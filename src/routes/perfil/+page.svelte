@@ -1,0 +1,250 @@
+<script>
+  import { onMount } from 'svelte';
+  import { supabase } from '$lib/supabaseClient';
+  import { page } from '$app/stores';
+  import { requiredOk as requiredOkUtil, buildPayload, isValidImage } from '$lib/profileUtils';
+
+  let loading = true;
+  let saving = false;
+  let msg = '';
+  let userId = null;
+
+  // Form fields
+  let nome_exibicao = '';
+  let documento = '';
+  let contato = '';
+  let inscricao_estadual = '';
+  let endereco = '';
+  let largura_bobina = '80mm';
+  let logo_url = '';
+  let rodape_recibo = 'Obrigado pela preferência!';
+
+  let pendingLogoUrl = null; // used when uploading before first save
+
+  const requiredOk = () => requiredOkUtil({ nome_exibicao, documento, contato, largura_bobina });
+
+  let dirty = false;
+  function markDirty() { dirty = true; }
+  function clearDirty() { dirty = false; }
+
+  onMount(async () => {
+    // Require auth
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = '/login'; return; }
+    userId = session.user.id;
+
+    // Load profile (no default insert due to NOT NULL constraints)
+    const { data, error } = await supabase
+      .from('empresa_perfil')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) {
+      console.error('Erro ao carregar perfil', error);
+      msg = 'Erro ao carregar perfil.';
+    } else if (data) {
+      nome_exibicao = data.nome_exibicao ?? '';
+      documento = data.documento ?? '';
+      contato = data.contato ?? '';
+      inscricao_estadual = data.inscricao_estadual ?? '';
+      endereco = data.endereco ?? '';
+      largura_bobina = data.largura_bobina ?? '80mm';
+      logo_url = data.logo_url ?? '';
+      rodape_recibo = data.rodape_recibo ?? 'Obrigado pela preferência!';
+    }
+    // Show completion notice if requested
+    const params = new URLSearchParams($page.url.search);
+    if (params.get('msg') === 'complete' && !requiredOk()) {
+      msg = 'Complete as informações da sua empresa antes de continuar.';
+    }
+    loading = false;
+
+    // Warn on unsaved changes
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', (e) => {
+        if (dirty) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      });
+    }
+  });
+
+  async function uploadLogo(e) {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    try {
+      if (!isValidImage(file)) {
+        msg = 'Arquivo inválido. Envie uma imagem (até ~1.5MB).';
+        return;
+      }
+      const path = `${userId}.png`;
+      const { error } = await supabase.storage.from('logos').upload(path, file, {
+        upsert: true,
+        contentType: file.type || 'image/png'
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from('logos').getPublicUrl(path);
+      const url = data.publicUrl;
+      logo_url = url;
+      // If a row exists, persist immediately; otherwise keep pending for first save
+      const { data: existing } = await supabase
+        .from('empresa_perfil')
+        .select('user_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (existing) {
+        await supabase.from('empresa_perfil').upsert({ user_id: userId, logo_url: url }, { onConflict: 'user_id' });
+      } else {
+        pendingLogoUrl = url;
+      }
+      msg = 'Logo atualizada.';
+      markDirty();
+    } catch (err) {
+      console.error(err);
+      msg = 'Erro ao enviar logo.';
+    }
+  }
+
+  async function salvar() {
+    if (!requiredOk()) { msg = 'Preencha os campos obrigatórios.'; return; }
+    saving = true; msg = '';
+    const payload = buildPayload({
+      userId,
+      nome_exibicao,
+      documento,
+      contato,
+      inscricao_estadual,
+      endereco,
+      rodape_recibo,
+      largura_bobina,
+      logo_url,
+      pendingLogoUrl
+    });
+    const { error } = await supabase.from('empresa_perfil').upsert(payload, { onConflict: 'user_id' });
+    saving = false;
+    if (error) { msg = 'Erro ao salvar perfil.'; return; }
+    msg = 'Perfil salvo com sucesso.';
+    clearDirty();
+    setTimeout(() => { window.location.href = '/painel.html'; }, 600);
+  }
+
+  async function logout() {
+    try { await supabase.auth.signOut(); } catch {}
+    window.location.href = '/login';
+  }
+</script>
+
+<h1 class="text-2xl font-semibold mb-2">Perfil da Empresa</h1>
+{#if msg}
+  <div class="mb-4 text-sm text-amber-400">{msg}</div>
+{/if}
+
+{#if loading}
+  <p>Carregando…</p>
+{:else}
+  <div class="flex items-center gap-2 mb-4">
+    <a href="/app" class="px-3 py-1.5 rounded-md border border-slate-700 text-slate-200 hover:bg-slate-800">Voltar ao App</a>
+    <button on:click={logout} class="px-3 py-1.5 rounded-md border border-slate-700 text-slate-200 hover:bg-slate-800">Sair</button>
+  </div>
+
+  <form class="bg-slate-900/50 border border-slate-700 rounded-xl p-4 grid gap-4 max-w-2xl" on:submit|preventDefault={salvar}>
+    <label class="block">
+      <span class="block mb-1">Nome exibido no recibo *</span>
+      <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={nome_exibicao} on:input={markDirty} />
+    </label>
+
+    <div class="grid sm:grid-cols-2 gap-4">
+      <label class="block">
+        <span class="block mb-1">Documento (CNPJ/CPF) *</span>
+  <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={documento} on:input={markDirty} />
+      </label>
+      <label class="block">
+        <span class="block mb-1">Contato (telefone ou e-mail) *</span>
+  <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={contato} on:input={markDirty} />
+      </label>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-4">
+      <label class="block">
+        <span class="block mb-1">Inscrição Estadual (opcional)</span>
+  <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={inscricao_estadual} on:input={markDirty} placeholder="ISENTO quando aplicável" />
+      </label>
+      <label class="block">
+        <span class="block mb-1">Largura da bobina *</span>
+        <select class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={largura_bobina} on:change={markDirty}>
+          <option value="80mm">80 mm</option>
+          <option value="58mm">58 mm</option>
+        </select>
+      </label>
+    </div>
+
+    <label class="block">
+      <span class="block mb-1">Endereço (opcional)</span>
+  <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={endereco} on:input={markDirty} />
+    </label>
+
+    <div class="grid gap-3">
+      <span class="block">Logo da empresa (opcional)</span>
+      <div class="flex items-center gap-4">
+        <img src={logo_url} alt="Logo" class="w-20 h-20 rounded border border-slate-700 object-contain bg-slate-900" />
+        <div class="flex flex-col gap-1">
+          <input type="file" accept="image/*" on:change={uploadLogo} />
+          <span class="text-xs text-slate-400">PNG quadrado até ~1MB recomendado</span>
+        </div>
+      </div>
+    </div>
+
+    <label class="block">
+      <span class="block mb-1">Rodapé do recibo (opcional)</span>
+      <textarea class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 min-h-[80px]" bind:value={rodape_recibo} on:input={markDirty} />
+    </label>
+
+    <div class="flex items-center gap-3">
+      <button type="submit" class="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-700 text-white font-semibold disabled:opacity-60" disabled={!requiredOk() || saving}>
+        {saving ? 'Salvando…' : 'Salvar alterações'}
+      </button>
+      {#if !requiredOk()}
+        <span class="text-sm text-amber-400">Preencha os campos obrigatórios marcados com *</span>
+      {/if}
+    </div>
+  </form>
+{/if}
+
+<style>
+  :global(.min-h-screen){min-height:100vh}
+  :global(body){background:#0f172a}
+  :global(.text-slate-200){color:#e5e7eb}
+  :global(.text-slate-400){color:#94a3b8}
+  :global(.bg-slate-900){background:#0b1220}
+  :global(.border-slate-700){border-color:#334155}
+  :global(.bg-sky-700){background:#0369a1}
+  :global(.bg-sky-600){background:#0284c7}
+  :global(.text-white){color:#fff}
+  :global(.rounded-md){border-radius:0.5rem}
+  :global(.rounded-xl){border-radius:0.75rem}
+  :global(.px-3){padding-left:0.75rem;padding-right:0.75rem}
+  :global(.py-2){padding-top:0.5rem;padding-bottom:0.5rem}
+  :global(.px-4){padding-left:1rem;padding-right:1rem}
+  :global(.py-1\.5){padding-top:0.375rem;padding-bottom:0.375rem}
+  :global(.mb-1){margin-bottom:0.25rem}
+  :global(.mb-2){margin-bottom:0.5rem}
+  :global(.mb-4){margin-bottom:1rem}
+  :global(.p-4){padding:1rem}
+  :global(.grid){display:grid}
+  :global(.gap-4){gap:1rem}
+  :global(.gap-3){gap:0.75rem}
+  :global(.max-w-2xl){max-width:42rem}
+  :global(.flex){display:flex}
+  :global(.items-center){align-items:center}
+  :global(.gap-2){gap:0.5rem}
+  :global(.gap-4){gap:1rem}
+  :global(.w-20){width:5rem}
+  :global(.h-20){height:5rem}
+  :global(.object-contain){object-fit:contain}
+  :global(.font-semibold){font-weight:600}
+  :global(.text-2xl){font-size:1.5rem}
+  :global(.hover\:bg-slate-800:hover){background:#1f2937}
+  :global(.disabled\:opacity-60:disabled){opacity:.6}
+  :global(.min-h-\[80px\]){min-height:80px}
+</style>

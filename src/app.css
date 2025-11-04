@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+/* Pequenos utilitários opcionais */
+.container {
+  @apply max-w-6xl mx-auto px-4;
+}
+
+/*
+  Estilos globais reutilizáveis
+  - Mantém os componentes minimalistas (sem CSS duplicado em cada página)
+  - Compatível com tema claro/escuro
+*/
+
+/* Campo de formulário padrão */
+.input-form {
+  @apply block w-full px-3 py-2 rounded-md border shadow-sm sm:text-sm
+    bg-white text-slate-900 placeholder-slate-500 border-gray-300
+    focus:outline-none focus:ring-blue-500 focus:border-blue-500
+    dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:border-slate-600;
+}
+
+/* Botões padrão */
+.btn-primary {
+  @apply inline-flex items-center justify-center px-3 py-2 rounded-md
+    text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400;
+}
+.btn-secondary {
+  @apply inline-flex items-center justify-center px-3 py-2 rounded-md
+    border text-gray-700 bg-white hover:bg-gray-50 dark:text-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700;
+}
+/* Estado selecionado para botões de escolha (ex.: forma de pagamento) */
+.btn-secondary[aria-pressed="true"],
+.btn-secondary[aria-selected="true"] {
+  @apply bg-blue-600 text-white border-blue-500 ring-2 ring-blue-400;
+}
+.btn-danger {
+  @apply inline-flex items-center justify-center px-3 py-2 rounded-md
+    text-white bg-red-600 hover:bg-red-700;
+}
+
+/* Modal base */
+.modal-backdrop { @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50; }
+.modal-content { @apply bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md; }
