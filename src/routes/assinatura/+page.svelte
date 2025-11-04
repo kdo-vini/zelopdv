@@ -97,7 +97,6 @@
       <button class="btn-primary" on:click={assinar} disabled={loading}>
         {loading ? 'Redirecionando…' : 'Assinar R$ 59/mês'}
       </button>
-      <div class="text-xs text-slate-500 mt-2">Dica: defina VITE_PUBLIC_STRIPE_BUY_BUTTON_ID e VITE_PUBLIC_STRIPE_PUBLISHABLE_KEY no .env para exibir o botão do Stripe embutido.</div>
     {/if}
   {/if}
 
