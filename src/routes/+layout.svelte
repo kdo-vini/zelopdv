@@ -2,9 +2,11 @@
   import "../app.css";
   import { onMount } from 'svelte';
   import { supabase, hasSupabaseConfig } from '$lib/supabaseClient';
+  import { isSubscriptionActiveStrict } from '$lib/guards';
   import { page } from '$app/stores';
 
   let session = null;
+  let showMobileMenu = false;
 
   onMount(async () => {
     if (!supabase) return;
@@ -27,31 +29,13 @@
       let hasCompleteProfile = false;
       if (session?.user?.id) {
         try {
-          // 1) Assinatura ativa
+          // 1) Assinatura ativa (somente por user_id)
           let { data: subRow } = await supabase
             .from('subscriptions')
             .select('status, current_period_end')
             .eq('user_id', session.user.id)
             .maybeSingle();
-          if (!subRow) {
-            // fallback por e-mail (caso assinatura criada via Payment Link)
-            const { data: subByEmail } = await supabase
-              .from('subscriptions')
-              .select('id, status, user_id, user_email')
-              .eq('user_email', session.user.email)
-              .maybeSingle();
-            if (subByEmail) {
-              subRow = subByEmail;
-              // tentar vincular o user_id se ainda estiver nulo
-              if (!subByEmail.user_id) {
-                await supabase
-                  .from('subscriptions')
-                  .update({ user_id: session.user.id })
-                  .eq('id', subByEmail.id);
-              }
-            }
-          }
-          hasActiveSub = subRow && (subRow.status === 'active' || subRow.status === 'trialing');
+          hasActiveSub = isSubscriptionActiveStrict(subRow?.status);
 
           // 2) Perfil da empresa completo (não cria se ausente, devido a NOT NULL)
           let { data: perfil } = await supabase
@@ -173,7 +157,7 @@
         <span class="sr-only">Zelo PDV</span>
       </a>
 
-      <nav class="flex gap-4 text-sm items-center">
+      <nav class="hidden sm:flex gap-4 text-sm items-center">
         {#if session}
           <a href="/app" class="{navLinkBase} {$page.url.pathname.startsWith('/app') ? navLinkActive : navLinkInactive}">
             Frente de Caixa
@@ -196,8 +180,30 @@
           </a>
         {/if}
       </nav>
+      <button class="sm:hidden inline-flex items-center justify-center w-9 h-9 rounded-md border border-slate-300/60 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+        aria-label="Abrir menu" on:click={() => showMobileMenu = !showMobileMenu}>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+          <path fill-rule="evenodd" d="M3.75 6.75A.75.75 0 014.5 6h15a.75.75 0 010 1.5H4.5a.75.75 0 01-.75-.75zm0 5.25a.75.75 0 01.75-.75h15a.75.75 0 010 1.5H4.5a.75.75 0 01-.75-.75zm.75 4.5a.75.75 0 000 1.5h15a.75.75 0 000-1.5H4.5z" clip-rule="evenodd" />
+        </svg>
+      </button>
     </div>
   </header>
+
+  {#if showMobileMenu}
+    <div class="sm:hidden border-b border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-2 text-sm">
+        {#if session}
+          <a href="/app" class="{navLinkBase} { $page.url.pathname.startsWith('/app') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Frente de Caixa</a>
+          <a href="/admin" class="{navLinkBase} { $page.url.pathname.startsWith('/admin') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Admin</a>
+          <a href="/relatorios" class="{navLinkBase} { $page.url.pathname.startsWith('/relatorios') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Relatórios</a>
+          <a href="/perfil" class="{navLinkBase} { $page.url.pathname.startsWith('/perfil') ? navLinkActive : navLinkInactive } !px-3 !py-1.5" on:click={() => showMobileMenu=false}>Perfil</a>
+        {:else}
+          <a href="/login" class="text-sm font-medium text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300 transition-colors" on:click={() => showMobileMenu=false}>Entrar</a>
+          <a href="/cadastro" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-sky-600 border border-transparent rounded-md shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors" on:click={() => showMobileMenu=false}>Criar conta</a>
+        {/if}
+      </div>
+    </div>
+  {/if}
 
   <main class="max-w-6xl mx-auto px-4 py-6">
     <slot />

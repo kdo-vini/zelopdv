@@ -2,6 +2,15 @@
 import { supabase } from './supabaseClient';
 
 /**
+ * Normalize and strictly validate subscription status.
+ * Only "active" grants access per business rule.
+ */
+export function isSubscriptionActiveStrict(statusLike) {
+  const status = (statusLike ?? '').toString().trim().toLowerCase();
+  return status === 'active';
+}
+
+/**
  * Ensure user is logged in and has an active subscription; otherwise redirect.
  * Also optionally checks profile completeness.
  * Returns an object with { userId, email } when allowed, or null after redirect.
@@ -37,29 +46,17 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     }
   }
 
-  // 3) Subscription
+  // 3) Subscription (redirect only if status !== 'active')
   try {
     let { data: sub } = await supabase
       .from('subscriptions')
-      .select('status, current_period_end, user_email, user_id')
+      .select('status, current_period_end, user_id')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!sub && email) {
-      const { data: subByEmail } = await supabase
-        .from('subscriptions')
-        .select('id, status, current_period_end, user_email, user_id')
-        .eq('user_email', email)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      sub = subByEmail || null;
-    }
-    const now = new Date();
-    const periodOk = sub?.current_period_end ? new Date(sub.current_period_end) > now : false;
-    const isActive = sub && (sub.status === 'active' || (sub.status === 'trialing' && periodOk));
-    if (!isActive) {
+    const isActiveStrict = isSubscriptionActiveStrict(sub?.status);
+    if (!isActiveStrict) {
       if (redirectOnFail) window.location.href = '/assinatura?msg=subscribe';
       return null;
     }

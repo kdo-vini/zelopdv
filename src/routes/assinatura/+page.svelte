@@ -25,18 +25,6 @@
         .maybeSingle();
       subStatus = data?.status || null;
       customerId = data?.stripe_customer_id || null;
-      // Fallback: tentar por email caso user_id não esteja preenchido
-      if (!customerId && email) {
-        const { data: byEmail } = await supabase
-          .from('subscriptions')
-          .select('stripe_customer_id, status')
-          .eq('user_email', email)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        customerId = byEmail?.stripe_customer_id || customerId;
-        subStatus = subStatus || byEmail?.status || null;
-      }
     }
     try {
       const params = new URLSearchParams(window.location.search);
@@ -78,10 +66,9 @@
   async function gerenciar() {
     try {
       loading = true; message='';
-      if (!customerId) { message = 'Nenhum cliente Stripe vinculado.'; return; }
       const res = await fetch('/api/billing/create-portal-session', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId })
+        body: JSON.stringify({ customerId, email })
       });
       const json = await res.json();
       if (json?.url) { window.location.href = json.url; return; }
@@ -102,12 +89,15 @@
   <h1 class="text-2xl font-bold">Assinatura Zelo PDV</h1>
   <p class="text-slate-600 dark:text-slate-300">R$ 59/mês — cancele quando quiser.</p>
 
-  {#if subStatus === 'active' || subStatus === 'trialing'}
+  {#if subStatus === 'active'}
     <div class="p-3 bg-green-50 text-green-700 rounded">Assinatura ativa.</div>
     <div class="flex gap-3 items-center">
       <button class="btn-secondary" on:click={gerenciar} disabled={loading}>Gerenciar assinatura</button>
       <a href="/app" class="btn-primary">Entrar no sistema</a>
     </div>
+    {#if message}
+      <div class="p-3 bg-amber-50 text-amber-800 rounded">{message}</div>
+    {/if}
   {:else}
     <div class="p-3 bg-amber-50 text-amber-800 rounded">
       {message || 'Para usar o sistema, ative sua assinatura.'}

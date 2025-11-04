@@ -1,7 +1,8 @@
 // Centraliza a criação do cliente Stripe no lado do servidor
 import Stripe from 'stripe';
+import { env } from '$env/dynamic/private';
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+const STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
 
 if (!STRIPE_SECRET_KEY) {
   console.warn('[Stripe] STRIPE_SECRET_KEY ausente. Configure no .env local e na hospedagem.');

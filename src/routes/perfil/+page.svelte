@@ -8,6 +8,14 @@
   let saving = false;
   let msg = '';
   let userId = null;
+  let email = '';
+  
+  // Subscription state
+  let subLoading = true;
+  let subStatus = null;
+  let stripeCustomerId = null;
+  let cancelAtPeriodEnd = false;
+  let currentPeriodEnd = null; // ISO string
 
   // Form fields
   let nome_exibicao = '';
@@ -31,7 +39,27 @@
     // Require auth
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { window.location.href = '/login'; return; }
-    userId = session.user.id;
+  userId = session.user.id;
+  email = session.user.email || '';
+
+    // Load subscription (to enable Manage Subscription button)
+    try {
+      const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('status, stripe_customer_id, cancel_at_period_end, current_period_end')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      subStatus = sub?.status ?? null;
+      stripeCustomerId = sub?.stripe_customer_id ?? null;
+      cancelAtPeriodEnd = !!sub?.cancel_at_period_end;
+      currentPeriodEnd = sub?.current_period_end ?? null;
+    } catch (e) {
+      console.warn('Falha ao carregar assinatura:', e?.message || e);
+    } finally {
+      subLoading = false;
+    }
 
     // Load profile (no default insert due to NOT NULL constraints)
     const { data, error } = await supabase
@@ -133,6 +161,26 @@
     try { await supabase.auth.signOut(); } catch {}
     window.location.href = '/login';
   }
+
+  async function openManageSubscription() {
+    try {
+      msg = '';
+      const resp = await fetch('/api/billing/create-portal-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: stripeCustomerId, email })
+      });
+      const json = await resp.json();
+      if (!resp.ok || !json?.url) {
+        msg = json?.error || 'Não foi possível abrir o portal de assinatura.';
+        return;
+      }
+      window.location.href = json.url;
+    } catch (err) {
+      console.error(err);
+      msg = 'Erro ao abrir o portal do cliente Stripe.';
+    }
+  }
 </script>
 
 <h1 class="text-2xl font-semibold mb-2">Perfil da Empresa</h1>
@@ -143,49 +191,86 @@
 {#if loading}
   <p>Carregando…</p>
 {:else}
-  <div class="flex items-center gap-2 mb-4">
+  <div class="flex items-center justify-between mb-4">
     <a href="/app" class="px-3 py-1.5 rounded-md border border-slate-700 text-slate-200 hover:bg-slate-800">Voltar ao App</a>
     <button on:click={logout} class="px-3 py-1.5 rounded-md border border-slate-700 text-slate-200 hover:bg-slate-800">Sair</button>
   </div>
 
-  <form class="bg-slate-900/50 border border-slate-700 rounded-xl p-4 grid gap-4 max-w-2xl" on:submit|preventDefault={salvar}>
-    <label class="block">
-      <span class="block mb-1">Nome exibido no recibo *</span>
-      <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={nome_exibicao} on:input={markDirty} />
-    </label>
+  <form class="bg-slate-900/50 border border-slate-700 rounded-xl p-4 grid gap-6 max-w-2xl" on:submit|preventDefault={salvar}>
+    <!-- Subscription section -->
+    <section class="grid gap-2">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm text-slate-400">Assinatura</div>
+          {#if subLoading}
+            <div class="text-sm">Carregando status…</div>
+          {:else if subStatus}
+            <div class="text-sm">Status: <span class="font-semibold capitalize">{subStatus}</span></div>
+          {:else}
+            <div class="text-sm">Nenhuma assinatura encontrada.</div>
+          {/if}
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" on:click={openManageSubscription}
+            class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 disabled:opacity-60"
+            disabled={subLoading}>
+            Gerenciar assinatura
+          </button>
+          {#if !subLoading && subStatus !== 'active'}
+            <a href="/assinatura" class="px-3 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white">Assinar</a>
+          {/if}
+        </div>
+      </div>
+      {#if !subLoading && cancelAtPeriodEnd}
+        <div class="text-xs text-amber-300 bg-amber-900/20 border border-amber-700/30 rounded-md px-3 py-2">
+          A renovação automática foi desativada e sua assinatura será encerrada em
+          <strong>{currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString() : '—'}</strong>.
+        </div>
+      {/if}
+    </section>
 
-    <div class="grid sm:grid-cols-2 gap-4">
+    <!-- Company info -->
+    <section class="grid gap-4">
+      <h2 class="text-sm font-semibold text-slate-300">Informações da empresa</h2>
       <label class="block">
-        <span class="block mb-1">Documento (CNPJ/CPF) *</span>
-  <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={documento} on:input={markDirty} />
+        <span class="block mb-1">Nome exibido no recibo *</span>
+        <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={nome_exibicao} on:input={markDirty} />
       </label>
-      <label class="block">
-        <span class="block mb-1">Contato (telefone ou e-mail) *</span>
-  <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={contato} on:input={markDirty} />
-      </label>
-    </div>
 
-    <div class="grid sm:grid-cols-2 gap-4">
-      <label class="block">
-        <span class="block mb-1">Inscrição Estadual (opcional)</span>
-  <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={inscricao_estadual} on:input={markDirty} placeholder="ISENTO quando aplicável" />
-      </label>
-      <label class="block">
-        <span class="block mb-1">Largura da bobina *</span>
-        <select class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={largura_bobina} on:change={markDirty}>
-          <option value="80mm">80 mm</option>
-          <option value="58mm">58 mm</option>
-        </select>
-      </label>
-    </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <label class="block">
+          <span class="block mb-1">Documento (CNPJ/CPF) *</span>
+          <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={documento} on:input={markDirty} />
+        </label>
+        <label class="block">
+          <span class="block mb-1">Contato (telefone ou e-mail) *</span>
+          <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={contato} on:input={markDirty} />
+        </label>
+      </div>
 
-    <label class="block">
-      <span class="block mb-1">Endereço (opcional)</span>
-  <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={endereco} on:input={markDirty} />
-    </label>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <label class="block">
+          <span class="block mb-1">Inscrição Estadual (opcional)</span>
+          <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={inscricao_estadual} on:input={markDirty} placeholder="ISENTO quando aplicável" />
+        </label>
+        <label class="block">
+          <span class="block mb-1">Largura da bobina *</span>
+          <select class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={largura_bobina} on:change={markDirty}>
+            <option value="80mm">80 mm</option>
+            <option value="58mm">58 mm</option>
+          </select>
+        </label>
+      </div>
 
-    <div class="grid gap-3">
-      <span class="block">Logo da empresa (opcional)</span>
+      <label class="block">
+        <span class="block mb-1">Endereço (opcional)</span>
+        <input class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={endereco} on:input={markDirty} />
+      </label>
+    </section>
+
+    <!-- Branding -->
+    <section class="grid gap-3">
+      <h2 class="text-sm font-semibold text-slate-300">Branding</h2>
       <div class="flex items-center gap-4">
         <img src={logo_url} alt="Logo" class="w-20 h-20 rounded border border-slate-700 object-contain bg-slate-900" />
         <div class="flex flex-col gap-1">
@@ -193,12 +278,11 @@
           <span class="text-xs text-slate-400">PNG quadrado até ~1MB recomendado</span>
         </div>
       </div>
-    </div>
-
-    <label class="block">
-      <span class="block mb-1">Rodapé do recibo (opcional)</span>
-      <textarea class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 min-h-[80px]" bind:value={rodape_recibo} on:input={markDirty} />
-    </label>
+      <label class="block">
+        <span class="block mb-1">Rodapé do recibo (opcional)</span>
+        <textarea class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 min-h-[80px]" bind:value={rodape_recibo} on:input={markDirty} />
+      </label>
+    </section>
 
     <div class="flex items-center gap-3">
       <button type="submit" class="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-700 text-white font-semibold disabled:opacity-60" disabled={!requiredOk() || saving}>
@@ -233,6 +317,7 @@
   :global(.p-4){padding:1rem}
   :global(.grid){display:grid}
   :global(.gap-4){gap:1rem}
+  :global(.gap-6){gap:1.5rem}
   :global(.gap-3){gap:0.75rem}
   :global(.max-w-2xl){max-width:42rem}
   :global(.flex){display:flex}

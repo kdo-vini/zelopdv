@@ -1,10 +1,11 @@
 import { json } from '@sveltejs/kit';
 import { stripe } from '$lib/server/stripe';
+import { env } from '$env/dynamic/private';
 
 // ENV necessárias
-const PRICE_ID = process.env.STRIPE_PRICE_ID_MONTHLY_59; // price_XXXXXXXX
-const PAYMENT_LINK = process.env.VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL || process.env.PUBLIC_STRIPE_PAYMENT_LINK_URL; // https://buy.stripe.com/...
-const ORIGIN = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
+const PRICE_ID = env.STRIPE_PRICE_ID_MONTHLY_59; // price_XXXXXXXX
+const PAYMENT_LINK = env.VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL || env.PUBLIC_STRIPE_PAYMENT_LINK_URL; // https://buy.stripe.com/...
+const ORIGIN = env.PUBLIC_APP_URL || 'http://localhost:5173';
 
 export async function POST({ request }) {
   try {
@@ -25,7 +26,7 @@ export async function POST({ request }) {
       return json({ error: 'Valor inválido em STRIPE_PRICE_ID_MONTHLY_59. Informe o ID do price (ex: price_...), não a URL. Para Payment Link use VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL.' }, { status: 500 });
     }
 
-    if (!stripe) return new Response('Stripe não configurado', { status: 500 });
+  if (!stripe) return json({ error: 'Stripe não configurado' }, { status: 500 });
 
     // 1) Localizar ou criar Customer por e-mail
     const customers = await stripe.customers.list({ email, limit: 1 });

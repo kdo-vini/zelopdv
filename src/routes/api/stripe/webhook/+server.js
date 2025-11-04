@@ -1,9 +1,10 @@
 import { stripe } from '$lib/server/stripe';
 import { createClient } from '@supabase/supabase-js';
+import { env } from '$env/dynamic/private';
 
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET; // whsec_...
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET; // whsec_...
+const SUPABASE_URL = env.SUPABASE_URL || env.VITE_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = (SUPABASE_URL && SUPABASE_SERVICE_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -36,16 +37,8 @@ export async function POST({ request }) {
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
         const sub = event.data.object;
-        // Tentar obter email do cliente para reconciliar com usuário depois
-        let userEmail = null;
-        try {
-          const customer = await stripe.customers.retrieve(sub.customer);
-          userEmail = customer?.email || null;
-        } catch {}
-
         const payload = {
           user_id: sub.metadata?.user_id || null,
-          user_email: userEmail,
           stripe_customer_id: sub.customer,
           stripe_subscription_id: sub.id,
           status: sub.status,
