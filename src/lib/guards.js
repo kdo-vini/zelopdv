@@ -43,12 +43,16 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
       .from('subscriptions')
       .select('status, current_period_end, user_email, user_id')
       .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (!sub && email) {
       const { data: subByEmail } = await supabase
         .from('subscriptions')
         .select('id, status, current_period_end, user_email, user_id')
         .eq('user_email', email)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       sub = subByEmail || null;
     }

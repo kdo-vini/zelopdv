@@ -15,8 +15,28 @@
     userId = userData?.user?.id || '';
     email = userData?.user?.email || '';
     if (userId) {
-      const { data } = await supabase.from('subscriptions').select('status').eq('user_id', userId).maybeSingle();
+      // Buscar assinatura do usuário e também o stripe_customer_id para o botão de portal
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('status, stripe_customer_id')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       subStatus = data?.status || null;
+      customerId = data?.stripe_customer_id || null;
+      // Fallback: tentar por email caso user_id não esteja preenchido
+      if (!customerId && email) {
+        const { data: byEmail } = await supabase
+          .from('subscriptions')
+          .select('stripe_customer_id, status')
+          .eq('user_email', email)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        customerId = byEmail?.stripe_customer_id || customerId;
+        subStatus = subStatus || byEmail?.status || null;
+      }
     }
     try {
       const params = new URLSearchParams(window.location.search);
@@ -84,7 +104,10 @@
 
   {#if subStatus === 'active' || subStatus === 'trialing'}
     <div class="p-3 bg-green-50 text-green-700 rounded">Assinatura ativa.</div>
-    <button class="btn-secondary" on:click={gerenciar} disabled={loading}>Gerenciar assinatura</button>
+    <div class="flex gap-3 items-center">
+      <button class="btn-secondary" on:click={gerenciar} disabled={loading}>Gerenciar assinatura</button>
+      <a href="/app" class="btn-primary">Entrar no sistema</a>
+    </div>
   {:else}
     <div class="p-3 bg-amber-50 text-amber-800 rounded">
       {message || 'Para usar o sistema, ative sua assinatura.'}
