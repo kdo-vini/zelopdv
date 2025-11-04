@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zelo PDV · Painel</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:#0f172a;color:#e2e8f0;display:grid;place-items:center;min-height:100vh;margin:0}
+    .card{background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:24px;max-width:520px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .btn{display:inline-block;margin-top:16px;background:#0284c7;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none}
+    .btn:hover{background:#0369a1}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Redirecionando para o painel…</h1>
+    <p>Se não redirecionar em 1 segundo, clique abaixo.</p>
+    <a class="btn" href="/app">Ir para o painel</a>
+  </div>
+  <script>
+    setTimeout(()=>{ window.location.href = '/app'; }, 800);
+  </script>
+</body>
+</html>
