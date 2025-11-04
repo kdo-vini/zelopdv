@@ -11,7 +11,8 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^3.3.1",
-    "@sveltejs/adapter-vercel": "^6.1.1",
+    "@sveltejs/adapter-node": "^4.0.1",
+    "@sveltejs/adapter-vercel": "^5.3.1",
     "@sveltejs/kit": "^2.48.3",
     "@sveltejs/vite-plugin-svelte": "^3.1.2",
     "autoprefixer": "^10.4.20",
@@ -25,5 +26,8 @@
     "@supabase/supabase-js": "^2.47.10",
     "@tailwindcss/forms": "^0.5.7",
     "stripe": "^19.2.0"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }

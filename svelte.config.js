@@ -1,13 +1,12 @@
-import adapter from '@sveltejs/adapter-vercel';
+import adapterVercel from '@sveltejs/adapter-vercel';
+import adapterNode from '@sveltejs/adapter-node';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
   preprocess: vitePreprocess(),
   kit: {
-    adapter: adapter({
-      runtime: 'nodejs20.x'
-    })
+    adapter: (process.env.VERCEL ? adapterVercel() : adapterNode())
   }
 };
 

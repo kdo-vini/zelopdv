@@ -69,5 +69,5 @@ export async function POST({ request }) {
 }
 
 export const config = {
-  runtime: 'nodejs'
+  runtime: 'nodejs20.x'
 };
