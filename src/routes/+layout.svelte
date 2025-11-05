@@ -4,6 +4,7 @@
   import { supabase, hasSupabaseConfig } from '$lib/supabaseClient';
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { page } from '$app/stores';
+  export let params; // silence dev warning when SvelteKit passes params
 
   let session = null;
   let showMobileMenu = false;
@@ -50,8 +51,8 @@
         } catch {}
       }
 
-      // Se logado e perfil incompleto, força ir para /perfil.html
-      if (session && !hasCompleteProfile && path !== '/perfil.html') {
+      // Se logado e perfil incompleto, força ir para /perfil (evitar loop quando já está em /perfil)
+      if (session && !hasCompleteProfile && path !== '/perfil' && path !== '/perfil.html') {
         console.log('[AuthDebug] decision: force complete profile -> /perfil.html');
         const params = new URLSearchParams({ msg: 'complete' });
         window.location.href = `/perfil?${params.toString()}`;

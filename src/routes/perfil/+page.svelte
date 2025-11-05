@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { page } from '$app/stores';
-  import { requiredOk as requiredOkUtil, buildPayload, isValidImage } from '$lib/profileUtils';
+  import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina } from '$lib/profileUtils';
+  export let params; // silence dev warning in dev mode
 
   let loading = true;
   let saving = false;
@@ -29,7 +30,9 @@
 
   let pendingLogoUrl = null; // used when uploading before first save
 
-  const requiredOk = () => requiredOkUtil({ nome_exibicao, documento, contato, largura_bobina });
+  // Reativo: habilita o botão assim que os obrigatórios estiverem ok
+  let canSave = false;
+  $: canSave = requiredOkUtil({ nome_exibicao, documento, contato, largura_bobina });
 
   let dirty = false;
   function markDirty() { dirty = true; }
@@ -76,13 +79,14 @@
       contato = data.contato ?? '';
       inscricao_estadual = data.inscricao_estadual ?? '';
       endereco = data.endereco ?? '';
-      largura_bobina = data.largura_bobina ?? '80mm';
+  // Normaliza largura para valores canônicos
+  largura_bobina = normalizeLarguraBobina(data.largura_bobina ?? '80mm');
       logo_url = data.logo_url ?? '';
       rodape_recibo = data.rodape_recibo ?? 'Obrigado pela preferência!';
     }
     // Show completion notice if requested
     const params = new URLSearchParams($page.url.search);
-    if (params.get('msg') === 'complete' && !requiredOk()) {
+    if (params.get('msg') === 'complete' && !requiredOkUtil({ nome_exibicao, documento, contato, largura_bobina })) {
       msg = 'Complete as informações da sua empresa antes de continuar.';
     }
     loading = false;
@@ -135,7 +139,7 @@
   }
 
   async function salvar() {
-    if (!requiredOk()) { msg = 'Preencha os campos obrigatórios.'; return; }
+    if (!requiredOkUtil({ nome_exibicao, documento, contato, largura_bobina })) { msg = 'Preencha os campos obrigatórios.'; return; }
     saving = true; msg = '';
     const payload = buildPayload({
       userId,
@@ -255,7 +259,7 @@
         </label>
         <label class="block">
           <span class="block mb-1">Largura da bobina *</span>
-          <select class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={largura_bobina} on:change={markDirty}>
+          <select class="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" bind:value={largura_bobina} on:change={() => { largura_bobina = normalizeLarguraBobina(largura_bobina); markDirty(); }}>
             <option value="80mm">80 mm</option>
             <option value="58mm">58 mm</option>
           </select>
@@ -285,10 +289,10 @@
     </section>
 
     <div class="flex items-center gap-3">
-      <button type="submit" class="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-700 text-white font-semibold disabled:opacity-60" disabled={!requiredOk() || saving}>
+      <button type="submit" class="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-700 text-white font-semibold disabled:opacity-60" disabled={!canSave || saving}>
         {saving ? 'Salvando…' : 'Salvar alterações'}
       </button>
-      {#if !requiredOk()}
+      {#if !canSave}
         <span class="text-sm text-amber-400">Preencha os campos obrigatórios marcados com *</span>
       {/if}
     </div>

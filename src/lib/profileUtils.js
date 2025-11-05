@@ -1,10 +1,18 @@
 // Utility helpers for the Perfil page
 
+// Canonicalize paper width: accept '58mm', '58 mm', '80mm', '80 mm'
+export function normalizeLarguraBobina(value) {
+  const v = (value ?? '').toString().trim().replace(/\s+/g, '').toLowerCase();
+  if (v === '58mm' || v === '58') return '58mm';
+  if (v === '80mm' || v === '80') return '80mm';
+  return v; // unknown stays as-is
+}
+
 export function requiredOk({ nome_exibicao, documento, contato, largura_bobina }) {
   const nome = (nome_exibicao || '').trim();
   const doc = (documento || '').trim();
   const cont = (contato || '').trim();
-  const largura = largura_bobina || '';
+  const largura = normalizeLarguraBobina(largura_bobina);
   return Boolean(nome && doc && cont && (largura === '58mm' || largura === '80mm'));
 }
 
@@ -28,7 +36,9 @@ export function buildPayload({
     inscricao_estadual: (inscricao_estadual || '').trim() || null,
     endereco: (endereco || '').trim() || null,
     rodape_recibo: (rodape_recibo || 'Obrigado pela preferência!').trim() || 'Obrigado pela preferência!',
-    largura_bobina,
+    largura_bobina: normalizeLarguraBobina(largura_bobina) === '58mm' || normalizeLarguraBobina(largura_bobina) === '80mm'
+      ? normalizeLarguraBobina(largura_bobina)
+      : '80mm',
     logo_url: pendingLogoUrl || logo_url || null,
     updated_at: new Date().toISOString()
   };
