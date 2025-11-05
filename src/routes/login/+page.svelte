@@ -4,6 +4,7 @@
   let email = '';
   let password = '';
   let errorMessage = '';
+  let infoMessage = '';
   let loading = false;
 
   // Se já houver sessão ativa, redireciona para o PDV (/app)
@@ -11,6 +12,13 @@
     if (!supabase) return; // evita erro quando env não está configurado
     console.groupCollapsed('[AuthDebug] /login onMount');
     try {
+      // Mensagem após confirmação de e-mail
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('confirmed') === '1') {
+          infoMessage = 'E-mail confirmado com sucesso. Agora faça login.';
+        }
+      } catch {}
       const { data, error } = await supabase.auth.getSession();
       if (error) console.warn('[AuthDebug] getSession error (login):', error?.message || error);
       console.log('[AuthDebug] getSession (login)', { hasSession: Boolean(data?.session), userId: data?.session?.user?.id || null });
@@ -60,6 +68,9 @@
 
 <div class="max-w-md mx-auto bg-white dark:bg-slate-800 rounded-lg shadow p-6">
   <h1 class="text-xl font-semibold mb-4">Entrar</h1>
+  {#if infoMessage}
+    <div class="mb-4 text-sm text-green-700">{infoMessage}</div>
+  {/if}
   {#if errorMessage}
     <div class="mb-4 text-sm text-red-600">{errorMessage}</div>
   {/if}

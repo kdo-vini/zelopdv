@@ -1,6 +1,6 @@
-# Zelo PDV — Sangria de Caixa
+# Zelo PDV — PDV com Supabase e Stripe
 
-Este projeto é um PDV em SvelteKit com Supabase e Stripe. Abaixo, detalhes da funcionalidade de Sangria (retirada de dinheiro do caixa).
+Este projeto é um PDV em SvelteKit com Supabase e Stripe.
 
 ## Movimentar Caixa (Entrada/Saída)
 
@@ -45,4 +45,24 @@ Arquivo SQL: `supabase/caixa_movs_schema.sql`.
 
 - Dev: `npm run dev`
 - Testes: `npm test` (Vitest)
+
+## Autenticação
+
+O app usa Supabase Auth (e-mail/senha). Com confirmação de e-mail habilitada, o usuário deve confirmar antes de entrar.
+
+### Cadastro (validações)
+- E-mail único: o Supabase já impede e-mails duplicados; a UI mostra mensagem amigável quando detecta e-mail existente.
+- Senha mínima: a tela de cadastro exige pelo menos 8 caracteres.
+
+### Confirmação de e-mail e redirecionamento
+- Durante o sign up enviamos `emailRedirectTo` para que, após confirmar o e-mail, o usuário seja redirecionado para `/login?confirmed=1`.
+- A página de login exibe uma mensagem “E-mail confirmado com sucesso. Agora faça login.” quando este parâmetro está presente.
+
+### Personalização do e-mail de confirmação (Supabase)
+Personalize o conteúdo do e-mail diretamente no painel do Supabase:
+1. Supabase > Authentication > Email Templates (modo correspondente: Test ou Live)
+2. Ajuste o assunto e o HTML, incluindo branding e links.
+3. Configure domínio e remetente (SMTP) em Authentication > Providers, se preciso.
+
+Observação: para o Portal de Cobrança do Stripe em produção (live), crie e salve uma configuração padrão em https://dashboard.stripe.com/settings/billing/portal ou informe `STRIPE_BILLING_PORTAL_CONFIGURATION_ID` no `.env`.
 

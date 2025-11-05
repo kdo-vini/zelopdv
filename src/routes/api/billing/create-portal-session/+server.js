@@ -25,7 +25,9 @@ export async function POST({ request }) {
     }
 
     // Preferir o Origin do request em dev para facilitar retorno local
-    const reqOrigin = request.headers.get('origin');
+    const reqOrigin = (request?.headers && typeof request.headers.get === 'function')
+      ? request.headers.get('origin')
+      : null;
     const base = reqOrigin?.startsWith('http') ? reqOrigin : ORIGIN;
 
     const session = await stripe.billingPortal.sessions.create({

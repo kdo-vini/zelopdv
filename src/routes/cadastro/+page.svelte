@@ -14,11 +14,26 @@
     successMessage = '';
     if (!supabase) { errorMessage = 'Configuração do Supabase ausente.'; return; }
     if (!email || !password) { errorMessage = 'Informe e-mail e senha'; return; }
+    if (password.length < 8) { errorMessage = 'A senha deve ter pelo menos 8 caracteres.'; return; }
     if (password !== confirm) { errorMessage = 'As senhas não conferem'; return; }
     loading = true;
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // Redireciona confirmação para a página de login com aviso
+    let redirectTo = '';
+    try { redirectTo = `${window.location.origin}/login?confirmed=1`; } catch {}
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: redirectTo || undefined }
+    });
     loading = false;
-    if (error) { errorMessage = error.message; return; }
+    if (error) {
+      // Tratamento amigável para e-mail já existente
+      const msg = (error?.message || '').toLowerCase();
+      if (error?.status === 400 && (msg.includes('registered') || msg.includes('already')))
+        errorMessage = 'Este e-mail já está cadastrado.';
+      else errorMessage = error.message;
+      return;
+    }
     // Em projetos com confirmação por e-mail, o usuário precisa confirmar antes de logar
     successMessage = 'Conta criada. Verifique seu e-mail para confirmar e então faça login.';
   }
@@ -41,7 +56,7 @@
     </div>
     <div>
       <label for="cad-password" class="block text-sm mb-1">Senha</label>
-      <input id="cad-password" type="password" bind:value={password} class="input-form" required />
+      <input id="cad-password" type="password" bind:value={password} class="input-form" minlength="8" required />
     </div>
     <div>
       <label for="cad-confirm" class="block text-sm mb-1">Confirmar senha</label>
