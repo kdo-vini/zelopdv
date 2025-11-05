@@ -95,9 +95,6 @@
       <button class="btn-secondary" on:click={gerenciar} disabled={loading}>Gerenciar assinatura</button>
       <a href="/app" class="btn-primary">Entrar no sistema</a>
     </div>
-    {#if message}
-      <div class="p-3 bg-amber-50 text-amber-800 rounded">{message}</div>
-    {/if}
   {:else}
     <div class="p-3 bg-amber-50 text-amber-800 rounded">
       {message || 'Para usar o sistema, ative sua assinatura.'}
