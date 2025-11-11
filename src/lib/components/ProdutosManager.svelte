@@ -4,15 +4,21 @@
 
   let produtos = [];
   let categorias = [];
+  let subcategorias = [];
+  // filtros para a listagem
+  let idCategoriaFilter = null;
+  let idSubcategoriaFilter = null;
+  let buscaFilter = '';
   let errorMessage = '';
   let loading = true;
 
-  let form = { nome: '', preco: 0, id_categoria: null, eh_item_por_unidade: false, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0 };
+  let form = { nome: '', preco: 0, id_categoria: null, id_subcategoria: null, eh_item_por_unidade: false, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0 };
   let editingId = null;
   let editForm = {};
 
   onMount(async () => {
     await carregarCategorias();
+    await carregarSubcategorias();
     await carregarProdutos();
     loading = false;
   });
@@ -22,11 +28,40 @@
     const { data, error } = await supabase.from('categorias').select('*').order('ordem', { ascending: true });
     if (error) errorMessage = error.message; else categorias = data;
   }
+  async function carregarSubcategorias() {
+    // subcategorias usadas no formulário (baseado na categoria do formulário)
+    let q = supabase.from('subcategorias').select('id, id_categoria, nome, ordem').order('ordem', { ascending: true });
+    if (form.id_categoria) q = q.eq('id_categoria', form.id_categoria);
+    const { data, error } = await q;
+    if (error) errorMessage = error.message; else subcategorias = data || [];
+  }
+
+  async function carregarSubcategoriasFiltro(catId) {
+    // subcategorias para os filtros (independente do formulário)
+    let q = supabase.from('subcategorias').select('id, id_categoria, nome, ordem').order('ordem', { ascending: true });
+    if (catId) q = q.eq('id_categoria', catId);
+    const { data, error } = await q;
+    if (error) { /* não bloqueia */ } else filterSubcategorias = data || [];
+  }
+
+  // guarda as subcategorias do filtro sem conflitar com o select do form
+  let filterSubcategorias = [];
 
   /** Lista produtos ordenados por nome. */
   async function carregarProdutos() {
-    const { data, error } = await supabase.from('produtos').select('*').order('nome', { ascending: true });
-    if (error) errorMessage = error.message; else produtos = data;
+    // aplica filtros da UI (categoria, subcategoria, busca)
+    try {
+      loading = true;
+      let q = supabase.from('produtos').select('*');
+      if (idCategoriaFilter) q = q.eq('id_categoria', Number(idCategoriaFilter));
+      if (idSubcategoriaFilter) q = q.eq('id_subcategoria', Number(idSubcategoriaFilter));
+      if (buscaFilter && String(buscaFilter).trim() !== '') q = q.ilike('nome', `%${String(buscaFilter).trim()}%`);
+      const { data, error } = await q.order('nome', { ascending: true });
+      if (error) { errorMessage = error.message; produtos = []; }
+      else produtos = data || [];
+    } finally {
+      loading = false;
+    }
   }
 
   /** Cria novo produto com os campos informados. */
@@ -39,13 +74,14 @@
       nome: form.nome,
       preco: form.preco,
       id_categoria: form.id_categoria,
+      id_subcategoria: form.id_subcategoria,
       eh_item_por_unidade: form.eh_item_por_unidade,
       ocultar_no_pdv: form.ocultar_no_pdv,
       controlar_estoque: form.controlar_estoque,
       estoque_atual: form.controlar_estoque ? form.estoque_atual : 0
     });
     if (error) { errorMessage = error.message; return; }
-    form = { nome: '', preco: 0, id_categoria: null, eh_item_por_unidade: false, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0 };
+    form = { nome: '', preco: 0, id_categoria: form.id_categoria, id_subcategoria: null, eh_item_por_unidade: false, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0 };
     await carregarProdutos();
   }
 
@@ -68,6 +104,7 @@
       nome: editForm.nome,
       preco: editForm.preco,
       id_categoria: editForm.id_categoria,
+      id_subcategoria: editForm.id_subcategoria,
       eh_item_por_unidade: editForm.eh_item_por_unidade,
       ocultar_no_pdv: editForm.ocultar_no_pdv,
       controlar_estoque: editForm.controlar_estoque,
@@ -93,6 +130,34 @@
     {#if errorMessage}
       <div class="mb-4 text-sm text-red-600">{errorMessage}</div>
     {/if}
+    <!-- Filtros: categoria / subcategoria / busca -->
+    <div class="mb-4">
+      <div class="flex flex-wrap items-center gap-2 mb-2">
+        <select class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 min-w-[12rem]"
+          bind:value={idCategoriaFilter}
+          on:change={async()=>{ idCategoriaFilter = idCategoriaFilter ? Number(idCategoriaFilter) : null; idSubcategoriaFilter = null; await carregarSubcategoriasFiltro(idCategoriaFilter); await carregarProdutos(); }}>
+          <option value={null}>Todas as categorias</option>
+          {#each categorias as c}
+            <option value={c.id}>{c.nome}</option>
+          {/each}
+        </select>
+        <select class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 min-w-[12rem] disabled:opacity-50"
+          bind:value={idSubcategoriaFilter}
+          disabled={!idCategoriaFilter}
+          on:change={async()=>{ idSubcategoriaFilter = idSubcategoriaFilter ? Number(idSubcategoriaFilter) : null; await carregarProdutos(); }}>
+          <option value={null}>Todas as subcategorias</option>
+          {#each filterSubcategorias as s}
+            <option value={s.id}>{s.nome}</option>
+          {/each}
+        </select>
+        <input placeholder="Buscar produtos..." class="w-full sm:w-80 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2" bind:value={buscaFilter} on:input={async()=>{ await carregarProdutos(); }} />
+        <button class="px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" on:click={carregarProdutos}>Aplicar</button>
+        {#if idCategoriaFilter || idSubcategoriaFilter || (buscaFilter && buscaFilter.trim() !== '')}
+          <button class="px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" on:click={async()=>{ idCategoriaFilter=null; idSubcategoriaFilter=null; buscaFilter=''; filterSubcategorias=[]; await carregarProdutos(); }}>Limpar filtros</button>
+        {/if}
+      </div>
+    </div>
+
     <form on:submit={criarProduto} class="grid md:grid-cols-2 gap-4 mb-6">
       <div>
         <label for="comp-prod-nome" class="block text-sm mb-1">Nome</label>
@@ -104,10 +169,19 @@
       </div>
       <div>
         <label for="comp-prod-categoria" class="block text-sm mb-1">Categoria</label>
-        <select id="comp-prod-categoria" class="input-form" bind:value={form.id_categoria} required>
+        <select id="comp-prod-categoria" class="input-form" bind:value={form.id_categoria} required on:change={async()=>{ form.id_subcategoria=null; await carregarSubcategorias(); }}>
           <option value={null} disabled>Selecione...</option>
           {#each categorias as c}
             <option value={c.id}>{c.nome}</option>
+          {/each}
+        </select>
+      </div>
+      <div>
+        <label for="comp-prod-subcat" class="block text-sm mb-1">Subcategoria (opcional)</label>
+        <select id="comp-prod-subcat" class="input-form" bind:value={form.id_subcategoria}>
+          <option value={null}>—</option>
+          {#each subcategorias as s}
+            <option value={s.id}>{s.nome}</option>
           {/each}
         </select>
       </div>
@@ -151,9 +225,23 @@
                 </div>
                 <div>
                   <label for={`comp-edit-prod-categoria-${p.id}`} class="block text-sm mb-1">Categoria</label>
-                  <select id={`comp-edit-prod-categoria-${p.id}`} class="input-form" bind:value={editForm.id_categoria} required>
+                  <select id={`comp-edit-prod-categoria-${p.id}`} class="input-form" bind:value={editForm.id_categoria} required on:change={async()=>{
+                    // Recarrega subcategorias quando categoria muda no modo edição
+                    let q = supabase.from('subcategorias').select('id, id_categoria, nome, ordem').order('ordem', { ascending: true });
+                    if (editForm.id_categoria) q = q.eq('id_categoria', editForm.id_categoria);
+                    const { data } = await q; subcategorias = data || []; editForm.id_subcategoria = null;
+                  }}>
                     {#each categorias as c}
                       <option value={c.id}>{c.nome}</option>
+                    {/each}
+                  </select>
+                </div>
+                <div>
+                  <label for={`comp-edit-prod-subcat-${p.id}`} class="block text-sm mb-1">Subcategoria (opcional)</label>
+                  <select id={`comp-edit-prod-subcat-${p.id}`} class="input-form" bind:value={editForm.id_subcategoria}>
+                    <option value={null}>—</option>
+                    {#each subcategorias as s}
+                      <option value={s.id}>{s.nome}</option>
                     {/each}
                   </select>
                 </div>

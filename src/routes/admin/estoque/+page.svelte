@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
+  import { waitAuthReady } from '$lib/authStore';
 
   let loading = true;
   let erro = '';
@@ -10,21 +11,62 @@
   let toast = '';
   let toastTimer = null;
 
+  // Filtros
+  let categorias = [];
+  let subcategorias = [];
+  let idCategoria = null;
+  let idSubcategoria = null;
+
+  async function carregarCategorias() {
+    try {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('id, nome, ordem')
+        .order('ordem', { ascending: true });
+      if (error) throw error;
+      categorias = data || [];
+    } catch (e) {
+      // Não bloqueia a página; apenas exibe erro geral
+      erro = e?.message || String(e);
+    }
+  }
+
+  async function carregarSubcategorias() {
+    try {
+      if (!idCategoria) { subcategorias = []; return; }
+      const { data, error } = await supabase
+        .from('subcategorias')
+        .select('id, id_categoria, nome, ordem')
+        .eq('id_categoria', idCategoria)
+        .order('ordem', { ascending: true });
+      if (error) throw error;
+      subcategorias = data || [];
+    } catch (e) {
+      erro = e?.message || String(e);
+    }
+  }
+
   async function carregar() {
     erro = '';
     loading = true;
     try {
+      // Aguarda auth pronta para evitar RLS intermitente
+      await waitAuthReady();
       // Requer sessão
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { window.location.href = '/login'; return; }
       userId = session.user.id;
       // Busca apenas produtos com controle de estoque ativo
-      const { data, error } = await supabase
+      let q = supabase
         .from('produtos')
-        .select('id, nome, estoque_atual, controlar_estoque')
+        .select('id, nome, estoque_atual, controlar_estoque, id_categoria, id_subcategoria')
         .eq('id_usuario', userId)
-        .eq('controlar_estoque', true)
-        .order('nome', { ascending: true });
+        .eq('controlar_estoque', true);
+      const cat = idCategoria ? Number(idCategoria) : null;
+      const sub = idSubcategoria ? Number(idSubcategoria) : null;
+      if (cat) q = q.eq('id_categoria', cat);
+      if (sub) q = q.eq('id_subcategoria', sub);
+      const { data, error } = await q.order('nome', { ascending: true });
       if (error) throw error;
       produtos = (data || []).map(p => ({ ...p, _tmpEstoque: p.estoque_atual, _saving: false, _msg: '' }));
     } catch (e) {
@@ -34,7 +76,12 @@
     }
   }
 
-  onMount(carregar);
+  onMount(async () => {
+    await waitAuthReady();
+    await carregarCategorias();
+    await carregarSubcategorias();
+    await carregar();
+  });
 
   function filtrados() {
     const q = (busca || '').toLowerCase().trim();
@@ -78,15 +125,40 @@
   </div>
 {/if}
 
-<div class="flex items-center gap-2 mb-4">
-  <input
-    placeholder="Buscar produto..."
-    class="w-full sm:w-80 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2"
-    bind:value={busca}
-  />
-  <button class="px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" on:click={carregar}>
-    Atualizar
-  </button>
+<div class="flex flex-col gap-2 mb-4">
+  <div class="flex flex-wrap items-center gap-2">
+    <select class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 min-w-[12rem]"
+      bind:value={idCategoria}
+      on:change={async () => { idCategoria = idCategoria ? Number(idCategoria) : null; idSubcategoria = null; await carregarSubcategorias(); await carregar(); }}>
+      <option value={null}>Todas as categorias</option>
+      {#each categorias as c}
+        <option value={c.id}>{c.nome}</option>
+      {/each}
+    </select>
+    <select class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 min-w-[12rem] disabled:opacity-50"
+      bind:value={idSubcategoria}
+      disabled={!idCategoria}
+      on:change={async () => { idSubcategoria = idSubcategoria ? Number(idSubcategoria) : null; await carregar(); }}>
+      <option value={null}>Todas as subcategorias</option>
+      {#each subcategorias as s}
+        <option value={s.id}>{s.nome}</option>
+      {/each}
+    </select>
+    <input
+      placeholder="Buscar produto..."
+      class="w-full sm:w-80 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2"
+      bind:value={busca}
+    />
+    <button class="px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" on:click={carregar}>
+      Atualizar
+    </button>
+    {#if idCategoria || idSubcategoria || (busca && busca.trim() !== '')}
+      <button class="px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+        on:click={async ()=>{ idCategoria=null; idSubcategoria=null; busca=''; subcategorias=[]; await carregar(); }}>
+        Limpar filtros
+      </button>
+    {/if}
+  </div>
 </div>
 
 {#if loading}

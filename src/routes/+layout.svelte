@@ -182,6 +182,7 @@
                 <a href="/admin" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Dashboard</a>
                 <a href="/admin/pessoas" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Pessoas</a>
                 <a href="/admin/fichario" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Fichário (Fiado)</a>
+                <a href="/admin/produtos" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Gerenciar produtos</a>
                 <a href="/admin/estoque" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Estoque</a>
                 <a href="/admin/caixa" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Fechar Caixa</a>
                 <div class="my-1 border-t border-slate-200 dark:border-slate-700"></div>
@@ -219,8 +220,10 @@
           <a href="/admin" class="{navLinkBase} { $page.url.pathname === '/admin' ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Dashboard</a>
           <a href="/admin/pessoas" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/pessoas') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Pessoas</a>
           <a href="/admin/fichario" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/fichario') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Fichário (Fiado)</a>
+          <a href="/admin/produtos" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/produtos') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Gerenciar produtos</a>
           <a href="/admin/estoque" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/estoque') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Estoque</a>
           <a href="/admin/caixa" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/caixa') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Fechar Caixa</a>
+          
           <a href="/relatorios" class="{navLinkBase} { $page.url.pathname.startsWith('/relatorios') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Relatórios</a>
           <a href="/perfil" class="{navLinkBase} { $page.url.pathname.startsWith('/perfil') ? navLinkActive : navLinkInactive } !px-3 !py-1.5" on:click={() => showMobileMenu=false}>Perfil</a>
         {:else}

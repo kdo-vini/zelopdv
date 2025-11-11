@@ -19,9 +19,17 @@
 	function edit(p){ form = { id:p.id, nome:p.nome, tipo:p.tipo, contato:p.contato||'' }; }
 	function clear(){ form = { id:null, nome:'', tipo:'cliente', contato:'' }; }
 
+	function sanitizeContato(v){
+		// Permite apenas dígitos e limita a 11
+		return (v||'').replace(/\D/g,'').slice(0,11);
+	}
+
 	async function save(){
 		errorMsg='';
 		if(!form.nome.trim()){ errorMsg='Informe o nome.'; return; }
+		// normaliza contato: apenas dígitos e máximo 11
+		form.contato = sanitizeContato(form.contato);
+		if(form.contato && form.contato.length>11){ errorMsg='Contato deve ter no máximo 11 dígitos.'; return; }
 		if(form.id){
 			const { error } = await supabase.from('pessoas').update({ nome:form.nome, tipo:form.tipo, contato:form.contato }).eq('id', form.id);
 			if(error){ errorMsg=error.message; return; }
@@ -64,7 +72,7 @@
 					<option value="funcionario">Funcionário</option>
 				</select>
 			</label>
-			<label>Contato<input bind:value={form.contato} placeholder="(xx) xxxxx-xxxx" /></label>
+				<label>Contato<input bind:value={form.contato} placeholder="(xx) xxxxx-xxxx" inputmode="numeric" pattern="\\d*" maxlength="11" on:input={(e)=> form.contato = sanitizeContato(e.target.value)} /></label>
 			<div class="actions">
 				<button on:click={save}>{form.id ? 'Salvar' : 'Cadastrar'}</button>
 				{#if form.id}<button class="ghost" on:click={clear}>Cancelar</button>{/if}

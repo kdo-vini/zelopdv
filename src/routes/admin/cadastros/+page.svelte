@@ -1,5 +1,6 @@
 <script>
   import CategoriasManager from '$lib/components/CategoriasManager.svelte';
+  import SubcategoriasManager from '$lib/components/SubcategoriasManager.svelte';
   import ProdutosManager from '$lib/components/ProdutosManager.svelte';
 </script>
 
@@ -8,5 +9,8 @@
 
 <div class="grid lg:grid-cols-2 gap-6">
   <CategoriasManager />
-  <ProdutosManager />
+  <SubcategoriasManager />
+  <div class="lg:col-span-2">
+    <ProdutosManager />
+  </div>
 </div>
