@@ -6,6 +6,7 @@
 	let pessoas = [];
 	let form = { id:null, nome:'', tipo:'cliente', contato:'' };
 	let errorMsg = '';
+	let uid = null;
 
 	async function load() {
 		loading = true; errorMsg='';
@@ -25,7 +26,13 @@
 			const { error } = await supabase.from('pessoas').update({ nome:form.nome, tipo:form.tipo, contato:form.contato }).eq('id', form.id);
 			if(error){ errorMsg=error.message; return; }
 		} else {
-			const { error } = await supabase.from('pessoas').insert({ nome:form.nome, tipo:form.tipo, contato:form.contato });
+			if(!uid){
+				const { data: userData } = await supabase.auth.getUser();
+				uid = userData?.user?.id || null;
+			}
+			const payload = { nome:form.nome, tipo:form.tipo, contato:form.contato };
+			if (uid) payload.id_usuario = uid; // satisfaz RLS
+			const { error } = await supabase.from('pessoas').insert(payload);
 			if(error){ errorMsg=error.message; return; }
 		}
 		clear(); load();
@@ -38,7 +45,11 @@
 		load();
 	}
 
-	onMount(load);
+	onMount(async () => {
+	  const { data: userData } = await supabase.auth.getUser();
+	  uid = userData?.user?.id || null;
+	  await load();
+	});
 </script>
 
 <div class="wrap">
