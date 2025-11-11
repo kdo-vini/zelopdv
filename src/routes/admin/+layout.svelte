@@ -12,15 +12,7 @@
 </script>
 
 {#if ready}
-  <div class="grid gap-4">
-    <nav class="flex gap-3 text-sm">
-      <a href="/admin" class="hover:underline">Dashboard</a>
-      <a href="/admin/cadastros" class="hover:underline">Cadastros</a>
-      <a href="/admin/estoque" class="hover:underline">Estoque</a>
-      <a href="/admin/caixa" class="hover:underline">Fechar Caixa</a>
-    </nav>
-    <slot />
-  </div>
+  <slot />
 {:else}
   <p>Verificando autenticação...</p>
 {/if}

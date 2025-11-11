@@ -24,6 +24,8 @@
 	onMount(async () => {
 		const ok = await ensureActiveSubscription({ requireProfile: true });
 		if (!ok) return;
+		const { waitAuthReady } = await import('$lib/authStore');
+		await waitAuthReady();
 		try {
 			const { data: userData } = await supabase.auth.getUser();
 			const uid = userData?.user?.id;

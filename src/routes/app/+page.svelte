@@ -9,6 +9,7 @@
   // Ajuste: Removido o ".js" da importação para deixar o bundler resolver.
   import { supabase } from '$lib/supabaseClient';
   import { onMount } from 'svelte';
+  import { waitAuthReady } from '$lib/authStore';
   import { buildReceiptHTML } from '$lib/receipt';
   import { ensureActiveSubscription } from '$lib/guards';
 
@@ -37,12 +38,22 @@
 
   // Módulo 1.4 - Pagamento (Ainda não implementado, só a chamada)
   let modalPagamentoAberto = false;
-  let formaPagamento = null; // 'dinheiro' | 'cartao_debito' | 'cartao_credito' | 'pix' (suporta 'cartao' legado)
+  let formaPagamento = null; // 'dinheiro' | 'cartao_debito' | 'cartao_credito' | 'pix' | 'fiado'
   let valorRecebido = 0;
   let salvandoVenda = false;
   let erroPagamento = '';
   // Opção: imprimir recibo ao confirmar
   let imprimirRecibo = false;
+  // Fiado
+  let pessoasFiado = [];
+  let pessoaFiadoId = '';
+  async function carregarPessoasFiado(){
+    if (pessoasFiado.length) return;
+    try {
+      const { data, error } = await supabase.from('pessoas').select('id, nome').order('nome');
+      if (!error) pessoasFiado = data || [];
+    } catch {}
+  }
 
   // Módulo 1.5 - Movimentação de Caixa (Entrada/Saída)
   let modalMovCaixaAberto = false;
@@ -65,6 +76,7 @@
 
   // Efeito: quando o app monta, verifica sessão, caixa e carrega dados do PDV
   onMount(async () => {
+    await waitAuthReady();
     // Bloqueio: exige assinatura ativa antes de carregar o PDV
     const ok = await ensureActiveSubscription({ requireProfile: true });
     if (!ok) return;
@@ -529,6 +541,10 @@
         erroPagamento = 'Valor recebido insuficiente para cobrir o total.';
         return;
       }
+      if (formaPagamento === 'fiado' && !pessoaFiadoId) {
+        erroPagamento = 'Selecione a pessoa para lançar o fiado.';
+        return;
+      }
       if (comanda.length === 0) {
         erroPagamento = 'A comanda está vazia.';
         return;
@@ -664,6 +680,16 @@ window.addEventListener('message', function(e){
         throw new Error(itensError.message);
       }
 
+      // Lançar débito no fiado
+      if (formaPagamento === 'fiado' && pessoaFiadoId) {
+        try {
+          const { error: fiadoErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: pessoaFiadoId, p_valor: Number(totalComanda) });
+          if (fiadoErr) console.warn('fiado_lancar_debito erro:', fiadoErr.message);
+        } catch (e) {
+          console.warn('fiado_lancar_debito exceção:', e?.message || e);
+        }
+      }
+
       // Baixa de estoque simples (MVP): decrementa estoque_atual para itens com controlar_estoque = true
       try {
         const idsProdutos = [...new Set(comanda.filter(i => i.id_produto).map(i => i.id_produto))];
@@ -703,7 +729,7 @@ window.addEventListener('message', function(e){
       }
 
       // Captura dados do recibo antes de limpar estado, para evitar nulos na impressão
-      const fp = formaPagamento;
+  const fp = formaPagamento;
       const vr = valorRecebido;
       const trocoVal = fp === 'dinheiro' ? Number(troco) : 0;
       const totalVal = Number(totalComanda);
@@ -1239,6 +1265,7 @@ window.addEventListener('message', function(e){
               <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='cartao_debito'} on:click={() => formaPagamento='cartao_debito'}>Cartão (Débito)</button>
               <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='cartao_credito'} on:click={() => formaPagamento='cartao_credito'}>Cartão (Crédito)</button>
               <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='pix'} on:click={() => formaPagamento='pix'}>Pix</button>
+              <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='fiado'} on:click={async()=>{ formaPagamento='fiado'; await carregarPessoasFiado(); }}>Fiado</button>
             </div>
           </fieldset>
         </div>
@@ -1256,6 +1283,21 @@ window.addEventListener('message', function(e){
             <div>
               <div class="text-sm text-gray-600 dark:text-gray-300 mb-1">Troco</div>
               <div class="text-xl font-semibold dark:text-gray-100">R$ {Number(troco).toFixed(2)}</div>
+            </div>
+          </div>
+        {/if}
+
+        {#if formaPagamento === 'fiado'}
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <label for="select-pessoa-fiado" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Pessoa (Fiado)</label>
+              <select id="select-pessoa-fiado" class="input-form" bind:value={pessoaFiadoId}>
+                <option value="">-- selecione --</option>
+                {#each pessoasFiado as p}
+                  <option value={p.id}>{p.nome}</option>
+                {/each}
+              </select>
+              <p class="text-xs text-gray-500 mt-1">O valor será lançado no saldo de fiado desta pessoa.</p>
             </div>
           </div>
         {/if}

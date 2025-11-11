@@ -4,10 +4,20 @@
   import { supabase, hasSupabaseConfig } from '$lib/supabaseClient';
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { page } from '$app/stores';
-  export let params; // silence dev warning when SvelteKit passes params
+  // export let params; // (removido: não utilizado explicitamente)
 
   let session = null;
   let showMobileMenu = false;
+  let showAdminMenu = false;
+  let adminCloseTimer;
+  const closeDelay = 240; // ms
+
+  function openAdminMenu() { showAdminMenu = true; }
+  function scheduleCloseAdminMenu() {
+    cancelCloseAdminMenu();
+    adminCloseTimer = setTimeout(() => (showAdminMenu = false), closeDelay);
+  }
+  function cancelCloseAdminMenu() { if (adminCloseTimer) clearTimeout(adminCloseTimer); }
 
   onMount(async () => {
     if (!supabase) return;
@@ -117,18 +127,14 @@
     console.timeEnd('[AuthDebug] getSession (layout)');
     if (error) console.warn('[AuthDebug] getSession error:', error?.message || error);
     console.log('[AuthDebug] getSession', { hasSession: Boolean(data?.session), userId: data?.session?.user?.id || null });
-    if (data?.session) session = data.session;
-    authReady = true;
-    maybeNavigate();
+    if (data?.session) {
+      session = data.session;
+      authReady = true; // Only mark ready when we actually have a session here
+      maybeNavigate();
+    }
 
-    // 3) Fallback 1s
-    setTimeout(() => {
-      if (!navigated && !authReady) {
-        console.log('[AuthDebug] fallback: auth not ready after 1s, proceeding with current session state');
-        authReady = true;
-        maybeNavigate();
-      }
-    }, 1000);
+    // Importante: não forçar fallback de authReady sem sessão para evitar redirecionar
+    // prematuramente enquanto o onAuthStateChange não disparou.
 
     try {
       const keys = Object.keys(localStorage).filter((k) => k.includes('sb-') || k.toLowerCase().includes('supabase'));
@@ -163,12 +169,26 @@
           <a href="/app" class="{navLinkBase} {$page.url.pathname.startsWith('/app') ? navLinkActive : navLinkInactive}">
             Frente de Caixa
           </a>
-          <a href="/admin" class="{navLinkBase} {$page.url.pathname.startsWith('/admin') ? navLinkActive : navLinkInactive}">
-            Admin
-          </a>
-          <a href="/relatorios" class="{navLinkBase} {$page.url.pathname.startsWith('/relatorios') ? navLinkActive : navLinkInactive}">
-            Relatórios
-          </a>
+          <!-- Admin dropdown with hover delay -->
+          <div class="relative" role="menubar" tabindex="0" aria-label="Admin" on:mouseenter={openAdminMenu} on:mouseleave={scheduleCloseAdminMenu}>
+            <button class="{navLinkBase} {$page.url.pathname.startsWith('/admin') || $page.url.pathname.startsWith('/relatorios') ? navLinkActive : navLinkInactive} flex items-center gap-1"
+              aria-haspopup="true" aria-expanded={showAdminMenu} on:click={() => showAdminMenu = !showAdminMenu}>
+              Admin
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+            </button>
+            {#if showAdminMenu}
+        <div role="menu" tabindex="-1" aria-label="Admin opções" class="absolute right-0 mt-2 w-56 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-2 z-50"
+                   on:mouseenter={cancelCloseAdminMenu} on:mouseleave={scheduleCloseAdminMenu}>
+                <a href="/admin" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Dashboard</a>
+                <a href="/admin/pessoas" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Pessoas</a>
+                <a href="/admin/fichario" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Fichário (Fiado)</a>
+                <a href="/admin/estoque" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Estoque</a>
+                <a href="/admin/caixa" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Fechar Caixa</a>
+                <div class="my-1 border-t border-slate-200 dark:border-slate-700"></div>
+                <a href="/relatorios" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Relatórios</a>
+              </div>
+            {/if}
+          </div>
           <a href="/perfil" class="ml-4 {navLinkBase} {$page.url.pathname.startsWith('/perfil') ? navLinkActive : navLinkInactive} !px-3 !py-1.5">
             Perfil
           </a>
@@ -195,7 +215,12 @@
       <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-2 text-sm">
         {#if session}
           <a href="/app" class="{navLinkBase} { $page.url.pathname.startsWith('/app') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Frente de Caixa</a>
-          <a href="/admin" class="{navLinkBase} { $page.url.pathname.startsWith('/admin') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Admin</a>
+          <div class="mt-1 text-xs uppercase text-slate-500">Admin</div>
+          <a href="/admin" class="{navLinkBase} { $page.url.pathname === '/admin' ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Dashboard</a>
+          <a href="/admin/pessoas" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/pessoas') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Pessoas</a>
+          <a href="/admin/fichario" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/fichario') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Fichário (Fiado)</a>
+          <a href="/admin/estoque" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/estoque') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Estoque</a>
+          <a href="/admin/caixa" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/caixa') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Fechar Caixa</a>
           <a href="/relatorios" class="{navLinkBase} { $page.url.pathname.startsWith('/relatorios') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Relatórios</a>
           <a href="/perfil" class="{navLinkBase} { $page.url.pathname.startsWith('/perfil') ? navLinkActive : navLinkInactive } !px-3 !py-1.5" on:click={() => showMobileMenu=false}>Perfil</a>
         {:else}
@@ -218,25 +243,21 @@
 
   <!-- Floating WhatsApp button (global) -->
   <a
-    href="https://wa.me/5514991537503?text=Oi%21%20Vim%20pelo%20sistema%20Zelo%20PDV%20e%20gostaria%20de%20tirar%20uma%20d%C3%BAvida%20ou%20relatar%20um%20problema."
+    href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)."
     target="_blank"
     rel="noopener"
     aria-label="Falar no WhatsApp com Téchne IA"
-    title="Dúvidas ou problemas com o sistema? Entre em contato conosco!"
     class="group fixed print:hidden bottom-4 right-4 left-auto md:bottom-6 md:right-6 z-50"
   >
     <span class="sr-only">WhatsApp</span>
-    <div class="relative">
-      <!-- Tooltip -->
-      <div
-        role="tooltip"
-        class="pointer-events-none absolute right-full mr-3 bottom-1/2 translate-y-1/2 whitespace-nowrap px-3 py-2 rounded-md bg-slate-900 text-white text-xs shadow-lg opacity-0 scale-95 transition will-change-transform group-hover:opacity-100 group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100"
-      >
-        Dúvidas ou problemas com o sistema? Fale conosco!
-      </div>
-      <div class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#25D366] shadow-lg shadow-emerald-300/30 ring-2 ring-white/70 dark:ring-slate-900/70 flex items-center justify-center hover:scale-[1.03] active:scale-[.98] transition-transform">
-        <img src="https://cdn.simpleicons.org/whatsapp/FFFFFF" alt="WhatsApp" class="w-7 h-7 md:w-8 md:h-8 select-none" loading="lazy" />
-      </div>
+    <div
+      role="tooltip"
+      class="pointer-events-none absolute right-full mr-3 bottom-1/2 translate-y-1/2 whitespace-nowrap px-3 py-2 rounded-md bg-slate-900 text-white text-xs shadow-lg opacity-0 scale-95 transition will-change-transform group-hover:opacity-100 group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100"
+    >
+      Precisa de suporte? Dúvidas ou problemas — fale conosco!
+    </div>
+    <div class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#25D366] shadow-lg shadow-emerald-300/30 ring-2 ring-white/70 dark:ring-slate-900/70 flex items-center justify-center hover:scale-[1.03] active:scale-[.98] transition-transform">
+      <img src="https://cdn.simpleicons.org/whatsapp/FFFFFF" alt="WhatsApp" class="w-7 h-7 md:w-8 md:h-8 select-none" loading="lazy" />
     </div>
   </a>
 </div>

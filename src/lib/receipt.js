@@ -18,6 +18,7 @@ function formaLabel(f) {
   if (f === 'cartao_debito') return 'Cartão (débito)';
   if (f === 'cartao_credito') return 'Cartão (crédito)';
   if (f === 'pix') return 'Pix';
+  if (f === 'fiado') return 'Fiado';
   return String(f).charAt(0).toUpperCase() + String(f).slice(1);
 }
 
@@ -115,6 +116,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
       ${recebido != null ? `<div class="linha"><span>Recebido</span><span>${fmt(recebido)}</span></div>` : ''}
       ${trocoVal > 0 ? `<div class="linha"><span>Troco</span><span>${fmt(trocoVal)}</span></div>` : ''}
       <div style="margin-top:6px" class="linha"><span>Pagamento</span><strong>${escapeHtml(formaLabel(venda.formaPagamento))}</strong></div>
+      ${venda.formaPagamento === 'fiado' ? `<div class="linha" style="font-size:11px;color:#555;display:block;margin-top:4px">Lançado em saldo de fiado (não recebido agora).</div>` : ''}
     </div>
 
     <div class="rodape">
