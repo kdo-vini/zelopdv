@@ -77,7 +77,7 @@
 			// Vendas do caixa
 			const { data: vs, error: vErr } = await supabase
 				.from('vendas')
-				.select('id, valor_total, forma_pagamento, valor_recebido, valor_troco')
+				.select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, created_at')
 				.eq('id_caixa', idCaixa)
 				.order('id', { ascending: true });
 			if (vErr) throw vErr;
@@ -357,6 +357,7 @@
 							<thead>
 								<tr class="text-left text-slate-500">
 									<th class="py-2 pr-4">#</th>
+									<th class="py-2 pr-4">Horário</th>
 									<th class="py-2 pr-4">Forma</th>
 									<th class="py-2">Total</th>
 								</tr>
@@ -365,6 +366,7 @@
 								{#each vendas as v}
 									<tr>
 										<td class="py-2 pr-4">{v.id}</td>
+										<td class="py-2 pr-4">{v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
 										<td class="py-2 pr-4">{v.forma_pagamento}</td>
 										<td class="py-2">{fmt(v.valor_total)}</td>
 									</tr>

@@ -6,6 +6,7 @@
   let errorMessage = '';
   let caixa = null; // { id, data_abertura, valor_inicial }
   let vendas = []; // vendas do caixa
+  let movs = []; // movimentações de caixa (sangria/suprimento)
 
   let valorEmGaveta = 0;
   let fechando = false;
@@ -43,6 +44,14 @@
         .order('id', { ascending: true });
       if (vErr) throw vErr;
       vendas = vs || [];
+
+      // Movimentações do caixa (sangria/suprimento)
+      const { data: ms, error: mErr } = await supabase
+        .from('caixa_movimentacoes')
+        .select('tipo, valor')
+        .eq('id_caixa', caixa.id);
+      if (mErr) throw mErr;
+      movs = ms || [];
     } catch (err) {
       errorMessage = err?.message || 'Erro ao carregar caixa.';
     } finally {
@@ -61,10 +70,17 @@
   $: totalCartao = Number(totais.cartao_debito + totais.cartao_credito + totais.cartao_legacy);
   $: totalGeral = Number(totais.dinheiro + totalCartao + totais.pix);
 
-  // Caixa esperado na gaveta: valor_inicial + somatório (dinheiro recebido - troco)
-  $: esperadoEmGaveta = caixa ? Number(caixa.valor_inicial || 0) + (vendas || [])
+  // Dinheiro líquido das vendas: recebido - troco
+  $: totalDinheiroLiquido = (vendas || [])
     .filter(v => v.forma_pagamento === 'dinheiro')
-    .reduce((a, v) => a + Number(v.valor_recebido || 0) - Number(v.valor_troco || 0), 0) : 0;
+    .reduce((a, v) => a + Number(v.valor_recebido || 0) - Number(v.valor_troco || 0), 0);
+
+  // Totais de movimentações
+  $: totalSangria = (movs || []).filter(m => m.tipo === 'sangria').reduce((a, m) => a + Number(m.valor || 0), 0);
+  $: totalSuprimento = (movs || []).filter(m => m.tipo === 'suprimento').reduce((a, m) => a + Number(m.valor || 0), 0);
+
+  // Caixa esperado na gaveta: valor_inicial + dinheiro líquido - sangrias + suprimentos
+  $: esperadoEmGaveta = caixa ? Number(caixa.valor_inicial || 0) + Number(totalDinheiroLiquido || 0) - Number(totalSangria || 0) + Number(totalSuprimento || 0) : 0;
   $: diferenca = Number(valorEmGaveta || 0) - Number(esperadoEmGaveta || 0);
 
   /**
@@ -165,6 +181,7 @@
         <div>
           <div class="text-sm text-slate-500">Esperado na gaveta</div>
           <div class="text-lg font-semibold">R$ {Number(esperadoEmGaveta).toFixed(2)}</div>
+          <div class="text-[11px] text-slate-500 mt-1">Inclui troco inicial, vendas em dinheiro (recebido − troco), sangrias e suprimentos.</div>
         </div>
         <div>
           <div class="text-sm text-slate-500">Diferença</div>

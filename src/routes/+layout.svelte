@@ -215,6 +215,30 @@
       © {new Date().getFullYear()} Zelo PDV · Desenvolvido por Téchne IA
     </div>
   </footer>
+
+  <!-- Floating WhatsApp button (global) -->
+  <a
+    href="https://wa.me/5514991537503?text=Oi%21%20Vim%20pelo%20sistema%20Zelo%20PDV%20e%20gostaria%20de%20tirar%20uma%20d%C3%BAvida%20ou%20relatar%20um%20problema."
+    target="_blank"
+    rel="noopener"
+    aria-label="Falar no WhatsApp com Téchne IA"
+    title="Dúvidas ou problemas com o sistema? Entre em contato conosco!"
+    class="group fixed print:hidden bottom-4 right-4 left-auto md:bottom-6 md:right-6 z-50"
+  >
+    <span class="sr-only">WhatsApp</span>
+    <div class="relative">
+      <!-- Tooltip -->
+      <div
+        role="tooltip"
+        class="pointer-events-none absolute right-full mr-3 bottom-1/2 translate-y-1/2 whitespace-nowrap px-3 py-2 rounded-md bg-slate-900 text-white text-xs shadow-lg opacity-0 scale-95 transition will-change-transform group-hover:opacity-100 group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100"
+      >
+        Dúvidas ou problemas com o sistema? Fale conosco!
+      </div>
+      <div class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#25D366] shadow-lg shadow-emerald-300/30 ring-2 ring-white/70 dark:ring-slate-900/70 flex items-center justify-center hover:scale-[1.03] active:scale-[.98] transition-transform">
+        <img src="https://cdn.simpleicons.org/whatsapp/FFFFFF" alt="WhatsApp" class="w-7 h-7 md:w-8 md:h-8 select-none" loading="lazy" />
+      </div>
+    </div>
+  </a>
 </div>
 
 
