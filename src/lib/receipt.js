@@ -19,6 +19,7 @@ function formaLabel(f) {
   if (f === 'cartao_credito') return 'Cartão (crédito)';
   if (f === 'pix') return 'Pix';
   if (f === 'fiado') return 'Fiado';
+  if (f === 'multiplo' || f === 'múltiplo') return 'Vários';
   return String(f).charAt(0).toUpperCase() + String(f).slice(1);
 }
 
@@ -49,6 +50,11 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
   const totalCalc = venda.total != null ? Number(venda.total) : Number(subtotalCalc);
   const recebido = venda.valorRecebido != null ? Number(venda.valorRecebido) : null;
   const trocoVal = venda.troco != null ? Number(venda.troco) : (recebido != null ? (recebido - totalCalc) : 0);
+  const pagamentos = Array.isArray(venda.pagamentos) ? venda.pagamentos.map(p => ({
+    forma: p.forma || p.forma_pagamento,
+    valor: Number(p.valor || 0),
+    pessoaNome: p.pessoaNome || p.pessoa_nome || null
+  })) : [];
 
   let metaLinhas = [];
   if (endereco) metaLinhas.push(escapeHtml(endereco));
@@ -77,9 +83,12 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
     table.items thead th { font-size:11px; color:#555; text-align:left; padding-bottom:6px; border-bottom:1px solid #eee; }
     .qtd { width:28px; }
     .subtotal { width:90px; text-align:right; }
-    .totais { margin-top:8px; border-top:1px dashed #ddd; padding-top:6px; font-size:13px; }
+  .totais { margin-top:8px; border-top:1px dashed #ddd; padding-top:6px; font-size:13px; }
     .totais .linha { display:flex; justify-content:space-between; margin:4px 0; }
     .totais .total { font-weight:700; font-size:15px; }
+  .pagamentos { margin-top:6px; border-top:1px dashed #eee; padding-top:6px; }
+  .pagamentos .row { display:flex; justify-content:space-between; margin:2px 0; font-size:12px; }
+  .pagamentos .row .meta { color:#666; font-size:11px; }
     .rodape { text-align:center; font-size:11px; color:#666; margin-top:10px; line-height:1.4; }
     @media print { body { margin:0; } .cupom { padding:0; } }
   </style>
@@ -113,11 +122,34 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
     <div class="totais">
       <div class="linha"><span>Subtotal</span><span>${fmt(subtotalCalc)}</span></div>
       <div class="linha total"><span>Total</span><strong>${fmt(totalCalc)}</strong></div>
-      ${recebido != null ? `<div class="linha"><span>Recebido</span><span>${fmt(recebido)}</span></div>` : ''}
+      ${venda.formaPagamento !== 'multiplo' ? (recebido != null ? `<div class="linha"><span>Recebido</span><span>${fmt(recebido)}</span></div>` : '') : ''}
       ${trocoVal > 0 ? `<div class="linha"><span>Troco</span><span>${fmt(trocoVal)}</span></div>` : ''}
       <div style="margin-top:6px" class="linha"><span>Pagamento</span><strong>${escapeHtml(formaLabel(venda.formaPagamento))}</strong></div>
       ${venda.formaPagamento === 'fiado' ? `<div class="linha" style="font-size:11px;color:#555;display:block;margin-top:4px">Lançado em saldo de fiado (não recebido agora).</div>` : ''}
+      ${venda.formaPagamento === 'multiplo' && pagamentos.length ? `
+        <div class="pagamentos" aria-label="Pagamentos">
+          ${pagamentos.map(p => {
+            const label = escapeHtml(formaLabel(p.forma));
+            const meta = p.forma === 'fiado' && p.pessoaNome ? ` <span class="meta">• ${escapeHtml(p.pessoaNome)}</span>` : '';
+            return `<div class="row"><span>${label}${meta}</span><span>${fmt(p.valor)}</span></div>`;
+          }).join('')}
+        </div>
+      ` : ''}
     </div>
+
+    ${venda.formaPagamento === 'multiplo' && pagamentos.length ? (() => {
+      // Rodapé-resumo: Recebido via: Pix X · Cartão Y · Dinheiro Z (troco T)
+      const somar = (forms) => pagamentos.filter(p => forms.includes(p.forma)).reduce((s, p) => s + Number(p.valor||0), 0);
+      const pixT = somar(['pix']);
+      const cartaoT = somar(['cartao_debito','cartao_credito','cartao']);
+      const dinheiroT = somar(['dinheiro']);
+      const partes = [];
+      if (pixT > 0) partes.push(`Pix ${fmt(pixT)}`);
+      if (cartaoT > 0) partes.push(`Cartão ${fmt(cartaoT)}`);
+      if (dinheiroT > 0) partes.push(`Dinheiro ${fmt(dinheiroT)}`);
+  const trocoStr = trocoVal > 0 ? ` (troco ${fmt(trocoVal)})` : '';
+      return `<div class="rodape" style="margin-top:6px">Recebido via: ${partes.join(' · ')}${trocoStr}</div>`;
+    })() : ''}
 
     <div class="rodape">
       Obrigado pela preferência!<br/>

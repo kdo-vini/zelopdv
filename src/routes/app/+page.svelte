@@ -8,7 +8,7 @@
   // A S V E L T E K I T
   // Ajuste: Removido o ".js" da importação para deixar o bundler resolver.
   import { supabase } from '$lib/supabaseClient';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { waitAuthReady } from '$lib/authStore';
   import { buildReceiptHTML } from '$lib/receipt';
   import { ensureActiveSubscription } from '$lib/guards';
@@ -17,8 +17,25 @@
   let produtos = [];
   let categorias = [];
   let categoriaAtiva = null; // ID da categoria selecionada
+  let subcategorias = [];
+  let subcategoriaAtiva = null; // ID da subcategoria selecionada (ou null para todas)
+  let busca = '';
   let loading = true;
   let errorMessage = '';
+  let gridEl;
+  let buscaInputEl;
+
+  // Atalho: '/' foca a busca quando o modal de pagamento não está aberto e o usuário não está digitando em um campo
+  function onKeyGlobal(e) {
+    try {
+      const tag = (e.target?.tagName || '').toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea' || e.target?.isContentEditable;
+      if (!modalPagamentoAberto && !isTyping && e.key === '/') {
+        e.preventDefault();
+        if (buscaInputEl && typeof buscaInputEl.focus === 'function') buscaInputEl.focus();
+      }
+    } catch {}
+  }
 
   // O "Carrinho de Compras"
   // Cada item terá: { id, nome, preco, quantidade }
@@ -44,6 +61,12 @@
   let erroPagamento = '';
   // Opção: imprimir recibo ao confirmar
   let imprimirRecibo = false;
+  // Múltiplos pagamentos (split)
+  let multiPag = false;
+  let pagamentos = []; // { forma: 'dinheiro'|'pix'|'cartao_debito'|'cartao_credito'|'fiado'|'outro', valor: number, pessoaId?: string }
+  let novoPagForma = 'dinheiro';
+  let novoPagValor = 0;
+  let novoPagPessoaId = '';
   // Fiado
   let pessoasFiado = [];
   let pessoaFiadoId = '';
@@ -72,10 +95,61 @@
   let saldoCaixa = 0; // saldo atual em dinheiro no caixa
   let carregandoSaldo = false;
 
+  // Derivados e helpers de múltiplos pagamentos
+  $: somaPagamentos = pagamentos.reduce((acc, p) => acc + Number(p?.valor || 0), 0);
+  $: restantePagamento = Math.max(0, Number(totalComanda) - Number(somaPagamentos || 0));
+  $: trocoPrevMulti = (() => {
+    if (!multiPag) return 0;
+    const somaOutros = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a, b) => a + Number(b.valor || 0), 0);
+    const cashRec = Number((pagamentos.find(p => p.forma === 'dinheiro')?.valor) || 0);
+    const requeridoDin = Math.max(0, Number(totalComanda) - somaOutros);
+    return Math.max(0, cashRec - requeridoDin);
+  })();
+
+  function addPagamento() {
+    const forma = novoPagForma;
+    const valor = Number(novoPagValor || 0);
+    if (!forma || valor <= 0) return;
+    const total = Number(totalComanda);
+    const somaNaoDinheiroAtual = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a,b)=>a+Number(b.valor||0),0);
+    if (forma !== 'dinheiro') {
+      const novoSomaNC = somaNaoDinheiroAtual + valor;
+      if (novoSomaNC > total) {
+        erroPagamento = 'Pagamentos não-dinheiro não podem exceder o total da comanda.';
+        return;
+      }
+    }
+    if (forma === 'fiado') {
+      // permite apenas 1 linha de fiado
+      if (pagamentos.some(p => p.forma === 'fiado')) {
+        erroPagamento = 'Use apenas uma linha de Fiado.';
+        return;
+      }
+      if (!novoPagPessoaId) {
+        erroPagamento = 'Selecione a pessoa para o Fiado.';
+        return;
+      }
+      pagamentos = [...pagamentos, { forma, valor, pessoaId: novoPagPessoaId }];
+      novoPagPessoaId = '';
+    } else {
+      pagamentos = [...pagamentos, { forma, valor }];
+    }
+    // Sugere próximo valor = restante
+    novoPagValor = Math.max(0, total - pagamentos.reduce((a,b)=>a+Number(b.valor||0),0));
+    erroPagamento = '';
+  }
+
+  function removerPagamento(idx) {
+    pagamentos = pagamentos.filter((_, i) => i !== idx);
+    // Ajusta sugestão do próximo valor
+    novoPagValor = Math.max(0, Number(totalComanda) - pagamentos.reduce((a,b)=>a+Number(b.valor||0),0));
+  }
+
   // --- 3. CARREGAMENTO DE DADOS ---
 
   // Efeito: quando o app monta, verifica sessão, caixa e carrega dados do PDV
   onMount(async () => {
+    window.addEventListener('keydown', onKeyGlobal);
     await waitAuthReady();
     // Bloqueio: exige assinatura ativa antes de carregar o PDV
     const ok = await ensureActiveSubscription({ requireProfile: true });
@@ -97,8 +171,9 @@
     console.log('[AuthDebug] /app getSession result', { hasSession: Boolean(data?.session), userId: data?.session?.user?.id || null });
     if (data?.session?.user) {
       await verificarCaixaAberto(data.session.user.id);
-      await carregarCategorias();
-      await carregarProdutos();
+  await carregarCategorias();
+  await carregarProdutos();
+  await carregarSubcategorias();
       await atualizarSaldoCaixa();
       loading = false;
     } else {
@@ -112,8 +187,9 @@
       console.log('[AuthDebug] /app onAuthStateChange', { hasSession: Boolean(session), userId: session?.user?.id || null });
       if (session?.user) {
         await verificarCaixaAberto(session.user.id);
-        await carregarCategorias();
-        await carregarProdutos();
+  await carregarCategorias();
+  await carregarProdutos();
+  await carregarSubcategorias();
         await atualizarSaldoCaixa();
         loading = false;
       } else {
@@ -122,6 +198,10 @@
       }
     });
     console.groupEnd();
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('keydown', onKeyGlobal);
   });
 
   /**
@@ -163,21 +243,34 @@
       if (!caixaAberto || !idCaixaAberto) { saldoCaixa = 0; return; }
       carregandoSaldo = true;
       const pCaixa = supabase.from('caixas').select('valor_inicial').eq('id', idCaixaAberto).single();
-      const pVendasDin = supabase
+      const pVendasDoCaixa = supabase
         .from('vendas')
-        .select('valor_total')
-        .eq('id_caixa', idCaixaAberto)
-        .eq('forma_pagamento', 'dinheiro');
+        .select('id, forma_pagamento, valor_total, valor_troco')
+        .eq('id_caixa', idCaixaAberto);
       const pMovs = supabase
         .from('caixa_movimentacoes')
         .select('valor, tipo')
         .eq('id_caixa', idCaixaAberto);
 
-      const [{ data: cx, error: e1 }, { data: vendasDin, error: e2 }, { data: movs, error: e3 }] = await Promise.all([pCaixa, pVendasDin, pMovs]);
+      const [{ data: cx, error: e1 }, { data: vendasAll, error: e2 }, { data: movs, error: e3 }] = await Promise.all([pCaixa, pVendasDoCaixa, pMovs]);
       if (e1) throw e1; if (e2) throw e2; if (e3) throw e3;
 
       const valorInicial = Number(cx?.valor_inicial || 0);
-      const totalDinheiro = Array.isArray(vendasDin) ? vendasDin.reduce((acc, v) => acc + Number(v?.valor_total || 0), 0) : 0;
+      const dinheiroLegacy = Array.isArray(vendasAll)
+        ? vendasAll.filter(v => v?.forma_pagamento === 'dinheiro').reduce((acc, v) => acc + (Number(v?.valor_total || 0) - Number(v?.valor_troco || 0)), 0)
+        : 0;
+      let dinheiroMultiplo = 0;
+      const ids = Array.isArray(vendasAll) ? vendasAll.map(v => v.id) : [];
+      if (ids.length) {
+        const { data: pags, error: e4 } = await supabase
+          .from('vendas_pagamentos')
+          .select('id_venda, forma_pagamento, valor')
+          .in('id_venda', ids);
+        if (!e4 && Array.isArray(pags)) {
+          dinheiroMultiplo = pags.filter(p => p?.forma_pagamento === 'dinheiro').reduce((acc, p) => acc + Number(p?.valor || 0), 0);
+        }
+      }
+
       let totalSangria = 0, totalSuprimento = 0;
       if (Array.isArray(movs)) {
         for (const m of movs) {
@@ -186,7 +279,7 @@
           else if (m?.tipo === 'suprimento') totalSuprimento += val;
         }
       }
-      saldoCaixa = valorInicial + totalDinheiro - totalSangria + totalSuprimento;
+      saldoCaixa = valorInicial + dinheiroLegacy + dinheiroMultiplo - totalSangria + totalSuprimento;
     } catch (err) {
       console.warn('Falha ao atualizar saldo do caixa:', err?.message || err);
     } finally {
@@ -210,6 +303,16 @@
     }
   }
 
+  /** Carrega subcategorias ordenadas. */
+  async function carregarSubcategorias() {
+    const { data, error } = await supabase
+      .from('subcategorias')
+      .select('*')
+      .order('ordem', { ascending: true });
+    if (error) console.warn('Erro ao carregar subcategorias:', error.message);
+    else subcategorias = data || [];
+  }
+
   /** Carrega produtos visíveis no PDV, ordenados por nome. */
   async function carregarProdutos() {
     const { data, error } = await supabase
@@ -225,10 +328,42 @@
   
   // --- 4. LÓGICA DA COMANDA (Módulo 1.2) ---
 
-  // Filtra os produtos para mostrar apenas os da categoria ativa
-  $: produtosFiltrados = produtos.filter(
-    (p) => p.id_categoria === categoriaAtiva
-  );
+  // Reset de subcategoria ao trocar de categoria
+  $: if (categoriaAtiva != null) { subcategoriaAtiva = subcategoriaAtiva && subcategorias.some(s => s.id === subcategoriaAtiva && s.id_categoria === categoriaAtiva) ? subcategoriaAtiva : null; }
+
+  // Filtros
+  $: buscaLower = (busca || '').trim().toLowerCase();
+  $: subcatsDaCat = subcategorias.filter((s) => s.id_categoria === categoriaAtiva);
+
+  // Filtra os produtos por categoria, subcategoria (opcional) e busca por nome
+  $: produtosFiltrados = produtos.filter((p) => {
+    if (p.id_categoria !== categoriaAtiva) return false;
+    if (subcategoriaAtiva && p.id_subcategoria !== subcategoriaAtiva) return false;
+    if (buscaLower && !String(p.nome || '').toLowerCase().includes(buscaLower)) return false;
+    return true;
+  });
+
+  // Navegação por teclado no grid de produtos
+  function gridMoveFocus(delta, byRow = false) {
+    if (!gridEl) return;
+    const btns = Array.from(gridEl.querySelectorAll('button[data-prod]'));
+    if (!btns.length) return;
+    const active = document.activeElement;
+    let idx = btns.findIndex(b => b === active);
+    if (idx < 0) idx = 0;
+    let step = delta;
+    if (byRow) {
+      try {
+        const cs = getComputedStyle(gridEl);
+        const cols = (cs.gridTemplateColumns || '').split(' ').filter(Boolean).length || 1;
+        step = cols * (delta > 0 ? 1 : -1);
+      } catch { step = delta; }
+    }
+    let next = idx + step;
+    if (next < 0) next = 0;
+    if (next >= btns.length) next = btns.length - 1;
+    btns[next].focus();
+  }
 
   // Calcula o total da comanda
   $: totalComanda = comanda.reduce(
@@ -519,6 +654,11 @@
     modalPagamentoAberto = true;
     formaPagamento = null;
     valorRecebido = 0;
+    multiPag = false;
+    pagamentos = [];
+    novoPagForma = 'dinheiro';
+    novoPagValor = Number(totalComanda);
+    novoPagPessoaId = '';
     erroPagamento = '';
     salvandoVenda = false; // garante reset visual ao tentar novamente
   }
@@ -533,17 +673,47 @@
   async function confirmarVenda() {
     try {
       erroPagamento = '';
-      if (!formaPagamento) {
-        erroPagamento = 'Selecione a forma de pagamento.';
-        return;
-      }
-      if (formaPagamento === 'dinheiro' && Number(valorRecebido) < Number(totalComanda)) {
-        erroPagamento = 'Valor recebido insuficiente para cobrir o total.';
-        return;
-      }
-      if (formaPagamento === 'fiado' && !pessoaFiadoId) {
-        erroPagamento = 'Selecione a pessoa para lançar o fiado.';
-        return;
+      // Validações de pagamento (single vs múltiplo)
+      if (!multiPag) {
+        if (!formaPagamento) {
+          erroPagamento = 'Selecione a forma de pagamento.';
+          return;
+        }
+        if (formaPagamento === 'dinheiro' && Number(valorRecebido) < Number(totalComanda)) {
+          erroPagamento = 'Valor recebido insuficiente para cobrir o total.';
+          return;
+        }
+        if (formaPagamento === 'fiado' && !pessoaFiadoId) {
+          erroPagamento = 'Selecione a pessoa para lançar o fiado.';
+          return;
+        }
+      } else {
+        // múltiplos pagamentos
+        const soma = pagamentos.reduce((acc, p) => acc + Number(p?.valor || 0), 0);
+        const total = Number(totalComanda);
+        const somaNaoDinheiro = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a,b)=>a+Number(b.valor||0),0);
+        if (soma <= 0) {
+          erroPagamento = 'Adicione ao menos um pagamento.';
+          return;
+        }
+        if (soma < total) {
+          erroPagamento = 'A soma dos pagamentos é insuficiente para o total.';
+          return;
+        }
+        if (somaNaoDinheiro > total) {
+          erroPagamento = 'Pagamentos não-dinheiro não podem exceder o total da comanda.';
+          return;
+        }
+        // Regras: no máximo 1 linha de fiado, e obrigar pessoa
+        const fiados = pagamentos.filter(p => p.forma === 'fiado');
+        if (fiados.length > 1) {
+          erroPagamento = 'Use apenas uma linha para Fiado.';
+          return;
+        }
+        if (fiados.length === 1 && !fiados[0]?.pessoaId) {
+          erroPagamento = 'Selecione a pessoa para o Fiado.';
+          return;
+        }
       }
       if (comanda.length === 0) {
         erroPagamento = 'A comanda está vazia.';
@@ -630,13 +800,28 @@ window.addEventListener('message', function(e){
       }
 
       // Inserir a venda
+      // Determina payload de pagamento para a venda (single ou múltiplo)
+      let insertForma = formaPagamento;
+      let insertValorRecebido = formaPagamento === 'dinheiro' ? Number(valorRecebido) : null;
+      let insertValorTroco = formaPagamento === 'dinheiro' ? Math.max(0, Number(valorRecebido) - Number(totalComanda)) : 0;
+      let cashRecebidoMulti = 0;
+      let trocoMulti = 0;
+      if (multiPag) {
+        insertForma = 'multiplo';
+        const somaOutros = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a, b) => a + Number(b.valor || 0), 0);
+        cashRecebidoMulti = Number((pagamentos.find(p => p.forma === 'dinheiro')?.valor) || 0);
+        const requeridoEmDinheiro = Math.max(0, Number(totalComanda) - somaOutros);
+        trocoMulti = Math.max(0, cashRecebidoMulti - requeridoEmDinheiro);
+        insertValorRecebido = cashRecebidoMulti > 0 ? cashRecebidoMulti : null;
+        insertValorTroco = trocoMulti;
+      }
       const { data: venda, error: vendaError } = await supabase
         .from('vendas')
         .insert({
           valor_total: Number(totalComanda),
-          forma_pagamento: formaPagamento,
-          valor_recebido: formaPagamento === 'dinheiro' ? Number(valorRecebido) : null,
-          valor_troco: formaPagamento === 'dinheiro' ? Number(troco) : 0,
+          forma_pagamento: insertForma,
+          valor_recebido: insertValorRecebido,
+          valor_troco: insertValorTroco,
           id_usuario,
           id_caixa: idCaixaAberto
         })
@@ -681,13 +866,40 @@ window.addEventListener('message', function(e){
       }
 
       // Lançar débito no fiado
-      if (formaPagamento === 'fiado' && pessoaFiadoId) {
+      if (!multiPag && formaPagamento === 'fiado' && pessoaFiadoId) {
         try {
           const { error: fiadoErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: pessoaFiadoId, p_valor: Number(totalComanda) });
           if (fiadoErr) console.warn('fiado_lancar_debito erro:', fiadoErr.message);
         } catch (e) {
           console.warn('fiado_lancar_debito exceção:', e?.message || e);
         }
+      } else if (multiPag) {
+        const fiado = pagamentos.find(p => p.forma === 'fiado');
+        if (fiado && fiado.pessoaId && Number(fiado.valor) > 0) {
+          try {
+            const { error: fiadoErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: fiado.pessoaId, p_valor: Number(fiado.valor) });
+            if (fiadoErr) console.warn('fiado_lancar_debito erro:', fiadoErr.message);
+          } catch (e) {
+            console.warn('fiado_lancar_debito exceção:', e?.message || e);
+          }
+        }
+      }
+
+      // Se múltiplos pagamentos, registrar linhas em vendas_pagamentos
+      if (multiPag && pagamentos.length) {
+        // Valor persistido para dinheiro deve ser o aplicado (descontando o troco)
+        const linhas = pagamentos.map(p => {
+          const isDin = p.forma === 'dinheiro';
+          const aplicadoDin = isDin ? Math.max(0, Number(p.valor || 0) - Number(trocoMulti)) : Number(p.valor || 0);
+          return {
+            id_venda: venda.id,
+            id_usuario,
+            forma_pagamento: p.forma,
+            valor: isDin ? aplicadoDin : Number(p.valor || 0)
+          };
+        });
+        const { error: pagErr } = await supabase.from('vendas_pagamentos').insert(linhas);
+        if (pagErr) console.warn('Falha ao inserir vendas_pagamentos:', pagErr.message);
       }
 
       // Baixa de estoque simples (MVP): decrementa estoque_atual para itens com controlar_estoque = true
@@ -729,9 +941,9 @@ window.addEventListener('message', function(e){
       }
 
       // Captura dados do recibo antes de limpar estado, para evitar nulos na impressão
-  const fp = formaPagamento;
-      const vr = valorRecebido;
-      const trocoVal = fp === 'dinheiro' ? Number(troco) : 0;
+  const fp = multiPag ? 'multiplo' : formaPagamento;
+    const vr = multiPag ? (cashRecebidoMulti || null) : valorRecebido;
+    const trocoVal = multiPag ? Number(trocoMulti) : (fp === 'dinheiro' ? Number(troco) : 0);
       const totalVal = Number(totalComanda);
       const itensRecibo = itens;
 
@@ -740,18 +952,31 @@ window.addEventListener('message', function(e){
       comanda = [];
       formaPagamento = null;
       valorRecebido = 0;
+    multiPag = false;
+    pagamentos = [];
   // Atualiza saldo após a venda (para refletir pagamentos em dinheiro)
   await atualizarSaldoCaixa();
 
       // Agenda a impressão após a UI atualizar, evitando travar o botão em "Salvando..."
       if (imprimirRecibo) {
+        // Prepara detalhamento de pagamentos para recibo (com valores aplicados)
+        let printPagamentos = [];
+        if (multiPag && Array.isArray(pagamentos) && pagamentos.length) {
+          printPagamentos = pagamentos.map((p) => {
+            const isDin = p.forma === 'dinheiro';
+            const aplicadoDin = isDin ? Math.max(0, Number(p.valor || 0) - Number(trocoMulti || 0)) : Number(p.valor || 0);
+            const pessoaNome = p.forma === 'fiado' && p.pessoaId ? (pessoasFiado.find(x => x.id === p.pessoaId)?.nome || null) : null;
+            return { forma: p.forma, valor: isDin ? aplicadoDin : Number(p.valor || 0), pessoaNome };
+          });
+        }
         const payloadRecibo = {
           idVenda: venda.id,
           formaPagamento: fp,
           total: totalVal,
           valorRecebido: fp === 'dinheiro' ? Number(vr) : null,
           troco: trocoVal,
-          itens: itensRecibo
+          itens: itensRecibo,
+          pagamentos: printPagamentos
         };
 
         setTimeout(() => {
@@ -774,9 +999,9 @@ window.addEventListener('message', function(e){
    * Busca dados do perfil (empresa_perfil) do usuário autenticado automaticamente
    * Mostra logo, dados da empresa (somente os preenchidos), itens, totais e forma de pagamento
    */
-  async function imprimirReciboVenda({ idVenda, formaPagamento, total, valorRecebido, troco, itens }, targetWin = null) {
+  async function imprimirReciboVenda({ idVenda, formaPagamento, total, valorRecebido, troco, itens, pagamentos }, targetWin = null) {
   console.groupCollapsed('%c[Recibo] imprimirReciboVenda', 'color:#0a7');
-    console.log('[Recibo] params:', { idVenda, formaPagamento, total, valorRecebido, troco, itensCount: itens?.length || 0 });
+    console.log('[Recibo] params:', { idVenda, formaPagamento, total, valorRecebido, troco, itensCount: itens?.length || 0, pagamentosCount: pagamentos?.length || 0 });
     let perfil = null;
     let logoUrl = null;
     let larguraBobina = '80mm';
@@ -833,7 +1058,20 @@ window.addEventListener('message', function(e){
       largura_bobina: larguraBobina,
       logoUrl
     };
-    const venda = { idVenda, formaPagamento, total, valorRecebido, troco, itens };
+    let venda = { idVenda, formaPagamento, total, valorRecebido, troco, itens, pagamentos };
+    // Fallback: caso multiplo sem pagamentos no payload, tenta buscar do banco
+    if (formaPagamento === 'multiplo' && (!Array.isArray(pagamentos) || pagamentos.length === 0) && idVenda) {
+      try {
+        const { data: pagsDb, error: pagsErr } = await supabase
+          .from('vendas_pagamentos')
+          .select('forma_pagamento, valor')
+          .eq('id_venda', idVenda)
+          .limit(50);
+        if (!pagsErr && Array.isArray(pagsDb)) {
+          venda.pagamentos = pagsDb.map(p => ({ forma: p.forma_pagamento, valor: Number(p.valor || 0) }));
+        }
+      } catch {}
+    }
     console.log('[Recibo] normalizado:', { estabelecimento, venda });
 
   const html = buildReceiptHTML({ estabelecimento, venda });
@@ -1014,9 +1252,46 @@ window.addEventListener('message', function(e){
     {#if loading}
       <p>Carregando produtos...</p>
     {:else}
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <!-- Barra de busca e subcategorias -->
+      <div class="flex flex-col gap-2 mb-3">
+        <div>
+          <label for="busca-prod" class="block text-sm font-medium text-gray-700">Buscar produto</label>
+          <input id="busca-prod" type="text" class="input-form mt-1" placeholder="Digite um nome..." bind:value={busca} bind:this={buscaInputEl} />
+        </div>
+        {#if subcatsDaCat.length}
+          <div class="flex items-center gap-2 overflow-x-auto py-1">
+            <button type="button" class="px-3 py-1 rounded-full border text-sm"
+              class:bg-gray-900={subcategoriaAtiva === null}
+              class:text-white={subcategoriaAtiva === null}
+              class:border-gray-900={subcategoriaAtiva === null}
+              on:click={() => subcategoriaAtiva = null}>Todas</button>
+            {#each subcatsDaCat as sc (sc.id)}
+              <button type="button" class="px-3 py-1 rounded-full border text-sm"
+                class:bg-gray-900={subcategoriaAtiva === sc.id}
+                class:text-white={subcategoriaAtiva === sc.id}
+                class:border-gray-900={subcategoriaAtiva === sc.id}
+                on:click={() => subcategoriaAtiva = sc.id}>{sc.nome}</button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4" bind:this={gridEl}
+        role="grid" tabindex="0"
+        on:keydown={(e)=>{
+          if (e.key==='ArrowRight') { e.preventDefault(); gridMoveFocus(1); }
+          if (e.key==='ArrowLeft') { e.preventDefault(); gridMoveFocus(-1); }
+          if (e.key==='ArrowDown') { e.preventDefault(); gridMoveFocus(1, true); }
+          if (e.key==='ArrowUp') { e.preventDefault(); gridMoveFocus(-1, true); }
+          if (e.key==='Enter' || e.key===' ') {
+            const el = document.activeElement;
+            if (el && el.dataset && el.dataset.prod) { e.preventDefault(); el.click(); }
+          }
+        }}
+      >
         {#each produtosFiltrados as produto (produto.id)}
           <button
+            data-prod={produto.id}
             on:click={() => adicionarProduto(produto)}
             class="h-32 bg-white rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-shadow"
           >
@@ -1244,7 +1519,24 @@ window.addEventListener('message', function(e){
     role="button"
     tabindex="0"
     aria-label="Fechar modal de pagamento"
-    on:keydown={(e) => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { modalPagamentoAberto = false; salvandoVenda = false; erroPagamento = ''; } }}
+    on:keydown={(e) => {
+      const tag = (e.target?.tagName || '').toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable;
+      if (e.key === 'Escape') { modalPagamentoAberto = false; salvandoVenda = false; erroPagamento = ''; }
+      else if (!isTyping) {
+        if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); confirmarVenda(); }
+        if (!multiPag) {
+          if (e.key.toLowerCase() === 'd') { formaPagamento = 'dinheiro'; }
+          if (e.key.toLowerCase() === 'x') { formaPagamento = 'pix'; }
+          if (e.key.toLowerCase() === 'b') { formaPagamento = 'cartao_debito'; }
+          if (e.key.toLowerCase() === 'c') { formaPagamento = 'cartao_credito'; }
+          if (e.key.toLowerCase() === 'f') { formaPagamento = 'fiado'; carregarPessoasFiado(); }
+        } else {
+          if (e.key.toLowerCase() === 'm') { multiPag = !multiPag; }
+          if (e.key.toLowerCase() === 'a') { addPagamento(); }
+        }
+      }
+    }}
     on:click|self={() => { modalPagamentoAberto = false; salvandoVenda = false; erroPagamento = ''; }}
   >
     <div class="modal-content text-gray-900 dark:text-gray-100" role="dialog" aria-modal="true" aria-labelledby="titulo-pagamento">
@@ -1257,47 +1549,122 @@ window.addEventListener('message', function(e){
           <span class="text-2xl font-bold dark:text-gray-100">R$ {Number(totalComanda).toFixed(2)}</span>
         </div>
 
-        <div>
-          <fieldset>
-            <legend class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Forma de Pagamento</legend>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='dinheiro'} on:click={() => formaPagamento='dinheiro'}>Dinheiro</button>
-              <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='cartao_debito'} on:click={() => formaPagamento='cartao_debito'}>Cartão (Débito)</button>
-              <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='cartao_credito'} on:click={() => formaPagamento='cartao_credito'}>Cartão (Crédito)</button>
-              <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='pix'} on:click={() => formaPagamento='pix'}>Pix</button>
-              <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='fiado'} on:click={async()=>{ formaPagamento='fiado'; await carregarPessoasFiado(); }}>Fiado</button>
-            </div>
-          </fieldset>
+        <div class="flex items-center justify-between">
+          <label class="inline-flex items-center gap-2 text-sm dark:text-gray-200">
+            <input type="checkbox" bind:checked={imprimirRecibo} /> Imprimir recibo ao confirmar
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm dark:text-gray-200">
+            <input type="checkbox" bind:checked={multiPag} on:change={() => { if (multiPag && novoPagValor <= 0) { novoPagValor = Number(totalComanda) - somaPagamentos; } }} /> Múltiplos pagamentos
+          </label>
         </div>
 
-        <label class="inline-flex items-center gap-2 text-sm dark:text-gray-200">
-          <input type="checkbox" bind:checked={imprimirRecibo} /> Imprimir recibo ao confirmar
-        </label>
-
-        {#if formaPagamento === 'dinheiro'}
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-            <div>
-              <label for="valor-recebido" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Valor Recebido (R$)</label>
-              <input id="valor-recebido" type="number" min="0" step="0.01" bind:value={valorRecebido} class="input-form" />
-            </div>
-            <div>
-              <div class="text-sm text-gray-600 dark:text-gray-300 mb-1">Troco</div>
-              <div class="text-xl font-semibold dark:text-gray-100">R$ {Number(troco).toFixed(2)}</div>
-            </div>
+        {#if !multiPag}
+          <div>
+            <fieldset>
+              <legend class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Forma de Pagamento</legend>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='dinheiro'} on:click={() => formaPagamento='dinheiro'}>Dinheiro</button>
+                <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='cartao_debito'} on:click={() => formaPagamento='cartao_debito'}>Cartão (Débito)</button>
+                <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='cartao_credito'} on:click={() => formaPagamento='cartao_credito'}>Cartão (Crédito)</button>
+                <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='pix'} on:click={() => formaPagamento='pix'}>Pix</button>
+                <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='fiado'} on:click={async()=>{ formaPagamento='fiado'; await carregarPessoasFiado(); }}>Fiado</button>
+              </div>
+            </fieldset>
           </div>
-        {/if}
 
-        {#if formaPagamento === 'fiado'}
-          <div class="grid grid-cols-1 gap-3">
-            <div>
-              <label for="select-pessoa-fiado" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Pessoa (Fiado)</label>
-              <select id="select-pessoa-fiado" class="input-form" bind:value={pessoaFiadoId}>
-                <option value="">-- selecione --</option>
-                {#each pessoasFiado as p}
-                  <option value={p.id}>{p.nome}</option>
+          {#if formaPagamento === 'dinheiro'}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+              <div>
+                <label for="valor-recebido" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Valor Recebido (R$)</label>
+                <input id="valor-recebido" type="number" min="0" step="0.01" bind:value={valorRecebido} class="input-form" />
+              </div>
+              <div>
+                <div class="text-sm text-gray-600 dark:text-gray-300 mb-1">Troco</div>
+                <div class="text-xl font-semibold dark:text-gray-100">R$ {Number(troco).toFixed(2)}</div>
+              </div>
+            </div>
+          {/if}
+
+          {#if formaPagamento === 'fiado'}
+            <div class="grid grid-cols-1 gap-3">
+              <div>
+                <label for="select-pessoa-fiado" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Pessoa (Fiado)</label>
+                <select id="select-pessoa-fiado" class="input-form" bind:value={pessoaFiadoId}>
+                  <option value="">-- selecione --</option>
+                  {#each pessoasFiado as p}
+                    <option value={p.id}>{p.nome}</option>
+                  {/each}
+                </select>
+                <p class="text-xs text-gray-500 mt-1">O valor será lançado no saldo de fiado desta pessoa.</p>
+              </div>
+            </div>
+          {/if}
+        {:else}
+          <!-- UI de múltiplos pagamentos -->
+          <div class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <div>
+                <label for="mp-forma" class="block text-sm font-medium mb-1">Forma</label>
+                <select id="mp-forma" class="input-form" bind:value={novoPagForma}>
+                  <option value="dinheiro">Dinheiro</option>
+                  <option value="pix">Pix</option>
+                  <option value="cartao_debito">Cartão (Débito)</option>
+                  <option value="cartao_credito">Cartão (Crédito)</option>
+                  <option value="fiado">Fiado</option>
+                </select>
+              </div>
+              <div>
+                <label for="mp-valor" class="block text-sm font-medium mb-1">{novoPagForma==='dinheiro' ? 'Valor Recebido (R$)' : 'Valor (R$)'}</label>
+                <input id="mp-valor" type="number" min="0.01" step="0.01" class="input-form" bind:value={novoPagValor} />
+                {#if novoPagForma === 'dinheiro'}
+                  <div class="flex flex-wrap items-center gap-2 mt-2 text-sm">
+                    <span class="text-gray-600">Sugestões:</span>
+                    <button type="button" class="px-2 py-1 rounded border" on:click={() => novoPagValor = Math.max(0.01, Number(restantePagamento))}>Restante</button>
+                    <button type="button" class="px-2 py-1 rounded border" on:click={() => novoPagValor = Number(novoPagValor || 0) + 5}>+5,00</button>
+                    <button type="button" class="px-2 py-1 rounded border" on:click={() => novoPagValor = Number(novoPagValor || 0) + 10}>+10,00</button>
+                  </div>
+                {/if}
+              </div>
+              {#if novoPagForma === 'fiado'}
+                <div>
+                  <label for="mp-pessoa" class="block text-sm font-medium mb-1">Pessoa (Fiado)</label>
+                  <select id="mp-pessoa" class="input-form" bind:value={novoPagPessoaId} on:focus={carregarPessoasFiado}>
+                    <option value="">-- selecione --</option>
+                    {#each pessoasFiado as p}
+                      <option value={p.id}>{p.nome}</option>
+                    {/each}
+                  </select>
+                </div>
+              {/if}
+            </div>
+            <div class="flex justify-end">
+              <button type="button" class="btn-secondary" on:click={addPagamento}>Adicionar pagamento</button>
+            </div>
+
+            {#if pagamentos.length}
+              <div class="border rounded-md divide-y">
+                {#each pagamentos as p, i}
+                  <div class="flex items-center justify-between p-2">
+                    <div class="text-sm">
+                      <div class="font-medium capitalize">{p.forma.replace('_',' ')}</div>
+                      <div class="text-gray-600">R$ {Number(p.valor).toFixed(2)}{p.forma==='dinheiro' && trocoPrevMulti>0 ? ` (troco prev.: R$ ${Number(trocoPrevMulti).toFixed(2)})` : ''}</div>
+                      {#if p.forma==='fiado'}
+                        <div class="text-xs text-gray-500">Pessoa: {p.pessoaId}</div>
+                      {/if}
+                    </div>
+                    <button type="button" class="text-red-600 hover:underline" on:click={() => removerPagamento(i)}>remover</button>
+                  </div>
                 {/each}
-              </select>
-              <p class="text-xs text-gray-500 mt-1">O valor será lançado no saldo de fiado desta pessoa.</p>
+              </div>
+            {/if}
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="text-sm text-gray-700">Soma dos pagamentos</div>
+              <div class="text-right font-semibold">R$ {Number(somaPagamentos).toFixed(2)}</div>
+              <div class="text-sm text-gray-700">Restante</div>
+              <div class="text-right font-semibold">R$ {Number(restantePagamento).toFixed(2)}</div>
+              <div class="text-sm text-gray-700">Troco (previsto)</div>
+              <div class="text-right font-semibold">R$ {Number(trocoPrevMulti).toFixed(2)}</div>
             </div>
           </div>
         {/if}

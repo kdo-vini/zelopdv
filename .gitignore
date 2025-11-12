@@ -8,3 +8,9 @@ node_modules/
 dist/
 build/
 .vercel/
+
+# Local docs not for repo
+SUPPORT_GUIDE_ZELO_PDV.txt
+
+# Supabase SQL and local schema (keep out of repo)
+supabase/

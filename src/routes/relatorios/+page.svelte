@@ -14,6 +14,7 @@
 	// Dados
 	let vendas = [];
 	let vendasItens = [];
+	let vendasPagamentos = [];
 	let produtosMap = new Map(); // id_produto -> { id, nome, preco }
 	let movs = [];
 	let fechamentos = [];
@@ -108,6 +109,17 @@
 				}
 			}
 
+			// Pagamentos das vendas (para lidar com forma_pagamento = 'multiplo')
+			vendasPagamentos = [];
+			if (ids.length) {
+				const { data: pags, error: pgsErr } = await supabase
+					.from('vendas_pagamentos')
+					.select('id_venda, forma_pagamento, valor')
+					.in('id_venda', ids);
+				if (pgsErr) throw pgsErr;
+				vendasPagamentos = pags || [];
+			}
+
 			// Movimentações do caixa (sangria/suprimento)
 			const { data: ms, error: mErr } = await supabase
 				.from('caixa_movimentacoes')
@@ -123,14 +135,22 @@
 		}
 	}
 
-	// KPIs
-	$: totalDinheiro = (vendas || []).filter(v => v.forma_pagamento === 'dinheiro').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-	$: totalCartaoDebito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-	$: totalCartaoCredito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_credito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+	// KPIs com suporte a múltiplos pagamentos
+	$: singleCash = (vendas || []).filter(v => v.forma_pagamento === 'dinheiro').reduce((a, v) => a + Math.max(0, Number(v.valor_total || 0) - Number(v.valor_troco || 0)), 0);
+	$: singleDebito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+	$: singleCredito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_credito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
 	$: totalCartaoLegacy = (vendas || []).filter(v => v.forma_pagamento === 'cartao').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+	$: singlePix = (vendas || []).filter(v => v.forma_pagamento === 'pix').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+	$: pagCash = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'dinheiro').reduce((a, p) => a + Number(p.valor || 0), 0);
+	$: pagDebito = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'cartao_debito').reduce((a, p) => a + Number(p.valor || 0), 0);
+	$: pagCredito = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'cartao_credito').reduce((a, p) => a + Number(p.valor || 0), 0);
+	$: pagPix = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'pix').reduce((a, p) => a + Number(p.valor || 0), 0);
+	$: totalDinheiro = Number(singleCash + pagCash);
+	$: totalCartaoDebito = Number(singleDebito + pagDebito);
+	$: totalCartaoCredito = Number(singleCredito + pagCredito);
 	$: totalCartao = Number(totalCartaoDebito + totalCartaoCredito + totalCartaoLegacy);
-	$: totalPix = (vendas || []).filter(v => v.forma_pagamento === 'pix').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-	$: totalGeral = Number(totalDinheiro + totalCartao + totalPix);
+	$: totalPix = Number(singlePix + pagPix);
+	$: totalGeral = Number((vendas || []).reduce((a, v) => a + Number(v.valor_total || 0), 0));
 	$: qtdVendas = (vendas || []).length;
 	$: ticketMedio = qtdVendas ? totalGeral / qtdVendas : 0;
 

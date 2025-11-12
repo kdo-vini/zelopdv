@@ -6,6 +6,7 @@
   let errorMessage = '';
   let caixa = null; // { id, data_abertura, valor_inicial }
   let vendas = []; // vendas do caixa
+  let vendasPagamentos = []; // pagamentos das vendas (para múltiplos)
   let movs = []; // movimentações de caixa (sangria/suprimento)
 
   let valorEmGaveta = 0;
@@ -45,6 +46,18 @@
       if (vErr) throw vErr;
       vendas = vs || [];
 
+      // Pagamentos de vendas (para forma_pagamento = 'multiplo')
+      vendasPagamentos = [];
+      const ids = (vendas || []).map(v => v.id);
+      if (ids.length) {
+        const { data: pags, error: pErr } = await supabase
+          .from('vendas_pagamentos')
+          .select('id_venda, forma_pagamento, valor')
+          .in('id_venda', ids);
+        if (pErr) throw pErr;
+        vendasPagamentos = pags || [];
+      }
+
       // Movimentações do caixa (sangria/suprimento)
       const { data: ms, error: mErr } = await supabase
         .from('caixa_movimentacoes')
@@ -59,21 +72,32 @@
     }
   });
 
-  // Totais por forma de pagamento do caixa corrente
+  // Totais por forma de pagamento do caixa corrente (inclui múltiplos via vendas_pagamentos)
+  $: singleDinheiro = (vendas || []).filter(v => v.forma_pagamento === 'dinheiro').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+  $: singleDebito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+  $: singleCredito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_credito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+  $: singlePix = (vendas || []).filter(v => v.forma_pagamento === 'pix').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+  $: pagDinheiro = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'dinheiro').reduce((a, p) => a + Number(p.valor || 0), 0);
+  $: pagDebito = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'cartao_debito').reduce((a, p) => a + Number(p.valor || 0), 0);
+  $: pagCredito = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'cartao_credito').reduce((a, p) => a + Number(p.valor || 0), 0);
+  $: pagPix = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'pix').reduce((a, p) => a + Number(p.valor || 0), 0);
   $: totais = {
-    dinheiro: (vendas || []).filter(v => v.forma_pagamento === 'dinheiro').reduce((a, v) => a + Number(v.valor_total || 0), 0),
-    cartao_debito: (vendas || []).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a, v) => a + Number(v.valor_total || 0), 0),
-    cartao_credito: (vendas || []).filter(v => v.forma_pagamento === 'cartao_credito').reduce((a, v) => a + Number(v.valor_total || 0), 0),
+    dinheiro: Number(singleDinheiro + pagDinheiro),
+    cartao_debito: Number(singleDebito + pagDebito),
+    cartao_credito: Number(singleCredito + pagCredito),
     cartao_legacy: (vendas || []).filter(v => v.forma_pagamento === 'cartao').reduce((a, v) => a + Number(v.valor_total || 0), 0),
-    pix: (vendas || []).filter(v => v.forma_pagamento === 'pix').reduce((a, v) => a + Number(v.valor_total || 0), 0),
+    pix: Number(singlePix + pagPix),
   };
   $: totalCartao = Number(totais.cartao_debito + totais.cartao_credito + totais.cartao_legacy);
   $: totalGeral = Number(totais.dinheiro + totalCartao + totais.pix);
 
-  // Dinheiro líquido das vendas: recebido - troco
-  $: totalDinheiroLiquido = (vendas || [])
-    .filter(v => v.forma_pagamento === 'dinheiro')
-    .reduce((a, v) => a + Number(v.valor_recebido || 0) - Number(v.valor_troco || 0), 0);
+  // Dinheiro líquido das vendas: recebido - troco (singles) + soma de pagamentos em dinheiro (múltiplos já vêm líquidos)
+  $: totalDinheiroLiquido = (
+    (vendas || [])
+      .filter(v => v.forma_pagamento === 'dinheiro')
+      .reduce((a, v) => a + Number(v.valor_recebido || 0) - Number(v.valor_troco || 0), 0)
+    + (vendasPagamentos || []).filter(p => p.forma_pagamento === 'dinheiro').reduce((a, p) => a + Number(p.valor || 0), 0)
+  );
 
   // Totais de movimentações
   $: totalSangria = (movs || []).filter(m => m.tipo === 'sangria').reduce((a, m) => a + Number(m.valor || 0), 0);
