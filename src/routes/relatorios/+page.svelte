@@ -135,17 +135,34 @@
 		}
 	}
 
-	// KPIs com suporte a múltiplos pagamentos
-	$: singleCash = (vendas || []).filter(v => v.forma_pagamento === 'dinheiro').reduce((a, v) => a + Math.max(0, Number(v.valor_total || 0) - Number(v.valor_troco || 0)), 0);
+	// KPIs com suporte a múltiplos pagamentos (corrigido cálculo de dinheiro líquido)
+	// Dinheiro em vendas simples: valor_recebido - valor_troco (não usar valor_total, pois pode haver troco)
+	$: dinheiroSimplesLiquido = (vendas || [])
+		.filter(v => v.forma_pagamento === 'dinheiro')
+		.reduce((a, v) => a + Math.max(0, Number(v.valor_recebido || 0) - Number(v.valor_troco || 0)), 0);
+
+	// Dinheiro em vendas múltiplas: soma das linhas "dinheiro" menos troco (se houver troco e linha dinheiro)
+	$: dinheiroMultiploLiquido = (vendas || [])
+		.filter(v => v.forma_pagamento === 'multiplo')
+		.reduce((acc, v) => {
+			const linhas = (vendasPagamentos || []).filter(p => p.id_venda === v.id && p.forma_pagamento === 'dinheiro');
+			if (linhas.length === 0) return acc; // sem dinheiro nesta venda
+			const soma = linhas.reduce((s, p) => s + Number(p.valor || 0), 0);
+			const troco = Number(v.valor_troco || 0);
+			return acc + Math.max(0, soma - troco);
+		}, 0);
+
+	// Para exibição total de dinheiro (líquido em gaveta)
+	$: totalDinheiro = Number(dinheiroSimplesLiquido + dinheiroMultiploLiquido);
+
+	// Demais formas: somamos vendas simples daquela forma + linhas de pagamentos múltiplos
 	$: singleDebito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
 	$: singleCredito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_credito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
 	$: totalCartaoLegacy = (vendas || []).filter(v => v.forma_pagamento === 'cartao').reduce((a, v) => a + Number(v.valor_total || 0), 0);
 	$: singlePix = (vendas || []).filter(v => v.forma_pagamento === 'pix').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-	$: pagCash = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'dinheiro').reduce((a, p) => a + Number(p.valor || 0), 0);
 	$: pagDebito = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'cartao_debito').reduce((a, p) => a + Number(p.valor || 0), 0);
 	$: pagCredito = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'cartao_credito').reduce((a, p) => a + Number(p.valor || 0), 0);
 	$: pagPix = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'pix').reduce((a, p) => a + Number(p.valor || 0), 0);
-	$: totalDinheiro = Number(singleCash + pagCash);
 	$: totalCartaoDebito = Number(singleDebito + pagDebito);
 	$: totalCartaoCredito = Number(singleCredito + pagCredito);
 	$: totalCartao = Number(totalCartaoDebito + totalCartaoCredito + totalCartaoLegacy);

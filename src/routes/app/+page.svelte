@@ -245,7 +245,7 @@
       const pCaixa = supabase.from('caixas').select('valor_inicial').eq('id', idCaixaAberto).single();
       const pVendasDoCaixa = supabase
         .from('vendas')
-        .select('id, forma_pagamento, valor_total, valor_troco')
+        .select('id, forma_pagamento, valor_total, valor_recebido, valor_troco')
         .eq('id_caixa', idCaixaAberto);
       const pMovs = supabase
         .from('caixa_movimentacoes')
@@ -256,8 +256,14 @@
       if (e1) throw e1; if (e2) throw e2; if (e3) throw e3;
 
       const valorInicial = Number(cx?.valor_inicial || 0);
+      // Dinheiro de vendas simples: valor_recebido - troco (não usar valor_total - troco, pois subconta quando há troco)
       const dinheiroLegacy = Array.isArray(vendasAll)
-        ? vendasAll.filter(v => v?.forma_pagamento === 'dinheiro').reduce((acc, v) => acc + (Number(v?.valor_total || 0) - Number(v?.valor_troco || 0)), 0)
+        ? vendasAll.filter(v => v?.forma_pagamento === 'dinheiro').reduce((acc, v) => {
+            const recebido = Number(v?.valor_recebido || v?.valor_total || 0);
+            const troco = Number(v?.valor_troco || 0);
+            const liquido = Math.max(0, recebido - troco);
+            return acc + liquido;
+          }, 0)
         : 0;
       let dinheiroMultiplo = 0;
       const ids = Array.isArray(vendasAll) ? vendasAll.map(v => v.id) : [];
