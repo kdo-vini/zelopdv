@@ -6,6 +6,8 @@
   let loading = false;
   let errorMessage = '';
   let successMessage = '';
+  let showPassword = false;
+  let showConfirm = false;
 
   /** Cria conta com e-mail/senha; supõe confirmação por e-mail ativa. */
   async function handleSignUp(e) {
@@ -56,11 +58,67 @@
     </div>
     <div>
       <label for="cad-password" class="block text-sm mb-1">Senha</label>
-      <input id="cad-password" type="password" bind:value={password} class="input-form" minlength="8" required />
+      <div class="relative">
+        {#if showPassword}
+          <input id="cad-password" type="text" bind:value={password} class="input-form pr-10" minlength="8" required />
+        {:else}
+          <input id="cad-password" type="password" bind:value={password} class="input-form pr-10" minlength="8" required />
+        {/if}
+        <button type="button"
+          aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+          title="Pressione e segure para ver a senha"
+          on:mousedown={() => showPassword = true}
+          on:mouseup={() => showPassword = false}
+          on:mouseleave={() => showPassword = false}
+          on:touchstart={() => showPassword = true}
+          on:touchend={() => showPassword = false}
+          class="absolute inset-y-0 right-0 px-2 flex items-center text-slate-500 hover:text-slate-700 focus:outline-none">
+          {#if showPassword}
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3-7.5 9.75-7.5S21 12 21 12s-3 7.5-9.75 7.5S2.25 12 2.25 12Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          {:else}
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223C5.743 5.97 8.294 4.5 12 4.5c6.75 0 9.75 7.5 9.75 7.5a15.68 15.68 0 01-2.438 3.356" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 14.25a3 3 0 01-4.243-4.243" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
+            </svg>
+          {/if}
+        </button>
+      </div>
     </div>
     <div>
       <label for="cad-confirm" class="block text-sm mb-1">Confirmar senha</label>
-      <input id="cad-confirm" type="password" bind:value={confirm} class="input-form" required />
+      <div class="relative">
+        {#if showConfirm}
+          <input id="cad-confirm" type="text" bind:value={confirm} class="input-form pr-10" required />
+        {:else}
+          <input id="cad-confirm" type="password" bind:value={confirm} class="input-form pr-10" required />
+        {/if}
+        <button type="button"
+          aria-label={showConfirm ? 'Ocultar confirmação' : 'Mostrar confirmação'}
+          title="Pressione e segure para ver a confirmação"
+          on:mousedown={() => showConfirm = true}
+          on:mouseup={() => showConfirm = false}
+          on:mouseleave={() => showConfirm = false}
+          on:touchstart={() => showConfirm = true}
+          on:touchend={() => showConfirm = false}
+          class="absolute inset-y-0 right-0 px-2 flex items-center text-slate-500 hover:text-slate-700 focus:outline-none">
+          {#if showConfirm}
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3-7.5 9.75-7.5S21 12 21 12s-3 7.5-9.75 7.5S2.25 12 2.25 12Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          {:else}
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223C5.743 5.97 8.294 4.5 12 4.5c6.75 0 9.75 7.5 9.75 7.5a15.68 15.68 0 01-2.438 3.356" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 14.25a3 3 0 01-4.243-4.243" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
+            </svg>
+          {/if}
+        </button>
+      </div>
     </div>
     <button disabled={loading} class="btn-primary w-full">{loading ? 'Criando...' : 'Criar conta'}</button>
   </form>

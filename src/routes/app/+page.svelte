@@ -4,6 +4,11 @@
   Descrição: Frente de Caixa (PDV) movida para /app para que a landing fique em /
 -->
 
+<script context="module">
+  // Força renderização somente no cliente para evitar 500 na primeira navegação pós-login
+  export const ssr = false;
+</script>
+
 <script>
   // A S V E L T E K I T
   // Ajuste: Removido o ".js" da importação para deixar o bundler resolver.
@@ -201,8 +206,10 @@
   });
 
   onDestroy(() => {
-    window.removeEventListener('keydown', onKeyGlobal);
-  });
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('keydown', onKeyGlobal);
+      }
+    });
 
   /**
    * Verifica no banco se há um caixa aberto (sem data_fechamento) para o usuário.
