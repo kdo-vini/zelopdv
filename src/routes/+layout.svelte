@@ -25,10 +25,7 @@
   const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html'];
     const path = window.location.pathname;
 
-    console.groupCollapsed('[AuthDebug] +layout onMount');
-    console.log('path =', path);
-    console.log('hasSupabaseConfig =', hasSupabaseConfig);
-    console.log('supabase exists =', Boolean(supabase));
+
 
     let navigated = false;
     let authReady = false;
@@ -63,7 +60,7 @@
 
       // Se logado e perfil incompleto, força ir para /perfil (evitar loop quando já está em /perfil)
       if (session && !hasCompleteProfile && path !== '/perfil' && path !== '/perfil.html') {
-        console.log('[AuthDebug] decision: force complete profile -> /perfil.html');
+
         const params = new URLSearchParams({ msg: 'complete' });
         window.location.href = `/perfil?${params.toString()}`;
         navigated = true;
@@ -71,17 +68,17 @@
       }
 
       if (!session && !publicPaths.includes(path)) {
-        console.log('[AuthDebug] decision: redirect to /login (protected path + no session)');
+
         window.location.href = '/login';
         navigated = true;
         return;
       }
       if (session && publicPaths.includes(path)) {
-        console.log('[AuthDebug] decision: user is logged on a public path');
+
         if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html') {
-          console.log('[AuthDebug] stay on public path', path);
+
         } else {
-          console.log('[AuthDebug] redirect to /app');
+
           window.location.href = '/app';
           navigated = true;
         }
@@ -91,14 +88,14 @@
       const protectedPaths = ['/app', '/admin', '/relatorios'];
       if (session && protectedPaths.some((p) => path.startsWith(p))) {
         if (!hasCompleteProfile) {
-          console.log('[AuthDebug] decision: incomplete profile -> redirect /perfil');
+
           const params = new URLSearchParams({ msg: 'complete' });
           window.location.href = `/perfil?${params.toString()}`;
           navigated = true;
           return;
         }
         if (!hasActiveSub) {
-          console.log('[AuthDebug] decision: no active subscription -> redirect /assinatura');
+
           window.location.href = '/assinatura';
           navigated = true;
           return;
@@ -108,7 +105,7 @@
 
     // 1) onAuthStateChange primeiro (emite INITIAL_SESSION em v2)
     supabase.auth.onAuthStateChange((event, sess) => {
-      console.log('[AuthDebug] onAuthStateChange', { event, hasSession: Boolean(sess), userId: sess?.user?.id || null });
+
       session = sess;
       if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
         authReady = true;
@@ -122,11 +119,9 @@
         supabase.auth.getSession(),
         new Promise((resolve) => setTimeout(() => resolve({ data: { session: null }, error: null }), ms))
       ]);
-    console.time('[AuthDebug] getSession (layout)');
+
     const { data, error } = await getSessionWithTimeout(4000);
-    console.timeEnd('[AuthDebug] getSession (layout)');
     if (error) console.warn('[AuthDebug] getSession error:', error?.message || error);
-    console.log('[AuthDebug] getSession', { hasSession: Boolean(data?.session), userId: data?.session?.user?.id || null });
     if (data?.session) {
       session = data.session;
       authReady = true; // Only mark ready when we actually have a session here
@@ -136,11 +131,8 @@
     // Importante: não forçar fallback de authReady sem sessão para evitar redirecionar
     // prematuramente enquanto o onAuthStateChange não disparou.
 
-    try {
-      const keys = Object.keys(localStorage).filter((k) => k.includes('sb-') || k.toLowerCase().includes('supabase'));
-      console.log('[AuthDebug] localStorage keys (sb-/supabase):', keys);
-    } catch {}
-    console.groupEnd();
+
+
   });
 
   async function logout() {

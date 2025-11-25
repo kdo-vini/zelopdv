@@ -16,7 +16,7 @@ export const hasSupabaseConfig = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 let client = null;
 try {
 	if (hasSupabaseConfig) {
-		console.info('[AuthDebug] Creating Supabase client', { hasSupabaseConfig });
+
 		client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 			auth: {
 				persistSession: true,
@@ -26,7 +26,7 @@ try {
 				storage: typeof window !== 'undefined' ? window.localStorage : undefined,
 			},
 		});
-		console.info('[AuthDebug] Supabase client created');
+
 	} else {
 		console.warn('[Supabase] Variáveis ausentes. Defina PUBLIC_SUPABASE_URL/PUBLIC_SUPABASE_ANON_KEY (ou VITE_PUBLIC_*) no .env');
 	}
