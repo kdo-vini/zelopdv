@@ -157,7 +157,12 @@
       window.removeEventListener('offline', setOffline);
     };
   });
+  import ToastContainer from '$lib/components/ToastContainer.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 </script>
+
+<ToastContainer />
+<ConfirmDialog />
 
 {#if !isOnline}
   <div class="bg-red-600 text-white text-center text-sm py-1 font-medium z-[60] relative">

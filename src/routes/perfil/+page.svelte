@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { page } from '$app/stores';
   import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina } from '$lib/profileUtils';
+  import { addToast } from '$lib/stores/ui';
   export let params;
 
   let msg = '';
@@ -59,7 +60,7 @@
       cancelAtPeriodEnd = !!sub?.cancel_at_period_end;
       currentPeriodEnd = sub?.current_period_end ?? null;
     } catch (e) {
-      console.warn('Falha ao carregar assinatura:', e?.message || e);
+      console.warn('Falha ao carregar assinatura:', e?.message || e); // Keep warning for non-critical sub load
     } finally {
       subLoading = false;
     }
@@ -71,7 +72,7 @@
       .eq('user_id', userId)
       .maybeSingle();
     if (error) {
-      console.error('Erro ao carregar perfil', error);
+      addToast('Erro ao carregar perfil: ' + error.message, 'error');
       msg = 'Erro ao carregar perfil.';
     } else if (data) {
       nome_exibicao = data.nome_exibicao ?? '';
@@ -133,7 +134,7 @@
       msg = 'Logo atualizada.';
       markDirty();
     } catch (err) {
-      console.error(err);
+      addToast('Erro ao enviar logo.', 'error');
       msg = 'Erro ao enviar logo.';
     }
   }
@@ -155,7 +156,8 @@
     });
     const { error } = await supabase.from('empresa_perfil').upsert(payload, { onConflict: 'user_id' });
     saving = false;
-    if (error) { msg = 'Erro ao salvar perfil.'; return; }
+    if (error) { addToast('Erro ao salvar perfil: ' + error.message, 'error'); msg = 'Erro ao salvar perfil.'; return; }
+    addToast('Perfil salvo com sucesso.', 'success');
     msg = 'Perfil salvo com sucesso.';
     clearDirty();
     setTimeout(() => { window.location.href = '/painel.html'; }, 600);
@@ -181,7 +183,7 @@
       }
       window.location.href = json.url;
     } catch (err) {
-      console.error(err);
+      addToast('Erro ao abrir o portal do cliente Stripe.', 'error');
       msg = 'Erro ao abrir o portal do cliente Stripe.';
     }
   }

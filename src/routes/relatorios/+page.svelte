@@ -4,6 +4,7 @@
 	import { supabase } from '$lib/supabaseClient';
 	import { ensureActiveSubscription } from '$lib/guards';
 	import { withTimeout } from '$lib/utils';
+	import { addToast } from '$lib/stores/ui';
 
 	export let params;
 
@@ -71,7 +72,7 @@
 			);
 			if (!cErr) caixas = cs || [];
 		} catch (e) {
-			console.error('Erro ao carregar caixas:', e);
+			addToast('Erro ao carregar caixas: ' + e.message, 'error');
 		}
 	}
 
@@ -88,7 +89,7 @@
 			);
 			if (!hErr) fechamentos = hs || [];
 		} catch (e) {
-			console.error('Erro ao carregar fechamentos:', e);
+			addToast('Erro ao carregar fechamentos: ' + e.message, 'error');
 		}
 	}
 
@@ -167,6 +168,7 @@
 				}
 			}
 		} catch (err) {
+			addToast('Erro ao carregar dados do caixa: ' + err.message, 'error');
 			errorMessage = err?.message || 'Erro ao carregar dados do caixa.';
 		} finally {
 			loading = false;
@@ -423,6 +425,7 @@
 			if (resMovs.error && cxIds.length) { /* log? */ }
 			periodoMovs = resMovs.data || [];
 		} catch (e) {
+			addToast('Erro ao carregar relatório do período: ' + e.message, 'error');
 			errorMessage = e?.message || 'Erro ao carregar relatório do período.';
 		} finally {
 			periodoLoading = false;

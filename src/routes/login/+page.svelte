@@ -2,6 +2,7 @@
   import { supabase } from '$lib/supabaseClient';
   export let params;
   import { onMount } from 'svelte';
+  import { addToast } from '$lib/stores/ui';
   let email = '';
   let password = '';
   let errorMessage = '';
@@ -12,25 +13,11 @@
   // Se já houver sessão ativa, redireciona para o PDV (/app)
   onMount(async () => {
     if (!supabase) return; // evita erro quando env não está configurado
-    console.groupCollapsed('[AuthDebug] /login onMount');
-    try {
-      // Mensagem após confirmação de e-mail
-      try {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('confirmed') === '1') {
-          infoMessage = 'E-mail confirmado com sucesso. Agora faça login.';
-        }
-      } catch {}
       const { data, error } = await supabase.auth.getSession();
-      if (error) console.warn('[AuthDebug] getSession error (login):', error?.message || error);
-      console.log('[AuthDebug] getSession (login)', { hasSession: Boolean(data?.session), userId: data?.session?.user?.id || null });
+      if (error) console.warn('Erro ao verificar sessão:', error.message);
       if (data.session) {
-        console.log('[AuthDebug] already logged in -> redirect /app');
         window.location.href = '/app';
       }
-    } finally {
-      console.groupEnd();
-    }
   });
 
   /** Processa login com e-mail/senha usando Supabase Auth. */
@@ -41,16 +28,13 @@
     errorMessage = '';
     try {
       if (!supabase) { throw new Error('Configuração do Supabase ausente.'); }
-      console.groupCollapsed('[AuthDebug] handleLogin');
-      console.time('[AuthDebug] supabase.signInWithPassword');
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      console.timeEnd('[AuthDebug] supabase.signInWithPassword');
       if (error) {
-        console.warn('[AuthDebug] login error:', error?.message || error);
+        addToast('Erro ao entrar: ' + error.message, 'error');
         throw error;
       }
       if (data?.session) {
-        console.log('[AuthDebug] login OK -> aguardando sessão estável antes de redirect /app', { userId: data.session.user?.id || null });
+        addToast('Login realizado com sucesso!', 'success');
         const waitStableSession = async (tries = 15) => {
           for (let i = 0; i < tries; i++) {
             try {
@@ -65,14 +49,9 @@
         window.location.assign('/app');
       }
     } catch (err) {
-      console.error('[AuthDebug] login exception:', err?.message || err);
+      console.error('Login exception:', err);
       errorMessage = err?.message || 'Falha ao entrar.';
     } finally {
-      try {
-        const { data } = await supabase.auth.getSession();
-        console.log('[AuthDebug] post-login getSession', { hasSession: Boolean(data?.session), userId: data?.session?.user?.id || null });
-      } catch {}
-      console.groupEnd?.();
       loading = false;
     }
   }

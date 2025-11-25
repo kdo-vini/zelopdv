@@ -18,6 +18,7 @@
   import { buildReceiptHTML } from '$lib/receipt';
   import { ensureActiveSubscription } from '$lib/guards';
   import { withTimeout } from '$lib/utils';
+  import { addToast, confirmAction } from '$lib/stores/ui';
 
   export let params;
 
@@ -221,7 +222,7 @@
       .limit(1);
 
     if (error) {
-      console.error('Erro ao verificar caixa:', error.message);
+      addToast('Erro ao verificar caixa: ' + error.message, 'error');
       caixaAberto = false;
       modalAbrirCaixaAberto = true;
       idCaixaAberto = null;
@@ -289,7 +290,7 @@
       }
       saldoCaixa = valorInicial + dinheiroLegacy + dinheiroMultiplo - totalSangria + totalSuprimento;
     } catch (err) {
-      console.warn('Falha ao atualizar saldo do caixa:', err?.message || err);
+      console.warn('Falha ao atualizar saldo do caixa:', err?.message || err); // Keep log for debug, maybe toast if critical? Let's keep log for background update.
     } finally {
       carregandoSaldo = false;
     }
@@ -317,7 +318,7 @@
       .from('subcategorias')
       .select('*')
       .order('ordem', { ascending: true });
-    if (error) console.warn('Erro ao carregar subcategorias:', error.message);
+    if (error) addToast('Erro ao carregar subcategorias: ' + error.message, 'error');
     else subcategorias = data || [];
   }
 
@@ -404,7 +405,7 @@
       const qtdAtual = existente?.quantidade || 0;
       const disponivel = Number(produto.estoque_atual || 0);
       if (qtdAtual + 1 > disponivel) {
-        alert(`Estoque insuficiente para "${produto.nome}". Restam ${disponivel} unidade(s).`);
+        addToast(`Estoque insuficiente para "${produto.nome}". Restam ${disponivel} unidade(s).`, 'error');
         return;
       }
     }
@@ -461,7 +462,7 @@
         if (prod?.controlar_estoque) {
           const disponivel = Number(prod.estoque_atual || 0);
           if ((item.quantidade + 1) > disponivel) {
-            alert(`Estoque insuficiente para "${item.nome}". Restam ${disponivel} unidade(s).`);
+            addToast(`Estoque insuficiente para "${item.nome}". Restam ${disponivel} unidade(s).`, 'error');
             return;
           }
         }
@@ -486,8 +487,8 @@
   }
   
   /** Limpa toda a comanda mediante confirmação. */
-  function limparComanda() {
-    if (confirm('Limpar toda a comanda?')) {
+  async function limparComanda() {
+    if (await confirmAction('Limpar Comanda', 'Tem certeza que deseja remover todos os itens?')) {
       comanda = [];
     }
   }
@@ -562,7 +563,7 @@
           console.warn('Falha ao imprimir recibo de movimentação:', e?.message || e);
         }
       }
-      alert('Movimentação registrada com sucesso.');
+      addToast('Movimentação registrada com sucesso.', 'success');
       await atualizarSaldoCaixa();
     } catch (e) {
       erroMovCaixa = e?.message || 'Falha ao registrar a movimentação.';
@@ -580,7 +581,7 @@
     const { data: userData } = await supabase.auth.getUser();
     const id_usuario = userData?.user?.id ?? null;
     if (!id_usuario) {
-      alert('Sessão inválida. Faça login novamente.');
+      addToast('Sessão inválida. Faça login novamente.', 'error');
       return;
     }
     const { data, error } = await supabase
@@ -593,7 +594,7 @@
       .select('id')
       .single();
     if (error) {
-      alert('Erro ao abrir caixa: ' + error.message);
+      addToast('Erro ao abrir caixa: ' + error.message, 'error');
       return;
     }
     idCaixaAberto = data.id;
@@ -637,7 +638,7 @@
       const qtdAtual = existente?.quantidade || 0;
       const disponivel = Number(prod.estoque_atual || 0);
       if (qtdInt + qtdAtual > disponivel) {
-        alert(`Estoque insuficiente para "${prod.nome}". Restam ${disponivel} unidade(s).`);
+        addToast(`Estoque insuficiente para "${prod.nome}". Restam ${disponivel} unidade(s).`, 'error');
         return;
       }
     }
@@ -653,7 +654,7 @@
   /** Abre o modal de pagamento após validar que há itens. */
   function handleFinalizarVenda() {
     if (comanda.length === 0) {
-      alert('A comanda está vazia.'); // TODO: Usar um modal de aviso
+      addToast('A comanda está vazia.', 'warning');
       return;
     }
     
@@ -751,7 +752,7 @@ window.addEventListener('message', function(e){
             printWin.document.close();
           }
         } catch (e) {
-          console.warn('Popup de impressão bloqueado ou falhou ao abrir:', e?.message || e);
+          addToast('Popup de impressão bloqueado. Verifique as permissões do navegador.', 'warning');
           printWin = null;
         }
       }
@@ -877,18 +878,18 @@ window.addEventListener('message', function(e){
       if (!multiPag && formaPagamento === 'fiado' && pessoaFiadoId) {
         try {
           const { error: fiadoErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: pessoaFiadoId, p_valor: Number(totalComanda) });
-          if (fiadoErr) console.warn('fiado_lancar_debito erro:', fiadoErr.message);
+          if (fiadoErr) addToast('Erro ao lançar fiado: ' + fiadoErr.message, 'error');
         } catch (e) {
-          console.warn('fiado_lancar_debito exceção:', e?.message || e);
+          addToast('Erro ao lançar fiado.', 'error');
         }
       } else if (multiPag) {
         const fiado = pagamentos.find(p => p.forma === 'fiado');
         if (fiado && fiado.pessoaId && Number(fiado.valor) > 0) {
           try {
             const { error: fiadoErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: fiado.pessoaId, p_valor: Number(fiado.valor) });
-            if (fiadoErr) console.warn('fiado_lancar_debito erro:', fiadoErr.message);
+            if (fiadoErr) addToast('Erro ao lançar fiado: ' + fiadoErr.message, 'error');
           } catch (e) {
-            console.warn('fiado_lancar_debito exceção:', e?.message || e);
+            addToast('Erro ao lançar fiado.', 'error');
           }
         }
       }
@@ -907,7 +908,7 @@ window.addEventListener('message', function(e){
           };
         });
         const { error: pagErr } = await supabase.from('vendas_pagamentos').insert(linhas);
-        if (pagErr) console.warn('Falha ao inserir vendas_pagamentos:', pagErr.message);
+        if (pagErr) addToast('Falha ao registrar pagamentos: ' + pagErr.message, 'error');
       }
 
       // Baixa de estoque simples (MVP): decrementa estoque_atual para itens com controlar_estoque = true
@@ -940,12 +941,12 @@ window.addEventListener('message', function(e){
             // Não aguarda; registra resultado de forma assíncrona
             Promise.allSettled(updates).then((res) => {
               const fails = res.filter(r => r.status === 'rejected');
-              if (fails.length) console.warn('Algumas baixas de estoque falharam.', fails.length);
+              if (fails.length) addToast('Algumas baixas de estoque falharam.', 'warning');
             });
           }
         }
       } catch (estoqueErr) {
-        console.warn('Falha ao baixar estoque (MVP continua):', estoqueErr?.message || estoqueErr);
+        addToast('Falha ao baixar estoque.', 'warning');
       }
 
       // Captura dados do recibo antes de limpar estado, para evitar nulos na impressão
@@ -991,7 +992,7 @@ window.addEventListener('message', function(e){
           try {
             imprimirReciboVenda(payloadRecibo, printWin);
           } catch (e) {
-            console.warn('Falha ao imprimir recibo:', e?.message || e);
+            addToast('Falha ao imprimir recibo.', 'error');
           }
         }, 60);
       }
@@ -1089,7 +1090,7 @@ window.addEventListener('message', function(e){
       w = window.open('', '_blank', `width=${larguraBobina === '58mm' ? '280' : '380'},height=700`);
     }
     if (!w) {
-      console.warn('[Recibo] não foi possível abrir janela de impressão');
+      addToast('Não foi possível abrir janela de impressão.', 'error');
       console.groupEnd();
       return;
     }
@@ -1129,7 +1130,7 @@ window.addEventListener('message', function(e){
         }
       }, 150);
     } catch (e) {
-      console.warn('[Recibo] Falha ao escrever recibo na janela:', e?.message || e);
+      addToast('Falha ao escrever recibo na janela.', 'error');
     } finally {
       console.groupEnd();
     }
