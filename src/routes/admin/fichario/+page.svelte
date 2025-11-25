@@ -1,12 +1,13 @@
 <script>
-	import { onMount } from 'svelte';
-	import { supabase } from '$lib/supabaseClient';
+  import { onMount } from 'svelte';
+  import { supabase } from '$lib/supabaseClient';
+  export let params;
 
-	let pessoas = [];
-	let pessoaSelecionada = null;
-	let saldo = 0;
-	let valorPagamento = '';
-	let addAoCaixa = true;
+  let pessoas = [];
+  let pessoaSelecionada = null;
+  let saldo = 0;
+  let valorPagamento = '';
+  let addAoCaixa = true;
 	let imprimirRecibo = true;
 	let loading = true;
 	let errorMsg = '';

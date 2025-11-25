@@ -4,7 +4,8 @@
   import { supabase, hasSupabaseConfig } from '$lib/supabaseClient';
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { page } from '$app/stores';
-  // export let params; // (removido: não utilizado explicitamente)
+
+  export let params;
 
   let session = null;
   let showMobileMenu = false;
@@ -143,7 +144,26 @@
   const navLinkBase = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150";
   const navLinkInactive = "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800";
   const navLinkActive = "font-semibold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/50";
+
+  let isOnline = true;
+  onMount(() => {
+    isOnline = navigator.onLine;
+    const setOnline = () => isOnline = true;
+    const setOffline = () => isOnline = false;
+    window.addEventListener('online', setOnline);
+    window.addEventListener('offline', setOffline);
+    return () => {
+      window.removeEventListener('online', setOnline);
+      window.removeEventListener('offline', setOffline);
+    };
+  });
 </script>
+
+{#if !isOnline}
+  <div class="bg-red-600 text-white text-center text-sm py-1 font-medium z-[60] relative">
+    Você está offline. Verifique sua conexão.
+  </div>
+{/if}
 
 <div class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-50">
   <header class="border-b border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900 backdrop-blur sticky top-0 z-50">

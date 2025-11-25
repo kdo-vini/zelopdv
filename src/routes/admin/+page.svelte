@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
+  export let params;
 
   let loading = true;
   let errorMsg = '';

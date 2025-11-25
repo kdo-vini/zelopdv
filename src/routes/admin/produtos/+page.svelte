@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  export let params;
   import { waitAuthReady } from '$lib/authStore';
   import CategoriasManager from '$lib/components/CategoriasManager.svelte';
   import SubcategoriasManager from '$lib/components/SubcategoriasManager.svelte';

@@ -1,12 +1,13 @@
 <script>
-	import { onMount } from 'svelte';
-	import { supabase } from '$lib/supabaseClient';
+  import { onMount } from 'svelte';
+  import { supabase } from '$lib/supabaseClient';
+  export let params;
 
-	let loading = true;
-	let pessoas = [];
-	let form = { id:null, nome:'', tipo:'cliente', contato:'' };
-	let errorMsg = '';
-	let uid = null;
+  let pessoas = [];
+  let loading = true;
+  let errorMsg = '';
+  let form = { id: null, nome: '', tipo: 'cliente', contato: '' };
+  let uid = null;
 
 	async function load() {
 		loading = true; errorMsg='';

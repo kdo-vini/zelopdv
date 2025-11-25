@@ -17,6 +17,9 @@
   import { waitAuthReady } from '$lib/authStore';
   import { buildReceiptHTML } from '$lib/receipt';
   import { ensureActiveSubscription } from '$lib/guards';
+  import { withTimeout } from '$lib/utils';
+
+  export let params;
 
   // --- 1. ESTADO DO PDV ---
   let produtos = [];
@@ -164,45 +167,37 @@
       errorMessage = 'Configuração do Supabase ausente. Defina as variáveis no .env e reinicie.';
       return;
     }
-    console.groupCollapsed('[AuthDebug] /app onMount');
     const getSessionWithTimeout = (ms = 4000) =>
       Promise.race([
         supabase.auth.getSession(),
         new Promise((resolve) => setTimeout(() => resolve({ data: { session: null }, error: null }), ms))
       ]);
-    console.time('[AuthDebug] getSession (/app)');
     const { data } = await getSessionWithTimeout(4000);
-    console.timeEnd('[AuthDebug] getSession (/app)');
-    console.log('[AuthDebug] /app getSession result', { hasSession: Boolean(data?.session), userId: data?.session?.user?.id || null });
     if (data?.session?.user) {
-      await verificarCaixaAberto(data.session.user.id);
-  await carregarCategorias();
-  await carregarProdutos();
-  await carregarSubcategorias();
-      await atualizarSaldoCaixa();
+      await withTimeout(verificarCaixaAberto(data.session.user.id));
+      await withTimeout(carregarCategorias());
+      await withTimeout(carregarProdutos());
+      await withTimeout(carregarSubcategorias());
+      await withTimeout(atualizarSaldoCaixa());
       loading = false;
     } else {
-      console.log('[AuthDebug] /app: no session -> redirect /login');
       window.location.href = '/login';
       return;
     }
 
     // Mantém sincronizado, caso login/logout aconteça com a página aberta
     supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log('[AuthDebug] /app onAuthStateChange', { hasSession: Boolean(session), userId: session?.user?.id || null });
       if (session?.user) {
-        await verificarCaixaAberto(session.user.id);
-  await carregarCategorias();
-  await carregarProdutos();
-  await carregarSubcategorias();
-        await atualizarSaldoCaixa();
+        await withTimeout(verificarCaixaAberto(session.user.id));
+        await withTimeout(carregarCategorias());
+        await withTimeout(carregarProdutos());
+        await withTimeout(carregarSubcategorias());
+        await withTimeout(atualizarSaldoCaixa());
         loading = false;
       } else {
-        console.log('[AuthDebug] /app: logout detected -> redirect /login');
         window.location.href = '/login';
       }
     });
-    console.groupEnd();
   });
 
   onDestroy(() => {

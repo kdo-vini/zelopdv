@@ -2,12 +2,8 @@
   import { supabase } from '$lib/supabaseClient';
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
+  export let params;
 
-  let loading = false;
-  let message = '';
-  let subStatus = null;
-  let customerId = null;
-  let email = '';
   let userId = '';
 
   onMount(async () => {

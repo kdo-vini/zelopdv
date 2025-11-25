@@ -2,6 +2,7 @@
   import CategoriasManager from '$lib/components/CategoriasManager.svelte';
   import SubcategoriasManager from '$lib/components/SubcategoriasManager.svelte';
   import ProdutosManager from '$lib/components/ProdutosManager.svelte';
+  export let params;
 </script>
 
 <h1 class="text-2xl font-semibold mb-4">Cadastros</h1>

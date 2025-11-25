@@ -3,6 +3,10 @@
   <meta name="description" content="Zelo PDV: vendas rápidas, fiado simples, estoque crítico, movimentações de caixa e relatórios leves. Comece em minutos." />
 </svelte:head>
 
+<script>
+  export let params;
+</script>
+
 <!-- HERO -->
 <section class="pt-16 pb-20 relative overflow-hidden">
   <div class="absolute inset-0 -z-10 bg-gradient-to-br from-sky-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800"></div>

@@ -3,6 +3,9 @@
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabaseClient';
 	import { ensureActiveSubscription } from '$lib/guards';
+	import { withTimeout } from '$lib/utils';
+
+	export let params;
 
 	let loading = true;
 	let errorMessage = '';
@@ -57,24 +60,36 @@
 
 	async function carregarCaixasRecentes() {
 		const corte = new Date(); corte.setDate(corte.getDate() - 60);
-		const { data: cs, error: cErr } = await supabase
-			.from('caixas')
-			.select('id, data_abertura, data_fechamento, valor_inicial')
-			.eq('id_usuario', uid)
-			.gte('data_abertura', corte.toISOString())
-			.order('data_abertura', { ascending: false });
-		if (!cErr) caixas = cs || [];
+		try {
+			const { data: cs, error: cErr } = await withTimeout(
+				supabase
+					.from('caixas')
+					.select('id, data_abertura, data_fechamento, valor_inicial')
+					.eq('id_usuario', uid)
+					.gte('data_abertura', corte.toISOString())
+					.order('data_abertura', { ascending: false })
+			);
+			if (!cErr) caixas = cs || [];
+		} catch (e) {
+			console.error('Erro ao carregar caixas:', e);
+		}
 	}
 
 	async function carregarFechamentosRecentes() {
 		const limite = new Date(); limite.setDate(limite.getDate() - 30);
-		const { data: hs, error: hErr } = await supabase
-			.from('caixa_fechamentos')
-			.select('id, data_fechamento, total_dinheiro, total_cartao, total_pix, total_geral, valor_inicial, valor_esperado_em_gaveta, valor_contado_em_gaveta, diferenca, quantidade_vendas')
-			.eq('id_usuario', uid)
-			.gte('data_fechamento', limite.toISOString())
-			.order('data_fechamento', { ascending: false });
-		if (!hErr) fechamentos = hs || [];
+		try {
+			const { data: hs, error: hErr } = await withTimeout(
+				supabase
+					.from('caixa_fechamentos')
+					.select('id, data_fechamento, total_dinheiro, total_cartao, total_pix, total_geral, valor_inicial, valor_esperado_em_gaveta, valor_contado_em_gaveta, diferenca, quantidade_vendas')
+					.eq('id_usuario', uid)
+					.gte('data_fechamento', limite.toISOString())
+					.order('data_fechamento', { ascending: false })
+			);
+			if (!hErr) fechamentos = hs || [];
+		} catch (e) {
+			console.error('Erro ao carregar fechamentos:', e);
+		}
 	}
 
 	async function carregarRelatorioDoCaixa(idCaixa) {
@@ -82,66 +97,75 @@
 		try {
 			loading = true;
 			errorMessage = '';
-			// Info do caixa
-			const { data: cx, error: cxErr } = await supabase
+			// 1. Info do caixa
+			const pCaixa = supabase
 				.from('caixas')
 				.select('id, data_abertura, data_fechamento, valor_inicial')
 				.eq('id', idCaixa)
 				.single();
-			if (cxErr) throw cxErr;
-			caixaInfo = cx;
 
-			// Vendas do caixa
-			const { data: vs, error: vErr } = await supabase
+			// 2. Vendas do caixa
+			const pVendas = supabase
 				.from('vendas')
 				.select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, created_at')
 				.eq('id_caixa', idCaixa)
 				.order('id', { ascending: true });
-			if (vErr) throw vErr;
-			vendas = vs || [];
 
-			const ids = (vendas || []).map(v => v.id);
+			// 3. Movimentações
+			const pMovs = supabase
+				.from('caixa_movimentacoes')
+				.select('tipo, valor, motivo, created_at')
+				.eq('id_caixa', idCaixa)
+				.order('created_at', { ascending: false });
+
+			// Executa em paralelo
+			const [resCaixa, resVendas, resMovs] = await withTimeout(Promise.all([pCaixa, pVendas, pMovs]));
+
+			if (resCaixa.error) throw resCaixa.error;
+			caixaInfo = resCaixa.data;
+
+			if (resVendas.error) throw resVendas.error;
+			vendas = resVendas.data || [];
+
+			if (resMovs.error) throw resMovs.error;
+			movs = resMovs.data || [];
+
+			// Dependentes das vendas: itens e pagamentos
+			const ids = vendas.map(v => v.id);
 			vendasItens = [];
+			vendasPagamentos = [];
+
 			if (ids.length) {
-				const { data: its, error: iErr } = await supabase
+				const pItens = supabase
 					.from('vendas_itens')
 					.select('id_venda, id_produto, nome_produto_na_venda, quantidade, preco_unitario_na_venda')
 					.in('id_venda', ids);
-				if (iErr) throw iErr;
-				vendasItens = its || [];
-				// Carrega preços atuais dos produtos para cálculo de receita conforme solicitação
-				const pids = Array.from(new Set((vendasItens||[]).map(it => it.id_produto).filter(Boolean)));
+
+				const pPags = supabase
+					.from('vendas_pagamentos')
+					.select('id_venda, forma_pagamento, valor')
+					.in('id_venda', ids);
+
+				const [resItens, resPags] = await withTimeout(Promise.all([pItens, pPags]));
+
+				if (resItens.error) throw resItens.error;
+				vendasItens = resItens.data || [];
+
+				if (resPags.error) throw resPags.error;
+				vendasPagamentos = resPags.data || [];
+
+				// Produtos map
+				const pids = Array.from(new Set(vendasItens.map(it => it.id_produto).filter(Boolean)));
 				produtosMap = new Map();
 				if (pids.length) {
-					const { data: ps, error: pErr } = await supabase
-						.from('produtos')
-						.select('id, nome, preco')
-						.in('id', pids);
+					const { data: ps, error: pErr } = await withTimeout(
+						supabase.from('produtos').select('id, nome, preco').in('id', pids)
+					);
 					if (!pErr && ps) {
 						produtosMap = new Map(ps.map(p => [p.id, p]));
 					}
 				}
 			}
-
-			// Pagamentos das vendas (para lidar com forma_pagamento = 'multiplo')
-			vendasPagamentos = [];
-			if (ids.length) {
-				const { data: pags, error: pgsErr } = await supabase
-					.from('vendas_pagamentos')
-					.select('id_venda, forma_pagamento, valor')
-					.in('id_venda', ids);
-				if (pgsErr) throw pgsErr;
-				vendasPagamentos = pags || [];
-			}
-
-			// Movimentações do caixa (sangria/suprimento)
-			const { data: ms, error: mErr } = await supabase
-				.from('caixa_movimentacoes')
-				.select('tipo, valor, motivo, created_at')
-				.eq('id_caixa', idCaixa)
-				.order('created_at', { ascending: false });
-			if (mErr) throw mErr;
-			movs = ms || [];
 		} catch (err) {
 			errorMessage = err?.message || 'Erro ao carregar dados do caixa.';
 		} finally {
@@ -335,62 +359,69 @@
 		if (!uid || !dataInicio || !dataFim) return;
 		periodoLoading = true;
 		try {
-			// Vendas do período
-			const { data: vs, error: vErr } = await supabase
+			// 1. Vendas
+			const pVendas = supabase
 				.from('vendas')
 				.select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, created_at')
 				.eq('id_usuario', uid)
 				.gte('created_at', isoStart(dataInicio))
 				.lte('created_at', isoEnd(dataFim))
 				.order('created_at', { ascending: true });
-			if (vErr) throw vErr;
-			periodoVendas = vs || [];
-			const vendaIds = periodoVendas.map(v => v.id);
 
-			// Pagamentos múltiplos
-			periodoPagamentos = [];
-			if (vendaIds.length) {
-				const { data: pags, error: pagsErr } = await supabase
-					.from('vendas_pagamentos')
-					.select('id_venda, forma_pagamento, valor')
-					.in('id_venda', vendaIds);
-				if (pagsErr) throw pagsErr;
-				periodoPagamentos = pags || [];
-			}
-
-			// Itens das vendas
-			periodoItens = [];
-			if (vendaIds.length) {
-				const { data: its, error: itsErr } = await supabase
-					.from('vendas_itens')
-					.select('id_venda, id_produto, nome_produto_na_venda, quantidade, preco_unitario_na_venda')
-					.in('id_venda', vendaIds);
-				if (itsErr) throw itsErr;
-				periodoItens = its || [];
-			}
-
-			// Caixas que intersectam período
-			const { data: cxs, error: cErr } = await supabase
+			// 2. Caixas
+			const pCaixas = supabase
 				.from('caixas')
 				.select('id, data_abertura, data_fechamento, valor_inicial')
 				.eq('id_usuario', uid)
 				.lte('data_abertura', isoEnd(dataFim))
 				.or(`data_fechamento.is.null,data_fechamento.gte.${isoStart(dataInicio)}`);
-			if (cErr) { /* toleramos ausência */ }
-			periodoCaixas = cxs || [];
+
+			const [resVendas, resCaixas] = await withTimeout(Promise.all([pVendas, pCaixas]));
+
+			if (resVendas.error) throw resVendas.error;
+			periodoVendas = resVendas.data || [];
+			const vendaIds = periodoVendas.map(v => v.id);
+
+			if (resCaixas.error) { /* toleramos */ }
+			periodoCaixas = resCaixas.data || [];
 			const cxIds = periodoCaixas.map(c => c.id);
 
-			// Movimentações dentro do range
+			// 3. Dependentes (Pagamentos, Itens, Movimentações)
+			periodoPagamentos = [];
+			periodoItens = [];
 			periodoMovs = [];
-			if (cxIds.length) {
-				const { data: movsData, error: movErr } = await supabase
-					.from('caixa_movimentacoes')
-					.select('id_caixa, tipo, valor, created_at')
-					.in('id_caixa', cxIds)
-					.gte('created_at', isoStart(dataInicio))
-					.lte('created_at', isoEnd(dataFim));
-				if (!movErr) periodoMovs = movsData || [];
+
+			const promises = [];
+			if (vendaIds.length) {
+				promises.push(
+					supabase.from('vendas_pagamentos').select('id_venda, forma_pagamento, valor').in('id_venda', vendaIds)
+				);
+				promises.push(
+					supabase.from('vendas_itens').select('id_venda, id_produto, nome_produto_na_venda, quantidade, preco_unitario_na_venda').in('id_venda', vendaIds)
+				);
+			} else {
+				promises.push(Promise.resolve({ data: [], error: null }));
+				promises.push(Promise.resolve({ data: [], error: null }));
 			}
+
+			if (cxIds.length) {
+				promises.push(
+					supabase.from('caixa_movimentacoes').select('id_caixa, tipo, valor, created_at').in('id_caixa', cxIds).gte('created_at', isoStart(dataInicio)).lte('created_at', isoEnd(dataFim))
+				);
+			} else {
+				promises.push(Promise.resolve({ data: [], error: null }));
+			}
+
+			const [resPags, resItens, resMovs] = await withTimeout(Promise.all(promises));
+
+			if (resPags.error) throw resPags.error;
+			periodoPagamentos = resPags.data || [];
+
+			if (resItens.error) throw resItens.error;
+			periodoItens = resItens.data || [];
+
+			if (resMovs.error && cxIds.length) { /* log? */ }
+			periodoMovs = resMovs.data || [];
 		} catch (e) {
 			errorMessage = e?.message || 'Erro ao carregar relatório do período.';
 		} finally {

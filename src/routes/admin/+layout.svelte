@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription } from '$lib/guards';
+  export let params;
+
   let ready = false;
 
   onMount(async () => {

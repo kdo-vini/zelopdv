@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  export let params;
   onMount(() => { window.location.href = '/admin/cadastros'; });
 </script>
 

@@ -3,11 +3,11 @@
   import { supabase } from '$lib/supabaseClient';
   import { page } from '$app/stores';
   import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina } from '$lib/profileUtils';
-  export let params; // silence dev warning in dev mode
+  export let params;
 
+  let msg = '';
   let loading = true;
   let saving = false;
-  let msg = '';
   let userId = null;
   let email = '';
   
