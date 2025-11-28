@@ -1215,19 +1215,19 @@ window.addEventListener('message', function(e){
 <!-- --- 6. LAYOUT (HTML com Tailwind CSS) --- -->
 
 <!-- Barra de status do caixa (abaixo do header) -->
-<div class="w-full px-4 py-2 mb-2 bg-white border-b border-gray-200 flex items-center justify-between shadow-sm">
+<!-- Barra de status do caixa (abaixo do header) -->
+<div class="mx-4 mt-3 mb-2 px-4 py-3 bg-white border border-gray-200 rounded-xl flex items-center justify-between shadow-sm">
   <div class="text-sm text-gray-700">
     <span class="font-medium">Saldo em caixa (dinheiro):</span>
-    <span class="ml-1 text-green-700 font-semibold">R$ {Number(saldoCaixa).toFixed(2)}</span>
+    <span class="ml-1 text-green-700 font-bold text-base">R$ {Number(saldoCaixa).toFixed(2)}</span>
   </div>
   <div class="text-xs text-gray-500 flex items-center gap-2">
     {#if carregandoSaldo}
       <span>Atualizando…</span>
     {:else}
-      <button class="underline hover:text-gray-700" on:click={atualizarSaldoCaixa}>Atualizar</button>
+      <button class="text-indigo-600 hover:text-indigo-800 font-medium transition-colors" on:click={atualizarSaldoCaixa}>Atualizar</button>
     {/if}
   </div>
-  
 </div>
 
 <!-- Fundo principal do PDV: ocupa a largura disponível, sem forçar barras -->
@@ -1315,13 +1315,13 @@ window.addEventListener('message', function(e){
           <button
             data-prod={produto.id}
             on:click={() => adicionarProduto(produto)}
-            class="h-32 bg-white rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-shadow"
+            class="h-32 bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-200 transform hover:-translate-y-0.5"
           >
             <div class="p-3 flex flex-col justify-between h-full">
-              <span class="text-sm font-semibold text-gray-800 text-left leading-tight">
+              <span class="text-sm font-semibold text-gray-800 text-left leading-tight line-clamp-3">
                 {produto.nome}
               </span>
-              <span class="text-lg font-bold text-blue-600 text-right">
+              <span class="text-lg font-bold text-indigo-600 text-right">
                 R$ {Number(produto.preco).toFixed(2)}
               </span>
             </div>
@@ -1329,15 +1329,15 @@ window.addEventListener('message', function(e){
         {/each}
         
         <!-- Botão Fixo: Valor Personalizado (Fluxo B) -->
-         <button
+          <button
             on:click={() => modalValorAberto = true}
-            class="h-32 bg-yellow-100 border-2 border-dashed border-yellow-400 text-yellow-700 rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
+            class="h-32 bg-amber-50 border-2 border-dashed border-amber-300 text-amber-700 rounded-xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200 transform hover:-translate-y-0.5"
           >
             <div class="p-3 flex flex-col justify-center items-center h-full">
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 mb-1">
+               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 mb-1 text-amber-500">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              <span class="text-sm font-semibold text-center leading-tight">
+              <span class="text-sm font-bold text-center leading-tight">
                 Item Avulso
               </span>
             </div>
@@ -1372,17 +1372,17 @@ window.addEventListener('message', function(e){
               </div>
               
               <!-- Controles de Quantidade: sempre disponíveis -->
-              <div class="flex items-center border border-gray-300 rounded-md bg-white dark:bg-slate-800">
+              <div class="flex items-center border border-gray-200 rounded-lg bg-white shadow-sm">
                 <button 
                   on:click={() => decrementarItem(item.id)}
-                  class="w-9 h-9 text-lg font-bold text-red-600 hover:bg-red-50 dark:hover:bg-slate-700 rounded-l-md"
+                  class="w-8 h-8 flex items-center justify-center text-lg font-bold text-red-500 hover:bg-red-50 hover:text-red-600 rounded-l-lg transition-colors"
                 >-</button>
-                <span class="w-12 h-9 text-center leading-9 text-base font-semibold text-slate-900 dark:text-slate-100">
+                <span class="w-10 h-8 flex items-center justify-center text-sm font-semibold text-gray-900">
                   {item.quantidade}
                 </span>
                 <button 
                   on:click={() => incrementarItem(item.id)}
-                  class="w-9 h-9 text-lg font-bold text-green-600 hover:bg-green-50 dark:hover:bg-slate-700 rounded-r-md"
+                  class="w-8 h-8 flex items-center justify-center text-lg font-bold text-green-500 hover:bg-green-50 hover:text-green-600 rounded-r-lg transition-colors"
                 >+</button>
               </div>
             </li>
@@ -1403,20 +1403,20 @@ window.addEventListener('message', function(e){
       <div class="flex space-x-2">
         <button 
           on:click={abrirModalMovCaixa}
-          class="w-full py-3 bg-amber-100 text-amber-800 font-medium rounded-md hover:bg-amber-200 transition-colors"
+          class="flex-1 py-3 bg-amber-50 text-amber-700 border border-amber-200 font-semibold rounded-xl hover:bg-amber-100 transition-colors text-sm"
         >
-          Movimentar Caixa
+          Movimentar
         </button>
         <button 
           on:click={limparComanda}
-          class="w-full py-3 bg-red-100 text-red-700 font-medium rounded-md hover:bg-red-200 transition-colors"
+          class="flex-1 py-3 bg-red-50 text-red-700 border border-red-200 font-semibold rounded-xl hover:bg-red-100 transition-colors text-sm"
         >
           Limpar
         </button>
         <button
           on:click={handleFinalizarVenda}
           disabled={!caixaAberto || comanda.length === 0}
-          class="w-full py-3 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+          class="flex-[2] py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 shadow-md hover:shadow-lg transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:shadow-none"
         >
           Finalizar Venda
         </button>
