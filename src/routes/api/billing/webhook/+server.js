@@ -153,15 +153,39 @@ async function handleCheckoutCompleted(session) {
         subscriptionData.current_period_end = new Date(subscription.current_period_end * 1000).toISOString();
     }
 
-    // Create or update subscription in database
-    const { error } = await supabaseAdmin
+    // Try to update existing subscription first
+    const { data: existingSub, error: selectError } = await supabaseAdmin
         .from('subscriptions')
-        .upsert(subscriptionData, {
-            onConflict: 'user_id'
-        });
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+    if (selectError) {
+        console.error('[Webhook] Error checking existing subscription:', selectError);
+        throw selectError;
+    }
+
+    let error;
+    if (existingSub) {
+        // Update existing subscription
+        const { error: updateError } = await supabaseAdmin
+            .from('subscriptions')
+            .update(subscriptionData)
+            .eq('id', existingSub.id);
+        error = updateError;
+        console.log('[Webhook] Updated existing subscription');
+    } else {
+        // Insert new subscription
+        const { error: insertError } = await supabaseAdmin
+            .from('subscriptions')
+            .insert(subscriptionData);
+        error = insertError;
+        console.log('[Webhook] Inserted new subscription');
+    }
 
     if (error) {
-        console.error('[Webhook] Error upserting subscription:', error);
+        console.error('[Webhook] Error saving subscription:', error);
         throw error;
     }
 
