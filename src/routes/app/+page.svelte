@@ -1245,9 +1245,9 @@ window.addEventListener('message', function(e){
 <div class="flex w-full min-h-[70vh] bg-transparent overflow-hidden">
 
   <!-- Coluna 1: Categorias (Fixa) -->
-  <nav class="w-24 bg-gray-800 text-white flex-shrink-0 overflow-y-auto">
+  <nav class="w-24 bg-sidebar-base flex-shrink-0 overflow-y-auto">
     <!-- Link para o Admin -->
-    <a href="/admin" class="block p-4 text-center hover:bg-gray-700" title="Painel Admin">
+    <a href="/admin" class="block p-4 text-center hover:bg-white/10 transition-colors" title="Painel Admin">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto">
         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
       </svg>
@@ -1256,10 +1256,8 @@ window.addEventListener('message', function(e){
     {#each categorias as cat (cat.id)}
       <button
         on:click={() => (categoriaAtiva = cat.id)}
-        class="w-full h-24 p-2 flex flex-col items-center justify-center text-center text-xs font-medium border-b border-gray-700"
-        class:bg-white={categoriaAtiva === cat.id}
-        class:text-gray-900={categoriaAtiva === cat.id}
-        class:hover:bg-gray-700={categoriaAtiva !== cat.id}
+        class="w-full h-24 p-2 flex flex-col items-center justify-center text-center text-xs font-medium border-b border-white/10 transition-colors"
+        style="background-color: {categoriaAtiva === cat.id ? 'var(--sidebar-item-active-bg)' : 'transparent'}; color: {categoriaAtiva === cat.id ? 'var(--sidebar-item-active-text)' : 'var(--text-main)'}"
       >
         <!-- TODO: Adicionar ícones aqui -->
         <span>{cat.nome}</span>
@@ -1270,21 +1268,21 @@ window.addEventListener('message', function(e){
   <!-- Coluna 2: Produtos (Scrollável) -->
   <main class="flex-1 p-4 overflow-y-auto">
     {#if loading}
-      <p>Carregando produtos...</p>
+      <p class="text-main">Carregando produtos...</p>
     {:else}
       <!-- Barra de busca e subcategorias -->
       <div class="flex flex-col gap-3 mb-4">
         <div>
-          <label for="busca-prod" class="block text-sm font-medium text-gray-700 mb-1">Buscar produto</label>
+          <label for="busca-prod" class="block text-sm font-medium text-main mb-1">Buscar produto</label>
           <input id="busca-prod" type="text" class="input-form" placeholder="Digite um nome..." bind:value={busca} bind:this={buscaInputEl} />
         </div>
         {#if subcatsDaCat.length}
           <div class="flex flex-col gap-2">
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Subcategorias</span>
+            <span class="text-xs font-semibold text-muted uppercase tracking-wider ml-1">Subcategorias</span>
             <div class="flex items-center gap-2 overflow-x-auto py-1 px-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
               <button 
                 type="button" 
-                class="group relative px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-1 {subcategoriaAtiva === null ? 'bg-gray-900 text-white shadow-sm focus:ring-gray-900' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 focus:ring-gray-400'}"
+                class="group relative px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-1 {subcategoriaAtiva === null ? 'btn-primary' : 'btn-secondary'}"
                 on:click={() => subcategoriaAtiva = null}
               >
                 <span class="flex items-center gap-1.5">
@@ -1298,7 +1296,7 @@ window.addEventListener('message', function(e){
               {#each subcatsDaCat as sc (sc.id)}
                 <button 
                   type="button" 
-                  class="px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-1 {subcategoriaAtiva === sc.id ? 'bg-gray-900 text-white shadow-sm focus:ring-gray-900' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 focus:ring-gray-400'}"
+                  class="group relative px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-1 {subcategoriaAtiva === sc.id ? 'btn-primary' : 'btn-secondary'}"
                   on:click={() => subcategoriaAtiva = sc.id}
                 >
                   {sc.nome}
@@ -1326,10 +1324,10 @@ window.addEventListener('message', function(e){
           <button
             data-prod={produto.id}
             on:click={() => adicionarProduto(produto)}
-            class="h-32 bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-200 transform hover:-translate-y-0.5"
+            class="min-h-32 bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-200 transform hover:-translate-y-0.5"
           >
-            <div class="p-3 flex flex-col justify-between h-full">
-              <span class="text-sm font-semibold text-gray-800 text-left leading-tight line-clamp-3">
+            <div class="p-3 flex flex-col justify-between h-full gap-2">
+              <span class="text-sm font-semibold text-gray-800 text-left leading-tight break-words overflow-hidden">
                 {produto.nome}
               </span>
               <span class="text-lg font-bold text-indigo-600 text-right">
@@ -1403,10 +1401,10 @@ window.addEventListener('message', function(e){
     </div>
 
     <!-- Rodapé da Comanda -->
-    <div class="p-4 border-t bg-gray-50 space-y-4">
+    <div class="p-4 border-t space-y-4" style="background-color: var(--bg-panel);">
       <div class="flex justify-between items-center">
-        <span class="text-lg font-medium text-gray-700">Total:</span>
-        <span class="text-3xl font-bold text-gray-900">
+        <span class="text-lg font-medium text-muted">Total:</span>
+        <span class="text-3xl font-bold text-main">
           R$ {Number(totalComanda).toFixed(2)}
         </span>
       </div>
@@ -1427,7 +1425,7 @@ window.addEventListener('message', function(e){
         <button
           on:click={handleFinalizarVenda}
           disabled={!caixaAberto || comanda.length === 0}
-          class="flex-[2] py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 shadow-md hover:shadow-lg transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:shadow-none"
+          class="flex-[2] btn-primary py-3 font-bold rounded-xl shadow-md hover:shadow-lg transition-all"
         >
           Finalizar Venda
         </button>

@@ -1,0 +1,94 @@
+/* BASE THEME - Original Blue/Navy Design
+   This is the default theme for the POS system.
+   Dark navy design with light text - matching production.
+*/
+
+:root {
+    /* Backgrounds - ALL DARK NAVY */
+    --bg-app: #0F172A;
+    /* slate-900 - main dark background */
+    --bg-panel: #1E293B;
+    /* slate-800 - slightly lighter panels */
+    --bg-sidebar: #1E293B;
+    /* slate-800 - dark navy sidebar */
+    --bg-header: #0F172A;
+    /* slate-900 - dark header */
+
+    /* Text Colors - LIGHT for dark backgrounds */
+    --text-main: #F8FAFC;
+    /* slate-50 - primary text (WHITE) */
+    --text-muted: #94A3B8;
+    /* slate-400 - secondary text (lighter gray) */
+    --text-inverse: #0F172A;
+    /* slate-900 - text on light backgrounds */
+
+    /* Primary Actions */
+    --primary: #0EA5E9;
+    /* sky-500 - primary buttons */
+    --primary-hover: #0284C7;
+    /* sky-600 */
+    --primary-text: #FFFFFF;
+
+    /* Secondary Actions */
+    --secondary: #1E293B;
+    --secondary-border: #334155;
+    /* slate-700 */
+    --secondary-text: #F8FAFC;
+    /* slate-50 - white text */
+
+    /* Accents */
+    --accent: #0EA5E9;
+    /* sky-500 - links, highlights */
+    --accent-light: rgba(14, 165, 233, 0.1);
+    /* sky-500 with transparency */
+
+    /* Borders */
+    --border-subtle: #334155;
+    /* slate-700 */
+    --border-strong: #475569;
+    /* slate-600 */
+
+    /* Card & Input Backgrounds */
+    --bg-card: #0b1220;
+    /* Very dark blue for cards */
+    --bg-input: #0f172a;
+    /* Dark input background */
+    --border-card: #1f2937;
+    /* gray-800 */
+
+    /* Text Variants */
+    --text-label: #cbd5e1;
+    /* slate-300 - form labels */
+
+    /* Status Colors */
+    --error: #ef4444;
+    /* red-500 */
+    --error-bg: #7f1d1d;
+    /* red-900 */
+    --error-light: #fecaca;
+    /* red-200 */
+    --success: #10b981;
+    /* green-500 */
+    --success-bg: #064e3b;
+    /* green-900 */
+    --success-light: #d1fae5;
+    /* green-100 */
+    --warning: #f59e0b;
+    /* amber-500 */
+
+    /* Links */
+    --link: #93c5fd;
+    /* blue-300 */
+    --link-hover: #60a5fa;
+    /* blue-400 */
+
+    /* Sidebar Specifics */
+    --sidebar-item-active-bg: #FFFFFF;
+    --sidebar-item-active-text: #0F172A;
+    --sidebar-item-hover-bg: #334155;
+    /* slate-700 */
+
+    /* Transitions */
+    --transition-fast: 200ms ease;
+    --transition-normal: 300ms ease;
+}

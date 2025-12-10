@@ -110,16 +110,16 @@
 	.wrap{padding:16px}
 	.grid{display:grid;grid-template-columns:380px 1fr;gap:12px}
 	@media (max-width:900px){.grid{grid-template-columns:1fr}}
-	.card{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:14px}
-	label{display:flex;flex-direction:column;color:#cbd5e1;font-size:13px;margin-bottom:10px}
-	input,select{margin-top:6px;background:#0f172a;border:1px solid #1f2937;border-radius:8px;color:#e5e7eb;padding:8px}
+	.card{background:var(--bg-card);border:1px solid var(--border-card);border-radius:10px;padding:14px}
+	label{display:flex;flex-direction:column;color:var(--text-label);font-size:13px;margin-bottom:10px}
+	input,select{margin-top:6px;background:var(--bg-input);border:1px solid var(--border-card);border-radius:8px;color:var(--text-label);padding:8px}
 	.actions{display:flex;gap:8px}
-	button{background:#0f172a;border:1px solid #1f2937;color:#e5e7eb;border-radius:8px;height:34px;padding:0 12px}
+	button{background:var(--bg-input);border:1px solid var(--border-card);color:var(--text-label);border-radius:8px;height:34px;padding:0 12px}
 	button.ghost{background:transparent}
-	button.danger{border-color:#7f1d1d;color:#fecaca}
-	.err{color:#ef4444;margin:8px 0}
+	button.danger{border-color:var(--error-bg);color:var(--error-light)}
+	.err{color:var(--error);margin:8px 0}
 	table{width:100%;border-collapse:collapse}
-	th,td{border-bottom:1px solid #1f2937;padding:8px;text-align:left}
+	th,td{border-bottom:1px solid var(--border-card);padding:8px;text-align:left}
 	td.right{text-align:right}
-	.link{color:#93c5fd;text-decoration:none;margin-right:8px}
+	.link{color:var(--link);text-decoration:none;margin-right:8px}
 </style>

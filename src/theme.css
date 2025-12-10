@@ -1,0 +1,21 @@
+/* THEME ORCHESTRATOR
+   This file loads all available themes.
+   
+   Base theme is always loaded (original blue design).
+   Seasonal themes are toggled via CSS classes.
+   
+   To disable seasonal themes (e.g., after Christmas):
+   Comment out the respective @import line.
+*/
+
+/* Base Theme - Original Blue/Navy (Always Active) */
+@import "./themes/base.css";
+
+/* Seasonal Theme - Christmas (Active when .christmas-theme class is present) */
+@import "./themes/christmas.css";
+
+/* Future themes can be added here:
+   @import "./themes/halloween.css";
+   @import "./themes/valentine.css";
+   etc.
+*/

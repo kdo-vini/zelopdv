@@ -1,49 +1,132 @@
+@import "./theme.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light dark;
+/* Custom Utilities using Theme Variables */
+.bg-app-base {
+  background-color: var(--bg-app);
+  color: var(--text-main);
 }
 
-/* Pequenos utilitários opcionais */
-.container {
-  @apply max-w-6xl mx-auto px-4;
+.bg-sidebar-base {
+  background-color: var(--bg-sidebar);
+  color: var(--text-main);
 }
 
-/*
-  Estilos globais reutilizáveis
-  - Mantém os componentes minimalistas (sem CSS duplicado em cada página)
-  - Compatível com tema claro/escuro
-*/
+.bg-header-base {
+  background-color: var(--bg-header);
+  color: var(--text-main);
+}
 
-/* Campo de formulário padrão */
+.text-main {
+  color: var(--text-main);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-accent {
+  color: var(--accent);
+}
+
+/* --- GLOBAL COMPONENTS --- */
+
 .input-form {
-  @apply block w-full px-3 py-2 rounded-md border shadow-sm sm:text-sm
-    bg-white text-slate-900 placeholder-slate-500 border-gray-300
-    focus:outline-none focus:ring-blue-500 focus:border-blue-500
-    dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:border-slate-600;
+  @apply block w-full px-3 py-2 rounded-md border shadow-sm sm:text-sm;
+  background-color: var(--bg-panel);
+  color: var(--text-main);
+  border-color: var(--secondary-border);
 }
 
-/* Botões padrão */
+.input-form:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent);
+  border-color: var(--accent);
+}
+
 .btn-primary {
-  @apply inline-flex items-center justify-center px-3 py-2 rounded-md
-    text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400;
+  @apply inline-flex items-center justify-center px-3 py-2 rounded-md transition-colors;
+  background-color: var(--primary);
+  color: var(--primary-text);
 }
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #9CA3AF;
+  /* Fallback or var */
+}
+
 .btn-secondary {
-  @apply inline-flex items-center justify-center px-3 py-2 rounded-md
-    border text-gray-700 bg-white hover:bg-gray-50 dark:text-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700;
+  @apply inline-flex items-center justify-center px-3 py-2 rounded-md border transition-colors;
+  background-color: var(--secondary);
+  color: var(--secondary-text);
+  border-color: var(--secondary-border);
 }
-/* Estado selecionado para botões de escolha (ex.: forma de pagamento) */
+
+.btn-secondary:hover {
+  background-color: var(--bg-app);
+}
+
 .btn-secondary[aria-pressed="true"],
 .btn-secondary[aria-selected="true"] {
-  @apply bg-blue-600 text-white border-blue-500 ring-2 ring-blue-400;
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
+
 .btn-danger {
-  @apply inline-flex items-center justify-center px-3 py-2 rounded-md
-    text-white bg-red-600 hover:bg-red-700;
+  @apply inline-flex items-center justify-center px-3 py-2 rounded-md text-white bg-red-600 hover:bg-red-700;
 }
 
 /* Modal base */
-.modal-backdrop { @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50; }
-.modal-content { @apply bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md; }
+.modal-backdrop {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50;
+}
+
+.modal-content {
+  @apply bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md;
+}
+
+
+/* Snowfall Animation */
+.snow-container {
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.snowflake {
+  position: absolute;
+  top: -20px;
+  color: #fff;
+  font-size: 1.2em;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  animation-name: fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes fall {
+  0% {
+    transform: translateY(-20px) translateX(0px) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(110vh) translateX(20px) rotate(360deg);
+    opacity: 0.3;
+  }
+}

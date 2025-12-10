@@ -20,13 +20,38 @@
   }
   function cancelCloseAdminMenu() { if (adminCloseTimer) clearTimeout(adminCloseTimer); }
 
+  // CHRISTMAS THEME STATE
+  let isChristmasMode = false;
+  let flakes = [];
+
+  function createSnowflakes() {
+    return Array(30).fill(0).map((_,i) => ({
+      left: Math.random() * 100 + '%',
+      animDuration: (Math.random() * 5 + 5) + 's',
+      delay: (Math.random() * 5) + 's',
+      opacity: Math.random()
+    }));
+  }
+
+  function toggleChristmas() {
+     isChristmasMode = !isChristmasMode;
+     if(typeof window !== 'undefined'){
+       localStorage.setItem('zelo_xmas_theme', String(isChristmasMode));
+     }
+  }
+
   onMount(async () => {
+    // CHRISTMAS INIT
+    if(typeof window !== 'undefined'){
+        flakes = createSnowflakes();
+        const savedXmas = localStorage.getItem('zelo_xmas_theme');
+        if(savedXmas === 'true') isChristmasMode = true;
+    }
+
     if (!supabase) return;
 
   const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html'];
     const path = window.location.pathname;
-
-
 
     let navigated = false;
     let authReady = false;
@@ -128,12 +153,6 @@
       authReady = true; // Only mark ready when we actually have a session here
       maybeNavigate();
     }
-
-    // Importante: não forçar fallback de authReady sem sessão para evitar redirecionar
-    // prematuramente enquanto o onAuthStateChange não disparou.
-
-
-
   });
 
   async function logout() {
@@ -142,8 +161,8 @@
   }
 
   const navLinkBase = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150";
-  const navLinkInactive = "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800";
-  const navLinkActive = "font-semibold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/50";
+  const navLinkInactive = "text-muted hover:bg-black/5 dark:hover:bg-white/10";
+  const navLinkActive = "font-semibold text-[var(--accent)] bg-[var(--accent-light)]";
 
   let isOnline = true;
   onMount(() => {
@@ -170,23 +189,37 @@
   </div>
 {/if}
 
-<div class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-50">
-  <header class="border-b border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900 backdrop-blur sticky top-0 z-50">
+<div class="min-h-screen bg-app-base" class:christmas-theme={isChristmasMode}>
+  
+  {#if isChristmasMode}
+    <div class="snow-container">
+      {#each flakes as f}
+         <div class="snowflake" style="left: {f.left}; animation-duration: {f.animDuration}; animation-delay: {f.delay}; opacity: {f.opacity}">❄</div>
+      {/each}
+    </div>
+  {/if}
+
+  <header class="border-b bg-header-base backdrop-blur sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2">
-        <span class="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">
-          <span class="text-slate-900 dark:text-white">Zelo</span>
-          <span class="ml-1 align-[2px] inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider border-sky-200 text-sky-700 bg-sky-50 dark:border-sky-500/30 dark:text-sky-300 dark:bg-sky-500/10">PDV</span>
-        </span>
-        <span class="sr-only">Zelo PDV</span>
-      </a>
+      
+       <div class="flex items-center gap-4">
+          <a href="/" class="flex items-center gap-2">
+            <span class="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">
+              <span class="text-main">Zelo</span>
+              <span class="ml-1 align-[2px] inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]">PDV</span>
+            </span>
+          </a>
+          
+          <button on:click={toggleChristmas} class="p-1 rounded-full hover:bg-[var(--sidebar-item-hover-bg)] transition-colors group relative" title="Modo Natal">
+            <span class="text-xl filter grayscale group-hover:grayscale-0 transition-all duration-300" style="filter: {isChristmasMode ? 'none' : 'grayscale(100%)'}">🎄</span>
+          </button>
+       </div>
 
       <nav class="hidden sm:flex gap-4 text-sm items-center">
         {#if session}
           <a href="/app" class="{navLinkBase} {$page.url.pathname.startsWith('/app') ? navLinkActive : navLinkInactive}">
             Frente de Caixa
           </a>
-          <!-- Admin dropdown with hover delay -->
           <div class="relative" role="menubar" tabindex="0" aria-label="Admin" on:mouseenter={openAdminMenu} on:mouseleave={scheduleCloseAdminMenu}>
             <button class="{navLinkBase} {$page.url.pathname.startsWith('/admin') || $page.url.pathname.startsWith('/relatorios') ? navLinkActive : navLinkInactive} flex items-center gap-1"
               aria-haspopup="true" aria-expanded={showAdminMenu} on:click={() => showAdminMenu = !showAdminMenu}>
@@ -194,16 +227,18 @@
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
             </button>
             {#if showAdminMenu}
-        <div role="menu" tabindex="-1" aria-label="Admin opções" class="absolute right-0 mt-2 w-56 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-2 z-50"
-                   on:mouseenter={cancelCloseAdminMenu} on:mouseleave={scheduleCloseAdminMenu}>
-                <a href="/admin" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Dashboard</a>
-                <a href="/admin/pessoas" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Pessoas</a>
-                <a href="/admin/fichario" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Fichário (Fiado)</a>
-                <a href="/admin/produtos" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Gerenciar produtos</a>
-                <a href="/admin/estoque" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Estoque</a>
-                <a href="/admin/caixa" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Fechar Caixa</a>
-                <div class="my-1 border-t border-slate-200 dark:border-slate-700"></div>
-                <a href="/relatorios" class="block px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded">Relatórios</a>
+        <div role="menu" tabindex="-1" aria-label="Admin opções" 
+             class="absolute right-0 mt-2 w-56 rounded-md shadow-lg py-2 z-50"
+             style="background-color: var(--bg-panel); border: 1px solid var(--border-subtle);"
+             on:mouseenter={cancelCloseAdminMenu} on:mouseleave={scheduleCloseAdminMenu}>
+                <a href="/admin" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Dashboard</a>
+                <a href="/admin/pessoas" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Pessoas</a>
+                <a href="/admin/fichario" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Fichário (Fiado)</a>
+                <a href="/admin/produtos" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Gerenciar produtos</a>
+                <a href="/admin/estoque" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Estoque</a>
+                <a href="/admin/caixa" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Fechar Caixa</a>
+                <div class="my-1 border-t" style="border-color: var(--border-subtle);"></div>
+                <a href="/relatorios" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Relatórios</a>
               </div>
             {/if}
           </div>
@@ -211,15 +246,15 @@
             Perfil
           </a>
         {:else}
-          <a href="/login" class="text-sm font-medium text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300 transition-colors">
+          <a href="/login" class="text-sm font-medium text-[var(--accent)] hover:text-[var(--primary)] transition-colors">
             Entrar
           </a>
-          <a href="/cadastro" class="ml-2 inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-sky-600 border border-transparent rounded-md shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors">
+          <a href="/cadastro" class="ml-2 btn-primary px-4 shadow-sm text-sm font-medium border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)]">
             Criar conta
           </a>
         {/if}
       </nav>
-      <button class="sm:hidden inline-flex items-center justify-center w-9 h-9 rounded-md border border-slate-300/60 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+      <button class="sm:hidden inline-flex items-center justify-center w-9 h-9 rounded-md border text-main" style="border-color: var(--border-subtle);"
         aria-label="Abrir menu" on:click={() => showMobileMenu = !showMobileMenu}>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
           <path fill-rule="evenodd" d="M3.75 6.75A.75.75 0 014.5 6h15a.75.75 0 010 1.5H4.5a.75.75 0 01-.75-.75zm0 5.25a.75.75 0 01.75-.75h15a.75.75 0 010 1.5H4.5a.75.75 0 01-.75-.75zm.75 4.5a.75.75 0 000 1.5h15a.75.75 0 000-1.5H4.5z" clip-rule="evenodd" />
@@ -229,11 +264,11 @@
   </header>
 
   {#if showMobileMenu}
-    <div class="sm:hidden border-b border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+    <div class="sm:hidden border-b backdrop-blur" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
       <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-2 text-sm">
         {#if session}
           <a href="/app" class="{navLinkBase} { $page.url.pathname.startsWith('/app') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Frente de Caixa</a>
-          <div class="mt-1 text-xs uppercase text-slate-500">Admin</div>
+          <div class="mt-1 text-xs uppercase text-muted">Admin</div>
           <a href="/admin" class="{navLinkBase} { $page.url.pathname === '/admin' ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Dashboard</a>
           <a href="/admin/pessoas" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/pessoas') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Pessoas</a>
           <a href="/admin/fichario" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/fichario') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Fichário (Fiado)</a>
@@ -255,13 +290,12 @@
     <slot />
   </main>
 
-  <footer class="border-t border-slate-200/80 dark:border-slate-700/80 py-6 text-center text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900">
+  <footer class="border-t py-6 text-center text-xs text-muted" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       © {new Date().getFullYear()} Zelo PDV · Desenvolvido por Téchne IA
     </div>
   </footer>
 
-  <!-- Floating WhatsApp button (global) -->
   <a
     href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)."
     target="_blank"
@@ -281,5 +315,3 @@
     </div>
   </a>
 </div>
-
-

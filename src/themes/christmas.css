@@ -1,0 +1,400 @@
+/* CHRISTMAS THEME - Festive Red/Green/Gold Design
+   Seasonal theme applied via .christmas-theme class.
+   Can be enabled/disabled by toggling the class on root element.
+   
+   To deactivate: Comment out the import in theme.css
+*/
+
+.christmas-theme {
+    /* Core Christmas Palette */
+    --xmas-red: #D42426;
+    --xmas-dark-red: #8B0000;
+    --xmas-burgundy: #660000;
+    --xmas-green: #146B3A;
+    --xmas-dark-green: #0F4C29;
+    --xmas-gold: #D4AF37;
+    --xmas-light-gold: #F4E4C1;
+    --xmas-cream: #F5F5DC;
+
+    /* Override semantic variables */
+    --bg-app: #660000;
+    /* Deep burgundy */
+    --bg-panel: #0F4C29;
+    /* Dark green instead of white */
+    --bg-sidebar: #0F4C29;
+    /* Dark green */
+    --bg-header: #F5F5DC;
+    /* Cream */
+
+    --text-main: #F8FAFC;
+    /* White text for dark backgrounds */
+    --text-muted: #CBD5E1;
+    /* Light gray */
+    --text-inverse: #0F172A;
+    /* Dark text for light backgrounds */
+
+    --primary: #146B3A;
+    /* Green buttons */
+    --primary-hover: #0F4C29;
+    --primary-text: #FFFFFF;
+
+    --accent: #D4AF37;
+    /* Gold highlights */
+    --accent-light: rgba(212, 175, 55, 0.15);
+
+    --gold: #D4AF37;
+    --gold-light: #F4E4C1;
+    --gold-hover: #C5A028;
+
+    --sidebar-item-active-bg: #FFFFFF;
+    --sidebar-item-active-text: #D42426;
+    --sidebar-item-hover-bg: #146B3A;
+
+    --border-festive: #146B3A;
+    --border-gold: #D4AF37;
+    --border-subtle: #2D5F3E;
+    /* Lighter green for borders */
+    --border-card: #2D5F3E;
+    /* Green border for cards */
+
+    /* Card & Input Backgrounds */
+    --bg-card: #0F4C29;
+    /* Dark green for cards */
+    --bg-input: rgba(255, 255, 255, 0.1);
+    /* Semi-transparent white */
+
+    /* Text Variants */
+    --text-label: #F4E4C1;
+    /* Light gold for labels */
+
+    /* Status Colors */
+    --error: #D42426;
+    /* Christmas red */
+    --error-bg: #8B0000;
+    /* Dark red */
+    --error-light: #fecaca;
+    /* Light red */
+    --success: #146B3A;
+    /* Christmas green */
+    --success-bg: #0F4C29;
+    /* Dark green */
+    --success-light: #d1fae5;
+    /* Light green */
+    --warning: #D4AF37;
+    /* Gold */
+
+    /* Links */
+    --link: #F4E4C1;
+    /* Light gold */
+    --link-hover: #D4AF37;
+    /* Gold */
+
+    --transition-fast: 200ms ease;
+    --transition-normal: 300ms ease;
+}
+
+/* Background with texture */
+.christmas-theme.bg-app-base,
+.christmas-theme .bg-app-base {
+    background-color: var(--xmas-burgundy);
+    background-image:
+        radial-gradient(circle at 75% 30%, rgba(255, 50, 50, 0.3) 0%, transparent 60%),
+        radial-gradient(circle at 20% 80%, rgba(0, 0, 0, 0.3) 0%, transparent 70%),
+        repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.02) 10px, rgba(255, 255, 255, 0.02) 20px),
+        linear-gradient(135deg, var(--xmas-burgundy) 0%, #400000 100%);
+    background-attachment: fixed;
+}
+
+/* Header */
+.christmas-theme header {
+    background-color: var(--xmas-cream) !important;
+    border-bottom: 3px solid var(--xmas-green) !important;
+    box-shadow: 0 2px 0 0 var(--xmas-gold), 0 4px 12px rgba(20, 107, 58, 0.15);
+}
+
+/* Header navigation links - better visibility */
+.christmas-theme header a,
+.christmas-theme header button {
+    color: var(--xmas-dark-green) !important;
+}
+
+.christmas-theme header .text-muted {
+    color: #64748B !important;
+    /* Darker gray for better contrast on cream */
+}
+
+/* Logo "Zelo" - dark green on cream background */
+.christmas-theme header .text-main {
+    color: var(--xmas-dark-green) !important;
+}
+
+/* Dropdown menu - white text on dark green */
+.christmas-theme [role="menu"] a,
+.christmas-theme [role="menu"] .text-main {
+    color: #F8FAFC !important;
+}
+
+
+/* Buttons */
+.christmas-theme .btn-primary {
+    background: linear-gradient(135deg, var(--xmas-green) 0%, var(--xmas-dark-green) 100%) !important;
+    border: 1px solid var(--xmas-gold) !important;
+    box-shadow: 0 4px 6px rgba(20, 107, 58, 0.3), 0 0 0 1px var(--xmas-gold) inset;
+    transition: all var(--transition-normal);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.christmas-theme .btn-primary:hover {
+    filter: brightness(1.15);
+    box-shadow: 0 6px 12px rgba(20, 107, 58, 0.4), 0 0 0 2px var(--xmas-gold) inset;
+    transform: translateY(-1px);
+}
+
+.christmas-theme .btn-secondary {
+    background: var(--xmas-cream) !important;
+    border: 2px solid var(--xmas-green) !important;
+    color: var(--xmas-green) !important;
+    transition: all var(--transition-fast);
+}
+
+.christmas-theme .btn-secondary:hover {
+    background: #e8f5e9 !important;
+    border-color: var(--xmas-dark-green) !important;
+}
+
+.christmas-theme .btn-secondary[aria-pressed="true"],
+.christmas-theme .btn-secondary[aria-selected="true"] {
+    background: var(--xmas-green) !important;
+    border: 2px solid var(--xmas-gold) !important;
+    color: white !important;
+    box-shadow: 0 0 0 2px var(--xmas-gold) inset;
+}
+
+/* Input Focus */
+.christmas-theme .input-form:focus {
+    border-color: var(--xmas-green) !important;
+    box-shadow: 0 0 0 3px var(--xmas-light-gold) !important;
+}
+
+/* Custom Checkboxes */
+.christmas-theme input[type="checkbox"] {
+    appearance: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--xmas-green);
+    border-radius: 0.25rem;
+    background-color: white;
+    cursor: pointer;
+    position: relative;
+    transition: all var(--transition-fast);
+}
+
+.christmas-theme input[type="checkbox"]:hover {
+    border-color: var(--xmas-dark-green);
+    box-shadow: 0 0 0 2px var(--xmas-light-gold);
+}
+
+.christmas-theme input[type="checkbox"]:checked {
+    background-color: var(--xmas-gold);
+    border-color: var(--xmas-gold);
+}
+
+.christmas-theme input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--xmas-dark-green);
+    font-weight: bold;
+    font-size: 0.875rem;
+}
+
+/* Snowflake festive tint */
+.christmas-theme .snowflake {
+    color: rgba(255, 255, 255, 0.9);
+    filter: drop-shadow(0 0 2px rgba(212, 175, 55, 0.3));
+}
+
+/* ========================================
+   REPLACE DARK BLUE WITH FESTIVE COLORS
+   ======================================== */
+
+/* All slate-800/900 backgrounds become dark green */
+.christmas-theme .bg-slate-800,
+.christmas-theme .bg-slate-900,
+.christmas-theme .bg-gray-800,
+.christmas-theme .bg-gray-900 {
+    background-color: var(--xmas-dark-green) !important;
+    color: #F8FAFC !important;
+}
+
+/* Cards and panels */
+.christmas-theme .bg-white {
+    background-color: var(--xmas-dark-green) !important;
+    color: #F8FAFC !important;
+    border-color: var(--xmas-gold) !important;
+}
+
+/* Specific overrides for better UX */
+.christmas-theme .bg-white h1,
+.christmas-theme .bg-white h2,
+.christmas-theme .bg-white h3,
+.christmas-theme .bg-white h4,
+.christmas-theme .bg-white p,
+.christmas-theme .bg-white span,
+.christmas-theme .bg-white label {
+    color: #F8FAFC !important;
+}
+
+/* Tables */
+.christmas-theme table {
+    background-color: transparent;
+}
+
+.christmas-theme th,
+.christmas-theme td {
+    color: #F8FAFC;
+    border-color: var(--border-subtle) !important;
+}
+
+/* Form inputs on dark green background */
+.christmas-theme input,
+.christmas-theme select,
+.christmas-theme textarea {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: var(--xmas-gold) !important;
+    color: #F8FAFC !important;
+}
+
+.christmas-theme input::placeholder,
+.christmas-theme textarea::placeholder {
+    color: #CBD5E1 !important;
+}
+
+/* Select dropdowns */
+.christmas-theme select {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #F8FAFC;
+}
+
+.christmas-theme select option {
+    background-color: var(--xmas-dark-green);
+    color: #F8FAFC;
+}
+
+/* Links */
+.christmas-theme a:not(.btn-primary):not(.btn-secondary) {
+    color: var(--xmas-light-gold);
+}
+
+.christmas-theme a:not(.btn-primary):not(.btn-secondary):hover {
+    color: var(--xmas-gold);
+}
+
+/* Muted text */
+.christmas-theme .text-muted:not(header *),
+.christmas-theme .text-slate-500,
+.christmas-theme .text-slate-600,
+.christmas-theme .text-gray-500,
+.christmas-theme .text-gray-600 {
+    color: #CBD5E1 !important;
+}
+
+/* Dark text becomes light */
+.christmas-theme .text-slate-900,
+.christmas-theme .text-slate-800,
+.christmas-theme .text-gray-900,
+.christmas-theme .text-gray-800 {
+    color: #F8FAFC !important;
+}
+
+/* Preserve badge colors */
+.christmas-theme .bg-green-100,
+.christmas-theme .bg-green-500 {
+    background-color: var(--xmas-green) !important;
+    color: white !important;
+}
+
+.christmas-theme .bg-red-100,
+.christmas-theme .bg-red-500 {
+    background-color: var(--xmas-red) !important;
+    color: white !important;
+}
+
+.christmas-theme .bg-amber-100 {
+    background-color: var(--xmas-gold) !important;
+    color: var(--xmas-dark-green) !important;
+}
+
+/* Blue buttons become green */
+.christmas-theme .bg-blue-600,
+.christmas-theme .bg-blue-500,
+.christmas-theme .bg-sky-600,
+.christmas-theme .bg-sky-500 {
+    background-color: var(--xmas-green) !important;
+    border-color: var(--xmas-gold) !important;
+    color: white !important;
+}
+
+.christmas-theme .bg-blue-600:hover,
+.christmas-theme .bg-blue-500:hover {
+    background-color: var(--xmas-dark-green) !important;
+}
+
+/* Blue text becomes gold */
+.christmas-theme .text-blue-600,
+.christmas-theme .text-blue-500,
+.christmas-theme .text-sky-600,
+.christmas-theme .text-sky-500 {
+    color: var(--xmas-gold) !important;
+}
+
+/* Indigo/Purple text becomes gold (for product prices) */
+.christmas-theme .text-indigo-600,
+.christmas-theme .text-indigo-500 {
+    color: var(--xmas-gold) !important;
+}
+
+/* Indigo backgrounds become green */
+.christmas-theme .bg-indigo-600,
+.christmas-theme .bg-indigo-500 {
+    background-color: var(--xmas-green) !important;
+}
+
+/* ========================================
+   DASHBOARD ADMIN HARDCODED OVERRIDES
+   ======================================== */
+
+/* Dashboard cards - override hardcoded #0b1220 */
+.christmas-theme .card {
+    background-color: var(--xmas-dark-green) !important;
+    border-color: var(--xmas-gold) !important;
+}
+
+/* Dashboard buttons - override hardcoded #0f172a */
+.christmas-theme .btn {
+    background-color: var(--xmas-green) !important;
+    border-color: var(--xmas-gold) !important;
+    color: white !important;
+}
+
+.christmas-theme .btn:hover {
+    background-color: var(--xmas-dark-green) !important;
+}
+
+/* Dashboard tags */
+.christmas-theme .tag.venda {
+    background-color: var(--xmas-green) !important;
+    color: white !important;
+}
+
+.christmas-theme .tag.sangria {
+    background-color: var(--xmas-red) !important;
+    color: white !important;
+}
+
+/* Loading animation */
+.christmas-theme .loading {
+    background: linear-gradient(90deg, var(--xmas-dark-green), var(--xmas-green), var(--xmas-dark-green)) !important;
+}
