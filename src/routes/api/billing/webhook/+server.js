@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { stripe } from '$lib/server/stripe';
 import { env } from '$env/dynamic/private';
-import { supabase } from '$lib/supabaseClient';
+import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 
 const WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
 
