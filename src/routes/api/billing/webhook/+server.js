@@ -91,21 +91,28 @@ async function handleCheckoutCompleted(session) {
         console.log('[Webhook] Customer ID:', customerId);
 
         if (customerEmail) {
-            // Try to find user by email in empresa_perfil table
-            const { data: profiles, error: profileError } = await supabaseAdmin
-                .from('empresa_perfil')
-                .select('user_id, contato')
-                .eq('contato', customerEmail)
-                .limit(1);
+            // Use Supabase Auth Admin API to find user by email
+            try {
+                const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
 
-            console.log('[Webhook] Profile query result:', { profiles, profileError });
+                if (authError) {
+                    console.error('[Webhook] Error listing users:', authError);
+                } else {
+                    const matchedUser = authData.users.find(u => u.email === customerEmail);
+                    if (matchedUser) {
+                        userId = matchedUser.id;
+                        console.log('[Webhook] ✅ Found user by email in auth.users:', customerEmail, 'user_id:', userId);
+                    } else {
+                        console.log('[Webhook] No user found with email:', customerEmail);
+                    }
+                }
+            } catch (err) {
+                console.error('[Webhook] Error querying auth.users:', err);
+            }
 
-            if (profiles && profiles.length > 0) {
-                userId = profiles[0].user_id;
-                console.log('[Webhook] ✅ Found user by email:', customerEmail, 'user_id:', userId);
-            } else {
-                console.log('[Webhook] No profile found by email, trying stripe_customer_id');
-                // Fallback: try to find in subscriptions by stripe_customer_id
+            // Fallback: try to find in subscriptions by stripe_customer_id
+            if (!userId) {
+                console.log('[Webhook] Trying fallback: stripe_customer_id');
                 const { data: existingSubs, error: subError } = await supabaseAdmin
                     .from('subscriptions')
                     .select('user_id')
