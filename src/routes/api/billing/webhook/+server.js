@@ -1,0 +1,177 @@
+import { json } from '@sveltejs/kit';
+import { stripe } from '$lib/server/stripe';
+import { env } from '$env/dynamic/private';
+import { supabase } from '$lib/supabaseClient';
+
+const WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
+
+export async function POST({ request }) {
+    const body = await request.text();
+    const signature = request.headers.get('stripe-signature');
+
+    if (!WEBHOOK_SECRET) {
+        console.error('[Webhook] STRIPE_WEBHOOK_SECRET not configured');
+        return json({ error: 'Webhook secret not configured' }, { status: 500 });
+    }
+
+    let event;
+    try {
+        event = stripe.webhooks.constructEvent(body, signature, WEBHOOK_SECRET);
+    } catch (err) {
+        console.error('[Webhook] Signature verification failed:', err.message);
+        return json({ error: 'Invalid signature' }, { status: 400 });
+    }
+
+    console.log('[Webhook] Event received:', event.type);
+
+    try {
+        switch (event.type) {
+            case 'checkout.session.completed': {
+                const session = event.data.object;
+                await handleCheckoutCompleted(session);
+                break;
+            }
+
+            case 'customer.subscription.created':
+            case 'customer.subscription.updated': {
+                const subscription = event.data.object;
+                await handleSubscriptionUpdate(subscription);
+                break;
+            }
+
+            case 'customer.subscription.deleted': {
+                const subscription = event.data.object;
+                await handleSubscriptionDeleted(subscription);
+                break;
+            }
+
+            case 'invoice.payment_succeeded': {
+                const invoice = event.data.object;
+                await handleInvoicePaymentSucceeded(invoice);
+                break;
+            }
+
+            case 'invoice.payment_failed': {
+                const invoice = event.data.object;
+                await handleInvoicePaymentFailed(invoice);
+                break;
+            }
+
+            default:
+                console.log('[Webhook] Unhandled event type:', event.type);
+        }
+
+        return json({ received: true });
+    } catch (err) {
+        console.error('[Webhook] Error processing event:', err);
+        return json({ error: 'Webhook handler failed' }, { status: 500 });
+    }
+}
+
+async function handleCheckoutCompleted(session) {
+    console.log('[Webhook] Checkout completed:', session.id);
+
+    const customerId = session.customer;
+    const subscriptionId = session.subscription;
+    const userId = session.metadata?.user_id;
+
+    if (!userId) {
+        console.error('[Webhook] No user_id in session metadata');
+        return;
+    }
+
+    // Get subscription details from Stripe
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+    // Create or update subscription in database
+    const { error } = await supabase
+        .from('subscriptions')
+        .upsert({
+            user_id: userId,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId,
+            status: subscription.status,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'user_id'
+        });
+
+    if (error) {
+        console.error('[Webhook] Error upserting subscription:', error);
+        throw error;
+    }
+
+    console.log('[Webhook] Subscription created/updated for user:', userId);
+}
+
+async function handleSubscriptionUpdate(subscription) {
+    console.log('[Webhook] Subscription updated:', subscription.id);
+
+    const { error } = await supabase
+        .from('subscriptions')
+        .update({
+            status: subscription.status,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            updated_at: new Date().toISOString()
+        })
+        .eq('stripe_subscription_id', subscription.id);
+
+    if (error) {
+        console.error('[Webhook] Error updating subscription:', error);
+        throw error;
+    }
+
+    console.log('[Webhook] Subscription updated in database');
+}
+
+async function handleSubscriptionDeleted(subscription) {
+    console.log('[Webhook] Subscription deleted:', subscription.id);
+
+    const { error } = await supabase
+        .from('subscriptions')
+        .update({
+            status: 'canceled',
+            updated_at: new Date().toISOString()
+        })
+        .eq('stripe_subscription_id', subscription.id);
+
+    if (error) {
+        console.error('[Webhook] Error deleting subscription:', error);
+        throw error;
+    }
+
+    console.log('[Webhook] Subscription marked as canceled');
+}
+
+async function handleInvoicePaymentSucceeded(invoice) {
+    console.log('[Webhook] Invoice payment succeeded:', invoice.id);
+
+    if (!invoice.subscription) return;
+
+    // Refresh subscription data
+    const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+    await handleSubscriptionUpdate(subscription);
+}
+
+async function handleInvoicePaymentFailed(invoice) {
+    console.log('[Webhook] Invoice payment failed:', invoice.id);
+
+    if (!invoice.subscription) return;
+
+    const { error } = await supabase
+        .from('subscriptions')
+        .update({
+            status: 'past_due',
+            updated_at: new Date().toISOString()
+        })
+        .eq('stripe_subscription_id', invoice.subscription);
+
+    if (error) {
+        console.error('[Webhook] Error updating subscription to past_due:', error);
+    }
+}
