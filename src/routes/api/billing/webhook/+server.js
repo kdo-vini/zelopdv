@@ -73,10 +73,31 @@ async function handleCheckoutCompleted(session) {
 
     const customerId = session.customer;
     const subscriptionId = session.subscription;
-    const userId = session.metadata?.user_id;
+    let userId = session.metadata?.user_id;
+
+    // If no user_id in metadata (Payment Link), try to find by customer email
+    if (!userId) {
+        console.log('[Webhook] No user_id in metadata, looking up by customer email');
+
+        const customer = await stripe.customers.retrieve(customerId);
+        const customerEmail = customer.email || session.customer_details?.email;
+
+        if (customerEmail) {
+            const { data: users } = await supabase
+                .from('auth.users')
+                .select('id')
+                .eq('email', customerEmail)
+                .limit(1);
+
+            if (users && users.length > 0) {
+                userId = users[0].id;
+                console.log('[Webhook] Found user by email:', customerEmail);
+            }
+        }
+    }
 
     if (!userId) {
-        console.error('[Webhook] No user_id in session metadata');
+        console.error('[Webhook] Could not identify user - no metadata and no matching email');
         return;
     }
 
