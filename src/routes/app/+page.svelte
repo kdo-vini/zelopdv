@@ -824,6 +824,16 @@ window.addEventListener('message', function(e){
         insertValorRecebido = cashRecebidoMulti > 0 ? cashRecebidoMulti : null;
         insertValorTroco = trocoMulti;
       }
+
+      // Determina cliente vinculado caso seja Fiado (Single ou Multi)
+      let idClienteForVenda = null;
+      if (!multiPag && formaPagamento === 'fiado') {
+        idClienteForVenda = pessoaFiadoId || null;
+      } else if (multiPag) {
+         const pFiado = pagamentos.find(p => p.forma === 'fiado');
+         if (pFiado) idClienteForVenda = pFiado.pessoaId || null;
+      }
+
       const { data: venda, error: vendaError } = await supabase
         .from('vendas')
         .insert({
@@ -832,7 +842,8 @@ window.addEventListener('message', function(e){
           valor_recebido: insertValorRecebido,
           valor_troco: insertValorTroco,
           id_usuario,
-          id_caixa: idCaixaAberto
+          id_caixa: idCaixaAberto,
+          id_cliente: idClienteForVenda
         })
         .select('id')
         .single();
@@ -1501,7 +1512,7 @@ window.addEventListener('message', function(e){
     role="button"
     tabindex="0"
     aria-label="Fechar modal de valor avulso"
-    on:keydown={(e) => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { modalValorAberto = false; } }}
+    on:keydown={(e) => { if (e.key === 'Escape') { modalValorAberto = false; } }}
     on:click|self={() => modalValorAberto = false}
   >
     <div class="modal-content text-gray-900 dark:text-gray-100" role="dialog" aria-modal="true" aria-labelledby="titulo-valor-avulso">
