@@ -2,12 +2,28 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Normalize and strictly validate subscription status.
- * Only "active" grants access per business rule.
+ * Normalize and strictly validate subscription status AND expiration date.
+ * Only "active" status + non-expired period grants access per business rule.
+ * @param {Object} subscription - Subscription object with status and current_period_end
+ * @returns {boolean} - True if subscription is active and not expired
  */
-export function isSubscriptionActiveStrict(statusLike) {
-  const status = (statusLike ?? '').toString().trim().toLowerCase();
-  return status === 'active';
+export function isSubscriptionActiveStrict(subscription) {
+  if (!subscription) return false;
+
+  const status = (subscription.status ?? '').toString().trim().toLowerCase();
+  const isActive = status === 'active';
+
+  // Validate expiration date
+  if (subscription.current_period_end) {
+    const expiryDate = new Date(subscription.current_period_end);
+    const now = new Date();
+    const notExpired = expiryDate > now;
+
+    return isActive && notExpired;
+  }
+
+  // If no expiration date, only check status (fallback)
+  return isActive;
 }
 
 /**
@@ -46,22 +62,30 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     }
   }
 
-  // 3) Subscription (redirect only if status !== 'active')
+  // 3) Subscription (redirect only if status !== 'active' OR expired)
   try {
-    let { data: sub } = await supabase
+    let { data: sub, error } = await supabase
       .from('subscriptions')
       .select('status, current_period_end, user_id')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    const isActiveStrict = isSubscriptionActiveStrict(sub?.status);
-    if (!isActiveStrict) {
-      if (redirectOnFail) window.location.href = '/assinatura?msg=subscribe';
+
+    // If there's an error or no subscription, redirect
+    if (error || !sub) {
+      if (redirectOnFail) window.location.href = '/assinatura?msg=expired';
       return null;
     }
-  } catch {
-    if (redirectOnFail) window.location.href = '/assinatura?msg=subscribe';
+
+    const isActiveStrict = isSubscriptionActiveStrict(sub);
+    if (!isActiveStrict) {
+      if (redirectOnFail) window.location.href = '/assinatura?msg=expired';
+      return null;
+    }
+  } catch (err) {
+    console.error('[Guards] Error checking subscription:', err);
+    if (redirectOnFail) window.location.href = '/assinatura?msg=expired';
     return null;
   }
 

@@ -69,7 +69,7 @@
             .select('status, current_period_end')
             .eq('user_id', session.user.id)
             .maybeSingle();
-          hasActiveSub = isSubscriptionActiveStrict(subRow?.status);
+          hasActiveSub = isSubscriptionActiveStrict(subRow);
 
           // 2) Perfil da empresa completo (não cria se ausente, devido a NOT NULL)
           let { data: perfil } = await supabase
@@ -122,7 +122,7 @@
         }
         if (!hasActiveSub) {
 
-          window.location.href = '/assinatura';
+          window.location.href = '/assinatura?msg=expired';
           navigated = true;
           return;
         }

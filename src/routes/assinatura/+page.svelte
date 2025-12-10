@@ -5,32 +5,67 @@
   export let params;
 
   let userId = '';
+  let email = '';
+  let subStatus = null;
+  let customerId = null;
+  let loading = false;
+  let message = '';
+  let expiryDate = null;
 
   onMount(async () => {
-    const { data: userData } = await supabase.auth.getUser();
-    userId = userData?.user?.id || '';
-    email = userData?.user?.email || '';
-    if (userId) {
-      // Buscar assinatura do usuário e também o stripe_customer_id para o botão de portal
-      const { data } = await supabase
-        .from('subscriptions')
-        .select('status, stripe_customer_id')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      subStatus = data?.status || null;
-      customerId = data?.stripe_customer_id || null;
-    }
     try {
-      const params = new URLSearchParams(window.location.search);
-      const msg = params.get('msg');
-      if (msg === 'subscribe') {
-        message = 'Sua assinatura não está ativa. Assine para utilizar o sistema.';
-      } else if (msg === 'complete') {
-        message = 'Complete o perfil da empresa para continuar.';
+      const { data: userData } = await supabase.auth.getUser();
+      userId = userData?.user?.id || '';
+      email = userData?.user?.email || '';
+      
+      if (userId) {
+        try {
+          // Buscar assinatura do usuário e também o stripe_customer_id para o botão de portal
+          const { data } = await supabase
+            .from('subscriptions')
+            .select('status, stripe_customer_id, current_period_end, manually_extended_until')
+            .eq('user_id', userId)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          subStatus = data?.status || null;
+          customerId = data?.stripe_customer_id || null;
+          expiryDate = data?.manually_extended_until || data?.current_period_end || null;
+          
+          // Check if expired
+          if (subStatus === 'canceled' && expiryDate) {
+            const expiry = new Date(expiryDate);
+            const now = new Date();
+            if (expiry < now) {
+              message = `Sua assinatura expirou em ${expiry.toLocaleDateString('pt-BR')}. Renove para continuar usando o sistema.`;
+            } else {
+              message = `Sua assinatura foi cancelada e expirará em ${expiry.toLocaleDateString('pt-BR')}.`;
+            }
+          }
+        } catch (subError) {
+          console.error('[Assinatura] Erro ao carregar dados:', subError);
+          // Continua mesmo com erro - usuário pode assinar
+        }
       }
-    } catch {}
+      
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const msg = params.get('msg');
+        if (msg === 'subscribe') {
+          message = 'Sua assinatura não está ativa. Assine para utilizar o sistema.';
+        } else if (msg === 'complete') {
+          message = 'Complete o perfil da empresa para continuar.';
+        } else if (msg === 'expired') {
+          message = 'Sua assinatura expirou. Renove para continuar usando o sistema.';
+        }
+      } catch (paramError) {
+        console.error('[Assinatura] Erro ao ler parâmetros:', paramError);
+      }
+    } catch (error) {
+      console.error('[Assinatura] Erro crítico:', error);
+      message = 'Erro ao carregar página. Por favor, recarregue ou entre em contato com o suporte.';
+    }
   });
 
   const PAYMENT_LINK = import.meta.env.VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL || '';
