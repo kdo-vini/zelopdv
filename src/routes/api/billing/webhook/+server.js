@@ -83,19 +83,28 @@ async function handleCheckoutCompleted(session) {
     // Get subscription details from Stripe
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
+    const subscriptionData = {
+        user_id: userId,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        status: subscription.status,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        updated_at: new Date().toISOString()
+    };
+
+    // Only add timestamps if they exist
+    if (subscription.current_period_start) {
+        subscriptionData.current_period_start = new Date(subscription.current_period_start * 1000).toISOString();
+    }
+
+    if (subscription.current_period_end) {
+        subscriptionData.current_period_end = new Date(subscription.current_period_end * 1000).toISOString();
+    }
+
     // Create or update subscription in database
     const { error } = await supabase
         .from('subscriptions')
-        .upsert({
-            user_id: userId,
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            cancel_at_period_end: subscription.cancel_at_period_end,
-            updated_at: new Date().toISOString()
-        }, {
+        .upsert(subscriptionData, {
             onConflict: 'user_id'
         });
 
@@ -110,15 +119,24 @@ async function handleCheckoutCompleted(session) {
 async function handleSubscriptionUpdate(subscription) {
     console.log('[Webhook] Subscription updated:', subscription.id);
 
+    const updateData = {
+        status: subscription.status,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        updated_at: new Date().toISOString()
+    };
+
+    // Only add timestamps if they exist (not null)
+    if (subscription.current_period_start) {
+        updateData.current_period_start = new Date(subscription.current_period_start * 1000).toISOString();
+    }
+
+    if (subscription.current_period_end) {
+        updateData.current_period_end = new Date(subscription.current_period_end * 1000).toISOString();
+    }
+
     const { error } = await supabase
         .from('subscriptions')
-        .update({
-            status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            cancel_at_period_end: subscription.cancel_at_period_end,
-            updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('stripe_subscription_id', subscription.id);
 
     if (error) {
