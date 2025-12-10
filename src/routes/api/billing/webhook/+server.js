@@ -82,30 +82,40 @@ async function handleCheckoutCompleted(session) {
         const customer = await stripe.customers.retrieve(customerId);
         const customerEmail = customer.email || session.customer_details?.email;
 
+        console.log('[Webhook] Customer email:', customerEmail);
+        console.log('[Webhook] Customer ID:', customerId);
+
         if (customerEmail) {
             // Try to find user by email in empresa_perfil table
-            const { data: profiles } = await supabase
+            const { data: profiles, error: profileError } = await supabase
                 .from('empresa_perfil')
-                .select('user_id')
+                .select('user_id, contato')
                 .eq('contato', customerEmail)
                 .limit(1);
 
+            console.log('[Webhook] Profile query result:', { profiles, profileError });
+
             if (profiles && profiles.length > 0) {
                 userId = profiles[0].user_id;
-                console.log('[Webhook] Found user by email in empresa_perfil:', customerEmail);
+                console.log('[Webhook] ✅ Found user by email:', customerEmail, 'user_id:', userId);
             } else {
+                console.log('[Webhook] No profile found by email, trying stripe_customer_id');
                 // Fallback: try to find in subscriptions by stripe_customer_id
-                const { data: existingSubs } = await supabase
+                const { data: existingSubs, error: subError } = await supabase
                     .from('subscriptions')
                     .select('user_id')
                     .eq('stripe_customer_id', customerId)
                     .limit(1);
 
+                console.log('[Webhook] Subscription query result:', { existingSubs, subError });
+
                 if (existingSubs && existingSubs.length > 0) {
                     userId = existingSubs[0].user_id;
-                    console.log('[Webhook] Found user by existing stripe_customer_id');
+                    console.log('[Webhook] ✅ Found user by stripe_customer_id:', userId);
                 }
             }
+        } else {
+            console.log('[Webhook] ❌ No customer email available from Stripe');
         }
     }
 
