@@ -148,11 +148,7 @@ async function handleCheckoutCompleted(session) {
         updated_at: new Date().toISOString()
     };
 
-    // Only add timestamps if they exist
-    if (subscription.current_period_start) {
-        subscriptionData.current_period_start = new Date(subscription.current_period_start * 1000).toISOString();
-    }
-
+    // Only add current_period_end if it exists
     if (subscription.current_period_end) {
         subscriptionData.current_period_end = new Date(subscription.current_period_end * 1000).toISOString();
     }
