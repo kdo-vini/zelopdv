@@ -83,15 +83,28 @@ async function handleCheckoutCompleted(session) {
         const customerEmail = customer.email || session.customer_details?.email;
 
         if (customerEmail) {
-            const { data: users } = await supabase
-                .from('auth.users')
-                .select('id')
-                .eq('email', customerEmail)
+            // Try to find user by email in empresa_perfil table
+            const { data: profiles } = await supabase
+                .from('empresa_perfil')
+                .select('user_id')
+                .eq('contato', customerEmail)
                 .limit(1);
 
-            if (users && users.length > 0) {
-                userId = users[0].id;
-                console.log('[Webhook] Found user by email:', customerEmail);
+            if (profiles && profiles.length > 0) {
+                userId = profiles[0].user_id;
+                console.log('[Webhook] Found user by email in empresa_perfil:', customerEmail);
+            } else {
+                // Fallback: try to find in subscriptions by stripe_customer_id
+                const { data: existingSubs } = await supabase
+                    .from('subscriptions')
+                    .select('user_id')
+                    .eq('stripe_customer_id', customerId)
+                    .limit(1);
+
+                if (existingSubs && existingSubs.length > 0) {
+                    userId = existingSubs[0].user_id;
+                    console.log('[Webhook] Found user by existing stripe_customer_id');
+                }
             }
         }
     }
