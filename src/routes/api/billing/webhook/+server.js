@@ -14,6 +14,11 @@ export async function POST({ request }) {
         return json({ error: 'Webhook secret not configured' }, { status: 500 });
     }
 
+    if (!supabaseAdmin) {
+        console.error('[Webhook] supabaseAdmin is null - Check SUPABASE_SERVICE_ROLE_KEY in Vercel env vars');
+        return json({ error: 'Server configuration error: Missing Service Role Key' }, { status: 500 });
+    }
+
     let event;
     try {
         event = stripe.webhooks.constructEvent(body, signature, WEBHOOK_SECRET);
@@ -87,7 +92,7 @@ async function handleCheckoutCompleted(session) {
 
         if (customerEmail) {
             // Try to find user by email in empresa_perfil table
-            const { data: profiles, error: profileError } = await supabase
+            const { data: profiles, error: profileError } = await supabaseAdmin
                 .from('empresa_perfil')
                 .select('user_id, contato')
                 .eq('contato', customerEmail)
@@ -101,7 +106,7 @@ async function handleCheckoutCompleted(session) {
             } else {
                 console.log('[Webhook] No profile found by email, trying stripe_customer_id');
                 // Fallback: try to find in subscriptions by stripe_customer_id
-                const { data: existingSubs, error: subError } = await supabase
+                const { data: existingSubs, error: subError } = await supabaseAdmin
                     .from('subscriptions')
                     .select('user_id')
                     .eq('stripe_customer_id', customerId)
@@ -146,7 +151,7 @@ async function handleCheckoutCompleted(session) {
     }
 
     // Create or update subscription in database
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('subscriptions')
         .upsert(subscriptionData, {
             onConflict: 'user_id'
@@ -178,7 +183,7 @@ async function handleSubscriptionUpdate(subscription) {
         updateData.current_period_end = new Date(subscription.current_period_end * 1000).toISOString();
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('subscriptions')
         .update(updateData)
         .eq('stripe_subscription_id', subscription.id);
@@ -194,7 +199,7 @@ async function handleSubscriptionUpdate(subscription) {
 async function handleSubscriptionDeleted(subscription) {
     console.log('[Webhook] Subscription deleted:', subscription.id);
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('subscriptions')
         .update({
             status: 'canceled',
@@ -225,7 +230,7 @@ async function handleInvoicePaymentFailed(invoice) {
 
     if (!invoice.subscription) return;
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('subscriptions')
         .update({
             status: 'past_due',
