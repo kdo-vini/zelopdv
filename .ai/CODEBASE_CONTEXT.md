@@ -175,7 +175,150 @@ src/
 
 ---
 
-## 3. DATABASE SCHEMA (Supabase)
+## 3. SUBSCRIPTION SYSTEM (STRIPE)
+
+### 3.1 Architecture
+
+**Payment Flow:**
+1. User clicks "Assinar" → Opens Stripe checkout (Payment Link or programmatic)
+2. User completes payment → Stripe sends webhook event
+3. Webhook handler activates subscription in database
+4. User gains access to protected routes
+
+**Components:**
+- **Frontend:** Subscription page (`/assinatura/+page.svelte`)
+- **Backend:** Webhook handler (`/api/billing/webhook/+server.js`)
+- **Database:** `subscriptions` table
+- **Admin:** Subscription management panel (`admin-dashboard/`)
+
+### 3.2 Database Schema
+
+#### `subscriptions` Table
+```sql
+CREATE TABLE public.subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id),
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  status text,  -- 'active', 'canceled', 'past_due'
+  current_period_end timestamp with time zone,
+  cancel_at_period_end boolean DEFAULT false,
+  price_id text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  manually_extended_until timestamp with time zone,
+  admin_notes text,
+  last_modified_by uuid,
+  last_modified_at timestamp with time zone
+);
+
+-- Indexes
+CREATE INDEX idx_subscriptions_user_id ON public.subscriptions(user_id);
+CREATE INDEX idx_subscriptions_stripe_customer_id ON public.subscriptions(stripe_customer_id);
+```
+
+**Note:** RLS is DISABLED for webhooks (uses service role key)
+
+### 3.3 Webhook Handler
+
+**File:** `src/routes/api/billing/webhook/+server.js`
+
+**Handles Events:**
+- `checkout.session.completed` - Activates subscription after payment
+- `customer.subscription.created/updated` - Updates subscription details
+- `customer.subscription.deleted` - Marks subscription as canceled
+- `invoice.payment_succeeded` - Renews subscription
+- `invoice.payment_failed` - Marks as past_due
+
+**Key Features:**
+- **Signature verification** for security
+- **User lookup by email** (handles Payment Links without metadata)
+- **Service role key** (`supabaseAdmin`) to bypass RLS
+- **Manual update/insert** (no upsert due to missing UNIQUE constraint)
+
+**Critical Code:**
+```javascript
+// Find user by email using Auth Admin API
+const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+const matchedUser = authData.users.find(u => u.email === customerEmail);
+
+// Update or insert subscription
+const { data: existingSub } = await supabaseAdmin
+  .from('subscriptions')
+  .select('id')
+  .eq('user_id', userId)
+  .maybeSingle();
+
+if (existingSub) {
+  // Update existing
+  await supabaseAdmin.from('subscriptions').update(data).eq('id', existingSub.id);
+} else {
+  // Insert new
+  await supabaseAdmin.from('subscriptions').insert(data);
+}
+```
+
+### 3.4 Server-Side Supabase Client
+
+**File:** `src/lib/server/supabaseAdmin.js`
+
+```javascript
+import { createClient } from '@supabase/supabase-js';
+import { env } from '$env/dynamic/private';
+
+const supabaseUrl = env.SUPABASE_URL || env.VITE_SUPABASE_URL;
+const supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+
+export const supabaseAdmin = (supabaseUrl && supabaseServiceKey) 
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    })
+  : null;
+```
+
+**Why needed:** Bypasses RLS to allow webhooks to write to database
+
+### 3.5 Environment Variables
+
+**Required for Webhooks:**
+```env
+# Vercel (Backend)
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJxxx...  # Service role, NOT anon key
+STRIPE_SECRET_KEY=sk_live_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+
+# Frontend
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJxxx...
+STRIPE_PRICE_ID_MONTHLY_59=price_xxx
+```
+
+### 3.6 Access Control
+
+**Protected Routes:** `/app`, `/admin/*`, `/relatorios`
+
+**Guard Function:** `ensureActiveSubscription()` in `lib/guards.js`
+
+```javascript
+// Checks:
+// 1. User is authenticated
+// 2. Profile is complete (empresa_perfil)
+// 3. Subscription exists and is active
+// 4. Not expired (current_period_end OR manually_extended_until)
+
+const isActive = sub.status === 'active' && 
+  new Date(sub.manually_extended_until || sub.current_period_end) > now();
+```
+
+**Redirect Flow:**
+- No auth → `/login`
+- No profile → `/perfil?msg=complete`
+- No subscription → `/assinatura?msg=expired`
+
+---
+
+## 4. DATABASE SCHEMA (Supabase)
 
 ### 3.1 Core Tables
 

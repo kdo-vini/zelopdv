@@ -26,18 +26,21 @@ export async function POST({ request }) {
       return json({ error: 'Valor inválido em STRIPE_PRICE_ID_MONTHLY_59. Informe o ID do price (ex: price_...), não a URL. Para Payment Link use VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL.' }, { status: 500 });
     }
 
-  if (!stripe) return json({ error: 'Stripe não configurado' }, { status: 500 });
+    if (!stripe) return json({ error: 'Stripe não configurado' }, { status: 500 });
 
     // 1) Localizar ou criar Customer por e-mail
     const customers = await stripe.customers.list({ email, limit: 1 });
     const customer = customers.data[0] || await stripe.customers.create({ email, metadata: { user_id: userId } });
 
-    // 2) Criar Checkout Session para assinatura
+    // 2) Criar Checkout Session para assinatura com trial de 30 dias
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customer.id,
       line_items: [{ price: PRICE_ID, quantity: 1 }],
       allow_promotion_codes: true,
+      subscription_data: {
+        trial_period_days: 30,
+      },
       success_url: `${ORIGIN}/assinatura?success=1`,
       cancel_url: `${ORIGIN}/assinatura?canceled=1`,
       metadata: { user_id: userId },

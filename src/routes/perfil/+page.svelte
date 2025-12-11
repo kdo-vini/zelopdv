@@ -222,7 +222,7 @@
             disabled={subLoading}>
             Gerenciar assinatura
           </button>
-          {#if !subLoading && subStatus !== 'active'}
+          {#if !subLoading && subStatus !== 'active' && subStatus !== 'trialing'}
             <a href="/assinatura" class="px-3 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white">Assinar</a>
           {/if}
         </div>

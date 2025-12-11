@@ -3,15 +3,15 @@ import { supabase } from './supabaseClient';
 
 /**
  * Normalize and strictly validate subscription status AND expiration date.
- * Only "active" status + non-expired period grants access per business rule.
+ * Both "active" and "trialing" status grant access (trialing = free trial period).
  * @param {Object} subscription - Subscription object with status and current_period_end
- * @returns {boolean} - True if subscription is active and not expired
+ * @returns {boolean} - True if subscription is active/trialing and not expired
  */
 export function isSubscriptionActiveStrict(subscription) {
   if (!subscription) return false;
 
   const status = (subscription.status ?? '').toString().trim().toLowerCase();
-  const isActive = status === 'active';
+  const isActive = status === 'active' || status === 'trialing';
 
   // Validate expiration date
   if (subscription.current_period_end) {
@@ -62,7 +62,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     }
   }
 
-  // 3) Subscription (redirect only if status !== 'active' OR expired)
+  // 3) Subscription (redirect only if status !== 'active'/'trialing' OR expired)
   try {
     let { data: sub, error } = await supabase
       .from('subscriptions')
@@ -72,20 +72,21 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
       .limit(1)
       .maybeSingle();
 
-    // If there's an error or no subscription, redirect
+    // If there's an error or no subscription, redirect with 'subscribe' (new user)
     if (error || !sub) {
-      if (redirectOnFail) window.location.href = '/assinatura?msg=expired';
+      if (redirectOnFail) window.location.href = '/assinatura?msg=subscribe';
       return null;
     }
 
     const isActiveStrict = isSubscriptionActiveStrict(sub);
     if (!isActiveStrict) {
+      // User had subscription but it's not active anymore - use 'expired'
       if (redirectOnFail) window.location.href = '/assinatura?msg=expired';
       return null;
     }
   } catch (err) {
     console.error('[Guards] Error checking subscription:', err);
-    if (redirectOnFail) window.location.href = '/assinatura?msg=expired';
+    if (redirectOnFail) window.location.href = '/assinatura?msg=subscribe';
     return null;
   }
 

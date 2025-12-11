@@ -20,14 +20,14 @@
           Vendas em segundos, controle de vendas, estoque crítico, sangria e suprimento, fechamento confiável e painel diário.
         </p>
         <div class="mt-7 flex flex-wrap gap-4">
-          <a href="/cadastro" class="btn-primary text-base px-6 py-3">Criar conta</a>
+          <a href="/cadastro" class="btn-primary text-base px-6 py-3">Testar 30 dias grátis</a>
           <a href="/login" class="btn-secondary text-base px-6 py-3">Acessar</a>
           <div class="flex items-center text-sm text-slate-500 dark:text-slate-400 gap-2">
             <span class="inline-flex items-center gap-1"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>Online</span>
-            <span>R$ 59/mês fixo</span>
+            <span>30 dias grátis • depois R$ 59/mês</span>
           </div>
         </div>
-        <div class="mt-6 text-xs text-slate-500 dark:text-slate-400">Sem taxa de instalação. Cancelamento a qualquer momento.</div>
+        <div class="mt-6 text-xs text-slate-500 dark:text-slate-400">Teste grátis por 30 dias. Sem cobranças até lá. Cancele quando quiser.</div>
       </div>
       <!-- MOCK UI PREVIEW -->
       <div class="lg:col-span-5">
@@ -162,11 +162,11 @@
 <section class="py-14 border-t border-slate-200 dark:border-slate-700">
   <div class="mx-auto max-w-6xl px-4 flex flex-col sm:flex-row items-center justify-between gap-6">
     <div>
-      <h2 class="text-3xl font-semibold text-slate-900 dark:text-white">Comece agora por R$ 59/mês</h2>
-      <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Sem implantação, sem custo escondido. Tudo pronto em minutos.</p>
+      <h2 class="text-3xl font-semibold text-slate-900 dark:text-white">Experimente 30 dias grátis</h2>
+      <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Sem implantação, sem custo escondido. Depois do teste, R$ 59/mês.</p>
     </div>
     <div class="flex gap-3">
-      <a href="/cadastro" class="btn-primary px-6 py-3">Criar conta</a>
+      <a href="/cadastro" class="btn-primary px-6 py-3">Testar grátis</a>
       <a href="/login" class="btn-secondary px-6 py-3">Acessar</a>
     </div>
   </div>

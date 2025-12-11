@@ -10,7 +10,9 @@
   let customerId = null;
   let loading = false;
   let message = '';
+  let messageType = 'info'; // 'info' = convidativo, 'warning' = expiração/problema
   let expiryDate = null;
+  let hasHadSubscription = false; // true se usuário já teve assinatura antes
 
   onMount(async () => {
     try {
@@ -32,15 +34,18 @@
           subStatus = data?.status || null;
           customerId = data?.stripe_customer_id || null;
           expiryDate = data?.manually_extended_until || data?.current_period_end || null;
+          hasHadSubscription = !!data; // usuário já teve assinatura se data existe
           
-          // Check if expired
-          if (subStatus === 'canceled' && expiryDate) {
+          // Check if expired (apenas para quem já teve assinatura)
+          if (hasHadSubscription && subStatus === 'canceled' && expiryDate) {
             const expiry = new Date(expiryDate);
             const now = new Date();
             if (expiry < now) {
               message = `Sua assinatura expirou em ${expiry.toLocaleDateString('pt-BR')}. Renove para continuar usando o sistema.`;
+              messageType = 'warning';
             } else {
               message = `Sua assinatura foi cancelada e expirará em ${expiry.toLocaleDateString('pt-BR')}.`;
+              messageType = 'warning';
             }
           }
         } catch (subError) {
@@ -53,11 +58,18 @@
         const params = new URLSearchParams(window.location.search);
         const msg = params.get('msg');
         if (msg === 'subscribe') {
-          message = 'Sua assinatura não está ativa. Assine para utilizar o sistema.';
+          // Diferenciar: novo usuário vs usuário que já teve assinatura
+          if (hasHadSubscription) {
+            message = 'Sua assinatura não está ativa. Renove para utilizar o sistema.';
+            messageType = 'warning';
+          }
+          // Se não teve assinatura, não mostra warning - deixa a mensagem padrão convidativa
         } else if (msg === 'complete') {
           message = 'Complete o perfil da empresa para continuar.';
+          messageType = 'info';
         } else if (msg === 'expired') {
           message = 'Sua assinatura expirou. Renove para continuar usando o sistema.';
+          messageType = 'warning';
         }
       } catch (paramError) {
         console.error('[Assinatura] Erro ao ler parâmetros:', paramError);
@@ -65,6 +77,7 @@
     } catch (error) {
       console.error('[Assinatura] Erro crítico:', error);
       message = 'Erro ao carregar página. Por favor, recarregue ou entre em contato com o suporte.';
+      messageType = 'warning';
     }
   });
 
@@ -86,9 +99,11 @@
         const json = await res.json();
         if (json?.url) { window.location.href = json.url; return; }
         message = json?.error || 'Falha ao iniciar checkout.';
+        messageType = 'warning';
       }
     } catch (e) {
       message = e?.message || 'Erro.';
+      messageType = 'warning';
     } finally {
       loading = false;
     }
@@ -104,12 +119,19 @@
       const json = await res.json();
       if (json?.url) { window.location.href = json.url; return; }
       message = json?.error || 'Falha ao abrir portal.';
+      messageType = 'warning';
     } catch (e) {
       message = e?.message || 'Erro.';
+      messageType = 'warning';
     } finally {
       loading = false;
     }
   }
+
+  // Mensagem padrão para novos usuários (sem histórico de assinatura)
+  $: defaultMessage = hasHadSubscription 
+    ? 'Renove sua assinatura para continuar usando o sistema.' 
+    : 'Comece seu período de teste grátis e experimente todas as funcionalidades!';
 </script>
 
 <svelte:head>
@@ -118,25 +140,44 @@
 
 <section class="max-w-xl mx-auto space-y-4">
   <h1 class="text-2xl font-bold">Assinatura Zelo PDV</h1>
-  <p class="text-slate-600 dark:text-slate-300">R$ 59/mês — cancele quando quiser.</p>
+  <p class="text-slate-600 dark:text-slate-300">30 dias grátis, depois R$ 59/mês — cancele quando quiser.</p>
 
-  {#if subStatus === 'active'}
-    <div class="p-3 bg-green-50 text-green-700 rounded">Assinatura ativa.</div>
+  {#if subStatus === 'active' || subStatus === 'trialing'}
+    <div class="p-3 bg-green-50 text-green-700 rounded">
+      {#if subStatus === 'trialing'}
+        Período de teste ativo. Você tem acesso completo ao sistema!
+      {:else}
+        Assinatura ativa.
+      {/if}
+    </div>
     <div class="flex gap-3 items-center">
       <button class="btn-secondary" on:click={gerenciar} disabled={loading}>Gerenciar assinatura</button>
       <a href="/app" class="btn-primary">Entrar no sistema</a>
     </div>
   {:else}
-    <div class="p-3 bg-amber-50 text-amber-800 rounded">
-      {message || 'Para usar o sistema, ative sua assinatura.'}
-    </div>
+    <!-- Mensagem diferenciada: warning (amarelo) vs info (azul/verde claro) -->
+    {#if messageType === 'warning' && message}
+      <div class="p-3 bg-amber-50 text-amber-800 rounded border border-amber-200">
+        ⚠️ {message}
+      </div>
+    {:else}
+      <div class="p-4 bg-sky-50 text-sky-800 rounded border border-sky-200">
+        <div class="flex items-start gap-3">
+          <span class="text-2xl">🎉</span>
+          <div>
+            <div class="font-medium">{message || defaultMessage}</div>
+            <div class="text-sm mt-1 text-sky-600">Sem compromisso. Cancele a qualquer momento.</div>
+          </div>
+        </div>
+      </div>
+    {/if}
     {#if BUY_BUTTON_ID && PUBLISHABLE_KEY}
       <div class="mt-2">
         <stripe-buy-button buy-button-id={BUY_BUTTON_ID} publishable-key={PUBLISHABLE_KEY}></stripe-buy-button>
       </div>
     {:else}
       <button class="btn-primary" on:click={assinar} disabled={loading}>
-        {loading ? 'Redirecionando…' : 'Assinar R$ 59/mês'}
+        {loading ? 'Redirecionando…' : 'Iniciar período de teste grátis'}
       </button>
     {/if}
   {/if}

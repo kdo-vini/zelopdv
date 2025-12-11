@@ -121,8 +121,8 @@
           return;
         }
         if (!hasActiveSub) {
-
-          window.location.href = '/assinatura?msg=expired';
+          // Redirecionar para assinatura - msg=subscribe para novos usuários
+          window.location.href = '/assinatura?msg=subscribe';
           navigated = true;
           return;
         }
