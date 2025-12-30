@@ -1,0 +1,470 @@
+/* NEW YEAR THEME - Premium White/Gold/Royal Blue Design
+   Seasonal theme applied via .newyear-theme class.
+   
+   Palette:
+   - White/Light: #F8FAFC, #FFFFFF
+   - Royal Blue: #4169E1
+   - Gold: #D4AF37
+   - Premium Navy: #1B3B6F
+*/
+
+.newyear-theme {
+    /* Core New Year Palette */
+    --ny-blue: #4169E1;
+    --ny-dark-blue: #1B3B6F;
+    --ny-gold: #D4AF37;
+    --ny-dark-gold: #B8860B;
+    --ny-light-gold: #F4E4C1;
+    --ny-white: #FFFFFF;
+    --ny-light-bg: #FFFFFF;
+
+    /* Override semantic variables */
+    --bg-app: #FFFFFF;
+    --bg-panel: #FFFFFF;
+    --bg-sidebar: #F8FAFC;
+    /* Lighter sidebar */
+    --bg-header: #FFFFFF;
+
+    --text-main: #1B3B6F;
+    /* Keep dark blue for text readability */
+    --text-muted: #64748B;
+    --text-inverse: #1B3B6F;
+
+    --primary: #D4AF37;
+    /* Change primary to GOLD */
+    --primary-hover: #B8860B;
+    --primary-text: #FFFFFF;
+
+    --accent: #4169E1;
+    /* Change accent to BLUE */
+    --accent-light: rgba(65, 105, 225, 0.1);
+
+    --sidebar-item-active-bg: #F4E4C1;
+    --sidebar-item-active-text: #B8860B;
+    --sidebar-item-hover-bg: rgba(212, 175, 55, 0.1);
+
+    --border-subtle: #E2E8F0;
+    --border-card: #F4E4C1;
+    /* Golden border for cards */
+    --border-gold: #D4AF37;
+
+    /* Status Colors */
+    --error: #EF4444;
+    --success: #10B981;
+    --warning: #D4AF37;
+
+    --transition-fast: 200ms ease;
+    --transition-normal: 300ms ease;
+}
+
+/* Background with premium subtle texture */
+.newyear-theme.bg-app-base,
+.newyear-theme .bg-app-base {
+    background-color: var(--ny-light-bg);
+    background-image:
+        radial-gradient(circle at 100% 0%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 0% 100%, rgba(65, 105, 225, 0.05) 0%, transparent 50%),
+        linear-gradient(135deg, #FFFFFF 0%, #FAFAFA 100%);
+    background-attachment: fixed;
+}
+
+/* Header */
+.newyear-theme header {
+    background-color: #FFFFFF !important;
+    border-bottom: 2px solid var(--ny-gold) !important;
+    /* Gold border on header */
+    box-shadow: 0 4px 6px -1px rgba(212, 175, 55, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* Sparkle Effect */
+.sparkle-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    overflow: hidden;
+}
+
+.sparkle {
+    position: absolute;
+    color: var(--ny-gold);
+    font-size: 10px;
+    user-select: none;
+    animation: sparkle-anim linear infinite;
+    text-shadow: 0 0 5px var(--ny-light-gold);
+}
+
+@keyframes sparkle-anim {
+    0% {
+        transform: scale(0) rotate(0deg);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.2) rotate(180deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Sidebar Overrides for Lighter Sidebar */
+.newyear-theme aside,
+.newyear-theme .sidebar {
+    background-color: #FFFFFF !important;
+    border-right: 1px solid var(--ny-light-gold) !important;
+}
+
+.newyear-theme aside a,
+.newyear-theme .sidebar a {
+    color: var(--ny-dark-blue) !important;
+}
+
+.newyear-theme aside a:hover,
+.newyear-theme .sidebar a:hover {
+    background-color: var(--sidebar-item-hover-bg) !important;
+    color: var(--ny-dark-gold) !important;
+}
+
+/* Buttons */
+.newyear-theme .btn-primary {
+    background: linear-gradient(135deg, var(--ny-gold) 0%, var(--ny-dark-gold) 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 14px 0 rgba(212, 175, 55, 0.3);
+    color: #FFFFFF !important;
+}
+
+.newyear-theme .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.2);
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
+
+/* Card Styling */
+.newyear-theme .card,
+.newyear-theme .bg-white,
+.newyear-theme .bg-panel {
+    background-color: #FFFFFF !important;
+    color: var(--ny-dark-blue) !important;
+    border: 1px solid var(--ny-light-gold) !important;
+    box-shadow: 0 1px 3px 0 rgba(212, 175, 55, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Text Colors */
+.newyear-theme .text-main,
+.newyear-theme h1,
+.newyear-theme h2,
+.newyear-theme h3,
+.newyear-theme h4 {
+    color: var(--ny-dark-blue) !important;
+}
+
+.newyear-theme .text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Input Fields */
+.newyear-theme input,
+.newyear-theme select,
+.newyear-theme textarea {
+    background-color: #FFFFFF !important;
+    border: 1px solid var(--ny-light-gold) !important;
+    color: var(--ny-dark-blue) !important;
+}
+
+.newyear-theme input:focus {
+    border-color: var(--ny-gold) !important;
+    outline: 2px solid var(--ny-light-gold) !important;
+}
+
+/* Tables */
+.newyear-theme th {
+    background-color: #FAFAFA !important;
+    color: var(--ny-dark-gold) !important;
+    border-bottom: 2px solid var(--ny-light-gold) !important;
+}
+
+.newyear-theme td {
+    border-bottom: 1px solid var(--ny-light-gold) !important;
+    color: var(--ny-dark-blue) !important;
+}
+
+/* Accent for PDV Badge etc */
+.newyear-theme .bg-accent-light {
+    background-color: var(--ny-light-gold) !important;
+    color: var(--ny-dark-gold) !important;
+}
+
+/* Special touches of Blue */
+.newyear-theme .text-accent,
+.newyear-theme .text-blue-600,
+.newyear-theme .text-sky-600 {
+    color: var(--ny-blue) !important;
+}
+
+.newyear-theme .border-accent {
+    border-color: var(--ny-blue) !important;
+}
+
+/* ========================================
+   MODAL & CHECKBOX REFINEMENTS
+   ======================================== */
+
+/* Secondary Buttons (Modals) */
+.newyear-theme .btn-secondary {
+    background-color: #FFFFFF !important;
+    border: 1px solid var(--ny-gold) !important;
+    color: var(--ny-dark-gold) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.newyear-theme .btn-secondary:hover {
+    background-color: var(--ny-light-gold) !important;
+    color: var(--ny-dark-blue) !important;
+}
+
+.newyear-theme .btn-secondary[aria-pressed="true"],
+.newyear-theme .btn-secondary.active {
+    background: linear-gradient(135deg, var(--ny-gold) 0%, var(--ny-dark-gold) 100%) !important;
+    color: #FFFFFF !important;
+    border-color: var(--ny-dark-gold) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal Content - Warm up the background slightly */
+.newyear-theme .modal-content {
+    background-color: #FFFCF5 !important;
+    /* Very light cream */
+    border: 1px solid var(--ny-gold) !important;
+    box-shadow: 0 10px 25px -5px rgba(212, 175, 55, 0.15), 0 8px 10px -6px rgba(212, 175, 55, 0.1) !important;
+}
+
+/* Close buttons in modals (if any) */
+.newyear-theme .modal-close {
+    color: var(--ny-dark-gold) !important;
+}
+
+/* Modal Texts - Override Gray/Light colors to Royal Blue as requested */
+.newyear-theme .modal-content h3,
+.newyear-theme .modal-content span,
+.newyear-theme .modal-content p,
+.newyear-theme .modal-content label,
+.newyear-theme .modal-content div,
+.newyear-theme .modal-content legend {
+    color: var(--ny-dark-blue) !important;
+}
+
+/* Specific highlight for labels "Total da Comanda" etc to be lighter/brighter if needed, 
+   but user asked for Royal Blue. Let's make headers/labels Royal Blue and values Dark Blue for hierarchy 
+*/
+.newyear-theme .text-gray-600,
+.newyear-theme .text-gray-500,
+.newyear-theme .modal-content .text-sm {
+    color: var(--ny-blue) !important;
+    /* Royal Blue for labels */
+}
+
+.newyear-theme .modal-content .text-2xl,
+.newyear-theme .modal-content h3 {
+    color: var(--ny-dark-blue) !important;
+    /* Darker blue for titles/values */
+}
+
+/* CHECKBOXES - Custom "✅" Style */
+.newyear-theme input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.25em;
+    height: 1.25em;
+    border: 1px solid var(--ny-gold);
+    border-radius: 4px;
+    background-color: #FFFFFF;
+    display: inline-grid;
+    place-content: center;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: all 0.2s ease;
+}
+
+.newyear-theme input[type="checkbox"]::before {
+    content: "✅";
+    font-size: 0.8em;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+}
+
+.newyear-theme input[type="checkbox"]:checked {
+    background-color: #FFFFFF;
+    /* Keep white so emoji pops */
+    border-color: var(--ny-dark-gold);
+}
+
+.newyear-theme input[type="checkbox"]:checked::before {
+    transform: scale(1);
+}
+
+.newyear-theme input[type="checkbox"]:hover {
+    border-color: var(--ny-blue);
+    box-shadow: 0 0 0 2px var(--ny-light-gold);
+}
+
+/* ========================================
+   LANDING PAGE OVERHAUL (Premium Modern)
+   ======================================== */
+
+/* --- HERO SECTION --- */
+/* Add a rich, subtle gradient to the hero background */
+.newyear-theme section.relative.overflow-hidden {
+    background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.15) 0%, transparent 70%),
+        linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+}
+
+.newyear-theme section.relative.overflow-hidden .absolute {
+    /* Hide the original slate gradient to cleaner base */
+    opacity: 0;
+}
+
+/* Typography Enhancements */
+.newyear-theme .lg\:col-span-7 h1 {
+    color: var(--ny-dark-blue) !important;
+    text-shadow: 0 4px 10px rgba(65, 105, 225, 0.1);
+    letter-spacing: -0.02em;
+    font-weight: 800;
+}
+
+/* Premium Buttons in Hero */
+.newyear-theme .btn-primary.text-base {
+    background: linear-gradient(135deg, var(--ny-gold) 0%, #B8860B 100%) !important;
+    box-shadow: 0 10px 20px -5px rgba(212, 175, 55, 0.4);
+    border-radius: 50px !important;
+    /* Pills for modern feel */
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.newyear-theme .btn-primary.text-base:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 24px -5px rgba(212, 175, 55, 0.5);
+}
+
+.newyear-theme .btn-secondary.text-base {
+    border-radius: 50px !important;
+    border: 1px solid var(--ny-light-gold) !important;
+    color: var(--ny-dark-blue) !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(4px);
+}
+
+.newyear-theme .btn-secondary.text-base:hover {
+    border-color: var(--ny-gold) !important;
+    background: #FFFFFF !important;
+}
+
+/* --- "CAIXA ABERTO" CARD (Modern Glass Dark) --- */
+.newyear-theme .lg\:col-span-5 .rounded-2xl {
+    background: linear-gradient(145deg, #1B3B6F 0%, #162F58 100%) !important;
+    border: 1px solid rgba(212, 175, 55, 0.3) !important;
+    box-shadow: 0 20px 40px -10px rgba(27, 59, 111, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+}
+
+/* Sub-cards inside "Caixa Aberto" */
+.newyear-theme .lg\:col-span-5 .rounded-2xl .rounded-lg,
+.newyear-theme .lg\:col-span-5 .rounded-2xl .rounded-md {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: none !important;
+    backdrop-filter: blur(10px);
+}
+
+/* Green Badge "Esperado" */
+.newyear-theme .lg\:col-span-5 .rounded-2xl .text-emerald-700 {
+    background: linear-gradient(90deg, var(--ny-gold), #FDB931) !important;
+    color: #FFFFFF !important;
+    /* White text on gold pill */
+    font-weight: bold;
+    box-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
+}
+
+/* --- STATS SECTION (Floating Cards) --- */
+/* Remove the "box" around cards (User Request) */
+.newyear-theme section.bg-slate-50 {
+    background: transparent !important;
+    border: none !important;
+    position: relative;
+    /* Remove spotlight from container, move to cards if needed or remove entirely */
+}
+
+.newyear-theme section.bg-slate-50::before {
+    display: none;
+}
+
+/* Individual Stats Cards - Dark Premium Style */
+.newyear-theme section.bg-slate-50 .p-6.rounded-xl {
+    background: linear-gradient(145deg, #1B3B6F 0%, #162F58 100%) !important;
+    border: 1px solid rgba(212, 175, 55, 0.3) !important;
+    box-shadow: 0 10px 30px -5px rgba(27, 59, 111, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.newyear-theme section.bg-slate-50 .p-6.rounded-xl:hover {
+    transform: translateY(-5px);
+    border-color: var(--ny-gold) !important;
+    box-shadow: 0 15px 35px -5px rgba(212, 175, 55, 0.3) !important;
+}
+
+/* Stats Numbers Typography */
+.newyear-theme section.bg-slate-50 .text-4xl {
+    color: var(--ny-white) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    font-weight: 500;
+}
+
+.newyear-theme section.bg-slate-50 .text-sky-600 {
+    color: var(--ny-gold) !important;
+    /* Fallback if specific class used */
+}
+
+/* Text Colors inside Stats Cards */
+.newyear-theme section.bg-slate-50 .text-slate-600,
+.newyear-theme section.bg-slate-50 .text-slate-400 {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.newyear-theme section.bg-slate-50 .text-slate-400 {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* --- FEATURE CARDS --- */
+.newyear-theme section:not(.bg-slate-50) .group.rounded-xl {
+    background: #FFFFFF !important;
+    border: 1px solid var(--border-subtle) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    transition: all 0.3s ease;
+}
+
+.newyear-theme section:not(.bg-slate-50) .group.rounded-xl:hover {
+    border-color: var(--ny-gold) !important;
+    box-shadow: 0 12px 24px -8px rgba(212, 175, 55, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Dots inside feature cards */
+.newyear-theme section:not(.bg-slate-50) .group span.rounded-full {
+    background-color: var(--ny-gold) !important;
+    box-shadow: 0 0 8px var(--ny-gold);
+}
+
+/* CTA Bottom Section */
+.newyear-theme .py-14.border-t.border-slate-200 {
+    border-top: 1px solid var(--ny-light-gold) !important;
+    background: linear-gradient(180deg, #FFFFFF 0%, #FFFCF5 100%);
+}

@@ -12,6 +12,7 @@
   let showAdminMenu = false;
   let adminCloseTimer;
   const closeDelay = 240; // ms
+  
 
   function openAdminMenu() { showAdminMenu = true; }
   function scheduleCloseAdminMenu() {
@@ -20,7 +21,34 @@
   }
   function cancelCloseAdminMenu() { if (adminCloseTimer) clearTimeout(adminCloseTimer); }
 
-  // CHRISTMAS THEME STATE
+  // NEW YEAR THEME STATE
+  let isNewYearMode = false;
+  let sparkles = [];
+
+  function createSparkles() {
+    return Array(20).fill(0).map((_, i) => ({
+      left: Math.random() * 100 + '%',
+      top: Math.random() * 100 + '%',
+      size: (Math.random() * 4 + 2) + 'px',
+      animDuration: (Math.random() * 2 + 1) + 's',
+      delay: (Math.random() * 3) + 's',
+      opacity: Math.random()
+    }));
+  }
+
+  function toggleNewYear() {
+     isNewYearMode = !isNewYearMode;
+     if(typeof window !== 'undefined'){
+       localStorage.setItem('zelo_newyear_theme', String(isNewYearMode));
+       // Desativar natal se ativar ano novo (opcional, mas limpo)
+       if (isNewYearMode) {
+          isChristmasMode = false;
+          localStorage.setItem('zelo_xmas_theme', 'false');
+       }
+     }
+  }
+
+  // CHRISTMAS THEME STATE (DEPRECATED - Christmas is over)
   let isChristmasMode = false;
   let flakes = [];
 
@@ -41,11 +69,16 @@
   }
 
   onMount(async () => {
-    // CHRISTMAS INIT
+    // SEASONAL INIT
     if(typeof window !== 'undefined'){
         flakes = createSnowflakes();
+        sparkles = createSparkles();
+        
         const savedXmas = localStorage.getItem('zelo_xmas_theme');
         if(savedXmas === 'true') isChristmasMode = true;
+
+        const savedNY = localStorage.getItem('zelo_newyear_theme');
+        if(savedNY === 'true') isNewYearMode = true;
     }
 
     if (!supabase) return;
@@ -81,6 +114,7 @@
             perfil && perfil.nome_exibicao && perfil.documento && perfil.contato &&
             (perfil.largura_bobina === '58mm' || perfil.largura_bobina === '80mm')
           );
+          
         } catch {}
       }
 
@@ -93,14 +127,17 @@
         return;
       }
 
-      if (!session && !publicPaths.includes(path)) {
+      // Helper to check if path is public (includes /loja/* subroutes)
+      const isPublicPath = (p) => publicPaths.includes(p);
+
+      if (!session && !isPublicPath(path)) {
 
         window.location.href = '/login';
         navigated = true;
         return;
       }
-      if (session && publicPaths.includes(path)) {
-
+      if (session && isPublicPath(path)) {
+        // Allow /loja/* paths without redirect (public storefront)
         if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html') {
 
         } else {
@@ -189,12 +226,20 @@
   </div>
 {/if}
 
-<div class="min-h-screen bg-app-base" class:christmas-theme={isChristmasMode}>
+<div class="min-h-screen bg-app-base" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode}>
   
   {#if isChristmasMode}
     <div class="snow-container">
       {#each flakes as f}
          <div class="snowflake" style="left: {f.left}; animation-duration: {f.animDuration}; animation-delay: {f.delay}; opacity: {f.opacity}">❄</div>
+      {/each}
+    </div>
+  {/if}
+
+  {#if isNewYearMode}
+    <div class="sparkle-container">
+      {#each sparkles as s}
+         <div class="sparkle" style="left: {s.left}; top: {s.top}; width: {s.size}; height: {s.size}; animation-duration: {s.animDuration}; animation-delay: {s.delay}; opacity: {s.opacity}">✨</div>
       {/each}
     </div>
   {/if}
@@ -210,8 +255,16 @@
             </span>
           </a>
           
+          <!-- Botao de Natal desativado pois o natal ja passou -->
+          <!-- 
           <button on:click={toggleChristmas} class="p-1 rounded-full hover:bg-[var(--sidebar-item-hover-bg)] transition-colors group relative" title="Modo Natal">
             <span class="text-xl filter grayscale group-hover:grayscale-0 transition-all duration-300" style="filter: {isChristmasMode ? 'none' : 'grayscale(100%)'}">🎄</span>
+          </button>
+          -->
+
+          <!-- Novo Botao de Ano Novo -->
+          <button on:click={toggleNewYear} class="p-1 rounded-full hover:bg-[var(--sidebar-item-hover-bg)] transition-colors group relative" title="Modo Ano Novo">
+            <span class="text-xl filter grayscale group-hover:grayscale-0 transition-all duration-300" style="filter: {isNewYearMode ? 'none' : 'grayscale(100%)'}">🥂</span>
           </button>
        </div>
 
