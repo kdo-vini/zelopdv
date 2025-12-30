@@ -75,7 +75,13 @@
         sparkles = createSparkles();
         
         const savedXmas = localStorage.getItem('zelo_xmas_theme');
-        if(savedXmas === 'true') isChristmasMode = true;
+        // FORCE DISABLE CHRISTMAS (Christmas is over)
+        if(savedXmas === 'true') {
+          localStorage.setItem('zelo_xmas_theme', 'false');
+          isChristmasMode = false;
+        } else {
+          isChristmasMode = false;
+        }
 
         const savedNY = localStorage.getItem('zelo_newyear_theme');
         if(savedNY === 'true') isNewYearMode = true;
