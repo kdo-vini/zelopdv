@@ -21,7 +21,7 @@
   }
   function cancelCloseAdminMenu() { if (adminCloseTimer) clearTimeout(adminCloseTimer); }
 
-  // NEW YEAR THEME STATE
+  // NEW YEAR THEME STATE (DEPRECATED - New Year is over)
   let isNewYearMode = false;
   let sparkles = [];
 
@@ -84,11 +84,17 @@
         }
 
         const savedNY = localStorage.getItem('zelo_newyear_theme');
-        if(savedNY === 'true') isNewYearMode = true;
+        // FORCE DISABLE NEW YEAR (New Year is over)
+        if(savedNY === 'true') {
+          localStorage.setItem('zelo_newyear_theme', 'false');
+          isNewYearMode = false;
+        } else {
+          isNewYearMode = false;
+        }
     }
 
     if (!supabase) return;
-
+ 
   const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html'];
     const path = window.location.pathname;
 
@@ -268,10 +274,12 @@
           </button>
           -->
 
-          <!-- Novo Botao de Ano Novo -->
+          <!-- Botao de Ano Novo desativado pois o ano novo ja passou -->
+          <!-- 
           <button on:click={toggleNewYear} class="p-1 rounded-full hover:bg-[var(--sidebar-item-hover-bg)] transition-colors group relative" title="Modo Ano Novo">
             <span class="text-xl filter grayscale group-hover:grayscale-0 transition-all duration-300" style="filter: {isNewYearMode ? 'none' : 'grayscale(100%)'}">🥂</span>
           </button>
+          -->
        </div>
 
       <nav class="hidden sm:flex gap-4 text-sm items-center">
