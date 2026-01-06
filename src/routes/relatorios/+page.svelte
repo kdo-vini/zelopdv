@@ -506,7 +506,7 @@
 	{#if modoRelatorio === 'caixa'}
 		<div class="grid md:grid-cols-2 gap-4 items-end">
 			<div>
-				<label class="block text-sm text-slate-600 mb-1" for="select-caixa">Selecionar caixa</label>
+				<label class="block text-sm text-slate-700 dark:text-slate-300 mb-1" for="select-caixa">Selecionar caixa</label>
 				<select id="select-caixa" class="input-form" bind:value={caixaSelecionado} on:change={() => carregarRelatorioDoCaixa(caixaSelecionado)}>
 					{#each caixas as c}
 						<option value={c.id}>#{c.id} — {new Date(c.data_abertura).toLocaleString()} {c.data_fechamento ? `(fechado ${new Date(c.data_fechamento).toLocaleString()})` : '(aberto)'}</option>
@@ -539,7 +539,7 @@
 					<button class="btn-primary" on:click={carregarRelatorioPeriodo} disabled={periodoLoading}>{periodoLoading?'Carregando...':'Atualizar'}</button>
 				</div>
 			</div>
-			<div class="text-xs text-slate-500">Período: {dataInicio ? dataInicio.toLocaleDateString() : ''} – {dataFim ? dataFim.toLocaleDateString() : ''} ({preset})</div>
+			<div class="text-xs text-slate-600 dark:text-slate-400">Período: {dataInicio ? dataInicio.toLocaleDateString() : ''} – {dataFim ? dataFim.toLocaleDateString() : ''} ({preset})</div>
 		</div>
 	{/if}
 </section>
@@ -550,56 +550,56 @@
 {:else}
 	{#if modoRelatorio === 'caixa'}
 		{#if !caixaSelecionado}
-			<div class="text-sm text-slate-600">Nenhum caixa selecionado.</div>
+			<div class="text-sm text-slate-700 dark:text-slate-300">Nenhum caixa selecionado.</div>
 		{:else}
 		<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-4">
 			<!-- KPIs -->
 			<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Total de Vendas</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Total de Vendas</div>
 					<div class="text-xl font-semibold">{fmt(totalGeral)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Qtd. de Vendas</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Qtd. de Vendas</div>
 					<div class="text-xl font-semibold">{qtdVendas}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Ticket Médio</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Ticket Médio</div>
 					<div class="text-xl font-semibold">{fmt(ticketMedio)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Valor Inicial do Caixa</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Valor Inicial do Caixa</div>
 					<div class="text-xl font-semibold">{fmt(caixaInfo?.valor_inicial || 0)}</div>
 				</div>
 			</div>
 
 			<div class="grid sm:grid-cols-3 gap-4">
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Dinheiro</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Dinheiro</div>
 					<div class="text-lg font-semibold">{fmt(totalDinheiro)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Cartão</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Cartão</div>
 					<div class="text-lg font-semibold">{fmt(totalCartao)}</div>
-					<div class="text-xs text-slate-500 mt-1">Débito {fmt(totalCartaoDebito)} · Crédito {fmt(totalCartaoCredito)}{totalCartaoLegacy>0?` · Outros ${fmt(totalCartaoLegacy)}`:''}</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400 mt-1">Débito {fmt(totalCartaoDebito)} · Crédito {fmt(totalCartaoCredito)}{totalCartaoLegacy>0?` · Outros ${fmt(totalCartaoLegacy)}`:''}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Pix</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Pix</div>
 					<div class="text-lg font-semibold">{fmt(totalPix)}</div>
 				</div>
 			</div>
 
 			<div class="grid sm:grid-cols-3 gap-4">
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Sangria</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Sangria</div>
 					<div class="text-lg font-semibold text-amber-700">{fmt(totalSangria)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Suprimento</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Suprimento</div>
 					<div class="text-lg font-semibold text-green-700">{fmt(totalSuprimento)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Saldo Esperado em Gaveta</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Saldo Esperado em Gaveta</div>
 					<div class="text-lg font-semibold">{fmt(saldoEsperadoGaveta)}</div>
 				</div>
 			</div>
@@ -607,7 +607,7 @@
 			<!-- Top produtos -->
 			<div>
 				<h2 class="font-semibold mb-2">Top Produtos</h2>
-				<div class="mb-2 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+				<div class="mb-2 flex flex-wrap items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
 					<div class="flex items-center gap-2">
 						<label for="top-order">Ordenar por</label>
 						<select id="top-order" class="input-form max-w-52" bind:value={ordenarTop}>
@@ -625,12 +625,12 @@
 					</div>
 				</div>
 				{#if topProdutos.length === 0}
-					<div class="text-sm text-slate-600">Sem itens em vendas para este caixa.</div>
+					<div class="text-sm text-slate-700 dark:text-slate-300">Sem itens em vendas para este caixa.</div>
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="min-w-full text-sm">
 							<thead>
-								<tr class="text-left text-slate-500">
+								<tr class="text-left text-slate-600 dark:text-slate-400">
 									<th class="py-2 pr-4">Produto</th>
 									<th class="py-2 pr-4">Quantidade</th>
 									<th class="py-2">Receita</th>
@@ -654,12 +654,12 @@
 			<div>
 				<h2 class="font-semibold mb-2">Vendas do Caixa</h2>
 				{#if vendas.length === 0}
-					<div class="text-sm text-slate-600">Sem vendas para este caixa.</div>
+					<div class="text-sm text-slate-700 dark:text-slate-300">Sem vendas para este caixa.</div>
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="min-w-full text-sm">
 							<thead>
-								<tr class="text-left text-slate-500">
+								<tr class="text-left text-slate-600 dark:text-slate-400">
 									<th class="py-2 pr-4">#</th>
 									<th class="py-2 pr-4">Horário</th>
 									<th class="py-2 pr-4">Forma</th>
@@ -685,12 +685,12 @@
 			<div>
 				<h2 class="font-semibold mb-2">Movimentações do Caixa</h2>
 				{#if movs.length === 0}
-					<div class="text-sm text-slate-600">Sem sangrias/suprimentos.</div>
+					<div class="text-sm text-slate-700 dark:text-slate-300">Sem sangrias/suprimentos.</div>
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="min-w-full text-sm">
 							<thead>
-								<tr class="text-left text-slate-500">
+								<tr class="text-left text-slate-600 dark:text-slate-400">
 									<th class="py-2 pr-4">Quando</th>
 									<th class="py-2 pr-4">Tipo</th>
 									<th class="py-2 pr-4">Valor</th>
@@ -717,49 +717,49 @@
 		<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-4">
 			<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Total de Vendas</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Total de Vendas</div>
 					<div class="text-xl font-semibold">{fmt(periodoTotalGeral)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Qtd. de Vendas</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Qtd. de Vendas</div>
 					<div class="text-xl font-semibold">{periodoQtdVendas}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Ticket Médio</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Ticket Médio</div>
 					<div class="text-xl font-semibold">{fmt(periodoTicketMedio)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Dinheiro Líquido</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Dinheiro Líquido</div>
 					<div class="text-xl font-semibold">{fmt(periodoDinheiroLiquido)}</div>
 				</div>
 			</div>
 
 			<div class="grid sm:grid-cols-3 gap-4">
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Cartão Débito</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Cartão Débito</div>
 					<div class="text-lg font-semibold">{fmt(periodoCartaoDebito)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Cartão Crédito</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Cartão Crédito</div>
 					<div class="text-lg font-semibold">{fmt(periodoCartaoCredito)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Pix</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Pix</div>
 					<div class="text-lg font-semibold">{fmt(periodoPix)}</div>
 				</div>
 			</div>
 
 			<div class="grid sm:grid-cols-3 gap-4">
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Fiado</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Fiado</div>
 					<div class="text-lg font-semibold">{fmt(periodoFiado)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Sangrias</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Sangrias</div>
 					<div class="text-lg font-semibold text-amber-700">{fmt(periodoTotalSangria)}</div>
 				</div>
 				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-500">Suprimentos</div>
+					<div class="text-xs text-slate-600 dark:text-slate-400">Suprimentos</div>
 					<div class="text-lg font-semibold text-green-700">{fmt(periodoTotalSuprimento)}</div>
 				</div>
 			</div>
@@ -768,12 +768,12 @@
 			<div>
 				<h2 class="font-semibold mb-2">Série Diária</h2>
 				{#if periodoSerieDiaria.length === 0}
-					<div class="text-sm text-slate-600">Sem vendas no período.</div>
+					<div class="text-sm text-slate-700 dark:text-slate-300">Sem vendas no período.</div>
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="min-w-full text-sm">
 							<thead>
-								<tr class="text-left text-slate-500">
+								<tr class="text-left text-slate-600 dark:text-slate-400">
 									<th class="py-2 pr-4">Dia</th>
 									<th class="py-2 pr-4">Qtd</th>
 									<th class="py-2">Total</th>
@@ -796,7 +796,7 @@
 			<!-- Top produtos período -->
 			<div>
 				<h2 class="font-semibold mb-2">Top Produtos (Período)</h2>
-				<div class="mb-2 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+				<div class="mb-2 flex flex-wrap items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
 					<div class="flex items-center gap-2">
 						<label for="p-top-order">Ordenar por</label>
 						<select id="p-top-order" class="input-form max-w-52" bind:value={periodoOrdenarTop}>
@@ -814,12 +814,12 @@
 					</div>
 				</div>
 				{#if periodoTopProdutos.length === 0}
-					<div class="text-sm text-slate-600">Sem itens no período.</div>
+					<div class="text-sm text-slate-700 dark:text-slate-300">Sem itens no período.</div>
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="min-w-full text-sm">
 							<thead>
-								<tr class="text-left text-slate-500">
+								<tr class="text-left text-slate-600 dark:text-slate-400">
 									<th class="py-2 pr-4">Produto</th>
 									<th class="py-2 pr-4">Quantidade</th>
 									<th class="py-2">Receita</th>
