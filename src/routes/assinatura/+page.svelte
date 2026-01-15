@@ -1,5 +1,6 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
+  import { isSubscriptionActiveStrict } from '$lib/guards';
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   export let params;
@@ -13,6 +14,7 @@
   let messageType = 'info'; // 'info' = convidativo, 'warning' = expiração/problema
   let expiryDate = null;
   let hasHadSubscription = false; // true se usuário já teve assinatura antes
+  let isActiveStrict = false; // true apenas se status ativo E não expirado
 
   onMount(async () => {
     try {
@@ -25,7 +27,7 @@
           // Buscar assinatura do usuário e também o stripe_customer_id para o botão de portal
           const { data } = await supabase
             .from('subscriptions')
-            .select('status, stripe_customer_id, current_period_end, manually_extended_until')
+            .select('status, stripe_customer_id, current_period_end')
             .eq('user_id', userId)
             .order('updated_at', { ascending: false })
             .limit(1)
@@ -33,18 +35,34 @@
           
           subStatus = data?.status || null;
           customerId = data?.stripe_customer_id || null;
-          expiryDate = data?.manually_extended_until || data?.current_period_end || null;
+          expiryDate = data?.current_period_end || null;
           hasHadSubscription = !!data; // usuário já teve assinatura se data existe
           
-          // Check if expired (apenas para quem já teve assinatura)
-          if (hasHadSubscription && subStatus === 'canceled' && expiryDate) {
-            const expiry = new Date(expiryDate);
-            const now = new Date();
-            if (expiry < now) {
-              message = `Sua assinatura expirou em ${expiry.toLocaleDateString('pt-BR')}. Renove para continuar usando o sistema.`;
-              messageType = 'warning';
+          // Calcular isActiveStrict usando a função de guards (considera status E data)
+          isActiveStrict = isSubscriptionActiveStrict({
+            status: subStatus,
+            current_period_end: expiryDate
+          });
+          
+          // Check if expired (para quem já teve assinatura E está inativa)
+          if (hasHadSubscription && !isActiveStrict) {
+            if (expiryDate) {
+              const expiry = new Date(expiryDate);
+              const now = new Date();
+              if (expiry < now) {
+                message = `Sua assinatura expirou em ${expiry.toLocaleDateString('pt-BR')}. Renove para continuar usando o sistema.`;
+                messageType = 'warning';
+              } else if (subStatus === 'canceled') {
+                message = `Sua assinatura foi cancelada e expirará em ${expiry.toLocaleDateString('pt-BR')}.`;
+                messageType = 'warning';
+              } else {
+                // Status ativo mas data futura - algum problema
+                message = 'Sua assinatura não está ativa. Renove para utilizar o sistema.';
+                messageType = 'warning';
+              }
             } else {
-              message = `Sua assinatura foi cancelada e expirará em ${expiry.toLocaleDateString('pt-BR')}.`;
+              // Sem data de expiração (dados antigos/null) - assume expirado
+              message = 'Sua assinatura não está ativa. Renove para utilizar o sistema.';
               messageType = 'warning';
             }
           }
@@ -142,7 +160,7 @@
   <h1 class="text-2xl font-bold">Assinatura Zelo PDV</h1>
   <p class="text-slate-600 dark:text-slate-300">30 dias grátis, depois R$ 59/mês — cancele quando quiser.</p>
 
-  {#if subStatus === 'active' || subStatus === 'trialing'}
+  {#if isActiveStrict}
     <div class="p-3 bg-green-50 text-green-700 rounded">
       {#if subStatus === 'trialing'}
         Período de teste ativo. Você tem acesso completo ao sistema!
