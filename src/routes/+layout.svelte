@@ -238,7 +238,7 @@
   </div>
 {/if}
 
-<div class="min-h-screen bg-app-base" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode}>
+<div class="flex flex-col min-h-screen bg-app-base" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode}>
   
   {#if isChristmasMode}
     <div class="snow-container">
@@ -260,7 +260,7 @@
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
        <div class="flex items-center gap-4">
-          <a href="/" class="flex items-center gap-2">
+          <a href={session ? '/app' : '/'} class="flex items-center gap-2">
             <span class="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">
               <span class="text-main">Zelo</span>
               <span class="ml-1 align-[2px] inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]">PDV</span>
@@ -353,13 +353,20 @@
     </div>
   {/if}
 
-  <main class="max-w-6xl mx-auto px-4 py-6">
+  <main class="flex-1 max-w-6xl mx-auto px-4 py-6 w-full">
     <slot />
   </main>
 
-  <footer class="border-t py-6 text-center text-xs text-muted" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
+  <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
-      © {new Date().getFullYear()} Zelo PDV · Desenvolvido por Téchne IA
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xs" style="color: var(--text-muted);">© {new Date().getFullYear()} <strong style="color: var(--text-main);">Zelo PDV</strong></span>
+        </div>
+        <div class="text-xs" style="color: var(--text-muted);">
+          Desenvolvido com 💙 por <a href="https://techneia.com.br" target="_blank" rel="noopener noreferrer" class="font-medium hover:underline transition-colors" style="color: var(--accent);">Techne Sistemas</a>
+        </div>
+      </div>
     </div>
   </footer>
 
