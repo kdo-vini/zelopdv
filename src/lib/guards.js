@@ -32,10 +32,26 @@ export function isSubscriptionActiveStrict(subscription) {
  * Returns an object with { userId, email } when allowed, or null after redirect.
  */
 export async function ensureActiveSubscription({ requireProfile = false, redirectOnFail = true } = {}) {
-  // 1) Session
-  const { data: sess } = await supabase.auth.getSession();
-  const userId = sess?.session?.user?.id || null;
-  const email = sess?.session?.user?.email || null;
+  // Helper: wrap promise with timeout
+  const withTimeout = (promise, ms = 8000) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+    ]);
+
+  // 1) Session - with timeout to prevent infinite hang
+  let userId = null;
+  let email = null;
+  try {
+    const { data: sess } = await withTimeout(supabase.auth.getSession(), 8000);
+    userId = sess?.session?.user?.id || null;
+    email = sess?.session?.user?.email || null;
+  } catch (err) {
+    console.warn('[Guards] getSession timeout or error:', err?.message);
+    if (redirectOnFail) window.location.href = '/login';
+    return null;
+  }
+
   if (!userId) {
     if (redirectOnFail) window.location.href = '/login';
     return null;
