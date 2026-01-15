@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-
+  import { pdvCache } from '$lib/stores/pdvCache';
   let produtos = [];
   let categorias = [];
   let subcategorias = [];
@@ -82,6 +82,7 @@
     });
     if (error) { errorMessage = error.message; return; }
     form = { nome: '', preco: 0, id_categoria: form.id_categoria, id_subcategoria: null, eh_item_por_unidade: false, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0 };
+    pdvCache.invalidateProdutos();
     await carregarProdutos();
   }
 
@@ -112,6 +113,7 @@
     }).eq('id', editingId);
     if (error) { errorMessage = error.message; return; }
     editingId = null;
+    pdvCache.invalidateProdutos();
     await carregarProdutos();
   }
 
@@ -120,6 +122,7 @@
     if (!confirm('Excluir este produto?')) return;
     const { error } = await supabase.from('produtos').delete().eq('id', id);
     if (error) { errorMessage = error.message; return; }
+    pdvCache.invalidateProdutos();
     await carregarProdutos();
   }
 </script>

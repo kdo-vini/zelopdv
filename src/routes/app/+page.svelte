@@ -19,6 +19,7 @@
   import { ensureActiveSubscription } from '$lib/guards';
   import { withTimeout } from '$lib/utils';
   import { addToast, confirmAction } from '$lib/stores/ui';
+  import { pdvCache } from '$lib/stores/pdvCache';
 
   export let params;
 
@@ -186,19 +187,8 @@
       return;
     }
 
-    // Mantém sincronizado, caso login/logout aconteça com a página aberta
-    supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        await withTimeout(verificarCaixaAberto(session.user.id));
-        await withTimeout(carregarCategorias());
-        await withTimeout(carregarProdutos());
-        await withTimeout(carregarSubcategorias());
-        await withTimeout(atualizarSaldoCaixa());
-        loading = false;
-      } else {
-        window.location.href = '/login';
-      }
-    });
+    // Auth state changes são tratados pelo authStore.js e +layout.svelte centralmente
+    // Removido listener duplicado que causava queries redundantes (otimização de performance)
   });
 
   onDestroy(() => {
@@ -296,43 +286,38 @@
     }
   }
 
-  /** Carrega categorias ordenadas e define a primeira como ativa. */
-  async function carregarCategorias() {
-    const { data, error } = await supabase
-      .from('categorias')
-      .select('*')
-      .order('ordem', { ascending: true });
-    if (error) errorMessage = error.message;
-    else {
-      categorias = data;
-      // Seleciona a primeira categoria automaticamente
-      if (data.length > 0) {
-        categoriaAtiva = data[0].id;
+  /** Carrega categorias ordenadas e define a primeira como ativa. Usa cache de 5 min. */
+  async function carregarCategorias(forceRefresh = false) {
+    try {
+      const data = await pdvCache.getCategorias(forceRefresh);
+      categorias = data || [];
+      // Seleciona a primeira categoria automaticamente se nenhuma estiver ativa
+      if (categorias.length > 0 && !categoriaAtiva) {
+        categoriaAtiva = categorias[0].id;
       }
+    } catch (err) {
+      errorMessage = err?.message || 'Erro ao carregar categorias';
     }
   }
 
-  /** Carrega subcategorias ordenadas. */
-  async function carregarSubcategorias() {
-    const { data, error } = await supabase
-      .from('subcategorias')
-      .select('*')
-      .order('ordem', { ascending: true });
-    if (error) addToast('Erro ao carregar subcategorias: ' + error.message, 'error');
-    else subcategorias = data || [];
+  /** Carrega subcategorias ordenadas. Usa cache de 5 min. */
+  async function carregarSubcategorias(forceRefresh = false) {
+    try {
+      const data = await pdvCache.getSubcategorias(forceRefresh);
+      subcategorias = data || [];
+    } catch (err) {
+      addToast('Erro ao carregar subcategorias: ' + (err?.message || err), 'error');
+    }
   }
 
-  /** Carrega produtos visíveis no PDV, ordenados por nome. */
-  async function carregarProdutos() {
-    const { data, error } = await supabase
-      .from('produtos')
-      .select('*')
-      // Não queremos itens como "Mini Salgado Base" aparecendo aqui
-      .eq('ocultar_no_pdv', false) 
-      .order('nome', { ascending: true });
-      
-    if (error) errorMessage = error.message;
-    else produtos = data;
+  /** Carrega produtos visíveis no PDV, ordenados por nome. Usa cache de 5 min. */
+  async function carregarProdutos(forceRefresh = false) {
+    try {
+      const data = await pdvCache.getProdutos(forceRefresh);
+      produtos = data || [];
+    } catch (err) {
+      errorMessage = err?.message || 'Erro ao carregar produtos';
+    }
   }
   
   // --- 4. LÓGICA DA COMANDA (Módulo 1.2) ---

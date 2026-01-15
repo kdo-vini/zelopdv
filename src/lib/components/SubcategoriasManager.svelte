@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-
+  import { pdvCache } from '$lib/stores/pdvCache';
   let categorias = [];
   let subcategorias = [];
   let errorMessage = '';
@@ -39,6 +39,7 @@
     const { error } = await supabase.from('subcategorias').insert(payload);
     if (error) { errorMessage = error.message; return; }
     form = { id_categoria: form.id_categoria, nome: '', ordem: 0 };
+    pdvCache.invalidateSubcategorias();
     await carregarSubcategorias();
   }
 
@@ -50,6 +51,7 @@
     const { error } = await supabase.from('subcategorias').update({ id_categoria: editForm.id_categoria, nome: editForm.nome, ordem: editForm.ordem }).eq('id', editingId);
     if (error) { errorMessage = error.message; return; }
     editingId = null;
+    pdvCache.invalidateSubcategorias();
     await carregarSubcategorias();
   }
 
@@ -57,6 +59,7 @@
     if(!confirm('Excluir esta subcategoria?')) return;
     const { error } = await supabase.from('subcategorias').delete().eq('id', id);
     if (error) { errorMessage = error.message; return; }
+    pdvCache.invalidateSubcategorias();
     await carregarSubcategorias();
   }
 </script>
