@@ -353,7 +353,7 @@
     </div>
   {/if}
 
-  <main class="flex-1 max-w-6xl mx-auto px-4 py-6 w-full">
+  <main class="flex-1 mx-auto px-4 py-6 w-full {$page.url.pathname.startsWith('/app') ? 'max-w-full' : 'max-w-6xl'}">
     <slot />
   </main>
 

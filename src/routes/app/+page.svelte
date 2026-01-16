@@ -1237,44 +1237,60 @@ window.addEventListener('message', function(e){
 
 <!-- --- 6. LAYOUT (HTML com Tailwind CSS) --- -->
 
-<!-- Barra de status do caixa (abaixo do header) -->
-<!-- Barra de status do caixa (abaixo do header) -->
-<div class="mx-4 mt-3 mb-2 px-4 py-3 bg-white border border-gray-200 rounded-xl flex items-center justify-between shadow-sm">
-  <div class="text-sm text-gray-700">
-    <span class="font-medium">Saldo em caixa (dinheiro):</span>
-    <span class="ml-1 text-green-700 font-bold text-base">R$ {Number(saldoCaixa).toFixed(2)}</span>
+<!-- Barra de status e Saldo integrada (Minimalista) -->
+<div class="mx-4 mt-3 mb-2 px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-md">
+      <span class="text-xs text-slate-400 font-medium">Caixa:</span>
+      <span class="text-green-400 font-bold">R$ {Number(saldoCaixa).toFixed(2)}</span>
+    </div>
   </div>
-  <div class="text-xs text-gray-500 flex items-center gap-2">
+  <div class="flex items-center gap-4">
     {#if carregandoSaldo}
-      <span>Atualizando…</span>
+      <span class="text-[10px] text-slate-500 animate-pulse">Sincronizando...</span>
     {:else}
-      <button class="text-indigo-600 hover:text-indigo-800 font-medium transition-colors" on:click={atualizarSaldoCaixa}>Atualizar</button>
+      <button 
+        class="text-[10px] text-slate-400 hover:text-indigo-400 transition-colors uppercase tracking-wider font-semibold" 
+        on:click={atualizarSaldoCaixa}
+      >
+        Atualizar
+      </button>
     {/if}
   </div>
 </div>
 
 <!-- Fundo principal do PDV: ocupa a largura disponível, sem forçar barras -->
-<div class="flex w-full min-h-[70vh] bg-transparent overflow-hidden">
+<!-- Fundo principal do PDV: ocupa a largura disponível -->
+<div class="flex w-full h-[calc(100vh-140px)] bg-transparent overflow-hidden gap-4">
 
-  <!-- Coluna 1: Categorias (Fixa) -->
-  <nav class="w-24 bg-sidebar-base flex-shrink-0 overflow-y-auto">
-    <!-- Link para o Admin -->
-    <a href="/admin" class="block p-4 text-center hover:bg-white/10 transition-colors" title="Painel Admin">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
-      </svg>
-    </a>
-    
-    {#each categorias as cat (cat.id)}
-      <button
-        on:click={() => (categoriaAtiva = cat.id)}
-        class="w-full h-24 p-2 flex flex-col items-center justify-center text-center text-xs font-medium border-b border-white/10 transition-colors"
-        style="background-color: {categoriaAtiva === cat.id ? 'var(--sidebar-item-active-bg)' : 'transparent'}; color: {categoriaAtiva === cat.id ? 'var(--sidebar-item-active-text)' : 'var(--text-main)'}"
+  <!-- Coluna 1: Categorias (Slim Sidebar Rounded) -->
+  <nav class="w-24 bg-slate-900/50 border border-slate-800 rounded-2xl flex-shrink-0 flex flex-col justify-between py-2 ml-4">
+    <div class="overflow-y-auto flex-1 px-2 space-y-2 scrollbar-none">
+      {#each categorias as cat (cat.id)}
+        <button
+          on:click={() => (categoriaAtiva = cat.id)}
+          class="w-full aspect-square p-1 flex flex-col items-center justify-center text-center transition-all duration-200 group rounded-xl border {categoriaAtiva === cat.id ? 'bg-indigo-600 shadow-lg shadow-indigo-500/30 text-white border-transparent' : 'text-slate-400 hover:bg-slate-800 border-slate-700'}"
+        >
+          <div class="text-[9px] font-bold uppercase tracking-tight leading-tight group-hover:scale-105 transition-transform break-words w-full">
+            {cat.nome}
+          </div>
+        </button>
+      {/each}
+    </div>
+
+    <!-- Admin na base: discreto e ergonômico -->
+    <div class="px-2 pt-2 border-t border-slate-700/50">
+      <a 
+        href="/admin" 
+        class="flex flex-col items-center justify-center p-2 rounded-lg text-slate-500 hover:text-indigo-400 hover:bg-slate-800/50 transition-all group"
+        title="Painel Admin"
       >
-        <!-- TODO: Adicionar ícones aqui -->
-        <span>{cat.nome}</span>
-      </button>
-    {/each}
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 group-hover:rotate-12 transition-transform">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+        </svg>
+        <span class="text-[9px] uppercase mt-1 font-bold">Admin</span>
+      </a>
+    </div>
   </nav>
 
   <!-- Coluna 2: Produtos (Scrollável) -->
@@ -1328,44 +1344,49 @@ window.addEventListener('message', function(e){
     {/if}
   </main>
 
-  <!-- Coluna 3: Comanda (Fixa) -->
-  <aside class="w-80 lg:w-96 bg-white flex-shrink-0 flex flex-col shadow-lg">
+  <!-- Coluna 3: Comanda (Clean & Integrated - Rounded) -->
+  <aside class="w-96 bg-slate-900/90 border border-slate-800 rounded-l-2xl flex-shrink-0 flex flex-col shadow-2xl backdrop-blur-sm mr-0">
     <!-- Cabeçalho da Comanda -->
-    <div class="p-4 border-b">
-      <h2 class="text-xl font-bold text-gray-900">Comanda</h2>
+    <div class="px-6 py-4 border-b border-slate-800">
+      <h2 class="text-lg font-bold text-white uppercase tracking-widest">Comanda</h2>
     </div>
 
-    <!-- Lista de Itens (Scrollável) -->
-    <div class="flex-1 p-4 overflow-y-auto">
+    <!-- Lista de Itens (Minimalista) -->
+    <div class="flex-1 px-4 py-2 overflow-y-auto">
       {#if comanda.length === 0}
-        <div class="flex items-center justify-center h-full text-gray-500">
-          <p>Clique em um item para adicionar</p>
+        <div class="flex flex-col items-center justify-center h-full text-slate-500 opacity-50">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+          </svg>
+          <p class="text-xs uppercase font-bold tracking-tight">Vazio</p>
         </div>
       {:else}
-        <ul class="space-y-3">
+        <ul class="space-y-1">
           {#each comanda as item (item.id)}
-            <li class="flex items-center space-x-2">
+            <li class="p-3 bg-slate-800/30 rounded-lg flex items-center gap-3 group transition-colors hover:bg-slate-800/50">
               <!-- Detalhes do Item -->
-              <div class="flex-1">
-                <p class="text-sm font-medium text-gray-900">{item.nome}</p>
-                <p class="text-sm text-gray-600">
-                  R$ {Number(item.preco).toFixed(2)}
-                </p>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-slate-100 truncate leading-tight">{item.nome}</p>
+                <p class="text-[11px] text-slate-400">R$ {Number(item.preco).toFixed(2)}</p>
               </div>
               
-              <!-- Controles de Quantidade: sempre disponíveis -->
-              <div class="flex items-center border border-gray-200 rounded-lg bg-white shadow-sm">
+              <!-- Controles de Quantidade: Minimalistas -->
+              <div class="flex items-center gap-1 bg-slate-900/50 p-1 rounded-md border border-slate-700/50">
                 <button 
                   on:click={() => decrementarItem(item.id)}
-                  class="w-8 h-8 flex items-center justify-center text-lg font-bold text-red-500 hover:bg-red-50 hover:text-red-600 rounded-l-lg transition-colors"
-                >-</button>
-                <span class="w-10 h-8 flex items-center justify-center text-sm font-semibold text-gray-900">
+                  class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 10z" clip-rule="evenodd" /></svg>
+                </button>
+                <span class="w-6 text-center text-xs font-bold text-slate-200">
                   {item.quantidade}
                 </span>
                 <button 
                   on:click={() => incrementarItem(item.id)}
-                  class="w-8 h-8 flex items-center justify-center text-lg font-bold text-green-500 hover:bg-green-50 hover:text-green-600 rounded-r-lg transition-colors"
-                >+</button>
+                  class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-green-400 hover:bg-green-500/10 rounded transition-all"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                </button>
               </div>
             </li>
           {/each}
@@ -1373,34 +1394,40 @@ window.addEventListener('message', function(e){
       {/if}
     </div>
 
-    <!-- Rodapé da Comanda -->
-    <div class="p-4 border-t space-y-4" style="background-color: var(--bg-panel);">
-      <div class="flex justify-between items-center">
-        <span class="text-lg font-medium text-muted">Total:</span>
-        <span class="text-3xl font-bold text-main">
-          R$ {Number(totalComanda).toFixed(2)}
+    <!-- Rodapé da Comanda (Flat & Dark) -->
+    <div class="p-6 border-t border-slate-800 bg-slate-900/80 space-y-4">
+      <div class="flex justify-between items-end">
+        <span class="text-xs uppercase font-black text-slate-500 tracking-widest">Total</span>
+        <span class="text-4xl font-black text-white tracking-tighter">
+          <span class="text-sm font-bold text-indigo-400 mr-1">R$</span>{Number(totalComanda).toFixed(2)}
         </span>
       </div>
       
-      <div class="flex space-x-2">
+      <div class="grid grid-cols-4 gap-2">
         <button 
           on:click={abrirModalMovCaixa}
-          class="flex-1 py-3 bg-amber-50 text-amber-700 border border-amber-200 font-semibold rounded-xl hover:bg-amber-100 transition-colors text-sm"
+          class="col-span-1 p-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center"
+          title="Movimentação"
         >
-          Movimentar
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+          </svg>
         </button>
         <button 
           on:click={limparComanda}
-          class="flex-1 py-3 bg-red-50 text-red-700 border border-red-200 font-semibold rounded-xl hover:bg-red-100 transition-colors text-sm"
+          class="col-span-1 p-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center justify-center"
+          title="Limpar"
         >
-          Limpar
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.34 6.65m-2.88 0-.34-6.65m-3.08-4.11L6.91 10.75a7.5 7.5 0 1 0 10.18 0l-1.47-5.86m-9.52 0H6.25m9.5 0h.25" />
+          </svg>
         </button>
         <button
           on:click={handleFinalizarVenda}
           disabled={!caixaAberto || comanda.length === 0}
-          class="flex-[2] btn-primary py-3 font-bold rounded-xl shadow-md hover:shadow-lg transition-all"
+          class="col-span-2 btn-primary py-3 font-black uppercase text-xs tracking-widest rounded-lg shadow-lg disabled:opacity-20 transition-all active:scale-95"
         >
-          Finalizar Venda
+          Pagar
         </button>
       </div>
     </div>

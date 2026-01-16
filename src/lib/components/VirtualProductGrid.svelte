@@ -55,8 +55,9 @@
     if (!containerEl) return;
     const width = containerEl.clientWidth;
     
-    // Responsivo baseado no breakpoint do Tailwind
-    if (width >= 1280) columns = 6;      // xl
+    // Mais colunas para aproveitar telas largas (Full HD+)
+    if (width >= 1536) columns = 7;      // 2xl
+    else if (width >= 1280) columns = 6; // xl
     else if (width >= 1024) columns = 5; // lg
     else if (width >= 768) columns = 4;  // md
     else if (width >= 640) columns = 3;  // sm
@@ -142,30 +143,36 @@
         <button
           data-prod={produto.id}
           on:click={() => handleProdutoClick(produto)}
-          class="min-h-32 bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-200 transform hover:-translate-y-0.5"
+          class="group min-h-28 bg-slate-800/40 rounded-xl border border-slate-700/50 hover:border-indigo-500/50 hover:bg-slate-800/80 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all duration-200 flex flex-col justify-between"
         >
-          <div class="p-3 flex flex-col justify-between h-full gap-2">
-            <span class="text-sm font-semibold text-gray-800 text-left leading-tight break-words overflow-hidden">
+          <div class="p-3 w-full text-left">
+            <span class="text-xs font-bold text-slate-300 uppercase leading-snug break-words line-clamp-3 group-hover:text-white transition-colors">
               {produto.nome}
             </span>
-            <span class="text-lg font-bold text-indigo-600 text-right">
-              R$ {Number(produto.preco).toFixed(2)}
-            </span>
+          </div>
+          
+          <div class="px-3 pb-3 w-full text-right">
+            <div class="flex items-baseline justify-end gap-0.5">
+              <span class="text-[10px] font-bold text-indigo-400">R$</span>
+              <span class="text-lg font-black text-white tracking-tighter">
+                {Number(produto.preco).toFixed(2)}
+              </span>
+            </div>
           </div>
         </button>
       {/each}
       
-      <!-- Botão Fixo: Valor Personalizado (sempre no final) -->
+      <!-- Botão Fixo: Valor Personalizado (Minimalista) -->
       {#if endIndex >= produtos.length}
         <button
           on:click={handleValorAvulsoClick}
-          class="h-32 bg-amber-50 border-2 border-dashed border-amber-300 text-amber-700 rounded-xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200 transform hover:-translate-y-0.5"
+          class="h-28 bg-slate-800/10 border border-dashed border-slate-700 hover:border-amber-500/50 hover:bg-amber-500/5 text-slate-500 hover:text-amber-400 rounded-lg transition-all"
         >
-          <div class="p-3 flex flex-col justify-center items-center h-full">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 mb-1 text-amber-500">
+          <div class="p-4 flex flex-col justify-center items-center h-full">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mb-1 opacity-50">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            <span class="text-sm font-bold text-center leading-tight">
+            <span class="text-[10px] font-black uppercase tracking-widest text-center">
               Item Avulso
             </span>
           </div>
