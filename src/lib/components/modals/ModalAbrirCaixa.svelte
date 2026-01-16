@@ -28,10 +28,16 @@
     trocoInicial = 0;
     submitting = false;
   }
+  
+  function handleKeydown(e) {
+    if (e.key === 'Escape' && !submitting) {
+      // Don't close during submission, but Escape is less critical here since it's a required action
+    }
+  }
 </script>
 
 {#if open}
-  <div class="modal-backdrop">
+  <div class="modal-backdrop" on:keydown={handleKeydown}>
     <div class="modal-content">
       <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">Abrir Caixa</h3>
       <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">

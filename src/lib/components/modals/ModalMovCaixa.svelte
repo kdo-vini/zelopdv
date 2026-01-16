@@ -103,7 +103,12 @@
   }
   
   function handleKeydown(e) {
-    if (e.key === 'Escape') handleClose();
+    if (e.key === 'Escape') {
+      handleClose();
+    } else if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmit();
+    }
   }
   
   // Reset ao abrir

@@ -337,6 +337,7 @@ window.addEventListener('message', function(e){
                 <button type="button" class="btn-secondary" class:btn-primary={formaPagamento === 'pix'} on:click={() => formaPagamento='pix'}>Pix</button>
                 <button type="button" class="btn-secondary" class:btn-primary={formaPagamento === 'fiado'} on:click={async() => { formaPagamento='fiado'; await carregarPessoasFiado(); }}>Fiado</button>
               </div>
+              <p class="text-xs text-slate-500 mt-1">Atalhos: D=Dinheiro, X=Pix, B=Débito, C=Crédito, F=Fiado | Ctrl+Enter=Confirmar | Esc=Cancelar</p>
             </fieldset>
           </div>
 
