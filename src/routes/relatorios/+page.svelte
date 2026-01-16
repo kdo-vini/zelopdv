@@ -5,6 +5,10 @@
 	import { ensureActiveSubscription } from '$lib/guards';
 	import { withTimeout } from '$lib/utils';
 	import { addToast } from '$lib/stores/ui';
+	
+	// Gráficos visuais
+	import BarChart from '$lib/components/charts/BarChart.svelte';
+	import DonutChart from '$lib/components/charts/DonutChart.svelte';
 
 	export let params;
 
@@ -761,6 +765,38 @@
 				<div class="p-3 rounded border">
 					<div class="text-xs text-slate-600 dark:text-slate-400">Suprimentos</div>
 					<div class="text-lg font-semibold text-green-700">{fmt(periodoTotalSuprimento)}</div>
+				</div>
+			</div>
+
+			<!-- Gráficos Visuais -->
+			<div class="grid lg:grid-cols-2 gap-6">
+				<!-- Gráfico de Barras: Vendas diárias -->
+				<div class="p-4 rounded-lg border bg-slate-50 dark:bg-slate-900/50">
+					<BarChart 
+						title="Vendas por Dia"
+						data={periodoSerieDiaria.slice(-14).map(d => ({
+							label: new Date(d.dia).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+							value: d.total,
+							extra: d.qtd + ' vendas'
+						}))}
+						barColor="bg-indigo-500"
+						maxHeight={140}
+					/>
+				</div>
+				
+				<!-- Gráfico de Rosca: Formas de Pagamento -->
+				<div class="p-4 rounded-lg border bg-slate-50 dark:bg-slate-900/50">
+					<DonutChart
+						title="Formas de Pagamento"
+						data={[
+							{ label: 'Dinheiro', value: periodoDinheiroLiquido, color: '#22c55e' },
+							{ label: 'Pix', value: periodoPix, color: '#06b6d4' },
+							{ label: 'Débito', value: periodoCartaoDebito, color: '#3b82f6' },
+							{ label: 'Crédito', value: periodoCartaoCredito, color: '#8b5cf6' },
+							{ label: 'Fiado', value: periodoFiado, color: '#f59e0b' }
+						].filter(d => d.value > 0)}
+						size={160}
+					/>
 				</div>
 			</div>
 

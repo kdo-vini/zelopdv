@@ -12,4 +12,7 @@ build/
 # Local docs not for repo
 SUPPORT_GUIDE_ZELO_PDV.txt
 
+# Internal documentation and notes
+.ai/
+
 
