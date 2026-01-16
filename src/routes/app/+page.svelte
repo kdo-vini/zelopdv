@@ -20,6 +20,16 @@
   import { withTimeout } from '$lib/utils';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { pdvCache } from '$lib/stores/pdvCache';
+  
+  // Modais componentizados
+  import ModalAbrirCaixa from '$lib/components/modals/ModalAbrirCaixa.svelte';
+  import ModalQuantidade from '$lib/components/modals/ModalQuantidade.svelte';
+  import ModalValorAvulso from '$lib/components/modals/ModalValorAvulso.svelte';
+  import ModalMovCaixa from '$lib/components/modals/ModalMovCaixa.svelte';
+  import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
+  
+  // Grid virtualizado para performance
+  import VirtualProductGrid from '$lib/components/VirtualProductGrid.svelte';
 
   export let params;
 
@@ -104,6 +114,9 @@
   let idCaixaAberto = null;
   let saldoCaixa = 0; // saldo atual em dinheiro no caixa
   let carregandoSaldo = false;
+  
+  // Referência ao componente ModalPagamento
+  let modalPagamentoRef;
 
   // Derivados e helpers de múltiplos pagamentos
   $: somaPagamentos = pagamentos.reduce((acc, p) => acc + Number(p?.valor || 0), 0);
@@ -655,6 +668,37 @@
     novoPagPessoaId = '';
     erroPagamento = '';
     salvandoVenda = false; // garante reset visual ao tentar novamente
+  }
+
+  /**
+   * Handler para o evento 'confirmar' do ModalPagamento.
+   * Recebe os dados do modal e executa a persistência da venda.
+   */
+  async function handleVendaConfirmada(event) {
+    const { 
+      formaPagamento: forma, 
+      valorRecebido: valRec, 
+      valorTroco,
+      idCliente, 
+      pagamentos: pags, 
+      trocoMulti: tMulti, 
+      cashRecebidoMulti,
+      imprimirRecibo: printRecibo,
+      printWin,
+      pessoasFiado: pessoasList
+    } = event.detail;
+    
+    // Atualiza estados locais que serão usados pela função confirmarVenda
+    formaPagamento = forma === 'multiplo' ? forma : forma;
+    valorRecebido = valRec || 0;
+    imprimirRecibo = printRecibo;
+    multiPag = forma === 'multiplo';
+    if (pags?.length) pagamentos = pags;
+    if (pessoasList?.length) pessoasFiado = pessoasList;
+    if (idCliente) pessoaFiadoId = idCliente;
+    
+    // Chama a função de persistência existente
+    await confirmarVenda();
   }
 
   // Módulos 1.4 e 1.5 - Confirmar e persistir a venda
@@ -1292,51 +1336,12 @@ window.addEventListener('message', function(e){
         {/if}
       </div>
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4" bind:this={gridEl}
-        role="grid" tabindex="0"
-        on:keydown={(e)=>{
-          if (e.key==='ArrowRight') { e.preventDefault(); gridMoveFocus(1); }
-          if (e.key==='ArrowLeft') { e.preventDefault(); gridMoveFocus(-1); }
-          if (e.key==='ArrowDown') { e.preventDefault(); gridMoveFocus(1, true); }
-          if (e.key==='ArrowUp') { e.preventDefault(); gridMoveFocus(-1, true); }
-          if (e.key==='Enter' || e.key===' ') {
-            const el = document.activeElement;
-            if (el && el.dataset && el.dataset.prod) { e.preventDefault(); el.click(); }
-          }
-        }}
-      >
-        {#each produtosFiltrados as produto (produto.id)}
-          <button
-            data-prod={produto.id}
-            on:click={() => adicionarProduto(produto)}
-            class="min-h-32 bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-200 transform hover:-translate-y-0.5"
-          >
-            <div class="p-3 flex flex-col justify-between h-full gap-2">
-              <span class="text-sm font-semibold text-gray-800 text-left leading-tight break-words overflow-hidden">
-                {produto.nome}
-              </span>
-              <span class="text-lg font-bold text-indigo-600 text-right">
-                R$ {Number(produto.preco).toFixed(2)}
-              </span>
-            </div>
-          </button>
-        {/each}
-        
-        <!-- Botão Fixo: Valor Personalizado (Fluxo B) -->
-          <button
-            on:click={() => modalValorAberto = true}
-            class="h-32 bg-amber-50 border-2 border-dashed border-amber-300 text-amber-700 rounded-xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200 transform hover:-translate-y-0.5"
-          >
-            <div class="p-3 flex flex-col justify-center items-center h-full">
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 mb-1 text-amber-500">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              <span class="text-sm font-bold text-center leading-tight">
-                Item Avulso
-              </span>
-            </div>
-          </button>
-      </div>
+      <!-- Grid de Produtos Virtualizado -->
+      <VirtualProductGrid
+        produtos={produtosFiltrados}
+        on:produtoClick={(e) => adicionarProduto(e.detail)}
+        on:valorAvulsoClick={() => modalValorAberto = true}
+      />
     {/if}
   </main>
 
@@ -1420,336 +1425,87 @@ window.addEventListener('message', function(e){
 
 </div>
 
-<!-- --- 7. MODAIS --- -->
+<!-- --- 7. MODAIS (Componentizados) --- -->
 
-<!-- Modal: Abrir Caixa (Módulo 1.1) -->
-{#if modalAbrirCaixaAberto}
-  <div class="modal-backdrop">
-    <div class="modal-content">
-      <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Abrir Caixa</h3>
-      <p class="text-sm text-gray-600 mb-4">
-        Você precisa abrir o caixa antes de registrar vendas.
-      </p>
-      <form on:submit|preventDefault={handleAbrirCaixa}>
-        <label for="troco-inicial" class="block text-sm font-medium text-gray-700">Valor do Troco Inicial (R$)</label>
-        <input
-          id="troco-inicial"
-          type="number"
-          step="0.01"
-          min="0"
-          bind:value={trocoInicialInput}
-          class="mt-1 input-form"
-          required
-        />
-        <div class="mt-6 flex justify-end">
-          <button type="submit" class="btn-primary">Abrir Caixa</button>
-        </div>
-      </form>
-    </div>
-  </div>
-{/if}
+<!-- Modal: Abrir Caixa -->
+<ModalAbrirCaixa 
+  open={modalAbrirCaixaAberto}
+  on:submit={async (e) => {
+    trocoInicialInput = e.detail.trocoInicial;
+    await handleAbrirCaixa();
+  }}
+  on:close={() => {}}
+/>
 
-<!-- Modal: Quantidade (somente para itens marcados como "Por unidade") -->
-{#if modalQuantidadeAberto}
-  <div
-    class="modal-backdrop"
-    role="button"
-    tabindex="0"
-    aria-label="Fechar modal de quantidade"
-    on:keydown={(e) => { if (e.key === 'Escape') { modalQuantidadeAberto = false; produtoQuantidadeSelecionado = null; quantidadeInput = 1; } }}
-    on:click|self={() => { modalQuantidadeAberto = false; produtoQuantidadeSelecionado = null; quantidadeInput = 1; }}
-  >
-    <div class="modal-content text-gray-900 dark:text-gray-100" role="dialog" aria-modal="true" aria-labelledby="titulo-quantidade">
-      <h3 id="titulo-quantidade" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">
-        {produtoQuantidadeSelecionado ? produtoQuantidadeSelecionado.nome : 'Selecionar quantidade'}
-      </h3>
-      <form on:submit|preventDefault={handleAdicionarPorQuantidade} class="space-y-4">
-        <div>
-          <label for="qtd-input" class="block text-sm font-medium text-gray-800 dark:text-gray-200">Quantidade</label>
-          <input
-            id="qtd-input"
-            type="number"
-            min="1"
-            step="1"
-            bind:value={quantidadeInput}
-            class="mt-1 input-form"
-            required
-          />
-          {#if produtoQuantidadeSelecionado?.controlar_estoque}
-            <p class="mt-1 text-xs text-gray-500">Disponível: {Number(produtoQuantidadeSelecionado?.estoque_atual || 0)}</p>
-          {/if}
-        </div>
-        <div class="mt-6 flex justify-end">
-          <button type="button" on:click={() => { modalQuantidadeAberto = false; produtoQuantidadeSelecionado = null; quantidadeInput = 1; }} class="btn-secondary mr-2">Cancelar</button>
-          <button type="submit" class="btn-primary">Adicionar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-{/if}
-
-<!-- Modal: Valor Avulso (Módulo 1.3 - Fluxo B) -->
-{#if modalValorAberto}
-  <div
-    class="modal-backdrop"
-    role="button"
-    tabindex="0"
-    aria-label="Fechar modal de valor avulso"
-    on:keydown={(e) => { if (e.key === 'Escape') { modalValorAberto = false; } }}
-    on:click|self={() => modalValorAberto = false}
-  >
-    <div class="modal-content text-gray-900 dark:text-gray-100" role="dialog" aria-modal="true" aria-labelledby="titulo-valor-avulso">
-      <h3 id="titulo-valor-avulso" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">
-        Item Avulso / Valor Personalizado
-      </h3>
-      <form on:submit|preventDefault={handleAdicionarPorValor} class="space-y-4">
-        <div>
-          <label for="nome-avulso" class="block text-sm font-medium text-gray-800 dark:text-gray-200">Nome do Item (Opcional)</label>
-          <input id="nome-avulso" type="text" bind:value={nomeInput} class="mt-1 input-form" />
-        </div>
-        <div>
-          <label for="valor-avulso" class="block text-sm font-medium text-gray-800 dark:text-gray-200">Valor Total (R$)</label>
-          <input
-            id="valor-avulso"
-            type="number"
-            step="0.01"
-            min="0.01"
-            bind:value={valorInput}
-            class="mt-1 input-form"
-            required
-          />
-        </div>
-        <div class="mt-6 flex justify-end">
-          <button type="button" on:click={() => modalValorAberto = false} class="btn-secondary mr-2">Cancelar</button>
-          <button type="submit" class="btn-primary">Adicionar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-{/if}
-
-<!-- TODO: Modal de Pagamento (Fase 4) -->
-{#if modalPagamentoAberto}
-  <div
-    class="modal-backdrop"
-    role="button"
-    tabindex="0"
-    aria-label="Fechar modal de pagamento"
-    on:keydown={(e) => {
-      const tag = (e.target?.tagName || '').toLowerCase();
-      const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable;
-      if (e.key === 'Escape') { modalPagamentoAberto = false; salvandoVenda = false; erroPagamento = ''; }
-      else if (!isTyping) {
-        if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); confirmarVenda(); }
-        if (!multiPag) {
-          if (e.key.toLowerCase() === 'd') { formaPagamento = 'dinheiro'; }
-          if (e.key.toLowerCase() === 'x') { formaPagamento = 'pix'; }
-          if (e.key.toLowerCase() === 'b') { formaPagamento = 'cartao_debito'; }
-          if (e.key.toLowerCase() === 'c') { formaPagamento = 'cartao_credito'; }
-          if (e.key.toLowerCase() === 'f') { formaPagamento = 'fiado'; carregarPessoasFiado(); }
-        } else {
-          if (e.key.toLowerCase() === 'm') { multiPag = !multiPag; }
-          if (e.key.toLowerCase() === 'a') { addPagamento(); }
-        }
+<!-- Modal: Quantidade (produtos por unidade) -->
+<ModalQuantidade
+  open={modalQuantidadeAberto}
+  produto={produtoQuantidadeSelecionado}
+  on:confirm={(e) => {
+    const { produto, quantidade } = e.detail;
+    // Checagem de estoque
+    if (produto?.id && produto?.controlar_estoque) {
+      const existente = comanda.find((i) => i.id_produto === produto.id);
+      const qtdAtual = existente?.quantidade || 0;
+      const disponivel = Number(produto.estoque_atual || 0);
+      if (quantidade + qtdAtual > disponivel) {
+        addToast(`Estoque insuficiente para "${produto.nome}". Restam ${disponivel} unidade(s).`, 'error');
+        return;
       }
-    }}
-    on:click|self={() => { modalPagamentoAberto = false; salvandoVenda = false; erroPagamento = ''; }}
-  >
-    <div class="modal-content text-gray-900 dark:text-gray-100" role="dialog" aria-modal="true" aria-labelledby="titulo-pagamento">
-      <h3 id="titulo-pagamento" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">
-        Finalizar Pagamento
-      </h3>
-      <div class="space-y-4">
-        <div class="flex justify-between items-center">
-          <span class="text-gray-600 dark:text-gray-300">Total da Comanda</span>
-          <span class="text-2xl font-bold dark:text-gray-100">R$ {Number(totalComanda).toFixed(2)}</span>
-        </div>
+    }
+    adicionarItemNaComanda(produto, quantidade, produto.preco);
+    modalQuantidadeAberto = false;
+    produtoQuantidadeSelecionado = null;
+  }}
+  on:close={() => {
+    modalQuantidadeAberto = false;
+    produtoQuantidadeSelecionado = null;
+  }}
+/>
 
-        <div class="flex items-center justify-between">
-          <label class="inline-flex items-center gap-2 text-sm dark:text-gray-200">
-            <input type="checkbox" bind:checked={imprimirRecibo} /> Imprimir recibo ao confirmar
-          </label>
-          <label class="inline-flex items-center gap-2 text-sm dark:text-gray-200">
-            <input type="checkbox" bind:checked={multiPag} on:change={() => { if (multiPag && novoPagValor <= 0) { novoPagValor = Number(totalComanda) - somaPagamentos; } }} /> Múltiplos pagamentos
-          </label>
-        </div>
+<!-- Modal: Valor Avulso -->
+<ModalValorAvulso
+  open={modalValorAberto}
+  on:adicionar={(e) => {
+    const { nome, valor } = e.detail;
+    adicionarItemNaComanda({ id: null, nome }, 1, valor);
+    modalValorAberto = false;
+  }}
+  on:close={() => modalValorAberto = false}
+/>
 
-        {#if !multiPag}
-          <div>
-            <fieldset>
-              <legend class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Forma de Pagamento</legend>
-              <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='dinheiro'} on:click={() => formaPagamento='dinheiro'}>Dinheiro</button>
-                <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='cartao_debito'} on:click={() => formaPagamento='cartao_debito'}>Cartão (Débito)</button>
-                <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='cartao_credito'} on:click={() => formaPagamento='cartao_credito'}>Cartão (Crédito)</button>
-                <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='pix'} on:click={() => formaPagamento='pix'}>Pix</button>
-                <button type="button" class="btn-secondary" aria-pressed={formaPagamento==='fiado'} on:click={async()=>{ formaPagamento='fiado'; await carregarPessoasFiado(); }}>Fiado</button>
-              </div>
-            </fieldset>
-          </div>
+<!-- Modal: Pagamento -->
+<ModalPagamento
+  bind:this={modalPagamentoRef}
+  open={modalPagamentoAberto}
+  {totalComanda}
+  {comanda}
+  {idCaixaAberto}
+  {produtos}
+  on:confirmar={handleVendaConfirmada}
+  on:close={() => {
+    modalPagamentoAberto = false;
+  }}
+/>
 
-          {#if formaPagamento === 'dinheiro'}
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-              <div>
-                <label for="valor-recebido" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Valor Recebido (R$)</label>
-                <input id="valor-recebido" type="number" min="0" step="0.01" bind:value={valorRecebido} class="input-form" />
-              </div>
-              <div>
-                <div class="text-sm text-gray-600 dark:text-gray-300 mb-1">Troco</div>
-                <div class="text-xl font-semibold dark:text-gray-100">R$ {Number(troco).toFixed(2)}</div>
-              </div>
-            </div>
-          {/if}
-
-          {#if formaPagamento === 'fiado'}
-            <div class="grid grid-cols-1 gap-3">
-              <div>
-                <label for="select-pessoa-fiado" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Pessoa (Fiado)</label>
-                <select id="select-pessoa-fiado" class="input-form" bind:value={pessoaFiadoId}>
-                  <option value="">-- selecione --</option>
-                  {#each pessoasFiado as p}
-                    <option value={p.id}>{p.nome}</option>
-                  {/each}
-                </select>
-                <p class="text-xs text-gray-500 mt-1">O valor será lançado no saldo de fiado desta pessoa.</p>
-              </div>
-            </div>
-          {/if}
-        {:else}
-          <!-- UI de múltiplos pagamentos -->
-          <div class="space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-              <div>
-                <label for="mp-forma" class="block text-sm font-medium mb-1">Forma</label>
-                <select id="mp-forma" class="input-form" bind:value={novoPagForma}>
-                  <option value="dinheiro">Dinheiro</option>
-                  <option value="pix">Pix</option>
-                  <option value="cartao_debito">Cartão (Débito)</option>
-                  <option value="cartao_credito">Cartão (Crédito)</option>
-                  <option value="fiado">Fiado</option>
-                </select>
-              </div>
-              <div>
-                <label for="mp-valor" class="block text-sm font-medium mb-1">{novoPagForma==='dinheiro' ? 'Valor Recebido (R$)' : 'Valor (R$)'}</label>
-                <input id="mp-valor" type="number" min="0.01" step="0.01" class="input-form" bind:value={novoPagValor} />
-                {#if novoPagForma === 'dinheiro'}
-                  <div class="flex flex-wrap items-center gap-2 mt-2 text-sm">
-                    <span class="text-gray-600">Sugestões:</span>
-                    <button type="button" class="px-2 py-1 rounded border" on:click={() => novoPagValor = Math.max(0.01, Number(restantePagamento))}>Restante</button>
-                    <button type="button" class="px-2 py-1 rounded border" on:click={() => novoPagValor = Number(novoPagValor || 0) + 5}>+5,00</button>
-                    <button type="button" class="px-2 py-1 rounded border" on:click={() => novoPagValor = Number(novoPagValor || 0) + 10}>+10,00</button>
-                  </div>
-                {/if}
-              </div>
-              {#if novoPagForma === 'fiado'}
-                <div>
-                  <label for="mp-pessoa" class="block text-sm font-medium mb-1">Pessoa (Fiado)</label>
-                  <select id="mp-pessoa" class="input-form" bind:value={novoPagPessoaId} on:focus={carregarPessoasFiado}>
-                    <option value="">-- selecione --</option>
-                    {#each pessoasFiado as p}
-                      <option value={p.id}>{p.nome}</option>
-                    {/each}
-                  </select>
-                </div>
-              {/if}
-            </div>
-            <div class="flex justify-end">
-              <button type="button" class="btn-secondary" on:click={addPagamento}>Adicionar pagamento</button>
-            </div>
-
-            {#if pagamentos.length}
-              <div class="border rounded-md divide-y">
-                {#each pagamentos as p, i}
-                  <div class="flex items-center justify-between p-2">
-                    <div class="text-sm">
-                      <div class="font-medium capitalize">{p.forma.replace('_',' ')}</div>
-                      <div class="text-gray-600">R$ {Number(p.valor).toFixed(2)}{p.forma==='dinheiro' && trocoPrevMulti>0 ? ` (troco prev.: R$ ${Number(trocoPrevMulti).toFixed(2)})` : ''}</div>
-                      {#if p.forma==='fiado'}
-                        <div class="text-xs text-gray-500">Pessoa: {p.pessoaId}</div>
-                      {/if}
-                    </div>
-                    <button type="button" class="text-red-600 hover:underline" on:click={() => removerPagamento(i)}>remover</button>
-                  </div>
-                {/each}
-              </div>
-            {/if}
-
-            <div class="grid grid-cols-2 gap-3">
-              <div class="text-sm text-gray-700">Soma dos pagamentos</div>
-              <div class="text-right font-semibold">R$ {Number(somaPagamentos).toFixed(2)}</div>
-              <div class="text-sm text-gray-700">Restante</div>
-              <div class="text-right font-semibold">R$ {Number(restantePagamento).toFixed(2)}</div>
-              <div class="text-sm text-gray-700">Troco (previsto)</div>
-              <div class="text-right font-semibold">R$ {Number(trocoPrevMulti).toFixed(2)}</div>
-            </div>
-          </div>
-        {/if}
-
-        {#if erroPagamento}
-          <div class="text-sm text-red-600">{erroPagamento}</div>
-        {/if}
-
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" class="btn-secondary" on:click={() => { modalPagamentoAberto = false; salvandoVenda = false; erroPagamento=''; }}>Cancelar</button>
-          <button type="button" class="btn-primary" disabled={salvandoVenda} on:click={confirmarVenda}>
-            {salvandoVenda ? 'Salvando...' : (imprimirRecibo ? 'Confirmar e imprimir' : 'Confirmar venda')}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Modal: Movimentação de Caixa (Entrada/Saída) -->
-{#if modalMovCaixaAberto}
-  <div
-    class="modal-backdrop"
-    role="button"
-    tabindex="0"
-    aria-label="Fechar modal de movimentação de caixa"
-    on:keydown={(e) => { if (e.key === 'Escape') { modalMovCaixaAberto = false; salvandoMovCaixa = false; erroMovCaixa = ''; } }}
-    on:click|self={() => { modalMovCaixaAberto = false; salvandoMovCaixa = false; erroMovCaixa = ''; }}
-  >
-    <div class="modal-content text-gray-900 dark:text-gray-100" role="dialog" aria-modal="true" aria-labelledby="titulo-movcaixa">
-      <h3 id="titulo-movcaixa" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">
-        Movimentar Caixa
-      </h3>
-      <div class="space-y-4">
-        <div>
-          <fieldset>
-            <legend class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Tipo de movimentação</legend>
-            <div class="flex gap-2">
-              <button type="button" class="btn-secondary" aria-pressed={tipoMovCaixa==='entrada'} on:click={() => tipoMovCaixa='entrada'}>Entrada</button>
-              <button type="button" class="btn-secondary" aria-pressed={tipoMovCaixa==='saida'} on:click={() => tipoMovCaixa='saida'}>Saída</button>
-            </div>
-          </fieldset>
-        </div>
-        <div>
-          <label for="valor-mov" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Valor (R$)</label>
-          <input id="valor-mov" type="number" min="0.01" step="0.01" bind:value={valorMovCaixa} class="input-form" />
-        </div>
-        <div>
-          <label for="motivo-mov" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Motivo/observação (opcional)</label>
-          <input id="motivo-mov" type="text" maxlength="140" bind:value={motivoMovCaixa} class="input-form" placeholder="Ex.: Retirada para cofre / Troco adicional" />
-        </div>
-        <label class="inline-flex items-center gap-2 text-sm dark:text-gray-200">
-          <input type="checkbox" bind:checked={imprimirReciboMovFlag} /> Imprimir recibo
-        </label>
-
-        {#if erroMovCaixa}
-          <div class="text-sm text-red-600">{erroMovCaixa}</div>
-        {/if}
-
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" class="btn-secondary" on:click={() => { modalMovCaixaAberto = false; salvandoMovCaixa = false; erroMovCaixa = ''; }}>Cancelar</button>
-          <button type="button" class="btn-primary" disabled={salvandoMovCaixa} on:click={confirmarMovCaixa}>
-            {salvandoMovCaixa ? 'Registrando...' : 'Confirmar'}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-{/if}
-
+<!-- Modal: Movimentação de Caixa -->
+<ModalMovCaixa
+  open={modalMovCaixaAberto}
+  idCaixa={idCaixaAberto}
+  {saldoCaixa}
+  on:sucesso={async (e) => {
+    modalMovCaixaAberto = false;
+    if (e.detail.imprimirRecibo) {
+      try {
+        await imprimirReciboMovCaixa(e.detail);
+      } catch (err) {
+        console.warn('Falha ao imprimir recibo de movimentação:', err?.message || err);
+      }
+    }
+    await atualizarSaldoCaixa();
+  }}
+  on:close={() => modalMovCaixaAberto = false}
+/>
 
 <!-- Estilos removidos: usamos classes globais definidas em src/app.css -->
+
