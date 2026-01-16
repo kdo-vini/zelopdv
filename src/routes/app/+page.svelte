@@ -31,6 +31,9 @@
   // Grid virtualizado para performance
   import VirtualProductGrid from '$lib/components/VirtualProductGrid.svelte';
 
+  // Modo Offline (IndexedDB)
+  import { atualizarCacheProdutos, salvarVendaOffline, syncVendasPendentes } from '$lib/offlineDb';
+
   export let params;
 
   // --- 1. ESTADO DO PDV ---
@@ -173,6 +176,7 @@
   // Efeito: quando o app monta, verifica sessão, caixa e carrega dados do PDV
   onMount(async () => {
     window.addEventListener('keydown', onKeyGlobal);
+    window.addEventListener('online', handleSyncOnline);
     await waitAuthReady();
     // Bloqueio: exige assinatura ativa antes de carregar o PDV
     const ok = await ensureActiveSubscription({ requireProfile: true });
@@ -207,8 +211,19 @@
   onDestroy(() => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('keydown', onKeyGlobal);
+        window.removeEventListener('online', handleSyncOnline);
       }
     });
+
+  /** Sincroniza vendas pendentes quando volta a internet */
+  async function handleSyncOnline() {
+    addToast('Conexão restabelecida. Sincronizando vendas...', 'info');
+    const logs = await syncVendasPendentes(supabase);
+    if (logs.success > 0) {
+      addToast(`${logs.success} venda(s) sincronizada(s) com sucesso.`, 'success');
+      await atualizarSaldoCaixa();
+    }
+  }
 
   /**
    * Verifica no banco se há um caixa aberto (sem data_fechamento) para o usuário.
@@ -328,6 +343,10 @@
     try {
       const data = await pdvCache.getProdutos(forceRefresh);
       produtos = data || [];
+      // Atualiza cache offline
+      if (produtos.length) {
+        atualizarCacheProdutos(produtos).catch(e => console.warn('Falha ao cachear produtos offline:', e));
+      }
     } catch (err) {
       errorMessage = err?.message || 'Erro ao carregar produtos';
     }
@@ -863,178 +882,142 @@ window.addEventListener('message', function(e){
          if (pFiado) idClienteForVenda = pFiado.pessoaId || null;
       }
 
-      const { data: venda, error: vendaError } = await supabase
-        .from('vendas')
-        .insert({
-          valor_total: Number(totalComanda),
-          forma_pagamento: insertForma,
-          valor_recebido: insertValorRecebido,
-          valor_troco: insertValorTroco,
-          id_usuario,
-          id_caixa: idCaixaAberto,
-          id_cliente: idClienteForVenda
-        })
-        .select('id')
-        .single();
-
-      if (vendaError) {
-        throw new Error(vendaError.message);
-      }
-
-      // Função auxiliar: extrai quantidade efetiva quando o nome vier como "56x Produto"
-      const extrairQuantidadeEfetiva = (item) => {
-        if (item?.id_produto && typeof item?.nome === 'string') {
-          const m = item.nome.match(/^(\d+)x\s/i);
-          if (m) return parseInt(m[1], 10);
-        }
-        return item.quantidade || 1;
+      const dadosVenda = {
+        valor_total: Number(totalComanda),
+        forma_pagamento: insertForma,
+        valor_recebido: insertValorRecebido,
+        valor_troco: insertValorTroco,
+        id_usuario,
+        id_caixa: idCaixaAberto,
+        id_cliente: idClienteForVenda
       };
 
-      // Inserir itens da venda (quantidade efetiva e preço unitário coerente)
-      const itens = comanda.map((i) => {
-        const qtdEfetiva = extrairQuantidadeEfetiva(i);
-        // BUGFIX: i.preco já representa o preço unitário do produto no carrinho.
-        // Não dividir pelo qtdEfetiva, pois isso distorce a receita (ex.: 0,80 / 40 → 0,02).
-        // Para itens avulsos, tratamos o valor inserido como preço unitário também.
-        const precoUnit = Number(i.preco);
-        return {
+      // Tenta inserir no Supabase, senão salva localmente
+      let vendaId = null;
+      let isOffline = false;
+
+      try {
+        const { data: venda, error: vendaError } = await supabase
+          .from('vendas')
+          .insert(dadosVenda)
+          .select('id')
+          .single();
+
+        if (vendaError) throw vendaError;
+        vendaId = venda.id;
+      } catch (connErr) {
+        console.warn('Falha na conexão, salvando venda offline:', connErr);
+        isOffline = true;
+        // Salva localmente com os itens e pagamentos
+        const itemObj = comanda.map(i => ({
           id_usuario,
-          id_venda: venda.id,
           id_produto: i.id_produto ?? null,
-          quantidade: qtdEfetiva,
+          quantidade: i.quantidade,
           nome_produto_na_venda: i.nome,
-          preco_unitario_na_venda: Number(precoUnit)
-        };
-      });
-
-      const { error: itensError } = await supabase.from('vendas_itens').insert(itens);
-      if (itensError) {
-        // rollback best-effort
-        await supabase.from('vendas').delete().eq('id', venda.id);
-        throw new Error(itensError.message);
+          preco_unitario_na_venda: Number(i.preco)
+        }));
+        
+        await salvarVendaOffline({
+          ...dadosVenda,
+          itens: itemObj,
+          pagamentos: multiPag ? pagamentos : []
+        });
+        vendaId = `offline-${Date.now()}`;
       }
 
-      // Lançar débito no fiado
-      if (!multiPag && formaPagamento === 'fiado' && pessoaFiadoId) {
-        try {
-          const { error: fiadoErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: pessoaFiadoId, p_valor: Number(totalComanda) });
-          if (fiadoErr) addToast('Erro ao lançar fiado: ' + fiadoErr.message, 'error');
-        } catch (e) {
-          addToast('Erro ao lançar fiado.', 'error');
-        }
-      } else if (multiPag) {
-        const fiado = pagamentos.find(p => p.forma === 'fiado');
-        if (fiado && fiado.pessoaId && Number(fiado.valor) > 0) {
-          try {
-            const { error: fiadoErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: fiado.pessoaId, p_valor: Number(fiado.valor) });
-            if (fiadoErr) addToast('Erro ao lançar fiado: ' + fiadoErr.message, 'error');
-          } catch (e) {
-            addToast('Erro ao lançar fiado.', 'error');
+      // Se estiver online, continua com itens e estoque
+      if (!isOffline) {
+        // Função auxiliar: extrai quantidade efetiva quando o nome vier como "56x Produto"
+        const extrairQuantidadeEfetiva = (item) => {
+          if (item?.id_produto && typeof item?.nome === 'string') {
+            const m = item.nome.match(/^(\d+)x\s/i);
+            if (m) return parseInt(m[1], 10);
           }
-        }
-      }
+          return item.quantidade || 1;
+        };
 
-      // Se múltiplos pagamentos, registrar linhas em vendas_pagamentos
-      if (multiPag && pagamentos.length) {
-        // Valor persistido para dinheiro deve ser o aplicado (descontando o troco)
-        const linhas = pagamentos.map(p => {
-          const isDin = p.forma === 'dinheiro';
-          const aplicadoDin = isDin ? Math.max(0, Number(p.valor || 0) - Number(trocoMulti)) : Number(p.valor || 0);
+        const itens = comanda.map((i) => {
+          const qtdEfetiva = extrairQuantidadeEfetiva(i);
+          const precoUnit = Number(i.preco);
           return {
-            id_venda: venda.id,
             id_usuario,
-            forma_pagamento: p.forma,
-            valor: isDin ? aplicadoDin : Number(p.valor || 0)
+            id_venda: vendaId,
+            id_produto: i.id_produto ?? null,
+            quantidade: qtdEfetiva,
+            nome_produto_na_venda: i.nome,
+            preco_unitario_na_venda: Number(precoUnit)
           };
         });
-        const { error: pagErr } = await supabase.from('vendas_pagamentos').insert(linhas);
-        if (pagErr) addToast('Falha ao registrar pagamentos: ' + pagErr.message, 'error');
-      }
 
-      // Baixa de estoque simples (MVP): decrementa estoque_atual para itens com controlar_estoque = true
-      try {
-        const idsProdutos = [...new Set(comanda.filter(i => i.id_produto).map(i => i.id_produto))];
-        if (idsProdutos.length) {
-          // Busca flags de controle e estoque atual
-          const { data: prodsInfo, error: prodErr } = await supabase
-            .from('produtos')
-            .select('id, controlar_estoque, estoque_atual')
-            .in('id', idsProdutos);
-          if (!prodErr && prodsInfo) {
-            const mapInfo = new Map(prodsInfo.map(p => [p.id, p]));
-            // Soma quantidades efetivas vendidas por produto
-            const totalPorProduto = new Map();
-            for (const item of comanda) {
-              if (!item.id_produto) continue;
-              const qtdEf = extrairQuantidadeEfetiva(item);
-              totalPorProduto.set(item.id_produto, (totalPorProduto.get(item.id_produto) || 0) + Number(qtdEf));
-            }
-            // Dispara atualizações em paralelo sem bloquear o fluxo de venda
-            const updates = [];
-            for (const [idProd, totalVendida] of totalPorProduto.entries()) {
-              const info = mapInfo.get(idProd);
-              if (info?.controlar_estoque) {
-                const novoEstoque = Number(info.estoque_atual || 0) - Number(totalVendida || 0);
-                updates.push(supabase.from('produtos').update({ estoque_atual: novoEstoque }).eq('id', idProd));
-              }
-            }
-            // Não aguarda; registra resultado de forma assíncrona
-            Promise.allSettled(updates).then((res) => {
-              const fails = res.filter(r => r.status === 'rejected');
-              if (fails.length) addToast('Algumas baixas de estoque falharam.', 'warning');
-            });
+        const { error: itensError } = await supabase.from('vendas_itens').insert(itens);
+        if (itensError) {
+          await supabase.from('vendas').delete().eq('id', vendaId);
+          throw new Error(itensError.message);
+        }
+
+        // Lançar débito no fiado
+        if (!multiPag && formaPagamento === 'fiado' && pessoaFiadoId) {
+          supabase.rpc('fiado_lancar_debito', { p_id_pessoa: pessoaFiadoId, p_valor: Number(totalComanda) }).catch(() => {});
+        } else if (multiPag) {
+          const fiado = pagamentos.find(p => p.forma === 'fiado');
+          if (fiado && fiado.pessoaId && Number(fiado.valor) > 0) {
+            supabase.rpc('fiado_lancar_debito', { p_id_pessoa: fiado.pessoaId, p_valor: Number(fiado.valor) }).catch(() => {});
           }
         }
-      } catch (estoqueErr) {
-        addToast('Falha ao baixar estoque.', 'warning');
+
+        // Pagamentos
+        if (multiPag && pagamentos.length) {
+          const linhas = pagamentos.map(p => ({
+            id_venda: vendaId,
+            id_usuario,
+            forma_pagamento: p.forma,
+            valor: p.forma === 'dinheiro' ? Math.max(0, Number(p.valor || 0) - Number(trocoMulti)) : Number(p.valor || 0)
+          }));
+          await supabase.from('vendas_pagamentos').insert(linhas);
+        }
+
+        // Baixa de estoque
+        try {
+          const updates = [];
+          for (const item of comanda) {
+            if (!item.id_produto) continue;
+            const prod = produtos.find(p => p.id === item.id_produto);
+            if (prod?.controlar_estoque) {
+              const novoEstoque = Number(prod.estoque_atual || 0) - (extrairQuantidadeEfetiva(item));
+              updates.push(supabase.from('produtos').update({ estoque_atual: novoEstoque }).eq('id', item.id_produto));
+            }
+          }
+          Promise.allSettled(updates);
+        } catch {}
       }
 
-      // Captura dados do recibo antes de limpar estado, para evitar nulos na impressão
-  const fp = multiPag ? 'multiplo' : formaPagamento;
-    const vr = multiPag ? (cashRecebidoMulti || null) : valorRecebido;
-    const trocoVal = multiPag ? Number(trocoMulti) : (fp === 'dinheiro' ? Number(troco) : 0);
-      const totalVal = Number(totalComanda);
-      const itensRecibo = itens;
-
-      // Sucesso: fechar modal e limpar comanda
+      // Sucesso
       modalPagamentoAberto = false;
       comanda = [];
       formaPagamento = null;
       valorRecebido = 0;
-    multiPag = false;
-    pagamentos = [];
-  // Atualiza saldo após a venda (para refletir pagamentos em dinheiro)
-  await atualizarSaldoCaixa();
+      multiPag = false;
+      pagamentos = [];
+      
+      if (isOffline) {
+        addToast('Venda salva localmente (Modo Offline). Será sincronizada ao detectar internet.', 'warning');
+      } else {
+        addToast('Venda registrada com sucesso!', 'success');
+        await atualizarSaldoCaixa();
+      }
 
-      // Agenda a impressão após a UI atualizar, evitando travar o botão em "Salvando..."
+      // Impressão (Placeholder simples para offline)
       if (imprimirRecibo) {
-        // Prepara detalhamento de pagamentos para recibo (com valores aplicados)
-        let printPagamentos = [];
-        if (multiPag && Array.isArray(pagamentos) && pagamentos.length) {
-          printPagamentos = pagamentos.map((p) => {
-            const isDin = p.forma === 'dinheiro';
-            const aplicadoDin = isDin ? Math.max(0, Number(p.valor || 0) - Number(trocoMulti || 0)) : Number(p.valor || 0);
-            const pessoaNome = p.forma === 'fiado' && p.pessoaId ? (pessoasFiado.find(x => x.id === p.pessoaId)?.nome || null) : null;
-            return { forma: p.forma, valor: isDin ? aplicadoDin : Number(p.valor || 0), pessoaNome };
-          });
-        }
         const payloadRecibo = {
-          idVenda: venda.id,
-          formaPagamento: fp,
-          total: totalVal,
-          valorRecebido: fp === 'dinheiro' ? Number(vr) : null,
-          troco: trocoVal,
-          itens: itensRecibo,
-          pagamentos: printPagamentos
+          idVenda: vendaId,
+          formaPagamento: insertForma,
+          total: Number(totalComanda),
+          valorRecebido: insertValorRecebido,
+          troco: insertValorTroco,
+          itens: comanda.map(i => ({ ...i, preco_unitario_na_venda: i.preco })), // aproximado
+          pagamentos: multiPag ? pagamentos : []
         };
-
-        setTimeout(() => {
-          try {
-            imprimirReciboVenda(payloadRecibo, printWin);
-          } catch (e) {
-            addToast('Falha ao imprimir recibo.', 'error');
-          }
-        }, 60);
+        setTimeout(() => imprimirReciboVenda(payloadRecibo, printWin), 60);
       }
     } catch (err) {
       erroPagamento = err?.message ?? 'Erro ao salvar a venda.';
