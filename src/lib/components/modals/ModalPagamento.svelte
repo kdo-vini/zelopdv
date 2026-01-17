@@ -331,11 +331,11 @@ window.addEventListener('message', function(e){
             <fieldset>
               <legend class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Forma de Pagamento</legend>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn-secondary" class:btn-primary={formaPagamento === 'dinheiro'} on:click={() => formaPagamento='dinheiro'}>Dinheiro</button>
-                <button type="button" class="btn-secondary" class:btn-primary={formaPagamento === 'cartao_debito'} on:click={() => formaPagamento='cartao_debito'}>Cartão (Débito)</button>
-                <button type="button" class="btn-secondary" class:btn-primary={formaPagamento === 'cartao_credito'} on:click={() => formaPagamento='cartao_credito'}>Cartão (Crédito)</button>
-                <button type="button" class="btn-secondary" class:btn-primary={formaPagamento === 'pix'} on:click={() => formaPagamento='pix'}>Pix</button>
-                <button type="button" class="btn-secondary" class:btn-primary={formaPagamento === 'fiado'} on:click={async() => { formaPagamento='fiado'; await carregarPessoasFiado(); }}>Fiado</button>
+                <button type="button" class="btn-secondary" class:selected={formaPagamento === 'dinheiro'} on:click={() => formaPagamento='dinheiro'}>Dinheiro</button>
+                <button type="button" class="btn-secondary" class:selected={formaPagamento === 'cartao_debito'} on:click={() => formaPagamento='cartao_debito'}>Cartão (Débito)</button>
+                <button type="button" class="btn-secondary" class:selected={formaPagamento === 'cartao_credito'} on:click={() => formaPagamento='cartao_credito'}>Cartão (Crédito)</button>
+                <button type="button" class="btn-secondary" class:selected={formaPagamento === 'pix'} on:click={() => formaPagamento='pix'}>Pix</button>
+                <button type="button" class="btn-secondary" class:selected={formaPagamento === 'fiado'} on:click={async() => { formaPagamento='fiado'; await carregarPessoasFiado(); }}>Fiado</button>
               </div>
               <p class="text-xs text-slate-500 mt-1">Atalhos: D=Dinheiro, X=Pix, B=Débito, C=Crédito, F=Fiado | Ctrl+Enter=Confirmar | Esc=Cancelar</p>
             </fieldset>

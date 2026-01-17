@@ -76,10 +76,13 @@
 }
 
 .btn-secondary[aria-pressed="true"],
-.btn-secondary[aria-selected="true"] {
+.btn-secondary[aria-selected="true"],
+.btn-secondary.selected {
   background-color: var(--accent);
   border-color: var(--accent);
   color: #fff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  font-weight: 600;
 }
 
 .btn-danger {

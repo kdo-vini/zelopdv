@@ -14,48 +14,80 @@
 
   async function loadDash(){
     loading = true; errorMsg='';
-    const { data, error } = await supabase.rpc('dashboard_resumo');
-    if(error){
-      // Fallback client-side: compõe um resumo básico sem o RPC
-      console.warn('[dashboard_resumo] RPC falhou, usando fallback:', error.message);
-      try{
-        const { data: userData } = await supabase.auth.getUser();
-        const uid = userData?.user?.id;
-        // caixa aberto recente
-        const { data: cx } = await supabase
-          .from('caixas')
-          .select('id, data_abertura, data_fechamento')
-          .eq('id_usuario', uid)
-          .order('data_abertura', { ascending:false })
-          .limit(1);
-        const caixaAtual = (cx&&cx[0])||null;
-        let vendasHoje = [];
-        if(caixaAtual){
-          const inicio = new Date(); inicio.setHours(0,0,0,0);
-          const { data: vs } = await supabase
-            .from('vendas')
-            .select('id, valor_total, forma_pagamento, created_at')
-            .eq('id_caixa', caixaAtual.id)
-            .gte('created_at', inicio.toISOString());
-          vendasHoje = vs||[];
-        }
-        const totalHoje = (vendasHoje||[]).reduce((a,v)=>a+Number(v.valor_total||0),0);
-        const countHoje = (vendasHoje||[]).length;
-        const ticketMedioHoje = countHoje ? totalHoje/countHoje : null;
-        dash = {
-          vendas: { totalHoje, countHoje, ticketMedioHoje, ticketMedioOntem:null, ticketMedioVarPct:null },
-          estoque: { criticos:0, rupturas:0, saudePct:null },
-          caixa: { aberto: !!(caixaAtual && !caixaAtual.data_fechamento), desde: caixaAtual?.data_abertura||null, horasAberto: caixaAtual? Math.max(0, Math.round((Date.now()-new Date(caixaAtual.data_abertura).getTime())/36e5)) : null, ultimoFechamento: null },
-          atividade: (vendasHoje||[]).slice(0,10).map(v=>({ tipo:'venda', id:v.id, valor:v.valor_total, ts:v.created_at })),
-          alertas: [],
-          insight: 'Exibindo dados básicos (fallback).'
-        };
-      }catch(e){
-        errorMsg = error.message; loading=false; return;
+    try{
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if(!uid){ window.location.href = '/login'; return; }
+      
+      // Busca caixa aberto mais recente
+      const { data: cx } = await supabase
+        .from('caixas')
+        .select('id, data_abertura, data_fechamento')
+        .eq('id_usuario', uid)
+        .order('data_abertura', { ascending:false })
+        .limit(1);
+      const caixaAtual = (cx&&cx[0])||null;
+      
+      let vendasCaixa = [];
+      let movimentacoes = [];
+      
+      if(caixaAtual){
+        // Busca TODAS as vendas do caixa atual (sem filtro de data)
+        // Isso garante que vendas de caixas abertos por múltiplos dias apareçam corretamente
+        const { data: vs } = await supabase
+          .from('vendas')
+          .select('id, valor_total, forma_pagamento, created_at')
+          .eq('id_caixa', caixaAtual.id)
+          .order('created_at', { ascending: false });
+        vendasCaixa = vs||[];
+        
+        // Busca movimentações (sangrias/suprimentos) do caixa
+        const { data: movs } = await supabase
+          .from('caixa_movimentacoes')
+          .select('id, tipo, valor, motivo, created_at')
+          .eq('id_caixa', caixaAtual.id)
+          .order('created_at', { ascending: false });
+        movimentacoes = movs||[];
       }
-      loading=false; return;
+      
+      const totalCaixa = (vendasCaixa||[]).reduce((a,v)=>a+Number(v.valor_total||0),0);
+      const countCaixa = (vendasCaixa||[]).length;
+      const ticketMedioCaixa = countCaixa ? totalCaixa/countCaixa : null;
+      
+      // Combina vendas e movimentações para atividade recente, ordenado por timestamp
+      const atividadeVendas = (vendasCaixa||[]).map(v=>({ tipo:'venda', id:v.id, valor:v.valor_total, ts:v.created_at }));
+      const atividadeMovs = (movimentacoes||[]).map(m=>({ tipo:m.tipo, id:m.id, valor:m.valor, ts:m.created_at, motivo:m.motivo }));
+      const atividadeCombinada = [...atividadeVendas, ...atividadeMovs]
+        .sort((a,b) => new Date(b.ts) - new Date(a.ts))
+        .slice(0, 10);
+      
+      // Calcula alertas
+      const alertas = [];
+      if(caixaAtual && !caixaAtual.data_fechamento){
+        const horasAberto = Math.round((Date.now()-new Date(caixaAtual.data_abertura).getTime())/36e5);
+        if(horasAberto >= 10){
+          alertas.push({ mensagem: 'Caixa aberto ha mais de 10h. Considere fechar.' });
+        }
+      }
+      
+      dash = {
+        vendas: { totalHoje: totalCaixa, countHoje: countCaixa, ticketMedioHoje: ticketMedioCaixa, ticketMedioOntem:null, ticketMedioVarPct:null },
+        estoque: { criticos:0, rupturas:0, saudePct:null },
+        caixa: { 
+          aberto: !!(caixaAtual && !caixaAtual.data_fechamento), 
+          desde: caixaAtual?.data_abertura||null, 
+          horasAberto: caixaAtual ? Math.max(0, Math.round((Date.now()-new Date(caixaAtual.data_abertura).getTime())/36e5)) : null, 
+          ultimoFechamento: null 
+        },
+        atividade: atividadeCombinada,
+        alertas: alertas,
+        insight: countCaixa > 0 ? `${countCaixa} vendas registradas neste caixa.` : 'Nenhuma venda registrada ainda.'
+      };
+    }catch(e){
+      console.error('[Dashboard] Erro ao carregar:', e);
+      errorMsg = e?.message || 'Erro ao carregar dashboard.';
     }
-    dash = data || dash; loading=false;
+    loading=false;
   }
   import { waitAuthReady } from '$lib/authStore';
   onMount(async () => { await waitAuthReady(); await loadDash(); });
@@ -71,7 +103,7 @@
   {:else}
     <div class="grid kpis">
       <div class="card">
-        <div class="kptitle">Vendas hoje</div>
+        <div class="kptitle">Vendas do caixa</div>
         <div class="kpval">{fmt(dash.vendas.totalHoje)}</div>
         <div class="kpsub">{dash.vendas.countHoje} cupons • Ticket {dash.vendas.ticketMedioHoje ? fmt(dash.vendas.ticketMedioHoje) : '-'}</div>
       </div>
