@@ -716,6 +716,9 @@
     if (pessoasList?.length) pessoasFiado = pessoasList;
     if (idCliente) pessoaFiadoId = idCliente;
     
+    // Ativa estado de salvando no modal via referência
+    modalPagamentoRef?.setSalvando?.(true);
+    
     // Chama a função de persistência existente
     await confirmarVenda();
   }
@@ -955,13 +958,34 @@ window.addEventListener('message', function(e){
           throw new Error(itensError.message);
         }
 
-        // Lançar débito no fiado
+        // Lançar débito no fiado - IMPORTANTE: await para garantir atualização do saldo
+        const atualizarSaldoFiado = async (pessoaId, valor) => {
+          try {
+            // Tenta a RPC primeiro
+            const { error: rpcErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: pessoaId, p_valor: valor });
+            if (rpcErr) {
+              console.warn('[Fiado] RPC falhou, tentando update direto:', rpcErr.message);
+              // Fallback: atualiza diretamente a tabela pessoas
+              const { data: pessoa } = await supabase.from('pessoas').select('saldo_fiado').eq('id', pessoaId).single();
+              const saldoAtual = Number(pessoa?.saldo_fiado || 0);
+              const { error: updateErr } = await supabase.from('pessoas').update({ saldo_fiado: saldoAtual + valor }).eq('id', pessoaId);
+              if (updateErr) {
+                console.error('[Fiado] Fallback também falhou:', updateErr.message);
+              } else {
+                console.log('[Fiado] Saldo atualizado via fallback:', saldoAtual + valor);
+              }
+            }
+          } catch (e) {
+            console.error('[Fiado] Exceção ao lançar débito:', e);
+          }
+        };
+
         if (!multiPag && formaPagamento === 'fiado' && pessoaFiadoId) {
-          supabase.rpc('fiado_lancar_debito', { p_id_pessoa: pessoaFiadoId, p_valor: Number(totalComanda) }).catch(() => {});
+          await atualizarSaldoFiado(pessoaFiadoId, Number(totalComanda));
         } else if (multiPag) {
           const fiado = pagamentos.find(p => p.forma === 'fiado');
           if (fiado && fiado.pessoaId && Number(fiado.valor) > 0) {
-            supabase.rpc('fiado_lancar_debito', { p_id_pessoa: fiado.pessoaId, p_valor: Number(fiado.valor) }).catch(() => {});
+            await atualizarSaldoFiado(fiado.pessoaId, Number(fiado.valor));
           }
         }
 
@@ -991,7 +1015,8 @@ window.addEventListener('message', function(e){
         } catch {}
       }
 
-      // Sucesso
+      // Sucesso - reseta o estado do modal
+      modalPagamentoRef?.resetState?.();
       modalPagamentoAberto = false;
       comanda = [];
       formaPagamento = null;
@@ -1023,6 +1048,8 @@ window.addEventListener('message', function(e){
       erroPagamento = err?.message ?? 'Erro ao salvar a venda.';
     } finally {
       salvandoVenda = false;
+      // Garante que o modal saia do estado de salvando em caso de erro
+      modalPagamentoRef?.setSalvando?.(false);
     }
   }
 

@@ -10,6 +10,7 @@
   let addAoCaixa = true;
   let imprimirRecibo = true;
   let loading = true;
+  let salvando = false;
   let errorMsg = '';
   
   let history = [];
@@ -50,12 +51,15 @@
   }
 
   async function registrarPagamento(){
+    if(salvando) return; // Previne duplo clique
     if(!pessoaSelecionada){ alert('Selecione uma pessoa.'); return; }
     const valor = Number(valorPagamento);
     if(!valor || valor <= 0){ alert('Informe um valor válido.'); return; }
 
-    const { error: errPay } = await supabase.rpc('fiado_registrar_pagamento', { p_id_pessoa: pessoaSelecionada.id, p_valor: valor });
-    if(errPay){ alert(errPay.message); return; }
+    salvando = true;
+    try {
+      const { error: errPay } = await supabase.rpc('fiado_registrar_pagamento', { p_id_pessoa: pessoaSelecionada.id, p_valor: valor });
+      if(errPay){ alert(errPay.message); return; }
 
     if(addAoCaixa){
       const { data: cx } = await supabase.from('caixas').select('id').is('data_fechamento', null).order('data_abertura', { ascending:false }).limit(1).maybeSingle();
@@ -73,6 +77,9 @@
     valorPagamento = '';
     await loadPessoas();
     if(pessoaSelecionada) selecionar(pessoaSelecionada.id);
+    } finally {
+      salvando = false;
+    }
   }
 
   async function deletarVenda(id){
@@ -142,7 +149,9 @@
 					</label>
 				</div>
 				
-				<button class="btn-primary" on:click={registrarPagamento}>Registrar Pagamento</button>
+				<button class="btn-primary" disabled={salvando} on:click={registrarPagamento}>
+					{salvando ? 'Processando...' : 'Registrar Pagamento'}
+				</button>
 			{:else}
 				<p class="hint">Selecione uma pessoa para ver saldo e pagar.</p>
 			{/if}

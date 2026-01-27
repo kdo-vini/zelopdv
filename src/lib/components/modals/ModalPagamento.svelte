@@ -155,7 +155,9 @@
         return;
       }
       
-      salvandoVenda = true;
+      
+      // Estado de salvando agora é controlado pelo componente pai via setSalvando()
+      // NÃO setar salvandoVenda = true aqui para evitar loop infinito
       
       // Pre-abre janela de impressão
       let printWin = null;
