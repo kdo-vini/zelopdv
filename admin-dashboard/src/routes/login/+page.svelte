@@ -46,6 +46,7 @@
       loading = false
     }
   }
+
 </script>
 
 <svelte:head>
