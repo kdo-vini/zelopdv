@@ -93,6 +93,11 @@
   // Fiado
   let pessoasFiado = [];
   let pessoaFiadoId = '';
+  
+  // Desconto (recebido do modal)
+  let valorDescontoVenda = 0;
+  let descontoTipoVenda = null; // 'valor' | 'percentual' | null
+  let totalFinalVenda = 0;
   async function carregarPessoasFiado(){
     if (pessoasFiado.length) return;
     try {
@@ -704,7 +709,11 @@
       cashRecebidoMulti,
       imprimirRecibo: printRecibo,
       printWin,
-      pessoasFiado: pessoasList
+      pessoasFiado: pessoasList,
+      valorDesconto,
+      descontoTipo,
+      totalOriginal,
+      totalFinal
     } = event.detail;
     
     // Atualiza estados locais que serão usados pela função confirmarVenda
@@ -715,6 +724,11 @@
     if (pags?.length) pagamentos = pags;
     if (pessoasList?.length) pessoasFiado = pessoasList;
     if (idCliente) pessoaFiadoId = idCliente;
+    
+    // Dados de desconto
+    valorDescontoVenda = valorDesconto || 0;
+    descontoTipoVenda = descontoTipo || null;
+    totalFinalVenda = totalFinal || Number(totalComanda);
     
     // Ativa estado de salvando no modal via referência
     modalPagamentoRef?.setSalvando?.(true);
@@ -886,13 +900,15 @@ window.addEventListener('message', function(e){
       }
 
       const dadosVenda = {
-        valor_total: Number(totalComanda),
+        valor_total: totalFinalVenda || Number(totalComanda),
         forma_pagamento: insertForma,
         valor_recebido: insertValorRecebido,
         valor_troco: insertValorTroco,
         id_usuario,
         id_caixa: idCaixaAberto,
-        id_cliente: idClienteForVenda
+        id_cliente: idClienteForVenda,
+        valor_desconto: valorDescontoVenda || 0,
+        desconto_tipo: descontoTipoVenda || null
       };
 
       // Tenta inserir no Supabase, senão salva localmente
@@ -1036,7 +1052,9 @@ window.addEventListener('message', function(e){
         const payloadRecibo = {
           idVenda: vendaId,
           formaPagamento: insertForma,
-          total: Number(totalComanda),
+          total: totalFinalVenda || Number(totalComanda),
+          subtotal: Number(totalComanda),
+          desconto: valorDescontoVenda || 0,
           valorRecebido: insertValorRecebido,
           troco: insertValorTroco,
           itens: comanda.map(i => ({ ...i, preco_unitario_na_venda: i.preco })), // aproximado

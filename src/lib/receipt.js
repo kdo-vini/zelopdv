@@ -47,7 +47,9 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
   }).join('');
 
   const subtotalCalc = (venda.itens || []).reduce((s, it) => s + (Number(it.quantidade || 1) * Number(it.preco_unitario || it.preco_unitario_na_venda || 0)), 0);
-  const totalCalc = venda.total != null ? Number(venda.total) : Number(subtotalCalc);
+  const subtotalExibido = venda.subtotal != null ? Number(venda.subtotal) : subtotalCalc;
+  const descontoVal = venda.desconto != null ? Number(venda.desconto) : 0;
+  const totalCalc = venda.total != null ? Number(venda.total) : (subtotalExibido - descontoVal);
   const recebido = venda.valorRecebido != null ? Number(venda.valorRecebido) : null;
   const trocoVal = venda.troco != null ? Number(venda.troco) : (recebido != null ? (recebido - totalCalc) : 0);
   const pagamentos = Array.isArray(venda.pagamentos) ? venda.pagamentos.map(p => ({
@@ -120,7 +122,8 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
     </table>
 
     <div class="totais">
-      <div class="linha"><span>Subtotal</span><span>${fmt(subtotalCalc)}</span></div>
+      <div class="linha"><span>Subtotal</span><span>${fmt(subtotalExibido)}</span></div>
+      ${descontoVal > 0 ? `<div class="linha" style="color:#c00"><span>Desconto</span><span>-${fmt(descontoVal)}</span></div>` : ''}
       <div class="linha total"><span>Total</span><strong>${fmt(totalCalc)}</strong></div>
       ${venda.formaPagamento !== 'multiplo' ? (recebido != null ? `<div class="linha"><span>Recebido</span><span>${fmt(recebido)}</span></div>` : '') : ''}
       ${trocoVal > 0 ? `<div class="linha"><span>Troco</span><span>${fmt(trocoVal)}</span></div>` : ''}
@@ -129,25 +132,25 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
       ${venda.formaPagamento === 'multiplo' && pagamentos.length ? `
         <div class="pagamentos" aria-label="Pagamentos">
           ${pagamentos.map(p => {
-            const label = escapeHtml(formaLabel(p.forma));
-            const meta = p.forma === 'fiado' && p.pessoaNome ? ` <span class="meta">• ${escapeHtml(p.pessoaNome)}</span>` : '';
-            return `<div class="row"><span>${label}${meta}</span><span>${fmt(p.valor)}</span></div>`;
-          }).join('')}
+    const label = escapeHtml(formaLabel(p.forma));
+    const meta = p.forma === 'fiado' && p.pessoaNome ? ` <span class="meta">• ${escapeHtml(p.pessoaNome)}</span>` : '';
+    return `<div class="row"><span>${label}${meta}</span><span>${fmt(p.valor)}</span></div>`;
+  }).join('')}
         </div>
       ` : ''}
     </div>
 
     ${venda.formaPagamento === 'multiplo' && pagamentos.length ? (() => {
       // Rodapé-resumo: Recebido via: Pix X · Cartão Y · Dinheiro Z (troco T)
-      const somar = (forms) => pagamentos.filter(p => forms.includes(p.forma)).reduce((s, p) => s + Number(p.valor||0), 0);
+      const somar = (forms) => pagamentos.filter(p => forms.includes(p.forma)).reduce((s, p) => s + Number(p.valor || 0), 0);
       const pixT = somar(['pix']);
-      const cartaoT = somar(['cartao_debito','cartao_credito','cartao']);
+      const cartaoT = somar(['cartao_debito', 'cartao_credito', 'cartao']);
       const dinheiroT = somar(['dinheiro']);
       const partes = [];
       if (pixT > 0) partes.push(`Pix ${fmt(pixT)}`);
       if (cartaoT > 0) partes.push(`Cartão ${fmt(cartaoT)}`);
       if (dinheiroT > 0) partes.push(`Dinheiro ${fmt(dinheiroT)}`);
-  const trocoStr = trocoVal > 0 ? ` (troco ${fmt(trocoVal)})` : '';
+      const trocoStr = trocoVal > 0 ? ` (troco ${fmt(trocoVal)})` : '';
       return `<div class="rodape" style="margin-top:6px">Recebido via: ${partes.join(' · ')}${trocoStr}</div>`;
     })() : ''}
 

@@ -43,15 +43,30 @@
   let pessoasFiado = [];
   let pessoaFiadoId = '';
   
-  // Derivados
+  // Desconto
+  let descontoAtivo = false;
+  let descontoTipo = 'valor'; // 'valor' | 'percentual'
+  let descontoInput = 0;
+  
+  // Derivados - Desconto
+  $: valorDesconto = (() => {
+    if (!descontoAtivo || !descontoInput || descontoInput <= 0) return 0;
+    if (descontoTipo === 'percentual') {
+      return Math.min(Number(totalComanda), Number(totalComanda) * (Number(descontoInput) / 100));
+    }
+    return Math.min(Number(totalComanda), Number(descontoInput));
+  })();
+  $: totalFinal = Math.max(0, Number(totalComanda) - valorDesconto);
+  
+  // Derivados - Pagamentos (usam totalFinal)
   $: somaPagamentos = pagamentos.reduce((acc, p) => acc + Number(p?.valor || 0), 0);
-  $: restantePagamento = Math.max(0, Number(totalComanda) - Number(somaPagamentos || 0));
-  $: troco = formaPagamento === 'dinheiro' ? Math.max(0, Number(valorRecebido) - Number(totalComanda)) : 0;
+  $: restantePagamento = Math.max(0, totalFinal - Number(somaPagamentos || 0));
+  $: troco = formaPagamento === 'dinheiro' ? Math.max(0, Number(valorRecebido) - totalFinal) : 0;
   $: trocoPrevMulti = (() => {
     if (!multiPag) return 0;
     const somaOutros = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a, b) => a + Number(b.valor || 0), 0);
     const cashRec = Number((pagamentos.find(p => p.forma === 'dinheiro')?.valor) || 0);
-    const requeridoDin = Math.max(0, Number(totalComanda) - somaOutros);
+    const requeridoDin = Math.max(0, totalFinal - somaOutros);
     return Math.max(0, cashRec - requeridoDin);
   })();
   
@@ -68,13 +83,13 @@
     const valor = Number(novoPagValor || 0);
     if (!forma || valor <= 0) return;
     
-    const total = Number(totalComanda);
+    const total = totalFinal;
     const somaNaoDinheiroAtual = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a, b) => a + Number(b.valor || 0), 0);
     
     if (forma !== 'dinheiro') {
       const novoSomaNC = somaNaoDinheiroAtual + valor;
       if (novoSomaNC > total) {
-        erroPagamento = 'Pagamentos não-dinheiro não podem exceder o total da comanda.';
+        erroPagamento = 'Pagamentos não-dinheiro não podem exceder o total.';
         return;
       }
     }
@@ -94,13 +109,13 @@
       pagamentos = [...pagamentos, { forma, valor }];
     }
     
-    novoPagValor = Math.max(0, total - pagamentos.reduce((a, b) => a + Number(b.valor || 0), 0));
+    novoPagValor = Math.max(0, totalFinal - pagamentos.reduce((a, b) => a + Number(b.valor || 0), 0));
     erroPagamento = '';
   }
   
   function removerPagamento(idx) {
     pagamentos = pagamentos.filter((_, i) => i !== idx);
-    novoPagValor = Math.max(0, Number(totalComanda) - pagamentos.reduce((a, b) => a + Number(b.valor || 0), 0));
+    novoPagValor = Math.max(0, totalFinal - pagamentos.reduce((a, b) => a + Number(b.valor || 0), 0));
   }
   
   async function confirmarVenda() {
@@ -113,7 +128,7 @@
           erroPagamento = 'Selecione a forma de pagamento.';
           return;
         }
-        if (formaPagamento === 'dinheiro' && Number(valorRecebido) < Number(totalComanda)) {
+        if (formaPagamento === 'dinheiro' && Number(valorRecebido) < totalFinal) {
           erroPagamento = 'Valor recebido insuficiente para cobrir o total.';
           return;
         }
@@ -123,7 +138,7 @@
         }
       } else {
         const soma = pagamentos.reduce((acc, p) => acc + Number(p?.valor || 0), 0);
-        const total = Number(totalComanda);
+        const total = totalFinal;
         const somaNaoDinheiro = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a, b) => a + Number(b.valor || 0), 0);
         
         if (soma <= 0) {
@@ -135,7 +150,7 @@
           return;
         }
         if (somaNaoDinheiro > total) {
-          erroPagamento = 'Pagamentos não-dinheiro não podem exceder o total da comanda.';
+          erroPagamento = 'Pagamentos não-dinheiro não podem exceder o total.';
           return;
         }
         
@@ -188,7 +203,7 @@ window.addEventListener('message', function(e){
       // Cálculos para múltiplos pagamentos
       let insertForma = formaPagamento;
       let insertValorRecebido = formaPagamento === 'dinheiro' ? Number(valorRecebido) : null;
-      let insertValorTroco = formaPagamento === 'dinheiro' ? Math.max(0, Number(valorRecebido) - Number(totalComanda)) : 0;
+      let insertValorTroco = formaPagamento === 'dinheiro' ? Math.max(0, Number(valorRecebido) - totalFinal) : 0;
       let cashRecebidoMulti = 0;
       let trocoMulti = 0;
       
@@ -196,7 +211,7 @@ window.addEventListener('message', function(e){
         insertForma = 'multiplo';
         const somaOutros = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a, b) => a + Number(b.valor || 0), 0);
         cashRecebidoMulti = Number((pagamentos.find(p => p.forma === 'dinheiro')?.valor) || 0);
-        const requeridoEmDinheiro = Math.max(0, Number(totalComanda) - somaOutros);
+        const requeridoEmDinheiro = Math.max(0, totalFinal - somaOutros);
         trocoMulti = Math.max(0, cashRecebidoMulti - requeridoEmDinheiro);
         insertValorRecebido = cashRecebidoMulti > 0 ? cashRecebidoMulti : null;
         insertValorTroco = trocoMulti;
@@ -222,7 +237,11 @@ window.addEventListener('message', function(e){
         cashRecebidoMulti,
         imprimirRecibo,
         printWin,
-        pessoasFiado
+        pessoasFiado,
+        valorDesconto,
+        descontoTipo: descontoAtivo ? descontoTipo : null,
+        totalOriginal: Number(totalComanda),
+        totalFinal
       });
       
     } catch (err) {
@@ -273,6 +292,9 @@ window.addEventListener('message', function(e){
     pessoaFiadoId = '';
     erroPagamento = '';
     salvandoVenda = false;
+    descontoAtivo = false;
+    descontoTipo = 'valor';
+    descontoInput = 0;
   }
   
   // Expor método para setar estado de salvando (usado pelo pai)
@@ -297,6 +319,9 @@ window.addEventListener('message', function(e){
     pessoaFiadoId = '';
     erroPagamento = '';
     salvandoVenda = false;
+    descontoAtivo = false;
+    descontoTipo = 'valor';
+    descontoInput = 0;
   }
 </script>
 
@@ -315,8 +340,55 @@ window.addEventListener('message', function(e){
       </h3>
       <div class="space-y-4">
         <div class="flex justify-between items-center">
-          <span class="text-gray-600 dark:text-gray-300">Total da Comanda</span>
-          <span class="text-2xl font-bold dark:text-gray-100">R$ {Number(totalComanda).toFixed(2)}</span>
+          <span class="text-gray-600 dark:text-gray-300">Subtotal</span>
+          <span class="text-xl font-semibold dark:text-gray-100">R$ {Number(totalComanda).toFixed(2)}</span>
+        </div>
+
+        <!-- Seção de Desconto -->
+        <div class="border border-slate-200 dark:border-slate-600 rounded-lg p-3 space-y-3">
+          <label class="inline-flex items-center gap-2 text-sm font-medium dark:text-gray-200">
+            <input type="checkbox" bind:checked={descontoAtivo} class="rounded" />
+            Aplicar desconto
+          </label>
+          
+          {#if descontoAtivo}
+            <div class="flex flex-wrap items-end gap-3">
+              <div class="flex-1 min-w-[120px]">
+                <label for="desconto-input" class="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                  Valor do desconto
+                </label>
+                <div class="flex">
+                  <input 
+                    id="desconto-input" 
+                    type="number" 
+                    min="0" 
+                    step="0.01" 
+                    bind:value={descontoInput} 
+                    class="input-form flex-[5] rounded-r-none text-lg"
+                    placeholder={descontoTipo === 'percentual' ? '10' : '6.00'}
+                  />
+                  <select 
+                    bind:value={descontoTipo} 
+                    class="input-form rounded-l-none border-l-0 !w-14 text-sm text-center"
+                  >
+                    <option value="valor">R$</option>
+                    <option value="percentual">%</option>
+                  </select>
+                </div>
+              </div>
+              {#if valorDesconto > 0}
+                <div class="text-sm text-red-600 dark:text-red-400">
+                  −R$ {Number(valorDesconto).toFixed(2)}
+                </div>
+              {/if}
+            </div>
+          {/if}
+        </div>
+
+        <!-- Total Final -->
+        <div class="flex justify-between items-center {valorDesconto > 0 ? 'pt-2 border-t border-dashed border-slate-300 dark:border-slate-600' : ''}">
+          <span class="text-gray-800 dark:text-gray-100 font-medium">{valorDesconto > 0 ? 'Total com desconto' : 'Total'}</span>
+          <span class="text-2xl font-bold {valorDesconto > 0 ? 'text-green-600 dark:text-green-400' : 'dark:text-gray-100'}">R$ {Number(totalFinal).toFixed(2)}</span>
         </div>
 
         <div class="flex items-center justify-between">

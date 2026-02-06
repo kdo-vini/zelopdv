@@ -41,7 +41,7 @@
 
       const { data: vs, error: vErr } = await supabase
         .from('vendas')
-        .select('id, valor_total, forma_pagamento, valor_recebido, valor_troco')
+        .select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto')
         .eq('id_caixa', caixa.id)
         .order('id', { ascending: true });
       if (vErr) throw vErr;
@@ -91,6 +91,7 @@
   };
   $: totalCartao = Number(totais.cartao_debito + totais.cartao_credito + totais.cartao_legacy);
   $: totalGeral = Number(totais.dinheiro + totalCartao + totais.pix);
+  $: totalDescontos = (vendas || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
 
   // Dinheiro líquido das vendas: recebido - troco (singles) + soma de pagamentos em dinheiro (múltiplos já vêm líquidos)
   $: totalDinheiroLiquido = (
@@ -197,6 +198,14 @@
           <div class="text-lg font-semibold">R$ {Number(totalGeral).toFixed(2)}</div>
         </div>
       </div>
+
+      {#if totalDescontos > 0}
+        <div class="p-3 rounded border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+          <div class="text-xs text-amber-700 dark:text-amber-400">Descontos aplicados</div>
+          <div class="text-lg font-semibold text-amber-700 dark:text-amber-400">−R$ {Number(totalDescontos).toFixed(2)}</div>
+          <div class="text-[11px] text-amber-600 dark:text-amber-500 mt-1">Valor "perdido" em promoções/descontos neste caixa.</div>
+        </div>
+      {/if}
 
       <div class="grid sm:grid-cols-3 gap-4 items-end">
         <div>
