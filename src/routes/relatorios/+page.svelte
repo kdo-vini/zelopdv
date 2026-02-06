@@ -112,7 +112,7 @@
 			// 2. Vendas do caixa
 			const pVendas = supabase
 				.from('vendas')
-				.select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, created_at')
+				.select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at')
 				.eq('id_caixa', idCaixa)
 				.order('id', { ascending: true });
 
@@ -219,6 +219,7 @@
 	$: totalSangria = (movs || []).filter(m => m.tipo === 'sangria').reduce((a, m) => a + Number(m.valor || 0), 0);
 	$: totalSuprimento = (movs || []).filter(m => m.tipo === 'suprimento').reduce((a, m) => a + Number(m.valor || 0), 0);
 	$: saldoEsperadoGaveta = Number((caixaInfo?.valor_inicial || 0) + totalDinheiro - totalSangria + totalSuprimento);
+	$: totalDescontosCaixa = (vendas || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
 
 	// Top produtos (por receita total)
 	let ordenarTop = 'receita'; // 'receita' | 'quantidade' | 'alfabetica'
@@ -368,7 +369,7 @@
 			// 1. Vendas
 			const pVendas = supabase
 				.from('vendas')
-				.select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, created_at')
+				.select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at')
 				.eq('id_usuario', uid)
 				.gte('created_at', isoStart(dataInicio))
 				.lte('created_at', isoEnd(dataFim))
@@ -459,6 +460,7 @@
 	$: periodoTicketMedio = periodoQtdVendas ? periodoTotalGeral / periodoQtdVendas : 0;
 	$: periodoTotalSangria = (periodoMovs||[]).filter(m=> m.tipo==='sangria').reduce((a,m)=> a + Number(m.valor||0),0);
 	$: periodoTotalSuprimento = (periodoMovs||[]).filter(m=> m.tipo==='suprimento').reduce((a,m)=> a + Number(m.valor||0),0);
+	$: periodoTotalDescontos = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_desconto||0),0);
 
 	// Série diária (para futuro gráfico / export) – simples agregação client-side
 	$: periodoSerieDiaria = (() => {
@@ -607,6 +609,14 @@
 					<div class="text-lg font-semibold">{fmt(saldoEsperadoGaveta)}</div>
 				</div>
 			</div>
+
+			{#if totalDescontosCaixa > 0}
+				<div class="p-3 rounded border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+					<div class="text-xs text-amber-700 dark:text-amber-400">Descontos Aplicados</div>
+					<div class="text-lg font-semibold text-amber-700 dark:text-amber-400">−{fmt(totalDescontosCaixa)}</div>
+					<div class="text-[11px] text-amber-600 dark:text-amber-500 mt-1">Valor "perdido" em promoções/descontos neste caixa.</div>
+				</div>
+			{/if}
 
 			<!-- Top produtos -->
 			<div>
@@ -767,6 +777,14 @@
 					<div class="text-lg font-semibold text-green-700">{fmt(periodoTotalSuprimento)}</div>
 				</div>
 			</div>
+
+		{#if periodoTotalDescontos > 0}
+			<div class="p-3 rounded border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+				<div class="text-xs text-amber-700 dark:text-amber-400">Descontos Aplicados</div>
+				<div class="text-lg font-semibold text-amber-700 dark:text-amber-400">−{fmt(periodoTotalDescontos)}</div>
+				<div class="text-[11px] text-amber-600 dark:text-amber-500 mt-1">Valor "perdido" em promoções/descontos no período.</div>
+			</div>
+		{/if}
 
 			<!-- Gráficos Visuais -->
 			<div class="grid lg:grid-cols-2 gap-6">
