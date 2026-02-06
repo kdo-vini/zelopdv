@@ -1,7 +1,54 @@
 <svelte:head>
-  <title>Zelo PDV — Sistema de caixa simples para seu negócio</title>
-  <meta name="description" content="Zelo PDV: venda rápido, controle o fiado, saiba o que está acabando e feche o caixa certinho. Comece em minutos." />
+  <title>Zelo PDV</title>
+  <meta name="description" content="Zelo PDV: venda rápido, controle o fiado, saiba o que está acabando e feche o caixa certinho. Sistema de caixa online para mercadinhos, lanchonetes e lojas. Teste 30 dias grátis!" />
+  <meta name="keywords" content="PDV, sistema de caixa, ponto de venda, controle de estoque, fiado, vendas, mercadinho, lanchonete, loja, comércio, caixa online" />
+  <link rel="canonical" href="https://zelopdv.com.br" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://zelopdv.com.br" />
+  <meta property="og:title" content="Zelo PDV" />
+  <meta property="og:description" content="Venda rápido, controle o fiado, saiba o que está acabando e feche o caixa certinho. Comece em 15 minutos!" />
+  <meta property="og:image" content="/og-image.png" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:site_name" content="Zelo PDV" />
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Zelo PDV" />
+  <meta name="twitter:description" content="Venda rápido, controle o fiado e feche o caixa certinho. Teste 30 dias grátis!" />
+  <meta name="twitter:image" content="/og-image.png" />
+  
+  <!-- Schema.org Structured Data -->
+  {@html `<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Zelo PDV",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "59.00",
+      "priceCurrency": "BRL",
+      "priceValidUntil": "2027-12-31"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "50"
+    },
+    "description": "Sistema de caixa online para pequenos comércios. Controle vendas, fiado, estoque e fechamento de caixa.",
+    "url": "https://zelopdv.com.br",
+    "provider": {
+      "@type": "Organization",
+      "name": "Tecnik",
+      "url": "https://zelopdv.com.br"
+    }
+  }
+  </script>`}
 </svelte:head>
+
 
 <script>
   export let params;
@@ -19,12 +66,12 @@
     <div class="grid lg:grid-cols-12 gap-10 items-center">
       <div class="lg:col-span-7">
         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] text-slate-900 dark:text-white">
-          Venda rápido.<br/>
-          <span class="text-sky-600 dark:text-sky-400">Controle fácil.</span>
+          Sistema de Caixa<br/>
+          <span class="text-sky-600 dark:text-sky-400">Simples e Eficiente.</span>
         </h1>
         <p class="mt-5 text-lg text-slate-600 dark:text-slate-300 max-w-xl">
-          O caixa do seu mercadinho, lanchonete ou loja na palma da mão. 
-          Registre vendas, controle fiado, saiba o que está acabando e feche o caixa certinho — <strong>sem precisar de contador.</strong>
+          O <strong>Zelo PDV</strong> é o sistema de vendas ideal para seu mercadinho, lanchonete ou loja. 
+          Controle seu <strong>ponto de venda online</strong>, registre fiado, gerencie estoque e feche o caixa com precisão — tudo em um só lugar.
         </p>
         <div class="mt-7 flex flex-wrap gap-4">
           <a href="/cadastro" class="btn-primary text-base px-6 py-3">Testar 30 dias grátis</a>

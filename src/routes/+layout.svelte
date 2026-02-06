@@ -261,10 +261,7 @@
       
        <div class="flex items-center gap-4">
           <a href={session ? '/app' : '/'} class="flex items-center gap-2">
-            <span class="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">
-              <span class="text-main">Zelo</span>
-              <span class="ml-1 align-[2px] inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]">PDV</span>
-            </span>
+            <img src="/logo-zelo.svg" alt="Zelo PDV" class="h-8 sm:h-10 w-auto" />
           </a>
           
           <!-- Botao de Natal desativado pois o natal ja passou -->
