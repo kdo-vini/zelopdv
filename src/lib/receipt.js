@@ -104,7 +104,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
     </header>
 
     <div class="pedido">
-      <div>Pedido: <strong>${escapeHtml(String(venda.idVenda || venda.id || '—'))}</strong></div>
+      <div>Pedido: <strong>${escapeHtml(String(venda.numeroVenda || venda.idVenda || venda.id || '—'))}</strong></div>
       <div>${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
     </div>
 

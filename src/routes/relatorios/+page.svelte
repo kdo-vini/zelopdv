@@ -114,7 +114,7 @@
 			// 2. Vendas do caixa
 			const pVendas = supabase
 				.from('vendas')
-				.select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at')
+				.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at')
 				.eq('id_caixa', idCaixa)
 				.order('id', { ascending: true });
 
@@ -432,7 +432,7 @@
 			// 1. Vendas
 			const pVendas = supabase
 				.from('vendas')
-				.select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at')
+				.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at')
 				.eq('id_usuario', uid)
 				.gte('created_at', isoStart(dataInicio))
 				.lte('created_at', isoEnd(dataFim))
@@ -855,7 +855,7 @@
 							<tbody class="divide-y">
 								{#each vendas as v}
 									<tr>
-										<td class="py-2 pr-4">{v.id}</td>
+										<td class="py-2 pr-4">{v.numero_venda || v.id}</td>
 										<td class="py-2 pr-4">{v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
 										<td class="py-2 pr-4">{v.forma_pagamento}</td>
 										<td class="py-2">{fmt(v.valor_total)}</td>

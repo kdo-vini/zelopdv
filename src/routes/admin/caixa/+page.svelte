@@ -41,7 +41,7 @@
 
       const { data: vs, error: vErr } = await supabase
         .from('vendas')
-        .select('id, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto')
+        .select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto')
         .eq('id_caixa', caixa.id)
         .order('id', { ascending: true });
       if (vErr) throw vErr;

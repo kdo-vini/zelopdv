@@ -36,7 +36,7 @@
         // Isso garante que vendas de caixas abertos por múltiplos dias apareçam corretamente
         const { data: vs } = await supabase
           .from('vendas')
-          .select('id, valor_total, forma_pagamento, created_at')
+          .select('id, numero_venda, valor_total, forma_pagamento, created_at')
           .eq('id_caixa', caixaAtual.id)
           .order('created_at', { ascending: false });
         vendasCaixa = vs||[];
@@ -55,7 +55,7 @@
       const ticketMedioCaixa = countCaixa ? totalCaixa/countCaixa : null;
       
       // Combina vendas e movimentações para atividade recente, ordenado por timestamp
-      const atividadeVendas = (vendasCaixa||[]).map(v=>({ tipo:'venda', id:v.id, valor:v.valor_total, ts:v.created_at }));
+      const atividadeVendas = (vendasCaixa||[]).map(v=>({ tipo:'venda', id:v.id, numero_venda:v.numero_venda, valor:v.valor_total, ts:v.created_at }));
       const atividadeMovs = (movimentacoes||[]).map(m=>({ tipo:m.tipo, id:m.id, valor:m.valor, ts:m.created_at, motivo:m.motivo }));
       const atividadeCombinada = [...atividadeVendas, ...atividadeMovs]
         .sort((a,b) => new Date(b.ts) - new Date(a.ts))
@@ -136,7 +136,7 @@
       <ul class="timeline">{#each dash.atividade as ev}
         <li>
           <span class="tag {ev.tipo}">{ev.tipo}</span>
-          <span># {ev.id} • {fmt(ev.valor)}</span>
+          <span># {ev.numero_venda || ev.id} • {fmt(ev.valor)}</span>
           <span class="muted">{new Date(ev.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
           {#if ev.motivo}<span class="muted">• {ev.motivo}</span>{/if}
         </li>

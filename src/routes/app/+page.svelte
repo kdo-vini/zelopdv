@@ -913,17 +913,19 @@ window.addEventListener('message', function(e){
 
       // Tenta inserir no Supabase, senão salva localmente
       let vendaId = null;
+      let vendaNumero = null;
       let isOffline = false;
 
       try {
         const { data: venda, error: vendaError } = await supabase
           .from('vendas')
           .insert(dadosVenda)
-          .select('id')
+          .select('id, numero_venda')
           .single();
 
         if (vendaError) throw vendaError;
         vendaId = venda.id;
+        vendaNumero = venda.numero_venda;
       } catch (connErr) {
         console.warn('Falha na conexão, salvando venda offline:', connErr);
         isOffline = true;
@@ -1051,6 +1053,7 @@ window.addEventListener('message', function(e){
       if (imprimirRecibo) {
         const payloadRecibo = {
           idVenda: vendaId,
+          numeroVenda: vendaNumero,
           formaPagamento: insertForma,
           total: totalFinalVenda || Number(totalComanda),
           subtotal: Number(totalComanda),
@@ -1076,7 +1079,7 @@ window.addEventListener('message', function(e){
    * Busca dados do perfil (empresa_perfil) do usuário autenticado automaticamente
    * Mostra logo, dados da empresa (somente os preenchidos), itens, totais e forma de pagamento
    */
-  async function imprimirReciboVenda({ idVenda, formaPagamento, total, valorRecebido, troco, itens, pagamentos }, targetWin = null) {
+  async function imprimirReciboVenda({ idVenda, numeroVenda, formaPagamento, total, valorRecebido, troco, itens, pagamentos }, targetWin = null) {
   console.groupCollapsed('%c[Recibo] imprimirReciboVenda', 'color:#0a7');
     console.log('[Recibo] params:', { idVenda, formaPagamento, total, valorRecebido, troco, itensCount: itens?.length || 0, pagamentosCount: pagamentos?.length || 0 });
     let perfil = null;
@@ -1135,7 +1138,7 @@ window.addEventListener('message', function(e){
       largura_bobina: larguraBobina,
       logoUrl
     };
-    let venda = { idVenda, formaPagamento, total, valorRecebido, troco, itens, pagamentos };
+    let venda = { idVenda, numeroVenda, formaPagamento, total, valorRecebido, troco, itens, pagamentos };
     // Fallback: caso multiplo sem pagamentos no payload, tenta buscar do banco
     if (formaPagamento === 'multiplo' && (!Array.isArray(pagamentos) || pagamentos.length === 0) && idVenda) {
       try {
