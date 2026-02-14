@@ -54,6 +54,8 @@
   let vendaConcluida = null;
   // [NEW] Mobile State
   let showMobileCart = false;
+  // [NEW] Dados da Empresa
+  let dadosEmpresa = null;
 
   // Atalho: '/' foca a busca quando o modal de pagamento não está aberto e o usuário não está digitando em um campo
   function onKeyGlobal(e) {
@@ -218,6 +220,16 @@
 
     // Auth state changes são tratados pelo authStore.js e +layout.svelte centralmente
     // Removido listener duplicado que causava queries redundantes (otimização de performance)
+
+    // [NEW] Carrega dados da empresa para recibos (WhatsApp/Impressão)
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+         const { data } = await supabase.from('empresa_perfil').select('*').eq('user_id', user.id).single();
+         dadosEmpresa = data;
+      }
+    } catch (e) { console.error('Error fetching company profile:', e); }
+
   });
 
   onDestroy(() => {
@@ -1411,7 +1423,7 @@ window.addEventListener('message', function(e){
                 on:click={() => modalValorAberto = true}
                 class="btn-primary h-10 md:h-12 px-3 md:px-4 flex items-center gap-2 whitespace-nowrap bg-amber-500 hover:bg-amber-600 border-amber-600 text-white shadow-sm rounded-lg"
               >
-                <span class="text-sm font-bold">R$ Avulso</span>
+                <span class="text-sm font-bold">Venda Avulsa</span>
               </button>
            </div>
         </div>
@@ -1658,6 +1670,7 @@ window.addEventListener('message', function(e){
 <ModalSucesso
   open={modalSucessoAberto}
   venda={vendaConcluida}
+  empresa={dadosEmpresa}
   on:close={finalizarFluxoSucesso}
   on:novaVenda={finalizarFluxoSucesso}
 />

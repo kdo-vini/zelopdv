@@ -9,25 +9,42 @@
   
   export let open = false;
   export let venda = {}; // Objeto da venda finalizada
+  export let empresa = null; // Dados da empresa
   
   // Gera o texto para o WhatsApp
   function getWhatsAppText() {
     if (!venda || !venda.itens) return '';
     
-    let text = `*Pedido Realizado*\n`;
-    text += `${new Date().toLocaleString()}\n\n`;
+    // Header com Nome da Empresa ou Padrão
+    let text = `*${(empresa?.nome_exibicao || 'COMPROVANTE DE PEDIDO').toUpperCase()}*\n`;
+    
+    if (empresa?.documento) {
+        text += `CPF/CNPJ: ${empresa.documento}\n`;
+    }
+    if (empresa?.endereco) {
+        text += `${empresa.endereco}\n`;
+    }
+
+    text += `\n ${new Date().toLocaleString()}\n`;
+    text += `------------------------------\n`;
     
     venda.itens.forEach(item => {
-        text += `${item.quantidade}x ${item.nome} - R$ ${(item.quantidade * item.preco).toFixed(2)}\n`;
+        const totalItem = (item.quantidade * item.preco).toFixed(2);
+        text += `${item.quantidade}x ${item.nome}\n`;
+        text += `   R$ ${totalItem}\n`;
     });
     
-    text += `\n*Total: R$ ${Number(venda.total || 0).toFixed(2)}*`;
+    text += `------------------------------\n`;
+    text += `*TOTAL: R$ ${Number(venda.total || 0).toFixed(2)}*\n`;
     
     if (venda.pagamentos && venda.pagamentos.length > 0) {
-        text += `\nPgto: ${venda.pagamentos.map(p => p.forma).join(', ')}`;
+        text += `Pgto: ${venda.pagamentos.map(p => `${p.forma} (R$ ${Number(p.valor || 0).toFixed(2)})`).join(', ')}\n`;
     } else if (venda.formaPagamento) {
-        text += `\nPgto: ${venda.formaPagamento}`;
+        text += `Pgto: ${venda.formaPagamento}\n`;
     }
+
+    text += `\n_Obrigado pela preferência!_`;
+    text += `\n_ZeloPDV - Sistema de Gestão de Vendas_`;
 
     return encodeURIComponent(text);
   }
