@@ -580,8 +580,10 @@
 		else arr.sort((a,b)=> dir*(a.receita - b.receita));
 		return arr.slice(0, 10);
 	})();
+	import AdminLock from '$lib/components/AdminLock.svelte';
 </script>
 
+<AdminLock>
 <h1 class="text-2xl font-semibold mb-4">Relatórios</h1>
 {#if errorMessage}
 	<div class="mb-4 text-sm text-red-600">{errorMessage}</div>
@@ -1121,3 +1123,4 @@
 		</section>
 	{/if}
 {/if}
+</AdminLock>

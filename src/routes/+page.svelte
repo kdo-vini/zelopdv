@@ -1,473 +1,624 @@
 <svelte:head>
-  <title>Zelo PDV</title>
-  <meta name="description" content="Zelo PDV: venda rápido, controle o fiado, saiba o que está acabando e feche o caixa certinho. Sistema de caixa online para mercadinhos, lanchonetes e lojas. Teste 30 dias grátis!" />
-  <meta name="keywords" content="PDV, sistema de caixa, ponto de venda, controle de estoque, fiado, vendas, mercadinho, lanchonete, loja, comércio, caixa online" />
-  <link rel="canonical" href="https://zelopdv.com.br" />
+  <title>Zelo PDV - O Sistema de Gestão para Pequenos Negócios</title>
+  <meta name="description" content="Frente de caixa ultra-rápida, controle financeiro real e gestão de fiado. Teste grátis o sistema ideal para mercadinhos, lanchonetes e lojas de roupa." />
+  <meta name="keywords" content="PDV, Frente de Caixa, Sistema de Gestão, Controle Financeiro, Mercadinho, Loja de Roupa, Lanchonete, Fiado, Controle de Estoque" />
+  <meta name="robots" content="index, follow" />
   
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://zelopdv.com.br" />
-  <meta property="og:title" content="Zelo PDV" />
-  <meta property="og:description" content="Venda rápido, controle o fiado, saiba o que está acabando e feche o caixa certinho. Comece em 15 minutos!" />
-  <meta property="og:image" content="/og-image.png" />
-  <meta property="og:locale" content="pt_BR" />
-  <meta property="og:site_name" content="Zelo PDV" />
-  
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Zelo PDV" />
-  <meta name="twitter:description" content="Venda rápido, controle o fiado e feche o caixa certinho. Teste 30 dias grátis!" />
-  <meta name="twitter:image" content="/og-image.png" />
-  
-  <!-- Schema.org Structured Data -->
-  {@html `<script type="application/ld+json">
+  <meta property="og:url" content="https://zelopdv.com.br/" />
+  <meta property="og:title" content="Zelo PDV - O Sistema que Coloca Dinheiro no seu Bolso" />
+  <meta property="og:description" content="Controle vendas, fiado e despesas sem complicação. Comece seu teste grátis de 30 dias hoje mesmo." />
+  <meta property="og:image" content="https://zelopdv.com.br/og-image.jpg" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://zelopdv.com.br/" />
+  <meta property="twitter:title" content="Zelo PDV - Gestão Inteligente" />
+  <meta property="twitter:description" content="O sistema de caixa que coloca dinheiro no seu bolso. Controle de vendas, gestão de fiado e relatórios financeiros em um só lugar." />
+  <meta property="twitter:image" content="https://zelopdv.com.br/og-image.jpg" />
+
+  <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Zelo PDV",
     "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web",
+    "operatingSystem": "Web Browser",
     "offers": {
       "@type": "Offer",
       "price": "59.00",
       "priceCurrency": "BRL",
-      "priceValidUntil": "2027-12-31"
+      "priceValidUntil": "2025-12-31"
     },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "ratingCount": "50"
-    },
-    "description": "Sistema de caixa online para pequenos comércios. Controle vendas, fiado, estoque e fechamento de caixa.",
-    "url": "https://zelopdv.com.br",
-    "provider": {
-      "@type": "Organization",
-      "name": "Tecnik",
-      "url": "https://zelopdv.com.br"
-    }
+    "description": "Sistema de gestão e frente de caixa para pequenos negócios."
   }
-  </script>`}
+  </script>
 </svelte:head>
 
-
 <script>
-  export let params;
+  import { onMount } from 'svelte';
+  
+  // Efeito de Parallax suave no mouse
+  let mouseX = 0;
+  let mouseY = 0;
+  
+  function handleMouseMove(event) {
+    mouseX = event.clientX / window.innerWidth - 0.5;
+    mouseY = event.clientY / window.innerHeight - 0.5;
+  }
+
+  function handleSpotlight(e) {
+    const card = e.currentTarget;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    requestAnimationFrame(() => {
+      const rect = card.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      card.style.setProperty('--x', `${x}px`);
+      card.style.setProperty('--y', `${y}px`);
+    });
+  }
 </script>
 
-<!-- HERO com gradientes sutis -->
-<section class="pt-16 pb-20 relative overflow-hidden">
-  <!-- Gradientes de fundo -->
-  <div class="absolute inset-0 -z-10 bg-gradient-to-br from-sky-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800"></div>
-  <!-- Círculos de gradiente difusos -->
-  <div class="absolute top-0 left-1/4 w-96 h-96 bg-sky-400/20 dark:bg-sky-500/10 rounded-full blur-3xl -z-10"></div>
-  <div class="absolute bottom-0 right-1/4 w-80 h-80 bg-violet-400/15 dark:bg-violet-500/10 rounded-full blur-3xl -z-10"></div>
+<div class="min-h-screen bg-[#0B0F19] text-slate-300 font-sans selection:bg-sky-500/30 selection:text-sky-200 overflow-x-hidden" on:mousemove={handleMouseMove}>
   
-  <div class="mx-auto max-w-7xl px-4">
-    <div class="grid lg:grid-cols-12 gap-10 items-center">
-      <div class="lg:col-span-7">
-        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] text-slate-900 dark:text-white">
-          Sistema de Caixa<br/>
-          <span class="text-sky-600 dark:text-sky-400">Simples e Eficiente.</span>
-        </h1>
-        <p class="mt-5 text-lg text-slate-600 dark:text-slate-300 max-w-xl">
-          O <strong>Zelo PDV</strong> é o sistema de vendas ideal para seu mercadinho, lanchonete ou loja. 
-          Controle seu <strong>ponto de venda online</strong>, registre fiado, gerencie estoque e feche o caixa com precisão — tudo em um só lugar.
-        </p>
-        <div class="mt-7 flex flex-wrap gap-4">
-          <a href="/cadastro" class="btn-primary text-base px-6 py-3">Testar 30 dias grátis</a>
-          <a href="/login" class="btn-secondary text-base px-6 py-3">Já tenho conta</a>
+  <!-- NAV (Simples e Flutuante) -->
+  <nav class="fixed top-0 w-full z-50 transition-all duration-300 border-b border-white/5 bg-[#0B0F19]/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </div>
-        <div class="mt-6 flex items-center text-sm text-slate-500 dark:text-slate-400 gap-4">
-          <span class="inline-flex items-center gap-1.5">
-            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            Sistema online
-          </span>
-          <span>✓ Sem cartão de crédito</span>
-          <span>✓ Cancele quando quiser</span>
-        </div>
+        <span class="text-xl font-bold text-white tracking-tight">Zelo<span class="text-sky-500">PDV</span></span>
       </div>
       
-      <!-- MOCK UI PREVIEW com glassmorphism -->
-      <div class="lg:col-span-5">
-        <div class="rounded-2xl border border-white/20 dark:border-slate-600/50 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-5 shadow-2xl space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="text-xs uppercase tracking-wide font-medium text-slate-600 dark:text-slate-400">Caixa Aberto</div>
-            <div class="text-xs px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 font-medium">R$ 438,05 esperado</div>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+        <a href="#features" class="hover:text-white transition-colors">Funcionalidades</a>
+        <a href="#pricing" class="hover:text-white transition-colors">Preços</a>
+        <a href="#faq" class="hover:text-white transition-colors">Dúvidas</a>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <a href="/login" class="text-sm font-medium text-white hover:text-sky-400 transition-colors hidden sm:block">Entrar</a>
+        <a href="/cadastro" class="px-5 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all hover:scale-105 active:scale-95">
+          Começar Grátis
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <section class="relative pt-32 pb-40 overflow-hidden">
+    <!-- Background Glows -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-sky-600/20 rounded-full blur-[120px] -z-10 opacity-50 pointer-events-none"></div>
+    <div class="absolute bottom-0 right-0 w-[800px] h-[600px] bg-blue-900/10 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto px-6 text-center relative z-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-400 text-xs font-medium mb-8 animate-fade-in-up">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+        </span>
+        Novo: Gestão Financeira Completa
+      </div>
+
+      <h1 class="text-5xl md:text-7xl font-bold text-white tracking-tight leading-[1.1] mb-8 animate-fade-in-up delay-100">
+        O PDV que coloca <br class="hidden md:block" />
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-400 to-sky-400 animate-gradient">Dinheiro no seu Bolso</span>
+      </h1>
+
+      <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up delay-200">
+        Frente de caixa ultra-rápida combinada com a gestão financeira que seu negócio precisa. 
+        Controle vendas, fiado e despesas sem complicação.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up delay-300">
+        <a href="/cadastro" class="w-full sm:w-auto px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
+          Testar 30 dias grátis
+        </a>
+        <a href="#features" class="w-full sm:w-auto px-8 py-4 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-semibold backdrop-blur-sm transition-all">
+          Ver como funciona
+        </a>
+      </div>
+
+      <!-- MOCKUP DASHBOARD 3D -->
+      <div class="mt-20 relative perspective-1000 group">
+        <!-- Mockup Container with Tilt Effect -->
+        <div class="relative mx-auto max-w-5xl rounded-xl border border-white/10 bg-[#161b22] shadow-2xl shadow-sky-900/20 overflow-hidden transform transition-transform duration-700 hover:scale-[1.01]"
+             style="transform: rotateX({mouseY * 2}deg) rotateY({mouseX * 2}deg)">
+          
+          <!-- Browser Toolbar -->
+          <div class="h-10 border-b border-white/5 bg-[#0d1117] flex items-center px-4 gap-2">
+            <div class="flex gap-1.5">
+              <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+              <div class="w-3 h-3 rounded-full bg-amber-500/50"></div>
+              <div class="w-3 h-3 rounded-full bg-emerald-500/50"></div>
+            </div>
+            <div class="ml-4 flex-1 max-w-md h-6 rounded-md bg-white/5 border border-white/5 flex items-center px-3 text-xs text-slate-600 font-mono">
+              zelopdv.com.br/app
+            </div>
           </div>
-          <div class="grid grid-cols-3 gap-3 text-xs">
-            <div class="p-3 rounded-xl bg-white/80 dark:bg-slate-700/50 backdrop-blur border border-slate-200/50 dark:border-slate-600/30">
-              <div class="text-slate-500 dark:text-slate-400">Dinheiro</div>
-              <div class="mt-1 font-bold text-slate-900 dark:text-white">R$ 237,60</div>
+
+          <!-- App UI Placeholder (CSS Mockup provided, replace with IMAGES later) -->
+          <div class="p-6 grid grid-cols-1 md:grid-cols-4 gap-6 text-left">
+            <!-- Sidebar -->
+            <div class="hidden md:block col-span-1 border-r border-white/5 pr-6 space-y-6">
+              <div class="space-y-2">
+                <div class="h-8 w-full bg-sky-500/20 border-l-2 border-sky-500 rounded-r-md"></div>
+                <div class="h-8 w-3/4 bg-white/5 rounded-md"></div>
+                <div class="h-8 w-5/6 bg-white/5 rounded-md"></div>
+              </div>
+              <div class="space-y-2 pt-4 border-t border-white/5">
+                <div class="h-8 w-full bg-white/5 rounded-md"></div>
+                <div class="h-8 w-4/5 bg-white/5 rounded-md"></div>
+              </div>
             </div>
-            <div class="p-3 rounded-xl bg-white/80 dark:bg-slate-700/50 backdrop-blur border border-slate-200/50 dark:border-slate-600/30">
-              <div class="text-slate-500 dark:text-slate-400">Cartão</div>
-              <div class="mt-1 font-bold text-slate-900 dark:text-white">R$ 481,50</div>
+
+            <!-- Main Content -->
+            <div class="col-span-3 space-y-6">
+              <!-- Stats Row -->
+              <div class="grid grid-cols-3 gap-4">
+                <div class="p-4 rounded-xl bg-white/5 border border-white/5">
+                  <div class="text-xs text-slate-500 mb-1">Vendas Hoje</div>
+                  <div class="text-xl font-bold text-white">R$ 1.240,50</div>
+                </div>
+                <div class="p-4 rounded-xl bg-white/5 border border-white/5 relative overflow-hidden">
+                  <div class="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-transparent"></div>
+                  <div class="text-xs text-emerald-400 mb-1">Lucro Líquido</div>
+                  <div class="text-xl font-bold text-emerald-400">R$ 482,00</div>
+                </div>
+                <div class="p-4 rounded-xl bg-white/5 border border-white/5">
+                  <div class="text-xs text-amber-500 mb-1">Fiado a Receber</div>
+                  <div class="text-xl font-bold text-amber-500">R$ 850,00</div>
+                </div>
+              </div>
+
+              <!-- List Row -->
+              <div class="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="h-4 w-32 bg-white/10 rounded"></div>
+                  <div class="h-8 w-24 bg-sky-600 rounded-lg"></div>
+                </div>
+                <div class="space-y-3">
+                  <div class="h-10 w-full bg-white/5 rounded border border-white/5 flex items-center px-4">
+                     <div class="h-2 w-8 bg-slate-600 rounded mr-4"></div>
+                     <div class="h-2 w-24 bg-slate-600 rounded"></div>
+                  </div>
+                  <div class="h-10 w-full bg-white/5 rounded border border-white/5 flex items-center px-4">
+                     <div class="h-2 w-8 bg-slate-600 rounded mr-4"></div>
+                     <div class="h-2 w-32 bg-slate-600 rounded"></div>
+                  </div>
+                  <div class="h-10 w-full bg-white/5 rounded border border-white/5 flex items-center px-4">
+                     <div class="h-2 w-8 bg-slate-600 rounded mr-4"></div>
+                     <div class="h-2 w-20 bg-slate-600 rounded"></div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="p-3 rounded-xl bg-white/80 dark:bg-slate-700/50 backdrop-blur border border-slate-200/50 dark:border-slate-600/30">
-              <div class="text-slate-500 dark:text-slate-400">Pix</div>
-              <div class="mt-1 font-bold text-slate-900 dark:text-white">R$ 461,99</div>
-            </div>
-          </div>
-          <div class="rounded-xl border border-amber-200 dark:border-amber-700/50 bg-amber-50/80 dark:bg-amber-900/20 p-3 text-xs flex items-center justify-between backdrop-blur">
-            <div>
-              <div class="text-amber-700 dark:text-amber-400 font-medium">Fiado pendente</div>
-              <div class="font-bold text-amber-800 dark:text-amber-300">R$ 312,00</div>
-            </div>
-            <button class="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-[11px] font-medium hover:bg-amber-600 transition">Receber</button>
-          </div>
-          <div class="grid grid-cols-2 gap-3 text-xs">
-            <div class="p-3 rounded-xl bg-red-50/80 dark:bg-red-900/20 border border-red-200/50 dark:border-red-700/30 backdrop-blur">
-              <div class="text-red-600 dark:text-red-400 font-medium">⚠️ Acabando</div>
-              <div class="mt-1 font-bold text-red-700 dark:text-red-300">5 produtos</div>
-              <div class="mt-1 text-[10px] text-red-500 dark:text-red-400">Repor antes de perder venda!</div>
-            </div>
-            <div class="p-3 rounded-xl bg-white/80 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/30 backdrop-blur">
-              <div class="text-slate-500 dark:text-slate-400">Hoje</div>
-              <div class="mt-1 font-bold text-slate-900 dark:text-white">14 vendas</div>
-              <div class="mt-1 text-[10px] text-slate-400">Ticket médio: R$ 31,29</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FUNCIONALIDADES com ícones SVG e glassmorphism -->
-<section class="py-20 relative">
-  <div class="mx-auto max-w-7xl px-4">
-    <div class="text-center mb-12">
-      <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">Tudo que você precisa. Nada que confunde.</h2>
-      <p class="mt-4 text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">Feito pra quem trabalha, não pra quem quer estudar sistema. Liga, vende, fecha o caixa.</p>
-    </div>
-    
-    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Card 1 -->
-      <div class="group p-6 rounded-2xl border border-white/30 dark:border-slate-700/50 bg-white/70 dark:bg-slate-800/50 backdrop-blur-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-        <div class="w-12 h-12 rounded-xl bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <h3 class="font-bold text-lg text-slate-900 dark:text-white mb-2">Venda em segundos</h3>
-        <p class="text-sm text-slate-600 dark:text-slate-400">Digita o nome, clica, vende. Sem tela travada, sem esperar carregar. Simples assim.</p>
-      </div>
-
-      <!-- Card 2 -->
-      <div class="group p-6 rounded-2xl border border-white/30 dark:border-slate-700/50 bg-white/70 dark:bg-slate-800/50 backdrop-blur-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-        <div class="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <h3 class="font-bold text-lg text-slate-900 dark:text-white mb-2">Controle o fiado</h3>
-        <p class="text-sm text-slate-600 dark:text-slate-400">Anotou no caderno e esqueceu? Aqui não. Veja quem deve, quanto e desde quando.</p>
-      </div>
-
-      <!-- Card 3 -->
-      <div class="group p-6 rounded-2xl border border-white/30 dark:border-slate-700/50 bg-white/70 dark:bg-slate-800/50 backdrop-blur-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-        <div class="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/50 flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
-        </div>
-        <h3 class="font-bold text-lg text-slate-900 dark:text-white mb-2">Saiba o que está acabando</h3>
-        <p class="text-sm text-slate-600 dark:text-slate-400">O sistema avisa antes de faltar. Você repõe a tempo e não perde venda.</p>
-      </div>
-
-      <!-- Card 4 -->
-      <div class="group p-6 rounded-2xl border border-white/30 dark:border-slate-700/50 bg-white/70 dark:bg-slate-800/50 backdrop-blur-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-        <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <h3 class="font-bold text-lg text-slate-900 dark:text-white mb-2">Feche o caixa certinho</h3>
-        <p class="text-sm text-slate-600 dark:text-slate-400">Sem sobrar nem faltar centavos. O sistema calcula tudo pra você conferir.</p>
-      </div>
-
-      <!-- Card 5 -->
-      <div class="group p-6 rounded-2xl border border-white/30 dark:border-slate-700/50 bg-white/70 dark:bg-slate-800/50 backdrop-blur-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-        <div class="w-12 h-12 rounded-xl bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        </div>
-        <h3 class="font-bold text-lg text-slate-900 dark:text-white mb-2">Relatórios simples</h3>
-        <p class="text-sm text-slate-600 dark:text-slate-400">Veja quanto vendeu por dia, semana ou mês. Baixe em Excel se precisar.</p>
-      </div>
-
-      <!-- Card 6 -->
-      <div class="group p-6 rounded-2xl border border-white/30 dark:border-slate-700/50 bg-white/70 dark:bg-slate-800/50 backdrop-blur-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-        <div class="w-12 h-12 rounded-xl bg-pink-100 dark:bg-pink-900/50 flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-pink-600 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-        </div>
-        <h3 class="font-bold text-lg text-slate-900 dark:text-white mb-2">Imprime recibo</h3>
-        <p class="text-sm text-slate-600 dark:text-slate-400">Impressora térmica de 58mm ou 80mm. Conecta no USB e imprima no navegador.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ESTATÍSTICAS com fundo diferenciado -->
-<section class="py-16 relative overflow-hidden">
-  <div class="absolute inset-0 bg-gradient-to-b from-slate-100 to-slate-50 dark:from-slate-800/80 dark:to-slate-900/80"></div>
-  <div class="mx-auto max-w-7xl px-4 relative">
-    <div class="grid md:grid-cols-3 gap-6">
-      <div class="p-6 rounded-2xl bg-white/70 dark:bg-slate-800/60 backdrop-blur-lg border border-white/50 dark:border-slate-700/50 text-center">
-        <div class="text-5xl font-bold bg-gradient-to-r from-sky-500 to-sky-600 bg-clip-text text-transparent">40%</div>
-        <p class="mt-3 text-slate-700 dark:text-slate-300 font-medium">menos tempo fechando caixa</p>
-        <p class="mt-2 text-xs text-slate-500">Estudos com pequenos comércios</p>
-      </div>
-      <div class="p-6 rounded-2xl bg-white/70 dark:bg-slate-800/60 backdrop-blur-lg border border-white/50 dark:border-slate-700/50 text-center">
-        <div class="text-5xl font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 bg-clip-text text-transparent">Zero</div>
-        <p class="mt-3 text-slate-700 dark:text-slate-300 font-medium">erros de troco quando confere</p>
-        <p class="mt-2 text-xs text-slate-500">Clientes usando fechamento de caixa</p>
-      </div>
-      <div class="p-6 rounded-2xl bg-white/70 dark:bg-slate-800/60 backdrop-blur-lg border border-white/50 dark:border-slate-700/50 text-center">
-        <div class="text-5xl font-bold bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">15 min</div>
-        <p class="mt-3 text-slate-700 dark:text-slate-300 font-medium">pra configurar e começar</p>
-        <p class="mt-2 text-xs text-slate-500">Sem instalação, sem treinamento</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- PREÇO -->
-<section id="preco" class="py-20">
-  <div class="mx-auto max-w-4xl px-4">
-    <div class="text-center mb-12">
-      <h2 class="text-3xl font-bold text-slate-900 dark:text-white">Sem surpresas na fatura</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Um preço só. Tudo incluso. Sem pegadinhas.</p>
-    </div>
-    
-    <div class="relative">
-      <!-- Badge -->
-      <div class="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
-        <span class="px-4 py-1.5 rounded-full bg-gradient-to-r from-sky-500 to-sky-600 text-white text-sm font-medium shadow-lg">Mais popular</span>
-      </div>
-      
-      <div class="p-8 rounded-3xl border-2 border-sky-500/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div>
-            <h3 class="text-2xl font-bold text-slate-900 dark:text-white">Acesso Completo</h3>
-            <div class="mt-2 flex items-baseline gap-1">
-              <span class="text-4xl font-bold text-sky-600 dark:text-sky-400">R$ 59</span>
-              <span class="text-slate-500 dark:text-slate-400">/mês</span>
-            </div>
-            <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Cobrado mensalmente. Cancele quando quiser.</p>
           </div>
           
-          <div class="flex-1 md:max-w-sm">
-            <ul class="space-y-3 text-sm">
-              <li class="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                Vendas ilimitadas
-              </li>
-              <li class="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                Produtos ilimitados
-              </li>
-              <li class="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                Fiado, estoque, relatórios
-              </li>
-              <li class="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                Suporte via WhatsApp
-              </li>
-              <li class="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                Atualizações automáticas
-              </li>
-            </ul>
-          </div>
-          
-          <div class="md:text-right">
-            <a href="/cadastro" class="inline-flex items-center justify-center w-full md:w-auto px-8 py-3 text-base font-medium text-white bg-sky-600 rounded-xl shadow-lg hover:bg-sky-700 transition-all hover:scale-105">
-              Testar 30 dias grátis
-            </a>
-            <p class="mt-2 text-xs text-slate-500">Sem cartão de crédito</p>
-          </div>
+          <!-- Overlay Gradient for depth -->
+          <div class="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-transparent to-transparent pointer-events-none"></div>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FAQ com fundo diferenciado -->
-<section id="faq" class="py-20 bg-slate-900 dark:bg-slate-950">
-  <div class="mx-auto max-w-4xl px-4">
-    <div class="text-center mb-12">
-      <h2 class="text-3xl font-bold text-white">Perguntas Frequentes</h2>
-      <p class="mt-3 text-slate-400">Tire suas dúvidas antes de começar</p>
-    </div>
-    
-    <div class="space-y-4">
-      <details class="group rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur overflow-hidden">
-        <summary class="flex items-center justify-between cursor-pointer p-5 font-medium text-white hover:bg-slate-700/50 transition-colors">
-          <span>Posso cancelar quando quiser?</span>
-          <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </summary>
-        <div class="px-5 pb-5 text-sm text-slate-300">
-          Sim! Sem fidelidade, sem multa. Cancela na hora pelo portal de pagamento.
-        </div>
-      </details>
-
-      <details class="group rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur overflow-hidden">
-        <summary class="flex items-center justify-between cursor-pointer p-5 font-medium text-white hover:bg-slate-700/50 transition-colors">
-          <span>Preciso instalar algo no computador?</span>
-          <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </summary>
-        <div class="px-5 pb-5 text-sm text-slate-300">
-          Não! Funciona no navegador (Chrome, Edge, etc). Abre o site, entra na conta e pronto.
-        </div>
-      </details>
-
-      <details class="group rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur overflow-hidden">
-        <summary class="flex items-center justify-between cursor-pointer p-5 font-medium text-white hover:bg-slate-700/50 transition-colors">
-          <span>Funciona no celular ou tablet?</span>
-          <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </summary>
-        <div class="px-5 pb-5 text-sm text-slate-300">
-          Funciona! Mas recomendamos computador ou tablet grande pra ficar mais confortável.
-        </div>
-      </details>
-
-      <details class="group rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur overflow-hidden">
-        <summary class="flex items-center justify-between cursor-pointer p-5 font-medium text-white hover:bg-slate-700/50 transition-colors">
-          <span>E se a internet cair?</span>
-          <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </summary>
-        <div class="px-5 pb-5 text-sm text-slate-300">
-          Precisa de internet pra funcionar. Recomendamos ter uma conexão estável ou 4G de backup.
-        </div>
-      </details>
-
-      <details class="group rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur overflow-hidden">
-        <summary class="flex items-center justify-between cursor-pointer p-5 font-medium text-white hover:bg-slate-700/50 transition-colors">
-          <span>Como peço ajuda se tiver problema?</span>
-          <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </summary>
-        <div class="px-5 pb-5 text-sm text-slate-300">
-          Manda mensagem no WhatsApp <strong>(14) 99153-7503</strong> ou e-mail. Respondemos rápido, principalmente se for urgente.
-        </div>
-      </details>
-
-      <details class="group rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur overflow-hidden">
-        <summary class="flex items-center justify-between cursor-pointer p-5 font-medium text-white hover:bg-slate-700/50 transition-colors">
-          <span>Demora muito pra configurar?</span>
-          <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </summary>
-        <div class="px-5 pb-5 text-sm text-slate-300">
-          Leva uns <strong>15 minutinhos</strong>. Cria a conta, cadastra seus produtos e já tá vendendo.
-        </div>
-      </details>
-    </div>
-  </div>
-</section>
-
-<!-- CTA FINAL -->
-<section class="py-20 bg-gradient-to-r from-sky-600 via-sky-700 to-blue-700">
-  <div class="mx-auto max-w-4xl px-4 text-center">
-    <h2 class="text-3xl sm:text-4xl font-bold text-white">Pronto pra organizar seu caixa?</h2>
-    <p class="mt-4 text-sky-100 text-lg max-w-xl mx-auto">30 dias grátis. Sem cartão. Comece agora e veja a diferença.</p>
-    <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-      <a href="/cadastro" class="inline-flex items-center justify-center px-10 py-4 text-lg font-semibold text-sky-700 bg-white rounded-xl shadow-2xl hover:bg-sky-50 transition-all hover:scale-105">
-        Começar grátis
-      </a>
-      <a href="/login" class="inline-flex items-center justify-center px-10 py-4 text-lg font-medium text-white border-2 border-white/40 rounded-xl hover:bg-white/10 transition-colors">
-        Já tenho conta
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- CONTATO -->
-<section id="contato" class="py-16 border-t border-slate-200 dark:border-slate-700">
-  <div class="mx-auto max-w-6xl px-4">
-    <div class="grid md:grid-cols-2 gap-12">
-      <div>
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Fale Conosco</h2>
-        <p class="mt-3 text-slate-600 dark:text-slate-400">Dúvida? Problema? Sugestão? A gente responde rápido.</p>
         
-        <div class="mt-8 space-y-4">
-          <a href="https://wa.me/5514991537503?text=Oi!%20Vim%20pelo%20site%20do%20Zelo%20PDV." 
-             target="_blank" rel="noopener"
-             class="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-emerald-400 hover:shadow-lg transition-all group">
-            <div class="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-              <svg class="w-6 h-6 text-emerald-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-            </div>
-            <div>
-              <div class="font-semibold text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">WhatsApp</div>
-              <div class="text-sm text-slate-500">(14) 99153-7503</div>
-            </div>
-          </a>
-
-          <a href="mailto:techne.br@gmail.com" 
-             class="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-sky-400 hover:shadow-lg transition-all group">
-            <div class="w-12 h-12 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center">
-              <svg class="w-6 h-6 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div>
-              <div class="font-semibold text-slate-900 dark:text-white group-hover:text-sky-600 transition-colors">E-mail</div>
-              <div class="text-sm text-slate-500">techne.br@gmail.com</div>
-            </div>
-          </a>
-        </div>
+        <!-- Glow under dashboard -->
+        <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[90%] h-20 bg-sky-500/20 blur-[60px] -z-10"></div>
       </div>
+    </div>
+  </section>
 
-      <div class="flex flex-col justify-center">
-        <div class="p-6 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-          <h3 class="font-semibold text-slate-900 dark:text-white mb-4">Horário de Atendimento</h3>
-          <div class="space-y-3 text-sm">
-            <div class="flex justify-between">
-              <span class="text-slate-600 dark:text-slate-400">Segunda a Sexta</span>
-              <span class="font-medium text-slate-900 dark:text-white">9h às 18h</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-slate-600 dark:text-slate-400">Sábado</span>
-              <span class="font-medium text-slate-900 dark:text-white">9h às 12h</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-slate-600 dark:text-slate-400">Domingo</span>
-              <span class="text-slate-500">Fechado</span>
-            </div>
-          </div>
-          <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-600">
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-              💡 <strong>Problema urgente?</strong> Manda mensagem no WhatsApp descrevendo o problema. A gente prioriza!
-            </p>
-          </div>
+  <!-- BRANDS/TRUST STRIP -->
+  <section class="py-10 border-y border-white/5 bg-white/[0.02]">
+    <div class="max-w-7xl mx-auto px-6 text-center">
+      <p class="text-sm font-medium text-slate-500 mb-6">Ideal para pequenos negócios que pensam grande</p>
+      <div class="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+        <span class="text-lg font-bold text-white flex items-center gap-2">🛒 Mercadinhos</span>
+        <span class="text-lg font-bold text-white flex items-center gap-2">🍔 Lanchonetes</span>
+        <span class="text-lg font-bold text-white flex items-center gap-2">👕 Lojas de Roupa</span>
+        <span class="text-lg font-bold text-white flex items-center gap-2">✂️ Barbearias</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURE 1: VENDAS (Texto Esquerda, IMG Direita) -->
+  <section id="features" class="py-24 relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+      <div>
+        <div class="w-12 h-12 rounded-xl bg-sky-500/20 flex items-center justify-center mb-6">
+          <svg class="w-6 h-6 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Frente de Caixa Ágil. <br/><span class="text-sky-500">Sem Filas.</span></h2>
+        <p class="text-lg text-slate-400 mb-8 leading-relaxed">
+          Um PDV desenhado para velocidade. Digite, clique e venda. Funciona online e não te deixa na mão se a internet oscilar.
+        </p>
+        <ul class="space-y-4">
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 text-xs">✓</div>
+            Busca de produtos ultra-rápida
+          </li>
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 text-xs">✓</div>
+            Envio de comprovante via WhatsApp
+          </li>
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 text-xs">✓</div>
+            Impressão de Recibos (58mm e 80mm)
+          </li>
+        </ul>
+      </div>
+      <div class="relative group">
+        <div class="absolute inset-0 bg-sky-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-sky-500/30 transition-all duration-700"></div>
+        <div class="rounded-2xl border border-white/10 bg-[#121620] p-6 shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-sky-900/20 spotlight-card" on:mousemove={handleSpotlight}>
+           <!-- Placeholder Graphic for POS -->
+           <div class="grid grid-cols-2 gap-4">
+              <div class="col-span-1 space-y-3">
+                 <div class="bg-white/5 h-24 rounded-lg animate-pulse"></div>
+                 <div class="bg-white/5 h-24 rounded-lg animate-pulse delay-100"></div>
+                 <div class="bg-white/5 h-24 rounded-lg animate-pulse delay-200"></div>
+              </div>
+              <div class="col-span-1 bg-white/[0.03] rounded-lg p-4 flex flex-col justify-between">
+                 <div class="space-y-2">
+                    <div class="h-4 bg-white/10 rounded w-1/2"></div>
+                    <div class="h-8 bg-white/10 rounded w-full"></div>
+                 </div>
+                 <div class="h-10 bg-sky-600 rounded-lg w-full mt-4"></div>
+              </div>
+           </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<style lang="postcss">
-  :global(.btn-primary) {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-sky-600 border border-transparent rounded-lg shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all disabled:opacity-50 active:scale-[.98];
+  <!-- FEATURE 2: FINANCEIRO (IMG Esquerda, Texto Direita) -->
+  <section class="py-24 relative bg-white/[0.02]">
+    <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+      <div class="order-2 lg:order-1 relative group">
+        <div class="absolute inset-0 bg-emerald-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-emerald-500/30 transition-all duration-700"></div>
+        <div class="rounded-2xl border border-white/10 bg-[#121620] p-6 shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-emerald-900/20 spotlight-card" on:mousemove={handleSpotlight}>
+           <!-- Placeholder Graphic for Finance -->
+           <div class="space-y-4">
+              <div class="flex justify-between items-end">
+                 <div class="h-32 w-8 bg-white/5 rounded-t-sm"></div>
+                 <div class="h-48 w-8 bg-white/5 rounded-t-sm"></div>
+                 <div class="h-40 w-8 bg-white/5 rounded-t-sm"></div>
+                 <div class="h-56 w-8 bg-emerald-500 rounded-t-sm shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+                 <div class="h-36 w-8 bg-white/5 rounded-t-sm"></div>
+              </div>
+              <div class="h-px bg-white/10 w-full"></div>
+              <div class="flex justify-between text-xs text-slate-500">
+                 <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span>
+              </div>
+           </div>
+        </div>
+      </div>
+      <div class="order-1 lg:order-2">
+        <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-6">
+          <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Lucro Líquido Real. <br/><span class="text-emerald-500">Sem Achismos.</span></h2>
+        <p class="text-lg text-slate-400 mb-8 leading-relaxed">
+          Saber quanto vendeu é fácil. Difícil é saber quanto sobrou.
+          O Zelo PDV cruza vendas com despesas e te mostra seu <strong>Lucro Real</strong> no fim do mês.
+        </p>
+        <div class="grid grid-cols-2 gap-4">
+           <div class="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
+              <h4 class="text-white font-semibold mb-1">Controle de Despesas</h4>
+              <p class="text-sm text-slate-500">Lance aluguel, luz e retiradas.</p>
+           </div>
+           <div class="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
+              <h4 class="text-white font-semibold mb-1">Fechamento de Caixa</h4>
+              <p class="text-sm text-slate-500">Conferência cega e segura.</p>
+           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+   <!-- FEATURE 3: FIADO (Texto Esquerda, IMG Direita) -->
+  <section class="py-24 relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+      <div>
+        <div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mb-6">
+          <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Carteira de Clientes. <br/><span class="text-amber-500">Fiado Organizado.</span></h2>
+        <p class="text-lg text-slate-400 mb-8 leading-relaxed">
+          Transforme o "caderninho" em uma ferramenta profissional. Defina limites de crédito, veja histórico e cobre com educação e prova.
+        </p>
+         <ul class="space-y-4">
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 text-xs">✓</div>
+            Extrato detalhado por cliente
+          </li>
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 text-xs">✓</div>
+            Limite de crédito personalizável
+          </li>
+        </ul>
+      </div>
+      <div class="relative group">
+        <div class="absolute inset-0 bg-amber-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-amber-500/30 transition-all duration-700"></div>
+        <div class="rounded-2xl border border-white/10 bg-[#121620] p-6 shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-amber-900/20 spotlight-card" on:mousemove={handleSpotlight}>
+           <!-- Placeholder Graphic for Customers -->
+           <div class="space-y-3">
+              <div class="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5">
+                 <div class="w-10 h-10 rounded-full bg-slate-700"></div>
+                 <div class="flex-1">
+                    <div class="h-3 w-24 bg-slate-600 rounded mb-1"></div>
+                    <div class="h-2 w-16 bg-slate-700 rounded"></div>
+                 </div>
+                 <div class="text-right">
+                    <div class="h-3 w-16 bg-red-400/80 rounded mb-1"></div>
+                    <div class="h-2 w-8 bg-slate-700 rounded ml-auto"></div>
+                 </div>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5 opacity-60">
+                 <div class="w-10 h-10 rounded-full bg-slate-700"></div>
+                 <div class="flex-1">
+                    <div class="h-3 w-24 bg-slate-600 rounded mb-1"></div>
+                    <div class="h-2 w-16 bg-slate-700 rounded"></div>
+                 </div>
+                 <div class="text-right">
+                    <div class="h-3 w-16 bg-emerald-400/80 rounded mb-1"></div>
+                 </div>
+              </div>
+           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING (Single Card Focus) -->
+  <section id="pricing" class="py-24 relative bg-white/[0.02]">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <div class="mb-12">
+        <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">Preço Único. Tudo Incluso.</h2>
+        <p class="text-slate-400 text-lg">Sem pegadinhas, sem taxas extras de surpresa.</p>
+      </div>
+
+      <div class="relative max-w-lg mx-auto">
+        <!-- Glow Effect behind card -->
+        <div class="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl blur opacity-30 animate-pulse"></div>
+        
+        <div class="relative rounded-2xl bg-[#121620] p-8 md:p-12 shadow-2xl animate-border-gradient">
+          <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+             <span class="bg-sky-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-sky-500/40 tracking-wide uppercase">Oferta Especial</span>
+          </div>
+
+          <p class="text-slate-300 font-medium mb-1">Acesso Completo</p>
+          <div class="flex justify-center items-baseline gap-1 mb-6">
+            <span class="text-2xl text-slate-400">R$</span>
+            <span class="text-6xl font-bold text-white tracking-tight">59</span>
+            <span class="text-xl text-slate-500">/mês</span>
+          </div>
+
+          <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 mb-8">
+            <p class="text-sky-400 font-bold text-lg">30 Dias Grátis</p>
+            <p class="text-sm text-sky-300/80">Teste o mês todo. Se não amar, não paga.</p>
+          </div>
+
+          <ul class="space-y-4 text-left mb-10 max-w-xs mx-auto">
+            <li class="flex items-center gap-3 text-slate-200">
+              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+              <span>Vendas Ilimitadas</span>
+            </li>
+            <li class="flex items-center gap-3 text-slate-200">
+              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+              <span>Controle de Estoque e Fiado</span>
+            </li>
+            <li class="flex items-center gap-3 text-slate-200">
+              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+              <span>Gestão Financeira (Lucro)</span>
+            </li>
+            <li class="flex items-center gap-3 text-slate-200">
+              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+              <span>Suporte via WhatsApp</span>
+            </li>
+          </ul>
+
+          <a href="/cadastro" class="block w-full py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
+            Começar meus 30 dias grátis
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-24 border-t border-white/5 bg-[#0B0F19]">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold text-white mb-4">Perguntas Frequentes</h2>
+        <p class="text-slate-400">Tire suas dúvidas antes de começar</p>
+      </div>
+      
+      <div class="space-y-4">
+        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-all duration-300">
+          <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
+            <span>Preciso de computador potente?</span>
+            <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-6 text-slate-400 leading-relaxed animate-fade-in-down">
+            Não! O Zelo PDV roda direto no navegador (Chrome, Edge). Funciona em qualquer computador ou notebook básico, e até em tablets.
+          </div>
+        </details>
+
+        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+          <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
+            <span>Como funciona os 30 dias grátis?</span>
+            <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-6 text-slate-400 leading-relaxed">
+            Você cria a conta e cadastra seu cartão para ativar o período de teste. A cobrança só inicia após 30 dias. Se cancelar antes, não paga nada.
+          </div>
+        </details>
+
+        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+          <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
+            <span>Consigo emitir Nota Fiscal?</span>
+            <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-6 text-slate-400 leading-relaxed">
+             O foco do Zelo PDV é gestão gerencial e controle interno (não fiscal) para MEIs e pequenos negócios que não são obrigados a emitir NFC-e em todas as vendas. Emitimos recibos e comprovantes não fiscais.
+          </div>
+        </details>
+
+        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+          <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
+            <span>Se eu tiver dúvidas, tem suporte?</span>
+            <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-6 text-slate-400 leading-relaxed">
+            Sim! Temos suporte direto via WhatsApp em horário comercial. A gente ajuda a configurar e tirar dúvidas na hora.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="py-12 border-t border-white/10 bg-[#0B0F19]">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid md:grid-cols-4 gap-8 mb-12">
+        <div class="col-span-1 md:col-span-1">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <span class="font-bold text-white text-xl">Zelo<span class="text-sky-500">PDV</span></span>
+          </div>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            Tecnologia simples para negócios que querem crescer. Controle total do seu caixa e do seu lucro.
+          </p>
+        </div>
+        
+        <div>
+          <h4 class="text-white font-semibold mb-4">Produto</h4>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li><a href="#features" class="hover:text-sky-400 transition-colors">Funcionalidades</a></li>
+            <li><a href="#pricing" class="hover:text-sky-400 transition-colors">Preços</a></li>
+            <li><a href="/atualizacoes" class="hover:text-sky-400 transition-colors">Atualizações</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-white font-semibold mb-4">Suporte</h4>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li><a href="#faq" class="hover:text-sky-400 transition-colors">Central de Ajuda</a></li>
+            <li><a href="https://wa.me/5514991537503" class="hover:text-sky-400 transition-colors">Falar no WhatsApp</a></li>
+            <li><a href="mailto:techne.br@gmail.com" class="hover:text-sky-400 transition-colors">Email</a></li>
+          </ul>
+        </div>
+
+        <div>
+           <h4 class="text-white font-semibold mb-4">Legal</h4>
+           <ul class="space-y-2 text-sm text-slate-400">
+             <li><a href="/termos" class="hover:text-sky-400 transition-colors">Termos de Uso</a></li>
+             <li><a href="/privacidade" class="hover:text-sky-400 transition-colors">Privacidade</a></li>
+           </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-600">
+        <div>
+          &copy; {new Date().getFullYear()} <a href="https://techneia.com.br" target="_blank" rel="noopener noreferrer" class="hover:text-slate-500 transition-colors">Téchne Sistemas</a>. <br class="hidden md:block"/>Todos os direitos reservados.
+        </div>
+        <div class="flex gap-4">
+           <a href="https://instagram.com/techne.ia" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">@techne.ia</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+<style>
+  /* Custom Animations not in Tailwind by default */
+  .perspective-1000 {
+    perspective: 1000px;
   }
-  :global(.btn-secondary) {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all disabled:opacity-50 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 active:scale-[.98];
+  
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in-down {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in-down {
+    animation: fade-in-down 0.3s ease-out forwards;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s ease-out forwards;
+    opacity: 0; /* Default hidden */
+  }
+
+  /* Lightweight Border Animation */
+  @keyframes border-rotate {
+    0% { --border-angle: 0deg; }
+    100% { --border-angle: 360deg; }
+  }
+  @property --border-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  .animate-border-gradient {
+    position: relative;
+    border: 1px solid transparent;
+  }
+  .animate-border-gradient::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(from var(--border-angle), transparent 20%, #0ea5e9 80%, transparent 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: border-rotate 4s linear infinite;
+    pointer-events: none;
+  }
+  
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 6s ease infinite;
+  }
+
+  /* Spotlight Effect */
+  .spotlight-card {
+    position: relative;
+    overflow: hidden;
+    --x: -100px;
+    --y: -100px;
+  }
+  .spotlight-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    opacity: 0;
+    background: radial-gradient(800px circle at var(--x) var(--y), rgba(14, 165, 233, 0.1), transparent 40%);
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .spotlight-card:hover::before {
+    opacity: 1;
   }
 </style>

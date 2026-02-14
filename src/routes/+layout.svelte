@@ -227,10 +227,45 @@
   });
   import ToastContainer from '$lib/components/ToastContainer.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+  import PinSetupModal from '$lib/components/PinSetupModal.svelte';
+  import { adminUnlocked } from '$lib/stores/adminStore';
+
+  let showPinSetup = false;
+  let adminPin = null;
+
+  // Enhance the existing onMount/auth check
+  // We need to fetch the PIN from profile when session loads
+  
+  async function checkPin(uId) {
+    if (!uId) return;
+    const { data } = await supabase.from('empresa_perfil').select('pin_admin').eq('user_id', uId).maybeSingle();
+    // If no profile found, maybe wait for profile complete logic? 
+    // But if profile exists and pin_admin is null -> Show Setup
+    if (data) {
+        if (!data.pin_admin) {
+            showPinSetup = true;
+        } else {
+            adminPin = data.pin_admin;
+        }
+    }
+  }
+
+  // Hook into existing session logic
+  $: if (session?.user?.id) checkPin(session.user.id);
+  
+  function onPinSet(newPin) {
+    showPinSetup = false;
+    adminPin = newPin;
+    $adminUnlocked = true; // Auto unlock on creation
+  }
 </script>
 
 <ToastContainer />
 <ConfirmDialog />
+
+{#if showPinSetup && session}
+  <PinSetupModal userId={session.user.id} {onPinSet} />
+{/if}
 
 {#if !isOnline}
   <div class="bg-red-600 text-white text-center text-sm py-1 font-medium z-[60] relative">
@@ -256,6 +291,7 @@
     </div>
   {/if}
 
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing'}
   <header class="border-b bg-header-base backdrop-blur sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
@@ -350,11 +386,13 @@
       </div>
     </div>
   {/if}
+  {/if}
 
-  <main class="flex-1 mx-auto px-4 py-6 w-full {$page.url.pathname.startsWith('/app') ? 'max-w-full' : 'max-w-6xl'}">
+  <main class="flex-1 mx-auto w-full {$page.url.pathname.startsWith('/app') || $page.url.pathname === '/' || $page.url.pathname === '/landing' ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing'}
   <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -367,6 +405,7 @@
       </div>
     </div>
   </footer>
+  {/if}
 
   <a
     href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)."

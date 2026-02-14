@@ -58,8 +58,10 @@
   $: dataInicioStr = dataInicio.toISOString().slice(0,10);
   $: dataFimStr = dataFim.toISOString().slice(0,10);
 
+  import AdminLock from '$lib/components/AdminLock.svelte';
 </script>
 
+<AdminLock>
 <div class="space-y-6">
   <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     <div>
@@ -79,6 +81,7 @@
     <ExpensesManager {uid} {expenses} on:refresh={loadExpenses} />
   {/if}
 </div>
+</AdminLock>
 
 <style>
     .input-tiny {
