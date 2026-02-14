@@ -10,6 +10,8 @@
   let showPassword = false;
   let showConfirm = false;
 
+  import { getFriendlyErrorMessage } from '$lib/errorUtils';
+
   /** Cria conta com e-mail/senha; supõe confirmação por e-mail ativa. */
   async function handleSignUp(e) {
     e.preventDefault();
@@ -30,12 +32,8 @@
     });
     loading = false;
     if (error) {
-      // Tratamento amigável para e-mail já existente
-      const msg = (error?.message || '').toLowerCase();
-      if (error?.status === 400 && (msg.includes('registered') || msg.includes('already')))
-        errorMessage = 'Este e-mail já está cadastrado.';
-      else errorMessage = error.message;
-      return;
+       errorMessage = getFriendlyErrorMessage(error);
+       return;
     }
     // Em projetos com confirmação por e-mail, o usuário precisa confirmar antes de logar
     successMessage = 'Conta criada. Verifique seu e-mail para confirmar e então faça login.';

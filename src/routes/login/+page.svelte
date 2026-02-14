@@ -3,6 +3,7 @@
   export let params;
   import { onMount } from 'svelte';
   import { addToast } from '$lib/stores/ui';
+  import { getFriendlyErrorMessage } from '$lib/errorUtils';
   let email = '';
   let password = '';
   let errorMessage = '';
@@ -46,11 +47,9 @@
           return false;
         };
         await waitStableSession();
-        window.location.assign('/app');
-      }
     } catch (err) {
       console.error('Login exception:', err);
-      errorMessage = err?.message || 'Falha ao entrar.';
+      errorMessage = getFriendlyErrorMessage(err);
     } finally {
       loading = false;
     }

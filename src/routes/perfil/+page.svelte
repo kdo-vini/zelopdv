@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
+  import { translateSubscriptionStatus } from '$lib/errorUtils';
   import { page } from '$app/stores';
   import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina } from '$lib/profileUtils';
   import { addToast } from '$lib/stores/ui';
@@ -136,6 +137,92 @@
     // ...
   });
   // ... existing functions ...
+  let logoFile = null;
+
+  function uploadLogo(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!isValidImage(file)) {
+      addToast('Imagem inválida. Use PNG/JPG até 1.5MB.', 'error');
+      return;
+    }
+    logoFile = file;
+    pendingLogoUrl = URL.createObjectURL(file);
+    markDirty();
+  }
+
+  async function openManageSubscription() {
+    if (!stripeCustomerId && !email) {
+      addToast('Não há informações de cliente para gerenciar assinatura.', 'error');
+      return;
+    }
+    subLoading = true;
+    try {
+      const resp = await fetch('/api/billing/create-portal-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: stripeCustomerId, email })
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao criar sessão.');
+      if (data.url) window.location.href = data.url;
+    } catch (err) {
+      addToast('Erro: ' + err.message, 'error');
+      subLoading = false;
+    }
+  }
+
+  async function salvar() {
+    if (!canSave) return;
+    saving = true;
+    try {
+      let finalUrl = logo_url;
+      if (logoFile) {
+        // Upload para bucket 'logos' com nome fixo userId.png
+        const fileName = `${userId}.png`;
+        const { error: upErr } = await supabase.storage
+          .from('logos')
+          .upload(fileName, logoFile, { upsert: true });
+        
+        if (upErr) throw upErr;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('logos')
+          .getPublicUrl(fileName);
+          
+        finalUrl = `${publicUrl}?t=${Date.now()}`;
+      }
+
+      const payload = buildPayload({
+        userId,
+        nome_exibicao,
+        documento,
+        contato,
+        inscricao_estadual,
+        endereco,
+        rodape_recibo,
+        largura_bobina,
+        logo_url: finalUrl,
+        pendingLogoUrl: null // Passar null para usar o logo_url calculado
+      });
+      
+      const { error } = await supabase.from('empresa_perfil').upsert(payload, { onConflict: 'user_id' });
+      
+      if (error) throw error;
+      
+      addToast('Perfil salvo com sucesso!', 'success');
+      logo_url = finalUrl;
+      logoFile = null;
+      pendingLogoUrl = null;
+      clearDirty();
+    } catch (e) {
+      console.error(e);
+      addToast('Erro ao salvar: ' + e.message, 'error');
+    } finally {
+      saving = false;
+    }
+  }
+
   async function logout() {
     try {
       await supabase.auth.signOut();
@@ -169,7 +256,7 @@
           {#if subLoading}
             <div class="text-sm">Carregando status…</div>
           {:else if subStatus}
-            <div class="text-sm">Status: <span class="font-semibold capitalize">{subStatus}</span></div>
+            <div class="text-sm">Status: <span class="font-semibold capitalize">{translateSubscriptionStatus(subStatus)}</span></div>
           {:else}
             <div class="text-sm">Nenhuma assinatura encontrada.</div>
           {/if}
@@ -285,7 +372,7 @@
     <section class="grid gap-3">
       <h2 class="text-sm font-semibold text-slate-300">Branding</h2>
       <div class="flex items-center gap-4">
-        <img src={logo_url} alt="Logo" class="w-20 h-20 rounded border border-slate-700 object-contain bg-slate-900" />
+        <img src={pendingLogoUrl || logo_url} alt="Logo" class="w-20 h-20 rounded border border-slate-700 object-contain bg-slate-900" />
         <div class="flex flex-col gap-1">
           <input type="file" accept="image/*" on:change={uploadLogo} />
           <span class="text-xs text-slate-400">PNG quadrado até ~1MB recomendado</span>
