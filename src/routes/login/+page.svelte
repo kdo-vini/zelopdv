@@ -47,6 +47,8 @@
           return false;
         };
         await waitStableSession();
+        window.location.assign('/app');
+      }
     } catch (err) {
       console.error('Login exception:', err);
       errorMessage = getFriendlyErrorMessage(err);
