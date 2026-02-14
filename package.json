@@ -30,6 +30,7 @@
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "stripe": "^19.2.0",
+    "sweetalert2": "^11.26.18",
     "xlsx": "^0.18.5"
   },
   "engines": {

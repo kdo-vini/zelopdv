@@ -2,160 +2,454 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { pdvCache } from '$lib/stores/pdvCache';
+  import { addToast } from '$lib/stores/ui';
+  import { slide } from 'svelte/transition';
+  import Swal from 'sweetalert2';
+
+  // --- State ---
   let categorias = [];
   let subcategorias = [];
-  let errorMessage = '';
   let loading = true;
 
-  // Filtros e formulários
-  let catFiltro = null; // opção de filtrar por categoria
+  // Filters
+  let catFiltro = null;
+  let buscaFilter = '';
+
+  // UI State
+  let showCreateForm = false;
+  let selectedItems = new Set();
+  
+  // Sorting
+  let sortField = 'nome'; // 'nome' | 'categoria' | 'ordem'
+  let sortDesc = false;
+
+  // Form
   let form = { id_categoria: null, nome: '', ordem: 0 };
   let editingId = null;
   let editForm = {};
 
+  // --- Lifecycle ---
   onMount(async () => {
     await carregarCategorias();
     await carregarSubcategorias();
     loading = false;
   });
 
-  async function carregarCategorias(){
+  async function carregarCategorias() {
     const { data, error } = await supabase.from('categorias').select('id, nome, ordem').order('ordem', { ascending: true });
-    if (error) errorMessage = error.message; else categorias = data||[];
+    if (error) addToast(error.message, 'error'); else categorias = data || [];
+    
+    // Set default category for form if available
     if (categorias.length && form.id_categoria == null) form.id_categoria = categorias[0].id;
   }
-  async function carregarSubcategorias(){
-    let q = supabase.from('subcategorias').select('id, id_categoria, nome, ordem').order('ordem', { ascending: true });
-    if (catFiltro) q = q.eq('id_categoria', catFiltro);
-    const { data, error } = await q;
-    if (error) errorMessage = error.message; else subcategorias = data||[];
+
+  async function carregarSubcategorias() {
+    loading = true;
+    try {
+      let q = supabase.from('subcategorias').select('id, id_categoria, nome, ordem');
+      
+      if (catFiltro) q = q.eq('id_categoria', catFiltro);
+      if (buscaFilter && String(buscaFilter).trim() !== '') q = q.ilike('nome', `%${String(buscaFilter).trim()}%`);
+
+      const { data, error } = await q.order('ordem', { ascending: true });
+      if (error) addToast(error.message, 'error'); 
+      else subcategorias = data || [];
+      
+      selectedItems.clear();
+    } finally {
+      loading = false;
+    }
   }
 
-  async function criar(e){
+  // --- Computed ---
+  $: sortedSubcategorias = [...subcategorias].sort((a, b) => {
+    let valA = a[sortField];
+    let valB = b[sortField];
+
+    if (sortField === 'categoria') {
+      valA = getCategoriaNome(a.id_categoria);
+      valB = getCategoriaNome(b.id_categoria);
+    }
+
+    if (valA < valB) return sortDesc ? 1 : -1;
+    if (valA > valB) return sortDesc ? -1 : 1;
+    return 0;
+  });
+
+  // --- Actions ---
+  async function criarSubcategoria(e) {
     e.preventDefault();
     const { data: userData } = await supabase.auth.getUser();
     const id_usuario = userData?.user?.id ?? null;
-    const payload = { id_usuario, id_categoria: form.id_categoria, nome: form.nome, ordem: form.ordem };
+    
+    const payload = { 
+      id_usuario, 
+      id_categoria: form.id_categoria, 
+      nome: form.nome, 
+      ordem: form.ordem 
+    };
+
     const { error } = await supabase.from('subcategorias').insert(payload);
-    if (error) { errorMessage = error.message; return; }
+    if (error) { addToast(error.message, 'error'); return; }
+    
+    addToast('Subcategoria criada com sucesso!', 'success');
     form = { id_categoria: form.id_categoria, nome: '', ordem: 0 };
+    showCreateForm = false;
     pdvCache.invalidateSubcategorias();
     await carregarSubcategorias();
   }
 
-  function startEdit(s){ editingId = s.id; editForm = { ...s }; }
-  function cancelEdit(){ editingId = null; editForm = {}; }
+  function toggleSort(field) {
+    if (sortField === field) {
+      sortDesc = !sortDesc;
+    } else {
+      sortField = field;
+      sortDesc = false;
+    }
+  }
 
-  async function saveEdit(e){
-    e.preventDefault();
-    const { error } = await supabase.from('subcategorias').update({ id_categoria: editForm.id_categoria, nome: editForm.nome, ordem: editForm.ordem }).eq('id', editingId);
-    if (error) { errorMessage = error.message; return; }
+  // Bulk Actions
+  function toggleSelectAll(e) {
+    if (e.target.checked) {
+      sortedSubcategorias.forEach(s => selectedItems.add(s.id));
+    } else {
+      selectedItems.clear();
+    }
+    selectedItems = selectedItems;
+  }
+
+  function toggleSelect(id) {
+    if (selectedItems.has(id)) selectedItems.delete(id);
+    else selectedItems.add(id);
+    selectedItems = selectedItems;
+  }
+
+  function confirmarExclusaoEmMassa() {
+    if (selectedItems.size === 0) return;
+    
+    Swal.fire({
+      title: 'Excluir Subcategorias',
+      text: `Tem certeza que deseja excluir ${selectedItems.size} subcategorias selecionadas?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sim, excluir!',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        const ids = Array.from(selectedItems);
+        const { error } = await supabase.from('subcategorias').delete().in('id', ids);
+        if (error) addToast(error.message, 'error');
+        else {
+          addToast(`${ids.length} subcategorias excluídas.`, 'success');
+          pdvCache.invalidateSubcategorias();
+          selectedItems.clear();
+          await carregarSubcategorias();
+        }
+      }
+    });
+  }
+
+  // Row Actions
+  function startEdit(sub) {
+    editingId = sub.id;
+    editForm = { ...sub };
+  }
+
+  function cancelEdit() {
     editingId = null;
-    pdvCache.invalidateSubcategorias();
-    await carregarSubcategorias();
+    editForm = {};
   }
 
-  async function excluir(id){
-    if(!confirm('Excluir esta subcategoria?')) return;
+  async function saveEdit(e) {
+    e.preventDefault();
+    const { error } = await supabase.from('subcategorias').update({ 
+      id_categoria: editForm.id_categoria, 
+      nome: editForm.nome, 
+      ordem: editForm.ordem 
+    }).eq('id', editingId);
+
+    if (error) addToast(error.message, 'error');
+    else {
+      addToast('Subcategoria atualizada!', 'success');
+      editingId = null;
+      pdvCache.invalidateSubcategorias();
+      await carregarSubcategorias();
+    }
+  }
+
+  async function confirmarExclusaoSubcategoria(id) {
+    // 1. Check for dependent products
+    const { count, error } = await supabase
+      .from('produtos')
+      .select('*', { count: 'exact', head: true })
+      .eq('id_subcategoria', id);
+
+    if (error) {
+      addToast('Erro ao verificar produtos: ' + error.message, 'error');
+      return;
+    }
+
+    if (count > 0) {
+      // 2. Smart Decision Dialog
+      const result = await Swal.fire({
+        title: 'Atenção: Produtos Vinculados!',
+        html: `Esta subcategoria possui <b>${count}</b> produtos.<br>Como deseja prosseguir?`,
+        icon: 'warning',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonColor: '#3085d6', // Keep (Safe)
+        denyButtonColor: '#d33',       // Cascade (Destructive)
+        confirmButtonText: 'Manter Produtos (Desvincular)',
+        denyButtonText: 'Excluir Tudo (Cascata)',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+        focusConfirm: true
+      });
+
+      if (result.isConfirmed) {
+        // Option A: Unlink Products -> Delete Subcategory
+        const { error: updateError } = await supabase
+          .from('produtos')
+          .update({ id_subcategoria: null })
+          .eq('id_subcategoria', id);
+          
+        if (updateError) {
+          addToast('Erro ao desvincular produtos: ' + updateError.message, 'error');
+          return;
+        }
+        await _deleteSubcategoria(id, 'Subcategoria excluída e produtos desvinculados.');
+
+      } else if (result.isDenied) {
+        // Option B: Delete Products -> Delete Subcategory
+        // Double check for destructiveness
+        const confirmCascade = await Swal.fire({
+          title: 'Tem certeza absoluta?',
+          text: `Você irá apagar ${count} produtos permanentemente. Esta ação não pode ser desfeita.`,
+          icon: 'error',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          confirmButtonText: 'Sim, apagar tudo!',
+          cancelButtonText: 'Cancelar'
+        });
+
+        if (confirmCascade.isConfirmed) {
+          const { error: deleteProdError } = await supabase
+            .from('produtos')
+            .delete()
+            .eq('id_subcategoria', id);
+            
+          if (deleteProdError) {
+            addToast('Erro ao excluir produtos: ' + deleteProdError.message, 'error');
+            return;
+          }
+          await _deleteSubcategoria(id, 'Subcategoria e produtos excluídos com sucesso.');
+        }
+      }
+    } else {
+      // 3. Simple Delete (No Dependencies)
+      Swal.fire({
+        title: 'Excluir Subcategoria',
+        text: 'Tem certeza que deseja excluir esta subcategoria?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sim, excluir!',
+        cancelButtonText: 'Cancelar'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          await _deleteSubcategoria(id, 'Subcategoria excluída.');
+        }
+      });
+    }
+  }
+
+  async function _deleteSubcategoria(id, successMessage) {
     const { error } = await supabase.from('subcategorias').delete().eq('id', id);
-    if (error) { errorMessage = error.message; return; }
-    pdvCache.invalidateSubcategorias();
-    await carregarSubcategorias();
+    if (error) {
+      addToast(error.message, 'error');
+    } else {
+      addToast(successMessage, 'success');
+      pdvCache.invalidateSubcategorias();
+      await carregarSubcategorias();
+    }
+  }
+
+  // Helpers
+  function getCategoriaNome(id) {
+    return categorias.find(c => c.id === id)?.nome || '-';
   }
 </script>
 
-<section class="bg-white dark:bg-slate-800 rounded-lg shadow">
-  <div class="p-4 border-b font-semibold">Subcategorias</div>
-  <div class="p-4 space-y-6">
-    {#if errorMessage}
-      <div class="text-sm text-red-600">{errorMessage}</div>
-    {/if}
+<section class="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700">
+  <!-- Header Toolbar -->
+  <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div class="flex items-center gap-2">
+      <h2 class="font-semibold text-lg text-slate-800 dark:text-white">Subcategorias</h2>
+      <span class="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-full">{subcategorias.length}</span>
+    </div>
+    
+    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+      {#if selectedItems.size > 0}
+        <button class="btn-danger text-sm flex items-center gap-2" on:click={confirmarExclusaoEmMassa}>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          Excluir ({selectedItems.size})
+        </button>
+      {/if}
 
-    <div class="flex items-end gap-3">
-      <div>
-        <label for="subcat-filtro" class="block text-sm mb-1">Filtrar por categoria</label>
-        <select id="subcat-filtro" class="input-form" bind:value={catFiltro} on:change={carregarSubcategorias}>
+      <div class="flex-1 sm:flex-none">
+        <input 
+          type="text" 
+          placeholder="Buscar..." 
+          class="input-search"
+          bind:value={buscaFilter}
+          on:input={() => carregarSubcategorias()}
+        />
+      </div>
+
+      <button 
+        class="btn-primary flex items-center gap-2" 
+        on:click={() => showCreateForm = !showCreateForm}>
+        {#if showCreateForm}
+          Cancelar
+        {:else}
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+          Nova Subcategoria
+        {/if}
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters Row -->
+  <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex flex-wrap gap-3 text-sm">
+      <div class="flex items-center gap-2">
+        <span class="text-slate-500">Filtrar por Categoria:</span>
+        <select class="input-filter" bind:value={catFiltro} on:change={carregarSubcategorias}>
           <option value={null}>Todas</option>
           {#each categorias as c}
             <option value={c.id}>{c.nome}</option>
           {/each}
         </select>
       </div>
+      
+      {#if catFiltro || buscaFilter}
+        <button class="text-blue-600 hover:underline text-xs" on:click={() => { catFiltro=null; buscaFilter=''; carregarSubcategorias(); }}>
+          Limpar Filtros
+        </button>
+      {/if}
+  </div>
+
+  <!-- Collapsible Create Form -->
+  {#if showCreateForm}
+    <div transition:slide class="bg-blue-50/50 dark:bg-slate-900/50 border-b border-blue-100 dark:border-slate-600 p-4">
+      <form on:submit={criarSubcategoria} class="grid md:grid-cols-3 gap-4">
+        <div>
+          <label class="label-form">Categoria Pai</label>
+          <select class="input-form" bind:value={form.id_categoria} required>
+            {#each categorias as c}
+              <option value={c.id}>{c.nome}</option>
+            {/each}
+          </select>
+        </div>
+        <div>
+          <label class="label-form">Nome da Subcategoria</label>
+          <input class="input-form" bind:value={form.nome} required placeholder="Ex: Latas" />
+        </div>
+        <div>
+          <label class="label-form">Ordem de Exibição</label>
+          <input class="input-form" type="number" step="1" bind:value={form.ordem} required />
+        </div>
+        <div class="md:col-span-3 flex justify-end">
+           <button class="btn-primary px-6 w-full md:w-auto" type="submit">Salvar Subcategoria</button>
+        </div>
+      </form>
     </div>
+  {/if}
 
-    <form on:submit={criar} class="grid md:grid-cols-3 gap-4">
-      <div>
-        <label for="subcat-cat" class="block text-sm mb-1">Categoria</label>
-        <select id="subcat-cat" class="input-form" bind:value={form.id_categoria} required>
-          {#each categorias as c}
-            <option value={c.id}>{c.nome}</option>
-          {/each}
-        </select>
-      </div>
-      <div>
-        <label for="subcat-nome" class="block text-sm mb-1">Nome</label>
-        <input id="subcat-nome" class="input-form" bind:value={form.nome} required />
-      </div>
-      <div>
-        <label for="subcat-ordem" class="block text-sm mb-1">Ordem</label>
-        <input id="subcat-ordem" type="number" class="input-form" bind:value={form.ordem} required />
-      </div>
-      <div class="md:col-span-3">
-        <button class="btn-primary">Salvar</button>
-      </div>
-    </form>
-
+  <!-- Data Grid Table -->
+  <div class="overflow-x-auto relative">
     {#if loading}
-      <div>Carregando...</div>
+      <div class="p-8 text-center text-slate-500">Carregando subcategorias...</div>
+    {:else if subcategorias.length === 0}
+      <div class="p-8 text-center text-slate-500">Nenhuma subcategoria encontrada.</div>
     {:else}
-      <div class="divide-y">
-        {#each subcategorias as s}
-          <div class="py-3">
+      <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+        <thead class="bg-slate-50 dark:bg-slate-700/50 uppercase font-medium text-xs text-slate-500 dark:text-slate-400">
+          <tr>
+            <th class="p-4 w-4">
+              <input type="checkbox" class="rounded border-slate-300" on:change={toggleSelectAll} checked={sortedSubcategorias.length > 0 && sortedSubcategorias.every(s => selectedItems.has(s.id))} />
+            </th>
+            <th class="p-4 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200" on:click={() => toggleSort('nome')}>
+              Nome {#if sortField==='nome'}{sortDesc ? '↓' : '↑'}{/if}
+            </th>
+            <th class="p-4 cursor-pointer hover:text-slate-700" on:click={() => toggleSort('categoria')}>
+              Categoria {#if sortField==='categoria'}{sortDesc ? '↓' : '↑'}{/if}
+            </th>
+            <th class="p-4 cursor-pointer hover:text-slate-700" on:click={() => toggleSort('ordem')}>
+              Ordem {#if sortField==='ordem'}{sortDesc ? '↓' : '↑'}{/if}
+            </th>
+            <th class="p-4 text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+          {#each sortedSubcategorias as s (s.id)}
             {#if editingId === s.id}
-              <form on:submit={saveEdit} class="grid md:grid-cols-3 gap-4">
-                <div>
-                  <label for={`subcat-edit-cat-${s.id}`} class="block text-sm mb-1">Categoria</label>
-                  <select id={`subcat-edit-cat-${s.id}`} class="input-form" bind:value={editForm.id_categoria}>
-                    {#each categorias as c}
-                      <option value={c.id}>{c.nome}</option>
-                    {/each}
-                  </select>
-                </div>
-                <div>
-                  <label for={`subcat-edit-nome-${s.id}`} class="block text-sm mb-1">Nome</label>
-                  <input id={`subcat-edit-nome-${s.id}`} class="input-form" bind:value={editForm.nome} required />
-                </div>
-                <div>
-                  <label for={`subcat-edit-ordem-${s.id}`} class="block text-sm mb-1">Ordem</label>
-                  <input id={`subcat-edit-ordem-${s.id}`} type="number" class="input-form" bind:value={editForm.ordem} required />
-                </div>
-                <div class="md:col-span-3 flex gap-2">
-                  <button class="btn-primary">Salvar</button>
-                  <button type="button" class="btn-secondary" on:click={cancelEdit}>Cancelar</button>
-                </div>
-              </form>
+               <!-- Row Editing Mode -->
+               <tr class="bg-blue-50/30 dark:bg-blue-900/10">
+                 <td class="p-4"></td>
+                 <td colspan="3" class="p-4">
+                    <form on:submit={saveEdit} class="grid md:grid-cols-3 gap-4">
+                       <input class="input-form" bind:value={editForm.nome} placeholder="Nome" required />
+                       <select class="input-form" bind:value={editForm.id_categoria}>
+                         {#each categorias as c}<option value={c.id}>{c.nome}</option>{/each}
+                       </select>
+                       <input class="input-form w-24" type="number" bind:value={editForm.ordem} placeholder="Ordem" required />
+                       <div class="md:col-span-3 flex gap-2 justify-end">
+                         <button type="button" class="btn-ghost text-xs" on:click={cancelEdit}>Cancelar</button>
+                         <button type="submit" class="btn-primary text-xs">Salvar</button>
+                       </div>
+                    </form>
+                 </td>
+                 <td class="p-4"></td>
+               </tr>
             {:else}
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="font-medium">{s.nome}</div>
-                  <div class="text-sm text-slate-500">Ordem: {s.ordem}</div>
-                </div>
-                <div class="flex gap-2">
-                  <button class="btn-secondary" on:click={() => startEdit(s)}>Editar</button>
-                  <button class="btn-danger" on:click={() => excluir(s.id)}>Excluir</button>
-                </div>
-              </div>
+              <!-- Normal Row -->
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 group transition-colors">
+                <td class="p-4">
+                  <input type="checkbox" class="rounded border-slate-300" checked={selectedItems.has(s.id)} on:change={() => toggleSelect(s.id)} />
+                </td>
+                <td class="p-4 font-medium text-slate-900 dark:text-white">{s.nome}</td>
+                <td class="p-4 text-slate-500">{getCategoriaNome(s.id_categoria)}</td>
+                <td class="p-4">{s.ordem}</td>
+                <td class="p-4 text-right">
+                  <div class="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-500" title="Editar" on:click={() => startEdit(s)}>
+                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <button class="p-2 hover:bg-red-100 dark:hover:bg-red-900/40 rounded text-red-500" title="Excluir" on:click={() => confirmarExclusaoSubcategoria(s.id)}>
+                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
             {/if}
-          </div>
-        {/each}
-      </div>
+          {/each}
+        </tbody>
+      </table>
     {/if}
   </div>
 </section>
 
 <style lang="postcss">
-  .input-form { @apply block w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-slate-900 placeholder-slate-500 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600 dark:placeholder-slate-400; }
-  .btn-primary { @apply inline-flex items-center justify-center px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700; }
-  .btn-secondary { @apply inline-flex items-center justify-center px-3 py-2 rounded-md border hover:bg-slate-100 dark:hover:bg-slate-700; }
-  .btn-danger { @apply inline-flex items-center justify-center px-3 py-2 rounded-md bg-red-600 text-white hover:bg-red-700; }
+  /* Styles handled exclusively by global Tailwind classes where possible, or specific consistent scoped styles */
+  .input-form { @apply block w-full px-3 py-2 border border-slate-300 rounded-md bg-white text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600; }
+  .input-search { @apply w-full px-3 py-2 border border-slate-300 rounded-md bg-white text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600 pl-4; }
+
+  .label-form { @apply block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1; }
+  
+  .btn-primary { @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md shadow-sm transition-colors duration-200; }
+  .btn-danger { @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md shadow-sm transition-colors duration-200; }
+  .btn-ghost { @apply bg-transparent hover:bg-slate-100 text-slate-600 font-medium py-1 px-3 rounded transition-colors duration-200; }
 </style>
