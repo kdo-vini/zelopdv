@@ -5,6 +5,8 @@
 	import { ensureActiveSubscription } from '$lib/guards';
 	import { withTimeout } from '$lib/utils';
 	import { addToast } from '$lib/stores/ui';
+	import { generatePDFReport } from '$lib/utils/pdfReport';
+	import { generateExcelReport } from '$lib/utils/excelReport';
 	
 	// Gráficos visuais
 	import BarChart from '$lib/components/charts/BarChart.svelte';
@@ -220,6 +222,16 @@
 	$: totalSuprimento = (movs || []).filter(m => m.tipo === 'suprimento').reduce((a, m) => a + Number(m.valor || 0), 0);
 	$: saldoEsperadoGaveta = Number((caixaInfo?.valor_inicial || 0) + totalDinheiro - totalSangria + totalSuprimento);
 	$: totalDescontosCaixa = (vendas || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
+	$: receitaLiquidaCaixa = totalGeral - totalDescontosCaixa;
+
+	// Pagamentos breakdown (caixa)
+	$: caixaPagItems = [
+		{ label: 'Dinheiro', value: totalDinheiro, color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' },
+		{ label: 'Pix', value: totalPix, color: 'bg-cyan-500', textColor: 'text-cyan-600 dark:text-cyan-400' },
+		{ label: 'Débito', value: totalCartaoDebito, color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400' },
+		{ label: 'Crédito', value: totalCartaoCredito, color: 'bg-purple-500', textColor: 'text-purple-600 dark:text-purple-400' },
+	].filter(p => p.value > 0);
+	$: caixaPagTotal = caixaPagItems.reduce((a, p) => a + p.value, 0);
 
 	// Top produtos (por receita total)
 	let ordenarTop = 'receita'; // 'receita' | 'quantidade' | 'alfabetica'
@@ -250,53 +262,104 @@
 		return arr.slice(0, 10);
 	})();
 
-	// CSV helpers
-	function downloadCSV(filename, rows) {
-		const csv = rows.map(r => r.map(v => {
-			const s = String(v ?? '');
-			return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-		}).join(',')).join('\n');
-		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url; a.download = filename; a.click();
-		setTimeout(() => URL.revokeObjectURL(url), 2000);
+	// Export dropdown state
+	let showExportDropdown = false;
+
+	function getExportData() {
+		const isCaixa = modoRelatorio === 'caixa';
+		const periodoLabel = isCaixa
+			? (caixaInfo?.data_abertura
+				? `${new Date(caixaInfo.data_abertura).toLocaleDateString('pt-BR')} – ${caixaInfo?.data_fechamento ? new Date(caixaInfo.data_fechamento).toLocaleDateString('pt-BR') : 'aberto'}`
+				: 'Caixa')
+			: `${dataInicio ? dataInicio.toLocaleDateString('pt-BR') : ''} – ${dataFim ? dataFim.toLocaleDateString('pt-BR') : ''}`;
+
+		if (isCaixa) {
+			// Build serie diaria from vendas
+			const serieMap = new Map();
+			for (const v of (vendas || [])) {
+				const day = v.created_at ? new Date(v.created_at).toISOString().slice(0,10) : 'unknown';
+				const prev = serieMap.get(day) || { dia: day, total: 0, qtd: 0 };
+				prev.total += Number(v.valor_total || 0);
+				prev.qtd += 1;
+				serieMap.set(day, prev);
+			}
+			const serieDiariaCaixa = Array.from(serieMap.values()).sort((a,b) => a.dia.localeCompare(b.dia));
+
+			return {
+				periodo: periodoLabel,
+				modo: 'caixa',
+				caixaId: caixaInfo?.id,
+				kpis: {
+					totalGeral,
+					qtdVendas,
+					ticketMedio,
+					dinheiro: totalDinheiro,
+				},
+				pagamentos: {
+					dinheiro: totalDinheiro,
+					pix: totalPix,
+					debito: totalCartaoDebito,
+					credito: totalCartaoCredito,
+					fiado: 0,
+				},
+				serieDiaria: serieDiariaCaixa,
+				topProdutos,
+				balanco: {
+					sangria: totalSangria,
+					suprimento: totalSuprimento,
+					descontos: totalDescontosCaixa,
+				},
+			};
+		} else {
+			return {
+				periodo: periodoLabel,
+				modo: 'periodo',
+				kpis: {
+					totalGeral: periodoTotalGeral,
+					qtdVendas: periodoQtdVendas,
+					ticketMedio: periodoTicketMedio,
+					dinheiro: periodoDinheiroLiquido,
+				},
+				pagamentos: {
+					dinheiro: periodoDinheiroLiquido,
+					pix: periodoPix,
+					debito: periodoCartaoDebito,
+					credito: periodoCartaoCredito,
+					fiado: periodoFiado,
+				},
+				serieDiaria: periodoSerieDiaria,
+				topProdutos: periodoTopProdutos,
+				balanco: {
+					sangria: periodoTotalSangria,
+					suprimento: periodoTotalSuprimento,
+					descontos: periodoTotalDescontos,
+				},
+			};
+		}
 	}
 
-	function exportarVendasCSV() {
-		const header = ['id_venda', 'forma_pagamento', 'valor_total'];
-		const rows = (vendas || []).map(v => [v.id, v.forma_pagamento, Number(v.valor_total || 0).toFixed(2)]);
-		downloadCSV(`vendas_caixa_${caixaInfo?.id || ''}.csv`, [header, ...rows]);
+	function exportarPDF() {
+		try {
+			const dados = getExportData();
+			generatePDFReport(dados);
+			addToast('PDF gerado com sucesso!', 'success');
+		} catch (e) {
+			addToast('Erro ao gerar PDF: ' + e.message, 'error');
+		} finally {
+			showExportDropdown = false;
+		}
 	}
-	function exportarItensCSV() {
-		const header = ['id_venda', 'produto', 'quantidade', 'total_item'];
-		const rows = (vendasItens || []).map(it => {
-			const qtd = Number(it.quantidade || 0);
-			const unit = it.id_produto ? Number(produtosMap.get(it.id_produto)?.preco || 0) : Number(it.preco_unitario_na_venda || 0);
-			return [it.id_venda, it.nome_produto_na_venda, qtd, (unit * qtd).toFixed(2)];
-		});
-		downloadCSV(`itens_caixa_${caixaInfo?.id || ''}.csv`, [header, ...rows]);
-	}
-	function exportarResumoCSV() {
-		const rows = [
-			['Caixa', caixaInfo?.id || ''],
-			['Abertura', caixaInfo?.data_abertura ? new Date(caixaInfo.data_abertura).toLocaleString() : ''],
-			['Fechamento', caixaInfo?.data_fechamento ? new Date(caixaInfo.data_fechamento).toLocaleString() : '—'],
-			['Valor inicial', Number(caixaInfo?.valor_inicial || 0).toFixed(2)],
-			['Vendas (Dinheiro)', Number(totalDinheiro).toFixed(2)],
-			['Vendas (Cartão - Débito)', Number(totalCartaoDebito).toFixed(2)],
-			['Vendas (Cartão - Crédito)', Number(totalCartaoCredito).toFixed(2)],
-			['Vendas (Cartão - Outros/legado)', Number(totalCartaoLegacy).toFixed(2)],
-			['Vendas (Cartão - Total)', Number(totalCartao).toFixed(2)],
-			['Vendas (Pix)', Number(totalPix).toFixed(2)],
-			['Vendas (Total)', Number(totalGeral).toFixed(2)],
-			['Qtd. vendas', qtdVendas],
-			['Ticket médio', Number(ticketMedio).toFixed(2)],
-			['Sangria', Number(totalSangria).toFixed(2)],
-			['Suprimento', Number(totalSuprimento).toFixed(2)],
-			['Saldo esperado em gaveta', Number(saldoEsperadoGaveta).toFixed(2)],
-		];
-		downloadCSV(`resumo_caixa_${caixaInfo?.id || ''}.csv`, rows);
+
+	function exportarExcel() {
+		try {
+			const dados = getExportData();
+			generateExcelReport(dados);
+			addToast('Excel gerado com sucesso!', 'success');
+		} catch (e) {
+			addToast('Erro ao gerar Excel: ' + e.message, 'error');
+		} finally {
+			showExportDropdown = false;
+		}
 	}
 
 	// ---------------- Relatório por Período (multi-caixas) ----------------
@@ -461,6 +524,17 @@
 	$: periodoTotalSangria = (periodoMovs||[]).filter(m=> m.tipo==='sangria').reduce((a,m)=> a + Number(m.valor||0),0);
 	$: periodoTotalSuprimento = (periodoMovs||[]).filter(m=> m.tipo==='suprimento').reduce((a,m)=> a + Number(m.valor||0),0);
 	$: periodoTotalDescontos = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_desconto||0),0);
+	$: periodoReceitaLiquida = periodoTotalGeral - periodoTotalDescontos;
+
+	// Pagamentos breakdown (periodo)
+	$: periodoPagItems = [
+		{ label: 'Dinheiro', value: periodoDinheiroLiquido, color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' },
+		{ label: 'Pix', value: periodoPix, color: 'bg-cyan-500', textColor: 'text-cyan-600 dark:text-cyan-400' },
+		{ label: 'Débito', value: periodoCartaoDebito, color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400' },
+		{ label: 'Crédito', value: periodoCartaoCredito, color: 'bg-purple-500', textColor: 'text-purple-600 dark:text-purple-400' },
+		{ label: 'Fiado', value: periodoFiado, color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400' },
+	].filter(p => p.value > 0);
+	$: periodoPagTotal = periodoPagItems.reduce((a, p) => a + p.value, 0);
 
 	// Série diária (para futuro gráfico / export) – simples agregação client-side
 	$: periodoSerieDiaria = (() => {
@@ -519,10 +593,33 @@
 					{/each}
 				</select>
 			</div>
-			<div class="flex gap-2 justify-end">
-				<button class="btn-secondary" on:click={exportarResumoCSV}>Exportar Resumo</button>
-				<button class="btn-secondary" on:click={exportarVendasCSV}>Exportar Vendas</button>
-				<button class="btn-secondary" on:click={exportarItensCSV}>Exportar Itens</button>
+			<div class="flex gap-2 justify-end relative">
+				<button class="btn-primary flex items-center gap-2" on:click={() => showExportDropdown = !showExportDropdown}>
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+					Exportar Relatório
+					<svg class="w-3 h-3 transition-transform" class:rotate-180={showExportDropdown} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+				</button>
+				{#if showExportDropdown}
+					<!-- svelte-ignore a11y-click-events-have-key-events -->
+					<div class="fixed inset-0 z-40" on:click={() => showExportDropdown = false}></div>
+					<div class="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-slate-200 dark:border-slate-600 py-1 min-w-[200px] animate-fade-in">
+						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors" on:click={exportarPDF}>
+							<span class="text-lg">📄</span>
+							<div class="text-left">
+								<div class="font-medium">Exportar PDF</div>
+								<div class="text-xs text-slate-500 dark:text-slate-400">Relatório visual com gráficos</div>
+							</div>
+						</button>
+						<div class="border-t border-slate-100 dark:border-slate-600 mx-2"></div>
+						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors" on:click={exportarExcel}>
+							<span class="text-lg">📗</span>
+							<div class="text-left">
+								<div class="font-medium">Exportar Excel</div>
+								<div class="text-xs text-slate-500 dark:text-slate-400">Planilha com abas formatadas</div>
+							</div>
+						</button>
+					</div>
+				{/if}
 			</div>
 		</div>
 	{:else}
@@ -541,8 +638,34 @@
 					<label for="periodo-fim" class="block text-sm mb-1">Fim</label>
 					<input id="periodo-fim" type="date" class="input-form" value={dataFimStr} on:change={(e)=> { dataFim = new Date(e.target.value+'T00:00:00'); preset='personalizado'; }} />
 				</div>
-				<div class="flex gap-2 items-end">
+				<div class="flex gap-2 items-end relative">
 					<button class="btn-primary" on:click={carregarRelatorioPeriodo} disabled={periodoLoading}>{periodoLoading?'Carregando...':'Atualizar'}</button>
+					<button class="btn-secondary flex items-center gap-2" on:click={() => showExportDropdown = !showExportDropdown}>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+						Exportar
+						<svg class="w-3 h-3 transition-transform" class:rotate-180={showExportDropdown} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+					</button>
+					{#if showExportDropdown}
+						<!-- svelte-ignore a11y-click-events-have-key-events -->
+						<div class="fixed inset-0 z-40" on:click={() => showExportDropdown = false}></div>
+						<div class="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-slate-200 dark:border-slate-600 py-1 min-w-[200px] animate-fade-in">
+							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors" on:click={exportarPDF}>
+								<span class="text-lg">📄</span>
+								<div class="text-left">
+									<div class="font-medium">Exportar PDF</div>
+									<div class="text-xs text-slate-500 dark:text-slate-400">Relatório visual com gráficos</div>
+								</div>
+							</button>
+							<div class="border-t border-slate-100 dark:border-slate-600 mx-2"></div>
+							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors" on:click={exportarExcel}>
+								<span class="text-lg">📗</span>
+								<div class="text-left">
+									<div class="font-medium">Exportar Excel</div>
+									<div class="text-xs text-slate-500 dark:text-slate-400">Planilha com abas formatadas</div>
+								</div>
+							</button>
+						</div>
+					{/if}
 				</div>
 			</div>
 			<div class="text-xs text-slate-600 dark:text-slate-400">Período: {dataInicio ? dataInicio.toLocaleDateString() : ''} – {dataFim ? dataFim.toLocaleDateString() : ''} ({preset})</div>
@@ -558,68 +681,117 @@
 		{#if !caixaSelecionado}
 			<div class="text-sm text-slate-700 dark:text-slate-300">Nenhum caixa selecionado.</div>
 		{:else}
-		<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-4">
-			<!-- KPIs -->
-			<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Total de Vendas</div>
-					<div class="text-xl font-semibold">{fmt(totalGeral)}</div>
+		<section class="space-y-5">
+			<!-- ✦ HERO: Receita Líquida -->
+			<div class="rounded-xl bg-slate-800 dark:bg-slate-900 border border-slate-700 p-5">
+				<div class="flex items-center gap-2 text-slate-400 text-sm font-medium mb-1">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+					Receita Líquida
 				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Qtd. de Vendas</div>
-					<div class="text-xl font-semibold">{qtdVendas}</div>
-				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Ticket Médio</div>
-					<div class="text-xl font-semibold">{fmt(ticketMedio)}</div>
-				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Valor Inicial do Caixa</div>
-					<div class="text-xl font-semibold">{fmt(caixaInfo?.valor_inicial || 0)}</div>
+				<div class="text-3xl font-bold text-white tracking-tight">{fmt(receitaLiquidaCaixa)}</div>
+				<div class="flex items-center gap-3 mt-2 text-sm text-slate-400">
+					<span>Bruto: {fmt(totalGeral)}</span>
+					{#if totalDescontosCaixa > 0}
+						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(totalDescontosCaixa)}</span>
+					{/if}
 				</div>
 			</div>
 
-			<div class="grid sm:grid-cols-3 gap-4">
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Dinheiro</div>
-					<div class="text-lg font-semibold">{fmt(totalDinheiro)}</div>
+			<!-- ✦ KPIs -->
+			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-5 h-5 rounded bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-[11px]">💰</span>
+						Vendas Brutas
+					</div>
+					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(totalGeral)}</div>
 				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Cartão</div>
-					<div class="text-lg font-semibold">{fmt(totalCartao)}</div>
-					<div class="text-xs text-slate-600 dark:text-slate-400 mt-1">Débito {fmt(totalCartaoDebito)} · Crédito {fmt(totalCartaoCredito)}{totalCartaoLegacy>0?` · Outros ${fmt(totalCartaoLegacy)}`:''}</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-5 h-5 rounded bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[11px]">🛒</span>
+						Qtd. Vendas
+					</div>
+					<div class="text-xl font-bold text-slate-800 dark:text-white">{qtdVendas}</div>
 				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Pix</div>
-					<div class="text-lg font-semibold">{fmt(totalPix)}</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-5 h-5 rounded bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 text-[11px]">📊</span>
+						Ticket Médio
+					</div>
+					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(ticketMedio)}</div>
+				</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-5 h-5 rounded bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400 text-[11px]">💵</span>
+						Dinheiro Líq.
+					</div>
+					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(totalDinheiro)}</div>
 				</div>
 			</div>
 
-			<div class="grid sm:grid-cols-3 gap-4">
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Sangria</div>
-					<div class="text-lg font-semibold text-amber-700">{fmt(totalSangria)}</div>
+			<!-- ✦ Formas de Pagamento (unified card) -->
+			{#if caixaPagItems.length > 0}
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+				<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Formas de Pagamento</h3>
+				<!-- Proportional bar -->
+				<div class="flex h-3 rounded-full overflow-hidden mb-4">
+					{#each caixaPagItems as p}
+						<div class="{p.color}" style="width: {Math.max(caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100) : 0, 2)}%"></div>
+					{/each}
 				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Suprimento</div>
-					<div class="text-lg font-semibold text-green-700">{fmt(totalSuprimento)}</div>
+				<!-- Legend -->
+				<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+					{#each caixaPagItems as p}
+						<div class="flex items-center gap-2">
+							<span class="w-2.5 h-2.5 rounded-full {p.color} flex-shrink-0"></span>
+							<div>
+								<div class="text-xs text-slate-500 dark:text-slate-400">{p.label}</div>
+								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-slate-400">({caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100).toFixed(1) : 0}%)</span></div>
+							</div>
+						</div>
+					{/each}
 				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Saldo Esperado em Gaveta</div>
-					<div class="text-lg font-semibold">{fmt(saldoEsperadoGaveta)}</div>
-				</div>
+				{#if totalCartaoLegacy > 0}
+					<div class="mt-2 text-xs text-slate-500 dark:text-slate-400">Cartão (legado): {fmt(totalCartaoLegacy)}</div>
+				{/if}
 			</div>
-
-			{#if totalDescontosCaixa > 0}
-				<div class="p-3 rounded border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-					<div class="text-xs text-amber-700 dark:text-amber-400">Descontos Aplicados</div>
-					<div class="text-lg font-semibold text-amber-700 dark:text-amber-400">−{fmt(totalDescontosCaixa)}</div>
-					<div class="text-[11px] text-amber-600 dark:text-amber-500 mt-1">Valor "perdido" em promoções/descontos neste caixa.</div>
-				</div>
 			{/if}
 
+			<!-- ✦ Movimentações & Caixa -->
+			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-2 h-2 rounded-full bg-red-500"></span>
+						Sangrias
+					</div>
+					<div class="text-lg font-bold text-red-600 dark:text-red-400">{totalSangria > 0 ? '-' : ''}{fmt(totalSangria)}</div>
+				</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-2 h-2 rounded-full bg-green-500"></span>
+						Suprimentos
+					</div>
+					<div class="text-lg font-bold text-green-600 dark:text-green-400">+{fmt(totalSuprimento)}</div>
+				</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+						Descontos
+					</div>
+					<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{totalDescontosCaixa > 0 ? '-' : ''}{fmt(totalDescontosCaixa)}</div>
+				</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-2 h-2 rounded-full bg-slate-400"></span>
+						Saldo Gaveta
+					</div>
+					<div class="text-lg font-bold text-slate-700 dark:text-white">{fmt(saldoEsperadoGaveta)}</div>
+					<div class="text-[10px] text-slate-400 mt-0.5">Inicial: {fmt(caixaInfo?.valor_inicial || 0)}</div>
+				</div>
+			</div>
+
 			<!-- Top produtos -->
-			<div>
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 				<h2 class="font-semibold mb-2">Top Produtos</h2>
 				<div class="mb-2 flex flex-wrap items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
 					<div class="flex items-center gap-2">
@@ -728,63 +900,104 @@
         </section>
 		{/if}
 	{:else}
-		<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-4">
-			<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Total de Vendas</div>
-					<div class="text-xl font-semibold">{fmt(periodoTotalGeral)}</div>
+		<section class="space-y-5">
+			<!-- ✦ HERO: Receita Líquida -->
+			<div class="rounded-xl bg-slate-800 dark:bg-slate-900 border border-slate-700 p-5">
+				<div class="flex items-center gap-2 text-slate-400 text-sm font-medium mb-1">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+					Receita Líquida
 				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Qtd. de Vendas</div>
-					<div class="text-xl font-semibold">{periodoQtdVendas}</div>
-				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Ticket Médio</div>
-					<div class="text-xl font-semibold">{fmt(periodoTicketMedio)}</div>
-				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Dinheiro Líquido</div>
-					<div class="text-xl font-semibold">{fmt(periodoDinheiroLiquido)}</div>
+				<div class="text-3xl font-bold text-white tracking-tight">{fmt(periodoReceitaLiquida)}</div>
+				<div class="flex items-center gap-3 mt-2 text-sm text-slate-400">
+					<span>Bruto: {fmt(periodoTotalGeral)}</span>
+					{#if periodoTotalDescontos > 0}
+						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(periodoTotalDescontos)}</span>
+					{/if}
 				</div>
 			</div>
 
-			<div class="grid sm:grid-cols-3 gap-4">
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Cartão Débito</div>
-					<div class="text-lg font-semibold">{fmt(periodoCartaoDebito)}</div>
+			<!-- ✦ KPIs -->
+			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-5 h-5 rounded bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-[11px]">💰</span>
+						Vendas Brutas
+					</div>
+					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoTotalGeral)}</div>
 				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Cartão Crédito</div>
-					<div class="text-lg font-semibold">{fmt(periodoCartaoCredito)}</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-5 h-5 rounded bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[11px]">🛒</span>
+						Qtd. Vendas
+					</div>
+					<div class="text-xl font-bold text-slate-800 dark:text-white">{periodoQtdVendas}</div>
 				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Pix</div>
-					<div class="text-lg font-semibold">{fmt(periodoPix)}</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-5 h-5 rounded bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 text-[11px]">📊</span>
+						Ticket Médio
+					</div>
+					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoTicketMedio)}</div>
+				</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-5 h-5 rounded bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400 text-[11px]">💵</span>
+						Dinheiro Líq.
+					</div>
+					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoDinheiroLiquido)}</div>
 				</div>
 			</div>
 
-			<div class="grid sm:grid-cols-3 gap-4">
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Fiado</div>
-					<div class="text-lg font-semibold">{fmt(periodoFiado)}</div>
+			<!-- ✦ Formas de Pagamento (unified card) -->
+			{#if periodoPagItems.length > 0}
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+				<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Formas de Pagamento</h3>
+				<!-- Proportional bar -->
+				<div class="flex h-3 rounded-full overflow-hidden mb-4">
+					{#each periodoPagItems as p}
+						<div class="{p.color}" style="width: {Math.max(periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100) : 0, 2)}%"></div>
+					{/each}
 				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Sangrias</div>
-					<div class="text-lg font-semibold text-amber-700">{fmt(periodoTotalSangria)}</div>
+				<!-- Legend -->
+				<div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+					{#each periodoPagItems as p}
+						<div class="flex items-center gap-2">
+							<span class="w-2.5 h-2.5 rounded-full {p.color} flex-shrink-0"></span>
+							<div>
+								<div class="text-xs text-slate-500 dark:text-slate-400">{p.label}</div>
+								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-slate-400">({periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100).toFixed(1) : 0}%)</span></div>
+							</div>
+						</div>
+					{/each}
 				</div>
-				<div class="p-3 rounded border">
-					<div class="text-xs text-slate-600 dark:text-slate-400">Suprimentos</div>
-					<div class="text-lg font-semibold text-green-700">{fmt(periodoTotalSuprimento)}</div>
+			</div>
+			{/if}
+
+			<!-- ✦ Movimentações -->
+			<div class="grid grid-cols-3 gap-3">
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-2 h-2 rounded-full bg-red-500"></span>
+						Sangrias
+					</div>
+					<div class="text-lg font-bold text-red-600 dark:text-red-400">{periodoTotalSangria > 0 ? '-' : ''}{fmt(periodoTotalSangria)}</div>
+				</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-2 h-2 rounded-full bg-green-500"></span>
+						Suprimentos
+					</div>
+					<div class="text-lg font-bold text-green-600 dark:text-green-400">+{fmt(periodoTotalSuprimento)}</div>
+				</div>
+				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+						<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+						Descontos
+					</div>
+					<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{periodoTotalDescontos > 0 ? '-' : ''}{fmt(periodoTotalDescontos)}</div>
 				</div>
 			</div>
 
-		{#if periodoTotalDescontos > 0}
-			<div class="p-3 rounded border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-				<div class="text-xs text-amber-700 dark:text-amber-400">Descontos Aplicados</div>
-				<div class="text-lg font-semibold text-amber-700 dark:text-amber-400">−{fmt(periodoTotalDescontos)}</div>
-				<div class="text-[11px] text-amber-600 dark:text-amber-500 mt-1">Valor "perdido" em promoções/descontos no período.</div>
-			</div>
-		{/if}
 
 			<!-- Gráficos Visuais -->
 			<div class="grid lg:grid-cols-2 gap-6">

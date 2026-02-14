@@ -27,7 +27,10 @@
     "@tailwindcss/forms": "^0.5.7",
     "@vite-pwa/sveltekit": "^1.1.0",
     "dexie": "^4.2.1",
-    "stripe": "^19.2.0"
+    "jspdf": "^4.1.0",
+    "jspdf-autotable": "^5.0.7",
+    "stripe": "^19.2.0",
+    "xlsx": "^0.18.5"
   },
   "engines": {
     "node": "20.x"
