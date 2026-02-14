@@ -23,45 +23,22 @@
     if (!ok) return;
     const { data } = await supabase.auth.getUser();
     uid = data?.user?.id;
-    if (uid) loadExpenses();
+    if (uid) {
+        // Load Admin PIN
+        const { data: perfil } = await supabase.from('empresa_perfil').select('pin_admin').eq('user_id', uid).maybeSingle();
+        if (perfil?.pin_admin) adminPin = perfil.pin_admin;
+        
+        loadExpenses();
+    }
   });
 
-  async function loadExpenses() {
-    loading = true;
-    const isoStart = customIso(dataInicio, 'start');
-    const isoEnd = customIso(dataFim, 'end');
-    
-    const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', uid)
-        .gte('date', isoStart)
-        .lte('date', isoEnd)
-        .order('date', { ascending: false });
-    
-    if (!error) expenses = data || [];
-    loading = false;
-  }
-
-  function customIso(d, type) {
-    if (!d) return null;
-    let c = new Date(d);
-    if (type === 'start') c.setHours(0,0,0,0);
-    else c.setHours(23,59,59,999);
-    return new Date(c.getTime() - c.getTimezoneOffset()*60000).toISOString();
-  }
-
-  // Handle date changes
-  $: if (uid && dataInicio && dataFim) loadExpenses();
-
-  // Strings for inputs
-  $: dataInicioStr = dataInicio.toISOString().slice(0,10);
-  $: dataFimStr = dataFim.toISOString().slice(0,10);
+  // ... (existing helper functions)
 
   import AdminLock from '$lib/components/AdminLock.svelte';
+  let adminPin = '';
 </script>
 
-<AdminLock>
+<AdminLock correctPin={adminPin}>
 <div class="space-y-6">
   <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     <div>

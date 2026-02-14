@@ -49,6 +49,14 @@
 			uid = userData?.user?.id;
 			if (!uid) { window.location.href = '/login'; return; }
 
+			// Carrega PIN administrativo
+			const { data: perfilData } = await supabase
+				.from('empresa_perfil')
+				.select('pin_admin')
+				.eq('user_id', uid)
+				.maybeSingle();
+			if (perfilData?.pin_admin) adminPin = perfilData.pin_admin;
+
 			await carregarCaixasRecentes();
 			if (caixas.length) {
 				caixaSelecionado = caixas[0]?.id;
@@ -580,10 +588,13 @@
 		else arr.sort((a,b)=> dir*(a.receita - b.receita));
 		return arr.slice(0, 10);
 	})();
+	// Admin PIN
+	let adminPin = '';
+
 	import AdminLock from '$lib/components/AdminLock.svelte';
 </script>
 
-<AdminLock>
+<AdminLock correctPin={adminPin}>
 <h1 class="text-2xl font-semibold mb-4">Relatórios</h1>
 {#if errorMessage}
 	<div class="mb-4 text-sm text-red-600">{errorMessage}</div>
