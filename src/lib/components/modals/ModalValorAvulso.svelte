@@ -65,8 +65,9 @@
             step="0.01"
             min="0.01"
             bind:value={valor}
-            class="mt-1 input-form"
+            class="mt-1 input-form text-2xl h-12"
             required
+            autofocus
           />
         </div>
         <div class="mt-6 flex justify-end">

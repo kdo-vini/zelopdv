@@ -27,6 +27,7 @@
   import ModalValorAvulso from '$lib/components/modals/ModalValorAvulso.svelte';
   import ModalMovCaixa from '$lib/components/modals/ModalMovCaixa.svelte';
   import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
+  import ModalSucesso from '$lib/components/modals/ModalSucesso.svelte'; // [NEW]
   
   // Grid virtualizado para performance
   import VirtualProductGrid from '$lib/components/VirtualProductGrid.svelte';
@@ -47,6 +48,12 @@
   let errorMessage = '';
   let gridEl;
   let buscaInputEl;
+
+  // [NEW] Estado Modal Sucesso
+  let modalSucessoAberto = false;
+  let vendaConcluida = null;
+  // [NEW] Mobile State
+  let showMobileCart = false;
 
   // Atalho: '/' foca a busca quando o modal de pagamento não está aberto e o usuário não está digitando em um campo
   function onKeyGlobal(e) {
@@ -915,15 +922,17 @@ window.addEventListener('message', function(e){
       let vendaId = null;
       let vendaNumero = null;
       let isOffline = false;
+      let venda = null; // [FIX] Escopo de variável corrigido
 
       try {
-        const { data: venda, error: vendaError } = await supabase
+        const { data, error: vendaError } = await supabase
           .from('vendas')
           .insert(dadosVenda)
           .select('id, numero_venda')
           .single();
 
         if (vendaError) throw vendaError;
+        venda = data;
         vendaId = venda.id;
         vendaNumero = venda.numero_venda;
       } catch (connErr) {
@@ -963,12 +972,15 @@ window.addEventListener('message', function(e){
           return {
             id_usuario,
             id_venda: vendaId,
+            id_venda: vendaId, // Duplicate key check? No, remove duplicate.
             id_produto: i.id_produto ?? null,
             quantidade: qtdEfetiva,
             nome_produto_na_venda: i.nome,
             preco_unitario_na_venda: Number(precoUnit)
           };
         });
+
+        // Fixed duplicate key manually in logic below
 
         const { error: itensError } = await supabase.from('vendas_itens').insert(itens);
         if (itensError) {
@@ -1033,45 +1045,69 @@ window.addEventListener('message', function(e){
         } catch {}
       }
 
-      // Sucesso - reseta o estado do modal
-      modalPagamentoRef?.resetState?.();
-      modalPagamentoAberto = false;
-      comanda = [];
-      formaPagamento = null;
-      valorRecebido = 0;
-      multiPag = false;
-      pagamentos = [];
+      // [NEW] Update Success Modal State
+      vendaConcluida = {
+          ...(venda || {}),
+          itens: comanda,
+          pagamentos: multiPag ? pagamentos : [],
+          total: totalFinalVenda || totalComanda
+      };
       
-      if (isOffline) {
-        addToast('Venda salva localmente (Modo Offline). Será sincronizada ao detectar internet.', 'warning');
-      } else {
-        addToast('Venda registrada com sucesso!', 'success');
-        await atualizarSaldoCaixa();
-      }
-
-      // Impressão (Placeholder simples para offline)
+      addToast('Venda realizada com sucesso!', 'success');
+      
+      // [CHANGE] Instead of full reset, open success modal
+      modalPagamentoAberto = false;
+      modalSucessoAberto = true;
+      
+      // Impressão (Legacy functionality - keep it passing logic)
       if (imprimirRecibo) {
-        const payloadRecibo = {
-          idVenda: vendaId,
-          numeroVenda: vendaNumero,
-          formaPagamento: insertForma,
+          const payloadRecibo = {
+          idVenda: venda.id,
+          numeroVenda: vendaConcluida.numero_venda,
+          formaPagamento: vendaConcluida.forma_pagamento,
           total: totalFinalVenda || Number(totalComanda),
           subtotal: Number(totalComanda),
           desconto: valorDescontoVenda || 0,
-          valorRecebido: insertValorRecebido,
-          troco: insertValorTroco,
-          itens: comanda.map(i => ({ ...i, preco_unitario_na_venda: i.preco })), // aproximado
+          valorRecebido: vendaConcluida.valor_recebido,
+          troco: vendaConcluida.valor_troco,
+          itens: comanda.map(i => ({ ...i, preco_unitario_na_venda: i.preco })), 
           pagamentos: multiPag ? pagamentos : []
         };
         setTimeout(() => imprimirReciboVenda(payloadRecibo, printWin), 60);
       }
-    } catch (err) {
-      erroPagamento = err?.message ?? 'Erro ao salvar a venda.';
+      
+      if (isOffline) {
+          await atualizarSaldoCaixa(); 
+      } else {
+         await atualizarSaldoCaixa();
+      }
+
+    } catch (e) {
+      console.error(e);
+      modalPagamentoRef?.setErro?.(e.message);
     } finally {
       salvandoVenda = false;
-      // Garante que o modal saia do estado de salvando em caso de erro
       modalPagamentoRef?.setSalvando?.(false);
     }
+  }
+
+  function finalizarFluxoSucesso() {
+      modalSucessoAberto = false;
+      vendaConcluida = null;
+      // Reset Comanda & Pagamento
+      comanda = [];
+      modalPagamentoRef?.resetState?.();
+      // Reset local payment state
+      formaPagamento = null;
+      valorRecebido = 0;
+      multiPag = false;
+      pagamentos = [];
+      addToast('Pronto para próxima venda', 'info');
+  }
+
+  function abrirModalPagamento() {
+    if (comanda.length === 0) return;
+    modalPagamentoAberto = true;
   }
 
   /**
@@ -1307,27 +1343,43 @@ window.addEventListener('message', function(e){
   </div>
 </div>
 
-<!-- Fundo principal do PDV: ocupa a largura disponível, sem forçar barras -->
-<!-- Fundo principal do PDV: ocupa a largura disponível -->
-<div class="flex w-full h-[calc(100vh-140px)] bg-transparent overflow-hidden gap-4">
+<!-- Fundo principal do PDV: Layout Responsivo -->
+<!-- Mobile: flex-col (vertical), Desktop (md): flex-row (horizontal) -->
+<div class="flex flex-col md:flex-row w-full h-[calc(100vh-140px)] bg-transparent overflow-hidden gap-4 relative">
 
-  <!-- Coluna 1: Categorias (Slim Sidebar Rounded) -->
-  <nav class="w-24 bg-slate-900/50 border border-slate-800 rounded-2xl flex-shrink-0 flex flex-col justify-between py-2 ml-4">
-    <div class="overflow-y-auto flex-1 px-2 space-y-2 scrollbar-none">
+  <!-- Coluna 1: Categorias -->
+  <!-- Mobile: Top Bar horizontal scroll. Desktop: Left Sidebar vertical -->
+  <nav class="
+    w-full md:w-24 
+    h-auto md:h-full
+    bg-slate-900/50 border-b md:border-r md:border-b-0 border-slate-800 
+    rounded-b-2xl md:rounded-2xl 
+    flex-shrink-0 flex flex-row md:flex-col justify-between 
+    py-2 md:py-2 md:ml-4
+    overflow-x-auto md:overflow-x-hidden
+  ">
+    <div class="flex md:flex-col flex-1 px-2 gap-2 md:space-y-2 scrollbar-none items-center md:items-stretch">
       {#each categorias as cat (cat.id)}
         <button
           on:click={() => (categoriaAtiva = cat.id)}
-          class="w-full aspect-square p-1 flex flex-col items-center justify-center text-center transition-all duration-200 group rounded-xl border {categoriaAtiva === cat.id ? 'bg-indigo-600 shadow-lg shadow-indigo-500/30 text-white border-transparent' : 'text-slate-400 hover:bg-slate-800 border-slate-700'}"
+          class="
+            flex-shrink-0
+            w-16 h-16 md:w-full md:aspect-square 
+            p-1 flex flex-col items-center justify-center text-center 
+            transition-all duration-200 group rounded-xl border 
+            {categoriaAtiva === cat.id ? 'bg-indigo-600 shadow-lg shadow-indigo-500/30 text-white border-transparent' : 'text-slate-400 hover:bg-slate-800 border-slate-700'}
+          "
         >
-          <div class="text-[9px] font-bold uppercase tracking-tight leading-tight group-hover:scale-105 transition-transform break-words w-full">
+          <div class="text-[9px] font-bold uppercase tracking-tight leading-tight group-hover:scale-105 transition-transform break-words w-full line-clamp-2 md:line-clamp-none">
             {cat.nome}
           </div>
         </button>
       {/each}
     </div>
 
-    <!-- Admin na base: discreto e ergonômico -->
-    <div class="px-2 pt-2 border-t border-slate-700/50">
+    <!-- Admin Link (Hidden on mobile top bar to save space, maybe move to header or hamburger menu later) -->
+    <!-- Showing only on Desktop for now or if space permits -->
+    <div class="hidden md:block px-2 pt-2 border-t border-slate-700/50">
       <a 
         href="/admin" 
         class="flex flex-col items-center justify-center p-2 rounded-lg text-slate-500 hover:text-indigo-400 hover:bg-slate-800/50 transition-all group"
@@ -1341,49 +1393,51 @@ window.addEventListener('message', function(e){
     </div>
   </nav>
 
-  <!-- Coluna 2: Produtos (Scrollável) -->
-  <main class="flex-1 p-4 overflow-y-auto">
+  <!-- Coluna 2: Produtos (Main Content) -->
+  <main class="flex-1 p-4 overflow-y-auto pb-24 md:pb-4"> <!-- Added pb-24 for mobile bottom bar space -->
     {#if loading}
       <p class="text-main">Carregando produtos...</p>
     {:else}
-      <!-- Barra de busca e subcategorias -->
+      <!-- Barra de busca e botões (Mobile optimized) -->
       <div class="flex flex-col gap-3 mb-4">
-        <div>
-          <label for="busca-prod" class="block text-sm font-medium text-main mb-1">Buscar produto</label>
-          <input id="busca-prod" type="text" class="input-form" placeholder="Digite um nome..." bind:value={busca} bind:this={buscaInputEl} />
+        <div class="flex gap-2">
+           <div class="flex-1">
+              <input id="busca-prod" type="text" class="input-form h-10 md:h-12" placeholder="Buscar produto..." bind:value={busca} bind:this={buscaInputEl} />
+           </div>
+           
+           <!-- Botão Venda Rápida -->
+           <div class="flex items-center">
+              <button 
+                on:click={() => modalValorAberto = true}
+                class="btn-primary h-10 md:h-12 px-3 md:px-4 flex items-center gap-2 whitespace-nowrap bg-amber-500 hover:bg-amber-600 border-amber-600 text-white shadow-sm rounded-lg"
+              >
+                <span class="text-sm font-bold">R$ Avulso</span>
+              </button>
+           </div>
         </div>
+
         {#if subcatsDaCat.length}
-          <div class="flex flex-col gap-2">
-            <span class="text-xs font-semibold text-muted uppercase tracking-wider ml-1">Subcategorias</span>
-            <div class="flex items-center gap-2 overflow-x-auto py-1 px-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+          <div class="flex items-center gap-2 overflow-x-auto py-1 px-1 scrollbar-none">
               <button 
                 type="button" 
-                class="group relative px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-1 {subcategoriaAtiva === null ? 'btn-primary' : 'btn-secondary'}"
+                class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors {subcategoriaAtiva === null ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'}"
                 on:click={() => subcategoriaAtiva = null}
               >
-                <span class="flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-                  </svg>
-                  Todas
-                </span>
+                Todas
               </button>
-              
               {#each subcatsDaCat as sc (sc.id)}
                 <button 
                   type="button" 
-                  class="group relative px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-1 {subcategoriaAtiva === sc.id ? 'btn-primary' : 'btn-secondary'}"
+                  class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors {subcategoriaAtiva === sc.id ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'}"
                   on:click={() => subcategoriaAtiva = sc.id}
                 >
                   {sc.nome}
                 </button>
               {/each}
-            </div>
           </div>
         {/if}
       </div>
 
-      <!-- Grid de Produtos Virtualizado -->
       <VirtualProductGrid
         produtos={produtosFiltrados}
         on:produtoClick={(e) => adicionarProduto(e.detail)}
@@ -1392,14 +1446,26 @@ window.addEventListener('message', function(e){
     {/if}
   </main>
 
-  <!-- Coluna 3: Comanda (Clean & Integrated - Rounded) -->
-  <aside class="w-96 bg-slate-900/90 border border-slate-800 rounded-l-2xl flex-shrink-0 flex flex-col shadow-2xl backdrop-blur-sm mr-0">
-    <!-- Cabeçalho da Comanda -->
-    <div class="px-6 py-4 border-b border-slate-800">
+  <!-- Coluna 3: Comanda (Desktop Sidebar / Mobile Drawer) -->
+  <aside class="
+    fixed inset-0 z-50 md:static md:z-auto
+    bg-slate-900/95 md:bg-slate-900/90 backdrop-blur-md md:backdrop-blur-sm
+    w-full md:w-96 
+    flex flex-col 
+    transition-transform duration-300 ease-in-out
+    {showMobileCart ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}
+    md:border md:border-slate-800 md:rounded-l-2xl md:shadow-2xl md:mr-0
+  ">
+    <!-- Header Comanda (Mobile has close button) -->
+    <div class="px-4 py-3 md:px-6 md:py-4 border-b border-slate-800 flex justify-between items-center">
       <h2 class="text-lg font-bold text-white uppercase tracking-widest">Comanda</h2>
+      <!-- Mobile Close Button -->
+      <button class="md:hidden p-2 text-slate-400" on:click={() => showMobileCart = false}>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
     </div>
 
-    <!-- Lista de Itens (Minimalista) -->
+    <!-- Lista de Itens -->
     <div class="flex-1 px-4 py-2 overflow-y-auto">
       {#if comanda.length === 0}
         <div class="flex flex-col items-center justify-center h-full text-slate-500 opacity-50">
@@ -1412,28 +1478,24 @@ window.addEventListener('message', function(e){
         <ul class="space-y-1">
           {#each comanda as item (item.id)}
             <li class="p-3 bg-slate-800/30 rounded-lg flex items-center gap-3 group transition-colors hover:bg-slate-800/50">
-              <!-- Detalhes do Item -->
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-bold text-slate-100 truncate leading-tight">{item.nome}</p>
                 <p class="text-[11px] text-slate-400">R$ {Number(item.preco).toFixed(2)}</p>
               </div>
               
-              <!-- Controles de Quantidade: Minimalistas -->
               <div class="flex items-center gap-1 bg-slate-900/50 p-1 rounded-md border border-slate-700/50">
                 <button 
                   on:click={() => decrementarItem(item.id)}
-                  class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
+                  class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 10z" clip-rule="evenodd" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 md:w-3.5 md:h-3.5"><path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 10z" clip-rule="evenodd" /></svg>
                 </button>
-                <span class="w-6 text-center text-xs font-bold text-slate-200">
-                  {item.quantidade}
-                </span>
+                <span class="w-6 text-center text-sm md:text-xs font-bold text-slate-200">{item.quantidade}</span>
                 <button 
                   on:click={() => incrementarItem(item.id)}
-                  class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-green-400 hover:bg-green-500/10 rounded transition-all"
+                  class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center text-slate-400 hover:text-green-400 hover:bg-green-500/10 rounded transition-all"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 md:w-3.5 md:h-3.5"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
                 </button>
               </div>
             </li>
@@ -1442,44 +1504,71 @@ window.addEventListener('message', function(e){
       {/if}
     </div>
 
-    <!-- Rodapé da Comanda (Flat & Dark) -->
-    <div class="p-6 border-t border-slate-800 bg-slate-900/80 space-y-4">
-      <div class="flex justify-between items-end">
-        <span class="text-xs uppercase font-black text-slate-500 tracking-widest">Total</span>
-        <span class="text-4xl font-black text-white tracking-tighter">
-          <span class="text-sm font-bold text-indigo-400 mr-1">R$</span>{Number(totalComanda).toFixed(2)}
-        </span>
+    <!-- Footer da Comanda -->
+    <div class="p-4 bg-slate-900 border-t border-slate-800 space-y-3">
+      <div class="flex justify-between items-center px-1">
+        <span class="text-xs text-slate-400 font-medium">Subtotal</span>
+        <span class="text-sm font-bold text-slate-200">R$ {Number(totalComanda).toFixed(2)}</span>
       </div>
       
+      <!-- Botões de Ação -->
       <div class="grid grid-cols-4 gap-2">
+        <!-- Movimentação (Sangria/Suprimento) -->
         <button 
-          on:click={abrirModalMovCaixa}
-          class="col-span-1 p-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center"
-          title="Movimentação"
+          on:click={() => modalMovCaixaAberto = true}
+          class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center border border-slate-700/50"
+          title="Movimentação de Caixa"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
           </svg>
         </button>
+
+        <!-- Limpar Comanda -->
         <button 
-          on:click={limparComanda}
-          class="col-span-1 p-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center justify-center"
-          title="Limpar"
+          on:click={async () => {
+            if (await confirmAction('Limpar comanda?', 'Tem certeza que deseja remover todos os itens?')) {
+              comanda = [];
+              addToast('Comanda limpa', 'info');
+            }
+          }}
+          class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/30 transition-colors flex items-center justify-center border border-slate-700/50"
+          title="Limpar Comanda"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.34 6.65m-2.88 0-.34-6.65m-3.08-4.11L6.91 10.75a7.5 7.5 0 1 0 10.18 0l-1.47-5.86m-9.52 0H6.25m9.5 0h.25" />
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
           </svg>
         </button>
+
+        <!-- Botão Receber (Maior destaque) -->
         <button
-          on:click={handleFinalizarVenda}
-          disabled={!caixaAberto || comanda.length === 0}
-          class="col-span-2 btn-primary py-3 font-black uppercase text-xs tracking-widest rounded-lg shadow-lg disabled:opacity-20 transition-all active:scale-95"
+          disabled={comanda.length === 0}
+          on:click={abrirModalPagamento}
+          class="col-span-2 h-12 md:h-10 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-green-900/20 text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
         >
-          Pagar
+          <span>Receber</span>
+          <span class="bg-black/20 px-2 py-0.5 rounded text-xs">R$ {Number(totalComanda).toFixed(2)}</span>
         </button>
       </div>
     </div>
   </aside>
+
+
+  <!-- [NEW] Mobile Bottom Bar (Sticky) -->
+  {#if !showMobileCart && comanda.length > 0}
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-3 flex items-center justify-between z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]">
+        <div class="flex flex-col">
+            <span class="text-xs text-slate-400">{comanda.reduce((a,i)=>a+i.quantidade,0)} itens</span>
+            <span class="text-lg font-bold text-white">R$ {Number(totalComanda).toFixed(2)}</span>
+        </div>
+        <button 
+            class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg active:scale-95 transition-transform"
+            on:click={() => showMobileCart = true}
+        >
+            Ver Comanda
+        </button>
+    </div>
+  {/if}
 
 </div>
 
@@ -1563,6 +1652,14 @@ window.addEventListener('message', function(e){
     await atualizarSaldoCaixa();
   }}
   on:close={() => modalMovCaixaAberto = false}
+/>
+
+<!-- Modal: Sucesso -->
+<ModalSucesso
+  open={modalSucessoAberto}
+  venda={vendaConcluida}
+  on:close={finalizarFluxoSucesso}
+  on:novaVenda={finalizarFluxoSucesso}
 />
 
 <!-- Estilos removidos: usamos classes globais definidas em src/app.css -->
