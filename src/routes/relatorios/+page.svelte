@@ -382,6 +382,7 @@
 	let periodoItens = [];
 	let periodoMovs = [];
 	let periodoCaixas = [];
+	let periodoDespesas = [];
 
 	function aplicarPreset(p) {
 		preset = p;
@@ -481,8 +482,13 @@
 			} else {
 				promises.push(Promise.resolve({ data: [], error: null }));
 			}
+			
+			// 4. Despesas (expenses)
+			promises.push(
+				supabase.from('expenses').select('*').eq('user_id', uid).gte('date', isoStart(dataInicio)).lte('date', isoEnd(dataFim)).order('date', { ascending: false })
+			);
 
-			const [resPags, resItens, resMovs] = await withTimeout(Promise.all(promises));
+			const [resPags, resItens, resMovs, resDespesas] = await withTimeout(Promise.all(promises));
 
 			if (resPags.error) throw resPags.error;
 			periodoPagamentos = resPags.data || [];
@@ -492,6 +498,9 @@
 
 			if (resMovs.error && cxIds.length) { /* log? */ }
 			periodoMovs = resMovs.data || [];
+			
+			if (resDespesas.error) console.error('Error fetching expenses:', resDespesas.error); // optional log
+			periodoDespesas = resDespesas.data || [];
 		} catch (e) {
 			addToast('Erro ao carregar relatório do período: ' + e.message, 'error');
 			errorMessage = e?.message || 'Erro ao carregar relatório do período.';
@@ -524,7 +533,8 @@
 	$: periodoTotalSangria = (periodoMovs||[]).filter(m=> m.tipo==='sangria').reduce((a,m)=> a + Number(m.valor||0),0);
 	$: periodoTotalSuprimento = (periodoMovs||[]).filter(m=> m.tipo==='suprimento').reduce((a,m)=> a + Number(m.valor||0),0);
 	$: periodoTotalDescontos = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_desconto||0),0);
-	$: periodoReceitaLiquida = periodoTotalGeral - periodoTotalDescontos;
+	$: periodoTotalDespesas = (periodoDespesas||[]).reduce((a,e)=> a + Number(e.amount||0),0);
+	$: periodoReceitaLiquida = periodoTotalGeral - periodoTotalDescontos - periodoTotalDespesas; // Lucro Líquido (Bruto - Descontos - Despesas)
 
 	// Pagamentos breakdown (periodo)
 	$: periodoPagItems = [
@@ -912,6 +922,9 @@
 					<span>Bruto: {fmt(periodoTotalGeral)}</span>
 					{#if periodoTotalDescontos > 0}
 						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(periodoTotalDescontos)}</span>
+					{/if}
+					{#if periodoTotalDespesas > 0}
+						<span class="bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full text-xs">Despesas: -{fmt(periodoTotalDespesas)}</span>
 					{/if}
 				</div>
 			</div>

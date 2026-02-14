@@ -301,6 +301,7 @@
                 <a href="/admin/produtos" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Gerenciar produtos</a>
                 <a href="/admin/estoque" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Estoque</a>
                 <a href="/admin/caixa" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Fechar Caixa</a>
+                <a href="/admin/despesas" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Despesas</a>
                 <div class="my-1 border-t" style="border-color: var(--border-subtle);"></div>
                 <a href="/relatorios" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Relatórios</a>
               </div>
