@@ -439,13 +439,33 @@
 		periodoLoading = true;
 		try {
 			// 1. Vendas
-			const pVendas = supabase
-				.from('vendas')
-				.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at')
-				.eq('id_usuario', uid)
-				.gte('created_at', isoStart(dataInicio))
-				.lte('created_at', isoEnd(dataFim))
-				.order('created_at', { ascending: true });
+			// 1. Vendas (fetch all with pagination)
+			let allVendas = [];
+			let page = 0;
+			let pageSize = 1000;
+			let fetchMore = true;
+
+			while (fetchMore) {
+				const { data: batch, error: batchErr } = await supabase
+					.from('vendas')
+					.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at')
+					.eq('id_usuario', uid)
+					.gte('created_at', isoStart(dataInicio))
+					.lte('created_at', isoEnd(dataFim))
+					.order('created_at', { ascending: true })
+					.range(page * pageSize, (page + 1) * pageSize - 1);
+
+				if (batchErr) throw batchErr;
+
+				if (batch && batch.length > 0) {
+					allVendas = [...allVendas, ...batch];
+					if (batch.length < pageSize) fetchMore = false;
+					else page++;
+				} else {
+					fetchMore = false;
+				}
+			}
+			const pVendas = Promise.resolve({ data: allVendas, error: null }); // Mock promise for compatibility
 
 			// 2. Caixas
 			const pCaixas = supabase
@@ -471,30 +491,85 @@
 			periodoMovs = [];
 
 			const promises = [];
+			
+			// Helper to chunk array
+			const chunkArray = (arr, size) => {
+				const chunks = [];
+				for (let i = 0; i < arr.length; i += size) {
+					chunks.push(arr.slice(i, i + size));
+				}
+				return chunks;
+			};
+
 			if (vendaIds.length) {
-				promises.push(
-					supabase.from('vendas_pagamentos').select('id_venda, forma_pagamento, valor').in('id_venda', vendaIds)
+				const batches = chunkArray(vendaIds, 1000);
+				
+				// Fetch payments in batches
+				const payPromises = batches.map(batch => 
+					supabase.from('vendas_pagamentos').select('id_venda, forma_pagamento, valor').in('id_venda', batch)
 				);
-				promises.push(
-					supabase.from('vendas_itens').select('id_venda, id_produto, nome_produto_na_venda, quantidade, preco_unitario_na_venda').in('id_venda', vendaIds)
+				promises.push(Promise.all(payPromises).then(results => {
+					let all = [];
+					results.forEach(r => { if(r.data) all = [...all, ...r.data]; });
+					return { data: all, error: null };
+				}));
+
+				// Fetch items in batches
+				const itemPromises = batches.map(batch => 
+					supabase.from('vendas_itens').select('id_venda, id_produto, nome_produto_na_venda, quantidade, preco_unitario_na_venda').in('id_venda', batch)
 				);
+				promises.push(Promise.all(itemPromises).then(results => {
+					let all = [];
+					results.forEach(r => { if(r.data) all = [...all, ...r.data]; });
+					return { data: all, error: null };
+				}));
+
 			} else {
-				promises.push(Promise.resolve({ data: [], error: null }));
-				promises.push(Promise.resolve({ data: [], error: null }));
+				promises.push(Promise.resolve({ data: [], error: null })); // payments placeholder
+				promises.push(Promise.resolve({ data: [], error: null })); // items placeholder
 			}
 
 			if (cxIds.length) {
-				promises.push(
-					supabase.from('caixa_movimentacoes').select('id_caixa, tipo, valor, created_at').in('id_caixa', cxIds).gte('created_at', isoStart(dataInicio)).lte('created_at', isoEnd(dataFim))
+				const batches = chunkArray(cxIds, 1000);
+				const movPromises = batches.map(batch =>
+					supabase.from('caixa_movimentacoes').select('id_caixa, tipo, valor, created_at').in('id_caixa', batch).gte('created_at', isoStart(dataInicio)).lte('created_at', isoEnd(dataFim))
 				);
+				promises.push(Promise.all(movPromises).then(results => {
+					let all = [];
+					results.forEach(r => { if(r.data) all = [...all, ...r.data]; });
+					return { data: all, error: null };
+				}));
 			} else {
 				promises.push(Promise.resolve({ data: [], error: null }));
 			}
 			
-			// 4. Despesas (expenses)
-			promises.push(
-				supabase.from('expenses').select('*').eq('user_id', uid).gte('date', isoStart(dataInicio)).lte('date', isoEnd(dataFim)).order('date', { ascending: false })
-			);
+			// 4. Despesas (expenses) - pagination (similar to sales)
+			// For expenses, we just need a loop if count > 1000.
+			// Implementing simple pagination loop for expenses
+			promises.push((async () => {
+				let allExp = [];
+				let page = 0;
+				let fetchMore = true;
+				while(fetchMore) {
+					const { data, error } = await supabase.from('expenses')
+						.select('*')
+						.eq('user_id', uid)
+						.gte('date', isoStart(dataInicio))
+						.lte('date', isoEnd(dataFim))
+						.order('date', { ascending: false })
+						.range(page * 1000, (page + 1) * 1000 - 1);
+					
+					if (error) throw error;
+					if (data && data.length > 0) {
+						allExp = [...allExp, ...data];
+						if (data.length < 1000) fetchMore = false;
+						else page++;
+					} else {
+						fetchMore = false;
+					}
+				}
+				return { data: allExp, error: null };
+			})());
 
 			const [resPags, resItens, resMovs, resDespesas] = await withTimeout(Promise.all(promises));
 
