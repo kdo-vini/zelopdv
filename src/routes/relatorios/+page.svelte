@@ -691,7 +691,7 @@
 					{/if}
 				</div>
 			</div>
-			<div class="text-xs text-slate-600 dark:text-slate-400">Período: {dataInicio ? dataInicio.toLocaleDateString() : ''} – {dataFim ? dataFim.toLocaleDateString() : ''} ({preset})</div>
+			<div class="text-xs text-slate-600 dark:text-slate-400">Período: {dataInicio ? dataInicio.toLocaleDateString() : ''} – {dataFim ? dataFim.toLocaleDateString() : ''}</div>
 		</div>
 	{/if}
 </section>
