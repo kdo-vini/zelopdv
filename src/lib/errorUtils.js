@@ -32,6 +32,9 @@ export function getFriendlyErrorMessage(error) {
     if (msg.includes('weak password')) {
         return 'A senha é muito fraca. Tente uma combinação mais forte.';
     }
+    if (msg.includes('new password should be different')) {
+        return 'A nova senha deve ser diferente da senha anterior.';
+    }
     if (msg.includes('rate limit') || msg.includes('too many requests')) {
         return 'Muitas tentativas. Aguarde alguns instantes antes de tentar novamente.';
     }
