@@ -31,7 +31,6 @@
       if (!supabase) { throw new Error('Configuração do Supabase ausente.'); }
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        addToast('Erro ao entrar: ' + error.message, 'error');
         throw error;
       }
       if (data?.session) {
