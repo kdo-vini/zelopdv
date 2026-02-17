@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   export let params;
   import { supabase } from '$lib/supabaseClient';
+  import { addToast } from '$lib/stores/ui';
 
   let loading = true;
   let errorMessage = '';
@@ -146,7 +147,7 @@
         console.warn('Falha ao registrar histórico de fechamento:', e?.message || e);
       }
 
-      alert('Caixa fechado com sucesso.');
+      addToast('Caixa fechado com sucesso.', 'success');
       window.location.href = '/admin';
     } catch (err) {
       errorMessage = err?.message || 'Erro ao fechar caixa.';
