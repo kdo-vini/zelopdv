@@ -8,7 +8,7 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://zelopdv.com.br/" />
   <meta property="og:title" content="Zelo PDV - O Sistema que Coloca Dinheiro no seu Bolso" />
-  <meta property="og:description" content="Controle vendas, fiado e despesas sem complicação. Comece seu teste grátis de 30 dias hoje mesmo." />
+  <meta property="og:description" content="Controle vendas, fiado e despesas sem complicação. Comece seu teste grátis de 7 dias hoje mesmo." />
   <meta property="og:image" content="https://zelopdv.com.br/og-image.jpg" />
 
   <!-- Twitter -->
@@ -117,7 +117,7 @@
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up delay-300">
         <a href="/cadastro" class="w-full sm:w-auto px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
-          Testar 30 dias grátis
+          Testar 7 dias grátis
         </a>
         <a href="#features" class="w-full sm:w-auto px-8 py-4 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-semibold backdrop-blur-sm transition-all">
           Ver como funciona
@@ -396,8 +396,8 @@
           </div>
 
           <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 mb-8">
-            <p class="text-sky-400 font-bold text-lg">30 Dias Grátis</p>
-            <p class="text-sm text-sky-300/80">Teste o mês todo. Se não amar, não paga.</p>
+            <p class="text-sky-400 font-bold text-lg">7 Dias Grátis</p>
+            <p class="text-sm text-sky-300/80">Teste a semana toda. Se não amar, não paga.</p>
           </div>
 
           <ul class="space-y-4 text-left mb-10 max-w-xs mx-auto">
@@ -420,7 +420,7 @@
           </ul>
 
           <a href="/cadastro" class="block w-full py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
-            Começar meus 30 dias grátis
+            Começar meus 7 dias grátis
           </a>
         </div>
       </div>
@@ -448,11 +448,11 @@
 
         <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
-            <span>Como funciona os 30 dias grátis?</span>
+            <span>Como funciona os 7 dias grátis?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </summary>
           <div class="px-6 pb-6 text-slate-400 leading-relaxed">
-            Você cria a conta e cadastra seu cartão para ativar o período de teste. A cobrança só inicia após 30 dias. Se cancelar antes, não paga nada.
+            Você cria a conta e cadastra seu cartão para ativar o período de teste. A cobrança só inicia após 7 dias. Se cancelar antes, não paga nada.
           </div>
         </details>
 

@@ -158,7 +158,7 @@
 
 <section class="max-w-xl mx-auto space-y-4">
   <h1 class="text-2xl font-bold">Assinatura Zelo PDV</h1>
-  <p class="text-slate-600 dark:text-slate-300">30 dias grátis, depois R$ 59/mês — cancele quando quiser.</p>
+  <p class="text-slate-600 dark:text-slate-300">7 dias grátis, depois R$ 59/mês — cancele quando quiser.</p>
 
   {#if isActiveStrict}
     <div class="p-3 bg-green-50 text-green-700 rounded">

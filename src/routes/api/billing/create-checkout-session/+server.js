@@ -32,14 +32,14 @@ export async function POST({ request }) {
     const customers = await stripe.customers.list({ email, limit: 1 });
     const customer = customers.data[0] || await stripe.customers.create({ email, metadata: { user_id: userId } });
 
-    // 2) Criar Checkout Session para assinatura com trial de 30 dias
+    // 2) Criar Checkout Session para assinatura com trial de 7 dias
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customer.id,
       line_items: [{ price: PRICE_ID, quantity: 1 }],
       allow_promotion_codes: true,
       subscription_data: {
-        trial_period_days: 30,
+        trial_period_days: 7,
       },
       success_url: `${ORIGIN}/assinatura?success=1`,
       cancel_url: `${ORIGIN}/assinatura?canceled=1`,
