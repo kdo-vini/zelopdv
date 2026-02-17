@@ -15,8 +15,36 @@
   // The current ExpensesManager waits for props `expenses`.
   // Ideally, the PAGE should fetch and pass down.
   
+  // Reactive date strings for inputs
   let expenses = [];
-  let loading = true;
+  let loading = false;
+
+  $: dataInicioStr = dataInicio.toISOString().split('T')[0];
+  $: dataFimStr = dataFim.toISOString().split('T')[0];
+
+  async function loadExpenses() {
+    if (!uid) return;
+    loading = true;
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('user_id', uid)
+      .gte('date', dataInicio.toISOString())
+      .lte('date', dataFim.toISOString())
+      .order('date', { ascending: false });
+      
+    if (error) {
+        console.error('Error loading expenses:', error);
+    } else {
+        expenses = data || [];
+    }
+    loading = false;
+  }
+
+  // Reload when dates change (debounce or check if valid dates)
+  $: if (uid && dataInicio && dataFim) {
+      loadExpenses();
+  }
 
   onMount(async () => {
     const ok = await ensureActiveSubscription({ requireProfile: true });
@@ -31,8 +59,6 @@
         loadExpenses();
     }
   });
-
-  // ... (existing helper functions)
 
   import AdminLock from '$lib/components/AdminLock.svelte';
   let adminPin = '';

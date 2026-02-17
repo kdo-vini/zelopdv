@@ -9,17 +9,33 @@
 
   let session = null;
   let showMobileMenu = false;
-  let showAdminMenu = false;
-  let adminCloseTimer;
-  const closeDelay = 240; // ms
   
+  // Generic Menu State
+  let activeMenu = null; // 'gestao', 'financeiro', 'user', null
+  let menuCloseTimer;
+  const closeDelay = 200;
 
-  function openAdminMenu() { showAdminMenu = true; }
-  function scheduleCloseAdminMenu() {
-    cancelCloseAdminMenu();
-    adminCloseTimer = setTimeout(() => (showAdminMenu = false), closeDelay);
+  function openMenu(name) {
+    cancelCloseMenu();
+    activeMenu = name;
   }
-  function cancelCloseAdminMenu() { if (adminCloseTimer) clearTimeout(adminCloseTimer); }
+  
+  function scheduleCloseMenu() {
+    cancelCloseMenu();
+    menuCloseTimer = setTimeout(() => (activeMenu = null), closeDelay);
+  }
+  
+  function cancelCloseMenu() {
+    if (menuCloseTimer) clearTimeout(menuCloseTimer);
+  }
+
+  // Active state helpers
+  $: path = $page.url.pathname;
+  $: isGestao = path === '/admin' || path.startsWith('/admin/pessoas') || path.startsWith('/admin/produtos') || path.startsWith('/admin/estoque');
+  $: isFinanceiro = path.startsWith('/admin/caixa') || path.startsWith('/admin/fichario') || path.startsWith('/admin/despesas');
+  $: isRelatorios = path.startsWith('/relatorios');
+  $: isApp = path.startsWith('/app');
+  $: isPerfil = path.startsWith('/perfil');
 
   // NEW YEAR THEME STATE (DEPRECATED - New Year is over)
   let isNewYearMode = false;
@@ -232,26 +248,29 @@
 
   let showPinSetup = false;
   let adminPin = null;
+  let companyName = null;
 
   // Enhance the existing onMount/auth check
-  // We need to fetch the PIN from profile when session loads
+  // We need to fetch the PIN and NAME from profile when session loads
   
-  async function checkPin(uId) {
+  async function fetchProfileData(uId) {
     if (!uId) return;
-    const { data } = await supabase.from('empresa_perfil').select('pin_admin').eq('user_id', uId).maybeSingle();
-    // If no profile found, maybe wait for profile complete logic? 
-    // But if profile exists and pin_admin is null -> Show Setup
+    const { data } = await supabase.from('empresa_perfil').select('pin_admin, nome_exibicao').eq('user_id', uId).maybeSingle();
+    
     if (data) {
         if (!data.pin_admin) {
             showPinSetup = true;
         } else {
             adminPin = data.pin_admin;
         }
+        if (data.nome_exibicao) {
+            companyName = data.nome_exibicao;
+        }
     }
   }
 
   // Hook into existing session logic
-  $: if (session?.user?.id) checkPin(session.user.id);
+  $: if (session?.user?.id) fetchProfileData(session.user.id);
   
   function onPinSet(newPin) {
     showPinSetup = false;
@@ -315,41 +334,70 @@
           -->
        </div>
 
-      <nav class="hidden sm:flex gap-4 text-sm items-center">
+      <nav class="hidden md:flex gap-1 text-sm items-center font-medium">
         {#if session}
-          <a href="/app" class="{navLinkBase} {$page.url.pathname.startsWith('/app') ? navLinkActive : navLinkInactive}">
+          <!-- Frente de Caixa -->
+          <a href="/app" class="{navLinkBase} {isApp ? navLinkActive : navLinkInactive}">
             Frente de Caixa
           </a>
-          <div class="relative" role="menubar" tabindex="0" aria-label="Admin" on:mouseenter={openAdminMenu} on:mouseleave={scheduleCloseAdminMenu}>
-            <button class="{navLinkBase} {$page.url.pathname.startsWith('/admin') || $page.url.pathname.startsWith('/relatorios') ? navLinkActive : navLinkInactive} flex items-center gap-1"
-              aria-haspopup="true" aria-expanded={showAdminMenu} on:click={() => showAdminMenu = !showAdminMenu}>
-              Admin
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+
+          <!-- Gestão Dropdown -->
+          <div class="relative" role="menubar" tabindex="0" aria-label="Gestão" 
+               on:mouseenter={() => openMenu('gestao')} on:mouseleave={scheduleCloseMenu}>
+            <button class="{navLinkBase} {isGestao ? navLinkActive : navLinkInactive} flex items-center gap-1"
+              aria-haspopup="true" aria-expanded={activeMenu === 'gestao'} on:click={() => activeMenu = activeMenu === 'gestao' ? null : 'gestao'}>
+              Gestão
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 opacity-70"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
             </button>
-            {#if showAdminMenu}
-        <div role="menu" tabindex="-1" aria-label="Admin opções" 
-             class="absolute right-0 mt-2 w-56 rounded-md shadow-lg py-2 z-50"
-             style="background-color: var(--bg-panel); border: 1px solid var(--border-subtle);"
-             on:mouseenter={cancelCloseAdminMenu} on:mouseleave={scheduleCloseAdminMenu}>
-                <a href="/admin" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Dashboard</a>
-                <a href="/admin/pessoas" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Pessoas</a>
-                <a href="/admin/fichario" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Fichário (Fiado)</a>
-                <a href="/admin/produtos" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Gerenciar produtos</a>
-                <a href="/admin/estoque" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Estoque</a>
-                <a href="/admin/caixa" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Fechar Caixa</a>
-                <a href="/admin/despesas" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Despesas</a>
-                <div class="my-1 border-t" style="border-color: var(--border-subtle);"></div>
-                <a href="/relatorios" class="block px-3 py-2 text-sm text-main hover:bg-[var(--sidebar-item-hover-bg)] rounded">Relatórios</a>
+            
+            {#if activeMenu === 'gestao'}
+              <div role="menu" tabindex="-1" 
+                   class="absolute left-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-[var(--bg-panel)] border-[var(--border-subtle)]"
+                   on:mouseenter={cancelCloseMenu} on:mouseleave={scheduleCloseMenu}>
+                <a href="/admin" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Dashboard</a>
+                <a href="/admin/pessoas" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Pessoas</a>
+                <a href="/admin/produtos" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Produtos</a>
+                <a href="/admin/estoque" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Estoque</a>
               </div>
             {/if}
           </div>
-          
-          <a href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)." target="_blank" rel="noopener" class="{navLinkBase} {navLinkInactive} group relative flex items-center gap-2" aria-label="Suporte Técnico">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.02-.398-1.11-.94l-.149-.894c-.07-.424-.384-.764-.78-.93-.398-.164-.855-.142-1.205.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+
+          <!-- Financeiro Dropdown -->
+          <div class="relative" role="menubar" tabindex="0" aria-label="Financeiro" 
+               on:mouseenter={() => openMenu('financeiro')} on:mouseleave={scheduleCloseMenu}>
+            <button class="{navLinkBase} {isFinanceiro ? navLinkActive : navLinkInactive} flex items-center gap-1"
+              aria-haspopup="true" aria-expanded={activeMenu === 'financeiro'} on:click={() => activeMenu = activeMenu === 'financeiro' ? null : 'financeiro'}>
+              Financeiro
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 opacity-70"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+            </button>
+            
+            {#if activeMenu === 'financeiro'}
+              <div role="menu" tabindex="-1" 
+                   class="absolute left-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-[var(--bg-panel)] border-[var(--border-subtle)]"
+                   on:mouseenter={cancelCloseMenu} on:mouseleave={scheduleCloseMenu}>
+                <a href="/admin/caixa" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Fechar Caixa</a>
+                <a href="/admin/fichario" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Fichário (Fiado)</a>
+                <a href="/admin/despesas" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Despesas</a>
+              </div>
+            {/if}
+          </div>
+
+          <!-- Relatórios -->
+          <a href="/relatorios" class="{navLinkBase} {isRelatorios ? navLinkActive : navLinkInactive}">
+            Relatórios
+          </a>
+
+          <div class="mx-2 h-6 w-px bg-[var(--border-subtle)]"></div>
+
+          <!-- Suporte -->
+          <a href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)." 
+             target="_blank" rel="noopener" 
+             class="{navLinkBase} {navLinkInactive} group relative flex items-center gap-2" 
+             aria-label="Suporte Técnico">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-sky-500">
+               <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
             </svg>
-            <span class="hidden lg:inline">Suporte</span>
+            <span class="hidden xl:inline">Suporte</span>
             <!-- Tooltip -->
             <div role="tooltip" class="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 whitespace-nowrap px-3 py-2 rounded-md bg-slate-900 text-white text-xs shadow-lg opacity-0 scale-95 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 group-hover:visible z-50">
               Preciso de suporte
@@ -357,9 +405,38 @@
             </div>
           </a>
 
-          <a href="/perfil" class="ml-4 {navLinkBase} {$page.url.pathname.startsWith('/perfil') ? navLinkActive : navLinkInactive} !px-3 !py-1.5">
-            Perfil
-          </a>
+          <!-- User Menu -->
+          <div class="relative" role="menubar" tabindex="0" aria-label="Usuário" 
+               on:mouseenter={() => openMenu('user')} on:mouseleave={scheduleCloseMenu}>
+             <button class="{navLinkBase} {isPerfil ? navLinkActive : navLinkInactive} flex items-center gap-2"
+                 aria-haspopup="true" aria-expanded={activeMenu === 'user'} on:click={() => activeMenu = activeMenu === 'user' ? null : 'user'}>
+               <span class="w-8 h-8 rounded-full bg-[var(--accent-light)] flex items-center justify-center text-[var(--accent)] font-bold text-xs ring-2 ring-transparent group-hover:ring-[var(--accent)] transition-all">
+                 {(companyName || session.user.email)[0].toUpperCase()}
+               </span>
+               <span class="max-w-[150px] truncate hidden xl:inline font-semibold">
+                 {companyName || session.user.email.split('@')[0]}
+               </span>
+             </button>
+
+             {#if activeMenu === 'user'}
+              <div role="menu" tabindex="-1" 
+                   class="absolute right-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-[var(--bg-panel)] border-[var(--border-subtle)]"
+                   on:mouseenter={cancelCloseMenu} on:mouseleave={scheduleCloseMenu}>
+                <div class="px-4 py-2 text-xs text-[var(--text-muted)] border-b border-[var(--border-subtle)] mb-1">
+                  {session.user.email}
+                </div>
+                <!-- Exibir Nome da Empresa no menu também -->
+                {#if companyName}
+                  <div class="px-4 py-1 text-xs font-bold text-[var(--text-main)]">
+                    {companyName}
+                  </div>
+                {/if}
+                <a href="/perfil" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Meu Perfil</a>
+                <button on:click={logout} class="w-full text-left block px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">Sair</button>
+              </div>
+            {/if}
+          </div>
+
         {:else}
           <a href="/login" class="text-sm font-medium text-[var(--accent)] hover:text-[var(--primary)] transition-colors">
             Entrar
@@ -369,7 +446,7 @@
           </a>
         {/if}
       </nav>
-      <button class="sm:hidden inline-flex items-center justify-center w-9 h-9 rounded-md border text-main" style="border-color: var(--border-subtle);"
+      <button class="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-md border text-main" style="border-color: var(--border-subtle);"
         aria-label="Abrir menu" on:click={() => showMobileMenu = !showMobileMenu}>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
           <path fill-rule="evenodd" d="M3.75 6.75A.75.75 0 014.5 6h15a.75.75 0 010 1.5H4.5a.75.75 0 01-.75-.75zm0 5.25a.75.75 0 01.75-.75h15a.75.75 0 010 1.5H4.5a.75.75 0 01-.75-.75zm.75 4.5a.75.75 0 000 1.5h15a.75.75 0 000-1.5H4.5z" clip-rule="evenodd" />
@@ -379,29 +456,40 @@
   </header>
 
   {#if showMobileMenu}
-    <div class="sm:hidden border-b backdrop-blur" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
+    <div class="md:hidden border-b backdrop-blur" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
       <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-2 text-sm">
         {#if session}
-          <a href="/app" class="{navLinkBase} { $page.url.pathname.startsWith('/app') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Frente de Caixa</a>
-          <div class="mt-1 text-xs uppercase text-muted">Admin</div>
-          <a href="/admin" class="{navLinkBase} { $page.url.pathname === '/admin' ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Dashboard</a>
-          <a href="/admin/pessoas" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/pessoas') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Pessoas</a>
-          <a href="/admin/fichario" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/fichario') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Fichário (Fiado)</a>
-          <a href="/admin/produtos" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/produtos') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Gerenciar produtos</a>
-          <a href="/admin/estoque" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/estoque') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Estoque</a>
-          <a href="/admin/caixa" class="{navLinkBase} { $page.url.pathname.startsWith('/admin/caixa') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Fechar Caixa</a>
+          <a href="/app" class="{navLinkBase} {isApp ? navLinkActive : navLinkInactive} justify-center text-center py-3" on:click={() => showMobileMenu=false}>
+            FRENTE DE CAIXA
+          </a>
           
-          <a href="/relatorios" class="{navLinkBase} { $page.url.pathname.startsWith('/relatorios') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Relatórios</a>
-          <a href="/perfil" class="{navLinkBase} { $page.url.pathname.startsWith('/perfil') ? navLinkActive : navLinkInactive } !px-3 !py-1.5" on:click={() => showMobileMenu=false}>Perfil</a>
+          <div class="mt-4 px-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Gestão</div>
+          <a href="/admin" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Dashboard</a>
+          <a href="/admin/pessoas" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Pessoas</a>
+          <a href="/admin/produtos" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Produtos</a>
+          <a href="/admin/estoque" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Estoque</a>
+
+          <div class="mt-2 px-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Financeiro</div>
+          <a href="/admin/caixa" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Fechar Caixa</a>
+          <a href="/admin/fichario" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Fichário (Fiado)</a>
+          <a href="/admin/despesas" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Despesas</a>
+
+          <div class="mt-2 px-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Outros</div>
+          <a href="/relatorios" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Relatórios</a>
+          <a href="/perfil" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Meu Perfil</a>
           
-          <div class="my-1 border-t" style="border-color: var(--border-subtle);"></div>
-          <a href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)." target="_blank" class="{navLinkBase} {navLinkInactive} flex items-center gap-2" on:click={() => showMobileMenu=false}>
+          <div class="my-2 border-t border-[var(--border-subtle)]"></div>
+          
+          <a href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)." target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 text-sky-600 dark:text-sky-400 font-medium" on:click={() => showMobileMenu=false}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.02-.398-1.11-.94l-.149-.894c-.07-.424-.384-.764-.78-.93-.398-.164-.855-.142-1.205.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
             </svg>
             Suporte Técnico
           </a>
+
+          <button on:click={logout} class="w-full text-left px-3 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">
+            Sair
+          </button>
         {:else}
           <a href="/login" class="text-sm font-medium text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300 transition-colors" on:click={() => showMobileMenu=false}>Entrar</a>
           <a href="/cadastro" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-sky-600 border border-transparent rounded-md shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors" on:click={() => showMobileMenu=false}>Criar conta</a>
