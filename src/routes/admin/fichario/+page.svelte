@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
+  import { addToast } from '$lib/stores/ui';
   export let params;
 
   let pessoas = [];
@@ -52,14 +53,14 @@
 
   async function registrarPagamento(){
     if(salvando) return; // Previne duplo clique
-    if(!pessoaSelecionada){ alert('Selecione uma pessoa.'); return; }
+    if(!pessoaSelecionada){ addToast('Selecione uma pessoa.', 'info'); return; }
     const valor = Number(valorPagamento);
-    if(!valor || valor <= 0){ alert('Informe um valor válido.'); return; }
+    if(!valor || valor <= 0){ addToast('Informe um valor válido.', 'error'); return; }
 
     salvando = true;
     try {
       const { error: errPay } = await supabase.rpc('fiado_registrar_pagamento', { p_id_pessoa: pessoaSelecionada.id, p_valor: valor });
-      if(errPay){ alert(errPay.message); return; }
+      if(errPay){ addToast(errPay.message, 'error'); return; }
 
     if(addAoCaixa){
       const { data: cx } = await supabase.from('caixas').select('id').is('data_fechamento', null).order('data_abertura', { ascending:false }).limit(1).maybeSingle();
@@ -67,6 +68,8 @@
         await supabase.from('caixa_movimentacoes').insert({ id_caixa: cx.id, tipo: 'suprimento', valor, motivo: `Pagamento fiado de ${pessoaSelecionada.nome}` });
       }
     }
+
+    addToast('Pagamento registrado com sucesso!', 'success');
 
     if(imprimirRecibo){
       const win = window.open('', '_blank', 'width=380,height=600');
@@ -82,16 +85,28 @@
     }
   }
 
-  async function deletarVenda(id){
-    if(!confirm('Deseja realmente apagar esta transação do histórico?')) return;
-    
+  // Controle do modal de deleção
+  let itemParaDeletarId = null; 
+  function solicitarDelecao(id) {
+    itemParaDeletarId = id;
+  }
+  function cancelarDelecao() {
+    itemParaDeletarId = null;
+  }
+
+  async function confirmarDelecao(){
+    if(!itemParaDeletarId) return;
+    const id = itemParaDeletarId;
+    itemParaDeletarId = null;
+
     // Deleta a venda (cascata deve cuidar dos itens, se configurado, ou deixa orfão se sem FK cascade)
     // Assume-se que o usuário quer remover o registro visual.
     const { error } = await supabase.from('vendas').delete().eq('id', id);
     
     if(error){
-      alert('Erro ao apagar: ' + error.message);
+      addToast('Erro ao apagar: ' + error.message, 'error');
     } else {
+      addToast('Transação apagada.', 'success');
       // Recarrega histórico
       if(pessoaSelecionada) await loadHistory(pessoaSelecionada.id);
     }
@@ -184,7 +199,7 @@
 										</td>
 										<td>R$ {Number(item.valor_total).toFixed(2)}</td>
 										<td class="center">
-											<button class="btn-icon danger" title="Apagar" on:click={() => deletarVenda(item.id)}>
+											<button class="btn-icon danger" title="Apagar" on:click={() => solicitarDelecao(item.id)}>
 												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 											</button>
 										</td>
@@ -199,6 +214,20 @@
 			{/if}
 		</div>
 	</div>
+
+  <!-- Modal de Confirmação de Deleção -->
+  {#if itemParaDeletarId}
+    <div class="modal-backdrop" on:click={cancelarDelecao}>
+      <div class="modal" on:click|stopPropagation>
+        <h3 class="modal-title">Apagar Transação?</h3>
+        <p class="modal-text">Deseja realmente apagar esta transação do histórico?</p>
+        <div class="modal-actions">
+          <button class="btn ghost" on:click={cancelarDelecao}>Cancelar</button>
+          <button class="btn-primary danger" on:click={confirmarDelecao}>Sim, apagar</button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </section>
 
 <style>
@@ -279,4 +308,12 @@
 	
 	.empty{color:var(--text-muted);text-align:center;padding:20px}
 	.placeholder-history{display:flex;align-items:center;justify-content:center;height:100px;color:var(--border-strong);font-style:italic}
+
+  /* Modal Styles */
+  .modal-backdrop{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000}
+  .modal{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:24px;width:100%;max-width:400px;box-shadow:0 10px 25px rgba(0,0,0,0.2)}
+  .modal-title{margin:0 0 12px 0;font-size:18px;color:var(--text-main);font-weight:bold}
+  .modal-text{margin:0 0 24px 0;font-size:14px;color:var(--text-label)}
+  .modal-actions{display:flex;justify-content:flex-end;gap:12px}
+  .modal-actions .btn-primary.danger{background:var(--error);width:auto;padding:0 20px}
 </style>
