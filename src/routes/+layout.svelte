@@ -273,7 +273,7 @@
   </div>
 {/if}
 
-<div class="flex flex-col min-h-screen bg-app-base" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode}>
+<div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode}>
   
   {#if isChristmasMode}
     <div class="snow-container">
@@ -343,6 +343,15 @@
               </div>
             {/if}
           </div>
+          
+          <a href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)." target="_blank" class="{navLinkInactive} flex items-center gap-2" title="Suporte Técnico">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.02-.398-1.11-.94l-.149-.894c-.07-.424-.384-.764-.78-.93-.398-.164-.855-.142-1.205.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span class="hidden lg:inline">Suporte</span>
+          </a>
+
           <a href="/perfil" class="ml-4 {navLinkBase} {$page.url.pathname.startsWith('/perfil') ? navLinkActive : navLinkInactive} !px-3 !py-1.5">
             Perfil
           </a>
@@ -379,6 +388,15 @@
           
           <a href="/relatorios" class="{navLinkBase} { $page.url.pathname.startsWith('/relatorios') ? navLinkActive : navLinkInactive }" on:click={() => showMobileMenu=false}>Relatórios</a>
           <a href="/perfil" class="{navLinkBase} { $page.url.pathname.startsWith('/perfil') ? navLinkActive : navLinkInactive } !px-3 !py-1.5" on:click={() => showMobileMenu=false}>Perfil</a>
+          
+          <div class="my-1 border-t" style="border-color: var(--border-subtle);"></div>
+          <a href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)." target="_blank" class="{navLinkBase} {navLinkInactive} flex items-center gap-2" on:click={() => showMobileMenu=false}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.02-.398-1.11-.94l-.149-.894c-.07-.424-.384-.764-.78-.93-.398-.164-.855-.142-1.205.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Suporte Técnico
+          </a>
         {:else}
           <a href="/login" class="text-sm font-medium text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300 transition-colors" on:click={() => showMobileMenu=false}>Entrar</a>
           <a href="/cadastro" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-sky-600 border border-transparent rounded-md shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors" on:click={() => showMobileMenu=false}>Criar conta</a>
@@ -407,22 +425,5 @@
   </footer>
   {/if}
 
-  <a
-    href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)."
-    target="_blank"
-    rel="noopener"
-    aria-label="Falar no WhatsApp com Téchne IA"
-    class="group fixed print:hidden bottom-4 right-4 left-auto md:bottom-6 md:right-6 z-50"
-  >
-    <span class="sr-only">WhatsApp</span>
-    <div
-      role="tooltip"
-      class="pointer-events-none absolute right-full mr-3 bottom-1/2 translate-y-1/2 whitespace-nowrap px-3 py-2 rounded-md bg-slate-900 text-white text-xs shadow-lg opacity-0 scale-95 transition will-change-transform group-hover:opacity-100 group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100"
-    >
-      Precisa de suporte? Dúvidas ou problemas — fale conosco!
-    </div>
-    <div class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#25D366] shadow-lg shadow-emerald-300/30 ring-2 ring-white/70 dark:ring-slate-900/70 flex items-center justify-center hover:scale-[1.03] active:scale-[.98] transition-transform">
-      <img src="https://cdn.simpleicons.org/whatsapp/FFFFFF" alt="WhatsApp" class="w-7 h-7 md:w-8 md:h-8 select-none" loading="lazy" />
-    </div>
-  </a>
+
 </div>
