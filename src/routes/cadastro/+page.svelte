@@ -35,6 +35,13 @@
        errorMessage = getFriendlyErrorMessage(error);
        return;
     }
+
+    // Se o user já existe, o Supabase pode retornar identities: [] (quando email enumeration protection=true)
+    if (data?.user?.identities && data.user.identities.length === 0) {
+       errorMessage = `Este e-mail já está cadastrado. <a href="/login" class="underline font-bold">Clique aqui</a> para fazer login.`;
+       return;
+    }
+
     // Em projetos com confirmação por e-mail, o usuário precisa confirmar antes de logar
     successMessage = 'Conta criada. Verifique seu e-mail para confirmar e então faça login.';
   }
@@ -47,7 +54,7 @@
     <div class="mb-4 text-sm text-green-700">{successMessage}</div>
   {/if}
   {#if errorMessage}
-    <div class="mb-4 text-sm text-red-600">{errorMessage}</div>
+    <div class="mb-4 text-sm text-red-600">{@html errorMessage}</div>
   {/if}
 
   <form on:submit={handleSignUp} class="space-y-4">
