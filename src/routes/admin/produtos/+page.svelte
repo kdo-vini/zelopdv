@@ -16,9 +16,13 @@
   <div>Verificando autenticação…</div>
 {:else}
   <div class="grid xl:grid-cols-2 gap-6">
-    <CategoriasManager />
-    <SubcategoriasManager />
-    <div class="xl:col-span-2">
+    <div class="min-w-0">
+      <CategoriasManager />
+    </div>
+    <div class="min-w-0">
+      <SubcategoriasManager />
+    </div>
+    <div class="xl:col-span-2 min-w-0">
       <ProdutosManager />
     </div>
   </div>

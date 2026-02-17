@@ -83,24 +83,28 @@
 			{#if loading}
 				<p>Carregando...</p>
 			{:else}
-				<table>
-					<thead><tr><th>Nome</th><th>Tipo</th><th>Contato</th><th>Fiado</th><th></th></tr></thead>
-					<tbody>
-						{#each pessoas as p}
-							<tr>
-								<td>{p.nome}</td>
-								<td>{p.tipo}</td>
-								<td>{p.contato || '-'}</td>
-								<td>R$ {Number(p.saldo_fiado||0).toFixed(2)}</td>
-								<td class="right">
-									<a class="link" href="/admin/fichario?p={p.id}">Fichário</a>
-									<button class="ghost" on:click={() => edit(p)}>Editar</button>
-									<button class="danger" on:click={() => remove(p.id)}>Excluir</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+				<div class="overflow-x-auto w-full">
+					<table>
+						<thead><tr><th>Nome</th><th>Tipo</th><th>Contato</th><th>Fiado</th><th></th></tr></thead>
+						<tbody>
+							{#each pessoas as p}
+								<tr>
+									<td>{p.nome}</td>
+									<td>{p.tipo}</td>
+									<td>{p.contato || '-'}</td>
+									<td>R$ {Number(p.saldo_fiado||0).toFixed(2)}</td>
+									<td class="right">
+										<div class="flex justify-end gap-2">
+											<a class="link" href="/admin/fichario?p={p.id}">Fichário</a>
+											<button class="ghost" on:click={() => edit(p)}>Editar</button>
+											<button class="danger" on:click={() => remove(p.id)}>Excluir</button>
+										</div>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			{/if}
 		</div>
 	</div>

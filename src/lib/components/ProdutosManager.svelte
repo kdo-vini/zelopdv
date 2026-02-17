@@ -243,7 +243,7 @@
   }
 </script>
 
-<section class="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700">
+<section class="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 min-w-0">
   <!-- Header Toolbar -->
   <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div class="flex items-center gap-2">
@@ -376,7 +376,7 @@
     {:else if produtos.length === 0}
       <div class="p-8 text-center text-slate-500">Nenhum produto encontrado.</div>
     {:else}
-      <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+      <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300 min-w-[800px]">
         <thead class="bg-slate-50 dark:bg-slate-700/50 uppercase font-medium text-xs text-slate-500 dark:text-slate-400">
           <tr>
             <th class="p-4 w-4">
