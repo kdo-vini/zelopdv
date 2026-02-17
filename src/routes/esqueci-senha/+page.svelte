@@ -11,7 +11,7 @@
     loading = true;
     message = '';
     errorMessage = '';
-    const redirectTo = `${window.location.origin}/login`;
+    const redirectTo = `${window.location.origin}/redefinir-senha`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     loading = false;
     if (error) errorMessage = error.message;

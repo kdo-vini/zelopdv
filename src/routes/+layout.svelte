@@ -111,7 +111,7 @@
 
     if (!supabase) return;
  
-  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html'];
+  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html', '/redefinir-senha'];
     const path = window.location.pathname;
 
     let navigated = false;
@@ -166,7 +166,7 @@
       }
       if (session && isPublicPath(path)) {
         // Allow /loja/* paths without redirect (public storefront)
-        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html') {
+        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html' || path === '/redefinir-senha') {
 
         } else {
 
