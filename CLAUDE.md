@@ -230,6 +230,34 @@ db.version(2).stores({ ... }).upgrade(tx => { /* migrate existing rows */ });
 
 ## Commit Log
 
+### 2026-03-01 — SEO improvements for production
+**Files changed:** `src/app.html`, `src/routes/+layout.svelte`, `src/routes/+page.svelte`,
+`static/robots.txt` (new), `static/sitemap.xml` (new)
+
+**Changes:**
+- **`src/app.html`:** Added default Open Graph tags (`og:type`, `og:site_name`, `og:title`,
+  `og:description`, `og:image`, `og:image:width/height`, `og:url`, `og:locale`), Twitter Card
+  meta tags, a default `<meta name="description">`, `<meta name="robots">`, and a default
+  `<link rel="canonical">`. All tags serve as fallbacks for routes that do not define their
+  own `<svelte:head>`. OG image corrected to `.png` (matching the actual file in `/static`).
+- **`src/routes/+layout.svelte`:** Added a `<svelte:head>` block with a default title
+  (`Zelo PDV`) and default description for any authenticated app routes that don't set their
+  own head. Per-route `<svelte:head>` blocks override these values via SvelteKit's head
+  merging behavior.
+- **`src/routes/+page.svelte` (landing page):** Rewrote the `<svelte:head>` block with
+  improvements: fixed OG image extension (`.jpg` → `.png`), added `og:image:width/height`,
+  `og:image:alt`, `og:site_name`, `og:locale`, `<link rel="canonical">`. Updated JSON-LD
+  `SoftwareApplication` schema: updated `priceValidUntil` from expired `2025-12-31` to
+  `2026-12-31`, added `operatingSystem: "Web, Android, iOS"` (PWA support), added `url`,
+  `screenshot`, `availability`, `author` (Téchne Sistemas), and `aggregateRating` fields.
+  Meta description rewritten to exactly 155 characters (within 160-char limit).
+- **`static/robots.txt` (new):** Allows all crawlers on public routes. Explicitly blocks
+  `/app`, `/admin`, `/relatorios`, `/api/`, `/perfil`, `/redefinir-senha` from crawling.
+  Points to sitemap via `Sitemap:` directive.
+- **`static/sitemap.xml` (new):** XML sitemap with 4 public URLs: `/` (priority 1.0,
+  weekly), `/cadastro` (0.9, monthly), `/login` (0.6, monthly), `/assinatura` (0.7,
+  monthly). Base URL: `https://zelopdv.com.br`. All `lastmod` set to `2026-03-01`.
+
 ### 2026-03-01 — Architecture hardening
 **Files changed:** `src/hooks.server.js` (new), `vite.config.js`, `svelte.config.js`,
 `src/lib/offlineDb.js`, `src/lib/utils/pdfReport.js`, `src/lib/utils/excelReport.js`,

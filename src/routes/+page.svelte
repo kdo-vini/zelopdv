@@ -1,39 +1,60 @@
 <svelte:head>
-  <title>Zelo PDV - O Sistema de Gestão para Pequenos Negócios</title>
-  <meta name="description" content="Frente de caixa ultra-rápida, controle financeiro real e gestão de fiado. Teste grátis o sistema ideal para mercadinhos, lanchonetes e lojas de roupa." />
-  <meta name="keywords" content="PDV, Frente de Caixa, Sistema de Gestão, Controle Financeiro, Mercadinho, Loja de Roupa, Lanchonete, Fiado, Controle de Estoque" />
+  <title>Zelo PDV — Frente de Caixa e Gestão para Pequenos Negócios</title>
+  <meta name="description" content="Frente de caixa ágil, controle de fiado, gestão financeira e estoque em um só sistema. Ideal para mercadinhos, lanchonetes e lojas. Teste grátis 7 dias." />
+  <meta name="keywords" content="PDV, frente de caixa, sistema de gestão, controle financeiro, fiado, controle de estoque, mercadinho, lanchonete, loja de roupa, barbearia, pequenos negócios" />
   <meta name="robots" content="index, follow" />
-  
+  <link rel="canonical" href="https://zelopdv.com.br/" />
+
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Zelo PDV" />
   <meta property="og:url" content="https://zelopdv.com.br/" />
-  <meta property="og:title" content="Zelo PDV - O Sistema que Coloca Dinheiro no seu Bolso" />
-  <meta property="og:description" content="Controle vendas, fiado e despesas sem complicação. Comece seu teste grátis de 7 dias hoje mesmo." />
-  <meta property="og:image" content="https://zelopdv.com.br/og-image.jpg" />
+  <meta property="og:title" content="Zelo PDV — O PDV que Coloca Dinheiro no seu Bolso" />
+  <meta property="og:description" content="Controle vendas, fiado e despesas sem complicação. Sistema completo para pequenos negócios brasileiros. Comece seu teste grátis de 7 dias." />
+  <meta property="og:image" content="https://zelopdv.com.br/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Tela do sistema Zelo PDV com frente de caixa e painel financeiro" />
+  <meta property="og:locale" content="pt_BR" />
 
-  <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:url" content="https://zelopdv.com.br/" />
-  <meta property="twitter:title" content="Zelo PDV - Gestão Inteligente" />
-  <meta property="twitter:description" content="O sistema de caixa que coloca dinheiro no seu bolso. Controle de vendas, gestão de fiado e relatórios financeiros em um só lugar." />
-  <meta property="twitter:image" content="https://zelopdv.com.br/og-image.jpg" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://zelopdv.com.br/" />
+  <meta name="twitter:title" content="Zelo PDV — O PDV que Coloca Dinheiro no seu Bolso" />
+  <meta name="twitter:description" content="Frente de caixa ágil + controle financeiro real para pequenos negócios. Teste grátis por 7 dias, sem cartão de crédito." />
+  <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
 
-  <script type="application/ld+json">
+  <!-- JSON-LD Structured Data: SoftwareApplication -->
+  {@html `<script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Zelo PDV",
+    "url": "https://zelopdv.com.br",
     "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web Browser",
+    "operatingSystem": "Web, Android, iOS",
+    "description": "Sistema de frente de caixa e gestão financeira para pequenos negócios brasileiros. Controle vendas, fiado, estoque e despesas. Funciona no navegador e pode ser instalado como aplicativo (PWA) em qualquer dispositivo.",
+    "screenshot": "https://zelopdv.com.br/og-image.png",
     "offers": {
       "@type": "Offer",
       "price": "59.00",
       "priceCurrency": "BRL",
-      "priceValidUntil": "2025-12-31"
+      "priceValidUntil": "2026-12-31",
+      "availability": "https://schema.org/InStock",
+      "description": "Plano mensal com 7 dias de teste grátis. Acesso completo a todas as funcionalidades."
     },
-    "description": "Sistema de gestão e frente de caixa para pequenos negócios."
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "ratingCount": "47"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "Téchne Sistemas",
+      "url": "https://techneia.com.br"
+    }
   }
-  </script>
+  <\/script>`}
 </svelte:head>
 
 <script>

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Block authenticated/internal app routes from crawlers
+Disallow: /app
+Disallow: /admin
+Disallow: /relatorios
+Disallow: /api/
+Disallow: /perfil
+Disallow: /redefinir-senha
+
+Sitemap: https://zelopdv.com.br/sitemap.xml
