@@ -158,10 +158,12 @@
     }
     subLoading = true;
     try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token ?? '';
       const resp = await fetch('/api/billing/create-portal-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId: stripeCustomerId, email })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ customerId: stripeCustomerId })
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Erro ao criar sessão.');

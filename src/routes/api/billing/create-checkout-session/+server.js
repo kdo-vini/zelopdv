@@ -1,46 +1,44 @@
 import { json } from '@sveltejs/kit';
 import { stripe } from '$lib/server/stripe';
+import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { env } from '$env/dynamic/private';
 
-// ENV necessárias
-const PRICE_ID = env.STRIPE_PRICE_ID_MONTHLY_59; // price_XXXXXXXX
-const PAYMENT_LINK = env.VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL || env.PUBLIC_STRIPE_PAYMENT_LINK_URL; // https://buy.stripe.com/...
+const PRICE_ID = env.STRIPE_PRICE_ID_MONTHLY_59;
+const PAYMENT_LINK = env.VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL || env.PUBLIC_STRIPE_PAYMENT_LINK_URL;
 const ORIGIN = env.PUBLIC_APP_URL || 'http://localhost:5173';
 
 export async function POST({ request }) {
   try {
-    const body = await request.json().catch(() => ({}));
-    const { userId, email } = body || {};
-    if (!userId || !email) {
-      return json({ error: 'userId e email são obrigatórios' }, { status: 400 });
-    }
-    // Se houver Payment Link configurado, prioriza redirecionamento direto
-    if (PAYMENT_LINK) {
-      return json({ url: PAYMENT_LINK });
-    }
+    if (!supabaseAdmin) return json({ error: 'Configuração de servidor inválida' }, { status: 500 });
+
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) return json({ error: 'Não autorizado' }, { status: 401 });
+
+    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+    if (authErr || !user) return json({ error: 'Não autorizado' }, { status: 401 });
+
+    const userId = user.id;
+    const email = user.email;
+
+    if (PAYMENT_LINK) return json({ url: PAYMENT_LINK });
 
     if (!PRICE_ID) {
-      return json({ error: 'STRIPE_PRICE_ID_MONTHLY_59 ausente no ambiente. Alternativa: defina VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL com o Payment Link.' }, { status: 500 });
+      return json({ error: 'STRIPE_PRICE_ID_MONTHLY_59 ausente no ambiente.' }, { status: 500 });
     }
     if (PRICE_ID.startsWith('http')) {
-      return json({ error: 'Valor inválido em STRIPE_PRICE_ID_MONTHLY_59. Informe o ID do price (ex: price_...), não a URL. Para Payment Link use VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL.' }, { status: 500 });
+      return json({ error: 'Valor inválido em STRIPE_PRICE_ID_MONTHLY_59. Use price_... não uma URL.' }, { status: 500 });
     }
-
     if (!stripe) return json({ error: 'Stripe não configurado' }, { status: 500 });
 
-    // 1) Localizar ou criar Customer por e-mail
     const customers = await stripe.customers.list({ email, limit: 1 });
     const customer = customers.data[0] || await stripe.customers.create({ email, metadata: { user_id: userId } });
 
-    // 2) Criar Checkout Session para assinatura com trial de 7 dias
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customer.id,
       line_items: [{ price: PRICE_ID, quantity: 1 }],
       allow_promotion_codes: true,
-      subscription_data: {
-        trial_period_days: 7,
-      },
+      subscription_data: { trial_period_days: 7 },
       success_url: `${ORIGIN}/assinatura?success=1`,
       cancel_url: `${ORIGIN}/assinatura?canceled=1`,
       metadata: { user_id: userId },

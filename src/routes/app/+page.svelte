@@ -1047,20 +1047,28 @@ window.addEventListener('message', function(e){
           await supabase.from('vendas_pagamentos').insert(linhas);
         }
 
-        // Baixa de estoque
+        // Baixa de estoque — usa RPC atômica para evitar race conditions
         try {
-          const updates = [];
+          const baixaPromises = [];
           for (const item of comanda) {
             if (!item.id_produto) continue;
             const prod = produtos.find(p => p.id === item.id_produto);
             const freshInfo = freshStockMap.get(item.id_produto);
             if ((freshInfo ?? prod)?.controlar_estoque) {
-              const estoqueBase = freshInfo ? Number(freshInfo.estoque_atual || 0) : Number(prod?.estoque_atual || 0);
-              const novoEstoque = estoqueBase - extrairQuantidadeEfetiva(item);
-              updates.push(supabase.from('produtos').update({ estoque_atual: novoEstoque }).eq('id', item.id_produto));
+              const qtd = extrairQuantidadeEfetiva(item);
+              baixaPromises.push(
+                supabase.rpc('decrementar_estoque', { p_id: item.id_produto, p_qtd: qtd })
+              );
             }
           }
-          Promise.allSettled(updates);
+          const resultados = await Promise.allSettled(baixaPromises);
+          resultados.forEach((r, i) => {
+            if (r.status === 'rejected') {
+              console.error('[Estoque] Falha na baixa do item', i, r.reason);
+            } else if (r.value?.error) {
+              console.error('[Estoque] RPC erro no item', i, r.value.error.message);
+            }
+          });
         } catch {}
       }
 
@@ -1226,7 +1234,7 @@ window.addEventListener('message', function(e){
       w.focus();
       // 1) Envia via postMessage para o placeholder realizar a troca de forma confiável
       try {
-        w.postMessage({ type: 'RECIBO_HTML', html }, '*');
+        w.postMessage({ type: 'RECIBO_HTML', html }, window.location.origin);
       } catch (pmErr) {
         console.warn('[Recibo] postMessage falhou (seguirá com write/Blob):', pmErr?.message || pmErr);
       }

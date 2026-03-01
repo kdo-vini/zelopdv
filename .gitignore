@@ -15,3 +15,6 @@ SUPPORT_GUIDE_ZELO_PDV.txt
 # Internal documentation and notes
 .ai/
 SISTEMA.md
+
+# SQL migrations (local only — paste into Supabase SQL Editor manually)
+sql/

@@ -228,7 +228,46 @@ db.version(2).stores({ ... }).upgrade(tx => { /* migrate existing rows */ });
 
 ---
 
+## SQL Migrations
+
+SQL migration files live in `sql/` (gitignored — paste into Supabase SQL Editor manually).
+
+| File | Status | Description |
+|---|---|---|
+| `sql/00_get_user_id_by_email.sql` | ⚠️ **Pending — must run FIRST** | RPC to look up auth.users by email. Required by webhook. SDK has no getUserByEmail. |
+| `sql/01_decrementar_estoque.sql` | ⚠️ **Pending — must run** | Atomic stock decrement RPC. Required for the app code deployed in the scalability commit. |
+| `sql/02_saldo_caixa.sql` | Optional | Server-side cash balance function + recommended DB indexes. Wire-up in app code is a future task. |
+
+---
+
 ## Commit Log
+
+### 2026-03-01 — Scalability & security: webhook fix, billing auth, atomic stock, SQL migrations
+
+**Files changed:** `src/routes/api/billing/webhook/+server.js`,
+`src/routes/api/billing/create-checkout-session/+server.js`,
+`src/routes/api/billing/create-portal-session/+server.js`,
+`src/routes/assinatura/+page.svelte`, `src/routes/perfil/+page.svelte`,
+`src/routes/app/+page.svelte`, `.gitignore`
+`src/routes/api/stripe/webhook/+server.js` **(deleted)**
+
+**Changes:**
+- **`listUsers()` → `getUserByEmail()`:** The webhook handler no longer scans all users
+  into memory (broken at >50 users). Now uses the targeted `getUserByEmail()` API call.
+- **Legacy webhook deleted:** `src/routes/api/stripe/webhook/+server.js` removed to prevent
+  dual-processing of Stripe events, which could corrupt subscription records.
+- **Billing endpoints secured:** Both `create-checkout-session` and `create-portal-session`
+  now verify the caller's `Authorization: Bearer <token>` header via
+  `supabaseAdmin.auth.getUser()`. User identity is derived from the verified JWT, not the
+  request body. Clients updated to send the token. Return URL no longer trusts the
+  request `Origin` header.
+- **Atomic stock deduction:** Stock deduction replaced with `supabase.rpc('decrementar_estoque')`
+  — a Postgres function that does an atomic `UPDATE ... WHERE estoque_atual >= qty`. Eliminates
+  the concurrent-sale race condition. **Requires SQL migration 01 to be run in Supabase.**
+- **`postMessage` wildcard fixed:** Receipt popup now uses `window.location.origin` instead
+  of `'*'`.
+- **SQL migrations:** `sql/` folder created (gitignored). Contains `01_decrementar_estoque.sql`
+  and `02_saldo_caixa.sql` for manual execution in the Supabase SQL Editor.
 
 ### 2026-03-01 — PDV bug fixes: stock, fiado, cart persistence, offline cleanup
 **Files changed:** `src/routes/app/+page.svelte`
