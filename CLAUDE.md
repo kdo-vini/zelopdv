@@ -230,6 +230,29 @@ db.version(2).stores({ ... }).upgrade(tx => { /* migrate existing rows */ });
 
 ## Commit Log
 
+### 2026-03-01 — PDV bug fixes: stock, fiado, cart persistence, offline cleanup
+**Files changed:** `src/routes/app/+page.svelte`
+
+**Changes:**
+- **Fix 1 — Stock deduction uses fresh data:** Declared `freshStockMap` before the pre-sale
+  stock check try/catch. Assigned it from the `mapInfo` built during the real-time Supabase
+  fetch. In the deduction loop, each item now uses `freshStockMap.get(item.id_produto)` with
+  a fallback to the cached `produtos` array. Eliminates the race where a concurrent sale could
+  deduct from a stale cached stock value.
+- **Fix 2 — Fiado race condition removed:** Removed the read-modify-write fallback in
+  `atualizarSaldoFiado`. If the `fiado_lancar_debito` RPC fails, the error is now surfaced via
+  `addToast` (warning) instead of performing a non-atomic SELECT + UPDATE pair that would
+  silently corrupt `saldo_fiado` under concurrent writes.
+- **Fix 3 — Cart persists across page reloads:** `comanda` is now backed by `sessionStorage`.
+  On `onMount` the saved cart is restored before any other initialisation. A `$:` reactive
+  statement serialises `comanda` to `sessionStorage` on every mutation. `sessionStorage` is
+  cleared explicitly when a sale completes (`finalizarFluxoSucesso`) and when the user clears
+  the cart manually (`limparComanda`).
+- **Fix 4 — `limparVendasAntigas` wired on mount:** Added `limparVendasAntigas` to the
+  `$lib/offlineDb` import. Called fire-and-forget (`limparVendasAntigas(30).catch(() => {})`)
+  at the end of `onMount` so stuck IndexedDB records older than 30 days are purged on every
+  app load.
+
 ### 2026-03-01 — SEO improvements for production
 **Files changed:** `src/app.html`, `src/routes/+layout.svelte`, `src/routes/+page.svelte`,
 `static/robots.txt` (new), `static/sitemap.xml` (new)

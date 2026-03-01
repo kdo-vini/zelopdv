@@ -33,7 +33,7 @@
   import VirtualProductGrid from '$lib/components/VirtualProductGrid.svelte';
 
   // Modo Offline (IndexedDB)
-  import { atualizarCacheProdutos, salvarVendaOffline, syncVendasPendentes } from '$lib/offlineDb';
+  import { atualizarCacheProdutos, salvarVendaOffline, syncVendasPendentes, limparVendasAntigas } from '$lib/offlineDb';
 
   export let params;
 
@@ -189,6 +189,13 @@
 
   // Efeito: quando o app monta, verifica sessão, caixa e carrega dados do PDV
   onMount(async () => {
+    try {
+      const saved = sessionStorage.getItem('zelo_comanda');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) comanda = parsed;
+      }
+    } catch {}
     window.addEventListener('keydown', onKeyGlobal);
     window.addEventListener('online', handleSyncOnline);
     await waitAuthReady();
@@ -229,6 +236,9 @@
          dadosEmpresa = data;
       }
     } catch (e) { console.error('Error fetching company profile:', e); }
+
+    // Cleanup stuck offline records older than 30 days
+    limparVendasAntigas(30).catch(() => {});
 
   });
 
@@ -421,6 +431,11 @@
     0
   );
 
+  // Persiste a comanda em sessionStorage para sobreviver a recarregamentos
+  $: if (typeof sessionStorage !== 'undefined') {
+    try { sessionStorage.setItem('zelo_comanda', JSON.stringify(comanda)); } catch {}
+  }
+
   /**
    * Adiciona um produto na comanda.
    * Esta função decide qual fluxo seguir (Normal, Quantidade ou Valor).
@@ -531,6 +546,7 @@
   async function limparComanda() {
     if (await confirmAction('Limpar Comanda', 'Tem certeza que deseja remover todos os itens?')) {
       comanda = [];
+      try { sessionStorage.removeItem('zelo_comanda'); } catch {}
     }
   }
 
@@ -846,6 +862,7 @@ window.addEventListener('message', function(e){
       const id_usuario = userData?.user?.id ?? null;
 
       // Validação de estoque (refresco em tempo real antes de inserir a venda)
+      let freshStockMap = new Map();
       try {
         const idsProdutos = [...new Set(comanda.filter(i => i.id_produto).map(i => i.id_produto))];
         if (idsProdutos.length) {
@@ -855,6 +872,7 @@ window.addEventListener('message', function(e){
             .in('id', idsProdutos);
           if (!prodErr && prodsInfo) {
             const mapInfo = new Map(prodsInfo.map(p => [p.id, p]));
+            freshStockMap = mapInfo;
             // mesma lógica de extrair quantidade efetiva (para nomes como "56x Produto")
             const extrairQuantidadeEfetiva = (item) => {
               if (item?.id_produto && typeof item?.nome === 'string') {
@@ -1002,23 +1020,10 @@ window.addEventListener('message', function(e){
 
         // Lançar débito no fiado - IMPORTANTE: await para garantir atualização do saldo
         const atualizarSaldoFiado = async (pessoaId, valor) => {
-          try {
-            // Tenta a RPC primeiro
-            const { error: rpcErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: pessoaId, p_valor: valor });
-            if (rpcErr) {
-              console.warn('[Fiado] RPC falhou, tentando update direto:', rpcErr.message);
-              // Fallback: atualiza diretamente a tabela pessoas
-              const { data: pessoa } = await supabase.from('pessoas').select('saldo_fiado').eq('id', pessoaId).single();
-              const saldoAtual = Number(pessoa?.saldo_fiado || 0);
-              const { error: updateErr } = await supabase.from('pessoas').update({ saldo_fiado: saldoAtual + valor }).eq('id', pessoaId);
-              if (updateErr) {
-                console.error('[Fiado] Fallback também falhou:', updateErr.message);
-              } else {
-                console.log('[Fiado] Saldo atualizado via fallback:', saldoAtual + valor);
-              }
-            }
-          } catch (e) {
-            console.error('[Fiado] Exceção ao lançar débito:', e);
+          const { error: rpcErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: pessoaId, p_valor: valor });
+          if (rpcErr) {
+            console.error('[Fiado] RPC falhou:', rpcErr.message);
+            addToast('Venda salva, mas falha ao atualizar saldo do fiado. Verifique manualmente.', 'warning');
           }
         };
 
@@ -1048,8 +1053,10 @@ window.addEventListener('message', function(e){
           for (const item of comanda) {
             if (!item.id_produto) continue;
             const prod = produtos.find(p => p.id === item.id_produto);
-            if (prod?.controlar_estoque) {
-              const novoEstoque = Number(prod.estoque_atual || 0) - (extrairQuantidadeEfetiva(item));
+            const freshInfo = freshStockMap.get(item.id_produto);
+            if ((freshInfo ?? prod)?.controlar_estoque) {
+              const estoqueBase = freshInfo ? Number(freshInfo.estoque_atual || 0) : Number(prod?.estoque_atual || 0);
+              const novoEstoque = estoqueBase - extrairQuantidadeEfetiva(item);
               updates.push(supabase.from('produtos').update({ estoque_atual: novoEstoque }).eq('id', item.id_produto));
             }
           }
@@ -1108,6 +1115,7 @@ window.addEventListener('message', function(e){
       vendaConcluida = null;
       // Reset Comanda & Pagamento
       comanda = [];
+      try { sessionStorage.removeItem('zelo_comanda'); } catch {}
       modalPagamentoRef?.resetState?.();
       // Reset local payment state
       formaPagamento = null;
