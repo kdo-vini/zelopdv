@@ -5,8 +5,6 @@
 	import { ensureActiveSubscription } from '$lib/guards';
 	import { withTimeout } from '$lib/utils';
 	import { addToast } from '$lib/stores/ui';
-	import { generatePDFReport } from '$lib/utils/pdfReport';
-	import { generateExcelReport } from '$lib/utils/excelReport';
 	
 	// Gráficos visuais
 	import BarChart from '$lib/components/charts/BarChart.svelte';
@@ -346,10 +344,11 @@
 		}
 	}
 
-	function exportarPDF() {
+	async function exportarPDF() {
 		try {
 			const dados = getExportData();
-			generatePDFReport(dados);
+			const { generatePDFReport } = await import('$lib/utils/pdfReport');
+			await generatePDFReport(dados);
 			addToast('PDF gerado com sucesso!', 'success');
 		} catch (e) {
 			addToast('Erro ao gerar PDF: ' + e.message, 'error');
@@ -358,10 +357,11 @@
 		}
 	}
 
-	function exportarExcel() {
+	async function exportarExcel() {
 		try {
 			const dados = getExportData();
-			generateExcelReport(dados);
+			const { generateExcelReport } = await import('$lib/utils/excelReport');
+			await generateExcelReport(dados);
 			addToast('Excel gerado com sucesso!', 'success');
 		} catch (e) {
 			addToast('Erro ao gerar Excel: ' + e.message, 'error');

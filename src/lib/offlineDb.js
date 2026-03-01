@@ -2,12 +2,22 @@ import Dexie from 'dexie';
 
 export const db = new Dexie('ZeloPDVDB');
 
-// Define o esquema do banco de dados local
+// v1 — schema original
 db.version(1).stores({
     produtos: 'id, nome, preco, categoria_id',
-    vendas_pendentes: '++id, data, total, status', // status: 'aguardando' | 'sincronizado'
+    vendas_pendentes: '++id, data, total, status', // status: 'aguardando'
     categorias: 'id, nome'
 });
+
+// Como adicionar versões futuras:
+//
+// db.version(2).stores({
+//     vendas_pendentes: '++id, data, total, status, novo_campo'
+// }).upgrade(tx => {
+//     return tx.table('vendas_pendentes').toCollection().modify(v => {
+//         v.novo_campo = valorPadrao;
+//     });
+// });
 
 /**
  * Salva uma venda na fila de sincronização
@@ -28,13 +38,6 @@ export async function getVendasPendentes() {
 }
 
 /**
- * Marca uma venda como sincronizada
- */
-export async function marcarComoSincronizada(id) {
-    return await db.vendas_pendentes.update(id, { status: 'sincronizado' });
-}
-
-/**
  * Cache de produtos para busca offline
  */
 export async function atualizarCacheProdutos(produtos) {
@@ -43,7 +46,9 @@ export async function atualizarCacheProdutos(produtos) {
 }
 
 /**
- * Sincroniza vendas pendentes com o Supabase
+ * Sincroniza vendas pendentes com o Supabase.
+ * Registros sincronizados com sucesso são deletados do IndexedDB.
+ * Registros com falha permanecem como 'aguardando' para nova tentativa.
  */
 export async function syncVendasPendentes(supabase) {
     const pendentes = await getVendasPendentes();
@@ -87,8 +92,8 @@ export async function syncVendasPendentes(supabase) {
                 if (pagsError) throw pagsError;
             }
 
-            // 4. Marcar como sincronizada
-            await marcarComoSincronizada(vendaPendente.id);
+            // 4. Deletar do IndexedDB — o registro oficial agora está no Supabase
+            await db.vendas_pendentes.delete(vendaPendente.id);
             logs.success++;
         } catch (err) {
             console.error('Falha ao sincronizar venda offline:', err);
@@ -97,6 +102,21 @@ export async function syncVendasPendentes(supabase) {
     }
 
     return logs;
+}
+
+/**
+ * Remove vendas pendentes mais antigas que `diasMaximos` que nunca foram sincronizadas.
+ * Use como limpeza de segurança para registros presos (ex.: caixa deletado no servidor).
+ */
+export async function limparVendasAntigas(diasMaximos = 30) {
+    const limite = new Date();
+    limite.setDate(limite.getDate() - diasMaximos);
+    const limiteISO = limite.toISOString();
+
+    return await db.vendas_pendentes
+        .where('data')
+        .below(limiteISO)
+        .delete();
 }
 
 /**
