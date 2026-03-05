@@ -18,3 +18,7 @@ SISTEMA.md
 
 # SQL migrations (local only — paste into Supabase SQL Editor manually)
 sql/
+
+# Capture scripts
+capture.js
+capture.mjs
