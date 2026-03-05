@@ -111,7 +111,7 @@
 
     if (!supabase) return;
  
-  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html', '/redefinir-senha'];
+  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html', '/redefinir-senha', '/privacidade', '/termos'];
     const path = window.location.pathname;
 
     let navigated = false;
