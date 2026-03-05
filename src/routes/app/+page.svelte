@@ -1386,91 +1386,77 @@ window.addEventListener('message', function(e){
 </div>
 
 <!-- Fundo principal do PDV: Layout Responsivo -->
-<!-- Mobile: flex-col (vertical), Desktop (md): flex-row (horizontal) -->
-<div class="flex flex-col md:flex-row w-full flex-1 bg-transparent overflow-hidden gap-4 relative">
+<!-- Desktop: flex-row (produtos + comanda). Sidebar agora vem do layout -->
+<div class="flex flex-col md:flex-row w-full flex-1 bg-transparent overflow-hidden relative">
 
-  <!-- Coluna 1: Categorias -->
-  <!-- Mobile: Top Bar horizontal scroll. Desktop: Left Sidebar vertical -->
-  <nav class="
-    w-full md:w-24 
-    h-auto md:h-full
-    bg-slate-900/50 border-b md:border-r md:border-b-0 border-slate-800 
-    rounded-b-2xl md:rounded-2xl 
-    flex-shrink-0 flex flex-row md:flex-col justify-between 
-    py-2 md:py-2 md:ml-4
-    overflow-x-auto md:overflow-x-hidden
-  ">
-    <div class="flex md:flex-col flex-1 px-2 gap-2 md:space-y-2 scrollbar-none items-center md:items-stretch">
-      {#each categorias as cat (cat.id)}
-        <button
-          on:click={() => (categoriaAtiva = cat.id)}
-          class="
-            flex-shrink-0
-            w-16 h-16 md:w-full md:aspect-square 
-            p-1 flex flex-col items-center justify-center text-center 
-            transition-all duration-200 group rounded-xl border 
-            {categoriaAtiva === cat.id ? 'bg-sky-600 shadow-lg shadow-sky-500/30 text-white border-transparent' : 'text-slate-400 hover:bg-slate-800 border-slate-700'}
-          "
-        >
-          <div class="text-[9px] font-bold uppercase tracking-tight leading-tight group-hover:scale-105 transition-transform break-words w-full line-clamp-2 md:line-clamp-none">
-            {cat.nome}
-          </div>
-        </button>
-      {/each}
-    </div>
-
-    <!-- Admin Link (Hidden on mobile top bar to save space, maybe move to header or hamburger menu later) -->
-    <!-- Showing only on Desktop for now or if space permits -->
-    <div class="hidden md:block px-2 pt-2 border-t border-slate-700/50">
-      <a 
-        href="/gestao"
-        class="flex flex-col items-center justify-center p-2 rounded-lg text-slate-500 hover:text-sky-400 hover:bg-slate-800/50 transition-all group"
-        title="Painel de Gestão"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 group-hover:rotate-12 transition-transform">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
-        </svg>
-        <span class="text-[9px] uppercase mt-1 font-bold">Gestão</span>
-      </a>
-    </div>
-  </nav>
-
-  <!-- Coluna 2: Produtos (Main Content) -->
-  <main class="flex-1 p-4 overflow-y-auto pb-24 md:pb-4"> <!-- Added pb-24 for mobile bottom bar space -->
+  <!-- Coluna Principal: Produtos (Main Content) -->
+  <main class="flex-1 p-4 overflow-y-auto pb-24 md:pb-4">
     {#if loading}
       <p class="text-main">Carregando produtos...</p>
     {:else}
-      <!-- Barra de busca e botões (Mobile optimized) -->
+      <!-- Header: Título + Busca + Botão Avulso -->
       <div class="flex flex-col gap-3 mb-4">
-        <div class="flex gap-2">
-           <div class="flex-1">
+        <div class="flex items-center justify-between gap-3">
+          <h1 class="text-lg md:text-xl font-bold" style="color: var(--text-main);">Frente de Caixa</h1>
+          <div class="flex gap-2 flex-1 max-w-xl">
+            <div class="flex-1">
               <input id="busca-prod" type="text" class="input-form h-10 md:h-12" placeholder="Buscar produto..." bind:value={busca} bind:this={buscaInputEl} />
-           </div>
-           
-           <!-- Botão Venda Rápida -->
-           <div class="flex items-center">
-              <button 
-                on:click={() => modalValorAberto = true}
-                class="btn-primary h-10 md:h-12 px-3 md:px-4 flex items-center gap-2 whitespace-nowrap bg-amber-500 hover:bg-amber-600 border-amber-600 text-white shadow-sm rounded-lg"
-              >
-                <span class="text-sm font-bold">Venda Avulsa</span>
-              </button>
-           </div>
+            </div>
+            <button
+              on:click={() => modalValorAberto = true}
+              class="btn-primary h-10 md:h-12 px-3 md:px-4 flex items-center gap-2 whitespace-nowrap shadow-sm rounded-lg"
+              style="background: var(--accent); color: white;"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+              <span class="text-sm font-bold hidden md:inline">Novo Item Avulso</span>
+            </button>
+          </div>
         </div>
 
+        <!-- Categorias: Tabs horizontais -->
+        <div class="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none" role="tablist" aria-label="Categorias">
+          {#each categorias as cat (cat.id)}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={categoriaAtiva === cat.id}
+              class="flex-shrink-0 px-4 py-2 rounded-lg font-semibold text-sm transition-colors whitespace-nowrap"
+              style="
+                background: {categoriaAtiva === cat.id ? 'var(--primary)' : 'var(--bg-panel)'};
+                color: {categoriaAtiva === cat.id ? 'white' : 'var(--text-muted)'};
+                border: 1px solid {categoriaAtiva === cat.id ? 'transparent' : 'var(--border-subtle)'};
+              "
+              on:click={() => (categoriaAtiva = cat.id)}
+            >
+              {cat.nome}
+            </button>
+          {/each}
+        </div>
+
+        <!-- Subcategorias: Pills (quando existem) -->
         {#if subcatsDaCat.length}
           <div class="flex items-center gap-2 overflow-x-auto py-1 px-1 scrollbar-none">
-              <button 
-                type="button" 
-                class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors {subcategoriaAtiva === null ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'}"
+              <button
+                type="button"
+                class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors"
+                style="
+                  background: {subcategoriaAtiva === null ? 'var(--primary)' : 'var(--bg-panel)'};
+                  color: {subcategoriaAtiva === null ? 'white' : 'var(--text-muted)'};
+                  border: 1px solid {subcategoriaAtiva === null ? 'transparent' : 'var(--border-subtle)'};
+                "
                 on:click={() => subcategoriaAtiva = null}
               >
                 Todas
               </button>
               {#each subcatsDaCat as sc (sc.id)}
-                <button 
-                  type="button" 
-                  class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors {subcategoriaAtiva === sc.id ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'}"
+                <button
+                  type="button"
+                  class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors"
+                  style="
+                    background: {subcategoriaAtiva === sc.id ? 'var(--primary)' : 'var(--bg-panel)'};
+                    color: {subcategoriaAtiva === sc.id ? 'white' : 'var(--text-muted)'};
+                    border: 1px solid {subcategoriaAtiva === sc.id ? 'transparent' : 'var(--border-subtle)'};
+                  "
                   on:click={() => subcategoriaAtiva = sc.id}
                 >
                   {sc.nome}
