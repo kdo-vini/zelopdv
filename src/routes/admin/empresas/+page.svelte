@@ -193,7 +193,7 @@
                 <input placeholder="E-mail do usuário" type="email" class="input-form" bind:value={novoMembroEmail} />
                 <select class="input-form" bind:value={novoMembroRole}>
                   <option value="atendente">Atendente</option>
-                  <option value="admin">Admin</option>
+                  <option value="admin">Gestão</option>
                 </select>
                 <button class="btn-primary">Adicionar</button>
               </form>

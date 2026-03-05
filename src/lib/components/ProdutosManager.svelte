@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { pdvCache } from '$lib/stores/pdvCache';
-  import { addToast } from '$lib/stores/ui'; 
+  import { addToast } from '$lib/stores/ui';
   import { slide } from 'svelte/transition';
   import Swal from 'sweetalert2';
 
@@ -21,7 +21,7 @@
   let loading = true;
   let showCreateForm = false;
   let selectedItems = new Set();
-  
+
   // Pagination & Sorting
   let currentPage = 1;
   const itemsPerPage = 10;
@@ -58,34 +58,34 @@
     loading = true;
     try {
       let q = supabase.from('produtos').select('*');
-      
+
       if (idCategoriaFilter) q = q.eq('id_categoria', Number(idCategoriaFilter));
       if (idSubcategoriaFilter) q = q.eq('id_subcategoria', Number(idSubcategoriaFilter));
       if (buscaFilter && String(buscaFilter).trim() !== '') q = q.ilike('nome', `%${String(buscaFilter).trim()}%`);
 
       const { data, error } = await q.order('nome', { ascending: true });
-      if (error) { 
+      if (error) {
         addToast(error.message, 'error');
-        produtos = []; 
+        produtos = [];
       }
       else produtos = data || [];
-      
+
       currentPage = 1;
-      selectedItems.clear(); 
+      selectedItems.clear();
     } finally {
       loading = false;
     }
   }
 
   // --- Computed ---
-  $: filteredSubcatsForForm = form.id_categoria 
+  $: filteredSubcatsForForm = form.id_categoria
     ? subcategorias.filter(s => s.id_categoria === form.id_categoria)
     : [];
 
   $: filteredSubcatsForEdit = editForm.id_categoria
     ? subcategorias.filter(s => s.id_categoria === editForm.id_categoria)
     : [];
-    
+
   $: filteredSubcatsForFilter = idCategoriaFilter
     ? subcategorias.filter(s => s.id_categoria === Number(idCategoriaFilter))
     : subcategorias;
@@ -111,13 +111,13 @@
     e.preventDefault();
     const { data: userData } = await supabase.auth.getUser();
     const id_usuario = userData?.user?.id ?? null;
-    
+
     const payload = { ...form, id_usuario };
     if (!payload.id_subcategoria) payload.id_subcategoria = null;
 
     const { error } = await supabase.from('produtos').insert(payload);
     if (error) { addToast(error.message, 'error'); return; }
-    
+
     addToast('Produto criado com sucesso!', 'success');
     resetForm();
     showCreateForm = false;
@@ -145,7 +145,7 @@
     } else {
       paginatedProdutos.forEach(p => selectedItems.delete(p.id));
     }
-    selectedItems = selectedItems; 
+    selectedItems = selectedItems;
   }
 
   function toggleSelect(id) {
@@ -156,14 +156,14 @@
 
   function confirmarExclusaoEmMassa() {
     if (selectedItems.size === 0) return;
-    
+
     Swal.fire({
       title: 'Excluir Produtos',
       text: `Tem certeza que deseja excluir ${selectedItems.size} produtos selecionados?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
+      cancelButtonColor: '#334155',
       confirmButtonText: 'Sim, excluir!',
       cancelButtonText: 'Cancelar'
     }).then(async (result) => {
@@ -221,7 +221,7 @@
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
+      cancelButtonColor: '#334155',
       confirmButtonText: 'Sim, excluir!',
       cancelButtonText: 'Cancelar'
     }).then(async (result) => {
@@ -236,21 +236,21 @@
       }
     });
   }
-  
+
   // Helpers
   function getCategoriaNome(id) {
     return categorias.find(c => c.id === id)?.nome || '-';
   }
 </script>
 
-<section class="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 min-w-0">
+<section class="bg-slate-800/50 rounded-lg border border-slate-700/60 min-w-0">
   <!-- Header Toolbar -->
-  <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+  <div class="p-4 border-b border-slate-700/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div class="flex items-center gap-2">
-      <h2 class="font-semibold text-lg text-slate-800 dark:text-white">Produtos</h2>
-      <span class="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-full">{produtos.length}</span>
+      <h2 class="font-semibold text-lg text-white">Produtos</h2>
+      <span class="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full">{produtos.length}</span>
     </div>
-    
+
     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
       {#if selectedItems.size > 0}
         <button class="btn-danger text-sm flex items-center gap-2" on:click={confirmarExclusaoEmMassa}>
@@ -260,17 +260,17 @@
       {/if}
 
       <div class="flex-1 sm:flex-none">
-        <input 
-          type="text" 
-          placeholder="Buscar..." 
+        <input
+          type="text"
+          placeholder="Buscar..."
           class="input-search"
           bind:value={buscaFilter}
           on:input={() => carregarProdutos()}
         />
       </div>
 
-      <button 
-        class="btn-primary flex items-center gap-2" 
+      <button
+        class="btn-primary flex items-center gap-2"
         on:click={() => showCreateForm = !showCreateForm}>
         {#if showCreateForm}
           Cancelar
@@ -283,7 +283,7 @@
   </div>
 
   <!-- Filters Row -->
-  <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex flex-wrap gap-3 text-sm">
+  <div class="px-4 py-3 bg-slate-900/40 border-b border-slate-700/60 flex flex-wrap gap-3 text-sm">
       <div class="flex items-center gap-2">
         <span class="text-slate-500">Filtrar:</span>
         <select class="input-filter" bind:value={idCategoriaFilter} on:change={() => { idSubcategoriaFilter = null; carregarProdutos(); }}>
@@ -292,7 +292,7 @@
             <option value={c.id}>{c.nome}</option>
           {/each}
         </select>
-        
+
         <select class="input-filter" bind:value={idSubcategoriaFilter} disabled={!idCategoriaFilter} on:change={carregarProdutos}>
           <option value={null}>Todas Subcategorias</option>
           {#each filteredSubcatsForFilter as s}
@@ -300,9 +300,9 @@
           {/each}
         </select>
       </div>
-      
+
       {#if idCategoriaFilter || idSubcategoriaFilter || buscaFilter}
-        <button class="text-blue-600 hover:underline text-xs" on:click={() => { idCategoriaFilter=null; idSubcategoriaFilter=null; buscaFilter=''; carregarProdutos(); }}>
+        <button class="text-sky-400 hover:text-sky-300 text-xs" on:click={() => { idCategoriaFilter=null; idSubcategoriaFilter=null; buscaFilter=''; carregarProdutos(); }}>
           Limpar Filtros
         </button>
       {/if}
@@ -310,7 +310,7 @@
 
   <!-- Collapsible Create Form -->
   {#if showCreateForm}
-    <div transition:slide class="bg-blue-50/50 dark:bg-slate-900/50 border-b border-blue-100 dark:border-slate-600 p-4">
+    <div transition:slide class="bg-sky-500/5 border-b border-sky-500/15 p-4">
       <form on:submit={criarProduto} class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="lg:col-span-1">
           <label class="label-form">Nome</label>
@@ -342,18 +342,18 @@
         <!-- Toggles -->
         <div class="lg:col-span-4 flex flex-wrap gap-6 items-center pt-2">
           <label class="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" bind:checked={form.eh_item_por_unidade} class="rounded text-blue-600 focus:ring-blue-500" />
+            <input type="checkbox" bind:checked={form.eh_item_por_unidade} class="rounded text-sky-600 focus:ring-sky-500" />
             <span>Venda por unidade</span>
           </label>
           <label class="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" bind:checked={form.ocultar_no_pdv} class="rounded text-blue-600 focus:ring-blue-500" />
+            <input type="checkbox" bind:checked={form.ocultar_no_pdv} class="rounded text-sky-600 focus:ring-sky-500" />
             <span>Ocultar no PDV</span>
           </label>
           <label class="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" bind:checked={form.controlar_estoque} class="rounded text-blue-600 focus:ring-blue-500" />
+            <input type="checkbox" bind:checked={form.controlar_estoque} class="rounded text-sky-600 focus:ring-sky-500" />
             <span>Controlar Estoque</span>
           </label>
-          
+
           {#if form.controlar_estoque}
             <div class="flex items-center gap-2 animate-fadeIn">
                <span class="text-sm text-slate-600">Qtd Inicial:</span>
@@ -376,30 +376,30 @@
     {:else if produtos.length === 0}
       <div class="p-8 text-center text-slate-500">Nenhum produto encontrado.</div>
     {:else}
-      <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300 min-w-[800px]">
-        <thead class="bg-slate-50 dark:bg-slate-700/50 uppercase font-medium text-xs text-slate-500 dark:text-slate-400">
+      <table class="w-full text-left text-sm text-slate-300 min-w-[800px]">
+        <thead class="bg-slate-900/60 uppercase font-medium text-xs text-slate-400">
           <tr>
             <th class="p-4 w-4">
-              <input type="checkbox" class="rounded border-slate-300" on:change={toggleSelectAll} checked={paginatedProdutos.length > 0 && paginatedProdutos.every(p => selectedItems.has(p.id))} />
+              <input type="checkbox" class="rounded border-slate-600" on:change={toggleSelectAll} checked={paginatedProdutos.length > 0 && paginatedProdutos.every(p => selectedItems.has(p.id))} />
             </th>
-            <th class="p-4 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200" on:click={() => toggleSort('nome')}>
+            <th class="p-4 cursor-pointer hover:text-slate-200" on:click={() => toggleSort('nome')}>
               Nome {#if sortField==='nome'}{sortDesc ? '↓' : '↑'}{/if}
             </th>
-            <th class="p-4 cursor-pointer hover:text-slate-700" on:click={() => toggleSort('preco')}>
+            <th class="p-4 cursor-pointer hover:text-slate-200" on:click={() => toggleSort('preco')}>
               Preço {#if sortField==='preco'}{sortDesc ? '↓' : '↑'}{/if}
             </th>
             <th class="p-4">Categoria</th>
-            <th class="p-4 text-center cursor-pointer hover:text-slate-700" on:click={() => toggleSort('estoque_atual')}>
+            <th class="p-4 text-center cursor-pointer hover:text-slate-200" on:click={() => toggleSort('estoque_atual')}>
               Estoque {#if sortField==='estoque_atual'}{sortDesc ? '↓' : '↑'}{/if}
             </th>
             <th class="p-4 text-right">Ações</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+        <tbody class="divide-y divide-slate-700/40">
           {#each paginatedProdutos as p (p.id)}
             {#if editingId === p.id}
                <!-- Row Editing Mode -->
-               <tr class="bg-blue-50/30 dark:bg-blue-900/10">
+               <tr class="bg-sky-500/5">
                  <td class="p-4"></td>
                  <td colspan="5" class="p-4">
                     <form on:submit={saveEdit} class="grid gap-4">
@@ -433,14 +433,14 @@
                </tr>
             {:else}
               <!-- Normal Row -->
-              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 group transition-colors">
+              <tr class="hover:bg-slate-700/20 group transition-colors">
                 <td class="p-4">
-                  <input type="checkbox" class="rounded border-slate-300" checked={selectedItems.has(p.id)} on:change={() => toggleSelect(p.id)} />
+                  <input type="checkbox" class="rounded border-slate-600" checked={selectedItems.has(p.id)} on:change={() => toggleSelect(p.id)} />
                 </td>
-                <td class="p-4 font-medium text-slate-900 dark:text-white">
+                <td class="p-4 font-medium text-white">
                   {p.nome}
                   {#if p.ocultar_no_pdv}
-                    <span class="ml-2 text-[10px] uppercase tracking-wider text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">Oculto</span>
+                    <span class="ml-2 text-[10px] uppercase tracking-wider text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded">Oculto</span>
                   {/if}
                 </td>
                 <td class="p-4">R$ {Number(p.preco).toFixed(2)}</td>
@@ -449,7 +449,7 @@
                 </td>
                 <td class="p-4 text-center">
                   {#if p.controlar_estoque}
-                     <span class={`rounded-full px-2 py-0.5 text-xs font-bold ${p.estoque_atual < 5 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                     <span class={`rounded-full px-2 py-0.5 text-xs font-bold ${p.estoque_atual < 5 ? 'bg-red-500/15 text-red-400' : 'bg-green-500/15 text-green-400'}`}>
                        {p.estoque_atual}
                      </span>
                   {:else}
@@ -458,10 +458,10 @@
                 </td>
                 <td class="p-4 text-right">
                   <div class="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-500" title="Editar" on:click={() => startEdit(p)}>
+                    <button class="p-2 hover:bg-slate-600 rounded text-slate-500" title="Editar" on:click={() => startEdit(p)}>
                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     </button>
-                    <button class="p-2 hover:bg-red-100 dark:hover:bg-red-900/40 rounded text-red-500" title="Excluir" on:click={() => confirmarExclusaoProduto(p.id)}>
+                    <button class="p-2 hover:bg-red-900/40 rounded text-red-500" title="Excluir" on:click={() => confirmarExclusaoProduto(p.id)}>
                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </div>
@@ -476,19 +476,19 @@
 
   <!-- Pagination -->
   {#if totalPages > 1}
-    <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center text-sm">
+    <div class="p-4 border-t border-slate-700/60 flex justify-between items-center text-sm">
       <div class="text-slate-500">
         Página {currentPage} de {totalPages}
       </div>
       <div class="flex gap-2">
-        <button 
-          class="px-3 py-1 border rounded hover:bg-slate-50 disabled:opacity-50"
+        <button
+          class="px-3 py-1 border border-slate-700 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white disabled:opacity-50"
           disabled={currentPage === 1}
           on:click={() => currentPage--}>
           Anterior
         </button>
-        <button 
-          class="px-3 py-1 border rounded hover:bg-slate-50 disabled:opacity-50"
+        <button
+          class="px-3 py-1 border border-slate-700 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white disabled:opacity-50"
           disabled={currentPage === totalPages}
           on:click={() => currentPage++}>
           Próxima
@@ -499,5 +499,12 @@
 </section>
 
 <style lang="postcss">
-  /* Usa classes globais em src/app.css (.input-form, .btn-*) */
+  .input-form { @apply block w-full px-3 py-2 border border-slate-600/60 rounded-md bg-slate-900/60 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 placeholder-slate-600 sm:text-sm; }
+  .input-search { @apply w-full px-3 py-2 border border-slate-600/60 rounded-md bg-slate-900/60 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 placeholder-slate-600 sm:text-sm pl-4; }
+  .label-form { @apply block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1; }
+  .input-filter { @apply bg-transparent border-none text-slate-400 focus:ring-0 text-sm cursor-pointer hover:text-sky-400; }
+
+  .btn-primary { @apply bg-sky-600 hover:bg-sky-500 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200; }
+  .btn-danger { @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200; }
+  .btn-ghost { @apply bg-transparent hover:bg-slate-700 text-slate-400 hover:text-slate-200 font-medium py-1 px-3 rounded border border-slate-600/50 transition-colors duration-200; }
 </style>

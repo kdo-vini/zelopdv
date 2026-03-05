@@ -64,7 +64,7 @@
   <!-- Page header -->
   <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
     <div>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Admin / Cadastros</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Cadastros</p>
       <h1 class="text-xl font-bold text-slate-100 tracking-tight">Pessoas</h1>
     </div>
     <span class="text-xs text-slate-500 tabular-nums">{pessoas.length} registros</span>

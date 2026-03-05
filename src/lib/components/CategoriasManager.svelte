@@ -9,7 +9,7 @@
   // --- State ---
   let categorias = [];
   let loading = true;
-  
+
   // UI State
   let showCreateForm = false;
   let selectedItems = new Set();
@@ -33,15 +33,15 @@
     loading = true;
     try {
       let q = supabase.from('categorias').select('*');
-      
+
       if (buscaFilter && String(buscaFilter).trim() !== '') {
         q = q.ilike('nome', `%${String(buscaFilter).trim()}%`);
       }
 
       const { data, error } = await q.order('ordem', { ascending: true });
-      if (error) addToast(error.message, 'error'); 
+      if (error) addToast(error.message, 'error');
       else categorias = data || [];
-      
+
       selectedItems.clear();
     } finally {
       loading = false;
@@ -62,15 +62,15 @@
     e.preventDefault();
     const { data: userData } = await supabase.auth.getUser();
     const id_usuario = userData?.user?.id ?? null;
-    
-    const { error } = await supabase.from('categorias').insert({ 
-      nome: form.nome, 
+
+    const { error } = await supabase.from('categorias').insert({
+      nome: form.nome,
       ordem: form.ordem,
-      id_usuario 
+      id_usuario
     });
 
     if (error) { addToast(error.message, 'error'); return; }
-    
+
     addToast('Categoria criada com sucesso!', 'success');
     form = { nome: '', ordem: 0 };
     showCreateForm = false;
@@ -94,7 +94,7 @@
     } else {
       selectedItems.clear();
     }
-    selectedItems = selectedItems; 
+    selectedItems = selectedItems;
   }
 
   function toggleSelect(id) {
@@ -105,14 +105,14 @@
 
   function confirmarExclusaoEmMassa() {
     if (selectedItems.size === 0) return;
-    
+
     Swal.fire({
       title: 'Excluir Categorias',
       text: `Tem certeza que deseja excluir ${selectedItems.size} categorias selecionadas?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
+      cancelButtonColor: '#334155',
       confirmButtonText: 'Sim, excluir!',
       cancelButtonText: 'Cancelar'
     }).then(async (result) => {
@@ -143,9 +143,9 @@
 
   async function saveEdit(e) {
     e.preventDefault();
-    const { error } = await supabase.from('categorias').update({ 
-      nome: editForm.nome, 
-      ordem: editForm.ordem 
+    const { error } = await supabase.from('categorias').update({
+      nome: editForm.nome,
+      ordem: editForm.ordem
     }).eq('id', editingId);
 
     if (error) addToast(error.message, 'error');
@@ -177,7 +177,7 @@
         icon: 'warning',
         showCancelButton: true,
         showDenyButton: true,
-        confirmButtonColor: '#3085d6', // Keep (Safe)
+        confirmButtonColor: '#0284c7', // Keep (Safe)
         denyButtonColor: '#d33',       // Cascade (Destructive)
         confirmButtonText: 'Manter Produtos (Desvincular)',
         denyButtonText: 'Excluir Tudo (Cascata)',
@@ -192,7 +192,7 @@
           .from('produtos')
           .update({ id_categoria: null })
           .eq('id_categoria', id);
-          
+
         if (updateError) {
           addToast('Erro ao desvincular produtos: ' + updateError.message, 'error');
           return;
@@ -217,7 +217,7 @@
             .from('produtos')
             .delete()
             .eq('id_categoria', id);
-            
+
           if (deleteProdError) {
             addToast('Erro ao excluir produtos: ' + deleteProdError.message, 'error');
             return;
@@ -233,7 +233,7 @@
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
+        cancelButtonColor: '#334155',
         confirmButtonText: 'Sim, excluir!',
         cancelButtonText: 'Cancelar'
       }).then(async (result) => {
@@ -256,14 +256,14 @@
   }
 </script>
 
-<section class="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 min-w-0">
+<section class="bg-slate-800/50 rounded-lg border border-slate-700/60 min-w-0">
   <!-- Header Toolbar -->
-  <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+  <div class="p-4 border-b border-slate-700/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div class="flex items-center gap-2">
-      <h2 class="font-semibold text-lg text-slate-800 dark:text-white">Categorias</h2>
-      <span class="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-full">{categorias.length}</span>
+      <h2 class="font-semibold text-lg text-white">Categorias</h2>
+      <span class="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full">{categorias.length}</span>
     </div>
-    
+
     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
       {#if selectedItems.size > 0}
         <button class="btn-danger text-sm flex items-center gap-2" on:click={confirmarExclusaoEmMassa}>
@@ -273,17 +273,17 @@
       {/if}
 
       <div class="flex-1 sm:flex-none">
-        <input 
-          type="text" 
-          placeholder="Buscar..." 
+        <input
+          type="text"
+          placeholder="Buscar..."
           class="input-search"
           bind:value={buscaFilter}
           on:input={() => carregarCategorias()}
         />
       </div>
 
-      <button 
-        class="btn-primary flex items-center gap-2" 
+      <button
+        class="btn-primary flex items-center gap-2"
         on:click={() => showCreateForm = !showCreateForm}>
         {#if showCreateForm}
           Cancelar
@@ -297,7 +297,7 @@
 
   <!-- Collapsible Create Form -->
   {#if showCreateForm}
-    <div transition:slide class="bg-blue-50/50 dark:bg-slate-900/50 border-b border-blue-100 dark:border-slate-600 p-4">
+    <div transition:slide class="bg-sky-500/5 border-b border-sky-500/15 p-4">
       <form on:submit={criarCategoria} class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label class="label-form">Nome da Categoria</label>
@@ -321,26 +321,26 @@
     {:else if categorias.length === 0}
       <div class="p-8 text-center text-slate-500">Nenhuma categoria encontrada.</div>
     {:else}
-      <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300 min-w-[500px]">
-        <thead class="bg-slate-50 dark:bg-slate-700/50 uppercase font-medium text-xs text-slate-500 dark:text-slate-400">
+      <table class="w-full text-left text-sm text-slate-300 min-w-[500px]">
+        <thead class="bg-slate-900/60 uppercase font-medium text-xs text-slate-400">
           <tr>
             <th class="p-4 w-4">
-              <input type="checkbox" class="rounded border-slate-300" on:change={toggleSelectAll} checked={sortedCategorias.length > 0 && sortedCategorias.every(c => selectedItems.has(c.id))} />
+              <input type="checkbox" class="rounded border-slate-600" on:change={toggleSelectAll} checked={sortedCategorias.length > 0 && sortedCategorias.every(c => selectedItems.has(c.id))} />
             </th>
-            <th class="p-4 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200" on:click={() => toggleSort('nome')}>
+            <th class="p-4 cursor-pointer hover:text-slate-200" on:click={() => toggleSort('nome')}>
               Nome {#if sortField==='nome'}{sortDesc ? '↓' : '↑'}{/if}
             </th>
-            <th class="p-4 cursor-pointer hover:text-slate-700" on:click={() => toggleSort('ordem')}>
+            <th class="p-4 cursor-pointer hover:text-slate-200" on:click={() => toggleSort('ordem')}>
               Ordem {#if sortField==='ordem'}{sortDesc ? '↓' : '↑'}{/if}
             </th>
             <th class="p-4 text-right">Ações</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+        <tbody class="divide-y divide-slate-700/40">
           {#each sortedCategorias as c (c.id)}
             {#if editingId === c.id}
                <!-- Row Editing Mode -->
-               <tr class="bg-blue-50/30 dark:bg-blue-900/10">
+               <tr class="bg-sky-500/5">
                  <td class="p-4"></td>
                  <td colspan="2" class="p-4">
                     <form on:submit={saveEdit} class="flex gap-4">
@@ -354,18 +354,18 @@
                </tr>
             {:else}
               <!-- Normal Row -->
-              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 group transition-colors">
+              <tr class="hover:bg-slate-700/20 group transition-colors">
                 <td class="p-4">
-                  <input type="checkbox" class="rounded border-slate-300" checked={selectedItems.has(c.id)} on:change={() => toggleSelect(c.id)} />
+                  <input type="checkbox" class="rounded border-slate-600" checked={selectedItems.has(c.id)} on:change={() => toggleSelect(c.id)} />
                 </td>
-                <td class="p-4 font-medium text-slate-900 dark:text-white">{c.nome}</td>
+                <td class="p-4 font-medium text-white">{c.nome}</td>
                 <td class="p-4">{c.ordem}</td>
                 <td class="p-4 text-right">
                   <div class="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-500" title="Editar" on:click={() => startEdit(c)}>
+                    <button class="p-2 hover:bg-slate-600 rounded text-slate-500" title="Editar" on:click={() => startEdit(c)}>
                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     </button>
-                    <button class="p-2 hover:bg-red-100 dark:hover:bg-red-900/40 rounded text-red-500" title="Excluir" on:click={() => confirmarExclusaoCategoria(c.id)}>
+                    <button class="p-2 hover:bg-red-900/40 rounded text-red-500" title="Excluir" on:click={() => confirmarExclusaoCategoria(c.id)}>
                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </div>
@@ -380,12 +380,12 @@
 </section>
 
 <style lang="postcss">
-  /* Styles handled exclusively by global Tailwind classes where possible, or specific consistent scoped styles */
-  .input-form { @apply block w-full px-3 py-2 border border-slate-300 rounded-md bg-white text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600; }
-  .input-search { @apply w-full px-3 py-2 border border-slate-300 rounded-md bg-white text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600 pl-4; }
+  .input-form { @apply block w-full px-3 py-2 border border-slate-600/60 rounded-md bg-slate-900/60 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 placeholder-slate-600 sm:text-sm; }
+  .input-search { @apply w-full px-3 py-2 border border-slate-600/60 rounded-md bg-slate-900/60 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 placeholder-slate-600 sm:text-sm pl-4; }
   .label-form { @apply block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1; }
-  
-  .btn-primary { @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md shadow-sm transition-colors duration-200; }
-  .btn-danger { @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md shadow-sm transition-colors duration-200; }
-  .btn-ghost { @apply bg-transparent hover:bg-slate-100 text-slate-600 font-medium py-1 px-3 rounded transition-colors duration-200; }
+  .input-filter { @apply bg-transparent border-none text-slate-400 focus:ring-0 text-sm cursor-pointer hover:text-sky-400; }
+
+  .btn-primary { @apply bg-sky-600 hover:bg-sky-500 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200; }
+  .btn-danger { @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200; }
+  .btn-ghost { @apply bg-transparent hover:bg-slate-700 text-slate-400 hover:text-slate-200 font-medium py-1 px-3 rounded border border-slate-600/50 transition-colors duration-200; }
 </style>
