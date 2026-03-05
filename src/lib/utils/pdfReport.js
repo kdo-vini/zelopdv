@@ -2,8 +2,6 @@
  * Gerador de Relatório PDF — Zelo PDV
  * Usa jsPDF + jspdf-autotable para gerar relatórios visuais e estruturados.
  */
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 const COLORS = {
     primary: [59, 130, 246],      // blue-500
@@ -32,7 +30,9 @@ const fmt = (n) => `R$ ${Number(n || 0).toFixed(2)}`;
  * @param {object} dados.pagamentos - { dinheiro, pix, debito, credito, fiado }
  * @param {object} dados.balanco - { sangria, suprimento, descontos }
  */
-export function generatePDFReport(dados) {
+export async function generatePDFReport(dados) {
+    const { jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();

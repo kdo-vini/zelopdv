@@ -110,9 +110,11 @@
         window.location.href = PAYMENT_LINK;
         return;
       } else {
+        const { data: { session: authSession } } = await supabase.auth.getSession();
+        const token = authSession?.access_token ?? '';
         const res = await fetch('/api/billing/create-checkout-session', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, email })
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({})
         });
         const json = await res.json();
         if (json?.url) { window.location.href = json.url; return; }
@@ -130,9 +132,11 @@
   async function gerenciar() {
     try {
       loading = true; message='';
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token ?? '';
       const res = await fetch('/api/billing/create-portal-session', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId, email })
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ customerId })
       });
       const json = await res.json();
       if (json?.url) { window.location.href = json.url; return; }

@@ -1,3 +1,8 @@
+<svelte:head>
+  <title>Zelo PDV</title>
+  <meta name="description" content="Sistema de frente de caixa e gestão financeira para pequenos negócios brasileiros. Controle vendas, fiado, estoque e despesas em um só lugar." />
+</svelte:head>
+
 <script>
   import "../app.css";
   import { onMount } from 'svelte';

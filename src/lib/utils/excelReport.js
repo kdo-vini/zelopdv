@@ -2,14 +2,13 @@
  * Gerador de Relatório Excel — Zelo PDV
  * Usa SheetJS (xlsx) para gerar Excel formatado com múltiplas abas.
  */
-import * as XLSX from 'xlsx';
-
 const fmt = (n) => Number(n || 0).toFixed(2);
 
 /**
  * @param {object} dados — mesmo formato de pdfReport.js
  */
-export function generateExcelReport(dados) {
+export async function generateExcelReport(dados) {
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
 
     // ==================== ABA: RESUMO ====================

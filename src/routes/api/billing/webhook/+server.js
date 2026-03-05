@@ -91,20 +91,17 @@ async function handleCheckoutCompleted(session) {
         console.log('[Webhook] Customer ID:', customerId);
 
         if (customerEmail) {
-            // Use Supabase Auth Admin API to find user by email
+            // Look up user by email via RPC (auth-js SDK has no getUserByEmail)
             try {
-                const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-
-                if (authError) {
-                    console.error('[Webhook] Error listing users:', authError);
+                const { data: foundId, error: rpcError } = await supabaseAdmin
+                    .rpc('get_user_id_by_email', { p_email: customerEmail });
+                if (rpcError) {
+                    console.error('[Webhook] Error looking up user by email:', rpcError);
+                } else if (foundId) {
+                    userId = foundId;
+                    console.log('[Webhook] ✅ Found user by email:', customerEmail, 'user_id:', userId);
                 } else {
-                    const matchedUser = authData.users.find(u => u.email === customerEmail);
-                    if (matchedUser) {
-                        userId = matchedUser.id;
-                        console.log('[Webhook] ✅ Found user by email in auth.users:', customerEmail, 'user_id:', userId);
-                    } else {
-                        console.log('[Webhook] No user found with email:', customerEmail);
-                    }
+                    console.log('[Webhook] No user found with email:', customerEmail);
                 }
             } catch (err) {
                 console.error('[Webhook] Error querying auth.users:', err);
