@@ -143,7 +143,7 @@
         <button
           data-prod={produto.id}
           on:click={() => handleProdutoClick(produto)}
-          class="group min-h-28 bg-slate-800/40 rounded-xl border border-slate-700/50 hover:border-indigo-500/50 hover:bg-slate-800/80 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all duration-200 flex flex-col justify-between"
+          class="group min-h-28 bg-slate-800/40 rounded-xl border border-slate-700/50 hover:border-sky-500/50 hover:bg-slate-800/80 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all duration-200 flex flex-col justify-between"
         >
           <div class="p-3 w-full text-left">
             <span class="text-xs font-bold text-slate-300 uppercase leading-snug break-words line-clamp-3 group-hover:text-white transition-colors">
@@ -153,7 +153,7 @@
           
           <div class="px-3 pb-3 w-full text-right">
             <div class="flex items-baseline justify-end gap-0.5">
-              <span class="text-[10px] font-bold text-indigo-400">R$</span>
+              <span class="text-[10px] font-bold text-sky-400">R$</span>
               <span class="text-lg font-black text-white tracking-tighter">
                 {Number(produto.preco).toFixed(2)}
               </span>
@@ -181,10 +181,4 @@
     </div>
   </div>
   
-  <!-- Indicador de performance (debug, pode remover em produção) -->
-  {#if produtos.length > 50}
-    <div class="fixed bottom-4 left-4 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded shadow-sm pointer-events-none">
-      Exibindo {visibleProducts.length} de {produtos.length} produtos
-    </div>
-  {/if}
 </div>

@@ -1357,12 +1357,25 @@ window.addEventListener('message', function(e){
       <span class="text-green-400 font-bold">R$ {Number(saldoCaixa).toFixed(2)}</span>
     </div>
   </div>
+
+  <!-- Movimentação de Caixa — mobile only (on desktop it lives in the cart sidebar footer) -->
+  <button
+    class="md:hidden p-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-300 hover:text-white rounded-md border border-slate-700/50 transition-colors"
+    on:click={() => modalMovCaixaAberto = true}
+    title="Movimentação de Caixa"
+    aria-label="Movimentação de Caixa"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+    </svg>
+  </button>
+
   <div class="flex items-center gap-4">
     {#if carregandoSaldo}
       <span class="text-[10px] text-slate-500 animate-pulse">Sincronizando...</span>
     {:else}
-      <button 
-        class="text-[10px] text-slate-400 hover:text-indigo-400 transition-colors uppercase tracking-wider font-semibold" 
+      <button
+        class="text-[10px] text-slate-400 hover:text-sky-400 transition-colors uppercase tracking-wider font-semibold"
         on:click={atualizarSaldoCaixa}
       >
         Atualizar
@@ -1395,7 +1408,7 @@ window.addEventListener('message', function(e){
             w-16 h-16 md:w-full md:aspect-square 
             p-1 flex flex-col items-center justify-center text-center 
             transition-all duration-200 group rounded-xl border 
-            {categoriaAtiva === cat.id ? 'bg-indigo-600 shadow-lg shadow-indigo-500/30 text-white border-transparent' : 'text-slate-400 hover:bg-slate-800 border-slate-700'}
+            {categoriaAtiva === cat.id ? 'bg-sky-600 shadow-lg shadow-sky-500/30 text-white border-transparent' : 'text-slate-400 hover:bg-slate-800 border-slate-700'}
           "
         >
           <div class="text-[9px] font-bold uppercase tracking-tight leading-tight group-hover:scale-105 transition-transform break-words w-full line-clamp-2 md:line-clamp-none">
@@ -1410,7 +1423,7 @@ window.addEventListener('message', function(e){
     <div class="hidden md:block px-2 pt-2 border-t border-slate-700/50">
       <a 
         href="/admin" 
-        class="flex flex-col items-center justify-center p-2 rounded-lg text-slate-500 hover:text-indigo-400 hover:bg-slate-800/50 transition-all group"
+        class="flex flex-col items-center justify-center p-2 rounded-lg text-slate-500 hover:text-sky-400 hover:bg-slate-800/50 transition-all group"
         title="Painel Admin"
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 group-hover:rotate-12 transition-transform">
@@ -1448,7 +1461,7 @@ window.addEventListener('message', function(e){
           <div class="flex items-center gap-2 overflow-x-auto py-1 px-1 scrollbar-none">
               <button 
                 type="button" 
-                class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors {subcategoriaAtiva === null ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'}"
+                class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors {subcategoriaAtiva === null ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'}"
                 on:click={() => subcategoriaAtiva = null}
               >
                 Todas
@@ -1456,7 +1469,7 @@ window.addEventListener('message', function(e){
               {#each subcatsDaCat as sc (sc.id)}
                 <button 
                   type="button" 
-                  class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors {subcategoriaAtiva === sc.id ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'}"
+                  class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors {subcategoriaAtiva === sc.id ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'}"
                   on:click={() => subcategoriaAtiva = sc.id}
                 >
                   {sc.nome}
@@ -1590,7 +1603,7 @@ window.addEventListener('message', function(e){
             <span class="text-lg font-bold text-white">R$ {Number(totalComanda).toFixed(2)}</span>
         </div>
         <button 
-            class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg active:scale-95 transition-transform"
+            class="bg-sky-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg active:scale-95 transition-transform"
             on:click={() => showMobileCart = true}
         >
             Ver Comanda

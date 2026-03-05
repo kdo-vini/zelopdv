@@ -78,8 +78,8 @@
     on:click|self={handleClose}
   >
     <div class="modal-content text-center max-w-sm" role="dialog" aria-modal="true">
-      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4">
-        <svg class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20 mb-4">
+        <svg class="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
         </svg>
       </div>
