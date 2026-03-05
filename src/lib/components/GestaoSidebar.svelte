@@ -19,9 +19,9 @@
 
   $: pathname = $page.url.pathname;
 
-  function isActive(href) {
-    if (href === '/gestao') return pathname === '/gestao';
-    return pathname === href || pathname.startsWith(href + '/');
+  function isActive(href, currentPath) {
+    if (href === '/gestao') return currentPath === '/gestao';
+    return currentPath === href || currentPath.startsWith(href + '/');
   }
 
   async function logout() {
@@ -200,17 +200,17 @@
         </p>
         <ul role="list" class="space-y-0.5">
           {#each group.items as item}
-            {@const active = isActive(item.href)}
+            {@const active = isActive(item.href, pathname)}
             <li>
               <a
                 href={item.href}
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden"
                 style="
-                  background: {active ? 'var(--sidebar-item-active-bg)' : ''};
+                  background: {active ? 'var(--sidebar-item-active-bg)' : 'transparent'};
                   color: {active ? 'var(--sidebar-item-active-text)' : 'var(--text-main)'};
                 "
                 on:mouseenter={e => { if (!active) e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'; }}
-                on:mouseleave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--sidebar-item-active-bg)' : ''; }}
+                on:mouseleave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--sidebar-item-active-bg)' : 'transparent'; }}
                 on:click={closeMobile}
                 aria-current={active ? 'page' : undefined}
                 title={item.label}
