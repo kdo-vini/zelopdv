@@ -1,21 +1,21 @@
 <svelte:head>
-  <title>Zelo PDV - O Sistema de Gestão para Pequenos Negócios</title>
-  <meta name="description" content="Frente de caixa ultra-rápida, controle financeiro real e gestão de fiado. Teste grátis o sistema ideal para mercadinhos, lanchonetes e lojas de roupa." />
-  <meta name="keywords" content="PDV, Frente de Caixa, Sistema de Gestão, Controle Financeiro, Mercadinho, Loja de Roupa, Lanchonete, Fiado, Controle de Estoque" />
+  <title>Zelo PDV - Sistema PDV simples para Lanchonetes</title>
+  <meta name="description" content="Sistema PDV para lanchonete simples e direto ao ponto. Controle caixa, pedidos, estoque e fiado em segundos. Teste grátis o sistema ideal para lanchonetes e pequenos comércios." />
+  <meta name="keywords" content="sistema PDV, PDV para lanchonete, sistema para lanchonete, controle de caixa, sistema de vendas simples, lanchonete, hamburgueria, mercadinho, PDV grátis" />
   <meta name="robots" content="index, follow" />
   
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://zelopdv.com.br/" />
-  <meta property="og:title" content="Zelo PDV - O Sistema que Coloca Dinheiro no seu Bolso" />
-  <meta property="og:description" content="Controle vendas, fiado e despesas sem complicação. Comece seu teste grátis de 7 dias hoje mesmo." />
+  <meta property="og:title" content="Zelo PDV - Sistema PDV simples para Lanchonetes" />
+  <meta property="og:description" content="Controle pedidos, estoque e caixa em segundos. Ideal para lanchonetes e pequenos comércios." />
   <meta property="og:image" content="https://zelopdv.com.br/og-image.jpg" />
 
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://zelopdv.com.br/" />
-  <meta property="twitter:title" content="Zelo PDV - Gestão Inteligente" />
-  <meta property="twitter:description" content="O sistema de caixa que coloca dinheiro no seu bolso. Controle de vendas, gestão de fiado e relatórios financeiros em um só lugar." />
+  <meta property="twitter:title" content="Zelo PDV - Simples e Direto ao Ponto" />
+  <meta property="twitter:description" content="O sistema de caixa que coloca ordem no seu negócio. Controle de vendas, gestão de fiado e relatórios financeiros em um só lugar." />
   <meta property="twitter:image" content="https://zelopdv.com.br/og-image.jpg" />
 
   <script type="application/ld+json">
@@ -84,7 +84,7 @@
       <div class="flex items-center gap-4">
         <a href="/login" class="text-sm font-medium text-white hover:text-sky-400 transition-colors hidden sm:block">Entrar</a>
         <a href="/cadastro" class="px-5 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all hover:scale-105 active:scale-95">
-          Começar Grátis
+          Testar 7 dias grátis
         </a>
       </div>
     </div>
@@ -106,13 +106,12 @@
       </div>
 
       <h1 class="text-5xl md:text-7xl font-bold text-white tracking-tight leading-[1.1] mb-8 animate-fade-in-up delay-100">
-        O PDV que coloca <br class="hidden md:block" />
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-400 to-sky-400 animate-gradient">Dinheiro no seu Bolso</span>
+        Sistema PDV simples <br class="hidden md:block" />
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-400 to-sky-400 animate-gradient">para Lanchonetes</span>
       </h1>
 
       <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up delay-200">
-        Frente de caixa ultra-rápida combinada com a gestão financeira que seu negócio precisa. 
-        Controle vendas, fiado e despesas sem complicação.
+        Controle pedidos, estoque e caixa em segundos. Ideal para lanchonetes, hamburguerias e pequenos comércios.
       </p>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up delay-300">
@@ -125,11 +124,9 @@
       </div>
 
       <!-- MOCKUP DASHBOARD 3D -->
-      <div class="mt-20 relative perspective-1000 group">
-        <!-- Mockup Container with Tilt Effect -->
-        <div class="relative mx-auto max-w-5xl rounded-xl border border-white/10 bg-[#161b22] shadow-2xl shadow-sky-900/20 overflow-hidden transform transition-transform duration-700 hover:scale-[1.01]"
-             style="transform: rotateX({mouseY * 2}deg) rotateY({mouseX * 2}deg)">
-          
+      <div class="mt-20 relative group">
+        <!-- Mockup Container with Glow -->
+        <div class="relative mx-auto max-w-5xl rounded-xl border border-white/10 shadow-2xl shadow-sky-900/40 overflow-hidden transform transition-transform duration-700 hover:scale-[1.01]">
           <!-- Browser Toolbar -->
           <div class="h-10 border-b border-white/5 bg-[#0d1117] flex items-center px-4 gap-2">
             <div class="flex gap-1.5">
@@ -141,67 +138,17 @@
               zelopdv.com.br/app
             </div>
           </div>
-
-          <!-- App UI Placeholder (CSS Mockup provided, replace with IMAGES later) -->
-          <div class="p-6 grid grid-cols-1 md:grid-cols-4 gap-6 text-left">
-            <!-- Sidebar -->
-            <div class="hidden md:block col-span-1 border-r border-white/5 pr-6 space-y-6">
-              <div class="space-y-2">
-                <div class="h-8 w-full bg-sky-500/20 border-l-2 border-sky-500 rounded-r-md"></div>
-                <div class="h-8 w-3/4 bg-white/5 rounded-md"></div>
-                <div class="h-8 w-5/6 bg-white/5 rounded-md"></div>
-              </div>
-              <div class="space-y-2 pt-4 border-t border-white/5">
-                <div class="h-8 w-full bg-white/5 rounded-md"></div>
-                <div class="h-8 w-4/5 bg-white/5 rounded-md"></div>
-              </div>
-            </div>
-
-            <!-- Main Content -->
-            <div class="col-span-3 space-y-6">
-              <!-- Stats Row -->
-              <div class="grid grid-cols-3 gap-4">
-                <div class="p-4 rounded-xl bg-white/5 border border-white/5">
-                  <div class="text-xs text-slate-500 mb-1">Vendas Hoje</div>
-                  <div class="text-xl font-bold text-white">R$ 1.240,50</div>
-                </div>
-                <div class="p-4 rounded-xl bg-white/5 border border-white/5 relative overflow-hidden">
-                  <div class="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-transparent"></div>
-                  <div class="text-xs text-emerald-400 mb-1">Lucro Líquido</div>
-                  <div class="text-xl font-bold text-emerald-400">R$ 482,00</div>
-                </div>
-                <div class="p-4 rounded-xl bg-white/5 border border-white/5">
-                  <div class="text-xs text-amber-500 mb-1">Fiado a Receber</div>
-                  <div class="text-xl font-bold text-amber-500">R$ 850,00</div>
-                </div>
-              </div>
-
-              <!-- List Row -->
-              <div class="rounded-xl border border-white/5 bg-white/[0.02] p-4">
-                <div class="flex items-center justify-between mb-4">
-                  <div class="h-4 w-32 bg-white/10 rounded"></div>
-                  <div class="h-8 w-24 bg-sky-600 rounded-lg"></div>
-                </div>
-                <div class="space-y-3">
-                  <div class="h-10 w-full bg-white/5 rounded border border-white/5 flex items-center px-4">
-                     <div class="h-2 w-8 bg-slate-600 rounded mr-4"></div>
-                     <div class="h-2 w-24 bg-slate-600 rounded"></div>
-                  </div>
-                  <div class="h-10 w-full bg-white/5 rounded border border-white/5 flex items-center px-4">
-                     <div class="h-2 w-8 bg-slate-600 rounded mr-4"></div>
-                     <div class="h-2 w-32 bg-slate-600 rounded"></div>
-                  </div>
-                  <div class="h-10 w-full bg-white/5 rounded border border-white/5 flex items-center px-4">
-                     <div class="h-2 w-8 bg-slate-600 rounded mr-4"></div>
-                     <div class="h-2 w-20 bg-slate-600 rounded"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          
+          <!-- Imagem Real do Produto -->
+          <div class="bg-[#161b22] aspect-[16/9] md:aspect-auto">
+            <picture>
+              <source srcset="/images/screenshots/dashboard-desktop.png" media="(min-width: 768px)">
+              <img src="/images/screenshots/dashboard-desktop.png" alt="Tela de Vendas do Zelo PDV para Lanchonetes" class="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
+            </picture>
           </div>
           
           <!-- Overlay Gradient for depth -->
-          <div class="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-transparent to-transparent pointer-events-none"></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-[#0B0F19]/50 via-transparent to-transparent pointer-events-none"></div>
         </div>
         
         <!-- Glow under dashboard -->
@@ -213,12 +160,53 @@
   <!-- BRANDS/TRUST STRIP -->
   <section class="py-10 border-y border-white/5 bg-white/[0.02]">
     <div class="max-w-7xl mx-auto px-6 text-center">
-      <p class="text-sm font-medium text-slate-500 mb-6">Ideal para pequenos negócios que pensam grande</p>
-      <div class="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-        <span class="text-lg font-bold text-white flex items-center gap-2">🛒 Mercadinhos</span>
+      <p class="text-sm font-medium text-slate-500 mb-6">Criado especialmente para pequenos negócios brasileiros</p>
+      <div class="flex flex-wrap justify-center gap-8 md:gap-16 opacity-70 hover:opacity-100 transition-all duration-500">
         <span class="text-lg font-bold text-white flex items-center gap-2">🍔 Lanchonetes</span>
-        <span class="text-lg font-bold text-white flex items-center gap-2">👕 Lojas de Roupa</span>
-        <span class="text-lg font-bold text-white flex items-center gap-2">✂️ Barbearias</span>
+        <span class="text-lg font-bold text-white flex items-center gap-2">� Hamburguerias</span>
+        <span class="text-lg font-bold text-white flex items-center gap-2">🥪 Quiosques</span>
+        <span class="text-lg font-bold text-white flex items-center gap-2">🍕 Pequenos Deliveries</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="py-24 relative overflow-hidden bg-[#0d1117]">
+    <div class="max-w-7xl mx-auto px-6 text-center">
+      <h2 class="text-3xl md:text-4xl font-bold text-white mb-16">Como o Zelo PDV simplifica seu dia</h2>
+      
+      <div class="grid md:grid-cols-3 gap-12">
+        <div class="relative">
+          <div class="w-16 h-16 mx-auto bg-sky-500/10 rounded-2xl border border-sky-500/20 flex items-center justify-center mb-6">
+            <span class="text-2xl font-bold text-sky-400">1</span>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-3">Cadastre seus produtos</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">Adicione seu cardápio em minutos. Defina preços, categorias e controle o estoque do que for necessário.</p>
+        </div>
+        
+        <div class="relative">
+          <div class="hidden md:block absolute top-8 left-1/2 w-full h-px bg-gradient-to-r from-transparent via-sky-500/30 to-transparent"></div>
+          <div class="w-16 h-16 mx-auto bg-sky-500/10 rounded-2xl border border-sky-500/20 flex items-center justify-center mb-6">
+             <span class="text-2xl font-bold text-sky-400">2</span>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-3">Registre pedidos rápido</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">Tela de vendas limpa. Com poucos toques você registra o pedido, envia o comprovante no WhatsApp e atende o próximo da fila.</p>
+        </div>
+        
+        <div class="relative">
+          <div class="hidden md:block absolute top-8 left-1/2 w-full h-px bg-gradient-to-r from-transparent via-sky-500/30 to-transparent"></div>
+          <div class="w-16 h-16 mx-auto bg-sky-500/10 rounded-2xl border border-sky-500/20 flex items-center justify-center mb-6">
+             <span class="text-2xl font-bold text-sky-400">3</span>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-3">Veja o lucro do dia</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">Chega de fechar o caixa no papel. O sistema cruza o que entrou com as despesas e te mostra o lucro real.</p>
+        </div>
+      </div>
+      
+      <div class="mt-16">
+        <a href="/cadastro" class="inline-flex px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
+          Testar 7 dias grátis
+        </a>
       </div>
     </div>
   </section>
@@ -232,12 +220,12 @@
         </div>
         <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Frente de Caixa Ágil. <br/><span class="text-sky-500">Sem Filas.</span></h2>
         <p class="text-lg text-slate-400 mb-8 leading-relaxed">
-          Um PDV desenhado para velocidade. Digite, clique e venda. Funciona online e não te deixa na mão se a internet oscilar.
+          Um PDV desenhado para agilizar seu balcão. Toque, adicione e finalize. Ideal para horários de pico.
         </p>
         <ul class="space-y-4">
           <li class="flex items-center gap-3 text-slate-300">
             <div class="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 text-xs">✓</div>
-            Busca de produtos ultra-rápida
+            Registro de pedidos em segundos
           </li>
           <li class="flex items-center gap-3 text-slate-300">
             <div class="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 text-xs">✓</div>
@@ -245,28 +233,14 @@
           </li>
           <li class="flex items-center gap-3 text-slate-300">
             <div class="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 text-xs">✓</div>
-            Impressão de Recibos (58mm e 80mm)
+            Controle de estoque automático
           </li>
         </ul>
       </div>
       <div class="relative group">
         <div class="absolute inset-0 bg-sky-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-sky-500/30 transition-all duration-700"></div>
-        <div class="rounded-2xl border border-white/10 bg-[#121620] p-6 shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-sky-900/20 spotlight-card" on:mousemove={handleSpotlight}>
-           <!-- Placeholder Graphic for POS -->
-           <div class="grid grid-cols-2 gap-4">
-              <div class="col-span-1 space-y-3">
-                 <div class="bg-white/5 h-24 rounded-lg animate-pulse"></div>
-                 <div class="bg-white/5 h-24 rounded-lg animate-pulse delay-100"></div>
-                 <div class="bg-white/5 h-24 rounded-lg animate-pulse delay-200"></div>
-              </div>
-              <div class="col-span-1 bg-white/[0.03] rounded-lg p-4 flex flex-col justify-between">
-                 <div class="space-y-2">
-                    <div class="h-4 bg-white/10 rounded w-1/2"></div>
-                    <div class="h-8 bg-white/10 rounded w-full"></div>
-                 </div>
-                 <div class="h-10 bg-sky-600 rounded-lg w-full mt-4"></div>
-              </div>
-           </div>
+        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-sky-900/20">
+           <img src="/images/screenshots/sales-screen.png" alt="Tela de Vendas Lanchonete" class="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
         </div>
       </div>
     </div>
@@ -277,21 +251,8 @@
     <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
       <div class="order-2 lg:order-1 relative group">
         <div class="absolute inset-0 bg-emerald-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-emerald-500/30 transition-all duration-700"></div>
-        <div class="rounded-2xl border border-white/10 bg-[#121620] p-6 shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-emerald-900/20 spotlight-card" on:mousemove={handleSpotlight}>
-           <!-- Placeholder Graphic for Finance -->
-           <div class="space-y-4">
-              <div class="flex justify-between items-end">
-                 <div class="h-32 w-8 bg-white/5 rounded-t-sm"></div>
-                 <div class="h-48 w-8 bg-white/5 rounded-t-sm"></div>
-                 <div class="h-40 w-8 bg-white/5 rounded-t-sm"></div>
-                 <div class="h-56 w-8 bg-emerald-500 rounded-t-sm shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
-                 <div class="h-36 w-8 bg-white/5 rounded-t-sm"></div>
-              </div>
-              <div class="h-px bg-white/10 w-full"></div>
-              <div class="flex justify-between text-xs text-slate-500">
-                 <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span>
-              </div>
-           </div>
+        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-emerald-900/20">
+           <img src="/images/screenshots/financial-screen.png" alt="Tela de Controle de Caixa Lanchonete" class="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
         </div>
       </div>
       <div class="order-1 lg:order-2">
@@ -341,31 +302,8 @@
       </div>
       <div class="relative group">
         <div class="absolute inset-0 bg-amber-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-amber-500/30 transition-all duration-700"></div>
-        <div class="rounded-2xl border border-white/10 bg-[#121620] p-6 shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-amber-900/20 spotlight-card" on:mousemove={handleSpotlight}>
-           <!-- Placeholder Graphic for Customers -->
-           <div class="space-y-3">
-              <div class="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5">
-                 <div class="w-10 h-10 rounded-full bg-slate-700"></div>
-                 <div class="flex-1">
-                    <div class="h-3 w-24 bg-slate-600 rounded mb-1"></div>
-                    <div class="h-2 w-16 bg-slate-700 rounded"></div>
-                 </div>
-                 <div class="text-right">
-                    <div class="h-3 w-16 bg-red-400/80 rounded mb-1"></div>
-                    <div class="h-2 w-8 bg-slate-700 rounded ml-auto"></div>
-                 </div>
-              </div>
-              <div class="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5 opacity-60">
-                 <div class="w-10 h-10 rounded-full bg-slate-700"></div>
-                 <div class="flex-1">
-                    <div class="h-3 w-24 bg-slate-600 rounded mb-1"></div>
-                    <div class="h-2 w-16 bg-slate-700 rounded"></div>
-                 </div>
-                 <div class="text-right">
-                    <div class="h-3 w-16 bg-emerald-400/80 rounded mb-1"></div>
-                 </div>
-              </div>
-           </div>
+        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-amber-900/20">
+           <img src="/images/screenshots/customers-screen.png" alt="Tela de Controle de Fiado Clientes" class="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
         </div>
       </div>
     </div>
@@ -419,8 +357,8 @@
             </li>
           </ul>
 
-          <a href="/cadastro" class="block w-full py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
-            Começar meus 7 dias grátis
+          <a href="/cadastro" class="block w-full text-center py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
+            Testar 7 dias grátis
           </a>
         </div>
       </div>
