@@ -39,6 +39,7 @@
 <script>
   import { onMount } from 'svelte';
   
+  let activeLightboxImage = null;
   // Efeito de Parallax suave no mouse
   let mouseX = 0;
   let mouseY = 0;
@@ -126,7 +127,7 @@
       <!-- MOCKUP DASHBOARD 3D -->
       <div class="mt-20 relative group">
         <!-- Mockup Container with Glow -->
-        <div class="relative mx-auto max-w-5xl rounded-xl border border-white/10 shadow-2xl shadow-sky-900/40 overflow-hidden transform transition-transform duration-700 hover:scale-[1.01]">
+        <div class="relative mx-auto max-w-5xl rounded-xl border border-white/10 shadow-2xl shadow-sky-900/40 overflow-hidden transform transition-all duration-700 hover:scale-[1.01]">
           <!-- Browser Toolbar -->
           <div class="h-10 border-b border-white/5 bg-[#0d1117] flex items-center px-4 gap-2">
             <div class="flex gap-1.5">
@@ -140,11 +141,17 @@
           </div>
           
           <!-- Imagem Real do Produto -->
-          <div class="bg-[#161b22] aspect-[16/9] md:aspect-auto">
+          <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+          <div class="bg-[#161b22] aspect-[16/9] md:aspect-auto relative group cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/dashboard-desktop.png'} role="button" tabindex="0">
             <picture>
               <source srcset="/images/screenshots/dashboard-desktop.png" media="(min-width: 768px)">
-              <img src="/images/screenshots/dashboard-desktop.png" alt="Tela de Vendas do Zelo PDV para Lanchonetes" class="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
+              <img src="/images/screenshots/dashboard-desktop.png" alt="Tela de Vendas do Zelo PDV para Lanchonetes" class="w-full h-auto object-cover opacity-90 group-hover:blur-[2px] transition-all duration-300" />
             </picture>
+            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+               <div class="w-16 h-16 bg-sky-600/90 rounded-full flex items-center justify-center shadow-lg shadow-black/50 backdrop-blur-md transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+               </div>
+            </div>
           </div>
           
           <!-- Overlay Gradient for depth -->
@@ -239,8 +246,14 @@
       </div>
       <div class="relative group">
         <div class="absolute inset-0 bg-sky-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-sky-500/30 transition-all duration-700"></div>
-        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-sky-900/20">
-           <img src="/images/screenshots/sales-screen.png" alt="Tela de Vendas Lanchonete" class="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
+        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(14,165,233,0.3)] cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/sales-screen.png'} role="button" tabindex="0">
+           <img src="/images/screenshots/sales-screen.png" alt="Tela de Vendas Lanchonete" class="w-full h-auto object-cover opacity-90 group-hover:blur-[2px] transition-all duration-300" />
+           <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+               <div class="w-16 h-16 bg-sky-600/90 rounded-full flex items-center justify-center shadow-lg shadow-black/50 backdrop-blur-md transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+               </div>
+           </div>
         </div>
       </div>
     </div>
@@ -251,8 +264,14 @@
     <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
       <div class="order-2 lg:order-1 relative group">
         <div class="absolute inset-0 bg-emerald-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-emerald-500/30 transition-all duration-700"></div>
-        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-emerald-900/20">
-           <img src="/images/screenshots/financial-screen.png" alt="Tela de Controle de Caixa Lanchonete" class="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
+        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(16,185,129,0.3)] cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/financial-screen.png'} role="button" tabindex="0">
+           <img src="/images/screenshots/financial-screen.png" alt="Tela de Controle de Caixa Lanchonete" class="w-full h-auto object-cover opacity-90 group-hover:blur-[2px] transition-all duration-300" />
+           <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+               <div class="w-16 h-16 bg-emerald-600/90 rounded-full flex items-center justify-center shadow-lg shadow-black/50 backdrop-blur-md transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+               </div>
+           </div>
         </div>
       </div>
       <div class="order-1 lg:order-2">
@@ -302,8 +321,14 @@
       </div>
       <div class="relative group">
         <div class="absolute inset-0 bg-amber-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-amber-500/30 transition-all duration-700"></div>
-        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-amber-900/20">
-           <img src="/images/screenshots/customers-screen.png" alt="Tela de Controle de Fiado Clientes" class="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
+        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(245,158,11,0.3)] cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/customers-screen.png'} role="button" tabindex="0">
+           <img src="/images/screenshots/customers-screen.png" alt="Tela de Controle de Fiado Clientes" class="w-full h-auto object-cover opacity-90 group-hover:blur-[2px] transition-all duration-300" />
+           <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+               <div class="w-16 h-16 bg-amber-600/90 rounded-full flex items-center justify-center shadow-lg shadow-black/50 backdrop-blur-md transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+               </div>
+           </div>
         </div>
       </div>
     </div>
@@ -470,6 +495,21 @@
       </div>
     </div>
   </footer>
+
+  <!-- LIGHTBOX MODAL -->
+  {#if activeLightboxImage}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <div class="fixed inset-0 z-[100] flex items-center justify-center bg-[#0B0F19]/90 backdrop-blur-sm p-4 cursor-zoom-out animate-fade-in-up" style="animation-duration: 0.2s; opacity: 1;" on:click={() => activeLightboxImage = null}>
+      <div class="relative max-w-7xl w-full max-h-[90vh] flex items-center justify-center" on:click={(e) => e.stopPropagation()}>
+          <button class="absolute -top-12 right-0 md:-right-12 z-50 p-2 text-slate-400 hover:text-white transition-colors cursor-pointer" on:click={() => activeLightboxImage = null}>
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+          <!-- svelte-ignore a11y_img_redundant_alt -->
+          <img src={activeLightboxImage} alt="Imagem Ampliada do Produto Zelo PDV" class="max-w-full max-h-[85vh] object-contain rounded-xl shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/10" />
+      </div>
+    </div>
+  {/if}
 
 </div>
 

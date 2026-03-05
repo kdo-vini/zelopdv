@@ -27,7 +27,7 @@ export function getFriendlyErrorMessage(error) {
         return 'Este e-mail já está cadastrado. Tente fazer login.';
     }
     if (msg.includes('password should be at least')) {
-        return 'A senha deve ter pelo menos 6 caracteres.';
+        return 'A senha deve ter pelo menos 8 caracteres.';
     }
     if (msg.includes('weak password')) {
         return 'A senha é muito fraca. Tente uma combinação mais forte.';
