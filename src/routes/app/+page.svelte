@@ -1348,6 +1348,7 @@ window.addEventListener('message', function(e){
 </script>
 
 <!-- --- 6. LAYOUT (HTML com Tailwind CSS) --- -->
+<div class="flex flex-col h-full overflow-hidden">
 
 <!-- Barra de status e Saldo integrada (Minimalista) -->
 <div class="mx-4 mt-3 mb-2 px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg flex items-center justify-between">
@@ -1386,7 +1387,7 @@ window.addEventListener('message', function(e){
 
 <!-- Fundo principal do PDV: Layout Responsivo -->
 <!-- Mobile: flex-col (vertical), Desktop (md): flex-row (horizontal) -->
-<div class="flex flex-col md:flex-row w-full h-[calc(100vh-140px)] bg-transparent overflow-hidden gap-4 relative">
+<div class="flex flex-col md:flex-row w-full flex-1 bg-transparent overflow-hidden gap-4 relative">
 
   <!-- Coluna 1: Categorias -->
   <!-- Mobile: Top Bar horizontal scroll. Desktop: Left Sidebar vertical -->
@@ -1612,6 +1613,7 @@ window.addEventListener('message', function(e){
   {/if}
 
 </div>
+</div> <!-- /flex-col h-full -->
 
 <!-- --- 7. MODAIS (Componentizados) --- -->
 

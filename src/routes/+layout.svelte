@@ -42,7 +42,10 @@
   $: isRelatorios = path.startsWith('/relatorios');
   $: isApp = path.startsWith('/app');
   $: isPerfil = path.startsWith('/perfil');
+  $: isAssinatura = path.startsWith('/assinatura');
   $: isAuthPage = ['/login', '/cadastro', '/esqueci-senha', '/redefinir-senha'].includes(path);
+  // Routes that have their own sidebar layout — hide root header/footer for these
+  $: hasSidebarLayout = isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura;
 
   // NEW YEAR THEME STATE (DEPRECATED - New Year is over)
   let isNewYearMode = false;
@@ -324,7 +327,7 @@
     </div>
   {/if}
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isAuthPage && !isGestaoPrefixed}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isAuthPage && !hasSidebarLayout}
   <header class="border-b bg-header-base backdrop-blur sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
@@ -513,11 +516,11 @@
   {/if}
   {/if}
 
-  <main class="flex-1 mx-auto w-full {$page.url.pathname.startsWith('/app') || $page.url.pathname === '/' || $page.url.pathname === '/landing' || isAuthPage || isGestaoPrefixed ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
+  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || isAuthPage ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isAuthPage && !isGestaoPrefixed}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isAuthPage && !hasSidebarLayout}
   <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
