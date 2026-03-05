@@ -1422,7 +1422,7 @@ window.addEventListener('message', function(e){
     <!-- Showing only on Desktop for now or if space permits -->
     <div class="hidden md:block px-2 pt-2 border-t border-slate-700/50">
       <a 
-        href="/admin" 
+        href="/gestao"
         class="flex flex-col items-center justify-center p-2 rounded-lg text-slate-500 hover:text-sky-400 hover:bg-slate-800/50 transition-all group"
         title="Painel de Gestão"
       >

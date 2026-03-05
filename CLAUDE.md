@@ -39,7 +39,7 @@ To develop `admin-dashboard/`, run `npm run dev` from inside that directory.
 - `/perfil` — Company profile setup (auth required)
 - `/assinatura` — Subscription/billing page
 - `/app` — **Main POS interface** (active subscription required)
-- `/admin/*` — Admin dashboard: `pessoas`, `fichario`, `produtos`, `estoque`, `caixa`
+- `/gestao/*` — Management dashboard: `pessoas`, `fichario`, `produtos`, `estoque`, `caixa`
 - `/relatorios` — Reports
 - `/api/billing/` — Server-side Stripe API routes
 
@@ -110,11 +110,9 @@ To add a new CSS variable, define it in `base.css` **and** override it in `chris
 ## Notifications
 
 ```javascript
-import { addToast } from '$lib/toastStore'
-addToast({ message: 'Saved!', type: 'success' }) // 'success' | 'error' | 'info'
-
-import { confirmAction } from '$lib/toastStore'
-const ok = await confirmAction({ title: '...', message: '...', confirmText: 'Yes' })
+import { addToast, confirmAction } from '$lib/stores/ui'
+addToast('Mensagem aqui', 'success') // 'success' | 'error' | 'info' | 'warning'
+const ok = await confirmAction('Título', 'Mensagem de confirmação') // returns Promise<boolean>
 ```
 
 ## Environment Variables

@@ -148,7 +148,7 @@
       }
 
       addToast('Caixa fechado com sucesso.', 'success');
-      window.location.href = '/admin';
+      window.location.href = '/gestao';
     } catch (err) {
       errorMessage = err?.message || 'Erro ao fechar caixa.';
     } finally {

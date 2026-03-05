@@ -123,7 +123,7 @@
 <section class="wrap">
   <div class="header">
     <h2 class="title">Fichário (Fiado)</h2>
-    <a class="btn ghost" href="/admin/pessoas">Gerenciar Pessoas</a>
+    <a class="btn ghost" href="/gestao/pessoas">Gerenciar Pessoas</a>
   </div>
 
   {#if errorMsg}<p class="err">{errorMsg}</p>{/if}

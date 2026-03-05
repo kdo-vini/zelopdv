@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
+  import { addToast, confirmAction } from '$lib/stores/ui';
   export let params;
 
   let pessoas = [];
@@ -46,9 +47,11 @@
   }
 
   async function remove(id) {
-    if (!confirm('Excluir esta pessoa?')) return;
+    const ok = await confirmAction('Excluir pessoa', 'Tem certeza que deseja excluir esta pessoa?');
+    if (!ok) return;
     const { error } = await supabase.from('pessoas').delete().eq('id', id);
-    if (error) { alert(error.message); return; }
+    if (error) { addToast(error.message, 'error'); return; }
+    addToast('Pessoa excluída.', 'success');
     load();
   }
 
@@ -166,7 +169,7 @@
                     <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <!-- Fichário -->
                       <a
-                        href="/admin/fichario?p={p.id}"
+                        href="/gestao/fichario?p={p.id}"
                         class="icon-btn"
                         title="Ver fichário"
                         aria-label="Ver fichário de {p.nome}"

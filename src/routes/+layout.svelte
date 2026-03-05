@@ -36,8 +36,8 @@
 
   // Active state helpers
   $: path = $page.url.pathname;
-  $: isGestao = path === '/admin' || path.startsWith('/admin/pessoas') || path.startsWith('/admin/produtos') || path.startsWith('/admin/estoque');
-  $: isFinanceiro = path.startsWith('/admin/caixa') || path.startsWith('/admin/fichario') || path.startsWith('/admin/despesas');
+  $: isGestao = path === '/gestao' || path.startsWith('/gestao/pessoas') || path.startsWith('/gestao/produtos') || path.startsWith('/gestao/estoque');
+  $: isFinanceiro = path.startsWith('/gestao/caixa') || path.startsWith('/gestao/fichario') || path.startsWith('/gestao/despesas');
   $: isRelatorios = path.startsWith('/relatorios');
   $: isApp = path.startsWith('/app');
   $: isPerfil = path.startsWith('/perfil');
@@ -182,7 +182,7 @@
         return;
       }
       // Protege rotas internas sem assinatura ativa
-      const protectedPaths = ['/app', '/admin', '/relatorios'];
+      const protectedPaths = ['/app', '/gestao', '/relatorios'];
       if (session && protectedPaths.some((p) => path.startsWith(p))) {
         if (!hasCompleteProfile) {
 
@@ -360,10 +360,10 @@
               <div role="menu" tabindex="-1" 
                    class="absolute left-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-[var(--bg-panel)] border-[var(--border-subtle)]"
                    on:mouseenter={cancelCloseMenu} on:mouseleave={scheduleCloseMenu}>
-                <a href="/admin" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Dashboard</a>
-                <a href="/admin/pessoas" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Pessoas</a>
-                <a href="/admin/produtos" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Produtos</a>
-                <a href="/admin/estoque" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Estoque</a>
+                <a href="/gestao" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Dashboard</a>
+                <a href="/gestao/pessoas" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Pessoas</a>
+                <a href="/gestao/produtos" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Produtos</a>
+                <a href="/gestao/estoque" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Estoque</a>
               </div>
             {/if}
           </div>
@@ -381,9 +381,9 @@
               <div role="menu" tabindex="-1" 
                    class="absolute left-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-[var(--bg-panel)] border-[var(--border-subtle)]"
                    on:mouseenter={cancelCloseMenu} on:mouseleave={scheduleCloseMenu}>
-                <a href="/admin/caixa" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Fechar Caixa</a>
-                <a href="/admin/fichario" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Fichário (Fiado)</a>
-                <a href="/admin/despesas" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Despesas</a>
+                <a href="/gestao/caixa" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Fechar Caixa</a>
+                <a href="/gestao/fichario" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Fichário (Fiado)</a>
+                <a href="/gestao/despesas" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Despesas</a>
               </div>
             {/if}
           </div>
@@ -470,15 +470,15 @@
           </a>
           
           <div class="mt-4 px-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Gestão</div>
-          <a href="/admin" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Dashboard</a>
-          <a href="/admin/pessoas" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Pessoas</a>
-          <a href="/admin/produtos" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Produtos</a>
-          <a href="/admin/estoque" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Estoque</a>
+          <a href="/gestao" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Dashboard</a>
+          <a href="/gestao/pessoas" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Pessoas</a>
+          <a href="/gestao/produtos" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Produtos</a>
+          <a href="/gestao/estoque" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Estoque</a>
 
           <div class="mt-2 px-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Financeiro</div>
-          <a href="/admin/caixa" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Fechar Caixa</a>
-          <a href="/admin/fichario" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Fichário (Fiado)</a>
-          <a href="/admin/despesas" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Despesas</a>
+          <a href="/gestao/caixa" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Fechar Caixa</a>
+          <a href="/gestao/fichario" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Fichário (Fiado)</a>
+          <a href="/gestao/despesas" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Despesas</a>
 
           <div class="mt-2 px-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Outros</div>
           <a href="/relatorios" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Relatórios</a>

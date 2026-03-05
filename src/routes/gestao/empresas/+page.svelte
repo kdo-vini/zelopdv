@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   export let params;
   import { supabase } from '$lib/supabaseClient';
+  import { confirmAction } from '$lib/stores/ui';
 
   let empresas = [];
   let membrosPorEmpresa = new Map(); // id_empresa -> array de { id_usuario, role }
@@ -122,7 +123,8 @@
 
   async function removerMembro(empresaId, userId) {
     if (!podeGerenciar(empresaId)) { errorMessage = 'Acesso negado.'; return; }
-    if (!confirm('Remover este membro?')) return;
+    const ok = await confirmAction('Remover membro', 'Tem certeza que deseja remover este membro?');
+    if (!ok) return;
     const { error } = await supabase
       .from('empresa_usuarios')
       .delete()

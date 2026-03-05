@@ -229,8 +229,8 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
       <a href="/app" class="btn btn-primary">Nova Venda</a>
       <a href="/relatorios" class="btn">Relatórios</a>
-      <a href="/admin/pessoas" class="btn">Clientes</a>
-      <a href="/admin/produtos" class="btn">Produtos</a>
+      <a href="/gestao/pessoas" class="btn">Clientes</a>
+      <a href="/gestao/produtos" class="btn">Produtos</a>
     </div>
   {/if}
 </section>

@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   export let params;
-  onMount(() => { window.location.href = '/admin/cadastros'; });
+  onMount(() => { window.location.href = '/gestao/cadastros'; });
 </script>
 
 <h1 class="text-2xl font-semibold mb-4">Categorias</h1>
