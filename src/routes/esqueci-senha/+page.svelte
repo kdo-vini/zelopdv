@@ -1,6 +1,8 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   export let params;
+  import AuthLayout from '$lib/components/AuthLayout.svelte';
+
   let email = '';
   let message = '';
   let errorMessage = '';
@@ -19,23 +21,34 @@
   }
 </script>
 
-<div class="max-w-md mx-auto bg-white dark:bg-slate-800 rounded-lg shadow p-6">
-  <h1 class="text-xl font-semibold mb-4">Esqueci minha senha</h1>
+<AuthLayout title="Esqueci minha senha" subtitle="Informe seu e-mail e enviaremos um link para redefinir sua senha">
   {#if message}
-    <div class="mb-4 text-sm text-green-700">{message}</div>
+    <div class="auth-success">{message}</div>
   {/if}
   {#if errorMessage}
-    <div class="mb-4 text-sm text-red-600">{errorMessage}</div>
+    <div class="auth-error">{errorMessage}</div>
   {/if}
-  <form on:submit={handleReset} class="space-y-4">
-    <div>
-      <label for="reset-email" class="block text-sm mb-1">E-mail</label>
-      <input id="reset-email" type="email" bind:value={email} class="input-form" required />
-    </div>
-    <button disabled={loading} class="btn-primary w-full">{loading ? 'Enviando...' : 'Enviar link de redefinição'}</button>
-  </form>
-</div>
 
-<style lang="postcss">
-  /* Usa classes globais em src/app.css (.input-form, .btn-primary) */
+  <form on:submit={handleReset} class="auth-form">
+    <div>
+      <label for="reset-email" class="auth-label">E-mail</label>
+      <input id="reset-email" type="email" bind:value={email} class="auth-input" placeholder="seu@email.com" required />
+    </div>
+    <button disabled={loading} class="auth-btn">
+      {#if loading}<span class="spinner"></span>{/if}
+      {loading ? 'Enviando...' : 'Enviar link de redefinição'}
+    </button>
+  </form>
+
+  <svelte:fragment slot="footer">
+    <a href="/login" class="auth-link">Voltar para o login</a>
+  </svelte:fragment>
+</AuthLayout>
+
+<style>
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
 </style>

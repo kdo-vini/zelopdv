@@ -4,6 +4,8 @@
   import { onMount } from 'svelte';
   import { addToast } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
+  import AuthLayout from '$lib/components/AuthLayout.svelte';
+
   let email = '';
   let password = '';
   let errorMessage = '';
@@ -57,26 +59,27 @@
   }
 </script>
 
-<div class="max-w-md mx-auto bg-white dark:bg-slate-800 rounded-lg shadow p-6">
-  <h1 class="text-xl font-semibold mb-4">Entrar</h1>
+<AuthLayout title="Entrar" subtitle="Acesse sua conta para gerenciar seu negócio">
   {#if infoMessage}
-    <div class="mb-4 text-sm text-green-700">{infoMessage}</div>
+    <div class="auth-success">{infoMessage}</div>
   {/if}
   {#if errorMessage}
-    <div class="mb-4 text-sm text-red-600">{errorMessage}</div>
+    <div class="auth-error">{errorMessage}</div>
   {/if}
-  <form on:submit={handleLogin} class="space-y-4">
+
+  <form on:submit={handleLogin} class="auth-form">
     <div>
-      <label for="login-email" class="block text-sm mb-1">E-mail</label>
-      <input id="login-email" type="email" bind:value={email} class="input-form" required />
+      <label for="login-email" class="auth-label">E-mail</label>
+      <input id="login-email" type="email" bind:value={email} class="auth-input" placeholder="seu@email.com" required />
     </div>
+
     <div>
-      <label for="login-password" class="block text-sm mb-1">Senha</label>
-      <div class="relative">
+      <label for="login-password" class="auth-label">Senha</label>
+      <div class="input-wrapper">
         {#if showPassword}
-          <input id="login-password" type="text" bind:value={password} class="input-form pr-10" required />
+          <input id="login-password" type="text" bind:value={password} class="auth-input pr-toggle" required />
         {:else}
-          <input id="login-password" type="password" bind:value={password} class="input-form pr-10" required />
+          <input id="login-password" type="password" bind:value={password} class="auth-input pr-toggle" required />
         {/if}
         <button type="button"
           aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
@@ -86,14 +89,14 @@
           on:mouseleave={() => showPassword = false}
           on:touchstart={() => showPassword = true}
           on:touchend={() => showPassword = false}
-          class="absolute inset-y-0 right-0 px-2 flex items-center text-slate-500 hover:text-slate-700 focus:outline-none">
+          class="toggle-btn">
           {#if showPassword}
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3-7.5 9.75-7.5S21 12 21 12s-3 7.5-9.75 7.5S2.25 12 2.25 12Z" />
               <circle cx="12" cy="12" r="3" />
             </svg>
           {:else}
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223C5.743 5.97 8.294 4.5 12 4.5c6.75 0 9.75 7.5 9.75 7.5a15.68 15.68 0 01-2.438 3.356" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 14.25a3 3 0 01-4.243-4.243" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
@@ -102,15 +105,54 @@
         </button>
       </div>
     </div>
-  <button type="submit" disabled={loading} class="btn-primary w-full">{loading ? 'Entrando...' : 'Entrar'}</button>
-  </form>
-  <div class="text-sm mt-4">
-    <a href="/esqueci-senha" class="text-sky-600 hover:underline">Esqueci minha senha</a>
-    <span class="mx-2">·</span>
-    <a href="/cadastro" class="text-sky-600 hover:underline">Criar conta</a>
-  </div>
-</div>
 
-<style lang="postcss">
-  /* Usa classes globais em src/app.css (.input-form, .btn-primary) */
+    <button type="submit" disabled={loading} class="auth-btn">
+      {#if loading}<span class="spinner"></span>{/if}
+      {loading ? 'Entrando...' : 'Entrar'}
+    </button>
+  </form>
+
+  <svelte:fragment slot="footer">
+    <a href="/esqueci-senha" class="auth-link">Esqueci minha senha</a>
+    <span class="sep">·</span>
+    <a href="/cadastro" class="auth-link">Criar conta</a>
+  </svelte:fragment>
+</AuthLayout>
+
+<style>
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .input-wrapper {
+    position: relative;
+  }
+  .pr-toggle {
+    padding-right: 2.75rem;
+  }
+  .toggle-btn {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .toggle-btn:hover {
+    color: #94a3b8;
+  }
+  .toggle-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  .sep {
+    margin: 0 0.5rem;
+    color: #475569;
+  }
 </style>

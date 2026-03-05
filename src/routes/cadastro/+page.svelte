@@ -1,6 +1,9 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   export let params;
+  import { getFriendlyErrorMessage } from '$lib/errorUtils';
+  import AuthLayout from '$lib/components/AuthLayout.svelte';
+
   let email = '';
   let password = '';
   let confirm = '';
@@ -9,8 +12,6 @@
   let successMessage = '';
   let showPassword = false;
   let showConfirm = false;
-
-  import { getFriendlyErrorMessage } from '$lib/errorUtils';
 
   /** Cria conta com e-mail/senha; supõe confirmação por e-mail ativa. */
   async function handleSignUp(e) {
@@ -38,37 +39,36 @@
 
     // Se o user já existe, o Supabase pode retornar identities: [] (quando email enumeration protection=true)
     if (data?.user?.identities && data.user.identities.length === 0) {
-       errorMessage = `Este e-mail já está cadastrado. <a href="/login" class="underline font-bold">Clique aqui</a> para fazer login.`;
+       errorMessage = `Este e-mail já está cadastrado. <a href="/login" class="auth-link font-bold">Clique aqui</a> para fazer login.`;
        return;
     }
 
     // Em projetos com confirmação por e-mail, o usuário precisa confirmar antes de logar
-    successMessage = 'Conta criada. Verifique seu e-mail para confirmar e então faça login.';
+    successMessage = 'Conta criada! Verifique seu e-mail para confirmar e então faça login.';
   }
 </script>
 
-<div class="max-w-md mx-auto bg-white dark:bg-slate-800 rounded-lg shadow p-6">
-  <h1 class="text-xl font-semibold mb-4">Criar conta</h1>
-
+<AuthLayout title="Criar conta" subtitle="Cadastre-se e comece a usar o Zelo PDV">
   {#if successMessage}
-    <div class="mb-4 text-sm text-green-700">{successMessage}</div>
+    <div class="auth-success">{successMessage}</div>
   {/if}
   {#if errorMessage}
-    <div class="mb-4 text-sm text-red-600">{@html errorMessage}</div>
+    <div class="auth-error">{@html errorMessage}</div>
   {/if}
 
-  <form on:submit={handleSignUp} class="space-y-4">
+  <form on:submit={handleSignUp} class="auth-form">
     <div>
-      <label for="cad-email" class="block text-sm mb-1">E-mail</label>
-      <input id="cad-email" type="email" bind:value={email} class="input-form" required />
+      <label for="cad-email" class="auth-label">E-mail</label>
+      <input id="cad-email" type="email" bind:value={email} class="auth-input" placeholder="seu@email.com" required />
     </div>
+
     <div>
-      <label for="cad-password" class="block text-sm mb-1">Senha</label>
-      <div class="relative">
+      <label for="cad-password" class="auth-label">Senha</label>
+      <div class="input-wrapper">
         {#if showPassword}
-          <input id="cad-password" type="text" bind:value={password} class="input-form pr-10" minlength="8" required />
+          <input id="cad-password" type="text" bind:value={password} class="auth-input pr-toggle" minlength="8" placeholder="Mínimo 8 caracteres" required />
         {:else}
-          <input id="cad-password" type="password" bind:value={password} class="input-form pr-10" minlength="8" required />
+          <input id="cad-password" type="password" bind:value={password} class="auth-input pr-toggle" minlength="8" placeholder="Mínimo 8 caracteres" required />
         {/if}
         <button type="button"
           aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
@@ -78,14 +78,14 @@
           on:mouseleave={() => showPassword = false}
           on:touchstart={() => showPassword = true}
           on:touchend={() => showPassword = false}
-          class="absolute inset-y-0 right-0 px-2 flex items-center text-slate-500 hover:text-slate-700 focus:outline-none">
+          class="toggle-btn">
           {#if showPassword}
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3-7.5 9.75-7.5S21 12 21 12s-3 7.5-9.75 7.5S2.25 12 2.25 12Z" />
               <circle cx="12" cy="12" r="3" />
             </svg>
           {:else}
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223C5.743 5.97 8.294 4.5 12 4.5c6.75 0 9.75 7.5 9.75 7.5a15.68 15.68 0 01-2.438 3.356" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 14.25a3 3 0 01-4.243-4.243" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
@@ -94,13 +94,14 @@
         </button>
       </div>
     </div>
+
     <div>
-      <label for="cad-confirm" class="block text-sm mb-1">Confirmar senha</label>
-      <div class="relative">
+      <label for="cad-confirm" class="auth-label">Confirmar senha</label>
+      <div class="input-wrapper">
         {#if showConfirm}
-          <input id="cad-confirm" type="text" bind:value={confirm} class="input-form pr-10" required />
+          <input id="cad-confirm" type="text" bind:value={confirm} class="auth-input pr-toggle" required />
         {:else}
-          <input id="cad-confirm" type="password" bind:value={confirm} class="input-form pr-10" required />
+          <input id="cad-confirm" type="password" bind:value={confirm} class="auth-input pr-toggle" required />
         {/if}
         <button type="button"
           aria-label={showConfirm ? 'Ocultar confirmação' : 'Mostrar confirmação'}
@@ -110,14 +111,14 @@
           on:mouseleave={() => showConfirm = false}
           on:touchstart={() => showConfirm = true}
           on:touchend={() => showConfirm = false}
-          class="absolute inset-y-0 right-0 px-2 flex items-center text-slate-500 hover:text-slate-700 focus:outline-none">
+          class="toggle-btn">
           {#if showConfirm}
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3-7.5 9.75-7.5S21 12 21 12s-3 7.5-9.75 7.5S2.25 12 2.25 12Z" />
               <circle cx="12" cy="12" r="3" />
             </svg>
           {:else}
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223C5.743 5.97 8.294 4.5 12 4.5c6.75 0 9.75 7.5 9.75 7.5a15.68 15.68 0 01-2.438 3.356" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 14.25a3 3 0 01-4.243-4.243" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
@@ -126,14 +127,48 @@
         </button>
       </div>
     </div>
-    <button disabled={loading} class="btn-primary w-full">{loading ? 'Criando...' : 'Criar conta'}</button>
+
+    <button disabled={loading} class="auth-btn">
+      {#if loading}<span class="spinner"></span>{/if}
+      {loading ? 'Criando...' : 'Criar conta'}
+    </button>
   </form>
 
-  <div class="text-sm mt-4">
-    <a href="/login" class="text-sky-600 hover:underline">Já tenho conta</a>
-  </div>
-</div>
+  <svelte:fragment slot="footer">
+    <a href="/login" class="auth-link">Já tenho conta</a>
+  </svelte:fragment>
+</AuthLayout>
 
-<style lang="postcss">
-  /* Usa classes globais em src/app.css (.input-form, .btn-primary) */
+<style>
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .input-wrapper {
+    position: relative;
+  }
+  .pr-toggle {
+    padding-right: 2.75rem;
+  }
+  .toggle-btn {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .toggle-btn:hover {
+    color: #94a3b8;
+  }
+  .toggle-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
 </style>
