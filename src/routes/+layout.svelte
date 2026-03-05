@@ -36,6 +36,7 @@
 
   // Active state helpers
   $: path = $page.url.pathname;
+  $: isGestaoPrefixed = path === '/gestao' || path.startsWith('/gestao/');
   $: isGestao = path === '/gestao' || path.startsWith('/gestao/pessoas') || path.startsWith('/gestao/produtos') || path.startsWith('/gestao/estoque');
   $: isFinanceiro = path.startsWith('/gestao/caixa') || path.startsWith('/gestao/fichario') || path.startsWith('/gestao/despesas');
   $: isRelatorios = path.startsWith('/relatorios');
@@ -227,6 +228,8 @@
   });
 
   async function logout() {
+    $sessionStore = null;
+    $companyNameStore = null;
     await supabase.auth.signOut();
     window.location.href = '/login';
   }
@@ -251,6 +254,7 @@
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import PinSetupModal from '$lib/components/PinSetupModal.svelte';
   import { adminUnlocked } from '$lib/stores/adminStore';
+  import { sessionStore, companyNameStore } from '$lib/stores/session';
 
   let showPinSetup = false;
   let adminPin = null;
@@ -277,6 +281,10 @@
 
   // Hook into existing session logic
   $: if (session?.user?.id) fetchProfileData(session.user.id);
+
+  // Alimenta stores globais de sessão para uso em sub-layouts (ex: GestaoSidebar)
+  $: $sessionStore = session;
+  $: $companyNameStore = companyName;
   
   function onPinSet(newPin) {
     showPinSetup = false;
@@ -293,7 +301,7 @@
 {/if}
 
 {#if !isOnline}
-  <div class="bg-red-600 text-white text-center text-sm py-1 font-medium z-[60] relative">
+  <div class="text-center text-sm py-1 font-medium z-[60] relative" style="background: var(--error); color: var(--primary-text);">
     Você está offline. Verifique sua conexão.
   </div>
 {/if}
@@ -316,7 +324,7 @@
     </div>
   {/if}
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isAuthPage}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isAuthPage && !isGestaoPrefixed}
   <header class="border-b bg-header-base backdrop-blur sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
@@ -400,14 +408,14 @@
              target="_blank" rel="noopener" 
              class="{navLinkBase} {navLinkInactive} group relative flex items-center gap-2" 
              aria-label="Suporte Técnico">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-sky-500">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5" style="color: var(--link);">
                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
             </svg>
             <span class="hidden xl:inline">Suporte</span>
             <!-- Tooltip -->
-            <div role="tooltip" class="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 whitespace-nowrap px-3 py-2 rounded-md bg-slate-900 text-white text-xs shadow-lg opacity-0 scale-95 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 group-hover:visible z-50">
+            <div role="tooltip" class="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 whitespace-nowrap px-3 py-2 rounded-md text-xs shadow-lg opacity-0 scale-95 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 group-hover:visible z-50" style="background: var(--bg-app); color: var(--text-main);">
               Preciso de suporte
-              <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45"></div>
+              <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45" style="background: var(--bg-app);"></div>
             </div>
           </a>
 
@@ -438,7 +446,7 @@
                   </div>
                 {/if}
                 <a href="/perfil" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Meu Perfil</a>
-                <button on:click={logout} class="w-full text-left block px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">Sair</button>
+                <button on:click={logout} class="w-full text-left block px-4 py-2 text-sm" style="color: var(--error);" on:mouseenter={e => e.currentTarget.style.background = 'var(--error-bg)'} on:mouseleave={e => e.currentTarget.style.background = ''}>Sair</button>
               </div>
             {/if}
           </div>
@@ -486,30 +494,30 @@
           
           <div class="my-2 border-t border-[var(--border-subtle)]"></div>
           
-          <a href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)." target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 text-sky-600 dark:text-sky-400 font-medium" on:click={() => showMobileMenu=false}>
+          <a href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)." target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 font-medium" style="color: var(--link);" on:click={() => showMobileMenu=false}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
             </svg>
             Suporte Técnico
           </a>
 
-          <button on:click={logout} class="w-full text-left px-3 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">
+          <button on:click={logout} class="w-full text-left px-3 py-2 rounded" style="color: var(--error);" on:mouseenter={e => e.currentTarget.style.background = 'var(--error-bg)'} on:mouseleave={e => e.currentTarget.style.background = ''}>
             Sair
           </button>
         {:else}
-          <a href="/login" class="text-sm font-medium text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300 transition-colors" on:click={() => showMobileMenu=false}>Entrar</a>
-          <a href="/cadastro" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-sky-600 border border-transparent rounded-md shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors" on:click={() => showMobileMenu=false}>Criar conta</a>
+          <a href="/login" class="text-sm font-medium transition-colors" style="color: var(--accent);" on:click={() => showMobileMenu=false}>Entrar</a>
+          <a href="/cadastro" class="btn-primary inline-flex items-center justify-center px-4 py-2 text-sm font-medium border border-transparent rounded-md shadow-sm transition-colors" on:click={() => showMobileMenu=false}>Criar conta</a>
         {/if}
       </div>
     </div>
   {/if}
   {/if}
 
-  <main class="flex-1 mx-auto w-full {$page.url.pathname.startsWith('/app') || $page.url.pathname === '/' || $page.url.pathname === '/landing' || isAuthPage ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
+  <main class="flex-1 mx-auto w-full {$page.url.pathname.startsWith('/app') || $page.url.pathname === '/' || $page.url.pathname === '/landing' || isAuthPage || isGestaoPrefixed ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isAuthPage}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isAuthPage && !isGestaoPrefixed}
   <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
