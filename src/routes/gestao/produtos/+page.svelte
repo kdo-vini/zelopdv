@@ -581,7 +581,7 @@
   <!-- Breadcrumb -->
   <div>
     <nav class="flex items-center gap-1.5 text-xs mb-1" style="color: var(--text-muted);">
-      <span>Início</span>
+      <span>Gestão</span>
       <span>/</span>
       <span>Produtos</span>
       {#if breadcrumbNomeCat}

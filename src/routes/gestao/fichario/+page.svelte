@@ -122,7 +122,10 @@
 
 <section class="wrap">
   <div class="header">
-    <h2 class="title">Fichário (Fiado)</h2>
+    <div>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Financeiro / Fichário</p>
+      <h2 class="title">Fichário (Fiado)</h2>
+    </div>
     <a class="btn ghost" href="/gestao/pessoas">Gerenciar Pessoas</a>
   </div>
 

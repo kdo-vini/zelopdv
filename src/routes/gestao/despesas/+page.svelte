@@ -26,8 +26,7 @@
     description: '',
     amount: '',
     category: 'Fornecedor',
-    date: new Date().toISOString().slice(0, 10),
-    note: ''
+    date: new Date().toISOString().slice(0, 10)
   };
 
   const categories = ['Fornecedor', 'Insumos', 'Aluguel', 'Contas fixas', 'Pessoal', 'Manutenção', 'Outros'];
@@ -99,12 +98,11 @@
         description: newExpense.description,
         amount: parseFloat(newExpense.amount),
         category: newExpense.category,
-        date: new Date(newExpense.date).toISOString(),
-        note: newExpense.note || null
+        date: new Date(newExpense.date).toISOString()
       });
       if (error) throw error;
       addToast('Despesa lançada!', 'success');
-      newExpense = { ...newExpense, description: '', amount: '', note: '' };
+      newExpense = { ...newExpense, description: '', amount: '' };
       loadExpenses();
     } catch (e) {
       addToast('Erro ao salvar: ' + e.message, 'error');
@@ -115,7 +113,7 @@
 
   function startEdit(ex) {
     editingId = ex.id;
-    editData = { description: ex.description, amount: ex.amount, category: ex.category, note: ex.note || '' };
+    editData = { description: ex.description, amount: ex.amount, category: ex.category };
   }
 
   function cancelEdit() {
@@ -126,16 +124,22 @@
   async function saveEdit(id) {
     loadingOp = true;
     try {
+      const newAmount = parseFloat(editData.amount);
       const { error } = await supabase.from('expenses').update({
         description: editData.description,
-        amount: parseFloat(editData.amount),
-        category: editData.category,
-        note: editData.note || null
-      }).eq('id', id);
+        amount: newAmount,
+        category: editData.category
+      }).eq('id', id).eq('user_id', uid);
       if (error) throw error;
+      // Optimistically update local array immediately so UI reflects the change
+      expenses = expenses.map(ex =>
+        ex.id === id
+          ? { ...ex, description: editData.description, amount: newAmount, category: editData.category }
+          : ex
+      );
       addToast('Despesa atualizada!', 'success');
       editingId = null;
-      loadExpenses();
+      editData = {};
     } catch (e) {
       addToast('Erro ao atualizar: ' + e.message, 'error');
     } finally {
@@ -174,6 +178,7 @@
   <!-- Header -->
   <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     <div>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Financeiro / Despesas</p>
       <h1 class="text-2xl font-bold" style="color: var(--text-main);">Gerenciar Despesas</h1>
       <p class="text-sm" style="color: var(--text-muted);">Lance contas, fornecedores e retiradas.</p>
     </div>
@@ -233,10 +238,6 @@
             <option>{cat}</option>
           {/each}
         </select>
-      </div>
-      <div class="flex-1 min-w-0">
-        <label class="text-xs mb-1 block" style="color: var(--text-muted);">Nota (Opcional)</label>
-        <input type="text" placeholder="" class="input-form w-full" bind:value={newExpense.note} />
       </div>
       <button
         class="btn-primary whitespace-nowrap flex items-center gap-2 h-10 px-4"

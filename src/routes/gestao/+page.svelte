@@ -138,7 +138,10 @@
 
 <section class="wrap">
   <div class="flex justify-between items-center mb-4">
-    <h1 class="pageTitle">Dashboard</h1>
+    <div>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Dashboard</p>
+      <h1 class="pageTitle">Dashboard</h1>
+    </div>
     <button class="btn-sm" on:click={loadDash}>Atualizar</button>
   </div>
 

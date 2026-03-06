@@ -135,6 +135,7 @@
   }
 </script>
 
+<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Empresas</p>
 <h1 class="text-2xl font-semibold mb-4">Empresas</h1>
 {#if errorMessage}
   <div class="mb-4 text-sm text-red-600">{errorMessage}</div>

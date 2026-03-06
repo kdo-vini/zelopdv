@@ -117,6 +117,7 @@
   }
 </script>
 
+<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Estoque</p>
 <h1 class="text-2xl font-semibold mb-4">Estoque</h1>
 <p class="text-slate-600 dark:text-slate-300 mb-3">Edite as quantidades de produtos com controle de estoque habilitado.</p>
 
