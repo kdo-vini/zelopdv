@@ -141,11 +141,11 @@
     : 'Comece seu período de teste grátis e experimente todas as funcionalidades!';
 </script>
 
-{#if BUY_BUTTON_ID && PUBLISHABLE_KEY}
-  <svelte:head>
+<svelte:head>
+  {#if BUY_BUTTON_ID && PUBLISHABLE_KEY}
     <script async src="https://js.stripe.com/v3/buy-button.js"></script>
-  </svelte:head>
-{/if}
+  {/if}
+</svelte:head>
 
 <section class="max-w-xl mx-auto space-y-4">
   <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Assinatura</p>

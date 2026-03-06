@@ -220,20 +220,20 @@
     <h3 class="text-sm font-semibold mb-3" style="color: var(--text-main);">Novo Lançamento</h3>
     <div class="flex flex-col lg:flex-row gap-3 items-end">
       <div class="flex-1 min-w-0">
-        <label class="text-xs mb-1 block" style="color: var(--text-muted);">Descrição</label>
-        <input type="text" placeholder="ex: Compra de embalagens" class="input-form w-full" bind:value={newExpense.description} />
+        <label for="exp-desc" class="text-xs mb-1 block" style="color: var(--text-muted);">Descrição</label>
+        <input id="exp-desc" type="text" placeholder="ex: Compra de embalagens" class="input-form w-full" bind:value={newExpense.description} />
       </div>
       <div class="w-full lg:w-28">
-        <label class="text-xs mb-1 block" style="color: var(--text-muted);">Valor (R$)</label>
-        <input type="number" step="0.01" min="0" class="input-form w-full text-right" placeholder="0.00" bind:value={newExpense.amount} />
+        <label for="exp-amount" class="text-xs mb-1 block" style="color: var(--text-muted);">Valor (R$)</label>
+        <input id="exp-amount" type="number" step="0.01" min="0" class="input-form w-full text-right" placeholder="0.00" bind:value={newExpense.amount} />
       </div>
       <div class="w-full lg:w-40">
-        <label class="text-xs mb-1 block" style="color: var(--text-muted);">Data</label>
-        <input type="date" class="input-form w-full" bind:value={newExpense.date} />
+        <label for="exp-date" class="text-xs mb-1 block" style="color: var(--text-muted);">Data</label>
+        <input id="exp-date" type="date" class="input-form w-full" bind:value={newExpense.date} />
       </div>
       <div class="w-full lg:w-44">
-        <label class="text-xs mb-1 block" style="color: var(--text-muted);">Categoria/Fornecedor</label>
-        <select class="input-form w-full" bind:value={newExpense.category}>
+        <label for="exp-cat" class="text-xs mb-1 block" style="color: var(--text-muted);">Categoria/Fornecedor</label>
+        <select id="exp-cat" class="input-form w-full" bind:value={newExpense.category}>
           {#each categories as cat}
             <option>{cat}</option>
           {/each}
