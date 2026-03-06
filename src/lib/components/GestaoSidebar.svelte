@@ -179,6 +179,7 @@
         </svg>
       {/if}
     </button>
+  </div>
 
   <!-- Grupos de navegação -->
   <nav class="flex-1 overflow-y-auto px-3 py-2 space-y-1" aria-label="Navegação principal de gestão">
@@ -294,6 +295,11 @@
     }
     .sidebar-shell.mobile-open {
       transform: translateX(0);
+    }
+    /* Always show labels on mobile, regardless of collapsed state */
+    .sidebar-shell.collapsed .label-text {
+      max-width: 200px;
+      opacity: 1;
     }
   }
 
