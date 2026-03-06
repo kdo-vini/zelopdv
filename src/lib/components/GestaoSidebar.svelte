@@ -245,19 +245,27 @@
 
   <!-- Usuário / base -->
   <div class="flex-shrink-0 border-t px-3 py-3 overflow-hidden" style="border-color: var(--border-subtle);">
-    <div class="flex items-center gap-3 mb-2 min-w-0">
+    <a
+      href="/perfil"
+      on:click={closeMobile}
+      class="flex items-center gap-3 mb-2 min-w-0 w-full px-2 py-1.5 rounded-lg transition-colors"
+      style="color: var(--text-main);"
+      on:mouseenter={e => e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'}
+      on:mouseleave={e => e.currentTarget.style.background = ''}
+      title="Meu Perfil"
+      aria-label="Ir para Meu Perfil"
+    >
       <div
         class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
         style="background: var(--accent-light); color: var(--accent);"
         aria-hidden="true"
-        title={displayName}
       >
         {avatarLetter}
       </div>
-      <span class="label-text text-sm font-medium truncate min-w-0" style="color: var(--text-main);" title={displayName}>
+      <span class="label-text text-sm font-medium truncate min-w-0" style="color: var(--text-main);">
         {displayName}
       </span>
-    </div>
+    </a>
     <button
       on:click={logout}
       class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors overflow-hidden"

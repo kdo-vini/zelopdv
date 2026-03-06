@@ -9,7 +9,8 @@ const ORIGIN = env.PUBLIC_APP_URL || 'http://localhost:5173';
 
 export async function POST({ request }) {
   try {
-    if (!supabaseAdmin) return json({ error: 'Configuração de servidor inválida' }, { status: 500 });
+    if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado. Verifique SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.' }, { status: 500 });
+    if (!stripe) return json({ error: 'Stripe não configurado. Verifique STRIPE_SECRET_KEY.' }, { status: 500 });
 
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
     if (!token) return json({ error: 'Não autorizado' }, { status: 401 });
@@ -28,7 +29,6 @@ export async function POST({ request }) {
     if (PRICE_ID.startsWith('http')) {
       return json({ error: 'Valor inválido em STRIPE_PRICE_ID_MONTHLY_59. Use price_... não uma URL.' }, { status: 500 });
     }
-    if (!stripe) return json({ error: 'Stripe não configurado' }, { status: 500 });
 
     const customers = await stripe.customers.list({ email, limit: 1 });
     const customer = customers.data[0] || await stripe.customers.create({ email, metadata: { user_id: userId } });

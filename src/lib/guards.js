@@ -4,7 +4,8 @@ import { supabase } from './supabaseClient';
 /**
  * Normalize and strictly validate subscription status AND expiration date.
  * Both "active" and "trialing" status grant access (trialing = free trial period).
- * @param {Object} subscription - Subscription object with status and current_period_end
+ * Also checks manually_extended_until for admin-extended subscriptions.
+ * @param {Object} subscription - Subscription object
  * @returns {boolean} - True if subscription is active/trialing and not expired
  */
 export function isSubscriptionActiveStrict(subscription) {
@@ -13,12 +14,16 @@ export function isSubscriptionActiveStrict(subscription) {
   const status = (subscription.status ?? '').toString().trim().toLowerCase();
   const isActive = status === 'active' || status === 'trialing';
 
+  // Check manually_extended_until (admin extension overrides expiry)
+  if (subscription.manually_extended_until) {
+    const extendedUntil = new Date(subscription.manually_extended_until);
+    if (extendedUntil > new Date()) return true;
+  }
+
   // Validate expiration date
   if (subscription.current_period_end) {
     const expiryDate = new Date(subscription.current_period_end);
-    const now = new Date();
-    const notExpired = expiryDate > now;
-
+    const notExpired = expiryDate > new Date();
     return isActive && notExpired;
   }
 
@@ -82,7 +87,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
   try {
     let { data: sub, error } = await supabase
       .from('subscriptions')
-      .select('status, current_period_end, user_id')
+      .select('status, current_period_end, manually_extended_until, user_id')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)

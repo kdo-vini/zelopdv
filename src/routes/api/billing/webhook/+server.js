@@ -9,6 +9,11 @@ export async function POST({ request }) {
     const body = await request.text();
     const signature = request.headers.get('stripe-signature');
 
+    if (!stripe) {
+        console.error('[Webhook] stripe is null - Check STRIPE_SECRET_KEY in env vars');
+        return json({ error: 'Stripe not configured' }, { status: 500 });
+    }
+
     if (!WEBHOOK_SECRET) {
         console.error('[Webhook] STRIPE_WEBHOOK_SECRET not configured');
         return json({ error: 'Webhook secret not configured' }, { status: 500 });
@@ -87,24 +92,21 @@ async function handleCheckoutCompleted(session) {
         const customer = await stripe.customers.retrieve(customerId);
         const customerEmail = customer.email || session.customer_details?.email;
 
-        console.log('[Webhook] Customer email:', customerEmail);
-        console.log('[Webhook] Customer ID:', customerId);
-
         if (customerEmail) {
             // Look up user by email via RPC (auth-js SDK has no getUserByEmail)
             try {
                 const { data: foundId, error: rpcError } = await supabaseAdmin
                     .rpc('get_user_id_by_email', { p_email: customerEmail });
                 if (rpcError) {
-                    console.error('[Webhook] Error looking up user by email:', rpcError);
+                    console.error('[Webhook] Error looking up user by email via RPC');
                 } else if (foundId) {
                     userId = foundId;
-                    console.log('[Webhook] ✅ Found user by email:', customerEmail, 'user_id:', userId);
+                    console.log('[Webhook] ✅ Found user by email lookup');
                 } else {
-                    console.log('[Webhook] No user found with email:', customerEmail);
+                    console.log('[Webhook] No user found with that email');
                 }
             } catch (err) {
-                console.error('[Webhook] Error querying auth.users:', err);
+                console.error('[Webhook] Error querying auth.users:', err.message);
             }
 
             // Fallback: try to find in subscriptions by stripe_customer_id
@@ -116,11 +118,11 @@ async function handleCheckoutCompleted(session) {
                     .eq('stripe_customer_id', customerId)
                     .limit(1);
 
-                console.log('[Webhook] Subscription query result:', { existingSubs, subError });
-
-                if (existingSubs && existingSubs.length > 0) {
+                if (subError) {
+                    console.error('[Webhook] Subscription fallback query error:', subError.message);
+                } else if (existingSubs?.length > 0) {
                     userId = existingSubs[0].user_id;
-                    console.log('[Webhook] ✅ Found user by stripe_customer_id:', userId);
+                    console.log('[Webhook] ✅ Found user by stripe_customer_id');
                 }
             }
         } else {
@@ -145,7 +147,6 @@ async function handleCheckoutCompleted(session) {
         updated_at: new Date().toISOString()
     };
 
-    // Only add current_period_end if it exists
     if (subscription.current_period_end) {
         subscriptionData.current_period_end = new Date(subscription.current_period_end * 1000).toISOString();
     }
@@ -165,7 +166,6 @@ async function handleCheckoutCompleted(session) {
 
     let error;
     if (existingSub) {
-        // Update existing subscription
         const { error: updateError } = await supabaseAdmin
             .from('subscriptions')
             .update(subscriptionData)
@@ -173,7 +173,6 @@ async function handleCheckoutCompleted(session) {
         error = updateError;
         console.log('[Webhook] Updated existing subscription');
     } else {
-        // Insert new subscription
         const { error: insertError } = await supabaseAdmin
             .from('subscriptions')
             .insert(subscriptionData);
@@ -186,7 +185,7 @@ async function handleCheckoutCompleted(session) {
         throw error;
     }
 
-    console.log('[Webhook] Subscription created/updated for user:', userId);
+    console.log('[Webhook] Subscription saved for user:', userId);
 }
 
 async function handleSubscriptionUpdate(subscription) {
@@ -198,7 +197,6 @@ async function handleSubscriptionUpdate(subscription) {
         updated_at: new Date().toISOString()
     };
 
-    // Only add timestamps if they exist (not null)
     if (subscription.current_period_start) {
         updateData.current_period_start = new Date(subscription.current_period_start * 1000).toISOString();
     }
@@ -232,7 +230,7 @@ async function handleSubscriptionDeleted(subscription) {
         .eq('stripe_subscription_id', subscription.id);
 
     if (error) {
-        console.error('[Webhook] Error deleting subscription:', error);
+        console.error('[Webhook] Error marking subscription as canceled:', error);
         throw error;
     }
 
@@ -244,7 +242,6 @@ async function handleInvoicePaymentSucceeded(invoice) {
 
     if (!invoice.subscription) return;
 
-    // Refresh subscription data
     const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
     await handleSubscriptionUpdate(subscription);
 }
@@ -264,5 +261,6 @@ async function handleInvoicePaymentFailed(invoice) {
 
     if (error) {
         console.error('[Webhook] Error updating subscription to past_due:', error);
+        throw error;
     }
 }

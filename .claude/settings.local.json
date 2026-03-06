@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(cp:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(python3:*)"
     ]
   }
 }

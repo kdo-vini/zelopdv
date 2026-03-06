@@ -7,8 +7,8 @@ const ORIGIN = env.PUBLIC_APP_URL || 'http://localhost:5173';
 const PORTAL_CONFIGURATION = env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID || env.STRIPE_BILLING_PORTAL_CONFIGURATION;
 
 export async function POST({ request }) {
-  if (!stripe) return json({ error: 'Stripe não configurado' }, { status: 500 });
-  if (!supabaseAdmin) return json({ error: 'Configuração de servidor inválida' }, { status: 500 });
+  if (!stripe) return json({ error: 'Stripe não configurado. Verifique STRIPE_SECRET_KEY.' }, { status: 500 });
+  if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado. Verifique SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.' }, { status: 500 });
 
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -17,15 +17,21 @@ export async function POST({ request }) {
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
     if (authErr || !user) return json({ error: 'Não autorizado' }, { status: 401 });
 
-    const body = await request.json().catch(() => ({}));
-    let { customerId } = body || {};
+    // Always look up customerId from DB — never trust client-sent IDs (IDOR prevention)
+    const { data: sub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let customerId = sub?.stripe_customer_id || null;
 
     if (!customerId) {
       const list = await stripe.customers.list({ email: user.email, limit: 1 });
-      const found = list.data?.[0] || null;
-      if (found) {
-        customerId = found.id;
-      } else {
+      customerId = list.data?.[0]?.id || null;
+      if (!customerId) {
         const created = await stripe.customers.create({ email: user.email });
         customerId = created.id;
       }

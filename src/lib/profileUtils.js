@@ -1,10 +1,13 @@
 // Utility helpers for the Perfil page
 
 // Canonicalize paper width: accept '58mm', '58 mm', '80mm', '80 mm'
+const VALID_WIDTHS = ['58mm', '80mm', 'pdf'];
+
 export function normalizeLarguraBobina(value) {
   const v = (value ?? '').toString().trim().replace(/\s+/g, '').toLowerCase();
   if (v === '58mm' || v === '58') return '58mm';
   if (v === '80mm' || v === '80') return '80mm';
+  if (v === 'pdf') return 'pdf';
   return v; // unknown stays as-is
 }
 
@@ -13,12 +16,13 @@ export function requiredOk({ nome_exibicao, documento, contato, largura_bobina }
   const doc = (documento || '').trim();
   const cont = (contato || '').trim();
   const largura = normalizeLarguraBobina(largura_bobina);
-  return Boolean(nome && doc && cont && (largura === '58mm' || largura === '80mm'));
+  return Boolean(nome && doc && cont && VALID_WIDTHS.includes(largura));
 }
 
 export function buildPayload({
   userId,
   nome_exibicao,
+  razao_social,
   documento,
   contato,
   inscricao_estadual,
@@ -28,17 +32,17 @@ export function buildPayload({
   logo_url,
   pendingLogoUrl
 }) {
+  const largura = normalizeLarguraBobina(largura_bobina);
   return {
     user_id: userId,
     nome_exibicao: (nome_exibicao || '').trim(),
+    razao_social: (razao_social || '').trim() || null,
     documento: (documento || '').trim(),
     contato: (contato || '').trim(),
     inscricao_estadual: (inscricao_estadual || '').trim() || null,
     endereco: (endereco || '').trim() || null,
     rodape_recibo: (rodape_recibo || 'Obrigado pela preferência!').trim() || 'Obrigado pela preferência!',
-    largura_bobina: normalizeLarguraBobina(largura_bobina) === '58mm' || normalizeLarguraBobina(largura_bobina) === '80mm'
-      ? normalizeLarguraBobina(largura_bobina)
-      : '80mm',
+    largura_bobina: VALID_WIDTHS.includes(largura) ? largura : '80mm',
     logo_url: pendingLogoUrl || logo_url || null,
     updated_at: new Date().toISOString()
   };

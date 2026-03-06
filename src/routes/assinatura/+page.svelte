@@ -2,13 +2,10 @@
   import { supabase } from '$lib/supabaseClient';
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { onMount } from 'svelte';
-  import { page } from '$app/stores';
-  export let params;
 
   let userId = '';
   let email = '';
   let subStatus = null;
-  let customerId = null;
   let loading = false;
   let message = '';
   let messageType = 'info'; // 'info' = convidativo, 'warning' = expiração/problema
@@ -21,67 +18,55 @@
       const { data: userData } = await supabase.auth.getUser();
       userId = userData?.user?.id || '';
       email = userData?.user?.email || '';
-      
+
       if (userId) {
         try {
-          // Buscar assinatura do usuário e também o stripe_customer_id para o botão de portal
           const { data } = await supabase
             .from('subscriptions')
-            .select('status, stripe_customer_id, current_period_end')
+            .select('status, current_period_end, manually_extended_until')
             .eq('user_id', userId)
             .order('updated_at', { ascending: false })
             .limit(1)
             .maybeSingle();
-          
+
           subStatus = data?.status || null;
-          customerId = data?.stripe_customer_id || null;
           expiryDate = data?.current_period_end || null;
-          hasHadSubscription = !!data; // usuário já teve assinatura se data existe
-          
-          // Calcular isActiveStrict usando a função de guards (considera status E data)
-          isActiveStrict = isSubscriptionActiveStrict({
-            status: subStatus,
-            current_period_end: expiryDate
-          });
-          
+          hasHadSubscription = !!data;
+
+          isActiveStrict = isSubscriptionActiveStrict(data);
+
           // Check if expired (para quem já teve assinatura E está inativa)
           if (hasHadSubscription && !isActiveStrict) {
             if (expiryDate) {
               const expiry = new Date(expiryDate);
-              const now = new Date();
-              if (expiry < now) {
+              if (expiry < new Date()) {
                 message = `Sua assinatura expirou em ${expiry.toLocaleDateString('pt-BR')}. Renove para continuar usando o sistema.`;
                 messageType = 'warning';
               } else if (subStatus === 'canceled') {
                 message = `Sua assinatura foi cancelada e expirará em ${expiry.toLocaleDateString('pt-BR')}.`;
                 messageType = 'warning';
               } else {
-                // Status ativo mas data futura - algum problema
                 message = 'Sua assinatura não está ativa. Renove para utilizar o sistema.';
                 messageType = 'warning';
               }
             } else {
-              // Sem data de expiração (dados antigos/null) - assume expirado
               message = 'Sua assinatura não está ativa. Renove para utilizar o sistema.';
               messageType = 'warning';
             }
           }
         } catch (subError) {
           console.error('[Assinatura] Erro ao carregar dados:', subError);
-          // Continua mesmo com erro - usuário pode assinar
         }
       }
-      
+
       try {
         const params = new URLSearchParams(window.location.search);
         const msg = params.get('msg');
         if (msg === 'subscribe') {
-          // Diferenciar: novo usuário vs usuário que já teve assinatura
           if (hasHadSubscription) {
             message = 'Sua assinatura não está ativa. Renove para utilizar o sistema.';
             messageType = 'warning';
           }
-          // Se não teve assinatura, não mostra warning - deixa a mensagem padrão convidativa
         } else if (msg === 'complete') {
           message = 'Complete o perfil da empresa para continuar.';
           messageType = 'info';
@@ -136,7 +121,7 @@
       const token = authSession?.access_token ?? '';
       const res = await fetch('/api/billing/create-portal-session', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ customerId })
+        body: JSON.stringify({})
       });
       const json = await res.json();
       if (json?.url) { window.location.href = json.url; return; }
@@ -151,16 +136,19 @@
   }
 
   // Mensagem padrão para novos usuários (sem histórico de assinatura)
-  $: defaultMessage = hasHadSubscription 
-    ? 'Renove sua assinatura para continuar usando o sistema.' 
+  $: defaultMessage = hasHadSubscription
+    ? 'Renove sua assinatura para continuar usando o sistema.'
     : 'Comece seu período de teste grátis e experimente todas as funcionalidades!';
 </script>
 
-<svelte:head>
-  <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+{#if BUY_BUTTON_ID && PUBLISHABLE_KEY}
+  <svelte:head>
+    <script async src="https://js.stripe.com/v3/buy-button.js"></script>
   </svelte:head>
+{/if}
 
 <section class="max-w-xl mx-auto space-y-4">
+  <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Assinatura</p>
   <h1 class="text-2xl font-bold">Assinatura Zelo PDV</h1>
   <p class="text-slate-600 dark:text-slate-300">7 dias grátis, depois R$ 59/mês — cancele quando quiser.</p>
 
