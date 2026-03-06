@@ -61,13 +61,13 @@
     },
     {
       title: 'Gestão e Relatórios',
-      body: 'No menu superior você encontra a Gestão (produtos, clientes, estoque) e os Relatórios de vendas. Explore à vontade!',
+      body: 'Na barra lateral à esquerda você acessa Gestão (produtos, clientes, estoque, despesas) e Relatórios de vendas. No mobile ela fica recolhida — toque no ícone ☰ para abrir.',
       selector: null,
       position: 'center',
     },
     {
       title: 'Suporte',
-      body: 'Ficou com dúvida? Clique em "Suporte" no menu para falar com a gente pelo WhatsApp. Estamos sempre prontos para ajudar! 💙',
+      body: 'Ficou com dúvida? No rodapé da barra lateral há um link direto para o nosso suporte pelo WhatsApp. Estamos sempre prontos para ajudar! 💙',
       selector: null,
       position: 'center',
     },
