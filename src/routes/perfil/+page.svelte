@@ -623,7 +623,6 @@
               >
                 <option value="80mm">Térmica 80 mm</option>
                 <option value="58mm">Térmica 58 mm</option>
-                <option value="pdf">PDF / Sem impressora</option>
               </select>
             </label>
           </section>

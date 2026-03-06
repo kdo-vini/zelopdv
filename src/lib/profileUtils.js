@@ -1,13 +1,13 @@
 // Utility helpers for the Perfil page
 
 // Canonicalize paper width: accept '58mm', '58 mm', '80mm', '80 mm'
-const VALID_WIDTHS = ['58mm', '80mm', 'pdf'];
+const VALID_WIDTHS = ['58mm', '80mm'];
 
 export function normalizeLarguraBobina(value) {
   const v = (value ?? '').toString().trim().replace(/\s+/g, '').toLowerCase();
   if (v === '58mm' || v === '58') return '58mm';
   if (v === '80mm' || v === '80') return '80mm';
-  if (v === 'pdf') return 'pdf';
+  // 'pdf' was removed as a valid option — fall through to unknown
   return v; // unknown stays as-is
 }
 
