@@ -13,9 +13,9 @@ test.use({ storageState: { cookies: [], origins: [] } });
 test.describe('Página de Login', () => {
   test('exibe campos de email e senha e botão Entrar', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByLabel(/e-?mail/i)).toBeVisible();
-    await expect(page.getByLabel(/senha/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /entrar/i })).toBeVisible();
+    await expect(page.getByLabel(/^e-?mail$/i)).toBeVisible();
+    await expect(page.getByLabel(/^senha$/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /^entrar$/i })).toBeVisible();
   });
 
   test('exibe erro ao submeter com campos vazios', async ({ page }) => {
@@ -32,9 +32,9 @@ test.describe('Página de Login', () => {
 
   test('exibe erro com credenciais inválidas', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel(/e-?mail/i).fill('invalido@exemplo.com.br');
-    await page.getByLabel(/senha/i).fill('senha-errada-123');
-    await page.getByRole('button', { name: /entrar/i }).click();
+    await page.getByLabel(/^e-?mail$/i).fill('invalido@exemplo.com.br');
+    await page.getByLabel(/^senha$/i).fill('senha-errada-123');
+    await page.getByRole('button', { name: /^entrar$/i }).click();
 
     // Wait for error message to appear (toast or inline)
     await expect(
@@ -85,12 +85,12 @@ test.describe('Recuperação de Senha', () => {
 
   test('aceita email válido e exibe confirmação', async ({ page }) => {
     await page.goto('/esqueci-senha');
-    await page.getByLabel(/e-?mail/i).fill('teste@exemplo.com.br');
+    await page.getByLabel(/^e-?mail$/i).fill('teste@exemplo.com.br');
     await page.getByRole('button', { name: /enviar|recuperar|redefinir/i }).click();
 
     // Should show a success message after submission
     await expect(
-      page.locator('text=/enviado|verifique|email/i').first()
+      page.getByText(/enviaremos|enviado|verifique/i).first()
     ).toBeVisible({ timeout: 8_000 });
   });
 });

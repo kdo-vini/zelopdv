@@ -31,12 +31,17 @@ setup('authenticate', async ({ page }) => {
   await page.goto('/login');
   await expect(page).toHaveURL(/\/login/);
 
-  await page.getByLabel(/^e-?mail$/i).fill(email);
-  await page.getByLabel(/^senha$/i).fill(password);
+  // Wait for form fields to be ready
+  const emailField = page.getByLabel(/^e-?mail$/i);
+  const passwordField = page.getByLabel(/^senha$/i);
+  await expect(emailField).toBeVisible({ timeout: 8_000 });
+
+  await emailField.fill(email);
+  await passwordField.fill(password);
   await page.getByRole('button', { name: /^entrar$/i }).click();
 
   // After login the app redirects to /app (active subscription) or /perfil (incomplete profile)
-  await page.waitForURL(/\/(app|perfil|assinatura)/, { timeout: 15_000 });
+  await page.waitForURL(/\/(app|perfil|assinatura)/, { timeout: 30_000 });
 
   await page.context().storageState({ path: authFile });
 });

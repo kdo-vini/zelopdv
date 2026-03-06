@@ -26,9 +26,8 @@ test.describe('Frente de Caixa - Carregamento', () => {
 
   test('exibe a grade de produtos ou mensagem de lista vazia', async ({ page }) => {
     // Either the product grid or an empty-state message must be visible
-    const gridOrEmpty = page.locator(
-      '[data-testid="product-grid"], [data-testid="empty-products"], .product-grid, text=/nenhum produto/i'
-    );
+    const gridOrEmpty = page.locator('[data-testid="product-grid"], [data-testid="empty-products"], .product-grid')
+      .or(page.getByText(/nenhum produto/i));
     await expect(gridOrEmpty.first()).toBeVisible({ timeout: 12_000 });
   });
 
@@ -197,9 +196,8 @@ test.describe('Gestão - Produtos', () => {
 
   test('exibe lista de produtos ou estado vazio', async ({ page }) => {
     await page.goto('/gestao/produtos');
-    const content = page.locator(
-      '[data-testid="produtos-list"], table, [data-testid="empty-state"], text=/nenhum produto/i'
-    );
+    const content = page.locator('[data-testid="produtos-list"], table, [data-testid="empty-state"]')
+      .or(page.getByText(/nenhum produto/i));
     await expect(content.first()).toBeVisible({ timeout: 10_000 });
   });
 });
@@ -212,9 +210,8 @@ test.describe('Gestão - Pessoas (Clientes)', () => {
 
   test('exibe lista de clientes ou estado vazio', async ({ page }) => {
     await page.goto('/gestao/pessoas');
-    const content = page.locator(
-      'table, [data-testid="pessoas-list"], text=/nenhum cliente/i, text=/nenhuma pessoa/i'
-    );
+    const content = page.locator('table, [data-testid="pessoas-list"]')
+      .or(page.getByText(/nenhum cliente|nenhuma pessoa/i));
     await expect(content.first()).toBeVisible({ timeout: 10_000 });
   });
 });
