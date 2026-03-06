@@ -1413,18 +1413,18 @@ window.addEventListener('message', function(e){
           </div>
         </div>
 
-        <!-- Categorias: Tabs horizontais -->
-        <div class="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none" role="tablist" aria-label="Categorias">
+        <!-- Categorias: Tabs horizontais (estilo underline) -->
+        <div class="flex items-center gap-6 overflow-x-auto py-1 scrollbar-none border-b" style="border-color: var(--border-subtle);" role="tablist" aria-label="Categorias">
           {#each categorias as cat (cat.id)}
             <button
               type="button"
               role="tab"
               aria-selected={categoriaAtiva === cat.id}
-              class="flex-shrink-0 px-4 py-2 rounded-lg font-semibold text-sm transition-colors whitespace-nowrap"
+              class="flex-shrink-0 pb-2 font-semibold text-sm transition-colors whitespace-nowrap relative"
               style="
-                background: {categoriaAtiva === cat.id ? 'var(--primary)' : 'var(--bg-panel)'};
-                color: {categoriaAtiva === cat.id ? 'white' : 'var(--text-muted)'};
-                border: 1px solid {categoriaAtiva === cat.id ? 'transparent' : 'var(--border-subtle)'};
+                color: {categoriaAtiva === cat.id ? 'var(--text-main)' : 'var(--text-muted)'};
+                border-bottom: 2px solid {categoriaAtiva === cat.id ? 'var(--primary)' : 'transparent'};
+                margin-bottom: -1px;
               "
               on:click={() => (categoriaAtiva = cat.id)}
             >
