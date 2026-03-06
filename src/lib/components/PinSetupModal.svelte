@@ -31,18 +31,25 @@
         addToast('PINs não conferem.', 'warning');
         return;
     }
+    await doSavePin(pin, 'PIN definido com sucesso!');
+  }
 
+  async function skipForNow() {
+    await doSavePin('0000', 'PIN temporário definido (0000). Altere em Perfil > Segurança.');
+  }
+
+  async function doSavePin(value, successMsg) {
     saving = true;
     try {
         const { error } = await supabase
             .from('empresa_perfil')
-            .update({ pin_admin: pin })
+            .update({ pin_admin: value })
             .eq('user_id', userId);
 
         if (error) throw error;
         
-        addToast('PIN definido com sucesso!', 'success');
-        onPinSet(pin); // Callback to update parent state
+        addToast(successMsg, 'success');
+        onPinSet(value);
     } catch (e) {
         addToast('Erro ao salvar PIN: ' + e.message, 'error');
     } finally {
@@ -52,19 +59,22 @@
 </script>
 
 <!-- Backdrop (High z-index, cannot close) -->
-<div class="fixed inset-0 z-[200] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 text-center">
+<div class="fixed inset-0 z-[200] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);">
+  <div class="rounded-xl shadow-2xl max-w-md w-full p-6 text-center" style="background: var(--bg-card); border: 1px solid var(--border-card);">
     
-    <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+    <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background: color-mix(in srgb, var(--primary) 15%, transparent);">
         <span class="text-3xl">🔒</span>
     </div>
 
-    <h2 class="text-xl font-bold text-slate-800 dark:text-white mb-2">Segurança do Sistema</h2>
-    <p class="text-slate-600 dark:text-slate-300 mb-6 text-sm">
-        Para proteger dados sensíveis (Relatórios, Despesas), defina agora uma <strong>Senha Administrativa (PIN)</strong> de 4 a 6 dígitos.
+    <h2 class="text-xl font-bold mb-2" style="color: var(--text-main);">Segurança do Sistema</h2>
+    <p class="mb-2 text-sm" style="color: var(--text-muted);">
+        O <strong style="color: var(--text-main);">PIN Administrativo</strong> protege áreas sensíveis como <strong>Relatórios</strong> e <strong>Despesas</strong>, impedindo que funcionários acessem dados financeiros.
+    </p>
+    <p class="mb-6 text-xs" style="color: var(--text-muted);">
+        Escolha de 4 a 6 dígitos. Você pode alterar depois em <strong>Perfil → Segurança</strong>.
     </p>
 
-    <div class="space-y-6">
+    <div class="space-y-4">
         <div class="relative">
             <input 
                 type="password" 
@@ -72,7 +82,8 @@
                 maxlength="6" 
                 inputmode="numeric"
                 pattern="[0-9]*"
-                class="w-full text-center text-2xl tracking-widest font-mono p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 placeholder:text-base placeholder:tracking-normal" 
+                class="w-full text-center text-2xl tracking-widest font-mono p-3 rounded-lg"
+                style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
                 bind:value={pin} 
                 on:input={(e) => {
                     if (/\D/.test(e.currentTarget.value)) {
@@ -82,9 +93,9 @@
                 }}
             />
             {#if bubble.show && bubble.field === 'pin'}
-                 <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg shadow-xl whitespace-nowrap z-50 animate-bounce-small">
+                 <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 text-xs font-bold rounded-lg shadow-xl whitespace-nowrap z-50" style="background: var(--warning); color: #fff;">
                     Apenas números!
-                    <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-800"></div>
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent" style="border-top-color: var(--warning);"></div>
                  </div>
             {/if}
         </div>
@@ -96,7 +107,8 @@
                 maxlength="6" 
                 inputmode="numeric"
                 pattern="[0-9]*"
-                class="w-full text-center text-2xl tracking-widest font-mono p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 placeholder:text-base placeholder:tracking-normal" 
+                class="w-full text-center text-2xl tracking-widest font-mono p-3 rounded-lg"
+                style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
                 bind:value={confirmPin} 
                 on:input={(e) => {
                     if (/\D/.test(e.currentTarget.value)) {
@@ -106,16 +118,29 @@
                 }}
             />
             {#if bubble.show && bubble.field === 'confirm'}
-                 <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg shadow-xl whitespace-nowrap z-50 animate-bounce-small">
+                 <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 text-xs font-bold rounded-lg shadow-xl whitespace-nowrap z-50" style="background: var(--warning); color: #fff;">
                     Apenas números!
-                    <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-800"></div>
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent" style="border-top-color: var(--warning);"></div>
                  </div>
             {/if}
         </div>
         
-        <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-blue-500/30" on:click={savePin} disabled={saving}>
-            {saving ? 'Salvando...' : 'Definir Senha Admin'}
+        <button 
+            class="w-full font-bold py-3 rounded-lg transition-colors"
+            style="background: var(--primary); color: var(--primary-text);"
+            on:click={savePin} disabled={saving}
+        >
+            {saving ? 'Salvando...' : 'Definir PIN Administrativo'}
         </button>
+
+        <button 
+            class="w-full py-2 rounded-lg text-sm font-medium transition-colors"
+            style="background: transparent; color: var(--text-muted); border: 1px solid var(--border-subtle);"
+            on:click={skipForNow} disabled={saving}
+        >
+            Configurar depois
+        </button>
+        <p class="text-[11px]" style="color: var(--text-muted); opacity: 0.7;">Ao pular, o PIN será definido como <strong>0000</strong> temporariamente.</p>
     </div>
   </div>
 </div>

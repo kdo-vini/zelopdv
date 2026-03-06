@@ -47,6 +47,39 @@ export function getFriendlyErrorMessage(error) {
         return 'Erro de conexão. Verifique sua internet e tente novamente.';
     }
 
+    // Erros de banco (Supabase/Postgres)
+    if (msg.includes('violates row-level security') || msg.includes('row-level security')) {
+        return 'Sem permissão para realizar esta ação. Verifique suas credenciais.';
+    }
+    if (msg.includes('unique constraint') || msg.includes('duplicate key')) {
+        return 'Este registro já existe. Verifique os dados e tente novamente.';
+    }
+    if (msg.includes('foreign key constraint') || msg.includes('violates foreign key')) {
+        return 'Não é possível completar: há dados vinculados a este registro.';
+    }
+    if (msg.includes('not null constraint') || msg.includes('null value in column')) {
+        return 'Um campo obrigatório não foi preenchido.';
+    }
+
+    // Erros de timeout
+    if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('aborted')) {
+        return 'A operação demorou demais. Verifique sua conexão e tente novamente.';
+    }
+
+    // Erros de pagamento / Stripe
+    if (msg.includes('card_declined') || msg.includes('card declined')) {
+        return 'Cartão recusado. Verifique os dados ou tente outro cartão.';
+    }
+    if (msg.includes('expired_card')) {
+        return 'Cartão expirado. Atualize os dados do seu cartão.';
+    }
+    if (msg.includes('insufficient_funds')) {
+        return 'Saldo insuficiente no cartão. Tente outro meio de pagamento.';
+    }
+    if (msg.includes('processing_error') || msg.includes('payment_failed')) {
+        return 'Erro ao processar pagamento. Tente novamente em instantes.';
+    }
+
     // Fallback: retorna a mensagem original se não houver mapeamento específico, 
     // mas traduzindo prefixos comuns se possível.
     if (msg.startsWith('auth api error: ')) {

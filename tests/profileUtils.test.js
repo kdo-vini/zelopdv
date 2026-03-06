@@ -12,6 +12,9 @@ describe('profileUtils.requiredOk', () => {
     expect(requiredOk({ nome_exibicao: 'A', documento: '1', contato: '2', largura_bobina: '80mm' })).toBe(true);
     expect(requiredOk({ nome_exibicao: 'A', documento: '1', contato: '2', largura_bobina: '58mm' })).toBe(true);
   });
+  it('rejects pdf as a valid largura_bobina', () => {
+    expect(requiredOk({ nome_exibicao: 'A', documento: '1', contato: '2', largura_bobina: 'pdf' })).toBe(false);
+  });
 });
 
 describe('profileUtils.buildPayload', () => {

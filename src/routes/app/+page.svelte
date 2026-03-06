@@ -19,6 +19,7 @@
   import { ensureActiveSubscription } from '$lib/guards';
   import { withTimeout } from '$lib/utils';
   import { addToast, confirmAction } from '$lib/stores/ui';
+  import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import { pdvCache } from '$lib/stores/pdvCache';
   
   // Modais componentizados
@@ -1002,15 +1003,12 @@ window.addEventListener('message', function(e){
           return {
             id_usuario,
             id_venda: vendaId,
-            id_venda: vendaId, // Duplicate key check? No, remove duplicate.
             id_produto: i.id_produto ?? null,
             quantidade: qtdEfetiva,
             nome_produto_na_venda: i.nome,
             preco_unitario_na_venda: Number(precoUnit)
           };
         });
-
-        // Fixed duplicate key manually in logic below
 
         const { error: itensError } = await supabase.from('vendas_itens').insert(itens);
         if (itensError) {
@@ -1111,7 +1109,8 @@ window.addEventListener('message', function(e){
 
     } catch (e) {
       console.error(e);
-      modalPagamentoRef?.setErro?.(e.message);
+      const friendlyMsg = getFriendlyErrorMessage(e);
+      modalPagamentoRef?.setErro?.(friendlyMsg);
     } finally {
       salvandoVenda = false;
       modalPagamentoRef?.setSalvando?.(false);

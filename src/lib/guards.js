@@ -1,5 +1,6 @@
 // Client-side guards for session, profile, and subscription
 import { supabase } from './supabaseClient';
+import { requiredOk } from './profileUtils';
 
 /**
  * Normalize and strictly validate subscription status AND expiration date.
@@ -70,10 +71,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
         .select('nome_exibicao, documento, contato, largura_bobina')
         .eq('user_id', userId)
         .maybeSingle();
-      const ok = Boolean(
-        perfil && perfil.nome_exibicao && perfil.documento && perfil.contato &&
-        (perfil.largura_bobina === '58mm' || perfil.largura_bobina === '80mm')
-      );
+      const ok = Boolean(perfil && requiredOk(perfil));
       if (!ok) {
         if (redirectOnFail) window.location.href = '/perfil?msg=complete';
         return null;

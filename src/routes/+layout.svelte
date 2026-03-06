@@ -8,6 +8,7 @@
   import { onMount } from 'svelte';
   import { supabase, hasSupabaseConfig } from '$lib/supabaseClient';
   import { isSubscriptionActiveStrict } from '$lib/guards';
+  import { requiredOk } from '$lib/profileUtils';
   import { page } from '$app/stores';
 
   export let params;
@@ -148,10 +149,7 @@
             .select('nome_exibicao, documento, contato, largura_bobina')
             .eq('user_id', session.user.id)
             .maybeSingle();
-          hasCompleteProfile = Boolean(
-            perfil && perfil.nome_exibicao && perfil.documento && perfil.contato &&
-            (perfil.largura_bobina === '58mm' || perfil.largura_bobina === '80mm')
-          );
+          hasCompleteProfile = Boolean(perfil && requiredOk(perfil));
           
         } catch {}
       }

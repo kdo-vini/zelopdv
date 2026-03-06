@@ -97,17 +97,35 @@
       } else {
         const { data: { session: authSession } } = await supabase.auth.getSession();
         const token = authSession?.access_token ?? '';
-        const res = await fetch('/api/billing/create-checkout-session', {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({})
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        let res;
+        try {
+          res = await fetch('/api/billing/create-checkout-session', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({}),
+            signal: controller.signal
+          });
+        } finally {
+          clearTimeout(timeout);
+        }
         const json = await res.json();
         if (json?.url) { window.location.href = json.url; return; }
-        message = json?.error || 'Falha ao iniciar checkout.';
+        if (res.status === 401) {
+          message = 'Sua sessão expirou. Faça login novamente.';
+        } else if (res.status >= 500) {
+          message = 'Erro no servidor de pagamento. Tente novamente em instantes.';
+        } else {
+          message = json?.error || 'Falha ao iniciar checkout.';
+        }
         messageType = 'warning';
       }
     } catch (e) {
-      message = e?.message || 'Erro.';
+      if (e?.name === 'AbortError') {
+        message = 'A conexão com o servidor de pagamento demorou demais. Verifique sua internet e tente novamente.';
+      } else {
+        message = e?.message || 'Erro ao conectar com o servidor de pagamento.';
+      }
       messageType = 'warning';
     } finally {
       loading = false;
@@ -119,16 +137,34 @@
       loading = true; message='';
       const { data: { session: authSession } } = await supabase.auth.getSession();
       const token = authSession?.access_token ?? '';
-      const res = await fetch('/api/billing/create-portal-session', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({})
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      let res;
+      try {
+        res = await fetch('/api/billing/create-portal-session', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({}),
+          signal: controller.signal
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
       const json = await res.json();
       if (json?.url) { window.location.href = json.url; return; }
-      message = json?.error || 'Falha ao abrir portal.';
+      if (res.status === 401) {
+        message = 'Sua sessão expirou. Faça login novamente.';
+      } else if (res.status >= 500) {
+        message = 'Erro no servidor. Tente novamente em instantes.';
+      } else {
+        message = json?.error || 'Falha ao abrir portal.';
+      }
       messageType = 'warning';
     } catch (e) {
-      message = e?.message || 'Erro.';
+      if (e?.name === 'AbortError') {
+        message = 'Conexão demorou demais. Verifique sua internet e tente novamente.';
+      } else {
+        message = e?.message || 'Erro ao conectar com o servidor.';
+      }
       messageType = 'warning';
     } finally {
       loading = false;
