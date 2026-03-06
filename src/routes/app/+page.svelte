@@ -32,6 +32,8 @@
   
   // Grid virtualizado para performance
   import VirtualProductGrid from '$lib/components/VirtualProductGrid.svelte';
+  // Tour de onboarding para novos usuários
+  import OnboardingTour from '$lib/components/OnboardingTour.svelte';
 
   // Modo Offline (IndexedDB)
   import { atualizarCacheProdutos, salvarVendaOffline, syncVendasPendentes, limparVendasAntigas } from '$lib/offlineDb';
@@ -53,6 +55,9 @@
   // [NEW] Estado Modal Sucesso
   let modalSucessoAberto = false;
   let vendaConcluida = null;
+
+  // Onboarding tour: exibe na primeira visita ao /app
+  let showOnboarding = false;
   // [NEW] Mobile State
   let showMobileCart = false;
   // [NEW] Dados da Empresa
@@ -199,6 +204,12 @@
     } catch {}
     window.addEventListener('keydown', onKeyGlobal);
     window.addEventListener('online', handleSyncOnline);
+
+    // Onboarding: mostra o tour apenas na primeira visita
+    if (!localStorage.getItem('zelo_onboarding_done')) {
+      showOnboarding = true;
+    }
+
     await waitAuthReady();
     // Bloqueio: exige assinatura ativa antes de carregar o PDV
     const ok = await ensureActiveSubscription({ requireProfile: true });
@@ -1402,6 +1413,7 @@ window.addEventListener('message', function(e){
               <input id="busca-prod" type="text" class="input-form h-10 md:h-12" placeholder="Buscar produto..." bind:value={busca} bind:this={buscaInputEl} />
             </div>
             <button
+              data-testid="btn-avulso"
               on:click={() => modalValorAberto = true}
               class="btn-primary h-10 md:h-12 px-3 md:px-4 flex items-center gap-2 whitespace-nowrap shadow-sm rounded-lg"
               style="background: var(--accent); color: white;"
@@ -1416,6 +1428,7 @@ window.addEventListener('message', function(e){
         <div class="flex items-center gap-6 overflow-x-auto py-1 scrollbar-none border-b" style="border-color: var(--border-subtle);" role="tablist" aria-label="Categorias">
           {#each categorias as cat (cat.id)}
             <button
+              data-testid="category-tab"
               type="button"
               role="tab"
               aria-selected={categoriaAtiva === cat.id}
@@ -1465,16 +1478,18 @@ window.addEventListener('message', function(e){
         {/if}
       </div>
 
-      <VirtualProductGrid
-        produtos={produtosFiltrados}
-        on:produtoClick={(e) => adicionarProduto(e.detail)}
-        on:valorAvulsoClick={() => modalValorAberto = true}
-      />
+      <div data-testid="product-grid">
+        <VirtualProductGrid
+          produtos={produtosFiltrados}
+          on:produtoClick={(e) => adicionarProduto(e.detail)}
+          on:valorAvulsoClick={() => modalValorAberto = true}
+        />
+      </div>
     {/if}
   </main>
 
   <!-- Coluna 3: Comanda (Desktop Sidebar / Mobile Drawer) -->
-  <aside class="
+  <aside data-testid="cart" class="
     fixed inset-0 z-50 md:static md:z-auto
     bg-slate-900/95 md:bg-slate-900/90 backdrop-blur-md md:backdrop-blur-sm
     w-full md:w-96 
@@ -1569,6 +1584,7 @@ window.addEventListener('message', function(e){
 
         <!-- Botão Receber (Maior destaque) -->
         <button
+          data-testid="btn-cobrar"
           disabled={comanda.length === 0}
           on:click={abrirModalPagamento}
           class="col-span-2 h-12 md:h-10 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-green-900/20 text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
@@ -1599,6 +1615,11 @@ window.addEventListener('message', function(e){
 
 </div>
 </div> <!-- /flex-col h-full -->
+
+<!-- Tour de onboarding para novos usuários -->
+{#if showOnboarding}
+  <OnboardingTour onComplete={() => (showOnboarding = false)} />
+{/if}
 
 <!-- --- 7. MODAIS (Componentizados) --- -->
 
