@@ -37,7 +37,10 @@ export async function POST({ request, url }) {
       }
     }
 
-    const origin = ORIGIN || url.origin;
+    const requestOrigin = request.headers.get('origin') || request.headers.get('x-forwarded-host')
+      ? `https://${request.headers.get('x-forwarded-host')}`
+      : null;
+    const origin = ORIGIN || requestOrigin || url.origin;
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/assinatura`,

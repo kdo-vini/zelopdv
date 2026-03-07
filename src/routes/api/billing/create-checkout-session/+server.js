@@ -33,7 +33,10 @@ export async function POST({ request, url }) {
     const customers = await stripe.customers.list({ email, limit: 1 });
     const customer = customers.data[0] || await stripe.customers.create({ email, metadata: { user_id: userId } });
 
-    const origin = ORIGIN || url.origin;
+    const requestOrigin = request.headers.get('origin') || request.headers.get('x-forwarded-host')
+      ? `https://${request.headers.get('x-forwarded-host')}`
+      : null;
+    const origin = ORIGIN || requestOrigin || url.origin;
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customer.id,

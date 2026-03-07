@@ -5,8 +5,6 @@
   import { page } from '$app/stores';
   import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina } from '$lib/profileUtils';
   import { addToast } from '$lib/stores/ui';
-  import AdminLock from '$lib/components/AdminLock.svelte';
-
   export let params;
 
   const tabs = [
@@ -274,8 +272,7 @@
   $: tag = subStatus ? statusTag(subStatus) : null;
 </script>
 
-<AdminLock correctPin={adminPin}>
-  <form on:submit|preventDefault={salvar}>
+<form on:submit|preventDefault={salvar}>
 
     <!-- Page header -->
     <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
@@ -683,4 +680,3 @@
 
     {/if}
   </form>
-</AdminLock>

@@ -267,10 +267,16 @@
   async function fetchProfileData(uId) {
     if (!uId) return;
     const { data } = await supabase.from('empresa_perfil').select('pin_admin, nome_exibicao').eq('user_id', uId).maybeSingle();
-    
+
     if (data) {
         if (!data.pin_admin) {
-            showPinSetup = true;
+            // Don't interrupt onboarding flow — only prompt PIN setup on protected app pages
+            const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+            const onboardingPaths = ['/perfil', '/assinatura', '/login', '/cadastro', '/esqueci-senha', '/redefinir-senha'];
+            const isOnboarding = onboardingPaths.some(p => currentPath === p || currentPath.startsWith(p + '?'));
+            if (!isOnboarding) {
+                showPinSetup = true;
+            }
         } else {
             adminPin = data.pin_admin;
         }
@@ -297,7 +303,7 @@
 <ToastContainer />
 <ConfirmDialog />
 
-{#if showPinSetup && session}
+{#if showPinSetup && session && !isPerfil && !isAssinatura}
   <PinSetupModal userId={session.user.id} {onPinSet} />
 {/if}
 
