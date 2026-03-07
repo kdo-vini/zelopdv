@@ -61,6 +61,12 @@
 
       try {
         const params = new URLSearchParams(window.location.search);
+
+        // Após pagamento bem-sucedido, redirecionar para o app automaticamente
+        if (params.get('success') === '1' && isActiveStrict) {
+          setTimeout(() => { window.location.href = '/app'; }, 2500);
+        }
+
         const msg = params.get('msg');
         if (msg === 'subscribe') {
           if (hasHadSubscription) {

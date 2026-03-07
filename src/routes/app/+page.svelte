@@ -1400,12 +1400,12 @@ window.addEventListener('message', function(e){
 <div class="flex flex-col md:flex-row w-full flex-1 bg-transparent overflow-hidden relative">
 
   <!-- Coluna Principal: Produtos (Main Content) -->
-  <main class="flex-1 p-4 overflow-y-auto pb-24 md:pb-4">
+  <main class="flex-1 flex flex-col p-4 overflow-hidden pb-0">
     {#if loading}
       <p class="text-main">Carregando produtos...</p>
     {:else}
       <!-- Header: Título + Busca + Botão Avulso -->
-      <div class="flex flex-col gap-3 mb-4">
+      <div class="flex-shrink-0 flex flex-col gap-3 mb-4">
         <div class="flex items-center justify-between gap-3">
           <h1 class="text-lg md:text-xl font-bold" style="color: var(--text-main);">Frente de Caixa</h1>
           <div class="flex gap-2 flex-1 max-w-xl">
@@ -1478,7 +1478,7 @@ window.addEventListener('message', function(e){
         {/if}
       </div>
 
-      <div data-testid="product-grid">
+      <div data-testid="product-grid" class="flex-1 flex flex-col min-h-0">
         <VirtualProductGrid
           produtos={produtosFiltrados}
           on:produtoClick={(e) => adicionarProduto(e.detail)}
