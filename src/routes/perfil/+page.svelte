@@ -242,6 +242,12 @@
       logoFile = null;
       pendingLogoUrl = null;
       clearDirty();
+
+      // Se for primeiro setup (veio via ?msg=complete), redirecionar para assinar
+      const urlParams = new URLSearchParams($page.url.search);
+      if (urlParams.get('msg') === 'complete') {
+        window.location.href = '/assinatura';
+      }
     } catch (e) {
       console.error('[perfil] salvar failed:', e);
       addToast('Erro ao salvar: ' + e.message, 'error');
