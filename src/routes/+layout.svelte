@@ -347,6 +347,9 @@
   </div>
 {/if}
 
+{#if $page.url.pathname === '/pascoa'}
+  <slot />
+{:else}
 <div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode} class:easter-theme={isEasterMode}>
   
   {#if isChristmasMode}
@@ -373,7 +376,7 @@
     </div>
   {/if}
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isAuthPage && !hasSidebarLayout}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isAuthPage && !hasSidebarLayout}
   <header class="border-b bg-header-base backdrop-blur sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
@@ -569,11 +572,11 @@
   {/if}
   {/if}
 
-  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || isAuthPage ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
+  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isAuthPage ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isAuthPage && !hasSidebarLayout}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isAuthPage && !hasSidebarLayout}
   <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -583,10 +586,8 @@
         <div class="text-xs" style="color: var(--text-muted);">
           Desenvolvido com 💙 por <a href="https://techneia.com.br" target="_blank" rel="noopener noreferrer" class="font-medium hover:underline transition-colors" style="color: var(--accent);">Techne Sistemas</a>
         </div>
-      </div>
-    </div>
-  </footer>
   {/if}
 
 
 </div>
+{/if}
