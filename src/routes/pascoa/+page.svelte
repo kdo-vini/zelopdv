@@ -32,7 +32,7 @@
       "price": "59.00",
       "priceCurrency": "BRL",
       "priceValidUntil": "2026-12-31",
-      "description": "7 dias grátis, sem cartão"
+      "description": "7 dias grátis"
     },
     "description": "Sistema para vender na Páscoa 2026. Ideal para doceiras, confeiteiras e revendedores.",
     "url": "https://zelopdv.com.br/pascoa"
@@ -155,7 +155,7 @@
         </h1>
 
         <p class="text-lg md:text-xl text-slate-400 font-medium max-w-lg mb-10 leading-relaxed animate-fade-in-up delay-200">
-          O sistema de vendas mais simples para doceiras, MEIs, e empreendedores. Cadastre seus ovos e feche o caixa em segundos, no celular ou PC.
+          O sistema de vendas mais simples para doceiras, MEIs, e empreendedores. Cadastre seus doces e feche o caixa em segundos, no celular ou PC.
         </p>
 
         <div class="flex flex-col sm:flex-row items-center gap-5 animate-fade-in-up delay-300">
@@ -168,7 +168,7 @@
             Ver como funciona
           </a>
         </div>
-        <p class="text-[10px] text-slate-500 uppercase tracking-widest mt-4 font-bold">Sem cartão de crédito • Cancele quando quiser</p>
+        <p class="text-[10px] text-slate-500 uppercase tracking-widest mt-4 font-bold">Cancele quando quiser</p>
       </div>
 
       <!-- Visuals -->
@@ -376,7 +376,7 @@
             <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-[150%] skew-x-[-20deg] group-hover/btn:animate-shine"></span>
             Testar 7 dias grátis
           </a>
-          <p class="text-xs text-slate-500 text-center mt-5 font-medium uppercase tracking-widest">Sem cartão de crédito no cadastro</p>
+          <p class="text-xs text-slate-500 text-center mt-5 font-medium uppercase tracking-widest">Cancele quando quiser</p>
         </div>
       </div>
 
@@ -389,10 +389,12 @@
       <div class="flex flex-col md:flex-row justify-between items-center gap-8">
         
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-400 to-pink-600 flex items-center justify-center">
-            <span class="text-white text-sm font-black tracking-tight" style="font-family: serif;">Z</span>
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 via-pink-500 to-purple-600 p-[1px] relative">
+            <div class="w-full h-full rounded-xl bg-[#06040A] flex items-center justify-center relative z-10">
+               <svg class="w-4 h-4 text-transparent bg-clip-text bg-gradient-to-br from-amber-300 to-pink-500 fill-current text-pink-400" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            </div>
           </div>
-          <span class="font-bold text-white tracking-tight text-lg">Zelo<span class="text-amber-400">PDV</span></span>
+          <span class="text-xl font-black tracking-tighter text-white">Zelo<span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-pink-500">PDV</span></span>
         </div>
 
         <div class="flex flex-wrap items-center justify-center gap-8 text-sm font-bold tracking-wide text-slate-500">
