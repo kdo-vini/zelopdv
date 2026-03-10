@@ -60,9 +60,49 @@
     estoque_atual: 0
   };
 
+  // ─── Kit Páscoa ───────────────────────────────────────────────────────────────
+  let kitPascoaInserted = false;
+
+  $: showKitPascoa = (() => {
+    const now = new Date();
+    const inSeason = now >= new Date('2026-03-10') && now <= new Date('2026-04-06');
+    return inSeason && !kitPascoaInserted;
+  })();
+
+  async function aplicarKitPascoa() {
+    const ok = await confirmAction(
+      'Kit Páscoa 2026',
+      'Criar 5 categorias para a Páscoa: Ovos de Páscoa, Trufas & Bombons, Cestas, Colomba Pascal e Avulso?'
+    );
+    if (!ok) return;
+
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData?.user?.id;
+    if (!uid) { addToast('Sessão expirada.', 'error'); return; }
+
+    const cats = [
+      { nome: 'Ovos de Páscoa',   ordem: 1, id_usuario: uid },
+      { nome: 'Trufas & Bombons', ordem: 2, id_usuario: uid },
+      { nome: 'Cestas',           ordem: 3, id_usuario: uid },
+      { nome: 'Colomba Pascal',   ordem: 4, id_usuario: uid },
+      { nome: 'Avulso',           ordem: 5, id_usuario: uid },
+    ];
+
+    const { error } = await supabase.from('categorias').insert(cats);
+    if (error) {
+      addToast('Erro ao criar categorias.', 'error');
+    } else {
+      addToast('🐣 Kit Páscoa ativado! 5 categorias criadas.', 'success');
+      kitPascoaInserted = true;
+      localStorage.setItem('zelo_kit_pascoa_2026', 'done');
+      await carregarCategorias();
+    }
+  }
+
   // ─── Lifecycle ────────────────────────────────────────────────────────────────
   onMount(async () => {
     await waitAuthReady();
+    kitPascoaInserted = localStorage.getItem('zelo_kit_pascoa_2026') === 'done';
     await carregarTudo();
   });
 
@@ -611,6 +651,27 @@
     </button>
   </div>
 </div>
+
+<!-- ─── Kit Páscoa Banner ─────────────────────────────────────────────────────── -->
+{#if showKitPascoa}
+  <div style="background: linear-gradient(135deg, #F9F4FF, #FDE8F0); border: 1.5px solid #D4BBE8;"
+       class="rounded-xl p-4 mb-4 flex items-center justify-between gap-4">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-wider mb-0.5" style="color: #9B6EBF;">Especial Páscoa 2026 🥚</p>
+      <p class="font-bold text-sm" style="color: #3B1F5E;">Kit de categorias pronto para usar</p>
+      <p class="text-xs" style="color: #7E6D8A;">Ovos de Páscoa, Trufas, Cestas, Colomba Pascal, Avulso</p>
+    </div>
+    <div class="flex gap-2 flex-shrink-0">
+      <button on:click={aplicarKitPascoa}
+        class="px-4 py-2 rounded-lg text-sm font-bold text-white"
+        style="background: linear-gradient(135deg, #9B6EBF, #6B3FA0);">
+        Ativar Kit
+      </button>
+      <button on:click={() => kitPascoaInserted = true} class="px-2 py-2 text-xs rounded-lg"
+        style="color: #7E6D8A; background: rgba(0,0,0,0.05);">✕</button>
+    </div>
+  </div>
+{/if}
 
 <!-- ─── Layout Split View ─────────────────────────────────────────────────────── -->
 <div class="split-view" style="background: var(--bg-app);">

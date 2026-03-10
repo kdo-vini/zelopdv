@@ -17,6 +17,9 @@
 /* Seasonal Theme - New Year (Active when .newyear-theme class is present) */
 @import "./themes/newyear.css";
 
+/* Seasonal Theme - Easter (Active when .easter-theme class is present) */
+@import "./themes/easter.css";
+
 /* Future themes can be added here:
    @import "./themes/halloween.css";
    @import "./themes/valentine.css";

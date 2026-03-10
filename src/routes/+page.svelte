@@ -74,6 +74,9 @@
         <a href="#features" class="hover:text-white transition-colors">Funcionalidades</a>
         <a href="#pricing" class="hover:text-white transition-colors">Preços</a>
         <a href="#faq" class="hover:text-white transition-colors">Dúvidas</a>
+        <a href="/pascoa" class="flex items-center gap-1.5 text-purple-400 hover:text-purple-300 font-semibold transition-colors bg-purple-500/10 px-3 py-1.5 rounded-full border border-purple-500/20">
+          <span>🐰</span> Páscoa
+        </a>
       </div>
 
       <div class="flex items-center gap-4">
@@ -103,6 +106,9 @@
         <a href="#features" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Funcionalidades</a>
         <a href="#pricing" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Preços</a>
         <a href="#faq" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Dúvidas</a>
+        <a href="/pascoa" class="flex items-center justify-center gap-1.5 text-sm font-semibold text-purple-400 hover:text-purple-300 transition-colors py-2 bg-purple-500/10 rounded-lg border border-purple-500/20" on:click={() => showMobileMenu = false}>
+          <span>🐰</span> Zelo Páscoa
+        </a>
         <a href="/cadastro" class="mt-1 w-full text-center px-5 py-3 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all" on:click={() => showMobileMenu = false}>
           Testar grátis
         </a>

@@ -9,10 +9,12 @@ Zelo PDV is a SaaS POS (Point of Sale) system for Brazilian lanchonetes (quick-s
 ## Commands
 
 ```bash
-npm run dev       # Start dev server (http://localhost:5173)
-npm run build     # Production build
-npm run preview   # Preview production build
-npm run test      # Run tests with Vitest
+npm run dev           # Start dev server (http://localhost:5173)
+npm run build         # Production build
+npm run preview       # Preview production build
+npm run test          # Run unit tests with Vitest
+npm run test:e2e      # Run E2E tests with Playwright
+npm run test:e2e:ui   # Run Playwright tests with UI
 ```
 
 Node version: 20.x (see `.nvmrc`).
@@ -21,7 +23,7 @@ There are two separate apps:
 - **Root** (`/`) — main POS app, deployed as main Vercel project
 - **`admin-dashboard/`** — separate Svelte 4 admin portal, deployed as a separate Vercel project
 
-To develop `admin-dashboard/`, run `npm run dev` from inside that directory.
+To develop `admin-dashboard/`, run `npm run dev` from inside that directory (runs on port 5174).
 
 ## Architecture
 
@@ -32,24 +34,47 @@ To develop `admin-dashboard/`, run `npm run dev` from inside that directory.
 - **Dexie.js** (IndexedDB) for offline data caching
 - **Tailwind CSS** + CSS Variables for styling
 - **PWA** via `@vite-pwa/sveltekit` (Workbox service worker)
+- **jsPDF** + **XLSX** for PDF/Excel report generation
 
 ### Route Structure
-- `/` — Landing page (public)
-- `/login`, `/cadastro`, `/esqueci-senha`, `/redefinir-senha` — Auth (public)
-- `/perfil` — Company profile setup (auth required)
+
+**Public:**
+- `/` — Landing page (root)
+- `/landing` — Alternate landing page (with server load)
+- `/login`, `/cadastro`, `/esqueci-senha`, `/redefinir-senha` — Auth
+- `/privacidade`, `/termos` — Legal pages
+
+**Auth required:**
+- `/perfil` — Company profile setup
 - `/assinatura` — Subscription/billing page
-- `/app` — **Main POS interface** (active subscription required)
-- `/gestao/*` — Management dashboard: `pessoas`, `fichario`, `produtos`, `estoque`, `caixa`
+
+**Active subscription required:**
+- `/app` — **Main POS interface**
+- `/gestao` — Management dashboard root
+- `/gestao/pessoas` — Customer management
+- `/gestao/fichario` — Fiado (credit) management
+- `/gestao/produtos` — Product management
+- `/gestao/categorias` — Category management
+- `/gestao/estoque` — Inventory management
+- `/gestao/caixa` — Cash register management
+- `/gestao/cadastros` — General registrations/settings
+- `/gestao/empresas` — Company management
+- `/gestao/despesas` — Expenses tracking
 - `/relatorios` — Reports
-- `/api/billing/` — Server-side Stripe API routes
+
+**API:**
+- `/api/public-env` — Public environment variables
+- `/api/billing/webhook` — Stripe webhook handler
+- `/api/billing/create-checkout-session` — Stripe checkout session
+- `/api/billing/create-portal-session` — Stripe billing portal session
 
 ### Auth & Subscription Guard (`src/lib/guards.js`)
 Every protected page runs `ensureActiveSubscription()`, which checks in sequence:
-1. User is authenticated
-2. Company profile exists in `empresa_perfil`
-3. `subscriptions` table has an active record (`status === 'active'` and `current_period_end` or `manually_extended_until` is in the future)
+1. User is authenticated (session exists)
+2. Optionally: company profile is complete in `empresa_perfil` (when `requireProfile: true`)
+3. `subscriptions` table has an active record (`status === 'active'` or `status === 'trialing'`, and `current_period_end` or `manually_extended_until` is in the future)
 
-Redirect flow: no auth → `/login` | no profile → `/perfil?msg=complete` | no sub → `/assinatura?msg=expired`
+Redirect flow: no auth → `/login` | no/incomplete profile → `/perfil?msg=complete` | no subscription (new user) → `/assinatura?msg=subscribe` | expired subscription → `/assinatura?msg=expired`
 
 `authReady` writable store signals when initial auth check is complete. Use `waitAuthReady()` before accessing auth state.
 
@@ -69,6 +94,12 @@ Protected routes (`/app`, `/gestao/*`, `/relatorios`) use a **left sidebar** (`G
 | `src/lib/authStore.js` | `authReady` and `waitAuthReady()` |
 | `src/lib/offlineDb.js` | Dexie IndexedDB schema |
 | `src/lib/guards.js` | `ensureActiveSubscription()` |
+| `src/lib/stores/ui.js` | Toast notifications and confirm dialogs |
+| `src/lib/stores/session.js` | User session store |
+| `src/lib/stores/pdvCache.js` | POS system caching |
+| `src/lib/profileUtils.js` | Company profile utilities |
+| `src/lib/utils/excelReport.js` | Excel report generation (XLSX) |
+| `src/lib/utils/pdfReport.js` | PDF report generation (jsPDF) |
 | `src/routes/api/billing/webhook/+server.js` | Stripe webhook handler |
 
 ## Database (Supabase PostgreSQL)
@@ -96,7 +127,7 @@ Events handled: `checkout.session.completed`, `customer.subscription.created/upd
 - `src/theme.css` — imports theme files
 - `src/themes/base.css` — navy/blue default theme (production)
 - `src/themes/christmas.css` — seasonal override (activated via `.christmas-theme` class on root div)
-- `src/themes/newyear.css` — New Year seasonal theme
+- `src/themes/newyear.css` — New Year seasonal theme (activated via `.newyear-theme` class)
 - `src/app.css` — Tailwind + theme-agnostic utilities
 
 **Critical rule: NEVER hardcode hex colors in components.** Always use CSS variables:
@@ -110,7 +141,7 @@ Events handled: `checkout.session.completed`, `customer.subscription.created/upd
 
 Key variables: `--bg-app`, `--bg-panel`, `--bg-card`, `--bg-input`, `--text-main`, `--text-muted`, `--text-label`, `--primary`, `--primary-hover`, `--border-subtle`, `--border-card`, `--error`, `--success`, `--warning`.
 
-To add a new CSS variable, define it in `base.css` **and** override it in `christmas.css`.
+To add a new CSS variable, define it in `base.css` **and** override it in **all theme files** (`christmas.css`, `newyear.css`).
 
 ## Notifications
 
@@ -122,10 +153,10 @@ const ok = await confirmAction('Título', 'Mensagem de confirmação') // return
 
 ## Environment Variables
 
-**Frontend (Vite prefix):**
+**Frontend (SvelteKit PUBLIC_ prefix, with VITE_PUBLIC_ fallback):**
 ```
-VITE_PUBLIC_SUPABASE_URL
-VITE_PUBLIC_SUPABASE_ANON_KEY
+PUBLIC_SUPABASE_URL           # or VITE_PUBLIC_SUPABASE_URL
+PUBLIC_SUPABASE_ANON_KEY      # or VITE_PUBLIC_SUPABASE_ANON_KEY
 VITE_PUBLIC_STRIPE_PUBLISHABLE_KEY
 VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL
 PUBLIC_APP_URL
@@ -153,7 +184,6 @@ stripe trigger checkout.session.completed
 ## Additional Documentation
 
 The `.ai/` directory contains detailed reference docs:
-- `.ai/CODEBASE_CONTEXT.md` — complete technical reference (theming, DB schema, Stripe flow)
 - `.ai/DEPLOYMENT.md` — Vercel deployment guide
 - `.ai/STRIPE_SETUP.md` — Stripe dashboard configuration
 - `.ai/CRON_SETUP.md` — Scheduled job setup (subscription expiration)

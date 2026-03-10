@@ -48,6 +48,36 @@
   // Routes that have their own sidebar layout — hide root header/footer for these
   $: hasSidebarLayout = isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura;
 
+  // EASTER THEME STATE
+  let isEasterMode = false;
+  let eggs = [];
+
+  function createEggs() {
+    const symbols = ['🥚', '🐣', '🐰', '🌸', '🌷'];
+    return Array(18).fill(0).map((_, i) => ({
+      left: Math.random() * 100 + '%',
+      animDuration: (Math.random() * 8 + 10) + 's',
+      delay: (Math.random() * 8) + 's',
+      emoji: symbols[Math.floor(Math.random() * symbols.length)]
+    }));
+  }
+
+  function toggleEaster() {
+    isEasterMode = !isEasterMode;
+    localStorage.setItem('zelo_easter_theme', String(isEasterMode));
+    if (isEasterMode) {
+      isChristmasMode = false;
+      localStorage.setItem('zelo_xmas_theme', 'false');
+      isNewYearMode = false;
+      localStorage.setItem('zelo_newyear_theme', 'false');
+    }
+  }
+
+  $: isEasterSeason = (() => {
+    const now = new Date();
+    return now >= new Date('2026-03-29') && now < new Date('2026-04-07');
+  })();
+
   // NEW YEAR THEME STATE (DEPRECATED - New Year is over)
   let isNewYearMode = false;
   let sparkles = [];
@@ -118,11 +148,15 @@
         } else {
           isNewYearMode = false;
         }
+
+        eggs = createEggs();
+        const savedEaster = localStorage.getItem('zelo_easter_theme');
+        isEasterMode = savedEaster === 'true';
     }
 
     if (!supabase) return;
  
-  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html', '/redefinir-senha', '/privacidade', '/termos'];
+  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html', '/redefinir-senha', '/privacidade', '/termos', '/pascoa'];
     const path = window.location.pathname;
 
     let navigated = false;
@@ -313,7 +347,7 @@
   </div>
 {/if}
 
-<div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode}>
+<div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode} class:easter-theme={isEasterMode}>
   
   {#if isChristmasMode}
     <div class="snow-container">
@@ -327,6 +361,14 @@
     <div class="sparkle-container">
       {#each sparkles as s}
          <div class="sparkle" style="left: {s.left}; top: {s.top}; width: {s.size}; height: {s.size}; animation-duration: {s.animDuration}; animation-delay: {s.delay}; opacity: {s.opacity}">✨</div>
+      {/each}
+    </div>
+  {/if}
+
+  {#if isEasterMode}
+    <div class="egg-container">
+      {#each eggs as e}
+        <div class="easter-egg-float" style="left:{e.left}; animation-duration:{e.animDuration}; animation-delay:{e.delay}">{e.emoji}</div>
       {/each}
     </div>
   {/if}
@@ -348,11 +390,18 @@
           -->
 
           <!-- Botao de Ano Novo desativado pois o ano novo ja passou -->
-          <!-- 
+          <!--
           <button on:click={toggleNewYear} class="p-1 rounded-full hover:bg-[var(--sidebar-item-hover-bg)] transition-colors group relative" title="Modo Ano Novo">
             <span class="text-xl filter grayscale group-hover:grayscale-0 transition-all duration-300" style="filter: {isNewYearMode ? 'none' : 'grayscale(100%)'}">🥂</span>
           </button>
           -->
+
+          {#if isEasterSeason}
+            <button on:click={toggleEaster} title={isEasterMode ? 'Desativar tema Páscoa' : 'Ativar tema Páscoa'}
+              class="p-1 rounded-full hover:bg-white/10 transition-colors">
+              <span style="filter: {isEasterMode ? 'none' : 'grayscale(100%)'}" class="text-xl">🐰</span>
+            </button>
+          {/if}
        </div>
 
       <nav class="hidden md:flex gap-1 text-sm items-center font-medium">
