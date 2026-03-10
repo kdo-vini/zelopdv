@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:5173",
+      "localStorage": [
+        {
+          "name": "sb-xnnjyrblpvsqrtsshawa-auth-token",
+          "value": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsImtpZCI6IkVJZkhmdkkyekkxNXhDRHEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3hubmp5cmJscHZzcXJ0c3NoYXdhLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJkNTYyNWJlOS1hYmVmLTQzNzEtYThlNy1lOTE1MjIwYWVjNDIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcyODEwMTQ2LCJpYXQiOjE3NzI4MDY1NDYsImVtYWlsIjoia2RvLnZpbmlAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbCI6Imtkby52aW5pQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaG9uZV92ZXJpZmllZCI6ZmFsc2UsInN1YiI6ImQ1NjI1YmU5LWFiZWYtNDM3MS1hOGU3LWU5MTUyMjBhZWM0MiJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzcyODA2NTQ2fV0sInNlc3Npb25faWQiOiIwMTc4ZWYyZS0zMWYzLTQ0MWMtYmZhNS0wYjYxMzUzNmRkYjMiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.1YjctkT_8eDKXjGK1b4QQuOAJ8nFJsqyi8lKCXceLdc\",\"token_type\":\"bearer\",\"expires_in\":3600,\"expires_at\":1772810146,\"refresh_token\":\"zawqpkiycpi7\",\"user\":{\"id\":\"d5625be9-abef-4371-a8e7-e915220aec42\",\"aud\":\"authenticated\",\"role\":\"authenticated\",\"email\":\"kdo.vini@gmail.com\",\"email_confirmed_at\":\"2025-10-30T16:43:52.330985Z\",\"phone\":\"\",\"confirmed_at\":\"2025-10-30T16:43:52.330985Z\",\"recovery_sent_at\":\"2026-03-06T02:34:54.224154Z\",\"last_sign_in_at\":\"2026-03-06T14:15:46.307124697Z\",\"app_metadata\":{\"provider\":\"email\",\"providers\":[\"email\"]},\"user_metadata\":{\"email\":\"kdo.vini@gmail.com\",\"email_verified\":true,\"phone_verified\":false,\"sub\":\"d5625be9-abef-4371-a8e7-e915220aec42\"},\"identities\":[{\"identity_id\":\"b5a7b11f-4868-4ed9-925d-520716d0dc48\",\"id\":\"d5625be9-abef-4371-a8e7-e915220aec42\",\"user_id\":\"d5625be9-abef-4371-a8e7-e915220aec42\",\"identity_data\":{\"email\":\"kdo.vini@gmail.com\",\"email_verified\":true,\"phone_verified\":false,\"sub\":\"d5625be9-abef-4371-a8e7-e915220aec42\"},\"provider\":\"email\",\"last_sign_in_at\":\"2025-10-30T16:43:35.377884Z\",\"created_at\":\"2025-10-30T16:43:35.378661Z\",\"updated_at\":\"2025-10-30T16:43:35.378661Z\",\"email\":\"kdo.vini@gmail.com\"}],\"created_at\":\"2025-10-30T16:43:35.324681Z\",\"updated_at\":\"2026-03-06T14:15:46.343963Z\",\"is_anonymous\":false},\"weak_password\":null}"
+        }
+      ]
+    }
+  ]
+}

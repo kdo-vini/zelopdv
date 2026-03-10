@@ -216,7 +216,6 @@
           <div class="flex items-center justify-between w-full">
              <div class="flex items-center gap-2">
                 <span class="tag {ev.tipo}">{ev.tipo === 'sangria' ? 'Sangria' : (ev.tipo === 'suprimento' ? 'Suprimento' : 'Venda')}</span>
-                <span class="font-medium text-sm">#{ev.numero_venda || ev.id}</span>
              </div>
              <span class="font-bold text-gray-700 dark:text-gray-300">{ev.tipo !== 'venda' ? (ev.tipo === 'sangria' ? '-' : '+') : ''}{fmt(ev.valor)}</span>
           </div>

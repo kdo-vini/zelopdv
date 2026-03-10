@@ -6,7 +6,11 @@
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__execute_sql",
       "mcp__claude_ai_Supabase__apply_migration",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Skill(commit-commands:commit-push-pr)",
+      "Bash(xargs grep:*)",
+      "Bash(git:*)",
+      "Bash(cat:*)"
     ]
   }
 }
