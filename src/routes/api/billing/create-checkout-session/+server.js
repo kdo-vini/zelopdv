@@ -5,9 +5,9 @@ import { env } from '$env/dynamic/private';
 
 const PRICE_ID = env.STRIPE_PRICE_ID_MONTHLY_59;
 const PAYMENT_LINK = env.VITE_PUBLIC_STRIPE_PAYMENT_LINK_URL || env.PUBLIC_STRIPE_PAYMENT_LINK_URL;
-const ORIGIN = env.PUBLIC_APP_URL || 'http://localhost:5173';
+const ORIGIN = env.PUBLIC_APP_URL;
 
-export async function POST({ request }) {
+export async function POST({ request, url }) {
   try {
     if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado. Verifique SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.' }, { status: 500 });
     if (!stripe) return json({ error: 'Stripe não configurado. Verifique STRIPE_SECRET_KEY.' }, { status: 500 });
@@ -33,14 +33,18 @@ export async function POST({ request }) {
     const customers = await stripe.customers.list({ email, limit: 1 });
     const customer = customers.data[0] || await stripe.customers.create({ email, metadata: { user_id: userId } });
 
+    const requestOrigin = request.headers.get('origin') || request.headers.get('x-forwarded-host')
+      ? `https://${request.headers.get('x-forwarded-host')}`
+      : null;
+    const origin = ORIGIN || requestOrigin || url.origin;
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customer.id,
       line_items: [{ price: PRICE_ID, quantity: 1 }],
       allow_promotion_codes: true,
       subscription_data: { trial_period_days: 7 },
-      success_url: `${ORIGIN}/assinatura?success=1`,
-      cancel_url: `${ORIGIN}/assinatura?canceled=1`,
+      success_url: `${origin}/assinatura?success=1`,
+      cancel_url: `${origin}/assinatura?canceled=1`,
       metadata: { user_id: userId },
     });
 

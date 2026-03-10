@@ -120,7 +120,7 @@
   }
 </script>
 
-{#if $adminUnlocked}
+{#if $adminUnlocked || !correctPin}
   <slot />
 {:else}
   <div class="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 animate-in fade-in zoom-in duration-300">

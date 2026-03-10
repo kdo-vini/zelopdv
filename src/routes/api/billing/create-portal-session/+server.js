@@ -3,10 +3,10 @@ import { stripe } from '$lib/server/stripe';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { env } from '$env/dynamic/private';
 
-const ORIGIN = env.PUBLIC_APP_URL || 'http://localhost:5173';
+const ORIGIN = env.PUBLIC_APP_URL;
 const PORTAL_CONFIGURATION = env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID || env.STRIPE_BILLING_PORTAL_CONFIGURATION;
 
-export async function POST({ request }) {
+export async function POST({ request, url }) {
   if (!stripe) return json({ error: 'Stripe não configurado. Verifique STRIPE_SECRET_KEY.' }, { status: 500 });
   if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado. Verifique SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.' }, { status: 500 });
 
@@ -37,9 +37,13 @@ export async function POST({ request }) {
       }
     }
 
+    const requestOrigin = request.headers.get('origin') || request.headers.get('x-forwarded-host')
+      ? `https://${request.headers.get('x-forwarded-host')}`
+      : null;
+    const origin = ORIGIN || requestOrigin || url.origin;
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${ORIGIN}/assinatura`,
+      return_url: `${origin}/assinatura`,
       ...(PORTAL_CONFIGURATION ? { configuration: PORTAL_CONFIGURATION } : {}),
     });
 

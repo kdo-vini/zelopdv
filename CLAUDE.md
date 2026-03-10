@@ -53,10 +53,15 @@ Redirect flow: no auth → `/login` | no profile → `/perfil?msg=complete` | no
 
 `authReady` writable store signals when initial auth check is complete. Use `waitAuthReady()` before accessing auth state.
 
+### Navigation Layout
+Protected routes (`/app`, `/gestao/*`, `/relatorios`) use a **left sidebar** (`GestaoSidebar.svelte`) as the primary navigation — there is **no top navigation bar** on these pages. The root `+layout.svelte` top header only appears on public/marketing pages. On mobile the sidebar collapses and is toggled with a hamburger icon.
+
 ### Key Source Files
 | File | Purpose |
 |------|---------|
-| `src/routes/+layout.svelte` | Root layout: auth listener, subscription check, navigation |
+| `src/routes/+layout.svelte` | Root layout: auth listener, subscription check, top header (public pages only) |
+| `src/routes/app/+layout.svelte` | POS layout: mounts `GestaoSidebar` as the left nav |
+| `src/lib/components/GestaoSidebar.svelte` | Left sidebar navigation for all protected routes |
 | `src/routes/app/+page.svelte` | Main POS: product grid, cart, checkout |
 | `src/lib/supabaseClient.js` | Supabase singleton (anon key, frontend) |
 | `src/lib/server/supabaseAdmin.js` | Supabase service role client (server only, bypasses RLS) |

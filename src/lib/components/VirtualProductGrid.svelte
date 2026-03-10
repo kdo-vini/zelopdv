@@ -27,7 +27,8 @@
   
   // Cálculos reativos
   $: rowHeight = itemHeight + 16; // altura + gap
-  $: totalRows = Math.ceil(produtos.length / columns);
+  // +1 accounts for the always-present "Item Avulso" button at the end
+  $: totalRows = Math.ceil((produtos.length + 1) / columns);
   $: totalHeight = totalRows * rowHeight;
   
   // Calcula quais itens estão visíveis
@@ -129,8 +130,8 @@
   class="flex-1 overflow-y-auto overflow-x-hidden"
   on:scroll={handleScroll}
 >
-  <!-- Container com altura total para scroll correto -->
-  <div style="height: {totalHeight}px; position: relative;">
+  <!-- Container com altura total para scroll correto. Extra 96px para barra inferior no mobile. -->
+  <div style="height: {totalHeight + 96}px; position: relative;">
     <!-- Grid posicionado com offset -->
     <div 
       class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 absolute w-full px-4"
