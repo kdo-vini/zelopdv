@@ -586,8 +586,9 @@
         <div class="text-xs" style="color: var(--text-muted);">
           Desenvolvido com 💙 por <a href="https://techneia.com.br" target="_blank" rel="noopener noreferrer" class="font-medium hover:underline transition-colors" style="color: var(--accent);">Techne Sistemas</a>
         </div>
+      </div>
+    </div>
+  </footer>
   {/if}
-
-
 </div>
 {/if}
