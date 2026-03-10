@@ -283,8 +283,8 @@
       <div class="order-2 lg:order-1 relative group">
         <div class="absolute inset-0 bg-emerald-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-emerald-500/30 transition-all duration-700"></div>
         <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(16,185,129,0.3)] cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/despesas-page.png'} role="button" tabindex="0">
-           <img src="/images/screenshots/despesas-page.png" alt="Tela de Controle de Caixa Lanchonete" loading="lazy" class="w-full h-auto object-cover opacity-90 group-hover:blur-[2px] transition-all duration-300" />
+        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(16,185,129,0.3)] cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/financial-screen.png'} role="button" tabindex="0">
+           <img src="/images/screenshots/financial-screen.png" alt="Tela de Controle de Caixa Lanchonete" loading="lazy" class="w-full h-auto object-cover opacity-90 group-hover:blur-[2px] transition-all duration-300" />
            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                <div class="w-16 h-16 bg-emerald-600/90 rounded-full flex items-center justify-center shadow-lg shadow-black/50 backdrop-blur-md transform scale-75 group-hover:scale-100 transition-transform duration-300">
                   <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
@@ -315,10 +315,59 @@
     </div>
   </section>
 
-  <!-- FEATURE 3: FIADO (Texto Esquerda, IMG Direita) -->
+  <!-- FEATURE 3: DESPESAS (Texto Esquerda, IMG Direita) -->
   <section class="py-24 relative overflow-hidden">
     <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
       <div>
+        <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-6">
+          <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Controle de Despesas. <br/><span class="text-purple-500">Saiba para onde vai o dinheiro.</span></h2>
+        <p class="text-lg text-slate-400 mb-8 leading-relaxed">
+          Registre todos os gastos do seu negócio, desde fornecedores até retiradas diárias. O sistema organiza tudo para te dar clareza no fim do mês.
+        </p>
+         <ul class="space-y-4">
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs">✓</div>
+            Categorização inteligente de gastos
+          </li>
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs">✓</div>
+            Previsibilidade do seu fluxo de caixa
+          </li>
+        </ul>
+      </div>
+      <div class="relative group">
+        <div class="absolute inset-0 bg-purple-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-purple-500/30 transition-all duration-700"></div>
+        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(168,85,247,0.3)] cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/despesas-page.png'} role="button" tabindex="0">
+           <img src="/images/screenshots/despesas-page.png" alt="Tela de Controle de Despesas Lanchonete" loading="lazy" class="w-full h-auto object-cover opacity-90 group-hover:blur-[2px] transition-all duration-300" />
+           <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+               <div class="w-16 h-16 bg-purple-600/90 rounded-full flex items-center justify-center shadow-lg shadow-black/50 backdrop-blur-md transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+               </div>
+           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURE 4: FIADO (IMG Esquerda, Texto Direita) -->
+  <section class="py-24 relative bg-white/[0.02]">
+    <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+      <div class="order-2 lg:order-1 relative group">
+        <div class="absolute inset-0 bg-amber-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-amber-500/30 transition-all duration-700"></div>
+        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(245,158,11,0.3)] cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/customers-screen.png'} role="button" tabindex="0">
+           <img src="/images/screenshots/customers-screen.png" alt="Tela de Controle de Fiado Clientes" loading="lazy" class="w-full h-auto object-cover opacity-90 group-hover:blur-[2px] transition-all duration-300" />
+           <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+               <div class="w-16 h-16 bg-amber-600/90 rounded-full flex items-center justify-center shadow-lg shadow-black/50 backdrop-blur-md transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+               </div>
+           </div>
+        </div>
+      </div>
+      <div class="order-1 lg:order-2">
         <div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mb-6">
           <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
         </div>
@@ -336,18 +385,6 @@
             Limite de crédito personalizável
           </li>
         </ul>
-      </div>
-      <div class="relative group">
-        <div class="absolute inset-0 bg-amber-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-amber-500/30 transition-all duration-700"></div>
-        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(245,158,11,0.3)] cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/customers-screen.png'} role="button" tabindex="0">
-           <img src="/images/screenshots/customers-screen.png" alt="Tela de Controle de Fiado Clientes" loading="lazy" class="w-full h-auto object-cover opacity-90 group-hover:blur-[2px] transition-all duration-300" />
-           <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-               <div class="w-16 h-16 bg-amber-600/90 rounded-full flex items-center justify-center shadow-lg shadow-black/50 backdrop-blur-md transform scale-75 group-hover:scale-100 transition-transform duration-300">
-                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
-               </div>
-           </div>
-        </div>
       </div>
     </div>
   </section>
