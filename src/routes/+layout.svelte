@@ -208,7 +208,7 @@
       }
       if (session && isPublicPath(path)) {
         // Allow /loja/* paths without redirect (public storefront)
-        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html' || path === '/redefinir-senha') {
+        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html' || path === '/redefinir-senha' || path === '/pascoa') {
 
         } else {
 
