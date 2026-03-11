@@ -69,7 +69,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-pink-500 to-purple-600 p-[1px] shadow-lg shadow-pink-500/20 relative">
           <div class="absolute inset-0 bg-gradient-to-br from-amber-400 to-purple-600 blur-md opacity-40 group-hover:opacity-100 transition-opacity duration-500"></div>
           <div class="w-full h-full rounded-xl bg-[#06040A] flex items-center justify-center relative z-10 transition-colors group-hover:bg-opacity-80">
-             <svg class="w-5 h-5 text-transparent bg-clip-text bg-gradient-to-br from-amber-300 to-pink-500 fill-current text-pink-400" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+             <span class="text-xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-amber-200 to-pink-400">Z</span>
           </div>
         </div>
         <span class="text-2xl font-black tracking-tighter text-white">Zelo<span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-pink-500">PDV</span></span>
@@ -391,7 +391,7 @@
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 via-pink-500 to-purple-600 p-[1px] relative">
             <div class="w-full h-full rounded-xl bg-[#06040A] flex items-center justify-center relative z-10">
-               <svg class="w-4 h-4 text-transparent bg-clip-text bg-gradient-to-br from-amber-300 to-pink-500 fill-current text-pink-400" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+               <span class="text-lg font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-amber-200 to-pink-400">Z</span>
             </div>
           </div>
           <span class="text-xl font-black tracking-tighter text-white">Zelo<span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-pink-500">PDV</span></span>
