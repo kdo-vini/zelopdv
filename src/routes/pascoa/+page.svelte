@@ -20,7 +20,7 @@
   <meta name="twitter:description" content="Cadastre ovos, controle o estoque e as vendas no fiado. 7 dias grátis." />
 
   <!-- JSON-LD SEO -->
-  {@html `<script type="application/ld+json">
+  <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -37,7 +37,7 @@
     "description": "Sistema para vender na Páscoa 2026. Ideal para doceiras, confeiteiras e revendedores.",
     "url": "https://zelopdv.com.br/pascoa"
   }
-  <\/script>`}
+  </script>
 </svelte:head>
 
 <script>
@@ -65,14 +65,9 @@
     <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
       
       <!-- Brand -->
-      <a href="/pascoa" class="flex items-center gap-3 group relative z-50">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-pink-500 to-purple-600 p-[1px] shadow-lg shadow-pink-500/20 relative">
-          <div class="absolute inset-0 bg-gradient-to-br from-amber-400 to-purple-600 blur-md opacity-40 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="w-full h-full rounded-xl bg-[#06040A] flex items-center justify-center relative z-10 transition-colors group-hover:bg-opacity-80">
-             <span class="text-xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-amber-200 to-pink-400">Z</span>
-          </div>
-        </div>
-        <span class="text-2xl font-black tracking-tighter text-white">Zelo<span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-pink-500">PDV</span></span>
+      <a href="/pascoa" class="flex items-center gap-4 group relative z-50">
+        <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 md:h-40 w-auto drop-shadow-[0_0_15px_rgba(236,72,153,0.3)] transition-transform group-hover:scale-105" />
+        <span class="text-3xl filter drop-shadow-[0_0_10px_rgba(251,191,36,0.5)] animate-bounce" style="animation-duration: 3s">🐰</span>
       </a>
 
       <!-- Desktop Links -->
@@ -141,14 +136,6 @@
       
       <!-- Text content -->
       <div class="text-left relative z-20">
-        <div class="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-300 text-xs font-black tracking-widest uppercase mb-8 shadow-[0_0_30px_rgba(251,191,36,0.15)] backdrop-blur-md animate-fade-in-up">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-          </span>
-          Venda mais nesta Páscoa 2026
-        </div>
-
         <h1 class="text-5xl md:text-7xl font-black text-white tracking-tighter leading-[1.05] mb-6 drop-shadow-2xl animate-fade-in-up delay-100">
           Venda seus ovos de Páscoa <br class="hidden md:block"/> com <br class="block md:hidden"/>
           <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-500 animate-gradient-slow drop-shadow-[0_0_30px_rgba(236,72,153,0.3)]">controle total do caixa.</span>
@@ -388,13 +375,9 @@
     <div class="max-w-7xl mx-auto px-6">
       <div class="flex flex-col md:flex-row justify-between items-center gap-8">
         
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 via-pink-500 to-purple-600 p-[1px] relative">
-            <div class="w-full h-full rounded-xl bg-[#06040A] flex items-center justify-center relative z-10">
-               <span class="text-lg font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-amber-200 to-pink-400">Z</span>
-            </div>
-          </div>
-          <span class="text-xl font-black tracking-tighter text-white">Zelo<span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-pink-500">PDV</span></span>
+        <div class="flex items-center gap-4">
+          <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 md:h-40 w-auto opacity-80" />
+          <span class="text-xl">🐰</span>
         </div>
 
         <div class="flex flex-wrap items-center justify-center gap-8 text-sm font-bold tracking-wide text-slate-500">

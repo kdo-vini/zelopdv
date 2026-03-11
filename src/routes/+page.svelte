@@ -65,7 +65,7 @@
     <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <a href="/" class="flex items-center gap-2">
-          <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-20 md:h-24 w-auto" />
+          <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 md:h-40 w-auto" />
         </a>
       </div>
 
@@ -582,7 +582,7 @@
     <div class="max-w-7xl mx-auto px-6">
       <div class="grid md:grid-cols-4 gap-8 mb-12">
         <div class="col-span-1 md:col-span-1">
-            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-20 w-auto" />
+            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 md:h-40 w-auto" />
           <p class="text-slate-500 text-sm leading-relaxed">
             Tecnologia simples para negócios que querem crescer. Controle total do seu caixa e do seu lucro.
           </p>
