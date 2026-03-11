@@ -157,7 +157,7 @@
       title="Ir para Frente de Caixa"
       on:click={closeMobile}
     >
-      <img src="/logo-zelo.svg" alt="Zelo PDV" class="h-8 w-auto flex-shrink-0" />
+      <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-8 w-auto flex-shrink-0" />
     </a>
 
     <!-- Botão de colapsar — oculto em mobile -->

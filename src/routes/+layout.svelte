@@ -382,7 +382,7 @@
       
        <div class="flex items-center gap-4">
           <a href={session ? '/app' : '/'} class="flex items-center gap-2">
-            <img src="/logo-zelo.svg" alt="Zelo PDV" class="h-8 sm:h-10 w-auto" />
+            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-8 sm:h-10 w-auto" />
           </a>
           
           <!-- Botao de Natal desativado pois o natal ja passou -->

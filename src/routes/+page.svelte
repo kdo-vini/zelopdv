@@ -64,10 +64,9 @@
   <nav class="fixed top-0 w-full z-50 transition-all duration-300 border-b border-white/5 bg-[#0B0F19]/80 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        </div>
-        <span class="text-xl font-bold text-white tracking-tight">Zelo<span class="text-sky-500">PDV</span></span>
+        <a href="/" class="flex items-center gap-2">
+          <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-8 md:h-10 w-auto" />
+        </a>
       </div>
 
       <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
@@ -582,10 +581,7 @@
       <div class="grid md:grid-cols-4 gap-8 mb-12">
         <div class="col-span-1 md:col-span-1">
           <div class="flex items-center gap-2 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
-              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            </div>
-            <span class="font-bold text-white text-xl">Zelo<span class="text-sky-500">PDV</span></span>
+            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-8 w-auto" />
           </div>
           <p class="text-slate-500 text-sm leading-relaxed">
             Tecnologia simples para negócios que querem crescer. Controle total do seu caixa e do seu lucro.
