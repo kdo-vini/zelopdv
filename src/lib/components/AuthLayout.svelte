@@ -85,7 +85,7 @@
     margin-bottom: 1.5rem;
   }
   .auth-logo-img {
-    height: 2.5rem;
+    height: 5.5rem;
     width: auto;
   }
 

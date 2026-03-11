@@ -65,7 +65,7 @@
     <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <a href="/" class="flex items-center gap-2">
-          <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-8 md:h-10 w-auto" />
+          <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-20 md:h-24 w-auto" />
         </a>
       </div>
 
@@ -76,6 +76,7 @@
         <a href="/pascoa" class="flex items-center gap-1.5 text-purple-400 hover:text-purple-300 font-semibold transition-colors bg-purple-500/10 px-3 py-1.5 rounded-full border border-purple-500/20">
           <span>🐰</span> Páscoa
         </a>
+
       </div>
 
       <div class="flex items-center gap-4">
@@ -108,6 +109,7 @@
         <a href="/pascoa" class="flex items-center justify-center gap-1.5 text-sm font-semibold text-purple-400 hover:text-purple-300 transition-colors py-2 bg-purple-500/10 rounded-lg border border-purple-500/20" on:click={() => showMobileMenu = false}>
           <span>🐰</span> Zelo Páscoa
         </a>
+
         <a href="/cadastro" class="mt-1 w-full text-center px-5 py-3 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all" on:click={() => showMobileMenu = false}>
           Testar grátis
         </a>
@@ -580,9 +582,7 @@
     <div class="max-w-7xl mx-auto px-6">
       <div class="grid md:grid-cols-4 gap-8 mb-12">
         <div class="col-span-1 md:col-span-1">
-          <div class="flex items-center gap-2 mb-4">
-            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-8 w-auto" />
-          </div>
+            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-20 w-auto" />
           <p class="text-slate-500 text-sm leading-relaxed">
             Tecnologia simples para negócios que querem crescer. Controle total do seu caixa e do seu lucro.
           </p>

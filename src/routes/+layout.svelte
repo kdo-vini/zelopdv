@@ -48,35 +48,7 @@
   // Routes that have their own sidebar layout — hide root header/footer for these
   $: hasSidebarLayout = isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura;
 
-  // EASTER THEME STATE
-  let isEasterMode = false;
-  let eggs = [];
 
-  function createEggs() {
-    const symbols = ['🥚', '🐣', '🐰', '🌸', '🌷'];
-    return Array(18).fill(0).map((_, i) => ({
-      left: Math.random() * 100 + '%',
-      animDuration: (Math.random() * 8 + 10) + 's',
-      delay: (Math.random() * 8) + 's',
-      emoji: symbols[Math.floor(Math.random() * symbols.length)]
-    }));
-  }
-
-  function toggleEaster() {
-    isEasterMode = !isEasterMode;
-    localStorage.setItem('zelo_easter_theme', String(isEasterMode));
-    if (isEasterMode) {
-      isChristmasMode = false;
-      localStorage.setItem('zelo_xmas_theme', 'false');
-      isNewYearMode = false;
-      localStorage.setItem('zelo_newyear_theme', 'false');
-    }
-  }
-
-  $: isEasterSeason = (() => {
-    const now = new Date();
-    return now >= new Date('2026-03-29') && now < new Date('2026-04-07');
-  })();
 
   // NEW YEAR THEME STATE (DEPRECATED - New Year is over)
   let isNewYearMode = false;
@@ -149,9 +121,7 @@
           isNewYearMode = false;
         }
 
-        eggs = createEggs();
-        const savedEaster = localStorage.getItem('zelo_easter_theme');
-        isEasterMode = savedEaster === 'true';
+
     }
 
     if (!supabase) return;
@@ -350,7 +320,7 @@
 {#if $page.url.pathname === '/pascoa'}
   <slot />
 {:else}
-<div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode} class:easter-theme={isEasterMode}>
+<div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode}>
   
   {#if isChristmasMode}
     <div class="snow-container">
@@ -368,13 +338,6 @@
     </div>
   {/if}
 
-  {#if isEasterMode}
-    <div class="egg-container">
-      {#each eggs as e}
-        <div class="easter-egg-float" style="left:{e.left}; animation-duration:{e.animDuration}; animation-delay:{e.delay}">{e.emoji}</div>
-      {/each}
-    </div>
-  {/if}
 
   {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isAuthPage && !hasSidebarLayout}
   <header class="border-b bg-header-base backdrop-blur sticky top-0 z-50 transition-colors duration-500">
@@ -382,7 +345,7 @@
       
        <div class="flex items-center gap-4">
           <a href={session ? '/app' : '/'} class="flex items-center gap-2">
-            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-8 sm:h-10 w-auto" />
+            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-20 sm:h-24 w-auto" />
           </a>
           
           <!-- Botao de Natal desativado pois o natal ja passou -->
@@ -399,12 +362,7 @@
           </button>
           -->
 
-          {#if isEasterSeason}
-            <button on:click={toggleEaster} title={isEasterMode ? 'Desativar tema Páscoa' : 'Ativar tema Páscoa'}
-              class="p-1 rounded-full hover:bg-white/10 transition-colors">
-              <span style="filter: {isEasterMode ? 'none' : 'grayscale(100%)'}" class="text-xl">🐰</span>
-            </button>
-          {/if}
+
        </div>
 
       <nav class="hidden md:flex gap-1 text-sm items-center font-medium">
