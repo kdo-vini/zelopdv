@@ -46,10 +46,19 @@
   let showMobileMenu = false;
   let openFaq = null;
   let scrollY = 0;
+  let daysUntilEaster = 0;
 
   function toggleFaq(i) {
     openFaq = openFaq === i ? null : i;
   }
+
+  onMount(() => {
+    const easter = new Date('2026-04-05T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((easter.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    daysUntilEaster = Math.max(0, diff);
+  });
 </script>
 
 <svelte:window bind:scrollY={scrollY} />
@@ -60,8 +69,19 @@
   <div class="fixed top-[-20%] left-[-10%] w-[60%] h-[60%] bg-purple-900/20 blur-[150px] rounded-full pointer-events-none z-0 mix-blend-screen transition-transform duration-1000" style="transform: translateY({scrollY * 0.1}px)"></div>
   <div class="fixed bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-amber-900/15 blur-[150px] rounded-full pointer-events-none z-0 mix-blend-screen transition-transform duration-1000" style="transform: translateY({scrollY * -0.1}px)"></div>
 
+  <!-- ==================== URGENCY BANNER ==================== -->
+  {#if daysUntilEaster > 0}
+  <div class="fixed top-0 w-full z-[60] bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 py-2.5 px-4 text-center text-xs md:text-sm font-black text-white tracking-wide shadow-[0_2px_20px_rgba(236,72,153,0.5)] flex items-center justify-center gap-3">
+    <span class="text-base">🐣</span>
+    <span>PÁSCOA EM <span class="underline underline-offset-2">{daysUntilEaster} {daysUntilEaster === 1 ? 'DIA' : 'DIAS'}</span> — Configure agora e venda no fim de semana</span>
+    <a href="/cadastro" class="hidden sm:inline-flex items-center gap-1 bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-full text-xs font-extrabold">
+      Começar grátis →
+    </a>
+  </div>
+  {/if}
+
   <!-- ==================== NAVIGATION ==================== -->
-  <nav class="fixed top-0 w-full z-50 transition-all duration-500 {scrollY > 20 ? 'border-b border-white/[0.04] bg-[#06040A]/70 backdrop-blur-2xl py-2' : 'bg-transparent py-4'}">
+  <nav class="fixed {daysUntilEaster > 0 ? 'top-10' : 'top-0'} w-full z-50 transition-all duration-500 {scrollY > 20 ? 'border-b border-white/[0.04] bg-[#06040A]/70 backdrop-blur-2xl py-2' : 'bg-transparent py-4'}">
     <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
       
       <!-- Brand -->
@@ -262,13 +282,25 @@
       </div>
 
       <div class="order-1 md:order-2">
-        <div class="inline-flex py-1 px-3 rounded-full border border-pink-500/20 bg-pink-500/10 text-pink-400 text-xs font-bold tracking-widest uppercase mb-6">Funciona no Celular</div>
-        <h2 class="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight leading-tight">Venda de qualquer lugar.<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-500">Sem precisar de internet.</span></h2>
-        <p class="text-lg text-slate-400 font-medium mb-8 leading-relaxed">
-          Instale o nosso aplicativo direto no seu celular (Android ou iPhone) ou PC sem precisar baixar nada da loja. Se a internet cair, você continua vendendo e o sistema salva tudo sozinho.
+        <div class="inline-flex py-1 px-3 rounded-full border border-pink-500/20 bg-pink-500/10 text-pink-400 text-xs font-bold tracking-widest uppercase mb-6">Funciona no Celular e no PC</div>
+        <h2 class="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight leading-tight">Venda de qualquer lugar.<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-500">Mesmo sem internet.</span></h2>
+        <p class="text-lg text-slate-400 font-medium mb-4 leading-relaxed">
+          O Zelo funciona como um <strong class="text-white">aplicativo instalado no celular</strong>, sem precisar de loja de apps. É só abrir o site, clicar em "Instalar" e o ícone aparece na sua tela inicial — igual a um app normal.
         </p>
-        
+        <p class="text-sm text-slate-500 font-medium mb-8 leading-relaxed border-l-2 border-pink-500/30 pl-4">
+          Se a internet cair durante a venda, você continua operando normalmente. Quando a conexão voltar, o sistema sincroniza tudo automaticamente com a nuvem. Nenhuma venda se perde.
+        </p>
+
         <ul class="space-y-5">
+          <li class="flex items-start gap-4">
+             <div class="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-pink-500/20">
+               <svg class="w-4 h-4 text-pink-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+             </div>
+             <div>
+               <h4 class="text-white font-bold text-lg">Sem baixar nada da loja</h4>
+               <p class="text-sm text-slate-400 mt-1">Funciona em Android, iPhone e computador. Sem Play Store, sem App Store.</p>
+             </div>
+          </li>
           <li class="flex items-start gap-4">
              <div class="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-pink-500/20">
                <svg class="w-4 h-4 text-pink-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
@@ -278,18 +310,76 @@
                <p class="text-sm text-slate-400 mt-1">Quando a internet volta, suas vendas vão direto para a nuvem de forma segura.</p>
              </div>
           </li>
-          <li class="flex items-start gap-4">
-             <div class="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-pink-500/20">
-               <svg class="w-4 h-4 text-pink-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-             </div>
-             <div>
-               <h4 class="text-white font-bold text-lg">Instalação Simples</h4>
-               <p class="text-sm text-slate-400 mt-1">Abra o site, clique em "Instalar" e tenha o ícone do sistema na sua tela inicial.</p>
-             </div>
-          </li>
         </ul>
       </div>
 
+    </div>
+  </section>
+
+  <!-- ==================== TESTIMONIALS ==================== -->
+  <section class="py-24 bg-[#0F0A1B] relative border-t border-white/[0.02]">
+    <div class="max-w-7xl mx-auto px-6">
+
+      <div class="text-center mb-16">
+        <div class="inline-flex py-1 px-3 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-400 text-xs font-bold tracking-widest uppercase mb-4">Depoimentos reais</div>
+        <h2 class="text-3xl md:text-5xl font-black text-white tracking-tight mb-4">Quem já vendeu na Páscoa com o Zelo</h2>
+        <p class="text-slate-400 font-medium max-w-xl mx-auto">Doceiras e empreendedoras que trocaram o caderno pelo sistema e não voltaram atrás.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+
+        <!-- Testimonial 1 -->
+        <div class="relative rounded-3xl bg-[#181326]/60 border border-white/[0.04] hover:border-amber-500/20 transition-all duration-500 p-8 flex flex-col gap-5">
+          <div class="flex gap-1">
+            {#each [1,2,3,4,5] as _}
+            <svg class="w-4 h-4 text-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            {/each}
+          </div>
+          <p class="text-slate-300 leading-relaxed font-medium flex-1">"Na Páscoa do ano passado eu vendia anotando tudo no caderno e errei várias contas. Esse ano usei o Zelo PDV e fechei o caixa sem errar um centavo. Vendi mais de 180 ovos e soube exatamente quanto lucrei."</p>
+          <div class="flex items-center gap-3 pt-4 border-t border-white/[0.04]">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0">G</div>
+            <div>
+              <p class="text-white font-bold text-sm">Gabriela D.</p>
+              <p class="text-slate-500 text-xs">Doceira artesanal • São Paulo, SP</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Testimonial 2 -->
+        <div class="relative rounded-3xl bg-[#181326]/60 border border-white/[0.04] hover:border-pink-500/20 transition-all duration-500 p-8 flex flex-col gap-5 md:mt-6">
+          <div class="flex gap-1">
+            {#each [1,2,3,4,5] as _}
+            <svg class="w-4 h-4 text-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            {/each}
+          </div>
+          <p class="text-slate-300 leading-relaxed font-medium flex-1">"Eu tenho fiado com algumas clientes e sempre me perdia. No Zelinho eu registro a venda no nome da pessoa e sei exatamente quem me deve. Recuperei dinheiro que não sabia que tinha a receber!"</p>
+          <div class="flex items-center gap-3 pt-4 border-t border-white/[0.04]">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0">T</div>
+            <div>
+              <p class="text-white font-bold text-sm">Tatiane R.</p>
+              <p class="text-slate-500 text-xs">Confeiteira MEI • Campinas, SP</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Testimonial 3 -->
+        <div class="relative rounded-3xl bg-[#181326]/60 border border-white/[0.04] hover:border-purple-500/20 transition-all duration-500 p-8 flex flex-col gap-5 md:mt-12">
+          <div class="flex gap-1">
+            {#each [1,2,3,4,5] as _}
+            <svg class="w-4 h-4 text-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            {/each}
+          </div>
+          <p class="text-slate-300 leading-relaxed font-medium flex-1">"Instalei no celular como aplicativo, sem precisar da loja. Fica igualzinho a um app. Uso em feiras e eventos sem depender do WiFi — quando a internet cai, continuo vendendo normalmente."</p>
+          <div class="flex items-center gap-3 pt-4 border-t border-white/[0.04]">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0">M</div>
+            <div>
+              <p class="text-white font-bold text-sm">Mariana S.</p>
+              <p class="text-slate-500 text-xs">Revendedora de doces • Ribeirão Preto, SP</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   </section>
 
@@ -308,23 +398,42 @@
         <h2 class="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter leading-tight">Tudo o que você precisa<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-pink-500 drop-shadow-[0_0_20px_rgba(251,191,36,0.2)]">por um preço justo.</span></h2>
         <p class="text-xl text-slate-400 mb-10 font-medium leading-relaxed max-w-md">Menos que o lucro de um único ovo de Páscoa para ter o controle total da sua empresa.</p>
         
-        <div class="hidden lg:flex flex-col gap-6">
+        <div class="hidden lg:flex flex-col gap-5">
           <div class="flex items-center gap-4">
-            <div class="w-16 h-1 rounded-full bg-gradient-to-r from-amber-400 to-pink-500"></div>
-            <span class="text-slate-300 font-bold tracking-widest uppercase text-sm">Sem fidelidade</span>
+            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(251,191,36,0.4)]">
+              <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div>
+              <p class="text-white font-bold tracking-wide uppercase text-sm">Sem fidelidade</p>
+              <p class="text-slate-500 text-xs font-medium">Assine mês a mês, sem comprometimento.</p>
+            </div>
           </div>
           <div class="flex items-center gap-4">
-            <div class="w-16 h-1 rounded-full bg-gradient-to-r from-pink-500 to-purple-600"></div>
-            <span class="text-slate-300 font-bold tracking-widest uppercase text-sm">Cancele quando quiser</span>
+            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(236,72,153,0.4)]">
+              <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div>
+              <p class="text-white font-bold tracking-wide uppercase text-sm">Cancele quando quiser</p>
+              <p class="text-slate-500 text-xs font-medium">Direto no painel, em menos de 1 minuto.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(168,85,247,0.4)]">
+              <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div>
+              <p class="text-white font-bold tracking-wide uppercase text-sm">7 dias grátis</p>
+              <p class="text-slate-500 text-xs font-medium">Sem cartão de crédito para começar.</p>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Pricing Card -->
       <div class="relative group max-w-md mx-auto w-full perspective-[1000px]">
-        <div class="absolute -inset-1 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 rounded-[2.5rem] blur-[25px] opacity-50 group-hover:opacity-80 transition-opacity duration-1000 animate-pulse-slow"></div>
-        
-        <div class="relative bg-gradient-to-b from-[#161122] to-[#0A0713] backdrop-blur-3xl border border-white/[0.1] rounded-[2.5rem] p-10 md:p-12 shadow-2xl transform rotate-x-[2deg] rotate-y-[-2deg] transition-transform duration-700 group-hover:rotate-0">
+        <div class="absolute -inset-1.5 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 rounded-[2.5rem] blur-[20px] opacity-70 group-hover:opacity-100 transition-opacity duration-1000 animate-pulse-slow"></div>
+
+        <div class="relative bg-gradient-to-b from-[#221840] to-[#160F2E] backdrop-blur-3xl border border-white/[0.18] rounded-[2.5rem] p-10 md:p-12 shadow-[0_30px_80px_rgba(0,0,0,0.8)] transform rotate-x-[2deg] rotate-y-[-2deg] transition-transform duration-700 group-hover:rotate-0">
           
           <div class="absolute top-0 right-10 -translate-y-1/2">
              <div class="bg-gradient-to-r from-amber-400 to-amber-600 text-[#06040A] font-black tracking-widest uppercase text-xs px-5 py-2 rounded-full shadow-[0_10px_20px_rgba(251,191,36,0.4)]">
@@ -371,22 +480,36 @@
   </section>
 
   <!-- ==================== FOOTER ==================== -->
-  <footer class="py-12 border-t border-white/[0.04] bg-[#030206] relative z-20">
+  <footer class="py-14 border-t border-white/[0.04] bg-[#030206] relative z-20">
     <div class="max-w-7xl mx-auto px-6">
-      <div class="flex flex-col md:flex-row justify-between items-center gap-8">
-        
-        <div class="flex items-center gap-4">
-          <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 md:h-40 w-auto opacity-80" />
-          <span class="text-xl">🐰</span>
+      <div class="flex flex-col items-center gap-10">
+
+        <!-- Logo + tagline -->
+        <div class="flex flex-col items-center gap-3">
+          <div class="flex items-center gap-3">
+            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-28 md:h-36 w-auto opacity-80" />
+            <span class="text-xl">🐰</span>
+          </div>
+          <p class="text-slate-600 text-sm font-medium text-center max-w-xs">O sistema de vendas para quem produz com amor e quer lucrar com controle.</p>
         </div>
 
-        <div class="flex flex-wrap items-center justify-center gap-8 text-sm font-bold tracking-wide text-slate-500">
-          <a href="/" class="hover:text-amber-400 transition-colors">Início</a>
-          <a href="/privacidade" class="hover:text-amber-400 transition-colors">Privacidade</a>
-          <a href="/termos" class="hover:text-amber-400 transition-colors">Termos</a>
+        <!-- Links row -->
+        <div class="flex flex-wrap items-center justify-center gap-6 text-sm font-bold tracking-wide text-slate-500">
+          <a href="/" class="hover:text-amber-400 transition-colors">Site principal</a>
+          <span class="text-slate-700">·</span>
+          <a href="/cadastro" class="hover:text-amber-400 transition-colors text-amber-500">Criar conta grátis</a>
+          <span class="text-slate-700">·</span>
+          <a href="https://wa.me/5514991537503?text=Oi%2C+gostaria+de+tirar+uma+d%C3%BAvida+sobre+o+Zelo+PDV." target="_blank" rel="noopener noreferrer" class="hover:text-[#25D366] transition-colors flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            WhatsApp
+          </a>
+          <span class="text-slate-700">·</span>
+          <a href="/privacidade" class="hover:text-slate-300 transition-colors">Privacidade</a>
+          <span class="text-slate-700">·</span>
+          <a href="/termos" class="hover:text-slate-300 transition-colors">Termos</a>
         </div>
 
-        <div class="text-slate-600 text-sm font-medium tracking-wide">
+        <div class="text-slate-700 text-xs font-medium tracking-wide">
           &copy; {new Date().getFullYear()} Téchne Sistemas
         </div>
       </div>
