@@ -10,7 +10,8 @@
       "Skill(commit-commands:commit-push-pr)",
       "Bash(xargs grep:*)",
       "Bash(git:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Skill(commit-commands:commit)"
     ]
   }
 }

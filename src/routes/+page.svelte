@@ -48,20 +48,37 @@
 
   let activeLightboxImage = null;
   let showMobileMenu = false;
+  let daysUntilEaster = 0;
 
   onMount(() => {
     function handleKeydown(e) {
       if (e.key === 'Escape') activeLightboxImage = null;
     }
     window.addEventListener('keydown', handleKeydown);
+
+    const easter = new Date('2026-04-05T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((easter.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    daysUntilEaster = Math.max(0, diff);
+
     return () => window.removeEventListener('keydown', handleKeydown);
   });
 </script>
 
 <div class="min-h-screen bg-[#0B0F19] text-slate-300 font-sans selection:bg-sky-500/30 selection:text-sky-200 overflow-x-hidden">
 
+  <!-- EASTER PROMO BANNER -->
+  {#if daysUntilEaster > 0}
+  <a href="/pascoa" class="fixed top-0 w-full z-[60] bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 py-2 px-4 text-center text-xs md:text-sm font-bold text-white tracking-wide shadow-[0_2px_20px_rgba(236,72,153,0.4)] flex items-center justify-center gap-2 hover:brightness-110 transition-all">
+    <span>🐣</span>
+    <span>Páscoa em <strong>{daysUntilEaster} {daysUntilEaster === 1 ? 'dia' : 'dias'}</strong> — veja a oferta especial para doceiras e revendedores</span>
+    <span class="hidden sm:inline-flex items-center gap-1 bg-white/20 px-2.5 py-0.5 rounded-full text-xs font-extrabold ml-1">Ver →</span>
+  </a>
+  {/if}
+
   <!-- NAV (Simples e Flutuante) -->
-  <nav class="fixed top-0 w-full z-50 transition-all duration-300 border-b border-white/5 bg-[#0B0F19]/80 backdrop-blur-md">
+  <nav class="fixed {daysUntilEaster > 0 ? 'top-9' : 'top-0'} w-full z-50 transition-all duration-300 border-b border-white/5 bg-[#0B0F19]/80 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <a href="/" class="flex items-center gap-2">
@@ -73,10 +90,6 @@
         <a href="#features" class="hover:text-white transition-colors">Funcionalidades</a>
         <a href="#pricing" class="hover:text-white transition-colors">Preços</a>
         <a href="#faq" class="hover:text-white transition-colors">Dúvidas</a>
-        <a href="/pascoa" class="flex items-center gap-1.5 text-purple-400 hover:text-purple-300 font-semibold transition-colors bg-purple-500/10 px-3 py-1.5 rounded-full border border-purple-500/20">
-          <span>🐰</span> Páscoa
-        </a>
-
       </div>
 
       <div class="flex items-center gap-4">
@@ -106,10 +119,6 @@
         <a href="#features" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Funcionalidades</a>
         <a href="#pricing" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Preços</a>
         <a href="#faq" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Dúvidas</a>
-        <a href="/pascoa" class="flex items-center justify-center gap-1.5 text-sm font-semibold text-purple-400 hover:text-purple-300 transition-colors py-2 bg-purple-500/10 rounded-lg border border-purple-500/20" on:click={() => showMobileMenu = false}>
-          <span>🐰</span> Zelo Páscoa
-        </a>
-
         <a href="/cadastro" class="mt-1 w-full text-center px-5 py-3 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all" on:click={() => showMobileMenu = false}>
           Testar grátis
         </a>
@@ -149,12 +158,12 @@
           Ver como funciona
         </a>
       </div>
-      <p class="text-xs text-slate-500 mt-3">Cadastre seu cartão para ativar. Cancele antes dos 7 dias e não paga nada.</p>
+      <p class="text-xs text-slate-500 mt-3">Sem cobranças durante os 7 dias. Cancele quando quiser.</p>
 
       <!-- MOCKUP DASHBOARD 3D -->
       <div class="mt-20 relative group">
         <!-- Mockup Container with Glow -->
-        <div class="relative mx-auto max-w-5xl rounded-xl border border-white/10 shadow-2xl shadow-sky-900/40 overflow-hidden transform transition-all duration-700 hover:scale-[1.01]">
+        <div class="relative mx-auto max-w-5xl rounded-xl border border-white/20 shadow-[0_0_0_1px_rgba(56,189,248,0.1),0_30px_80px_-10px_rgba(14,165,233,0.25)] overflow-hidden transform transition-all duration-700 hover:scale-[1.01]">
           <!-- Browser Toolbar -->
           <div class="h-10 border-b border-white/5 bg-[#0d1117] flex items-center px-4 gap-2">
             <div class="flex gap-1.5">
@@ -183,7 +192,7 @@
         </div>
 
         <!-- Glow under dashboard -->
-        <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[90%] h-20 bg-sky-500/20 blur-[60px] -z-10"></div>
+        <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[90%] h-20 bg-sky-500/35 blur-[60px] -z-10"></div>
       </div>
     </div>
   </section>
@@ -238,7 +247,7 @@
         <a href="/cadastro" class="inline-flex px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
           Testar 7 dias grátis
         </a>
-        <p class="text-xs text-slate-500 mt-3">Cadastre seu cartão para ativar. Cancele antes dos 7 dias e não paga nada.</p>
+        <p class="text-xs text-slate-500 mt-3">Sem cobranças durante os 7 dias. Cancele quando quiser.</p>
       </div>
     </div>
   </section>
@@ -573,6 +582,36 @@
             Sim! Temos suporte direto via WhatsApp em horário comercial. A gente ajuda a configurar e tirar dúvidas na hora.
           </div>
         </details>
+
+        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+          <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
+            <span>Funciona sem internet?</span>
+            <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-6 text-slate-400 leading-relaxed animate-fade-in-down">
+            Sim. O Zelo PDV é um PWA (aplicativo web progressivo): você instala ele direto do navegador, sem loja de apps, e ele continua funcionando mesmo se a internet cair. As vendas ficam salvas no dispositivo e sobem para a nuvem automaticamente quando a conexão voltar.
+          </div>
+        </details>
+
+        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+          <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
+            <span>Funciona no celular?</span>
+            <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-6 text-slate-400 leading-relaxed animate-fade-in-down">
+            Sim. Funciona em Android e iPhone. Abra o site no Chrome ou Safari, clique em "Adicionar à tela inicial" e o ícone aparece como qualquer outro app — sem precisar da Play Store nem da App Store. A interface é adaptada para telas menores.
+          </div>
+        </details>
+
+        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+          <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
+            <span>Consigo usar em mais de um dispositivo?</span>
+            <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-6 text-slate-400 leading-relaxed animate-fade-in-down">
+            Sim. Você pode abrir o Zelo PDV em vários dispositivos ao mesmo tempo — celular, tablet e computador — e todos ficam sincronizados em tempo real. Uma única assinatura cobre todos os dispositivos do seu negócio.
+          </div>
+        </details>
       </div>
     </div>
   </section>
@@ -632,7 +671,7 @@
     target="_blank"
     rel="noopener noreferrer"
     aria-label="Falar no WhatsApp"
-    class="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#25D366] hover:bg-[#20b858] text-white font-semibold text-sm px-4 py-3 rounded-full shadow-lg shadow-black/30 transition-all hover:scale-105 active:scale-95 group"
+    class="fixed bottom-20 sm:bottom-6 right-6 z-50 flex items-center gap-3 bg-[#25D366] hover:bg-[#20b858] text-white font-semibold text-sm px-4 py-3 rounded-full shadow-lg shadow-black/30 transition-all hover:scale-105 active:scale-95 group"
   >
     <svg class="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
