@@ -60,6 +60,20 @@
     --text-label: #cbd5e1;
     /* slate-300 - form labels */
 
+    /* Blog Editorial Surface */
+    --blog-bg: rgb(247 248 251);
+    --blog-surface: rgb(255 255 255);
+    --blog-card: rgb(255 255 255);
+    --blog-border: rgb(217 226 236);
+    --blog-text: rgb(15 43 70);
+    --blog-muted: rgb(107 114 128);
+    --blog-pill-bg: rgba(255, 255, 255, 0.72);
+    --blog-pill-text: rgb(53 81 107);
+    --blog-shadow: rgb(15 43 70 / 0.08);
+    --blog-glow-a: rgb(14 165 233 / 0.16);
+    --blog-glow-b: rgb(244 114 182 / 0.12);
+    --blog-glow-c: rgb(99 102 241 / 0.12);
+
     /* Status Colors */
     --error: #ef4444;
     /* red-500 */

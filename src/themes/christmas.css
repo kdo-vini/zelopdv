@@ -67,6 +67,20 @@
     --text-label: #F4E4C1;
     /* Light gold for labels */
 
+    /* Blog Editorial Surface */
+    --blog-bg: rgb(255 248 241);
+    --blog-surface: rgb(255 253 248);
+    --blog-card: rgb(255 253 248);
+    --blog-border: rgb(231 215 184);
+    --blog-text: rgb(90 21 21);
+    --blog-muted: rgb(122 91 82);
+    --blog-pill-bg: rgba(255, 253, 248, 0.76);
+    --blog-pill-text: rgb(122 61 26);
+    --blog-shadow: rgb(102 0 0 / 0.08);
+    --blog-glow-a: rgb(212 36 38 / 0.14);
+    --blog-glow-b: rgb(212 175 55 / 0.16);
+    --blog-glow-c: rgb(20 107 58 / 0.12);
+
     /* Status Colors */
     --error: #D42426;
     /* Christmas red */

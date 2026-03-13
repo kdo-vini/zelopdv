@@ -48,6 +48,20 @@
     /* Golden border for cards */
     --border-gold: #D4AF37;
 
+    /* Blog Editorial Surface */
+    --blog-bg: rgb(250 251 255);
+    --blog-surface: rgb(255 255 255);
+    --blog-card: rgb(255 255 255);
+    --blog-border: rgb(231 233 243);
+    --blog-text: rgb(27 59 111);
+    --blog-muted: rgb(100 116 139);
+    --blog-pill-bg: rgba(255, 255, 255, 0.8);
+    --blog-pill-text: rgb(65 105 225);
+    --blog-shadow: rgb(27 59 111 / 0.08);
+    --blog-glow-a: rgb(65 105 225 / 0.12);
+    --blog-glow-b: rgb(212 175 55 / 0.14);
+    --blog-glow-c: rgb(255 255 255 / 0.32);
+
     /* Status Colors */
     --error: #EF4444;
     --success: #10B981;

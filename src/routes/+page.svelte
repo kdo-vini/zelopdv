@@ -1,6 +1,6 @@
 <svelte:head>
   <title>Zelo PDV - Sistema PDV simples para Lanchonetes</title>
-  <meta name="description" content="Sistema PDV para lanchonete simples e direto ao ponto. Controle caixa, pedidos, estoque e fiado em segundos. Teste grátis o sistema ideal para lanchonetes e pequenos comércios." />
+  <meta name="description" content="Sistema PDV para lanchonete, hamburgueria e pequenos negócios. Controle caixa, fiado, despesas e veja seu lucro real. Sem instalar nada. Teste grátis 7 dias." />
   <meta name="keywords" content="sistema PDV, PDV para lanchonete, sistema para lanchonete, controle de caixa, sistema de vendas simples, lanchonete, hamburgueria, mercadinho, PDV grátis" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://zelopdv.com.br/" />
@@ -39,6 +39,47 @@
       "ratingValue": "4.9",
       "reviewCount": "38"
     }
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Preciso de computador potente?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Não! O Zelo PDV roda direto no navegador (Chrome, Edge). Funciona em qualquer computador ou notebook básico, e até em tablets."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Como funciona os 7 dias grátis?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Você cria a conta e cadastra seu cartão para ativar o período de teste. A cobrança só inicia após 7 dias. Se cancelar antes, não paga nada."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Consigo emitir Nota Fiscal?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O Zelo PDV emite recibos e comprovantes de venda. Não emitimos NFC-e (Nota Fiscal ao Consumidor Eletrônica), sendo ideal para MEIs e pequenos negócios que fazem controle gerencial interno. Se precisar emissão fiscal em cada venda, recomendamos combinar o Zelo com um emissor fiscal dedicado."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Se eu tiver dúvidas, tem suporte?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Sim! Temos suporte direto via WhatsApp em horário comercial. A gente ajuda a configurar e tirar dúvidas na hora."
+        }
+      }
+    ]
   }
   </script>
 </svelte:head>
@@ -88,6 +129,7 @@
 
       <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
         <a href="#features" class="hover:text-white transition-colors">Funcionalidades</a>
+        <a href="/blog" class="hover:text-white transition-colors">Blog</a>
         <a href="#pricing" class="hover:text-white transition-colors">Preços</a>
         <a href="#faq" class="hover:text-white transition-colors">Dúvidas</a>
       </div>
@@ -117,6 +159,7 @@
     {#if showMobileMenu}
       <div class="md:hidden border-t border-white/5 bg-[#0B0F19]/95 backdrop-blur-md px-6 py-4 flex flex-col gap-4 animate-fade-in-down">
         <a href="#features" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Funcionalidades</a>
+        <a href="/blog" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Blog</a>
         <a href="#pricing" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Preços</a>
         <a href="#faq" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Dúvidas</a>
         <a href="/cadastro" class="mt-1 w-full text-center px-5 py-3 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all" on:click={() => showMobileMenu = false}>
@@ -259,7 +302,7 @@
         <div class="w-12 h-12 rounded-xl bg-sky-500/20 flex items-center justify-center mb-6">
           <svg class="w-6 h-6 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </div>
-        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Frente de Caixa Ágil. <br/><span class="text-sky-500">Sem Filas.</span></h2>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Frente de Caixa PDV para Lanchonetes: <br/><span class="text-sky-500">Registre Pedidos em Segundos</span></h2>
         <p class="text-lg text-slate-400 mb-8 leading-relaxed">
           Um PDV desenhado para agilizar seu balcão. Toque, adicione e finalize. Ideal para horários de pico.
         </p>
@@ -312,7 +355,7 @@
         <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-6">
           <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
-        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Lucro Líquido Real. <br/><span class="text-emerald-500">Sem Achismos.</span></h2>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Gestão Financeira para Lanchonete: <br/><span class="text-emerald-500">Veja Seu Lucro Real</span></h2>
         <p class="text-lg text-slate-400 mb-8 leading-relaxed">
           Saber quanto vendeu é fácil. Difícil é saber quanto sobrou.
           O Zelo PDV cruza vendas com despesas e te mostra seu <strong>Lucro Real</strong> no fim do mês.
@@ -338,7 +381,7 @@
         <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-6">
           <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
         </div>
-        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Controle de Despesas. <br/><span class="text-purple-500">Saiba para onde vai o dinheiro.</span></h2>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Controle de Despesas para Pequenos Negócios</h2>
         <p class="text-lg text-slate-400 mb-8 leading-relaxed">
           Registre todos os gastos do seu negócio, desde fornecedores até retiradas diárias. O sistema organiza tudo para te dar clareza no fim do mês.
         </p>
@@ -387,7 +430,7 @@
         <div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mb-6">
           <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
         </div>
-        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Carteira de Clientes. <br/><span class="text-amber-500">Fiado Organizado.</span></h2>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Controle de Fiado Digital: <br/><span class="text-amber-500">Acabe com o Caderninho</span></h2>
         <p class="text-lg text-slate-400 mb-8 leading-relaxed">
           Transforme o "caderninho" em uma ferramenta profissional. Defina limites de crédito, veja histórico e cobre com educação e prova.
         </p>
@@ -473,6 +516,87 @@
           <p class="text-slate-300 text-sm leading-relaxed">"Simples, rápido e com suporte no WhatsApp. Exatamente o que eu precisava."</p>
         </div>
 
+      </div>
+    </div>
+  </section>
+
+  <!-- SEGMENTS -->
+  <section class="segments-section py-24 relative overflow-hidden border-t border-white/5">
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <div class="segments-shell">
+        <div class="segments-intro">
+          <h2 class="segments-title">Para quem é o Zelo PDV?</h2>
+          <p class="segments-description">
+            O Zelo PDV é feito para pequenos negócios de alimentação que precisam de um backoffice simples, sem pagar caro em sistemas complexos de delivery.
+            Você registra vendas, acompanha despesas, organiza o fiado e entende o lucro real sem sair do navegador.
+          </p>
+        </div>
+
+        <div class="segments-grid">
+          <a href="/para-lanchonetes" class="segment-card">
+            <div class="segment-card-top">
+              <span class="segment-icon">🍔</span>
+            </div>
+            <h3 class="segment-title">Lanchonetes</h3>
+            <p class="segment-text">
+              Para quem precisa registrar pedidos rápido no balcão, controlar o caixa e saber o lucro no fim do dia.
+            </p>
+            <span class="segment-link">
+              Ver página do segmento
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </a>
+
+          <a href="/para-hamburguerias" class="segment-card">
+            <div class="segment-card-top">
+              <span class="segment-icon">🍔</span>
+            </div>
+            <h3 class="segment-title">Hamburguerias</h3>
+            <p class="segment-text">
+              Ideal para controlar combos, estoque e pico de movimento sem complicação na operação.
+            </p>
+            <span class="segment-link">
+              Ver página do segmento
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </a>
+
+          <a href="/para-delivery" class="segment-card">
+            <div class="segment-card-top">
+              <span class="segment-icon">🛵</span>
+            </div>
+            <h3 class="segment-title">Delivery Próprio</h3>
+            <p class="segment-text">
+              Para quem faz entrega por conta própria, sem marketplace e sem perder margem com taxa.
+            </p>
+            <span class="segment-link">
+              Ver página do segmento
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </a>
+
+          <a href="/para-mei" class="segment-card">
+            <div class="segment-card-top">
+              <span class="segment-icon">📱</span>
+            </div>
+            <h3 class="segment-title">MEIs e Pequenos Negócios</h3>
+            <p class="segment-text">
+              Controle simples para substituir planilha e caderno por um sistema leve que também funciona no celular.
+            </p>
+            <span class="segment-link">
+              Ver página do segmento
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </a>
+        </div>
       </div>
     </div>
   </section>
@@ -779,6 +903,161 @@
   }
   .spotlight-card:hover::before {
     opacity: 1;
+  }
+
+  .segments-section {
+    background: color-mix(in srgb, var(--bg-panel) 88%, black);
+  }
+
+  .segments-shell {
+    display: grid;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .segments-intro {
+    max-width: 34rem;
+  }
+
+  .segments-title {
+    color: white;
+    font-size: clamp(2.3rem, 4.5vw, 4rem);
+    line-height: 0.98;
+    letter-spacing: -0.05em;
+    font-weight: 700;
+    margin-bottom: 1.15rem;
+    text-wrap: balance;
+  }
+
+  .segments-description {
+    color: rgb(148 163 184 / 0.98);
+    font-size: 1.05rem;
+    line-height: 1.85;
+  }
+
+  .segments-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .segment-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: 1.4rem;
+    border-radius: 1.6rem;
+    border: 1px solid color-mix(in srgb, white 10%, transparent);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, white 3%, transparent),
+      color-mix(in srgb, var(--bg-card) 98%, transparent)
+    );
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 10%, transparent),
+      0 18px 38px color-mix(in srgb, black 32%, transparent);
+    transition:
+      transform 220ms ease,
+      border-color 220ms ease,
+      box-shadow 220ms ease,
+      background 220ms ease;
+    overflow: hidden;
+  }
+
+  .segment-card::after {
+    content: '';
+    position: absolute;
+    inset: auto -30% -45% auto;
+    width: 8rem;
+    height: 8rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    filter: blur(42px);
+    opacity: 0;
+    transition: opacity 220ms ease;
+    pointer-events: none;
+  }
+
+  .segment-card:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--primary) 24%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 12%, transparent),
+      0 22px 46px color-mix(in srgb, black 36%, transparent);
+  }
+
+  .segment-card:hover::after {
+    opacity: 0.9;
+  }
+
+  .segment-card-top {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .segment-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+  }
+
+  .segment-title {
+    color: white;
+    font-size: 1.28rem;
+    line-height: 1.15;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+    letter-spacing: -0.03em;
+  }
+
+  .segment-text {
+    color: rgb(148 163 184 / 0.96);
+    font-size: 0.97rem;
+    line-height: 1.75;
+    margin-bottom: 1.2rem;
+    flex: 1;
+  }
+
+  .segment-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: color-mix(in srgb, white 86%, var(--primary));
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+
+  @media (min-width: 1024px) {
+    .segments-shell {
+      grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+      gap: 2.25rem;
+    }
+
+    .segments-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .segments-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 639px) {
+    .segment-card {
+      padding: 1.2rem;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
