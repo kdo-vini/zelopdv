@@ -49,7 +49,7 @@
     "mainEntity": [
       {
         "@type": "Question",
-        "name": "Preciso de computador potente?",
+        "name": "Preciso de computador potente para usar o Zelo PDV?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Não! O Zelo PDV roda direto no navegador (Chrome, Edge). Funciona em qualquer computador ou notebook básico, e até em tablets."
@@ -57,7 +57,7 @@
       },
       {
         "@type": "Question",
-        "name": "Como funciona os 7 dias grátis?",
+        "name": "Como funcionam os 7 dias grátis?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Você cria a conta e cadastra seu cartão para ativar o período de teste. A cobrança só inicia após 7 dias. Se cancelar antes, não paga nada."
@@ -65,7 +65,7 @@
       },
       {
         "@type": "Question",
-        "name": "Consigo emitir Nota Fiscal?",
+        "name": "O Zelo PDV emite Nota Fiscal?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "O Zelo PDV emite recibos e comprovantes de venda. Não emitimos NFC-e (Nota Fiscal ao Consumidor Eletrônica), sendo ideal para MEIs e pequenos negócios que fazem controle gerencial interno. Se precisar emissão fiscal em cada venda, recomendamos combinar o Zelo com um emissor fiscal dedicado."
@@ -73,7 +73,7 @@
       },
       {
         "@type": "Question",
-        "name": "Se eu tiver dúvidas, tem suporte?",
+        "name": "Tem suporte se eu tiver dúvidas?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Sim! Temos suporte direto via WhatsApp em horário comercial. A gente ajuda a configurar e tirar dúvidas na hora."
@@ -247,7 +247,7 @@
       <div class="flex flex-wrap justify-center gap-8 md:gap-16 opacity-70 hover:opacity-100 transition-all duration-500">
         <span class="text-lg font-bold text-white flex items-center gap-2">🍔 Lanchonetes</span>
         <span class="text-lg font-bold text-white flex items-center gap-2">🍔 Hamburguerias</span>
-        <span class="text-lg font-bold text-white flex items-center gap-2">🥪 Quiosques</span>
+        <span class="text-lg font-bold text-white flex items-center gap-2">📱 MEIs e Microempreendedores</span>
         <span class="text-lg font-bold text-white flex items-center gap-2">🍕 Pequenos Deliveries</span>
       </div>
     </div>
@@ -503,7 +503,7 @@
             <div class="w-11 h-11 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg flex-shrink-0">C</div>
             <div>
               <p class="text-white font-semibold text-sm leading-tight">Carlos M.</p>
-              <p class="text-slate-500 text-xs">Quiosque Sabor da Praia · Natal, RN</p>
+              <p class="text-slate-500 text-xs">Lanchonete Sabor da Praia · Natal, RN</p>
             </div>
           </div>
           <div class="flex gap-0.5">
