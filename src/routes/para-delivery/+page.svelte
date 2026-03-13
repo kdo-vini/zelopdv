@@ -23,8 +23,8 @@
   <meta name="twitter:description" content={page.meta.description} />
   <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
 
-  <script type="application/ld+json">{JSON.stringify(softwareApplicationSchema)}</script>
-  <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
+  {@html `<script type="application/ld+json">${JSON.stringify(softwareApplicationSchema)}</script>`}
+  {@html `<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`}
 </svelte:head>
 
 <SegmentLandingPage {page} />

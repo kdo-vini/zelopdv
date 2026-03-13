@@ -2,7 +2,10 @@ User-agent: *
 Allow: /
 
 Disallow: /api/
-Disallow: /painel.html
-Disallow: /perfil.html
+Disallow: /app
+Disallow: /gestao/
+Disallow: /relatorios
+Disallow: /perfil
+Disallow: /assinatura
 
 Sitemap: https://zelopdv.com.br/sitemap.xml

@@ -18,12 +18,47 @@
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
+    description: post.description,
     datePublished: post.publishedAt,
+    dateModified: post.publishedAt,
+    url: `https://zelopdv.com.br/blog/${post.slug}`,
+    image: 'https://zelopdv.com.br/og-image.png',
+    author: {
+      '@type': 'Organization',
+      name: 'Equipe Zelo PDV',
+      url: 'https://zelopdv.com.br'
+    },
     publisher: {
       '@type': 'Organization',
       name: 'Zelo PDV',
-      url: 'https://zelopdv.com.br'
+      url: 'https://zelopdv.com.br',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://zelopdv.com.br/logo-horizontal.png'
+      }
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://zelopdv.com.br/blog/${post.slug}`
     }
+  };
+  $: breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Blog',
+        item: 'https://zelopdv.com.br/blog'
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: post.title,
+        item: `https://zelopdv.com.br/blog/${post.slug}`
+      }
+    ]
   };
 </script>
 
@@ -44,7 +79,8 @@
   <meta name="twitter:description" content={post.description} />
   <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
 
-  <script type="application/ld+json">{JSON.stringify(articleSchema)}</script>
+  {@html `<script type="application/ld+json">${JSON.stringify(articleSchema)}</script>`}
+  {@html `<script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>`}
 </svelte:head>
 
 <div class="article-shell min-h-screen overflow-x-hidden font-sans">

@@ -16,6 +16,27 @@
   function formatDate(date) {
     return dateFormatter.format(new Date(`${date}T00:00:00`));
   }
+
+  const blogSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: 'Blog do Zelo PDV',
+    description: 'Artigos práticos sobre gestão de lanchonete, controle de caixa, fiado e lucro real para pequenos negócios de alimentação.',
+    url: 'https://zelopdv.com.br/blog',
+    publisher: {
+      '@type': 'Organization',
+      name: 'Zelo PDV',
+      url: 'https://zelopdv.com.br'
+    },
+    blogPost: sortedPosts.map((post, i) => ({
+      '@type': 'BlogPosting',
+      position: i + 1,
+      headline: post.title,
+      description: post.description,
+      url: `https://zelopdv.com.br/blog/${post.slug}`,
+      datePublished: post.publishedAt
+    }))
+  };
 </script>
 
 <svelte:head>
@@ -43,6 +64,8 @@
     content="Artigos práticos sobre gestão de lanchonete, controle de caixa, fiado e lucro real para pequenos negócios de alimentação."
   />
   <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
+
+  {@html `<script type="application/ld+json">${JSON.stringify(blogSchema)}</script>`}
 </svelte:head>
 
 <div class="blog-shell min-h-screen overflow-x-hidden font-sans">
