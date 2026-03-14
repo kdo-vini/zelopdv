@@ -57,7 +57,8 @@
     >
       <div>
         &copy; {new Date().getFullYear()} <a href="https://techneia.com.br" target="_blank" rel="noopener noreferrer" class={`transition-colors ${isLight ? 'hover:text-sky-600' : 'hover:text-white'}`}>Téchne Sistemas</a>. <br class="hidden md:block" />
-        Todos os direitos reservados.
+        Todos os direitos reservados. <br class="hidden md:block" />
+        <span class="opacity-60">Techne Sistemas Tecnologia Da Informacao Ltda — CNPJ: 65.679.798/0001-95</span>
       </div>
       <div class="flex gap-4">
         <a href="https://instagram.com/techne.ia" target="_blank" rel="noopener noreferrer" class={`transition-colors ${isLight ? 'hover:text-sky-600' : 'hover:text-white'}`}>@techne.ia</a>
