@@ -780,7 +780,8 @@
 
       <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-600">
         <div>
-          &copy; {new Date().getFullYear()} <a href="https://techneia.com.br" target="_blank" rel="noopener noreferrer" class="hover:text-slate-500 transition-colors">Téchne Sistemas</a>. <br class="hidden md:block"/>Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} <a href="https://techneia.com.br" target="_blank" rel="noopener noreferrer" class="hover:text-slate-500 transition-colors">Téchne Sistemas</a>. <br class="hidden md:block"/>Todos os direitos reservados. <br class="hidden md:block"/>
+          <span class="opacity-60">Techne Sistemas Tecnologia Da Informacao Ltda — CNPJ: 65.679.798/0001-95</span>
         </div>
         <div class="flex gap-4">
            <a href="https://instagram.com/techne.ia" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">@techne.ia</a>
