@@ -445,7 +445,7 @@
         <div class="section-number" aria-hidden="true">13</div>
         <h2 class="section-title">Contato</h2>
         <div class="section-body">
-          <p>Para dúvidas sobre estes Termos, entre em contato com a Téchne Sistemas:</p>
+          <p>Para dúvidas sobre estes Termos, entre em contato com a Téchne Sistemas (<strong>Techne Sistemas Tecnologia Da Informacao Ltda</strong>, CNPJ: 65.679.798/0001-95):</p>
           <div class="contact-grid">
             <a href="mailto:techne.br@gmail.com" class="contact-item">
               <span class="contact-item-icon" aria-hidden="true">

@@ -86,9 +86,9 @@
           Nos termos do Art. 5º, VI da LGPD, o controlador dos dados pessoais tratados nesta Política é:
         </p>
         <div class="info-card">
-          <p><strong>Téchne Sistemas</strong></p>
-          <p>CNPJ: (a informar)</p>
-          <p>Endereço: Bauru, São Paulo, Brasil</p>
+          <p><strong>Techne Sistemas Tecnologia Da Informacao Ltda</strong></p>
+          <p>CNPJ: 65.679.798/0001-95</p>
+          <p>Endereço: Promissão, São Paulo, Brasil</p>
           <p>E-mail: <a href="mailto:techne.br@gmail.com" class="inline-link">techne.br@gmail.com</a></p>
           <p>Site: <a href="https://zelopdv.com.br" target="_blank" rel="noopener noreferrer" class="inline-link">zelopdv.com.br</a></p>
         </div>
