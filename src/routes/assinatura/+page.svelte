@@ -180,7 +180,7 @@
   // Mensagem padrão para novos usuários (sem histórico de assinatura)
   $: defaultMessage = hasHadSubscription
     ? 'Renove sua assinatura para continuar usando o sistema.'
-    : 'Comece seu período de teste grátis e experimente todas as funcionalidades!';
+    : '30 dias grátis, sem cartão de crédito. Experimente todas as funcionalidades sem compromisso!';
 </script>
 
 <svelte:head>
@@ -192,12 +192,12 @@
 <section class="max-w-xl mx-auto space-y-4">
   <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Assinatura</p>
   <h1 class="text-2xl font-bold">Assinatura Zelo PDV</h1>
-  <p class="text-slate-600 dark:text-slate-300">7 dias grátis, depois R$ 59/mês — cancele quando quiser.</p>
+  <p class="text-slate-600 dark:text-slate-300">30 dias grátis, sem cartão de crédito — depois R$ 59/mês. Cancele quando quiser.</p>
 
   {#if isActiveStrict}
     <div class="p-3 bg-green-50 text-green-700 rounded">
       {#if subStatus === 'trialing'}
-        Período de teste ativo. Você tem acesso completo ao sistema!
+        Período de teste ativo (30 dias grátis). Você tem acesso completo ao sistema!
       {:else}
         Assinatura ativa.
       {/if}
@@ -229,7 +229,7 @@
       </div>
     {:else}
       <button class="btn-primary" on:click={assinar} disabled={loading}>
-        {loading ? 'Redirecionando…' : 'Iniciar período de teste grátis'}
+        {loading ? 'Redirecionando…' : 'Começar 30 dias grátis — sem cartão'}
       </button>
     {/if}
   {/if}

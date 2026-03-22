@@ -135,7 +135,7 @@
             href="/cadastro"
             class="article-cta-button"
           >
-            Testar 7 dias grátis →
+            Testar 30 dias grátis →
           </a>
         </section>
       </div>

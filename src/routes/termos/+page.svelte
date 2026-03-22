@@ -169,7 +169,7 @@
               </div>
               <div>
                 <div class="highlight-card-title">Teste Gratuito</div>
-                <div class="highlight-card-value">7 dias</div>
+                <div class="highlight-card-value">30 dias</div>
                 <div class="highlight-card-sub">sem cobrança</div>
               </div>
             </div>
@@ -187,20 +187,19 @@
 
           <ol class="numbered-list">
             <li>
-              <strong>Período de Teste Gratuito:</strong> O Serviço oferece 7 (sete) dias de teste gratuito
-              para novos usuários. Para ativar o período de teste, é necessário cadastrar um método de
-              pagamento válido. Nenhum valor é cobrado durante o período de teste.
+              <strong>Período de Teste Gratuito:</strong> O Serviço oferece 30 (trinta) dias de teste gratuito
+              para novos usuários. Não é necessário cadastrar um método de pagamento para iniciar o teste.
+              Nenhum valor é cobrado durante o período de teste.
             </li>
             <li>
-              <strong>Assinatura Mensal:</strong> Após o término do período de teste, a assinatura é renovada
-              automaticamente no valor de <strong>R$ 59,00 (cinquenta e nove reais) por mês</strong>,
-              cobrado no cartão de crédito cadastrado.
+              <strong>Assinatura Mensal:</strong> Após o término do período de teste, o Usuário pode assinar por
+              <strong>R$ 59,00 (cinquenta e nove reais) por mês</strong>. A cobrança é realizada no cartão
+              de crédito informado no momento da assinatura.
             </li>
             <li>
-              <strong>Cancelamento Antecipado:</strong> O Usuário pode cancelar a assinatura a qualquer
-              momento antes do término do período de teste sem qualquer custo. Se cancelar após o período
-              de teste, o acesso ao Serviço será mantido até o fim do ciclo faturado e não haverá reembolso
-              proporcional.
+              <strong>Cancelamento Antecipado:</strong> O Usuário pode cancelar a qualquer momento.
+              Durante o período de teste gratuito, o cancelamento é imediato e sem custo. Após a assinatura
+              ser ativada, o acesso é mantido até o fim do ciclo faturado e não haverá reembolso proporcional.
             </li>
             <li>
               <strong>Inadimplência:</strong> Em caso de falha no pagamento, a Empresa tentará cobrar o

@@ -42,7 +42,15 @@ export async function POST({ request, url }) {
       customer: customer.id,
       line_items: [{ price: PRICE_ID, quantity: 1 }],
       allow_promotion_codes: true,
-      subscription_data: { trial_period_days: 7 },
+      payment_method_collection: 'if_required',
+      subscription_data: {
+        trial_period_days: 30,
+        trial_settings: {
+          end_behavior: {
+            missing_payment_method: 'cancel'
+          }
+        }
+      },
       success_url: `${origin}/assinatura?success=1`,
       cancel_url: `${origin}/assinatura?canceled=1`,
       metadata: { user_id: userId },

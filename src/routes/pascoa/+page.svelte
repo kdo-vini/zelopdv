@@ -8,7 +8,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Venda mais nesta Páscoa com o Zelo PDV" />
-  <meta property="og:description" content="Controle suas vendas e seu lucro com facilidade. Teste grátis por 7 dias." />
+  <meta property="og:description" content="Controle suas vendas e seu lucro com facilidade. Teste grátis por 30 dias, sem cartão." />
   <meta property="og:url" content="https://zelopdv.com.br/pascoa" />
   <meta property="og:image" content="https://zelopdv.com.br/og-image.png" />
   <meta property="og:locale" content="pt_BR" />
@@ -17,7 +17,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="O sistema ideal para sua Páscoa" />
-  <meta name="twitter:description" content="Cadastre ovos, controle o estoque e as vendas no fiado. 7 dias grátis." />
+  <meta name="twitter:description" content="Cadastre ovos, controle o estoque e as vendas no fiado. 30 dias grátis, sem cartão." />
 
   <!-- JSON-LD SEO -->
   <script type="application/ld+json">
@@ -32,7 +32,7 @@
       "price": "59.00",
       "priceCurrency": "BRL",
       "priceValidUntil": "2026-12-31",
-      "description": "7 dias grátis"
+      "description": "30 dias grátis, sem cartão"
     },
     "description": "Sistema para vender na Páscoa 2026. Ideal para doceiras, confeiteiras e revendedores.",
     "url": "https://zelopdv.com.br/pascoa"
@@ -168,7 +168,7 @@
         <div class="flex flex-col sm:flex-row items-center gap-5 animate-fade-in-up delay-300">
           <a href="/cadastro" class="w-full sm:w-auto px-8 py-4.5 text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-2xl font-extrabold shadow-[0_0_40px_rgba(219,39,119,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_60px_rgba(219,39,119,0.5)] flex items-center justify-center gap-3 group relative overflow-hidden">
             <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] skew-x-[-20deg] group-hover:animate-shine"></span>
-            Começar Grátis — 7 Dias
+            Começar Grátis — 30 Dias
             <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
           </a>
           <a href="#como-funciona" class="w-full sm:w-auto px-8 py-4 text-slate-300 hover:text-white bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] rounded-2xl font-bold backdrop-blur-xl transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-1">
@@ -422,7 +422,7 @@
               <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </div>
             <div>
-              <p class="text-white font-bold tracking-wide uppercase text-sm">7 dias grátis</p>
+              <p class="text-white font-bold tracking-wide uppercase text-sm">30 dias grátis</p>
               <p class="text-slate-500 text-xs font-medium">Sem cartão de crédito para começar.</p>
             </div>
           </div>
@@ -437,7 +437,7 @@
           
           <div class="absolute top-0 right-10 -translate-y-1/2">
              <div class="bg-gradient-to-r from-amber-400 to-amber-600 text-[#06040A] font-black tracking-widest uppercase text-xs px-5 py-2 rounded-full shadow-[0_10px_20px_rgba(251,191,36,0.4)]">
-               7 DIAS GRÁTIS
+               30 DIAS GRÁTIS
              </div>
           </div>
 
@@ -470,7 +470,7 @@
 
           <a href="/cadastro" class="block w-full text-center py-5 text-xl font-black text-white bg-gradient-to-r from-amber-500 to-pink-600 rounded-2xl shadow-[0_10px_40px_rgba(236,72,153,0.4)] transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] hover:shadow-[0_15px_50px_rgba(236,72,153,0.6)] relative overflow-hidden group/btn">
             <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-[150%] skew-x-[-20deg] group-hover/btn:animate-shine"></span>
-            Testar 7 dias grátis
+            Testar 30 dias grátis
           </a>
           <p class="text-xs text-slate-500 text-center mt-5 font-medium uppercase tracking-widest">Cancele quando quiser</p>
         </div>

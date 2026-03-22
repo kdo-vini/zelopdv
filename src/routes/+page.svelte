@@ -1,6 +1,6 @@
 <svelte:head>
   <title>Zelo PDV - Sistema PDV simples para Lanchonetes</title>
-  <meta name="description" content="Sistema PDV para lanchonete, hamburgueria e pequenos negócios. Controle caixa, fiado, despesas e veja seu lucro real. Sem instalar nada. Teste grátis 7 dias." />
+  <meta name="description" content="Sistema PDV para lanchonete, hamburgueria e pequenos negócios. Controle caixa, fiado, despesas e veja seu lucro real. Sem instalar nada. Teste grátis 30 dias, sem cartão." />
   <meta name="keywords" content="sistema PDV, PDV para lanchonete, sistema para lanchonete, controle de caixa, sistema de vendas simples, lanchonete, hamburgueria, mercadinho, PDV grátis" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://zelopdv.com.br/" />
@@ -57,10 +57,10 @@
       },
       {
         "@type": "Question",
-        "name": "Como funcionam os 7 dias grátis?",
+        "name": "Como funcionam os 30 dias grátis?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Você cria a conta e cadastra seu cartão para ativar o período de teste. A cobrança só inicia após 7 dias. Se cancelar antes, não paga nada."
+          "text": "Você cria a conta e começa seu período de teste de 30 dias, sem precisar cadastrar cartão. Se assinar e quiser cancelar, pode fazer isso a qualquer momento."
         }
       },
       {
@@ -137,7 +137,7 @@
       <div class="flex items-center gap-4">
         <a href="/login" class="text-sm font-medium text-white hover:text-sky-400 transition-colors hidden sm:block">Entrar</a>
         <a href="/cadastro" class="px-5 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all hover:scale-105 active:scale-95">
-          Testar 7 dias grátis
+          Testar 30 dias grátis
         </a>
         <!-- Hamburger button (mobile only) -->
         <button
@@ -195,13 +195,13 @@
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up delay-300">
         <a href="/cadastro" class="w-full sm:w-auto px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
-          Testar 7 dias grátis
+          Testar 30 dias grátis
         </a>
         <a href="#features" class="w-full sm:w-auto px-8 py-4 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-semibold backdrop-blur-sm transition-all">
           Ver como funciona
         </a>
       </div>
-      <p class="text-xs text-slate-500 mt-3">Sem cobranças durante os 7 dias. Cancele quando quiser.</p>
+      <p class="text-xs text-slate-500 mt-3">Sem cobranças durante os 30 dias. Cancele quando quiser.</p>
 
       <!-- MOCKUP DASHBOARD 3D -->
       <div class="mt-20 relative group">
@@ -288,9 +288,9 @@
 
       <div class="mt-16">
         <a href="/cadastro" class="inline-flex px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
-          Testar 7 dias grátis
+          Testar 30 dias grátis
         </a>
-        <p class="text-xs text-slate-500 mt-3">Sem cobranças durante os 7 dias. Cancele quando quiser.</p>
+        <p class="text-xs text-slate-500 mt-3">Sem cobranças durante os 30 dias. Cancele quando quiser.</p>
       </div>
     </div>
   </section>
@@ -626,8 +626,8 @@
           </div>
 
           <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 mb-8">
-            <p class="text-sky-400 font-bold text-lg">7 Dias Grátis</p>
-            <p class="text-sm text-sky-300/80">Teste a semana toda. Se não amar, não paga.</p>
+            <p class="text-sky-400 font-bold text-lg">30 Dias Grátis</p>
+            <p class="text-sm text-sky-300/80">Teste por 30 dias. Se não amar, não paga.</p>
           </div>
 
           <ul class="space-y-4 text-left mb-10 max-w-xs mx-auto">
@@ -652,7 +652,7 @@
           <a href="/cadastro" class="block w-full text-center py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
             Começar teste gratuito
           </a>
-          <p class="text-xs text-slate-500 text-center mt-3">Cartão necessário para ativar o teste. Cancele antes dos 7 dias, não paga nada.</p>
+          <p class="text-xs text-slate-500 text-center mt-3">Sem cartão de crédito necessário. Cancele quando quiser.</p>
         </div>
       </div>
     </div>
@@ -679,11 +679,11 @@
 
         <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
-            <span>Como funciona os 7 dias grátis?</span>
+            <span>Como funciona os 30 dias grátis?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </summary>
           <div class="px-6 pb-6 text-slate-400 leading-relaxed animate-fade-in-down">
-            Você cria a conta e cadastra seu cartão para ativar o período de teste. A cobrança só inicia após 7 dias. Se cancelar antes, não paga nada.
+            Você cria a conta e começa seu período de teste de 30 dias, sem precisar cadastrar cartão. Se assinar e quiser cancelar, pode fazer isso a qualquer momento.
           </div>
         </details>
 

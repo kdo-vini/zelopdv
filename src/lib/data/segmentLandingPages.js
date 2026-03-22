@@ -26,9 +26,9 @@ export const generalFaqs = [
       'Não. O Zelo PDV roda direto no navegador e funciona em computador, notebook e tablet básicos. Para muitos negócios, isso já resolve sem compra de equipamento novo.'
   },
   {
-    question: 'Como funciona os 7 dias grátis?',
+    question: 'Como funciona os 30 dias grátis?',
     answer:
-      'Você cria a conta, cadastra o cartão e usa o sistema por sete dias completos para testar a rotina do negócio. Se cancelar antes do prazo acabar, não paga nada.'
+      'Você cria a conta e usa o sistema por trinta dias completos, sem precisar cadastrar cartão. É tempo de sobra para testar a rotina do negócio. Se assinar e quiser cancelar depois, pode fazer isso a qualquer momento.'
   },
   {
     question: 'Funciona no celular?',
@@ -48,7 +48,7 @@ export const segmentPages = {
     meta: {
       title: 'Sistema PDV para Lanchonete — Caixa, Fiado e Lucro Real | Zelo PDV',
       description:
-        'Sistema PDV para lanchonete simples e sem mensalidade surpresa. Controle caixa, fiado e veja o lucro real do seu negócio. Teste grátis 7 dias, sem instalar nada.',
+        'Sistema PDV para lanchonete simples e sem mensalidade surpresa. Controle caixa, fiado e veja o lucro real do seu negócio. Teste grátis 30 dias, sem cartão de crédito, sem instalar nada.',
       canonical: 'https://zelopdv.com.br/para-lanchonetes'
     },
     heroBadge: 'Feito para balcão, caixa e retaguarda',
@@ -169,7 +169,7 @@ export const segmentPages = {
     meta: {
       title: 'PDV para Hamburgueria — Controle Pedidos e Lucro Sem Complicação | Zelo PDV',
       description:
-        'Sistema PDV para hamburgueria: registre pedidos rápido, controle estoque e saiba quanto sobrou no fim do dia. R$ 59/mês, 7 dias grátis.',
+        'Sistema PDV para hamburgueria: registre pedidos rápido, controle estoque e saiba quanto sobrou no fim do dia. R$ 59/mês, 30 dias grátis, sem cartão.',
       canonical: 'https://zelopdv.com.br/para-hamburguerias'
     },
     heroBadge: 'Operação enxuta para pico de movimento',
@@ -404,7 +404,7 @@ export const segmentPages = {
     ],
     finalCtaTitle: 'Comece seu teste gratuito agora',
     finalCtaText:
-      'Se você faz delivery por conta própria e quer parar de depender de anotações soltas, o Zelo pode ser o centro da sua operação. Teste por sete dias e veja a diferença no fechamento.'
+      'Se você faz delivery por conta própria e quer parar de depender de anotações soltas, o Zelo pode ser o centro da sua operação. Teste por 30 dias grátis, sem cartão, e veja a diferença no fechamento.'
   },
   mei: {
     slug: 'para-mei',

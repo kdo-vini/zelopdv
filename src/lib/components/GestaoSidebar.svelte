@@ -6,10 +6,32 @@
 
   let mobileOpen = false;
   let collapsed = false;
+  let subStatus = null;
+  let trialDaysLeft = null;
 
-  onMount(() => {
+  onMount(async () => {
     const saved = localStorage.getItem('zelo_sidebar_collapsed');
     if (saved !== null) collapsed = saved === 'true';
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id) {
+      try {
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('status, current_period_end')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (sub?.status === 'trialing' && sub?.current_period_end) {
+          subStatus = sub.status;
+          const diff = new Date(sub.current_period_end) - new Date();
+          trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+        }
+      } catch (e) {
+        // silent fail - non-critical
+      }
+    }
   });
 
   function toggleCollapse() {
@@ -180,6 +202,21 @@
       {/if}
     </button>
   </div>
+
+  {#if subStatus === 'trialing' && trialDaysLeft !== null && trialDaysLeft <= 7}
+    <div class="mx-3 mt-2 mb-1 rounded-lg p-3 text-xs" style="background: var(--warning); color: #1a1a00; border: 1px solid rgba(0,0,0,0.15);">
+      <p class="font-bold mb-0.5">
+        {#if trialDaysLeft === 0}
+          ⚠️ Seu teste termina hoje!
+        {:else}
+          ⚠️ Teste termina em {trialDaysLeft} dia{trialDaysLeft === 1 ? '' : 's'}
+        {/if}
+      </p>
+      <p class="opacity-80">
+        <a href="/assinatura" class="underline font-medium" on:click={closeMobile}>Assine agora</a> para não perder o acesso.
+      </p>
+    </div>
+  {/if}
 
   <!-- Grupos de navegação -->
   <nav class="flex-1 overflow-y-auto px-3 py-2 space-y-1" aria-label="Navegação principal de gestão">

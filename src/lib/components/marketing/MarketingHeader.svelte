@@ -48,7 +48,7 @@
         href="/cadastro"
         class="px-5 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all hover:scale-105 active:scale-95"
       >
-        Testar 7 dias grátis
+        Testar 30 dias grátis
       </a>
       <button
         class="md:hidden flex items-center justify-center w-9 h-9 rounded-lg border text-slate-300 transition-colors"

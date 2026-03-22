@@ -105,7 +105,7 @@
     const diff = new Date(currentPeriodEnd) - new Date();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   })();
-  $: trialProgressPct = trialDaysLeft !== null ? Math.round(((7 - trialDaysLeft) / 7) * 100) : 0;
+  $: trialProgressPct = trialDaysLeft !== null ? Math.min(100, Math.max(0, Math.round(((30 - trialDaysLeft) / 30) * 100))) : 0;
 
   onMount(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -530,7 +530,7 @@
                 <div>
                   <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color: var(--text-muted);">Seu plano</p>
                   <p class="text-lg font-bold" style="color: var(--text-main);">Plano Zelo PDV</p>
-                  <p class="text-sm mt-0.5" style="color: var(--text-muted);">R$ 59,90 / mês</p>
+                  <p class="text-sm mt-0.5" style="color: var(--text-muted);">R$ 59,00 / mês</p>
                 </div>
                 {#if tag}
                   <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide" style="color: {tag.color}; background: {tag.bg};">

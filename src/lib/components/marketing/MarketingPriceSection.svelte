@@ -23,8 +23,8 @@
         </div>
 
         <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 mb-8">
-          <p class="text-sky-400 font-bold text-lg">7 Dias Grátis</p>
-          <p class="text-sm text-sky-300/80">Teste a semana toda. Se não amar, não paga.</p>
+          <p class="text-sky-400 font-bold text-lg">30 Dias Grátis</p>
+          <p class="text-sm text-sky-300/80">Teste por 30 dias. Se não amar, não paga.</p>
         </div>
 
         <ul class="space-y-4 text-left mb-10 max-w-xs mx-auto">
@@ -53,7 +53,7 @@
           Começar teste gratuito
         </a>
         <p class="text-xs text-center mt-3" style="color: var(--text-muted);">
-          Cartão necessário para ativar o teste. Cancele antes dos 7 dias, não paga nada.
+          Sem cartão de crédito necessário. Cancele quando quiser.
         </p>
       </div>
     </div>
