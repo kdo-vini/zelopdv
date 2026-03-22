@@ -3,6 +3,7 @@
   export let params;
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import AuthLayout from '$lib/components/AuthLayout.svelte';
+  import EmailSentHelper from '$lib/components/EmailSentHelper.svelte';
 
   let email = '';
   let password = '';
@@ -51,6 +52,7 @@
 <AuthLayout title="Criar conta" subtitle="Cadastre-se e comece a usar o Zelo PDV">
   {#if successMessage}
     <div class="auth-success">{successMessage}</div>
+    <EmailSentHelper {email} />
   {/if}
   {#if errorMessage}
     <div class="auth-error">{@html errorMessage}</div>

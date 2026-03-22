@@ -2,6 +2,7 @@
   import { supabase } from '$lib/supabaseClient';
   export let params;
   import AuthLayout from '$lib/components/AuthLayout.svelte';
+  import EmailSentHelper from '$lib/components/EmailSentHelper.svelte';
 
   let email = '';
   let message = '';
@@ -24,6 +25,7 @@
 <AuthLayout title="Esqueci minha senha" subtitle="Informe seu e-mail e enviaremos um link para redefinir sua senha">
   {#if message}
     <div class="auth-success">{message}</div>
+    <EmailSentHelper {email} />
   {/if}
   {#if errorMessage}
     <div class="auth-error">{errorMessage}</div>
