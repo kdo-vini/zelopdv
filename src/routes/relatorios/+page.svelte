@@ -31,11 +31,21 @@
 	let vendasItens = [];
 	let vendasPagamentos = [];
 	let produtosMap = new Map(); // id_produto -> { id, nome, preco }
+	let pessoasMap = new Map(); // id_cliente -> { nome }
 	let movs = [];
 	let fechamentos = [];
 
 	// Helpers
 	const fmt = (n) => `R$ ${Number(n || 0).toFixed(2)}`;
+	const formatForma = (f) => ({
+		dinheiro:       'Dinheiro',
+		pix:            'PIX',
+		cartao_debito:  'Cartão (Débito)',
+		cartao_credito: 'Cartão (Crédito)',
+		cartao:         'Cartão',
+		fiado:          'Fiado',
+		multiplo:       'Múltiplo',
+	})[f] ?? f;
 
 	onMount(async () => {
 		const ok = await ensureActiveSubscription({ requireProfile: true });
@@ -120,7 +130,7 @@
 			// 2. Vendas do caixa
 			const pVendas = supabase
 				.from('vendas')
-				.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at')
+				.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at, id_cliente')
 				.eq('id_caixa', idCaixa)
 				.order('id', { ascending: true });
 
@@ -178,6 +188,16 @@
 						produtosMap = new Map(ps.map(p => [p.id, p]));
 					}
 				}
+			}
+
+			// Pessoas map (for fiado tooltip)
+			const clienteIds = Array.from(new Set(vendas.filter(v => v.id_cliente).map(v => v.id_cliente)));
+			pessoasMap = new Map();
+			if (clienteIds.length) {
+				const { data: ps2, error: ps2Err } = await withTimeout(
+					supabase.from('pessoas').select('id, nome').in('id', clienteIds)
+				);
+				if (!ps2Err && ps2) pessoasMap = new Map(ps2.map(p => [p.id, p]));
 			}
 		} catch (err) {
 			addToast('Erro ao carregar dados do caixa: ' + err.message, 'error');
@@ -941,7 +961,7 @@
 				{#if vendas.length === 0}
 					<div class="text-sm text-slate-700 dark:text-slate-300">Sem vendas para este caixa.</div>
 				{:else}
-					<div class="overflow-x-auto">
+					<div class="overflow-x-auto" style="overflow-y: visible;">
 						<table class="min-w-full text-sm">
 							<thead>
 								<tr class="text-left text-slate-600 dark:text-slate-400">
@@ -953,10 +973,29 @@
 							</thead>
 							<tbody class="divide-y">
 								{#each vendas as v}
+									{@const hasFiado = v.forma_pagamento === 'fiado' || (v.forma_pagamento === 'multiplo' && vendasPagamentos.some(p => p.id_venda === v.id && p.forma_pagamento === 'fiado'))}
+									{@const cliente = hasFiado && v.id_cliente ? pessoasMap.get(v.id_cliente) : null}
+									{@const itens = vendasItens.filter(i => i.id_venda === v.id)}
 									<tr>
 										<td class="py-2 pr-4">{v.numero_venda || v.id}</td>
 										<td class="py-2 pr-4">{v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
-										<td class="py-2 pr-4">{v.forma_pagamento}</td>
+										<td class="py-2 pr-4">
+											<span class="relative group cursor-default">
+												<span class={v.forma_pagamento === 'fiado' ? 'text-amber-400 font-medium' : ''}>{formatForma(v.forma_pagamento)}</span>
+												{#if itens.length}
+													<div class="absolute left-0 top-full mt-1 z-50 hidden group-hover:block w-56 rounded-lg shadow-lg border border-slate-600 bg-slate-800 text-slate-100 text-xs p-3 space-y-1" style="overflow: visible;">
+														{#if cliente}
+															<div class="font-semibold text-white border-b border-slate-700 pb-1 mb-1">{cliente.nome}</div>
+														{/if}
+														<ul class="space-y-0.5">
+															{#each itens as it}
+																<li>{it.quantidade}× {it.nome_produto_na_venda}</li>
+															{/each}
+														</ul>
+													</div>
+												{/if}
+											</span>
+										</td>
 										<td class="py-2">{fmt(v.valor_total)}</td>
 									</tr>
 								{/each}
