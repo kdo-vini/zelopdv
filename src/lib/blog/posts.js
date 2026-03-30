@@ -1,5 +1,117 @@
 export const posts = [
   {
+    slug: 'como-calcular-taxa-aplicativo-delivery',
+    title: 'Taxas de aplicativos de delivery: quanto iFood, Rappi e outros cobram do restaurante em 2026',
+    description:
+      'Guia atualizado em abril de 2026 com as taxas reais de iFood, Rappi, 99Food e Aiqfome. Aprenda a calcular se plataformas de delivery estão dando lucro ou prejuízo.',
+    keyword: 'taxa ifood restaurante',
+    coverVariant: 'ember',
+    publishedAt: '2026-04-01',
+    readingTime: '8 min',
+    content: `
+      <p>Se você tem uma lanchonete, hamburgueria ou qualquer negócio de alimentação e vende por aplicativo, saber exatamente quanto cada plataforma cobra é essencial. Muita gente cadastra o restaurante no iFood ou no Rappi, vê os pedidos entrando e acha que está lucrando — quando, na prática, está vendendo com margem negativa em alguns itens sem perceber.</p>
+      <p>A conta não é só "quanto vendi menos a taxa". Existem comissões sobre o pedido, taxas de pagamento online, mensalidades e custos escondidos que, somados, podem consumir de 15% a 35% do valor de cada venda. Sem conhecer esses números, o dono toma decisão no escuro e descobre o problema só quando o caixa aperta no fim do mês.</p>
+      <p>Este artigo foi atualizado em <strong>abril de 2026</strong> com os dados mais recentes das principais plataformas no Brasil. Vamos mostrar quanto cada uma cobra, como calcular se a operação está dando lucro e o que fazer para não perder dinheiro.</p>
+
+      <h2>Quanto cada plataforma cobra do restaurante</h2>
+      <p>Antes de qualquer cálculo, é importante entender a estrutura de cobrança. A maioria das plataformas combina três tipos de custo:</p>
+      <ul>
+        <li><strong>Comissão sobre o pedido</strong> — percentual sobre o valor total da venda</li>
+        <li><strong>Taxa de pagamento online</strong> — percentual sobre pedidos pagos pelo app (geralmente 3,2% a 3,5%)</li>
+        <li><strong>Mensalidade</strong> — valor fixo mensal, em alguns casos isento para faturamentos baixos</li>
+      </ul>
+      <p>Abaixo, os valores praticados por cada plataforma em 2025/2026:</p>
+
+      <h2>iFood</h2>
+      <p>O iFood é a maior plataforma de delivery do Brasil e oferece dois planos principais:</p>
+      <ul>
+        <li><strong>Plano Básico (entrega própria):</strong> comissão de <strong>12%</strong> sobre o valor do pedido, mensalidade de aproximadamente R$ 110 (isenta abaixo de R$ 1.800/mês de faturamento)</li>
+        <li><strong>Plano Entrega (logística do iFood):</strong> comissão de <strong>23%</strong> sobre o valor do pedido, mensalidade de aproximadamente R$ 150</li>
+      </ul>
+      <p>Em ambos os planos, existe também a <strong>taxa de pagamento online</strong> de 3,2% a 3,5% sobre pedidos pagos pelo aplicativo. Isso significa que, no Plano Entrega, o custo real pode chegar a <strong>26,5%</strong> da venda.</p>
+
+      <h2>Rappi</h2>
+      <p>A Rappi anunciou em 2025 uma ação agressiva de mercado: <strong>isenção de comissão por até 3 anos</strong> para novos restaurantes parceiros ou parceiros com cadastros ativos. Essa promoção pode variar por região e contrato.</p>
+      <p>Para quem não se enquadra na promoção, a estrutura anterior opera com taxas em torno de:</p>
+      <ul>
+        <li><strong>Entrega própria:</strong> aproximadamente <strong>15%</strong> de comissão</li>
+        <li><strong>Entrega pelo app:</strong> aproximadamente <strong>23%</strong> de comissão</li>
+      </ul>
+      <p>Consulte o Portal do Parceiro Rappi para confirmar as condições vigentes para o seu CNPJ e região.</p>
+
+      <h2>99Food</h2>
+      <p>A 99Food retornou ao mercado brasileiro com uma estratégia de taxas competitivas para atrair restaurantes. Os modelos atuais incluem:</p>
+      <ul>
+        <li><strong>Plano de entrada:</strong> comissão a partir de <strong>8,9% a 9%</strong>, sem mensalidade</li>
+        <li><strong>Taxa de pagamento online:</strong> em torno de 3,2%</li>
+      </ul>
+      <p>A 99Food está focada em ganhar mercado, então as condições podem ser vantajosas, especialmente para novos cadastros.</p>
+
+      <h2>Aiqfome</h2>
+      <p>O Aiqfome tem forte presença em cidades do interior do Brasil e é conhecido por taxas mais acessíveis:</p>
+      <ul>
+        <li><strong>Comissão:</strong> geralmente até <strong>12%</strong> do valor do pedido</li>
+        <li>Modelo mais voltado para pequenas e médias empresas</li>
+        <li>Taxas podem variar conforme região e porte do negócio</li>
+      </ul>
+
+      <h2>Uber Eats ainda existe no Brasil?</h2>
+      <p><strong>Não.</strong> O Uber Eats encerrou as operações de entrega de restaurantes no Brasil em 2022. Ainda existe o aplicativo para outros serviços, mas não atua mais como marketplace de delivery de comida.</p>
+
+      <h2>Como calcular se a venda pelo app está dando lucro</h2>
+      <p>A conta mais importante que todo dono de lanchonete precisa fazer é simples: <strong>quanto realmente entra no meu bolso depois de todas as taxas?</strong></p>
+      <p>Vamos usar um exemplo prático. Imagine que você vendeu um lanche por <strong>R$ 30,00</strong> no iFood com o Plano Entrega:</p>
+      <ul>
+        <li>Comissão do iFood (23%): <strong>−R$ 6,90</strong></li>
+        <li>Taxa de pagamento online (3,5%): <strong>−R$ 1,05</strong></li>
+        <li><strong>Valor líquido recebido: R$ 22,05</strong></li>
+      </ul>
+      <p>Agora pergunte: qual é o custo desse lanche para produzir? Se o custo do ingrediente + embalagem é R$ 12,00, sua margem real é:</p>
+      <ul>
+        <li>R$ 22,05 (líquido) − R$ 12,00 (custo) = <strong>R$ 10,05 de lucro bruto</strong></li>
+        <li>Isso representa uma margem de <strong>33,5%</strong> sobre o valor da venda</li>
+      </ul>
+      <p>Agora compare com o mesmo lanche vendido no balcão, sem taxa nenhuma:</p>
+      <ul>
+        <li>R$ 30,00 − R$ 12,00 = <strong>R$ 18,00 de lucro bruto (60%)</strong></li>
+      </ul>
+      <p>A diferença é de quase R$ 8,00 por pedido. Se você vende 20 lanches por dia pelo app, está deixando <strong>R$ 160,00 por dia</strong> em comissões — mais de <strong>R$ 4.800,00 por mês</strong>.</p>
+
+      <h2>Quando vale a pena vender por aplicativo</h2>
+      <p>Apesar dos custos, plataformas de delivery podem valer a pena em situações específicas:</p>
+      <ul>
+        <li><strong>Visibilidade:</strong> Você aparece para milhares de pessoas que não conheceriam seu negócio de outra forma</li>
+        <li><strong>Capacidade ociosa:</strong> Se a cozinha tem ociosidade em certos horários, pedidos de app usam capacidade que já existe</li>
+        <li><strong>Volume:</strong> Mesmo com margem menor, um volume alto de pedidos pode compensar</li>
+        <li><strong>Aquisição de clientes:</strong> Clientes que te conhecem pelo app podem virar compradores diretos depois</li>
+      </ul>
+      <p>O que <strong>não</strong> vale a pena é vender pelo app sem saber quanto está entrando e quanto está saindo. Isso é o que separa quem lucra de quem trabalha de graça.</p>
+
+      <h2>5 dicas para lucrar vendendo por aplicativo</h2>
+
+      <h2>1. Tenha preço diferente para o app</h2>
+      <p>Muitos restaurantes vendem no iFood pelo mesmo preço do balcão. Isso significa que toda a margem que seria lucro vai para a plataforma. Considere aumentar o preço no app entre 10% e 20% para compensar as taxas. A maioria dos clientes de delivery já espera isso.</p>
+
+      <h2>2. Conheça o custo real de cada produto</h2>
+      <p>Antes de colocar um item no cardápio do app, faça a conta: custo do ingrediente + embalagem + taxa da plataforma. Se o que sobra é muito baixo ou negativo, esse item não deveria estar no delivery — ou precisa de reajuste de preço.</p>
+
+      <h2>3. Registre as vendas de plataforma separado</h2>
+      <p>Se as vendas do app se misturam com as do balcão no seu controle, você nunca vai saber qual canal dá mais lucro. Separe os registros por forma de pagamento: iFood, Rappi, balcão, Pix. Assim fica claro o que cada canal traz de verdade.</p>
+
+      <h2>4. Monitore o percentual que vai em taxa todo mês</h2>
+      <p>No fim de cada mês, calcule: total faturado nas plataformas vs. total recebido líquido. Se a diferença está acima de 25%, reavalie os planos contratados e os itens mais vendidos por delivery. Pode haver espaço para negociar ou trocar de plano.</p>
+
+      <h2>5. Compare plataformas e diversifique</h2>
+      <p>Não fique preso a um só app. Se iFood cobra 23% e 99Food cobra 9%, talvez valha ter presença nos dois e direcionar esforço de marketing para onde a margem é melhor. A promoção de isenção do Rappi, por exemplo, pode ser uma oportunidade de curto prazo.</p>
+
+      <h2>Como o Zelo PDV ajuda no controle das taxas de plataformas</h2>
+      <p>O Zelo PDV agora permite que você <strong>configure as plataformas de delivery diretamente no seu perfil</strong>, definindo a taxa de comissão de cada uma. Na hora de finalizar a venda, basta selecionar a plataforma e o sistema calcula automaticamente quanto vai para a taxa e quanto é seu valor líquido.</p>
+      <p>Isso significa que, ao registrar uma venda pelo iFood no caixa, você já vê na tela: "Taxa iFood 23% = −R$ 6,90 → Líquido: R$ 23,10". Sem surpresa, sem conta de cabeça, sem confusão no fechamento.</p>
+      <p>Para quem vende pelo balcão e também por aplicativos, essa visibilidade muda o jogo. Você deixa de descobrir a margem real só quando o extrato do app chega e passa a enxergar, no mesmo dia, quanto cada canal de venda está trazendo de verdade para o negócio.</p>
+      <p>O resultado é simples: mais controle sobre a operação e menos dinheiro perdido por falta de informação. Para quem já vende por plataforma — e principalmente para quem está pensando em começar — saber exatamente quanto fica é o primeiro passo para não trabalhar de graça.</p>
+    `
+  },
+  {
     slug: 'como-fechar-caixa-lanchonete',
     title: 'Como fechar o caixa de uma lanchonete do jeito certo',
     description:

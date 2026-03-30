@@ -319,6 +319,10 @@
             <div class="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 text-xs">✓</div>
             Controle de estoque automático
           </li>
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 text-xs">✓</div>
+            Vendas iFood/Rappi e outras plataformas de delivery com taxa configurável
+          </li>
         </ul>
       </div>
       <div class="relative group">

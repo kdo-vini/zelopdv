@@ -58,7 +58,8 @@ export const segmentPages = {
     highlights: [
       'Caixa simples para balcão e retirada',
       'Fiado organizado sem caderno',
-      'Lucro real com despesas lançadas'
+      'Lucro real com despesas lançadas',
+      'Vendas por iFood, Rappi e outras plataformas de delivery com taxa configurável'
     ],
     problemTitle: 'Quando a lanchonete vende, mas o caixa continua confuso',
     problemParagraphs: [
@@ -107,6 +108,12 @@ export const segmentPages = {
         title: 'Lucro real no fim do dia',
         description:
           'Lance despesas, acompanhe entradas e enxergue o resultado da operação com mais clareza. Em vez de olhar só para o faturamento, você passa a entender o que realmente sobrou.'
+      },
+      {
+        icon: '📲',
+        title: 'Vendas de plataformas com taxa embutida',
+        description:
+          'Registre vendas do iFood, Rappi e outros apps direto no caixa, com a taxa da plataforma já configurada. Assim você sabe na hora quanto recebeu de verdade, sem surpresa no extrato.'
       }
     ],
     howTitle: 'Como funciona na rotina da sua lanchonete',
@@ -179,7 +186,8 @@ export const segmentPages = {
     highlights: [
       'Combos e adicionais mais organizados',
       'Caixa mais ágil em noites de pico',
-      'Lucro sem planilha no pós-expediente'
+      'Lucro sem planilha no pós-expediente',
+      'Taxa de iFood e Rappi calculada na hora'
     ],
     problemTitle: 'A hamburgueria cresce rápido, e a operação complica junto',
     problemParagraphs: [
@@ -225,9 +233,9 @@ export const segmentPages = {
       },
       {
         icon: '📊',
-        title: 'Lucro e despesas no mesmo lugar',
+        title: 'Lucro, despesas e taxas de plataformas',
         description:
-          'Em vez de fechar o dia com achismo, você registra despesas e consegue enxergar melhor o que realmente sobrou depois da correria da noite.'
+          'Em vez de fechar o dia com achismo, registre despesas e vendas de aplicativos com a taxa já embutida. Assim você enxerga quanto realmente sobrou, mesmo nas vendas por iFood ou Rappi.'
       }
     ],
     howTitle: 'Como o Zelo entra na rotina da hamburgueria',
@@ -300,7 +308,8 @@ export const segmentPages = {
     highlights: [
       'Pedidos próprios sem taxa de aplicativo',
       'Caixa e despesas no mesmo lugar',
-      'Controle simples para operação enxuta'
+      'Controle simples para operação enxuta',
+      'Vendas via iFood/Rappi com taxa configurável'
     ],
     problemTitle: 'Quando o pedido entra por todo lado, o financeiro some',
     problemParagraphs: [
@@ -349,6 +358,12 @@ export const segmentPages = {
         title: 'Funciona de onde a operação acontece',
         description:
           'Você pode usar no notebook do caixa ou direto no celular, o que é ótimo para negócio enxuto que não quer montar uma estrutura cara só para começar.'
+      },
+      {
+        icon: '🧮',
+        title: 'Taxa de plataformas já no caixa',
+        description:
+          'Se você também vende por iFood, Rappi ou outro app, pode registrar essas vendas com a taxa da plataforma configurada. O sistema calcula quanto entra de verdade, sem surpresa no fechamento.'
       }
     ],
     howTitle: 'Como o Zelo ajuda o delivery próprio no dia a dia',
