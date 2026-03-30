@@ -118,6 +118,7 @@
   let valorDescontoVenda = 0;
   let descontoTipoVenda = null; // 'valor' | 'percentual' | null
   let totalFinalVenda = 0;
+  let valorPlataformaVenda = null;
   async function carregarPessoasFiado(){
     if (pessoasFiado.length) return;
     try {
@@ -751,13 +752,13 @@
    * Recebe os dados do modal e executa a persistência da venda.
    */
   async function handleVendaConfirmada(event) {
-    const { 
-      formaPagamento: forma, 
-      valorRecebido: valRec, 
+    const {
+      formaPagamento: forma,
+      valorRecebido: valRec,
       valorTroco,
-      idCliente, 
-      pagamentos: pags, 
-      trocoMulti: tMulti, 
+      idCliente,
+      pagamentos: pags,
+      trocoMulti: tMulti,
       cashRecebidoMulti,
       imprimirRecibo: printRecibo,
       printWin,
@@ -765,7 +766,8 @@
       valorDesconto,
       descontoTipo,
       totalOriginal,
-      totalFinal
+      totalFinal,
+      valorPlataforma,
     } = event.detail;
     
     // Atualiza estados locais que serão usados pela função confirmarVenda
@@ -781,6 +783,7 @@
     valorDescontoVenda = valorDesconto || 0;
     descontoTipoVenda = descontoTipo || null;
     totalFinalVenda = totalFinal || Number(totalComanda);
+    valorPlataformaVenda = valorPlataforma ?? null;
     
     // Ativa estado de salvando no modal via referência
     modalPagamentoRef?.setSalvando?.(true);
@@ -954,7 +957,7 @@ window.addEventListener('message', function(e){
       }
 
       const dadosVenda = {
-        valor_total: totalFinalVenda || Number(totalComanda),
+        valor_total: valorPlataformaVenda ?? totalFinalVenda ?? Number(totalComanda),
         forma_pagamento: insertForma,
         valor_recebido: insertValorRecebido,
         valor_troco: insertValorTroco,
