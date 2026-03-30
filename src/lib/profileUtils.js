@@ -5,11 +5,11 @@ const VALID_WIDTHS = ['58mm', '80mm'];
 
 // Preset platforms with default tax rates (%)
 export const PLATAFORMAS_PRESET = [
-  { id: 'ifood',    nome: 'iFood',    taxa_pct: 28, icone: '🟠' },
-  { id: 'rappi',    nome: 'Rappi',    taxa_pct: 25, icone: '🟣' },
-  { id: '99food',   nome: '99Food',   taxa_pct: 20, icone: '🔴' },
-  { id: 'aiqfome',  nome: 'Aiqfome',  taxa_pct: 18, icone: '🟡' },
-  { id: 'ubereats', nome: 'UberEats', taxa_pct: 30, icone: '🟢' },
+  { id: 'ifood',   nome: 'iFood',   taxa_pct: 28, icone: '🟠' },
+  { id: 'rappi',   nome: 'Rappi',   taxa_pct: 25, icone: '🟣' },
+  { id: '99food',  nome: '99Food',  taxa_pct: 20, icone: '🔴' },
+  { id: 'aiqfome', nome: 'Aiqfome', taxa_pct: 18, icone: '🟡' },
+  { id: 'keeta',   nome: 'Keeta',   taxa_pct: 25, icone: '🔵' },
 ];
 
 export function normalizeLarguraBobina(value) {
