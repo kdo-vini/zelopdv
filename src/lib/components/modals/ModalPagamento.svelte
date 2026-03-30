@@ -617,7 +617,7 @@ window.addEventListener('message', function(e){
             {#if salvandoVenda}
               Salvando…
             {:else}
-              ✓ Confirmar R$ {Number(totalFinal).toFixed(2)}
+              ✓ Confirmar R$ {Number(plataformaSelecionada && valorPlataforma > 0 ? valorPlataforma : totalFinal).toFixed(2)}
             {/if}
           </button>
         </div>
