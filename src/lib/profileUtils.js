@@ -3,6 +3,15 @@
 // Canonicalize paper width: accept '58mm', '58 mm', '80mm', '80 mm'
 const VALID_WIDTHS = ['58mm', '80mm'];
 
+// Preset platforms with default tax rates (%)
+export const PLATAFORMAS_PRESET = [
+  { id: 'ifood',    nome: 'iFood',    taxa_pct: 28, icone: '🟠' },
+  { id: 'rappi',    nome: 'Rappi',    taxa_pct: 25, icone: '🟣' },
+  { id: '99food',   nome: '99Food',   taxa_pct: 20, icone: '🔴' },
+  { id: 'aiqfome',  nome: 'Aiqfome',  taxa_pct: 18, icone: '🟡' },
+  { id: 'ubereats', nome: 'UberEats', taxa_pct: 30, icone: '🟢' },
+];
+
 export function normalizeLarguraBobina(value) {
   const v = (value ?? '').toString().trim().replace(/\s+/g, '').toLowerCase();
   if (v === '58mm' || v === '58') return '58mm';
@@ -30,7 +39,8 @@ export function buildPayload({
   rodape_recibo,
   largura_bobina,
   logo_url,
-  pendingLogoUrl
+  pendingLogoUrl,
+  plataformas_pagamento
 }) {
   const largura = normalizeLarguraBobina(largura_bobina);
   return {
@@ -44,6 +54,7 @@ export function buildPayload({
     rodape_recibo: (rodape_recibo || 'Obrigado pela preferência!').trim() || 'Obrigado pela preferência!',
     largura_bobina: VALID_WIDTHS.includes(largura) ? largura : '80mm',
     logo_url: pendingLogoUrl || logo_url || null,
+    plataformas_pagamento: plataformas_pagamento ?? [],
     updated_at: new Date().toISOString()
   };
 }

@@ -11,7 +11,14 @@
       "Bash(xargs grep:*)",
       "Bash(git:*)",
       "Bash(cat:*)",
-      "Skill(commit-commands:commit)"
+      "Skill(commit-commands:commit)",
+      "mcp__claude_ai_Supabase__get_advisors",
+      "mcp__claude_ai_Vercel__list_projects",
+      "mcp__claude_ai_Vercel__list_teams",
+      "mcp__claude_ai_Vercel__get_project",
+      "Bash(find /c/Users/Vinicius/Desktop/Code/zeloPDV-Prod -type f -name *migration* -o -name *schema* -o -name supabase.json)",
+      "Bash(grep -r \"interface.*venda\\\\|type.*venda\" /c/Users/Vinicius/Desktop/Code/zeloPDV-Prod/src --include=*.ts --include=*.d.ts)",
+      "Bash(node -e \":*)"
     ]
   }
 }

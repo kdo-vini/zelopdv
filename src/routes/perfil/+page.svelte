@@ -3,7 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { translateSubscriptionStatus } from '$lib/errorUtils';
   import { page } from '$app/stores';
-  import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina } from '$lib/profileUtils';
+  import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina, PLATAFORMAS_PRESET } from '$lib/profileUtils';
   import { addToast } from '$lib/stores/ui';
   export let params;
 
@@ -92,6 +92,9 @@
   let notifEstoqueBaixo = false;
   let notifFechamentoCaixa = false;
 
+  // Plataformas de pagamento
+  let plataformas_pagamento = PLATAFORMAS_PRESET.map(p => ({ ...p, ativo: false }));
+
   let canSave = false;
   $: canSave = requiredOkUtil({ nome_exibicao, documento, contato, largura_bobina });
 
@@ -157,6 +160,17 @@
       logo_url          = data.logo_url ?? '';
       rodape_recibo     = data.rodape_recibo ?? 'Obrigado pela preferência!';
       adminPin          = data.pin_admin || '';
+
+      // Load plataformas: merge saved data with presets (to handle new presets)
+      const saved = data.plataformas_pagamento ?? [];
+      plataformas_pagamento = PLATAFORMAS_PRESET.map(preset => {
+        const s = saved.find(x => x.id === preset.id);
+        return s ? { ...preset, ...s } : { ...preset, ativo: false };
+      });
+      // Add any custom platforms from saved that aren't in preset
+      const presetIds = PLATAFORMAS_PRESET.map(p => p.id);
+      const customSaved = saved.filter(x => !presetIds.includes(x.id));
+      plataformas_pagamento = [...plataformas_pagamento, ...customSaved];
     }
 
     const urlParams = new URLSearchParams($page.url.search);
@@ -230,6 +244,7 @@
         largura_bobina,
         logo_url: finalUrl,
         pendingLogoUrl: null,
+        plataformas_pagamento,
       });
 
       const { error } = await supabase.from('empresa_perfil').upsert(payload, { onConflict: 'user_id' });
@@ -628,6 +643,59 @@
                 <option value="58mm">Térmica 58 mm</option>
               </select>
             </label>
+          </section>
+
+          <!-- Plataformas de Venda -->
+          <section class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+            <div>
+              <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Plataformas de Venda</h2>
+              <p class="text-xs mt-1" style="color: var(--text-muted);">Ative as plataformas que você usa e defina a taxa (%). Elas aparecerão como forma de pagamento na venda.</p>
+            </div>
+
+            {#each plataformas_pagamento as plat, i}
+              <div class="flex items-center justify-between gap-4 flex-wrap" style="{i > 0 ? 'border-top: 1px solid var(--border-subtle); padding-top: 1rem;' : ''}">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                  <span class="text-xl flex-shrink-0">{plat.icone}</span>
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium truncate" style="color: var(--text-main);">{plat.nome}</p>
+                    {#if plat.ativo}
+                      <p class="text-xs" style="color: var(--text-muted);">Taxa: {plat.taxa_pct}%</p>
+                    {/if}
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3 flex-shrink-0">
+                  {#if plat.ativo}
+                    <div class="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        class="w-20 rounded-md px-2 py-1.5 text-sm text-center"
+                        style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                        bind:value={plataformas_pagamento[i].taxa_pct}
+                        on:input={markDirty}
+                      />
+                      <span class="text-xs font-medium" style="color: var(--text-muted);">%</span>
+                    </div>
+                  {/if}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={plat.ativo}
+                    on:click={() => { plataformas_pagamento[i].ativo = !plataformas_pagamento[i].ativo; plataformas_pagamento = plataformas_pagamento; markDirty(); }}
+                    class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
+                    style="background: {plat.ativo ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {plat.ativo ? 'var(--primary)' : 'var(--border-subtle)'};"
+                  >
+                    <span
+                      class="inline-block h-5 w-5 transform rounded-full shadow transition duration-200"
+                      style="background: var(--text-main); transform: translateX({plat.ativo ? '20px' : '0px'});"
+                    ></span>
+                  </button>
+                </div>
+              </div>
+            {/each}
           </section>
 
           <!-- Notificações -->

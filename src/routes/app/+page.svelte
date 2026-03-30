@@ -63,6 +63,11 @@
   // [NEW] Dados da Empresa
   let dadosEmpresa = null;
 
+  // Plataformas de pagamento ativas (derivado de dadosEmpresa)
+  $: plataformasAtivas = (dadosEmpresa?.plataformas_pagamento ?? [])
+    .filter(p => p.ativo)
+    .map(p => ({ id: p.id, nome: p.nome, icone: p.icone || '📦', taxa_pct: Number(p.taxa_pct || 0) }));
+
   // Atalho: '/' foca a busca quando o modal de pagamento não está aberto e o usuário não está digitando em um campo
   function onKeyGlobal(e) {
     try {
@@ -1678,6 +1683,7 @@ window.addEventListener('message', function(e){
   {comanda}
   {idCaixaAberto}
   {produtos}
+  {plataformasAtivas}
   on:confirmar={handleVendaConfirmada}
   on:close={() => {
     modalPagamentoAberto = false;
