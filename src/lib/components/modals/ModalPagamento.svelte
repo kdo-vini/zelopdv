@@ -50,6 +50,9 @@
   let descontoAtivo = false;
   let descontoTipo = 'valor';
   let descontoInput = 0;
+
+  // Valor real cobrado na plataforma (digitado pelo usuário)
+  let valorPlataforma = 0;
   
   // Derivados - Desconto
   $: valorDesconto = (() => {
@@ -63,8 +66,9 @@
   
   // Plataforma selecionada (se for forma de pagamento de plataforma)
   $: plataformaSelecionada = plataformasAtivas.find(p => p.id === formaPagamento) ?? null;
-  $: taxaPlataformaValor = plataformaSelecionada ? (totalFinal * plataformaSelecionada.taxa_pct / 100) : 0;
-  $: liquidoPlataforma = totalFinal - taxaPlataformaValor;
+  $: taxaPlataformaValor = (plataformaSelecionada && valorPlataforma > 0)
+      ? (valorPlataforma * plataformaSelecionada.taxa_pct / 100) : 0;
+  $: liquidoPlataforma = valorPlataforma > 0 ? valorPlataforma - taxaPlataformaValor : 0;
   
   // Derivados - Pagamentos
   $: somaPagamentos = pagamentos.reduce((acc, p) => acc + Number(p?.valor || 0), 0);
@@ -137,6 +141,7 @@
 
   function selecionarForma(id) {
     formaPagamento = id;
+    valorPlataforma = 0;
     if (id === 'fiado') carregarPessoasFiado();
   }
 
@@ -164,6 +169,10 @@
         }
         if (formaPagamento === 'fiado' && !pessoaFiadoId) {
           erroPagamento = 'Selecione a pessoa para lançar o fiado.';
+          return;
+        }
+        if (plataformaSelecionada && (!valorPlataforma || valorPlataforma <= 0)) {
+          erroPagamento = `Informe o valor cobrado no ${plataformaSelecionada.nome}.`;
           return;
         }
       } else {
@@ -266,7 +275,8 @@ window.addEventListener('message', function(e){
         valorDesconto,
         descontoTipo: descontoAtivo ? descontoTipo : null,
         totalOriginal: Number(totalComanda),
-        totalFinal
+        totalFinal,
+        valorLiquidoPlataforma: (plataformaSelecionada && liquidoPlataforma > 0) ? Number(liquidoPlataforma) : null,
       });
       
     } catch (err) {
@@ -319,8 +329,9 @@ window.addEventListener('message', function(e){
     descontoAtivo = false;
     descontoTipo = 'valor';
     descontoInput = 0;
+    valorPlataforma = 0;
   }
-  
+
   export function setSalvando(val) {
     salvandoVenda = val;
   }
@@ -345,6 +356,7 @@ window.addEventListener('message', function(e){
     descontoAtivo = false;
     descontoTipo = 'valor';
     descontoInput = 0;
+    valorPlataforma = 0;
   }
 </script>
 
@@ -480,17 +492,31 @@ window.addEventListener('message', function(e){
             </div>
           {/if}
 
-          <!-- Contexto: Plataforma → taxa -->
+          <!-- Contexto: Plataforma → valor cobrado + taxa -->
           {#if plataformaSelecionada}
             <div class="context-panel platform-tax-panel">
-              <div class="tax-row">
-                <span class="tax-label">Taxa {plataformaSelecionada.nome} ({plataformaSelecionada.taxa_pct}%)</span>
-                <span class="tax-value">−R$ {Number(taxaPlataformaValor).toFixed(2)}</span>
-              </div>
-              <div class="tax-row tax-row-net">
-                <span class="tax-label">Valor líquido</span>
-                <strong class="tax-net-value">R$ {Number(liquidoPlataforma).toFixed(2)}</strong>
-              </div>
+              <label class="context-label" for="valor-plataforma">
+                Valor cobrado no {plataformaSelecionada.nome} (R$)
+              </label>
+              <input
+                id="valor-plataforma"
+                type="number"
+                min="0.01"
+                step="0.01"
+                class="context-input"
+                bind:value={valorPlataforma}
+                placeholder="0,00"
+              />
+              {#if valorPlataforma > 0}
+                <div class="tax-row">
+                  <span class="tax-label">Taxa {plataformaSelecionada.nome} ({plataformaSelecionada.taxa_pct}%)</span>
+                  <span class="tax-value">−R$ {Number(taxaPlataformaValor).toFixed(2)}</span>
+                </div>
+                <div class="tax-row tax-row-net">
+                  <span class="tax-label">Líquido estimado</span>
+                  <strong class="tax-net-value">R$ {Number(liquidoPlataforma).toFixed(2)}</strong>
+                </div>
+              {/if}
             </div>
           {/if}
 
