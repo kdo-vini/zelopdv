@@ -767,7 +767,7 @@
       descontoTipo,
       totalOriginal,
       totalFinal,
-      valorPlataforma,
+      valorLiquidoPlataforma,
     } = event.detail;
     
     // Atualiza estados locais que serão usados pela função confirmarVenda
@@ -783,7 +783,7 @@
     valorDescontoVenda = valorDesconto || 0;
     descontoTipoVenda = descontoTipo || null;
     totalFinalVenda = totalFinal || Number(totalComanda);
-    valorPlataformaVenda = valorPlataforma ?? null;
+    valorPlataformaVenda = valorLiquidoPlataforma ?? null;
     
     // Ativa estado de salvando no modal via referência
     modalPagamentoRef?.setSalvando?.(true);

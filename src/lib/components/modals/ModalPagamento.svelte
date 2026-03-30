@@ -276,7 +276,7 @@ window.addEventListener('message', function(e){
         descontoTipo: descontoAtivo ? descontoTipo : null,
         totalOriginal: Number(totalComanda),
         totalFinal,
-        valorPlataforma: (plataformaSelecionada && valorPlataforma > 0) ? Number(valorPlataforma) : null,
+        valorLiquidoPlataforma: (plataformaSelecionada && liquidoPlataforma > 0) ? Number(liquidoPlataforma) : null,
       });
       
     } catch (err) {
