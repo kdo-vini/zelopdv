@@ -209,32 +209,6 @@
         return;
       }
       
-      // Pre-abre janela de impressão
-      let printWin = null;
-      if (imprimirRecibo) {
-        try {
-          printWin = window.open('', '_blank', 'width=320,height=600');
-          if (printWin) {
-            printWin.document.open();
-            printWin.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Recibo</title></head><body style="font-family:sans-serif;padding:12px;font-size:12px;">Preparando recibo...<script>
-window.addEventListener('message', function(e){
-  try {
-    if (e && e.data && e.data.type === 'RECIBO_HTML' && typeof e.data.html === 'string') {
-      document.open();
-      document.write(e.data.html);
-      document.close();
-    }
-  } catch(err){}
-});
-<\/script></body></html>`);
-            printWin.document.close();
-          }
-        } catch (e) {
-          addToast('Popup de impressão bloqueado. Verifique as permissões do navegador.', 'warning');
-          printWin = null;
-        }
-      }
-      
       // Cálculos para múltiplos pagamentos
       let insertForma = formaPagamento;
       let insertValorRecebido = formaPagamento === 'dinheiro' ? Number(valorRecebido) : null;
@@ -270,7 +244,6 @@ window.addEventListener('message', function(e){
         trocoMulti,
         cashRecebidoMulti,
         imprimirRecibo,
-        printWin,
         pessoasFiado,
         valorDesconto,
         descontoTipo: descontoAtivo ? descontoTipo : null,
