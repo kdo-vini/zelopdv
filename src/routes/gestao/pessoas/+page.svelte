@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { addToast, confirmAction } from '$lib/stores/ui';
+  import { maskPhone } from '$lib/masks';
   export let params;
 
   let pessoas = [];
@@ -18,18 +19,14 @@
     loading = false;
   }
 
-  function edit(p) { form = { id: p.id, nome: p.nome, tipo: p.tipo, contato: p.contato || '' }; }
+  function edit(p) { form = { id: p.id, nome: p.nome, tipo: p.tipo, contato: maskPhone(p.contato || '') }; }
   function clear() { form = { id: null, nome: '', tipo: 'cliente', contato: '' }; }
-
-  function sanitizeContato(v) {
-    return (v || '').replace(/\D/g, '').slice(0, 11);
-  }
 
   async function save() {
     errorMsg = '';
     if (!form.nome.trim()) { errorMsg = 'Informe o nome.'; return; }
-    form.contato = sanitizeContato(form.contato);
-    if (form.contato && form.contato.length > 11) { errorMsg = 'Contato deve ter no máximo 11 dígitos.'; return; }
+    const digits = (form.contato || '').replace(/\D/g, '');
+    if (digits && digits.length > 11) { errorMsg = 'Contato deve ter no máximo 11 dígitos.'; return; }
     if (form.id) {
       const { error } = await supabase.from('pessoas').update({ nome: form.nome, tipo: form.tipo, contato: form.contato }).eq('id', form.id);
       if (error) { errorMsg = error.message; return; }
@@ -104,11 +101,9 @@
           <input
             class="field-input"
             bind:value={form.contato}
-            placeholder="xx xxxxx xxxx"
+            placeholder="(00) 00000-0000"
             inputmode="numeric"
-            pattern="\d*"
-            maxlength="11"
-            on:input={(e) => form.contato = sanitizeContato(e.target.value)}
+            on:input={(e) => form.contato = maskPhone(e.target.value)}
           />
         </label>
       </div>
@@ -161,7 +156,7 @@
                       {p.tipo === 'funcionario' ? 'Func.' : 'Cliente'}
                     </span>
                   </td>
-                  <td class="px-4 py-3 text-slate-400 tabular-nums">{p.contato || '—'}</td>
+                  <td class="px-4 py-3 text-slate-400 tabular-nums">{maskPhone(p.contato) || '—'}</td>
                   <td class="px-4 py-3 text-right tabular-nums font-medium {Number(p.saldo_fiado || 0) > 0 ? 'text-amber-400' : 'text-slate-500'}">
                     R$ {Number(p.saldo_fiado || 0).toFixed(2)}
                   </td>

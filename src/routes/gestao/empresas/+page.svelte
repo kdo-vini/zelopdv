@@ -3,6 +3,7 @@
   export let params;
   import { supabase } from '$lib/supabaseClient';
   import { confirmAction } from '$lib/stores/ui';
+  import { maskCNPJ } from '$lib/masks';
 
   let empresas = [];
   let membrosPorEmpresa = new Map(); // id_empresa -> array de { id_usuario, role }
@@ -150,7 +151,11 @@
     </div>
     <div>
       <label for="empresa-cnpj" class="block text-sm mb-1">CNPJ (opcional)</label>
-      <input id="empresa-cnpj" class="input-form" bind:value={formEmpresa.cnpj} />
+      <input id="empresa-cnpj" class="input-form" bind:value={formEmpresa.cnpj}
+        inputmode="numeric"
+        placeholder="00.000.000/0000-00"
+        on:input={(e) => formEmpresa.cnpj = maskCNPJ(e.target.value)}
+      />
     </div>
     <div class="md:col-span-2">
       <button class="btn-primary">Criar Empresa</button>
@@ -172,7 +177,7 @@
             <div>
               <div class="font-medium">{emp.nome}</div>
               {#if emp.cnpj}
-                <div class="text-xs text-slate-500">CNPJ: {emp.cnpj}</div>
+                <div class="text-xs text-slate-500">CNPJ: {maskCNPJ(emp.cnpj)}</div>
               {/if}
             </div>
             <div class="text-xs rounded px-2 py-1 border bg-white dark:bg-slate-800">Minha função: {minhaMembership.get(emp.id)}</div>

@@ -4,6 +4,7 @@
   import { translateSubscriptionStatus } from '$lib/errorUtils';
   import { page } from '$app/stores';
   import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina, PLATAFORMAS_PRESET } from '$lib/profileUtils';
+  import { maskPhone, maskDocumento } from '$lib/masks';
   import { addToast } from '$lib/stores/ui';
   export let params;
 
@@ -152,8 +153,8 @@
     } else if (data) {
       nome_exibicao     = data.nome_exibicao ?? '';
       razao_social      = data.razao_social ?? '';
-      documento         = data.documento ?? '';
-      contato           = data.contato ?? '';
+      documento         = maskDocumento(data.documento ?? '');
+      contato           = maskPhone(data.contato ?? '');
       inscricao_estadual = data.inscricao_estadual ?? '';
       endereco          = data.endereco ?? '';
       largura_bobina    = normalizeLarguraBobina(data.largura_bobina ?? '80mm');
@@ -480,7 +481,10 @@
                 <input
                   class="w-full rounded-md px-3 py-2 text-sm"
                   style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                  bind:value={documento} on:input={markDirty}
+                  bind:value={documento}
+                  inputmode="numeric"
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                  on:input={(e) => { documento = maskDocumento(e.target.value); markDirty(); }}
                 />
               </label>
               <label class="block">
@@ -504,8 +508,10 @@
               <input
                 class="w-full rounded-md px-3 py-2 text-sm"
                 style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                bind:value={contato} on:input={markDirty}
+                bind:value={contato}
+                inputmode="numeric"
                 placeholder="(00) 00000-0000"
+                on:input={(e) => { contato = maskPhone(e.target.value); markDirty(); }}
               />
             </label>
 
