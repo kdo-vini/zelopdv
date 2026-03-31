@@ -8,6 +8,8 @@
 
   let loading = true;
   let errorMsg = '';
+  let vendasItens = [];
+  let vendaParaDeletarId = null;
   // [NEW] Added 'vendasPorHora' to dash state
   let dash = {
     vendas:{ totalHoje:0, countHoje:0, ticketMedioHoje:null, ticketMedioOntem:null, ticketMedioVarPct:null },
@@ -44,7 +46,19 @@
           .eq('id_caixa', caixaAtual.id)
           .order('created_at', { ascending: false });
         vendasCaixa = vs||[];
-        
+
+        // Busca itens das vendas para hover
+        const vendaIds = (vs||[]).map(v => v.id);
+        if (vendaIds.length) {
+          const { data: itens } = await supabase
+            .from('vendas_itens')
+            .select('id_venda, quantidade, nome_produto_na_venda')
+            .in('id_venda', vendaIds);
+          vendasItens = itens || [];
+        } else {
+          vendasItens = [];
+        }
+
         // Busca movimentações
         const { data: movs } = await supabase
           .from('caixa_movimentacoes')
@@ -134,6 +148,22 @@
   onMount(async () => { await waitAuthReady(); await loadDash(); });
 
   const fmt = (v)=> `R$ ${Number(v||0).toFixed(2)}`;
+
+  function solicitarDelecaoVenda(id) { vendaParaDeletarId = id; }
+  function cancelarDelecaoVenda() { vendaParaDeletarId = null; }
+
+  async function confirmarDelecaoVenda() {
+    if (!vendaParaDeletarId) return;
+    const id = vendaParaDeletarId;
+    vendaParaDeletarId = null;
+    const { error } = await supabase.from('vendas').delete().eq('id', id);
+    if (error) {
+      alert('Erro ao excluir: ' + error.message);
+    } else {
+      vendasItens = vendasItens.filter(i => i.id_venda !== id);
+      dash = { ...dash, atividade: dash.atividade.filter(ev => !(ev.tipo === 'venda' && ev.id === id)) };
+    }
+  }
 </script>
 
 <section class="wrap">
@@ -212,12 +242,32 @@
          <div class="kptitle text-base font-semibold text-gray-800 dark:text-gray-200">Atividade Recente</div>
       </div>
       <ul class="timeline">{#each dash.atividade as ev}
+        {@const itensVenda = ev.tipo === 'venda' ? vendasItens.filter(i => i.id_venda === ev.id) : []}
         <li>
-          <div class="flex items-center justify-between w-full">
-             <div class="flex items-center gap-2">
+          <div class="flex items-center justify-between w-full gap-2">
+             <div class="flex items-center gap-2 min-w-0">
                 <span class="tag {ev.tipo}">{ev.tipo === 'sangria' ? 'Sangria' : (ev.tipo === 'suprimento' ? 'Suprimento' : 'Venda')}</span>
+                {#if ev.tipo === 'venda' && itensVenda.length}
+                  <span class="relative group cursor-default">
+                    <span class="muted text-[10px] underline decoration-dotted">ver itens</span>
+                    <div class="absolute left-0 top-full mt-1 z-50 hidden group-hover:block w-52 rounded-lg shadow-lg border border-slate-600 bg-slate-800 text-slate-100 text-xs p-3 space-y-1" style="overflow:visible;">
+                      <ul class="space-y-0.5">
+                        {#each itensVenda as it}
+                          <li>{it.quantidade}× {it.nome_produto_na_venda}</li>
+                        {/each}
+                      </ul>
+                    </div>
+                  </span>
+                {/if}
              </div>
-             <span class="font-bold text-gray-700 dark:text-gray-300">{ev.tipo !== 'venda' ? (ev.tipo === 'sangria' ? '-' : '+') : ''}{fmt(ev.valor)}</span>
+             <div class="flex items-center gap-1 ml-auto">
+               <span class="font-bold text-gray-700 dark:text-gray-300">{ev.tipo !== 'venda' ? (ev.tipo === 'sangria' ? '-' : '+') : ''}{fmt(ev.valor)}</span>
+               {#if ev.tipo === 'venda'}
+                 <button class="btn-icon danger" title="Excluir venda" on:click={() => solicitarDelecaoVenda(ev.id)}>
+                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                 </button>
+               {/if}
+             </div>
           </div>
           <div class="flex justify-between w-full mt-1">
              <span class="muted">{new Date(ev.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
@@ -226,6 +276,20 @@
         </li>
       {/each}</ul>
     </div>
+
+    <!-- Modal: Confirmar Exclusão de Venda -->
+    {#if vendaParaDeletarId}
+      <div class="modal-backdrop" on:click={cancelarDelecaoVenda}>
+        <div class="modal-box" on:click|stopPropagation>
+          <h3 class="modal-title">Excluir venda?</h3>
+          <p class="modal-text">Esta ação remove a venda do banco de dados e dos relatórios permanentemente. Use apenas para remover vendas de teste.</p>
+          <div class="modal-actions">
+            <button class="btn ghost" on:click={cancelarDelecaoVenda}>Cancelar</button>
+            <button class="btn-danger" on:click={confirmarDelecaoVenda}>Sim, excluir</button>
+          </div>
+        </div>
+      </div>
+    {/if}
 
     <!-- Quick Actions (Bottom) -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
@@ -258,6 +322,18 @@
   .tag.venda{background:#dcfce7;color:#166534}
   .tag.sangria{background:#fee2e2;color:#991b1b}
   .tag.suprimento{background:#f3f4f6;color:#374151}
+
+  .btn-icon{background:transparent;border:none;padding:4px;cursor:pointer;color:var(--text-muted);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
+  .btn-icon:hover{background:var(--border-subtle)}
+  .btn-icon.danger:hover{background:rgba(239,68,68,0.15);color:#ef4444}
+
+  .modal-backdrop{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:1000}
+  .modal-box{background:var(--bg-card);border:1px solid var(--border-card);border-radius:12px;padding:24px;max-width:380px;width:90%}
+  .modal-title{margin:0 0 10px;font-size:17px;font-weight:700;color:var(--text-main)}
+  .modal-text{margin:0 0 20px;font-size:13px;color:var(--text-label);line-height:1.5}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px}
+  .btn-danger{padding:8px 18px;border-radius:8px;background:#ef4444;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;transition:background 0.15s}
+  .btn-danger:hover{background:#dc2626}
 
   .btn{display:inline-flex;align-items:center;justify-content:center;height:44px;border-radius:10px;border:1px solid var(--border-card);background:var(--bg-input);color:var(--text-label);text-decoration:none;font-size:14px;font-weight:500;transition:all 0.2s}
   .btn:hover{background:var(--bg-panel);transform:translateY(-1px)}
