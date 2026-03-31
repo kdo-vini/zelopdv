@@ -4,7 +4,8 @@
 -->
 <script>
   import { createEventDispatcher } from 'svelte';
-  
+  import { maskPhone, maskDocumento } from '$lib/masks';
+
   const dispatch = createEventDispatcher();
   
   export let open = false;
@@ -19,7 +20,7 @@
     let text = `*${(empresa?.nome_exibicao || 'COMPROVANTE DE PEDIDO').toUpperCase()}*\n`;
     
     if (empresa?.documento) {
-        text += `CPF/CNPJ: ${empresa.documento}\n`;
+        text += `CPF/CNPJ: ${maskDocumento(empresa.documento)}\n`;
     }
     if (empresa?.endereco) {
         text += `${empresa.endereco}\n`;

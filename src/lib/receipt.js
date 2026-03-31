@@ -1,6 +1,8 @@
 // src/lib/receipt.js
 // Pure HTML builder for receipts. Safe to unit test.
 
+import { maskPhone, maskDocumento } from '$lib/masks.js';
+
 function escapeHtml(str) {
   if (str == null) return '';
   return String(str)
@@ -60,8 +62,8 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
 
   let metaLinhas = [];
   if (endereco) metaLinhas.push(escapeHtml(endereco));
-  if (contato) metaLinhas.push(escapeHtml(contato));
-  if (documento) metaLinhas.push(`CNPJ/CPF: ${escapeHtml(documento)}`);
+  if (contato) metaLinhas.push(escapeHtml(maskPhone(contato)));
+  if (documento) metaLinhas.push(`CNPJ/CPF: ${escapeHtml(maskDocumento(documento))}`);
   const metaHtml = metaLinhas.length ? metaLinhas.join(' • ') : '';
 
   // debug overlay removed per request; options.debug is ignored
@@ -156,7 +158,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
 
     <div class="rodape">
       Obrigado pela preferência!<br/>
-      ${contato ? escapeHtml(contato) : escapeHtml(nomeEmpresa)}
+      ${contato ? escapeHtml(maskPhone(contato)) : escapeHtml(nomeEmpresa)}
     </div>
 
   </div>
