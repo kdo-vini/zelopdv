@@ -761,7 +761,6 @@
       trocoMulti: tMulti,
       cashRecebidoMulti,
       imprimirRecibo: printRecibo,
-      printWin,
       pessoasFiado: pessoasList,
       valorDesconto,
       descontoTipo,
@@ -850,32 +849,6 @@
       }
 
       salvandoVenda = true;
-
-      // Se for imprimir, abra a janela imediatamente para não ser bloqueada por popup blockers
-      let printWin = null;
-      if (imprimirRecibo) {
-        try {
-          printWin = window.open('', '_blank', 'width=320,height=600');
-          if (printWin) {
-            printWin.document.open();
-            printWin.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Recibo</title></head><body style="font-family:sans-serif;padding:12px;font-size:12px;">Preparando recibo...<script>
-window.addEventListener('message', function(e){
-  try {
-    if (e && e.data && e.data.type === 'RECIBO_HTML' && typeof e.data.html === 'string') {
-      document.open();
-      document.write(e.data.html);
-      document.close();
-    }
-  } catch(err){ console.warn('[ReciboPlaceholder] replace via postMessage falhou:', (err && err.message) || err); }
-});
-<\/script></body></html>`);
-            printWin.document.close();
-          }
-        } catch (e) {
-          addToast('Popup de impressão bloqueado. Verifique as permissões do navegador.', 'warning');
-          printWin = null;
-        }
-      }
 
       // Usuário autenticado
       const { data: userData } = await supabase.auth.getUser();
@@ -1117,7 +1090,7 @@ window.addEventListener('message', function(e){
           itens: comanda.map(i => ({ ...i, preco_unitario_na_venda: i.preco })), 
           pagamentos: multiPag ? pagamentos : []
         };
-        setTimeout(() => imprimirReciboVenda(payloadRecibo, printWin), 60);
+        setTimeout(() => imprimirReciboVenda(payloadRecibo), 60);
       }
       
       if (isOffline) {
@@ -1157,11 +1130,45 @@ window.addEventListener('message', function(e){
   }
 
   /**
-   * Imprime recibo/nota estilo profissional (iFood-like)
-   * Busca dados do perfil (empresa_perfil) do usuário autenticado automaticamente
-   * Mostra logo, dados da empresa (somente os preenchidos), itens, totais e forma de pagamento
+   * Imprime HTML via iframe oculto — sem popup, funciona em PWA e navegadores com bloqueio de popup.
    */
-  async function imprimirReciboVenda({ idVenda, numeroVenda, formaPagamento, total, valorRecebido, troco, itens, pagamentos }, targetWin = null) {
+  function printViaIframe(html) {
+    return new Promise((resolve) => {
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden;';
+      document.body.appendChild(iframe);
+
+      const cleanup = () => {
+        setTimeout(() => {
+          try { document.body.removeChild(iframe); } catch {}
+          resolve();
+        }, 500);
+      };
+
+      try {
+        iframe.contentWindow.addEventListener('afterprint', cleanup);
+      } catch {}
+      setTimeout(cleanup, 15000); // fallback seguro
+
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(html);
+        doc.close();
+        // O próprio HTML chama window.print() no onload — funciona dentro do iframe
+      } catch (e) {
+        console.warn('[Recibo] iframe write falhou:', e?.message || e);
+        addToast('Não foi possível imprimir. Verifique as permissões do navegador.', 'error');
+        cleanup();
+      }
+    });
+  }
+
+  /**
+   * Imprime recibo/nota estilo profissional.
+   * Busca dados do perfil (empresa_perfil) do usuário autenticado automaticamente.
+   */
+  async function imprimirReciboVenda({ idVenda, numeroVenda, formaPagamento, total, valorRecebido, troco, itens, pagamentos }) {
   console.groupCollapsed('%c[Recibo] imprimirReciboVenda', 'color:#0a7');
     console.log('[Recibo] params:', { idVenda, formaPagamento, total, valorRecebido, troco, itensCount: itens?.length || 0, pagamentosCount: pagamentos?.length || 0 });
     let perfil = null;
@@ -1238,55 +1245,8 @@ window.addEventListener('message', function(e){
 
   const html = buildReceiptHTML({ estabelecimento, venda });
 
-    let w = targetWin;
-    if (!w || w.closed) {
-      w = window.open('', '_blank', `width=${larguraBobina === '58mm' ? '280' : '380'},height=700`);
-    }
-    if (!w) {
-      addToast('Não foi possível abrir janela de impressão.', 'error');
-      console.groupEnd();
-      return;
-    }
-    try {
-      // Tenta sobrescrever conteúdo existente (ex: placeholder "Preparando recibo...")
-      w.focus();
-      // 1) Envia via postMessage para o placeholder realizar a troca de forma confiável
-      try {
-        w.postMessage({ type: 'RECIBO_HTML', html }, window.location.origin);
-      } catch (pmErr) {
-        console.warn('[Recibo] postMessage falhou (seguirá com write/Blob):', pmErr?.message || pmErr);
-      }
-      try {
-        w.document.open();
-        w.document.write(html);
-        w.document.close();
-      } catch (writeErr) {
-        console.warn('[Recibo] write falhou, tentando via Blob URL:', writeErr?.message || writeErr);
-        const blob = new Blob([html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        w.location.replace(url);
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-      }
-      // 2) Verificação tardia: se ainda estiver com placeholder, força troca via Blob URL
-      setTimeout(() => {
-        try {
-          const stillPlaceholder = !!w && !w.closed && w.document && /Preparando\s+recibo/i.test(w.document.body?.innerText || '');
-          if (stillPlaceholder) {
-            console.warn('[Recibo] placeholder ainda presente; aplicando fallback Blob URL');
-            const blob2 = new Blob([html], { type: 'text/html' });
-            const url2 = URL.createObjectURL(blob2);
-            w.location.replace(url2);
-            setTimeout(() => URL.revokeObjectURL(url2), 5000);
-          }
-        } catch (chkErr) {
-          console.warn('[Recibo] verificação placeholder falhou:', chkErr?.message || chkErr);
-        }
-      }, 150);
-    } catch (e) {
-      addToast('Falha ao escrever recibo na janela.', 'error');
-    } finally {
-      console.groupEnd();
-    }
+    console.groupEnd();
+    await printViaIframe(html);
   }
 
   /**
@@ -1346,21 +1306,10 @@ window.addEventListener('message', function(e){
       <div style="font-size:14px;font-weight:700">${rotuloValor}: R$ ${Number(valor).toFixed(2)}</div>
       <div style="border-top:1px dashed #999;margin:8px 0"></div>
       <div style="text-align:center;color:#555;">Obrigado</div>
-      <script>window.onload=function(){setTimeout(()=>{try{window.print()}catch(e){}},100)}<\/script>
+      <script>window.onload=function(){setTimeout(()=>{try{window.print()}catch(e){}},120)}<\/script>
     </body></html>`;
 
-    let w = window.open('', '_blank', `width=${larguraBobina === '58mm' ? '280' : '380'},height=600`);
-    if (!w) return;
-    try {
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-    } catch (e) {
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      w.location.replace(url);
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-    }
+    await printViaIframe(html);
   }
 
 </script>
@@ -1719,6 +1668,21 @@ window.addEventListener('message', function(e){
   empresa={dadosEmpresa}
   on:close={finalizarFluxoSucesso}
   on:novaVenda={finalizarFluxoSucesso}
+  on:imprimir={() => {
+    if (!vendaConcluida) return;
+    imprimirReciboVenda({
+      idVenda: vendaConcluida.id,
+      numeroVenda: vendaConcluida.numero_venda,
+      formaPagamento: vendaConcluida.forma_pagamento,
+      total: vendaConcluida.total,
+      subtotal: vendaConcluida.subtotal,
+      desconto: vendaConcluida.desconto,
+      valorRecebido: vendaConcluida.valor_recebido,
+      troco: vendaConcluida.valor_troco,
+      itens: vendaConcluida.itens?.map(i => ({ ...i, preco_unitario_na_venda: i.preco })) || [],
+      pagamentos: vendaConcluida.pagamentos || []
+    });
+  }}
 />
 
 <!-- Estilos removidos: usamos classes globais definidas em src/app.css -->
