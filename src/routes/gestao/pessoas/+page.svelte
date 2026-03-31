@@ -100,10 +100,10 @@
           <span class="field-label">Contato</span>
           <input
             class="field-input"
-            bind:value={form.contato}
+            value={form.contato}
             placeholder="(00) 00000-0000"
             inputmode="numeric"
-            on:input={(e) => form.contato = maskPhone(e.target.value)}
+            on:input={(e) => { form.contato = maskPhone(e.target.value); e.target.value = form.contato; }}
           />
         </label>
       </div>

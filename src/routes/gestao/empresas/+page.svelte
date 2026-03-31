@@ -151,10 +151,11 @@
     </div>
     <div>
       <label for="empresa-cnpj" class="block text-sm mb-1">CNPJ (opcional)</label>
-      <input id="empresa-cnpj" class="input-form" bind:value={formEmpresa.cnpj}
+      <input id="empresa-cnpj" class="input-form"
+        value={formEmpresa.cnpj}
         inputmode="numeric"
         placeholder="00.000.000/0000-00"
-        on:input={(e) => formEmpresa.cnpj = maskCNPJ(e.target.value)}
+        on:input={(e) => { formEmpresa.cnpj = maskCNPJ(e.target.value); e.target.value = formEmpresa.cnpj; }}
       />
     </div>
     <div class="md:col-span-2">

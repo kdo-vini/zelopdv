@@ -481,10 +481,10 @@
                 <input
                   class="w-full rounded-md px-3 py-2 text-sm"
                   style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                  bind:value={documento}
+                  value={documento}
                   inputmode="numeric"
                   placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                  on:input={(e) => { documento = maskDocumento(e.target.value); markDirty(); }}
+                  on:input={(e) => { documento = maskDocumento(e.target.value); e.target.value = documento; markDirty(); }}
                 />
               </label>
               <label class="block">
@@ -508,10 +508,10 @@
               <input
                 class="w-full rounded-md px-3 py-2 text-sm"
                 style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                bind:value={contato}
+                value={contato}
                 inputmode="numeric"
                 placeholder="(00) 00000-0000"
-                on:input={(e) => { contato = maskPhone(e.target.value); markDirty(); }}
+                on:input={(e) => { contato = maskPhone(e.target.value); e.target.value = contato; markDirty(); }}
               />
             </label>
 
