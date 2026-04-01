@@ -84,6 +84,10 @@
   // Cada item terá: { id, nome, preco, quantidade }
   let comanda = [];
 
+  // Tipo de pedido e taxa de entrega
+  let tipoPedido = 'retirada'; // 'retirada' | 'delivery'
+  let taxaEntregaInput = 0;
+
   // --- 2. ESTADO DOS MODAIS (Fluxos Especiais) ---
   
   // Fluxo de quantidade por modal (para itens marcados como "Por unidade")
@@ -448,6 +452,8 @@
     (acc, item) => acc + item.preco * item.quantidade,
     0
   );
+  // Total com taxa de entrega incluída
+  $: totalComandaComEntrega = Number(totalComanda) + (tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0);
 
   // Persiste a comanda em sessionStorage para sobreviver a recarregamentos
   $: if (typeof sessionStorage !== 'undefined') {
@@ -930,7 +936,7 @@
       }
 
       const dadosVenda = {
-        valor_total: valorPlataformaVenda ?? totalFinalVenda ?? Number(totalComanda),
+        valor_total: valorPlataformaVenda ?? totalFinalVenda ?? Number(totalComandaComEntrega),
         forma_pagamento: insertForma,
         valor_recebido: insertValorRecebido,
         valor_troco: insertValorTroco,
@@ -938,7 +944,9 @@
         id_caixa: idCaixaAberto,
         id_cliente: idClienteForVenda,
         valor_desconto: valorDescontoVenda || 0,
-        desconto_tipo: descontoTipoVenda || null
+        desconto_tipo: descontoTipoVenda || null,
+        tipo_pedido: tipoPedido,
+        taxa_entrega: tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0
       };
 
       // Tenta inserir no Supabase, senão salva localmente
@@ -1082,12 +1090,14 @@
           idVenda: venda.id,
           numeroVenda: vendaConcluida.numero_venda,
           formaPagamento: vendaConcluida.forma_pagamento,
-          total: totalFinalVenda || Number(totalComanda),
+          total: totalFinalVenda || Number(totalComandaComEntrega),
           subtotal: Number(totalComanda),
           desconto: valorDescontoVenda || 0,
+          taxaEntrega: tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0,
+          tipoPedido,
           valorRecebido: vendaConcluida.valor_recebido,
           troco: vendaConcluida.valor_troco,
-          itens: comanda.map(i => ({ ...i, preco_unitario_na_venda: i.preco })), 
+          itens: comanda.map(i => ({ ...i, preco_unitario_na_venda: i.preco })),
           pagamentos: multiPag ? pagamentos : []
         };
         setTimeout(() => imprimirReciboVenda(payloadRecibo), 60);
@@ -1121,6 +1131,8 @@
       valorRecebido = 0;
       multiPag = false;
       pagamentos = [];
+      tipoPedido = 'retirada';
+      taxaEntregaInput = 0;
       addToast('Pronto para próxima venda', 'info');
   }
 
@@ -1168,7 +1180,7 @@
    * Imprime recibo/nota estilo profissional.
    * Busca dados do perfil (empresa_perfil) do usuário autenticado automaticamente.
    */
-  async function imprimirReciboVenda({ idVenda, numeroVenda, formaPagamento, total, valorRecebido, troco, itens, pagamentos }) {
+  async function imprimirReciboVenda({ idVenda, numeroVenda, formaPagamento, total, subtotal, valorRecebido, troco, itens, pagamentos, taxaEntrega = 0, tipoPedido: tipoPed = 'retirada' }) {
   console.groupCollapsed('%c[Recibo] imprimirReciboVenda', 'color:#0a7');
     console.log('[Recibo] params:', { idVenda, formaPagamento, total, valorRecebido, troco, itensCount: itens?.length || 0, pagamentosCount: pagamentos?.length || 0 });
     let perfil = null;
@@ -1227,7 +1239,7 @@
       largura_bobina: larguraBobina,
       logoUrl
     };
-    let venda = { idVenda, numeroVenda, formaPagamento, total, valorRecebido, troco, itens, pagamentos };
+    let venda = { idVenda, numeroVenda, formaPagamento, total, subtotal: subtotal ?? total, taxaEntrega, tipoPedido: tipoPed, valorRecebido, troco, itens, pagamentos };
     // Fallback: caso multiplo sem pagamentos no payload, tenta buscar do banco
     if (formaPagamento === 'multiplo' && (!Array.isArray(pagamentos) || pagamentos.length === 0) && idVenda) {
       try {
@@ -1505,10 +1517,46 @@
 
     <!-- Footer da Comanda -->
     <div class="p-4 bg-slate-900 border-t border-slate-800 space-y-3">
+      <!-- Tipo de Pedido -->
+      <div class="flex gap-2">
+        {#each [{ id: 'retirada', label: 'Retirada', icon: '🛍️' }, { id: 'delivery', label: 'Delivery', icon: '🛵' }] as tipo}
+          <button
+            type="button"
+            on:click={() => { tipoPedido = tipo.id; if (tipo.id !== 'delivery') taxaEntregaInput = 0; }}
+            class="flex-1 px-2 py-1.5 rounded-full font-medium text-xs transition-colors border flex items-center justify-center gap-1 {tipoPedido === tipo.id ? 'bg-sky-600 text-white border-transparent' : 'bg-slate-800 text-slate-400 border-slate-700'}"
+          >
+            <span>{tipo.icon}</span>
+            <span>{tipo.label}</span>
+          </button>
+        {/each}
+      </div>
+
+      <!-- Taxa de Entrega (só quando Delivery) -->
+      {#if tipoPedido === 'delivery'}
+        <div class="flex items-center gap-2">
+          <label for="taxa-entrega-input" class="text-xs text-slate-400 whitespace-nowrap">Taxa entrega (R$)</label>
+          <input
+            id="taxa-entrega-input"
+            type="number"
+            min="0"
+            step="0.01"
+            bind:value={taxaEntregaInput}
+            class="flex-1 bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-500"
+            placeholder="0,00"
+          />
+        </div>
+      {/if}
+
       <div class="flex justify-between items-center px-1">
         <span class="text-xs text-slate-400 font-medium">Subtotal</span>
         <span class="text-sm font-bold text-slate-200">R$ {Number(totalComanda).toFixed(2)}</span>
       </div>
+      {#if tipoPedido === 'delivery' && Number(taxaEntregaInput) > 0}
+        <div class="flex justify-between items-center px-1">
+          <span class="text-xs text-purple-400 font-medium">Taxa entrega</span>
+          <span class="text-sm font-bold text-purple-400">+ R$ {Number(taxaEntregaInput).toFixed(2)}</span>
+        </div>
+      {/if}
       
       <!-- Botões de Ação -->
       <div class="grid grid-cols-4 gap-2">
@@ -1547,7 +1595,7 @@
           class="col-span-2 h-12 md:h-10 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-green-900/20 text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
         >
           <span>Receber</span>
-          <span class="bg-black/20 px-2 py-0.5 rounded text-xs">R$ {Number(totalComanda).toFixed(2)}</span>
+          <span class="bg-black/20 px-2 py-0.5 rounded text-xs">R$ {Number(totalComandaComEntrega).toFixed(2)}</span>
         </button>
       </div>
     </div>
@@ -1631,7 +1679,10 @@
 <ModalPagamento
   bind:this={modalPagamentoRef}
   open={modalPagamentoAberto}
-  {totalComanda}
+  totalComanda={totalComandaComEntrega}
+  subtotalProdutos={totalComanda}
+  {tipoPedido}
+  taxaEntrega={tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0}
   {comanda}
   {idCaixaAberto}
   {produtos}

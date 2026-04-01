@@ -9,15 +9,12 @@ db.version(1).stores({
     categorias: 'id, nome'
 });
 
-// Como adicionar versões futuras:
-//
-// db.version(2).stores({
-//     vendas_pendentes: '++id, data, total, status, novo_campo'
-// }).upgrade(tx => {
-//     return tx.table('vendas_pendentes').toCollection().modify(v => {
-//         v.novo_campo = valorPadrao;
-//     });
-// });
+// v2 — adiciona tipo_pedido e taxa_entrega
+db.version(2).stores({
+    produtos: 'id, nome, preco, categoria_id',
+    vendas_pendentes: '++id, data, total, status',
+    categorias: 'id, nome'
+});
 
 /**
  * Salva uma venda na fila de sincronização
@@ -67,6 +64,8 @@ export async function syncVendasPendentes(supabase) {
                     id_usuario: vendaPendente.id_usuario,
                     id_caixa: vendaPendente.id_caixa,
                     id_cliente: vendaPendente.id_cliente,
+                    tipo_pedido: vendaPendente.tipo_pedido ?? 'retirada',
+                    taxa_entrega: vendaPendente.taxa_entrega ?? 0,
                     created_at: vendaPendente.data // Preserva a data original da venda offline
                 })
                 .select('id')

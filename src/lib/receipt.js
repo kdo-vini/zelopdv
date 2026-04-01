@@ -126,6 +126,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
 
     <div class="pedido-linha"><span>Pedido</span><strong>#${pedidoNum}</strong></div>
     <div class="pedido-linha"><span>${dataStr}</span><span>${horaStr}</span></div>
+    ${venda.tipoPedido === 'delivery' ? `<div class="pedido-linha"><span>Tipo</span><strong>🛵 Delivery</strong></div>` : venda.tipoPedido === 'retirada' ? `<div class="pedido-linha"><span>Tipo</span><strong>🛍️ Retirada</strong></div>` : ''}
 
     <hr class="sep">
 
@@ -137,8 +138,9 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, options = {
 
     <hr class="sep">
 
-    <div class="linha-total"><span>Subtotal</span><span>${fmt(subtotalExibido)}</span></div>
+    <div class="linha-total"><span>Subtotal (produtos)</span><span>${fmt(subtotalExibido)}</span></div>
     ${descontoVal > 0 ? `<div class="linha-total desconto"><span>Desconto</span><span>- ${fmt(descontoVal)}</span></div>` : ''}
+    ${Number(venda.taxaEntrega || 0) > 0 ? `<div class="linha-total" style="font-size:11px"><span>Taxa de entrega</span><span>+ ${fmt(venda.taxaEntrega)}</span></div>` : ''}
     <div class="linha-total grand-total"><span>TOTAL</span><span>${fmt(totalCalc)}</span></div>
 
     <hr class="sep">
