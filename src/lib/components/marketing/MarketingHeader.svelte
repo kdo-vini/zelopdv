@@ -39,7 +39,7 @@
     <div class="flex items-center gap-4">
       <a
         href="/login"
-        class="hidden sm:block text-sm font-medium transition-colors hover:text-sky-400"
+        class="hidden md:block text-sm font-medium transition-colors hover:text-sky-400"
         style={`color: ${isLight ? 'var(--blog-text)' : 'white'}`}
       >
         Entrar
@@ -85,13 +85,23 @@
           {link.label}
         </a>
       {/each}
-      <a
-        href="/cadastro"
-        class="mt-1 w-full text-center px-5 py-3 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all"
-        on:click={() => (showMobileMenu = false)}
-      >
-        Testar grátis
-      </a>
+      <div class="mt-1 flex flex-col gap-2 pt-2 border-t" style={`border-color: ${isLight ? 'var(--blog-border)' : 'rgba(255,255,255,0.1)'}`}>
+        <a
+          href="/login"
+          class="w-full text-center px-5 py-3 text-sm font-semibold transition-colors hover:text-sky-400"
+          style={`color: ${isLight ? 'var(--blog-text)' : 'white'}`}
+          on:click={() => (showMobileMenu = false)}
+        >
+          Entrar
+        </a>
+        <a
+          href="/cadastro"
+          class="w-full text-center px-5 py-3 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all"
+          on:click={() => (showMobileMenu = false)}
+        >
+          Testar grátis
+        </a>
+      </div>
     </div>
   {/if}
 </nav>
