@@ -18,7 +18,9 @@
       "mcp__claude_ai_Vercel__get_project",
       "Bash(find /c/Users/Vinicius/Desktop/Code/zeloPDV-Prod -type f -name *migration* -o -name *schema* -o -name supabase.json)",
       "Bash(grep -r \"interface.*venda\\\\|type.*venda\" /c/Users/Vinicius/Desktop/Code/zeloPDV-Prod/src --include=*.ts --include=*.d.ts)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "mcp__b66dc66d-f2ed-435c-934d-a473e8b38636__list_projects",
+      "mcp__b66dc66d-f2ed-435c-934d-a473e8b38636__apply_migration"
     ]
   }
 }

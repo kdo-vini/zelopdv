@@ -27,6 +27,15 @@
 
   /** @type {Array<{id: string, nome: string, taxa_pct: number, icone: string, ativo: boolean}>} */
   export let plataformasAtivas = [];
+
+  /** @type {'retirada'|'delivery'} */
+  export let tipoPedido = 'retirada';
+
+  /** @type {number} */
+  export let taxaEntrega = 0;
+
+  /** @type {number} */
+  export let subtotalProdutos = 0;
   
   // Estados locais
   let formaPagamento = null;
@@ -349,10 +358,26 @@
       <div class="zone zone-summary">
         <h3 id="titulo-pagamento" class="zone-title">Finalizar Pagamento</h3>
 
-        <div class="summary-row">
-          <span class="summary-label">Subtotal</span>
-          <span class="summary-value">R$ {Number(totalComanda).toFixed(2)}</span>
-        </div>
+        {#if tipoPedido === 'delivery' && taxaEntrega > 0}
+          <div class="summary-row">
+            <span class="summary-label">Subtotal (produtos)</span>
+            <span class="summary-value">R$ {Number(subtotalProdutos || totalComanda - taxaEntrega).toFixed(2)}</span>
+          </div>
+          <div class="summary-row" style="color: #a78bfa; font-size: 0.85em;">
+            <span>Taxa de entrega (entregador)</span>
+            <span>+ R$ {Number(taxaEntrega).toFixed(2)}</span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-row">
+            <span class="summary-label">Subtotal</span>
+            <span class="summary-value">R$ {Number(totalComanda).toFixed(2)}</span>
+          </div>
+        {:else}
+          <div class="summary-row">
+            <span class="summary-label">Subtotal</span>
+            <span class="summary-value">R$ {Number(totalComanda).toFixed(2)}</span>
+          </div>
+        {/if}
 
         <!-- Desconto colapsável -->
         <button type="button" class="discount-toggle" on:click={() => descontoAtivo = !descontoAtivo}>
@@ -386,7 +411,7 @@
           <div class="summary-divider"></div>
         {/if}
         <div class="summary-row summary-total">
-          <span class="summary-label">{valorDesconto > 0 ? 'Total c/ desconto' : 'Total'}</span>
+          <span class="summary-label">{valorDesconto > 0 ? 'Total c/ desconto' : (tipoPedido === 'delivery' && taxaEntrega > 0 ? 'Total (c/ entrega)' : 'Total')}</span>
           <span class="total-value {valorDesconto > 0 ? 'total-discounted' : ''}">R$ {Number(totalFinal).toFixed(2)}</span>
         </div>
       </div>

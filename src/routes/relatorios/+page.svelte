@@ -130,7 +130,7 @@
 			// 2. Vendas do caixa
 			const pVendas = supabase
 				.from('vendas')
-				.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at, id_cliente')
+				.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, tipo_pedido, taxa_entrega, created_at, id_cliente')
 				.eq('id_caixa', idCaixa)
 				.order('id', { ascending: true });
 
@@ -249,6 +249,21 @@
 	$: saldoEsperadoGaveta = Number((caixaInfo?.valor_inicial || 0) + totalDinheiro - totalSangria + totalSuprimento);
 	$: totalDescontosCaixa = (vendas || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
 	$: receitaLiquidaCaixa = totalGeral - totalDescontosCaixa;
+
+	// Delivery breakdown (caixa)
+	$: totalTaxaEntregaCaixa = (vendas || []).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
+	$: receitaRestauranteCaixa = totalGeral - totalDescontosCaixa - totalTaxaEntregaCaixa;
+	$: vendasPorTipoCaixa = (() => {
+		const tipos = ['retirada', 'delivery'];
+		return tipos.map(t => ({
+			tipo: t,
+			label: t === 'delivery' ? 'Delivery' : 'Retirada',
+			icon: t === 'delivery' ? '🛵' : '🛍️',
+			qtd: (vendas || []).filter(v => (v.tipo_pedido || 'retirada') === t).length,
+			total: (vendas || []).filter(v => (v.tipo_pedido || 'retirada') === t).reduce((a, v) => a + Number(v.valor_total || 0), 0),
+			taxaEntrega: (vendas || []).filter(v => (v.tipo_pedido || 'retirada') === t).reduce((a, v) => a + Number(v.taxa_entrega || 0), 0),
+		})).filter(t => t.qtd > 0);
+	})();
 
 	// Pagamentos breakdown (caixa)
 	$: caixaPagItems = [
@@ -468,7 +483,7 @@
 			while (fetchMore) {
 				const { data: batch, error: batchErr } = await supabase
 					.from('vendas')
-					.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, created_at')
+					.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, tipo_pedido, taxa_entrega, created_at')
 					.eq('id_usuario', uid)
 					.gte('created_at', isoStart(dataInicio))
 					.lte('created_at', isoEnd(dataFim))
@@ -639,6 +654,21 @@
 	$: periodoTotalDespesas = (periodoDespesas||[]).reduce((a,e)=> a + Number(e.amount||0),0);
 	$: periodoReceitaLiquida = periodoTotalGeral - periodoTotalDescontos - periodoTotalDespesas; // Lucro Líquido (Bruto - Descontos - Despesas)
 
+	// Delivery breakdown (periodo)
+	$: periodoTotalTaxaEntrega = (periodoVendas||[]).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
+	$: periodoReceitaRestaurante = periodoTotalGeral - periodoTotalDescontos - periodoTotalTaxaEntrega - periodoTotalDespesas;
+	$: periodoVendasPorTipo = (() => {
+		const tipos = ['retirada', 'delivery'];
+		return tipos.map(t => ({
+			tipo: t,
+			label: t === 'delivery' ? 'Delivery' : 'Retirada',
+			icon: t === 'delivery' ? '🛵' : '🛍️',
+			qtd: (periodoVendas||[]).filter(v => (v.tipo_pedido || 'retirada') === t).length,
+			total: (periodoVendas||[]).filter(v => (v.tipo_pedido || 'retirada') === t).reduce((a, v) => a + Number(v.valor_total || 0), 0),
+			taxaEntrega: (periodoVendas||[]).filter(v => (v.tipo_pedido || 'retirada') === t).reduce((a, v) => a + Number(v.taxa_entrega || 0), 0),
+		})).filter(t => t.qtd > 0);
+	})();
+
 	// Pagamentos breakdown (periodo)
 	$: periodoPagItems = [
 		{ label: 'Dinheiro', value: periodoDinheiroLiquido, color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' },
@@ -807,11 +837,14 @@
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
 					Receita Líquida
 				</div>
-				<div class="text-3xl font-bold text-white tracking-tight">{fmt(receitaLiquidaCaixa)}</div>
-				<div class="flex items-center gap-3 mt-2 text-sm text-slate-400">
+				<div class="text-3xl font-bold text-white tracking-tight">{fmt(totalTaxaEntregaCaixa > 0 ? receitaRestauranteCaixa : receitaLiquidaCaixa)}</div>
+				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-slate-400">
 					<span>Bruto: {fmt(totalGeral)}</span>
 					{#if totalDescontosCaixa > 0}
 						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(totalDescontosCaixa)}</span>
+					{/if}
+					{#if totalTaxaEntregaCaixa > 0}
+						<span class="bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full text-xs">Entregador: -{fmt(totalTaxaEntregaCaixa)}</span>
 					{/if}
 				</div>
 			</div>
@@ -872,6 +905,37 @@
 				</div>
 				{#if totalCartaoLegacy > 0}
 					<div class="mt-2 text-xs text-slate-500 dark:text-slate-400">Cartão (legado): {fmt(totalCartaoLegacy)}</div>
+				{/if}
+			</div>
+			{/if}
+
+			<!-- ✦ Tipos de Pedido (caixa) -->
+			{#if vendasPorTipoCaixa.length > 0}
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+				<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Tipos de Pedido</h3>
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+					{#each vendasPorTipoCaixa as t}
+						<div class="flex flex-col gap-1 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
+							<div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{t.icon} {t.label}</div>
+							<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(t.total)}</div>
+							<div class="text-xs text-slate-400">{t.qtd} venda{t.qtd !== 1 ? 's' : ''}</div>
+							{#if t.taxaEntrega > 0}
+								<div class="text-xs text-purple-500 dark:text-purple-400">Taxa entrega: {fmt(t.taxaEntrega)}</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+				{#if totalTaxaEntregaCaixa > 0}
+					<div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-4">
+						<div>
+							<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Receita do Restaurante</div>
+							<div class="text-base font-bold text-slate-800 dark:text-white">{fmt(receitaRestauranteCaixa)}</div>
+						</div>
+						<div>
+							<div class="text-xs text-purple-500 dark:text-purple-400 mb-1">Taxas de Entrega (entregador)</div>
+							<div class="text-base font-bold text-purple-600 dark:text-purple-400">{fmt(totalTaxaEntregaCaixa)}</div>
+						</div>
+					</div>
 				{/if}
 			</div>
 			{/if}
@@ -1045,14 +1109,17 @@
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
 					Receita Líquida
 				</div>
-				<div class="text-3xl font-bold text-white tracking-tight">{fmt(periodoReceitaLiquida)}</div>
-				<div class="flex items-center gap-3 mt-2 text-sm text-slate-400">
+				<div class="text-3xl font-bold text-white tracking-tight">{fmt(periodoTotalTaxaEntrega > 0 ? periodoReceitaRestaurante : periodoReceitaLiquida)}</div>
+				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-slate-400">
 					<span>Bruto: {fmt(periodoTotalGeral)}</span>
 					{#if periodoTotalDescontos > 0}
 						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(periodoTotalDescontos)}</span>
 					{/if}
 					{#if periodoTotalDespesas > 0}
 						<span class="bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full text-xs">Despesas: -{fmt(periodoTotalDespesas)}</span>
+					{/if}
+					{#if periodoTotalTaxaEntrega > 0}
+						<span class="bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full text-xs">Entregador: -{fmt(periodoTotalTaxaEntrega)}</span>
 					{/if}
 				</div>
 			</div>
@@ -1111,6 +1178,37 @@
 						</div>
 					{/each}
 				</div>
+			</div>
+			{/if}
+
+			<!-- ✦ Tipos de Pedido (periodo) -->
+			{#if periodoVendasPorTipo.length > 0}
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+				<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Tipos de Pedido</h3>
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+					{#each periodoVendasPorTipo as t}
+						<div class="flex flex-col gap-1 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
+							<div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{t.icon} {t.label}</div>
+							<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(t.total)}</div>
+							<div class="text-xs text-slate-400">{t.qtd} venda{t.qtd !== 1 ? 's' : ''}</div>
+							{#if t.taxaEntrega > 0}
+								<div class="text-xs text-purple-500 dark:text-purple-400">Taxa entrega: {fmt(t.taxaEntrega)}</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+				{#if periodoTotalTaxaEntrega > 0}
+					<div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-4">
+						<div>
+							<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Receita do Restaurante</div>
+							<div class="text-base font-bold text-slate-800 dark:text-white">{fmt(periodoReceitaRestaurante)}</div>
+						</div>
+						<div>
+							<div class="text-xs text-purple-500 dark:text-purple-400 mb-1">Taxas de Entrega (entregador)</div>
+							<div class="text-base font-bold text-purple-600 dark:text-purple-400">{fmt(periodoTotalTaxaEntrega)}</div>
+						</div>
+					</div>
+				{/if}
 			</div>
 			{/if}
 
