@@ -135,7 +135,7 @@
       </div>
 
       <div class="flex items-center gap-4">
-        <a href="/login" class="text-sm font-medium text-white hover:text-sky-400 transition-colors hidden sm:block">Entrar</a>
+        <a href="/login" class="text-sm font-medium text-white hover:text-sky-400 transition-colors hidden md:block">Entrar</a>
         <a href="/cadastro" class="px-5 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all hover:scale-105 active:scale-95">
           Testar 30 dias grátis
         </a>
@@ -162,9 +162,14 @@
         <a href="/blog" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Blog</a>
         <a href="#pricing" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Preços</a>
         <a href="#faq" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Dúvidas</a>
-        <a href="/cadastro" class="mt-1 w-full text-center px-5 py-3 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all" on:click={() => showMobileMenu = false}>
-          Testar grátis
-        </a>
+        <div class="mt-1 flex flex-col gap-2 pt-2 border-t border-white/10">
+          <a href="/login" class="w-full text-center px-5 py-3 text-sm font-semibold text-white hover:text-sky-400 transition-colors" on:click={() => showMobileMenu = false}>
+            Entrar
+          </a>
+          <a href="/cadastro" class="w-full text-center px-5 py-3 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all" on:click={() => showMobileMenu = false}>
+            Testar grátis
+          </a>
+        </div>
       </div>
     {/if}
   </nav>
