@@ -36,7 +36,6 @@
     {
       id: 'marmitaria',
       label: 'Marmitaria',
-      badge: 'MT',
       defaultMargin: 28,
       commonRange: '22% a 35%',
       placeholder: 'Marmita de frango grelhado',
@@ -46,7 +45,6 @@
     {
       id: 'lanchonete',
       label: 'Lanchonete / Hot-dog',
-      badge: 'HD',
       defaultMargin: 30,
       commonRange: '25% a 40%',
       placeholder: 'Hot-dog especial',
@@ -56,7 +54,6 @@
     {
       id: 'hamburgueria',
       label: 'Hamburgueria',
-      badge: 'HB',
       defaultMargin: 32,
       commonRange: '28% a 45%',
       placeholder: 'Burger artesanal',
@@ -66,7 +63,6 @@
     {
       id: 'pizzaria',
       label: 'Pizzaria',
-      badge: 'PZ',
       defaultMargin: 30,
       commonRange: '25% a 38%',
       placeholder: 'Pizza média de calabresa',
@@ -76,7 +72,6 @@
     {
       id: 'doceria',
       label: 'Açaí / Doceria / Páscoa',
-      badge: 'DC',
       defaultMargin: 35,
       commonRange: '30% a 50%',
       placeholder: 'Ovo de Páscoa de 350g',
@@ -86,7 +81,6 @@
     {
       id: 'delivery',
       label: 'Delivery puro',
-      badge: 'DL',
       defaultMargin: 28,
       commonRange: '22% a 35%',
       placeholder: 'Combo delivery',
@@ -96,7 +90,6 @@
     {
       id: 'mercadinho',
       label: 'Mercadinho / Mercearia',
-      badge: 'MG',
       defaultMargin: 20,
       commonRange: '15% a 28%',
       placeholder: 'Cesta promocional',
@@ -106,7 +99,6 @@
     {
       id: 'outro',
       label: 'Outro',
-      badge: 'OT',
       defaultMargin: 30,
       commonRange: '20% a 40%',
       placeholder: 'Seu produto principal',
@@ -957,7 +949,7 @@
           {#if businessStep === 1}
             <div class="niche-chips">
               {#each niches as niche}
-                  <button
+                <button
                   type="button"
                   class="niche-chip"
                   class:chip-selected={fullForm.niche === niche.id}
@@ -1304,9 +1296,7 @@
     gap: 1.5rem;
   }
 
-  .eyebrow,
-  .section-kicker,
-  .result-kicker {
+  .section-kicker {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
@@ -1398,9 +1388,7 @@
   }
 
   .section-title,
-  .cta-title,
-  .block-title,
-  .result-card h3 {
+  .cta-title {
     color: var(--text-main);
   }
 
@@ -1408,29 +1396,6 @@
     font-size: clamp(1.7rem, 3vw, 2.7rem);
     line-height: 1.06;
     letter-spacing: -0.04em;
-  }
-
-  .block-head {
-    gap: 0.9rem;
-    margin-bottom: 1.2rem;
-  }
-
-  .block-number {
-    width: 2rem;
-    height: 2rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--primary) 14%, transparent);
-    color: var(--text-main);
-    font-size: 0.88rem;
-    font-weight: 700;
-  }
-
-  .block-title {
-    font-size: 1.3rem;
-    margin-bottom: 0.2rem;
   }
 
   .mode-grid,
@@ -1521,30 +1486,6 @@
     font-weight: 600;
   }
 
-  .chip-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.6rem;
-    height: 1.6rem;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--primary) 16%, transparent);
-    color: var(--text-main);
-    font-size: 0.7rem;
-    font-weight: 700;
-  }
-
-  .product-layout {
-    display: grid;
-    gap: 1.5rem;
-  }
-
-  .product-main {
-    display: grid;
-    gap: 1.5rem;
-    align-content: start;
-  }
-
   .field {
     display: block;
   }
@@ -1621,8 +1562,7 @@
   .details-card,
   .slider-card,
   .helper-box,
-  .empty-state,
-  .summary-card {
+  .empty-state {
     border-radius: 1.2rem;
     border: 1px solid color-mix(in srgb, white 8%, var(--border-subtle));
     background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
@@ -1784,10 +1724,6 @@
     accent-color: var(--primary);
   }
 
-  .aligned-start {
-    align-items: flex-start;
-  }
-
   .primary-button,
   .ghost-button,
   .primary-link {
@@ -1829,7 +1765,6 @@
     cursor: not-allowed;
   }
 
-  .result-card h3,
   .cta-title {
     margin-top: 0.75rem;
   }
@@ -1907,10 +1842,6 @@
 
   .price-spotlight-strong {
     background: color-mix(in srgb, var(--primary) 14%, transparent);
-  }
-
-  .product-result-card {
-    padding: 1.4rem;
   }
 
   .result-highlight-grid {
@@ -2151,15 +2082,6 @@
 
     .ingredient-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .progress-shell {
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-
-    .progress-step {
-      flex-direction: column;
-      align-items: flex-start;
     }
   }
 
