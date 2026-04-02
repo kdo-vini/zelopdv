@@ -403,13 +403,7 @@
   <section class="pb-24">
     <div class="max-w-6xl mx-auto px-6 page-content">
         <section class="section-card section-spacing">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Cálculo individual</p>
-              <h2 class="section-title">Preço de 1 produto</h2>
-            </div>
-            <p class="section-note">Ideal para descobrir quanto faturar com um item avulso ou lançamento rápido.</p>
-          </div>
+
 
           <div class="progress-shell">
             {#each productStepLabels as label, index}
@@ -507,9 +501,6 @@
                       <p class="field-label no-gap">Ingredientes da receita</p>
                       <p class="builder-copy">Preencha quanto você comprou, quanto pagou e quanto entra na receita.</p>
                     </div>
-                    <button type="button" class="secondary-button" on:click={addIngredientRow}>
-                      + Adicionar ingrediente
-                    </button>
                   </div>
 
                   <div class="ingredient-list">
@@ -622,6 +613,10 @@
                       </div>
                     {/each}
                   </div>
+
+                  <button type="button" class="secondary-button" on:click={addIngredientRow} style="margin-top: 1rem;">
+                    + Adicionar ingrediente
+                  </button>
 
                   <div class="builder-summary">
                     <span>Subtotal dos ingredientes</span>
@@ -836,24 +831,29 @@
           </div>
         </section>
 
-      <section class="section-card section-spacing faq-shell max-w-3xl mx-auto">
-        <div class="faq-intro" style="text-align: center;">
-          <p class="section-kicker">FAQ</p>
-          <h2 class="section-title" style="font-size: 1.8rem;">Perguntas frequentes</h2>
-        </div>
+    </div>
+  </section>
 
-        <div class="faq-list">
-          {#each faqItems as item}
-            <details class="faq-item">
-              <summary>
-                <span>{item.question}</span>
-                <span>+</span>
-              </summary>
-              <div>{item.answer}</div>
-            </details>
-          {/each}
-        </div>
-      </section>
+  <section class="py-24 border-t border-white/5 bg-[#0B0F19]">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold text-white mb-4">Perguntas Frequentes</h2>
+        <p class="text-slate-400">Tire suas dúvidas e entenda os detalhes dos cálculos.</p>
+      </div>
+
+      <div class="space-y-4">
+        {#each faqItems as item}
+          <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-all duration-300">
+            <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
+              <span>{item.question}</span>
+              <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </summary>
+            <div class="px-6 pb-6 text-slate-400 leading-relaxed">
+              {item.answer}
+            </div>
+          </details>
+        {/each}
+      </div>
     </div>
   </section>
 
@@ -879,6 +879,9 @@
 
 <style>
   .page-shell {
+    --bg-app: #0B0F19; /* Align with main landing page */
+    --bg-panel: #111827; 
+    --bg-card: #0F172A;
     background: var(--bg-app);
     color: var(--text-label);
   }
