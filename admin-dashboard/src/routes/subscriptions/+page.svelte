@@ -3,11 +3,12 @@
   import { supabase } from '$lib/supabaseAdmin'
   import { logAdminAction } from '$lib/logger'
   import { success, error as errorToast } from '$lib/toast'
+  import { fade, slide } from 'svelte/transition'
   
   let subscriptions = []
   let loading = true
   let searchTerm = ''
-  let filterStatus = 'all' // 'all', 'active', 'canceled', 'expiring'
+  let filterStatus = 'all' // 'all', 'active', 'canceled', 'expired', 'expiring'
   let adminInfo = null
   
   // Modal states
@@ -38,9 +39,6 @@
   async function loadSubscriptions() {
     loading = true
     
-    console.log('[Subscriptions] Loading with filter:', filterStatus)
-    
-    // Get subscriptions with user info
     let query = supabase
       .from('subscriptions')
       .select('*')
@@ -59,15 +57,12 @@
         .lte('current_period_end', sevenDaysFromNow.toISOString())
         .gte('current_period_end', new Date().toISOString())
     } else if (filterStatus === 'expired') {
-      // Show subscriptions that are active but expired
       query = query
         .eq('status', 'active')
         .lt('current_period_end', new Date().toISOString())
     }
     
     const { data: subs, error } = await query
-    
-    console.log('[Subscriptions] Query result:', { subs, error })
     
     if (error) {
       console.error('Error loading subscriptions:', error)
@@ -76,18 +71,13 @@
       return
     }
     
-    // Get empresa_perfil for each subscription
     if (subs && subs.length > 0) {
-      console.log('[Subscriptions] Found', subs.length, 'subscriptions')
       const userIds = subs.map(s => s.user_id)
       const { data: profiles, error: profileError } = await supabase
         .from('empresa_perfil')
         .select('user_id, nome_exibicao, contato, documento')
         .in('user_id', userIds)
       
-      console.log('[Subscriptions] Profiles:', { profiles, profileError })
-      
-      // Merge profiles with subscriptions
       subscriptions = subs.map(sub => ({
         ...sub,
         empresa_perfil: profiles?.find(p => p.user_id === sub.user_id) || {
@@ -96,10 +86,7 @@
           documento: 'N/A'
         }
       }))
-      
-      console.log('[Subscriptions] Final subscriptions:', subscriptions)
     } else {
-      console.log('[Subscriptions] No subscriptions found')
       subscriptions = []
     }
     
@@ -129,7 +116,6 @@
     extending = true
     
     try {
-      // Call the database function
       const { data, error } = await supabase.rpc('admin_extend_subscription', {
         p_subscription_id: selectedSub.id,
         p_months: extendMonths,
@@ -156,7 +142,7 @@
   }
   
   async function handleCancelSubscription(sub) {
-    if (!confirm(`Tem certeza que deseja cancelar a assinatura de ${sub.empresa_perfil.nome_exibicao}?`)) {
+    if (!confirm(`Têm certeza que deseja cancelar a assinatura de ${sub.empresa_perfil.nome_exibicao}?`)) {
       return
     }
     
@@ -220,20 +206,19 @@
   }
   
   function getStatusBadge(sub) {
-    // Check if expired (even if status is active)
     const isExpired = new Date(sub.current_period_end) < new Date()
     
     if (sub.status === 'active' && isExpired) {
-      return { text: '⚠️ EXPIRADA', class: 'bg-red-900/30 text-red-400 border-red-700' }
+      return { text: 'EXPIRADA', class: 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.1)]' }
     }
     
     const badges = {
-      active: { text: 'Ativa', class: 'bg-green-900/30 text-green-400 border-green-700' },
-      canceled: { text: 'Cancelada', class: 'bg-red-900/30 text-red-400 border-red-700' },
-      past_due: { text: 'Vencida', class: 'bg-amber-900/30 text-amber-400 border-amber-700' },
-      trialing: { text: 'Trial', class: 'bg-blue-900/30 text-blue-400 border-blue-700' }
+      active: { text: 'ATIVA', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.1)]' },
+      canceled: { text: 'CANCELADA', class: 'bg-slate-500/10 text-slate-400 border-slate-500/20 shadow-[0_0_8px_rgba(100,116,139,0.1)]' },
+      past_due: { text: 'VENCIDA', class: 'bg-orange-500/10 text-orange-400 border-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.1)]' },
+      trialing: { text: 'TRIAL', class: 'bg-sky-500/10 text-sky-400 border-sky-500/20 shadow-[0_0_8px_rgba(14,165,233,0.1)]' }
     }
-    return badges[sub.status] || { text: sub.status, class: 'bg-slate-700 text-slate-300 border-slate-600' }
+    return badges[sub.status] || { text: sub.status.toUpperCase(), class: 'bg-slate-700 text-slate-300 border-slate-600' }
   }
   
   function getDaysUntilExpiry(date) {
@@ -242,6 +227,15 @@
     const diff = expiry - now
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
     return days
+  }
+
+  function getInitials(name) {
+    if (!name) return '?'
+    const parts = name.trim().split(' ')
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
   }
   
   $: filteredSubscriptions = subscriptions.filter(sub => {
@@ -259,145 +253,194 @@
   <title>Assinaturas - Zelo Admin</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <!-- Header -->
-  <div class="flex justify-between items-center">
-    <div>
-      <h2 class="text-2xl font-bold">Assinaturas</h2>
-      <p class="text-slate-400 mt-1">Gerenciar todas as assinaturas</p>
+<div class="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500">
+  
+  <!-- Sleek Header Area -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-800">
+    <div class="relative">
+      <h2 class="text-3xl font-extrabold tracking-tight text-white mb-1">Subscriptions</h2>
+      <p class="text-slate-400 text-sm font-medium">Controle de faturamento, trials e cancelamentos.</p>
+      <!-- Accent Glow Line -->
+      <div class="absolute -bottom-6 left-0 w-16 h-[2px] bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>
     </div>
     
-    <button
-      on:click={loadSubscriptions}
-      class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition"
-    >
-      🔄 Atualizar
-    </button>
-  </div>
-  
-  <!-- Filters -->
-  <div class="bg-slate-800 border border-slate-700 rounded-lg p-4">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- Search -->
-      <div>
-        <label class="block text-sm text-slate-400 mb-2">Buscar</label>
-        <input
-          type="text"
-          bind:value={searchTerm}
-          placeholder="Nome, email ou documento..."
-          class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
-        />
-      </div>
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
       
       <!-- Status Filter -->
-      <div>
-        <label class="block text-sm text-slate-400 mb-2">Status</label>
+      <div class="relative group w-full sm:w-auto">
         <select
           bind:value={filterStatus}
           on:change={loadSubscriptions}
-          class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+          class="w-full sm:w-48 appearance-none pl-4 pr-10 py-2.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-sm font-medium text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
         >
           <option value="all">Todas</option>
           <option value="active">Ativas</option>
-          <option value="expired">⚠️ Expiradas</option>
-          <option value="expiring">Expirando (7 dias)</option>
+          <option value="expired">🚨 Expiradas</option>
+          <option value="expiring">⚠️ Em < 7 Dias</option>
           <option value="canceled">Canceladas</option>
         </select>
+        <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+          <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
       </div>
+
+      <!-- Search Box -->
+      <div class="relative group w-full sm:w-72">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          bind:value={searchTerm}
+          placeholder="Busca (Email/Doc)"
+          class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
+        />
+      </div>
+      
+      <button
+        on:click={loadSubscriptions}
+        class="flex items-center justify-center shrink-0 w-11 h-11 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
+        title="Atualizar"
+      >
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
     </div>
   </div>
   
-  <!-- Subscriptions List -->
+  <!-- Content Area -->
   {#if loading}
-    <div class="text-center py-12">
-      <div class="text-slate-400">Carregando assinaturas...</div>
+    <div class="flex flex-col items-center justify-center py-24 space-y-4" in:fade>
+      <div class="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+      <div class="text-sm font-medium text-slate-400">Verificando dados de assinaturas...</div>
     </div>
   {:else if filteredSubscriptions.length === 0}
-    <div class="bg-slate-800 border border-slate-700 rounded-lg p-12 text-center">
-      <div class="text-slate-400">Nenhuma assinatura encontrada</div>
+    <div class="flex flex-col items-center justify-center py-24 px-4 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/30" in:fade>
+      <div class="w-16 h-16 mb-4 rounded-full bg-slate-800/50 flex items-center justify-center">
+        <svg class="w-8 h-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+      </div>
+      <h3 class="text-lg font-medium text-slate-300">Nada encontrado.</h3>
+      <p class="text-sm text-slate-500 mt-1">Sua busca ou filtro atual não resultaram em assinaturas.</p>
     </div>
   {:else}
-    <div class="space-y-4">
+    <!-- Desktop Table View -->
+    <div class="hidden md:block overflow-hidden bg-slate-900/40 border border-slate-800/60 rounded-2xl shadow-xl backdrop-blur-sm" in:fade>
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-slate-800 bg-slate-900/80">
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ciclo Vence dia</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Registrado em</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Ações Rápidas</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800/50">
+          {#each filteredSubscriptions as sub (sub.id)}
+            {@const badge = getStatusBadge(sub)}
+            {@const daysLeft = getDaysUntilExpiry(sub.current_period_end)}
+            {@const isExpiringSoon = sub.status === 'active' && daysLeft <= 7 && daysLeft > 0}
+            {@const isExpired = new Date(sub.current_period_end) < new Date()}
+            
+            <tr class="group hover:bg-slate-800/30 transition-colors">
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-4">
+                  <div class="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center text-sm font-bold text-white shadow-inner shrink-0">
+                    {getInitials(sub.empresa_perfil.nome_exibicao)}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold text-slate-200 truncate group-hover:text-white transition-colors">{sub.empresa_perfil.nome_exibicao || 'S/N'}</p>
+                    <p class="text-xs text-slate-500 truncate mt-0.5">{sub.empresa_perfil.contato}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="py-4 px-6">
+                <span class="inline-flex px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-md border {badge.class}">
+                  {badge.text}
+                </span>
+              </td>
+              <td class="py-4 px-6 text-[13px]">
+                <div class="{isExpired ? 'text-rose-400 font-semibold' : isExpiringSoon ? 'text-amber-400 font-semibold' : 'text-slate-300'}">
+                  {new Date(sub.current_period_end).toLocaleDateString('pt-BR')}
+                </div>
+                {#if sub.status === 'active'}
+                  <div class="text-[11px] font-medium mt-0.5 {isExpired ? 'text-rose-400/80' : isExpiringSoon ? 'text-amber-400/80' : 'text-slate-500'}">
+                    {#if isExpired}
+                      Em atraso há {Math.abs(daysLeft)}d
+                    {:else}
+                      Restam {daysLeft} dias
+                    {/if}
+                  </div>
+                {/if}
+              </td>
+              <td class="py-4 px-6 text-[13px] text-slate-400">
+                {new Date(sub.created_at).toLocaleDateString('pt-BR')}
+              </td>
+              <td class="py-4 px-6 text-right">
+                <div class="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {#if sub.status === 'active'}
+                    <!-- Extend (Accept Manual Payment) -->
+                    <button on:click={() => openExtendModal(sub)} class="px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-all" title="Registrar Pagamento / Extensão">
+                       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                       Lançar
+                    </button>
+                    <!-- Cancel -->
+                    <button on:click={() => handleCancelSubscription(sub)} class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors border border-transparent hover:border-rose-500/20" title="Cancelar Imediatamente">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  {:else if sub.status === 'canceled'}
+                    <!-- Reactivate -->
+                    <button on:click={() => handleReactivateSubscription(sub)} class="px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-all" title="Reativar Inscrição">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                       Reativar
+                    </button>
+                  {/if}
+                </div>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Stacked View -->
+    <div class="md:hidden space-y-4" in:fade>
       {#each filteredSubscriptions as sub (sub.id)}
         {@const badge = getStatusBadge(sub)}
         {@const daysLeft = getDaysUntilExpiry(sub.current_period_end)}
-        {@const isExpiringSoon = sub.status === 'active' && daysLeft <= 7 && daysLeft > 0}
-        {@const isExpired = new Date(sub.current_period_end) < new Date()}
         
-        <div class="bg-slate-800 border border-slate-700 rounded-lg p-6">
-          <div class="flex justify-between items-start mb-4">
-            <div class="flex-1">
-              <h3 class="text-lg font-semibold text-white mb-1">
-                {sub.empresa_perfil.nome_exibicao || 'Sem nome'}
-              </h3>
-              <div class="text-sm text-slate-400 space-y-1">
-                <div>📧 {sub.empresa_perfil.contato}</div>
-                <div>📄 {sub.empresa_perfil.documento || 'N/A'}</div>
-              </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-100">{sub.empresa_perfil.nome_exibicao || 'S/N'}</h3>
+              <p class="text-xs text-slate-500 mt-0.5">{sub.empresa_perfil.contato}</p>
             </div>
-            
-            <div class="text-right">
-              <span class="inline-block px-3 py-1 text-sm border rounded-full {badge.class}">
-                {badge.text}
-              </span>
+            <span class="inline-flex px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border {badge.class}">
+              {badge.text}
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 text-xs py-3 border-t border-slate-800 mt-2">
+            <div>
+              <span class="text-slate-500 block mb-0.5">Expiração:</span>
+              <span class="text-slate-300 font-medium">{new Date(sub.current_period_end).toLocaleDateString('pt-BR')}</span>
             </div>
           </div>
-          
-          <!-- Subscription Details -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
-            <div>
-              <div class="text-slate-400">Expira em</div>
-              <div class="font-medium {isExpired ? 'text-red-400' : isExpiringSoon ? 'text-amber-400' : 'text-white'}">
-                {new Date(sub.current_period_end).toLocaleDateString('pt-BR')}
-                {#if sub.status === 'active'}
-                  {#if isExpired}
-                    <span class="text-xs">(EXPIROU há {Math.abs(daysLeft)}d)</span>
-                  {:else}
-                    <span class="text-xs">({daysLeft}d)</span>
-                  {/if}
-                {/if}
-              </div>
-            </div>
-            
-            <div>
-              <div class="text-slate-400">Criada em</div>
-              <div class="font-medium text-white">
-                {new Date(sub.created_at).toLocaleDateString('pt-BR')}
-              </div>
-            </div>
-            
-            {#if sub.admin_notes}
-              <div class="col-span-2">
-                <div class="text-slate-400">Notas</div>
-                <div class="font-medium text-white text-xs">{sub.admin_notes}</div>
-              </div>
-            {/if}
-          </div>
-          
-          <!-- Actions -->
-          <div class="flex gap-2 flex-wrap">
-            {#if sub.status === 'active'}
-              <button
-                on:click={() => openExtendModal(sub)}
-                class="px-4 py-2 bg-green-900/30 hover:bg-green-900/50 text-green-400 border border-green-700 rounded-lg transition text-sm"
-              >
-                💰 Registrar Pagamento
+
+          <div class="flex items-center gap-2 border-t border-slate-800 pt-3 mt-1">
+             {#if sub.status === 'active'}
+              <button on:click={() => openExtendModal(sub)} class="flex-1 py-1.5 bg-emerald-500/10 text-emerald-400 font-medium text-xs rounded-lg border border-emerald-500/20">
+                Prorrogar
               </button>
-              
-              <button
-                on:click={() => handleCancelSubscription(sub)}
-                class="px-4 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-700 rounded-lg transition text-sm"
-              >
-                ❌ Cancelar
+              <button on:click={() => handleCancelSubscription(sub)} class="px-2 py-1.5 bg-slate-800 text-rose-400 hover:text-rose-300 rounded-lg border border-slate-700">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-            {:else if sub.status === 'canceled'}
-              <button
-                on:click={() => handleReactivateSubscription(sub)}
-                class="px-4 py-2 bg-green-900/30 hover:bg-green-900/50 text-green-400 border border-green-700 rounded-lg transition text-sm"
-              >
-                ✅ Reativar
+             {:else if sub.status === 'canceled'}
+              <button on:click={() => handleReactivateSubscription(sub)} class="flex-1 py-1.5 bg-emerald-500/10 text-emerald-400 font-medium text-xs rounded-lg border border-emerald-500/20">
+                Reativar
               </button>
-            {/if}
+             {/if}
           </div>
         </div>
       {/each}
@@ -405,78 +448,72 @@
   {/if}
 </div>
 
-<!-- Extend Modal -->
+<!-- Extend Subscription Glass Modal -->
 {#if showExtendModal && selectedSub}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-    <div class="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-md w-full">
-      <h3 class="text-xl font-bold mb-4">Registrar Pagamento Manual</h3>
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-[#0B0F19]/80" transition:fade={{ duration: 200 }}>
+    <div class="relative w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden" transition:slide={{ duration: 300, axis: 'y' }}>
       
-      <div class="mb-4">
-        <div class="text-sm text-slate-400">Empresa</div>
-        <div class="font-medium">{selectedSub.empresa_perfil.nome_exibicao}</div>
+      <!-- Glow Header -->
+      <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-500/60 to-transparent"></div>
+      
+      <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white tracking-wide">Renovação Manual</h3>
+        <button on:click={closeExtendModal} class="text-slate-500 hover:text-white transition-colors outline-none"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
       </div>
       
-      <div class="mb-4">
-        <div class="text-sm text-slate-400">Expira atualmente em</div>
-        <div class="font-medium">
-          {new Date(selectedSub.current_period_end).toLocaleDateString('pt-BR')}
+      <div class="p-6 space-y-6">
+        
+        <div>
+          <p class="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-1">Empresa Alvo</p>
+          <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
+             <div class="w-8 h-8 bg-sky-500/20 text-sky-400 flex items-center justify-center rounded-full font-bold text-xs">{getInitials(selectedSub.empresa_perfil.nome_exibicao)}</div>
+             <div class="text-sm font-medium text-slate-200">{selectedSub.empresa_perfil.nome_exibicao}</div>
+          </div>
         </div>
-      </div>
-      
-      <div class="mb-4">
-        <label class="block text-sm text-slate-400 mb-2">Período pago</label>
-        <div class="grid grid-cols-4 gap-2">
-          <button
-            on:click={() => extendMonths = 1}
-            class="px-3 py-2 rounded-lg border transition {extendMonths === 1 ? 'bg-sky-600 border-sky-500' : 'bg-slate-700 border-slate-600'}"
-          >
-            1 mês
-          </button>
-          <button
-            on:click={() => extendMonths = 3}
-            class="px-3 py-2 rounded-lg border transition {extendMonths === 3 ? 'bg-sky-600 border-sky-500' : 'bg-slate-700 border-slate-600'}"
-          >
-            3 meses
-          </button>
-          <button
-            on:click={() => extendMonths = 6}
-            class="px-3 py-2 rounded-lg border transition {extendMonths === 6 ? 'bg-sky-600 border-sky-500' : 'bg-slate-700 border-slate-600'}"
-          >
-            6 meses
-          </button>
-          <button
-            on:click={() => extendMonths = 12}
-            class="px-3 py-2 rounded-lg border transition {extendMonths === 12 ? 'bg-sky-600 border-sky-500' : 'bg-slate-700 border-slate-600'}"
-          >
-            1 ano
-          </button>
+        
+        <div class="grid grid-cols-2 gap-4">
+           <div>
+              <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Status Atual</p>
+              <div class="text-sm font-semibold text-rose-400">
+                {new Date(selectedSub.current_period_end) < new Date() ? 'Expirada' : 'Ativa'}
+              </div>
+           </div>
+           <div>
+             <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Expira(va) em</p>
+             <div class="text-sm font-semibold text-slate-300">{new Date(selectedSub.current_period_end).toLocaleDateString('pt-BR')}</div>
+           </div>
         </div>
+        
+        <div>
+          <label class="block text-[13px] font-medium text-slate-400 mb-2">Ciclo de Extensão</label>
+          <div class="grid grid-cols-4 gap-2">
+            {#each [1, 3, 6, 12] as months}
+              <button
+                on:click={() => extendMonths = months}
+                class="py-2.5 rounded-xl border text-sm font-bold transition-all {extendMonths === months ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}"
+              >
+                {months === 12 ? '1 Ano' : `${months}M`}
+              </button>
+            {/each}
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-[13px] font-medium text-slate-400 mb-2">Motivo da inserção manual <span class="text-rose-400">*</span></label>
+          <textarea
+            bind:value={extendReason}
+            rows="2"
+            placeholder="Ex: Pagamento recebido via PIX..."
+            class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all shadow-inner resize-none"
+          ></textarea>
+        </div>
+        
       </div>
       
-      <div class="mb-4">
-        <label class="block text-sm text-slate-400 mb-2">Motivo (obrigatório)</label>
-        <textarea
-          bind:value={extendReason}
-          rows="3"
-          placeholder="Ex: Extensão promocional para early adopter"
-          class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
-        ></textarea>
-      </div>
-      
-      <div class="flex gap-2">
-        <button
-          on:click={closeExtendModal}
-          disabled={extending}
-          class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition disabled:opacity-50"
-        >
-          Cancelar
-        </button>
-        <button
-          on:click={handleExtendSubscription}
-          disabled={extending || !extendReason.trim()}
-          class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition disabled:opacity-50"
-        >
-          {extending ? 'Estendendo...' : 'Estender'}
+      <div class="px-6 py-4 bg-slate-800/30 border-t border-slate-800 flex justify-end gap-3">
+        <button on:click={closeExtendModal} disabled={extending} class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-50">Cancelar</button>
+        <button on:click={handleExtendSubscription} disabled={extending || !extendReason.trim()} class="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
+          {extending ? 'Registrando...' : 'Confirmar Pgto'}
         </button>
       </div>
     </div>
