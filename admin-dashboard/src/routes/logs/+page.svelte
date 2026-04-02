@@ -24,7 +24,9 @@
       reactivate_subscription: '✅ Reativou assinatura',
       reset_password: '🔑 Reset de senha',
       login: '🔐 Login',
-      view_dashboard: '👁️ Visualizou dashboard'
+      view_dashboard: '👁️ Visualizou dashboard',
+      delete_user: '🗑️ Excluiu conta (Cascade)',
+      edit_user: '✏️ Editou dados do usuário'
     }
     return labels[action] || action
   }

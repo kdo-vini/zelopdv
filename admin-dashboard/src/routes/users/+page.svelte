@@ -7,6 +7,8 @@
   let loading = true
   let searchTerm = ''
   let adminInfo = null
+  let isEditing = false
+  let editForm = {}
   
   onMount(async () => {
     await loadAdminInfo()
@@ -86,6 +88,75 @@
     } catch (err) {
       console.error('Error resetting password:', err)
       alert('Erro ao enviar email de reset')
+    }
+  }
+
+  function openEdit(user) {
+    editForm = { ...user }
+    isEditing = true
+  }
+
+  function closeEdit() {
+    isEditing = false
+    editForm = {}
+  }
+
+  async function saveEdit() {
+    try {
+      const { error } = await supabase
+        .from('empresa_perfil')
+        .update({
+          nome_exibicao: editForm.nome_exibicao,
+          documento: editForm.documento,
+          contato: editForm.contato,
+          modulo_pdv_ativo: editForm.modulo_pdv_ativo
+        })
+        .eq('user_id', editForm.user_id)
+      
+      if (error) throw error
+      
+      await logAdminAction({
+        adminId: adminInfo.id,
+        action: 'edit_user',
+        targetUserId: editForm.user_id,
+        details: { email: editForm.contato, company: editForm.nome_exibicao }
+      })
+      
+      alert('Dados salvos com sucesso!')
+      closeEdit()
+      await loadUsers()
+    } catch (err) {
+      console.error('Save error:', err)
+      alert('Erro ao salvar os dados.')
+    }
+  }
+
+  async function handleDeleteUser(user) {
+    if (!adminInfo) return
+    const confirmation = prompt(`DIGITE "${user.nome_exibicao}" para confirmar a EXCLUSÃO TOTAL (CASCADE) deste usuário. Esta ação é IRREVERSÍVEL.`)
+    
+    if (confirmation !== user.nome_exibicao) {
+      if (confirmation !== null) alert('Nome incorreto, exclusão cancelada.')
+      return
+    }
+    
+    try {
+      const { error } = await supabase.rpc('admin_delete_user', {
+        target_user_id: user.user_id,
+        target_user_email: user.contato || 'unknown',
+        action_details: {
+            company: user.nome_exibicao,
+            deleted_by: adminInfo.email
+        }
+      })
+      
+      if (error) throw error
+      
+      alert('Usuário e todos os seus dados foram excluídos com sucesso (Cascade).')
+      await loadUsers()
+    } catch (err) {
+      console.error('Delete error', err)
+      alert(`Erro ao excluir usuário: ${err.message}`)
     }
   }
   
@@ -208,19 +279,70 @@
             <button
               on:click={() => handleResetPassword(user)}
               class="px-4 py-2 bg-amber-900/30 hover:bg-amber-900/50 text-amber-400 border border-amber-700 rounded-lg transition text-sm"
+              title="Enviar e-mail para recuperar senha"
             >
-              🔑 Reset Senha
+              🔑 Resgatar Acesso
             </button>
             
             <a
               href="/subscriptions?user={user.user_id}"
               class="px-4 py-2 bg-sky-900/30 hover:bg-sky-900/50 text-sky-400 border border-sky-700 rounded-lg transition text-sm inline-block"
+              title="Gerenciar assinatura e planos"
             >
               📋 Ver Assinatura
             </a>
+
+            <button
+              on:click={() => openEdit(user)}
+              class="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg transition text-sm"
+              title="Editar dados da empresa (Nome, Documento, etc)"
+            >
+              ✏️ Editar
+            </button>
+
+            <button
+              on:click={() => handleDeleteUser(user)}
+              class="px-4 py-2 bg-red-900/40 hover:bg-red-900/60 text-red-400 border border-red-700 rounded-lg transition text-sm ml-auto"
+              title="Excluir usuário e apagar todos os dados"
+            >
+              🗑️ Excluir (Cascade)
+            </button>
           </div>
         </div>
       {/each}
     </div>
   {/if}
 </div>
+
+<!-- Edit Modal -->
+{#if isEditing}
+  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-lg w-full max-w-lg overflow-hidden shadow-2xl">
+      <div class="p-6 border-b border-slate-700 font-bold text-lg text-white">
+        Editar Usuário
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm text-slate-400 mb-1">Nome de Exibição / Empresa</label>
+          <input type="text" bind:value={editForm.nome_exibicao} class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="block text-sm text-slate-400 mb-1">Documento (CPF/CNPJ)</label>
+          <input type="text" bind:value={editForm.documento} class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="block text-sm text-slate-400 mb-1">Email / Contato</label>
+          <input type="email" bind:value={editForm.contato} class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
+        </div>
+        <div class="flex items-center space-x-3 pt-2">
+          <input type="checkbox" bind:checked={editForm.modulo_pdv_ativo} id="mod_pdv" class="w-5 h-5 bg-slate-700 border border-slate-600 rounded text-sky-500 focus:ring-0 focus:ring-offset-0" />
+          <label for="mod_pdv" class="text-white text-sm">Módulo PDV Ativo</label>
+        </div>
+      </div>
+      <div class="p-6 border-t border-slate-700 flex justify-end gap-3 bg-slate-900/50">
+        <button on:click={closeEdit} class="px-5 py-2 text-slate-300 hover:text-white transition">Cancelar</button>
+        <button on:click={saveEdit} class="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition font-medium">Salvar</button>
+      </div>
+    </div>
+  </div>
+{/if}
