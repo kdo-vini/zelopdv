@@ -479,54 +479,32 @@
   <MarketingHeader />
 
   <section class="hero-shell">
-    <div class="glow glow-a"></div>
-    <div class="glow glow-b"></div>
-
     <div class="max-w-6xl mx-auto px-6 hero-stack">
-      <div class="eyebrow">Ferramenta grátis</div>
-      <h1 class="hero-title">Descubra quanto cobrar com mais segurança</h1>
-      <p class="hero-copy">
-        Calcule o preço ideal de um produto ou faça a precificação completa do seu negócio,
-        com resultado na hora e sem precisar criar conta.
-      </p>
+      <div class="eyebrow">Ferramenta grátis · sem criar conta</div>
+      <h1 class="hero-title">Descubra quanto cobrar</h1>
+      <div class="mode-toggle">
+        <button
+          type="button"
+          class="mode-pill"
+          class:mode-pill-active={selectedCalculator === 'product'}
+          on:click={() => selectCalculator('product')}
+        >
+          Preço de 1 produto
+        </button>
+        <button
+          type="button"
+          class="mode-pill"
+          class:mode-pill-active={selectedCalculator === 'business'}
+          on:click={() => selectCalculator('business')}
+        >
+          Negócio completo
+        </button>
+      </div>
     </div>
   </section>
 
   <section class="pb-24">
     <div class="max-w-6xl mx-auto px-6 page-content">
-      <section class="section-card section-spacing">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">Escolha como calcular</p>
-            <h2 class="section-title">O que você quer calcular hoje?</h2>
-          </div>
-          <p class="section-note">Comece pelo cálculo mais prático para o seu momento.</p>
-        </div>
-
-        <div class="tool-choice-grid">
-          <button
-            type="button"
-            class="tool-choice-card"
-            class:tool-choice-active={selectedCalculator === 'product'}
-            on:click={() => selectCalculator('product')}
-          >
-            <span class="tool-choice-badge">1</span>
-            <strong>Preço de 1 produto</strong>
-            <p>Para hot-dog, marmita, ovo de Páscoa, doce, combo ou qualquer item unitário.</p>
-          </button>
-
-          <button
-            type="button"
-            class="tool-choice-card"
-            class:tool-choice-active={selectedCalculator === 'business'}
-            on:click={() => selectCalculator('business')}
-          >
-            <span class="tool-choice-badge">2</span>
-            <strong>Precificação completa do negócio</strong>
-            <p>Para incluir custos fixos, estimativa de vendas, lucro mensal e ponto de equilíbrio.</p>
-          </button>
-        </div>
-      </section>
 
       {#if selectedCalculator === 'product'}
         <section class="product-layout">
@@ -534,10 +512,7 @@
             <article class="section-card section-spacing">
               <div class="block-head">
                 <span class="block-number">1</span>
-                <div>
-                  <h3 class="block-title">Qual produto você quer precificar?</h3>
-                  <p class="block-copy">Comece pelo nome e escolha um nicho parecido com o seu caso.</p>
-                </div>
+                <h3 class="block-title">Qual produto você quer precificar?</h3>
               </div>
 
               <div class="input-grid">
@@ -553,17 +528,16 @@
                 </label>
               </div>
 
-              <div class="niche-grid">
+              <div class="niche-chips">
                 {#each niches as niche}
                   <button
                     type="button"
-                    class="choice-card"
-                    class:card-selected={productForm.niche === niche.id}
+                    class="niche-chip"
+                    class:chip-selected={productForm.niche === niche.id}
                     on:click={() => selectProductNiche(niche.id)}
                   >
-                    <span class="choice-badge">{niche.badge}</span>
-                    <strong>{niche.label}</strong>
-                    <span>{niche.description}</span>
+                    <span class="chip-badge">{niche.badge}</span>
+                    <span>{niche.label}</span>
                   </button>
                 {/each}
               </div>
@@ -572,10 +546,7 @@
             <article class="section-card section-spacing">
               <div class="block-head">
                 <span class="block-number">2</span>
-                <div>
-                  <h3 class="block-title">Como você quer informar os custos?</h3>
-                  <p class="block-copy">Você pode informar o valor total da unidade ou montar a receita ingrediente por ingrediente.</p>
-                </div>
+                <h3 class="block-title">Custos do produto</h3>
               </div>
 
               <div class="mode-grid">
@@ -751,10 +722,7 @@
             <article class="section-card section-spacing">
               <div class="block-head">
                 <span class="block-number">3</span>
-                <div>
-                  <h3 class="block-title">Custos fora da receita</h3>
-                  <p class="block-copy">Aqui entram embalagem, sacola, etiqueta e outros extras por unidade.</p>
-                </div>
+                <h3 class="block-title">Embalagem e extras</h3>
               </div>
 
               <div class="input-grid">
@@ -793,10 +761,7 @@
             <article class="section-card section-spacing">
               <div class="block-head">
                 <span class="block-number">4</span>
-                <div>
-                  <h3 class="block-title">Lucro e taxas</h3>
-                  <p class="block-copy">Comece por um preset simples. Se precisar, faca o ajuste fino logo abaixo.</p>
-                </div>
+                <h3 class="block-title">Margem de lucro</h3>
               </div>
 
               <div class="preset-grid">
@@ -897,30 +862,7 @@
             </div>
           </div>
 
-          <aside class="product-side">
-            <div class="result-card summary-card">
-              <p class="result-kicker">Visão rápida</p>
-              <h3>{productLabel}</h3>
-              <div class="metric-stack compact-top">
-                <div class="metric-row">
-                  <span>Base da receita</span>
-                  <strong>{formatCurrency(productBaseCost)}</strong>
-                </div>
-                <div class="metric-row">
-                  <span>Embalagem + extras</span>
-                  <strong>{formatCurrency(productForm.packagingCost + productForm.extraUnitCost)}</strong>
-                </div>
-                <div class="metric-row">
-                  <span>Custo total da unidade</span>
-                  <strong>{formatCurrency(productDirectCost)}</strong>
-                </div>
-                <div class="metric-row">
-                  <span>Margem usada</span>
-                  <strong>{productMargin}%</strong>
-                </div>
-              </div>
-            </div>
-          </aside>
+
         </section>
 
         {#if showProductResult}
@@ -1005,17 +947,16 @@
           </div>
 
           {#if businessStep === 1}
-            <div class="niche-grid">
+            <div class="niche-chips">
               {#each niches as niche}
                 <button
                   type="button"
-                  class="choice-card"
-                  class:card-selected={fullForm.niche === niche.id}
+                  class="niche-chip"
+                  class:chip-selected={fullForm.niche === niche.id}
                   on:click={() => selectFullNiche(niche.id)}
                 >
-                  <span class="choice-badge">{niche.badge}</span>
-                  <strong>{niche.label}</strong>
-                  <span>{niche.description}</span>
+                  <span class="chip-badge">{niche.badge}</span>
+                  <span>{niche.label}</span>
                 </button>
               {/each}
             </div>
@@ -1314,6 +1255,21 @@
     </div>
   </section>
 
+  {#if productResultReady && selectedCalculator === 'product'}
+    <div class="sticky-bar">
+      <div class="sticky-inner max-w-6xl mx-auto px-6">
+        <div class="sticky-info">
+          <span class="sticky-label">Preço sugerido</span>
+          <strong class="sticky-price">{formatCurrency(productSuggestedPrice)}</strong>
+          {#if productForm.productName}<span class="sticky-name">· {productForm.productName}</span>{/if}
+        </div>
+        <button type="button" class="primary-button" on:click={revealProductResult}>
+          Ver detalhes →
+        </button>
+      </div>
+    </div>
+  {/if}
+
   <MarketingFooter />
 </div>
 
@@ -1324,44 +1280,19 @@
   }
 
   .hero-shell {
-    position: relative;
-    overflow: hidden;
-    padding-top: 8.5rem;
-    padding-bottom: 2.5rem;
+    padding-top: 7.5rem;
+    padding-bottom: 3rem;
   }
 
   .hero-stack {
-    position: relative;
-    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
   }
 
   .page-content {
     display: grid;
     gap: 1.5rem;
-  }
-
-  .glow {
-    position: absolute;
-    border-radius: 999px;
-    filter: blur(110px);
-    pointer-events: none;
-    opacity: 0.68;
-  }
-
-  .glow-a {
-    width: 30rem;
-    height: 30rem;
-    top: -8rem;
-    left: 12%;
-    background: color-mix(in srgb, var(--primary) 24%, transparent);
-  }
-
-  .glow-b {
-    width: 24rem;
-    height: 24rem;
-    right: -4rem;
-    bottom: -8rem;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
   }
 
   .eyebrow,
@@ -1371,38 +1302,63 @@
     align-items: center;
     gap: 0.45rem;
     border-radius: 999px;
-    padding: 0.42rem 0.85rem;
-    font-size: 0.75rem;
+    padding: 0.38rem 0.8rem;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-    color: color-mix(in srgb, white 74%, var(--primary));
-    border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    color: color-mix(in srgb, white 70%, var(--primary));
+    border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   }
 
   .hero-title {
-    margin-top: 1rem;
     color: var(--text-main);
-    font-size: clamp(2.5rem, 5vw, 4.6rem);
-    line-height: 1.03;
-    letter-spacing: -0.06em;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1.08;
+    letter-spacing: -0.05em;
     font-weight: 800;
-    max-width: 15ch;
+    max-width: 20ch;
   }
 
-  .hero-copy,
+  /* Mode toggle pills */
+  .mode-toggle {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .mode-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 2.6rem;
+    padding: 0 1.2rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, white 10%, var(--border-subtle));
+    background: color-mix(in srgb, var(--bg-panel) 80%, transparent);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all var(--transition-fast);
+  }
+
+  .mode-pill:hover {
+    border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+    color: var(--text-main);
+  }
+
+  .mode-pill-active {
+    background: color-mix(in srgb, var(--primary) 14%, var(--bg-panel));
+    border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+    color: var(--text-main);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+
   .section-note,
   .cta-copy,
-  .block-copy,
   .subtle-copy {
     color: var(--text-muted);
     line-height: 1.75;
-  }
-
-  .hero-copy {
-    margin-top: 1rem;
-    max-width: 56rem;
   }
 
   .section-card,
@@ -1468,22 +1424,18 @@
     margin-bottom: 0.2rem;
   }
 
-  .tool-choice-grid,
   .mode-grid,
   .preset-grid,
   .metric-grid,
   .cta-benefits,
   .faq-shell,
   .faq-list,
-  .input-grid,
-  .niche-grid {
+  .input-grid {
     display: grid;
     gap: 1rem;
   }
 
-  .tool-choice-card,
   .mode-card,
-  .choice-card,
   .preset-card,
   .metric-card {
     text-align: left;
@@ -1498,12 +1450,8 @@
       background var(--transition-fast);
   }
 
-  .tool-choice-card:hover,
-  .tool-choice-active,
   .mode-card:hover,
   .mode-card-active,
-  .choice-card:hover,
-  .card-selected,
   .preset-card:hover,
   .preset-card-active {
     transform: translateY(-1px);
@@ -1512,18 +1460,14 @@
     box-shadow: 0 10px 24px color-mix(in srgb, var(--primary) 10%, transparent);
   }
 
-  .tool-choice-card strong,
   .mode-card strong,
-  .choice-card strong,
   .preset-card strong,
   .metric-card strong {
     display: block;
     color: var(--text-main);
   }
 
-  .tool-choice-card p,
   .mode-card p,
-  .choice-card span,
   .metric-card span,
   .builder-copy,
   .slider-copy,
@@ -1533,19 +1477,52 @@
     color: var(--text-muted);
   }
 
-  .tool-choice-badge,
-  .choice-badge {
-    width: 2.1rem;
-    height: 2.1rem;
+  /* Niche chips */
+  .niche-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .niche-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.4rem;
+    padding: 0 0.9rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, white 9%, var(--border-subtle));
+    background: color-mix(in srgb, var(--bg-panel) 85%, transparent);
+    color: var(--text-label);
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+  }
+
+  .niche-chip:hover {
+    border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+    color: var(--text-main);
+  }
+
+  .chip-selected {
+    border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+    background: color-mix(in srgb, var(--primary) 12%, var(--bg-panel));
+    color: var(--text-main);
+    font-weight: 600;
+  }
+
+  .chip-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
     border-radius: 999px;
     background: color-mix(in srgb, var(--primary) 16%, transparent);
     color: var(--text-main);
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 700;
-    margin-bottom: 0.75rem;
   }
 
   .product-layout {
@@ -1553,8 +1530,7 @@
     gap: 1.5rem;
   }
 
-  .product-main,
-  .product-side {
+  .product-main {
     display: grid;
     gap: 1.5rem;
     align-content: start;
@@ -1849,9 +1825,55 @@
     margin-top: 0.75rem;
   }
 
-  .summary-card {
-    position: sticky;
-    top: 6.5rem;
+  /* Sticky result bar */
+  .sticky-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid color-mix(in srgb, white 10%, var(--border-subtle));
+    padding: 0.85rem 0;
+    animation: slideUp 0.25s ease-out;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .sticky-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .sticky-info {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .sticky-label {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  .sticky-price {
+    color: var(--text-main);
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  .sticky-name {
+    color: var(--text-muted);
+    font-size: 0.85rem;
   }
 
   .price-spotlight {
@@ -2041,25 +2063,12 @@
   }
 
   @media (min-width: 1024px) {
-    .product-layout {
-      grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
-      align-items: start;
-    }
-
-    .niche-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
     .ingredient-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
-  @media (max-width: 1023px) {
-    .summary-card {
-      position: static;
-    }
-  }
+
 
   @media (max-width: 767px) {
     .hero-shell {
