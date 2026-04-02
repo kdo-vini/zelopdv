@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { supabase } from '$lib/supabaseAdmin'
   import { logAdminAction } from '$lib/logger'
+  import { fade, slide } from 'svelte/transition'
   
   let users = []
   let loading = true
@@ -31,7 +32,6 @@
   async function loadUsers() {
     loading = true
     
-    // Get all empresa_perfil
     const { data: profiles, error: profileError } = await supabase
       .from('empresa_perfil')
       .select('*')
@@ -44,7 +44,6 @@
       return
     }
     
-    // Get subscriptions for these users
     if (profiles && profiles.length > 0) {
       const userIds = profiles.map(p => p.user_id)
       const { data: subs } = await supabase
@@ -53,7 +52,6 @@
         .in('user_id', userIds)
         .order('updated_at', { ascending: false })
       
-      // Merge subscriptions with profiles (only most recent per user)
       users = profiles.map(profile => ({
         ...profile,
         subscriptions: subs?.filter(s => s.user_id === profile.user_id).slice(0, 1) || []
@@ -66,9 +64,7 @@
   }
   
   async function handleResetPassword(user) {
-    if (!confirm(`Enviar email de reset de senha para ${user.contato}?`)) {
-      return
-    }
+    if (!confirm(`Enviar email de reset de senha para ${user.contato}?`)) return
     
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.contato, {
@@ -133,10 +129,10 @@
 
   async function handleDeleteUser(user) {
     if (!adminInfo) return
-    const confirmation = prompt(`DIGITE "${user.nome_exibicao}" para confirmar a EXCLUSÃO TOTAL (CASCADE) deste usuário. Esta ação é IRREVERSÍVEL.`)
+    const confirmation = prompt(`Tem certeza que deseja apagar a conta de ${user.nome_exibicao}? Esta ação é IRREVERSÍVEL. Para confirmar, digite "delete":`)
     
-    if (confirmation !== user.nome_exibicao) {
-      if (confirmation !== null) alert('Nome incorreto, exclusão cancelada.')
+    if (confirmation !== 'delete') {
+      if (confirmation !== null) alert('Código de exclusão incorreto. Ação cancelada.')
       return
     }
     
@@ -152,25 +148,34 @@
       
       if (error) throw error
       
-      alert('Usuário e todos os seus dados foram excluídos com sucesso (Cascade).')
+      alert('Conta excluída definitivamente (Cascade).')
       await loadUsers()
     } catch (err) {
       console.error('Delete error', err)
-      alert(`Erro ao excluir usuário: ${err.message}`)
+      alert(`Erro ao excluir: ${err.message}`)
     }
   }
   
   function getUserStatus(user) {
     const sub = user.subscriptions?.[0]
-    if (!sub) return { text: 'Sem assinatura', class: 'bg-slate-700 text-slate-300 border-slate-600' }
+    if (!sub) return { text: 'Inativo', class: 'bg-slate-500/10 text-slate-400 border border-slate-500/20 shadow-[0_0_8px_rgba(100,116,139,0.1)]' }
     
     if (sub.status === 'active') {
-      return { text: 'Ativo', class: 'bg-green-900/30 text-green-400 border-green-700' }
+      return { text: 'Ativo', class: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.2)]' }
     } else if (sub.status === 'canceled') {
-      return { text: 'Cancelado', class: 'bg-red-900/30 text-red-400 border-red-700' }
+      return { text: 'Cancelado', class: 'bg-rose-500/10 text-rose-400 border border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.2)]' }
     }
     
-    return { text: sub.status, class: 'bg-slate-700 text-slate-300 border-slate-600' }
+    return { text: sub.status, class: 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.2)]' }
+  }
+
+  function getInitials(name) {
+    if (!name) return '?'
+    const parts = name.trim().split(' ')
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
   }
   
   $: filteredUsers = users.filter(user => {
@@ -185,127 +190,162 @@
 </script>
 
 <svelte:head>
-  <title>Usuários - Zelo Admin</title>
+  <title>Usuários - Admin Zelo</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <!-- Header -->
-  <div class="flex justify-between items-center">
-    <div>
-      <h2 class="text-2xl font-bold">Usuários</h2>
-      <p class="text-slate-400 mt-1">Gerenciar contas de empresas</p>
+<div class="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500">
+  
+  <!-- Sleek Header Area -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-800">
+    <div class="relative">
+      <h2 class="text-3xl font-extrabold tracking-tight text-white mb-1">Users Management</h2>
+      <p class="text-slate-400 text-sm font-medium">Controle total de clientes, acessos e auditoria.</p>
+      <!-- Accent Glow Line -->
+      <div class="absolute -bottom-6 left-0 w-16 h-[2px] bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
     </div>
     
-    <button
-      on:click={loadUsers}
-      class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition"
-    >
-      🔄 Atualizar
-    </button>
+    <div class="flex items-center gap-3">
+      <div class="relative group w-full md:w-80">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-sky-400 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          bind:value={searchTerm}
+          placeholder="Buscar por nome, doc ou email..."
+          class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all shadow-inner"
+        />
+      </div>
+      
+      <button
+        on:click={loadUsers}
+        class="flex items-center justify-center w-11 h-11 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
+        title="Atualizar"
+      >
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+    </div>
   </div>
   
-  <!-- Search -->
-  <div class="bg-slate-800 border border-slate-700 rounded-lg p-4">
-    <label class="block text-sm text-slate-400 mb-2">Buscar</label>
-    <input
-      type="text"
-      bind:value={searchTerm}
-      placeholder="Nome, email ou documento..."
-      class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
-    />
-  </div>
-  
-  <!-- Users List -->
+  <!-- Data Grid / List -->
   {#if loading}
-    <div class="text-center py-12">
-      <div class="text-slate-400">Carregando usuários...</div>
+    <div class="flex flex-col items-center justify-center py-24 space-y-4" in:fade>
+      <div class="w-8 h-8 border-2 border-sky-500/30 border-t-sky-500 rounded-full animate-spin"></div>
+      <div class="text-sm font-medium text-slate-400">Sincronizando banco de dados...</div>
     </div>
   {:else if filteredUsers.length === 0}
-    <div class="bg-slate-800 border border-slate-700 rounded-lg p-12 text-center">
-      <div class="text-slate-400">Nenhum usuário encontrado</div>
+    <div class="flex flex-col items-center justify-center py-24 px-4 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/30" in:fade>
+      <div class="w-16 h-16 mb-4 rounded-full bg-slate-800/50 flex items-center justify-center">
+        <svg class="w-8 h-8 text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-medium text-slate-300">Nenhum resultado</h3>
+      <p class="text-sm text-slate-500 mt-1 max-w-sm">Tente ajustar seus termos de busca para encontrar o usuário.</p>
     </div>
   {:else}
-    <div class="space-y-4">
+    <!-- Desktop Table View -->
+    <div class="hidden md:block overflow-hidden bg-slate-900/40 border border-slate-800/60 rounded-2xl shadow-xl backdrop-blur-sm" in:fade>
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-slate-800 bg-slate-900/80">
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Assinatura Expira</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Documento</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800/50">
+          {#each filteredUsers as user (user.user_id)}
+            {@const status = getUserStatus(user)}
+            {@const sub = user.subscriptions?.[0]}
+            
+            <tr class="group hover:bg-slate-800/30 transition-colors">
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-4">
+                  <!-- Avatar -->
+                  <div class="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center text-sm font-bold text-white shadow-inner shrink-0">
+                    {getInitials(user.nome_exibicao)}
+                  </div>
+                  <!-- Name & Email -->
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold text-slate-200 truncate group-hover:text-white transition-colors">{user.nome_exibicao || 'Sem Nome'}</p>
+                    <p class="text-xs text-slate-500 truncate mt-0.5">{user.contato}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="py-4 px-6">
+                <span class="inline-flex px-2.5 py-1 text-[11px] font-medium tracking-wide rounded-md {status.class}">
+                  {status.text}
+                </span>
+              </td>
+              <td class="py-4 px-6 text-sm text-slate-400">
+                {#if sub && sub.current_period_end}
+                  {new Date(sub.current_period_end).toLocaleDateString('pt-BR')}
+                {:else}
+                  <span class="text-slate-600">-</span>
+                {/if}
+              </td>
+              <td class="py-4 px-6 text-sm text-slate-400 font-mono text-xs">
+                {user.documento || '-'}
+              </td>
+              <td class="py-4 px-6 text-right">
+                <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  
+                  <button on:click={() => handleResetPassword(user)} class="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors" title="Reset de Senha">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                  </button>
+
+                  <a href="/subscriptions?user={user.user_id}" class="p-2 text-slate-400 hover:text-sky-400 hover:bg-sky-400/10 rounded-lg transition-colors" title="Assinatura">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  </a>
+
+                  <button on:click={() => openEdit(user)} class="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors" title="Editar">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  </button>
+
+                  <button on:click={() => handleDeleteUser(user)} class="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors ml-2" title="Excluir Definitivamente">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                  
+                </div>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Stacked View -->
+    <div class="md:hidden space-y-4" in:fade>
       {#each filteredUsers as user (user.user_id)}
         {@const status = getUserStatus(user)}
-        {@const sub = user.subscriptions?.[0]}
-        
-        <div class="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-1 h-full {status.class.split(' ')[0]}"></div>
+          
           <div class="flex justify-between items-start mb-4">
-            <div class="flex-1">
-              <h3 class="text-lg font-semibold text-white mb-1">
-                {user.nome_exibicao || 'Sem nome'}
-              </h3>
-              <div class="text-sm text-slate-400 space-y-1">
-                <div>📧 {user.contato}</div>
-                <div>📄 {user.documento || 'N/A'}</div>
-                <div>📱 {user.telefone || 'N/A'}</div>
-              </div>
-            </div>
-            
-            <div class="text-right">
-              <span class="inline-block px-3 py-1 text-sm border rounded-full {status.class}">
-                {status.text}
-              </span>
-            </div>
-          </div>
-          
-          <!-- User Details -->
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4 text-sm">
             <div>
-              <div class="text-slate-400">Cadastrado em</div>
-              <div class="font-medium text-white">
-                {new Date(user.created_at).toLocaleDateString('pt-BR')}
-              </div>
+              <h3 class="text-base font-bold text-slate-100">{user.nome_exibicao || 'Sem Nome'}</h3>
+              <p class="text-sm text-slate-400 mt-0.5">{user.contato}</p>
             </div>
-            
-            {#if sub}
-              <div>
-                <div class="text-slate-400">Assinatura expira</div>
-                <div class="font-medium text-white">
-                  {new Date(sub.current_period_end).toLocaleDateString('pt-BR')}
-                </div>
-              </div>
-            {/if}
-            
-            <div>
-              <div class="text-slate-400">Largura Bobina</div>
-              <div class="font-medium text-white">{user.largura_bobina || 'N/A'}</div>
-            </div>
+            <span class="inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded {status.class}">
+              {status.text}
+            </span>
           </div>
-          
-          <!-- Actions -->
-          <div class="flex gap-2 flex-wrap">
-            <button
-              on:click={() => handleResetPassword(user)}
-              class="px-4 py-2 bg-amber-900/30 hover:bg-amber-900/50 text-amber-400 border border-amber-700 rounded-lg transition text-sm"
-              title="Enviar e-mail para recuperar senha"
-            >
-              🔑 Resgatar Acesso
-            </button>
-            
-            <a
-              href="/subscriptions?user={user.user_id}"
-              class="px-4 py-2 bg-sky-900/30 hover:bg-sky-900/50 text-sky-400 border border-sky-700 rounded-lg transition text-sm inline-block"
-              title="Gerenciar assinatura e planos"
-            >
-              📋 Ver Assinatura
-            </a>
 
-            <button
-              on:click={() => openEdit(user)}
-              class="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg transition text-sm"
-              title="Editar dados da empresa (Nome, Documento, etc)"
-            >
-              ✏️ Editar
+          <div class="flex items-center gap-4 border-t border-slate-800 pt-4 mt-2">
+            <button on:click={() => handleResetPassword(user)} class="p-2 text-slate-400 bg-slate-800 rounded-lg hover:text-white" title="Reset Senha">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
             </button>
-
-            <button
-              on:click={() => handleDeleteUser(user)}
-              class="px-4 py-2 bg-red-900/40 hover:bg-red-900/60 text-red-400 border border-red-700 rounded-lg transition text-sm ml-auto"
-              title="Excluir usuário e apagar todos os dados"
-            >
-              🗑️ Excluir (Cascade)
+            <button on:click={() => openEdit(user)} class="p-2 text-slate-400 bg-slate-800 rounded-lg hover:text-white" title="Editar">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+            </button>
+            <div class="flex-1"></div>
+            <button on:click={() => handleDeleteUser(user)} class="p-2 text-rose-400 bg-rose-500/10 rounded-lg" title="Excluir">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
             </button>
           </div>
         </div>
@@ -314,34 +354,69 @@
   {/if}
 </div>
 
-<!-- Edit Modal -->
+<!-- Super Modern Glass Edit Modal -->
 {#if isEditing}
-  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-    <div class="bg-slate-800 border border-slate-700 rounded-lg w-full max-w-lg overflow-hidden shadow-2xl">
-      <div class="p-6 border-b border-slate-700 font-bold text-lg text-white">
-        Editar Usuário
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-[#0B0F19]/80" transition:fade={{ duration: 200 }}>
+    <div 
+      class="relative w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden"
+      transition:slide={{ duration: 300, axis: 'y' }}
+    >
+      <!-- Top Glow -->
+      <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-sky-500/50 to-transparent"></div>
+      
+      <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white tracking-wide">Editar Perfil</h3>
+        <button on:click={closeEdit} class="text-slate-500 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
       </div>
-      <div class="p-6 space-y-4">
-        <div>
-          <label class="block text-sm text-slate-400 mb-1">Nome de Exibição / Empresa</label>
-          <input type="text" bind:value={editForm.nome_exibicao} class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
+
+      <div class="p-6 space-y-5">
+        <div class="space-y-1.5">
+          <label class="block text-[13px] font-medium text-slate-400">Nome de Exibição / Empresa</label>
+          <input 
+            type="text" 
+            bind:value={editForm.nome_exibicao} 
+            class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+          />
         </div>
-        <div>
-          <label class="block text-sm text-slate-400 mb-1">Documento (CPF/CNPJ)</label>
-          <input type="text" bind:value={editForm.documento} class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
+        
+        <div class="space-y-1.5">
+          <label class="block text-[13px] font-medium text-slate-400">Documento (CPF/CNPJ)</label>
+          <input 
+            type="text" 
+            bind:value={editForm.documento} 
+            class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+          />
         </div>
-        <div>
-          <label class="block text-sm text-slate-400 mb-1">Email / Contato</label>
-          <input type="email" bind:value={editForm.contato} class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
+
+        <div class="space-y-1.5">
+          <label class="block text-[13px] font-medium text-slate-400">Email de Contato</label>
+          <input 
+            type="email" 
+            bind:value={editForm.contato} 
+            class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+          />
         </div>
-        <div class="flex items-center space-x-3 pt-2">
-          <input type="checkbox" bind:checked={editForm.modulo_pdv_ativo} id="mod_pdv" class="w-5 h-5 bg-slate-700 border border-slate-600 rounded text-sky-500 focus:ring-0 focus:ring-offset-0" />
-          <label for="mod_pdv" class="text-white text-sm">Módulo PDV Ativo</label>
+
+        <div class="pt-2">
+          <label class="flex items-center cursor-pointer group">
+            <div class="relative flex items-center justify-center">
+              <input type="checkbox" bind:checked={editForm.modulo_pdv_ativo} class="sr-only peer" />
+              <div class="w-10 h-5.5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-sky-500 shadow-inner"></div>
+            </div>
+            <span class="ml-3 text-sm font-medium text-slate-300 group-hover:text-white transition-colors">Acesso ao Módulo PDV</span>
+          </label>
         </div>
       </div>
-      <div class="p-6 border-t border-slate-700 flex justify-end gap-3 bg-slate-900/50">
-        <button on:click={closeEdit} class="px-5 py-2 text-slate-300 hover:text-white transition">Cancelar</button>
-        <button on:click={saveEdit} class="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition font-medium">Salvar</button>
+
+      <div class="px-6 py-4 bg-slate-800/30 border-t border-slate-800 flex justify-end gap-3">
+        <button on:click={closeEdit} class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors">
+          Cancelar
+        </button>
+        <button on:click={saveEdit} class="px-5 py-2 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-xl transition-all shadow-[0_0_15px_rgba(14,165,233,0.4)]">
+          Salvar Alterações
+        </button>
       </div>
     </div>
   </div>
