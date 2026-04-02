@@ -483,11 +483,11 @@
     <div class="glow glow-b"></div>
 
     <div class="max-w-6xl mx-auto px-6 hero-stack">
-      <div class="eyebrow">Ferramenta gratuita e pública</div>
-      <h1 class="hero-title">Calculadora de precificação para descobrir quanto cobrar</h1>
+      <div class="eyebrow">Ferramenta grátis</div>
+      <h1 class="hero-title">Descubra quanto cobrar com mais segurança</h1>
       <p class="hero-copy">
-        Use a mesma URL <strong>/precificacao</strong> para dois cenários: calcular o preço de 1 produto
-        ou montar a precificação completa do negócio. O caminho rápido vem primeiro.
+        Calcule o preço ideal de um produto ou faça a precificação completa do seu negócio,
+        com resultado na hora e sem precisar criar conta.
       </p>
     </div>
   </section>
@@ -497,10 +497,10 @@
       <section class="section-card section-spacing">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Escolha inicial</p>
+            <p class="section-kicker">Escolha como calcular</p>
             <h2 class="section-title">O que você quer calcular hoje?</h2>
           </div>
-          <p class="section-note">A opção mais usada é Preço de 1 produto. A análise completa fica logo ao lado.</p>
+          <p class="section-note">Comece pelo cálculo mais prático para o seu momento.</p>
         </div>
 
         <div class="tool-choice-grid">
@@ -893,13 +893,13 @@
               <button type="button" class="primary-button" on:click={revealProductResult}>
                 Calcular preço
               </button>
-              <p class="subtle-copy">Você pode preencher no modo rápido ou ingrediente por ingrediente. O resultado aparece abaixo.</p>
+              <p class="subtle-copy">Preencha os dados do seu jeito e veja o preço sugerido logo abaixo.</p>
             </div>
           </div>
 
           <aside class="product-side">
             <div class="result-card summary-card">
-              <p class="result-kicker">Resumo do custo</p>
+              <p class="result-kicker">Visão rápida</p>
               <h3>{productLabel}</h3>
               <div class="metric-stack compact-top">
                 <div class="metric-row">
@@ -925,7 +925,7 @@
 
         {#if showProductResult}
           <section class="result-card product-result-card">
-            <p class="result-kicker">Resultado do produto</p>
+            <p class="result-kicker">Preço sugerido</p>
             <h2 class="section-title">{productLabel}</h2>
 
             {#if productResultReady}
@@ -983,10 +983,10 @@
         <section class="section-card section-spacing">
           <div class="section-head">
             <div>
-              <p class="section-kicker">Modo avançado</p>
+              <p class="section-kicker">Análise completa</p>
               <h2 class="section-title">Precificação completa do negócio</h2>
             </div>
-            <p class="section-note">Este fluxo entra em custos fixos, previsão de vendas, lucro mensal e ponto de equilíbrio.</p>
+            <p class="section-note">Ideal para quem quer enxergar custos fixos, lucro mensal e ponto de equilíbrio com clareza.</p>
           </div>
 
           <div class="progress-shell">
