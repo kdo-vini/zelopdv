@@ -8,6 +8,7 @@
   $: isBlogRoute = $page.url.pathname.startsWith('/blog');
   $: navLinks = [
     { href: isBlogRoute ? '/#features' : '#features', label: 'Funcionalidades' },
+    { href: '/precificacao', label: 'Precificacao' },
     { href: '/blog', label: 'Blog' },
     { href: isBlogRoute ? '/#pricing' : '#pricing', label: 'Preços' },
     { href: isBlogRoute ? '/#faq' : '#faq', label: 'Dúvidas' }

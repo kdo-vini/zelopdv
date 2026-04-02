@@ -129,6 +129,7 @@
 
       <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
         <a href="#features" class="hover:text-white transition-colors">Funcionalidades</a>
+        <a href="/precificacao" class="hover:text-white transition-colors">Precificacao</a>
         <a href="/blog" class="hover:text-white transition-colors">Blog</a>
         <a href="#pricing" class="hover:text-white transition-colors">Preços</a>
         <a href="#faq" class="hover:text-white transition-colors">Dúvidas</a>
@@ -159,6 +160,7 @@
     {#if showMobileMenu}
       <div class="md:hidden border-t border-white/5 bg-[#0B0F19]/95 backdrop-blur-md px-6 py-4 flex flex-col gap-4 animate-fade-in-down">
         <a href="#features" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Funcionalidades</a>
+        <a href="/precificacao" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Precificacao</a>
         <a href="/blog" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Blog</a>
         <a href="#pricing" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Preços</a>
         <a href="#faq" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Dúvidas</a>
