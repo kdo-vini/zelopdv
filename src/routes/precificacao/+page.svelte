@@ -143,7 +143,7 @@
     }
   ];
 
-  const stepLabels = ['Seu nicho', 'Produto', 'Custos fixos', 'Margem', 'Resultado'];
+
   const productStepLabels = ['O que', 'Custos', 'Extras', 'Margem', 'Resultado'];
 
   const nicheMap = niches.reduce((acc, niche) => {
@@ -161,14 +161,11 @@
     currency: 'BRL'
   });
 
-  let selectedCalculator = 'product';
-  let businessStep = 1;
   let productStep = 1;
   let ingredientId = 2;
 
-  let productForm = createProductForm('marmitaria');
+  let productForm = createProductForm('outro');
   let ingredientRows = [createIngredientRow()];
-  let fullForm = createFullForm('delivery');
 
   function createProductForm(nicheId) {
     const niche = nicheMap[nicheId] || niches[0];
@@ -199,25 +196,7 @@
     };
   }
 
-  function createFullForm(nicheId) {
-    const niche = nicheMap[nicheId] || niches[0];
-    return {
-      niche: niche.id,
-      productName: '',
-      ingredientsCost: 0,
-      packagingCost: 0,
-      extraUnitCost: 0,
-      usePlatformFee: niche.defaultPlatformFee,
-      platformFee: niche.defaultPlatformFee ? 12 : 0,
-      rent: 0,
-      staff: 0,
-      utilities: 0,
-      internet: 0,
-      otherFixed: 0,
-      salesPerMonth: 300,
-      margin: niche.defaultMargin
-    };
-  }
+
 
   function clampNumber(value, min = 0, max = 9999999) {
     const number = Number(value);
@@ -261,13 +240,7 @@
     productForm = { ...productForm, [field]: value };
   }
 
-  function updateFullField(field, value) {
-    fullForm = { ...fullForm, [field]: value };
-  }
 
-  function selectCalculator(mode) {
-    selectedCalculator = mode;
-  }
 
   function selectProductNiche(nicheId) {
     const niche = nicheMap[nicheId];
@@ -281,17 +254,7 @@
     };
   }
 
-  function selectFullNiche(nicheId) {
-    const niche = nicheMap[nicheId];
-    if (!niche) return;
-    fullForm = {
-      ...fullForm,
-      niche: niche.id,
-      margin: niche.defaultMargin,
-      usePlatformFee: niche.defaultPlatformFee,
-      platformFee: niche.defaultPlatformFee ? (fullForm.platformFee || 12) : 0
-    };
-  }
+
 
   function setProductCostMode(mode) {
     productForm = { ...productForm, costMode: mode };
@@ -347,18 +310,7 @@
     if (productStep > 1) productStep -= 1;
   }
 
-  function goToBusinessStep(step) {
-    if (step < 1 || step > 5) return;
-    businessStep = step;
-  }
 
-  function nextBusinessStep() {
-    if (businessStep < 5) businessStep += 1;
-  }
-
-  function previousBusinessStep() {
-    if (businessStep > 1) businessStep -= 1;
-  }
 
   $: productNiche = nicheMap[productForm.niche] || niches[0];
   $: productPresetMargins = getPresetMargins(productForm.niche);
@@ -397,46 +349,7 @@
   $: productResultReady = productDirectCost > 0 && productSuggestedDenominator > 0;
   $: productLabel = productForm.productName || productNiche.placeholder;
 
-  $: fullNiche = nicheMap[fullForm.niche] || niches[0];
-  $: fullProductLabel = fullForm.productName || fullNiche.placeholder;
-  $: fullDirectCost =
-    fullForm.ingredientsCost + fullForm.packagingCost + fullForm.extraUnitCost;
-  $: fullTotalFixedCosts =
-    fullForm.rent +
-    fullForm.staff +
-    fullForm.utilities +
-    fullForm.internet +
-    fullForm.otherFixed;
-  $: fullFixedCostPerUnit =
-    fullForm.salesPerMonth > 0 ? fullTotalFixedCosts / fullForm.salesPerMonth : 0;
-  $: fullTotalUnitCost = fullDirectCost + fullFixedCostPerUnit;
-  $: fullFeeRate = fullForm.usePlatformFee ? fullForm.platformFee / 100 : 0;
-  $: fullMarginRate = fullForm.margin / 100;
-  $: fullMinimumDenominator = 1 - fullFeeRate;
-  $: fullSuggestedDenominator = 1 - fullFeeRate - fullMarginRate;
-  $: fullMinimumPrice =
-    fullTotalUnitCost > 0 && fullMinimumDenominator > 0
-      ? fullTotalUnitCost / fullMinimumDenominator
-      : 0;
-  $: fullSuggestedPrice =
-    fullTotalUnitCost > 0 && fullSuggestedDenominator > 0
-      ? fullTotalUnitCost / fullSuggestedDenominator
-      : 0;
-  $: fullPlatformValue = fullSuggestedPrice * fullFeeRate;
-  $: fullProfitPerUnit =
-    fullSuggestedPrice > 0
-      ? fullSuggestedPrice - fullTotalUnitCost - fullPlatformValue
-      : 0;
-  $: fullMonthlyRevenue = fullSuggestedPrice * fullForm.salesPerMonth;
-  $: fullMonthlyProfit = fullProfitPerUnit * fullForm.salesPerMonth;
-  $: fullContributionPerSale =
-    fullSuggestedPrice - fullDirectCost - fullPlatformValue;
-  $: fullBreakEvenUnits =
-    fullContributionPerSale > 0 ? fullTotalFixedCosts / fullContributionPerSale : 0;
-  $: fullHasResult =
-    fullDirectCost > 0 &&
-    fullForm.salesPerMonth > 0 &&
-    fullSuggestedDenominator > 0;
+
 
   $: webAppSchema = {
     '@context': 'https://schema.org',
@@ -483,31 +396,12 @@
   <section class="hero-shell">
     <div class="max-w-6xl mx-auto px-6 hero-stack">
       <h1 class="hero-title">Descubra quanto cobrar</h1>
-      <div class="mode-toggle">
-        <button
-          type="button"
-          class="mode-pill"
-          class:mode-pill-active={selectedCalculator === 'product'}
-          on:click={() => selectCalculator('product')}
-        >
-          Preço de 1 produto
-        </button>
-        <button
-          type="button"
-          class="mode-pill"
-          class:mode-pill-active={selectedCalculator === 'business'}
-          on:click={() => selectCalculator('business')}
-        >
-          Negócio completo
-        </button>
-      </div>
+      <p class="hero-subtitle">Calcule o preço de venda de qualquer produto de forma simples e descubra sua margem real.</p>
     </div>
   </section>
 
   <section class="pb-24">
     <div class="max-w-6xl mx-auto px-6 page-content">
-
-      {#if selectedCalculator === 'product'}
         <section class="section-card section-spacing">
           <div class="section-head">
             <div>
@@ -546,18 +440,23 @@
               </label>
             </div>
 
-            <div class="niche-chips">
-              {#each niches as niche}
-                <button
-                  type="button"
-                  class="niche-chip"
-                  class:chip-selected={productForm.niche === niche.id}
-                  on:click={() => selectProductNiche(niche.id)}
-                >
-                  <span>{niche.label}</span>
-                </button>
-              {/each}
-            </div>
+            <details class="details-card compact-top">
+              <summary>Quer margens pré-configuradas? Escolha seu segmento</summary>
+              <div class="details-body">
+                <div class="niche-chips">
+                  {#each niches as niche}
+                    <button
+                      type="button"
+                      class="niche-chip"
+                      class:chip-selected={productForm.niche === niche.id}
+                      on:click={() => selectProductNiche(niche.id)}
+                    >
+                      <span>{niche.label}</span>
+                    </button>
+                  {/each}
+                </div>
+              </div>
+            </details>
           {/if}
 
           {#if productStep === 2}
@@ -909,9 +808,24 @@
             {/if}
           {/if}
 
+          {#if productStep === 5 && productResultReady}
+            <section class="cta-card compact-top">
+              <div>
+                <p class="section-kicker">O que vem depois?</p>
+                <h2 class="cta-title">Tire essas contas do papel e automatize seu caixa</h2>
+                <p class="cta-copy">O sistema Zelo PDV calcula seu lucro real automaticamente a cada venda. Sem planilhas.</p>
+              </div>
+
+              <div class="cta-actions" style="margin-top: 0.5rem;">
+                <a href="/cadastro" class="primary-link">Criar conta grátis</a>
+                <p style="font-size: 0.85rem; color: var(--text-muted)">Sem cartão de crédito. Cancele quando quiser.</p>
+              </div>
+            </section>
+          {/if}
+
           <div class="actions-row">
             <button class="ghost-button" type="button" on:click={previousProductStep} disabled={productStep === 1}>
-              Voltar
+          Voltar
             </button>
 
             {#if productStep < 5}
@@ -921,322 +835,11 @@
             {/if}
           </div>
         </section>
-      {:else}
-        <section class="section-card section-spacing">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Análise completa</p>
-              <h2 class="section-title">Precificação completa do negócio</h2>
-            </div>
-            <p class="section-note">Ideal para quem quer enxergar custos fixos, lucro mensal e ponto de equilíbrio com clareza.</p>
-          </div>
 
-          <div class="progress-shell">
-            {#each stepLabels as label, index}
-              <button
-                type="button"
-                class="progress-step"
-                class:progress-step-complete={index + 1 < businessStep}
-                class:progress-step-current={index + 1 === businessStep}
-                on:click={() => goToBusinessStep(index + 1)}
-              >
-                <span class="progress-circle">{index + 1}</span>
-                <small>{label}</small>
-              </button>
-            {/each}
-          </div>
-
-          {#if businessStep === 1}
-            <div class="niche-chips">
-              {#each niches as niche}
-                <button
-                  type="button"
-                  class="niche-chip"
-                  class:chip-selected={fullForm.niche === niche.id}
-                  on:click={() => selectFullNiche(niche.id)}
-                >
-                  <span>{niche.label}</span>
-                </button>
-              {/each}
-            </div>
-          {/if}
-
-          {#if businessStep === 2}
-            <div class="input-grid">
-              <label class="field">
-                <span class="field-label">Nome do produto</span>
-                <input
-                  class="input"
-                  type="text"
-                  placeholder={fullNiche.placeholder}
-                  value={fullForm.productName}
-                  on:input={(event) => updateFullField('productName', event.currentTarget.value)}
-                />
-              </label>
-
-              <label class="field">
-                <span class="field-label">Custo dos ingredientes / matéria-prima</span>
-                <div class="money-input">
-                  <span>R$</span>
-                  <input
-                    class="money-field"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    value={formatCurrencyInput(fullForm.ingredientsCost)}
-                    on:input={(event) => updateFullField('ingredientsCost', parseCurrencyInput(event.currentTarget.value))}
-                  />
-                </div>
-              </label>
-
-              <label class="field">
-                <span class="field-label">Embalagem</span>
-                <div class="money-input">
-                  <span>R$</span>
-                  <input
-                    class="money-field"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    value={formatCurrencyInput(fullForm.packagingCost)}
-                    on:input={(event) => updateFullField('packagingCost', parseCurrencyInput(event.currentTarget.value))}
-                  />
-                </div>
-              </label>
-
-              <label class="field">
-                <span class="field-label">Outros custos por unidade</span>
-                <div class="money-input">
-                  <span>R$</span>
-                  <input
-                    class="money-field"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    value={formatCurrencyInput(fullForm.extraUnitCost)}
-                    on:input={(event) => updateFullField('extraUnitCost', parseCurrencyInput(event.currentTarget.value))}
-                  />
-                </div>
-              </label>
-            </div>
-
-            <label class="toggle-line compact-top">
-              <input
-                type="checkbox"
-                checked={fullForm.usePlatformFee}
-                on:change={(event) => updateFullField('usePlatformFee', event.currentTarget.checked)}
-              />
-              <span>Aplicar taxa de plataforma / app</span>
-            </label>
-
-            {#if fullForm.usePlatformFee}
-              <label class="field field-compact compact-top">
-                <span class="field-label">Taxa da plataforma (%)</span>
-                <input
-                  class="input"
-                  type="number"
-                  min="0"
-                  max="80"
-                  step="0.1"
-                  value={fullForm.platformFee}
-                  on:input={(event) => updateFullField('platformFee', clampNumber(event.currentTarget.value, 0, 80))}
-                />
-              </label>
-            {/if}
-          {/if}
-
-          {#if businessStep === 3}
-            <div class="input-grid">
-              <label class="field">
-                <span class="field-label">Aluguel</span>
-                <div class="money-input">
-                  <span>R$</span>
-                  <input
-                    class="money-field"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    value={formatCurrencyInput(fullForm.rent)}
-                    on:input={(event) => updateFullField('rent', parseCurrencyInput(event.currentTarget.value))}
-                  />
-                </div>
-              </label>
-
-              <label class="field">
-                <span class="field-label">Funcionarios</span>
-                <div class="money-input">
-                  <span>R$</span>
-                  <input
-                    class="money-field"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    value={formatCurrencyInput(fullForm.staff)}
-                    on:input={(event) => updateFullField('staff', parseCurrencyInput(event.currentTarget.value))}
-                  />
-                </div>
-              </label>
-
-              <label class="field">
-                <span class="field-label">Energia / água / gás</span>
-                <div class="money-input">
-                  <span>R$</span>
-                  <input
-                    class="money-field"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    value={formatCurrencyInput(fullForm.utilities)}
-                    on:input={(event) => updateFullField('utilities', parseCurrencyInput(event.currentTarget.value))}
-                  />
-                </div>
-              </label>
-
-              <label class="field">
-                <span class="field-label">Internet / telefone</span>
-                <div class="money-input">
-                  <span>R$</span>
-                  <input
-                    class="money-field"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    value={formatCurrencyInput(fullForm.internet)}
-                    on:input={(event) => updateFullField('internet', parseCurrencyInput(event.currentTarget.value))}
-                  />
-                </div>
-              </label>
-
-              <label class="field">
-                <span class="field-label">Outros custos fixos</span>
-                <div class="money-input">
-                  <span>R$</span>
-                  <input
-                    class="money-field"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    value={formatCurrencyInput(fullForm.otherFixed)}
-                    on:input={(event) => updateFullField('otherFixed', parseCurrencyInput(event.currentTarget.value))}
-                  />
-                </div>
-              </label>
-
-              <label class="field">
-                <span class="field-label">Estimativa de vendas por mês</span>
-                <input
-                  class="input"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={fullForm.salesPerMonth}
-                  on:input={(event) => updateFullField('salesPerMonth', clampNumber(event.currentTarget.value, 0, 999999))}
-                />
-              </label>
-            </div>
-          {/if}
-
-          {#if businessStep === 4}
-            <div class="slider-card">
-              <div class="slider-head">
-                <div>
-                  <p class="field-label">Margem de lucro desejada</p>
-                  <p class="slider-copy">Para {fullNiche.label.toLowerCase()}, margens entre {fullNiche.commonRange} sao comuns.</p>
-                </div>
-                <strong>{fullForm.margin}%</strong>
-              </div>
-              <input
-                class="range-input"
-                type="range"
-                min="15"
-                max="80"
-                step="1"
-                value={fullForm.margin}
-                on:input={(event) => updateFullField('margin', clampNumber(event.currentTarget.value, 15, 80))}
-              />
-            </div>
-          {/if}
-
-          {#if businessStep === 5}
-            <div class="result-highlight-grid">
-              <div class="price-spotlight">
-                <span>Preço mínimo</span>
-                <strong>{formatCurrency(fullMinimumPrice)}</strong>
-                <p>Valor mínimo para cobrir a estrutura informada.</p>
-              </div>
-
-              <div class="price-spotlight price-spotlight-strong">
-                <span>Preço recomendado</span>
-                <strong>{formatCurrency(fullSuggestedPrice)}</strong>
-                <p>Já considerando custos fixos, taxa e margem desejada.</p>
-              </div>
-            </div>
-
-            {#if fullHasResult}
-              <div class="metric-grid compact-top">
-                <div class="metric-card">
-                  <span>Lucro por unidade</span>
-                  <strong>{formatCurrency(fullProfitPerUnit)}</strong>
-                </div>
-                <div class="metric-card">
-                  <span>Lucro mensal estimado</span>
-                  <strong>{formatCurrency(fullMonthlyProfit)}</strong>
-                </div>
-                <div class="metric-card">
-                  <span>Faturamento mensal</span>
-                  <strong>{formatCurrency(fullMonthlyRevenue)}</strong>
-                </div>
-                <div class="metric-card">
-                  <span>Ponto de equilíbrio</span>
-                  <strong>{formatWholeNumber(fullBreakEvenUnits)} vendas</strong>
-                </div>
-              </div>
-            {:else}
-              <div class="empty-state compact-top">
-                <strong>Faltam alguns dados para fechar o cálculo</strong>
-                <p>Preencha custos do produto, custos fixos e estimativa de vendas para ver o resultado completo.</p>
-              </div>
-            {/if}
-          {/if}
-
-          <div class="actions-row">
-            <button class="ghost-button" type="button" on:click={previousBusinessStep} disabled={businessStep === 1}>
-              Voltar
-            </button>
-
-            {#if businessStep < 5}
-              <button class="primary-button" type="button" on:click={nextBusinessStep}>
-                {businessStep === 4 ? 'Ver resultado' : 'Continuar'}
-              </button>
-            {/if}
-          </div>
-        </section>
-      {/if}
-
-      <section class="cta-card">
-        <div>
-          <p class="section-kicker">Depois do cálculo</p>
-          <h2 class="cta-title">Agora aplique essa precificação no seu negócio</h2>
-          <p class="cta-copy">O Zelo PDV calcula seu lucro real automaticamente a cada venda e tira essas contas do papel.</p>
-        </div>
-
-        <div class="cta-benefits">
-          <div class="benefit-row"><span>✅</span><span>Controle de caixa sem planilha</span></div>
-          <div class="benefit-row"><span>✅</span><span>Gestão de estoque e baixa automática</span></div>
-          <div class="benefit-row"><span>✅</span><span>Relatórios de vendas e lucro real</span></div>
-          <div class="benefit-row"><span>✅</span><span>Fiado e histórico do cliente no mesmo lugar</span></div>
-        </div>
-
-        <div class="cta-actions">
-          <a href="/cadastro" class="primary-link">Testar 30 dias grátis</a>
-          <p>Sem cartão de crédito. Cancele quando quiser.</p>
-        </div>
-      </section>
-
-      <section class="section-card section-spacing faq-shell">
-        <div class="faq-intro">
+      <section class="section-card section-spacing faq-shell max-w-3xl mx-auto">
+        <div class="faq-intro" style="text-align: center;">
           <p class="section-kicker">FAQ</p>
-          <h2 class="section-title">Perguntas frequentes sobre precificação</h2>
+          <h2 class="section-title" style="font-size: 1.8rem;">Perguntas frequentes</h2>
         </div>
 
         <div class="faq-list">
@@ -1254,7 +857,7 @@
     </div>
   </section>
 
-  {#if productResultReady && selectedCalculator === 'product'}
+  {#if productResultReady}
     <div class="sticky-bar">
       <div class="sticky-inner max-w-6xl mx-auto px-6">
         <div class="sticky-info">
@@ -2075,8 +1678,7 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .result-highlight-grid,
-    .faq-shell {
+    .result-highlight-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
