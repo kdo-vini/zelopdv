@@ -1297,7 +1297,6 @@
         <div class="faq-intro">
           <p class="section-kicker">FAQ</p>
           <h2 class="section-title">Perguntas frequentes sobre precificação</h2>
-          <p class="section-note">Sem forçar cadastro e sem empurrar termos técnicos logo de cara.</p>
         </div>
 
         <div class="faq-list">
