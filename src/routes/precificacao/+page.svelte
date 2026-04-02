@@ -152,6 +152,7 @@
   ];
 
   const stepLabels = ['Seu nicho', 'Produto', 'Custos fixos', 'Margem', 'Resultado'];
+  const productStepLabels = ['O que', 'Custos', 'Extras', 'Margem', 'Resultado'];
 
   const nicheMap = niches.reduce((acc, niche) => {
     acc[niche.id] = niche;
@@ -170,8 +171,8 @@
 
   let selectedCalculator = 'product';
   let businessStep = 1;
+  let productStep = 1;
   let ingredientId = 2;
-  let showProductResult = false;
 
   let productForm = createProductForm('marmitaria');
   let ingredientRows = [createIngredientRow()];
@@ -341,8 +342,17 @@
     return purchasePrice * (usageQuantity / purchaseQuantity);
   }
 
-  function revealProductResult() {
-    showProductResult = true;
+  function goToProductStep(step) {
+    if (step < 1 || step > 5) return;
+    productStep = step;
+  }
+
+  function nextProductStep() {
+    if (productStep < 5) productStep += 1;
+  }
+
+  function previousProductStep() {
+    if (productStep > 1) productStep -= 1;
   }
 
   function goToBusinessStep(step) {
@@ -480,7 +490,6 @@
 
   <section class="hero-shell">
     <div class="max-w-6xl mx-auto px-6 hero-stack">
-      <div class="eyebrow">Ferramenta grátis · sem criar conta</div>
       <h1 class="hero-title">Descubra quanto cobrar</h1>
       <div class="mode-toggle">
         <button
@@ -507,87 +516,99 @@
     <div class="max-w-6xl mx-auto px-6 page-content">
 
       {#if selectedCalculator === 'product'}
-        <section class="product-layout">
-          <div class="product-main">
-            <article class="section-card section-spacing">
-              <div class="block-head">
-                <span class="block-number">1</span>
-                <h3 class="block-title">Qual produto você quer precificar?</h3>
-              </div>
+        <section class="section-card section-spacing">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Cálculo individual</p>
+              <h2 class="section-title">Preço de 1 produto</h2>
+            </div>
+            <p class="section-note">Ideal para descobrir quanto faturar com um item avulso ou lançamento rápido.</p>
+          </div>
 
-              <div class="input-grid">
-                <label class="field">
-                  <span class="field-label">Nome do produto</span>
-                  <input
-                    class="input"
-                    type="text"
-                    placeholder={productNiche.placeholder}
-                    value={productForm.productName}
-                    on:input={(event) => updateProductField('productName', event.currentTarget.value)}
-                  />
+          <div class="progress-shell">
+            {#each productStepLabels as label, index}
+              <button
+                type="button"
+                class="progress-step"
+                class:progress-step-complete={index + 1 < productStep}
+                class:progress-step-current={index + 1 === productStep}
+                on:click={() => goToProductStep(index + 1)}
+              >
+                <span class="progress-circle">{index + 1}</span>
+                <small>{label}</small>
+              </button>
+            {/each}
+          </div>
+
+          {#if productStep === 1}
+            <div class="input-grid">
+              <label class="field">
+                <span class="field-label">Nome do produto</span>
+                <input
+                  class="input"
+                  type="text"
+                  placeholder={productNiche.placeholder}
+                  value={productForm.productName}
+                  on:input={(event) => updateProductField('productName', event.currentTarget.value)}
+                />
+              </label>
+            </div>
+
+            <div class="niche-chips">
+              {#each niches as niche}
+                <button
+                  type="button"
+                  class="niche-chip"
+                  class:chip-selected={productForm.niche === niche.id}
+                  on:click={() => selectProductNiche(niche.id)}
+                >
+                  <span>{niche.label}</span>
+                </button>
+              {/each}
+            </div>
+          {/if}
+
+          {#if productStep === 2}
+            <div class="mode-grid">
+              <button
+                type="button"
+                class="mode-card"
+                class:mode-card-active={productForm.costMode === 'simple'}
+                on:click={() => setProductCostMode('simple')}
+              >
+                <strong>Tenho o custo total da unidade</strong>
+                <p>Melhor para quem já sabe o custo final da receita ou quer um cálculo rápido.</p>
+              </button>
+
+              <button
+                type="button"
+                class="mode-card"
+                class:mode-card-active={productForm.costMode === 'ingredients'}
+                on:click={() => setProductCostMode('ingredients')}
+              >
+                <strong>Quero lançar ingrediente por ingrediente</strong>
+                <p>Melhor para quando você quer calcular proporção por peso, volume ou unidades.</p>
+              </button>
+            </div>
+
+            {#if productForm.costMode === 'simple'}
+              <div class="hero-input-area compact-top">
+                <label class="hero-field">
+                  <span class="hero-field-label">Custo total da receita / unidade</span>
+                  <p class="hero-field-subtitle">Insira o valor final de produção da sua unidade.</p>
+                  <div class="hero-money-input">
+                    <span>R$</span>
+                    <input
+                      class="hero-money-field"
+                      type="text"
+                      inputmode="numeric"
+                      placeholder="0,00"
+                      value={formatCurrencyInput(productForm.totalCost)}
+                      on:input={(event) => updateProductField('totalCost', parseCurrencyInput(event.currentTarget.value))}
+                    />
+                  </div>
                 </label>
               </div>
-
-              <div class="niche-chips">
-                {#each niches as niche}
-                  <button
-                    type="button"
-                    class="niche-chip"
-                    class:chip-selected={productForm.niche === niche.id}
-                    on:click={() => selectProductNiche(niche.id)}
-                  >
-                    <span class="chip-badge">{niche.badge}</span>
-                    <span>{niche.label}</span>
-                  </button>
-                {/each}
-              </div>
-            </article>
-
-            <article class="section-card section-spacing">
-              <div class="block-head">
-                <span class="block-number">2</span>
-                <h3 class="block-title">Custos do produto</h3>
-              </div>
-
-              <div class="mode-grid">
-                <button
-                  type="button"
-                  class="mode-card"
-                  class:mode-card-active={productForm.costMode === 'simple'}
-                  on:click={() => setProductCostMode('simple')}
-                >
-                  <strong>Tenho o custo total da unidade</strong>
-                  <p>Melhor para quem já sabe o custo final da receita ou quer um cálculo rápido.</p>
-                </button>
-
-                <button
-                  type="button"
-                  class="mode-card"
-                  class:mode-card-active={productForm.costMode === 'ingredients'}
-                  on:click={() => setProductCostMode('ingredients')}
-                >
-                  <strong>Quero lançar ingrediente por ingrediente</strong>
-                  <p>Melhor para quando você quer calcular proporção por peso, volume ou unidades.</p>
-                </button>
-              </div>
-
-              {#if productForm.costMode === 'simple'}
-                <div class="input-grid compact-top">
-                  <label class="field">
-                    <span class="field-label">Custo total da receita / unidade</span>
-                    <div class="money-input">
-                      <span>R$</span>
-                      <input
-                        class="money-field"
-                        type="text"
-                        inputmode="numeric"
-                        placeholder="0,00"
-                        value={formatCurrencyInput(productForm.totalCost)}
-                        on:input={(event) => updateProductField('totalCost', parseCurrencyInput(event.currentTarget.value))}
-                      />
-                    </div>
-                  </label>
-                </div>
               {:else}
                 <div class="builder-shell">
                   <div class="builder-head">
@@ -717,84 +738,74 @@
                   </div>
                 </div>
               {/if}
-            </article>
+            {/if}
 
-            <article class="section-card section-spacing">
-              <div class="block-head">
-                <span class="block-number">3</span>
-                <h3 class="block-title">Embalagem e extras</h3>
-              </div>
+          {#if productStep === 3}
+            <div class="input-grid">
+              <label class="field">
+                <span class="field-label">Embalagem</span>
+                <div class="money-input">
+                  <span>R$</span>
+                  <input
+                    class="money-field"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="0,00"
+                    value={formatCurrencyInput(productForm.packagingCost)}
+                    on:input={(event) => updateProductField('packagingCost', parseCurrencyInput(event.currentTarget.value))}
+                  />
+                </div>
+              </label>
 
-              <div class="input-grid">
-                <label class="field">
-                  <span class="field-label">Embalagem</span>
-                  <div class="money-input">
-                    <span>R$</span>
-                    <input
-                      class="money-field"
-                      type="text"
-                      inputmode="numeric"
-                      placeholder="0,00"
-                      value={formatCurrencyInput(productForm.packagingCost)}
-                      on:input={(event) => updateProductField('packagingCost', parseCurrencyInput(event.currentTarget.value))}
-                    />
-                  </div>
-                </label>
+              <label class="field">
+                <span class="field-label">Outros custos por unidade</span>
+                <div class="money-input">
+                  <span>R$</span>
+                  <input
+                    class="money-field"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="0,00"
+                    value={formatCurrencyInput(productForm.extraUnitCost)}
+                    on:input={(event) => updateProductField('extraUnitCost', parseCurrencyInput(event.currentTarget.value))}
+                  />
+                </div>
+              </label>
+            </div>
+          {/if}
 
-                <label class="field">
-                  <span class="field-label">Outros custos por unidade</span>
-                  <div class="money-input">
-                    <span>R$</span>
-                    <input
-                      class="money-field"
-                      type="text"
-                      inputmode="numeric"
-                      placeholder="0,00"
-                      value={formatCurrencyInput(productForm.extraUnitCost)}
-                      on:input={(event) => updateProductField('extraUnitCost', parseCurrencyInput(event.currentTarget.value))}
-                    />
-                  </div>
-                </label>
-              </div>
-            </article>
+          {#if productStep === 4}
+            <div class="preset-grid">
+              <button
+                type="button"
+                class="preset-card"
+                class:preset-card-active={!productForm.useCustomMargin && productForm.marginPreset === 'competitive'}
+                on:click={() => updateProductField('marginPreset', 'competitive')}
+              >
+                <strong>Mais competitivo</strong>
+                <span>{productPresetMargins.competitive}%</span>
+              </button>
+              <button
+                type="button"
+                class="preset-card"
+                class:preset-card-active={!productForm.useCustomMargin && productForm.marginPreset === 'balanced'}
+                on:click={() => updateProductField('marginPreset', 'balanced')}
+              >
+                <strong>Equilibrado</strong>
+                <span>{productPresetMargins.balanced}%</span>
+              </button>
+              <button
+                type="button"
+                class="preset-card"
+                class:preset-card-active={!productForm.useCustomMargin && productForm.marginPreset === 'premium'}
+                on:click={() => updateProductField('marginPreset', 'premium')}
+              >
+                <strong>Mais lucrativo</strong>
+                <span>{productPresetMargins.premium}%</span>
+              </button>
+            </div>
 
-            <article class="section-card section-spacing">
-              <div class="block-head">
-                <span class="block-number">4</span>
-                <h3 class="block-title">Margem de lucro</h3>
-              </div>
-
-              <div class="preset-grid">
-                <button
-                  type="button"
-                  class="preset-card"
-                  class:preset-card-active={!productForm.useCustomMargin && productForm.marginPreset === 'competitive'}
-                  on:click={() => updateProductField('marginPreset', 'competitive')}
-                >
-                  <strong>Mais competitivo</strong>
-                  <span>{productPresetMargins.competitive}%</span>
-                </button>
-                <button
-                  type="button"
-                  class="preset-card"
-                  class:preset-card-active={!productForm.useCustomMargin && productForm.marginPreset === 'balanced'}
-                  on:click={() => updateProductField('marginPreset', 'balanced')}
-                >
-                  <strong>Equilibrado</strong>
-                  <span>{productPresetMargins.balanced}%</span>
-                </button>
-                <button
-                  type="button"
-                  class="preset-card"
-                  class:preset-card-active={!productForm.useCustomMargin && productForm.marginPreset === 'premium'}
-                  on:click={() => updateProductField('marginPreset', 'premium')}
-                >
-                  <strong>Mais lucrativo</strong>
-                  <span>{productPresetMargins.premium}%</span>
-                </button>
-              </div>
-
-              <details class="details-card">
+            <details class="details-card compact-top">
                 <summary>Ajuste fino de margem e taxas</summary>
                 <div class="details-body">
                   <label class="toggle-line">
@@ -852,24 +863,9 @@
                   {/if}
                 </div>
               </details>
-            </article>
+          {/if}
 
-            <div class="actions-row aligned-start">
-              <button type="button" class="primary-button" on:click={revealProductResult}>
-                Calcular preço
-              </button>
-              <p class="subtle-copy">Preencha os dados do seu jeito e veja o preço sugerido logo abaixo.</p>
-            </div>
-          </div>
-
-
-        </section>
-
-        {#if showProductResult}
-          <section class="result-card product-result-card">
-            <p class="result-kicker">Preço sugerido</p>
-            <h2 class="section-title">{productLabel}</h2>
-
+          {#if productStep === 5}
             {#if productResultReady}
               <div class="result-highlight-grid">
                 <div class="price-spotlight">
@@ -881,11 +877,11 @@
                 <div class="price-spotlight price-spotlight-strong">
                   <span>Preço recomendado</span>
                   <strong>{formatCurrency(productSuggestedPrice)}</strong>
-                  <p>Com a margem escolhida e os custos informados acima.</p>
+                  <p>Com a margem escolhida e custos informados.</p>
                 </div>
               </div>
 
-              <div class="metric-grid">
+              <div class="metric-grid compact-top">
                 <div class="metric-card">
                   <span>Lucro por unidade</span>
                   <strong>{formatCurrency(productProfitPerUnit)}</strong>
@@ -906,21 +902,33 @@
                 {/if}
               </div>
 
-              <div class="helper-box">
+              <div class="helper-box compact-top">
                 <strong>Leitura simples</strong>
                 <p>
-                  Se você vender por <strong>{formatCurrency(productSuggestedPrice)}</strong>, a sobra estimada por unidade fica em
-                  <strong>{formatCurrency(productProfitPerUnit)}</strong>. Se quiser brigar por preço, use o preset competitivo ou reduza sua margem.
+                  A sobra estimada por unidade fica em
+                  <strong>{formatCurrency(productProfitPerUnit)}</strong> para cada <strong>{formatCurrency(productSuggestedPrice)}</strong> vendidos.
                 </p>
               </div>
             {:else}
               <div class="empty-state">
                 <strong>Faltam dados para fechar a conta</strong>
-                <p>Preencha pelo menos o custo da unidade. Se estiver no modo por ingrediente, confira se as unidades comprada e usada combinam entre si.</p>
+                <p>Preencha pelo menos o custo da unidade para exibir os resultados.</p>
               </div>
             {/if}
-          </section>
-        {/if}
+          {/if}
+
+          <div class="actions-row">
+            <button class="ghost-button" type="button" on:click={previousProductStep} disabled={productStep === 1}>
+              Voltar
+            </button>
+
+            {#if productStep < 5}
+              <button class="primary-button" type="button" on:click={nextProductStep}>
+                {productStep === 4 ? 'Ver resultado' : 'Continuar'}
+              </button>
+            {/if}
+          </div>
+        </section>
       {:else}
         <section class="section-card section-spacing">
           <div class="section-head">
@@ -949,13 +957,12 @@
           {#if businessStep === 1}
             <div class="niche-chips">
               {#each niches as niche}
-                <button
+                  <button
                   type="button"
                   class="niche-chip"
                   class:chip-selected={fullForm.niche === niche.id}
                   on:click={() => selectFullNiche(niche.id)}
                 >
-                  <span class="chip-badge">{niche.badge}</span>
                   <span>{niche.label}</span>
                 </button>
               {/each}
@@ -1234,7 +1241,7 @@
         </div>
       </section>
 
-      <section class="faq-shell">
+      <section class="section-card section-spacing faq-shell">
         <div class="faq-intro">
           <p class="section-kicker">FAQ</p>
           <h2 class="section-title">Perguntas frequentes sobre precificação</h2>
@@ -1263,9 +1270,11 @@
           <strong class="sticky-price">{formatCurrency(productSuggestedPrice)}</strong>
           {#if productForm.productName}<span class="sticky-name">· {productForm.productName}</span>{/if}
         </div>
-        <button type="button" class="primary-button" on:click={revealProductResult}>
-          Ver detalhes →
-        </button>
+        {#if productStep < 5}
+          <button type="button" class="primary-button" on:click={() => goToProductStep(5)}>
+            Ver detalhes →
+          </button>
+        {/if}
       </div>
     </div>
   {/if}
@@ -1865,10 +1874,11 @@
   }
 
   .sticky-price {
-    color: var(--text-main);
-    font-size: 1.4rem;
+    color: var(--primary);
+    font-size: 1.55rem;
     font-weight: 800;
     letter-spacing: -0.03em;
+    text-shadow: 0 0 16px color-mix(in srgb, var(--primary) 40%, transparent);
   }
 
   .sticky-name {
@@ -1930,16 +1940,34 @@
   }
 
   .progress-shell {
-    display: grid;
-    gap: 0.8rem;
-    margin-bottom: 1.4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+    margin-bottom: 2rem;
+  }
+
+  .progress-shell::before {
+    content: '';
+    position: absolute;
+    top: 1rem;
+    left: 1.5rem;
+    right: 1.5rem;
+    height: 2px;
+    background: color-mix(in srgb, white 10%, var(--border-subtle));
+    z-index: 0;
   }
 
   .progress-step {
+    position: relative;
+    z-index: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.8rem;
+    gap: 0.6rem;
     color: var(--text-muted);
+    background: transparent;
+    padding: 0 0.5rem;
   }
 
   .progress-circle {
@@ -1949,27 +1977,100 @@
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, white 10%, var(--border-subtle));
-    background: color-mix(in srgb, var(--bg-panel) 96%, transparent);
+    border: 2px solid color-mix(in srgb, var(--bg-panel) 96%, var(--border-subtle));
+    background: var(--bg-card);
     color: var(--text-label);
     font-size: 0.88rem;
     font-weight: 700;
+    transition: all var(--transition-fast);
   }
 
   .progress-step small {
+    font-size: 0.8rem;
+    font-weight: 500;
     color: inherit;
+    white-space: nowrap;
   }
 
-  .progress-step-complete .progress-circle,
+  .progress-step-complete .progress-circle {
+    border-color: color-mix(in srgb, var(--primary) 60%, transparent);
+    background: color-mix(in srgb, var(--primary) 12%, var(--bg-card));
+    color: var(--primary);
+  }
+
   .progress-step-current .progress-circle {
-    border-color: color-mix(in srgb, var(--primary) 28%, transparent);
-    background: color-mix(in srgb, var(--primary) 14%, transparent);
-    color: var(--text-main);
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--primary-text);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 50%, transparent);
   }
 
   .progress-step-current,
   .progress-step-complete {
     color: var(--text-main);
+  }
+
+  .progress-step-current small {
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  /* Hero Input specific styling */
+  .hero-input-area {
+    border-radius: 1.25rem;
+    border: 2px dashed color-mix(in srgb, white 10%, var(--border-subtle));
+    background: color-mix(in srgb, var(--bg-panel) 60%, transparent);
+    padding: 2.5rem 1rem;
+    text-align: center;
+    transition: all var(--transition-fast);
+  }
+
+  .hero-input-area:focus-within {
+    border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+    background: color-mix(in srgb, var(--bg-panel) 80%, transparent);
+  }
+
+  .hero-field-label {
+    display: block;
+    color: var(--text-main);
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .hero-field-subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.3rem;
+  }
+
+  .hero-money-input {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .hero-money-input span {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+
+  .hero-money-field {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--text-main);
+    width: 5ch;
+    text-align: left;
+    background: transparent;
+    border: none;
+    outline: none;
+    transition: all var(--transition-fast);
+  }
+
+  .hero-money-field:focus {
+    color: var(--primary);
   }
 
   .cta-card {
