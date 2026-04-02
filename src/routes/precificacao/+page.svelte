@@ -1,29 +1,29 @@
 <svelte:head>
-  <title>Calculadora de Precificacao Gratis | Zelo PDV</title>
+  <title>Calculadora de Precificação Grátis | Zelo PDV</title>
   <meta
     name="description"
-    content="Calcule o preco ideal dos seus produtos. Ferramenta gratis para lanchonetes, hamburguerias, delivery, marmitaria e pequenos negocios."
+    content="Calcule o preço ideal dos seus produtos. Ferramenta grátis para lanchonetes, hamburguerias, delivery, marmitarias e pequenos negócios."
   />
   <meta
     name="keywords"
-    content="precificacao, calcular preco de venda, margem de lucro, preco de custo, quanto cobrar, delivery, marmitaria"
+    content="precificação, calcular preço de venda, margem de lucro, preço de custo, quanto cobrar, delivery, marmitaria"
   />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://zelopdv.com.br/precificacao" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://zelopdv.com.br/precificacao" />
-  <meta property="og:title" content="Calculadora de Precificacao Gratis | Zelo PDV" />
+  <meta property="og:title" content="Calculadora de Precificação Grátis | Zelo PDV" />
   <meta
     property="og:description"
-    content="Descubra quanto cobrar em um produto especifico ou monte a precificacao completa do seu negocio."
+    content="Descubra quanto cobrar em um produto específico ou monte a precificação completa do seu negócio."
   />
   <meta property="og:image" content="https://zelopdv.com.br/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://zelopdv.com.br/precificacao" />
-  <meta name="twitter:title" content="Calculadora de Precificacao Gratis | Zelo PDV" />
+  <meta name="twitter:title" content="Calculadora de Precificação Grátis | Zelo PDV" />
   <meta
     name="twitter:description"
-    content="Calcule o preco de venda ideal para hot-dog, marmita, ovo de Pascoa e outros produtos sem precisar criar conta."
+    content="Calcule o preço de venda ideal para hot-dog, marmita, ovo de Páscoa e outros produtos sem precisar criar conta."
   />
   <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
 </svelte:head>
@@ -41,7 +41,7 @@
       commonRange: '22% a 35%',
       placeholder: 'Marmita de frango grelhado',
       defaultPlatformFee: true,
-      description: 'Boa para quem vende unidade avulsa e tambem por app.'
+      description: 'Boa para quem vende unidade avulsa e também por app.'
     },
     {
       id: 'lanchonete',
@@ -51,7 +51,7 @@
       commonRange: '25% a 40%',
       placeholder: 'Hot-dog especial',
       defaultPlatformFee: false,
-      description: 'Ideal para lanche unitario, combo simples e venda no balcao.'
+      description: 'Ideal para lanche unitário, combo simples e venda no balcão.'
     },
     {
       id: 'hamburgueria',
@@ -69,19 +69,19 @@
       badge: 'PZ',
       defaultMargin: 30,
       commonRange: '25% a 38%',
-      placeholder: 'Pizza media de calabresa',
+      placeholder: 'Pizza média de calabresa',
       defaultPlatformFee: true,
       description: 'Use quando embalagem, entrega e taxa influenciam bastante.'
     },
     {
       id: 'doceria',
-      label: 'Acai / Doceria / Pascoa',
+      label: 'Açaí / Doceria / Páscoa',
       badge: 'DC',
       defaultMargin: 35,
       commonRange: '30% a 50%',
-      placeholder: 'Ovo de Pascoa de 350g',
+      placeholder: 'Ovo de Páscoa de 350g',
       defaultPlatformFee: false,
-      description: 'Serve para doce unitario, kit sazonal e producao por encomenda.'
+      description: 'Serve para doce unitário, kit sazonal e produção por encomenda.'
     },
     {
       id: 'delivery',
@@ -111,7 +111,7 @@
       commonRange: '20% a 40%',
       placeholder: 'Seu produto principal',
       defaultPlatformFee: false,
-      description: 'Use quando seu caso nao encaixa nos exemplos acima.'
+      description: 'Use quando seu caso não encaixa nos exemplos acima.'
     }
   ];
 
@@ -125,29 +125,29 @@
 
   const faqItems = [
     {
-      question: 'Preciso saber quantas vou vender no mes?',
+      question: 'Preciso saber quantas vou vender no mês?',
       answer:
-        'Nao. Se voce quer descobrir quanto cobrar em uma unidade, use o modo Preco de 1 produto. A estimativa de vendas por mes so entra no modo de negocio completo.'
+        'Não. Se você quer descobrir quanto cobrar em uma unidade, use o modo Preço de 1 produto. A estimativa de vendas por mês só entra no modo de negócio completo.'
     },
     {
       question: 'Posso lancar ingrediente por ingrediente?',
       answer:
-        'Sim. Voce pode informar quantidade comprada, unidade, preco pago e quantidade usada na receita. A calculadora faz a proporcao automaticamente.'
+        'Sim. Você pode informar quantidade comprada, unidade, preço pago e quantidade usada na receita. A calculadora faz a proporção automaticamente.'
     },
     {
-      question: 'Posso usar para ovo de Pascoa, hot-dog ou bolo no pote?',
+      question: 'Posso usar para ovo de Páscoa, hot-dog ou bolo no pote?',
       answer:
-        'Sim. O modo rapido foi desenhado exatamente para produto unitario e sazonal. Serve para hot-dog, marmita, ovo de Pascoa, doce, pizza e varios outros casos.'
+        'Sim. O modo rápido foi desenhado exatamente para produto unitário e sazonal. Serve para hot-dog, marmita, ovo de Páscoa, doce, pizza e vários outros casos.'
     },
     {
       question: 'A taxa da plataforma entra no calculo?',
       answer:
-        'Sim. Se voce vende por app, marketplace ou outro canal com percentual de desconto, basta ativar a taxa e informar o numero.'
+        'Sim. Se você vende por app, marketplace ou outro canal com percentual de desconto, basta ativar a taxa e informar o número.'
     },
     {
       question: 'Qual margem de lucro devo usar?',
       answer:
-        'Nao existe um numero unico. O ideal e partir de um preset equilibrado e ajustar se o preco final ficar alto ou baixo demais para o seu publico.'
+        'Não existe um número único. O ideal é partir de um preset equilibrado e ajustar se o preço final ficar alto ou baixo demais para o seu público.'
     }
   ];
 
@@ -439,22 +439,22 @@
   $: webAppSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'Calculadora de Precificacao Zelo PDV',
+    name: 'Calculadora de Precificação Zelo PDV',
     url: 'https://zelopdv.com.br/precificacao',
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web Browser',
     description:
-      'Ferramenta gratis para calcular preco de venda de produtos e precificacao completa de pequenos negocios.',
+      'Ferramenta grátis para calcular preço de venda de produtos e precificação completa de pequenos negócios.',
     offers: {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'BRL'
     },
     featureList: [
-      'Calculo rapido para produto especifico',
-      'Lancamento ingrediente por ingrediente',
-      'Precificacao completa com custos fixos',
-      'Preco minimo e preco recomendado'
+      'Cálculo rápido para produto específico',
+      'Lançamento ingrediente por ingrediente',
+      'Precificação completa com custos fixos',
+      'Preço mínimo e preço recomendado'
     ]
   };
 
@@ -483,11 +483,11 @@
     <div class="glow glow-b"></div>
 
     <div class="max-w-6xl mx-auto px-6 hero-stack">
-      <div class="eyebrow">Ferramenta gratuita e publica</div>
-      <h1 class="hero-title">Calculadora de precificacao para descobrir quanto cobrar</h1>
+      <div class="eyebrow">Ferramenta gratuita e pública</div>
+      <h1 class="hero-title">Calculadora de precificação para descobrir quanto cobrar</h1>
       <p class="hero-copy">
-        Use a mesma URL <strong>/precificacao</strong> para dois cenarios: calcular o preco de 1 produto
-        ou montar a precificacao completa do negocio. O caminho rapido vem primeiro.
+        Use a mesma URL <strong>/precificacao</strong> para dois cenários: calcular o preço de 1 produto
+        ou montar a precificação completa do negócio. O caminho rápido vem primeiro.
       </p>
     </div>
   </section>
@@ -498,9 +498,9 @@
         <div class="section-head">
           <div>
             <p class="section-kicker">Escolha inicial</p>
-            <h2 class="section-title">O que voce quer calcular hoje?</h2>
+            <h2 class="section-title">O que você quer calcular hoje?</h2>
           </div>
-          <p class="section-note">A opcao mais usada e Preco de 1 produto. A analise completa fica logo ao lado.</p>
+          <p class="section-note">A opção mais usada é Preço de 1 produto. A análise completa fica logo ao lado.</p>
         </div>
 
         <div class="tool-choice-grid">
@@ -511,8 +511,8 @@
             on:click={() => selectCalculator('product')}
           >
             <span class="tool-choice-badge">1</span>
-            <strong>Preco de 1 produto</strong>
-            <p>Para hot-dog, marmita, ovo de Pascoa, doce, combo ou qualquer item unitario.</p>
+            <strong>Preço de 1 produto</strong>
+            <p>Para hot-dog, marmita, ovo de Páscoa, doce, combo ou qualquer item unitário.</p>
           </button>
 
           <button
@@ -522,8 +522,8 @@
             on:click={() => selectCalculator('business')}
           >
             <span class="tool-choice-badge">2</span>
-            <strong>Precificacao completa do negocio</strong>
-            <p>Para incluir custos fixos, estimativa de vendas, lucro mensal e ponto de equilibrio.</p>
+            <strong>Precificação completa do negócio</strong>
+            <p>Para incluir custos fixos, estimativa de vendas, lucro mensal e ponto de equilíbrio.</p>
           </button>
         </div>
       </section>
@@ -535,7 +535,7 @@
               <div class="block-head">
                 <span class="block-number">1</span>
                 <div>
-                  <h3 class="block-title">Qual produto voce quer precificar?</h3>
+                  <h3 class="block-title">Qual produto você quer precificar?</h3>
                   <p class="block-copy">Comece pelo nome e escolha um nicho parecido com o seu caso.</p>
                 </div>
               </div>
@@ -573,8 +573,8 @@
               <div class="block-head">
                 <span class="block-number">2</span>
                 <div>
-                  <h3 class="block-title">Como voce quer informar os custos?</h3>
-                  <p class="block-copy">Voce pode informar o valor total da unidade ou montar a receita ingrediente por ingrediente.</p>
+                  <h3 class="block-title">Como você quer informar os custos?</h3>
+                  <p class="block-copy">Você pode informar o valor total da unidade ou montar a receita ingrediente por ingrediente.</p>
                 </div>
               </div>
 
@@ -586,7 +586,7 @@
                   on:click={() => setProductCostMode('simple')}
                 >
                   <strong>Tenho o custo total da unidade</strong>
-                  <p>Melhor para quem ja sabe o custo final da receita ou quer um calculo rapido.</p>
+                  <p>Melhor para quem já sabe o custo final da receita ou quer um cálculo rápido.</p>
                 </button>
 
                 <button
@@ -595,8 +595,8 @@
                   class:mode-card-active={productForm.costMode === 'ingredients'}
                   on:click={() => setProductCostMode('ingredients')}
                 >
-                  <strong>Quero lancar ingrediente por ingrediente</strong>
-                  <p>Melhor para quando voce quer calcular proporcao por peso, volume ou unidades.</p>
+                  <strong>Quero lançar ingrediente por ingrediente</strong>
+                  <p>Melhor para quando você quer calcular proporção por peso, volume ou unidades.</p>
                 </button>
               </div>
 
@@ -622,7 +622,7 @@
                   <div class="builder-head">
                     <div>
                       <p class="field-label no-gap">Ingredientes da receita</p>
-                      <p class="builder-copy">Preencha quanto voce comprou, quanto pagou e quanto entra na receita.</p>
+                      <p class="builder-copy">Preencha quanto você comprou, quanto pagou e quanto entra na receita.</p>
                     </div>
                     <button type="button" class="secondary-button" on:click={addIngredientRow}>
                       + Adicionar ingrediente
@@ -693,7 +693,7 @@
                           </label>
 
                           <label class="field">
-                            <span class="field-label">Preco pago</span>
+                            <span class="field-label">Preço pago</span>
                             <div class="money-input">
                               <span>R$</span>
                               <input
@@ -734,7 +734,7 @@
                         </div>
 
                         {#if !isIngredientCompatible(row) && row.purchaseQuantity && row.usageQuantity}
-                          <p class="warning-copy">As unidades comprada e usada precisam ser da mesma familia.</p>
+                          <p class="warning-copy">As unidades comprada e usada precisam ser da mesma família.</p>
                         {/if}
                       </div>
                     {/each}
@@ -891,9 +891,9 @@
 
             <div class="actions-row aligned-start">
               <button type="button" class="primary-button" on:click={revealProductResult}>
-                Calcular preco
+                Calcular preço
               </button>
-              <p class="subtle-copy">Voce pode preencher no modo rapido ou ingrediente por ingrediente. O resultado aparece abaixo.</p>
+              <p class="subtle-copy">Você pode preencher no modo rápido ou ingrediente por ingrediente. O resultado aparece abaixo.</p>
             </div>
           </div>
 
@@ -931,13 +931,13 @@
             {#if productResultReady}
               <div class="result-highlight-grid">
                 <div class="price-spotlight">
-                  <span>Preco minimo</span>
+                  <span>Preço mínimo</span>
                   <strong>{formatCurrency(productMinimumPrice)}</strong>
                   <p>Abaixo disso sua margem tende a ficar apertada.</p>
                 </div>
 
                 <div class="price-spotlight price-spotlight-strong">
-                  <span>Preco recomendado</span>
+                  <span>Preço recomendado</span>
                   <strong>{formatCurrency(productSuggestedPrice)}</strong>
                   <p>Com a margem escolhida e os custos informados acima.</p>
                 </div>
@@ -967,8 +967,8 @@
               <div class="helper-box">
                 <strong>Leitura simples</strong>
                 <p>
-                  Se voce vender por <strong>{formatCurrency(productSuggestedPrice)}</strong>, a sobra estimada por unidade fica em
-                  <strong>{formatCurrency(productProfitPerUnit)}</strong>. Se quiser brigar por preco, use o preset competitivo ou reduza sua margem.
+                  Se você vender por <strong>{formatCurrency(productSuggestedPrice)}</strong>, a sobra estimada por unidade fica em
+                  <strong>{formatCurrency(productProfitPerUnit)}</strong>. Se quiser brigar por preço, use o preset competitivo ou reduza sua margem.
                 </p>
               </div>
             {:else}
@@ -983,10 +983,10 @@
         <section class="section-card section-spacing">
           <div class="section-head">
             <div>
-              <p class="section-kicker">Modo avancado</p>
-              <h2 class="section-title">Precificacao completa do negocio</h2>
+              <p class="section-kicker">Modo avançado</p>
+              <h2 class="section-title">Precificação completa do negócio</h2>
             </div>
-            <p class="section-note">Este fluxo entra em custos fixos, previsao de vendas, lucro mensal e ponto de equilibrio.</p>
+            <p class="section-note">Este fluxo entra em custos fixos, previsão de vendas, lucro mensal e ponto de equilíbrio.</p>
           </div>
 
           <div class="progress-shell">
@@ -1035,7 +1035,7 @@
               </label>
 
               <label class="field">
-                <span class="field-label">Custo dos ingredientes / materia-prima</span>
+                <span class="field-label">Custo dos ingredientes / matéria-prima</span>
                 <div class="money-input">
                   <span>R$</span>
                   <input
@@ -1138,7 +1138,7 @@
               </label>
 
               <label class="field">
-                <span class="field-label">Energia / agua / gas</span>
+                <span class="field-label">Energia / água / gás</span>
                 <div class="money-input">
                   <span>R$</span>
                   <input
@@ -1183,7 +1183,7 @@
               </label>
 
               <label class="field">
-                <span class="field-label">Estimativa de vendas por mes</span>
+                <span class="field-label">Estimativa de vendas por mês</span>
                 <input
                   class="input"
                   type="number"
@@ -1220,15 +1220,15 @@
           {#if businessStep === 5}
             <div class="result-highlight-grid">
               <div class="price-spotlight">
-                <span>Preco minimo</span>
+                <span>Preço mínimo</span>
                 <strong>{formatCurrency(fullMinimumPrice)}</strong>
-                <p>Valor minimo para cobrir a estrutura informada.</p>
+                <p>Valor mínimo para cobrir a estrutura informada.</p>
               </div>
 
               <div class="price-spotlight price-spotlight-strong">
-                <span>Preco recomendado</span>
+                <span>Preço recomendado</span>
                 <strong>{formatCurrency(fullSuggestedPrice)}</strong>
-                <p>Ja considerando custos fixos, taxa e margem desejada.</p>
+                <p>Já considerando custos fixos, taxa e margem desejada.</p>
               </div>
             </div>
 
@@ -1247,13 +1247,13 @@
                   <strong>{formatCurrency(fullMonthlyRevenue)}</strong>
                 </div>
                 <div class="metric-card">
-                  <span>Ponto de equilibrio</span>
+                  <span>Ponto de equilíbrio</span>
                   <strong>{formatWholeNumber(fullBreakEvenUnits)} vendas</strong>
                 </div>
               </div>
             {:else}
               <div class="empty-state compact-top">
-                <strong>Faltam alguns dados para fechar o calculo</strong>
+                <strong>Faltam alguns dados para fechar o cálculo</strong>
                 <p>Preencha custos do produto, custos fixos e estimativa de vendas para ver o resultado completo.</p>
               </div>
             {/if}
@@ -1275,29 +1275,29 @@
 
       <section class="cta-card">
         <div>
-          <p class="section-kicker">Depois do calculo</p>
-          <h2 class="cta-title">Agora aplique essa precificacao no seu negocio</h2>
+          <p class="section-kicker">Depois do cálculo</p>
+          <h2 class="cta-title">Agora aplique essa precificação no seu negócio</h2>
           <p class="cta-copy">O Zelo PDV calcula seu lucro real automaticamente a cada venda e tira essas contas do papel.</p>
         </div>
 
         <div class="cta-benefits">
-          <div class="benefit-row"><span>OK</span><span>Controle de caixa sem planilha</span></div>
-          <div class="benefit-row"><span>OK</span><span>Gestao de estoque e baixa automatica</span></div>
-          <div class="benefit-row"><span>OK</span><span>Relatorios de vendas e lucro real</span></div>
-          <div class="benefit-row"><span>OK</span><span>Fiado e historico do cliente no mesmo lugar</span></div>
+          <div class="benefit-row"><span>✅</span><span>Controle de caixa sem planilha</span></div>
+          <div class="benefit-row"><span>✅</span><span>Gestão de estoque e baixa automática</span></div>
+          <div class="benefit-row"><span>✅</span><span>Relatórios de vendas e lucro real</span></div>
+          <div class="benefit-row"><span>✅</span><span>Fiado e histórico do cliente no mesmo lugar</span></div>
         </div>
 
         <div class="cta-actions">
-          <a href="/cadastro" class="primary-link">Testar 30 dias gratis</a>
-          <p>Sem cartao de credito. Cancele quando quiser.</p>
+          <a href="/cadastro" class="primary-link">Testar 30 dias grátis</a>
+          <p>Sem cartão de crédito. Cancele quando quiser.</p>
         </div>
       </section>
 
       <section class="faq-shell">
         <div class="faq-intro">
           <p class="section-kicker">FAQ</p>
-          <h2 class="section-title">Perguntas frequentes sobre precificacao</h2>
-          <p class="section-note">Sem forcar cadastro e sem empurrar termos tecnicos logo de cara.</p>
+          <h2 class="section-title">Perguntas frequentes sobre precificação</h2>
+          <p class="section-note">Sem forçar cadastro e sem empurrar termos técnicos logo de cara.</p>
         </div>
 
         <div class="faq-list">
