@@ -813,7 +813,7 @@
 
               <div class="cta-actions" style="margin-top: 0.5rem;">
                 <a href="/cadastro" class="primary-link">Criar conta grátis</a>
-                <p style="font-size: 0.85rem; color: var(--text-muted)">Sem cartão de crédito. Cancele quando quiser.</p>
+                <p style="font-size: 0.85rem; color: var(--text-muted)">Teste grátis de 7 dias. Aceitamos PIX, Boleto e Cartão.</p>
               </div>
             </section>
           {/if}

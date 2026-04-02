@@ -69,7 +69,7 @@
   // Subscription state
   let subLoading = true;
   let subStatus = null;
-  let stripeCustomerId = null;
+  let providerCustomerId = null;
   let cancelAtPeriodEnd = false;
   let currentPeriodEnd = null;
 
@@ -125,13 +125,13 @@
     try {
       const { data: sub } = await supabase
         .from('subscriptions')
-        .select('status, stripe_customer_id, cancel_at_period_end, current_period_end')
+        .select('status, provider_customer_id, cancel_at_period_end, current_period_end')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       subStatus = sub?.status ?? null;
-      stripeCustomerId = sub?.stripe_customer_id ?? null;
+      providerCustomerId = sub?.provider_customer_id ?? null;
       cancelAtPeriodEnd = !!sub?.cancel_at_period_end;
       currentPeriodEnd = sub?.current_period_end ?? null;
     } catch (e) {
@@ -193,28 +193,7 @@
     markDirty();
   }
 
-  async function openManageSubscription() {
-    if (!stripeCustomerId && !email) {
-      addToast('Não há informações de cliente para gerenciar assinatura.', 'error');
-      return;
-    }
-    subLoading = true;
-    try {
-      const { data: { session: authSession } } = await supabase.auth.getSession();
-      const token = authSession?.access_token ?? '';
-      const resp = await fetch('/api/billing/create-portal-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ customerId: stripeCustomerId }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || 'Erro ao criar sessão.');
-      if (data.url) window.location.href = data.url;
-    } catch (err) {
-      addToast('Erro: ' + err.message, 'error');
-      subLoading = false;
-    }
-  }
+  // openManageSubscription removed - user manages via /assinatura
 
   async function salvar() {
     if (!canSave) return;
@@ -596,17 +575,10 @@
 
               <!-- Actions -->
               <div class="flex items-center gap-3 flex-wrap">
-                <button type="button" on:click={openManageSubscription}
+                <a href="/assinatura"
                   class="px-4 py-2 rounded-md text-sm font-semibold transition-colors disabled:opacity-60"
                   style="background: var(--primary); color: var(--primary-text);"
-                  disabled={subLoading}
-                >Gerenciar Assinatura</button>
-                {#if !subStatus || (subStatus !== 'active' && subStatus !== 'trialing')}
-                  <a href="/assinatura"
-                    class="px-4 py-2 rounded-md text-sm font-semibold"
-                    style="background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle);"
-                  >Ver planos</a>
-                {/if}
+                >Gerenciar Assinatura</a>
               </div>
             {/if}
           </section>
@@ -615,15 +587,14 @@
           <section class="rounded-lg p-5 grid gap-3" style="background: var(--bg-card); border: 1px solid var(--border-card);">
             <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Histórico de faturas</h2>
             <p class="text-sm" style="color: var(--text-muted);">
-              O histórico completo de faturas e notas fiscais está disponível no Portal Stripe.
+              As opções de renovação e informações da assinatura podem ser acompanhadas na nova área de Gerenciamento.
             </p>
-            <button type="button" on:click={openManageSubscription}
+            <a href="/assinatura"
               class="self-start px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
               style="background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle);"
               on:mouseenter={e => (e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)')}
               on:mouseleave={e => (e.currentTarget.style.background = 'var(--bg-input)')}
-              disabled={subLoading}
-            >Abrir Portal de Pagamentos</button>
+            >Gerenciar Pagamentos</a>
           </section>
 
         </div>

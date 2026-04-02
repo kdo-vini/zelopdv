@@ -207,8 +207,8 @@
               a regularização.
             </li>
             <li>
-              Os pagamentos são processados por <strong>Stripe</strong>, uma plataforma terceira de
-              processamento de pagamentos. A Empresa não armazena dados completos de cartão de crédito
+              Os pagamentos são processados por <strong>Asaas</strong>, uma plataforma terceira de
+              pagamentos consolidada no Brasil. Nós não retemos ou armazenamos dados completos de cartão de crédito
               em seus servidores.
             </li>
             <li>
