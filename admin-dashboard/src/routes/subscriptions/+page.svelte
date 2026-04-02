@@ -276,7 +276,7 @@
           <option value="all">Todas</option>
           <option value="active">Ativas</option>
           <option value="expired">🚨 Expiradas</option>
-          <option value="expiring">⚠️ Em < 7 Dias</option>
+          <option value="expiring">⚠️ Em &lt; 7 Dias</option>
           <option value="canceled">Canceladas</option>
         </select>
         <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
