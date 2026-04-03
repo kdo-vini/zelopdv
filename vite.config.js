@@ -7,6 +7,9 @@ const supabaseUrl = process.env.PUBLIC_SUPABASE_URL ?? process.env.VITE_PUBLIC_S
 const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : '';
 
 export default defineConfig({
+  optimizeDeps: {
+    exclude: ['qz-tray']
+  },
   plugins: [
     sveltekit(),
     SvelteKitPWA({

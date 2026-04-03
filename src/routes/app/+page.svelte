@@ -16,6 +16,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { waitAuthReady } from '$lib/authStore';
   import { buildReceiptHTML } from '$lib/receipt';
+  import { printHtmlViaQZ } from '$lib/qzPrint';
   import { ensureActiveSubscription } from '$lib/guards';
   import { withTimeout } from '$lib/utils';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -1177,6 +1178,15 @@
   }
 
   /**
+   * Imprime HTML do recibo: tenta QZ Tray (direto na impressora, sem diálogo),
+   * cai no iframe silencioso como fallback se QZ não estiver instalado.
+   */
+  async function printRecibo(html) {
+    const ok = await printHtmlViaQZ(html);
+    if (!ok) await printViaIframe(html);
+  }
+
+  /**
    * Imprime recibo/nota estilo profissional.
    * Busca dados do perfil (empresa_perfil) do usuário autenticado automaticamente.
    */
@@ -1258,7 +1268,7 @@
   const html = buildReceiptHTML({ estabelecimento, venda });
 
     console.groupEnd();
-    await printViaIframe(html);
+    await printRecibo(html);
   }
 
   /**
@@ -1321,7 +1331,7 @@
       <script>window.onload=function(){setTimeout(()=>{try{window.print()}catch(e){}},120)}<\/script>
     </body></html>`;
 
-    await printViaIframe(html);
+    await printRecibo(html);
   }
 
 </script>

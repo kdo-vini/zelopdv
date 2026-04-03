@@ -9,10 +9,11 @@
   export let params;
 
   const tabs = [
-    { id: 'perfil',      label: 'Perfil' },
-    { id: 'empresa',     label: 'Empresa' },
-    { id: 'assinatura',  label: 'Assinatura' },
+    { id: 'perfil',       label: 'Perfil' },
+    { id: 'empresa',      label: 'Empresa' },
+    { id: 'assinatura',   label: 'Assinatura' },
     { id: 'preferencias', label: 'Preferências' },
+    { id: 'integracoes',  label: 'Integrações' },
   ];
   let activeTab = 'perfil';
 
@@ -275,7 +276,7 @@
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Meu Perfil</p>
         <h1 class="text-2xl font-semibold" style="color: var(--text-main);">Configurações da Conta</h1>
       </div>
-      {#if activeTab !== 'assinatura'}
+      {#if activeTab !== 'assinatura' && activeTab !== 'integracoes'}
         <button
           type={activeTab === 'preferencias' ? 'button' : 'submit'}
           on:click={activeTab === 'preferencias' ? salvarPreferencias : undefined}
@@ -720,6 +721,73 @@
             </div>
           </section>
 
+        </div>
+      {/if}
+
+      <!-- ─── Aba 5: Integrações ──────────────────────────── -->
+      {#if activeTab === 'integracoes'}
+        <div class="grid gap-5 max-w-2xl">
+
+          <!-- QZ Tray -->
+          <section class="rounded-lg p-5 grid gap-5" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+
+            <!-- Header -->
+            <div class="flex items-start gap-4">
+              <div class="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style="background: color-mix(in srgb, var(--primary) 12%, transparent);">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);">
+                  <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-base font-semibold" style="color: var(--text-main);">QZ Tray — Impressão Direta</h2>
+                <p class="text-sm mt-1" style="color: var(--text-muted);">
+                  Imprime recibos diretamente na impressora térmica, sem abrir o diálogo do navegador.
+                  Instale uma vez no computador e pronto — as próximas impressões saem automáticas.
+                </p>
+              </div>
+            </div>
+
+            <!-- Download button -->
+            <a
+              href="https://github.com/qzind/tray/releases/download/v2.2.5/qz-tray-2.2.5-x86_64.exe"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold w-fit transition-opacity hover:opacity-90"
+              style="background: var(--primary); color: var(--primary-text);"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Baixar QZ Tray
+            </a>
+
+            <!-- Step-by-step -->
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide mb-3" style="color: var(--text-muted);">Como configurar</p>
+              <ol class="grid gap-3">
+                {#each [
+                  { text: 'Clique em "Baixar QZ Tray" e instale o programa no computador.' },
+                  { text: 'Abra o QZ Tray — ele ficará ativo na bandeja do sistema (canto inferior direito da tela).' },
+                  { text: 'Defina sua impressora térmica como <strong>impressora padrão</strong> no Windows: <em>Configurações → Bluetooth e dispositivos → Impressoras → [sua impressora] → Definir como padrão</em>.' },
+                  { text: 'Na primeira impressão pelo Zelo PDV, um popup aparecerá pedindo permissão. Clique em <strong>Allow</strong> e marque <strong>Remember this decision (Lembrar essa decisão)</strong>.' },
+                  { text: 'Pronto! As próximas impressões saem diretas, sem nenhum diálogo.' },
+                ] as step, i}
+                  <li class="flex gap-3 text-sm" style="color: var(--text-label);">
+                    <span
+                      class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
+                      style="background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary);"
+                    >{i + 1}</span>
+                    <span>{@html step.text}</span>
+                  </li>
+                {/each}
+              </ol>
+            </div>
+
+            <p class="text-xs" style="color: var(--text-muted);">
+              QZ Tray é gratuito e de código aberto. Precisa estar aberto em segundo plano enquanto o Zelo PDV está em uso. Se fechar o QZ Tray, a impressão volta a usar o diálogo do navegador automaticamente.
+            </p>
+
+          </section>
         </div>
       {/if}
 
