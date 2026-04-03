@@ -49,6 +49,8 @@
   $: isAuthPage = ['/login', '/cadastro', '/esqueci-senha', '/redefinir-senha'].includes(path);
   // Routes that have their own sidebar layout — hide root header/footer for these
   $: hasSidebarLayout = isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura;
+  // Show support chat on public/auth pages but not inside the app
+  $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && $page.url.pathname !== '/pascoa';
 
 
 
@@ -260,6 +262,7 @@
   import ToastContainer from '$lib/components/ToastContainer.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import PinSetupModal from '$lib/components/PinSetupModal.svelte';
+  import SupportChat from '$lib/components/SupportChat.svelte';
   import { adminUnlocked } from '$lib/stores/adminStore';
   import { sessionStore, companyNameStore } from '$lib/stores/session';
 
@@ -549,6 +552,10 @@
       </div>
     </div>
   </footer>
+  {/if}
+
+  {#if showSupportChat}
+    <SupportChat />
   {/if}
 </div>
 {/if}

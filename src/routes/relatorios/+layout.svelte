@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { ensureActiveSubscription } from '$lib/guards';
   import GestaoSidebar from '$lib/components/GestaoSidebar.svelte';
+  import AssistantChat from '$lib/components/AssistantChat.svelte';
 
   let ready = false;
 
@@ -34,3 +35,4 @@
     </div>
   </div>
 {/if}
+<AssistantChat />

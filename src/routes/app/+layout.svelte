@@ -1,5 +1,6 @@
 <script>
   import GestaoSidebar from '$lib/components/GestaoSidebar.svelte';
+  import AssistantChat from '$lib/components/AssistantChat.svelte';
 </script>
 
 <div class="flex h-screen overflow-hidden" style="background: var(--bg-app);">
@@ -8,3 +9,4 @@
     <slot />
   </div>
 </div>
+<AssistantChat />
