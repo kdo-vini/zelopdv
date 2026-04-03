@@ -21,7 +21,16 @@ export async function POST({ request, url }) {
     const userId = user.id;
     const email = user.email;
 
-    if (PAYMENT_LINK) return json({ url: PAYMENT_LINK });
+    // Verifica elegibilidade do trial no nosso DB (fonte da verdade)
+    const { data: existingSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const isFirstTime = !existingSub;
+
+    // Payment Link só para first-time (não controlamos trial do link estático)
+    if (PAYMENT_LINK && isFirstTime) return json({ url: PAYMENT_LINK });
 
     if (!PRICE_ID) {
       return json({ error: 'STRIPE_PRICE_ID_MONTHLY_59 ausente no ambiente.' }, { status: 500 });
@@ -37,20 +46,18 @@ export async function POST({ request, url }) {
       ? `https://${request.headers.get('x-forwarded-host')}`
       : null;
     const origin = ORIGIN || requestOrigin || url.origin;
+
+    const subscriptionData = isFirstTime
+      ? { trial_period_days: 30, trial_settings: { end_behavior: { missing_payment_method: 'cancel' } } }
+      : {};
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customer.id,
       line_items: [{ price: PRICE_ID, quantity: 1 }],
       allow_promotion_codes: true,
       payment_method_collection: 'if_required',
-      subscription_data: {
-        trial_period_days: 30,
-        trial_settings: {
-          end_behavior: {
-            missing_payment_method: 'cancel'
-          }
-        }
-      },
+      subscription_data: subscriptionData,
       success_url: `${origin}/assinatura?success=1`,
       cancel_url: `${origin}/assinatura?canceled=1`,
       metadata: { user_id: userId },
