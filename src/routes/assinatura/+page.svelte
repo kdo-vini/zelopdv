@@ -262,11 +262,11 @@
   {:else if subscriptionCreated && billingType === 'PIX'}
     <!-- PIX QR CODE DISPLAY -->
     <div class="status-card info">
-      <div class="status-icon">🎉</div>
+      <div class="status-icon">⏳</div>
       <div>
-        <strong>Assinatura criada com sucesso!</strong>
+        <strong>Aguardando pagamento PIX…</strong>
         <div class="status-detail">
-          Seu acesso começa agora.
+          Seu acesso será liberado automaticamente após a confirmação.
         </div>
       </div>
     </div>
@@ -284,7 +284,9 @@
       </div>
     {/if}
 
-    <a href="/app" class="btn-primary" style="margin-top: 1rem;">Entrar no sistema →</a>
+    <div class="status-card active" style="margin-top: 1rem; opacity: 0.7; font-size: 0.85rem;">
+      ℹ️ O sistema detectará o pagamento em instantes.
+    </div>
 
   {:else}
     <!-- SUBSCRIBE STATE -->
