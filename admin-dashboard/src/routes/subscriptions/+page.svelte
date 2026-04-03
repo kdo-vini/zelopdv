@@ -152,6 +152,7 @@
         .from('subscriptions')
         .update({
           status: 'canceled',
+          current_period_end: new Date().toISOString(), // Expira data imediatamente
           last_modified_by: adminInfo.id,
           last_modified_at: new Date().toISOString()
         })
@@ -211,13 +212,20 @@
     
     try {
       statusUpdating = true
+      const updateData = {
+        status: newStatus,
+        last_modified_by: adminInfo.id,
+        last_modified_at: new Date().toISOString()
+      }
+      
+      // Se cancelar manual, mata a data de expiração para travar o acesso
+      if (newStatus === 'canceled') {
+        updateData.current_period_end = new Date().toISOString()
+      }
+
       const { error } = await supabase
         .from('subscriptions')
-        .update({
-          status: newStatus,
-          last_modified_by: adminInfo.id,
-          last_modified_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', sub.id)
       
       if (error) throw error

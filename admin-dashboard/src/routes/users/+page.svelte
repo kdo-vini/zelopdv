@@ -120,13 +120,20 @@
       // Update subscription status if it changed
       const originalSub = users.find(u => u.user_id === editForm.user_id)?.subscriptions?.[0]
       if (editSub && originalSub && editSub.status !== originalSub.status) {
+        const updateData = {
+          status: editSub.status,
+          last_modified_by: adminInfo.id,
+          last_modified_at: new Date().toISOString()
+        }
+
+        // Se cancelar, expira a data imediatamente
+        if (editSub.status === 'canceled') {
+          updateData.current_period_end = new Date().toISOString()
+        }
+
         const { error: subError } = await supabase
           .from('subscriptions')
-          .update({
-            status: editSub.status,
-            last_modified_by: adminInfo.id,
-            last_modified_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('user_id', editForm.user_id)
         
         if (subError) throw subError
@@ -212,6 +219,7 @@
         .from('subscriptions')
         .update({
           status: 'canceled',
+          current_period_end: new Date().toISOString(), // Expira data imediatamente
           last_modified_by: adminInfo.id,
           last_modified_at: new Date().toISOString()
         })
