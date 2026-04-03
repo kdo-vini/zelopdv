@@ -1,6 +1,7 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import { isOpen, messages, contextType, closeAssistant } from '$lib/stores/assistant';
+  import { marked } from 'marked';
 
   let input = '';
   let isStreaming = false;
@@ -227,6 +228,10 @@
           <span class="typing-dots" aria-label="Digitando...">
             <span></span><span></span><span></span>
           </span>
+        {:else if msg.role === 'assistant'}
+          <div class="markdown-content">
+            {@html marked.parse(msg.content)}
+          </div>
         {:else}
           {msg.content}
         {/if}
@@ -376,8 +381,34 @@
     border-radius: 14px;
     font-size: 13px;
     line-height: 1.5;
-    white-space: pre-wrap;
     word-break: break-word;
+  }
+
+  .markdown-content :global(p) {
+    margin-bottom: 0.75rem;
+  }
+  .markdown-content :global(p:last-child) {
+    margin-bottom: 0;
+  }
+  .markdown-content :global(ul), .markdown-content :global(ol) {
+    margin-bottom: 0.75rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+  .markdown-content :global(ol) {
+    list-style: decimal;
+  }
+  .markdown-content :global(li) {
+    margin-bottom: 0.25rem;
+  }
+  .markdown-content :global(strong) {
+    font-weight: 700;
+  }
+  .markdown-content :global(code) {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    font-family: monospace;
   }
 
   .p-user {

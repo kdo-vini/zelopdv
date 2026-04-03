@@ -1,4 +1,5 @@
 <script>
+  import { marked } from 'marked';
   const WHATSAPP_URL =
     'https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema).';
 
@@ -130,6 +131,10 @@
               <span class="typing-indicator" aria-label="Digitando...">
                 <span></span><span></span><span></span>
               </span>
+            {:else if msg.role === 'assistant'}
+              <div class="markdown-content">
+                {@html marked.parse(msg.content)}
+              </div>
             {:else}
               {msg.content}
             {/if}
@@ -285,8 +290,34 @@
     border-radius: 12px;
     font-size: 13px;
     line-height: 1.5;
-    white-space: pre-wrap;
     word-break: break-word;
+  }
+
+  .markdown-content :global(p) {
+    margin-bottom: 0.75rem;
+  }
+  .markdown-content :global(p:last-child) {
+    margin-bottom: 0;
+  }
+  .markdown-content :global(ul), .markdown-content :global(ol) {
+    margin-bottom: 0.75rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+  .markdown-content :global(ol) {
+    list-style: decimal;
+  }
+  .markdown-content :global(li) {
+    margin-bottom: 0.25rem;
+  }
+  .markdown-content :global(strong) {
+    font-weight: 700;
+  }
+  .markdown-content :global(code) {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    font-family: monospace;
   }
 
   .user-msg {
