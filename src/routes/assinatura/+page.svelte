@@ -14,7 +14,8 @@
   let expiryDate = null;
   let hasHadSubscription = false;
   let isActiveStrict = false;
-  let billingType = 'PIX';
+  let billingType = 'CREDIT_CARD';
+  const pixEmManutencao = true; // Temporário: PIX via Asaas indisponível (bloqueio de IP cloud)
 
   // PIX data after subscription creation
   let pixQrImage = null;
@@ -115,6 +116,27 @@
         return;
       }
 
+      // Cartão de crédito: usa Stripe (Asaas bloqueado por IP de cloud)
+      if (billingType === 'CREDIT_CARD') {
+        const stripeRes = await fetch('/api/billing/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const stripeJson = await stripeRes.json();
+        if (!stripeRes.ok) {
+          message = stripeJson?.error || 'Falha ao criar sessão de pagamento.';
+          messageType = 'warning';
+          return;
+        }
+        if (stripeJson?.url) {
+          window.location.href = stripeJson.url;
+          return;
+        }
+      }
+
       const res = await fetch('/api/billing/create-subscription', {
         method: 'POST',
         headers: {
@@ -144,14 +166,6 @@
       if (json.pix?.encodedImage) {
         pixQrImage = `data:image/png;base64,${json.pix.encodedImage}`;
         pixCopyPaste = json.pix.payload;
-      }
-
-      if (billingType === 'CREDIT_CARD' || billingType === 'BOLETO') {
-        // Redirect to Asaas checkout page for card/boleto
-        if (invoiceUrl) {
-          window.location.href = invoiceUrl;
-          return;
-        }
       }
 
       // For PIX, show QR code inline
@@ -348,12 +362,15 @@
     <div class="billing-selector">
       <h2 class="selector-title">Como quer pagar?</h2>
       <div class="billing-options">
-        <label class="billing-option" class:selected={billingType === 'PIX'}>
-          <input type="radio" bind:group={billingType} value="PIX" />
+        <label class="billing-option billing-option-disabled" class:selected={billingType === 'PIX' && !pixEmManutencao}>
+          <input type="radio" bind:group={billingType} value="PIX" disabled={pixEmManutencao} />
           <span class="option-icon">🟢</span>
           <div>
             <strong>PIX</strong>
             <span class="option-detail">Aprovação instantânea</span>
+            {#if pixEmManutencao}
+              <span class="option-manutencao">Em manutenção</span>
+            {/if}
           </div>
         </label>
 
@@ -667,6 +684,27 @@
   }
   :global(.dark) .status-card.info {
     color: #bae6fd;
+  }
+
+  .billing-option-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+    filter: grayscale(0.5);
+  }
+
+  .option-manutencao {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #92400e;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   @media (max-width: 480px) {

@@ -109,13 +109,13 @@ async function handleCheckoutCompleted(session) {
                 console.error('[Webhook] Error querying auth.users:', err.message);
             }
 
-            // Fallback: try to find in subscriptions by stripe_customer_id
+            // Fallback: try to find in subscriptions by provider_customer_id
             if (!userId) {
-                console.log('[Webhook] Trying fallback: stripe_customer_id');
+                console.log('[Webhook] Trying fallback: provider_customer_id');
                 const { data: existingSubs, error: subError } = await supabaseAdmin
                     .from('subscriptions')
                     .select('user_id')
-                    .eq('stripe_customer_id', customerId)
+                    .eq('provider_customer_id', customerId)
                     .limit(1);
 
                 if (subError) {
@@ -140,8 +140,9 @@ async function handleCheckoutCompleted(session) {
 
     const subscriptionData = {
         user_id: userId,
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscriptionId,
+        provider_customer_id: customerId,
+        provider_subscription_id: subscriptionId,
+        payment_provider: 'stripe',
         status: subscription.status,
         cancel_at_period_end: subscription.cancel_at_period_end,
         updated_at: new Date().toISOString()
@@ -208,7 +209,7 @@ async function handleSubscriptionUpdate(subscription) {
     const { error } = await supabaseAdmin
         .from('subscriptions')
         .update(updateData)
-        .eq('stripe_subscription_id', subscription.id);
+        .eq('provider_subscription_id', subscription.id);
 
     if (error) {
         console.error('[Webhook] Error updating subscription:', error);
@@ -227,7 +228,7 @@ async function handleSubscriptionDeleted(subscription) {
             status: 'canceled',
             updated_at: new Date().toISOString()
         })
-        .eq('stripe_subscription_id', subscription.id);
+        .eq('provider_subscription_id', subscription.id);
 
     if (error) {
         console.error('[Webhook] Error marking subscription as canceled:', error);
@@ -257,7 +258,7 @@ async function handleInvoicePaymentFailed(invoice) {
             status: 'past_due',
             updated_at: new Date().toISOString()
         })
-        .eq('stripe_subscription_id', invoice.subscription);
+        .eq('provider_subscription_id', invoice.subscription);
 
     if (error) {
         console.error('[Webhook] Error updating subscription to past_due:', error);
