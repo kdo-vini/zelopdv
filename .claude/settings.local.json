@@ -21,7 +21,11 @@
       "Bash(node -e \":*)",
       "mcp__b66dc66d-f2ed-435c-934d-a473e8b38636__list_projects",
       "mcp__b66dc66d-f2ed-435c-934d-a473e8b38636__apply_migration",
-      "WebFetch(domain:docs.asaas.com)"
+      "WebFetch(domain:docs.asaas.com)",
+      "WebSearch",
+      "Bash(done)",
+      "Bash(grep:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
