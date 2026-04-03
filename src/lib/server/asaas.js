@@ -168,7 +168,7 @@ export async function getPaymentInvoiceUrl(paymentId) {
 // ──── Helpers ──────────────────────────────────────────
 
 export function isConfigured() {
-  return USE_PROXY ? (!!PROXY_URL && !!PROXY_SECRET) : !!API_KEY;
+  return USE_PROXY ? !!PROXY_URL : !!API_KEY;
 }
 
 export function getBaseUrl() {

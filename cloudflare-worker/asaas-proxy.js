@@ -26,7 +26,7 @@ export default {
     // IMPORTANTE: Use a variável ASAAS_BASE_URL do painel ou a fixa abaixo
     const baseUrl = env.ASAAS_BASE_URL || "https://api.asaas.com"; 
     const cleanPath = pathname.replace(/^\//, ''); 
-    const asaasUrl = `${baseUrl}/${cleanPath}${search}`.replace('/api/v3', '/v3').replace('//', '/');
+    const asaasUrl = `${baseUrl}/${cleanPath}${search}`.replace('/api/v3', '/v3');
 
     try {
       const token = env.ASAAS_API_KEY ? env.ASAAS_API_KEY.trim() : "";
