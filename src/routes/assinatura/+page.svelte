@@ -15,6 +15,7 @@
   let hasHadSubscription = false;
   let isActiveStrict = false;
   let billingType = 'CREDIT_CARD';
+  let trialDaysLeft = null;
   const pixEmManutencao = true; // Temporário: PIX via Asaas indisponível (bloqueio de IP cloud)
 
   // PIX data after subscription creation
@@ -51,6 +52,11 @@
           billingType = data?.billing_type || 'PIX';
 
           isActiveStrict = isSubscriptionActiveStrict(data);
+
+          if (subStatus === 'trialing' && expiryDate) {
+            const diff = new Date(expiryDate) - new Date();
+            trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+          }
 
           if (hasHadSubscription && !isActiveStrict) {
             if (expiryDate) {
@@ -289,29 +295,88 @@
 
   {#if isActiveStrict}
     <!-- ACTIVE SUBSCRIPTION STATE -->
-    <div class="status-card active">
-      <div class="status-icon">✅</div>
-      <div>
-        {#if subStatus === 'trialing'}
-          <strong>Período de teste ativo</strong> — Você tem acesso completo ao sistema!
+    {#if subStatus === 'trialing' && trialDaysLeft !== null && trialDaysLeft <= 7}
+      <!-- Trial ending soon: show warning + subscription form -->
+      <div class="status-card warning">
+        <div class="status-icon">⚠️</div>
+        <div>
+          <strong>
+            {trialDaysLeft === 0 ? 'Seu teste termina hoje!' : `Teste termina em ${trialDaysLeft} dia${trialDaysLeft === 1 ? '' : 's'}`}
+          </strong>
           {#if expiryDate}
-            <div class="status-detail">Teste válido até {new Date(expiryDate).toLocaleDateString('pt-BR')}</div>
+            <div class="status-detail">Válido até {new Date(expiryDate).toLocaleDateString('pt-BR')}. Assine abaixo para não perder o acesso.</div>
           {/if}
-        {:else}
-          <strong>Assinatura ativa</strong>
-          {#if expiryDate}
-            <div class="status-detail">Próxima renovação: {new Date(expiryDate).toLocaleDateString('pt-BR')}</div>
-          {/if}
-        {/if}
+        </div>
       </div>
-    </div>
 
-    <div class="actions-row">
-      <a href="/app" class="btn-primary">Entrar no sistema</a>
-      <button class="btn-danger-outline" on:click={cancelarAssinatura} disabled={canceling}>
-        {canceling ? 'Cancelando…' : 'Cancelar assinatura'}
+      <a href="/app" class="btn-secondary" style="text-align:center; text-decoration:none;">Entrar no sistema agora</a>
+
+      <!-- BILLING TYPE SELECTOR -->
+      <div class="billing-selector">
+        <h2 class="selector-title">Assine para continuar após o teste</h2>
+        <div class="billing-options">
+          <label class="billing-option billing-option-disabled" class:selected={billingType === 'PIX' && !pixEmManutencao}>
+            <input type="radio" bind:group={billingType} value="PIX" disabled={pixEmManutencao} />
+            <span class="option-icon">🟢</span>
+            <div>
+              <strong>PIX</strong>
+              <span class="option-detail">Aprovação instantânea</span>
+              {#if pixEmManutencao}
+                <span class="option-manutencao">Em manutenção</span>
+              {/if}
+            </div>
+          </label>
+
+          <label class="billing-option" class:selected={billingType === 'CREDIT_CARD'}>
+            <input type="radio" bind:group={billingType} value="CREDIT_CARD" />
+            <span class="option-icon">💳</span>
+            <div>
+              <strong>Cartão de Crédito</strong>
+              <span class="option-detail">Renovação automática</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <button class="btn-primary btn-subscribe" on:click={assinar} disabled={loading}>
+        {#if loading}
+          Processando…
+        {:else}
+          Assinar agora — R$ 59/mês
+        {/if}
       </button>
-    </div>
+
+      <p class="legal-text">
+        Ao assinar, você concorda com nossos <a href="/termos">Termos de Uso</a> e <a href="/privacidade">Política de Privacidade</a>.
+        A cobrança de R$ 59/mês será iniciada imediatamente.
+      </p>
+
+    {:else}
+      <!-- Normal active/trialing state -->
+      <div class="status-card active">
+        <div class="status-icon">✅</div>
+        <div>
+          {#if subStatus === 'trialing'}
+            <strong>Período de teste ativo</strong> — Você tem acesso completo ao sistema!
+            {#if expiryDate}
+              <div class="status-detail">Teste válido até {new Date(expiryDate).toLocaleDateString('pt-BR')}</div>
+            {/if}
+          {:else}
+            <strong>Assinatura ativa</strong>
+            {#if expiryDate}
+              <div class="status-detail">Próxima renovação: {new Date(expiryDate).toLocaleDateString('pt-BR')}</div>
+            {/if}
+          {/if}
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <a href="/app" class="btn-primary">Entrar no sistema</a>
+        <button class="btn-danger-outline" on:click={cancelarAssinatura} disabled={canceling}>
+          {canceling ? 'Cancelando…' : 'Cancelar assinatura'}
+        </button>
+      </div>
+    {/if}
 
   {:else if subscriptionCreated && billingType === 'PIX'}
     <!-- PIX QR CODE DISPLAY -->
