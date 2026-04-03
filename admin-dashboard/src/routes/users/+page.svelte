@@ -10,6 +10,8 @@
   let adminInfo = null
   let isEditing = false
   let editForm = {}
+  let editSub = null
+  let subLoading = false
   
   onMount(async () => {
     await loadAdminInfo()
@@ -89,17 +91,21 @@
 
   function openEdit(user) {
     editForm = { ...user }
+    editSub = user.subscriptions?.[0] || null
     isEditing = true
   }
 
   function closeEdit() {
     isEditing = false
     editForm = {}
+    editSub = null
   }
 
   async function saveEdit() {
     try {
-      const { error } = await supabase
+      subLoading = true
+      // Update profile
+      const { error: profileError } = await supabase
         .from('empresa_perfil')
         .update({
           nome_exibicao: editForm.nome_exibicao,
@@ -109,7 +115,29 @@
         })
         .eq('user_id', editForm.user_id)
       
-      if (error) throw error
+      if (profileError) throw profileError
+      
+      // Update subscription status if it changed
+      const originalSub = users.find(u => u.user_id === editForm.user_id)?.subscriptions?.[0]
+      if (editSub && originalSub && editSub.status !== originalSub.status) {
+        const { error: subError } = await supabase
+          .from('subscriptions')
+          .update({
+            status: editSub.status,
+            last_modified_by: adminInfo.id,
+            last_modified_at: new Date().toISOString()
+          })
+          .eq('user_id', editForm.user_id)
+        
+        if (subError) throw subError
+        
+        await logAdminAction({
+          adminId: adminInfo.id,
+          action: 'update_subscription_status',
+          targetUserId: editForm.user_id,
+          details: { old_status: originalSub.status, new_status: editSub.status, company: editForm.nome_exibicao }
+        })
+      }
       
       await logAdminAction({
         adminId: adminInfo.id,
@@ -123,7 +151,89 @@
       await loadUsers()
     } catch (err) {
       console.error('Save error:', err)
-      alert('Erro ao salvar os dados.')
+      alert('Erro ao salvar os dados: ' + err.message)
+    } finally {
+      subLoading = false
+    }
+  }
+
+  async function handleQuickExtendTrial(days) {
+    if (!editSub) {
+      alert('Usuário não possui uma assinatura/trial ativo para estender.')
+      return
+    }
+
+    if (!confirm(`Estender trial de ${editForm.nome_exibicao} por mais ${days} dias?`)) return
+    
+    try {
+      subLoading = true
+      const currentEnd = new Date(editSub.current_period_end)
+      const baseDate = currentEnd < new Date() ? new Date() : currentEnd
+      const newEnd = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000)
+      
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({
+          status: 'trialing',
+          current_period_end: newEnd.toISOString(),
+          last_modified_by: adminInfo.id,
+          last_modified_at: new Date().toISOString()
+        })
+        .eq('user_id', editForm.user_id)
+      
+      if (error) throw error
+      
+      await logAdminAction({
+        adminId: adminInfo.id,
+        action: 'extend_trial',
+        targetUserId: editForm.user_id,
+        details: { days, new_expiry: newEnd.toISOString(), company: editForm.nome_exibicao }
+      })
+      
+      alert(`Trial estendido até ${newEnd.toLocaleDateString('pt-BR')}!`)
+      editSub.current_period_end = newEnd.toISOString()
+      editSub.status = 'trialing'
+      await loadUsers()
+    } catch (err) {
+      console.error('Extend trial error:', err)
+      alert('Erro ao estender trial')
+    } finally {
+      subLoading = false
+    }
+  }
+
+  async function handleCancelSub() {
+    if (!editSub) return
+    if (!confirm(`Tem certeza que deseja CANCELAR a assinatura/trial de ${editForm.nome_exibicao}?`)) return
+    
+    try {
+      subLoading = true
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({
+          status: 'canceled',
+          last_modified_by: adminInfo.id,
+          last_modified_at: new Date().toISOString()
+        })
+        .eq('user_id', editForm.user_id)
+      
+      if (error) throw error
+      
+      await logAdminAction({
+        adminId: adminInfo.id,
+        action: 'cancel_subscription',
+        targetUserId: editForm.user_id,
+        details: { subscription_id: editSub.id, company: editForm.nome_exibicao }
+      })
+      
+      alert('Assinatura cancelada com sucesso.')
+      editSub.status = 'canceled'
+      await loadUsers()
+    } catch (err) {
+      console.error('Cancel sub error:', err)
+      alert('Erro ao cancelar assinatura')
+    } finally {
+      subLoading = false
     }
   }
 
@@ -408,14 +518,65 @@
             <span class="ml-3 text-sm font-medium text-slate-300 group-hover:text-white transition-colors">Acesso ao Módulo PDV</span>
           </label>
         </div>
+
+        {#if editSub}
+          <div class="pt-4 border-t border-slate-800 space-y-4">
+            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Controle de Assinatura</h4>
+            
+            <div class="space-y-1.5">
+              <label class="block text-[13px] font-medium text-slate-400">Status da Conta</label>
+              <select 
+                bind:value={editSub.status}
+                class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-sky-500 transition-all shadow-inner"
+              >
+                <option value="active">Ativo (Lançamento Manual/Assinado)</option>
+                <option value="trialing">Trial (Período de Teste)</option>
+                <option value="past_due">Vencido (Atraso no Pagamento)</option>
+                <option value="canceled">Cancelado (Sem Acesso)</option>
+              </select>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <p class="text-[11px] font-medium text-slate-500">Ações Rápidas de Trial</p>
+              <div class="flex gap-2">
+                <button 
+                  on:click={() => handleQuickExtendTrial(7)}
+                  disabled={subLoading}
+                  class="flex-1 py-2 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+                >
+                  +7 Dias Trial
+                </button>
+                <button 
+                  on:click={() => handleQuickExtendTrial(15)}
+                  disabled={subLoading}
+                  class="flex-1 py-2 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+                >
+                  +15 Dias Trial
+                </button>
+              </div>
+            </div>
+
+            <button 
+              on:click={handleCancelSub}
+              disabled={subLoading}
+              class="w-full py-2.5 text-xs font-bold text-rose-400 bg-rose-500/5 border border-rose-500/20 rounded-xl hover:bg-rose-500/10 transition-all disabled:opacity-50"
+            >
+              Cancelar Inscrição Imediatamente
+            </button>
+          </div>
+        {:else}
+           <div class="pt-4 border-t border-slate-800">
+             <p class="text-xs text-slate-500 italic text-center">Nenhum registro de assinatura encontrado para este usuário.</p>
+           </div>
+        {/if}
       </div>
 
       <div class="px-6 py-4 bg-slate-800/30 border-t border-slate-800 flex justify-end gap-3">
-        <button on:click={closeEdit} class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors">
+        <button on:click={closeEdit} disabled={subLoading} class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-50">
           Cancelar
         </button>
-        <button on:click={saveEdit} class="px-5 py-2 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-xl transition-all shadow-[0_0_15px_rgba(14,165,233,0.4)]">
-          Salvar Alterações
+        <button on:click={saveEdit} disabled={subLoading} class="px-5 py-2 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-xl transition-all shadow-[0_0_15px_rgba(14,165,233,0.4)] disabled:opacity-50">
+          {subLoading ? 'Salvando...' : 'Salvar Alterações'}
         </button>
       </div>
     </div>

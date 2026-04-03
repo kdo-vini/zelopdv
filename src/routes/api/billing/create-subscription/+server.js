@@ -21,8 +21,8 @@ export async function POST({ request }) {
     const body = await request.json();
     const billingType = body.billingType || 'PIX'; // Default to PIX
 
-    if (!['PIX', 'CREDIT_CARD', 'BOLETO'].includes(billingType)) {
-      return json({ error: 'Tipo de pagamento inválido. Use PIX, CREDIT_CARD ou BOLETO.' }, { status: 400 });
+    if (!['PIX', 'CREDIT_CARD'].includes(billingType)) {
+      return json({ error: 'Tipo de pagamento inválido. Use PIX ou CREDIT_CARD.' }, { status: 400 });
     }
 
     // Get customer profile for CPF/CNPJ
@@ -51,9 +51,12 @@ export async function POST({ request }) {
       );
     }
 
-    // Calculate first due date (30 days from now for trial)
+    // Calcular data de vencimento
+    // Se quiser cobrança IMEDIATA (com QR Code na hora), usetrialDays = 0
+    // Se quiser dar 30 dias grátis, o QR Code de pagamento só aparece no vencimento.
+    const trialDays = 0; // Mudando para 0 para gerar QR Code imediato conforme feedback
     const firstDue = new Date();
-    firstDue.setDate(firstDue.getDate() + 30);
+    firstDue.setDate(firstDue.getDate() + trialDays);
     const nextDueDate = firstDue.toISOString().split('T')[0]; // YYYY-MM-DD
 
     // Create subscription in Asaas
@@ -83,7 +86,7 @@ export async function POST({ request }) {
       user_id: userId,
       provider_customer_id: customer.id,
       provider_subscription_id: subscription.id,
-      status: 'trialing',
+      status: trialDays > 0 ? 'trialing' : 'active',
       current_period_end: trialEnd.toISOString(),
       cancel_at_period_end: false,
       payment_provider: 'asaas',

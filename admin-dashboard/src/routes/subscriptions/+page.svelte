@@ -17,6 +17,7 @@
   let extendMonths = 1
   let extendReason = ''
   let extending = false
+  let statusUpdating = false
   
   onMount(async () => {
     await loadAdminInfo()
@@ -204,6 +205,77 @@
       errorToast('Erro ao reativar assinatura')
     }
   }
+
+  async function handleUpdateStatus(sub, newStatus) {
+    if (sub.status === newStatus) return
+    
+    try {
+      statusUpdating = true
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({
+          status: newStatus,
+          last_modified_by: adminInfo.id,
+          last_modified_at: new Date().toISOString()
+        })
+        .eq('id', sub.id)
+      
+      if (error) throw error
+      
+      await logAdminAction({
+        adminId: adminInfo.id,
+        action: 'update_subscription_status',
+        targetUserId: sub.user_id,
+        details: { subscription_id: sub.id, old_status: sub.status, new_status: newStatus, company: sub.empresa_perfil.nome_exibicao }
+      })
+      
+      success(`Status atualizado para ${newStatus}`)
+      await loadSubscriptions()
+    } catch (err) {
+      console.error('Error updating status:', err)
+      errorToast('Erro ao atualizar status')
+    } finally {
+      statusUpdating = false
+    }
+  }
+
+  async function handleExtendTrialOnly(sub, days) {
+    if (!confirm(`Estender TRIAL de ${sub.empresa_perfil.nome_exibicao} por ${days} dias?`)) return
+    
+    try {
+      statusUpdating = true
+      const currentEnd = new Date(sub.current_period_end)
+      const baseDate = currentEnd < new Date() ? new Date() : currentEnd
+      const newEnd = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000)
+      
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({
+          status: 'trialing',
+          current_period_end: newEnd.toISOString(),
+          last_modified_by: adminInfo.id,
+          last_modified_at: new Date().toISOString()
+        })
+        .eq('id', sub.id)
+      
+      if (error) throw error
+      
+      await logAdminAction({
+        adminId: adminInfo.id,
+        action: 'extend_trial',
+        targetUserId: sub.user_id,
+        details: { subscription_id: sub.id, days, new_expiry: newEnd.toISOString(), company: sub.empresa_perfil.nome_exibicao }
+      })
+      
+      success(`Trial estendido até ${newEnd.toLocaleDateString('pt-BR')}`)
+      await loadSubscriptions()
+    } catch (err) {
+      console.error('Error extending trial:', err)
+      errorToast('Erro ao estender trial')
+    } finally {
+      statusUpdating = false
+    }
+  }
   
   function getStatusBadge(sub) {
     const isExpired = new Date(sub.current_period_end) < new Date()
@@ -378,12 +450,39 @@
                 {new Date(sub.created_at).toLocaleDateString('pt-BR')}
               </td>
               <td class="py-4 px-6 text-right">
-                <div class="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div class="flex items-center justify-end gap-1.5">
+                  
+                  <!-- Status Quick Change -->
+                  <div class="relative group/status mr-2">
+                    <select 
+                      value={sub.status} 
+                      on:change={(e) => handleUpdateStatus(sub, e.target.value)}
+                      disabled={statusUpdating}
+                      class="appearance-none bg-slate-800/50 border border-slate-700/50 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-white hover:border-slate-600 focus:outline-none transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <option value="active">ACTIVE</option>
+                      <option value="trialing">TRIAL</option>
+                      <option value="past_due">PAST DUE</option>
+                      <option value="canceled">CANCELED</option>
+                    </select>
+                  </div>
+
+                  {#if sub.status === 'trialing' || new Date(sub.current_period_end) < new Date()}
+                    <button 
+                      on:click={() => handleExtendTrialOnly(sub, 7)}
+                      disabled={statusUpdating}
+                      class="px-2 py-1.5 text-[10px] font-bold text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded-lg transition-all disabled:opacity-50"
+                      title="Estender Trial +7 Dias"
+                    >
+                      +7D Trial
+                    </button>
+                  {/if}
+
                   {#if sub.status === 'active'}
                     <!-- Extend (Accept Manual Payment) -->
                     <button on:click={() => openExtendModal(sub)} class="px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-all" title="Registrar Pagamento / Extensão">
                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                       Lançar
+                       Renovar
                     </button>
                     <!-- Cancel -->
                     <button on:click={() => handleCancelSubscription(sub)} class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors border border-transparent hover:border-rose-500/20" title="Cancelar Imediatamente">

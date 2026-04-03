@@ -225,12 +225,13 @@
 <svelte:head>
   <title>Assinatura — Zelo PDV</title>
   <meta name="description" content="Assine o Zelo PDV. 30 dias grátis, depois R$ 59/mês. Pague com PIX, cartão de crédito ou boleto.">
+  <meta name="description" content="Assine o Zelo PDV. R$ 59/mês. Pague com PIX ou cartão de crédito.">
 </svelte:head>
 
 <section class="assinatura-container">
   <p class="breadcrumb">Conta / Assinatura</p>
   <h1 class="title">Assinatura Zelo PDV</h1>
-  <p class="subtitle">30 dias grátis — depois R$ 59/mês. Pague com PIX, cartão ou boleto.</p>
+  <p class="subtitle">Apenas R$ 59/mês. Pague com PIX ou cartão de crédito.</p>
 
   {#if isActiveStrict}
     <!-- ACTIVE SUBSCRIPTION STATE -->
@@ -265,18 +266,14 @@
       <div>
         <strong>Assinatura criada com sucesso!</strong>
         <div class="status-detail">
-          Seu período de teste começa agora. Acesse o sistema enquanto seu teste é válido.
-          {#if trialEnd}
-            Período de teste até <strong>{new Date(trialEnd).toLocaleDateString('pt-BR')}</strong>.
-          {/if}
+          Seu acesso começa agora.
         </div>
       </div>
     </div>
 
     {#if pixQrImage}
       <div class="pix-card">
-        <h2 class="pix-title">PIX para futuras cobranças</h2>
-        <p class="pix-subtitle">O pagamento será cobrado após o período de teste. Você receberá um e-mail com o QR Code quando for necessário pagar.</p>
+        <h2 class="pix-title">PIX para pagamento</h2>
         <img src={pixQrImage} alt="QR Code PIX" class="pix-qr" />
         {#if pixCopyPaste}
           <button class="btn-secondary pix-copy-btn" on:click={copyPix}>
@@ -301,7 +298,6 @@
         <div class="status-icon">🎉</div>
         <div>
           <div class="font-medium">{message || defaultMessage}</div>
-          <div class="status-detail">Sem compromisso. Cancele a qualquer momento.</div>
         </div>
       </div>
     {/if}
@@ -327,15 +323,6 @@
             <span class="option-detail">Renovação automática</span>
           </div>
         </label>
-
-        <label class="billing-option" class:selected={billingType === 'BOLETO'}>
-          <input type="radio" bind:group={billingType} value="BOLETO" />
-          <span class="option-icon">📄</span>
-          <div>
-            <strong>Boleto</strong>
-            <span class="option-detail">Até 3 dias para compensar</span>
-          </div>
-        </label>
       </div>
     </div>
 
@@ -343,7 +330,7 @@
       {#if loading}
         Processando…
       {:else}
-        Começar 30 dias grátis
+        Assinar agora
       {/if}
     </button>
 
