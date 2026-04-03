@@ -1,7 +1,7 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import { isSubscriptionActiveStrict } from '$lib/guards';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { addToast, confirmAction } from '$lib/stores/ui';
 
   let userId = '';
@@ -22,6 +22,11 @@
   let invoiceUrl = null;
   let trialEnd = null;
   let subscriptionCreated = false;
+  let pollInterval = null;
+
+  onDestroy(() => {
+    if (pollInterval) clearInterval(pollInterval);
+  });
 
   onMount(async () => {
     try {
@@ -165,6 +170,18 @@
         subStatus = newSub.status;
         expiryDate = newSub.current_period_end;
         isActiveStrict = isSubscriptionActiveStrict(newSub);
+
+        // Zero fricção: se ganhou trial, manda pro app direto
+        if (subStatus === 'trialing' && isActiveStrict) {
+            addToast('Trial de 30 dias ativado! Aproveite. 🎉', 'success');
+            setTimeout(() => { window.location.href = '/app'; }, 1500);
+            return;
+        }
+
+        // Se for PIX e não estiver ativo, inicia polling para redirecionar automaticamente quando o webhook bater
+        if (billingType === 'PIX' && !isActiveStrict) {
+            startPixPolling();
+        }
       }
 
     } catch (e) {
@@ -208,6 +225,29 @@
     } finally {
       canceling = false;
     }
+  }
+
+  function startPixPolling() {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(async () => {
+      if (!userId) return;
+      const { data: pollSub } = await supabase
+        .from('subscriptions')
+        .select('status, current_period_end')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (pollSub && isSubscriptionActiveStrict(pollSub)) {
+        clearInterval(pollInterval);
+        addToast('Pagamento confirmado! Redirecionando...', 'success');
+        isActiveStrict = true;
+        subStatus = pollSub.status;
+        expiryDate = pollSub.current_period_end;
+        setTimeout(() => { window.location.href = '/app'; }, 1500);
+      }
+    }, 4000); // Polling a cada 4 segundos
   }
 
   function copyPix() {
@@ -338,7 +378,11 @@
 
     <p class="legal-text">
       Ao assinar, você concorda com nossos <a href="/termos">Termos de Uso</a> e <a href="/privacidade">Política de Privacidade</a>.
-      A cobrança de R$ 59/mês será iniciada após o período de teste.
+      {#if !hasHadSubscription}
+        A cobrança de R$ 59/mês será iniciada após o período de teste.
+      {:else}
+        A cobrança de R$ 59/mês será iniciada imediatamente.
+      {/if}
     </p>
   {/if}
 </section>

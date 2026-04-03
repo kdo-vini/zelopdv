@@ -131,6 +131,10 @@ export async function createSubscription({
     nextDueDate,
     cycle: 'MONTHLY',
     description,
+    callback: {
+      successUrl: 'https://admin.zelopdv.com.br/assinatura?success=1',
+      autoRedirect: true
+    },
     ...(externalReference ? { externalReference } : {}),
   });
 }

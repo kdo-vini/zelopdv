@@ -51,13 +51,26 @@ export async function POST({ request }) {
       );
     }
 
-    // Calcular data de vencimento
-    // Se quiser cobrança IMEDIATA (com QR Code na hora), usetrialDays = 0
-    // Se quiser dar 30 dias grátis, o QR Code de pagamento só aparece no vencimento.
-    const trialDays = 0; // Mudando para 0 para gerar QR Code imediato conforme feedback
+    // 1. Check if user already has a subscription record (ever)
+    const { data: existingSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('id, provider_subscription_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    // 2. Trial eligibility: No previous record = 30 days trial
+    const isFirstTime = !existingSub;
+    const trialDays = isFirstTime ? 30 : 0;
+
+    // Calcular datas
+    const now = new Date();
     const firstDue = new Date();
     firstDue.setDate(firstDue.getDate() + trialDays);
-    const nextDueDate = firstDue.toISOString().split('T')[0]; // YYYY-MM-DD
+    const nextDueDate = firstDue.toISOString().split('T')[0];
+
+    // Expiry date for our local DB
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + (isFirstTime ? 30 : 0));
 
     // Create subscription in Asaas
     const subscription = await createSubscription({
@@ -68,30 +81,17 @@ export async function POST({ request }) {
       externalReference: userId,
     });
 
-    // Save to our database
-    const now = new Date().toISOString();
-    const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 30);
-
-    // Check if user already has a subscription record
-    const { data: existingSub } = await supabaseAdmin
-      .from('subscriptions')
-      .select('id')
-      .eq('user_id', userId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
+    const nowIso = new Date().toISOString();
     const subscriptionData = {
       user_id: userId,
       provider_customer_id: customer.id,
       provider_subscription_id: subscription.id,
-      status: trialDays > 0 ? 'trialing' : 'incomplete',
-      current_period_end: trialDays > 0 ? trialEnd.toISOString() : now,
+      status: isFirstTime ? 'trialing' : 'incomplete',
+      current_period_end: trialEnd.toISOString(),
       cancel_at_period_end: false,
       payment_provider: 'asaas',
       billing_type: billingType,
-      updated_at: now,
+      updated_at: nowIso,
     };
 
     if (existingSub) {
@@ -100,38 +100,45 @@ export async function POST({ request }) {
         .update(subscriptionData)
         .eq('id', existingSub.id);
     } else {
-      subscriptionData.created_at = now;
+      subscriptionData.created_at = nowIso;
       await supabaseAdmin
         .from('subscriptions')
         .insert(subscriptionData);
     }
 
-    // For PIX payments, try to get the first payment's QR Code
+    // For PIX payments, get QR Code. For Credit Card/Boleto, get invoiceUrl from the first payment.
     let pixData = null;
-    if (billingType === 'PIX') {
+    let invoiceUrl = null;
+    
+    if (!isFirstTime) {
       try {
         // Wait a moment for Asaas to create the first payment
         await new Promise(r => setTimeout(r, 1500));
         const payments = await listSubscriptionPayments(subscription.id);
         const firstPayment = payments?.data?.[0];
         if (firstPayment?.id) {
-          pixData = await getPixQrCode(firstPayment.id);
-          pixData.paymentId = firstPayment.id;
-          pixData.invoiceUrl = firstPayment.invoiceUrl;
+          invoiceUrl = firstPayment.invoiceUrl;
+          if (billingType === 'PIX') {
+            pixData = await getPixQrCode(firstPayment.id);
+            pixData.paymentId = firstPayment.id;
+            pixData.invoiceUrl = invoiceUrl;
+          }
         }
-      } catch (pixErr) {
-        console.warn('[Asaas] Could not get PIX QR Code (trial starts in 30 days):', pixErr?.message);
+      } catch (paymentErr) {
+        console.warn('[Asaas] Could not get payment data:', paymentErr?.message);
       }
     }
+
 
     return json({
       success: true,
       subscriptionId: subscription.id,
-      invoiceUrl: subscription.invoiceUrl || null,
+      invoiceUrl: invoiceUrl,
       trialEnd: trialEnd.toISOString(),
       billingType,
       pix: pixData,
     });
+
 
   } catch (err) {
     console.error('[Asaas] create-subscription error:', err?.message || err);
