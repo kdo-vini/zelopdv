@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import OpenAI from 'openai';
 
 // Simple in-memory rate limiter (best-effort in serverless — resets per instance)
@@ -214,17 +215,32 @@ export async function POST({ request, getClientAddress }) {
             ...limitedMessages,
           ],
           stream: true,
+          stream_options: { include_usage: true },
           max_tokens: 600,
           temperature: 0.7,
         });
 
+        let usageData = null;
         for await (const chunk of stream) {
           const content = chunk.choices[0]?.delta?.content;
           if (content) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
           }
+          if (chunk.usage) usageData = chunk.usage;
         }
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+
+        if (usageData) {
+          const pt = usageData.prompt_tokens || 0;
+          const ct = usageData.completion_tokens || 0;
+          const cost = (pt / 1_000_000 * 0.15) + (ct / 1_000_000 * 0.60);
+          supabaseAdmin?.from('ai_usage_logs').insert({
+            user_id: null, chat_type: 'support', model: 'gpt-4o-mini',
+            prompt_tokens: pt, completion_tokens: ct,
+            total_tokens: usageData.total_tokens || 0,
+            cost_usd: Math.round(cost * 1_000_000) / 1_000_000,
+          }).then(({ error }) => { if (error) console.warn('[Support] ai_usage_logs:', error.message) });
+        }
       } catch (err) {
         console.error('[SupportChat] OpenAI error:', err.message);
         controller.enqueue(

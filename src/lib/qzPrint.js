@@ -22,14 +22,25 @@ async function loadQZ() {
     const mod = await import('qz-tray');
     qz = mod.default ?? mod;
 
-    // Certificado nulo (modo não assinado) — QZ Tray pedirá permissão ao usuário
-    // na primeira conexão. O usuário clica "Allow" e marca "Remember".
-    qz.security.setCertificatePromise(function (resolve) {
-      resolve('');
+    // Certificado assinado — QZ Tray reconhece zelopdv.com.br como site confiável.
+    // O certificado fica em /digital-certificate.pem e a assinatura é feita no servidor.
+    qz.security.setCertificatePromise(function (resolve, reject) {
+      fetch('/digital-certificate.pem')
+        .then((res) => (res.ok ? res.text() : Promise.reject(res.status)))
+        .then(resolve)
+        .catch(reject);
     });
-    qz.security.setSignaturePromise(function (_toSign) {
-      return function (resolve) {
-        resolve('');
+    qz.security.setSignatureAlgorithm('SHA512');
+    qz.security.setSignaturePromise(function (toSign) {
+      return function (resolve, reject) {
+        fetch('/api/print/sign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ toSign })
+        })
+          .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+          .then((data) => resolve(data.signature))
+          .catch(reject);
       };
     });
 

@@ -33,38 +33,80 @@
   
   async function loadUsers() {
     loading = true
-    
+
     const { data: profiles, error: profileError } = await supabase
       .from('empresa_perfil')
       .select('*')
       .order('created_at', { ascending: false })
-    
+
     if (profileError) {
       console.error('Error loading users:', profileError)
       users = []
       loading = false
       return
     }
-    
+
     if (profiles && profiles.length > 0) {
       const userIds = profiles.map(p => p.user_id)
-      const { data: subs } = await supabase
-        .from('subscriptions')
-        .select('user_id, status, current_period_end, manually_extended_until')
-        .in('user_id', userIds)
-        .order('updated_at', { ascending: false })
-      
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
+
+      // Run queries in parallel
+      const [subsResult, aiResult, salesResult, lastSeenResult] = await Promise.all([
+        supabase
+          .from('subscriptions')
+          .select('user_id, status, current_period_end, manually_extended_until')
+          .in('user_id', userIds)
+          .order('updated_at', { ascending: false }),
+        supabase
+          .from('ai_usage_logs')
+          .select('user_id')
+          .in('user_id', userIds),
+        supabase
+          .from('vendas')
+          .select('id_usuario')
+          .in('id_usuario', userIds)
+          .gte('created_at', thirtyDaysAgo),
+        supabase.rpc('admin_get_users_last_seen'),
+      ])
+
+      // Build per-user lookup maps
+      const aiCountMap = {}
+      for (const row of aiResult.data || []) {
+        if (row.user_id) aiCountMap[row.user_id] = (aiCountMap[row.user_id] || 0) + 1
+      }
+      const salesCountMap = {}
+      for (const row of salesResult.data || []) {
+        if (row.id_usuario) salesCountMap[row.id_usuario] = (salesCountMap[row.id_usuario] || 0) + 1
+      }
+      const lastSeenMap = {}
+      for (const row of lastSeenResult.data || []) {
+        lastSeenMap[row.user_id] = row.effective_last_seen
+      }
+
       users = profiles.map(profile => ({
         ...profile,
-        subscriptions: subs?.filter(s => s.user_id === profile.user_id).slice(0, 1) || []
+        subscriptions: subsResult.data?.filter(s => s.user_id === profile.user_id).slice(0, 1) || [],
+        ai_interactions: aiCountMap[profile.user_id] || 0,
+        sales_last_30d: salesCountMap[profile.user_id] || 0,
+        effective_last_seen: lastSeenMap[profile.user_id] || null,
       }))
     } else {
       users = []
     }
-    
+
     loading = false
   }
-  
+
+  function formatLastSeen(ts) {
+    if (!ts) return 'Nunca'
+    const m = Math.floor((Date.now() - new Date(ts)) / 60000)
+    const h = Math.floor(m / 60)
+    const d = Math.floor(h / 24)
+    if (m < 60) return `${m}min atrás`
+    if (h < 24) return `${h}h atrás`
+    return `${d} dias atrás`
+  }
+
   async function handleResetPassword(user) {
     if (!confirm(`Enviar email de reset de senha para ${user.contato}?`)) return
     
@@ -372,6 +414,8 @@
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Assinatura Expira</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Último Acesso</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Inter. IA</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Documento</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Ações</th>
           </tr>
@@ -406,6 +450,12 @@
                 {:else}
                   <span class="text-slate-600">-</span>
                 {/if}
+              </td>
+              <td class="py-4 px-6 text-xs text-slate-400">
+                {formatLastSeen(user.effective_last_seen)}
+              </td>
+              <td class="py-4 px-6 text-xs text-slate-400 text-center">
+                {user.ai_interactions || 0}
               </td>
               <td class="py-4 px-6 text-sm text-slate-400 font-mono text-xs">
                 {user.documento || '-'}

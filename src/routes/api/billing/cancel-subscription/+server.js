@@ -14,6 +14,13 @@ export async function POST({ request }) {
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
     if (authErr || !user) return json({ error: 'Não autorizado' }, { status: 401 });
 
+    // Fire-and-forget: track last activity
+    supabaseAdmin
+      .from('empresa_perfil')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .then(({ error }) => { if (error) console.warn('[cancel-subscription] last_seen_at:', error.message) });
+
     // Find user's subscription
     const { data: sub } = await supabaseAdmin
       .from('subscriptions')

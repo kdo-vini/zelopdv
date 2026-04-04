@@ -267,6 +267,13 @@ export async function POST({ request }) {
   const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
   if (authErr || !user) return json({ error: 'Não autorizado.' }, { status: 401 });
 
+  // Fire-and-forget: track last activity
+  supabaseAdmin
+    .from('empresa_perfil')
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .then(({ error }) => { if (error) console.warn('[Assistant] last_seen_at:', error.message) });
+
   let body;
   try {
     body = await request.json();
@@ -301,17 +308,32 @@ export async function POST({ request }) {
             ...limitedMessages,
           ],
           stream: true,
+          stream_options: { include_usage: true },
           max_tokens: 800,
           temperature: 0.7,
         });
 
+        let usageData = null;
         for await (const chunk of stream) {
           const content = chunk.choices[0]?.delta?.content;
           if (content) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
           }
+          if (chunk.usage) usageData = chunk.usage;
         }
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+
+        if (usageData) {
+          const pt = usageData.prompt_tokens || 0;
+          const ct = usageData.completion_tokens || 0;
+          const cost = (pt / 1_000_000 * 2.0) + (ct / 1_000_000 * 8.0);
+          supabaseAdmin.from('ai_usage_logs').insert({
+            user_id: user.id, chat_type: 'assistant', model: 'gpt-4.1',
+            prompt_tokens: pt, completion_tokens: ct,
+            total_tokens: usageData.total_tokens || 0,
+            cost_usd: Math.round(cost * 1_000_000) / 1_000_000,
+          }).then(({ error }) => { if (error) console.warn('[Assistant] ai_usage_logs:', error.message) });
+        }
       } catch (err) {
         console.error('[AssistantChat] OpenAI error:', err.message);
         controller.enqueue(

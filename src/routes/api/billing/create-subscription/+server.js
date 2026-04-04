@@ -17,6 +17,13 @@ export async function POST({ request }) {
     const userId = user.id;
     const email = user.email;
 
+    // Fire-and-forget: track last activity
+    supabaseAdmin
+      .from('empresa_perfil')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .then(({ error }) => { if (error) console.warn('[create-subscription] last_seen_at:', error.message) });
+
     // Get billing type from request body
     const body = await request.json();
     const billingType = body.billingType || 'PIX'; // Default to PIX

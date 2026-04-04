@@ -7,40 +7,71 @@
     activeSubscriptions: 0,
     mrr: 0,
     expiringSoon: 0,
-    newThisMonth: 0
+    newThisMonth: 0,
+    dau: 0,
+    wau: 0,
+    aiCostBrl: 0,
+    churnPct: 0,
   }
-  
+
   let loading = true
-  
+
   onMount(async () => {
     await loadStats()
     loading = false
   })
-  
+
   async function loadStats() {
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    // Active subscriptions
     const { data: subs } = await supabase
       .from('subscriptions')
       .select('id, status, current_period_end, created_at')
-      .eq('status', 'active')
-    
+      .in('status', ['active', 'trialing'])
+
     stats.activeSubscriptions = subs?.length || 0
-    stats.mrr = (subs?.length || 0) * 59.00
-    
-    const startOfMonth = new Date()
-    startOfMonth.setDate(1)
-    startOfMonth.setHours(0, 0, 0, 0)
-    
-    stats.newThisMonth = subs?.filter(s => 
+    const activeSubs = subs?.filter(s => s.status === 'active') || []
+    stats.mrr = activeSubs.length * 59.00
+
+    stats.newThisMonth = subs?.filter(s =>
       new Date(s.created_at) >= startOfMonth
     ).length || 0
-    
-    const sevenDaysFromNow = new Date()
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
-    
+
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 86400000)
     stats.expiringSoon = subs?.filter(s => {
       const expiry = new Date(s.current_period_end)
-      return expiry <= sevenDaysFromNow && expiry > new Date()
+      return expiry <= sevenDaysFromNow && expiry > now
     }).length || 0
+
+    // DAU / WAU — uses GREATEST(last_seen_at, auth.last_sign_in_at) via security definer fn
+    const { data: lastSeenData } = await supabase.rpc('admin_get_users_last_seen')
+
+    stats.dau = lastSeenData?.filter(p => p.effective_last_seen && new Date(p.effective_last_seen) >= today).length || 0
+    stats.wau = lastSeenData?.filter(p => p.effective_last_seen && new Date(p.effective_last_seen) >= sevenDaysAgo).length || 0
+
+    // AI cost this month (USD → BRL at 5.0)
+    const { data: aiLogs } = await supabase
+      .from('ai_usage_logs')
+      .select('cost_usd')
+      .gte('created_at', startOfMonth.toISOString())
+
+    const totalCostUsd = aiLogs?.reduce((s, r) => s + (Number(r.cost_usd) || 0), 0) || 0
+    stats.aiCostBrl = totalCostUsd * 5.0
+
+    // Churn this month: canceled this month / (active at start of month)
+    const { data: canceledThisMonth } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('status', 'canceled')
+      .gte('updated_at', startOfMonth.toISOString())
+
+    const canceledCount = canceledThisMonth?.length || 0
+    const activeAtStart = stats.activeSubscriptions + canceledCount
+    stats.churnPct = activeAtStart > 0 ? Math.round((canceledCount / activeAtStart) * 100) : 0
   }
 </script>
 
@@ -120,6 +151,63 @@
         </div>
         <div class="text-3xl font-extrabold text-white tracking-tight">{stats.expiringSoon}</div>
         <div class="mt-2 text-xs font-medium text-amber-400/60">Cuidado com retenção</div>
+      </div>
+
+    </div>
+
+    <!-- Engagement & Cost Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" in:fade={{delay: 150}}>
+
+      <!-- DAU Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-sky-500/30 transition-colors">
+        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-400/0 via-sky-500 to-sky-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="flex justify-between items-start mb-4">
+          <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">DAU (hoje)</div>
+          <div class="p-2 bg-sky-500/10 text-sky-400 rounded-lg">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+        </div>
+        <div class="text-3xl font-extrabold text-white tracking-tight">{stats.dau}</div>
+        <div class="mt-2 text-xs font-medium text-sky-400/60">Usuários ativos hoje</div>
+      </div>
+
+      <!-- WAU Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/30 transition-colors">
+        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-400/0 via-indigo-500 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="flex justify-between items-start mb-4">
+          <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">WAU (7 dias)</div>
+          <div class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          </div>
+        </div>
+        <div class="text-3xl font-extrabold text-white tracking-tight">{stats.wau}</div>
+        <div class="mt-2 text-xs font-medium text-indigo-400/60">Usuários ativos em 7 dias</div>
+      </div>
+
+      <!-- AI Cost Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-violet-500/30 transition-colors">
+        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-violet-400/0 via-violet-500 to-violet-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="flex justify-between items-start mb-4">
+          <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">Custo IA (mês)</div>
+          <div class="p-2 bg-violet-500/10 text-violet-400 rounded-lg">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          </div>
+        </div>
+        <div class="text-3xl font-extrabold text-white tracking-tight">R$ {stats.aiCostBrl.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+        <div class="mt-2 text-xs font-medium text-violet-400/60">USD × 5.0 estimado</div>
+      </div>
+
+      <!-- Churn Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-rose-500/30 transition-colors">
+        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-rose-400/0 via-rose-500 to-rose-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="flex justify-between items-start mb-4">
+          <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">Churn (mês)</div>
+          <div class="p-2 bg-rose-500/10 text-rose-400 rounded-lg">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
+          </div>
+        </div>
+        <div class="text-3xl font-extrabold text-white tracking-tight">{stats.churnPct}%</div>
+        <div class="mt-2 text-xs font-medium text-rose-400/60">Cancelamentos no mês</div>
       </div>
 
     </div>
