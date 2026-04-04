@@ -72,13 +72,11 @@
   })
 
   async function loadData() {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
-
     const [profilesRes, subsRes, lastSeenRes, salesRes] = await Promise.all([
       supabase.from('empresa_perfil').select('user_id, nome_exibicao, created_at'),
       supabase.from('subscriptions').select('user_id, status, created_at, current_period_end, updated_at'),
       supabase.rpc('admin_get_users_last_seen'),
-      supabase.from('vendas').select('id_usuario').gte('created_at', thirtyDaysAgo),
+      supabase.rpc('admin_get_sales_counts', { days_ago: 30 }),
     ])
 
     const lastSeenMap = {}
@@ -86,7 +84,7 @@
 
     const salesMap = {}
     for (const v of salesRes.data || []) {
-      salesMap[v.id_usuario] = (salesMap[v.id_usuario] || 0) + 1
+      salesMap[v.id_usuario] = Number(v.sales_count)
     }
 
     profiles = (profilesRes.data || []).map(p => ({

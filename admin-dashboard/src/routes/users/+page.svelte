@@ -48,7 +48,6 @@
 
     if (profiles && profiles.length > 0) {
       const userIds = profiles.map(p => p.user_id)
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
 
       // Run queries in parallel
       const [subsResult, aiResult, salesResult, lastSeenResult] = await Promise.all([
@@ -61,11 +60,7 @@
           .from('ai_usage_logs')
           .select('user_id')
           .in('user_id', userIds),
-        supabase
-          .from('vendas')
-          .select('id_usuario')
-          .in('id_usuario', userIds)
-          .gte('created_at', thirtyDaysAgo),
+        supabase.rpc('admin_get_sales_counts', { days_ago: 30 }),
         supabase.rpc('admin_get_users_last_seen'),
       ])
 
@@ -76,7 +71,7 @@
       }
       const salesCountMap = {}
       for (const row of salesResult.data || []) {
-        if (row.id_usuario) salesCountMap[row.id_usuario] = (salesCountMap[row.id_usuario] || 0) + 1
+        if (row.id_usuario) salesCountMap[row.id_usuario] = Number(row.sales_count)
       }
       const lastSeenMap = {}
       for (const row of lastSeenResult.data || []) {
