@@ -15,6 +15,51 @@
   // Funnel data
   let funnelData = { signups: 0, trialing: 0, converted: 0 }
 
+  // Score tooltip
+  let tooltipUser = null
+  let tooltipPos = { x: 0, y: 0 }
+
+  function showTooltip(event, user) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    tooltipPos = { x: rect.left + rect.width / 2, y: rect.top }
+    tooltipUser = user
+  }
+
+  function hideTooltip() {
+    tooltipUser = null
+  }
+
+  function calcChurnReasons(profile, sub) {
+    if (!sub || sub.status === 'canceled') return [{ label: 'Assinatura cancelada', points: 100 }]
+
+    const reasons = []
+
+    const dias = profile.effective_last_seen
+      ? Math.floor((Date.now() - new Date(profile.effective_last_seen)) / 86400000) : 999
+
+    if      (dias > 30) reasons.push({ label: `Sem acesso há ${dias} dias`, points: 45 })
+    else if (dias > 14) reasons.push({ label: `Sem acesso há ${dias} dias`, points: 30 })
+    else if (dias > 7)  reasons.push({ label: `Sem acesso há ${dias} dias`, points: 15 })
+    else if (dias > 3)  reasons.push({ label: `Sem acesso há ${dias} dias`, points: 5 })
+
+    if (sub.status === 'past_due') {
+      reasons.push({ label: 'Pagamento atrasado', points: 40 })
+    } else if (sub.status === 'trialing') {
+      const daysLeft = sub.current_period_end
+        ? Math.floor((new Date(sub.current_period_end) - Date.now()) / 86400000) : 0
+      if (daysLeft <= 3 && (profile.sales_last_30d || 0) === 0)
+        reasons.push({ label: `Trial vence em ${daysLeft}d sem uso`, points: 25 })
+      else if (daysLeft <= 7 && (profile.sales_last_30d || 0) === 0)
+        reasons.push({ label: `Trial vence em ${daysLeft}d sem uso`, points: 15 })
+    }
+
+    const vendas = profile.sales_last_30d || 0
+    if      (vendas === 0)  reasons.push({ label: 'Zero vendas em 30 dias', points: 20 })
+    else if (vendas < 10)  reasons.push({ label: `Apenas ${vendas} vendas em 30d`, points: 8 })
+
+    return reasons
+  }
+
   onMount(async () => {
     await loadData()
     loading = false
@@ -336,7 +381,11 @@
                 <td class="py-3 px-6 text-xs text-slate-400">{formatLastSeen(user.effective_last_seen)}</td>
                 <td class="py-3 px-6 text-xs text-slate-400">{user.sub?.status || '—'}</td>
                 <td class="py-3 px-6 text-xs text-slate-400 text-right">{user.sales_last_30d ?? 0}</td>
-                <td class="py-3 px-6 text-sm font-bold text-white text-center">{user.score === 100 ? '—' : user.score}</td>
+                <td class="py-3 px-6 text-center cursor-help"
+                    on:mouseenter={(e) => showTooltip(e, user)}
+                    on:mouseleave={hideTooltip}>
+                  <span class="text-sm font-bold text-white">{user.score === 100 ? '—' : user.score}</span>
+                </td>
                 <td class="py-3 px-6">
                   <span class="inline-flex px-2 py-0.5 text-[10px] font-semibold rounded {badge.cls}">{badge.label}</span>
                 </td>
@@ -352,3 +401,24 @@
 
   {/if}
 </div>
+
+{#if tooltipUser}
+  <div class="fixed z-50 w-64 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-3 pointer-events-none"
+       style="left: {tooltipPos.x}px; top: {tooltipPos.y}px; transform: translate(-50%, calc(-100% - 8px))">
+    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-700"></div>
+    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Fatores de risco</div>
+    {#each calcChurnReasons(tooltipUser, tooltipUser.sub) as r}
+      <div class="flex justify-between text-xs py-0.5">
+        <span class="text-slate-300">{r.label}</span>
+        <span class="font-bold text-rose-400">+{r.points}</span>
+      </div>
+    {/each}
+    {#if calcChurnReasons(tooltipUser, tooltipUser.sub).length === 0}
+      <p class="text-xs text-emerald-400">Sem fatores de risco</p>
+    {/if}
+    <div class="border-t border-slate-700 mt-2 pt-2 flex justify-between text-xs">
+      <span class="text-slate-400">Score total</span>
+      <span class="font-bold text-white">{tooltipUser.score === 100 ? 'Cancelado' : tooltipUser.score}</span>
+    </div>
+  </div>
+{/if}

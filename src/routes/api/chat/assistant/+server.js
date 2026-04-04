@@ -11,6 +11,12 @@ async function buildBusinessContext(userId) {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
+    // Business profile + product catalog (for context-aware responses)
+    const [perfilRes, catalogoRes] = await Promise.all([
+      supabaseAdmin.from('empresa_perfil').select('nome_exibicao').eq('user_id', userId).maybeSingle(),
+      supabaseAdmin.from('produtos').select('nome').eq('id_usuario', userId).order('nome').limit(40),
+    ]);
+
     // Sales last 30 days
     const { data: vendas } = await supabaseAdmin
       .from('vendas')
@@ -97,6 +103,10 @@ async function buildBusinessContext(userId) {
     }
 
     return {
+      perfil: {
+        nome_negocio: perfilRes.data?.nome_exibicao || null,
+      },
+      catalogo_produtos: (catalogoRes.data || []).map(p => p.nome),
       periodo: 'últimos 30 dias',
       vendas: {
         quantidade: totalVendas,
@@ -119,6 +129,9 @@ async function buildBusinessContext(userId) {
 }
 
 function buildSystemPrompt(context, contextType) {
+  const nomeNegocio = context.perfil?.nome_negocio || 'este negócio'
+  const catalogoNomes = (context.catalogo_produtos || []).join(', ') || null
+
   // Pre-compute key metrics so the AI doesn't need to do arithmetic
   const receita = parseFloat(context.vendas?.receita_total || 0);
   const numVendas = context.vendas?.quantidade || 0;
@@ -148,30 +161,31 @@ MÉTRICAS JÁ CALCULADAS (use exatamente estes valores, não recalcule):
     vendas: `
 FOCO ATIVO — VENDAS E RECEITA:
 Ao responder sobre vendas, sempre mencione:
-• O ticket médio calculado acima e se está bom para o tipo de negócio (lanchonete: ideal R$ 20–45)
+• O ticket médio calculado acima e se parece adequado para o tipo de produto vendido
 • O método de pagamento dominante e implicações (muito fiado = risco; muito dinheiro = difícil rastrear)
 • Se a quantidade de vendas parece consistente com o período
-• Uma sugestão concreta para aumentar receita (upsell, combo, horário de pico, promoção)
-Evite análises genéricas — use os números reais.`,
+• Uma sugestão concreta para aumentar receita usando os produtos reais do negócio (upsell, combo, promoção)
+Evite análises genéricas — use os números e produtos reais.`,
 
     produtos: `
 FOCO ATIVO — PRODUTOS E PRECIFICAÇÃO:
 Ao responder sobre produtos:
 • Diferencie "mais vendido em quantidade" de "mais rentável em receita" — podem ser diferentes
 • Se o usuário perguntar o preço de um produto: peça o custo de produção e calcule markup e margem
-  - Markup = preço_venda / custo. Bom para lanchonete: 2,5x a 4x
+  - Markup = preço_venda / custo. Saudável para food service: 2,5x a 4x (depende do produto)
   - Margem bruta = (preço_venda - custo) / preço_venda × 100%. Saudável: 60–75%
-• Bebidas têm markup maior (3x–5x) — se não vender bebidas, mencione essa oportunidade
+• Itens complementares (bebidas, adicionais) têm markup maior (3x–5x) — mencione se ausentes
 • Sugira combo dos 2–3 produtos mais vendidos para aumentar o ticket médio
-• Produtos com baixa venda e custo alto devem ser avaliados para retirada do cardápio`,
+• Produtos com baixa venda e custo alto devem ser avaliados para retirada do cardápio
+• Use os nomes reais dos produtos do catálogo em todos os exemplos`,
 
     despesas: `
 FOCO ATIVO — DESPESAS E CUSTOS:
 Ao responder sobre despesas:
 • Mencione o % que as despesas representam da receita (valor já calculado acima)
-• Benchmarks para lanchonete saudável: despesas totais ≤ 80% da receita, margem ≥ 20%
+• Benchmarks saudáveis: despesas totais ≤ 80% da receita, margem ≥ 20%
 • Se despesas > 85% da receita: alerta — o negócio está no limite ou no prejuízo
-• Categorias típicas de lanchonete por peso: Fornecedor/insumos (35–45%), Pessoal (20–30%), Aluguel (8–15%), Energia+outros (5–10%)
+• Categorias típicas por peso: Fornecedor/insumos (35–45%), Pessoal (20–30%), Aluguel (8–15%), Energia+outros (5–10%)
 • Se a categoria mais pesada estiver fora desse range, comente especificamente
 • Sugira uma ação prática para reduzir a maior despesa identificada`,
 
@@ -203,16 +217,25 @@ ${JSON.stringify(context)}
 ${metricsBlock}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CONHECIMENTO DE DOMÍNIO — LANCHONETES E FOOD SERVICE BRASIL
+IDENTIDADE DO NEGÓCIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Nome do negócio: ${nomeNegocio}
+${catalogoNomes ? `• Produtos cadastrados no sistema: ${catalogoNomes}` : '• Produtos cadastrados: não informado'}
+
+IMPORTANTE: Use os produtos reais acima como referência em todos os exemplos, sugestões e análises. Nunca cite produtos genéricos (como "cachorro quente", "lanche", "prato feito") se não estiverem no catálogo. Se o negócio vende donuts, os exemplos devem ser sobre donuts. Se vende marmitas, sobre marmitas.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONHECIMENTO DE DOMÍNIO — FOOD SERVICE E PEQUENOS NEGÓCIOS BRASIL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 BENCHMARKS DO SETOR (use para comparar com os dados do usuário):
 • CMV (Custo de Mercadoria Vendida) saudável: 28–38% da receita bruta
 • Despesas com pessoal: 20–30% da receita
 • Aluguel: ideal abaixo de 10% da receita. Acima de 15% é perigoso.
-• Lucro líquido saudável para lanchonete: 10–20% da receita
-• Ticket médio típico: R$ 15–20 (lanchonete simples), R$ 25–45 (hamburgueria/delivery)
+• Lucro líquido saudável para pequenos negócios de alimentação: 10–20% da receita
+• Ticket médio típico: varia muito por segmento — baseie-se nos dados reais do negócio
 • Fiado seguro: abaixo de 10–15% do faturamento mensal. Acima disso, risco de caixa.
-• Bebidas têm o maior markup do cardápio — sempre recomendar cadastrar se ausentes
+• Bebidas/complementos têm o maior markup — sempre recomendar cadastrar se ausentes
+• Adapte benchmarks ao tipo de produto: confeitaria/doces têm margens diferentes de refeições
 
 FÓRMULAS ESSENCIAIS (use quando o usuário perguntar sobre preço ou margem):
 • Markup multiplicador = preço de venda ÷ custo do produto
