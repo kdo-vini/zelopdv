@@ -3,6 +3,11 @@
  * Usa jsPDF + jspdf-autotable para gerar relatórios visuais e estruturados.
  */
 
+function hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+
 const COLORS = {
     primary: [59, 130, 246],      // blue-500
     primaryDark: [30, 64, 175],   // blue-800
@@ -121,12 +126,14 @@ export async function generatePDFReport(dados) {
     // ==================== PAYMENT BREAKDOWN ====================
     function drawPaymentBreakdown() {
         const pags = dados.pagamentos;
+        const extras = (pags.extras || []).map(e => ({ label: e.label, value: e.value, color: hexToRgb(e.hex) }));
         const items = [
             { label: 'Dinheiro', value: pags.dinheiro, color: COLORS.success },
             { label: 'Pix', value: pags.pix, color: COLORS.cyan },
             { label: 'Débito', value: pags.debito, color: COLORS.primary },
             { label: 'Crédito', value: pags.credito, color: COLORS.purple },
             { label: 'Fiado', value: pags.fiado, color: COLORS.warning },
+            ...extras,
         ].filter(it => it.value > 0);
 
         if (items.length === 0) return;
@@ -151,26 +158,29 @@ export async function generatePDFReport(dados) {
         });
         y += barH + 3;
 
-        // Legend
+        // Legend — wraps to next row after 5 columns
         const legendCols = Math.min(items.length, 5);
         const colW = contentWidth / legendCols;
         items.forEach((it, i) => {
-            const lx = margin + i * colW;
+            const row = Math.floor(i / legendCols);
+            const col = i % legendCols;
+            const lx = margin + col * colW;
+            const rowY = y + row * 10;
             doc.setFillColor(...it.color);
-            doc.rect(lx, y, 3, 3, 'F');
+            doc.rect(lx, rowY, 3, 3, 'F');
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(7);
             doc.setTextColor(...COLORS.slate);
-            doc.text(`${it.label}`, lx + 5, y + 3);
+            doc.text(`${it.label}`, lx + 5, rowY + 3);
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(7);
             doc.setTextColor(...COLORS.black);
             const pct = total > 0 ? ((it.value / total) * 100).toFixed(1) : '0';
-            doc.text(`${fmt(it.value)} (${pct}%)`, lx + 5, y + 7);
+            doc.text(`${fmt(it.value)} (${pct}%)`, lx + 5, rowY + 7);
         });
-        y += 12;
+        y += Math.ceil(items.length / legendCols) * 10 + 2;
     }
 
     // ==================== BAR CHART ====================
@@ -235,12 +245,14 @@ export async function generatePDFReport(dados) {
     // ==================== DONUT CHART ====================
     function drawDonutChart() {
         const pags = dados.pagamentos;
+        const extras = (pags.extras || []).map(e => ({ label: e.label, value: e.value, color: hexToRgb(e.hex) }));
         const items = [
             { label: 'Dinheiro', value: pags.dinheiro, color: COLORS.success },
             { label: 'Pix', value: pags.pix, color: COLORS.cyan },
             { label: 'Débito', value: pags.debito, color: COLORS.primary },
             { label: 'Crédito', value: pags.credito, color: COLORS.purple },
             { label: 'Fiado', value: pags.fiado, color: COLORS.warning },
+            ...extras,
         ].filter(it => it.value > 0);
 
         if (items.length === 0) return;

@@ -9,8 +9,8 @@
 	// Gráficos visuais
 	import BarChart from '$lib/components/charts/BarChart.svelte';
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
+	import { PLATAFORMAS_PRESET } from '$lib/profileUtils';
 
-	export let params;
 
 	let loading = true;
 	let errorMessage = '';
@@ -35,6 +35,23 @@
 	let movs = [];
 	let fechamentos = [];
 
+	// Active platforms loaded from empresa_perfil
+	let plataformasAtivas = [];
+
+	// Platform color map (Tailwind classes + hex for charts/PDF)
+	const PLATFORM_COLORS = {
+		ifood:   { color: 'bg-orange-500', textColor: 'text-orange-500 dark:text-orange-400', hex: '#f97316' },
+		rappi:   { color: 'bg-fuchsia-500', textColor: 'text-fuchsia-500 dark:text-fuchsia-400', hex: '#d946ef' },
+		'99food':{ color: 'bg-red-400', textColor: 'text-red-400 dark:text-red-300', hex: '#f87171' },
+		aiqfome: { color: 'bg-yellow-400', textColor: 'text-yellow-500 dark:text-yellow-400', hex: '#facc15' },
+		keeta:   { color: 'bg-sky-400', textColor: 'text-sky-400 dark:text-sky-300', hex: '#38bdf8' },
+	};
+	const DEFAULT_PLAT_COLOR = { color: 'bg-teal-500', textColor: 'text-teal-500 dark:text-teal-400', hex: '#14b8a6' };
+
+	// Pagination state for "Vendas do Caixa" table
+	const VENDAS_PER_PAGE = 10;
+	let vendasPage = 1;
+
 	// Helpers
 	const fmt = (n) => `R$ ${Number(n || 0).toFixed(2)}`;
 	const formatForma = (f) => ({
@@ -45,7 +62,10 @@
 		cartao:         'Cartão',
 		fiado:          'Fiado',
 		multiplo:       'Múltiplo',
-	})[f] ?? f;
+	})[f] ?? (plataformasAtivas.find(p => p.id === f)?.nome
+	       || PLATAFORMAS_PRESET.find(p => p.id === f)?.nome
+	       || f?.replace(/_/g, ' ')
+	       || f);
 
 	onMount(async () => {
 		const ok = await ensureActiveSubscription({ requireProfile: true });
@@ -60,10 +80,11 @@
 			// Carrega PIN administrativo
 			const { data: perfilData } = await supabase
 				.from('empresa_perfil')
-				.select('pin_admin')
+				.select('pin_admin, plataformas_pagamento')
 				.eq('user_id', uid)
 				.maybeSingle();
 			if (perfilData?.pin_admin) adminPin = perfilData.pin_admin;
+			plataformasAtivas = (perfilData?.plataformas_pagamento || []).filter(p => p.ativo !== false);
 
 			await carregarCaixasRecentes();
 			if (caixas.length) {
@@ -117,6 +138,7 @@
 
 	async function carregarRelatorioDoCaixa(idCaixa) {
 		if (!idCaixa) return;
+		vendasPage = 1;
 		try {
 			loading = true;
 			errorMessage = '';
@@ -239,6 +261,9 @@
 	$: totalCartaoCredito = Number(singleCredito + pagCredito);
 	$: totalCartao = Number(totalCartaoDebito + totalCartaoCredito + totalCartaoLegacy);
 	$: totalPix = Number(singlePix + pagPix);
+	$: singleFiado = (vendas || []).filter(v => v.forma_pagamento === 'fiado').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+	$: pagFiado = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'fiado').reduce((a, p) => a + Number(p.valor || 0), 0);
+	$: totalFiado = Number(singleFiado + pagFiado);
 	$: totalGeral = Number((vendas || []).reduce((a, v) => a + Number(v.valor_total || 0), 0));
 	$: qtdVendas = (vendas || []).length;
 	$: ticketMedio = qtdVendas ? totalGeral / qtdVendas : 0;
@@ -265,14 +290,54 @@
 		})).filter(t => t.qtd > 0);
 	})();
 
+	// Plataformas nas vendas do caixa (detecta todas, inclusive desativadas com histórico)
+	$: platTotaisCaixa = (() => {
+		const _ = plataformasAtivas;
+		const STANDARD = new Set(['dinheiro','pix','cartao_debito','cartao_credito','cartao','fiado','multiplo']);
+		const platMap = new Map();
+		for (const v of (vendas||[])) {
+			if (!STANDARD.has(v.forma_pagamento))
+				platMap.set(v.forma_pagamento, (platMap.get(v.forma_pagamento)||0) + Number(v.valor_total||0));
+		}
+		for (const p of (vendasPagamentos||[])) {
+			if (!STANDARD.has(p.forma_pagamento))
+				platMap.set(p.forma_pagamento, (platMap.get(p.forma_pagamento)||0) + Number(p.valor||0));
+		}
+		return Array.from(platMap.entries())
+			.filter(([, v]) => v > 0)
+			.map(([id, value]) => {
+				const info = plataformasAtivas.find(p => p.id === id)
+				          || PLATAFORMAS_PRESET.find(p => p.id === id)
+				          || { id, nome: id.replace(/_/g, ' ') };
+				const clr = PLATFORM_COLORS[id] || DEFAULT_PLAT_COLOR;
+				return { label: info.nome, id, value, color: clr.color, textColor: clr.textColor, hex: clr.hex };
+			});
+	})();
+
 	// Pagamentos breakdown (caixa)
 	$: caixaPagItems = [
 		{ label: 'Dinheiro', value: totalDinheiro, color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' },
 		{ label: 'Pix', value: totalPix, color: 'bg-cyan-500', textColor: 'text-cyan-600 dark:text-cyan-400' },
 		{ label: 'Débito', value: totalCartaoDebito, color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400' },
 		{ label: 'Crédito', value: totalCartaoCredito, color: 'bg-purple-500', textColor: 'text-purple-600 dark:text-purple-400' },
+		{ label: 'Fiado', value: totalFiado, color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400' },
+		...platTotaisCaixa,
 	].filter(p => p.value > 0);
 	$: caixaPagTotal = caixaPagItems.reduce((a, p) => a + p.value, 0);
+
+	// Paginação das vendas do caixa (mais recentes primeiro)
+	$: vendasSorted = [...(vendas||[])].reverse();
+	$: vendasTotalPages = Math.max(1, Math.ceil(vendasSorted.length / VENDAS_PER_PAGE));
+	$: vendasPageButtons = (() => {
+		if (vendasTotalPages <= 7) return Array.from({length: vendasTotalPages}, (_, i) => i+1);
+		const btns = [1];
+		if (vendasPage > 3) btns.push(null);
+		for (let p = Math.max(2, vendasPage-1); p <= Math.min(vendasTotalPages-1, vendasPage+1); p++) btns.push(p);
+		if (vendasPage < vendasTotalPages-2) btns.push(null);
+		btns.push(vendasTotalPages);
+		return btns;
+	})();
+	$: vendasExibidas = vendasSorted.slice((vendasPage-1)*VENDAS_PER_PAGE, vendasPage*VENDAS_PER_PAGE);
 
 	// Top produtos (por receita total)
 	let ordenarTop = 'receita'; // 'receita' | 'quantidade' | 'alfabetica'
@@ -341,7 +406,8 @@
 					pix: totalPix,
 					debito: totalCartaoDebito,
 					credito: totalCartaoCredito,
-					fiado: 0,
+					fiado: totalFiado,
+					extras: platTotaisCaixa.map(p => ({ label: p.label, value: p.value, hex: p.hex })),
 				},
 				serieDiaria: serieDiariaCaixa,
 				topProdutos,
@@ -367,6 +433,7 @@
 					debito: periodoCartaoDebito,
 					credito: periodoCartaoCredito,
 					fiado: periodoFiado,
+					extras: platTotaisPeriodo.map(p => ({ label: p.label, value: p.value, hex: p.hex })),
 				},
 				serieDiaria: periodoSerieDiaria,
 				topProdutos: periodoTopProdutos,
@@ -473,7 +540,6 @@
 		if (!uid || !dataInicio || !dataFim) return;
 		periodoLoading = true;
 		try {
-			// 1. Vendas
 			// 1. Vendas (fetch all with pagination)
 			let allVendas = [];
 			let page = 0;
@@ -587,7 +653,7 @@
 				let fetchMore = true;
 				while(fetchMore) {
 					const { data, error } = await supabase.from('expenses')
-						.select('*')
+						.select('amount')
 						.eq('user_id', uid)
 						.gte('date', isoStart(dataInicio))
 						.lte('date', isoEnd(dataFim))
@@ -669,6 +735,30 @@
 		})).filter(t => t.qtd > 0);
 	})();
 
+	// Plataformas nas vendas do período
+	$: platTotaisPeriodo = (() => {
+		const _ = plataformasAtivas;
+		const STANDARD = new Set(['dinheiro','pix','cartao_debito','cartao_credito','cartao','fiado','multiplo']);
+		const platMap = new Map();
+		for (const v of (periodoVendas||[])) {
+			if (!STANDARD.has(v.forma_pagamento))
+				platMap.set(v.forma_pagamento, (platMap.get(v.forma_pagamento)||0) + Number(v.valor_total||0));
+		}
+		for (const p of (periodoPagamentos||[])) {
+			if (!STANDARD.has(p.forma_pagamento))
+				platMap.set(p.forma_pagamento, (platMap.get(p.forma_pagamento)||0) + Number(p.valor||0));
+		}
+		return Array.from(platMap.entries())
+			.filter(([, v]) => v > 0)
+			.map(([id, value]) => {
+				const info = plataformasAtivas.find(p => p.id === id)
+				          || PLATAFORMAS_PRESET.find(p => p.id === id)
+				          || { id, nome: id.replace(/_/g, ' ') };
+				const clr = PLATFORM_COLORS[id] || DEFAULT_PLAT_COLOR;
+				return { label: info.nome, id, value, color: clr.color, textColor: clr.textColor, hex: clr.hex };
+			});
+	})();
+
 	// Pagamentos breakdown (periodo)
 	$: periodoPagItems = [
 		{ label: 'Dinheiro', value: periodoDinheiroLiquido, color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' },
@@ -676,6 +766,7 @@
 		{ label: 'Débito', value: periodoCartaoDebito, color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400' },
 		{ label: 'Crédito', value: periodoCartaoCredito, color: 'bg-purple-500', textColor: 'text-purple-600 dark:text-purple-400' },
 		{ label: 'Fiado', value: periodoFiado, color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400' },
+		...platTotaisPeriodo,
 	].filter(p => p.value > 0);
 	$: periodoPagTotal = periodoPagItems.reduce((a, p) => a + p.value, 0);
 
@@ -892,7 +983,7 @@
 					{/each}
 				</div>
 				<!-- Legend -->
-				<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
 					{#each caixaPagItems as p}
 						<div class="flex items-center gap-2">
 							<span class="w-2.5 h-2.5 rounded-full {p.color} flex-shrink-0"></span>
@@ -1020,34 +1111,40 @@
 			</div>
 
 			<!-- Vendas -->
-			<div>
-				<h2 class="font-semibold mb-2">Vendas do Caixa</h2>
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+				<div class="flex items-center justify-between mb-3">
+					<h2 class="font-semibold text-slate-800 dark:text-white">
+						Vendas do Caixa
+						<span class="text-sm font-normal text-slate-500 dark:text-slate-400">({vendas.length})</span>
+					</h2>
+
+				</div>
 				{#if vendas.length === 0}
-					<div class="text-sm text-slate-700 dark:text-slate-300">Sem vendas para este caixa.</div>
+					<div class="text-sm text-slate-500 dark:text-slate-400">Sem vendas para este caixa.</div>
 				{:else}
-					<div class="overflow-x-auto" style="overflow-y: visible;">
+					<div class="overflow-x-auto">
 						<table class="min-w-full text-sm">
 							<thead>
-								<tr class="text-left text-slate-600 dark:text-slate-400">
-									<th class="py-2 pr-4">#</th>
-									<th class="py-2 pr-4">Horário</th>
-									<th class="py-2 pr-4">Forma</th>
-									<th class="py-2">Total</th>
+								<tr class="text-left text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+									<th class="py-2 pr-3 font-medium">#</th>
+									<th class="py-2 pr-3 font-medium">Horário</th>
+									<th class="py-2 pr-3 font-medium">Forma</th>
+									<th class="py-2 text-right font-medium">Total</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y">
-								{#each vendas as v}
+							<tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+								{#each vendasExibidas as v}
 									{@const hasFiado = v.forma_pagamento === 'fiado' || (v.forma_pagamento === 'multiplo' && vendasPagamentos.some(p => p.id_venda === v.id && p.forma_pagamento === 'fiado'))}
 									{@const cliente = hasFiado && v.id_cliente ? pessoasMap.get(v.id_cliente) : null}
 									{@const itens = vendasItens.filter(i => i.id_venda === v.id)}
-									<tr>
-										<td class="py-2 pr-4">{v.numero_venda || v.id}</td>
-										<td class="py-2 pr-4">{v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
-										<td class="py-2 pr-4">
+									<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+										<td class="py-2 pr-3 text-slate-500 dark:text-slate-400 text-xs">{v.numero_venda || v.id}</td>
+										<td class="py-2 pr-3 text-slate-600 dark:text-slate-300 text-xs">{v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+										<td class="py-2 pr-3">
 											<span class="relative group cursor-default">
-												<span class={v.forma_pagamento === 'fiado' ? 'text-amber-400 font-medium' : ''}>{formatForma(v.forma_pagamento)}</span>
+												<span class="text-xs font-medium {v.forma_pagamento === 'fiado' ? 'text-amber-500' : 'text-slate-700 dark:text-slate-200'}">{formatForma(v.forma_pagamento)}</span>
 												{#if itens.length}
-													<div class="absolute left-0 top-full mt-1 z-50 hidden group-hover:block w-56 rounded-lg shadow-lg border border-slate-600 bg-slate-800 text-slate-100 text-xs p-3 space-y-1" style="overflow: visible;">
+													<div class="absolute left-0 top-full mt-1 z-50 hidden group-hover:block w-56 rounded-lg shadow-xl border border-slate-600 bg-slate-800 text-slate-100 text-xs p-3 space-y-1">
 														{#if cliente}
 															<div class="font-semibold text-white border-b border-slate-700 pb-1 mb-1">{cliente.nome}</div>
 														{/if}
@@ -1060,12 +1157,43 @@
 												{/if}
 											</span>
 										</td>
-										<td class="py-2">{fmt(v.valor_total)}</td>
+										<td class="py-2 text-right font-semibold text-slate-800 dark:text-white text-xs">{fmt(v.valor_total)}</td>
 									</tr>
 								{/each}
 							</tbody>
 						</table>
 					</div>
+
+					<!-- Controles de paginação -->
+					{#if vendasTotalPages > 1}
+						<div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+							<span class="text-xs text-slate-500 dark:text-slate-400">
+								{(vendasPage-1)*VENDAS_PER_PAGE + 1}–{Math.min(vendasPage*VENDAS_PER_PAGE, vendas.length)} de {vendas.length} vendas
+							</span>
+							<div class="flex items-center gap-1">
+								<button
+									class="px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+									disabled={vendasPage === 1}
+									on:click={() => vendasPage--}
+								>← Ant.</button>
+								{#each vendasPageButtons as pg}
+									{#if pg === null}
+										<span class="px-1 text-xs text-slate-400">…</span>
+									{:else}
+										<button
+											class="px-2 py-1 text-xs rounded border transition-colors {pg === vendasPage ? 'bg-sky-500 text-white border-sky-500' : 'border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'}"
+											on:click={() => vendasPage = pg}
+										>{pg}</button>
+									{/if}
+								{/each}
+								<button
+									class="px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+									disabled={vendasPage === vendasTotalPages}
+									on:click={() => vendasPage++}
+								>Próx. →</button>
+							</div>
+						</div>
+					{/if}
 				{/if}
 			</div>
 
@@ -1167,7 +1295,7 @@
 					{/each}
 				</div>
 				<!-- Legend -->
-				<div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
 					{#each periodoPagItems as p}
 						<div class="flex items-center gap-2">
 							<span class="w-2.5 h-2.5 rounded-full {p.color} flex-shrink-0"></span>
@@ -1263,7 +1391,8 @@
 							{ label: 'Pix', value: periodoPix, color: '#06b6d4' },
 							{ label: 'Débito', value: periodoCartaoDebito, color: '#3b82f6' },
 							{ label: 'Crédito', value: periodoCartaoCredito, color: '#8b5cf6' },
-							{ label: 'Fiado', value: periodoFiado, color: '#f59e0b' }
+							{ label: 'Fiado', value: periodoFiado, color: '#f59e0b' },
+							...platTotaisPeriodo.map(p => ({ label: p.label, value: p.value, color: p.hex }))
 						].filter(d => d.value > 0)}
 						size={160}
 					/>

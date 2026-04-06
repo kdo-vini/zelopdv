@@ -31,6 +31,7 @@ export async function generateExcelReport(dados) {
         ['Cartão Débito', `R$ ${fmt(dados.pagamentos.debito)}`],
         ['Cartão Crédito', `R$ ${fmt(dados.pagamentos.credito)}`],
         ['Fiado', `R$ ${fmt(dados.pagamentos.fiado)}`],
+        ...(dados.pagamentos.extras || []).filter(e => e.value > 0).map(e => [e.label, `R$ ${fmt(e.value)}`]),
         [],
         ['BALANÇO'],
         ['Item', 'Valor'],
@@ -145,6 +146,7 @@ export async function generateExcelReport(dados) {
                     ['Cartão Débito', `R$ ${fmt(dados.pagamentos.debito)}`, ((dados.pagamentos.debito / total) * 100).toFixed(1) + '%'],
                     ['Cartão Crédito', `R$ ${fmt(dados.pagamentos.credito)}`, ((dados.pagamentos.credito / total) * 100).toFixed(1) + '%'],
                     ['Fiado', `R$ ${fmt(dados.pagamentos.fiado)}`, ((dados.pagamentos.fiado / total) * 100).toFixed(1) + '%'],
+                    ...(dados.pagamentos.extras || []).filter(e => e.value > 0).map(e => [e.label, `R$ ${fmt(e.value)}`, ((e.value / total) * 100).toFixed(1) + '%']),
                 ];
             })(),
             [],
