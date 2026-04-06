@@ -16,7 +16,7 @@
   let isActiveStrict = false;
   let billingType = 'CREDIT_CARD';
   let trialDaysLeft = null;
-  const pixEmManutencao = true; // Temporário: PIX via Asaas indisponível (bloqueio de IP cloud)
+  const pixEmManutencao = false;
 
   // PIX data after subscription creation
   let pixQrImage = null;
@@ -122,27 +122,6 @@
         return;
       }
 
-      // Cartão de crédito: usa Stripe (Asaas bloqueado por IP de cloud)
-      if (billingType === 'CREDIT_CARD') {
-        const stripeRes = await fetch('/api/billing/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        const stripeJson = await stripeRes.json();
-        if (!stripeRes.ok) {
-          message = stripeJson?.error || 'Falha ao criar sessão de pagamento.';
-          messageType = 'warning';
-          return;
-        }
-        if (stripeJson?.url) {
-          window.location.href = stripeJson.url;
-          return;
-        }
-      }
-
       const res = await fetch('/api/billing/create-subscription', {
         method: 'POST',
         headers: {
@@ -201,6 +180,11 @@
         // Se for PIX e não estiver ativo, inicia polling para redirecionar automaticamente quando o webhook bater
         if (billingType === 'PIX' && !isActiveStrict) {
             startPixPolling();
+        }
+
+        // Cartão de crédito: redireciona para fatura do Asaas
+        if (billingType === 'CREDIT_CARD' && invoiceUrl) {
+            window.location.href = invoiceUrl;
         }
       }
 
@@ -315,15 +299,12 @@
       <div class="billing-selector">
         <h2 class="selector-title">Assine para continuar após o teste</h2>
         <div class="billing-options">
-          <label class="billing-option billing-option-disabled" class:selected={billingType === 'PIX' && !pixEmManutencao}>
-            <input type="radio" bind:group={billingType} value="PIX" disabled={pixEmManutencao} />
+          <label class="billing-option" class:selected={billingType === 'PIX'}>
+            <input type="radio" bind:group={billingType} value="PIX" />
             <span class="option-icon">🟢</span>
             <div>
               <strong>PIX</strong>
               <span class="option-detail">Aprovação instantânea</span>
-              {#if pixEmManutencao}
-                <span class="option-manutencao">Em manutenção</span>
-              {/if}
             </div>
           </label>
 
