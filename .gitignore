@@ -26,4 +26,3 @@ capture.js
 capture.mjs
 cloudflare-worker/asaas-proxy-node.js
 .claude/settings.local.json
-.claude/settings.local.json
