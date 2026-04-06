@@ -19,7 +19,8 @@ export async function POST({ request }) {
       .from('empresa_perfil')
       .update({ last_seen_at: new Date().toISOString() })
       .eq('user_id', user.id)
-      .then(({ error }) => { if (error) console.warn('[cancel-subscription] last_seen_at:', error.message) });
+      .then(({ error }) => { if (error) console.warn('[cancel-subscription] last_seen_at:', error.message); })
+      .catch((e) => console.warn('[cancel-subscription] last_seen_at catch:', e.message));
 
     // Find user's subscription
     const { data: sub } = await supabaseAdmin
@@ -41,11 +42,13 @@ export async function POST({ request }) {
       console.warn('[Asaas] Error canceling subscription (may already be canceled):', asaasErr?.message);
     }
 
-    // Update in our DB
+    // Update in our DB — preserve status so access remains until current_period_end expires.
+    // cancel_at_period_end: true signals that renewal was canceled.
+    // isSubscriptionActiveStrict checks both status AND current_period_end, so the user
+    // retains access until their paid period ends without us needing a cron job.
     const { error: dbErr } = await supabaseAdmin
       .from('subscriptions')
       .update({
-        status: 'canceled',
         cancel_at_period_end: true,
         updated_at: new Date().toISOString(),
       })
@@ -56,7 +59,7 @@ export async function POST({ request }) {
       return json({ error: 'Erro ao atualizar banco de dados.' }, { status: 500 });
     }
 
-    return json({ success: true, message: 'Assinatura cancelada com sucesso.' });
+    return json({ success: true, message: 'Assinatura cancelada. Acesso mantido até o fim do período atual.' });
   } catch (err) {
     console.error('[Asaas] cancel-subscription error:', err?.message || err);
     return json({ error: 'Falha ao cancelar assinatura.' }, { status: 500 });

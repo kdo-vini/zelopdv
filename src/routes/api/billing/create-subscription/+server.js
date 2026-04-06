@@ -1,6 +1,15 @@
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
-import { createCustomer, findCustomerByCpfCnpj, findCustomerByEmail, createSubscription, listSubscriptionPayments, getPixQrCode, isConfigured } from '$lib/server/asaas';
+import {
+  createCustomer,
+  findCustomerByCpfCnpj,
+  findCustomerByEmail,
+  createSubscription,
+  removeSubscription,
+  listSubscriptionPayments,
+  getPixQrCode,
+  isConfigured,
+} from '$lib/server/asaas';
 
 export async function POST({ request }) {
   try {
@@ -22,11 +31,12 @@ export async function POST({ request }) {
       .from('empresa_perfil')
       .update({ last_seen_at: new Date().toISOString() })
       .eq('user_id', userId)
-      .then(({ error }) => { if (error) console.warn('[create-subscription] last_seen_at:', error.message) });
+      .then(({ error }) => { if (error) console.warn('[create-subscription] last_seen_at:', error.message); })
+      .catch((e) => console.warn('[create-subscription] last_seen_at catch:', e.message));
 
     // Get billing type from request body
     const body = await request.json();
-    const billingType = body.billingType || 'PIX'; // Default to PIX
+    const billingType = body.billingType || 'PIX';
 
     if (!['PIX', 'CREDIT_CARD'].includes(billingType)) {
       return json({ error: 'Tipo de pagamento inválido. Use PIX ou CREDIT_CARD.' }, { status: 400 });
@@ -43,12 +53,50 @@ export async function POST({ request }) {
       return json({ error: 'Complete o perfil da empresa (CPF/CNPJ) antes de assinar.', redirect: '/perfil?msg=complete' }, { status: 400 });
     }
 
+    // Check existing subscription
+    const { data: existingSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('id, provider_subscription_id, status, current_period_end, billing_type')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const isFirstTime = !existingSub;
+
+    // Check if user is currently in an active trial — must not reset it
+    const isActiveTrial = existingSub?.status === 'trialing'
+      && existingSub?.current_period_end
+      && new Date(existingSub.current_period_end) > new Date();
+
+    // Guard: prevent duplicate Asaas subscriptions for active/trialing users with same billing type
+    const isActiveSubscription = existingSub?.provider_subscription_id
+      && (existingSub.status === 'active' || existingSub.status === 'trialing')
+      && new Date(existingSub.current_period_end) > new Date();
+
+    if (isActiveSubscription && existingSub.billing_type === billingType) {
+      // Already has an active subscription with the same billing type — return existing data
+      return json({
+        success: true,
+        subscriptionId: existingSub.provider_subscription_id,
+        trialEnd: existingSub.current_period_end,
+        billingType,
+        pix: null,
+        invoiceUrl: null,
+      });
+    }
+
+    // If billing type is changing for an active subscription, cancel the old one in Asaas first
+    if (isActiveSubscription && existingSub.billing_type !== billingType && existingSub.provider_subscription_id) {
+      try {
+        await removeSubscription(existingSub.provider_subscription_id);
+      } catch (e) {
+        console.warn('[create-subscription] Could not cancel old Asaas subscription:', e.message);
+      }
+    }
+
     // Find or create Asaas customer
     const cpfCnpj = perfil.documento.replace(/\D/g, '');
     let customer = await findCustomerByCpfCnpj(cpfCnpj);
-    if (!customer) {
-      customer = await findCustomerByEmail(email);
-    }
+    if (!customer) customer = await findCustomerByEmail(email);
     if (!customer) {
       customer = await createCustomer(
         perfil.nome_exibicao || email,
@@ -58,26 +106,15 @@ export async function POST({ request }) {
       );
     }
 
-    // 1. Check if user already has a subscription record (ever)
-    const { data: existingSub } = await supabaseAdmin
-      .from('subscriptions')
-      .select('id, provider_subscription_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    // 2. Trial eligibility: No previous record = 30 days trial
-    const isFirstTime = !existingSub;
     const trialDays = isFirstTime ? 30 : 0;
-
-    // Calcular datas
-    const now = new Date();
     const firstDue = new Date();
     firstDue.setDate(firstDue.getDate() + trialDays);
     const nextDueDate = firstDue.toISOString().split('T')[0];
 
-    // Expiry date for our local DB
-    const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + (isFirstTime ? 30 : 0));
+    // Preserve existing trial end if still active, otherwise calculate new
+    const trialEnd = isActiveTrial
+      ? new Date(existingSub.current_period_end)
+      : (() => { const d = new Date(); d.setDate(d.getDate() + (isFirstTime ? 30 : 0)); return d; })();
 
     // Create subscription in Asaas
     const subscription = await createSubscription({
@@ -93,7 +130,7 @@ export async function POST({ request }) {
       user_id: userId,
       provider_customer_id: customer.id,
       provider_subscription_id: subscription.id,
-      status: isFirstTime ? 'trialing' : 'incomplete',
+      status: isActiveTrial ? 'trialing' : (isFirstTime ? 'trialing' : 'incomplete'),
       current_period_end: trialEnd.toISOString(),
       cancel_at_period_end: false,
       payment_provider: 'asaas',
@@ -101,28 +138,43 @@ export async function POST({ request }) {
       updated_at: nowIso,
     };
 
+    // Write to DB — on failure, rollback the Asaas subscription
+    let dbResult;
     if (existingSub) {
-      await supabaseAdmin
+      dbResult = await supabaseAdmin
         .from('subscriptions')
         .update(subscriptionData)
         .eq('id', existingSub.id);
     } else {
       subscriptionData.created_at = nowIso;
-      await supabaseAdmin
+      dbResult = await supabaseAdmin
         .from('subscriptions')
         .insert(subscriptionData);
     }
 
-    // For PIX payments, get QR Code. For Credit Card/Boleto, get invoiceUrl from the first payment.
+    if (dbResult.error) {
+      // Rollback: cancel the subscription we just created in Asaas
+      try { await removeSubscription(subscription.id); } catch {}
+      console.error('[create-subscription] DB write failed, rolled back Asaas subscription:', dbResult.error);
+      return json({ error: 'Erro ao salvar assinatura. Tente novamente.' }, { status: 500 });
+    }
+
+    // For non-trial: fetch the first payment with retry (Asaas may take a moment to generate it)
     let pixData = null;
     let invoiceUrl = null;
-    
-    if (!isFirstTime) {
+
+    if (!isFirstTime && !isActiveTrial) {
       try {
-        // Wait a moment for Asaas to create the first payment
-        await new Promise(r => setTimeout(r, 1500));
-        const payments = await listSubscriptionPayments(subscription.id);
-        const firstPayment = payments?.data?.[0];
+        let firstPayment = null;
+        for (let attempt = 0; attempt < 5; attempt++) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1))); // 1s, 2s, 3s, 4s, 5s
+          const payments = await listSubscriptionPayments(subscription.id);
+          if (payments?.data?.[0]) {
+            firstPayment = payments.data[0];
+            break;
+          }
+        }
+
         if (firstPayment?.id) {
           invoiceUrl = firstPayment.invoiceUrl;
           if (billingType === 'PIX') {
@@ -132,23 +184,21 @@ export async function POST({ request }) {
           }
         }
       } catch (paymentErr) {
-        console.warn('[Asaas] Could not get payment data:', paymentErr?.message);
+        console.warn('[create-subscription] Could not get payment data:', paymentErr?.message);
       }
     }
-
 
     return json({
       success: true,
       subscriptionId: subscription.id,
-      invoiceUrl: invoiceUrl,
+      invoiceUrl,
       trialEnd: trialEnd.toISOString(),
       billingType,
       pix: pixData,
     });
 
-
   } catch (err) {
-    console.error('[Asaas] create-subscription error:', err?.message || err);
+    console.error('[create-subscription] error:', err?.message || err);
     return json({ error: err?.message || 'Falha ao criar assinatura' }, { status: 500 });
   }
 }

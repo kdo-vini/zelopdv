@@ -1,7 +1,10 @@
 // Centraliza a comunicação com a API do Asaas (v3)
 import { env } from '$env/dynamic/private';
 
-const API_KEY = env.ASAAS_API_KEY;
+// ASAAS_API_KEY stored without leading '$' in .env to avoid dotenv-expand issues
+const API_KEY = env.ASAAS_API_KEY
+  ? (env.ASAAS_API_KEY.startsWith('$') ? env.ASAAS_API_KEY : `$${env.ASAAS_API_KEY}`)
+  : null;
 const IS_SANDBOX = env.ASAAS_SANDBOX === 'true';
 
 // URL direta do Asaas (usada se o proxy não estiver configurado)
@@ -16,9 +19,6 @@ const USE_PROXY = !!PROXY_URL;
 
 if (!API_KEY && !USE_PROXY) {
   console.warn('[Asaas] ASAAS_API_KEY ou ASAAS_PROXY_URL ausente. Configure no .env local.');
-} else {
-  // Debug seguro: mostra apenas o início da chave para conferir se o \$ está causando problemas
-  console.log('[Asaas] Chave carregada. Início:', API_KEY ? (API_KEY.substring(0, 15) + '...') : 'VAZIA');
 }
 
 /**
@@ -51,9 +51,6 @@ async function asaasRequest(method, path, body = null) {
     'User-Agent': 'ZeloPDV-Server-Integration',
   };
 
-  // Log para conferência de segurança (Headers enviados)
-  console.log(`[Asaas Debug] Enviando ${method} para ${asaasUrl}`);
-  console.log(`[Asaas Debug] Headers detectados: Content-Type, access_token: ${headers.access_token ? 'SIM' : 'NÃO'}, User-Agent: ${headers['User-Agent']}`);
 
   // Se for proxy, podemos passar um secret se configurado
   if (USE_PROXY && PROXY_SECRET) {

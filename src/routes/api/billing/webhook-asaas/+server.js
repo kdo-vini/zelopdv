@@ -62,16 +62,17 @@ export async function POST({ request }) {
     switch (eventType) {
       case 'PAYMENT_RECEIVED':
       case 'PAYMENT_CONFIRMED': {
-        // Payment confirmed — activate subscription and extend period
+        // Payment confirmed — activate subscription and extend period by 1 month
         const dueDate = payment.dueDate ? new Date(payment.dueDate) : new Date();
-        // Set current_period_end to 30 days after the due date
+        // Use setMonth to correctly handle months with 28/29/31 days
         const periodEnd = new Date(dueDate);
-        periodEnd.setDate(periodEnd.getDate() + 30);
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
 
         const { error } = await supabaseAdmin
           .from('subscriptions')
           .update({
             status: 'active',
+            cancel_at_period_end: false,
             current_period_end: periodEnd.toISOString(),
             updated_at: now,
           })
@@ -98,9 +99,27 @@ export async function POST({ request }) {
       }
 
       case 'PAYMENT_DELETED':
-      case 'PAYMENT_REFUNDED':
+        // Operational deletion (e.g. duplicate payment, manual adjustment) — do not affect subscription
+        console.log(`[Asaas Webhook] ℹ️ PAYMENT_DELETED for subscription ${existingSub.id} — no action taken`);
+        break;
+
+      case 'PAYMENT_REFUNDED': {
+        // Refund processed — mark as past_due; next payment cycle will determine final status
+        const { error } = await supabaseAdmin
+          .from('subscriptions')
+          .update({
+            status: 'past_due',
+            updated_at: now,
+          })
+          .eq('id', existingSub.id);
+
+        if (error) console.error('[Asaas Webhook] Error updating to past_due on refund:', error);
+        else console.log(`[Asaas Webhook] ↩️ Subscription ${existingSub.id} marked past_due after refund`);
+        break;
+      }
+
       case 'PAYMENT_CHARGEBACK_REQUESTED': {
-        // Payment deleted/refunded — mark as canceled
+        // Chargeback/dispute — cancel immediately (fraud risk)
         const { error } = await supabaseAdmin
           .from('subscriptions')
           .update({
@@ -110,8 +129,8 @@ export async function POST({ request }) {
           })
           .eq('id', existingSub.id);
 
-        if (error) console.error('[Asaas Webhook] Error updating to canceled:', error);
-        else console.log(`[Asaas Webhook] ❌ Subscription ${existingSub.id} canceled`);
+        if (error) console.error('[Asaas Webhook] Error canceling on chargeback:', error);
+        else console.log(`[Asaas Webhook] 🚨 Subscription ${existingSub.id} canceled due to chargeback`);
         break;
       }
 

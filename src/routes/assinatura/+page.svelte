@@ -16,7 +16,6 @@
   let isActiveStrict = false;
   let billingType = 'CREDIT_CARD';
   let trialDaysLeft = null;
-  const pixEmManutencao = false;
 
   // PIX data after subscription creation
   let pixQrImage = null;
@@ -25,6 +24,9 @@
   let trialEnd = null;
   let subscriptionCreated = false;
   let pollInterval = null;
+  let pollStartTime = null;
+  const POLL_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos
+  let pixPollingExpired = false;
 
   onDestroy(() => {
     if (pollInterval) clearInterval(pollInterval);
@@ -233,8 +235,20 @@
 
   function startPixPolling() {
     if (pollInterval) clearInterval(pollInterval);
+    pollStartTime = Date.now();
+    pixPollingExpired = false;
+
     pollInterval = setInterval(async () => {
       if (!userId) return;
+
+      // Timeout: encerra polling após 15 minutos
+      if (Date.now() - pollStartTime > POLL_TIMEOUT_MS) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+        pixPollingExpired = true;
+        return;
+      }
+
       const { data: pollSub } = await supabase
         .from('subscriptions')
         .select('status, current_period_end')
@@ -251,7 +265,7 @@
         expiryDate = pollSub.current_period_end;
         setTimeout(() => { window.location.href = '/app'; }, 1500);
       }
-    }, 4000); // Polling a cada 4 segundos
+    }, 4000);
   }
 
   function copyPix() {
@@ -268,7 +282,6 @@
 
 <svelte:head>
   <title>Assinatura — Zelo PDV</title>
-  <meta name="description" content="Assine o Zelo PDV. 30 dias grátis, depois R$ 59/mês. Pague com PIX, cartão de crédito ou boleto.">
   <meta name="description" content="Assine o Zelo PDV. R$ 59/mês. Pague com PIX ou cartão de crédito.">
 </svelte:head>
 
@@ -384,9 +397,15 @@
       </div>
     {/if}
 
-    <div class="status-card active" style="margin-top: 1rem; opacity: 0.7; font-size: 0.85rem;">
-      ℹ️ O sistema detectará o pagamento em instantes.
-    </div>
+    {#if pixPollingExpired}
+      <div class="status-card warning" style="margin-top: 1rem; font-size: 0.85rem;">
+        ⚠️ Não detectamos o pagamento automaticamente. Se você pagou, aguarde alguns minutos e recarregue a página.
+      </div>
+    {:else}
+      <div class="status-card active" style="margin-top: 1rem; opacity: 0.7; font-size: 0.85rem;">
+        ℹ️ O sistema detectará o pagamento em instantes.
+      </div>
+    {/if}
 
   {:else}
     <!-- SUBSCRIBE STATE -->
@@ -408,15 +427,12 @@
     <div class="billing-selector">
       <h2 class="selector-title">Como quer pagar?</h2>
       <div class="billing-options">
-        <label class="billing-option billing-option-disabled" class:selected={billingType === 'PIX' && !pixEmManutencao}>
-          <input type="radio" bind:group={billingType} value="PIX" disabled={pixEmManutencao} />
+        <label class="billing-option" class:selected={billingType === 'PIX'}>
+          <input type="radio" bind:group={billingType} value="PIX" />
           <span class="option-icon">🟢</span>
           <div>
             <strong>PIX</strong>
             <span class="option-detail">Aprovação instantânea</span>
-            {#if pixEmManutencao}
-              <span class="option-manutencao">Em manutenção</span>
-            {/if}
           </div>
         </label>
 
