@@ -5,6 +5,7 @@
   import { addToast } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import AuthLayout from '$lib/components/AuthLayout.svelte';
+  import GoogleAuthButton from '$lib/components/GoogleAuthButton.svelte';
 
   let email = '';
   let password = '';
@@ -66,6 +67,9 @@
   {#if errorMessage}
     <div class="auth-error">{errorMessage}</div>
   {/if}
+
+  <GoogleAuthButton />
+  <div class="auth-divider">ou continue com e-mail</div>
 
   <form on:submit={handleLogin} class="auth-form">
     <div>

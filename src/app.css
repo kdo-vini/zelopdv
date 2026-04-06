@@ -226,6 +226,24 @@ html {
   margin-bottom: 0.375rem;
 }
 
+/* Divisor "ou" entre OAuth e formulário de e-mail */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+  color: #475569;
+  font-size: 0.8125rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(51, 65, 85, 0.45);
+}
+
 
 /* Snowfall Animation */
 .snow-container {

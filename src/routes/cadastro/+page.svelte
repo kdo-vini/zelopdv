@@ -3,6 +3,7 @@
   export let params;
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import AuthLayout from '$lib/components/AuthLayout.svelte';
+  import GoogleAuthButton from '$lib/components/GoogleAuthButton.svelte';
   import EmailSentHelper from '$lib/components/EmailSentHelper.svelte';
 
   let email = '';
@@ -57,6 +58,9 @@
   {#if errorMessage}
     <div class="auth-error">{@html errorMessage}</div>
   {/if}
+
+  <GoogleAuthButton />
+  <div class="auth-divider">ou continue com e-mail</div>
 
   <form on:submit={handleSignUp} class="auth-form">
     <div>
