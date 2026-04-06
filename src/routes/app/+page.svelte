@@ -1076,7 +1076,14 @@
           ...(venda || {}),
           itens: comanda,
           pagamentos: multiPag ? pagamentos : [],
-          total: totalFinalVenda || totalComanda
+          total: totalFinalVenda || totalComanda,
+          forma_pagamento: insertForma,
+          subtotal: Number(totalComanda),
+          valor_recebido: insertValorRecebido,
+          valor_troco: insertValorTroco,
+          taxa_entrega: tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0,
+          tipo_pedido: tipoPedido,
+          desconto: valorDescontoVenda || 0
       };
       
       addToast('Venda realizada com sucesso!', 'success');
@@ -1090,14 +1097,14 @@
           const payloadRecibo = {
           idVenda: venda.id,
           numeroVenda: vendaConcluida.numero_venda,
-          formaPagamento: vendaConcluida.forma_pagamento,
+          formaPagamento: insertForma,
           total: totalFinalVenda || Number(totalComandaComEntrega),
           subtotal: Number(totalComanda),
           desconto: valorDescontoVenda || 0,
           taxaEntrega: tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0,
           tipoPedido,
-          valorRecebido: vendaConcluida.valor_recebido,
-          troco: vendaConcluida.valor_troco,
+          valorRecebido: insertValorRecebido,
+          troco: insertValorTroco,
           itens: comanda.map(i => ({ ...i, preco_unitario_na_venda: i.preco })),
           pagamentos: multiPag ? pagamentos : []
         };
@@ -1738,6 +1745,8 @@
       total: vendaConcluida.total,
       subtotal: vendaConcluida.subtotal,
       desconto: vendaConcluida.desconto,
+      taxaEntrega: vendaConcluida.taxa_entrega || 0,
+      tipoPedido: vendaConcluida.tipo_pedido || 'retirada',
       valorRecebido: vendaConcluida.valor_recebido,
       troco: vendaConcluida.valor_troco,
       itens: vendaConcluida.itens?.map(i => ({ ...i, preco_unitario_na_venda: i.preco })) || [],
