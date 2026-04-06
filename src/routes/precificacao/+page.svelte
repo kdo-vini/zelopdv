@@ -1,150 +1,127 @@
-<svelte:head>
-  <title>Calculadora de Precificação Grátis | Zelo PDV</title>
-  <meta
-    name="description"
-    content="Calcule o preço ideal dos seus produtos. Ferramenta grátis para lanchonetes, hamburguerias, delivery, marmitarias e pequenos negócios."
-  />
-  <meta
-    name="keywords"
-    content="precificação, calcular preço de venda, margem de lucro, preço de custo, quanto cobrar, delivery, marmitaria"
-  />
-  <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://zelopdv.com.br/precificacao" />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://zelopdv.com.br/precificacao" />
-  <meta property="og:title" content="Calculadora de Precificação Grátis | Zelo PDV" />
-  <meta
-    property="og:description"
-    content="Descubra quanto cobrar em um produto específico ou monte a precificação completa do seu negócio."
-  />
-  <meta property="og:image" content="https://zelopdv.com.br/og-image.png" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:url" content="https://zelopdv.com.br/precificacao" />
-  <meta name="twitter:title" content="Calculadora de Precificação Grátis | Zelo PDV" />
-  <meta
-    name="twitter:description"
-    content="Calcule o preço de venda ideal para hot-dog, marmita, ovo de Páscoa e outros produtos sem precisar criar conta."
-  />
-  <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
-</svelte:head>
-
 <script>
-  import MarketingHeader from '$lib/components/marketing/MarketingHeader.svelte';
-  import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
+  import MarketingHeader from "$lib/components/marketing/MarketingHeader.svelte";
+  import MarketingFooter from "$lib/components/marketing/MarketingFooter.svelte";
 
   const niches = [
     {
-      id: 'marmitaria',
-      label: 'Marmitaria',
+      id: "marmitaria",
+      label: "Marmitaria",
       defaultMargin: 28,
-      commonRange: '22% a 35%',
-      placeholder: 'Marmita de frango grelhado',
+      commonRange: "22% a 35%",
+      placeholder: "Marmita de frango grelhado",
       defaultPlatformFee: true,
-      description: 'Boa para quem vende unidade avulsa e também por app.'
+      description: "Boa para quem vende unidade avulsa e também por app.",
     },
     {
-      id: 'lanchonete',
-      label: 'Lanchonete / Hot-dog',
+      id: "lanchonete",
+      label: "Lanchonete / Hot-dog",
       defaultMargin: 30,
-      commonRange: '25% a 40%',
-      placeholder: 'Hot-dog especial',
+      commonRange: "25% a 40%",
+      placeholder: "Hot-dog especial",
       defaultPlatformFee: false,
-      description: 'Ideal para lanche unitário, combo simples e venda no balcão.'
+      description:
+        "Ideal para lanche unitário, combo simples e venda no balcão.",
     },
     {
-      id: 'hamburgueria',
-      label: 'Hamburgueria',
+      id: "hamburgueria",
+      label: "Hamburgueria",
       defaultMargin: 32,
-      commonRange: '28% a 45%',
-      placeholder: 'Burger artesanal',
+      commonRange: "28% a 45%",
+      placeholder: "Burger artesanal",
       defaultPlatformFee: true,
-      description: 'Funciona bem para combo, smash e delivery por app.'
+      description: "Funciona bem para combo, smash e delivery por app.",
     },
     {
-      id: 'pizzaria',
-      label: 'Pizzaria',
+      id: "pizzaria",
+      label: "Pizzaria",
       defaultMargin: 30,
-      commonRange: '25% a 38%',
-      placeholder: 'Pizza média de calabresa',
+      commonRange: "25% a 38%",
+      placeholder: "Pizza média de calabresa",
       defaultPlatformFee: true,
-      description: 'Use quando embalagem, entrega e taxa influenciam bastante.'
+      description: "Use quando embalagem, entrega e taxa influenciam bastante.",
     },
     {
-      id: 'doceria',
-      label: 'Açaí / Doceria / Páscoa',
+      id: "doceria",
+      label: "Açaí / Doceria / Páscoa",
       defaultMargin: 35,
-      commonRange: '30% a 50%',
-      placeholder: 'Ovo de Páscoa de 350g',
+      commonRange: "30% a 50%",
+      placeholder: "Ovo de Páscoa de 350g",
       defaultPlatformFee: false,
-      description: 'Serve para doce unitário, kit sazonal e produção por encomenda.'
+      description:
+        "Serve para doce unitário, kit sazonal e produção por encomenda.",
     },
     {
-      id: 'delivery',
-      label: 'Delivery puro',
+      id: "delivery",
+      label: "Delivery puro",
       defaultMargin: 28,
-      commonRange: '22% a 35%',
-      placeholder: 'Combo delivery',
+      commonRange: "22% a 35%",
+      placeholder: "Combo delivery",
       defaultPlatformFee: true,
-      description: 'Escolha este se a maior parte das vendas passa por app.'
+      description: "Escolha este se a maior parte das vendas passa por app.",
     },
     {
-      id: 'mercadinho',
-      label: 'Mercadinho / Mercearia',
+      id: "mercadinho",
+      label: "Mercadinho / Mercearia",
       defaultMargin: 20,
-      commonRange: '15% a 28%',
-      placeholder: 'Cesta promocional',
+      commonRange: "15% a 28%",
+      placeholder: "Cesta promocional",
       defaultPlatformFee: false,
-      description: 'Melhor para itens simples com giro recorrente.'
+      description: "Melhor para itens simples com giro recorrente.",
     },
     {
-      id: 'outro',
-      label: 'Outro',
+      id: "outro",
+      label: "Outro",
       defaultMargin: 30,
-      commonRange: '20% a 40%',
-      placeholder: 'Seu produto principal',
+      commonRange: "20% a 40%",
+      placeholder: "Seu produto principal",
       defaultPlatformFee: false,
-      description: 'Use quando seu caso não encaixa nos exemplos acima.'
-    }
+      description: "Use quando seu caso não encaixa nos exemplos acima.",
+    },
   ];
 
   const unitOptions = [
-    { value: 'g', label: 'g', family: 'weight', factor: 1 },
-    { value: 'kg', label: 'kg', family: 'weight', factor: 1000 },
-    { value: 'ml', label: 'ml', family: 'volume', factor: 1 },
-    { value: 'l', label: 'L', family: 'volume', factor: 1000 },
-    { value: 'un', label: 'un', family: 'count', factor: 1 }
+    { value: "g", label: "g", family: "weight", factor: 1 },
+    { value: "kg", label: "kg", family: "weight", factor: 1000 },
+    { value: "ml", label: "ml", family: "volume", factor: 1 },
+    { value: "l", label: "L", family: "volume", factor: 1000 },
+    { value: "un", label: "un", family: "count", factor: 1 },
   ];
 
   const faqItems = [
     {
-      question: 'Preciso saber quantas vou vender no mês?',
+      question: "Preciso saber quantas vou vender no mês?",
       answer:
-        'Não. Se você quer descobrir quanto cobrar em uma unidade, use o modo Preço de 1 produto. A estimativa de vendas por mês só entra no modo de negócio completo.'
+        "Não. Se você quer descobrir quanto cobrar em uma unidade, use o modo Preço de 1 produto. A estimativa de vendas por mês só entra no modo de negócio completo.",
     },
     {
-      question: 'Posso lancar ingrediente por ingrediente?',
+      question: "Posso lancar ingrediente por ingrediente?",
       answer:
-        'Sim. Você pode informar quantidade comprada, unidade, preço pago e quantidade usada na receita. A calculadora faz a proporção automaticamente.'
+        "Sim. Você pode informar quantidade comprada, unidade, preço pago e quantidade usada na receita. A calculadora faz a proporção automaticamente.",
     },
     {
-      question: 'Posso usar para ovo de Páscoa, hot-dog ou bolo no pote?',
+      question: "Posso usar para ovo de Páscoa, hot-dog ou bolo no pote?",
       answer:
-        'Sim. O modo rápido foi desenhado exatamente para produto unitário e sazonal. Serve para hot-dog, marmita, ovo de Páscoa, doce, pizza e vários outros casos.'
+        "Sim. O modo rápido foi desenhado exatamente para produto unitário e sazonal. Serve para hot-dog, marmita, ovo de Páscoa, doce, pizza e vários outros casos.",
     },
     {
-      question: 'A taxa da plataforma entra no calculo?',
+      question: "A taxa da plataforma entra no calculo?",
       answer:
-        'Sim. Se você vende por app, marketplace ou outro canal com percentual de desconto, basta ativar a taxa e informar o número.'
+        "Sim. Se você vende por app, marketplace ou outro canal com percentual de desconto, basta ativar a taxa e informar o número.",
     },
     {
-      question: 'Qual margem de lucro devo usar?',
+      question: "Qual margem de lucro devo usar?",
       answer:
-        'Não existe um número único. O ideal é partir de um preset equilibrado e ajustar se o preço final ficar alto ou baixo demais para o seu público.'
-    }
+        "Não existe um número único. O ideal é partir de um preset equilibrado e ajustar se o preço final ficar alto ou baixo demais para o seu público.",
+    },
   ];
 
-
-  const productStepLabels = ['O que', 'Custos', 'Extras', 'Margem', 'Resultado'];
+  const productStepLabels = [
+    "O que",
+    "Custos",
+    "Extras",
+    "Margem",
+    "Resultado",
+  ];
 
   const nicheMap = niches.reduce((acc, niche) => {
     acc[niche.id] = niche;
@@ -156,47 +133,45 @@
     return acc;
   }, {});
 
-  const currencyFormatter = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
+  const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
   });
 
   let productStep = 1;
   let ingredientId = 2;
 
-  let productForm = createProductForm('outro');
+  let productForm = createProductForm("outro");
   let ingredientRows = [createIngredientRow()];
 
   function createProductForm(nicheId) {
     const niche = nicheMap[nicheId] || niches[0];
     return {
       niche: niche.id,
-      productName: '',
-      costMode: 'simple',
+      productName: "",
+      costMode: "simple",
       totalCost: 0,
       packagingCost: 0,
       extraUnitCost: 0,
       includePlatformFee: niche.defaultPlatformFee,
       platformFee: niche.defaultPlatformFee ? 12 : 0,
-      marginPreset: 'balanced',
+      marginPreset: "balanced",
       useCustomMargin: false,
-      customMargin: niche.defaultMargin
+      customMargin: niche.defaultMargin,
     };
   }
 
   function createIngredientRow() {
     return {
       id: ingredientId++,
-      name: '',
+      name: "",
       purchaseQuantity: 0,
-      purchaseUnit: 'kg',
+      purchaseUnit: "kg",
       purchasePrice: 0,
       usageQuantity: 0,
-      usageUnit: 'g'
+      usageUnit: "g",
     };
   }
-
-
 
   function clampNumber(value, min = 0, max = 9999999) {
     const number = Number(value);
@@ -205,15 +180,15 @@
   }
 
   function parseCurrencyInput(value) {
-    const digits = String(value || '').replace(/\D/g, '');
+    const digits = String(value || "").replace(/\D/g, "");
     return digits ? Number(digits) / 100 : 0;
   }
 
   function formatCurrencyInput(value) {
-    if (!value) return '';
-    return value.toLocaleString('pt-BR', {
+    if (!value) return "";
+    return value.toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     });
   }
 
@@ -222,8 +197,8 @@
   }
 
   function formatWholeNumber(value) {
-    return new Intl.NumberFormat('pt-BR', {
-      maximumFractionDigits: 0
+    return new Intl.NumberFormat("pt-BR", {
+      maximumFractionDigits: 0,
     }).format(Number.isFinite(value) ? value : 0);
   }
 
@@ -232,15 +207,13 @@
     return {
       competitive: Math.max(15, niche.defaultMargin - 5),
       balanced: niche.defaultMargin,
-      premium: Math.min(80, niche.defaultMargin + 7)
+      premium: Math.min(80, niche.defaultMargin + 7),
     };
   }
 
   function updateProductField(field, value) {
     productForm = { ...productForm, [field]: value };
   }
-
-
 
   function selectProductNiche(nicheId) {
     const niche = nicheMap[nicheId];
@@ -249,12 +222,10 @@
       ...productForm,
       niche: niche.id,
       includePlatformFee: niche.defaultPlatformFee,
-      platformFee: niche.defaultPlatformFee ? (productForm.platformFee || 12) : 0,
-      customMargin: niche.defaultMargin
+      platformFee: niche.defaultPlatformFee ? productForm.platformFee || 12 : 0,
+      customMargin: niche.defaultMargin,
     };
   }
-
-
 
   function setProductCostMode(mode) {
     productForm = { ...productForm, costMode: mode };
@@ -271,7 +242,7 @@
 
   function updateIngredientRow(id, field, value) {
     ingredientRows = ingredientRows.map((row) =>
-      row.id === id ? { ...row, [field]: value } : row
+      row.id === id ? { ...row, [field]: value } : row,
     );
   }
 
@@ -289,11 +260,13 @@
     if (!isIngredientCompatible(row)) return 0;
     const purchaseUnit = getUnitDefinition(row.purchaseUnit);
     const usageUnit = getUnitDefinition(row.usageUnit);
-    const purchaseQuantity = Number(row.purchaseQuantity || 0) * purchaseUnit.factor;
+    const purchaseQuantity =
+      Number(row.purchaseQuantity || 0) * purchaseUnit.factor;
     const usageQuantity = Number(row.usageQuantity || 0) * usageUnit.factor;
     const purchasePrice = Number(row.purchasePrice || 0);
 
-    if (purchaseQuantity <= 0 || usageQuantity <= 0 || purchasePrice <= 0) return 0;
+    if (purchaseQuantity <= 0 || usageQuantity <= 0 || purchasePrice <= 0)
+      return 0;
     return purchasePrice * (usageQuantity / purchaseQuantity);
   }
 
@@ -310,26 +283,31 @@
     if (productStep > 1) productStep -= 1;
   }
 
-
-
   $: productNiche = nicheMap[productForm.niche] || niches[0];
   $: productPresetMargins = getPresetMargins(productForm.niche);
-  $: productMargin =
-    productForm.useCustomMargin
-      ? productForm.customMargin
-      : productPresetMargins[productForm.marginPreset];
+  $: productMargin = productForm.useCustomMargin
+    ? productForm.customMargin
+    : productPresetMargins[productForm.marginPreset];
   $: ingredientCostTotal = ingredientRows.reduce(
     (total, row) => total + getIngredientRowCost(row),
-    0
+    0,
   );
   $: ingredientRowCountWithData = ingredientRows.filter(
-    (row) => row.name || row.purchaseQuantity || row.purchasePrice || row.usageQuantity
+    (row) =>
+      row.name ||
+      row.purchaseQuantity ||
+      row.purchasePrice ||
+      row.usageQuantity,
   ).length;
   $: productBaseCost =
-    productForm.costMode === 'simple' ? productForm.totalCost : ingredientCostTotal;
+    productForm.costMode === "simple"
+      ? productForm.totalCost
+      : ingredientCostTotal;
   $: productDirectCost =
     productBaseCost + productForm.packagingCost + productForm.extraUnitCost;
-  $: productFeeRate = productForm.includePlatformFee ? productForm.platformFee / 100 : 0;
+  $: productFeeRate = productForm.includePlatformFee
+    ? productForm.platformFee / 100
+    : 0;
   $: productMarginRate = productMargin / 100;
   $: productMinimumDenominator = 1 - productFeeRate;
   $: productSuggestedDenominator = 1 - productFeeRate - productMarginRate;
@@ -346,46 +324,81 @@
     productSuggestedPrice > 0
       ? productSuggestedPrice - productDirectCost - productFeeValue
       : 0;
-  $: productResultReady = productDirectCost > 0 && productSuggestedDenominator > 0;
+  $: productResultReady =
+    productDirectCost > 0 && productSuggestedDenominator > 0;
   $: productLabel = productForm.productName || productNiche.placeholder;
 
-
-
   $: webAppSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'WebApplication',
-    name: 'Calculadora de Precificação Zelo PDV',
-    url: 'https://zelopdv.com.br/precificacao',
-    applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Web Browser',
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Calculadora de Precificação Zelo PDV",
+    url: "https://zelopdv.com.br/precificacao",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web Browser",
     description:
-      'Ferramenta grátis para calcular preço de venda de produtos e precificação completa de pequenos negócios.',
+      "Ferramenta grátis para calcular preço de venda de produtos e precificação completa de pequenos negócios.",
     offers: {
-      '@type': 'Offer',
-      price: '0',
-      priceCurrency: 'BRL'
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "BRL",
     },
     featureList: [
-      'Cálculo rápido para produto específico',
-      'Lançamento ingrediente por ingrediente',
-      'Precificação completa com custos fixos',
-      'Preço mínimo e preço recomendado'
-    ]
+      "Cálculo rápido para produto específico",
+      "Lançamento ingrediente por ingrediente",
+      "Precificação completa com custos fixos",
+      "Preço mínimo e preço recomendado",
+    ],
   };
 
   $: faqSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
     mainEntity: faqItems.map((item) => ({
-      '@type': 'Question',
+      "@type": "Question",
       name: item.question,
       acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer
-      }
-    }))
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
   };
 </script>
+
+<svelte:head>
+  <title>Calculadora de Precificação Grátis | Zelo PDV</title>
+  <meta
+    name="description"
+    content="Calcule o preço ideal dos seus produtos. Ferramenta grátis para lanchonetes, hamburguerias, delivery, marmitarias e pequenos negócios."
+  />
+  <meta
+    name="keywords"
+    content="precificação, calcular preço de venda, margem de lucro, preço de custo, quanto cobrar, delivery, marmitaria"
+  />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://zelopdv.com.br/precificacao" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://zelopdv.com.br/precificacao" />
+  <meta
+    property="og:title"
+    content="Calculadora de Precificação Grátis | Zelo PDV"
+  />
+  <meta
+    property="og:description"
+    content="Descubra quanto cobrar em um produto específico ou monte a precificação completa do seu negócio."
+  />
+  <meta property="og:image" content="https://zelopdv.com.br/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://zelopdv.com.br/precificacao" />
+  <meta
+    name="twitter:title"
+    content="Calculadora de Precificação Grátis | Zelo PDV"
+  />
+  <meta
+    name="twitter:description"
+    content="Calcule o preço de venda ideal para hot-dog, marmita, ovo de Páscoa e outros produtos sem precisar criar conta."
+  />
+  <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
+</svelte:head>
 
 {@html `<script type="application/ld+json">${JSON.stringify(webAppSchema)}</script>`}
 {@html `<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`}
@@ -396,441 +409,551 @@
   <section class="hero-shell">
     <div class="max-w-6xl mx-auto px-6 hero-stack">
       <h1 class="hero-title">Descubra quanto cobrar</h1>
-      <p class="hero-subtitle">Calcule o preço de venda de qualquer produto de forma simples e descubra sua margem real.</p>
+      <p class="hero-subtitle">
+        Calcule o preço de venda de qualquer produto de forma simples e descubra
+        sua margem real.
+      </p>
     </div>
   </section>
 
   <section class="pb-24">
     <div class="max-w-6xl mx-auto px-6 page-content">
-        <section class="section-card section-spacing">
+      <section class="section-card section-spacing">
+        <div class="progress-shell">
+          {#each productStepLabels as label, index}
+            <button
+              type="button"
+              class="progress-step"
+              class:progress-step-complete={index + 1 < productStep}
+              class:progress-step-current={index + 1 === productStep}
+              on:click={() => goToProductStep(index + 1)}
+            >
+              <span class="progress-circle">{index + 1}</span>
+              <small>{label}</small>
+            </button>
+          {/each}
+        </div>
 
-
-          <div class="progress-shell">
-            {#each productStepLabels as label, index}
-              <button
-                type="button"
-                class="progress-step"
-                class:progress-step-complete={index + 1 < productStep}
-                class:progress-step-current={index + 1 === productStep}
-                on:click={() => goToProductStep(index + 1)}
-              >
-                <span class="progress-circle">{index + 1}</span>
-                <small>{label}</small>
-              </button>
-            {/each}
+        {#if productStep === 1}
+          <div class="input-grid">
+            <label class="field">
+              <span class="field-label">Nome do produto</span>
+              <input
+                class="input"
+                type="text"
+                placeholder={productNiche.placeholder}
+                value={productForm.productName}
+                on:input={(event) =>
+                  updateProductField("productName", event.currentTarget.value)}
+              />
+            </label>
           </div>
 
-          {#if productStep === 1}
-            <div class="input-grid">
-              <label class="field">
-                <span class="field-label">Nome do produto</span>
-                <input
-                  class="input"
-                  type="text"
-                  placeholder={productNiche.placeholder}
-                  value={productForm.productName}
-                  on:input={(event) => updateProductField('productName', event.currentTarget.value)}
-                />
-              </label>
-            </div>
-
-            <details class="details-card compact-top">
-              <summary>Quer margens pré-configuradas? Escolha seu segmento</summary>
-              <div class="details-body">
-                <div class="niche-chips">
-                  {#each niches as niche}
-                    <button
-                      type="button"
-                      class="niche-chip"
-                      class:chip-selected={productForm.niche === niche.id}
-                      on:click={() => selectProductNiche(niche.id)}
-                    >
-                      <span>{niche.label}</span>
-                    </button>
-                  {/each}
-                </div>
-              </div>
-            </details>
-          {/if}
-
-          {#if productStep === 2}
-            <div class="mode-grid">
-              <button
-                type="button"
-                class="mode-card"
-                class:mode-card-active={productForm.costMode === 'simple'}
-                on:click={() => setProductCostMode('simple')}
-              >
-                <strong>Tenho o custo total da unidade</strong>
-                <p>Melhor para quem já sabe o custo final da receita ou quer um cálculo rápido.</p>
-              </button>
-
-              <button
-                type="button"
-                class="mode-card"
-                class:mode-card-active={productForm.costMode === 'ingredients'}
-                on:click={() => setProductCostMode('ingredients')}
-              >
-                <strong>Quero lançar ingrediente por ingrediente</strong>
-                <p>Melhor para quando você quer calcular proporção por peso, volume ou unidades.</p>
-              </button>
-            </div>
-
-            {#if productForm.costMode === 'simple'}
-              <div class="hero-input-area compact-top">
-                <label class="hero-field">
-                  <span class="hero-field-label">Custo total da receita / unidade</span>
-                  <p class="hero-field-subtitle">Insira o valor final de produção da sua unidade.</p>
-                  <div class="hero-money-input">
-                    <span>R$</span>
-                    <input
-                      class="hero-money-field"
-                      type="text"
-                      inputmode="numeric"
-                      placeholder="0,00"
-                      value={formatCurrencyInput(productForm.totalCost)}
-                      on:input={(event) => updateProductField('totalCost', parseCurrencyInput(event.currentTarget.value))}
-                    />
-                  </div>
-                </label>
-              </div>
-              {:else}
-                <div class="builder-shell">
-                  <div class="builder-head">
-                    <div>
-                      <p class="field-label no-gap">Ingredientes da receita</p>
-                      <p class="builder-copy">Preencha quanto você comprou, quanto pagou e quanto entra na receita.</p>
-                    </div>
-                  </div>
-
-                  <div class="ingredient-list">
-                    {#each ingredientRows as row, index}
-                      <div class="ingredient-row">
-                        <div class="ingredient-row-top">
-                          <div>
-                            <strong>Linha {index + 1}</strong>
-                            {#if row.name}
-                              <span>{row.name}</span>
-                            {:else}
-                              <span>Ingrediente sem nome</span>
-                            {/if}
-                          </div>
-                          <div class="ingredient-row-actions">
-                            <span class="row-cost">{formatCurrency(getIngredientRowCost(row))}</span>
-                            <button
-                              type="button"
-                              class="icon-button"
-                              aria-label="Remover ingrediente"
-                              on:click={() => removeIngredientRow(row.id)}
-                              disabled={ingredientRows.length === 1}
-                            >
-                              Remover
-                            </button>
-                          </div>
-                        </div>
-
-                        <div class="ingredient-grid">
-                          <label class="field">
-                            <span class="field-label">Ingrediente</span>
-                            <input
-                              class="input"
-                              type="text"
-                              placeholder="Ex: salsicha, chocolate, creme"
-                              value={row.name}
-                              on:input={(event) => updateIngredientRow(row.id, 'name', event.currentTarget.value)}
-                            />
-                          </label>
-
-                          <label class="field">
-                            <span class="field-label">Quantidade comprada</span>
-                            <input
-                              class="input"
-                              type="number"
-                              min="0"
-                              step="0.001"
-                              value={row.purchaseQuantity}
-                              on:input={(event) => updateIngredientRow(row.id, 'purchaseQuantity', clampNumber(event.currentTarget.value, 0))}
-                            />
-                          </label>
-
-                          <label class="field">
-                            <span class="field-label">Unidade comprada</span>
-                            <select
-                              class="input"
-                              value={row.purchaseUnit}
-                              on:change={(event) => updateIngredientRow(row.id, 'purchaseUnit', event.currentTarget.value)}
-                            >
-                              {#each unitOptions as unit}
-                                <option value={unit.value}>{unit.label}</option>
-                              {/each}
-                            </select>
-                          </label>
-
-                          <label class="field">
-                            <span class="field-label">Preço pago</span>
-                            <div class="money-input">
-                              <span>R$</span>
-                              <input
-                                class="money-field"
-                                type="text"
-                                inputmode="numeric"
-                                placeholder="0,00"
-                                value={formatCurrencyInput(row.purchasePrice)}
-                                on:input={(event) => updateIngredientRow(row.id, 'purchasePrice', parseCurrencyInput(event.currentTarget.value))}
-                              />
-                            </div>
-                          </label>
-
-                          <label class="field">
-                            <span class="field-label">Quantidade usada</span>
-                            <input
-                              class="input"
-                              type="number"
-                              min="0"
-                              step="0.001"
-                              value={row.usageQuantity}
-                              on:input={(event) => updateIngredientRow(row.id, 'usageQuantity', clampNumber(event.currentTarget.value, 0))}
-                            />
-                          </label>
-
-                          <label class="field">
-                            <span class="field-label">Unidade usada</span>
-                            <select
-                              class="input"
-                              value={row.usageUnit}
-                              on:change={(event) => updateIngredientRow(row.id, 'usageUnit', event.currentTarget.value)}
-                            >
-                              {#each unitOptions as unit}
-                                <option value={unit.value}>{unit.label}</option>
-                              {/each}
-                            </select>
-                          </label>
-                        </div>
-
-                        {#if !isIngredientCompatible(row) && row.purchaseQuantity && row.usageQuantity}
-                          <p class="warning-copy">As unidades comprada e usada precisam ser da mesma família.</p>
-                        {/if}
-                      </div>
-                    {/each}
-                  </div>
-
-                  <button type="button" class="secondary-button" on:click={addIngredientRow} style="margin-top: 1rem;">
-                    + Adicionar ingrediente
+          <details class="details-card compact-top">
+            <summary
+              >Quer margens pré-configuradas? Escolha seu segmento</summary
+            >
+            <div class="details-body">
+              <div class="niche-chips">
+                {#each niches as niche}
+                  <button
+                    type="button"
+                    class="niche-chip"
+                    class:chip-selected={productForm.niche === niche.id}
+                    on:click={() => selectProductNiche(niche.id)}
+                  >
+                    <span>{niche.label}</span>
                   </button>
-
-                  <div class="builder-summary">
-                    <span>Subtotal dos ingredientes</span>
-                    <strong>{formatCurrency(ingredientCostTotal)}</strong>
-                  </div>
-                </div>
-              {/if}
-            {/if}
-
-          {#if productStep === 3}
-            <div class="input-grid">
-              <label class="field">
-                <span class="field-label">Embalagem</span>
-                <div class="money-input">
-                  <span>R$</span>
-                  <input
-                    class="money-field"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    value={formatCurrencyInput(productForm.packagingCost)}
-                    on:input={(event) => updateProductField('packagingCost', parseCurrencyInput(event.currentTarget.value))}
-                  />
-                </div>
-              </label>
-
-              <label class="field">
-                <span class="field-label">Outros custos por unidade</span>
-                <div class="money-input">
-                  <span>R$</span>
-                  <input
-                    class="money-field"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    value={formatCurrencyInput(productForm.extraUnitCost)}
-                    on:input={(event) => updateProductField('extraUnitCost', parseCurrencyInput(event.currentTarget.value))}
-                  />
-                </div>
-              </label>
+                {/each}
+              </div>
             </div>
-          {/if}
+          </details>
+        {/if}
 
-          {#if productStep === 4}
-            <div class="preset-grid">
-              <button
-                type="button"
-                class="preset-card"
-                class:preset-card-active={!productForm.useCustomMargin && productForm.marginPreset === 'competitive'}
-                on:click={() => updateProductField('marginPreset', 'competitive')}
-              >
-                <strong>Mais competitivo</strong>
-                <span>{productPresetMargins.competitive}%</span>
-              </button>
-              <button
-                type="button"
-                class="preset-card"
-                class:preset-card-active={!productForm.useCustomMargin && productForm.marginPreset === 'balanced'}
-                on:click={() => updateProductField('marginPreset', 'balanced')}
-              >
-                <strong>Equilibrado</strong>
-                <span>{productPresetMargins.balanced}%</span>
-              </button>
-              <button
-                type="button"
-                class="preset-card"
-                class:preset-card-active={!productForm.useCustomMargin && productForm.marginPreset === 'premium'}
-                on:click={() => updateProductField('marginPreset', 'premium')}
-              >
-                <strong>Mais lucrativo</strong>
-                <span>{productPresetMargins.premium}%</span>
-              </button>
-            </div>
-
-            <details class="details-card compact-top">
-                <summary>Ajuste fino de margem e taxas</summary>
-                <div class="details-body">
-                  <label class="toggle-line">
-                    <input
-                      type="checkbox"
-                      checked={productForm.useCustomMargin}
-                      on:change={(event) => updateProductField('useCustomMargin', event.currentTarget.checked)}
-                    />
-                    <span>Usar margem customizada</span>
-                  </label>
-
-                  {#if productForm.useCustomMargin}
-                    <div class="slider-card compact-top">
-                      <div class="slider-head">
-                        <div>
-                          <p class="field-label">Margem desejada</p>
-                          <p class="slider-copy">Para {productNiche.label.toLowerCase()}, margens entre {productNiche.commonRange} sao comuns.</p>
-                        </div>
-                        <strong>{productForm.customMargin}%</strong>
-                      </div>
-                      <input
-                        class="range-input"
-                        type="range"
-                        min="15"
-                        max="80"
-                        step="1"
-                        value={productForm.customMargin}
-                        on:input={(event) => updateProductField('customMargin', clampNumber(event.currentTarget.value, 15, 80))}
-                      />
-                    </div>
-                  {/if}
-
-                  <label class="toggle-line compact-top">
-                    <input
-                      type="checkbox"
-                      checked={productForm.includePlatformFee}
-                      on:change={(event) => updateProductField('includePlatformFee', event.currentTarget.checked)}
-                    />
-                    <span>Aplicar taxa de plataforma / app</span>
-                  </label>
-
-                  {#if productForm.includePlatformFee}
-                    <label class="field field-compact compact-top">
-                      <span class="field-label">Taxa da plataforma (%)</span>
-                      <input
-                        class="input"
-                        type="number"
-                        min="0"
-                        max="80"
-                        step="0.1"
-                        value={productForm.platformFee}
-                        on:input={(event) => updateProductField('platformFee', clampNumber(event.currentTarget.value, 0, 80))}
-                      />
-                    </label>
-                  {/if}
-                </div>
-              </details>
-          {/if}
-
-          {#if productStep === 5}
-            {#if productResultReady}
-              <div class="result-highlight-grid">
-                <div class="price-spotlight">
-                  <span>Preço mínimo</span>
-                  <strong>{formatCurrency(productMinimumPrice)}</strong>
-                  <p>Abaixo disso sua margem tende a ficar apertada.</p>
-                </div>
-
-                <div class="price-spotlight price-spotlight-strong">
-                  <span>Preço recomendado</span>
-                  <strong>{formatCurrency(productSuggestedPrice)}</strong>
-                  <p>Com a margem escolhida e custos informados.</p>
-                </div>
-              </div>
-
-              <div class="metric-grid compact-top">
-                <div class="metric-card">
-                  <span>Lucro por unidade</span>
-                  <strong>{formatCurrency(productProfitPerUnit)}</strong>
-                </div>
-                <div class="metric-card">
-                  <span>Custo total da unidade</span>
-                  <strong>{formatCurrency(productDirectCost)}</strong>
-                </div>
-                <div class="metric-card">
-                  <span>Ingredientes / base</span>
-                  <strong>{formatCurrency(productBaseCost)}</strong>
-                </div>
-                {#if productForm.includePlatformFee}
-                  <div class="metric-card">
-                    <span>Taxa estimada nesta venda</span>
-                    <strong>{formatCurrency(productFeeValue)}</strong>
-                  </div>
-                {/if}
-              </div>
-
-              <div class="helper-box compact-top">
-                <strong>Leitura simples</strong>
-                <p>
-                  A sobra estimada por unidade fica em
-                  <strong>{formatCurrency(productProfitPerUnit)}</strong> para cada <strong>{formatCurrency(productSuggestedPrice)}</strong> vendidos.
-                </p>
-              </div>
-            {:else}
-              <div class="empty-state">
-                <strong>Faltam dados para fechar a conta</strong>
-                <p>Preencha pelo menos o custo da unidade para exibir os resultados.</p>
-              </div>
-            {/if}
-          {/if}
-
-          {#if productStep === 5 && productResultReady}
-            <section class="cta-card compact-top">
-              <div>
-                <p class="section-kicker">O que vem depois?</p>
-                <h2 class="cta-title">Tire essas contas do papel e automatize seu caixa</h2>
-                <p class="cta-copy">O sistema Zelo PDV calcula seu lucro real automaticamente a cada venda. Sem planilhas.</p>
-              </div>
-
-              <div class="cta-actions" style="margin-top: 0.5rem;">
-                <a href="/cadastro" class="primary-link">Criar conta grátis</a>
-                <p style="font-size: 0.85rem; color: var(--text-muted)">Teste grátis de 7 dias. Aceitamos PIX, Boleto e Cartão.</p>
-              </div>
-            </section>
-          {/if}
-
-          <div class="actions-row">
-            <button class="ghost-button" type="button" on:click={previousProductStep} disabled={productStep === 1}>
-          Voltar
+        {#if productStep === 2}
+          <div class="mode-grid">
+            <button
+              type="button"
+              class="mode-card"
+              class:mode-card-active={productForm.costMode === "simple"}
+              on:click={() => setProductCostMode("simple")}
+            >
+              <strong>Tenho o custo total da unidade</strong>
+              <p>
+                Melhor para quem já sabe o custo final da receita ou quer um
+                cálculo rápido.
+              </p>
             </button>
 
-            {#if productStep < 5}
-              <button class="primary-button" type="button" on:click={nextProductStep}>
-                {productStep === 4 ? 'Ver resultado' : 'Continuar'}
-              </button>
-            {/if}
+            <button
+              type="button"
+              class="mode-card"
+              class:mode-card-active={productForm.costMode === "ingredients"}
+              on:click={() => setProductCostMode("ingredients")}
+            >
+              <strong>Quero lançar ingrediente por ingrediente</strong>
+              <p>
+                Melhor para quando você quer calcular proporção por peso, volume
+                ou unidades.
+              </p>
+            </button>
           </div>
-        </section>
 
+          {#if productForm.costMode === "simple"}
+            <div class="hero-input-area compact-top">
+              <label class="hero-field">
+                <span class="hero-field-label"
+                  >Custo total da receita / unidade</span
+                >
+                <p class="hero-field-subtitle">
+                  Insira o valor final de produção da sua unidade.
+                </p>
+                <div class="hero-money-input">
+                  <span>R$</span>
+                  <input
+                    class="hero-money-field"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="0,00"
+                    value={formatCurrencyInput(productForm.totalCost)}
+                    on:input={(event) =>
+                      updateProductField(
+                        "totalCost",
+                        parseCurrencyInput(event.currentTarget.value),
+                      )}
+                  />
+                </div>
+              </label>
+            </div>
+          {:else}
+            <div class="builder-shell">
+              <div class="builder-head">
+                <div>
+                  <p class="field-label no-gap">Ingredientes da receita</p>
+                  <p class="builder-copy">
+                    Preencha quanto você comprou, quanto pagou e quanto entra na
+                    receita.
+                  </p>
+                </div>
+              </div>
+
+              <div class="ingredient-list">
+                {#each ingredientRows as row, index}
+                  <div class="ingredient-row">
+                    <div class="ingredient-row-top">
+                      <div>
+                        <strong>Linha {index + 1}</strong>
+                        {#if row.name}
+                          <span>{row.name}</span>
+                        {:else}
+                          <span>Ingrediente sem nome</span>
+                        {/if}
+                      </div>
+                      <div class="ingredient-row-actions">
+                        <span class="row-cost"
+                          >{formatCurrency(getIngredientRowCost(row))}</span
+                        >
+                        <button
+                          type="button"
+                          class="icon-button"
+                          aria-label="Remover ingrediente"
+                          on:click={() => removeIngredientRow(row.id)}
+                          disabled={ingredientRows.length === 1}
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="ingredient-grid">
+                      <label class="field">
+                        <span class="field-label">Ingrediente</span>
+                        <input
+                          class="input"
+                          type="text"
+                          placeholder="Ex: salsicha, chocolate, creme"
+                          value={row.name}
+                          on:input={(event) =>
+                            updateIngredientRow(
+                              row.id,
+                              "name",
+                              event.currentTarget.value,
+                            )}
+                        />
+                      </label>
+
+                      <label class="field">
+                        <span class="field-label">Quantidade comprada</span>
+                        <input
+                          class="input"
+                          type="number"
+                          min="0"
+                          step="0.001"
+                          value={row.purchaseQuantity}
+                          on:input={(event) =>
+                            updateIngredientRow(
+                              row.id,
+                              "purchaseQuantity",
+                              clampNumber(event.currentTarget.value, 0),
+                            )}
+                        />
+                      </label>
+
+                      <label class="field">
+                        <span class="field-label">Unidade comprada</span>
+                        <select
+                          class="input"
+                          value={row.purchaseUnit}
+                          on:change={(event) =>
+                            updateIngredientRow(
+                              row.id,
+                              "purchaseUnit",
+                              event.currentTarget.value,
+                            )}
+                        >
+                          {#each unitOptions as unit}
+                            <option value={unit.value}>{unit.label}</option>
+                          {/each}
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span class="field-label">Preço pago</span>
+                        <div class="money-input">
+                          <span>R$</span>
+                          <input
+                            class="money-field"
+                            type="text"
+                            inputmode="numeric"
+                            placeholder="0,00"
+                            value={formatCurrencyInput(row.purchasePrice)}
+                            on:input={(event) =>
+                              updateIngredientRow(
+                                row.id,
+                                "purchasePrice",
+                                parseCurrencyInput(event.currentTarget.value),
+                              )}
+                          />
+                        </div>
+                      </label>
+
+                      <label class="field">
+                        <span class="field-label">Quantidade usada</span>
+                        <input
+                          class="input"
+                          type="number"
+                          min="0"
+                          step="0.001"
+                          value={row.usageQuantity}
+                          on:input={(event) =>
+                            updateIngredientRow(
+                              row.id,
+                              "usageQuantity",
+                              clampNumber(event.currentTarget.value, 0),
+                            )}
+                        />
+                      </label>
+
+                      <label class="field">
+                        <span class="field-label">Unidade usada</span>
+                        <select
+                          class="input"
+                          value={row.usageUnit}
+                          on:change={(event) =>
+                            updateIngredientRow(
+                              row.id,
+                              "usageUnit",
+                              event.currentTarget.value,
+                            )}
+                        >
+                          {#each unitOptions as unit}
+                            <option value={unit.value}>{unit.label}</option>
+                          {/each}
+                        </select>
+                      </label>
+                    </div>
+
+                    {#if !isIngredientCompatible(row) && row.purchaseQuantity && row.usageQuantity}
+                      <p class="warning-copy">
+                        As unidades comprada e usada precisam ser da mesma
+                        família.
+                      </p>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+
+              <button
+                type="button"
+                class="secondary-button"
+                on:click={addIngredientRow}
+                style="margin-top: 1rem;"
+              >
+                + Adicionar ingrediente
+              </button>
+
+              <div class="builder-summary">
+                <span>Subtotal dos ingredientes</span>
+                <strong>{formatCurrency(ingredientCostTotal)}</strong>
+              </div>
+            </div>
+          {/if}
+        {/if}
+
+        {#if productStep === 3}
+          <div class="input-grid">
+            <label class="field">
+              <span class="field-label">Embalagem</span>
+              <div class="money-input">
+                <span>R$</span>
+                <input
+                  class="money-field"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="0,00"
+                  value={formatCurrencyInput(productForm.packagingCost)}
+                  on:input={(event) =>
+                    updateProductField(
+                      "packagingCost",
+                      parseCurrencyInput(event.currentTarget.value),
+                    )}
+                />
+              </div>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Outros custos por unidade</span>
+              <div class="money-input">
+                <span>R$</span>
+                <input
+                  class="money-field"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="0,00"
+                  value={formatCurrencyInput(productForm.extraUnitCost)}
+                  on:input={(event) =>
+                    updateProductField(
+                      "extraUnitCost",
+                      parseCurrencyInput(event.currentTarget.value),
+                    )}
+                />
+              </div>
+            </label>
+          </div>
+        {/if}
+
+        {#if productStep === 4}
+          <div class="preset-grid">
+            <button
+              type="button"
+              class="preset-card"
+              class:preset-card-active={!productForm.useCustomMargin &&
+                productForm.marginPreset === "competitive"}
+              on:click={() => updateProductField("marginPreset", "competitive")}
+            >
+              <strong>Mais competitivo</strong>
+              <span>{productPresetMargins.competitive}%</span>
+            </button>
+            <button
+              type="button"
+              class="preset-card"
+              class:preset-card-active={!productForm.useCustomMargin &&
+                productForm.marginPreset === "balanced"}
+              on:click={() => updateProductField("marginPreset", "balanced")}
+            >
+              <strong>Equilibrado</strong>
+              <span>{productPresetMargins.balanced}%</span>
+            </button>
+            <button
+              type="button"
+              class="preset-card"
+              class:preset-card-active={!productForm.useCustomMargin &&
+                productForm.marginPreset === "premium"}
+              on:click={() => updateProductField("marginPreset", "premium")}
+            >
+              <strong>Mais lucrativo</strong>
+              <span>{productPresetMargins.premium}%</span>
+            </button>
+          </div>
+
+          <details class="details-card compact-top">
+            <summary>Ajuste fino de margem e taxas</summary>
+            <div class="details-body">
+              <label class="toggle-line">
+                <input
+                  type="checkbox"
+                  checked={productForm.useCustomMargin}
+                  on:change={(event) =>
+                    updateProductField(
+                      "useCustomMargin",
+                      event.currentTarget.checked,
+                    )}
+                />
+                <span>Usar margem customizada</span>
+              </label>
+
+              {#if productForm.useCustomMargin}
+                <div class="slider-card compact-top">
+                  <div class="slider-head">
+                    <div>
+                      <p class="field-label">Margem desejada</p>
+                      <p class="slider-copy">
+                        Para {productNiche.label.toLowerCase()}, margens entre {productNiche.commonRange}
+                        sao comuns.
+                      </p>
+                    </div>
+                    <strong>{productForm.customMargin}%</strong>
+                  </div>
+                  <input
+                    class="range-input"
+                    type="range"
+                    min="15"
+                    max="80"
+                    step="1"
+                    value={productForm.customMargin}
+                    on:input={(event) =>
+                      updateProductField(
+                        "customMargin",
+                        clampNumber(event.currentTarget.value, 15, 80),
+                      )}
+                  />
+                </div>
+              {/if}
+
+              <label class="toggle-line compact-top">
+                <input
+                  type="checkbox"
+                  checked={productForm.includePlatformFee}
+                  on:change={(event) =>
+                    updateProductField(
+                      "includePlatformFee",
+                      event.currentTarget.checked,
+                    )}
+                />
+                <span>Aplicar taxa de plataforma / app</span>
+              </label>
+
+              {#if productForm.includePlatformFee}
+                <label class="field field-compact compact-top">
+                  <span class="field-label">Taxa da plataforma (%)</span>
+                  <input
+                    class="input"
+                    type="number"
+                    min="0"
+                    max="80"
+                    step="0.1"
+                    value={productForm.platformFee}
+                    on:input={(event) =>
+                      updateProductField(
+                        "platformFee",
+                        clampNumber(event.currentTarget.value, 0, 80),
+                      )}
+                  />
+                </label>
+              {/if}
+            </div>
+          </details>
+        {/if}
+
+        {#if productStep === 5}
+          {#if productResultReady}
+            <div class="result-highlight-grid">
+              <div class="price-spotlight">
+                <span>Preço mínimo</span>
+                <strong>{formatCurrency(productMinimumPrice)}</strong>
+                <p>Abaixo disso sua margem tende a ficar apertada.</p>
+              </div>
+
+              <div class="price-spotlight price-spotlight-strong">
+                <span>Preço recomendado</span>
+                <strong>{formatCurrency(productSuggestedPrice)}</strong>
+                <p>Com a margem escolhida e custos informados.</p>
+              </div>
+            </div>
+
+            <div class="metric-grid compact-top">
+              <div class="metric-card">
+                <span>Lucro por unidade</span>
+                <strong>{formatCurrency(productProfitPerUnit)}</strong>
+              </div>
+              <div class="metric-card">
+                <span>Custo total da unidade</span>
+                <strong>{formatCurrency(productDirectCost)}</strong>
+              </div>
+              <div class="metric-card">
+                <span>Ingredientes / base</span>
+                <strong>{formatCurrency(productBaseCost)}</strong>
+              </div>
+              {#if productForm.includePlatformFee}
+                <div class="metric-card">
+                  <span>Taxa estimada nesta venda</span>
+                  <strong>{formatCurrency(productFeeValue)}</strong>
+                </div>
+              {/if}
+            </div>
+
+            <div class="helper-box compact-top">
+              <strong>Leitura simples</strong>
+              <p>
+                A sobra estimada por unidade fica em
+                <strong>{formatCurrency(productProfitPerUnit)}</strong> para
+                cada <strong>{formatCurrency(productSuggestedPrice)}</strong> vendidos.
+              </p>
+            </div>
+          {:else}
+            <div class="empty-state">
+              <strong>Faltam dados para fechar a conta</strong>
+              <p>
+                Preencha pelo menos o custo da unidade para exibir os
+                resultados.
+              </p>
+            </div>
+          {/if}
+        {/if}
+
+        {#if productStep === 5 && productResultReady}
+          <section class="cta-card compact-top">
+            <div>
+              <p class="section-kicker">O que vem depois?</p>
+              <h2 class="cta-title">
+                Tire essas contas do papel e automatize seu caixa
+              </h2>
+              <p class="cta-copy">
+                O sistema Zelo PDV calcula seu lucro real automaticamente a cada
+                venda. Sem planilhas.
+              </p>
+            </div>
+
+            <div class="cta-actions" style="margin-top: 0.5rem;">
+              <a href="/cadastro" class="primary-link">Criar conta grátis</a>
+              <p style="font-size: 0.85rem; color: var(--text-muted)">
+                Teste grátis de 7 dias. Aceitamos PIX, e Cartão.
+              </p>
+            </div>
+          </section>
+        {/if}
+
+        <div class="actions-row">
+          <button
+            class="ghost-button"
+            type="button"
+            on:click={previousProductStep}
+            disabled={productStep === 1}
+          >
+            Voltar
+          </button>
+
+          {#if productStep < 5}
+            <button
+              class="primary-button"
+              type="button"
+              on:click={nextProductStep}
+            >
+              {productStep === 4 ? "Ver resultado" : "Continuar"}
+            </button>
+          {/if}
+        </div>
+      </section>
     </div>
   </section>
 
@@ -838,15 +961,32 @@
     <div class="max-w-3xl mx-auto px-6">
       <div class="text-center mb-12">
         <h2 class="text-3xl font-bold text-white mb-4">Perguntas Frequentes</h2>
-        <p class="text-slate-400">Tire suas dúvidas e entenda os detalhes dos cálculos.</p>
+        <p class="text-slate-400">
+          Tire suas dúvidas e entenda os detalhes dos cálculos.
+        </p>
       </div>
 
       <div class="space-y-4">
         {#each faqItems as item}
-          <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-all duration-300">
-            <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
+          <details
+            class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-all duration-300"
+          >
+            <summary
+              class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none"
+            >
               <span>{item.question}</span>
-              <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              <svg
+                class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                /></svg
+              >
             </summary>
             <div class="px-6 pb-6 text-slate-400 leading-relaxed">
               {item.answer}
@@ -862,11 +1002,19 @@
       <div class="sticky-inner max-w-6xl mx-auto px-6">
         <div class="sticky-info">
           <span class="sticky-label">Preço sugerido</span>
-          <strong class="sticky-price">{formatCurrency(productSuggestedPrice)}</strong>
-          {#if productForm.productName}<span class="sticky-name">· {productForm.productName}</span>{/if}
+          <strong class="sticky-price"
+            >{formatCurrency(productSuggestedPrice)}</strong
+          >
+          {#if productForm.productName}<span class="sticky-name"
+              >· {productForm.productName}</span
+            >{/if}
         </div>
         {#if productStep < 5}
-          <button type="button" class="primary-button" on:click={() => goToProductStep(5)}>
+          <button
+            type="button"
+            class="primary-button"
+            on:click={() => goToProductStep(5)}
+          >
             Ver detalhes →
           </button>
         {/if}
@@ -879,9 +1027,9 @@
 
 <style>
   .page-shell {
-    --bg-app: #0B0F19; /* Align with main landing page */
-    --bg-panel: #111827; 
-    --bg-card: #0F172A;
+    --bg-app: #0b0f19; /* Align with main landing page */
+    --bg-panel: #111827;
+    --bg-card: #0f172a;
     background: var(--bg-app);
     color: var(--text-label);
   }
@@ -972,8 +1120,11 @@
   .faq-item {
     border-radius: 1.65rem;
     border: 1px solid color-mix(in srgb, white 8%, var(--border-subtle));
-    background:
-      linear-gradient(180deg, color-mix(in srgb, white 4%, transparent), color-mix(in srgb, var(--bg-card) 96%, transparent));
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, white 4%, transparent),
+      color-mix(in srgb, var(--bg-card) 96%, transparent)
+    );
     box-shadow:
       inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
       0 18px 45px color-mix(in srgb, black 25%, transparent);
@@ -1391,8 +1542,14 @@
   }
 
   @keyframes slideUp {
-    from { transform: translateY(100%); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
   .sticky-inner {
@@ -1485,7 +1642,7 @@
   }
 
   .progress-shell::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 1rem;
     left: 1.5rem;
@@ -1514,7 +1671,8 @@
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    border: 2px solid color-mix(in srgb, var(--bg-panel) 96%, var(--border-subtle));
+    border: 2px solid
+      color-mix(in srgb, var(--bg-panel) 96%, var(--border-subtle));
     background: var(--bg-card);
     color: var(--text-label);
     font-size: 0.88rem;
@@ -1695,8 +1853,6 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
-
-
 
   @media (max-width: 767px) {
     .hero-shell {
