@@ -25,4 +25,11 @@ sql/
 capture.js
 capture.mjs
 cloudflare-worker/asaas-proxy-node.js
+
+# Claude Code local files (not for repo)
 .claude/settings.local.json
+.claude/agent-memory/
+
+# Digital certificates (not for repo)
+static/*.pem
+static/digital-certificate*
