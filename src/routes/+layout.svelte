@@ -9,6 +9,7 @@
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { requiredOk } from '$lib/profileUtils';
   import { page } from '$app/stores';
+  import { get } from 'svelte/store';
 
   export let params;
 
@@ -50,7 +51,7 @@
   // Routes that have their own sidebar layout — hide root header/footer for these
   $: hasSidebarLayout = isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura;
   // Show support chat on public/auth pages but not inside the app
-  $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && $page.url.pathname !== '/pascoa';
+  $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && $page.url.pathname !== '/pascoa' && !$page.error;
 
 
 
@@ -138,6 +139,8 @@
 
     const maybeNavigate = async () => {
       if (navigated || !authReady) return;
+      // Não redirecionar em páginas de erro (404, 500, etc.)
+      if (get(page).error) return;
       // Se logado, checa assinatura antes de liberar rotas protegidas
       let hasActiveSub = false;
       let hasCompleteProfile = false;
@@ -350,7 +353,7 @@
       
        <div class="flex items-center gap-4">
           <a href={session ? '/app' : '/'} class="flex items-center gap-2">
-            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 sm:h-36 w-auto" />
+            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-20 sm:h-24 w-auto" />
           </a>
           
           <!-- Botao de Natal desativado pois o natal ja passou -->
@@ -535,11 +538,11 @@
   {/if}
   {/if}
 
-  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isAuthPage ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
+  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isAuthPage && !hasSidebarLayout}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isAuthPage && !hasSidebarLayout && !$page.error}
   <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
