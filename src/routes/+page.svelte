@@ -188,7 +188,7 @@
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
         </span>
-        Novo: Gestão Financeira Completa
+        Novo: Conheça o Zelinho, sua IA para o lucro real
       </div>
 
       <h1 class="text-5xl md:text-7xl font-bold text-white tracking-tight leading-[1.1] mb-8 animate-fade-in-up delay-100">
