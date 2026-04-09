@@ -10,6 +10,7 @@ import {
   getPixQrCode,
   isConfigured,
 } from '$lib/server/asaas';
+import { enviarBoasVindas } from '$lib/server/whatsapp';
 
 export async function POST({ request }) {
   try {
@@ -157,6 +158,23 @@ export async function POST({ request }) {
       try { await removeSubscription(subscription.id); } catch {}
       console.error('[create-subscription] DB write failed, rolled back Asaas subscription:', dbResult.error);
       return json({ error: 'Erro ao salvar assinatura. Tente novamente.' }, { status: 500 });
+    }
+
+    // Fire-and-forget: WhatsApp onboarding on first account creation
+    if (isFirstTime && perfil?.contato) {
+      enviarBoasVindas(perfil.contato, perfil.nome_exibicao || '')
+        .then((sent) => {
+          if (sent) {
+            // Mark as sent so cron skips onboarding resend
+            supabaseAdmin
+              .from('subscriptions')
+              .update({ whatsapp_onboarding_sent_at: new Date().toISOString() })
+              .eq('user_id', userId)
+              .then(() => {})
+              .catch(() => {});
+          }
+        })
+        .catch((e) => console.warn('[WhatsApp] onboarding fire-and-forget error:', e?.message));
     }
 
     // For non-trial: fetch the first payment with retry (Asaas may take a moment to generate it)
