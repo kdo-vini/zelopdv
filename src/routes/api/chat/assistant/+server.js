@@ -313,7 +313,7 @@ export async function POST({ request }) {
 
   const limitedMessages = messages
     .slice(-20)
-    .filter(m => m.role && m.content && typeof m.content === 'string')
+    .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content && typeof m.content === 'string')
     .map(m => ({ role: m.role, content: m.content.slice(0, 3000) }));
 
   const systemPrompt = buildSystemPrompt(businessContext, context_type);

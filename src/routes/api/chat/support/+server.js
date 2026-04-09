@@ -184,7 +184,7 @@ export async function POST({ request, getClientAddress }) {
   // Limit to last 12 messages (6 turns) and sanitize
   const limitedMessages = messages
     .slice(-12)
-    .filter(m => m.role && m.content && typeof m.content === 'string')
+    .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content && typeof m.content === 'string')
     .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
 
   const openai = new OpenAI({ apiKey });

@@ -6,6 +6,7 @@
  * Instalação para o cliente:
  *   https://qz.io/download/ → instalar e manter rodando em background
  */
+import { supabase } from '$lib/supabaseClient';
 
 /** @type {any} Instância do QZ Tray carregada dinamicamente */
 let qz = null;
@@ -33,10 +34,13 @@ async function loadQZ() {
     qz.security.setSignatureAlgorithm('SHA512');
     qz.security.setSignaturePromise(function (toSign) {
       return function (resolve, reject) {
-        fetch('/api/print/sign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ toSign })
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          const token = session?.access_token ?? '';
+          return fetch('/api/print/sign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ toSign })
+          });
         })
           .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
           .then((data) => resolve(data.signature))

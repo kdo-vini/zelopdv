@@ -2,6 +2,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { isOpen, messages, contextType, closeAssistant } from '$lib/stores/assistant';
   import { marked } from 'marked';
+  import DOMPurify from 'dompurify';
 
   let input = '';
   let isStreaming = false;
@@ -230,7 +231,7 @@
           </span>
         {:else if msg.role === 'assistant'}
           <div class="markdown-content">
-            {@html marked.parse(msg.content)}
+            {@html DOMPurify.sanitize(marked.parse(msg.content))}
           </div>
         {:else}
           {msg.content}

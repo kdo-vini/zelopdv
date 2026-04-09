@@ -1,5 +1,6 @@
 <script>
   import { marked } from 'marked';
+  import DOMPurify from 'dompurify';
 
   // Open links in new tab and style them as safe external links
   marked.use({
@@ -144,7 +145,7 @@
               </span>
             {:else if msg.role === 'assistant'}
               <div class="markdown-content">
-                {@html marked.parse(msg.content)}
+                {@html DOMPurify.sanitize(marked.parse(msg.content))}
               </div>
             {:else}
               {msg.content}

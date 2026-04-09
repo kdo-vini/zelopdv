@@ -122,9 +122,17 @@
     window.open(url, '_blank');
   }
 
+  function escapeHtmlRecibo(str) {
+    return String(str ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  }
+
   function buildReciboPagamento(nome, valor){
     const dt = new Date().toLocaleString('pt-BR');
-    return `Zelo PDV\n\nRECIBO DE PAGAMENTO (FIADO)\n\nPessoa: ${nome}\nValor: R$ ${valor.toFixed(2)}\nData: ${dt}\n\nObrigado!`;
+    return `Zelo PDV\n\nRECIBO DE PAGAMENTO (FIADO)\n\nPessoa: ${escapeHtmlRecibo(nome)}\nValor: R$ ${Number(valor).toFixed(2)}\nData: ${dt}\n\nObrigado!`;
   }
 
   onMount(async () => { loading = true; await loadPessoas(); loading = false; });
