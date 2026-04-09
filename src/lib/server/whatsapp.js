@@ -63,11 +63,11 @@ async function enviar(telefone, mensagem) {
  * Mensagem 1 — Boas-vindas (disparada na criacao da conta, trial day 0)
  */
 export async function enviarBoasVindas(telefone, nomeUsuario) {
-  const nome = (nomeUsuario || 'oi').split(' ')[0]; // first name only
+  const nome = (nomeUsuario || 'você').split(' ')[0];
   const mensagem =
-    `Oi ${nome}! Vi que voce acabou de criar sua conta no ZeloPDV. ` +
-    `Que otimo ter voce por aqui! Se tiver qualquer duvida na hora de configurar, ` +
-    `e so me chamar aqui no WhatsApp — estou disponivel para ajudar. ` +
+    `Oi ${nome}! Vi que você acabou de criar sua conta no ZeloPDV. ` +
+    `Que ótimo ter você por aqui! Se tiver qualquer dúvida na hora de configurar, ` +
+    `é só me chamar aqui no WhatsApp — estou disponível para ajudar. ` +
     `Boa sorte com os primeiros pedidos! — Vinicius, Fundador do ZeloPDV`;
   return enviar(telefone, mensagem);
 }
@@ -76,13 +76,13 @@ export async function enviarBoasVindas(telefone, nomeUsuario) {
  * Mensagem 2 — Followup 7 dias (disparada pela cron ~dia 7 do trial)
  */
 export async function enviarFollowup7d(telefone, nomeUsuario) {
-  const nome = (nomeUsuario || 'oi').split(' ')[0];
+  const nome = (nomeUsuario || 'você').split(' ')[0];
   const mensagem =
-    `Oi ${nome}, tudo bem? Faz uma semana que voce criou sua conta no ZeloPDV ` +
-    `e queria passar para saber como esta sendo a experiencia. ` +
-    `Ja conseguiu configurar o cardapio e fazer seu primeiro pedido? ` +
-    `Se tiver alguma duvida ou dificuldade, pode falar comigo a vontade. ` +
-    `Estou aqui para ajudar no que precisar. — Vinicius, ZeloPDV`;
+    `Oi ${nome}, tudo bem? Faz uma semana que você criou sua conta no ZeloPDV ` +
+    `e queria passar pra saber como está sendo a experiência. ` +
+    `Já conseguiu configurar o cardápio e fazer seu primeiro pedido? ` +
+    `Se tiver alguma dúvida ou dificuldade, pode falar comigo à vontade. ` +
+    `Estou aqui pra ajudar no que precisar. — Vinicius, ZeloPDV`;
   return enviar(telefone, mensagem);
 }
 
@@ -90,12 +90,12 @@ export async function enviarFollowup7d(telefone, nomeUsuario) {
  * Mensagem 3 — Followup 28 dias / trial encerrando (disparada pela cron ~dia 28)
  */
 export async function enviarFollowup28d(telefone, nomeUsuario) {
-  const nome = (nomeUsuario || 'oi').split(' ')[0];
+  const nome = (nomeUsuario || 'você').split(' ')[0];
   const mensagem =
-    `Oi ${nome}! O seu periodo de teste no ZeloPDV esta chegando ao fim em breve. ` +
-    `Queria saber como foi a experiencia nesses 30 dias — o sistema atendeu o que voce precisava? ` +
-    `Se tiver qualquer duvida antes de decidir continuar, e so me chamar. ` +
-    `Para manter o acesso, basta acessar zelopdv.com.br e escolher a forma de pagamento. ` +
-    `Sera um prazer continuar com voce! — Vinicius, ZeloPDV`;
+    `Oi ${nome}! O seu período de teste no ZeloPDV está chegando ao fim em breve. ` +
+    `Queria saber como foi a experiência nesses 30 dias — o sistema atendeu o que você precisava? ` +
+    `Se tiver qualquer dúvida antes de decidir continuar, é só me chamar. ` +
+    `Para manter o acesso, basta entrar em zelopdv.com.br e escolher a forma de pagamento. ` +
+    `Será um prazer continuar com você! — Vinicius, ZeloPDV`;
   return enviar(telefone, mensagem);
 }
