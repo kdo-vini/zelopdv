@@ -204,18 +204,38 @@
     </button>
   </div>
 
-  {#if subStatus === 'trialing' && trialDaysLeft !== null && trialDaysLeft <= 7}
-    <div class="mx-3 mt-2 mb-1 rounded-lg p-3 text-xs" style="background: var(--warning); color: #1a1a00; border: 1px solid rgba(0,0,0,0.15);">
-      <p class="font-bold mb-0.5">
-        {#if trialDaysLeft === 0}
-          ⚠️ Seu teste termina hoje!
-        {:else}
-          ⚠️ Teste termina em {trialDaysLeft} dia{trialDaysLeft === 1 ? '' : 's'}
-        {/if}
-      </p>
-      <p class="opacity-80">
-        <a href="/assinatura" class="underline font-medium" on:click={closeMobile}>Assine agora</a> para não perder o acesso.
-      </p>
+  {#if subStatus === 'trialing' && trialDaysLeft !== null && !collapsed}
+    {@const trialDay = Math.min(30, Math.max(1, 30 - trialDaysLeft))}
+    {@const pct = Math.round((trialDay / 30) * 100)}
+    {@const urgent = trialDaysLeft <= 7}
+    <div
+      class="mx-3 mt-2 mb-1 rounded-lg p-3 text-xs label-text"
+      style="background: {urgent ? 'var(--warning)' : 'var(--bg-input)'}; color: {urgent ? '#1a1a00' : 'var(--text-main)'}; border: 1px solid {urgent ? 'rgba(0,0,0,0.12)' : 'var(--border-subtle)'};"
+    >
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="font-semibold">
+          {#if trialDaysLeft === 0}
+            Teste termina hoje
+          {:else if urgent}
+            Termina em {trialDaysLeft} dia{trialDaysLeft === 1 ? '' : 's'}
+          {:else}
+            Dia {trialDay} de 30
+          {/if}
+        </span>
+        <a
+          href="/assinatura"
+          on:click={closeMobile}
+          class="font-bold underline"
+          style="color: {urgent ? '#1a1a00' : 'var(--primary)'}; font-size: 0.7rem;"
+        >Assinar</a>
+      </div>
+      <!-- Progress bar -->
+      <div style="height:3px; border-radius:2px; background: {urgent ? 'rgba(0,0,0,0.15)' : 'var(--border-subtle)'}; overflow:hidden; margin-bottom:6px;">
+        <div style="width:{pct}%; height:100%; border-radius:2px; background:{urgent ? 'rgba(0,0,0,0.4)' : 'var(--primary)'}; transition:width 0.4s;"></div>
+      </div>
+      {#if !urgent}
+        <p style="color: var(--text-muted); font-size: 0.68rem; margin:0;">Caixa · Relatórios · Suporte</p>
+      {/if}
     </div>
   {/if}
 

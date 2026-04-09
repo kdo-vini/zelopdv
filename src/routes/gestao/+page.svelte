@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { waitAuthReady } from '$lib/authStore';
   import BarChart from '$lib/components/charts/BarChart.svelte'; // [NEW]
+  import OnboardingChecklist from '$lib/components/OnboardingChecklist.svelte';
 
   export let params;
 
@@ -167,6 +168,8 @@
 </script>
 
 <section class="wrap">
+  <OnboardingChecklist />
+
   <div class="flex justify-between items-center mb-4">
     <div>
       <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Dashboard</p>

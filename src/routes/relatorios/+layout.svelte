@@ -10,6 +10,8 @@
     const ok = await ensureActiveSubscription({ requireProfile: true });
     if (!ok) return;
     ready = true;
+    // Track that user visited relatorios — used by onboarding checklist step 3
+    localStorage.setItem('zelo_relatorio_visited', 'true');
   });
 </script>
 
