@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { addToast } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
@@ -9,6 +10,36 @@
   let loading = false;
   let showPassword = false;
   let showConfirm = false;
+  let sessionReady = false;
+  let sessionError = false;
+
+  onMount(() => {
+    // Listen for the PASSWORD_RECOVERY event from Supabase (triggered when the URL hash is processed)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && sess)) {
+        sessionReady = true;
+      }
+    });
+
+    // Also check if there's already an active session (user may have refreshed)
+    supabase.auth.getSession().then(({ data }) => {
+      if (data?.session) {
+        sessionReady = true;
+      }
+    });
+
+    // Timeout: if no recovery session is detected, show error
+    const timeout = setTimeout(() => {
+      if (!sessionReady) {
+        sessionError = true;
+      }
+    }, 6000);
+
+    return () => {
+      subscription?.unsubscribe();
+      clearTimeout(timeout);
+    };
+  });
 
   async function handleUpdatePassword(e) {
     e.preventDefault();
@@ -39,6 +70,20 @@
 </script>
 
 <AuthLayout title="Criar nova senha" subtitle="Digite sua nova senha abaixo para recuperar o acesso à sua conta">
+  {#if sessionError}
+    <div class="auth-error" style="text-align: center; padding: 1.5rem 1rem;">
+      <p style="margin-bottom: 0.75rem; font-weight: 600;">Link inválido ou expirado</p>
+      <p style="font-size: 0.875rem; opacity: 0.85;">O link de recuperação pode ter expirado ou já foi utilizado.</p>
+      <a href="/esqueci-senha" class="auth-btn" style="display: inline-block; margin-top: 1rem; text-decoration: none; text-align: center;">
+        Solicitar novo link
+      </a>
+    </div>
+  {:else if !sessionReady}
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 2rem 0;">
+      <span class="spinner"></span>
+      <p style="color: var(--text-muted); font-size: 0.875rem;">Verificando link de recuperação...</p>
+    </div>
+  {:else}
   <form on:submit={handleUpdatePassword} class="auth-form">
     <div>
       <label for="new-password" class="auth-label">Nova senha</label>
@@ -98,6 +143,7 @@
       {loading ? 'Salvando...' : 'Salvar e entrar no sistema'}
     </button>
   </form>
+  {/if}
 
   <svelte:fragment slot="footer">
     <a href="/login" class="auth-link">Voltar para o login</a>

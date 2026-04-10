@@ -217,7 +217,7 @@
     supabase.auth.onAuthStateChange((event, sess) => {
 
       session = sess;
-      if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
+      if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'PASSWORD_RECOVERY'].includes(event)) {
         authReady = true;
         maybeNavigate();
       }

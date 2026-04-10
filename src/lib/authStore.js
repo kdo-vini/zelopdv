@@ -15,7 +15,7 @@ function init() {
   // Listener: keeps session fresh
   supabase?.auth.onAuthStateChange((event, sess) => {
     sessionStore.set(sess);
-    if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
+    if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'PASSWORD_RECOVERY'].includes(event)) {
       authReadyStore.set(true);
       resolveReady();
     }

@@ -199,11 +199,14 @@ export async function POST({ request }) {
     let pixData = null;
     let invoiceUrl = null;
 
-    if (!isFirstTime && !isActiveTrial) {
+    if (!isActiveTrial) {
       try {
         let firstPayment = null;
         for (let attempt = 0; attempt < 5; attempt++) {
-          await new Promise(r => setTimeout(r, 1000 * (attempt + 1))); // 1s, 2s, 3s, 4s, 5s
+          // For CREDIT_CARD, check immediately on first attempt; PIX needs time to generate QR
+          if (attempt > 0 || billingType !== 'CREDIT_CARD') {
+            await new Promise(r => setTimeout(r, 1000 * attempt || 1000));
+          }
           const payments = await listSubscriptionPayments(subscription.id);
           if (payments?.data?.[0]) {
             firstPayment = payments.data[0];
@@ -235,6 +238,8 @@ export async function POST({ request }) {
 
   } catch (err) {
     console.error('[create-subscription] error:', err?.message || err);
-    return json({ error: err?.message || 'Falha ao criar assinatura' }, { status: 500 });
+    // Distinguish Asaas API validation errors (user-readable) from internal errors
+    const isAsaasError = err?.message && !err.message.includes('Supabase') && !err.message.includes('DB');
+    return json({ error: err?.message || 'Falha ao criar assinatura' }, { status: isAsaasError ? 400 : 500 });
   }
 }

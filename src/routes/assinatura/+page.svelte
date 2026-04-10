@@ -27,6 +27,7 @@
   let pollStartTime = null;
   const POLL_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos
   let pixPollingExpired = false;
+  let autoStartingTrial = false;
 
   onDestroy(() => {
     if (pollInterval) clearInterval(pollInterval);
@@ -80,6 +81,33 @@
           }
         } catch (subError) {
           console.error('[Assinatura] Erro ao carregar dados:', subError);
+        }
+
+        // Auto-start trial for new users (zero friction)
+        if (!hasHadSubscription) {
+          autoStartingTrial = true;
+          try {
+            const { data: { session: authSession } } = await supabase.auth.getSession();
+            const token = authSession?.access_token ?? '';
+            if (token) {
+              const res = await fetch('/api/billing/start-trial', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+              });
+              const data = await res.json();
+              if (res.ok) {
+                addToast('Seu teste gratuito de 30 dias foi ativado! 🎉', 'success');
+                setTimeout(() => { window.location.href = '/app'; }, 1500);
+                return; // autoStartingTrial stays true — redirect is in-flight
+              }
+              message = data?.error || 'Erro ao ativar período de teste. Tente novamente.';
+              messageType = 'warning';
+            }
+          } catch (e) {
+            message = 'Erro ao conectar. Tente novamente ou entre em contato com o suporte.';
+            messageType = 'warning';
+          }
+          autoStartingTrial = false; // only reset on failure
         }
       }
 
@@ -292,7 +320,7 @@
 
   {#if isActiveStrict}
     <!-- ACTIVE SUBSCRIPTION STATE -->
-    {#if subStatus === 'trialing' && trialDaysLeft !== null && trialDaysLeft <= 7}
+    {#if subStatus === 'trialing' && trialDaysLeft !== null && trialDaysLeft <= 30}
       <!-- Trial ending soon: show warning + subscription form -->
       <div class="status-card warning">
         <div class="status-icon">⚠️</div>
@@ -406,6 +434,15 @@
         ℹ️ O sistema detectará o pagamento em instantes.
       </div>
     {/if}
+
+  {:else if autoStartingTrial}
+    <div class="status-card info">
+      <div class="status-icon">⏳</div>
+      <div>
+        <strong>Ativando seu teste gratuito de 30 dias…</strong>
+        <div class="status-detail">Você será redirecionado em instantes.</div>
+      </div>
+    </div>
 
   {:else}
     <!-- SUBSCRIBE STATE -->
