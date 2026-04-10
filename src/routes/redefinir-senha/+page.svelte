@@ -13,6 +13,24 @@
   let sessionReady = false;
   let sessionError = false;
 
+  // Password strength rules
+  $: rules = {
+    length:   password.length >= 8,
+    upper:    /[A-Z]/.test(password),
+    number:   /[0-9]/.test(password),
+    special:  /[^A-Za-z0-9]/.test(password),
+  };
+  $: passwordValid = rules.length && rules.upper && rules.number && rules.special;
+  $: showChecklist = password.length > 0;
+
+  function validatePassword() {
+    if (!rules.length)  return 'A senha deve ter pelo menos 8 caracteres.';
+    if (!rules.upper)   return 'A senha deve conter pelo menos uma letra maiúscula.';
+    if (!rules.number)  return 'A senha deve conter pelo menos um número.';
+    if (!rules.special) return 'A senha deve conter pelo menos um caractere especial (ex: !@#$%).';
+    return null;
+  }
+
   onMount(() => {
     // Listen for the PASSWORD_RECOVERY event from Supabase (triggered when the URL hash is processed)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
@@ -47,8 +65,9 @@
       addToast('As senhas não conferem', 'error');
       return;
     }
-    if (password.length < 8) {
-      addToast('A senha deve ter pelo menos 8 caracteres.', 'error');
+    const validationError = validatePassword();
+    if (validationError) {
+      addToast(validationError, 'error');
       return;
     }
 
@@ -110,6 +129,22 @@
           {/if}
         </button>
       </div>
+      {#if showChecklist}
+        <ul class="pw-rules">
+          <li class:ok={rules.length}>
+            <span class="rule-icon">{rules.length ? '✓' : '·'}</span> Mínimo 8 caracteres
+          </li>
+          <li class:ok={rules.upper}>
+            <span class="rule-icon">{rules.upper ? '✓' : '·'}</span> Uma letra maiúscula
+          </li>
+          <li class:ok={rules.number}>
+            <span class="rule-icon">{rules.number ? '✓' : '·'}</span> Um número
+          </li>
+          <li class:ok={rules.special}>
+            <span class="rule-icon">{rules.special ? '✓' : '·'}</span> Um caractere especial (ex: !@#$%)
+          </li>
+        </ul>
+      {/if}
     </div>
 
     <div>
@@ -138,7 +173,7 @@
       </div>
     </div>
 
-    <button disabled={loading} class="auth-btn" style="margin-top: 0.5rem;">
+    <button disabled={loading || !passwordValid} class="auth-btn" style="margin-top: 0.5rem;">
       {#if loading}<span class="spinner"></span>{/if}
       {loading ? 'Salvando...' : 'Salvar e entrar no sistema'}
     </button>
@@ -181,5 +216,30 @@
   .toggle-icon {
     width: 1.25rem;
     height: 1.25rem;
+  }
+  .pw-rules {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .pw-rules li {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: color 0.2s;
+  }
+  .pw-rules li.ok {
+    color: #22c55e;
+  }
+  .rule-icon {
+    font-weight: 700;
+    font-size: 0.85rem;
+    width: 1em;
+    text-align: center;
   }
 </style>

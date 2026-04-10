@@ -205,8 +205,9 @@
           return;
         }
         if (!hasActiveSub) {
-          // Redirecionar para assinatura - msg=subscribe para novos usuários
-          window.location.href = '/assinatura?msg=subscribe';
+          // Novos usuários (sem assinatura prévia) → /assinatura sem msg (auto-trial dispara lá)
+          // Usuários com assinatura expirada/cancelada → /assinatura?msg=expired
+          window.location.href = subRow ? '/assinatura?msg=expired' : '/assinatura';
           navigated = true;
           return;
         }

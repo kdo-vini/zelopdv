@@ -63,48 +63,44 @@ export async function POST({ request }) {
       .then(({ error }) => { if (error) console.warn('[start-trial] last_seen_at:', error.message); })
       .catch((e) => console.warn('[start-trial] last_seen_at catch:', e.message));
 
-    // Fire-and-forget: WhatsApp onboarding + email day-0
+    // Fire-and-forget: day-0 email — uses auth email directly, no perfil dependency
+    if (isEmailConfigured()) {
+      const { subject, html } = emailDay0('');
+      sendEmail({ to: email, subject, html })
+        .then((sent) => {
+          if (sent) {
+            supabaseAdmin
+              .from('email_onboarding_logs')
+              .insert({ user_id: userId, email_day: 0, recipient_email: email })
+              .then(() => {})
+              .catch(() => {});
+          }
+        })
+        .catch((e) => console.warn('[start-trial] Email day-0 error:', e?.message));
+    }
+
+    // Fire-and-forget: WhatsApp — needs perfil.contato (phone number)
     supabaseAdmin
       .from('empresa_perfil')
       .select('nome_exibicao, contato')
       .eq('user_id', userId)
       .maybeSingle()
       .then(({ data: perfil }) => {
-        if (!perfil) return;
-
-        // WhatsApp
-        if (perfil.contato) {
-          enviarBoasVindas(perfil.contato, perfil.nome_exibicao || '')
-            .then((sent) => {
-              if (sent) {
-                supabaseAdmin
-                  .from('subscriptions')
-                  .update({ whatsapp_onboarding_sent_at: new Date().toISOString() })
-                  .eq('user_id', userId)
-                  .then(() => {})
-                  .catch(() => {});
-              }
-            })
-            .catch((e) => console.warn('[start-trial] WhatsApp fire-and-forget error:', e?.message));
-        }
-
-        // Email day-0
-        if (isEmailConfigured()) {
-          const { subject, html } = emailDay0(perfil.nome_exibicao || '');
-          sendEmail({ to: email, subject, html })
-            .then((sent) => {
-              if (sent) {
-                supabaseAdmin
-                  .from('email_onboarding_logs')
-                  .insert({ user_id: userId, email_day: 0, recipient_email: email })
-                  .then(() => {})
-                  .catch(() => {});
-              }
-            })
-            .catch((e) => console.warn('[start-trial] Email day-0 fire-and-forget error:', e?.message));
-        }
+        if (!perfil?.contato) return;
+        enviarBoasVindas(perfil.contato, perfil.nome_exibicao || '')
+          .then((sent) => {
+            if (sent) {
+              supabaseAdmin
+                .from('subscriptions')
+                .update({ whatsapp_onboarding_sent_at: new Date().toISOString() })
+                .eq('user_id', userId)
+                .then(() => {})
+                .catch(() => {});
+            }
+          })
+          .catch((e) => console.warn('[start-trial] WhatsApp error:', e?.message));
       })
-      .catch((e) => console.warn('[start-trial] perfil fetch for notifications error:', e?.message));
+      .catch((e) => console.warn('[start-trial] perfil fetch error:', e?.message));
 
     return json({ success: true, trialEnd: trialEnd.toISOString() });
 
