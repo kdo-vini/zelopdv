@@ -68,11 +68,18 @@
       if (dbError) throw dbError;
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        fetch('/api/billing/start-trial', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }).catch(() => {});
+      if (!session?.access_token) {
+        throw new Error('Sua sessão expirou. Faça login novamente.');
+      }
+
+      const trialResponse = await fetch('/api/billing/start-trial', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const trialPayload = await trialResponse.json().catch(() => ({}));
+
+      if (!trialResponse.ok) {
+        throw new Error(trialPayload?.error || 'Erro ao ativar período de teste.');
       }
 
       window.location.href = '/gestao';
