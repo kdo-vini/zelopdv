@@ -10,8 +10,6 @@
 
 import { env } from '$env/dynamic/private';
 
-const WHATSAPP_TOKEN = env.WHATSAPP_TOKEN;
-const TELEFONE_REMETENTE = env.WHATSAPP_TELEFONE_REMETENTE;
 const API_BASE = 'http://app.techneia.com.br/external_api/mensagens/whatsapp_qr_code/enviar';
 
 /**
@@ -21,7 +19,9 @@ const API_BASE = 'http://app.techneia.com.br/external_api/mensagens/whatsapp_qr_
  * @returns {Promise<boolean>} true if sent successfully
  */
 async function enviar(telefone, mensagem) {
-  if (!WHATSAPP_TOKEN || !TELEFONE_REMETENTE) {
+  const token = env.WHATSAPP_TOKEN;
+  const remetente = env.WHATSAPP_TELEFONE_REMETENTE;
+  if (!token || !remetente) {
     console.warn('[WhatsApp] WHATSAPP_TOKEN ou WHATSAPP_TELEFONE_REMETENTE nao configurado, mensagem ignorada.');
     return false;
   }
@@ -36,13 +36,13 @@ async function enviar(telefone, mensagem) {
 
   try {
     const url = new URL(API_BASE);
-    url.searchParams.set('telefone_remetente', TELEFONE_REMETENTE);
+    url.searchParams.set('telefone_remetente', remetente);
     url.searchParams.set('telefone_destinatario', destino);
     url.searchParams.set('conteudo_mensagem', mensagem);
 
     const response = await fetch(url.toString(), {
       method: 'POST',
-      headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (!response.ok) {

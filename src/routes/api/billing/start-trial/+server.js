@@ -26,6 +26,33 @@ export async function POST({ request }) {
       .maybeSingle();
 
     if (existingSub) {
+      // Fire day-0 email even on idempotent return if not yet sent
+      supabaseAdmin
+        .from('email_onboarding_logs')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('email_day', 0)
+        .maybeSingle()
+        .then(({ data: alreadySent }) => {
+          if (alreadySent || !isEmailConfigured()) return;
+          supabaseAdmin.from('empresa_perfil')
+            .select('nome_exibicao')
+            .eq('user_id', userId)
+            .maybeSingle()
+            .then(({ data: perfil }) => {
+              const { subject, html } = emailDay0(perfil?.nome_exibicao || '');
+              sendEmail({ to: email, subject, html })
+                .then((sent) => {
+                  if (sent) supabaseAdmin.from('email_onboarding_logs')
+                    .insert({ user_id: userId, email_day: 0, recipient_email: email })
+                    .then(() => {}).catch(() => {});
+                })
+                .catch((e) => console.warn('[start-trial] Email day-0 (idempotent) error:', e?.message));
+            })
+            .catch(() => {});
+        })
+        .catch(() => {});
+
       return json({
         success: true,
         trialEnd: existingSub.current_period_end,
@@ -63,42 +90,40 @@ export async function POST({ request }) {
       .then(({ error }) => { if (error) console.warn('[start-trial] last_seen_at:', error.message); })
       .catch((e) => console.warn('[start-trial] last_seen_at catch:', e.message));
 
-    // Fire-and-forget: day-0 email — uses auth email directly, no perfil dependency
-    if (isEmailConfigured()) {
-      const { subject, html } = emailDay0('');
-      sendEmail({ to: email, subject, html })
-        .then((sent) => {
-          if (sent) {
-            supabaseAdmin
-              .from('email_onboarding_logs')
-              .insert({ user_id: userId, email_day: 0, recipient_email: email })
-              .then(() => {})
-              .catch(() => {});
-          }
-        })
-        .catch((e) => console.warn('[start-trial] Email day-0 error:', e?.message));
-    }
-
-    // Fire-and-forget: WhatsApp — needs perfil.contato (phone number)
+    // Fire-and-forget: fetch perfil once → personalize email + send WhatsApp
     supabaseAdmin
       .from('empresa_perfil')
       .select('nome_exibicao, contato')
       .eq('user_id', userId)
       .maybeSingle()
       .then(({ data: perfil }) => {
-        if (!perfil?.contato) return;
-        enviarBoasVindas(perfil.contato, perfil.nome_exibicao || '')
-          .then((sent) => {
-            if (sent) {
-              supabaseAdmin
+        const nomeLoja = perfil?.nome_exibicao || '';
+
+        // Day-0 email with store name
+        if (isEmailConfigured()) {
+          const { subject, html } = emailDay0(nomeLoja);
+          sendEmail({ to: email, subject, html })
+            .then((sent) => {
+              if (sent) supabaseAdmin
+                .from('email_onboarding_logs')
+                .insert({ user_id: userId, email_day: 0, recipient_email: email })
+                .then(() => {}).catch(() => {});
+            })
+            .catch((e) => console.warn('[start-trial] Email day-0 error:', e?.message));
+        }
+
+        // WhatsApp
+        if (perfil?.contato) {
+          enviarBoasVindas(perfil.contato, nomeLoja)
+            .then((sent) => {
+              if (sent) supabaseAdmin
                 .from('subscriptions')
                 .update({ whatsapp_onboarding_sent_at: new Date().toISOString() })
                 .eq('user_id', userId)
-                .then(() => {})
-                .catch(() => {});
-            }
-          })
-          .catch((e) => console.warn('[start-trial] WhatsApp error:', e?.message));
+                .then(() => {}).catch(() => {});
+            })
+            .catch((e) => console.warn('[start-trial] WhatsApp error:', e?.message));
+        }
       })
       .catch((e) => console.warn('[start-trial] perfil fetch error:', e?.message));
 

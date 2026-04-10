@@ -6,6 +6,7 @@
   import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina, PLATAFORMAS_PRESET } from '$lib/profileUtils';
   import { maskPhone, maskDocumento } from '$lib/masks';
   import { addToast } from '$lib/stores/ui';
+  import OnboardingWizard from '$lib/components/OnboardingWizard.svelte';
   export let params;
 
   const tabs = [
@@ -66,6 +67,7 @@
   let saving = false;
   let userId = null;
   let email = '';
+  let showOnboardingWizard = false;
 
   // Subscription state
   let subLoading = true;
@@ -177,7 +179,7 @@
 
     const urlParams = new URLSearchParams($page.url.search);
     if (urlParams.get('msg') === 'complete' && !requiredOkUtil({ nome_exibicao, documento, contato, largura_bobina })) {
-      msg = 'Complete as informações da sua empresa antes de continuar.';
+      showOnboardingWizard = true;
     }
     loading = false;
   });
@@ -267,6 +269,10 @@
   }
   $: tag = subStatus ? statusTag(subStatus) : null;
 </script>
+
+{#if showOnboardingWizard}
+  <OnboardingWizard show={showOnboardingWizard} userId={userId} email={email} />
+{/if}
 
 <form on:submit|preventDefault={salvar}>
 

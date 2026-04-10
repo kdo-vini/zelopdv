@@ -97,7 +97,7 @@
               const data = await res.json();
               if (res.ok) {
                 addToast('Seu teste gratuito de 30 dias foi ativado! 🎉', 'success');
-                setTimeout(() => { window.location.href = '/gestao'; }, 1500);
+                setTimeout(() => { window.location.href = '/gestao'; }, 600);
                 return; // autoStartingTrial stays true — redirect is in-flight
               }
               message = data?.error || 'Erro ao ativar período de teste. Tente novamente.';
@@ -114,7 +114,7 @@
       try {
         const params = new URLSearchParams(window.location.search);
         if (params.get('success') === '1' && isActiveStrict) {
-          setTimeout(() => { window.location.href = '/gestao'; }, 2500);
+          setTimeout(() => { window.location.href = '/gestao'; }, 800);
         }
         const msg = params.get('msg');
         if (msg === 'subscribe') {
@@ -203,7 +203,7 @@
         // Zero fricção: se ganhou trial, manda pro gestao direto
         if (subStatus === 'trialing' && isActiveStrict) {
             addToast('Trial de 30 dias ativado! Aproveite. 🎉', 'success');
-            setTimeout(() => { window.location.href = '/gestao'; }, 1500);
+            setTimeout(() => { window.location.href = '/gestao'; }, 600);
             return;
         }
 
@@ -291,7 +291,7 @@
         isActiveStrict = true;
         subStatus = pollSub.status;
         expiryDate = pollSub.current_period_end;
-        setTimeout(() => { window.location.href = '/gestao'; }, 1500);
+        setTimeout(() => { window.location.href = '/gestao'; }, 600);
       }
     }, 4000);
   }
