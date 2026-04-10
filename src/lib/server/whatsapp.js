@@ -10,7 +10,7 @@
 
 import { env } from '$env/dynamic/private';
 
-const API_BASE = 'http://app.techneia.com.br/external_api/mensagens/whatsapp_qr_code/enviar';
+const API_BASE = 'https://app.techneia.com.br/external_api/mensagens/whatsapp_qr_code/enviar';
 
 /**
  * Core send function — shared by all message types.
