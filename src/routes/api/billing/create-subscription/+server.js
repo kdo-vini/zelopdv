@@ -114,10 +114,10 @@ export async function POST({ request }) {
     firstDue.setDate(firstDue.getDate() + trialDays);
     const nextDueDate = firstDue.toISOString().split('T')[0];
 
-    // Preserve existing trial end if still active, otherwise calculate new
-    const trialEnd = isActiveTrial
-      ? new Date(existingSub.current_period_end)
-      : (() => { const d = new Date(); d.setDate(d.getDate() + (isFirstTime ? 30 : 0)); return d; })();
+    // If voluntarily subscribing (!isFirstTime), trial ends now and we transition to incomplete until paid
+    const trialEnd = isFirstTime
+      ? (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })()
+      : new Date();
 
     // Create subscription in Asaas
     const subscription = await createSubscription({
@@ -133,7 +133,7 @@ export async function POST({ request }) {
       user_id: userId,
       provider_customer_id: customer.id,
       provider_subscription_id: subscription.id,
-      status: isActiveTrial ? 'trialing' : (isFirstTime ? 'trialing' : 'incomplete'),
+      status: isFirstTime ? 'trialing' : 'incomplete',
       current_period_end: trialEnd.toISOString(),
       cancel_at_period_end: false,
       payment_provider: 'asaas',
@@ -195,11 +195,11 @@ export async function POST({ request }) {
         .catch((e) => console.warn('[Email] day-0 fire-and-forget error:', e?.message));
     }
 
-    // For non-trial: fetch the first payment with retry (Asaas may take a moment to generate it)
+    // For non-first-time users: fetch the first payment with retry (Asaas generates it because nextDueDate is today)
     let pixData = null;
     let invoiceUrl = null;
 
-    if (!isActiveTrial) {
+    if (!isFirstTime) {
       try {
         let firstPayment = null;
         for (let attempt = 0; attempt < 5; attempt++) {

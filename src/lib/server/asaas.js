@@ -95,7 +95,7 @@ export async function createCustomer(name, cpfCnpj, email, externalReference = '
     name,
     cpfCnpj: cpfCnpj.replace(/\D/g, ''),
     email,
-    notificationDisabled: false,
+    notificationDisabled: true,
     ...(externalReference ? { externalReference } : {}),
   });
 }

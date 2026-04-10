@@ -52,7 +52,7 @@
           subStatus = data?.status || null;
           expiryDate = data?.current_period_end || null;
           hasHadSubscription = !!data;
-          billingType = data?.billing_type || 'PIX';
+          billingType = data?.billing_type === 'PIX' ? 'CREDIT_CARD' : (data?.billing_type || 'CREDIT_CARD');
 
           isActiveStrict = isSubscriptionActiveStrict(data);
 
@@ -152,7 +152,12 @@
         return;
       }
 
-      const res = await fetch('/api/billing/create-subscription', {
+      let uri = '/api/billing/create-subscription';
+      if (billingType === 'CREDIT_CARD') {
+        uri = '/api/billing/create-checkout-session';
+      }
+
+      const res = await fetch(uri, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,6 +175,11 @@
         }
         message = json?.error || 'Falha ao criar assinatura.';
         messageType = 'warning';
+        return;
+      }
+
+      if (billingType === 'CREDIT_CARD' && json.url) {
+        window.location.href = json.url;
         return;
       }
 
@@ -340,12 +350,12 @@
       <div class="billing-selector">
         <h2 class="selector-title">Assine para continuar após o teste</h2>
         <div class="billing-options">
-          <label class="billing-option" class:selected={billingType === 'PIX'}>
-            <input type="radio" bind:group={billingType} value="PIX" />
-            <span class="option-icon">🟢</span>
-            <div>
+          <label class="billing-option billing-option-disabled">
+            <input type="radio" bind:group={billingType} value="PIX" disabled />
+            <span class="option-icon" style="opacity: 0.5;">🟢</span>
+            <div style="opacity: 0.6;">
               <strong>PIX</strong>
-              <span class="option-detail">Aprovação instantânea</span>
+              <span class="option-detail" style="color: var(--error); font-weight: bold;">Em manutenção</span>
             </div>
           </label>
 
@@ -464,12 +474,12 @@
     <div class="billing-selector">
       <h2 class="selector-title">Como quer pagar?</h2>
       <div class="billing-options">
-        <label class="billing-option" class:selected={billingType === 'PIX'}>
-          <input type="radio" bind:group={billingType} value="PIX" />
-          <span class="option-icon">🟢</span>
-          <div>
+        <label class="billing-option billing-option-disabled">
+          <input type="radio" bind:group={billingType} value="PIX" disabled />
+          <span class="option-icon" style="opacity: 0.5;">🟢</span>
+          <div style="opacity: 0.6;">
             <strong>PIX</strong>
-            <span class="option-detail">Aprovação instantânea</span>
+            <span class="option-detail" style="color: var(--error); font-weight: bold;">Em manutenção</span>
           </div>
         </label>
 
