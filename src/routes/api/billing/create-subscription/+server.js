@@ -11,6 +11,8 @@ import {
   isConfigured,
 } from '$lib/server/asaas';
 import { enviarBoasVindas } from '$lib/server/whatsapp';
+import { sendEmail, isEmailConfigured } from '$lib/server/email';
+import { emailDay0 } from '$lib/server/emailTemplates';
 
 export async function POST({ request }) {
   try {
@@ -175,6 +177,22 @@ export async function POST({ request }) {
           }
         })
         .catch((e) => console.warn('[WhatsApp] onboarding fire-and-forget error:', e?.message));
+    }
+
+    // Fire-and-forget: Day-0 welcome email on first account creation
+    if (isFirstTime && isEmailConfigured()) {
+      const { subject, html } = emailDay0(perfil?.nome_exibicao || '');
+      sendEmail({ to: email, subject, html })
+        .then((sent) => {
+          if (sent) {
+            supabaseAdmin
+              .from('email_onboarding_logs')
+              .insert({ user_id: userId, email_day: 0, recipient_email: email })
+              .then(() => {})
+              .catch(() => {});
+          }
+        })
+        .catch((e) => console.warn('[Email] day-0 fire-and-forget error:', e?.message));
     }
 
     // For non-trial: fetch the first payment with retry (Asaas may take a moment to generate it)
