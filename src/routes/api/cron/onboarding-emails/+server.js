@@ -17,7 +17,7 @@
  *   SUPABASE_SERVICE_ROLE_KEY — Supabase service role key (bypasses RLS)
  *
  * Required tables (run migrations in Supabase SQL editor):
- *   See .ai/migrations/email_onboarding_logs.sql
+ *   See supabase/migrations/20260415000000_email_onboarding_logs_rls.sql
  *   subscriptions WhatsApp sent_at columns
  *   onboarding_communication_events
  */
