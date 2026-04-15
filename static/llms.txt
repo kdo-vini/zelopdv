@@ -1,0 +1,72 @@
+# Zelo PDV — Sistema PDV para Lanchonetes e Pequenos Negócios
+
+> Zelo PDV é um sistema de frente de caixa (PDV) online para lanchonetes, hamburguerias, deliveries próprios e MEIs brasileiros. Roda no navegador, sem instalar nada. Funciona offline via PWA.
+
+## Produto
+
+- **URL:** https://zelopdv.com.br
+- **Categoria:** SaaS · POS (Point of Sale) · Gestão de Negócios
+- **Público-alvo:** Donos de lanchonetes, hamburguerias, deliveries próprios e MEIs do setor de alimentação no Brasil
+- **Preço:** R$ 59/mês — plano único com acesso completo. 30 dias grátis, sem cartão.
+- **Desenvolvido por:** Téchne Sistemas (CNPJ: 65.679.798/0001-95)
+
+## Funcionalidades Principais
+
+- Frente de caixa PDV: registro de pedidos em segundos, ideal para horários de pico
+- Controle de fiado digital: extrato por cliente, limite de crédito, histórico de compras
+- Fechamento de caixa: conferência cega e segura, resumo do dia
+- Gestão de despesas: lançamento de gastos fixos e variáveis (aluguel, luz, fornecedores)
+- Relatório de lucro real: cruza vendas com despesas, mostra quanto sobrou de verdade
+- Controle de estoque automático: descontado a cada venda
+- Comprovante via WhatsApp: enviado ao cliente diretamente do sistema
+- Funciona offline (PWA): instala como app, sincroniza quando a internet voltar
+
+## Páginas Públicas
+
+- [Homepage](https://zelopdv.com.br/) — apresentação do produto e call-to-action
+- [Para Lanchonetes](https://zelopdv.com.br/para-lanchonetes) — landing page específica para o segmento
+- [Para Hamburguerias](https://zelopdv.com.br/para-hamburguerias) — landing page específica
+- [Para Delivery Próprio](https://zelopdv.com.br/para-delivery) — landing page específica
+- [Para MEIs](https://zelopdv.com.br/para-mei) — landing page específica
+- [Precificação](https://zelopdv.com.br/precificacao) — calculadora de preço de venda
+- [Blog](https://zelopdv.com.br/blog) — artigos sobre gestão de lanchonetes e pequenos negócios
+- [Cadastro](https://zelopdv.com.br/cadastro) — criação de conta (começa trial de 30 dias)
+
+## Blog — Artigos Publicados
+
+- [Como calcular a taxa do aplicativo de delivery](https://zelopdv.com.br/blog/como-calcular-taxa-aplicativo-delivery)
+- [Como fechar o caixa da lanchonete](https://zelopdv.com.br/blog/como-fechar-caixa-lanchonete)
+- [Controle de fiado para lanchonete](https://zelopdv.com.br/blog/controle-de-fiado-lanchonete)
+- [7 erros que fazem lanchonetes perderem dinheiro](https://zelopdv.com.br/blog/7-erros-lanchonetes-perdem-dinheiro)
+- [5 coisas que toda lanchonete deveria controlar](https://zelopdv.com.br/blog/5-coisas-lanchonete-deveria-controlar)
+- [10 dicas para organizar o caixa do restaurante](https://zelopdv.com.br/blog/10-dicas-organizar-caixa-restaurante)
+- [6 sinais de que sua lanchonete está desorganizada](https://zelopdv.com.br/blog/6-sinais-lanchonete-desorganizada)
+
+## Posicionamento de Mercado
+
+O Zelo PDV endereça donos de pequenos negócios de alimentação que **não** precisam de um sistema de delivery complexo (iFood PDV, WhatsMenu, KCMS), mas precisam de um backoffice simples para:
+- Saber o lucro real ao fim do mês
+- Controlar despesas e fiado
+- Fechar o caixa com segurança
+- Registrar vendas rapidamente no balcão
+
+Preço muito abaixo dos concorrentes (R$ 100–200/mês): R$ 59/mês tudo incluso.
+
+## Diferenciais Técnicos
+
+- Funciona 100% no navegador (Chrome, Edge) — sem instalar software
+- PWA com suporte offline via IndexedDB (Dexie.js)
+- Backend: SvelteKit + Supabase (PostgreSQL)
+- Pagamento via PIX, Boleto ou Cartão de Crédito (Asaas)
+- Suporte via WhatsApp em horário comercial
+
+## Contato
+
+- WhatsApp: https://wa.me/5514991537503
+- Email: techne.br@gmail.com
+- Instagram: https://instagram.com/techne.ia
+
+## Política de Conteúdo para IA
+
+Os artigos do blog Zelo PDV são de livre indexação e citação, desde que a fonte seja preservada.
+Não indexe conteúdo das rotas autenticadas (/app, /gestao, /relatorios, /perfil, /assinatura).

@@ -1,5 +1,5 @@
 <svelte:head>
-  <title>Zelo PDV - Sistema PDV simples para Lanchonetes</title>
+  <title>Sistema PDV para Lanchonete — Zelo PDV: Simples, Rápido e Online</title>
   <meta name="description" content="Sistema PDV para lanchonete, hamburgueria e pequenos negócios. Controle caixa, fiado, despesas e veja seu lucro real. Sem instalar nada. Teste grátis 30 dias, sem cartão." />
   <meta name="keywords" content="sistema PDV, PDV para lanchonete, sistema para lanchonete, controle de caixa, sistema de vendas simples, lanchonete, hamburgueria, mercadinho, PDV grátis" />
   <meta name="robots" content="index, follow" />
@@ -8,42 +8,108 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://zelopdv.com.br/" />
-  <meta property="og:title" content="Zelo PDV - Sistema PDV simples para Lanchonetes" />
-  <meta property="og:description" content="Controle pedidos, estoque e caixa em segundos. Ideal para lanchonetes e pequenos comércios." />
+  <meta property="og:title" content="Sistema PDV para Lanchonete — Zelo PDV: Simples, Rápido e Online" />
+  <meta property="og:description" content="Controle pedidos, estoque e caixa em segundos. Sistema PDV ideal para lanchonetes e pequenos comércios." />
   <meta property="og:image" content="https://zelopdv.com.br/og-image.png" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:site_name" content="Zelo PDV" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://zelopdv.com.br/" />
-  <meta name="twitter:title" content="Zelo PDV - Sistema PDV simples para Lanchonetes" />
+  <meta name="twitter:title" content="Sistema PDV para Lanchonete — Zelo PDV" />
   <meta name="twitter:description" content="O sistema de caixa que coloca ordem no seu negócio. Controle de vendas, gestão de fiado e relatórios financeiros em um só lugar." />
   <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
 
-  <script type="application/ld+json">
-  {
+  <!-- SoftwareApplication Schema -->
+  {@html `<script type="application/ld+json">${JSON.stringify({
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Zelo PDV",
+    "alternateName": "Sistema PDV para Lanchonete",
     "url": "https://zelopdv.com.br",
     "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web Browser",
+    "applicationSubCategory": "PointOfSaleApplication",
+    "operatingSystem": "Web Browser, Android, iOS",
+    "browserRequirements": "Requires Google Chrome or Microsoft Edge",
+    "inLanguage": "pt-BR",
     "offers": {
       "@type": "Offer",
       "price": "59.00",
       "priceCurrency": "BRL",
-      "priceValidUntil": "2027-12-31"
+      "priceValidUntil": "2027-12-31",
+      "availability": "https://schema.org/InStock",
+      "description": "Plano único com acesso completo: vendas ilimitadas, controle de fiado, gestão financeira e suporte via WhatsApp."
     },
-    "description": "Sistema de gestão e frente de caixa para pequenos negócios.",
+    "featureList": [
+      "Frente de caixa PDV para lanchonete",
+      "Controle de fiado digital",
+      "Fechamento de caixa",
+      "Gestão de despesas",
+      "Relatório de lucro real",
+      "Controle de estoque",
+      "Funciona offline (PWA)",
+      "Comprovante via WhatsApp"
+    ],
+    "screenshot": "https://zelopdv.com.br/images/screenshots/dashboard-desktop.png",
+    "description": "Sistema PDV online para lanchonetes, hamburguerias e pequenos negócios. Controle caixa, fiado, despesas e veja seu lucro real sem instalar nada.",
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "4.9",
-      "reviewCount": "38"
+      "reviewCount": "38",
+      "bestRating": "5"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Téchne Sistemas",
+      "url": "https://techneia.com.br"
     }
-  }
-  </script>
+  })}</script>`}
 
-  <script type="application/ld+json">
-  {
+  <!-- Organization Schema -->
+  {@html `<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Téchne Sistemas",
+    "legalName": "Techne Sistemas Tecnologia Da Informacao Ltda",
+    "url": "https://zelopdv.com.br",
+    "logo": "https://zelopdv.com.br/favicon.png",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "telephone": "+55-14-99153-7503",
+      "availableLanguage": "Portuguese",
+      "contactOption": "TollFree"
+    },
+    "sameAs": [
+      "https://instagram.com/techne.ia"
+    ],
+    "address": {
+      "@type": "PostalAddress",
+      "addressCountry": "BR"
+    }
+  })}</script>`}
+
+  <!-- WebSite Schema with SearchAction -->
+  {@html `<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Zelo PDV",
+    "url": "https://zelopdv.com.br",
+    "inLanguage": "pt-BR",
+    "description": "Sistema PDV para lanchonete e pequenos negócios. Controle caixa, fiado, despesas e lucro real no navegador.",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://zelopdv.com.br/blog?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  })}</script>`}
+
+  <!-- FAQPage Schema -->
+  {@html `<script type="application/ld+json">${JSON.stringify({
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
@@ -78,10 +144,25 @@
           "@type": "Answer",
           "text": "Sim! Temos suporte direto via WhatsApp em horário comercial. A gente ajuda a configurar e tirar dúvidas na hora."
         }
+      },
+      {
+        "@type": "Question",
+        "name": "O sistema funciona sem internet?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Sim. O Zelo PDV é um PWA (Progressive Web App): funciona offline e sincroniza automaticamente quando a internet voltar."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quanto custa o sistema PDV para lanchonete?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O Zelo PDV custa R$ 59 por mês, com acesso completo a todas as funcionalidades. Os primeiros 30 dias são grátis, sem precisar de cartão de crédito."
+        }
       }
     ]
-  }
-  </script>
+  })}</script>`}
 </svelte:head>
 
 <script>
