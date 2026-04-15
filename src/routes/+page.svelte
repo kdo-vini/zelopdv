@@ -21,12 +21,16 @@
   <meta name="twitter:description" content="O sistema de caixa que coloca ordem no seu negócio. Controle de vendas, gestão de fiado e relatórios financeiros em um só lugar." />
   <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
 
-  <!-- SoftwareApplication Schema -->
+  <!-- SoftwareApplication + Product Schema -->
   {@html `<script type="application/ld+json">${JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
+    "@type": ["SoftwareApplication", "Product"],
     "name": "Zelo PDV",
     "alternateName": "Sistema PDV para Lanchonete",
+    "brand": { "@type": "Brand", "name": "Zelo PDV" },
+    "sku": "zelopdv-plano-unico",
+    "category": "Business > Point of Sale Software",
+    "itemCondition": "https://schema.org/NewCondition",
     "url": "https://zelopdv.com.br",
     "applicationCategory": "BusinessApplication",
     "applicationSubCategory": "PointOfSaleApplication",
@@ -49,7 +53,8 @@
       "Relatório de lucro real",
       "Controle de estoque",
       "Funciona offline (PWA)",
-      "Comprovante via WhatsApp"
+      "Comprovante via WhatsApp",
+      "Assistente de IA para lucro real (Zelinho)"
     ],
     "screenshot": "https://zelopdv.com.br/images/screenshots/dashboard-desktop.png",
     "description": "Sistema PDV online para lanchonetes, hamburguerias e pequenos negócios. Controle caixa, fiado, despesas e veja seu lucro real sem instalar nada.",
@@ -59,6 +64,29 @@
       "reviewCount": "38",
       "bestRating": "5"
     },
+    "review": [
+      {
+        "@type": "Review",
+        "author": { "@type": "Person", "name": "Marcos A." },
+        "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+        "reviewBody": "Abri o caixa no celular e em 10 minutos já tava vendendo. Nunca vi sistema tão fácil.",
+        "datePublished": "2026-01-15"
+      },
+      {
+        "@type": "Review",
+        "author": { "@type": "Person", "name": "Fernanda S." },
+        "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+        "reviewBody": "O controle de fiado mudou minha vida. Acabou a briga com cliente por causa de dívida.",
+        "datePublished": "2026-02-03"
+      },
+      {
+        "@type": "Review",
+        "author": { "@type": "Person", "name": "Patrícia N." },
+        "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+        "reviewBody": "Eu fazia tudo no caderno. Hoje sei exatamente quanto lucrei no mês.",
+        "datePublished": "2026-03-10"
+      }
+    ],
     "publisher": {
       "@type": "Organization",
       "name": "Téchne Sistemas",
@@ -210,6 +238,9 @@
 
       <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
         <a href="#features" class="hover:text-white transition-colors">Funcionalidades</a>
+        <a href="#zelinho" class="hover:text-white transition-colors flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>Zelinho IA
+        </a>
         <a href="/precificacao" class="hover:text-white transition-colors">Precificação</a>
         <a href="/blog" class="hover:text-white transition-colors">Blog</a>
         <a href="#pricing" class="hover:text-white transition-colors">Preços</a>
@@ -241,6 +272,9 @@
     {#if showMobileMenu}
       <div class="md:hidden border-t border-white/5 bg-[#0B0F19]/95 backdrop-blur-md px-6 py-4 flex flex-col gap-4 animate-fade-in-down">
         <a href="#features" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Funcionalidades</a>
+        <a href="#zelinho" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2 flex items-center gap-2" on:click={() => showMobileMenu = false}>
+          <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>Zelinho IA
+        </a>
         <a href="/precificacao" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Precificação</a>
         <a href="/blog" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Blog</a>
         <a href="#pricing" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Preços</a>
@@ -269,7 +303,7 @@
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
         </span>
-        Novo: Conheça o Zelinho, sua IA para o lucro real
+        Zelinho — IA com contexto real do seu negócio
       </div>
 
       <h1 class="text-5xl md:text-7xl font-bold text-white tracking-tight leading-[1.1] mb-8 animate-fade-in-up delay-100">
@@ -536,6 +570,131 @@
             Limite de crédito personalizável
           </li>
         </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURE 5: ZELINHO AI -->
+  <section id="zelinho" class="py-24 relative overflow-hidden">
+    <!-- Background glow -->
+    <div class="absolute inset-0 bg-gradient-to-br from-sky-900/20 via-transparent to-indigo-900/20 pointer-events-none"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-sky-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <div class="text-center mb-16">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-400 text-xs font-semibold mb-6">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+          </span>
+          Inteligência Artificial para Pequenos Negócios
+        </div>
+        <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">
+          Zelinho: O Primeiro Assistente de IA<br class="hidden md:block"/>
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-400">Focado no Lucro Real</span>
+        </h2>
+        <p class="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          Não é um chatbot genérico. O Zelinho lê suas vendas, despesas e estoque reais
+          e responde com contexto do <strong class="text-slate-300">seu</strong> negócio.
+        </p>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-16 items-center">
+        <!-- Left: Feature bullets -->
+        <div class="space-y-6">
+          <div class="flex items-start gap-4 p-5 rounded-2xl border border-white/5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-sky-500/20 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-white font-semibold mb-1">Análise de lucro por período</h3>
+              <p class="text-slate-400 text-sm leading-relaxed">Pergunte "quanto lucrei essa semana?" e o Zelinho busca suas vendas e despesas reais para te dar a resposta.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4 p-5 rounded-2xl border border-white/5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-white font-semibold mb-1">Alerta de produtos com menor margem</h3>
+              <p class="text-slate-400 text-sm leading-relaxed">O Zelinho identifica quais itens do seu cardápio estão te dando menos retorno para que você ajuste preços ou custo.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4 p-5 rounded-2xl border border-white/5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-white font-semibold mb-1">Sugestões práticas baseadas nos seus dados</h3>
+              <p class="text-slate-400 text-sm leading-relaxed">Não são dicas genéricas de internet. São recomendações geradas a partir do histórico real do seu negócio.</p>
+            </div>
+          </div>
+
+          <a href="/cadastro" class="inline-flex items-center gap-2 px-6 py-3 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-full shadow-lg shadow-sky-900/30 transition-all hover:-translate-y-0.5 text-sm mt-2">
+            Experimentar o Zelinho grátis
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+          </a>
+        </div>
+
+        <!-- Right: AI chat mockup -->
+        <div class="relative">
+          <div class="absolute inset-0 bg-sky-500/10 blur-[80px] rounded-full -z-10"></div>
+          <div class="rounded-2xl border border-white/10 bg-[#0d1117] shadow-2xl overflow-hidden">
+            <!-- Chat header -->
+            <div class="border-b border-white/5 px-5 py-4 flex items-center gap-3 bg-[#0B0F19]">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-lg">Z</div>
+              <div>
+                <p class="text-white text-sm font-semibold leading-none">Zelinho</p>
+                <p class="text-sky-400 text-xs mt-0.5">Parceiro IA · online</p>
+              </div>
+              <div class="ml-auto flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-emerald-400 text-xs">ativo</span>
+              </div>
+            </div>
+            <!-- Chat messages -->
+            <div class="p-5 space-y-4 min-h-[280px]">
+              <!-- User message -->
+              <div class="flex justify-end">
+                <div class="bg-sky-600/30 border border-sky-500/20 rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[80%]">
+                  <p class="text-slate-200 text-sm">Quanto lucrei essa semana?</p>
+                </div>
+              </div>
+              <!-- AI response -->
+              <div class="flex items-start gap-2.5">
+                <div class="w-7 h-7 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">Z</div>
+                <div class="bg-white/[0.05] border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]">
+                  <p class="text-slate-300 text-sm leading-relaxed">Analisando seus dados de <strong class="text-white">seg a dom</strong>...</p>
+                  <div class="mt-3 space-y-1.5">
+                    <div class="flex justify-between text-xs">
+                      <span class="text-slate-400">Vendas brutas</span>
+                      <span class="text-white font-medium">R$ 3.847</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                      <span class="text-slate-400">Despesas lançadas</span>
+                      <span class="text-red-400 font-medium">- R$ 1.290</span>
+                    </div>
+                    <div class="h-px bg-white/10 my-2"></div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-emerald-400 font-semibold">Lucro real</span>
+                      <span class="text-emerald-400 font-bold">R$ 2.557</span>
+                    </div>
+                  </div>
+                  <p class="text-slate-400 text-xs mt-3">Seu ticket médio foi <strong class="text-white">R$ 28,40</strong>. Quer ver quais produtos venderam mais?</p>
+                </div>
+              </div>
+            </div>
+            <!-- Chat input -->
+            <div class="border-t border-white/5 px-4 py-3 flex items-center gap-3 bg-[#0B0F19]/50">
+              <div class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-slate-500 text-sm">Pergunte sobre seu negócio...</div>
+              <button class="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center flex-shrink-0" aria-label="Enviar">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>

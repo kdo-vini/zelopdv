@@ -131,7 +131,7 @@
 
     if (!supabase) return;
  
-  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html', '/redefinir-senha', '/privacidade', '/termos', '/pascoa', '/para-lanchonetes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao'];
+  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/perfil.html', '/painel.html', '/redefinir-senha', '/privacidade', '/termos', '/pascoa', '/para-lanchonetes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao', '/vs-planilha'];
     const path = window.location.pathname;
 
     let navigated = false;
@@ -185,7 +185,7 @@
       }
       if (session && isPublicPath(path)) {
         // Allow /loja/* paths without redirect (public storefront)
-        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html' || path === '/redefinir-senha' || path === '/pascoa' || path === '/precificacao' || path.startsWith('/para-') || path.startsWith('/blog')) {
+        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html' || path === '/redefinir-senha' || path === '/pascoa' || path === '/precificacao' || path === '/vs-planilha' || path.startsWith('/para-') || path.startsWith('/blog')) {
 
         } else {
 
