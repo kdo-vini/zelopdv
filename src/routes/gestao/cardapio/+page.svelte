@@ -399,7 +399,7 @@
                               <span class="text-xs font-medium" style="color: var(--text-label);">{prod.nome}</span>
                               <input
                                 type="text"
-                                value={getOv(prod.id, 'price', Number(prod.preco_venda).toFixed(2).replace('.', ','))}
+                                value={getOv(prod.id, 'price', Number(prod.preco).toFixed(2).replace('.', ','))}
                                 on:input={e => setOv(prod.id, 'price', e.target.value)}
                                 class="w-24 px-2 py-1 rounded-lg text-xs text-right focus:outline-none"
                                 style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
