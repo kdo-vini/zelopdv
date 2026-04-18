@@ -101,7 +101,7 @@
               name: p.nome,
               price: itemOverrides[p.id]?.price !== undefined
                 ? itemOverrides[p.id].price
-                : Number(p.preco_venda).toFixed(2).replace('.', ','),
+                : Number(p.preco).toFixed(2).replace('.', ','),
               description: itemOverrides[p.id]?.description ?? ''
             }))
         }))
@@ -123,7 +123,7 @@
       if (!user) return;
       const [catRes, prodRes] = await Promise.all([
         supabase.from('categorias').select('id, nome').eq('id_usuario', user.id).order('nome'),
-        supabase.from('produtos').select('id, nome, preco_venda, id_categoria')
+        supabase.from('produtos').select('id, nome, preco, id_categoria')
           .eq('id_usuario', user.id).eq('ativo', true).order('nome')
       ]);
       if (catRes.error || prodRes.error) throw new Error('query_error');
