@@ -33,6 +33,7 @@
     "@vite-pwa/sveltekit": "^1.1.0",
     "dexie": "^4.2.1",
     "dompurify": "^3.3.3",
+    "html2canvas": "^1.4.1",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "marked": "^17.0.5",

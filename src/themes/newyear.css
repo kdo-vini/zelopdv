@@ -64,6 +64,7 @@
 
     /* Status Colors */
     --error: #EF4444;
+    --error-bg: #FEE2E2;
     --success: #10B981;
     --warning: #D4AF37;
 
