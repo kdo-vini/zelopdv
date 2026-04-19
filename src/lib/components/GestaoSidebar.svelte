@@ -9,6 +9,7 @@
   let collapsed = false;
   let subStatus = null;
   let trialDaysLeft = null;
+  let companyLogoUrl = null;
 
   onMount(async () => {
     const saved = localStorage.getItem('zelo_sidebar_collapsed');
@@ -17,18 +18,26 @@
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.id) {
       try {
-        const { data: sub } = await supabase
-          .from('subscriptions')
-          .select('status, current_period_end')
-          .eq('user_id', user.id)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const [{ data: sub }, { data: perfil }] = await Promise.all([
+          supabase
+            .from('subscriptions')
+            .select('status, current_period_end')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from('empresa_perfil')
+            .select('logo_url')
+            .eq('user_id', user.id)
+            .maybeSingle()
+        ]);
         if (sub?.status === 'trialing' && sub?.current_period_end) {
           subStatus = sub.status;
           const diff = new Date(sub.current_period_end) - new Date();
           trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
         }
+        if (perfil?.logo_url) companyLogoUrl = perfil.logo_url;
       } catch (e) {
         // silent fail - non-critical
       }
@@ -335,11 +344,15 @@
       aria-label="Ir para Meu Perfil"
     >
       <div
-        class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-        style="background: var(--accent-light); color: var(--accent);"
+        class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden"
+        style={companyLogoUrl ? 'background: var(--bg-input);' : 'background: var(--accent-light); color: var(--accent);'}
         aria-hidden="true"
       >
-        {avatarLetter}
+        {#if companyLogoUrl}
+          <img src={companyLogoUrl} alt="Logo" class="w-full h-full object-contain" />
+        {:else}
+          {avatarLetter}
+        {/if}
       </div>
       <span class="label-text text-sm font-medium truncate min-w-0" style="color: var(--text-main);">
         {displayName}
