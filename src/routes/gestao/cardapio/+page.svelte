@@ -13,7 +13,14 @@
   let exporting = false;
   let exportingPDF = false;
   let loading = false;
-  let previewEl;
+  let previewWrapper;
+
+  // Contact info state
+  let storeName = '';
+  let cardPhone = '';
+  let cardInstagram = '';
+  let cardAddress = '';
+  let showQRHint = false;
 
   // "Do sistema" state
   let categorias = [];
@@ -84,10 +91,103 @@
       footerBg: '#052e16',
       footerText: '#4ade80',
       footerBorder: '#166534',
+    },
+    noturno: {
+      label: 'Noturno',
+      swatch: '#1c1c1e',
+      bg: '#1c1c1e',
+      headerBg: '#111113',
+      titleColor: '#ff6b2b',
+      titleFont: 'Georgia, serif',
+      subtitleColor: '#facc15',
+      sectionBg: '#2a2a2e',
+      sectionText: '#ff6b2b',
+      itemText: '#f4f4f5',
+      priceColor: '#facc15',
+      descColor: '#a1a1aa',
+      divider: '#3f3f46',
+      footerBg: '#111113',
+      footerText: '#71717a',
+      footerBorder: '#2a2a2e',
+    },
+    vermelho: {
+      label: 'Vermelho',
+      swatch: '#7f1d1d',
+      bg: '#fdf6f0',
+      headerBg: '#7f1d1d',
+      titleColor: '#fef3c7',
+      titleFont: 'Georgia, serif',
+      subtitleColor: '#fca5a5',
+      sectionBg: '#fee2e2',
+      sectionText: '#991b1b',
+      itemText: '#1c1917',
+      priceColor: '#b91c1c',
+      descColor: '#78716c',
+      divider: '#fecaca',
+      footerBg: '#7f1d1d',
+      footerText: '#fca5a5',
+      footerBorder: '#991b1b',
+    },
+    verao: {
+      label: 'Verão',
+      swatch: '#06b6d4',
+      bg: '#f0fdfa',
+      headerBg: '#ecfeff',
+      titleColor: '#0e7490',
+      titleFont: 'Georgia, serif',
+      subtitleColor: '#f97316',
+      sectionBg: '#cffafe',
+      sectionText: '#0e7490',
+      itemText: '#134e4a',
+      priceColor: '#f97316',
+      descColor: '#6b7280',
+      divider: '#a5f3fc',
+      footerBg: '#ecfeff',
+      footerText: '#0891b2',
+      footerBorder: '#a5f3fc',
+    },
+    minimalista: {
+      label: 'Minimal',
+      swatch: '#e5e7eb',
+      bg: '#f9fafb',
+      headerBg: '#ffffff',
+      titleColor: '#111827',
+      titleFont: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+      subtitleColor: '#6b7280',
+      sectionBg: '#f3f4f6',
+      sectionText: '#374151',
+      itemText: '#111827',
+      priceColor: '#111827',
+      descColor: '#9ca3af',
+      divider: '#e5e7eb',
+      footerBg: '#ffffff',
+      footerText: '#d1d5db',
+      footerBorder: '#e5e7eb',
+    },
+    festa: {
+      label: 'Festa',
+      swatch: '#92400e',
+      bg: '#fffbeb',
+      headerBg: '#92400e',
+      titleColor: '#fef3c7',
+      titleFont: 'Georgia, serif',
+      subtitleColor: '#fcd34d',
+      sectionBg: '#fef3c7',
+      sectionText: '#78350f',
+      itemText: '#292524',
+      priceColor: '#b45309',
+      descColor: '#78716c',
+      divider: '#fde68a',
+      footerBg: '#92400e',
+      footerText: '#fcd34d',
+      footerBorder: '#78350f',
     }
   };
 
   $: t = templates[theme];
+
+  // ── Derived: has any contact footer content ─────────────────────────────
+  $: hasFooterContent = cardFooter || cardPhone || cardInstagram || cardAddress || showQRHint;
 
   // ── Preview sections (computed) ─────────────────────────────────────────
   $: previewSections = mode === 'sistema'
@@ -114,6 +214,38 @@
           description: i.description || ''
         }))
       }));
+
+  // ── Page split algorithm ─────────────────────────────────────────────────
+  const HEADER_H = 128;  // first page header (store name + title + subtitle + padding)
+  const FOOTER_H = 84;   // last page footer (approximated generously)
+  const SECTION_H = 36;  // section label bar height
+  const ITEM_H = 42;     // each product row height
+  const PAGE_H = 525;    // total page height
+  const PADDING_V = 16;  // top+bottom padding of sections area
+
+  $: pages = (() => {
+    if (previewSections.length === 0) return [[]];
+    const result = [];
+    let current = [];
+    let usedH = HEADER_H + PADDING_V; // first page starts with header
+
+    for (const section of previewSections) {
+      const sH = SECTION_H + section.items.length * ITEM_H;
+      const isFirstPage = result.length === 0;
+      const budget = PAGE_H - (isFirstPage ? HEADER_H + PADDING_V : PADDING_V);
+
+      if (current.length > 0 && usedH + sH > budget) {
+        result.push(current);
+        current = [section];
+        usedH = PADDING_V + sH;
+      } else {
+        current.push(section);
+        usedH += sH;
+      }
+    }
+    if (current.length > 0 || result.length === 0) result.push(current);
+    return result;
+  })();
 
   // ── Data loading ────────────────────────────────────────────────────────
   onMount(async () => {
@@ -184,33 +316,69 @@
 
   // ── Export ──────────────────────────────────────────────────────────────
   async function doExport(type) {
-    if (!previewEl) return;
+    if (!previewWrapper) return;
     if (type === 'jpg') exporting = true;
     else exportingPDF = true;
     try {
       const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(previewEl, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: t.bg
-      });
+      const pageEls = previewWrapper.querySelectorAll('.cardapio-page');
+
       if (type === 'jpg') {
-        const a = document.createElement('a');
-        a.download = 'cardapio.jpg';
-        a.href = canvas.toDataURL('image/jpeg', 0.95);
-        a.click();
+        if (pageEls.length === 1) {
+          const canvas = await html2canvas(pageEls[0], {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: t.bg
+          });
+          const a = document.createElement('a');
+          a.download = 'cardapio.jpg';
+          a.href = canvas.toDataURL('image/jpeg', 0.95);
+          a.click();
+        } else {
+          for (let i = 0; i < pageEls.length; i++) {
+            const canvas = await html2canvas(pageEls[i], {
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              backgroundColor: t.bg
+            });
+            const a = document.createElement('a');
+            a.download = `cardapio-${i + 1}.jpg`;
+            a.href = canvas.toDataURL('image/jpeg', 0.95);
+            a.click();
+            if (i < pageEls.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+          }
+        }
         addToast('Cardápio exportado como JPG!', 'success');
       } else {
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const w = canvas.width / 2;
-        const h = canvas.height / 2;
+        const canvases = [];
+        for (let i = 0; i < pageEls.length; i++) {
+          const canvas = await html2canvas(pageEls[i], {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: t.bg
+          });
+          canvases.push(canvas);
+        }
+
+        const w = canvases[0].width / 2;
+        const h = canvases[0].height / 2;
         const pdf = new jsPDF({
           orientation: h >= w ? 'portrait' : 'landscape',
           unit: 'px',
           format: [w, h]
         });
-        pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+
+        for (let i = 0; i < canvases.length; i++) {
+          if (i > 0) pdf.addPage([w, h]);
+          const imgData = canvases[i].toDataURL('image/jpeg', 0.95);
+          pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+        }
+
         pdf.save('cardapio.pdf');
         addToast('Cardápio exportado como PDF!', 'success');
       }
@@ -309,28 +477,104 @@
 
         <div>
           <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
-            Rodapé
+            Rodapé livre
             <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
           </label>
           <input
             type="text"
             bind:value={cardFooter}
-            placeholder="Ex: WhatsApp: (14) 99999-9999"
+            placeholder="Ex: Promoções válidas até domingo"
             class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
             style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
           />
         </div>
       </div>
 
-      <!-- Theme selector -->
+      <!-- Contact info -->
+      <div class="rounded-xl p-4 space-y-3" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
+        <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Informações de Contato</p>
+
+        <div>
+          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
+            Nome do Estabelecimento
+            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
+          </label>
+          <input
+            type="text"
+            bind:value={storeName}
+            placeholder="Ex: Lanchonete do Zé"
+            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+            style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
+            Telefone / WhatsApp
+            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
+          </label>
+          <input
+            type="text"
+            bind:value={cardPhone}
+            placeholder="(00) 00000-0000"
+            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+            style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
+            Instagram
+            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
+          </label>
+          <input
+            type="text"
+            bind:value={cardInstagram}
+            placeholder="@seulanche"
+            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+            style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
+            Endereço
+            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
+          </label>
+          <input
+            type="text"
+            bind:value={cardAddress}
+            placeholder="Rua das Flores, 123 — Centro"
+            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+            style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+          />
+        </div>
+
+        <!-- showQRHint toggle -->
+        <label class="flex items-center gap-3 cursor-pointer py-1 select-none">
+          <div
+            class="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
+            style="background: {showQRHint ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showQRHint ? 'var(--primary)' : 'var(--border-subtle)'};"
+          >
+            <input type="checkbox" bind:checked={showQRHint} class="sr-only" />
+            <span
+              class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+              style="transform: translateX({showQRHint ? '16px' : '0px'});"
+            ></span>
+          </div>
+          <span class="text-xs font-medium" style="color: var(--text-label);">Mostrar aviso "Peça pelo WhatsApp"</span>
+        </label>
+      </div>
+
+      <!-- Theme selector — 2-column grid to accommodate 8 themes -->
       <div class="rounded-xl p-4" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
         <p class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-muted);">Tema Visual</p>
-        <div class="flex gap-2">
+        <div class="grid grid-cols-4 gap-2">
           {#each Object.entries(templates) as [key, tmpl]}
             {@const active = theme === key}
             <button
               on:click={() => theme = key}
-              class="flex-1 flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 transition-all"
+              class="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border-2 transition-all"
               style="
                 border-color: {active ? 'var(--primary)' : 'transparent'};
                 outline: {active ? '2px solid var(--primary)' : 'none'};
@@ -339,13 +583,13 @@
               title="Tema {tmpl.label}"
             >
               <div
-                class="w-8 h-8 rounded-lg border-2"
+                class="w-7 h-7 rounded-lg border-2"
                 style="
                   background: {tmpl.swatch};
                   border-color: {active ? 'var(--primary)' : 'var(--border-subtle)'};
                 "
               ></div>
-              <span class="text-xs font-medium" style="color: {active ? 'var(--primary)' : 'var(--text-muted)'};">{tmpl.label}</span>
+              <span class="text-xs font-medium leading-tight text-center" style="color: {active ? 'var(--primary)' : 'var(--text-muted)'};">{tmpl.label}</span>
             </button>
           {/each}
         </div>
@@ -414,7 +658,7 @@
                               on:input={e => setOv(prod.id, 'description', e.target.value)}
                               class="w-full px-2 py-1 rounded-lg text-xs focus:outline-none"
                               style="background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-subtle);"
-                              placeholder="Descrição do dia (ex: Frango com Brócolis)"
+                              placeholder="Descreva seu produto (Opcional)"
                             />
                           </div>
                         {/each}
@@ -585,131 +829,230 @@
         </div>
       </div>
 
-      <!-- Cardápio preview wrapper — centered, scrollable -->
+      <!-- Cardápio preview wrapper — multi-page, centered -->
       <div class="flex justify-center">
-        <div
-          bind:this={previewEl}
-          style="
-            width: 420px;
-            background: {t.bg};
-            font-family: Georgia, 'Times New Roman', serif;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-            border-radius: 4px;
-            overflow: hidden;
-          "
-        >
-          <!-- ── Header ── -->
-          <div style="
-            padding: 32px 28px 20px;
-            text-align: center;
-            background: {t.headerBg};
-            border-bottom: 2px solid {t.divider};
-          ">
-            <h1 style="
-              margin: 0;
-              font-size: 26px;
-              font-weight: 800;
-              color: {t.titleColor};
-              letter-spacing: 0.08em;
-              text-transform: uppercase;
-              line-height: 1.2;
-            ">{cardTitle || 'Cardápio'}</h1>
+        <div bind:this={previewWrapper} class="flex flex-col gap-4 items-center">
 
-            {#if cardSubtitle}
-              <p style="
-                margin: 8px 0 0;
-                font-size: 13px;
-                color: {t.subtitleColor};
-                font-style: italic;
-                letter-spacing: 0.02em;
-              ">{cardSubtitle}</p>
+          {#each pages as pageSections, pi}
+            <!-- Page indicator label (outside card, shown when multiple pages) -->
+            {#if pages.length > 1}
+              <p class="text-xs" style="color: var(--text-muted);">
+                Página {pi + 1} de {pages.length}
+              </p>
             {/if}
-          </div>
 
-          <!-- ── Sections ── -->
-          <div style="padding: 8px 0;">
-            {#if previewSections.length === 0}
-              <div style="padding: 48px 28px; text-align: center; color: {t.subtitleColor}; font-size: 14px;">
-                {mode === 'sistema' ? 'Selecione categorias no painel ao lado.' : 'Adicione seções e itens no painel ao lado.'}
-              </div>
-            {:else}
-              {#each previewSections as section, si}
-
-                <!-- Section header -->
+            <!-- Individual cardápio page — fixed 420×525 (4:5) -->
+            <div
+              class="cardapio-page"
+              style="
+                width: 420px;
+                height: 525px;
+                background: {t.bg};
+                font-family: {t.titleFont ?? 'Georgia, serif'};
+                box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+                border-radius: 4px;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                flex-shrink: 0;
+              "
+            >
+              <!-- ── Header (first page only) ── -->
+              {#if pi === 0}
                 <div style="
-                  margin-top: {si > 0 ? '8px' : '4px'};
-                  padding: 8px 28px;
-                  background: {t.sectionBg};
-                  border-top: 1px solid {t.divider};
-                  border-bottom: 1px solid {t.divider};
+                  padding: 32px 28px 20px;
+                  text-align: center;
+                  background: {t.headerBg};
+                  border-bottom: 2px solid {t.divider};
+                  flex-shrink: 0;
                 ">
-                  <span style="
-                    font-size: 11px;
-                    font-weight: 700;
-                    color: {t.sectionText};
-                    letter-spacing: 0.15em;
+                  {#if storeName}
+                    <p style="
+                      margin: 0 0 6px;
+                      font-size: 11px;
+                      font-weight: 600;
+                      color: {t.subtitleColor};
+                      letter-spacing: 0.18em;
+                      text-transform: uppercase;
+                      font-family: {t.titleFont};
+                    ">{storeName}</p>
+                  {/if}
+
+                  <h1 style="
+                    margin: 0;
+                    font-size: 26px;
+                    font-weight: 800;
+                    color: {t.titleColor};
+                    letter-spacing: 0.08em;
                     text-transform: uppercase;
-                    font-family: Georgia, serif;
-                  ">{section.name}</span>
-                </div>
+                    line-height: 1.2;
+                    font-family: {t.titleFont};
+                  ">{cardTitle || 'Cardápio'}</h1>
 
-                <!-- Items -->
-                <div>
-                  {#each section.items as item, idx}
+                  {#if cardSubtitle}
+                    <p style="
+                      margin: 8px 0 0;
+                      font-size: 13px;
+                      color: {t.subtitleColor};
+                      font-style: italic;
+                      letter-spacing: 0.02em;
+                    ">{cardSubtitle}</p>
+                  {/if}
+                </div>
+              {/if}
+
+              <!-- ── Sections area ── -->
+              <div style="flex: 1; overflow: hidden; padding: 8px 0;">
+                {#if pageSections.length === 0 && pi === 0}
+                  <!-- Empty state on first/only page -->
+                  <div style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    color: {t.subtitleColor};
+                    font-size: 14px;
+                    text-align: center;
+                    padding: 0 28px;
+                  ">
+                    {mode === 'sistema' ? 'Selecione categorias no painel ao lado.' : 'Adicione seções e itens no painel ao lado.'}
+                  </div>
+                {:else}
+                  {#each pageSections as section, si}
+
+                    <!-- Section header -->
                     <div style="
-                      padding: 11px 28px;
-                      {idx < section.items.length - 1 ? `border-bottom: 1px solid ${t.divider};` : ''}
+                      margin-top: {si > 0 ? '8px' : '4px'};
+                      padding: 8px 28px;
+                      background: {t.sectionBg};
+                      border-top: 1px solid {t.divider};
+                      border-bottom: 1px solid {t.divider};
                     ">
-                      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-                        <div style="flex: 1; min-width: 0;">
-                          <span style="
-                            display: block;
-                            font-size: 14px;
-                            font-weight: 600;
-                            color: {t.itemText};
-                            line-height: 1.3;
-                          ">{item.name || '—'}</span>
-                          {#if item.description}
-                            <span style="
-                              display: block;
-                              margin-top: 2px;
-                              font-size: 11px;
-                              color: {t.descColor};
-                              font-style: italic;
-                              line-height: 1.4;
-                            ">{item.description}</span>
-                          {/if}
-                        </div>
-                        {#if item.price}
-                          <span style="
-                            font-size: 14px;
-                            font-weight: 700;
-                            color: {t.priceColor};
-                            white-space: nowrap;
-                            flex-shrink: 0;
-                            margin-top: 1px;
-                          ">{fmtPrice(item.price)}</span>
-                        {/if}
-                      </div>
+                      <span style="
+                        font-size: 11px;
+                        font-weight: 700;
+                        color: {t.sectionText};
+                        letter-spacing: 0.15em;
+                        text-transform: uppercase;
+                        font-family: Georgia, serif;
+                      ">{section.name}</span>
                     </div>
+
+                    <!-- Items -->
+                    <div>
+                      {#each section.items as item, idx}
+                        <div style="
+                          padding: 11px 28px;
+                          {idx < section.items.length - 1 ? `border-bottom: 1px solid ${t.divider};` : ''}
+                        ">
+                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                            <div style="flex: 1; min-width: 0;">
+                              <span style="
+                                display: block;
+                                font-size: 14px;
+                                font-weight: 600;
+                                color: {t.itemText};
+                                line-height: 1.3;
+                              ">{item.name || '—'}</span>
+                              {#if item.description}
+                                <span style="
+                                  display: block;
+                                  margin-top: 2px;
+                                  font-size: 11px;
+                                  color: {t.descColor};
+                                  font-style: italic;
+                                  line-height: 1.4;
+                                ">{item.description}</span>
+                              {/if}
+                            </div>
+                            {#if item.price}
+                              <span style="
+                                font-size: 14px;
+                                font-weight: 700;
+                                color: {t.priceColor};
+                                white-space: nowrap;
+                                flex-shrink: 0;
+                                margin-top: 1px;
+                              ">{fmtPrice(item.price)}</span>
+                            {/if}
+                          </div>
+                        </div>
+                      {/each}
+                    </div>
+
                   {/each}
+                {/if}
+              </div>
+
+              <!-- ── Footer (last page only, when content exists) ── -->
+              {#if pi === pages.length - 1 && hasFooterContent}
+                <div style="
+                  padding: 14px 28px;
+                  text-align: center;
+                  background: {t.footerBg};
+                  border-top: 1px solid {t.footerBorder};
+                  flex-shrink: 0;
+                ">
+                  <!-- Free-text footer line -->
+                  {#if cardFooter}
+                    <p style="margin: 0 0 6px; font-size: 12px; color: {t.footerText}; letter-spacing: 0.02em;">{cardFooter}</p>
+                  {/if}
+
+                  <!-- WhatsApp hint badge -->
+                  {#if showQRHint}
+                    <p style="
+                      display: inline-block;
+                      margin: 0 0 6px;
+                      padding: 3px 10px;
+                      border-radius: 20px;
+                      font-size: 11px;
+                      font-weight: 600;
+                      background: #25D366;
+                      color: #ffffff;
+                      letter-spacing: 0.01em;
+                    ">Peca pelo WhatsApp</p>
+                  {/if}
+
+                  <!-- Phone -->
+                  {#if cardPhone}
+                    <p style="margin: 0 0 4px; font-size: 12px; color: {t.footerText}; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: {t.footerText}; flex-shrink: 0;">
+                        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                      </svg>
+                      {cardPhone}
+                    </p>
+                  {/if}
+
+                  <!-- Instagram -->
+                  {#if cardInstagram}
+                    <p style="margin: 0 0 4px; font-size: 12px; color: {t.footerText}; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: {t.footerText}; flex-shrink: 0;">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                        <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/>
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                      </svg>
+                      {cardInstagram.startsWith('@') ? cardInstagram : '@' + cardInstagram}
+                    </p>
+                  {/if}
+
+                  <!-- Address -->
+                  {#if cardAddress}
+                    <p style="margin: 0; font-size: 11px; color: {t.footerText}; display: flex; align-items: flex-start; justify-content: center; gap: 5px; line-height: 1.5;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: {t.footerText}; flex-shrink: 0; margin-top: 1px;">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      {cardAddress}
+                    </p>
+                  {/if}
                 </div>
+              {/if}
 
-              {/each}
-            {/if}
-          </div>
-
-          <!-- ── Footer ── -->
-          {#if cardFooter}
-            <div style="
-              padding: 14px 28px;
-              text-align: center;
-              background: {t.footerBg};
-              border-top: 1px solid {t.footerBorder};
-            ">
-              <span style="font-size: 12px; color: {t.footerText}; letter-spacing: 0.02em;">{cardFooter}</span>
             </div>
-          {/if}
+            <!-- end .cardapio-page -->
+
+          {/each}
+
         </div>
       </div>
     </div>
