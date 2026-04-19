@@ -17,16 +17,19 @@
   let loading = false;
   let previewWrapper;
 
-  // Contact info state
-  let storeName = '';
-  let cardPhone = '';
+  // Contact (manual)
   let cardInstagram = '';
-  let cardAddress = '';
   let showQRHint = false;
 
-  // Logo state
-  let logoBase64 = '';
-  let showLogo = true;
+  // Profile data (pulled from empresa_perfil)
+  let perfil = null;         // { nome_exibicao, contato, logo_url, endereco }
+  let perfilLogoBase64 = ''; // logo_url converted to base64 for html2canvas
+
+  // Profile field toggles — what to show in the cardápio
+  let showLogo = false;
+  let showStoreName = false;
+  let showPhone = false;
+  let showAddress = false;
 
   // "Do sistema" state
   let categorias = [];
@@ -221,7 +224,7 @@
   $: t = templates[theme];
 
   // ── Derived: has any contact footer content ─────────────────────────────
-  $: hasFooterContent = cardFooter || cardPhone || cardInstagram || cardAddress || showQRHint;
+  $: hasFooterContent = cardFooter || (perfil?.contato && showPhone) || cardInstagram || (perfil?.endereco && showAddress) || showQRHint;
 
   // ── Preview sections (computed) ─────────────────────────────────────────
   $: previewSections = mode === 'sistema'
@@ -263,8 +266,8 @@
   const PAGE_H = 525;    // total page height
   const PADDING_V = 16;  // top+bottom padding of sections area
 
-  // Adjust header height when logo is shown (+56px) or storeName is shown (+18px)
-  $: HEADER_H_ACTUAL = 128 + (logoBase64 && showLogo ? 56 : 0) + (storeName ? 18 : 0);
+  // Adjust header height when logo or store name is shown
+  $: HEADER_H_ACTUAL = 128 + (perfilLogoBase64 && showLogo ? 56 : 0) + (perfil?.nome_exibicao && showStoreName ? 18 : 0);
 
   $: effectiveSectionHeight = (section) =>
     SECTION_H + (twoColumn ? Math.ceil(section.items.length / 2) * ITEM_H : section.items.length * ITEM_H);
@@ -299,18 +302,10 @@
       localStorage.setItem('zeloPDV_cardapio_config', JSON.stringify({
         mode, theme, font,
         cardTitle, cardSubtitle, cardFooter,
-        storeName, cardPhone, cardInstagram, cardAddress,
-        showQRHint, twoColumn,
-        showLogo, itemBadges
+        cardInstagram, showQRHint, twoColumn,
+        showLogo, showStoreName, showPhone, showAddress,
+        itemBadges
       }));
-    } catch {}
-    // Save logo separately to handle QuotaExceededError from large base64
-    try {
-      if (logoBase64) {
-        localStorage.setItem('zeloPDV_cardapio_logo', logoBase64);
-      } else {
-        localStorage.removeItem('zeloPDV_cardapio_logo');
-      }
     } catch {}
   }
 
@@ -332,37 +327,50 @@
         if (c.cardTitle !== undefined) cardTitle = c.cardTitle;
         if (c.cardSubtitle !== undefined) cardSubtitle = c.cardSubtitle;
         if (c.cardFooter !== undefined) cardFooter = c.cardFooter;
-        if (c.storeName !== undefined) storeName = c.storeName;
-        if (c.cardPhone !== undefined) cardPhone = c.cardPhone;
         if (c.cardInstagram !== undefined) cardInstagram = c.cardInstagram;
-        if (c.cardAddress !== undefined) cardAddress = c.cardAddress;
         if (c.showQRHint !== undefined) showQRHint = c.showQRHint;
         if (c.twoColumn !== undefined) twoColumn = c.twoColumn;
         if (c.showLogo !== undefined) showLogo = c.showLogo;
+        if (c.showStoreName !== undefined) showStoreName = c.showStoreName;
+        if (c.showPhone !== undefined) showPhone = c.showPhone;
+        if (c.showAddress !== undefined) showAddress = c.showAddress;
         if (c.itemBadges !== undefined) itemBadges = c.itemBadges;
       }
-    } catch {}
-    // Restore logo base64 separately (stored in its own key to avoid JSON size bloat)
-    try {
-      const savedLogo = localStorage.getItem('zeloPDV_cardapio_logo');
-      if (savedLogo) logoBase64 = savedLogo;
     } catch {}
 
     loading = true;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const [catRes, prodRes] = await Promise.all([
+      const [catRes, prodRes, perfilRes] = await Promise.all([
         supabase.from('categorias').select('id, nome').eq('id_usuario', user.id).order('nome'),
         supabase.from('produtos').select('id, nome, preco, id_categoria')
           .eq('id_usuario', user.id)
           .or('ocultar_no_pdv.is.null,ocultar_no_pdv.eq.false')
-          .order('nome')
+          .order('nome'),
+        supabase.from('empresa_perfil').select('nome_exibicao, contato, logo_url, endereco').eq('user_id', user.id).maybeSingle()
       ]);
       if (catRes.error || prodRes.error) throw new Error('query_error');
       categorias = catRes.data || [];
       produtos = prodRes.data || [];
       selectedCatIds = new Set(categorias.map(c => c.id));
+      if (perfilRes.data) {
+        perfil = perfilRes.data;
+        if (perfil.logo_url) {
+          try {
+            const logoRes = await fetch(perfil.logo_url);
+            const blob = await logoRes.blob();
+            perfilLogoBase64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = e => resolve(e.target.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+          } catch {
+            perfilLogoBase64 = '';
+          }
+        }
+      }
     } catch {
       addToast('Erro ao carregar produtos', 'error');
     } finally {
@@ -488,17 +496,6 @@
       exporting = false;
       exportingPDF = false;
     }
-  }
-
-  function handleLogoUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      logoBase64 = ev.target.result;
-      showLogo = true;
-    };
-    reader.readAsDataURL(file);
   }
 
   function fmtPrice(p) {
@@ -666,126 +663,132 @@
         </div>
       </div>
 
-      <!-- Contact info -->
+      <!-- Dados do Perfil -->
       <div class="rounded-xl p-4 space-y-3" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
-        <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Informações de Contato</p>
+        <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Dados do Perfil</p>
 
-        <!-- Logo upload -->
-        <div>
-          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
-            Logo
-            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
-          </label>
+        {#if !perfil && loading}
+          <p class="text-xs" style="color: var(--text-muted);">Carregando perfil...</p>
+        {:else if perfil}
 
-          {#if logoBase64}
-            <!-- Preview + controls -->
-            <div class="flex items-center gap-3">
-              <img src={logoBase64} alt="Logo" class="w-14 h-14 object-contain rounded-lg flex-shrink-0"
-                style="background: var(--bg-input); border: 1px solid var(--border-subtle);" />
-              <div class="flex flex-col gap-1.5 flex-1">
-                <!-- Show/hide toggle -->
-                <label class="flex items-center gap-2 cursor-pointer select-none">
-                  <div class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
-                    style="background: {showLogo ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showLogo ? 'var(--primary)' : 'var(--border-subtle)'};">
-                    <input type="checkbox" bind:checked={showLogo} class="sr-only" />
-                    <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
-                      style="transform: translateX({showLogo ? '14px' : '0px'});"></span>
-                  </div>
-                  <span class="text-xs" style="color: var(--text-label);">Exibir no cardápio</span>
-                </label>
-                <!-- Remove button -->
-                <button on:click={() => { logoBase64 = ''; showLogo = true; }}
-                  class="text-xs text-left transition-colors"
-                  style="color: var(--error); background: none; border: none; cursor: pointer; padding: 0;">
-                  Remover logo
-                </button>
+          <!-- Logo row -->
+          <div class="flex items-center justify-between gap-3 py-1">
+            <div class="flex items-center gap-2 min-w-0">
+              {#if perfilLogoBase64}
+                <img src={perfilLogoBase64} alt="Logo" class="w-10 h-10 object-contain rounded-lg flex-shrink-0"
+                  style="background: var(--bg-input); border: 1px solid var(--border-subtle);" />
+              {:else}
+                <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center"
+                  style="background: var(--bg-input); border: 1px solid var(--border-subtle);">
+                  <span class="text-xs" style="color: var(--text-muted);">—</span>
+                </div>
+              {/if}
+              <div class="min-w-0">
+                <p class="text-xs font-medium" style="color: var(--text-label);">Logo</p>
+                {#if !perfil.logo_url}
+                  <a href="/perfil" class="text-xs" style="color: var(--primary);">Adicionar no perfil →</a>
+                {:else}
+                  <p class="text-xs" style="color: var(--text-muted);">Do perfil</p>
+                {/if}
               </div>
             </div>
-          {:else}
-            <!-- Upload zone -->
-            <label class="flex flex-col items-center gap-2 py-4 rounded-xl cursor-pointer transition-colors"
-              style="border: 1.5px dashed var(--border-subtle); background: var(--bg-input);"
-              on:mouseenter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-              on:mouseleave={e => e.currentTarget.style.borderColor = 'var(--border-subtle)'}>
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-              <span class="text-xs" style="color: var(--text-muted);">Clique para enviar (PNG, JPG)</span>
-              <input type="file" accept="image/*" class="sr-only" on:change={handleLogoUpload} />
+            <label class="flex items-center gap-2 cursor-pointer select-none flex-shrink-0">
+              <span class="text-xs" style="color: var(--text-muted);">Exibir</span>
+              <div class="relative w-8 h-4 rounded-full transition-colors"
+                style="background: {showLogo ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showLogo ? 'var(--primary)' : 'var(--border-subtle)'};">
+                <input type="checkbox" bind:checked={showLogo} class="sr-only" />
+                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
+                  style="transform: translateX({showLogo ? '14px' : '0px'});"></span>
+              </div>
             </label>
-          {/if}
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
-            Nome do Estabelecimento
-            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
-          </label>
-          <input
-            type="text"
-            bind:value={storeName}
-            placeholder="Ex: Lanchonete do Zé"
-            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-          />
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
-            Telefone / WhatsApp
-            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
-          </label>
-          <input
-            type="text"
-            bind:value={cardPhone}
-            placeholder="(00) 00000-0000"
-            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-          />
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
-            Instagram
-            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
-          </label>
-          <input
-            type="text"
-            bind:value={cardInstagram}
-            placeholder="@seulanche"
-            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-          />
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
-            Endereço
-            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
-          </label>
-          <input
-            type="text"
-            bind:value={cardAddress}
-            placeholder="Rua das Flores, 123 — Centro"
-            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-          />
-        </div>
-
-        <!-- showQRHint toggle -->
-        <label class="flex items-center gap-3 cursor-pointer py-1 select-none">
-          <div
-            class="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
-            style="background: {showQRHint ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showQRHint ? 'var(--primary)' : 'var(--border-subtle)'};"
-          >
-            <input type="checkbox" bind:checked={showQRHint} class="sr-only" />
-            <span
-              class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
-              style="transform: translateX({showQRHint ? '16px' : '0px'});"
-            ></span>
           </div>
-          <span class="text-xs font-medium" style="color: var(--text-label);">Mostrar aviso "Peça pelo WhatsApp"</span>
-        </label>
+
+          <!-- Nome row -->
+          <div class="flex items-center justify-between gap-3 py-1">
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-medium" style="color: var(--text-label);">Nome</p>
+              <p class="text-xs truncate" style="color: var(--text-muted);">
+                {perfil.nome_exibicao || '—'}
+                {#if !perfil.nome_exibicao}<a href="/perfil" style="color: var(--primary);">Adicionar →</a>{/if}
+              </p>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer select-none flex-shrink-0">
+              <span class="text-xs" style="color: var(--text-muted);">Exibir</span>
+              <div class="relative w-8 h-4 rounded-full transition-colors"
+                style="background: {showStoreName ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showStoreName ? 'var(--primary)' : 'var(--border-subtle)'};">
+                <input type="checkbox" bind:checked={showStoreName} class="sr-only" />
+                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
+                  style="transform: translateX({showStoreName ? '14px' : '0px'});"></span>
+              </div>
+            </label>
+          </div>
+
+          <!-- Telefone row -->
+          <div class="flex items-center justify-between gap-3 py-1">
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-medium" style="color: var(--text-label);">Telefone</p>
+              <p class="text-xs truncate" style="color: var(--text-muted);">
+                {perfil.contato || '—'}
+                {#if !perfil.contato}<a href="/perfil" style="color: var(--primary);">Adicionar →</a>{/if}
+              </p>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer select-none flex-shrink-0">
+              <span class="text-xs" style="color: var(--text-muted);">Exibir</span>
+              <div class="relative w-8 h-4 rounded-full transition-colors"
+                style="background: {showPhone ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showPhone ? 'var(--primary)' : 'var(--border-subtle)'};">
+                <input type="checkbox" bind:checked={showPhone} class="sr-only" />
+                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
+                  style="transform: translateX({showPhone ? '14px' : '0px'});"></span>
+              </div>
+            </label>
+          </div>
+
+          <!-- Endereço row -->
+          <div class="flex items-center justify-between gap-3 py-1">
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-medium" style="color: var(--text-label);">Endereço</p>
+              <p class="text-xs truncate" style="color: var(--text-muted);">
+                {perfil.endereco || '—'}
+                {#if !perfil.endereco}<a href="/perfil" style="color: var(--primary);">Adicionar →</a>{/if}
+              </p>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer select-none flex-shrink-0">
+              <span class="text-xs" style="color: var(--text-muted);">Exibir</span>
+              <div class="relative w-8 h-4 rounded-full transition-colors"
+                style="background: {showAddress ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showAddress ? 'var(--primary)' : 'var(--border-subtle)'};">
+                <input type="checkbox" bind:checked={showAddress} class="sr-only" />
+                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
+                  style="transform: translateX({showAddress ? '14px' : '0px'});"></span>
+              </div>
+            </label>
+          </div>
+
+        {:else}
+          <p class="text-xs" style="color: var(--text-muted);">
+            Perfil não encontrado. <a href="/perfil" style="color: var(--primary);">Configurar perfil →</a>
+          </p>
+        {/if}
+
+        <div class="pt-1" style="border-top: 1px solid var(--border-subtle);">
+          <!-- Instagram (manual) -->
+          <label class="block text-xs font-medium mb-1.5 mt-2" style="color: var(--text-label);">Instagram
+            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
+          </label>
+          <input type="text" bind:value={cardInstagram} placeholder="@seulanche"
+            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none mb-2"
+            style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" />
+
+          <!-- WhatsApp hint toggle -->
+          <label class="flex items-center gap-3 cursor-pointer py-1 select-none">
+            <div class="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
+              style="background: {showQRHint ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showQRHint ? 'var(--primary)' : 'var(--border-subtle)'};">
+              <input type="checkbox" bind:checked={showQRHint} class="sr-only" />
+              <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+                style="transform: translateX({showQRHint ? '16px' : '0px'});"></span>
+            </div>
+            <span class="text-xs font-medium" style="color: var(--text-label);">Mostrar "Peça pelo WhatsApp"</span>
+          </label>
+        </div>
       </div>
 
       <!-- ─── DO SISTEMA ─────────────────────────────────────────────────── -->
@@ -1120,12 +1123,12 @@
                   border-bottom: 2px solid {t.divider};
                   flex-shrink: 0;
                 ">
-                  {#if logoBase64 && showLogo}
+                  {#if perfilLogoBase64 && showLogo}
                     <div style="display: block; text-align: center; margin-bottom: 8px;">
-                      <img src={logoBase64} alt="Logo" style="max-height: 48px; max-width: 120px; object-fit: contain; display: inline-block;" />
+                      <img src={perfilLogoBase64} alt="Logo" style="max-height: 48px; max-width: 120px; object-fit: contain; display: inline-block;" />
                     </div>
                   {/if}
-                  {#if storeName}
+                  {#if perfil?.nome_exibicao && showStoreName}
                     <p style="
                       margin: 0 0 6px;
                       font-size: 11px;
@@ -1134,7 +1137,7 @@
                       letter-spacing: 0.18em;
                       text-transform: uppercase;
                       font-family: {currentFont.family};
-                    ">{storeName}</p>
+                    ">{perfil.nome_exibicao}</p>
                   {/if}
 
                   <h1 style="
@@ -1223,6 +1226,8 @@
                                 font-weight: 600;
                                 color: {t.itemText};
                                 line-height: 1.3;
+                                text-transform: uppercase;
+                                letter-spacing: 0.03em;
                               ">{item.name || '—'}</span>
                               {#if item.isDestaque}
                                 <span style="
@@ -1265,6 +1270,8 @@
                                   color: {t.descColor};
                                   font-style: italic;
                                   line-height: 1.4;
+                                  text-transform: uppercase;
+                                  letter-spacing: 0.02em;
                                 ">{item.description}</span>
                               {/if}
                             </div>
@@ -1317,9 +1324,9 @@
                   {/if}
 
                   <!-- Phone -->
-                  {#if cardPhone}
+                  {#if perfil?.contato && showPhone}
                     <div style="margin: 0 0 4px; font-size: 12px; color: {t.footerText}; text-align: center; letter-spacing: 0.01em;">
-                      ☎&#xFE0E;&nbsp;{cardPhone}
+                      ☎&#xFE0E;&nbsp;{perfil.contato}
                     </div>
                   {/if}
 
@@ -1331,9 +1338,9 @@
                   {/if}
 
                   <!-- Address -->
-                  {#if cardAddress}
+                  {#if perfil?.endereco && showAddress}
                     <div style="margin: 0; font-size: 11px; color: {t.footerText}; text-align: center; line-height: 1.5; letter-spacing: 0.01em;">
-                      &#9679;&nbsp;{cardAddress}
+                      &#9679;&nbsp;{perfil.endereco}
                     </div>
                   {/if}
                 </div>
