@@ -124,7 +124,9 @@
       const [catRes, prodRes] = await Promise.all([
         supabase.from('categorias').select('id, nome').eq('id_usuario', user.id).order('nome'),
         supabase.from('produtos').select('id, nome, preco, id_categoria')
-          .eq('id_usuario', user.id).eq('ativo', true).order('nome')
+          .eq('id_usuario', user.id)
+          .or('ocultar_no_pdv.is.null,ocultar_no_pdv.eq.false')
+          .order('nome')
       ]);
       if (catRes.error || prodRes.error) throw new Error('query_error');
       categorias = catRes.data || [];
