@@ -24,12 +24,17 @@
   let cardAddress = '';
   let showQRHint = false;
 
+  // Logo state
+  let logoBase64 = '';
+  let showLogo = true;
+
   // "Do sistema" state
   let categorias = [];
   let produtos = [];
   let selectedCatIds = new Set();
   let itemOverrides = {}; // prodId -> { price, description }
   let destaqueId = null; // id of the highlighted product
+  let itemBadges = {};   // prodId (or item.id for "do zero") -> 'novo' | 'promo' | null
 
   // "Do zero" state
   let sections = [{ id: uid(), name: 'Seção', items: [] }];
@@ -233,7 +238,8 @@
                 ? itemOverrides[p.id].price
                 : Number(p.preco).toFixed(2).replace('.', ','),
               description: itemOverrides[p.id]?.description ?? '',
-              isDestaque: p.id === destaqueId
+              isDestaque: p.id === destaqueId,
+              badge: itemBadges[p.id] || null
             }))
         }))
         .filter(s => s.items.length > 0)
@@ -244,17 +250,21 @@
           name: i.name,
           price: i.price || '',
           description: i.description || '',
-          isDestaque: i.isDestaque || false
+          isDestaque: i.isDestaque || false,
+          badge: i.badge || null
         }))
       }));
 
   // ── Page split algorithm ─────────────────────────────────────────────────
-  const HEADER_H = 128;  // first page header (store name + title + subtitle + padding)
+  const HEADER_H = 128;  // first page header base (store name + title + subtitle + padding)
   const FOOTER_H = 84;   // last page footer (approximated generously)
   const SECTION_H = 36;  // section label bar height
   const ITEM_H = 42;     // each product row height
   const PAGE_H = 525;    // total page height
   const PADDING_V = 16;  // top+bottom padding of sections area
+
+  // Adjust header height when logo is shown (+56px) or storeName is shown (+18px)
+  $: HEADER_H_ACTUAL = 128 + (logoBase64 && showLogo ? 56 : 0) + (storeName ? 18 : 0);
 
   $: effectiveSectionHeight = (section) =>
     SECTION_H + (twoColumn ? Math.ceil(section.items.length / 2) * ITEM_H : section.items.length * ITEM_H);
@@ -263,12 +273,12 @@
     if (previewSections.length === 0) return [[]];
     const result = [];
     let current = [];
-    let usedH = HEADER_H + PADDING_V; // first page starts with header
+    let usedH = HEADER_H_ACTUAL + PADDING_V; // first page starts with header
 
     for (const section of previewSections) {
       const sH = effectiveSectionHeight(section);
       const isFirstPage = result.length === 0;
-      const budget = PAGE_H - (isFirstPage ? HEADER_H + PADDING_V : PADDING_V);
+      const budget = PAGE_H - (isFirstPage ? HEADER_H_ACTUAL + PADDING_V : PADDING_V);
 
       if (current.length > 0 && usedH + sH > budget) {
         result.push(current);
@@ -285,12 +295,23 @@
 
   // ── localStorage config persistence ─────────────────────────────────────
   $: if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('zeloPDV_cardapio_config', JSON.stringify({
-      mode, theme, font,
-      cardTitle, cardSubtitle, cardFooter,
-      storeName, cardPhone, cardInstagram, cardAddress,
-      showQRHint, twoColumn
-    }));
+    try {
+      localStorage.setItem('zeloPDV_cardapio_config', JSON.stringify({
+        mode, theme, font,
+        cardTitle, cardSubtitle, cardFooter,
+        storeName, cardPhone, cardInstagram, cardAddress,
+        showQRHint, twoColumn,
+        showLogo, itemBadges
+      }));
+    } catch {}
+    // Save logo separately to handle QuotaExceededError from large base64
+    try {
+      if (logoBase64) {
+        localStorage.setItem('zeloPDV_cardapio_logo', logoBase64);
+      } else {
+        localStorage.removeItem('zeloPDV_cardapio_logo');
+      }
+    } catch {}
   }
 
   // ── Data loading ────────────────────────────────────────────────────────
@@ -317,7 +338,14 @@
         if (c.cardAddress !== undefined) cardAddress = c.cardAddress;
         if (c.showQRHint !== undefined) showQRHint = c.showQRHint;
         if (c.twoColumn !== undefined) twoColumn = c.twoColumn;
+        if (c.showLogo !== undefined) showLogo = c.showLogo;
+        if (c.itemBadges !== undefined) itemBadges = c.itemBadges;
       }
+    } catch {}
+    // Restore logo base64 separately (stored in its own key to avoid JSON size bloat)
+    try {
+      const savedLogo = localStorage.getItem('zeloPDV_cardapio_logo');
+      if (savedLogo) logoBase64 = savedLogo;
     } catch {}
 
     loading = true;
@@ -352,7 +380,7 @@
   function addItem(sectionId) {
     sections = sections.map(s =>
       s.id === sectionId
-        ? { ...s, items: [...s.items, { id: uid(), name: '', price: '', description: '', isDestaque: false }] }
+        ? { ...s, items: [...s.items, { id: uid(), name: '', price: '', description: '', isDestaque: false, badge: null }] }
         : s
     );
   }
@@ -460,6 +488,17 @@
       exporting = false;
       exportingPDF = false;
     }
+  }
+
+  function handleLogoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      logoBase64 = ev.target.result;
+      showLogo = true;
+    };
+    reader.readAsDataURL(file);
   }
 
   function fmtPrice(p) {
@@ -631,6 +670,52 @@
       <div class="rounded-xl p-4 space-y-3" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
         <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Informações de Contato</p>
 
+        <!-- Logo upload -->
+        <div>
+          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
+            Logo
+            <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
+          </label>
+
+          {#if logoBase64}
+            <!-- Preview + controls -->
+            <div class="flex items-center gap-3">
+              <img src={logoBase64} alt="Logo" class="w-14 h-14 object-contain rounded-lg flex-shrink-0"
+                style="background: var(--bg-input); border: 1px solid var(--border-subtle);" />
+              <div class="flex flex-col gap-1.5 flex-1">
+                <!-- Show/hide toggle -->
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                  <div class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
+                    style="background: {showLogo ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showLogo ? 'var(--primary)' : 'var(--border-subtle)'};">
+                    <input type="checkbox" bind:checked={showLogo} class="sr-only" />
+                    <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
+                      style="transform: translateX({showLogo ? '14px' : '0px'});"></span>
+                  </div>
+                  <span class="text-xs" style="color: var(--text-label);">Exibir no cardápio</span>
+                </label>
+                <!-- Remove button -->
+                <button on:click={() => { logoBase64 = ''; showLogo = true; }}
+                  class="text-xs text-left transition-colors"
+                  style="color: var(--error); background: none; border: none; cursor: pointer; padding: 0;">
+                  Remover logo
+                </button>
+              </div>
+            </div>
+          {:else}
+            <!-- Upload zone -->
+            <label class="flex flex-col items-center gap-2 py-4 rounded-xl cursor-pointer transition-colors"
+              style="border: 1.5px dashed var(--border-subtle); background: var(--bg-input);"
+              on:mouseenter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+              on:mouseleave={e => e.currentTarget.style.borderColor = 'var(--border-subtle)'}>
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span class="text-xs" style="color: var(--text-muted);">Clique para enviar (PNG, JPG)</span>
+              <input type="file" accept="image/*" class="sr-only" on:change={handleLogoUpload} />
+            </label>
+          {/if}
+        </div>
+
         <div>
           <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
             Nome do Estabelecimento
@@ -758,6 +843,27 @@
                                 class="flex-shrink-0 text-base leading-none p-0.5 transition-colors"
                                 style="color: {destaqueId === prod.id ? '#f59e0b' : 'var(--text-muted)'}; background: none; border: none; cursor: pointer;"
                               >★</button>
+                              <!-- Badge toggles -->
+                              <button
+                                on:click={() => itemBadges = { ...itemBadges, [prod.id]: itemBadges[prod.id] === 'novo' ? null : 'novo' }}
+                                title="Marcar como Novo"
+                                class="flex-shrink-0 font-bold transition-all"
+                                style="
+                                  background: {itemBadges[prod.id] === 'novo' ? '#3b82f6' : 'var(--bg-input)'};
+                                  color: {itemBadges[prod.id] === 'novo' ? '#fff' : 'var(--text-muted)'};
+                                  border: 1px solid {itemBadges[prod.id] === 'novo' ? '#3b82f6' : 'var(--border-subtle)'};
+                                  font-size: 9px; line-height: 1; padding: 2px 5px; border-radius: 4px; cursor: pointer;
+                                ">NOVO</button>
+                              <button
+                                on:click={() => itemBadges = { ...itemBadges, [prod.id]: itemBadges[prod.id] === 'promo' ? null : 'promo' }}
+                                title="Marcar como Em Promoção"
+                                class="flex-shrink-0 font-bold transition-all"
+                                style="
+                                  background: {itemBadges[prod.id] === 'promo' ? '#ef4444' : 'var(--bg-input)'};
+                                  color: {itemBadges[prod.id] === 'promo' ? '#fff' : 'var(--text-muted)'};
+                                  border: 1px solid {itemBadges[prod.id] === 'promo' ? '#ef4444' : 'var(--border-subtle)'};
+                                  font-size: 9px; line-height: 1; padding: 2px 5px; border-radius: 4px; cursor: pointer;
+                                ">PROMO</button>
                               <input
                                 type="text"
                                 value={getOv(prod.id, 'price', Number(prod.preco).toFixed(2).replace('.', ','))}
@@ -831,6 +937,27 @@
                         class="flex-shrink-0 text-base leading-none p-0.5 transition-colors"
                         style="color: {item.isDestaque ? '#f59e0b' : 'var(--text-muted)'}; background: none; border: none; cursor: pointer;"
                       >★</button>
+                      <!-- Badge toggles for "do zero" items -->
+                      <button
+                        on:click={() => updateItem(section.id, item.id, 'badge', item.badge === 'novo' ? null : 'novo')}
+                        title="Marcar como Novo"
+                        class="flex-shrink-0 font-bold transition-all"
+                        style="
+                          background: {item.badge === 'novo' ? '#3b82f6' : 'var(--bg-input)'};
+                          color: {item.badge === 'novo' ? '#fff' : 'var(--text-muted)'};
+                          border: 1px solid {item.badge === 'novo' ? '#3b82f6' : 'var(--border-subtle)'};
+                          font-size: 9px; line-height: 1; padding: 2px 5px; border-radius: 4px; cursor: pointer;
+                        ">NOVO</button>
+                      <button
+                        on:click={() => updateItem(section.id, item.id, 'badge', item.badge === 'promo' ? null : 'promo')}
+                        title="Marcar como Em Promoção"
+                        class="flex-shrink-0 font-bold transition-all"
+                        style="
+                          background: {item.badge === 'promo' ? '#ef4444' : 'var(--bg-input)'};
+                          color: {item.badge === 'promo' ? '#fff' : 'var(--text-muted)'};
+                          border: 1px solid {item.badge === 'promo' ? '#ef4444' : 'var(--border-subtle)'};
+                          font-size: 9px; line-height: 1; padding: 2px 5px; border-radius: 4px; cursor: pointer;
+                        ">PROMO</button>
                       <input
                         type="text"
                         value={item.name}
@@ -993,6 +1120,11 @@
                   border-bottom: 2px solid {t.divider};
                   flex-shrink: 0;
                 ">
+                  {#if logoBase64 && showLogo}
+                    <div style="display: block; text-align: center; margin-bottom: 8px;">
+                      <img src={logoBase64} alt="Logo" style="max-height: 48px; max-width: 120px; object-fit: contain; display: inline-block;" />
+                    </div>
+                  {/if}
                   {#if storeName}
                     <p style="
                       margin: 0 0 6px;
@@ -1106,6 +1238,25 @@
                                   vertical-align: middle;
                                 ">DESTAQUE</span>
                               {/if}
+                              {#if item.badge === 'novo'}
+                                <span style="
+                                  display: inline-block; margin-left: 5px;
+                                  padding: 1px 5px; border-radius: 8px;
+                                  font-size: 8px; font-weight: 800;
+                                  background: #3b82f6; color: #fff;
+                                  letter-spacing: 0.06em; vertical-align: middle;
+                                  text-transform: uppercase;
+                                ">NOVO</span>
+                              {:else if item.badge === 'promo'}
+                                <span style="
+                                  display: inline-block; margin-left: 5px;
+                                  padding: 1px 5px; border-radius: 8px;
+                                  font-size: 8px; font-weight: 800;
+                                  background: #ef4444; color: #fff;
+                                  letter-spacing: 0.06em; vertical-align: middle;
+                                  text-transform: uppercase;
+                                ">PROMO</span>
+                              {/if}
                               {#if item.description}
                                 <span style="
                                   display: block;
@@ -1167,35 +1318,23 @@
 
                   <!-- Phone -->
                   {#if cardPhone}
-                    <p style="margin: 0 0 4px; font-size: 12px; color: {t.footerText}; display: flex; align-items: center; justify-content: center; gap: 5px;">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: {t.footerText}; flex-shrink: 0;">
-                        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
-                      </svg>
-                      {cardPhone}
-                    </p>
+                    <div style="margin: 0 0 4px; font-size: 12px; color: {t.footerText}; text-align: center; letter-spacing: 0.01em;">
+                      ☎&#xFE0E;&nbsp;{cardPhone}
+                    </div>
                   {/if}
 
                   <!-- Instagram -->
                   {#if cardInstagram}
-                    <p style="margin: 0 0 4px; font-size: 12px; color: {t.footerText}; display: flex; align-items: center; justify-content: center; gap: 5px;">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: {t.footerText}; flex-shrink: 0;">
-                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                        <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/>
-                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-                      </svg>
-                      {cardInstagram.startsWith('@') ? cardInstagram : '@' + cardInstagram}
-                    </p>
+                    <div style="margin: 0 0 4px; font-size: 12px; color: {t.footerText}; text-align: center; letter-spacing: 0.01em;">
+                      &#9642;&nbsp;{cardInstagram.startsWith('@') ? cardInstagram : '@' + cardInstagram}
+                    </div>
                   {/if}
 
                   <!-- Address -->
                   {#if cardAddress}
-                    <p style="margin: 0; font-size: 11px; color: {t.footerText}; display: flex; align-items: flex-start; justify-content: center; gap: 5px; line-height: 1.5;">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: {t.footerText}; flex-shrink: 0; margin-top: 1px;">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-                        <circle cx="12" cy="10" r="3"/>
-                      </svg>
-                      {cardAddress}
-                    </p>
+                    <div style="margin: 0; font-size: 11px; color: {t.footerText}; text-align: center; line-height: 1.5; letter-spacing: 0.01em;">
+                      &#9679;&nbsp;{cardAddress}
+                    </div>
                   {/if}
                 </div>
               {/if}
