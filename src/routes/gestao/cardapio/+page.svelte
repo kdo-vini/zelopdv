@@ -7,6 +7,8 @@
   // ── State ──────────────────────────────────────────────────────────────
   let mode = 'sistema'; // 'sistema' | 'zero'
   let theme = 'elegante';
+  let font = 'classico';
+  let twoColumn = false;
   let cardTitle = 'Cardápio';
   let cardSubtitle = '';
   let cardFooter = '';
@@ -27,12 +29,39 @@
   let produtos = [];
   let selectedCatIds = new Set();
   let itemOverrides = {}; // prodId -> { price, description }
+  let destaqueId = null; // id of the highlighted product
 
   // "Do zero" state
   let sections = [{ id: uid(), name: 'Seção', items: [] }];
 
   function uid() {
     return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  // ── Fonts ───────────────────────────────────────────────────────────────
+  const fonts = {
+    classico:  { label: 'Clássico',  family: "'Playfair Display', Georgia, serif",        google: 'Playfair+Display:wght@700;800' },
+    moderno:   { label: 'Moderno',   family: "'Montserrat', 'Helvetica Neue', sans-serif", google: 'Montserrat:wght@600;700;800' },
+    artesanal: { label: 'Artesanal', family: "'Dancing Script', cursive",                 google: 'Dancing+Script:wght@700' },
+    impacto:   { label: 'Impacto',   family: "'Oswald', 'Arial Narrow', sans-serif",      google: 'Oswald:wght@600;700' },
+    suave:     { label: 'Suave',     family: "'Lato', 'Segoe UI', sans-serif",            google: 'Lato:wght@700;900' },
+  };
+
+  $: currentFont = fonts[font];
+
+  function loadGoogleFont(googleParam) {
+    const id = 'gf-' + googleParam.split(':')[0];
+    if (document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${googleParam}&display=swap`;
+    document.head.appendChild(link);
+  }
+
+  // Preload on font change
+  $: if (typeof document !== 'undefined' && currentFont) {
+    loadGoogleFont(currentFont.google);
   }
 
   // ── Templates ──────────────────────────────────────────────────────────
@@ -198,20 +227,24 @@
           items: produtos
             .filter(p => p.id_categoria === c.id)
             .map(p => ({
+              id: p.id,
               name: p.nome,
               price: itemOverrides[p.id]?.price !== undefined
                 ? itemOverrides[p.id].price
                 : Number(p.preco).toFixed(2).replace('.', ','),
-              description: itemOverrides[p.id]?.description ?? ''
+              description: itemOverrides[p.id]?.description ?? '',
+              isDestaque: p.id === destaqueId
             }))
         }))
         .filter(s => s.items.length > 0)
     : sections.map(s => ({
         name: s.name,
         items: s.items.map(i => ({
+          id: i.id,
           name: i.name,
           price: i.price || '',
-          description: i.description || ''
+          description: i.description || '',
+          isDestaque: i.isDestaque || false
         }))
       }));
 
@@ -223,6 +256,9 @@
   const PAGE_H = 525;    // total page height
   const PADDING_V = 16;  // top+bottom padding of sections area
 
+  $: effectiveSectionHeight = (section) =>
+    SECTION_H + (twoColumn ? Math.ceil(section.items.length / 2) * ITEM_H : section.items.length * ITEM_H);
+
   $: pages = (() => {
     if (previewSections.length === 0) return [[]];
     const result = [];
@@ -230,7 +266,7 @@
     let usedH = HEADER_H + PADDING_V; // first page starts with header
 
     for (const section of previewSections) {
-      const sH = SECTION_H + section.items.length * ITEM_H;
+      const sH = effectiveSectionHeight(section);
       const isFirstPage = result.length === 0;
       const budget = PAGE_H - (isFirstPage ? HEADER_H + PADDING_V : PADDING_V);
 
@@ -247,8 +283,43 @@
     return result;
   })();
 
+  // ── localStorage config persistence ─────────────────────────────────────
+  $: if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('zeloPDV_cardapio_config', JSON.stringify({
+      mode, theme, font,
+      cardTitle, cardSubtitle, cardFooter,
+      storeName, cardPhone, cardInstagram, cardAddress,
+      showQRHint, twoColumn
+    }));
+  }
+
   // ── Data loading ────────────────────────────────────────────────────────
   onMount(async () => {
+    // Load all Google Fonts upfront so exports render correctly
+    for (const f of Object.values(fonts)) {
+      loadGoogleFont(f.google);
+    }
+
+    // Restore saved config
+    try {
+      const saved = localStorage.getItem('zeloPDV_cardapio_config');
+      if (saved) {
+        const c = JSON.parse(saved);
+        if (c.mode) mode = c.mode;
+        if (c.theme && templates[c.theme]) theme = c.theme;
+        if (c.font && fonts[c.font]) font = c.font;
+        if (c.cardTitle !== undefined) cardTitle = c.cardTitle;
+        if (c.cardSubtitle !== undefined) cardSubtitle = c.cardSubtitle;
+        if (c.cardFooter !== undefined) cardFooter = c.cardFooter;
+        if (c.storeName !== undefined) storeName = c.storeName;
+        if (c.cardPhone !== undefined) cardPhone = c.cardPhone;
+        if (c.cardInstagram !== undefined) cardInstagram = c.cardInstagram;
+        if (c.cardAddress !== undefined) cardAddress = c.cardAddress;
+        if (c.showQRHint !== undefined) showQRHint = c.showQRHint;
+        if (c.twoColumn !== undefined) twoColumn = c.twoColumn;
+      }
+    } catch {}
+
     loading = true;
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -281,7 +352,7 @@
   function addItem(sectionId) {
     sections = sections.map(s =>
       s.id === sectionId
-        ? { ...s, items: [...s.items, { id: uid(), name: '', price: '', description: '' }] }
+        ? { ...s, items: [...s.items, { id: uid(), name: '', price: '', description: '', isDestaque: false }] }
         : s
     );
   }
@@ -320,6 +391,7 @@
     if (type === 'jpg') exporting = true;
     else exportingPDF = true;
     try {
+      await document.fonts.ready;
       const { default: html2canvas } = await import('html2canvas');
       const pageEls = previewWrapper.querySelectorAll('.cardapio-page');
 
@@ -446,7 +518,7 @@
         </button>
       </div>
 
-      <!-- General settings -->
+      <!-- General settings — Personalização -->
       <div class="rounded-xl p-4 space-y-3" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
         <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Personalização</p>
 
@@ -487,6 +559,71 @@
             class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
             style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
           />
+        </div>
+
+        <!-- 2-column layout toggle -->
+        <label class="flex items-center gap-3 cursor-pointer py-1 select-none">
+          <div
+            class="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
+            style="background: {twoColumn ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {twoColumn ? 'var(--primary)' : 'var(--border-subtle)'};"
+          >
+            <input type="checkbox" bind:checked={twoColumn} class="sr-only" />
+            <span
+              class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+              style="transform: translateX({twoColumn ? '16px' : '0px'});"
+            ></span>
+          </div>
+          <span class="text-xs font-medium" style="color: var(--text-label);">Layout 2 colunas (mais itens por página)</span>
+        </label>
+      </div>
+
+      <!-- Font selector -->
+      <div class="rounded-xl p-4" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
+        <p class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-muted);">Fonte</p>
+        <div class="grid grid-cols-2 gap-2">
+          {#each Object.entries(fonts) as [key, f]}
+            {@const active = font === key}
+            <button
+              on:click={() => font = key}
+              class="py-2.5 px-3 rounded-xl text-sm transition-all text-left"
+              style="
+                border: 2px solid {active ? 'var(--primary)' : 'var(--border-subtle)'};
+                background: {active ? 'var(--accent-light)' : 'var(--bg-input)'};
+                color: {active ? 'var(--primary)' : 'var(--text-label)'};
+                font-family: {f.family};
+                font-weight: 700;
+              "
+            >{f.label}</button>
+          {/each}
+        </div>
+      </div>
+
+      <!-- Theme selector — 2-column grid to accommodate 8 themes -->
+      <div class="rounded-xl p-4" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
+        <p class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-muted);">Tema Visual</p>
+        <div class="grid grid-cols-4 gap-2">
+          {#each Object.entries(templates) as [key, tmpl]}
+            {@const active = theme === key}
+            <button
+              on:click={() => theme = key}
+              class="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border-2 transition-all"
+              style="
+                border-color: {active ? 'var(--primary)' : 'transparent'};
+                outline: {active ? '2px solid var(--primary)' : 'none'};
+                background: {active ? 'var(--accent-light)' : 'var(--bg-input)'};
+              "
+              title="Tema {tmpl.label}"
+            >
+              <div
+                class="w-7 h-7 rounded-lg border-2"
+                style="
+                  background: {tmpl.swatch};
+                  border-color: {active ? 'var(--primary)' : 'var(--border-subtle)'};
+                "
+              ></div>
+              <span class="text-xs font-medium leading-tight text-center" style="color: {active ? 'var(--primary)' : 'var(--text-muted)'};">{tmpl.label}</span>
+            </button>
+          {/each}
         </div>
       </div>
 
@@ -566,35 +703,6 @@
         </label>
       </div>
 
-      <!-- Theme selector — 2-column grid to accommodate 8 themes -->
-      <div class="rounded-xl p-4" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
-        <p class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-muted);">Tema Visual</p>
-        <div class="grid grid-cols-4 gap-2">
-          {#each Object.entries(templates) as [key, tmpl]}
-            {@const active = theme === key}
-            <button
-              on:click={() => theme = key}
-              class="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border-2 transition-all"
-              style="
-                border-color: {active ? 'var(--primary)' : 'transparent'};
-                outline: {active ? '2px solid var(--primary)' : 'none'};
-                background: {active ? 'var(--accent-light)' : 'var(--bg-input)'};
-              "
-              title="Tema {tmpl.label}"
-            >
-              <div
-                class="w-7 h-7 rounded-lg border-2"
-                style="
-                  background: {tmpl.swatch};
-                  border-color: {active ? 'var(--primary)' : 'var(--border-subtle)'};
-                "
-              ></div>
-              <span class="text-xs font-medium leading-tight text-center" style="color: {active ? 'var(--primary)' : 'var(--text-muted)'};">{tmpl.label}</span>
-            </button>
-          {/each}
-        </div>
-      </div>
-
       <!-- ─── DO SISTEMA ─────────────────────────────────────────────────── -->
       {#if mode === 'sistema'}
         <div class="rounded-xl p-4 space-y-4" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
@@ -642,7 +750,14 @@
                         {#each catProds as prod}
                           <div class="space-y-1.5">
                             <div class="flex items-center justify-between gap-2">
-                              <span class="text-xs font-medium" style="color: var(--text-label);">{prod.nome}</span>
+                              <span class="text-xs font-medium flex-1 min-w-0 truncate" style="color: var(--text-label);">{prod.nome}</span>
+                              <!-- Destaque star toggle -->
+                              <button
+                                on:click={() => destaqueId = destaqueId === prod.id ? null : prod.id}
+                                title={destaqueId === prod.id ? 'Remover destaque' : 'Marcar como Destaque do Dia'}
+                                class="flex-shrink-0 text-base leading-none p-0.5 transition-colors"
+                                style="color: {destaqueId === prod.id ? '#f59e0b' : 'var(--text-muted)'}; background: none; border: none; cursor: pointer;"
+                              >★</button>
                               <input
                                 type="text"
                                 value={getOv(prod.id, 'price', Number(prod.preco).toFixed(2).replace('.', ','))}
@@ -708,14 +823,23 @@
               {#each section.items as item (item.id)}
                 <div class="flex items-start gap-2 pl-2 border-l-2" style="border-color: var(--border-subtle);">
                   <div class="flex-1 space-y-1.5">
-                    <input
-                      type="text"
-                      value={item.name}
-                      on:input={e => updateItem(section.id, item.id, 'name', e.target.value)}
-                      class="w-full px-2.5 py-1.5 rounded-lg text-sm focus:outline-none"
-                      style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                      placeholder="Nome do item"
-                    />
+                    <div class="flex items-center gap-1.5">
+                      <!-- Destaque star toggle for "do zero" items -->
+                      <button
+                        on:click={() => updateItem(section.id, item.id, 'isDestaque', !item.isDestaque)}
+                        title={item.isDestaque ? 'Remover destaque' : 'Marcar como Destaque do Dia'}
+                        class="flex-shrink-0 text-base leading-none p-0.5 transition-colors"
+                        style="color: {item.isDestaque ? '#f59e0b' : 'var(--text-muted)'}; background: none; border: none; cursor: pointer;"
+                      >★</button>
+                      <input
+                        type="text"
+                        value={item.name}
+                        on:input={e => updateItem(section.id, item.id, 'name', e.target.value)}
+                        class="flex-1 px-2.5 py-1.5 rounded-lg text-sm focus:outline-none"
+                        style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                        placeholder="Nome do item"
+                      />
+                    </div>
                     <div class="flex gap-2">
                       <input
                         type="text"
@@ -778,6 +902,9 @@
           </button>
         </div>
       {/if}
+
+      <!-- Config auto-save hint -->
+      <p class="text-xs text-center pb-2" style="color: var(--text-muted);">Configurações salvas automaticamente</p>
     </div>
 
     <!-- ════════════════════════════ PREVIEW ════════════════════════════ -->
@@ -848,7 +975,7 @@
                 width: 420px;
                 height: 525px;
                 background: {t.bg};
-                font-family: {t.titleFont ?? 'Georgia, serif'};
+                font-family: {currentFont.family};
                 box-shadow: 0 20px 60px rgba(0,0,0,0.4);
                 border-radius: 4px;
                 overflow: hidden;
@@ -874,7 +1001,7 @@
                       color: {t.subtitleColor};
                       letter-spacing: 0.18em;
                       text-transform: uppercase;
-                      font-family: {t.titleFont};
+                      font-family: {currentFont.family};
                     ">{storeName}</p>
                   {/if}
 
@@ -886,7 +1013,7 @@
                     letter-spacing: 0.08em;
                     text-transform: uppercase;
                     line-height: 1.2;
-                    font-family: {t.titleFont};
+                    font-family: {currentFont.family};
                   ">{cardTitle || 'Cardápio'}</h1>
 
                   {#if cardSubtitle}
@@ -934,26 +1061,51 @@
                         color: {t.sectionText};
                         letter-spacing: 0.15em;
                         text-transform: uppercase;
-                        font-family: Georgia, serif;
+                        font-family: {currentFont.family};
                       ">{section.name}</span>
                     </div>
 
-                    <!-- Items -->
-                    <div>
+                    <!-- Items — single or 2-column layout -->
+                    <div style="
+                      {twoColumn
+                        ? 'display: grid; grid-template-columns: 1fr 1fr; gap: 0;'
+                        : ''}
+                    ">
                       {#each section.items as item, idx}
                         <div style="
                           padding: 11px 28px;
-                          {idx < section.items.length - 1 ? `border-bottom: 1px solid ${t.divider};` : ''}
+                          {twoColumn && idx % 2 === 0 ? 'border-right: 1px solid ' + t.divider + ';' : ''}
+                          {twoColumn
+                            ? (Math.floor(idx / 2) < Math.ceil(section.items.length / 2) - 1
+                                ? 'border-bottom: 1px solid ' + t.divider + ';'
+                                : (section.items.length % 2 === 0 || idx < section.items.length - 1
+                                    ? 'border-bottom: 1px solid ' + t.divider + ';'
+                                    : ''))
+                            : (idx < section.items.length - 1 ? 'border-bottom: 1px solid ' + t.divider + ';' : '')}
                         ">
-                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;">
                             <div style="flex: 1; min-width: 0;">
                               <span style="
-                                display: block;
-                                font-size: 14px;
+                                display: inline;
+                                font-size: {twoColumn ? '12px' : '14px'};
                                 font-weight: 600;
                                 color: {t.itemText};
                                 line-height: 1.3;
                               ">{item.name || '—'}</span>
+                              {#if item.isDestaque}
+                                <span style="
+                                  display: inline-block;
+                                  margin-left: 6px;
+                                  padding: 1px 6px;
+                                  border-radius: 10px;
+                                  font-size: 9px;
+                                  font-weight: 700;
+                                  background: #f59e0b;
+                                  color: #fff;
+                                  letter-spacing: 0.05em;
+                                  vertical-align: middle;
+                                ">DESTAQUE</span>
+                              {/if}
                               {#if item.description}
                                 <span style="
                                   display: block;
@@ -967,7 +1119,7 @@
                             </div>
                             {#if item.price}
                               <span style="
-                                font-size: 14px;
+                                font-size: {twoColumn ? '12px' : '14px'};
                                 font-weight: 700;
                                 color: {t.priceColor};
                                 white-space: nowrap;
