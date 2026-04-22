@@ -259,40 +259,132 @@
       }));
 
   // ── Page split algorithm ─────────────────────────────────────────────────
-  const HEADER_H = 128;  // first page header base (store name + title + subtitle + padding)
-  const FOOTER_H = 84;   // last page footer (approximated generously)
-  const SECTION_H = 36;  // section label bar height
-  const ITEM_H = 42;     // each product row height
-  const PAGE_H = 525;    // total page height
-  const PADDING_V = 16;  // top+bottom padding of sections area
+  const HEADER_H = 128;     // first page header base (store name + title + subtitle + padding)
+  const FOOTER_H = 100;     // footer reserve (approximated generously — real footer varies)
+  const SECTION_H = 36;     // section label bar height
+  const SECTION_GAP = 8;    // margin-top between sibling sections on same page
+  const ITEM_H = 42;        // each product row height (name + padding, no description)
+  const ITEM_DESC_EXTRA = 20; // extra height when an item has a description
+  const PAGE_H = 525;       // total page height
+  const PADDING_V = 16;     // top+bottom padding of sections area
 
   // Adjust header height when logo or store name is shown
   $: HEADER_H_ACTUAL = 128 + (perfilLogoBase64 && showLogo ? 56 : 0) + (perfil?.nome_exibicao && showStoreName ? 18 : 0);
 
-  $: effectiveSectionHeight = (section) =>
-    SECTION_H + (twoColumn ? Math.ceil(section.items.length / 2) * ITEM_H : section.items.length * ITEM_H);
+  // Height contribution of a single item (in single-column mode).
+  // For two-column, a "row" is a pair of items — we take the max row height.
+  function itemHeight(item) {
+    return ITEM_H + (item && item.description ? ITEM_DESC_EXTRA : 0);
+  }
+  function rowHeight(items, idx, perRow) {
+    // height of the row that starts at items[idx] when laying out `perRow` per row
+    let h = 0;
+    for (let k = 0; k < perRow && idx + k < items.length; k++) {
+      h = Math.max(h, itemHeight(items[idx + k]));
+    }
+    return h;
+  }
 
+  // Build pages by flowing sections; split a section across pages when it
+  // exceeds the remaining height budget. Reserves FOOTER_H on every page
+  // when footer content exists so the footer never overlaps product rows.
   $: pages = (() => {
     if (previewSections.length === 0) return [[]];
+
+    const perRow = twoColumn ? 2 : 1;
+    const footerReserve = hasFooterContent ? FOOTER_H : 0;
+    const pageBudget = (pageIndex) => {
+      const headerH = pageIndex === 0 ? HEADER_H_ACTUAL : 0;
+      return PAGE_H - headerH - PADDING_V - footerReserve;
+    };
+
     const result = [];
-    let current = [];
-    let usedH = HEADER_H_ACTUAL + PADDING_V; // first page starts with header
+    let currentPage = [];
+    let usedH = 0;
+
+    const flushPage = () => {
+      result.push(currentPage);
+      currentPage = [];
+      usedH = 0;
+    };
 
     for (const section of previewSections) {
-      const sH = effectiveSectionHeight(section);
-      const isFirstPage = result.length === 0;
-      const budget = PAGE_H - (isFirstPage ? HEADER_H_ACTUAL + PADDING_V : PADDING_V);
+      let items = section.items.slice();
+      let isContinuation = false;
 
-      if (current.length > 0 && usedH + sH > budget) {
-        result.push(current);
-        current = [section];
-        usedH = PADDING_V + sH;
-      } else {
-        current.push(section);
-        usedH += sH;
+      // Empty section — show just the header bar if it fits on current page.
+      if (items.length === 0) {
+        const available = pageBudget(result.length) - usedH;
+        const sectionGap = currentPage.length > 0 ? SECTION_GAP : 0;
+        if (available < sectionGap + SECTION_H && currentPage.length > 0) {
+          flushPage();
+        }
+        currentPage.push({ ...section, items: [] });
+        usedH += (currentPage.length > 1 ? SECTION_GAP : 0) + SECTION_H;
+        continue;
+      }
+
+      while (items.length > 0) {
+        const available = pageBudget(result.length) - usedH;
+        const sectionGap = currentPage.length > 0 ? SECTION_GAP : 0;
+
+        // Smallest chunk we'd place on this page: header + first row.
+        const firstRowH = rowHeight(items, 0, perRow);
+        const minNeeded = sectionGap + SECTION_H + firstRowH;
+
+        if (available < minNeeded) {
+          if (currentPage.length === 0) {
+            // Page is empty but still can't fit one row — shouldn't happen
+            // with sane constants, but bail out by forcing one row to avoid
+            // an infinite loop.
+            const taken = items.slice(0, perRow);
+            currentPage.push({
+              ...section,
+              name: isContinuation ? `${section.name} (cont.)` : section.name,
+              items: taken
+            });
+            items = items.slice(perRow);
+            isContinuation = true;
+            flushPage();
+            continue;
+          }
+          flushPage();
+          continue;
+        }
+
+        // Greedily pack as many rows as fit into `available`.
+        let usedInChunk = sectionGap + SECTION_H;
+        let takenCount = 0;
+        while (takenCount < items.length) {
+          const rH = rowHeight(items, takenCount, perRow);
+          if (usedInChunk + rH > available) break;
+          usedInChunk += rH;
+          takenCount += perRow;
+        }
+        takenCount = Math.min(takenCount, items.length);
+
+        if (takenCount === 0) {
+          // Defensive — loop guard above should prevent this.
+          flushPage();
+          continue;
+        }
+
+        const chunk = items.slice(0, takenCount);
+        currentPage.push({
+          ...section,
+          name: isContinuation ? `${section.name} (cont.)` : section.name,
+          items: chunk
+        });
+        usedH += usedInChunk;
+        items = items.slice(takenCount);
+        if (items.length > 0) {
+          isContinuation = true;
+          flushPage();
+        }
       }
     }
-    if (current.length > 0 || result.length === 0) result.push(current);
+
+    if (currentPage.length > 0 || result.length === 0) result.push(currentPage);
     return result;
   })();
 
