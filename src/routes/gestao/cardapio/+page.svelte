@@ -14,8 +14,10 @@
   let cardFooter = '';
   let exporting = false;
   let exportingPDF = false;
+  let exportProgress = { current: 0, total: 0 };
   let loading = false;
   let previewWrapper;
+  let productSearch = '';
 
   // Contact (manual)
   let cardInstagram = '';
@@ -401,6 +403,22 @@
     } catch {}
   }
 
+  // ── localStorage data persistence (sections, overrides, selections) ─────
+  // Kept in a separate key because this can grow large and has different
+  // lifecycle from UI config. Only written after initial load has finished
+  // (via `dataHydrated`) to avoid clobbering saved data with defaults.
+  let dataHydrated = false;
+  $: if (dataHydrated && typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('zeloPDV_cardapio_data', JSON.stringify({
+        sections,
+        selectedCatIds: Array.from(selectedCatIds),
+        itemOverrides,
+        destaqueId
+      }));
+    } catch {}
+  }
+
   // ── Data loading ────────────────────────────────────────────────────────
   onMount(async () => {
     // Load all Google Fonts upfront so exports render correctly
@@ -430,6 +448,23 @@
       }
     } catch {}
 
+    // Restore saved data (sections/overrides/destaque). Category selection
+    // needs `categorias` loaded before applying — handled below after fetch.
+    let savedData = null;
+    try {
+      const rawData = localStorage.getItem('zeloPDV_cardapio_data');
+      if (rawData) {
+        savedData = JSON.parse(rawData);
+        if (Array.isArray(savedData.sections) && savedData.sections.length > 0) {
+          sections = savedData.sections;
+        }
+        if (savedData.itemOverrides && typeof savedData.itemOverrides === 'object') {
+          itemOverrides = savedData.itemOverrides;
+        }
+        if (savedData.destaqueId !== undefined) destaqueId = savedData.destaqueId;
+      }
+    } catch {}
+
     loading = true;
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -445,7 +480,13 @@
       if (catRes.error || prodRes.error) throw new Error('query_error');
       categorias = catRes.data || [];
       produtos = prodRes.data || [];
-      selectedCatIds = new Set(categorias.map(c => c.id));
+      if (savedData && Array.isArray(savedData.selectedCatIds)) {
+        // Keep only ids that still exist on the server.
+        const valid = new Set(categorias.map(c => c.id));
+        selectedCatIds = new Set(savedData.selectedCatIds.filter(id => valid.has(id)));
+      } else {
+        selectedCatIds = new Set(categorias.map(c => c.id));
+      }
       if (perfilRes.data) {
         perfil = perfilRes.data;
         if (perfil.logo_url) {
@@ -467,6 +508,7 @@
       addToast('Erro ao carregar produtos', 'error');
     } finally {
       loading = false;
+      dataHydrated = true;
     }
   });
 
@@ -499,6 +541,25 @@
         : s
     );
   }
+  function moveSection(id, direction) {
+    const i = sections.findIndex(s => s.id === id);
+    const j = i + direction;
+    if (i < 0 || j < 0 || j >= sections.length) return;
+    const next = sections.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    sections = next;
+  }
+  function moveItem(sectionId, itemId, direction) {
+    sections = sections.map(s => {
+      if (s.id !== sectionId) return s;
+      const i = s.items.findIndex(it => it.id === itemId);
+      const j = i + direction;
+      if (i < 0 || j < 0 || j >= s.items.length) return s;
+      const items = s.items.slice();
+      [items[i], items[j]] = [items[j], items[i]];
+      return { ...s, items };
+    });
+  }
 
   // ── "Do sistema" helpers ────────────────────────────────────────────────
   function toggleCat(id) {
@@ -522,47 +583,33 @@
       await document.fonts.ready;
       const { default: html2canvas } = await import('html2canvas');
       const pageEls = previewWrapper.querySelectorAll('.cardapio-page');
+      exportProgress = { current: 0, total: pageEls.length };
+
+      const renderPage = async (el) => html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: t.bg
+      });
 
       if (type === 'jpg') {
-        if (pageEls.length === 1) {
-          const canvas = await html2canvas(pageEls[0], {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: t.bg
-          });
+        for (let i = 0; i < pageEls.length; i++) {
+          exportProgress = { current: i + 1, total: pageEls.length };
+          const canvas = await renderPage(pageEls[i]);
           const a = document.createElement('a');
-          a.download = 'cardapio.jpg';
+          a.download = pageEls.length === 1 ? 'cardapio.jpg' : `cardapio-${i + 1}.jpg`;
           a.href = canvas.toDataURL('image/jpeg', 0.95);
           a.click();
-        } else {
-          for (let i = 0; i < pageEls.length; i++) {
-            const canvas = await html2canvas(pageEls[i], {
-              scale: 2,
-              useCORS: true,
-              logging: false,
-              backgroundColor: t.bg
-            });
-            const a = document.createElement('a');
-            a.download = `cardapio-${i + 1}.jpg`;
-            a.href = canvas.toDataURL('image/jpeg', 0.95);
-            a.click();
-            if (i < pageEls.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, 300));
-            }
+          if (i < pageEls.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300));
           }
         }
         addToast('Cardápio exportado como JPG!', 'success');
       } else {
         const canvases = [];
         for (let i = 0; i < pageEls.length; i++) {
-          const canvas = await html2canvas(pageEls[i], {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: t.bg
-          });
-          canvases.push(canvas);
+          exportProgress = { current: i + 1, total: pageEls.length };
+          canvases.push(await renderPage(pageEls[i]));
         }
 
         const w = canvases[0].width / 2;
@@ -587,6 +634,7 @@
     } finally {
       exporting = false;
       exportingPDF = false;
+      exportProgress = { current: 0, total: 0 };
     }
   }
 
@@ -886,7 +934,18 @@
       <!-- ─── DO SISTEMA ─────────────────────────────────────────────────── -->
       {#if mode === 'sistema'}
         <div class="rounded-xl p-4 space-y-4" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
-          <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Produtos do Sistema</p>
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Produtos do Sistema</p>
+            {#if !loading && produtos.length > 0}
+              <input
+                type="text"
+                bind:value={productSearch}
+                placeholder="Buscar produto..."
+                class="flex-1 min-w-0 max-w-[200px] px-2.5 py-1 rounded-lg text-xs focus:outline-none"
+                style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+              />
+            {/if}
+          </div>
 
           {#if loading}
             <div class="flex items-center justify-center py-8 gap-2" style="color: var(--text-muted);">
@@ -909,7 +968,10 @@
           {:else}
             <div class="space-y-4">
               {#each categorias as cat}
-                {@const catProds = produtos.filter(p => p.id_categoria === cat.id)}
+                {@const q = productSearch.trim().toLowerCase()}
+                {@const catProds = produtos.filter(p =>
+                  p.id_categoria === cat.id && (!q || p.nome.toLowerCase().includes(q))
+                )}
                 {#if catProds.length > 0}
                   <div class="space-y-2">
                     <!-- Category checkbox -->
@@ -983,6 +1045,10 @@
                   </div>
                 {/if}
               {/each}
+
+              {#if productSearch.trim() && produtos.filter(p => p.nome.toLowerCase().includes(productSearch.trim().toLowerCase())).length === 0}
+                <p class="text-xs text-center py-3" style="color: var(--text-muted);">Nenhum produto encontrado para "{productSearch}".</p>
+              {/if}
             </div>
           {/if}
         </div>
@@ -991,10 +1057,10 @@
       <!-- ─── DO ZERO ──────────────────────────────────────────────────────── -->
       {#if mode === 'zero'}
         <div class="space-y-3">
-          {#each sections as section (section.id)}
+          {#each sections as section, sIdx (section.id)}
             <div class="rounded-xl p-4 space-y-3" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
 
-              <!-- Section name + delete -->
+              <!-- Section name + reorder + delete -->
               <div class="flex items-center gap-2">
                 <input
                   type="text"
@@ -1005,6 +1071,28 @@
                   placeholder="Nome da seção"
                 />
                 {#if sections.length > 1}
+                  <button
+                    on:click={() => moveSection(section.id, -1)}
+                    disabled={sIdx === 0}
+                    class="p-2 rounded-lg flex-shrink-0 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    style="color: var(--text-muted);"
+                    title="Mover seção para cima"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                    </svg>
+                  </button>
+                  <button
+                    on:click={() => moveSection(section.id, 1)}
+                    disabled={sIdx === sections.length - 1}
+                    class="p-2 rounded-lg flex-shrink-0 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    style="color: var(--text-muted);"
+                    title="Mover seção para baixo"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                  </button>
                   <button
                     on:click={() => removeSection(section.id)}
                     class="p-2 rounded-lg flex-shrink-0 transition-colors"
@@ -1021,8 +1109,32 @@
               </div>
 
               <!-- Items -->
-              {#each section.items as item (item.id)}
+              {#each section.items as item, iIdx (item.id)}
                 <div class="flex items-start gap-2 pl-2 border-l-2" style="border-color: var(--border-subtle);">
+                  <div class="flex flex-col items-center gap-0.5 pt-1.5">
+                    <button
+                      on:click={() => moveItem(section.id, item.id, -1)}
+                      disabled={iIdx === 0}
+                      class="p-0.5 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                      style="color: var(--text-muted);"
+                      title="Mover item para cima"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                      </svg>
+                    </button>
+                    <button
+                      on:click={() => moveItem(section.id, item.id, 1)}
+                      disabled={iIdx === section.items.length - 1}
+                      class="p-0.5 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                      style="color: var(--text-muted);"
+                      title="Mover item para baixo"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </button>
+                  </div>
                   <div class="flex-1 space-y-1.5">
                     <div class="flex items-center gap-1.5">
                       <!-- Destaque star toggle for "do zero" items -->
@@ -1147,12 +1259,12 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              Gerando...
+              {exportProgress.total > 1 ? `Gerando ${exportProgress.current}/${exportProgress.total}...` : 'Gerando...'}
             {:else}
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
               </svg>
-              Baixar JPG
+              Baixar JPG{pages.length > 1 ? ` (${pages.length})` : ''}
             {/if}
           </button>
 
@@ -1167,7 +1279,7 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              Gerando...
+              {exportProgress.total > 1 ? `Gerando ${exportProgress.current}/${exportProgress.total}...` : 'Gerando...'}
             {:else}
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
