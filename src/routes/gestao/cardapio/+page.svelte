@@ -14,8 +14,10 @@
   let cardFooter = '';
   let exporting = false;
   let exportingPDF = false;
+  let exportProgress = { current: 0, total: 0 };
   let loading = false;
   let previewWrapper;
+  let productSearch = '';
 
   // Contact (manual)
   let cardInstagram = '';
@@ -259,40 +261,132 @@
       }));
 
   // ── Page split algorithm ─────────────────────────────────────────────────
-  const HEADER_H = 128;  // first page header base (store name + title + subtitle + padding)
-  const FOOTER_H = 84;   // last page footer (approximated generously)
-  const SECTION_H = 36;  // section label bar height
-  const ITEM_H = 42;     // each product row height
-  const PAGE_H = 525;    // total page height
-  const PADDING_V = 16;  // top+bottom padding of sections area
+  const HEADER_H = 128;     // first page header base (store name + title + subtitle + padding)
+  const FOOTER_H = 100;     // footer reserve (approximated generously — real footer varies)
+  const SECTION_H = 36;     // section label bar height
+  const SECTION_GAP = 8;    // margin-top between sibling sections on same page
+  const ITEM_H = 42;        // each product row height (name + padding, no description)
+  const ITEM_DESC_EXTRA = 20; // extra height when an item has a description
+  const PAGE_H = 525;       // total page height
+  const PADDING_V = 16;     // top+bottom padding of sections area
 
   // Adjust header height when logo or store name is shown
   $: HEADER_H_ACTUAL = 128 + (perfilLogoBase64 && showLogo ? 56 : 0) + (perfil?.nome_exibicao && showStoreName ? 18 : 0);
 
-  $: effectiveSectionHeight = (section) =>
-    SECTION_H + (twoColumn ? Math.ceil(section.items.length / 2) * ITEM_H : section.items.length * ITEM_H);
+  // Height contribution of a single item (in single-column mode).
+  // For two-column, a "row" is a pair of items — we take the max row height.
+  function itemHeight(item) {
+    return ITEM_H + (item && item.description ? ITEM_DESC_EXTRA : 0);
+  }
+  function rowHeight(items, idx, perRow) {
+    // height of the row that starts at items[idx] when laying out `perRow` per row
+    let h = 0;
+    for (let k = 0; k < perRow && idx + k < items.length; k++) {
+      h = Math.max(h, itemHeight(items[idx + k]));
+    }
+    return h;
+  }
 
+  // Build pages by flowing sections; split a section across pages when it
+  // exceeds the remaining height budget. Reserves FOOTER_H on every page
+  // when footer content exists so the footer never overlaps product rows.
   $: pages = (() => {
     if (previewSections.length === 0) return [[]];
+
+    const perRow = twoColumn ? 2 : 1;
+    const footerReserve = hasFooterContent ? FOOTER_H : 0;
+    const pageBudget = (pageIndex) => {
+      const headerH = pageIndex === 0 ? HEADER_H_ACTUAL : 0;
+      return PAGE_H - headerH - PADDING_V - footerReserve;
+    };
+
     const result = [];
-    let current = [];
-    let usedH = HEADER_H_ACTUAL + PADDING_V; // first page starts with header
+    let currentPage = [];
+    let usedH = 0;
+
+    const flushPage = () => {
+      result.push(currentPage);
+      currentPage = [];
+      usedH = 0;
+    };
 
     for (const section of previewSections) {
-      const sH = effectiveSectionHeight(section);
-      const isFirstPage = result.length === 0;
-      const budget = PAGE_H - (isFirstPage ? HEADER_H_ACTUAL + PADDING_V : PADDING_V);
+      let items = section.items.slice();
+      let isContinuation = false;
 
-      if (current.length > 0 && usedH + sH > budget) {
-        result.push(current);
-        current = [section];
-        usedH = PADDING_V + sH;
-      } else {
-        current.push(section);
-        usedH += sH;
+      // Empty section — show just the header bar if it fits on current page.
+      if (items.length === 0) {
+        const available = pageBudget(result.length) - usedH;
+        const sectionGap = currentPage.length > 0 ? SECTION_GAP : 0;
+        if (available < sectionGap + SECTION_H && currentPage.length > 0) {
+          flushPage();
+        }
+        currentPage.push({ ...section, items: [] });
+        usedH += (currentPage.length > 1 ? SECTION_GAP : 0) + SECTION_H;
+        continue;
+      }
+
+      while (items.length > 0) {
+        const available = pageBudget(result.length) - usedH;
+        const sectionGap = currentPage.length > 0 ? SECTION_GAP : 0;
+
+        // Smallest chunk we'd place on this page: header + first row.
+        const firstRowH = rowHeight(items, 0, perRow);
+        const minNeeded = sectionGap + SECTION_H + firstRowH;
+
+        if (available < minNeeded) {
+          if (currentPage.length === 0) {
+            // Page is empty but still can't fit one row — shouldn't happen
+            // with sane constants, but bail out by forcing one row to avoid
+            // an infinite loop.
+            const taken = items.slice(0, perRow);
+            currentPage.push({
+              ...section,
+              name: isContinuation ? `${section.name} (cont.)` : section.name,
+              items: taken
+            });
+            items = items.slice(perRow);
+            isContinuation = true;
+            flushPage();
+            continue;
+          }
+          flushPage();
+          continue;
+        }
+
+        // Greedily pack as many rows as fit into `available`.
+        let usedInChunk = sectionGap + SECTION_H;
+        let takenCount = 0;
+        while (takenCount < items.length) {
+          const rH = rowHeight(items, takenCount, perRow);
+          if (usedInChunk + rH > available) break;
+          usedInChunk += rH;
+          takenCount += perRow;
+        }
+        takenCount = Math.min(takenCount, items.length);
+
+        if (takenCount === 0) {
+          // Defensive — loop guard above should prevent this.
+          flushPage();
+          continue;
+        }
+
+        const chunk = items.slice(0, takenCount);
+        currentPage.push({
+          ...section,
+          name: isContinuation ? `${section.name} (cont.)` : section.name,
+          items: chunk
+        });
+        usedH += usedInChunk;
+        items = items.slice(takenCount);
+        if (items.length > 0) {
+          isContinuation = true;
+          flushPage();
+        }
       }
     }
-    if (current.length > 0 || result.length === 0) result.push(current);
+
+    if (currentPage.length > 0 || result.length === 0) result.push(currentPage);
     return result;
   })();
 
@@ -305,6 +399,22 @@
         cardInstagram, showQRHint, twoColumn,
         showLogo, showStoreName, showPhone, showAddress,
         itemBadges
+      }));
+    } catch {}
+  }
+
+  // ── localStorage data persistence (sections, overrides, selections) ─────
+  // Kept in a separate key because this can grow large and has different
+  // lifecycle from UI config. Only written after initial load has finished
+  // (via `dataHydrated`) to avoid clobbering saved data with defaults.
+  let dataHydrated = false;
+  $: if (dataHydrated && typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('zeloPDV_cardapio_data', JSON.stringify({
+        sections,
+        selectedCatIds: Array.from(selectedCatIds),
+        itemOverrides,
+        destaqueId
       }));
     } catch {}
   }
@@ -338,6 +448,23 @@
       }
     } catch {}
 
+    // Restore saved data (sections/overrides/destaque). Category selection
+    // needs `categorias` loaded before applying — handled below after fetch.
+    let savedData = null;
+    try {
+      const rawData = localStorage.getItem('zeloPDV_cardapio_data');
+      if (rawData) {
+        savedData = JSON.parse(rawData);
+        if (Array.isArray(savedData.sections) && savedData.sections.length > 0) {
+          sections = savedData.sections;
+        }
+        if (savedData.itemOverrides && typeof savedData.itemOverrides === 'object') {
+          itemOverrides = savedData.itemOverrides;
+        }
+        if (savedData.destaqueId !== undefined) destaqueId = savedData.destaqueId;
+      }
+    } catch {}
+
     loading = true;
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -353,7 +480,13 @@
       if (catRes.error || prodRes.error) throw new Error('query_error');
       categorias = catRes.data || [];
       produtos = prodRes.data || [];
-      selectedCatIds = new Set(categorias.map(c => c.id));
+      if (savedData && Array.isArray(savedData.selectedCatIds)) {
+        // Keep only ids that still exist on the server.
+        const valid = new Set(categorias.map(c => c.id));
+        selectedCatIds = new Set(savedData.selectedCatIds.filter(id => valid.has(id)));
+      } else {
+        selectedCatIds = new Set(categorias.map(c => c.id));
+      }
       if (perfilRes.data) {
         perfil = perfilRes.data;
         if (perfil.logo_url) {
@@ -375,6 +508,7 @@
       addToast('Erro ao carregar produtos', 'error');
     } finally {
       loading = false;
+      dataHydrated = true;
     }
   });
 
@@ -407,6 +541,25 @@
         : s
     );
   }
+  function moveSection(id, direction) {
+    const i = sections.findIndex(s => s.id === id);
+    const j = i + direction;
+    if (i < 0 || j < 0 || j >= sections.length) return;
+    const next = sections.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    sections = next;
+  }
+  function moveItem(sectionId, itemId, direction) {
+    sections = sections.map(s => {
+      if (s.id !== sectionId) return s;
+      const i = s.items.findIndex(it => it.id === itemId);
+      const j = i + direction;
+      if (i < 0 || j < 0 || j >= s.items.length) return s;
+      const items = s.items.slice();
+      [items[i], items[j]] = [items[j], items[i]];
+      return { ...s, items };
+    });
+  }
 
   // ── "Do sistema" helpers ────────────────────────────────────────────────
   function toggleCat(id) {
@@ -430,47 +583,33 @@
       await document.fonts.ready;
       const { default: html2canvas } = await import('html2canvas');
       const pageEls = previewWrapper.querySelectorAll('.cardapio-page');
+      exportProgress = { current: 0, total: pageEls.length };
+
+      const renderPage = async (el) => html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: t.bg
+      });
 
       if (type === 'jpg') {
-        if (pageEls.length === 1) {
-          const canvas = await html2canvas(pageEls[0], {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: t.bg
-          });
+        for (let i = 0; i < pageEls.length; i++) {
+          exportProgress = { current: i + 1, total: pageEls.length };
+          const canvas = await renderPage(pageEls[i]);
           const a = document.createElement('a');
-          a.download = 'cardapio.jpg';
+          a.download = pageEls.length === 1 ? 'cardapio.jpg' : `cardapio-${i + 1}.jpg`;
           a.href = canvas.toDataURL('image/jpeg', 0.95);
           a.click();
-        } else {
-          for (let i = 0; i < pageEls.length; i++) {
-            const canvas = await html2canvas(pageEls[i], {
-              scale: 2,
-              useCORS: true,
-              logging: false,
-              backgroundColor: t.bg
-            });
-            const a = document.createElement('a');
-            a.download = `cardapio-${i + 1}.jpg`;
-            a.href = canvas.toDataURL('image/jpeg', 0.95);
-            a.click();
-            if (i < pageEls.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, 300));
-            }
+          if (i < pageEls.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300));
           }
         }
         addToast('Cardápio exportado como JPG!', 'success');
       } else {
         const canvases = [];
         for (let i = 0; i < pageEls.length; i++) {
-          const canvas = await html2canvas(pageEls[i], {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: t.bg
-          });
-          canvases.push(canvas);
+          exportProgress = { current: i + 1, total: pageEls.length };
+          canvases.push(await renderPage(pageEls[i]));
         }
 
         const w = canvases[0].width / 2;
@@ -495,6 +634,7 @@
     } finally {
       exporting = false;
       exportingPDF = false;
+      exportProgress = { current: 0, total: 0 };
     }
   }
 
@@ -794,7 +934,18 @@
       <!-- ─── DO SISTEMA ─────────────────────────────────────────────────── -->
       {#if mode === 'sistema'}
         <div class="rounded-xl p-4 space-y-4" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
-          <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Produtos do Sistema</p>
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Produtos do Sistema</p>
+            {#if !loading && produtos.length > 0}
+              <input
+                type="text"
+                bind:value={productSearch}
+                placeholder="Buscar produto..."
+                class="flex-1 min-w-0 max-w-[200px] px-2.5 py-1 rounded-lg text-xs focus:outline-none"
+                style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+              />
+            {/if}
+          </div>
 
           {#if loading}
             <div class="flex items-center justify-center py-8 gap-2" style="color: var(--text-muted);">
@@ -817,7 +968,10 @@
           {:else}
             <div class="space-y-4">
               {#each categorias as cat}
-                {@const catProds = produtos.filter(p => p.id_categoria === cat.id)}
+                {@const q = productSearch.trim().toLowerCase()}
+                {@const catProds = produtos.filter(p =>
+                  p.id_categoria === cat.id && (!q || p.nome.toLowerCase().includes(q))
+                )}
                 {#if catProds.length > 0}
                   <div class="space-y-2">
                     <!-- Category checkbox -->
@@ -891,6 +1045,10 @@
                   </div>
                 {/if}
               {/each}
+
+              {#if productSearch.trim() && produtos.filter(p => p.nome.toLowerCase().includes(productSearch.trim().toLowerCase())).length === 0}
+                <p class="text-xs text-center py-3" style="color: var(--text-muted);">Nenhum produto encontrado para "{productSearch}".</p>
+              {/if}
             </div>
           {/if}
         </div>
@@ -899,10 +1057,10 @@
       <!-- ─── DO ZERO ──────────────────────────────────────────────────────── -->
       {#if mode === 'zero'}
         <div class="space-y-3">
-          {#each sections as section (section.id)}
+          {#each sections as section, sIdx (section.id)}
             <div class="rounded-xl p-4 space-y-3" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
 
-              <!-- Section name + delete -->
+              <!-- Section name + reorder + delete -->
               <div class="flex items-center gap-2">
                 <input
                   type="text"
@@ -913,6 +1071,28 @@
                   placeholder="Nome da seção"
                 />
                 {#if sections.length > 1}
+                  <button
+                    on:click={() => moveSection(section.id, -1)}
+                    disabled={sIdx === 0}
+                    class="p-2 rounded-lg flex-shrink-0 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    style="color: var(--text-muted);"
+                    title="Mover seção para cima"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                    </svg>
+                  </button>
+                  <button
+                    on:click={() => moveSection(section.id, 1)}
+                    disabled={sIdx === sections.length - 1}
+                    class="p-2 rounded-lg flex-shrink-0 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    style="color: var(--text-muted);"
+                    title="Mover seção para baixo"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                  </button>
                   <button
                     on:click={() => removeSection(section.id)}
                     class="p-2 rounded-lg flex-shrink-0 transition-colors"
@@ -929,8 +1109,32 @@
               </div>
 
               <!-- Items -->
-              {#each section.items as item (item.id)}
+              {#each section.items as item, iIdx (item.id)}
                 <div class="flex items-start gap-2 pl-2 border-l-2" style="border-color: var(--border-subtle);">
+                  <div class="flex flex-col items-center gap-0.5 pt-1.5">
+                    <button
+                      on:click={() => moveItem(section.id, item.id, -1)}
+                      disabled={iIdx === 0}
+                      class="p-0.5 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                      style="color: var(--text-muted);"
+                      title="Mover item para cima"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                      </svg>
+                    </button>
+                    <button
+                      on:click={() => moveItem(section.id, item.id, 1)}
+                      disabled={iIdx === section.items.length - 1}
+                      class="p-0.5 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                      style="color: var(--text-muted);"
+                      title="Mover item para baixo"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </button>
+                  </div>
                   <div class="flex-1 space-y-1.5">
                     <div class="flex items-center gap-1.5">
                       <!-- Destaque star toggle for "do zero" items -->
@@ -1055,12 +1259,12 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              Gerando...
+              {exportProgress.total > 1 ? `Gerando ${exportProgress.current}/${exportProgress.total}...` : 'Gerando...'}
             {:else}
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
               </svg>
-              Baixar JPG
+              Baixar JPG{pages.length > 1 ? ` (${pages.length})` : ''}
             {/if}
           </button>
 
@@ -1075,7 +1279,7 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              Gerando...
+              {exportProgress.total > 1 ? `Gerando ${exportProgress.current}/${exportProgress.total}...` : 'Gerando...'}
             {:else}
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
