@@ -14,7 +14,7 @@ async function buildBusinessContext(userId) {
     // Business profile + product catalog (for context-aware responses)
     const [perfilRes, catalogoRes] = await Promise.all([
       supabaseAdmin.from('empresa_perfil').select('nome_exibicao').eq('user_id', userId).maybeSingle(),
-      supabaseAdmin.from('produtos').select('nome').eq('id_usuario', userId).order('nome').limit(40),
+      supabaseAdmin.from('produtos').select('nome, preco').eq('id_usuario', userId).order('nome').limit(40),
     ]);
 
     // Sales last 30 days
@@ -37,16 +37,16 @@ async function buildBusinessContext(userId) {
       const ids = vendaIds.map(v => v.id).slice(0, 500);
       const { data: items } = await supabaseAdmin
         .from('vendas_itens')
-        .select('id_produto, quantidade, subtotal, produtos(nome)')
+        .select('id_produto, quantidade, preco_unitario_na_venda, nome_produto_na_venda')
         .in('id_venda', ids);
 
       const productMap = {};
       for (const item of items || []) {
         const key = item.id_produto;
-        const nome = item.produtos?.nome || 'Desconhecido';
+        const nome = item.nome_produto_na_venda || 'Desconhecido';
         if (!productMap[key]) productMap[key] = { nome, qtd: 0, receita: 0 };
         productMap[key].qtd += Number(item.quantidade) || 0;
-        productMap[key].receita += Number(item.subtotal) || 0;
+        productMap[key].receita += (Number(item.preco_unitario_na_venda) || 0) * (Number(item.quantidade) || 0);
       }
       topProducts = Object.values(productMap)
         .sort((a, b) => b.qtd - a.qtd)
@@ -64,9 +64,9 @@ async function buildBusinessContext(userId) {
     // Latest cash register
     const { data: caixa } = await supabaseAdmin
       .from('caixas')
-      .select('status, saldo_inicial')
+      .select('valor_inicial, data_abertura, data_fechamento')
       .eq('id_usuario', userId)
-      .order('created_at', { ascending: false })
+      .order('data_abertura', { ascending: false })
       .limit(1)
       .maybeSingle();
 
@@ -106,7 +106,7 @@ async function buildBusinessContext(userId) {
       perfil: {
         nome_negocio: perfilRes.data?.nome_exibicao || null,
       },
-      catalogo_produtos: (catalogoRes.data || []).map(p => p.nome),
+      catalogo_produtos: (catalogoRes.data || []).map(p => `${p.nome} (R$ ${Number(p.preco).toFixed(2)})`),
       periodo: 'últimos 30 dias',
       vendas: {
         quantidade: totalVendas,
@@ -119,7 +119,7 @@ async function buildBusinessContext(userId) {
         por_categoria: despesasPorCat,
       },
       lucro_estimado: (receitaTotal - totalDespesas).toFixed(2),
-      caixa: caixa ? { status: caixa.status, saldo_inicial: caixa.saldo_inicial } : null,
+      caixa: caixa ? { aberto: !caixa.data_fechamento, valor_inicial: caixa.valor_inicial, data_abertura: caixa.data_abertura } : null,
       fiado_em_aberto: topFiado?.map(p => ({ cliente: p.nome, saldo: p.saldo_fiado })) || [],
     };
   } catch (err) {
