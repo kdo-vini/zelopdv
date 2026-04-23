@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 
 const ALLOWED_ORIGINS = new Set([
+  'https://zelochat.vercel.app',
   'https://chat.zelopdv.com.br',
   // local dev
   'http://localhost:3000',
