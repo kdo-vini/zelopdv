@@ -961,123 +961,119 @@
     </div>
   </section>
 
-  <!-- PRICING (Single Card Focus) -->
+  <!-- PRICING (Plano Principal + Add-ons em grid lateral) -->
   <section id="pricing" class="py-24 relative bg-white/[0.02]">
-    <div class="max-w-4xl mx-auto px-6 text-center">
-      <div class="mb-12">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-12">
         <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">Preço Único. Tudo Incluso.</h2>
         <p class="text-slate-400 text-lg">Sem pegadinhas, sem taxas extras de surpresa.</p>
       </div>
 
-      <div class="relative max-w-lg mx-auto">
-        <!-- Glow Effect behind card -->
-        <div class="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl blur opacity-30 animate-pulse"></div>
+      <div class="grid lg:grid-cols-[1.1fr_1fr] gap-6 lg:gap-8 items-start max-w-5xl mx-auto">
+        <!-- ========== PLANO PRINCIPAL ========== -->
+        <div class="relative">
+          <!-- Glow Effect behind card -->
+          <div class="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl blur opacity-30 animate-pulse"></div>
 
-        <div class="relative rounded-2xl bg-[#121620] p-8 md:p-12 shadow-2xl animate-border-gradient">
-          <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-             <span class="bg-sky-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-sky-500/40 tracking-wide uppercase">Plano Único</span>
-          </div>
-
-          <p class="text-slate-300 font-medium mb-1">Acesso Completo</p>
-          <div class="flex justify-center items-baseline gap-1 mb-6">
-            <span class="text-2xl text-slate-400">R$</span>
-            <span class="text-6xl font-bold text-white tracking-tight">59</span>
-            <span class="text-xl text-slate-500">/mês</span>
-          </div>
-
-          <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 mb-8">
-            <p class="text-sky-400 font-bold text-lg">30 Dias Grátis</p>
-            <p class="text-sm text-sky-300/80">Teste por 30 dias. Se não amar, não paga.</p>
-          </div>
-
-          <ul class="space-y-4 text-left mb-10 max-w-xs mx-auto">
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
-              <span>Vendas Ilimitadas</span>
-            </li>
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
-              <span>Controle de Estoque e Fiado</span>
-            </li>
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
-              <span>Gestão Financeira (Lucro)</span>
-            </li>
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
-              <span>Suporte via WhatsApp</span>
-            </li>
-          </ul>
-
-          <a href="/cadastro" class="block w-full text-center py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
-            Começar teste gratuito
-          </a>
-          <p class="text-xs text-slate-500 text-center mt-3">Sem cartão de crédito necessário. Cancele quando quiser.</p>
-        </div>
-      </div>
-
-      <!-- Separator with label -->
-      <div class="relative mt-16 mb-10 flex items-center justify-center max-w-lg mx-auto">
-        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-white/10"></div>
-        <span class="px-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Atende no salão?</span>
-        <div class="flex-1 h-px bg-gradient-to-l from-transparent via-white/10 to-white/10"></div>
-      </div>
-
-      <!-- Add-on Module Card (companion to main pricing card) -->
-      <div class="relative max-w-lg mx-auto">
-        <!-- Subtle rose glow -->
-        <div class="absolute -inset-1 bg-gradient-to-r from-rose-500/30 to-rose-700/30 rounded-2xl blur opacity-20"></div>
-
-        <div class="relative rounded-2xl bg-[#121620] p-8 md:p-10 shadow-2xl border border-rose-500/15 text-center">
-          <!-- "+ ADD-ON" pill (matches "PLANO ÚNICO" style) -->
-          <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-            <span class="bg-rose-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-rose-500/40 tracking-wide uppercase">+ Add-on opcional</span>
-          </div>
-
-          <!-- Icon + Title -->
-          <div class="flex items-center justify-center gap-3 mb-4 mt-2">
-            <div class="w-12 h-12 rounded-xl bg-rose-500/15 border border-rose-500/20 flex items-center justify-center flex-shrink-0">
-              <svg class="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+          <div class="relative rounded-2xl bg-[#121620] p-8 md:p-12 shadow-2xl animate-border-gradient text-center">
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+              <span class="bg-sky-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-sky-500/40 tracking-wide uppercase">Plano Único</span>
             </div>
-            <p class="text-xl font-bold text-white">Módulo Mesas</p>
+
+            <p class="text-slate-300 font-medium mb-1">Acesso Completo</p>
+            <div class="flex justify-center items-baseline gap-1 mb-6">
+              <span class="text-2xl text-slate-400">R$</span>
+              <span class="text-6xl font-bold text-white tracking-tight">59</span>
+              <span class="text-xl text-slate-500">/mês</span>
+            </div>
+
+            <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 mb-8">
+              <p class="text-sky-400 font-bold text-lg">30 Dias Grátis</p>
+              <p class="text-sm text-sky-300/80">Teste por 30 dias. Se não amar, não paga.</p>
+            </div>
+
+            <ul class="space-y-4 text-left mb-10 max-w-xs mx-auto">
+              <li class="flex items-center gap-3 text-slate-200">
+                <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+                <span>Vendas Ilimitadas</span>
+              </li>
+              <li class="flex items-center gap-3 text-slate-200">
+                <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+                <span>Controle de Estoque e Fiado</span>
+              </li>
+              <li class="flex items-center gap-3 text-slate-200">
+                <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+                <span>Gestão Financeira (Lucro)</span>
+              </li>
+              <li class="flex items-center gap-3 text-slate-200">
+                <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+                <span>Suporte via WhatsApp</span>
+              </li>
+            </ul>
+
+            <a href="/cadastro" class="block w-full text-center py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
+              Começar teste gratuito
+            </a>
+            <p class="text-xs text-slate-500 text-center mt-3">Sem cartão. Cancele quando quiser.</p>
           </div>
-          <p class="text-sm text-slate-400 mb-6">Para bares, hamburguerias e atendimento no salão</p>
+        </div>
 
-          <!-- Price -->
-          <div class="flex justify-center items-baseline gap-1 mb-2">
-            <span class="text-lg text-slate-400">+R$</span>
-            <span class="text-5xl font-bold text-white tracking-tight">30</span>
-            <span class="text-lg text-slate-500">/mês</span>
+        <!-- ========== COLUNA ADD-ONS (cards brancos / glass) ========== -->
+        <div class="flex flex-col gap-4">
+          <!-- Header da coluna -->
+          <div class="hidden lg:block">
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Add-ons opcionais</p>
+            <p class="text-sm text-slate-400">Ative só o que precisar. Sem fidelidade.</p>
           </div>
-          <p class="text-xs text-slate-500 mb-7">
-            Total <strong class="text-white font-semibold">R$ 89/mês</strong> quando ligado
-          </p>
 
-          <!-- Features -->
-          <ul class="space-y-3 text-left max-w-xs mx-auto mb-7">
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs flex-shrink-0">✓</div>
-              <span class="text-sm">Mapa visual com status de mesas</span>
-            </li>
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs flex-shrink-0">✓</div>
-              <span class="text-sm">Comandas + divisão de conta</span>
-            </li>
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs flex-shrink-0">✓</div>
-              <span class="text-sm">Taxa de serviço, couvert, pré-conta</span>
-            </li>
-          </ul>
+          <!-- Add-on Card: Mesas -->
+          <div class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 p-6 md:p-7 transition-all duration-300">
+            <div class="flex items-start justify-between gap-4 mb-5">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-base font-bold text-white">Módulo Mesas</p>
+                  <p class="text-xs text-slate-400">Bares, hamburguerias, salão</p>
+                </div>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <div class="flex items-baseline gap-0.5 justify-end">
+                  <span class="text-xs text-slate-400">+R$</span>
+                  <span class="text-2xl font-bold text-white">30</span>
+                </div>
+                <p class="text-[10px] text-slate-500 -mt-0.5">/mês</p>
+              </div>
+            </div>
 
-          <!-- Secondary CTA -->
-          <a href="#mesas" class="inline-flex items-center justify-center gap-2 w-full py-3 text-sm font-semibold text-rose-300 border border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-500/50 rounded-xl transition-all">
-            Ver como funciona
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
-          </a>
+            <ul class="space-y-2 mb-5">
+              <li class="flex items-center gap-2.5 text-sm text-slate-300">
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <span>Mapa visual com status de mesas</span>
+              </li>
+              <li class="flex items-center gap-2.5 text-sm text-slate-300">
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <span>Comandas e divisão de conta</span>
+              </li>
+              <li class="flex items-center gap-2.5 text-sm text-slate-300">
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <span>Taxa de serviço, couvert, pré-conta</span>
+              </li>
+            </ul>
 
-          <p class="text-xs text-slate-500 mt-4">
-            Ativa e desativa quando quiser pela tela de assinatura. Sem fidelidade.
-          </p>
+            <a href="#mesas" class="inline-flex items-center gap-1.5 text-xs font-semibold text-white/80 hover:text-white transition-colors">
+              Ver como funciona
+              <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+
+          <!-- Placeholder Card: futuros add-ons (subtle, gives sense of expandability) -->
+          <div class="rounded-2xl border border-dashed border-white/10 p-5 text-center">
+            <p class="text-xs text-slate-500">
+              Mais add-ons chegando em breve
+            </p>
+          </div>
         </div>
       </div>
     </div>
