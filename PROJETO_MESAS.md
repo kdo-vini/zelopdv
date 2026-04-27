@@ -23,26 +23,25 @@
 
 ## 2. Status atual do projeto
 
-- **Sprint atual**: 1 (Fundações)
-- **Última tarefa concluída**: Frontend toggle de add-on em `/assinatura`
-- **Pendência crítica**: aplicar a migração SQL em produção (`xnnjyrblpvsqrtsshawa`) — bloqueada por política de aprovação explícita; SQL pronto em [`.ai/migrations/mesas_module.sql`](.ai/migrations/mesas_module.sql).
-- **Próxima tarefa**: usuário aprovar e aplicar migração + rodar `npm run build` + commit.
-- **Bloqueios ativos**: migração SQL (precisa aprovação manual).
+- **Sprint atual**: 1 (Fundações) — **CONCLUÍDO**
+- **Última tarefa concluída**: Migração SQL aplicada em produção (project `xnnjyrblpvsqrtsshawa`) — 2026-04-27
+- **Próxima tarefa**: Sprint 2 — telas core (`/gestao/mesas`, `/app/mesas`, `/app/mesas/[id]`)
+- **Bloqueios ativos**: nenhum
 
 ---
 
 ## 3. Escopo MVP — checklist
 
-### Sprint 1 — Fundações
+### Sprint 1 — Fundações ✅
 - [✅] Schema SQL pronto em `.ai/migrations/mesas_module.sql`
-- [☐] **Migração aplicada em produção** (bloqueada — pendente aprovação)
+- [✅] **Migração aplicada em produção** (project `xnnjyrblpvsqrtsshawa`, 2026-04-27)
 - [✅] `updateSubscriptionValue()` em `src/lib/server/asaas.js`
 - [✅] `create-subscription` aceita `addons: { mesas: bool }` e calcula `value = 59 + (mesas ? 30 : 0)`
 - [✅] Endpoint `POST /api/billing/toggle-addon` (ativa/desativa add-on em assinatura existente)
 - [✅] `hasMesasAddon(userId)` em `src/lib/guards.js`
 - [✅] UI do toggle de add-on em `/assinatura` (formulário novo + view de assinante ativo)
-- [☐] `npm run build` passou
-- [☐] Commit Sprint 1
+- [✅] `npm run build` passou
+- [✅] Commit Sprint 1 (`5dd7c5f`)
 
 ### Sprint 2 — Telas core
 - [☐] `/gestao/mesas` (CRUD de mesas — número, capacidade, ativa)
@@ -138,9 +137,34 @@ Arquivo: [`.ai/migrations/mesas_module.sql`](.ai/migrations/mesas_module.sql)
 - **Decisão**: chamar `updateSubscriptionValue` sem `nextDueDate`.
 - **Rationale**: preserva a data de vencimento atual (e o trial ativo). Asaas só ajusta o valor da próxima fatura.
 
+### 2026-04-27 — Tipos de FK: `id_produto integer`, `id_venda bigint`
+- **Decisão**: `comanda_itens.id_produto` é `integer`, `comandas.id_venda` é `bigint`.
+- **Alternativa considerada**: `uuid` (assumido inicialmente).
+- **Rationale**: a inspeção do schema real revelou que `produtos.id` é `integer` e `vendas.id` é `bigint`. A primeira tentativa de migração falhou no `comandas_id_venda_fkey` por incompatibilidade de tipos. Lição: sempre verificar `information_schema.columns` antes de criar FKs.
+
 ---
 
 ## 8. Changelog detalhado
+
+### [2026-04-27] Sprint 1 — Migração aplicada em produção
+
+**Files**:
+- `.ai/migrations/mesas_module.sql` (atualizado: tipos de FK corrigidos)
+- `PROJETO_MESAS.md` (atualizado: status, gotcha de tipos, log de decisão)
+
+**Tabelas criadas em produção** (`xnnjyrblpvsqrtsshawa`):
+- `mesas` (RLS habilitada, policy `mesas_owner`)
+- `comandas` (RLS habilitada, policy `comandas_owner`)
+- `comanda_itens` (RLS habilitada, policy `comanda_itens_owner` via EXISTS)
+- Coluna nova: `subscriptions.has_mesas_addon BOOLEAN DEFAULT false`
+
+**Verification**: confirmado via `information_schema` + `pg_policies` — 3 tabelas, 3 policies, RLS=true em todas.
+
+**Gotcha encontrado**: primeira tentativa falhou com `cannot be implemented: Key columns "id_venda" and "id" are of incompatible types: uuid and bigint`. Causa: assumi `uuid` para todas as FKs, mas `produtos.id=integer` e `vendas.id=bigint`. Schema do `mesas.md` original estava errado nesse ponto. Corrigido e re-aplicado com sucesso.
+
+**Commit (doc update)**: pendente
+
+---
 
 ### [2026-04-27] Sprint 1 — Backend + UI prontos, migração pendente
 
@@ -222,6 +246,7 @@ SELECT count(*) FROM mesas;  -- deve ver só as do user B (zero se A criou e B n
 7. **Svelte não interpola `{}` em `<script type="application/ld+json">`**: usar `{@html}` (ver CLAUDE.md, seção SEO).
 8. **Tema**: nunca hardcoded `#hex` em components — usar CSS variables (`var(--primary)`, etc.).
 9. **PIX está em manutenção** na UI atual (`disabled` no radio). Quando reativar, addon deve continuar funcionando.
+10. **`produtos.id = integer`, `vendas.id = bigint`** — não são UUIDs. Qualquer nova FK que aponte pra essas tabelas precisa do tipo certo. `comanda_itens.id_produto` é `integer`; `comandas.id_venda` é `bigint`.
 
 ---
 
@@ -229,7 +254,7 @@ SELECT count(*) FROM mesas;  -- deve ver só as do user B (zero se A criou e B n
 
 | Risco | Severidade | Mitigação |
 |---|---|---|
-| Migração não aplicada → endpoints quebram em produção | **alto** | Aplicar antes do deploy. Validar em staging primeiro. |
+| Migração não aplicada → endpoints quebram em produção | ~~alto~~ ✅ resolvido | Aplicada em 2026-04-27. |
 | Asaas API muda contrato de update de subscription | médio | Função isolada em `asaas.js` — fácil ajustar. |
 | Cliente ativa addon mas não tem mesas configuradas → UX confusa no Sprint 2 | médio | Empty state em `/gestao/mesas` com CTA "criar primeira mesa". |
 | Webhook reconciliation atrasa (PAYMENT_RECEIVED só dispara mensalmente) → DB pode ficar dessincronizado se update de Asaas falhar silenciosamente | baixo | Endpoint `toggle-addon` faz rollback se DB falhar. Logs vão pra console. |
@@ -238,7 +263,7 @@ SELECT count(*) FROM mesas;  -- deve ver só as do user B (zero se A criou e B n
 
 ## 12. TODOs deferidos
 
-- [ ] Aplicar migração em produção (bloqueado — pendente aprovação)
+- [x] ~~Aplicar migração em produção~~ ✅ feito 2026-04-27
 - [ ] Migrar fluxo CC para Asaas (atualmente vai pro endpoint legado Stripe)
 - [ ] Adicionar telemetria: quantos % dos assinantes ativam o add-on?
 - [ ] Atualizar `/precificacao` com pricing do add-on
