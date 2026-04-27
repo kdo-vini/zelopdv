@@ -23,9 +23,9 @@
 
 ## 2. Status atual do projeto
 
-- **Sprint atual**: 3 (Fechamento) — **CONCLUÍDO**
-- **Última tarefa concluída**: Modal "Fechar Mesa" com 5 formas de pagamento, conversão comanda→venda, baixa de estoque, débito no fiado, pré-conta e recibo imprimíveis — 2026-04-27
-- **Próxima tarefa**: Sprint 4 — polish, testes E2E, atualizar copy `/precificacao`, beta com cliente solicitante
+- **Sprint atual**: 4 (Landing copy + polish) — **CONCLUÍDO**
+- **Última tarefa concluída**: Landing page atualizada com seção dedicada do Módulo Mesas, mention no pricing card, FAQ entry + JSON-LD — 2026-04-27
+- **Próxima tarefa**: Beta com cliente solicitante (ação externa, não-código)
 - **Bloqueios ativos**: nenhum
 
 ---
@@ -61,9 +61,9 @@
 - [✅] Divisão igual exibida (informacional) — total / num_pessoas
 
 ### Sprint 4 — Polish + lançamento
-- [☐] Testes unit + E2E
-- [☐] Update copy `/precificacao` com tier add-on
-- [☐] Beta com cliente que solicitou
+- [☐] Testes unit + E2E (deferido)
+- [✅] Update copy na **landing** (`/`) — usuário decidiu não tocar em `/precificacao`
+- [☐] Beta com cliente que solicitou (ação externa)
 
 ---
 
