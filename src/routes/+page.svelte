@@ -1016,19 +1016,68 @@
         </div>
       </div>
 
-      <!-- Add-on opcional -->
-      <div class="mt-8 max-w-lg mx-auto rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-5 text-left">
-        <div class="flex items-start gap-3">
-          <div class="w-9 h-9 rounded-lg bg-rose-500/20 flex items-center justify-center text-lg flex-shrink-0">🪑</div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-baseline justify-between gap-3 flex-wrap">
-              <p class="font-semibold text-white">Atende no salão? Ative o Módulo Mesas.</p>
-              <p class="text-rose-400 font-bold text-sm whitespace-nowrap">+R$ 30/mês</p>
-            </div>
-            <p class="text-sm text-slate-400 mt-1 leading-relaxed">
-              Mesas, comandas, taxa de serviço, divisão de conta. Ativa e desativa pela tela de assinatura — total R$ 89/mês quando ligado.
-            </p>
+      <!-- Separator with label -->
+      <div class="relative mt-16 mb-10 flex items-center justify-center max-w-lg mx-auto">
+        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-white/10"></div>
+        <span class="px-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Atende no salão?</span>
+        <div class="flex-1 h-px bg-gradient-to-l from-transparent via-white/10 to-white/10"></div>
+      </div>
+
+      <!-- Add-on Module Card (companion to main pricing card) -->
+      <div class="relative max-w-lg mx-auto">
+        <!-- Subtle rose glow -->
+        <div class="absolute -inset-1 bg-gradient-to-r from-rose-500/30 to-rose-700/30 rounded-2xl blur opacity-20"></div>
+
+        <div class="relative rounded-2xl bg-[#121620] p-8 md:p-10 shadow-2xl border border-rose-500/15 text-center">
+          <!-- "+ ADD-ON" pill (matches "PLANO ÚNICO" style) -->
+          <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+            <span class="bg-rose-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-rose-500/40 tracking-wide uppercase">+ Add-on opcional</span>
           </div>
+
+          <!-- Icon + Title -->
+          <div class="flex items-center justify-center gap-3 mb-4 mt-2">
+            <div class="w-12 h-12 rounded-xl bg-rose-500/15 border border-rose-500/20 flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+            </div>
+            <p class="text-xl font-bold text-white">Módulo Mesas</p>
+          </div>
+          <p class="text-sm text-slate-400 mb-6">Para bares, hamburguerias e atendimento no salão</p>
+
+          <!-- Price -->
+          <div class="flex justify-center items-baseline gap-1 mb-2">
+            <span class="text-lg text-slate-400">+R$</span>
+            <span class="text-5xl font-bold text-white tracking-tight">30</span>
+            <span class="text-lg text-slate-500">/mês</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-7">
+            Total <strong class="text-white font-semibold">R$ 89/mês</strong> quando ligado
+          </p>
+
+          <!-- Features -->
+          <ul class="space-y-3 text-left max-w-xs mx-auto mb-7">
+            <li class="flex items-center gap-3 text-slate-200">
+              <div class="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs flex-shrink-0">✓</div>
+              <span class="text-sm">Mapa visual com status de mesas</span>
+            </li>
+            <li class="flex items-center gap-3 text-slate-200">
+              <div class="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs flex-shrink-0">✓</div>
+              <span class="text-sm">Comandas + divisão de conta</span>
+            </li>
+            <li class="flex items-center gap-3 text-slate-200">
+              <div class="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs flex-shrink-0">✓</div>
+              <span class="text-sm">Taxa de serviço, couvert, pré-conta</span>
+            </li>
+          </ul>
+
+          <!-- Secondary CTA -->
+          <a href="#mesas" class="inline-flex items-center justify-center gap-2 w-full py-3 text-sm font-semibold text-rose-300 border border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-500/50 rounded-xl transition-all">
+            Ver como funciona
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+          </a>
+
+          <p class="text-xs text-slate-500 mt-4">
+            Ativa e desativa quando quiser pela tela de assinatura. Sem fidelidade.
+          </p>
         </div>
       </div>
     </div>
