@@ -23,9 +23,9 @@
 
 ## 2. Status atual do projeto
 
-- **Sprint atual**: 2 (Telas core) — **CONCLUÍDO**
-- **Última tarefa concluída**: Páginas `/gestao/mesas`, `/app/mesas`, `/app/mesas/[id]` + gate por addon + link no sidebar — 2026-04-27
-- **Próxima tarefa**: Sprint 3 — fechamento (modal de divisão, conversão comanda→venda, recibo)
+- **Sprint atual**: 3 (Fechamento) — **CONCLUÍDO**
+- **Última tarefa concluída**: Modal "Fechar Mesa" com 5 formas de pagamento, conversão comanda→venda, baixa de estoque, débito no fiado, pré-conta e recibo imprimíveis — 2026-04-27
+- **Próxima tarefa**: Sprint 4 — polish, testes E2E, atualizar copy `/precificacao`, beta com cliente solicitante
 - **Bloqueios ativos**: nenhum
 
 ---
@@ -51,11 +51,14 @@
 - [✅] Link "Mesas" adicionado no sidebar (grupo Vendas, após Frente de Caixa)
 - [✅] `/assinatura?addon=mesas` mostra banner de upsell + pré-marca o checkbox
 
-### Sprint 3 — Fechamento
-- [☐] Modal "Fechar mesa" com divisão igual entre N pessoas
-- [☐] Conversão `comandas` → `vendas` + `vendas_itens` ao fechar
-- [☐] Pré-conta (impressão sem fechar) + recibo final
-- [☐] Liberação da mesa (status → 'livre')
+### Sprint 3 — Fechamento ✅
+- [✅] Modal "Fechar mesa" com 5 formas (dinheiro/débito/crédito/PIX/fiado), troco automático para dinheiro, dropdown de cliente para fiado
+- [✅] Conversão `comandas` → `vendas` + `vendas_itens` ao fechar (com snapshot de nome/preço, qty arredondada para int)
+- [✅] Pré-conta (modal printável que NÃO fecha a comanda) + recibo final (após fechar) — ambos com `@media print` styles
+- [✅] Liberação da mesa (status → 'livre') + comanda fechada com `id_venda` + `total_calculado`
+- [✅] Baixa de estoque automática para produtos com `controlar_estoque`
+- [✅] RPC `fiado_lancar_debito` para vendas no fiado
+- [✅] Divisão igual exibida (informacional) — total / num_pessoas
 
 ### Sprint 4 — Polish + lançamento
 - [☐] Testes unit + E2E
@@ -148,6 +151,36 @@ Arquivo: [`.ai/migrations/mesas_module.sql`](.ai/migrations/mesas_module.sql)
 ---
 
 ## 8. Changelog detalhado
+
+### [2026-04-27] Sprint 3 — Fechamento (close + recibo + pré-conta)
+
+**Files**:
+- `src/routes/app/mesas/[id]/+page.svelte` (editado) — adicionados:
+  - Estado: `closeModalOpen`, `preContaOpen`, `formaPagamento`, `valorRecebido`, `pessoaFiadoId`, `pessoas`, `idCaixaAberto`, `recibo`, `recibosOpen`, `nomeEmpresa`
+  - Funções: `loadCaixaEPerfil()`, `loadPessoasFiado()`, `abrirCloseModal()`, `fecharMesa()`, `imprimir()`, `fecharRecibo()`
+  - 3 novos modais: pré-conta (printable, mantém comanda aberta), fechar mesa (com seletor de forma + cash/troco + dropdown fiado), recibo (após confirmação)
+  - Print styles `@media print` (oculta tudo exceto `.print-target`, força preto/branco)
+
+**Fluxo de fechamento**:
+1. `vendas` insert (valor_total, forma, troco, id_caixa quando disponível, id_cliente para fiado, tipo_pedido='mesa')
+2. `vendas_itens` insert (snapshot nome+preço, qty arredondada para int)
+3. Se fiado: `rpc('fiado_lancar_debito', {p_id_pessoa, p_valor})`
+4. Baixa de estoque: `rpc('decrementar_estoque')` para produtos com `controlar_estoque`
+5. `comandas` update: status='fechada', fechada_em, id_venda, total_calculado
+6. `mesas` update: status='livre'
+7. Mostra recibo modal + redireciona ao clicar "Voltar"
+
+**Verification**: `npm run build` passou.
+
+**Commit**: pendente
+
+**Gotchas**:
+- `vendas_itens.quantidade` é `integer` (não numeric). Comanda permite `quantidade` numérica (0.5 chopp), mas no momento do fechamento arredondamos. Documentado em gotcha #11.
+- `id_caixa` é nullable — se não houver caixa aberto, salva como null. Relatório de fechamento de caixa não vai capturar essa venda nesse caso.
+- Pré-conta NÃO altera estado da comanda. Só print.
+- `numero_venda` é gerado automaticamente pelo DB (sequence/trigger). Não passamos.
+
+---
 
 ### [2026-04-27] Sprint 2 — Telas core (CRUD + mapa + comanda)
 
@@ -277,6 +310,8 @@ SELECT count(*) FROM mesas;  -- deve ver só as do user B (zero se A criou e B n
 8. **Tema**: nunca hardcoded `#hex` em components — usar CSS variables (`var(--primary)`, etc.).
 9. **PIX está em manutenção** na UI atual (`disabled` no radio). Quando reativar, addon deve continuar funcionando.
 10. **`produtos.id = integer`, `vendas.id = bigint`** — não são UUIDs. Qualquer nova FK que aponte pra essas tabelas precisa do tipo certo. `comanda_itens.id_produto` é `integer`; `comandas.id_venda` é `bigint`.
+11. **`vendas_itens.quantidade = integer`**, mas `comanda_itens.quantidade = numeric(10,3)`. Ao fechar uma mesa, arredondamos com `Math.round` (mín. 1). Se o negócio precisar registrar fração na venda final, precisará migration `ALTER TABLE vendas_itens ALTER COLUMN quantidade TYPE numeric(10,3)`.
+12. **`numero_venda` em `vendas`** é gerado pelo DB (sequence ou trigger). NUNCA passar manualmente no insert.
 
 ---
 
