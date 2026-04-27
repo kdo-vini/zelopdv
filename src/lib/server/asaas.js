@@ -140,6 +140,14 @@ export async function getSubscription(subscriptionId) {
   return asaasRequest('GET', `/v3/subscriptions/${subscriptionId}`);
 }
 
+// Update existing subscription value. Asaas does NOT pro-rata —
+// the new value applies only to the next billing cycle.
+export async function updateSubscriptionValue(subscriptionId, newValue, nextDueDate = null) {
+  const body = { value: newValue };
+  if (nextDueDate) body.nextDueDate = nextDueDate;
+  return asaasRequest('POST', `/v3/subscriptions/${subscriptionId}`, body);
+}
+
 export async function removeSubscription(subscriptionId) {
   return asaasRequest('DELETE', `/v3/subscriptions/${subscriptionId}`);
 }

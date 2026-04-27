@@ -37,13 +37,20 @@ export async function POST({ request }) {
       .then(({ error }) => { if (error) console.warn('[create-subscription] last_seen_at:', error.message); })
       .catch((e) => console.warn('[create-subscription] last_seen_at catch:', e.message));
 
-    // Get billing type from request body
+    // Get billing type and add-ons from request body
     const body = await request.json();
     const billingType = body.billingType || 'PIX';
+    const addons = body.addons || {};
+    const hasMesasAddon = !!addons.mesas;
 
     if (!['PIX', 'CREDIT_CARD'].includes(billingType)) {
       return json({ error: 'Tipo de pagamento inválido. Use PIX ou CREDIT_CARD.' }, { status: 400 });
     }
+
+    // Plan pricing: base R$59 + R$30 per active add-on
+    const BASE_VALUE = 59.00;
+    const MESAS_ADDON_VALUE = 30.00;
+    const subscriptionValue = BASE_VALUE + (hasMesasAddon ? MESAS_ADDON_VALUE : 0);
 
     // Get customer profile for CPF/CNPJ
     const { data: perfil } = await supabaseAdmin
@@ -123,7 +130,7 @@ export async function POST({ request }) {
     const subscription = await createSubscription({
       customerId: customer.id,
       billingType,
-      value: 59.00,
+      value: subscriptionValue,
       nextDueDate,
       externalReference: userId,
     });
@@ -138,6 +145,7 @@ export async function POST({ request }) {
       cancel_at_period_end: false,
       payment_provider: 'asaas',
       billing_type: billingType,
+      has_mesas_addon: hasMesasAddon,
       updated_at: nowIso,
     };
 

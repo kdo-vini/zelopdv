@@ -111,3 +111,26 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
 
   return { userId, email };
 }
+
+/**
+ * Returns whether the given user has the Mesas add-on active on their subscription.
+ * Read-only — does not redirect. Call AFTER ensureActiveSubscription so an active sub is guaranteed.
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function hasMesasAddon(userId) {
+  if (!userId) return false;
+  try {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('has_mesas_addon')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return !!data?.has_mesas_addon;
+  } catch (err) {
+    console.warn('[Guards] hasMesasAddon error:', err?.message);
+    return false;
+  }
+}
