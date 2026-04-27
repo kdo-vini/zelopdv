@@ -19,6 +19,7 @@
   let mesasAddonOn = false;          // checkbox state for new-subscriber form
   let activeMesasAddon = false;      // current DB state for active-subscriber view
   let togglingAddon = false;
+  let camePromptingMesas = false;    // came to /assinatura via ?addon=mesas
 
   const BASE_PRICE = 59;
   const MESAS_ADDON_PRICE = 30;
@@ -125,6 +126,11 @@
         const params = new URLSearchParams(window.location.search);
         if (params.get('success') === '1' && isActiveStrict) {
           setTimeout(() => { window.location.href = '/gestao'; }, 800);
+        }
+        if (params.get('addon') === 'mesas') {
+          camePromptingMesas = true;
+          // Pre-check the addon for new subscribers if not already active
+          if (!activeMesasAddon) mesasAddonOn = true;
         }
         const msg = params.get('msg');
         if (msg === 'subscribe') {
@@ -381,6 +387,24 @@
   <p class="breadcrumb">Conta / Assinatura</p>
   <h1 class="title">Assinatura Zelo PDV</h1>
   <p class="subtitle">Plano base R$ 59/mês. Adicione o Módulo Mesas (+R$ 30) para gerenciar mesas e comandas.</p>
+
+  {#if camePromptingMesas}
+    <div class="status-card info" style="border-color: rgba(14,165,233,0.45);">
+      <div class="status-icon">🪑</div>
+      <div>
+        <strong>Ative o Módulo Mesas</strong>
+        <div class="status-detail">
+          {#if isActiveStrict && !activeMesasAddon}
+            Toque em "Ativar Módulo Mesas" abaixo. Próxima cobrança passa para R$ 89/mês.
+          {:else if activeMesasAddon}
+            Módulo já está ativo na sua assinatura. Acesse <a href="/app/mesas" style="color: var(--primary);">/app/mesas</a>.
+          {:else}
+            Marque "Módulo Mesas" no formulário abaixo. Total ficará R$ 89/mês.
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
 
   {#if isActiveStrict}
     <!-- ACTIVE SUBSCRIPTION STATE -->

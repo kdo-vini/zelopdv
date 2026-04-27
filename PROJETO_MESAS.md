@@ -23,9 +23,9 @@
 
 ## 2. Status atual do projeto
 
-- **Sprint atual**: 1 (Fundações) — **CONCLUÍDO**
-- **Última tarefa concluída**: Migração SQL aplicada em produção (project `xnnjyrblpvsqrtsshawa`) — 2026-04-27
-- **Próxima tarefa**: Sprint 2 — telas core (`/gestao/mesas`, `/app/mesas`, `/app/mesas/[id]`)
+- **Sprint atual**: 2 (Telas core) — **CONCLUÍDO**
+- **Última tarefa concluída**: Páginas `/gestao/mesas`, `/app/mesas`, `/app/mesas/[id]` + gate por addon + link no sidebar — 2026-04-27
+- **Próxima tarefa**: Sprint 3 — fechamento (modal de divisão, conversão comanda→venda, recibo)
 - **Bloqueios ativos**: nenhum
 
 ---
@@ -43,11 +43,13 @@
 - [✅] `npm run build` passou
 - [✅] Commit Sprint 1 (`5dd7c5f`)
 
-### Sprint 2 — Telas core
-- [☐] `/gestao/mesas` (CRUD de mesas — número, capacidade, ativa)
-- [☐] `/app/mesas` (mapa visual de mesas, status livre/ocupada/fechando)
-- [☐] `/app/mesas/[id]` (comanda — adicionar itens via grid de produtos, observações)
-- [☐] Gate `hasMesasAddon` aplicado nas rotas acima
+### Sprint 2 — Telas core ✅
+- [✅] `/gestao/mesas` (CRUD de mesas — número, capacidade, ativa, status)
+- [✅] `/app/mesas` (mapa visual com tiles coloridos por status)
+- [✅] `/app/mesas/[id]` (comanda: produtos grid + itens + totais + ajustes)
+- [✅] Gate `hasMesasAddon` aplicado nas 3 rotas (redirect/upsell card pra `/assinatura?addon=mesas`)
+- [✅] Link "Mesas" adicionado no sidebar (grupo Vendas, após Frente de Caixa)
+- [✅] `/assinatura?addon=mesas` mostra banner de upsell + pré-marca o checkbox
 
 ### Sprint 3 — Fechamento
 - [☐] Modal "Fechar mesa" com divisão igual entre N pessoas
@@ -110,9 +112,10 @@ Arquivo: [`.ai/migrations/mesas_module.sql`](.ai/migrations/mesas_module.sql)
 | `src/routes/api/billing/toggle-addon/+server.js` | endpoint toggle | criado | 2026-04-27 |
 | `src/lib/guards.js` | + `hasMesasAddon()` | aplicado | 2026-04-27 |
 | `src/routes/assinatura/+page.svelte` | toggle UI | aplicado | 2026-04-27 |
-| `src/routes/gestao/mesas/+page.svelte` | CRUD mesas (Sprint 2) | TODO | — |
-| `src/routes/app/mesas/+page.svelte` | mapa de mesas (Sprint 2) | TODO | — |
-| `src/routes/app/mesas/[id]/+page.svelte` | comanda (Sprint 2) | TODO | — |
+| `src/routes/gestao/mesas/+page.svelte` | CRUD mesas | criado | 2026-04-27 |
+| `src/routes/app/mesas/+page.svelte` | mapa visual | criado | 2026-04-27 |
+| `src/routes/app/mesas/[id]/+page.svelte` | comanda | criado | 2026-04-27 |
+| `src/lib/components/GestaoSidebar.svelte` | + link "Mesas" no grupo Vendas | editado | 2026-04-27 |
 
 ---
 
@@ -145,6 +148,33 @@ Arquivo: [`.ai/migrations/mesas_module.sql`](.ai/migrations/mesas_module.sql)
 ---
 
 ## 8. Changelog detalhado
+
+### [2026-04-27] Sprint 2 — Telas core (CRUD + mapa + comanda)
+
+**Files**:
+- `src/routes/gestao/mesas/+page.svelte` (novo) — CRUD com modal de criar/editar, tabela com status pills, exclusão com proteção de FK
+- `src/routes/app/mesas/+page.svelte` (novo) — mapa de tiles coloridos por status (verde=livre, vermelho=ocupada, âmbar=fechando), abre/cria comanda ao clicar
+- `src/routes/app/mesas/[id]/+page.svelte` (novo) — split-view comanda: produtos com busca/categorias à esquerda, itens com qty stepper + totais à direita, ajustes (taxa serviço, couvert, desconto) em accordion
+- `src/lib/components/GestaoSidebar.svelte` (editado) — link "Mesas" no grupo Vendas
+- `src/routes/assinatura/+page.svelte` (editado) — query `?addon=mesas` mostra banner de upsell e pré-marca o checkbox
+
+**UX**:
+- Cada página tem upsell card próprio quando `hasMesasAddon = false` (botão para `/assinatura?addon=mesas`)
+- Comanda usa `pdvCache` para produtos/categorias (evita duplicar fetch)
+- Adicionar produto na comanda: se já existe, incrementa qty (não duplica row)
+- Botão "Fechar mesa" presente mas disabled (Sprint 3)
+- Botão "Cancelar comanda" funcional: marca comanda como cancelada + libera mesa
+
+**Verification**: `npm run build` passou — 3 novas entries em `.svelte-kit/output/server/entries/pages/` (gestao/mesas, app/mesas, app/mesas/_id_).
+
+**Commit**: pendente
+
+**Gotchas**:
+- Mesa só aparece no mapa se `ativa = true`. CRUD permite desativar sem excluir.
+- Excluir mesa com comandas → bloqueado pelo FK; tratamos a mensagem de erro.
+- `numero` é único por usuário (constraint `mesas_usuario_numero_unique`); duplicate gera toast amigável.
+
+---
 
 ### [2026-04-27] Sprint 1 — Migração aplicada em produção
 
