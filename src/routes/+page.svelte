@@ -254,7 +254,8 @@
 
       <div class="flex items-center gap-4">
         <a href="/login" class="text-sm font-medium text-white hover:text-sky-400 transition-colors hidden md:block">Entrar</a>
-        <a href="/cadastro" class="px-5 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all hover:scale-105 active:scale-95">
+        <!-- CTA do header: só desktop. Em mobile o usuário tem o CTA grande na hero + opção dentro do menu. -->
+        <a href="/cadastro" class="hidden md:inline-block px-5 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all hover:scale-105 active:scale-95">
           Testar 30 dias grátis
         </a>
         <!-- Hamburger button (mobile only) -->
@@ -300,12 +301,12 @@
     <div class="absolute bottom-0 right-0 w-[800px] h-[600px] bg-blue-900/10 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
 
     <div class="max-w-7xl mx-auto px-6 text-center relative z-10">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-400 text-xs font-medium mb-8 animate-fade-in-up">
-        <span class="relative flex h-2 w-2">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-400 text-[11px] font-semibold uppercase tracking-wider mb-8 animate-fade-in-up">
+        <span class="relative flex h-1.5 w-1.5">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+          <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-sky-500"></span>
         </span>
-        Zelinho — IA com contexto real do seu negócio
+        Novo · IA que mostra seu lucro real
       </div>
 
       <h1 class="text-5xl md:text-7xl font-bold text-white tracking-tight leading-[1.1] mb-8 animate-fade-in-up delay-100">
