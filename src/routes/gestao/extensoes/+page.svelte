@@ -48,21 +48,21 @@
       compatible: planTier === 'pdv' || planTier === 'bundle',
       cta: '/assinatura?addon=mesas',
       manage: '/app/mesas',
-      incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Bundle).',
+      incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Pacote Gestão + Atendimento).',
     },
     {
       id: 'chat',
       kind: 'plan',
       name: 'ZeloChat',
       tagline: 'Atendimento WhatsApp com IA',
-      description: 'IA responde clientes, anota pedidos, dispara alertas humano. Disponível no plano ZeloChat ou no Bundle (PDV + Chat).',
+      description: 'IA responde clientes, anota pedidos, dispara alertas humanos. Disponível no plano ZeloChat ou no Pacote Gestão + Atendimento (que inclui PDV).',
       price: PLANS.bundle.price - PLANS.pdv.price, // diferencial pra fazer upgrade do pdv
       active: chatActive,
       compatible: true, // sempre disponível como upgrade
       cta: planTier === 'pdv' ? '/assinatura?upgrade=bundle' : '/assinatura?upgrade=chat',
       manage: chatActive ? 'https://chat.zelopdv.com.br' : null,
-      ctaLabel: planTier === 'pdv' ? 'Upgrade pra Bundle' : 'Assinar ZeloChat',
-      priceLabel: planTier === 'pdv' ? `+R$ ${(PLANS.bundle.price - PLANS.pdv.price)}/mês (vira Bundle)` : `R$ ${PLANS.chat.price}/mês`,
+      ctaLabel: planTier === 'pdv' ? 'Upgrade pro pacote completo' : 'Assinar ZeloChat',
+      priceLabel: planTier === 'pdv' ? `+R$ ${(PLANS.bundle.price - PLANS.pdv.price)}/mês (vira pacote completo)` : `R$ ${PLANS.chat.price}/mês`,
     },
   ];
 </script>

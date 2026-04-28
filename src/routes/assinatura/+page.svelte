@@ -304,7 +304,7 @@
 
   async function toggleMesasAddon() {
     if (!activePlanAllowsMesas) {
-      addToast('Mesas não está disponível para o plano ZeloChat. Mude pra ZeloPDV ou Bundle.', 'warning');
+      addToast('Mesas não está disponível para o plano ZeloChat. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.', 'warning');
       return;
     }
     const turningOn = !activeMesasAddon;
@@ -356,13 +356,13 @@
 
 <svelte:head>
   <title>Assinatura — Zelo</title>
-  <meta name="description" content="Assine ZeloPDV (R$ 59), ZeloChat (R$ 97) ou o Bundle (R$ 147). Cartão de crédito.">
+  <meta name="description" content="Assine ZeloPDV (R$ 59), ZeloChat (R$ 97) ou o Pacote Gestão + Atendimento (R$ 147). Cartão de crédito.">
 </svelte:head>
 
 <section class="assinatura-container">
   <p class="breadcrumb">Conta / Assinatura</p>
   <h1 class="title">Sua assinatura Zelo</h1>
-  <p class="subtitle">Escolha o plano. ZeloPDV (PDV + financeiro), ZeloChat (atendimento com IA), ou ambos no Bundle com R$ 9 de desconto.</p>
+  <p class="subtitle">Escolha o plano. ZeloPDV (gestão completa), ZeloChat (atendimento com IA), ou os dois no Pacote Gestão + Atendimento com R$ 9 de desconto.</p>
 
   {#if camePromptingMesas}
     <div class="status-card info">
@@ -373,7 +373,7 @@
           {#if isActiveStrict && activePlanAllowsMesas && !activeMesasAddon}
             Use "Ativar Módulo Mesas" abaixo.
           {:else if isActiveStrict && !activePlanAllowsMesas}
-            O Módulo Mesas precisa de um plano com PDV. Mude pra ZeloPDV ou Bundle.
+            O Módulo Mesas precisa de um plano com PDV. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.
           {:else if activeMesasAddon}
             Já está ativo. Acesse <a href="/app/mesas" style="color: var(--primary);">/app/mesas</a>.
           {:else}

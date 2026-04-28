@@ -437,7 +437,7 @@
           <option value="all">Todos planos</option>
           <option value="pdv">ZeloPDV</option>
           <option value="chat">ZeloChat</option>
-          <option value="bundle">Bundle</option>
+          <option value="bundle">Pacote G+A</option>
         </select>
         <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
           <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>

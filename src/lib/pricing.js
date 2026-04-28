@@ -29,8 +29,8 @@ export const PLANS = {
   },
   bundle: {
     id: 'bundle',
-    name: 'ZeloChat + ZeloPDV',
-    tagline: 'PDV completo + Atendimento com IA',
+    name: 'Pacote Gestão + Atendimento',
+    tagline: 'ZeloPDV (gestão completa) + ZeloChat (atendimento com IA)',
     price: 147.00,
     includesPdv: true,
     includesChat: true,
