@@ -6,6 +6,9 @@
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
 
+  // Base do app principal (onde rodam os endpoints /api/admin/billing/*)
+  const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://zelopdv.com.br'
+
   let subscriptions = []
   let loading = true
   let searchTerm = ''
@@ -132,15 +135,13 @@
     editMesasAddon = false
   }
 
-  // Admin pode mudar plano e addons direto no DB sem chamar Asaas (controle manual).
-  // ATENÇÃO: se a subscription tem provider_subscription_id, o valor no Asaas NÃO é atualizado.
-  // Use isso só pra correções administrativas; cobrança real será no valor antigo do Asaas.
+  // Admin muda plano e addons. Para subs Stripe, chama endpoint que sincroniza com Stripe API
+  // (igual o user faria via /assinatura). Para subs manual/sem provedor, update direto no DB.
   async function handleSavePlan() {
     if (!selectedSub || !VALID_PLAN_TIERS.includes(editPlanTier)) {
       errorToast('Plano inválido.')
       return
     }
-    // Strip Mesas se incompatível com o plano (chat-only não suporta)
     const finalMesas = isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon
 
     if (editMesasAddon && !isAddonAllowed(editPlanTier, 'mesas')) {
@@ -150,7 +151,64 @@
 
     try {
       planSaving = true
+      const provider = selectedSub.payment_provider
 
+      if (provider === 'stripe') {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          errorToast('Sessão expirada. Faça login novamente.')
+          return
+        }
+
+        const res = await fetch(`${API_BASE}/api/admin/billing/sync-plan`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            subscriptionId: selectedSub.id,
+            planTier: editPlanTier,
+            hasMesasAddon: finalMesas,
+          }),
+        })
+        const body = await res.json().catch(() => ({}))
+
+        if (res.status === 422 && body.code === 'stripe_resource_missing') {
+          const ok = confirm(
+            `A subscription ${body.providerSubscriptionId || ''} não existe no Stripe (provavelmente ID legado de migração). ` +
+            `Reclassificar como "manual" pra desbloquear edição direta no DB?`
+          )
+          if (ok) {
+            await handleReclassifyManual(selectedSub, session.access_token)
+          }
+          return
+        }
+
+        if (!res.ok) {
+          errorToast('Erro ao sincronizar com Stripe: ' + (body.error || res.statusText))
+          return
+        }
+
+        await logAdminAction({
+          adminId: adminInfo.id,
+          action: 'admin_sync_plan_stripe',
+          targetUserId: selectedSub.user_id,
+          details: {
+            subscription_id: selectedSub.id,
+            old: { plan_tier: selectedSub.plan_tier, has_mesas_addon: selectedSub.has_mesas_addon },
+            new: { plan_tier: editPlanTier, has_mesas_addon: finalMesas },
+            stripe_updated: body.stripeUpdated,
+          },
+        })
+
+        success(`Plano alterado para ${planLabel(editPlanTier)}${body.stripeUpdated ? ' (Stripe sincronizado)' : ' (sem mudança no Stripe)'}.`)
+        closePlanModal()
+        await loadSubscriptions()
+        return
+      }
+
+      // Manual ou sem provedor: update direto no DB
       const updatePayload = {
         plan_tier: editPlanTier,
         has_mesas_addon: finalMesas,
@@ -168,17 +226,17 @@
 
       await logAdminAction({
         adminId: adminInfo.id,
-        action: 'admin_change_plan',
+        action: 'admin_change_plan_manual',
         targetUserId: selectedSub.user_id,
         details: {
           subscription_id: selectedSub.id,
           old: { plan_tier: selectedSub.plan_tier, has_mesas_addon: selectedSub.has_mesas_addon },
           new: { plan_tier: editPlanTier, has_mesas_addon: finalMesas },
-          warning: selectedSub.provider_subscription_id ? 'Asaas value NOT synced — valor no provedor permanece antigo' : null,
+          provider: provider || 'none',
         },
       })
 
-      success(`Plano alterado para ${planLabel(editPlanTier)}${selectedSub.provider_subscription_id ? ' (apenas no DB — valor no Asaas não foi atualizado)' : ''}.`)
+      success(`Plano alterado para ${planLabel(editPlanTier)} (apenas no DB — sem provedor).`)
       closePlanModal()
       await loadSubscriptions()
     } catch (err) {
@@ -186,6 +244,40 @@
       errorToast('Erro ao alterar plano: ' + err.message)
     } finally {
       planSaving = false
+    }
+  }
+
+  async function handleReclassifyManual(sub, accessToken) {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/billing/reclassify-manual`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ subscriptionId: sub.id }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        errorToast('Erro ao reclassificar: ' + (body.error || res.statusText))
+        return
+      }
+      await logAdminAction({
+        adminId: adminInfo.id,
+        action: 'admin_reclassify_manual',
+        targetUserId: sub.user_id,
+        details: {
+          subscription_id: sub.id,
+          previous_provider: body.previousProvider,
+          previous_provider_sub_id: body.previousProviderSubId,
+        },
+      })
+      success(`Subscription reclassificada como manual. Provedor anterior (${body.previousProvider}) limpo.`)
+      closePlanModal()
+      await loadSubscriptions()
+    } catch (err) {
+      console.error('Reclassify error:', err)
+      errorToast('Erro ao reclassificar: ' + err.message)
     }
   }
   
@@ -811,11 +903,15 @@
           </div>
         </div>
 
-        {#if selectedSub.provider_subscription_id}
+        {#if selectedSub.payment_provider === 'stripe'}
+          <div class="rounded-lg p-3 bg-indigo-500/5 border border-indigo-500/30 text-[11px] text-indigo-300 leading-relaxed">
+            <strong class="block">✅ Stripe será sincronizado</strong>
+            Salvar vai chamar a API do Stripe pra atualizar o plano/addon. Mudança vale a partir do próximo ciclo (sem proration).
+          </div>
+        {:else if selectedSub.payment_provider === 'asaas'}
           <div class="rounded-lg p-3 bg-amber-500/5 border border-amber-500/30 text-[11px] text-amber-300 leading-relaxed">
             <strong class="block">⚠️ Mudança apenas no DB</strong>
-            Esta sub tem provedor (Asaas). O valor real cobrado <strong>não será atualizado</strong> via essa tela. Use só pra correção administrativa.
-            Pra alterar valor real no Asaas, peça pro user usar /assinatura ou ajuste no Asaas dashboard.
+            Provedor é Asaas (legado). Valor real cobrado <strong>não será atualizado</strong>. Use só pra correção administrativa.
           </div>
         {:else}
           <div class="rounded-lg p-3 bg-emerald-500/5 border border-emerald-500/30 text-[11px] text-emerald-300 leading-relaxed">
