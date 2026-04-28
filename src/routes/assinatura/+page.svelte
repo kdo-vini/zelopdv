@@ -16,6 +16,15 @@
   let isActiveStrict = false;
   let billingType = 'CREDIT_CARD';
   let trialDaysLeft = null;
+  let mesasAddonOn = false;          // checkbox state for new-subscriber form
+  let activeMesasAddon = false;      // current DB state for active-subscriber view
+  let togglingAddon = false;
+  let camePromptingMesas = false;    // came to /assinatura via ?addon=mesas
+
+  const BASE_PRICE = 59;
+  const MESAS_ADDON_PRICE = 30;
+  $: planPrice = BASE_PRICE + (mesasAddonOn ? MESAS_ADDON_PRICE : 0);
+  $: activePlanPrice = BASE_PRICE + (activeMesasAddon ? MESAS_ADDON_PRICE : 0);
 
   // PIX data after subscription creation
   let pixQrImage = null;
@@ -43,7 +52,7 @@
         try {
           const { data } = await supabase
             .from('subscriptions')
-            .select('status, current_period_end, manually_extended_until, billing_type, payment_provider')
+            .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon')
             .eq('user_id', userId)
             .order('updated_at', { ascending: false })
             .limit(1)
@@ -53,6 +62,8 @@
           expiryDate = data?.current_period_end || null;
           hasHadSubscription = !!data;
           billingType = data?.billing_type === 'PIX' ? 'CREDIT_CARD' : (data?.billing_type || 'CREDIT_CARD');
+          activeMesasAddon = !!data?.has_mesas_addon;
+          mesasAddonOn = activeMesasAddon; // pre-fill new-sub form with current preference
 
           isActiveStrict = isSubscriptionActiveStrict(data);
 
@@ -116,6 +127,11 @@
         if (params.get('success') === '1' && isActiveStrict) {
           setTimeout(() => { window.location.href = '/gestao'; }, 800);
         }
+        if (params.get('addon') === 'mesas') {
+          camePromptingMesas = true;
+          // Pre-check the addon for new subscribers if not already active
+          if (!activeMesasAddon) mesasAddonOn = true;
+        }
         const msg = params.get('msg');
         if (msg === 'subscribe') {
           if (hasHadSubscription) {
@@ -163,7 +179,7 @@
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ billingType }),
+        body: JSON.stringify({ billingType, addons: { mesas: mesasAddonOn } }),
       });
 
       const json = await res.json();
@@ -313,6 +329,50 @@
     }
   }
 
+  async function toggleMesasAddon() {
+    const turningOn = !activeMesasAddon;
+    const confirmed = await confirmAction(
+      turningOn ? 'Ativar Módulo Mesas' : 'Desativar Módulo Mesas',
+      turningOn
+        ? `O valor da próxima cobrança passará para R$ ${BASE_PRICE + MESAS_ADDON_PRICE}/mês. A cobrança atual não é alterada.`
+        : `O valor da próxima cobrança voltará para R$ ${BASE_PRICE}/mês. A cobrança atual não é alterada.`
+    );
+    if (!confirmed) return;
+
+    try {
+      togglingAddon = true;
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token ?? '';
+      if (!token) {
+        addToast('Sua sessão expirou. Faça login novamente.', 'warning');
+        return;
+      }
+
+      const res = await fetch('/api/billing/toggle-addon', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ addon: 'mesas', enabled: turningOn }),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        addToast(json?.error || 'Falha ao alterar add-on.', 'error');
+        return;
+      }
+
+      activeMesasAddon = turningOn;
+      mesasAddonOn = turningOn;
+      addToast(json?.message || 'Add-on atualizado.', 'success');
+    } catch (e) {
+      addToast('Erro ao conectar. Tente novamente.', 'error');
+    } finally {
+      togglingAddon = false;
+    }
+  }
+
   $: defaultMessage = hasHadSubscription
     ? 'Renove sua assinatura para continuar usando o sistema.'
     : '30 dias grátis! Escolha como pagar após o período de teste.';
@@ -326,7 +386,25 @@
 <section class="assinatura-container">
   <p class="breadcrumb">Conta / Assinatura</p>
   <h1 class="title">Assinatura Zelo PDV</h1>
-  <p class="subtitle">Apenas R$ 59/mês. Pague com PIX ou cartão de crédito.</p>
+  <p class="subtitle">Plano base R$ 59/mês. Adicione o Módulo Mesas (+R$ 30) para gerenciar mesas e comandas.</p>
+
+  {#if camePromptingMesas}
+    <div class="status-card info" style="border-color: rgba(14,165,233,0.45);">
+      <div class="status-icon">🪑</div>
+      <div>
+        <strong>Ative o Módulo Mesas</strong>
+        <div class="status-detail">
+          {#if isActiveStrict && !activeMesasAddon}
+            Toque em "Ativar Módulo Mesas" abaixo. Próxima cobrança passa para R$ 89/mês.
+          {:else if activeMesasAddon}
+            Módulo já está ativo na sua assinatura. Acesse <a href="/app/mesas" style="color: var(--primary);">/app/mesas</a>.
+          {:else}
+            Marque "Módulo Mesas" no formulário abaixo. Total ficará R$ 89/mês.
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
 
   {#if isActiveStrict}
     <!-- ACTIVE SUBSCRIPTION STATE -->
@@ -370,17 +448,25 @@
         </div>
       </div>
 
+      <label class="addon-toggle">
+        <input type="checkbox" bind:checked={mesasAddonOn} />
+        <div class="addon-info">
+          <strong>Módulo Mesas <span class="addon-price">+R$ 30/mês</span></strong>
+          <span class="addon-detail">Mesas, comandas e divisão de conta para bares e lanchonetes.</span>
+        </div>
+      </label>
+
       <button class="btn-primary btn-subscribe" on:click={assinar} disabled={loading}>
         {#if loading}
           Processando…
         {:else}
-          Assinar agora — R$ 59/mês
+          Assinar agora — R$ {planPrice}/mês
         {/if}
       </button>
 
       <p class="legal-text">
         Ao assinar, você concorda com nossos <a href="/termos">Termos de Uso</a> e <a href="/privacidade">Política de Privacidade</a>.
-        A cobrança de R$ 59/mês será iniciada imediatamente.
+        A cobrança de R$ {planPrice}/mês será iniciada imediatamente.
       </p>
 
     {:else}
@@ -400,6 +486,36 @@
             {/if}
           {/if}
         </div>
+      </div>
+
+      <div class="addon-card">
+        <div class="addon-card-header">
+          <strong>Módulo Mesas</strong>
+          <span class="addon-status" class:on={activeMesasAddon}>
+            {activeMesasAddon ? 'Ativo' : 'Não ativo'}
+          </span>
+        </div>
+        <p class="addon-card-detail">
+          {#if activeMesasAddon}
+            Você está pagando R$ {activePlanPrice}/mês (R$ 59 plano + R$ 30 add-on).
+            Desativar volta o valor para R$ 59/mês na próxima cobrança.
+          {:else}
+            Adicione mesas, comandas e divisão de conta. +R$ 30/mês — total R$ 89/mês a partir da próxima cobrança.
+          {/if}
+        </p>
+        <button
+          class="btn-secondary"
+          on:click={toggleMesasAddon}
+          disabled={togglingAddon}
+        >
+          {#if togglingAddon}
+            Atualizando…
+          {:else if activeMesasAddon}
+            Desativar Módulo Mesas
+          {:else}
+            Ativar Módulo Mesas (+R$ 30/mês)
+          {/if}
+        </button>
       </div>
 
       <div class="actions-row">
@@ -494,20 +610,28 @@
       </div>
     </div>
 
+    <label class="addon-toggle">
+      <input type="checkbox" bind:checked={mesasAddonOn} />
+      <div class="addon-info">
+        <strong>Módulo Mesas <span class="addon-price">+R$ 30/mês</span></strong>
+        <span class="addon-detail">Mesas, comandas e divisão de conta para bares e lanchonetes.</span>
+      </div>
+    </label>
+
     <button class="btn-primary btn-subscribe" on:click={assinar} disabled={loading}>
       {#if loading}
         Processando…
       {:else}
-        Assinar agora
+        Assinar agora — R$ {planPrice}/mês
       {/if}
     </button>
 
     <p class="legal-text">
       Ao assinar, você concorda com nossos <a href="/termos">Termos de Uso</a> e <a href="/privacidade">Política de Privacidade</a>.
       {#if !hasHadSubscription}
-        A cobrança de R$ 59/mês será iniciada após o período de teste.
+        A cobrança de R$ {planPrice}/mês será iniciada após o período de teste.
       {:else}
-        A cobrança de R$ 59/mês será iniciada imediatamente.
+        A cobrança de R$ {planPrice}/mês será iniciada imediatamente.
       {/if}
     </p>
   {/if}
@@ -800,6 +924,102 @@
     cursor: not-allowed;
     pointer-events: none;
     filter: grayscale(0.5);
+  }
+
+  /* Add-on toggle (used in subscribe forms) */
+  .addon-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 2px solid var(--border-subtle);
+    border-radius: 10px;
+    cursor: pointer;
+    background: var(--bg-card);
+    transition: all 0.2s;
+  }
+
+  .addon-toggle:hover {
+    border-color: var(--primary);
+  }
+
+  .addon-toggle input[type="checkbox"] {
+    margin-top: 0.2rem;
+    accent-color: var(--primary);
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .addon-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+  }
+
+  .addon-info strong {
+    color: var(--text-main);
+    font-size: 0.95rem;
+  }
+
+  .addon-price {
+    color: var(--primary);
+    font-size: 0.85rem;
+    margin-left: 0.35rem;
+  }
+
+  .addon-detail {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* Add-on card (active subscriber view) */
+  .addon-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--border-card);
+    border-radius: 10px;
+    background: var(--bg-card);
+  }
+
+  .addon-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .addon-card-header strong {
+    font-size: 1rem;
+    color: var(--text-main);
+  }
+
+  .addon-status {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: var(--bg-input);
+    color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .addon-status.on {
+    background: rgba(34, 197, 94, 0.15);
+    color: #166534;
+    border-color: rgba(34, 197, 94, 0.35);
+  }
+
+  .addon-card-detail {
+    font-size: 0.85rem;
+    color: var(--text-label);
+    margin: 0;
+    line-height: 1.5;
   }
 
   .option-manutencao {

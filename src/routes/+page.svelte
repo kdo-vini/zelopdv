@@ -188,6 +188,14 @@
           "@type": "Answer",
           "text": "O Zelo PDV custa R$ 59 por mês, com acesso completo a todas as funcionalidades. Os primeiros 30 dias são grátis, sem precisar de cartão de crédito."
         }
+      },
+      {
+        "@type": "Question",
+        "name": "Como funciona o Módulo Mesas?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O Módulo Mesas é um add-on opcional de R$ 30/mês (total R$ 89/mês) que adiciona gestão de mesas para bares, hamburguerias e restaurantes: mapa visual com status livre/ocupada, comandas acumulativas, taxa de serviço, couvert, desconto e divisão igual entre N pessoas. Ative e desative quando quiser pela tela de assinatura — sem fidelidade."
+        }
       }
     ]
   })}</script>`}
@@ -238,9 +246,6 @@
 
       <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
         <a href="#features" class="hover:text-white transition-colors">Funcionalidades</a>
-        <a href="#zelinho" class="hover:text-white transition-colors flex items-center gap-1">
-          <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>Zelinho IA
-        </a>
         <a href="/precificacao" class="hover:text-white transition-colors">Precificação</a>
         <a href="/blog" class="hover:text-white transition-colors">Blog</a>
         <a href="#pricing" class="hover:text-white transition-colors">Preços</a>
@@ -249,7 +254,8 @@
 
       <div class="flex items-center gap-4">
         <a href="/login" class="text-sm font-medium text-white hover:text-sky-400 transition-colors hidden md:block">Entrar</a>
-        <a href="/cadastro" class="px-5 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all hover:scale-105 active:scale-95">
+        <!-- CTA do header: só desktop. Em mobile o usuário tem o CTA grande na hero + opção dentro do menu. -->
+        <a href="/cadastro" class="hidden md:inline-block px-5 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all hover:scale-105 active:scale-95">
           Testar 30 dias grátis
         </a>
         <!-- Hamburger button (mobile only) -->
@@ -272,9 +278,6 @@
     {#if showMobileMenu}
       <div class="md:hidden border-t border-white/5 bg-[#0B0F19]/95 backdrop-blur-md px-6 py-4 flex flex-col gap-4 animate-fade-in-down">
         <a href="#features" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Funcionalidades</a>
-        <a href="#zelinho" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2 flex items-center gap-2" on:click={() => showMobileMenu = false}>
-          <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>Zelinho IA
-        </a>
         <a href="/precificacao" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Precificação</a>
         <a href="/blog" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Blog</a>
         <a href="#pricing" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Preços</a>
@@ -298,12 +301,12 @@
     <div class="absolute bottom-0 right-0 w-[800px] h-[600px] bg-blue-900/10 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
 
     <div class="max-w-7xl mx-auto px-6 text-center relative z-10">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-400 text-xs font-medium mb-8 animate-fade-in-up">
-        <span class="relative flex h-2 w-2">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-400 text-[11px] font-semibold uppercase tracking-wider mb-8 animate-fade-in-up">
+        <span class="relative flex h-1.5 w-1.5">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+          <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-sky-500"></span>
         </span>
-        Zelinho — IA com contexto real do seu negócio
+        Novo · IA que mostra seu lucro real
       </div>
 
       <h1 class="text-5xl md:text-7xl font-bold text-white tracking-tight leading-[1.1] mb-8 animate-fade-in-up delay-100">
@@ -574,7 +577,114 @@
     </div>
   </section>
 
-  <!-- FEATURE 5: ZELINHO AI -->
+  <!-- FEATURE 5: MESAS (ADD-ON) -->
+  <section id="mesas" class="py-24 relative overflow-hidden">
+    <!-- Background glow -->
+    <div class="absolute inset-0 bg-gradient-to-br from-rose-900/20 via-transparent to-rose-900/10 pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center relative z-10">
+      <!-- Texto à esquerda -->
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs font-semibold mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+          Add-on opcional · +R$ 30/mês
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center mb-6">
+          <svg class="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+        </div>
+
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">
+          Módulo Mesas para Bares e Restaurantes:<br/>
+          <span class="text-rose-400">Comandas e Divisão de Conta</span>
+        </h2>
+        <p class="text-lg text-slate-400 mb-8 leading-relaxed">
+          Abra mesa, vá adicionando consumo da rodada e divida a conta na hora de fechar.
+          Pensado para bares, hamburguerias e qualquer lanchonete que atende no salão.
+        </p>
+
+        <ul class="space-y-4 mb-8">
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs">✓</div>
+            Mapa visual com status livre/ocupada
+          </li>
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs">✓</div>
+            Comanda acumulativa por mesa
+          </li>
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs">✓</div>
+            Taxa de serviço, couvert e desconto
+          </li>
+          <li class="flex items-center gap-3 text-slate-300">
+            <div class="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs">✓</div>
+            Divisão igual entre N pessoas + pré-conta
+          </li>
+        </ul>
+
+        <p class="text-sm text-slate-500">
+          Ative quando precisar, desative quando não usar mais. Sem fidelidade.
+        </p>
+      </div>
+
+      <!-- Mockup CSS de mesas -->
+      <div class="relative group">
+        <div class="absolute inset-0 bg-rose-500/15 blur-[80px] rounded-full -z-10 group-hover:bg-rose-500/25 transition-all duration-700"></div>
+        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl p-8 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(244,63,94,0.25)]">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <p class="text-xs text-slate-500 uppercase tracking-wider font-bold mb-1">Mesas</p>
+              <p class="text-sm text-slate-300">3 livres · 5 ocupadas</p>
+            </div>
+            <span class="text-xs text-rose-400/80 font-semibold">M11</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <!-- Tile 1: livre -->
+            <div class="aspect-square rounded-xl border-2 border-emerald-500/40 bg-emerald-500/[0.06] p-3 flex flex-col justify-between">
+              <span class="text-2xl font-bold text-white">1</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Livre</span>
+            </div>
+            <!-- Tile 2: ocupada -->
+            <div class="aspect-square rounded-xl border-2 border-rose-500/45 bg-rose-500/[0.08] p-3 flex flex-col justify-between">
+              <span class="text-2xl font-bold text-white">2</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400">Ocupada</span>
+            </div>
+            <!-- Tile 3: ocupada -->
+            <div class="aspect-square rounded-xl border-2 border-rose-500/45 bg-rose-500/[0.08] p-3 flex flex-col justify-between">
+              <span class="text-2xl font-bold text-white">3</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400">Ocupada</span>
+            </div>
+            <!-- Tile 4: fechando -->
+            <div class="aspect-square rounded-xl border-2 border-amber-500/45 bg-amber-500/[0.08] p-3 flex flex-col justify-between">
+              <span class="text-2xl font-bold text-white">4</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">Fechando</span>
+            </div>
+            <!-- Tile 5: livre -->
+            <div class="aspect-square rounded-xl border-2 border-emerald-500/40 bg-emerald-500/[0.06] p-3 flex flex-col justify-between">
+              <span class="text-2xl font-bold text-white">5</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Livre</span>
+            </div>
+            <!-- Tile 6: ocupada -->
+            <div class="aspect-square rounded-xl border-2 border-rose-500/45 bg-rose-500/[0.08] p-3 flex flex-col justify-between">
+              <span class="text-2xl font-bold text-white">6</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400">Ocupada</span>
+            </div>
+          </div>
+
+          <!-- Comanda preview row -->
+          <div class="mt-5 pt-5 border-t border-white/5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-400">Mesa 2 · 3 pessoas</span>
+              <span class="font-semibold text-white">R$ 142,50</span>
+            </div>
+            <div class="text-[11px] text-slate-500 mt-1">por pessoa: R$ 47,50</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURE 6: ZELINHO AI -->
   <section id="zelinho" class="py-24 relative overflow-hidden">
     <!-- Background glow -->
     <div class="absolute inset-0 bg-gradient-to-br from-sky-900/20 via-transparent to-indigo-900/20 pointer-events-none"></div>
@@ -852,58 +962,119 @@
     </div>
   </section>
 
-  <!-- PRICING (Single Card Focus) -->
+  <!-- PRICING (Plano Principal + Add-ons em grid lateral) -->
   <section id="pricing" class="py-24 relative bg-white/[0.02]">
-    <div class="max-w-4xl mx-auto px-6 text-center">
-      <div class="mb-12">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-12">
         <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">Preço Único. Tudo Incluso.</h2>
         <p class="text-slate-400 text-lg">Sem pegadinhas, sem taxas extras de surpresa.</p>
       </div>
 
-      <div class="relative max-w-lg mx-auto">
-        <!-- Glow Effect behind card -->
-        <div class="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl blur opacity-30 animate-pulse"></div>
+      <div class="grid lg:grid-cols-[1.1fr_1fr] gap-6 lg:gap-8 items-start max-w-5xl mx-auto">
+        <!-- ========== PLANO PRINCIPAL ========== -->
+        <div class="relative">
+          <!-- Glow Effect behind card -->
+          <div class="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl blur opacity-30 animate-pulse"></div>
 
-        <div class="relative rounded-2xl bg-[#121620] p-8 md:p-12 shadow-2xl animate-border-gradient">
-          <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-             <span class="bg-sky-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-sky-500/40 tracking-wide uppercase">Plano Único</span>
+          <div class="relative rounded-2xl bg-[#121620] p-8 md:p-12 shadow-2xl animate-border-gradient text-center">
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+              <span class="bg-sky-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-sky-500/40 tracking-wide uppercase">Plano Único</span>
+            </div>
+
+            <p class="text-slate-300 font-medium mb-1">Acesso Completo</p>
+            <div class="flex justify-center items-baseline gap-1 mb-6">
+              <span class="text-2xl text-slate-400">R$</span>
+              <span class="text-6xl font-bold text-white tracking-tight">59</span>
+              <span class="text-xl text-slate-500">/mês</span>
+            </div>
+
+            <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 mb-8">
+              <p class="text-sky-400 font-bold text-lg">30 Dias Grátis</p>
+              <p class="text-sm text-sky-300/80">Teste por 30 dias. Se não amar, não paga.</p>
+            </div>
+
+            <ul class="space-y-4 text-left mb-10 max-w-xs mx-auto">
+              <li class="flex items-center gap-3 text-slate-200">
+                <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+                <span>Vendas Ilimitadas</span>
+              </li>
+              <li class="flex items-center gap-3 text-slate-200">
+                <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+                <span>Controle de Estoque e Fiado</span>
+              </li>
+              <li class="flex items-center gap-3 text-slate-200">
+                <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+                <span>Gestão Financeira (Lucro)</span>
+              </li>
+              <li class="flex items-center gap-3 text-slate-200">
+                <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
+                <span>Suporte via WhatsApp</span>
+              </li>
+            </ul>
+
+            <a href="/cadastro" class="block w-full text-center py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
+              Começar teste gratuito
+            </a>
+            <p class="text-xs text-slate-500 text-center mt-3">Sem cartão. Cancele quando quiser.</p>
+          </div>
+        </div>
+
+        <!-- ========== COLUNA ADD-ONS (cards brancos / glass) ========== -->
+        <div class="flex flex-col gap-4">
+          <!-- Header da coluna -->
+          <div class="hidden lg:block">
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Add-ons opcionais</p>
+            <p class="text-sm text-slate-400">Ative só o que precisar. Sem fidelidade.</p>
           </div>
 
-          <p class="text-slate-300 font-medium mb-1">Acesso Completo</p>
-          <div class="flex justify-center items-baseline gap-1 mb-6">
-            <span class="text-2xl text-slate-400">R$</span>
-            <span class="text-6xl font-bold text-white tracking-tight">59</span>
-            <span class="text-xl text-slate-500">/mês</span>
+          <!-- Add-on Card: Mesas -->
+          <div class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 p-6 md:p-7 transition-all duration-300">
+            <div class="flex items-start justify-between gap-4 mb-5">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-base font-bold text-white">Módulo Mesas</p>
+                  <p class="text-xs text-slate-400">Bares, hamburguerias, salão</p>
+                </div>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <div class="flex items-baseline gap-0.5 justify-end">
+                  <span class="text-xs text-slate-400">+R$</span>
+                  <span class="text-2xl font-bold text-white">30</span>
+                </div>
+                <p class="text-[10px] text-slate-500 -mt-0.5">/mês</p>
+              </div>
+            </div>
+
+            <ul class="space-y-2 mb-5">
+              <li class="flex items-center gap-2.5 text-sm text-slate-300">
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <span>Mapa visual com status de mesas</span>
+              </li>
+              <li class="flex items-center gap-2.5 text-sm text-slate-300">
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <span>Comandas e divisão de conta</span>
+              </li>
+              <li class="flex items-center gap-2.5 text-sm text-slate-300">
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <span>Taxa de serviço, couvert, pré-conta</span>
+              </li>
+            </ul>
+
+            <a href="#mesas" class="inline-flex items-center gap-1.5 text-xs font-semibold text-white/80 hover:text-white transition-colors">
+              Ver como funciona
+              <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </a>
           </div>
 
-          <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 mb-8">
-            <p class="text-sky-400 font-bold text-lg">30 Dias Grátis</p>
-            <p class="text-sm text-sky-300/80">Teste por 30 dias. Se não amar, não paga.</p>
+          <!-- Placeholder Card: futuros add-ons (subtle, gives sense of expandability) -->
+          <div class="rounded-2xl border border-dashed border-white/10 p-5 text-center">
+            <p class="text-xs text-slate-500">
+              Mais add-ons chegando em breve
+            </p>
           </div>
-
-          <ul class="space-y-4 text-left mb-10 max-w-xs mx-auto">
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
-              <span>Vendas Ilimitadas</span>
-            </li>
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
-              <span>Controle de Estoque e Fiado</span>
-            </li>
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
-              <span>Gestão Financeira (Lucro)</span>
-            </li>
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs text-bold">✓</div>
-              <span>Suporte via WhatsApp</span>
-            </li>
-          </ul>
-
-          <a href="/cadastro" class="block w-full text-center py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
-            Começar teste gratuito
-          </a>
-          <p class="text-xs text-slate-500 text-center mt-3">Sem cartão de crédito necessário. Cancele quando quiser.</p>
         </div>
       </div>
     </div>
@@ -975,6 +1146,16 @@
           </summary>
           <div class="px-6 pb-6 text-slate-400 leading-relaxed animate-fade-in-down">
             Sim. Funciona em Android e iPhone. Abra o site no Chrome ou Safari, clique em "Adicionar à tela inicial" e o ícone aparece como qualquer outro app — sem precisar da Play Store nem da App Store. A interface é adaptada para telas menores.
+          </div>
+        </details>
+
+        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+          <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
+            <span>Como funciona o Módulo Mesas?</span>
+            <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-6 text-slate-400 leading-relaxed animate-fade-in-down">
+            O Módulo Mesas é um add-on opcional de <strong class="text-rose-400">+R$ 30/mês</strong> (total R$ 89/mês). Adiciona mapa visual de mesas, comandas acumulativas, taxa de serviço, couvert, desconto e divisão igual entre N pessoas — pensado para bares, hamburguerias e restaurantes que atendem no salão. Ative ou desative pela tela de assinatura quando quiser, sem fidelidade.
           </div>
         </details>
 
