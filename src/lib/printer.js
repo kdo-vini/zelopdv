@@ -1,29 +1,26 @@
 // src/lib/printer.js
 // Driver de impressora térmica via WebUSB (Chrome/Edge desktop).
 // Substitui o QZ Tray — sem instalação, sem servidor de assinatura.
+//
+// Modelo "lease per job": só abrimos + claimamos a interface durante a
+// impressão, liberando logo depois. Isso permite coexistir com outros apps
+// no mesmo computador (ex: Zelo Chat) que também usam WebUSB — apenas um
+// processo por vez consegue claimar o device no Windows.
+//
 // Cai num fallback de impressão via iframe (HTML + window.print) quando:
 //   - navegador não suporta WebUSB (Firefox/Safari/iOS)
 //   - usuário ainda não pareou nenhuma impressora
-//   - a impressora paread não está conectada / claim falhou
+//   - claim falhou mesmo após os retries curtos
 
 import { writable, get } from 'svelte/store';
 
 const STORAGE_KEY = 'zelo_printer_v1';
 
-/** @type {USBDevice|null} */
-let cachedDevice = null;
-/** @type {number|null} */
-let cachedEndpoint = null;
-/** @type {number|null} */
-let cachedInterface = null;
 let pairingInFlight = false;
 
-/** Store reativo: { paired, name, vendorId, productId } | null */
+/** Store reativo: { name, vendorId, productId } | null */
 export const printerStatus = writable(readStored());
 
-/**
- * @returns {{ vendorId:number, productId:number, name:string }|null}
- */
 function readStored() {
   if (typeof localStorage === 'undefined') return null;
   try {
@@ -52,10 +49,6 @@ export function getPairedInfo() {
   return get(printerStatus);
 }
 
-/**
- * Lista filtros agressivos cobrindo VendorIDs comuns de impressoras térmicas
- * brasileiras + classe USB de impressora (0x07).
- */
 const USB_FILTERS = [
   { classCode: 0x07 },          // USB Printer class (cobre 95% dos casos)
   { vendorId: 0x04b8 },         // Epson
@@ -71,9 +64,42 @@ const USB_FILTERS = [
   { vendorId: 0x067b },         // Prolific (alguns adaptadores)
 ];
 
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function hex4(n) { return Number(n).toString(16).padStart(4, '0'); }
+
+const BUSY_RX = /access denied|already.*claimed|busy|in use/i;
+
 /**
- * Solicita ao usuário escolher uma impressora USB.
- * Após pareada, salva no localStorage para auto-reconexão silenciosa.
+ * Detecta interface + endpoint OUT no device (que já deve estar aberto).
+ * @param {USBDevice} device
+ */
+function detectInterface(device) {
+  // 1ª tentativa: interface de classe Printer (0x07) com endpoint OUT
+  for (const conf of device.configurations) {
+    for (const iface of conf.interfaces) {
+      for (const alt of iface.alternates) {
+        if (alt.interfaceClass !== 0x07) continue;
+        const out = alt.endpoints.find(e => e.direction === 'out');
+        if (out) return { interfaceNumber: iface.interfaceNumber, endpointNumber: out.endpointNumber };
+      }
+    }
+  }
+  // 2ª tentativa: qualquer interface vendor-specific com endpoint OUT bulk
+  if (device.configuration) {
+    for (const iface of device.configuration.interfaces) {
+      for (const alt of iface.alternates) {
+        const out = alt.endpoints.find(e => e.direction === 'out' && (e.type === 'bulk' || !e.type));
+        if (out) return { interfaceNumber: iface.interfaceNumber, endpointNumber: out.endpointNumber };
+      }
+    }
+  }
+  throw new Error('Não encontrei endpoint de saída na impressora. Modelo pode não ser compatível.');
+}
+
+/**
+ * Pareia a impressora com o navegador. Faz smoke test (open → detect → close)
+ * e salva SOMENTE os metadados — não mantém claim, pra não bloquear outros apps.
+ * O claim acontece sob demanda em cada chamada de sendBytes().
  *
  * @returns {Promise<{ vendorId:number, productId:number, name:string }>}
  */
@@ -88,8 +114,25 @@ export async function pairPrinter() {
   try {
     const device = await navigator.usb.requestDevice({ filters: USB_FILTERS });
     if (!device) throw new Error('Nenhuma impressora foi selecionada.');
-    await openDevice(device);
-    cachedDevice = device;
+
+    // Smoke test — valida que o modelo é compatível, depois libera tudo
+    try {
+      if (!device.opened) await device.open();
+      if (device.configuration === null) await device.selectConfiguration(1);
+      detectInterface(device);
+      try { await device.close(); } catch {}
+    } catch (e) {
+      try { if (device.opened) await device.close(); } catch {}
+      const msg = String(e?.message || e);
+      if (BUSY_RX.test(msg)) {
+        throw new Error(
+          'Não consegui acessar a impressora — outro programa (provavelmente o Zelo Chat) ' +
+          'está usando ela neste momento. Feche o Zelo Chat por 10 segundos e tente parear de novo.'
+        );
+      }
+      throw new Error('Falha ao parear: ' + msg);
+    }
+
     const info = {
       vendorId: device.vendorId,
       productId: device.productId,
@@ -103,30 +146,29 @@ export async function pairPrinter() {
 }
 
 /**
- * Esquece a impressora pareada (não revoga o consentimento USB do navegador,
- * apenas limpa nossa preferência local — usuário pode parear de novo a qualquer momento).
+ * Esquece a impressora pareada — limpa metadados locais e revoga o consentimento
+ * USB do navegador via device.forget() (se disponível).
  */
 export async function unpairPrinter() {
-  try {
-    if (cachedDevice && cachedInterface != null) {
-      try { await cachedDevice.releaseInterface(cachedInterface); } catch {}
-    }
-    if (cachedDevice && cachedDevice.opened) {
-      try { await cachedDevice.close(); } catch {}
-    }
-    if (cachedDevice && typeof cachedDevice.forget === 'function') {
-      try { await cachedDevice.forget(); } catch {}
-    }
-  } finally {
-    cachedDevice = null;
-    cachedInterface = null;
-    cachedEndpoint = null;
-    clearStoredInfo();
+  const stored = readStored();
+  if (stored && isWebUsbSupported()) {
+    try {
+      const devices = await navigator.usb.getDevices();
+      const dev = devices.find(d => d.vendorId === stored.vendorId && d.productId === stored.productId);
+      if (dev) {
+        try { if (dev.opened) await dev.close(); } catch {}
+        if (typeof dev.forget === 'function') {
+          try { await dev.forget(); } catch {}
+        }
+      }
+    } catch {}
   }
+  clearStoredInfo();
 }
 
 /**
  * Procura entre os devices já autorizados pelo usuário (sem prompt).
+ * @returns {Promise<USBDevice|null>}
  */
 async function findPairedDevice() {
   if (!isWebUsbSupported()) return null;
@@ -139,75 +181,56 @@ async function findPairedDevice() {
 }
 
 /**
- * Abre o device, seleciona configuração e claima a interface de impressão.
- * Detecta endpoint OUT (bulk) e guarda em cache.
+ * Abre o device, seleciona configuração, detecta interface e claima.
+ * Tenta até 4× (1 inicial + 3 retries com 200/500/1000ms) se outro app estiver usando.
  *
- * @param {USBDevice} device
+ * @returns {Promise<{ device: USBDevice, interfaceNumber: number, endpointNumber: number }>}
  */
-async function openDevice(device) {
-  if (!device.opened) await device.open();
-  if (device.configuration === null) await device.selectConfiguration(1);
+async function acquireForJob() {
+  const dev = await findPairedDevice();
+  if (!dev) throw new Error('Impressora térmica não está conectada.');
 
-  /** @type {{interfaceNumber:number, endpointNumber:number}|null} */
-  let chosen = null;
+  const delays = [200, 500, 1000];
+  let lastErr = null;
 
-  // 1ª tentativa: interface de classe Printer (0x07) com endpoint OUT
-  outer: for (const conf of device.configurations) {
-    for (const iface of conf.interfaces) {
-      for (const alt of iface.alternates) {
-        if (alt.interfaceClass !== 0x07) continue;
-        const out = alt.endpoints.find(e => e.direction === 'out');
-        if (out) { chosen = { interfaceNumber: iface.interfaceNumber, endpointNumber: out.endpointNumber }; break outer; }
-      }
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      if (!dev.opened) await dev.open();
+      if (dev.configuration === null) await dev.selectConfiguration(1);
+      const { interfaceNumber, endpointNumber } = detectInterface(dev);
+      await dev.claimInterface(interfaceNumber);
+      return { device: dev, interfaceNumber, endpointNumber };
+    } catch (e) {
+      lastErr = e;
+      const msg = String(e?.message || e);
+      const isBusy = BUSY_RX.test(msg);
+      // Fecha antes do próximo retry (ou antes de surfacing do erro)
+      try { if (dev.opened) await dev.close(); } catch {}
+      if (!isBusy || attempt === delays.length) break;
+      await sleep(delays[attempt]);
     }
   }
-  // 2ª tentativa: qualquer interface vendor-specific com endpoint OUT bulk
-  if (!chosen) {
-    outer2: for (const iface of device.configuration.interfaces) {
-      for (const alt of iface.alternates) {
-        const out = alt.endpoints.find(e => e.direction === 'out' && (e.type === 'bulk' || !e.type));
-        if (out) { chosen = { interfaceNumber: iface.interfaceNumber, endpointNumber: out.endpointNumber }; break outer2; }
-      }
-    }
-  }
-  if (!chosen) throw new Error('Não encontrei endpoint de saída na impressora. Modelo pode não ser compatível.');
 
-  try {
-    await device.claimInterface(chosen.interfaceNumber);
-  } catch (e) {
-    const msg = String(e?.message || e);
-    if (/already.*claimed|busy|access denied/i.test(msg)) {
-      throw new Error('Impressora ocupada — feche outro programa que esteja usando ela (ou desinstale o driver de impressora do Windows) e pareie de novo.');
-    }
-    throw new Error('Falha ao acessar a impressora: ' + msg);
+  const msg = String(lastErr?.message || lastErr);
+  if (BUSY_RX.test(msg)) {
+    throw new Error(
+      'A impressora está sendo usada por outro app (provavelmente o Zelo Chat). ' +
+      'Aguarde alguns segundos e tente novamente — o sistema libera automaticamente após cada impressão.'
+    );
   }
-  cachedInterface = chosen.interfaceNumber;
-  cachedEndpoint = chosen.endpointNumber;
+  throw new Error('Falha ao acessar a impressora: ' + msg);
 }
 
 /**
- * Garante device aberto e endpoint cacheado. Retorna null se não houver impressora pareada
- * ou se ela não estiver mais conectada.
+ * Libera interface e fecha o device. Chamado em finally após cada job.
  */
-async function ensureOpen() {
-  if (cachedDevice && cachedDevice.opened && cachedEndpoint != null) return cachedDevice;
-  const dev = cachedDevice || await findPairedDevice();
-  if (!dev) return null;
-  try {
-    await openDevice(dev);
-    cachedDevice = dev;
-    return dev;
-  } catch (e) {
-    console.warn('[printer] openDevice falhou:', e?.message || e);
-    cachedDevice = null;
-    cachedInterface = null;
-    cachedEndpoint = null;
-    return null;
-  }
+async function releaseAfterJob(device, interfaceNumber) {
+  try { await device.releaseInterface(interfaceNumber); } catch {}
+  try { if (device.opened) await device.close(); } catch {}
 }
 
 /**
- * @returns {Promise<boolean>} true se há uma impressora pareada conectada e pronta.
+ * @returns {Promise<boolean>} true se há uma impressora pareada conectada (sem testar abertura).
  */
 export async function isPrinterReady() {
   if (!isWebUsbSupported()) return false;
@@ -219,42 +242,26 @@ export async function isPrinterReady() {
 let queue = Promise.resolve();
 
 /**
- * Envia bytes ESC/POS para a impressora pareada. Lança erro se não estiver pronta.
+ * Envia bytes ESC/POS para a impressora pareada. Cada chamada:
+ *   1. acquire (open + claim) com retry curto se outro app estiver usando
+ *   2. transferOut em chunks de 64 bytes
+ *   3. release (release + close) — sempre, mesmo em caso de erro
+ *
  * @param {Uint8Array} bytes
  */
 export function sendBytes(bytes) {
   const next = queue.then(async () => {
-    const dev = await ensureOpen();
-    if (!dev) throw new Error('Impressora térmica não está conectada.');
-    const CHUNK = 64;
-    for (let i = 0; i < bytes.length; i += CHUNK) {
-      const slice = bytes.slice(i, i + CHUNK);
-      await dev.transferOut(cachedEndpoint, slice);
+    const lease = await acquireForJob();
+    try {
+      const CHUNK = 64;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        const slice = bytes.slice(i, i + CHUNK);
+        await lease.device.transferOut(lease.endpointNumber, slice);
+      }
+    } finally {
+      await releaseAfterJob(lease.device, lease.interfaceNumber);
     }
   });
-  // Mantém a fila viva mesmo se um envio falhar.
   queue = next.catch(() => {});
   return next;
-}
-
-function hex4(n) { return Number(n).toString(16).padStart(4, '0'); }
-
-/* --------------------------------------------------------------------------
- * Auto-reconexão silenciosa: sempre que o usuário pluga/desplug a impressora,
- * o navegador dispara connect/disconnect. Atualizamos o cache.
- * -------------------------------------------------------------------------- */
-if (typeof navigator !== 'undefined' && navigator.usb && typeof navigator.usb.addEventListener === 'function') {
-  navigator.usb.addEventListener('disconnect', (ev) => {
-    if (cachedDevice && ev.device === cachedDevice) {
-      cachedDevice = null;
-      cachedInterface = null;
-      cachedEndpoint = null;
-    }
-  });
-  navigator.usb.addEventListener('connect', (ev) => {
-    const stored = readStored();
-    if (stored && ev.device.vendorId === stored.vendorId && ev.device.productId === stored.productId) {
-      cachedDevice = ev.device;
-    }
-  });
 }
