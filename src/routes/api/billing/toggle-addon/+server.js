@@ -1,20 +1,19 @@
+// Liga/desliga um addon na subscription Stripe via subscription_items.
+// Mesas é o único addon hoje. Modelo: cada addon = 1 subscription_item separado com seu próprio price.
 import { json } from '@sveltejs/kit';
+import { stripe } from '$lib/server/stripe';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
-import { updateSubscriptionValue, isConfigured } from '$lib/server/asaas';
+import { ADDONS, isAddonAllowed, VALID_ADDONS } from '$lib/pricing';
 
-const BASE_VALUE = 59.00;
-const ADDON_VALUES = {
-  mesas: 30.00,
+const ADDON_DB_COLUMN = {
+  mesas: 'has_mesas_addon',
 };
-
-const SUPPORTED_ADDONS = Object.keys(ADDON_VALUES);
 
 export async function POST({ request }) {
   try {
     if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado.' }, { status: 500 });
-    if (!isConfigured()) return json({ error: 'Asaas não configurado.' }, { status: 500 });
+    if (!stripe) return json({ error: 'Stripe não configurado.' }, { status: 500 });
 
-    // Auth
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
     if (!token) return json({ error: 'Não autorizado' }, { status: 401 });
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
@@ -25,73 +24,81 @@ export async function POST({ request }) {
     const addon = body.addon;
     const enabled = !!body.enabled;
 
-    if (!SUPPORTED_ADDONS.includes(addon)) {
-      return json({ error: `Add-on inválido. Suportados: ${SUPPORTED_ADDONS.join(', ')}.` }, { status: 400 });
+    if (!VALID_ADDONS.includes(addon)) {
+      return json({ error: `Add-on inválido. Suportados: ${VALID_ADDONS.join(', ')}.` }, { status: 400 });
     }
 
-    // Read current subscription
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, has_mesas_addon, status, current_period_end')
+      .select('id, provider_subscription_id, plan_tier, has_mesas_addon, status, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (subErr || !sub) {
-      return json({ error: 'Assinatura não encontrada. Assine antes de ativar add-ons.' }, { status: 404 });
+      return json({ error: 'Assinatura não encontrada.' }, { status: 404 });
     }
-
     if (!sub.provider_subscription_id) {
-      return json({ error: 'Assinatura sem ID de provedor. Recrie a assinatura.' }, { status: 400 });
+      return json({ error: 'Assinatura sem provedor. Crie uma assinatura primeiro.' }, { status: 400 });
+    }
+    if (sub.payment_provider !== 'stripe') {
+      return json({ error: 'Esta assinatura não está no Stripe — toggle não suportado.' }, { status: 400 });
+    }
+    if (!['active', 'trialing'].includes(sub.status)) {
+      return json({ error: 'Apenas assinaturas ativas ou em trial podem modificar add-ons.' }, { status: 400 });
     }
 
-    // No-op if state already matches
-    const currentMesas = !!sub.has_mesas_addon;
-    if (addon === 'mesas' && currentMesas === enabled) {
-      return json({ success: true, value: BASE_VALUE + (enabled ? ADDON_VALUES.mesas : 0), unchanged: true });
+    if (enabled && !isAddonAllowed(sub.plan_tier, addon)) {
+      return json({
+        error: `Add-on "${ADDONS[addon].name}" não é compatível com ${sub.plan_tier}. Mude pra um plano com PDV.`,
+      }, { status: 400 });
     }
 
-    // Compute new value with the toggle applied
-    const nextMesas = addon === 'mesas' ? enabled : currentMesas;
-    const newValue = BASE_VALUE + (nextMesas ? ADDON_VALUES.mesas : 0);
+    // Read current Stripe subscription items
+    const stripeSub = await stripe.subscriptions.retrieve(sub.provider_subscription_id, { expand: ['items.data.price'] });
+    const items = stripeSub.items?.data || [];
 
-    // Update Asaas first (no nextDueDate — preserve current cycle / trial end)
-    try {
-      await updateSubscriptionValue(sub.provider_subscription_id, newValue);
-    } catch (e) {
-      console.error('[toggle-addon] Asaas update failed:', e?.message);
-      return json({ error: 'Falha ao atualizar valor no provedor de pagamento.' }, { status: 502 });
+    const addonPriceId = ADDONS[addon].stripePriceId;
+    const existingItem = items.find((i) => i.price?.id === addonPriceId);
+
+    // No-op
+    if (enabled && existingItem) return json({ success: true, unchanged: true });
+    if (!enabled && !existingItem) return json({ success: true, unchanged: true });
+
+    let newItems;
+    if (enabled) {
+      newItems = [{ price: addonPriceId, quantity: 1 }];
+    } else {
+      // Marca o item pra deletar
+      newItems = [{ id: existingItem.id, deleted: true }];
     }
 
-    // Update DB flag
-    const dbResult = await supabaseAdmin
+    // Atualiza no Stripe com proration (cobra só o pedaço do mês restante)
+    await stripe.subscriptions.update(sub.provider_subscription_id, {
+      items: newItems,
+      proration_behavior: 'create_prorations',
+    });
+
+    // DB sync acontece via webhook customer.subscription.updated, mas atualizamos sincrono pra UX imediata.
+    await supabaseAdmin
       .from('subscriptions')
       .update({
-        has_mesas_addon: nextMesas,
+        [ADDON_DB_COLUMN[addon]]: enabled,
         updated_at: new Date().toISOString(),
       })
       .eq('id', sub.id);
-
-    if (dbResult.error) {
-      // Best-effort rollback in Asaas to old value
-      const oldValue = BASE_VALUE + (currentMesas ? ADDON_VALUES.mesas : 0);
-      try { await updateSubscriptionValue(sub.provider_subscription_id, oldValue); } catch {}
-      console.error('[toggle-addon] DB update failed, rolled back Asaas value:', dbResult.error);
-      return json({ error: 'Erro ao salvar add-on. Tente novamente.' }, { status: 500 });
-    }
 
     return json({
       success: true,
       addon,
       enabled,
-      value: newValue,
       message: enabled
-        ? `Add-on ${addon} ativado. Próxima cobrança: R$ ${newValue.toFixed(2)}.`
-        : `Add-on ${addon} desativado. Próxima cobrança: R$ ${newValue.toFixed(2)}.`,
+        ? `Add-on ${ADDONS[addon].name} ativado. Cobrança proporcional aplicada.`
+        : `Add-on ${ADDONS[addon].name} desativado.`,
     });
   } catch (err) {
-    console.error('[toggle-addon] error:', err?.message || err);
+    console.error('[toggle-addon] Stripe error:', err?.message || err);
     return json({ error: err?.message || 'Falha ao alternar add-on' }, { status: 500 });
   }
 }

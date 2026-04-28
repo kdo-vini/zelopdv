@@ -4,20 +4,26 @@
   import { logAdminAction } from '$lib/logger'
   import { success, error as errorToast } from '$lib/toast'
   import { fade, slide } from 'svelte/transition'
-  
+  import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
+
   let subscriptions = []
   let loading = true
   let searchTerm = ''
   let filterStatus = 'all' // 'all', 'active', 'canceled', 'expired', 'expiring'
+  let filterPlan = 'all' // 'all', 'pdv', 'chat', 'bundle'
   let adminInfo = null
-  
+
   // Modal states
   let showExtendModal = false
+  let showPlanModal = false
   let selectedSub = null
   let extendMonths = 1
   let extendReason = ''
   let extending = false
   let statusUpdating = false
+  let planSaving = false
+  let editPlanTier = 'pdv'
+  let editMesasAddon = false
   
   onMount(async () => {
     await loadAdminInfo()
@@ -39,11 +45,15 @@
   
   async function loadSubscriptions() {
     loading = true
-    
+
     let query = supabase
       .from('subscriptions')
       .select('*')
       .order('created_at', { ascending: false })
+
+    if (filterPlan !== 'all') {
+      query = query.eq('plan_tier', filterPlan)
+    }
     
     // Apply status filter
     if (filterStatus === 'active') {
@@ -100,12 +110,83 @@
     extendReason = ''
     showExtendModal = true
   }
-  
+
   function closeExtendModal() {
     showExtendModal = false
     selectedSub = null
     extendMonths = 1
     extendReason = ''
+  }
+
+  function openPlanModal(sub) {
+    selectedSub = sub
+    editPlanTier = sub.plan_tier || 'pdv'
+    editMesasAddon = !!sub.has_mesas_addon
+    showPlanModal = true
+  }
+
+  function closePlanModal() {
+    showPlanModal = false
+    selectedSub = null
+    editPlanTier = 'pdv'
+    editMesasAddon = false
+  }
+
+  // Admin pode mudar plano e addons direto no DB sem chamar Asaas (controle manual).
+  // ATENÇÃO: se a subscription tem provider_subscription_id, o valor no Asaas NÃO é atualizado.
+  // Use isso só pra correções administrativas; cobrança real será no valor antigo do Asaas.
+  async function handleSavePlan() {
+    if (!selectedSub || !VALID_PLAN_TIERS.includes(editPlanTier)) {
+      errorToast('Plano inválido.')
+      return
+    }
+    // Strip Mesas se incompatível com o plano (chat-only não suporta)
+    const finalMesas = isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon
+
+    if (editMesasAddon && !isAddonAllowed(editPlanTier, 'mesas')) {
+      const confirm1 = confirm(`O plano ${planLabel(editPlanTier)} não suporta o Módulo Mesas. Vamos desativar o add-on. Continuar?`)
+      if (!confirm1) return
+    }
+
+    try {
+      planSaving = true
+
+      const updatePayload = {
+        plan_tier: editPlanTier,
+        has_mesas_addon: finalMesas,
+        last_modified_by: adminInfo?.id || null,
+        last_modified_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      const { error } = await supabase
+        .from('subscriptions')
+        .update(updatePayload)
+        .eq('id', selectedSub.id)
+
+      if (error) throw error
+
+      await logAdminAction({
+        adminId: adminInfo.id,
+        action: 'admin_change_plan',
+        targetUserId: selectedSub.user_id,
+        details: {
+          subscription_id: selectedSub.id,
+          old: { plan_tier: selectedSub.plan_tier, has_mesas_addon: selectedSub.has_mesas_addon },
+          new: { plan_tier: editPlanTier, has_mesas_addon: finalMesas },
+          warning: selectedSub.provider_subscription_id ? 'Asaas value NOT synced — valor no provedor permanece antigo' : null,
+        },
+      })
+
+      success(`Plano alterado para ${planLabel(editPlanTier)}${selectedSub.provider_subscription_id ? ' (apenas no DB — valor no Asaas não foi atualizado)' : ''}.`)
+      closePlanModal()
+      await loadSubscriptions()
+    } catch (err) {
+      console.error('Save plan error:', err)
+      errorToast('Erro ao alterar plano: ' + err.message)
+    } finally {
+      planSaving = false
+    }
   }
   
   async function handleExtendSubscription() {
@@ -346,6 +427,23 @@
     
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
       
+      <!-- Plan Filter -->
+      <div class="relative group w-full sm:w-auto">
+        <select
+          bind:value={filterPlan}
+          on:change={loadSubscriptions}
+          class="w-full sm:w-40 appearance-none pl-4 pr-10 py-2.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-sm font-medium text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
+        >
+          <option value="all">Todos planos</option>
+          <option value="pdv">ZeloPDV</option>
+          <option value="chat">ZeloChat</option>
+          <option value="bundle">Bundle</option>
+        </select>
+        <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+          <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+      </div>
+
       <!-- Status Filter -->
       <div class="relative group w-full sm:w-auto">
         <select
@@ -410,9 +508,11 @@
         <thead>
           <tr class="border-b border-slate-800 bg-slate-900/80">
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Plano</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Valor</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ciclo Vence dia</th>
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Registrado em</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Vence em</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Criado em</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Ações Rápidas</th>
           </tr>
         </thead>
@@ -434,6 +534,23 @@
                     <p class="text-xs text-slate-500 truncate mt-0.5">{sub.empresa_perfil.contato}</p>
                   </div>
                 </div>
+              </td>
+              <td class="py-4 px-6">
+                <button
+                  on:click={() => openPlanModal(sub)}
+                  class="inline-flex flex-col items-start gap-0.5 px-2 py-1 rounded-md border border-slate-700/40 hover:border-slate-600 hover:bg-slate-800/40 transition-all text-left"
+                  title="Mudar plano/addons"
+                >
+                  <span class="text-[11px] font-semibold tracking-wide {sub.plan_tier === 'bundle' ? 'text-indigo-300' : sub.plan_tier === 'chat' ? 'text-violet-300' : 'text-sky-300'}">
+                    {planLabel(sub.plan_tier || 'pdv')}
+                  </span>
+                  {#if sub.has_mesas_addon}
+                    <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">+Mesas</span>
+                  {/if}
+                </button>
+              </td>
+              <td class="py-4 px-6 text-[13px] font-mono text-slate-300">
+                R$ {subscriptionValue(sub).toFixed(2)}
               </td>
               <td class="py-4 px-6">
                 <span class="inline-flex px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-md border {badge.class}">
@@ -621,6 +738,96 @@
         <button on:click={closeExtendModal} disabled={extending} class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-50">Cancelar</button>
         <button on:click={handleExtendSubscription} disabled={extending || !extendReason.trim()} class="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
           {extending ? 'Registrando...' : 'Confirmar Pgto'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Plan/Addon Change Modal -->
+{#if showPlanModal && selectedSub}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-[#0B0F19]/80" transition:fade={{ duration: 200 }}>
+    <div class="relative w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden" transition:slide={{ duration: 300, axis: 'y' }}>
+      <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/60 to-transparent"></div>
+
+      <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white tracking-wide">Plano e Addons</h3>
+        <button on:click={closePlanModal} class="text-slate-500 hover:text-white transition-colors outline-none"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <div>
+          <p class="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-1">Empresa</p>
+          <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
+            <div class="w-8 h-8 bg-indigo-500/20 text-indigo-400 flex items-center justify-center rounded-full font-bold text-xs">{getInitials(selectedSub.empresa_perfil.nome_exibicao)}</div>
+            <div class="text-sm font-medium text-slate-200">{selectedSub.empresa_perfil.nome_exibicao}</div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[13px] font-medium text-slate-400 mb-2">Plano</label>
+          <div class="grid grid-cols-3 gap-2">
+            {#each VALID_PLAN_TIERS as tier}
+              <button
+                type="button"
+                on:click={() => editPlanTier = tier}
+                class="py-3 rounded-xl border text-xs font-bold transition-all {editPlanTier === tier ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}"
+              >
+                <div class="text-[11px] mb-0.5">{PLANS[tier].name}</div>
+                <div class="text-[9px] opacity-70">R$ {PLANS[tier].price}</div>
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800">
+          <label class="flex items-center cursor-pointer group {!isAddonAllowed(editPlanTier, 'mesas') ? 'opacity-40 cursor-not-allowed' : ''}">
+            <div class="relative flex items-center justify-center">
+              <input
+                type="checkbox"
+                bind:checked={editMesasAddon}
+                disabled={!isAddonAllowed(editPlanTier, 'mesas')}
+                class="sr-only peer"
+              />
+              <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
+            </div>
+            <div class="ml-3">
+              <span class="text-sm font-medium text-slate-300">Módulo Mesas (+R$ 30/mês)</span>
+              {#if !isAddonAllowed(editPlanTier, 'mesas')}
+                <p class="text-[11px] text-amber-400 mt-0.5">Indisponível em {PLANS[editPlanTier].name} (precisa de PDV).</p>
+              {/if}
+            </div>
+          </label>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800 grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Valor atual</p>
+            <div class="text-sm font-mono font-semibold text-slate-300">R$ {subscriptionValue(selectedSub).toFixed(2)}</div>
+          </div>
+          <div>
+            <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Novo valor</p>
+            <div class="text-sm font-mono font-semibold text-emerald-300">R$ {calculateValue(editPlanTier, { mesas: editMesasAddon && isAddonAllowed(editPlanTier, 'mesas') }).toFixed(2)}</div>
+          </div>
+        </div>
+
+        {#if selectedSub.provider_subscription_id}
+          <div class="rounded-lg p-3 bg-amber-500/5 border border-amber-500/30 text-[11px] text-amber-300 leading-relaxed">
+            <strong class="block">⚠️ Mudança apenas no DB</strong>
+            Esta sub tem provedor (Asaas). O valor real cobrado <strong>não será atualizado</strong> via essa tela. Use só pra correção administrativa.
+            Pra alterar valor real no Asaas, peça pro user usar /assinatura ou ajuste no Asaas dashboard.
+          </div>
+        {:else}
+          <div class="rounded-lg p-3 bg-emerald-500/5 border border-emerald-500/30 text-[11px] text-emerald-300 leading-relaxed">
+            ℹ️ Sem provedor — alteração 100% manual. Bom pra trials/cortesias.
+          </div>
+        {/if}
+      </div>
+
+      <div class="px-6 py-4 bg-slate-800/30 border-t border-slate-800 flex justify-end gap-3">
+        <button on:click={closePlanModal} disabled={planSaving} class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-50">Cancelar</button>
+        <button on:click={handleSavePlan} disabled={planSaving} class="px-5 py-2 text-sm font-semibold text-white bg-indigo-500 hover:bg-indigo-400 rounded-xl transition-all shadow-[0_0_15px_rgba(99,102,241,0.4)] disabled:opacity-50">
+          {planSaving ? 'Salvando...' : 'Salvar Plano'}
         </button>
       </div>
     </div>

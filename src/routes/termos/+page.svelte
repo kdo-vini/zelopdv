@@ -207,9 +207,8 @@
               a regularização.
             </li>
             <li>
-              Os pagamentos são processados por <strong>Asaas</strong>, uma plataforma terceira de
-              pagamentos consolidada no Brasil. Nós não retemos ou armazenamos dados completos de cartão de crédito
-              em seus servidores.
+              Os pagamentos são processados por <strong>Stripe</strong>, plataforma global certificada PCI DSS Nível 1.
+              Nós não retemos ou armazenamos dados completos de cartão de crédito em nossos servidores.
             </li>
             <li>
               A Empresa reserva-se o direito de reajustar os preços com aviso prévio de 30 (trinta) dias

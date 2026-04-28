@@ -115,6 +115,8 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
 /**
  * Returns whether the given user has the Mesas add-on active on their subscription.
  * Read-only — does not redirect. Call AFTER ensureActiveSubscription so an active sub is guaranteed.
+ * Defesa em camadas: só retorna true se o plano permitir Mesas (pdv ou bundle).
+ * Plano 'chat' nunca permite Mesas, mesmo com flag has_mesas_addon=true (inconsistência protegida).
  * @param {string} userId
  * @returns {Promise<boolean>}
  */
@@ -123,14 +125,65 @@ export async function hasMesasAddon(userId) {
   try {
     const { data } = await supabase
       .from('subscriptions')
-      .select('has_mesas_addon')
+      .select('has_mesas_addon, plan_tier')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    return !!data?.has_mesas_addon;
+    if (!data) return false;
+    const planAllowsMesas = data.plan_tier === 'pdv' || data.plan_tier === 'bundle';
+    return planAllowsMesas && !!data.has_mesas_addon;
   } catch (err) {
     console.warn('[Guards] hasMesasAddon error:', err?.message);
+    return false;
+  }
+}
+
+/**
+ * Returns whether the user has access to ZeloChat (plan_tier 'chat' ou 'bundle' + sub ativa).
+ * Read-only — não redireciona. Pode ser usado pelo app ZeloChat (separado) lendo do mesmo DB,
+ * ou por upsell cards no PDV.
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function hasZeloChatAccess(userId) {
+  if (!userId) return false;
+  try {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('plan_tier, status, current_period_end, manually_extended_until')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!isSubscriptionActiveStrict(data)) return false;
+    return data?.plan_tier === 'chat' || data?.plan_tier === 'bundle';
+  } catch (err) {
+    console.warn('[Guards] hasZeloChatAccess error:', err?.message);
+    return false;
+  }
+}
+
+/**
+ * Returns whether the user has access to ZeloPDV (plan_tier 'pdv' ou 'bundle' + sub ativa).
+ * Read-only — não redireciona.
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function hasZeloPdvAccess(userId) {
+  if (!userId) return false;
+  try {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('plan_tier, status, current_period_end, manually_extended_until')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!isSubscriptionActiveStrict(data)) return false;
+    return data?.plan_tier === 'pdv' || data?.plan_tier === 'bundle';
+  } catch (err) {
+    console.warn('[Guards] hasZeloPdvAccess error:', err?.message);
     return false;
   }
 }

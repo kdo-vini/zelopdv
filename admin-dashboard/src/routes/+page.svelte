@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { supabase } from '$lib/supabaseAdmin'
   import { fade } from 'svelte/transition'
+  import { subscriptionValue } from '$lib/pricing'
   
   let stats = {
     activeSubscriptions: 0,
@@ -30,12 +31,13 @@
     // Active subscriptions
     const { data: subs } = await supabase
       .from('subscriptions')
-      .select('id, status, current_period_end, created_at')
+      .select('id, status, current_period_end, created_at, plan_tier, has_mesas_addon')
       .in('status', ['active', 'trialing'])
 
     stats.activeSubscriptions = subs?.length || 0
     const activeSubs = subs?.filter(s => s.status === 'active') || []
-    stats.mrr = activeSubs.length * 59.00
+    // MRR = soma do valor real de cada subscription ativa (plan_tier + addons)
+    stats.mrr = activeSubs.reduce((sum, s) => sum + subscriptionValue(s), 0)
 
     stats.newThisMonth = subs?.filter(s =>
       new Date(s.created_at) >= startOfMonth

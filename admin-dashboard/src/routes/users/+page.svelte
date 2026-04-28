@@ -3,7 +3,8 @@
   import { supabase } from '$lib/supabaseAdmin'
   import { logAdminAction } from '$lib/logger'
   import { fade, slide } from 'svelte/transition'
-  
+  import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
+
   let users = []
   let loading = true
   let searchTerm = ''
@@ -12,6 +13,8 @@
   let editForm = {}
   let editSub = null
   let subLoading = false
+  let editPlanTier = 'pdv'
+  let editMesasAddon = false
   
   onMount(async () => {
     await loadAdminInfo()
@@ -53,7 +56,7 @@
       const [subsResult, aiResult, salesResult, lastSeenResult] = await Promise.all([
         supabase
           .from('subscriptions')
-          .select('user_id, status, current_period_end, manually_extended_until')
+          .select('id, user_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, provider_subscription_id')
           .in('user_id', userIds)
           .order('updated_at', { ascending: false }),
         supabase
@@ -129,6 +132,8 @@
   function openEdit(user) {
     editForm = { ...user }
     editSub = user.subscriptions?.[0] || null
+    editPlanTier = editSub?.plan_tier || 'pdv'
+    editMesasAddon = !!editSub?.has_mesas_addon
     isEditing = true
   }
 
@@ -136,6 +141,8 @@
     isEditing = false
     editForm = {}
     editSub = null
+    editPlanTier = 'pdv'
+    editMesasAddon = false
   }
 
   async function saveEdit() {
@@ -154,13 +161,23 @@
       
       if (profileError) throw profileError
       
-      // Update subscription status if it changed
+      // Update subscription if status, plan_tier, or addon changed
       const originalSub = users.find(u => u.user_id === editForm.user_id)?.subscriptions?.[0]
-      if (editSub && originalSub && editSub.status !== originalSub.status) {
+      const finalMesas = isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon
+      const subChanged = editSub && originalSub && (
+        editSub.status !== originalSub.status ||
+        editPlanTier !== (originalSub.plan_tier || 'pdv') ||
+        finalMesas !== !!originalSub.has_mesas_addon
+      )
+
+      if (subChanged) {
         const updateData = {
           status: editSub.status,
+          plan_tier: editPlanTier,
+          has_mesas_addon: finalMesas,
           last_modified_by: adminInfo.id,
-          last_modified_at: new Date().toISOString()
+          last_modified_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         }
 
         // Se cancelar, expira a data imediatamente
@@ -172,14 +189,19 @@
           .from('subscriptions')
           .update(updateData)
           .eq('user_id', editForm.user_id)
-        
+
         if (subError) throw subError
-        
+
         await logAdminAction({
           adminId: adminInfo.id,
-          action: 'update_subscription_status',
+          action: 'admin_edit_subscription',
           targetUserId: editForm.user_id,
-          details: { old_status: originalSub.status, new_status: editSub.status, company: editForm.nome_exibicao }
+          details: {
+            old: { status: originalSub.status, plan_tier: originalSub.plan_tier, has_mesas_addon: originalSub.has_mesas_addon },
+            new: { status: editSub.status, plan_tier: editPlanTier, has_mesas_addon: finalMesas },
+            company: editForm.nome_exibicao,
+            warning: originalSub.provider_subscription_id ? 'Asaas value NOT synced' : null,
+          },
         })
       }
       

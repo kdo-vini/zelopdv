@@ -3,44 +3,46 @@
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { onMount, onDestroy } from 'svelte';
   import { addToast, confirmAction } from '$lib/stores/ui';
+  import { PLANS, ADDONS, calculateValue, isAddonAllowed } from '$lib/pricing';
 
   let userId = '';
   let email = '';
   let subStatus = null;
   let loading = false;
   let canceling = false;
+  let changingPlan = false;
   let message = '';
   let messageType = 'info';
   let expiryDate = null;
   let hasHadSubscription = false;
   let isActiveStrict = false;
-  let billingType = 'CREDIT_CARD';
   let trialDaysLeft = null;
-  let mesasAddonOn = false;          // checkbox state for new-subscriber form
-  let activeMesasAddon = false;      // current DB state for active-subscriber view
+  let mesasAddonOn = false;
+  let activeMesasAddon = false;
   let togglingAddon = false;
-  let camePromptingMesas = false;    // came to /assinatura via ?addon=mesas
+  let camePromptingMesas = false;
+  let cameUpgradingTo = '';
 
-  const BASE_PRICE = 59;
-  const MESAS_ADDON_PRICE = 30;
-  $: planPrice = BASE_PRICE + (mesasAddonOn ? MESAS_ADDON_PRICE : 0);
-  $: activePlanPrice = BASE_PRICE + (activeMesasAddon ? MESAS_ADDON_PRICE : 0);
+  // Plano selecionado pelo user pra assinar / mudar
+  let selectedPlan = 'pdv';
+  // Plano atual do user (se já tem subscription)
+  let activePlanTier = null;
 
-  // PIX data after subscription creation
-  let pixQrImage = null;
-  let pixCopyPaste = null;
-  let invoiceUrl = null;
-  let trialEnd = null;
-  let subscriptionCreated = false;
-  let pollInterval = null;
-  let pollStartTime = null;
-  const POLL_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos
-  let pixPollingExpired = false;
+  $: planPrice = calculateValue(selectedPlan, { mesas: mesasAddonOn });
+  $: activePlanPrice = activePlanTier
+    ? calculateValue(activePlanTier, { mesas: activeMesasAddon })
+    : 0;
+  $: selectedPlanAllowsMesas = PLANS[selectedPlan]?.allowsMesas;
+  $: activePlanAllowsMesas = activePlanTier
+    ? PLANS[activePlanTier]?.allowsMesas
+    : false;
+
+  // Se selectedPlan não permite Mesas, força mesasAddonOn=false (UX clara)
+  $: if (!selectedPlanAllowsMesas && mesasAddonOn) mesasAddonOn = false;
+
   let autoStartingTrial = false;
 
-  onDestroy(() => {
-    if (pollInterval) clearInterval(pollInterval);
-  });
+  onDestroy(() => {});
 
   onMount(async () => {
     try {
@@ -52,7 +54,7 @@
         try {
           const { data } = await supabase
             .from('subscriptions')
-            .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon')
+            .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, plan_tier')
             .eq('user_id', userId)
             .order('updated_at', { ascending: false })
             .limit(1)
@@ -61,9 +63,10 @@
           subStatus = data?.status || null;
           expiryDate = data?.current_period_end || null;
           hasHadSubscription = !!data;
-          billingType = data?.billing_type === 'PIX' ? 'CREDIT_CARD' : (data?.billing_type || 'CREDIT_CARD');
           activeMesasAddon = !!data?.has_mesas_addon;
-          mesasAddonOn = activeMesasAddon; // pre-fill new-sub form with current preference
+          mesasAddonOn = activeMesasAddon;
+          activePlanTier = data?.plan_tier || 'pdv';
+          selectedPlan = activePlanTier;
 
           isActiveStrict = isSubscriptionActiveStrict(data);
 
@@ -94,7 +97,7 @@
           console.error('[Assinatura] Erro ao carregar dados:', subError);
         }
 
-        // Auto-start trial for new users (zero friction)
+        // Auto-start trial pra novo user — sempre como 'pdv' (eles podem fazer upgrade depois)
         if (!hasHadSubscription) {
           autoStartingTrial = true;
           try {
@@ -107,9 +110,9 @@
               });
               const data = await res.json();
               if (res.ok) {
-                addToast('Seu teste gratuito de 30 dias foi ativado! 🎉', 'success');
+                addToast('Seu teste gratuito de 30 dias foi ativado!', 'success');
                 setTimeout(() => { window.location.href = '/gestao'; }, 600);
-                return; // autoStartingTrial stays true — redirect is in-flight
+                return;
               }
               message = data?.error || 'Erro ao ativar período de teste. Tente novamente.';
               messageType = 'warning';
@@ -118,7 +121,7 @@
             message = 'Erro ao conectar. Tente novamente ou entre em contato com o suporte.';
             messageType = 'warning';
           }
-          autoStartingTrial = false; // only reset on failure
+          autoStartingTrial = false;
         }
       }
 
@@ -129,15 +132,19 @@
         }
         if (params.get('addon') === 'mesas') {
           camePromptingMesas = true;
-          // Pre-check the addon for new subscribers if not already active
           if (!activeMesasAddon) mesasAddonOn = true;
+          // Se user veio querendo Mesas mas tá no plano errado, sugere bundle
+          if (selectedPlan === 'chat') selectedPlan = 'bundle';
+        }
+        const upgrade = params.get('upgrade');
+        if (upgrade && PLANS[upgrade]) {
+          cameUpgradingTo = upgrade;
+          selectedPlan = upgrade;
         }
         const msg = params.get('msg');
-        if (msg === 'subscribe') {
-          if (hasHadSubscription) {
-            message = 'Sua assinatura não está ativa. Renove para utilizar o sistema.';
-            messageType = 'warning';
-          }
+        if (msg === 'subscribe' && hasHadSubscription) {
+          message = 'Sua assinatura não está ativa. Renove para utilizar o sistema.';
+          messageType = 'warning';
         } else if (msg === 'complete') {
           message = 'Complete o perfil da empresa para continuar.';
           messageType = 'info';
@@ -156,6 +163,7 @@
   });
 
   async function assinar() {
+    if (loading) return;
     try {
       loading = true;
       message = '';
@@ -168,87 +176,94 @@
         return;
       }
 
-      let uri = '/api/billing/create-subscription';
-      if (billingType === 'CREDIT_CARD') {
-        uri = '/api/billing/create-checkout-session';
-      }
-
-      const res = await fetch(uri, {
+      const res = await fetch('/api/billing/create-subscription', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ billingType, addons: { mesas: mesasAddonOn } }),
+        body: JSON.stringify({
+          planTier: selectedPlan,
+          addons: { mesas: mesasAddonOn },
+        }),
       });
 
-      const json = await res.json();
+      const data = await res.json();
 
       if (!res.ok) {
-        if (json?.redirect) {
-          window.location.href = json.redirect;
+        if (data?.redirect) {
+          window.location.href = data.redirect;
           return;
         }
-        message = json?.error || 'Falha ao criar assinatura.';
+        message = data?.error || 'Falha ao criar assinatura.';
         messageType = 'warning';
         return;
       }
 
-      if (billingType === 'CREDIT_CARD' && json.url) {
-        window.location.href = json.url;
+      // Stripe Checkout retorna URL hospedada — redireciona pra lá pra completar o pagamento.
+      if (data.url) {
+        window.location.href = data.url;
         return;
       }
 
-      // Success!
-      subscriptionCreated = true;
-      trialEnd = json.trialEnd;
-      invoiceUrl = json.invoiceUrl;
-
-      if (json.pix?.encodedImage) {
-        pixQrImage = `data:image/png;base64,${json.pix.encodedImage}`;
-        pixCopyPaste = json.pix.payload;
-      }
-
-      // For PIX, show QR code inline
-      addToast('Assinatura criada com sucesso! 🎉', 'success');
-
-      // Reload subscription status
-      const { data: newSub } = await supabase
-        .from('subscriptions')
-        .select('status, current_period_end')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (newSub) {
-        subStatus = newSub.status;
-        expiryDate = newSub.current_period_end;
-        isActiveStrict = isSubscriptionActiveStrict(newSub);
-
-        // Zero fricção: se ganhou trial, manda pro gestao direto
-        if (subStatus === 'trialing' && isActiveStrict) {
-            addToast('Trial de 30 dias ativado! Aproveite. 🎉', 'success');
-            setTimeout(() => { window.location.href = '/gestao'; }, 600);
-            return;
-        }
-
-        // Se for PIX e não estiver ativo, inicia polling para redirecionar automaticamente quando o webhook bater
-        if (billingType === 'PIX' && !isActiveStrict) {
-            startPixPolling();
-        }
-
-        // Cartão de crédito: redireciona para fatura do Asaas
-        if (billingType === 'CREDIT_CARD' && invoiceUrl) {
-            window.location.href = invoiceUrl;
-        }
-      }
-
+      message = 'Resposta inesperada do servidor. Tente novamente.';
+      messageType = 'warning';
     } catch (e) {
       message = e?.message || 'Erro ao conectar com o servidor de pagamento.';
       messageType = 'warning';
     } finally {
       loading = false;
+    }
+  }
+
+  async function trocarPlano(targetTier) {
+    if (changingPlan || !targetTier || targetTier === activePlanTier) return;
+
+    const targetPlan = PLANS[targetTier];
+    const willLoseMesas = activeMesasAddon && !targetPlan.allowsMesas;
+    const newValue = calculateValue(targetTier, { mesas: activeMesasAddon && targetPlan.allowsMesas });
+    const message = willLoseMesas
+      ? `Trocar para ${targetPlan.name} (R$ ${newValue}/mês)? O Módulo Mesas será desativado pois esse plano não inclui PDV.`
+      : `Trocar para ${targetPlan.name} (R$ ${newValue}/mês)? O novo valor entra na próxima cobrança.`;
+
+    const ok = await confirmAction('Mudar de plano', message);
+    if (!ok) return;
+
+    try {
+      changingPlan = true;
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token ?? '';
+      if (!token) {
+        addToast('Sessão expirou. Faça login.', 'warning');
+        return;
+      }
+
+      const res = await fetch('/api/billing/change-plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ targetTier }),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        addToast(json?.error || 'Falha ao mudar plano.', 'error');
+        return;
+      }
+
+      addToast(json?.message || 'Plano alterado.', 'success');
+      activePlanTier = targetTier;
+      selectedPlan = targetTier;
+      if (willLoseMesas) {
+        activeMesasAddon = false;
+        mesasAddonOn = false;
+      }
+    } catch (e) {
+      addToast('Erro ao trocar plano.', 'error');
+    } finally {
+      changingPlan = false;
     }
   }
 
@@ -287,55 +302,16 @@
     }
   }
 
-  function startPixPolling() {
-    if (pollInterval) clearInterval(pollInterval);
-    pollStartTime = Date.now();
-    pixPollingExpired = false;
-
-    pollInterval = setInterval(async () => {
-      if (!userId) return;
-
-      // Timeout: encerra polling após 15 minutos
-      if (Date.now() - pollStartTime > POLL_TIMEOUT_MS) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-        pixPollingExpired = true;
-        return;
-      }
-
-      const { data: pollSub } = await supabase
-        .from('subscriptions')
-        .select('status, current_period_end')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (pollSub && isSubscriptionActiveStrict(pollSub)) {
-        clearInterval(pollInterval);
-        addToast('Pagamento confirmado! Redirecionando...', 'success');
-        isActiveStrict = true;
-        subStatus = pollSub.status;
-        expiryDate = pollSub.current_period_end;
-        setTimeout(() => { window.location.href = '/gestao'; }, 600);
-      }
-    }, 4000);
-  }
-
-  function copyPix() {
-    if (pixCopyPaste) {
-      navigator.clipboard.writeText(pixCopyPaste);
-      addToast('Código PIX copiado!', 'success');
-    }
-  }
-
   async function toggleMesasAddon() {
+    if (!activePlanAllowsMesas) {
+      addToast('Mesas não está disponível para o plano ZeloChat. Mude pra ZeloPDV ou Bundle.', 'warning');
+      return;
+    }
     const turningOn = !activeMesasAddon;
+    const previewValue = calculateValue(activePlanTier, { mesas: turningOn });
     const confirmed = await confirmAction(
       turningOn ? 'Ativar Módulo Mesas' : 'Desativar Módulo Mesas',
-      turningOn
-        ? `O valor da próxima cobrança passará para R$ ${BASE_PRICE + MESAS_ADDON_PRICE}/mês. A cobrança atual não é alterada.`
-        : `O valor da próxima cobrança voltará para R$ ${BASE_PRICE}/mês. A cobrança atual não é alterada.`
+      `O valor da próxima cobrança ${turningOn ? 'passará' : 'voltará'} para R$ ${previewValue}/mês. A cobrança atual não é alterada.`
     );
     if (!confirmed) return;
 
@@ -375,31 +351,49 @@
 
   $: defaultMessage = hasHadSubscription
     ? 'Renove sua assinatura para continuar usando o sistema.'
-    : '30 dias grátis! Escolha como pagar após o período de teste.';
+    : '30 dias grátis! Escolha o plano que faz sentido pro seu negócio.';
 </script>
 
 <svelte:head>
-  <title>Assinatura — Zelo PDV</title>
-  <meta name="description" content="Assine o Zelo PDV. R$ 59/mês. Pague com PIX ou cartão de crédito.">
+  <title>Assinatura — Zelo</title>
+  <meta name="description" content="Assine ZeloPDV (R$ 59), ZeloChat (R$ 97) ou o Bundle (R$ 147). Cartão de crédito.">
 </svelte:head>
 
 <section class="assinatura-container">
   <p class="breadcrumb">Conta / Assinatura</p>
-  <h1 class="title">Assinatura Zelo PDV</h1>
-  <p class="subtitle">Plano base R$ 59/mês. Adicione o Módulo Mesas (+R$ 30) para gerenciar mesas e comandas.</p>
+  <h1 class="title">Sua assinatura Zelo</h1>
+  <p class="subtitle">Escolha o plano. ZeloPDV (PDV + financeiro), ZeloChat (atendimento com IA), ou ambos no Bundle com R$ 9 de desconto.</p>
 
   {#if camePromptingMesas}
-    <div class="status-card info" style="border-color: rgba(14,165,233,0.45);">
+    <div class="status-card info">
       <div class="status-icon">🪑</div>
       <div>
-        <strong>Ative o Módulo Mesas</strong>
+        <strong>Você quer ativar o Módulo Mesas</strong>
         <div class="status-detail">
-          {#if isActiveStrict && !activeMesasAddon}
-            Toque em "Ativar Módulo Mesas" abaixo. Próxima cobrança passa para R$ 89/mês.
+          {#if isActiveStrict && activePlanAllowsMesas && !activeMesasAddon}
+            Use "Ativar Módulo Mesas" abaixo.
+          {:else if isActiveStrict && !activePlanAllowsMesas}
+            O Módulo Mesas precisa de um plano com PDV. Mude pra ZeloPDV ou Bundle.
           {:else if activeMesasAddon}
-            Módulo já está ativo na sua assinatura. Acesse <a href="/app/mesas" style="color: var(--primary);">/app/mesas</a>.
+            Já está ativo. Acesse <a href="/app/mesas" style="color: var(--primary);">/app/mesas</a>.
           {:else}
-            Marque "Módulo Mesas" no formulário abaixo. Total ficará R$ 89/mês.
+            Marque "Módulo Mesas" no formulário de assinatura abaixo.
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if cameUpgradingTo && cameUpgradingTo !== activePlanTier}
+    <div class="status-card info" style="border-color: rgba(99, 102, 241, 0.45);">
+      <div class="status-icon">⚡</div>
+      <div>
+        <strong>Upgrade para {PLANS[cameUpgradingTo].name}</strong>
+        <div class="status-detail">
+          {#if isActiveStrict}
+            Confirme abaixo. Novo valor entra na próxima cobrança.
+          {:else}
+            Selecione o plano e finalize sua assinatura.
           {/if}
         </div>
       </div>
@@ -407,87 +401,58 @@
   {/if}
 
   {#if isActiveStrict}
-    <!-- ACTIVE SUBSCRIPTION STATE -->
+    <!-- ACTIVE / TRIALING — show current plan + plan switcher + addon controls -->
+
     {#if subStatus === 'trialing' && trialDaysLeft !== null && trialDaysLeft <= 30}
-      <!-- Trial ending soon: show warning + subscription form -->
       <div class="status-card warning">
-        <div class="status-icon">⚠️</div>
+        <div class="status-icon">⏳</div>
         <div>
           <strong>
             {trialDaysLeft === 0 ? 'Seu teste termina hoje!' : `Teste termina em ${trialDaysLeft} dia${trialDaysLeft === 1 ? '' : 's'}`}
           </strong>
           {#if expiryDate}
-            <div class="status-detail">Válido até {new Date(expiryDate).toLocaleDateString('pt-BR')}. Assine abaixo para não perder o acesso.</div>
+            <div class="status-detail">Válido até {new Date(expiryDate).toLocaleDateString('pt-BR')}.</div>
           {/if}
         </div>
       </div>
-
-      <a href="/app" class="btn-secondary" style="text-align:center; text-decoration:none;">Entrar no sistema agora</a>
-
-      <!-- BILLING TYPE SELECTOR -->
-      <div class="billing-selector">
-        <h2 class="selector-title">Assine para continuar após o teste</h2>
-        <div class="billing-options">
-          <label class="billing-option billing-option-disabled">
-            <input type="radio" bind:group={billingType} value="PIX" disabled />
-            <span class="option-icon" style="opacity: 0.5;">🟢</span>
-            <div style="opacity: 0.6;">
-              <strong>PIX</strong>
-              <span class="option-detail" style="color: var(--error); font-weight: bold;">Em manutenção</span>
-            </div>
-          </label>
-
-          <label class="billing-option" class:selected={billingType === 'CREDIT_CARD'}>
-            <input type="radio" bind:group={billingType} value="CREDIT_CARD" />
-            <span class="option-icon">💳</span>
-            <div>
-              <strong>Cartão de Crédito</strong>
-              <span class="option-detail">Renovação automática</span>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <label class="addon-toggle">
-        <input type="checkbox" bind:checked={mesasAddonOn} />
-        <div class="addon-info">
-          <strong>Módulo Mesas <span class="addon-price">+R$ 30/mês</span></strong>
-          <span class="addon-detail">Mesas, comandas e divisão de conta para bares e lanchonetes.</span>
-        </div>
-      </label>
-
-      <button class="btn-primary btn-subscribe" on:click={assinar} disabled={loading}>
-        {#if loading}
-          Processando…
-        {:else}
-          Assinar agora — R$ {planPrice}/mês
-        {/if}
-      </button>
-
-      <p class="legal-text">
-        Ao assinar, você concorda com nossos <a href="/termos">Termos de Uso</a> e <a href="/privacidade">Política de Privacidade</a>.
-        A cobrança de R$ {planPrice}/mês será iniciada imediatamente.
-      </p>
-
     {:else}
-      <!-- Normal active/trialing state -->
       <div class="status-card active">
         <div class="status-icon">✅</div>
         <div>
-          {#if subStatus === 'trialing'}
-            <strong>Período de teste ativo</strong> — Você tem acesso completo ao sistema!
-            {#if expiryDate}
-              <div class="status-detail">Teste válido até {new Date(expiryDate).toLocaleDateString('pt-BR')}</div>
-            {/if}
-          {:else}
-            <strong>Assinatura ativa</strong>
-            {#if expiryDate}
-              <div class="status-detail">Próxima renovação: {new Date(expiryDate).toLocaleDateString('pt-BR')}</div>
-            {/if}
+          <strong>Assinatura ativa — {PLANS[activePlanTier]?.name || 'Plano'}</strong>
+          {#if expiryDate}
+            <div class="status-detail">Próxima renovação: {new Date(expiryDate).toLocaleDateString('pt-BR')} · R$ {activePlanPrice}/mês</div>
           {/if}
         </div>
       </div>
+    {/if}
 
+    <a href="/app" class="btn-secondary" style="text-align:center; text-decoration:none;">Entrar no sistema</a>
+
+    <h2 class="selector-title" style="margin-top: 1rem;">Mudar de plano</h2>
+    <div class="plans-grid">
+      {#each Object.values(PLANS) as plan}
+        <button
+          type="button"
+          class="plan-card"
+          class:current={plan.id === activePlanTier}
+          class:bundle={plan.id === 'bundle'}
+          on:click={() => trocarPlano(plan.id)}
+          disabled={changingPlan || plan.id === activePlanTier}
+        >
+          {#if plan.id === 'bundle'}<span class="plan-badge">Mais popular</span>{/if}
+          <div class="plan-name">{plan.name}</div>
+          <div class="plan-price">R$ {plan.price}<span class="plan-cycle">/mês</span></div>
+          {#if plan.bundleSavings}<div class="plan-savings">Economize R$ {plan.bundleSavings}</div>{/if}
+          <div class="plan-tagline">{plan.tagline}</div>
+          <div class="plan-cta">
+            {#if plan.id === activePlanTier}Plano atual{:else if changingPlan}Mudando…{:else}Mudar para este plano{/if}
+          </div>
+        </button>
+      {/each}
+    </div>
+
+    {#if activePlanAllowsMesas}
       <div class="addon-card">
         <div class="addon-card-header">
           <strong>Módulo Mesas</strong>
@@ -497,10 +462,9 @@
         </div>
         <p class="addon-card-detail">
           {#if activeMesasAddon}
-            Você está pagando R$ {activePlanPrice}/mês (R$ 59 plano + R$ 30 add-on).
-            Desativar volta o valor para R$ 59/mês na próxima cobrança.
+            Você está pagando R$ {activePlanPrice}/mês (plano + add-on). Desativar volta o valor para R$ {calculateValue(activePlanTier, { mesas: false })}/mês na próxima cobrança.
           {:else}
-            Adicione mesas, comandas e divisão de conta. +R$ 30/mês — total R$ 89/mês a partir da próxima cobrança.
+            Adicione mesas, comandas e divisão de conta. +R$ 30/mês — total R$ {calculateValue(activePlanTier, { mesas: true })}/mês.
           {/if}
         </p>
         <button
@@ -517,49 +481,13 @@
           {/if}
         </button>
       </div>
-
-      <div class="actions-row">
-        <a href="/app" class="btn-primary">Entrar no sistema</a>
-        <button class="btn-danger-outline" on:click={cancelarAssinatura} disabled={canceling}>
-          {canceling ? 'Cancelando…' : 'Cancelar assinatura'}
-        </button>
-      </div>
     {/if}
 
-  {:else if subscriptionCreated && billingType === 'PIX'}
-    <!-- PIX QR CODE DISPLAY -->
-    <div class="status-card info">
-      <div class="status-icon">⏳</div>
-      <div>
-        <strong>Aguardando pagamento PIX…</strong>
-        <div class="status-detail">
-          Seu acesso será liberado automaticamente após a confirmação.
-        </div>
-      </div>
+    <div class="actions-row">
+      <button class="btn-danger-outline" on:click={cancelarAssinatura} disabled={canceling}>
+        {canceling ? 'Cancelando…' : 'Cancelar assinatura'}
+      </button>
     </div>
-
-    {#if pixQrImage}
-      <div class="pix-card">
-        <h2 class="pix-title">PIX para pagamento</h2>
-        <img src={pixQrImage} alt="QR Code PIX" class="pix-qr" />
-        {#if pixCopyPaste}
-          <button class="btn-secondary pix-copy-btn" on:click={copyPix}>
-            📋 Copiar código PIX
-          </button>
-          <p class="pix-code">{pixCopyPaste.substring(0, 40)}…</p>
-        {/if}
-      </div>
-    {/if}
-
-    {#if pixPollingExpired}
-      <div class="status-card warning" style="margin-top: 1rem; font-size: 0.85rem;">
-        ⚠️ Não detectamos o pagamento automaticamente. Se você pagou, aguarde alguns minutos e recarregue a página.
-      </div>
-    {:else}
-      <div class="status-card active" style="margin-top: 1rem; opacity: 0.7; font-size: 0.85rem;">
-        ℹ️ O sistema detectará o pagamento em instantes.
-      </div>
-    {/if}
 
   {:else if autoStartingTrial}
     <div class="status-card info">
@@ -571,7 +499,7 @@
     </div>
 
   {:else}
-    <!-- SUBSCRIBE STATE -->
+    <!-- NOT-ACTIVE — show plan picker + addon + payment form -->
     {#if messageType === 'warning' && message}
       <div class="status-card warning">
         <div class="status-icon">⚠️</div>
@@ -586,50 +514,50 @@
       </div>
     {/if}
 
-    <!-- BILLING TYPE SELECTOR -->
-    <div class="billing-selector">
-      <h2 class="selector-title">Como quer pagar?</h2>
-      <div class="billing-options">
-        <label class="billing-option billing-option-disabled">
-          <input type="radio" bind:group={billingType} value="PIX" disabled />
-          <span class="option-icon" style="opacity: 0.5;">🟢</span>
-          <div style="opacity: 0.6;">
-            <strong>PIX</strong>
-            <span class="option-detail" style="color: var(--error); font-weight: bold;">Em manutenção</span>
-          </div>
-        </label>
-
-        <label class="billing-option" class:selected={billingType === 'CREDIT_CARD'}>
-          <input type="radio" bind:group={billingType} value="CREDIT_CARD" />
-          <span class="option-icon">💳</span>
-          <div>
-            <strong>Cartão de Crédito</strong>
-            <span class="option-detail">Renovação automática</span>
-          </div>
-        </label>
-      </div>
+    <h2 class="selector-title">Escolha seu plano</h2>
+    <div class="plans-grid">
+      {#each Object.values(PLANS) as plan}
+        <button
+          type="button"
+          class="plan-card"
+          class:selected={selectedPlan === plan.id}
+          class:bundle={plan.id === 'bundle'}
+          on:click={() => selectedPlan = plan.id}
+        >
+          {#if plan.id === 'bundle'}<span class="plan-badge">Mais popular</span>{/if}
+          <div class="plan-name">{plan.name}</div>
+          <div class="plan-price">R$ {plan.price}<span class="plan-cycle">/mês</span></div>
+          {#if plan.bundleSavings}<div class="plan-savings">Economize R$ {plan.bundleSavings}</div>{/if}
+          <div class="plan-tagline">{plan.tagline}</div>
+        </button>
+      {/each}
     </div>
 
-    <label class="addon-toggle">
-      <input type="checkbox" bind:checked={mesasAddonOn} />
-      <div class="addon-info">
-        <strong>Módulo Mesas <span class="addon-price">+R$ 30/mês</span></strong>
-        <span class="addon-detail">Mesas, comandas e divisão de conta para bares e lanchonetes.</span>
-      </div>
-    </label>
+    {#if selectedPlanAllowsMesas}
+      <label class="addon-toggle">
+        <input type="checkbox" bind:checked={mesasAddonOn} />
+        <div class="addon-info">
+          <strong>Módulo Mesas <span class="addon-price">+R$ 30/mês</span></strong>
+          <span class="addon-detail">Mesas, comandas e divisão de conta para bares e lanchonetes.</span>
+        </div>
+      </label>
+    {:else}
+      <p class="legal-text" style="margin: -0.4rem 0 0;">Módulo Mesas só está disponível em planos com ZeloPDV.</p>
+    {/if}
 
     <button class="btn-primary btn-subscribe" on:click={assinar} disabled={loading}>
       {#if loading}
         Processando…
       {:else}
-        Assinar agora — R$ {planPrice}/mês
+        Assinar {PLANS[selectedPlan].name} — R$ {planPrice}/mês
       {/if}
     </button>
 
     <p class="legal-text">
       Ao assinar, você concorda com nossos <a href="/termos">Termos de Uso</a> e <a href="/privacidade">Política de Privacidade</a>.
+      Pagamento via cartão de crédito (Stripe).
       {#if !hasHadSubscription}
-        A cobrança de R$ {planPrice}/mês será iniciada após o período de teste.
+        A cobrança de R$ {planPrice}/mês será iniciada após o período de teste de 30 dias.
       {:else}
         A cobrança de R$ {planPrice}/mês será iniciada imediatamente.
       {/if}
@@ -639,7 +567,7 @@
 
 <style>
   .assinatura-container {
-    max-width: 540px;
+    max-width: 720px;
     margin: 2rem auto;
     padding: 0 1rem;
     display: flex;
@@ -669,7 +597,6 @@
     margin: 0;
   }
 
-  /* Status cards */
   .status-card {
     display: flex;
     gap: 0.75rem;
@@ -685,37 +612,20 @@
     border: 1px solid rgba(34, 197, 94, 0.25);
     color: #166534;
   }
-
   .status-card.warning {
     background: rgba(245, 158, 11, 0.08);
     border: 1px solid rgba(245, 158, 11, 0.25);
     color: #92400e;
   }
-
   .status-card.info {
     background: rgba(14, 165, 233, 0.08);
     border: 1px solid rgba(14, 165, 233, 0.25);
     color: #0c4a6e;
   }
+  .status-icon { font-size: 1.5rem; flex-shrink: 0; }
+  .status-detail { font-size: 0.85rem; margin-top: 0.25rem; opacity: 0.8; }
 
-  .status-icon {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-  }
-
-  .status-detail {
-    font-size: 0.85rem;
-    margin-top: 0.25rem;
-    opacity: 0.8;
-  }
-
-  /* Actions */
-  .actions-row {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-    flex-wrap: wrap;
-  }
+  .actions-row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
 
   .btn-primary {
     display: inline-flex;
@@ -732,21 +642,9 @@
     text-decoration: none;
     transition: background 0.2s;
   }
-
-  .btn-primary:hover {
-    background: var(--primary-hover);
-  }
-
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .btn-subscribe {
-    width: 100%;
-    padding: 1rem;
-    font-size: 1.1rem;
-  }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-subscribe { width: 100%; padding: 1rem; font-size: 1.1rem; }
 
   .btn-secondary {
     display: inline-flex;
@@ -762,10 +660,7 @@
     cursor: pointer;
     transition: background 0.2s;
   }
-
-  .btn-secondary:hover {
-    background: var(--bg-card);
-  }
+  .btn-secondary:hover { background: var(--bg-card); }
 
   .btn-danger-outline {
     display: inline-flex;
@@ -781,33 +676,90 @@
     cursor: pointer;
     transition: all 0.2s;
   }
+  .btn-danger-outline:hover { background: rgba(220, 38, 38, 0.08); }
+  .btn-danger-outline:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .btn-danger-outline:hover {
-    background: rgba(220, 38, 38, 0.08);
+  /* Plans grid */
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.25rem;
   }
-
-  .btn-danger-outline:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .plan-card {
+    position: relative;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 1.1rem 1rem 1rem;
+    border: 2px solid var(--border-subtle);
+    border-radius: 12px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
   }
+  .plan-card:hover:not(:disabled) { border-color: var(--primary); transform: translateY(-1px); }
+  .plan-card.selected { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+  .plan-card.current { border-color: var(--success, #16a34a); background: rgba(34,197,94,0.04); }
+  .plan-card.current:hover { transform: none; }
+  .plan-card.bundle { border-color: rgba(99, 102, 241, 0.5); }
+  .plan-card.bundle.selected { border-color: rgb(99, 102, 241); box-shadow: 0 0 0 1px rgb(99, 102, 241); }
+  .plan-card:disabled { cursor: default; opacity: 0.85; }
 
-  /* Billing type selector */
-  .billing-selector {
-    margin-top: 0.5rem;
+  .plan-badge {
+    position: absolute;
+    top: -10px;
+    right: 12px;
+    background: rgb(99, 102, 241);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
   }
+  .plan-name { font-size: 1rem; font-weight: 800; }
+  .plan-price {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1;
+  }
+  .plan-cycle { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); }
+  .plan-savings {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgb(99, 102, 241);
+    background: rgba(99, 102, 241, 0.1);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    align-self: flex-start;
+  }
+  .plan-tagline { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+  .plan-cta {
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .plan-card.current .plan-cta { color: var(--success, #16a34a); }
+  .plan-card:disabled .plan-cta { color: var(--text-muted); }
 
+  .billing-selector { margin-top: 0.5rem; }
   .selector-title {
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-main);
-    margin: 0 0 0.75rem 0;
+    margin: 0 0 0.6rem 0;
   }
 
-  .billing-options {
-    display: flex;
-    gap: 0.5rem;
-  }
-
+  .billing-options { display: flex; gap: 0.5rem; }
   .billing-option {
     flex: 1;
     display: flex;
@@ -822,38 +774,17 @@
     transition: all 0.2s;
     background: var(--bg-card);
   }
-
-  .billing-option input[type="radio"] {
-    display: none;
-  }
-
-  .billing-option:hover {
-    border-color: var(--primary);
-    background: rgba(var(--primary-rgb, 59, 130, 246), 0.04);
-  }
-
+  .billing-option input[type="radio"] { display: none; }
+  .billing-option:hover { border-color: var(--primary); background: rgba(var(--primary-rgb, 59, 130, 246), 0.04); }
   .billing-option.selected {
     border-color: var(--primary);
     background: rgba(var(--primary-rgb, 59, 130, 246), 0.08);
     box-shadow: 0 0 0 1px var(--primary);
   }
+  .option-icon { font-size: 1.5rem; }
+  .billing-option strong { font-size: 0.85rem; color: var(--text-main); }
+  .option-detail { font-size: 0.72rem; color: var(--text-muted); display: block; }
 
-  .option-icon {
-    font-size: 1.5rem;
-  }
-
-  .billing-option strong {
-    font-size: 0.85rem;
-    color: var(--text-main);
-  }
-
-  .option-detail {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    display: block;
-  }
-
-  /* PIX QR Code */
   .pix-card {
     background: var(--bg-card);
     border: 1px solid var(--border-card);
@@ -861,63 +792,17 @@
     padding: 1.5rem;
     text-align: center;
   }
+  .pix-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.25rem 0; color: var(--text-main); }
+  .pix-qr { max-width: 220px; margin: 0 auto 1rem; display: block; border-radius: 8px; }
+  .pix-copy-btn { width: 100%; margin-bottom: 0.5rem; }
+  .pix-code { font-size: 0.7rem; color: var(--text-muted); word-break: break-all; font-family: monospace; margin: 0; }
 
-  .pix-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin: 0 0 0.25rem 0;
-    color: var(--text-main);
-  }
+  .legal-text { font-size: 0.78rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
+  .legal-text a { color: var(--primary); text-decoration: underline; }
 
-  .pix-subtitle {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin: 0 0 1rem 0;
-  }
-
-  .pix-qr {
-    max-width: 220px;
-    margin: 0 auto 1rem;
-    display: block;
-    border-radius: 8px;
-  }
-
-  .pix-copy-btn {
-    width: 100%;
-    margin-bottom: 0.5rem;
-  }
-
-  .pix-code {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    word-break: break-all;
-    font-family: monospace;
-    margin: 0;
-  }
-
-  /* Legal text */
-  .legal-text {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    text-align: center;
-    line-height: 1.5;
-  }
-
-  .legal-text a {
-    color: var(--primary);
-    text-decoration: underline;
-  }
-
-  /* Dark mode adjustments */
-  :global(.dark) .status-card.active {
-    color: #bbf7d0;
-  }
-  :global(.dark) .status-card.warning {
-    color: #fde68a;
-  }
-  :global(.dark) .status-card.info {
-    color: #bae6fd;
-  }
+  :global(.dark) .status-card.active { color: #bbf7d0; }
+  :global(.dark) .status-card.warning { color: #fde68a; }
+  :global(.dark) .status-card.info { color: #bae6fd; }
 
   .billing-option-disabled {
     opacity: 0.45;
@@ -926,7 +811,6 @@
     filter: grayscale(0.5);
   }
 
-  /* Add-on toggle (used in subscribe forms) */
   .addon-toggle {
     display: flex;
     align-items: flex-start;
@@ -938,43 +822,18 @@
     background: var(--bg-card);
     transition: all 0.2s;
   }
-
-  .addon-toggle:hover {
-    border-color: var(--primary);
-  }
-
+  .addon-toggle:hover { border-color: var(--primary); }
   .addon-toggle input[type="checkbox"] {
     margin-top: 0.2rem;
     accent-color: var(--primary);
     width: 1rem;
     height: 1rem;
   }
+  .addon-info { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
+  .addon-info strong { color: var(--text-main); font-size: 0.95rem; }
+  .addon-price { color: var(--primary); font-size: 0.85rem; margin-left: 0.35rem; }
+  .addon-detail { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
 
-  .addon-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    flex: 1;
-  }
-
-  .addon-info strong {
-    color: var(--text-main);
-    font-size: 0.95rem;
-  }
-
-  .addon-price {
-    color: var(--primary);
-    font-size: 0.85rem;
-    margin-left: 0.35rem;
-  }
-
-  .addon-detail {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    line-height: 1.4;
-  }
-
-  /* Add-on card (active subscriber view) */
   .addon-card {
     display: flex;
     flex-direction: column;
@@ -984,19 +843,8 @@
     border-radius: 10px;
     background: var(--bg-card);
   }
-
-  .addon-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  .addon-card-header strong {
-    font-size: 1rem;
-    color: var(--text-main);
-  }
-
+  .addon-card-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .addon-card-header strong { font-size: 1rem; color: var(--text-main); }
   .addon-status {
     font-size: 0.7rem;
     font-weight: 700;
@@ -1008,42 +856,15 @@
     color: var(--text-muted);
     border: 1px solid var(--border-subtle);
   }
-
   .addon-status.on {
     background: rgba(34, 197, 94, 0.15);
     color: #166534;
     border-color: rgba(34, 197, 94, 0.35);
   }
-
-  .addon-card-detail {
-    font-size: 0.85rem;
-    color: var(--text-label);
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  .option-manutencao {
-    display: inline-block;
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: #92400e;
-    background: rgba(245, 158, 11, 0.15);
-    border: 1px solid rgba(245, 158, 11, 0.35);
-    border-radius: 4px;
-    padding: 1px 5px;
-    margin-top: 2px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
+  .addon-card-detail { font-size: 0.85rem; color: var(--text-label); margin: 0; line-height: 1.5; }
 
   @media (max-width: 480px) {
-    .billing-options {
-      flex-direction: column;
-    }
-    .billing-option {
-      flex-direction: row;
-      text-align: left;
-      gap: 0.75rem;
-    }
+    .billing-options { flex-direction: column; }
+    .billing-option { flex-direction: row; text-align: left; gap: 0.75rem; }
   }
 </style>

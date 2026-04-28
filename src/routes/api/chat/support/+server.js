@@ -87,7 +87,7 @@ NÃO EMITIMOS:
 • NFC-e. O sistema gera recibos e comprovantes internos. Para nota fiscal, recomendamos combinar com um emissor fiscal dedicado.
 
 ASSINATURA
-• PIX, Boleto ou Cartão — processado pelo Asaas (empresa brasileira)
+• Cartão de crédito (recorrência mensal) — processado pelo Stripe
 • Cancele pelo próprio sistema em /perfil, sem multa
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

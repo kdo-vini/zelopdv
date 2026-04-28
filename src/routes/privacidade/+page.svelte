@@ -137,7 +137,7 @@
 
         <h3 class="subsection-title">3.4 Dados de Pagamento</h3>
         <p>
-          Processados diretamente pela Asaas (terceiro). A Empresa recebe apenas confirmação de pagamento e identificadores de assinatura. Dados completos de cartão de crédito <strong>não</strong> são armazenados em nossos servidores.
+          Processados diretamente pelo Stripe (terceiro certificado PCI DSS Nível 1). A Empresa recebe apenas confirmação de pagamento e identificadores de assinatura. Dados completos de cartão de crédito <strong>não</strong> são armazenados em nossos servidores.
         </p>
 
         <h3 class="subsection-title">3.5 Dados Técnicos (coletados automaticamente)</h3>
@@ -229,15 +229,16 @@
         </div>
 
         <div class="partner-card">
-          <h3 class="partner-name">6.2 Asaas <span class="partner-domain">(asaas.com)</span></h3>
+          <h3 class="partner-name">6.2 Stripe <span class="partner-domain">(stripe.com)</span></h3>
           <p>
-            Utilizada como processador de pagamentos (gateway). Coleta e processa dados de transações,
-            incluindo nome, CPF/CNPJ, e-mail e dados de faturamento/pagamento para efetivação das cobranças.
-            A Asaas atua como controladora independente em relação ao processamento das transações financeiras.
+            Utilizado como processador de pagamentos (gateway). Coleta e processa dados de transações,
+            incluindo nome, e-mail e dados de faturamento/pagamento para efetivação das cobranças recorrentes.
+            O Stripe atua como controlador independente em relação ao processamento das transações financeiras
+            e é certificado PCI DSS Nível 1.
           </p>
           <p class="mt-2">
             Política de privacidade:
-            <a href="https://asaas.com/privacidade" target="_blank" rel="noopener noreferrer" class="inline-link">asaas.com/privacidade</a>
+            <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" class="inline-link">stripe.com/privacy</a>
           </p>
         </div>
 
@@ -263,7 +264,7 @@
       <section id="transferencia" aria-labelledby="heading-transferencia">
         <h2 id="heading-transferencia" class="section-title">7. Transferência Internacional de Dados</h2>
         <p>
-          Os parceiros Supabase e Vercel possuem infraestrutura nos Estados Unidos e/ou na União Europeia. As transferências internacionais são realizadas com amparo em cláusulas contratuais padrão (Standard Contractual Clauses — SCCs) e mecanismos equivalentes, em conformidade com o Art. 33 da LGPD. O Asaas possui infraestrutura operando no Brasil sob normativas locais.
+          Os parceiros Supabase, Vercel e Stripe possuem infraestrutura nos Estados Unidos e/ou na União Europeia. As transferências internacionais são realizadas com amparo em cláusulas contratuais padrão (Standard Contractual Clauses — SCCs) e mecanismos equivalentes, em conformidade com o Art. 33 da LGPD.
         </p>
       </section>
 
@@ -291,7 +292,7 @@
                 <td>Durante a vigência da conta + 5 anos</td>
               </tr>
               <tr>
-                <td>Dados de pagamento (logs Asaas/Sistema)</td>
+                <td>Dados de pagamento (logs Stripe/Sistema)</td>
                 <td>10 anos (obrigação fiscal/legal)</td>
               </tr>
               <tr>

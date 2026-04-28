@@ -1,28 +1,30 @@
+// Cria sessão de Checkout Stripe pra novo subscriber ou renovação.
+// Suporta plano (pdv|chat|bundle) + addons (mesas) como subscription_items separados.
+// PIX/Boleto: Stripe BR adicionou suporte beta a PIX; se a feature flag estiver ativa,
+// payment_method_types inclui 'pix'. Default = card-only.
 import { json } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
+import { stripe } from '$lib/server/stripe';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import {
-  createCustomer,
-  findCustomerByCpfCnpj,
-  findCustomerByEmail,
-  createSubscription,
-  removeSubscription,
-  listSubscriptionPayments,
-  getPixQrCode,
-  isConfigured,
-} from '$lib/server/asaas';
-import { enviarBoasVindas } from '$lib/server/whatsapp';
-import { sendEmail, isEmailConfigured } from '$lib/server/email';
-import { emailDay0 } from '$lib/server/emailTemplates';
+  isValidPlanTier,
+  isAddonAllowed,
+  buildStripeLineItems,
+  PLANS,
+} from '$lib/pricing';
 
-export async function POST({ request }) {
+const PIX_ENABLED = env.BILLING_PIX_ENABLED === 'true';
+const ORIGIN = env.PUBLIC_APP_URL || 'https://zelopdv.com.br';
+const TRIAL_DAYS = 30;
+
+export async function POST({ request, url }) {
   try {
     if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado.' }, { status: 500 });
-    if (!isConfigured()) return json({ error: 'Asaas não configurado. Verifique ASAAS_API_KEY.' }, { status: 500 });
+    if (!stripe) return json({ error: 'Stripe não configurado. Verifique STRIPE_SECRET_KEY.' }, { status: 500 });
 
     // Auth
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
     if (!token) return json({ error: 'Não autorizado' }, { status: 401 });
-
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
     if (authErr || !user) return json({ error: 'Não autorizado' }, { status: 401 });
 
@@ -35,24 +37,24 @@ export async function POST({ request }) {
       .update({ last_seen_at: new Date().toISOString() })
       .eq('user_id', userId)
       .then(({ error }) => { if (error) console.warn('[create-subscription] last_seen_at:', error.message); })
-      .catch((e) => console.warn('[create-subscription] last_seen_at catch:', e.message));
+      .catch(() => {});
 
-    // Get billing type and add-ons from request body
-    const body = await request.json();
-    const billingType = body.billingType || 'PIX';
-    const addons = body.addons || {};
-    const hasMesasAddon = !!addons.mesas;
+    // Parse body
+    const body = await request.json().catch(() => ({}));
+    const planTier = body.planTier || 'pdv';
+    const requestedAddons = body.addons || {};
 
-    if (!['PIX', 'CREDIT_CARD'].includes(billingType)) {
-      return json({ error: 'Tipo de pagamento inválido. Use PIX ou CREDIT_CARD.' }, { status: 400 });
+    if (!isValidPlanTier(planTier)) {
+      return json({ error: `Plano inválido. Use: ${Object.keys(PLANS).join(', ')}.` }, { status: 400 });
     }
 
-    // Plan pricing: base R$59 + R$30 per active add-on
-    const BASE_VALUE = 59.00;
-    const MESAS_ADDON_VALUE = 30.00;
-    const subscriptionValue = BASE_VALUE + (hasMesasAddon ? MESAS_ADDON_VALUE : 0);
+    // Mesas só permitido em planos com PDV
+    const hasMesasAddon = !!requestedAddons.mesas;
+    if (hasMesasAddon && !isAddonAllowed(planTier, 'mesas')) {
+      return json({ error: `Plano ${planTier} não suporta o add-on Mesas.` }, { status: 400 });
+    }
 
-    // Get customer profile for CPF/CNPJ
+    // Profile gate: precisa ter CNPJ/CPF preenchido (Stripe não exige, mas usamos pra emitir nota fiscal e validar negócio)
     const { data: perfil } = await supabaseAdmin
       .from('empresa_perfil')
       .select('nome_exibicao, documento, contato')
@@ -60,194 +62,103 @@ export async function POST({ request }) {
       .maybeSingle();
 
     if (!perfil?.documento) {
-      return json({ error: 'Complete o perfil da empresa (CPF/CNPJ) antes de assinar.', redirect: '/perfil?msg=complete' }, { status: 400 });
+      return json({
+        error: 'Complete o perfil da empresa (CPF/CNPJ) antes de assinar.',
+        redirect: '/perfil?msg=complete',
+      }, { status: 400 });
     }
 
-    // Check existing subscription
+    // Existing subscription check
     const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, status, current_period_end, billing_type')
+      .select('id, provider_subscription_id, provider_customer_id, status, current_period_end, plan_tier, payment_provider')
       .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     const isFirstTime = !existingSub;
 
-    // Check if user is currently in an active trial — must not reset it
-    const isActiveTrial = existingSub?.status === 'trialing'
-      && existingSub?.current_period_end
-      && new Date(existingSub.current_period_end) > new Date();
+    // Find or create Stripe customer
+    let stripeCustomerId = existingSub?.provider_customer_id && existingSub.payment_provider === 'stripe'
+      ? existingSub.provider_customer_id
+      : null;
 
-    // Guard: prevent duplicate Asaas subscriptions for active/trialing users with same billing type
-    const isActiveSubscription = existingSub?.provider_subscription_id
-      && (existingSub.status === 'active' || existingSub.status === 'trialing')
-      && new Date(existingSub.current_period_end) > new Date();
-
-    if (isActiveSubscription && existingSub.billing_type === billingType) {
-      // Already has an active subscription with the same billing type — return existing data
-      return json({
-        success: true,
-        subscriptionId: existingSub.provider_subscription_id,
-        trialEnd: existingSub.current_period_end,
-        billingType,
-        pix: null,
-        invoiceUrl: null,
-      });
+    if (!stripeCustomerId) {
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      stripeCustomerId = customers.data[0]?.id;
     }
-
-    // If billing type is changing for an active subscription, cancel the old one in Asaas first
-    if (isActiveSubscription && existingSub.billing_type !== billingType && existingSub.provider_subscription_id) {
-      try {
-        await removeSubscription(existingSub.provider_subscription_id);
-      } catch (e) {
-        console.warn('[create-subscription] Could not cancel old Asaas subscription:', e.message);
-      }
-    }
-
-    // Find or create Asaas customer
-    const cpfCnpj = perfil.documento.replace(/\D/g, '');
-    let customer = await findCustomerByCpfCnpj(cpfCnpj);
-    if (!customer) customer = await findCustomerByEmail(email);
-    if (!customer) {
-      customer = await createCustomer(
-        perfil.nome_exibicao || email,
-        cpfCnpj,
+    if (!stripeCustomerId) {
+      const newCustomer = await stripe.customers.create({
         email,
-        userId
-      );
+        name: perfil.nome_exibicao || email,
+        metadata: {
+          user_id: userId,
+          documento: perfil.documento,
+        },
+      });
+      stripeCustomerId = newCustomer.id;
     }
 
-    const trialDays = isFirstTime ? 30 : 0;
-    const firstDue = new Date();
-    firstDue.setDate(firstDue.getDate() + trialDays);
-    const nextDueDate = firstDue.toISOString().split('T')[0];
+    // Build line_items
+    const lineItems = buildStripeLineItems(planTier, { mesas: hasMesasAddon });
 
-    // If voluntarily subscribing (!isFirstTime), trial ends now and we transition to incomplete until paid
-    const trialEnd = isFirstTime
-      ? (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })()
-      : new Date();
+    // Decide payment methods. PIX via flag — só ligar quando habilitado no Stripe Dashboard.
+    const paymentMethodTypes = ['card'];
+    if (PIX_ENABLED) paymentMethodTypes.unshift('pix');
 
-    // Create subscription in Asaas
-    const subscription = await createSubscription({
-      customerId: customer.id,
-      billingType,
-      value: subscriptionValue,
-      nextDueDate,
-      externalReference: userId,
+    // Subscription data: trial só pra first-time
+    const subscriptionData = isFirstTime
+      ? {
+          trial_period_days: TRIAL_DAYS,
+          trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
+          metadata: { user_id: userId, plan_tier: planTier, has_mesas_addon: String(hasMesasAddon) },
+        }
+      : {
+          metadata: { user_id: userId, plan_tier: planTier, has_mesas_addon: String(hasMesasAddon) },
+        };
+
+    const requestOrigin = url?.origin || ORIGIN;
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: stripeCustomerId,
+      line_items: lineItems,
+      payment_method_types: paymentMethodTypes,
+      payment_method_collection: isFirstTime ? 'if_required' : 'always',
+      allow_promotion_codes: true,
+      subscription_data: subscriptionData,
+      success_url: `${requestOrigin}/assinatura?success=1`,
+      cancel_url: `${requestOrigin}/assinatura?canceled=1`,
+      metadata: {
+        user_id: userId,
+        plan_tier: planTier,
+        has_mesas_addon: String(hasMesasAddon),
+      },
     });
 
+    // Pre-record subscription state in DB as 'incomplete'. Webhook (checkout.session.completed)
+    // will update with provider_subscription_id and flip to 'trialing'/'active'.
     const nowIso = new Date().toISOString();
-    const subscriptionData = {
+    const subData = {
       user_id: userId,
-      provider_customer_id: customer.id,
-      provider_subscription_id: subscription.id,
-      status: isFirstTime ? 'trialing' : 'incomplete',
-      current_period_end: trialEnd.toISOString(),
-      cancel_at_period_end: false,
-      payment_provider: 'asaas',
-      billing_type: billingType,
+      provider_customer_id: stripeCustomerId,
+      payment_provider: 'stripe',
+      plan_tier: planTier,
       has_mesas_addon: hasMesasAddon,
+      status: existingSub?.status === 'active' ? 'active' : 'incomplete',
       updated_at: nowIso,
     };
 
-    // Write to DB — on failure, rollback the Asaas subscription
-    let dbResult;
     if (existingSub) {
-      dbResult = await supabaseAdmin
-        .from('subscriptions')
-        .update(subscriptionData)
-        .eq('id', existingSub.id);
+      await supabaseAdmin.from('subscriptions').update(subData).eq('id', existingSub.id);
     } else {
-      subscriptionData.created_at = nowIso;
-      dbResult = await supabaseAdmin
-        .from('subscriptions')
-        .insert(subscriptionData);
+      subData.created_at = nowIso;
+      await supabaseAdmin.from('subscriptions').insert(subData);
     }
 
-    if (dbResult.error) {
-      // Rollback: cancel the subscription we just created in Asaas
-      try { await removeSubscription(subscription.id); } catch {}
-      console.error('[create-subscription] DB write failed, rolled back Asaas subscription:', dbResult.error);
-      return json({ error: 'Erro ao salvar assinatura. Tente novamente.' }, { status: 500 });
-    }
-
-    // Fire-and-forget: WhatsApp onboarding on first account creation
-    if (isFirstTime && perfil?.contato) {
-      enviarBoasVindas(perfil.contato, perfil.nome_exibicao || '')
-        .then((sent) => {
-          if (sent) {
-            // Mark as sent so cron skips onboarding resend
-            supabaseAdmin
-              .from('subscriptions')
-              .update({ whatsapp_onboarding_sent_at: new Date().toISOString() })
-              .eq('user_id', userId)
-              .then(() => {})
-              .catch(() => {});
-          }
-        })
-        .catch((e) => console.warn('[WhatsApp] onboarding fire-and-forget error:', e?.message));
-    }
-
-    // Fire-and-forget: Day-0 welcome email on first account creation
-    if (isFirstTime && isEmailConfigured()) {
-      const { subject, html } = emailDay0(perfil?.nome_exibicao || '');
-      sendEmail({ to: email, subject, html })
-        .then((sent) => {
-          if (sent) {
-            supabaseAdmin
-              .from('email_onboarding_logs')
-              .insert({ user_id: userId, email_day: 0, recipient_email: email })
-              .then(() => {})
-              .catch(() => {});
-          }
-        })
-        .catch((e) => console.warn('[Email] day-0 fire-and-forget error:', e?.message));
-    }
-
-    // For non-first-time users: fetch the first payment with retry (Asaas generates it because nextDueDate is today)
-    let pixData = null;
-    let invoiceUrl = null;
-
-    if (!isFirstTime) {
-      try {
-        let firstPayment = null;
-        for (let attempt = 0; attempt < 5; attempt++) {
-          // For CREDIT_CARD, check immediately on first attempt; PIX needs time to generate QR
-          if (attempt > 0 || billingType !== 'CREDIT_CARD') {
-            await new Promise(r => setTimeout(r, 1000 * attempt || 1000));
-          }
-          const payments = await listSubscriptionPayments(subscription.id);
-          if (payments?.data?.[0]) {
-            firstPayment = payments.data[0];
-            break;
-          }
-        }
-
-        if (firstPayment?.id) {
-          invoiceUrl = firstPayment.invoiceUrl;
-          if (billingType === 'PIX') {
-            pixData = await getPixQrCode(firstPayment.id);
-            pixData.paymentId = firstPayment.id;
-            pixData.invoiceUrl = invoiceUrl;
-          }
-        }
-      } catch (paymentErr) {
-        console.warn('[create-subscription] Could not get payment data:', paymentErr?.message);
-      }
-    }
-
-    return json({
-      success: true,
-      subscriptionId: subscription.id,
-      invoiceUrl,
-      trialEnd: trialEnd.toISOString(),
-      billingType,
-      pix: pixData,
-    });
-
+    return json({ url: session.url, sessionId: session.id });
   } catch (err) {
-    console.error('[create-subscription] error:', err?.message || err);
-    // Distinguish Asaas API validation errors (user-readable) from internal errors
-    const isAsaasError = err?.message && !err.message.includes('Supabase') && !err.message.includes('DB');
-    return json({ error: err?.message || 'Falha ao criar assinatura' }, { status: isAsaasError ? 400 : 500 });
+    console.error('[create-subscription] Stripe error:', err?.message || err);
+    return json({ error: err?.message || 'Falha ao criar assinatura' }, { status: 500 });
   }
 }
