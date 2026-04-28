@@ -16,6 +16,7 @@ import {
 // Ajuste o domínio admin aqui se diferir.
 const ALLOWED_ORIGINS = new Set([
   'https://admin.zelopdv.com.br',
+  'https://www.admin.zelopdv.com.br',
   'http://localhost:5174',
   'http://127.0.0.1:5174',
 ]);
@@ -134,7 +135,7 @@ export async function POST({ request }) {
     if (newItems.length > 0) {
       await stripe.subscriptions.update(sub.provider_subscription_id, {
         items: newItems,
-        proration_behavior: 'none',
+        proration_behavior: 'create_prorations',
         metadata: { ...(stripeSub.metadata || {}), plan_tier: planTier, admin_synced_by: admin.id },
       });
     }

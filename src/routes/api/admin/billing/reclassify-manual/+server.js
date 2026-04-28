@@ -6,6 +6,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 
 const ALLOWED_ORIGINS = new Set([
   'https://admin.zelopdv.com.br',
+  'https://www.admin.zelopdv.com.br',
   'http://localhost:5174',
   'http://127.0.0.1:5174',
 ]);

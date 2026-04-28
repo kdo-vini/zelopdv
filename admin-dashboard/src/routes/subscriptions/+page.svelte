@@ -7,7 +7,7 @@
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
 
   // Base do app principal (onde rodam os endpoints /api/admin/billing/*)
-  const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://zelopdv.com.br'
+  const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
 
   let subscriptions = []
   let loading = true
