@@ -35,8 +35,8 @@ describe('receipt builder', () => {
   it('labels debit and credit card forms distinctly', () => {
     const hDeb = buildReceiptHTML({ estabelecimento: { nome_exibicao: 'Loja' }, venda: { idVenda: 2, formaPagamento: 'cartao_debito', total: 10, itens: [] } });
     const hCred = buildReceiptHTML({ estabelecimento: { nome_exibicao: 'Loja' }, venda: { idVenda: 3, formaPagamento: 'cartao_credito', total: 10, itens: [] } });
-    expect(hDeb).toMatch(/Cartão \(débito\)/i);
-    expect(hCred).toMatch(/Cartão \(crédito\)/i);
+    expect(hDeb).toMatch(/Cartão \(Débito\)/i);
+    expect(hCred).toMatch(/Cartão \(Crédito\)/i);
   });
 
   it('renders items with correct totals', () => {
@@ -52,7 +52,7 @@ describe('receipt builder', () => {
     // Subtotals R$ 10,00 and R$ 6,50, and total R$ 16,50
     expect(html).toMatch(/R\$\s*10/);
     expect(html).toMatch(/R\$\s*6/);
-    expect(html).toMatch(/Total<\/span><strong>R\$\s*16/);
+    expect(html).toMatch(/TOTAL<\/span><span>R\$\s*16/);
   });
 
   // debug overlay removed per request; ensure no DEBUG text leaks

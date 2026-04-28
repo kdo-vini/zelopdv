@@ -7,6 +7,8 @@
   import { maskPhone, maskDocumento } from '$lib/masks';
   import { addToast } from '$lib/stores/ui';
   import OnboardingWizard from '$lib/components/OnboardingWizard.svelte';
+  import { pairPrinter, unpairPrinter, printerStatus, isWebUsbSupported } from '$lib/printer';
+  import { printTeste } from '$lib/printService';
   export let params;
 
   const tabs = [
@@ -113,6 +115,60 @@
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   })();
   $: trialProgressPct = trialDaysLeft !== null ? Math.min(100, Math.max(0, Math.round(((30 - trialDaysLeft) / 30) * 100))) : 0;
+
+  // ── Impressora USB ──────────────────────────────────────────────────────────
+  let printerPairing = false;
+  let printerUnpairing = false;
+  let printerTesting = false;
+  let printerPairError = '';
+  let printerTestResult = null; // 'ok' | 'fail' | null
+
+  async function handlePairPrinter() {
+    printerPairing = true;
+    printerPairError = '';
+    try {
+      await pairPrinter();
+      addToast('Impressora pareada com sucesso!', 'success');
+    } catch (e) {
+      printerPairError = e?.message || 'Falha ao parear.';
+    } finally {
+      printerPairing = false;
+    }
+  }
+
+  async function handleUnpairPrinter() {
+    printerUnpairing = true;
+    try {
+      await unpairPrinter();
+      addToast('Impressora desconectada.', 'info');
+    } catch (e) {
+      addToast('Erro ao desconectar: ' + (e?.message || e), 'error');
+    } finally {
+      printerUnpairing = false;
+    }
+  }
+
+  async function handleTestPrint() {
+    printerTesting = true;
+    printerTestResult = null;
+    try {
+      const ok = await printTeste({
+        nome_exibicao,
+        largura_bobina,
+        contato,
+        endereco,
+        documento,
+      });
+      printerTestResult = ok ? 'ok' : 'fail';
+      if (!ok) addToast('Nenhuma impressora pareada. Pare a impressora primeiro.', 'warning');
+    } catch (e) {
+      printerTestResult = 'fail';
+      addToast('Falha ao imprimir teste: ' + (e?.message || e), 'error');
+    } finally {
+      printerTesting = false;
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   onMount(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -734,63 +790,176 @@
       {#if activeTab === 'integracoes'}
         <div class="grid gap-5 max-w-2xl">
 
-          <!-- QZ Tray -->
-          <section class="rounded-lg p-5 grid gap-5" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+          <!-- Impressora Térmica USB -->
+          <section class="rounded-xl p-5 grid gap-5" style="background: var(--bg-card); border: 1px solid var(--border-card);">
 
             <!-- Header -->
             <div class="flex items-start gap-4">
               <div class="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style="background: color-mix(in srgb, var(--primary) 12%, transparent);">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);">
-                  <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                  <polyline points="6 9 6 2 18 2 18 9"/>
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                  <rect x="6" y="14" width="12" height="8"/>
                 </svg>
               </div>
-              <div>
-                <h2 class="text-base font-semibold" style="color: var(--text-main);">QZ Tray — Impressão Direta</h2>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h2 class="text-base font-semibold" style="color: var(--text-main);">Impressora Térmica USB</h2>
+                  <!-- badge de status -->
+                  {#if !isWebUsbSupported()}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning);">
+                      Requer Chrome / Edge
+                    </span>
+                  {:else if $printerStatus}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success);">
+                      ● Pareada
+                    </span>
+                  {:else}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--text-muted) 15%, transparent); color: var(--text-muted);">
+                      Não configurada
+                    </span>
+                  {/if}
+                </div>
                 <p class="text-sm mt-1" style="color: var(--text-muted);">
-                  Imprime recibos diretamente na impressora térmica, sem abrir o diálogo do navegador.
-                  Instale uma vez no computador e pronto — as próximas impressões saem automáticas.
+                  Impressão direta via cabo USB — sem instalar nada, sem servidor em segundo plano.
+                  Funciona em Chrome e Edge no computador do caixa.
+                  Se a impressora não estiver conectada, o sistema usa o diálogo padrão do navegador.
                 </p>
               </div>
             </div>
 
-            <!-- Download button -->
-            <a
-              href="https://github.com/qzind/tray/releases/download/v2.2.5/qz-tray-2.2.5-x86_64.exe"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold w-fit transition-opacity hover:opacity-90"
-              style="background: var(--primary); color: var(--primary-text);"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              Baixar QZ Tray
-            </a>
+            {#if !isWebUsbSupported()}
+              <!-- Browser incompatível -->
+              <div class="flex items-start gap-3 p-3 rounded-lg" style="background: color-mix(in srgb, var(--warning) 10%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--warning);">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <div>
+                  <p class="text-sm font-semibold" style="color: var(--text-main);">WebUSB não disponível</p>
+                  <p class="text-sm mt-0.5" style="color: var(--text-muted);">
+                    Este navegador não suporta WebUSB. Para usar a impressão direta,
+                    abra o Zelo PDV no <strong>Google Chrome</strong> ou <strong>Microsoft Edge</strong> no computador do caixa.
+                    No Firefox, Safari e iOS a impressão usa o diálogo padrão do navegador automaticamente.
+                  </p>
+                </div>
+              </div>
 
-            <!-- Step-by-step -->
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide mb-3" style="color: var(--text-muted);">Como configurar</p>
-              <ol class="grid gap-3">
-                {#each [
-                  { text: 'Clique em "Baixar QZ Tray" e instale o programa no computador.' },
-                  { text: 'Abra o QZ Tray — ele ficará ativo na bandeja do sistema (canto inferior direito da tela).' },
-                  { text: 'Defina sua impressora térmica como <strong>impressora padrão</strong> no Windows: <em>Configurações → Bluetooth e dispositivos → Impressoras → [sua impressora] → Definir como padrão</em>.' },
-                  { text: 'Na primeira impressão pelo Zelo PDV, um popup aparecerá pedindo permissão. Clique em <strong>Allow</strong> e marque <strong>Remember this decision (Lembrar essa decisão)</strong>.' },
-                  { text: 'Pronto! As próximas impressões saem diretas, sem nenhum diálogo.' },
-                ] as step, i}
-                  <li class="flex gap-3 text-sm" style="color: var(--text-label);">
-                    <span
-                      class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-                      style="background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary);"
-                    >{i + 1}</span>
-                    <span>{@html step.text}</span>
-                  </li>
-                {/each}
-              </ol>
-            </div>
+            {:else if $printerStatus}
+              <!-- Impressora pareada -->
+              <div class="flex items-center justify-between gap-3 p-3 rounded-lg" style="background: color-mix(in srgb, var(--success) 8%, transparent); border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: color-mix(in srgb, var(--success) 15%, transparent);">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--success);">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-semibold" style="color: var(--text-main);">{$printerStatus.name}</p>
+                    <p class="text-xs mt-0.5" style="color: var(--text-muted);">
+                      ID: {$printerStatus.vendorId?.toString(16).padStart(4,'0')}:{$printerStatus.productId?.toString(16).padStart(4,'0')}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                  <button
+                    type="button"
+                    disabled={printerTesting}
+                    on:click={handleTestPrint}
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                  >
+                    {#if printerTesting}
+                      <svg class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                      </svg>
+                      Imprimindo…
+                    {:else if printerTestResult === 'ok'}
+                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--success);">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Teste enviado
+                    {:else if printerTestResult === 'fail'}
+                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="color: var(--error);">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                      Falhou
+                    {:else}
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                      </svg>
+                      Imprimir teste
+                    {/if}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={printerUnpairing}
+                    on:click={handleUnpairPrinter}
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                    style="background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error); border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);"
+                  >
+                    {printerUnpairing ? 'Removendo…' : 'Remover'}
+                  </button>
+                </div>
+              </div>
 
-            <p class="text-xs" style="color: var(--text-muted);">
-              QZ Tray é gratuito e de código aberto. Precisa estar aberto em segundo plano enquanto o Zelo PDV está em uso. Se fechar o QZ Tray, a impressão volta a usar o diálogo do navegador automaticamente.
+            {:else}
+              <!-- Sem impressora — CTA de parear -->
+              <div>
+                <button
+                  type="button"
+                  disabled={printerPairing}
+                  on:click={handlePairPrinter}
+                  class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+                  style="background: var(--primary); color: var(--primary-text, #fff);"
+                >
+                  {#if printerPairing}
+                    <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    Aguardando seleção…
+                  {:else}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    Parear impressora USB
+                  {/if}
+                </button>
+
+                {#if printerPairError}
+                  <p class="mt-2 text-sm" style="color: var(--error);">{printerPairError}</p>
+                {/if}
+              </div>
+
+              <!-- Passos -->
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide mb-3" style="color: var(--text-muted);">Como configurar</p>
+                <ol class="grid gap-3">
+                  {#each [
+                    { text: 'Conecte a impressora térmica no computador do caixa via <strong>cabo USB</strong>.' },
+                    { text: 'Clique em <strong>Parear impressora USB</strong> acima. Um popup do navegador aparecerá com a lista de dispositivos USB.' },
+                    { text: 'Selecione sua impressora na lista e clique em <strong>Conectar</strong>.' },
+                    { text: 'Clique em <strong>Imprimir teste</strong> para confirmar que tudo funcionou.' },
+                    { text: 'Pronto! As próximas impressões saem automáticas pelo cabo USB, sem nenhum diálogo.' },
+                  ] as step, i}
+                    <li class="flex gap-3 text-sm" style="color: var(--text-label);">
+                      <span
+                        class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
+                        style="background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary);"
+                      >{i + 1}</span>
+                      <span>{@html step.text}</span>
+                    </li>
+                  {/each}
+                </ol>
+              </div>
+            {/if}
+
+            <!-- Nota sobre fallback -->
+            <p class="text-xs" style="color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+              <strong style="color: var(--text-label);">Sem impressora pareada?</strong>
+              A impressão cai automaticamente no diálogo padrão do navegador — compatível com qualquer impressora instalada no Windows (rede, USB ou Bluetooth).
+              Você pode voltar aqui a qualquer momento para parear ou trocar a impressora.
             </p>
 
           </section>

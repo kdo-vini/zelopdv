@@ -38,7 +38,6 @@
     "jspdf-autotable": "^5.0.7",
     "marked": "^17.0.5",
     "openai": "^6.33.0",
-    "qz-tray": "^2.2.5",
     "resend": "^6.10.0",
     "stripe": "^19.2.0",
     "sweetalert2": "^11.26.18",

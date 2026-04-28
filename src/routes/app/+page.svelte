@@ -15,8 +15,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { onMount, onDestroy } from 'svelte';
   import { waitAuthReady } from '$lib/authStore';
-  import { buildReceiptHTML } from '$lib/receipt';
-  import { printHtmlViaQZ } from '$lib/qzPrint';
+  import { printVenda, printMovCaixa } from '$lib/printService';
   import { ensureActiveSubscription } from '$lib/guards';
   import { withTimeout } from '$lib/utils';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -1149,196 +1148,68 @@
     modalPagamentoAberto = true;
   }
 
-  /**
-   * Imprime HTML via iframe oculto — sem popup, funciona em PWA e navegadores com bloqueio de popup.
-   */
-  function printViaIframe(html) {
-    return new Promise((resolve) => {
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden;';
-      document.body.appendChild(iframe);
+  // ── Helpers compartilhados de perfil ──────────────────────────────────────
 
-      const cleanup = () => {
-        setTimeout(() => {
-          try { document.body.removeChild(iframe); } catch {}
-          resolve();
-        }, 500);
-      };
-
-      try {
-        iframe.contentWindow.addEventListener('afterprint', cleanup);
-      } catch {}
-      setTimeout(cleanup, 15000); // fallback seguro
-
-      try {
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        doc.open();
-        doc.write(html);
-        doc.close();
-        // O próprio HTML chama window.print() no onload — funciona dentro do iframe
-      } catch (e) {
-        console.warn('[Recibo] iframe write falhou:', e?.message || e);
-        addToast('Não foi possível imprimir. Verifique as permissões do navegador.', 'error');
-        cleanup();
-      }
-    });
-  }
-
-  /**
-   * Imprime HTML do recibo: tenta QZ Tray (direto na impressora, sem diálogo),
-   * cai no iframe silencioso como fallback se QZ não estiver instalado.
-   */
-  async function printRecibo(html) {
-    const ok = await printHtmlViaQZ(html);
-    if (!ok) await printViaIframe(html);
-  }
-
-  /**
-   * Imprime recibo/nota estilo profissional.
-   * Busca dados do perfil (empresa_perfil) do usuário autenticado automaticamente.
-   */
-  async function imprimirReciboVenda({ idVenda, numeroVenda, formaPagamento, total, subtotal, valorRecebido, troco, itens, pagamentos, taxaEntrega = 0, tipoPedido: tipoPed = 'retirada' }) {
-  console.groupCollapsed('%c[Recibo] imprimirReciboVenda', 'color:#0a7');
-    console.log('[Recibo] params:', { idVenda, formaPagamento, total, valorRecebido, troco, itensCount: itens?.length || 0, pagamentosCount: pagamentos?.length || 0 });
-    let perfil = null;
-    let logoUrl = null;
-    let larguraBobina = '80mm';
-    // Busca perfil com timeout para evitar travar o placeholder "Preparando recibo..."
-    const withTimeout = (p, ms, label='op') => Promise.race([
-      p,
-      new Promise((resolve) => setTimeout(() => resolve({ __timeout: true, label }), ms))
-    ]);
+  async function fetchPerfil() {
+    const race = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r({ __timeout: true }), ms))]);
     try {
-      console.time('[Recibo] getUser');
-      const userRes = await withTimeout(supabase.auth.getUser(), 800, 'getUser');
-      console.timeEnd('[Recibo] getUser');
-      if (!userRes?.__timeout) {
-        const userId = userRes?.data?.user?.id;
-        console.log('[Recibo] userId:', userId);
-        if (userId) {
-          console.time('[Recibo] fetch perfil');
-          const perfilRes = await withTimeout(
-            supabase.from('empresa_perfil').select('*').eq('user_id', userId).limit(1).single(),
-            800,
-            'perfil'
-          );
-          console.timeEnd('[Recibo] fetch perfil');
-          if (!perfilRes?.__timeout && !perfilRes?.error) {
-            perfil = perfilRes.data;
-            larguraBobina = perfil?.largura_bobina || '80mm';
-            console.log('[Recibo] perfil carregado:', perfil);
-            // Prefer profile's stored public URL; fallback to conventional storage path
-            if (perfil.logo_url) {
-              logoUrl = perfil.logo_url;
-            } else {
-              const pUrl = supabase.storage.from('logos').getPublicUrl(`${userId}.png`);
-              logoUrl = pUrl?.data?.publicUrl || null;
-            }
-            console.log('[Recibo] logoUrl:', logoUrl);
-          } else {
-            console.warn('[Recibo] perfil não carregado (timeout/erro):', perfilRes?.error?.message || perfilRes?.label || 'timeout');
-          }
-        } else {
-          console.warn('[Recibo] Sem userId — perfil não será carregado');
-        }
+      const userRes = await race(supabase.auth.getUser(), 800);
+      if (userRes?.__timeout) return null;
+      const userId = userRes?.data?.user?.id;
+      if (!userId) return null;
+      const perfilRes = await race(
+        supabase.from('empresa_perfil').select('*').eq('user_id', userId).limit(1).single(),
+        800
+      );
+      if (perfilRes?.__timeout || perfilRes?.error) return null;
+      const perfil = perfilRes.data;
+      if (!perfil.logo_url) {
+        const pUrl = supabase.storage.from('logos').getPublicUrl(`${userId}.png`);
+        perfil.logoUrl = pUrl?.data?.publicUrl || null;
       } else {
-        console.warn('[Recibo] getUser timeout — seguindo com defaults');
+        perfil.logoUrl = perfil.logo_url;
       }
-    } catch (e) {
-      console.warn('[Recibo] Exceção ao montar perfil/logo:', e?.message || e);
-    }
+      return perfil;
+    } catch { return null; }
+  }
 
-    const estabelecimento = {
+  function perfilToEstabelecimento(perfil) {
+    return {
       nome_exibicao: perfil?.nome_exibicao || 'Zelo PDV',
       documento: perfil?.documento || null,
       contato: perfil?.contato || null,
       endereco: perfil?.endereco || null,
-      largura_bobina: larguraBobina,
-      logoUrl
+      largura_bobina: perfil?.largura_bobina || '80mm',
+      rodape_recibo: perfil?.rodape_recibo || 'Obrigado pela preferência!',
+      logoUrl: perfil?.logoUrl || null,
     };
-    let venda = { idVenda, numeroVenda, formaPagamento, total, subtotal: subtotal ?? total, taxaEntrega, tipoPedido: tipoPed, valorRecebido, troco, itens, pagamentos };
-    // Fallback: caso multiplo sem pagamentos no payload, tenta buscar do banco
-    if (formaPagamento === 'multiplo' && (!Array.isArray(pagamentos) || pagamentos.length === 0) && idVenda) {
-      try {
-        const { data: pagsDb, error: pagsErr } = await supabase
-          .from('vendas_pagamentos')
-          .select('forma_pagamento, valor')
-          .eq('id_venda', idVenda)
-          .limit(50);
-        if (!pagsErr && Array.isArray(pagsDb)) {
-          venda.pagamentos = pagsDb.map(p => ({ forma: p.forma_pagamento, valor: Number(p.valor || 0) }));
-        }
-      } catch {}
-    }
-    console.log('[Recibo] normalizado:', { estabelecimento, venda });
-
-  const html = buildReceiptHTML({ estabelecimento, venda });
-
-    console.groupEnd();
-    await printRecibo(html);
   }
 
-  /**
-   * Imprime recibo simples para Sangria de Caixa
-   */
+  // ── Impressão de venda ─────────────────────────────────────────────────────
+
+  async function imprimirReciboVenda({ idVenda, numeroVenda, formaPagamento, total, subtotal, valorRecebido, troco, itens, pagamentos, taxaEntrega = 0, tipoPedido: tipoPed = 'retirada' }) {
+    const perfil = await fetchPerfil();
+    const estabelecimento = perfilToEstabelecimento(perfil);
+    let pags = pagamentos || [];
+    if (formaPagamento === 'multiplo' && (!Array.isArray(pags) || !pags.length) && idVenda) {
+      try {
+        const { data: pagsDb } = await supabase
+          .from('vendas_pagamentos').select('forma_pagamento, valor').eq('id_venda', idVenda).limit(50);
+        if (Array.isArray(pagsDb)) pags = pagsDb.map(p => ({ forma: p.forma_pagamento, valor: Number(p.valor || 0) }));
+      } catch {}
+    }
+    await printVenda({
+      estabelecimento,
+      venda: { idVenda, numeroVenda, formaPagamento, total, subtotal: subtotal ?? total, taxaEntrega, tipoPedido: tipoPed, valorRecebido, troco, itens, pagamentos: pags },
+    });
+  }
+
+  // ── Impressão de movimentação de caixa ────────────────────────────────────
+
   async function imprimirReciboMovCaixa({ idMov, idCaixa, tipo, valor, motivo, created_at }) {
-    let perfil = null;
-    let logoUrl = null;
-    let larguraBobina = '80mm';
-    try {
-      const { data: ures } = await supabase.auth.getUser();
-      const userId = ures?.user?.id || null;
-      if (userId) {
-        const { data: perfilRes } = await supabase
-          .from('empresa_perfil')
-          .select('*')
-          .eq('user_id', userId)
-          .limit(1)
-          .single();
-        perfil = perfilRes || null;
-        larguraBobina = perfil?.largura_bobina || '80mm';
-        if (perfil?.logo_url) {
-          logoUrl = perfil.logo_url;
-        } else if (userId) {
-          const pUrl = supabase.storage.from('logos').getPublicUrl(`${userId}.png`);
-          logoUrl = pUrl?.data?.publicUrl || null;
-        }
-      }
-    } catch {}
-
-    const nome = perfil?.nome_exibicao || 'Zelo PDV';
-    const doc = perfil?.documento || '';
-    const contato = perfil?.contato || '';
-    const end = perfil?.endereco || '';
-    const dt = created_at ? new Date(created_at) : new Date();
-    const dtStr = dt.toLocaleString();
-
-    const titulo = tipo === 'saida' ? 'Sangria de Caixa' : 'Suprimento de Caixa';
-    const rotuloValor = tipo === 'saida' ? 'Valor retirado' : 'Valor adicionado';
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>${titulo}</title>
-    </head><body style="font-family:sans-serif;padding:8px;font-size:12px;width:${larguraBobina};">
-      ${logoUrl ? `<img src="${logoUrl}" alt="logo" style="max-width:100%;max-height:60px;display:block;margin:0 auto 6px auto;"/>` : ''}
-      <div style="text-align:center;">
-        <div style="font-size:14px;font-weight:700;">${nome}</div>
-        ${doc ? `<div style=\"color:#555\">${doc}</div>` : ''}
-        ${contato ? `<div style=\"color:#555\">${contato}</div>` : ''}
-        ${end ? `<div style=\"color:#555\">${end}</div>` : ''}
-      </div>
-      <div style="border-top:1px dashed #999;margin:8px 0"></div>
-      <div style="text-align:center;"><strong>${titulo}</strong></div>
-      <div>Movimentação: #${idMov ?? '-'} | Caixa: #${idCaixa ?? '-'}</div>
-      <div>Data/Hora: ${dtStr}</div>
-      ${motivo ? `<div>Motivo: ${motivo}</div>` : ''}
-      <div style="border-top:1px dashed #999;margin:8px 0"></div>
-      <div style="font-size:14px;font-weight:700">${rotuloValor}: R$ ${Number(valor).toFixed(2)}</div>
-      <div style="border-top:1px dashed #999;margin:8px 0"></div>
-      <div style="text-align:center;color:#555;">Obrigado</div>
-      <script>window.onload=function(){setTimeout(()=>{try{window.print()}catch(e){}},120)}<\/script>
-    </body></html>`;
-
-    await printRecibo(html);
+    const perfil = await fetchPerfil();
+    const estabelecimento = perfilToEstabelecimento(perfil);
+    await printMovCaixa({ estabelecimento, mov: { idMov, idCaixa, tipo, valor, motivo, created_at } });
   }
 
 </script>

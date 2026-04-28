@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { addToast } from '$lib/stores/ui';
+  import { printPagamentoFiado } from '$lib/printService';
   export let params;
 
   let pessoas = [];
@@ -72,9 +73,32 @@
     addToast('Pagamento registrado com sucesso!', 'success');
 
     if(imprimirRecibo){
-      const win = window.open('', '_blank', 'width=380,height=600');
-      win.document.write(`<pre style="font-family:ui-monospace,Menlo,Consolas,monospace">${buildReciboPagamento(pessoaSelecionada.nome, valor)}</pre>`);
-      win.document.close(); win.focus(); win.print?.();
+      try {
+        const { data: perfilData } = await supabase
+          .from('empresa_perfil')
+          .select('nome_exibicao, documento, contato, endereco, largura_bobina, rodape_recibo')
+          .limit(1)
+          .maybeSingle();
+        const saldoAtual = Number((pessoaSelecionada?.saldo_fiado || 0)) - valor;
+        await printPagamentoFiado({
+          estabelecimento: {
+            nome_exibicao: perfilData?.nome_exibicao || 'Zelo PDV',
+            documento: perfilData?.documento || null,
+            contato: perfilData?.contato || null,
+            endereco: perfilData?.endereco || null,
+            largura_bobina: perfilData?.largura_bobina || '80mm',
+            rodape_recibo: perfilData?.rodape_recibo || 'Obrigado!',
+          },
+          pagamento: {
+            nomePessoa: pessoaSelecionada.nome,
+            valor,
+            saldoAnterior: Number(pessoaSelecionada?.saldo_fiado || 0),
+            saldoAtual: Math.max(0, saldoAtual),
+          },
+        });
+      } catch (e) {
+        console.warn('[Fiado] Falha ao imprimir recibo:', e?.message);
+      }
     }
 
     valorPagamento = '';
@@ -120,19 +144,6 @@
       ? `https://wa.me/55${numero}?text=${encodeURIComponent(msg)}`
       : `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
-  }
-
-  function escapeHtmlRecibo(str) {
-    return String(str ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;');
-  }
-
-  function buildReciboPagamento(nome, valor){
-    const dt = new Date().toLocaleString('pt-BR');
-    return `Zelo PDV\n\nRECIBO DE PAGAMENTO (FIADO)\n\nPessoa: ${escapeHtmlRecibo(nome)}\nValor: R$ ${Number(valor).toFixed(2)}\nData: ${dt}\n\nObrigado!`;
   }
 
   onMount(async () => { loading = true; await loadPessoas(); loading = false; });

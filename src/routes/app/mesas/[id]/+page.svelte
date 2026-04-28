@@ -6,6 +6,7 @@
   import { hasMesasAddon } from '$lib/guards';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { pdvCache } from '$lib/stores/pdvCache';
+  import { printVenda } from '$lib/printService';
 
   let userId = '';
   let addonActive = false;
@@ -44,6 +45,7 @@
   let recibo = null; // dados da venda fechada (mostra após close)
   let recibosOpen = false;
   let nomeEmpresa = '';
+  let perfilImpressao = null;
 
   // Split de pagamento (modo múltiplo)
   let multiPag = false;
@@ -160,13 +162,19 @@
       .limit(1);
     idCaixaAberto = caixas?.[0]?.id ?? null;
 
-    // Empresa name for receipt
+    // Perfil completo para impressão
     const { data: perfil } = await supabase
       .from('empresa_perfil')
-      .select('nome_exibicao')
+      .select('nome_exibicao, documento, contato, endereco, largura_bobina, rodape_recibo, logo_url')
       .eq('user_id', userId)
       .maybeSingle();
     nomeEmpresa = perfil?.nome_exibicao || '';
+    if (perfil) {
+      const pUrl = !perfil.logo_url
+        ? supabase.storage.from('logos').getPublicUrl(`${userId}.png`)?.data?.publicUrl
+        : null;
+      perfilImpressao = { ...perfil, logoUrl: perfil.logo_url || pUrl || null };
+    }
   }
 
   async function loadPessoasFiado() {
@@ -667,8 +675,65 @@
     })[f] || f;
   }
 
-  function imprimir() {
-    window.print();
+  function estabelecimentoFromPerfil() {
+    return {
+      nome_exibicao: perfilImpressao?.nome_exibicao || nomeEmpresa || 'Zelo PDV',
+      documento: perfilImpressao?.documento || null,
+      contato: perfilImpressao?.contato || null,
+      endereco: perfilImpressao?.endereco || null,
+      largura_bobina: perfilImpressao?.largura_bobina || '80mm',
+      rodape_recibo: perfilImpressao?.rodape_recibo || 'Obrigado pela preferência!',
+      logoUrl: perfilImpressao?.logoUrl || null,
+    };
+  }
+
+  async function imprimirPreConta() {
+    const est = estabelecimentoFromPerfil();
+    await printVenda({
+      estabelecimento: est,
+      venda: {
+        mesaNumero: mesa?.numero,
+        itens: itens.map(i => ({
+          nome: i.nome_produto,
+          quantidade: i.quantidade,
+          preco_unitario: i.preco_unitario,
+        })),
+        subtotal,
+        desconto,
+        total,
+        taxaEntrega: couvert > 0 ? couvert : 0,
+        formaPagamento: null,
+      },
+      opcoes: { titulo: `PRÉ-CONTA — MESA ${mesa?.numero || ''}`, naoFiscal: true },
+    });
+  }
+
+  async function imprimirRecibo() {
+    if (!recibo) return;
+    const est = estabelecimentoFromPerfil();
+    const pags = recibo.pagamentos_split?.length
+      ? recibo.pagamentos_split.map(p => ({ forma: p.forma, valor: Number(p.valor) }))
+      : [];
+    await printVenda({
+      estabelecimento: est,
+      venda: {
+        numeroVenda: recibo.numero_venda,
+        mesaNumero: recibo.mesa_numero,
+        itens: recibo.itens.map(i => ({
+          nome: i.nome,
+          quantidade: i.quantidade,
+          preco_unitario: i.preco_unitario,
+        })),
+        subtotal: recibo.subtotal,
+        desconto: recibo.desconto,
+        total: recibo.total,
+        formaPagamento: recibo.pagamentos_split?.length ? 'multiplo' : recibo.forma_pagamento,
+        pagamentos: pags,
+        valorRecebido: recibo.valor_recebido,
+        troco: recibo.valor_troco,
+      },
+      opcoes: { titulo: `RECIBO — MESA ${recibo.mesa_numero || ''}` },
+    });
   }
 
   function fecharRecibo() {
@@ -1497,7 +1562,7 @@
 
       <div class="modal-actions print-hide">
         <button class="btn-secondary" on:click={() => preContaOpen = false}>Fechar</button>
-        <button class="btn-primary" on:click={imprimir}>
+        <button class="btn-primary" on:click={imprimirPreConta}>
           <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" d="M5 2.75A.75.75 0 0 1 5.75 2h8.5a.75.75 0 0 1 .75.75V5h.75A2.75 2.75 0 0 1 18.5 7.75v4A2.75 2.75 0 0 1 15.75 14.5H15v2.75a.75.75 0 0 1-.75.75h-8.5a.75.75 0 0 1-.75-.75V14.5h-.75A2.75 2.75 0 0 1 1.5 11.75v-4A2.75 2.75 0 0 1 4.25 5H5V2.75ZM6.5 5h7V3.5h-7V5Zm0 9.5v3h7v-3h-7Zm8.25-6.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" clip-rule="evenodd"/>
           </svg>
@@ -1788,7 +1853,7 @@
       <p class="recibo-footer">Obrigado pela visita!</p>
 
       <div class="modal-actions print-hide">
-        <button class="btn-secondary" on:click={imprimir}>
+        <button class="btn-secondary" on:click={imprimirRecibo}>
           <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" d="M5 2.75A.75.75 0 0 1 5.75 2h8.5a.75.75 0 0 1 .75.75V5h.75A2.75 2.75 0 0 1 18.5 7.75v4A2.75 2.75 0 0 1 15.75 14.5H15v2.75a.75.75 0 0 1-.75.75h-8.5a.75.75 0 0 1-.75-.75V14.5h-.75A2.75 2.75 0 0 1 1.5 11.75v-4A2.75 2.75 0 0 1 4.25 5H5V2.75ZM6.5 5h7V3.5h-7V5Zm0 9.5v3h7v-3h-7Z" clip-rule="evenodd"/>
           </svg>
