@@ -68,6 +68,22 @@
     --success: #10B981;
     --warning: #D4AF37;
 
+    /* Semantic status pills/badges (legible on white background) */
+    --status-success-bg: rgba(22, 163, 74, 0.10);
+    --status-success-border: rgba(22, 163, 74, 0.40);
+    --status-success-text: #15803d;
+    /* green-700 — strong contrast on white */
+
+    --status-error-bg: rgba(220, 38, 38, 0.10);
+    --status-error-border: rgba(220, 38, 38, 0.40);
+    --status-error-text: #b91c1c;
+    /* red-700 */
+
+    --status-warning-bg: rgba(184, 134, 11, 0.10);
+    --status-warning-border: rgba(184, 134, 11, 0.40);
+    --status-warning-text: #B8860B;
+    /* dark gold — matches NY palette */
+
     --transition-fast: 200ms ease;
     --transition-normal: 300ms ease;
 }

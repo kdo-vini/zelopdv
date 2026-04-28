@@ -97,6 +97,22 @@
     --warning: #D4AF37;
     /* Gold */
 
+    /* Semantic status pills/badges (legible over dark green burgundy palette) */
+    --status-success-bg: rgba(74, 222, 128, 0.12);
+    --status-success-border: rgba(74, 222, 128, 0.45);
+    --status-success-text: #86efac;
+    /* green-300 — pops on dark green */
+
+    --status-error-bg: rgba(248, 113, 113, 0.14);
+    --status-error-border: rgba(248, 113, 113, 0.45);
+    --status-error-text: #fecaca;
+    /* red-200 — high contrast on burgundy */
+
+    --status-warning-bg: rgba(244, 228, 193, 0.18);
+    --status-warning-border: rgba(212, 175, 55, 0.55);
+    --status-warning-text: #F4E4C1;
+    /* festive light gold */
+
     /* Links */
     --link: #F4E4C1;
     /* Light gold */

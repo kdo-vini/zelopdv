@@ -90,6 +90,22 @@
     --warning: #f59e0b;
     /* amber-500 */
 
+    /* Semantic status pills/badges (WCAG-AA legible on dark surfaces) */
+    --status-success-bg: rgba(34, 197, 94, 0.10);
+    --status-success-border: rgba(34, 197, 94, 0.40);
+    --status-success-text: #4ade80;
+    /* green-400 */
+
+    --status-error-bg: rgba(239, 68, 68, 0.10);
+    --status-error-border: rgba(239, 68, 68, 0.40);
+    --status-error-text: #f87171;
+    /* red-400 */
+
+    --status-warning-bg: rgba(245, 158, 11, 0.10);
+    --status-warning-border: rgba(245, 158, 11, 0.40);
+    --status-warning-text: #fbbf24;
+    /* amber-400 */
+
     /* Links */
     --link: #93c5fd;
     /* blue-300 */
