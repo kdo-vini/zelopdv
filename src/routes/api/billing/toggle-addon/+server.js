@@ -39,14 +39,36 @@ export async function POST({ request }) {
     if (subErr || !sub) {
       return json({ error: 'Assinatura não encontrada.' }, { status: 404 });
     }
+    if (!['active', 'trialing'].includes(sub.status)) {
+      return json({ error: 'Apenas assinaturas ativas ou em trial podem modificar add-ons.' }, { status: 400 });
+    }
+
+    // Trial sem provedor: atualiza só o DB (preferência para quando virar assinatura real)
+    if (sub.status === 'trialing' && !sub.provider_subscription_id) {
+      if (enabled && !isAddonAllowed(sub.plan_tier, addon)) {
+        return json({
+          error: `Add-on "${ADDONS[addon].name}" não é compatível com o plano atual.`,
+        }, { status: 400 });
+      }
+      await supabaseAdmin
+        .from('subscriptions')
+        .update({ [ADDON_DB_COLUMN[addon]]: enabled, updated_at: new Date().toISOString() })
+        .eq('id', sub.id);
+      return json({
+        success: true,
+        addon,
+        enabled,
+        message: enabled
+          ? `Add-on ${ADDONS[addon].name} ativado no trial.`
+          : `Add-on ${ADDONS[addon].name} desativado.`,
+      });
+    }
+
     if (!sub.provider_subscription_id) {
       return json({ error: 'Assinatura sem provedor. Crie uma assinatura primeiro.' }, { status: 400 });
     }
     if (sub.payment_provider !== 'stripe') {
       return json({ error: 'Esta assinatura não está no Stripe — toggle não suportado.' }, { status: 400 });
-    }
-    if (!['active', 'trialing'].includes(sub.status)) {
-      return json({ error: 'Apenas assinaturas ativas ou em trial podem modificar add-ons.' }, { status: 400 });
     }
 
     if (enabled && !isAddonAllowed(sub.plan_tier, addon)) {
