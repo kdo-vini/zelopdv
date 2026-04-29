@@ -126,7 +126,7 @@ export async function POST({ request }) {
         status: 'trialing',
         current_period_end: trialEnd.toISOString(),
         cancel_at_period_end: false,
-        payment_provider: 'stripe',
+        payment_provider: null,
         created_at: nowIso,
         updated_at: nowIso,
       });

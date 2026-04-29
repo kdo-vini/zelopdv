@@ -153,7 +153,7 @@
       planSaving = true
       const provider = selectedSub.payment_provider
 
-      if (provider === 'stripe') {
+      if (provider === 'stripe' && selectedSub.provider_subscription_id) {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) {
           errorToast('Sessão expirada. Faça login novamente.')
