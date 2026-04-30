@@ -118,8 +118,9 @@ export async function printPagamentoFiado(payload) {
  */
 export async function printTeste(estabelecimento) {
   const bytes = buildTesteEscPos(estabelecimento);
-  const ok = await tryEscPos(bytes);
-  return ok;
+  if (!isWebUsbSupported() || !getPairedInfo()) return false;
+  await sendBytes(bytes);
+  return true;
 }
 
 /** Re-exporta helpers de perfil para os componentes. */

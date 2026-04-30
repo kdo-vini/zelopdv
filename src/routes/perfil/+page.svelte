@@ -160,7 +160,7 @@
         documento,
       });
       printerTestResult = ok ? 'ok' : 'fail';
-      if (!ok) addToast('Nenhuma impressora pareada. Pare a impressora primeiro.', 'warning');
+      if (!ok) addToast('Nenhuma impressora pareada. Pareie a impressora primeiro.', 'warning');
     } catch (e) {
       printerTestResult = 'fail';
       addToast('Falha ao imprimir teste: ' + (e?.message || e), 'error');

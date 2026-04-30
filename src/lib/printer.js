@@ -67,39 +67,79 @@ const USB_FILTERS = [
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function hex4(n) { return Number(n).toString(16).padStart(4, '0'); }
 
-const BUSY_RX = /access denied|already.*claimed|busy|in use/i;
+const BUSY_RX = /already.*claimed|busy|in use/i;
+const ACCESS_BLOCKED_RX = /access denied|blocked|insufficient permissions|protected/i;
 
 /**
- * Detecta interface + endpoint OUT no device (que já deve estar aberto).
+ * Detecta interface + endpoint OUT a partir dos descritores USB.
  * @param {USBDevice} device
  */
 function detectInterface(device) {
+  const configurations = Array.from(device.configurations || []);
+
   // 1ª tentativa: interface de classe Printer (0x07) com endpoint OUT
-  for (const conf of device.configurations) {
+  for (const conf of configurations) {
     for (const iface of conf.interfaces) {
       for (const alt of iface.alternates) {
         if (alt.interfaceClass !== 0x07) continue;
         const out = alt.endpoints.find(e => e.direction === 'out');
-        if (out) return { interfaceNumber: iface.interfaceNumber, endpointNumber: out.endpointNumber };
+        if (out) {
+          return {
+            configurationValue: conf.configurationValue,
+            interfaceNumber: iface.interfaceNumber,
+            endpointNumber: out.endpointNumber,
+          };
+        }
       }
     }
   }
   // 2ª tentativa: qualquer interface vendor-specific com endpoint OUT bulk
-  if (device.configuration) {
-    for (const iface of device.configuration.interfaces) {
+  for (const conf of configurations) {
+    for (const iface of conf.interfaces) {
       for (const alt of iface.alternates) {
         const out = alt.endpoints.find(e => e.direction === 'out' && (e.type === 'bulk' || !e.type));
-        if (out) return { interfaceNumber: iface.interfaceNumber, endpointNumber: out.endpointNumber };
+        if (out) {
+          return {
+            configurationValue: conf.configurationValue,
+            interfaceNumber: iface.interfaceNumber,
+            endpointNumber: out.endpointNumber,
+          };
+        }
       }
     }
   }
   throw new Error('Não encontrei endpoint de saída na impressora. Modelo pode não ser compatível.');
 }
 
+function isAccessBlockedError(error) {
+  return ACCESS_BLOCKED_RX.test(String(error?.message || error));
+}
+
+function isBusyError(error) {
+  return BUSY_RX.test(String(error?.message || error));
+}
+
+function formatAccessBlockedMessage() {
+  return (
+    'O navegador encontrou a impressora, mas o Windows bloqueou o acesso USB direto. ' +
+    'Isso pode acontecer quando o driver/spooler do Windows, outro aplicativo de impressão, ' +
+    'ou uma permissão antiga do navegador ficou segurando a porta. Desconecte e conecte o cabo USB, ' +
+    'feche outros apps de impressão e tente novamente. Se continuar, remova a permissão USB do site no Chrome/Edge e pareie de novo.'
+  );
+}
+
+function formatBusyMessage() {
+  return (
+    'A impressora está ocupada por outro processo neste momento. ' +
+    'Aguarde alguns segundos, feche outros apps que imprimem nessa mesma impressora e tente novamente.'
+  );
+}
+
 /**
- * Pareia a impressora com o navegador. Faz smoke test (open → detect → close)
- * e salva SOMENTE os metadados — não mantém claim, pra não bloquear outros apps.
- * O claim acontece sob demanda em cada chamada de sendBytes().
+ * Pareia a impressora com o navegador e salva SOMENTE os metadados.
+ * Não abrimos nem claimamos a interface aqui: no Windows isso pode falhar por
+ * driver/permissão mesmo quando a impressora não está ocupada. O claim acontece
+ * sob demanda em cada chamada de sendBytes().
  *
  * @returns {Promise<{ vendorId:number, productId:number, name:string }>}
  */
@@ -112,26 +152,17 @@ export async function pairPrinter() {
   }
   pairingInFlight = true;
   try {
-    const device = await navigator.usb.requestDevice({ filters: USB_FILTERS });
-    if (!device) throw new Error('Nenhuma impressora foi selecionada.');
-
-    // Smoke test — valida que o modelo é compatível, depois libera tudo
+    let device;
     try {
-      if (!device.opened) await device.open();
-      if (device.configuration === null) await device.selectConfiguration(1);
-      detectInterface(device);
-      try { await device.close(); } catch {}
+      device = await navigator.usb.requestDevice({ filters: USB_FILTERS });
     } catch (e) {
-      try { if (device.opened) await device.close(); } catch {}
-      const msg = String(e?.message || e);
-      if (BUSY_RX.test(msg)) {
-        throw new Error(
-          'Não consegui acessar a impressora — outro programa (provavelmente o Zelo Chat) ' +
-          'está usando ela neste momento. Feche o Zelo Chat por 10 segundos e tente parear de novo.'
-        );
+      if (e?.name === 'NotFoundError') {
+        throw new Error('Nenhuma impressora foi selecionada.');
       }
-      throw new Error('Falha ao parear: ' + msg);
+      throw new Error('Falha ao abrir o seletor USB: ' + (e?.message || e));
     }
+    if (!device) throw new Error('Nenhuma impressora foi selecionada.');
+    detectInterface(device);
 
     const info = {
       vendorId: device.vendorId,
@@ -195,15 +226,16 @@ async function acquireForJob() {
 
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
+      const { configurationValue, interfaceNumber, endpointNumber } = detectInterface(dev);
       if (!dev.opened) await dev.open();
-      if (dev.configuration === null) await dev.selectConfiguration(1);
-      const { interfaceNumber, endpointNumber } = detectInterface(dev);
+      if (dev.configuration?.configurationValue !== configurationValue) {
+        await dev.selectConfiguration(configurationValue);
+      }
       await dev.claimInterface(interfaceNumber);
       return { device: dev, interfaceNumber, endpointNumber };
     } catch (e) {
       lastErr = e;
-      const msg = String(e?.message || e);
-      const isBusy = BUSY_RX.test(msg);
+      const isBusy = isBusyError(e);
       // Fecha antes do próximo retry (ou antes de surfacing do erro)
       try { if (dev.opened) await dev.close(); } catch {}
       if (!isBusy || attempt === delays.length) break;
@@ -211,13 +243,13 @@ async function acquireForJob() {
     }
   }
 
-  const msg = String(lastErr?.message || lastErr);
-  if (BUSY_RX.test(msg)) {
-    throw new Error(
-      'A impressora está sendo usada por outro app (provavelmente o Zelo Chat). ' +
-      'Aguarde alguns segundos e tente novamente — o sistema libera automaticamente após cada impressão.'
-    );
+  if (isBusyError(lastErr)) {
+    throw new Error(formatBusyMessage());
   }
+  if (isAccessBlockedError(lastErr)) {
+    throw new Error(formatAccessBlockedMessage());
+  }
+  const msg = String(lastErr?.message || lastErr);
   throw new Error('Falha ao acessar a impressora: ' + msg);
 }
 
