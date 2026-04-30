@@ -5,6 +5,7 @@
   import { success, error as errorToast } from '$lib/toast'
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
+  import { getEffectiveExpiry, getDaysUntilEffectiveExpiry, isSubscriptionExpired, hasActiveManualExtension } from '$lib/subscriptionHelpers'
 
   // Base do app principal (onde rodam os endpoints /api/admin/billing/*)
   const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
@@ -58,24 +59,18 @@
       query = query.eq('plan_tier', filterPlan)
     }
     
-    // Apply status filter
+    // Apply status filter. The "expiring"/"expired" buckets need to consider
+    // both current_period_end and manually_extended_until — postgrest doesn't
+    // express GREATEST() filters cleanly, so we fetch all active and narrow
+    // client-side. Volume here is bounded (admin scope), so this is fine.
     if (filterStatus === 'active') {
       query = query.eq('status', 'active')
     } else if (filterStatus === 'canceled') {
       query = query.eq('status', 'canceled')
-    } else if (filterStatus === 'expiring') {
-      const sevenDaysFromNow = new Date()
-      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
-      query = query
-        .eq('status', 'active')
-        .lte('current_period_end', sevenDaysFromNow.toISOString())
-        .gte('current_period_end', new Date().toISOString())
-    } else if (filterStatus === 'expired') {
-      query = query
-        .eq('status', 'active')
-        .lt('current_period_end', new Date().toISOString())
+    } else if (filterStatus === 'expiring' || filterStatus === 'expired') {
+      query = query.eq('status', 'active')
     }
-    
+
     const { data: subs, error } = await query
     
     if (error) {
@@ -91,8 +86,8 @@
         .from('empresa_perfil')
         .select('user_id, nome_exibicao, contato, documento')
         .in('user_id', userIds)
-      
-      subscriptions = subs.map(sub => ({
+
+      let merged = subs.map(sub => ({
         ...sub,
         empresa_perfil: profiles?.find(p => p.user_id === sub.user_id) || {
           nome_exibicao: 'Sem perfil',
@@ -100,10 +95,23 @@
           documento: 'N/A'
         }
       }))
+
+      // Client-side narrow for expiring/expired (effective expiry respects
+      // manually_extended_until — see subscriptionHelpers.js).
+      if (filterStatus === 'expiring') {
+        merged = merged.filter(sub => {
+          const days = getDaysUntilEffectiveExpiry(sub)
+          return days > 0 && days <= 7
+        })
+      } else if (filterStatus === 'expired') {
+        merged = merged.filter(sub => isSubscriptionExpired(sub))
+      }
+
+      subscriptions = merged
     } else {
       subscriptions = []
     }
-    
+
     loading = false
   }
   
@@ -459,12 +467,10 @@
   }
   
   function getStatusBadge(sub) {
-    const isExpired = new Date(sub.current_period_end) < new Date()
-    
-    if (sub.status === 'active' && isExpired) {
+    if (sub.status === 'active' && isSubscriptionExpired(sub)) {
       return { text: 'EXPIRADA', class: 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.1)]' }
     }
-    
+
     const badges = {
       active: { text: 'ATIVA', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.1)]' },
       canceled: { text: 'CANCELADA', class: 'bg-slate-500/10 text-slate-400 border-slate-500/20 shadow-[0_0_8px_rgba(100,116,139,0.1)]' },
@@ -472,14 +478,6 @@
       trialing: { text: 'TRIAL', class: 'bg-sky-500/10 text-sky-400 border-sky-500/20 shadow-[0_0_8px_rgba(14,165,233,0.1)]' }
     }
     return badges[sub.status] || { text: sub.status.toUpperCase(), class: 'bg-slate-700 text-slate-300 border-slate-600' }
-  }
-  
-  function getDaysUntilExpiry(date) {
-    const expiry = new Date(date)
-    const now = new Date()
-    const diff = expiry - now
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
-    return days
   }
 
   function getInitials(name) {
@@ -611,9 +609,11 @@
         <tbody class="divide-y divide-slate-800/50">
           {#each filteredSubscriptions as sub (sub.id)}
             {@const badge = getStatusBadge(sub)}
-            {@const daysLeft = getDaysUntilExpiry(sub.current_period_end)}
+            {@const daysLeft = getDaysUntilEffectiveExpiry(sub)}
             {@const isExpiringSoon = sub.status === 'active' && daysLeft <= 7 && daysLeft > 0}
-            {@const isExpired = new Date(sub.current_period_end) < new Date()}
+            {@const isExpired = isSubscriptionExpired(sub)}
+            {@const effectiveExpiry = getEffectiveExpiry(sub)}
+            {@const onManualExt = hasActiveManualExtension(sub)}
             
             <tr class="group hover:bg-slate-800/30 transition-colors">
               <td class="py-4 px-6">
@@ -650,8 +650,16 @@
                 </span>
               </td>
               <td class="py-4 px-6 text-[13px]">
-                <div class="{isExpired ? 'text-rose-400 font-semibold' : isExpiringSoon ? 'text-amber-400 font-semibold' : 'text-slate-300'}">
-                  {new Date(sub.current_period_end).toLocaleDateString('pt-BR')}
+                <div class="{isExpired ? 'text-rose-400 font-semibold' : isExpiringSoon ? 'text-amber-400 font-semibold' : 'text-slate-300'} flex items-center gap-1.5">
+                  {effectiveExpiry ? effectiveExpiry.toLocaleDateString('pt-BR') : '—'}
+                  {#if onManualExt}
+                    <span
+                      class="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold tracking-wider rounded bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                      title={`Extensão manual ativa até ${new Date(sub.manually_extended_until).toLocaleDateString('pt-BR')}. Período pago vence em ${sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('pt-BR') : '—'}.`}
+                    >
+                      +EXT
+                    </span>
+                  {/if}
                 </div>
                 {#if sub.status === 'active'}
                   <div class="text-[11px] font-medium mt-0.5 {isExpired ? 'text-rose-400/80' : isExpiringSoon ? 'text-amber-400/80' : 'text-slate-500'}">
@@ -684,8 +692,8 @@
                     </select>
                   </div>
 
-                  {#if sub.status === 'trialing' || new Date(sub.current_period_end) < new Date()}
-                    <button 
+                  {#if sub.status === 'trialing' || isExpired}
+                    <button
                       on:click={() => handleExtendTrialOnly(sub, 7)}
                       disabled={statusUpdating}
                       class="px-2 py-1.5 text-[10px] font-bold text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded-lg transition-all disabled:opacity-50"
@@ -724,8 +732,10 @@
     <div class="md:hidden space-y-4" in:fade>
       {#each filteredSubscriptions as sub (sub.id)}
         {@const badge = getStatusBadge(sub)}
-        {@const daysLeft = getDaysUntilExpiry(sub.current_period_end)}
-        
+        {@const daysLeft = getDaysUntilEffectiveExpiry(sub)}
+        {@const effectiveExpiry = getEffectiveExpiry(sub)}
+        {@const onManualExt = hasActiveManualExtension(sub)}
+
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
           <div class="flex justify-between items-start mb-3">
             <div>
@@ -740,7 +750,12 @@
           <div class="grid grid-cols-2 gap-4 text-xs py-3 border-t border-slate-800 mt-2">
             <div>
               <span class="text-slate-500 block mb-0.5">Expiração:</span>
-              <span class="text-slate-300 font-medium">{new Date(sub.current_period_end).toLocaleDateString('pt-BR')}</span>
+              <span class="text-slate-300 font-medium inline-flex items-center gap-1.5">
+                {effectiveExpiry ? effectiveExpiry.toLocaleDateString('pt-BR') : '—'}
+                {#if onManualExt}
+                  <span class="inline-flex px-1 py-0.5 text-[8px] font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">+EXT</span>
+                {/if}
+              </span>
             </div>
           </div>
 
@@ -791,12 +806,17 @@
            <div>
               <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Status Atual</p>
               <div class="text-sm font-semibold text-rose-400">
-                {new Date(selectedSub.current_period_end) < new Date() ? 'Expirada' : 'Ativa'}
+                {isSubscriptionExpired(selectedSub) ? 'Expirada' : 'Ativa'}
               </div>
            </div>
            <div>
              <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Expira(va) em</p>
-             <div class="text-sm font-semibold text-slate-300">{new Date(selectedSub.current_period_end).toLocaleDateString('pt-BR')}</div>
+             <div class="text-sm font-semibold text-slate-300 inline-flex items-center gap-1.5">
+               {getEffectiveExpiry(selectedSub)?.toLocaleDateString('pt-BR') ?? '—'}
+               {#if hasActiveManualExtension(selectedSub)}
+                 <span class="text-[9px] font-bold text-amber-400" title="Extensão manual ativa">(+ext)</span>
+               {/if}
+             </div>
            </div>
         </div>
         

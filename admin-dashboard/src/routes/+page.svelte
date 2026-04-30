@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseAdmin'
   import { fade } from 'svelte/transition'
   import { subscriptionValue } from '$lib/pricing'
+  import { getEffectiveExpiry } from '$lib/subscriptionHelpers'
   
   let stats = {
     activeSubscriptions: 0,
@@ -31,7 +32,7 @@
     // Active subscriptions
     const { data: subs } = await supabase
       .from('subscriptions')
-      .select('id, status, current_period_end, created_at, plan_tier, has_mesas_addon')
+      .select('id, status, current_period_end, manually_extended_until, created_at, plan_tier, has_mesas_addon')
       .in('status', ['active', 'trialing'])
 
     stats.activeSubscriptions = subs?.length || 0
@@ -43,10 +44,14 @@
       new Date(s.created_at) >= startOfMonth
     ).length || 0
 
+    // "Expiring soon" must respect manually_extended_until — otherwise a
+    // sub with current_period_end in the next 7 days but a manual extension
+    // beyond that window incorrectly inflates this metric and triggers
+    // unnecessary admin attention.
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 86400000)
     stats.expiringSoon = subs?.filter(s => {
-      const expiry = new Date(s.current_period_end)
-      return expiry <= sevenDaysFromNow && expiry > now
+      const expiry = getEffectiveExpiry(s)
+      return expiry && expiry <= sevenDaysFromNow && expiry > now
     }).length || 0
 
     // DAU / WAU — uses GREATEST(last_seen_at, auth.last_sign_in_at) via security definer fn

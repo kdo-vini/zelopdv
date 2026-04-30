@@ -4,6 +4,7 @@
   import { logAdminAction } from '$lib/logger'
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
+  import { getEffectiveExpiry, hasActiveManualExtension } from '$lib/subscriptionHelpers'
 
   let users = []
   let loading = true
@@ -462,8 +463,18 @@
                 </span>
               </td>
               <td class="py-4 px-6 text-sm text-slate-400">
-                {#if sub && sub.current_period_end}
-                  {new Date(sub.current_period_end).toLocaleDateString('pt-BR')}
+                {#if sub}
+                  {@const effExpiry = getEffectiveExpiry(sub)}
+                  {#if effExpiry}
+                    <span class="inline-flex items-center gap-1.5">
+                      {effExpiry.toLocaleDateString('pt-BR')}
+                      {#if hasActiveManualExtension(sub)}
+                        <span class="inline-flex px-1 py-0.5 text-[8px] font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20" title={`Extensão manual ativa até ${new Date(sub.manually_extended_until).toLocaleDateString('pt-BR')}`}>+EXT</span>
+                      {/if}
+                    </span>
+                  {:else}
+                    <span class="text-slate-600">-</span>
+                  {/if}
                 {:else}
                   <span class="text-slate-600">-</span>
                 {/if}
