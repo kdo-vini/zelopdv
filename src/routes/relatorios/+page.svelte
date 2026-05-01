@@ -2,7 +2,7 @@
 	// Relatórios: modo por caixa e por período (multi-caixas agregados)
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabaseClient';
-	import { ensureActiveSubscription } from '$lib/guards';
+	import { ensureActiveSubscription, hasMesasAddon } from '$lib/guards';
 	import { withTimeout } from '$lib/utils';
 	import { addToast } from '$lib/stores/ui';
 	
@@ -20,6 +20,7 @@
 
 	// UID do usuário autenticado
 	let uid = null;
+	let mesasAddonAtivo = false;
 
 	// Filtro: lista de caixas do usuário (últimos 60 dias) e caixa selecionado
 	let caixas = [];
@@ -30,6 +31,7 @@
 	let vendas = [];
 	let vendasItens = [];
 	let vendasPagamentos = [];
+	let comandasMesaCaixa = [];
 	let produtosMap = new Map(); // id_produto -> { id, nome, preco }
 	let pessoasMap = new Map(); // id_cliente -> { nome }
 	let movs = [];
@@ -67,6 +69,66 @@
 	       || f?.replace(/_/g, ' ')
 	       || f);
 
+	function chunkArray(arr, size = 1000) {
+		const chunks = [];
+		for (let i = 0; i < arr.length; i += size) {
+			chunks.push(arr.slice(i, i + size));
+		}
+		return chunks;
+	}
+
+	function buildItensSubtotalMap(itens) {
+		const map = new Map();
+		for (const item of itens || []) {
+			const vendaId = item.id_venda;
+			const subtotal = Number(item.preco_unitario_na_venda || 0) * Number(item.quantidade || 0);
+			map.set(vendaId, (map.get(vendaId) || 0) + subtotal);
+		}
+		return map;
+	}
+
+	function calcularResumoMesas(comandas, itensSubtotalMap) {
+		return (comandas || []).reduce((acc, comanda) => {
+			const subtotalItens = Number(itensSubtotalMap.get(comanda.id_venda) || 0);
+			const couvert = Number(comanda.couvert_valor || 0);
+			const desconto = Number(comanda.desconto || 0);
+			const totalCalculado = Number(comanda.total_calculado || 0);
+			const taxaServico = Math.max(0, totalCalculado - subtotalItens - couvert + desconto);
+
+			acc.comandas += 1;
+			acc.couvert += couvert;
+			acc.descontos += desconto;
+			acc.taxaServico += taxaServico;
+			return acc;
+		}, {
+			comandas: 0,
+			couvert: 0,
+			descontos: 0,
+			taxaServico: 0,
+		});
+	}
+
+	async function carregarComandasMesaPorVendas(vendaIds) {
+		if (!mesasAddonAtivo || !vendaIds?.length) return [];
+
+		const resultados = await withTimeout(Promise.all(
+			chunkArray(vendaIds, 1000).map((batch) =>
+				supabase
+					.from('comandas')
+					.select('id_venda, desconto, couvert_valor, total_calculado')
+					.eq('status', 'fechada')
+					.in('id_venda', batch)
+			)
+		));
+
+		let comandas = [];
+		for (const resultado of resultados) {
+			if (resultado.error) throw resultado.error;
+			comandas = comandas.concat(resultado.data || []);
+		}
+		return comandas;
+	}
+
 	onMount(async () => {
 		const ok = await ensureActiveSubscription({ requireProfile: true });
 		if (!ok) return;
@@ -76,6 +138,7 @@
 			const { data: userData } = await supabase.auth.getUser();
 			uid = userData?.user?.id;
 			if (!uid) { window.location.href = '/login'; return; }
+			mesasAddonAtivo = await hasMesasAddon(uid);
 
 			// Carrega PIN administrativo
 			const { data: perfilData } = await supabase
@@ -179,6 +242,7 @@
 			const ids = vendas.map(v => v.id);
 			vendasItens = [];
 			vendasPagamentos = [];
+			comandasMesaCaixa = [];
 
 			if (ids.length) {
 				const pItens = supabase
@@ -191,13 +255,15 @@
 					.select('id_venda, forma_pagamento, valor')
 					.in('id_venda', ids);
 
-				const [resItens, resPags] = await withTimeout(Promise.all([pItens, pPags]));
+				const pComandasMesa = carregarComandasMesaPorVendas(ids);
+				const [resItens, resPags, comandasMesa] = await withTimeout(Promise.all([pItens, pPags, pComandasMesa]));
 
 				if (resItens.error) throw resItens.error;
 				vendasItens = resItens.data || [];
 
 				if (resPags.error) throw resPags.error;
 				vendasPagamentos = resPags.data || [];
+				comandasMesaCaixa = comandasMesa || [];
 
 				// Produtos map
 				const pids = Array.from(new Set(vendasItens.map(it => it.id_produto).filter(Boolean)));
@@ -274,6 +340,8 @@
 	$: saldoEsperadoGaveta = Number((caixaInfo?.valor_inicial || 0) + totalDinheiro - totalSangria + totalSuprimento);
 	$: totalDescontosCaixa = (vendas || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
 	$: receitaLiquidaCaixa = totalGeral - totalDescontosCaixa;
+	$: caixaItensSubtotalMap = buildItensSubtotalMap(vendasItens);
+	$: resumoMesasCaixa = calcularResumoMesas(comandasMesaCaixa, caixaItensSubtotalMap);
 
 	// Delivery breakdown (caixa)
 	$: totalTaxaEntregaCaixa = (vendas || []).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
@@ -490,6 +558,7 @@
 	let periodoVendas = [];
 	let periodoPagamentos = [];
 	let periodoItens = [];
+	let periodoComandasMesa = [];
 	let periodoMovs = [];
 	let periodoCaixas = [];
 	let periodoDespesas = [];
@@ -589,19 +658,11 @@
 			// 3. Dependentes (Pagamentos, Itens, Movimentações)
 			periodoPagamentos = [];
 			periodoItens = [];
+			periodoComandasMesa = [];
 			periodoMovs = [];
 
 			const promises = [];
 			
-			// Helper to chunk array
-			const chunkArray = (arr, size) => {
-				const chunks = [];
-				for (let i = 0; i < arr.length; i += size) {
-					chunks.push(arr.slice(i, i + size));
-				}
-				return chunks;
-			};
-
 			if (vendaIds.length) {
 				const batches = chunkArray(vendaIds, 1000);
 				
@@ -685,6 +746,7 @@
 			
 			if (resDespesas.error) console.error('Error fetching expenses:', resDespesas.error); // optional log
 			periodoDespesas = resDespesas.data || [];
+			periodoComandasMesa = vendaIds.length ? await carregarComandasMesaPorVendas(vendaIds) : [];
 		} catch (e) {
 			addToast('Erro ao carregar relatório do período: ' + e.message, 'error');
 			errorMessage = e?.message || 'Erro ao carregar relatório do período.';
@@ -718,6 +780,8 @@
 	$: periodoTotalSuprimento = (periodoMovs||[]).filter(m=> m.tipo==='suprimento').reduce((a,m)=> a + Number(m.valor||0),0);
 	$: periodoTotalDescontos = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_desconto||0),0);
 	$: periodoTotalDespesas = (periodoDespesas||[]).reduce((a,e)=> a + Number(e.amount||0),0);
+	$: periodoItensSubtotalMap = buildItensSubtotalMap(periodoItens);
+	$: resumoMesasPeriodo = calcularResumoMesas(periodoComandasMesa, periodoItensSubtotalMap);
 	$: periodoReceitaLiquida = periodoTotalGeral - periodoTotalDescontos - periodoTotalDespesas; // Lucro Líquido (Bruto - Descontos - Despesas)
 
 	// Delivery breakdown (periodo)
@@ -1064,6 +1128,36 @@
 				</div>
 			</div>
 
+			{#if mesasAddonAtivo}
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+				<div class="flex items-center justify-between gap-3 mb-3">
+					<div>
+						<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Resumo do Módulo Mesas</h3>
+						<div class="text-xs text-slate-500 dark:text-slate-400">Ajustes vindos das comandas fechadas do salão.</div>
+					</div>
+					<div class="text-xs text-slate-500 dark:text-slate-400">{resumoMesasCaixa.comandas} comanda{resumoMesasCaixa.comandas === 1 ? '' : 's'}</div>
+				</div>
+				<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Couvert / repasse músico</div>
+						<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(resumoMesasCaixa.couvert)}</div>
+					</div>
+					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Descontos em comandas</div>
+						<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{resumoMesasCaixa.descontos > 0 ? '-' : ''}{fmt(resumoMesasCaixa.descontos)}</div>
+					</div>
+					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Taxa de serviço</div>
+						<div class="text-lg font-bold text-emerald-600 dark:text-emerald-400">+{fmt(resumoMesasCaixa.taxaServico)}</div>
+					</div>
+					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Comandas fechadas</div>
+						<div class="text-lg font-bold text-slate-800 dark:text-white">{resumoMesasCaixa.comandas}</div>
+					</div>
+				</div>
+			</div>
+			{/if}
+
 			<!-- Top produtos -->
 			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 				<h2 class="font-semibold mb-2">Top Produtos</h2>
@@ -1367,6 +1461,36 @@
 
 
 			<!-- Gráficos Visuais -->
+			{#if mesasAddonAtivo}
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+				<div class="flex items-center justify-between gap-3 mb-3">
+					<div>
+						<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Resumo do Módulo Mesas</h3>
+						<div class="text-xs text-slate-500 dark:text-slate-400">Totais das comandas fechadas dentro do período selecionado.</div>
+					</div>
+					<div class="text-xs text-slate-500 dark:text-slate-400">{resumoMesasPeriodo.comandas} comanda{resumoMesasPeriodo.comandas === 1 ? '' : 's'}</div>
+				</div>
+				<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Couvert / repasse músico</div>
+						<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(resumoMesasPeriodo.couvert)}</div>
+					</div>
+					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Descontos em comandas</div>
+						<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{resumoMesasPeriodo.descontos > 0 ? '-' : ''}{fmt(resumoMesasPeriodo.descontos)}</div>
+					</div>
+					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Taxa de serviço</div>
+						<div class="text-lg font-bold text-emerald-600 dark:text-emerald-400">+{fmt(resumoMesasPeriodo.taxaServico)}</div>
+					</div>
+					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Comandas fechadas</div>
+						<div class="text-lg font-bold text-slate-800 dark:text-white">{resumoMesasPeriodo.comandas}</div>
+					</div>
+				</div>
+			</div>
+			{/if}
+
 			<div class="grid lg:grid-cols-2 gap-6">
 				<!-- Gráfico de Barras: Vendas diárias -->
 				<div class="p-4 rounded-lg border bg-slate-50 dark:bg-slate-900/50">
