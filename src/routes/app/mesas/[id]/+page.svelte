@@ -252,74 +252,81 @@
     }));
   }
 
-  async function loadProdutos() {
-    produtos = await pdvCache.getProdutos();
+  async function loadProdutos(forceRefresh = false) {
+    produtos = await pdvCache.getProdutos(forceRefresh);
     categorias = await pdvCache.getCategorias();
+  }
+
+  async function refreshItensEProdutos() {
+    await Promise.all([
+      loadItens(),
+      loadProdutos(true),
+    ]);
+  }
+
+  function produtoSemEstoque(produto) {
+    return !!produto?.controlar_estoque && Number(produto.estoque_atual || 0) <= 0;
+  }
+
+  function errorMessageFrom(error, fallback = 'Falha ao atualizar a comanda.') {
+    return error?.message || String(error || fallback);
   }
 
   async function adicionarProduto(produto) {
     if (!comanda || savingItem) return;
+    if (produtoSemEstoque(produto)) {
+      addToast(`Estoque insuficiente para "${produto.nome}".`, 'warning');
+      return;
+    }
+
     savingItem = true;
 
-    // If item already in comanda, increment quantity instead of duplicating
-    const existing = itens.find(i => i.id_produto === produto.id);
-    if (existing) {
-      const newQty = Number(existing.quantidade) + 1;
-      const { error } = await supabase
-        .from('comanda_itens')
-        .update({ quantidade: newQty })
-        .eq('id', existing.id);
+    try {
+      const { error } = await supabase.rpc('comanda_aplicar_delta_item', {
+        p_id_comanda: comanda.id,
+        p_id_produto: produto.id,
+        p_delta: 1,
+      });
+
       if (error) {
-        addToast('Erro ao atualizar item: ' + error.message, 'error');
-      } else {
-        itens = itens.map(i => i.id === existing.id ? { ...i, quantidade: newQty } : i);
+        throw error;
       }
+
+      await refreshItensEProdutos();
+    } catch (error) {
+      addToast('Erro ao adicionar item: ' + errorMessageFrom(error), 'error');
+    } finally {
       savingItem = false;
-      return;
     }
-
-    const { data, error } = await supabase
-      .from('comanda_itens')
-      .insert({
-        id_comanda: comanda.id,
-        id_produto: produto.id,
-        quantidade: 1,
-        preco_unitario: produto.preco,
-      })
-      .select('*')
-      .single();
-
-    savingItem = false;
-
-    if (error) {
-      addToast('Erro ao adicionar item: ' + error.message, 'error');
-      return;
-    }
-    itens = [...itens, { ...data, nome_produto: produto.nome }];
   }
 
   async function alterarQuantidade(item, delta) {
+    if (!comanda || savingItem) return;
+
     const novaQtd = Number(item.quantidade) + delta;
     if (novaQtd <= 0) {
       const ok = await confirmAction('Remover item', `Remover "${item.nome_produto}" da comanda?`);
       if (!ok) return;
-      const { error } = await supabase.from('comanda_itens').delete().eq('id', item.id);
+    }
+
+    savingItem = true;
+    try {
+      const { error } = await supabase.rpc('comanda_aplicar_delta_item', {
+        p_id_comanda: comanda.id,
+        p_id_produto: item.id_produto,
+        p_delta: delta,
+      });
+
       if (error) {
-        addToast('Erro ao remover: ' + error.message, 'error');
-        return;
+        throw error;
       }
-      itens = itens.filter(i => i.id !== item.id);
-      return;
+
+      await refreshItensEProdutos();
+    } catch (error) {
+      addToast('Erro ao atualizar item: ' + errorMessageFrom(error), 'error');
+    } finally {
+      savingItem = false;
     }
-    const { error } = await supabase
-      .from('comanda_itens')
-      .update({ quantidade: novaQtd })
-      .eq('id', item.id);
-    if (error) {
-      addToast('Erro ao atualizar: ' + error.message, 'error');
-      return;
-    }
-    itens = itens.map(i => i.id === item.id ? { ...i, quantidade: novaQtd } : i);
   }
 
   async function atualizarComanda(campo, valor) {
@@ -341,10 +348,17 @@
     );
     if (!ok) return;
 
-    await supabase.from('comandas').update({ status: 'cancelada', fechada_em: new Date().toISOString() }).eq('id', comanda.id);
-    await supabase.from('mesas').update({ status: 'livre' }).eq('id', mesaId);
-    addToast('Comanda cancelada.', 'info');
-    goto('/app/mesas');
+    try {
+      const { error } = await supabase.rpc('comanda_cancelar_com_estoque', {
+        p_id_comanda: comanda.id,
+      });
+      if (error) throw error;
+
+      addToast('Comanda cancelada.', 'info');
+      goto('/app/mesas');
+    } catch (error) {
+      addToast('Erro ao cancelar comanda: ' + errorMessageFrom(error), 'error');
+    }
   }
 
   async function abrirCloseModal() {
@@ -433,6 +447,11 @@
 
     closing = true;
     try {
+      const { error: estoqueErr } = await supabase.rpc('comanda_garantir_estoque_baixado', {
+        p_id_comanda: comanda.id,
+      });
+      if (estoqueErr) throw new Error(estoqueErr.message);
+
       const valorTotal = Math.round(total * 100) / 100;
 
       // Monta a lista UNIFICADA de pagamentos da venda (parciais já existentes + novos no fechamento)
@@ -581,28 +600,7 @@
         }
       }
 
-      // 4. Stock decrement (best-effort, only for produtos.controlar_estoque)
-      const baixas = [];
-      for (const it of itens) {
-        if (!it.id_produto) continue;
-        const prod = produtos.find(p => p.id === it.id_produto);
-        if (prod?.controlar_estoque) {
-          baixas.push(
-            supabase.rpc('decrementar_estoque', {
-              p_id: it.id_produto,
-              p_qtd: Math.max(1, Math.round(Number(it.quantidade))),
-            })
-          );
-        }
-      }
-      if (baixas.length > 0) {
-        const results = await Promise.allSettled(baixas);
-        results.forEach((r, idx) => {
-          if (r.status === 'rejected' || r.value?.error) {
-            console.warn('[Mesa.fechar] stock decrement falhou item', idx);
-          }
-        });
-      }
+      // 4. Estoque ja foi reservado em tempo real na comanda.
 
       // 5. Comanda → fechada
       await supabase
@@ -1099,12 +1097,19 @@
         {#each produtosFiltrados as p (p.id)}
           <button
             class="produto-card"
+            class:sem-estoque={produtoSemEstoque(p)}
             on:click={() => adicionarProduto(p)}
-            disabled={savingItem}
+            disabled={savingItem || produtoSemEstoque(p)}
+            title={produtoSemEstoque(p) ? 'Sem estoque' : p.nome}
             type="button"
           >
             <span class="produto-nome">{p.nome}</span>
             <span class="produto-preco">R$ {Number(p.preco).toFixed(2)}</span>
+            {#if p.controlar_estoque}
+              <span class="produto-estoque" class:stock-empty={produtoSemEstoque(p)}>
+                {produtoSemEstoque(p) ? 'Sem estoque' : `${Number(p.estoque_atual || 0)} em estoque`}
+              </span>
+            {/if}
           </button>
         {/each}
         {#if produtosFiltrados.length === 0}
@@ -1175,11 +1180,11 @@
                   <span class="item-preco">R$ {Number(item.preco_unitario).toFixed(2)} · subtotal R$ {(Number(item.preco_unitario) * Number(item.quantidade)).toFixed(2)}</span>
                 </div>
                 <div class="qty-cluster">
-                  <button class="qty-btn qty-minus" on:click={() => alterarQuantidade(item, -1)} aria-label="Diminuir">
+                  <button class="qty-btn qty-minus" on:click={() => alterarQuantidade(item, -1)} disabled={savingItem} aria-label="Diminuir">
                     <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 10Z" clip-rule="evenodd"/></svg>
                   </button>
                   <span class="qty-val">{item.quantidade}</span>
-                  <button class="qty-btn qty-plus" on:click={() => alterarQuantidade(item, +1)} aria-label="Aumentar">
+                  <button class="qty-btn qty-plus" on:click={() => alterarQuantidade(item, +1)} disabled={savingItem} aria-label="Aumentar">
                     <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/></svg>
                   </button>
                 </div>
@@ -2194,6 +2199,13 @@
     border-color: var(--primary);
   }
   .produto-card:disabled { opacity: 0.55; cursor: progress; }
+  .produto-card.sem-estoque,
+  .produto-card.sem-estoque:hover {
+    border-color: var(--border-subtle);
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+  }
   .produto-nome {
     font-size: 0.9rem; font-weight: 600; line-height: 1.3;
     overflow: hidden; display: -webkit-box;
@@ -2203,6 +2215,13 @@
     font-size: 0.95rem; font-weight: 700; color: var(--primary);
     font-variant-numeric: tabular-nums;
   }
+  .produto-estoque {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .produto-estoque.stock-empty { color: var(--status-error-text); }
   .empty-produtos {
     color: var(--text-muted); padding: 1rem;
     grid-column: 1 / -1;
