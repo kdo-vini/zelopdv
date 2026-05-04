@@ -1,5 +1,6 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
+  import { getAuthRedirectUrl } from '$lib/authRedirect';
   export let params;
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import AuthLayout from '$lib/components/AuthLayout.svelte';
@@ -27,7 +28,7 @@
     loading = true;
     // Redireciona confirmação para a página de login com aviso
     let redirectTo = '';
-    try { redirectTo = `${window.location.origin}/login?confirmed=1`; } catch {}
+    try { redirectTo = getAuthRedirectUrl('/login?confirmed=1'); } catch {}
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

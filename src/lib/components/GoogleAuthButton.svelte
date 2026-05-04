@@ -1,5 +1,6 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
+  import { getAuthRedirectUrl } from '$lib/authRedirect';
   import { addToast } from '$lib/stores/ui';
 
   let loading = false;
@@ -10,7 +11,7 @@
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: { redirectTo: getAuthRedirectUrl('/auth/callback') },
       });
       if (error) throw error;
       // browser redirects — keep loading=true

@@ -4,9 +4,11 @@
   import { fade } from 'svelte/transition'
 
   const USD_TO_BRL = 5.0
+  const GPT_4O_MINI_INPUT_PER_1M = 0.15
+  const GPT_4O_MINI_OUTPUT_PER_1M = 0.60
 
   let loading = true
-  let summaryCards = { totalTokens: 0, costBrl: 0, uniqueUsers: 0, avgTokensPerUser: 0 }
+  let summaryCards = { totalTokens: 0, costBrl: 0, uniqueCompanies: 0, avgTokensPerCompany: 0 }
   let perUserRows = []
   let dailyChartCanvas
   let dailyChart
@@ -27,53 +29,103 @@
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000)
 
-    const [logsRes, profilesRes] = await Promise.all([
+    const [logsRes, chatUsageRes, profilesRes] = await Promise.all([
       supabase
         .from('ai_usage_logs')
         .select('user_id, chat_type, model, prompt_tokens, completion_tokens, total_tokens, cost_usd, created_at')
         .gte('created_at', startOfMonth.toISOString()),
       supabase
+        .from('zelochat_ai_usage_daily')
+        .select('empresa_id, usage_date, feature, model, request_count, success_count, error_count, rate_limited_count, prompt_tokens, completion_tokens, total_tokens')
+        .gte('usage_date', startOfMonth.toISOString().slice(0, 10)),
+      supabase
         .from('empresa_perfil')
-        .select('user_id, nome_exibicao, contato'),
+        .select('id, user_id, nome_exibicao, contato'),
     ])
 
     const logs = logsRes.data || []
+    const chatUsage = chatUsageRes.data || []
     const profiles = profilesRes.data || []
-    const profileMap = {}
-    for (const p of profiles) profileMap[p.user_id] = p
-
-    // Summary
-    const uniqueUserSet = new Set(logs.filter(l => l.user_id).map(l => l.user_id))
-    summaryCards.totalTokens = logs.reduce((s, l) => s + (l.total_tokens || 0), 0)
-    summaryCards.costBrl = logs.reduce((s, l) => s + (Number(l.cost_usd) || 0), 0) * USD_TO_BRL
-    summaryCards.uniqueUsers = uniqueUserSet.size
-    summaryCards.avgTokensPerUser = uniqueUserSet.size > 0
-      ? Math.round(summaryCards.totalTokens / uniqueUserSet.size) : 0
-
-    // Per-user aggregation
-    const userMap = {}
-    for (const log of logs) {
-      const uid = log.user_id || '__support__'
-      if (!userMap[uid]) {
-        userMap[uid] = { user_id: uid, support: 0, assistant: 0, totalTokens: 0, costUsd: 0 }
-      }
-      if (log.chat_type === 'support') userMap[uid].support++
-      else userMap[uid].assistant++
-      userMap[uid].totalTokens += log.total_tokens || 0
-      userMap[uid].costUsd += Number(log.cost_usd) || 0
+    const profileByUser = {}
+    const profileByEmpresa = {}
+    for (const p of profiles) {
+      if (p.user_id) profileByUser[p.user_id] = p
+      if (p.id) profileByEmpresa[p.id] = p
     }
 
-    perUserRows = Object.values(userMap).sort((a, b) => b.totalTokens - a.totalTokens).map(r => ({
+    // Summary
+    const uniqueCompanySet = new Set()
+    logs.filter(l => l.user_id).forEach(l => uniqueCompanySet.add(profileByUser[l.user_id]?.id || l.user_id))
+    chatUsage.filter(l => l.empresa_id).forEach(l => uniqueCompanySet.add(l.empresa_id))
+
+    const pdvTokens = logs.reduce((s, l) => s + (l.total_tokens || 0), 0)
+    const chatTokens = chatUsage.reduce((s, l) => s + (l.total_tokens || 0), 0)
+    const pdvCostUsd = logs.reduce((s, l) => s + (Number(l.cost_usd) || 0), 0)
+    const chatCostUsd = chatUsage.reduce((s, l) => s + estimateChatUsageUsd(l), 0)
+
+    summaryCards.totalTokens = pdvTokens + chatTokens
+    summaryCards.costBrl = (pdvCostUsd + chatCostUsd) * USD_TO_BRL
+    summaryCards.uniqueCompanies = uniqueCompanySet.size
+    summaryCards.avgTokensPerCompany = uniqueCompanySet.size > 0
+      ? Math.round(summaryCards.totalTokens / uniqueCompanySet.size) : 0
+
+    // Per-company aggregation
+    const companyMap = {}
+    function ensureCompany(key, profile = null) {
+      if (!companyMap[key]) {
+        companyMap[key] = {
+          key,
+          profile,
+          support: 0,
+          assistant: 0,
+          zelochat: 0,
+          totalTokens: 0,
+          costUsd: 0,
+          errors: 0,
+          rateLimited: 0,
+        }
+      }
+      if (!companyMap[key].profile && profile) companyMap[key].profile = profile
+      return companyMap[key]
+    }
+
+    for (const log of logs) {
+      const profile = profileByUser[log.user_id] || null
+      const key = profile?.id || log.user_id || '__support__'
+      const row = ensureCompany(key, profile)
+      if (log.chat_type === 'support') row.support++
+      else row.assistant++
+      row.totalTokens += log.total_tokens || 0
+      row.costUsd += Number(log.cost_usd) || 0
+    }
+
+    for (const usage of chatUsage) {
+      const key = usage.empresa_id || '__unknown_chat__'
+      const row = ensureCompany(key, profileByEmpresa[key] || null)
+      row.zelochat += usage.request_count || 0
+      row.totalTokens += usage.total_tokens || 0
+      row.costUsd += estimateChatUsageUsd(usage)
+      row.errors += usage.error_count || 0
+      row.rateLimited += usage.rate_limited_count || 0
+    }
+
+    perUserRows = Object.values(companyMap).sort((a, b) => b.totalTokens - a.totalTokens).map(r => ({
       ...r,
-      profile: profileMap[r.user_id] || null,
       costBrl: r.costUsd * USD_TO_BRL,
     }))
 
     // Build daily data for chart (last 30 days)
-    dailyChartData = buildDailyData(logs, thirtyDaysAgo)
+    dailyChartData = buildDailyData(logs, chatUsage, thirtyDaysAgo)
   }
 
-  function buildDailyData(logs, since) {
+  function estimateChatUsageUsd(row) {
+    const model = String(row.model || '').toLowerCase()
+    if (!model.includes('gpt-4o-mini')) return 0
+    return ((row.prompt_tokens || 0) / 1_000_000) * GPT_4O_MINI_INPUT_PER_1M
+      + ((row.completion_tokens || 0) / 1_000_000) * GPT_4O_MINI_OUTPUT_PER_1M
+  }
+
+  function buildDailyData(logs, chatUsage, since) {
     const now = new Date()
     const days = 30
     const labels = [], tokenData = [], costData = []
@@ -90,8 +142,14 @@
         const t = new Date(l.created_at)
         return t >= day && t < dayEnd
       })
-      tokenData.push(dayLogs.reduce((s, l) => s + (l.total_tokens || 0), 0))
-      costData.push(Number((dayLogs.reduce((s, l) => s + (Number(l.cost_usd) || 0), 0) * USD_TO_BRL).toFixed(4)))
+      const isoDay = day.toISOString().slice(0, 10)
+      const chatDayLogs = chatUsage.filter(l => l.usage_date === isoDay)
+      const dayTokens = dayLogs.reduce((s, l) => s + (l.total_tokens || 0), 0)
+        + chatDayLogs.reduce((s, l) => s + (l.total_tokens || 0), 0)
+      const dayCostUsd = dayLogs.reduce((s, l) => s + (Number(l.cost_usd) || 0), 0)
+        + chatDayLogs.reduce((s, l) => s + estimateChatUsageUsd(l), 0)
+      tokenData.push(dayTokens)
+      costData.push(Number((dayCostUsd * USD_TO_BRL).toFixed(4)))
     }
     return { labels, tokenData, costData }
   }
@@ -170,7 +228,7 @@
   <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-800">
     <div class="relative">
       <h2 class="text-3xl font-extrabold tracking-tight text-white mb-1">Uso de IA</h2>
-      <p class="text-slate-400 text-sm font-medium">Consumo de tokens, custo estimado e breakdown por usuário (mês atual)</p>
+      <p class="text-slate-400 text-sm font-medium">Consumo de tokens, custo estimado e breakdown por empresa (mês atual)</p>
       <div class="absolute -bottom-6 left-0 w-16 h-[2px] bg-violet-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]"></div>
     </div>
   </div>
@@ -201,16 +259,16 @@
 
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/30 transition-colors">
         <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-400/0 via-indigo-500 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider mb-4">Usuários que Usaram</div>
-        <div class="text-3xl font-extrabold text-white tracking-tight">{summaryCards.uniqueUsers}</div>
-        <div class="mt-2 text-xs font-medium text-indigo-400/60">Assistente (autenticado)</div>
+        <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider mb-4">Empresas com Uso</div>
+        <div class="text-3xl font-extrabold text-white tracking-tight">{summaryCards.uniqueCompanies}</div>
+        <div class="mt-2 text-xs font-medium text-indigo-400/60">PDV + ZeloChat</div>
       </div>
 
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-sky-500/30 transition-colors">
         <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-400/0 via-sky-500 to-sky-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider mb-4">Média Tokens/Usuário</div>
-        <div class="text-3xl font-extrabold text-white tracking-tight">{summaryCards.avgTokensPerUser.toLocaleString('pt-BR')}</div>
-        <div class="mt-2 text-xs font-medium text-sky-400/60">Usuários do assistente</div>
+        <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider mb-4">Média Tokens/Empresa</div>
+        <div class="text-3xl font-extrabold text-white tracking-tight">{summaryCards.avgTokensPerCompany.toLocaleString('pt-BR')}</div>
+        <div class="mt-2 text-xs font-medium text-sky-400/60">Empresas com consumo</div>
       </div>
 
     </div>
@@ -226,7 +284,7 @@
     <!-- Per-User Table -->
     <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden backdrop-blur-sm" in:fade={{delay: 200}}>
       <div class="px-6 py-5 border-b border-slate-800">
-        <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Breakdown por Usuário</h3>
+        <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Breakdown por Empresa</h3>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
@@ -234,32 +292,39 @@
             <tr class="border-b border-slate-800 bg-slate-900/60">
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Empresa</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">Suporte</th>
-              <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">Assistente</th>
+              <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">Assistente PDV</th>
+              <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">ZeloChat</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Total Tokens</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Custo R$</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-800/50">
-            {#each perUserRows as row (row.user_id)}
+            {#each perUserRows as row (row.key)}
               <tr class="hover:bg-slate-800/30 transition-colors">
                 <td class="py-3 px-6">
-                  {#if row.user_id === '__support__'}
+                  {#if row.key === '__support__'}
                     <span class="text-sm text-slate-400 italic">Visitantes (sem conta)</span>
                   {:else}
                     <div>
                       <p class="text-sm font-medium text-slate-200">{row.profile?.nome_exibicao || 'Sem nome'}</p>
-                      <p class="text-xs text-slate-500">{row.profile?.contato || row.user_id.slice(0, 12) + '…'}</p>
+                      <p class="text-xs text-slate-500">{row.profile?.contato || row.key.slice(0, 12) + '...'}</p>
                     </div>
                   {/if}
                 </td>
                 <td class="py-3 px-6 text-xs text-slate-400 text-center">{row.support}</td>
                 <td class="py-3 px-6 text-xs text-slate-400 text-center">{row.assistant}</td>
+                <td class="py-3 px-6 text-xs text-slate-400 text-center">
+                  {row.zelochat}
+                  {#if row.errors || row.rateLimited}
+                    <span class="ml-1 text-[10px] text-amber-400">({row.errors} err, {row.rateLimited} limit)</span>
+                  {/if}
+                </td>
                 <td class="py-3 px-6 text-sm text-white font-medium text-right">{row.totalTokens.toLocaleString('pt-BR')}</td>
                 <td class="py-3 px-6 text-sm text-violet-400 font-medium text-right">R$ {row.costBrl.toLocaleString('pt-BR', {minimumFractionDigits: 4, maximumFractionDigits: 4})}</td>
               </tr>
             {:else}
               <tr>
-                <td colspan="5" class="py-12 text-center text-slate-500 text-sm">Nenhum uso de IA registrado este mês.</td>
+                <td colspan="6" class="py-12 text-center text-slate-500 text-sm">Nenhum uso de IA registrado este mês.</td>
               </tr>
             {/each}
           </tbody>

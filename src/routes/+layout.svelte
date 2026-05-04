@@ -166,7 +166,7 @@
       }
 
       // Se logado e perfil incompleto, força ir para /perfil (evitar loop quando já está em /perfil)
-      if (session && !hasCompleteProfile && path !== '/perfil' && path !== '/perfil.html') {
+      if (session && !hasCompleteProfile && path !== '/perfil' && path !== '/perfil.html' && path !== '/redefinir-senha') {
 
         const params = new URLSearchParams({ msg: 'complete' });
         window.location.href = `/perfil?${params.toString()}`;

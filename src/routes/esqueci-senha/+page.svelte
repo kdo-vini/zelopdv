@@ -1,5 +1,6 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
+  import { getAuthRedirectUrl } from '$lib/authRedirect';
   export let params;
   import AuthLayout from '$lib/components/AuthLayout.svelte';
   import EmailSentHelper from '$lib/components/EmailSentHelper.svelte';
@@ -14,7 +15,7 @@
     loading = true;
     message = '';
     errorMessage = '';
-    const redirectTo = `${window.location.origin}/redefinir-senha`;
+    const redirectTo = getAuthRedirectUrl('/redefinir-senha');
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     loading = false;
     if (error) errorMessage = error.message;
