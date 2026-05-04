@@ -111,6 +111,7 @@
               const data = await res.json();
               if (res.ok) {
                 addToast('Seu teste gratuito de 30 dias foi ativado!', 'success');
+                if (window.fbq) window.fbq('track', 'StartTrial');
                 setTimeout(() => { window.location.href = '/gestao'; }, 600);
                 return;
               }
@@ -128,6 +129,7 @@
       try {
         const params = new URLSearchParams(window.location.search);
         if (params.get('success') === '1' && isActiveStrict) {
+          if (window.fbq) window.fbq('track', 'Subscribe');
           setTimeout(() => { window.location.href = '/gestao'; }, 800);
         }
         if (params.get('addon') === 'mesas') {

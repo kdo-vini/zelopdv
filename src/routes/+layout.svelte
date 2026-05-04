@@ -10,6 +10,13 @@
   import { requiredOk } from '$lib/profileUtils';
   import { page } from '$app/stores';
   import { get } from 'svelte/store';
+  import { afterNavigate } from '$app/navigation';
+
+  afterNavigate(() => {
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'PageView');
+    }
+  });
 
   export let params;
 

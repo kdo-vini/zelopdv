@@ -220,6 +220,8 @@
     const diff = Math.ceil((easter.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     daysUntilEaster = Math.max(0, diff);
 
+    if (window.fbq) window.fbq('track', 'ViewContent');
+
     return () => window.removeEventListener('keydown', handleKeydown);
   });
 </script>
