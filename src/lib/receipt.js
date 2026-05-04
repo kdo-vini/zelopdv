@@ -35,53 +35,53 @@ const SHARED_CSS = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Courier New', Courier, monospace;
-  background: #fff; color: #111;
+  background: #fff; color: #000;
   font-size: 12px; line-height: 1.5;
 }
 .cupom { margin: 0 auto; padding: 12px 10px; }
-.sep { border: none; border-top: 1.5px dashed #555; margin: 7px 0; }
-.sep-solid { border: none; border-top: 1.5px solid #111; margin: 7px 0; }
+.sep { border: none; border-top: 1.5px dashed #000; margin: 7px 0; }
+.sep-solid { border: none; border-top: 1.5px solid #000; margin: 7px 0; }
 
 /* Header */
 .logo { max-height: 52px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto 8px; }
 .nome-empresa { font-size: 15px; font-weight: 800; text-align: center; letter-spacing: .04em; text-transform: uppercase; }
-.meta-empresa { font-size: 10px; text-align: center; color: #444; margin-top: 3px; line-height: 1.6; }
+.meta-empresa { font-size: 10px; text-align: center; color: #000; margin-top: 3px; line-height: 1.6; }
 .titulo-cupom { font-size: 11px; font-weight: 700; text-align: center; letter-spacing: .12em; text-transform: uppercase; margin-top: 6px; }
 
 /* Pedido */
 .info-row { display: flex; justify-content: space-between; font-size: 11px; margin: 1px 0; }
-.info-row .label { color: #555; }
+.info-row .label { color: #000; }
 .info-row .val { font-weight: 600; }
 
 /* Itens */
-.items-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #555;
+.items-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #000;
   display: flex; justify-content: space-between; margin-bottom: 3px; }
 .item-row { display: flex; gap: 4px; margin: 3px 0; font-size: 11px; }
 .item-qtd { min-width: 22px; font-weight: 700; flex-shrink: 0; }
 .item-nome { flex: 1; }
 .item-sub { width: 68px; text-align: right; flex-shrink: 0; white-space: nowrap; }
-.item-unit { font-size: 10px; color: #666; margin-left: 26px; margin-top: -2px; }
+.item-unit { font-size: 10px; color: #000; margin-left: 26px; margin-top: -2px; }
 
 /* Totais */
 .total-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
-.total-row.desconto .val { color: #16a34a; }
+.total-row.desconto .val { color: #000; }
 .total-row.grand { font-size: 15px; font-weight: 900; padding: 5px 0 3px; letter-spacing: .01em; }
 
 /* Pagamento */
 .pgto-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
-.pgto-row .forma { color: #333; }
-.pgto-nota { font-size: 10px; color: #555; font-style: italic; margin-top: 3px; }
+.pgto-row .forma { color: #000; }
+.pgto-nota { font-size: 10px; color: #000; font-style: italic; margin-top: 3px; }
 
 /* Rodapé */
-.rodape { text-align: center; font-size: 10px; color: #444; margin-top: 6px; line-height: 1.7; }
-.nao-fiscal { text-align: center; font-size: 9px; color: #888; letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
+.rodape { text-align: center; font-size: 10px; color: #000; margin-top: 6px; line-height: 1.7; }
+.nao-fiscal { text-align: center; font-size: 9px; color: #000; letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
 
 /* Títulos de bloco */
 .titulo-mov { font-size: 13px; font-weight: 800; text-align: center; text-transform: uppercase; margin: 4px 0; }
 .mov-valor-linha { font-size: 15px; font-weight: 900; padding: 4px 0; }
 
 @media print {
-  body { padding: 0; font-size: 11px; }
+  body { padding: 0; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cupom { padding: 0 4px; width: 100%; }
 }
 `;

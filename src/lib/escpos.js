@@ -75,6 +75,14 @@ class Builder {
   line(s = '') { this.text(s); this.parts.push([LF]); return this; }
   newline(n = 1) { for (let i = 0; i < n; i++) this.parts.push([LF]); return this; }
   init() { return this.raw([ESC, 0x40]); }
+  /**
+   * ESC 7 n1 n2 n3 — ajusta intensidade de impressão.
+   * n1 = heating dots (0–255, padrão 7): mais = mais escuro
+   * n2 = heating time (3–255, padrão 80): mais = mais escuro (unidades de 10µs)
+   * n3 = heating interval (0–255, padrão 2): mantemos baixo
+   * Valores aqui produzem impressão bem mais escura sem risco de queimar o papel.
+   */
+  darkness() { return this.raw([ESC, 0x37, 15, 200, 2]); }
   /** ESC t 2 → CP850 (Multilingual Latin 1). */
   selectCodepage() { return this.raw([ESC, 0x74, 0x02]); }
   /** ESC R 8 → caracteres internacionais Latin-American. */
@@ -214,7 +222,7 @@ export function buildVendaEscPos(payload) {
   const cols = est.largura_bobina === '58mm' ? 32 : 48;
 
   const b = new Builder();
-  b.init().selectCodepage().charset();
+  b.init().darkness().selectCodepage().charset();
 
   /* HEADER */
   b.align('center').bold(true).size({ width: true, height: true });
@@ -348,7 +356,7 @@ export function buildMovCaixaEscPos({ estabelecimento, mov }) {
   const rotuloValor = isSaida ? 'Valor retirado' : 'Valor adicionado';
 
   const b = new Builder();
-  b.init().selectCodepage().charset();
+  b.init().darkness().selectCodepage().charset();
 
   b.align('center').bold(true).size({ width: true, height: true });
   b.line(String(est.nome_exibicao || 'Zelo PDV').toUpperCase());
@@ -399,7 +407,7 @@ export function buildPagamentoFiadoEscPos({ estabelecimento, pagamento }) {
   const cols = est.largura_bobina === '58mm' ? 32 : 48;
 
   const b = new Builder();
-  b.init().selectCodepage().charset();
+  b.init().darkness().selectCodepage().charset();
 
   b.align('center').bold(true).size({ width: true, height: true });
   b.line(String(est.nome_exibicao || 'Zelo PDV').toUpperCase());
@@ -447,7 +455,7 @@ export function buildPagamentoFiadoEscPos({ estabelecimento, pagamento }) {
 export function buildTesteEscPos(est = {}) {
   const cols = est.largura_bobina === '58mm' ? 32 : 48;
   const b = new Builder();
-  b.init().selectCodepage().charset();
+  b.init().darkness().selectCodepage().charset();
 
   b.align('center').bold(true).size({ width: true, height: true });
   b.line('TESTE DE IMPRESSAO');
