@@ -186,15 +186,7 @@
         "name": "Quanto custa o sistema PDV para lanchonete?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "O Zelo PDV custa R$ 59 por mês, com acesso completo a todas as funcionalidades. Os primeiros 30 dias são grátis, sem precisar de cartão de crédito."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Como funciona o Módulo Mesas?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "O Módulo Mesas é um add-on opcional de R$ 30/mês (total R$ 89/mês) que adiciona gestão de mesas para bares, hamburguerias e restaurantes: mapa visual com status livre/ocupada, comandas acumulativas, taxa de serviço, couvert, desconto e divisão igual entre N pessoas. Ative e desative quando quiser pela tela de assinatura — sem fidelidade."
+          "text": "O Zelo PDV custa R$ 59 por mês, com acesso completo a todas as funcionalidades. Os primeiros 30 dias são grátis, sem precisar de cartão de crédito. Add-ons opcionais (Mesas, Pedidos + Cozinha) custam R$ 30/mês cada e podem ser ativados ou desativados a qualquer momento."
         }
       }
     ]
@@ -579,109 +571,67 @@
     </div>
   </section>
 
-  <!-- FEATURE 5: MESAS (ADD-ON) -->
-  <section id="mesas" class="py-24 relative overflow-hidden">
-    <!-- Background glow -->
-    <div class="absolute inset-0 bg-gradient-to-br from-rose-900/20 via-transparent to-rose-900/10 pointer-events-none"></div>
+  <!-- FEATURE 5: EXTENSÕES (HUB) -->
+  <section id="extensoes" class="py-24 relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-amber-900/15 via-transparent to-rose-900/10 pointer-events-none"></div>
 
-    <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center relative z-10">
-      <!-- Texto à esquerda -->
-      <div>
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs font-semibold mb-6">
-          <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-          Add-on opcional · +R$ 30/mês
+    <div class="max-w-6xl mx-auto px-6 relative z-10">
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs font-semibold mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+          Add-ons opcionais
         </div>
-        <div class="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center mb-6">
-          <svg class="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
-        </div>
-
-        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">
-          Módulo Mesas para Bares e Restaurantes:<br/>
-          <span class="text-rose-400">Comandas e Divisão de Conta</span>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-5">
+          Combine só o que faz sentido pro seu negócio
         </h2>
-        <p class="text-lg text-slate-400 mb-8 leading-relaxed">
-          Abra mesa, vá adicionando consumo da rodada e divida a conta na hora de fechar.
-          Pensado para bares, hamburguerias e qualquer lanchonete que atende no salão.
-        </p>
-
-        <ul class="space-y-4 mb-8">
-          <li class="flex items-center gap-3 text-slate-300">
-            <div class="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs">✓</div>
-            Mapa visual com status livre/ocupada
-          </li>
-          <li class="flex items-center gap-3 text-slate-300">
-            <div class="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs">✓</div>
-            Comanda acumulativa por mesa
-          </li>
-          <li class="flex items-center gap-3 text-slate-300">
-            <div class="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs">✓</div>
-            Taxa de serviço, couvert e desconto
-          </li>
-          <li class="flex items-center gap-3 text-slate-300">
-            <div class="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 text-xs">✓</div>
-            Divisão igual entre N pessoas + pré-conta
-          </li>
-        </ul>
-
-        <p class="text-sm text-slate-500">
-          Ative quando precisar, desative quando não usar mais. Sem fidelidade.
+        <p class="text-lg text-slate-400 leading-relaxed">
+          Plano base R$ 59. Extensões opcionais para quem precisa de mais — bar com mesas, lanchonete com cozinha separada, e o que vier no futuro. Cada uma é cobrada à parte, ativa e desativa quando quiser.
         </p>
       </div>
 
-      <!-- Mockup CSS de mesas -->
-      <div class="relative group">
-        <div class="absolute inset-0 bg-rose-500/15 blur-[80px] rounded-full -z-10 group-hover:bg-rose-500/25 transition-all duration-700"></div>
-        <div class="rounded-2xl border border-white/10 bg-[#121620] shadow-2xl p-8 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(244,63,94,0.25)]">
-          <div class="flex items-center justify-between mb-5">
-            <div>
-              <p class="text-xs text-slate-500 uppercase tracking-wider font-bold mb-1">Mesas</p>
-              <p class="text-sm text-slate-300">3 livres · 5 ocupadas</p>
+      <div class="grid md:grid-cols-2 gap-5 mb-10">
+        <!-- Mesas -->
+        <a href="/extensoes/mesas" class="group rounded-2xl border border-white/10 bg-[#121620] p-7 transition-all hover:border-rose-500/40 hover:-translate-y-1">
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center">
+              <svg class="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
             </div>
-            <span class="text-xs text-rose-400/80 font-semibold">M11</span>
+            <span class="text-xs font-bold text-rose-400">+R$ 30/mês</span>
           </div>
+          <h3 class="text-xl font-bold text-white mb-2 group-hover:text-rose-200 transition-colors">Módulo Mesas</h3>
+          <p class="text-sm text-slate-400 leading-relaxed mb-4">
+            Mapa visual de mesas, comanda acumulativa, taxa de serviço, couvert e divisão entre N pessoas. Ideal para bares e hamburguerias com salão.
+          </p>
+          <span class="inline-flex items-center gap-2 text-sm font-semibold text-rose-400 group-hover:gap-3 transition-all">
+            Ver detalhes
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </span>
+        </a>
 
-          <div class="grid grid-cols-3 gap-3">
-            <!-- Tile 1: livre -->
-            <div class="aspect-square rounded-xl border-2 border-emerald-500/40 bg-emerald-500/[0.06] p-3 flex flex-col justify-between">
-              <span class="text-2xl font-bold text-white">1</span>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Livre</span>
+        <!-- Pedidos + Cozinha -->
+        <a href="/extensoes/pedidos-cozinha" class="group rounded-2xl border border-white/10 bg-[#121620] p-7 transition-all hover:border-amber-500/40 hover:-translate-y-1">
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+              <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 3.75h3m-1.5 0v2.25m-6.75 6h13.5M5.25 12A6.75 6.75 0 0112 5.25 6.75 6.75 0 0118.75 12m-13.5 0v2.25a4.5 4.5 0 004.5 4.5h4.5a4.5 4.5 0 004.5-4.5V12"/></svg>
             </div>
-            <!-- Tile 2: ocupada -->
-            <div class="aspect-square rounded-xl border-2 border-rose-500/45 bg-rose-500/[0.08] p-3 flex flex-col justify-between">
-              <span class="text-2xl font-bold text-white">2</span>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400">Ocupada</span>
-            </div>
-            <!-- Tile 3: ocupada -->
-            <div class="aspect-square rounded-xl border-2 border-rose-500/45 bg-rose-500/[0.08] p-3 flex flex-col justify-between">
-              <span class="text-2xl font-bold text-white">3</span>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400">Ocupada</span>
-            </div>
-            <!-- Tile 4: fechando -->
-            <div class="aspect-square rounded-xl border-2 border-amber-500/45 bg-amber-500/[0.08] p-3 flex flex-col justify-between">
-              <span class="text-2xl font-bold text-white">4</span>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">Fechando</span>
-            </div>
-            <!-- Tile 5: livre -->
-            <div class="aspect-square rounded-xl border-2 border-emerald-500/40 bg-emerald-500/[0.06] p-3 flex flex-col justify-between">
-              <span class="text-2xl font-bold text-white">5</span>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Livre</span>
-            </div>
-            <!-- Tile 6: ocupada -->
-            <div class="aspect-square rounded-xl border-2 border-rose-500/45 bg-rose-500/[0.08] p-3 flex flex-col justify-between">
-              <span class="text-2xl font-bold text-white">6</span>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400">Ocupada</span>
-            </div>
+            <span class="text-xs font-bold text-amber-400">+R$ 30/mês</span>
           </div>
+          <h3 class="text-xl font-bold text-white mb-2 group-hover:text-amber-200 transition-colors">Pedidos + Cozinha</h3>
+          <p class="text-sm text-slate-400 leading-relaxed mb-4">
+            Atendente lança pedidos pelo celular, cozinha acompanha em painel kiosk em tempo real, caixa recebe e cobra. Pra lanchonete com atendente, cozinha e caixa separados.
+          </p>
+          <span class="inline-flex items-center gap-2 text-sm font-semibold text-amber-400 group-hover:gap-3 transition-all">
+            Ver detalhes
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </span>
+        </a>
+      </div>
 
-          <!-- Comanda preview row -->
-          <div class="mt-5 pt-5 border-t border-white/5">
-            <div class="flex items-center justify-between text-xs">
-              <span class="text-slate-400">Mesa 2 · 3 pessoas</span>
-              <span class="font-semibold text-white">R$ 142,50</span>
-            </div>
-            <div class="text-[11px] text-slate-500 mt-1">por pessoa: R$ 47,50</div>
-          </div>
-        </div>
+      <div class="text-center">
+        <a href="/extensoes" class="inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all">
+          Ver todas as extensões
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
       </div>
     </div>
   </section>
@@ -1030,11 +980,11 @@
           </div>
 
           <!-- Add-on Card: Mesas -->
-          <div class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 p-6 md:p-7 transition-all duration-300">
+          <a href="/extensoes/mesas" class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-rose-500/30 p-6 md:p-7 transition-all duration-300 block">
             <div class="flex items-start justify-between gap-4 mb-5">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+                <div class="w-11 h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
                 </div>
                 <div class="min-w-0">
                   <p class="text-base font-bold text-white">Módulo Mesas</p>
@@ -1065,18 +1015,58 @@
               </li>
             </ul>
 
-            <a href="#mesas" class="inline-flex items-center gap-1.5 text-xs font-semibold text-white/80 hover:text-white transition-colors">
-              Ver como funciona
-              <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            </a>
-          </div>
+            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-300 group-hover:gap-2 transition-all">
+              Ver detalhes
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </span>
+          </a>
 
-          <!-- Placeholder Card: futuros add-ons (subtle, gives sense of expandability) -->
-          <div class="rounded-2xl border border-dashed border-white/10 p-5 text-center">
-            <p class="text-xs text-slate-500">
-              Mais add-ons chegando em breve
-            </p>
-          </div>
+          <!-- Add-on Card: Pedidos + Cozinha -->
+          <a href="/extensoes/pedidos-cozinha" class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-amber-500/30 p-6 md:p-7 transition-all duration-300 block">
+            <div class="flex items-start justify-between gap-4 mb-5">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 3.75h3m-1.5 0v2.25m-6.75 6h13.5M5.25 12A6.75 6.75 0 0112 5.25 6.75 6.75 0 0118.75 12m-13.5 0v2.25a4.5 4.5 0 004.5 4.5h4.5a4.5 4.5 0 004.5-4.5V12"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-base font-bold text-white">Pedidos + Cozinha</p>
+                  <p class="text-xs text-slate-400">Lanchonete com cozinha separada</p>
+                </div>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <div class="flex items-baseline gap-0.5 justify-end">
+                  <span class="text-xs text-slate-400">+R$</span>
+                  <span class="text-2xl font-bold text-white">30</span>
+                </div>
+                <p class="text-[10px] text-slate-500 -mt-0.5">/mês</p>
+              </div>
+            </div>
+
+            <ul class="space-y-2 mb-5">
+              <li class="flex items-center gap-2.5 text-sm text-slate-300">
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <span>Atendente lança pedido pelo celular</span>
+              </li>
+              <li class="flex items-center gap-2.5 text-sm text-slate-300">
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <span>Painel de cozinha em tempo real</span>
+              </li>
+              <li class="flex items-center gap-2.5 text-sm text-slate-300">
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <span>Caixa cobra pedidos prontos</span>
+              </li>
+            </ul>
+
+            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-300 group-hover:gap-2 transition-all">
+              Ver detalhes
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </span>
+          </a>
+
+          <a href="/extensoes" class="rounded-2xl border border-dashed border-white/10 hover:border-white/20 p-5 flex flex-col items-center justify-center text-center transition-colors">
+            <p class="text-xs text-slate-400 mb-1">Mais add-ons em breve</p>
+            <span class="text-xs font-semibold text-slate-300">Ver todas as extensões →</span>
+          </a>
         </div>
       </div>
     </div>
@@ -1153,11 +1143,11 @@
 
         <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
-            <span>Como funciona o Módulo Mesas?</span>
+            <span>O que são as extensões (add-ons)?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </summary>
           <div class="px-6 pb-6 text-slate-400 leading-relaxed animate-fade-in-down">
-            O Módulo Mesas é um add-on opcional de <strong class="text-rose-400">+R$ 30/mês</strong> (total R$ 89/mês). Adiciona mapa visual de mesas, comandas acumulativas, taxa de serviço, couvert, desconto e divisão igual entre N pessoas — pensado para bares, hamburguerias e restaurantes que atendem no salão. Ative ou desative pela tela de assinatura quando quiser, sem fidelidade.
+            São módulos opcionais cobrados como adicional mensal sobre o plano base de R$ 59. Hoje existem dois: <strong class="text-rose-300">Módulo Mesas</strong> (+R$ 30/mês, para bares e restaurantes com salão) e <strong class="text-amber-300">Pedidos + Cozinha</strong> (+R$ 30/mês, para lanchonetes com atendente, cozinha e caixa separados). Você ativa só os que fazem sentido pra sua operação e pode desligar a qualquer momento. <a href="/extensoes" class="underline text-sky-300 hover:text-sky-200">Ver todas as extensões →</a>
           </div>
         </details>
 
