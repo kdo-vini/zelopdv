@@ -54,6 +54,7 @@
   $: isSegmentMarketingPage = path.startsWith('/para-');
   $: isBlogPage = path.startsWith('/blog');
   $: isPricingPage = path === '/precificacao';
+  $: isExtensoesPage = path === '/extensoes' || path.startsWith('/extensoes/');
   $: isAuthPage = ['/login', '/cadastro', '/esqueci-senha', '/redefinir-senha'].includes(path);
   // Routes that have their own sidebar layout — hide root header/footer for these
   $: hasSidebarLayout = isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura;
@@ -355,7 +356,7 @@
   {/if}
 
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isAuthPage && !hasSidebarLayout}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isAuthPage && !hasSidebarLayout}
   <header class="border-b bg-header-base backdrop-blur sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
@@ -546,11 +547,11 @@
   {/if}
   {/if}
 
-  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
+  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isAuthPage && !hasSidebarLayout && !$page.error}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isAuthPage && !hasSidebarLayout && !$page.error}
   <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
