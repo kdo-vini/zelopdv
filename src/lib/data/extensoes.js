@@ -1,9 +1,14 @@
 // Marketing data for the consolidated /extensoes page.
 // Each entry feeds one section of the single-scroll page (anchor = slug).
+//
+// Two kinds of entries:
+//   - kind: 'addon'  → cobrado como SubscriptionItem extra no Stripe (Mesas, Pedidos)
+//   - kind: 'plan'   → produto separado (ZeloChat, vira upgrade pro Bundle)
+//
 // To add a new addon: append an entry here and ensure pricing.js + the
 // toggle/webhook addon map are in sync.
 
-import { ADDONS } from '$lib/pricing';
+import { ADDONS, PLANS } from '$lib/pricing';
 
 const BASE_URL = 'https://zelopdv.com.br';
 
@@ -265,10 +270,146 @@ export const extensoes = {
     finalCtaTitle: 'Teste Pedidos + Cozinha por 30 dias grátis',
     finalCtaText:
       'Cria conta sem cartão, ativa o add-on no checkout e usa por trinta dias completos. Se não fizer diferença na sua fila, é só deixar o trial expirar.'
+  },
+
+  chat: {
+    slug: 'chat',
+    kind: 'plan',
+    addonId: null,
+    external: true,
+    externalUrl: 'https://chat.zelopdv.com.br',
+    upgradeHref: '/cadastro?plan=bundle',
+    standalonePrice: PLANS.chat.price,
+    bundleDelta: PLANS.bundle.price - PLANS.pdv.price,
+    meta: {
+      title: 'Zelo Chat — Atendimento WhatsApp com IA | Zelo PDV',
+      description:
+        'Atendimento automático via WhatsApp com IA. Responde clientes, anota pedidos, dispara alertas humanos quando precisar. Disponível como upgrade do Zelo PDV (+R$ 88/mês no pacote completo) ou standalone.',
+      canonical: `${BASE_URL}/extensoes#chat`
+    },
+    h1: 'Zelo Chat: WhatsApp atendido por IA',
+    subtitle:
+      'Para quem perde venda no WhatsApp porque ninguém responde a tempo. A IA atende, anota o pedido e te chama só quando precisar de humano.',
+    forSegments: ['Lanchonetes', 'Hamburguerias', 'Pequenos deliveries', 'Restaurantes', 'Pizzarias'],
+    highlights: [
+      'IA responde clientes 24/7 com tom da sua marca',
+      'Anota pedido, calcula valor, confirma endereço',
+      'Dispara alerta humano quando o caso pede',
+      'Pedido cai direto no caixa do Zelo PDV'
+    ],
+    problemTitle: 'WhatsApp parado é venda perdida',
+    problemParagraphs: [
+      'A maioria das lanchonetes pequenas vende muito mais pelo WhatsApp do que admite. O problema é que ninguém consegue responder no horário do almoço, no pico da noite, ou nos dias que o atendente faltou.',
+      'Cliente manda "tem hambúrguer hoje?" às 12h05. Você responde 12h47. Ele já comeu em outro lugar. Multiplique isso por 30 mensagens por dia e tá aí o motivo do mês ter fechado fraco.',
+      'O Zelo Chat coloca uma IA na sua conta de WhatsApp Business que responde no segundo zero, anota o pedido com cardápio em mãos, e te chama só quando o cliente pede algo fora do roteiro.'
+    ],
+    problemPoints: [
+      { label: 'Resposta lenta', value: 'Cliente sai pra outro estabelecimento enquanto você termina o lanche da mesa 4.' },
+      { label: 'Cardápio repetido', value: 'Mesma pergunta, mesma resposta, dez vezes por dia. Atendente cansa, erra preço, esquece sabor.' },
+      { label: 'Pedido perdido', value: 'Mensagem que entrou no meio de outra conversa. Cliente espera, você não viu, vira reclamação.' }
+    ],
+    featuresTitle: 'O que o Zelo Chat faz no seu WhatsApp',
+    featuresIntro:
+      'IA treinada com seu cardápio, seu tom de marca e suas regras de negócio. Integra direto com o Zelo PDV — pedido fechado vira venda no caixa.',
+    features: [
+      {
+        icon: 'chat',
+        title: 'Atende 24/7 sem demora',
+        description:
+          'Responde no segundo zero, com tom da sua marca. Trabalha enquanto você está na cozinha, no banco, ou dormindo. Cliente nunca fica esperando.'
+      },
+      {
+        icon: 'menu',
+        title: 'Anota pedido com cardápio em mãos',
+        description:
+          'Sabe o que tem no cardápio, calcula valor com adicionais, confirma endereço pra delivery, calcula taxa de entrega. Pedido sai pronto pra cozinha.'
+      },
+      {
+        icon: 'alert',
+        title: 'Chama humano quando precisa',
+        description:
+          'Se o cliente pede algo fora do roteiro (alergia, observação fora do padrão, troca complexa), a IA pausa e te avisa pra entrar na conversa.'
+      },
+      {
+        icon: 'sync',
+        title: 'Integrado com o Zelo PDV',
+        description:
+          'Pedido confirmado no chat vira venda direto no caixa. Estoque baixa, fechamento sai redondo, e você não precisa redigitar nada.'
+      },
+      {
+        icon: 'tone',
+        title: 'Treinado com sua marca',
+        description:
+          'Configura tom (informal, formal, descontraído), gírias regionais, e expressões que você usa com cliente. A IA fala como você falaria.'
+      },
+      {
+        icon: 'shield',
+        title: 'WhatsApp Business oficial',
+        description:
+          'Usa a API oficial do WhatsApp Business — sem risco de banimento. Você mantém o número, o histórico, os contatos.'
+      }
+    ],
+    howTitle: 'Como funciona',
+    howIntro: 'Setup em 30 minutos. Você fala com o cliente que quiser; a IA cobre o resto.',
+    steps: [
+      {
+        title: 'Conecte seu WhatsApp Business',
+        description:
+          'Em chat.zelopdv.com.br você liga seu número via API oficial do WhatsApp. Não precisa trocar de número, não perde histórico.'
+      },
+      {
+        title: 'Treine a IA com seu cardápio',
+        description:
+          'Sobe o cardápio, define tom da marca, configura faixa de entrega, taxa, formas de pagamento. Em alguns minutos a IA tá afiada.'
+      },
+      {
+        title: 'Receba pedido pronto no Zelo PDV',
+        description:
+          'Cliente conversou no WhatsApp, a IA fechou o pedido, o pedido caiu no seu /app/pedidos. Cozinha prepara, caixa cobra, dia avança.'
+      }
+    ],
+    testimonial: {
+      name: 'Diego M.',
+      business: 'Hamburgueria Don Diego',
+      city: 'Curitiba, PR',
+      quote:
+        'Antes a gente respondia WhatsApp na correria entre pedido e pedido. Hoje a IA responde tudo, e a gente só entra quando ela passa o caso. Faturamento subiu uns 25% só de não perder cliente que ficava sem resposta.',
+      note: 'Usa Zelo Chat conectado ao Zelo PDV — pedido do WhatsApp cai direto na cozinha.'
+    },
+    faqSpecific: [
+      {
+        question: 'Zelo Chat é o mesmo plano do Zelo PDV?',
+        answer:
+          'Não. O Zelo Chat é um produto separado, mas que se conecta ao Zelo PDV. Quem já assina o PDV pode adicionar o Chat fazendo upgrade pro Pacote Gestão + Atendimento por +R$ 88/mês (em vez de R$ 97 standalone — R$ 9 de desconto). O Chat funciona sem PDV também, se for o caso.'
+      },
+      {
+        question: 'Posso testar antes de assinar?',
+        answer:
+          'Sim. Em chat.zelopdv.com.br você cria uma conta e faz a configuração inicial. O período inicial é gratuito pra você ver a IA respondendo no seu WhatsApp antes de cobrar.'
+      },
+      {
+        question: 'A IA vai responder coisa errada e perder cliente?',
+        answer:
+          'A IA é treinada com seu cardápio, suas regras, seu tom. Quando ela detecta que está fora do roteiro, pausa e te avisa antes de mandar resposta errada. Você pode revisar todas as conversas no painel.'
+      },
+      {
+        question: 'Funciona com WhatsApp pessoal ou só Business?',
+        answer:
+          'Só com WhatsApp Business via API oficial. É a única forma sem risco de banimento e que permite IA. Se você usa WhatsApp pessoal hoje, a gente ajuda na migração — você não perde número nem contatos.'
+      }
+    ],
+    finalCtaTitle: 'Conheça o Zelo Chat em chat.zelopdv.com.br',
+    finalCtaText:
+      'Site oficial com demo, configurador e cadastro. Ou ative direto no Zelo PDV escolhendo o Pacote Gestão + Atendimento no checkout.'
   }
 };
 
 export function getAddonPrice(addonId) {
   const addon = ADDONS[addonId];
   return addon ? Number(addon.price) : 30;
+}
+
+// Preço da extensão Chat quando agregada ao Zelo PDV (delta no Bundle)
+export function getChatBundleDelta() {
+  return PLANS.bundle.price - PLANS.pdv.price;
 }
