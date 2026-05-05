@@ -92,9 +92,9 @@
   <main>
     <!-- HERO -->
     <section class="relative pt-32 pb-20 overflow-hidden border-b border-white/5">
-      <div class="absolute top-0 left-0 w-full h-72 bg-gradient-to-b from-amber-500/10 to-transparent pointer-events-none"></div>
-      <div class="absolute -top-8 right-0 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
-      <div class="absolute -top-8 -left-24 w-96 h-96 rounded-full bg-sky-500/10 blur-3xl pointer-events-none"></div>
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div class="w-[900px] h-[400px] rounded-full bg-sky-500/5 blur-3xl"></div>
+      </div>
 
       <div class="max-w-5xl mx-auto px-6 relative z-10 text-center">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs font-medium mb-6">
