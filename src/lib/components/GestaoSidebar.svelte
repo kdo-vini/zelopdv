@@ -10,6 +10,8 @@
   let subStatus = null;
   let trialDaysLeft = null;
   let companyLogoUrl = null;
+  let pedidosAddonActive = false;
+  let mesasAddonActive = false;
 
   onMount(async () => {
     const saved = localStorage.getItem('zelo_sidebar_collapsed');
@@ -21,7 +23,7 @@
         const [{ data: sub }, { data: perfil }] = await Promise.all([
           supabase
             .from('subscriptions')
-            .select('status, current_period_end')
+            .select('status, current_period_end, plan_tier, has_pedidos_addon, has_mesas_addon')
             .eq('user_id', user.id)
             .order('updated_at', { ascending: false })
             .limit(1)
@@ -37,6 +39,9 @@
           const diff = new Date(sub.current_period_end) - new Date();
           trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
         }
+        const planAllowsAddons = sub?.plan_tier === 'pdv' || sub?.plan_tier === 'bundle';
+        pedidosAddonActive = planAllowsAddons && !!sub?.has_pedidos_addon;
+        mesasAddonActive = planAllowsAddons && !!sub?.has_mesas_addon;
         if (perfil?.logo_url) companyLogoUrl = perfil.logo_url;
       } catch (e) {
         // silent fail - non-critical
@@ -71,6 +76,18 @@
   $: avatarLetter = ($companyNameStore || $sessionStore?.user?.email || 'Z')[0].toUpperCase();
   $: displayName = $companyNameStore || $sessionStore?.user?.email?.split('@')[0] || '';
 
+  // Mapa central de addons → flag reativa. Quando um novo addon for adicionado,
+  // basta criar a flag (ex: deliveryAddonActive) e registrar aqui.
+  $: addonFlags = {
+    pedidos: pedidosAddonActive,
+    mesas: mesasAddonActive
+  };
+
+  function shouldShowItem(item, flags) {
+    if (!item.requiresAddon) return true;
+    return !!flags[item.requiresAddon];
+  }
+
   const navGroups = [
     {
       label: 'Vendas',
@@ -83,7 +100,20 @@
         {
           href: '/app/mesas',
           label: 'Mesas',
+          requiresAddon: 'mesas',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>`
+        },
+        {
+          href: '/app/pedidos',
+          label: 'Pedidos',
+          requiresAddon: 'pedidos',
+          icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h10.5M8.25 12h10.5M8.25 17.25h10.5M3.75 6.75h.008v.008H3.75V6.75Zm0 5.25h.008v.008H3.75V12Zm0 5.25h.008v.008H3.75v-.008Z" /></svg>`
+        },
+        {
+          href: '/app/pedidos/cozinha',
+          label: 'Cozinha',
+          requiresAddon: 'pedidos',
+          icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 3.75h3m-1.5 0v2.25m-6.75 6h13.5M5.25 12A6.75 6.75 0 0 1 12 5.25 6.75 6.75 0 0 1 18.75 12m-13.5 0v2.25a4.5 4.5 0 0 0 4.5 4.5h4.5a4.5 4.5 0 0 0 4.5-4.5V12" /></svg>`
         }
       ]
     },
@@ -113,6 +143,7 @@
         {
           href: '/gestao/mesas',
           label: 'Cadastro de Mesas',
+          requiresAddon: 'mesas',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>`
         }
       ]
@@ -278,25 +309,27 @@
         </p>
         <ul role="list" class="space-y-0.5">
           {#each group.items as item}
-            {@const active = isActive(item.href, pathname)}
-            <li>
-              <a
-                href={item.href}
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden"
-                style="
-                  background: {active ? 'var(--sidebar-item-active-bg)' : 'transparent'};
-                  color: {active ? 'var(--sidebar-item-active-text)' : 'var(--text-main)'};
-                "
-                on:mouseenter={e => { if (!active) e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'; }}
-                on:mouseleave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--sidebar-item-active-bg)' : 'transparent'; }}
-                on:click={closeMobile}
-                aria-current={active ? 'page' : undefined}
-                title={item.label}
-              >
-                {@html item.icon}
-                <span class="label-text whitespace-nowrap">{item.label}</span>
-              </a>
-            </li>
+            {#if shouldShowItem(item, addonFlags)}
+              {@const active = isActive(item.href, pathname)}
+              <li>
+                <a
+                  href={item.href}
+                  class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden"
+                  style="
+                    background: {active ? 'var(--sidebar-item-active-bg)' : 'transparent'};
+                    color: {active ? 'var(--sidebar-item-active-text)' : 'var(--text-main)'};
+                  "
+                  on:mouseenter={e => { if (!active) e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'; }}
+                  on:mouseleave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--sidebar-item-active-bg)' : 'transparent'; }}
+                  on:click={closeMobile}
+                  aria-current={active ? 'page' : undefined}
+                  title={item.label}
+                >
+                  {@html item.icon}
+                  <span class="label-text whitespace-nowrap">{item.label}</span>
+                </a>
+              </li>
+            {/if}
           {/each}
         </ul>
       </div>

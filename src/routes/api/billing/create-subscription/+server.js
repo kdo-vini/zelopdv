@@ -1,5 +1,5 @@
 // Cria sessão de Checkout Stripe pra novo subscriber ou renovação.
-// Suporta plano (pdv|chat|bundle) + addons (mesas) como subscription_items separados.
+// Suporta plano (pdv|chat|bundle) + addons como subscription_items separados.
 // PIX/Boleto: Stripe BR adicionou suporte beta a PIX; se a feature flag estiver ativa,
 // payment_method_types inclui 'pix'. Default = card-only.
 import { json } from '@sveltejs/kit';
@@ -53,6 +53,10 @@ export async function POST({ request, url }) {
     if (hasMesasAddon && !isAddonAllowed(planTier, 'mesas')) {
       return json({ error: `Plano ${planTier} não suporta o add-on Mesas.` }, { status: 400 });
     }
+    const hasPedidosAddon = !!requestedAddons.pedidos;
+    if (hasPedidosAddon && !isAddonAllowed(planTier, 'pedidos')) {
+      return json({ error: `Plano ${planTier} não suporta o add-on Pedidos + Cozinha.` }, { status: 400 });
+    }
 
     // Profile gate: precisa ter CNPJ/CPF preenchido (Stripe não exige, mas usamos pra emitir nota fiscal e validar negócio)
     const { data: perfil } = await supabaseAdmin
@@ -101,7 +105,10 @@ export async function POST({ request, url }) {
     }
 
     // Build line_items
-    const lineItems = buildStripeLineItems(planTier, { mesas: hasMesasAddon });
+    const lineItems = buildStripeLineItems(planTier, {
+      mesas: hasMesasAddon,
+      pedidos: hasPedidosAddon,
+    });
 
     // Decide payment methods. PIX via flag — só ligar quando habilitado no Stripe Dashboard.
     const paymentMethodTypes = ['card'];
@@ -112,10 +119,20 @@ export async function POST({ request, url }) {
       ? {
           trial_period_days: TRIAL_DAYS,
           trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
-          metadata: { user_id: userId, plan_tier: planTier, has_mesas_addon: String(hasMesasAddon) },
+          metadata: {
+            user_id: userId,
+            plan_tier: planTier,
+            has_mesas_addon: String(hasMesasAddon),
+            has_pedidos_addon: String(hasPedidosAddon),
+          },
         }
       : {
-          metadata: { user_id: userId, plan_tier: planTier, has_mesas_addon: String(hasMesasAddon) },
+          metadata: {
+            user_id: userId,
+            plan_tier: planTier,
+            has_mesas_addon: String(hasMesasAddon),
+            has_pedidos_addon: String(hasPedidosAddon),
+          },
         };
 
     const requestOrigin = url?.origin || ORIGIN;
@@ -133,6 +150,7 @@ export async function POST({ request, url }) {
         user_id: userId,
         plan_tier: planTier,
         has_mesas_addon: String(hasMesasAddon),
+        has_pedidos_addon: String(hasPedidosAddon),
       },
     });
 
@@ -145,6 +163,7 @@ export async function POST({ request, url }) {
       payment_provider: 'stripe',
       plan_tier: planTier,
       has_mesas_addon: hasMesasAddon,
+      has_pedidos_addon: hasPedidosAddon,
       status: existingSub?.status === 'active' ? 'active' : 'incomplete',
       updated_at: nowIso,
     };

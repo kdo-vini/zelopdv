@@ -2,7 +2,7 @@
 //
 // Eventos tratados:
 // - checkout.session.completed: subscription criada via Checkout — popular DB
-// - customer.subscription.created/updated: mudanças de plano/addon — sync plan_tier + has_mesas_addon
+// - customer.subscription.created/updated: mudanças de plano/addon — sync plan_tier + add-ons
 // - customer.subscription.deleted: subscription cancelada — marca canceled
 // - customer.subscription.trial_will_end: 3 dias antes do trial — log only (futuro: enviar email)
 // - invoice.paid / invoice.payment_succeeded: pagamento OK — extender current_period_end
@@ -40,7 +40,7 @@ async function findSubscriptionRow({ stripeSubId, stripeCustomerId, userId }) {
   if (stripeSubId) {
     const { data } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, payment_provider')
+      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_pedidos_addon, payment_provider')
       .eq('provider_subscription_id', stripeSubId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -50,7 +50,7 @@ async function findSubscriptionRow({ stripeSubId, stripeCustomerId, userId }) {
   if (userId) {
     const { data } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, payment_provider')
+      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_pedidos_addon, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -60,7 +60,7 @@ async function findSubscriptionRow({ stripeSubId, stripeCustomerId, userId }) {
   if (stripeCustomerId) {
     const { data } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, payment_provider')
+      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_pedidos_addon, payment_provider')
       .eq('provider_customer_id', stripeCustomerId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -154,6 +154,7 @@ export async function POST({ request }) {
           payment_provider: 'stripe',
           plan_tier: planTier || row.plan_tier || 'pdv',
           has_mesas_addon: !!addons.mesas,
+          has_pedidos_addon: !!addons.pedidos,
           status: mapStripeStatus(sub.status),
           current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : row.current_period_end,
           billing_type: 'CREDIT_CARD',
@@ -185,11 +186,12 @@ export async function POST({ request }) {
           payment_provider: 'stripe',
           plan_tier: planTier || row.plan_tier || 'pdv',
           has_mesas_addon: !!addons.mesas,
+          has_pedidos_addon: !!addons.pedidos,
           status: mapStripeStatus(sub.status),
           current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : row.current_period_end,
           cancel_at_period_end: !!sub.cancel_at_period_end,
         });
-        console.log(`[Stripe Webhook] [SYNC] sub ${stripeSubId} → status=${sub.status}, plan=${planTier}, mesas=${!!addons.mesas}`);
+        console.log(`[Stripe Webhook] [SYNC] sub ${stripeSubId} → status=${sub.status}, plan=${planTier}, mesas=${!!addons.mesas}, pedidos=${!!addons.pedidos}`);
         break;
       }
 

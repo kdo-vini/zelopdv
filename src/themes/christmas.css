@@ -90,6 +90,8 @@
     /* Light red */
     --success: #146B3A;
     /* Christmas green */
+    --success-hover: #0F4C29;
+    /* Darker Christmas green for hover */
     --success-bg: #0F4C29;
     /* Dark green */
     --success-light: #d1fae5;

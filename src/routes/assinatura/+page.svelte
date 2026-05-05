@@ -3,7 +3,7 @@
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { onMount, onDestroy } from 'svelte';
   import { addToast, confirmAction } from '$lib/stores/ui';
-  import { PLANS, ADDONS, calculateValue, isAddonAllowed } from '$lib/pricing';
+  import { PLANS, ADDONS, calculateValue } from '$lib/pricing';
 
   let userId = '';
   let email = '';
@@ -18,9 +18,12 @@
   let isActiveStrict = false;
   let trialDaysLeft = null;
   let mesasAddonOn = false;
+  let pedidosAddonOn = false;
   let activeMesasAddon = false;
+  let activePedidosAddon = false;
   let togglingAddon = false;
   let camePromptingMesas = false;
+  let camePromptingPedidos = false;
   let cameUpgradingTo = '';
 
   // Plano selecionado pelo user pra assinar / mudar
@@ -28,17 +31,28 @@
   // Plano atual do user (se já tem subscription)
   let activePlanTier = null;
 
-  $: planPrice = calculateValue(selectedPlan, { mesas: mesasAddonOn });
+  $: planPrice = calculateValue(selectedPlan, {
+    mesas: mesasAddonOn,
+    pedidos: pedidosAddonOn,
+  });
   $: activePlanPrice = activePlanTier
-    ? calculateValue(activePlanTier, { mesas: activeMesasAddon })
+    ? calculateValue(activePlanTier, {
+        mesas: activeMesasAddon,
+        pedidos: activePedidosAddon,
+      })
     : 0;
   $: selectedPlanAllowsMesas = PLANS[selectedPlan]?.allowsMesas;
+  $: selectedPlanAllowsPedidos = PLANS[selectedPlan]?.allowsPedidos;
   $: activePlanAllowsMesas = activePlanTier
     ? PLANS[activePlanTier]?.allowsMesas
+    : false;
+  $: activePlanAllowsPedidos = activePlanTier
+    ? PLANS[activePlanTier]?.allowsPedidos
     : false;
 
   // Se selectedPlan não permite Mesas, força mesasAddonOn=false (UX clara)
   $: if (!selectedPlanAllowsMesas && mesasAddonOn) mesasAddonOn = false;
+  $: if (!selectedPlanAllowsPedidos && pedidosAddonOn) pedidosAddonOn = false;
 
   let autoStartingTrial = false;
 
@@ -54,7 +68,7 @@
         try {
           const { data } = await supabase
             .from('subscriptions')
-            .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, plan_tier')
+            .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_pedidos_addon, plan_tier')
             .eq('user_id', userId)
             .order('updated_at', { ascending: false })
             .limit(1)
@@ -64,7 +78,9 @@
           expiryDate = data?.current_period_end || null;
           hasHadSubscription = !!data;
           activeMesasAddon = !!data?.has_mesas_addon;
+          activePedidosAddon = !!data?.has_pedidos_addon;
           mesasAddonOn = activeMesasAddon;
+          pedidosAddonOn = activePedidosAddon;
           activePlanTier = data?.plan_tier || 'pdv';
           selectedPlan = activePlanTier;
 
@@ -138,6 +154,11 @@
           // Se user veio querendo Mesas mas tá no plano errado, sugere bundle
           if (selectedPlan === 'chat') selectedPlan = 'bundle';
         }
+        if (params.get('addon') === 'pedidos') {
+          camePromptingPedidos = true;
+          if (!activePedidosAddon) pedidosAddonOn = true;
+          if (selectedPlan === 'chat') selectedPlan = 'bundle';
+        }
         const upgrade = params.get('upgrade');
         if (upgrade && PLANS[upgrade]) {
           cameUpgradingTo = upgrade;
@@ -186,7 +207,10 @@
         },
         body: JSON.stringify({
           planTier: selectedPlan,
-          addons: { mesas: mesasAddonOn },
+          addons: {
+            mesas: mesasAddonOn,
+            pedidos: pedidosAddonOn,
+          },
         }),
       });
 
@@ -223,9 +247,17 @@
 
     const targetPlan = PLANS[targetTier];
     const willLoseMesas = activeMesasAddon && !targetPlan.allowsMesas;
-    const newValue = calculateValue(targetTier, { mesas: activeMesasAddon && targetPlan.allowsMesas });
-    const message = willLoseMesas
-      ? `Trocar para ${targetPlan.name} (R$ ${newValue}/mês)? O Módulo Mesas será desativado pois esse plano não inclui PDV.`
+    const willLosePedidos = activePedidosAddon && !targetPlan.allowsPedidos;
+    const newValue = calculateValue(targetTier, {
+      mesas: activeMesasAddon && targetPlan.allowsMesas,
+      pedidos: activePedidosAddon && targetPlan.allowsPedidos,
+    });
+    const lostAddonNames = [
+      willLoseMesas ? ADDONS.mesas.name : null,
+      willLosePedidos ? ADDONS.pedidos.name : null,
+    ].filter(Boolean);
+    const message = lostAddonNames.length
+      ? `Trocar para ${targetPlan.name} (R$ ${newValue}/mês)? ${lostAddonNames.join(' e ')} será desativado pois esse plano não inclui PDV.`
       : `Trocar para ${targetPlan.name} (R$ ${newValue}/mês)? O novo valor entra na próxima cobrança.`;
 
     const ok = await confirmAction('Mudar de plano', message);
@@ -261,6 +293,10 @@
       if (willLoseMesas) {
         activeMesasAddon = false;
         mesasAddonOn = false;
+      }
+      if (willLosePedidos) {
+        activePedidosAddon = false;
+        pedidosAddonOn = false;
       }
     } catch (e) {
       addToast('Erro ao trocar plano.', 'error');
@@ -310,7 +346,10 @@
       return;
     }
     const turningOn = !activeMesasAddon;
-    const previewValue = calculateValue(activePlanTier, { mesas: turningOn });
+    const previewValue = calculateValue(activePlanTier, {
+      mesas: turningOn,
+      pedidos: activePedidosAddon,
+    });
     const confirmed = await confirmAction(
       turningOn ? 'Ativar Módulo Mesas' : 'Desativar Módulo Mesas',
       `O valor da próxima cobrança ${turningOn ? 'passará' : 'voltará'} para R$ ${previewValue}/mês. A cobrança atual não é alterada.`
@@ -351,6 +390,56 @@
     }
   }
 
+  async function togglePedidosAddon() {
+    if (!activePlanAllowsPedidos) {
+      addToast('Pedidos + Cozinha não está disponível para o plano ZeloChat. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.', 'warning');
+      return;
+    }
+    const turningOn = !activePedidosAddon;
+    const previewValue = calculateValue(activePlanTier, {
+      mesas: activeMesasAddon,
+      pedidos: turningOn,
+    });
+    const confirmed = await confirmAction(
+      turningOn ? 'Ativar Pedidos + Cozinha' : 'Desativar Pedidos + Cozinha',
+      `O valor da próxima cobrança ${turningOn ? 'passará' : 'voltará'} para R$ ${previewValue}/mês. A cobrança atual não é alterada.`
+    );
+    if (!confirmed) return;
+
+    try {
+      togglingAddon = true;
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token ?? '';
+      if (!token) {
+        addToast('Sua sessão expirou. Faça login novamente.', 'warning');
+        return;
+      }
+
+      const res = await fetch('/api/billing/toggle-addon', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ addon: 'pedidos', enabled: turningOn }),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        addToast(json?.error || 'Falha ao alterar add-on.', 'error');
+        return;
+      }
+
+      activePedidosAddon = turningOn;
+      pedidosAddonOn = turningOn;
+      addToast(json?.message || 'Add-on atualizado.', 'success');
+    } catch (e) {
+      addToast('Erro ao conectar. Tente novamente.', 'error');
+    } finally {
+      togglingAddon = false;
+    }
+  }
+
   $: defaultMessage = hasHadSubscription
     ? 'Renove sua assinatura para continuar usando o sistema.'
     : '30 dias grátis! Escolha o plano que faz sentido pro seu negócio.';
@@ -380,6 +469,26 @@
             Já está ativo. Acesse <a href="/app/mesas" style="color: var(--primary);">/app/mesas</a>.
           {:else}
             Marque "Módulo Mesas" no formulário de assinatura abaixo.
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if camePromptingPedidos}
+    <div class="status-card info">
+      <div class="status-icon">PC</div>
+      <div>
+        <strong>Você quer ativar Pedidos + Cozinha</strong>
+        <div class="status-detail">
+          {#if isActiveStrict && activePlanAllowsPedidos && !activePedidosAddon}
+            Use "Ativar Pedidos + Cozinha" abaixo.
+          {:else if isActiveStrict && !activePlanAllowsPedidos}
+            Pedidos + Cozinha precisa de um plano com PDV. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.
+          {:else if activePedidosAddon}
+            Já está ativo.
+          {:else}
+            Marque "Pedidos + Cozinha" no formulário de assinatura abaixo.
           {/if}
         </div>
       </div>
@@ -464,9 +573,9 @@
         </div>
         <p class="addon-card-detail">
           {#if activeMesasAddon}
-            Você está pagando R$ {activePlanPrice}/mês (plano + add-on). Desativar volta o valor para R$ {calculateValue(activePlanTier, { mesas: false })}/mês na próxima cobrança.
+            Você está pagando R$ {activePlanPrice}/mês (plano + add-ons). Desativar volta o valor para R$ {calculateValue(activePlanTier, { mesas: false, pedidos: activePedidosAddon })}/mês na próxima cobrança.
           {:else}
-            Adicione mesas, comandas e divisão de conta. +R$ 30/mês — total R$ {calculateValue(activePlanTier, { mesas: true })}/mês.
+            Adicione mesas, comandas e divisão de conta. +R$ 30/mês — total R$ {calculateValue(activePlanTier, { mesas: true, pedidos: activePedidosAddon })}/mês.
           {/if}
         </p>
         <button
@@ -480,6 +589,37 @@
             Desativar Módulo Mesas
           {:else}
             Ativar Módulo Mesas (+R$ 30/mês)
+          {/if}
+        </button>
+      </div>
+    {/if}
+
+    {#if activePlanAllowsPedidos}
+      <div class="addon-card">
+        <div class="addon-card-header">
+          <strong>Pedidos + Cozinha</strong>
+          <span class="addon-status" class:on={activePedidosAddon}>
+            {activePedidosAddon ? 'Ativo' : 'Não ativo'}
+          </span>
+        </div>
+        <p class="addon-card-detail">
+          {#if activePedidosAddon}
+            Você está pagando R$ {activePlanPrice}/mês (plano + add-ons). Desativar volta o valor para R$ {calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: false })}/mês na próxima cobrança.
+          {:else}
+            Adicione pedidos, delivery e painel de cozinha. +R$ 30/mês - total R$ {calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: true })}/mês.
+          {/if}
+        </p>
+        <button
+          class="btn-secondary"
+          on:click={togglePedidosAddon}
+          disabled={togglingAddon}
+        >
+          {#if togglingAddon}
+            Atualizando...
+          {:else if activePedidosAddon}
+            Desativar Pedidos + Cozinha
+          {:else}
+            Ativar Pedidos + Cozinha (+R$ 30/mês)
           {/if}
         </button>
       </div>
@@ -545,6 +685,18 @@
       </label>
     {:else}
       <p class="legal-text" style="margin: -0.4rem 0 0;">Módulo Mesas só está disponível em planos com ZeloPDV.</p>
+    {/if}
+
+    {#if selectedPlanAllowsPedidos}
+      <label class="addon-toggle">
+        <input type="checkbox" bind:checked={pedidosAddonOn} />
+        <div class="addon-info">
+          <strong>Pedidos + Cozinha <span class="addon-price">+R$ 30/mês</span></strong>
+          <span class="addon-detail">Pedidos, delivery e painel de cozinha para separar atendimento e produção.</span>
+        </div>
+      </label>
+    {:else}
+      <p class="legal-text" style="margin: -0.4rem 0 0;">Pedidos + Cozinha só está disponível em planos com ZeloPDV.</p>
     {/if}
 
     <button class="btn-primary btn-subscribe" on:click={assinar} disabled={loading}>

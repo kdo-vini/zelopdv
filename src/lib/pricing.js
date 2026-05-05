@@ -13,6 +13,7 @@ export const PLANS = {
     includesPdv: true,
     includesChat: false,
     allowsMesas: true,
+    allowsPedidos: true,
     stripePriceId: 'price_1SO4yvLUJWyE4PkYwoYAYc6h',
     stripeLookupKey: 'zelo_pdv_monthly_v1',
   },
@@ -24,6 +25,7 @@ export const PLANS = {
     includesPdv: false,
     includesChat: true,
     allowsMesas: false,
+    allowsPedidos: false,
     stripePriceId: 'price_1TR0xGLUJWyE4PkYcBy0cOoD',
     stripeLookupKey: 'zelo_chat_monthly_v1',
   },
@@ -35,6 +37,7 @@ export const PLANS = {
     includesPdv: true,
     includesChat: true,
     allowsMesas: true,
+    allowsPedidos: true,
     bundleSavings: 9.00,
     stripePriceId: 'price_1TR0xGLUJWyE4PkYY0DMOWLI',
     stripeLookupKey: 'zelo_bundle_monthly_v1',
@@ -50,6 +53,15 @@ export const ADDONS = {
     requiresFlag: 'allowsMesas',
     stripePriceId: 'price_1TR0xHLUJWyE4PkYlvTgAub7',
     stripeLookupKey: 'zelo_addon_mesas_monthly_v1',
+  },
+  pedidos: {
+    id: 'pedidos',
+    name: 'Pedidos + Cozinha',
+    tagline: 'Pedidos, delivery e painel de cozinha',
+    price: 30.00,
+    requiresFlag: 'allowsPedidos',
+    stripePriceId: 'price_1TTjDcLUJWyE4PkYbHDHq9gw',
+    stripeLookupKey: 'zelo_addon_pedidos_monthly_v1',
   },
 };
 
@@ -105,7 +117,7 @@ export function sanitizeAddons(planTier, addons = {}) {
 }
 
 // Constrói a lista de line_items pro Stripe Checkout / subscription.update
-// addons: { mesas: boolean, ... }
+// addons: { mesas: boolean, pedidos: boolean, ... }
 export function buildStripeLineItems(planTier, addons = {}) {
   const plan = PLANS[planTier];
   if (!plan) throw new Error(`Plano inválido: ${planTier}`);

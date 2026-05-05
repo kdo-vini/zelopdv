@@ -140,6 +140,31 @@ export async function hasMesasAddon(userId) {
 }
 
 /**
+ * Returns whether the given user has the Pedidos + Cozinha add-on active.
+ * Read-only; does not redirect. Only plans with PDV can use this add-on.
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function hasPedidosAddon(userId) {
+  if (!userId) return false;
+  try {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('has_pedidos_addon, plan_tier')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return false;
+    const planAllowsPedidos = data.plan_tier === 'pdv' || data.plan_tier === 'bundle';
+    return planAllowsPedidos && !!data.has_pedidos_addon;
+  } catch (err) {
+    console.warn('[Guards] hasPedidosAddon error:', err?.message);
+    return false;
+  }
+}
+
+/**
  * Returns whether the user has access to ZeloChat (plan_tier 'chat' ou 'bundle' + sub ativa).
  * Read-only — não redireciona. Pode ser usado pelo app ZeloChat (separado) lendo do mesmo DB,
  * ou por upsell cards no PDV.

@@ -1,12 +1,13 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-  import { hasMesasAddon, hasZeloChatAccess } from '$lib/guards';
+  import { hasMesasAddon, hasPedidosAddon, hasZeloChatAccess } from '$lib/guards';
   import { PLANS, ADDONS } from '$lib/pricing';
 
   let userId = '';
   let ready = false;
   let mesasActive = false;
+  let pedidosActive = false;
   let chatActive = false;
   let planTier = null;
 
@@ -27,8 +28,9 @@
       .maybeSingle();
     planTier = data?.plan_tier || 'pdv';
 
-    [mesasActive, chatActive] = await Promise.all([
+    [mesasActive, pedidosActive, chatActive] = await Promise.all([
       hasMesasAddon(userId),
+      hasPedidosAddon(userId),
       hasZeloChatAccess(userId),
     ]);
     ready = true;
@@ -48,6 +50,19 @@
       compatible: planTier === 'pdv' || planTier === 'bundle',
       cta: '/assinatura?addon=mesas',
       manage: '/app/mesas',
+      incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Pacote Gestão + Atendimento).',
+    },
+    {
+      id: 'pedidos',
+      kind: 'addon',
+      name: 'Pedidos + Cozinha',
+      tagline: 'Para delivery, retirada e produção',
+      description: 'Controle pedidos, acompanhe preparo na cozinha e organize entregas sem misturar tudo no caixa.',
+      price: ADDONS.pedidos.price,
+      active: pedidosActive,
+      compatible: planTier === 'pdv' || planTier === 'bundle',
+      cta: '/assinatura?addon=pedidos',
+      manage: '/app/pedidos',
       incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Pacote Gestão + Atendimento).',
     },
     {
@@ -91,6 +106,12 @@
             {#if ext.id === 'mesas'}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/>
+              </svg>
+            {:else if ext.id === 'pedidos'}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 3.75h9l1.5 3h-12l1.5-3Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 6.75h13.5v11.5a2 2 0 0 1-2 2H7.25a2 2 0 0 1-2-2V6.75Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 11h7.5M8.25 14h5.25M16 18.25h.01"/>
               </svg>
             {:else if ext.id === 'chat'}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">

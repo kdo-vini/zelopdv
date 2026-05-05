@@ -83,6 +83,8 @@
     /* red-200 */
     --success: #10b981;
     /* green-500 */
+    --success-hover: #059669;
+    /* green-600 */
     --success-bg: #064e3b;
     /* green-900 */
     --success-light: #d1fae5;

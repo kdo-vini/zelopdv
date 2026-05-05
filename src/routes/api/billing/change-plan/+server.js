@@ -1,5 +1,5 @@
 // Troca o plano da subscription Stripe (price swap no item principal). Proration on.
-// Se o novo plano não permite Mesas, remove o addon.
+// Se o novo plano não permite algum add-on, remove o item correspondente.
 import { json } from '@sveltejs/kit';
 import { stripe } from '$lib/server/stripe';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
@@ -8,6 +8,7 @@ import {
   ADDONS,
   STRIPE_PRICE_TO_PLAN,
   STRIPE_PRICE_TO_ADDON,
+  VALID_ADDONS,
   isValidPlanTier,
   isAddonAllowed,
 } from '$lib/pricing';
@@ -32,7 +33,7 @@ export async function POST({ request }) {
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, plan_tier, status, has_mesas_addon, payment_provider')
+      .select('id, provider_subscription_id, plan_tier, status, has_mesas_addon, has_pedidos_addon, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -52,7 +53,11 @@ export async function POST({ request }) {
 
     // Identificar o item de plano (não-addon)
     const planItem = items.find((i) => STRIPE_PRICE_TO_PLAN[i.price?.id]);
-    const mesasItem = items.find((i) => STRIPE_PRICE_TO_ADDON[i.price?.id] === 'mesas');
+    const addonItems = new Map(
+      items
+        .map((i) => [STRIPE_PRICE_TO_ADDON[i.price?.id], i])
+        .filter(([addonId]) => !!addonId)
+    );
 
     if (!planItem) {
       console.error(`[change-plan] Subscription ${sub.provider_subscription_id} não tem plan item identificável`);
@@ -60,13 +65,15 @@ export async function POST({ request }) {
     }
 
     const newPlanPriceId = PLANS[targetTier].stripePriceId;
-    const newPlanAllowsMesas = isAddonAllowed(targetTier, 'mesas');
-    const removeMesas = !newPlanAllowsMesas && !!mesasItem;
+    const removedAddons = VALID_ADDONS.filter((addonId) => {
+      const item = addonItems.get(addonId);
+      return !!item && !isAddonAllowed(targetTier, addonId);
+    });
 
     // Build items array
     const newItems = [{ id: planItem.id, price: newPlanPriceId }];
-    if (removeMesas) {
-      newItems.push({ id: mesasItem.id, deleted: true });
+    for (const addonId of removedAddons) {
+      newItems.push({ id: addonItems.get(addonId).id, deleted: true });
     }
 
     await stripe.subscriptions.update(sub.provider_subscription_id, {
@@ -80,14 +87,15 @@ export async function POST({ request }) {
       plan_tier: targetTier,
       updated_at: new Date().toISOString(),
     };
-    if (removeMesas) updatePayload.has_mesas_addon = false;
+    if (removedAddons.includes('mesas')) updatePayload.has_mesas_addon = false;
+    if (removedAddons.includes('pedidos')) updatePayload.has_pedidos_addon = false;
     await supabaseAdmin.from('subscriptions').update(updatePayload).eq('id', sub.id);
 
     return json({
       success: true,
       planTier: targetTier,
       previousTier: sub.plan_tier,
-      removedAddons: removeMesas ? ['mesas'] : [],
+      removedAddons,
       message: `Plano alterado para ${PLANS[targetTier].name}. Proporção do mês atual será cobrada.`,
     });
   } catch (err) {
