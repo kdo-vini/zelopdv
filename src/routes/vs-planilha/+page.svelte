@@ -95,7 +95,7 @@
 </svelte:head>
 
 <script>
-  import MarketingHeader from '$lib/components/marketing/MarketingHeader.svelte';
+  import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
 
   const comparisonRows = [
@@ -129,7 +129,7 @@
 </script>
 
 <div class="min-h-screen bg-[#0B0F19] text-slate-300 font-sans overflow-x-hidden">
-  <MarketingHeader />
+  <SiteHeader />
 
   <!-- HERO -->
   <section class="relative pt-40 pb-20 overflow-hidden">

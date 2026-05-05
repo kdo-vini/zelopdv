@@ -1,5 +1,5 @@
 <script>
-  import MarketingHeader from '$lib/components/marketing/MarketingHeader.svelte';
+  import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import { extensoes, getAddonPrice, getChatBundleDelta } from '$lib/data/extensoes';
   import { generalFaqs } from '$lib/data/segmentLandingPages';
@@ -183,7 +183,7 @@
   class="min-h-screen overflow-x-hidden font-sans selection:bg-sky-500/30 selection:text-white"
   style="background: var(--bg-app); color: var(--text-label);"
 >
-  <MarketingHeader />
+  <SiteHeader />
 
   <main>
     <!-- ============ HERO ============ -->

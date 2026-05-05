@@ -1,7 +1,7 @@
 <script>
   import BlogCoverArt from '$lib/components/blog/BlogCoverArt.svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
-  import MarketingHeader from '$lib/components/marketing/MarketingHeader.svelte';
+  import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import { publishedPosts } from '$lib/blog/posts';
 
   const sortedPosts = [...publishedPosts].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
@@ -69,7 +69,7 @@
 </svelte:head>
 
 <div class="blog-shell min-h-screen overflow-x-hidden font-sans">
-  <MarketingHeader />
+  <SiteHeader />
 
   <main class="pt-28 pb-20">
     <section class="hero-wrap relative">

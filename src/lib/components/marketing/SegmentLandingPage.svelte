@@ -1,6 +1,6 @@
 <script>
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
-  import MarketingHeader from '$lib/components/marketing/MarketingHeader.svelte';
+  import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import MarketingPriceSection from '$lib/components/marketing/MarketingPriceSection.svelte';
   import { generalFaqs } from '$lib/data/segmentLandingPages';
 
@@ -13,7 +13,7 @@
   class="min-h-screen overflow-x-hidden font-sans selection:bg-sky-500/30 selection:text-white"
   style="background: var(--bg-app); color: var(--text-label);"
 >
-  <MarketingHeader />
+  <SiteHeader />
 
   <main>
     <section class="relative pt-32 pb-20 overflow-hidden border-b border-white/5">

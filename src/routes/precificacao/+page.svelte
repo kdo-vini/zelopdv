@@ -1,5 +1,5 @@
 <script>
-  import MarketingHeader from "$lib/components/marketing/MarketingHeader.svelte";
+  import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import MarketingFooter from "$lib/components/marketing/MarketingFooter.svelte";
 
   const niches = [
@@ -404,7 +404,7 @@
 {@html `<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`}
 
 <div class="min-h-screen page-shell">
-  <MarketingHeader />
+  <SiteHeader />
 
   <section class="hero-shell">
     <div class="max-w-6xl mx-auto px-6 hero-stack">
