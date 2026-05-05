@@ -591,7 +591,7 @@
 
       <div class="grid md:grid-cols-2 gap-5 mb-10">
         <!-- Mesas -->
-        <a href="/extensoes/mesas" class="group rounded-2xl border border-white/10 bg-[#121620] p-7 transition-all hover:border-rose-500/40 hover:-translate-y-1">
+        <a href="/extensoes#mesas" class="group rounded-2xl border border-white/10 bg-[#121620] p-7 transition-all hover:border-rose-500/40 hover:-translate-y-1">
           <div class="flex items-start justify-between gap-3 mb-4">
             <div class="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center">
               <svg class="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
@@ -609,7 +609,7 @@
         </a>
 
         <!-- Pedidos + Cozinha -->
-        <a href="/extensoes/pedidos-cozinha" class="group rounded-2xl border border-white/10 bg-[#121620] p-7 transition-all hover:border-amber-500/40 hover:-translate-y-1">
+        <a href="/extensoes#pedidos-cozinha" class="group rounded-2xl border border-white/10 bg-[#121620] p-7 transition-all hover:border-amber-500/40 hover:-translate-y-1">
           <div class="flex items-start justify-between gap-3 mb-4">
             <div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
               <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 3.75h3m-1.5 0v2.25m-6.75 6h13.5M5.25 12A6.75 6.75 0 0112 5.25 6.75 6.75 0 0118.75 12m-13.5 0v2.25a4.5 4.5 0 004.5 4.5h4.5a4.5 4.5 0 004.5-4.5V12"/></svg>
@@ -980,7 +980,7 @@
           </div>
 
           <!-- Add-on Card: Mesas -->
-          <a href="/extensoes/mesas" class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-rose-500/30 p-6 md:p-7 transition-all duration-300 block">
+          <a href="/extensoes#mesas" class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-rose-500/30 p-6 md:p-7 transition-all duration-300 block">
             <div class="flex items-start justify-between gap-4 mb-5">
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-11 h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center flex-shrink-0">
@@ -1022,7 +1022,7 @@
           </a>
 
           <!-- Add-on Card: Pedidos + Cozinha -->
-          <a href="/extensoes/pedidos-cozinha" class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-amber-500/30 p-6 md:p-7 transition-all duration-300 block">
+          <a href="/extensoes#pedidos-cozinha" class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-amber-500/30 p-6 md:p-7 transition-all duration-300 block">
             <div class="flex items-start justify-between gap-4 mb-5">
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">

@@ -29,8 +29,8 @@
           <li><a href={featuresHref} class="transition-colors hover:text-sky-400">Funcionalidades</a></li>
           <li><a href={pricingHref} class="transition-colors hover:text-sky-400">Preços</a></li>
           <li><a href="/precificacao" class="transition-colors hover:text-sky-400">Precificação</a></li>
+          <li><a href="/extensoes" class="transition-colors hover:text-sky-400">Extensões</a></li>
           <li><a href="/blog" class="transition-colors hover:text-sky-400">Blog</a></li>
-          <li><a href="/atualizacoes" class="transition-colors hover:text-sky-400">Atualizações</a></li>
         </ul>
       </div>
 

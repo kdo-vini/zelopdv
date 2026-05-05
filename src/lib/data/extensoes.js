@@ -1,9 +1,7 @@
-// Marketing data for /extensoes hub + per-addon detail pages.
-// Each entry mirrors the SegmentLandingPage shape (hero/problem/features/steps/testimonial/faq)
-// with two extra fields: monthlyAddOnLabel (rendered as "+R$ X/mês") and forSegments (chips).
-//
-// To add a new addon: append an entry here, add the slug to static/sitemap.xml,
-// and ensure pricing.js + the toggle/webhook addon map are in sync.
+// Marketing data for the consolidated /extensoes page.
+// Each entry feeds one section of the single-scroll page (anchor = slug).
+// To add a new addon: append an entry here and ensure pricing.js + the
+// toggle/webhook addon map are in sync.
 
 import { ADDONS } from '$lib/pricing';
 
@@ -17,7 +15,7 @@ export const extensoes = {
       title: 'Módulo Mesas — Comandas, Divisão de Conta e Mapa de Salão | Zelo PDV',
       description:
         'Add-on do Zelo PDV para bares, hamburguerias e restaurantes pequenos. Mapa de mesas, comanda acumulativa, divisão entre N pessoas, taxa de serviço, couvert e pré-conta. +R$ 30/mês sobre o plano base.',
-      canonical: `${BASE_URL}/extensoes/mesas`
+      canonical: `${BASE_URL}/extensoes#mesas`
     },
     heroBadge: 'Add-on Zelo PDV',
     h1: 'Módulo Mesas: Comanda, Divisão de Conta e Mapa de Salão',
@@ -144,7 +142,7 @@ export const extensoes = {
       title: 'Pedidos + Cozinha — Atendente, Caixa e Painel de Preparo | Zelo PDV',
       description:
         'Add-on do Zelo PDV para lanchonetes e hamburguerias com atendimento separado de caixa. Atendente lança o pedido, cozinha vê na tela em tempo real, caixa recebe sem pegar o ticket de volta. +R$ 30/mês.',
-      canonical: `${BASE_URL}/extensoes/pedidos-cozinha`
+      canonical: `${BASE_URL}/extensoes#pedidos-cozinha`
     },
     heroBadge: 'Add-on Zelo PDV',
     h1: 'Pedidos + Cozinha: Atendente Anota, Cozinha Prepara, Caixa Cobra',
@@ -269,59 +267,6 @@ export const extensoes = {
       'Cria conta sem cartão, ativa o add-on no checkout e usa por trinta dias completos. Se não fizer diferença na sua fila, é só deixar o trial expirar.'
   }
 };
-
-export const extensoesList = Object.values(extensoes);
-
-export function getExtensaoBySlug(slug) {
-  return extensoes[slug] || null;
-}
-
-export function buildAddonOfferSchema(page) {
-  const addon = ADDONS[page.addonId];
-  const addonPrice = addon ? Number(addon.price) : 30;
-  const totalPrice = (59 + addonPrice).toFixed(2);
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: `Zelo PDV — ${page.h1.split(':')[0].trim()}`,
-    url: page.meta.canonical,
-    applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Web Browser',
-    description: page.meta.description,
-    offers: {
-      '@type': 'Offer',
-      price: totalPrice,
-      priceCurrency: 'BRL',
-      priceValidUntil: '2027-12-31',
-      availability: 'https://schema.org/InStock',
-      url: page.meta.canonical
-    }
-  };
-}
-
-export function buildAddonFaqSchema(page) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: page.faqSpecific.map((faq) => ({
-      '@type': 'Question',
-      name: faq.question,
-      acceptedAnswer: { '@type': 'Answer', text: faq.answer }
-    }))
-  };
-}
-
-export function buildBreadcrumbSchema(page) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Início', item: BASE_URL },
-      { '@type': 'ListItem', position: 2, name: 'Extensões', item: `${BASE_URL}/extensoes` },
-      { '@type': 'ListItem', position: 3, name: page.h1.split(':')[0].trim(), item: page.meta.canonical }
-    ]
-  };
-}
 
 export function getAddonPrice(addonId) {
   const addon = ADDONS[addonId];
