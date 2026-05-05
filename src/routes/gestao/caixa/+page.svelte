@@ -3,6 +3,12 @@
   export let params;
   import { supabase } from '$lib/supabaseClient';
   import { addToast } from '$lib/stores/ui';
+  import {
+    STANDARD_PAYMENT_FORMS,
+    calculateExpectedDrawer,
+    calculateMovementSummary,
+    calculatePaymentSummary
+  } from '$lib/finance/caixa';
 
   let loading = true;
   let errorMessage = '';
@@ -74,40 +80,31 @@
     }
   });
 
-  // Totais por forma de pagamento do caixa corrente (inclui múltiplos via vendas_pagamentos)
-  $: singleDinheiro = (vendas || []).filter(v => v.forma_pagamento === 'dinheiro').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-  $: singleDebito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-  $: singleCredito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_credito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-  $: singlePix = (vendas || []).filter(v => v.forma_pagamento === 'pix').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-  $: pagDinheiro = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'dinheiro').reduce((a, p) => a + Number(p.valor || 0), 0);
-  $: pagDebito = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'cartao_debito').reduce((a, p) => a + Number(p.valor || 0), 0);
-  $: pagCredito = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'cartao_credito').reduce((a, p) => a + Number(p.valor || 0), 0);
-  $: pagPix = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'pix').reduce((a, p) => a + Number(p.valor || 0), 0);
+  $: resumoPagamentos = calculatePaymentSummary(vendas, vendasPagamentos);
   $: totais = {
-    dinheiro: Number(singleDinheiro + pagDinheiro),
-    cartao_debito: Number(singleDebito + pagDebito),
-    cartao_credito: Number(singleCredito + pagCredito),
-    cartao_legacy: (vendas || []).filter(v => v.forma_pagamento === 'cartao').reduce((a, v) => a + Number(v.valor_total || 0), 0),
-    pix: Number(singlePix + pagPix),
+    dinheiro: resumoPagamentos.dinheiro,
+    cartao_debito: resumoPagamentos.cartaoDebito,
+    cartao_credito: resumoPagamentos.cartaoCredito,
+    cartao_legacy: resumoPagamentos.cartaoLegacy,
+    pix: resumoPagamentos.pix,
+    fiado: resumoPagamentos.fiado,
   };
-  $: totalCartao = Number(totais.cartao_debito + totais.cartao_credito + totais.cartao_legacy);
-  $: totalGeral = Number(totais.dinheiro + totalCartao + totais.pix);
+  $: formasExtras = Object.entries(resumoPagamentos.totalsByForm || {})
+    .filter(([forma, valor]) => !STANDARD_PAYMENT_FORMS.has(forma) && Number(valor || 0) > 0)
+    .map(([forma, valor]) => ({ forma, valor }));
+  $: totalCartao = resumoPagamentos.totalCartao;
+  $: totalGeral = resumoPagamentos.totalGeral;
   $: totalDescontos = (vendas || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
-
-  // Dinheiro líquido das vendas: recebido - troco (singles) + soma de pagamentos em dinheiro (múltiplos já vêm líquidos)
-  $: totalDinheiroLiquido = (
-    (vendas || [])
-      .filter(v => v.forma_pagamento === 'dinheiro')
-      .reduce((a, v) => a + Number(v.valor_recebido || 0) - Number(v.valor_troco || 0), 0)
-    + (vendasPagamentos || []).filter(p => p.forma_pagamento === 'dinheiro').reduce((a, p) => a + Number(p.valor || 0), 0)
-  );
-
-  // Totais de movimentações
-  $: totalSangria = (movs || []).filter(m => m.tipo === 'sangria').reduce((a, m) => a + Number(m.valor || 0), 0);
-  $: totalSuprimento = (movs || []).filter(m => m.tipo === 'suprimento').reduce((a, m) => a + Number(m.valor || 0), 0);
-
-  // Caixa esperado na gaveta: valor_inicial + dinheiro líquido - sangrias + suprimentos
-  $: esperadoEmGaveta = caixa ? Number(caixa.valor_inicial || 0) + Number(totalDinheiroLiquido || 0) - Number(totalSangria || 0) + Number(totalSuprimento || 0) : 0;
+  $: totalDinheiroLiquido = resumoPagamentos.dinheiro;
+  $: resumoMovs = calculateMovementSummary(movs);
+  $: totalSangria = resumoMovs.sangria;
+  $: totalSuprimento = resumoMovs.suprimento;
+  $: esperadoEmGaveta = caixa ? calculateExpectedDrawer({
+    valorInicial: caixa.valor_inicial,
+    dinheiroLiquido: totalDinheiroLiquido,
+    sangria: totalSangria,
+    suprimento: totalSuprimento
+  }) : 0;
   $: diferenca = Number(valorEmGaveta || 0) - Number(esperadoEmGaveta || 0);
 
   /**
@@ -200,6 +197,23 @@
           <div class="text-lg font-semibold">R$ {Number(totalGeral).toFixed(2)}</div>
         </div>
       </div>
+
+      {#if totais.fiado > 0 || formasExtras.length > 0}
+        <div class="grid sm:grid-cols-3 gap-4">
+          {#if totais.fiado > 0}
+            <div class="p-3 rounded border bg-white dark:bg-slate-800">
+              <div class="text-xs text-slate-500">Fiado</div>
+              <div class="text-lg font-semibold">R$ {Number(totais.fiado).toFixed(2)}</div>
+            </div>
+          {/if}
+          {#each formasExtras as item}
+            <div class="p-3 rounded border bg-white dark:bg-slate-800">
+              <div class="text-xs text-slate-500">{item.forma.replace(/_/g, ' ')}</div>
+              <div class="text-lg font-semibold">R$ {Number(item.valor).toFixed(2)}</div>
+            </div>
+          {/each}
+        </div>
+      {/if}
 
       {#if totalDescontos > 0}
         <div class="p-3 rounded border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">

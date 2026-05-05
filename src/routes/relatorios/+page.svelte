@@ -5,6 +5,13 @@
 	import { ensureActiveSubscription, hasMesasAddon } from '$lib/guards';
 	import { withTimeout } from '$lib/utils';
 	import { addToast } from '$lib/stores/ui';
+	import {
+		calculateExpectedDrawer,
+		calculateMovementSummary,
+		calculatePaymentSummary,
+		calculateRestaurantRevenue,
+		calculateRevenue
+	} from '$lib/finance/caixa';
 	
 	// Gráficos visuais
 	import BarChart from '$lib/components/charts/BarChart.svelte';
@@ -297,6 +304,7 @@
 
 	// KPIs com suporte a múltiplos pagamentos (corrigido cálculo de dinheiro líquido)
 	// Dinheiro em vendas simples: valor_recebido - valor_troco (não usar valor_total, pois pode haver troco)
+	$: resumoPagamentosCaixa = calculatePaymentSummary(vendas, vendasPagamentos);
 	$: dinheiroSimplesLiquido = (vendas || [])
 		.filter(v => v.forma_pagamento === 'dinheiro')
 		.reduce((a, v) => a + Math.max(0, Number(v.valor_recebido || 0) - Number(v.valor_troco || 0)), 0);
@@ -308,12 +316,11 @@
 			const linhas = (vendasPagamentos || []).filter(p => p.id_venda === v.id && p.forma_pagamento === 'dinheiro');
 			if (linhas.length === 0) return acc; // sem dinheiro nesta venda
 			const soma = linhas.reduce((s, p) => s + Number(p.valor || 0), 0);
-			const troco = Number(v.valor_troco || 0);
-			return acc + Math.max(0, soma - troco);
+			return acc + soma;
 		}, 0);
 
 	// Para exibição total de dinheiro (líquido em gaveta)
-	$: totalDinheiro = Number(dinheiroSimplesLiquido + dinheiroMultiploLiquido);
+	$: totalDinheiro = resumoPagamentosCaixa.dinheiro;
 
 	// Demais formas: somamos vendas simples daquela forma + linhas de pagamentos múltiplos
 	$: singleDebito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
@@ -335,17 +342,23 @@
 	$: ticketMedio = qtdVendas ? totalGeral / qtdVendas : 0;
 
 	// Movimentações resumo
-	$: totalSangria = (movs || []).filter(m => m.tipo === 'sangria').reduce((a, m) => a + Number(m.valor || 0), 0);
-	$: totalSuprimento = (movs || []).filter(m => m.tipo === 'suprimento').reduce((a, m) => a + Number(m.valor || 0), 0);
-	$: saldoEsperadoGaveta = Number((caixaInfo?.valor_inicial || 0) + totalDinheiro - totalSangria + totalSuprimento);
+	$: resumoMovsCaixa = calculateMovementSummary(movs);
+	$: totalSangria = resumoMovsCaixa.sangria;
+	$: totalSuprimento = resumoMovsCaixa.suprimento;
+	$: saldoEsperadoGaveta = calculateExpectedDrawer({
+		valorInicial: caixaInfo?.valor_inicial,
+		dinheiroLiquido: totalDinheiro,
+		sangria: totalSangria,
+		suprimento: totalSuprimento
+	});
 	$: totalDescontosCaixa = (vendas || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
-	$: receitaLiquidaCaixa = totalGeral - totalDescontosCaixa;
+	$: receitaLiquidaCaixa = calculateRevenue({ totalGeral });
 	$: caixaItensSubtotalMap = buildItensSubtotalMap(vendasItens);
 	$: resumoMesasCaixa = calcularResumoMesas(comandasMesaCaixa, caixaItensSubtotalMap);
 
 	// Delivery breakdown (caixa)
 	$: totalTaxaEntregaCaixa = (vendas || []).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
-	$: receitaRestauranteCaixa = totalGeral - totalDescontosCaixa - totalTaxaEntregaCaixa;
+	$: receitaRestauranteCaixa = calculateRestaurantRevenue({ totalGeral, taxaEntrega: totalTaxaEntregaCaixa });
 	$: vendasPorTipoCaixa = (() => {
 		const tipos = ['retirada', 'delivery'];
 		return tipos.map(t => ({
@@ -756,6 +769,7 @@
 	}
 
 	// KPIs período (dinheiro líquido)
+	$: resumoPagamentosPeriodo = calculatePaymentSummary(periodoVendas, periodoPagamentos);
 	$: periodoDinheiroSimplesLiquido = (periodoVendas||[])
 		.filter(v => v.forma_pagamento === 'dinheiro')
 		.reduce((a,v)=> a + Math.max(0, Number(v.valor_recebido||0) - Number(v.valor_troco||0)),0);
@@ -765,10 +779,9 @@
 			const linhas = (periodoPagamentos||[]).filter(p => p.id_venda === v.id && p.forma_pagamento === 'dinheiro');
 			if (!linhas.length) return acc;
 			const soma = linhas.reduce((s,p)=> s + Number(p.valor||0),0);
-			const troco = Number(v.valor_troco||0);
-			return acc + Math.max(0, soma - troco);
+			return acc + soma;
 		},0);
-	$: periodoDinheiroLiquido = periodoDinheiroSimplesLiquido + periodoDinheiroMultiploLiquido;
+	$: periodoDinheiroLiquido = resumoPagamentosPeriodo.dinheiro;
 	$: periodoPix = (periodoVendas||[]).filter(v => v.forma_pagamento === 'pix').reduce((a,v)=> a + Number(v.valor_total||0),0) + (periodoPagamentos||[]).filter(p=> p.forma_pagamento === 'pix').reduce((a,p)=> a + Number(p.valor||0),0);
 	$: periodoCartaoDebito = (periodoVendas||[]).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a,v)=> a + Number(v.valor_total||0),0) + (periodoPagamentos||[]).filter(p=> p.forma_pagamento === 'cartao_debito').reduce((a,p)=> a + Number(p.valor||0),0);
 	$: periodoCartaoCredito = (periodoVendas||[]).filter(v => v.forma_pagamento === 'cartao_credito').reduce((a,v)=> a + Number(v.valor_total||0),0) + (periodoPagamentos||[]).filter(p=> p.forma_pagamento === 'cartao_credito').reduce((a,p)=> a + Number(p.valor||0),0);
@@ -776,17 +789,18 @@
 	$: periodoTotalGeral = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_total||0),0);
 	$: periodoQtdVendas = (periodoVendas||[]).length;
 	$: periodoTicketMedio = periodoQtdVendas ? periodoTotalGeral / periodoQtdVendas : 0;
-	$: periodoTotalSangria = (periodoMovs||[]).filter(m=> m.tipo==='sangria').reduce((a,m)=> a + Number(m.valor||0),0);
-	$: periodoTotalSuprimento = (periodoMovs||[]).filter(m=> m.tipo==='suprimento').reduce((a,m)=> a + Number(m.valor||0),0);
+	$: resumoMovsPeriodo = calculateMovementSummary(periodoMovs);
+	$: periodoTotalSangria = resumoMovsPeriodo.sangria;
+	$: periodoTotalSuprimento = resumoMovsPeriodo.suprimento;
 	$: periodoTotalDescontos = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_desconto||0),0);
 	$: periodoTotalDespesas = (periodoDespesas||[]).reduce((a,e)=> a + Number(e.amount||0),0);
 	$: periodoItensSubtotalMap = buildItensSubtotalMap(periodoItens);
 	$: resumoMesasPeriodo = calcularResumoMesas(periodoComandasMesa, periodoItensSubtotalMap);
-	$: periodoReceitaLiquida = periodoTotalGeral - periodoTotalDescontos - periodoTotalDespesas; // Lucro Líquido (Bruto - Descontos - Despesas)
+	$: periodoReceitaLiquida = calculateRevenue({ totalGeral: periodoTotalGeral, despesas: periodoTotalDespesas });
 
 	// Delivery breakdown (periodo)
 	$: periodoTotalTaxaEntrega = (periodoVendas||[]).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
-	$: periodoReceitaRestaurante = periodoTotalGeral - periodoTotalDescontos - periodoTotalTaxaEntrega - periodoTotalDespesas;
+	$: periodoReceitaRestaurante = calculateRestaurantRevenue({ totalGeral: periodoTotalGeral, taxaEntrega: periodoTotalTaxaEntrega, despesas: periodoTotalDespesas });
 	$: periodoVendasPorTipo = (() => {
 		const tipos = ['retirada', 'delivery'];
 		return tipos.map(t => ({

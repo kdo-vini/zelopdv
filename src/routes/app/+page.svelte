@@ -21,6 +21,7 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import { pdvCache } from '$lib/stores/pdvCache';
+  import { calculateSaleSettlement, money, validatePaymentCoverage } from '$lib/finance/caixa';
   
   // Modais componentizados
   import ModalAbrirCaixa from '$lib/components/modals/ModalAbrirCaixa.svelte';
@@ -121,7 +122,7 @@
   // Desconto (recebido do modal)
   let valorDescontoVenda = 0;
   let descontoTipoVenda = null; // 'valor' | 'percentual' | null
-  let totalFinalVenda = 0;
+  let totalFinalVenda = null;
   let valorPlataformaVenda = null;
   async function carregarPessoasFiado(){
     if (pessoasFiado.length) return;
@@ -772,7 +773,6 @@
       descontoTipo,
       totalOriginal,
       totalFinal,
-      valorLiquidoPlataforma,
     } = event.detail;
     
     // Atualiza estados locais que serão usados pela função confirmarVenda
@@ -787,8 +787,8 @@
     // Dados de desconto
     valorDescontoVenda = valorDesconto || 0;
     descontoTipoVenda = descontoTipo || null;
-    totalFinalVenda = totalFinal || Number(totalComanda);
-    valorPlataformaVenda = valorLiquidoPlataforma ?? null;
+    totalFinalVenda = Number(totalFinal ?? totalComandaComEntrega);
+    valorPlataformaVenda = null;
     
     // Ativa estado de salvando no modal via referência
     modalPagamentoRef?.setSalvando?.(true);
@@ -798,7 +798,7 @@
   }
 
   // Módulos 1.4 e 1.5 - Confirmar e persistir a venda
-  $: troco = formaPagamento === 'dinheiro' ? Math.max(0, Number(valorRecebido) - Number(totalComanda)) : 0;
+  $: troco = formaPagamento === 'dinheiro' ? Math.max(0, Number(valorRecebido) - Number(totalFinalVenda ?? totalComandaComEntrega)) : 0;
 
   /**
    * Persiste a venda e itens; faz baixa de estoque simples (MVP).
@@ -807,14 +807,16 @@
   async function confirmarVenda() {
     try {
       erroPagamento = '';
+      const totalCobradoVenda = money(totalFinalVenda ?? totalComandaComEntrega);
       // Validações de pagamento (single vs múltiplo)
       if (!multiPag) {
-        if (!formaPagamento) {
-          erroPagamento = 'Selecione a forma de pagamento.';
-          return;
-        }
-        if (formaPagamento === 'dinheiro' && Number(valorRecebido) < Number(totalComanda)) {
-          erroPagamento = 'Valor recebido insuficiente para cobrir o total.';
+        const erro = validatePaymentCoverage({
+          formaPagamento,
+          valorRecebido,
+          totalFinal: totalCobradoVenda
+        });
+        if (erro) {
+          erroPagamento = erro;
           return;
         }
         if (formaPagamento === 'fiado' && !pessoaFiadoId) {
@@ -823,19 +825,13 @@
         }
       } else {
         // múltiplos pagamentos
-        const soma = pagamentos.reduce((acc, p) => acc + Number(p?.valor || 0), 0);
-        const total = Number(totalComanda);
-        const somaNaoDinheiro = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a,b)=>a+Number(b.valor||0),0);
-        if (soma <= 0) {
-          erroPagamento = 'Adicione ao menos um pagamento.';
-          return;
-        }
-        if (soma < total) {
-          erroPagamento = 'A soma dos pagamentos é insuficiente para o total.';
-          return;
-        }
-        if (somaNaoDinheiro > total) {
-          erroPagamento = 'Pagamentos não-dinheiro não podem exceder o total da comanda.';
+        const erro = validatePaymentCoverage({
+          formaPagamento: 'multiplo',
+          pagamentos,
+          totalFinal: totalCobradoVenda
+        });
+        if (erro) {
+          erroPagamento = erro;
           return;
         }
         // Regras: no máximo 1 linha de fiado, e obrigar pessoa
@@ -911,20 +907,16 @@
 
       // Inserir a venda
       // Determina payload de pagamento para a venda (single ou múltiplo)
-      let insertForma = formaPagamento;
-      let insertValorRecebido = formaPagamento === 'dinheiro' ? Number(valorRecebido) : null;
-      let insertValorTroco = formaPagamento === 'dinheiro' ? Math.max(0, Number(valorRecebido) - Number(totalComanda)) : 0;
-      let cashRecebidoMulti = 0;
-      let trocoMulti = 0;
-      if (multiPag) {
-        insertForma = 'multiplo';
-        const somaOutros = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a, b) => a + Number(b.valor || 0), 0);
-        cashRecebidoMulti = Number((pagamentos.find(p => p.forma === 'dinheiro')?.valor) || 0);
-        const requeridoEmDinheiro = Math.max(0, Number(totalComanda) - somaOutros);
-        trocoMulti = Math.max(0, cashRecebidoMulti - requeridoEmDinheiro);
-        insertValorRecebido = cashRecebidoMulti > 0 ? cashRecebidoMulti : null;
-        insertValorTroco = trocoMulti;
-      }
+      const settlement = calculateSaleSettlement({
+        formaPagamento: multiPag ? 'multiplo' : formaPagamento,
+        valorRecebido,
+        pagamentos,
+        totalFinal: totalCobradoVenda
+      });
+      let insertForma = settlement.formaPagamento;
+      let insertValorRecebido = settlement.valorRecebido;
+      let insertValorTroco = settlement.valorTroco;
+      let trocoMulti = settlement.valorTroco;
 
       // Determina cliente vinculado caso seja Fiado (Single ou Multi)
       let idClienteForVenda = null;
@@ -936,7 +928,7 @@
       }
 
       const dadosVenda = {
-        valor_total: valorPlataformaVenda ?? totalFinalVenda ?? Number(totalComandaComEntrega),
+        valor_total: totalCobradoVenda,
         forma_pagamento: insertForma,
         valor_recebido: insertValorRecebido,
         valor_troco: insertValorTroco,
@@ -1026,7 +1018,7 @@
         };
 
         if (!multiPag && formaPagamento === 'fiado' && pessoaFiadoId) {
-          await atualizarSaldoFiado(pessoaFiadoId, Number(totalComanda));
+          await atualizarSaldoFiado(pessoaFiadoId, totalCobradoVenda);
         } else if (multiPag) {
           const fiado = pagamentos.find(p => p.forma === 'fiado');
           if (fiado && fiado.pessoaId && Number(fiado.valor) > 0) {
@@ -1036,13 +1028,14 @@
 
         // Pagamentos
         if (multiPag && pagamentos.length) {
-          const linhas = pagamentos.map(p => ({
+          const linhas = settlement.paymentRows.map(p => ({
             id_venda: vendaId,
             id_usuario,
             forma_pagamento: p.forma,
-            valor: p.forma === 'dinheiro' ? Math.max(0, Number(p.valor || 0) - Number(trocoMulti)) : Number(p.valor || 0)
+            valor: Number(p.valor || 0)
           }));
-          await supabase.from('vendas_pagamentos').insert(linhas);
+          const { error: pagsError } = await supabase.from('vendas_pagamentos').insert(linhas);
+          if (pagsError) throw new Error(pagsError.message);
         }
 
         // Baixa de estoque — usa RPC atômica para evitar race conditions
@@ -1074,8 +1067,8 @@
       vendaConcluida = {
           ...(venda || {}),
           itens: comanda,
-          pagamentos: multiPag ? pagamentos : [],
-          total: totalFinalVenda || totalComanda,
+          pagamentos: multiPag ? settlement.paymentRows : [],
+          total: totalCobradoVenda,
           forma_pagamento: insertForma,
           subtotal: Number(totalComanda),
           valor_recebido: insertValorRecebido,
@@ -1097,7 +1090,7 @@
           idVenda: venda.id,
           numeroVenda: vendaConcluida.numero_venda,
           formaPagamento: insertForma,
-          total: totalFinalVenda || Number(totalComandaComEntrega),
+          total: totalCobradoVenda,
           subtotal: Number(totalComanda),
           desconto: valorDescontoVenda || 0,
           taxaEntrega: tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0,
@@ -1105,7 +1098,7 @@
           valorRecebido: insertValorRecebido,
           troco: insertValorTroco,
           itens: comanda.map(i => ({ ...i, preco_unitario_na_venda: i.preco })),
-          pagamentos: multiPag ? pagamentos : []
+          pagamentos: multiPag ? settlement.paymentRows : []
         };
         setTimeout(() => imprimirReciboVenda(payloadRecibo), 60);
       }

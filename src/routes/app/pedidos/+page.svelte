@@ -7,6 +7,7 @@
   import { addToast } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
+  import { calculateSaleSettlement, money } from '$lib/finance/caixa';
 
   let ready = false;
   let loading = true;
@@ -213,21 +214,27 @@
 
     if (!itens.length) throw new Error('Pedido sem itens.');
 
-    const totalOriginal = Number(pagamento.totalOriginal || totalPedido);
-    const totalFinal = Number(pagamento.totalFinal ?? totalPedido);
-    const valorDesconto = Number(pagamento.valorDesconto || 0);
+    const totalBase = money(totalEmFechamento || totalPedido);
+    const totalOriginal = money(pagamento.totalOriginal || totalBase);
+    const totalFinal = money(pagamento.totalFinal ?? totalBase);
+    const valorDesconto = money(pagamento.valorDesconto || 0);
     const formaPagamento = pagamento.formaPagamento;
     const multiPag = formaPagamento === 'multiplo';
     const pagamentos = Array.isArray(pagamento.pagamentos) ? pagamento.pagamentos : [];
-    const valorLiquidoPlataforma = pagamento.valorLiquidoPlataforma ?? null;
+    const settlement = calculateSaleSettlement({
+      formaPagamento,
+      valorRecebido: pagamento.valorRecebido,
+      pagamentos,
+      totalFinal
+    });
 
     const estoqueProdutos = await validarEstoque(itens);
 
     const dadosVenda = {
-      valor_total: valorLiquidoPlataforma ?? totalFinal,
-      forma_pagamento: formaPagamento,
-      valor_recebido: pagamento.valorRecebido ?? null,
-      valor_troco: Number(pagamento.valorTroco || 0),
+      valor_total: totalFinal,
+      forma_pagamento: settlement.formaPagamento,
+      valor_recebido: settlement.valorRecebido,
+      valor_troco: settlement.valorTroco,
       id_usuario: userId,
       id_caixa: idCaixaAberto,
       id_cliente: pagamento.idCliente || null,
@@ -258,8 +265,8 @@
       const { error: itensError } = await supabase.from('vendas_itens').insert(linhasItens);
       if (itensError) throw itensError;
 
-      await registrarFiado(formaPagamento, pagamento.idCliente, pagamentos, totalFinal);
-      await registrarPagamentos(venda.id, multiPag, pagamentos, Number(pagamento.trocoMulti || 0));
+      await registrarFiado(settlement.formaPagamento, pagamento.idCliente, settlement.paymentRows, totalFinal);
+      await registrarPagamentos(venda.id, multiPag, settlement.paymentRows);
       await baixarEstoque(itens, estoqueProdutos);
     } catch (err) {
       await supabase.from('vendas').delete().eq('id', venda.id);
@@ -336,15 +343,13 @@
     }
   }
 
-  async function registrarPagamentos(idVenda, multiPag, pagamentos, trocoMulti) {
+  async function registrarPagamentos(idVenda, multiPag, pagamentos) {
     if (!multiPag || !pagamentos.length) return;
     const linhas = pagamentos.map((p) => ({
       id_venda: idVenda,
       id_usuario: userId,
       forma_pagamento: p.forma,
-      valor: p.forma === 'dinheiro'
-        ? Math.max(0, Number(p.valor || 0) - Number(trocoMulti || 0))
-        : Number(p.valor || 0)
+      valor: money(p.valor)
     }));
     const { error } = await supabase.from('vendas_pagamentos').insert(linhas);
     if (error) throw error;

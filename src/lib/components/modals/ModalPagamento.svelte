@@ -519,7 +519,7 @@
           {/if}
 
           <!-- Botão dividir pagamento -->
-          <button type="button" class="split-btn" on:click={() => { multiPag = true; novoPagValor = Number(totalComanda) - somaPagamentos; }}>
+          <button type="button" class="split-btn" on:click={() => { multiPag = true; novoPagValor = Number(totalFinal) - somaPagamentos; }}>
             ✂ Dividir pagamento
           </button>
 

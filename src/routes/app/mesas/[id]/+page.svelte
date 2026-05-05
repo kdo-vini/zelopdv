@@ -76,20 +76,20 @@
   }
 
   $: troco = formaPagamento === 'dinheiro'
-    ? Math.max(0, Number(valorRecebido || 0) - total)
+    ? Math.max(0, Number(valorRecebido || 0) - alvoPagamentoAtual)
     : 0;
   $: faltaPagar = formaPagamento === 'dinheiro'
-    ? Math.max(0, total - Number(valorRecebido || 0))
+    ? Math.max(0, alvoPagamentoAtual - Number(valorRecebido || 0))
     : 0;
 
   // Split derivados
   $: somaPagamentos = pagamentos.reduce((acc, p) => acc + Number(p?.valor || 0), 0);
-  $: restantePagamento = Math.max(0, total - Number(somaPagamentos || 0));
+  $: restantePagamento = Math.max(0, alvoPagamentoAtual - Number(somaPagamentos || 0));
   $: trocoMulti = (() => {
     if (!multiPag) return 0;
     const somaOutros = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a, b) => a + Number(b.valor || 0), 0);
     const cashRec = Number((pagamentos.find(p => p.forma === 'dinheiro')?.valor) || 0);
-    const requeridoDin = Math.max(0, total - somaOutros);
+    const requeridoDin = Math.max(0, alvoPagamentoAtual - somaOutros);
     return Math.max(0, cashRec - requeridoDin);
   })();
 
@@ -105,6 +105,7 @@
   // Pagamentos parciais — total já pago e saldo a pagar
   $: jaPago = pagamentosParciais.reduce((acc, p) => acc + Number(p.valor || 0), 0);
   $: saldoMesa = Math.max(0, total - jaPago);
+  $: alvoPagamentoAtual = pagamentosParciais.length > 0 ? saldoMesa : total;
 
   $: produtosFiltrados = produtos.filter(p => {
     if (p.ativo === false) return false;
@@ -577,6 +578,13 @@
         addToast(`Faltam R$ ${(alvoPagamento - somaPagamentos).toFixed(2)} para fechar.`, 'warning');
         return;
       }
+      const somaNaoDinheiro = pagamentos
+        .filter(p => p.forma !== 'dinheiro')
+        .reduce((a, b) => a + Number(b.valor || 0), 0);
+      if (somaNaoDinheiro > alvoPagamento + 0.001) {
+        addToast('Pagamentos nao-dinheiro nao podem exceder o saldo a pagar.', 'warning');
+        return;
+      }
       const fiadoLines = pagamentos.filter(p => p.forma === 'fiado');
       if (fiadoLines.length > 1) {
         addToast('Use apenas uma linha de Fiado.', 'warning');
@@ -911,7 +919,7 @@
     pagamentos = [];
     erroPagamento = '';
     novoPagForma = formaPagamento === 'fiado' ? 'dinheiro' : (formaPagamento || 'dinheiro');
-    novoPagValor = total;
+    novoPagValor = alvoPagamentoAtual;
     novoPagPessoaId = '';
     if (novoPagForma === 'fiado') loadPessoasFiado();
   }
@@ -933,7 +941,7 @@
   }
 
   function preencherRestante() {
-    novoPagValor = Math.max(0, total - somaPagamentos);
+    novoPagValor = Math.max(0, alvoPagamentoAtual - somaPagamentos);
   }
 
   function onNovoPagFormaChange() {
@@ -955,7 +963,7 @@
 
     if (forma !== 'dinheiro') {
       const novoSomaNC = somaNaoDinheiroAtual + valor;
-      if (novoSomaNC > total + 0.001) {
+      if (novoSomaNC > alvoPagamentoAtual + 0.001) {
         erroPagamento = 'Pagamentos não-dinheiro não podem exceder o total.';
         return;
       }
@@ -976,12 +984,12 @@
       pagamentos = [...pagamentos, { forma, valor }];
     }
 
-    novoPagValor = Math.max(0, total - pagamentos.reduce((a, b) => a + Number(b.valor || 0), 0));
+    novoPagValor = Math.max(0, alvoPagamentoAtual - pagamentos.reduce((a, b) => a + Number(b.valor || 0), 0));
   }
 
   function removerPagamento(i) {
     pagamentos = pagamentos.filter((_, idx) => idx !== i);
-    novoPagValor = Math.max(0, total - pagamentos.reduce((a, b) => a + Number(b.valor || 0), 0));
+    novoPagValor = Math.max(0, alvoPagamentoAtual - pagamentos.reduce((a, b) => a + Number(b.valor || 0), 0));
     erroPagamento = '';
   }
 
