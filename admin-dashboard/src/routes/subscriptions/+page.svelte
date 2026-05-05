@@ -28,6 +28,7 @@
   let planSaving = false
   let editPlanTier = 'pdv'
   let editMesasAddon = false
+  let editPedidosAddon = false
   
   onMount(async () => {
     await loadAdminInfo()
@@ -133,6 +134,7 @@
     selectedSub = sub
     editPlanTier = sub.plan_tier || 'pdv'
     editMesasAddon = !!sub.has_mesas_addon
+    editPedidosAddon = !!sub.has_pedidos_addon
     showPlanModal = true
   }
 
@@ -141,6 +143,7 @@
     selectedSub = null
     editPlanTier = 'pdv'
     editMesasAddon = false
+    editPedidosAddon = false
   }
 
   // Admin muda plano e addons. Para subs Stripe, chama endpoint que sincroniza com Stripe API
@@ -151,10 +154,15 @@
       return
     }
     const finalMesas = isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon
+    const finalPedidos = isAddonAllowed(editPlanTier, 'pedidos') && editPedidosAddon
 
     if (editMesasAddon && !isAddonAllowed(editPlanTier, 'mesas')) {
       const confirm1 = confirm(`O plano ${planLabel(editPlanTier)} não suporta o Módulo Mesas. Vamos desativar o add-on. Continuar?`)
       if (!confirm1) return
+    }
+    if (editPedidosAddon && !isAddonAllowed(editPlanTier, 'pedidos')) {
+      const confirm2 = confirm(`O plano ${planLabel(editPlanTier)} não suporta Pedidos + Cozinha. Vamos desativar o add-on. Continuar?`)
+      if (!confirm2) return
     }
 
     try {
@@ -177,7 +185,10 @@
           body: JSON.stringify({
             subscriptionId: selectedSub.id,
             planTier: editPlanTier,
+            addons: { mesas: finalMesas, pedidos: finalPedidos },
+            // back-compat com versões antigas do endpoint:
             hasMesasAddon: finalMesas,
+            hasPedidosAddon: finalPedidos,
           }),
         })
         const body = await res.json().catch(() => ({}))
@@ -204,8 +215,16 @@
           targetUserId: selectedSub.user_id,
           details: {
             subscription_id: selectedSub.id,
-            old: { plan_tier: selectedSub.plan_tier, has_mesas_addon: selectedSub.has_mesas_addon },
-            new: { plan_tier: editPlanTier, has_mesas_addon: finalMesas },
+            old: {
+              plan_tier: selectedSub.plan_tier,
+              has_mesas_addon: selectedSub.has_mesas_addon,
+              has_pedidos_addon: selectedSub.has_pedidos_addon,
+            },
+            new: {
+              plan_tier: editPlanTier,
+              has_mesas_addon: finalMesas,
+              has_pedidos_addon: finalPedidos,
+            },
             stripe_updated: body.stripeUpdated,
           },
         })
@@ -220,6 +239,7 @@
       const updatePayload = {
         plan_tier: editPlanTier,
         has_mesas_addon: finalMesas,
+        has_pedidos_addon: finalPedidos,
         last_modified_by: adminInfo?.id || null,
         last_modified_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -238,8 +258,16 @@
         targetUserId: selectedSub.user_id,
         details: {
           subscription_id: selectedSub.id,
-          old: { plan_tier: selectedSub.plan_tier, has_mesas_addon: selectedSub.has_mesas_addon },
-          new: { plan_tier: editPlanTier, has_mesas_addon: finalMesas },
+          old: {
+            plan_tier: selectedSub.plan_tier,
+            has_mesas_addon: selectedSub.has_mesas_addon,
+            has_pedidos_addon: selectedSub.has_pedidos_addon,
+          },
+          new: {
+            plan_tier: editPlanTier,
+            has_mesas_addon: finalMesas,
+            has_pedidos_addon: finalPedidos,
+          },
           provider: provider || 'none',
         },
       })
@@ -636,8 +664,10 @@
                   <span class="text-[11px] font-semibold tracking-wide {sub.plan_tier === 'bundle' ? 'text-indigo-300' : sub.plan_tier === 'chat' ? 'text-violet-300' : 'text-sky-300'}">
                     {planLabel(sub.plan_tier || 'pdv')}
                   </span>
-                  {#if sub.has_mesas_addon}
-                    <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">+Mesas</span>
+                  {#if sub.has_mesas_addon || sub.has_pedidos_addon}
+                    <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
+                      {#if sub.has_mesas_addon}+Mesas{/if}{#if sub.has_mesas_addon && sub.has_pedidos_addon} · {/if}{#if sub.has_pedidos_addon}+Pedidos{/if}
+                    </span>
                   {/if}
                 </button>
               </td>
@@ -892,7 +922,7 @@
           </div>
         </div>
 
-        <div class="pt-4 border-t border-slate-800">
+        <div class="pt-4 border-t border-slate-800 space-y-3">
           <label class="flex items-center cursor-pointer group {!isAddonAllowed(editPlanTier, 'mesas') ? 'opacity-40 cursor-not-allowed' : ''}">
             <div class="relative flex items-center justify-center">
               <input
@@ -910,6 +940,24 @@
               {/if}
             </div>
           </label>
+
+          <label class="flex items-center cursor-pointer group {!isAddonAllowed(editPlanTier, 'pedidos') ? 'opacity-40 cursor-not-allowed' : ''}">
+            <div class="relative flex items-center justify-center">
+              <input
+                type="checkbox"
+                bind:checked={editPedidosAddon}
+                disabled={!isAddonAllowed(editPlanTier, 'pedidos')}
+                class="sr-only peer"
+              />
+              <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500 shadow-inner"></div>
+            </div>
+            <div class="ml-3">
+              <span class="text-sm font-medium text-slate-300">Pedidos + Cozinha (+R$ 30/mês)</span>
+              {#if !isAddonAllowed(editPlanTier, 'pedidos')}
+                <p class="text-[11px] text-amber-400 mt-0.5">Indisponível em {PLANS[editPlanTier].name} (precisa de PDV).</p>
+              {/if}
+            </div>
+          </label>
         </div>
 
         <div class="pt-4 border-t border-slate-800 grid grid-cols-2 gap-4">
@@ -919,7 +967,10 @@
           </div>
           <div>
             <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Novo valor</p>
-            <div class="text-sm font-mono font-semibold text-emerald-300">R$ {calculateValue(editPlanTier, { mesas: editMesasAddon && isAddonAllowed(editPlanTier, 'mesas') }).toFixed(2)}</div>
+            <div class="text-sm font-mono font-semibold text-emerald-300">R$ {calculateValue(editPlanTier, {
+              mesas: editMesasAddon && isAddonAllowed(editPlanTier, 'mesas'),
+              pedidos: editPedidosAddon && isAddonAllowed(editPlanTier, 'pedidos'),
+            }).toFixed(2)}</div>
           </div>
         </div>
 

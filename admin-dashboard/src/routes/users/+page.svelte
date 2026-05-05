@@ -16,6 +16,7 @@
   let subLoading = false
   let editPlanTier = 'pdv'
   let editMesasAddon = false
+  let editPedidosAddon = false
   
   onMount(async () => {
     await loadAdminInfo()
@@ -57,7 +58,7 @@
       const [subsResult, aiResult, salesResult, lastSeenResult] = await Promise.all([
         supabase
           .from('subscriptions')
-          .select('id, user_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, provider_subscription_id')
+          .select('id, user_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, provider_subscription_id')
           .in('user_id', userIds)
           .order('updated_at', { ascending: false }),
         supabase
@@ -135,6 +136,7 @@
     editSub = user.subscriptions?.[0] || null
     editPlanTier = editSub?.plan_tier || 'pdv'
     editMesasAddon = !!editSub?.has_mesas_addon
+    editPedidosAddon = !!editSub?.has_pedidos_addon
     isEditing = true
   }
 
@@ -144,6 +146,7 @@
     editSub = null
     editPlanTier = 'pdv'
     editMesasAddon = false
+    editPedidosAddon = false
   }
 
   async function saveEdit() {
@@ -165,10 +168,12 @@
       // Update subscription if status, plan_tier, or addon changed
       const originalSub = users.find(u => u.user_id === editForm.user_id)?.subscriptions?.[0]
       const finalMesas = isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon
+      const finalPedidos = isAddonAllowed(editPlanTier, 'pedidos') && editPedidosAddon
       const subChanged = editSub && originalSub && (
         editSub.status !== originalSub.status ||
         editPlanTier !== (originalSub.plan_tier || 'pdv') ||
-        finalMesas !== !!originalSub.has_mesas_addon
+        finalMesas !== !!originalSub.has_mesas_addon ||
+        finalPedidos !== !!originalSub.has_pedidos_addon
       )
 
       if (subChanged) {
@@ -176,6 +181,7 @@
           status: editSub.status,
           plan_tier: editPlanTier,
           has_mesas_addon: finalMesas,
+          has_pedidos_addon: finalPedidos,
           last_modified_by: adminInfo.id,
           last_modified_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -198,10 +204,20 @@
           action: 'admin_edit_subscription',
           targetUserId: editForm.user_id,
           details: {
-            old: { status: originalSub.status, plan_tier: originalSub.plan_tier, has_mesas_addon: originalSub.has_mesas_addon },
-            new: { status: editSub.status, plan_tier: editPlanTier, has_mesas_addon: finalMesas },
+            old: {
+              status: originalSub.status,
+              plan_tier: originalSub.plan_tier,
+              has_mesas_addon: originalSub.has_mesas_addon,
+              has_pedidos_addon: originalSub.has_pedidos_addon,
+            },
+            new: {
+              status: editSub.status,
+              plan_tier: editPlanTier,
+              has_mesas_addon: finalMesas,
+              has_pedidos_addon: finalPedidos,
+            },
             company: editForm.nome_exibicao,
-            warning: originalSub.provider_subscription_id ? 'Asaas value NOT synced' : null,
+            warning: originalSub.provider_subscription_id ? 'Stripe value NOT synced — use /subscriptions page for Stripe sync' : null,
           },
         })
       }

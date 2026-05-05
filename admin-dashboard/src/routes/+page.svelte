@@ -32,7 +32,7 @@
     // Active subscriptions
     const { data: subs } = await supabase
       .from('subscriptions')
-      .select('id, status, current_period_end, manually_extended_until, created_at, plan_tier, has_mesas_addon')
+      .select('id, status, current_period_end, manually_extended_until, created_at, plan_tier, has_mesas_addon, has_pedidos_addon')
       .in('status', ['active', 'trialing'])
 
     stats.activeSubscriptions = subs?.length || 0

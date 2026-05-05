@@ -9,6 +9,7 @@ export const PLANS = {
     includesPdv: true,
     includesChat: false,
     allowsMesas: true,
+    allowsPedidos: true,
     stripePriceId: 'price_1SO4yvLUJWyE4PkYwoYAYc6h',
   },
   chat: {
@@ -18,6 +19,7 @@ export const PLANS = {
     includesPdv: false,
     includesChat: true,
     allowsMesas: false,
+    allowsPedidos: false,
     stripePriceId: 'price_1TR0xGLUJWyE4PkYcBy0cOoD',
   },
   bundle: {
@@ -27,6 +29,7 @@ export const PLANS = {
     includesPdv: true,
     includesChat: true,
     allowsMesas: true,
+    allowsPedidos: true,
     stripePriceId: 'price_1TR0xGLUJWyE4PkYY0DMOWLI',
   },
 };
@@ -38,6 +41,13 @@ export const ADDONS = {
     price: 30.00,
     requiresFlag: 'allowsMesas',
     stripePriceId: 'price_1TR0xHLUJWyE4PkYlvTgAub7',
+  },
+  pedidos: {
+    id: 'pedidos',
+    name: 'Pedidos + Cozinha',
+    price: 30.00,
+    requiresFlag: 'allowsPedidos',
+    stripePriceId: 'price_1TTjDcLUJWyE4PkYbHDHq9gw',
   },
 };
 
@@ -66,7 +76,10 @@ export function calculateValue(planTier, addons = {}) {
 export function subscriptionValue(sub) {
   if (!sub) return 0;
   const tier = sub.plan_tier || 'pdv';
-  return calculateValue(tier, { mesas: !!sub.has_mesas_addon });
+  return calculateValue(tier, {
+    mesas: !!sub.has_mesas_addon,
+    pedidos: !!sub.has_pedidos_addon,
+  });
 }
 
 export function planLabel(tier) {

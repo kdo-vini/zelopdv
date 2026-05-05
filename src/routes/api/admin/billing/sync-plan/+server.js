@@ -1,17 +1,23 @@
-// Admin-only: sincroniza plan_tier + has_mesas_addon de uma sub Stripe ao chamar Stripe API.
+// Admin-only: sincroniza plan_tier + flags de addon de uma sub Stripe ao chamar Stripe API.
 // Combina lógica de change-plan + toggle-addon num único POST. Auth: super_admin.
-// Proration desligada (admin override = ajuste administrativo, mudança vale no próximo ciclo).
 import { json } from '@sveltejs/kit';
 import { stripe } from '$lib/server/stripe';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import {
   PLANS,
   ADDONS,
+  VALID_ADDONS,
   STRIPE_PRICE_TO_PLAN,
   STRIPE_PRICE_TO_ADDON,
   isValidPlanTier,
   isAddonAllowed,
 } from '$lib/pricing';
+
+// Mapa addon → coluna DB (mesmo padrão do toggle-addon endpoint).
+const ADDON_DB_COLUMN = {
+  mesas: 'has_mesas_addon',
+  pedidos: 'has_pedidos_addon',
+};
 
 // Ajuste o domínio admin aqui se diferir.
 const ALLOWED_ORIGINS = new Set([
@@ -70,7 +76,14 @@ export async function POST({ request }) {
     if (!admin) return json({ error: 'Acesso restrito a super admins.' }, { status: 403, headers: cors });
 
     const body = await request.json().catch(() => ({}));
-    const { subscriptionId, planTier, hasMesasAddon } = body;
+    const { subscriptionId, planTier, hasMesasAddon, hasPedidosAddon, addons } = body;
+
+    // Aceita tanto `addons: { mesas, pedidos }` (novo) quanto flags soltas (legado: hasMesasAddon)
+    // pra não quebrar consumidores antigos.
+    const wantedAddons = {
+      mesas: addons?.mesas ?? hasMesasAddon ?? false,
+      pedidos: addons?.pedidos ?? hasPedidosAddon ?? false,
+    };
 
     if (!subscriptionId) return json({ error: 'subscriptionId obrigatório.' }, { status: 400, headers: cors });
     if (!isValidPlanTier(planTier)) {
@@ -79,7 +92,7 @@ export async function POST({ request }) {
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, provider_subscription_id, plan_tier, has_mesas_addon, status, payment_provider')
+      .select('id, user_id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, status, payment_provider')
       .eq('id', subscriptionId)
       .maybeSingle();
 
@@ -109,7 +122,11 @@ export async function POST({ request }) {
 
     const items = stripeSub.items?.data || [];
     const planItem = items.find((i) => STRIPE_PRICE_TO_PLAN[i.price?.id]);
-    const mesasItem = items.find((i) => STRIPE_PRICE_TO_ADDON[i.price?.id] === 'mesas');
+    const addonItemByAddon = new Map();
+    for (const item of items) {
+      const addonId = STRIPE_PRICE_TO_ADDON[item.price?.id];
+      if (addonId) addonItemByAddon.set(addonId, item);
+    }
 
     if (!planItem) {
       console.error(`[admin/sync-plan] Subscription ${sub.provider_subscription_id} sem plan item identificável`);
@@ -119,17 +136,25 @@ export async function POST({ request }) {
     const newPlanPriceId = PLANS[planTier].stripePriceId;
     const planChanged = planItem.price?.id !== newPlanPriceId;
 
-    const wantsMesas = !!hasMesasAddon && isAddonAllowed(planTier, 'mesas');
-    const hasMesasNow = !!mesasItem;
+    // Para cada addon válido, calcula estado desejado considerando se o plano permite.
+    // Addon não permitido pelo novo plano é forçado a OFF (admin/sync = autoridade).
+    const finalAddons = {};
+    for (const addonId of VALID_ADDONS) {
+      finalAddons[addonId] = !!wantedAddons[addonId] && isAddonAllowed(planTier, addonId);
+    }
 
     const newItems = [];
     if (planChanged) {
       newItems.push({ id: planItem.id, price: newPlanPriceId });
     }
-    if (wantsMesas && !hasMesasNow) {
-      newItems.push({ price: ADDONS.mesas.stripePriceId, quantity: 1 });
-    } else if (!wantsMesas && hasMesasNow) {
-      newItems.push({ id: mesasItem.id, deleted: true });
+    for (const addonId of VALID_ADDONS) {
+      const wants = finalAddons[addonId];
+      const existing = addonItemByAddon.get(addonId);
+      if (wants && !existing) {
+        newItems.push({ price: ADDONS[addonId].stripePriceId, quantity: 1 });
+      } else if (!wants && existing) {
+        newItems.push({ id: existing.id, deleted: true });
+      }
     }
 
     if (newItems.length > 0) {
@@ -140,21 +165,29 @@ export async function POST({ request }) {
       });
     }
 
+    const updatePayload = {
+      plan_tier: planTier,
+      last_modified_by: admin.id,
+      last_modified_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    for (const addonId of VALID_ADDONS) {
+      const col = ADDON_DB_COLUMN[addonId];
+      if (col) updatePayload[col] = finalAddons[addonId];
+    }
+
     await supabaseAdmin
       .from('subscriptions')
-      .update({
-        plan_tier: planTier,
-        has_mesas_addon: wantsMesas,
-        last_modified_by: admin.id,
-        last_modified_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', sub.id);
 
     return json({
       success: true,
       planTier,
-      hasMesasAddon: wantsMesas,
+      addons: finalAddons,
+      // Back-compat: clients antigos esperavam hasMesasAddon no top-level.
+      hasMesasAddon: finalAddons.mesas,
+      hasPedidosAddon: finalAddons.pedidos,
       stripeUpdated: newItems.length > 0,
       previousTier: sub.plan_tier,
     }, { headers: cors });
