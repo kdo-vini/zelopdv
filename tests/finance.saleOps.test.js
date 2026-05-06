@@ -166,6 +166,98 @@ describe('buildVendaPayload', () => {
 
     expect(payload.pagamentos).toEqual([{ forma_pagamento: 'pix', valor: 50 }]);
   });
+
+  test('platform fee with valid taxa_pct is computed and snapshotted', () => {
+    const { payload } = buildVendaPayload({
+      formaPagamento: 'ifood',
+      totalFinal: 100,
+      itens: baseItens,
+      idCaixa: 1,
+      taxasPlataforma: [
+        { plataforma_id: 'ifood', plataforma_nome: 'iFood', taxa_pct: 14, valor_bruto: 100 }
+      ]
+    });
+
+    expect(payload.taxas_plataforma).toEqual([
+      {
+        plataforma_id: 'ifood',
+        plataforma_nome: 'iFood',
+        taxa_pct: 14,
+        valor_bruto: 100,
+        valor_taxa: 14
+      }
+    ]);
+  });
+
+  test('platform fee with taxa_pct = 0 is dropped (no row inserted)', () => {
+    const { payload } = buildVendaPayload({
+      formaPagamento: 'rappi',
+      totalFinal: 80,
+      itens: baseItens,
+      idCaixa: 1,
+      taxasPlataforma: [
+        { plataforma_id: 'rappi', plataforma_nome: 'Rappi', taxa_pct: 0, valor_bruto: 80 }
+      ]
+    });
+
+    expect(payload.taxas_plataforma).toEqual([]);
+  });
+
+  test('multi-pay with platform line emits taxa for the platform portion only', () => {
+    const { payload } = buildVendaPayload({
+      formaPagamento: 'multiplo',
+      pagamentos: [
+        { forma: 'ifood', valor: 60 },
+        { forma: 'dinheiro', valor: 40 }
+      ],
+      totalFinal: 100,
+      itens: baseItens,
+      idCaixa: 1,
+      // Caller (modal) is responsible for computing per-row valor_bruto
+      taxasPlataforma: [
+        { plataforma_id: 'ifood', plataforma_nome: 'iFood', taxa_pct: 14, valor_bruto: 60 }
+      ]
+    });
+
+    expect(payload.taxas_plataforma).toHaveLength(1);
+    expect(payload.taxas_plataforma[0].valor_bruto).toBe(60);
+    expect(payload.taxas_plataforma[0].valor_taxa).toBe(8.4);
+  });
+
+  test('multi-pay with two platforms emits two taxa rows', () => {
+    const { payload } = buildVendaPayload({
+      formaPagamento: 'multiplo',
+      pagamentos: [
+        { forma: 'ifood', valor: 50 },
+        { forma: 'rappi', valor: 50 }
+      ],
+      totalFinal: 100,
+      itens: baseItens,
+      idCaixa: 1,
+      taxasPlataforma: [
+        { plataforma_id: 'ifood', plataforma_nome: 'iFood', taxa_pct: 14, valor_bruto: 50 },
+        { plataforma_id: 'rappi', plataforma_nome: 'Rappi', taxa_pct: 23, valor_bruto: 50 }
+      ]
+    });
+
+    expect(payload.taxas_plataforma).toHaveLength(2);
+    expect(payload.taxas_plataforma[0].valor_taxa).toBe(7);
+    expect(payload.taxas_plataforma[1].valor_taxa).toBe(11.5);
+  });
+
+  test('platform fee with missing plataforma_id is dropped', () => {
+    const { payload } = buildVendaPayload({
+      formaPagamento: 'ifood',
+      totalFinal: 100,
+      itens: baseItens,
+      idCaixa: 1,
+      taxasPlataforma: [
+        { plataforma_id: '', plataforma_nome: '', taxa_pct: 14, valor_bruto: 100 }
+      ]
+    });
+
+    expect(payload.taxas_plataforma).toEqual([]);
+  });
 });
 
 describe('extractEffectiveQty', () => {

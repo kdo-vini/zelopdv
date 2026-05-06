@@ -244,6 +244,39 @@
         if (pFiado) idClienteForVenda = pFiado.pessoaId || null;
       }
       
+      // Platform fees: 1 entry per platform line in the sale.
+      // Single-pay: 1 entry (formaPagamento === plataforma_id).
+      // Multi-pay: 1 entry per row whose forma matches a configured platform.
+      const taxasPlataforma = [];
+      if (!multiPag && plataformaSelecionada) {
+        const grossBase = Number(valorPlataforma) > 0 ? Number(valorPlataforma) : totalFinal;
+        const taxaPct = Number(plataformaSelecionada.taxa_pct || 0);
+        if (grossBase > 0 && taxaPct > 0) {
+          taxasPlataforma.push({
+            plataforma_id: plataformaSelecionada.id,
+            plataforma_nome: plataformaSelecionada.nome,
+            taxa_pct: taxaPct,
+            valor_bruto: grossBase
+          });
+        }
+      } else if (multiPag) {
+        for (const p of pagamentos) {
+          const plat = plataformasAtivas.find((pl) => pl.id === p.forma);
+          if (plat) {
+            const taxaPct = Number(plat.taxa_pct || 0);
+            const grossBase = Number(p.valor || 0);
+            if (grossBase > 0 && taxaPct > 0) {
+              taxasPlataforma.push({
+                plataforma_id: plat.id,
+                plataforma_nome: plat.nome,
+                taxa_pct: taxaPct,
+                valor_bruto: grossBase
+              });
+            }
+          }
+        }
+      }
+
       dispatch('confirmar', {
         formaPagamento: insertForma,
         valorRecebido: insertValorRecebido,
@@ -258,7 +291,7 @@
         descontoTipo: descontoAtivo ? descontoTipo : null,
         totalOriginal: Number(totalComanda),
         totalFinal,
-        valorLiquidoPlataforma: (plataformaSelecionada && liquidoPlataforma > 0) ? Number(liquidoPlataforma) : null,
+        taxasPlataforma,
       });
       
     } catch (err) {

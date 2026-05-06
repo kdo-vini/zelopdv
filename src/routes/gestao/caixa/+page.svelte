@@ -7,7 +7,8 @@
     STANDARD_PAYMENT_FORMS,
     calculateExpectedDrawer,
     calculateMovementSummary,
-    calculatePaymentSummary
+    calculatePaymentSummary,
+    calculatePlatformFees
   } from '$lib/finance/caixa';
 
   let loading = true;
@@ -15,6 +16,7 @@
   let caixa = null; // { id, data_abertura, valor_inicial }
   let vendas = []; // vendas do caixa
   let vendasPagamentos = []; // pagamentos das vendas (para múltiplos)
+  let vendasTaxasPlataforma = []; // taxas de plataforma (iFood, etc.)
   let movs = []; // movimentações de caixa (sangria/suprimento)
 
   let valorEmGaveta = 0;
@@ -56,6 +58,7 @@
 
       // Pagamentos de vendas (para forma_pagamento = 'multiplo')
       vendasPagamentos = [];
+      vendasTaxasPlataforma = [];
       const ids = (vendas || []).map(v => v.id);
       if (ids.length) {
         const { data: pags, error: pErr } = await supabase
@@ -64,6 +67,12 @@
           .in('id_venda', ids);
         if (pErr) throw pErr;
         vendasPagamentos = pags || [];
+
+        const { data: taxas } = await supabase
+          .from('vendas_taxas_plataforma')
+          .select('id_venda, plataforma_id, plataforma_nome, taxa_pct, valor_bruto, valor_taxa')
+          .in('id_venda', ids);
+        vendasTaxasPlataforma = taxas || [];
       }
 
       // Movimentações do caixa (sangria/suprimento)
@@ -95,6 +104,8 @@
   $: totalCartao = resumoPagamentos.totalCartao;
   $: totalGeral = resumoPagamentos.totalGeral;
   $: totalDescontos = (vendas || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
+  $: resumoTaxas = calculatePlatformFees(vendasTaxasPlataforma);
+  $: totalCustosPlataforma = resumoTaxas.total;
   $: totalDinheiroLiquido = resumoPagamentos.dinheiro;
   $: resumoMovs = calculateMovementSummary(movs);
   $: totalSangria = resumoMovs.sangria;
@@ -220,6 +231,24 @@
           <div class="text-xs text-amber-700 dark:text-amber-400">Descontos aplicados</div>
           <div class="text-lg font-semibold text-amber-700 dark:text-amber-400">−R$ {Number(totalDescontos).toFixed(2)}</div>
           <div class="text-[11px] text-amber-600 dark:text-amber-500 mt-1">Valor "perdido" em promoções/descontos neste caixa.</div>
+        </div>
+      {/if}
+
+      {#if resumoTaxas.byPlatform.length > 0}
+        <div class="p-3 rounded border bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-rose-700 dark:text-rose-400">Custos de plataforma (comissões)</div>
+            <div class="text-lg font-semibold text-rose-700 dark:text-rose-400">−R$ {Number(totalCustosPlataforma).toFixed(2)}</div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
+            {#each resumoTaxas.byPlatform as plat}
+              <div class="flex items-center justify-between gap-2 px-2 py-1 rounded bg-white/60 dark:bg-slate-800/60">
+                <span class="text-xs font-medium text-slate-700 dark:text-slate-200">{plat.nome}</span>
+                <span class="text-xs font-semibold text-rose-700 dark:text-rose-400">−R$ {Number(plat.total).toFixed(2)}</span>
+              </div>
+            {/each}
+          </div>
+          <div class="text-[11px] text-rose-600 dark:text-rose-500 mt-2">Não impacta o saldo da gaveta (comissão é descontada do repasse da plataforma).</div>
         </div>
       {/if}
 

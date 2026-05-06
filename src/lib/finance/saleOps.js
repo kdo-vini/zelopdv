@@ -35,6 +35,12 @@ export function extractEffectiveQty(item) {
  * @param {number|null} [input.idCaixa=null] - integer FK to caixas.id (server may fall back if closed)
  * @param {string|null} [input.idCliente=null] - UUID for single-pay fiado client
  * @param {Array} [input.itens=[]] - [{ id_produto, quantidade, nome, preco }]
+ * @param {Array} [input.taxasPlataforma=[]] - [{ plataforma_id, plataforma_nome, taxa_pct, valor_bruto }]
+ *   For each platform line in the sale, the modal computes the gross
+ *   amount charged on that platform and the configured/overridden
+ *   commission rate. The fee `valor_taxa = valor_bruto * taxa_pct / 100`
+ *   is computed here so persistence is consistent across callsites.
+ *   Lines with `taxa_pct === 0` are dropped.
  * @param {string} [input.createdAt] - ISO timestamp (set only for offline replay to preserve original sale time)
  * @returns {{ payload: Object, settlement: Object }} payload for the RPC + settlement (for receipts/UI)
  */
@@ -98,6 +104,22 @@ export function buildVendaPayload(input) {
     }
   }
 
+  // Platform fees — snapshot taxa_pct so historical reports stay stable
+  const taxasPlataforma = (input.taxasPlataforma || [])
+    .map((t) => {
+      const taxaPct = Number(t?.taxa_pct || 0);
+      const valorBruto = money(t?.valor_bruto || 0);
+      const valorTaxa = money((valorBruto * taxaPct) / 100);
+      return {
+        plataforma_id: t?.plataforma_id || '',
+        plataforma_nome: t?.plataforma_nome || t?.plataforma_id || '',
+        taxa_pct: taxaPct,
+        valor_bruto: valorBruto,
+        valor_taxa: valorTaxa
+      };
+    })
+    .filter((t) => t.plataforma_id && t.valor_taxa > 0);
+
   const payload = {
     valor_total: totalCobrado,
     forma_pagamento: settlement.formaPagamento,
@@ -112,7 +134,8 @@ export function buildVendaPayload(input) {
     itens,
     pagamentos: pagamentosOut,
     estoque,
-    fiados
+    fiados,
+    taxas_plataforma: taxasPlataforma
   };
 
   if (input.createdAt) {

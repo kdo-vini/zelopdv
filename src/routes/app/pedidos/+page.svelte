@@ -232,7 +232,8 @@
       tipoPedido: 'retirada',
       idCaixa: idCaixaAberto,
       idCliente: pagamento.idCliente || null,
-      itens
+      itens,
+      taxasPlataforma: Array.isArray(pagamento.taxasPlataforma) ? pagamento.taxasPlataforma : []
     });
 
     const { data, error: rpcError } = await supabase.rpc('criar_venda_completa', {

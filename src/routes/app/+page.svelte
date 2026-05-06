@@ -124,7 +124,7 @@
   let valorDescontoVenda = 0;
   let descontoTipoVenda = null; // 'valor' | 'percentual' | null
   let totalFinalVenda = null;
-  let valorPlataformaVenda = null;
+  let taxasPlataformaVenda = [];
   async function carregarPessoasFiado(){
     if (pessoasFiado.length) return;
     try {
@@ -774,8 +774,9 @@
       descontoTipo,
       totalOriginal,
       totalFinal,
+      taxasPlataforma,
     } = event.detail;
-    
+
     // Atualiza estados locais que serão usados pela função confirmarVenda
     formaPagamento = forma === 'multiplo' ? forma : forma;
     valorRecebido = valRec || 0;
@@ -784,16 +785,16 @@
     if (pags?.length) pagamentos = pags;
     if (pessoasList?.length) pessoasFiado = pessoasList;
     if (idCliente) pessoaFiadoId = idCliente;
-    
+
     // Dados de desconto
     valorDescontoVenda = valorDesconto || 0;
     descontoTipoVenda = descontoTipo || null;
     totalFinalVenda = Number(totalFinal ?? totalComandaComEntrega);
-    valorPlataformaVenda = null;
-    
+    taxasPlataformaVenda = Array.isArray(taxasPlataforma) ? taxasPlataforma : [];
+
     // Ativa estado de salvando no modal via referência
     modalPagamentoRef?.setSalvando?.(true);
-    
+
     // Chama a função de persistência existente
     await confirmarVenda();
   }
@@ -918,7 +919,8 @@
         tipoPedido,
         idCaixa: idCaixaAberto,
         idCliente: !multiPag && formaPagamento === 'fiado' ? pessoaFiadoId : null,
-        itens: comanda
+        itens: comanda,
+        taxasPlataforma: taxasPlataformaVenda
       });
 
       const insertForma = settlement.formaPagamento;

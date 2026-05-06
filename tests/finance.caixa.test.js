@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   calculateExpectedDrawer,
   calculatePaymentSummary,
+  calculatePlatformFees,
   calculateRestaurantRevenue,
   calculateRevenue,
   calculateSaleSettlement,
@@ -122,5 +123,43 @@ describe('caixa finance math', () => {
   test('restaurant revenue excludes delivery fee but not discount twice', () => {
     expect(calculateRevenue({ totalGeral: 90, despesas: 10 })).toBe(80);
     expect(calculateRestaurantRevenue({ totalGeral: 90, taxaEntrega: 8, despesas: 10 })).toBe(72);
+  });
+
+  test('platform fees subtract from net revenue', () => {
+    expect(calculateRevenue({ totalGeral: 1000, despesas: 100, custosPlataforma: 140 })).toBe(760);
+    expect(calculateRestaurantRevenue({ totalGeral: 1000, taxaEntrega: 50, despesas: 100, custosPlataforma: 140 })).toBe(710);
+  });
+});
+
+describe('calculatePlatformFees', () => {
+  test('aggregates fees across multiple sales by platform', () => {
+    const taxas = [
+      { plataforma_id: 'ifood', plataforma_nome: 'iFood', valor_taxa: 14, valor_bruto: 100 },
+      { plataforma_id: 'ifood', plataforma_nome: 'iFood', valor_taxa: 7, valor_bruto: 50 },
+      { plataforma_id: 'rappi', plataforma_nome: 'Rappi', valor_taxa: 23, valor_bruto: 100 }
+    ];
+    const result = calculatePlatformFees(taxas);
+
+    expect(result.total).toBe(44);
+    expect(result.byPlatform).toHaveLength(2);
+    // Sorted desc by total — Rappi (23) > iFood (21)
+    expect(result.byPlatform[0]).toMatchObject({ id: 'rappi', total: 23, brutoTotal: 100, qtdVendas: 1 });
+    expect(result.byPlatform[1]).toMatchObject({ id: 'ifood', total: 21, brutoTotal: 150, qtdVendas: 2 });
+  });
+
+  test('drops rows with valor_taxa <= 0', () => {
+    const result = calculatePlatformFees([
+      { plataforma_id: 'ifood', plataforma_nome: 'iFood', valor_taxa: 0, valor_bruto: 100 },
+      { plataforma_id: 'rappi', plataforma_nome: 'Rappi', valor_taxa: 5, valor_bruto: 50 }
+    ]);
+
+    expect(result.total).toBe(5);
+    expect(result.byPlatform).toHaveLength(1);
+    expect(result.byPlatform[0].id).toBe('rappi');
+  });
+
+  test('handles empty/missing input', () => {
+    expect(calculatePlatformFees([])).toEqual({ total: 0, byPlatform: [] });
+    expect(calculatePlatformFees()).toEqual({ total: 0, byPlatform: [] });
   });
 });

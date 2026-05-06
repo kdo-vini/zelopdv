@@ -156,12 +156,44 @@ export function calculateExpectedDrawer({ valorInicial = 0, dinheiroLiquido = 0,
   return money(money(valorInicial) + money(dinheiroLiquido) - money(sangria) + money(suprimento));
 }
 
-export function calculateRevenue({ totalGeral = 0, despesas = 0 }) {
-  return money(money(totalGeral) - money(despesas));
+export function calculateRevenue({ totalGeral = 0, despesas = 0, custosPlataforma = 0 }) {
+  return money(money(totalGeral) - money(despesas) - money(custosPlataforma));
 }
 
-export function calculateRestaurantRevenue({ totalGeral = 0, taxaEntrega = 0, despesas = 0 }) {
-  return money(money(totalGeral) - money(taxaEntrega) - money(despesas));
+export function calculateRestaurantRevenue({ totalGeral = 0, taxaEntrega = 0, despesas = 0, custosPlataforma = 0 }) {
+  return money(money(totalGeral) - money(taxaEntrega) - money(despesas) - money(custosPlataforma));
+}
+
+/**
+ * Aggregate platform fees from vendas_taxas_plataforma rows.
+ * Returns total + per-platform breakdown sorted desc by total.
+ *
+ * @param {Array} taxas - rows from `vendas_taxas_plataforma`:
+ *   [{ plataforma_id, plataforma_nome, valor_taxa, valor_bruto, taxa_pct }]
+ * @returns {{ total: number, byPlatform: Array<{id, nome, total, brutoTotal, qtdVendas}> }}
+ */
+export function calculatePlatformFees(taxas = []) {
+  const map = new Map();
+  let total = 0;
+
+  for (const row of taxas || []) {
+    const id = row?.plataforma_id || 'desconhecida';
+    const nome = row?.plataforma_nome || id.replace(/_/g, ' ');
+    const valorTaxa = money(row?.valor_taxa || 0);
+    const valorBruto = money(row?.valor_bruto || 0);
+    if (valorTaxa <= 0) continue;
+
+    total = money(total + valorTaxa);
+    const existing = map.get(id) || { id, nome, total: 0, brutoTotal: 0, qtdVendas: 0 };
+    existing.total = money(existing.total + valorTaxa);
+    existing.brutoTotal = money(existing.brutoTotal + valorBruto);
+    existing.qtdVendas += 1;
+    map.set(id, existing);
+  }
+
+  const byPlatform = Array.from(map.values()).sort((a, b) => b.total - a.total);
+
+  return { total, byPlatform };
 }
 
 export function platformTotalsFromPayments({ vendas = [], pagamentos = [], plataformasAtivas = [], presets = [] }) {

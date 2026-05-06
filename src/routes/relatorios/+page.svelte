@@ -9,6 +9,7 @@
 		calculateExpectedDrawer,
 		calculateMovementSummary,
 		calculatePaymentSummary,
+		calculatePlatformFees,
 		calculateRestaurantRevenue,
 		calculateRevenue
 	} from '$lib/finance/caixa';
@@ -38,6 +39,7 @@
 	let vendas = [];
 	let vendasItens = [];
 	let vendasPagamentos = [];
+	let vendasTaxasPlataforma = [];
 	let comandasMesaCaixa = [];
 	let produtosMap = new Map(); // id_produto -> { id, nome, preco }
 	let pessoasMap = new Map(); // id_cliente -> { nome }
@@ -249,6 +251,7 @@
 			const ids = vendas.map(v => v.id);
 			vendasItens = [];
 			vendasPagamentos = [];
+			vendasTaxasPlataforma = [];
 			comandasMesaCaixa = [];
 
 			if (ids.length) {
@@ -262,14 +265,21 @@
 					.select('id_venda, forma_pagamento, valor')
 					.in('id_venda', ids);
 
+				const pTaxas = supabase
+					.from('vendas_taxas_plataforma')
+					.select('id_venda, plataforma_id, plataforma_nome, taxa_pct, valor_bruto, valor_taxa')
+					.in('id_venda', ids);
+
 				const pComandasMesa = carregarComandasMesaPorVendas(ids);
-				const [resItens, resPags, comandasMesa] = await withTimeout(Promise.all([pItens, pPags, pComandasMesa]));
+				const [resItens, resPags, resTaxas, comandasMesa] = await withTimeout(Promise.all([pItens, pPags, pTaxas, pComandasMesa]));
 
 				if (resItens.error) throw resItens.error;
 				vendasItens = resItens.data || [];
 
 				if (resPags.error) throw resPags.error;
 				vendasPagamentos = resPags.data || [];
+
+				if (!resTaxas.error) vendasTaxasPlataforma = resTaxas.data || [];
 				comandasMesaCaixa = comandasMesa || [];
 
 				// Produtos map
@@ -352,13 +362,15 @@
 		suprimento: totalSuprimento
 	});
 	$: totalDescontosCaixa = (vendas || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
-	$: receitaLiquidaCaixa = calculateRevenue({ totalGeral });
+	$: resumoTaxasCaixa = calculatePlatformFees(vendasTaxasPlataforma);
+	$: totalCustosPlataformaCaixa = resumoTaxasCaixa.total;
+	$: receitaLiquidaCaixa = calculateRevenue({ totalGeral, custosPlataforma: totalCustosPlataformaCaixa });
 	$: caixaItensSubtotalMap = buildItensSubtotalMap(vendasItens);
 	$: resumoMesasCaixa = calcularResumoMesas(comandasMesaCaixa, caixaItensSubtotalMap);
 
 	// Delivery breakdown (caixa)
 	$: totalTaxaEntregaCaixa = (vendas || []).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
-	$: receitaRestauranteCaixa = calculateRestaurantRevenue({ totalGeral, taxaEntrega: totalTaxaEntregaCaixa });
+	$: receitaRestauranteCaixa = calculateRestaurantRevenue({ totalGeral, taxaEntrega: totalTaxaEntregaCaixa, custosPlataforma: totalCustosPlataformaCaixa });
 	$: vendasPorTipoCaixa = (() => {
 		const tipos = ['retirada', 'delivery'];
 		return tipos.map(t => ({
@@ -575,6 +587,7 @@
 	let periodoMovs = [];
 	let periodoCaixas = [];
 	let periodoDespesas = [];
+	let periodoTaxasPlataforma = [];
 
 	function aplicarPreset(p) {
 		preset = p;
@@ -668,19 +681,20 @@
 			periodoCaixas = resCaixas.data || [];
 			const cxIds = periodoCaixas.map(c => c.id);
 
-			// 3. Dependentes (Pagamentos, Itens, Movimentações)
+			// 3. Dependentes (Pagamentos, Itens, Movimentações, Taxas Plataforma)
 			periodoPagamentos = [];
 			periodoItens = [];
 			periodoComandasMesa = [];
 			periodoMovs = [];
+			periodoTaxasPlataforma = [];
 
 			const promises = [];
-			
+
 			if (vendaIds.length) {
 				const batches = chunkArray(vendaIds, 1000);
-				
+
 				// Fetch payments in batches
-				const payPromises = batches.map(batch => 
+				const payPromises = batches.map(batch =>
 					supabase.from('vendas_pagamentos').select('id_venda, forma_pagamento, valor').in('id_venda', batch)
 				);
 				promises.push(Promise.all(payPromises).then(results => {
@@ -690,7 +704,7 @@
 				}));
 
 				// Fetch items in batches
-				const itemPromises = batches.map(batch => 
+				const itemPromises = batches.map(batch =>
 					supabase.from('vendas_itens').select('id_venda, id_produto, nome_produto_na_venda, quantidade, preco_unitario_na_venda').in('id_venda', batch)
 				);
 				promises.push(Promise.all(itemPromises).then(results => {
@@ -699,9 +713,20 @@
 					return { data: all, error: null };
 				}));
 
+				// Fetch platform fees in batches
+				const taxasPromises = batches.map(batch =>
+					supabase.from('vendas_taxas_plataforma').select('id_venda, plataforma_id, plataforma_nome, taxa_pct, valor_bruto, valor_taxa').in('id_venda', batch)
+				);
+				promises.push(Promise.all(taxasPromises).then(results => {
+					let all = [];
+					results.forEach(r => { if(r.data) all = [...all, ...r.data]; });
+					return { data: all, error: null };
+				}));
+
 			} else {
 				promises.push(Promise.resolve({ data: [], error: null })); // payments placeholder
 				promises.push(Promise.resolve({ data: [], error: null })); // items placeholder
+				promises.push(Promise.resolve({ data: [], error: null })); // taxas placeholder
 			}
 
 			if (cxIds.length) {
@@ -746,7 +771,7 @@
 				return { data: allExp, error: null };
 			})());
 
-			const [resPags, resItens, resMovs, resDespesas] = await withTimeout(Promise.all(promises));
+			const [resPags, resItens, resTaxasPlat, resMovs, resDespesas] = await withTimeout(Promise.all(promises));
 
 			if (resPags.error) throw resPags.error;
 			periodoPagamentos = resPags.data || [];
@@ -754,9 +779,11 @@
 			if (resItens.error) throw resItens.error;
 			periodoItens = resItens.data || [];
 
+			if (!resTaxasPlat.error) periodoTaxasPlataforma = resTaxasPlat.data || [];
+
 			if (resMovs.error && cxIds.length) { /* log? */ }
 			periodoMovs = resMovs.data || [];
-			
+
 			if (resDespesas.error) console.error('Error fetching expenses:', resDespesas.error); // optional log
 			periodoDespesas = resDespesas.data || [];
 			periodoComandasMesa = vendaIds.length ? await carregarComandasMesaPorVendas(vendaIds) : [];
@@ -794,13 +821,15 @@
 	$: periodoTotalSuprimento = resumoMovsPeriodo.suprimento;
 	$: periodoTotalDescontos = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_desconto||0),0);
 	$: periodoTotalDespesas = (periodoDespesas||[]).reduce((a,e)=> a + Number(e.amount||0),0);
+	$: resumoTaxasPeriodo = calculatePlatformFees(periodoTaxasPlataforma);
+	$: periodoTotalCustosPlataforma = resumoTaxasPeriodo.total;
 	$: periodoItensSubtotalMap = buildItensSubtotalMap(periodoItens);
 	$: resumoMesasPeriodo = calcularResumoMesas(periodoComandasMesa, periodoItensSubtotalMap);
-	$: periodoReceitaLiquida = calculateRevenue({ totalGeral: periodoTotalGeral, despesas: periodoTotalDespesas });
+	$: periodoReceitaLiquida = calculateRevenue({ totalGeral: periodoTotalGeral, despesas: periodoTotalDespesas, custosPlataforma: periodoTotalCustosPlataforma });
 
 	// Delivery breakdown (periodo)
 	$: periodoTotalTaxaEntrega = (periodoVendas||[]).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
-	$: periodoReceitaRestaurante = calculateRestaurantRevenue({ totalGeral: periodoTotalGeral, taxaEntrega: periodoTotalTaxaEntrega, despesas: periodoTotalDespesas });
+	$: periodoReceitaRestaurante = calculateRestaurantRevenue({ totalGeral: periodoTotalGeral, taxaEntrega: periodoTotalTaxaEntrega, despesas: periodoTotalDespesas, custosPlataforma: periodoTotalCustosPlataforma });
 	$: periodoVendasPorTipo = (() => {
 		const tipos = ['retirada', 'delivery'];
 		return tipos.map(t => ({
@@ -1012,6 +1041,9 @@
 					{#if totalDescontosCaixa > 0}
 						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(totalDescontosCaixa)}</span>
 					{/if}
+					{#if totalCustosPlataformaCaixa > 0}
+						<span class="bg-rose-500/15 text-rose-400 px-2 py-0.5 rounded-full text-xs">Plataformas: -{fmt(totalCustosPlataformaCaixa)}</span>
+					{/if}
 					{#if totalTaxaEntregaCaixa > 0}
 						<span class="bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full text-xs">Entregador: -{fmt(totalTaxaEntregaCaixa)}</span>
 					{/if}
@@ -1075,6 +1107,31 @@
 				{#if totalCartaoLegacy > 0}
 					<div class="mt-2 text-xs text-slate-500 dark:text-slate-400">Cartão (legado): {fmt(totalCartaoLegacy)}</div>
 				{/if}
+			</div>
+			{/if}
+
+			<!-- ✦ Custos de Plataforma (caixa) -->
+			{#if resumoTaxasCaixa.byPlatform.length > 0}
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+				<div class="flex items-center justify-between gap-3 mb-3">
+					<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Custos de Plataforma</h3>
+					<div class="text-sm font-bold text-rose-600 dark:text-rose-400">-{fmt(totalCustosPlataformaCaixa)}</div>
+				</div>
+				<p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+					Comissão das plataformas (snapshot da taxa configurada no momento da venda). Já descontado da Receita Líquida acima.
+				</p>
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+					{#each resumoTaxasCaixa.byPlatform as plat}
+						<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+							<div class="flex items-center justify-between mb-1">
+								<span class="text-xs font-medium text-slate-700 dark:text-slate-200">{plat.nome}</span>
+								<span class="text-xs text-slate-500 dark:text-slate-400">{plat.qtdVendas} venda{plat.qtdVendas === 1 ? '' : 's'}</span>
+							</div>
+							<div class="text-base font-bold text-rose-600 dark:text-rose-400">-{fmt(plat.total)}</div>
+							<div class="text-[11px] text-slate-400 mt-0.5">Bruto na plataforma: {fmt(plat.brutoTotal)}</div>
+						</div>
+					{/each}
+				</div>
 			</div>
 			{/if}
 
@@ -1351,6 +1408,9 @@
 					{#if periodoTotalDescontos > 0}
 						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(periodoTotalDescontos)}</span>
 					{/if}
+					{#if periodoTotalCustosPlataforma > 0}
+						<span class="bg-rose-500/15 text-rose-400 px-2 py-0.5 rounded-full text-xs">Plataformas: -{fmt(periodoTotalCustosPlataforma)}</span>
+					{/if}
 					{#if periodoTotalDespesas > 0}
 						<span class="bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full text-xs">Despesas: -{fmt(periodoTotalDespesas)}</span>
 					{/if}
@@ -1411,6 +1471,31 @@
 								<div class="text-xs text-slate-500 dark:text-slate-400">{p.label}</div>
 								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-slate-400">({periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100).toFixed(1) : 0}%)</span></div>
 							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+			{/if}
+
+			<!-- ✦ Custos de Plataforma (periodo) -->
+			{#if resumoTaxasPeriodo.byPlatform.length > 0}
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+				<div class="flex items-center justify-between gap-3 mb-3">
+					<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Custos de Plataforma</h3>
+					<div class="text-sm font-bold text-rose-600 dark:text-rose-400">-{fmt(periodoTotalCustosPlataforma)}</div>
+				</div>
+				<p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+					Comissão das plataformas (snapshot da taxa configurada no momento da venda). Já descontado da Receita Líquida acima.
+				</p>
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+					{#each resumoTaxasPeriodo.byPlatform as plat}
+						<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+							<div class="flex items-center justify-between mb-1">
+								<span class="text-xs font-medium text-slate-700 dark:text-slate-200">{plat.nome}</span>
+								<span class="text-xs text-slate-500 dark:text-slate-400">{plat.qtdVendas} venda{plat.qtdVendas === 1 ? '' : 's'}</span>
+							</div>
+							<div class="text-base font-bold text-rose-600 dark:text-rose-400">-{fmt(plat.total)}</div>
+							<div class="text-[11px] text-slate-400 mt-0.5">Bruto na plataforma: {fmt(plat.brutoTotal)}</div>
 						</div>
 					{/each}
 				</div>
