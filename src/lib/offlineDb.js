@@ -16,13 +16,32 @@ db.version(2).stores({
     categorias: 'id, nome'
 });
 
+// v3 — vendas_pendentes agora armazena { payload, createdAt, status }
+//      payload é o JSON enviado direto pra RPC criar_venda_completa.
+db.version(3).stores({
+    produtos: 'id, nome, preco, categoria_id',
+    vendas_pendentes: '++id, createdAt, status',
+    categorias: 'id, nome'
+});
+
 /**
- * Salva uma venda na fila de sincronização
+ * Salva uma venda na fila de sincronização.
+ *
+ * Aceita formato novo: { payload } onde payload é o JSON pronto para a RPC
+ * `criar_venda_completa`. Caller deve construir o payload via
+ * `buildVendaPayload` em `$lib/finance/saleOps`.
+ *
+ * Para backward compat, ainda aceita o formato antigo (campos planos +
+ * itens/pagamentos), guardando como veio. O sync detecta automaticamente
+ * o formato e converte se necessário.
  */
 export async function salvarVendaOffline(venda) {
+    const createdAt = venda?.createdAt || new Date().toISOString();
     return await db.vendas_pendentes.add({
         ...venda,
-        data: new Date().toISOString(),
+        createdAt,
+        // Mantém `data` para compat com cleanup antigo de `limparVendasAntigas`.
+        data: createdAt,
         status: 'aguardando'
     });
 }
@@ -43,7 +62,74 @@ export async function atualizarCacheProdutos(produtos) {
 }
 
 /**
- * Sincroniza vendas pendentes com o Supabase.
+ * Constrói payload da RPC a partir do formato antigo (pré-v3) — best effort.
+ * Retorna null se não tem dados mínimos.
+ */
+function legacyToPayload(record) {
+    if (!record || record.payload) return null; // já é v3
+    if (!record.itens?.length) return null;
+
+    const pagamentos = (record.pagamentos || [])
+        .map((p) => ({
+            forma_pagamento: p.forma_pagamento || p.forma,
+            valor: Number(p.valor || 0)
+        }))
+        .filter((p) => p.valor > 0);
+
+    // Estoque: lista todos os itens com id_produto; o RPC filtra por controlar_estoque.
+    const estoque = (record.itens || [])
+        .filter((i) => i.id_produto)
+        .map((i) => ({
+            id_produto: i.id_produto,
+            quantidade: Number(i.quantidade || 1)
+        }));
+
+    // Fiado: legacy não tinha esse campo separado, então inferimos.
+    const fiados = [];
+    if (record.forma_pagamento === 'fiado' && record.id_cliente && Number(record.valor_total || 0) > 0) {
+        fiados.push({ id_pessoa: record.id_cliente, valor: Number(record.valor_total) });
+    } else if (record.forma_pagamento === 'multiplo') {
+        const fiadoRow = (record.pagamentos || []).find((p) => (p.forma_pagamento || p.forma) === 'fiado');
+        if (fiadoRow?.pessoaId && Number(fiadoRow.valor || 0) > 0) {
+            fiados.push({ id_pessoa: fiadoRow.pessoaId, valor: Number(fiadoRow.valor) });
+        }
+    }
+
+    return {
+        valor_total: Number(record.valor_total || 0),
+        forma_pagamento: record.forma_pagamento || 'dinheiro',
+        valor_recebido: record.valor_recebido ?? null,
+        valor_troco: Number(record.valor_troco || 0),
+        valor_desconto: Number(record.valor_desconto || 0),
+        desconto_tipo: record.desconto_tipo || null,
+        tipo_pedido: record.tipo_pedido || 'retirada',
+        taxa_entrega: Number(record.taxa_entrega || 0),
+        id_caixa: record.id_caixa ?? null,
+        id_cliente: record.id_cliente ?? null,
+        itens: (record.itens || []).map((i) => ({
+            id_produto: i.id_produto ?? null,
+            quantidade: Number(i.quantidade || 1),
+            nome_produto_na_venda: i.nome_produto_na_venda || i.nome || '',
+            preco_unitario_na_venda: Number(i.preco_unitario_na_venda || i.preco || 0)
+        })),
+        pagamentos,
+        estoque,
+        fiados,
+        created_at: record.data || record.createdAt
+    };
+}
+
+/**
+ * Sincroniza vendas pendentes via RPC atômica `criar_venda_completa`.
+ * Cada venda vira UMA chamada que insere venda + itens + pagamentos +
+ * decremento de estoque + débito de fiado em uma única transação Postgres.
+ *
+ * Vantagens vs. inserts manuais:
+ *  - Atomicidade: rollback completo se qualquer passo falhar
+ *  - Estoque e fiado são aplicados (eram pulados no fluxo antigo)
+ *  - Caixa fechado tem fallback automático no servidor (atribui ao caixa
+ *    aberto atual do usuário, ou null se nenhum aberto)
+ *
  * Registros sincronizados com sucesso são deletados do IndexedDB.
  * Registros com falha permanecem como 'aguardando' para nova tentativa.
  */
@@ -53,45 +139,26 @@ export async function syncVendasPendentes(supabase) {
 
     for (const vendaPendente of pendentes) {
         try {
-            // 1. Inserir a venda
-            const { data: venda, error: vendaError } = await supabase
-                .from('vendas')
-                .insert({
-                    valor_total: vendaPendente.valor_total,
-                    forma_pagamento: vendaPendente.forma_pagamento,
-                    valor_recebido: vendaPendente.valor_recebido,
-                    valor_troco: vendaPendente.valor_troco,
-                    id_usuario: vendaPendente.id_usuario,
-                    id_caixa: vendaPendente.id_caixa,
-                    id_cliente: vendaPendente.id_cliente,
-                    tipo_pedido: vendaPendente.tipo_pedido ?? 'retirada',
-                    taxa_entrega: vendaPendente.taxa_entrega ?? 0,
-                    created_at: vendaPendente.data // Preserva a data original da venda offline
-                })
-                .select('id')
-                .single();
+            // Compat: se for registro v1/v2, converte; v3 já tem .payload pronto.
+            const payload = vendaPendente.payload || legacyToPayload(vendaPendente);
 
-            if (vendaError) throw vendaError;
-
-            // 2. Inserir os itens
-            const itens = vendaPendente.itens.map(i => ({
-                ...i,
-                id_venda: venda.id
-            }));
-            const { error: itensError } = await supabase.from('vendas_itens').insert(itens);
-            if (itensError) throw itensError;
-
-            // 3. Inserir pagamentos (se houver)
-            if (vendaPendente.pagamentos && vendaPendente.pagamentos.length > 0) {
-                const pags = vendaPendente.pagamentos.map(p => ({
-                    ...p,
-                    id_venda: venda.id
-                }));
-                const { error: pagsError } = await supabase.from('vendas_pagamentos').insert(pags);
-                if (pagsError) throw pagsError;
+            if (!payload) {
+                console.warn('[Sync] Venda pendente sem payload válido — pulando:', vendaPendente.id);
+                logs.fail++;
+                continue;
             }
 
-            // 4. Deletar do IndexedDB — o registro oficial agora está no Supabase
+            // Garante que created_at preserve a data original da venda offline
+            if (!payload.created_at) {
+                payload.created_at = vendaPendente.createdAt || vendaPendente.data;
+            }
+
+            const { data, error } = await supabase.rpc('criar_venda_completa', {
+                p_payload: payload
+            });
+            if (error) throw error;
+            if (!data?.id) throw new Error('RPC retornou sem ID — venda não persistida.');
+
             await db.vendas_pendentes.delete(vendaPendente.id);
             logs.success++;
         } catch (err) {

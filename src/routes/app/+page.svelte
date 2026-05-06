@@ -21,7 +21,8 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import { pdvCache } from '$lib/stores/pdvCache';
-  import { calculateSaleSettlement, money, validatePaymentCoverage } from '$lib/finance/caixa';
+  import { money, validatePaymentCoverage } from '$lib/finance/caixa';
+  import { buildVendaPayload } from '$lib/finance/saleOps';
   
   // Modais componentizados
   import ModalAbrirCaixa from '$lib/components/modals/ModalAbrirCaixa.svelte';
@@ -905,162 +906,45 @@
         console.warn('Falha ao validar estoque pré-venda (prossegue):', chkErr?.message || chkErr);
       }
 
-      // Inserir a venda
-      // Determina payload de pagamento para a venda (single ou múltiplo)
-      const settlement = calculateSaleSettlement({
+      // Build payload único — usado tanto online (RPC atômica) quanto offline (replay no sync).
+      const { payload, settlement } = buildVendaPayload({
         formaPagamento: multiPag ? 'multiplo' : formaPagamento,
         valorRecebido,
         pagamentos,
-        totalFinal: totalCobradoVenda
+        totalFinal: totalCobradoVenda,
+        valorDesconto: valorDescontoVenda,
+        descontoTipo: descontoTipoVenda,
+        taxaEntrega: tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0,
+        tipoPedido,
+        idCaixa: idCaixaAberto,
+        idCliente: !multiPag && formaPagamento === 'fiado' ? pessoaFiadoId : null,
+        itens: comanda
       });
-      let insertForma = settlement.formaPagamento;
-      let insertValorRecebido = settlement.valorRecebido;
-      let insertValorTroco = settlement.valorTroco;
-      let trocoMulti = settlement.valorTroco;
 
-      // Determina cliente vinculado caso seja Fiado (Single ou Multi)
-      let idClienteForVenda = null;
-      if (!multiPag && formaPagamento === 'fiado') {
-        idClienteForVenda = pessoaFiadoId || null;
-      } else if (multiPag) {
-         const pFiado = pagamentos.find(p => p.forma === 'fiado');
-         if (pFiado) idClienteForVenda = pFiado.pessoaId || null;
-      }
+      const insertForma = settlement.formaPagamento;
+      const insertValorRecebido = settlement.valorRecebido;
+      const insertValorTroco = settlement.valorTroco;
 
-      const dadosVenda = {
-        valor_total: totalCobradoVenda,
-        forma_pagamento: insertForma,
-        valor_recebido: insertValorRecebido,
-        valor_troco: insertValorTroco,
-        id_usuario,
-        id_caixa: idCaixaAberto,
-        id_cliente: idClienteForVenda,
-        valor_desconto: valorDescontoVenda || 0,
-        desconto_tipo: descontoTipoVenda || null,
-        tipo_pedido: tipoPedido,
-        taxa_entrega: tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0
-      };
-
-      // Tenta inserir no Supabase, senão salva localmente
+      // Tenta RPC atômica online; em caso de falha de rede, salva offline pra sync depois.
       let vendaId = null;
-      let vendaNumero = null;
+      let venda = null;
       let isOffline = false;
-      let venda = null; // [FIX] Escopo de variável corrigido
 
       try {
-        const { data, error: vendaError } = await supabase
-          .from('vendas')
-          .insert(dadosVenda)
-          .select('id, numero_venda')
-          .single();
-
-        if (vendaError) throw vendaError;
-        venda = data;
+        const { data, error: rpcError } = await supabase.rpc('criar_venda_completa', {
+          p_payload: payload
+        });
+        if (rpcError) throw rpcError;
+        venda = { id: data?.id, numero_venda: data?.numero_venda };
         vendaId = venda.id;
-        vendaNumero = venda.numero_venda;
       } catch (connErr) {
-        console.warn('Falha na conexão, salvando venda offline:', connErr);
+        console.warn('Falha na RPC de venda, salvando offline:', connErr?.message || connErr);
         isOffline = true;
-        // Salva localmente com os itens e pagamentos
-        const itemObj = comanda.map(i => ({
-          id_usuario,
-          id_produto: i.id_produto ?? null,
-          quantidade: i.quantidade,
-          nome_produto_na_venda: i.nome,
-          preco_unitario_na_venda: Number(i.preco)
-        }));
-        
         await salvarVendaOffline({
-          ...dadosVenda,
-          itens: itemObj,
-          pagamentos: multiPag ? pagamentos : []
+          payload,
+          createdAt: new Date().toISOString()
         });
         vendaId = `offline-${Date.now()}`;
-      }
-
-      // Se estiver online, continua com itens e estoque
-      if (!isOffline) {
-        // Função auxiliar: extrai quantidade efetiva quando o nome vier como "56x Produto"
-        const extrairQuantidadeEfetiva = (item) => {
-          if (item?.id_produto && typeof item?.nome === 'string') {
-            const m = item.nome.match(/^(\d+)x\s/i);
-            if (m) return parseInt(m[1], 10);
-          }
-          return item.quantidade || 1;
-        };
-
-        const itens = comanda.map((i) => {
-          const qtdEfetiva = extrairQuantidadeEfetiva(i);
-          const precoUnit = Number(i.preco);
-          return {
-            id_usuario,
-            id_venda: vendaId,
-            id_produto: i.id_produto ?? null,
-            quantidade: qtdEfetiva,
-            nome_produto_na_venda: i.nome,
-            preco_unitario_na_venda: Number(precoUnit)
-          };
-        });
-
-        const { error: itensError } = await supabase.from('vendas_itens').insert(itens);
-        if (itensError) {
-          await supabase.from('vendas').delete().eq('id', vendaId);
-          throw new Error(itensError.message);
-        }
-
-        // Lançar débito no fiado - IMPORTANTE: await para garantir atualização do saldo
-        const atualizarSaldoFiado = async (pessoaId, valor) => {
-          const { error: rpcErr } = await supabase.rpc('fiado_lancar_debito', { p_id_pessoa: pessoaId, p_valor: valor });
-          if (rpcErr) {
-            console.error('[Fiado] RPC falhou:', rpcErr.message);
-            addToast('Venda salva, mas falha ao atualizar saldo do fiado. Verifique manualmente.', 'warning');
-          }
-        };
-
-        if (!multiPag && formaPagamento === 'fiado' && pessoaFiadoId) {
-          await atualizarSaldoFiado(pessoaFiadoId, totalCobradoVenda);
-        } else if (multiPag) {
-          const fiado = pagamentos.find(p => p.forma === 'fiado');
-          if (fiado && fiado.pessoaId && Number(fiado.valor) > 0) {
-            await atualizarSaldoFiado(fiado.pessoaId, Number(fiado.valor));
-          }
-        }
-
-        // Pagamentos
-        if (multiPag && pagamentos.length) {
-          const linhas = settlement.paymentRows.map(p => ({
-            id_venda: vendaId,
-            id_usuario,
-            forma_pagamento: p.forma,
-            valor: Number(p.valor || 0)
-          }));
-          const { error: pagsError } = await supabase.from('vendas_pagamentos').insert(linhas);
-          if (pagsError) throw new Error(pagsError.message);
-        }
-
-        // Baixa de estoque — usa RPC atômica para evitar race conditions
-        try {
-          const baixaPromises = [];
-          for (const item of comanda) {
-            if (!item.id_produto) continue;
-            const prod = produtos.find(p => p.id === item.id_produto);
-            const freshInfo = freshStockMap.get(item.id_produto);
-            if ((freshInfo ?? prod)?.controlar_estoque) {
-              const qtd = extrairQuantidadeEfetiva(item);
-              baixaPromises.push(
-                supabase.rpc('decrementar_estoque', { p_id: item.id_produto, p_qtd: qtd })
-              );
-            }
-          }
-          const resultados = await Promise.allSettled(baixaPromises);
-          resultados.forEach((r, i) => {
-            if (r.status === 'rejected') {
-              console.error('[Estoque] Falha na baixa do item', i, r.reason);
-            } else if (r.value?.error) {
-              console.error('[Estoque] RPC erro no item', i, r.value.error.message);
-            }
-          });
-        } catch {}
       }
 
       // [NEW] Update Success Modal State
@@ -1087,7 +971,7 @@
       // Impressão (Legacy functionality - keep it passing logic)
       if (imprimirRecibo) {
           const payloadRecibo = {
-          idVenda: venda.id,
+          idVenda: vendaId,
           numeroVenda: vendaConcluida.numero_venda,
           formaPagamento: insertForma,
           total: totalCobradoVenda,

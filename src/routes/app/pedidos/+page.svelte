@@ -7,7 +7,8 @@
   import { addToast } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
-  import { calculateSaleSettlement, money } from '$lib/finance/caixa';
+  import { money } from '$lib/finance/caixa';
+  import { buildVendaPayload } from '$lib/finance/saleOps';
 
   let ready = false;
   let loading = true;
@@ -215,70 +216,36 @@
     if (!itens.length) throw new Error('Pedido sem itens.');
 
     const totalBase = money(totalEmFechamento || totalPedido);
-    const totalOriginal = money(pagamento.totalOriginal || totalBase);
     const totalFinal = money(pagamento.totalFinal ?? totalBase);
-    const valorDesconto = money(pagamento.valorDesconto || 0);
-    const formaPagamento = pagamento.formaPagamento;
-    const multiPag = formaPagamento === 'multiplo';
-    const pagamentos = Array.isArray(pagamento.pagamentos) ? pagamento.pagamentos : [];
-    const settlement = calculateSaleSettlement({
-      formaPagamento,
+
+    // Pre-flight estoque check (UX: mensagem amigável antes de submeter o RPC)
+    await validarEstoque(itens);
+
+    const { payload } = buildVendaPayload({
+      formaPagamento: pagamento.formaPagamento,
       valorRecebido: pagamento.valorRecebido,
-      pagamentos,
-      totalFinal
+      pagamentos: Array.isArray(pagamento.pagamentos) ? pagamento.pagamentos : [],
+      totalFinal,
+      valorDesconto: pagamento.valorDesconto || 0,
+      descontoTipo: pagamento.descontoTipo || null,
+      taxaEntrega: 0,
+      tipoPedido: 'retirada',
+      idCaixa: idCaixaAberto,
+      idCliente: pagamento.idCliente || null,
+      itens
     });
 
-    const estoqueProdutos = await validarEstoque(itens);
+    const { data, error: rpcError } = await supabase.rpc('criar_venda_completa', {
+      p_payload: payload
+    });
+    if (rpcError) throw rpcError;
 
-    const dadosVenda = {
-      valor_total: totalFinal,
-      forma_pagamento: settlement.formaPagamento,
-      valor_recebido: settlement.valorRecebido,
-      valor_troco: settlement.valorTroco,
-      id_usuario: userId,
-      id_caixa: idCaixaAberto,
-      id_cliente: pagamento.idCliente || null,
-      valor_desconto: valorDesconto,
-      desconto_tipo: pagamento.descontoTipo || null,
-      tipo_pedido: 'retirada',
-      taxa_entrega: 0
-    };
-
-    const { data: venda, error: vendaError } = await supabase
-      .from('vendas')
-      .insert(dadosVenda)
-      .select('id, numero_venda')
-      .single();
-
-    if (vendaError) throw vendaError;
-
-    try {
-      const linhasItens = itens.map((item) => ({
-        id_usuario: userId,
-        id_venda: venda.id,
-        id_produto: item.id_produto,
-        quantidade: item.quantidade,
-        nome_produto_na_venda: item.nome,
-        preco_unitario_na_venda: item.preco
-      }));
-
-      const { error: itensError } = await supabase.from('vendas_itens').insert(linhasItens);
-      if (itensError) throw itensError;
-
-      await registrarFiado(settlement.formaPagamento, pagamento.idCliente, settlement.paymentRows, totalFinal);
-      await registrarPagamentos(venda.id, multiPag, settlement.paymentRows);
-      await baixarEstoque(itens, estoqueProdutos);
-    } catch (err) {
-      await supabase.from('vendas').delete().eq('id', venda.id);
-      throw err;
-    }
-
-    return venda;
+    return { id: data?.id, numero_venda: data?.numero_venda };
   }
 
   async function validarEstoque(itens) {
     const ids = [...new Set(itens.filter((item) => item.id_produto).map((item) => item.id_produto))];
-    if (!ids.length) return new Map();
+    if (!ids.length) return;
 
     const { data, error } = await supabase
       .from('produtos')
@@ -317,59 +284,6 @@
     if (insuficientes.length) {
       throw new Error(`Estoque insuficiente para: ${insuficientes.join(', ')}`);
     }
-
-    return produtosMap;
-  }
-
-  async function registrarFiado(formaPagamento, idCliente, pagamentos, totalFinal) {
-    if (formaPagamento === 'fiado' && idCliente) {
-      const { error } = await supabase.rpc('fiado_lancar_debito', {
-        p_id_pessoa: idCliente,
-        p_valor: totalFinal
-      });
-      if (error) addToast('Venda salva, mas falha ao atualizar saldo do fiado.', 'warning');
-      return;
-    }
-
-    if (formaPagamento === 'multiplo') {
-      const fiado = pagamentos.find((p) => p.forma === 'fiado');
-      if (fiado?.pessoaId && Number(fiado.valor) > 0) {
-        const { error } = await supabase.rpc('fiado_lancar_debito', {
-          p_id_pessoa: fiado.pessoaId,
-          p_valor: Number(fiado.valor)
-        });
-        if (error) addToast('Venda salva, mas falha ao atualizar saldo do fiado.', 'warning');
-      }
-    }
-  }
-
-  async function registrarPagamentos(idVenda, multiPag, pagamentos) {
-    if (!multiPag || !pagamentos.length) return;
-    const linhas = pagamentos.map((p) => ({
-      id_venda: idVenda,
-      id_usuario: userId,
-      forma_pagamento: p.forma,
-      valor: money(p.valor)
-    }));
-    const { error } = await supabase.from('vendas_pagamentos').insert(linhas);
-    if (error) throw error;
-  }
-
-  async function baixarEstoque(itens, produtosMap = new Map()) {
-    const promessas = itens
-      .filter((item) => item.id_produto && produtosMap.get(item.id_produto)?.controlar_estoque)
-      .map((item) => supabase.rpc('decrementar_estoque', {
-        p_id: item.id_produto,
-        p_qtd: Number(item.quantidade || 0)
-      }));
-
-    const resultados = await Promise.allSettled(promessas);
-    resultados.forEach((resultado) => {
-      if (resultado.status === 'fulfilled' && resultado.value?.error) {
-        console.error('[Pedidos] Erro ao baixar estoque:', resultado.value.error.message);
-      }
-    });
-    pdvCache.invalidateProdutos();
   }
 
   function statusLabel(status) {
