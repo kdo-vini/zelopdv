@@ -4,7 +4,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription, hasPedidosAddon } from '$lib/guards';
   import { pdvCache } from '$lib/stores/pdvCache';
-  import { addToast } from '$lib/stores/ui';
+  import { addToast, confirmAction } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
   import { money } from '$lib/finance/caixa';
@@ -136,6 +136,41 @@
     if (window.matchMedia('(max-width: 860px)').matches) {
       mobileDetailOpen = true;
     }
+  }
+
+  function editarPedido(pedido) {
+    goto(`/app/pedidos/${pedido.id}/editar`);
+  }
+
+  async function excluirPedido(pedido) {
+    const titulo = `Pedido #${pedido.numero_pedido}`;
+    const itensPronto = (pedido.pedido_itens || []).some((i) => i.status_cozinha === 'pronto');
+    const mensagem = itensPronto
+      ? `Cancelar o ${titulo}? Há itens já marcados como prontos pela cozinha — eles serão descartados.`
+      : `Cancelar o ${titulo}? Esta ação não pode ser desfeita.`;
+
+    const ok = await confirmAction('Cancelar pedido', mensagem);
+    if (!ok) return;
+
+    const { error, data } = await supabase
+      .from('pedidos')
+      .delete()
+      .eq('id', pedido.id)
+      .eq('id_usuario', userId)
+      .in('status', ['aberto', 'pronto'])
+      .select('id');
+
+    if (error) {
+      addToast('Erro ao cancelar pedido: ' + getFriendlyErrorMessage(error), 'error');
+      return;
+    }
+    if (!data || data.length === 0) {
+      addToast('Pedido já foi fechado em outro dispositivo.', 'warning');
+    } else {
+      addToast(`${titulo} cancelado.`, 'success');
+    }
+    if (pedidoSelecionadoId === pedido.id) pedidoSelecionadoId = null;
+    await carregarPedidos();
   }
 
   async function abrirPagamento() {
@@ -363,26 +398,48 @@
           {#each pedidos as pedido (pedido.id)}
             {@const totalCard = (pedido.pedido_itens || []).reduce((acc, item) => acc + Number(item.subtotal || Number(item.preco_unitario || 0) * Number(item.quantidade || 0)), 0)}
             {@const qtdItens = (pedido.pedido_itens || []).reduce((acc, item) => acc + Number(item.quantidade || 0), 0)}
-            <button
-              type="button"
-              class="queue-item"
-              class:selected={pedido.id === pedidoSelecionado?.id}
-              aria-pressed={pedido.id === pedidoSelecionado?.id}
-              on:click={() => selecionarPedido(pedido.id)}
-            >
-              <div class="qi-top">
-                <span class="order-num">#{pedido.numero_pedido}</span>
-                <span class="status-pill" data-status={pedido.status} aria-label="Status: {statusLabel(pedido.status)}">{statusLabel(pedido.status)}</span>
+            <div class="queue-card">
+              <button
+                type="button"
+                class="queue-item"
+                class:selected={pedido.id === pedidoSelecionado?.id}
+                aria-pressed={pedido.id === pedidoSelecionado?.id}
+                on:click={() => selecionarPedido(pedido.id)}
+              >
+                <div class="qi-top">
+                  <span class="order-num">#{pedido.numero_pedido}</span>
+                  <span class="status-pill" data-status={pedido.status} aria-label="Status: {statusLabel(pedido.status)}">{statusLabel(pedido.status)}</span>
+                </div>
+                <div class="qi-mid">
+                  <strong class="qi-cliente">{clienteLabel(pedido)}</strong>
+                  <span class="qi-meta">{origemLabel(pedido)} · {formatTime(pedido.criado_em)}</span>
+                </div>
+                <div class="qi-foot">
+                  <span>{qtdItens} {qtdItens === 1 ? 'item' : 'itens'}</span>
+                  <strong>{formatMoney(totalCard)}</strong>
+                </div>
+              </button>
+              <div class="queue-actions">
+                <button
+                  type="button"
+                  class="action-btn"
+                  aria-label="Editar pedido #{pedido.numero_pedido}"
+                  title="Editar pedido"
+                  on:click|stopPropagation={() => editarPedido(pedido)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
+                </button>
+                <button
+                  type="button"
+                  class="action-btn action-btn-danger"
+                  aria-label="Cancelar pedido #{pedido.numero_pedido}"
+                  title="Cancelar pedido"
+                  on:click|stopPropagation={() => excluirPedido(pedido)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
               </div>
-              <div class="qi-mid">
-                <strong class="qi-cliente">{clienteLabel(pedido)}</strong>
-                <span class="qi-meta">{origemLabel(pedido)} · {formatTime(pedido.criado_em)}</span>
-              </div>
-              <div class="qi-foot">
-                <span>{qtdItens} {qtdItens === 1 ? 'item' : 'itens'}</span>
-                <strong>{formatMoney(totalCard)}</strong>
-              </div>
-            </button>
+            </div>
           {/each}
         </section>
 
@@ -584,6 +641,15 @@
     overflow-y: auto;
   }
 
+  .queue-card {
+    position: relative;
+  }
+  .queue-card:hover .queue-actions,
+  .queue-card:focus-within .queue-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   .queue-item {
     display: grid;
     gap: 8px;
@@ -593,6 +659,7 @@
     color: var(--text-main);
     border-radius: 10px;
     padding: 14px;
+    padding-right: 64px;
     text-align: left;
     cursor: pointer;
     transition: border-color 140ms ease, background 140ms ease, transform 80ms ease;
@@ -605,6 +672,46 @@
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent-light);
     background: var(--bg-input);
+  }
+
+  .queue-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 140ms ease;
+  }
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-panel);
+    color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  }
+  .action-btn svg { width: 14px; height: 14px; }
+  .action-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-main);
+    border-color: var(--border-strong);
+  }
+  .action-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+  /* Em telas touch (mobile), sempre visível */
+  @media (hover: none) {
+    .queue-actions { opacity: 1; pointer-events: auto; }
   }
 
   .qi-top {

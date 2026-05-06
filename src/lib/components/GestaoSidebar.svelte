@@ -59,7 +59,12 @@
   function isActive(href, currentPath) {
     // Itens "raiz" precisam ser exact match — caso contrário /app/mesas marcaria /app como ativo
     if (href === '/gestao' || href === '/app') return currentPath === href;
-    return currentPath === href || currentPath.startsWith(href + '/');
+    if (currentPath !== href && !currentPath.startsWith(href + '/')) return false;
+    // Se algum item mais específico também combina (ex: /app/pedidos/cozinha vs /app/pedidos),
+    // só o mais específico fica ativo.
+    return !allHrefs.some(
+      (h) => h.length > href.length && (currentPath === h || currentPath.startsWith(h + '/'))
+    );
   }
 
   async function logout() {
@@ -189,6 +194,8 @@
       ]
     }
   ];
+
+  const allHrefs = navGroups.flatMap((g) => g.items.map((i) => i.href));
 </script>
 
 <!-- Botão hambúrguer mobile -->
