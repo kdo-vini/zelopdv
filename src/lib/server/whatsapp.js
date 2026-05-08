@@ -18,6 +18,10 @@ const API_BASE = 'https://app.techneia.com.br/external_api/mensagens/whatsapp_qr
  * @param {string} mensagem - Plain text message (no emoji)
  * @returns {Promise<boolean>} true if sent successfully
  */
+export function isWhatsAppConfigured() {
+  return !!(env.WHATSAPP_TOKEN && env.WHATSAPP_TELEFONE_REMETENTE);
+}
+
 async function enviar(telefone, mensagem) {
   const token = env.WHATSAPP_TOKEN;
   const remetente = env.WHATSAPP_TELEFONE_REMETENTE;
@@ -45,13 +49,35 @@ async function enviar(telefone, mensagem) {
       headers: { Authorization: `Bearer ${token}` },
     });
 
+    const body = await response.text();
+
     if (!response.ok) {
-      const body = await response.text();
       console.error(`[WhatsApp] Erro ao enviar para ${destino}:`, body);
       return false;
     }
 
-    console.log(`[WhatsApp] Mensagem enviada com sucesso para ${destino}`);
+    let payload = null;
+    try {
+      payload = body ? JSON.parse(body) : null;
+    } catch {
+      payload = null;
+    }
+
+    const explicitError =
+      payload?.error ||
+      payload?.erro ||
+      payload?.success === false ||
+      payload?.ok === false ||
+      String(payload?.status || '').toLowerCase() === 'error';
+    const textError =
+      !payload && /\b(erro|error|invalid|invalido|inválido|falha)\b/i.test(body || '');
+
+    if (explicitError || textError) {
+      console.error(`[WhatsApp] API retornou erro para ${destino}:`, body);
+      return false;
+    }
+
+    console.log(`[WhatsApp] Mensagem aceita pela API para ${destino}:`, body || response.status);
     return true;
   } catch (err) {
     console.error('[WhatsApp] Excecao ao enviar mensagem:', err?.message || err);

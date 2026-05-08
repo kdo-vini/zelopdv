@@ -16,8 +16,9 @@
  *   SUPABASE_URL        — Supabase project URL
  *   SUPABASE_SERVICE_ROLE_KEY — Supabase service role key (bypasses RLS)
  *
- * Required table (run migration in Supabase SQL editor):
+ * Required tables (run migrations in Supabase SQL editor):
  *   See .ai/migrations/email_onboarding_logs.sql
+ *   See .ai/migrations/whatsapp_onboarding_logs.sql
  */
 
 import { json } from '@sveltejs/kit';
@@ -25,6 +26,15 @@ import { env } from '$env/dynamic/private';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { sendEmail, isEmailConfigured } from '$lib/server/email';
 import { EMAIL_SEQUENCE, EMAIL_DAYS } from '$lib/server/emailTemplates';
+import {
+  enviarFollowup28d,
+  isWhatsAppConfigured,
+} from '$lib/server/whatsapp';
+
+const WHATSAPP_SEQUENCE = new Map([
+  [28, enviarFollowup28d],
+]);
+const WHATSAPP_DAYS = [28];
 
 export async function GET({ request }) {
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -46,7 +56,16 @@ export async function GET({ request }) {
   }
 
   const now = new Date();
-  const results = { sent: 0, skipped: 0, errors: 0, details: [] };
+  const results = {
+    sent: 0,
+    skipped: 0,
+    errors: 0,
+    details: [],
+    whatsappSent: 0,
+    whatsappSkipped: 0,
+    whatsappErrors: 0,
+    whatsappDetails: [],
+  };
 
   // ── 1. Fetch all active trials ────────────────────────────────────────────
   const { data: trials, error: trialsErr } = await supabaseAdmin
@@ -80,10 +99,32 @@ export async function GET({ request }) {
   /** @type {Set<string>} user_id:email_day */
   const sentSet = new Set((alreadySent || []).map((r) => `${r.user_id}:${r.email_day}`));
 
+  let whatsappLogAvailable = isWhatsAppConfigured();
+  let whatsappSentSet = new Set();
+
+  if (whatsappLogAvailable) {
+    const { data: alreadySentWhatsApp, error: whatsappLogsErr } = await supabaseAdmin
+      .from('whatsapp_onboarding_logs')
+      .select('user_id, message_day')
+      .in('user_id', userIds);
+
+    if (whatsappLogsErr) {
+      whatsappLogAvailable = false;
+      console.warn(
+        '[onboarding-emails] WhatsApp logs indisponiveis; pulando follow-ups de WhatsApp:',
+        whatsappLogsErr.message
+      );
+    } else {
+      whatsappSentSet = new Set(
+        (alreadySentWhatsApp || []).map((r) => `${r.user_id}:${r.message_day}`)
+      );
+    }
+  }
+
   // ── 3. Fetch user profiles (nome + email) ─────────────────────────────────
   const { data: profiles } = await supabaseAdmin
     .from('empresa_perfil')
-    .select('user_id, nome_exibicao')
+    .select('user_id, nome_exibicao, contato')
     .in('user_id', userIds);
 
   const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
@@ -109,13 +150,15 @@ export async function GET({ request }) {
     if (!userEmail) {
       results.skipped++;
       results.details.push({ user_id, reason: 'email not found', daysSince });
-      continue;
     }
 
-    const nome = profileMap[user_id]?.nome_exibicao || '';
+    const profile = profileMap[user_id] || {};
+    const nome = profile.nome_exibicao || '';
+    const telefone = profile.contato || '';
 
     // Find all email days that should be sent but haven't been yet
-    for (const emailDay of EMAIL_DAYS) {
+    if (userEmail) {
+      for (const emailDay of EMAIL_DAYS) {
       if (daysSince < emailDay) continue; // not yet time
       if (sentSet.has(`${user_id}:${emailDay}`)) continue; // already sent
 
@@ -148,6 +191,46 @@ export async function GET({ request }) {
       } else {
         results.errors++;
         results.details.push({ user_id, emailDay, to: userEmail, error: 'send failed' });
+      }
+      }
+    }
+
+    if (!whatsappLogAvailable) continue;
+
+    if (!telefone) {
+      results.whatsappSkipped++;
+      results.whatsappDetails.push({ user_id, reason: 'phone not found', daysSince });
+      continue;
+    }
+
+    for (const messageDay of WHATSAPP_DAYS) {
+      if (daysSince < messageDay) continue;
+      if (whatsappSentSet.has(`${user_id}:${messageDay}`)) continue;
+
+      const sendWhatsApp = WHATSAPP_SEQUENCE.get(messageDay);
+      if (!sendWhatsApp) continue;
+
+      const sent = await sendWhatsApp(telefone, nome);
+
+      if (sent) {
+        const { error: insertErr } = await supabaseAdmin
+          .from('whatsapp_onboarding_logs')
+          .insert({
+            user_id,
+            message_day: messageDay,
+            recipient_phone: telefone,
+          });
+
+        if (insertErr && !insertErr.message.includes('duplicate')) {
+          console.error('[onboarding-emails] Erro ao salvar log de WhatsApp:', insertErr.message);
+        }
+
+        whatsappSentSet.add(`${user_id}:${messageDay}`);
+        results.whatsappSent++;
+        results.whatsappDetails.push({ user_id, messageDay });
+      } else {
+        results.whatsappErrors++;
+        results.whatsappDetails.push({ user_id, messageDay, error: 'send failed' });
       }
     }
   }
