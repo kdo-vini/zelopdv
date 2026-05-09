@@ -8,7 +8,7 @@
  */
 
 const APP_URL = 'https://zelopdv.com.br';
-const WHATSAPP_NUMBER = '5514991537503'; // WHATSAPP_TELEFONE_REMETENTE
+const WHATSAPP_NUMBER = '5514991537503'; // Public support WhatsApp number
 
 /** Shared HTML wrapper — applies branding and works in Gmail/Outlook/Apple Mail */
 function wrapEmail(bodyHtml) {

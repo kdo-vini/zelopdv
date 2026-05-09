@@ -33,3 +33,4 @@ cloudflare-worker/asaas-proxy-node.js
 # Digital certificates (not for repo)
 static/*.pem
 static/digital-certificate*
+.vercel

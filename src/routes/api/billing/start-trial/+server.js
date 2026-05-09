@@ -124,7 +124,7 @@ async function maybeSendWelcomeWhatsApp({ userId, perfil }) {
       channel: 'whatsapp',
       messageDay: 0,
       status: 'skipped',
-      provider: 'techneia',
+      provider: 'zelochat',
       error: 'missing profile contact',
     });
     return false;
@@ -136,7 +136,7 @@ async function maybeSendWelcomeWhatsApp({ userId, perfil }) {
     messageDay: 0,
     status: 'attempted',
     recipient: perfil.contato,
-    provider: 'techneia',
+    provider: 'zelochat',
   });
   const sent = await enviarBoasVindas(perfil.contato, perfil.nome_exibicao || '');
 
@@ -147,7 +147,7 @@ async function maybeSendWelcomeWhatsApp({ userId, perfil }) {
       messageDay: 0,
       status: 'failed',
       recipient: perfil.contato,
-      provider: 'techneia',
+      provider: 'zelochat',
       error: 'enviarBoasVindas returned false',
     });
     return false;
@@ -168,7 +168,7 @@ async function maybeSendWelcomeWhatsApp({ userId, perfil }) {
     messageDay: 0,
     status: 'sent',
     recipient: perfil.contato,
-    provider: 'techneia',
+    provider: 'zelochat',
   });
 
   return true;

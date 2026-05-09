@@ -241,7 +241,7 @@ export async function GET({ request }) {
         messageDay,
         status: 'attempted',
         recipient: telefone,
-        provider: 'techneia',
+        provider: 'zelochat',
         metadata: { source: 'cron' },
       });
       const sent = await sendWhatsApp(telefone, nome);
@@ -267,7 +267,7 @@ export async function GET({ request }) {
           messageDay,
           status: 'sent',
           recipient: telefone,
-          provider: 'techneia',
+          provider: 'zelochat',
           metadata: { source: 'cron' },
         });
       } else {
@@ -279,7 +279,7 @@ export async function GET({ request }) {
           messageDay,
           status: 'failed',
           recipient: telefone,
-          provider: 'techneia',
+          provider: 'zelochat',
           error: 'WhatsApp sender returned false',
           metadata: { source: 'cron' },
         });

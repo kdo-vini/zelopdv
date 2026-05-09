@@ -1,6 +1,6 @@
 /**
  * Server-side WhatsApp notification module for ZeloPDV.
- * Uses the Techneia WhatsApp QR Code API (fire-and-forget, no emoji).
+ * Uses ZeloChat's internal WhatsApp POST API (fire-and-forget, no emoji).
  *
  * Messages:
  *  - enviarBoasVindas   : sent immediately on first account creation
@@ -11,7 +11,19 @@
 import { env } from '$env/dynamic/private';
 import { normalizeBrazilianPhone } from '$lib/masks';
 
-const API_BASE = 'https://app.techneia.com.br/external_api/mensagens/whatsapp_qr_code/enviar';
+const DEFAULT_ZELOCHAT_SEND_URL = 'https://chat.zelopdv.com.br/internal/whatsapp/send-text';
+
+function getZeloChatSendUrl() {
+  const explicitUrl = (env.ZELOCHAT_INTERNAL_SEND_URL || env.ZELOCHAT_INTERNAL_API_URL || '').trim();
+  if (explicitUrl) return explicitUrl;
+
+  const baseUrl = (env.ZELOCHAT_API_BASE_URL || '').trim().replace(/\/+$/, '');
+  return baseUrl ? `${baseUrl}/internal/whatsapp/send-text` : DEFAULT_ZELOCHAT_SEND_URL;
+}
+
+function getZeloChatInternalKey() {
+  return (env.ZELOCHAT_INTERNAL_API_KEY || env.TECHNE_INTERNAL_API_KEY || '').trim();
+}
 
 /**
  * Core send function — shared by all message types.
@@ -20,14 +32,13 @@ const API_BASE = 'https://app.techneia.com.br/external_api/mensagens/whatsapp_qr
  * @returns {Promise<boolean>} true if sent successfully
  */
 export function isWhatsAppConfigured() {
-  return !!(env.WHATSAPP_TOKEN && env.WHATSAPP_TELEFONE_REMETENTE);
+  return !!getZeloChatInternalKey();
 }
 
 async function enviar(telefone, mensagem) {
-  const token = env.WHATSAPP_TOKEN;
-  const remetente = env.WHATSAPP_TELEFONE_REMETENTE;
-  if (!token || !remetente) {
-    console.warn('[WhatsApp] WHATSAPP_TOKEN ou WHATSAPP_TELEFONE_REMETENTE nao configurado, mensagem ignorada.');
+  const internalKey = getZeloChatInternalKey();
+  if (!internalKey) {
+    console.warn('[WhatsApp] ZELOCHAT_INTERNAL_API_KEY nao configurado, mensagem ignorada.');
     return false;
   }
 
@@ -38,14 +49,13 @@ async function enviar(telefone, mensagem) {
   }
 
   try {
-    const url = new URL(API_BASE);
-    url.searchParams.set('telefone_remetente', remetente);
-    url.searchParams.set('telefone_destinatario', destino);
-    url.searchParams.set('conteudo_mensagem', mensagem);
-
-    const response = await fetch(url.toString(), {
+    const response = await fetch(getZeloChatSendUrl(), {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-ZeloChat-Internal-Key': internalKey,
+      },
+      body: JSON.stringify({ to: destino, message: mensagem }),
     });
 
     const body = await response.text();
@@ -63,10 +73,10 @@ async function enviar(telefone, mensagem) {
     }
 
     const explicitError =
+      payload?.ok === false ||
       payload?.error ||
       payload?.erro ||
       payload?.success === false ||
-      payload?.ok === false ||
       String(payload?.status || '').toLowerCase() === 'error';
     const textError =
       !payload && /\b(erro|error|invalid|invalido|inválido|falha)\b/i.test(body || '');
