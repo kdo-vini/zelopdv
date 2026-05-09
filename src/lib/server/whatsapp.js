@@ -11,7 +11,7 @@
 import { env } from '$env/dynamic/private';
 import { normalizeBrazilianPhone } from '$lib/masks';
 
-const DEFAULT_ZELOCHAT_SEND_URL = 'https://chat.zelopdv.com.br/internal/whatsapp/send-text';
+const DEFAULT_ZELOCHAT_SEND_URL = 'https://zelochat-production.up.railway.app/internal/whatsapp/send-text';
 
 function getZeloChatSendUrl() {
   const explicitUrl = (env.ZELOCHAT_INTERNAL_SEND_URL || env.ZELOCHAT_INTERNAL_API_URL || '').trim();
