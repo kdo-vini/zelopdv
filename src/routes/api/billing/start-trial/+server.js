@@ -3,6 +3,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { enviarBoasVindas } from '$lib/server/whatsapp';
 import { sendEmail, isEmailConfigured } from '$lib/server/email';
 import { emailDay0 } from '$lib/server/emailTemplates';
+import { logOnboardingCommunication } from '$lib/server/onboardingEvents';
 
 async function fetchPerfil(userId) {
   const { data: perfil, error } = await supabaseAdmin
@@ -31,7 +32,30 @@ async function touchLastSeen(userId, nowIso) {
 }
 
 async function maybeSendDay0Email({ userId, email, nomeLoja }) {
-  if (!email || !isEmailConfigured()) return false;
+  if (!email) {
+    await logOnboardingCommunication({
+      userId,
+      channel: 'email',
+      messageDay: 0,
+      status: 'skipped',
+      provider: 'resend',
+      error: 'missing recipient email',
+    });
+    return false;
+  }
+
+  if (!isEmailConfigured()) {
+    await logOnboardingCommunication({
+      userId,
+      channel: 'email',
+      messageDay: 0,
+      status: 'failed',
+      recipient: email,
+      provider: 'resend',
+      error: 'RESEND_API_KEY or RESEND_FROM_EMAIL not configured',
+    });
+    return false;
+  }
 
   const { data: alreadySent, error: logErr } = await supabaseAdmin
     .from('email_onboarding_logs')
@@ -44,12 +68,33 @@ async function maybeSendDay0Email({ userId, email, nomeLoja }) {
     console.warn('[start-trial] Email log check error:', logErr.message);
   }
 
-  if (alreadySent) return false;
+  if (alreadySent) return true;
 
   const { subject, html } = emailDay0(nomeLoja || '');
+  await logOnboardingCommunication({
+    userId,
+    channel: 'email',
+    messageDay: 0,
+    status: 'attempted',
+    recipient: email,
+    provider: 'resend',
+    metadata: { subject },
+  });
   const sent = await sendEmail({ to: email, subject, html });
 
-  if (!sent) return false;
+  if (!sent) {
+    await logOnboardingCommunication({
+      userId,
+      channel: 'email',
+      messageDay: 0,
+      status: 'failed',
+      recipient: email,
+      provider: 'resend',
+      error: 'sendEmail returned false',
+      metadata: { subject },
+    });
+    return false;
+  }
 
   const { error: insertErr } = await supabaseAdmin
     .from('email_onboarding_logs')
@@ -59,15 +104,54 @@ async function maybeSendDay0Email({ userId, email, nomeLoja }) {
     console.warn('[start-trial] Email log insert error:', insertErr.message);
   }
 
+  await logOnboardingCommunication({
+    userId,
+    channel: 'email',
+    messageDay: 0,
+    status: 'sent',
+    recipient: email,
+    provider: 'resend',
+    metadata: { subject },
+  });
+
   return true;
 }
 
 async function maybeSendWelcomeWhatsApp({ userId, perfil }) {
-  if (!perfil?.contato) return false;
+  if (!perfil?.contato) {
+    await logOnboardingCommunication({
+      userId,
+      channel: 'whatsapp',
+      messageDay: 0,
+      status: 'skipped',
+      provider: 'techneia',
+      error: 'missing profile contact',
+    });
+    return false;
+  }
 
+  await logOnboardingCommunication({
+    userId,
+    channel: 'whatsapp',
+    messageDay: 0,
+    status: 'attempted',
+    recipient: perfil.contato,
+    provider: 'techneia',
+  });
   const sent = await enviarBoasVindas(perfil.contato, perfil.nome_exibicao || '');
 
-  if (!sent) return false;
+  if (!sent) {
+    await logOnboardingCommunication({
+      userId,
+      channel: 'whatsapp',
+      messageDay: 0,
+      status: 'failed',
+      recipient: perfil.contato,
+      provider: 'techneia',
+      error: 'enviarBoasVindas returned false',
+    });
+    return false;
+  }
 
   const { error } = await supabaseAdmin
     .from('subscriptions')
@@ -77,6 +161,15 @@ async function maybeSendWelcomeWhatsApp({ userId, perfil }) {
   if (error) {
     console.warn('[start-trial] WhatsApp sent_at update error:', error.message);
   }
+
+  await logOnboardingCommunication({
+    userId,
+    channel: 'whatsapp',
+    messageDay: 0,
+    status: 'sent',
+    recipient: perfil.contato,
+    provider: 'techneia',
+  });
 
   return true;
 }
@@ -96,22 +189,33 @@ export async function POST({ request }) {
 
     const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, status, current_period_end')
+      .select('id, status, current_period_end, whatsapp_onboarding_sent_at')
       .eq('user_id', userId)
       .maybeSingle();
 
     if (existingSub) {
       const perfil = await fetchPerfil(userId);
-      await maybeSendDay0Email({
+      const emailDay0Sent = await maybeSendDay0Email({
         userId,
         email,
         nomeLoja: perfil?.nome_exibicao || '',
       });
+      let whatsappDay0Sent = Boolean(existingSub.whatsapp_onboarding_sent_at);
+      if (!existingSub.whatsapp_onboarding_sent_at) {
+        whatsappDay0Sent = await maybeSendWelcomeWhatsApp({
+          userId,
+          perfil,
+        });
+      }
 
       return json({
         success: true,
         trialEnd: existingSub.current_period_end,
         alreadyExists: true,
+        onboarding: {
+          emailDay0Sent,
+          whatsappDay0Sent,
+        },
       });
     }
 
@@ -156,7 +260,14 @@ export async function POST({ request }) {
       }
     }
 
-    return json({ success: true, trialEnd: trialEnd.toISOString() });
+    return json({
+      success: true,
+      trialEnd: trialEnd.toISOString(),
+      onboarding: {
+        emailDay0Sent: sideEffects[1]?.status === 'fulfilled' && sideEffects[1].value === true,
+        whatsappDay0Sent: sideEffects[2]?.status === 'fulfilled' && sideEffects[2].value === true,
+      },
+    });
 
   } catch (err) {
     console.error('[start-trial] error:', err?.message || err);

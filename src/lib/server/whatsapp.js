@@ -9,6 +9,7 @@
  */
 
 import { env } from '$env/dynamic/private';
+import { normalizeBrazilianPhone } from '$lib/masks';
 
 const API_BASE = 'https://app.techneia.com.br/external_api/mensagens/whatsapp_qr_code/enviar';
 
@@ -30,13 +31,11 @@ async function enviar(telefone, mensagem) {
     return false;
   }
 
-  // Normalize: strip non-digits, ensure country code 55
-  const digits = telefone.replace(/\D/g, '');
-  if (!digits || digits.length < 10) {
+  const destino = normalizeBrazilianPhone(telefone);
+  if (!destino) {
     console.warn('[WhatsApp] Telefone invalido, ignorando:', telefone);
     return false;
   }
-  const destino = digits.startsWith('55') ? digits : `55${digits}`;
 
   try {
     const url = new URL(API_BASE);

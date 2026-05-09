@@ -7,6 +7,17 @@ const supabaseUrl = process.env.PUBLIC_SUPABASE_URL ?? process.env.VITE_PUBLIC_S
 const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : '';
 
 export default defineConfig({
+  test: {
+    include: ['tests/**/*.test.js'],
+    exclude: [
+      'node_modules/**',
+      'e2e/**',
+      '.claude/**',
+      'admin-dashboard/**',
+      'playwright-report/**',
+      'test-results/**'
+    ]
+  },
   plugins: [
     sveltekit(),
     SvelteKitPWA({

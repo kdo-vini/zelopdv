@@ -152,14 +152,16 @@
       // Se logado, checa assinatura antes de liberar rotas protegidas
       let hasActiveSub = false;
       let hasCompleteProfile = false;
+      let subRow = null;
       if (session?.user?.id) {
         try {
           // 1) Assinatura ativa (somente por user_id)
-          let { data: subRow } = await supabase
+          let { data } = await supabase
             .from('subscriptions')
             .select('status, current_period_end')
             .eq('user_id', session.user.id)
             .maybeSingle();
+          subRow = data;
           hasActiveSub = isSubscriptionActiveStrict(subRow);
 
           // 2) Perfil da empresa completo (não cria se ausente, devido a NOT NULL)

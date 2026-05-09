@@ -1,7 +1,7 @@
 <script>
   import { tick } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-  import { maskPhone, maskDocumento } from '$lib/masks';
+  import { maskPhone, maskDocumento, normalizeBrazilianPhone } from '$lib/masks';
 
   export let show = false;
   export let userId = '';
@@ -33,7 +33,7 @@
   function validate() {
     error = '';
     if (step === 1 && !nome.trim()) { error = 'Informe o nome da loja.'; return false; }
-    if (step === 2 && !contato.trim()) { error = 'Informe o telefone.'; return false; }
+    if (step === 2 && !normalizeBrazilianPhone(contato)) { error = 'Informe um WhatsApp válido com DDD.'; return false; }
     if (step === 3 && !documento.trim()) { error = 'Informe o CPF ou CNPJ.'; return false; }
     return true;
   }
@@ -60,7 +60,7 @@
           user_id: userId,
           nome_exibicao: nome.trim(),
           documento: documento.trim(),
-          contato: contato.trim(),
+          contato: normalizeBrazilianPhone(contato),
           largura_bobina,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' });

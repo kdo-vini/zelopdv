@@ -396,7 +396,7 @@
           </li>
         </ul>
         <p class="mt-4">
-          Não utilizamos cookies de rastreamento, publicidade comportamental ou ferramentas de analytics de terceiros como Google Analytics.
+          Utilizamos ferramentas de analytics e mensuração de campanhas, como Google Analytics e Meta Pixel, para entender o uso do site, medir conversões e melhorar a experiência. Essas ferramentas podem usar cookies ou tecnologias semelhantes conforme suas próprias políticas.
         </p>
         <p class="mt-4">
           Você pode limpar cookies e dados locais a qualquer momento pelas configurações do seu navegador, porém isso encerrará sua sessão no sistema.

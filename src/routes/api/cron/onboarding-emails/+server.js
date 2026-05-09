@@ -7,7 +7,7 @@
  * Vercel automatically injects the CRON_SECRET env var as a Bearer token
  * when calling cron jobs — configure it in your Vercel project settings.
  *
- * Schedule: 0 6 * * * (6am UTC = 3am BRT) — defined in vercel.json
+ * Schedule: 0 9 * * * (9am UTC = 6am BRT) — defined in vercel.json
  *
  * Required env vars:
  *   CRON_SECRET         — shared secret for endpoint protection
@@ -18,7 +18,8 @@
  *
  * Required tables (run migrations in Supabase SQL editor):
  *   See .ai/migrations/email_onboarding_logs.sql
- *   See .ai/migrations/whatsapp_onboarding_logs.sql
+ *   subscriptions WhatsApp sent_at columns
+ *   onboarding_communication_events
  */
 
 import { json } from '@sveltejs/kit';
@@ -27,14 +28,19 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { sendEmail, isEmailConfigured } from '$lib/server/email';
 import { EMAIL_SEQUENCE, EMAIL_DAYS } from '$lib/server/emailTemplates';
 import {
+  enviarBoasVindas,
+  enviarFollowup7d,
   enviarFollowup28d,
   isWhatsAppConfigured,
 } from '$lib/server/whatsapp';
+import { logOnboardingCommunication } from '$lib/server/onboardingEvents';
 
 const WHATSAPP_SEQUENCE = new Map([
+  [0, enviarBoasVindas],
+  [7, enviarFollowup7d],
   [28, enviarFollowup28d],
 ]);
-const WHATSAPP_DAYS = [28];
+const WHATSAPP_DAYS = [0, 7, 28];
 
 export async function GET({ request }) {
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -70,7 +76,9 @@ export async function GET({ request }) {
   // ── 1. Fetch all active trials ────────────────────────────────────────────
   const { data: trials, error: trialsErr } = await supabaseAdmin
     .from('subscriptions')
-    .select('user_id, created_at, current_period_end')
+    .select(
+      'user_id, created_at, current_period_end, whatsapp_onboarding_sent_at, whatsapp_followup_7d_sent_at, whatsapp_followup_28d_sent_at'
+    )
     .eq('status', 'trialing')
     .gt('current_period_end', now.toISOString());
 
@@ -99,25 +107,14 @@ export async function GET({ request }) {
   /** @type {Set<string>} user_id:email_day */
   const sentSet = new Set((alreadySent || []).map((r) => `${r.user_id}:${r.email_day}`));
 
-  let whatsappLogAvailable = isWhatsAppConfigured();
+  const whatsappAvailable = isWhatsAppConfigured();
   let whatsappSentSet = new Set();
 
-  if (whatsappLogAvailable) {
-    const { data: alreadySentWhatsApp, error: whatsappLogsErr } = await supabaseAdmin
-      .from('whatsapp_onboarding_logs')
-      .select('user_id, message_day')
-      .in('user_id', userIds);
-
-    if (whatsappLogsErr) {
-      whatsappLogAvailable = false;
-      console.warn(
-        '[onboarding-emails] WhatsApp logs indisponiveis; pulando follow-ups de WhatsApp:',
-        whatsappLogsErr.message
-      );
-    } else {
-      whatsappSentSet = new Set(
-        (alreadySentWhatsApp || []).map((r) => `${r.user_id}:${r.message_day}`)
-      );
+  if (whatsappAvailable) {
+    for (const trial of trials) {
+      if (trial.whatsapp_onboarding_sent_at) whatsappSentSet.add(`${trial.user_id}:0`);
+      if (trial.whatsapp_followup_7d_sent_at) whatsappSentSet.add(`${trial.user_id}:7`);
+      if (trial.whatsapp_followup_28d_sent_at) whatsappSentSet.add(`${trial.user_id}:28`);
     }
   }
 
@@ -167,6 +164,15 @@ export async function GET({ request }) {
 
       const { subject, html } = templateFn(nome);
 
+      await logOnboardingCommunication({
+        userId: user_id,
+        channel: 'email',
+        messageDay: emailDay,
+        status: 'attempted',
+        recipient: userEmail,
+        provider: 'resend',
+        metadata: { source: 'cron', subject },
+      });
       const sent = await sendEmail({ to: userEmail, subject, html });
 
       if (sent) {
@@ -188,14 +194,33 @@ export async function GET({ request }) {
 
         results.sent++;
         results.details.push({ user_id, emailDay, to: userEmail });
+        await logOnboardingCommunication({
+          userId: user_id,
+          channel: 'email',
+          messageDay: emailDay,
+          status: 'sent',
+          recipient: userEmail,
+          provider: 'resend',
+          metadata: { source: 'cron', subject },
+        });
       } else {
         results.errors++;
         results.details.push({ user_id, emailDay, to: userEmail, error: 'send failed' });
+        await logOnboardingCommunication({
+          userId: user_id,
+          channel: 'email',
+          messageDay: emailDay,
+          status: 'failed',
+          recipient: userEmail,
+          provider: 'resend',
+          error: 'sendEmail returned false',
+          metadata: { source: 'cron', subject },
+        });
       }
       }
     }
 
-    if (!whatsappLogAvailable) continue;
+    if (!whatsappAvailable) continue;
 
     if (!telefone) {
       results.whatsappSkipped++;
@@ -210,27 +235,54 @@ export async function GET({ request }) {
       const sendWhatsApp = WHATSAPP_SEQUENCE.get(messageDay);
       if (!sendWhatsApp) continue;
 
+      await logOnboardingCommunication({
+        userId: user_id,
+        channel: 'whatsapp',
+        messageDay,
+        status: 'attempted',
+        recipient: telefone,
+        provider: 'techneia',
+        metadata: { source: 'cron' },
+      });
       const sent = await sendWhatsApp(telefone, nome);
 
       if (sent) {
-        const { error: insertErr } = await supabaseAdmin
-          .from('whatsapp_onboarding_logs')
-          .insert({
-            user_id,
-            message_day: messageDay,
-            recipient_phone: telefone,
-          });
-
-        if (insertErr && !insertErr.message.includes('duplicate')) {
-          console.error('[onboarding-emails] Erro ao salvar log de WhatsApp:', insertErr.message);
-        }
-
         whatsappSentSet.add(`${user_id}:${messageDay}`);
+        const sentField = {
+          0: 'whatsapp_onboarding_sent_at',
+          7: 'whatsapp_followup_7d_sent_at',
+          28: 'whatsapp_followup_28d_sent_at',
+        }[messageDay];
+        if (sentField) {
+          await supabaseAdmin
+            .from('subscriptions')
+            .update({ [sentField]: new Date().toISOString() })
+            .eq('user_id', user_id);
+        }
         results.whatsappSent++;
         results.whatsappDetails.push({ user_id, messageDay });
+        await logOnboardingCommunication({
+          userId: user_id,
+          channel: 'whatsapp',
+          messageDay,
+          status: 'sent',
+          recipient: telefone,
+          provider: 'techneia',
+          metadata: { source: 'cron' },
+        });
       } else {
         results.whatsappErrors++;
         results.whatsappDetails.push({ user_id, messageDay, error: 'send failed' });
+        await logOnboardingCommunication({
+          userId: user_id,
+          channel: 'whatsapp',
+          messageDay,
+          status: 'failed',
+          recipient: telefone,
+          provider: 'techneia',
+          error: 'WhatsApp sender returned false',
+          metadata: { source: 'cron' },
+        });
       }
     }
   }

@@ -1,4 +1,5 @@
 // Utility helpers for the Perfil page
+import { normalizeBrazilianPhone } from './masks.js';
 
 // Canonicalize paper width: accept '58mm', '58 mm', '80mm', '80 mm'
 const VALID_WIDTHS = ['58mm', '80mm'];
@@ -48,7 +49,7 @@ export function buildPayload({
     nome_exibicao: (nome_exibicao || '').trim(),
     razao_social: (razao_social || '').trim() || null,
     documento: (documento || '').trim(),
-    contato: (contato || '').trim(),
+    contato: normalizeBrazilianPhone(contato) || (contato || '').trim(),
     inscricao_estadual: (inscricao_estadual || '').trim() || null,
     endereco: (endereco || '').trim() || null,
     rodape_recibo: (rodape_recibo || 'Obrigado pela preferência!').trim() || 'Obrigado pela preferência!',

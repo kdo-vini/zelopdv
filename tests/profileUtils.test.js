@@ -47,6 +47,18 @@ describe('profileUtils.buildPayload', () => {
     expect(typeof payload.updated_at).toBe('string');
     Date.now = now;
   });
+
+  it('stores phone contacts in canonical WhatsApp format when possible', () => {
+    const payload = buildPayload({
+      userId: 'u1',
+      nome_exibicao: 'Loja',
+      documento: '123',
+      contato: '+55 11 99999-9999',
+      largura_bobina: '80mm',
+    });
+
+    expect(payload.contato).toBe('5511999999999');
+  });
 });
 
 describe('profileUtils.isValidImage', () => {
