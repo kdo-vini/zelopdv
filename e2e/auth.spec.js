@@ -14,7 +14,7 @@ test.describe('Página de Login', () => {
   test('exibe campos de email e senha e botão Entrar', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByLabel(/e-?mail/i)).toBeVisible();
-    await expect(page.getByLabel(/senha/i)).toBeVisible();
+    await expect(page.getByRole('textbox', { name: /senha/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /entrar/i })).toBeVisible();
   });
 
@@ -33,7 +33,7 @@ test.describe('Página de Login', () => {
   test('exibe erro com credenciais inválidas', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/e-?mail/i).fill('invalido@exemplo.com.br');
-    await page.getByLabel(/senha/i).fill('senha-errada-123');
+    await page.getByRole('textbox', { name: /senha/i }).fill('senha-errada-123');
     await page.getByRole('button', { name: /entrar/i }).click();
 
     // Wait for error message to appear (toast or inline)
