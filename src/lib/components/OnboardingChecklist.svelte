@@ -5,12 +5,14 @@
   let visible = false;
   let userId = null;
   let hasProdutos = false;
+  let hasCaixa = false;
   let hasVenda = false;
   let hasRelatorio = false;
   let completing = false;
 
-  $: allDone = hasProdutos && hasVenda && hasRelatorio;
-  $: doneCount = [hasProdutos, hasVenda, hasRelatorio].filter(Boolean).length;
+  $: allDone = hasProdutos && hasCaixa && hasVenda && hasRelatorio;
+  $: doneCount = [hasProdutos, hasCaixa, hasVenda, hasRelatorio].filter(Boolean).length;
+  const totalSteps = 4;
 
   onMount(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -27,19 +29,21 @@
     if (perfil?.onboarding_completed) return;
 
     // Check each step in parallel
-    const [prodRes, vendaRes] = await Promise.all([
+    const [prodRes, caixaRes, vendaRes] = await Promise.all([
       supabase.from('produtos').select('id', { count: 'exact', head: true }).eq('id_usuario', userId),
+      supabase.from('caixas').select('id', { count: 'exact', head: true }).eq('id_usuario', userId),
       supabase.from('vendas').select('id', { count: 'exact', head: true }).eq('id_usuario', userId),
     ]);
 
     hasProdutos = (prodRes.count ?? 0) > 0;
+    hasCaixa = (caixaRes.count ?? 0) > 0;
     hasVenda = (vendaRes.count ?? 0) > 0;
     hasRelatorio = localStorage.getItem('zelo_relatorio_visited') === 'true';
 
     visible = true;
 
     // If already all done from the start (e.g. just refreshed after doing everything), complete immediately
-    if (hasProdutos && hasVenda && hasRelatorio) {
+    if (hasProdutos && hasCaixa && hasVenda && hasRelatorio) {
       markComplete();
     }
   });
@@ -76,7 +80,7 @@
     <div class="checklist-header">
       <div>
         <p class="checklist-title">Primeiros passos</p>
-        <p class="checklist-sub">{doneCount} de 3 etapas concluídas</p>
+        <p class="checklist-sub">{doneCount} de {totalSteps} etapas concluídas</p>
       </div>
       <button class="dismiss-btn" on:click={dismiss} aria-label="Dispensar">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
@@ -86,8 +90,8 @@
     </div>
 
     <!-- Progress bar -->
-    <div class="progress-track" role="progressbar" aria-valuenow={doneCount} aria-valuemin="0" aria-valuemax="3">
-      <div class="progress-fill" style="width: {(doneCount / 3) * 100}%"></div>
+    <div class="progress-track" role="progressbar" aria-valuenow={doneCount} aria-valuemin="0" aria-valuemax={totalSteps}>
+      <div class="progress-fill" style="width: {(doneCount / totalSteps) * 100}%"></div>
     </div>
 
     <!-- Steps -->
@@ -106,6 +110,20 @@
         {/if}
       </li>
 
+      <li class="step" class:done={hasCaixa}>
+        <span class="step-icon" aria-hidden="true">
+          {#if hasCaixa}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+          {:else}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><circle cx="10" cy="10" r="7.25" /></svg>
+          {/if}
+        </span>
+        <span class="step-label">Abra o caixa do dia</span>
+        {#if !hasCaixa}
+          <a href="/app" class="step-link">Abrir →</a>
+        {/if}
+      </li>
+
       <li class="step" class:done={hasVenda}>
         <span class="step-icon" aria-hidden="true">
           {#if hasVenda}
@@ -114,7 +132,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><circle cx="10" cy="10" r="7.25" /></svg>
           {/if}
         </span>
-        <span class="step-label">Registre sua primeira venda</span>
+        <span class="step-label">Registre a primeira venda e recibo</span>
         {#if !hasVenda}
           <a href="/app" class="step-link">Ir →</a>
         {/if}

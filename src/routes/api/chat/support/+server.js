@@ -80,8 +80,9 @@ PIN ADMINISTRATIVO
 • Esqueceu o PIN: clique em "Esqueci meu PIN" na tela de bloqueio → um código de verificação chega no e-mail cadastrado → digite o código → defina um PIN novo
 
 IMPRESSÃO TÉRMICA
-• Integração opcional com QZ Tray para imprimir direto na térmica, sem pop-up do navegador
-• Sem o QZ Tray, a impressão continua funcionando normalmente pelo navegador
+• A impressão padrão funciona pelo diálogo nativo do navegador/Windows
+• A impressão direta USB é opcional e avançada, via WebUSB no Chrome/Edge desktop
+• Se o WebUSB falhar, o sistema usa automaticamente a impressão nativa do navegador/Windows
 
 NÃO EMITIMOS:
 • NFC-e. O sistema gera recibos e comprovantes internos. Para nota fiscal, recomendamos combinar com um emissor fiscal dedicado.
@@ -116,8 +117,8 @@ Esqueci o PIN / PIN incorreto
 → Na tela de bloqueio, clique em "Esqueci meu PIN". Um código de verificação será enviado para o e-mail da conta. Digite o código, depois crie um PIN novo. Se não receber o e-mail, verifique a pasta de spam.
 → Se nunca configurou um PIN, tente 0000 — é o padrão para quem pulou a configuração inicial.
 
-QZ Tray não imprime
-→ Verifique se o QZ Tray está aberto na bandeja do sistema (canto inferior direito). A impressora térmica precisa estar definida como padrão no Windows. Se o pop-up de permissão aparecer, clique em "Allow" e marque "Remember this decision".
+USB direto não imprime
+→ Use Chrome ou Edge no computador do caixa, conecte a impressora por USB e pareie em Perfil → Integrações. Se aparecer aviso de sobreposição/interferência ou o navegador bloquear a permissão, continue pela impressão nativa do Windows; o Zelo abre esse fallback automaticamente quando o USB falha.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 COMO CRIAR CONTA

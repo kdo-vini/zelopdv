@@ -805,6 +805,9 @@
               <div class="flex-1">
                 <div class="flex items-center gap-2 flex-wrap">
                   <h2 class="text-base font-semibold" style="color: var(--text-main);">Impressora Térmica USB</h2>
+                  <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary);">
+                    Opcional / avançada
+                  </span>
                   <!-- badge de status -->
                   {#if !isWebUsbSupported()}
                     <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning);">
@@ -821,7 +824,8 @@
                   {/if}
                 </div>
                 <p class="text-sm mt-1" style="color: var(--text-muted);">
-                  Impressão direta via cabo USB para Chrome e Edge no computador do caixa.
+                  Impressão direta via cabo USB para Chrome e Edge no computador do caixa. É opcional:
+                  a impressão nativa pelo Windows continua funcionando sem parear.
                   Se o navegador bloquear a permissão ou mostrar aviso de sobreposição/interferência,
                   use a impressão pelo Windows; ela abre automaticamente quando a USB falha.
                 </p>
@@ -928,7 +932,23 @@
                 </button>
 
                 {#if printerPairError}
-                  <p class="mt-2 text-sm" style="color: var(--error);">{printerPairError}</p>
+                  <div class="mt-3 p-3 rounded-lg" style="background: color-mix(in srgb, var(--error) 8%, transparent); border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);">
+                    <p class="text-sm font-semibold" style="color: var(--error);">Não foi possível parear via USB.</p>
+                    <p class="mt-1 text-sm" style="color: var(--text-label);">{printerPairError}</p>
+                    <p class="mt-2 text-xs" style="color: var(--text-muted);">
+                      Feche janelas de permissão abertas, desconecte e reconecte o cabo USB e tente novamente.
+                      Se o navegador mostrar aviso de sobreposição/interferência, continue usando a impressão nativa do Windows.
+                    </p>
+                    <button
+                      type="button"
+                      class="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+                      style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                      disabled={printerPairing}
+                      on:click={handlePairPrinter}
+                    >
+                      {printerPairing ? 'Tentando novamente…' : 'Tentar USB novamente'}
+                    </button>
+                  </div>
                 {/if}
               </div>
 
@@ -941,7 +961,7 @@
                     { text: 'Clique em <strong>Parear impressora USB</strong> acima. Um popup do navegador aparecerá com a lista de dispositivos USB.' },
                     { text: 'Selecione sua impressora na lista e clique em <strong>Conectar</strong>.' },
                     { text: 'Clique em <strong>Imprimir teste</strong> para confirmar que tudo funcionou.' },
-                    { text: 'Pronto! As próximas impressões saem automáticas pelo cabo USB, sem nenhum diálogo.' },
+                    { text: 'Pronto! Quando o navegador permitir, as próximas impressões saem direto pelo cabo USB. Se falhar, o Zelo usa a impressão nativa do Windows.' },
                   ] as step, i}
                     <li class="flex gap-3 text-sm" style="color: var(--text-label);">
                       <span
