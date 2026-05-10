@@ -42,7 +42,8 @@
     min-height: 100dvh;
     padding: 1rem;
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     background: linear-gradient(160deg, #070d1a 0%, #0f172a 40%, #0c1425 70%, #091120 100%);
   }
 
@@ -134,7 +135,7 @@
       padding: 2rem 1.25rem;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-start;
       border-left: none;
       border-right: none;
     }

@@ -68,7 +68,7 @@
 
 <div class="flex h-screen overflow-hidden" style="background: var(--bg-app);">
   <GestaoSidebar />
-  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0 pt-14 md:pt-0">
     <slot />
   </div>
 </div>

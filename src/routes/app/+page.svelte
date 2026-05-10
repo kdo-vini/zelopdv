@@ -82,6 +82,13 @@
     } catch {}
   }
 
+  function handleOnboardingStepChange(event) {
+    const selector = event.detail?.selector || '';
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && (selector.includes('cart') || selector.includes('btn-cobrar'))) {
+      showMobileCart = true;
+    }
+  }
+
   // O "Carrinho de Compras"
   // Cada item terá: { id, nome, preco, quantidade }
   let comanda = [];
@@ -1146,7 +1153,7 @@
           <h1 class="text-lg md:text-xl font-bold" style="color: var(--text-main);">Frente de Caixa</h1>
           <div class="flex gap-2 flex-1 max-w-xl">
             <div class="flex-1">
-              <input id="busca-prod" type="text" class="input-form h-10 md:h-12" placeholder="Buscar produto..." bind:value={busca} bind:this={buscaInputEl} />
+              <input id="busca-prod" data-testid="product-search" type="text" class="input-form h-10 md:h-12" placeholder="Buscar produto..." bind:value={busca} bind:this={buscaInputEl} />
             </div>
             <button
               data-testid="btn-avulso"
@@ -1390,7 +1397,7 @@
 
 <!-- Tour de onboarding para novos usuários -->
 {#if showOnboarding}
-  <OnboardingTour onComplete={() => (showOnboarding = false)} />
+  <OnboardingTour onComplete={() => (showOnboarding = false)} on:stepchange={handleOnboardingStepChange} />
 {/if}
 
 <!-- --- 7. MODAIS (Componentizados) --- -->

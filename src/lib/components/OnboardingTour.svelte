@@ -9,9 +9,10 @@
    * Props:
    *   onComplete  - callback chamado quando o tour é concluído ou pulado
    */
-  import { onMount, onDestroy, tick } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
   export let onComplete = () => {};
+  const dispatch = createEventDispatcher();
 
   // --- PASSOS DO TOUR ---
   // selector: seletor CSS do elemento a destacar (null = centro da tela)
@@ -32,7 +33,7 @@
     {
       title: 'Busca Rápida',
       body: 'Use a busca para encontrar produtos por nome. Dica: pressione "/" em qualquer lugar para focar a busca instantaneamente.',
-      selector: 'input[placeholder*="buscar"], input[placeholder*="pesquisar"]',
+      selector: '[data-testid="product-search"], input[placeholder*="Buscar"], input[placeholder*="buscar"], input[placeholder*="pesquisar"]',
       position: 'bottom',
     },
     {
@@ -86,6 +87,12 @@
 
   async function updatePosition() {
     await tick();
+    dispatch('stepchange', {
+      currentStep,
+      selector: step.selector,
+      title: step.title,
+    });
+
     if (!step.selector) {
       // Centro da tela
       tooltipStyle = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%)';

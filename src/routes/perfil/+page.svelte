@@ -360,7 +360,7 @@
     {:else}
 
       <!-- Tab nav -->
-      <nav class="flex gap-1 border-b mb-6" style="border-color: var(--border-subtle);">
+      <nav class="flex gap-1 border-b mb-6 overflow-x-auto whitespace-nowrap" style="border-color: var(--border-subtle);">
         {#each tabs as t}
           <button
             type="button"
@@ -821,9 +821,9 @@
                   {/if}
                 </div>
                 <p class="text-sm mt-1" style="color: var(--text-muted);">
-                  Impressão direta via cabo USB — sem instalar nada, sem servidor em segundo plano.
-                  Funciona em Chrome e Edge no computador do caixa.
-                  Se a impressora não estiver conectada, o sistema usa o diálogo padrão do navegador.
+                  Impressão direta via cabo USB para Chrome e Edge no computador do caixa.
+                  Se o navegador bloquear a permissão ou mostrar aviso de sobreposição/interferência,
+                  use a impressão pelo Windows; ela abre automaticamente quando a USB falha.
                 </p>
               </div>
             </div>
@@ -971,8 +971,8 @@
 
             <!-- Nota sobre fallback -->
             <p class="text-xs" style="color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 12px;">
-              <strong style="color: var(--text-label);">Sem impressora pareada?</strong>
-              A impressão cai automaticamente no diálogo padrão do navegador — compatível com qualquer impressora instalada no Windows (rede, USB ou Bluetooth).
+              <strong style="color: var(--text-label);">USB falhou ou não quer parear?</strong>
+              Use a impressão pelo Windows pelo diálogo padrão do navegador — compatível com qualquer impressora instalada no Windows (rede, USB ou Bluetooth).
               Você pode voltar aqui a qualquer momento para parear ou trocar a impressora.
             </p>
 

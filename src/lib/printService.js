@@ -60,7 +60,7 @@ async function tryEscPos(bytes) {
   } catch (e) {
     console.warn('[print] ESC/POS falhou, caindo no iframe:', e?.message);
     addToast(
-      'A impressao USB direta falhou. Abrindo a impressao pelo Windows como alternativa.',
+      'A impressao USB direta falhou. Abrindo a impressao pelo Windows agora. Se aparecer aviso de sobreposicao/interferencia, use esta opcao.',
       'warning',
       7000
     );

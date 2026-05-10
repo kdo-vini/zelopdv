@@ -1821,6 +1821,12 @@
     background: var(--sidebar-item-hover-bg);
   }
 
+  @media (hover: none), (max-width: 768px) {
+    .row-actions {
+      opacity: 1;
+    }
+  }
+
   .row-action-danger:hover {
     background: color-mix(in srgb, var(--error) 15%, transparent);
   }
@@ -2024,6 +2030,27 @@
     padding-top: 1rem;
     margin-top: 0.25rem;
     border-top: 1px solid;
+  }
+
+  @media (max-width: 640px) {
+    .modal-backdrop {
+      align-items: flex-start;
+      overflow-y: auto;
+    }
+
+    .modal-box {
+      max-height: calc(100dvh - 2rem);
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .modal-footer {
+      flex-direction: column-reverse;
+    }
+
+    .modal-footer button {
+      width: 100%;
+    }
   }
 
   .btn-ghost-modal {
