@@ -65,4 +65,22 @@ describe('receipt builder', () => {
     expect(html).not.toContain('DEBUG:');
     expect(html).not.toContain('<pre');
   });
+
+  it('uses high-contrast thermal print styles for browser fallback', () => {
+    const html = buildReceiptHTML({
+      estabelecimento: { nome_exibicao: 'Loja', largura_bobina: '58mm' },
+      venda: {
+        idVenda: 10,
+        formaPagamento: 'multiplo',
+        total: 25,
+        itens: [],
+        pagamentos: [{ forma: 'fiado', valor: 25, pessoaNome: 'Cliente Teste' }]
+      }
+    });
+
+    expect(html).toContain('@page { size: 58mm auto; margin: 0; }');
+    expect(html).toContain('color: #000 !important');
+    expect(html).toContain('font-weight: 900');
+    expect(html).not.toContain('color:#888');
+  });
 });

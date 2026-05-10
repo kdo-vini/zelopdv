@@ -14,6 +14,7 @@ import {
   buildMovCaixaHTML,
   buildPagamentoFiadoHTML,
 } from '$lib/receipt.js';
+import { addToast } from '$lib/stores/ui.js';
 
 /* --------------------------------------------------------------------------
  * Iframe fallback — sem popup, funciona em PWA, sem bloqueio de popup.
@@ -58,6 +59,11 @@ async function tryEscPos(bytes) {
     return true;
   } catch (e) {
     console.warn('[print] ESC/POS falhou, caindo no iframe:', e?.message);
+    addToast(
+      'A impressao USB direta falhou. Abrindo a impressao pelo Windows como alternativa.',
+      'warning',
+      7000
+    );
     return false;
   }
 }

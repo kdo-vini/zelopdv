@@ -33,58 +33,69 @@ function formaLabel(f) {
 
 const SHARED_CSS = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
+@page { margin: 0; }
+html, body { background: #fff; }
 body {
   font-family: 'Courier New', Courier, monospace;
   background: #fff; color: #000;
-  font-size: 12px; line-height: 1.5;
+  font-size: 13px; line-height: 1.45; font-weight: 600;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }
-.cupom { margin: 0 auto; padding: 12px 10px; }
-.sep { border: none; border-top: 1.5px dashed #000; margin: 7px 0; }
-.sep-solid { border: none; border-top: 1.5px solid #000; margin: 7px 0; }
+.cupom, .cupom * { color: #000 !important; opacity: 1 !important; text-shadow: none !important; }
+.cupom { margin: 0 auto; padding: 10px 8px; }
+.sep { border: none; border-top: 2px dashed #000; margin: 7px 0; }
+.sep-solid { border: none; border-top: 2px solid #000; margin: 7px 0; }
 
 /* Header */
-.logo { max-height: 52px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto 8px; }
-.nome-empresa { font-size: 15px; font-weight: 800; text-align: center; letter-spacing: .04em; text-transform: uppercase; }
-.meta-empresa { font-size: 10px; text-align: center; color: #000; margin-top: 3px; line-height: 1.6; }
-.titulo-cupom { font-size: 11px; font-weight: 700; text-align: center; letter-spacing: .12em; text-transform: uppercase; margin-top: 6px; }
+.logo { max-height: 52px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto 8px; filter: grayscale(1) contrast(1.35); }
+.nome-empresa { font-size: 16px; font-weight: 900; text-align: center; letter-spacing: .035em; text-transform: uppercase; }
+.meta-empresa { font-size: 11px; font-weight: 700; text-align: center; color: #000; margin-top: 3px; line-height: 1.45; }
+.titulo-cupom { font-size: 12px; font-weight: 900; text-align: center; letter-spacing: .1em; text-transform: uppercase; margin-top: 6px; }
 
 /* Pedido */
-.info-row { display: flex; justify-content: space-between; font-size: 11px; margin: 1px 0; }
+.info-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin: 1px 0; }
 .info-row .label { color: #000; }
-.info-row .val { font-weight: 600; }
+.info-row .val { font-weight: 900; }
 
 /* Itens */
-.items-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #000;
+.items-header { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: #000;
   display: flex; justify-content: space-between; margin-bottom: 3px; }
-.item-row { display: flex; gap: 4px; margin: 3px 0; font-size: 11px; }
-.item-qtd { min-width: 22px; font-weight: 700; flex-shrink: 0; }
-.item-nome { flex: 1; }
-.item-sub { width: 68px; text-align: right; flex-shrink: 0; white-space: nowrap; }
-.item-unit { font-size: 10px; color: #000; margin-left: 26px; margin-top: -2px; }
+.item-row { display: flex; gap: 4px; margin: 3px 0; font-size: 12px; font-weight: 700; }
+.item-qtd { min-width: 24px; font-weight: 900; flex-shrink: 0; }
+.item-nome { flex: 1; font-weight: 800; }
+.item-sub { width: 74px; text-align: right; flex-shrink: 0; white-space: nowrap; font-weight: 900; }
+.item-unit { font-size: 11px; font-weight: 700; color: #000; margin-left: 28px; margin-top: -2px; }
 
 /* Totais */
-.total-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
+.total-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; padding: 1px 0; }
 .total-row.desconto .val { color: #000; }
-.total-row.grand { font-size: 15px; font-weight: 900; padding: 5px 0 3px; letter-spacing: .01em; }
+.total-row.grand { font-size: 17px; font-weight: 900; padding: 5px 0 3px; letter-spacing: .01em; }
 
 /* Pagamento */
-.pgto-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
+.pgto-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; padding: 1px 0; }
 .pgto-row .forma { color: #000; }
-.pgto-nota { font-size: 10px; color: #000; font-style: italic; margin-top: 3px; }
+.pgto-row span:last-child { font-weight: 900; }
+.pgto-nota { font-size: 11px; font-weight: 700; color: #000; font-style: italic; margin-top: 3px; }
 
 /* Rodapé */
-.rodape { text-align: center; font-size: 10px; color: #000; margin-top: 6px; line-height: 1.7; }
-.nao-fiscal { text-align: center; font-size: 9px; color: #000; letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
+.rodape { text-align: center; font-size: 11px; font-weight: 700; color: #000; margin-top: 6px; line-height: 1.55; }
+.nao-fiscal { text-align: center; font-size: 10px; font-weight: 700; color: #000; letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
 
 /* Títulos de bloco */
 .titulo-mov { font-size: 13px; font-weight: 800; text-align: center; text-transform: uppercase; margin: 4px 0; }
 .mov-valor-linha { font-size: 15px; font-weight: 900; padding: 4px 0; }
 
 @media print {
-  body { padding: 0; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cupom { padding: 0 4px; width: 100%; }
+  html, body { margin: 0 !important; padding: 0 !important; width: 100%; }
+  body { font-size: 13px; font-weight: 700; }
+  .cupom { margin: 0 !important; padding: 1.5mm 2mm; max-width: none; }
+  .sep, .sep-solid { border-top-width: 2px; }
 }
 `;
+
+function paperWidthCss(largura) {
+  return largura === '58mm' ? '58mm' : '80mm';
+}
 
 /**
  * HTML cupom de venda — Tier A.
@@ -92,7 +103,7 @@ body {
  */
 export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {} } = {}) {
   const largura = estabelecimento?.largura_bobina || '80mm';
-  const width = largura === '58mm' ? '216px' : '312px';
+  const width = paperWidthCss(largura);
   const logoUrl = estabelecimento?.logoUrl || estabelecimento?.logotipo_url || null;
   const nomeEmpresa = estabelecimento?.nome_exibicao || 'Zelo PDV';
   const rodape = estabelecimento?.rodape_recibo || 'Obrigado pela preferência!';
@@ -144,7 +155,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
     pgtoHtml = `
       <div class="pgto-row"><span class="forma">Pagamento</span><span>Múltiplos</span></div>
       ${pagamentos.map(p => {
-        const meta = p.forma === 'fiado' && p.pessoaNome ? ` <span style="color:#888">(${escHtml(p.pessoaNome)})</span>` : '';
+        const meta = p.forma === 'fiado' && p.pessoaNome ? ` <span style="color:#000;font-weight:900">(${escHtml(p.pessoaNome)})</span>` : '';
         return `<div class="pgto-row" style="padding-left:8px"><span class="forma">${escHtml(formaLabel(p.forma))}${meta}</span><span>${fmtBRL(p.valor)}</span></div>`;
       }).join('')}
       ${troco > 0 ? `<div class="pgto-row"><span>Troco</span><span>${fmtBRL(troco)}</span></div>` : ''}
@@ -172,6 +183,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     ${SHARED_CSS}
+    @page { size: ${width} auto; margin: 0; }
     .cupom { width: ${width}; }
   </style>
 </head>
@@ -199,7 +211,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
   <div class="items-header">
     <span>Item</span><span>Valor</span>
   </div>
-  ${itensHtml || '<div style="text-align:center;color:#888;padding:4px 0">Nenhum item</div>'}
+  ${itensHtml || '<div style="text-align:center;color:#000;font-weight:700;padding:4px 0">Nenhum item</div>'}
 
   <hr class="sep">
 
@@ -238,7 +250,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
  */
 export function buildMovCaixaHTML({ estabelecimento = {}, mov = {} } = {}) {
   const largura = estabelecimento?.largura_bobina || '80mm';
-  const width = largura === '58mm' ? '216px' : '312px';
+  const width = paperWidthCss(largura);
   const nome = escHtml(estabelecimento?.nome_exibicao || 'Zelo PDV');
   const rodape = escHtml(estabelecimento?.rodape_recibo || 'Obrigado!');
 
@@ -259,6 +271,7 @@ export function buildMovCaixaHTML({ estabelecimento = {}, mov = {} } = {}) {
   <title>${titulo}</title>
   <style>
     ${SHARED_CSS}
+    @page { size: ${width} auto; margin: 0; }
     .cupom { width: ${width}; }
   </style>
 </head>
@@ -302,7 +315,7 @@ export function buildMovCaixaHTML({ estabelecimento = {}, mov = {} } = {}) {
  */
 export function buildPagamentoFiadoHTML({ estabelecimento = {}, pagamento = {} } = {}) {
   const largura = estabelecimento?.largura_bobina || '80mm';
-  const width = largura === '58mm' ? '216px' : '312px';
+  const width = paperWidthCss(largura);
   const nome = escHtml(estabelecimento?.nome_exibicao || 'Zelo PDV');
   const dt = new Date();
 
@@ -313,6 +326,7 @@ export function buildPagamentoFiadoHTML({ estabelecimento = {}, pagamento = {} }
   <title>Recibo de Pagamento Fiado</title>
   <style>
     ${SHARED_CSS}
+    @page { size: ${width} auto; margin: 0; }
     .cupom { width: ${width}; }
   </style>
 </head>
