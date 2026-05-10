@@ -94,7 +94,7 @@
   let rodape_recibo = 'Obrigado pela preferência!';
 
   // Form fields — Aba Preferências
-  let largura_bobina = '80mm';
+  let largura_bobina = '58mm';
   let notifEstoqueBaixo = false;
   let notifFechamentoCaixa = false;
 
@@ -216,7 +216,7 @@
       contato           = maskPhone(data.contato ?? '');
       inscricao_estadual = data.inscricao_estadual ?? '';
       endereco          = data.endereco ?? '';
-      largura_bobina    = normalizeLarguraBobina(data.largura_bobina ?? '80mm');
+      largura_bobina    = normalizeLarguraBobina(data.largura_bobina ?? '58mm');
       logo_url          = data.logo_url ?? '';
       rodape_recibo     = data.rodape_recibo ?? 'Obrigado pela preferência!';
       adminPin          = data.pin_admin || '';
@@ -679,8 +679,8 @@
                 bind:value={largura_bobina}
                 on:change={() => { largura_bobina = normalizeLarguraBobina(largura_bobina); markDirty(); }}
               >
-                <option value="80mm">Térmica 80 mm</option>
                 <option value="58mm">Térmica 58 mm</option>
+                <option value="80mm">Térmica 80 mm</option>
               </select>
             </label>
           </section>

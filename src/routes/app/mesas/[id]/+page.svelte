@@ -839,7 +839,7 @@
       documento: perfilImpressao?.documento || null,
       contato: perfilImpressao?.contato || null,
       endereco: perfilImpressao?.endereco || null,
-      largura_bobina: perfilImpressao?.largura_bobina || '80mm',
+      largura_bobina: perfilImpressao?.largura_bobina || '58mm',
       rodape_recibo: perfilImpressao?.rodape_recibo || 'Obrigado pela preferência!',
       logoUrl: perfilImpressao?.logoUrl || null,
     };

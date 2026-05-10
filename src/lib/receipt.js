@@ -102,7 +102,7 @@ function paperWidthCss(largura) {
  * Aceita o mesmo shape de buildVendaEscPos().
  */
 export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {} } = {}) {
-  const largura = estabelecimento?.largura_bobina || '80mm';
+  const largura = estabelecimento?.largura_bobina || '58mm';
   const width = paperWidthCss(largura);
   const logoUrl = estabelecimento?.logoUrl || estabelecimento?.logotipo_url || null;
   const nomeEmpresa = estabelecimento?.nome_exibicao || 'Zelo PDV';
@@ -249,7 +249,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
  * HTML cupom de movimentação de caixa (sangria/suprimento).
  */
 export function buildMovCaixaHTML({ estabelecimento = {}, mov = {} } = {}) {
-  const largura = estabelecimento?.largura_bobina || '80mm';
+  const largura = estabelecimento?.largura_bobina || '58mm';
   const width = paperWidthCss(largura);
   const nome = escHtml(estabelecimento?.nome_exibicao || 'Zelo PDV');
   const rodape = escHtml(estabelecimento?.rodape_recibo || 'Obrigado!');
@@ -314,7 +314,7 @@ export function buildMovCaixaHTML({ estabelecimento = {}, mov = {} } = {}) {
  * HTML cupom de pagamento de fiado.
  */
 export function buildPagamentoFiadoHTML({ estabelecimento = {}, pagamento = {} } = {}) {
-  const largura = estabelecimento?.largura_bobina || '80mm';
+  const largura = estabelecimento?.largura_bobina || '58mm';
   const width = paperWidthCss(largura);
   const nome = escHtml(estabelecimento?.nome_exibicao || 'Zelo PDV');
   const dt = new Date();

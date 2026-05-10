@@ -10,6 +10,9 @@
   
   /** @type {Array<{id: number, nome: string, preco: number, por_unidade?: boolean, controlar_estoque?: boolean, estoque_atual?: number}>} */
   export let produtos = [];
+
+  /** @type {boolean} Differentiates first-use empty state from search/filter with no results. */
+  export let hasAnyProducts = true;
   
   /** @type {number} Altura de cada card em pixels */
   export let itemHeight = 128;
@@ -130,6 +133,29 @@
   class="flex-1 overflow-y-auto overflow-x-hidden"
   on:scroll={handleScroll}
 >
+  {#if produtos.length === 0}
+    <div class="empty-state">
+      <div class="empty-card">
+        <div class="empty-icon" aria-hidden="true">+</div>
+        <h3>{hasAnyProducts ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado ainda'}</h3>
+        <p>
+          {hasAnyProducts
+            ? 'Tente limpar a busca ou escolher outra categoria. Se quiser vender mesmo assim, use um item avulso.'
+            : 'Para testar agora, use um item avulso. Depois você pode cadastrar seus produtos em Gestão → Produtos e eles aparecem aqui automaticamente.'}
+        </p>
+        <div class="empty-actions">
+          <button type="button" class="empty-primary" on:click={handleValorAvulsoClick}>
+            Testar com item avulso
+          </button>
+          {#if !hasAnyProducts}
+            <a href="/gestao/produtos" class="empty-secondary">
+              Cadastrar produtos
+            </a>
+          {/if}
+        </div>
+      </div>
+    </div>
+  {:else}
   <!-- Container com altura total para scroll correto. Extra 96px para barra inferior no mobile. -->
   <div style="height: {totalHeight + 96}px; position: relative;">
     <!-- Grid posicionado com offset -->
@@ -181,5 +207,82 @@
       {/if}
     </div>
   </div>
+  {/if}
   
 </div>
+
+<style>
+  .empty-state {
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .empty-card {
+    width: min(100%, 28rem);
+    border: 1px solid var(--border-card);
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--text-main);
+  }
+
+  .empty-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: 0 auto 0.85rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: color-mix(in srgb, var(--primary) 16%, transparent);
+    color: var(--primary);
+  }
+
+  .empty-card h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  .empty-card p {
+    margin: 0;
+    color: var(--text-label);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .empty-actions {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 1.15rem;
+  }
+
+  .empty-primary,
+  .empty-secondary {
+    min-height: 2.75rem;
+    border-radius: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .empty-primary {
+    border: 0;
+    background: var(--primary);
+    color: var(--primary-text);
+  }
+
+  .empty-secondary {
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-input);
+    color: var(--text-main);
+  }
+</style>

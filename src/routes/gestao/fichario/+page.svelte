@@ -86,7 +86,7 @@
             documento: perfilData?.documento || null,
             contato: perfilData?.contato || null,
             endereco: perfilData?.endereco || null,
-            largura_bobina: perfilData?.largura_bobina || '80mm',
+            largura_bobina: perfilData?.largura_bobina || '58mm',
             rodape_recibo: perfilData?.rodape_recibo || 'Obrigado!',
           },
           pagamento: {

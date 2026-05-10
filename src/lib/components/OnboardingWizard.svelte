@@ -13,7 +13,7 @@
   let nome = '';
   let contato = '';
   let documento = '';
-  let largura_bobina = '80mm';
+  let largura_bobina = '58mm';
 
   let error = '';
   let saving = false;
@@ -144,7 +144,7 @@
       {:else if step === 3}
         <div class="step-label">Passo 3 de 4</div>
         <h2 class="step-title">Qual o CPF ou CNPJ?</h2>
-        <p class="step-hint">Para emissão de documentos fiscais.</p>
+        <p class="step-hint">Vai aparecer no recibo e ajuda a identificar sua loja. O Zelo PDV ainda não emite NFC-e.</p>
         <input
           bind:this={documentoInput}
           bind:value={documento}
@@ -160,19 +160,8 @@
       {:else if step === 4}
         <div class="step-label">Passo 4 de 4</div>
         <h2 class="step-title">Tipo de impressora?</h2>
-        <p class="step-hint">Define o formato dos recibos impressos.</p>
+        <p class="step-hint">58 mm é o padrão mais comum em impressoras térmicas pequenas. Se não souber, pode deixar assim.</p>
         <div class="printer-options">
-          <button
-            type="button"
-            class="printer-card"
-            class:printer-selected={largura_bobina === '80mm'}
-            on:click={() => (largura_bobina = '80mm')}
-            aria-pressed={largura_bobina === '80mm'}
-          >
-            <span class="printer-icon">🖨️</span>
-            <strong>80 mm</strong>
-            <span class="printer-sub">Padrão</span>
-          </button>
           <button
             type="button"
             class="printer-card"
@@ -182,7 +171,18 @@
           >
             <span class="printer-icon">🖨️</span>
             <strong>58 mm</strong>
-            <span class="printer-sub">Compacta</span>
+            <span class="printer-sub">Mais comum</span>
+          </button>
+          <button
+            type="button"
+            class="printer-card"
+            class:printer-selected={largura_bobina === '80mm'}
+            on:click={() => (largura_bobina = '80mm')}
+            aria-pressed={largura_bobina === '80mm'}
+          >
+            <span class="printer-icon">🖨️</span>
+            <strong>80 mm</strong>
+            <span class="printer-sub">Larga</span>
           </button>
         </div>
       {/if}

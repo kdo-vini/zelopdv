@@ -34,8 +34,6 @@
   
   // Grid virtualizado para performance
   import VirtualProductGrid from '$lib/components/VirtualProductGrid.svelte';
-  // Tour de onboarding para novos usuários
-  import OnboardingTour from '$lib/components/OnboardingTour.svelte';
 
   // Modo Offline (IndexedDB)
   import { atualizarCacheProdutos, salvarVendaOffline, syncVendasPendentes, limparVendasAntigas } from '$lib/offlineDb';
@@ -58,8 +56,6 @@
   let modalSucessoAberto = false;
   let vendaConcluida = null;
 
-  // Onboarding tour: exibe na primeira visita ao /app
-  let showOnboarding = false;
   // [NEW] Mobile State
   let showMobileCart = false;
   // [NEW] Dados da Empresa
@@ -80,13 +76,6 @@
         if (buscaInputEl && typeof buscaInputEl.focus === 'function') buscaInputEl.focus();
       }
     } catch {}
-  }
-
-  function handleOnboardingStepChange(event) {
-    const selector = event.detail?.selector || '';
-    if (typeof window !== 'undefined' && window.innerWidth < 768 && (selector.includes('cart') || selector.includes('btn-cobrar'))) {
-      showMobileCart = true;
-    }
   }
 
   // O "Carrinho de Compras"
@@ -223,11 +212,6 @@
     } catch {}
     window.addEventListener('keydown', onKeyGlobal);
     window.addEventListener('online', handleSyncOnline);
-
-    // Onboarding: mostra o tour apenas na primeira visita
-    if (!localStorage.getItem('zelo_onboarding_done')) {
-      showOnboarding = true;
-    }
 
     await waitAuthReady();
     // Bloqueio: exige assinatura ativa antes de carregar o PDV
@@ -1065,7 +1049,7 @@
       documento: perfil?.documento || null,
       contato: perfil?.contato || null,
       endereco: perfil?.endereco || null,
-      largura_bobina: perfil?.largura_bobina || '80mm',
+      largura_bobina: perfil?.largura_bobina || '58mm',
       rodape_recibo: perfil?.rodape_recibo || 'Obrigado pela preferência!',
       logoUrl: perfil?.logoUrl || null,
     };
@@ -1224,6 +1208,7 @@
       <div data-testid="product-grid" class="flex-1 flex flex-col min-h-0">
         <VirtualProductGrid
           produtos={produtosFiltrados}
+          hasAnyProducts={produtos.length > 0}
           on:produtoClick={(e) => adicionarProduto(e.detail)}
           on:valorAvulsoClick={() => modalValorAberto = true}
         />
@@ -1394,11 +1379,6 @@
 
 </div>
 </div> <!-- /flex-col h-full -->
-
-<!-- Tour de onboarding para novos usuários -->
-{#if showOnboarding}
-  <OnboardingTour onComplete={() => (showOnboarding = false)} on:stepchange={handleOnboardingStepChange} />
-{/if}
 
 <!-- --- 7. MODAIS (Componentizados) --- -->
 

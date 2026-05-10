@@ -10,9 +10,9 @@
   let hasRelatorio = false;
   let completing = false;
 
-  $: allDone = hasProdutos && hasCaixa && hasVenda && hasRelatorio;
-  $: doneCount = [hasProdutos, hasCaixa, hasVenda, hasRelatorio].filter(Boolean).length;
-  const totalSteps = 4;
+  $: activationDone = hasProdutos && hasCaixa && hasVenda;
+  $: doneCount = [hasProdutos, hasCaixa, hasVenda].filter(Boolean).length;
+  const totalSteps = 3;
 
   onMount(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -43,7 +43,7 @@
     visible = true;
 
     // If already all done from the start (e.g. just refreshed after doing everything), complete immediately
-    if (hasProdutos && hasCaixa && hasVenda && hasRelatorio) {
+    if (hasProdutos && hasCaixa && hasVenda) {
       markComplete();
     }
   });
@@ -69,8 +69,8 @@
     }
   }
 
-  // Auto-complete when all steps become true
-  $: if (allDone && visible && !completing) {
+  // Auto-complete when the core activation steps become true.
+  $: if (activationDone && visible && !completing) {
     markComplete();
   }
 </script>
@@ -146,15 +146,15 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><circle cx="10" cy="10" r="7.25" /></svg>
           {/if}
         </span>
-        <span class="step-label">Veja seu relatório do dia</span>
+        <span class="step-label">Opcional: veja seu relatório do dia</span>
         {#if !hasRelatorio}
           <a href="/relatorios" class="step-link">Ir →</a>
         {/if}
       </li>
     </ul>
 
-    {#if allDone}
-      <p class="all-done-msg">Tudo pronto! Bom trabalho.</p>
+    {#if activationDone}
+      <p class="all-done-msg">Tudo pronto para vender. Bom trabalho.</p>
     {/if}
   </div>
 {/if}
