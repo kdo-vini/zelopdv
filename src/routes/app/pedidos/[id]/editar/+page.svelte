@@ -51,14 +51,14 @@
     }
 
     pedidoId = $page.params.id;
-    await Promise.all([carregarProdutos(), carregarCategorias()]);
+    await Promise.all([carregarProdutos(true), carregarCategorias()]);
     await carregarPedido();
     loading = false;
   });
 
-  async function carregarProdutos() {
+  async function carregarProdutos(forceRefresh = false) {
     try {
-      produtos = await pdvCache.getProdutos();
+      produtos = await pdvCache.getProdutos(forceRefresh);
     } catch (err) {
       addToast('Erro ao carregar produtos: ' + getFriendlyErrorMessage(err), 'error');
     }

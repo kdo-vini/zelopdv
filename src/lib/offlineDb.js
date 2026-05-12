@@ -47,6 +47,42 @@ export async function salvarVendaOffline(venda) {
 }
 
 /**
+ * Decide se uma falha ao chamar a RPC de venda deve entrar na fila offline.
+ *
+ * Importante: erros de regra de negócio do Supabase/Postgres (estoque
+ * insuficiente, RLS, FK, payload inválido etc.) não podem virar venda offline.
+ * A fila offline é só para falhas compatíveis com conexão/timeout.
+ */
+export function shouldQueueVendaOffline(error) {
+    if (!error) return false;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+
+    const message = String(
+        typeof error === 'string'
+            ? error
+            : error.message || error.error_description || error.details || error.hint || ''
+    ).toLowerCase();
+
+    return [
+        'failed to fetch',
+        'fetch failed',
+        'networkerror',
+        'network error',
+        'network request failed',
+        'load failed',
+        'connection',
+        'internet',
+        'offline',
+        'timeout',
+        'timed out',
+        'aborted',
+        'aborterror',
+        'err_internet_disconnected',
+        'err_network_changed'
+    ].some((needle) => message.includes(needle));
+}
+
+/**
  * Obtém todas as vendas que ainda não foram sincronizadas
  */
 export async function getVendasPendentes() {

@@ -60,7 +60,7 @@
       return;
     }
 
-    await Promise.all([carregarProdutos(), carregarEmpresa(), carregarCaixaAberto()]);
+    await Promise.all([carregarProdutos(true), carregarEmpresa(), carregarCaixaAberto()]);
     await carregarPedidos();
     pollTimer = setInterval(carregarPedidos, 3000);
   });
@@ -69,9 +69,9 @@
     if (pollTimer) clearInterval(pollTimer);
   });
 
-  async function carregarProdutos() {
+  async function carregarProdutos(forceRefresh = false) {
     try {
-      produtos = await pdvCache.getProdutos();
+      produtos = await pdvCache.getProdutos(forceRefresh);
     } catch (err) {
       addToast('Erro ao carregar produtos: ' + getFriendlyErrorMessage(err), 'error');
     }
@@ -230,7 +230,8 @@
       pedidoEmFechamento = null;
       itensEmFechamento = [];
       totalEmFechamento = 0;
-      await Promise.all([carregarPedidos(), carregarProdutos()]);
+      pdvCache.invalidateProdutos();
+      await Promise.all([carregarPedidos(), carregarProdutos(true)]);
     } catch (err) {
       const msg = getFriendlyErrorMessage(err);
       erroPagamento = msg;

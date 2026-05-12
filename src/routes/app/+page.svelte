@@ -37,7 +37,7 @@
   import VirtualProductGrid from '$lib/components/VirtualProductGrid.svelte';
 
   // Modo Offline (IndexedDB)
-  import { atualizarCacheProdutos, salvarVendaOffline, syncVendasPendentes, limparVendasAntigas } from '$lib/offlineDb';
+  import { atualizarCacheProdutos, salvarVendaOffline, shouldQueueVendaOffline, syncVendasPendentes, limparVendasAntigas } from '$lib/offlineDb';
 
   export let params;
 
@@ -271,6 +271,8 @@
     const logs = await syncVendasPendentes(supabase);
     if (logs.success > 0) {
       addToast(`${logs.success} venda(s) sincronizada(s) com sucesso.`, 'success');
+      pdvCache.invalidateProdutos();
+      await carregarProdutos(true);
       await atualizarSaldoCaixa();
     }
   }
@@ -846,10 +848,6 @@
 
       salvandoVenda = true;
 
-      // Usuário autenticado
-      const { data: userData } = await supabase.auth.getUser();
-      const id_usuario = userData?.user?.id ?? null;
-
       // Validação de estoque (refresco em tempo real antes de inserir a venda)
       let freshStockMap = new Map();
       try {
@@ -926,7 +924,8 @@
         venda = { id: data?.id, numero_venda: data?.numero_venda };
         vendaId = venda.id;
       } catch (connErr) {
-        console.warn('Falha na RPC de venda, salvando offline:', connErr?.message || connErr);
+        if (!shouldQueueVendaOffline(connErr)) throw connErr;
+        console.warn('Falha de conexão na RPC de venda, salvando offline:', connErr?.message || connErr);
         isOffline = true;
         await salvarVendaOffline({
           payload,
@@ -978,6 +977,8 @@
       if (isOffline) {
           await atualizarSaldoCaixa(); 
       } else {
+         pdvCache.invalidateProdutos();
+         await carregarProdutos(true);
          await atualizarSaldoCaixa();
       }
 
