@@ -84,7 +84,7 @@
       }
 
       const didTrackTrial = !trialPayload?.alreadyExists && trackStartTrial();
-      setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 600 : 0);
+      setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 1500 : 0);
     } catch (e) {
       error = e.message || 'Erro ao salvar. Tente novamente.';
       saving = false;

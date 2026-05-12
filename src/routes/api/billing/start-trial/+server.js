@@ -4,6 +4,7 @@ import { enviarBoasVindas } from '$lib/server/whatsapp';
 import { sendEmail, isEmailConfigured } from '$lib/server/email';
 import { emailDay0 } from '$lib/server/emailTemplates';
 import { logOnboardingCommunication } from '$lib/server/onboardingEvents';
+import { sendCapiEvent } from '$lib/server/metaCapi';
 
 async function fetchPerfil(userId) {
   const { data: perfil, error } = await supabaseAdmin
@@ -186,6 +187,10 @@ export async function POST({ request }) {
 
     const userId = user.id;
     const email = user.email;
+    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim()
+      || request.headers.get('x-real-ip')
+      || undefined;
+    const userAgent = request.headers.get('user-agent') || undefined;
 
     const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
@@ -241,17 +246,26 @@ export async function POST({ request }) {
     }
 
     const perfil = await fetchPerfil(userId);
-    const sideEffects = await Promise.allSettled([
-      touchLastSeen(userId, nowIso),
-      maybeSendDay0Email({
-        userId,
+    const [, sideEffects] = await Promise.all([
+      sendCapiEvent({
+        eventName: 'StartTrial',
         email,
-        nomeLoja: perfil?.nome_exibicao || '',
+        ipAddress,
+        userAgent,
+        customData: { value: 0, currency: 'BRL', predicted_ltv: 0 },
       }),
-      maybeSendWelcomeWhatsApp({
-        userId,
-        perfil,
-      }),
+      Promise.allSettled([
+        touchLastSeen(userId, nowIso),
+        maybeSendDay0Email({
+          userId,
+          email,
+          nomeLoja: perfil?.nome_exibicao || '',
+        }),
+        maybeSendWelcomeWhatsApp({
+          userId,
+          perfil,
+        }),
+      ]),
     ]);
 
     for (const result of sideEffects) {

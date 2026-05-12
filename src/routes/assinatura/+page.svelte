@@ -66,6 +66,18 @@
       email = userData?.user?.email || '';
 
       if (userId) {
+        // Block sub-users from accessing subscription management
+        const { data: subUserRow } = await supabase
+          .from('access_users')
+          .select('id')
+          .eq('auth_user_id', userId)
+          .eq('status', 'active')
+          .maybeSingle();
+        if (subUserRow) {
+          window.location.href = '/gestao';
+          return;
+        }
+
         try {
           const { data } = await supabase
             .from('subscriptions')
@@ -131,7 +143,7 @@
                   addToast('Seu teste gratuito de 30 dias foi ativado!', 'success');
                   trackStartTrial();
                 }
-                setTimeout(() => { window.location.href = '/gestao'; }, 600);
+                setTimeout(() => { window.location.href = '/gestao'; }, 1500);
                 return;
               }
               message = data?.error || 'Erro ao ativar período de teste. Tente novamente.';
