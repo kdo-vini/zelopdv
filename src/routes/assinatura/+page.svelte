@@ -128,7 +128,7 @@
               if (res.ok) {
                 if (!data.alreadyExists) {
                   addToast('Seu teste gratuito de 30 dias foi ativado!', 'success');
-                  if (window.fbq) window.fbq('track', 'StartTrial');
+                  if (window.fbq) window.fbq('track', 'StartTrial', { value: 0, currency: 'BRL' });
                 }
                 setTimeout(() => { window.location.href = '/gestao'; }, 600);
                 return;
@@ -147,7 +147,12 @@
       try {
         const params = new URLSearchParams(window.location.search);
         if (params.get('success') === '1' && isActiveStrict) {
-          if (window.fbq) window.fbq('track', 'Subscribe');
+          if (window.fbq) {
+            const subscribeValue = activePlanTier
+              ? calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: activePedidosAddon })
+              : 0;
+            window.fbq('track', 'Subscribe', { value: subscribeValue, currency: 'BRL' });
+          }
           setTimeout(() => { window.location.href = '/gestao'; }, 800);
         }
         if (params.get('addon') === 'mesas') {
