@@ -769,7 +769,7 @@
                   style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
                 />
                 <label class="flex items-center gap-2 text-xs" style="color: var(--text-label);">
-                  <input type="checkbox" bind:checked={editCatForm.controlar_estoque_compartilhado} style="accent-color: var(--primary);" />
+                  <input class="themed-checkbox compact" type="checkbox" bind:checked={editCatForm.controlar_estoque_compartilhado} />
                   Estoque compartilhado
                 </label>
                 {#if editCatForm.controlar_estoque_compartilhado}
@@ -1353,8 +1353,8 @@
             style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
           />
         </div>
-        <label class="prod-option-label" style="color: var(--text-label); background: var(--bg-panel); border-color: var(--border-subtle);">
-          <input type="checkbox" bind:checked={newCatForm.controlar_estoque_compartilhado} style="accent-color: var(--primary);" />
+        <label class="prod-option-label option-card" style="color: var(--text-label); background: var(--bg-input); border-color: var(--border-subtle);">
+          <input class="themed-checkbox" type="checkbox" bind:checked={newCatForm.controlar_estoque_compartilhado} />
           <div>
             <span class="font-medium text-sm">Estoque compartilhado</span>
             <p class="text-xs mt-0.5" style="color: var(--text-muted);">Todos os produtos desta categoria usam a mesma quantidade</p>
@@ -2202,6 +2202,59 @@
     cursor: pointer;
     flex: 1;
     min-width: 180px;
+  }
+
+  .option-card {
+    padding: 0.75rem;
+    border: 1px solid;
+    border-radius: 0.5rem;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+  }
+
+  .option-card:hover {
+    border-color: var(--primary);
+  }
+
+  .themed-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-grid;
+    place-content: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    flex: 0 0 auto;
+    margin-top: 0.0625rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.25rem;
+    background-color: var(--bg-card);
+    color: var(--primary);
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .themed-checkbox:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .themed-checkbox:checked::after {
+    content: "";
+    width: 0.3125rem;
+    height: 0.5625rem;
+    border: solid var(--primary-text);
+    border-width: 0 0.125rem 0.125rem 0;
+    transform: rotate(45deg) translateY(-0.0625rem);
+  }
+
+  .themed-checkbox.compact {
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0;
+  }
+
+  .themed-checkbox:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
   }
 
   /* ─── Loading ─────────────────────────────────────────────────────────────── */
