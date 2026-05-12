@@ -5,10 +5,22 @@ export const META_EVENTS = {
   viewContent: 'ViewContent',
 };
 
+export const META_CUSTOM_EVENTS = {
+  startTrial: 'ZeloStartTrial',
+  subscribe: 'ZeloSubscribe',
+};
+
 export function trackMetaEvent(eventName, params = {}) {
   if (typeof window === 'undefined' || typeof window.fbq !== 'function') return false;
 
   window.fbq('track', eventName, params);
+  return true;
+}
+
+export function trackMetaCustomEvent(eventName, params = {}) {
+  if (typeof window === 'undefined' || typeof window.fbq !== 'function') return false;
+
+  window.fbq('trackCustom', eventName, params);
   return true;
 }
 
@@ -17,18 +29,31 @@ export function trackLead(params = {}) {
 }
 
 export function trackStartTrial(params = {}) {
-  return trackMetaEvent(META_EVENTS.startTrial, {
+  const payload = {
     value: 0,
     currency: 'BRL',
+    plan_id: 'zelo_pdv_trial_30d',
+    trial_days: 30,
     ...params,
-  });
+  };
+
+  const trackedStandard = trackMetaEvent(META_EVENTS.startTrial, payload);
+  const trackedCustom = trackMetaCustomEvent(META_CUSTOM_EVENTS.startTrial, payload);
+
+  return trackedStandard || trackedCustom;
 }
 
 export function trackSubscribe(params = {}) {
-  return trackMetaEvent(META_EVENTS.subscribe, {
+  const payload = {
     currency: 'BRL',
+    plan_id: 'zelo_paid_subscription',
     ...params,
-  });
+  };
+
+  const trackedStandard = trackMetaEvent(META_EVENTS.subscribe, payload);
+  const trackedCustom = trackMetaCustomEvent(META_CUSTOM_EVENTS.subscribe, payload);
+
+  return trackedStandard || trackedCustom;
 }
 
 export function trackViewContent(params = {}) {
