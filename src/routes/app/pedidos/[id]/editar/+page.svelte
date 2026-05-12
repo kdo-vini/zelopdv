@@ -7,6 +7,7 @@
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
+  import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
 
   let ready = false;
   let loading = true;
@@ -108,11 +109,20 @@
 
   function adicionarProduto(produto) {
     const existente = carrinho.find((item) => item.id_produto === produto.id);
-    const qtdAtual = Number(existente?.quantidade || 0);
-    const disponivel = Number(produto.estoque_atual || 0);
+    const candidato = existente
+      ? carrinho.map((item) => item === existente ? { ...item, quantidade: Number(item.quantidade || 0) + 1 } : item)
+      : [
+          ...carrinho,
+          {
+            id_produto: produto.id,
+            nome: produto.nome,
+            preco: Number(produto.preco || 0),
+            quantidade: 1,
+            enviado_cozinha: true
+          }
+        ];
 
-    if (produto.controlar_estoque && qtdAtual + 1 > disponivel) {
-      addToast(`Estoque insuficiente para "${produto.nome}". Restam ${disponivel}.`, 'warning');
+    if (!validarEstoqueCarrinho(candidato)) {
       return;
     }
 
@@ -135,7 +145,6 @@
   }
 
   function alterarQuantidade(item, delta) {
-    const produto = produtos.find((p) => p.id === item.id_produto);
     const proxima = Number(item.quantidade || 0) + delta;
 
     if (proxima <= 0) {
@@ -143,13 +152,32 @@
       return;
     }
 
-    if (delta > 0 && produto?.controlar_estoque && proxima > Number(produto.estoque_atual || 0)) {
-      addToast(`Estoque insuficiente para "${item.nome}".`, 'warning');
+    const candidato = carrinho.map((i) => i === item ? { ...i, quantidade: proxima } : i);
+    if (delta > 0 && !validarEstoqueCarrinho(candidato)) {
       return;
     }
 
     item.quantidade = proxima;
     carrinho = [...carrinho];
+  }
+
+  function validarEstoqueCarrinho(itens) {
+    const itensComInfo = itens.map((item) => {
+      const produto = produtos.find((p) => p.id === item.id_produto);
+      return {
+        ...produto,
+        id_produto: item.id_produto,
+        nome: produto?.nome || item.nome,
+        quantidade: Number(item.quantidade || 0)
+      };
+    });
+    const insuficiente = somarQuantidadePorEstoque(itensComInfo, itensComInfo)
+      .find((linha) => linha.quantidade > linha.disponivel);
+    if (insuficiente) {
+      addToast(`Estoque insuficiente para "${insuficiente.nome}". Restam ${insuficiente.disponivel}.`, 'warning');
+      return false;
+    }
+    return true;
   }
 
   function removerItem(item) {
@@ -289,8 +317,8 @@
                 <button type="button" class="product-card" on:click={() => adicionarProduto(produto)}>
                   <strong>{produto.nome}</strong>
                   <span class="price">{formatMoney(produto.preco)}</span>
-                  {#if produto.controlar_estoque}
-                    <small>Estoque: {Number(produto.estoque_atual || 0)}</small>
+                  {#if produtoControlaEstoque(produto)}
+                    <small>Estoque: {estoqueDisponivel(produto)}</small>
                   {/if}
                 </button>
               {/each}

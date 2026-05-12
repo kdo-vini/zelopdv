@@ -57,7 +57,7 @@
   async function carregarProdutos() {
     loading = true;
     try {
-      let q = supabase.from('produtos').select('*');
+      let q = supabase.from('produtos').select('*, categorias(id, nome, controlar_estoque_compartilhado, estoque_compartilhado_atual)');
 
       if (idCategoriaFilter) q = q.eq('id_categoria', Number(idCategoriaFilter));
       if (idSubcategoriaFilter) q = q.eq('id_subcategoria', Number(idSubcategoriaFilter));
@@ -86,14 +86,17 @@
     ? subcategorias.filter(s => s.id_categoria === editForm.id_categoria)
     : [];
 
+  $: formCategoriaCompartilhada = categoriaTemEstoqueCompartilhado(form.id_categoria);
+  $: editCategoriaCompartilhada = categoriaTemEstoqueCompartilhado(editForm.id_categoria);
+
   $: filteredSubcatsForFilter = idCategoriaFilter
     ? subcategorias.filter(s => s.id_categoria === Number(idCategoriaFilter))
     : subcategorias;
 
   // Client-side Sorting & Pagination
   $: sortedProdutos = [...produtos].sort((a, b) => {
-    const valA = a[sortField];
-    const valB = b[sortField];
+    const valA = sortField === 'estoque_atual' ? estoqueExibido(a) : a[sortField];
+    const valB = sortField === 'estoque_atual' ? estoqueExibido(b) : b[sortField];
     if (valA < valB) return sortDesc ? 1 : -1;
     if (valA > valB) return sortDesc ? -1 : 1;
     return 0;
@@ -112,7 +115,12 @@
     const { data: userData } = await supabase.auth.getUser();
     const id_usuario = userData?.user?.id ?? null;
 
-    const payload = { ...form, id_usuario };
+    const payload = {
+      ...form,
+      id_usuario,
+      controlar_estoque: formCategoriaCompartilhada ? false : form.controlar_estoque,
+      estoque_atual: !formCategoriaCompartilhada && form.controlar_estoque ? form.estoque_atual : 0
+    };
     if (!payload.id_subcategoria) payload.id_subcategoria = null;
 
     const { error } = await supabase.from('produtos').insert(payload);
@@ -201,8 +209,8 @@
       id_subcategoria: editForm.id_subcategoria || null,
       eh_item_por_unidade: editForm.eh_item_por_unidade,
       ocultar_no_pdv: editForm.ocultar_no_pdv,
-      controlar_estoque: editForm.controlar_estoque,
-      estoque_atual: editForm.controlar_estoque ? editForm.estoque_atual : 0
+      controlar_estoque: editCategoriaCompartilhada ? false : editForm.controlar_estoque,
+      estoque_atual: !editCategoriaCompartilhada && editForm.controlar_estoque ? editForm.estoque_atual : 0
     }).eq('id', editingId);
 
     if (error) addToast(error.message, 'error');
@@ -240,6 +248,21 @@
   // Helpers
   function getCategoriaNome(id) {
     return categorias.find(c => c.id === id)?.nome || '-';
+  }
+
+  function categoriaTemEstoqueCompartilhado(idCategoria) {
+    if (!idCategoria) return false;
+    return !!categorias.find(c => c.id === Number(idCategoria))?.controlar_estoque_compartilhado;
+  }
+
+  function estoqueProdutoCompartilhado(produto) {
+    return !!produto?.categorias?.controlar_estoque_compartilhado;
+  }
+
+  function estoqueExibido(produto) {
+    return estoqueProdutoCompartilhado(produto)
+      ? Number(produto?.categorias?.estoque_compartilhado_atual || 0)
+      : Number(produto?.estoque_atual || 0);
   }
 </script>
 
@@ -349,12 +372,16 @@
             <input type="checkbox" bind:checked={form.ocultar_no_pdv} class="rounded text-sky-600 focus:ring-sky-500" />
             <span>Ocultar no PDV</span>
           </label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" bind:checked={form.controlar_estoque} class="rounded text-sky-600 focus:ring-sky-500" />
-            <span>Controlar Estoque</span>
-          </label>
+          {#if formCategoriaCompartilhada}
+            <span class="text-sm text-slate-500">Estoque compartilhado pela categoria</span>
+          {:else}
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" bind:checked={form.controlar_estoque} class="rounded text-sky-600 focus:ring-sky-500" />
+              <span>Controlar Estoque</span>
+            </label>
+          {/if}
 
-          {#if form.controlar_estoque}
+          {#if !formCategoriaCompartilhada && form.controlar_estoque}
             <div class="flex items-center gap-2 animate-fadeIn">
                <span class="text-sm text-slate-600">Qtd Inicial:</span>
                <input type="number" step="1" min="0" class="input-form w-24 py-1" bind:value={form.estoque_atual} />
@@ -418,8 +445,12 @@
                        </div>
                        <div class="flex items-center justify-between">
                           <div class="flex gap-4">
-                             <label class="flex items-center gap-2 text-xs"><input type="checkbox" bind:checked={editForm.controlar_estoque}> Estoque</label>
-                             {#if editForm.controlar_estoque}
+                             {#if editCategoriaCompartilhada}
+                               <span class="text-xs text-slate-500">Estoque compartilhado pela categoria</span>
+                             {:else}
+                               <label class="flex items-center gap-2 text-xs"><input type="checkbox" bind:checked={editForm.controlar_estoque}> Estoque</label>
+                             {/if}
+                             {#if !editCategoriaCompartilhada && editForm.controlar_estoque}
                                <input type="number" class="input-form w-20 py-1 text-xs" bind:value={editForm.estoque_atual} />
                              {/if}
                           </div>
@@ -448,10 +479,13 @@
                   <div class="text-xs">{getCategoriaNome(p.id_categoria)}</div>
                 </td>
                 <td class="p-4 text-center">
-                  {#if p.controlar_estoque}
-                     <span class={`rounded-full px-2 py-0.5 text-xs font-bold ${p.estoque_atual < 5 ? 'bg-red-500/15 text-red-400' : 'bg-green-500/15 text-green-400'}`}>
-                       {p.estoque_atual}
+                  {#if p.controlar_estoque || estoqueProdutoCompartilhado(p)}
+                     <span class={`rounded-full px-2 py-0.5 text-xs font-bold ${estoqueExibido(p) < 5 ? 'bg-red-500/15 text-red-400' : 'bg-green-500/15 text-green-400'}`} title={estoqueProdutoCompartilhado(p) ? 'Estoque compartilhado pela categoria' : 'Estoque individual'}>
+                       {estoqueExibido(p)}
                      </span>
+                     {#if estoqueProdutoCompartilhado(p)}
+                       <div class="text-[10px] text-slate-500 mt-1">grupo</div>
+                     {/if}
                   {:else}
                      <span class="text-slate-400 text-xs">-</span>
                   {/if}

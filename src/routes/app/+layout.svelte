@@ -17,20 +17,30 @@
 
       // --- Alerta de estoque baixo ---
       if (localStorage.getItem('zelo_notif_estoque') === 'true' && !sessionStorage.getItem('zelo_notif_estoque_shown')) {
-        const { data: baixos, error } = await supabase
-          .from('produtos')
-          .select('id')
-          .eq('id_usuario', userId)
-          .eq('controlar_estoque', true)
-          .lt('estoque_atual', ESTOQUE_BAIXO_LIMITE)
-          .limit(50);
-        if (error) {
-          console.warn('[Notificacoes] Erro ao verificar estoque:', error.message);
+        const [produtosBaixos, categoriasBaixas] = await Promise.all([
+          supabase
+            .from('produtos')
+            .select('id')
+            .eq('id_usuario', userId)
+            .eq('controlar_estoque', true)
+            .lt('estoque_atual', ESTOQUE_BAIXO_LIMITE)
+            .limit(50),
+          supabase
+            .from('categorias')
+            .select('id')
+            .eq('id_usuario', userId)
+            .eq('controlar_estoque_compartilhado', true)
+            .lt('estoque_compartilhado_atual', ESTOQUE_BAIXO_LIMITE)
+            .limit(50)
+        ]);
+        if (produtosBaixos.error || categoriasBaixas.error) {
+          console.warn('[Notificacoes] Erro ao verificar estoque:', produtosBaixos.error?.message || categoriasBaixas.error?.message);
         } else {
           sessionStorage.setItem('zelo_notif_estoque_shown', '1');
-          if (baixos.length > 0) {
+          const totalBaixos = (produtosBaixos.data || []).length + (categoriasBaixas.data || []).length;
+          if (totalBaixos > 0) {
             addToast(
-              `${baixos.length} produto${baixos.length > 1 ? 's' : ''} com estoque baixo (< ${ESTOQUE_BAIXO_LIMITE} unidades). Verifique em Gestão → Estoque.`,
+              `${totalBaixos} item${totalBaixos > 1 ? 's' : ''} com estoque baixo (< ${ESTOQUE_BAIXO_LIMITE} unidades). Verifique em Gestão → Estoque.`,
               'warning',
               8000
             );

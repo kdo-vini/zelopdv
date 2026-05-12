@@ -4,6 +4,7 @@
 -->
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { estoqueDisponivel, produtoControlaEstoque } from '$lib/stock';
   
   const dispatch = createEventDispatcher();
   
@@ -60,8 +61,8 @@
             class="mt-1 input-form"
             required
           />
-          {#if produto.controlar_estoque}
-            <p class="mt-1 text-xs text-gray-500">Disponível: {Number(produto.estoque_atual || 0)}</p>
+          {#if produtoControlaEstoque(produto)}
+            <p class="mt-1 text-xs text-gray-500">Disponível: {estoqueDisponivel(produto)}</p>
           {/if}
         </div>
         <div class="mt-6 flex justify-end">

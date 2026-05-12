@@ -20,7 +20,7 @@
   let sortDesc = false;
 
   // Form
-  let form = { nome: '', ordem: 0 };
+  let form = { nome: '', ordem: 0, controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 };
   let editingId = null;
   let editForm = {};
 
@@ -66,13 +66,15 @@
     const { error } = await supabase.from('categorias').insert({
       nome: form.nome,
       ordem: form.ordem,
+      controlar_estoque_compartilhado: !!form.controlar_estoque_compartilhado,
+      estoque_compartilhado_atual: form.controlar_estoque_compartilhado ? Number(form.estoque_compartilhado_atual || 0) : 0,
       id_usuario
     });
 
     if (error) { addToast(error.message, 'error'); return; }
 
     addToast('Categoria criada com sucesso!', 'success');
-    form = { nome: '', ordem: 0 };
+    form = { nome: '', ordem: 0, controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 };
     showCreateForm = false;
     pdvCache.invalidateCategorias();
     await carregarCategorias();
@@ -145,7 +147,9 @@
     e.preventDefault();
     const { error } = await supabase.from('categorias').update({
       nome: editForm.nome,
-      ordem: editForm.ordem
+      ordem: editForm.ordem,
+      controlar_estoque_compartilhado: !!editForm.controlar_estoque_compartilhado,
+      estoque_compartilhado_atual: editForm.controlar_estoque_compartilhado ? Number(editForm.estoque_compartilhado_atual || 0) : 0
     }).eq('id', editingId);
 
     if (error) addToast(error.message, 'error');
@@ -298,7 +302,7 @@
   <!-- Collapsible Create Form -->
   {#if showCreateForm}
     <div transition:slide class="bg-sky-500/5 border-b border-sky-500/15 p-4">
-      <form on:submit={criarCategoria} class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <form on:submit={criarCategoria} class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
           <label class="label-form">Nome da Categoria</label>
           <input class="input-form" bind:value={form.nome} required placeholder="Ex: Bebidas" />
@@ -307,6 +311,16 @@
           <label class="label-form">Ordem de Exibição</label>
           <input class="input-form" type="number" step="1" bind:value={form.ordem} required />
         </div>
+        <label class="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" bind:checked={form.controlar_estoque_compartilhado} class="rounded text-sky-600 focus:ring-sky-500" />
+          <span>Estoque compartilhado</span>
+        </label>
+        {#if form.controlar_estoque_compartilhado}
+          <div>
+            <label class="label-form">Qtd. Compartilhada</label>
+            <input class="input-form" type="number" min="0" step="1" bind:value={form.estoque_compartilhado_atual} />
+          </div>
+        {/if}
         <div class="flex items-end">
            <button class="btn-primary px-6 w-full md:w-auto" type="submit">Salvar Categoria</button>
         </div>
@@ -333,6 +347,7 @@
             <th class="p-4 cursor-pointer hover:text-slate-200" on:click={() => toggleSort('ordem')}>
               Ordem {#if sortField==='ordem'}{sortDesc ? '↓' : '↑'}{/if}
             </th>
+            <th class="p-4">Estoque</th>
             <th class="p-4 text-right">Ações</th>
           </tr>
         </thead>
@@ -342,10 +357,17 @@
                <!-- Row Editing Mode -->
                <tr class="bg-sky-500/5">
                  <td class="p-4"></td>
-                 <td colspan="2" class="p-4">
-                    <form on:submit={saveEdit} class="flex gap-4">
+                 <td colspan="3" class="p-4">
+                    <form on:submit={saveEdit} class="flex flex-wrap gap-4 items-center">
                        <input class="input-form flex-1" bind:value={editForm.nome} placeholder="Nome" required />
                        <input class="input-form w-24" type="number" bind:value={editForm.ordem} placeholder="Ordem" required />
+                       <label class="flex items-center gap-2 text-xs">
+                         <input type="checkbox" bind:checked={editForm.controlar_estoque_compartilhado} />
+                         Compartilhado
+                       </label>
+                       {#if editForm.controlar_estoque_compartilhado}
+                         <input class="input-form w-28" type="number" min="0" step="1" bind:value={editForm.estoque_compartilhado_atual} placeholder="Qtd." />
+                       {/if}
                        <button type="submit" class="btn-primary text-xs">Salvar</button>
                        <button type="button" class="btn-ghost text-xs" on:click={cancelEdit}>Cancelar</button>
                     </form>
@@ -360,6 +382,13 @@
                 </td>
                 <td class="p-4 font-medium text-white">{c.nome}</td>
                 <td class="p-4">{c.ordem}</td>
+                <td class="p-4">
+                  {#if c.controlar_estoque_compartilhado}
+                    <span class="rounded-full px-2 py-0.5 text-xs font-bold bg-sky-500/15 text-sky-400">{c.estoque_compartilhado_atual}</span>
+                  {:else}
+                    <span class="text-slate-400 text-xs">Individual</span>
+                  {/if}
+                </td>
                 <td class="p-4 text-right">
                   <div class="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button class="p-2 hover:bg-slate-600 rounded text-slate-500" title="Editar" on:click={() => startEdit(c)}>

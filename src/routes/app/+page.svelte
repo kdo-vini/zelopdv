@@ -23,6 +23,7 @@
   import { pdvCache } from '$lib/stores/pdvCache';
   import { money, validatePaymentCoverage } from '$lib/finance/caixa';
   import { buildVendaPayload } from '$lib/finance/saleOps';
+  import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
   
   // Modais componentizados
   import ModalAbrirCaixa from '$lib/components/modals/ModalAbrirCaixa.svelte';
@@ -473,10 +474,10 @@
     }
 
     // Caso padrão: adiciona 1 unidade diretamente (com checagem de estoque)
-    if (produto?.id && produto?.controlar_estoque) {
+    if (produto?.id && produtoControlaEstoque(produto)) {
       const existente = comanda.find((i) => i.id_produto === produto.id);
       const qtdAtual = existente?.quantidade || 0;
-      const disponivel = Number(produto.estoque_atual || 0);
+      const disponivel = estoqueDisponivel(produto);
       if (qtdAtual + 1 > disponivel) {
         addToast(`Estoque insuficiente para "${produto.nome}". Restam ${disponivel} unidade(s).`, 'error');
         return;
@@ -532,8 +533,8 @@
       // Regra de estoque no + da comanda
       if (item.id_produto) {
         const prod = produtos.find((p) => p.id === item.id_produto);
-        if (prod?.controlar_estoque) {
-          const disponivel = Number(prod.estoque_atual || 0);
+        if (produtoControlaEstoque(prod)) {
+          const disponivel = estoqueDisponivel(prod);
           if ((item.quantidade + 1) > disponivel) {
             addToast(`Estoque insuficiente para "${item.nome}". Restam ${disponivel} unidade(s).`, 'error');
             return;
@@ -707,10 +708,10 @@
     if (!Number.isFinite(qtd) || qtdInt <= 0) return;
 
     // Checagem de estoque levando em conta quantidade já na comanda
-    if (prod.id && prod.controlar_estoque) {
+    if (prod.id && produtoControlaEstoque(prod)) {
       const existente = comanda.find((i) => i.id_produto === prod.id);
       const qtdAtual = existente?.quantidade || 0;
-      const disponivel = Number(prod.estoque_atual || 0);
+      const disponivel = estoqueDisponivel(prod);
       if (qtdInt + qtdAtual > disponivel) {
         addToast(`Estoque insuficiente para "${prod.nome}". Restam ${disponivel} unidade(s).`, 'error');
         return;
@@ -856,7 +857,7 @@
         if (idsProdutos.length) {
           const { data: prodsInfo, error: prodErr } = await supabase
             .from('produtos')
-            .select('id, nome, controlar_estoque, estoque_atual')
+            .select('id, nome, id_categoria, controlar_estoque, estoque_atual, categorias(id, nome, controlar_estoque_compartilhado, estoque_compartilhado_atual)')
             .in('id', idsProdutos);
           if (!prodErr && prodsInfo) {
             const mapInfo = new Map(prodsInfo.map(p => [p.id, p]));
@@ -869,24 +870,18 @@
               }
               return item.quantidade || 1;
             };
-            // Soma quantidade requerida por produto
-            const requeridos = new Map();
-            for (const it of comanda) {
-              if (!it.id_produto) continue;
-              const qtdEf = extrairQuantidadeEfetiva(it);
-              requeridos.set(it.id_produto, (requeridos.get(it.id_produto) || 0) + Number(qtdEf));
-            }
+            const itensComInfo = comanda
+              .filter((it) => it.id_produto)
+              .map((it) => ({
+                ...mapInfo.get(it.id_produto),
+                id_produto: it.id_produto,
+                nome: mapInfo.get(it.id_produto)?.nome || it.nome,
+                quantidade: extrairQuantidadeEfetiva(it)
+              }));
             // Checa insuficiências
-            const insuficientes = [];
-            for (const [idProd, qtdNec] of requeridos.entries()) {
-              const info = mapInfo.get(idProd);
-              if (info?.controlar_estoque) {
-                const disp = Number(info.estoque_atual || 0);
-                if (qtdNec > disp) {
-                  insuficientes.push(`${info.nome} (disp: ${disp}, ped: ${qtdNec})`);
-                }
-              }
-            }
+            const insuficientes = somarQuantidadePorEstoque(itensComInfo, itensComInfo)
+              .filter((item) => item.quantidade > item.disponivel)
+              .map((item) => `${item.nome} (disp: ${item.disponivel}, ped: ${item.quantidade})`);
             if (insuficientes.length) {
               erroPagamento = `Estoque insuficiente para: ${insuficientes.join(', ')}`;
               salvandoVenda = false;
@@ -1399,10 +1394,10 @@
   on:confirm={(e) => {
     const { produto, quantidade } = e.detail;
     // Checagem de estoque
-    if (produto?.id && produto?.controlar_estoque) {
+    if (produto?.id && produtoControlaEstoque(produto)) {
       const existente = comanda.find((i) => i.id_produto === produto.id);
       const qtdAtual = existente?.quantidade || 0;
-      const disponivel = Number(produto.estoque_atual || 0);
+      const disponivel = estoqueDisponivel(produto);
       if (quantidade + qtdAtual > disponivel) {
         addToast(`Estoque insuficiente para "${produto.nome}". Restam ${disponivel} unidade(s).`, 'error');
         return;
@@ -1493,4 +1488,3 @@
 />
 
 <!-- Estilos removidos: usamos classes globais definidas em src/app.css -->
-

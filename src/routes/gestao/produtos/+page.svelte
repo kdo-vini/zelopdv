@@ -19,7 +19,7 @@
   // Inline editing on the tree
   let editingCatId = null;
   let editingSubId = null;
-  let editCatForm = { nome: '', ordem: 0 };
+  let editCatForm = { nome: '', ordem: 0, controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 };
   let editSubForm = { nome: '', ordem: 0, id_categoria: null };
 
   // ─── State: Product Table ─────────────────────────────────────────────────────
@@ -47,7 +47,7 @@
   let showSubModal = false;
   let showProdModal = false;
 
-  let newCatForm = { nome: '', ordem: 0 };
+  let newCatForm = { nome: '', ordem: 0, controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 };
   let newSubForm = { nome: '', ordem: 0, id_categoria: null };
   let newProdForm = {
     nome: '',
@@ -143,7 +143,7 @@
   async function carregarProdutos() {
     loading = true;
     try {
-      let q = supabase.from('produtos').select('*');
+      let q = supabase.from('produtos').select('*, categorias(id, nome, controlar_estoque_compartilhado, estoque_compartilhado_atual)');
 
       if (selectedSubcategoriaId) {
         q = q.eq('id_subcategoria', selectedSubcategoriaId);
@@ -228,13 +228,13 @@
   $: filteredProdutos = (() => {
     let list = [...produtos];
     if (filterOcultosOnly) list = list.filter(p => p.ocultar_no_pdv);
-    if (filterEstoqueOnly) list = list.filter(p => p.controlar_estoque);
+    if (filterEstoqueOnly) list = list.filter(p => p.controlar_estoque || estoqueProdutoCompartilhado(p));
     return list;
   })();
 
   $: sortedProdutos = [...filteredProdutos].sort((a, b) => {
-    const va = a[sortField] ?? '';
-    const vb = b[sortField] ?? '';
+    const va = sortField === 'estoque_atual' ? estoqueExibido(a) : (a[sortField] ?? '');
+    const vb = sortField === 'estoque_atual' ? estoqueExibido(b) : (b[sortField] ?? '');
     if (va < vb) return sortDesc ? 1 : -1;
     if (va > vb) return sortDesc ? -1 : 1;
     return 0;
@@ -254,6 +254,9 @@
     ? subcategorias.filter(s => s.id_categoria === editProdForm.id_categoria)
     : [];
 
+  $: newProdCategoriaCompartilhada = categoriaTemEstoqueCompartilhado(newProdForm.id_categoria);
+  $: editProdCategoriaCompartilhada = categoriaTemEstoqueCompartilhado(editProdForm.id_categoria);
+
   function toggleSort(field) {
     if (sortField === field) {
       sortDesc = !sortDesc;
@@ -261,6 +264,21 @@
       sortField = field;
       sortDesc = false;
     }
+  }
+
+  function categoriaTemEstoqueCompartilhado(idCategoria) {
+    if (!idCategoria) return false;
+    return !!categorias.find((cat) => cat.id === Number(idCategoria))?.controlar_estoque_compartilhado;
+  }
+
+  function estoqueProdutoCompartilhado(prod) {
+    return !!prod?.categorias?.controlar_estoque_compartilhado;
+  }
+
+  function estoqueExibido(prod) {
+    return estoqueProdutoCompartilhado(prod)
+      ? Number(prod?.categorias?.estoque_compartilhado_atual || 0)
+      : Number(prod?.estoque_atual || 0);
   }
 
   // ─── Seleção em massa ─────────────────────────────────────────────────────────
@@ -288,6 +306,8 @@
     const { error } = await supabase.from('categorias').insert({
       nome: newCatForm.nome,
       ordem: newCatForm.ordem,
+      controlar_estoque_compartilhado: !!newCatForm.controlar_estoque_compartilhado,
+      estoque_compartilhado_atual: newCatForm.controlar_estoque_compartilhado ? Number(newCatForm.estoque_compartilhado_atual || 0) : 0,
       id_usuario
     });
 
@@ -297,7 +317,7 @@
     }
 
     addToast('Categoria criada com sucesso!', 'success');
-    newCatForm = { nome: '', ordem: 0 };
+    newCatForm = { nome: '', ordem: 0, controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 };
     showCatModal = false;
     pdvCache.invalidateCategorias();
     await carregarCategorias();
@@ -305,20 +325,30 @@
 
   function iniciarEdicaoCategoria(cat) {
     editingCatId = cat.id;
-    editCatForm = { nome: cat.nome, ordem: cat.ordem };
+    editCatForm = {
+      nome: cat.nome,
+      ordem: cat.ordem,
+      controlar_estoque_compartilhado: !!cat.controlar_estoque_compartilhado,
+      estoque_compartilhado_atual: Number(cat.estoque_compartilhado_atual || 0)
+    };
     editingSubId = null;
   }
 
   function cancelarEdicaoCategoria() {
     editingCatId = null;
-    editCatForm = { nome: '', ordem: 0 };
+    editCatForm = { nome: '', ordem: 0, controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 };
   }
 
   async function salvarEdicaoCategoria(e) {
     e.preventDefault();
     const { error } = await supabase
       .from('categorias')
-      .update({ nome: editCatForm.nome, ordem: editCatForm.ordem })
+      .update({
+        nome: editCatForm.nome,
+        ordem: editCatForm.ordem,
+        controlar_estoque_compartilhado: !!editCatForm.controlar_estoque_compartilhado,
+        estoque_compartilhado_atual: editCatForm.controlar_estoque_compartilhado ? Number(editCatForm.estoque_compartilhado_atual || 0) : 0
+      })
       .eq('id', editingCatId);
 
     if (error) {
@@ -485,7 +515,8 @@
       ...newProdForm,
       id_usuario,
       id_subcategoria: newProdForm.id_subcategoria || null,
-      estoque_atual: newProdForm.controlar_estoque ? newProdForm.estoque_atual : 0
+      controlar_estoque: newProdCategoriaCompartilhada ? false : newProdForm.controlar_estoque,
+      estoque_atual: !newProdCategoriaCompartilhada && newProdForm.controlar_estoque ? newProdForm.estoque_atual : 0
     };
 
     const { error } = await supabase.from('produtos').insert(payload);
@@ -529,8 +560,8 @@
       id_subcategoria: editProdForm.id_subcategoria || null,
       eh_item_por_unidade: editProdForm.eh_item_por_unidade,
       ocultar_no_pdv: editProdForm.ocultar_no_pdv,
-      controlar_estoque: editProdForm.controlar_estoque,
-      estoque_atual: editProdForm.controlar_estoque ? editProdForm.estoque_atual : 0
+      controlar_estoque: editProdCategoriaCompartilhada ? false : editProdForm.controlar_estoque,
+      estoque_atual: !editProdCategoriaCompartilhada && editProdForm.controlar_estoque ? editProdForm.estoque_atual : 0
     }).eq('id', editingProdId);
 
     if (error) {
@@ -737,6 +768,21 @@
                   required
                   style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
                 />
+                <label class="flex items-center gap-2 text-xs" style="color: var(--text-label);">
+                  <input type="checkbox" bind:checked={editCatForm.controlar_estoque_compartilhado} style="accent-color: var(--primary);" />
+                  Estoque compartilhado
+                </label>
+                {#if editCatForm.controlar_estoque_compartilhado}
+                  <input
+                    class="tree-input"
+                    type="number"
+                    min="0"
+                    step="1"
+                    bind:value={editCatForm.estoque_compartilhado_atual}
+                    placeholder="Qtd. compartilhada"
+                    style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                  />
+                {/if}
                 <div class="flex gap-2">
                   <button type="submit" class="btn-xs-primary" style="background: var(--primary); color: var(--primary-text);">Salvar</button>
                   <button type="button" class="btn-xs-ghost" on:click={cancelarEdicaoCategoria} style="color: var(--text-muted); border-color: var(--border-subtle);">Cancelar</button>
@@ -770,6 +816,12 @@
               </button>
 
               <span class="flex-1 text-sm font-medium truncate">{cat.nome}</span>
+              {#if cat.controlar_estoque_compartilhado}
+                <span class="subcat-badge" title="Estoque compartilhado"
+                  style="background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary);">
+                  {cat.estoque_compartilhado_atual}
+                </span>
+              {/if}
 
               <!-- Badge de subcategorias -->
               {#if getSubcatCount(cat.id) > 0}
@@ -1096,11 +1148,15 @@
                       </div>
                       <div class="flex items-center justify-between flex-wrap gap-3">
                         <div class="flex items-center gap-4 text-sm flex-wrap" style="color: var(--text-label);">
-                          <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="checkbox" bind:checked={editProdForm.controlar_estoque} style="accent-color: var(--primary);" />
-                            Controlar estoque
-                          </label>
-                          {#if editProdForm.controlar_estoque}
+                          {#if editProdCategoriaCompartilhada}
+                            <span class="text-xs" style="color: var(--text-muted);">Estoque compartilhado pela categoria</span>
+                          {:else}
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                              <input type="checkbox" bind:checked={editProdForm.controlar_estoque} style="accent-color: var(--primary);" />
+                              Controlar estoque
+                            </label>
+                          {/if}
+                          {#if !editProdCategoriaCompartilhada && editProdForm.controlar_estoque}
                             <div class="flex items-center gap-1.5" transition:slide|local={{ duration: 100 }}>
                               <span>Qtd:</span>
                               <input
@@ -1168,15 +1224,19 @@
 
                   <!-- Estoque -->
                   <td class="td-cell text-center">
-                    {#if prod.controlar_estoque}
+                    {#if prod.controlar_estoque || estoqueProdutoCompartilhado(prod)}
                       <span
                         class="badge-estoque"
-                        style={prod.estoque_atual < 5
+                        title={estoqueProdutoCompartilhado(prod) ? 'Estoque compartilhado pela categoria' : 'Estoque individual'}
+                        style={estoqueExibido(prod) < 5
                           ? 'background: color-mix(in srgb, var(--error) 12%, transparent); color: var(--error);'
                           : 'background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);'}
                       >
-                        {prod.estoque_atual}
+                        {estoqueExibido(prod)}
                       </span>
+                      {#if estoqueProdutoCompartilhado(prod)}
+                        <div class="text-[10px] mt-1" style="color: var(--text-muted);">grupo</div>
+                      {/if}
                     {:else}
                       <span class="text-xs" style="color: var(--text-muted);">—</span>
                     {/if}
@@ -1293,6 +1353,26 @@
             style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
           />
         </div>
+        <label class="prod-option-label" style="color: var(--text-label); background: var(--bg-panel); border-color: var(--border-subtle);">
+          <input type="checkbox" bind:checked={newCatForm.controlar_estoque_compartilhado} style="accent-color: var(--primary);" />
+          <div>
+            <span class="font-medium text-sm">Estoque compartilhado</span>
+            <p class="text-xs mt-0.5" style="color: var(--text-muted);">Todos os produtos desta categoria usam a mesma quantidade</p>
+          </div>
+        </label>
+        {#if newCatForm.controlar_estoque_compartilhado}
+          <div>
+            <label class="form-label" style="color: var(--text-label);">Qtd. Compartilhada</label>
+            <input
+              class="form-input"
+              type="number"
+              min="0"
+              step="1"
+              bind:value={newCatForm.estoque_compartilhado_atual}
+              style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+            />
+          </div>
+        {/if}
         <div class="modal-footer" style="border-color: var(--border-subtle);">
           <button type="button" class="btn-ghost-modal" on:click={() => showCatModal = false} style="color: var(--text-muted); border-color: var(--border-subtle);">
             Cancelar
@@ -1455,14 +1535,23 @@
               <p class="text-xs mt-0.5" style="color: var(--text-muted);">Produto não aparecerá para seleção na venda</p>
             </div>
           </label>
-          <label class="prod-option-label" style="color: var(--text-label);">
-            <input type="checkbox" bind:checked={newProdForm.controlar_estoque} style="accent-color: var(--primary);" />
-            <div>
-              <span class="font-medium text-sm">Controlar estoque</span>
-              <p class="text-xs mt-0.5" style="color: var(--text-muted);">Acompanha a quantidade disponível</p>
+          {#if newProdCategoriaCompartilhada}
+            <div class="prod-option-label" style="color: var(--text-label);">
+              <div>
+                <span class="font-medium text-sm">Estoque compartilhado</span>
+                <p class="text-xs mt-0.5" style="color: var(--text-muted);">A quantidade é controlada na categoria selecionada</p>
+              </div>
             </div>
-          </label>
-          {#if newProdForm.controlar_estoque}
+          {:else}
+            <label class="prod-option-label" style="color: var(--text-label);">
+              <input type="checkbox" bind:checked={newProdForm.controlar_estoque} style="accent-color: var(--primary);" />
+              <div>
+                <span class="font-medium text-sm">Controlar estoque</span>
+                <p class="text-xs mt-0.5" style="color: var(--text-muted);">Acompanha a quantidade disponível</p>
+              </div>
+            </label>
+          {/if}
+          {#if !newProdCategoriaCompartilhada && newProdForm.controlar_estoque}
             <div class="flex items-center gap-2" transition:slide|local={{ duration: 100 }}>
               <label class="form-label mb-0" style="color: var(--text-label);">Qtd. Inicial:</label>
               <input

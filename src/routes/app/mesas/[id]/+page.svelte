@@ -7,6 +7,7 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { printVenda } from '$lib/printService';
+  import { estoqueDisponivel, produtoControlaEstoque, produtoSemEstoque as semEstoque } from '$lib/stock';
 
   let userId = '';
   let addonActive = false;
@@ -418,7 +419,7 @@
   }
 
   function produtoSemEstoque(produto) {
-    return !!produto?.controlar_estoque && Number(produto.estoque_atual || 0) <= 0;
+    return semEstoque(produto);
   }
 
   function errorMessageFrom(error, fallback = 'Falha ao atualizar a comanda.') {
@@ -1265,9 +1266,9 @@
           >
             <span class="produto-nome">{p.nome}</span>
             <span class="produto-preco">R$ {Number(p.preco).toFixed(2)}</span>
-            {#if p.controlar_estoque}
+            {#if produtoControlaEstoque(p)}
               <span class="produto-estoque" class:stock-empty={produtoSemEstoque(p)}>
-                {produtoSemEstoque(p) ? 'Sem estoque' : `${Number(p.estoque_atual || 0)} em estoque`}
+                {produtoSemEstoque(p) ? 'Sem estoque' : `${estoqueDisponivel(p)} em estoque`}
               </span>
             {/if}
           </button>

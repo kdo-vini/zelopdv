@@ -9,6 +9,7 @@
   import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
   import { money } from '$lib/finance/caixa';
   import { buildVendaPayload } from '$lib/finance/saleOps';
+  import { somarQuantidadePorEstoque } from '$lib/stock';
 
   let ready = false;
   let loading = true;
@@ -285,7 +286,7 @@
 
     const { data, error } = await supabase
       .from('produtos')
-      .select('id, nome, controlar_estoque, estoque_atual')
+      .select('id, nome, id_categoria, controlar_estoque, estoque_atual, categorias(id, nome, controlar_estoque_compartilhado, estoque_compartilhado_atual)')
       .in('id', ids);
     if (error) throw error;
 
@@ -303,19 +304,18 @@
       throw new Error(`Produto removido do cadastro: ${removidos.join(', ')}. Edite o pedido antes de receber.`);
     }
 
-    const requeridos = new Map();
-    for (const item of itens) {
-      if (!item.id_produto) continue;
-      requeridos.set(item.id_produto, (requeridos.get(item.id_produto) || 0) + Number(item.quantidade || 0));
-    }
+    const itensComInfo = itens
+      .filter((item) => item.id_produto)
+      .map((item) => ({
+        ...produtosMap.get(item.id_produto),
+        id_produto: item.id_produto,
+        nome: produtosMap.get(item.id_produto)?.nome || item.nome,
+        quantidade: Number(item.quantidade || 0)
+      }));
 
-    const insuficientes = [];
-    for (const [id, qtd] of requeridos.entries()) {
-      const produto = produtosMap.get(id);
-      if (produto?.controlar_estoque && qtd > Number(produto.estoque_atual || 0)) {
-        insuficientes.push(`${produto.nome} (disp: ${Number(produto.estoque_atual || 0)}, ped: ${qtd})`);
-      }
-    }
+    const insuficientes = somarQuantidadePorEstoque(itensComInfo, itensComInfo)
+      .filter((item) => item.quantidade > item.disponivel)
+      .map((item) => `${item.nome} (disp: ${item.disponivel}, ped: ${item.quantidade})`);
 
     if (insuficientes.length) {
       throw new Error(`Estoque insuficiente para: ${insuficientes.join(', ')}`);

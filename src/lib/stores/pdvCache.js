@@ -68,7 +68,7 @@ const createPdvCache = () => {
 
             const { data, error } = await supabase
                 .from('produtos')
-                .select('*')
+                .select('*, categorias(id, nome, controlar_estoque_compartilhado, estoque_compartilhado_atual)')
                 .eq('ocultar_no_pdv', false)
                 .order('nome', { ascending: true });
 
