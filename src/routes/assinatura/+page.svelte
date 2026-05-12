@@ -153,6 +153,10 @@
               : 0;
             window.fbq('track', 'Subscribe', { value: subscribeValue, currency: 'BRL' });
           }
+          // Remove ?success=1 from URL immediately so a page refresh doesn't re-fire the pixel
+          const cleanUrl = new URL(window.location.href);
+          cleanUrl.searchParams.delete('success');
+          history.replaceState({}, '', cleanUrl.toString());
           setTimeout(() => { window.location.href = '/gestao'; }, 800);
         }
         if (params.get('addon') === 'mesas') {

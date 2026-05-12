@@ -19,9 +19,14 @@
   let editPedidosAddon = false
   
   onMount(async () => {
-    await loadAdminInfo()
-    await loadUsers()
-    loading = false
+    try {
+      await loadAdminInfo()
+      await loadUsers()
+    } catch (err) {
+      console.error('[Users] Unexpected error in onMount:', err)
+    } finally {
+      loading = false
+    }
   })
   
   async function loadAdminInfo() {
