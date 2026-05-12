@@ -10,9 +10,18 @@
       return;
     }
 
+    function maybeFireLeadPixel(session) {
+      if (!window.fbq) return;
+      const createdAt = new Date(session.user.created_at);
+      const isNewUser = Date.now() - createdAt.getTime() < 60_000;
+      if (isNewUser) window.fbq('track', 'Lead');
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         subscription.unsubscribe();
+        clearTimeout(timeout);
+        maybeFireLeadPixel(session);
         window.location.href = '/app';
       } else if (event === 'INITIAL_SESSION' && !session) {
         // OAuth code not yet exchanged — wait for SIGNED_IN
@@ -23,6 +32,8 @@
     supabase.auth.getSession().then(({ data }) => {
       if (data?.session) {
         subscription.unsubscribe();
+        clearTimeout(timeout);
+        maybeFireLeadPixel(data.session);
         window.location.href = '/app';
       }
     });
