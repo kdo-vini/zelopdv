@@ -17,7 +17,25 @@
   let editPlanTier = 'pdv'
   let editMesasAddon = false
   let editPedidosAddon = false
-  
+
+  // Status filter + pagination
+  let statusFilter = 'all'
+  const PAGE_SIZE = 50
+  let pageLimit = PAGE_SIZE
+
+  const STATUS_TABS = [
+    { key: 'all',       label: 'Todos' },
+    { key: 'trialing',  label: 'Trialing' },
+    { key: 'active',    label: 'Ativo' },
+    { key: 'canceled',  label: 'Cancelado' },
+    { key: 'no_profile',label: 'Sem Perfil' },
+  ]
+
+  function setStatusFilter(key) {
+    statusFilter = key
+    pageLimit = PAGE_SIZE
+  }
+
   onMount(async () => {
     try {
       await loadAdminInfo()
@@ -392,14 +410,37 @@
   }
   
   $: filteredUsers = users.filter(user => {
-    if (!searchTerm) return true
-    const search = searchTerm.toLowerCase()
-    return (
-      user.nome_exibicao?.toLowerCase().includes(search) ||
-      user.email?.toLowerCase().includes(search) ||
-      user.phone?.toLowerCase().includes(search)
-    )
+    // Text search
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase()
+      const matchesSearch = (
+        user.nome_exibicao?.toLowerCase().includes(search) ||
+        user.email?.toLowerCase().includes(search) ||
+        user.phone?.toLowerCase().includes(search)
+      )
+      if (!matchesSearch) return false
+    }
+
+    // Status filter
+    if (statusFilter === 'all') return true
+    if (statusFilter === 'no_profile') return user.has_profile === false
+    const subStatus = user.subscriptions?.[0]?.status
+    return subStatus === statusFilter
   })
+
+  $: counts = {
+    all:        users.length,
+    trialing:   users.filter(u => u.subscriptions?.[0]?.status === 'trialing').length,
+    active:     users.filter(u => u.subscriptions?.[0]?.status === 'active').length,
+    canceled:   users.filter(u => u.subscriptions?.[0]?.status === 'canceled').length,
+    no_profile: users.filter(u => u.has_profile === false).length,
+  }
+
+  // Reset page when filters change
+  $: { filteredUsers; pageLimit = PAGE_SIZE }
+
+  $: pagedUsers = filteredUsers.slice(0, pageLimit)
+  $: hasMore = filteredUsers.length > pageLimit
 </script>
 
 <svelte:head>
@@ -442,6 +483,28 @@
     </div>
   </div>
   
+  <!-- Status Filter Tabs -->
+  {#if !loading && users.length > 0}
+    <div class="flex flex-wrap gap-1.5" in:fade>
+      {#each STATUS_TABS as tab}
+        {@const isActive = statusFilter === tab.key}
+        <button
+          on:click={() => setStatusFilter(tab.key)}
+          class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium border transition-all
+            {isActive
+              ? 'text-sky-400 border-sky-500 bg-sky-500/10'
+              : 'text-slate-500 border-slate-800 bg-slate-900 hover:text-slate-300 hover:border-slate-700'}"
+        >
+          {tab.label}
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full
+            {isActive ? 'bg-sky-500/20 text-sky-400' : 'bg-slate-800 text-slate-500'}">
+            {counts[tab.key] ?? 0}
+          </span>
+        </button>
+      {/each}
+    </div>
+  {/if}
+
   <!-- Data Grid / List -->
   {#if loading}
     <div class="flex flex-col items-center justify-center py-24 space-y-4" in:fade>
@@ -473,7 +536,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800/50">
-          {#each filteredUsers as user (user.user_id)}
+          {#each pagedUsers as user (user.user_id)}
             {@const status = getUserStatus(user)}
             {@const sub = user.subscriptions?.[0]}
             
@@ -560,7 +623,7 @@
 
     <!-- Mobile Stacked View -->
     <div class="md:hidden space-y-4" in:fade>
-      {#each filteredUsers as user (user.user_id)}
+      {#each pagedUsers as user (user.user_id)}
         {@const status = getUserStatus(user)}
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
           <div class="absolute top-0 left-0 w-1 h-full {status.class.split(' ')[0]}"></div>
@@ -598,6 +661,19 @@
         </div>
       {/each}
     </div>
+
+    <!-- Load More -->
+    {#if hasMore}
+      <div class="flex flex-col items-center gap-2 pt-2" in:fade>
+        <p class="text-xs text-slate-500">Mostrando {pagedUsers.length} de {filteredUsers.length} usuários</p>
+        <button
+          on:click={() => pageLimit += PAGE_SIZE}
+          class="px-6 py-2.5 text-sm font-semibold text-sky-400 bg-sky-500/10 border border-sky-500/30 rounded-xl hover:bg-sky-500/20 hover:border-sky-500/50 transition-all"
+        >
+          Carregar mais
+        </button>
+      </div>
+    {/if}
   {/if}
 </div>
 
