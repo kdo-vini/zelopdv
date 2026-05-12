@@ -126,8 +126,10 @@
               });
               const data = await res.json();
               if (res.ok) {
-                addToast('Seu teste gratuito de 30 dias foi ativado!', 'success');
-                if (window.fbq) window.fbq('track', 'StartTrial');
+                if (!data.alreadyExists) {
+                  addToast('Seu teste gratuito de 30 dias foi ativado!', 'success');
+                  if (window.fbq) window.fbq('track', 'StartTrial');
+                }
                 setTimeout(() => { window.location.href = '/gestao'; }, 600);
                 return;
               }
