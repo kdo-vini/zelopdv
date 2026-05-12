@@ -333,6 +333,30 @@ ${signature()}
 }
 
 // ---------------------------------------------------------------------------
+// NUDGE — Complete registration (no empresa_perfil yet)
+// ---------------------------------------------------------------------------
+export function emailNudgeCompleteProfile(email) {
+  const html = wrapEmail(`
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Você criou uma conta no Zelo PDV — mas não terminou o cadastro 👀</p>
+
+<p style="margin:0 0 16px;">Oi! Vi aqui que você criou sua conta, mas ainda não configurou o perfil da sua empresa. Isso leva menos de 2 minutos e é o único passo que falta para ativar seu <strong>teste gratuito de 30 dias</strong>.</p>
+
+<p style="margin:0 0 16px;">Depois de completar o cadastro você já pode registrar vendas, controlar o caixa e ver os relatórios financeiros — sem pagar nada agora.</p>
+
+<p style="margin:0 0 16px;">Se tiver qualquer dúvida ou travar em algum campo, pode responder diretamente neste email. Estou acompanhando cada novo usuário de perto.</p>
+
+${ctaButton('Completar meu cadastro →', `${APP_URL}/onboarding`)}
+
+${signature()}
+`);
+
+  return {
+    subject: 'Seu cadastro no Zelo PDV está incompleto — finalize em 2 minutos',
+    html,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Registry — maps email day → template function
 // ---------------------------------------------------------------------------
 
