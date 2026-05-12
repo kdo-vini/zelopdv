@@ -1,67 +1,72 @@
 <script>
   import { onMount } from 'svelte'
+  import { afterNavigate } from '$app/navigation'
   import { supabase, isSuperAdmin, getAdminInfo, updateLastLogin } from '$lib/supabaseAdmin'
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   import Toast from '$lib/Toast.svelte'
   import { fade } from 'svelte/transition'
-  
+
   let session = null
   let adminInfo = null
   let loading = true
   let error = ''
   let mobileMenuOpen = false
-  
-  // Skip auth check on login page
+
   $: isLoginPage = $page.url.pathname === '/login'
-  
-  onMount(async () => {
-    // Skip auth check on login page
-    if (isLoginPage) {
-      loading = false
-      return
-    }
-    
+
+  async function performAdminCheck() {
+    loading = true
+    error = ''
     try {
-      // Check auth state
       const { data: { session: currentSession } } = await supabase.auth.getSession()
       session = currentSession
-      
+
       if (!session) {
-        console.log('[Admin] No session, redirecting to login')
+        loading = false
         goto('/login')
         return
       }
-      
-      // Check if user is super admin
+
       const isAdmin = await isSuperAdmin(session.user.id)
-      
       if (!isAdmin) {
         error = 'Acesso Negado. Você não é um super admin homologado.'
         loading = false
         return
       }
-      
-      // Get admin info
+
       adminInfo = await getAdminInfo(session.user.id)
-      
-      if (adminInfo) {
-        await updateLastLogin(adminInfo.id)
-      }
-      
+      if (adminInfo) await updateLastLogin(adminInfo.id)
       loading = false
-      
-      // Listen for auth changes
-      supabase.auth.onAuthStateChange((event, newSession) => {
-        if (event === 'SIGNED_OUT') {
-          goto('/login')
-        }
-      })
     } catch (err) {
       console.error('[Admin] Error in layout:', err)
       error = err.message || 'Erro de autenticação'
       loading = false
     }
+  }
+
+  // Handles navigation away from /login after successful login
+  afterNavigate(({ from }) => {
+    if (from?.url?.pathname === '/login' && !isLoginPage) {
+      performAdminCheck()
+    }
+  })
+
+  onMount(() => {
+    supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'SIGNED_OUT') {
+        session = null
+        adminInfo = null
+        goto('/login')
+      }
+    })
+
+    if (isLoginPage) {
+      loading = false
+      return
+    }
+
+    performAdminCheck()
   })
   
   async function handleLogout() {

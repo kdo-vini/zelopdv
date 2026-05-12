@@ -39,22 +39,18 @@
   async function loadUsers() {
     loading = true
 
-    const { data: profiles, error: profileError } = await supabase
-      .from('empresa_perfil')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const { data: allUsers, error: usersError } = await supabase.rpc('admin_get_all_auth_users')
 
-    if (profileError) {
-      console.error('Error loading users:', profileError)
+    if (usersError) {
+      console.error('Error loading users:', usersError)
       users = []
       loading = false
       return
     }
 
-    if (profiles && profiles.length > 0) {
-      const userIds = profiles.map(p => p.user_id)
+    if (allUsers && allUsers.length > 0) {
+      const userIds = allUsers.map(u => u.user_id)
 
-      // Run queries in parallel
       const [subsResult, aiResult, salesResult, lastSeenResult] = await Promise.all([
         supabase
           .from('subscriptions')
@@ -69,7 +65,6 @@
         supabase.rpc('admin_get_users_last_seen'),
       ])
 
-      // Build per-user lookup maps
       const aiCountMap = {}
       for (const row of aiResult.data || []) {
         if (row.user_id) aiCountMap[row.user_id] = (aiCountMap[row.user_id] || 0) + 1
@@ -83,12 +78,20 @@
         lastSeenMap[row.user_id] = row.effective_last_seen
       }
 
-      users = profiles.map(profile => ({
-        ...profile,
-        subscriptions: subsResult.data?.filter(s => s.user_id === profile.user_id).slice(0, 1) || [],
-        ai_interactions: aiCountMap[profile.user_id] || 0,
-        sales_last_30d: salesCountMap[profile.user_id] || 0,
-        effective_last_seen: lastSeenMap[profile.user_id] || null,
+      users = allUsers.map(u => ({
+        user_id: u.user_id,
+        // Profile fields — fall back to auth metadata for users without a profile
+        nome_exibicao: u.nome_exibicao || u.raw_user_meta_data?.full_name || null,
+        contato: u.contato || u.email,
+        documento: u.documento || null,
+        modulo_pdv_ativo: u.modulo_pdv_ativo ?? false,
+        created_at: u.profile_created_at || u.auth_created_at,
+        last_seen_at: u.last_seen_at,
+        has_profile: !!u.nome_exibicao,
+        subscriptions: subsResult.data?.filter(s => s.user_id === u.user_id).slice(0, 1) || [],
+        ai_interactions: aiCountMap[u.user_id] || 0,
+        sales_last_30d: salesCountMap[u.user_id] || 0,
+        effective_last_seen: lastSeenMap[u.user_id] || null,
       }))
     } else {
       users = []
