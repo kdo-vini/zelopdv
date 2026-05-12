@@ -2,6 +2,7 @@
   import { tick } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { maskPhone, maskDocumento, normalizeBrazilianPhone } from '$lib/masks';
+  import { trackStartTrial } from '$lib/metaPixel';
 
   export let show = false;
   export let userId = '';
@@ -82,7 +83,8 @@
         throw new Error(trialPayload?.error || 'Erro ao ativar período de teste.');
       }
 
-      window.location.href = '/gestao';
+      const didTrackTrial = !trialPayload?.alreadyExists && trackStartTrial();
+      setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 600 : 0);
     } catch (e) {
       error = e.message || 'Erro ao salvar. Tente novamente.';
       saving = false;

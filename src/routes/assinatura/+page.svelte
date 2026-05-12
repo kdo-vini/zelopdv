@@ -4,6 +4,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { PLANS, ADDONS, calculateValue } from '$lib/pricing';
+  import { trackStartTrial, trackSubscribe } from '$lib/metaPixel';
 
   let userId = '';
   let email = '';
@@ -128,7 +129,7 @@
               if (res.ok) {
                 if (!data.alreadyExists) {
                   addToast('Seu teste gratuito de 30 dias foi ativado!', 'success');
-                  if (window.fbq) window.fbq('track', 'StartTrial', { value: 0, currency: 'BRL' });
+                  trackStartTrial();
                 }
                 setTimeout(() => { window.location.href = '/gestao'; }, 600);
                 return;
@@ -147,12 +148,10 @@
       try {
         const params = new URLSearchParams(window.location.search);
         if (params.get('success') === '1' && isActiveStrict) {
-          if (window.fbq) {
-            const subscribeValue = activePlanTier
-              ? calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: activePedidosAddon })
-              : 0;
-            window.fbq('track', 'Subscribe', { value: subscribeValue, currency: 'BRL' });
-          }
+          const subscribeValue = activePlanTier
+            ? calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: activePedidosAddon })
+            : 0;
+          trackSubscribe({ value: subscribeValue });
           // Remove ?success=1 from URL immediately so a page refresh doesn't re-fire the pixel
           const cleanUrl = new URL(window.location.href);
           cleanUrl.searchParams.delete('success');

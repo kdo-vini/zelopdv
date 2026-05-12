@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
+  import { trackLead } from '$lib/metaPixel';
 
   let status = 'Autenticando...';
 
@@ -11,10 +12,9 @@
     }
 
     function maybeFireLeadPixel(session) {
-      if (!window.fbq) return;
       const createdAt = new Date(session.user.created_at);
       const isNewUser = Date.now() - createdAt.getTime() < 60_000;
-      if (isNewUser) window.fbq('track', 'Lead');
+      if (isNewUser) trackLead();
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {

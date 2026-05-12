@@ -196,6 +196,7 @@
 <script>
   import { onMount } from 'svelte';
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
+  import { trackViewContent } from '$lib/metaPixel';
 
   let activeLightboxImage = null;
   let daysUntilEaster = 0;
@@ -212,7 +213,7 @@
     const diff = Math.ceil((easter.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     daysUntilEaster = Math.max(0, diff);
 
-    if (window.fbq) window.fbq('track', 'ViewContent');
+    trackViewContent();
 
     return () => window.removeEventListener('keydown', handleKeydown);
   });

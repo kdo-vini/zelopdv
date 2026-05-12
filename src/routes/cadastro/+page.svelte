@@ -6,6 +6,7 @@
   import AuthLayout from '$lib/components/AuthLayout.svelte';
   import GoogleAuthButton from '$lib/components/GoogleAuthButton.svelte';
   import EmailSentHelper from '$lib/components/EmailSentHelper.svelte';
+  import { trackLead } from '$lib/metaPixel';
 
   let email = '';
   let password = '';
@@ -48,7 +49,7 @@
 
     // Em projetos com confirmação por e-mail, o usuário precisa confirmar antes de logar
     successMessage = 'Conta criada! Verifique seu e-mail para confirmar e então faça login.';
-    if (window.fbq) window.fbq('track', 'Lead');
+    trackLead();
   }
 </script>
 
