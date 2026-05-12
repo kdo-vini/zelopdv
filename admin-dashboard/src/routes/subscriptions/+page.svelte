@@ -51,6 +51,9 @@
   async function loadSubscriptions() {
     loading = true
 
+    const { data: admins } = await supabase.from('super_admins').select('user_id')
+    const adminIds = new Set((admins || []).map(a => a.user_id))
+
     let query = supabase
       .from('subscriptions')
       .select('*')
@@ -88,14 +91,16 @@
         .select('user_id, nome_exibicao, contato, documento')
         .in('user_id', userIds)
 
-      let merged = subs.map(sub => ({
-        ...sub,
-        empresa_perfil: profiles?.find(p => p.user_id === sub.user_id) || {
-          nome_exibicao: 'Sem perfil',
-          contato: 'N/A',
-          documento: 'N/A'
-        }
-      }))
+      let merged = subs
+        .filter(sub => !adminIds.has(sub.user_id))
+        .map(sub => ({
+          ...sub,
+          empresa_perfil: profiles?.find(p => p.user_id === sub.user_id) || {
+            nome_exibicao: 'Sem perfil',
+            contato: 'N/A',
+            documento: 'N/A'
+          }
+        }))
 
       // Client-side narrow for expiring/expired (effective expiry respects
       // manually_extended_until — see subscriptionHelpers.js).

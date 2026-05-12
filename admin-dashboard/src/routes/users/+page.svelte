@@ -172,7 +172,7 @@
 
   function openEdit(user) {
     editForm = { ...user }
-    editSub = user.subscriptions?.[0] || null
+    editSub = user.subscriptions?.[0] ? { ...user.subscriptions[0] } : null
     editPlanTier = editSub?.plan_tier || 'pdv'
     editMesasAddon = !!editSub?.has_mesas_addon
     editPedidosAddon = !!editSub?.has_pedidos_addon

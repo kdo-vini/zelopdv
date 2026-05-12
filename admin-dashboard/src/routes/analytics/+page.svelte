@@ -72,12 +72,15 @@
   })
 
   async function loadData() {
-    const [profilesRes, subsRes, lastSeenRes, salesRes] = await Promise.all([
+    const [profilesRes, subsRes, lastSeenRes, salesRes, adminsRes] = await Promise.all([
       supabase.from('empresa_perfil').select('user_id, nome_exibicao, created_at'),
       supabase.from('subscriptions').select('user_id, status, created_at, current_period_end, updated_at'),
       supabase.rpc('admin_get_users_last_seen'),
       supabase.rpc('admin_get_sales_counts', { days_ago: 30 }),
+      supabase.from('super_admins').select('user_id'),
     ])
+
+    const adminIds = new Set((adminsRes.data || []).map(a => a.user_id))
 
     const lastSeenMap = {}
     for (const r of lastSeenRes.data || []) lastSeenMap[r.user_id] = r.effective_last_seen
@@ -87,12 +90,14 @@
       salesMap[v.id_usuario] = Number(v.sales_count)
     }
 
-    profiles = (profilesRes.data || []).map(p => ({
-      ...p,
-      effective_last_seen: lastSeenMap[p.user_id] || null,
-      sales_last_30d: salesMap[p.user_id] || 0,
-    }))
-    subs = subsRes.data || []
+    profiles = (profilesRes.data || [])
+      .filter(p => !adminIds.has(p.user_id))
+      .map(p => ({
+        ...p,
+        effective_last_seen: lastSeenMap[p.user_id] || null,
+        sales_last_30d: salesMap[p.user_id] || 0,
+      }))
+    subs = (subsRes.data || []).filter(s => !adminIds.has(s.user_id))
 
     // Funnel
     funnelData.signups = profiles.length
