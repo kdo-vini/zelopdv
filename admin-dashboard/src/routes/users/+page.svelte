@@ -240,7 +240,7 @@
         adminId: adminInfo.id,
         action: 'edit_user',
         targetUserId: editForm.user_id,
-        details: { email: editForm.contato, company: editForm.nome_exibicao }
+        details: { email: editForm.email, company: editForm.nome_exibicao }
       })
       
       alert('Dados salvos com sucesso!')
@@ -391,8 +391,8 @@
     const search = searchTerm.toLowerCase()
     return (
       user.nome_exibicao?.toLowerCase().includes(search) ||
-      user.contato?.toLowerCase().includes(search) ||
-      user.documento?.toLowerCase().includes(search)
+      user.email?.toLowerCase().includes(search) ||
+      user.phone?.toLowerCase().includes(search)
     )
   })
 </script>
