@@ -72,12 +72,14 @@ Banco local: `ZeloPDVDB`
 - A venda online e o replay offline usam o mesmo formato de payload.
 - A RPC centraliza venda, itens, pagamentos, estoque, fiado e taxas de plataforma.
 - A sincronização apaga do IndexedDB somente vendas que retornam `data.id`.
+- Cada venda enviada pela RPC carrega `client_sale_id`, uma chave gerada no navegador para idempotência.
+- Se a mesma venda for reenviada com o mesmo `client_sale_id`, a RPC retorna a venda existente e não baixa estoque nem lança fiado de novo.
 - Erros de regra de negócio não são mais colocados na fila offline.
 - Vendas pendentes antigas são removidas por `limparVendasAntigas(30)` como limpeza de segurança.
 
 ## Riscos conhecidos
 
-- Não há chave de idempotência para venda offline. Se o servidor concluir a venda, mas a resposta se perder no cliente, existe risco de duplicar no replay. A correção ideal é adicionar um `client_sale_id` único no payload, persistir em `vendas` e tornar a RPC idempotente.
+- A idempotência depende da migration `offline_sales_idempotency_2026_05_12.sql` estar aplicada no Supabase. Sem ela, o payload já carrega `client_sale_id`, mas a proteção contra duplicidade no banco não existe.
 - O estoque local não é decrementado imediatamente quando uma venda fica pendente offline. Isso evita mentir que o banco baixou, mas permite que a tela exiba estoque anterior até sincronizar.
 - Se duas máquinas venderem offline o mesmo item, a primeira que sincronizar consome o estoque. A segunda pode falhar no replay se a RPC bloquear estoque insuficiente.
 - O modo offline depende de a tela e os dados já estarem carregados antes da queda.
@@ -88,7 +90,7 @@ Banco local: `ZeloPDVDB`
 - Permitir abrir/reabrir o PDV sem internet depois de uma sessão válida.
 - Cachear categorias, subcategorias, produtos, pessoas fiado, perfil da empresa e caixa aberto em IndexedDB.
 - Ter indicador claro de status offline e quantidade de vendas pendentes.
-- Ter idempotência por venda (`client_sale_id`) no banco/RPC.
+- Exibir no PDV quantas vendas estão pendentes de sincronização e quais falharam no replay.
 - Ter baixa local otimista de estoque pendente, com reconciliação no sync.
 - Persistir contexto de operador/empresa dona no payload offline.
 - Cobrir com testes unitários e e2e os cenários de queda antes, durante e depois da RPC.

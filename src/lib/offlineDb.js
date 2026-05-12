@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import { createClientSaleId } from './finance/saleOps.js';
 
 export const db = new Dexie('ZeloPDVDB');
 
@@ -36,14 +37,22 @@ db.version(3).stores({
  * o formato e converte se necessário.
  */
 export async function salvarVendaOffline(venda) {
+    return await db.vendas_pendentes.add(prepareVendaOfflineRecord(venda));
+}
+
+export function prepareVendaOfflineRecord(venda) {
     const createdAt = venda?.createdAt || new Date().toISOString();
-    return await db.vendas_pendentes.add({
+    const payload = venda?.payload
+        ? { ...venda.payload, client_sale_id: venda.payload.client_sale_id || createClientSaleId() }
+        : venda?.payload;
+    return {
         ...venda,
+        payload,
         createdAt,
         // Mantém `data` para compat com cleanup antigo de `limparVendasAntigas`.
         data: createdAt,
         status: 'aguardando'
-    });
+    };
 }
 
 /**
@@ -132,6 +141,7 @@ function legacyToPayload(record) {
     }
 
     return {
+        client_sale_id: record.client_sale_id || createClientSaleId(),
         valor_total: Number(record.valor_total || 0),
         forma_pagamento: record.forma_pagamento || 'dinheiro',
         valor_recebido: record.valor_recebido ?? null,
@@ -187,6 +197,9 @@ export async function syncVendasPendentes(supabase) {
             // Garante que created_at preserve a data original da venda offline
             if (!payload.created_at) {
                 payload.created_at = vendaPendente.createdAt || vendaPendente.data;
+            }
+            if (!payload.client_sale_id) {
+                payload.client_sale_id = vendaPendente.client_sale_id || createClientSaleId();
             }
 
             const { data, error } = await supabase.rpc('criar_venda_completa', {

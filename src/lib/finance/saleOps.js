@@ -1,5 +1,12 @@
 import { calculateSaleSettlement, money } from './caixa.js';
 
+export function createClientSaleId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `sale-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 /**
  * Extract effective quantity from a comanda item.
  * Supports the "56x Produto" naming convention used in /app.
@@ -41,6 +48,7 @@ export function extractEffectiveQty(item) {
  *   commission rate. The fee `valor_taxa = valor_bruto * taxa_pct / 100`
  *   is computed here so persistence is consistent across callsites.
  *   Lines with `taxa_pct === 0` are dropped.
+ * @param {string} [input.clientSaleId] - client-generated idempotency key.
  * @param {string} [input.createdAt] - ISO timestamp (set only for offline replay to preserve original sale time)
  * @returns {{ payload: Object, settlement: Object }} payload for the RPC + settlement (for receipts/UI)
  */
@@ -121,6 +129,7 @@ export function buildVendaPayload(input) {
     .filter((t) => t.plataforma_id && t.valor_taxa > 0);
 
   const payload = {
+    client_sale_id: input.clientSaleId || createClientSaleId(),
     valor_total: totalCobrado,
     forma_pagamento: settlement.formaPagamento,
     valor_recebido: settlement.valorRecebido,

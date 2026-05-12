@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
-import { shouldQueueVendaOffline } from '../src/lib/offlineDb.js';
+import { prepareVendaOfflineRecord, shouldQueueVendaOffline } from '../src/lib/offlineDb.js';
 
 describe('shouldQueueVendaOffline', () => {
   test('queues network-like failures for offline replay', () => {
@@ -18,5 +18,23 @@ describe('shouldQueueVendaOffline', () => {
     vi.stubGlobal('navigator', { onLine: false });
     expect(shouldQueueVendaOffline(new Error('Request failed'))).toBe(true);
     vi.unstubAllGlobals();
+  });
+});
+
+describe('prepareVendaOfflineRecord', () => {
+  test('preserves an existing client_sale_id in the queued payload', () => {
+    const record = prepareVendaOfflineRecord({
+      payload: { client_sale_id: 'sale-existing', valor_total: 10 }
+    });
+
+    expect(record.payload.client_sale_id).toBe('sale-existing');
+  });
+
+  test('adds a client_sale_id when an offline payload does not have one', () => {
+    const record = prepareVendaOfflineRecord({
+      payload: { valor_total: 10 }
+    });
+
+    expect(record.payload.client_sale_id).toBeTruthy();
   });
 });
