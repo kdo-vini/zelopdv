@@ -1,0 +1,432 @@
+<script>
+  import { isSupportOpen, supportMessages, closeSupport } from '$lib/stores/support';
+  import { marked } from 'marked';
+  import DOMPurify from 'dompurify';
+
+  marked.use({
+    renderer: {
+      link({ href, title, tokens }) {
+        const text = this.parser.parseInline(tokens);
+        const titleAttr = title ? ` title="${title}"` : '';
+        return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+      }
+    }
+  });
+
+  let input = '';
+  let isStreaming = false;
+  let messagesEl;
+
+  function scrollToBottom() {
+    if (messagesEl) {
+      setTimeout(() => {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }, 10);
+    }
+  }
+
+  async function sendMessage() {
+    const content = input.trim();
+    if (!content || isStreaming) return;
+
+    input = '';
+    supportMessages.update(msgs => [
+      ...msgs,
+      { role: 'user', content },
+      { role: 'assistant', content: '' },
+    ]);
+    isStreaming = true;
+    scrollToBottom();
+
+    try {
+      const res = await fetch('/api/chat/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: $supportMessages.filter(m => m.content || m.role === 'user') }),
+      });
+
+      if (!res.ok || !res.body) {
+        supportMessages.update(msgs => {
+          const copy = [...msgs];
+          copy[copy.length - 1] = { role: 'assistant', content: 'Erro ao conectar. Tente novamente.' };
+          return copy;
+        });
+        isStreaming = false;
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') { isStreaming = false; break; }
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) {
+              supportMessages.update(msgs => {
+                const copy = [...msgs];
+                copy[copy.length - 1] = { role: 'assistant', content: parsed.error };
+                return copy;
+              });
+              isStreaming = false;
+              break;
+            }
+            if (parsed.content) {
+              supportMessages.update(msgs => {
+                const copy = [...msgs];
+                copy[copy.length - 1] = {
+                  ...copy[copy.length - 1],
+                  content: copy[copy.length - 1].content + parsed.content,
+                };
+                return copy;
+              });
+              scrollToBottom();
+            }
+          } catch { /* ignore parse errors */ }
+        }
+      }
+    } catch {
+      supportMessages.update(msgs => {
+        const copy = [...msgs];
+        copy[copy.length - 1] = { role: 'assistant', content: 'Erro de conexão. Tente novamente.' };
+        return copy;
+      });
+    } finally {
+      isStreaming = false;
+      scrollToBottom();
+    }
+  }
+
+  function onKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function clearMessages() {
+    $supportMessages = [];
+  }
+
+  $: if ($isSupportOpen) scrollToBottom();
+</script>
+
+<!-- Mobile backdrop -->
+{#if $isSupportOpen}
+  <div
+    class="md:hidden fixed inset-0 z-[89] bg-black/50"
+    role="presentation"
+    on:click={closeSupport}
+    aria-hidden="true"
+  ></div>
+{/if}
+
+<!-- Slide-in panel -->
+<div
+  class="support-panel"
+  class:open={$isSupportOpen}
+  role="complementary"
+  aria-label="Suporte Zelo PDV"
+  aria-hidden={!$isSupportOpen}
+>
+  <!-- Header -->
+  <div class="panel-header">
+    <div class="flex items-center gap-2">
+      <div class="panel-avatar">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+        </svg>
+      </div>
+      <div>
+        <div class="font-semibold text-sm">Suporte Zelo PDV</div>
+        <div class="text-xs" style="opacity: 0.80;">Tire dúvidas sobre o sistema</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-1">
+      <button on:click={clearMessages} class="icon-btn" title="Limpar conversa" aria-label="Limpar conversa">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+        </svg>
+      </button>
+      <button on:click={closeSupport} class="icon-btn" aria-label="Fechar suporte">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="panel-messages" bind:this={messagesEl}>
+    {#if $supportMessages.length === 0}
+      <div class="welcome-msg">
+        <p class="font-semibold mb-1">Como posso ajudar? 👋</p>
+        <p class="text-sm" style="opacity: 0.75;">Posso explicar como cadastrar produtos, criar cargos e usuários, usar o módulo de Mesas, Pedidos, Cozinha e muito mais.</p>
+        <p class="text-sm mt-2" style="opacity: 0.65;">Se eu não souber responder, te conecto direto com nossa equipe pelo WhatsApp.</p>
+      </div>
+    {/if}
+
+    {#each $supportMessages as msg}
+      <div class="p-msg {msg.role === 'user' ? 'p-user' : 'p-assistant'}">
+        {#if msg.role === 'assistant' && !msg.content && isStreaming}
+          <span class="typing-dots" aria-label="Digitando...">
+            <span></span><span></span><span></span>
+          </span>
+        {:else if msg.role === 'assistant'}
+          <div class="markdown-content">
+            {@html DOMPurify.sanitize(marked.parse(msg.content))}
+          </div>
+        {:else}
+          {msg.content}
+        {/if}
+      </div>
+    {/each}
+  </div>
+
+  <!-- Input -->
+  <div class="panel-input-area">
+    <input
+      type="text"
+      bind:value={input}
+      on:keydown={onKeyDown}
+      placeholder="Como faço para...?"
+      disabled={isStreaming}
+      class="panel-input"
+      autocomplete="off"
+      maxlength="1000"
+    />
+    <button
+      on:click={sendMessage}
+      disabled={isStreaming || !input.trim()}
+      class="panel-send-btn"
+      aria-label="Enviar"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+        <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+      </svg>
+    </button>
+  </div>
+</div>
+
+<style>
+  .support-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100vh;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border-card);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .support-panel.open {
+    transform: translateX(0);
+  }
+
+  @media (max-width: 640px) {
+    .support-panel {
+      width: 100vw;
+    }
+  }
+
+  .panel-header {
+    padding: 14px 16px;
+    background: #0f766e;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .panel-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: white;
+    opacity: 0.8;
+    padding: 5px;
+    border-radius: 4px;
+    line-height: 0;
+    transition: opacity 0.15s;
+  }
+  .icon-btn:hover {
+    opacity: 1;
+  }
+
+  .panel-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .welcome-msg {
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 20px 10px;
+    background: var(--bg-input);
+    border-radius: 12px;
+  }
+
+  .p-msg {
+    max-width: 88%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .markdown-content :global(p) {
+    margin-bottom: 0.75rem;
+  }
+  .markdown-content :global(p:last-child) {
+    margin-bottom: 0;
+  }
+  .markdown-content :global(ul), .markdown-content :global(ol) {
+    margin-bottom: 0.75rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+  .markdown-content :global(ol) {
+    list-style: decimal;
+  }
+  .markdown-content :global(li) {
+    margin-bottom: 0.25rem;
+  }
+  .markdown-content :global(strong) {
+    font-weight: 700;
+  }
+  .markdown-content :global(a) {
+    color: #0f766e;
+    text-decoration: underline;
+  }
+  .markdown-content :global(code) {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+
+  .p-user {
+    background: #0f766e;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+
+  .p-assistant {
+    background: var(--bg-input);
+    color: var(--text-main);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+
+  .typing-dots {
+    display: inline-flex;
+    gap: 4px;
+    padding: 2px 0;
+    align-items: center;
+  }
+  .typing-dots span {
+    width: 6px;
+    height: 6px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    animation: dot-bounce 1.2s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  .typing-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  @keyframes dot-bounce {
+    0%, 60%, 100% {
+      transform: translateY(0);
+      opacity: 0.4;
+    }
+    30% {
+      transform: translateY(-4px);
+      opacity: 1;
+    }
+  }
+
+  .panel-input-area {
+    padding: 12px;
+    display: flex;
+    gap: 8px;
+    border-top: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .panel-input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 22px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-input);
+    color: var(--text-main);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .panel-input:focus {
+    border-color: #0f766e;
+  }
+  .panel-input:disabled {
+    opacity: 0.6;
+  }
+
+  .panel-send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #0f766e;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .panel-send-btn:hover:not(:disabled) {
+    background: #0d6460;
+  }
+  .panel-send-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+</style>

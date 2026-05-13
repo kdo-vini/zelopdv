@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import GestaoSidebar from '$lib/components/GestaoSidebar.svelte';
   import AssistantChat from '$lib/components/AssistantChat.svelte';
+  import InAppSupportChat from '$lib/components/InAppSupportChat.svelte';
   import { supabase } from '$lib/supabaseClient';
   import { addToast } from '$lib/stores/ui';
   import { waitAuthReady } from '$lib/authStore';
@@ -83,3 +84,4 @@
   </div>
 </div>
 <AssistantChat />
+<InAppSupportChat />

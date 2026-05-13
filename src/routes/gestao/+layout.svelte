@@ -3,6 +3,7 @@
   import { ensureActiveSubscription } from '$lib/guards';
   import GestaoSidebar from '$lib/components/GestaoSidebar.svelte';
   import AssistantChat from '$lib/components/AssistantChat.svelte';
+  import InAppSupportChat from '$lib/components/InAppSupportChat.svelte';
 
   let ready = false;
 
@@ -36,3 +37,4 @@
   </div>
 {/if}
 <AssistantChat />
+<InAppSupportChat />

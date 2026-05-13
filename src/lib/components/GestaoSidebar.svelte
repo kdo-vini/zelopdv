@@ -2,7 +2,8 @@
   import { page } from '$app/stores';
   import { supabase } from '$lib/supabaseClient';
   import { sessionStore, companyNameStore } from '$lib/stores/session';
-  import { toggleAssistant } from '$lib/stores/assistant';
+  import { toggleAssistant, closeAssistant } from '$lib/stores/assistant';
+  import { toggleSupport, closeSupport, isSupportOpen } from '$lib/stores/support';
   import { onMount } from 'svelte';
 
   let mobileOpen = false;
@@ -405,27 +406,25 @@
       </p>
       <ul role="list" class="space-y-0.5">
         <li>
-          <a
-            href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)."
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden"
-            style="color: var(--text-main);"
+          <button
+            on:click={() => { toggleSupport(); closeAssistant(); closeMobile(); }}
+            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden w-full text-left"
+            style="color: {$isSupportOpen ? '#0f766e' : 'var(--text-main)'};"
             on:mouseenter={e => e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'}
             on:mouseleave={e => e.currentTarget.style.background = ''}
-            on:click={closeMobile}
-            aria-label="Suporte via WhatsApp (abre em nova aba)"
-            title="Suporte"
+            title="Suporte IA"
+            aria-label="Abrir Suporte IA"
+            aria-pressed={$isSupportOpen}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" style="color: var(--link);" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" style="color: {$isSupportOpen ? '#0f766e' : 'var(--link)'};" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
             </svg>
             <span class="label-text whitespace-nowrap">Suporte</span>
-          </a>
+          </button>
         </li>
         <li>
           <button
-            on:click={() => { toggleAssistant(); closeMobile(); }}
+            on:click={() => { toggleAssistant(); closeSupport(); closeMobile(); }}
             class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden w-full text-left"
             style="color: var(--text-main);"
             on:mouseenter={e => e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'}
