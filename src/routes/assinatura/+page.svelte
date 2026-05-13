@@ -21,11 +21,14 @@
   let trialDaysLeft = null;
   let mesasAddonOn = false;
   let pedidosAddonOn = false;
+  let acessosAddonOn = false;
   let activeMesasAddon = false;
   let activePedidosAddon = false;
+  let activeAcessosAddon = false;
   let togglingAddon = false;
   let camePromptingMesas = false;
   let camePromptingPedidos = false;
+  let camePromptingAcessos = false;
   let cameUpgradingTo = '';
 
   // Plano selecionado pelo user pra assinar / mudar
@@ -36,25 +39,32 @@
   $: planPrice = calculateValue(selectedPlan, {
     mesas: mesasAddonOn,
     pedidos: pedidosAddonOn,
+    acessos: acessosAddonOn,
   });
   $: activePlanPrice = activePlanTier
     ? calculateValue(activePlanTier, {
         mesas: activeMesasAddon,
         pedidos: activePedidosAddon,
+        acessos: activeAcessosAddon,
       })
     : 0;
   $: selectedPlanAllowsMesas = PLANS[selectedPlan]?.allowsMesas;
   $: selectedPlanAllowsPedidos = PLANS[selectedPlan]?.allowsPedidos;
+  $: selectedPlanAllowsAcessos = PLANS[selectedPlan]?.allowsAcessos;
   $: activePlanAllowsMesas = activePlanTier
     ? PLANS[activePlanTier]?.allowsMesas
     : false;
   $: activePlanAllowsPedidos = activePlanTier
     ? PLANS[activePlanTier]?.allowsPedidos
     : false;
+  $: activePlanAllowsAcessos = activePlanTier
+    ? PLANS[activePlanTier]?.allowsAcessos
+    : false;
 
-  // Se selectedPlan não permite Mesas, força mesasAddonOn=false (UX clara)
+  // Se selectedPlan não permite os addons, força off (UX clara)
   $: if (!selectedPlanAllowsMesas && mesasAddonOn) mesasAddonOn = false;
   $: if (!selectedPlanAllowsPedidos && pedidosAddonOn) pedidosAddonOn = false;
+  $: if (!selectedPlanAllowsAcessos && acessosAddonOn) acessosAddonOn = false;
 
   let autoStartingTrial = false;
 
@@ -82,7 +92,7 @@
         try {
           const { data } = await supabase
             .from('subscriptions')
-            .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_pedidos_addon, plan_tier')
+            .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_pedidos_addon, has_acessos_addon, plan_tier')
             .eq('user_id', userId)
             .order('updated_at', { ascending: false })
             .limit(1)
@@ -93,8 +103,10 @@
           hasHadSubscription = !!data;
           activeMesasAddon = !!data?.has_mesas_addon;
           activePedidosAddon = !!data?.has_pedidos_addon;
+          activeAcessosAddon = !!data?.has_acessos_addon;
           mesasAddonOn = activeMesasAddon;
           pedidosAddonOn = activePedidosAddon;
+          acessosAddonOn = activeAcessosAddon;
           activePlanTier = data?.plan_tier || 'pdv';
           selectedPlan = activePlanTier;
 
@@ -182,6 +194,11 @@
           if (!activePedidosAddon) pedidosAddonOn = true;
           if (selectedPlan === 'chat') selectedPlan = 'bundle';
         }
+        if (params.get('addon') === 'acessos') {
+          camePromptingAcessos = true;
+          if (!activeAcessosAddon) acessosAddonOn = true;
+          if (selectedPlan === 'chat') selectedPlan = 'bundle';
+        }
         const upgrade = params.get('upgrade');
         if (upgrade && PLANS[upgrade]) {
           cameUpgradingTo = upgrade;
@@ -233,6 +250,7 @@
           addons: {
             mesas: mesasAddonOn,
             pedidos: pedidosAddonOn,
+            acessos: acessosAddonOn,
           },
         }),
       });
@@ -274,13 +292,16 @@
     const targetPlan = PLANS[targetTier];
     const willLoseMesas = activeMesasAddon && !targetPlan.allowsMesas;
     const willLosePedidos = activePedidosAddon && !targetPlan.allowsPedidos;
+    const willLoseAcessos = activeAcessosAddon && !targetPlan.allowsAcessos;
     const newValue = calculateValue(targetTier, {
       mesas: activeMesasAddon && targetPlan.allowsMesas,
       pedidos: activePedidosAddon && targetPlan.allowsPedidos,
+      acessos: activeAcessosAddon && targetPlan.allowsAcessos,
     });
     const lostAddonNames = [
       willLoseMesas ? ADDONS.mesas.name : null,
       willLosePedidos ? ADDONS.pedidos.name : null,
+      willLoseAcessos ? ADDONS.acessos.name : null,
     ].filter(Boolean);
     const message = lostAddonNames.length
       ? `Trocar para ${targetPlan.name} (R$ ${newValue}/mês)? ${lostAddonNames.join(' e ')} será desativado pois esse plano não inclui PDV.`
@@ -323,6 +344,10 @@
       if (willLosePedidos) {
         activePedidosAddon = false;
         pedidosAddonOn = false;
+      }
+      if (willLoseAcessos) {
+        activeAcessosAddon = false;
+        acessosAddonOn = false;
       }
     } catch (e) {
       addToast('Erro ao trocar plano.', 'error');
@@ -466,6 +491,57 @@
     }
   }
 
+  async function toggleAcessosAddon() {
+    if (!activePlanAllowsAcessos) {
+      addToast('Controle de Acessos não está disponível para o plano ZeloChat. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.', 'warning');
+      return;
+    }
+    const turningOn = !activeAcessosAddon;
+    const previewValue = calculateValue(activePlanTier, {
+      mesas: activeMesasAddon,
+      pedidos: activePedidosAddon,
+      acessos: turningOn,
+    });
+    const confirmed = await confirmAction(
+      turningOn ? 'Ativar Controle de Acessos' : 'Desativar Controle de Acessos',
+      `O valor da próxima cobrança ${turningOn ? 'passará' : 'voltará'} para R$ ${previewValue}/mês. A cobrança atual não é alterada.`
+    );
+    if (!confirmed) return;
+
+    try {
+      togglingAddon = true;
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token ?? '';
+      if (!token) {
+        addToast('Sua sessão expirou. Faça login novamente.', 'warning');
+        return;
+      }
+
+      const res = await fetch('/api/billing/toggle-addon', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ addon: 'acessos', enabled: turningOn }),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        addToast(json?.error || 'Falha ao alterar add-on.', 'error');
+        return;
+      }
+
+      activeAcessosAddon = turningOn;
+      acessosAddonOn = turningOn;
+      addToast(json?.message || 'Add-on atualizado.', 'success');
+    } catch (e) {
+      addToast('Erro ao conectar. Tente novamente.', 'error');
+    } finally {
+      togglingAddon = false;
+    }
+  }
+
   $: defaultMessage = hasHadSubscription
     ? 'Renove sua assinatura para continuar usando o sistema.'
     : '30 dias grátis! Escolha o plano que faz sentido pro seu negócio.';
@@ -515,6 +591,26 @@
             Já está ativo.
           {:else}
             Marque "Pedidos + Cozinha" no formulário de assinatura abaixo.
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if camePromptingAcessos}
+    <div class="status-card info">
+      <div class="status-icon">🔑</div>
+      <div>
+        <strong>Você quer ativar Controle de Acessos</strong>
+        <div class="status-detail">
+          {#if isActiveStrict && activePlanAllowsAcessos && !activeAcessosAddon}
+            Use "Ativar Controle de Acessos" abaixo.
+          {:else if isActiveStrict && !activePlanAllowsAcessos}
+            Controle de Acessos precisa de um plano com PDV. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.
+          {:else if activeAcessosAddon}
+            Já está ativo.
+          {:else}
+            Marque "Controle de Acessos" no formulário de assinatura abaixo.
           {/if}
         </div>
       </div>
@@ -651,6 +747,37 @@
       </div>
     {/if}
 
+    {#if activePlanAllowsAcessos}
+      <div class="addon-card">
+        <div class="addon-card-header">
+          <strong>Controle de Acessos</strong>
+          <span class="addon-status" class:on={activeAcessosAddon}>
+            {activeAcessosAddon ? 'Ativo' : 'Não ativo'}
+          </span>
+        </div>
+        <p class="addon-card-detail">
+          {#if activeAcessosAddon}
+            Você está pagando R$ {activePlanPrice}/mês (plano + add-ons). Desativar volta o valor para R$ {calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: activePedidosAddon, acessos: false })}/mês na próxima cobrança.
+          {:else}
+            Gerencie usuários e permissões de acesso ao sistema. +R$ 30/mês — total R$ {calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: activePedidosAddon, acessos: true })}/mês.
+          {/if}
+        </p>
+        <button
+          class="btn-secondary"
+          on:click={toggleAcessosAddon}
+          disabled={togglingAddon}
+        >
+          {#if togglingAddon}
+            Atualizando…
+          {:else if activeAcessosAddon}
+            Desativar Controle de Acessos
+          {:else}
+            Ativar Controle de Acessos (+R$ 30/mês)
+          {/if}
+        </button>
+      </div>
+    {/if}
+
     <div class="actions-row">
       <button class="btn-danger-outline" on:click={cancelarAssinatura} disabled={canceling}>
         {canceling ? 'Cancelando…' : 'Cancelar assinatura'}
@@ -723,6 +850,18 @@
       </label>
     {:else}
       <p class="legal-text" style="margin: -0.4rem 0 0;">Pedidos + Cozinha só está disponível em planos com ZeloPDV.</p>
+    {/if}
+
+    {#if selectedPlanAllowsAcessos}
+      <label class="addon-toggle">
+        <input type="checkbox" bind:checked={acessosAddonOn} />
+        <div class="addon-info">
+          <strong>Controle de Acessos <span class="addon-price">+R$ 30/mês</span></strong>
+          <span class="addon-detail">Gerencie usuários e defina permissões de acesso ao sistema para sua equipe.</span>
+        </div>
+      </label>
+    {:else}
+      <p class="legal-text" style="margin: -0.4rem 0 0;">Controle de Acessos só está disponível em planos com ZeloPDV.</p>
     {/if}
 
     <button class="btn-primary btn-subscribe" on:click={assinar} disabled={loading}>
