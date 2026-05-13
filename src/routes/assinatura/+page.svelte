@@ -251,6 +251,9 @@
 
       // Stripe Checkout retorna URL hospedada — redireciona pra lá pra completar o pagamento.
       if (data.url) {
+        if (typeof window.fbq === 'function') {
+          window.fbq('track', 'InitiateCheckout', { value: planPrice, currency: 'BRL' });
+        }
         window.location.href = data.url;
         return;
       }
