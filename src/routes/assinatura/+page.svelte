@@ -5,7 +5,7 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { PLANS, ADDONS, calculateValue } from '$lib/pricing';
   import { trackStartTrial, trackSubscribe } from '$lib/metaPixel';
-  import { goto } from '$app/navigation';
+
 
   let userId = '';
   let email = '';
@@ -75,7 +75,7 @@
           .eq('status', 'active')
           .maybeSingle();
         if (subUserRow) {
-          goto('/gestao');
+          window.location.href = '/gestao';
           return;
         }
 
@@ -144,7 +144,7 @@
                   addToast('Seu teste gratuito de 30 dias foi ativado!', 'success');
                   trackStartTrial();
                 }
-                setTimeout(() => goto('/gestao'), 1500);
+                setTimeout(() => { window.location.href = '/gestao'; }, 2000);
                 return;
               }
               message = data?.error || 'Erro ao ativar período de teste. Tente novamente.';
@@ -169,7 +169,7 @@
           const cleanUrl = new URL(window.location.href);
           cleanUrl.searchParams.delete('success');
           history.replaceState({}, '', cleanUrl.toString());
-          setTimeout(() => goto('/gestao'), 800);
+          setTimeout(() => { window.location.href = '/gestao'; }, 800);
         }
         if (params.get('addon') === 'mesas') {
           camePromptingMesas = true;

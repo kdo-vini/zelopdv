@@ -3,7 +3,6 @@
   import { supabase } from '$lib/supabaseClient';
   import { maskPhone, maskDocumento, normalizeBrazilianPhone } from '$lib/masks';
   import { trackStartTrial } from '$lib/metaPixel';
-  import { goto } from '$app/navigation';
 
   export let show = false;
   export let userId = '';
@@ -85,7 +84,7 @@
       }
 
       const didTrackTrial = !trialPayload?.alreadyExists && trackStartTrial();
-      setTimeout(() => goto('/gestao'), didTrackTrial ? 1500 : 0);
+      setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 2000 : 0);
     } catch (e) {
       error = e.message || 'Erro ao salvar. Tente novamente.';
       saving = false;
