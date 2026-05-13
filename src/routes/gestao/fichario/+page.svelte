@@ -152,8 +152,7 @@
     const id = itemParaDeletarId;
     itemParaDeletarId = null;
 
-    // Deleta a venda (cascata deve cuidar dos itens, se configurado, ou deixa orfão se sem FK cascade)
-    // Assume-se que o usuário quer remover o registro visual.
+    await supabase.from('pedidos').update({ id_venda: null }).eq('id_venda', id);
     const { error } = await supabase.from('vendas').delete().eq('id', id);
     
     if(error){

@@ -157,6 +157,8 @@
     if (!vendaParaDeletarId) return;
     const id = vendaParaDeletarId;
     vendaParaDeletarId = null;
+    // Desvincula pedidos que referenciam esta venda antes de deletar
+    await supabase.from('pedidos').update({ id_venda: null }).eq('id_venda', id);
     const { error } = await supabase.from('vendas').delete().eq('id', id);
     if (error) {
       alert('Erro ao excluir: ' + error.message);
