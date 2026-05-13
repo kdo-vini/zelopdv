@@ -2,11 +2,15 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription } from '$lib/guards';
+  import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import AdminLock from '$lib/components/AdminLock.svelte';
 
   let uid = null;
   let adminPin = '';
+  let ownerUserId = null;
+  let operadorUserId = null;
+  let isSubUser = false;
 
   // Date range — defaults to current month
   let today = new Date();
@@ -95,12 +99,25 @@
     try {
       const { error } = await supabase.from('expenses').insert({
         user_id: uid,
+        id_operador: operadorUserId,
         description: newExpense.description,
         amount: parseFloat(newExpense.amount),
         category: newExpense.category,
         date: new Date(newExpense.date).toISOString()
       });
       if (error) throw error;
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'despesa.criada',
+          entityType: 'expense',
+          details: {
+            description: newExpense.description,
+            amount: parseFloat(newExpense.amount),
+            category: newExpense.category
+          }
+        });
+      }
       addToast('Despesa lançada!', 'success');
       newExpense = { ...newExpense, description: '', amount: '' };
       loadExpenses();
@@ -125,6 +142,7 @@
     loadingOp = true;
     try {
       const newAmount = parseFloat(editData.amount);
+      const previous = expenses.find((ex) => ex.id === id);
       const { error } = await supabase.from('expenses').update({
         description: editData.description,
         amount: newAmount,
@@ -137,6 +155,26 @@
           ? { ...ex, description: editData.description, amount: newAmount, category: editData.category }
           : ex
       );
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'despesa.editada',
+          entityType: 'expense',
+          entityId: String(id),
+          details: {
+            before: previous ? {
+              description: previous.description,
+              amount: Number(previous.amount || 0),
+              category: previous.category
+            } : null,
+            after: {
+              description: editData.description,
+              amount: newAmount,
+              category: editData.category
+            }
+          }
+        });
+      }
       addToast('Despesa atualizada!', 'success');
       editingId = null;
       editData = {};
@@ -151,8 +189,22 @@
     const confirmed = await confirmAction('Apagar despesa?', 'Tem certeza que deseja remover esta despesa permanentemente?');
     if (!confirmed) return;
     try {
-      const { error } = await supabase.from('expenses').delete().eq('id', id);
+      const previous = expenses.find((ex) => ex.id === id);
+      const { error } = await supabase.from('expenses').delete().eq('id', id).eq('user_id', uid);
       if (error) throw error;
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'despesa.removida',
+          entityType: 'expense',
+          entityId: String(id),
+          details: previous ? {
+            description: previous.description,
+            amount: Number(previous.amount || 0),
+            category: previous.category
+          } : {}
+        });
+      }
       addToast('Despesa removida', 'success');
       loadExpenses();
     } catch (e) {
@@ -161,13 +213,17 @@
   }
 
   onMount(async () => {
-    const ok = await ensureActiveSubscription({ requireProfile: true });
-    if (!ok) return;
-    const { data } = await supabase.auth.getUser();
-    uid = data?.user?.id;
+    const authCtx = await ensureActiveSubscription({ requireProfile: true });
+    if (!authCtx) return;
+    uid = authCtx.userId;
+    ownerUserId = authCtx.ownerUserId;
+    operadorUserId = authCtx.userId;
+    isSubUser = authCtx.isSubUser;
     if (uid) {
-      const { data: perfil } = await supabase.from('empresa_perfil').select('pin_admin').eq('user_id', uid).maybeSingle();
+      const { data: perfil } = await supabase.from('empresa_perfil').select('pin_admin').eq('user_id', ownerUserId).maybeSingle();
       if (perfil?.pin_admin) adminPin = perfil.pin_admin;
+      // Override uid with ownerUserId for all DB operations
+      uid = ownerUserId;
       loadExpenses();
     }
   });

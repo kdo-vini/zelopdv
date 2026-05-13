@@ -61,6 +61,24 @@
   // Show support chat on public/auth pages but not inside the app
   $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && $page.url.pathname !== '/pascoa' && !$page.error;
 
+  async function resolveAccessContext(userId) {
+    if (!userId) return { isSubUser: false, ownerUserId: userId };
+    try {
+      const { data } = await supabase
+        .from('access_users')
+        .select('owner_user_id')
+        .eq('auth_user_id', userId)
+        .eq('status', 'active')
+        .maybeSingle();
+      return {
+        isSubUser: Boolean(data?.owner_user_id),
+        ownerUserId: data?.owner_user_id || userId
+      };
+    } catch {
+      return { isSubUser: false, ownerUserId: userId };
+    }
+  }
+
 
 
   // NEW YEAR THEME STATE (DEPRECATED - New Year is over)
@@ -155,22 +173,29 @@
       let subRow = null;
       if (session?.user?.id) {
         try {
+          const accessCtx = await resolveAccessContext(session.user.id);
+          const companyUserId = accessCtx.ownerUserId || session.user.id;
+
           // 1) Assinatura ativa (somente por user_id)
           let { data } = await supabase
             .from('subscriptions')
             .select('status, current_period_end')
-            .eq('user_id', session.user.id)
+            .eq('user_id', companyUserId)
             .maybeSingle();
           subRow = data;
           hasActiveSub = isSubscriptionActiveStrict(subRow);
 
-          // 2) Perfil da empresa completo (não cria se ausente, devido a NOT NULL)
-          let { data: perfil } = await supabase
-            .from('empresa_perfil')
-            .select('nome_exibicao, documento, contato, largura_bobina')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-          hasCompleteProfile = Boolean(perfil && requiredOk(perfil));
+          // 2) Perfil da empresa completo (subusuário usa o perfil do titular)
+          if (accessCtx.isSubUser) {
+            hasCompleteProfile = true;
+          } else {
+            let { data: perfil } = await supabase
+              .from('empresa_perfil')
+              .select('nome_exibicao, documento, contato, largura_bobina')
+              .eq('user_id', companyUserId)
+              .maybeSingle();
+            hasCompleteProfile = Boolean(perfil && requiredOk(perfil));
+          }
           
         } catch {}
       }
@@ -289,7 +314,13 @@
   
   async function fetchProfileData(uId) {
     if (!uId) return;
-    const { data } = await supabase.from('empresa_perfil').select('pin_admin, nome_exibicao').eq('user_id', uId).maybeSingle();
+    const accessCtx = await resolveAccessContext(uId);
+    const companyUserId = accessCtx.ownerUserId || uId;
+    const { data } = await supabase
+      .from('empresa_perfil')
+      .select('pin_admin, nome_exibicao')
+      .eq('user_id', companyUserId)
+      .maybeSingle();
 
     if (data) {
         if (!data.pin_admin) {

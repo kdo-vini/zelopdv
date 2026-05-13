@@ -70,6 +70,17 @@ describe('buildVendaPayload', () => {
     expect(payload.pagamentos).toEqual([]);
   });
 
+  test('single fiado without client is rejected to avoid orphan debt rows', () => {
+    expect(() =>
+      buildVendaPayload({
+        formaPagamento: 'fiado',
+        totalFinal: 87.5,
+        itens: baseItens,
+        idCaixa: 1
+      })
+    ).toThrow('Venda no fiado exige um cliente vinculado.');
+  });
+
   test('multi-pay with fiado row routes id_cliente from the fiado pessoaId', () => {
     const pessoaId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     const { payload } = buildVendaPayload({
@@ -85,6 +96,21 @@ describe('buildVendaPayload', () => {
 
     expect(payload.id_cliente).toBe(pessoaId);
     expect(payload.fiados).toEqual([{ id_pessoa: pessoaId, valor: 20 }]);
+  });
+
+  test('multi-pay fiado without pessoaId is rejected to keep venda and fiado consistent', () => {
+    expect(() =>
+      buildVendaPayload({
+        formaPagamento: 'multiplo',
+        pagamentos: [
+          { forma: 'pix', valor: 30 },
+          { forma: 'fiado', valor: 20 }
+        ],
+        totalFinal: 50,
+        itens: baseItens,
+        idCaixa: 1
+      })
+    ).toThrow('Pagamento fiado exige um cliente vinculado.');
   });
 
   test('items with "56x Produto" naming use the prefix as quantity', () => {

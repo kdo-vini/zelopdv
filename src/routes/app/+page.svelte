@@ -17,6 +17,7 @@
   import { waitAuthReady } from '$lib/authStore';
   import { printVenda, printMovCaixa } from '$lib/printService';
   import { ensureActiveSubscription } from '$lib/guards';
+  import { getAccessContext, logAuditAction } from '$lib/accessControl';
   import { withTimeout } from '$lib/utils';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
@@ -49,6 +50,9 @@
   let subcategoriaAtiva = null; // ID da subcategoria selecionada (ou null para todas)
   let busca = '';
   let loading = true;
+  let ownerUserId = null;
+  let isSubUser = false;
+  let operadorUserId = null;
   let errorMessage = '';
   let gridEl;
   let buscaInputEl;
@@ -66,6 +70,15 @@
   $: plataformasAtivas = (dadosEmpresa?.plataformas_pagamento ?? [])
     .filter(p => p.ativo)
     .map(p => ({ id: p.id, nome: p.nome, icone: p.icone || '📦', taxa_pct: Number(p.taxa_pct || 0) }));
+
+  // Permission gates — owners have all permissions; sub-users check their role
+  // Initialized to true (owners); onMount overwrites for sub-users after loading permissions from API
+  let canVender = true;
+  let canReceber = true;
+  let canDesconto = true;
+  let canCancelar = true;
+  let canAbrirCaixa = true;
+  let canMovimentarCaixa = true;
 
   // Atalho: '/' foca a busca quando o modal de pagamento não está aberto e o usuário não está digitando em um campo
   function onKeyGlobal(e) {
@@ -216,8 +229,11 @@
 
     await waitAuthReady();
     // Bloqueio: exige assinatura ativa antes de carregar o PDV
-    const ok = await ensureActiveSubscription({ requireProfile: true });
-    if (!ok) return;
+    const authCtx = await ensureActiveSubscription({ requireProfile: true });
+    if (!authCtx) return;
+    ownerUserId = authCtx.ownerUserId;
+    isSubUser = authCtx.isSubUser;
+    operadorUserId = authCtx.userId;
     // Verifica login e carrega dados do PDV
     if (!supabase) {
       errorMessage = 'Configuração do Supabase ausente. Defina as variáveis no .env e reinicie.';
@@ -230,7 +246,7 @@
       ]);
     const { data } = await getSessionWithTimeout(4000);
     if (data?.session?.user) {
-      await withTimeout(verificarCaixaAberto(data.session.user.id));
+      await withTimeout(verificarCaixaAberto(ownerUserId));
       await withTimeout(carregarCategorias());
       await withTimeout(carregarProdutos());
       await withTimeout(carregarSubcategorias());
@@ -246,12 +262,29 @@
 
     // [NEW] Carrega dados da empresa para recibos (WhatsApp/Impressão)
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-         const { data } = await supabase.from('empresa_perfil').select('*').eq('user_id', user.id).single();
-         dadosEmpresa = data;
+      if (ownerUserId) {
+        const { data } = await supabase.from('empresa_perfil').select('*').eq('user_id', ownerUserId).single();
+        dadosEmpresa = data;
       }
     } catch (e) { console.error('Error fetching company profile:', e); }
+
+    // Load sub-user permissions
+    if (isSubUser) {
+      // Sub-users start with no permissions; only grant what's explicitly allowed
+      canVender = false; canReceber = false; canDesconto = false;
+      canCancelar = false; canAbrirCaixa = false; canMovimentarCaixa = false;
+      try {
+        const ctx = await getAccessContext();
+        if (ctx?.permissions) {
+          canVender = !!ctx.permissions['pdv.vender'];
+          canReceber = !!ctx.permissions['pdv.receber'];
+          canDesconto = !!ctx.permissions['pdv.desconto'];
+          canCancelar = !!ctx.permissions['pdv.cancelar'];
+          canAbrirCaixa = !!ctx.permissions['caixa.abrir'];
+          canMovimentarCaixa = !!ctx.permissions['caixa.movimentar'];
+        }
+      } catch (e) { console.warn('[PDV] Failed to load permissions:', e?.message); }
+    }
 
     // Cleanup stuck offline records older than 30 days
     limparVendasAntigas(30).catch(() => {});
@@ -268,7 +301,10 @@
   /** Sincroniza vendas pendentes quando volta a internet */
   async function handleSyncOnline() {
     addToast('Conexão restabelecida. Sincronizando vendas...', 'info');
-    const logs = await syncVendasPendentes(supabase);
+    const logs = await syncVendasPendentes(supabase, {
+      ownerUserId,
+      operatorUserId: operadorUserId
+    });
     if (logs.success > 0) {
       addToast(`${logs.success} venda(s) sincronizada(s) com sucesso.`, 'success');
       pdvCache.invalidateProdutos();
@@ -603,8 +639,7 @@
         return;
       }
       salvandoMovCaixa = true;
-      const { data: userData } = await supabase.auth.getUser();
-      const id_usuario = userData?.user?.id ?? null;
+      const id_usuario = ownerUserId;
       if (!id_usuario) {
         throw new Error('Sessão inválida. Faça login novamente.');
       }
@@ -614,6 +649,7 @@
         .insert({
           id_caixa: idCaixaAberto,
           id_usuario,
+          id_operador: operadorUserId,
           tipo: tipoMovCaixa === 'saida' ? 'sangria' : 'suprimento',
           valor: v,
           motivo: motivoMovCaixa || null
@@ -640,6 +676,9 @@
           console.warn('Falha ao imprimir recibo de movimentação:', e?.message || e);
         }
       }
+      if (isSubUser) {
+        logAuditAction({ ownerUserId, action: 'caixa.movimentado', entityType: 'caixa_movimentacao', entityId: data?.id ? String(data.id) : null, details: { tipo: tipoMovCaixa, valor: v } });
+      }
       addToast('Movimentação registrada com sucesso.', 'success');
       await atualizarSaldoCaixa();
     } catch (e) {
@@ -655,8 +694,7 @@
   /** Abre um caixa com o troco inicial para o usuário autenticado. */
   async function handleAbrirCaixa() {
     if (trocoInicialInput < 0) return;
-    const { data: userData } = await supabase.auth.getUser();
-    const id_usuario = userData?.user?.id ?? null;
+    const id_usuario = ownerUserId;
     if (!id_usuario) {
       addToast('Sessão inválida. Faça login novamente.', 'error');
       return;
@@ -666,7 +704,8 @@
       .insert({
         data_abertura: new Date().toISOString(),
         valor_inicial: Number(trocoInicialInput),
-        id_usuario
+        id_usuario,
+        id_operador: operadorUserId
       })
       .select('id')
       .single();
@@ -677,6 +716,9 @@
     idCaixaAberto = data.id;
     caixaAberto = true;
     modalAbrirCaixaAberto = false;
+    if (isSubUser) {
+      logAuditAction({ ownerUserId, action: 'caixa.aberto', entityType: 'caixa', entityId: String(data.id), details: { valor_inicial: Number(trocoInicialInput) } });
+    }
     await atualizarSaldoCaixa();
   }
 
@@ -904,7 +946,8 @@
         idCaixa: idCaixaAberto,
         idCliente: !multiPag && formaPagamento === 'fiado' ? pessoaFiadoId : null,
         itens: comanda,
-        taxasPlataforma: taxasPlataformaVenda
+        taxasPlataforma: taxasPlataformaVenda,
+        operadorId: operadorUserId
       });
 
       const insertForma = settlement.formaPagamento;
@@ -929,7 +972,9 @@
         isOffline = true;
         await salvarVendaOffline({
           payload,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          ownerUserId,
+          operatorUserId: operadorUserId
         });
         vendaId = `offline-${Date.now()}`;
       }
@@ -1019,9 +1064,7 @@
   async function fetchPerfil() {
     const race = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r({ __timeout: true }), ms))]);
     try {
-      const userRes = await race(supabase.auth.getUser(), 800);
-      if (userRes?.__timeout) return null;
-      const userId = userRes?.data?.user?.id;
+      const userId = ownerUserId;
       if (!userId) return null;
       const perfilRes = await race(
         supabase.from('empresa_perfil').select('*').eq('user_id', userId).limit(1).single(),
@@ -1094,8 +1137,9 @@
 
   <!-- Movimentação de Caixa — mobile only (on desktop it lives in the cart sidebar footer) -->
   <button
-    class="md:hidden p-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-300 hover:text-white rounded-md border border-slate-700/50 transition-colors"
+    class="md:hidden p-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-300 hover:text-white rounded-md border border-slate-700/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
     on:click={() => modalMovCaixaAberto = true}
+    disabled={!canMovimentarCaixa}
     title="Movimentação de Caixa"
     aria-label="Movimentação de Caixa"
   >
@@ -1316,9 +1360,10 @@
       <!-- Botões de Ação -->
       <div class="grid grid-cols-4 gap-2">
         <!-- Movimentação (Sangria/Suprimento) -->
-        <button 
+        <button
           on:click={() => modalMovCaixaAberto = true}
-          class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center border border-slate-700/50"
+          disabled={!canMovimentarCaixa}
+          class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center border border-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
           title="Movimentação de Caixa"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -1327,14 +1372,15 @@
         </button>
 
         <!-- Limpar Comanda -->
-        <button 
+        <button
           on:click={async () => {
             if (await confirmAction('Limpar comanda?', 'Tem certeza que deseja remover todos os itens?')) {
               comanda = [];
               addToast('Comanda limpa', 'info');
             }
           }}
-          class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/30 transition-colors flex items-center justify-center border border-slate-700/50"
+          disabled={!canCancelar}
+          class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/30 transition-colors flex items-center justify-center border border-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
           title="Limpar Comanda"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -1345,7 +1391,7 @@
         <!-- Botão Receber (Maior destaque) -->
         <button
           data-testid="btn-cobrar"
-          disabled={comanda.length === 0}
+          disabled={comanda.length === 0 || !canVender || !canReceber}
           on:click={abrirModalPagamento}
           class="col-span-2 h-12 md:h-10 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-green-900/20 text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
         >
@@ -1379,9 +1425,10 @@
 <!-- --- 7. MODAIS (Componentizados) --- -->
 
 <!-- Modal: Abrir Caixa -->
-<ModalAbrirCaixa 
+<ModalAbrirCaixa
   open={modalAbrirCaixaAberto}
   on:submit={async (e) => {
+    if (!canAbrirCaixa) { addToast('Sem permissão para abrir caixa.', 'error'); return; }
     trocoInicialInput = e.detail.trocoInicial;
     await handleAbrirCaixa();
   }}

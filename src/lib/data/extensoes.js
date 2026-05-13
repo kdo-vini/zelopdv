@@ -272,6 +272,138 @@ export const extensoes = {
       'Cria conta sem cartão, ativa o add-on no checkout e usa por trinta dias completos. Se não fizer diferença na sua fila, é só deixar o trial expirar.'
   },
 
+  acessos: {
+    slug: 'acessos',
+    addonId: 'acessos',
+    meta: {
+      title: 'Controle de Acessos — Equipe com Cargos e Permissões | Zelo PDV',
+      description:
+        'Add-on do Zelo PDV para negócios com equipe. Crie até 5 subusuários por e-mail, organize em cargos como Caixa, Atendente e Gerente, e controle quem pode fazer o quê no sistema. +R$ 30/mês.',
+      canonical: `${BASE_URL}/extensoes#acessos`
+    },
+    heroBadge: 'Add-on Zelo PDV',
+    h1: 'Controle de Acessos: Equipe com Cargos e Permissões',
+    subtitle:
+      'Para negócios com mais de uma pessoa na operação. Convide sua equipe por e-mail, defina o que cada cargo pode fazer, e mantenha o dono no controle de tudo que importa.',
+    forSegments: ['Restaurantes com equipe', 'Hamburguerias', 'Lanchonetes', 'Bares', 'Pequenos comércios'],
+    highlights: [
+      'Até 5 subusuários com login próprio — sem compartilhar senha',
+      'Cargos padrão prontos: Caixa, Atendente e Gerente',
+      'Permissões por checkbox por grupo de funcionalidade',
+      'Log de auditoria automático para ações sensíveis'
+    ],
+    problemTitle: 'Quando todo mundo usa a mesma senha e ninguém sabe quem fez o quê',
+    problemParagraphs: [
+      'Lanchonete com dois ou três funcionários quase sempre começa com todo mundo logado na mesma conta. No começo funciona. Com o tempo o caixa fecha errado, uma venda some, e ninguém lembra quem estava no turno.',
+      'Sistemas de controle de acesso empresarial cobram R$ 100, R$ 200 por funcionalidade, com permissões complexas que demoram uma tarde inteira pra configurar — e ainda cobram por usuário.',
+      'O Controle de Acessos do Zelo PDV é a versão prática disso: convide a equipe por e-mail, escolha o cargo (Caixa, Atendente, Gerente), ajuste o que cada um pode fazer, e pronto. Cada pessoa entra com login próprio, sem compartilhar senha, e tudo fica rastreado.'
+    ],
+    problemPoints: [
+      { label: 'Senha compartilhada', value: 'Caixa abre, atendente fecha, gerente cancela venda — tudo na mesma conta. Se algo der errado, não tem como saber quem fez.' },
+      { label: 'Sem controle de operação', value: 'Funcionário aplica desconto sem autorização, cancela venda no caixa, ou acessa relatórios financeiros sem precisar. O dono só descobre no fechamento.' },
+      { label: 'Auditoria manual', value: 'Verificar o que aconteceu num turno vira trabalho de detetive — checando WhatsApp, caderno e memória do caixa.' }
+    ],
+    featuresTitle: 'O que muda na operação com Controle de Acessos',
+    featuresIntro:
+      'Cada funcionário entra com e-mail e senha próprios. As permissões do cargo determinam exatamente o que ele vê e faz — sem configuração por script, sem tela técnica, só checkboxes.',
+    features: [
+      {
+        icon: '👥',
+        title: 'Até 5 subusuários',
+        description:
+          'Convide até cinco pessoas da equipe por e-mail. Cada uma recebe um link de acesso, cria a própria senha e entra no sistema com o contexto da sua empresa — sem criar uma conta avulsa.'
+      },
+      {
+        icon: '🎭',
+        title: 'Cargos com permissões',
+        description:
+          'Três cargos prontos: Caixa (vende, recebe, abre e fecha caixa), Atendente (lança pedidos e mesas) e Gerente (gestão operacional completa, sem acessar assinatura). Edite as permissões de cada cargo por checkboxes.'
+      },
+      {
+        icon: '🔒',
+        title: 'Dono sempre no controle',
+        description:
+          'Assinatura, extensões, configurações de acesso e PIN de segurança são exclusivos do dono da conta. Nenhum cargo, nem Gerente, pode alterar isso.'
+      },
+      {
+        icon: '📋',
+        title: 'Log de auditoria automático',
+        description:
+          'Toda ação sensível fica registrada com operador, horário e detalhe: venda, cancelamento, abertura de caixa, sangria, despesa, ajuste de estoque. Você sabe o que aconteceu em cada turno.'
+      },
+      {
+        icon: '🧩',
+        title: 'Permissões por módulo',
+        description:
+          'As permissões de Mesas e Pedidos/Cozinha só aparecem na matriz se você tiver esses add-ons ativos. Se desativar um módulo, as permissões ficam salvas pra quando reativar.'
+      },
+      {
+        icon: '✉️',
+        title: 'Convite por e-mail',
+        description:
+          'O funcionário recebe um e-mail com link pra criar senha e entrar. Sem burocracia de CPF ou formulário longo. O dono pode bloquear ou remover o acesso a qualquer momento.'
+      }
+    ],
+    howTitle: 'Como funciona na prática',
+    howIntro:
+      'Três passos e a equipe já opera com login próprio. O dono configura uma vez, a rotina muda no próximo turno.',
+    steps: [
+      {
+        title: 'Ative o add-on em Extensões',
+        description:
+          'Em /gestao/extensoes, clique em "Ativar" no card Controle de Acessos. O item "Acessos" aparece no menu lateral da gestão.'
+      },
+      {
+        title: 'Configure os cargos e permissões',
+        description:
+          'Em /gestao/acessos, veja os cargos padrão (Caixa, Atendente, Gerente) e ajuste as permissões por checkbox conforme a sua operação. Pode renomear ou criar novos cargos.'
+      },
+      {
+        title: 'Convide a equipe por e-mail',
+        description:
+          'Na aba Usuários, adicione o e-mail de cada funcionário, escolha o cargo e clique em Convidar. Cada pessoa recebe o link de acesso e entra com senha própria.'
+      }
+    ],
+    testimonial: {
+      name: 'Patrícia R.',
+      business: 'Lanchonete da Pat',
+      city: 'Campinas, SP',
+      quote:
+        'Antes todo mundo usava minha senha. Hoje cada um entra com o próprio login, eu sei quem cancelou o quê, e minha equipe não acessa os relatórios financeiros.',
+      note: 'Usa Controle de Acessos com 3 funcionários — 1 caixa, 1 atendente e 1 gerente de turno.'
+    },
+    faqSpecific: [
+      {
+        question: 'Quantos subusuários posso criar?',
+        answer:
+          'O MVP suporta até 5 subusuários ativos por empresa. Se você precisar de mais, entre em contato — estamos planejando opções para equipes maiores.'
+      },
+      {
+        question: 'O funcionário vai ver os meus relatórios financeiros?',
+        answer:
+          'Depende do cargo. Por padrão, Caixa e Atendente não têm acesso a relatórios. O Gerente tem, mas você pode desmarcar essa permissão no checkbox do cargo. O dono sempre mantém acesso total.'
+      },
+      {
+        question: 'O que acontece se eu desativar o add-on?',
+        answer:
+          'Os subusuários perdem acesso imediatamente, mas os dados (cargos, vínculos, histórico) ficam salvos. Se você reativar, tudo volta como estava — sem precisar reconvidar.'
+      },
+      {
+        question: 'Funciona com Mesas e Pedidos + Cozinha ao mesmo tempo?',
+        answer:
+          'Sim. As permissões de Mesas e Pedidos/Cozinha aparecem na matriz de cada cargo quando esses add-ons estão ativos. Você controla quem pode abrir mesa, lançar pedido, acessar o painel da cozinha e receber no caixa.'
+      },
+      {
+        question: 'Quanto custa?',
+        answer:
+          '+R$ 30/mês sobre o plano base de R$ 59. Total fica R$ 89/mês. Sem taxa de adesão. Primeiro mês grátis durante o trial.'
+      }
+    ],
+    finalCtaTitle: 'Teste o Controle de Acessos por 30 dias grátis',
+    finalCtaText:
+      'Cria conta sem cartão, ativa o add-on no checkout e convide sua equipe. Se não fizer sentido pra sua operação, é só deixar o trial expirar.'
+  },
+
   chat: {
     slug: 'chat',
     kind: 'plan',

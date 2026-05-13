@@ -12,6 +12,9 @@
   let companyLogoUrl = null;
   let pedidosAddonActive = false;
   let mesasAddonActive = false;
+  let acessosAddonActive = false;
+  let isSubUserMode = false;
+  let subUserPermissions = {};
 
   onMount(async () => {
     const saved = localStorage.getItem('zelo_sidebar_collapsed');
@@ -19,19 +22,38 @@
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.id) {
+      let subscriptionUserId = user.id;
+
+      // Check if current user is a sub-user first so addon visibility can inherit
+      // the owner's active subscription flags.
+      try {
+        const { data: subUserRow } = await supabase
+          .from('access_users')
+          .select('id, owner_user_id, role_id, access_roles(permissions)')
+          .eq('auth_user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (subUserRow) {
+          isSubUserMode = true;
+          subUserPermissions = subUserRow.access_roles?.permissions || {};
+          subscriptionUserId = subUserRow.owner_user_id || user.id;
+        }
+      } catch (e) { /* silent */ }
+
       try {
         const [{ data: sub }, { data: perfil }] = await Promise.all([
           supabase
             .from('subscriptions')
-            .select('status, current_period_end, plan_tier, has_pedidos_addon, has_mesas_addon')
-            .eq('user_id', user.id)
+            .select('status, current_period_end, plan_tier, has_pedidos_addon, has_mesas_addon, has_acessos_addon')
+            .eq('user_id', subscriptionUserId)
             .order('updated_at', { ascending: false })
             .limit(1)
             .maybeSingle(),
           supabase
             .from('empresa_perfil')
             .select('logo_url')
-            .eq('user_id', user.id)
+            .eq('user_id', subscriptionUserId)
             .maybeSingle()
         ]);
         if (sub?.status === 'trialing' && sub?.current_period_end) {
@@ -42,6 +64,7 @@
         const planAllowsAddons = sub?.plan_tier === 'pdv' || sub?.plan_tier === 'bundle';
         pedidosAddonActive = planAllowsAddons && !!sub?.has_pedidos_addon;
         mesasAddonActive = planAllowsAddons && !!sub?.has_mesas_addon;
+        acessosAddonActive = planAllowsAddons && !!sub?.has_acessos_addon;
         if (perfil?.logo_url) companyLogoUrl = perfil.logo_url;
       } catch (e) {
         // silent fail - non-critical
@@ -85,12 +108,25 @@
   // basta criar a flag (ex: deliveryAddonActive) e registrar aqui.
   $: addonFlags = {
     pedidos: pedidosAddonActive,
-    mesas: mesasAddonActive
+    mesas: mesasAddonActive,
+    acessos: acessosAddonActive
   };
 
   function shouldShowItem(item, flags) {
-    if (!item.requiresAddon) return true;
-    return !!flags[item.requiresAddon];
+    if (!item.requiresAddon) {
+      // Block admin-only items for sub-users
+      if (isSubUserMode && item.adminOnly) return false;
+      if (isSubUserMode && item.requiredPermission) {
+        return subUserPermissions?.[item.requiredPermission] === true;
+      }
+      return true;
+    }
+    if (!flags[item.requiresAddon]) return false;
+    if (isSubUserMode && item.adminOnly) return false;
+    if (isSubUserMode && item.requiredPermission) {
+      return subUserPermissions?.[item.requiredPermission] === true;
+    }
+    return true;
   }
 
   const navGroups = [
@@ -100,24 +136,28 @@
         {
           href: '/app',
           label: 'Frente de Caixa',
+          requiredPermission: 'pdv.acessar',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.15c0 .415.336.75.75.75z" /></svg>`
         },
         {
           href: '/app/mesas',
           label: 'Mesas',
           requiresAddon: 'mesas',
+          requiredPermission: 'mesas.acessar',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>`
         },
         {
           href: '/app/pedidos',
           label: 'Pedidos',
           requiresAddon: 'pedidos',
+          requiredPermission: 'pedidos.acessar',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h10.5M8.25 12h10.5M8.25 17.25h10.5M3.75 6.75h.008v.008H3.75V6.75Zm0 5.25h.008v.008H3.75V12Zm0 5.25h.008v.008H3.75v-.008Z" /></svg>`
         },
         {
           href: '/app/pedidos/cozinha',
           label: 'Cozinha',
           requiresAddon: 'pedidos',
+          requiredPermission: 'pedidos.cozinha',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 3.75h3m-1.5 0v2.25m-6.75 6h13.5M5.25 12A6.75 6.75 0 0 1 12 5.25 6.75 6.75 0 0 1 18.75 12m-13.5 0v2.25a4.5 4.5 0 0 0 4.5 4.5h4.5a4.5 4.5 0 0 0 4.5-4.5V12" /></svg>`
         }
       ]
@@ -133,22 +173,26 @@
         {
           href: '/gestao/produtos',
           label: 'Produtos',
+          requiredPermission: 'produtos.visualizar',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>`
         },
         {
           href: '/gestao/pessoas',
           label: 'Pessoas',
+          requiredPermission: 'pessoas.visualizar',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>`
         },
         {
           href: '/gestao/estoque',
           label: 'Estoque',
+          requiredPermission: 'estoque.visualizar',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" /></svg>`
         },
         {
           href: '/gestao/mesas',
           label: 'Cadastro de Mesas',
           requiresAddon: 'mesas',
+          requiredPermission: 'mesas.acessar',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>`
         }
       ]
@@ -159,16 +203,19 @@
         {
           href: '/gestao/caixa',
           label: 'Fechar Caixa',
+          requiredPermission: 'caixa.ver',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" /></svg>`
         },
         {
           href: '/gestao/fichario',
           label: 'Fichário (Fiado)',
+          requiredPermission: 'fiado.visualizar',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>`
         },
         {
           href: '/gestao/despesas',
           label: 'Despesas',
+          requiredPermission: 'despesas.visualizar',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>`
         }
       ]
@@ -179,6 +226,7 @@
         {
           href: '/relatorios',
           label: 'Relatórios',
+          requiredPermission: 'relatorios.ver',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>`
         },
         {
@@ -189,7 +237,15 @@
         {
           href: '/gestao/extensoes',
           label: 'Extensões',
+          adminOnly: true,
           icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.96.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.6c-1.886.342-3.815.566-5.78.666a.64.64 0 01-.657-.643v0z" /></svg>`
+        },
+        {
+          href: '/gestao/acessos',
+          label: 'Acessos',
+          requiresAddon: 'acessos',
+          adminOnly: true,
+          icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>`
         }
       ]
     }
@@ -272,7 +328,7 @@
     </button>
   </div>
 
-  {#if subStatus === 'trialing' && trialDaysLeft !== null && !collapsed}
+  {#if subStatus === 'trialing' && trialDaysLeft !== null && !collapsed && !isSubUserMode}
     {@const trialDay = Math.min(30, Math.max(1, 30 - trialDaysLeft))}
     {@const pct = Math.round((trialDay / 30) * 100)}
     {@const urgent = trialDaysLeft <= 7}

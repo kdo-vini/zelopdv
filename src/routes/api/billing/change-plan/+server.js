@@ -33,7 +33,7 @@ export async function POST({ request }) {
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, plan_tier, status, has_mesas_addon, has_pedidos_addon, payment_provider')
+      .select('id, provider_subscription_id, plan_tier, status, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -89,6 +89,7 @@ export async function POST({ request }) {
     };
     if (removedAddons.includes('mesas')) updatePayload.has_mesas_addon = false;
     if (removedAddons.includes('pedidos')) updatePayload.has_pedidos_addon = false;
+    if (removedAddons.includes('acessos')) updatePayload.has_acessos_addon = false;
     await supabaseAdmin.from('subscriptions').update(updatePayload).eq('id', sub.id);
 
     return json({

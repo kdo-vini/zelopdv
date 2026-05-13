@@ -10,6 +10,7 @@ export const PLANS = {
     includesChat: false,
     allowsMesas: true,
     allowsPedidos: true,
+    allowsAcessos: true,
     stripePriceId: 'price_1SO4yvLUJWyE4PkYwoYAYc6h',
   },
   chat: {
@@ -20,6 +21,7 @@ export const PLANS = {
     includesChat: true,
     allowsMesas: false,
     allowsPedidos: false,
+    allowsAcessos: false,
     stripePriceId: 'price_1TR0xGLUJWyE4PkYcBy0cOoD',
   },
   bundle: {
@@ -30,6 +32,7 @@ export const PLANS = {
     includesChat: true,
     allowsMesas: true,
     allowsPedidos: true,
+    allowsAcessos: true,
     stripePriceId: 'price_1TR0xGLUJWyE4PkYY0DMOWLI',
   },
 };
@@ -48,6 +51,13 @@ export const ADDONS = {
     price: 30.00,
     requiresFlag: 'allowsPedidos',
     stripePriceId: 'price_1TTjDcLUJWyE4PkYbHDHq9gw',
+  },
+  acessos: {
+    id: 'acessos',
+    name: 'Controle de Acessos',
+    price: 30.00,
+    requiresFlag: 'allowsAcessos',
+    stripePriceId: 'price_1TWMi0LUJWyE4PkYQl4rBlQs',
   },
 };
 
@@ -79,6 +89,7 @@ export function subscriptionValue(sub) {
   return calculateValue(tier, {
     mesas: !!sub.has_mesas_addon,
     pedidos: !!sub.has_pedidos_addon,
+    acessos: !!sub.has_acessos_addon,
   });
 }
 

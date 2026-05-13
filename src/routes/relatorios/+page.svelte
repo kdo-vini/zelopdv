@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabaseClient';
 	import { ensureActiveSubscription, hasMesasAddon } from '$lib/guards';
+	import { hasPermission as hasAccessPermission } from '$lib/accessControl';
 	import { withTimeout } from '$lib/utils';
 	import { addToast } from '$lib/stores/ui';
 	import {
@@ -139,13 +140,17 @@
 	}
 
 	onMount(async () => {
-		const ok = await ensureActiveSubscription({ requireProfile: true });
-		if (!ok) return;
+		const authCtx = await ensureActiveSubscription({ requireProfile: true });
+		if (!authCtx) return;
+		if (authCtx.isSubUser && !(await hasAccessPermission('relatorios.ver'))) {
+			addToast('Seu cargo não tem acesso aos relatórios.', 'warning');
+			window.location.href = '/app';
+			return;
+		}
 		const { waitAuthReady } = await import('$lib/authStore');
 		await waitAuthReady();
 		try {
-			const { data: userData } = await supabase.auth.getUser();
-			uid = userData?.user?.id;
+			uid = authCtx.ownerUserId || authCtx.userId;
 			if (!uid) { window.location.href = '/login'; return; }
 			mesasAddonAtivo = await hasMesasAddon(uid);
 

@@ -17,6 +17,7 @@ import {
 const ADDON_DB_COLUMN = {
   mesas: 'has_mesas_addon',
   pedidos: 'has_pedidos_addon',
+  acessos: 'has_acessos_addon',
 };
 
 // Ajuste o domínio admin aqui se diferir.
@@ -76,13 +77,14 @@ export async function POST({ request }) {
     if (!admin) return json({ error: 'Acesso restrito a super admins.' }, { status: 403, headers: cors });
 
     const body = await request.json().catch(() => ({}));
-    const { subscriptionId, planTier, hasMesasAddon, hasPedidosAddon, addons } = body;
+    const { subscriptionId, planTier, hasMesasAddon, hasPedidosAddon, hasAcessosAddon, addons } = body;
 
     // Aceita tanto `addons: { mesas, pedidos }` (novo) quanto flags soltas (legado: hasMesasAddon)
     // pra não quebrar consumidores antigos.
     const wantedAddons = {
       mesas: addons?.mesas ?? hasMesasAddon ?? false,
       pedidos: addons?.pedidos ?? hasPedidosAddon ?? false,
+      acessos: addons?.acessos ?? hasAcessosAddon ?? false,
     };
 
     if (!subscriptionId) return json({ error: 'subscriptionId obrigatório.' }, { status: 400, headers: cors });
@@ -92,7 +94,7 @@ export async function POST({ request }) {
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, status, payment_provider')
+      .select('id, user_id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, status, payment_provider')
       .eq('id', subscriptionId)
       .maybeSingle();
 
@@ -188,6 +190,7 @@ export async function POST({ request }) {
       // Back-compat: clients antigos esperavam hasMesasAddon no top-level.
       hasMesasAddon: finalAddons.mesas,
       hasPedidosAddon: finalAddons.pedidos,
+      hasAcessosAddon: finalAddons.acessos,
       stripeUpdated: newItems.length > 0,
       previousTier: sub.plan_tier,
     }, { headers: cors });

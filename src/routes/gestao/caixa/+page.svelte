@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   export let params;
   import { supabase } from '$lib/supabaseClient';
+  import { ensureActiveSubscription } from '$lib/guards';
   import { addToast } from '$lib/stores/ui';
   import {
     STANDARD_PAYMENT_FORMS,
@@ -24,6 +25,8 @@
 
   // Ao montar, localiza o caixa aberto do usuário e carrega as vendas atreladas
   let uid = null;
+  let ownerUserId = null;
+  let operadorUserId = null;
   onMount(async () => {
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -32,11 +35,16 @@
         window.location.href = '/login';
         return;
       }
+      const authCtx = await ensureActiveSubscription();
+      if (authCtx) {
+        ownerUserId = authCtx.ownerUserId;
+        operadorUserId = authCtx.userId;
+      }
       // caixa aberto do usuário
       const { data: cs, error: cErr } = await supabase
         .from('caixas')
         .select('id, data_abertura, valor_inicial')
-        .eq('id_usuario', uid)
+        .eq('id_usuario', ownerUserId || uid)
         .is('data_fechamento', null)
         .order('data_abertura', { ascending: false })
         .limit(1);
@@ -139,7 +147,8 @@
       try {
         await supabase.from('caixa_fechamentos').insert({
           id_caixa: caixa.id,
-          id_usuario: uid,
+          id_usuario: ownerUserId || uid,
+          id_operador: operadorUserId || uid,
           data_fechamento: new Date().toISOString(),
           total_dinheiro: Number(totais.dinheiro || 0),
           total_cartao: Number(totalCartao || 0),

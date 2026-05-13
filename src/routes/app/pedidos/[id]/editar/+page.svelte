@@ -4,6 +4,8 @@
   import { page } from '$app/stores';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription, hasPedidosAddon } from '$lib/guards';
+  import { hasPermission as hasAccessPermission } from '$lib/accessControl';
+  import { logAuditAction } from '$lib/accessControl';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
@@ -13,6 +15,9 @@
   let loading = true;
   let addonActive = false;
   let userId = '';
+  let ownerUserId = '';
+  let operadorUserId = '';
+  let isSubUser = false;
   let produtos = [];
   let categorias = [];
   let categoriaAtiva = null;
@@ -41,8 +46,16 @@
     if (!auth?.userId) return;
 
     userId = auth.userId;
-    pdvCache.setUserId(userId);
-    addonActive = await hasPedidosAddon(userId);
+    ownerUserId = auth.ownerUserId || auth.userId;
+    operadorUserId = auth.userId;
+    isSubUser = auth.isSubUser;
+    if (isSubUser && !(await hasAccessPermission('pedidos.criar'))) {
+      addToast('Seu cargo não pode editar pedidos.', 'warning');
+      goto('/app/pedidos');
+      return;
+    }
+    pdvCache.setUserId(ownerUserId);
+    addonActive = await hasPedidosAddon(ownerUserId);
     ready = true;
 
     if (!addonActive) {
@@ -77,7 +90,7 @@
       .from('pedidos')
       .select('id, numero_pedido, status, nome_cliente, observacoes, origem, pedido_itens(id, id_produto, nome, preco_unitario, quantidade, enviado_cozinha, status_cozinha)')
       .eq('id', pedidoId)
-      .eq('id_usuario', userId)
+      .eq('id_usuario', ownerUserId || userId)
       .maybeSingle();
 
     if (error || !data) {
@@ -197,10 +210,11 @@
         .from('pedidos')
         .update({
           nome_cliente: nomeCliente.trim() || null,
-          observacoes: observacoes.trim() || null
+          observacoes: observacoes.trim() || null,
+          id_operador: operadorUserId
         })
         .eq('id', pedidoId)
-        .eq('id_usuario', userId)
+        .eq('id_usuario', ownerUserId || userId)
         .in('status', ['aberto', 'pronto']);
 
       if (updateErr) throw updateErr;
@@ -229,11 +243,24 @@
       if (pedidoCarregado?.status === 'pronto') {
         await supabase
           .from('pedidos')
-          .update({ status: 'aberto' })
+          .update({ status: 'aberto', id_operador: operadorUserId })
           .eq('id', pedidoId)
-          .eq('id_usuario', userId);
+          .eq('id_usuario', ownerUserId || userId);
       }
 
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'pedido.editado',
+          entityType: 'pedido',
+          entityId: String(pedidoId),
+          details: {
+            numero_pedido: pedidoCarregado?.numero_pedido,
+            itens: itens.length,
+            reaberto_cozinha: pedidoCarregado?.status === 'pronto'
+          }
+        });
+      }
       addToast(`Pedido #${pedidoCarregado?.numero_pedido} atualizado.`, 'success');
       goto('/app/pedidos');
     } catch (err) {

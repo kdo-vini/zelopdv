@@ -29,6 +29,7 @@
   let editPlanTier = 'pdv'
   let editMesasAddon = false
   let editPedidosAddon = false
+  let editAcessosAddon = false
   
   onMount(async () => {
     await loadAdminInfo()
@@ -140,6 +141,7 @@
     editPlanTier = sub.plan_tier || 'pdv'
     editMesasAddon = !!sub.has_mesas_addon
     editPedidosAddon = !!sub.has_pedidos_addon
+    editAcessosAddon = !!sub.has_acessos_addon
     showPlanModal = true
   }
 
@@ -149,6 +151,7 @@
     editPlanTier = 'pdv'
     editMesasAddon = false
     editPedidosAddon = false
+    editAcessosAddon = false
   }
 
   // Admin muda plano e addons. Para subs Stripe, chama endpoint que sincroniza com Stripe API
@@ -160,6 +163,7 @@
     }
     const finalMesas = isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon
     const finalPedidos = isAddonAllowed(editPlanTier, 'pedidos') && editPedidosAddon
+    const finalAcessos = isAddonAllowed(editPlanTier, 'acessos') && editAcessosAddon
 
     if (editMesasAddon && !isAddonAllowed(editPlanTier, 'mesas')) {
       const confirm1 = confirm(`O plano ${planLabel(editPlanTier)} não suporta o Módulo Mesas. Vamos desativar o add-on. Continuar?`)
@@ -168,6 +172,10 @@
     if (editPedidosAddon && !isAddonAllowed(editPlanTier, 'pedidos')) {
       const confirm2 = confirm(`O plano ${planLabel(editPlanTier)} não suporta Pedidos + Cozinha. Vamos desativar o add-on. Continuar?`)
       if (!confirm2) return
+    }
+    if (editAcessosAddon && !isAddonAllowed(editPlanTier, 'acessos')) {
+      const confirm3 = confirm(`O plano ${planLabel(editPlanTier)} não suporta Controle de Acessos. Vamos desativar o add-on. Continuar?`)
+      if (!confirm3) return
     }
 
     try {
@@ -190,10 +198,11 @@
           body: JSON.stringify({
             subscriptionId: selectedSub.id,
             planTier: editPlanTier,
-            addons: { mesas: finalMesas, pedidos: finalPedidos },
+            addons: { mesas: finalMesas, pedidos: finalPedidos, acessos: finalAcessos },
             // back-compat com versões antigas do endpoint:
             hasMesasAddon: finalMesas,
             hasPedidosAddon: finalPedidos,
+            hasAcessosAddon: finalAcessos,
           }),
         })
         const body = await res.json().catch(() => ({}))
@@ -224,11 +233,13 @@
               plan_tier: selectedSub.plan_tier,
               has_mesas_addon: selectedSub.has_mesas_addon,
               has_pedidos_addon: selectedSub.has_pedidos_addon,
+              has_acessos_addon: selectedSub.has_acessos_addon,
             },
             new: {
               plan_tier: editPlanTier,
               has_mesas_addon: finalMesas,
               has_pedidos_addon: finalPedidos,
+              has_acessos_addon: finalAcessos,
             },
             stripe_updated: body.stripeUpdated,
           },
@@ -245,6 +256,7 @@
         plan_tier: editPlanTier,
         has_mesas_addon: finalMesas,
         has_pedidos_addon: finalPedidos,
+        has_acessos_addon: finalAcessos,
         last_modified_by: adminInfo?.id || null,
         last_modified_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -267,11 +279,13 @@
             plan_tier: selectedSub.plan_tier,
             has_mesas_addon: selectedSub.has_mesas_addon,
             has_pedidos_addon: selectedSub.has_pedidos_addon,
+            has_acessos_addon: selectedSub.has_acessos_addon,
           },
           new: {
             plan_tier: editPlanTier,
             has_mesas_addon: finalMesas,
             has_pedidos_addon: finalPedidos,
+            has_acessos_addon: finalAcessos,
           },
           provider: provider || 'none',
         },
@@ -669,9 +683,13 @@
                   <span class="text-[11px] font-semibold tracking-wide {sub.plan_tier === 'bundle' ? 'text-indigo-300' : sub.plan_tier === 'chat' ? 'text-violet-300' : 'text-sky-300'}">
                     {planLabel(sub.plan_tier || 'pdv')}
                   </span>
-                  {#if sub.has_mesas_addon || sub.has_pedidos_addon}
+                  {#if sub.has_mesas_addon || sub.has_pedidos_addon || sub.has_acessos_addon}
                     <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
-                      {#if sub.has_mesas_addon}+Mesas{/if}{#if sub.has_mesas_addon && sub.has_pedidos_addon} · {/if}{#if sub.has_pedidos_addon}+Pedidos{/if}
+                      {[
+                        sub.has_mesas_addon ? '+Mesas' : null,
+                        sub.has_pedidos_addon ? '+Pedidos' : null,
+                        sub.has_acessos_addon ? '+Acessos' : null,
+                      ].filter(Boolean).join(' · ')}
                     </span>
                   {/if}
                 </button>
@@ -963,6 +981,24 @@
               {/if}
             </div>
           </label>
+
+          <label class="flex items-center cursor-pointer group {!isAddonAllowed(editPlanTier, 'acessos') ? 'opacity-40 cursor-not-allowed' : ''}">
+            <div class="relative flex items-center justify-center">
+              <input
+                type="checkbox"
+                bind:checked={editAcessosAddon}
+                disabled={!isAddonAllowed(editPlanTier, 'acessos')}
+                class="sr-only peer"
+              />
+              <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-500 shadow-inner"></div>
+            </div>
+            <div class="ml-3">
+              <span class="text-sm font-medium text-slate-300">Controle de Acessos (+R$ 30/mês)</span>
+              {#if !isAddonAllowed(editPlanTier, 'acessos')}
+                <p class="text-[11px] text-amber-400 mt-0.5">Indisponível em {PLANS[editPlanTier].name} (precisa de PDV).</p>
+              {/if}
+            </div>
+          </label>
         </div>
 
         <div class="pt-4 border-t border-slate-800 grid grid-cols-2 gap-4">
@@ -975,6 +1011,7 @@
             <div class="text-sm font-mono font-semibold text-emerald-300">R$ {calculateValue(editPlanTier, {
               mesas: editMesasAddon && isAddonAllowed(editPlanTier, 'mesas'),
               pedidos: editPedidosAddon && isAddonAllowed(editPlanTier, 'pedidos'),
+              acessos: editAcessosAddon && isAddonAllowed(editPlanTier, 'acessos'),
             }).toFixed(2)}</div>
           </div>
         </div>

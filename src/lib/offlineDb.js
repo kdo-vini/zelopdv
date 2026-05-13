@@ -25,6 +25,13 @@ db.version(3).stores({
     categorias: 'id, nome'
 });
 
+// v4 — contextualiza a fila offline por owner/operator para replay seguro com subusuários
+db.version(4).stores({
+    produtos: 'id, nome, preco, categoria_id',
+    vendas_pendentes: '++id, createdAt, status, ownerUserId, operatorUserId',
+    categorias: 'id, nome'
+});
+
 /**
  * Salva uma venda na fila de sincronização.
  *
@@ -48,6 +55,8 @@ export function prepareVendaOfflineRecord(venda) {
     return {
         ...venda,
         payload,
+        ownerUserId: venda?.ownerUserId || venda?.payload?.owner_user_id || null,
+        operatorUserId: venda?.operatorUserId || venda?.payload?.operador_id || null,
         createdAt,
         // Mantém `data` para compat com cleanup antigo de `limparVendasAntigas`.
         data: createdAt,
@@ -179,12 +188,19 @@ function legacyToPayload(record) {
  * Registros sincronizados com sucesso são deletados do IndexedDB.
  * Registros com falha permanecem como 'aguardando' para nova tentativa.
  */
-export async function syncVendasPendentes(supabase) {
+export async function syncVendasPendentes(supabase, context = {}) {
+    const ownerFilter = context?.ownerUserId || null;
+    const operatorFallback = context?.operatorUserId || null;
     const pendentes = await getVendasPendentes();
-    const logs = { success: 0, fail: 0 };
+    const logs = { success: 0, fail: 0, skipped: 0 };
 
     for (const vendaPendente of pendentes) {
         try {
+            if (ownerFilter && vendaPendente.ownerUserId && vendaPendente.ownerUserId !== ownerFilter) {
+                logs.skipped++;
+                continue;
+            }
+
             // Compat: se for registro v1/v2, converte; v3 já tem .payload pronto.
             const payload = vendaPendente.payload || legacyToPayload(vendaPendente);
 
@@ -200,6 +216,9 @@ export async function syncVendasPendentes(supabase) {
             }
             if (!payload.client_sale_id) {
                 payload.client_sale_id = vendaPendente.client_sale_id || createClientSaleId();
+            }
+            if (!payload.operador_id && (vendaPendente.operatorUserId || operatorFallback)) {
+                payload.operador_id = vendaPendente.operatorUserId || operatorFallback;
             }
 
             const { data, error } = await supabase.rpc('criar_venda_completa', {

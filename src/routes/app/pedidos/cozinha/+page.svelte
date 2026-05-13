@@ -3,9 +3,14 @@
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription, hasPedidosAddon } from '$lib/guards';
+  import { hasPermission as hasAccessPermission } from '$lib/accessControl';
+  import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
 
   let userId = '';
+  let ownerUserId = '';
+  let operadorUserId = '';
+  let isSubUser = false;
   let addonActive = false;
   let ready = false;
   let loading = true;
@@ -34,7 +39,15 @@
     if (!auth?.userId) return;
 
     userId = auth.userId;
-    addonActive = await hasPedidosAddon(userId);
+    ownerUserId = auth.ownerUserId || auth.userId;
+    operadorUserId = auth.userId;
+    isSubUser = auth.isSubUser;
+    if (isSubUser && !(await hasAccessPermission('pedidos.cozinha'))) {
+      addToast('Seu cargo não tem acesso ao painel de cozinha.', 'warning');
+      goto('/app');
+      return;
+    }
+    addonActive = await hasPedidosAddon(ownerUserId);
     ready = true;
     if (!addonActive) {
       loading = false;
@@ -46,7 +59,7 @@
   }
 
   async function loadPedidos() {
-    if (!userId) return;
+    if (!ownerUserId) return;
     if (!loading) refreshing = true;
 
     const { data, error } = await supabase
@@ -71,7 +84,7 @@
           status_cozinha
         )
       `)
-      .eq('id_usuario', userId)
+      .eq('id_usuario', ownerUserId)
       .in('status', ['aberto', 'pronto'])
       .eq('pedido_itens.enviado_cozinha', true)
       .order('criado_em', { ascending: true });
@@ -96,10 +109,10 @@
   function setupRealtime() {
     cleanupRealtime();
     realtimeChannel = supabase
-      .channel(`cozinha-${userId}`)
+      .channel(`cozinha-${ownerUserId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'pedidos', filter: `id_usuario=eq.${userId}` },
+        { event: '*', schema: 'public', table: 'pedidos', filter: `id_usuario=eq.${ownerUserId}` },
         scheduleRefresh
       )
       .on(
@@ -181,7 +194,7 @@
       .from('pedidos')
       .delete()
       .eq('id', pedido.id)
-      .eq('id_usuario', userId)
+      .eq('id_usuario', ownerUserId)
       .in('status', ['aberto', 'pronto'])
       .select('id');
 
@@ -192,6 +205,19 @@
     if (!data || data.length === 0) {
       addToast('Pedido já foi fechado em outro dispositivo.', 'warning');
     } else {
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'pedido.cancelado',
+          entityType: 'pedido',
+          entityId: String(pedido.id),
+          details: {
+            numero_pedido: pedido.numero_pedido,
+            origem: pedido.origem,
+            origem_painel: 'cozinha'
+          }
+        });
+      }
       addToast(`${titulo} cancelado.`, 'success');
     }
     await loadPedidos();
@@ -224,12 +250,26 @@
         // Guard com .eq('status', 'aberto') evita reabrir um pedido já fechado pelo caixa.
         const { error: pedidoErr } = await supabase
           .from('pedidos')
-          .update({ status: 'pronto' })
+          .update({ status: 'pronto', id_operador: operadorUserId })
           .eq('id', pedido.id)
+          .eq('id_usuario', ownerUserId)
           .eq('status', 'aberto');
         if (pedidoErr) throw pedidoErr;
       }
 
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'pedido.item_pronto',
+          entityType: 'pedido_item',
+          entityId: String(item.id),
+          details: {
+            pedido_id: pedido.id,
+            numero_pedido: pedido.numero_pedido,
+            nome: item.nome
+          }
+        });
+      }
       await loadPedidos();
     } catch (error) {
       addToast('Erro ao marcar item pronto: ' + (error?.message || error), 'error');

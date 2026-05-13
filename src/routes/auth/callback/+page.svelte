@@ -5,6 +5,21 @@
 
   let status = 'Autenticando...';
 
+  async function logSubUserLogin(session, source = 'auth-callback') {
+    try {
+      const token = session?.access_token;
+      if (!token) return;
+      await fetch('/api/access/audit-login', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ source, provider: 'oauth' }),
+      });
+    } catch {}
+  }
+
   onMount(() => {
     if (!supabase) {
       window.location.href = '/login';
@@ -22,6 +37,7 @@
         subscription.unsubscribe();
         clearTimeout(timeout);
         maybeFireLeadPixel(session);
+        logSubUserLogin(session, 'oauth-signed-in');
         window.location.href = '/app';
       } else if (event === 'INITIAL_SESSION' && !session) {
         // OAuth code not yet exchanged — wait for SIGNED_IN
@@ -34,6 +50,7 @@
         subscription.unsubscribe();
         clearTimeout(timeout);
         maybeFireLeadPixel(data.session);
+        logSubUserLogin(data.session, 'oauth-existing-session');
         window.location.href = '/app';
       }
     });

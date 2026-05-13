@@ -72,6 +72,19 @@ export function buildVendaPayload(input) {
     if (fiadoRow?.pessoaId) idCliente = fiadoRow.pessoaId;
   }
 
+  if (!isMulti && input.formaPagamento === 'fiado' && !idCliente) {
+    throw new Error('Venda no fiado exige um cliente vinculado.');
+  }
+  if (isMulti) {
+    const fiadoRow = (input.pagamentos || []).find(
+      (p) => (p?.forma_pagamento || p?.forma) === 'fiado'
+    );
+    const fiadoValor = money(fiadoRow?.valor || 0);
+    if (fiadoValor > 0 && !idCliente) {
+      throw new Error('Pagamento fiado exige um cliente vinculado.');
+    }
+  }
+
   // Multi-pay rows for vendas_pagamentos (cash already net of change)
   const pagamentosOut = isMulti
     ? settlement.paymentRows
@@ -144,7 +157,8 @@ export function buildVendaPayload(input) {
     pagamentos: pagamentosOut,
     estoque,
     fiados,
-    taxas_plataforma: taxasPlataforma
+    taxas_plataforma: taxasPlataforma,
+    ...(input.operadorId ? { operador_id: input.operadorId } : {})
   };
 
   if (input.createdAt) {

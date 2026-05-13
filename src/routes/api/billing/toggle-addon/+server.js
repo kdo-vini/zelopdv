@@ -8,6 +8,7 @@ import { ADDONS, isAddonAllowed, VALID_ADDONS } from '$lib/pricing';
 const ADDON_DB_COLUMN = {
   mesas: 'has_mesas_addon',
   pedidos: 'has_pedidos_addon',
+  acessos: 'has_acessos_addon',
 };
 
 export async function POST({ request }) {
@@ -31,7 +32,7 @@ export async function POST({ request }) {
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, status, payment_provider')
+      .select('id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, status, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)

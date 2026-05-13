@@ -3,6 +3,8 @@
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription, hasPedidosAddon } from '$lib/guards';
+  import { hasPermission as hasAccessPermission } from '$lib/accessControl';
+  import { logAuditAction } from '$lib/accessControl';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
@@ -12,6 +14,9 @@
   let loading = true;
   let addonActive = false;
   let userId = '';
+  let ownerUserId = '';
+  let operadorUserId = '';
+  let isSubUser = false;
   let produtos = [];
   let categorias = [];
   let categoriaAtiva = null;
@@ -36,8 +41,16 @@
     if (!auth?.userId) return;
 
     userId = auth.userId;
-    pdvCache.setUserId(userId);
-    addonActive = await hasPedidosAddon(userId);
+    ownerUserId = auth.ownerUserId || auth.userId;
+    operadorUserId = auth.userId;
+    isSubUser = auth.isSubUser;
+    if (isSubUser && !(await hasAccessPermission('pedidos.criar'))) {
+      addToast('Seu cargo não pode criar ou editar pedidos.', 'warning');
+      goto('/app/pedidos');
+      return;
+    }
+    pdvCache.setUserId(ownerUserId);
+    addonActive = await hasPedidosAddon(ownerUserId);
     ready = true;
 
     if (!addonActive) {
@@ -143,7 +156,7 @@
   }
 
   async function proximoNumeroPedido() {
-    const { data, error } = await supabase.rpc('proximo_numero_pedido', { p_id_usuario: userId });
+    const { data, error } = await supabase.rpc('proximo_numero_pedido', { p_id_usuario: ownerUserId || userId });
     if (error) throw error;
     return Number(data || 1);
   }
@@ -179,7 +192,8 @@
 
     try {
       const pedido = await inserirPedidoComRetry({
-        id_usuario: userId,
+        id_usuario: ownerUserId || userId,
+        id_operador: operadorUserId,
         status: 'aberto',
         nome_cliente: nomeCliente.trim() || null,
         observacoes: observacoes.trim() || null,
@@ -201,6 +215,19 @@
       const { error: itensError } = await supabase.from('pedido_itens').insert(itens);
       if (itensError) throw itensError;
 
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'pedido.criado',
+          entityType: 'pedido',
+          entityId: String(pedido.id),
+          details: {
+            numero_pedido: pedido.numero_pedido,
+            itens: itens.length,
+            total: totalPedido
+          }
+        });
+      }
       addToast(`Pedido #${pedido.numero_pedido} criado.`, 'success');
       carrinho = [];
       nomeCliente = '';

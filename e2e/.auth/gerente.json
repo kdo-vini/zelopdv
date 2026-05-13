@@ -1,0 +1,53 @@
+{
+  "cookies": [
+    {
+      "name": "_fbp",
+      "value": "fb.0.1778671689772.385350651838063129",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1786447691,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga",
+      "value": "GA1.1.1291928742.1778671690",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1813231691.183725,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga_6XMEDGM8H6",
+      "value": "GS2.1.s1778671689$o1$g1$t1778671691$j58$l0$h0",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1813231691.187828,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:5173",
+      "localStorage": [
+        {
+          "name": "lastExternalReferrer",
+          "value": "empty"
+        },
+        {
+          "name": "sb-xnnjyrblpvsqrtsshawa-auth-token",
+          "value": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsImtpZCI6IkVJZkhmdkkyekkxNXhDRHEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3hubmp5cmJscHZzcXJ0c3NoYXdhLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJmNzZjZjI5NC1kNzNlLTRiNzUtOTMxOS1lZDQzMWI5M2FjYzIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc4Njc1MjkwLCJpYXQiOjE3Nzg2NzE2OTAsImVtYWlsIjoiZTJlLmFjZXNzb3MuZ2VyZW50ZUB6ZWxvcGR2LnRlc3QiLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlfSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc3ODY3MTY5MH1dLCJzZXNzaW9uX2lkIjoiMDNkOWRiMzUtMzJiYy00ZjUzLTk5MGEtNmI1ZDQxZTRhNzJmIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.pGqNn-4rXui5RFmlxuqElb79hn9h96aara6O_6a5cyA\",\"token_type\":\"bearer\",\"expires_in\":3600,\"expires_at\":1778675290,\"refresh_token\":\"ir37ok7vuf2u\",\"user\":{\"id\":\"f76cf294-d73e-4b75-9319-ed431b93acc2\",\"aud\":\"authenticated\",\"role\":\"authenticated\",\"email\":\"e2e.acessos.gerente@zelopdv.test\",\"email_confirmed_at\":\"2026-05-13T11:28:03.947557Z\",\"phone\":\"\",\"confirmed_at\":\"2026-05-13T11:28:03.947557Z\",\"last_sign_in_at\":\"2026-05-13T11:28:10.14974948Z\",\"app_metadata\":{\"provider\":\"email\",\"providers\":[\"email\"]},\"user_metadata\":{\"email_verified\":true},\"identities\":[{\"identity_id\":\"81a3cd92-6b11-4d61-ad2f-124ec7b9fe40\",\"id\":\"f76cf294-d73e-4b75-9319-ed431b93acc2\",\"user_id\":\"f76cf294-d73e-4b75-9319-ed431b93acc2\",\"identity_data\":{\"email\":\"e2e.acessos.gerente@zelopdv.test\",\"email_verified\":true,\"phone_verified\":false,\"sub\":\"f76cf294-d73e-4b75-9319-ed431b93acc2\"},\"provider\":\"email\",\"last_sign_in_at\":\"2026-05-13T11:14:54.119653Z\",\"created_at\":\"2026-05-13T11:14:54.119708Z\",\"updated_at\":\"2026-05-13T11:14:54.119708Z\",\"email\":\"e2e.acessos.gerente@zelopdv.test\"}],\"created_at\":\"2026-05-13T11:14:54.106394Z\",\"updated_at\":\"2026-05-13T11:28:10.152229Z\",\"is_anonymous\":false},\"weak_password\":null}"
+        },
+        {
+          "name": "lastExternalReferrerTime",
+          "value": "1778671689764"
+        }
+      ]
+    }
+  ]
+}

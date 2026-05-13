@@ -10,6 +10,15 @@
 const APP_URL = 'https://zelopdv.com.br';
 const WHATSAPP_NUMBER = '5514991537503'; // Public support WhatsApp number
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /** Shared HTML wrapper — applies branding and works in Gmail/Outlook/Apple Mail */
 function wrapEmail(bodyHtml) {
   return `<!DOCTYPE html>
@@ -352,6 +361,43 @@ ${signature()}
 
   return {
     subject: 'Seu cadastro no Zelo PDV está incompleto — finalize em 2 minutos',
+    html,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// ACCESS CONTROL — Sub-user invite
+// ---------------------------------------------------------------------------
+export function emailAccessControlInvite({ companyName, roleName, inviteUrl }) {
+  const safeCompanyName = escapeHtml(companyName || 'sua equipe');
+  const safeRoleName = roleName ? escapeHtml(roleName) : '';
+  const safeInviteUrl = escapeHtml(inviteUrl);
+
+  const html = wrapEmail(`
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Seu acesso ao Zelo PDV foi liberado</p>
+
+<p style="margin:0 0 16px;">Você recebeu um convite para entrar na operação da <strong>${safeCompanyName}</strong> no Zelo PDV.</p>
+
+${safeRoleName
+    ? `<p style="margin:0 0 16px;">Seu perfil inicial será <strong>${safeRoleName}</strong>, com as permissões definidas pela empresa.</p>`
+    : '<p style="margin:0 0 16px;">Seu acesso já está separado com as permissões definidas pela empresa.</p>'}
+
+<p style="margin:0 0 16px;">Clique no botão abaixo para aceitar o convite e definir sua senha de acesso.</p>
+
+${ctaButton('Aceitar convite e criar senha →', safeInviteUrl)}
+
+<p style="margin:24px 0 8px;color:#6b7280;font-size:13px;">Se o botão não abrir, use este link direto:</p>
+<p style="margin:0 0 16px;font-size:13px;line-height:1.7;word-break:break-all;">
+  <a href="${safeInviteUrl}" style="color:#1d4ed8;">${safeInviteUrl}</a>
+</p>
+
+<p style="margin:0 0 16px;">Depois da confirmação, você poderá entrar normalmente no sistema com este mesmo e-mail.</p>
+
+${signature()}
+`);
+
+  return {
+    subject: `Convite para acessar ${companyName || 'sua empresa'} no Zelo PDV`,
     html,
   };
 }

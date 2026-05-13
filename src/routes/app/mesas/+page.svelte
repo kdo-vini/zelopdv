@@ -2,10 +2,15 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { hasMesasAddon } from '$lib/guards';
+  import { hasMesasAddon, ensureActiveSubscription } from '$lib/guards';
+  import { hasPermission as hasAccessPermission } from '$lib/accessControl';
+  import { logAuditAction } from '$lib/accessControl';
   import { addToast } from '$lib/stores/ui';
 
   let userId = '';
+  let ownerUserId = '';
+  let operadorUserId = '';
+  let isSubUser = false;
   let addonActive = false;
   let ready = false;
   let mesas = [];
@@ -19,14 +24,19 @@
   let filtroStatus = 'todas';
 
   onMount(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    userId = user?.id || '';
-    if (!userId) {
-      window.location.href = '/login';
+    const authCtx = await ensureActiveSubscription({ requireProfile: true });
+    if (!authCtx?.userId) return;
+    userId = authCtx.userId;
+    ownerUserId = authCtx.ownerUserId || authCtx.userId;
+    operadorUserId = authCtx.userId;
+    isSubUser = authCtx.isSubUser;
+    if (isSubUser && !(await hasAccessPermission('mesas.acessar'))) {
+      addToast('Seu cargo não tem acesso ao módulo de mesas.', 'warning');
+      goto('/app');
       return;
     }
 
-    addonActive = await hasMesasAddon(userId);
+    addonActive = await hasMesasAddon(ownerUserId);
     ready = true;
 
     if (addonActive) {
@@ -43,8 +53,8 @@
   async function loadMesas() {
     loading = true;
     const [mesasResp, comandasResp] = await Promise.all([
-      supabase.from('mesas').select('*').eq('ativa', true).order('numero', { ascending: true }),
-      supabase.from('comandas').select('id_mesa, created_at').eq('status', 'aberta'),
+      supabase.from('mesas').select('*').eq('id_usuario', ownerUserId).eq('ativa', true).order('numero', { ascending: true }),
+      supabase.from('comandas').select('id_mesa, created_at').eq('id_usuario', ownerUserId).eq('status', 'aberta'),
     ]);
 
     if (mesasResp.error) {
@@ -68,6 +78,7 @@
     const { data: existing, error: findErr } = await supabase
       .from('comandas')
       .select('id')
+      .eq('id_usuario', ownerUserId)
       .eq('id_mesa', mesa.id)
       .eq('status', 'aberta')
       .maybeSingle();
@@ -88,7 +99,8 @@
       .from('comandas')
       .insert({
         id_mesa: mesa.id,
-        id_usuario: userId,
+        id_usuario: ownerUserId,
+        id_operador: operadorUserId,
         status: 'aberta',
         num_pessoas: 1,
       });
@@ -103,7 +115,18 @@
     await supabase
       .from('mesas')
       .update({ status: 'ocupada' })
-      .eq('id', mesa.id);
+      .eq('id', mesa.id)
+      .eq('id_usuario', ownerUserId);
+
+    if (isSubUser) {
+      logAuditAction({
+        ownerUserId,
+        action: 'mesa.aberta',
+        entityType: 'mesa',
+        entityId: String(mesa.id),
+        details: { numero: mesa.numero },
+      });
+    }
 
     goto(`/app/mesas/${mesa.id}`);
   }
@@ -174,12 +197,14 @@
           {/if}
         </div>
       </div>
-      <a href="/gestao/mesas" class="btn-secondary">
-        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path fill-rule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.251l-1.18 2.044a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.113a7.047 7.047 0 0 1 0-2.228L1.821 7.773a1 1 0 0 1-.206-1.251l1.18-2.044a1 1 0 0 1 1.187-.447l1.598.54A6.993 6.993 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd"/>
-        </svg>
-        Configurar mesas
-      </a>
+      {#if !isSubUser}
+        <a href="/gestao/mesas" class="btn-secondary">
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.251l-1.18 2.044a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.113a7.047 7.047 0 0 1 0-2.228L1.821 7.773a1 1 0 0 1-.206-1.251l1.18-2.044a1 1 0 0 1 1.187-.447l1.598.54A6.993 6.993 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd"/>
+          </svg>
+          Configurar mesas
+        </a>
+      {/if}
     </header>
 
     {#if mesas.length > 0}

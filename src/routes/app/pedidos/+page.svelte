@@ -3,9 +3,11 @@
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription, hasPedidosAddon } from '$lib/guards';
+  import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
+  import { logAuditAction } from '$lib/accessControl';
   import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
   import { money } from '$lib/finance/caixa';
   import { buildVendaPayload } from '$lib/finance/saleOps';
@@ -15,6 +17,9 @@
   let loading = true;
   let addonActive = false;
   let userId = '';
+  let ownerUserId = '';
+  let operadorUserId = '';
+  let isSubUser = false;
   let pedidos = [];
   let pedidoSelecionadoId = null;
   let produtos = [];
@@ -51,8 +56,16 @@
     if (!auth?.userId) return;
 
     userId = auth.userId;
-    pdvCache.setUserId(userId);
-    addonActive = await hasPedidosAddon(userId);
+    ownerUserId = auth.ownerUserId || auth.userId;
+    operadorUserId = auth.userId;
+    isSubUser = auth.isSubUser;
+    if (isSubUser && !(await hasAccessPermission('pedidos.acessar'))) {
+      addToast('Seu cargo não tem acesso ao módulo de pedidos.', 'warning');
+      goto('/app');
+      return;
+    }
+    pdvCache.setUserId(ownerUserId);
+    addonActive = await hasPedidosAddon(ownerUserId);
     ready = true;
 
     if (!addonActive) {
@@ -82,7 +95,7 @@
       const { data } = await supabase
         .from('empresa_perfil')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', ownerUserId || userId)
         .maybeSingle();
       dadosEmpresa = data;
     } catch {}
@@ -92,7 +105,7 @@
     const { data, error } = await supabase
       .from('caixas')
       .select('id')
-      .eq('id_usuario', userId)
+      .eq('id_usuario', ownerUserId || userId)
       .is('data_fechamento', null)
       .order('data_abertura', { ascending: false })
       .limit(1)
@@ -114,7 +127,7 @@
       const { data, error } = await supabase
         .from('pedidos')
         .select('id, numero_pedido, status, observacoes, nome_cliente, origem, criado_em, pedido_itens(id, id_produto, nome, preco_unitario, quantidade, subtotal, enviado_cozinha, status_cozinha)')
-        .eq('id_usuario', userId)
+        .eq('id_usuario', ownerUserId || userId)
         .eq('origem', 'balcao')
         .in('status', ['aberto', 'pronto'])
         .order('criado_em', { ascending: true });
@@ -157,7 +170,7 @@
       .from('pedidos')
       .delete()
       .eq('id', pedido.id)
-      .eq('id_usuario', userId)
+      .eq('id_usuario', ownerUserId || userId)
       .in('status', ['aberto', 'pronto'])
       .select('id');
 
@@ -168,6 +181,18 @@
     if (!data || data.length === 0) {
       addToast('Pedido já foi fechado em outro dispositivo.', 'warning');
     } else {
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'pedido.cancelado',
+          entityType: 'pedido',
+          entityId: String(pedido.id),
+          details: {
+            numero_pedido: pedido.numero_pedido,
+            origem: pedido.origem
+          }
+        });
+      }
       addToast(`${titulo} cancelado.`, 'success');
     }
     if (pedidoSelecionadoId === pedido.id) pedidoSelecionadoId = null;
@@ -207,10 +232,11 @@
         .update({
           status: 'fechado',
           id_venda: venda.id,
-          fechado_em: new Date().toISOString()
+          fechado_em: new Date().toISOString(),
+          id_operador: operadorUserId
         })
         .eq('id', alvo.id)
-        .eq('id_usuario', userId)
+        .eq('id_usuario', ownerUserId || userId)
         .in('status', ['aberto', 'pronto'])
         .select('id');
 
@@ -223,6 +249,18 @@
         addToast('Pedido já havia sido fechado em outro dispositivo. Reverta a venda manualmente se duplicada.', 'warning');
       }
 
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'pedido.fechado',
+          entityType: 'pedido',
+          entityId: String(alvo.id),
+          details: {
+            numero_pedido: alvo.numero_pedido,
+            venda_id: venda.id
+          }
+        });
+      }
       addToast(`Pedido #${alvo.numero_pedido} fechado com sucesso.`, 'success');
       modalPagamentoAberto = false;
       modalPagamentoRef?.resetState?.();
@@ -270,7 +308,8 @@
       idCaixa: idCaixaAberto,
       idCliente: pagamento.idCliente || null,
       itens,
-      taxasPlataforma: Array.isArray(pagamento.taxasPlataforma) ? pagamento.taxasPlataforma : []
+      taxasPlataforma: Array.isArray(pagamento.taxasPlataforma) ? pagamento.taxasPlataforma : [],
+      operadorId: operadorUserId
     });
 
     const { data, error: rpcError } = await supabase.rpc('criar_venda_completa', {

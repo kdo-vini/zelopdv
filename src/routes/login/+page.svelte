@@ -14,6 +14,21 @@
   let loading = false;
   let showPassword = false;
 
+  async function logSubUserLogin(session, source = 'login') {
+    try {
+      const token = session?.access_token;
+      if (!token) return;
+      await fetch('/api/access/audit-login', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ source, provider: 'password' }),
+      });
+    } catch {}
+  }
+
   // Se já houver sessão ativa, redireciona para o PDV (/app)
   onMount(async () => {
     if (!supabase) return; // evita erro quando env não está configurado
@@ -37,6 +52,7 @@
         throw error;
       }
       if (data?.session) {
+        await logSubUserLogin(data.session, 'login-password');
         addToast('Login realizado com sucesso!', 'success');
         const waitStableSession = async (tries = 15) => {
           for (let i = 0; i < tries; i++) {

@@ -1,12 +1,15 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-  import { waitAuthReady } from '$lib/authStore';
+  import { ensureActiveSubscription } from '$lib/guards';
+  import { logAuditAction } from '$lib/accessControl';
   import { pdvCache } from '$lib/stores/pdvCache';
 
   let loading = true;
   let erro = '';
   let userId = null;
+  let ownerUserId = null;
+  let isSubUser = false;
   let produtos = [];
   let linhasEstoque = [];
   let busca = '';
@@ -18,11 +21,23 @@
   let idCategoria = null;
   let idSubcategoria = null;
 
+  async function ensureAuthContext() {
+    if (ownerUserId && userId) return true;
+    const authCtx = await ensureActiveSubscription({ requireProfile: true });
+    if (!authCtx?.userId) return false;
+    userId = authCtx.userId;
+    ownerUserId = authCtx.ownerUserId;
+    isSubUser = authCtx.isSubUser;
+    return true;
+  }
+
   async function carregarCategorias() {
     try {
+      if (!(await ensureAuthContext())) return;
       const { data, error } = await supabase
         .from('categorias')
         .select('id, nome, ordem, controlar_estoque_compartilhado, estoque_compartilhado_atual')
+        .eq('id_usuario', ownerUserId)
         .order('ordem', { ascending: true });
       if (error) throw error;
       categorias = data || [];
@@ -33,10 +48,12 @@
 
   async function carregarSubcategorias() {
     try {
+      if (!(await ensureAuthContext())) return;
       if (!idCategoria) { subcategorias = []; return; }
       const { data, error } = await supabase
         .from('subcategorias')
         .select('id, id_categoria, nome, ordem')
+        .eq('id_usuario', ownerUserId)
         .eq('id_categoria', idCategoria)
         .order('ordem', { ascending: true });
       if (error) throw error;
@@ -50,15 +67,12 @@
     erro = '';
     loading = true;
     try {
-      await waitAuthReady();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { window.location.href = '/login'; return; }
-      userId = session.user.id;
+      if (!(await ensureAuthContext())) return;
 
       let q = supabase
         .from('produtos')
         .select('id, nome, estoque_atual, controlar_estoque, id_categoria, id_subcategoria, categorias(id, nome, controlar_estoque_compartilhado, estoque_compartilhado_atual)')
-        .eq('id_usuario', userId);
+        .eq('id_usuario', ownerUserId);
 
       const cat = idCategoria ? Number(idCategoria) : null;
       const sub = idSubcategoria ? Number(idSubcategoria) : null;
@@ -76,7 +90,7 @@
   }
 
   onMount(async () => {
-    await waitAuthReady();
+    if (!(await ensureAuthContext())) return;
     await carregarCategorias();
     await carregarSubcategorias();
     await carregar();
@@ -133,6 +147,7 @@
     linha._saving = true; linha._msg = ''; linhasEstoque = [...linhasEstoque];
     try {
       const table = linha.tipo === 'categoria' ? 'categorias' : 'produtos';
+      const anterior = Number(linha.estoque_atual || 0);
       const payload = linha.tipo === 'categoria'
         ? { estoque_compartilhado_atual: novo }
         : { estoque_atual: novo };
@@ -140,7 +155,7 @@
         .from(table)
         .update(payload)
         .eq('id', linha.id)
-        .eq('id_usuario', userId);
+        .eq('id_usuario', ownerUserId || userId);
       if (error) throw error;
       linha.estoque_atual = novo;
       if (linha.tipo === 'categoria') {
@@ -151,6 +166,20 @@
         produtos = produtos.map((produto) => produto.id === linha.id ? { ...produto, estoque_atual: novo } : produto);
       }
       linha._msg = 'Salvo';
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'estoque.ajustado',
+          entityType: linha.tipo,
+          entityId: String(linha.id),
+          details: {
+            nome: linha.nome,
+            de: anterior,
+            para: novo,
+            modo: linha.tipo === 'categoria' ? 'compartilhado' : 'individual'
+          }
+        });
+      }
       toast = 'Estoque salvo com sucesso';
       pdvCache.invalidateProdutos();
       pdvCache.invalidateCategorias();

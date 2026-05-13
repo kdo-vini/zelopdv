@@ -3,13 +3,18 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { hasMesasAddon, hasPedidosAddon } from '$lib/guards';
+  import { ensureActiveSubscription, hasMesasAddon, hasPedidosAddon } from '$lib/guards';
+  import { hasPermission as hasAccessPermission } from '$lib/accessControl';
+  import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { printVenda } from '$lib/printService';
   import { estoqueDisponivel, produtoControlaEstoque, produtoSemEstoque as semEstoque } from '$lib/stock';
 
   let userId = '';
+  let ownerUserId = '';
+  let operadorUserId = '';
+  let isSubUser = false;
   let addonActive = false;
   let pedidosAddonActive = false;
   let ready = false;
@@ -115,22 +120,32 @@
     return true;
   });
 
+  async function auditMesa(action, entityType, entityId, details = {}) {
+    if (!isSubUser) return;
+    await logAuditAction({ ownerUserId, action, entityType, entityId, details });
+  }
+
   onMount(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    userId = user?.id || '';
-    if (!userId) {
-      window.location.href = '/login';
+    const authCtx = await ensureActiveSubscription({ requireProfile: true });
+    if (!authCtx?.userId) return;
+    userId = authCtx.userId;
+    ownerUserId = authCtx.ownerUserId || authCtx.userId;
+    operadorUserId = authCtx.userId;
+    isSubUser = authCtx.isSubUser;
+    if (isSubUser && !(await hasAccessPermission('mesas.acessar'))) {
+      addToast('Seu cargo não tem acesso às comandas de mesa.', 'warning');
+      goto('/app');
       return;
     }
 
-    addonActive = await hasMesasAddon(userId);
+    addonActive = await hasMesasAddon(ownerUserId);
     if (!addonActive) {
       ready = true;
       return;
     }
 
-    pedidosAddonActive = await hasPedidosAddon(userId);
-    pdvCache.setUserId(userId);
+    pedidosAddonActive = await hasPedidosAddon(ownerUserId);
+    pdvCache.setUserId(ownerUserId);
     ready = true;
 
     await Promise.all([
@@ -148,6 +163,7 @@
     const { data, error } = await supabase
       .from('comanda_pagamentos')
       .select('*')
+      .eq('id_usuario', ownerUserId)
       .eq('id_comanda', comanda.id)
       .order('created_at', { ascending: true });
     if (error) {
@@ -162,7 +178,7 @@
     const { data: caixas } = await supabase
       .from('caixas')
       .select('id')
-      .eq('id_usuario', userId)
+      .eq('id_usuario', ownerUserId)
       .is('data_fechamento', null)
       .order('data_abertura', { ascending: false })
       .limit(1);
@@ -172,12 +188,12 @@
     const { data: perfil } = await supabase
       .from('empresa_perfil')
       .select('nome_exibicao, documento, contato, endereco, largura_bobina, rodape_recibo, logo_url')
-      .eq('user_id', userId)
+      .eq('user_id', ownerUserId)
       .maybeSingle();
     nomeEmpresa = perfil?.nome_exibicao || '';
     if (perfil) {
       const pUrl = !perfil.logo_url
-        ? supabase.storage.from('logos').getPublicUrl(`${userId}.png`)?.data?.publicUrl
+        ? supabase.storage.from('logos').getPublicUrl(`${ownerUserId}.png`)?.data?.publicUrl
         : null;
       perfilImpressao = { ...perfil, logoUrl: perfil.logo_url || pUrl || null };
     }
@@ -188,6 +204,7 @@
     const { data } = await supabase
       .from('pessoas')
       .select('id, nome, saldo_fiado')
+      .eq('id_usuario', ownerUserId)
       .order('nome', { ascending: true });
     pessoas = data || [];
   }
@@ -199,6 +216,7 @@
       .from('mesas')
       .select('*')
       .eq('id', mesaId)
+      .eq('id_usuario', ownerUserId)
       .maybeSingle();
 
     if (mErr || !m) {
@@ -212,6 +230,7 @@
     let { data: c } = await supabase
       .from('comandas')
       .select('*')
+      .eq('id_usuario', ownerUserId)
       .eq('id_mesa', mesaId)
       .eq('status', 'aberta')
       .maybeSingle();
@@ -221,7 +240,8 @@
         .from('comandas')
         .insert({
           id_mesa: mesaId,
-          id_usuario: userId,
+          id_usuario: ownerUserId,
+          id_operador: operadorUserId,
           status: 'aberta',
           num_pessoas: 1,
         })
@@ -233,8 +253,9 @@
       }
       c = created;
       // Mesa para 'ocupada'
-      await supabase.from('mesas').update({ status: 'ocupada' }).eq('id', mesaId);
+      await supabase.from('mesas').update({ status: 'ocupada' }).eq('id', mesaId).eq('id_usuario', ownerUserId);
       mesa.status = 'ocupada';
+      auditMesa('mesa.aberta', 'mesa', mesaId, { numero: m.numero });
     }
     comanda = c;
 
@@ -284,6 +305,7 @@
     const { data, error } = await supabase
       .from('pedidos')
       .select('id, pedido_itens(id, id_produto, nome, enviado_cozinha)')
+      .eq('id_usuario', ownerUserId)
       .eq('id_comanda', comanda.id)
       .eq('origem', 'comanda')
       .in('status', ['aberto', 'pronto']);
@@ -311,6 +333,7 @@
     const { data, error } = await supabase
       .from('pedidos')
       .select('id, pedido_itens(id_produto, nome, enviado_cozinha)')
+      .eq('id_usuario', ownerUserId)
       .eq('id_comanda', comanda.id)
       .eq('origem', 'comanda')
       .in('status', ['aberto', 'pronto']);
@@ -325,7 +348,7 @@
   }
 
   async function proximoNumeroPedido() {
-    const { data, error } = await supabase.rpc('proximo_numero_pedido', { p_id_usuario: userId });
+    const { data, error } = await supabase.rpc('proximo_numero_pedido', { p_id_usuario: ownerUserId });
     if (error) throw error;
     return Number(data || 1);
   }
@@ -370,7 +393,8 @@
       const subtotalItem = Math.round(quantidade * preco * 100) / 100;
 
       const pedido = await inserirPedidoComRetry({
-        id_usuario: userId,
+        id_usuario: ownerUserId,
+        id_operador: operadorUserId,
         status: 'aberto',
         origem: 'comanda',
         id_comanda: comanda.id,
@@ -391,11 +415,18 @@
         });
 
       if (itemErr) {
-        await supabase.from('pedidos').delete().eq('id', pedido.id);
+        await supabase.from('pedidos').delete().eq('id', pedido.id).eq('id_usuario', ownerUserId);
         throw itemErr;
       }
 
       itensEnviadosCozinha = new Set(itensEnviadosCozinha).add(cozinhaKeyFromItem(item));
+      await auditMesa('mesa.item_enviado_cozinha', 'comanda', comanda.id, {
+        mesa_id: mesaId,
+        pedido_id: pedido.id,
+        produto_id: item.id_produto,
+        nome: item.nome_produto,
+        quantidade,
+      });
       addToast('Item enviado para a cozinha.', 'success');
     } catch (error) {
       addToast('Erro ao enviar para a cozinha: ' + (error?.message || error), 'error');
@@ -486,13 +517,15 @@
   async function atualizarComanda(campo, valor) {
     const { error } = await supabase
       .from('comandas')
-      .update({ [campo]: valor })
-      .eq('id', comanda.id);
+      .update({ [campo]: valor, id_operador: operadorUserId })
+      .eq('id', comanda.id)
+      .eq('id_usuario', ownerUserId);
     if (error) {
       addToast('Erro ao salvar: ' + error.message, 'error');
       return;
     }
     comanda = { ...comanda, [campo]: valor };
+    await auditMesa('comanda.atualizada', 'comanda', comanda.id, { campo, valor });
   }
 
   async function cancelarComanda() {
@@ -503,11 +536,20 @@
     if (!ok) return;
 
     try {
+      await supabase
+        .from('comandas')
+        .update({ id_operador: operadorUserId })
+        .eq('id', comanda.id)
+        .eq('id_usuario', ownerUserId);
       const { error } = await supabase.rpc('comanda_cancelar_com_estoque', {
         p_id_comanda: comanda.id,
       });
       if (error) throw error;
 
+      await auditMesa('comanda.cancelada', 'comanda', comanda.id, {
+        mesa_id: mesaId,
+        itens: itens.length,
+      });
       addToast('Comanda cancelada.', 'info');
       goto('/app/mesas');
     } catch (error) {
@@ -543,7 +585,7 @@
     }
     // Update mesa status para 'fechando' (cosmético)
     if (mesa.status !== 'fechando') {
-      await supabase.from('mesas').update({ status: 'fechando' }).eq('id', mesaId);
+      await supabase.from('mesas').update({ status: 'fechando' }).eq('id', mesaId).eq('id_usuario', ownerUserId);
       mesa = { ...mesa, status: 'fechando' };
     }
     if (formaPagamento === 'fiado') loadPessoasFiado();
@@ -688,7 +730,8 @@
         forma_pagamento: insertForma,
         valor_recebido: insertValorRecebido,
         valor_troco: insertValorTroco,
-        id_usuario: userId,
+        id_usuario: ownerUserId,
+        id_operador: operadorUserId,
         id_caixa: idCaixaAberto,
         id_cliente: insertIdCliente,
         valor_desconto: Math.round(desconto * 100) / 100 || 0,
@@ -706,7 +749,7 @@
 
       // 2. Insert vendas_itens (mapping comanda_itens, snapshot, qty rounded to int)
       const itensPayload = itens.map(i => ({
-        id_usuario: userId,
+        id_usuario: ownerUserId,
         id_venda: vendaId,
         id_produto: i.id_produto ?? null,
         quantidade: Math.max(1, Math.round(Number(i.quantidade))),
@@ -737,7 +780,7 @@
           }
           return {
             id_venda: vendaId,
-            id_usuario: userId,
+            id_usuario: ownerUserId,
             forma_pagamento: l.forma,
             valor: Math.round(valorFinal * 100) / 100,
           };
@@ -771,20 +814,29 @@
           fechada_em: new Date().toISOString(),
           id_venda: vendaId,
           total_calculado: valorTotal,
+          id_operador: operadorUserId,
         })
-        .eq('id', comanda.id);
+        .eq('id', comanda.id)
+        .eq('id_usuario', ownerUserId);
 
       // 5b. Limpa pagamentos parciais (já viraram vendas_pagamentos)
       if (temParciais) {
         const { error: cleanErr } = await supabase
           .from('comanda_pagamentos')
           .delete()
+          .eq('id_usuario', ownerUserId)
           .eq('id_comanda', comanda.id);
         if (cleanErr) console.warn('[Mesa.fechar] cleanup parciais falhou:', cleanErr.message);
       }
 
       // 6. Mesa → livre
-      await supabase.from('mesas').update({ status: 'livre' }).eq('id', mesaId);
+      await supabase.from('mesas').update({ status: 'livre' }).eq('id', mesaId).eq('id_usuario', ownerUserId);
+      await auditMesa('mesa.fechada', 'comanda', comanda.id, {
+        mesa_id: mesaId,
+        venda_id: vendaId,
+        total: valorTotal,
+        forma_pagamento: insertForma,
+      });
 
       // 7. Build receipt and show
       const reciboPagamentos = linhasNovas.length > 0
@@ -1040,7 +1092,7 @@
       const valorRound = Math.round(valor * 100) / 100;
       const payload = {
         id_comanda: comanda.id,
-        id_usuario: userId,
+        id_usuario: ownerUserId,
         forma_pagamento: parcialForma,
         valor: valorRound,
         id_pessoa: parcialForma === 'fiado' ? parcialPessoaId : null,
@@ -1054,6 +1106,16 @@
       if (error) throw new Error(error.message);
 
       pagamentosParciais = [...pagamentosParciais, data];
+      await supabase
+        .from('comandas')
+        .update({ id_operador: operadorUserId })
+        .eq('id', comanda.id)
+        .eq('id_usuario', ownerUserId);
+      await auditMesa('comanda.pagamento_parcial_registrado', 'comanda_pagamento', data.id, {
+        comanda_id: comanda.id,
+        forma_pagamento: parcialForma,
+        valor: valorRound,
+      });
       addToast(`Pagamento parcial de R$ ${valorRound.toFixed(2)} (${nomeForma(parcialForma)}) registrado.`, 'success');
 
       // Reset form para o saldo restante
@@ -1081,12 +1143,23 @@
     const { error } = await supabase
       .from('comanda_pagamentos')
       .delete()
-      .eq('id', p.id);
+      .eq('id', p.id)
+      .eq('id_usuario', ownerUserId);
     if (error) {
       addToast('Erro ao remover: ' + error.message, 'error');
       return;
     }
     pagamentosParciais = pagamentosParciais.filter(x => x.id !== p.id);
+    await supabase
+      .from('comandas')
+      .update({ id_operador: operadorUserId })
+      .eq('id', comanda.id)
+      .eq('id_usuario', ownerUserId);
+    await auditMesa('comanda.pagamento_parcial_removido', 'comanda_pagamento', p.id, {
+      comanda_id: comanda.id,
+      forma_pagamento: p.forma_pagamento,
+      valor: Number(p.valor),
+    });
     addToast('Pagamento parcial removido.', 'info');
   }
 
@@ -1096,7 +1169,7 @@
     const { data, error } = await supabase
       .from('mesas')
       .select('id, numero, capacidade, status, ativa')
-      .eq('id_usuario', userId)
+      .eq('id_usuario', ownerUserId)
       .eq('ativa', true)
       .eq('status', 'livre')
       .order('numero', { ascending: true });
@@ -1131,6 +1204,7 @@
         .from('mesas')
         .select('id, status, ativa, numero')
         .eq('id', mesaDestinoId)
+        .eq('id_usuario', ownerUserId)
         .maybeSingle();
 
       if (destErr || !dest) {
@@ -1153,24 +1227,32 @@
       // 1. Comanda → nova mesa (carrega num_pessoas, itens, ajustes naturalmente via FK)
       const { error: comErr } = await supabase
         .from('comandas')
-        .update({ id_mesa: mesaDestinoId })
-        .eq('id', comanda.id);
+        .update({ id_mesa: mesaDestinoId, id_operador: operadorUserId })
+        .eq('id', comanda.id)
+        .eq('id_usuario', ownerUserId);
       if (comErr) throw new Error(comErr.message);
 
       // 2. Mesa destino → ocupada
       const { error: destUpdErr } = await supabase
         .from('mesas')
         .update({ status: 'ocupada' })
-        .eq('id', mesaDestinoId);
+        .eq('id', mesaDestinoId)
+        .eq('id_usuario', ownerUserId);
       if (destUpdErr) console.warn('[Mesa.transferir] update destino falhou:', destUpdErr.message);
 
       // 3. Mesa origem → livre
       const { error: orgUpdErr } = await supabase
         .from('mesas')
         .update({ status: 'livre' })
-        .eq('id', mesaId);
+        .eq('id', mesaId)
+        .eq('id_usuario', ownerUserId);
       if (orgUpdErr) console.warn('[Mesa.transferir] update origem falhou:', orgUpdErr.message);
 
+      await auditMesa('mesa.transferida', 'comanda', comanda.id, {
+        origem_mesa_id: mesaId,
+        destino_mesa_id: mesaDestinoId,
+        destino_mesa_numero: dest.numero,
+      });
       addToast(`Mesa ${mesa.numero} → Mesa ${dest.numero}: comanda, ${itens.length} ${itens.length === 1 ? 'item' : 'itens'} e ${comanda.num_pessoas || 1} ${(comanda.num_pessoas || 1) === 1 ? 'pessoa' : 'pessoas'} transferidos.`, 'success');
       transferModalOpen = false;
       goto(`/app/mesas/${mesaDestinoId}`);

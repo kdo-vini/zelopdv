@@ -13,8 +13,8 @@ test.use({ storageState: { cookies: [], origins: [] } });
 test.describe('Página de Login', () => {
   test('exibe campos de email e senha e botão Entrar', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByLabel(/e-?mail/i)).toBeVisible();
-    await expect(page.getByRole('textbox', { name: /senha/i })).toBeVisible();
+    await expect(page.locator('#login-email')).toBeVisible();
+    await expect(page.locator('#login-password')).toBeVisible();
     await expect(page.getByRole('button', { name: /entrar/i })).toBeVisible();
   });
 
@@ -32,8 +32,8 @@ test.describe('Página de Login', () => {
 
   test('exibe erro com credenciais inválidas', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel(/e-?mail/i).fill('invalido@exemplo.com.br');
-    await page.getByRole('textbox', { name: /senha/i }).fill('senha-errada-123');
+    await page.locator('#login-email').fill('invalido@exemplo.com.br');
+    await page.locator('#login-password').fill('senha-errada-123');
     await page.getByRole('button', { name: /entrar/i }).click();
 
     // Wait for error message to appear (toast or inline)
@@ -58,14 +58,14 @@ test.describe('Página de Login', () => {
 test.describe('Página de Cadastro', () => {
   test('exibe formulário de criação de conta', async ({ page }) => {
     await page.goto('/cadastro');
-    await expect(page.getByLabel(/e-?mail/i)).toBeVisible();
-    await expect(page.getByLabel(/senha/i).first()).toBeVisible();
+    await expect(page.locator('#cad-email')).toBeVisible();
+    await expect(page.locator('#cad-password')).toBeVisible();
     await expect(page.getByRole('button', { name: /criar|cadastrar|registrar/i })).toBeVisible();
   });
 
   test('exibe erro com email inválido', async ({ page }) => {
     await page.goto('/cadastro');
-    await page.getByLabel(/e-?mail/i).fill('nao-é-um-email');
+    await page.locator('#cad-email').fill('nao-é-um-email');
     await page.getByRole('button', { name: /criar|cadastrar|registrar/i }).click();
 
     const hasNativeError = await page.evaluate(() => {

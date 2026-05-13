@@ -35,7 +35,8 @@ export function isSubscriptionActiveStrict(subscription) {
 /**
  * Ensure user is logged in and has an active subscription; otherwise redirect.
  * Also optionally checks profile completeness.
- * Returns an object with { userId, email } when allowed, or null after redirect.
+ * Returns an object with { userId, email, ownerUserId, isSubUser, roleId } when allowed, or null after redirect.
+ * Sub-users are detected before the profile check and short-circuit to the owner's subscription validation.
  */
 export async function ensureActiveSubscription({ requireProfile = false, redirectOnFail = true } = {}) {
   // Helper: wrap promise with timeout
@@ -63,7 +64,46 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     return null;
   }
 
-  // 2) Optional: profile completeness
+  // 2) Sub-user check — before profile check, so sub-users skip the profile requirement
+  try {
+    const { data: accessUser } = await supabase
+      .from('access_users')
+      .select('owner_user_id, role_id')
+      .eq('auth_user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (accessUser) {
+      // This user is a sub-user — verify the owner's subscription and add-on
+      const ownerUserId = accessUser.owner_user_id;
+
+      let { data: ownerSub, error: ownerSubError } = await supabase
+        .from('subscriptions')
+        .select('status, current_period_end, manually_extended_until, has_acessos_addon')
+        .eq('user_id', ownerUserId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (ownerSubError || !ownerSub || !isSubscriptionActiveStrict(ownerSub) || !ownerSub.has_acessos_addon) {
+        if (redirectOnFail) window.location.href = '/assinatura?msg=addon_required';
+        return null;
+      }
+
+      return {
+        userId,
+        email,
+        ownerUserId,
+        isSubUser: true,
+        roleId: accessUser.role_id,
+      };
+    }
+  } catch (err) {
+    console.warn('[Guards] sub-user check error:', err?.message);
+    // Fall through to owner flow on unexpected error
+  }
+
+  // 3) Optional: profile completeness (owners only)
   if (requireProfile) {
     try {
       const { data: perfil } = await supabase
@@ -81,7 +121,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     }
   }
 
-  // 3) Subscription (redirect only if status !== 'active'/'trialing' OR expired)
+  // 4) Subscription (redirect only if status !== 'active'/'trialing' OR expired)
   try {
     let { data: sub, error } = await supabase
       .from('subscriptions')
@@ -109,7 +149,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     return null;
   }
 
-  return { userId, email };
+  return { userId, email, ownerUserId: userId, isSubUser: false, roleId: null };
 }
 
 /**
@@ -160,6 +200,32 @@ export async function hasPedidosAddon(userId) {
     return planAllowsPedidos && !!data.has_pedidos_addon;
   } catch (err) {
     console.warn('[Guards] hasPedidosAddon error:', err?.message);
+    return false;
+  }
+}
+
+/**
+ * Returns whether the given user has the Acessos (Access Control) add-on active on their subscription.
+ * Read-only — does not redirect. Call AFTER ensureActiveSubscription so an active sub is guaranteed.
+ * Only pdv or bundle plans can use this add-on.
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function hasAcessosAddon(userId) {
+  if (!userId) return false;
+  try {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('has_acessos_addon, plan_tier')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return false;
+    const planAllowsAcessos = data.plan_tier === 'pdv' || data.plan_tier === 'bundle';
+    return planAllowsAcessos && !!data.has_acessos_addon;
+  } catch (err) {
+    console.warn('[Guards] hasAcessosAddon error:', err?.message);
     return false;
   }
 }

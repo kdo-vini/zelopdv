@@ -1,13 +1,14 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-  import { hasMesasAddon, hasPedidosAddon, hasZeloChatAccess } from '$lib/guards';
+  import { hasMesasAddon, hasPedidosAddon, hasZeloChatAccess, hasAcessosAddon } from '$lib/guards';
   import { PLANS, ADDONS } from '$lib/pricing';
 
   let userId = '';
   let ready = false;
   let mesasActive = false;
   let pedidosActive = false;
+  let acessosActive = false;
   let chatActive = false;
   let planTier = null;
 
@@ -16,6 +17,18 @@
     userId = user?.id || '';
     if (!userId) {
       window.location.href = '/login';
+      return;
+    }
+
+    // Block sub-users from accessing extensions management
+    const { data: subUserRow } = await supabase
+      .from('access_users')
+      .select('id')
+      .eq('auth_user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (subUserRow) {
+      window.location.href = '/gestao';
       return;
     }
 
@@ -28,9 +41,10 @@
       .maybeSingle();
     planTier = data?.plan_tier || 'pdv';
 
-    [mesasActive, pedidosActive, chatActive] = await Promise.all([
+    [mesasActive, pedidosActive, acessosActive, chatActive] = await Promise.all([
       hasMesasAddon(userId),
       hasPedidosAddon(userId),
+      hasAcessosAddon(userId),
       hasZeloChatAccess(userId),
     ]);
     ready = true;
@@ -63,6 +77,19 @@
       compatible: planTier === 'pdv' || planTier === 'bundle',
       cta: '/assinatura?addon=pedidos',
       manage: '/app/pedidos',
+      incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Pacote Gestão + Atendimento).',
+    },
+    {
+      id: 'acessos',
+      kind: 'addon',
+      name: 'Controle de Acessos',
+      tagline: 'Equipe com cargos e permissões',
+      description: 'Crie até 5 subusuários para sua equipe, defina cargos como Caixa, Atendente e Gerente, e controle quem pode fazer o quê no sistema.',
+      price: ADDONS.acessos.price,
+      active: acessosActive,
+      compatible: planTier === 'pdv' || planTier === 'bundle',
+      cta: '/assinatura?addon=acessos',
+      manage: '/gestao/acessos',
       incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Pacote Gestão + Atendimento).',
     },
     {
@@ -112,6 +139,10 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 3.75h9l1.5 3h-12l1.5-3Z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 6.75h13.5v11.5a2 2 0 0 1-2 2H7.25a2 2 0 0 1-2-2V6.75Z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 11h7.5M8.25 14h5.25M16 18.25h.01"/>
+              </svg>
+            {:else if ext.id === 'acessos'}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
               </svg>
             {:else if ext.id === 'chat'}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">

@@ -14,6 +14,7 @@ export const PLANS = {
     includesChat: false,
     allowsMesas: true,
     allowsPedidos: true,
+    allowsAcessos: true,
     stripePriceId: 'price_1SO4yvLUJWyE4PkYwoYAYc6h',
     stripeLookupKey: 'zelo_pdv_monthly_v1',
   },
@@ -38,6 +39,7 @@ export const PLANS = {
     includesChat: true,
     allowsMesas: true,
     allowsPedidos: true,
+    allowsAcessos: true,
     bundleSavings: 9.00,
     stripePriceId: 'price_1TR0xGLUJWyE4PkYY0DMOWLI',
     stripeLookupKey: 'zelo_bundle_monthly_v1',
@@ -62,6 +64,15 @@ export const ADDONS = {
     requiresFlag: 'allowsPedidos',
     stripePriceId: 'price_1TTjDcLUJWyE4PkYbHDHq9gw',
     stripeLookupKey: 'zelo_addon_pedidos_monthly_v1',
+  },
+  acessos: {
+    id: 'acessos',
+    name: 'Controle de Acessos',
+    tagline: 'Subusuários com cargos e permissões',
+    price: 30.00,
+    requiresFlag: 'allowsAcessos',
+    stripePriceId: 'price_1TWMi0LUJWyE4PkYQl4rBlQs',
+    stripeLookupKey: 'zelo_addon_acessos_monthly_v1',
   },
 };
 

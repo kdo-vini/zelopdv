@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
+  import { ensureActiveSubscription } from '$lib/guards';
+  import { logAuditAction } from '$lib/accessControl';
   import { addToast } from '$lib/stores/ui';
   import { printPagamentoFiado } from '$lib/printService';
   export let params;
@@ -14,12 +16,16 @@
   let loading = true;
   let salvando = false;
   let errorMsg = '';
+  let ownerUserId = '';
+  let operadorUserId = '';
+  let isSubUser = false;
   
   let history = [];
   let loadingHistory = false;
 
   async function loadPessoas(){
-    const { data, error } = await supabase.from('pessoas').select('id,nome,tipo,saldo_fiado,contato').order('nome');
+    if (!ownerUserId) return;
+    const { data, error } = await supabase.from('pessoas').select('id,nome,tipo,saldo_fiado,contato').eq('id_usuario', ownerUserId).order('nome');
     if(error){ errorMsg = error.message; return; }
     pessoas = data || [];
   }
@@ -38,6 +44,7 @@
     const { data, error } = await supabase
       .from('vendas')
       .select('id, created_at, valor_total, vendas_itens(nome_produto_na_venda)')
+      .eq('id_usuario', ownerUserId)
       .eq('id_cliente', pessoaId)
       .eq('forma_pagamento', 'fiado')
       .order('created_at', { ascending: false })
@@ -64,10 +71,31 @@
       if(errPay){ addToast(errPay.message, 'error'); return; }
 
     if(addAoCaixa){
-      const { data: cx } = await supabase.from('caixas').select('id').is('data_fechamento', null).order('data_abertura', { ascending:false }).limit(1).maybeSingle();
+      const { data: cx } = await supabase.from('caixas').select('id').eq('id_usuario', ownerUserId).is('data_fechamento', null).order('data_abertura', { ascending:false }).limit(1).maybeSingle();
       if(cx?.id){
-        await supabase.from('caixa_movimentacoes').insert({ id_caixa: cx.id, tipo: 'suprimento', valor, motivo: `Pagamento fiado de ${pessoaSelecionada.nome}` });
+        await supabase.from('caixa_movimentacoes').insert({
+          id_caixa: cx.id,
+          id_usuario: ownerUserId,
+          id_operador: operadorUserId,
+          tipo: 'suprimento',
+          valor,
+          motivo: `Pagamento fiado de ${pessoaSelecionada.nome}`
+        });
       }
+    }
+
+    if (isSubUser) {
+      logAuditAction({
+        ownerUserId,
+        action: 'fiado.pagamento_registrado',
+        entityType: 'pessoa',
+        entityId: pessoaSelecionada.id,
+        details: {
+          nome: pessoaSelecionada.nome,
+          valor,
+          addAoCaixa
+        }
+      });
     }
 
     addToast('Pagamento registrado com sucesso!', 'success');
@@ -77,6 +105,7 @@
         const { data: perfilData } = await supabase
           .from('empresa_perfil')
           .select('nome_exibicao, documento, contato, endereco, largura_bobina, rodape_recibo')
+          .eq('user_id', ownerUserId)
           .limit(1)
           .maybeSingle();
         const saldoAtual = Number((pessoaSelecionada?.saldo_fiado || 0)) - valor;
@@ -146,7 +175,19 @@
     window.open(url, '_blank');
   }
 
-  onMount(async () => { loading = true; await loadPessoas(); loading = false; });
+  onMount(async () => {
+    loading = true;
+    const authCtx = await ensureActiveSubscription({ requireProfile: true });
+    if (!authCtx) {
+      loading = false;
+      return;
+    }
+    ownerUserId = authCtx.ownerUserId;
+    operadorUserId = authCtx.userId;
+    isSubUser = authCtx.isSubUser;
+    await loadPessoas();
+    loading = false;
+  });
 </script>
 
 <section class="wrap">
