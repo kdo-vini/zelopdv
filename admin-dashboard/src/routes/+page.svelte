@@ -6,6 +6,7 @@
   import { getEffectiveExpiry, isSubscriptionExpired } from '$lib/subscriptionHelpers'
   import { INTERNAL_ACCOUNT_LABELS, filterExternalAccounts, isInternalAccount } from '$lib/internalAccounts'
   import { logAdminAction } from '$lib/logger'
+  import { generatePdfReport, formatBRL, formatNumber } from '$lib/pdfReport'
   
   let stats = {
     activeSubscriptions: 0,
@@ -237,6 +238,121 @@
     const activeAtStart = stats.activeSubscriptions + canceledCount
     stats.churnPct = activeAtStart > 0 ? Math.round((canceledCount / activeAtStart) * 100) : 0
   }
+
+  function exportDashboardPdf() {
+    const arpu = stats.paidSubscriptions ? stats.realMrr / stats.paidSubscriptions : 0
+    const margin = stats.realMrr > 0 ? Math.round(monthlyProfit / stats.realMrr * 100) : 0
+
+    generatePdfReport({
+      title: 'Painel Financeiro Executivo',
+      subtitle: 'Visão consolidada de receita, custos, lucro e saúde da plataforma',
+      generatedBy: adminInfo?.email,
+      kpis: [
+        { label: 'MRR Real',          value: formatBRL(stats.realMrr),           hint: 'Apenas pagantes ativos' },
+        { label: 'ARR',               value: formatBRL(arr),                     hint: 'MRR × 12' },
+        { label: 'ARPU',              value: formatBRL(arpu),                    hint: 'Receita média por cliente' },
+        { label: 'Lucro do Mês',      value: formatBRL(monthlyProfit),           hint: `Margem ${margin}%` },
+        { label: 'Custos Fixos',      value: formatBRL(fixedMonthlyCosts),       hint: `${fixedExpenses.length} ${fixedExpenses.length === 1 ? 'item' : 'itens'}` },
+        { label: 'Valor em Trial',    value: formatBRL(stats.trialPipelineValue), hint: 'Pipeline de conversão' },
+        { label: 'Contas Pagantes',   value: formatNumber(stats.paidSubscriptions) },
+        { label: 'Em Trial',          value: formatNumber(stats.trialSubscriptions) },
+        { label: 'Inativas',          value: formatNumber(stats.inactiveSubscriptions) },
+        { label: 'Novos no Mês',      value: formatNumber(stats.newThisMonth) },
+        { label: 'Expirando (7d)',    value: formatNumber(stats.expiringSoon),   hint: 'Atenção: retenção' },
+        { label: 'Churn (mês)',       value: `${stats.churnPct}%` },
+        { label: 'DAU',               value: formatNumber(stats.dau),            hint: 'Ativos hoje' },
+        { label: 'WAU',               value: formatNumber(stats.wau),            hint: 'Ativos em 7 dias' },
+        { label: 'Custo IA (mês)',    value: formatBRL(stats.aiCostBrl),         hint: 'Estimado USD × 5,0' },
+        { label: 'Contas Internas',   value: formatNumber(stats.internalAccountsExcluded), hint: 'Excluídas do cálculo' },
+      ],
+      sections: [
+        {
+          type: 'table',
+          title: 'Resumo Financeiro',
+          description: 'Indicadores-chave de receita e rentabilidade',
+          columns: [
+            { key: 'metrica', label: 'Métrica' },
+            { key: 'valor',   label: 'Valor', align: 'right' },
+            { key: 'nota',    label: 'Observação' },
+          ],
+          rows: [
+            { metrica: 'MRR (Receita Mensal Recorrente)', valor: formatBRL(stats.realMrr),           nota: 'Pagantes ativos, sem trials nem contas internas' },
+            { metrica: 'ARR (Anual Run Rate)',            valor: formatBRL(arr),                     nota: 'Projeção anual da base atual' },
+            { metrica: 'ARPU',                            valor: formatBRL(arpu),                    nota: 'Ticket médio por cliente pagante' },
+            { metrica: 'Custos Fixos Mensais',            valor: formatBRL(fixedMonthlyCosts),       nota: `${fixedExpenses.length} ${fixedExpenses.length === 1 ? 'despesa cadastrada' : 'despesas cadastradas'}` },
+            { metrica: 'Lucro Mensal',                    valor: formatBRL(monthlyProfit),           nota: `Margem operacional ${margin}%` },
+            { metrica: 'Custo de IA (mês corrente)',      valor: formatBRL(stats.aiCostBrl),         nota: 'USD convertido a R$ 5,00' },
+            { metrica: 'Pipeline em Trial',               valor: formatBRL(stats.trialPipelineValue), nota: 'Potencial de receita se converter' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Despesas Fixas',
+          description: 'Custos recorrentes considerados no cálculo de lucro',
+          columns: [
+            { key: 'label',  label: 'Despesa' },
+            { key: 'amount', label: 'Valor mensal', align: 'right', format: v => formatBRL(v) },
+          ],
+          rows: fixedExpenses.length
+            ? fixedExpenses.map(e => ({ label: e.label, amount: e.amount }))
+            : [{ label: '— Nenhuma despesa cadastrada —', amount: 0 }],
+          footer: [
+            { label: 'Total de custos fixos mensais', value: formatBRL(fixedMonthlyCosts) },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Projeções de Caixa',
+          description: 'Receita, custos e lucro projetados mantendo a base atual',
+          columns: [
+            { key: 'periodo', label: 'Período' },
+            { key: 'receita', label: 'Receita',  align: 'right', format: v => formatBRL(v) },
+            { key: 'custos',  label: 'Custos',   align: 'right', format: v => formatBRL(v) },
+            { key: 'lucro',   label: 'Lucro',    align: 'right', format: v => formatBRL(v) },
+          ],
+          rows: projections.map(p => ({
+            periodo: `${p.months} ${p.months === 1 ? 'mês' : 'meses'}`,
+            receita: p.revenue,
+            custos: p.expenses,
+            lucro: p.profit,
+          })),
+        },
+        {
+          type: 'table',
+          title: 'Base de Clientes',
+          description: 'Composição da carteira por status',
+          columns: [
+            { key: 'segmento', label: 'Segmento' },
+            { key: 'count',    label: 'Contas', align: 'right', format: v => formatNumber(v) },
+            { key: 'nota',     label: 'Observação' },
+          ],
+          rows: [
+            { segmento: 'Pagantes Ativas',  count: stats.paidSubscriptions,         nota: 'Geram MRR' },
+            { segmento: 'Em Trial',         count: stats.trialSubscriptions,        nota: 'Pipeline de conversão' },
+            { segmento: 'Inativas',         count: stats.inactiveSubscriptions,     nota: 'Sem impacto no MRR' },
+            { segmento: 'Novas no Mês',     count: stats.newThisMonth,              nota: 'Crescimento bruto' },
+            { segmento: 'Expirando em 7d',  count: stats.expiringSoon,              nota: 'Risco de churn' },
+            { segmento: 'Contas Internas',  count: stats.internalAccountsExcluded,  nota: `Excluídas: ${internalAccountsLabel}` },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Engajamento da Plataforma',
+          description: 'Indicadores de uso do produto no período',
+          columns: [
+            { key: 'metrica', label: 'Métrica' },
+            { key: 'valor',   label: 'Valor', align: 'right' },
+            { key: 'nota',    label: 'Observação' },
+          ],
+          rows: [
+            { metrica: 'DAU (Daily Active Users)',  valor: formatNumber(stats.dau),    nota: 'Usuários ativos hoje' },
+            { metrica: 'WAU (Weekly Active Users)', valor: formatNumber(stats.wau),    nota: 'Ativos nos últimos 7 dias' },
+            { metrica: 'Churn Mensal',              valor: `${stats.churnPct}%`,       nota: 'Cancelamentos no mês corrente' },
+          ],
+        },
+      ],
+    })
+  }
 </script>
 
 <svelte:head>
@@ -252,6 +368,18 @@
       <p class="text-slate-400 text-sm font-medium">Métricas de crescimento e saúde da plataforma</p>
       <div class="absolute -bottom-6 left-0 w-16 h-[2px] bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
     </div>
+
+    <button
+      on:click={exportDashboardPdf}
+      disabled={loading}
+      class="flex items-center gap-2 shrink-0 px-4 h-11 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-xl text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+      title="Exportar painel financeiro em PDF"
+    >
+      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      Exportar PDF
+    </button>
   </div>
   
   {#if loading}
