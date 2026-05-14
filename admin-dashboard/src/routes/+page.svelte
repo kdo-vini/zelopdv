@@ -3,11 +3,18 @@
   import { supabase } from '$lib/supabaseAdmin'
   import { fade } from 'svelte/transition'
   import { subscriptionValue } from '$lib/pricing'
-  import { getEffectiveExpiry } from '$lib/subscriptionHelpers'
+  import { getEffectiveExpiry, isSubscriptionExpired } from '$lib/subscriptionHelpers'
+  import { INTERNAL_ACCOUNT_LABELS, filterExternalAccounts, isInternalAccount } from '$lib/internalAccounts'
+  import { logAdminAction } from '$lib/logger'
   
   let stats = {
     activeSubscriptions: 0,
-    mrr: 0,
+    realMrr: 0,
+    trialPipelineValue: 0,
+    paidSubscriptions: 0,
+    trialSubscriptions: 0,
+    inactiveSubscriptions: 0,
+    internalAccountsExcluded: 0,
     expiringSoon: 0,
     newThisMonth: 0,
     dau: 0,
@@ -17,11 +24,151 @@
   }
 
   let loading = true
+  let savingFinanceExpense = false
+  let adminInfo = null
+  const internalAccountsLabel = INTERNAL_ACCOUNT_LABELS.join(', ')
+  let fixedExpenses = []
+  let expenseDraft = { label: '', amount: '' }
+
+  $: fixedMonthlyCosts = fixedExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+  $: arr = stats.realMrr * 12
+  $: monthlyProfit = stats.realMrr - fixedMonthlyCosts
+  $: projections = [3, 6, 12].map((months) => ({
+    months,
+    revenue: stats.realMrr * months,
+    expenses: fixedMonthlyCosts * months,
+    profit: monthlyProfit * months,
+  }))
+  $: canAddExpense = expenseDraft.label.trim().length > 0 && Number(expenseDraft.amount) >= 0
 
   onMount(async () => {
-    await loadStats()
+    await loadAdminInfo()
+    await Promise.all([loadStats(), loadFixedExpenses()])
     loading = false
   })
+
+  function formatCurrency(value) {
+    return value.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  }
+
+  async function loadAdminInfo() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user?.id) return
+
+    const { data } = await supabase
+      .from('super_admins')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    adminInfo = data || null
+  }
+
+  async function loadFixedExpenses() {
+    const { data, error } = await supabase
+      .from('admin_finance_fixed_expenses')
+      .select('id, label, amount, created_at')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('[Dashboard] Failed to load fixed expenses:', error)
+      fixedExpenses = []
+      return
+    }
+
+    fixedExpenses = (data || []).map((item) => ({
+      ...item,
+      amount: Number(item.amount) || 0,
+    }))
+  }
+
+  async function addFixedExpense() {
+    if (!canAddExpense || savingFinanceExpense) return
+
+    try {
+      savingFinanceExpense = true
+
+      const payload = {
+        label: expenseDraft.label.trim(),
+        amount: Math.round((Number(expenseDraft.amount) || 0) * 100) / 100,
+        created_by: adminInfo?.id || null,
+        updated_by: adminInfo?.id || null,
+      }
+
+      const { data, error } = await supabase
+        .from('admin_finance_fixed_expenses')
+        .insert(payload)
+        .select('id, label, amount, created_at')
+        .single()
+
+      if (error) throw error
+
+      fixedExpenses = [{ ...data, amount: Number(data?.amount) || 0 }, ...fixedExpenses]
+      expenseDraft = { label: '', amount: '' }
+
+      if (adminInfo?.id) {
+        await logAdminAction({
+          adminId: adminInfo.id,
+          action: 'create_admin_finance_fixed_expense',
+          details: {
+            label: payload.label,
+            amount: payload.amount,
+          },
+        })
+      }
+    } catch (err) {
+      console.error('[Dashboard] Failed to add fixed expense:', err)
+      alert('Erro ao adicionar despesa fixa.')
+    } finally {
+      savingFinanceExpense = false
+    }
+  }
+
+  async function removeFixedExpense(expense) {
+    if (!expense?.id) return
+
+    try {
+      const { error } = await supabase
+        .from('admin_finance_fixed_expenses')
+        .delete()
+        .eq('id', expense.id)
+
+      if (error) throw error
+
+      fixedExpenses = fixedExpenses.filter((item) => item.id !== expense.id)
+
+      if (adminInfo?.id) {
+        await logAdminAction({
+          adminId: adminInfo.id,
+          action: 'delete_admin_finance_fixed_expense',
+          details: {
+            expense_id: expense.id,
+            label: expense.label,
+            amount: expense.amount,
+          },
+        })
+      }
+    } catch (err) {
+      console.error('[Dashboard] Failed to remove fixed expense:', err)
+      alert('Erro ao remover despesa fixa.')
+    }
+  }
+
+  function isCurrentlyPaid(sub) {
+    return sub?.status === 'active' && !isSubscriptionExpired(sub)
+  }
+
+  function isCurrentlyTrialing(sub) {
+    return sub?.status === 'trialing' && !isSubscriptionExpired(sub)
+  }
+
+  function sumSubscriptionValues(subscriptions = []) {
+    return subscriptions.reduce((sum, sub) => sum + subscriptionValue(sub), 0)
+  }
 
   async function loadStats() {
     const now = new Date()
@@ -29,36 +176,46 @@
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000)
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
-    // Active subscriptions
     const { data: subs } = await supabase
       .from('subscriptions')
-      .select('id, status, current_period_end, manually_extended_until, created_at, plan_tier, has_mesas_addon, has_pedidos_addon')
-      .in('status', ['active', 'trialing'])
+      .select('id, user_id, status, current_period_end, manually_extended_until, created_at, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon')
 
-    stats.activeSubscriptions = subs?.length || 0
-    const activeSubs = subs?.filter(s => s.status === 'active') || []
-    // MRR = soma do valor real de cada subscription ativa (plan_tier + addons)
-    stats.mrr = activeSubs.reduce((sum, s) => sum + subscriptionValue(s), 0)
+    const allSubs = subs || []
+    const externalSubs = filterExternalAccounts(allSubs)
+    const paidSubs = externalSubs.filter(isCurrentlyPaid)
+    const trialSubs = externalSubs.filter(isCurrentlyTrialing)
+    const accessibleSubs = [...paidSubs, ...trialSubs]
+    const inactiveSubs = externalSubs.filter((sub) => !isCurrentlyPaid(sub) && !isCurrentlyTrialing(sub))
+    const internalSubs = allSubs.filter((sub) => isInternalAccount(sub))
 
-    stats.newThisMonth = subs?.filter(s =>
+    stats.activeSubscriptions = accessibleSubs.length
+    stats.paidSubscriptions = paidSubs.length
+    stats.trialSubscriptions = trialSubs.length
+    stats.inactiveSubscriptions = inactiveSubs.length
+    stats.internalAccountsExcluded = internalSubs.length
+    stats.realMrr = sumSubscriptionValues(paidSubs)
+    stats.trialPipelineValue = sumSubscriptionValues(trialSubs)
+
+    stats.newThisMonth = accessibleSubs.filter(s =>
       new Date(s.created_at) >= startOfMonth
-    ).length || 0
+    ).length
 
     // "Expiring soon" must respect manually_extended_until — otherwise a
     // sub with current_period_end in the next 7 days but a manual extension
     // beyond that window incorrectly inflates this metric and triggers
     // unnecessary admin attention.
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 86400000)
-    stats.expiringSoon = subs?.filter(s => {
+    stats.expiringSoon = accessibleSubs.filter(s => {
       const expiry = getEffectiveExpiry(s)
       return expiry && expiry <= sevenDaysFromNow && expiry > now
-    }).length || 0
+    }).length
 
     // DAU / WAU — uses GREATEST(last_seen_at, auth.last_sign_in_at) via security definer fn
     const { data: lastSeenData } = await supabase.rpc('admin_get_users_last_seen')
+    const externalLastSeen = filterExternalAccounts(lastSeenData || [])
 
-    stats.dau = lastSeenData?.filter(p => p.effective_last_seen && new Date(p.effective_last_seen) >= today).length || 0
-    stats.wau = lastSeenData?.filter(p => p.effective_last_seen && new Date(p.effective_last_seen) >= sevenDaysAgo).length || 0
+    stats.dau = externalLastSeen.filter(p => p.effective_last_seen && new Date(p.effective_last_seen) >= today).length
+    stats.wau = externalLastSeen.filter(p => p.effective_last_seen && new Date(p.effective_last_seen) >= sevenDaysAgo).length
 
     // AI cost this month (USD → BRL at 5.0)
     const { data: aiLogs } = await supabase
@@ -72,11 +229,11 @@
     // Churn this month: canceled this month / (active at start of month)
     const { data: canceledThisMonth } = await supabase
       .from('subscriptions')
-      .select('id')
+      .select('id, user_id')
       .eq('status', 'canceled')
       .gte('updated_at', startOfMonth.toISOString())
 
-    const canceledCount = canceledThisMonth?.length || 0
+    const canceledCount = filterExternalAccounts(canceledThisMonth || []).length
     const activeAtStart = stats.activeSubscriptions + canceledCount
     stats.churnPct = activeAtStart > 0 ? Math.round((canceledCount / activeAtStart) * 100) : 0
   }
@@ -110,28 +267,28 @@
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
         <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400/0 via-emerald-500 to-emerald-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-4">
-          <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">MRR</div>
+          <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">MRR Real</div>
           <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
         </div>
         <div class="text-3xl font-extrabold text-white tracking-tight">
-          R$ {stats.mrr.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
+          R$ {stats.realMrr.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
         </div>
-        <div class="mt-2 text-xs font-medium text-emerald-400/60">+ Base estimada sólida</div>
+        <div class="mt-2 text-xs font-medium text-emerald-400/60">Sem trials e sem contas internas</div>
       </div>
       
       <!-- Active Subs Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-sky-500/30 transition-colors">
         <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-400/0 via-sky-500 to-sky-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-4">
-          <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">Assinaturas Ativas</div>
+          <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">Contas com Acesso</div>
           <div class="p-2 bg-sky-500/10 text-sky-400 rounded-lg">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
           </div>
         </div>
         <div class="text-3xl font-extrabold text-white tracking-tight">{stats.activeSubscriptions}</div>
-        <div class="mt-2 text-xs font-medium text-sky-400/60">Contas pagantes ou trial</div>
+        <div class="mt-2 text-xs font-medium text-sky-400/60">Pagas + trial, sem contas internas</div>
       </div>
       
       <!-- New This Month Card -->
@@ -162,6 +319,199 @@
 
     </div>
 
+    <section class="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 backdrop-blur-sm overflow-hidden relative" in:fade={{delay: 125}}>
+      <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/50 to-transparent"></div>
+
+      <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between mb-6">
+        <div class="max-w-2xl">
+          <h3 class="text-xl font-bold text-white tracking-wide">Painel Financeiro</h3>
+          <p class="text-sm text-slate-400 mt-1">Receita real, base pagante, custos fixos e projeções de caixa em um só lugar, sem misturar trial com MRR.</p>
+        </div>
+        <div class="inline-flex items-center gap-2 self-start rounded-full border border-slate-700 bg-slate-950/70 px-3 py-1.5 text-xs font-medium text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+          {stats.internalAccountsExcluded} conta(s) interna(s) fora do calculo: {internalAccountsLabel}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)] gap-6">
+        <div class="space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-4">
+            <div class="bg-slate-950/80 border border-emerald-500/15 rounded-2xl p-5">
+              <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.22em]">MRR</div>
+              <div class="mt-3 text-3xl font-extrabold text-white">R$ {formatCurrency(stats.realMrr)}</div>
+              <div class="mt-2 text-xs text-emerald-400/70">Receita mensal recorrente real</div>
+            </div>
+
+            <div class="bg-slate-950/80 border border-sky-500/15 rounded-2xl p-5">
+              <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.22em]">ARR</div>
+              <div class="mt-3 text-3xl font-extrabold text-white">R$ {formatCurrency(arr)}</div>
+              <div class="mt-2 text-xs text-sky-400/70">Run rate anual da base atual</div>
+            </div>
+
+            <div class="bg-slate-950/80 border border-violet-500/15 rounded-2xl p-5">
+              <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.22em]">Valor em Trial</div>
+              <div class="mt-3 text-3xl font-extrabold text-white">R$ {formatCurrency(stats.trialPipelineValue)}</div>
+              <div class="mt-2 text-xs text-violet-400/70">Potencial de conversao, ainda nao entra em MRR</div>
+            </div>
+
+            <div class={`bg-slate-950/80 border rounded-2xl p-5 ${monthlyProfit >= 0 ? 'border-emerald-500/15' : 'border-rose-500/15'}`}>
+              <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.22em]">Lucro do Mes</div>
+              <div class="mt-3 text-3xl font-extrabold text-white">R$ {formatCurrency(monthlyProfit)}</div>
+              <div class={`mt-2 text-xs ${monthlyProfit >= 0 ? 'text-emerald-400/70' : 'text-rose-400/70'}`}>
+                MRR menos custos fixos cadastrados
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-4">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500 font-semibold">Pagas</div>
+              <div class="mt-2 text-2xl font-bold text-white">{stats.paidSubscriptions}</div>
+              <div class="text-xs text-slate-400 mt-1">Contas pagantes ativas</div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-4">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500 font-semibold">Trial</div>
+              <div class="mt-2 text-2xl font-bold text-white">{stats.trialSubscriptions}</div>
+              <div class="text-xs text-slate-400 mt-1">Ainda em avaliacao</div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-4">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500 font-semibold">Inativas</div>
+              <div class="mt-2 text-2xl font-bold text-white">{stats.inactiveSubscriptions}</div>
+              <div class="text-xs text-slate-400 mt-1">Sem impacto no MRR atual</div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-4">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500 font-semibold">Custos Fixos</div>
+              <div class="mt-2 text-2xl font-bold text-white">R$ {formatCurrency(fixedMonthlyCosts)}</div>
+              <div class="text-xs text-slate-400 mt-1">Soma da lista salva no banco</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {#each projections as projection}
+              <div class="rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
+                <div class="flex items-center justify-between">
+                  <div class="text-sm font-semibold text-white">{projection.months} meses</div>
+                  <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500">Projecao</div>
+                </div>
+                <div class="mt-4 space-y-3">
+                  <div>
+                    <div class="text-xs text-slate-500">Receita</div>
+                    <div class="text-lg font-bold text-white">R$ {formatCurrency(projection.revenue)}</div>
+                  </div>
+                  <div>
+                    <div class="text-xs text-slate-500">Custos fixos</div>
+                    <div class="text-lg font-bold text-slate-200">R$ {formatCurrency(projection.expenses)}</div>
+                  </div>
+                  <div>
+                    <div class="text-xs text-slate-500">Lucro projetado</div>
+                    <div class={`text-xl font-extrabold ${projection.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      R$ {formatCurrency(projection.profit)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <aside class="rounded-3xl border border-slate-800 bg-slate-950/85 p-5 lg:p-6">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h4 class="text-base font-bold text-white">Despesas Fixas</h4>
+              <p class="text-sm text-slate-400 mt-1">Uma lista global de custos fixos, salva no banco e compartilhada entre navegadores, sem separar por mês.</p>
+            </div>
+            <div class="rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              DB
+            </div>
+          </div>
+
+          <div class="mt-5 grid grid-cols-1 gap-3">
+            <input
+              bind:value={expenseDraft.label}
+              type="text"
+              placeholder="Ex.: aluguel, folha, contador"
+              class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-sky-500/60"
+            />
+            <div class="flex gap-3">
+              <input
+                bind:value={expenseDraft.amount}
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-sky-500/60"
+              />
+              <button
+                type="button"
+                on:click={addFixedExpense}
+                disabled={!canAddExpense || savingFinanceExpense}
+                class={`rounded-2xl px-4 py-3 text-sm font-semibold transition min-w-[120px] ${canAddExpense && !savingFinanceExpense ? 'bg-sky-500 text-slate-950 hover:bg-sky-400' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+              >
+                {savingFinanceExpense ? 'Salvando...' : 'Adicionar'}
+              </button>
+            </div>
+            <div class="text-xs text-slate-500">Adicione quantos itens quiser: aluguel, folha, internet, contador, sistema e outros custos fixos recorrentes.</div>
+          </div>
+
+          <div class="mt-5 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs uppercase tracking-[0.18em] text-slate-500 font-semibold">Total fixo mensal</div>
+                <div class="mt-2 text-2xl font-extrabold text-white">R$ {formatCurrency(fixedMonthlyCosts)}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs uppercase tracking-[0.18em] text-slate-500 font-semibold">Resultado</div>
+                <div class={`mt-2 text-lg font-bold ${monthlyProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  R$ {formatCurrency(monthlyProfit)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 space-y-3 max-h-[320px] overflow-auto pr-1">
+            {#if fixedExpenses.length === 0}
+              <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 px-4 py-8 text-center">
+                <div class="text-sm font-medium text-slate-300">Nenhuma despesa fixa cadastrada</div>
+                <div class="text-xs text-slate-500 mt-2">Adicione itens para o lucro e as projeções refletirem seus custos fixos reais.</div>
+              </div>
+            {:else}
+              {#each fixedExpenses as expense}
+                <div class="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold text-white truncate">{expense.label}</div>
+                    <div class="text-xs text-slate-500 mt-1">Despesa fixa global</div>
+                  </div>
+                  <div class="flex items-center gap-3 shrink-0">
+                    <div class="text-sm font-bold text-slate-200">R$ {formatCurrency(expense.amount)}</div>
+                    <button
+                      type="button"
+                      on:click={() => removeFixedExpense(expense)}
+                      class="rounded-xl border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-400 transition hover:border-rose-500/40 hover:text-rose-300"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              {/each}
+            {/if}
+          </div>
+
+          <div class="mt-5 rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 px-4 py-5">
+            <div class="text-sm font-medium text-slate-200">Como isso entra no painel</div>
+            <div class="mt-3 space-y-2 text-xs text-slate-400">
+              <div>MRR: considera apenas contas pagas ativas, sem trials e sem contas internas.</div>
+              <div>ARR: `MRR x 12` com a base atual.</div>
+              <div>Lucro do mês: `MRR - soma das despesas fixas`.</div>
+              <div>Projeções 3/6/12 meses: repetem a mesma base de receita e a mesma lista fixa atual.</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+    
     <!-- Engagement & Cost Row -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" in:fade={{delay: 150}}>
 
