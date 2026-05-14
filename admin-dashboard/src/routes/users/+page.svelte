@@ -5,6 +5,7 @@
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
   import { getEffectiveExpiry, hasActiveManualExtension } from '$lib/subscriptionHelpers'
+  import { generatePdfReport, formatNumber } from '$lib/pdfReport'
 
   let users = []
   let loading = true
@@ -409,6 +410,128 @@
     return name.substring(0, 2).toUpperCase()
   }
   
+  function exportUsersPdf() {
+    const list = filteredUsers
+    const now = Date.now()
+    const dayMs = 86400000
+
+    // Engagement buckets baseado em effective_last_seen
+    const activeToday   = list.filter(u => u.effective_last_seen && (now - new Date(u.effective_last_seen)) < dayMs).length
+    const active7d      = list.filter(u => u.effective_last_seen && (now - new Date(u.effective_last_seen)) < 7 * dayMs).length
+    const active30d     = list.filter(u => u.effective_last_seen && (now - new Date(u.effective_last_seen)) < 30 * dayMs).length
+    const dormant30plus = list.filter(u => !u.effective_last_seen || (now - new Date(u.effective_last_seen)) >= 30 * dayMs).length
+
+    // Distribuição por status de assinatura
+    const statusBuckets = { active: 0, trialing: 0, canceled: 0, past_due: 0, no_sub: 0 }
+    for (const u of list) {
+      const s = u.subscriptions?.[0]?.status
+      if (!s) statusBuckets.no_sub++
+      else if (statusBuckets[s] !== undefined) statusBuckets[s]++
+      else statusBuckets[s] = (statusBuckets[s] || 0) + 1
+    }
+
+    const totalAi    = list.reduce((s, u) => s + (u.ai_interactions || 0), 0)
+    const totalSales = list.reduce((s, u) => s + (u.sales_last_30d || 0), 0)
+    const withProfile = list.filter(u => u.has_profile).length
+
+    const filterDesc = [
+      statusFilter !== 'all' ? `status=${statusFilter}` : null,
+      searchTerm.trim()      ? `busca="${searchTerm}"`   : null,
+    ].filter(Boolean).join(' · ') || 'sem filtros'
+
+    generatePdfReport({
+      title: 'Relatório de Usuários',
+      subtitle: `Base de clientes, engajamento e adoção do produto · Filtros: ${filterDesc}`,
+      generatedBy: adminInfo?.email,
+      kpis: [
+        { label: 'Total de Usuários', value: formatNumber(list.length), hint: `${withProfile} com perfil completo` },
+        { label: 'Ativos Hoje (DAU)', value: formatNumber(activeToday) },
+        { label: 'Ativos 7 dias (WAU)', value: formatNumber(active7d) },
+        { label: 'Ativos 30 dias (MAU)', value: formatNumber(active30d) },
+        { label: 'Inativos (30+ dias)', value: formatNumber(dormant30plus), hint: 'Sem acesso recente' },
+        { label: 'Assinantes Ativos', value: formatNumber(statusBuckets.active) },
+        { label: 'Em Trial', value: formatNumber(statusBuckets.trialing) },
+        { label: 'Vendas Totais (30d)', value: formatNumber(totalSales), hint: `${formatNumber(totalAi)} interações IA` },
+      ],
+      sections: [
+        {
+          type: 'table',
+          title: 'Distribuição por Status',
+          description: 'Composição da base por status de assinatura',
+          columns: [
+            { key: 'status', label: 'Status' },
+            { key: 'count',  label: 'Usuários', align: 'right', format: v => formatNumber(v) },
+            { key: 'share',  label: 'Share',    align: 'right', format: v => `${v}%` },
+          ],
+          rows: [
+            { status: 'Ativo',     count: statusBuckets.active,    share: list.length ? Math.round(statusBuckets.active / list.length * 100) : 0 },
+            { status: 'Trial',     count: statusBuckets.trialing,  share: list.length ? Math.round(statusBuckets.trialing / list.length * 100) : 0 },
+            { status: 'Cancelado', count: statusBuckets.canceled,  share: list.length ? Math.round(statusBuckets.canceled / list.length * 100) : 0 },
+            { status: 'Past Due',  count: statusBuckets.past_due,  share: list.length ? Math.round(statusBuckets.past_due / list.length * 100) : 0 },
+            { status: 'Sem assinatura', count: statusBuckets.no_sub, share: list.length ? Math.round(statusBuckets.no_sub / list.length * 100) : 0 },
+          ],
+          footer: [
+            { label: 'Total', value: formatNumber(list.length) },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Top 20 Usuários por Vendas (30 dias)',
+          description: 'Clientes mais ativos no PDV — indicadores de adoção e fit do produto',
+          columns: [
+            { key: 'cliente', label: 'Cliente' },
+            { key: 'email',   label: 'Email' },
+            { key: 'plano',   label: 'Plano' },
+            { key: 'vendas',  label: 'Vendas 30d', align: 'right', format: v => formatNumber(v) },
+            { key: 'ai',      label: 'Inter. IA',  align: 'right', format: v => formatNumber(v) },
+          ],
+          rows: [...list]
+            .sort((a, b) => (b.sales_last_30d || 0) - (a.sales_last_30d || 0))
+            .slice(0, 20)
+            .map(u => ({
+              cliente: u.nome_exibicao || '—',
+              email: u.email || '—',
+              plano: u.subscriptions?.[0]?.plan_tier ? planLabel(u.subscriptions[0].plan_tier) : '—',
+              vendas: u.sales_last_30d || 0,
+              ai: u.ai_interactions || 0,
+            })),
+        },
+        {
+          type: 'table',
+          title: 'Listagem Completa de Usuários',
+          description: 'Todos os usuários conforme filtros aplicados',
+          columns: [
+            { key: 'cliente', label: 'Cliente' },
+            { key: 'email',   label: 'Email' },
+            { key: 'status',  label: 'Status' },
+            { key: 'plano',   label: 'Plano' },
+            { key: 'expira',  label: 'Expira em' },
+            { key: 'ultimo',  label: 'Último acesso' },
+            { key: 'vendas',  label: 'Vendas 30d', align: 'right', format: v => formatNumber(v) },
+          ],
+          rows: list.map(u => {
+            const sub = u.subscriptions?.[0]
+            const eff = sub ? getEffectiveExpiry(sub) : null
+            return {
+              cliente: u.nome_exibicao || 'Sem nome',
+              email: u.email || '—',
+              status: getUserStatus(u).text,
+              plano: sub?.plan_tier ? planLabel(sub.plan_tier) : '—',
+              expira: eff ? eff.toLocaleDateString('pt-BR') : '—',
+              ultimo: u.effective_last_seen
+                ? new Date(u.effective_last_seen).toLocaleDateString('pt-BR')
+                : 'Nunca',
+              vendas: u.sales_last_30d || 0,
+            }
+          }),
+          footer: [
+            { label: `Total de usuários listados`, value: formatNumber(list.length) },
+          ],
+        },
+      ],
+    })
+  }
+
   $: filteredUsers = users.filter(user => {
     // Text search
     if (searchTerm) {
@@ -479,6 +602,18 @@
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
+      </button>
+
+      <button
+        on:click={exportUsersPdf}
+        disabled={loading || filteredUsers.length === 0}
+        class="flex items-center gap-2 shrink-0 px-4 h-11 bg-sky-500/10 border border-sky-500/30 hover:bg-sky-500/20 hover:border-sky-500/50 rounded-xl text-sky-400 hover:text-sky-300 font-medium text-sm transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+        title="Exportar relatório de usuários em PDF"
+      >
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Exportar PDF
       </button>
     </div>
   </div>

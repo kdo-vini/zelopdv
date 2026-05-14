@@ -6,6 +6,7 @@
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
   import { getEffectiveExpiry, getDaysUntilEffectiveExpiry, isSubscriptionExpired, hasActiveManualExtension } from '$lib/subscriptionHelpers'
+  import { generatePdfReport, formatBRL, formatNumber } from '$lib/pdfReport'
 
   // Base do app principal (onde rodam os endpoints /api/admin/billing/*)
   const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
@@ -536,6 +537,131 @@
     return name.substring(0, 2).toUpperCase()
   }
   
+  function exportFinancialPdf() {
+    const list = filteredSubscriptions
+    const activeSubs   = list.filter(s => s.status === 'active' && !isSubscriptionExpired(s))
+    const trialSubs    = list.filter(s => s.status === 'trialing')
+    const canceledSubs = list.filter(s => s.status === 'canceled')
+    const expiredSubs  = list.filter(s => isSubscriptionExpired(s))
+
+    const mrr = activeSubs.reduce((sum, s) => sum + subscriptionValue(s), 0)
+    const arr = mrr * 12
+    const arpu = activeSubs.length ? mrr / activeSubs.length : 0
+
+    // Distribuição por plano (apenas ativas — receita real)
+    const planBuckets = {}
+    for (const s of activeSubs) {
+      const tier = s.plan_tier || 'pdv'
+      if (!planBuckets[tier]) planBuckets[tier] = { count: 0, mrr: 0 }
+      planBuckets[tier].count++
+      planBuckets[tier].mrr += subscriptionValue(s)
+    }
+    const planRows = Object.entries(planBuckets).map(([tier, b]) => ({
+      plan: planLabel(tier),
+      count: b.count,
+      mrr: b.mrr,
+      share: mrr > 0 ? Math.round(b.mrr / mrr * 100) : 0,
+    })).sort((a, b) => b.mrr - a.mrr)
+
+    // Add-ons receita
+    const addonRevenue = activeSubs.reduce((acc, s) => {
+      if (s.has_mesas_addon)   acc.mesas   += 30
+      if (s.has_pedidos_addon) acc.pedidos += 30
+      if (s.has_acessos_addon) acc.acessos += 30
+      return acc
+    }, { mesas: 0, pedidos: 0, acessos: 0 })
+
+    // Filtro aplicado
+    const filterDesc = [
+      filterStatus !== 'all' ? `status=${filterStatus}` : null,
+      filterPlan !== 'all'   ? `plano=${filterPlan}`     : null,
+      searchTerm.trim()      ? `busca="${searchTerm}"`   : null,
+    ].filter(Boolean).join(' · ') || 'sem filtros'
+
+    generatePdfReport({
+      title: 'Relatório Financeiro',
+      subtitle: `Assinaturas, receita recorrente e status de cobrança · Filtros: ${filterDesc}`,
+      generatedBy: adminInfo?.email,
+      kpis: [
+        { label: 'MRR',                value: formatBRL(mrr),  hint: 'Receita mensal recorrente' },
+        { label: 'ARR Projetada',      value: formatBRL(arr),  hint: 'MRR × 12' },
+        { label: 'ARPU',               value: formatBRL(arpu), hint: 'Receita média por cliente' },
+        { label: 'Clientes Pagantes',  value: formatNumber(activeSubs.length), hint: `${trialSubs.length} em trial` },
+        { label: 'Cancelados',         value: formatNumber(canceledSubs.length) },
+        { label: 'Expiradas',          value: formatNumber(expiredSubs.length), hint: 'Pagamento atrasado' },
+        { label: 'Receita Add-ons/mês',value: formatBRL(addonRevenue.mesas + addonRevenue.pedidos + addonRevenue.acessos) },
+        { label: 'Total Analisado',    value: formatNumber(list.length) },
+      ],
+      sections: [
+        {
+          type: 'table',
+          title: 'Receita por Plano',
+          description: 'Composição do MRR — apenas assinaturas ativas e não expiradas',
+          columns: [
+            { key: 'plan',  label: 'Plano' },
+            { key: 'count', label: 'Clientes', align: 'right', format: v => formatNumber(v) },
+            { key: 'mrr',   label: 'MRR',      align: 'right', format: v => formatBRL(v) },
+            { key: 'share', label: 'Share',    align: 'right', format: v => `${v}%` },
+          ],
+          rows: planRows,
+          footer: [
+            { label: 'Total MRR', value: formatBRL(mrr) },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Receita de Add-ons',
+          description: 'Receita mensal recorrente proveniente de módulos opcionais',
+          columns: [
+            { key: 'addon', label: 'Módulo' },
+            { key: 'count', label: 'Clientes', align: 'right', format: v => formatNumber(v) },
+            { key: 'mrr',   label: 'MRR',      align: 'right', format: v => formatBRL(v) },
+          ],
+          rows: [
+            { addon: 'Módulo Mesas',         count: activeSubs.filter(s => s.has_mesas_addon).length,   mrr: addonRevenue.mesas },
+            { addon: 'Pedidos + Cozinha',    count: activeSubs.filter(s => s.has_pedidos_addon).length, mrr: addonRevenue.pedidos },
+            { addon: 'Controle de Acessos',  count: activeSubs.filter(s => s.has_acessos_addon).length, mrr: addonRevenue.acessos },
+          ],
+          footer: [
+            { label: 'Total Add-ons', value: formatBRL(addonRevenue.mesas + addonRevenue.pedidos + addonRevenue.acessos) },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Detalhamento de Assinaturas',
+          description: 'Lista completa de todas as assinaturas conforme filtros aplicados',
+          columns: [
+            { key: 'cliente', label: 'Cliente' },
+            { key: 'plano',   label: 'Plano' },
+            { key: 'status',  label: 'Status' },
+            { key: 'valor',   label: 'Valor/mês', align: 'right', format: v => formatBRL(v) },
+            { key: 'vence',   label: 'Vence em' },
+            { key: 'criado',  label: 'Criado em' },
+          ],
+          rows: list.map(s => {
+            const eff = getEffectiveExpiry(s)
+            const addons = [
+              s.has_mesas_addon   ? 'Mesas'   : null,
+              s.has_pedidos_addon ? 'Pedidos' : null,
+              s.has_acessos_addon ? 'Acessos' : null,
+            ].filter(Boolean).join(', ')
+            return {
+              cliente: s.empresa_perfil.nome_exibicao || 'S/N',
+              plano: planLabel(s.plan_tier || 'pdv') + (addons ? ` (+${addons})` : ''),
+              status: getStatusBadge(s).text,
+              valor: subscriptionValue(s),
+              vence: eff ? eff.toLocaleDateString('pt-BR') : '—',
+              criado: new Date(s.created_at).toLocaleDateString('pt-BR'),
+            }
+          }),
+          footer: [
+            { label: `Total de assinaturas: ${list.length} · MRR ativo`, value: formatBRL(mrr) },
+          ],
+        },
+      ],
+    })
+  }
+
   $: filteredSubscriptions = subscriptions.filter(sub => {
     if (!searchTerm) return true
     const search = searchTerm.toLowerCase()
@@ -620,6 +746,18 @@
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
+      </button>
+
+      <button
+        on:click={exportFinancialPdf}
+        disabled={loading || filteredSubscriptions.length === 0}
+        class="flex items-center gap-2 shrink-0 px-4 h-11 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-xl text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+        title="Exportar relatório financeiro em PDF"
+      >
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Exportar PDF
       </button>
     </div>
   </div>

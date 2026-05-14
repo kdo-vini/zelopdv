@@ -2,6 +2,9 @@
   import { onMount, onDestroy } from 'svelte'
   import { supabase } from '$lib/supabaseAdmin'
   import { fade } from 'svelte/transition'
+  import { generatePdfReport, canvasToImage, formatBRL, formatNumber } from '$lib/pdfReport'
+
+  let adminEmail = null
 
   let loading = true
   let profiles = []
@@ -64,7 +67,134 @@
     await loadData()
     loading = false
     await renderCharts()
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        const { data } = await supabase.from('super_admins').select('email').eq('user_id', session.user.id).single()
+        adminEmail = data?.email
+      }
+    } catch (_) {}
   })
+
+  function exportAnalyticsPdf() {
+    const engagementImg = canvasToImage(engagementCanvas)
+    const revenueImg    = canvasToImage(revenueCanvas)
+
+    // KPIs derivados
+    const now = Date.now()
+    const dayMs = 86400000
+    const dau = profiles.filter(p => p.effective_last_seen && (now - new Date(p.effective_last_seen)) < dayMs).length
+    const wau = profiles.filter(p => p.effective_last_seen && (now - new Date(p.effective_last_seen)) < 7 * dayMs).length
+    const mau = profiles.filter(p => p.effective_last_seen && (now - new Date(p.effective_last_seen)) < 30 * dayMs).length
+
+    const activeSubs = subs.filter(s => s.status === 'active').length
+    const mrr = activeSubs * 59 // estimativa simples como no buildMrrSeries
+
+    const highRisk   = churnUsers.filter(u => u.score >= 50 && u.score < 100).length
+    const mediumRisk = churnUsers.filter(u => u.score >= 20 && u.score < 50).length
+    const canceled   = churnUsers.filter(u => u.score === 100).length
+
+    const convRate = funnelData.signups > 0
+      ? Math.round(funnelData.converted / funnelData.signups * 100)
+      : 0
+
+    const sections = []
+
+    if (engagementImg) {
+      sections.push({
+        type: 'chart',
+        title: 'Engajamento — DAU / WAU / MAU (últimos 90 dias)',
+        description: 'Usuários ativos diários, semanais e mensais com base no último acesso registrado',
+        image: engagementImg,
+      })
+    }
+
+    if (revenueImg) {
+      sections.push({
+        type: 'chart',
+        title: 'Receita Mensal Recorrente (MRR) — últimos 6 meses',
+        description: 'MRR estimado com base em assinaturas ativas a cada mês',
+        image: revenueImg,
+      })
+    }
+
+    sections.push({
+      type: 'funnel',
+      title: 'Funil de Conversão Trial → Pago',
+      description: 'Da captação até a conversão em cliente pagante',
+      steps: [
+        { label: 'Signups Totais',     value: funnelData.signups,   pct: 100 },
+        { label: 'Trials Ativos',      value: funnelData.trialing,  pct: funnelData.signups > 0 ? Math.round(funnelData.trialing / funnelData.signups * 100) : 0 },
+        { label: 'Convertidos (Pago)', value: funnelData.converted, pct: convRate },
+      ],
+    })
+
+    // Distribuição de risco
+    const lowRisk = churnUsers.filter(u => u.score < 20).length
+    sections.push({
+      type: 'table',
+      title: 'Distribuição de Risco de Churn',
+      description: 'Segmentação da base por probabilidade de cancelamento',
+      columns: [
+        { key: 'nivel', label: 'Nível de Risco' },
+        { key: 'count', label: 'Usuários', align: 'right', format: v => formatNumber(v) },
+        { key: 'share', label: 'Share',    align: 'right', format: v => `${v}%` },
+        { key: 'desc',  label: 'Significado' },
+      ],
+      rows: [
+        { nivel: 'Baixo (0–19)',  count: lowRisk,    share: churnUsers.length ? Math.round(lowRisk / churnUsers.length * 100) : 0,    desc: 'Engajados e em dia' },
+        { nivel: 'Médio (20–49)', count: mediumRisk, share: churnUsers.length ? Math.round(mediumRisk / churnUsers.length * 100) : 0, desc: 'Sinais de afastamento' },
+        { nivel: 'Alto (50–99)',  count: highRisk,   share: churnUsers.length ? Math.round(highRisk / churnUsers.length * 100) : 0,   desc: 'Risco crítico — agir' },
+        { nivel: 'Cancelados',    count: canceled,   share: churnUsers.length ? Math.round(canceled / churnUsers.length * 100) : 0,   desc: 'Já saíram' },
+      ],
+      footer: [
+        { label: 'Total analisado', value: formatNumber(churnUsers.length) },
+      ],
+    })
+
+    // Top 25 usuários em risco alto (acionáveis)
+    const topRisk = churnUsers.filter(u => u.score >= 20 && u.score < 100).slice(0, 25)
+    if (topRisk.length) {
+      sections.push({
+        type: 'table',
+        title: 'Top Usuários em Risco — Ação Recomendada',
+        description: 'Clientes com maior score de churn (excluindo já cancelados) — priorize contato proativo',
+        columns: [
+          { key: 'cliente', label: 'Cliente' },
+          { key: 'status',  label: 'Status' },
+          { key: 'ultimo',  label: 'Último Acesso' },
+          { key: 'vendas',  label: 'Vendas 30d', align: 'right', format: v => formatNumber(v) },
+          { key: 'score',   label: 'Score',      align: 'right' },
+        ],
+        rows: topRisk.map(u => ({
+          cliente: u.nome_exibicao || (u.user_id ? u.user_id.slice(0, 8) + '…' : '—'),
+          status: u.sub?.status || '—',
+          ultimo: u.effective_last_seen
+            ? new Date(u.effective_last_seen).toLocaleDateString('pt-BR')
+            : 'Nunca',
+          vendas: u.sales_last_30d || 0,
+          score: u.score,
+        })),
+      })
+    }
+
+    generatePdfReport({
+      title: 'Relatório de Analytics',
+      subtitle: 'Engajamento, receita, conversão e risco de churn',
+      generatedBy: adminEmail,
+      kpis: [
+        { label: 'MRR Estimado',     value: formatBRL(mrr),          hint: 'Assinaturas ativas × R$ 59' },
+        { label: 'DAU',              value: formatNumber(dau),       hint: 'Ativos nas últimas 24h' },
+        { label: 'WAU',              value: formatNumber(wau),       hint: 'Ativos nos últimos 7 dias' },
+        { label: 'MAU',              value: formatNumber(mau),       hint: 'Ativos nos últimos 30 dias' },
+        { label: 'Conversão Trial→Pago', value: `${convRate}%`,      hint: `${funnelData.converted} de ${funnelData.signups} signups` },
+        { label: 'Trials Ativos',    value: formatNumber(funnelData.trialing) },
+        { label: 'Risco Alto',       value: formatNumber(highRisk),  hint: 'Score ≥ 50' },
+        { label: 'Cancelados',       value: formatNumber(canceled) },
+      ],
+      sections,
+    })
+  }
 
   onDestroy(() => {
     engagementChart?.destroy()
@@ -304,6 +434,18 @@
       <p class="text-slate-400 text-sm font-medium">Engajamento, receita e risco de churn por usuário</p>
       <div class="absolute -bottom-6 left-0 w-16 h-[2px] bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
     </div>
+
+    <button
+      on:click={exportAnalyticsPdf}
+      disabled={loading}
+      class="flex items-center gap-2 shrink-0 px-4 h-11 bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 hover:border-indigo-500/50 rounded-xl text-indigo-300 hover:text-indigo-200 font-medium text-sm transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+      title="Exportar relatório de analytics em PDF"
+    >
+      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      Exportar PDF
+    </button>
   </div>
 
   {#if loading}
