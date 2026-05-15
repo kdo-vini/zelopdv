@@ -14,7 +14,7 @@
   let addonActive = false;
   let ready = false;
   let mesas = [];
-  let comandasAbertas = new Map(); // mesa_id → created_at
+  let comandasAbertas = new Map(); // mesa_id → aberta_em
   let loading = true;
   let opening = null;
   let now = Date.now();
@@ -54,7 +54,7 @@
     loading = true;
     const [mesasResp, comandasResp] = await Promise.all([
       supabase.from('mesas').select('*').eq('id_usuario', ownerUserId).eq('ativa', true).order('numero', { ascending: true }),
-      supabase.from('comandas').select('id_mesa, created_at').eq('id_usuario', ownerUserId).eq('status', 'aberta'),
+      supabase.from('comandas').select('id_mesa, aberta_em').eq('id_usuario', ownerUserId).eq('status', 'aberta'),
     ]);
 
     if (mesasResp.error) {
@@ -64,7 +64,7 @@
     }
 
     if (!comandasResp.error && comandasResp.data) {
-      comandasAbertas = new Map(comandasResp.data.map(c => [c.id_mesa, c.created_at]));
+      comandasAbertas = new Map(comandasResp.data.map(c => [c.id_mesa, c.aberta_em]));
     }
 
     loading = false;
