@@ -15,6 +15,9 @@
   let busca = '';
   let toast = '';
   let toastTimer = null;
+  let expandidos = new Set();
+  let salvandoProduto = {};
+  let msgProduto = {};
 
   let categorias = [];
   let subcategorias = [];
@@ -100,13 +103,14 @@
 
   function montarLinhasEstoque(lista, termo) {
     const q = (termo || '').toLowerCase().trim();
-    const grupos = new Map();
-    const linhas = [];
+    const gruposCompartilhados = new Map();
+    const gruposIndividuais = new Map();
+    const linhasSoltas = [];
 
     for (const produto of lista || []) {
       const categoria = produto.categorias;
       if (categoria?.controlar_estoque_compartilhado) {
-        const atual = grupos.get(categoria.id) || {
+        const atual = gruposCompartilhados.get(categoria.id) || {
           tipo: 'categoria',
           id: categoria.id,
           nome: categoria.nome,
@@ -117,27 +121,99 @@
           produtos: []
         };
         atual.produtos.push(produto.nome);
-        grupos.set(categoria.id, atual);
+        gruposCompartilhados.set(categoria.id, atual);
+      } else if (produto.controlar_estoque && categoria) {
+        const atual = gruposIndividuais.get(categoria.id) || {
+          tipo: 'grupo',
+          id: categoria.id,
+          nome: categoria.nome,
+          itens: []
+        };
+        atual.itens.push({
+          tipo: 'produto',
+          id: produto.id,
+          nome: produto.nome,
+          estoque_atual: Number(produto.estoque_atual || 0),
+          _tmpEstoque: Number(produto.estoque_atual || 0)
+        });
+        gruposIndividuais.set(categoria.id, atual);
       } else if (produto.controlar_estoque) {
-        linhas.push({
+        linhasSoltas.push({
           tipo: 'produto',
           id: produto.id,
           nome: produto.nome,
           estoque_atual: Number(produto.estoque_atual || 0),
           _tmpEstoque: Number(produto.estoque_atual || 0),
           _saving: false,
-          _msg: '',
-          produtos: []
+          _msg: ''
         });
       }
     }
 
-    const todas = [...grupos.values(), ...linhas].sort((a, b) => a.nome.localeCompare(b.nome));
+    const todas = [
+      ...gruposCompartilhados.values(),
+      ...gruposIndividuais.values(),
+      ...linhasSoltas
+    ].sort((a, b) => a.nome.localeCompare(b.nome));
+
     if (!q) return todas;
     return todas.filter((linha) => {
       if (String(linha.nome || '').toLowerCase().includes(q)) return true;
-      return linha.produtos.some((nome) => String(nome || '').toLowerCase().includes(q));
+      if (linha.tipo === 'grupo') {
+        return linha.itens.some((item) => String(item.nome || '').toLowerCase().includes(q));
+      }
+      if (linha.tipo === 'categoria') {
+        return linha.produtos.some((nome) => String(nome || '').toLowerCase().includes(q));
+      }
+      return false;
     });
+  }
+
+  function toggleExpandido(id) {
+    const novo = new Set(expandidos);
+    novo.has(id) ? novo.delete(id) : novo.add(id);
+    expandidos = novo;
+  }
+
+  async function salvarItem(item) {
+    if (salvandoProduto[item.id]) return;
+    const novo = Number(item._tmpEstoque);
+    if (Number.isNaN(novo) || novo < 0) {
+      msgProduto = { ...msgProduto, [item.id]: 'Valor inválido' };
+      return;
+    }
+    salvandoProduto = { ...salvandoProduto, [item.id]: true };
+    msgProduto = { ...msgProduto, [item.id]: '' };
+    try {
+      const anterior = Number(item.estoque_atual || 0);
+      const { error } = await supabase
+        .from('produtos')
+        .update({ estoque_atual: novo })
+        .eq('id', item.id)
+        .eq('id_usuario', ownerUserId || userId);
+      if (error) throw error;
+      item.estoque_atual = novo;
+      produtos = produtos.map((p) => p.id === item.id ? { ...p, estoque_atual: novo } : p);
+      msgProduto = { ...msgProduto, [item.id]: 'Salvo' };
+      if (isSubUser) {
+        logAuditAction({
+          ownerUserId,
+          action: 'estoque.ajustado',
+          entityType: 'produto',
+          entityId: String(item.id),
+          details: { nome: item.nome, de: anterior, para: novo, modo: 'individual' }
+        });
+      }
+      toast = 'Estoque salvo com sucesso';
+      pdvCache.invalidateProdutos();
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast = ''; }, 2000);
+      setTimeout(() => { msgProduto = { ...msgProduto, [item.id]: '' }; }, 1200);
+    } catch (e) {
+      msgProduto = { ...msgProduto, [item.id]: e?.message || 'Erro ao salvar' };
+    } finally {
+      salvandoProduto = { ...salvandoProduto, [item.id]: false };
+    }
   }
 
   async function salvarLinha(linha) {
@@ -197,7 +273,7 @@
 
 <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Estoque</p>
 <h1 class="text-2xl font-semibold mb-4">Estoque</h1>
-<p class="text-slate-600 dark:text-slate-300 mb-3">Edite produtos com estoque individual e categorias com estoque compartilhado.</p>
+<p class="text-slate-600 dark:text-slate-300 mb-3">Produtos com estoque individual aparecem agrupados por categoria. Clique na categoria para expandir e editar cada produto separadamente.</p>
 
 {#if toast}
   <div class="fixed top-4 right-4 bg-emerald-600 text-white px-3 py-2 rounded shadow">
@@ -261,36 +337,83 @@
         </thead>
         <tbody>
           {#each linhasEstoque as linha (`${linha.tipo}-${linha.id}`)}
-            <tr class="border-b border-slate-100 dark:border-slate-800">
-              <td class="py-2 pr-4">
-                <div class="font-medium">{linha.nome}</div>
-                {#if linha.tipo === 'categoria'}
-                  <div class="text-xs text-slate-500">
-                    Grupo compartilhado · {linha.produtos.length} produto(s): {linha.produtos.slice(0, 4).join(', ')}{linha.produtos.length > 4 ? '...' : ''}
+            {#if linha.tipo === 'grupo'}
+              <tr
+                class="border-b border-slate-200 dark:border-slate-700 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                on:click={() => toggleExpandido(linha.id)}
+              >
+                <td class="py-2 pr-4" colspan="4">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold">{linha.nome}</span>
+                    <span class="text-xs text-slate-500">
+                      · {linha.itens.reduce((s, i) => s + i.estoque_atual, 0)} un. total · {linha.itens.length} produto(s)
+                    </span>
+                    <span class="ml-auto text-slate-400 text-xs pr-2">{expandidos.has(linha.id) ? '▲' : '▼'}</span>
                   </div>
-                {:else}
-                  <div class="text-xs text-slate-500">Produto · ID: {linha.id}</div>
-                {/if}
-              </td>
-              <td class="py-2 pr-4">
-                <input type="number" min="0" step="1" class="w-28 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1"
-                  bind:value={linha._tmpEstoque}
-                  on:keydown={(e) => { if (e.key === 'Enter') salvarLinha(linha); }}
-                />
-              </td>
-              <td class="py-2 pr-4">
-                <button class="px-3 py-1.5 rounded-md bg-blue-600 text-white disabled:bg-slate-400"
-                  disabled={linha._saving}
-                  on:click={() => salvarLinha(linha)}>
-                  {linha._saving ? 'Salvando...' : 'Salvar'}
-                </button>
-              </td>
-              <td class="py-2 pr-4 text-xs">
-                {#if linha._msg}
-                  <span class="text-slate-500">{linha._msg}</span>
-                {/if}
-              </td>
-            </tr>
+                </td>
+              </tr>
+              {#if expandidos.has(linha.id)}
+                {#each linha.itens as item (`produto-${item.id}`)}
+                  <tr class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/20">
+                    <td class="py-2 pr-4 pl-8">
+                      <div class="font-medium">{item.nome}</div>
+                      <div class="text-xs text-slate-500">Estoque individual</div>
+                    </td>
+                    <td class="py-2 pr-4">
+                      <input type="number" min="0" step="1"
+                        class="w-28 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1"
+                        bind:value={item._tmpEstoque}
+                        on:keydown={(e) => { if (e.key === 'Enter') salvarItem(item); }}
+                      />
+                    </td>
+                    <td class="py-2 pr-4">
+                      <button
+                        class="px-3 py-1.5 rounded-md bg-blue-600 text-white disabled:bg-slate-400"
+                        disabled={salvandoProduto[item.id]}
+                        on:click={() => salvarItem(item)}>
+                        {salvandoProduto[item.id] ? 'Salvando...' : 'Salvar'}
+                      </button>
+                    </td>
+                    <td class="py-2 pr-4 text-xs">
+                      {#if msgProduto[item.id]}
+                        <span class="text-slate-500">{msgProduto[item.id]}</span>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              {/if}
+            {:else}
+              <tr class="border-b border-slate-100 dark:border-slate-800">
+                <td class="py-2 pr-4">
+                  <div class="font-medium">{linha.nome}</div>
+                  {#if linha.tipo === 'categoria'}
+                    <div class="text-xs text-slate-500">
+                      Pool compartilhado · {linha.produtos.length} produto(s): {linha.produtos.slice(0, 4).join(', ')}{linha.produtos.length > 4 ? '...' : ''}
+                    </div>
+                  {:else}
+                    <div class="text-xs text-slate-500">Produto individual</div>
+                  {/if}
+                </td>
+                <td class="py-2 pr-4">
+                  <input type="number" min="0" step="1" class="w-28 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1"
+                    bind:value={linha._tmpEstoque}
+                    on:keydown={(e) => { if (e.key === 'Enter') salvarLinha(linha); }}
+                  />
+                </td>
+                <td class="py-2 pr-4">
+                  <button class="px-3 py-1.5 rounded-md bg-blue-600 text-white disabled:bg-slate-400"
+                    disabled={linha._saving}
+                    on:click={() => salvarLinha(linha)}>
+                    {linha._saving ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </td>
+                <td class="py-2 pr-4 text-xs">
+                  {#if linha._msg}
+                    <span class="text-slate-500">{linha._msg}</span>
+                  {/if}
+                </td>
+              </tr>
+            {/if}
           {/each}
         </tbody>
       </table>
