@@ -1,3 +1,15 @@
+/**
+ * Retorna o preço do produto para a tabela ativa.
+ * null em preco_2/preco_3 significa "usar preço principal como fallback".
+ * @param {{ preco: number, preco_2?: number|null, preco_3?: number|null }} produto
+ * @param {1|2|3} tabela
+ */
+export function getPrecoTabela(produto, tabela) {
+  if (tabela === 2 && produto.preco_2 != null) return produto.preco_2;
+  if (tabela === 3 && produto.preco_3 != null) return produto.preco_3;
+  return produto.preco;
+}
+
 export const STANDARD_PAYMENT_FORMS = new Set([
   'dinheiro',
   'pix',

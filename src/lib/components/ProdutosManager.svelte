@@ -368,7 +368,7 @@
           <input class="input-form" bind:value={form.nome} required placeholder="Ex: Coca-Cola" />
         </div>
         <div class="lg:col-span-1">
-          <label class="label-form">Preço ({nomesTabelas[0]})</label>
+          <label class="label-form">{tabelasPrecoAtivo ? `Preço ${nomesTabelas[0]}` : 'Preço'}</label>
           <input class="input-form" type="number" step="0.01" min="0" bind:value={form.preco} required />
         </div>
         {#if tabelasPrecoAtivo}

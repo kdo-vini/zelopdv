@@ -5,14 +5,18 @@
 -->
 <script>
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
-  
+  import { getPrecoTabela } from '$lib/finance/caixa';
+
   const dispatch = createEventDispatcher();
-  
-  /** @type {Array<{id: number, nome: string, preco: number, por_unidade?: boolean, controlar_estoque?: boolean, estoque_atual?: number}>} */
+
+  /** @type {Array<{id: number, nome: string, preco: number, preco_2?: number, preco_3?: number, por_unidade?: boolean, controlar_estoque?: boolean, estoque_atual?: number}>} */
   export let produtos = [];
 
   /** @type {boolean} Differentiates first-use empty state from search/filter with no results. */
   export let hasAnyProducts = true;
+
+  /** @type {number} Tabela de preço ativa (1, 2 ou 3) */
+  export let tabelaAtiva = 1;
   
   /** @type {number} Altura de cada card em pixels */
   export let itemHeight = 128;
@@ -182,7 +186,7 @@
             <div class="flex items-baseline justify-end gap-0.5">
               <span class="text-[10px] font-bold text-sky-400">R$</span>
               <span class="text-lg font-black text-white tracking-tighter">
-                {Number(produto.preco).toFixed(2)}
+                {Number(getPrecoTabela(produto, tabelaAtiva)).toFixed(2)}
               </span>
             </div>
           </div>
