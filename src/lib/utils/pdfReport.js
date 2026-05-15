@@ -343,23 +343,36 @@ export async function generatePDFReport(dados) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.setTextColor(...COLORS.slateDark);
-        doc.text('Top Produtos', margin, y + 4);
+        const tituloFiltro = dados.produtosCategoriaFiltro ? ` — ${dados.produtosCategoriaFiltro}` : '';
+        doc.text(`Produtos Vendidos${tituloFiltro}`, margin, y + 4);
         y += 6;
+
+        // Totais (linha-resumo no final)
+        const totalQtd = prods.reduce((a, p) => a + Number(p.quantidade || 0), 0);
+        const totalReceita = prods.reduce((a, p) => a + Number(p.receita || 0), 0);
 
         let prodFinalY = y;
         autoTable(doc, {
             startY: y,
             margin: { left: margin, right: margin },
-            head: [['#', 'Produto', 'Quantidade', 'Receita']],
+            head: [['#', 'Produto', 'Categoria', 'Qtd.', 'Receita']],
             body: prods.map((p, i) => [
                 i + 1,
                 p.nome,
+                p.categoria || '—',
                 p.quantidade,
                 fmt(p.receita)
             ]),
+            foot: [['', 'Total', '', totalQtd, fmt(totalReceita)]],
             headStyles: {
                 fillColor: COLORS.primaryDark,
                 textColor: COLORS.white,
+                fontStyle: 'bold',
+                fontSize: 8,
+            },
+            footStyles: {
+                fillColor: COLORS.slateLight,
+                textColor: COLORS.black,
                 fontStyle: 'bold',
                 fontSize: 8,
             },
@@ -372,8 +385,9 @@ export async function generatePDFReport(dados) {
             },
             columnStyles: {
                 0: { cellWidth: 10, halign: 'center' },
-                2: { halign: 'center' },
-                3: { halign: 'right' },
+                2: { cellWidth: 36 },
+                3: { halign: 'center', cellWidth: 14 },
+                4: { halign: 'right', cellWidth: 26 },
             },
             theme: 'grid',
             styles: {

@@ -87,37 +87,43 @@ export async function generateExcelReport(dados) {
         XLSX.utils.book_append_sheet(wb, wsSerie, 'Série Diária');
     }
 
-    // ==================== ABA: TOP PRODUTOS ====================
+    // ==================== ABA: PRODUTOS VENDIDOS ====================
     const prods = dados.topProdutos || [];
     if (prods.length > 0) {
-        const prodHeader = ['#', 'Produto', 'Quantidade', 'Receita (R$)'];
+        const filtroLabel = dados.produtosCategoriaFiltro
+            ? `Categoria: ${dados.produtosCategoriaFiltro}`
+            : 'Categoria: Todas';
+        const prodHeader = ['#', 'Produto', 'Categoria', 'Quantidade', 'Receita (R$)'];
         const prodRows = prods.map((p, i) => [
             i + 1,
             p.nome,
+            p.categoria || '—',
             p.quantidade,
             `R$ ${fmt(p.receita)}`
         ]);
 
         const prodFull = [
-            ['TOP PRODUTOS'],
+            ['PRODUTOS VENDIDOS'],
             [`Período: ${dados.periodo}`],
+            [filtroLabel],
             [],
             prodHeader,
             ...prodRows,
             [],
-            ['', 'TOTAL',
+            ['', 'TOTAL', '',
                 prods.reduce((a, p) => a + p.quantidade, 0),
                 `R$ ${fmt(prods.reduce((a, p) => a + p.receita, 0))}`
             ],
         ];
 
         const wsProds = XLSX.utils.aoa_to_sheet(prodFull);
-        wsProds['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 14 }, { wch: 18 }];
+        wsProds['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 22 }, { wch: 14 }, { wch: 18 }];
         wsProds['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
+            { s: { r: 2, c: 0 }, e: { r: 2, c: 4 } },
         ];
-        XLSX.utils.book_append_sheet(wb, wsProds, 'Top Produtos');
+        XLSX.utils.book_append_sheet(wb, wsProds, 'Produtos Vendidos');
     }
 
     // ==================== ABA: BALANÇO ====================

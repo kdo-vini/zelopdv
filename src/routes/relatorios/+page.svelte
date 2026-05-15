@@ -49,6 +49,7 @@
 	let comandasMesaCaixa = [];
 	let produtosMap = new Map(); // id_produto -> { id, nome, preco }
 	let pessoasMap = new Map(); // id_cliente -> { nome }
+	let periodoProdutosMap = new Map(); // id_produto -> { id, nome, preco, id_categoria, categorias }
 	let movs = [];
 	let fechamentos = [];
 
@@ -315,12 +316,15 @@
 				comandasMesaCaixa = comandasMesa || [];
 				vendaIdsFromPedidosCaixa = pedidosIds || new Set();
 
-				// Produtos map
+				// Produtos map (com categoria para permitir filtro nos relatórios)
 				const pids = Array.from(new Set(vendasItens.map(it => it.id_produto).filter(Boolean)));
 				produtosMap = new Map();
 				if (pids.length) {
 					const { data: ps, error: pErr } = await withTimeout(
-						supabase.from('produtos').select('id, nome, preco').in('id', pids)
+						supabase
+							.from('produtos')
+							.select('id, nome, preco, id_categoria, categorias(id, nome)')
+							.in('id', pids)
 					);
 					if (!pErr && ps) {
 						produtosMap = new Map(ps.map(p => [p.id, p]));
@@ -380,7 +384,9 @@
 	$: singleFiado = (vendas || []).filter(v => v.forma_pagamento === 'fiado').reduce((a, v) => a + Number(v.valor_total || 0), 0);
 	$: pagFiado = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'fiado').reduce((a, p) => a + Number(p.valor || 0), 0);
 	$: totalFiado = Number(singleFiado + pagFiado);
-	$: totalGeral = Number((vendas || []).reduce((a, v) => a + Number(v.valor_total || 0), 0));
+	// totalBruto inclui fiado (somatório integral das vendas). totalGeral exclui fiado (apenas receita realizada).
+	$: totalBruto = Number((vendas || []).reduce((a, v) => a + Number(v.valor_total || 0), 0));
+	$: totalGeral = Number(totalBruto - totalFiado);
 	$: qtdVendas = (vendas || []).length;
 	$: ticketMedio = qtdVendas ? totalGeral / qtdVendas : 0;
 
@@ -473,19 +479,49 @@
 	})();
 	$: vendasExibidas = vendasSorted.slice((vendasPage-1)*VENDAS_PER_PAGE, vendasPage*VENDAS_PER_PAGE);
 
-	// Top produtos (por receita total)
+	// Produtos vendidos no caixa — lista completa (sem TOP fixo), com filtro por categoria.
 	let ordenarTop = 'receita'; // 'receita' | 'quantidade' | 'alfabetica'
 	let ordenarDirecao = 'desc'; // 'desc' | 'asc'
+	let categoriaFiltro = ''; // '' = todas. Pode ser id da categoria ou '__sem__' para sem categoria.
+	let mostrarFiltrosProdutos = false;
+
+	// Lista de categorias derivadas dos produtos vendidos no caixa (com fallback 'Sem categoria').
+	$: categoriasDoCaixa = (() => {
+		const map = new Map();
+		let temSemCategoria = false;
+		for (const it of (vendasItens || [])) {
+			const prod = it.id_produto ? produtosMap.get(it.id_produto) : null;
+			const cat = prod?.categorias;
+			if (cat?.id) map.set(cat.id, cat.nome || 'Categoria');
+			else temSemCategoria = true;
+		}
+		const arr = Array.from(map.entries()).map(([id, nome]) => ({ id, nome }));
+		arr.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+		if (temSemCategoria) arr.push({ id: '__sem__', nome: 'Sem categoria' });
+		return arr;
+	})();
+
 	$: topProdutos = (() => {
 		const map = new Map();
 		for (const it of (vendasItens || [])) {
+			const prod = it.id_produto ? produtosMap.get(it.id_produto) : null;
+			const catId = prod?.categorias?.id || null;
+			if (categoriaFiltro) {
+				const matches = categoriaFiltro === '__sem__' ? !catId : catId === categoriaFiltro;
+				if (!matches) continue;
+			}
 			const key = it.nome_produto_na_venda || 'Item';
 			const qtd = Number(it.quantidade || 0);
-			// Regra pedida: receita = valor do produto * quantidade
-			// Preferimos o preço do produto (quando houver id_produto); senão, usamos o preço salvo na venda
-			const precoProduto = it.id_produto ? Number(produtosMap.get(it.id_produto)?.preco || 0) : Number(it.preco_unitario_na_venda || 0);
+			// Receita = valor do produto * quantidade. Preferimos o preço atual do produto
+			// quando disponível; senão, usamos o preço salvo na venda.
+			const precoProduto = it.id_produto ? Number(prod?.preco || 0) : Number(it.preco_unitario_na_venda || 0);
 			const receita = precoProduto * qtd;
-			const prev = map.get(key) || { nome: key, quantidade: 0, receita: 0 };
+			const prev = map.get(key) || {
+				nome: key,
+				quantidade: 0,
+				receita: 0,
+				categoria: prod?.categorias?.nome || (catId ? 'Categoria' : 'Sem categoria'),
+			};
 			prev.quantidade += qtd;
 			prev.receita += receita;
 			map.set(key, prev);
@@ -499,7 +535,7 @@
 		} else {
 			arr.sort((a, b) => dir * (a.receita - b.receita));
 		}
-		return arr.slice(0, 10);
+		return arr;
 	})();
 
 	// Export dropdown state
@@ -525,6 +561,10 @@
 			}
 			const serieDiariaCaixa = Array.from(serieMap.values()).sort((a,b) => a.dia.localeCompare(b.dia));
 
+			const catCaixa = categoriaFiltro
+				? (categoriasDoCaixa.find(c => c.id === categoriaFiltro)?.nome || null)
+				: null;
+
 			return {
 				periodo: periodoLabel,
 				modo: 'caixa',
@@ -545,6 +585,7 @@
 				},
 				serieDiaria: serieDiariaCaixa,
 				topProdutos,
+				produtosCategoriaFiltro: catCaixa,
 				balanco: {
 					sangria: totalSangria,
 					suprimento: totalSuprimento,
@@ -552,6 +593,10 @@
 				},
 			};
 		} else {
+			const catPeriodo = periodoCategoriaFiltro
+				? (categoriasDoPeriodo.find(c => c.id === periodoCategoriaFiltro)?.nome || null)
+				: null;
+
 			return {
 				periodo: periodoLabel,
 				modo: 'periodo',
@@ -571,6 +616,7 @@
 				},
 				serieDiaria: periodoSerieDiaria,
 				topProdutos: periodoTopProdutos,
+				produtosCategoriaFiltro: catPeriodo,
 				balanco: {
 					sangria: periodoTotalSangria,
 					suprimento: periodoTotalSuprimento,
@@ -834,6 +880,26 @@
 			]);
 			periodoComandasMesa = pComandasPeriodo;
 			vendaIdsFromPedidosPeriodo = pPedidosPeriodo;
+
+			// Produtos do período com categoria (para filtro por categoria)
+			const pPids = Array.from(new Set((periodoItens || []).map(it => it.id_produto).filter(Boolean)));
+			periodoProdutosMap = new Map();
+			if (pPids.length) {
+				const batches = chunkArray(pPids, 1000);
+				const results = await Promise.all(
+					batches.map(batch =>
+						supabase
+							.from('produtos')
+							.select('id, nome, preco, id_categoria, categorias(id, nome)')
+							.in('id', batch)
+					)
+				);
+				for (const r of results) {
+					if (!r.error && r.data) {
+						for (const p of r.data) periodoProdutosMap.set(p.id, p);
+					}
+				}
+			}
 		} catch (e) {
 			addToast('Erro ao carregar relatório do período: ' + e.message, 'error');
 			errorMessage = e?.message || 'Erro ao carregar relatório do período.';
@@ -860,7 +926,8 @@
 	$: periodoCartaoDebito = (periodoVendas||[]).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a,v)=> a + Number(v.valor_total||0),0) + (periodoPagamentos||[]).filter(p=> p.forma_pagamento === 'cartao_debito').reduce((a,p)=> a + Number(p.valor||0),0);
 	$: periodoCartaoCredito = (periodoVendas||[]).filter(v => v.forma_pagamento === 'cartao_credito').reduce((a,v)=> a + Number(v.valor_total||0),0) + (periodoPagamentos||[]).filter(p=> p.forma_pagamento === 'cartao_credito').reduce((a,p)=> a + Number(p.valor||0),0);
 	$: periodoFiado = (periodoVendas||[]).filter(v => v.forma_pagamento === 'fiado').reduce((a,v)=> a + Number(v.valor_total||0),0) + (periodoPagamentos||[]).filter(p=> p.forma_pagamento === 'fiado').reduce((a,p)=> a + Number(p.valor||0),0);
-	$: periodoTotalGeral = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_total||0),0);
+	$: periodoTotalBruto = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_total||0),0);
+	$: periodoTotalGeral = periodoTotalBruto - periodoFiado;
 	$: periodoQtdVendas = (periodoVendas||[]).length;
 	$: periodoTicketMedio = periodoQtdVendas ? periodoTotalGeral / periodoQtdVendas : 0;
 	$: resumoMovsPeriodo = calculateMovementSummary(periodoMovs);
@@ -945,16 +1012,45 @@
 		return Array.from(map.values()).sort((a,b)=> a.dia.localeCompare(b.dia));
 	})();
 
-	// Top produtos período
+	// Produtos vendidos no período — lista completa, com filtro por categoria.
 	let periodoOrdenarTop = 'receita';
 	let periodoOrdenarDirecao = 'desc';
+	let periodoCategoriaFiltro = '';
+	let periodoMostrarFiltros = false;
+
+	$: categoriasDoPeriodo = (() => {
+		const map = new Map();
+		let temSemCategoria = false;
+		for (const it of (periodoItens || [])) {
+			const prod = it.id_produto ? periodoProdutosMap.get(it.id_produto) : null;
+			const cat = prod?.categorias;
+			if (cat?.id) map.set(cat.id, cat.nome || 'Categoria');
+			else temSemCategoria = true;
+		}
+		const arr = Array.from(map.entries()).map(([id, nome]) => ({ id, nome }));
+		arr.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+		if (temSemCategoria) arr.push({ id: '__sem__', nome: 'Sem categoria' });
+		return arr;
+	})();
+
 	$: periodoTopProdutos = (() => {
 		const map = new Map();
 		for (const it of (periodoItens||[])) {
+			const prod = it.id_produto ? periodoProdutosMap.get(it.id_produto) : null;
+			const catId = prod?.categorias?.id || null;
+			if (periodoCategoriaFiltro) {
+				const matches = periodoCategoriaFiltro === '__sem__' ? !catId : catId === periodoCategoriaFiltro;
+				if (!matches) continue;
+			}
 			const key = it.nome_produto_na_venda || 'Item';
 			const qtd = Number(it.quantidade||0);
 			const receita = Number(it.preco_unitario_na_venda||0) * qtd; // usa preço capturado na venda
-			const prev = map.get(key) || { nome: key, quantidade: 0, receita: 0 };
+			const prev = map.get(key) || {
+				nome: key,
+				quantidade: 0,
+				receita: 0,
+				categoria: prod?.categorias?.nome || (catId ? 'Categoria' : 'Sem categoria'),
+			};
 			prev.quantidade += qtd;
 			prev.receita += receita;
 			map.set(key, prev);
@@ -964,7 +1060,7 @@
 		if (periodoOrdenarTop === 'quantidade') arr.sort((a,b)=> dir*(a.quantidade - b.quantidade));
 		else if (periodoOrdenarTop === 'alfabetica') arr.sort((a,b)=> dir*a.nome.localeCompare(b.nome,'pt-BR'));
 		else arr.sort((a,b)=> dir*(a.receita - b.receita));
-		return arr.slice(0, 10);
+		return arr;
 	})();
 	// Admin PIN
 	let adminPin = '';
@@ -1306,47 +1402,93 @@
 			</div>
 			{/if}
 
-			<!-- Top produtos -->
+			<!-- Produtos Vendidos (lista completa, com filtro por categoria) -->
 			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-				<h2 class="font-semibold mb-2">Top Produtos</h2>
-				<div class="mb-2 flex flex-wrap items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
-					<div class="flex items-center gap-2">
-						<label for="top-order">Ordenar por</label>
-						<select id="top-order" class="input-form max-w-52" bind:value={ordenarTop}>
-							<option value="receita">Receita</option>
-							<option value="quantidade">Quantidade</option>
-							<option value="alfabetica">Produto</option>
-						</select>
+				<div class="flex items-center justify-between mb-3 gap-2">
+					<div class="min-w-0">
+						<h2 class="font-semibold text-slate-800 dark:text-white">
+							Produtos Vendidos
+							<span class="text-sm font-normal text-slate-500 dark:text-slate-400">({topProdutos.length})</span>
+						</h2>
+						{#if categoriaFiltro}
+							{@const _cat = categoriasDoCaixa.find(c => c.id === categoriaFiltro)}
+							<div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+								Filtrado: <span class="text-slate-700 dark:text-slate-200 font-medium">{_cat?.nome || 'Categoria'}</span>
+								<button class="ml-1 underline" on:click={() => categoriaFiltro = ''}>limpar</button>
+							</div>
+						{/if}
 					</div>
-					<div class="flex items-center gap-2">
-						<label for="top-dir">Direção</label>
-						<select id="top-dir" class="input-form max-w-40" bind:value={ordenarDirecao}>
-							<option value="desc">Maior → menor / Z → A</option>
-							<option value="asc">Menor → maior / A → Z</option>
-						</select>
-					</div>
+					<button
+						class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors {mostrarFiltrosProdutos || categoriaFiltro ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-400 text-sky-700 dark:text-sky-300' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}"
+						aria-label="Abrir filtros"
+						title="Filtros"
+						on:click={() => mostrarFiltrosProdutos = !mostrarFiltrosProdutos}
+					>
+						<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M6 12h12M10 20h4" /></svg>
+						Filtros
+						{#if categoriaFiltro}
+							<span class="ml-0.5 inline-flex w-4 h-4 rounded-full bg-sky-500 text-white items-center justify-center text-[10px] font-bold">1</span>
+						{/if}
+					</button>
 				</div>
+				{#if mostrarFiltrosProdutos}
+					<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700">
+						<div>
+							<label for="top-order" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Ordenar por</label>
+							<select id="top-order" class="input-form w-full" bind:value={ordenarTop}>
+								<option value="receita">Receita</option>
+								<option value="quantidade">Quantidade</option>
+								<option value="alfabetica">Produto</option>
+							</select>
+						</div>
+						<div>
+							<label for="top-dir" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Direção</label>
+							<select id="top-dir" class="input-form w-full" bind:value={ordenarDirecao}>
+								<option value="desc">Maior → menor</option>
+								<option value="asc">Menor → maior</option>
+							</select>
+						</div>
+						<div>
+							<label for="top-cat" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Categoria</label>
+							<select id="top-cat" class="input-form w-full" bind:value={categoriaFiltro}>
+								<option value="">Todas</option>
+								{#each categoriasDoCaixa as c}
+									<option value={c.id}>{c.nome}</option>
+								{/each}
+							</select>
+						</div>
+					</div>
+				{/if}
 				{#if topProdutos.length === 0}
-					<div class="text-sm text-slate-700 dark:text-slate-300">Sem itens em vendas para este caixa.</div>
+					<div class="text-sm text-slate-700 dark:text-slate-300">Sem itens em vendas para este caixa{categoriaFiltro ? ' nesta categoria' : ''}.</div>
 				{:else}
-					<div class="overflow-x-auto">
+					<div class="overflow-x-auto max-h-[480px] overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-700">
 						<table class="min-w-full text-sm">
-							<thead>
-								<tr class="text-left text-slate-600 dark:text-slate-400">
-									<th class="py-2 pr-4">Produto</th>
-									<th class="py-2 pr-4">Quantidade</th>
-									<th class="py-2">Receita</th>
+							<thead class="bg-slate-50 dark:bg-slate-900/60 sticky top-0">
+								<tr class="text-left text-xs text-slate-500 dark:text-slate-400">
+									<th class="py-2 px-3 font-medium">Produto</th>
+									<th class="py-2 px-3 font-medium hidden sm:table-cell">Categoria</th>
+									<th class="py-2 px-3 font-medium text-center">Qtd.</th>
+									<th class="py-2 px-3 font-medium text-right">Receita</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y">
+							<tbody class="divide-y divide-slate-100 dark:divide-slate-700">
 								{#each topProdutos as p}
-									<tr>
-										<td class="py-2 pr-4">{p.nome}</td>
-										<td class="py-2 pr-4">{p.quantidade}</td>
-										<td class="py-2">{fmt(p.receita)}</td>
+									<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+										<td class="py-2 px-3 text-slate-800 dark:text-slate-100">{p.nome}</td>
+										<td class="py-2 px-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">{p.categoria || '—'}</td>
+										<td class="py-2 px-3 text-center">{p.quantidade}</td>
+										<td class="py-2 px-3 text-right font-medium">{fmt(p.receita)}</td>
 									</tr>
 								{/each}
 							</tbody>
+							<tfoot class="bg-slate-50 dark:bg-slate-900/60 sticky bottom-0">
+								<tr class="text-sm font-semibold">
+									<td class="py-2 px-3" colspan="2">Total</td>
+									<td class="py-2 px-3 text-center">{topProdutos.reduce((a,p)=>a+p.quantidade,0)}</td>
+									<td class="py-2 px-3 text-right">{fmt(topProdutos.reduce((a,p)=>a+p.receita,0))}</td>
+								</tr>
+							</tfoot>
 						</table>
 					</div>
 				{/if}
@@ -1750,47 +1892,93 @@
 				{/if}
 			</div>
 
-			<!-- Top produtos período -->
-			<div>
-				<h2 class="font-semibold mb-2">Top Produtos (Período)</h2>
-				<div class="mb-2 flex flex-wrap items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
-					<div class="flex items-center gap-2">
-						<label for="p-top-order">Ordenar por</label>
-						<select id="p-top-order" class="input-form max-w-52" bind:value={periodoOrdenarTop}>
-							<option value="receita">Receita</option>
-							<option value="quantidade">Quantidade</option>
-							<option value="alfabetica">Produto</option>
-						</select>
+			<!-- Produtos Vendidos (Período) — lista completa com filtro por categoria -->
+			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+				<div class="flex items-center justify-between mb-3 gap-2">
+					<div class="min-w-0">
+						<h2 class="font-semibold text-slate-800 dark:text-white">
+							Produtos Vendidos (Período)
+							<span class="text-sm font-normal text-slate-500 dark:text-slate-400">({periodoTopProdutos.length})</span>
+						</h2>
+						{#if periodoCategoriaFiltro}
+							{@const _cat = categoriasDoPeriodo.find(c => c.id === periodoCategoriaFiltro)}
+							<div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+								Filtrado: <span class="text-slate-700 dark:text-slate-200 font-medium">{_cat?.nome || 'Categoria'}</span>
+								<button class="ml-1 underline" on:click={() => periodoCategoriaFiltro = ''}>limpar</button>
+							</div>
+						{/if}
 					</div>
-					<div class="flex items-center gap-2">
-						<label for="p-top-dir">Direção</label>
-						<select id="p-top-dir" class="input-form max-w-40" bind:value={periodoOrdenarDirecao}>
-							<option value="desc">Maior → menor / Z → A</option>
-							<option value="asc">Menor → maior / A → Z</option>
-						</select>
-					</div>
+					<button
+						class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors {periodoMostrarFiltros || periodoCategoriaFiltro ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-400 text-sky-700 dark:text-sky-300' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}"
+						aria-label="Abrir filtros"
+						title="Filtros"
+						on:click={() => periodoMostrarFiltros = !periodoMostrarFiltros}
+					>
+						<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M6 12h12M10 20h4" /></svg>
+						Filtros
+						{#if periodoCategoriaFiltro}
+							<span class="ml-0.5 inline-flex w-4 h-4 rounded-full bg-sky-500 text-white items-center justify-center text-[10px] font-bold">1</span>
+						{/if}
+					</button>
 				</div>
+				{#if periodoMostrarFiltros}
+					<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700">
+						<div>
+							<label for="p-top-order" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Ordenar por</label>
+							<select id="p-top-order" class="input-form w-full" bind:value={periodoOrdenarTop}>
+								<option value="receita">Receita</option>
+								<option value="quantidade">Quantidade</option>
+								<option value="alfabetica">Produto</option>
+							</select>
+						</div>
+						<div>
+							<label for="p-top-dir" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Direção</label>
+							<select id="p-top-dir" class="input-form w-full" bind:value={periodoOrdenarDirecao}>
+								<option value="desc">Maior → menor</option>
+								<option value="asc">Menor → maior</option>
+							</select>
+						</div>
+						<div>
+							<label for="p-top-cat" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Categoria</label>
+							<select id="p-top-cat" class="input-form w-full" bind:value={periodoCategoriaFiltro}>
+								<option value="">Todas</option>
+								{#each categoriasDoPeriodo as c}
+									<option value={c.id}>{c.nome}</option>
+								{/each}
+							</select>
+						</div>
+					</div>
+				{/if}
 				{#if periodoTopProdutos.length === 0}
-					<div class="text-sm text-slate-700 dark:text-slate-300">Sem itens no período.</div>
+					<div class="text-sm text-slate-700 dark:text-slate-300">Sem itens no período{periodoCategoriaFiltro ? ' nesta categoria' : ''}.</div>
 				{:else}
-					<div class="overflow-x-auto">
+					<div class="overflow-x-auto max-h-[480px] overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-700">
 						<table class="min-w-full text-sm">
-							<thead>
-								<tr class="text-left text-slate-600 dark:text-slate-400">
-									<th class="py-2 pr-4">Produto</th>
-									<th class="py-2 pr-4">Quantidade</th>
-									<th class="py-2">Receita</th>
+							<thead class="bg-slate-50 dark:bg-slate-900/60 sticky top-0">
+								<tr class="text-left text-xs text-slate-500 dark:text-slate-400">
+									<th class="py-2 px-3 font-medium">Produto</th>
+									<th class="py-2 px-3 font-medium hidden sm:table-cell">Categoria</th>
+									<th class="py-2 px-3 font-medium text-center">Qtd.</th>
+									<th class="py-2 px-3 font-medium text-right">Receita</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y">
+							<tbody class="divide-y divide-slate-100 dark:divide-slate-700">
 								{#each periodoTopProdutos as p}
-								<tr>
-									<td class="py-2 pr-4">{p.nome}</td>
-									<td class="py-2 pr-4">{p.quantidade}</td>
-									<td class="py-2">{fmt(p.receita)}</td>
-								</tr>
+									<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+										<td class="py-2 px-3 text-slate-800 dark:text-slate-100">{p.nome}</td>
+										<td class="py-2 px-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">{p.categoria || '—'}</td>
+										<td class="py-2 px-3 text-center">{p.quantidade}</td>
+										<td class="py-2 px-3 text-right font-medium">{fmt(p.receita)}</td>
+									</tr>
 								{/each}
 							</tbody>
+							<tfoot class="bg-slate-50 dark:bg-slate-900/60 sticky bottom-0">
+								<tr class="text-sm font-semibold">
+									<td class="py-2 px-3" colspan="2">Total</td>
+									<td class="py-2 px-3 text-center">{periodoTopProdutos.reduce((a,p)=>a+p.quantidade,0)}</td>
+									<td class="py-2 px-3 text-right">{fmt(periodoTopProdutos.reduce((a,p)=>a+p.receita,0))}</td>
+								</tr>
+							</tfoot>
 						</table>
 					</div>
 				{/if}
