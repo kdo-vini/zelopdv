@@ -72,6 +72,8 @@
     dadosEmpresa?.tabela_preco_2_nome || 'Tabela 2',
     dadosEmpresa?.tabela_preco_3_nome || 'Tabela 3',
   ];
+  // Se o toggle for desligado em runtime, força volta para tabela 1
+  $: if (!tabelasPrecoAtivo && tabelaAtiva !== 1) tabelaAtiva = 1;
 
   // Plataformas de pagamento ativas (derivado de dadosEmpresa)
   $: plataformasAtivas = (dadosEmpresa?.plataformas_pagamento ?? [])
@@ -526,8 +528,9 @@
 
     // Caso padrão: adiciona 1 unidade diretamente (com checagem de estoque)
     if (produto?.id && produtoControlaEstoque(produto)) {
-      const existente = comanda.find((i) => i.id_produto === produto.id);
-      const qtdAtual = existente?.quantidade || 0;
+      const qtdAtual = comanda
+        .filter((i) => i.id_produto === produto.id)
+        .reduce((acc, i) => acc + i.quantidade, 0);
       const disponivel = estoqueDisponivel(produto);
       if (qtdAtual + 1 > disponivel) {
         addToast(`Estoque insuficiente para "${produto.nome}". Restam ${disponivel} unidade(s).`, 'error');
@@ -546,33 +549,28 @@
    * Aceita itens de banco (com id) ou avulsos (sem id).
    */
   function adicionarItemNaComanda(item, qtd, preco) {
-    // 'item' pode ser um produto do DB ou um item avulso
-    
-    // Se o item NÃO TEM ID (é avulso), damos um ID temporário (timestamp)
-    const idUnico = item.id ?? Date.now();
+    // Chave inclui o preço: trocar de tabela cria linha nova em vez de
+    // incrementar a linha do preço antigo.
+    const idUnico = item.id != null ? `${item.id}__${preco}` : Date.now();
 
     const itemExistente = comanda.find((i) => i.id === idUnico);
 
     if (itemExistente) {
-      // Se existe, incrementa a quantidade
       itemExistente.quantidade += qtd;
-      // Atualiza o array para forçar reatividade do Svelte
-      comanda = [...comanda]; 
+      comanda = [...comanda];
     } else {
-      // Se é novo, adiciona nova linha
       comanda = [
         ...comanda,
         {
           id: idUnico,
-          id_produto: item.id || null, // ID real do produto no DB
+          id_produto: item.id || null,
           nome: item.nome,
           preco: preco,
           quantidade: qtd,
         },
       ];
     }
-    
-    // Fecha modais de adição (se algum estiver aberto)
+
     modalValorAberto = false;
   }
 
@@ -581,12 +579,15 @@
   function incrementarItem(id) {
     const item = comanda.find((i) => i.id === id);
     if (item) {
-      // Regra de estoque no + da comanda
+      // Regra de estoque: soma todas as linhas do mesmo produto (tabelas distintas).
       if (item.id_produto) {
         const prod = produtos.find((p) => p.id === item.id_produto);
         if (produtoControlaEstoque(prod)) {
           const disponivel = estoqueDisponivel(prod);
-          if ((item.quantidade + 1) > disponivel) {
+          const qtdTotal = comanda
+            .filter((i) => i.id_produto === item.id_produto)
+            .reduce((acc, i) => acc + i.quantidade, 0);
+          if ((qtdTotal + 1) > disponivel) {
             addToast(`Estoque insuficiente para "${item.nome}". Restam ${disponivel} unidade(s).`, 'error');
             return;
           }
@@ -764,10 +765,11 @@
     const qtdInt = Math.floor(qtd);
     if (!Number.isFinite(qtd) || qtdInt <= 0) return;
 
-    // Checagem de estoque levando em conta quantidade já na comanda
+    // Checagem de estoque levando em conta quantidade já na comanda (todas as tabelas)
     if (prod.id && produtoControlaEstoque(prod)) {
-      const existente = comanda.find((i) => i.id_produto === prod.id);
-      const qtdAtual = existente?.quantidade || 0;
+      const qtdAtual = comanda
+        .filter((i) => i.id_produto === prod.id)
+        .reduce((acc, i) => acc + i.quantidade, 0);
       const disponivel = estoqueDisponivel(prod);
       if (qtdInt + qtdAtual > disponivel) {
         addToast(`Estoque insuficiente para "${prod.nome}". Restam ${disponivel} unidade(s).`, 'error');
@@ -1468,10 +1470,11 @@
   produto={produtoQuantidadeSelecionado}
   on:confirm={(e) => {
     const { produto, quantidade } = e.detail;
-    // Checagem de estoque
+    // Checagem de estoque (soma todas as tabelas no carrinho)
     if (produto?.id && produtoControlaEstoque(produto)) {
-      const existente = comanda.find((i) => i.id_produto === produto.id);
-      const qtdAtual = existente?.quantidade || 0;
+      const qtdAtual = comanda
+        .filter((i) => i.id_produto === produto.id)
+        .reduce((acc, i) => acc + i.quantidade, 0);
       const disponivel = estoqueDisponivel(produto);
       if (quantidade + qtdAtual > disponivel) {
         addToast(`Estoque insuficiente para "${produto.nome}". Restam ${disponivel} unidade(s).`, 'error');

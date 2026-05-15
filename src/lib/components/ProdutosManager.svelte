@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast } from '$lib/stores/ui';
+  import { getAccessContext } from '$lib/accessControl';
   import { slide } from 'svelte/transition';
   import Swal from 'sweetalert2';
 
@@ -41,12 +42,14 @@
     await Promise.all([carregarCategorias(), carregarSubcategorias()]);
     await carregarProdutos();
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      // Sub-users: empresa_perfil pertence ao owner, não ao usuário logado.
+      const ctx = await getAccessContext();
+      const ownerId = ctx?.ownerUserId;
+      if (ownerId) {
         const { data: perfil } = await supabase
           .from('empresa_perfil')
           .select('tabelas_preco_ativo, tabela_preco_1_nome, tabela_preco_2_nome, tabela_preco_3_nome')
-          .eq('user_id', user.id)
+          .eq('user_id', ownerId)
           .maybeSingle();
         if (perfil) {
           tabelasPrecoAtivo = !!perfil.tabelas_preco_ativo;
@@ -57,7 +60,9 @@
           ];
         }
       }
-    } catch (e) { /* silently ignore */ }
+    } catch (e) {
+      console.warn('[tabelas-preco] perfil load failed:', e?.message);
+    }
     loading = false;
   });
 
