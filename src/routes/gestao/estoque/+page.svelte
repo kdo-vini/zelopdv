@@ -110,7 +110,6 @@
     for (const produto of lista || []) {
       const categoria = produto.categorias;
       if (categoria?.controlar_estoque_compartilhado) {
-        // Pool único por categoria (comportamento original)
         const atual = gruposCompartilhados.get(categoria.id) || {
           tipo: 'categoria',
           id: categoria.id,
@@ -124,7 +123,6 @@
         atual.produtos.push(produto.nome);
         gruposCompartilhados.set(categoria.id, atual);
       } else if (produto.controlar_estoque && categoria) {
-        // Estoque individual agrupado visualmente por categoria
         const atual = gruposIndividuais.get(categoria.id) || {
           tipo: 'grupo',
           id: categoria.id,
@@ -140,7 +138,6 @@
         });
         gruposIndividuais.set(categoria.id, atual);
       } else if (produto.controlar_estoque) {
-        // Produto individual sem categoria
         linhasSoltas.push({
           tipo: 'produto',
           id: produto.id,
@@ -148,8 +145,7 @@
           estoque_atual: Number(produto.estoque_atual || 0),
           _tmpEstoque: Number(produto.estoque_atual || 0),
           _saving: false,
-          _msg: '',
-          produtos: []
+          _msg: ''
         });
       }
     }
@@ -342,7 +338,6 @@
         <tbody>
           {#each linhasEstoque as linha (`${linha.tipo}-${linha.id}`)}
             {#if linha.tipo === 'grupo'}
-              <!-- Cabeçalho do grupo: total somado dos estoques individuais -->
               <tr
                 class="border-b border-slate-200 dark:border-slate-700 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/50"
                 on:click={() => toggleExpandido(linha.id)}
@@ -388,7 +383,6 @@
                 {/each}
               {/if}
             {:else}
-              <!-- Linha de produto individual (sem categoria) ou pool compartilhado -->
               <tr class="border-b border-slate-100 dark:border-slate-800">
                 <td class="py-2 pr-4">
                   <div class="font-medium">{linha.nome}</div>
