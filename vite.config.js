@@ -1,12 +1,24 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import { readFileSync } from 'node:fs';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const buildVersion =
+  process.env.PUBLIC_APP_VERSION ||
+  process.env.VITE_PUBLIC_APP_VERSION ||
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.VERCEL_DEPLOYMENT_ID ||
+  `${pkg.version}-${Date.now()}`;
 
 // Supabase hostname for runtime caching strategy
 const supabaseUrl = process.env.PUBLIC_SUPABASE_URL ?? process.env.VITE_PUBLIC_SUPABASE_URL ?? '';
 const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : '';
 
 export default defineConfig({
+  define: {
+    __ZELO_BUILD_VERSION__: JSON.stringify(buildVersion)
+  },
   test: {
     include: ['tests/**/*.test.js'],
     exclude: [

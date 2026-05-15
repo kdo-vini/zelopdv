@@ -302,6 +302,7 @@
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import PinSetupModal from '$lib/components/PinSetupModal.svelte';
   import SupportChat from '$lib/components/SupportChat.svelte';
+  import UpdateAvailable from '$lib/components/UpdateAvailable.svelte';
   import { adminUnlocked } from '$lib/stores/adminStore';
   import { sessionStore, companyNameStore } from '$lib/stores/session';
 
@@ -356,6 +357,7 @@
 
 <ToastContainer />
 <ConfirmDialog />
+<UpdateAvailable />
 
 {#if showPinSetup && session && !isPerfil && !isAssinatura}
   <PinSetupModal userId={session.user.id} {onPinSet} />
