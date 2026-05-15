@@ -65,6 +65,13 @@
   let showMobileCart = false;
   // [NEW] Dados da Empresa
   let dadosEmpresa = null;
+  let tabelaAtiva = 1;
+  $: tabelasPrecoAtivo = !!dadosEmpresa?.tabelas_preco_ativo;
+  $: nomesTabelas = [
+    dadosEmpresa?.tabela_preco_1_nome || 'Tabela 1',
+    dadosEmpresa?.tabela_preco_2_nome || 'Tabela 2',
+    dadosEmpresa?.tabela_preco_3_nome || 'Tabela 3',
+  ];
 
   // Plataformas de pagamento ativas (derivado de dadosEmpresa)
   $: plataformasAtivas = (dadosEmpresa?.plataformas_pagamento ?? [])
@@ -484,6 +491,12 @@
     (acc, item) => acc + item.preco * item.quantidade,
     0
   );
+
+  function getPrecoTabela(produto, tabela) {
+    if (tabela === 2 && produto.preco_2 != null) return produto.preco_2;
+    if (tabela === 3 && produto.preco_3 != null) return produto.preco_3;
+    return produto.preco;
+  }
   // Total com taxa de entrega incluída
   $: totalComandaComEntrega = Number(totalComanda) + (tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0);
 
@@ -521,7 +534,7 @@
         return;
       }
     }
-    adicionarItemNaComanda(produto, 1, produto.preco);
+    adicionarItemNaComanda(produto, 1, getPrecoTabela(produto, tabelaAtiva));
   }
 
   /**
@@ -762,7 +775,7 @@
       }
     }
 
-    adicionarItemNaComanda(prod, qtdInt, prod.preco);
+    adicionarItemNaComanda(prod, qtdInt, getPrecoTabela(prod, tabelaAtiva));
     // Reset/fechar modal
     modalQuantidadeAberto = false;
     produtoQuantidadeSelecionado = null;
@@ -1191,6 +1204,20 @@
           </div>
         </div>
 
+        {#if tabelasPrecoAtivo}
+          <!-- Seletor de Tabela de Preço -->
+          <div class="flex gap-1">
+            {#each nomesTabelas as nome, i}
+              <button
+                type="button"
+                class="px-3 py-1 rounded text-sm font-medium transition-colors"
+                style="{tabelaAtiva === i+1 ? 'background: var(--primary); color: white;' : 'border: 1px solid var(--border-subtle); color: var(--text-muted); background: transparent;'}"
+                on:click={() => tabelaAtiva = i + 1}
+              >{nome}</button>
+            {/each}
+          </div>
+        {/if}
+
         <!-- Categorias: Tabs horizontais (estilo underline) -->
         <div class="flex items-center gap-6 overflow-x-auto py-1 scrollbar-none border-b" style="border-color: var(--border-subtle);" role="tablist" aria-label="Categorias">
           {#each categorias as cat (cat.id)}
@@ -1451,7 +1478,7 @@
         return;
       }
     }
-    adicionarItemNaComanda(produto, quantidade, produto.preco);
+    adicionarItemNaComanda(produto, quantidade, getPrecoTabela(produto, tabelaAtiva));
     modalQuantidadeAberto = false;
     produtoQuantidadeSelecionado = null;
   }}
