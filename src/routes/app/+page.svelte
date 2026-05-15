@@ -22,7 +22,7 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import { pdvCache } from '$lib/stores/pdvCache';
-  import { money, validatePaymentCoverage } from '$lib/finance/caixa';
+  import { money, validatePaymentCoverage, getPrecoTabela } from '$lib/finance/caixa';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
   
@@ -499,11 +499,6 @@
     0
   );
 
-  function getPrecoTabela(produto, tabela) {
-    if (tabela === 2 && produto.preco_2 != null) return produto.preco_2;
-    if (tabela === 3 && produto.preco_3 != null) return produto.preco_3;
-    return produto.preco;
-  }
   // Total com taxa de entrega incluída
   $: totalComandaComEntrega = Number(totalComanda) + (tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0);
 

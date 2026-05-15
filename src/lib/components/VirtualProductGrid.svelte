@@ -5,9 +5,10 @@
 -->
 <script>
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
-  
+  import { getPrecoTabela } from '$lib/finance/caixa';
+
   const dispatch = createEventDispatcher();
-  
+
   /** @type {Array<{id: number, nome: string, preco: number, preco_2?: number, preco_3?: number, por_unidade?: boolean, controlar_estoque?: boolean, estoque_atual?: number}>} */
   export let produtos = [];
 
@@ -16,12 +17,6 @@
 
   /** @type {number} Tabela de preço ativa (1, 2 ou 3) */
   export let tabelaAtiva = 1;
-
-  function getPrecoTabela(produto, tabela) {
-    if (tabela === 2 && produto.preco_2 != null) return produto.preco_2;
-    if (tabela === 3 && produto.preco_3 != null) return produto.preco_3;
-    return produto.preco;
-  }
   
   /** @type {number} Altura de cada card em pixels */
   export let itemHeight = 128;
