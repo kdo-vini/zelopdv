@@ -2183,8 +2183,8 @@
       overflow: visible;
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
-    .produto-card { min-height: 84px; padding: 0.95rem 1rem; }
-    .produto-nome { font-size: 0.95rem; }
+    .produto-card { min-height: 116px; padding: 0.85rem 0.95rem; }
+    .produto-nome { font-size: 0.95rem; min-height: 2.5em; }
     .produto-preco { font-size: 1rem; }
     .comanda-side {
       position: fixed;
@@ -2437,10 +2437,10 @@
   .produto-card {
     display: flex; flex-direction: column;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.85rem 1rem;
-    min-height: 72px;
+    justify-content: flex-start;
+    gap: 0.35rem;
+    padding: 0.75rem 0.85rem;
+    min-height: 108px;
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: 12px;
@@ -2468,9 +2468,13 @@
     transform: none;
   }
   .produto-nome {
-    font-size: 0.9rem; font-weight: 600; line-height: 1.3;
+    width: 100%;
+    font-size: 0.9rem; font-weight: 600; line-height: 1.25;
+    min-height: 2.5em;
     overflow: hidden; display: -webkit-box;
     -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
   .produto-preco {
     font-size: 0.95rem; font-weight: 700; color: var(--primary);
