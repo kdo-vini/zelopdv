@@ -5,6 +5,7 @@
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { waitAuthReady } from '$lib/authStore';
+  import { getAccessContext } from '$lib/accessControl';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
@@ -52,6 +53,8 @@
   let newProdForm = {
     nome: '',
     preco: 0,
+    preco_2: null,
+    preco_3: null,
     id_categoria: null,
     id_subcategoria: null,
     eh_item_por_unidade: false,
@@ -59,6 +62,10 @@
     controlar_estoque: false,
     estoque_atual: 0
   };
+
+  // Tabelas de preço (Balcão / Revenda / Atacado)
+  let tabelasPrecoAtivo = false;
+  let nomesTabelas = ['Tabela 1', 'Tabela 2', 'Tabela 3'];
 
   // ─── Kit Páscoa ───────────────────────────────────────────────────────────────
   let kitPascoaInserted = false;
@@ -104,6 +111,27 @@
     await waitAuthReady();
     kitPascoaInserted = localStorage.getItem('zelo_kit_pascoa_2026') === 'done';
     await carregarTudo();
+    try {
+      const ctx = await getAccessContext();
+      const ownerId = ctx?.ownerUserId;
+      if (ownerId) {
+        const { data: perfil } = await supabase
+          .from('empresa_perfil')
+          .select('tabelas_preco_ativo, tabela_preco_1_nome, tabela_preco_2_nome, tabela_preco_3_nome')
+          .eq('user_id', ownerId)
+          .maybeSingle();
+        if (perfil) {
+          tabelasPrecoAtivo = !!perfil.tabelas_preco_ativo;
+          nomesTabelas = [
+            perfil.tabela_preco_1_nome || 'Tabela 1',
+            perfil.tabela_preco_2_nome || 'Tabela 2',
+            perfil.tabela_preco_3_nome || 'Tabela 3',
+          ];
+        }
+      }
+    } catch (e) {
+      console.warn('[tabelas-preco] perfil load failed:', e?.message);
+    }
   });
 
   async function carregarTudo() {
@@ -529,6 +557,8 @@
     newProdForm = {
       nome: '',
       preco: 0,
+      preco_2: null,
+      preco_3: null,
       id_categoria: null,
       id_subcategoria: null,
       eh_item_por_unidade: false,
@@ -556,6 +586,8 @@
     const { error } = await supabase.from('produtos').update({
       nome: editProdForm.nome,
       preco: editProdForm.preco,
+      preco_2: editProdForm.preco_2 ?? null,
+      preco_3: editProdForm.preco_3 ?? null,
       id_categoria: editProdForm.id_categoria,
       id_subcategoria: editProdForm.id_subcategoria || null,
       eh_item_por_unidade: editProdForm.eh_item_por_unidade,
@@ -1120,10 +1152,30 @@
                           step="0.01"
                           min="0"
                           bind:value={editProdForm.preco}
-                          placeholder="Preço"
+                          placeholder={tabelasPrecoAtivo ? nomesTabelas[0] : 'Preço'}
                           required
                           style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
                         />
+                        {#if tabelasPrecoAtivo}
+                          <input
+                            class="edit-input w-28"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            bind:value={editProdForm.preco_2}
+                            placeholder={nomesTabelas[1]}
+                            style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                          />
+                          <input
+                            class="edit-input w-28"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            bind:value={editProdForm.preco_3}
+                            placeholder={nomesTabelas[2]}
+                            style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                          />
+                        {/if}
                         <select
                           class="edit-input flex-1 min-w-32"
                           bind:value={editProdForm.id_categoria}
@@ -1478,7 +1530,7 @@
             />
           </div>
           <div>
-            <label class="form-label" style="color: var(--text-label);">Preço (R$)</label>
+            <label class="form-label" style="color: var(--text-label);">{tabelasPrecoAtivo ? `Preço ${nomesTabelas[0]} (R$)` : 'Preço (R$)'}</label>
             <input
               class="form-input"
               type="number"
@@ -1489,6 +1541,32 @@
               style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
             />
           </div>
+          {#if tabelasPrecoAtivo}
+            <div>
+              <label class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[1]} (R$)</label>
+              <input
+                class="form-input"
+                type="number"
+                step="0.01"
+                min="0"
+                bind:value={newProdForm.preco_2}
+                placeholder="Opcional"
+                style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+              />
+            </div>
+            <div>
+              <label class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[2]} (R$)</label>
+              <input
+                class="form-input"
+                type="number"
+                step="0.01"
+                min="0"
+                bind:value={newProdForm.preco_3}
+                placeholder="Opcional"
+                style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+              />
+            </div>
+          {/if}
           <div>
             <label class="form-label" style="color: var(--text-label);">Categoria</label>
             <select
