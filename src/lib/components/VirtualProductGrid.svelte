@@ -8,11 +8,20 @@
   
   const dispatch = createEventDispatcher();
   
-  /** @type {Array<{id: number, nome: string, preco: number, por_unidade?: boolean, controlar_estoque?: boolean, estoque_atual?: number}>} */
+  /** @type {Array<{id: number, nome: string, preco: number, preco_2?: number, preco_3?: number, por_unidade?: boolean, controlar_estoque?: boolean, estoque_atual?: number}>} */
   export let produtos = [];
 
   /** @type {boolean} Differentiates first-use empty state from search/filter with no results. */
   export let hasAnyProducts = true;
+
+  /** @type {number} Tabela de preço ativa (1, 2 ou 3) */
+  export let tabelaAtiva = 1;
+
+  function getPrecoTabela(produto, tabela) {
+    if (tabela === 2 && produto.preco_2 != null) return produto.preco_2;
+    if (tabela === 3 && produto.preco_3 != null) return produto.preco_3;
+    return produto.preco;
+  }
   
   /** @type {number} Altura de cada card em pixels */
   export let itemHeight = 128;
@@ -182,7 +191,7 @@
             <div class="flex items-baseline justify-end gap-0.5">
               <span class="text-[10px] font-bold text-sky-400">R$</span>
               <span class="text-lg font-black text-white tracking-tighter">
-                {Number(produto.preco).toFixed(2)}
+                {Number(getPrecoTabela(produto, tabelaAtiva)).toFixed(2)}
               </span>
             </div>
           </div>

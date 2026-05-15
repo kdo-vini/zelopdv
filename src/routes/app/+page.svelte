@@ -98,6 +98,11 @@
         e.preventDefault();
         if (buscaInputEl && typeof buscaInputEl.focus === 'function') buscaInputEl.focus();
       }
+      // Ctrl+T: cicla entre tabelas de preço (igual ao sistema anterior do João)
+      if (e.ctrlKey && e.key.toLowerCase() === 't' && tabelasPrecoAtivo) {
+        e.preventDefault();
+        tabelaAtiva = tabelaAtiva === 3 ? 1 : tabelaAtiva + 1;
+      }
     } catch {}
   }
 
@@ -1278,6 +1283,7 @@
         <VirtualProductGrid
           produtos={produtosFiltrados}
           hasAnyProducts={produtos.length > 0}
+          tabelaAtiva={tabelaAtiva}
           on:produtoClick={(e) => adicionarProduto(e.detail)}
           on:valorAvulsoClick={() => modalValorAberto = true}
         />
