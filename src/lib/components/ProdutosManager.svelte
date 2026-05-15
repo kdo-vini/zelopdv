@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast } from '$lib/stores/ui';
+  import { getAccessContext } from '$lib/accessControl';
   import { slide } from 'svelte/transition';
   import Swal from 'sweetalert2';
 
@@ -29,14 +30,39 @@
   let sortDesc = false;
 
   // Form
-  let form = { nome: '', preco: 0, id_categoria: null, id_subcategoria: null, eh_item_por_unidade: false, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0 };
+  let form = { nome: '', preco: 0, preco_2: null, preco_3: null, id_categoria: null, id_subcategoria: null, eh_item_por_unidade: false, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0 };
   let editingId = null;
   let editForm = {};
+
+  let tabelasPrecoAtivo = false;
+  let nomesTabelas = ['Tabela 1', 'Tabela 2', 'Tabela 3'];
 
   // --- Lifecycle ---
   onMount(async () => {
     await Promise.all([carregarCategorias(), carregarSubcategorias()]);
     await carregarProdutos();
+    try {
+      // Sub-users: empresa_perfil pertence ao owner, não ao usuário logado.
+      const ctx = await getAccessContext();
+      const ownerId = ctx?.ownerUserId;
+      if (ownerId) {
+        const { data: perfil } = await supabase
+          .from('empresa_perfil')
+          .select('tabelas_preco_ativo, tabela_preco_1_nome, tabela_preco_2_nome, tabela_preco_3_nome')
+          .eq('user_id', ownerId)
+          .maybeSingle();
+        if (perfil) {
+          tabelasPrecoAtivo = !!perfil.tabelas_preco_ativo;
+          nomesTabelas = [
+            perfil.tabela_preco_1_nome || 'Tabela 1',
+            perfil.tabela_preco_2_nome || 'Tabela 2',
+            perfil.tabela_preco_3_nome || 'Tabela 3',
+          ];
+        }
+      }
+    } catch (e) {
+      console.warn('[tabelas-preco] perfil load failed:', e?.message);
+    }
     loading = false;
   });
 
@@ -134,7 +160,7 @@
   }
 
   function resetForm() {
-    form = { nome: '', preco: 0, id_categoria: null, id_subcategoria: null, eh_item_por_unidade: false, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0 };
+    form = { nome: '', preco: 0, preco_2: null, preco_3: null, id_categoria: null, id_subcategoria: null, eh_item_por_unidade: false, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0 };
   }
 
   function toggleSort(field) {
@@ -205,6 +231,8 @@
     const { error } = await supabase.from('produtos').update({
       nome: editForm.nome,
       preco: editForm.preco,
+      preco_2: editForm.preco_2 ?? null,
+      preco_3: editForm.preco_3 ?? null,
       id_categoria: editForm.id_categoria,
       id_subcategoria: editForm.id_subcategoria || null,
       eh_item_por_unidade: editForm.eh_item_por_unidade,
@@ -340,9 +368,19 @@
           <input class="input-form" bind:value={form.nome} required placeholder="Ex: Coca-Cola" />
         </div>
         <div class="lg:col-span-1">
-          <label class="label-form">Preço</label>
+          <label class="label-form">Preço ({nomesTabelas[0]})</label>
           <input class="input-form" type="number" step="0.01" min="0" bind:value={form.preco} required />
         </div>
+        {#if tabelasPrecoAtivo}
+          <div class="lg:col-span-1">
+            <label class="label-form">Preço {nomesTabelas[1]}</label>
+            <input class="input-form" type="number" step="0.01" min="0" bind:value={form.preco_2} placeholder="Opcional" />
+          </div>
+          <div class="lg:col-span-1">
+            <label class="label-form">Preço {nomesTabelas[2]}</label>
+            <input class="input-form" type="number" step="0.01" min="0" bind:value={form.preco_3} placeholder="Opcional" />
+          </div>
+        {/if}
         <div>
           <label class="label-form">Categoria</label>
           <select class="input-form" bind:value={form.id_categoria} required>
@@ -430,9 +468,13 @@
                  <td class="p-4"></td>
                  <td colspan="5" class="p-4">
                     <form on:submit={saveEdit} class="grid gap-4">
-                       <div class="flex gap-4">
-                         <input class="input-form flex-1" bind:value={editForm.nome} placeholder="Nome" required />
-                         <input class="input-form w-32" type="number" step="0.01" bind:value={editForm.preco} placeholder="Preço" required />
+                       <div class="flex gap-4 flex-wrap">
+                         <input class="input-form flex-1 min-w-[160px]" bind:value={editForm.nome} placeholder="Nome" required />
+                         <input class="input-form w-32" type="number" step="0.01" bind:value={editForm.preco} placeholder="{nomesTabelas[0]}" required />
+                         {#if tabelasPrecoAtivo}
+                           <input class="input-form w-32" type="number" step="0.01" bind:value={editForm.preco_2} placeholder="{nomesTabelas[1]}" />
+                           <input class="input-form w-32" type="number" step="0.01" bind:value={editForm.preco_3} placeholder="{nomesTabelas[2]}" />
+                         {/if}
                        </div>
                        <div class="flex gap-4">
                           <select class="input-form flex-1" bind:value={editForm.id_categoria}>

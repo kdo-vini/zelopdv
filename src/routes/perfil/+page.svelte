@@ -97,6 +97,10 @@
   let largura_bobina = '58mm';
   let notifEstoqueBaixo = false;
   let notifFechamentoCaixa = false;
+  let tabelasPrecoAtivo = false;
+  let nomeTabela1 = 'Tabela 1';
+  let nomeTabela2 = 'Tabela 2';
+  let nomeTabela3 = 'Tabela 3';
 
   // Plataformas de pagamento
   let plataformas_pagamento = PLATAFORMAS_PRESET.map(p => ({ ...p, ativo: false }));
@@ -220,6 +224,10 @@
       logo_url          = data.logo_url ?? '';
       rodape_recibo     = data.rodape_recibo ?? 'Obrigado pela preferência!';
       adminPin          = data.pin_admin || '';
+      tabelasPrecoAtivo = !!data.tabelas_preco_ativo;
+      nomeTabela1       = data.tabela_preco_1_nome || 'Tabela 1';
+      nomeTabela2       = data.tabela_preco_2_nome || 'Tabela 2';
+      nomeTabela3       = data.tabela_preco_3_nome || 'Tabela 3';
 
       // Load plataformas: merge saved data with presets (to handle new presets)
       const saved = data.plataformas_pagamento ?? [];
@@ -285,6 +293,10 @@
         pendingLogoUrl: null,
         plataformas_pagamento,
       });
+      payload.tabelas_preco_ativo = tabelasPrecoAtivo;
+      payload.tabela_preco_1_nome = nomeTabela1;
+      payload.tabela_preco_2_nome = nomeTabela2;
+      payload.tabela_preco_3_nome = nomeTabela3;
 
       const { error } = await supabase.from('empresa_perfil').upsert(payload, { onConflict: 'user_id' });
       if (error) throw error;
@@ -736,6 +748,62 @@
                 </div>
               </div>
             {/each}
+          </section>
+
+          <!-- Tabelas de Preço -->
+          <section class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+            <div>
+              <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Tabelas de Preço</h2>
+              <p class="text-xs mt-1" style="color: var(--text-muted);">Ative para trabalhar com até 3 preços por produto (ex: Balcão, Revenda, Atacado). O seletor aparece no topo do PDV.</p>
+            </div>
+
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-sm font-medium" style="color: var(--text-main);">Ativar tabelas de preço</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={tabelasPrecoAtivo}
+                on:click={() => tabelasPrecoAtivo = !tabelasPrecoAtivo}
+                class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
+                style="background: {tabelasPrecoAtivo ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {tabelasPrecoAtivo ? 'var(--primary)' : 'var(--border-subtle)'};"
+              >
+                <span
+                  class="inline-block h-5 w-5 transform rounded-full shadow transition duration-200"
+                  style="background: var(--text-main); transform: translateX({tabelasPrecoAtivo ? '20px' : '0px'});"
+                ></span>
+              </button>
+            </div>
+
+            {#if tabelasPrecoAtivo}
+              <div class="grid sm:grid-cols-3 gap-3" style="border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+                <label class="block">
+                  <span class="block mb-1 text-xs" style="color: var(--text-label);">Nome Tabela 1</span>
+                  <input
+                    class="w-full rounded-md px-3 py-2 text-sm"
+                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                    bind:value={nomeTabela1} placeholder="Ex: Balcão"
+                  />
+                </label>
+                <label class="block">
+                  <span class="block mb-1 text-xs" style="color: var(--text-label);">Nome Tabela 2</span>
+                  <input
+                    class="w-full rounded-md px-3 py-2 text-sm"
+                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                    bind:value={nomeTabela2} placeholder="Ex: Revenda"
+                  />
+                </label>
+                <label class="block">
+                  <span class="block mb-1 text-xs" style="color: var(--text-label);">Nome Tabela 3</span>
+                  <input
+                    class="w-full rounded-md px-3 py-2 text-sm"
+                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                    bind:value={nomeTabela3} placeholder="Ex: Atacado"
+                  />
+                </label>
+              </div>
+            {/if}
           </section>
 
           <!-- Notificações -->
