@@ -129,6 +129,34 @@ describe('caixa finance math', () => {
     expect(calculateRevenue({ totalGeral: 1000, despesas: 100, custosPlataforma: 140 })).toBe(760);
     expect(calculateRestaurantRevenue({ totalGeral: 1000, taxaEntrega: 50, despesas: 100, custosPlataforma: 140 })).toBe(710);
   });
+
+  test('fiado sales are excluded from totalGeral but exposed via totalBruto and fiado', () => {
+    const vendas = [
+      { id: 1, forma_pagamento: 'dinheiro', valor_total: 30, valor_recebido: 30, valor_troco: 0 },
+      { id: 2, forma_pagamento: 'fiado', valor_total: 50 }
+    ];
+    const summary = calculatePaymentSummary(vendas, []);
+
+    // Fiado é dívida, não receita realizada — não entra em totalGeral
+    expect(summary.totalGeral).toBe(30);
+    expect(summary.totalBruto).toBe(80);
+    expect(summary.fiado).toBe(50);
+    expect(summary.dinheiro).toBe(30);
+  });
+
+  test('multi-pay sale with fiado portion subtracts only fiado from totalGeral', () => {
+    const vendas = [{ id: 1, forma_pagamento: 'multiplo', valor_total: 100, valor_troco: 0 }];
+    const pagamentos = [
+      { id_venda: 1, forma_pagamento: 'dinheiro', valor: 60 },
+      { id_venda: 1, forma_pagamento: 'fiado', valor: 40 }
+    ];
+    const summary = calculatePaymentSummary(vendas, pagamentos);
+
+    expect(summary.totalBruto).toBe(100);
+    expect(summary.fiado).toBe(40);
+    expect(summary.totalGeral).toBe(60); // só a parte realizada
+    expect(summary.dinheiro).toBe(60);
+  });
 });
 
 describe('calculatePlatformFees', () => {

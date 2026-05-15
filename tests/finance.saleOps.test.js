@@ -1,5 +1,10 @@
-import { describe, expect, test } from 'vitest';
-import { buildVendaPayload, createClientSaleId, extractEffectiveQty } from '../src/lib/finance/saleOps.js';
+import { describe, expect, test, vi } from 'vitest';
+import {
+  buildVendaPayload,
+  createClientSaleId,
+  extractEffectiveQty,
+  revertFiadoDebtForVenda
+} from '../src/lib/finance/saleOps.js';
 
 describe('buildVendaPayload', () => {
   const baseItens = [
@@ -327,5 +332,80 @@ describe('extractEffectiveQty', () => {
 
   test('ignores prefix on items without id_produto (avulso text could collide)', () => {
     expect(extractEffectiveQty({ id_produto: null, nome: '5x algo', quantidade: 2 })).toBe(2);
+  });
+});
+
+describe('revertFiadoDebtForVenda', () => {
+  function makeSupabase({ venda, fiadoPagamentos = [], rpcImpl }) {
+    const calls = { rpc: [] };
+    const queryMaybeSingle = (table, eqs) => {
+      if (table === 'vendas' && eqs?.id === venda?.id) {
+        return Promise.resolve({ data: venda, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    const supabase = {
+      from(table) {
+        const ctx = { table, eqs: {} };
+        const builder = {
+          select() { return builder; },
+          eq(k, v) { ctx.eqs[k] = v; return builder; },
+          maybeSingle() { return queryMaybeSingle(ctx.table, ctx.eqs); },
+          then(resolve) {
+            if (ctx.table === 'vendas_pagamentos') {
+              return resolve({ data: fiadoPagamentos, error: null });
+            }
+            return resolve({ data: null, error: null });
+          }
+        };
+        return builder;
+      },
+      rpc: vi.fn((name, args) => {
+        calls.rpc.push({ name, args });
+        return rpcImpl ? rpcImpl(name, args) : Promise.resolve({ data: null, error: null });
+      }),
+      _calls: calls
+    };
+    return supabase;
+  }
+
+  test('reverts full valor_total for single-fiado sale', async () => {
+    const supabase = makeSupabase({
+      venda: { id: 10, forma_pagamento: 'fiado', valor_total: 75, id_cliente: 'pessoa-1' }
+    });
+
+    const result = await revertFiadoDebtForVenda(supabase, 10);
+
+    expect(result.revertedTotal).toBe(75);
+    expect(result.lines).toEqual([{ id_pessoa: 'pessoa-1', valor: 75 }]);
+    expect(supabase.rpc).toHaveBeenCalledWith('fiado_registrar_pagamento', {
+      p_id_pessoa: 'pessoa-1',
+      p_valor: 75
+    });
+  });
+
+  test('reverts only fiado portion of multi-pay sale', async () => {
+    const supabase = makeSupabase({
+      venda: { id: 11, forma_pagamento: 'multiplo', valor_total: 100, id_cliente: 'pessoa-2' },
+      fiadoPagamentos: [{ forma_pagamento: 'fiado', valor: 30 }]
+    });
+
+    const result = await revertFiadoDebtForVenda(supabase, 11);
+
+    expect(result.revertedTotal).toBe(30);
+    expect(result.lines).toEqual([{ id_pessoa: 'pessoa-2', valor: 30 }]);
+    expect(supabase.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  test('does nothing for non-fiado sale', async () => {
+    const supabase = makeSupabase({
+      venda: { id: 12, forma_pagamento: 'dinheiro', valor_total: 40, id_cliente: null }
+    });
+
+    const result = await revertFiadoDebtForVenda(supabase, 12);
+
+    expect(result.revertedTotal).toBe(0);
+    expect(result.lines).toEqual([]);
+    expect(supabase.rpc).not.toHaveBeenCalled();
   });
 });

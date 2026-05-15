@@ -1,5 +1,63 @@
 import { calculateSaleSettlement, money } from './caixa.js';
 
+/**
+ * Reverte o débito fiado vinculado a uma venda antes de excluí-la.
+ * Lê forma_pagamento, valor_total, id_cliente e (se múltiplo) pagamentos fiado,
+ * e chama o RPC `fiado_registrar_pagamento` (decrementa pessoas.saldo_fiado)
+ * para cada lançamento que precisa ser estornado.
+ *
+ * Idempotência: a venda já existe no banco; o RPC apenas ajusta o saldo.
+ * Falhas no estorno são repassadas ao chamador para abortar o delete.
+ *
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string|number} vendaId
+ * @returns {Promise<{revertedTotal: number, lines: Array<{id_pessoa: string, valor: number}>}>}
+ */
+export async function revertFiadoDebtForVenda(supabase, vendaId) {
+  if (!supabase || vendaId == null) {
+    return { revertedTotal: 0, lines: [] };
+  }
+
+  const { data: venda, error: vendaErr } = await supabase
+    .from('vendas')
+    .select('id, forma_pagamento, valor_total, id_cliente')
+    .eq('id', vendaId)
+    .maybeSingle();
+  if (vendaErr) throw vendaErr;
+  if (!venda) return { revertedTotal: 0, lines: [] };
+
+  const lines = [];
+
+  if (venda.forma_pagamento === 'fiado') {
+    const valor = money(venda.valor_total);
+    if (valor > 0 && venda.id_cliente) {
+      lines.push({ id_pessoa: venda.id_cliente, valor });
+    }
+  } else if (venda.forma_pagamento === 'multiplo') {
+    const { data: pags, error: pagsErr } = await supabase
+      .from('vendas_pagamentos')
+      .select('forma_pagamento, valor')
+      .eq('id_venda', vendaId)
+      .eq('forma_pagamento', 'fiado');
+    if (pagsErr) throw pagsErr;
+    const totalFiado = money((pags || []).reduce((acc, p) => acc + Number(p?.valor || 0), 0));
+    if (totalFiado > 0 && venda.id_cliente) {
+      lines.push({ id_pessoa: venda.id_cliente, valor: totalFiado });
+    }
+  }
+
+  for (const line of lines) {
+    const { error: rpcErr } = await supabase.rpc('fiado_registrar_pagamento', {
+      p_id_pessoa: line.id_pessoa,
+      p_valor: line.valor,
+    });
+    if (rpcErr) throw rpcErr;
+  }
+
+  const revertedTotal = money(lines.reduce((acc, l) => acc + l.valor, 0));
+  return { revertedTotal, lines };
+}
+
 export function createClientSaleId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();

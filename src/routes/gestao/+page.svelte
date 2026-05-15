@@ -4,6 +4,7 @@
   import { waitAuthReady } from '$lib/authStore';
   import BarChart from '$lib/components/charts/BarChart.svelte'; // [NEW]
   import OnboardingChecklist from '$lib/components/OnboardingChecklist.svelte';
+  import { revertFiadoDebtForVenda } from '$lib/finance/saleOps';
 
   export let params;
 
@@ -69,7 +70,23 @@
         movimentacoes = movs||[];
       }
       
-      const totalCaixa = (vendasCaixa||[]).reduce((a,v)=>a+Number(v.valor_total||0),0);
+      // Fiado é dívida (a receber), não receita realizada — exclui do total do caixa.
+      // Para vendas múltiplas com parcela fiado, descontamos apenas a parcela fiado via vendas_pagamentos.
+      const vendaIdsCaixa = (vendasCaixa||[]).map(v=>v.id);
+      let pagFiadoMulti = 0;
+      if (vendaIdsCaixa.length) {
+        const { data: pagsMulti } = await supabase
+          .from('vendas_pagamentos')
+          .select('id_venda, forma_pagamento, valor')
+          .in('id_venda', vendaIdsCaixa)
+          .eq('forma_pagamento', 'fiado');
+        pagFiadoMulti = (pagsMulti||[]).reduce((a,p)=> a + Number(p.valor||0), 0);
+      }
+      const totalCaixa = (vendasCaixa||[]).reduce((a,v)=> {
+        // Venda fiado pura: ignora valor inteiro.
+        if (v.forma_pagamento === 'fiado') return a;
+        return a + Number(v.valor_total||0);
+      }, 0) - pagFiadoMulti;
       const countCaixa = (vendasCaixa||[]).length;
       const ticketMedioCaixa = countCaixa ? totalCaixa/countCaixa : null;
       
@@ -80,6 +97,8 @@
       // Filter sales from 'today' based on local time logic or just strictly follow current open box context
       // Since we want "Vendas Hoje" (or current box session), we stick to sales in `vendasCaixa`
       for(const v of vendasCaixa){
+        // Vendas fiado puras não contam como receita realizada do horário.
+        if (v.forma_pagamento === 'fiado') continue;
         const d = new Date(v.created_at);
         const h = d.getHours();
         if(h >= 0 && h < 24) {
@@ -157,6 +176,13 @@
     if (!vendaParaDeletarId) return;
     const id = vendaParaDeletarId;
     vendaParaDeletarId = null;
+    // Estorna fiado antes da exclusão para manter o fichário consistente.
+    try {
+      await revertFiadoDebtForVenda(supabase, id);
+    } catch (e) {
+      alert('Não foi possível estornar a dívida no fichário: ' + (e?.message || e));
+      return;
+    }
     // Desvincula pedidos que referenciam esta venda antes de deletar
     await supabase.from('pedidos').update({ id_venda: null }).eq('id_venda', id);
     const { error } = await supabase.from('vendas').delete().eq('id', id);

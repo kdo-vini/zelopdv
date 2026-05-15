@@ -5,6 +5,7 @@
   import { logAuditAction } from '$lib/accessControl';
   import { addToast } from '$lib/stores/ui';
   import { printPagamentoFiado } from '$lib/printService';
+  import { revertFiadoDebtForVenda } from '$lib/finance/saleOps';
   export let params;
 
   let pessoas = [];
@@ -152,15 +153,32 @@
     const id = itemParaDeletarId;
     itemParaDeletarId = null;
 
+    try {
+      // Estorna a dívida no fichário ANTES de apagar a venda, para que o
+      // saldo_fiado da pessoa fique consistente caso a venda seja fiado.
+      await revertFiadoDebtForVenda(supabase, id);
+    } catch (e) {
+      addToast('Não foi possível estornar a dívida no fichário: ' + (e?.message || e), 'error');
+      return;
+    }
+
     await supabase.from('pedidos').update({ id_venda: null }).eq('id_venda', id);
     const { error } = await supabase.from('vendas').delete().eq('id', id);
-    
+
     if(error){
       addToast('Erro ao apagar: ' + error.message, 'error');
     } else {
       addToast('Transação apagada.', 'success');
-      // Recarrega histórico
-      if(pessoaSelecionada) await loadHistory(pessoaSelecionada.id);
+      // Recarrega lista de pessoas (saldo_fiado mudou) e histórico
+      await loadPessoas();
+      if(pessoaSelecionada){
+        const refreshed = pessoas.find(p => p.id === pessoaSelecionada.id);
+        if (refreshed){
+          pessoaSelecionada = refreshed;
+          saldo = Number(refreshed.saldo_fiado || 0);
+        }
+        await loadHistory(pessoaSelecionada.id);
+      }
     }
   }
 

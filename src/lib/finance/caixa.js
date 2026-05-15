@@ -142,7 +142,10 @@ export function calculatePaymentSummary(vendas = [], pagamentos = []) {
 
   totalsByForm.dinheiro = cashTotal;
 
-  const totalGeral = money((vendas || []).reduce((sum, venda) => sum + money(venda?.valor_total), 0));
+  const fiadoTotal = money(totalsByForm.fiado || 0);
+  const totalBruto = money((vendas || []).reduce((sum, venda) => sum + money(venda?.valor_total), 0));
+  // Fiado é dívida (a receber), não receita realizada — não entra em totais do caixa.
+  const totalGeral = money(totalBruto - fiadoTotal);
 
   return {
     totalsByForm,
@@ -151,9 +154,10 @@ export function calculatePaymentSummary(vendas = [], pagamentos = []) {
     cartaoDebito: money(totalsByForm.cartao_debito),
     cartaoCredito: money(totalsByForm.cartao_credito),
     cartaoLegacy: money(totalsByForm.cartao),
-    fiado: money(totalsByForm.fiado),
+    fiado: fiadoTotal,
     totalCartao: money((totalsByForm.cartao_debito || 0) + (totalsByForm.cartao_credito || 0) + (totalsByForm.cartao || 0)),
-    totalGeral
+    totalGeral,
+    totalBruto
   };
 }
 
