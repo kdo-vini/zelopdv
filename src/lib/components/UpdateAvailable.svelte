@@ -291,12 +291,12 @@
   >
     <div class="update-dot" aria-hidden="true"></div>
     <div class="update-copy">
-      <strong>A new update is available.</strong>
-      <span>Refresh to get the latest improvements.</span>
+      <strong>Uma nova atualizacao esta disponivel.</strong>
+      <span>Atualize para receber as melhorias mais recentes.</span>
     </div>
     <div class="update-actions">
-      <button type="button" class="btn-later" on:click={later}>Later</button>
-      <button type="button" class="btn-refresh" on:click={refreshNow}>Refresh now</button>
+      <button type="button" class="btn-later" on:click={later}>Depois</button>
+      <button type="button" class="btn-refresh" on:click={refreshNow}>Atualizar agora</button>
     </div>
   </section>
 {/if}
