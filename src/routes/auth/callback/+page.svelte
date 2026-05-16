@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { trackLead } from '$lib/metaPixel';
+  import { claimStoredReferral } from '$lib/referrals/client';
 
   let status = 'Autenticando...';
 
@@ -32,12 +33,13 @@
       if (isNewUser) trackLead();
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         subscription.unsubscribe();
         clearTimeout(timeout);
         maybeFireLeadPixel(session);
-        logSubUserLogin(session, 'oauth-signed-in');
+        await logSubUserLogin(session, 'oauth-signed-in');
+        await claimStoredReferral(session, 'oauth-signed-in');
         window.location.href = '/app';
       } else if (event === 'INITIAL_SESSION' && !session) {
         // OAuth code not yet exchanged — wait for SIGNED_IN
@@ -45,12 +47,13 @@
     });
 
     // Fallback: if already signed in or exchange completes quickly
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (data?.session) {
         subscription.unsubscribe();
         clearTimeout(timeout);
         maybeFireLeadPixel(data.session);
-        logSubUserLogin(data.session, 'oauth-existing-session');
+        await logSubUserLogin(data.session, 'oauth-existing-session');
+        await claimStoredReferral(data.session, 'oauth-existing-session');
         window.location.href = '/app';
       }
     });

@@ -301,6 +301,13 @@
       const { error } = await supabase.from('empresa_perfil').upsert(payload, { onConflict: 'user_id' });
       if (error) throw error;
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        fetch('/api/referrals/code', {
+          headers: { authorization: `Bearer ${session.access_token}` },
+        }).catch(() => {});
+      }
+
       addToast('Perfil salvo com sucesso!', 'success');
       logo_url = finalUrl;
       logoFile = null;

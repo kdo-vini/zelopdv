@@ -4,6 +4,7 @@
   import { waitAuthReady } from '$lib/authStore';
   import BarChart from '$lib/components/charts/BarChart.svelte'; // [NEW]
   import OnboardingChecklist from '$lib/components/OnboardingChecklist.svelte';
+  import ReferralCard from '$lib/components/ReferralCard.svelte';
   import { revertFiadoDebtForVenda } from '$lib/finance/saleOps';
 
   export let params;
@@ -210,6 +211,10 @@
   {#if loading}
     <div class="loading">Carregando...</div>
   {:else}
+    <div class="mb-4">
+      <ReferralCard compact={true} />
+    </div>
+
     <!-- [NEW] Mobile-First Grid Layout: 2 cols on mobile, 4 on desktop -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
       <!-- Vendas Hoje (Most Important) -->

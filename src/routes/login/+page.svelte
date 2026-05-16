@@ -6,6 +6,7 @@
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import AuthLayout from '$lib/components/AuthLayout.svelte';
   import GoogleAuthButton from '$lib/components/GoogleAuthButton.svelte';
+  import { claimStoredReferral, persistReferralAttributionFromUrl } from '$lib/referrals/client';
 
   let email = '';
   let password = '';
@@ -31,6 +32,7 @@
 
   // Se já houver sessão ativa, redireciona para o PDV (/app)
   onMount(async () => {
+    persistReferralAttributionFromUrl();
     if (!supabase) return; // evita erro quando env não está configurado
       const { data, error } = await supabase.auth.getSession();
       if (error) console.warn('Erro ao verificar sessão:', error.message);
@@ -53,6 +55,7 @@
       }
       if (data?.session) {
         await logSubUserLogin(data.session, 'login-password');
+        await claimStoredReferral(data.session, 'login-password');
         addToast('Login realizado com sucesso!', 'success');
         const waitStableSession = async (tries = 15) => {
           for (let i = 0; i < tries; i++) {

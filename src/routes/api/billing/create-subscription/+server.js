@@ -12,12 +12,13 @@ import {
   buildStripeLineItems,
   PLANS,
 } from '$lib/pricing';
+import { progressReferralForUser } from '$lib/server/referrals';
 
 const PIX_ENABLED = env.BILLING_PIX_ENABLED === 'true';
 const ORIGIN = env.PUBLIC_APP_URL || 'https://zelopdv.com.br';
 const TRIAL_DAYS = 30;
 
-export async function POST({ request, url }) {
+export async function POST({ request, url, cookies }) {
   try {
     if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado.' }, { status: 500 });
     if (!stripe) return json({ error: 'Stripe não configurado. Verifique STRIPE_SECRET_KEY.' }, { status: 500 });
@@ -188,6 +189,17 @@ export async function POST({ request, url }) {
       subData.created_at = nowIso;
       await supabaseAdmin.from('subscriptions').insert(subData);
     }
+
+    await progressReferralForUser({
+      userId,
+      email,
+      wantedStatus: 'pending_payment',
+      referralCode: cookies?.get?.('zelo_referral_code') || user.user_metadata?.referral_code,
+      referralId: cookies?.get?.('zelo_referral_id'),
+      source: 'create-subscription',
+    }).catch((err) => {
+      console.warn('[create-subscription] referral progress error:', err?.message || err);
+    });
 
     return json({ url: session.url, sessionId: session.id });
   } catch (err) {

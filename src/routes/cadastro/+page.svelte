@@ -7,6 +7,8 @@
   import GoogleAuthButton from '$lib/components/GoogleAuthButton.svelte';
   import EmailSentHelper from '$lib/components/EmailSentHelper.svelte';
   import { trackLead } from '$lib/metaPixel';
+  import { getStoredReferralAttribution, persistReferralAttributionFromUrl } from '$lib/referrals/client';
+  import { onMount } from 'svelte';
 
   let email = '';
   let password = '';
@@ -16,6 +18,10 @@
   let successMessage = '';
   let showPassword = false;
   let showConfirm = false;
+
+  onMount(() => {
+    persistReferralAttributionFromUrl();
+  });
 
   /** Cria conta com e-mail/senha; supõe confirmação por e-mail ativa. */
   async function handleSignUp(e) {
@@ -30,10 +36,14 @@
     // Redireciona confirmação para a página de login com aviso
     let redirectTo = '';
     try { redirectTo = getAuthRedirectUrl('/login?confirmed=1'); } catch {}
+    const referral = getStoredReferralAttribution();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirectTo || undefined }
+      options: {
+        emailRedirectTo: redirectTo || undefined,
+        data: referral.code ? { referral_code: referral.code } : undefined,
+      }
     });
     loading = false;
     if (error) {

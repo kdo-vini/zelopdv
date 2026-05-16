@@ -5,6 +5,10 @@ import { sendEmail, isEmailConfigured } from '$lib/server/email';
 import { emailDay0 } from '$lib/server/emailTemplates';
 import { logOnboardingCommunication } from '$lib/server/onboardingEvents';
 import { sendCapiEvent } from '$lib/server/metaCapi';
+import {
+  ensureReferralCodeForEmpresa,
+  progressReferralForUser,
+} from '$lib/server/referrals';
 
 async function fetchPerfil(userId) {
   const { data: perfil, error } = await supabaseAdmin
@@ -175,7 +179,7 @@ async function maybeSendWelcomeWhatsApp({ userId, perfil }) {
   return true;
 }
 
-export async function POST({ request }) {
+export async function POST({ request, cookies }) {
   try {
     if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado.' }, { status: 500 });
 
@@ -200,6 +204,21 @@ export async function POST({ request }) {
 
     if (existingSub) {
       const perfil = await fetchPerfil(userId);
+      if (perfil?.nome_exibicao) {
+        await ensureReferralCodeForEmpresa(userId, perfil.nome_exibicao).catch((err) => {
+          console.warn('[start-trial] referral code ensure error:', err?.message || err);
+        });
+      }
+      await progressReferralForUser({
+        userId,
+        email,
+        wantedStatus: 'trial_started',
+        referralCode: cookies?.get?.('zelo_referral_code') || user.user_metadata?.referral_code,
+        referralId: cookies?.get?.('zelo_referral_id'),
+        source: 'start-trial-existing',
+      }).catch((err) => {
+        console.warn('[start-trial] referral progress existing error:', err?.message || err);
+      });
       const emailDay0Sent = await maybeSendDay0Email({
         userId,
         email,
@@ -246,6 +265,21 @@ export async function POST({ request }) {
     }
 
     const perfil = await fetchPerfil(userId);
+    if (perfil?.nome_exibicao) {
+      await ensureReferralCodeForEmpresa(userId, perfil.nome_exibicao).catch((err) => {
+        console.warn('[start-trial] referral code ensure error:', err?.message || err);
+      });
+    }
+    await progressReferralForUser({
+      userId,
+      email,
+      wantedStatus: 'trial_started',
+      referralCode: cookies?.get?.('zelo_referral_code') || user.user_metadata?.referral_code,
+      referralId: cookies?.get?.('zelo_referral_id'),
+      source: 'start-trial',
+    }).catch((err) => {
+      console.warn('[start-trial] referral progress error:', err?.message || err);
+    });
     const [, sideEffects] = await Promise.all([
       sendCapiEvent({
         eventName: 'StartTrial',

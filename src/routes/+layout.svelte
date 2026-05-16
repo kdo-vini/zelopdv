@@ -55,11 +55,12 @@
   $: isBlogPage = path.startsWith('/blog');
   $: isPricingPage = path === '/precificacao';
   $: isExtensoesPage = path === '/extensoes' || path.startsWith('/extensoes/');
+  $: isReferralPage = path.startsWith('/indica/');
   $: isAuthPage = ['/login', '/cadastro', '/esqueci-senha', '/redefinir-senha'].includes(path);
   // Routes that have their own sidebar layout — hide root header/footer for these
   $: hasSidebarLayout = isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura;
   // Show support chat on public/auth pages but not inside the app
-  $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && $page.url.pathname !== '/pascoa' && !$page.error;
+  $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && !isReferralPage && $page.url.pathname !== '/pascoa' && !$page.error;
 
   async function resolveAccessContext(userId) {
     if (!userId) return { isSubUser: false, ownerUserId: userId };
@@ -210,7 +211,7 @@
       }
 
       // Helper to check if path is public (includes /loja/* subroutes)
-      const isPublicPath = (p) => publicPaths.includes(p) || p.startsWith('/blog/');
+      const isPublicPath = (p) => publicPaths.includes(p) || p.startsWith('/blog/') || p.startsWith('/indica/');
 
       if (!session && !isPublicPath(path)) {
 
@@ -220,7 +221,7 @@
       }
       if (session && isPublicPath(path)) {
         // Allow /loja/* paths without redirect (public storefront)
-        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html' || path === '/redefinir-senha' || path === '/pascoa' || path === '/precificacao' || path === '/vs-planilha' || path.startsWith('/para-') || path.startsWith('/blog')) {
+        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html' || path === '/redefinir-senha' || path === '/pascoa' || path === '/precificacao' || path === '/vs-planilha' || path.startsWith('/para-') || path.startsWith('/blog') || path.startsWith('/indica/')) {
 
         } else {
 
@@ -391,7 +392,7 @@
   {/if}
 
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isAuthPage && !hasSidebarLayout}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isReferralPage && !isAuthPage && !hasSidebarLayout}
   <header class="border-b bg-header-base backdrop-blur sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
@@ -582,11 +583,11 @@
   {/if}
   {/if}
 
-  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
+  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isReferralPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isAuthPage && !hasSidebarLayout && !$page.error}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isReferralPage && !isAuthPage && !hasSidebarLayout && !$page.error}
   <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
