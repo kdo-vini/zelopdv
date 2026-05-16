@@ -33,6 +33,10 @@ function nextStatus(current, wanted) {
   return STATUS_RANK[wanted] > STATUS_RANK[current] ? wanted : current;
 }
 
+function isRecoverableRejection(reason) {
+  return reason === 'same_phone' || reason === 'same_documento';
+}
+
 export async function resolveOwnerUserId(userId) {
   assertAdminClient();
   const { data } = await supabaseAdmin
@@ -181,18 +185,6 @@ async function isAutoReferral({ referrer, referredUserId, referredEmail, referre
     return { blocked: true, reason: 'same_email' };
   }
 
-  const referrerPhone = normalizeDigits(referrer.contato);
-  const referredPhone = normalizeDigits(referredProfile?.contato);
-  if (referrerPhone && referredPhone && referrerPhone === referredPhone) {
-    return { blocked: true, reason: 'same_phone' };
-  }
-
-  const referrerDoc = normalizeDigits(referrer.documento);
-  const referredDoc = normalizeDigits(referredProfile?.documento);
-  if (referrerDoc && referredDoc && referrerDoc === referredDoc) {
-    return { blocked: true, reason: 'same_documento' };
-  }
-
   return { blocked: false, reason: '' };
 }
 
@@ -283,9 +275,16 @@ export async function claimReferralForUser({
     referred_phone: referredProfile?.contato || null,
     referred_documento: referredProfile?.documento || null,
     referral_code: referrer.referral_code,
-    status: nextStatus(referral?.status, wantedStatus),
+    status:
+      referral?.status === 'rejected' && isRecoverableRejection(referral?.rejection_reason)
+        ? wantedStatus
+        : nextStatus(referral?.status, wantedStatus),
     source: referral?.source || source,
     updated_at: nowIso,
+    rejection_reason:
+      referral?.status === 'rejected' && isRecoverableRejection(referral?.rejection_reason)
+        ? null
+        : referral?.rejection_reason || null,
   };
 
   if (referral?.id) {
