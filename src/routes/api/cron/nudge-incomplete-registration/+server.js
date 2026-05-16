@@ -81,9 +81,30 @@ export async function GET({ request }) {
 
   const nudgedSet = new Set((alreadyNudged || []).map((r) => r.user_id));
 
+  // Sub-usuários (funcionários convidados via add-on de Acessos) não devem receber
+  // o nudge — eles nunca terão empresa_perfil próprio, e o dono cuida da conta.
+  const { data: subUsers, error: subUsersErr } = await supabaseAdmin
+    .from('access_users')
+    .select('auth_user_id')
+    .in('auth_user_id', userIds)
+    .not('auth_user_id', 'is', null);
+
+  if (subUsersErr) {
+    console.error('[nudge-incomplete-registration] Erro ao buscar sub-usuários:', subUsersErr.message);
+    return json({ error: subUsersErr.message }, { status: 500 });
+  }
+
+  const subUserSet = new Set((subUsers || []).map((r) => r.auth_user_id));
+
   // ── 3. Process each user ──────────────────────────────────────────────────
   for (const user of users) {
     const { user_id, email } = user;
+
+    // Skip sub-users — they're company employees, not leads
+    if (subUserSet.has(user_id)) {
+      results.skipped++;
+      continue;
+    }
 
     // Skip if nudge was already sent
     if (nudgedSet.has(user_id)) {

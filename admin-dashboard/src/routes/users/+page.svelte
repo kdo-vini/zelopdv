@@ -30,7 +30,15 @@
     { key: 'active',    label: 'Ativo' },
     { key: 'canceled',  label: 'Cancelado' },
     { key: 'no_profile',label: 'Sem Perfil' },
+    { key: 'sub_users', label: 'Sub-usuários' },
   ]
+
+  const ACCESS_STATUS_LABEL = {
+    pending: { text: 'Pendente', class: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
+    active:  { text: 'Ativo',    class: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' },
+    blocked: { text: 'Bloqueado',class: 'bg-rose-500/10 text-rose-400 border border-rose-500/20' },
+    removed: { text: 'Removido', class: 'bg-slate-500/10 text-slate-400 border border-slate-500/20' },
+  }
 
   function setStatusFilter(key) {
     statusFilter = key
@@ -75,7 +83,7 @@
     if (allUsers && allUsers.length > 0) {
       const userIds = allUsers.map(u => u.user_id)
 
-      const [subsResult, aiResult, salesResult, lastSeenResult] = await Promise.all([
+      const [subsResult, aiResult, salesResult, lastSeenResult, accessUsersResult] = await Promise.all([
         supabase
           .from('subscriptions')
           .select('id, user_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, provider_subscription_id')
@@ -87,6 +95,11 @@
           .in('user_id', userIds),
         supabase.rpc('admin_get_sales_counts', { days_ago: 30 }),
         supabase.rpc('admin_get_users_last_seen'),
+        supabase
+          .from('access_users')
+          .select('auth_user_id, owner_user_id, role_id, status, email, created_at')
+          .in('auth_user_id', userIds)
+          .not('auth_user_id', 'is', null),
       ])
 
       const aiCountMap = {}
@@ -102,21 +115,67 @@
         lastSeenMap[row.user_id] = row.effective_last_seen
       }
 
-      users = allUsers.map(u => ({
-        user_id: u.user_id,
-        nome_exibicao: u.nome_exibicao || u.raw_user_meta_data?.full_name || null,
-        email: u.email,            // auth email — used for mailto / password reset
-        phone: u.contato || null,  // empresa_perfil.contato = WhatsApp phone
-        documento: u.documento || null,
-        modulo_pdv_ativo: u.modulo_pdv_ativo ?? false,
-        created_at: u.profile_created_at || u.auth_created_at,
-        last_seen_at: u.last_seen_at,
-        has_profile: !!u.nome_exibicao,
-        subscriptions: subsResult.data?.filter(s => s.user_id === u.user_id).slice(0, 1) || [],
-        ai_interactions: aiCountMap[u.user_id] || 0,
-        sales_last_30d: salesCountMap[u.user_id] || 0,
-        effective_last_seen: lastSeenMap[u.user_id] || null,
-      }))
+      // Map auth_user_id → access_user row (sub-user metadata)
+      const subUserMap = {}
+      const ownerIds = new Set()
+      const roleIds = new Set()
+      for (const row of accessUsersResult.data || []) {
+        subUserMap[row.auth_user_id] = row
+        if (row.owner_user_id) ownerIds.add(row.owner_user_id)
+        if (row.role_id) roleIds.add(row.role_id)
+      }
+
+      // Fetch owner company names + role names for sub-users
+      const [ownerProfilesResult, rolesResult] = await Promise.all([
+        ownerIds.size > 0
+          ? supabase
+              .from('empresa_perfil')
+              .select('user_id, nome_exibicao')
+              .in('user_id', Array.from(ownerIds))
+          : { data: [] },
+        roleIds.size > 0
+          ? supabase
+              .from('access_roles')
+              .select('id, name')
+              .in('id', Array.from(roleIds))
+          : { data: [] },
+      ])
+
+      const ownerNameMap = {}
+      for (const row of ownerProfilesResult.data || []) {
+        ownerNameMap[row.user_id] = row.nome_exibicao
+      }
+      const roleNameMap = {}
+      for (const row of rolesResult.data || []) {
+        roleNameMap[row.id] = row.name
+      }
+
+      users = allUsers.map(u => {
+        const subUser = subUserMap[u.user_id] || null
+        const ownerCompanyName = subUser ? (ownerNameMap[subUser.owner_user_id] || null) : null
+        return {
+          user_id: u.user_id,
+          nome_exibicao: u.nome_exibicao || u.raw_user_meta_data?.full_name || null,
+          email: u.email,            // auth email — used for mailto / password reset
+          phone: u.contato || null,  // empresa_perfil.contato = WhatsApp phone
+          documento: u.documento || null,
+          modulo_pdv_ativo: u.modulo_pdv_ativo ?? false,
+          created_at: u.profile_created_at || u.auth_created_at,
+          last_seen_at: u.last_seen_at,
+          has_profile: !!u.nome_exibicao,
+          subscriptions: subsResult.data?.filter(s => s.user_id === u.user_id).slice(0, 1) || [],
+          ai_interactions: aiCountMap[u.user_id] || 0,
+          sales_last_30d: salesCountMap[u.user_id] || 0,
+          effective_last_seen: lastSeenMap[u.user_id] || null,
+          is_sub_user: !!subUser,
+          owner_user_id: subUser?.owner_user_id || null,
+          owner_company_name: ownerCompanyName,
+          role_id: subUser?.role_id || null,
+          role_name: subUser?.role_id ? (roleNameMap[subUser.role_id] || null) : null,
+          access_status: subUser?.status || null,
+          access_invited_at: subUser?.created_at || null,
+        }
+      })
     } else {
       users = []
     }
@@ -539,24 +598,31 @@
       const matchesSearch = (
         user.nome_exibicao?.toLowerCase().includes(search) ||
         user.email?.toLowerCase().includes(search) ||
-        user.phone?.toLowerCase().includes(search)
+        user.phone?.toLowerCase().includes(search) ||
+        user.owner_company_name?.toLowerCase().includes(search)
       )
       if (!matchesSearch) return false
     }
 
-    // Status filter
+    // Sub-users só aparecem na própria aba — nunca contam como empresa
+    if (statusFilter === 'sub_users') return user.is_sub_user === true
+    if (user.is_sub_user) return false
+
+    // Empresa filters
     if (statusFilter === 'all') return true
     if (statusFilter === 'no_profile') return user.has_profile === false
     const subStatus = user.subscriptions?.[0]?.status
     return subStatus === statusFilter
   })
 
+  $: companies = users.filter(u => !u.is_sub_user)
   $: counts = {
-    all:        users.length,
-    trialing:   users.filter(u => u.subscriptions?.[0]?.status === 'trialing').length,
-    active:     users.filter(u => u.subscriptions?.[0]?.status === 'active').length,
-    canceled:   users.filter(u => u.subscriptions?.[0]?.status === 'canceled').length,
-    no_profile: users.filter(u => u.has_profile === false).length,
+    all:        companies.length,
+    trialing:   companies.filter(u => u.subscriptions?.[0]?.status === 'trialing').length,
+    active:     companies.filter(u => u.subscriptions?.[0]?.status === 'active').length,
+    canceled:   companies.filter(u => u.subscriptions?.[0]?.status === 'canceled').length,
+    no_profile: companies.filter(u => u.has_profile === false).length,
+    sub_users:  users.filter(u => u.is_sub_user).length,
   }
 
   // Reset page when filters change
@@ -659,6 +725,62 @@
   {:else}
     <!-- Desktop Table View -->
     <div class="hidden md:block overflow-hidden bg-slate-900/40 border border-slate-800/60 rounded-2xl shadow-xl backdrop-blur-sm" in:fade>
+      {#if statusFilter === 'sub_users'}
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 bg-slate-900/80">
+              <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Sub-usuário</th>
+              <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Empresa dona</th>
+              <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cargo</th>
+              <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Convite</th>
+              <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Último Acesso</th>
+              <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/50">
+            {#each pagedUsers as user (user.user_id)}
+              {@const accessSt = ACCESS_STATUS_LABEL[user.access_status] || { text: user.access_status || '-', class: 'bg-slate-500/10 text-slate-400 border border-slate-500/20' }}
+              <tr class="group hover:bg-slate-800/30 transition-colors">
+                <td class="py-4 px-6">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-700 to-indigo-900 border border-indigo-700 flex items-center justify-center text-sm font-bold text-white shadow-inner shrink-0">
+                      {getInitials(user.email)}
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-slate-200 truncate group-hover:text-white transition-colors">{user.email}</p>
+                      <p class="text-xs text-slate-500 truncate mt-0.5">Sub-usuário</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="py-4 px-6 text-sm text-slate-300">
+                  {user.owner_company_name || `Empresa #${(user.owner_user_id || '').slice(0, 8)}`}
+                </td>
+                <td class="py-4 px-6 text-sm text-slate-400">
+                  {user.role_name || '—'}
+                </td>
+                <td class="py-4 px-6">
+                  <span class="inline-flex px-2.5 py-1 text-[11px] font-medium tracking-wide rounded-md {accessSt.class}">
+                    {accessSt.text}
+                  </span>
+                </td>
+                <td class="py-4 px-6 text-xs text-slate-400">
+                  {formatLastSeen(user.effective_last_seen)}
+                </td>
+                <td class="py-4 px-6 text-right">
+                  <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <a href="mailto:{user.email}" class="p-2 text-slate-400 hover:text-sky-400 hover:bg-sky-400/10 rounded-lg transition-colors" title="Enviar e-mail">
+                      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    </a>
+                    <button on:click={() => handleResetPassword(user)} class="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors" title="Reset de Senha">
+                      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      {:else}
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="border-b border-slate-800 bg-slate-900/80">
@@ -674,7 +796,7 @@
           {#each pagedUsers as user (user.user_id)}
             {@const status = getUserStatus(user)}
             {@const sub = user.subscriptions?.[0]}
-            
+
             <tr class="group hover:bg-slate-800/30 transition-colors">
               <td class="py-4 px-6">
                 <div class="flex items-center gap-4">
@@ -754,19 +876,34 @@
           {/each}
         </tbody>
       </table>
+      {/if}
     </div>
 
     <!-- Mobile Stacked View -->
     <div class="md:hidden space-y-4" in:fade>
       {#each pagedUsers as user (user.user_id)}
-        {@const status = getUserStatus(user)}
+        {@const status = user.is_sub_user
+          ? (ACCESS_STATUS_LABEL[user.access_status] || { text: user.access_status || '-', class: 'bg-slate-500/10 text-slate-400 border border-slate-500/20' })
+          : getUserStatus(user)}
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
           <div class="absolute top-0 left-0 w-1 h-full {status.class.split(' ')[0]}"></div>
-          
+
           <div class="flex justify-between items-start mb-4">
-            <div>
-              <h3 class="text-base font-bold text-slate-100">{user.nome_exibicao || 'Sem Nome'}</h3>
-              <p class="text-sm text-slate-400 mt-0.5">{user.contato}</p>
+            <div class="min-w-0 pr-2">
+              <h3 class="text-base font-bold text-slate-100 truncate">
+                {#if user.is_sub_user}
+                  {user.email}
+                {:else}
+                  {user.nome_exibicao || 'Sem Nome'}
+                {/if}
+              </h3>
+              <p class="text-sm text-slate-400 mt-0.5 truncate">
+                {#if user.is_sub_user}
+                  Sub-usuário de <span class="text-slate-300">{user.owner_company_name || 'empresa'}</span>{user.role_name ? ` · ${user.role_name}` : ''}
+                {:else}
+                  {user.email}
+                {/if}
+              </p>
             </div>
             <span class="inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded {status.class}">
               {status.text}
@@ -785,13 +922,15 @@
             <button on:click={() => handleResetPassword(user)} class="p-2 text-slate-400 bg-slate-800 rounded-lg hover:text-amber-400" title="Reset Senha">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
             </button>
-            <button on:click={() => openEdit(user)} class="p-2 text-slate-400 bg-slate-800 rounded-lg hover:text-white" title="Editar">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-            </button>
-            <div class="flex-1"></div>
-            <button on:click={() => handleDeleteUser(user)} class="p-2 text-rose-400 bg-rose-500/10 rounded-lg" title="Excluir">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </button>
+            {#if !user.is_sub_user}
+              <button on:click={() => openEdit(user)} class="p-2 text-slate-400 bg-slate-800 rounded-lg hover:text-white" title="Editar">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+              </button>
+              <div class="flex-1"></div>
+              <button on:click={() => handleDeleteUser(user)} class="p-2 text-rose-400 bg-rose-500/10 rounded-lg" title="Excluir">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+            {/if}
           </div>
         </div>
       {/each}
