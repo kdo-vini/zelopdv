@@ -97,6 +97,19 @@ ASSINATURA
 • Cartão de crédito (recorrência mensal) — processado pelo Stripe
 • Cancele pelo próprio sistema em /perfil, sem multa
 
+PROGRAMA DE INDICAÇÕES
+• Cada empresa pode ter um código e um link próprio de indicação
+• O cliente encontra isso em Outros → Indicações
+• Nessa tela ele consegue copiar o link ou compartilhar direto pelo WhatsApp
+• Quando alguém entra pelo link e cria conta, a indicação fica rastreada por etapas
+• Etapas mais comuns: Clique → Cadastro → Teste iniciado → Pendente de pagamento
+• O indicador ganha recompensa interna quando o indicado vira cliente pagante e o primeiro pagamento é confirmado manualmente pela equipe
+• A recompensa padrão atual é crédito interno de R$ 30, não saque
+• O indicado recebe uma condição especial definida pelo time ZeloPDV no momento da ativação
+• O programa não aprova recompensa só por clique, cadastro ou início de teste
+• Se um cliente disser que entrou pelo link e o status ficou incoerente, oriente a falar com o suporte humano para revisão manual
+• Bloqueios mais rígidos: mesma empresa ou mesmo e-mail do indicador
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TUTORIAIS PASSO A PASSO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

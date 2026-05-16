@@ -66,6 +66,9 @@ RLS:
 - `POST /api/admin/referrals/apply-reward-manual`
   - super admin;
   - marca reward como `applied` e referral como `reward_applied`.
+- `POST /api/admin/referrals/manual-action`
+  - super admin;
+  - executa ações guiadas no admin: avançar etapa, rejeitar com motivo, reabrir indicação e manter reward coerente para auditoria.
 
 ## Telas Criadas
 
@@ -73,10 +76,8 @@ RLS:
   - landing pública simples para convite.
 - `/gestao/indicacoes`
   - tela “Minhas indicações” da empresa.
-- Card no `/gestao`
-  - mostra código, link, copiar link e “Indicar pelo WhatsApp”.
 - `admin-dashboard/src/routes/referrals/+page.svelte`
-  - lista indicações e permite aprovar/aplicar recompensa manualmente.
+  - lista indicações e permite ações guiadas de auditoria: avançar etapa, rejeitar, reabrir, aprovar pagamento e aplicar recompensa.
 - Item “Indicações” na sidebar do app e do admin.
 
 ## Regras Implementadas
@@ -86,8 +87,7 @@ RLS:
 - Bloqueio de autoindicação por:
   - mesma empresa;
   - mesmo e-mail;
-  - mesmo telefone;
-  - mesmo CPF/CNPJ.
+- Casos com mesmo telefone ou mesmo CPF/CNPJ não são mais rejeitados automaticamente no onboarding do MVP. Eles podem ser revisados manualmente no admin.
 - Recompensa só é aprovada por ação manual após confirmação humana.
 - Limite de 5 recompensas aprovadas/aplicadas por empresa por mês.
 - Recompensa padrão: R$30 de crédito interno.
@@ -97,9 +97,22 @@ RLS:
 
 1. Acesse `admin.zelopdv` e abra “Indicações”.
 2. Confirme fora do sistema se o indicado realmente pagou.
-3. Clique em “Aprovar” na indicação.
+3. Escolha a ação guiada “Confirmar pagamento e aprovar recompensa”.
 4. O sistema marca a indicação como `paid_manual_confirmed` e cria reward `approved`.
-5. Depois de aplicar o crédito/add-on manualmente na operação, clique em “Marcar aplicada”.
+5. Depois de aplicar o crédito/add-on manualmente na operação, use a ação “Marcar recompensa como aplicada”.
+
+## Auditoria Manual no Admin
+
+- O painel admin expõe ações guiadas em cada linha em vez de um seletor livre de status.
+- Ações disponíveis conforme o contexto:
+  - marcar como cadastro;
+  - marcar como teste iniciado;
+  - marcar como pendente de pagamento;
+  - confirmar pagamento e aprovar recompensa;
+  - marcar recompensa como aplicada;
+  - rejeitar com motivo;
+  - reabrir para cadastro, teste iniciado ou pendente de pagamento.
+- Quando uma indicação é reaberta ou rejeitada depois de já ter reward `approved` ou `applied`, a reward é cancelada automaticamente para manter a trilha auditável coerente.
 
 ## Por Que Manual no MVP
 

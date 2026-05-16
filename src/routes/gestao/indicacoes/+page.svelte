@@ -1,5 +1,71 @@
 <script>
   import ReferralCard from '$lib/components/ReferralCard.svelte';
+
+  const quickFacts = [
+    {
+      title: 'Compartilhe seu link ou código',
+      text: 'Envie pelo WhatsApp ou copie o link. Quando a pessoa entra por ele, a indicação fica registrada.'
+    },
+    {
+      title: 'Seu crédito libera depois do pagamento',
+      text: 'Cadastro e teste grátis ainda não geram crédito. A aprovação acontece só após o primeiro pagamento confirmado pelo time.'
+    },
+    {
+      title: 'O indicado recebe condição especial',
+      text: 'A condição é definida pelo time ZeloPDV no momento da ativação. Pode ser teste estendido, apoio na implantação ou outro benefício comercial.'
+    },
+    {
+      title: 'Programa simples e auditável',
+      text: 'O limite inicial é de até 5 recompensas aprovadas por empresa por mês. O benefício é interno: crédito em conta ou extensão, nunca saque.'
+    }
+  ];
+
+  const journeySteps = [
+    {
+      title: '1. Clique e cadastro',
+      text: 'A pessoa entra pelo seu link, cria a conta e completa o onboarding.'
+    },
+    {
+      title: '2. Uso e ativação',
+      text: 'A indicação evolui para cadastro, teste iniciado e depois pagamento pendente.'
+    },
+    {
+      title: '3. Confirmação manual',
+      text: 'Quando o primeiro pagamento é validado pelo time ZeloPDV, a recompensa fica aprovada.'
+    },
+    {
+      title: '4. Aplicação do benefício',
+      text: 'Depois disso, o crédito ou extensão é aplicado e aparece como concluído no seu histórico.'
+    }
+  ];
+
+  const faqItems = [
+    {
+      question: 'Quando eu ganho os R$30 de crédito?',
+      answer:
+        'O crédito só é aprovado depois que o indicado vira cliente pagante e esse primeiro pagamento é confirmado manualmente pela equipe. Clique ou cadastro sozinho não libera recompensa.'
+    },
+    {
+      question: 'O indicado ganha o quê?',
+      answer:
+        'Quem entra pelo seu link recebe uma condição especial definida pelo time ZeloPDV. Em geral isso entra como apoio na implantação, período de teste estendido ou outro benefício comercial equivalente.'
+    },
+    {
+      question: 'O que pode fazer uma indicação ser rejeitada?',
+      answer:
+        'Os bloqueios mais rígidos são autoindicação da mesma empresa ou uso do mesmo e-mail do indicador. Casos suspeitos também podem passar por revisão manual antes de qualquer aprovação.'
+    },
+    {
+      question: 'Preciso avisar o suporte para validar uma indicação?',
+      answer:
+        'Não para o tracking normal. Basta compartilhar o link ou código. Se você perceber um status incoerente depois do cadastro e onboarding, aí vale chamar o suporte para revisão manual.'
+    },
+    {
+      question: 'Onde eu acompanho se a indicação avançou?',
+      answer:
+        'Nesta própria página. Aqui você vê cliques, cadastros, clientes pagos e recompensas pendentes, aprovadas ou aplicadas.'
+    }
+  ];
 </script>
 
 <svelte:head>
@@ -9,12 +75,78 @@
 <section class="wrap">
   <div class="header">
     <div>
-      <p>Gestão / Indicações</p>
+      <p>Outros / Indicações</p>
       <h1>Minhas indicações</h1>
+      <span class="lede">
+        Compartilhe seu código, acompanhe quem avançou no cadastro e veja quando seu crédito fica liberado.
+      </span>
+    </div>
+  </div>
+
+  <div class="quick-grid">
+    {#each quickFacts as fact}
+      <article class="info-card">
+        <h2>{fact.title}</h2>
+        <p>{fact.text}</p>
+      </article>
+    {/each}
+  </div>
+
+  <div class="journey">
+    <div class="section-copy">
+      <p class="section-eyebrow">Como funciona</p>
+      <h2>O que acontece depois que você compartilha</h2>
+      <span>
+        O programa foi feito para começar pequeno, com rastreio claro e aprovação manual do pagamento antes de qualquer crédito.
+      </span>
+    </div>
+
+    <div class="journey-grid">
+      {#each journeySteps as step}
+        <article class="journey-step">
+          <h3>{step.title}</h3>
+          <p>{step.text}</p>
+        </article>
+      {/each}
     </div>
   </div>
 
   <ReferralCard />
+
+  <div class="faq-shell">
+    <div class="section-copy">
+      <p class="section-eyebrow">FAQ</p>
+      <h2>Perguntas frequentes</h2>
+      <span>
+        Reuni aqui o que costuma gerar mais dúvida para o indicante, sem te obrigar a sair da página.
+      </span>
+    </div>
+
+    <div class="faq-list">
+      {#each faqItems as item}
+        <details class="faq-item">
+          <summary>{item.question}</summary>
+          <p>{item.answer}</p>
+        </details>
+      {/each}
+    </div>
+  </div>
+
+  <div class="help-banner">
+    <div>
+      <strong>Viu uma indicação com status estranho?</strong>
+      <p>
+        Se a pessoa entrou pelo seu link, concluiu cadastro e mesmo assim o histórico não andou, fale com o suporte para revisão manual.
+      </p>
+    </div>
+    <a
+      href="https://wa.me/5514991537503?text=Ol%C3%A1%2C%20vim%20pela%20p%C3%A1gina%20de%20indica%C3%A7%C3%B5es%20do%20Zelo%20PDV%20e%20preciso%20de%20ajuda%20para%20revisar%20um%20status."
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Falar com suporte
+    </a>
+  </div>
 </section>
 
 <style>
@@ -22,28 +154,161 @@
     padding: 16px;
     max-width: 1100px;
     margin: 0 auto;
+    display: grid;
+    gap: 1.25rem;
   }
 
   .header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 1rem;
-    margin-bottom: 1rem;
   }
 
-  p {
+  .header p,
+  .section-eyebrow {
     margin: 0 0 0.25rem;
     color: var(--text-muted);
     text-transform: uppercase;
-    font-size: 0.65rem;
+    font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.12em;
   }
 
-  h1 {
+  h1,
+  h2,
+  h3 {
     margin: 0;
     color: var(--text-main);
-    font-size: 1.6rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  h2 {
+    font-size: 1.05rem;
+  }
+
+  h3 {
+    font-size: 0.95rem;
+  }
+
+  .lede,
+  .section-copy span,
+  .info-card p,
+  .journey-step p,
+  .faq-item p,
+  .help-banner p {
+    display: block;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .lede {
+    margin-top: 0.45rem;
+    max-width: 760px;
+  }
+
+  .quick-grid,
+  .journey-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .info-card,
+  .journey-step {
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 1rem;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .journey,
+  .faq-shell {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .section-copy {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .faq-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .faq-item {
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 0.95rem 1rem;
+  }
+
+  .faq-item summary {
+    cursor: pointer;
+    color: var(--text-main);
+    font-weight: 700;
+    list-style: none;
+  }
+
+  .faq-item summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-item p {
+    margin: 0.75rem 0 0;
+  }
+
+  .help-banner {
+    background: color-mix(in srgb, var(--primary) 12%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--primary) 34%, var(--border-subtle));
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .help-banner strong {
+    color: var(--text-main);
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  .help-banner a {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem 0.9rem;
+    border-radius: 8px;
+    text-decoration: none;
+    background: var(--primary);
+    color: var(--primary-text);
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 760px) {
+    .quick-grid,
+    .journey-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .help-banner {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .help-banner a {
+      width: 100%;
+    }
   }
 </style>

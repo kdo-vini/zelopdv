@@ -14,6 +14,24 @@ const STATUS_RANK = {
 
 const DEFAULT_REWARD_AMOUNT_CENTS = 3000;
 const MONTHLY_APPROVED_REWARD_LIMIT = 5;
+const REFERRAL_STATUS_LABELS = {
+  clicked: 'Clique',
+  signed_up: 'Cadastro',
+  trial_started: 'Teste iniciado',
+  pending_payment: 'Pendente de pagamento',
+  paid_manual_confirmed: 'Pagamento confirmado manualmente',
+  reward_approved: 'Recompensa aprovada',
+  reward_applied: 'Recompensa aplicada',
+  rejected: 'Rejeitada',
+};
+const MANUAL_REJECTION_REASONS = {
+  same_empresa: 'Autoindicação',
+  duplicate: 'Duplicada',
+  payment_not_confirmed: 'Pagamento não confirmado',
+  fraud_suspected: 'Fraude ou suspeita',
+  team_request: 'Pedido do time',
+  other: 'Outro motivo manual',
+};
 
 function assertAdminClient() {
   if (!supabaseAdmin) throw new Error('Supabase admin não configurado.');
@@ -35,6 +53,81 @@ function nextStatus(current, wanted) {
 
 function isRecoverableRejection(reason) {
   return reason === 'same_phone' || reason === 'same_documento';
+}
+
+function buildAuditEntry(summary, notes = '') {
+  const cleanNotes = (notes || '').toString().trim();
+  return `[${new Date().toISOString()}] ${summary}${cleanNotes ? ` - ${cleanNotes}` : ''}`;
+}
+
+function mergeAdminNotes(existingNotes, summary, notes = '') {
+  const entry = buildAuditEntry(summary, notes);
+  return [existingNotes, entry].filter(Boolean).join('\n');
+}
+
+async function getReferralById(referralId) {
+  const { data, error } = await supabaseAdmin
+    .from('referrals')
+    .select('*')
+    .eq('id', referralId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+async function getRewardByReferralId(referralId) {
+  const { data, error } = await supabaseAdmin
+    .from('referral_rewards')
+    .select('*')
+    .eq('referral_id', referralId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+async function updateReferralById(referralId, payload) {
+  const { data, error } = await supabaseAdmin
+    .from('referrals')
+    .update(payload)
+    .eq('id', referralId)
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+async function cancelReward({
+  reward,
+  adminUserId,
+  notes = '',
+  summary = 'Recompensa cancelada manualmente',
+}) {
+  if (!reward || reward.status === 'cancelled') return reward || null;
+
+  const { data, error } = await supabaseAdmin
+    .from('referral_rewards')
+    .update({
+      status: 'cancelled',
+      reason: buildAuditEntry(summary, notes),
+      updated_at: new Date().toISOString(),
+      applied_by: reward.status === 'applied' ? adminUserId : reward.applied_by || null,
+    })
+    .eq('id', reward.id)
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+async function ensureSuperAdmin(adminUserId) {
+  if (!adminUserId) throw new Error('adminUserId obrigatório.');
+  const admin = await isSuperAdminUser(adminUserId);
+  if (!admin) throw new Error('Acesso restrito a super admins.');
+  return admin;
 }
 
 export async function resolveOwnerUserId(userId) {
@@ -339,18 +432,9 @@ export async function confirmReferralPaymentManually(
 ) {
   assertAdminClient();
   if (!referralId) throw new Error('referralId obrigatório.');
-  if (!adminUserId) throw new Error('adminUserId obrigatório.');
+  await ensureSuperAdmin(adminUserId);
 
-  const admin = await isSuperAdminUser(adminUserId);
-  if (!admin) throw new Error('Acesso restrito a super admins.');
-
-  const { data: referral, error: referralError } = await supabaseAdmin
-    .from('referrals')
-    .select('*')
-    .eq('id', referralId)
-    .maybeSingle();
-
-  if (referralError) throw referralError;
+  const referral = await getReferralById(referralId);
   if (!referral) throw new Error('Indicação não encontrada.');
   if (referral.status === 'rejected') throw new Error('Indicação rejeitada não pode ser aprovada.');
   if (!referral.referred_empresa_id) throw new Error('Indicação ainda não foi vinculada a uma empresa indicada.');
@@ -359,11 +443,7 @@ export async function confirmReferralPaymentManually(
     throw new Error('Autoindicação bloqueada.');
   }
 
-  const { data: existingReward } = await supabaseAdmin
-    .from('referral_rewards')
-    .select('id, status')
-    .eq('referral_id', referral.id)
-    .maybeSingle();
+  const existingReward = await getRewardByReferralId(referral.id);
 
   const monthStart = new Date();
   monthStart.setUTCDate(1);
@@ -384,20 +464,14 @@ export async function confirmReferralPaymentManually(
   }
 
   const nowIso = new Date().toISOString();
-  const { data: updatedReferral, error: updateReferralError } = await supabaseAdmin
-    .from('referrals')
-    .update({
-      status: 'paid_manual_confirmed',
-      paid_at: nowIso,
-      confirmed_by: adminUserId,
-      admin_notes: notes || null,
-      updated_at: nowIso,
-    })
-    .eq('id', referral.id)
-    .select('*')
-    .single();
-
-  if (updateReferralError) throw updateReferralError;
+  const updatedReferral = await updateReferralById(referral.id, {
+    status: 'paid_manual_confirmed',
+    paid_at: nowIso,
+    confirmed_by: adminUserId,
+    rejection_reason: null,
+    admin_notes: mergeAdminNotes(referral.admin_notes, 'Pagamento confirmado manualmente', notes),
+    updated_at: nowIso,
+  });
 
   const rewardPayload = {
     referral_id: referral.id,
@@ -409,6 +483,8 @@ export async function confirmReferralPaymentManually(
     reason: notes || 'Primeiro pagamento confirmado manualmente.',
     approved_at: nowIso,
     approved_by: adminUserId,
+    applied_at: null,
+    applied_by: null,
     updated_at: nowIso,
   };
 
@@ -426,8 +502,7 @@ export async function confirmReferralPaymentManually(
 export async function markReferralRewardAppliedManually(rewardId, adminUserId, notes = '') {
   assertAdminClient();
   if (!rewardId) throw new Error('rewardId obrigatório.');
-  const admin = await isSuperAdminUser(adminUserId);
-  if (!admin) throw new Error('Acesso restrito a super admins.');
+  await ensureSuperAdmin(adminUserId);
 
   const { data: reward, error: rewardError } = await supabaseAdmin
     .from('referral_rewards')
@@ -457,10 +532,125 @@ export async function markReferralRewardAppliedManually(rewardId, adminUserId, n
 
   if (updateRewardError) throw updateRewardError;
 
-  await supabaseAdmin
-    .from('referrals')
-    .update({ status: 'reward_applied', updated_at: nowIso })
-    .eq('id', reward.referral_id);
+  const referral = await getReferralById(reward.referral_id);
+  await updateReferralById(reward.referral_id, {
+    status: 'reward_applied',
+    admin_notes: mergeAdminNotes(referral?.admin_notes, 'Recompensa marcada como aplicada', notes),
+    updated_at: nowIso,
+  });
 
   return updatedReward;
+}
+
+export async function executeReferralAdminAction(
+  referralId,
+  action,
+  adminUserId,
+  {
+    notes = '',
+    rewardType = 'credit',
+    amountCents = DEFAULT_REWARD_AMOUNT_CENTS,
+    addonKey = null,
+  } = {},
+) {
+  assertAdminClient();
+  if (!referralId) throw new Error('referralId obrigatório.');
+  if (!action) throw new Error('Ação obrigatória.');
+  await ensureSuperAdmin(adminUserId);
+
+  const referral = await getReferralById(referralId);
+  if (!referral) throw new Error('Indicação não encontrada.');
+
+  const reward = await getRewardByReferralId(referral.id);
+  const nowIso = new Date().toISOString();
+
+  const setStatus = async (targetStatus, summary) => {
+    const shouldCancelReward = reward && ['approved', 'applied'].includes(reward.status)
+      && STATUS_RANK[targetStatus] < STATUS_RANK.paid_manual_confirmed;
+
+    const updatedReward = shouldCancelReward
+      ? await cancelReward({
+          reward,
+          adminUserId,
+          notes,
+          summary: `${summary} com cancelamento da recompensa`,
+        })
+      : reward;
+
+    const updatedReferral = await updateReferralById(referral.id, {
+      status: targetStatus,
+      rejection_reason: null,
+      paid_at: STATUS_RANK[targetStatus] < STATUS_RANK.paid_manual_confirmed ? null : referral.paid_at,
+      confirmed_by: STATUS_RANK[targetStatus] < STATUS_RANK.paid_manual_confirmed ? null : referral.confirmed_by,
+      admin_notes: mergeAdminNotes(referral.admin_notes, summary, notes),
+      updated_at: nowIso,
+    });
+
+    return { referral: updatedReferral, reward: updatedReward };
+  };
+
+  const rejectManually = async (reasonKey) => {
+    const reasonLabel = MANUAL_REJECTION_REASONS[reasonKey];
+    if (!reasonLabel) throw new Error('Motivo de rejeição inválido.');
+
+    const updatedReward = reward && ['approved', 'applied'].includes(reward.status)
+      ? await cancelReward({
+          reward,
+          adminUserId,
+          notes,
+          summary: `Indicação rejeitada: ${reasonLabel}`,
+        })
+      : reward;
+
+    const updatedReferral = await updateReferralById(referral.id, {
+      status: 'rejected',
+      rejection_reason: reasonKey,
+      admin_notes: mergeAdminNotes(referral.admin_notes, `Indicação rejeitada: ${reasonLabel}`, notes),
+      updated_at: nowIso,
+    });
+
+    return { referral: updatedReferral, reward: updatedReward };
+  };
+
+  switch (action) {
+    case 'mark_signed_up':
+      return setStatus('signed_up', 'Status ajustado manualmente para cadastro');
+    case 'mark_trial_started':
+      return setStatus('trial_started', 'Status ajustado manualmente para teste iniciado');
+    case 'mark_pending_payment':
+      return setStatus('pending_payment', 'Status ajustado manualmente para pendente de pagamento');
+    case 'reopen_signed_up':
+      return setStatus('signed_up', 'Indicação reaberta manualmente para cadastro');
+    case 'reopen_trial_started':
+      return setStatus('trial_started', 'Indicação reaberta manualmente para teste iniciado');
+    case 'reopen_pending_payment':
+      return setStatus('pending_payment', 'Indicação reaberta manualmente para pendente de pagamento');
+    case 'confirm_payment':
+      return confirmReferralPaymentManually(referral.id, adminUserId, notes, {
+        rewardType,
+        amountCents,
+        addonKey,
+      });
+    case 'mark_reward_applied': {
+      const activeReward = reward || await getRewardByReferralId(referral.id);
+      if (!activeReward) throw new Error('Recompensa não encontrada para esta indicação.');
+      const updatedReward = await markReferralRewardAppliedManually(activeReward.id, adminUserId, notes);
+      const updatedReferral = await getReferralById(referral.id);
+      return { referral: updatedReferral, reward: updatedReward };
+    }
+    case 'reject_same_empresa':
+      return rejectManually('same_empresa');
+    case 'reject_duplicate':
+      return rejectManually('duplicate');
+    case 'reject_payment_not_confirmed':
+      return rejectManually('payment_not_confirmed');
+    case 'reject_fraud_suspected':
+      return rejectManually('fraud_suspected');
+    case 'reject_team_request':
+      return rejectManually('team_request');
+    case 'reject_other':
+      return rejectManually('other');
+    default:
+      throw new Error(`Ação manual não suportada: ${action}`);
+  }
 }
