@@ -83,25 +83,32 @@ export async function GET({ request }) {
 
   // Sub-usuários (funcionários convidados via add-on de Acessos) não devem receber
   // o nudge — eles nunca terão empresa_perfil próprio, e o dono cuida da conta.
+  // O match precisa cobrir 2 casos: convite aceito (auth_user_id preenchido) e
+  // convite pendente onde o funcionário fez signup direto pelo formulário (match por email).
+  const emails = users.map((u) => u.email?.toLowerCase()).filter(Boolean);
   const { data: subUsers, error: subUsersErr } = await supabaseAdmin
     .from('access_users')
-    .select('auth_user_id')
-    .in('auth_user_id', userIds)
-    .not('auth_user_id', 'is', null);
+    .select('auth_user_id, email')
+    .or(`auth_user_id.in.(${userIds.join(',')}),email.in.(${emails.join(',')})`);
 
   if (subUsersErr) {
     console.error('[nudge-incomplete-registration] Erro ao buscar sub-usuários:', subUsersErr.message);
     return json({ error: subUsersErr.message }, { status: 500 });
   }
 
-  const subUserSet = new Set((subUsers || []).map((r) => r.auth_user_id));
+  const subUserAuthIds = new Set();
+  const subUserEmails = new Set();
+  for (const row of subUsers || []) {
+    if (row.auth_user_id) subUserAuthIds.add(row.auth_user_id);
+    if (row.email) subUserEmails.add(row.email.toLowerCase());
+  }
 
   // ── 3. Process each user ──────────────────────────────────────────────────
   for (const user of users) {
     const { user_id, email } = user;
 
     // Skip sub-users — they're company employees, not leads
-    if (subUserSet.has(user_id)) {
+    if (subUserAuthIds.has(user_id) || (email && subUserEmails.has(email.toLowerCase()))) {
       results.skipped++;
       continue;
     }

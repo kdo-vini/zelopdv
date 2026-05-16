@@ -82,6 +82,7 @@
 
     if (allUsers && allUsers.length > 0) {
       const userIds = allUsers.map(u => u.user_id)
+      const emails = allUsers.map(u => u.email?.toLowerCase()).filter(Boolean)
 
       const [subsResult, aiResult, salesResult, lastSeenResult, accessUsersResult] = await Promise.all([
         supabase
@@ -95,11 +96,12 @@
           .in('user_id', userIds),
         supabase.rpc('admin_get_sales_counts', { days_ago: 30 }),
         supabase.rpc('admin_get_users_last_seen'),
+        // Match por auth_user_id (convite aceito) OU email (convite pendente +
+        // funcionário fez signup direto pelo formulário antes de aceitar).
         supabase
           .from('access_users')
           .select('auth_user_id, owner_user_id, role_id, status, email, created_at')
-          .in('auth_user_id', userIds)
-          .not('auth_user_id', 'is', null),
+          .or(`auth_user_id.in.(${userIds.join(',')}),email.in.(${emails.join(',')})`),
       ])
 
       const aiCountMap = {}
@@ -115,12 +117,14 @@
         lastSeenMap[row.user_id] = row.effective_last_seen
       }
 
-      // Map auth_user_id → access_user row (sub-user metadata)
-      const subUserMap = {}
+      // Mapas para resolver sub-user por auth_user_id OU por email.
+      const subUserByAuthId = {}
+      const subUserByEmail = {}
       const ownerIds = new Set()
       const roleIds = new Set()
       for (const row of accessUsersResult.data || []) {
-        subUserMap[row.auth_user_id] = row
+        if (row.auth_user_id) subUserByAuthId[row.auth_user_id] = row
+        if (row.email) subUserByEmail[row.email.toLowerCase()] = row
         if (row.owner_user_id) ownerIds.add(row.owner_user_id)
         if (row.role_id) roleIds.add(row.role_id)
       }
@@ -151,7 +155,9 @@
       }
 
       users = allUsers.map(u => {
-        const subUser = subUserMap[u.user_id] || null
+        const subUser = subUserByAuthId[u.user_id]
+          || (u.email ? subUserByEmail[u.email.toLowerCase()] : null)
+          || null
         const ownerCompanyName = subUser ? (ownerNameMap[subUser.owner_user_id] || null) : null
         return {
           user_id: u.user_id,
