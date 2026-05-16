@@ -18,6 +18,8 @@
   let rewards = [];
 
   $: whatsappUrl = link ? buildWhatsAppReferralUrl(link) : '';
+  $: anonymousClickedCount = referrals.filter((r) => !r.referred_email && !r.referred_phone && r.status === 'clicked').length;
+  $: listedReferrals = referrals.filter((r) => r.referred_email || r.referred_phone || r.status !== 'clicked');
   $: signedUpCount = referrals.filter((r) => ['signed_up', 'trial_started', 'pending_payment', 'paid_manual_confirmed', 'reward_approved', 'reward_applied'].includes(r.status)).length;
   $: paidCount = referrals.filter((r) => ['paid_manual_confirmed', 'reward_approved', 'reward_applied'].includes(r.status)).length;
   $: approvedRewards = rewards.filter((r) => r.status === 'approved').length;
@@ -83,6 +85,10 @@
     if (!cents) return '-';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
   }
+
+  function plural(count) {
+    return count === 1 ? '' : 's';
+  }
 </script>
 
 <section class="referral-card">
@@ -92,9 +98,7 @@
       <h2>Indique outro empreendedor</h2>
       <p class="description">Compartilhe seu código e ganhe crédito quando o indicado virar cliente.</p>
     </div>
-    {#if !compact}
-      <a class="subtle-link" href="/gestao">Dashboard</a>
-    {:else}
+    {#if compact}
       <a class="subtle-link" href="/gestao/indicacoes">Minhas indicações</a>
     {/if}
   </div>
@@ -130,12 +134,17 @@
       <div class="tables">
         <div>
           <h3>Indicações enviadas</h3>
-          {#if referrals.length}
+          {#if anonymousClickedCount}
+            <p class="muted summary-note">
+              {anonymousClickedCount} clique{plural(anonymousClickedCount)} ainda sem identificação ficaram resumido{plural(anonymousClickedCount)} para evitar ruído.
+            </p>
+          {/if}
+          {#if listedReferrals.length}
             <ul class="rows">
-              {#each referrals as item}
+              {#each listedReferrals as item}
                 <li>
                   <div>
-                    <strong>{item.referred_email || item.referred_phone || 'Visitante ainda não identificado'}</strong>
+                    <strong>{item.referred_email || item.referred_phone}</strong>
                     <span>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span>
                   </div>
                   <span class="status">{formatReferralStatus(item.status)}</span>
@@ -317,6 +326,10 @@
     padding: 0;
     display: grid;
     gap: 0.5rem;
+  }
+
+  .summary-note {
+    margin-top: 0.6rem;
   }
 
   .rows li {
