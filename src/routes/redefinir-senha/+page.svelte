@@ -76,6 +76,21 @@
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
+      // If this user was invited as a sub-user, activate the access_users row
+      // (link auth_user_id and flip status to 'active'). No-op for regular
+      // password resets.
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          await fetch('/api/access/activate', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+        }
+      } catch (activationErr) {
+        console.warn('[redefinir-senha] activate error:', activationErr);
+      }
+
       addToast('Senha atualizada com sucesso!', 'success');
       // Redireciona para o app após sucesso
       window.location.href = '/app';

@@ -9,7 +9,14 @@
   import OnboardingWizard from '$lib/components/OnboardingWizard.svelte';
   import { pairPrinter, unpairPrinter, printerStatus, isWebUsbSupported } from '$lib/printer';
   import { printTeste } from '$lib/printService';
+  import { getAccessContext } from '$lib/accessControl';
   export let params;
+
+  // Sub-user state (populated in onMount if user is a sub-user)
+  let isSubUser = false;
+  let ownerCompanyName = '';
+  let subUserRoleName = '';
+  let resettingPassword = false;
 
   const tabs = [
     { id: 'perfil',       label: 'Perfil' },
@@ -180,6 +187,32 @@
     userId = session.user.id;
     email = session.user.email || '';
 
+    // Sub-users see a stripped-down "Minha conta" view — they can't manage the
+    // company profile, subscription, plataformas, etc. Detect early and skip
+    // the owner data loading entirely.
+    try {
+      const accessCtx = await getAccessContext();
+      if (accessCtx?.isSubUser) {
+        isSubUser = true;
+        const [{ data: owner }, roleResult] = await Promise.all([
+          supabase
+            .from('empresa_perfil')
+            .select('nome_exibicao, razao_social')
+            .eq('user_id', accessCtx.ownerUserId)
+            .maybeSingle(),
+          accessCtx.roleId
+            ? supabase.from('access_roles').select('name').eq('id', accessCtx.roleId).maybeSingle()
+            : Promise.resolve({ data: null }),
+        ]);
+        ownerCompanyName = owner?.nome_exibicao || owner?.razao_social || '';
+        subUserRoleName = roleResult?.data?.name || '';
+        loading = false;
+        return;
+      }
+    } catch (e) {
+      console.warn('[perfil] sub-user detection failed:', e?.message || e);
+    }
+
     // Load preferences from localStorage
     notifEstoqueBaixo = localStorage.getItem('zelo_notif_estoque') === 'true';
     notifFechamentoCaixa = localStorage.getItem('zelo_notif_caixa') === 'true';
@@ -345,6 +378,54 @@
   $: tag = subStatus ? statusTag(subStatus) : null;
 </script>
 
+{#if isSubUser}
+  <div class="max-w-2xl">
+    <div class="mb-6">
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Meu Perfil</p>
+      <h1 class="text-2xl font-semibold" style="color: var(--text-main);">Minha conta</h1>
+      <p class="mt-1 text-sm" style="color: var(--text-muted);">Você está acessando como funcionário. Apenas o titular pode editar o perfil da empresa.</p>
+    </div>
+
+    {#if loading}
+      <p class="text-sm" style="color: var(--text-muted);">Carregando…</p>
+    {:else}
+      <section class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+        <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Seus dados</h2>
+
+        <div class="grid gap-3 text-sm">
+          <div>
+            <span class="block text-xs mb-0.5" style="color: var(--text-muted);">E-mail</span>
+            <span style="color: var(--text-main);">{email}</span>
+          </div>
+          <div>
+            <span class="block text-xs mb-0.5" style="color: var(--text-muted);">Empresa</span>
+            <span style="color: var(--text-main);">{ownerCompanyName || '—'}</span>
+          </div>
+          <div>
+            <span class="block text-xs mb-0.5" style="color: var(--text-muted);">Cargo</span>
+            <span style="color: var(--text-main);">{subUserRoleName || '—'}</span>
+          </div>
+        </div>
+
+        <div class="pt-3" style="border-top: 1px solid var(--border-subtle);">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-60 transition-colors"
+            style="background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle);"
+            disabled={resettingPassword}
+            on:click={async () => {
+              resettingPassword = true;
+              try { await resetPassword(); } finally { resettingPassword = false; }
+            }}
+          >
+            {resettingPassword ? 'Enviando…' : 'Trocar senha por e-mail'}
+          </button>
+          <p class="text-xs mt-2" style="color: var(--text-muted);">Enviaremos um link para {email} para você redefinir a senha.</p>
+        </div>
+      </section>
+    {/if}
+  </div>
+{:else}
 {#if showOnboardingWizard}
   <OnboardingWizard show={showOnboardingWizard} userId={userId} email={email} />
 {/if}
@@ -1077,3 +1158,4 @@
 
     {/if}
   </form>
+{/if}

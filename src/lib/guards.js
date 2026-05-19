@@ -3,6 +3,29 @@ import { supabase } from './supabaseClient';
 import { requiredOk } from './profileUtils';
 
 /**
+ * Returns the user_id whose subscription should be inspected for a given
+ * authenticated user. Sub-users inherit the owner's subscription (and add-ons),
+ * so the addon check helpers must redirect their query to the owner. Falls
+ * back to the original userId for owners or on lookup error.
+ * @param {string} userId
+ * @returns {Promise<string>}
+ */
+async function resolveSubscriptionUserId(userId) {
+  if (!userId) return userId;
+  try {
+    const { data } = await supabase
+      .from('access_users')
+      .select('owner_user_id')
+      .eq('auth_user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+    return data?.owner_user_id || userId;
+  } catch {
+    return userId;
+  }
+}
+
+/**
  * Normalize and strictly validate subscription status AND expiration date.
  * Both "active" and "trialing" status grant access (trialing = free trial period).
  * Also checks manually_extended_until for admin-extended subscriptions.
@@ -163,10 +186,11 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
 export async function hasMesasAddon(userId) {
   if (!userId) return false;
   try {
+    const subUserId = await resolveSubscriptionUserId(userId);
     const { data } = await supabase
       .from('subscriptions')
       .select('has_mesas_addon, plan_tier')
-      .eq('user_id', userId)
+      .eq('user_id', subUserId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -188,10 +212,11 @@ export async function hasMesasAddon(userId) {
 export async function hasPedidosAddon(userId) {
   if (!userId) return false;
   try {
+    const subUserId = await resolveSubscriptionUserId(userId);
     const { data } = await supabase
       .from('subscriptions')
       .select('has_pedidos_addon, plan_tier')
-      .eq('user_id', userId)
+      .eq('user_id', subUserId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -214,10 +239,11 @@ export async function hasPedidosAddon(userId) {
 export async function hasAcessosAddon(userId) {
   if (!userId) return false;
   try {
+    const subUserId = await resolveSubscriptionUserId(userId);
     const { data } = await supabase
       .from('subscriptions')
       .select('has_acessos_addon, plan_tier')
-      .eq('user_id', userId)
+      .eq('user_id', subUserId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -240,10 +266,11 @@ export async function hasAcessosAddon(userId) {
 export async function hasZeloChatAccess(userId) {
   if (!userId) return false;
   try {
+    const subUserId = await resolveSubscriptionUserId(userId);
     const { data } = await supabase
       .from('subscriptions')
       .select('plan_tier, status, current_period_end, manually_extended_until')
-      .eq('user_id', userId)
+      .eq('user_id', subUserId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -264,10 +291,11 @@ export async function hasZeloChatAccess(userId) {
 export async function hasZeloPdvAccess(userId) {
   if (!userId) return false;
   try {
+    const subUserId = await resolveSubscriptionUserId(userId);
     const { data } = await supabase
       .from('subscriptions')
       .select('plan_tier, status, current_period_end, manually_extended_until')
-      .eq('user_id', userId)
+      .eq('user_id', subUserId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();

@@ -71,10 +71,32 @@
         .eq('auth_user_id', userId)
         .eq('status', 'active')
         .maybeSingle();
-      return {
-        isSubUser: Boolean(data?.owner_user_id),
-        ownerUserId: data?.owner_user_id || userId
-      };
+
+      if (data?.owner_user_id) {
+        return { isSubUser: true, ownerUserId: data.owner_user_id };
+      }
+
+      // Fallback: user has invite metadata but access_users row was never
+      // activated (legacy invites accepted before the activation step existed).
+      // Calls the server endpoint to link auth_user_id and flip to 'active'.
+      const { data: { session } } = await supabase.auth.getSession();
+      const ownerFromMetadata = session?.user?.user_metadata?.owner_user_id;
+      if (session?.access_token && ownerFromMetadata) {
+        try {
+          const res = await fetch('/api/access/activate', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (payload?.activated) {
+            return { isSubUser: true, ownerUserId: ownerFromMetadata };
+          }
+        } catch (activationErr) {
+          console.warn('[layout] sub-user activation fallback failed:', activationErr);
+        }
+      }
+
+      return { isSubUser: false, ownerUserId: userId };
     } catch {
       return { isSubUser: false, ownerUserId: userId };
     }

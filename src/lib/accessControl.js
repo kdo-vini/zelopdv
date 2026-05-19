@@ -5,11 +5,55 @@ import { supabase } from './supabaseClient';
 // Module-level cache — cleared whenever auth state changes.
 let _cachedContext = undefined; // undefined = not yet loaded; null = unauthenticated
 
+// sessionStorage mirror so the cache survives layout remounts on cross-section
+// navigation (e.g. /app ↔ /gestao) without an extra round-trip + flash of
+// unauthorized nav items.
+const STORAGE_KEY = 'zelo_access_context_v1';
+
+function readFromStorage() {
+  if (typeof sessionStorage === 'undefined') return undefined;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return undefined;
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+function writeToStorage(value) {
+  if (typeof sessionStorage === 'undefined') return;
+  try {
+    if (value == null) sessionStorage.removeItem(STORAGE_KEY);
+    else sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+  } catch {}
+}
+
+// Hydrate the in-memory cache from sessionStorage on module load so the very
+// first synchronous getAccessContextSync() call returns the cached value.
+if (typeof window !== 'undefined') {
+  const persisted = readFromStorage();
+  if (persisted !== undefined) _cachedContext = persisted;
+}
+
 // Reset cache on any auth state change (sign-in, sign-out, token refresh).
 if (supabase) {
-  supabase.auth.onAuthStateChange(() => {
+  supabase.auth.onAuthStateChange((event) => {
+    // TOKEN_REFRESHED fires periodically without changing identity — keep cache.
+    if (event === 'TOKEN_REFRESHED') return;
     _cachedContext = undefined;
+    writeToStorage(null);
   });
+}
+
+/**
+ * Synchronous read of the cached access context. Returns undefined if not yet
+ * loaded (callers should fall back to `getAccessContext()`). Used by UI shells
+ * that need to decide what to render before the first network round-trip.
+ * @returns {{isSubUser: boolean, ownerUserId: string, roleId: string|null, permissions: object|null}|null|undefined}
+ */
+export function getAccessContextSync() {
+  return _cachedContext;
 }
 
 /**
@@ -57,10 +101,12 @@ export async function getAccessContext() {
       };
     }
 
+    writeToStorage(_cachedContext);
     return _cachedContext;
   } catch (err) {
     console.warn('[accessControl] getAccessContext error:', err?.message);
     _cachedContext = null;
+    writeToStorage(null);
     return null;
   }
 }

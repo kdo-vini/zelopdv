@@ -4,6 +4,7 @@
   import { sessionStore, companyNameStore } from '$lib/stores/session';
   import { toggleAssistant, closeAssistant } from '$lib/stores/assistant';
   import { toggleSupport, closeSupport, isSupportOpen } from '$lib/stores/support';
+  import { getAccessContext, getAccessContextSync } from '$lib/accessControl';
   import { onMount } from 'svelte';
 
   let mobileOpen = false;
@@ -16,6 +17,19 @@
   let acessosAddonActive = false;
   let isSubUserMode = false;
   let subUserPermissions = {};
+  // Until access context is known, suppress permission-gated nav items so the
+  // sidebar never flashes owner-only links to a freshly-mounted sub-user
+  // (happens on cross-section nav like /app ↔ /gestao because each section has
+  // its own layout that remounts the sidebar).
+  let accessLoaded = false;
+  {
+    const cached = getAccessContextSync();
+    if (cached) {
+      isSubUserMode = cached.isSubUser === true;
+      subUserPermissions = cached.permissions || {};
+      accessLoaded = true;
+    }
+  }
 
   onMount(async () => {
     const saved = localStorage.getItem('zelo_sidebar_collapsed');
@@ -25,21 +39,19 @@
     if (user?.id) {
       let subscriptionUserId = user.id;
 
-      // Check if current user is a sub-user first so addon visibility can inherit
-      // the owner's active subscription flags.
+      // Resolve sub-user via the shared cache helper (avoids duplicating the
+      // query and benefits from the sessionStorage warm-start).
       try {
-        const { data: subUserRow } = await supabase
-          .from('access_users')
-          .select('id, owner_user_id, role_id, access_roles(permissions)')
-          .eq('auth_user_id', user.id)
-          .eq('status', 'active')
-          .maybeSingle();
-
-        if (subUserRow) {
+        const ctx = await getAccessContext();
+        if (ctx?.isSubUser) {
           isSubUserMode = true;
-          subUserPermissions = subUserRow.access_roles?.permissions || {};
-          subscriptionUserId = subUserRow.owner_user_id || user.id;
+          subUserPermissions = ctx.permissions || {};
+          subscriptionUserId = ctx.ownerUserId || user.id;
+        } else {
+          isSubUserMode = false;
+          subUserPermissions = {};
         }
+        accessLoaded = true;
       } catch (e) { /* silent */ }
 
       try {
@@ -113,9 +125,14 @@
     acessos: acessosAddonActive
   };
 
-  function shouldShowItem(item, flags) {
+  function shouldShowItem(item, flags, ready = accessLoaded) {
+    // Hide any permission/admin-gated entry until we know who the user is. For
+    // public items (no requiredPermission and no adminOnly) we render eagerly
+    // so the menu doesn't feel empty for owners on a cold start.
+    const isGated = item.adminOnly || item.requiredPermission;
+    if (isGated && !ready) return false;
+
     if (!item.requiresAddon) {
-      // Block admin-only items for sub-users
       if (isSubUserMode && item.adminOnly) return false;
       if (isSubUserMode && item.requiredPermission) {
         return subUserPermissions?.[item.requiredPermission] === true;
@@ -379,7 +396,7 @@
         </p>
         <ul role="list" class="space-y-0.5">
           {#each group.items as item}
-            {#if shouldShowItem(item, addonFlags)}
+            {#if shouldShowItem(item, addonFlags, accessLoaded)}
               {@const active = isActive(item.href, pathname)}
               <li>
                 <a
