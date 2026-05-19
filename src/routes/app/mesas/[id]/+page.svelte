@@ -3,7 +3,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { ensureActiveSubscription, hasMesasAddon, hasPedidosAddon } from '$lib/guards';
+  import { ensureActiveSubscription, hasMesasAddon, hasPedidosAddon, bounceSubUserMissingAddon } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -139,6 +139,7 @@
     }
 
     addonActive = await hasMesasAddon(ownerUserId);
+    if (bounceSubUserMissingAddon({ addonActive, isSubUser, addonLabel: 'Mesas' })) return;
     if (!addonActive) {
       ready = true;
       return;

@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { ensureActiveSubscription, hasPedidosAddon } from '$lib/guards';
+  import { ensureActiveSubscription, hasPedidosAddon, bounceSubUserMissingAddon } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -66,6 +66,7 @@
     }
     pdvCache.setUserId(ownerUserId);
     addonActive = await hasPedidosAddon(ownerUserId);
+    if (bounceSubUserMissingAddon({ addonActive, isSubUser, addonLabel: 'Pedidos' })) return;
     ready = true;
 
     if (!addonActive) {

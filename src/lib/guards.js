@@ -1,6 +1,23 @@
 // Client-side guards for session, profile, and subscription
 import { supabase } from './supabaseClient';
 import { requiredOk } from './profileUtils';
+import { addToast } from './stores/ui';
+
+/**
+ * For pages gated by an add-on: when the addon is inactive AND the current
+ * user is a sub-user, redirect to /app with a warning toast (a sub-user
+ * cannot buy the add-on, so the owner-targeted upsell is dead-end UX).
+ * Owners without the addon keep seeing the upsell screen.
+ *
+ * Returns true if the redirect was triggered — caller should early-return.
+ */
+export function bounceSubUserMissingAddon({ addonActive, isSubUser, addonLabel = 'Este módulo' }) {
+  if (addonActive || !isSubUser) return false;
+  if (typeof window === 'undefined') return false;
+  addToast(`${addonLabel} não está ativo na empresa. Fale com o titular para liberar o acesso.`, 'warning');
+  window.location.href = '/app';
+  return true;
+}
 
 /**
  * Returns the user_id whose subscription should be inspected for a given

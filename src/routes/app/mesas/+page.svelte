@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { hasMesasAddon, ensureActiveSubscription } from '$lib/guards';
+  import { hasMesasAddon, ensureActiveSubscription, bounceSubUserMissingAddon } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast } from '$lib/stores/ui';
@@ -37,6 +37,7 @@
     }
 
     addonActive = await hasMesasAddon(ownerUserId);
+    if (bounceSubUserMissingAddon({ addonActive, isSubUser, addonLabel: 'Mesas' })) return;
     ready = true;
 
     if (addonActive) {

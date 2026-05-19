@@ -1,10 +1,12 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-  import { hasMesasAddon } from '$lib/guards';
+  import { hasMesasAddon, bounceSubUserMissingAddon } from '$lib/guards';
+  import { getAccessContext } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
 
   let userId = '';
+  let isSubUser = false;
   let addonActive = false;
   let ready = false;
   let mesas = [];
@@ -29,7 +31,11 @@
       return;
     }
 
+    const ctx = await getAccessContext();
+    isSubUser = !!ctx?.isSubUser;
+
     addonActive = await hasMesasAddon(userId);
+    if (bounceSubUserMissingAddon({ addonActive, isSubUser, addonLabel: 'Mesas' })) return;
     ready = true;
 
     if (addonActive) {
