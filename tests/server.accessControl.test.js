@@ -126,6 +126,34 @@ function makeSupabaseAdmin(state) {
           return { error: state.deleteError ?? null };
         }),
       })),
+      update: vi.fn((payload) => {
+        const filters = [];
+        const updateQuery = {
+          eq(field, value) {
+            filters.push({ field, value });
+            return updateQuery;
+          },
+          select() {
+            return {
+              single: async () => {
+                const rows = (state[table] ?? []).map((row) => {
+                  const match = filters.every((f) => row?.[f.field] === f.value);
+                  if (!match) return row;
+                  return { ...row, ...payload };
+                });
+                state[table] = rows;
+                const updated = rows.find((row) =>
+                  filters.every((f) => row?.[f.field] === f.value),
+                );
+                state.updateCalls.push({ table, payload, filters });
+                if (state.updateError) return { data: null, error: state.updateError };
+                return { data: updated ? { id: updated.id } : null, error: null };
+              },
+            };
+          },
+        };
+        return updateQuery;
+      }),
     })),
     auth: {
       admin: {
@@ -188,6 +216,7 @@ function createState(overrides = {}) {
     upsertCalls: [],
     insertedAccessUsers: [],
     deleteCalls: [],
+    updateCalls: [],
     deletedAuthUsers: [],
     inviteCalls: [],
     sentEmails: [],
@@ -311,6 +340,39 @@ describe('server accessControl', () => {
         html: '<p>Empresa: Lanchonete Central | Cargo: Gerente | Link: https://zelopdv.com.br/auth/v1/verify?token=abc</p>',
       },
     ]);
+  });
+
+  it('reactivates a previously-removed row instead of failing on the unique (owner,email) constraint', async () => {
+    const state = createState({
+      access_roles: [{ id: 'role-gerente', owner_user_id: 'owner-1', name: 'Gerente' }],
+      empresa_perfil: [{ user_id: 'owner-1', nome_exibicao: 'Loja' }],
+      access_users: [
+        {
+          id: 'access-removed-1',
+          owner_user_id: 'owner-1',
+          email: 'reconvite@test.com',
+          status: 'removed',
+          role_id: 'role-old',
+          auth_user_id: 'auth-old-1',
+        },
+      ],
+      generatedInviteLink: 'https://zelopdv.com.br/auth/v1/verify?token=re',
+    });
+
+    // Track the update call to confirm reactivation
+    const originalFrom = state;
+    state.updateCalls = [];
+
+    const { inviteSubUser } = await loadAccessControl(state);
+
+    const result = await inviteSubUser('owner-1', 'reconvite@test.com', 'role-gerente');
+
+    expect(result).toEqual({ success: true, accessUserId: 'access-removed-1' });
+    // No new row inserted — the existing 'removed' row was reused
+    expect(state.insertedAccessUsers).toHaveLength(0);
+    // Invite email still sent
+    expect(state.inviteCalls).toHaveLength(1);
+    expect(state.sentEmails).toHaveLength(1);
   });
 
   it('cleans up the pending row when the invite email cannot be sent', async () => {

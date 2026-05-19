@@ -67,20 +67,47 @@ export async function DELETE({ request, params }) {
 
   const { data: subUser } = await supabaseAdmin
     .from('access_users')
-    .select('id, email, status, role_id')
+    .select('id, email, status, role_id, auth_user_id')
     .eq('id', params.id)
     .eq('owner_user_id', user.id)
     .maybeSingle();
 
   if (!subUser) return json({ error: 'Usuário não encontrado.' }, { status: 404 });
 
-  const { error } = await supabaseAdmin
+  // Hard-delete the access_users row so the email can be re-invited cleanly
+  // (respects the UNIQUE (owner_user_id, email) constraint).
+  const { error: deleteError } = await supabaseAdmin
     .from('access_users')
-    .update({ status: 'removed', updated_at: new Date().toISOString() })
+    .delete()
     .eq('id', params.id)
     .eq('owner_user_id', user.id);
 
-  if (error) return json({ error: error.message }, { status: 500 });
+  if (deleteError) return json({ error: deleteError.message }, { status: 500 });
+
+  // Cascade to auth.users only if the sub-user accepted the invite AND does not
+  // hold their own ZeloPDV subscription (i.e. they are not also an owner of a
+  // separate account). Otherwise we would delete a legit titular account.
+  let authDeleted = false;
+  let authSkippedReason = null;
+  if (subUser.auth_user_id) {
+    const { data: ownSubscription } = await supabaseAdmin
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', subUser.auth_user_id)
+      .maybeSingle();
+
+    if (ownSubscription) {
+      authSkippedReason = 'has_own_subscription';
+    } else {
+      const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(subUser.auth_user_id);
+      if (authErr) {
+        console.warn('[access.users.DELETE] auth cascade error:', authErr.message);
+        authSkippedReason = 'auth_delete_failed';
+      } else {
+        authDeleted = true;
+      }
+    }
+  }
 
   await logServerAuditAction({
     ownerUserId: user.id,
@@ -90,10 +117,13 @@ export async function DELETE({ request, params }) {
     entityId: params.id,
     details: {
       email: subUser.email,
-      status: subUser.status,
+      previous_status: subUser.status,
       role_id: subUser.role_id,
+      auth_user_id: subUser.auth_user_id,
+      auth_deleted: authDeleted,
+      auth_skipped_reason: authSkippedReason,
     },
   });
 
-  return json({ success: true });
+  return json({ success: true, auth_deleted: authDeleted });
 }

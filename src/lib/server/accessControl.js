@@ -219,16 +219,17 @@ export async function inviteSubUser(ownerUserId, email, roleId) {
     throw 'Limite de subusuários atingido.';
   }
 
-  // 3) Check if this email is already invited or active under this owner (any status except 'removed')
-  const { data: existingInvite } = await supabaseAdmin
+  // 3) Check if this email is already invited or active under this owner (any status except 'removed').
+  //    Removed rows are kept (soft-delete) but we will reactivate them below to respect the
+  //    UNIQUE (owner_user_id, email) constraint.
+  const { data: existingRow } = await supabaseAdmin
     .from('access_users')
-    .select('id')
+    .select('id, status')
     .eq('owner_user_id', ownerUserId)
     .eq('email', email)
-    .neq('status', 'removed')
     .maybeSingle();
 
-  if (existingInvite) {
+  if (existingRow && existingRow.status !== 'removed') {
     throw 'E-mail já convidado ou cadastrado nesta empresa.';
   }
 
@@ -249,21 +250,43 @@ export async function inviteSubUser(ownerUserId, email, roleId) {
     }
   }
 
-  // 5) Insert pending access_users row
-  const { data: newRow, error: insertError } = await supabaseAdmin
-    .from('access_users')
-    .insert({
-      owner_user_id: ownerUserId,
-      email,
-      role_id: roleId,
-      status: 'pending',
-    })
-    .select('id')
-    .single();
+  // 5) Insert pending access_users row, or reactivate a previously-removed row for the same email.
+  let newRow;
+  if (existingRow?.status === 'removed') {
+    const { data: updatedRow, error: updateError } = await supabaseAdmin
+      .from('access_users')
+      .update({
+        role_id: roleId,
+        status: 'pending',
+        auth_user_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existingRow.id)
+      .select('id')
+      .single();
 
-  if (insertError || !newRow) {
-    console.error('[accessControl] inviteSubUser insert error:', insertError?.message);
-    throw 'Erro ao criar convite. Tente novamente.';
+    if (updateError || !updatedRow) {
+      console.error('[accessControl] inviteSubUser reactivate error:', updateError?.message);
+      throw 'Erro ao criar convite. Tente novamente.';
+    }
+    newRow = updatedRow;
+  } else {
+    const { data: insertedRow, error: insertError } = await supabaseAdmin
+      .from('access_users')
+      .insert({
+        owner_user_id: ownerUserId,
+        email,
+        role_id: roleId,
+        status: 'pending',
+      })
+      .select('id')
+      .single();
+
+    if (insertError || !insertedRow) {
+      console.error('[accessControl] inviteSubUser insert error:', insertError?.message);
+      throw 'Erro ao criar convite. Tente novamente.';
+    }
+    newRow = insertedRow;
   }
 
   const [{ data: companyProfile }, { data: roleProfile }] = await Promise.all([
