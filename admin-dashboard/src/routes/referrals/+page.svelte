@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseAdmin'
   import { logAdminAction } from '$lib/logger'
   import { success, error as errorToast } from '$lib/toast'
+  import { confirmDialog, promptDialog } from '$lib/confirmDialog'
 
   const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
 
@@ -253,11 +254,21 @@
       && ['reopen_pending_payment', 'reopen_trial_started', 'reopen_signed_up', 'reject_same_empresa', 'reject_duplicate', 'reject_payment_not_confirmed', 'reject_fraud_suspected', 'reject_team_request', 'reject_other'].includes(action)
 
     if (rewardWillBeCancelled) {
-      const ok = confirm('Essa ação vai cancelar a recompensa atual para manter a auditoria consistente. Deseja continuar?')
+      const ok = await confirmDialog({
+        title: 'Cancelar recompensa atual',
+        message: 'Essa ação vai cancelar a recompensa atual para manter a auditoria consistente. Deseja continuar?',
+        confirmStyle: 'warning',
+      })
       if (!ok) return
     }
 
-    const notes = prompt(`Observação para "${actionMeta.label}":`, defaultNotesFor(action))
+    const notes = await promptDialog({
+      title: actionMeta.label,
+      message: `Observação para "${actionMeta.label}":`,
+      defaultValue: defaultNotesFor(action),
+      multiline: true,
+      placeholder: 'Adicione contexto da decisão...',
+    })
     if (notes === null) return
 
     try {

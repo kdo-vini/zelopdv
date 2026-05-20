@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseAdmin'
   import { logAdminAction } from '$lib/logger'
   import { success, error as errorToast } from '$lib/toast'
+  import { confirmDialog } from '$lib/confirmDialog'
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
   import { getEffectiveExpiry, getDaysUntilEffectiveExpiry, isSubscriptionExpired, hasActiveManualExtension } from '$lib/subscriptionHelpers'
@@ -167,16 +168,28 @@
     const finalAcessos = isAddonAllowed(editPlanTier, 'acessos') && editAcessosAddon
 
     if (editMesasAddon && !isAddonAllowed(editPlanTier, 'mesas')) {
-      const confirm1 = confirm(`O plano ${planLabel(editPlanTier)} não suporta o Módulo Mesas. Vamos desativar o add-on. Continuar?`)
-      if (!confirm1) return
+      const ok = await confirmDialog({
+        title: 'Add-on incompatível',
+        message: `O plano ${planLabel(editPlanTier)} não suporta o Módulo Mesas. Vamos desativar o add-on. Continuar?`,
+        confirmStyle: 'warning',
+      })
+      if (!ok) return
     }
     if (editPedidosAddon && !isAddonAllowed(editPlanTier, 'pedidos')) {
-      const confirm2 = confirm(`O plano ${planLabel(editPlanTier)} não suporta Pedidos + Cozinha. Vamos desativar o add-on. Continuar?`)
-      if (!confirm2) return
+      const ok = await confirmDialog({
+        title: 'Add-on incompatível',
+        message: `O plano ${planLabel(editPlanTier)} não suporta Pedidos + Cozinha. Vamos desativar o add-on. Continuar?`,
+        confirmStyle: 'warning',
+      })
+      if (!ok) return
     }
     if (editAcessosAddon && !isAddonAllowed(editPlanTier, 'acessos')) {
-      const confirm3 = confirm(`O plano ${planLabel(editPlanTier)} não suporta Controle de Acessos. Vamos desativar o add-on. Continuar?`)
-      if (!confirm3) return
+      const ok = await confirmDialog({
+        title: 'Add-on incompatível',
+        message: `O plano ${planLabel(editPlanTier)} não suporta Controle de Acessos. Vamos desativar o add-on. Continuar?`,
+        confirmStyle: 'warning',
+      })
+      if (!ok) return
     }
 
     try {
@@ -209,10 +222,14 @@
         const body = await res.json().catch(() => ({}))
 
         if (res.status === 422 && body.code === 'stripe_resource_missing') {
-          const ok = confirm(
-            `A subscription ${body.providerSubscriptionId || ''} não existe no Stripe (provavelmente ID legado de migração). ` +
-            `Reclassificar como "manual" pra desbloquear edição direta no DB?`
-          )
+          const ok = await confirmDialog({
+            title: 'Subscription não existe no Stripe',
+            message:
+              `A subscription ${body.providerSubscriptionId || ''} não existe no Stripe (provavelmente ID legado de migração). ` +
+              `Reclassificar como "manual" pra desbloquear edição direta no DB?`,
+            confirmLabel: 'Reclassificar',
+            confirmStyle: 'warning',
+          })
           if (ok) {
             await handleReclassifyManual(selectedSub, session.access_token)
           }
@@ -372,9 +389,14 @@
   }
   
   async function handleCancelSubscription(sub) {
-    if (!confirm(`Têm certeza que deseja cancelar a assinatura de ${sub.empresa_perfil.nome_exibicao}?`)) {
-      return
-    }
+    const ok = await confirmDialog({
+      title: 'Cancelar assinatura',
+      message: `Têm certeza que deseja cancelar a assinatura de ${sub.empresa_perfil.nome_exibicao}?`,
+      confirmLabel: 'Cancelar agora',
+      cancelLabel: 'Voltar',
+      confirmStyle: 'danger',
+    })
+    if (!ok) return
     
     try {
       const { error } = await supabase
@@ -405,9 +427,12 @@
   }
   
   async function handleReactivateSubscription(sub) {
-    if (!confirm(`Reativar assinatura de ${sub.empresa_perfil.nome_exibicao}?`)) {
-      return
-    }
+    const ok = await confirmDialog({
+      title: 'Reativar assinatura',
+      message: `Reativar assinatura de ${sub.empresa_perfil.nome_exibicao}?`,
+      confirmLabel: 'Reativar',
+    })
+    if (!ok) return
     
     try {
       const { error } = await supabase
@@ -477,7 +502,12 @@
   }
 
   async function handleExtendTrialOnly(sub, days) {
-    if (!confirm(`Estender TRIAL de ${sub.empresa_perfil.nome_exibicao} por ${days} dias?`)) return
+    const ok = await confirmDialog({
+      title: 'Estender trial',
+      message: `Estender TRIAL de ${sub.empresa_perfil.nome_exibicao} por ${days} dias?`,
+      confirmLabel: `+${days} dias`,
+    })
+    if (!ok) return
     
     try {
       statusUpdating = true

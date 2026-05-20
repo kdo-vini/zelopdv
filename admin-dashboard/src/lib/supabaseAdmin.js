@@ -2,12 +2,14 @@
 // Uses ANON KEY - RLS is disabled on admin tables for simplicity
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl =
+    import.meta.env.VITE_PUBLIC_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey =
+    import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
     console.error('[Admin] Supabase credentials missing')
-    console.error('Required: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY')
+    console.error('Required: VITE_PUBLIC_SUPABASE_URL and VITE_PUBLIC_SUPABASE_ANON_KEY')
 }
 
 // Create admin client

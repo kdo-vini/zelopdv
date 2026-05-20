@@ -1,3 +1,5 @@
+import { error as errorToast } from './toast'
+
 // Gerador de relatórios PDF via janela de impressão do browser.
 // Não usa libs externas — o usuário escolhe "Salvar como PDF" no diálogo nativo.
 //
@@ -400,7 +402,7 @@ export function generatePdfReport(opts) {
   const html = buildHtml(opts)
   const w = window.open('', '_blank', 'width=1024,height=768')
   if (!w) {
-    alert('Permita pop-ups para gerar o relatório PDF.')
+    errorToast('Permita pop-ups para gerar o relatório PDF.')
     return
   }
   w.document.open()

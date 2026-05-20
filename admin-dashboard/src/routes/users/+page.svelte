@@ -6,6 +6,8 @@
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
   import { getEffectiveExpiry, hasActiveManualExtension } from '$lib/subscriptionHelpers'
   import { generatePdfReport, formatNumber } from '$lib/pdfReport'
+  import { success, error as errorToast } from '$lib/toast'
+  import { confirmDialog } from '$lib/confirmDialog'
 
   let users = []
   let loading = true
@@ -213,7 +215,12 @@
   }
 
   async function handleResetPassword(user) {
-    if (!confirm(`Enviar email de reset de senha para ${user.email}?`)) return
+    const ok = await confirmDialog({
+      title: 'Reset de senha',
+      message: `Enviar email de reset de senha para ${user.email}?`,
+      confirmLabel: 'Enviar',
+    })
+    if (!ok) return
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
@@ -228,11 +235,11 @@
         targetUserId: user.user_id,
         details: { email: user.email, company: user.nome_exibicao }
       })
-      
-      alert('Email de reset enviado com sucesso!')
+
+      success('Email de reset enviado com sucesso!')
     } catch (err) {
       console.error('Error resetting password:', err)
-      alert('Erro ao enviar email de reset')
+      errorToast('Erro ao enviar email de reset')
     }
   }
 
@@ -332,12 +339,12 @@
         details: { email: editForm.email, company: editForm.nome_exibicao }
       })
       
-      alert('Dados salvos com sucesso!')
+      success('Dados salvos com sucesso!')
       closeEdit()
       await loadUsers()
     } catch (err) {
       console.error('Save error:', err)
-      alert('Erro ao salvar os dados: ' + err.message)
+      errorToast('Erro ao salvar os dados: ' + err.message)
     } finally {
       subLoading = false
     }
@@ -345,11 +352,16 @@
 
   async function handleQuickExtendTrial(days) {
     if (!editSub) {
-      alert('Usuário não possui uma assinatura/trial ativo para estender.')
+      errorToast('Usuário não possui uma assinatura/trial ativo para estender.')
       return
     }
 
-    if (!confirm(`Estender trial de ${editForm.nome_exibicao} por mais ${days} dias?`)) return
+    const ok = await confirmDialog({
+      title: 'Estender trial',
+      message: `Estender trial de ${editForm.nome_exibicao} por mais ${days} dias?`,
+      confirmLabel: `+${days} dias`,
+    })
+    if (!ok) return
     
     try {
       subLoading = true
@@ -376,13 +388,13 @@
         details: { days, new_expiry: newEnd.toISOString(), company: editForm.nome_exibicao }
       })
       
-      alert(`Trial estendido até ${newEnd.toLocaleDateString('pt-BR')}!`)
+      success(`Trial estendido até ${newEnd.toLocaleDateString('pt-BR')}!`)
       editSub.current_period_end = newEnd.toISOString()
       editSub.status = 'trialing'
       await loadUsers()
     } catch (err) {
       console.error('Extend trial error:', err)
-      alert('Erro ao estender trial')
+      errorToast('Erro ao estender trial')
     } finally {
       subLoading = false
     }
@@ -390,7 +402,14 @@
 
   async function handleCancelSub() {
     if (!editSub) return
-    if (!confirm(`Tem certeza que deseja CANCELAR a assinatura/trial de ${editForm.nome_exibicao}?`)) return
+    const ok = await confirmDialog({
+      title: 'Cancelar assinatura',
+      message: `Tem certeza que deseja CANCELAR a assinatura/trial de ${editForm.nome_exibicao}?`,
+      confirmLabel: 'Cancelar agora',
+      cancelLabel: 'Voltar',
+      confirmStyle: 'danger',
+    })
+    if (!ok) return
     
     try {
       subLoading = true
@@ -413,26 +432,33 @@
         details: { subscription_id: editSub.id, company: editForm.nome_exibicao }
       })
       
-      alert('Assinatura cancelada com sucesso.')
+      success('Assinatura cancelada com sucesso.')
       editSub.status = 'canceled'
       await loadUsers()
     } catch (err) {
       console.error('Cancel sub error:', err)
-      alert('Erro ao cancelar assinatura')
+      errorToast('Erro ao cancelar assinatura')
     } finally {
       subLoading = false
     }
   }
 
   async function handleDeleteUser(user) {
-    if (!adminInfo) return
-    const confirmation = prompt(`Tem certeza que deseja apagar a conta de ${user.nome_exibicao}? Esta ação é IRREVERSÍVEL. Para confirmar, digite "delete":`)
-    
-    if (confirmation !== 'delete') {
-      if (confirmation !== null) alert('Código de exclusão incorreto. Ação cancelada.')
+    if (!adminInfo) {
+      errorToast('Sessão expirada. Faça login novamente.')
       return
     }
-    
+
+    const ok = await confirmDialog({
+      title: 'Apagar conta',
+      message: `Tem certeza que deseja apagar a conta de ${user.nome_exibicao}?\nEsta ação é IRREVERSÍVEL e cascateia todos os dados do usuário.`,
+      confirmLabel: 'Apagar definitivamente',
+      cancelLabel: 'Cancelar',
+      confirmStyle: 'danger',
+      requireType: 'delete',
+    })
+    if (!ok) return
+
     try {
       const { error } = await supabase.rpc('admin_delete_user', {
         target_user_id: user.user_id,
@@ -442,14 +468,14 @@
             deleted_by: adminInfo.email
         }
       })
-      
+
       if (error) throw error
-      
-      alert('Conta excluída definitivamente (Cascade).')
+
+      success('Conta excluída definitivamente (Cascade).')
       await loadUsers()
     } catch (err) {
       console.error('Delete error', err)
-      alert(`Erro ao excluir: ${err.message}`)
+      errorToast(`Erro ao excluir: ${err.message}`)
     }
   }
   

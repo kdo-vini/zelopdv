@@ -5,6 +5,7 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   import Toast from '$lib/Toast.svelte'
+  import ConfirmDialog from '$lib/ConfirmDialog.svelte'
   import { fade } from 'svelte/transition'
 
   let session = null
@@ -212,6 +213,7 @@
     
     <!-- Toast Notifications -->
     <Toast />
+    <ConfirmDialog />
   </div>
 {/if}
 

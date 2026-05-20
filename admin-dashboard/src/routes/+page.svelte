@@ -7,6 +7,7 @@
   import { INTERNAL_ACCOUNT_LABELS, filterExternalAccounts, isInternalAccount } from '$lib/internalAccounts'
   import { logAdminAction } from '$lib/logger'
   import { generatePdfReport, formatBRL, formatNumber } from '$lib/pdfReport'
+  import { error as errorToast } from '$lib/toast'
   
   let stats = {
     activeSubscriptions: 0,
@@ -123,7 +124,7 @@
       }
     } catch (err) {
       console.error('[Dashboard] Failed to add fixed expense:', err)
-      alert('Erro ao adicionar despesa fixa.')
+      errorToast('Erro ao adicionar despesa fixa.')
     } finally {
       savingFinanceExpense = false
     }
@@ -155,7 +156,7 @@
       }
     } catch (err) {
       console.error('[Dashboard] Failed to remove fixed expense:', err)
-      alert('Erro ao remover despesa fixa.')
+      errorToast('Erro ao remover despesa fixa.')
     }
   }
 
