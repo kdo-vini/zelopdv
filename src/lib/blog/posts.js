@@ -1,5 +1,318 @@
 export const posts = [
   {
+    slug: 'como-calcular-lucro-real-lanchonete',
+    title: 'Como calcular o lucro real da sua lanchonete (sem enganar a si mesmo)',
+    description:
+      'Aprenda a calcular o lucro real da sua lanchonete considerando custo de mercadoria, despesas fixas, mão de obra e pró-labore. Chega de achar que sobrou dinheiro quando não sobrou.',
+    keyword: 'como calcular lucro real de lanchonete',
+    coverVariant: 'violet',
+    publishedAt: '2026-05-10',
+    readingTime: '9 min',
+    content: `
+      <p>Todo dono de lanchonete já sentiu aquilo: o movimento foi bom, as vendas entraram, mas no fim do mês o dinheiro não está na conta. Parecia que tinha lucro, mas na prática não sobrou nada — ou sobrou muito menos do que o esperado. Esse fenômeno tem nome: é a confusão entre faturamento e lucro real.</p>
+      <p>Saber quanto você vendeu é simples. Saber quanto você <em>lucrou de verdade</em> exige uma conta diferente — mais honesta e mais completa. Este artigo vai te mostrar o passo a passo para calcular o lucro real da sua lanchonete, sem ilusão e sem deixar custo de fora.</p>
+
+      <h2>Por que o "dinheiro em caixa" mente sobre o lucro</h2>
+      <p>O maior erro financeiro em lanchonetes é confundir caixa cheio com lucro. O caixa pode estar positivo porque você ainda não pagou os fornecedores do mês. Ou porque recebeu antecipado por um evento. Ou porque o aluguel vence semana que vem. Dinheiro em caixa é posição de liquidez — não é lucro.</p>
+      <p>Lucro real é o que sobra depois que <strong>todas as despesas operacionais</strong> foram pagas: mercadoria, aluguel, luz, água, funcionários, embalagens, taxas, manutenção, impostos e seu próprio pró-labore. Só depois disso dá para dizer quanto você ganhou.</p>
+
+      <h2>Os 4 números que todo cálculo de lucro precisa ter</h2>
+      <p>Para chegar ao lucro real, você precisa calcular quatro componentes principais:</p>
+
+      <h2>1. Custo de Mercadoria Vendida (CMV)</h2>
+      <p>O CMV é quanto você gastou em ingredientes e insumos para produzir tudo que vendeu no período. A fórmula é:</p>
+      <ul>
+        <li><strong>CMV = Estoque inicial + Compras do período − Estoque final</strong></li>
+      </ul>
+      <p>Exemplo: você tinha R$ 800 em estoque no início do mês, comprou R$ 3.200 em mercadoria e terminou o mês com R$ 600 em estoque. Seu CMV foi <strong>R$ 3.400</strong>.</p>
+      <p>Em lanchonetes bem geridas, o CMV costuma ficar entre <strong>28% e 38%</strong> do faturamento. Se estiver acima de 40%, há desperdício ou precificação incorreta.</p>
+
+      <h2>2. Despesas fixas operacionais</h2>
+      <p>São os gastos que acontecem todo mês independente de quanto você vende:</p>
+      <ul>
+        <li>Aluguel do ponto</li>
+        <li>Energia elétrica, água, gás</li>
+        <li>Internet e telefone</li>
+        <li>Salários e encargos de funcionários</li>
+        <li>Contabilidade</li>
+        <li>Sistema de gestão, maquininhas de pagamento</li>
+        <li>Seguros e taxas fixas</li>
+      </ul>
+      <p>Some tudo. Esse é o seu custo fixo mensal. Qualquer negócio precisa vender o suficiente para cobrir esse valor antes de começar a lucrar.</p>
+
+      <h2>3. Despesas variáveis e extras</h2>
+      <p>Esses são custos que variam com o volume de vendas ou que aparecem de forma pontual:</p>
+      <ul>
+        <li>Embalagens (caixas, sacolas, guardanapos)</li>
+        <li>Taxas de cartão e máquina de pagamento (geralmente 1,5% a 3% do faturamento)</li>
+        <li>Comissão de delivery apps</li>
+        <li>Manutenção de equipamentos</li>
+        <li>Material de limpeza e descartáveis</li>
+      </ul>
+
+      <h2>4. Pró-labore do dono</h2>
+      <p>Esse é o item mais ignorado em lanchonetes familiares: <strong>o salário do próprio dono</strong>. Se você trabalha no seu negócio, precisa considerar o seu trabalho como custo — mesmo que não se pague formalmente.</p>
+      <p>Por que isso importa? Porque se você não coloca o seu trabalho como despesa, a conta de lucro está inflada. Você pode estar ganhando menos do que ganharia trabalhando para outra pessoa, sem perceber.</p>
+      <p>Uma boa referência é o salário que você teria que pagar para contratar alguém para fazer o que você faz. Inclua esse valor nas despesas.</p>
+
+      <h2>A fórmula do lucro real</h2>
+      <p>Com todos os números em mãos, o cálculo é direto:</p>
+      <ul>
+        <li><strong>Faturamento bruto</strong> (total das vendas do mês)</li>
+        <li>menos <strong>CMV</strong> (custo da mercadoria vendida)</li>
+        <li>= <strong>Lucro bruto</strong></li>
+        <li>menos <strong>Despesas fixas</strong></li>
+        <li>menos <strong>Despesas variáveis</strong></li>
+        <li>menos <strong>Pró-labore</strong></li>
+        <li>= <strong>Lucro real (ou prejuízo)</strong></li>
+      </ul>
+      <p>Exemplo prático: uma lanchonete com faturamento de R$ 18.000 no mês.</p>
+      <ul>
+        <li>CMV: R$ 6.300 (35%)</li>
+        <li>Despesas fixas: R$ 5.200 (aluguel, luz, salários)</li>
+        <li>Despesas variáveis: R$ 1.100 (embalagens, taxas, delivery)</li>
+        <li>Pró-labore do dono: R$ 2.000</li>
+        <li><strong>Lucro real: R$ 3.400 (18,9% do faturamento)</strong></li>
+      </ul>
+      <p>R$ 3.400 de lucro real em R$ 18.000 vendidos. Parece pouco? Para muitas lanchonetes, esse é o número real — e muitos donos achavam que lucravam o dobro porque não incluíam todos os custos na conta.</p>
+
+      <h2>Qual é a margem de lucro ideal para uma lanchonete?</h2>
+      <p>Não existe um número universal, mas há referências do setor:</p>
+      <ul>
+        <li><strong>Abaixo de 10%:</strong> situação delicada. Qualquer imprevisto pode gerar prejuízo.</li>
+        <li><strong>Entre 10% e 20%:</strong> operação viável, mas com pouca gordura para investimento.</li>
+        <li><strong>Acima de 20%:</strong> boa margem para o segmento. Negócio saudável com capacidade de reinvestimento.</li>
+      </ul>
+      <p>Para hamburguerias artesanais e lanches especiais com ticket médio mais alto, margens acima de 25% são alcançáveis. Para lanches simples em volume, margens entre 12% e 18% são mais comuns.</p>
+
+      <h2>Como usar o Zelo PDV para calcular isso todo mês</h2>
+      <p>Fazer essa conta manualmente uma vez até funciona. Fazer todo mês, com dados confiáveis, é o que realmente muda a gestão. O Zelo PDV registra suas vendas, despesas e fechamento de caixa em um lugar só, o que te dá os números necessários para calcular o lucro real sem depender de planilha ou de estimativa.</p>
+      <p>Com o controle diário registrado, você consegue ver no fim do mês exatamente quanto entrou, quanto saiu e quanto sobrou — e parar de adivinhar se o negócio está lucrando ou não.</p>
+    `
+  },
+  {
+    slug: 'sistema-pdv-para-lanchonete-online',
+    title: 'Sistema PDV para lanchonete online: o que é, como funciona e como escolher',
+    description:
+      'Entenda o que é um sistema PDV para lanchonete online, quais funcionalidades são essenciais, e como escolher o mais adequado para o seu negócio sem pagar caro.',
+    keyword: 'sistema pdv para lanchonete online',
+    coverVariant: 'aqua',
+    publishedAt: '2026-05-14',
+    readingTime: '8 min',
+    content: `
+      <p>Se você tem uma lanchonete e ainda controla as vendas no caderninho, na calculadora ou em uma planilha de Excel, existe uma boa chance de estar perdendo dinheiro sem perceber. Um sistema PDV (Ponto de Venda) para lanchonete online resolve exatamente esse problema — e hoje em dia é possível ter um sem instalar nada, sem servidor físico e sem pagar fortunas.</p>
+      <p>Este artigo explica o que é um PDV online para lanchonete, quais funcionalidades realmente importam e como escolher o sistema certo para o seu tamanho de negócio.</p>
+
+      <h2>O que é um sistema PDV para lanchonete?</h2>
+      <p>PDV significa Ponto de Venda. Um sistema PDV é o software que registra as vendas do seu estabelecimento — o que foi vendido, quanto foi cobrado, qual foi a forma de pagamento e qual foi o troco. No lugar da gaveta de dinheiro com um caderno do lado, o PDV centraliza tudo em tela.</p>
+      <p>Um PDV <em>online</em> é aquele que roda no navegador, sem precisar de instalação. Você acessa pelo computador, tablet ou celular, de qualquer lugar. Os dados ficam salvos na nuvem e não se perdem se o dispositivo quebrar ou for trocado.</p>
+
+      <h2>Por que lanchonetes precisam de um PDV?</h2>
+      <p>Alguns donos acham que PDV é coisa de supermercado ou de franquia grande. Na prática, qualquer negócio que vende mais de 20 itens por dia se beneficia de um sistema de controle. Veja os principais motivos:</p>
+      <ul>
+        <li><strong>Registro preciso das vendas:</strong> saber exatamente quanto entrou no dia, sem depender de memória</li>
+        <li><strong>Fechamento de caixa confiável:</strong> confrontar o dinheiro físico com o que o sistema registrou</li>
+        <li><strong>Controle de formas de pagamento:</strong> separar o que foi no dinheiro, cartão, Pix</li>
+        <li><strong>Histórico para tomada de decisão:</strong> quais dias vendem mais, quais produtos saem mais</li>
+        <li><strong>Menos erro de troco e de cobrança:</strong> o sistema calcula, não o funcionário no susto</li>
+      </ul>
+
+      <h2>Funcionalidades essenciais em um PDV para lanchonete</h2>
+      <p>Não são todos os sistemas PDV que servem bem para lanchonetes. Algumas funções são indispensáveis para esse tipo de operação:</p>
+
+      <h2>Registro de vendas rápido</h2>
+      <p>Em hora de pico, a lanchonete não pode parar para o atendente mexer em telas complicadas. O PDV precisa ser ágil: seleciona o produto, registra a quantidade, confirma o pagamento. Menos cliques, mais velocidade.</p>
+
+      <h2>Múltiplas formas de pagamento</h2>
+      <p>Dinheiro, cartão de débito, crédito, Pix. Um bom PDV registra tudo separado, para que o fechamento de caixa bata com exatidão. Não pode misturar entradas de cartão com entradas em espécie.</p>
+
+      <h2>Fechamento de caixa diário</h2>
+      <p>No fim do dia, o sistema deve gerar um resumo: total de vendas, entradas por forma de pagamento, sangrias, saldo esperado. Esse fechamento é o termômetro financeiro da lanchonete — e é onde você identifica se tem sobra, falta ou diferença.</p>
+
+      <h2>Controle de fiado</h2>
+      <p>Em lanchonetes de bairro e de comunidade, o fiado é uma realidade. Um bom sistema PDV para esse tipo de negócio precisa ter um módulo de fiado: cadastro de clientes, registro do que foi fiado, data e controle do que foi pago.</p>
+
+      <h2>Registro de despesas</h2>
+      <p>Só controlar o que entrou não basta. O PDV precisa também registrar o que saiu: compras de mercadoria, conta de luz, pagamento de funcionário. Sem esse registro, é impossível calcular o lucro real.</p>
+
+      <h2>Como um PDV online se diferencia do sistema instalado</h2>
+      <p>PDVs tradicionais são instalados diretamente na máquina. Se o computador quebra, você perde os dados — a não ser que tenha backup. Se precisar acessar de outro dispositivo, não consegue. Se o programa precisar de atualização, alguém precisa ir até o ponto e fazer manualmente.</p>
+      <p>Um PDV online (baseado em nuvem) resolve tudo isso:</p>
+      <ul>
+        <li>Acesso de qualquer dispositivo com navegador</li>
+        <li>Dados salvos automaticamente na nuvem</li>
+        <li>Atualizações automáticas, sem intervenção manual</li>
+        <li>Sem necessidade de servidor ou infraestrutura própria</li>
+        <li>Geralmente com custo menor e planos mensais acessíveis</li>
+      </ul>
+
+      <h2>Quanto custa um sistema PDV para lanchonete?</h2>
+      <p>O mercado oferece opções para todos os bolsos:</p>
+      <ul>
+        <li><strong>Gratuito ou freemium:</strong> versões com funcionalidades básicas, boas para quem está começando</li>
+        <li><strong>R$ 50 a R$ 150/mês:</strong> sistemas completos para pequenas operações, com suporte incluso</li>
+        <li><strong>R$ 200 a R$ 500/mês:</strong> soluções mais robustas, com módulos de estoque, multi-estabelecimentos e integrações</li>
+      </ul>
+      <p>Para a maioria das lanchonetes independentes, um sistema entre R$ 0 e R$ 100/mês já resolve bem. Não vale pagar por funcionalidades que você não vai usar.</p>
+
+      <h2>O Zelo PDV foi feito para lanchonetes como a sua</h2>
+      <p>O Zelo PDV é um sistema PDV online desenvolvido especificamente para lanchonetes, hamburguerias e pequenos estabelecimentos de alimentação. Funciona direto no navegador, sem instalação, com interface pensada para velocidade no atendimento e clareza no fechamento.</p>
+      <p>Cobre vendas, fiado, despesas, fechamento de caixa e histórico — tudo em um só lugar. Para quem está saindo do caderninho ou da planilha, é o ponto de partida mais prático para organizar a gestão sem complicar a operação.</p>
+    `
+  },
+  {
+    slug: 'controle-de-caixa-para-hamburgueria',
+    title: 'Controle de caixa para hamburgueria: como fazer do jeito certo',
+    description:
+      'Guia completo de controle de caixa para hamburgueria: abertura, sangria, fechamento e como identificar diferenças antes que virem problema.',
+    keyword: 'controle de caixa para hamburgueria',
+    coverVariant: 'slate',
+    publishedAt: '2026-05-17',
+    readingTime: '7 min',
+    content: `
+      <p>Hamburgueria é um negócio com ritmo intenso: fila nos horários de pico, vários pedidos simultâneos, pagamentos por dinheiro, cartão, Pix e até pelo delivery. Nesse ambiente, o controle de caixa é o que impede que o dinheiro escorra por descuido, erro de troco ou desvio sem que ninguém perceba.</p>
+      <p>Este guia explica como fazer o controle de caixa de uma hamburgueria do jeito correto — da abertura ao fechamento — sem precisar de contador ou de sistema caro para começar.</p>
+
+      <h2>Por que hamburgueria precisa de controle de caixa rigoroso?</h2>
+      <p>Hamburguerias têm uma característica que torna o controle de caixa ainda mais importante: ticket médio relativamente alto combinado com volume de pedidos elevado. Uma hamburgueria com 80 pedidos no dia e ticket de R$ 45 movimenta R$ 3.600 diários. Uma diferença de 2% — por erro de troco, desconto não autorizado ou esquecimento — representa R$ 72 por dia, R$ 2.160 por mês.</p>
+      <p>Sem controle, essas perdas se acumulam silenciosamente e aparecem só quando o caixa está no vermelho e já é difícil identificar onde foi o problema.</p>
+
+      <h2>As 4 etapas do controle de caixa</h2>
+
+      <h2>1. Abertura de caixa</h2>
+      <p>Antes de qualquer venda, o caixa deve ser aberto com um <strong>fundo de caixa</strong>: o valor em dinheiro físico colocado no início do turno para dar troco. Esse valor precisa ser registrado.</p>
+      <ul>
+        <li>Defina um valor padrão de fundo de caixa (ex: R$ 100)</li>
+        <li>Confira o valor físico antes de abrir</li>
+        <li>Registre o horário e o responsável pela abertura</li>
+      </ul>
+      <p>Parece burocracia, mas a abertura registrada é o ponto de partida do confronto no fechamento. Sem ela, qualquer diferença vira dúvida.</p>
+
+      <h2>2. Registro de todas as vendas</h2>
+      <p>Durante o dia, cada venda precisa ser registrada com forma de pagamento. Dinheiro, débito, crédito e Pix têm destinos diferentes:</p>
+      <ul>
+        <li><strong>Dinheiro:</strong> fica fisicamente no caixa e é contado no fechamento</li>
+        <li><strong>Débito e crédito:</strong> entram via maquininha e são liquidados pela operadora</li>
+        <li><strong>Pix:</strong> entra direto na conta bancária, não no caixa físico</li>
+      </ul>
+      <p>Misturar essas entradas no controle é o erro mais comum em hamburguerias. O sistema ou planilha precisa separar cada tipo para que o fechamento seja possível.</p>
+
+      <h2>3. Sangria</h2>
+      <p>Sangria é a retirada de dinheiro do caixa durante o dia para evitar acúmulo excessivo. É uma prática de segurança: quanto menos dinheiro fica no caixa, menor o risco em caso de roubo ou erro.</p>
+      <ul>
+        <li>Defina um limite de valor no caixa físico (ex: R$ 300)</li>
+        <li>Quando ultrapassar, retire o excedente e registre como sangria</li>
+        <li>Guarde o valor retirado em local seguro</li>
+        <li>Anote horário e responsável pela retirada</li>
+      </ul>
+      <p>A sangria não é saída de despesa — é movimentação interna. No fechamento, o valor sangrado entra na conta do total de dinheiro do dia.</p>
+
+      <h2>4. Fechamento de caixa</h2>
+      <p>O fechamento é o momento mais importante do controle. É quando você compara o que o sistema diz que deveria estar no caixa com o que está fisicamente.</p>
+      <p>A fórmula é:</p>
+      <ul>
+        <li><strong>Fundo de caixa</strong> (abertura)</li>
+        <li><strong>+ Total de vendas em dinheiro</strong></li>
+        <li><strong>− Sangrias realizadas</strong></li>
+        <li><strong>= Saldo esperado em caixa</strong></li>
+      </ul>
+      <p>Conte o dinheiro físico. Se bater com o saldo esperado, o caixa fechou certo. Se houver diferença — para mais ou para menos — é preciso identificar o motivo antes de fechar.</p>
+
+      <h2>O que fazer quando o caixa não fecha</h2>
+      <p>Diferença no caixa pode ter várias origens:</p>
+      <ul>
+        <li><strong>Troco errado:</strong> o atendente deu mais troco do que deveria</li>
+        <li><strong>Venda não registrada:</strong> alguém recebeu em dinheiro e não lançou</li>
+        <li><strong>Despesa paga sem registro:</strong> alguém tirou do caixa para pagar algo e não anotou</li>
+        <li><strong>Desvio:</strong> menos comum, mas precisa ser investigado se as diferenças forem recorrentes</li>
+      </ul>
+      <p>O importante é registrar a diferença, buscar a causa e corrigir o processo. Uma diferença de R$ 5 pode ser erro; diferenças repetidas de R$ 50 são problema de processo — ou de pessoa.</p>
+
+      <h2>Erros comuns que sabotam o controle de caixa em hamburguerias</h2>
+      <ul>
+        <li>Deixar o caixa aberto sem responsável definido</li>
+        <li>Fazer compras com dinheiro do caixa sem registrar como saída</li>
+        <li>Não separar o faturamento por forma de pagamento</li>
+        <li>Fazer o fechamento de memória, sem comparar com registro</li>
+        <li>Não registrar descontos dados no balcão</li>
+      </ul>
+
+      <h2>Como o Zelo PDV ajuda no controle de caixa</h2>
+      <p>O Zelo PDV tem um módulo específico de controle de caixa desenvolvido para o ritmo de hamburguerias e lanchonetes. Abertura com fundo de caixa, registro de vendas por forma de pagamento, sangria, despesas e fechamento com relatório de diferença — tudo em uma tela simples, acessível pelo navegador sem instalação.</p>
+      <p>O objetivo não é complicar a operação. É garantir que, no fim do dia, o dono saiba exatamente quanto entrou, quanto saiu e quanto deveria estar no caixa — em menos de cinco minutos de fechamento.</p>
+    `
+  },
+  {
+    slug: 'como-controlar-fiado-em-lanchonete',
+    title: 'Como controlar o fiado na lanchonete sem perder dinheiro nem cliente',
+    description:
+      'Aprenda a controlar o fiado na sua lanchonete de forma organizada: como registrar, cobrar sem constranger e definir limites sem perder clientes.',
+    keyword: 'como controlar fiado em lanchonete',
+    coverVariant: 'orbital',
+    publishedAt: '2026-05-20',
+    readingTime: '7 min',
+    content: `
+      <p>Fiado é uma prática antiga no comércio de bairro. Em lanchonetes, é quase inevitável: o cliente esqueceu a carteira, o pagamento caiu mas não apareceu na conta, o conhecido de sempre pediu para pagar depois. Na maioria das vezes, é bem-intencionado. Mas sem controle, o fiado acumula silenciosamente e vira um buraco no caixa que ninguém consegue explicar direito.</p>
+      <p>Este artigo mostra como controlar o fiado na lanchonete de forma organizada, sem constrangimento e sem perder clientes que pagam honestamente.</p>
+
+      <h2>Por que o fiado sem controle é perigoso</h2>
+      <p>O problema do fiado não é a prática em si — é a falta de registro. Quando não tem controle:</p>
+      <ul>
+        <li>Você não sabe quanto está emprestando no total</li>
+        <li>Não sabe quem deve, quanto e desde quando</li>
+        <li>A cobrança depende de memória e acaba sendo esquecida</li>
+        <li>Clientes "entendem" que podem ficar sem pagar por muito tempo</li>
+        <li>No fechamento de caixa, o valor do fiado não aparece — e a conta não fecha</li>
+      </ul>
+      <p>Uma lanchonete com 15 clientes no fiado, cada um devendo em média R$ 40, tem R$ 600 "na rua" — às vezes há meses. Multiplicado por 12 meses, pode representar mais de R$ 7.000 em crédito não recebido por ano.</p>
+
+      <h2>O primeiro passo: registrar tudo por escrito (ou no sistema)</h2>
+      <p>A única forma de controlar fiado é registrar cada lançamento. Isso significa:</p>
+      <ul>
+        <li><strong>Nome do cliente</strong></li>
+        <li><strong>Data da compra</strong></li>
+        <li><strong>Valor fiado</strong></li>
+        <li><strong>O que foi comprado</strong> (opcional, mas ajuda na cobrança)</li>
+        <li><strong>Data e valor de cada pagamento recebido</strong></li>
+      </ul>
+      <p>Pode ser num caderno específico, numa planilha ou num sistema como o Zelo PDV. O que não pode é ser "de cabeça" ou misturado com outras anotações. O registro de fiado precisa ser fácil de consultar na hora que o cliente chegar para pagar.</p>
+
+      <h2>Como definir regras claras de fiado</h2>
+      <p>Antes de controlar melhor, é importante definir regras. Sem política, cada situação vira uma negociação diferente — e o dono sempre perde porque não quer constranger o cliente.</p>
+      <p>Algumas regras simples que funcionam bem:</p>
+      <ul>
+        <li><strong>Limite por cliente:</strong> defina um valor máximo que um cliente pode dever (ex: R$ 80). Quando atingir, só recebe após quitar ou reduzir o saldo.</li>
+        <li><strong>Prazo de pagamento:</strong> combine um prazo. "Quinzenal", "todo dia de pagamento" ou "até sexta" são acordos que normalizam a cobrança.</li>
+        <li><strong>Registro obrigatório:</strong> se não tiver no cadastro, não tem fiado. Isso evita clientes de passagem que nunca voltam.</li>
+        <li><strong>Sem acúmulo com prazo vencido:</strong> se o prazo passou e não pagou, não abre novo fiado até regularizar.</li>
+      </ul>
+
+      <h2>Como cobrar o fiado sem constranger o cliente</h2>
+      <p>A parte mais difícil para a maioria dos donos de lanchonete é a cobrança. Muita gente prefere deixar o fiado crescer a ter uma conversa desconfortável. Mas a forma como você cobra faz toda a diferença.</p>
+      <p>Dicas que funcionam na prática:</p>
+      <ul>
+        <li><strong>Lembre antes de perguntar:</strong> ao invés de "você deve R$ 60", experimente "oi, tá chegando o dia que a gente combinou — você consegue acertar ainda essa semana?"</li>
+        <li><strong>Mostre o registro:</strong> ter o caderno ou o sistema mostra profissionalismo e tira o constrangimento de "eu não devia isso"</li>
+        <li><strong>Seja consistente:</strong> cobrar um e ignorar outro cria desequilíbrio. Com todo mundo tratado igual, a cobrança deixa de parecer perseguição</li>
+        <li><strong>Ofereça parcelamento informal:</strong> clientes com fiado alto às vezes ficam com vergonha de voltar. Propor pagar metade agora e metade depois dissolve a situação</li>
+      </ul>
+
+      <h2>O que fazer com fiado antigo que não foi pago</h2>
+      <p>Fiado com mais de 60 dias tem baixa chance de recebimento. A recomendação prática é:</p>
+      <ul>
+        <li>Até 30 dias: cobrança ativa, lembre na próxima visita</li>
+        <li>30 a 60 dias: contato direto, por mensagem ou pessoalmente</li>
+        <li>Acima de 60 dias: avalie o custo-benefício. Para valores pequenos, às vezes o desgaste não vale. Para valores altos, considere uma conversa direta sobre o acordo.</li>
+      </ul>
+      <p>Não adianta tentar recuperar todos os fiados antigos de uma vez. Foque nos maiores e nos clientes que ainda frequentam o estabelecimento.</p>
+
+      <h2>Como o Zelo PDV controla o fiado automaticamente</h2>
+      <p>O Zelo PDV tem um módulo de fiado que permite cadastrar clientes, registrar o que foi fiado em cada visita e marcar os pagamentos recebidos. Em vez de folhear um caderno ou lembrar de cabeça, você abre o sistema, busca o nome do cliente e vê o histórico completo: quanto deve, desde quando e o que foi pago.</p>
+      <p>Na hora da cobrança, isso muda tudo. Não é mais você dizendo "acho que você deve uns R$ 50" — é o sistema mostrando R$ 47,50 registrados em três compras nas datas específicas. Profissionalismo que facilita a cobrança e evita discussão.</p>
+      <p>Para lanchonetes que convivem com fiado no dia a dia, ter esse controle organizado é a diferença entre uma prática sustentável e um vazamento constante de caixa.</p>
+    `
+  },
+  {
     slug: 'como-calcular-taxa-aplicativo-delivery',
     title: 'Taxas de aplicativos de delivery: quanto iFood, Rappi e outros cobram do restaurante em 2026',
     description:
