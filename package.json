@@ -27,6 +27,8 @@
     "vitest": "^3.0.0"
   },
   "dependencies": {
+    "@iconify/icons-simple-icons": "^1.2.74",
+    "@iconify/svelte": "^5.2.1",
     "@supabase/supabase-js": "^2.47.10",
     "@tailwindcss/forms": "^0.5.7",
     "@types/dompurify": "^3.0.5",
@@ -41,6 +43,7 @@
     "resend": "^6.10.0",
     "stripe": "^19.2.0",
     "sweetalert2": "^11.26.18",
+    "ws": "^8.20.1",
     "xlsx": "^0.18.5"
   },
   "engines": {

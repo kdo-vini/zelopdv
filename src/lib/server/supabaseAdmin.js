@@ -1,5 +1,6 @@
 // Server-side Supabase client with service role key (bypasses RLS)
 import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import { env } from '$env/dynamic/private';
 
 const supabaseUrl =
@@ -22,6 +23,9 @@ export const supabaseAdmin = (supabaseUrl && supabaseServiceKey)
         auth: {
             autoRefreshToken: false,
             persistSession: false
+        },
+        realtime: {
+            transport: ws
         }
     })
     : null;

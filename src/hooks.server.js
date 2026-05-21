@@ -13,7 +13,9 @@ const WINDOW_MS = 60 * 1000; // 1 minute
 /** Max requests per IP per window for each route prefix */
 const LIMITS = {
     '/api/billing/webhook':                   200, // high: called by Stripe servers
+    '/api/webhooks/abacatepay':              200,
     '/api/billing/create-subscription':         5, // low: prevents duplicate/abuse subscription creation
+    '/api/billing/pix/create':                 10,
     '/api/billing/cancel-subscription':         5,
     '/api/billing/create-checkout-session':    10,
     '/api/billing/create-portal-session':      10,

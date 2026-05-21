@@ -1,4 +1,6 @@
 <script>
+  import OfflineIcon from '@iconify/svelte/dist/OfflineIcon.svelte';
+  import pixIconData from '@iconify/icons-simple-icons/pix';
   import { supabase } from '$lib/supabaseClient';
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { onMount, onDestroy } from 'svelte';
@@ -11,6 +13,7 @@
   let email = '';
   let subStatus = null;
   let loading = false;
+  let pixLoading = false;
   let canceling = false;
   let changingPlan = false;
   let message = '';
@@ -35,6 +38,45 @@
   let selectedPlan = 'pdv';
   // Plano atual do user (se já tem subscription)
   let activePlanTier = null;
+  let pixPayment = null;
+  let pixStatusLoading = false;
+  let pixStatusInterval = null;
+  let pixCountdownInterval = null;
+  let pixNow = Date.now();
+  let pixModalOpen = false;
+  let pixAutoRenewing = false;
+  let checkoutStep = 1;
+  let pixSelectionKey = '';
+
+  const checkoutSteps = [
+    { id: 1, label: 'Plano' },
+    { id: 2, label: 'Add-ons' },
+    { id: 3, label: 'Pagamento' },
+  ];
+  const primaryPlanIds = ['pdv', 'bundle'];
+  const addonCatalog = [
+    {
+      id: 'mesas',
+      name: 'Módulo Mesas',
+      priceLabel: '+R$ 30/mês',
+      teaser: 'Mesas, comandas e divisão de conta sem confusão no caixa.',
+      painPoint: 'Evita conta perdida, fechamento demorado e atendimento travado nas mesas.',
+    },
+    {
+      id: 'pedidos',
+      name: 'Pedidos + Cozinha',
+      priceLabel: '+R$ 30/mês',
+      teaser: 'Pedidos saem do papel e chegam organizados na produção.',
+      painPoint: 'Reduz erro de pedido, atraso na cozinha e ruído entre atendimento e produção.',
+    },
+    {
+      id: 'acessos',
+      name: 'Controle de Acessos',
+      priceLabel: '+R$ 30/mês',
+      teaser: 'Equipe com permissões certas, sem senha compartilhada.',
+      painPoint: 'Evita acessos indevidos, alterações sem rastreio e bagunça operacional.',
+    },
+  ];
 
   $: planPrice = calculateValue(selectedPlan, {
     mesas: mesasAddonOn,
@@ -60,17 +102,151 @@
   $: activePlanAllowsAcessos = activePlanTier
     ? PLANS[activePlanTier]?.allowsAcessos
     : false;
+  $: activePlanOptions = [activePlanTier === 'chat' ? 'chat' : null, ...primaryPlanIds]
+    .filter(Boolean)
+    .map((planId) => PLANS[planId]);
+  $: selectedPlanName = PLANS[selectedPlan]?.name || 'Plano';
+  $: selectedPlanTagline = PLANS[selectedPlan]?.tagline || '';
+  $: selectedAddons = addonCatalog.filter((addon) => {
+    if (addon.id === 'mesas') return mesasAddonOn;
+    if (addon.id === 'pedidos') return pedidosAddonOn;
+    if (addon.id === 'acessos') return acessosAddonOn;
+    return false;
+  });
+  $: selectionSummary = [
+    selectedPlanName,
+    ...selectedAddons.map((addon) => addon.name),
+  ];
+  $: currentCheckoutStepLabel = checkoutSteps.find((step) => step.id === checkoutStep)?.label || 'Plano';
+  $: currentSelectionKey = JSON.stringify({
+    selectedPlan,
+    mesas: mesasAddonOn,
+    pedidos: pedidosAddonOn,
+    acessos: acessosAddonOn,
+  });
+  $: pixPaymentMatchesSelection = !pixPayment || pixSelectionKey === currentSelectionKey;
+  $: pixExpiresAtMs = pixPayment?.expiresAt ? new Date(pixPayment.expiresAt).getTime() : null;
+  $: pixSecondsRemaining = pixExpiresAtMs
+    ? Math.max(0, Math.ceil((pixExpiresAtMs - pixNow) / 1000))
+    : null;
+  $: pixCountdownLabel = formatPixCountdown(pixSecondsRemaining);
+  $: pixStatusLabel = getPixStatusLabel(pixPayment?.status);
+  $: pixIsAwaitingPayment = pixPayment?.status === 'pending' && pixPaymentMatchesSelection;
+  $: if (
+    pixModalOpen
+    && pixPaymentMatchesSelection
+    && pixPayment?.status === 'pending'
+    && pixSecondsRemaining === 0
+    && !pixLoading
+    && !pixAutoRenewing
+  ) {
+    renovarPixExpirado();
+  }
 
   // Se selectedPlan não permite os addons, força off (UX clara)
   $: if (!selectedPlanAllowsMesas && mesasAddonOn) mesasAddonOn = false;
   $: if (!selectedPlanAllowsPedidos && pedidosAddonOn) pedidosAddonOn = false;
   $: if (!selectedPlanAllowsAcessos && acessosAddonOn) acessosAddonOn = false;
+  $: if (!isActiveStrict && selectedPlan === 'chat') selectedPlan = 'bundle';
 
   let autoStartingTrial = false;
 
-  onDestroy(() => {});
+  function stopPixStatusPolling() {
+    if (pixStatusInterval) {
+      clearInterval(pixStatusInterval);
+      pixStatusInterval = null;
+    }
+  }
+
+  function startPixClock() {
+    if (typeof window === 'undefined' || pixCountdownInterval) return;
+    pixCountdownInterval = window.setInterval(() => {
+      pixNow = Date.now();
+    }, 1000);
+  }
+
+  function stopPixClock() {
+    if (pixCountdownInterval) {
+      clearInterval(pixCountdownInterval);
+      pixCountdownInterval = null;
+    }
+  }
+
+  function goToCheckoutStep(step) {
+    checkoutStep = Math.min(3, Math.max(1, step));
+  }
+
+  function handlePlanSelection(planId) {
+    selectedPlan = planId;
+  }
+
+  function toggleAddonSelection(addonId) {
+    if (addonId === 'mesas' && selectedPlanAllowsMesas) mesasAddonOn = !mesasAddonOn;
+    if (addonId === 'pedidos' && selectedPlanAllowsPedidos) pedidosAddonOn = !pedidosAddonOn;
+    if (addonId === 'acessos' && selectedPlanAllowsAcessos) acessosAddonOn = !acessosAddonOn;
+  }
+
+  function addonAvailable(addonId) {
+    if (addonId === 'mesas') return selectedPlanAllowsMesas;
+    if (addonId === 'pedidos') return selectedPlanAllowsPedidos;
+    if (addonId === 'acessos') return selectedPlanAllowsAcessos;
+    return false;
+  }
+
+  function addonSelected(addonId) {
+    if (addonId === 'mesas') return mesasAddonOn;
+    if (addonId === 'pedidos') return pedidosAddonOn;
+    if (addonId === 'acessos') return acessosAddonOn;
+    return false;
+  }
+
+  function formatPixCountdown(seconds) {
+    if (seconds === null || seconds === undefined) return '';
+    if (seconds <= 0) return 'Renovando Pix...';
+
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+  }
+
+  function getPixStatusLabel(status) {
+    switch (status) {
+      case 'paid':
+        return 'Pagamento confirmado';
+      case 'expired':
+        return 'Pix vencido';
+      case 'failed':
+        return 'Falha no pagamento';
+      case 'cancelled':
+        return 'Pix cancelado';
+      case 'refunded':
+        return 'Pagamento estornado';
+      case 'pending':
+      default:
+        return 'Aguardando pagamento';
+    }
+  }
+
+  function closePixModal() {
+    pixModalOpen = false;
+  }
+
+  function startPixStatusPolling() {
+    stopPixStatusPolling();
+    if (typeof window === 'undefined' || !pixPayment?.paymentId || pixPayment.status !== 'pending') return;
+
+    pixStatusInterval = window.setInterval(() => {
+      atualizarPixStatus({ silent: true });
+    }, 10000);
+  }
+
+  onDestroy(() => {
+    stopPixStatusPolling();
+    stopPixClock();
+  });
 
   onMount(async () => {
+    startPixClock();
     try {
       const { data: userData } = await supabase.auth.getUser();
       userId = userData?.user?.id || '';
@@ -188,16 +364,19 @@
           if (!activeMesasAddon) mesasAddonOn = true;
           // Se user veio querendo Mesas mas tá no plano errado, sugere bundle
           if (selectedPlan === 'chat') selectedPlan = 'bundle';
+          checkoutStep = 2;
         }
         if (params.get('addon') === 'pedidos') {
           camePromptingPedidos = true;
           if (!activePedidosAddon) pedidosAddonOn = true;
           if (selectedPlan === 'chat') selectedPlan = 'bundle';
+          checkoutStep = 2;
         }
         if (params.get('addon') === 'acessos') {
           camePromptingAcessos = true;
           if (!activeAcessosAddon) acessosAddonOn = true;
           if (selectedPlan === 'chat') selectedPlan = 'bundle';
+          checkoutStep = 2;
         }
         const upgrade = params.get('upgrade');
         if (upgrade && PLANS[upgrade]) {
@@ -267,7 +446,7 @@
         return;
       }
 
-      // Stripe Checkout retorna URL hospedada — redireciona pra lá pra completar o pagamento.
+      // O fluxo de cartão retorna uma URL hospedada pelo provedor e segue por redirecionamento.
       if (data.url) {
         if (typeof window.fbq === 'function') {
           window.fbq('track', 'InitiateCheckout', { value: planPrice, currency: 'BRL' });
@@ -283,6 +462,165 @@
       messageType = 'warning';
     } finally {
       loading = false;
+    }
+  }
+
+  async function gerarPix({ autoRenew = false } = {}) {
+    if (pixLoading) return;
+
+    try {
+      pixLoading = true;
+      message = '';
+
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token ?? '';
+      if (!token) {
+        message = 'Sua sessão expirou. Faça login novamente.';
+        messageType = 'warning';
+        return;
+      }
+
+      const res = await fetch('/api/billing/pix/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          planTier: selectedPlan,
+          addons: {
+            mesas: mesasAddonOn,
+            pedidos: pedidosAddonOn,
+            acessos: acessosAddonOn,
+          },
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data?.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
+        message = data?.error || 'Falha ao gerar cobrança Pix.';
+        messageType = 'warning';
+        return;
+      }
+
+      pixPayment = data;
+      pixSelectionKey = currentSelectionKey;
+      pixModalOpen = true;
+      goToCheckoutStep(3);
+      startPixStatusPolling();
+      messageType = 'info';
+      if (autoRenew) {
+        message = 'O Pix venceu e uma nova cobrança foi gerada automaticamente.';
+      } else {
+        message = data?.reused
+          ? 'Você já tinha um Pix em aberto. Mantivemos a cobrança atual.'
+          : 'Pix gerado com sucesso. Faça o pagamento e acompanhe a confirmação nesta tela.';
+      }
+    } catch (e) {
+      message = e?.message || 'Erro ao conectar com o servidor de pagamento.';
+      messageType = 'warning';
+    } finally {
+      pixLoading = false;
+    }
+  }
+
+  async function atualizarPixStatus({ silent = false } = {}) {
+    if (!pixPayment?.paymentId || pixStatusLoading) return;
+
+    try {
+      pixStatusLoading = true;
+
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token ?? '';
+      if (!token) {
+        if (!silent) {
+          message = 'Sua sessão expirou. Faça login novamente.';
+          messageType = 'warning';
+        }
+        return;
+      }
+
+      const res = await fetch(`/api/billing/pix/status/${pixPayment.paymentId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (!silent) {
+          message = data?.error || 'Falha ao consultar status do Pix.';
+          messageType = 'warning';
+        }
+        return;
+      }
+
+      pixPayment = data;
+      if (data.status === 'pending') {
+        pixSelectionKey = currentSelectionKey;
+      }
+
+      if (data.status === 'paid') {
+        stopPixStatusPolling();
+        message = 'Pagamento confirmado. Redirecionando…';
+        messageType = 'success';
+        setTimeout(() => {
+          window.location.href = '/gestao';
+        }, 1200);
+        return;
+      }
+
+      if (data.status === 'expired') {
+        stopPixStatusPolling();
+        if (pixModalOpen && pixPaymentMatchesSelection && !pixAutoRenewing) {
+          await renovarPixExpirado();
+          return;
+        }
+        if (!silent) {
+          message = 'Este Pix venceu. Geramos uma nova cobrança para continuar.';
+          messageType = 'warning';
+        }
+        return;
+      }
+
+      if (['failed', 'cancelled', 'refunded'].includes(data.status)) {
+        stopPixStatusPolling();
+        if (!silent) {
+          message = 'Não foi possível confirmar este Pix. Gere uma nova cobrança para continuar.';
+          messageType = 'warning';
+        }
+        return;
+      }
+
+      if (!silent) {
+        message = 'Cobrança Pix ainda aguardando pagamento.';
+        messageType = 'info';
+      }
+    } catch (e) {
+      if (!silent) {
+        message = e?.message || 'Erro ao consultar status do Pix.';
+        messageType = 'warning';
+      }
+    } finally {
+      pixStatusLoading = false;
+    }
+  }
+
+  async function renovarPixExpirado() {
+    if (pixAutoRenewing || pixLoading) return;
+
+    pixAutoRenewing = true;
+    try {
+      await gerarPix({ autoRenew: true });
+    } finally {
+      pixAutoRenewing = false;
     }
   }
 
@@ -545,17 +883,21 @@
   $: defaultMessage = hasHadSubscription
     ? 'Renove sua assinatura para continuar usando o sistema.'
     : '30 dias grátis! Escolha o plano que faz sentido pro seu negócio.';
+
+  $: if (pixPayment && pixSelectionKey && pixSelectionKey !== currentSelectionKey) {
+    stopPixStatusPolling();
+  }
 </script>
 
 <svelte:head>
   <title>Assinatura — Zelo</title>
-  <meta name="description" content="Assine ZeloPDV (R$ 59), ZeloChat (R$ 97) ou o Pacote Gestão + Atendimento (R$ 147). Cartão de crédito.">
+  <meta name="description" content="Monte seu plano ZeloPDV, escolha add-ons e pague com Pix ou cartão no fluxo de assinatura do Zelo.">
 </svelte:head>
 
 <section class="assinatura-container">
   <p class="breadcrumb">Conta / Assinatura</p>
   <h1 class="title">Sua assinatura Zelo</h1>
-  <p class="subtitle">Escolha o plano. ZeloPDV (gestão completa), ZeloChat (atendimento com IA), ou os dois no Pacote Gestão + Atendimento com R$ 9 de desconto.</p>
+  <p class="subtitle">Escolha o pacote, ajuste os módulos e finalize com Pix ou cartão em poucos passos.</p>
 
   {#if camePromptingMesas}
     <div class="status-card info">
@@ -664,7 +1006,7 @@
 
     <h2 class="selector-title" style="margin-top: 1rem;">Mudar de plano</h2>
     <div class="plans-grid">
-      {#each Object.values(PLANS) as plan}
+      {#each activePlanOptions as plan}
         <button
           type="button"
           class="plan-card"
@@ -794,7 +1136,7 @@
     </div>
 
   {:else}
-    <!-- NOT-ACTIVE — show plan picker + addon + payment form -->
+    <!-- NOT-ACTIVE — step-by-step checkout -->
     {#if messageType === 'warning' && message}
       <div class="status-card warning">
         <div class="status-icon">⚠️</div>
@@ -809,72 +1151,239 @@
       </div>
     {/if}
 
-    <h2 class="selector-title">Escolha seu plano</h2>
-    <div class="plans-grid">
-      {#each Object.values(PLANS) as plan}
-        <button
-          type="button"
-          class="plan-card"
-          class:selected={selectedPlan === plan.id}
-          class:bundle={plan.id === 'bundle'}
-          on:click={() => selectedPlan = plan.id}
-        >
-          {#if plan.id === 'bundle'}<span class="plan-badge">Mais popular</span>{/if}
-          <div class="plan-name">{plan.name}</div>
-          <div class="plan-price">R$ {plan.price}<span class="plan-cycle">/mês</span></div>
-          {#if plan.bundleSavings}<div class="plan-savings">Economize R$ {plan.bundleSavings}</div>{/if}
-          <div class="plan-tagline">{plan.tagline}</div>
-        </button>
-      {/each}
-    </div>
+    <div class="checkout-flow">
+      <div class="checkout-steps" aria-label="Etapas da assinatura">
+        {#each checkoutSteps as step}
+          <button
+            type="button"
+            class="step-chip"
+            class:active={checkoutStep === step.id}
+            class:done={checkoutStep > step.id}
+            on:click={() => goToCheckoutStep(step.id)}
+          >
+            <span class="step-chip-number">{step.id}</span>
+            <span>{step.label}</span>
+          </button>
+        {/each}
+      </div>
 
-    {#if selectedPlanAllowsMesas}
-      <label class="addon-toggle">
-        <input type="checkbox" bind:checked={mesasAddonOn} />
-        <div class="addon-info">
-          <strong>Módulo Mesas <span class="addon-price">+R$ 30/mês</span></strong>
-          <span class="addon-detail">Mesas, comandas e divisão de conta para bares e lanchonetes.</span>
+      <div class="mobile-step-pagination" aria-label="Etapa atual da assinatura">
+        <div class="mobile-step-copy">
+          <span class="mobile-step-kicker">Etapa {checkoutStep} de {checkoutSteps.length}</span>
+          <strong>{currentCheckoutStepLabel}</strong>
         </div>
-      </label>
-    {:else}
-      <p class="legal-text" style="margin: -0.4rem 0 0;">Módulo Mesas só está disponível em planos com ZeloPDV.</p>
-    {/if}
-
-    {#if selectedPlanAllowsPedidos}
-      <label class="addon-toggle">
-        <input type="checkbox" bind:checked={pedidosAddonOn} />
-        <div class="addon-info">
-          <strong>Pedidos + Cozinha <span class="addon-price">+R$ 30/mês</span></strong>
-          <span class="addon-detail">Pedidos, delivery e painel de cozinha para separar atendimento e produção.</span>
+        <div class="mobile-step-dots" aria-hidden="true">
+          {#each checkoutSteps as step}
+            <button
+              type="button"
+              class="mobile-step-dot"
+              class:active={checkoutStep === step.id}
+              on:click={() => goToCheckoutStep(step.id)}
+              aria-label={`Ir para ${step.label}`}
+            ></button>
+          {/each}
         </div>
-      </label>
-    {:else}
-      <p class="legal-text" style="margin: -0.4rem 0 0;">Pedidos + Cozinha só está disponível em planos com ZeloPDV.</p>
-    {/if}
+      </div>
 
-    {#if selectedPlanAllowsAcessos}
-      <label class="addon-toggle">
-        <input type="checkbox" bind:checked={acessosAddonOn} />
-        <div class="addon-info">
-          <strong>Controle de Acessos <span class="addon-price">+R$ 30/mês</span></strong>
-          <span class="addon-detail">Gerencie usuários e defina permissões de acesso ao sistema para sua equipe.</span>
+      <div class="checkout-shell">
+        <div class="checkout-track" style={`transform: translateX(-${(checkoutStep - 1) * 100}%);`}>
+          <section class="checkout-step-panel" aria-hidden={checkoutStep !== 1}>
+            <div class="step-panel-header step-panel-header-large">
+              <p class="step-kicker">Etapa 1</p>
+              <h2 class="selector-title selector-title-large">Escolha o pacote base da sua operação</h2>
+              <p class="step-copy">Comece pelo formato do seu negócio. No próximo passo você ajusta os módulos e vê o valor final.</p>
+            </div>
+
+            <div class="plan-focus-grid plan-focus-grid-large">
+              {#each primaryPlanIds as planId}
+                <button
+                  type="button"
+                  class="plan-card plan-card-primary plan-card-decision"
+                  class:selected={selectedPlan === planId}
+                  class:bundle={planId === 'bundle'}
+                  on:click={() => handlePlanSelection(planId)}
+                >
+                  {#if planId === 'bundle'}<span class="plan-badge">Mais popular</span>{/if}
+                  <span class="decision-eyebrow">
+                    {#if planId === 'pdv'}
+                      Gestão da operação
+                    {:else}
+                      Gestão + atendimento
+                    {/if}
+                  </span>
+                  <div class="plan-name">{PLANS[planId].name}</div>
+                  <div class="plan-price">R$ {PLANS[planId].price}<span class="plan-cycle">/mês</span></div>
+                  {#if PLANS[planId].bundleSavings}<div class="plan-savings">Economize R$ {PLANS[planId].bundleSavings}</div>{/if}
+                  <div class="plan-tagline">{PLANS[planId].tagline}</div>
+                  <div class="plan-cta">{selectedPlan === planId ? 'Pacote selecionado' : 'Escolher pacote'}</div>
+                </button>
+              {/each}
+            </div>
+
+            <div class="step-actions">
+              <button type="button" class="btn-primary step-continue" on:click={() => goToCheckoutStep(2)}>
+                Continuar
+              </button>
+            </div>
+          </section>
+
+          <section class="checkout-step-panel" aria-hidden={checkoutStep !== 2}>
+            <div class="step-panel-header">
+              <p class="step-kicker">Etapa 2</p>
+              <h2 class="selector-title">Adicione só o que faz diferença</h2>
+              <p class="step-copy">Toque nos módulos que resolvem gargalos da sua rotina. O valor total atualiza na hora.</p>
+            </div>
+
+            <div class="addons-grid">
+              {#each addonCatalog as addon}
+                <button
+                  type="button"
+                  class="addon-choice"
+                  class:selected={addonSelected(addon.id)}
+                  class:disabled={!addonAvailable(addon.id)}
+                  on:click={() => toggleAddonSelection(addon.id)}
+                  disabled={!addonAvailable(addon.id)}
+                >
+                  <div class="addon-choice-top">
+                    <div class="addon-choice-title">
+                      <strong>{addon.name}</strong>
+                      <span>{addon.priceLabel}</span>
+                    </div>
+                    <span class="addon-pill" class:on={addonSelected(addon.id)}>
+                      {#if addonAvailable(addon.id)}
+                        {addonSelected(addon.id) ? 'Selecionado' : 'Opcional'}
+                      {:else}
+                        Não disponível
+                      {/if}
+                    </span>
+                  </div>
+                  <p class="addon-choice-copy">
+                    {#if addonAvailable(addon.id)}
+                      {addon.teaser}
+                    {:else}
+                      Disponível apenas em planos com ZeloPDV.
+                    {/if}
+                  </p>
+                  {#if addonAvailable(addon.id)}
+                    <span class="addon-pain">Resolve: {addon.painPoint}</span>
+                  {/if}
+                  <span class="addon-tooltip">{addon.painPoint}</span>
+                </button>
+              {/each}
+            </div>
+
+            <div class="step-actions step-actions-between">
+              <button type="button" class="btn-secondary" on:click={() => goToCheckoutStep(1)}>
+                Voltar
+              </button>
+              <button type="button" class="btn-primary step-continue" on:click={() => goToCheckoutStep(3)}>
+                Revisar e pagar
+              </button>
+            </div>
+          </section>
+
+          <section class="checkout-step-panel" aria-hidden={checkoutStep !== 3}>
+            <div class="step-panel-header">
+              <p class="step-kicker">Etapa 3</p>
+              <h2 class="selector-title">Revise e escolha como pagar</h2>
+              <p class="step-copy">Seu pacote ficou em R$ {planPrice}/mês. Escolha a forma de pagamento para liberar ou renovar seu acesso.</p>
+            </div>
+
+            <div class="step-total-spotlight">
+              <span class="step-total-label">Total do seu pacote</span>
+              <strong>R$ {planPrice}/mês</strong>
+              <p>{selectedAddons.length ? selectionSummary.join(' + ') : selectedPlanTagline}</p>
+            </div>
+
+            <div class="payment-grid">
+              <button class="payment-card" type="button" on:click={gerarPix} disabled={loading || pixLoading}>
+                <div class="payment-card-head">
+                  <span class="payment-card-icon" aria-hidden="true">
+                    <OfflineIcon icon={pixIconData} />
+                  </span>
+                  <span class="payment-card-kicker">Pix</span>
+                </div>
+                <strong>Pagar com Pix</strong>
+                <span>Abra o QR Code, pague no seu banco e acompanhe a confirmação nesta tela.</span>
+                <span class="payment-card-cta">
+                  {pixLoading ? 'Preparando Pix…' : `Pagar com Pix — R$ ${planPrice}/mês`}
+                </span>
+              </button>
+
+              <button class="payment-card" type="button" on:click={assinar} disabled={loading || pixLoading}>
+                <div class="payment-card-head">
+                  <span class="payment-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 64 64" role="presentation" focusable="false">
+                      <rect x="8" y="14" width="48" height="36" rx="8" fill="none" stroke="currentColor" stroke-width="4" />
+                      <rect x="12" y="22" width="40" height="8" rx="2" fill="currentColor" opacity="0.9" />
+                      <rect x="16" y="38" width="12" height="4" rx="2" fill="currentColor" opacity="0.55" />
+                      <rect x="32" y="38" width="16" height="4" rx="2" fill="currentColor" opacity="0.35" />
+                    </svg>
+                  </span>
+                  <span class="payment-card-kicker">Cartão</span>
+                </div>
+                <strong>Pagar com cartão</strong>
+                <span>Finalize agora no cartão e mantenha a renovação automática ativa.</span>
+                <span class="payment-card-cta">
+                  {loading ? 'Processando…' : `Pagar com cartão — R$ ${planPrice}/mês`}
+                </span>
+              </button>
+            </div>
+
+            {#if pixPayment && !pixPaymentMatchesSelection}
+              <div class="status-card warning compact-status">
+                <div class="status-icon">⚠️</div>
+                <div>Você alterou o plano ou os add-ons depois de gerar o Pix. Gere uma nova cobrança para continuar com a seleção atual.</div>
+              </div>
+            {/if}
+
+            <div class="step-actions step-actions-between">
+              <button type="button" class="btn-secondary" on:click={() => goToCheckoutStep(2)}>
+                Voltar
+              </button>
+            </div>
+          </section>
         </div>
-      </label>
-    {:else}
-      <p class="legal-text" style="margin: -0.4rem 0 0;">Controle de Acessos só está disponível em planos com ZeloPDV.</p>
-    {/if}
+      </div>
 
-    <button class="btn-primary btn-subscribe" on:click={assinar} disabled={loading}>
-      {#if loading}
-        Processando…
-      {:else}
-        Assinar {PLANS[selectedPlan].name} — R$ {planPrice}/mês
+      {#if checkoutStep < 3}
+        <div class="mobile-sticky-summary" aria-label="Resumo do pacote selecionado">
+          <div class="mobile-sticky-copy">
+            <span>{selectedPlanName}</span>
+            <strong>R$ {planPrice}/mês</strong>
+          </div>
+          <button
+            type="button"
+            class="btn-primary mobile-sticky-action"
+            on:click={() => goToCheckoutStep(checkoutStep + 1)}
+          >
+            {checkoutStep === 1 ? 'Continuar' : 'Revisar e pagar'}
+          </button>
+        </div>
       {/if}
-    </button>
+
+      <div class="checkout-summary">
+        <div>
+          <p class="summary-kicker">Resumo do pacote</p>
+          <h2 class="summary-title">{selectedPlanName}</h2>
+          <p class="summary-copy">
+            {#if selectedAddons.length}
+              {selectionSummary.join(' + ')}
+            {:else}
+              {selectedPlanTagline}
+            {/if}
+          </p>
+        </div>
+        <div class="summary-total">
+          <span>Total mensal</span>
+          <strong>R$ {planPrice}</strong>
+        </div>
+      </div>
+    </div>
 
     <p class="legal-text">
       Ao assinar, você concorda com nossos <a href="/termos">Termos de Uso</a> e <a href="/privacidade">Política de Privacidade</a>.
-      Pagamento via cartão de crédito (Stripe).
+      Pagamento via cartão ou Pix.
       {#if !hasHadSubscription}
         A cobrança de R$ {planPrice}/mês será iniciada após o período de teste de 30 dias.
       {:else}
@@ -884,9 +1393,100 @@
   {/if}
 </section>
 
+{#if pixModalOpen && pixPayment && pixPaymentMatchesSelection}
+  <div class="pix-modal-layer">
+    <button type="button" class="pix-modal-backdrop" aria-label="Fechar Pix" on:click={closePixModal}></button>
+    <div
+      class="pix-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pix-modal-title"
+      tabindex="-1"
+    >
+      <button type="button" class="pix-modal-close" aria-label="Fechar Pix" on:click={closePixModal}>
+        ×
+      </button>
+
+      <div class="pix-modal-header">
+        <span class="pix-modal-icon" aria-hidden="true">
+          <OfflineIcon icon={pixIconData} />
+        </span>
+        <div>
+          <p class="step-kicker">Pagamento Pix</p>
+          <h2 id="pix-modal-title" class="pix-modal-title">{pixStatusLabel}</h2>
+          <p class="pix-detail">Valor: R$ {planPrice}/mês</p>
+        </div>
+      </div>
+
+      <div class="pix-waiting-line" class:confirmed={pixPayment.status === 'paid'}>
+        {#if pixIsAwaitingPayment || pixAutoRenewing}
+          <span class="spinner" aria-hidden="true"></span>
+          <span>{pixAutoRenewing ? 'Renovando QR Code Pix...' : 'Aguardando confirmação do pagamento...'}</span>
+        {:else}
+          <span>{pixStatusLabel}</span>
+        {/if}
+      </div>
+
+      {#if pixPayment.expiresAt && pixIsAwaitingPayment}
+        <div class="pix-countdown">
+          <span>QR Code válido por</span>
+          <strong>{pixCountdownLabel}</strong>
+          <small>Quando vencer, um novo Pix será gerado automaticamente.</small>
+        </div>
+      {/if}
+
+      {#if pixAutoRenewing || pixLoading}
+        <div class="pix-renewing-state">
+          <span class="spinner large" aria-hidden="true"></span>
+          <strong>Preparando novo Pix</strong>
+        </div>
+      {:else}
+        {#if pixPayment.qrCodeBase64}
+          <img class="pix-qrcode" src={pixPayment.qrCodeBase64} alt="QR Code Pix" />
+        {/if}
+
+        {#if pixPayment.brCode}
+          <label class="pix-copy-field">
+            <span>Copia e cola</span>
+            <textarea readonly rows="4">{pixPayment.brCode}</textarea>
+          </label>
+          <div class="pix-actions">
+            <button
+              type="button"
+              class="btn-primary"
+              on:click={() => {
+                navigator.clipboard?.writeText(pixPayment.brCode);
+                addToast('Código Pix copiado.', 'success');
+              }}
+            >
+              Copiar código Pix
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              on:click={() => atualizarPixStatus()}
+              disabled={pixStatusLoading}
+            >
+              {#if pixStatusLoading}
+                Atualizando...
+              {:else}
+                Já paguei
+              {/if}
+            </button>
+          </div>
+        {/if}
+      {/if}
+
+      <p class="legal-text pix-legal">
+        Esta tela acompanha o pagamento automaticamente. Você pode fechar e voltar depois; o acesso será liberado quando o Pix for confirmado.
+      </p>
+    </div>
+  </div>
+{/if}
+
 <style>
   .assinatura-container {
-    max-width: 720px;
+    max-width: 920px;
     margin: 2rem auto;
     padding: 0 1rem;
     display: flex;
@@ -963,7 +1563,6 @@
   }
   .btn-primary:hover { background: var(--primary-hover); }
   .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-  .btn-subscribe { width: 100%; padding: 1rem; font-size: 1.1rem; }
 
   .btn-secondary {
     display: inline-flex;
@@ -1070,7 +1669,6 @@
   .plan-card.current .plan-cta { color: var(--success, #16a34a); }
   .plan-card:disabled .plan-cta { color: var(--text-muted); }
 
-  .billing-selector { margin-top: 0.5rem; }
   .selector-title {
     font-size: 1rem;
     font-weight: 700;
@@ -1078,43 +1676,633 @@
     margin: 0 0 0.6rem 0;
   }
 
-  .billing-options { display: flex; gap: 0.5rem; }
-  .billing-option {
-    flex: 1;
+  .checkout-flow {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .checkout-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .mobile-step-pagination {
+    display: none;
+  }
+
+  .mobile-sticky-summary {
+    display: none;
+  }
+
+  .step-chip {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.85rem 0.5rem;
-    border: 2px solid var(--border-subtle);
-    border-radius: 10px;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-label);
+    font: inherit;
+    font-weight: 600;
     cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  }
+
+  .step-chip-number {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    background: var(--bg-input);
+    flex-shrink: 0;
+  }
+
+  .step-chip.active,
+  .step-chip.done {
+    border-color: var(--primary);
+    color: var(--text-main);
+  }
+
+  .step-chip.active .step-chip-number,
+  .step-chip.done .step-chip-number {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--button-text, var(--bg-card));
+  }
+
+  .checkout-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
     background: var(--bg-card);
   }
-  .billing-option input[type="radio"] { display: none; }
-  .billing-option:hover { border-color: var(--primary); background: rgba(var(--primary-rgb, 59, 130, 246), 0.04); }
-  .billing-option.selected {
+
+  .summary-kicker,
+  .step-kicker {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  .summary-title {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--text-main);
+  }
+
+  .summary-copy,
+  .step-copy {
+    margin: 0;
+    color: var(--text-label);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .summary-total {
+    display: grid;
+    gap: 0.15rem;
+    text-align: right;
+    color: var(--text-label);
+    font-size: 0.82rem;
+  }
+
+  .summary-total strong {
+    font-size: 1.7rem;
+    line-height: 1;
+    color: var(--text-main);
+  }
+
+  .checkout-shell {
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    background: var(--bg-card);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  }
+
+  .checkout-track {
+    display: flex;
+    width: 100%;
+    transition: transform 0.3s ease;
+  }
+
+  .checkout-step-panel {
+    width: 100%;
+    flex: 0 0 100%;
+    padding: 1.5rem;
+    display: grid;
+    gap: 1.25rem;
+    align-content: start;
+    min-height: 500px;
+  }
+
+  .step-panel-header {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .step-panel-header-large {
+    text-align: center;
+    justify-items: center;
+    gap: 0.4rem;
+  }
+
+  .plan-focus-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .plan-focus-grid-large {
+    margin-top: 0.25rem;
+  }
+
+  .plan-card-primary {
+    min-height: 220px;
+    justify-content: center;
+  }
+
+  .plan-card-decision {
+    min-height: 280px;
+    padding: 1.5rem;
+    gap: 0.7rem;
+    border-width: 2px;
+    border-radius: 14px;
+  }
+
+  .decision-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  .selector-title-large {
+    font-size: clamp(1.45rem, 3vw, 2rem);
+    margin: 0;
+    text-align: center;
+  }
+
+  .plan-card-decision .plan-name {
+    font-size: 1.2rem;
+  }
+
+  .plan-card-decision .plan-price {
+    font-size: 2rem;
+  }
+
+  .plan-card-decision .plan-tagline {
+    font-size: 0.95rem;
+    line-height: 1.55;
+    max-width: 28ch;
+  }
+
+  .plan-card-decision .plan-cta {
+    margin-top: auto;
+    font-size: 0.9rem;
+  }
+
+  .addons-grid,
+  .payment-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  .addon-choice,
+  .payment-card {
+    position: relative;
+    display: grid;
+    gap: 0.7rem;
+    align-content: start;
+    padding: 1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-input);
+    color: var(--text-main);
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+
+  .addon-choice:hover,
+  .addon-choice:focus-visible,
+  .payment-card:hover,
+  .payment-card:focus-visible {
     border-color: var(--primary);
-    background: rgba(var(--primary-rgb, 59, 130, 246), 0.08);
+    background: var(--bg-card);
+    transform: translateY(-1px);
+  }
+
+  .addon-choice.selected {
+    border-color: var(--primary);
+    background: var(--bg-card);
     box-shadow: 0 0 0 1px var(--primary);
   }
-  .option-icon { font-size: 1.5rem; }
-  .billing-option strong { font-size: 0.85rem; color: var(--text-main); }
-  .option-detail { font-size: 0.72rem; color: var(--text-muted); display: block; }
 
-  .pix-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-card);
-    border-radius: 12px;
-    padding: 1.5rem;
-    text-align: center;
+  .addon-choice.disabled {
+    cursor: not-allowed;
+    opacity: 0.68;
+    transform: none;
   }
-  .pix-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.25rem 0; color: var(--text-main); }
-  .pix-qr { max-width: 220px; margin: 0 auto 1rem; display: block; border-radius: 8px; }
-  .pix-copy-btn { width: 100%; margin-bottom: 0.5rem; }
-  .pix-code { font-size: 0.7rem; color: var(--text-muted); word-break: break-all; font-family: monospace; margin: 0; }
+
+  .addon-choice-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .addon-choice-title {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  .addon-choice-title strong {
+    font-size: 0.98rem;
+  }
+
+  .addon-choice-title span,
+  .addon-choice-copy,
+  .payment-card span:not(.payment-card-kicker):not(.payment-card-cta) {
+    color: var(--text-label);
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+
+  .addon-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .addon-pill.on {
+    color: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .addon-pain {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .addon-tooltip {
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    bottom: calc(100% + 0.5rem);
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 2;
+  }
+
+  .addon-choice:hover .addon-tooltip,
+  .addon-choice:focus-visible .addon-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .payment-card {
+    min-height: 220px;
+    padding: 1.15rem;
+  }
+
+  .payment-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .payment-card-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+
+  .payment-card-icon svg {
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+
+  .payment-card-icon :global(svg) {
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+
+  .payment-card-kicker {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  .payment-card strong {
+    font-size: 1.12rem;
+  }
+
+  .payment-card-cta {
+    margin-top: auto;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .step-total-spotlight {
+    display: grid;
+    gap: 0.2rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    background: var(--bg-input);
+  }
+
+  .step-total-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  .step-total-spotlight strong {
+    font-size: 1.7rem;
+    line-height: 1;
+    color: var(--text-main);
+  }
+
+  .step-total-spotlight p {
+    margin: 0.2rem 0 0;
+    color: var(--text-label);
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .step-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: auto;
+  }
+
+  .step-actions-between {
+    justify-content: space-between;
+  }
+
+  .step-continue {
+    min-width: 220px;
+  }
+
+  .pix-detail {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .pix-qrcode {
+    width: min(100%, 280px);
+    aspect-ratio: 1;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    background: white;
+    padding: 0.75rem;
+    justify-self: center;
+  }
+
+  .pix-copy-field {
+    display: grid;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .pix-copy-field textarea {
+    width: 100%;
+    resize: vertical;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-input);
+    color: var(--text-main);
+    padding: 0.85rem;
+    font: inherit;
+    line-height: 1.4;
+  }
+
+  .pix-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .compact-status {
+    margin-top: 0.25rem;
+  }
+
+  .pix-legal {
+    text-align: left;
+    margin-top: 0;
+  }
+
+  .pix-modal-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+  }
+
+  .pix-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(2, 6, 23, 0.68);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+  }
+
+  .pix-modal {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 520px);
+    max-height: min(92vh, 760px);
+    overflow: auto;
+    display: grid;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 18px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.32);
+  }
+
+  .pix-modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 2.35rem;
+    height: 2.35rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: var(--bg-input);
+    color: var(--text-main);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .pix-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 0.95rem;
+    padding-right: 2.5rem;
+  }
+
+  .pix-modal-icon {
+    width: 3.2rem;
+    height: 3.2rem;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .pix-modal-icon :global(svg) {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  .pix-modal-title {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 1.35rem;
+    line-height: 1.15;
+  }
+
+  .pix-waiting-line {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    background: var(--bg-input);
+    color: var(--text-label);
+    font-size: 0.9rem;
+  }
+
+  .pix-waiting-line.confirmed {
+    color: var(--success, #16a34a);
+  }
+
+  .spinner {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 999px;
+    border: 2px solid var(--border-subtle);
+    border-top-color: var(--primary);
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  .spinner.large {
+    width: 2rem;
+    height: 2rem;
+    border-width: 3px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .pix-countdown {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.2rem 0.8rem;
+    align-items: center;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    background: var(--bg-input);
+  }
+
+  .pix-countdown span {
+    color: var(--text-label);
+    font-size: 0.86rem;
+  }
+
+  .pix-countdown strong {
+    color: var(--text-main);
+    font-size: 1.35rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pix-countdown small {
+    grid-column: 1 / -1;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .pix-renewing-state {
+    display: grid;
+    justify-items: center;
+    gap: 0.75rem;
+    padding: 2rem 1rem;
+    color: var(--text-label);
+  }
 
   .legal-text { font-size: 0.78rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
   .legal-text a { color: var(--primary); text-decoration: underline; }
@@ -1123,43 +2311,13 @@
   :global(.dark) .status-card.warning { color: #fde68a; }
   :global(.dark) .status-card.info { color: #bae6fd; }
 
-  .billing-option-disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    pointer-events: none;
-    filter: grayscale(0.5);
-  }
-
-  .addon-toggle {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 0.85rem 1rem;
-    border: 2px solid var(--border-subtle);
-    border-radius: 10px;
-    cursor: pointer;
-    background: var(--bg-card);
-    transition: all 0.2s;
-  }
-  .addon-toggle:hover { border-color: var(--primary); }
-  .addon-toggle input[type="checkbox"] {
-    margin-top: 0.2rem;
-    accent-color: var(--primary);
-    width: 1rem;
-    height: 1rem;
-  }
-  .addon-info { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
-  .addon-info strong { color: var(--text-main); font-size: 0.95rem; }
-  .addon-price { color: var(--primary); font-size: 0.85rem; margin-left: 0.35rem; }
-  .addon-detail { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
-
   .addon-card {
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
     padding: 1rem 1.15rem;
-    border: 1px solid var(--border-card);
-    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
     background: var(--bg-card);
   }
   .addon-card-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
@@ -1182,8 +2340,232 @@
   }
   .addon-card-detail { font-size: 0.85rem; color: var(--text-label); margin: 0; line-height: 1.5; }
 
-  @media (max-width: 480px) {
-    .billing-options { flex-direction: column; }
-    .billing-option { flex-direction: row; text-align: left; gap: 0.75rem; }
+  @media (max-width: 760px) {
+    .checkout-summary,
+    .plan-focus-grid,
+    .addons-grid,
+    .payment-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .summary-total {
+      text-align: left;
+    }
+
+    .step-actions-between {
+      justify-content: flex-end;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .assinatura-container {
+      padding: 0 0.75rem 6.5rem;
+    }
+
+    .checkout-steps {
+      display: none;
+    }
+
+    .mobile-step-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.95rem 1rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      background: var(--bg-card);
+      box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+    }
+
+    .mobile-step-copy {
+      display: grid;
+      gap: 0.15rem;
+    }
+
+    .mobile-step-kicker {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .mobile-step-copy strong {
+      font-size: 1rem;
+      color: var(--text-main);
+    }
+
+    .mobile-step-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-shrink: 0;
+    }
+
+    .mobile-step-dot {
+      width: 0.7rem;
+      height: 0.7rem;
+      padding: 0;
+      border: none;
+      border-radius: 999px;
+      background: var(--border-subtle);
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .mobile-step-dot.active {
+      width: 1.6rem;
+      background: var(--primary);
+    }
+
+    .mobile-sticky-summary {
+      position: fixed;
+      left: 0.75rem;
+      right: 0.75rem;
+      bottom: 0.75rem;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.85rem;
+      align-items: center;
+      padding: 0.85rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      background: var(--bg-card);
+      box-shadow: 0 22px 60px rgba(15, 23, 42, 0.26);
+    }
+
+    .mobile-sticky-copy {
+      min-width: 0;
+      display: grid;
+      gap: 0.12rem;
+    }
+
+    .mobile-sticky-copy span {
+      color: var(--text-label);
+      font-size: 0.78rem;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mobile-sticky-copy strong {
+      color: var(--text-main);
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+
+    .mobile-sticky-action {
+      width: auto;
+      min-width: 9.5rem;
+      white-space: nowrap;
+    }
+
+    .addon-choice-top {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .pix-actions,
+    .step-actions,
+    .step-actions-between {
+      flex-direction: column;
+    }
+
+    .step-continue,
+    .payment-card,
+    .btn-primary,
+    .btn-secondary {
+      width: 100%;
+    }
+
+    .checkout-step-panel {
+      min-height: auto;
+      padding: 1.2rem;
+    }
+
+    .checkout-shell {
+      border-radius: 18px;
+      box-shadow: 0 28px 60px rgba(15, 23, 42, 0.16);
+    }
+
+    .step-panel-header-large {
+      text-align: left;
+      justify-items: start;
+    }
+
+    .plan-card-decision,
+    .payment-card {
+      min-height: 0;
+    }
+
+    .plan-card-decision {
+      padding: 1.25rem;
+      gap: 0.8rem;
+    }
+
+    .selector-title-large {
+      font-size: 1.7rem;
+      line-height: 1.12;
+    }
+
+    .step-copy {
+      font-size: 0.95rem;
+    }
+
+    .step-total-spotlight {
+      padding: 1rem;
+    }
+
+    .step-total-spotlight strong {
+      font-size: 1.9rem;
+    }
+
+    .payment-card {
+      gap: 0.8rem;
+      padding: 1rem;
+    }
+
+    .payment-card strong {
+      font-size: 1.18rem;
+    }
+
+    .addon-tooltip {
+      display: none;
+    }
+
+    .pix-modal-layer {
+      align-items: end;
+      padding: 0.75rem;
+    }
+
+    .pix-modal {
+      width: 100%;
+      max-height: 94vh;
+      padding: 1rem;
+      border-radius: 18px;
+    }
+
+    .pix-modal-header {
+      align-items: flex-start;
+    }
+
+    .pix-modal-title {
+      font-size: 1.2rem;
+    }
+
+    .pix-qrcode {
+      width: min(100%, 240px);
+    }
+
+    .pix-countdown {
+      grid-template-columns: 1fr;
+    }
+
+    .pix-actions {
+      width: 100%;
+    }
   }
 </style>
