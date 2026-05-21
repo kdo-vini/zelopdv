@@ -219,8 +219,8 @@ export function buildVendaEscPos(payload) {
   const est = payload?.estabelecimento || {};
   const venda = payload?.venda || {};
   const opcoes = payload?.opcoes || {};
-  const largura = est.largura_bobina || '58mm';
-  const cols = largura === '58mm' ? 32 : 48;
+  const largura = est.largura_bobina || '80mm';
+  const cols = largura === '58mm' ? 28 : 32;
 
   const b = new Builder();
   b.init().darkness().selectCodepage().charset();
@@ -350,8 +350,8 @@ export function buildVendaEscPos(payload) {
  */
 export function buildMovCaixaEscPos({ estabelecimento, mov }) {
   const est = estabelecimento || {};
-  const largura = est.largura_bobina || '58mm';
-  const cols = largura === '58mm' ? 32 : 48;
+  const largura = est.largura_bobina || '80mm';
+  const cols = largura === '58mm' ? 28 : 32;
 
   const isSaida = mov.tipo === 'saida';
   const titulo = isSaida ? 'SANGRIA DE CAIXA' : 'SUPRIMENTO DE CAIXA';
@@ -406,8 +406,8 @@ export function buildMovCaixaEscPos({ estabelecimento, mov }) {
  */
 export function buildPagamentoFiadoEscPos({ estabelecimento, pagamento }) {
   const est = estabelecimento || {};
-  const largura = est.largura_bobina || '58mm';
-  const cols = largura === '58mm' ? 32 : 48;
+  const largura = est.largura_bobina || '80mm';
+  const cols = largura === '58mm' ? 28 : 32;
 
   const b = new Builder();
   b.init().darkness().selectCodepage().charset();
@@ -456,8 +456,8 @@ export function buildPagamentoFiadoEscPos({ estabelecimento, pagamento }) {
  * @param {EstabelecimentoCupom} est
  */
 export function buildTesteEscPos(est = {}) {
-  const largura = est.largura_bobina || '58mm';
-  const cols = largura === '58mm' ? 32 : 48;
+  const largura = est.largura_bobina || '80mm';
+  const cols = largura === '58mm' ? 28 : 32;
   const b = new Builder();
   b.init().darkness().selectCodepage().charset();
 

@@ -1103,7 +1103,7 @@
       documento: perfil?.documento || null,
       contato: perfil?.contato || null,
       endereco: perfil?.endereco || null,
-      largura_bobina: perfil?.largura_bobina || '58mm',
+      largura_bobina: perfil?.largura_bobina || '80mm',
       rodape_recibo: perfil?.rodape_recibo || 'Obrigado pela preferência!',
       logoUrl: perfil?.logoUrl || null,
     };

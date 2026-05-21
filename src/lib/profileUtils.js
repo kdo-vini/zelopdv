@@ -53,7 +53,7 @@ export function buildPayload({
     inscricao_estadual: (inscricao_estadual || '').trim() || null,
     endereco: (endereco || '').trim() || null,
     rodape_recibo: (rodape_recibo || 'Obrigado pela preferência!').trim() || 'Obrigado pela preferência!',
-    largura_bobina: VALID_WIDTHS.includes(largura) ? largura : '58mm',
+    largura_bobina: VALID_WIDTHS.includes(largura) ? largura : '80mm',
     logo_url: pendingLogoUrl || logo_url || null,
     plataformas_pagamento: plataformas_pagamento ?? [],
     updated_at: new Date().toISOString()
