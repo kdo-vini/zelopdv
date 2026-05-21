@@ -14,7 +14,7 @@
   let nome = '';
   let contato = '';
   let documento = '';
-  let largura_bobina = '58mm';
+  let largura_bobina = '80mm';
 
   let error = '';
   let saving = false;
@@ -162,19 +162,8 @@
       {:else if step === 4}
         <div class="step-label">Passo 4 de 4</div>
         <h2 class="step-title">Tipo de impressora?</h2>
-        <p class="step-hint">58 mm é o padrão mais comum em impressoras térmicas pequenas. Se não souber, pode deixar assim.</p>
+        <p class="step-hint">80 mm é o padrão da maioria das impressoras térmicas de balcão. Use 58 mm só se sua impressora for o modelo menor (papel estreito).</p>
         <div class="printer-options">
-          <button
-            type="button"
-            class="printer-card"
-            class:printer-selected={largura_bobina === '58mm'}
-            on:click={() => (largura_bobina = '58mm')}
-            aria-pressed={largura_bobina === '58mm'}
-          >
-            <span class="printer-icon">🖨️</span>
-            <strong>58 mm</strong>
-            <span class="printer-sub">Mais comum</span>
-          </button>
           <button
             type="button"
             class="printer-card"
@@ -184,7 +173,18 @@
           >
             <span class="printer-icon">🖨️</span>
             <strong>80 mm</strong>
-            <span class="printer-sub">Larga</span>
+            <span class="printer-sub">Mais comum</span>
+          </button>
+          <button
+            type="button"
+            class="printer-card"
+            class:printer-selected={largura_bobina === '58mm'}
+            on:click={() => (largura_bobina = '58mm')}
+            aria-pressed={largura_bobina === '58mm'}
+          >
+            <span class="printer-icon">🖨️</span>
+            <strong>58 mm</strong>
+            <span class="printer-sub">Estreita</span>
           </button>
         </div>
       {/if}
