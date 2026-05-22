@@ -1,4 +1,5 @@
 <script>
+  import { page } from '$app/stores';
   import { ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL, ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL } from '$lib/zeloImpressaoClient.js';
 
   const downloadUrl = ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL;
@@ -11,6 +12,8 @@
     'No Zelo PDV ou no ZeloChat, clique em Conectar impressora e digite o código exibido no app.',
     'Escolha a impressora e faça um teste de impressão.',
   ];
+
+  $: downloadPending = $page.url.searchParams.get('download') === 'not-ready';
 </script>
 
 <svelte:head>
@@ -21,6 +24,13 @@
 
 <div class="min-h-screen bg-[#0b1020] text-white">
   <section class="mx-auto max-w-5xl px-6 py-16 md:px-8 md:py-24">
+    {#if downloadPending}
+      <div class="mb-8 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-sm text-amber-100 shadow-lg shadow-amber-950/20">
+        O link direto do instalador já está reservado em <strong class="text-white">zelopdv.com.br/downloads/zelo-impressao/latest/Zelo-Impressao-Setup.exe</strong>,
+        mas o arquivo ainda não foi publicado nesta hospedagem. Assim que o `.exe` for enviado para esse path, o download passará a começar automaticamente por essa mesma URL.
+      </div>
+    {/if}
+
     <div class="max-w-3xl">
       <span class="inline-flex rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">Windows 10/11</span>
       <h1 class="mt-5 text-4xl font-black tracking-tight md:text-6xl">Zelo Impressão</h1>
@@ -31,8 +41,6 @@
       <div class="mt-8 flex flex-wrap gap-3">
         <a
           href={downloadUrl}
-          target="_blank"
-          rel="noopener noreferrer"
           class="inline-flex items-center justify-center rounded-2xl bg-sky-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-900/30 transition hover:-translate-y-0.5 hover:bg-sky-400"
         >Baixar instalador</a>
         <a
@@ -41,6 +49,7 @@
         >Voltar ao Zelo PDV</a>
       </div>
       <p class="mt-3 text-sm text-slate-400">Depois de baixar: é só <strong class="text-slate-200">Avançar, Avançar, Instalar e pronto</strong>.</p>
+      <p class="mt-2 text-xs text-slate-500 break-all">Link direto oficial: {downloadUrl}</p>
     </div>
 
     <div class="mt-12 grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
