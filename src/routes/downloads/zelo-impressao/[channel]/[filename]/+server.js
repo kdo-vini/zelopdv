@@ -38,10 +38,11 @@ export async function GET({ params }) {
   }
 
   // Otherwise, construct GitHub release URL
-  // e.g., channel = '0.1.2' or 'v0.1.2' -> releases/download/v0.1.2/Zelo-Impressao-Setup.exe
+  // If channel is a version (e.g. '0.1.2'), we redirect to the versioned filename 'Zelo-Impressao-0.1.2-Setup.exe'
+  // If channel is 'latest', we redirect to the version-independent filename 'Zelo-Impressao-Setup.exe'
   const gitHubReleaseUrl = channel === 'latest'
     ? 'https://github.com/kdo-vini/zeloprinter/releases/latest/download/Zelo-Impressao-Setup.exe'
-    : `https://github.com/kdo-vini/zeloprinter/releases/download/v${channel.replace(/^v/, '')}/Zelo-Impressao-Setup.exe`;
+    : `https://github.com/kdo-vini/zeloprinter/releases/download/v${channel.replace(/^v/, '')}/Zelo-Impressao-${channel.replace(/^v/, '')}-Setup.exe`;
 
   throw redirect(302, gitHubReleaseUrl);
 }
