@@ -6,19 +6,19 @@
   const canonicalUrl = ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL;
 
   const passos = [
-    'Baixe o instalador no computador onde a impressora está conectada.',
-    'Clique em Avançar, Avançar, Instalar e aguarde a conclusão.',
-    'Abra o Zelo Impressão e deixe o aplicativo rodando nesse computador.',
-    'No Zelo PDV ou no ZeloChat, clique em Conectar impressora e digite o código exibido no app.',
-    'Escolha a impressora e faça um teste de impressão.',
+    'Baixe o arquivo no computador onde a impressora está instalada.',
+    'Na primeira vez, o Windows pode mostrar um aviso de proteção. Clique para continuar, avance 2 vezes e depois clique em Instalar.',
+    'Quando terminar, abra o Zelo Impressão. Se a janela sumir, ele continua aberto no ícone perto do relógio do Windows.',
+    'No Zelo PDV ou no ZeloChat, abra a parte de impressão e digite o código de 6 números que aparece na tela do Zelo Impressão.',
+    'Escolha a sua impressora e clique em Imprimir teste.',
   ];
 
   $: downloadPending = $page.url.searchParams.get('download') === 'not-ready';
 </script>
 
 <svelte:head>
-  <title>Zelo Impressão — instalação simples para PDV e ZeloChat</title>
-  <meta name="description" content="Baixe o Zelo Impressão para conectar sua impressora térmica no Windows e imprimir automaticamente pedidos do Zelo PDV e do ZeloChat." />
+  <title>Zelo Impressão — passo a passo para instalar e configurar</title>
+  <meta name="description" content="Veja o passo a passo para baixar, instalar, abrir e configurar o Zelo Impressão no Windows sem precisar de suporte técnico." />
   <link rel="canonical" href={canonicalUrl} />
 </svelte:head>
 
@@ -35,8 +35,8 @@
       <span class="inline-flex rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">Windows 10/11</span>
       <h1 class="mt-5 text-4xl font-black tracking-tight md:text-6xl">Zelo Impressão</h1>
       <p class="mt-4 max-w-2xl text-lg text-slate-300 md:text-xl">
-        O instalador oficial para deixar o <strong class="text-white">Zelo PDV</strong> e o <strong class="text-white">ZeloChat</strong>
-        imprimindo automaticamente no computador da operação.
+        Siga este passo a passo para instalar sozinho e deixar o <strong class="text-white">Zelo PDV</strong> e o <strong class="text-white">ZeloChat</strong>
+        imprimindo automaticamente nesse computador.
       </p>
       <div class="mt-8 flex flex-wrap gap-3">
         <a
@@ -48,13 +48,13 @@
           class="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
         >Voltar ao Zelo PDV</a>
       </div>
-      <p class="mt-3 text-sm text-slate-400">Depois de baixar: é só <strong class="text-slate-200">Avançar, Avançar, Instalar e pronto</strong>.</p>
+      <p class="mt-3 text-sm text-slate-400">Na primeira instalação, se aparecer um aviso do Windows, continue e finalize a instalação normalmente.</p>
       <p class="mt-2 text-xs text-slate-500 break-all">Link direto oficial: {downloadUrl}</p>
     </div>
 
     <div class="mt-12 grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
       <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20">
-        <h2 class="text-xl font-bold text-white">Como instalar</h2>
+        <h2 class="text-xl font-bold text-white">Passo a passo</h2>
         <ol class="mt-5 grid gap-4">
           {#each passos as passo, index}
             <li class="flex gap-4 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
@@ -67,27 +67,27 @@
 
       <div class="grid gap-6">
         <div class="rounded-3xl border border-emerald-400/20 bg-emerald-400/8 p-6">
-          <h3 class="text-lg font-bold text-white">Quando usar</h3>
+          <h3 class="text-lg font-bold text-white">Na primeira instalação</h3>
           <p class="mt-3 text-sm leading-6 text-slate-200">
-            Recomendado para operações que querem impressão automática estável, sem depender de permissões do navegador.
+            Se o Windows mostrar um aviso antes de instalar, pode continuar. Esse aviso pode aparecer na primeira vez. Basta avançar e concluir a instalação.
           </p>
         </div>
 
         <div class="rounded-3xl border border-amber-400/20 bg-amber-400/8 p-6">
-          <h3 class="text-lg font-bold text-white">Também funciona com</h3>
+          <h3 class="text-lg font-bold text-white">Como abrir depois</h3>
           <ul class="mt-3 grid gap-2 text-sm leading-6 text-slate-200">
-            <li>• pedidos do ZeloChat</li>
-            <li>• impressão automática estilo iFood</li>
-            <li>• impressoras instaladas no Windows</li>
-            <li>• PDV e Chat no mesmo computador</li>
+            <li>• procure o ícone do Zelo Impressão perto do relógio do Windows</li>
+            <li>• se não aparecer de primeira, clique na setinha para mostrar os outros ícones</li>
+            <li>• clique no ícone para abrir a tela novamente</li>
+            <li>• deixe esse programa aberto nesse computador</li>
           </ul>
         </div>
 
         <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
-          <h3 class="text-lg font-bold text-white">Precisa de ajuda?</h3>
+          <h3 class="text-lg font-bold text-white">Depois de instalar</h3>
           <p class="mt-3 text-sm leading-6 text-slate-300">
-            Se o app abrir mas o navegador não conectar, volte ao PDV ou ao Chat e clique em <strong class="text-white">Conectar impressora</strong>.
-            O sistema vai pedir o código exibido pelo próprio Zelo Impressão.
+            Volte ao PDV ou ao Chat, clique em <strong class="text-white">Conectar impressora</strong>, digite o código que aparece na tela do Zelo Impressão
+            e depois escolha a impressora para fazer o teste.
           </p>
         </div>
       </div>
