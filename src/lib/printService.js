@@ -8,7 +8,7 @@ import {
   getZeloImpressaoFriendlyMessage,
   sendRawEscposPrintJob,
   sendTestPrint,
-} from '@zelo/impressao-client';
+} from '$lib/zeloImpressaoClient.js';
 import {
   buildVendaEscPos,
   buildMovCaixaEscPos,

@@ -20,7 +20,7 @@
     sendTestPrint as sendZeloImpressaoTestPrint,
     ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL,
     ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL,
-  } from '@zelo/impressao-client';
+  } from '$lib/zeloImpressaoClient.js';
   export let params;
   const zeloImpressaoDownloadUrl = ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL;
   const zeloImpressaoDownloadPageUrl = ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL;
