@@ -1236,7 +1236,7 @@
                     </div>
                   {:else}
                     <div class="rounded-lg px-3 py-2 text-xs" style="background: color-mix(in srgb, var(--warning) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--warning) 24%, transparent);">
-                      Se o Windows mostrar aviso na primeira vez, continue ate concluir a instalacao.
+                      Se o Windows mostrar a tela azul de proteção, clique em &quot;Mais informações&quot; no canto inferior esquerdo e depois em &quot;Executar mesmo assim&quot;.
                     </div>
                     <div class="rounded-lg px-3 py-2 text-xs" style="background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);">
                       Quando a janela sumir, o programa pode continuar aberto no icone ao lado do relogio.

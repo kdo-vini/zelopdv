@@ -7,7 +7,7 @@
 
   const passos = [
     'Baixe o arquivo no computador onde a impressora está instalada.',
-    'Na primeira vez, o Windows pode mostrar um aviso de proteção. Clique para continuar, avance 2 vezes e depois clique em Instalar.',
+    'Se aparecer a tela azul de proteção do Windows (SmartScreen), clique em "Mais informações" no canto inferior esquerdo e depois em "Executar mesmo assim".',
     'Quando terminar, abra o Zelo Impressão. Se a janela sumir, ele continua aberto no ícone perto do relógio do Windows.',
     'No Zelo PDV ou no ZeloChat, abra a parte de impressão e digite o código de 6 números que aparece na tela do Zelo Impressão.',
     'Escolha a sua impressora e clique em Imprimir teste.',
@@ -48,7 +48,7 @@
           class="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
         >Voltar ao Zelo PDV</a>
       </div>
-      <p class="mt-3 text-sm text-slate-400">Na primeira instalação, se aparecer um aviso do Windows, continue e finalize a instalação normalmente.</p>
+      <p class="mt-3 text-sm text-slate-400">Na primeira instalação, se aparecer a tela azul do Windows, clique em "Mais informações" e depois em "Executar mesmo assim".</p>
       <p class="mt-2 text-xs text-slate-500 break-all">Link direto oficial: {downloadUrl}</p>
     </div>
 
@@ -69,7 +69,7 @@
         <div class="rounded-3xl border border-emerald-400/20 bg-emerald-400/8 p-6">
           <h3 class="text-lg font-bold text-white">Na primeira instalação</h3>
           <p class="mt-3 text-sm leading-6 text-slate-200">
-            Se o Windows mostrar um aviso antes de instalar, pode continuar. Esse aviso pode aparecer na primeira vez. Basta avançar e concluir a instalação.
+            Se aparecer a tela azul de proteção do Windows, clique em <strong class="text-white">"Mais informações"</strong> no canto inferior esquerdo e depois em <strong class="text-white">"Executar mesmo assim"</strong> para concluir a instalação.
           </p>
         </div>
 
