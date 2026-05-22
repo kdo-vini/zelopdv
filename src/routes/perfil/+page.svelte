@@ -10,7 +10,20 @@
   import { pairPrinter, unpairPrinter, printerStatus, isWebUsbSupported } from '$lib/printer';
   import { printTeste } from '$lib/printService';
   import { getAccessContext } from '$lib/accessControl';
+  import {
+    detectZeloImpressao,
+    getConfig as getZeloImpressaoConfig,
+    getPrinters as getZeloImpressaoPrinters,
+    getZeloImpressaoFriendlyMessage,
+    pairZeloImpressao,
+    saveConfig as saveZeloImpressaoConfig,
+    sendTestPrint as sendZeloImpressaoTestPrint,
+    ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL,
+    ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL,
+  } from '@zelo/impressao-client';
   export let params;
+  const zeloImpressaoDownloadUrl = ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL;
+  const zeloImpressaoDownloadPageUrl = ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL;
 
   // Sub-user state (populated in onMount if user is a sub-user)
   let isSubUser = false;
@@ -133,6 +146,94 @@
   let printerTesting = false;
   let printerPairError = '';
   let printerTestResult = null; // 'ok' | 'fail' | null
+  let localPrintLoading = false;
+  let localPrintStatus = 'desconectado';
+  let localPrintMessage = 'Verificando Zelo Impressão...';
+  let localPrintPrinters = [];
+  let localPrintSelectedPrinterId = '';
+  let localPrintPairCode = '';
+  let localPrintTesting = false;
+  let localPrintSaving = false;
+  let localPrintPairing = false;
+
+  async function refreshLocalPrint() {
+    localPrintLoading = true;
+    try {
+      const detection = await detectZeloImpressao();
+      if (!detection.running) {
+        localPrintStatus = 'nao_instalado';
+        localPrintMessage = detection.message;
+        localPrintPrinters = [];
+        return;
+      }
+      if (!detection.paired) {
+        localPrintStatus = 'desconectado';
+        localPrintMessage = 'Conecte este navegador ao Zelo Impressão usando o código exibido no aplicativo.';
+        localPrintPrinters = [];
+        return;
+      }
+      const [printers, config] = await Promise.all([
+        getZeloImpressaoPrinters(),
+        getZeloImpressaoConfig(),
+      ]);
+      localPrintStatus = 'conectado';
+      localPrintMessage = 'Zelo Impressão conectado neste computador.';
+      localPrintPrinters = printers;
+      localPrintSelectedPrinterId = config?.selectedPrinterId || printers.find((p) => p.isDefault)?.id || printers[0]?.id || '';
+    } catch (e) {
+      localPrintStatus = 'desconectado';
+      localPrintMessage = getZeloImpressaoFriendlyMessage(e);
+    } finally {
+      localPrintLoading = false;
+    }
+  }
+
+  async function handlePairLocalPrint() {
+    if (!localPrintPairCode.trim()) {
+      addToast('Digite o código exibido no Zelo Impressão.', 'warning');
+      return;
+    }
+    localPrintPairing = true;
+    try {
+      await pairZeloImpressao(localPrintPairCode);
+      localPrintPairCode = '';
+      addToast('Zelo Impressão conectado.', 'success');
+      await refreshLocalPrint();
+    } catch (e) {
+      addToast(getZeloImpressaoFriendlyMessage(e), 'error');
+    } finally {
+      localPrintPairing = false;
+    }
+  }
+
+  async function handleSaveLocalPrintConfig() {
+    localPrintSaving = true;
+    try {
+      const printer = localPrintPrinters.find((p) => p.id === localPrintSelectedPrinterId);
+      await saveZeloImpressaoConfig({
+        selectedPrinterId: printer?.id || null,
+        selectedPrinterName: printer?.name || null,
+      });
+      addToast('Impressora selecionada para impressão automática.', 'success');
+      await refreshLocalPrint();
+    } catch (e) {
+      addToast(getZeloImpressaoFriendlyMessage(e), 'error');
+    } finally {
+      localPrintSaving = false;
+    }
+  }
+
+  async function handleLocalTestPrint() {
+    localPrintTesting = true;
+    try {
+      await sendZeloImpressaoTestPrint(localPrintSelectedPrinterId || undefined);
+      addToast('Teste enviado pelo Zelo Impressão.', 'success');
+    } catch (e) {
+      addToast(getZeloImpressaoFriendlyMessage(e), 'error');
+    } finally {
+      localPrintTesting = false;
+    }
+  }
 
   async function handlePairPrinter() {
     printerPairing = true;
@@ -279,6 +380,7 @@
       showOnboardingWizard = true;
     }
     loading = false;
+    void refreshLocalPrint();
   });
 
   function uploadLogo(e) {
@@ -945,6 +1047,138 @@
       <!-- ─── Aba 5: Integrações ──────────────────────────── -->
       {#if activeTab === 'integracoes'}
         <div class="grid gap-5 max-w-2xl">
+
+          <!-- Zelo Impressão local -->
+          <section class="rounded-xl p-5 grid gap-5" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+            <div class="flex items-start gap-4">
+              <div class="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style="background: color-mix(in srgb, var(--primary) 12%, transparent);">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);">
+                  <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h2 class="text-base font-semibold" style="color: var(--text-main);">Zelo Impressão</h2>
+                  <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--success) 10%, transparent); color: var(--success);">Recomendado</span>
+                  {#if localPrintStatus === 'conectado'}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success);">● conectado</span>
+                  {:else if localPrintStatus === 'nao_instalado'}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning);">não instalado</span>
+                  {:else}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--text-muted) 15%, transparent); color: var(--text-muted);">desconectado</span>
+                  {/if}
+                </div>
+                <p class="text-sm mt-1" style="color: var(--text-muted);">{localPrintMessage}</p>
+                <div class="flex flex-wrap gap-2 mt-3">
+                  <a
+                    href={zeloImpressaoDownloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-90"
+                    style="background: var(--primary); color: var(--primary-text, #fff);"
+                  >Baixar para Windows</a>
+                  <a
+                    href={zeloImpressaoDownloadPageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-80"
+                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                  >Ver instruções</a>
+                </div>
+              </div>
+              <button
+                type="button"
+                on:click={refreshLocalPrint}
+                disabled={localPrintLoading}
+                class="px-3 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+              >{localPrintLoading ? 'Verificando…' : 'Atualizar'}</button>
+            </div>
+
+            {#if localPrintStatus === 'desconectado'}
+              <div class="grid gap-3">
+                <label class="text-sm font-semibold" style="color: var(--text-main);" for="zelo-impressao-code">Código do Zelo Impressão</label>
+                <div class="flex gap-2">
+                  <input
+                    id="zelo-impressao-code"
+                    bind:value={localPrintPairCode}
+                    inputmode="numeric"
+                    maxlength="6"
+                    placeholder="000000"
+                    class="flex-1 rounded-lg px-3 py-2 text-sm"
+                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                  />
+                  <button
+                    type="button"
+                    on:click={handlePairLocalPrint}
+                    disabled={localPrintPairing}
+                    class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+                    style="background: var(--primary); color: var(--primary-text, #fff);"
+                  >{localPrintPairing ? 'Conectando…' : 'Conectar'}</button>
+                </div>
+              </div>
+            {/if}
+
+            {#if localPrintStatus === 'conectado'}
+              <div class="grid gap-3">
+                <label class="text-sm font-semibold" style="color: var(--text-main);" for="zelo-impressao-printer">Impressora selecionada</label>
+                <select
+                  id="zelo-impressao-printer"
+                  bind:value={localPrintSelectedPrinterId}
+                  class="rounded-lg px-3 py-2 text-sm"
+                  style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                >
+                  {#each localPrintPrinters as printer}
+                    <option value={printer.id}>{printer.name}{printer.isDefault ? ' (padrão)' : ''}{printer.isOffline ? ' - offline' : ''}</option>
+                  {/each}
+                </select>
+                <div class="flex gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    on:click={handleSaveLocalPrintConfig}
+                    disabled={localPrintSaving || !localPrintSelectedPrinterId}
+                    class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+                    style="background: var(--primary); color: var(--primary-text, #fff);"
+                  >{localPrintSaving ? 'Salvando…' : 'Salvar impressora'}</button>
+                  <button
+                    type="button"
+                    on:click={handleLocalTestPrint}
+                    disabled={localPrintTesting}
+                    class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                  >{localPrintTesting ? 'Imprimindo…' : 'Imprimir teste'}</button>
+                </div>
+              </div>
+            {/if}
+
+            {#if localPrintStatus === 'nao_instalado'}
+              <div class="text-sm p-3 rounded-lg grid gap-3" style="background: color-mix(in srgb, var(--warning) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);">
+                <p>
+                  Instale e abra o Zelo Impressão neste computador para deixar o PDV e o Chat imprimindo automaticamente sem depender de WebUSB.
+                </p>
+                <div class="flex flex-wrap gap-2">
+                  <a
+                    href={zeloImpressaoDownloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-90"
+                    style="background: var(--primary); color: var(--primary-text, #fff);"
+                  >Baixar instalador</a>
+                  <a
+                    href={zeloImpressaoDownloadPageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-80"
+                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                  >Passo a passo</a>
+                </div>
+              </div>
+            {/if}
+
+            <p class="text-xs" style="color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+              Se o Zelo Impressão estiver offline, o PDV continua usando a impressão pelo navegador para não travar a venda.
+            </p>
+          </section>
 
           <!-- Impressora Térmica USB -->
           <section class="rounded-xl p-5 grid gap-5" style="background: var(--bg-card); border: 1px solid var(--border-card);">

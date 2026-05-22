@@ -1,8 +1,14 @@
 // src/lib/printService.js
-// API de impressão unificada — ESC/POS via WebUSB primeiro, iframe HTML como fallback.
+// API de impressão unificada — Zelo Impressão local primeiro, iframe HTML como fallback.
 // Todos os pontos de impressão do app usam exclusivamente as funções deste módulo.
 
 import { sendBytes, isWebUsbSupported, getPairedInfo } from '$lib/printer.js';
+import {
+  fallbackToBrowserPrint,
+  getZeloImpressaoFriendlyMessage,
+  sendRawEscposPrintJob,
+  sendTestPrint,
+} from '@zelo/impressao-client';
 import {
   buildVendaEscPos,
   buildMovCaixaEscPos,
@@ -21,46 +27,32 @@ import { addToast } from '$lib/stores/ui.js';
  * -------------------------------------------------------------------------- */
 
 function printViaIframe(html) {
-  return new Promise((resolve) => {
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText =
-      'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden;';
-    document.body.appendChild(iframe);
-
-    const cleanup = () =>
-      setTimeout(() => {
-        try { document.body.removeChild(iframe); } catch {}
-        resolve();
-      }, 500);
-
-    try { iframe.contentWindow.addEventListener('afterprint', cleanup); } catch {}
-    setTimeout(cleanup, 15000); // segurança
-
-    try {
-      const doc = iframe.contentDocument || iframe.contentWindow.document;
-      doc.open();
-      doc.write(html);
-      doc.close();
-    } catch (e) {
-      console.warn('[print] iframe write falhou:', e?.message);
-      cleanup();
-    }
-  });
+  return fallbackToBrowserPrint(html);
 }
 
 /* --------------------------------------------------------------------------
  * Helpers internos
  * -------------------------------------------------------------------------- */
 
-async function tryEscPos(bytes) {
-  if (!isWebUsbSupported() || !getPairedInfo()) return false;
+function companyStoreIdFrom(payload) {
+  const est = payload?.estabelecimento || {};
+  return est.id || est.empresa_id || est.user_id || est.owner_id || undefined;
+}
+
+async function tryZeloImpressao(bytes, payload, jobType, metadata = {}) {
   try {
-    await sendBytes(bytes);
+    await sendRawEscposPrintJob({
+      source: 'zelopdv',
+      companyStoreId: companyStoreIdFrom(payload),
+      bytes,
+      type: jobType,
+      metadata,
+    });
     return true;
   } catch (e) {
-    console.warn('[print] ESC/POS falhou, caindo no iframe:', e?.message);
+    console.warn('[print] Zelo Impressão indisponível, caindo no navegador:', e?.message);
     addToast(
-      'A impressao USB direta falhou. Abrindo a impressao pelo Windows agora. Se aparecer aviso de sobreposicao/interferencia, use esta opcao.',
+      getZeloImpressaoFriendlyMessage(e),
       'warning',
       7000
     );
@@ -80,7 +72,10 @@ async function tryEscPos(bytes) {
  */
 export async function printVenda(payload) {
   const bytes = buildVendaEscPos(payload);
-  const ok = await tryEscPos(bytes);
+  const ok = await tryZeloImpressao(bytes, payload, 'receipt', {
+    numeroVenda: payload?.venda?.numeroVenda || payload?.venda?.idVenda,
+    tipoPedido: payload?.venda?.tipoPedido,
+  });
   if (!ok) {
     const html = buildReceiptHTML(payload);
     await printViaIframe(html);
@@ -94,7 +89,10 @@ export async function printVenda(payload) {
  */
 export async function printMovCaixa(payload) {
   const bytes = buildMovCaixaEscPos(payload);
-  const ok = await tryEscPos(bytes);
+  const ok = await tryZeloImpressao(bytes, payload, 'receipt', {
+    documentType: 'movimentacao_caixa',
+    idMov: payload?.mov?.idMov,
+  });
   if (!ok) {
     const html = buildMovCaixaHTML(payload);
     await printViaIframe(html);
@@ -108,7 +106,10 @@ export async function printMovCaixa(payload) {
  */
 export async function printPagamentoFiado(payload) {
   const bytes = buildPagamentoFiadoEscPos(payload);
-  const ok = await tryEscPos(bytes);
+  const ok = await tryZeloImpressao(bytes, payload, 'receipt', {
+    documentType: 'pagamento_fiado',
+    nomePessoa: payload?.pagamento?.nomePessoa,
+  });
   if (!ok) {
     const html = buildPagamentoFiadoHTML(payload);
     await printViaIframe(html);
@@ -124,6 +125,13 @@ export async function printPagamentoFiado(payload) {
  */
 export async function printTeste(estabelecimento) {
   const bytes = buildTesteEscPos(estabelecimento);
+  try {
+    await sendTestPrint();
+    return true;
+  } catch (e) {
+    console.warn('[print] teste via Zelo Impressão falhou:', e?.message);
+  }
+
   if (!isWebUsbSupported() || !getPairedInfo()) return false;
   await sendBytes(bytes);
   return true;
