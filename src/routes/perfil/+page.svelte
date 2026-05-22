@@ -148,7 +148,7 @@
   let printerTestResult = null; // 'ok' | 'fail' | null
   let localPrintLoading = false;
   let localPrintStatus = 'desconectado';
-  let localPrintMessage = 'Verificando o Zelo Impressão neste computador...';
+  let localPrintMessage = 'Verificando Zelo Impressão...';
   let localPrintPrinters = [];
   let localPrintSelectedPrinterId = '';
   let localPrintPairCode = '';
@@ -168,7 +168,7 @@
       }
       if (!detection.paired) {
         localPrintStatus = 'desconectado';
-        localPrintMessage = 'Abra o Zelo Impressão neste computador e digite aqui o código de 6 números que aparece na tela.';
+        localPrintMessage = 'Conecte este navegador ao Zelo Impressão usando o código exibido no aplicativo.';
         localPrintPrinters = [];
         return;
       }
@@ -177,7 +177,7 @@
         getZeloImpressaoConfig(),
       ]);
       localPrintStatus = 'conectado';
-      localPrintMessage = 'Tudo certo. Agora escolha a impressora abaixo e faça um teste.';
+      localPrintMessage = 'Zelo Impressão conectado neste computador.';
       localPrintPrinters = printers;
       localPrintSelectedPrinterId = config?.selectedPrinterId || printers.find((p) => p.isDefault)?.id || printers[0]?.id || '';
     } catch (e) {
@@ -190,14 +190,14 @@
 
   async function handlePairLocalPrint() {
     if (!localPrintPairCode.trim()) {
-      addToast('Digite o código de 6 números que aparece na tela do Zelo Impressão.', 'warning');
+      addToast('Digite o código exibido no Zelo Impressão.', 'warning');
       return;
     }
     localPrintPairing = true;
     try {
       await pairZeloImpressao(localPrintPairCode);
       localPrintPairCode = '';
-      addToast('Conexão concluída. Agora escolha a impressora e faça o teste.', 'success');
+      addToast('Zelo Impressão conectado.', 'success');
       await refreshLocalPrint();
     } catch (e) {
       addToast(getZeloImpressaoFriendlyMessage(e), 'error');
@@ -214,7 +214,7 @@
         selectedPrinterId: printer?.id || null,
         selectedPrinterName: printer?.name || null,
       });
-      addToast('Impressora salva com sucesso.', 'success');
+      addToast('Impressora selecionada para impressão automática.', 'success');
       await refreshLocalPrint();
     } catch (e) {
       addToast(getZeloImpressaoFriendlyMessage(e), 'error');
@@ -227,7 +227,7 @@
     localPrintTesting = true;
     try {
       await sendZeloImpressaoTestPrint(localPrintSelectedPrinterId || undefined);
-      addToast('Teste enviado. Confira se a impressão saiu na impressora.', 'success');
+      addToast('Teste enviado pelo Zelo Impressão.', 'success');
     } catch (e) {
       addToast(getZeloImpressaoFriendlyMessage(e), 'error');
     } finally {
@@ -1048,75 +1048,142 @@
       {#if activeTab === 'integracoes'}
         <div class="grid gap-5 max-w-2xl">
 
-          <!-- Zelo Impressao local -->
-          <section class="rounded-xl p-5 grid gap-5" style="background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 6%, var(--bg-card)) 0%, var(--bg-card) 100%); border: 1px solid var(--border-card);">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-              <div class="flex items-start gap-4 min-w-0">
-                <div class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center" style="background: color-mix(in srgb, var(--primary) 14%, transparent); border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);">
-                    <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
-                  </svg>
-                </div>
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <h2 class="text-base font-semibold" style="color: var(--text-main);">Zelo Impressao</h2>
-                    <span class="text-xs px-2.5 py-1 rounded-full font-medium" style="background: color-mix(in srgb, var(--success) 10%, transparent); color: var(--success);">Recomendado</span>
-                    {#if localPrintStatus === 'conectado'}
-                      <span class="text-xs px-2.5 py-1 rounded-full font-medium" style="background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success);">Conectado</span>
-                    {:else if localPrintStatus === 'nao_instalado'}
-                      <span class="text-xs px-2.5 py-1 rounded-full font-medium" style="background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning);">Nao instalado</span>
-                    {:else}
-                      <span class="text-xs px-2.5 py-1 rounded-full font-medium" style="background: color-mix(in srgb, var(--text-muted) 15%, transparent); color: var(--text-muted);">Aguardando conexao</span>
-                    {/if}
-                  </div>
-                  <p class="text-sm mt-1.5 max-w-2xl" style="color: var(--text-muted);">{localPrintMessage}</p>
-                </div>
-              </div>
+          <!-- Zelo Impressão -->
+          <section class="rounded-xl overflow-hidden" style="background: var(--bg-card); border: 1px solid var(--border-card);">
 
-              <div class="flex items-center gap-2 flex-wrap">
-                {#if localPrintStatus === 'nao_instalado'}
-                  <a
-                    href={zeloImpressaoDownloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-center gap-2 px-3.5 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-90"
-                    style="background: var(--primary); color: var(--primary-text, #fff);"
-                  >Baixar para Windows</a>
-                {/if}
-                <a
-                  href={zeloImpressaoDownloadPageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center gap-2 px-3.5 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-80"
-                  style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                >Ver instrucoes</a>
-                <button
-                  type="button"
-                  on:click={refreshLocalPrint}
-                  disabled={localPrintLoading}
-                  class="px-3.5 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style="background: transparent; color: var(--text-main); border: 1px solid var(--border-subtle);"
-                >{localPrintLoading ? 'Verificando...' : 'Atualizar'}</button>
+            <!-- Header do card -->
+            <div class="p-5 flex items-center gap-4">
+              <div class="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style="background: color-mix(in srgb, var(--primary) 12%, transparent);">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);">
+                  <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                </svg>
               </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h2 class="text-base font-semibold" style="color: var(--text-main);">Zelo Impressão</h2>
+                  {#if localPrintStatus === 'conectado'}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success);">● Conectado</span>
+                  {:else if localPrintStatus === 'nao_instalado'}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning);">Não instalado</span>
+                  {:else}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text-muted);">Desconectado</span>
+                  {/if}
+                </div>
+                <p class="text-sm mt-0.5 truncate" style="color: var(--text-muted);">
+                  Impressão automática pelo Windows — sem precisar de WebUSB
+                </p>
+              </div>
+              <button
+                type="button"
+                on:click={refreshLocalPrint}
+                disabled={localPrintLoading}
+                class="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-40"
+                style="background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-subtle);"
+              >{localPrintLoading ? 'Verificando…' : 'Atualizar'}</button>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2">
-              <div class="rounded-xl p-4 grid gap-3" style="background: color-mix(in srgb, var(--bg-input) 88%, transparent); border: 1px solid var(--border-subtle);">
-                {#if localPrintStatus === 'conectado'}
-                  <div class="grid gap-3">
-                    <div class="flex items-start justify-between gap-3 flex-wrap">
-                      <div>
-                        <p class="text-sm font-semibold" style="color: var(--text-main);">Impressora pronta para uso</p>
-                        <p class="text-xs mt-1" style="color: var(--text-muted);">
-                          Escolha qual impressora o PDV vai usar neste computador.
-                        </p>
-                      </div>
-                      <span class="text-xs px-2.5 py-1 rounded-full font-medium" style="background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary);">
-                        {localPrintPrinters.length} impressora{localPrintPrinters.length === 1 ? '' : 's'}
-                      </span>
-                    </div>
+            <!-- Corpo dinâmico por estado -->
+            <div style="border-top: 1px solid var(--border-subtle);">
 
-                    <label class="text-sm font-semibold" style="color: var(--text-main);" for="zelo-impressao-printer">Escolha a impressora</label>
+              {#if localPrintStatus === 'nao_instalado'}
+                <!-- Estado: não instalado -->
+                <div class="p-5 grid gap-4">
+                  <div class="flex flex-wrap gap-2">
+                    <a
+                      href={zeloImpressaoDownloadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
+                      style="background: var(--primary); color: var(--primary-text, #fff);"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      Baixar para Windows
+                    </a>
+                    <a
+                      href={zeloImpressaoDownloadPageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
+                      style="background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle);"
+                    >Ver instruções</a>
+                  </div>
+                  <div style="border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+                    <p class="text-xs font-semibold uppercase tracking-wide mb-3" style="color: var(--text-muted);">Como configurar</p>
+                    <ol class="grid gap-2.5">
+                      <li class="flex items-start gap-3">
+                        <span class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style="background: var(--bg-input); color: var(--text-muted);">1</span>
+                        <span class="text-sm" style="color: var(--text-label);">Baixe e instale o aplicativo.</span>
+                      </li>
+                      <li class="flex items-start gap-3">
+                        <span class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style="background: var(--bg-input); color: var(--text-muted);">2</span>
+                        <span class="text-sm" style="color: var(--text-label);">Abra o Zelo Impressão e deixe o programa rodando.</span>
+                      </li>
+                      <li class="flex items-start gap-3">
+                        <span class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style="background: var(--bg-input); color: var(--text-muted);">3</span>
+                        <span class="text-sm" style="color: var(--text-label);">Volte aqui para conectar com o código de 6 números.</span>
+                      </li>
+                    </ol>
+                  </div>
+                </div>
+
+              {:else if localPrintStatus === 'desconectado'}
+                <!-- Estado: instalado mas não pareado -->
+                <div class="p-5 grid gap-4">
+                  <div>
+                    <p class="text-sm font-medium mb-1" style="color: var(--text-main);">Conectar ao Zelo Impressão</p>
+                    <p class="text-xs" style="color: var(--text-muted);">Digite o código de 6 dígitos exibido no aplicativo.</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <input
+                      id="zelo-impressao-code"
+                      bind:value={localPrintPairCode}
+                      inputmode="numeric"
+                      maxlength="6"
+                      placeholder="000000"
+                      class="flex-1 rounded-lg px-3 py-2 text-sm font-mono tracking-widest text-center"
+                      style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                    />
+                    <button
+                      type="button"
+                      on:click={handlePairLocalPrint}
+                      disabled={localPrintPairing}
+                      class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+                      style="background: var(--primary); color: var(--primary-text, #fff);"
+                    >{localPrintPairing ? 'Conectando…' : 'Conectar'}</button>
+                  </div>
+                  <div class="flex flex-wrap gap-2 pt-1" style="border-top: 1px solid var(--border-subtle);">
+                    <a
+                      href={zeloImpressaoDownloadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-xs font-medium transition-opacity hover:opacity-80"
+                      style="color: var(--primary);"
+                    >Baixar instalador</a>
+                    <span style="color: var(--border-subtle);">·</span>
+                    <a
+                      href={zeloImpressaoDownloadPageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-xs font-medium transition-opacity hover:opacity-80"
+                      style="color: var(--text-muted);"
+                    >Ver instruções</a>
+                  </div>
+                </div>
+
+              {:else if localPrintStatus === 'conectado'}
+                <!-- Estado: conectado -->
+                <div class="p-5 grid gap-4">
+                  <div class="flex items-center gap-3 p-3 rounded-lg" style="background: color-mix(in srgb, var(--success) 7%, transparent); border: 1px solid color-mix(in srgb, var(--success) 20%, transparent);">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--success);">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <p class="text-sm font-medium" style="color: var(--success);">Pronto para imprimir neste computador</p>
+                  </div>
+
+                  <div class="grid gap-2">
+                    <label class="text-xs font-semibold uppercase tracking-wide" style="color: var(--text-muted);" for="zelo-impressao-printer">Impressora</label>
                     <select
                       id="zelo-impressao-printer"
                       bind:value={localPrintSelectedPrinterId}
@@ -1124,338 +1191,41 @@
                       style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
                     >
                       {#each localPrintPrinters as printer}
-                        <option value={printer.id}>{printer.name}{printer.isDefault ? ' (padrao)' : ''}{printer.isOffline ? ' - offline' : ''}</option>
+                        <option value={printer.id}>{printer.name}{printer.isDefault ? ' (padrão)' : ''}{printer.isOffline ? ' — offline' : ''}</option>
                       {/each}
                     </select>
-                    <div class="flex gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        on:click={handleSaveLocalPrintConfig}
-                        disabled={localPrintSaving || !localPrintSelectedPrinterId}
-                        class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
-                        style="background: var(--primary); color: var(--primary-text, #fff);"
-                      >{localPrintSaving ? 'Salvando...' : 'Salvar'}</button>
-                      <button
-                        type="button"
-                        on:click={handleLocalTestPrint}
-                        disabled={localPrintTesting}
-                        class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
-                        style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                      >{localPrintTesting ? 'Imprimindo...' : 'Fazer teste'}</button>
-                    </div>
                   </div>
-                {:else if localPrintStatus === 'desconectado'}
-                  <div class="grid gap-3">
-                    <div>
-                      <p class="text-sm font-semibold" style="color: var(--text-main);">Conecte com o codigo de 6 numeros</p>
-                      <p class="text-xs mt-1" style="color: var(--text-muted);">
-                        Abra o Zelo Impressao neste computador e digite abaixo o codigo que aparece na tela.
-                      </p>
-                    </div>
 
-                    <label class="text-sm font-semibold" style="color: var(--text-main);" for="zelo-impressao-code">Codigo que aparece na tela</label>
-                    <div class="flex gap-2 flex-wrap">
-                      <input
-                        id="zelo-impressao-code"
-                        bind:value={localPrintPairCode}
-                        inputmode="numeric"
-                        maxlength="6"
-                        placeholder="Digite os 6 numeros"
-                        class="flex-1 min-w-[220px] rounded-lg px-3 py-2 text-sm"
-                        style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                      />
-                      <button
-                        type="button"
-                        on:click={handlePairLocalPrint}
-                        disabled={localPrintPairing}
-                        class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
-                        style="background: var(--primary); color: var(--primary-text, #fff);"
-                      >{localPrintPairing ? 'Conectando...' : 'Continuar'}</button>
-                    </div>
-                  </div>
-                {:else}
-                  <div class="grid gap-3">
-                    <div>
-                      <p class="text-sm font-semibold" style="color: var(--text-main);">Instale uma vez e imprima sem depender do navegador</p>
-                      <p class="text-xs mt-1" style="color: var(--text-muted);">
-                        O Zelo Impressao deixa o PDV e o Chat usando a impressora automaticamente neste computador.
-                      </p>
-                    </div>
-
-                    <div class="grid gap-2">
-                      <div class="rounded-lg px-3 py-2 text-sm" style="background: color-mix(in srgb, var(--warning) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);">
-                        1. Baixe e instale o aplicativo.
-                      </div>
-                      <div class="rounded-lg px-3 py-2 text-sm" style="background: color-mix(in srgb, var(--warning) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);">
-                        2. Abra o Zelo Impressao e deixe o programa rodando.
-                      </div>
-                      <div class="rounded-lg px-3 py-2 text-sm" style="background: color-mix(in srgb, var(--warning) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);">
-                        3. Volte aqui para conectar com o codigo de 6 numeros.
-                      </div>
-                    </div>
-                  </div>
-                {/if}
-              </div>
-
-              <aside class="rounded-xl p-4 grid gap-3" style="background: color-mix(in srgb, var(--bg-card) 70%, var(--bg-input)); border: 1px solid var(--border-subtle);">
-                <div>
-                  <p class="text-sm font-semibold" style="color: var(--text-main);">
-                    {#if localPrintStatus === 'conectado'}
-                      Proximo passo
-                    {:else if localPrintStatus === 'desconectado'}
-                      Se nao aparecer a tela
-                    {:else}
-                      O que esperar
-                    {/if}
-                  </p>
-                  <p class="text-xs mt-1" style="color: var(--text-muted);">
-                    {#if localPrintStatus === 'conectado'}
-                      Depois de salvar, faca um teste para confirmar se a impressora certa esta respondendo.
-                    {:else if localPrintStatus === 'desconectado'}
-                      Se a janela sumiu, o aplicativo pode estar aberto perto do relogio do Windows.
-                    {:else}
-                      Enquanto voce instala, o PDV continua usando a impressao pelo navegador para nao travar a venda.
-                    {/if}
-                  </p>
-                </div>
-
-                <div class="grid gap-2">
-                  {#if localPrintStatus === 'conectado'}
-                    <div class="rounded-lg px-3 py-2 text-xs" style="background: color-mix(in srgb, var(--success) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--success) 24%, transparent);">
-                      O aplicativo ja esta disponivel neste computador.
-                    </div>
-                    <div class="rounded-lg px-3 py-2 text-xs" style="background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);">
-                      Use &quot;Fazer teste&quot; sempre que trocar de impressora.
-                    </div>
-                  {:else if localPrintStatus === 'desconectado'}
-                    <div class="rounded-lg px-3 py-2 text-xs" style="background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);">
-                      Procure o icone do Zelo Impressao perto do relogio do Windows.
-                    </div>
-                    <div class="rounded-lg px-3 py-2 text-xs" style="background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);">
-                      Se precisar, clique na setinha para mostrar os outros icones.
-                    </div>
-                  {:else}
-                    <div class="rounded-lg px-3 py-2 text-xs" style="background: color-mix(in srgb, var(--warning) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--warning) 24%, transparent);">
-                      Se o Windows mostrar a tela azul de proteção, clique em &quot;Mais informações&quot; no canto inferior esquerdo e depois em &quot;Executar mesmo assim&quot;.
-                    </div>
-                    <div class="rounded-lg px-3 py-2 text-xs" style="background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);">
-                      Quando a janela sumir, o programa pode continuar aberto no icone ao lado do relogio.
-                    </div>
-                  {/if}
-                </div>
-              </aside>
-            </div>
-
-            <p class="text-xs" style="color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 12px;">
-              Se o Zelo Impressao ainda nao estiver aberto, o PDV continua funcionando normalmente enquanto voce termina a configuracao.
-            </p>
-          </section>
-
-          <!-- Impressora Térmica USB -->
-          <section class="rounded-xl p-5 grid gap-5" style="background: var(--bg-card); border: 1px solid var(--border-card);">
-
-            <!-- Header -->
-            <div class="flex items-start gap-4">
-              <div class="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style="background: color-mix(in srgb, var(--primary) 12%, transparent);">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);">
-                  <polyline points="6 9 6 2 18 2 18 9"/>
-                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                  <rect x="6" y="14" width="12" height="8"/>
-                </svg>
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <h2 class="text-base font-semibold" style="color: var(--text-main);">Impressora Térmica USB</h2>
-                  <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary);">
-                    Opcional / avançada
-                  </span>
-                  <!-- badge de status -->
-                  {#if !isWebUsbSupported()}
-                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning);">
-                      Requer Chrome / Edge
-                    </span>
-                  {:else if $printerStatus}
-                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success);">
-                      ● Pareada
-                    </span>
-                  {:else}
-                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background: color-mix(in srgb, var(--text-muted) 15%, transparent); color: var(--text-muted);">
-                      Não configurada
-                    </span>
-                  {/if}
-                </div>
-                <p class="text-sm mt-1" style="color: var(--text-muted);">
-                  Impressão direta via cabo USB para Chrome e Edge no computador do caixa. É opcional:
-                  a impressão nativa pelo Windows continua funcionando sem parear.
-                  Se o navegador bloquear a permissão ou mostrar aviso de sobreposição/interferência,
-                  use a impressão pelo Windows; ela abre automaticamente quando a USB falha.
-                </p>
-              </div>
-            </div>
-
-            {#if !isWebUsbSupported()}
-              <!-- Browser incompatível -->
-              <div class="flex items-start gap-3 p-3 rounded-lg" style="background: color-mix(in srgb, var(--warning) 10%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--warning);">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-                <div>
-                  <p class="text-sm font-semibold" style="color: var(--text-main);">WebUSB não disponível</p>
-                  <p class="text-sm mt-0.5" style="color: var(--text-muted);">
-                    Este navegador não suporta WebUSB. Para usar a impressão direta,
-                    abra o Zelo PDV no <strong>Google Chrome</strong> ou <strong>Microsoft Edge</strong> no computador do caixa.
-                    No Firefox, Safari e iOS a impressão usa o diálogo padrão do navegador automaticamente.
-                  </p>
-                </div>
-              </div>
-
-            {:else if $printerStatus}
-              <!-- Impressora pareada -->
-              <div class="flex items-center justify-between gap-3 p-3 rounded-lg" style="background: color-mix(in srgb, var(--success) 8%, transparent); border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: color-mix(in srgb, var(--success) 15%, transparent);">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--success);">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p class="text-sm font-semibold" style="color: var(--text-main);">{$printerStatus.name}</p>
-                    <p class="text-xs mt-0.5" style="color: var(--text-muted);">
-                      ID: {$printerStatus.vendorId?.toString(16).padStart(4,'0')}:{$printerStatus.productId?.toString(16).padStart(4,'0')}
-                    </p>
-                  </div>
-                </div>
-                <div class="flex gap-2 shrink-0">
-                  <button
-                    type="button"
-                    disabled={printerTesting}
-                    on:click={handleTestPrint}
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
-                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                  >
-                    {#if printerTesting}
-                      <svg class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                      </svg>
-                      Imprimindo…
-                    {:else if printerTestResult === 'ok'}
-                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--success);">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                      Teste enviado
-                    {:else if printerTestResult === 'fail'}
-                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="color: var(--error);">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
-                      Falhou
-                    {:else}
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
-                      </svg>
-                      Imprimir teste
-                    {/if}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={printerUnpairing}
-                    on:click={handleUnpairPrinter}
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
-                    style="background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error); border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);"
-                  >
-                    {printerUnpairing ? 'Removendo…' : 'Remover'}
-                  </button>
-                </div>
-              </div>
-
-            {:else}
-              <!-- Sem impressora — CTA de parear -->
-              <div>
-                <button
-                  type="button"
-                  disabled={printerPairing}
-                  on:click={handlePairPrinter}
-                  class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
-                  style="background: var(--primary); color: var(--primary-text, #fff);"
-                >
-                  {#if printerPairing}
-                    <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                    </svg>
-                    Aguardando seleção…
-                  {:else}
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                    </svg>
-                    Parear impressora USB
-                  {/if}
-                </button>
-
-                {#if printerPairError}
-                  <div class="mt-3 p-3 rounded-lg" style="background: color-mix(in srgb, var(--error) 8%, transparent); border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);">
-                    <p class="text-sm font-semibold" style="color: var(--error);">Não foi possível parear via USB.</p>
-                    <p class="mt-1 text-sm" style="color: var(--text-label);">{printerPairError}</p>
-                    <p class="mt-2 text-xs" style="color: var(--text-muted);">
-                      Feche janelas de permissão abertas, desconecte e reconecte o cabo USB e tente novamente.
-                      Se o navegador mostrar aviso de sobreposição/interferência, continue usando a impressão nativa do Windows.
-                    </p>
+                  <div class="flex gap-2 flex-wrap">
                     <button
                       type="button"
-                      class="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
-                      style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                      disabled={printerPairing}
-                      on:click={handlePairPrinter}
-                    >
-                      {printerPairing ? 'Tentando novamente…' : 'Tentar USB novamente'}
-                    </button>
+                      on:click={handleSaveLocalPrintConfig}
+                      disabled={localPrintSaving || !localPrintSelectedPrinterId}
+                      class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+                      style="background: var(--primary); color: var(--primary-text, #fff);"
+                    >{localPrintSaving ? 'Salvando…' : 'Salvar impressora'}</button>
+                    <button
+                      type="button"
+                      on:click={handleLocalTestPrint}
+                      disabled={localPrintTesting}
+                      class="px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+                      style="background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle);"
+                    >{localPrintTesting ? 'Imprimindo…' : 'Imprimir teste'}</button>
                   </div>
-                {/if}
-              </div>
+                </div>
+              {/if}
 
-              <!-- Passos -->
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-wide mb-3" style="color: var(--text-muted);">Como configurar</p>
-                <ol class="grid gap-3">
-                  {#each [
-                    { text: 'Conecte a impressora térmica no computador do caixa via <strong>cabo USB</strong>.' },
-                    { text: 'Clique em <strong>Parear impressora USB</strong> acima. Um popup do navegador aparecerá com a lista de dispositivos USB.' },
-                    { text: 'Selecione sua impressora na lista e clique em <strong>Conectar</strong>.' },
-                    { text: 'Clique em <strong>Imprimir teste</strong> para confirmar que tudo funcionou.' },
-                    { text: 'Pronto! Quando o navegador permitir, as próximas impressões saem direto pelo cabo USB. Se falhar, o Zelo usa a impressão nativa do Windows.' },
-                  ] as step, i}
-                    <li class="flex gap-3 text-sm" style="color: var(--text-label);">
-                      <span
-                        class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-                        style="background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary);"
-                      >{i + 1}</span>
-                      <span>{@html step.text}</span>
-                    </li>
-                  {/each}
-                </ol>
-              </div>
+            </div>
 
-              <!-- Coexistência com Zelo Chat -->
-              <div class="text-xs p-3 rounded-lg flex items-start gap-2.5" style="background: color-mix(in srgb, var(--primary) 6%, transparent); color: var(--text-label); border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-                </svg>
-                <span>
-                  <strong style="color: var(--text-main);">Usa também o Zelo Chat?</strong>
-                  Sem problema — os dois apps compartilham a mesma impressora. O Chat
-                  imprime os pedidos automaticamente; o PDV libera a impressora após cada
-                  cupom. Se aparecer "impressora ocupada", aguarde 1-2 segundos e tente
-                  de novo.
-                </span>
-              </div>
-            {/if}
-
-            <!-- Nota sobre fallback -->
-            <p class="text-xs" style="color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 12px;">
-              <strong style="color: var(--text-label);">USB falhou ou não quer parear?</strong>
-              Use a impressão pelo Windows pelo diálogo padrão do navegador — compatível com qualquer impressora instalada no Windows (rede, USB ou Bluetooth).
-              Você pode voltar aqui a qualquer momento para parear ou trocar a impressora.
-            </p>
+            <!-- Rodapé -->
+            <div class="px-5 py-3 flex items-center gap-2" style="background: color-mix(in srgb, var(--text-muted) 4%, transparent); border-top: 1px solid var(--border-subtle);">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <p class="text-xs" style="color: var(--text-muted);">
+                Se o Zelo Impressão estiver offline, o PDV continua usando o diálogo do navegador para não travar a venda.
+              </p>
+            </div>
 
           </section>
         </div>
