@@ -65,6 +65,7 @@ body {
 .item-nome { flex: 1; font-weight: 800; }
 .item-sub { width: 74px; text-align: right; flex-shrink: 0; white-space: nowrap; font-weight: 900; }
 .item-unit { font-size: 11px; font-weight: 700; color: #000; margin-left: 28px; margin-top: -2px; }
+.item-obs { font-size: 11px; font-weight: 700; color: #000; margin-left: 28px; margin-top: 1px; font-style: italic; }
 
 /* Totais */
 .total-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; padding: 1px 0; }
@@ -140,6 +141,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
     const qtd = Number(it.quantidade || 1);
     const unit = Number(it.preco_unitario || it.preco_unitario_na_venda || 0);
     const sub = qtd * unit;
+    const obs = String(it.observacao || it.obs || '').trim();
     return `
       <div class="item-row">
         <span class="item-qtd">${qtd}x</span>
@@ -147,6 +149,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
         <span class="item-sub">${fmtBRL(sub)}</span>
       </div>
       ${qtd > 1 ? `<div class="item-unit">${fmtBRL(unit)} cada</div>` : ''}
+      ${obs ? `<div class="item-obs">${escHtml(obs)}</div>` : ''}
     `;
   }).join('');
 

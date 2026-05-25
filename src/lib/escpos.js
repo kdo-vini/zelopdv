@@ -41,7 +41,7 @@ const ASCII_FOLD = {
   'Ú':'U','Ù':'U','Û':'U','Ü':'U',
   'ç':'c','Ç':'C',
   'ñ':'n','Ñ':'N',
-  '°':'o','ª':'a','º':'o','—':'-','–':'-','’':"'",'‘':"'",'“':'"','”':'"','…':'...',
+  '°':'o','ª':'a','º':'o','—':'-','–':'-','’':"'",'‘':"'",'“':'"','”':'"','…':'...',' ':' ',
 };
 
 /** Encode 1 string em bytes CP850 com fallback ASCII. */
@@ -116,7 +116,9 @@ class Builder {
  * -------------------------------------------------------------------------- */
 
 function fmtBRL(v) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+    .format(Number(v || 0))
+    .replace(/ /g, ' ');
 }
 function repeat(ch, n) { return ch.repeat(Math.max(0, n)); }
 /** Quebra texto em múltiplas linhas respeitando largura, sem cortar palavras. */
@@ -227,18 +229,24 @@ export function buildVendaEscPos(payload) {
 
   /* HEADER */
   b.align('center').bold(true).size({ width: true, height: true });
-  b.line(String(est.nome_exibicao || 'Zelo PDV').toUpperCase());
+  // Em double-width cada char ocupa 2 cols, então quebramos em metade.
+  const nameWidth = Math.max(8, Math.floor(cols / 2));
+  for (const ln of wrap(String(est.nome_exibicao || 'Zelo PDV').toUpperCase(), nameWidth)) {
+    b.line(ln);
+  }
   b.size({}).bold(false);
 
-  if (est.endereco) b.line(est.endereco);
-  if (est.contato) b.line(est.contato);
-  if (est.documento) b.line('CNPJ/CPF: ' + est.documento);
+  if (est.endereco) for (const ln of wrap(est.endereco, cols)) b.line(ln);
+  if (est.contato) for (const ln of wrap(est.contato, cols)) b.line(ln);
+  if (est.documento) for (const ln of wrap('CNPJ/CPF: ' + est.documento, cols)) b.line(ln);
 
   b.newline();
 
   /* TÍTULO + PEDIDO */
   const titulo = opcoes.titulo || 'CUPOM NAO FISCAL';
-  b.bold(true).line(centerLine(titulo, cols)).bold(false);
+  b.bold(true);
+  for (const ln of wrap(titulo, cols)) b.line(centerLine(ln, cols));
+  b.bold(false);
 
   const pedidoNum = String(venda.numeroVenda ?? venda.idVenda ?? '—');
   const tipo = tipoPedidoLabel(venda.tipoPedido);
@@ -282,6 +290,12 @@ export function buildVendaEscPos(payload) {
       if (qtd > 1) {
         b.line(repeat(' ', prefix.length) + `${fmtBRL(unit)} cada`);
       }
+      const obs = String(it.observacao || it.obs || '').trim();
+      if (obs) {
+        for (const ln of wrap(obs, descColW)) {
+          b.line(repeat(' ', prefix.length) + ln);
+        }
+      }
     }
   }
 
@@ -299,7 +313,7 @@ export function buildVendaEscPos(payload) {
   if (taxa > 0) b.line(twoCol('Taxa entrega', '+ ' + fmtBRL(taxa), cols));
 
   b.bold(true).size({ width: false, height: true });
-  b.line(twoCol('TOTAL', fmtBRL(total), Math.floor(cols / 1)));
+  b.line(twoCol('TOTAL', fmtBRL(total), cols));
   b.size({}).bold(false);
 
   /* PAGAMENTO */
@@ -330,9 +344,13 @@ export function buildVendaEscPos(payload) {
   /* RODAPÉ */
   b.newline();
   b.align('center');
-  if (opcoes.naoFiscal) b.line('* nao fiscal — uso interno *');
-  b.line(est.rodape_recibo || 'Obrigado pela preferencia!');
-  if (est.contato) b.line(est.contato);
+  if (opcoes.naoFiscal) {
+    for (const ln of wrap('* nao fiscal — uso interno *', cols)) b.line(centerLine(ln, cols));
+  }
+  for (const ln of wrap(est.rodape_recibo || 'Obrigado pela preferencia!', cols)) {
+    b.line(centerLine(ln, cols));
+  }
+  if (est.contato) for (const ln of wrap(est.contato, cols)) b.line(ln);
 
   b.newline();
   b.feed(2);
@@ -361,14 +379,19 @@ export function buildMovCaixaEscPos({ estabelecimento, mov }) {
   b.init().darkness().selectCodepage().charset();
 
   b.align('center').bold(true).size({ width: true, height: true });
-  b.line(String(est.nome_exibicao || 'Zelo PDV').toUpperCase());
+  const nameWidth = Math.max(8, Math.floor(cols / 2));
+  for (const ln of wrap(String(est.nome_exibicao || 'Zelo PDV').toUpperCase(), nameWidth)) {
+    b.line(ln);
+  }
   b.size({}).bold(false);
-  if (est.endereco) b.line(est.endereco);
-  if (est.contato) b.line(est.contato);
-  if (est.documento) b.line('CNPJ/CPF: ' + est.documento);
+  if (est.endereco) for (const ln of wrap(est.endereco, cols)) b.line(ln);
+  if (est.contato) for (const ln of wrap(est.contato, cols)) b.line(ln);
+  if (est.documento) for (const ln of wrap('CNPJ/CPF: ' + est.documento, cols)) b.line(ln);
 
   b.newline();
-  b.bold(true).line(centerLine(titulo, cols)).bold(false);
+  b.bold(true);
+  for (const ln of wrap(titulo, cols)) b.line(centerLine(ln, cols));
+  b.bold(false);
   b.align('left');
   b.line(repeat('-', cols));
 
@@ -413,19 +436,31 @@ export function buildPagamentoFiadoEscPos({ estabelecimento, pagamento }) {
   b.init().darkness().selectCodepage().charset();
 
   b.align('center').bold(true).size({ width: true, height: true });
-  b.line(String(est.nome_exibicao || 'Zelo PDV').toUpperCase());
+  const nameWidth = Math.max(8, Math.floor(cols / 2));
+  for (const ln of wrap(String(est.nome_exibicao || 'Zelo PDV').toUpperCase(), nameWidth)) {
+    b.line(ln);
+  }
   b.size({}).bold(false);
-  if (est.endereco) b.line(est.endereco);
-  if (est.contato) b.line(est.contato);
-  if (est.documento) b.line('CNPJ/CPF: ' + est.documento);
+  if (est.endereco) for (const ln of wrap(est.endereco, cols)) b.line(ln);
+  if (est.contato) for (const ln of wrap(est.contato, cols)) b.line(ln);
+  if (est.documento) for (const ln of wrap('CNPJ/CPF: ' + est.documento, cols)) b.line(ln);
 
   b.newline();
-  b.bold(true).line(centerLine('RECIBO DE PAGAMENTO (FIADO)', cols)).bold(false);
+  b.bold(true);
+  for (const ln of wrap('RECIBO DE PAGAMENTO (FIADO)', cols)) b.line(centerLine(ln, cols));
+  b.bold(false);
   b.align('left');
   b.line(repeat('-', cols));
 
   const dt = new Date();
-  b.line(twoCol('Cliente', String(pagamento.nomePessoa || '—'), cols));
+  // Nome do cliente pode ser longo — quebra em wrap pra não ser cortado pelo slice em twoCol.
+  const nomePessoa = String(pagamento.nomePessoa || '—');
+  if (nomePessoa.length <= cols - 'Cliente'.length - 2) {
+    b.line(twoCol('Cliente', nomePessoa, cols));
+  } else {
+    b.line('Cliente:');
+    for (const ln of wrap(nomePessoa, cols)) b.line(ln);
+  }
   b.line(twoCol(dt.toLocaleDateString('pt-BR'), dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), cols));
 
   if (pagamento.saldoAnterior != null) b.line(twoCol('Saldo anterior', fmtBRL(pagamento.saldoAnterior), cols));
