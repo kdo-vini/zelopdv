@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { translateSubscriptionStatus } from '$lib/errorUtils';
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina, PLATAFORMAS_PRESET } from '$lib/profileUtils';
   import { maskPhone, maskDocumento } from '$lib/masks';
   import { addToast } from '$lib/stores/ui';
@@ -74,14 +75,10 @@
   }
 
   async function resetPassword() {
-    if (!email) return;
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw error;
-      addToast('E-mail de redefinição enviado para ' + email, 'success');
-    } catch (e) {
-      addToast('Erro: ' + e.message, 'error');
-    }
+    // Usuário já está autenticado no perfil: a página /redefinir-senha
+    // detecta a sessão ativa e libera o form diretamente, sem precisar
+    // de email de recuperação.
+    await goto('/redefinir-senha');
   }
 
   let msg = '';
@@ -520,9 +517,9 @@
               try { await resetPassword(); } finally { resettingPassword = false; }
             }}
           >
-            {resettingPassword ? 'Enviando…' : 'Trocar senha por e-mail'}
+            {resettingPassword ? 'Abrindo…' : 'Trocar senha'}
           </button>
-          <p class="text-xs mt-2" style="color: var(--text-muted);">Enviaremos um link para {email} para você redefinir a senha.</p>
+          <p class="text-xs mt-2" style="color: var(--text-muted);">Defina uma nova senha para sua conta agora.</p>
         </div>
       </section>
     {/if}
@@ -636,7 +633,7 @@
             <div class="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <p class="text-sm font-medium" style="color: var(--text-main);">Senha</p>
-                <p class="text-xs mt-0.5" style="color: var(--text-muted);">Enviaremos um link de redefinição para {email}.</p>
+                <p class="text-xs mt-0.5" style="color: var(--text-muted);">Defina uma nova senha para sua conta agora.</p>
               </div>
               <button type="button" on:click={resetPassword}
                 class="flex-shrink-0 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
