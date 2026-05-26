@@ -323,17 +323,19 @@
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="search-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
               <input bind:value={busca} type="search" placeholder="Buscar produto" />
             </div>
-            <div class="category-row" aria-label="Categorias">
-              <button type="button" class:active={categoriaAtiva === null} on:click={() => categoriaAtiva = null}>Todos</button>
-              {#each categorias as categoria (categoria.id)}
-                <button
-                  type="button"
-                  class:active={categoriaAtiva === categoria.id}
-                  on:click={() => categoriaAtiva = categoria.id}
-                >
-                  {categoria.nome}
-                </button>
-              {/each}
+            <div class="category-scroll">
+              <div class="category-row" aria-label="Categorias">
+                <button type="button" class:active={categoriaAtiva === null} on:click={() => categoriaAtiva = null}>Todos</button>
+                {#each categorias as categoria (categoria.id)}
+                  <button
+                    type="button"
+                    class:active={categoriaAtiva === categoria.id}
+                    on:click={() => categoriaAtiva = categoria.id}
+                  >
+                    {categoria.nome}
+                  </button>
+                {/each}
+              </div>
             </div>
           </div>
 
@@ -435,7 +437,8 @@
 
 <style>
   .novo-page {
-    min-height: 100vh;
+    height: 100%;
+    overflow-y: auto;
     padding: clamp(14px, 2.5vw, 28px);
     background: var(--bg-app);
     color: var(--text-main);
@@ -571,22 +574,44 @@
     box-shadow: 0 0 0 2px var(--accent-light);
   }
 
+  /* Wrapper para o fade indicator à direita */
+  .category-scroll {
+    position: relative;
+  }
+  .category-scroll::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 6px;
+    width: 48px;
+    background: linear-gradient(to right, transparent, var(--bg-panel));
+    pointer-events: none;
+    border-radius: 0 6px 6px 0;
+  }
+
   .category-row {
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    padding-bottom: 4px;
+    padding-bottom: 6px;
+    padding-right: 44px;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+    scroll-behavior: smooth;
   }
-  .category-row::-webkit-scrollbar { height: 4px; }
+  .category-row::-webkit-scrollbar { height: 3px; }
   .category-row::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 4px; }
+  .category-row::-webkit-scrollbar-track { background: transparent; }
 
   .category-row button {
     flex: 0 0 auto;
     border: 1px solid var(--border-subtle);
     background: var(--bg-card);
     color: var(--text-label);
-    padding: 9px 14px;
+    padding: 11px 16px;
+    min-height: 44px;
     border-radius: 999px;
     cursor: pointer;
     font-weight: 700;
@@ -808,6 +833,9 @@
 
   @media (max-width: 940px) {
     .order-layout { grid-template-columns: 1fr; }
+    .catalog {
+      padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    }
     .cart-panel {
       position: fixed;
       inset: 0;

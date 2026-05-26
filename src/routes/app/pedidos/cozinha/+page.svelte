@@ -442,7 +442,8 @@
 
   .kitchen-shell,
   .blocked {
-    min-height: 100vh;
+    height: 100%;
+    overflow-y: auto;
     background: #05070a;
     color: #f8fafc;
     padding: clamp(1rem, 2vw, 2rem);
@@ -773,23 +774,42 @@
   }
 
   @media (max-width: 900px) {
-    .kitchen-topbar,
-    .status-strip {
+    .kitchen-topbar {
       align-items: stretch;
       flex-direction: column;
+      gap: 0.75rem;
     }
 
     .status-strip {
       width: 100%;
+      flex-wrap: wrap;
     }
 
-    .status-strip > div,
+    .status-strip > div {
+      flex: 1;
+      min-width: 80px;
+    }
+
     .status-strip button {
-      width: 100%;
+      flex: 1;
     }
 
     .kitchen-board {
       grid-template-columns: 1fr;
+    }
+
+    /* Touch: botões de ação maiores e sempre visíveis */
+    .action-btn {
+      width: 36px;
+      height: 36px;
+      min-height: 36px;
+    }
+    .action-btn svg { width: 16px; height: 16px; }
+
+    /* Itens de pedido: botão "Marcar" mais fácil de tocar */
+    li button {
+      min-width: 80px;
+      padding: 0.5rem 0.75rem;
     }
   }
 </style>

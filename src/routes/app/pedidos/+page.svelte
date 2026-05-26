@@ -564,7 +564,8 @@
 
 <style>
   .pedidos-page {
-    min-height: 100vh;
+    height: 100%;
+    overflow-y: auto;
     padding: clamp(14px, 2.5vw, 28px);
     background: var(--bg-app);
     color: var(--text-main);
@@ -678,7 +679,7 @@
     gap: 8px;
     align-content: start;
     padding: 10px;
-    max-height: calc(100vh - 140px);
+    max-height: calc(100dvh - 140px);
     overflow-y: auto;
   }
 
@@ -750,9 +751,14 @@
     color: var(--error);
     border-color: rgba(239, 68, 68, 0.4);
   }
-  /* Em telas touch (mobile), sempre visível */
+  /* Em telas touch (mobile): sempre visível e maior para toque */
   @media (hover: none) {
     .queue-actions { opacity: 1; pointer-events: auto; }
+    .action-btn {
+      width: 36px;
+      height: 36px;
+    }
+    .action-btn svg { width: 16px; height: 16px; }
   }
 
   .qi-top {
