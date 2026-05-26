@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const loadHandler = async () => await import('../src/routes/api/billing/webhook/+server.js');
 
-function makeSupabaseAdmin(row = { id: 'sub-row', user_id: 'u1', plan_tier: 'pdv' }) {
+function mockWebhookSecret(value = 'whsec_test') {
+  vi.doMock('$env/dynamic/private', () => ({ env: { STRIPE_WEBHOOK_SECRET: value } }));
+}
+
+function makeSupabaseAdmin(row = { id: 'sub-row', user_id: 'u1', plan_tier: 'pdv' }, updates = []) {
   return {
     from: vi.fn((table) => {
       const chain = {
@@ -19,8 +23,11 @@ function makeSupabaseAdmin(row = { id: 'sub-row', user_id: 'u1', plan_tier: 'pdv
           data: table === 'subscriptions' ? row : null,
           error: null
         })),
-        update: vi.fn(() => ({
-          eq: async () => ({ error: null })
+        update: vi.fn((payload) => ({
+          eq: async () => {
+            updates.push({ table, payload });
+            return { error: null };
+          }
         }))
       };
       return chain;
@@ -35,7 +42,7 @@ beforeEach(() => {
 
 describe('API: stripe webhook', () => {
   it('returns 400 when Stripe signature verification fails', async () => {
-    vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'whsec_test');
+    mockWebhookSecret();
     const constructEvent = vi.fn(() => {
       throw new Error('bad signature');
     });
@@ -52,7 +59,7 @@ describe('API: stripe webhook', () => {
   });
 
   it('returns 500 when service role missing', async () => {
-    vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'whsec_test');
+    mockWebhookSecret();
     vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({ supabaseAdmin: null }));
     vi.doMock('../src/lib/server/stripe.js', () => ({
       stripe: { webhooks: { constructEvent: vi.fn() } }
@@ -65,7 +72,9 @@ describe('API: stripe webhook', () => {
   });
 
   it('updates subscription on subscription.updated', async () => {
-    vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'whsec_test');
+    mockWebhookSecret();
+    const updates = [];
+    const periodEnd = Math.floor(Date.now() / 1000) + 3600;
     const constructEvent = vi.fn(() => ({
       id: 'evt_1',
       type: 'customer.subscription.updated',
@@ -75,14 +84,14 @@ describe('API: stripe webhook', () => {
           customer: 'cus_123',
           status: 'active',
           metadata: { user_id: 'u1' },
-          current_period_end: Math.floor(Date.now() / 1000) + 3600,
+          current_period_end: periodEnd,
           cancel_at_period_end: false,
           items: { data: [{ price: { id: 'price_123' } }] }
         }
       }
     }));
 
-    vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({ supabaseAdmin: makeSupabaseAdmin() }));
+    vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({ supabaseAdmin: makeSupabaseAdmin(undefined, updates) }));
     vi.doMock('../src/lib/server/stripe.js', () => ({
       stripe: { webhooks: { constructEvent } }
     }));
@@ -91,5 +100,43 @@ describe('API: stripe webhook', () => {
     const res = await POST({ request: { text: async () => 'raw', headers: { get: () => 'sig' } } });
 
     expect(res.status).toBe(200);
+    expect(updates.find((u) => u.table === 'subscriptions')?.payload.current_period_end)
+      .toBe(new Date(periodEnd * 1000).toISOString());
+  });
+
+  it('reads current_period_end from subscription items when Stripe omits subscription-level period', async () => {
+    mockWebhookSecret();
+    const updates = [];
+    const itemPeriodEnd = Math.floor(Date.now() / 1000) + 7200;
+    const constructEvent = vi.fn(() => ({
+      id: 'evt_2',
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          id: 'sub_123',
+          customer: 'cus_123',
+          status: 'active',
+          metadata: { user_id: 'u1' },
+          cancel_at_period_end: false,
+          items: {
+            data: [
+              { price: { id: 'price_123' }, current_period_end: itemPeriodEnd }
+            ]
+          }
+        }
+      }
+    }));
+
+    vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({ supabaseAdmin: makeSupabaseAdmin(undefined, updates) }));
+    vi.doMock('../src/lib/server/stripe.js', () => ({
+      stripe: { webhooks: { constructEvent } }
+    }));
+
+    const { POST } = await loadHandler();
+    const res = await POST({ request: { text: async () => 'raw', headers: { get: () => 'sig' } } });
+
+    expect(res.status).toBe(200);
+    expect(updates.find((u) => u.table === 'subscriptions')?.payload.current_period_end)
+      .toBe(new Date(itemPeriodEnd * 1000).toISOString());
   });
 });

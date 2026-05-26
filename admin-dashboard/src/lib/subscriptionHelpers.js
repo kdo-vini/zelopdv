@@ -3,6 +3,10 @@
  * does the customer actually lose access" in a way that respects manual
  * extensions.
  *
+ * The `subscriptions` row in Supabase is the source of truth. Stripe,
+ * Abacate Pay, and manual admin actions only feed these columns; the admin
+ * panel should not ask payment providers to decide customer access.
+ *
  * Background: the `subscriptions` table has two relevant columns:
  *   - `current_period_end`: paid billing period end (set by Stripe/Asaas
  *     webhooks or trial extension).
@@ -21,10 +25,37 @@
  * helpers. These helpers are for read/display only.
  */
 
+export function parseSubscriptionDate(value) {
+  if (!value) return null
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+
+  if (typeof value === 'number') {
+    const milliseconds = value < 100000000000 ? value * 1000 : value
+    const date = new Date(milliseconds)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    if (/^\d+$/.test(trimmed)) return parseSubscriptionDate(Number(trimmed))
+
+    const date = new Date(trimmed)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  return null
+}
+
+export function formatSubscriptionDate(value) {
+  const date = parseSubscriptionDate(value)
+  return date ? date.toLocaleDateString('pt-BR') : '—'
+}
+
 export function getEffectiveExpiry(sub) {
   if (!sub) return null
-  const periodEnd = sub.current_period_end ? new Date(sub.current_period_end) : null
-  const manualEnd = sub.manually_extended_until ? new Date(sub.manually_extended_until) : null
+  const periodEnd = parseSubscriptionDate(sub.current_period_end)
+  const manualEnd = parseSubscriptionDate(sub.manually_extended_until)
   if (!periodEnd && !manualEnd) return null
   if (!periodEnd) return manualEnd
   if (!manualEnd) return periodEnd
@@ -51,9 +82,11 @@ export function isSubscriptionExpired(sub) {
  */
 export function hasActiveManualExtension(sub) {
   if (!sub?.manually_extended_until) return false
-  const manualEnd = new Date(sub.manually_extended_until)
+  const manualEnd = parseSubscriptionDate(sub.manually_extended_until)
+  if (!manualEnd) return false
   if (manualEnd.getTime() < Date.now()) return false
   if (!sub.current_period_end) return true
-  const periodEnd = new Date(sub.current_period_end)
+  const periodEnd = parseSubscriptionDate(sub.current_period_end)
+  if (!periodEnd) return true
   return manualEnd > periodEnd
 }

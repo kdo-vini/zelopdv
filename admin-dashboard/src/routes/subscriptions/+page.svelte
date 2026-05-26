@@ -6,7 +6,7 @@
   import { confirmDialog } from '$lib/confirmDialog'
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
-  import { getEffectiveExpiry, getDaysUntilEffectiveExpiry, isSubscriptionExpired, hasActiveManualExtension } from '$lib/subscriptionHelpers'
+  import { getEffectiveExpiry, getDaysUntilEffectiveExpiry, isSubscriptionExpired, hasActiveManualExtension, parseSubscriptionDate, formatSubscriptionDate } from '$lib/subscriptionHelpers'
   import { generatePdfReport, formatBRL, formatNumber } from '$lib/pdfReport'
 
   // Base do app principal (onde rodam os endpoints /api/admin/billing/*)
@@ -59,7 +59,24 @@
 
     let query = supabase
       .from('subscriptions')
-      .select('*')
+      .select(`
+        id,
+        user_id,
+        status,
+        current_period_end,
+        manually_extended_until,
+        created_at,
+        updated_at,
+        plan_tier,
+        has_mesas_addon,
+        has_pedidos_addon,
+        has_acessos_addon,
+        payment_provider,
+        provider_subscription_id,
+        provider_customer_id,
+        billing_type,
+        cancel_at_period_end
+      `)
       .order('created_at', { ascending: false })
 
     if (filterPlan !== 'all') {
@@ -376,7 +393,7 @@
         errorToast(data.error)
       } else {
         const wasExpired = data.was_expired ? ' (assinatura estava expirada)' : '';
-        success(`Pagamento registrado! Nova expiração: ${new Date(data.new_expiry).toLocaleDateString('pt-BR')}${wasExpired}`)
+        success(`Pagamento registrado! Nova expiração: ${formatSubscriptionDate(data.new_expiry)}${wasExpired}`)
         closeExtendModal()
         await loadSubscriptions()
       }
@@ -511,8 +528,8 @@
     
     try {
       statusUpdating = true
-      const currentEnd = new Date(sub.current_period_end)
-      const baseDate = currentEnd < new Date() ? new Date() : currentEnd
+      const currentEnd = parseSubscriptionDate(sub.current_period_end)
+      const baseDate = !currentEnd || currentEnd < new Date() ? new Date() : currentEnd
       const newEnd = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000)
       
       const { error } = await supabase
@@ -680,8 +697,8 @@
               plano: planLabel(s.plan_tier || 'pdv') + (addons ? ` (+${addons})` : ''),
               status: getStatusBadge(s).text,
               valor: subscriptionValue(s),
-              vence: eff ? eff.toLocaleDateString('pt-BR') : '—',
-              criado: new Date(s.created_at).toLocaleDateString('pt-BR'),
+              vence: formatSubscriptionDate(eff),
+              criado: formatSubscriptionDate(s.created_at),
             }
           }),
           footer: [
@@ -872,11 +889,11 @@
               </td>
               <td class="py-4 px-6 text-[13px]">
                 <div class="{isExpired ? 'text-rose-400 font-semibold' : isExpiringSoon ? 'text-amber-400 font-semibold' : 'text-slate-300'} flex items-center gap-1.5">
-                  {effectiveExpiry ? effectiveExpiry.toLocaleDateString('pt-BR') : '—'}
+                  {formatSubscriptionDate(effectiveExpiry)}
                   {#if onManualExt}
                     <span
                       class="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold tracking-wider rounded bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                      title={`Extensão manual ativa até ${new Date(sub.manually_extended_until).toLocaleDateString('pt-BR')}. Período pago vence em ${sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('pt-BR') : '—'}.`}
+                      title={`Extensão manual ativa até ${formatSubscriptionDate(sub.manually_extended_until)}. Período pago vence em ${formatSubscriptionDate(sub.current_period_end)}.`}
                     >
                       +EXT
                     </span>
@@ -893,7 +910,7 @@
                 {/if}
               </td>
               <td class="py-4 px-6 text-[13px] text-slate-400">
-                {new Date(sub.created_at).toLocaleDateString('pt-BR')}
+                {formatSubscriptionDate(sub.created_at)}
               </td>
               <td class="py-4 px-6 text-right">
                 <div class="flex items-center justify-end gap-1.5">
@@ -972,7 +989,7 @@
             <div>
               <span class="text-slate-500 block mb-0.5">Expiração:</span>
               <span class="text-slate-300 font-medium inline-flex items-center gap-1.5">
-                {effectiveExpiry ? effectiveExpiry.toLocaleDateString('pt-BR') : '—'}
+                {formatSubscriptionDate(effectiveExpiry)}
                 {#if onManualExt}
                   <span class="inline-flex px-1 py-0.5 text-[8px] font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">+EXT</span>
                 {/if}
@@ -1033,7 +1050,7 @@
            <div>
              <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Expira(va) em</p>
              <div class="text-sm font-semibold text-slate-300 inline-flex items-center gap-1.5">
-               {getEffectiveExpiry(selectedSub)?.toLocaleDateString('pt-BR') ?? '—'}
+               {formatSubscriptionDate(getEffectiveExpiry(selectedSub))}
                {#if hasActiveManualExtension(selectedSub)}
                  <span class="text-[9px] font-bold text-amber-400" title="Extensão manual ativa">(+ext)</span>
                {/if}

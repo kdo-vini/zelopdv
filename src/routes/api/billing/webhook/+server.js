@@ -95,6 +95,30 @@ function mapStripeStatus(stripeStatus) {
   return map[stripeStatus] || stripeStatus || 'incomplete';
 }
 
+function toStripeTimestampDate(timestamp) {
+  if (!timestamp) return null;
+  const numericTimestamp = Number(timestamp);
+  if (!Number.isFinite(numericTimestamp)) return null;
+  const date = new Date(numericTimestamp * 1000);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getStripeSubscriptionPeriodEnd(sub) {
+  const subscriptionPeriodEnd = toStripeTimestampDate(sub?.current_period_end);
+  if (subscriptionPeriodEnd) return subscriptionPeriodEnd;
+
+  const itemPeriodEnds = (sub?.items?.data || [])
+    .map((item) => toStripeTimestampDate(item?.current_period_end))
+    .filter(Boolean);
+
+  if (itemPeriodEnds.length === 0) return null;
+  return new Date(Math.max(...itemPeriodEnds.map((date) => date.getTime())));
+}
+
+function getStripeSubscriptionPeriodEndIso(sub, fallback = null) {
+  return getStripeSubscriptionPeriodEnd(sub)?.toISOString() || fallback;
+}
+
 export async function POST({ request }) {
   if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado.' }, { status: 500 });
   if (!stripe) return json({ error: 'Stripe não configurado.' }, { status: 500 });
@@ -157,7 +181,7 @@ export async function POST({ request }) {
           has_pedidos_addon: !!addons.pedidos,
           has_acessos_addon: !!addons.acessos,
           status: mapStripeStatus(sub.status),
-          current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : row.current_period_end,
+          current_period_end: getStripeSubscriptionPeriodEndIso(sub, row.current_period_end),
           billing_type: 'CREDIT_CARD',
           cancel_at_period_end: !!sub.cancel_at_period_end,
         });
@@ -190,7 +214,7 @@ export async function POST({ request }) {
           has_pedidos_addon: !!addons.pedidos,
           has_acessos_addon: !!addons.acessos,
           status: mapStripeStatus(sub.status),
-          current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : row.current_period_end,
+          current_period_end: getStripeSubscriptionPeriodEndIso(sub, row.current_period_end),
           cancel_at_period_end: !!sub.cancel_at_period_end,
         });
         console.log(`[Stripe Webhook] [SYNC] sub ${stripeSubId} → status=${sub.status}, plan=${planTier}, mesas=${!!addons.mesas}, pedidos=${!!addons.pedidos}, acessos=${!!addons.acessos}`);
@@ -226,12 +250,13 @@ export async function POST({ request }) {
         if (!row) break;
 
         // current_period_end vem da subscription, não da invoice. Buscar pra garantir.
-        const sub = await stripe.subscriptions.retrieve(stripeSubId);
+        const sub = await stripe.subscriptions.retrieve(stripeSubId, { expand: ['items.data.price'] });
+        const periodEnd = getStripeSubscriptionPeriodEnd(sub);
         await updateSubscriptionRow(row.id, {
           status: 'active',
-          current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : row.current_period_end,
+          current_period_end: periodEnd?.toISOString() || row.current_period_end,
         });
-        console.log(`[Stripe Webhook] [PAID] sub ${stripeSubId} active until ${new Date(sub.current_period_end * 1000).toISOString()}`);
+        console.log(`[Stripe Webhook] [PAID] sub ${stripeSubId} active until ${periodEnd?.toISOString() || row.current_period_end || 'unknown'}`);
         break;
       }
 
