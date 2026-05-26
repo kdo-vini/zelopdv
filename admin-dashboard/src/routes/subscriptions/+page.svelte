@@ -15,9 +15,50 @@
   let subscriptions = []
   let loading = true
   let searchTerm = ''
-  let filterStatus = 'all' // 'all', 'active', 'canceled', 'expired', 'expiring'
+  let showFilters = false
+  let filterStatus = 'all'
   let filterPlan = 'all' // 'all', 'pdv', 'chat', 'bundle'
+  let filterProvider = 'all'
+  let filterAddon = 'all'
   let adminInfo = null
+
+  const statusFilters = [
+    { value: 'all', label: 'Todas' },
+    { value: 'active', label: 'Ativas' },
+    { value: 'trialing', label: 'Trial' },
+    { value: 'past_due', label: 'Past due' },
+    { value: 'canceled', label: 'Canceladas' },
+    { value: 'expired', label: 'Expiradas' },
+    { value: 'expiring_7', label: 'Vencem em 7d' },
+    { value: 'expiring_15', label: 'Vencem em 15d' },
+    { value: 'expiring_30', label: 'Vencem em 30d' },
+    { value: 'manual_extension', label: 'Com extensão' },
+    { value: 'cancel_at_period_end', label: 'Cancela no fim' },
+  ]
+
+  const planFilters = [
+    { value: 'all', label: 'Todos' },
+    { value: 'pdv', label: 'ZeloPDV' },
+    { value: 'chat', label: 'ZeloChat' },
+    { value: 'bundle', label: 'Pacote G+A' },
+  ]
+
+  const providerFilters = [
+    { value: 'all', label: 'Todos' },
+    { value: 'manual', label: 'Manual' },
+    { value: 'abacatepay', label: 'Abacate Pay' },
+    { value: 'stripe', label: 'Stripe' },
+    { value: 'none', label: 'Sem provedor' },
+  ]
+
+  const addonFilters = [
+    { value: 'all', label: 'Todos' },
+    { value: 'with_any', label: 'Com addon' },
+    { value: 'none', label: 'Sem addon' },
+    { value: 'mesas', label: 'Mesas' },
+    { value: 'pedidos', label: 'Pedidos' },
+    { value: 'acessos', label: 'Acessos' },
+  ]
 
   // Modal states
   let showExtendModal = false
@@ -79,22 +120,6 @@
       `)
       .order('created_at', { ascending: false })
 
-    if (filterPlan !== 'all') {
-      query = query.eq('plan_tier', filterPlan)
-    }
-    
-    // Apply status filter. The "expiring"/"expired" buckets need to consider
-    // both current_period_end and manually_extended_until — postgrest doesn't
-    // express GREATEST() filters cleanly, so we fetch all active and narrow
-    // client-side. Volume here is bounded (admin scope), so this is fine.
-    if (filterStatus === 'active') {
-      query = query.eq('status', 'active')
-    } else if (filterStatus === 'canceled') {
-      query = query.eq('status', 'canceled')
-    } else if (filterStatus === 'expiring' || filterStatus === 'expired') {
-      query = query.eq('status', 'active')
-    }
-
     const { data: subs, error } = await query
     
     if (error) {
@@ -121,17 +146,6 @@
             documento: 'N/A'
           }
         }))
-
-      // Client-side narrow for expiring/expired (effective expiry respects
-      // manually_extended_until — see subscriptionHelpers.js).
-      if (filterStatus === 'expiring') {
-        merged = merged.filter(sub => {
-          const days = getDaysUntilEffectiveExpiry(sub)
-          return days > 0 && days <= 7
-        })
-      } else if (filterStatus === 'expired') {
-        merged = merged.filter(sub => isSubscriptionExpired(sub))
-      }
 
       subscriptions = merged
     } else {
@@ -583,6 +597,57 @@
     }
     return name.substring(0, 2).toUpperCase()
   }
+
+  function getFilterLabel(options, value) {
+    return options.find(option => option.value === value)?.label || 'Todos'
+  }
+
+  function subscriptionMatchesStatus(sub) {
+    const days = getDaysUntilEffectiveExpiry(sub)
+
+    if (filterStatus === 'all') return true
+    if (filterStatus === 'expired') return isSubscriptionExpired(sub)
+    if (filterStatus === 'expiring_7') return days > 0 && days <= 7
+    if (filterStatus === 'expiring_15') return days > 0 && days <= 15
+    if (filterStatus === 'expiring_30') return days > 0 && days <= 30
+    if (filterStatus === 'manual_extension') return hasActiveManualExtension(sub)
+    if (filterStatus === 'cancel_at_period_end') return !!sub.cancel_at_period_end
+    return sub.status === filterStatus
+  }
+
+  function subscriptionMatchesProvider(sub) {
+    if (filterProvider === 'all') return true
+    if (filterProvider === 'none') return !sub.payment_provider
+    return sub.payment_provider === filterProvider
+  }
+
+  function subscriptionMatchesAddon(sub) {
+    const hasAnyAddon = !!(sub.has_mesas_addon || sub.has_pedidos_addon || sub.has_acessos_addon)
+
+    if (filterAddon === 'all') return true
+    if (filterAddon === 'with_any') return hasAnyAddon
+    if (filterAddon === 'none') return !hasAnyAddon
+    if (filterAddon === 'mesas') return !!sub.has_mesas_addon
+    if (filterAddon === 'pedidos') return !!sub.has_pedidos_addon
+    if (filterAddon === 'acessos') return !!sub.has_acessos_addon
+    return true
+  }
+
+  function resetFilters() {
+    filterStatus = 'all'
+    filterPlan = 'all'
+    filterProvider = 'all'
+    filterAddon = 'all'
+    searchTerm = ''
+  }
+
+  $: activeFilterCount = [
+    filterStatus !== 'all',
+    filterPlan !== 'all',
+    filterProvider !== 'all',
+    filterAddon !== 'all',
+    searchTerm.trim(),
+  ].filter(Boolean).length
   
   function exportFinancialPdf() {
     const list = filteredSubscriptions
@@ -710,7 +775,12 @@
   }
 
   $: filteredSubscriptions = subscriptions.filter(sub => {
-    if (!searchTerm) return true
+    if (filterPlan !== 'all' && sub.plan_tier !== filterPlan) return false
+    if (!subscriptionMatchesStatus(sub)) return false
+    if (!subscriptionMatchesProvider(sub)) return false
+    if (!subscriptionMatchesAddon(sub)) return false
+    if (!searchTerm.trim()) return true
+
     const search = searchTerm.toLowerCase()
     return (
       sub.empresa_perfil.nome_exibicao?.toLowerCase().includes(search) ||
@@ -724,54 +794,17 @@
   <title>Assinaturas - Zelo Admin</title>
 </svelte:head>
 
-<div class="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500">
+<div class="max-w-[1400px] mx-auto space-y-4 animate-in fade-in duration-500">
   
   <!-- Sleek Header Area -->
-  <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-800">
-    <div class="relative">
-      <h2 class="text-3xl font-extrabold tracking-tight text-white mb-1">Subscriptions</h2>
-      <p class="text-slate-400 text-sm font-medium">Controle de faturamento, trials e cancelamentos.</p>
-      <!-- Accent Glow Line -->
-      <div class="absolute -bottom-6 left-0 w-16 h-[2px] bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-white">Assinaturas</h2>
+      <p class="text-xs text-slate-500">{filteredSubscriptions.length} de {subscriptions.length} registros</p>
     </div>
     
-    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
       
-      <!-- Plan Filter -->
-      <div class="relative group w-full sm:w-auto">
-        <select
-          bind:value={filterPlan}
-          on:change={loadSubscriptions}
-          class="w-full sm:w-40 appearance-none pl-4 pr-10 py-2.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-sm font-medium text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
-        >
-          <option value="all">Todos planos</option>
-          <option value="pdv">ZeloPDV</option>
-          <option value="chat">ZeloChat</option>
-          <option value="bundle">Pacote G+A</option>
-        </select>
-        <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-          <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-        </div>
-      </div>
-
-      <!-- Status Filter -->
-      <div class="relative group w-full sm:w-auto">
-        <select
-          bind:value={filterStatus}
-          on:change={loadSubscriptions}
-          class="w-full sm:w-48 appearance-none pl-4 pr-10 py-2.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-sm font-medium text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
-        >
-          <option value="all">Todas</option>
-          <option value="active">Ativas</option>
-          <option value="expired">🚨 Expiradas</option>
-          <option value="expiring">⚠️ Em &lt; 7 Dias</option>
-          <option value="canceled">Canceladas</option>
-        </select>
-        <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-          <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-        </div>
-      </div>
-
       <!-- Search Box -->
       <div class="relative group w-full sm:w-72">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -781,13 +814,82 @@
           type="text"
           bind:value={searchTerm}
           placeholder="Busca (Email/Doc)"
-          class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
+          class="w-full pl-9 pr-3 h-9 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all"
         />
+      </div>
+
+      <div class="relative">
+        <button
+          on:click={() => showFilters = !showFilters}
+          class="relative flex items-center justify-center shrink-0 w-9 h-9 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-slate-300 hover:text-white transition-all focus:outline-none focus:ring-2 focus:ring-slate-700"
+          title="Filtros"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h18M6 12h12M10 19h4" />
+          </svg>
+          {#if activeFilterCount > 0}
+            <span class="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-indigo-500 text-[10px] leading-4 font-bold text-white">{activeFilterCount}</span>
+          {/if}
+        </button>
+
+        {#if showFilters}
+          <div class="absolute right-0 top-11 z-30 w-[min(92vw,420px)] rounded-xl border border-slate-800 bg-slate-950 shadow-2xl p-3" transition:fade={{ duration: 120 }}>
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <div class="text-xs font-semibold text-slate-300">Filtros</div>
+              <button on:click={resetFilters} class="text-[11px] text-slate-500 hover:text-slate-200">Limpar</button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label class="space-y-1">
+                <span class="text-[10px] uppercase font-bold text-slate-500">Status</span>
+                <select bind:value={filterStatus} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50">
+                  {#each statusFilters as option}
+                    <option value={option.value}>{option.label}</option>
+                  {/each}
+                </select>
+              </label>
+
+              <label class="space-y-1">
+                <span class="text-[10px] uppercase font-bold text-slate-500">Plano</span>
+                <select bind:value={filterPlan} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50">
+                  {#each planFilters as option}
+                    <option value={option.value}>{option.label}</option>
+                  {/each}
+                </select>
+              </label>
+
+              <label class="space-y-1">
+                <span class="text-[10px] uppercase font-bold text-slate-500">Origem</span>
+                <select bind:value={filterProvider} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50">
+                  {#each providerFilters as option}
+                    <option value={option.value}>{option.label}</option>
+                  {/each}
+                </select>
+              </label>
+
+              <label class="space-y-1">
+                <span class="text-[10px] uppercase font-bold text-slate-500">Add-on</span>
+                <select bind:value={filterAddon} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50">
+                  {#each addonFilters as option}
+                    <option value={option.value}>{option.label}</option>
+                  {/each}
+                </select>
+              </label>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-1.5 text-[11px] text-slate-400">
+              <span class="px-2 py-1 rounded-md bg-slate-900 border border-slate-800">Status: {getFilterLabel(statusFilters, filterStatus)}</span>
+              <span class="px-2 py-1 rounded-md bg-slate-900 border border-slate-800">Plano: {getFilterLabel(planFilters, filterPlan)}</span>
+              <span class="px-2 py-1 rounded-md bg-slate-900 border border-slate-800">Origem: {getFilterLabel(providerFilters, filterProvider)}</span>
+              <span class="px-2 py-1 rounded-md bg-slate-900 border border-slate-800">Add-on: {getFilterLabel(addonFilters, filterAddon)}</span>
+            </div>
+          </div>
+        {/if}
       </div>
       
       <button
         on:click={loadSubscriptions}
-        class="flex items-center justify-center shrink-0 w-11 h-11 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
+        class="flex items-center justify-center shrink-0 w-9 h-9 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-slate-300 hover:text-white transition-all focus:outline-none focus:ring-2 focus:ring-slate-700"
         title="Atualizar"
       >
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -798,13 +900,13 @@
       <button
         on:click={exportFinancialPdf}
         disabled={loading || filteredSubscriptions.length === 0}
-        class="flex items-center gap-2 shrink-0 px-4 h-11 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-xl text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+        class="flex items-center justify-center gap-2 shrink-0 px-3 h-9 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-lg text-emerald-400 hover:text-emerald-300 font-medium text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
         title="Exportar relatório financeiro em PDF"
       >
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        Exportar PDF
+        PDF
       </button>
     </div>
   </div>
@@ -825,32 +927,32 @@
     </div>
   {:else}
     <!-- Desktop Table View -->
-    <div class="hidden md:block overflow-hidden bg-slate-900/40 border border-slate-800/60 rounded-2xl shadow-xl backdrop-blur-sm" in:fade>
+    <div class="hidden md:block overflow-hidden bg-slate-900/30 border border-slate-800/60 rounded-lg" in:fade>
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="border-b border-slate-800 bg-slate-900/80">
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</th>
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Plano</th>
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Valor</th>
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Vence em</th>
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Criado em</th>
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Ações Rápidas</th>
+            <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Cliente</th>
+            <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Plano</th>
+            <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Valor</th>
+            <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Status</th>
+            <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Vence</th>
+            <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Criado</th>
+            <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase text-right">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800/50">
           {#each filteredSubscriptions as sub (sub.id)}
             {@const badge = getStatusBadge(sub)}
             {@const daysLeft = getDaysUntilEffectiveExpiry(sub)}
-            {@const isExpiringSoon = sub.status === 'active' && daysLeft <= 7 && daysLeft > 0}
+            {@const isExpiringSoon = ['active', 'trialing'].includes(sub.status) && daysLeft <= 7 && daysLeft > 0}
             {@const isExpired = isSubscriptionExpired(sub)}
             {@const effectiveExpiry = getEffectiveExpiry(sub)}
             {@const onManualExt = hasActiveManualExtension(sub)}
             
             <tr class="group hover:bg-slate-800/30 transition-colors">
-              <td class="py-4 px-6">
-                <div class="flex items-center gap-4">
-                  <div class="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center text-sm font-bold text-white shadow-inner shrink-0">
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
                     {getInitials(sub.empresa_perfil.nome_exibicao)}
                   </div>
                   <div class="min-w-0">
@@ -859,7 +961,7 @@
                   </div>
                 </div>
               </td>
-              <td class="py-4 px-6">
+              <td class="py-3 px-4">
                 <button
                   on:click={() => openPlanModal(sub)}
                   class="inline-flex flex-col items-start gap-0.5 px-2 py-1 rounded-md border border-slate-700/40 hover:border-slate-600 hover:bg-slate-800/40 transition-all text-left"
@@ -879,15 +981,15 @@
                   {/if}
                 </button>
               </td>
-              <td class="py-4 px-6 text-[13px] font-mono text-slate-300">
+              <td class="py-3 px-4 text-xs font-mono text-slate-300">
                 R$ {subscriptionValue(sub).toFixed(2)}
               </td>
-              <td class="py-4 px-6">
+              <td class="py-3 px-4">
                 <span class="inline-flex px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-md border {badge.class}">
                   {badge.text}
                 </span>
               </td>
-              <td class="py-4 px-6 text-[13px]">
+              <td class="py-3 px-4 text-xs">
                 <div class="{isExpired ? 'text-rose-400 font-semibold' : isExpiringSoon ? 'text-amber-400 font-semibold' : 'text-slate-300'} flex items-center gap-1.5">
                   {formatSubscriptionDate(effectiveExpiry)}
                   {#if onManualExt}
@@ -909,10 +1011,10 @@
                   </div>
                 {/if}
               </td>
-              <td class="py-4 px-6 text-[13px] text-slate-400">
+              <td class="py-3 px-4 text-xs text-slate-400">
                 {formatSubscriptionDate(sub.created_at)}
               </td>
-              <td class="py-4 px-6 text-right">
+              <td class="py-3 px-4 text-right">
                 <div class="flex items-center justify-end gap-1.5">
                   
                   <!-- Status Quick Change -->
