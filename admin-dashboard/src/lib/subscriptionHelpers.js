@@ -8,7 +8,7 @@
  * panel should not ask payment providers to decide customer access.
  *
  * Background: the `subscriptions` table has two relevant columns:
- *   - `current_period_end`: paid billing period end (set by Stripe/Asaas
+ *   - `current_period_end`: paid billing period end (set by Stripe
  *     webhooks or trial extension).
  *   - `manually_extended_until`: courtesy extension set by admin via the
  *     "Renovar" flow (see admin_extend_subscription RPC) or by an enterprise

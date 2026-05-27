@@ -1308,11 +1308,6 @@
             <strong class="block">✅ Stripe será sincronizado</strong>
             Salvar vai chamar a API do Stripe pra atualizar o plano/addon. Mudança vale a partir do próximo ciclo (sem proration).
           </div>
-        {:else if selectedSub.payment_provider === 'asaas'}
-          <div class="rounded-lg p-3 bg-amber-500/5 border border-amber-500/30 text-[11px] text-amber-300 leading-relaxed">
-            <strong class="block">⚠️ Mudança apenas no DB</strong>
-            Provedor é Asaas (legado). Valor real cobrado <strong>não será atualizado</strong>. Use só pra correção administrativa.
-          </div>
         {:else}
           <div class="rounded-lg p-3 bg-emerald-500/5 border border-emerald-500/30 text-[11px] text-emerald-300 leading-relaxed">
             ℹ️ Sem provedor — alteração 100% manual. Bom pra trials/cortesias.

@@ -35,7 +35,7 @@ export async function POST({ request }) {
       return json({ success: true, alreadyCanceled: true, message: 'Assinatura já estava cancelada.' });
     }
 
-    // Se tem provider Stripe, cancela lá. Se não tem (manual/Asaas legado), só atualiza DB.
+    // Se tem provider Stripe, cancela lá. Assinaturas sem provedor seguem só com ajuste no DB.
     if (sub.provider_subscription_id && sub.payment_provider === 'stripe') {
       try {
         await stripe.subscriptions.update(sub.provider_subscription_id, {

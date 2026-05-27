@@ -57,7 +57,7 @@ Preço muito abaixo dos concorrentes (R$ 100–200/mês): R$ 59/mês tudo inclus
 - Funciona 100% no navegador (Chrome, Edge) — sem instalar software
 - PWA com suporte offline via IndexedDB (Dexie.js)
 - Backend: SvelteKit + Supabase (PostgreSQL)
-- Pagamento via PIX, Boleto ou Cartão de Crédito (Asaas)
+- Pagamento via PIX, Boleto ou Cartão de Crédito
 - Suporte via WhatsApp em horário comercial
 
 ## Contato

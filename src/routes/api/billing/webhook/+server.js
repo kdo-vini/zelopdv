@@ -1,4 +1,4 @@
-// Stripe webhook handler. Reativado após pivot do Asaas (Apr/2026).
+// Stripe webhook handler.
 //
 // Eventos tratados:
 // - checkout.session.completed: subscription criada via Checkout — popular DB
