@@ -1,6 +1,5 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
-  import { getAuthRedirectUrl } from '$lib/authRedirect';
   export let params;
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import AuthLayout from '$lib/components/AuthLayout.svelte';
@@ -33,27 +32,24 @@
     if (password.length < 8) { errorMessage = 'A senha deve ter pelo menos 8 caracteres.'; return; }
     if (password !== confirm) { errorMessage = 'As senhas não conferem'; return; }
     loading = true;
-    // Redireciona confirmação para a página de login com aviso
-    let redirectTo = '';
-    try { redirectTo = getAuthRedirectUrl('/login?confirmed=1'); } catch {}
     const referral = getStoredReferralAttribution();
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectTo || undefined,
-        data: referral.code ? { referral_code: referral.code } : undefined,
-      }
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        password,
+        referralCode: referral.code || '',
+      }),
     });
+    const payload = await response.json().catch(() => ({}));
     loading = false;
-    if (error) {
-       errorMessage = getFriendlyErrorMessage(error);
-       return;
-    }
-
-    // Se o user já existe, o Supabase pode retornar identities: [] (quando email enumeration protection=true)
-    if (data?.user?.identities && data.user.identities.length === 0) {
-       errorMessage = `Este e-mail já está cadastrado. <a href="/login" class="auth-link font-bold">Clique aqui</a> para fazer login.`;
+    if (!response.ok) {
+       if (payload?.existingUser) {
+         errorMessage = `Este e-mail já está cadastrado. <a href="/login" class="auth-link font-bold">Clique aqui</a> para fazer login.`;
+         return;
+       }
+       errorMessage = getFriendlyErrorMessage(payload?.error || 'Falha ao criar conta.');
        return;
     }
 

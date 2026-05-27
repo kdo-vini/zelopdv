@@ -54,16 +54,19 @@
   async function startReset() {
     loadingRest = true;
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user || !user.email) throw new Error('Email não encontrado.');
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user || null;
+        if (!user || !user.email || !session?.access_token) throw new Error('Email não encontrado.');
         resetEmail = user.email;
 
-        const { error } = await supabase.auth.signInWithOtp({
-            email: resetEmail,
-            options: { shouldCreateUser: false } 
+        const response = await fetch('/api/auth/pin-reset-otp', {
+            method: 'POST',
+            headers: {
+                authorization: `Bearer ${session.access_token}`
+            }
         });
-        
-        if (error) throw error;
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error || 'Falha ao enviar código.');
         
         addToast(`Código enviado para ${resetEmail}`, 'info');
         mode = 'verify';

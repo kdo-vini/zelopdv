@@ -49,26 +49,40 @@
     errorMessage = '';
     try {
       if (!supabase) { throw new Error('Configuração do Supabase ausente.'); }
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        throw error;
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Falha ao fazer login.');
       }
-      if (data?.session) {
-        await logSubUserLogin(data.session, 'login-password');
-        await claimStoredReferral(data.session, 'login-password');
-        addToast('Login realizado com sucesso!', 'success');
-        const waitStableSession = async (tries = 15) => {
-          for (let i = 0; i < tries; i++) {
-            try {
-              const { data: s } = await supabase.auth.getSession();
-              if (s?.session?.user?.id) return true;
-            } catch {}
-            await new Promise(r => setTimeout(r, 150));
-          }
-          return false;
-        };
-        await waitStableSession();
-        window.location.assign('/app');
+      if (payload?.session?.access_token && payload?.session?.refresh_token) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: payload.session.access_token,
+          refresh_token: payload.session.refresh_token,
+        });
+        if (error) {
+          throw error;
+        }
+        if (data?.session) {
+          await logSubUserLogin(data.session, 'login-password');
+          await claimStoredReferral(data.session, 'login-password');
+          addToast('Login realizado com sucesso!', 'success');
+          const waitStableSession = async (tries = 15) => {
+            for (let i = 0; i < tries; i++) {
+              try {
+                const { data: s } = await supabase.auth.getSession();
+                if (s?.session?.user?.id) return true;
+              } catch {}
+              await new Promise(r => setTimeout(r, 150));
+            }
+            return false;
+          };
+          await waitStableSession();
+          window.location.assign('/app');
+        }
       }
     } catch (err) {
       console.error('Login exception:', err);

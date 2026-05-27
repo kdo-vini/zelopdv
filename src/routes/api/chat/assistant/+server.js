@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { buildRateLimitKey, createRateLimitResponse, enforceRateLimit } from '$lib/server/rateLimit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import OpenAI from 'openai';
 
@@ -289,6 +290,17 @@ export async function POST({ request }) {
 
   const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
   if (authErr || !user) return json({ error: 'Não autorizado.' }, { status: 401 });
+
+  const rateLimit = enforceRateLimit({
+    key: buildRateLimitKey('chat', 'assistant', 'user', user.id),
+    logKey: `chat:assistant:user:${user.id}`,
+    route: '/api/chat/assistant',
+    limit: 60,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rateLimit.ok) {
+    return createRateLimitResponse(rateLimit, 'Muitas mensagens. Tente novamente em 1 hora.');
+  }
 
   // Fire-and-forget: track last activity
   supabaseAdmin

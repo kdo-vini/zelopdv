@@ -1,24 +1,8 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { createRateLimitResponse, enforceRateLimit, getRequestIp } from '$lib/server/rateLimit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import OpenAI from 'openai';
-
-// Simple in-memory rate limiter (best-effort in serverless — resets per instance)
-const rateLimitMap = new Map();
-const RATE_LIMIT = 20;
-const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-
-function checkRateLimit(ip) {
-  const now = Date.now();
-  const record = rateLimitMap.get(ip);
-  if (!record || now > record.resetTime) {
-    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_WINDOW_MS });
-    return true;
-  }
-  if (record.count >= RATE_LIMIT) return false;
-  record.count++;
-  return true;
-}
 
 const SYSTEM_PROMPT = `Você é o assistente de suporte do Zelo PDV. Atende tanto visitantes que ainda não conhecem o sistema quanto clientes que já usam e têm uma dúvida sobre como usar alguma funcionalidade. Seu papel é ajudar de verdade — com tutoriais passo a passo, precisos e sem inventar nada — e, quando fizer sentido naturalmente, mencionar que dá pra testar grátis. Sem forçar venda.
 
@@ -348,10 +332,16 @@ export async function POST({ request, getClientAddress }) {
     return json({ error: 'Assistente não configurado.' }, { status: 503 });
   }
 
-  // Rate limit
-  const ip = getClientAddress();
-  if (!checkRateLimit(ip)) {
-    return json({ error: 'Muitas mensagens. Tente novamente em 1 hora.' }, { status: 429 });
+  const ip = getRequestIp({ request, getClientAddress });
+  const rateLimit = enforceRateLimit({
+    key: `chat:support:ip:${ip}`,
+    logKey: `chat:support:ip:${ip}`,
+    route: '/api/chat/support',
+    limit: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rateLimit.ok) {
+    return createRateLimitResponse(rateLimit, 'Muitas mensagens. Tente novamente em 1 hora.');
   }
 
   let body;

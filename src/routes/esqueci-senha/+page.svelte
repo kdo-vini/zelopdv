@@ -1,9 +1,8 @@
 <script>
-  import { supabase } from '$lib/supabaseClient';
-  import { getAuthRedirectUrl } from '$lib/authRedirect';
   export let params;
   import AuthLayout from '$lib/components/AuthLayout.svelte';
   import EmailSentHelper from '$lib/components/EmailSentHelper.svelte';
+  import { getFriendlyErrorMessage } from '$lib/errorUtils';
 
   let email = '';
   let message = '';
@@ -15,11 +14,15 @@
     loading = true;
     message = '';
     errorMessage = '';
-    const redirectTo = getAuthRedirectUrl('/redefinir-senha');
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    const response = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const payload = await response.json().catch(() => ({}));
     loading = false;
-    if (error) errorMessage = error.message;
-    else message = 'Se existir uma conta com este e-mail, enviaremos instruções para redefinir a senha.';
+    if (!response.ok) errorMessage = getFriendlyErrorMessage(payload?.error || 'Falha ao enviar redefinição.');
+    else message = payload?.message || 'Se existir uma conta com este e-mail, enviaremos instruções para redefinir a senha.';
   }
 </script>
 

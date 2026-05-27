@@ -1,68 +1,53 @@
-import { json } from '@sveltejs/kit';
+import { createRateLimitResponse, enforceRateLimit, getRequestIp } from '$lib/server/rateLimit';
 
-/**
- * In-memory rate limiter for API routes.
- * Resets per IP per route every WINDOW_MS milliseconds.
- * On Vercel, each serverless invocation has its own memory — this is a
- * best-effort guard, not a hard distributed limit. For a hard limit use
- * Vercel's built-in rate limiting or an edge KV store.
- */
+const DEFAULT_LIMIT = { limit: 120, windowMs: 60 * 1000 };
 
-const WINDOW_MS = 60 * 1000; // 1 minute
-
-/** Max requests per IP per window for each route prefix */
 const LIMITS = {
-    '/api/billing/webhook':                   200, // high: called by Stripe servers
-    '/api/webhooks/abacatepay':              200,
-    '/api/billing/create-subscription':         5, // low: prevents duplicate/abuse subscription creation
-    '/api/billing/pix/create':                 10,
-    '/api/billing/cancel-subscription':         5,
-    '/api/billing/create-checkout-session':    10,
-    '/api/billing/create-portal-session':      10,
+  '/api/billing/webhook': { limit: 200, windowMs: 60 * 1000 },
+  '/api/webhooks/abacatepay': { limit: 200, windowMs: 60 * 1000 },
+  '/api/billing/create-subscription': { limit: 5, windowMs: 60 * 1000 },
+  '/api/billing/pix/create': { limit: 10, windowMs: 60 * 1000 },
+  '/api/billing/cancel-subscription': { limit: 5, windowMs: 60 * 1000 },
+  '/api/billing/create-checkout-session': { limit: 10, windowMs: 60 * 1000 },
+  '/api/billing/create-portal-session': { limit: 10, windowMs: 60 * 1000 },
+  '/api/auth/login': { limit: 20, windowMs: 10 * 60 * 1000 },
+  '/api/auth/signup': { limit: 10, windowMs: 60 * 60 * 1000 },
+  '/api/auth/reset-password': { limit: 10, windowMs: 60 * 60 * 1000 },
+  '/api/auth/pin-reset-otp': { limit: 10, windowMs: 60 * 60 * 1000 },
+  '/api/chat/support': { limit: 10, windowMs: 60 * 60 * 1000 },
+  '/api/chat/assistant': { limit: 60, windowMs: 60 * 60 * 1000 },
+  '/api/access/users': { limit: 20, windowMs: 60 * 60 * 1000 },
+  '/api/access/roles': { limit: 30, windowMs: 60 * 60 * 1000 },
+  '/api/referrals/claim': { limit: 20, windowMs: 60 * 60 * 1000 },
+  '/api/referrals/code': { limit: 30, windowMs: 60 * 60 * 1000 },
 };
-const DEFAULT_LIMIT = 300;
 
-/** @type {Map<string, { count: number, resetAt: number }>} */
-const store = new Map();
-
-function getLimit(pathname) {
-    for (const [prefix, limit] of Object.entries(LIMITS)) {
-        if (pathname.startsWith(prefix)) return limit;
-    }
-    return DEFAULT_LIMIT;
-}
-
-function cleanup(now) {
-    if (store.size < 5000) return;
-    for (const [key, entry] of store) {
-        if (now > entry.resetAt) store.delete(key);
-    }
+function getLimitConfig(pathname) {
+  for (const [prefix, config] of Object.entries(LIMITS)) {
+    if (pathname.startsWith(prefix)) return config;
+  }
+  return DEFAULT_LIMIT;
 }
 
 /** @type {import('@sveltejs/kit').Handle} */
 export async function handle({ event, resolve }) {
-    if (event.url.pathname.startsWith('/api/')) {
-        const ip = event.getClientAddress();
-        const key = `${ip}:${event.url.pathname}`;
-        const now = Date.now();
-        const limit = getLimit(event.url.pathname);
+  if (event.url.pathname.startsWith('/api/')) {
+    const ip = getRequestIp({
+      request: event.request,
+      getClientAddress: () => event.getClientAddress(),
+    });
+    const config = getLimitConfig(event.url.pathname);
+    const result = enforceRateLimit({
+      key: `route:${event.url.pathname}:ip:${ip}`,
+      logKey: `route:${event.url.pathname}:ip:${ip}`,
+      route: event.url.pathname,
+      ...config,
+    });
 
-        let entry = store.get(key);
-        if (!entry || now > entry.resetAt) {
-            entry = { count: 0, resetAt: now + WINDOW_MS };
-        }
-
-        entry.count++;
-        store.set(key, entry);
-        cleanup(now);
-
-        if (entry.count > limit) {
-            return json(
-                { error: 'Too many requests. Try again in a minute.' },
-                { status: 429, headers: { 'Retry-After': '60' } }
-            );
-        }
+    if (!result.ok) {
+      return createRateLimitResponse(result);
     }
+  }
 
-    return resolve(event);
+  return resolve(event);
 }
