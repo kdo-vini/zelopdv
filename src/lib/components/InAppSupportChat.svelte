@@ -1,123 +1,6 @@
 <script>
   import { isSupportOpen, supportMessages, closeSupport } from '$lib/stores/support';
-  import { marked } from 'marked';
-  import DOMPurify from 'dompurify';
-
-  marked.use({
-    renderer: {
-      link({ href, title, tokens }) {
-        const text = this.parser.parseInline(tokens);
-        const titleAttr = title ? ` title="${title}"` : '';
-        return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
-      }
-    }
-  });
-
-  let input = '';
-  let isStreaming = false;
-  let messagesEl;
-
-  function scrollToBottom() {
-    if (messagesEl) {
-      setTimeout(() => {
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      }, 10);
-    }
-  }
-
-  async function sendMessage() {
-    const content = input.trim();
-    if (!content || isStreaming) return;
-
-    input = '';
-    supportMessages.update(msgs => [
-      ...msgs,
-      { role: 'user', content },
-      { role: 'assistant', content: '' },
-    ]);
-    isStreaming = true;
-    scrollToBottom();
-
-    try {
-      const res = await fetch('/api/chat/support', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: $supportMessages.filter(m => m.content || m.role === 'user') }),
-      });
-
-      if (!res.ok || !res.body) {
-        supportMessages.update(msgs => {
-          const copy = [...msgs];
-          copy[copy.length - 1] = { role: 'assistant', content: 'Erro ao conectar. Tente novamente.' };
-          return copy;
-        });
-        isStreaming = false;
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') { isStreaming = false; break; }
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.error) {
-              supportMessages.update(msgs => {
-                const copy = [...msgs];
-                copy[copy.length - 1] = { role: 'assistant', content: parsed.error };
-                return copy;
-              });
-              isStreaming = false;
-              break;
-            }
-            if (parsed.content) {
-              supportMessages.update(msgs => {
-                const copy = [...msgs];
-                copy[copy.length - 1] = {
-                  ...copy[copy.length - 1],
-                  content: copy[copy.length - 1].content + parsed.content,
-                };
-                return copy;
-              });
-              scrollToBottom();
-            }
-          } catch { /* ignore parse errors */ }
-        }
-      }
-    } catch {
-      supportMessages.update(msgs => {
-        const copy = [...msgs];
-        copy[copy.length - 1] = { role: 'assistant', content: 'Erro de conexão. Tente novamente.' };
-        return copy;
-      });
-    } finally {
-      isStreaming = false;
-      scrollToBottom();
-    }
-  }
-
-  function onKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  }
-
-  function clearMessages() {
-    $supportMessages = [];
-  }
-
-  $: if ($isSupportOpen) scrollToBottom();
+  import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
 </script>
 
 <!-- Mobile backdrop -->
@@ -130,92 +13,106 @@
   ></div>
 {/if}
 
-<!-- Slide-in panel -->
-<div
-  class="support-panel"
-  class:open={$isSupportOpen}
-  role="complementary"
-  aria-label="Suporte Zelo PDV"
-  aria-hidden={!$isSupportOpen}
+<ChatStreamCore
+  messagesStore={supportMessages}
+  active={$isSupportOpen}
+  endpoint="/api/chat/support"
+  placeholder="Como faço para...?"
+  maxLength={1000}
+  let:clearMessages
+  let:input
+  let:isStreaming
+  let:messages
+  let:onKeyDown
+  let:registerMessagesContainer
+  let:renderMarkdown
+  let:sendMessage
+  let:setInput
 >
-  <!-- Header -->
-  <div class="panel-header">
-    <div class="flex items-center gap-2">
-      <div class="panel-avatar">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-        </svg>
+  <div
+    class="support-panel"
+    class:open={$isSupportOpen}
+    role="complementary"
+    aria-label="Suporte Zelo PDV"
+    aria-hidden={!$isSupportOpen}
+  >
+    <div class="panel-header">
+      <div class="flex items-center gap-2">
+        <div class="panel-avatar">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+          </svg>
+        </div>
+        <div>
+          <div class="font-semibold text-sm">Suporte Zelo PDV</div>
+          <div class="text-xs" style="opacity: 0.80;">Tire dúvidas sobre o sistema</div>
+        </div>
       </div>
-      <div>
-        <div class="font-semibold text-sm">Suporte Zelo PDV</div>
-        <div class="text-xs" style="opacity: 0.80;">Tire dúvidas sobre o sistema</div>
+      <div class="flex items-center gap-1">
+        <button on:click={clearMessages} class="icon-btn" title="Limpar conversa" aria-label="Limpar conversa">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+          </svg>
+        </button>
+        <button on:click={closeSupport} class="icon-btn" aria-label="Fechar suporte">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
     </div>
-    <div class="flex items-center gap-1">
-      <button on:click={clearMessages} class="icon-btn" title="Limpar conversa" aria-label="Limpar conversa">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-        </svg>
-      </button>
-      <button on:click={closeSupport} class="icon-btn" aria-label="Fechar suporte">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+
+    <div class="panel-messages" use:registerMessagesContainer>
+      {#if messages.length === 0}
+        <div class="welcome-msg">
+          <p class="font-semibold mb-1">Como posso ajudar? 👋</p>
+          <p class="text-sm" style="opacity: 0.75;">Posso explicar como cadastrar produtos, criar cargos e usuários, usar o módulo de Mesas, Pedidos, Cozinha e muito mais.</p>
+          <p class="text-sm mt-2" style="opacity: 0.65;">Se eu não souber responder, te conecto direto com nossa equipe pelo WhatsApp.</p>
+        </div>
+      {/if}
+
+      {#each messages as msg}
+        <div class="p-msg {msg.role === 'user' ? 'p-user' : 'p-assistant'}">
+          {#if msg.role === 'assistant' && !msg.content && isStreaming}
+            <span class="typing-dots" aria-label="Digitando...">
+              <span></span><span></span><span></span>
+            </span>
+          {:else if msg.role === 'assistant'}
+            <div class="markdown-content">
+              {@html renderMarkdown(msg.content)}
+            </div>
+          {:else}
+            {msg.content}
+          {/if}
+        </div>
+      {/each}
+    </div>
+
+    <div class="panel-input-area">
+      <input
+        type="text"
+        value={input}
+        on:input={(event) => setInput(event.currentTarget.value)}
+        on:keydown={onKeyDown}
+        placeholder="Como faço para...?"
+        disabled={isStreaming}
+        class="panel-input"
+        autocomplete="off"
+        maxlength="1000"
+      />
+      <button
+        on:click={sendMessage}
+        disabled={isStreaming || !input.trim()}
+        class="panel-send-btn"
+        aria-label="Enviar"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+          <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
         </svg>
       </button>
     </div>
   </div>
-
-  <!-- Messages -->
-  <div class="panel-messages" bind:this={messagesEl}>
-    {#if $supportMessages.length === 0}
-      <div class="welcome-msg">
-        <p class="font-semibold mb-1">Como posso ajudar? 👋</p>
-        <p class="text-sm" style="opacity: 0.75;">Posso explicar como cadastrar produtos, criar cargos e usuários, usar o módulo de Mesas, Pedidos, Cozinha e muito mais.</p>
-        <p class="text-sm mt-2" style="opacity: 0.65;">Se eu não souber responder, te conecto direto com nossa equipe pelo WhatsApp.</p>
-      </div>
-    {/if}
-
-    {#each $supportMessages as msg}
-      <div class="p-msg {msg.role === 'user' ? 'p-user' : 'p-assistant'}">
-        {#if msg.role === 'assistant' && !msg.content && isStreaming}
-          <span class="typing-dots" aria-label="Digitando...">
-            <span></span><span></span><span></span>
-          </span>
-        {:else if msg.role === 'assistant'}
-          <div class="markdown-content">
-            {@html DOMPurify.sanitize(marked.parse(msg.content))}
-          </div>
-        {:else}
-          {msg.content}
-        {/if}
-      </div>
-    {/each}
-  </div>
-
-  <!-- Input -->
-  <div class="panel-input-area">
-    <input
-      type="text"
-      bind:value={input}
-      on:keydown={onKeyDown}
-      placeholder="Como faço para...?"
-      disabled={isStreaming}
-      class="panel-input"
-      autocomplete="off"
-      maxlength="1000"
-    />
-    <button
-      on:click={sendMessage}
-      disabled={isStreaming || !input.trim()}
-      class="panel-send-btn"
-      aria-label="Enviar"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
-        <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-      </svg>
-    </button>
-  </div>
-</div>
+</ChatStreamCore>
 
 <style>
   .support-panel {

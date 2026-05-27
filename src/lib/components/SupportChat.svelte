@@ -1,189 +1,106 @@
 <script>
-  import { marked } from 'marked';
-  import DOMPurify from 'dompurify';
+  import { writable } from 'svelte/store';
+  import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
 
-  // Open links in new tab and style them as safe external links
-  marked.use({
-    renderer: {
-      link({ href, title, tokens }) {
-        const text = this.parser.parseInline(tokens);
-        const titleAttr = title ? ` title="${title}"` : '';
-        return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
-      }
-    }
-  });
   const WHATSAPP_URL =
     'https://wa.me/5514991537503?text=Ol%C3%A1%2C%20vim%20pelo%20site%20do%20Zelo%20PDV%20e%20gostaria%20de%20saber%20mais.';
 
   let isOpen = false;
-  let messages = [];
-  let input = '';
-  let isStreaming = false;
-  let messagesEl;
+  const messagesStore = writable([]);
 
   function toggleChat() {
     isOpen = !isOpen;
-  }
-
-  function scrollToBottom() {
-    if (messagesEl) {
-      setTimeout(() => {
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      }, 10);
-    }
-  }
-
-  async function sendMessage() {
-    const content = input.trim();
-    if (!content || isStreaming) return;
-
-    input = '';
-    messages = [...messages, { role: 'user', content }];
-    messages = [...messages, { role: 'assistant', content: '' }];
-    const idx = messages.length - 1;
-    isStreaming = true;
-    scrollToBottom();
-
-    try {
-      const response = await fetch('/api/chat/support', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: messages.slice(0, -1).slice(-12),
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        messages[idx] = { ...messages[idx], content: err.error || 'Erro ao conectar. Tente novamente.' };
-        messages = messages;
-        return;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6);
-          if (data === '[DONE]') break;
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.content) {
-              messages[idx] = { ...messages[idx], content: messages[idx].content + parsed.content };
-              messages = messages;
-              scrollToBottom();
-            }
-            if (parsed.error) {
-              messages[idx] = { ...messages[idx], content: parsed.error };
-              messages = messages;
-            }
-          } catch {
-            // ignore parse errors on incomplete chunks
-          }
-        }
-      }
-    } catch {
-      messages[idx] = { ...messages[idx], content: 'Erro de conexão. Tente novamente.' };
-      messages = messages;
-    } finally {
-      isStreaming = false;
-      scrollToBottom();
-    }
-  }
-
-  function onKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
   }
 </script>
 
 <div class="support-chat-container" role="complementary" aria-label="Chat de suporte">
   {#if isOpen}
-    <div class="chat-window" role="dialog" aria-modal="true" aria-label="Suporte Zelo PDV">
-      <!-- Header -->
-      <div class="chat-header">
-        <div class="flex items-center gap-2">
-          <div class="avatar">Z</div>
-          <div>
-            <div class="font-semibold text-sm">Suporte Zelo PDV</div>
-            <div class="text-xs" style="opacity: 0.75;">Assistente IA</div>
+    <ChatStreamCore
+      messagesStore={messagesStore}
+      active={isOpen}
+      endpoint="/api/chat/support"
+      placeholder="Digite sua dúvida..."
+      maxLength={500}
+      let:messages
+      let:input
+      let:isStreaming
+      let:onKeyDown
+      let:registerMessagesContainer
+      let:renderMarkdown
+      let:sendMessage
+      let:setInput
+    >
+      <div class="chat-window" role="dialog" aria-modal="true" aria-label="Suporte Zelo PDV">
+        <div class="chat-header">
+          <div class="flex items-center gap-2">
+            <div class="avatar">Z</div>
+            <div>
+              <div class="font-semibold text-sm">Suporte Zelo PDV</div>
+              <div class="text-xs" style="opacity: 0.75;">Assistente IA</div>
+            </div>
           </div>
+          <button on:click={toggleChat} class="close-btn" aria-label="Fechar chat">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-        <button on:click={toggleChat} class="close-btn" aria-label="Fechar chat">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
 
-      <!-- Messages -->
-      <div class="chat-messages" bind:this={messagesEl}>
-        {#if messages.length === 0}
-          <div class="welcome-message">
-            <p>Olá! 👋 Sou o assistente de suporte do Zelo PDV.</p>
-            <p class="text-xs mt-2" style="opacity: 0.65;">Como posso te ajudar hoje? Pergunte sobre funcionalidades, o trial de 30 dias grátis ou como começar.</p>
-          </div>
-        {/if}
+        <div class="chat-messages" use:registerMessagesContainer>
+          {#if messages.length === 0}
+            <div class="welcome-message">
+              <p>Olá! 👋 Sou o assistente de suporte do Zelo PDV.</p>
+              <p class="text-xs mt-2" style="opacity: 0.65;">Como posso te ajudar hoje? Pergunte sobre funcionalidades, o trial de 30 dias grátis ou como começar.</p>
+            </div>
+          {/if}
 
-        {#each messages as msg}
-          <div class="message {msg.role === 'user' ? 'user-msg' : 'assistant-msg'}">
-            {#if msg.role === 'assistant' && !msg.content && isStreaming}
-              <span class="typing-indicator" aria-label="Digitando...">
-                <span></span><span></span><span></span>
-              </span>
-            {:else if msg.role === 'assistant'}
-              <div class="markdown-content">
-                {@html DOMPurify.sanitize(marked.parse(msg.content))}
-              </div>
-            {:else}
-              {msg.content}
-            {/if}
-          </div>
-        {/each}
-      </div>
+          {#each messages as msg}
+            <div class="message {msg.role === 'user' ? 'user-msg' : 'assistant-msg'}">
+              {#if msg.role === 'assistant' && !msg.content && isStreaming}
+                <span class="typing-indicator" aria-label="Digitando...">
+                  <span></span><span></span><span></span>
+                </span>
+              {:else if msg.role === 'assistant'}
+                <div class="markdown-content">
+                  {@html renderMarkdown(msg.content)}
+                </div>
+              {:else}
+                {msg.content}
+              {/if}
+            </div>
+          {/each}
+        </div>
 
-      <!-- Disclaimer -->
-      <div class="disclaimer">
-        Não encontrou o que precisava?
-        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" class="whatsapp-link">Falar com a equipe →</a>
-      </div>
+        <div class="disclaimer">
+          Não encontrou o que precisava?
+          <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" class="whatsapp-link">Falar com a equipe →</a>
+        </div>
 
-      <!-- Input -->
-      <div class="chat-input-area">
-        <input
-          type="text"
-          bind:value={input}
-          on:keydown={onKeyDown}
-          placeholder="Digite sua dúvida..."
-          disabled={isStreaming}
-          class="chat-input"
-          autocomplete="off"
-          maxlength="500"
-        />
-        <button
-          on:click={sendMessage}
-          disabled={isStreaming || !input.trim()}
-          class="send-btn"
-          aria-label="Enviar mensagem"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
-            <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-          </svg>
-        </button>
+        <div class="chat-input-area">
+          <input
+            type="text"
+            value={input}
+            on:input={(event) => setInput(event.currentTarget.value)}
+            on:keydown={onKeyDown}
+            placeholder="Digite sua dúvida..."
+            disabled={isStreaming}
+            class="chat-input"
+            autocomplete="off"
+            maxlength="500"
+          />
+          <button
+            on:click={sendMessage}
+            disabled={isStreaming || !input.trim()}
+            class="send-btn"
+            aria-label="Enviar mensagem"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+              <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+            </svg>
+          </button>
+        </div>
       </div>
-    </div>
+    </ChatStreamCore>
   {/if}
 
   <!-- Floating toggle button -->
