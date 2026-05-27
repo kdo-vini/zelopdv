@@ -8,6 +8,8 @@ Origem do plano: análise completa em conversa com Claude (2026-05-27). Cada ite
 
 ## PR 6 — Adicionar svelte-check + lint no app principal
 
+**Status**: parcialmente aplicado no commit `add0805`. `npm run check` já existe e roda, mas ainda há warnings a tratar.
+
 **Por quê**: hoje só o `admin-dashboard/` tem `npm run check`. O app principal não tem verificação estática — qualquer regressão de tipos/imports só aparece em runtime ou em PR review humano.
 
 **O que fazer**:
@@ -27,6 +29,8 @@ Origem do plano: análise completa em conversa com Claude (2026-05-27). Cada ite
 ---
 
 ## PR 7 — DRY do chat: extrair ChatStreamCore
+
+**Status**: aplicado.
 
 **Por quê**: `src/lib/components/SupportChat.svelte` (489 L) e `src/lib/components/InAppSupportChat.svelte` (432 L) duplicam todo o miolo de stream SSE → marked → DOMPurify → render. Diferenças são apenas: SupportChat tem estado local + toggle/botão flutuante; InAppSupportChat lê/escreve em `$lib/stores/support`.
 
@@ -52,33 +56,21 @@ Origem do plano: análise completa em conversa com Claude (2026-05-27). Cada ite
 
 ---
 
-## PR 8 — Decidir futuro do gateway Asaas (cloudflare-worker + branch legado)
+## PR 8 — Remover gateway legado (cloudflare-worker + branch antigo)
 
-**Contexto**: O comentário em `src/routes/api/billing/webhook/+server.js:1` diz "Stripe webhook handler. Reativado após pivot do Asaas (Apr/2026)". Existem ainda:
-- `cloudflare-worker/asaas-proxy.js` — proxy Cloudflare Workers para API Asaas. Zero referências no repo.
-- `src/routes/api/billing/cancel-subscription/+server.js:38` — branch "manual/Asaas legado".
-- `admin-dashboard/src/routes/subscriptions/+page.svelte:1311` — UI mostra label "Asaas (legado)" quando `payment_provider === 'asaas'`.
-- `admin-dashboard/src/lib/subscriptionHelpers.js:11` — JSDoc menciona Stripe/Asaas.
+**Status**: aplicado após decisão de produto. O gateway legado foi removido do código ativo.
 
-**Perguntas a responder com produto/cofundador**:
-1. Existe alguma `subscriptions.payment_provider = 'asaas'` ainda ativa no DB?
-2. O worker `cloudflare-worker/asaas-proxy.js` ainda está deployado na Cloudflare?
-3. Se sim para (1): migrar essas assinaturas pra Stripe ou cancelar.
-4. Se não para (1) e (2): remover tudo.
-
-**O que fazer (se decisão for "pode remover")**:
-1. Remover pasta `cloudflare-worker/` completa.
-2. Em `cancel-subscription/+server.js`, simplificar removendo branch Asaas.
-3. Em `admin-dashboard/src/routes/subscriptions/+page.svelte`, remover bloco `{:else if selectedSub.payment_provider === 'asaas'}`.
-4. Em `admin-dashboard/src/lib/subscriptionHelpers.js`, ajustar JSDoc.
-
-**Validação**: testar cancelamento de assinatura Stripe ativa.
-
-**Tamanho**: 30 min após decisão; horas se precisar migrar dados.
+**Resultado**:
+1. Pasta `cloudflare-worker/` removida.
+2. Referências legadas removidas do app principal e do admin.
+3. Texto público e comentários internos alinhados ao billing atual.
+4. Build principal, build do admin e testes passaram após a limpeza.
 
 ---
 
 ## PR 9 — Investigar agendamento de `/api/cron/nudge-incomplete-registration`
+
+**Status**: aplicado. O cron foi adicionado ao `vercel.json`.
 
 **Contexto**: `vercel.json` só agenda `/api/cron/onboarding-emails`. A rota `/api/cron/nudge-incomplete-registration/+server.js` existe e tem lógica de envio de email + log. Mas não há gatilho documentado.
 
@@ -98,29 +90,9 @@ Origem do plano: análise completa em conversa com Claude (2026-05-27). Cada ite
 
 ---
 
-## PR 10 — Substituir @iconify/* por SVG inline (2 deps p/ 2 ícones)
-
-**Contexto**: `@iconify/svelte` e `@iconify/icons-simple-icons` são usados SOMENTE em `src/routes/assinatura/+page.svelte` para 1 ícone cada:
-- `OfflineIcon` de `@iconify/svelte/dist/OfflineIcon.svelte`
-- `pixIconData` de `@iconify/icons-simple-icons/pix`
-
-**O que fazer**:
-1. Criar `src/lib/icons/PixIcon.svelte` com o SVG do PIX inline (pegar de simple-icons GitHub).
-2. Criar `src/lib/icons/OfflineIcon.svelte` com SVG equivalente.
-3. Atualizar `assinatura/+page.svelte` pra usar os componentes locais.
-4. `npm uninstall @iconify/svelte @iconify/icons-simple-icons`.
-
-**Validação**:
-- Build (admin-dashboard não usa essas deps, só o app principal).
-- QA: abrir `/assinatura`, conferir que ambos ícones aparecem.
-
-**Ganho**: tamanho do node_modules + uma dependência runtime a menos no bundle.
-
-**Tamanho**: 1h.
-
----
-
 ## PR 11+ — Decomposição gradual dos arquivos gigantes
+
+**Status**: adiado por enquanto. Não atacar nesta rodada.
 
 Não é um PR só — são vários incrementais, com QA manual entre eles. NUNCA fazer "big bang".
 

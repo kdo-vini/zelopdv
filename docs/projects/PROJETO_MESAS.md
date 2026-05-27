@@ -13,11 +13,11 @@
 - Add-on Mesas: **+R$ 30/mês**
 - Total com add-on: **R$ 89/mês**
 
-**Stack**: SvelteKit 5 (SSR/SPA hybrid) + Supabase (Postgres + Auth + RLS) + Asaas (PIX/Boleto/Cartão).
+**Stack**: SvelteKit 5 (SSR/SPA hybrid) + Supabase (Postgres + Auth + RLS) + Stripe para assinatura + AbacatePay para PIX transparente.
 
 **Persona MVP**: caixa/dono no balcão. Garçom anota em papel (externo ao sistema). Foco: lanchoneterias e bares pequenos.
 
-**Spec original**: [`mesas.md`](mesas.md) (raiz do repo).
+**Spec original**: [mesas-initial-plan.md](../archive/mesas-initial-plan.md) (arquivo historico).
 
 ---
 
@@ -35,7 +35,6 @@
 ### Sprint 1 — Fundações ✅
 - [✅] Schema SQL pronto em `.ai/migrations/mesas_module.sql`
 - [✅] **Migração aplicada em produção** (project `xnnjyrblpvsqrtsshawa`, 2026-04-27)
-- [✅] `updateSubscriptionValue()` em `src/lib/server/asaas.js`
 - [✅] `create-subscription` aceita `addons: { mesas: bool }` e calcula `value = 59 + (mesas ? 30 : 0)`
 - [✅] Endpoint `POST /api/billing/toggle-addon` (ativa/desativa add-on em assinatura existente)
 - [✅] `hasMesasAddon(userId)` em `src/lib/guards.js`
@@ -107,10 +106,9 @@ Arquivo: [`.ai/migrations/mesas_module.sql`](.ai/migrations/mesas_module.sql)
 
 | Arquivo | Propósito | Status | Última edição |
 |---|---|---|---|
-| `mesas.md` | Spec original (não editar) | locked | 2026-04-27 |
-| `PROJETO_MESAS.md` | Este doc (handoff) | living | 2026-04-27 |
+| `docs/archive/mesas-initial-plan.md` | Spec original (não editar) | locked | 2026-04-27 |
+| `docs/projects/PROJETO_MESAS.md` | Este doc (handoff) | living | 2026-04-27 |
 | `.ai/migrations/mesas_module.sql` | Schema | pronto, não aplicado | 2026-04-27 |
-| `src/lib/server/asaas.js` | + `updateSubscriptionValue()` | aplicado | 2026-04-27 |
 | `src/routes/api/billing/create-subscription/+server.js` | aceita `addons` | aplicado | 2026-04-27 |
 | `src/routes/api/billing/toggle-addon/+server.js` | endpoint toggle | criado | 2026-04-27 |
 | `src/lib/guards.js` | + `hasMesasAddon()` | aplicado | 2026-04-27 |
@@ -134,14 +132,14 @@ Arquivo: [`.ai/migrations/mesas_module.sql`](.ai/migrations/mesas_module.sql)
 - **Alternativa considerada**: tabela `subscription_addons (id, sub_id, addon_key, enabled, ...)`.
 - **Rationale**: MVP só tem 1 add-on; simplicidade > flexibilidade. Reavaliar quando 2º add-on chegar.
 
-### 2026-04-27 — Asaas: `POST /v3/subscriptions/{id}` para atualizar valor
-- **Decisão**: usar `updateSubscriptionValue(subscriptionId, newValue)` para toggle.
-- **Alternativa considerada**: cancelar + recriar.
-- **Rationale**: cancelar+recriar resetaria `nextDueDate` e poderia bagunçar o trial. Asaas suporta update de valor in-place; o pro-rata não acontece (próximo ciclo já vem com novo valor) — ok pra MVP.
+### 2026-04-27 — Stripe: add-ons modelados como `subscription_items`
+- **Decisão**: cada add-on vira um item separado na assinatura Stripe.
+- **Alternativa considerada**: recalcular um único price fixo por combinação de plano + add-ons.
+- **Rationale**: reduz explosão de preços cadastrados no Stripe, permite toggles independentes e mantém o modelo alinhado ao `buildStripeLineItems()`.
 
-### 2026-04-27 — Toggle não passa `nextDueDate`
-- **Decisão**: chamar `updateSubscriptionValue` sem `nextDueDate`.
-- **Rationale**: preserva a data de vencimento atual (e o trial ativo). Asaas só ajusta o valor da próxima fatura.
+### 2026-04-27 — Toggle com proration no Stripe
+- **Decisão**: `toggle-addon` usa `proration_behavior: 'create_prorations'`.
+- **Rationale**: a cobrança ou crédito proporcional acontece no ciclo atual, com feedback imediato para o assinante. O DB também é atualizado sincronicamente para a UX não depender do webhook.
 
 ### 2026-04-27 — Tipos de FK: `id_produto integer`, `id_venda bigint`
 - **Decisão**: `comanda_itens.id_produto` é `integer`, `comandas.id_venda` é `bigint`.
@@ -213,7 +211,7 @@ Arquivo: [`.ai/migrations/mesas_module.sql`](.ai/migrations/mesas_module.sql)
 
 **Files**:
 - `.ai/migrations/mesas_module.sql` (atualizado: tipos de FK corrigidos)
-- `PROJETO_MESAS.md` (atualizado: status, gotcha de tipos, log de decisão)
+- `docs/projects/PROJETO_MESAS.md` (atualizado: status, gotcha de tipos, log de decisão)
 
 **Tabelas criadas em produção** (`xnnjyrblpvsqrtsshawa`):
 - `mesas` (RLS habilitada, policy `mesas_owner`)
@@ -223,7 +221,7 @@ Arquivo: [`.ai/migrations/mesas_module.sql`](.ai/migrations/mesas_module.sql)
 
 **Verification**: confirmado via `information_schema` + `pg_policies` — 3 tabelas, 3 policies, RLS=true em todas.
 
-**Gotcha encontrado**: primeira tentativa falhou com `cannot be implemented: Key columns "id_venda" and "id" are of incompatible types: uuid and bigint`. Causa: assumi `uuid` para todas as FKs, mas `produtos.id=integer` e `vendas.id=bigint`. Schema do `mesas.md` original estava errado nesse ponto. Corrigido e re-aplicado com sucesso.
+**Gotcha encontrado**: primeira tentativa falhou com `cannot be implemented: Key columns "id_venda" and "id" are of incompatible types: uuid and bigint`. Causa: assumi `uuid` para todas as FKs, mas `produtos.id=integer` e `vendas.id=bigint`. Schema do plano inicial de Mesas estava errado nesse ponto. Corrigido e re-aplicado com sucesso.
 
 **Commit (doc update)**: pendente
 
@@ -233,12 +231,11 @@ Arquivo: [`.ai/migrations/mesas_module.sql`](.ai/migrations/mesas_module.sql)
 
 **Files**:
 - `.ai/migrations/mesas_module.sql` (novo)
-- `src/lib/server/asaas.js` (modificado: + `updateSubscriptionValue`)
 - `src/routes/api/billing/create-subscription/+server.js` (modificado: aceita `addons`, `value` agora dinâmico, persiste `has_mesas_addon`)
 - `src/routes/api/billing/toggle-addon/+server.js` (novo)
 - `src/lib/guards.js` (modificado: + `hasMesasAddon`)
 - `src/routes/assinatura/+page.svelte` (modificado: checkbox em formulários novos + toggle card em assinante ativo + total dinâmico)
-- `PROJETO_MESAS.md` (novo)
+- `docs/projects/PROJETO_MESAS.md` (novo)
 
 **Tabelas a criar** (após aplicação da migração):
 - `mesas`, `comandas`, `comanda_itens`
@@ -300,18 +297,16 @@ SELECT count(*) FROM mesas;  -- deve ver só as do user B (zero se A criou e B n
 
 ## 10. Gotchas e pitfalls conhecidos
 
-1. **Asaas não pro-rata**: toggle no meio do ciclo só vale para o **próximo** pagamento. A cobrança em andamento permanece com o valor antigo.
-2. **Asaas não emite evento `SUBSCRIPTION_UPDATED`**: nenhum webhook dispara quando se chama `POST /v3/subscriptions/{id}`. Reconciliação acontece no próximo `PAYMENT_RECEIVED` (que vem com o novo `value`).
-3. **`subscriptions` tem RLS desabilitada**: leituras client-side funcionam (RLS não bloqueia), mas escritas só via service role. O endpoint `toggle-addon` usa `supabaseAdmin`.
-4. **`id_usuario` vs `user_id`**: tabelas de domínio (`mesas`, `comandas`, `comanda_itens`) usam `id_usuario`. Tabela de billing (`subscriptions`) usa `user_id`. Não trocar.
-5. **CC ainda usa endpoint legado Stripe**: `/api/billing/create-checkout-session` (Stripe) recebe `addons` no body mas pode ignorar — verificar quando CC migrar pra Asaas. PIX já passa pelo fluxo Asaas correto.
-6. **Trial não pode ser resetado**: `toggle-addon` chama `updateSubscriptionValue` SEM passar `nextDueDate`, preservando a data atual.
-7. **Svelte não interpola `{}` em `<script type="application/ld+json">`**: usar `{@html}` (ver CLAUDE.md, seção SEO).
-8. **Tema**: nunca hardcoded `#hex` em components — usar CSS variables (`var(--primary)`, etc.).
-9. **PIX está em manutenção** na UI atual (`disabled` no radio). Quando reativar, addon deve continuar funcionando.
-10. **`produtos.id = integer`, `vendas.id = bigint`** — não são UUIDs. Qualquer nova FK que aponte pra essas tabelas precisa do tipo certo. `comanda_itens.id_produto` é `integer`; `comandas.id_venda` é `bigint`.
-11. **`vendas_itens.quantidade = integer`**, mas `comanda_itens.quantidade = numeric(10,3)`. Ao fechar uma mesa, arredondamos com `Math.round` (mín. 1). Se o negócio precisar registrar fração na venda final, precisará migration `ALTER TABLE vendas_itens ALTER COLUMN quantidade TYPE numeric(10,3)`.
-12. **`numero_venda` em `vendas`** é gerado pelo DB (sequence ou trigger). NUNCA passar manualmente no insert.
+1. **`toggle-addon` no Stripe usa proration**: a alteração pode gerar cobrança ou crédito proporcional no ciclo atual.
+2. **`subscriptions` tem RLS desabilitada**: leituras client-side funcionam (RLS não bloqueia), mas escritas só via service role. O endpoint `toggle-addon` usa `supabaseAdmin`.
+3. **`id_usuario` vs `user_id`**: tabelas de domínio (`mesas`, `comandas`, `comanda_itens`) usam `id_usuario`. Tabela de billing (`subscriptions`) usa `user_id`. Não trocar.
+4. **Endpoint legado**: `/api/billing/create-checkout-session` está descontinuado. O fluxo suportado é `/api/billing/create-subscription`.
+5. **Svelte não interpola `{}` em `<script type="application/ld+json">`**: usar `{@html}` (ver CLAUDE.md, seção SEO).
+6. **Tema**: nunca hardcoded `#hex` em components — usar CSS variables (`var(--primary)`, etc.).
+7. **PIX do checkout principal depende de flag**: `create-subscription` só expõe `pix` no Stripe se `BILLING_PIX_ENABLED=true`.
+8. **`produtos.id = integer`, `vendas.id = bigint`** — não são UUIDs. Qualquer nova FK que aponte pra essas tabelas precisa do tipo certo. `comanda_itens.id_produto` é `integer`; `comandas.id_venda` é `bigint`.
+9. **`vendas_itens.quantidade = integer`**, mas `comanda_itens.quantidade = numeric(10,3)`. Ao fechar uma mesa, arredondamos com `Math.round` (mín. 1). Se o negócio precisar registrar fração na venda final, precisará migration `ALTER TABLE vendas_itens ALTER COLUMN quantidade TYPE numeric(10,3)`.
+10. **`numero_venda` em `vendas`** é gerado pelo DB (sequence ou trigger). NUNCA passar manualmente no insert.
 
 ---
 
@@ -320,21 +315,20 @@ SELECT count(*) FROM mesas;  -- deve ver só as do user B (zero se A criou e B n
 | Risco | Severidade | Mitigação |
 |---|---|---|
 | Migração não aplicada → endpoints quebram em produção | ~~alto~~ ✅ resolvido | Aplicada em 2026-04-27. |
-| Asaas API muda contrato de update de subscription | médio | Função isolada em `asaas.js` — fácil ajustar. |
+| Mudança futura na modelagem de preços/add-ons no Stripe | médio | `buildStripeLineItems()` e `toggle-addon` concentram a lógica de billing. |
 | Cliente ativa addon mas não tem mesas configuradas → UX confusa no Sprint 2 | médio | Empty state em `/gestao/mesas` com CTA "criar primeira mesa". |
-| Webhook reconciliation atrasa (PAYMENT_RECEIVED só dispara mensalmente) → DB pode ficar dessincronizado se update de Asaas falhar silenciosamente | baixo | Endpoint `toggle-addon` faz rollback se DB falhar. Logs vão pra console. |
+| Divergência entre update síncrono do DB e webhook Stripe em caso de falha parcial | baixo | Endpoint `toggle-addon` atualiza DB para UX imediata; webhook de `customer.subscription.updated` reconcilia estado. |
 
 ---
 
 ## 12. TODOs deferidos
 
 - [x] ~~Aplicar migração em produção~~ ✅ feito 2026-04-27
-- [ ] Migrar fluxo CC para Asaas (atualmente vai pro endpoint legado Stripe)
+- [ ] Revisar UX entre checkout Stripe e PIX transparente para manter jornada de billing consistente
 - [ ] Adicionar telemetria: quantos % dos assinantes ativam o add-on?
 - [ ] Atualizar `/precificacao` com pricing do add-on
 - [ ] Atualizar `/termos` mencionando que o add-on não é pro-rata
 - [ ] Considerar tabela `subscription_addons` quando 2º add-on chegar
-- [ ] Verificar se Asaas suporta ajuste de `nextDueDate` em sandbox sem efeitos colaterais (testar antes de Sprint 2)
 - [ ] Decidir: ao desativar add-on, o que acontece com mesas/comandas existentes? (esconder UI vs deletar dados — tendência: esconder, manter dados pro caso de re-ativar)
 
 ---

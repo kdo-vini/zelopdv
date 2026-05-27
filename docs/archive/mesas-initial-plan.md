@@ -1,5 +1,7 @@
 # Plano — Módulo Mesas: Gerenciamento de Projeto + Implementação MVP
 
+> Arquivo historico. Este plano originou o tracker vivo em [../projects/PROJETO_MESAS.md](../projects/PROJETO_MESAS.md).
+
 ## Contexto
 
 Cliente solicitou módulo de mesas estilo bar. Após dois rounds de refino:
@@ -16,7 +18,7 @@ Cliente solicitou módulo de mesas estilo bar. Após dois rounds de refino:
 
 ## Entregáveis (após ExitPlanMode aprovado)
 
-### 1. Criar `PROJETO_MESAS.md` no root do projeto
+### 1. Criar `PROJETO_MESAS.md` como tracker vivo do projeto
 
 **Princípio crítico**: documento de **HANDOFF stateful**. Qualquer agente (Claude, outra IA, outra conta) deve poder continuar do zero só lendo esse arquivo. Os tokens podem acabar a qualquer momento.
 
@@ -25,7 +27,7 @@ Cliente solicitou módulo de mesas estilo bar. Após dois rounds de refino:
 1. **Contexto geral**
    - Objetivo do módulo (1 parágrafo)
    - Pricing definitivo: R$30 add-on, R$89 total
-   - Stack técnica relevante (SvelteKit 5, Supabase, Asaas)
+   - Stack técnica relevante (SvelteKit 5, Supabase, Stripe)
    - Persona alvo: caixa/dono no balcão
 
 2. **Status atual do projeto** (atualizado a cada commit)
@@ -79,10 +81,9 @@ a) **Migração SQL** em `.ai/migrations/mesas_module.sql`:
    - Índices críticos
    - Aplicar via Supabase MCP (`mcp__b66dc66d-...__apply_migration`)
 
-b) **Backend billing** — parametrizar Asaas:
-   - `src/lib/server/asaas.js`: aceitar `value` dinâmico em `createSubscription`
-   - `src/routes/api/billing/create-subscription/+server.js`: aceitar payload `{ addons: { mesas: true } }` e calcular `value = 59 + (addons.mesas ? 30 : 0)`
-   - Novo endpoint `src/routes/api/billing/toggle-addon/+server.js`: ativar/desativar add-on em assinatura existente (atualiza valor no Asaas + flag no DB)
+b) **Backend billing** — integrar com Stripe:
+   - `src/routes/api/billing/create-subscription/+server.js`: aceitar payload `{ addons: { mesas: true } }` e montar `line_items` com o add-on
+   - Novo endpoint `src/routes/api/billing/toggle-addon/+server.js`: ativar/desativar add-on em assinatura existente via `subscription_items` no Stripe + flag no DB
 
 c) **Gate de feature**:
    - `src/lib/guards.js`: nova função `hasMesasAddon(userId)` que consulta `subscriptions.has_mesas_addon`
@@ -179,12 +180,11 @@ CREATE POLICY comanda_itens_owner ON comanda_itens FOR ALL
 ## Arquivos a criar/modificar no Sprint 1
 
 **Criar**:
-- `PROJETO_MESAS.md` (root) — gerenciamento de projeto
+- `docs/projects/PROJETO_MESAS.md` — gerenciamento de projeto
 - `.ai/migrations/mesas_module.sql` — migração SQL
 - `src/routes/api/billing/toggle-addon/+server.js` — endpoint de toggle do add-on
 
 **Modificar**:
-- `src/lib/server/asaas.js:126` — parametrizar `value` em `createSubscription`
 - `src/routes/api/billing/create-subscription/+server.js` — aceitar `addons` no payload
 - `src/lib/guards.js` — adicionar `hasMesasAddon(userId)`
 - `src/routes/assinatura/+page.svelte` — UI do toggle de add-on
@@ -196,19 +196,19 @@ CREATE POLICY comanda_itens_owner ON comanda_itens FOR ALL
 Vou precisar:
 - Aplicar migração SQL via Supabase MCP
 - Criar arquivos novos (migration, endpoint, doc)
-- Editar arquivos existentes (asaas.js, guards.js, assinatura/+page.svelte, etc.)
+- Editar arquivos existentes (billing, guards.js, assinatura/+page.svelte, etc.)
 - Rodar `npm run build` pra validar
 - Commits no git pra registrar progresso (cada item significativo do checklist = 1 commit)
 
 ## Protocolo de handoff (importante — tokens podem acabar)
 
 Após CADA item concluído do checklist:
-1. Atualizar `PROJETO_MESAS.md` (status + changelog detalhado)
+1. Atualizar `docs/projects/PROJETO_MESAS.md` (status + changelog detalhado)
 2. Commit com mensagem clara referenciando o item
 3. Listar próximo item explicitamente no doc
 
 Assim qualquer agente que assumir consegue:
-- Ler `PROJETO_MESAS.md` → entender estado atual
+- Ler `docs/projects/PROJETO_MESAS.md` → entender estado atual
 - Olhar último commit → saber o que foi feito
 - Pegar próxima tarefa do checklist → continuar
 
@@ -218,7 +218,7 @@ Quando o sprint 1 estiver feito:
 
 1. **DB**: Tabelas `mesas`, `comandas`, `comanda_itens` existem em produção. `subscriptions.has_mesas_addon` existe.
 2. **RLS**: Policies aplicadas e testadas (user A não vê mesas do user B).
-3. **Billing**: Toggle do add-on em `/assinatura` aumenta/diminui valor da assinatura no Asaas.
+3. **Billing**: Toggle do add-on em `/assinatura` adiciona/remove o item de add-on na assinatura Stripe.
 4. **Webhook**: Próximo `PAYMENT_RECEIVED` cobra R$89 (se add-on ativo) ou R$59 (sem add-on).
 5. **Gate**: `hasMesasAddon(userId)` retorna `true`/`false` corretamente. Rotas futuras `/app/mesas` poderão usar o gate.
 6. **Build**: `npm run build` passa sem erro.
