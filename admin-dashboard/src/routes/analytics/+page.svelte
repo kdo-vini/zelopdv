@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
-  import { supabase } from '$lib/supabaseAdmin'
+  import { supabase } from '$lib/supabaseClient'
   import { fade } from 'svelte/transition'
   import { generatePdfReport, canvasToImage, formatBRL, formatNumber } from '$lib/pdfReport'
 

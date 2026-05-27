@@ -1,5 +1,9 @@
-// Supabase client for admin dashboard
-// Uses ANON KEY - RLS is disabled on admin tables for simplicity
+// Supabase client for admin dashboard.
+// Uses the public ANON KEY (NOT service-role). RLS is disabled on the tables
+// this dashboard reads/writes (subscriptions, empresa_perfil, super_admins),
+// and access is gated by the super_admins check (see isSuperAdmin below), not by RLS.
+// If you add a new admin table, either disable RLS on it or route the query
+// through a server-side handler that uses the real service-role key.
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl =
@@ -12,8 +16,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Required: VITE_PUBLIC_SUPABASE_URL and VITE_PUBLIC_SUPABASE_ANON_KEY')
 }
 
-// Create admin client
-// Note: RLS is disabled on subscriptions, empresa_perfil, and super_admins
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         autoRefreshToken: true,

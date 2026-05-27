@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { supabase } from '$lib/supabaseAdmin'
+  import { supabase } from '$lib/supabaseClient'
   import { logAdminAction } from '$lib/logger'
   import { success, error as errorToast } from '$lib/toast'
   import { confirmDialog, promptDialog } from '$lib/confirmDialog'

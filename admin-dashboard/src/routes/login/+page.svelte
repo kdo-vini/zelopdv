@@ -1,5 +1,5 @@
 <script>
-  import { supabase } from '$lib/supabaseAdmin'
+  import { supabase } from '$lib/supabaseClient'
   import { goto } from '$app/navigation'
   import { fade } from 'svelte/transition'
   

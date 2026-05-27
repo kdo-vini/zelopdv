@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { supabase } from '$lib/supabaseAdmin'
+  import { supabase } from '$lib/supabaseClient'
   import { fade } from 'svelte/transition'
   import { subscriptionValue } from '$lib/pricing'
   import { getEffectiveExpiry, isSubscriptionExpired } from '$lib/subscriptionHelpers'

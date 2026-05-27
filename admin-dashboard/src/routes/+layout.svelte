@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { afterNavigate } from '$app/navigation'
-  import { supabase, isSuperAdmin, getAdminInfo, updateLastLogin } from '$lib/supabaseAdmin'
+  import { supabase, isSuperAdmin, getAdminInfo, updateLastLogin } from '$lib/supabaseClient'
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   import Toast from '$lib/Toast.svelte'

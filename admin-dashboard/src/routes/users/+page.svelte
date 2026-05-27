@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { supabase } from '$lib/supabaseAdmin'
+  import { supabase } from '$lib/supabaseClient'
   import { logAdminAction } from '$lib/logger'
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'

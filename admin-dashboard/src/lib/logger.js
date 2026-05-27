@@ -1,5 +1,5 @@
 // Admin activity logger
-import { supabase } from './supabaseAdmin'
+import { supabase } from './supabaseClient'
 
 /**
  * Log admin action to database
