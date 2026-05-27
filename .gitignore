@@ -8,6 +8,7 @@ node_modules/
 dist/
 build/
 .vercel/
+vite.config.js.timestamp-*
 
 # Local docs not for repo
 SUPPORT_GUIDE_ZELO_PDV.txt
@@ -24,7 +25,6 @@ sql/
 # Capture scripts
 capture.js
 capture.mjs
-cloudflare-worker/asaas-proxy-node.js
 
 # Claude Code local files (not for repo)
 .claude/settings.local.json
