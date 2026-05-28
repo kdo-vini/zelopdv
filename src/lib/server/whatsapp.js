@@ -35,17 +35,44 @@ export function isWhatsAppConfigured() {
   return !!getZeloChatInternalKey();
 }
 
-async function enviar(telefone, mensagem) {
+function buildResult(ok, overrides = {}) {
+  return {
+    ok,
+    status: null,
+    body: null,
+    error: null,
+    ...overrides,
+  };
+}
+
+function parseBody(body) {
+  try {
+    return body ? JSON.parse(body) : null;
+  } catch {
+    return null;
+  }
+}
+
+function resultErrorMessage(result) {
+  if (result?.error) return result.error;
+  const payload = parseBody(result?.body || '');
+  if (typeof payload?.message === 'string') return payload.message;
+  if (typeof payload?.error === 'string') return payload.error;
+  if (typeof result?.body === 'string' && result.body.trim()) return result.body.trim();
+  return 'WhatsApp sender returned false';
+}
+
+async function enviarDetalhado(telefone, mensagem) {
   const internalKey = getZeloChatInternalKey();
   if (!internalKey) {
     console.warn('[WhatsApp] ZELOCHAT_INTERNAL_API_KEY nao configurado, mensagem ignorada.');
-    return false;
+    return buildResult(false, { error: 'ZELOCHAT_INTERNAL_API_KEY not configured' });
   }
 
   const destino = normalizeBrazilianPhone(telefone);
   if (!destino) {
     console.warn('[WhatsApp] Telefone invalido, ignorando:', telefone);
-    return false;
+    return buildResult(false, { error: 'invalid phone' });
   }
 
   try {
@@ -62,15 +89,14 @@ async function enviar(telefone, mensagem) {
 
     if (!response.ok) {
       console.error(`[WhatsApp] Erro ao enviar para ${destino}:`, body);
-      return false;
+      return buildResult(false, {
+        status: response.status,
+        body,
+        error: resultErrorMessage({ body }) || `HTTP ${response.status}`,
+      });
     }
 
-    let payload = null;
-    try {
-      payload = body ? JSON.parse(body) : null;
-    } catch {
-      payload = null;
-    }
+    const payload = parseBody(body);
 
     const explicitError =
       payload?.ok === false ||
@@ -83,34 +109,53 @@ async function enviar(telefone, mensagem) {
 
     if (explicitError || textError) {
       console.error(`[WhatsApp] API retornou erro para ${destino}:`, body);
-      return false;
+      return buildResult(false, {
+        status: response.status,
+        body,
+        error: resultErrorMessage({ body }),
+      });
     }
 
     console.log(`[WhatsApp] Mensagem aceita pela API para ${destino}:`, body || response.status);
-    return true;
+    return buildResult(true, { status: response.status, body });
   } catch (err) {
     console.error('[WhatsApp] Excecao ao enviar mensagem:', err?.message || err);
-    return false;
+    return buildResult(false, { error: err?.message || String(err) });
   }
+}
+
+async function enviar(telefone, mensagem) {
+  const result = await enviarDetalhado(telefone, mensagem);
+  return result.ok;
 }
 
 /**
  * Mensagem 1 — Boas-vindas (disparada na criacao da conta, trial day 0)
  */
 export async function enviarBoasVindas(telefone, nomeUsuario) {
+  const result = await enviarBoasVindasDetalhado(telefone, nomeUsuario);
+  return result.ok;
+}
+
+export async function enviarBoasVindasDetalhado(telefone, nomeUsuario) {
   const nome = (nomeUsuario || 'você').split(' ')[0];
   const mensagem =
     `Oi ${nome}! Vi que você acabou de criar sua conta no ZeloPDV. ` +
     `Que ótimo ter você por aqui! Se tiver qualquer dúvida na hora de configurar, ` +
     `é só me chamar aqui no WhatsApp — estou disponível para ajudar. ` +
     `Boa sorte com os primeiros pedidos! — Vinicius, Fundador do ZeloPDV`;
-  return enviar(telefone, mensagem);
+  return enviarDetalhado(telefone, mensagem);
 }
 
 /**
  * Mensagem 2 — Followup 7 dias (disparada pela cron ~dia 7 do trial)
  */
 export async function enviarFollowup7d(telefone, nomeUsuario) {
+  const result = await enviarFollowup7dDetalhado(telefone, nomeUsuario);
+  return result.ok;
+}
+
+export async function enviarFollowup7dDetalhado(telefone, nomeUsuario) {
   const nome = (nomeUsuario || 'você').split(' ')[0];
   const mensagem =
     `Oi ${nome}, tudo bem? Faz uma semana que você criou sua conta no ZeloPDV ` +
@@ -118,13 +163,18 @@ export async function enviarFollowup7d(telefone, nomeUsuario) {
     `Já conseguiu configurar o cardápio e fazer seu primeiro pedido? ` +
     `Se tiver alguma dúvida ou dificuldade, pode falar comigo à vontade. ` +
     `Estou aqui pra ajudar no que precisar. — Vinicius, ZeloPDV`;
-  return enviar(telefone, mensagem);
+  return enviarDetalhado(telefone, mensagem);
 }
 
 /**
  * Mensagem 3 — Followup 28 dias / trial encerrando (disparada pela cron ~dia 28)
  */
 export async function enviarFollowup28d(telefone, nomeUsuario) {
+  const result = await enviarFollowup28dDetalhado(telefone, nomeUsuario);
+  return result.ok;
+}
+
+export async function enviarFollowup28dDetalhado(telefone, nomeUsuario) {
   const nome = (nomeUsuario || 'você').split(' ')[0];
   const mensagem =
     `Oi ${nome}! O seu período de teste no ZeloPDV está chegando ao fim em breve. ` +
@@ -132,5 +182,9 @@ export async function enviarFollowup28d(telefone, nomeUsuario) {
     `Se tiver qualquer dúvida antes de decidir continuar, é só me chamar. ` +
     `Para manter o acesso, basta entrar em zelopdv.com.br e escolher a forma de pagamento. ` +
     `Será um prazer continuar com você! — Vinicius, ZeloPDV`;
-  return enviar(telefone, mensagem);
+  return enviarDetalhado(telefone, mensagem);
+}
+
+export function getWhatsAppSendError(result) {
+  return resultErrorMessage(result);
 }

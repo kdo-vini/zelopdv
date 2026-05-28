@@ -28,17 +28,18 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { sendEmail, isEmailConfigured } from '$lib/server/email';
 import { EMAIL_SEQUENCE, EMAIL_DAYS } from '$lib/server/emailTemplates';
 import {
-  enviarBoasVindas,
-  enviarFollowup7d,
-  enviarFollowup28d,
+  enviarBoasVindasDetalhado,
+  enviarFollowup7dDetalhado,
+  enviarFollowup28dDetalhado,
+  getWhatsAppSendError,
   isWhatsAppConfigured,
 } from '$lib/server/whatsapp';
 import { logOnboardingCommunication } from '$lib/server/onboardingEvents';
 
 const WHATSAPP_SEQUENCE = new Map([
-  [0, enviarBoasVindas],
-  [7, enviarFollowup7d],
-  [28, enviarFollowup28d],
+  [0, enviarBoasVindasDetalhado],
+  [7, enviarFollowup7dDetalhado],
+  [28, enviarFollowup28dDetalhado],
 ]);
 const WHATSAPP_DAYS = [0, 7, 28];
 
@@ -244,9 +245,9 @@ export async function GET({ request }) {
         provider: 'zelochat',
         metadata: { source: 'cron' },
       });
-      const sent = await sendWhatsApp(telefone, nome);
+      const sendResult = await sendWhatsApp(telefone, nome);
 
-      if (sent) {
+      if (sendResult.ok) {
         whatsappSentSet.add(`${user_id}:${messageDay}`);
         const sentField = {
           0: 'whatsapp_onboarding_sent_at',
@@ -268,11 +269,16 @@ export async function GET({ request }) {
           status: 'sent',
           recipient: telefone,
           provider: 'zelochat',
-          metadata: { source: 'cron' },
+          metadata: {
+            source: 'cron',
+            providerStatus: sendResult.status,
+            providerBody: sendResult.body,
+          },
         });
       } else {
+        const errorMessage = getWhatsAppSendError(sendResult);
         results.whatsappErrors++;
-        results.whatsappDetails.push({ user_id, messageDay, error: 'send failed' });
+        results.whatsappDetails.push({ user_id, messageDay, error: errorMessage });
         await logOnboardingCommunication({
           userId: user_id,
           channel: 'whatsapp',
@@ -280,8 +286,12 @@ export async function GET({ request }) {
           status: 'failed',
           recipient: telefone,
           provider: 'zelochat',
-          error: 'WhatsApp sender returned false',
-          metadata: { source: 'cron' },
+          error: errorMessage,
+          metadata: {
+            source: 'cron',
+            providerStatus: sendResult.status,
+            providerBody: sendResult.body,
+          },
         });
       }
     }

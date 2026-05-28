@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
-import { enviarBoasVindas } from '$lib/server/whatsapp';
+import { enviarBoasVindasDetalhado, getWhatsAppSendError } from '$lib/server/whatsapp';
 import { sendEmail, isEmailConfigured } from '$lib/server/email';
 import { emailDay0 } from '$lib/server/emailTemplates';
 import { logOnboardingCommunication } from '$lib/server/onboardingEvents';
@@ -143,9 +143,10 @@ async function maybeSendWelcomeWhatsApp({ userId, perfil }) {
     recipient: perfil.contato,
     provider: 'zelochat',
   });
-  const sent = await enviarBoasVindas(perfil.contato, perfil.nome_exibicao || '');
+  const sendResult = await enviarBoasVindasDetalhado(perfil.contato, perfil.nome_exibicao || '');
 
-  if (!sent) {
+  if (!sendResult.ok) {
+    const errorMessage = getWhatsAppSendError(sendResult);
     await logOnboardingCommunication({
       userId,
       channel: 'whatsapp',
@@ -153,7 +154,11 @@ async function maybeSendWelcomeWhatsApp({ userId, perfil }) {
       status: 'failed',
       recipient: perfil.contato,
       provider: 'zelochat',
-      error: 'enviarBoasVindas returned false',
+      error: errorMessage,
+      metadata: {
+        providerStatus: sendResult.status,
+        providerBody: sendResult.body,
+      },
     });
     return false;
   }
@@ -174,6 +179,10 @@ async function maybeSendWelcomeWhatsApp({ userId, perfil }) {
     status: 'sent',
     recipient: perfil.contato,
     provider: 'zelochat',
+    metadata: {
+      providerStatus: sendResult.status,
+      providerBody: sendResult.body,
+    },
   });
 
   return true;

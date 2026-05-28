@@ -92,4 +92,26 @@ describe('server WhatsApp sender', () => {
     expect(sent).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('exposes the provider error for onboarding logs', async () => {
+    vi.doMock('$env/dynamic/private', () => ({
+      env: {
+        ZELOCHAT_INTERNAL_API_KEY: 'test-key',
+        ZELOCHAT_INTERNAL_SEND_URL: 'https://chat.test/internal/whatsapp/send-text',
+      },
+    }));
+
+    const fetchMock = vi.fn(async () => new Response(
+      JSON.stringify({ error: 'TECHNE_WHATSAPP_NOT_CONNECTED', message: 'Instância desconectada' }),
+      { status: 409 }
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { enviarFollowup28dDetalhado, getWhatsAppSendError } = await loadWhatsapp();
+    const result = await enviarFollowup28dDetalhado('5511999999999', 'Vini');
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(409);
+    expect(getWhatsAppSendError(result)).toBe('Instância desconectada');
+  });
 });
