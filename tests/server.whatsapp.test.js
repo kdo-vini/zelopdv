@@ -56,7 +56,7 @@ describe('server WhatsApp sender', () => {
     await enviarBoasVindas('5511999999999', 'Vini');
 
     expect(fetchMock.mock.calls[0][0]).toBe(
-      'https://zelochat-production.up.railway.app/internal/whatsapp/send-text'
+      'https://chat.zelopdv.com.br/internal/whatsapp/send-text'
     );
   });
 
