@@ -9,6 +9,7 @@
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
+  import { getPrecoTabela } from '$lib/finance/caixa';
   import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
 
   let ready = false;
@@ -21,6 +22,8 @@
   let produtos = [];
   let categorias = [];
   let categoriaAtiva = null;
+  let dadosEmpresa = null;
+  let tabelaAtiva = 1;
   let busca = '';
   let carrinho = [];
   let nomeCliente = '';
@@ -32,12 +35,24 @@
   let pedidoCarregado = null;
   let temItensProntos = false;
 
+  $: tabelasPrecoAtivo = !!dadosEmpresa?.tabelas_preco_ativo;
+  $: nomesTabelas = [
+    dadosEmpresa?.tabela_preco_1_nome || 'Tabela 1',
+    dadosEmpresa?.tabela_preco_2_nome || 'Tabela 2',
+    dadosEmpresa?.tabela_preco_3_nome || 'Tabela 3'
+  ];
+  $: if (!tabelasPrecoAtivo && tabelaAtiva !== 1) tabelaAtiva = 1;
   $: termoBusca = busca.trim().toLowerCase();
   $: produtosFiltrados = produtos.filter((produto) => {
     if (categoriaAtiva && produto.id_categoria !== categoriaAtiva) return false;
     if (termoBusca && !String(produto.nome || '').toLowerCase().includes(termoBusca)) return false;
     return true;
   });
+  $: produtosExibidos = produtosFiltrados.map((produto) => ({
+    ...produto,
+    precoExibicao: Number(getPrecoTabela(produto, tabelaAtiva) || 0),
+    renderKey: `${produto.id}__${tabelaAtiva}`
+  }));
   $: totalItens = carrinho.reduce((acc, item) => acc + Number(item.quantidade || 0), 0);
   $: totalPedido = carrinho.reduce((acc, item) => acc + Number(item.preco || 0) * Number(item.quantidade || 0), 0);
 
@@ -65,7 +80,7 @@
     }
 
     pedidoId = $page.params.id;
-    await Promise.all([carregarProdutos(true), carregarCategorias()]);
+    await Promise.all([carregarProdutos(true), carregarCategorias(), carregarEmpresa()]);
     await carregarPedido();
     loading = false;
   });
@@ -84,6 +99,25 @@
     } catch (err) {
       addToast('Erro ao carregar categorias: ' + getFriendlyErrorMessage(err), 'error');
     }
+  }
+
+  async function carregarEmpresa() {
+    try {
+      const { data } = await supabase
+        .from('empresa_perfil')
+        .select('tabelas_preco_ativo, tabela_preco_1_nome, tabela_preco_2_nome, tabela_preco_3_nome')
+        .eq('user_id', ownerUserId || userId)
+        .maybeSingle();
+      dadosEmpresa = data || null;
+    } catch {}
+  }
+
+  function precoProdutoAtivo(produto) {
+    return Number(getPrecoTabela(produto, tabelaAtiva) || 0);
+  }
+
+  function buildLineId(idProduto, preco) {
+    return `${idProduto}__${Number(preco || 0)}`;
   }
 
   async function carregarPedido() {
@@ -111,6 +145,7 @@
     observacoes = data.observacoes || '';
 
     carrinho = (data.pedido_itens || []).map((item) => ({
+      lineId: buildLineId(item.id_produto, item.preco_unitario),
       id_produto: item.id_produto,
       nome: item.nome,
       preco: Number(item.preco_unitario || 0),
@@ -122,15 +157,18 @@
   }
 
   function adicionarProduto(produto) {
-    const existente = carrinho.find((item) => item.id_produto === produto.id);
+    const preco = precoProdutoAtivo(produto);
+    const lineId = buildLineId(produto.id, preco);
+    const existente = carrinho.find((item) => item.lineId === lineId);
     const candidato = existente
       ? carrinho.map((item) => item === existente ? { ...item, quantidade: Number(item.quantidade || 0) + 1 } : item)
       : [
           ...carrinho,
           {
+            lineId,
             id_produto: produto.id,
             nome: produto.nome,
-            preco: Number(produto.preco || 0),
+            preco,
             quantidade: 1,
             enviado_cozinha: true
           }
@@ -149,9 +187,10 @@
     carrinho = [
       ...carrinho,
       {
+        lineId,
         id_produto: produto.id,
         nome: produto.nome,
-        preco: Number(produto.preco || 0),
+        preco,
         quantidade: 1,
         enviado_cozinha: true
       }
@@ -323,6 +362,24 @@
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="search-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
               <input bind:value={busca} type="search" placeholder="Buscar produto" />
             </div>
+            {#if tabelasPrecoAtivo}
+              <div class="table-nav">
+                <span class="table-nav-label">Tabela de preco</span>
+                <div class="table-scroll">
+                  <div class="table-row" aria-label="Tabelas de preco">
+                    {#each nomesTabelas as nome, i}
+                      <button
+                        type="button"
+                        class:active={tabelaAtiva === i + 1}
+                        on:click={() => tabelaAtiva = i + 1}
+                      >
+                        {nome}
+                      </button>
+                    {/each}
+                  </div>
+                </div>
+              </div>
+            {/if}
             <div class="category-scroll">
               <div class="category-row" aria-label="Categorias">
                 <button type="button" class:active={categoriaAtiva === null} on:click={() => categoriaAtiva = null}>Todos</button>
@@ -339,14 +396,14 @@
             </div>
           </div>
 
-          {#if produtosFiltrados.length === 0}
+          {#if produtosExibidos.length === 0}
             <div class="empty-products">Nenhum produto encontrado.</div>
           {:else}
             <div class="product-grid">
-              {#each produtosFiltrados as produto (produto.id)}
+              {#each produtosExibidos as produto (produto.renderKey)}
                 <button type="button" class="product-card" on:click={() => adicionarProduto(produto)}>
                   <strong>{produto.nome}</strong>
-                  <span class="price">{formatMoney(produto.preco)}</span>
+                  <span class="price">{formatMoney(produto.precoExibicao)}</span>
                   {#if produtoControlaEstoque(produto)}
                     <small>Estoque: {estoqueDisponivel(produto)}</small>
                   {/if}
@@ -378,7 +435,7 @@
             <div class="empty-cart">Adicione produtos para montar o pedido.</div>
           {:else}
             <ul class="cart-list">
-              {#each carrinho as item (item.id_produto)}
+              {#each carrinho as item (item.lineId)}
                 <li>
                   <div class="cart-item-top">
                     <div class="cart-item-info">
@@ -623,6 +680,53 @@
     border-color: var(--accent);
     background: var(--accent-light);
     color: var(--accent);
+  }
+
+  .table-scroll {
+    position: relative;
+  }
+  .table-nav {
+    display: grid;
+    gap: 8px;
+  }
+  .table-nav-label {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .table-row {
+    display: flex;
+    gap: 18px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--border-subtle);
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+  }
+  .table-row::-webkit-scrollbar { height: 3px; }
+  .table-row::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 4px; }
+  .table-row::-webkit-scrollbar-track { background: transparent; }
+  .table-row button {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 0 0 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 140ms ease, border-color 140ms ease;
+  }
+  .table-row button.active {
+    color: var(--text-main);
+    border-bottom-color: var(--primary);
   }
 
   .product-grid {

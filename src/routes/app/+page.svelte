@@ -1207,16 +1207,22 @@
         </div>
 
         {#if tabelasPrecoAtivo}
-          <!-- Seletor de Tabela de Preço -->
-          <div class="flex gap-1">
-            {#each nomesTabelas as nome, i}
-              <button
-                type="button"
-                class="px-3 py-1 rounded text-sm font-medium transition-colors"
-                style="{tabelaAtiva === i+1 ? 'background: var(--primary); color: white;' : 'border: 1px solid var(--border-subtle); color: var(--text-muted); background: transparent;'}"
-                on:click={() => tabelaAtiva = i + 1}
-              >{nome}</button>
-            {/each}
+          <div class="grid gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-[0.18em]" style="color: var(--text-muted);">Tabela de Preco</span>
+            <div class="flex items-center gap-5 overflow-x-auto pb-1 scrollbar-none border-b" style="border-color: var(--border-subtle);">
+              {#each nomesTabelas as nome, i}
+                <button
+                  type="button"
+                  class="flex-shrink-0 pb-2 text-sm font-semibold whitespace-nowrap transition-colors"
+                  style="
+                    color: {tabelaAtiva === i + 1 ? 'var(--text-main)' : 'var(--text-muted)'};
+                    border-bottom: 2px solid {tabelaAtiva === i + 1 ? 'var(--primary)' : 'transparent'};
+                    margin-bottom: -1px;
+                  "
+                  on:click={() => tabelaAtiva = i + 1}
+                >{nome}</button>
+              {/each}
+            </div>
           </div>
         {/if}
 
