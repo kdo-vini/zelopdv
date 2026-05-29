@@ -3,6 +3,11 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { getServerAccessContext } from '$lib/server/accessControl';
 import { createTransparentPixCharge, isAbacatePayConfigured } from '$lib/server/abacatePay';
 import {
+  isValidBrazilianTaxId,
+  normalizeBrazilianPhone,
+  normalizeBrazilianTaxId,
+} from '$lib/masks';
+import {
   calculateValue,
   isValidPlanTier,
   isAddonAllowed,
@@ -99,6 +104,23 @@ export async function POST({ request }) {
       }, { status: 400 });
     }
 
+    const normalizedTaxId = normalizeBrazilianTaxId(perfil.documento);
+    const normalizedPhone = normalizeBrazilianPhone(perfil.contato);
+
+    if (!normalizedTaxId || !isValidBrazilianTaxId(normalizedTaxId)) {
+      return json({
+        error: 'CPF/CNPJ inválido no perfil da empresa. Atualize o cadastro antes de gerar Pix.',
+        redirect: '/perfil?msg=complete',
+      }, { status: 400 });
+    }
+
+    if (!normalizedPhone) {
+      return json({
+        error: 'Telefone inválido no perfil da empresa. Atualize o cadastro antes de gerar Pix.',
+        redirect: '/perfil?msg=complete',
+      }, { status: 400 });
+    }
+
     const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
       .select('id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
@@ -173,8 +195,8 @@ export async function POST({ request }) {
       customer: {
         name: perfil.nome_exibicao,
         email: user.email,
-        taxId: perfil.documento,
-        cellphone: perfil.contato,
+        taxId: normalizedTaxId,
+        cellphone: normalizedPhone,
       },
     });
 
