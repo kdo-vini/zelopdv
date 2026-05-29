@@ -35,65 +35,6 @@ export function normalizeBrazilianPhone(value) {
   return null;
 }
 
-export function normalizeBrazilianTaxId(value) {
-  const digits = (value || '').replace(/\D/g, '');
-  if (digits.length === 11 || digits.length === 14) return digits;
-  return null;
-}
-
-function hasOnlyRepeatedDigits(value) {
-  return /^(\d)\1+$/.test(value);
-}
-
-export function isValidCPF(value) {
-  const cpf = (value || '').replace(/\D/g, '');
-  if (cpf.length !== 11 || hasOnlyRepeatedDigits(cpf)) return false;
-
-  let sum = 0;
-  for (let i = 0; i < 9; i += 1) {
-    sum += Number(cpf[i]) * (10 - i);
-  }
-  let digit = 11 - (sum % 11);
-  if (digit >= 10) digit = 0;
-  if (digit !== Number(cpf[9])) return false;
-
-  sum = 0;
-  for (let i = 0; i < 10; i += 1) {
-    sum += Number(cpf[i]) * (11 - i);
-  }
-  digit = 11 - (sum % 11);
-  if (digit >= 10) digit = 0;
-
-  return digit === Number(cpf[10]);
-}
-
-export function isValidCNPJ(value) {
-  const cnpj = (value || '').replace(/\D/g, '');
-  if (cnpj.length !== 14 || hasOnlyRepeatedDigits(cnpj)) return false;
-
-  const firstWeights = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  const secondWeights = [6, ...firstWeights];
-
-  const calculateDigit = (base, weights) => {
-    const sum = weights.reduce((acc, weight, index) => acc + Number(base[index]) * weight, 0);
-    const remainder = sum % 11;
-    return remainder < 2 ? 0 : 11 - remainder;
-  };
-
-  const firstDigit = calculateDigit(cnpj, firstWeights);
-  if (firstDigit !== Number(cnpj[12])) return false;
-
-  const secondDigit = calculateDigit(cnpj, secondWeights);
-  return secondDigit === Number(cnpj[13]);
-}
-
-export function isValidBrazilianTaxId(value) {
-  const digits = (value || '').replace(/\D/g, '');
-  if (digits.length === 11) return isValidCPF(digits);
-  if (digits.length === 14) return isValidCNPJ(digits);
-  return false;
-}
-
 /**
  * Formats a CPF as XXX.XXX.XXX-XX.
  */

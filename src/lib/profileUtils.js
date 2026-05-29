@@ -1,9 +1,5 @@
 // Utility helpers for the Perfil page
-import {
-  isValidBrazilianTaxId,
-  normalizeBrazilianPhone,
-  normalizeBrazilianTaxId,
-} from './masks.js';
+import { normalizeBrazilianPhone } from './masks.js';
 
 // Canonicalize paper width: accept '58mm', '58 mm', '80mm', '80 mm'
 const VALID_WIDTHS = ['58mm', '80mm'];
@@ -27,7 +23,7 @@ export function normalizeLarguraBobina(value) {
 
 export function requiredOk({ nome_exibicao, documento, contato, largura_bobina }) {
   const nome = (nome_exibicao || '').trim();
-  const doc = isValidBrazilianTaxId(documento);
+  const doc = (documento || '').trim();
   const cont = (contato || '').trim();
   const largura = normalizeLarguraBobina(largura_bobina);
   return Boolean(nome && doc && cont && VALID_WIDTHS.includes(largura));
@@ -52,7 +48,7 @@ export function buildPayload({
     user_id: userId,
     nome_exibicao: (nome_exibicao || '').trim(),
     razao_social: (razao_social || '').trim() || null,
-    documento: normalizeBrazilianTaxId(documento) || (documento || '').trim(),
+    documento: (documento || '').trim(),
     contato: normalizeBrazilianPhone(contato) || (contato || '').trim(),
     inscricao_estadual: (inscricao_estadual || '').trim() || null,
     endereco: (endereco || '').trim() || null,
