@@ -1,7 +1,6 @@
 // Cria sessão de Checkout Stripe pra novo subscriber ou renovação.
 // Suporta plano (pdv|chat|bundle) + addons como subscription_items separados.
-// PIX/Boleto: Stripe BR adicionou suporte beta a PIX; se a feature flag estiver ativa,
-// payment_method_types inclui 'pix'. Default = card-only.
+// Checkout Stripe deste endpoint é apenas cartão. Pix usa o fluxo separado da AbacatePay.
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { stripe } from '$lib/server/stripe';
@@ -14,7 +13,6 @@ import {
 } from '$lib/pricing';
 import { progressReferralForUser } from '$lib/server/referrals';
 
-const PIX_ENABLED = env.BILLING_PIX_ENABLED === 'true';
 const ORIGIN = env.PUBLIC_APP_URL || 'https://zelopdv.com.br';
 const TRIAL_DAYS = 30;
 
@@ -117,10 +115,6 @@ export async function POST({ request, url, cookies }) {
       acessos: hasAcessosAddon,
     });
 
-    // Decide payment methods. PIX via flag — só ligar quando habilitado no Stripe Dashboard.
-    const paymentMethodTypes = ['card'];
-    if (PIX_ENABLED) paymentMethodTypes.unshift('pix');
-
     const subscriptionMetadata = {
       user_id: userId,
       plan_tier: planTier,
@@ -147,7 +141,7 @@ export async function POST({ request, url, cookies }) {
       mode: 'subscription',
       customer: stripeCustomerId,
       line_items: lineItems,
-      payment_method_types: paymentMethodTypes,
+      payment_method_types: ['card'],
       payment_method_collection: isFirstTime ? 'if_required' : 'always',
       allow_promotion_codes: true,
       subscription_data: subscriptionData,
