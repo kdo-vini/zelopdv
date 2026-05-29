@@ -155,6 +155,17 @@
     : isActiveStrict
       ? `Renovar com Pix - R$ ${planPrice}/mês`
       : `Pagar com Pix - R$ ${planPrice}/mês`;
+  $: cardPaymentTitle = isActiveStrict
+    ? (activePackageChanged ? 'Renovar no cartão com este pacote' : 'Renovar plano atual no cartão')
+    : 'Pagar com cartão';
+  $: cardPaymentDescription = isActiveStrict
+    ? 'Finalize no checkout seguro e mantenha a renovação automática ativa.'
+    : 'Finalize agora no cartão e mantenha a renovação automática ativa.';
+  $: cardPaymentCta = loading
+    ? 'Processando...'
+    : isActiveStrict
+      ? `Renovar no cartão - R$ ${planPrice}/mês`
+      : `Pagar com cartão - R$ ${planPrice}/mês`;
   $: currentSelectionKey = JSON.stringify({
     selectedPlan,
     mesas: mesasAddonOn,
@@ -1025,7 +1036,7 @@
               <span>Após o pagamento: <strong>{projectedRenewalLabel}</strong></span>
             </div>
 
-            <div class="payment-grid single-payment">
+            <div class="payment-grid">
               <button class="payment-card" type="button" on:click={() => gerarPix({ renewal: true })} disabled={loading || pixLoading}>
                 <div class="payment-card-head">
                   <span class="payment-card-icon" aria-hidden="true">
@@ -1036,6 +1047,23 @@
                 <strong>{pixPaymentTitle}</strong>
                 <span>{pixPaymentDescription}</span>
                 <span class="payment-card-cta">{pixPaymentCta}</span>
+              </button>
+
+              <button class="payment-card" type="button" on:click={assinar} disabled={loading || pixLoading}>
+                <div class="payment-card-head">
+                  <span class="payment-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 64 64" role="presentation" focusable="false">
+                      <rect x="8" y="14" width="48" height="36" rx="8" fill="none" stroke="currentColor" stroke-width="4" />
+                      <rect x="12" y="22" width="40" height="8" rx="2" fill="currentColor" opacity="0.9" />
+                      <rect x="16" y="38" width="12" height="4" rx="2" fill="currentColor" opacity="0.55" />
+                      <rect x="32" y="38" width="16" height="4" rx="2" fill="currentColor" opacity="0.35" />
+                    </svg>
+                  </span>
+                  <span class="payment-card-kicker">Cartão</span>
+                </div>
+                <strong>{cardPaymentTitle}</strong>
+                <span>{cardPaymentDescription}</span>
+                <span class="payment-card-cta">{cardPaymentCta}</span>
               </button>
             </div>
 
@@ -1982,10 +2010,6 @@
   .payment-card {
     min-height: 220px;
     padding: 1.15rem;
-  }
-
-  .single-payment {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .payment-card-head {

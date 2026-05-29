@@ -115,8 +115,36 @@ function getStripeSubscriptionPeriodEnd(sub) {
   return new Date(Math.max(...itemPeriodEnds.map((date) => date.getTime())));
 }
 
-function getStripeSubscriptionPeriodEndIso(sub, fallback = null) {
-  return getStripeSubscriptionPeriodEnd(sub)?.toISOString() || fallback;
+function parseDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function addMonths(baseDate, months) {
+  const next = new Date(baseDate);
+  next.setMonth(next.getMonth() + months);
+  return next;
+}
+
+function getLatestDate(...dates) {
+  const validDates = dates.filter((date) => date && !Number.isNaN(date.getTime()));
+  if (!validDates.length) return null;
+  return validDates.reduce((latest, date) => (date > latest ? date : latest));
+}
+
+function getSubscriptionPeriodEndForDb(sub, rowCurrentPeriodEnd = null) {
+  const stripePeriodEnd = getStripeSubscriptionPeriodEnd(sub);
+  const rowPeriodEnd = parseDate(rowCurrentPeriodEnd);
+
+  if (sub?.metadata?.early_renewal === 'true') {
+    const renewalBase = parseDate(sub.metadata?.renewal_base_period_end);
+    const renewedPeriodEnd = renewalBase ? addMonths(renewalBase, 1) : null;
+    return getLatestDate(renewedPeriodEnd, rowPeriodEnd, stripePeriodEnd)?.toISOString()
+      || rowCurrentPeriodEnd;
+  }
+
+  return getLatestDate(stripePeriodEnd, rowPeriodEnd)?.toISOString() || rowCurrentPeriodEnd;
 }
 
 export async function POST({ request }) {
@@ -181,7 +209,7 @@ export async function POST({ request }) {
           has_pedidos_addon: !!addons.pedidos,
           has_acessos_addon: !!addons.acessos,
           status: mapStripeStatus(sub.status),
-          current_period_end: getStripeSubscriptionPeriodEndIso(sub, row.current_period_end),
+          current_period_end: getSubscriptionPeriodEndForDb(sub, row.current_period_end),
           billing_type: 'CREDIT_CARD',
           cancel_at_period_end: !!sub.cancel_at_period_end,
         });
@@ -214,7 +242,7 @@ export async function POST({ request }) {
           has_pedidos_addon: !!addons.pedidos,
           has_acessos_addon: !!addons.acessos,
           status: mapStripeStatus(sub.status),
-          current_period_end: getStripeSubscriptionPeriodEndIso(sub, row.current_period_end),
+          current_period_end: getSubscriptionPeriodEndForDb(sub, row.current_period_end),
           cancel_at_period_end: !!sub.cancel_at_period_end,
         });
         console.log(`[Stripe Webhook] [SYNC] sub ${stripeSubId} → status=${sub.status}, plan=${planTier}, mesas=${!!addons.mesas}, pedidos=${!!addons.pedidos}, acessos=${!!addons.acessos}`);
@@ -251,12 +279,12 @@ export async function POST({ request }) {
 
         // current_period_end vem da subscription, não da invoice. Buscar pra garantir.
         const sub = await stripe.subscriptions.retrieve(stripeSubId, { expand: ['items.data.price'] });
-        const periodEnd = getStripeSubscriptionPeriodEnd(sub);
+        const periodEndIso = getSubscriptionPeriodEndForDb(sub, row.current_period_end);
         await updateSubscriptionRow(row.id, {
           status: 'active',
-          current_period_end: periodEnd?.toISOString() || row.current_period_end,
+          current_period_end: periodEndIso || row.current_period_end,
         });
-        console.log(`[Stripe Webhook] [PAID] sub ${stripeSubId} active until ${periodEnd?.toISOString() || row.current_period_end || 'unknown'}`);
+        console.log(`[Stripe Webhook] [PAID] sub ${stripeSubId} active until ${periodEndIso || row.current_period_end || 'unknown'}`);
         break;
       }
 

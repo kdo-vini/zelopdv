@@ -87,6 +87,7 @@ export async function POST({ request, url, cookies }) {
       .maybeSingle();
 
     const isFirstTime = !existingSub;
+    const shouldPreserveCurrentAccess = ['active', 'trialing'].includes(existingSub?.status || '');
 
     // Find or create Stripe customer
     let stripeCustomerId = existingSub?.provider_customer_id && existingSub.payment_provider === 'stripe'
@@ -120,27 +121,25 @@ export async function POST({ request, url, cookies }) {
     const paymentMethodTypes = ['card'];
     if (PIX_ENABLED) paymentMethodTypes.unshift('pix');
 
+    const subscriptionMetadata = {
+      user_id: userId,
+      plan_tier: planTier,
+      has_mesas_addon: String(hasMesasAddon),
+      has_pedidos_addon: String(hasPedidosAddon),
+      has_acessos_addon: String(hasAcessosAddon),
+      early_renewal: String(shouldPreserveCurrentAccess),
+      renewal_base_period_end: shouldPreserveCurrentAccess ? existingSub?.current_period_end || '' : '',
+    };
+
     // Subscription data: trial só pra first-time
     const subscriptionData = isFirstTime
       ? {
           trial_period_days: TRIAL_DAYS,
           trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
-          metadata: {
-            user_id: userId,
-            plan_tier: planTier,
-            has_mesas_addon: String(hasMesasAddon),
-            has_pedidos_addon: String(hasPedidosAddon),
-            has_acessos_addon: String(hasAcessosAddon),
-          },
+          metadata: subscriptionMetadata,
         }
       : {
-          metadata: {
-            user_id: userId,
-            plan_tier: planTier,
-            has_mesas_addon: String(hasMesasAddon),
-            has_pedidos_addon: String(hasPedidosAddon),
-            has_acessos_addon: String(hasAcessosAddon),
-          },
+          metadata: subscriptionMetadata,
         };
 
     const requestOrigin = url?.origin || ORIGIN;
@@ -154,13 +153,7 @@ export async function POST({ request, url, cookies }) {
       subscription_data: subscriptionData,
       success_url: `${requestOrigin}/assinatura?success=1`,
       cancel_url: `${requestOrigin}/assinatura?canceled=1`,
-      metadata: {
-        user_id: userId,
-        plan_tier: planTier,
-        has_mesas_addon: String(hasMesasAddon),
-        has_pedidos_addon: String(hasPedidosAddon),
-        has_acessos_addon: String(hasAcessosAddon),
-      },
+      metadata: subscriptionMetadata,
     });
 
     // Pre-record subscription state in DB as 'incomplete'. Webhook (checkout.session.completed)
@@ -169,8 +162,6 @@ export async function POST({ request, url, cookies }) {
     // Preserve access state until Stripe confirms checkout. This avoids a trialing
     // or active customer being flipped to "incomplete" or receiving plan/add-on
     // access changes before the hosted Checkout actually succeeds.
-    const shouldPreserveCurrentAccess = ['active', 'trialing'].includes(existingSub?.status || '');
-
     const subData = {
       user_id: userId,
       provider_customer_id: stripeCustomerId,
