@@ -1207,34 +1207,29 @@
         </div>
 
         {#if tabelasPrecoAtivo}
-          <div class="grid gap-2">
-            <span class="text-[10px] font-bold uppercase tracking-[0.18em]" style="color: var(--text-muted);">Tabela de Preco</span>
-            <div class="flex items-center gap-5 overflow-x-auto pb-1 scrollbar-none border-b" style="border-color: var(--border-subtle);">
-              {#each nomesTabelas as nome, i}
-                <button
-                  type="button"
-                  class="flex-shrink-0 pb-2 text-sm font-semibold whitespace-nowrap transition-colors"
-                  style="
-                    color: {tabelaAtiva === i + 1 ? 'var(--text-main)' : 'var(--text-muted)'};
-                    border-bottom: 2px solid {tabelaAtiva === i + 1 ? 'var(--primary)' : 'transparent'};
-                    margin-bottom: -1px;
-                  "
-                  on:click={() => tabelaAtiva = i + 1}
-                >{nome}</button>
-              {/each}
-            </div>
+          <div class="flex items-center gap-4 overflow-x-auto pb-1 scrollbar-none">
+            {#each nomesTabelas as nome, i}
+              <button
+                type="button"
+                class="flex-shrink-0 pb-1 text-xs font-semibold whitespace-nowrap transition-colors md:text-sm"
+                style="
+                  color: {tabelaAtiva === i + 1 ? 'var(--primary)' : 'var(--text-muted)'};
+                  border-bottom: 1.5px solid {tabelaAtiva === i + 1 ? 'var(--primary)' : 'transparent'};
+                "
+                on:click={() => tabelaAtiva = i + 1}
+              >{nome}</button>
+            {/each}
           </div>
         {/if}
 
-        <!-- Categorias: Tabs horizontais (estilo underline) -->
-        <div class="flex items-center gap-6 overflow-x-auto py-1 scrollbar-none border-b" style="border-color: var(--border-subtle);" role="tablist" aria-label="Categorias">
+        <div class="flex items-center gap-6 overflow-x-auto pb-1 scrollbar-none border-b" style="border-color: var(--border-subtle);" role="tablist" aria-label="Categorias">
           {#each categorias as cat (cat.id)}
             <button
               data-testid="category-tab"
               type="button"
               role="tab"
               aria-selected={categoriaAtiva === cat.id}
-              class="flex-shrink-0 pb-2 font-semibold text-sm transition-colors whitespace-nowrap relative"
+              class="flex-shrink-0 pb-2 font-semibold text-base transition-colors whitespace-nowrap relative"
               style="
                 color: {categoriaAtiva === cat.id ? 'var(--text-main)' : 'var(--text-muted)'};
                 border-bottom: 2px solid {categoriaAtiva === cat.id ? 'var(--primary)' : 'transparent'};
@@ -1250,32 +1245,32 @@
         <!-- Subcategorias: Pills (quando existem) -->
         {#if subcatsDaCat.length}
           <div class="flex items-center gap-2 overflow-x-auto py-1 px-1 scrollbar-none">
+            <button
+              type="button"
+              class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors"
+              style="
+                background: {subcategoriaAtiva === null ? 'color-mix(in srgb, var(--primary) 16%, transparent)' : 'var(--bg-panel)'};
+                color: {subcategoriaAtiva === null ? 'var(--primary)' : 'var(--text-muted)'};
+                border: 1px solid {subcategoriaAtiva === null ? 'color-mix(in srgb, var(--primary) 40%, var(--border-subtle))' : 'var(--border-subtle)'};
+              "
+              on:click={() => subcategoriaAtiva = null}
+            >
+              Todas
+            </button>
+            {#each subcatsDaCat as sc (sc.id)}
               <button
                 type="button"
                 class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors"
                 style="
-                  background: {subcategoriaAtiva === null ? 'var(--primary)' : 'var(--bg-panel)'};
-                  color: {subcategoriaAtiva === null ? 'white' : 'var(--text-muted)'};
-                  border: 1px solid {subcategoriaAtiva === null ? 'transparent' : 'var(--border-subtle)'};
+                  background: {subcategoriaAtiva === sc.id ? 'color-mix(in srgb, var(--primary) 16%, transparent)' : 'var(--bg-panel)'};
+                  color: {subcategoriaAtiva === sc.id ? 'var(--primary)' : 'var(--text-muted)'};
+                  border: 1px solid {subcategoriaAtiva === sc.id ? 'color-mix(in srgb, var(--primary) 40%, var(--border-subtle))' : 'var(--border-subtle)'};
                 "
-                on:click={() => subcategoriaAtiva = null}
+                on:click={() => subcategoriaAtiva = sc.id}
               >
-                Todas
+                {sc.nome}
               </button>
-              {#each subcatsDaCat as sc (sc.id)}
-                <button
-                  type="button"
-                  class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors"
-                  style="
-                    background: {subcategoriaAtiva === sc.id ? 'var(--primary)' : 'var(--bg-panel)'};
-                    color: {subcategoriaAtiva === sc.id ? 'white' : 'var(--text-muted)'};
-                    border: 1px solid {subcategoriaAtiva === sc.id ? 'transparent' : 'var(--border-subtle)'};
-                  "
-                  on:click={() => subcategoriaAtiva = sc.id}
-                >
-                  {sc.nome}
-                </button>
-              {/each}
+            {/each}
           </div>
         {/if}
       </div>
