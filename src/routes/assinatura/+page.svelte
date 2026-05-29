@@ -5,7 +5,7 @@
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { onMount, onDestroy } from 'svelte';
   import { addToast, confirmAction } from '$lib/stores/ui';
-  import { PLANS, ADDONS, calculateValue } from '$lib/pricing';
+  import { PLANS, calculateValue } from '$lib/pricing';
   import { trackStartTrial, trackSubscribe } from '$lib/metaPixel';
 
 
@@ -15,7 +15,6 @@
   let loading = false;
   let pixLoading = false;
   let canceling = false;
-  let changingPlan = false;
   let message = '';
   let messageType = 'info';
   let expiryDate = null;
@@ -28,7 +27,6 @@
   let activeMesasAddon = false;
   let activePedidosAddon = false;
   let activeAcessosAddon = false;
-  let togglingAddon = false;
   let camePromptingMesas = false;
   let camePromptingPedidos = false;
   let camePromptingAcessos = false;
@@ -102,9 +100,9 @@
   $: activePlanAllowsAcessos = activePlanTier
     ? PLANS[activePlanTier]?.allowsAcessos
     : false;
-  $: activePlanOptions = [activePlanTier === 'chat' ? 'chat' : null, ...primaryPlanIds]
-    .filter(Boolean)
-    .map((planId) => PLANS[planId]);
+  $: wizardPlanIds = isActiveStrict && activePlanTier === 'chat'
+    ? ['chat', ...primaryPlanIds]
+    : primaryPlanIds;
   $: selectedPlanName = PLANS[selectedPlan]?.name || 'Plano';
   $: selectedPlanTagline = PLANS[selectedPlan]?.tagline || '';
   $: selectedAddons = addonCatalog.filter((addon) => {
@@ -118,6 +116,45 @@
     ...selectedAddons.map((addon) => addon.name),
   ];
   $: currentCheckoutStepLabel = checkoutSteps.find((step) => step.id === checkoutStep)?.label || 'Plano';
+  $: projectedRenewalDate = getProjectedRenewalDate(expiryDate);
+  $: projectedRenewalLabel = formatDate(projectedRenewalDate);
+  $: expiryDateLabel = formatDate(expiryDate);
+  $: activePackageChanged = isActiveStrict && (
+    selectedPlan !== activePlanTier
+    || !!mesasAddonOn !== !!activeMesasAddon
+    || !!pedidosAddonOn !== !!activePedidosAddon
+    || !!acessosAddonOn !== !!activeAcessosAddon
+  );
+  $: wizardModeLabel = isActiveStrict ? 'Mudar de plano' : 'Assinatura';
+  $: wizardStepOneTitle = isActiveStrict
+    ? 'Escolha como sua assinatura deve ficar'
+    : 'Escolha o pacote base da sua operação';
+  $: wizardStepOneCopy = isActiveStrict
+    ? 'Você pode manter o pacote atual para renovar ou escolher outro pacote antes de pagar.'
+    : 'Comece pelo formato do seu negócio. No próximo passo você ajusta os módulos e vê o valor final.';
+  $: wizardStepTwoTitle = isActiveStrict
+    ? 'Ajuste os módulos da assinatura'
+    : 'Adicione só o que faz diferença';
+  $: wizardStepTwoCopy = isActiveStrict
+    ? 'Os módulos selecionados entram junto com a renovação quando o Pix for confirmado.'
+    : 'Toque nos módulos que resolvem gargalos da sua rotina. O valor total atualiza na hora.';
+  $: wizardStepThreeTitle = isActiveStrict
+    ? 'Revise e confirme a renovação'
+    : 'Revise e escolha como pagar';
+  $: wizardStepThreeCopy = isActiveStrict
+    ? `Seu pacote ${activePackageChanged ? 'ficará' : 'continua'} em R$ ${planPrice}/mês. Ao pagar, somamos 1 mês ao vencimento atual.`
+    : `Seu pacote ficou em R$ ${planPrice}/mês. Escolha a forma de pagamento para liberar ou renovar seu acesso.`;
+  $: pixPaymentTitle = isActiveStrict
+    ? (activePackageChanged ? 'Renovar com este pacote' : 'Renovar plano atual')
+    : 'Pagar com Pix';
+  $: pixPaymentDescription = isActiveStrict
+    ? `O novo vencimento previsto é ${projectedRenewalLabel}.`
+    : 'Abra o QR Code, pague no seu banco e acompanhe a confirmação nesta tela.';
+  $: pixPaymentCta = pixLoading
+    ? 'Preparando Pix...'
+    : isActiveStrict
+      ? `Renovar com Pix - R$ ${planPrice}/mês`
+      : `Pagar com Pix - R$ ${planPrice}/mês`;
   $: currentSelectionKey = JSON.stringify({
     selectedPlan,
     mesas: mesasAddonOn,
@@ -176,8 +213,67 @@
     checkoutStep = Math.min(3, Math.max(1, step));
   }
 
+  function formatDate(value) {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('pt-BR');
+  }
+
+  function getProjectedRenewalDate(value) {
+    const now = new Date();
+    const currentEnd = value ? new Date(value) : null;
+    const baseDate = currentEnd && !Number.isNaN(currentEnd.getTime()) && currentEnd > now
+      ? currentEnd
+      : now;
+    const nextDate = new Date(baseDate);
+    nextDate.setMonth(nextDate.getMonth() + 1);
+    return nextDate;
+  }
+
+  function applySubscriptionState(data) {
+    subStatus = data?.status || null;
+    expiryDate = data?.current_period_end || null;
+    hasHadSubscription = !!data;
+    activeMesasAddon = !!data?.has_mesas_addon;
+    activePedidosAddon = !!data?.has_pedidos_addon;
+    activeAcessosAddon = !!data?.has_acessos_addon;
+    mesasAddonOn = activeMesasAddon;
+    pedidosAddonOn = activePedidosAddon;
+    acessosAddonOn = activeAcessosAddon;
+    activePlanTier = data?.plan_tier || 'pdv';
+    selectedPlan = activePlanTier;
+
+    isActiveStrict = isSubscriptionActiveStrict(data);
+    trialDaysLeft = null;
+    if (subStatus === 'trialing' && expiryDate) {
+      const diff = new Date(expiryDate) - new Date();
+      trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+    }
+  }
+
+  async function loadSubscriptionState() {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_pedidos_addon, has_acessos_addon, plan_tier')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    applySubscriptionState(data);
+    return data;
+  }
+
   function handlePlanSelection(planId) {
     selectedPlan = planId;
+  }
+
+  function getPlanDecisionEyebrow(planId) {
+    if (planId === 'chat') return 'Atendimento';
+    if (planId === 'bundle') return 'Gestão + atendimento';
+    return 'Gestão da operação';
   }
 
   function toggleAddonSelection(addonId) {
@@ -266,32 +362,7 @@
         }
 
         try {
-          const { data } = await supabase
-            .from('subscriptions')
-            .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_pedidos_addon, has_acessos_addon, plan_tier')
-            .eq('user_id', userId)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          subStatus = data?.status || null;
-          expiryDate = data?.current_period_end || null;
-          hasHadSubscription = !!data;
-          activeMesasAddon = !!data?.has_mesas_addon;
-          activePedidosAddon = !!data?.has_pedidos_addon;
-          activeAcessosAddon = !!data?.has_acessos_addon;
-          mesasAddonOn = activeMesasAddon;
-          pedidosAddonOn = activePedidosAddon;
-          acessosAddonOn = activeAcessosAddon;
-          activePlanTier = data?.plan_tier || 'pdv';
-          selectedPlan = activePlanTier;
-
-          isActiveStrict = isSubscriptionActiveStrict(data);
-
-          if (subStatus === 'trialing' && expiryDate) {
-            const diff = new Date(expiryDate) - new Date();
-            trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-          }
+          await loadSubscriptionState();
 
           if (hasHadSubscription && !isActiveStrict) {
             if (expiryDate) {
@@ -350,7 +421,11 @@
         const params = new URLSearchParams(window.location.search);
         if (params.get('success') === '1' && isActiveStrict) {
           const subscribeValue = activePlanTier
-            ? calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: activePedidosAddon })
+            ? calculateValue(activePlanTier, {
+                mesas: activeMesasAddon,
+                pedidos: activePedidosAddon,
+                acessos: activeAcessosAddon,
+              })
             : 0;
           trackSubscribe({ value: subscribeValue });
           // Remove ?success=1 from URL immediately so a page refresh doesn't re-fire the pixel
@@ -465,7 +540,7 @@
     }
   }
 
-  async function gerarPix({ autoRenew = false } = {}) {
+  async function gerarPix({ autoRenew = false, renewal = false } = {}) {
     if (pixLoading) return;
 
     try {
@@ -516,6 +591,10 @@
       messageType = 'info';
       if (autoRenew) {
         message = 'O Pix venceu e uma nova cobrança foi gerada automaticamente.';
+      } else if (renewal) {
+        message = data?.reused
+          ? 'Você já tinha um Pix de renovação em aberto. Mantivemos a cobrança atual.'
+          : 'Pix de renovação gerado. Ao confirmar o pagamento, somamos 1 mês ao vencimento atual.';
       } else {
         message = data?.reused
           ? 'Você já tinha um Pix em aberto. Mantivemos a cobrança atual.'
@@ -533,6 +612,7 @@
     if (!pixPayment?.paymentId || pixStatusLoading) return;
 
     try {
+      const shouldStayOnPageAfterPayment = isActiveStrict && hasHadSubscription;
       pixStatusLoading = true;
 
       const { data: { session: authSession } } = await supabase.auth.getSession();
@@ -569,6 +649,18 @@
 
       if (data.status === 'paid') {
         stopPixStatusPolling();
+        if (shouldStayOnPageAfterPayment) {
+          const updatedSubscription = await loadSubscriptionState();
+          const renewedUntil = formatDate(updatedSubscription?.current_period_end) || projectedRenewalLabel;
+          pixModalOpen = false;
+          message = renewedUntil
+            ? `Pagamento confirmado. Sua assinatura foi renovada até ${renewedUntil}.`
+            : 'Pagamento confirmado. Sua assinatura foi renovada.';
+          messageType = 'success';
+          addToast('Assinatura renovada com sucesso.', 'success');
+          return;
+        }
+
         message = 'Pagamento confirmado. Redirecionando…';
         messageType = 'success';
         setTimeout(() => {
@@ -624,76 +716,6 @@
     }
   }
 
-  async function trocarPlano(targetTier) {
-    if (changingPlan || !targetTier || targetTier === activePlanTier) return;
-
-    const targetPlan = PLANS[targetTier];
-    const willLoseMesas = activeMesasAddon && !targetPlan.allowsMesas;
-    const willLosePedidos = activePedidosAddon && !targetPlan.allowsPedidos;
-    const willLoseAcessos = activeAcessosAddon && !targetPlan.allowsAcessos;
-    const newValue = calculateValue(targetTier, {
-      mesas: activeMesasAddon && targetPlan.allowsMesas,
-      pedidos: activePedidosAddon && targetPlan.allowsPedidos,
-      acessos: activeAcessosAddon && targetPlan.allowsAcessos,
-    });
-    const lostAddonNames = [
-      willLoseMesas ? ADDONS.mesas.name : null,
-      willLosePedidos ? ADDONS.pedidos.name : null,
-      willLoseAcessos ? ADDONS.acessos.name : null,
-    ].filter(Boolean);
-    const message = lostAddonNames.length
-      ? `Trocar para ${targetPlan.name} (R$ ${newValue}/mês)? ${lostAddonNames.join(' e ')} será desativado pois esse plano não inclui PDV.`
-      : `Trocar para ${targetPlan.name} (R$ ${newValue}/mês)? O novo valor entra na próxima cobrança.`;
-
-    const ok = await confirmAction('Mudar de plano', message);
-    if (!ok) return;
-
-    try {
-      changingPlan = true;
-      const { data: { session: authSession } } = await supabase.auth.getSession();
-      const token = authSession?.access_token ?? '';
-      if (!token) {
-        addToast('Sessão expirou. Faça login.', 'warning');
-        return;
-      }
-
-      const res = await fetch('/api/billing/change-plan', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ targetTier }),
-      });
-      const json = await res.json();
-
-      if (!res.ok) {
-        addToast(json?.error || 'Falha ao mudar plano.', 'error');
-        return;
-      }
-
-      addToast(json?.message || 'Plano alterado.', 'success');
-      activePlanTier = targetTier;
-      selectedPlan = targetTier;
-      if (willLoseMesas) {
-        activeMesasAddon = false;
-        mesasAddonOn = false;
-      }
-      if (willLosePedidos) {
-        activePedidosAddon = false;
-        pedidosAddonOn = false;
-      }
-      if (willLoseAcessos) {
-        activeAcessosAddon = false;
-        acessosAddonOn = false;
-      }
-    } catch (e) {
-      addToast('Erro ao trocar plano.', 'error');
-    } finally {
-      changingPlan = false;
-    }
-  }
-
   async function cancelarAssinatura() {
     const confirmed = await confirmAction(
       'Cancelar Assinatura',
@@ -729,157 +751,6 @@
     }
   }
 
-  async function toggleMesasAddon() {
-    if (!activePlanAllowsMesas) {
-      addToast('Mesas não está disponível para o plano ZeloChat. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.', 'warning');
-      return;
-    }
-    const turningOn = !activeMesasAddon;
-    const previewValue = calculateValue(activePlanTier, {
-      mesas: turningOn,
-      pedidos: activePedidosAddon,
-    });
-    const confirmed = await confirmAction(
-      turningOn ? 'Ativar Módulo Mesas' : 'Desativar Módulo Mesas',
-      `O valor da próxima cobrança ${turningOn ? 'passará' : 'voltará'} para R$ ${previewValue}/mês. A cobrança atual não é alterada.`
-    );
-    if (!confirmed) return;
-
-    try {
-      togglingAddon = true;
-      const { data: { session: authSession } } = await supabase.auth.getSession();
-      const token = authSession?.access_token ?? '';
-      if (!token) {
-        addToast('Sua sessão expirou. Faça login novamente.', 'warning');
-        return;
-      }
-
-      const res = await fetch('/api/billing/toggle-addon', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ addon: 'mesas', enabled: turningOn }),
-      });
-      const json = await res.json();
-
-      if (!res.ok) {
-        addToast(json?.error || 'Falha ao alterar add-on.', 'error');
-        return;
-      }
-
-      activeMesasAddon = turningOn;
-      mesasAddonOn = turningOn;
-      addToast(json?.message || 'Add-on atualizado.', 'success');
-    } catch (e) {
-      addToast('Erro ao conectar. Tente novamente.', 'error');
-    } finally {
-      togglingAddon = false;
-    }
-  }
-
-  async function togglePedidosAddon() {
-    if (!activePlanAllowsPedidos) {
-      addToast('Pedidos + Cozinha não está disponível para o plano ZeloChat. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.', 'warning');
-      return;
-    }
-    const turningOn = !activePedidosAddon;
-    const previewValue = calculateValue(activePlanTier, {
-      mesas: activeMesasAddon,
-      pedidos: turningOn,
-    });
-    const confirmed = await confirmAction(
-      turningOn ? 'Ativar Pedidos + Cozinha' : 'Desativar Pedidos + Cozinha',
-      `O valor da próxima cobrança ${turningOn ? 'passará' : 'voltará'} para R$ ${previewValue}/mês. A cobrança atual não é alterada.`
-    );
-    if (!confirmed) return;
-
-    try {
-      togglingAddon = true;
-      const { data: { session: authSession } } = await supabase.auth.getSession();
-      const token = authSession?.access_token ?? '';
-      if (!token) {
-        addToast('Sua sessão expirou. Faça login novamente.', 'warning');
-        return;
-      }
-
-      const res = await fetch('/api/billing/toggle-addon', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ addon: 'pedidos', enabled: turningOn }),
-      });
-      const json = await res.json();
-
-      if (!res.ok) {
-        addToast(json?.error || 'Falha ao alterar add-on.', 'error');
-        return;
-      }
-
-      activePedidosAddon = turningOn;
-      pedidosAddonOn = turningOn;
-      addToast(json?.message || 'Add-on atualizado.', 'success');
-    } catch (e) {
-      addToast('Erro ao conectar. Tente novamente.', 'error');
-    } finally {
-      togglingAddon = false;
-    }
-  }
-
-  async function toggleAcessosAddon() {
-    if (!activePlanAllowsAcessos) {
-      addToast('Controle de Acessos não está disponível para o plano ZeloChat. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.', 'warning');
-      return;
-    }
-    const turningOn = !activeAcessosAddon;
-    const previewValue = calculateValue(activePlanTier, {
-      mesas: activeMesasAddon,
-      pedidos: activePedidosAddon,
-      acessos: turningOn,
-    });
-    const confirmed = await confirmAction(
-      turningOn ? 'Ativar Controle de Acessos' : 'Desativar Controle de Acessos',
-      `O valor da próxima cobrança ${turningOn ? 'passará' : 'voltará'} para R$ ${previewValue}/mês. A cobrança atual não é alterada.`
-    );
-    if (!confirmed) return;
-
-    try {
-      togglingAddon = true;
-      const { data: { session: authSession } } = await supabase.auth.getSession();
-      const token = authSession?.access_token ?? '';
-      if (!token) {
-        addToast('Sua sessão expirou. Faça login novamente.', 'warning');
-        return;
-      }
-
-      const res = await fetch('/api/billing/toggle-addon', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ addon: 'acessos', enabled: turningOn }),
-      });
-      const json = await res.json();
-
-      if (!res.ok) {
-        addToast(json?.error || 'Falha ao alterar add-on.', 'error');
-        return;
-      }
-
-      activeAcessosAddon = turningOn;
-      acessosAddonOn = turningOn;
-      addToast(json?.message || 'Add-on atualizado.', 'success');
-    } catch (e) {
-      addToast('Erro ao conectar. Tente novamente.', 'error');
-    } finally {
-      togglingAddon = false;
-    }
-  }
-
   $: defaultMessage = hasHadSubscription
     ? 'Renove sua assinatura para continuar usando o sistema.'
     : '30 dias grátis! Escolha o plano que faz sentido pro seu negócio.';
@@ -903,10 +774,10 @@
     <div class="status-card info">
       <div class="status-icon">🪑</div>
       <div>
-        <strong>Você quer ativar o Módulo Mesas</strong>
-        <div class="status-detail">
-          {#if isActiveStrict && activePlanAllowsMesas && !activeMesasAddon}
-            Use "Ativar Módulo Mesas" abaixo.
+          <strong>Você quer ativar o Módulo Mesas</strong>
+          <div class="status-detail">
+            {#if isActiveStrict && activePlanAllowsMesas && !activeMesasAddon}
+            Marque "Módulo Mesas" no wizard abaixo e confirme a renovação.
           {:else if isActiveStrict && !activePlanAllowsMesas}
             O Módulo Mesas precisa de um plano com PDV. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.
           {:else if activeMesasAddon}
@@ -923,10 +794,10 @@
     <div class="status-card info">
       <div class="status-icon">PC</div>
       <div>
-        <strong>Você quer ativar Pedidos + Cozinha</strong>
-        <div class="status-detail">
-          {#if isActiveStrict && activePlanAllowsPedidos && !activePedidosAddon}
-            Use "Ativar Pedidos + Cozinha" abaixo.
+          <strong>Você quer ativar Pedidos + Cozinha</strong>
+          <div class="status-detail">
+            {#if isActiveStrict && activePlanAllowsPedidos && !activePedidosAddon}
+            Marque "Pedidos + Cozinha" no wizard abaixo e confirme a renovação.
           {:else if isActiveStrict && !activePlanAllowsPedidos}
             Pedidos + Cozinha precisa de um plano com PDV. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.
           {:else if activePedidosAddon}
@@ -943,10 +814,10 @@
     <div class="status-card info">
       <div class="status-icon">🔑</div>
       <div>
-        <strong>Você quer ativar Controle de Acessos</strong>
-        <div class="status-detail">
-          {#if isActiveStrict && activePlanAllowsAcessos && !activeAcessosAddon}
-            Use "Ativar Controle de Acessos" abaixo.
+          <strong>Você quer ativar Controle de Acessos</strong>
+          <div class="status-detail">
+            {#if isActiveStrict && activePlanAllowsAcessos && !activeAcessosAddon}
+            Marque "Controle de Acessos" no wizard abaixo e confirme a renovação.
           {:else if isActiveStrict && !activePlanAllowsAcessos}
             Controle de Acessos precisa de um plano com PDV. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.
           {:else if activeAcessosAddon}
@@ -1004,121 +875,220 @@
 
     <a href="/app" class="btn-secondary" style="text-align:center; text-decoration:none;">Entrar no sistema</a>
 
-    <h2 class="selector-title" style="margin-top: 1rem;">Mudar de plano</h2>
-    <div class="plans-grid">
-      {#each activePlanOptions as plan}
-        <button
-          type="button"
-          class="plan-card"
-          class:current={plan.id === activePlanTier}
-          class:bundle={plan.id === 'bundle'}
-          on:click={() => trocarPlano(plan.id)}
-          disabled={changingPlan || plan.id === activePlanTier}
-        >
-          {#if plan.id === 'bundle'}<span class="plan-badge">Mais popular</span>{/if}
-          <div class="plan-name">{plan.name}</div>
-          <div class="plan-price">R$ {plan.price}<span class="plan-cycle">/mês</span></div>
-          {#if plan.bundleSavings}<div class="plan-savings">Economize R$ {plan.bundleSavings}</div>{/if}
-          <div class="plan-tagline">{plan.tagline}</div>
-          <div class="plan-cta">
-            {#if plan.id === activePlanTier}Plano atual{:else if changingPlan}Mudando…{:else}Mudar para este plano{/if}
+    <div class="checkout-flow">
+      <div class="checkout-steps" aria-label="Etapas para mudar ou renovar assinatura">
+        {#each checkoutSteps as step}
+          <button
+            type="button"
+            class="step-chip"
+            class:active={checkoutStep === step.id}
+            class:done={checkoutStep > step.id}
+            on:click={() => goToCheckoutStep(step.id)}
+          >
+            <span class="step-chip-number">{step.id}</span>
+            <span>{step.label}</span>
+          </button>
+        {/each}
+      </div>
+
+      <div class="mobile-step-pagination" aria-label="Etapa atual da renovação">
+        <div class="mobile-step-copy">
+          <span class="mobile-step-kicker">Etapa {checkoutStep} de {checkoutSteps.length}</span>
+          <strong>{currentCheckoutStepLabel}</strong>
+        </div>
+        <div class="mobile-step-dots" aria-hidden="true">
+          {#each checkoutSteps as step}
+            <button
+              type="button"
+              class="mobile-step-dot"
+              class:active={checkoutStep === step.id}
+              on:click={() => goToCheckoutStep(step.id)}
+              aria-label={`Ir para ${step.label}`}
+            ></button>
+          {/each}
+        </div>
+      </div>
+
+      <div class="checkout-shell">
+        <div class="checkout-track" style={`transform: translateX(-${(checkoutStep - 1) * 100}%);`}>
+          <section class="checkout-step-panel" aria-hidden={checkoutStep !== 1}>
+            <div class="step-panel-header step-panel-header-large">
+              <p class="step-kicker">{wizardModeLabel}</p>
+              <h2 class="selector-title selector-title-large">{wizardStepOneTitle}</h2>
+              <p class="step-copy">{wizardStepOneCopy}</p>
+            </div>
+
+            <div class="plan-focus-grid plan-focus-grid-large">
+              {#each wizardPlanIds as planId}
+                <button
+                  type="button"
+                  class="plan-card plan-card-primary plan-card-decision"
+                  class:selected={selectedPlan === planId}
+                  class:current={planId === activePlanTier}
+                  class:bundle={planId === 'bundle'}
+                  on:click={() => handlePlanSelection(planId)}
+                >
+                  {#if planId === 'bundle'}<span class="plan-badge">Mais popular</span>{/if}
+                  <span class="decision-eyebrow">{getPlanDecisionEyebrow(planId)}</span>
+                  <div class="plan-name">{PLANS[planId].name}</div>
+                  <div class="plan-price">R$ {PLANS[planId].price}<span class="plan-cycle">/mês</span></div>
+                  {#if PLANS[planId].bundleSavings}<div class="plan-savings">Economize R$ {PLANS[planId].bundleSavings}</div>{/if}
+                  <div class="plan-tagline">{PLANS[planId].tagline}</div>
+                  <div class="plan-cta">
+                    {#if selectedPlan === planId}
+                      {planId === activePlanTier ? 'Plano atual selecionado' : 'Novo pacote selecionado'}
+                    {:else}
+                      Escolher pacote
+                    {/if}
+                  </div>
+                </button>
+              {/each}
+            </div>
+
+            <div class="step-actions">
+              <button type="button" class="btn-primary step-continue" on:click={() => goToCheckoutStep(2)}>
+                Continuar
+              </button>
+            </div>
+          </section>
+
+          <section class="checkout-step-panel" aria-hidden={checkoutStep !== 2}>
+            <div class="step-panel-header">
+              <p class="step-kicker">{wizardModeLabel}</p>
+              <h2 class="selector-title">{wizardStepTwoTitle}</h2>
+              <p class="step-copy">{wizardStepTwoCopy}</p>
+            </div>
+
+            <div class="addons-grid">
+              {#each addonCatalog as addon}
+                <button
+                  type="button"
+                  class="addon-choice"
+                  class:selected={addonSelected(addon.id)}
+                  class:disabled={!addonAvailable(addon.id)}
+                  on:click={() => toggleAddonSelection(addon.id)}
+                  disabled={!addonAvailable(addon.id)}
+                >
+                  <div class="addon-choice-top">
+                    <div class="addon-choice-title">
+                      <strong>{addon.name}</strong>
+                      <span>{addon.priceLabel}</span>
+                    </div>
+                    <span class="addon-pill" class:on={addonSelected(addon.id)}>
+                      {#if addonAvailable(addon.id)}
+                        {addonSelected(addon.id) ? 'Selecionado' : 'Opcional'}
+                      {:else}
+                        Não disponível
+                      {/if}
+                    </span>
+                  </div>
+                  <p class="addon-choice-copy">
+                    {#if addonAvailable(addon.id)}
+                      {addon.teaser}
+                    {:else}
+                      Disponível apenas em planos com ZeloPDV.
+                    {/if}
+                  </p>
+                  {#if addonAvailable(addon.id)}
+                    <span class="addon-pain">Resolve: {addon.painPoint}</span>
+                  {/if}
+                  <span class="addon-tooltip">{addon.painPoint}</span>
+                </button>
+              {/each}
+            </div>
+
+            <div class="step-actions step-actions-between">
+              <button type="button" class="btn-secondary" on:click={() => goToCheckoutStep(1)}>
+                Voltar
+              </button>
+              <button type="button" class="btn-primary step-continue" on:click={() => goToCheckoutStep(3)}>
+                Revisar e pagar
+              </button>
+            </div>
+          </section>
+
+          <section class="checkout-step-panel" aria-hidden={checkoutStep !== 3}>
+            <div class="step-panel-header">
+              <p class="step-kicker">{wizardModeLabel}</p>
+              <h2 class="selector-title">{wizardStepThreeTitle}</h2>
+              <p class="step-copy">{wizardStepThreeCopy}</p>
+            </div>
+
+            <div class="step-total-spotlight">
+              <span class="step-total-label">{activePackageChanged ? 'Novo pacote' : 'Pacote atual'}</span>
+              <strong>R$ {planPrice}/mês</strong>
+              <p>{selectedAddons.length ? selectionSummary.join(' + ') : selectedPlanTagline}</p>
+            </div>
+
+            <div class="renewal-summary">
+              <span>Vencimento atual: <strong>{expiryDateLabel || 'não definido'}</strong></span>
+              <span>Após o pagamento: <strong>{projectedRenewalLabel}</strong></span>
+            </div>
+
+            <div class="payment-grid single-payment">
+              <button class="payment-card" type="button" on:click={() => gerarPix({ renewal: true })} disabled={loading || pixLoading}>
+                <div class="payment-card-head">
+                  <span class="payment-card-icon" aria-hidden="true">
+                    <OfflineIcon icon={pixIconData} />
+                  </span>
+                  <span class="payment-card-kicker">Pix</span>
+                </div>
+                <strong>{pixPaymentTitle}</strong>
+                <span>{pixPaymentDescription}</span>
+                <span class="payment-card-cta">{pixPaymentCta}</span>
+              </button>
+            </div>
+
+            {#if pixPayment && !pixPaymentMatchesSelection}
+              <div class="status-card warning compact-status">
+                <div class="status-icon">⚠️</div>
+                <div>Você alterou o plano ou os add-ons depois de gerar o Pix. Gere uma nova cobrança para continuar com a seleção atual.</div>
+              </div>
+            {/if}
+
+            <div class="step-actions step-actions-between">
+              <button type="button" class="btn-secondary" on:click={() => goToCheckoutStep(2)}>
+                Voltar
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {#if checkoutStep < 3}
+        <div class="mobile-sticky-summary" aria-label="Resumo do pacote selecionado">
+          <div class="mobile-sticky-copy">
+            <span>{selectedPlanName}</span>
+            <strong>R$ {planPrice}/mês</strong>
           </div>
-        </button>
-      {/each}
+          <button
+            type="button"
+            class="btn-primary mobile-sticky-action"
+            on:click={() => goToCheckoutStep(checkoutStep + 1)}
+          >
+            {checkoutStep === 1 ? 'Continuar' : 'Revisar e pagar'}
+          </button>
+        </div>
+      {/if}
+
+      <div class="checkout-summary">
+        <div>
+          <p class="summary-kicker">{activePackageChanged ? 'Pacote selecionado' : 'Renovação do pacote atual'}</p>
+          <h2 class="summary-title">{selectedPlanName}</h2>
+          <p class="summary-copy">
+            {#if selectedAddons.length}
+              {selectionSummary.join(' + ')}
+            {:else}
+              {selectedPlanTagline}
+            {/if}
+          </p>
+        </div>
+        <div class="summary-total">
+          <span>Total mensal</span>
+          <strong>R$ {planPrice}</strong>
+        </div>
+      </div>
     </div>
-
-    {#if activePlanAllowsMesas}
-      <div class="addon-card">
-        <div class="addon-card-header">
-          <strong>Módulo Mesas</strong>
-          <span class="addon-status" class:on={activeMesasAddon}>
-            {activeMesasAddon ? 'Ativo' : 'Não ativo'}
-          </span>
-        </div>
-        <p class="addon-card-detail">
-          {#if activeMesasAddon}
-            Você está pagando R$ {activePlanPrice}/mês (plano + add-ons). Desativar volta o valor para R$ {calculateValue(activePlanTier, { mesas: false, pedidos: activePedidosAddon })}/mês na próxima cobrança.
-          {:else}
-            Adicione mesas, comandas e divisão de conta. +R$ 30/mês — total R$ {calculateValue(activePlanTier, { mesas: true, pedidos: activePedidosAddon })}/mês.
-          {/if}
-        </p>
-        <button
-          class="btn-secondary"
-          on:click={toggleMesasAddon}
-          disabled={togglingAddon}
-        >
-          {#if togglingAddon}
-            Atualizando…
-          {:else if activeMesasAddon}
-            Desativar Módulo Mesas
-          {:else}
-            Ativar Módulo Mesas (+R$ 30/mês)
-          {/if}
-        </button>
-      </div>
-    {/if}
-
-    {#if activePlanAllowsPedidos}
-      <div class="addon-card">
-        <div class="addon-card-header">
-          <strong>Pedidos + Cozinha</strong>
-          <span class="addon-status" class:on={activePedidosAddon}>
-            {activePedidosAddon ? 'Ativo' : 'Não ativo'}
-          </span>
-        </div>
-        <p class="addon-card-detail">
-          {#if activePedidosAddon}
-            Você está pagando R$ {activePlanPrice}/mês (plano + add-ons). Desativar volta o valor para R$ {calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: false })}/mês na próxima cobrança.
-          {:else}
-            Adicione pedidos, delivery e painel de cozinha. +R$ 30/mês - total R$ {calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: true })}/mês.
-          {/if}
-        </p>
-        <button
-          class="btn-secondary"
-          on:click={togglePedidosAddon}
-          disabled={togglingAddon}
-        >
-          {#if togglingAddon}
-            Atualizando...
-          {:else if activePedidosAddon}
-            Desativar Pedidos + Cozinha
-          {:else}
-            Ativar Pedidos + Cozinha (+R$ 30/mês)
-          {/if}
-        </button>
-      </div>
-    {/if}
-
-    {#if activePlanAllowsAcessos}
-      <div class="addon-card">
-        <div class="addon-card-header">
-          <strong>Controle de Acessos</strong>
-          <span class="addon-status" class:on={activeAcessosAddon}>
-            {activeAcessosAddon ? 'Ativo' : 'Não ativo'}
-          </span>
-        </div>
-        <p class="addon-card-detail">
-          {#if activeAcessosAddon}
-            Você está pagando R$ {activePlanPrice}/mês (plano + add-ons). Desativar volta o valor para R$ {calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: activePedidosAddon, acessos: false })}/mês na próxima cobrança.
-          {:else}
-            Gerencie usuários e permissões de acesso ao sistema. +R$ 30/mês — total R$ {calculateValue(activePlanTier, { mesas: activeMesasAddon, pedidos: activePedidosAddon, acessos: true })}/mês.
-          {/if}
-        </p>
-        <button
-          class="btn-secondary"
-          on:click={toggleAcessosAddon}
-          disabled={togglingAddon}
-        >
-          {#if togglingAddon}
-            Atualizando…
-          {:else if activeAcessosAddon}
-            Desativar Controle de Acessos
-          {:else}
-            Ativar Controle de Acessos (+R$ 30/mês)
-          {/if}
-        </button>
-      </div>
-    {/if}
 
     <div class="actions-row">
       <button class="btn-danger-outline" on:click={cancelarAssinatura} disabled={canceling}>
@@ -1597,13 +1567,6 @@
   .btn-danger-outline:hover { background: rgba(220, 38, 38, 0.08); }
   .btn-danger-outline:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* Plans grid */
-  .plans-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 0.75rem;
-    margin-top: 0.25rem;
-  }
   .plan-card {
     position: relative;
     text-align: left;
@@ -1783,6 +1746,25 @@
   .summary-total strong {
     font-size: 1.7rem;
     line-height: 1;
+    color: var(--text-main);
+  }
+
+  .renewal-summary {
+    display: flex;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+  }
+
+  .renewal-summary span {
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: var(--bg-input);
+  }
+
+  .renewal-summary strong {
     color: var(--text-main);
   }
 
@@ -2000,6 +1982,10 @@
   .payment-card {
     min-height: 220px;
     padding: 1.15rem;
+  }
+
+  .single-payment {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .payment-card-head {
@@ -2310,35 +2296,6 @@
   :global(.dark) .status-card.active { color: #bbf7d0; }
   :global(.dark) .status-card.warning { color: #fde68a; }
   :global(.dark) .status-card.info { color: #bae6fd; }
-
-  .addon-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    padding: 1rem 1.15rem;
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    background: var(--bg-card);
-  }
-  .addon-card-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-  .addon-card-header strong { font-size: 1rem; color: var(--text-main); }
-  .addon-status {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-    background: var(--bg-input);
-    color: var(--text-muted);
-    border: 1px solid var(--border-subtle);
-  }
-  .addon-status.on {
-    background: rgba(34, 197, 94, 0.15);
-    color: #166534;
-    border-color: rgba(34, 197, 94, 0.35);
-  }
-  .addon-card-detail { font-size: 0.85rem; color: var(--text-label); margin: 0; line-height: 1.5; }
 
   @media (max-width: 760px) {
     .checkout-summary,
