@@ -8,10 +8,19 @@
   let inputEl = null
 
   $: state = $dialogState
-  $: if (state) {
-    if (state.mode === 'prompt') promptValue = state.defaultValue ?? ''
-    typedConfirm = ''
-    tick().then(() => inputEl?.focus())
+  // Reset + autofocus only when a new dialog opens (state identity changes).
+  // Guarding on identity is required: because typedConfirm/promptValue are both
+  // bound (bind:value) and assigned here, Svelte couples them so every keystroke
+  // re-invalidates `state` and re-runs this block — without the guard it would
+  // wipe the field on every character typed.
+  let lastState = null
+  $: if (state !== lastState) {
+    lastState = state
+    if (state) {
+      if (state.mode === 'prompt') promptValue = state.defaultValue ?? ''
+      typedConfirm = ''
+      tick().then(() => inputEl?.focus())
+    }
   }
 
   $: confirmDisabled = !!state && (
