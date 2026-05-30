@@ -675,7 +675,7 @@
         message = 'Pagamento confirmado. Redirecionando…';
         messageType = 'success';
         setTimeout(() => {
-          window.location.href = '/gestao';
+          window.location.href = '/assinatura?success=1';
         }, 1200);
         return;
       }
