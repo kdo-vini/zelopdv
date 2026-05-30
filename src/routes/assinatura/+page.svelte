@@ -7,7 +7,7 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { PLANS, calculateValue } from '$lib/pricing';
   import { trackStartTrial, trackSubscribe } from '$lib/metaPixel';
-  import { trackGoogleAdsAssinatura } from '$lib/googleAds';
+  import { trackGoogleAdsAssinatura, trackGoogleAdsInscricao } from '$lib/googleAds';
 
 
   let userId = '';
@@ -414,6 +414,7 @@
                 if (!data.alreadyExists) {
                   addToast('Seu teste gratuito de 30 dias foi ativado!', 'success');
                   trackStartTrial();
+                  trackGoogleAdsInscricao();
                 }
                 setTimeout(() => { window.location.href = '/gestao'; }, 2000);
                 return;

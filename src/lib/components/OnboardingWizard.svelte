@@ -9,6 +9,7 @@
     normalizeBrazilianTaxId,
   } from '$lib/masks';
   import { trackStartTrial } from '$lib/metaPixel';
+  import { trackGoogleAdsInscricao } from '$lib/googleAds';
 
   export let show = false;
   export let userId = '';
@@ -89,7 +90,12 @@
         throw new Error(trialPayload?.error || 'Erro ao ativar período de teste.');
       }
 
-      const didTrackTrial = !trialPayload?.alreadyExists && trackStartTrial();
+      let didTrackTrial = false;
+      if (!trialPayload?.alreadyExists) {
+        const trackedMetaTrial = trackStartTrial();
+        const trackedGoogleTrial = trackGoogleAdsInscricao();
+        didTrackTrial = trackedMetaTrial || trackedGoogleTrial;
+      }
       setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 2000 : 0);
     } catch (e) {
       error = e.message || 'Erro ao salvar. Tente novamente.';

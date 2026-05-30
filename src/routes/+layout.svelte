@@ -11,6 +11,7 @@
   import { page } from '$app/stores';
   import { get } from 'svelte/store';
   import { afterNavigate } from '$app/navigation';
+  import { isZeloContactWhatsAppHref, trackGoogleAdsContato } from '$lib/googleAds';
 
   afterNavigate(() => {
     if (typeof window !== 'undefined' && window.fbq) {
@@ -319,6 +320,24 @@
     return () => {
       window.removeEventListener('online', setOnline);
       window.removeEventListener('offline', setOffline);
+    };
+  });
+
+  onMount(() => {
+    function handleContactClick(event) {
+      const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+      const href = anchor?.getAttribute('href') || '';
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      const isProtectedArea = ['/app', '/gestao', '/relatorios'].some((prefix) => currentPath.startsWith(prefix));
+
+      if (!isProtectedArea && isZeloContactWhatsAppHref(href)) {
+        trackGoogleAdsContato();
+      }
+    }
+
+    document.addEventListener('click', handleContactClick, true);
+    return () => {
+      document.removeEventListener('click', handleContactClick, true);
     };
   });
   import ToastContainer from '$lib/components/ToastContainer.svelte';
