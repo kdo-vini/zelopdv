@@ -2,6 +2,13 @@ import { createRateLimitResponse, enforceRateLimit, getRequestIp } from '$lib/se
 
 const DEFAULT_LIMIT = { limit: 120, windowMs: 60 * 1000 };
 
+const ADMIN_API_ORIGINS = new Set([
+  'https://admin.zelopdv.com.br',
+  'https://www.admin.zelopdv.com.br',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+]);
+
 const LIMITS = {
   '/api/billing/webhook': { limit: 200, windowMs: 60 * 1000 },
   '/api/webhooks/abacatepay': { limit: 200, windowMs: 60 * 1000 },
@@ -29,8 +36,32 @@ function getLimitConfig(pathname) {
   return DEFAULT_LIMIT;
 }
 
+function getAdminCorsHeaders(request) {
+  const origin = request.headers.get('origin');
+  if (!origin || !ADMIN_API_ORIGINS.has(origin)) return null;
+
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers':
+      request.headers.get('access-control-request-headers') || 'authorization,content-type',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  };
+}
+
 /** @type {import('@sveltejs/kit').Handle} */
 export async function handle({ event, resolve }) {
+  const isAdminApi = event.url.pathname.startsWith('/api/admin/');
+  const adminCorsHeaders = isAdminApi ? getAdminCorsHeaders(event.request) : null;
+
+  if (isAdminApi && event.request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: adminCorsHeaders ? 204 : 403,
+      headers: adminCorsHeaders || {},
+    });
+  }
+
   if (event.url.pathname.startsWith('/api/')) {
     const ip = getRequestIp({
       request: event.request,
@@ -45,9 +76,21 @@ export async function handle({ event, resolve }) {
     });
 
     if (!result.ok) {
-      return createRateLimitResponse(result);
+      const response = createRateLimitResponse(result);
+      if (adminCorsHeaders) {
+        for (const [key, value] of Object.entries(adminCorsHeaders)) {
+          response.headers.set(key, value);
+        }
+      }
+      return response;
     }
   }
 
-  return resolve(event);
+  const response = await resolve(event);
+  if (adminCorsHeaders) {
+    for (const [key, value] of Object.entries(adminCorsHeaders)) {
+      response.headers.set(key, value);
+    }
+  }
+  return response;
 }
