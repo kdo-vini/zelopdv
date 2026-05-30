@@ -7,6 +7,7 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { PLANS, calculateValue } from '$lib/pricing';
   import { trackStartTrial, trackSubscribe } from '$lib/metaPixel';
+  import { trackGoogleAdsAssinatura } from '$lib/googleAds';
 
 
   let userId = '';
@@ -439,6 +440,7 @@
               })
             : 0;
           trackSubscribe({ value: subscribeValue });
+          trackGoogleAdsAssinatura();
           // Remove ?success=1 from URL immediately so a page refresh doesn't re-fire the pixel
           const cleanUrl = new URL(window.location.href);
           cleanUrl.searchParams.delete('success');
