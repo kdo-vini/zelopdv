@@ -1,6 +1,13 @@
 // Admin activity logger
 import { supabase } from './supabaseClient'
 
+const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
+
+async function getAccessToken() {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || null
+}
+
 /**
  * Log admin action to database
  * @param {Object} params
@@ -11,35 +18,29 @@ import { supabase } from './supabaseClient'
  */
 export async function logAdminAction({ adminId, action, targetUserId = null, details = {} }) {
     try {
-        // Get admin email
-        const { data: admin } = await supabase
-            .from('super_admins')
-            .select('email')
-            .eq('id', adminId)
-            .single()
-
-        // Get target email if provided
-        let targetEmail = null
-        if (targetUserId) {
-            const { data: user } = await supabase.auth.admin.getUserById(targetUserId)
-            targetEmail = user?.email
+        const token = await getAccessToken()
+        if (!token) {
+            console.error('[Logger] No active session to authenticate admin log request')
+            return
         }
 
-        // Insert log
-        const { error } = await supabase
-            .from('admin_activity_logs')
-            .insert({
-                admin_id: adminId,
-                admin_email: admin?.email,
+        const response = await fetch(`${API_BASE}/api/admin/activity-logs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                adminId,
                 action,
-                target_user_id: targetUserId,
-                target_email: targetEmail,
+                targetUserId,
                 details,
-                created_at: new Date().toISOString()
-            })
+            }),
+        })
 
-        if (error) {
-            console.error('[Logger] Failed to log action:', error)
+        if (!response.ok) {
+            const body = await response.json().catch(() => ({}))
+            console.error('[Logger] Failed to log action:', body.error || response.statusText)
         }
     } catch (err) {
         console.error('[Logger] Error:', err)
@@ -51,30 +52,52 @@ export async function logAdminAction({ adminId, action, targetUserId = null, det
  * @param {number} limit - Number of logs to fetch
  */
 export async function getRecentLogs(limit = 50) {
-    const { data, error } = await supabase
-        .from('admin_activity_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(limit)
+    try {
+        const token = await getAccessToken()
+        if (!token) return []
 
-    if (error) {
-        console.error('[Logger] Failed to fetch logs:', error)
+        const response = await fetch(`${API_BASE}/api/admin/activity-logs?limit=${limit}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        })
+
+        const body = await response.json().catch(() => ({}))
+        if (!response.ok) {
+            console.error('[Logger] Failed to fetch logs:', body.error || response.statusText)
+            return []
+        }
+
+        return body.logs || []
+    } catch (err) {
+        console.error('[Logger] Failed to fetch logs:', err)
         return []
     }
-
-    return data || []
 }
 
 /**
  * Get logs for specific admin
  */
 export async function getLogsByAdmin(adminId, limit = 50) {
-    const { data, error } = await supabase
-        .from('admin_activity_logs')
-        .select('*')
-        .eq('admin_id', adminId)
-        .order('created_at', { ascending: false })
-        .limit(limit)
+    try {
+        const token = await getAccessToken()
+        if (!token) return []
 
-    return data || []
+        const response = await fetch(`${API_BASE}/api/admin/activity-logs?adminId=${encodeURIComponent(adminId)}&limit=${limit}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        })
+
+        const body = await response.json().catch(() => ({}))
+        if (!response.ok) {
+            console.error('[Logger] Failed to fetch admin logs:', body.error || response.statusText)
+            return []
+        }
+
+        return body.logs || []
+    } catch (err) {
+        console.error('[Logger] Failed to fetch admin logs:', err)
+        return []
+    }
 }
