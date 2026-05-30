@@ -7,18 +7,40 @@ function hasGtag() {
   return typeof window !== 'undefined' && typeof window.gtag === 'function';
 }
 
-function trackConversion(sendTo) {
+function trackConversion(sendTo, params = {}) {
   if (!hasGtag()) return false;
 
   window.gtag('event', 'conversion', {
     send_to: sendTo,
+    ...params,
   });
 
   return true;
 }
 
-export function trackGoogleAdsAssinatura() {
-  return trackConversion(ASSINATURA_CONVERSION_ID);
+export function waitForGtag({ attempts = 40, intervalMs = 150 } = {}) {
+  if (hasGtag()) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    let remaining = attempts;
+    const timer = window.setInterval(() => {
+      if (hasGtag()) {
+        window.clearInterval(timer);
+        resolve(true);
+        return;
+      }
+
+      remaining -= 1;
+      if (remaining <= 0) {
+        window.clearInterval(timer);
+        resolve(false);
+      }
+    }, intervalMs);
+  });
+}
+
+export function trackGoogleAdsAssinatura(params = {}) {
+  return trackConversion(ASSINATURA_CONVERSION_ID, params);
 }
 
 export function trackGoogleAdsInscricao() {

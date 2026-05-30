@@ -6,10 +6,10 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { page } from '$app/stores';
-  import { trackSubscribe } from '$lib/metaPixel';
-  import { trackGoogleAdsAssinatura } from '$lib/googleAds';
+  import { trackGoogleAdsAssinatura, waitForGtag } from '$lib/googleAds';
 
-  const REDIRECT_DELAY_MS = 1800;
+  const REDIRECT_DELAY_MS = 4500;
+  const GOOGLE_CALLBACK_TIMEOUT_MS = 3000;
 
   let hasTracked = false;
   let countdownMs = REDIRECT_DELAY_MS;
@@ -25,29 +25,46 @@
     $page.url.searchParams.get('payment_id') || '',
     $page.url.searchParams.get('legacy') || '',
   ].join(':');
+  $: transactionId = $page.url.searchParams.get('session_id')
+    || $page.url.searchParams.get('payment_id')
+    || conversionKey;
   $: countdownSeconds = Math.max(1, Math.ceil(countdownMs / 1000));
 
   function goToDashboard() {
-    window.location.href = '/gestao';
+    if (typeof window !== 'undefined' && window.location.pathname !== '/gestao') {
+      window.location.href = '/gestao';
+    }
   }
 
-  function trackConversionOnce() {
+  async function trackConversionOnce() {
     if (typeof window === 'undefined' || hasTracked) return;
 
-    const storageKey = `zelo_assinatura_conversion:${conversionKey || 'default'}`;
+    const storageKey = `zelo_google_ads_assinatura_conversion:v2:${conversionKey || 'default'}`;
     if (window.sessionStorage.getItem(storageKey) === '1') {
       hasTracked = true;
+      redirectTimer = window.setTimeout(goToDashboard, 1000);
       return;
     }
 
-    const trackedMeta = conversionValue
-      ? trackSubscribe({ value: conversionValue })
-      : trackSubscribe();
-    const trackedGoogle = trackGoogleAdsAssinatura();
+    const hasGoogleTag = await waitForGtag({ attempts: 20, intervalMs: 150 });
 
-    if (trackedMeta || trackedGoogle) {
-      window.sessionStorage.setItem(storageKey, '1');
-    }
+    let googleCallbackFired = false;
+    const trackedGoogle = hasGoogleTag && trackGoogleAdsAssinatura({
+      ...(conversionValue ? { value: conversionValue, currency: 'BRL' } : {}),
+      transaction_id: transactionId,
+      transport_type: 'beacon',
+      event_timeout: GOOGLE_CALLBACK_TIMEOUT_MS,
+      event_callback: () => {
+        googleCallbackFired = true;
+        window.sessionStorage.setItem(storageKey, '1');
+        goToDashboard();
+      },
+    });
+
+    window.setTimeout(() => {
+      if (!googleCallbackFired) goToDashboard();
+    }, GOOGLE_CALLBACK_TIMEOUT_MS + 400);
+
     hasTracked = true;
   }
 
@@ -58,9 +75,7 @@
       countdownMs = Math.max(0, countdownMs - 100);
     }, 100);
 
-    redirectTimer = window.setTimeout(() => {
-      goToDashboard();
-    }, REDIRECT_DELAY_MS);
+    redirectTimer = window.setTimeout(goToDashboard, REDIRECT_DELAY_MS + 2500);
   });
 
   onDestroy(() => {
