@@ -664,6 +664,15 @@
       if (data.status === 'paid') {
         stopPixStatusPolling();
         if (shouldStayOnPageAfterPayment) {
+          const subscribeValue = activePlanTier
+            ? calculateValue(activePlanTier, {
+                mesas: activeMesasAddon,
+                pedidos: activePedidosAddon,
+                acessos: activeAcessosAddon,
+              })
+            : 0;
+          trackSubscribe({ value: subscribeValue });
+          trackGoogleAdsAssinatura();
           const updatedSubscription = await loadSubscriptionState();
           const renewedUntil = formatDate(updatedSubscription?.current_period_end) || projectedRenewalLabel;
           pixModalOpen = false;
