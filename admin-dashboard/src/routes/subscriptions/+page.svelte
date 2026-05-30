@@ -64,7 +64,9 @@
   let showExtendModal = false
   let showPlanModal = false
   let selectedSub = null
-  let extendMonths = 1
+  let extendMode = 'days'
+  let extendDays = 30
+  let extendTargetDate = ''
   let extendReason = ''
   let extending = false
   let statusUpdating = false
@@ -157,7 +159,9 @@
   
   function openExtendModal(sub) {
     selectedSub = sub
-    extendMonths = 1
+    extendMode = 'days'
+    extendDays = 30
+    extendTargetDate = formatDateInputValue(getDefaultExtensionTargetDate(sub))
     extendReason = ''
     showExtendModal = true
   }
@@ -165,7 +169,9 @@
   function closeExtendModal() {
     showExtendModal = false
     selectedSub = null
-    extendMonths = 1
+    extendMode = 'days'
+    extendDays = 30
+    extendTargetDate = ''
     extendReason = ''
   }
 
@@ -186,6 +192,81 @@
     editPedidosAddon = false
     editAcessosAddon = false
   }
+
+  function getProviderLabel(provider) {
+    if (provider === 'stripe') return 'Stripe'
+    if (provider === 'abacatepay') return 'Abacate Pay'
+    if (provider === 'manual') return 'Manual'
+    return 'Sem provedor'
+  }
+
+  function getProviderTone(provider) {
+    if (provider === 'stripe') return 'text-indigo-300'
+    if (provider === 'abacatepay') return 'text-emerald-300'
+    if (provider === 'manual') return 'text-amber-300'
+    return 'text-slate-300'
+  }
+
+  function getProviderPlanHint(sub) {
+    const provider = sub?.payment_provider
+    if (provider === 'stripe') {
+      return {
+        className: 'bg-indigo-500/5 border-indigo-500/30 text-indigo-300',
+        title: 'Stripe será sincronizado',
+        body: 'Salvar vai chamar a API do Stripe para atualizar plano e add-ons. Mudança vale no provedor e no banco.',
+      }
+    }
+    if (provider === 'abacatepay') {
+      return {
+        className: 'bg-emerald-500/5 border-emerald-500/30 text-emerald-300',
+        title: 'Abacate Pay identificado',
+        body: 'Esta assinatura veio do fluxo Pix via Abacate Pay. Plano e add-ons serão ajustados só no banco; o provedor não mantém catálogo de assinatura para sincronizar.',
+      }
+    }
+    if (provider === 'manual') {
+      return {
+        className: 'bg-amber-500/5 border-amber-500/30 text-amber-300',
+        title: 'Assinatura manual',
+        body: 'Alteração 100% manual no banco. Use para cortesias, migrações e clientes fora de automação.',
+      }
+    }
+    return {
+      className: 'bg-slate-500/5 border-slate-500/30 text-slate-300',
+      title: 'Sem provedor vinculado',
+      body: 'Essa linha está sem `payment_provider` no banco. A alteração será aplicada direto no DB.',
+    }
+  }
+
+  function addDays(date, days) {
+    const next = new Date(date)
+    next.setDate(next.getDate() + days)
+    return next
+  }
+
+  function formatDateInputValue(value) {
+    const date = parseSubscriptionDate(value)
+    if (!date) return ''
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  function getDefaultExtensionTargetDate(sub) {
+    const base = getEffectiveExpiry(sub) || new Date()
+    const reference = base > new Date() ? base : new Date()
+    return addDays(reference, 30)
+  }
+
+  function getExtensionPreviewDate(sub) {
+    if (!sub) return null
+    const base = getEffectiveExpiry(sub) || new Date()
+    const reference = base > new Date() ? base : new Date()
+    if (extendMode === 'date') return parseSubscriptionDate(extendTargetDate)
+    return addDays(reference, extendDays)
+  }
+
+  $: selectedSubProviderHint = selectedSub ? getProviderPlanHint(selectedSub) : null
 
   // Admin muda plano e addons. Para subs Stripe, chama endpoint que sincroniza com Stripe API
   // (igual o user faria via /assinatura). Para subs manual/sem provedor, update direto no DB.
@@ -300,7 +381,7 @@
         return
       }
 
-      // Manual ou sem provedor: update direto no DB
+      // Abacate/manual/sem provedor: update direto no DB
       const updatePayload = {
         plan_tier: editPlanTier,
         has_mesas_addon: finalMesas,
@@ -340,7 +421,7 @@
         },
       })
 
-      success(`Plano alterado para ${planLabel(editPlanTier)} (apenas no DB — sem provedor).`)
+      success(`Plano alterado para ${planLabel(editPlanTier)} (ajuste direto no DB — ${getProviderLabel(provider)}).`)
       closePlanModal()
       await loadSubscriptions()
     } catch (err) {
@@ -390,27 +471,67 @@
       errorToast('Por favor, preencha o motivo do pagamento')
       return
     }
+
+    if (extendMode === 'date' && !extendTargetDate) {
+      errorToast('Escolha a data final da extensão.')
+      return
+    }
     
     extending = true
     
     try {
-      const { data, error } = await supabase.rpc('admin_extend_subscription', {
-        p_subscription_id: selectedSub.id,
-        p_months: extendMonths,
-        p_reason: extendReason,
-        p_admin_id: adminInfo.id
-      })
-      
-      if (error) throw error
-      
-      if (data.error) {
-        errorToast(data.error)
-      } else {
-        const wasExpired = data.was_expired ? ' (assinatura estava expirada)' : '';
-        success(`Pagamento registrado! Nova expiração: ${formatSubscriptionDate(data.new_expiry)}${wasExpired}`)
-        closeExtendModal()
-        await loadSubscriptions()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        errorToast('Sessão expirada. Faça login novamente.')
+        return
       }
+
+      const response = await fetch(`${API_BASE}/api/admin/billing/extend-subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: selectedSub.id,
+          reason: extendReason,
+          days: extendMode === 'days' ? extendDays : null,
+          targetDate: extendMode === 'date' ? extendTargetDate : null,
+        }),
+      })
+
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        errorToast(body.error || 'Erro ao registrar pagamento')
+        return
+      }
+
+      const wasExpired = body.wasExpired ? ' (assinatura estava expirada)' : ''
+      const modeLabel = body.mode === 'target_date'
+        ? `Data final ajustada para ${formatSubscriptionDate(body.newExpiry)}`
+        : `Nova expiração: ${formatSubscriptionDate(body.newExpiry)}`
+
+      await logAdminAction({
+        adminId: adminInfo.id,
+        action: 'extend_subscription_admin_dashboard',
+        targetUserId: selectedSub.user_id,
+        details: {
+          subscription_id: selectedSub.id,
+          company: selectedSub.empresa_perfil.nome_exibicao,
+          mode: body.mode,
+          days: body.days,
+          target_date: body.targetDate,
+          previous_expiry: body.previousExpiry,
+          new_expiry: body.newExpiry,
+          provider: body.provider,
+          billing_type: body.billingType,
+          reason: extendReason,
+        }
+      })
+
+      success(`Pagamento registrado! ${modeLabel}${wasExpired}`)
+      closeExtendModal()
+      await loadSubscriptions()
     } catch (err) {
       console.error('Error extending subscription:', err)
       errorToast('Erro ao registrar pagamento')
@@ -957,7 +1078,12 @@
                   </div>
                   <div class="min-w-0">
                     <p class="text-sm font-semibold text-slate-200 truncate group-hover:text-white transition-colors">{sub.empresa_perfil.nome_exibicao || 'S/N'}</p>
-                    <p class="text-xs text-slate-500 truncate mt-0.5">{sub.empresa_perfil.contato}</p>
+                    <div class="flex items-center gap-2 mt-0.5 min-w-0">
+                      <p class="text-xs text-slate-500 truncate">{sub.empresa_perfil.contato}</p>
+                      <span class={`text-[10px] font-semibold uppercase tracking-wide shrink-0 ${getProviderTone(sub.payment_provider)}`}>
+                        {getProviderLabel(sub.payment_provider)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </td>
@@ -1080,7 +1206,12 @@
           <div class="flex justify-between items-start mb-3">
             <div>
               <h3 class="text-sm font-bold text-slate-100">{sub.empresa_perfil.nome_exibicao || 'S/N'}</h3>
-              <p class="text-xs text-slate-500 mt-0.5">{sub.empresa_perfil.contato}</p>
+              <div class="flex items-center gap-2 mt-0.5">
+                <p class="text-xs text-slate-500">{sub.empresa_perfil.contato}</p>
+                <span class={`text-[10px] font-semibold uppercase tracking-wide ${getProviderTone(sub.payment_provider)}`}>
+                  {getProviderLabel(sub.payment_provider)}
+                </span>
+              </div>
             </div>
             <span class="inline-flex px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border {badge.class}">
               {badge.text}
@@ -1138,7 +1269,12 @@
           <p class="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-1">Empresa Alvo</p>
           <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
              <div class="w-8 h-8 bg-sky-500/20 text-sky-400 flex items-center justify-center rounded-full font-bold text-xs">{getInitials(selectedSub.empresa_perfil.nome_exibicao)}</div>
-             <div class="text-sm font-medium text-slate-200">{selectedSub.empresa_perfil.nome_exibicao}</div>
+             <div>
+               <div class="text-sm font-medium text-slate-200">{selectedSub.empresa_perfil.nome_exibicao}</div>
+               <div class={`text-[11px] font-semibold uppercase tracking-wide ${getProviderTone(selectedSub.payment_provider)}`}>
+                 {getProviderLabel(selectedSub.payment_provider)}
+               </div>
+             </div>
           </div>
         </div>
         
@@ -1161,22 +1297,69 @@
         </div>
         
         <div>
-          <label class="block text-[13px] font-medium text-slate-400 mb-2">Ciclo de Extensão</label>
-          <div class="grid grid-cols-4 gap-2">
-            {#each [1, 3, 6, 12] as months}
-              <button
-                on:click={() => extendMonths = months}
-                class="py-2.5 rounded-xl border text-sm font-bold transition-all {extendMonths === months ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}"
-              >
-                {months === 12 ? '1 Ano' : `${months}M`}
-              </button>
-            {/each}
+          <p class="block text-[13px] font-medium text-slate-400 mb-2">Modo de ajuste</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              on:click={() => extendMode = 'days'}
+              class={`py-2.5 rounded-xl border text-sm font-bold transition-all ${extendMode === 'days' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}`}
+            >
+              Somar dias
+            </button>
+            <button
+              type="button"
+              on:click={() => extendMode = 'date'}
+              class={`py-2.5 rounded-xl border text-sm font-bold transition-all ${extendMode === 'date' ? 'bg-sky-500/20 text-sky-400 border-sky-500/40 shadow-[0_0_10px_rgba(14,165,233,0.2)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}`}
+            >
+              Definir data final
+            </button>
           </div>
+        </div>
+
+        {#if extendMode === 'days'}
+          <div>
+            <p class="block text-[13px] font-medium text-slate-400 mb-2">Prorrogar por dias</p>
+            <div class="grid grid-cols-3 gap-2">
+              {#each [7, 15, 30] as days}
+                <button
+                  type="button"
+                  on:click={() => extendDays = days}
+                  class={`py-2.5 rounded-xl border text-sm font-bold transition-all ${extendDays === days ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}`}
+                >
+                  +{days}d
+                </button>
+              {/each}
+            </div>
+          </div>
+        {:else}
+          <div>
+            <label for="extend-target-date" class="block text-[13px] font-medium text-slate-400 mb-2">Data final do acesso</label>
+            <input
+              id="extend-target-date"
+              type="date"
+              bind:value={extendTargetDate}
+              class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+            />
+            <p class="mt-2 text-[11px] text-slate-500">
+              A data escolhida precisa ser posterior ao vencimento efetivo atual para gerar efeito real no acesso.
+            </p>
+          </div>
+        {/if}
+
+        <div class="rounded-xl border border-slate-700/60 bg-slate-800/40 p-4">
+          <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Novo vencimento efetivo</p>
+          <div class="text-base font-semibold text-emerald-300">
+            {formatSubscriptionDate(getExtensionPreviewDate(selectedSub))}
+          </div>
+          <p class="mt-2 text-[11px] text-slate-500">
+            Esse ajuste grava `manually_extended_until` no banco e passa a valer no acesso real do cliente.
+          </p>
         </div>
         
         <div>
-          <label class="block text-[13px] font-medium text-slate-400 mb-2">Motivo da inserção manual <span class="text-rose-400">*</span></label>
+          <label for="extend-reason" class="block text-[13px] font-medium text-slate-400 mb-2">Motivo da inserção manual <span class="text-rose-400">*</span></label>
           <textarea
+            id="extend-reason"
             bind:value={extendReason}
             rows="2"
             placeholder="Ex: Pagamento recebido via PIX..."
@@ -1188,7 +1371,7 @@
       
       <div class="px-6 py-4 bg-slate-800/30 border-t border-slate-800 flex justify-end gap-3">
         <button on:click={closeExtendModal} disabled={extending} class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-50">Cancelar</button>
-        <button on:click={handleExtendSubscription} disabled={extending || !extendReason.trim()} class="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
+        <button on:click={handleExtendSubscription} disabled={extending || !extendReason.trim() || (extendMode === 'date' && !extendTargetDate)} class="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
           {extending ? 'Registrando...' : 'Confirmar Pgto'}
         </button>
       </div>
@@ -1212,12 +1395,17 @@
           <p class="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-1">Empresa</p>
           <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
             <div class="w-8 h-8 bg-indigo-500/20 text-indigo-400 flex items-center justify-center rounded-full font-bold text-xs">{getInitials(selectedSub.empresa_perfil.nome_exibicao)}</div>
-            <div class="text-sm font-medium text-slate-200">{selectedSub.empresa_perfil.nome_exibicao}</div>
+            <div>
+              <div class="text-sm font-medium text-slate-200">{selectedSub.empresa_perfil.nome_exibicao}</div>
+              <div class={`text-[11px] font-semibold uppercase tracking-wide ${getProviderTone(selectedSub.payment_provider)}`}>
+                {getProviderLabel(selectedSub.payment_provider)}
+              </div>
+            </div>
           </div>
         </div>
 
         <div>
-          <label class="block text-[13px] font-medium text-slate-400 mb-2">Plano</label>
+          <p class="block text-[13px] font-medium text-slate-400 mb-2">Plano</p>
           <div class="grid grid-cols-3 gap-2">
             {#each VALID_PLAN_TIERS as tier}
               <button
@@ -1303,16 +1491,10 @@
           </div>
         </div>
 
-        {#if selectedSub.payment_provider === 'stripe'}
-          <div class="rounded-lg p-3 bg-indigo-500/5 border border-indigo-500/30 text-[11px] text-indigo-300 leading-relaxed">
-            <strong class="block">✅ Stripe será sincronizado</strong>
-            Salvar vai chamar a API do Stripe pra atualizar o plano/addon. Mudança vale a partir do próximo ciclo (sem proration).
-          </div>
-        {:else}
-          <div class="rounded-lg p-3 bg-emerald-500/5 border border-emerald-500/30 text-[11px] text-emerald-300 leading-relaxed">
-            ℹ️ Sem provedor — alteração 100% manual. Bom pra trials/cortesias.
-          </div>
-        {/if}
+        <div class={`rounded-lg p-3 border text-[11px] leading-relaxed ${selectedSubProviderHint.className}`}>
+          <strong class="block">{selectedSubProviderHint.title}</strong>
+          {selectedSubProviderHint.body}
+        </div>
       </div>
 
       <div class="px-6 py-4 bg-slate-800/30 border-t border-slate-800 flex justify-end gap-3">
