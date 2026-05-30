@@ -500,6 +500,8 @@
           mode: body.mode,
           target_date: body.targetDate,
           previous_expiry: body.previousExpiry,
+          previous_current_period_end: body.previousCurrentPeriodEnd,
+          previous_manual_extension: body.previousManualExtension,
           new_expiry: body.newExpiry,
           provider: body.provider,
           billing_type: body.billingType,
@@ -1282,7 +1284,7 @@
             class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
           />
           <p class="mt-2 text-[11px] text-slate-500">
-            O admin grava exatamente essa data em `manually_extended_until` no banco.
+            O admin grava exatamente essa data no vencimento real da assinatura.
           </p>
         </div>
 
@@ -1292,7 +1294,7 @@
             {formatSubscriptionDate(getExtensionPreviewDate(selectedSub))}
           </div>
           <p class="mt-2 text-[11px] text-slate-500">
-            Esse ajuste grava `manually_extended_until` no banco e passa a valer no acesso real do cliente.
+            Esse ajuste grava `current_period_end` e `manually_extended_until` no banco.
           </p>
         </div>
         

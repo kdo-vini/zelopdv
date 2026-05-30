@@ -102,6 +102,7 @@ export async function POST({ request }) {
 
     const nowIso = now.toISOString();
     const updatePayload = {
+      current_period_end: newExpiry.toISOString(),
       manually_extended_until: newExpiry.toISOString(),
       status: 'active',
       cancel_at_period_end: false,
@@ -123,6 +124,8 @@ export async function POST({ request }) {
       success: true,
       subscriptionId,
       previousExpiry: effectiveExpiry?.toISOString() || null,
+      previousCurrentPeriodEnd: currentPeriodEnd?.toISOString() || null,
+      previousManualExtension: manualUntil?.toISOString() || null,
       newExpiry: newExpiry.toISOString(),
       wasExpired: effectiveExpiry ? effectiveExpiry < now : true,
       provider: sub.payment_provider || null,
