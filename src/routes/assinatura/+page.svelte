@@ -6,8 +6,8 @@
   import { onMount, onDestroy } from 'svelte';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { PLANS, calculateValue } from '$lib/pricing';
-  import { trackStartTrial, trackSubscribe } from '$lib/metaPixel';
-  import { trackGoogleAdsAssinatura, trackGoogleAdsInscricao } from '$lib/googleAds';
+  import { trackStartTrial } from '$lib/metaPixel';
+  import { trackGoogleAdsInscricao } from '$lib/googleAds';
 
 
   let userId = '';
@@ -225,6 +225,15 @@
     checkoutStep = Math.min(3, Math.max(1, step));
   }
 
+  function buildSuccessPageUrl({ source = 'app', paymentId = '', value = null } = {}) {
+    const params = new URLSearchParams({ source });
+    if (paymentId) params.set('payment_id', paymentId);
+    if (typeof value === 'number' && !Number.isNaN(value) && value > 0) {
+      params.set('value', String(value));
+    }
+    return `/assinatura/sucesso?${params.toString()}`;
+  }
+
   function formatDate(value) {
     if (!value) return '';
     const date = value instanceof Date ? value : new Date(value);
@@ -432,21 +441,19 @@
 
       try {
         const params = new URLSearchParams(window.location.search);
-        if (params.get('success') === '1' && isActiveStrict) {
+        if (params.get('success') === '1') {
           const subscribeValue = activePlanTier
             ? calculateValue(activePlanTier, {
                 mesas: activeMesasAddon,
                 pedidos: activePedidosAddon,
                 acessos: activeAcessosAddon,
               })
-            : 0;
-          trackSubscribe({ value: subscribeValue });
-          trackGoogleAdsAssinatura();
-          // Remove ?success=1 from URL immediately so a page refresh doesn't re-fire the pixel
-          const cleanUrl = new URL(window.location.href);
-          cleanUrl.searchParams.delete('success');
-          history.replaceState({}, '', cleanUrl.toString());
-          setTimeout(() => { window.location.href = '/gestao'; }, 800);
+            : null;
+          window.location.href = buildSuccessPageUrl({
+            source: 'legacy',
+            value: subscribeValue,
+          });
+          return;
         }
         if (params.get('addon') === 'mesas') {
           camePromptingMesas = true;
@@ -663,31 +670,14 @@
 
       if (data.status === 'paid') {
         stopPixStatusPolling();
-        if (shouldStayOnPageAfterPayment) {
-          const subscribeValue = activePlanTier
-            ? calculateValue(activePlanTier, {
-                mesas: activeMesasAddon,
-                pedidos: activePedidosAddon,
-                acessos: activeAcessosAddon,
-              })
-            : 0;
-          trackSubscribe({ value: subscribeValue });
-          trackGoogleAdsAssinatura();
-          const updatedSubscription = await loadSubscriptionState();
-          const renewedUntil = formatDate(updatedSubscription?.current_period_end) || projectedRenewalLabel;
-          pixModalOpen = false;
-          message = renewedUntil
-            ? `Pagamento confirmado. Sua assinatura foi renovada até ${renewedUntil}.`
-            : 'Pagamento confirmado. Sua assinatura foi renovada.';
-          messageType = 'success';
-          addToast('Assinatura renovada com sucesso.', 'success');
-          return;
-        }
-
         message = 'Pagamento confirmado. Redirecionando…';
         messageType = 'success';
         setTimeout(() => {
-          window.location.href = '/assinatura?success=1';
+          window.location.href = buildSuccessPageUrl({
+            source: shouldStayOnPageAfterPayment ? 'pix-renewal' : 'pix',
+            paymentId: pixPayment?.paymentId || data.paymentId || '',
+            value: planPrice,
+          });
         }, 1200);
         return;
       }

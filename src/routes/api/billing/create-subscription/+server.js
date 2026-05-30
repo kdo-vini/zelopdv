@@ -9,6 +9,7 @@ import {
   isValidPlanTier,
   isAddonAllowed,
   buildStripeLineItems,
+  calculateValue,
   PLANS,
 } from '$lib/pricing';
 import { progressReferralForUser } from '$lib/server/referrals';
@@ -137,6 +138,11 @@ export async function POST({ request, url, cookies }) {
         };
 
     const requestOrigin = url?.origin || ORIGIN;
+    const successValue = calculateValue(planTier, {
+      mesas: hasMesasAddon,
+      pedidos: hasPedidosAddon,
+      acessos: hasAcessosAddon,
+    });
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: stripeCustomerId,
@@ -145,7 +151,7 @@ export async function POST({ request, url, cookies }) {
       payment_method_collection: isFirstTime ? 'if_required' : 'always',
       allow_promotion_codes: true,
       subscription_data: subscriptionData,
-      success_url: `${requestOrigin}/assinatura?success=1`,
+      success_url: `${requestOrigin}/assinatura/sucesso?source=stripe&session_id={CHECKOUT_SESSION_ID}&value=${successValue}`,
       cancel_url: `${requestOrigin}/assinatura?canceled=1`,
       metadata: subscriptionMetadata,
     });
