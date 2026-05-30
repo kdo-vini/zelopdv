@@ -64,10 +64,7 @@
   let showExtendModal = false
   let showPlanModal = false
   let selectedSub = null
-  let extendMode = 'days'
-  let extendDays = 30
   let extendTargetDate = ''
-  let extendReason = ''
   let extending = false
   let statusUpdating = false
   let planSaving = false
@@ -159,20 +156,14 @@
   
   function openExtendModal(sub) {
     selectedSub = sub
-    extendMode = 'days'
-    extendDays = 30
     extendTargetDate = formatDateInputValue(getDefaultExtensionTargetDate(sub))
-    extendReason = ''
     showExtendModal = true
   }
 
   function closeExtendModal() {
     showExtendModal = false
     selectedSub = null
-    extendMode = 'days'
-    extendDays = 30
     extendTargetDate = ''
-    extendReason = ''
   }
 
   function openPlanModal(sub) {
@@ -260,10 +251,7 @@
 
   function getExtensionPreviewDate(sub) {
     if (!sub) return null
-    const base = getEffectiveExpiry(sub) || new Date()
-    const reference = base > new Date() ? base : new Date()
-    if (extendMode === 'date') return parseSubscriptionDate(extendTargetDate)
-    return addDays(reference, extendDays)
+    return parseSubscriptionDate(extendTargetDate)
   }
 
   $: selectedSubProviderHint = selectedSub ? getProviderPlanHint(selectedSub) : null
@@ -467,13 +455,8 @@
   }
   
   async function handleExtendSubscription() {
-    if (!selectedSub || !extendReason.trim()) {
-      errorToast('Por favor, preencha o motivo do pagamento')
-      return
-    }
-
-    if (extendMode === 'date' && !extendTargetDate) {
-      errorToast('Escolha a data final da extensão.')
+    if (!selectedSub || !extendTargetDate) {
+      errorToast('Escolha a data final do acesso.')
       return
     }
     
@@ -494,22 +477,18 @@
         },
         body: JSON.stringify({
           subscriptionId: selectedSub.id,
-          reason: extendReason,
-          days: extendMode === 'days' ? extendDays : null,
-          targetDate: extendMode === 'date' ? extendTargetDate : null,
+          targetDate: extendTargetDate,
         }),
       })
 
       const body = await response.json().catch(() => ({}))
       if (!response.ok) {
-        errorToast(body.error || 'Erro ao registrar pagamento')
+        errorToast(body.error || 'Erro ao atualizar vencimento')
         return
       }
 
       const wasExpired = body.wasExpired ? ' (assinatura estava expirada)' : ''
-      const modeLabel = body.mode === 'target_date'
-        ? `Data final ajustada para ${formatSubscriptionDate(body.newExpiry)}`
-        : `Nova expiração: ${formatSubscriptionDate(body.newExpiry)}`
+      const modeLabel = `Data final ajustada para ${formatSubscriptionDate(body.newExpiry)}`
 
       await logAdminAction({
         adminId: adminInfo.id,
@@ -519,22 +498,20 @@
           subscription_id: selectedSub.id,
           company: selectedSub.empresa_perfil.nome_exibicao,
           mode: body.mode,
-          days: body.days,
           target_date: body.targetDate,
           previous_expiry: body.previousExpiry,
           new_expiry: body.newExpiry,
           provider: body.provider,
           billing_type: body.billingType,
-          reason: extendReason,
         }
       })
 
-      success(`Pagamento registrado! ${modeLabel}${wasExpired}`)
+      success(`Vencimento atualizado. ${modeLabel}${wasExpired}`)
       closeExtendModal()
       await loadSubscriptions()
     } catch (err) {
       console.error('Error extending subscription:', err)
-      errorToast('Erro ao registrar pagamento')
+      errorToast('Erro ao atualizar vencimento')
     } finally {
       extending = false
     }
@@ -1297,54 +1274,17 @@
         </div>
         
         <div>
-          <p class="block text-[13px] font-medium text-slate-400 mb-2">Modo de ajuste</p>
-          <div class="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              on:click={() => extendMode = 'days'}
-              class={`py-2.5 rounded-xl border text-sm font-bold transition-all ${extendMode === 'days' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}`}
-            >
-              Somar dias
-            </button>
-            <button
-              type="button"
-              on:click={() => extendMode = 'date'}
-              class={`py-2.5 rounded-xl border text-sm font-bold transition-all ${extendMode === 'date' ? 'bg-sky-500/20 text-sky-400 border-sky-500/40 shadow-[0_0_10px_rgba(14,165,233,0.2)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}`}
-            >
-              Definir data final
-            </button>
-          </div>
+          <label for="extend-target-date" class="block text-[13px] font-medium text-slate-400 mb-2">Data final do acesso</label>
+          <input
+            id="extend-target-date"
+            type="date"
+            bind:value={extendTargetDate}
+            class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+          />
+          <p class="mt-2 text-[11px] text-slate-500">
+            O admin grava exatamente essa data em `manually_extended_until` no banco.
+          </p>
         </div>
-
-        {#if extendMode === 'days'}
-          <div>
-            <p class="block text-[13px] font-medium text-slate-400 mb-2">Prorrogar por dias</p>
-            <div class="grid grid-cols-3 gap-2">
-              {#each [7, 15, 30] as days}
-                <button
-                  type="button"
-                  on:click={() => extendDays = days}
-                  class={`py-2.5 rounded-xl border text-sm font-bold transition-all ${extendDays === days ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}`}
-                >
-                  +{days}d
-                </button>
-              {/each}
-            </div>
-          </div>
-        {:else}
-          <div>
-            <label for="extend-target-date" class="block text-[13px] font-medium text-slate-400 mb-2">Data final do acesso</label>
-            <input
-              id="extend-target-date"
-              type="date"
-              bind:value={extendTargetDate}
-              class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
-            />
-            <p class="mt-2 text-[11px] text-slate-500">
-              A data escolhida precisa ser posterior ao vencimento efetivo atual para gerar efeito real no acesso.
-            </p>
-          </div>
-        {/if}
 
         <div class="rounded-xl border border-slate-700/60 bg-slate-800/40 p-4">
           <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Novo vencimento efetivo</p>
@@ -1356,23 +1296,12 @@
           </p>
         </div>
         
-        <div>
-          <label for="extend-reason" class="block text-[13px] font-medium text-slate-400 mb-2">Motivo da inserção manual <span class="text-rose-400">*</span></label>
-          <textarea
-            id="extend-reason"
-            bind:value={extendReason}
-            rows="2"
-            placeholder="Ex: Pagamento recebido via PIX..."
-            class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all shadow-inner resize-none"
-          ></textarea>
-        </div>
-        
       </div>
       
       <div class="px-6 py-4 bg-slate-800/30 border-t border-slate-800 flex justify-end gap-3">
         <button on:click={closeExtendModal} disabled={extending} class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-50">Cancelar</button>
-        <button on:click={handleExtendSubscription} disabled={extending || !extendReason.trim() || (extendMode === 'date' && !extendTargetDate)} class="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
-          {extending ? 'Registrando...' : 'Confirmar Pgto'}
+        <button on:click={handleExtendSubscription} disabled={extending || !extendTargetDate} class="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
+          {extending ? 'Salvando...' : 'Salvar data'}
         </button>
       </div>
     </div>

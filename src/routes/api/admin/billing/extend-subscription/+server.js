@@ -76,19 +76,14 @@ export async function POST({ request }) {
 
     const body = await request.json().catch(() => ({}));
     const subscriptionId = body.subscriptionId;
-    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
-    const days = Number(body.days);
     const targetDate = typeof body.targetDate === 'string' ? body.targetDate : '';
 
     if (!subscriptionId) return json({ error: 'subscriptionId obrigatório.' }, { status: 400, headers: cors });
-    if (!reason) return json({ error: 'Motivo obrigatório.' }, { status: 400, headers: cors });
 
-    const isDaysMode = Number.isFinite(days) && days > 0;
     const parsedTargetDate = parseTargetDate(targetDate);
-    const isTargetDateMode = !!parsedTargetDate;
 
-    if (!isDaysMode && !isTargetDateMode) {
-      return json({ error: 'Informe dias ou uma data final válida.' }, { status: 400, headers: cors });
+    if (!parsedTargetDate) {
+      return json({ error: 'Informe uma data final válida.' }, { status: 400, headers: cors });
     }
 
     const { data: sub, error: subErr } = await supabaseAdmin
@@ -103,22 +98,7 @@ export async function POST({ request }) {
     const currentPeriodEnd = parseDate(sub.current_period_end);
     const manualUntil = parseDate(sub.manually_extended_until);
     const effectiveExpiry = maxDate(currentPeriodEnd, manualUntil);
-    const baseDate = maxDate(effectiveExpiry, now) || now;
-
-    let newExpiry;
-    if (isTargetDateMode) {
-      newExpiry = parsedTargetDate;
-      if (effectiveExpiry && newExpiry <= effectiveExpiry) {
-        return json({
-          error: `A data final precisa ser posterior ao vencimento atual (${effectiveExpiry.toLocaleDateString('pt-BR')}).`,
-        }, { status: 400, headers: cors });
-      }
-      if (!effectiveExpiry && newExpiry <= now) {
-        return json({ error: 'A data final precisa ser futura.' }, { status: 400, headers: cors });
-      }
-    } else {
-      newExpiry = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
-    }
+    const newExpiry = parsedTargetDate;
 
     const nowIso = now.toISOString();
     const updatePayload = {
@@ -147,10 +127,8 @@ export async function POST({ request }) {
       wasExpired: effectiveExpiry ? effectiveExpiry < now : true,
       provider: sub.payment_provider || null,
       billingType: sub.billing_type || null,
-      mode: isTargetDateMode ? 'target_date' : 'days',
-      days: isDaysMode ? days : null,
-      targetDate: isTargetDateMode ? targetDate : null,
-      reason,
+      mode: 'target_date',
+      targetDate,
     }, { headers: cors });
   } catch (err) {
     console.error('[admin/extend-subscription] error:', err?.message || err);
