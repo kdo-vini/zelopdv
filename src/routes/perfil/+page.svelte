@@ -4,6 +4,7 @@
   import { translateSubscriptionStatus } from '$lib/errorUtils';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { ADDONS, PLANS, calculateValue } from '$lib/pricing';
   import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina, PLATAFORMAS_PRESET } from '$lib/profileUtils';
   import { maskPhone, maskDocumento } from '$lib/masks';
   import { addToast } from '$lib/stores/ui';
@@ -156,6 +157,10 @@
   let providerCustomerId = null;
   let cancelAtPeriodEnd = false;
   let currentPeriodEnd = null;
+  let subscriptionPlanTier = null;
+  let hasMesasAddon = false;
+  let hasPedidosAddon = false;
+  let hasAcessosAddon = false;
 
   // Form fields — Aba Perfil
   let nome_exibicao = '';
@@ -198,6 +203,24 @@
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   })();
   $: trialProgressPct = trialDaysLeft !== null ? Math.min(100, Math.max(0, Math.round(((30 - trialDaysLeft) / 30) * 100))) : 0;
+  $: activePlan = subscriptionPlanTier ? PLANS[subscriptionPlanTier] ?? null : null;
+  $: activeAddons = [
+    hasMesasAddon ? ADDONS.mesas.name : null,
+    hasPedidosAddon ? ADDONS.pedidos.name : null,
+    hasAcessosAddon ? ADDONS.acessos.name : null,
+  ].filter(Boolean);
+  $: activePlanLabel = activePlan?.name || 'Sem assinatura ativa';
+  $: activePlanAmount = activePlan
+    ? calculateValue(subscriptionPlanTier, {
+        mesas: hasMesasAddon,
+        pedidos: hasPedidosAddon,
+        acessos: hasAcessosAddon,
+      })
+    : null;
+  $: activePlanAmountLabel = activePlanAmount === null
+    ? ''
+    : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(activePlanAmount);
+  $: activePlanDetails = activeAddons.length ? activeAddons.join(' + ') : '';
 
   // ── Impressora USB ──────────────────────────────────────────────────────────
   let printerPairing = false;
@@ -381,7 +404,7 @@
     try {
       const { data: sub } = await supabase
         .from('subscriptions')
-        .select('status, provider_customer_id, cancel_at_period_end, current_period_end')
+        .select('status, provider_customer_id, cancel_at_period_end, current_period_end, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -390,6 +413,10 @@
       providerCustomerId = sub?.provider_customer_id ?? null;
       cancelAtPeriodEnd = !!sub?.cancel_at_period_end;
       currentPeriodEnd = sub?.current_period_end ?? null;
+      subscriptionPlanTier = sub?.plan_tier ?? null;
+      hasMesasAddon = !!sub?.has_mesas_addon;
+      hasPedidosAddon = !!sub?.has_pedidos_addon;
+      hasAcessosAddon = !!sub?.has_acessos_addon;
     } catch (e) {
       console.warn('Falha ao carregar assinatura:', e?.message || e);
     } finally {
@@ -853,8 +880,13 @@
               <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
                 <div>
                   <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color: var(--text-muted);">Seu plano</p>
-                  <p class="text-lg font-bold" style="color: var(--text-main);">Plano Zelo PDV</p>
-                  <p class="text-sm mt-0.5" style="color: var(--text-muted);">R$ 59,00 / mês</p>
+                  <p class="text-lg font-bold" style="color: var(--text-main);">{activePlanLabel}</p>
+                  {#if activePlanDetails}
+                    <p class="text-sm mt-0.5" style="color: var(--text-muted);">{activePlanDetails}</p>
+                  {/if}
+                  {#if activePlanAmountLabel}
+                    <p class="text-sm mt-0.5" style="color: var(--text-muted);">{activePlanAmountLabel} / mês</p>
+                  {/if}
                 </div>
                 {#if tag}
                   <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide" style="color: {tag.color}; background: {tag.bg};">
