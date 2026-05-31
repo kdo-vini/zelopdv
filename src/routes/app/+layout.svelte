@@ -9,12 +9,48 @@
 
   const ESTOQUE_BAIXO_LIMITE = 5;
 
+  // Banner de reativação quando há exclusão de conta agendada (carência de 14 dias).
+  let deletionScheduledAt = null;
+  let reactivating = false;
+  $: deletionDaysLeft = deletionScheduledAt
+    ? Math.max(0, Math.ceil((new Date(deletionScheduledAt).getTime() - Date.now()) / 86400000))
+    : 0;
+
+  async function reactivateAccount() {
+    reactivating = true;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Sessão expirada.');
+      const res = await fetch('/api/account/reactivate', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${session.access_token}` },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body?.success) throw new Error(body?.error || 'Falha ao reativar.');
+      deletionScheduledAt = null;
+      addToast('Conta reativada. A exclusão foi cancelada.', 'success');
+    } catch (e) {
+      addToast(e.message || 'Erro ao reativar a conta.', 'error');
+    } finally {
+      reactivating = false;
+    }
+  }
+
   onMount(async () => {
     try {
       await waitAuthReady();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const userId = session.user.id;
+
+      // Detecta exclusão agendada para exibir o banner de reativação.
+      supabase
+        .from('empresa_perfil')
+        .select('deletion_scheduled_at')
+        .eq('user_id', userId)
+        .maybeSingle()
+        .then(({ data }) => { deletionScheduledAt = data?.deletion_scheduled_at ?? null; })
+        .catch(() => {});
 
       // --- Alerta de estoque baixo ---
       if (localStorage.getItem('zelo_notif_estoque') === 'true' && !sessionStorage.getItem('zelo_notif_estoque_shown')) {
@@ -80,6 +116,21 @@
 <div class="flex h-screen overflow-hidden" style="background: var(--bg-app);">
   <GestaoSidebar />
   <div class="flex-1 flex flex-col overflow-hidden min-w-0 pt-14 md:pt-0">
+    {#if deletionScheduledAt}
+      <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm" style="background: color-mix(in srgb, var(--warning) 15%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--warning) 35%, transparent); color: var(--text-main);">
+        <span>
+          Sua conta está agendada para exclusão em
+          <strong>{deletionDaysLeft} {deletionDaysLeft === 1 ? 'dia' : 'dias'}</strong>.
+        </span>
+        <button
+          type="button"
+          on:click={reactivateAccount}
+          disabled={reactivating}
+          class="px-3 py-1 rounded-md text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+          style="background: var(--success); color: #fff;"
+        >{reactivating ? 'Reativando…' : 'Reativar conta'}</button>
+      </div>
+    {/if}
     <slot />
   </div>
 </div>

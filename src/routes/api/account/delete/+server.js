@@ -1,28 +1,16 @@
-// Self-service account deletion (LGPD Art. 18, III).
-// Orchestrates the irreversible deletion of a user's account and ALL their data
-// across Zelo PDV + ZeloChat (shared DB):
+// Self-service account deletion (LGPD Art. 18, III) — SCHEDULES deletion with a
+// 14-day grace period instead of purging immediately.
 //   1. auth: verify the caller owns the account and is NOT a sub-user
-//   2. Stripe: cancel the subscription immediately (so billing stops)
-//   3. Storage: best-effort removal of the account's files
-//   4. DB: public.delete_account() purges every table + the auth identity
-//
-// The destructive RPC is service_role-only, so this endpoint is the single
-// gate — the browser can never purge directly and skip steps 2/3.
+//   2. Stripe: cancel at period end (reversible — resumes on reactivation)
+//   3. DB: mark empresa_perfil.deletion_scheduled_at = now() + 14 days
+// The actual irreversible purge (delete_account RPC + storage + Whatsmiau) is run
+// by the deletion sweeper once the grace period elapses. The user can reactivate
+// any time before then via POST /api/account/reactivate.
 import { json } from '@sveltejs/kit';
 import { stripe } from '$lib/server/stripe';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 
-async function removePrefix(bucket, prefix) {
-  // Lists and removes every object under `prefix` (best-effort).
-  try {
-    const { data, error } = await supabaseAdmin.storage.from(bucket).list(prefix, { limit: 1000 });
-    if (error || !data?.length) return;
-    const paths = data.filter((o) => o.id).map((o) => `${prefix}/${o.name}`);
-    if (paths.length) await supabaseAdmin.storage.from(bucket).remove(paths);
-  } catch (e) {
-    console.warn(`[account/delete] storage cleanup ${bucket}/${prefix} falhou:`, e?.message || e);
-  }
-}
+const GRACE_DAYS = 14;
 
 export async function POST({ request }) {
   try {
@@ -35,19 +23,18 @@ export async function POST({ request }) {
 
     const userId = user.id;
 
-    // Only the account owner may delete. Sub-users (funcionários) operate under an
-    // owner and must never be able to destroy the owner's account.
+    // Only the account owner may delete. Sub-users (funcionários) must never be
+    // able to schedule deletion of the owner's account.
     const { data: ownProfile } = await supabaseAdmin
       .from('empresa_perfil')
-      .select('id, logo_url')
+      .select('id')
       .eq('user_id', userId)
       .maybeSingle();
     if (!ownProfile) {
       return json({ error: 'Apenas o titular da conta pode apagá-la.' }, { status: 403 });
     }
-    const empresaId = ownProfile.id;
 
-    // 1) Cancel Stripe subscription immediately (not at period end — the account is going away).
+    // 1) Cancel Stripe subscription at period end (reversible).
     if (stripe) {
       const { data: sub } = await supabaseAdmin
         .from('subscriptions')
@@ -58,40 +45,38 @@ export async function POST({ request }) {
         .maybeSingle();
       if (sub?.provider_subscription_id && sub.payment_provider === 'stripe') {
         try {
-          await stripe.subscriptions.cancel(sub.provider_subscription_id);
+          await stripe.subscriptions.update(sub.provider_subscription_id, { cancel_at_period_end: true });
         } catch (stripeErr) {
           const msg = stripeErr?.message || '';
-          if (!/resource_missing|not.?found|no such|already canceled/i.test(msg)) {
+          if (!/resource_missing|not.?found|no such/i.test(msg)) {
             console.error('[account/delete] Stripe cancel error:', msg);
             return json({
-              error: 'Não foi possível cancelar a assinatura. Tente novamente em alguns minutos.',
+              error: 'Não foi possível agendar o cancelamento da assinatura. Tente novamente.',
             }, { status: 502 });
           }
         }
       }
     }
 
-    // 2) Storage cleanup (best-effort — the authoritative PII lives in the DB).
-    await Promise.allSettled([
-      supabaseAdmin.storage.from('logos').remove([`${userId}.png`, `${userId}.jpg`, `${userId}.jpeg`, `${userId}.webp`]),
-      removePrefix('zelochat-media', `send/${empresaId}`),
-      removePrefix('zelochat-media', `received/${empresaId}`),
-      removePrefix('delivery-assets', `${empresaId}`),
-    ]);
-
-    // 3) Purge all DB data + the auth identity (irreversible).
-    const { error: rpcErr } = await supabaseAdmin.rpc('delete_account', {
-      p_user_id: userId,
-      p_source: 'pdv',
-    });
-    if (rpcErr) {
-      console.error('[account/delete] RPC error:', rpcErr);
-      return json({ error: 'Falha ao apagar a conta. Nenhum dado foi removido.' }, { status: 500 });
+    // 2) Schedule the deletion (grace period).
+    const now = new Date();
+    const scheduledAt = new Date(now.getTime() + GRACE_DAYS * 24 * 60 * 60 * 1000);
+    const { error: dbErr } = await supabaseAdmin
+      .from('empresa_perfil')
+      .update({
+        deletion_scheduled_at: scheduledAt.toISOString(),
+        deletion_requested_at: now.toISOString(),
+        deletion_source: 'pdv',
+      })
+      .eq('user_id', userId);
+    if (dbErr) {
+      console.error('[account/delete] schedule error:', dbErr);
+      return json({ error: 'Falha ao agendar a exclusão.' }, { status: 500 });
     }
 
-    return json({ success: true });
+    return json({ success: true, scheduledAt: scheduledAt.toISOString(), graceDays: GRACE_DAYS });
   } catch (err) {
     console.error('[account/delete] error:', err?.message || err);
-    return json({ error: 'Falha ao apagar a conta.' }, { status: 500 });
+    return json({ error: 'Falha ao agendar a exclusão da conta.' }, { status: 500 });
   }
 }

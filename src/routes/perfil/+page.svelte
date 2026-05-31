@@ -84,7 +84,11 @@
 
   // ───── Apagar conta (LGPD) ─────
   // Fluxo deliberadamente cheio de atrito: revelar a zona de perigo, ler o aviso,
-  // confirmar irreversibilidade, digitar o nome da empresa e aguardar o cooldown.
+  // confirmar, digitar o nome da empresa e aguardar o cooldown. Ao confirmar, a
+  // exclusão é AGENDADA com 14 dias de carência — a pessoa pode reativar até lá.
+  const SUPORTE_WHATSAPP_URL =
+    'https://wa.me/5514991537503?text=' +
+    encodeURIComponent('Olá! Preciso de ajuda com a minha conta no Zelo PDV antes de decidir apagá-la.');
   let showDangerZone = false;
   let showDeleteModal = false;
   let deleteStep = 1;        // 1 = aviso + ciência; 2 = digitar nome + cooldown
@@ -93,6 +97,33 @@
   let deleteCooldown = 0;    // segundos restantes até liberar o botão final
   let cooldownTimer = null;
   let deleting = false;
+  let reactivating = false;
+  let hasZelochat = false;          // mostra a menção ao ZeloChat só se a pessoa usa
+  let deletionScheduledAt = null;   // ISO string quando há exclusão agendada
+
+  $: deletionDaysLeft = deletionScheduledAt
+    ? Math.max(0, Math.ceil((new Date(deletionScheduledAt).getTime() - Date.now()) / 86400000))
+    : 0;
+
+  async function reactivateAccount() {
+    reactivating = true;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Sessão expirada.');
+      const res = await fetch('/api/account/reactivate', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${session.access_token}` },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body?.success) throw new Error(body?.error || 'Falha ao reativar.');
+      deletionScheduledAt = null;
+      addToast('Conta reativada. A exclusão foi cancelada.', 'success');
+    } catch (e) {
+      addToast(e.message || 'Erro ao reativar a conta.', 'error');
+    } finally {
+      reactivating = false;
+    }
+  }
 
   function openDeleteModal() {
     showDeleteModal = true;
@@ -133,9 +164,9 @@
         headers: { authorization: `Bearer ${session.access_token}` },
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body?.success) throw new Error(body?.error || 'Falha ao apagar a conta.');
+      if (!res.ok || !body?.success) throw new Error(body?.error || 'Falha ao agendar a exclusão.');
       await supabase.auth.signOut().catch(() => {});
-      window.location.href = '/login?msg=account_deleted';
+      window.location.href = '/login?msg=deletion_scheduled';
     } catch (e) {
       addToast(e.message || 'Erro ao apagar a conta.', 'error');
       deleting = false;
@@ -448,6 +479,9 @@
       nomeTabela1       = data.tabela_preco_1_nome || 'Tabela 1';
       nomeTabela2       = data.tabela_preco_2_nome || 'Tabela 2';
       nomeTabela3       = data.tabela_preco_3_nome || 'Tabela 3';
+      deletionScheduledAt = data.deletion_scheduled_at ?? null;
+      hasZelochat       = !!data.whatsmiau_instance || data.zelochat_onboarding_done === true
+                            || ['chat', 'bundle'].includes(subscriptionPlanTier);
 
       // Load plataformas: merge saved data with presets (to handle new presets)
       const saved = data.plataformas_pagamento ?? [];
@@ -1328,7 +1362,26 @@
   {#if !loading}
     <!-- Zona de perigo — recolhida por padrão, no rodapé do perfil do titular. -->
     <div class="mt-10 pt-6" style="border-top: 1px solid var(--border-subtle);">
-      {#if !showDangerZone}
+      {#if deletionScheduledAt}
+        <!-- Exclusão agendada: oferecer reativação dentro da carência. -->
+        <section class="rounded-lg p-5 grid gap-3" style="background: color-mix(in srgb, var(--warning) 8%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);">
+          <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--warning);">Exclusão agendada</h2>
+          <p class="text-sm leading-relaxed" style="color: var(--text-main);">
+            Sua conta será apagada definitivamente em
+            <strong>{deletionDaysLeft} {deletionDaysLeft === 1 ? 'dia' : 'dias'}</strong>.
+            Até lá nada foi apagado e você pode voltar atrás a qualquer momento.
+          </p>
+          <div>
+            <button
+              type="button"
+              on:click={reactivateAccount}
+              disabled={reactivating}
+              class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+              style="background: var(--success); color: #fff;"
+            >{reactivating ? 'Reativando…' : 'Reativar minha conta'}</button>
+          </div>
+        </section>
+      {:else if !showDangerZone}
         <button
           type="button"
           on:click={() => (showDangerZone = true)}
@@ -1338,13 +1391,27 @@
       {:else}
         <section class="rounded-lg p-5 grid gap-3" style="background: color-mix(in srgb, var(--error) 5%, transparent); border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);">
           <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--error);">Zona de perigo</h2>
-          <p class="text-sm" style="color: var(--text-main);">Apagar sua conta</p>
+          <p class="text-sm" style="color: var(--text-main);">Apagar sua conta do Zelo PDV</p>
           <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
-            Remove permanentemente sua empresa, vendas, produtos, clientes, dados do ZeloChat
-            (conversas, pedidos) e cancela sua assinatura. Esta ação é <strong>irreversível</strong>
-            e não pode ser desfeita.
+            Remove permanentemente sua conta e todos os dados do Zelo PDV — empresa, vendas,
+            produtos, caixas e clientes{#if hasZelochat}, além dos seus dados do ZeloChat (conversas e pedidos){/if} —
+            e cancela sua assinatura.
           </p>
-          <div>
+          <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+            Está com dúvidas ou travado em algo? Fale com a nossa equipe antes — a gente
+            resolve com você, sem precisar apagar nada.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <a
+              href={SUPORTE_WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
+              style="background: #25D366; color: #fff;"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.978-1.207zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+              Falar com a equipe
+            </a>
             <button
               type="button"
               on:click={openDeleteModal}
@@ -1372,16 +1439,19 @@
         <div class="p-6 grid gap-4">
           {#if deleteStep === 1}
             <p class="text-sm leading-relaxed" style="color: var(--text-main);">
-              Você está prestes a apagar <strong>todos os dados</strong> da conta
-              {#if nome_exibicao}<strong>{nome_exibicao}</strong>{/if}: vendas, produtos,
-              caixas, clientes, conversas e pedidos do ZeloChat. Sua assinatura será cancelada.
+              Você vai agendar a exclusão da conta
+              {#if nome_exibicao}<strong>{nome_exibicao}</strong>{/if}. Sua assinatura é cancelada
+              e, após <strong>14 dias</strong>, todos os dados do Zelo PDV{#if hasZelochat} e do ZeloChat{/if}
+              são apagados de forma definitiva.
             </p>
-            <p class="text-sm font-semibold" style="color: var(--error);">
-              Isto é irreversível. Não há como recuperar os dados depois.
+            <p class="text-sm leading-relaxed" style="color: var(--text-muted);">
+              Durante esses 14 dias nada é apagado — é só entrar de novo e clicar em
+              <strong>Reativar</strong> para cancelar a exclusão. Depois do prazo,
+              <strong>não há como recuperar</strong>.
             </p>
             <label class="flex items-start gap-2 text-sm cursor-pointer" style="color: var(--text-main);">
               <input type="checkbox" bind:checked={ackIrreversible} class="mt-0.5" />
-              <span>Entendo que esta ação é permanente e apagará todos os meus dados.</span>
+              <span>Entendo que após 14 dias a exclusão é permanente e apaga todos os meus dados.</span>
             </label>
           {:else}
             <p class="text-sm leading-relaxed" style="color: var(--text-main);">
@@ -1423,9 +1493,9 @@
               class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               style="background: var(--error); color: #fff;"
             >
-              {#if deleting}Apagando…
+              {#if deleting}Agendando…
               {:else if deleteCooldown > 0}Aguarde {deleteCooldown}s…
-              {:else}Apagar definitivamente{/if}
+              {:else}Agendar exclusão (14 dias){/if}
             </button>
           {/if}
         </div>
