@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { translateSubscriptionStatus } from '$lib/errorUtils';
   import { page } from '$app/stores';
@@ -80,6 +80,68 @@
     // de email de recuperação.
     await goto('/redefinir-senha');
   }
+
+  // ───── Apagar conta (LGPD) ─────
+  // Fluxo deliberadamente cheio de atrito: revelar a zona de perigo, ler o aviso,
+  // confirmar irreversibilidade, digitar o nome da empresa e aguardar o cooldown.
+  let showDangerZone = false;
+  let showDeleteModal = false;
+  let deleteStep = 1;        // 1 = aviso + ciência; 2 = digitar nome + cooldown
+  let ackIrreversible = false;
+  let typedConfirmName = '';
+  let deleteCooldown = 0;    // segundos restantes até liberar o botão final
+  let cooldownTimer = null;
+  let deleting = false;
+
+  function openDeleteModal() {
+    showDeleteModal = true;
+    deleteStep = 1;
+    ackIrreversible = false;
+    typedConfirmName = '';
+    deleteCooldown = 0;
+  }
+  function closeDeleteModal() {
+    if (deleting) return;
+    showDeleteModal = false;
+    clearInterval(cooldownTimer);
+  }
+  function goToConfirmStep() {
+    if (!ackIrreversible) return;
+    deleteStep = 2;
+    deleteCooldown = 5;
+    clearInterval(cooldownTimer);
+    cooldownTimer = setInterval(() => {
+      deleteCooldown -= 1;
+      if (deleteCooldown <= 0) clearInterval(cooldownTimer);
+    }, 1000);
+  }
+
+  $: nameMatches =
+    (nome_exibicao || '').trim().length > 0 &&
+    typedConfirmName.trim().toLowerCase() === (nome_exibicao || '').trim().toLowerCase();
+  $: canConfirmDelete = deleteStep === 2 && nameMatches && deleteCooldown <= 0 && !deleting;
+
+  async function confirmDeleteAccount() {
+    if (!canConfirmDelete) return;
+    deleting = true;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Sessão expirada. Faça login novamente.');
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${session.access_token}` },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body?.success) throw new Error(body?.error || 'Falha ao apagar a conta.');
+      await supabase.auth.signOut().catch(() => {});
+      window.location.href = '/login?msg=account_deleted';
+    } catch (e) {
+      addToast(e.message || 'Erro ao apagar a conta.', 'error');
+      deleting = false;
+    }
+  }
+
+  onDestroy(() => clearInterval(cooldownTimer));
 
   let msg = '';
   let loading = true;
@@ -1230,4 +1292,112 @@
 
     {/if}
   </form>
+
+  {#if !loading}
+    <!-- Zona de perigo — recolhida por padrão, no rodapé do perfil do titular. -->
+    <div class="mt-10 pt-6" style="border-top: 1px solid var(--border-subtle);">
+      {#if !showDangerZone}
+        <button
+          type="button"
+          on:click={() => (showDangerZone = true)}
+          class="text-xs font-medium transition-opacity hover:opacity-80"
+          style="color: var(--text-muted);"
+        >Opções avançadas da conta</button>
+      {:else}
+        <section class="rounded-lg p-5 grid gap-3" style="background: color-mix(in srgb, var(--error) 5%, transparent); border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);">
+          <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--error);">Zona de perigo</h2>
+          <p class="text-sm" style="color: var(--text-main);">Apagar sua conta</p>
+          <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+            Remove permanentemente sua empresa, vendas, produtos, clientes, dados do ZeloChat
+            (conversas, pedidos) e cancela sua assinatura. Esta ação é <strong>irreversível</strong>
+            e não pode ser desfeita.
+          </p>
+          <div>
+            <button
+              type="button"
+              on:click={openDeleteModal}
+              class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
+              style="background: var(--error); color: #fff;"
+            >Apagar minha conta…</button>
+          </div>
+        </section>
+      {/if}
+    </div>
+  {/if}
+
+  {#if showDeleteModal}
+    <div
+      class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+      style="background: rgba(0,0,0,0.6);"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="w-full max-w-md rounded-xl overflow-hidden shadow-2xl" style="background: var(--bg-card); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--border-subtle);">
+          <h3 class="text-lg font-semibold" style="color: var(--error);">Apagar conta</h3>
+        </div>
+
+        <div class="p-6 grid gap-4">
+          {#if deleteStep === 1}
+            <p class="text-sm leading-relaxed" style="color: var(--text-main);">
+              Você está prestes a apagar <strong>todos os dados</strong> da conta
+              {#if nome_exibicao}<strong>{nome_exibicao}</strong>{/if}: vendas, produtos,
+              caixas, clientes, conversas e pedidos do ZeloChat. Sua assinatura será cancelada.
+            </p>
+            <p class="text-sm font-semibold" style="color: var(--error);">
+              Isto é irreversível. Não há como recuperar os dados depois.
+            </p>
+            <label class="flex items-start gap-2 text-sm cursor-pointer" style="color: var(--text-main);">
+              <input type="checkbox" bind:checked={ackIrreversible} class="mt-0.5" />
+              <span>Entendo que esta ação é permanente e apagará todos os meus dados.</span>
+            </label>
+          {:else}
+            <p class="text-sm leading-relaxed" style="color: var(--text-main);">
+              Para confirmar, digite o nome da sua empresa:
+              <strong>{nome_exibicao}</strong>
+            </p>
+            <input
+              type="text"
+              bind:value={typedConfirmName}
+              placeholder={nome_exibicao}
+              autocomplete="off"
+              class="w-full px-3 py-2 rounded-lg text-sm"
+              style="background: var(--bg-input); color: var(--text-main); border: 1px solid {nameMatches ? 'var(--success)' : 'var(--border-subtle)'};"
+            />
+          {/if}
+        </div>
+
+        <div class="px-6 py-4 flex justify-end gap-3" style="background: color-mix(in srgb, var(--text-muted) 4%, transparent); border-top: 1px solid var(--border-subtle);">
+          <button
+            type="button"
+            on:click={closeDeleteModal}
+            disabled={deleting}
+            class="px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+            style="color: var(--text-muted);"
+          >Cancelar</button>
+          {#if deleteStep === 1}
+            <button
+              type="button"
+              on:click={goToConfirmStep}
+              disabled={!ackIrreversible}
+              class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              style="background: var(--error); color: #fff;"
+            >Continuar</button>
+          {:else}
+            <button
+              type="button"
+              on:click={confirmDeleteAccount}
+              disabled={!canConfirmDelete}
+              class="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              style="background: var(--error); color: #fff;"
+            >
+              {#if deleting}Apagando…
+              {:else if deleteCooldown > 0}Aguarde {deleteCooldown}s…
+              {:else}Apagar definitivamente{/if}
+            </button>
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
 {/if}
