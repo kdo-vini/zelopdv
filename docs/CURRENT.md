@@ -18,6 +18,7 @@
 - `npm test` — **149/149** testes passando (inclui novos testes de gate offline e snapshot de entitlement)
 - `npm run check` — **0 errors / 133 warnings** (warnings pré-existentes em páginas de marketing)
 - Ads/marketing: nova rota pública `/contato` com formulário interno de lead para sitelinks sem saída para domínio externo; `npm run check` manteve **0 errors / 133 warnings** e `npm run build` concluiu com warnings pré-existentes/adapter.
+- Marketing: `/vs-planilha` agora usa layout full-width de página pública; CTAs de conversa em home, segmentos, extensões, precificação e comparação abrem o chatbot público sem alterar os botões de teste grátis para `/cadastro`. Rodapé mantém WhatsApp e adiciona link interno de demonstração para `/contato?assunto=demo`.
 
 ## Falhas abertas confirmadas
 

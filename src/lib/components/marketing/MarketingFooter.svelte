@@ -38,6 +38,7 @@
         <h4 class="font-semibold mb-4" style={`color: ${isLight ? 'var(--blog-text)' : 'white'}`}>Suporte</h4>
         <ul class="space-y-2 text-sm" style={`color: ${isLight ? 'var(--blog-muted)' : 'var(--text-muted)'}`}>
           <li><a href={faqHref} class="transition-colors hover:text-sky-400">Central de Ajuda</a></li>
+          <li><a href="/contato?assunto=demo" class="transition-colors hover:text-sky-400">Agendar demonstração</a></li>
           <li><a href="https://wa.me/5514991537503" class="transition-colors hover:text-sky-400">Falar no WhatsApp</a></li>
           <li><a href="mailto:techne.br@gmail.com" class="transition-colors hover:text-sky-400">Email</a></li>
         </ul>

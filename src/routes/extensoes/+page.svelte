@@ -23,6 +23,10 @@
   const acessos = extensoes.acessos;
   const chat = extensoes.chat;
 
+  function openSupportChat() {
+    window.dispatchEvent(new CustomEvent('zelo:open-support-chat'));
+  }
+
   // Grade principal de cards. Ordem importa — addons baratos primeiro, Chat (upgrade de plano) por último.
   const cards = [
     {
@@ -248,6 +252,14 @@
           >
             Testar 30 dias grátis
           </a>
+          <button
+            type="button"
+            on:click={openSupportChat}
+            class="px-7 py-3.5 text-sm font-semibold rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white transition-colors"
+            style="color: var(--text-label);"
+          >
+            Falar com especialista
+          </button>
           <a
             href="#extensoes"
             class="px-7 py-3.5 text-sm font-semibold rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white transition-colors"
@@ -584,6 +596,14 @@
           >
             Começar trial 30 dias
           </a>
+          <button
+            type="button"
+            on:click={openSupportChat}
+            class="px-7 py-3.5 text-sm font-semibold rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white transition-colors"
+            style="color: var(--text-label);"
+          >
+            Falar com especialista
+          </button>
           <a
             href="/precificacao"
             class="px-7 py-3.5 text-sm font-semibold rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white transition-colors"

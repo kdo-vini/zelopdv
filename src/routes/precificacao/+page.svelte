@@ -144,6 +144,10 @@
   let productForm = createProductForm("outro");
   let ingredientRows = [createIngredientRow()];
 
+  function openSupportChat() {
+    window.dispatchEvent(new CustomEvent("zelo:open-support-chat"));
+  }
+
   function createProductForm(nicheId) {
     const niche = nicheMap[nicheId] || niches[0];
     return {
@@ -926,6 +930,9 @@
 
             <div class="cta-actions" style="margin-top: 0.5rem;">
               <a href="/cadastro" class="primary-link">Criar conta grátis</a>
+              <button type="button" class="ghost-button" on:click={openSupportChat}>
+                Falar com especialista
+              </button>
               <p style="font-size: 0.85rem; color: var(--text-muted)">
                 Teste grátis de 7 dias. Aceitamos PIX, e Cartão.
               </p>

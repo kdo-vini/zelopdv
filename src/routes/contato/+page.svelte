@@ -28,15 +28,15 @@
     },
     whatsapp: {
       eyebrow: 'Pedidos e atendimento',
-      title: 'Organize pedidos do WhatsApp sem mandar o visitante para fora do site',
+      title: 'Organize pedidos do WhatsApp sem perder venda no caminho',
       description:
-        'Para campanhas de Google Ads, esta página mantém o lead dentro do domínio do Zelo e direciona a conversa para o fluxo certo.',
+        'Entenda como o Zelo PDV ajuda a receber pedidos, acompanhar o caixa e deixar o atendimento mais organizado no dia a dia.',
     },
     suporte: {
       eyebrow: 'Suporte Zelo PDV',
       title: 'Receba orientação para começar ou resolver uma dúvida',
       description:
-        'Clientes e visitantes podem usar este formulário para pedir ajuda sem depender de links externos na campanha.',
+        'Conte o que você precisa e o time Zelo indica o melhor próximo passo, seja para começar o teste, conhecer recursos ou tirar uma dúvida inicial.',
     },
     planos: {
       eyebrow: 'Planos e extensões',
@@ -52,9 +52,9 @@
     },
     outro: {
       eyebrow: 'Contato Zelo PDV',
-      title: 'Converse com o time Zelo sem sair do nosso site',
+      title: 'Converse com o time Zelo sobre o seu negócio',
       description:
-        'Uma rota interna para campanhas, dúvidas comerciais, demonstração e suporte inicial. Tudo dentro do domínio do ZeloPDV.',
+        'Tire dúvidas sobre planos, demonstração, WhatsApp, suporte inicial ou teste grátis para sua lanchonete, hamburgueria, delivery próprio ou MEI.',
     },
   };
 
@@ -161,7 +161,7 @@
     name: 'Contato Zelo PDV',
     url: 'https://zelopdv.com.br/contato',
     description:
-      'Página interna de contato comercial, demonstração e suporte inicial do Zelo PDV.',
+      'Página de contato para falar com o time Zelo PDV, solicitar demonstração, conhecer planos e tirar dúvidas iniciais.',
     publisher: {
       '@type': 'Organization',
       name: 'Zelo PDV',
@@ -171,7 +171,7 @@
 </script>
 
 <svelte:head>
-  <title>Contato Zelo PDV — Fale com Especialista, Demo e Suporte</title>
+  <title>Contato Zelo PDV — Fale com Especialista, Demonstração e Suporte</title>
   <meta
     name="description"
     content="Fale com o time Zelo PDV sem sair do site. Solicite demonstração, suporte inicial, planos ou orientação para lanchonete, hamburgueria e delivery."
@@ -179,18 +179,18 @@
   <link rel="canonical" href="https://zelopdv.com.br/contato" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://zelopdv.com.br/contato" />
-  <meta property="og:title" content="Contato Zelo PDV — Fale com Especialista, Demo e Suporte" />
+  <meta property="og:title" content="Contato Zelo PDV — Fale com Especialista, Demonstração e Suporte" />
   <meta
     property="og:description"
-    content="Uma rota interna para campanhas, contato comercial e suporte inicial do Zelo PDV."
+    content="Fale com o time Zelo PDV para solicitar demonstração, tirar dúvidas sobre planos, WhatsApp e suporte inicial."
   />
   <meta property="og:image" content="https://zelopdv.com.br/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://zelopdv.com.br/contato" />
-  <meta name="twitter:title" content="Contato Zelo PDV — Fale com Especialista, Demo e Suporte" />
+  <meta name="twitter:title" content="Contato Zelo PDV — Fale com Especialista, Demonstração e Suporte" />
   <meta
     name="twitter:description"
-    content="Solicite demonstração, suporte inicial ou orientação comercial sem sair do domínio do Zelo PDV."
+    content="Solicite demonstração, suporte inicial ou orientação comercial para sua lanchonete, hamburgueria, delivery próprio ou MEI."
   />
   <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
   {@html `<script type="application/ld+json">${JSON.stringify(contactSchema)}</script>`}
@@ -224,7 +224,7 @@
 
         <div class="lead-panel" id="formulario">
           <div class="panel-head">
-            <p>Contato interno</p>
+            <p>Fale com o time Zelo</p>
             <h2>Deixe seus dados</h2>
           </div>
 
@@ -301,7 +301,7 @@
       <div class="section-inner">
         <div class="section-head">
           <p>Próximo passo</p>
-          <h2>Três caminhos internos para qualquer campanha</h2>
+          <h2>Escolha o melhor caminho para avançar</h2>
         </div>
 
         <div class="route-grid">
@@ -319,12 +319,11 @@
     <section class="fit-section">
       <div class="section-inner fit-grid">
         <div>
-          <p class="eyebrow">Para quem essa rota serve</p>
-          <h2>Uma URL para demo, suporte, WhatsApp e especialista</h2>
+          <p class="eyebrow">Para quem o Zelo PDV ajuda</p>
+          <h2>Atendimento para quem vende comida todos os dias</h2>
           <p>
-            O Google Ads pode usar variações como <strong>/contato?assunto=demo</strong>,
-            <strong>/contato?assunto=whatsapp</strong> e <strong>/contato?assunto=suporte</strong>.
-            A página muda o contexto inicial, mas mantém o usuário dentro do domínio.
+            Se você precisa melhorar o caixa, controlar estoque, organizar pedidos do WhatsApp
+            ou entender qual plano faz sentido, o time Zelo pode orientar antes de você começar.
           </p>
         </div>
 
@@ -682,10 +681,6 @@
     padding: 1.2rem;
     color: var(--text-main);
     font-weight: 800;
-  }
-
-  strong {
-    color: var(--text-main);
   }
 
   @media (max-width: 900px) {

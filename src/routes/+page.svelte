@@ -201,6 +201,10 @@
   let activeLightboxImage = null;
   let daysUntilEaster = 0;
 
+  function openSupportChat() {
+    window.dispatchEvent(new CustomEvent('zelo:open-support-chat'));
+  }
+
   onMount(() => {
     function handleKeydown(e) {
       if (e.key === 'Escape') activeLightboxImage = null;
@@ -264,7 +268,12 @@
           Ver como funciona
         </a>
       </div>
-      <p class="text-xs text-slate-500 mt-3">Sem cobranças durante os 30 dias. Cancele quando quiser.</p>
+      <p class="text-xs text-slate-500 mt-3">
+        Sem cobranças durante os 30 dias. Cancele quando quiser.
+        <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+          Falar com especialista
+        </button>
+      </p>
 
       <!-- MOCKUP DASHBOARD 3D -->
       <div class="mt-20 relative group">
@@ -911,7 +920,12 @@
             <a href="/cadastro" class="block w-full text-center py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
               Começar teste gratuito
             </a>
-            <p class="text-xs text-slate-500 text-center mt-3">Sem cartão. Cancele quando quiser.</p>
+            <p class="text-xs text-slate-500 text-center mt-3">
+              Sem cartão. Cancele quando quiser.
+              <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+                Falar com especialista
+              </button>
+            </p>
           </div>
         </div>
 
@@ -1132,6 +1146,7 @@
           <h4 class="text-white font-semibold mb-4">Suporte</h4>
           <ul class="space-y-2 text-sm text-slate-400">
             <li><a href="#faq" class="hover:text-sky-400 transition-colors">Central de Ajuda</a></li>
+            <li><a href="/contato?assunto=demo" class="hover:text-sky-400 transition-colors">Agendar demonstração</a></li>
             <li><a href="https://wa.me/5514991537503" class="hover:text-sky-400 transition-colors">Falar no WhatsApp</a></li>
             <li><a href="mailto:techne.br@gmail.com" class="hover:text-sky-400 transition-colors">Email</a></li>
           </ul>

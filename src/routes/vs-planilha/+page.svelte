@@ -126,6 +126,10 @@
       body: 'Abrir Excel no celular no meio do atendimento é inviável. Então você vai para o papel ou o caderno — e volta à estaca zero.'
     }
   ];
+
+  function openSupportChat() {
+    window.dispatchEvent(new CustomEvent('zelo:open-support-chat'));
+  }
 </script>
 
 <div class="min-h-screen bg-[#0B0F19] text-slate-300 font-sans overflow-x-hidden">
@@ -155,6 +159,9 @@
           Ver comparação
         </a>
       </div>
+      <button type="button" on:click={openSupportChat} class="mt-5 text-sm text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+        Falar com especialista
+      </button>
     </div>
   </section>
 
@@ -317,7 +324,12 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
         </svg>
       </a>
-      <p class="text-xs text-slate-500 mt-3">Sem cobranças durante os 30 dias. Cancele quando quiser.</p>
+      <p class="text-xs text-slate-500 mt-3">
+        Sem cobranças durante os 30 dias. Cancele quando quiser.
+        <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+          Falar com especialista
+        </button>
+      </p>
     </div>
   </section>
 

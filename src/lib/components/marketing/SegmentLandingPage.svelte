@@ -7,6 +7,10 @@
   export let page;
 
   $: allFaqs = [...page.faqSpecific, ...generalFaqs];
+
+  function openSupportChat() {
+    window.dispatchEvent(new CustomEvent('zelo:open-support-chat'));
+  }
 </script>
 
 <div
@@ -53,6 +57,9 @@
 
           <p class="text-sm" style="color: var(--text-muted);">
             Sem instalar nada. Cancele quando quiser durante o teste.
+            <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+              Falar com especialista
+            </button>
           </p>
         </div>
 
@@ -220,6 +227,9 @@
               Ver como funciona
             </a>
           </div>
+          <button type="button" on:click={openSupportChat} class="mt-5 text-sm text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+            Falar com especialista
+          </button>
         </div>
       </div>
     </section>

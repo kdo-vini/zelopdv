@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from 'svelte';
   import { writable } from 'svelte/store';
   import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
 
@@ -11,6 +12,20 @@
   function toggleChat() {
     isOpen = !isOpen;
   }
+
+  function openChat() {
+    isOpen = true;
+  }
+
+  onMount(() => {
+    const handleOpenChat = () => openChat();
+
+    window.addEventListener('zelo:open-support-chat', handleOpenChat);
+
+    return () => {
+      window.removeEventListener('zelo:open-support-chat', handleOpenChat);
+    };
+  });
 </script>
 
 <div class="support-chat-container" role="complementary" aria-label="Chat de suporte">
