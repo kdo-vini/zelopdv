@@ -1,5 +1,8 @@
 # PROJETO_ACESSOS — Add-on Controle de Acessos (Sprint Tracker)
 
+> Historico de sprint. Nao tratar este arquivo como fonte canônica do comportamento atual.
+> Fonte viva atual: `docs/modules/ACESSOS.md`.
+
 > **Princípio**: este arquivo é **handoff stateful**. Qualquer agente (Codex, Claude, outra IA, outra conta) deve poder continuar do zero só lendo este arquivo. Atualizar a cada commit/tarefa.
 
 ---

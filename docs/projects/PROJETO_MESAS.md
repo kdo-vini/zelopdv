@@ -1,5 +1,8 @@
 # PROJETO_MESAS — Add-on Mesas (Sprint Tracker)
 
+> Historico de sprint. Nao tratar este arquivo como fonte canônica do comportamento atual.
+> Fonte viva atual: `docs/modules/MESAS.md`.
+
 > **Princípio**: este arquivo é **handoff stateful**. Qualquer agente (Claude, outra IA, outra conta) deve poder continuar do zero só lendo este arquivo. Atualizar a cada commit/tarefa.
 
 ---

@@ -1,6 +1,6 @@
 # Plano — Módulo Mesas: Gerenciamento de Projeto + Implementação MVP
 
-> Arquivo historico. Este plano originou o tracker vivo em [../projects/PROJETO_MESAS.md](../projects/PROJETO_MESAS.md).
+> Arquivo historico. Este plano originou o tracker por sprint em [../projects/PROJETO_MESAS.md](../projects/PROJETO_MESAS.md). A fonte viva atual do modulo e `docs/modules/MESAS.md`.
 
 ## Contexto
 

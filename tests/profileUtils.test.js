@@ -3,17 +3,17 @@ import { requiredOk, buildPayload, isValidImage } from '../src/lib/profileUtils.
 
 describe('profileUtils.requiredOk', () => {
   it('returns false when any required field is missing', () => {
-    expect(requiredOk({ nome_exibicao: '', documento: '1', contato: '2', largura_bobina: '80mm' })).toBe(false);
+    expect(requiredOk({ nome_exibicao: '', documento: '52998224725', contato: '11999999999', largura_bobina: '80mm' })).toBe(false);
     expect(requiredOk({ nome_exibicao: 'A', documento: '', contato: '2', largura_bobina: '80mm' })).toBe(false);
-    expect(requiredOk({ nome_exibicao: 'A', documento: '1', contato: '', largura_bobina: '80mm' })).toBe(false);
-    expect(requiredOk({ nome_exibicao: 'A', documento: '1', contato: '2', largura_bobina: '70mm' })).toBe(false);
+    expect(requiredOk({ nome_exibicao: 'A', documento: '52998224725', contato: '', largura_bobina: '80mm' })).toBe(false);
+    expect(requiredOk({ nome_exibicao: 'A', documento: '52998224725', contato: '11999999999', largura_bobina: '70mm' })).toBe(false);
   });
   it('returns true when all required fields are valid', () => {
-    expect(requiredOk({ nome_exibicao: 'A', documento: '1', contato: '2', largura_bobina: '80mm' })).toBe(true);
-    expect(requiredOk({ nome_exibicao: 'A', documento: '1', contato: '2', largura_bobina: '58mm' })).toBe(true);
+    expect(requiredOk({ nome_exibicao: 'A', documento: '52998224725', contato: '11999999999', largura_bobina: '80mm' })).toBe(true);
+    expect(requiredOk({ nome_exibicao: 'A', documento: '52998224725', contato: '11999999999', largura_bobina: '58mm' })).toBe(true);
   });
   it('rejects pdf as a valid largura_bobina', () => {
-    expect(requiredOk({ nome_exibicao: 'A', documento: '1', contato: '2', largura_bobina: 'pdf' })).toBe(false);
+    expect(requiredOk({ nome_exibicao: 'A', documento: '52998224725', contato: '11999999999', largura_bobina: 'pdf' })).toBe(false);
   });
 });
 
@@ -52,7 +52,7 @@ describe('profileUtils.buildPayload', () => {
     const payload = buildPayload({
       userId: 'u1',
       nome_exibicao: 'Loja',
-      documento: '123',
+      documento: '52998224725',
       contato: '+55 11 99999-9999',
       largura_bobina: '80mm',
     });

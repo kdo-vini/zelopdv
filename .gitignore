@@ -13,10 +13,9 @@ vite.config.js.timestamp-*
 # Local docs not for repo
 SUPPORT_GUIDE_ZELO_PDV.txt
 
-# Internal documentation and notes
+# Internal notes not meant for versioning
 .ai/
 SISTEMA.md
-CLAUDE.md
 agents.md
 
 # SQL migrations (local only — paste into Supabase SQL Editor manually)

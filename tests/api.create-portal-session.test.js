@@ -59,9 +59,9 @@ describe('API: create-portal-session', () => {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
               order: vi.fn(() => ({
-                limit: vi.fn(() => ({
-                  maybeSingle: vi.fn(async () => ({
-                    data: { stripe_customer_id: 'cus_123' },
+                  limit: vi.fn(() => ({
+                    maybeSingle: vi.fn(async () => ({
+                    data: { provider_customer_id: 'cus_123' },
                     error: null
                   }))
                 }))

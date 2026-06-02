@@ -20,13 +20,13 @@ export async function POST({ request, url }) {
     // Always look up customerId from DB — never trust client-sent IDs (IDOR prevention)
     const { data: sub } = await supabaseAdmin
       .from('subscriptions')
-      .select('stripe_customer_id')
+      .select('provider_customer_id')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    let customerId = sub?.stripe_customer_id || null;
+    let customerId = sub?.provider_customer_id || null;
 
     if (!customerId) {
       const list = await stripe.customers.list({ email: user.email, limit: 1 });
@@ -37,9 +37,9 @@ export async function POST({ request, url }) {
       }
     }
 
-    const requestOrigin = request.headers.get('origin') || request.headers.get('x-forwarded-host')
-      ? `https://${request.headers.get('x-forwarded-host')}`
-      : null;
+    const headerOrigin = request.headers.get('origin');
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const requestOrigin = headerOrigin || (forwardedHost ? `https://${forwardedHost}` : null);
     const origin = ORIGIN || requestOrigin || url.origin;
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,

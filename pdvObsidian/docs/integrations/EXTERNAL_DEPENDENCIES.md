@@ -1,0 +1,1 @@
+../../../docs/integrations/EXTERNAL_DEPENDENCIES.md

@@ -1,0 +1,23 @@
+# ZeloPDV.memory
+
+> Memória viva. Guardar só fatos confirmados e úteis para continuidade técnica.
+> Atualizado em 2026-06-01.
+
+- O app principal roda em SvelteKit 2 + Svelte 5 e usa `@sveltejs/adapter-vercel` com runtime Node 20.
+- Existe um segundo app em `admin-dashboard/`, separado do app principal.
+- O backend real do produto é Supabase; service role só existe em código server-side.
+- `subscriptions` é a fonte de verdade de acesso/entitlement.
+- `billing_payments` registra o fluxo Pix da AbacatePay.
+- `src/lib/pricing.js` é o catálogo canônico de planos, add-ons e Stripe price IDs.
+- O fluxo offline do PDV é contingência, não offline-first completo.
+- O replay offline depende de `client_sale_id` e da RPC `criar_venda_completa`.
+- A fila offline Dexie está na versão 4 e guarda `ownerUserId` / `operatorUserId`.
+- O onboarding usa Resend para email e ZeloChat interno para WhatsApp.
+- O purge final de conta agendada não está neste repo; a migration diz que roda em um sweeper do ZeloChat.
+- O modelo de subusuário mistura duas camadas: contexto server-side/RLS por owner e gating fino de permissões majoritariamente no cliente.
+- `AdminLock`/`pin_admin` hoje é barreira de UI no browser, não proteção forte de segredo.
+- O admin dashboard usa anon key no browser e assume tabelas administrativas sem RLS.
+- As migrations do projeto ficam em `.ai/migrations/`; não há `supabase/migrations/` versionado.
+- A trilha documental principal agora é: `README.md` + docs operacionais na raiz + `pdvObsidian/HOME.md`.
+- Em 2026-06-01, `npm test` voltou a 140/140 após alinhar fixtures ao contrato atual de perfil/CPF/telefone.
+- Em produção, `subscriptions` usa `provider_customer_id`; o portal Stripe já foi alinhado para esse contrato.

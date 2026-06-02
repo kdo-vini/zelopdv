@@ -1,5 +1,8 @@
 # Cleanup follow-ups — ZeloPDV
 
+> Snapshot de backlog tecnico.
+> Nao use este arquivo como source-of-truth de estado atual do produto; use `CURRENT.md`, `CLAUDE.md` e `CODE_REVIEW.md`.
+
 Próximos PRs da auditoria de dead code/duplicatas. PRs 1–5 já foram aplicados (ver commit). Estes ficam pra agendar.
 
 Origem do plano: análise completa em conversa com Claude (2026-05-27). Cada item tem evidência concreta e plano de validação.

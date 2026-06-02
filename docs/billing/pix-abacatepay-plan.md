@@ -1,5 +1,8 @@
 # Plano Pix AbacatePay
 
+> Nota historica de desenho inicial.
+> Para o estado operacional atual, fluxos reais e riscos, use `BILLING.md`.
+
 ## Objetivo
 
 Adicionar pagamento via Pix com AbacatePay sem quebrar o fluxo atual do Stripe.

@@ -83,7 +83,7 @@ Banco local: `ZeloPDVDB`
 - O estoque local não é decrementado imediatamente quando uma venda fica pendente offline. Isso evita mentir que o banco baixou, mas permite que a tela exiba estoque anterior até sincronizar.
 - Se duas máquinas venderem offline o mesmo item, a primeira que sincronizar consome o estoque. A segunda pode falhar no replay se a RPC bloquear estoque insuficiente.
 - O modo offline depende de a tela e os dados já estarem carregados antes da queda.
-- A fila offline ainda não carrega `ownerUserId`/`id_operador` para o projeto de acessos. Isso está citado no planejamento de acessos e precisa ser endereçado antes de liberar subusuários com offline.
+- A fila offline Dexie ja carrega `ownerUserId` e `operatorUserId`, e o replay injeta `operador_id` quando necessario. Isso reduz o risco para subusuarios, mas o suporte offline continua restrito basicamente ao fluxo de venda no PDV.
 
 ## Critérios para considerar offline-first completo
 
@@ -92,5 +92,4 @@ Banco local: `ZeloPDVDB`
 - Ter indicador claro de status offline e quantidade de vendas pendentes.
 - Exibir no PDV quantas vendas estão pendentes de sincronização e quais falharam no replay.
 - Ter baixa local otimista de estoque pendente, com reconciliação no sync.
-- Persistir contexto de operador/empresa dona no payload offline.
 - Cobrir com testes unitários e e2e os cenários de queda antes, durante e depois da RPC.

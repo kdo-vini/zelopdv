@@ -198,7 +198,7 @@ describe('API: billing/pix/create', () => {
       user: { id: 'owner-1', email: 'owner@test.com' },
       writes: [],
       selectResults: {
-        empresa_perfil: { nome_exibicao: 'Loja Teste', documento: '12345678900', contato: '11999999999' },
+        empresa_perfil: { nome_exibicao: 'Loja Teste', documento: '52998224725', contato: '11999999999' },
         subscriptions: null,
       },
       accessContext: {

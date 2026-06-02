@@ -85,7 +85,7 @@ describe('ensureActiveSubscription', () => {
   it('returns owner access context when subscription is active and profile is ok', async () => {
     db.__session = { user: { id: 'owner-1', email: 'owner@test.com' } };
     db.access_users = [];
-    db.empresa_perfil = { user_id: 'owner-1', nome_exibicao: 'Loja', documento: '123', contato: '9999', largura_bobina: '80mm' };
+    db.empresa_perfil = { user_id: 'owner-1', nome_exibicao: 'Loja', documento: '52998224725', contato: '11999999999', largura_bobina: '80mm' };
     db.subscriptions = { user_id: 'owner-1', status: 'active', current_period_end: '2099-01-01T00:00:00.000Z' };
 
     const { ensureActiveSubscription } = await import('../src/lib/guards.js');

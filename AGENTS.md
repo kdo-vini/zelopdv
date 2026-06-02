@@ -1,6 +1,39 @@
 # AGENTS.md — ZeloPDV Subagent Reference
 
-Quick reference for using Claude Code subagents in the ZeloPDV codebase. Use this to pick the right agent and avoid repeating mistakes.
+Quick reference for using subagents in the ZeloPDV codebase.
+
+---
+
+## Mandatory read before any task
+
+1. Read [[CURRENT]] first.
+2. For anything beyond a tiny local edit, read [[ZeloPDV.memory]] next.
+3. For billing, subscription guards, offline sales, account deletion, referrals, or admin flows, read [[CLAUDE]] and [[CODE_REVIEW]] before touching code.
+4. After any fix or feature that changes behavior, update:
+   - [[CURRENT]] if the sprint/state changed
+   - [[FIXES_PROGRESS]] if a bug/risk moved
+   - [[INCIDENTS]] if the change came from a real outage or production failure mode
+   - [[ZeloPDV.memory]] only if a fact became worth carrying across sessions
+
+## Critical write surfaces
+
+Before editing these files, read the adjacent operational docs first:
+
+- `src/routes/api/billing/*` → [[BILLING]] + [[CODE_REVIEW]]
+- `src/lib/guards.js` → [[CLAUDE]] + [[CURRENT]]
+- `src/lib/finance/saleOps.js`, `src/lib/offlineDb.js`, `src/routes/app/+page.svelte` → [[CLAUDE]] + `docs/operations/OFFLINE.md`
+- `src/lib/server/accessControl.js`, `src/lib/accessControl.js`, `src/routes/api/access/*`, `src/routes/gestao/acessos/+page.svelte` → [[CLAUDE]] + `docs/modules/ACESSOS.md` + `docs/data/SCHEMA_RLS.md`
+- `src/routes/app/mesas/*`, `src/routes/gestao/mesas/+page.svelte` → [[CLAUDE]] + `docs/modules/MESAS.md`
+- `src/routes/relatorios/+page.svelte`, `src/routes/gestao/despesas/+page.svelte`, `src/lib/components/AdminLock.svelte` → [[CODE_REVIEW]] + `docs/data/SCHEMA_RLS.md`
+- `admin-dashboard/*` → [[CLAUDE]] + [[CODE_REVIEW]]
+
+## Documentation contract
+
+- Do not leave behavior changes undocumented.
+- Prefer updating an existing doc over creating a sibling doc.
+- If a doc becomes historical, mark it explicitly at the top instead of leaving it looking current.
+- If tests or validation commands are red, record that in [[CURRENT]] rather than pretending the branch is green.
+- Do not call a tracker in `docs/projects/` "live" unless it still matches the code; prefer `docs/modules/*` for current module behavior.
 
 ---
 

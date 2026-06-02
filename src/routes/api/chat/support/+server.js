@@ -23,7 +23,7 @@ Preço: R$ 59/mês. Os primeiros 30 dias são completamente gratuitos, sem preci
 ADD-ONS PAGOS (além da assinatura base):
 • Módulo Mesas (+R$ 30/mês): controle de mesas e comandas abertas
 • Módulo Pedidos + Cozinha (+R$ 30/mês): fila de pedidos e painel de cozinha
-• Controle de Acessos (+R$ 20/mês): usuários adicionais com cargos e permissões configuráveis
+• Controle de Acessos (+R$ 30/mês): usuários adicionais com cargos e permissões configuráveis
 Para ativar: acesse a sidebar → Extensões.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
