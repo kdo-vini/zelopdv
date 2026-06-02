@@ -134,7 +134,7 @@ O produto aparece imediatamente na Frente de Caixa, dentro da categoria selecion
 ──────────────────────────────────
 COMO CADASTRAR CARGO E USUÁRIO (ADD-ON CONTROLE DE ACESSOS)
 ──────────────────────────────────
-Este módulo é um add-on pago (+R$ 20/mês). Se não aparecer na sidebar, ative em Extensões.
+Este módulo é um add-on pago (+R$ 30/mês). Se não aparecer na sidebar, ative em Extensões.
 
 Acesse Gestão → Acessos no menu lateral.
 

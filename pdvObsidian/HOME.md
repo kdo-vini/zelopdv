@@ -15,6 +15,7 @@
 - [[CLAUDE]] — architecture / contracts / hotspots
 - [[BILLING]] — recurring billing + Pix runbook
 - [[CODE_REVIEW]] — known risks and drifts
+- [[TRADEOFFS]] — tradeoffs aceitos + dívida técnica conhecida
 - [[FIXES_PROGRESS]] — shipped vs pending
 - [[INCIDENTS]] — outage and failure patterns
 - [[AGENTS]] — operating contract for subagents

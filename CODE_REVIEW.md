@@ -10,6 +10,7 @@
 - Evidência: [src/lib/accessControl.js](/home/vinicius/code/zelopdv/src/lib/accessControl.js:122), [.ai/migrations/rls_subuser_access.sql](/home/vinicius/code/zelopdv/.ai/migrations/rls_subuser_access.sql:11), [src/routes/gestao/despesas/+page.svelte](/home/vinicius/code/zelopdv/src/routes/gestao/despesas/+page.svelte:72), [src/routes/gestao/despesas/+page.svelte](/home/vinicius/code/zelopdv/src/routes/gestao/despesas/+page.svelte:215)
 - Impacto: o contexto owner/subusuário existe e o RLS escopa por empresa dona, mas o JSON de permissões é lido no browser. Em superfícies como `despesas`, o carregamento da página acontece sem um gate explícito de permissão por rota. Isso é mais próximo de navegação/UI gating do que de RBAC de enforcement.
 - Ação recomendada: documentar isso como limitação atual, priorizar checks server-side para mutações e definir quais superfícies precisam de enforcement real além do escopo por owner.
+- Update 2026-06-01: a camada de *dados* de `expenses` foi endurecida — `expenses_owner_scoped_write_policies_2026_06_01` adicionou policies owner-scoped de `INSERT`/`UPDATE`/`DELETE`/`SELECT` em produção, então um subusuário não consegue mais escrever fora da empresa dona via RLS. O ponto P1 permanece aberto porque isso é escopo por *owner*, não RBAC por *papel*: a granularidade por cargo (quem pode lançar despesa vs. só ver) segue gated na UI. Tratado como dívida aceita em [[TRADEOFFS]].
 
 ### P1 — `AdminLock` não protege segredo no servidor; o PIN é carregado e comparado no cliente
 
@@ -65,11 +66,12 @@
 - Impacto: onboarding mais lento, merges mais frágeis, maior chance de regressão lateral e mais dificuldade para agentes trabalharem em paralelo.
 - Ação recomendada: usar os trackers existentes e decompor por superfícies de domínio, não por "limpeza geral".
 
-### P3 — Prompt de suporte ainda expõe preço antigo do add-on Acessos
+### P3 — Prompt de suporte expunha preço antigo do add-on Acessos — ✅ RESOLVIDO (2026-06-01)
 
 - Evidência: [src/routes/api/chat/support/+server.js](/home/vinicius/code/zelopdv/src/routes/api/chat/support/+server.js:26), [src/routes/api/chat/support/+server.js](/home/vinicius/code/zelopdv/src/routes/api/chat/support/+server.js:137), catálogo atual em [src/lib/pricing.js](/home/vinicius/code/zelopdv/src/lib/pricing.js:68)
-- Impacto: o suporte automatizado pode comunicar `+R$ 20/mês` quando o catálogo canônico já está em `R$ 30`.
-- Ação recomendada: fazer o prompt ler do catálogo canônico ou, no mínimo, alinhar o copy manualmente.
+- Impacto: o suporte automatizado comunicava `+R$ 20/mês` quando o catálogo canônico já estava em `R$ 30`.
+- Resolução: ambas as ocorrências (linhas 26 e 137) foram alinhadas manualmente para `+R$ 30/mês`.
+- Dívida residual: o copy continua sendo texto literal no prompt, não lido de `pricing.js`, então pode driftar de novo a cada mudança de preço. Registrado como dívida técnica conhecida em [[TRADEOFFS]] (DT-BILLING-01).
 
 ## Open questions
 

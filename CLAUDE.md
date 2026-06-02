@@ -9,7 +9,8 @@
 2. [[ZeloPDV.memory]] — fatos confirmados que ajudam continuidade
 3. [[BILLING]] — se tocar assinatura, cobrança, trial, checkout ou Pix
 4. [[CODE_REVIEW]] — riscos abertos e pontos frágeis do código
-5. [[FIXES_PROGRESS]] / [[INCIDENTS]] — trilha operacional
+5. [[TRADEOFFS]] — tradeoffs aceitos e dívida técnica conhecida (o que deixamos na mesa de propósito)
+6. [[FIXES_PROGRESS]] / [[INCIDENTS]] — trilha operacional
 
 ## Arquitetura real
 
