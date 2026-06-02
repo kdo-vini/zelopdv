@@ -31,6 +31,7 @@
 - [[docs/modules/MESAS]] — contrato operacional atual do add-on Mesas
 - [[docs/operations/OFFLINE]] — comportamento offline real do PDV
 - [[docs/referral-system]] — sistema de indicação
+- [[docs/marketing/PUBLIC_ROUTES]] — rotas públicas para leads, Ads, SEO, auth e suporte sem login
 - [[docs/billing/pix-abacatepay-plan]] — nota histórica do desenho inicial do Pix
 - [[docs/projects/PROJETO_ACESSOS]] — tracker histórico por sprint do add-on Acessos
 - [[docs/projects/PROJETO_MESAS]] — tracker histórico por sprint do add-on Mesas

@@ -2,12 +2,14 @@
   import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import MarketingFooter from "$lib/components/marketing/MarketingFooter.svelte";
 
+  // defaultMarkup = markup sobre o custo (%). Converted from the antigas margens
+  // sobre a venda via markup = margem / (1 - margem), preservando os preços atuais.
   const niches = [
     {
       id: "marmitaria",
       label: "Marmitaria",
-      defaultMargin: 28,
-      commonRange: "22% a 35%",
+      defaultMarkup: 39,
+      commonRange: "28% a 54%",
       placeholder: "Marmita de frango grelhado",
       defaultPlatformFee: true,
       description: "Boa para quem vende unidade avulsa e também por app.",
@@ -15,8 +17,8 @@
     {
       id: "lanchonete",
       label: "Lanchonete / Hot-dog",
-      defaultMargin: 30,
-      commonRange: "25% a 40%",
+      defaultMarkup: 43,
+      commonRange: "33% a 67%",
       placeholder: "Hot-dog especial",
       defaultPlatformFee: false,
       description:
@@ -25,8 +27,8 @@
     {
       id: "hamburgueria",
       label: "Hamburgueria",
-      defaultMargin: 32,
-      commonRange: "28% a 45%",
+      defaultMarkup: 47,
+      commonRange: "39% a 82%",
       placeholder: "Burger artesanal",
       defaultPlatformFee: true,
       description: "Funciona bem para combo, smash e delivery por app.",
@@ -34,8 +36,8 @@
     {
       id: "pizzaria",
       label: "Pizzaria",
-      defaultMargin: 30,
-      commonRange: "25% a 38%",
+      defaultMarkup: 43,
+      commonRange: "33% a 61%",
       placeholder: "Pizza média de calabresa",
       defaultPlatformFee: true,
       description: "Use quando embalagem, entrega e taxa influenciam bastante.",
@@ -43,8 +45,8 @@
     {
       id: "doceria",
       label: "Açaí / Doceria / Páscoa",
-      defaultMargin: 35,
-      commonRange: "30% a 50%",
+      defaultMarkup: 54,
+      commonRange: "43% a 100%",
       placeholder: "Ovo de Páscoa de 350g",
       defaultPlatformFee: false,
       description:
@@ -53,8 +55,8 @@
     {
       id: "delivery",
       label: "Delivery puro",
-      defaultMargin: 28,
-      commonRange: "22% a 35%",
+      defaultMarkup: 39,
+      commonRange: "28% a 54%",
       placeholder: "Combo delivery",
       defaultPlatformFee: true,
       description: "Escolha este se a maior parte das vendas passa por app.",
@@ -62,8 +64,8 @@
     {
       id: "mercadinho",
       label: "Mercadinho / Mercearia",
-      defaultMargin: 20,
-      commonRange: "15% a 28%",
+      defaultMarkup: 25,
+      commonRange: "18% a 39%",
       placeholder: "Cesta promocional",
       defaultPlatformFee: false,
       description: "Melhor para itens simples com giro recorrente.",
@@ -71,8 +73,8 @@
     {
       id: "outro",
       label: "Outro",
-      defaultMargin: 30,
-      commonRange: "20% a 40%",
+      defaultMarkup: 43,
+      commonRange: "25% a 67%",
       placeholder: "Seu produto principal",
       defaultPlatformFee: false,
       description: "Use quando seu caso não encaixa nos exemplos acima.",
@@ -160,8 +162,8 @@
       includePlatformFee: niche.defaultPlatformFee,
       platformFee: niche.defaultPlatformFee ? 12 : 0,
       marginPreset: "balanced",
-      useCustomMargin: false,
-      customMargin: niche.defaultMargin,
+      useCustomMarkup: false,
+      customMarkup: niche.defaultMarkup,
     };
   }
 
@@ -206,12 +208,12 @@
     }).format(Number.isFinite(value) ? value : 0);
   }
 
-  function getPresetMargins(nicheId) {
+  function getPresetMarkups(nicheId) {
     const niche = nicheMap[nicheId] || niches[0];
     return {
-      competitive: Math.max(15, niche.defaultMargin - 5),
-      balanced: niche.defaultMargin,
-      premium: Math.min(80, niche.defaultMargin + 7),
+      competitive: Math.max(1, niche.defaultMarkup - 10),
+      balanced: niche.defaultMarkup,
+      premium: Math.min(300, niche.defaultMarkup + 20),
     };
   }
 
@@ -227,7 +229,7 @@
       niche: niche.id,
       includePlatformFee: niche.defaultPlatformFee,
       platformFee: niche.defaultPlatformFee ? productForm.platformFee || 12 : 0,
-      customMargin: niche.defaultMargin,
+      customMarkup: niche.defaultMarkup,
     };
   }
 
@@ -288,10 +290,10 @@
   }
 
   $: productNiche = nicheMap[productForm.niche] || niches[0];
-  $: productPresetMargins = getPresetMargins(productForm.niche);
-  $: productMargin = productForm.useCustomMargin
-    ? productForm.customMargin
-    : productPresetMargins[productForm.marginPreset];
+  $: productPresetMarkups = getPresetMarkups(productForm.niche);
+  $: productMarkup = productForm.useCustomMarkup
+    ? productForm.customMarkup
+    : productPresetMarkups[productForm.marginPreset];
   $: ingredientCostTotal = ingredientRows.reduce(
     (total, row) => total + getIngredientRowCost(row),
     0,
@@ -312,24 +314,33 @@
   $: productFeeRate = productForm.includePlatformFee
     ? productForm.platformFee / 100
     : 0;
-  $: productMarginRate = productMargin / 100;
-  $: productMinimumDenominator = 1 - productFeeRate;
-  $: productSuggestedDenominator = 1 - productFeeRate - productMarginRate;
+  $: productMarkupRate = productMarkup / 100;
+  // Parcela do preço que sobra pro vendedor depois da taxa da plataforma.
+  // Como a taxa é limitada a 35%, esse denominador nunca zera (sem dead-end).
+  $: productNetRate = 1 - productFeeRate;
+  // Preço mínimo = ponto de equilíbrio (recupera o custo já contando a taxa).
   $: productMinimumPrice =
-    productDirectCost > 0 && productMinimumDenominator > 0
-      ? productDirectCost / productMinimumDenominator
+    productDirectCost > 0 && productNetRate > 0
+      ? productDirectCost / productNetRate
       : 0;
+  // Markup é sobre o CUSTO; depois fazemos o "gross up" pela taxa pra preservar
+  // o lucro alvo mesmo pagando a plataforma: preço = custo × (1 + markup) ÷ (1 − taxa).
   $: productSuggestedPrice =
-    productDirectCost > 0 && productSuggestedDenominator > 0
-      ? productDirectCost / productSuggestedDenominator
+    productDirectCost > 0 && productNetRate > 0
+      ? (productDirectCost * (1 + productMarkupRate)) / productNetRate
       : 0;
   $: productFeeValue = productSuggestedPrice * productFeeRate;
   $: productProfitPerUnit =
     productSuggestedPrice > 0
       ? productSuggestedPrice - productDirectCost - productFeeValue
       : 0;
-  $: productResultReady =
-    productDirectCost > 0 && productSuggestedDenominator > 0;
+  // Margem sobre a venda real (já líquida da taxa). Sem taxa, equivale a
+  // markup / (1 + markup) — ex.: markup 100% = 50% de margem.
+  $: productMarginOnSale =
+    productSuggestedPrice > 0
+      ? productProfitPerUnit / productSuggestedPrice
+      : productMarkupRate / (1 + productMarkupRate);
+  $: productResultReady = productDirectCost > 0 && productNetRate > 0;
   $: productLabel = productForm.productName || productNiche.placeholder;
 
   $: webAppSchema = {
@@ -747,80 +758,109 @@
         {/if}
 
         {#if productStep === 4}
+          <div class="markup-heading">
+            <span class="field-label no-gap">Markup sobre o custo</span>
+            <span
+              class="info-tip"
+              tabindex="0"
+              role="note"
+              aria-label="O que é markup e o que é margem sobre a venda"
+            >
+              i
+              <span class="info-pop">
+                <strong>Markup sobre o custo</strong> — quanto você soma em cima do
+                que o produto te custa. Ex.: custo R$ 10 com 100% de markup → você
+                quer R$ 10 de lucro, então o preço-base é R$ 20.<br />
+                Conta: <em>preço = custo × (1 + markup) ÷ (1 − taxa)</em>.
+                <br /><br />
+                <strong>Margem sobre a venda</strong> — quanto do preço final é
+                lucro de verdade. Ex.: R$ 10 de lucro num preço de R$ 20 = 50%.<br />
+                Conta: <em>margem = lucro ÷ preço</em>.
+                <br /><br />
+                Markup de 100% (vender pelo dobro do custo) equivale a 50% de
+                margem. A taxa da plataforma é descontada à parte e reduz a margem
+                real.
+              </span>
+            </span>
+          </div>
           <div class="preset-grid">
             <button
               type="button"
               class="preset-card"
-              class:preset-card-active={!productForm.useCustomMargin &&
+              class:preset-card-active={!productForm.useCustomMarkup &&
                 productForm.marginPreset === "competitive"}
               on:click={() => updateProductField("marginPreset", "competitive")}
             >
               <strong>Mais competitivo</strong>
-              <span>{productPresetMargins.competitive}%</span>
+              <span>{productPresetMarkups.competitive}%</span>
             </button>
             <button
               type="button"
               class="preset-card"
-              class:preset-card-active={!productForm.useCustomMargin &&
+              class:preset-card-active={!productForm.useCustomMarkup &&
                 productForm.marginPreset === "balanced"}
               on:click={() => updateProductField("marginPreset", "balanced")}
             >
               <strong>Equilibrado</strong>
-              <span>{productPresetMargins.balanced}%</span>
+              <span>{productPresetMarkups.balanced}%</span>
             </button>
             <button
               type="button"
               class="preset-card"
-              class:preset-card-active={!productForm.useCustomMargin &&
+              class:preset-card-active={!productForm.useCustomMarkup &&
                 productForm.marginPreset === "premium"}
               on:click={() => updateProductField("marginPreset", "premium")}
             >
               <strong>Mais lucrativo</strong>
-              <span>{productPresetMargins.premium}%</span>
+              <span>{productPresetMarkups.premium}%</span>
             </button>
           </div>
 
           <details class="details-card compact-top">
-            <summary>Ajuste fino de margem e taxas</summary>
+            <summary>Ajuste fino de markup e taxas</summary>
             <div class="details-body">
               <label class="toggle-line">
                 <input
                   type="checkbox"
-                  checked={productForm.useCustomMargin}
+                  checked={productForm.useCustomMarkup}
                   on:change={(event) =>
                     updateProductField(
-                      "useCustomMargin",
+                      "useCustomMarkup",
                       event.currentTarget.checked,
                     )}
                 />
-                <span>Usar margem customizada</span>
+                <span>Usar markup customizado</span>
               </label>
 
-              {#if productForm.useCustomMargin}
+              {#if productForm.useCustomMarkup}
                 <div class="slider-card compact-top">
                   <div class="slider-head">
                     <div>
-                      <p class="field-label">Margem desejada</p>
+                      <p class="field-label">Markup desejado</p>
                       <p class="slider-copy">
-                        Para {productNiche.label.toLowerCase()}, margens entre {productNiche.commonRange}
+                        Para {productNiche.label.toLowerCase()}, markups entre {productNiche.commonRange}
                         sao comuns.
                       </p>
                     </div>
-                    <strong>{productForm.customMargin}%</strong>
+                    <strong>{productForm.customMarkup}%</strong>
                   </div>
                   <input
                     class="range-input"
                     type="range"
-                    min="15"
-                    max="80"
+                    min="1"
+                    max="300"
                     step="1"
-                    value={productForm.customMargin}
+                    value={productForm.customMarkup}
                     on:input={(event) =>
                       updateProductField(
-                        "customMargin",
-                        clampNumber(event.currentTarget.value, 15, 80),
+                        "customMarkup",
+                        clampNumber(event.currentTarget.value, 1, 300),
                       )}
                   />
+                  <p class="slider-equivalence">
+                    ≈ {formatWholeNumber(productMarginOnSale * 100)}% de margem sobre
+                    a venda
+                  </p>
                 </div>
               {/if}
 
@@ -844,13 +884,13 @@
                     class="input"
                     type="number"
                     min="0"
-                    max="80"
+                    max="35"
                     step="0.1"
                     value={productForm.platformFee}
                     on:input={(event) =>
                       updateProductField(
                         "platformFee",
-                        clampNumber(event.currentTarget.value, 0, 80),
+                        clampNumber(event.currentTarget.value, 0, 35),
                       )}
                   />
                 </label>
@@ -865,17 +905,49 @@
               <div class="price-spotlight">
                 <span>Preço mínimo</span>
                 <strong>{formatCurrency(productMinimumPrice)}</strong>
-                <p>Abaixo disso sua margem tende a ficar apertada.</p>
+                <p>
+                  Ponto de equilíbrio (custo{#if productForm.includePlatformFee}
+                    + taxa{/if}). Abaixo disso você vende no prejuízo.
+                </p>
               </div>
 
               <div class="price-spotlight price-spotlight-strong">
                 <span>Preço recomendado</span>
                 <strong>{formatCurrency(productSuggestedPrice)}</strong>
-                <p>Com a margem escolhida e custos informados.</p>
+                <p>Com o markup escolhido e custos informados.</p>
               </div>
             </div>
 
             <div class="metric-grid compact-top">
+              <div class="metric-card">
+                <span class="metric-label-row">
+                  Markup / margem
+                  <span
+                    class="info-tip"
+                    tabindex="0"
+                    role="note"
+                    aria-label="Diferença entre markup e margem"
+                  >
+                    i
+                    <span class="info-pop">
+                      <strong>Markup sobre o custo</strong> — quanto você soma em
+                      cima do custo. Conta:
+                      <em>preço = custo × (1 + markup) ÷ (1 − taxa)</em>.
+                      <br /><br />
+                      <strong>Margem sobre a venda</strong> — quanto do preço final
+                      é lucro. Conta: <em>margem = lucro ÷ preço</em>.
+                      <br /><br />
+                      Markup de 100% = vender pelo dobro do custo = 50% de margem
+                      (sem taxa).
+                    </span>
+                  </span>
+                </span>
+                <strong
+                  >{formatWholeNumber(productMarkup)}% / {formatWholeNumber(
+                    productMarginOnSale * 100,
+                  )}%</strong
+                >
+              </div>
               <div class="metric-card">
                 <span>Lucro por unidade</span>
                 <strong>{formatCurrency(productProfitPerUnit)}</strong>
@@ -1486,6 +1558,85 @@
   .range-input {
     width: 100%;
     accent-color: var(--primary);
+  }
+
+  .markup-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .slider-equivalence {
+    margin-top: 0.7rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .metric-label-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .info-tip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--text-main);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: help;
+    flex-shrink: 0;
+  }
+
+  .info-pop {
+    position: absolute;
+    bottom: calc(100% + 0.55rem);
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(20rem, 78vw);
+    padding: 0.85rem 0.95rem;
+    border-radius: 0.85rem;
+    border: 1px solid color-mix(in srgb, white 12%, var(--border-subtle));
+    background: var(--bg-panel);
+    color: var(--text-label);
+    font-size: 0.82rem;
+    font-weight: 400;
+    line-height: 1.55;
+    text-align: left;
+    box-shadow: 0 16px 40px color-mix(in srgb, black 45%, transparent);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--transition-fast),
+      visibility var(--transition-fast);
+    z-index: 60;
+  }
+
+  .info-pop strong {
+    color: var(--text-main);
+  }
+
+  .info-pop em {
+    font-style: normal;
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  .info-tip:hover .info-pop,
+  .info-tip:focus .info-pop,
+  .info-tip:focus-within .info-pop {
+    opacity: 1;
+    visibility: visible;
   }
 
   .primary-button,
