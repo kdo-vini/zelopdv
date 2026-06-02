@@ -136,13 +136,17 @@
   }
 </script>
 
-<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Empresas</p>
-<h1 class="text-2xl font-semibold mb-4">Empresas</h1>
+<div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
+  <div>
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Empresas</p>
+    <h1 class="text-xl font-bold text-slate-100 tracking-tight">Empresas</h1>
+  </div>
+</div>
 {#if errorMessage}
   <div class="mb-4 text-sm text-red-600">{errorMessage}</div>
 {/if}
 
-<section class="mb-8 bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+<section class="mb-8 rounded-xl p-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
   <h2 class="font-semibold mb-3">Criar nova empresa</h2>
   <form on:submit={criarEmpresa} class="grid md:grid-cols-2 gap-4">
     <div>
@@ -164,7 +168,7 @@
   </form>
 </section>
 
-<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+<section class="rounded-xl p-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
   <h2 class="font-semibold mb-3">Minhas empresas</h2>
   {#if loading}
     <div>Carregando...</div>
@@ -173,23 +177,23 @@
   {:else}
     <div class="space-y-6">
       {#each empresas as emp}
-        <div class="border rounded-md">
+        <div class="rounded-lg border" style="border-color: var(--border-subtle);">
           <div class="p-4 flex items-center justify-between">
             <div>
-              <div class="font-medium">{emp.nome}</div>
+              <div class="font-medium" style="color: var(--text-main);">{emp.nome}</div>
               {#if emp.cnpj}
-                <div class="text-xs text-slate-500">CNPJ: {maskCNPJ(emp.cnpj)}</div>
+                <div class="text-xs" style="color: var(--text-muted);">CNPJ: {maskCNPJ(emp.cnpj)}</div>
               {/if}
             </div>
-            <div class="text-xs rounded px-2 py-1 border bg-white dark:bg-slate-800">Minha função: {minhaMembership.get(emp.id)}</div>
+            <div class="text-xs rounded px-2 py-1 border" style="background: var(--bg-panel); border-color: var(--border-subtle); color: var(--text-label);">Minha função: {minhaMembership.get(emp.id)}</div>
           </div>
-          <div class="p-4 border-t">
+          <div class="p-4 border-t" style="border-color: var(--border-subtle);">
             <h3 class="font-semibold mb-2">Membros</h3>
             <ul class="space-y-2">
               {#each (membrosPorEmpresa.get(emp.id) || []) as m}
                 <li class="flex items-center justify-between text-sm">
-                  <span class="text-slate-600">{m.id_usuario}</span>
-                  <span class="text-slate-800 font-medium">{m.role}</span>
+                  <span style="color: var(--text-muted);">{m.id_usuario}</span>
+                  <span class="font-medium" style="color: var(--text-main);">{m.role}</span>
                   {#if podeGerenciar(emp.id)}
                     <button class="btn-secondary" on:click={() => removerMembro(emp.id, m.id_usuario)}>Remover</button>
                   {/if}

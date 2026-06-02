@@ -198,10 +198,10 @@
 <section class="wrap">
   <OnboardingChecklist />
 
-  <div class="flex justify-between items-center mb-4">
+  <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
     <div>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Dashboard</p>
-      <h1 class="pageTitle">Dashboard</h1>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Dashboard</p>
+      <h1 class="text-xl font-bold text-slate-100 tracking-tight">Dashboard</h1>
     </div>
     <button class="btn-sm" on:click={loadDash}>Atualizar</button>
   </div>
@@ -213,10 +213,16 @@
     <!-- [NEW] Mobile-First Grid Layout: 2 cols on mobile, 4 on desktop -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
       <!-- Vendas Hoje (Most Important) -->
-      <div class="card bg-gradient-to-br from-indigo-50 to-white dark:from-slate-800 dark:to-slate-800 border-indigo-200 dark:border-slate-700 col-span-2 sm:col-span-1">
-        <div class="kptitle text-indigo-700 dark:text-indigo-400 font-semibold">Vendas Hoje</div>
-        <div class="kpval text-indigo-900 dark:text-white">{fmt(dash.vendas.totalHoje)}</div>
-        <div class="kpsub text-indigo-600/80 dark:text-indigo-300/70">{dash.vendas.countHoje} cupons</div>
+      <div
+        class="card col-span-2 sm:col-span-1"
+        style="
+          background: color-mix(in srgb, var(--primary) 10%, var(--bg-card));
+          border-color: color-mix(in srgb, var(--primary) 28%, var(--border-card));
+        "
+      >
+        <div class="kptitle font-semibold" style="color: var(--primary);">Vendas Hoje</div>
+        <div class="kpval" style="color: var(--text-main);">{fmt(dash.vendas.totalHoje)}</div>
+        <div class="kpsub" style="color: var(--text-label);">{dash.vendas.countHoje} cupons</div>
       </div>
       
       <!-- Chart spanning 2 cols on mobile if we want, or just generic kpis first -->

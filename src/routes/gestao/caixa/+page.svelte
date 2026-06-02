@@ -174,8 +174,12 @@
   }
 </script>
 
-<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Financeiro / Fechar Caixa</p>
-<h1 class="text-2xl font-semibold mb-4">Fechar Caixa</h1>
+<div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
+  <div>
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Financeiro / Fechar Caixa</p>
+    <h1 class="text-xl font-bold text-slate-100 tracking-tight">Fechar Caixa</h1>
+  </div>
+</div>
 {#if errorMessage}
   <div class="mb-4 text-sm text-red-600">{errorMessage}</div>
 {/if}
@@ -184,52 +188,52 @@
   <div>Carregando...</div>
 {:else}
   {#if !caixa}
-    <div class="text-sm text-slate-600">Nenhum caixa aberto encontrado para seu usuário.</div>
+    <div class="text-sm" style="color: var(--text-muted);">Nenhum caixa aberto encontrado para seu usuário.</div>
   {:else}
-    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-4">
+    <section class="rounded-xl p-4 space-y-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
       <div class="grid sm:grid-cols-2 gap-4">
         <div>
-          <div class="text-sm text-slate-500">Data de abertura</div>
-          <div class="font-medium">{new Date(caixa.data_abertura).toLocaleString()}</div>
+          <div class="text-sm" style="color: var(--text-muted);">Data de abertura</div>
+          <div class="font-medium" style="color: var(--text-main);">{new Date(caixa.data_abertura).toLocaleString()}</div>
         </div>
         <div>
-          <div class="text-sm text-slate-500">Troco inicial</div>
-          <div class="font-medium">R$ {Number(caixa.valor_inicial || 0).toFixed(2)}</div>
+          <div class="text-sm" style="color: var(--text-muted);">Troco inicial</div>
+          <div class="font-medium" style="color: var(--text-main);">R$ {Number(caixa.valor_inicial || 0).toFixed(2)}</div>
         </div>
       </div>
 
       <div class="grid sm:grid-cols-4 gap-4">
-        <div class="p-3 rounded border bg-white dark:bg-slate-800">
-          <div class="text-xs text-slate-500">Dinheiro</div>
-          <div class="text-lg font-semibold">R$ {Number(totais.dinheiro).toFixed(2)}</div>
+        <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+          <div class="text-xs" style="color: var(--text-muted);">Dinheiro</div>
+          <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.dinheiro).toFixed(2)}</div>
         </div>
-        <div class="p-3 rounded border bg-white dark:bg-slate-800">
-          <div class="text-xs text-slate-500">Cartão</div>
-          <div class="text-lg font-semibold">R$ {Number(totalCartao).toFixed(2)}</div>
-          <div class="text-xs text-slate-500 mt-1">Débito R$ {Number(totais.cartao_debito).toFixed(2)} · Crédito R$ {Number(totais.cartao_credito).toFixed(2)}{totais.cartao_legacy>0?` · Outros R$ ${Number(totais.cartao_legacy).toFixed(2)}`:''}</div>
+        <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+          <div class="text-xs" style="color: var(--text-muted);">Cartão</div>
+          <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totalCartao).toFixed(2)}</div>
+          <div class="text-xs mt-1" style="color: var(--text-muted);">Débito R$ {Number(totais.cartao_debito).toFixed(2)} · Crédito R$ {Number(totais.cartao_credito).toFixed(2)}{totais.cartao_legacy>0?` · Outros R$ ${Number(totais.cartao_legacy).toFixed(2)}`:''}</div>
         </div>
-        <div class="p-3 rounded border bg-white dark:bg-slate-800">
-          <div class="text-xs text-slate-500">Pix</div>
-          <div class="text-lg font-semibold">R$ {Number(totais.pix).toFixed(2)}</div>
+        <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+          <div class="text-xs" style="color: var(--text-muted);">Pix</div>
+          <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.pix).toFixed(2)}</div>
         </div>
-        <div class="p-3 rounded border bg-white dark:bg-slate-800">
-          <div class="text-xs text-slate-500">Total</div>
-          <div class="text-lg font-semibold">R$ {Number(totalGeral).toFixed(2)}</div>
+        <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+          <div class="text-xs" style="color: var(--text-muted);">Total</div>
+          <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totalGeral).toFixed(2)}</div>
         </div>
       </div>
 
       {#if totais.fiado > 0 || formasExtras.length > 0}
         <div class="grid sm:grid-cols-3 gap-4">
           {#if totais.fiado > 0}
-            <div class="p-3 rounded border bg-white dark:bg-slate-800">
-              <div class="text-xs text-slate-500">Fiado</div>
-              <div class="text-lg font-semibold">R$ {Number(totais.fiado).toFixed(2)}</div>
+            <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+              <div class="text-xs" style="color: var(--text-muted);">Fiado</div>
+              <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.fiado).toFixed(2)}</div>
             </div>
           {/if}
           {#each formasExtras as item}
-            <div class="p-3 rounded border bg-white dark:bg-slate-800">
-              <div class="text-xs text-slate-500">{item.forma.replace(/_/g, ' ')}</div>
-              <div class="text-lg font-semibold">R$ {Number(item.valor).toFixed(2)}</div>
+            <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+              <div class="text-xs" style="color: var(--text-muted);">{item.forma.replace(/_/g, ' ')}</div>
+              <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(item.valor).toFixed(2)}</div>
             </div>
           {/each}
         </div>

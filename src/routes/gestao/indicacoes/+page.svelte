@@ -35,10 +35,10 @@
 </svelte:head>
 
 <section class="wrap">
-  <div class="header">
+  <div class="header border-b border-slate-700/60 pb-4 mb-6">
     <div>
-      <p>Outros / Indicações</p>
-      <h1>Minhas indicações</h1>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Outros / Indicações</p>
+      <h1 class="text-xl font-bold text-slate-100 tracking-tight">Minhas indicações</h1>
       <span class="lede">
         Compartilhe seu código, acompanhe quem avançou no cadastro e veja quando seu crédito fica liberado.
       </span>
@@ -85,9 +85,9 @@
     margin: 0 0 0.25rem;
     color: var(--text-muted);
     text-transform: uppercase;
-    font-size: 0.68rem;
+    font-size: 0.625rem;
     font-weight: 800;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.2em;
   }
 
   h1,
@@ -97,7 +97,8 @@
   }
 
   h1 {
-    font-size: 1.8rem;
+    font-size: 1.25rem;
+    font-weight: 700;
   }
 
   h2 {

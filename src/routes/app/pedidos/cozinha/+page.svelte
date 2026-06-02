@@ -6,6 +6,7 @@
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
+  import BackLink from '$lib/components/ui/BackLink.svelte';
 
   let userId = '';
   let ownerUserId = '';
@@ -295,7 +296,8 @@
   <main class="kitchen-shell">
     <header class="kitchen-topbar">
       <div>
-        <p class="eyebrow">Painel da cozinha</p>
+        <BackLink href="/app/pedidos" label="Pedidos" />
+        <p class="eyebrow">Vendas / Cozinha</p>
         <h1>Pedidos em preparo</h1>
       </div>
       <div class="status-strip">
@@ -437,15 +439,15 @@
 
 <style>
   :global(body) {
-    background: #05070a;
+    background: var(--bg-app);
   }
 
   .kitchen-shell,
   .blocked {
     height: 100%;
     overflow-y: auto;
-    background: #05070a;
-    color: #f8fafc;
+    background: var(--bg-app);
+    color: var(--text-main);
     padding: clamp(1rem, 2vw, 2rem);
   }
 
@@ -464,7 +466,7 @@
     font-weight: 800;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #38bdf8;
+    color: var(--primary);
   }
 
   h1,
@@ -502,7 +504,7 @@
   }
 
   .status-strip small {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.72rem;
     text-transform: uppercase;
     font-weight: 800;
@@ -512,8 +514,8 @@
   .blocked-panel a {
     border: 0;
     border-radius: 8px;
-    background: #0ea5e9;
-    color: #ffffff;
+    background: var(--primary);
+    color: var(--primary-text);
     font-weight: 900;
     cursor: pointer;
     min-height: 44px;
@@ -526,7 +528,7 @@
 
   button:hover:not(:disabled),
   .blocked-panel a:hover {
-    background: #0284c7;
+    background: var(--primary-hover);
   }
 
   button:disabled {
@@ -556,15 +558,15 @@
     font-size: 1rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #cbd5e1;
+    color: var(--text-label);
   }
 
   .lane-header span {
     min-width: 34px;
     height: 28px;
     border-radius: 999px;
-    background: rgba(14, 165, 233, 0.16);
-    color: #7dd3fc;
+    background: color-mix(in srgb, var(--primary) 16%, transparent);
+    color: color-mix(in srgb, var(--primary) 70%, white);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -583,7 +585,7 @@
   .empty-state {
     border: 1px solid rgba(148, 163, 184, 0.18);
     border-radius: 8px;
-    background: #101826;
+    background: var(--bg-card);
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
   }
 
@@ -609,7 +611,7 @@
     align-items: center;
     justify-content: center;
     background: rgba(15, 23, 42, 0.6);
-    color: #94a3b8;
+    color: var(--text-muted);
     border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 6px;
     cursor: pointer;
@@ -618,12 +620,12 @@
   }
   .action-btn:hover {
     background: rgba(30, 41, 59, 0.95);
-    color: #f8fafc;
+    color: var(--text-main);
     border-color: rgba(148, 163, 184, 0.5);
   }
   .action-btn-danger:hover {
     background: rgba(239, 68, 68, 0.18);
-    color: #fca5a5;
+    color: color-mix(in srgb, var(--error) 60%, white);
     border-color: rgba(239, 68, 68, 0.5);
   }
   .action-btn svg { width: 14px; height: 14px; }
@@ -643,19 +645,19 @@
 
   .pedido-header p,
   .ready-card p {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.85rem;
     margin-top: 0.15rem;
   }
 
   .num-tag {
-    color: #0ea5e9;
+    color: var(--primary);
     font-weight: 900;
   }
 
   .pedido-header > span {
     font-weight: 900;
-    color: #facc15;
+    color: var(--warning);
     font-size: 1.1rem;
     font-variant-numeric: tabular-nums;
   }
@@ -664,7 +666,7 @@
     padding: 0.65rem 0.75rem;
     border-radius: 8px;
     background: rgba(250, 204, 21, 0.1);
-    color: #fde68a;
+    color: color-mix(in srgb, var(--warning) 58%, white);
     margin-bottom: 0.85rem;
     font-weight: 700;
   }
@@ -685,7 +687,7 @@
     align-items: center;
     padding: 0.75rem;
     border-radius: 8px;
-    background: #0b1220;
+    background: var(--bg-panel);
     border: 1px solid rgba(148, 163, 184, 0.14);
   }
 
@@ -702,14 +704,14 @@
   li small {
     display: inline-block;
     margin-top: 0.2rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     text-transform: uppercase;
     font-size: 0.68rem;
     font-weight: 900;
   }
 
   li.done button {
-    background: #166534;
+    background: var(--success);
   }
 
   .ready-list {
@@ -740,7 +742,7 @@
   }
 
   .ready-tag {
-    color: #86efac;
+    color: color-mix(in srgb, var(--success) 62%, white);
     font-size: 0.75rem;
     text-transform: uppercase;
     font-weight: 900;
@@ -756,7 +758,7 @@
   .empty-state {
     min-height: 55vh;
     margin-top: 1rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 1.2rem;
     font-weight: 800;
   }
@@ -770,7 +772,7 @@
   }
 
   .blocked-panel p:not(.eyebrow) {
-    color: #94a3b8;
+    color: var(--text-muted);
   }
 
   @media (max-width: 900px) {

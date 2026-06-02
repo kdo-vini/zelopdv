@@ -7,6 +7,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { page } from '$app/stores';
   import { trackGoogleAdsAssinatura, waitForGtag } from '$lib/googleAds';
+  import BackLink from '$lib/components/ui/BackLink.svelte';
 
   const REDIRECT_DELAY_MS = 4500;
   const GOOGLE_CALLBACK_TIMEOUT_MS = 3000;
@@ -86,6 +87,8 @@
 
 <section class="success-shell">
   <div class="success-card">
+    <BackLink href="/assinatura" label="Assinatura" />
+
     <div class="success-badge">
       <span class="badge-dot"></span>
       Pagamento confirmado

@@ -11,7 +11,7 @@
 <div class="tool-page">
   <div class="tool-page-head">
     <BackLink href="/ferramentas" label="Ferramentas" />
-    <h1 class="tool-page-title">Precificação</h1>
+    <h1 class="text-xl font-bold text-slate-100 tracking-tight mt-1">Precificação</h1>
     <p class="tool-page-subtitle">
       Descubra quanto cobrar por produto a partir do custo, markup e taxa de
       plataforma.

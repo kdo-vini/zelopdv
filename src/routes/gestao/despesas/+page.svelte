@@ -234,8 +234,8 @@
   <!-- Header -->
   <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     <div>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Financeiro / Despesas</p>
-      <h1 class="text-2xl font-bold" style="color: var(--text-main);">Gerenciar Despesas</h1>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Financeiro / Despesas</p>
+      <h1 class="text-xl font-bold text-slate-100 tracking-tight">Gerenciar Despesas</h1>
       <p class="text-sm" style="color: var(--text-muted);">Lance contas, fornecedores e retiradas.</p>
     </div>
     <div class="flex items-center gap-2 px-3 py-2 rounded-lg" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">

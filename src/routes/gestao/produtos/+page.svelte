@@ -680,25 +680,10 @@
 <svelte:window on:click={handleClickOutside} />
 
 <!-- ─── Cabeçalho da Página ──────────────────────────────────────────────────── -->
-<div class="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-  <!-- Breadcrumb -->
+<div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
   <div>
-    <nav class="flex items-center gap-1.5 text-xs mb-1" style="color: var(--text-muted);">
-      <span>Gestão</span>
-      <span>/</span>
-      <span>Produtos</span>
-      {#if breadcrumbNomeCat}
-        <span>/</span>
-        <span style="color: var(--text-label);">{breadcrumbNomeCat}</span>
-      {/if}
-      {#if breadcrumbNomeSub}
-        <span>/</span>
-        <span style="color: var(--primary);">{breadcrumbNomeSub}</span>
-      {/if}
-    </nav>
-    <h1 class="text-xl font-semibold" style="color: var(--text-main); font-family: 'Space Grotesk', sans-serif;">
-      Produtos
-    </h1>
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Produtos</p>
+    <h1 class="text-xl font-bold text-slate-100 tracking-tight">Produtos</h1>
   </div>
 
   <!-- Botões de ação globais -->

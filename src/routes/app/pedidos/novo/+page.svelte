@@ -10,6 +10,7 @@
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import { getPrecoTabela } from '$lib/finance/caixa';
   import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
+  import BackLink from '$lib/components/ui/BackLink.svelte';
 
   let ready = false;
   let loading = true;
@@ -302,14 +303,11 @@
   {:else}
     <header class="page-header">
       <div class="title-block">
-        <p class="eyebrow">Atendimento</p>
+        <BackLink href="/app/pedidos" label="Pedidos" />
+        <p class="eyebrow">Vendas / Pedidos</p>
         <h1>Novo pedido</h1>
         <span class="subtitle">{totalItens} {totalItens === 1 ? 'item' : 'itens'} no pedido</span>
       </div>
-      <button type="button" class="btn-secondary" on:click={() => goto('/app/pedidos')}>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
-        <span>Fila do caixa</span>
-      </button>
     </header>
 
     {#if loading}
@@ -486,7 +484,6 @@
     text-transform: uppercase;
   }
 
-  .btn-secondary,
   .btn-success,
   .upsell a {
     display: inline-flex;
@@ -503,15 +500,6 @@
     min-height: 44px;
     transition: background 160ms ease;
   }
-  .btn-secondary {
-    background: var(--bg-card);
-    color: var(--text-main);
-    border: 1px solid var(--border-subtle);
-  }
-  .btn-secondary:hover:not(:disabled) {
-    background: var(--bg-panel);
-    border-color: var(--border-strong);
-  }
   .btn-success {
     background: var(--success);
     color: var(--primary-text);
@@ -521,7 +509,6 @@
   .upsell a:hover { background: var(--primary-hover); }
 
   button:disabled { opacity: 0.55; cursor: not-allowed; }
-  .icon { width: 18px; height: 18px; flex-shrink: 0; }
 
   .order-layout {
     display: grid;

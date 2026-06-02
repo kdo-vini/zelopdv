@@ -119,8 +119,9 @@
       <p class="muted">Carregando…</p>
     </div>
   {:else}
-    <header class="page-header">
-      <h1 class="title">Extensões</h1>
+    <header class="page-header" style="border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 85%, transparent); padding-bottom: 1rem;">
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Outros / Extensões</p>
+      <h1 class="text-xl font-bold text-slate-100 tracking-tight">Extensões</h1>
       <p class="subtitle">
         Recursos extras que ampliam o seu Zelo. Ative só o que faz sentido pro seu negócio.
       </p>

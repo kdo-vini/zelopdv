@@ -431,8 +431,8 @@
 {#if !loading && !addonActive}
   <div class="space-y-6">
     <header>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Configurações / Acessos</p>
-      <h1 class="text-2xl font-bold" style="color: var(--text-main);">Controle de Acessos</h1>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Configurações / Acessos</p>
+      <h1 class="text-xl font-bold text-slate-100 tracking-tight">Controle de Acessos</h1>
     </header>
     <div class="rounded-xl border p-8 flex flex-col items-center text-center gap-4" style="background: var(--bg-card); border-color: var(--border-subtle);">
       <div class="w-14 h-14 rounded-full flex items-center justify-center" style="background: var(--accent-light);">
@@ -471,8 +471,8 @@
 
     <!-- Header -->
     <header>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Configurações / Acessos</p>
-      <h1 class="text-2xl font-bold" style="color: var(--text-main);">Controle de Acessos</h1>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Configurações / Acessos</p>
+      <h1 class="text-xl font-bold text-slate-100 tracking-tight">Controle de Acessos</h1>
       <p class="text-sm mt-1" style="color: var(--text-muted);">Gerencie cargos, permissões e usuários do seu sistema.</p>
     </header>
 

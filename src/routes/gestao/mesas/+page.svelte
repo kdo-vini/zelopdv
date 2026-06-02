@@ -195,9 +195,10 @@
       <a href="/assinatura?addon=mesas" class="btn-primary">Ativar Módulo Mesas</a>
     </div>
   {:else}
-    <header class="page-header">
+    <header class="page-header" style="border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 85%, transparent); padding-bottom: 1rem;">
       <div class="header-text">
-        <h1 class="title">Mesas do Salão</h1>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Mesas</p>
+        <h1 class="text-xl font-bold text-slate-100 tracking-tight">Mesas do Salão</h1>
         <p class="subtitle">
           Gerencie as mesas disponíveis no seu estabelecimento,<br>
           capacidade de clientes e status atual para o PDV.

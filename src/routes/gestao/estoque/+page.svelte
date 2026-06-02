@@ -271,9 +271,13 @@
   }
 </script>
 
-<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Estoque</p>
-<h1 class="text-2xl font-semibold mb-4">Estoque</h1>
-<p class="text-slate-600 dark:text-slate-300 mb-3">Produtos com estoque individual aparecem agrupados por categoria. Clique na categoria para expandir e editar cada produto separadamente.</p>
+<div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
+  <div>
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Estoque</p>
+    <h1 class="text-xl font-bold text-slate-100 tracking-tight">Estoque</h1>
+  </div>
+</div>
+<p class="mb-3" style="color: var(--text-muted);">Produtos com estoque individual aparecem agrupados por categoria. Clique na categoria para expandir e editar cada produto separadamente.</p>
 
 {#if toast}
   <div class="fixed top-4 right-4 bg-emerald-600 text-white px-3 py-2 rounded shadow">
@@ -283,7 +287,7 @@
 
 <div class="flex flex-col gap-2 mb-4">
   <div class="flex flex-wrap items-center gap-2">
-    <select class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 min-w-[12rem]"
+    <select class="rounded-md px-3 py-2 min-w-[12rem]" style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
       bind:value={idCategoria}
       on:change={async () => { idCategoria = idCategoria ? Number(idCategoria) : null; idSubcategoria = null; await carregarSubcategorias(); await carregar(); }}>
       <option value={null}>Todas as categorias</option>
@@ -291,7 +295,7 @@
         <option value={c.id}>{c.nome}</option>
       {/each}
     </select>
-    <select class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 min-w-[12rem] disabled:opacity-50"
+    <select class="rounded-md px-3 py-2 min-w-[12rem] disabled:opacity-50" style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
       bind:value={idSubcategoria}
       disabled={!idCategoria}
       on:change={async () => { idSubcategoria = idSubcategoria ? Number(idSubcategoria) : null; await carregar(); }}>
@@ -302,14 +306,15 @@
     </select>
     <input
       placeholder="Buscar produto ou grupo..."
-      class="w-full sm:w-80 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2"
+      class="w-full sm:w-80 rounded-md px-3 py-2"
+      style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
       bind:value={busca}
     />
-    <button class="px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" on:click={carregar}>
+    <button class="px-3 py-2 rounded-md" style="border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);" on:click={carregar}>
       Atualizar
     </button>
     {#if idCategoria || idSubcategoria || (busca && busca.trim() !== '')}
-      <button class="px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+      <button class="px-3 py-2 rounded-md" style="border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);"
         on:click={async ()=>{ idCategoria=null; idSubcategoria=null; busca=''; subcategorias=[]; await carregar(); }}>
         Limpar filtros
       </button>
@@ -328,7 +333,7 @@
     <div class="overflow-x-auto">
       <table class="min-w-[620px] w-full text-sm">
         <thead>
-          <tr class="text-left border-b border-slate-200 dark:border-slate-700">
+          <tr class="text-left" style="border-bottom: 1px solid var(--border-subtle); color: var(--text-label);">
             <th class="py-2 pr-4">Item</th>
             <th class="py-2 pr-4 w-40">Estoque Atual</th>
             <th class="py-2 pr-4 w-32"></th>
@@ -339,36 +344,39 @@
           {#each linhasEstoque as linha (`${linha.tipo}-${linha.id}`)}
             {#if linha.tipo === 'grupo'}
               <tr
-                class="border-b border-slate-200 dark:border-slate-700 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                class="cursor-pointer select-none"
+                style="border-bottom: 1px solid var(--border-subtle);"
                 on:click={() => toggleExpandido(linha.id)}
               >
                 <td class="py-2 pr-4" colspan="4">
                   <div class="flex items-center gap-2">
                     <span class="font-semibold">{linha.nome}</span>
-                    <span class="text-xs text-slate-500">
+                    <span class="text-xs" style="color: var(--text-muted);">
                       · {linha.itens.reduce((s, i) => s + i.estoque_atual, 0)} un. total · {linha.itens.length} produto(s)
                     </span>
-                    <span class="ml-auto text-slate-400 text-xs pr-2">{expandidos.has(linha.id) ? '▲' : '▼'}</span>
+                    <span class="ml-auto text-xs pr-2" style="color: var(--text-muted);">{expandidos.has(linha.id) ? '▲' : '▼'}</span>
                   </div>
                 </td>
               </tr>
               {#if expandidos.has(linha.id)}
                 {#each linha.itens as item (`produto-${item.id}`)}
-                  <tr class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/20">
+                  <tr style="border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--bg-panel) 78%, transparent);">
                     <td class="py-2 pr-4 pl-8">
                       <div class="font-medium">{item.nome}</div>
-                      <div class="text-xs text-slate-500">Estoque individual</div>
+                      <div class="text-xs" style="color: var(--text-muted);">Estoque individual</div>
                     </td>
                     <td class="py-2 pr-4">
                       <input type="number" min="0" step="1"
-                        class="w-28 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1"
+                        class="w-28 rounded-md px-2 py-1"
+                        style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
                         bind:value={item._tmpEstoque}
                         on:keydown={(e) => { if (e.key === 'Enter') salvarItem(item); }}
                       />
                     </td>
                     <td class="py-2 pr-4">
                       <button
-                        class="px-3 py-1.5 rounded-md bg-blue-600 text-white disabled:bg-slate-400"
+                        class="px-3 py-1.5 rounded-md disabled:opacity-60"
+                        style="background: var(--primary); color: var(--primary-text);"
                         disabled={salvandoProduto[item.id]}
                         on:click={() => salvarItem(item)}>
                         {salvandoProduto[item.id] ? 'Salvando...' : 'Salvar'}
@@ -383,25 +391,27 @@
                 {/each}
               {/if}
             {:else}
-              <tr class="border-b border-slate-100 dark:border-slate-800">
+              <tr style="border-bottom: 1px solid var(--border-subtle);">
                 <td class="py-2 pr-4">
                   <div class="font-medium">{linha.nome}</div>
                   {#if linha.tipo === 'categoria'}
-                    <div class="text-xs text-slate-500">
+                    <div class="text-xs" style="color: var(--text-muted);">
                       Pool compartilhado · {linha.produtos.length} produto(s): {linha.produtos.slice(0, 4).join(', ')}{linha.produtos.length > 4 ? '...' : ''}
                     </div>
                   {:else}
-                    <div class="text-xs text-slate-500">Produto individual</div>
+                    <div class="text-xs" style="color: var(--text-muted);">Produto individual</div>
                   {/if}
                 </td>
                 <td class="py-2 pr-4">
-                  <input type="number" min="0" step="1" class="w-28 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1"
+                  <input type="number" min="0" step="1" class="w-28 rounded-md px-2 py-1"
+                    style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
                     bind:value={linha._tmpEstoque}
                     on:keydown={(e) => { if (e.key === 'Enter') salvarLinha(linha); }}
                   />
                 </td>
                 <td class="py-2 pr-4">
-                  <button class="px-3 py-1.5 rounded-md bg-blue-600 text-white disabled:bg-slate-400"
+                  <button class="px-3 py-1.5 rounded-md disabled:opacity-60"
+                    style="background: var(--primary); color: var(--primary-text);"
                     disabled={linha._saving}
                     on:click={() => salvarLinha(linha)}>
                     {linha._saving ? 'Salvando...' : 'Salvar'}

@@ -74,7 +74,7 @@ Fonte única de cor. Resumo (ver arquivo para a lista completa):
 Toda página interna abre com um cabeçalho que dá **contexto + navegação**.
 
 ### 3a. Breadcrumb + título (telas de gestão)
-Padrão visto em `/gestao/pessoas`, `/produtos`, `/estoque`… (`pessoas/+page.svelte:~65`):
+Padrão canônico — **todas as páginas de gestão devem usar exatamente isto** (`pessoas/+page.svelte:~65`):
 
 ```svelte
 <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
@@ -88,27 +88,36 @@ Padrão visto em `/gestao/pessoas`, `/produtos`, `/estoque`… (`pessoas/+page.s
 </div>
 ```
 
-- Breadcrumb: `text-[10px] uppercase tracking-[0.2em] text-slate-500` no formato `Seção / Categoria`.
-- Título: `text-xl font-bold` (ou `text-2xl` quando há ícone).
-- Separador inferior `border-b border-slate-700/60 pb-4 mb-6`.
-- Metadado opcional à direita (contagem etc.).
+**Tipografia obrigatória — não variar:**
+
+| Elemento | Classes Tailwind |
+| --- | --- |
+| Breadcrumb `<p>` | `text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1` |
+| Título `<h1>` | `text-xl font-bold text-slate-100 tracking-tight` |
+| Container | `mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4` |
+
+- **Nunca use `text-2xl`, `font-semibold`, `color: var(--text-main)` ou `font-family` inline no h1.** Isso quebra a consistência entre páginas.
+- **Nunca use classes CSS locais** (`.title`, `.hub-title`, `.pageTitle`) para o h1 — use o Tailwind inline acima.
+- **Nunca use `style="color: var(--text-muted)"`** no breadcrumb — use `text-slate-500`.
+- Metadado/ação opcional à direita (contagem, botão "Atualizar" etc.) dentro do container.
+- Páginas com subtítulo descritivo podem adicionar `<p class="text-sm text-slate-400 mt-1">` após o h1, mas nunca no lugar do padrão acima.
 
 ### 3b. Back link (sub-páginas de um hub, ex.: ferramentas)
 Quando a página é filha de um hub (`/ferramentas/*`), use o componente
-**`src/lib/components/ui/BackLink.svelte`** no topo do header — clicável, leva ao pai:
+**`src/lib/components/ui/BackLink.svelte`** no topo do header — clicável, leva ao pai.
+O h1 usa as mesmas classes do padrão 3a:
 
 ```svelte
 <script>
   import BackLink from "$lib/components/ui/BackLink.svelte";
 </script>
 
-<BackLink href="/ferramentas" label="Ferramentas" />
-<h1 …>Precificação</h1>
+    <BackLink href="/ferramentas" label="Ferramentas" />
+<h1 class="text-xl font-bold text-slate-100 tracking-tight mt-1">Precificação</h1>
 ```
 
-Usado em `/ferramentas/precificacao` e `/ferramentas/cardapio`. É a versão **clicável**
-do breadcrumb 3a — sempre dê um caminho de volta. Não duplique o markup do link;
-use o componente.
+Usado em `/ferramentas/precificacao` e `/ferramentas/cardapio`. O BackLink substitui
+o breadcrumb `<p>` — não combine os dois. Não duplique o markup do link; use o componente.
 
 ---
 

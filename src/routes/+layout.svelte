@@ -43,6 +43,13 @@
     if (menuCloseTimer) clearTimeout(menuCloseTimer);
   }
 
+  const sidebarLayoutPrefixes = ['/gestao', '/app', '/relatorios', '/perfil', '/assinatura', '/ferramentas'];
+  const subscriptionRequiredPrefixes = ['/app', '/gestao', '/relatorios', '/ferramentas'];
+
+  function matchesProtectedPrefix(currentPath, prefixes) {
+    return prefixes.some((prefix) => currentPath === prefix || currentPath.startsWith(`${prefix}/`));
+  }
+
   // Active state helpers
   $: path = $page.url.pathname;
   $: isGestaoPrefixed = path === '/gestao' || path.startsWith('/gestao/');
@@ -62,7 +69,7 @@
   $: isAuthPage = ['/login', '/cadastro', '/esqueci-senha', '/redefinir-senha'].includes(path);
   $: isFerramentas = path === '/ferramentas' || path.startsWith('/ferramentas/');
   // Routes that have their own sidebar layout — hide root header/footer for these
-  $: hasSidebarLayout = isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura || isFerramentas;
+  $: hasSidebarLayout = matchesProtectedPrefix(path, sidebarLayoutPrefixes);
   // Show support chat on public/auth pages but not inside the app
   $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && !isFerramentas && !isReferralPage && $page.url.pathname !== '/pascoa' && !$page.error;
 
@@ -257,8 +264,7 @@
         return;
       }
       // Protege rotas internas sem assinatura ativa
-      const protectedPaths = ['/app', '/gestao', '/relatorios', '/ferramentas'];
-      if (session && protectedPaths.some((p) => path.startsWith(p))) {
+      if (session && matchesProtectedPrefix(path, subscriptionRequiredPrefixes)) {
         if (!hasCompleteProfile) {
 
           const params = new URLSearchParams({ msg: 'complete' });
@@ -331,7 +337,7 @@
       const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
       const href = anchor?.getAttribute('href') || '';
       const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-      const isProtectedArea = ['/app', '/gestao', '/relatorios', '/ferramentas'].some((prefix) => currentPath.startsWith(prefix));
+      const isProtectedArea = matchesProtectedPrefix(currentPath, sidebarLayoutPrefixes);
 
       if (!isProtectedArea && isZeloContactWhatsAppHref(href)) {
         trackGoogleAdsContato();

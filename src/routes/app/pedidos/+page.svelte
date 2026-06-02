@@ -406,7 +406,7 @@
   {:else}
     <header class="page-header">
       <div class="title-block">
-        <p class="eyebrow">Caixa</p>
+        <p class="eyebrow">Vendas / Pedidos</p>
         <h1>Pedidos</h1>
         <span class="subtitle">{pedidos.length} {pedidos.length === 1 ? 'pedido na fila' : 'pedidos na fila'}</span>
       </div>

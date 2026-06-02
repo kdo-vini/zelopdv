@@ -1069,14 +1069,18 @@
 </script>
 
 <AdminLock correctPin={adminPin}>
-<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Relatórios</p>
-<h1 class="text-2xl font-semibold mb-4">Relatórios</h1>
+<div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
+	<div>
+		<p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Outros / Relatórios</p>
+		<h1 class="text-xl font-bold text-slate-100 tracking-tight">Relatórios</h1>
+	</div>
+</div>
 {#if errorMessage}
 	<div class="mb-4 text-sm text-red-600">{errorMessage}</div>
 {/if}
 
 <!-- Barra de modo / filtros -->
-<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-4 space-y-4">
+<section class="rounded-xl p-4 mb-4 space-y-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
 	<div class="flex flex-wrap items-center gap-3 text-sm">
 		<button class="px-3 py-1 rounded border" class:btn-primary={modoRelatorio==='caixa'} on:click={() => modoRelatorio='caixa'}>Por Caixa</button>
 		<button class="px-3 py-1 rounded border" class:btn-primary={modoRelatorio==='periodo'} on:click={() => modoRelatorio='periodo'}>Por Período</button>
@@ -1084,7 +1088,7 @@
 	{#if modoRelatorio === 'caixa'}
 		<div class="grid md:grid-cols-2 gap-4 items-end">
 			<div>
-				<label class="block text-sm text-slate-700 dark:text-slate-300 mb-1" for="select-caixa">Selecionar caixa</label>
+				<label class="block text-sm mb-1" style="color: var(--text-label);" for="select-caixa">Selecionar caixa</label>
 				<select id="select-caixa" class="input-form" bind:value={caixaSelecionado} on:change={() => carregarRelatorioDoCaixa(caixaSelecionado)}>
 					{#each caixas as c}
 						<option value={c.id}>#{c.id} — {new Date(c.data_abertura).toLocaleString()} {c.data_fechamento ? `(fechado ${new Date(c.data_fechamento).toLocaleString()})` : '(aberto)'}</option>
@@ -1100,20 +1104,20 @@
 				{#if showExportDropdown}
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
 					<div class="fixed inset-0 z-40" on:click={() => showExportDropdown = false}></div>
-					<div class="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-slate-200 dark:border-slate-600 py-1 min-w-[200px] animate-fade-in">
-						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors" on:click={exportarPDF}>
+					<div class="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-xl border py-1 min-w-[200px] animate-fade-in" style="background: var(--bg-card); border-color: var(--border-subtle);">
+						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarPDF}>
 							<span class="text-lg">📄</span>
 							<div class="text-left">
 								<div class="font-medium">Exportar PDF</div>
-								<div class="text-xs text-slate-500 dark:text-slate-400">Relatório visual com gráficos</div>
+								<div class="text-xs" style="color: var(--text-muted);">Relatório visual com gráficos</div>
 							</div>
 						</button>
-						<div class="border-t border-slate-100 dark:border-slate-600 mx-2"></div>
-						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors" on:click={exportarExcel}>
+						<div class="mx-2" style="border-top: 1px solid var(--border-subtle);"></div>
+						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarExcel}>
 							<span class="text-lg">📗</span>
 							<div class="text-left">
 								<div class="font-medium">Exportar Excel</div>
-								<div class="text-xs text-slate-500 dark:text-slate-400">Planilha com abas formatadas</div>
+								<div class="text-xs" style="color: var(--text-muted);">Planilha com abas formatadas</div>
 							</div>
 						</button>
 					</div>
@@ -1146,20 +1150,20 @@
 					{#if showExportDropdown}
 						<!-- svelte-ignore a11y-click-events-have-key-events -->
 						<div class="fixed inset-0 z-40" on:click={() => showExportDropdown = false}></div>
-						<div class="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-slate-200 dark:border-slate-600 py-1 min-w-[200px] animate-fade-in">
-							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors" on:click={exportarPDF}>
+						<div class="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-xl border py-1 min-w-[200px] animate-fade-in" style="background: var(--bg-card); border-color: var(--border-subtle);">
+							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarPDF}>
 								<span class="text-lg">📄</span>
 								<div class="text-left">
 									<div class="font-medium">Exportar PDF</div>
-									<div class="text-xs text-slate-500 dark:text-slate-400">Relatório visual com gráficos</div>
+									<div class="text-xs" style="color: var(--text-muted);">Relatório visual com gráficos</div>
 								</div>
 							</button>
-							<div class="border-t border-slate-100 dark:border-slate-600 mx-2"></div>
-							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors" on:click={exportarExcel}>
+							<div class="mx-2" style="border-top: 1px solid var(--border-subtle);"></div>
+							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarExcel}>
 								<span class="text-lg">📗</span>
 								<div class="text-left">
 									<div class="font-medium">Exportar Excel</div>
-									<div class="text-xs text-slate-500 dark:text-slate-400">Planilha com abas formatadas</div>
+									<div class="text-xs" style="color: var(--text-muted);">Planilha com abas formatadas</div>
 								</div>
 							</button>
 						</div>

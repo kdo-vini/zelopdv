@@ -10,6 +10,7 @@
   import { pdvCache } from '$lib/stores/pdvCache';
   import { printVenda } from '$lib/printService';
   import { estoqueDisponivel, produtoControlaEstoque, produtoSemEstoque as semEstoque } from '$lib/stock';
+  import BackLink from '$lib/components/ui/BackLink.svelte';
 
   let userId = '';
   let ownerUserId = '';
@@ -1291,12 +1292,7 @@
     <!-- LADO PRODUTOS -->
     <section class="produtos-side">
       <div class="produtos-header">
-        <a href="/app/mesas" class="back-link">
-          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clip-rule="evenodd"/>
-          </svg>
-          Mesas
-        </a>
+        <BackLink href="/app/mesas" label="Mesas" />
         <div class="title-row">
           <h1 class="mesa-title">Mesa <strong>{mesa.numero}</strong></h1>
           <span class="status-pill" data-status={mesa.status}>
@@ -2326,15 +2322,6 @@
   .produtos-header {
     display: flex; flex-direction: column; gap: 0.5rem;
   }
-  .back-link {
-    display: inline-flex; align-items: center; gap: 0.25rem;
-    align-self: flex-start;
-    color: var(--text-label); text-decoration: none;
-    font-size: 0.85rem; font-weight: 600;
-    transition: color 0.15s;
-  }
-  .back-link svg { width: 16px; height: 16px; }
-  .back-link:hover { color: var(--primary); }
 
   .title-row {
     display: flex; align-items: center; gap: 0.75rem;
@@ -2764,7 +2751,7 @@
     transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
     min-height: 44px;
   }
-  .btn-primary svg, .btn-secondary svg, .btn-success svg {
+  .btn-primary svg, .btn-secondary svg {
     width: 16px; height: 16px;
     flex-shrink: 0;
   }

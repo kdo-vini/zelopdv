@@ -178,8 +178,9 @@
       <a href="/assinatura?addon=mesas" class="btn-primary">Ativar Módulo Mesas</a>
     </div>
   {:else}
-    <header class="map-header">
+    <header class="map-header border-b border-slate-800/70 pb-4">
       <div class="header-titles">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em]" style="color: var(--text-muted);">Vendas / Mesas</p>
         <h1 class="title">Mesas</h1>
         <div class="kpi-row" aria-label="Resumo do status das mesas">
           <span class="kpi-chip" data-status="livre">
@@ -513,7 +514,6 @@
     text-decoration: none; cursor: pointer;
   }
   .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
-  .btn-primary svg { width: 16px; height: 16px; }
 
   .btn-secondary {
     display: inline-flex; align-items: center; gap: 0.4rem;

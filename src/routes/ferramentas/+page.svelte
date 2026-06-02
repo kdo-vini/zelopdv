@@ -38,8 +38,9 @@
 </svelte:head>
 
 <div class="hub-shell">
-  <header class="hub-head">
-    <h1 class="hub-title">Ferramentas</h1>
+  <header class="hub-head" style="border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 85%, transparent); padding-bottom: 1rem;">
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Outros / Ferramentas</p>
+    <h1 class="text-xl font-bold text-slate-100 tracking-tight">Ferramentas</h1>
     <p class="hub-subtitle">
       Recursos extras para você precificar, divulgar e organizar o seu negócio.
     </p>
