@@ -38,7 +38,19 @@
   import VirtualProductGrid from '$lib/components/VirtualProductGrid.svelte';
 
   // Modo Offline (IndexedDB)
-  import { atualizarCacheProdutos, salvarVendaOffline, shouldQueueVendaOffline, syncVendasPendentes, limparVendasAntigas } from '$lib/offlineDb';
+  import {
+    atualizarCacheProdutos,
+    buscarProdutosLocal,
+    atualizarCacheCategorias,
+    buscarCategoriasLocal,
+    atualizarCacheSubcategorias,
+    buscarSubcategoriasLocal,
+    contarVendasPendentes,
+    salvarVendaOffline,
+    shouldQueueVendaOffline,
+    syncVendasPendentes,
+    limparVendasAntigas
+  } from '$lib/offlineDb';
 
   export let params;
 
@@ -54,6 +66,10 @@
   let isSubUser = false;
   let operadorUserId = null;
   let errorMessage = '';
+  // Sincronização offline: contador de vendas aguardando e estado do retry.
+  let vendasPendentesCount = 0;
+  let sincronizandoPendentes = false;
+  let pendentesInterval = null;
   let gridEl;
   let buscaInputEl;
 
@@ -303,6 +319,15 @@
     // Cleanup stuck offline records older than 30 days
     limparVendasAntigas(30).catch(() => {});
 
+    // Estado inicial do contador de pendentes + retry periódico.
+    // O evento `online` é pouco confiável em rede oscilante (dispara mas a rede
+    // ainda está ruim), então tentamos reenviar de tempos em tempos enquanto
+    // houver fila — não só quando o navegador acha que voltou.
+    await atualizarPendentesCount();
+    pendentesInterval = setInterval(() => {
+      tentarSincronizarPendentes({ silencioso: true });
+    }, 30000);
+
   });
 
   onDestroy(() => {
@@ -310,21 +335,54 @@
         window.removeEventListener('keydown', onKeyGlobal);
         window.removeEventListener('online', handleSyncOnline);
       }
+      if (pendentesInterval) clearInterval(pendentesInterval);
     });
 
-  /** Sincroniza vendas pendentes quando volta a internet */
-  async function handleSyncOnline() {
-    addToast('Conexão restabelecida. Sincronizando vendas...', 'info');
-    const logs = await syncVendasPendentes(supabase, {
-      ownerUserId,
-      operatorUserId: operadorUserId
-    });
-    if (logs.success > 0) {
-      addToast(`${logs.success} venda(s) sincronizada(s) com sucesso.`, 'success');
-      pdvCache.invalidateProdutos();
-      await carregarProdutos(true);
-      await atualizarSaldoCaixa();
+  /** Atualiza o contador de vendas aguardando sincronização. */
+  async function atualizarPendentesCount() {
+    try {
+      vendasPendentesCount = await contarVendasPendentes();
+    } catch {
+      // contagem é só indicador; ignora falha
     }
+  }
+
+  /**
+   * Tenta sincronizar a fila offline. Reutilizado pelo evento `online`, pelo
+   * retry periódico e pelo botão manual.
+   * @param {{ silencioso?: boolean }} opts silencioso = sem toasts de "sincronizando"
+   */
+  async function tentarSincronizarPendentes({ silencioso = false } = {}) {
+    if (sincronizandoPendentes) return;
+    await atualizarPendentesCount();
+    if (vendasPendentesCount === 0) return;
+    // Sem rede declarada: não adianta tentar (evita ruído e timeouts).
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+
+    sincronizandoPendentes = true;
+    try {
+      if (!silencioso) addToast('Sincronizando vendas pendentes...', 'info');
+      const logs = await syncVendasPendentes(supabase, {
+        ownerUserId,
+        operatorUserId: operadorUserId
+      });
+      if (logs.success > 0) {
+        addToast(`${logs.success} venda(s) sincronizada(s) com sucesso.`, 'success');
+        pdvCache.invalidateProdutos();
+        await carregarProdutos(true);
+        await atualizarSaldoCaixa();
+      } else if (!silencioso && logs.fail > 0) {
+        addToast('Não foi possível sincronizar agora. Tentaremos novamente.', 'warning');
+      }
+    } finally {
+      sincronizandoPendentes = false;
+      await atualizarPendentesCount();
+    }
+  }
+
+  /** Dispara quando o navegador sinaliza que a internet voltou. */
+  async function handleSyncOnline() {
+    await tentarSincronizarPendentes({ silencioso: false });
   }
 
   /**
@@ -420,37 +478,60 @@
   async function carregarCategorias(forceRefresh = false) {
     try {
       const data = await pdvCache.getCategorias(forceRefresh);
-      categorias = data || [];
+      // Rede falhou/vazia: cai no cache local persistido (offline-first).
+      categorias = (data && data.length) ? data : await buscarCategoriasLocal();
+      if (data && data.length) {
+        atualizarCacheCategorias(data).catch((e) => console.warn('Falha ao cachear categorias offline:', e));
+      }
       // Seleciona a primeira categoria automaticamente se nenhuma estiver ativa
       if (categorias.length > 0 && !categoriaAtiva) {
         categoriaAtiva = categorias[0].id;
       }
     } catch (err) {
-      errorMessage = err?.message || 'Erro ao carregar categorias';
+      // Erro de rede: tenta o cache local antes de desistir.
+      const local = await buscarCategoriasLocal().catch(() => []);
+      if (local.length) {
+        categorias = local;
+        if (!categoriaAtiva) categoriaAtiva = categorias[0].id;
+      } else {
+        errorMessage = err?.message || 'Erro ao carregar categorias';
+      }
     }
   }
 
-  /** Carrega subcategorias ordenadas. Usa cache de 5 min. */
+  /** Carrega subcategorias ordenadas. Usa cache de 5 min, com fallback IndexedDB. */
   async function carregarSubcategorias(forceRefresh = false) {
     try {
       const data = await pdvCache.getSubcategorias(forceRefresh);
-      subcategorias = data || [];
+      subcategorias = (data && data.length) ? data : await buscarSubcategoriasLocal();
+      if (data && data.length) {
+        atualizarCacheSubcategorias(data).catch((e) => console.warn('Falha ao cachear subcategorias offline:', e));
+      }
     } catch (err) {
-      addToast('Erro ao carregar subcategorias: ' + (err?.message || err), 'error');
+      const local = await buscarSubcategoriasLocal().catch(() => []);
+      if (local.length) subcategorias = local;
+      else addToast('Erro ao carregar subcategorias: ' + (err?.message || err), 'error');
     }
   }
 
-  /** Carrega produtos visíveis no PDV, ordenados por nome. Usa cache de 5 min. */
+  /** Carrega produtos visíveis no PDV, ordenados por nome. Usa cache de 5 min, com fallback IndexedDB. */
   async function carregarProdutos(forceRefresh = false) {
     try {
       const data = await pdvCache.getProdutos(forceRefresh);
-      produtos = data || [];
-      // Atualiza cache offline
-      if (produtos.length) {
-        atualizarCacheProdutos(produtos).catch(e => console.warn('Falha ao cachear produtos offline:', e));
+      if (data && data.length) {
+        produtos = data;
+        // Atualiza cache offline (produto completo, com estoque para validação offline)
+        atualizarCacheProdutos(produtos).catch((e) => console.warn('Falha ao cachear produtos offline:', e));
+      } else {
+        // Rede falhou ou retornou vazio: usa o último catálogo persistido.
+        const local = await buscarProdutosLocal();
+        produtos = local.length ? local : (data || []);
       }
     } catch (err) {
-      errorMessage = err?.message || 'Erro ao carregar produtos';
+      // Erro de rede no carregamento: não deixa a tela sem produtos se há cache.
+      const local = await buscarProdutosLocal().catch(() => []);
+      if (local.length) produtos = local;
+      else if (!produtos.length) errorMessage = err?.message || 'Erro ao carregar produtos';
     }
   }
   
@@ -992,6 +1073,7 @@
           operatorUserId: operadorUserId
         });
         vendaId = `offline-${Date.now()}`;
+        await atualizarPendentesCount();
       }
 
       // [NEW] Update Success Modal State
@@ -1148,6 +1230,22 @@
       <span class="text-xs text-slate-400 font-medium">Caixa:</span>
       <span class="text-green-400 font-bold">R$ {Number(saldoCaixa).toFixed(2)}</span>
     </div>
+
+    {#if vendasPendentesCount > 0}
+      <button
+        class="flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-md text-amber-300 hover:bg-amber-500/20 transition-colors disabled:opacity-60 disabled:cursor-wait"
+        on:click={() => tentarSincronizarPendentes({ silencioso: false })}
+        disabled={sincronizandoPendentes}
+        title="Vendas registradas offline aguardando envio ao servidor"
+      >
+        <span class="text-xs font-semibold">
+          {vendasPendentesCount} venda{vendasPendentesCount > 1 ? 's' : ''} a sincronizar
+        </span>
+        <span class="text-[10px] uppercase tracking-wider font-bold">
+          {sincronizandoPendentes ? 'Enviando...' : 'Sincronizar'}
+        </span>
+      </button>
+    {/if}
   </div>
 
   <!-- Movimentação de Caixa — mobile only (on desktop it lives in the cart sidebar footer) -->

@@ -2,6 +2,8 @@
 import { supabase } from './supabaseClient';
 import { requiredOk } from './profileUtils';
 import { addToast } from './stores/ui';
+import { isNetworkError } from './netStatus';
+import { saveEntitlementSnapshot, loadEntitlementSnapshot } from './offlineEntitlement';
 
 /**
  * For pages gated by an add-on: when the addon is inactive AND the current
@@ -104,14 +106,30 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     return null;
   }
 
+  // Fallback offline: quando uma das checagens abaixo falha por REDE (não por
+  // negativo confirmado do servidor), reusa o último entitlement validado
+  // online dentro da janela de carência. Mantém o operador trabalhando quando o
+  // Wi-Fi oscila, sem virar bypass de assinatura.
+  const offlineFallback = () => {
+    const snap = loadEntitlementSnapshot(userId);
+    if (!snap) return null;
+    console.warn('[Guards] Rede indisponível — usando entitlement em cache validado em', new Date(snap.validatedAt).toISOString());
+    return { userId: snap.userId, email: snap.email ?? email, ownerUserId: snap.ownerUserId, isSubUser: snap.isSubUser, roleId: snap.roleId };
+  };
+
   // 2) Sub-user check — before profile check, so sub-users skip the profile requirement
   try {
-    const { data: accessUser } = await supabase
+    const { data: accessUser, error: accessError } = await supabase
       .from('access_users')
       .select('owner_user_id, role_id')
       .eq('auth_user_id', userId)
       .eq('status', 'active')
       .maybeSingle();
+
+    if (accessError && isNetworkError(accessError)) {
+      const fb = offlineFallback();
+      if (fb) return fb;
+    }
 
     if (accessUser) {
       // This user is a sub-user — verify the owner's subscription and add-on
@@ -125,38 +143,60 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
         .limit(1)
         .maybeSingle();
 
+      if (ownerSubError && isNetworkError(ownerSubError)) {
+        const fb = offlineFallback();
+        if (fb) return fb;
+      }
+
       if (ownerSubError || !ownerSub || !isSubscriptionActiveStrict(ownerSub) || !ownerSub.has_acessos_addon) {
         if (redirectOnFail) window.location.href = '/assinatura?msg=addon_required';
         return null;
       }
 
-      return {
+      const subCtx = {
         userId,
         email,
         ownerUserId,
         isSubUser: true,
         roleId: accessUser.role_id,
       };
+      saveEntitlementSnapshot(subCtx);
+      return subCtx;
     }
   } catch (err) {
     console.warn('[Guards] sub-user check error:', err?.message);
+    if (isNetworkError(err)) {
+      const fb = offlineFallback();
+      if (fb) return fb;
+    }
     // Fall through to owner flow on unexpected error
   }
 
   // 3) Optional: profile completeness (owners only)
   if (requireProfile) {
     try {
-      const { data: perfil } = await supabase
+      const { data: perfil, error: perfilError } = await supabase
         .from('empresa_perfil')
         .select('nome_exibicao, documento, contato, largura_bobina')
         .eq('user_id', userId)
         .maybeSingle();
-      const ok = Boolean(perfil && requiredOk(perfil));
-      if (!ok) {
-        if (redirectOnFail) window.location.href = '/perfil?msg=complete';
-        return null;
+      if (perfilError && isNetworkError(perfilError)) {
+        const fb = offlineFallback();
+        if (fb) return fb;
+        // Sem snapshot e offline: não dá para verificar perfil — não redireciona
+        // por isso; deixa a checagem de assinatura abaixo decidir.
+      } else if (!perfilError) {
+        const ok = Boolean(perfil && requiredOk(perfil));
+        if (!ok) {
+          if (redirectOnFail) window.location.href = '/perfil?msg=complete';
+          return null;
+        }
       }
-    } catch {
+    } catch (err) {
+      if (isNetworkError(err)) {
+        const fb = offlineFallback();
+        if (fb) return fb;
+      }
       // ignore, fallback to allowing page to continue
     }
   }
@@ -170,6 +210,12 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    // Falha de REDE: tenta entitlement em cache antes de expulsar o operador.
+    if (error && isNetworkError(error)) {
+      const fb = offlineFallback();
+      if (fb) return fb;
+    }
 
     // If there's an error or no subscription, redirect with 'subscribe' (new user)
     if (error || !sub) {
@@ -185,11 +231,17 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     }
   } catch (err) {
     console.error('[Guards] Error checking subscription:', err);
+    if (isNetworkError(err)) {
+      const fb = offlineFallback();
+      if (fb) return fb;
+    }
     if (redirectOnFail) window.location.href = '/assinatura?msg=subscribe';
     return null;
   }
 
-  return { userId, email, ownerUserId: userId, isSubUser: false, roleId: null };
+  const ownerCtx = { userId, email, ownerUserId: userId, isSubUser: false, roleId: null };
+  saveEntitlementSnapshot(ownerCtx);
+  return ownerCtx;
 }
 
 /**

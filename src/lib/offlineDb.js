@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 import { createClientSaleId } from './finance/saleOps.js';
+import { isNetworkError } from './netStatus.js';
 
 export const db = new Dexie('ZeloPDVDB');
 
@@ -30,6 +31,15 @@ db.version(4).stores({
     produtos: 'id, nome, preco, categoria_id',
     vendas_pendentes: '++id, createdAt, status, ownerUserId, operatorUserId',
     categorias: 'id, nome'
+});
+
+// v5 — leitura offline-first: persiste subcategorias também, para que o filtro
+//      de categoria/subcategoria funcione no cold-start sem rede.
+db.version(5).stores({
+    produtos: 'id, nome, preco, categoria_id',
+    vendas_pendentes: '++id, createdAt, status, ownerUserId, operatorUserId',
+    categorias: 'id, nome',
+    subcategorias: 'id, id_categoria'
 });
 
 /**
@@ -72,32 +82,7 @@ export function prepareVendaOfflineRecord(venda) {
  * A fila offline é só para falhas compatíveis com conexão/timeout.
  */
 export function shouldQueueVendaOffline(error) {
-    if (!error) return false;
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
-
-    const message = String(
-        typeof error === 'string'
-            ? error
-            : error.message || error.error_description || error.details || error.hint || ''
-    ).toLowerCase();
-
-    return [
-        'failed to fetch',
-        'fetch failed',
-        'networkerror',
-        'network error',
-        'network request failed',
-        'load failed',
-        'connection',
-        'internet',
-        'offline',
-        'timeout',
-        'timed out',
-        'aborted',
-        'aborterror',
-        'err_internet_disconnected',
-        'err_network_changed'
-    ].some((needle) => message.includes(needle));
+    return isNetworkError(error);
 }
 
 /**
@@ -108,11 +93,52 @@ export async function getVendasPendentes() {
 }
 
 /**
- * Cache de produtos para busca offline
+ * Cache de produtos para busca offline.
+ * Grava o objeto completo (inclui o join `categorias` e `estoque_atual`), então
+ * o snapshot de estoque para validação offline vem junto de graça.
  */
 export async function atualizarCacheProdutos(produtos) {
     await db.produtos.clear();
     return await db.produtos.bulkAdd(produtos);
+}
+
+/**
+ * Cache de categorias para render offline do filtro do PDV.
+ */
+export async function atualizarCacheCategorias(categorias) {
+    await db.categorias.clear();
+    if (!categorias?.length) return;
+    return await db.categorias.bulkAdd(categorias);
+}
+
+/**
+ * Cache de subcategorias para render offline do filtro do PDV.
+ */
+export async function atualizarCacheSubcategorias(subcategorias) {
+    await db.subcategorias.clear();
+    if (!subcategorias?.length) return;
+    return await db.subcategorias.bulkAdd(subcategorias);
+}
+
+/**
+ * Lê categorias do cache local (fallback offline).
+ */
+export async function buscarCategoriasLocal() {
+    return await db.categorias.toArray();
+}
+
+/**
+ * Lê subcategorias do cache local (fallback offline).
+ */
+export async function buscarSubcategoriasLocal() {
+    return await db.subcategorias.toArray();
+}
+
+/**
+ * Conta vendas aguardando sincronização (para indicador no PDV).
+ */
+export async function contarVendasPendentes() {
+    return await db.vendas_pendentes.where('status').equals('aguardando').count();
 }
 
 /**
