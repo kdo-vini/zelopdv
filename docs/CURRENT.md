@@ -17,6 +17,7 @@
 
 - `npm test` — **149/149** testes passando (inclui novos testes de gate offline e snapshot de entitlement)
 - `npm run check` — **0 errors / 133 warnings** (warnings pré-existentes em páginas de marketing)
+- Ads/marketing: nova rota pública `/contato` com formulário interno de lead para sitelinks sem saída para domínio externo; `npm run check` manteve **0 errors / 133 warnings** e `npm run build` concluiu com warnings pré-existentes/adapter.
 
 ## Falhas abertas confirmadas
 
@@ -40,6 +41,7 @@
 
 ## Mudanças recentes visíveis no histórico Git
 
+- Rota pública `/contato` para campanhas Google Ads: variações por `assunto`/`utm_content`, formulário interno de lead via Resend e entrada no sitemap.
 - Robustez offline do PDV: gate de assinatura tolerante a queda de rede (snapshot de entitlement, carência de 7 dias), leitura offline-first de catálogo/categorias/subcategorias (Dexie v5), retry periódico de sync + badge de pendentes. Ver [[docs/operations/OFFLINE]] e [[TRADEOFFS]] (TA-OFF-01/02).
 - Grace period de 14 dias para deleção de conta + reativação.
 - Correção dos detalhes de plano na aba de perfil.
