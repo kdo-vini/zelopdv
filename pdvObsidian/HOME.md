@@ -19,6 +19,7 @@
 - [[FIXES_PROGRESS]] — shipped vs pending
 - [[INCIDENTS]] — outage and failure patterns
 - [[AGENTS]] — operating contract for subagents
+- [[DESIGN_PATTERNS]] — padrões de UI (consultar **antes** de mexer em qualquer tela)
 - [[ZeloPDV.memory]] — compact memory
 
 ## Deep docs

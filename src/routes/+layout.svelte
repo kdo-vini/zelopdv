@@ -60,10 +60,11 @@
   $: isVsPlanilhaPage = path === '/vs-planilha';
   $: isReferralPage = path.startsWith('/indica/');
   $: isAuthPage = ['/login', '/cadastro', '/esqueci-senha', '/redefinir-senha'].includes(path);
+  $: isFerramentas = path === '/ferramentas' || path.startsWith('/ferramentas/');
   // Routes that have their own sidebar layout — hide root header/footer for these
-  $: hasSidebarLayout = isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura;
+  $: hasSidebarLayout = isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura || isFerramentas;
   // Show support chat on public/auth pages but not inside the app
-  $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && !isReferralPage && $page.url.pathname !== '/pascoa' && !$page.error;
+  $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && !isFerramentas && !isReferralPage && $page.url.pathname !== '/pascoa' && !$page.error;
 
   async function resolveAccessContext(userId) {
     if (!userId) return { isSubUser: false, ownerUserId: userId };
@@ -256,7 +257,7 @@
         return;
       }
       // Protege rotas internas sem assinatura ativa
-      const protectedPaths = ['/app', '/gestao', '/relatorios'];
+      const protectedPaths = ['/app', '/gestao', '/relatorios', '/ferramentas'];
       if (session && protectedPaths.some((p) => path.startsWith(p))) {
         if (!hasCompleteProfile) {
 
@@ -330,7 +331,7 @@
       const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
       const href = anchor?.getAttribute('href') || '';
       const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-      const isProtectedArea = ['/app', '/gestao', '/relatorios'].some((prefix) => currentPath.startsWith(prefix));
+      const isProtectedArea = ['/app', '/gestao', '/relatorios', '/ferramentas'].some((prefix) => currentPath.startsWith(prefix));
 
       if (!isProtectedArea && isZeloContactWhatsAppHref(href)) {
         trackGoogleAdsContato();

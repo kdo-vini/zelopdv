@@ -113,10 +113,12 @@ Estas rotas nao devem ser usadas como destino para leads ou usuarios sem login:
 - `/app/pedidos/novo`
 - `/app/pedidos/cozinha`
 - `/app/pedidos/[id]/editar`
+- `/ferramentas`
+- `/ferramentas/cardapio`
+- `/ferramentas/precificacao`
 - `/gestao`
 - `/gestao/acessos`
 - `/gestao/caixa`
-- `/gestao/cardapio`
 - `/gestao/despesas`
 - `/gestao/empresas`
 - `/gestao/estoque`

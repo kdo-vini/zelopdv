@@ -11,6 +11,7 @@
 4. [[CODE_REVIEW]] — riscos abertos e pontos frágeis do código
 5. [[TRADEOFFS]] — tradeoffs aceitos e dívida técnica conhecida (o que deixamos na mesa de propósito)
 6. [[FIXES_PROGRESS]] / [[INCIDENTS]] — trilha operacional
+7. [[DESIGN_PATTERNS]] — **obrigatório antes de qualquer mudança de UI** (tela, componente, cabeçalho, botão, navegação)
 
 ## Arquitetura real
 
@@ -183,6 +184,7 @@ Estado validado mais recente está em [[CURRENT]].
 
 ## Convenções relevantes
 
+- Antes de qualquer mudança de UI (tela, componente, cabeçalho, botão, navegação), consultar [[DESIGN_PATTERNS]] e reutilizar o padrão existente em vez de inventar.
 - Não hardcode hex em componentes; usar variáveis de tema.
 - JSON-LD em Svelte deve usar `{@html}`.
 - Para mudanças profundas: atualizar [[CURRENT]], [[FIXES_PROGRESS]], [[ZeloPDV.memory]] e, se aplicável, [[INCIDENTS]].
