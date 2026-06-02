@@ -1,1 +1,1 @@
-../ZeloPDV.memory.md
+../docs/ZeloPDV.memory.md

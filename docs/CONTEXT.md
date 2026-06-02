@@ -2,24 +2,27 @@
 
 Este e o ponto de entrada para documentacao interna do repo.
 
-## Docs operacionais na raiz / vault
+## Docs operacionais (camada AI-first) — agora em `docs/`
 
-O repo agora tambem tem uma camada AI-first/operacional:
+Toda a documentacao do repo vive em `docs/` (antes era dividida entre raiz e `docs/`).
+A camada operacional/AI-first fica no topo de `docs/`:
 
-- `CURRENT.md`: estado curto da sessao/sprint
-- `CLAUDE.md`: arquitetura real, fluxos criticos e riscos
-- `BILLING.md`: runbook de assinatura/cobranca
-- `CODE_REVIEW.md`: auditoria consolidada
-- `FIXES_PROGRESS.md`: trilha viva de correcoes
-- `INCIDENTS.md`: historico/padroes de incidentes
-- `ZeloPDV.memory.md`: fatos confirmados para continuidade
-- `pdvObsidian/HOME.md`: hub do vault Obsidian
+- [CURRENT.md](./CURRENT.md): estado curto da sessao/sprint
+- [BILLING.md](./BILLING.md): runbook de assinatura/cobranca
+- [CODE_REVIEW.md](./CODE_REVIEW.md): auditoria consolidada
+- [TRADEOFFS.md](./TRADEOFFS.md): tradeoffs aceitos e divida tecnica conhecida
+- [FIXES_PROGRESS.md](./FIXES_PROGRESS.md): trilha viva de correcoes
+- [INCIDENTS.md](./INCIDENTS.md): historico/padroes de incidentes
+- [ZeloPDV.memory.md](./ZeloPDV.memory.md): fatos confirmados para continuidade
+- `pdvObsidian/HOME.md`: hub do vault Obsidian (espelha `docs/` via symlinks)
 
-Esses arquivos existem para engenharia + IA. O restante da documentacao detalhada continua em `docs/`.
+## O que fica na raiz (so pontos de entrada)
 
-## O que fica na raiz
+A raiz guarda apenas os tres arquivos que ferramentas e humanos esperam encontrar la:
 
-- `AGENTS.md`: instrucoes operacionais para agentes e contribuidores automatizados.
+- `README.md`: porta de entrada para humanos / GitHub.
+- `CLAUDE.md`: arquitetura real, fluxos criticos e riscos — carregado automaticamente pelo Claude Code a partir da raiz.
+- `AGENTS.md`: instrucoes operacionais para agentes (convencao cross-tool de raiz).
 
 ## Documentacao viva
 
@@ -46,7 +49,8 @@ Esses arquivos existem para engenharia + IA. O restante da documentacao detalhad
 
 ## Convencoes
 
-- Preferir docs em `docs/` para notas tecnicas detalhadas.
-- Reservar a raiz apenas para os docs operacionais centrais (`CURRENT`, `CLAUDE`, `BILLING`, `CODE_REVIEW`, `FIXES_PROGRESS`, `INCIDENTS`, `*.memory`, `AGENTS`).
+- Toda documentacao vive em `docs/`. Nao criar `.md` operacionais novos na raiz.
+- A raiz guarda apenas os pontos de entrada: `README.md`, `CLAUDE.md` e `AGENTS.md`.
+- O vault `pdvObsidian/` espelha `docs/` via symlinks; ao criar uma doc nova em `docs/`, adicionar o symlink correspondente no vault se quiser que apareca no Obsidian.
 - Quando uma doc deixar de ser viva, mover para `docs/archive/` ou consolidar numa doc atual.
 - Quando houver duplicacao entre uma nota curta e uma doc tecnica mais completa, manter a mais completa e remover a redundante.

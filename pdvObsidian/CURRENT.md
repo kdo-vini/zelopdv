@@ -1,1 +1,1 @@
-../CURRENT.md
+../docs/CURRENT.md

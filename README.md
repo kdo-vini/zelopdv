@@ -48,10 +48,10 @@ npm run check
 
 ## Comece por aqui
 
-- [CURRENT.md](/home/vinicius/code/zelopdv/CURRENT.md) — estado validado da sessão
+- [docs/CURRENT.md](/home/vinicius/code/zelopdv/docs/CURRENT.md) — estado validado da sessão
 - [CLAUDE.md](/home/vinicius/code/zelopdv/CLAUDE.md) — arquitetura, fluxos críticos, invariantes e riscos
-- [BILLING.md](/home/vinicius/code/zelopdv/BILLING.md) — assinatura, Stripe, Pix e operação manual
-- [CODE_REVIEW.md](/home/vinicius/code/zelopdv/CODE_REVIEW.md) — riscos técnicos já identificados
+- [docs/BILLING.md](/home/vinicius/code/zelopdv/docs/BILLING.md) — assinatura, Stripe, Pix e operação manual
+- [docs/CODE_REVIEW.md](/home/vinicius/code/zelopdv/docs/CODE_REVIEW.md) — riscos técnicos já identificados
 - [docs/data/SCHEMA_RLS.md](/home/vinicius/code/zelopdv/docs/data/SCHEMA_RLS.md) — tenancy, RLS e trust boundaries
 - [docs/integrations/EXTERNAL_DEPENDENCIES.md](/home/vinicius/code/zelopdv/docs/integrations/EXTERNAL_DEPENDENCIES.md) — integrações externas e blast radius
 - [docs/modules/ACESSOS.md](/home/vinicius/code/zelopdv/docs/modules/ACESSOS.md) — contrato atual do add-on Acessos
@@ -64,4 +64,4 @@ npm run check
 - `subscriptions` é a fonte de verdade de acesso.
 - O fluxo offline atual é contingência do PDV, não offline-first completo.
 - O purge final de contas agendadas depende de um sweeper externo citado nas migrations.
-- O admin dashboard assume tabelas administrativas acessíveis via anon key; ver [CODE_REVIEW.md](/home/vinicius/code/zelopdv/CODE_REVIEW.md).
+- O admin dashboard assume tabelas administrativas acessíveis via anon key; ver [docs/CODE_REVIEW.md](/home/vinicius/code/zelopdv/docs/CODE_REVIEW.md).

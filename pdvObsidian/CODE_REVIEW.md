@@ -1,1 +1,1 @@
-../CODE_REVIEW.md
+../docs/CODE_REVIEW.md

@@ -1,1 +1,1 @@
-../BILLING.md
+../docs/BILLING.md

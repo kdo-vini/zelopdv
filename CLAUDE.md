@@ -31,8 +31,8 @@
 | Admin interno | `admin-dashboard/` | operação manual e auditoria |
 | Testes unitários | `tests/` | Vitest |
 | Testes E2E | `e2e/` | Playwright |
-| Docs profundas | `docs/` | setup, offline, trackers e notas históricas |
-| Vault | `pdvObsidian/` | hub Obsidian e espelhos dos docs centrais |
+| Documentação | `docs/` | toda a doc do repo: operacional (`CURRENT`, `BILLING`, `CODE_REVIEW`, `TRADEOFFS`, `FIXES_PROGRESS`, `INCIDENTS`, `ZeloPDV.memory`) + profunda (setup, offline, módulos, trackers) |
+| Vault | `pdvObsidian/` | hub Obsidian; espelha `docs/` via symlinks |
 
 ### Superfícies do produto
 
@@ -172,8 +172,8 @@ Estado validado mais recente está em [[CURRENT]].
 
 ## Convenções de documentação
 
-- Docs operacionais centrais vivem na raiz e são espelhados no vault.
-- `docs/` guarda material profundo, trackers e notas históricas.
+- Toda a documentação vive em `docs/` (operacional + profunda) e é espelhada no vault `pdvObsidian/` via symlinks. Não criar `.md` operacionais novos na raiz.
+- A raiz guarda apenas os pontos de entrada: `README.md`, `CLAUDE.md` e `AGENTS.md`.
 - Quando um arquivo em `docs/` não for mais fonte viva, marque isso explicitamente no topo e aponte para a doc canônica atual.
 - Após mudanças relevantes:
   - atualizar [[CURRENT]] se o estado mudou

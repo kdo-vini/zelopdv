@@ -3,10 +3,11 @@
 > Atualizar a cada sprint/sessão.
 > Referências: [[CLAUDE]] · [[BILLING]] · [[CODE_REVIEW]] · [[FIXES_PROGRESS]] · [[INCIDENTS]]
 
-## Snapshot validado (2026-06-01)
+## Snapshot validado (2026-06-02)
 
 - Branch: `main`
-- HEAD inspecionado: `6605f34` — `Account deletion: 14-day grace period + support off-ramp (PDV)`
+- HEAD inspecionado: `7761053` — `Fix second Acessos price drift + add TRADEOFFS doc`
+- **Em andamento nesta sessão:** robustez offline do PDV (offline-first na leitura + gate tolerante a queda de rede). Ver [[docs/operations/OFFLINE]].
 - App principal: SvelteKit 2 + Svelte 5 + Vercel.
 - Admin: app separado em `admin-dashboard/`.
 - Backend real: Supabase + Stripe + AbacatePay + Resend + ZeloChat interno para WhatsApp.
@@ -14,8 +15,8 @@
 
 ## Validação executada nesta sessão
 
-- `npm test` — **140/140** testes passando
-- `npm run check` — **0 errors / 133 warnings**
+- `npm test` — **149/149** testes passando (inclui novos testes de gate offline e snapshot de entitlement)
+- `npm run check` — **0 errors / 133 warnings** (warnings pré-existentes em páginas de marketing)
 
 ## Falhas abertas confirmadas
 
@@ -39,6 +40,7 @@
 
 ## Mudanças recentes visíveis no histórico Git
 
+- Robustez offline do PDV: gate de assinatura tolerante a queda de rede (snapshot de entitlement, carência de 7 dias), leitura offline-first de catálogo/categorias/subcategorias (Dexie v5), retry periódico de sync + badge de pendentes. Ver [[docs/operations/OFFLINE]] e [[TRADEOFFS]] (TA-OFF-01/02).
 - Grace period de 14 dias para deleção de conta + reativação.
 - Correção dos detalhes de plano na aba de perfil.
 - Fluxo self-service de exclusão de conta.

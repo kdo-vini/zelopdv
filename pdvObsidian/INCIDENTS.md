@@ -1,1 +1,1 @@
-../INCIDENTS.md
+../docs/INCIDENTS.md

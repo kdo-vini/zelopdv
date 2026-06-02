@@ -97,6 +97,29 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 - **Por que é tolerável hoje:** o admin é interno e muda pouco.
 - **Gatilho de revisão:** quando o custo de manter dois mundos passar do custo de unificar.
 
+### TA-OFF-01 — Janela de carência de 7 dias no gate de assinatura offline
+
+- **O que deixamos na mesa:** revalidação online obrigatória a cada cold-start do PDV.
+- **O que ganhamos:** o operador não é mais expulso para `/assinatura` quando a rede oscila (caso da
+  fábrica do Agreste Salgados). `ensureActiveSubscription` reusa o último entitlement validado quando — e
+  só quando — a falha é de rede (`isNetworkError`); negativo confirmado pelo servidor segue redirecionando.
+- **Custo aceito:** uma assinatura cancelada/expirada continua acessível offline por até 7 dias desde a
+  última validação online bem-sucedida (por dispositivo, snapshot em localStorage).
+- **Por que é tolerável hoje:** a carência é curta, o snapshot só nasce após confirmação positiva, e a
+  receita real depende de cartão/Pix recorrente — não de quem consegue abrir o PDV. Não é bypass eterno.
+- **Gatilho de revisão:** abuso real observado, exigência regulatória de corte imediato, ou suporte a
+  multi-dispositivo que torne o snapshot por navegador insuficiente. Ver [[docs/operations/OFFLINE]].
+
+### TA-OFF-02 — Venda offline não bloqueia por estoque
+
+- **O que deixamos na mesa:** validação de estoque no momento da venda quando não há rede.
+- **O que ganhamos:** a venda offline sempre conclui; a baixa e a checagem ficam para o sync (RPC atômica).
+- **Custo aceito:** oversell possível se duas máquinas venderem o mesmo item offline — a primeira que
+  sincroniza consome o estoque; a segunda pode falhar no replay.
+- **Por que é tolerável hoje:** o público-alvo do modo offline é loja/fábrica com um caixa só. Baixo risco real.
+- **Gatilho de revisão:** clientes com múltiplos caixas simultâneos offline. Aí entra baixa otimista local
+  com reconciliação. Ver [[docs/operations/OFFLINE]].
+
 ---
 
 ## Dívida técnica conhecida

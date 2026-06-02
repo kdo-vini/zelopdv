@@ -1,1 +1,1 @@
-../TRADEOFFS.md
+../docs/TRADEOFFS.md

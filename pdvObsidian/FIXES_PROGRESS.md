@@ -1,1 +1,1 @@
-../FIXES_PROGRESS.md
+../docs/FIXES_PROGRESS.md
