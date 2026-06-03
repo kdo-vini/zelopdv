@@ -1450,7 +1450,7 @@
               <strong>não há como recuperar</strong>.
             </p>
             <label class="flex items-start gap-2 text-sm cursor-pointer" style="color: var(--text-main);">
-              <input type="checkbox" bind:checked={ackIrreversible} class="mt-0.5" />
+              <input class="themed-checkbox flex-shrink-0" type="checkbox" bind:checked={ackIrreversible} />
               <span>Entendo que após 14 dias a exclusão é permanente e apaga todos os meus dados.</span>
             </label>
           {:else}

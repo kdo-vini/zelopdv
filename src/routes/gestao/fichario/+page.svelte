@@ -242,20 +242,13 @@
           <input type="number" min="0" step="0.01" placeholder="0,00" bind:value={valorPagamento} />
         </label>
 				<div class="checks">
-					<label class="custom-check">
-						<input type="checkbox" bind:checked={addAoCaixa} />
-						<span class="checkmark">
-							<svg viewBox="0 0 24 24" fill="none" class="icon"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						</span>
-						<span class="text">Adicionar ao caixa atual</span>
+					<label class="flex items-center gap-2 cursor-pointer select-none text-sm" style="color: var(--text-label);">
+						<input class="themed-checkbox" type="checkbox" bind:checked={addAoCaixa} />
+						<span>Adicionar ao caixa atual</span>
 					</label>
-					
-					<label class="custom-check">
-						<input type="checkbox" bind:checked={imprimirRecibo} />
-						<span class="checkmark">
-							<svg viewBox="0 0 24 24" fill="none" class="icon"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						</span>
-						<span class="text">Imprimir recibo</span>
+					<label class="flex items-center gap-2 cursor-pointer select-none text-sm" style="color: var(--text-label);">
+						<input class="themed-checkbox" type="checkbox" bind:checked={imprimirRecibo} />
+						<span>Imprimir recibo</span>
 					</label>
 				</div>
 				

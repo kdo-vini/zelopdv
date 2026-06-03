@@ -1040,11 +1040,11 @@
               style="background: var(--bg-card); border-color: var(--border-card);"
             >
               <label class="filter-option" style="color: var(--text-label);">
-                <input type="checkbox" bind:checked={filterOcultosOnly} class="rounded" />
+                <input type="checkbox" bind:checked={filterOcultosOnly} class="themed-checkbox" />
                 <span>Somente ocultos no PDV</span>
               </label>
               <label class="filter-option" style="color: var(--text-label);">
-                <input type="checkbox" bind:checked={filterEstoqueOnly} class="rounded" />
+                <input type="checkbox" bind:checked={filterEstoqueOnly} class="themed-checkbox" />
                 <span>Somente com estoque controlado</span>
               </label>
               {#if filterOcultosOnly || filterEstoqueOnly}
@@ -1095,7 +1095,7 @@
                   type="checkbox"
                   on:change={toggleSelectAll}
                   checked={paginatedProdutos.length > 0 && paginatedProdutos.every(p => selectedItems.has(p.id))}
-                  style="accent-color: var(--primary);"
+                  class="themed-checkbox"
                 />
               </th>
               <th class="th-cell w-10"></th>
@@ -1189,7 +1189,7 @@
                             <span class="text-xs" style="color: var(--text-muted);">Estoque compartilhado pela categoria</span>
                           {:else}
                             <label class="flex items-center gap-1.5 cursor-pointer">
-                              <input type="checkbox" bind:checked={editProdForm.controlar_estoque} style="accent-color: var(--primary);" />
+                              <input type="checkbox" bind:checked={editProdForm.controlar_estoque} class="themed-checkbox" />
                               Controlar estoque
                             </label>
                           {/if}
@@ -1205,11 +1205,11 @@
                             </div>
                           {/if}
                           <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="checkbox" bind:checked={editProdForm.ocultar_no_pdv} style="accent-color: var(--primary);" />
+                            <input type="checkbox" bind:checked={editProdForm.ocultar_no_pdv} class="themed-checkbox" />
                             Ocultar no PDV
                           </label>
                           <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="checkbox" bind:checked={editProdForm.eh_item_por_unidade} style="accent-color: var(--primary);" />
+                            <input type="checkbox" bind:checked={editProdForm.eh_item_por_unidade} class="themed-checkbox" />
                             Venda por unidade
                           </label>
                         </div>
@@ -1233,7 +1233,7 @@
                       type="checkbox"
                       checked={selectedItems.has(prod.id)}
                       on:change={() => toggleSelect(prod.id)}
-                      style="accent-color: var(--primary);"
+                      class="themed-checkbox"
                     />
                   </td>
 
@@ -1585,14 +1585,14 @@
         <!-- Opções booleanas -->
         <div class="prod-options-grid" style="background: var(--bg-panel); border-color: var(--border-subtle);">
           <label class="prod-option-label" style="color: var(--text-label);">
-            <input type="checkbox" bind:checked={newProdForm.eh_item_por_unidade} style="accent-color: var(--primary);" />
+            <input type="checkbox" bind:checked={newProdForm.eh_item_por_unidade} class="themed-checkbox" />
             <div>
               <span class="font-medium text-sm">Venda por unidade</span>
               <p class="text-xs mt-0.5" style="color: var(--text-muted);">O produto é vendido em unidades inteiras</p>
             </div>
           </label>
           <label class="prod-option-label" style="color: var(--text-label);">
-            <input type="checkbox" bind:checked={newProdForm.ocultar_no_pdv} style="accent-color: var(--primary);" />
+            <input type="checkbox" bind:checked={newProdForm.ocultar_no_pdv} class="themed-checkbox" />
             <div>
               <span class="font-medium text-sm">Ocultar no PDV</span>
               <p class="text-xs mt-0.5" style="color: var(--text-muted);">Produto não aparecerá para seleção na venda</p>
@@ -1607,7 +1607,7 @@
             </div>
           {:else}
             <label class="prod-option-label" style="color: var(--text-label);">
-              <input type="checkbox" bind:checked={newProdForm.controlar_estoque} style="accent-color: var(--primary);" />
+              <input type="checkbox" bind:checked={newProdForm.controlar_estoque} class="themed-checkbox" />
               <div>
                 <span class="font-medium text-sm">Controlar estoque</span>
                 <p class="text-xs mt-0.5" style="color: var(--text-muted);">Acompanha a quantidade disponível</p>
@@ -2276,48 +2276,6 @@
 
   .option-card:hover {
     border-color: var(--primary);
-  }
-
-  .themed-checkbox {
-    appearance: none;
-    -webkit-appearance: none;
-    display: inline-grid;
-    place-content: center;
-    width: 1.125rem;
-    height: 1.125rem;
-    flex: 0 0 auto;
-    margin-top: 0.0625rem;
-    border: 1px solid var(--border-subtle);
-    border-radius: 0.25rem;
-    background-color: var(--bg-card);
-    color: var(--primary);
-    cursor: pointer;
-    transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
-  }
-
-  .themed-checkbox:checked {
-    background-color: var(--primary);
-    border-color: var(--primary);
-  }
-
-  .themed-checkbox:checked::after {
-    content: "";
-    width: 0.3125rem;
-    height: 0.5625rem;
-    border: solid var(--primary-text);
-    border-width: 0 0.125rem 0.125rem 0;
-    transform: rotate(45deg) translateY(-0.0625rem);
-  }
-
-  .themed-checkbox.compact {
-    width: 1rem;
-    height: 1rem;
-    margin-top: 0;
-  }
-
-  .themed-checkbox:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
   }
 
   /* ─── Loading ─────────────────────────────────────────────────────────────── */

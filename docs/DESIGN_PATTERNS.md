@@ -149,7 +149,26 @@ Card "clicável inteiro" (hub de ferramentas): ver `/ferramentas/+page.svelte` (
 
 ---
 
-## 6. Campos de formulário — `gestao/pessoas/+page.svelte:~212`
+## 6. Checkbox
+
+**Classe canônica:** `themed-checkbox` — definida globalmente em `src/app.css`.
+
+```svelte
+<label class="flex items-center gap-2 cursor-pointer select-none text-sm" style="color: var(--text-label);">
+  <input class="themed-checkbox" type="checkbox" bind:checked={valor} />
+  <span>Rótulo da opção</span>
+</label>
+```
+
+- Usa `appearance: none` + `::after` (checkmark rotacionado), fundo `--bg-card`, borda `--border-strong`.
+- Checked: fundo `--primary`, borda `--primary`, glow com `color-mix`.
+- Hover: borda `--primary`. Focus: ring `--primary` sem outline.
+- Variante compacta para contextos densos: adicione `compact` (width/height 1rem, sem margin-top). Ex.: `class="themed-checkbox compact"`.
+- **Nunca use** `style="accent-color: var(--primary);"` — isso só colore o checkbox nativo; não substitui o padrão.
+- **Não use** para toggle-switch (ver `/gestao/mesas` — padrão `.switch-row` próprio para inputs escondidos com thumb visual).
+- A classe `checkbox-custom` em `/gestao/acessos` é específica daquele contexto de permissões (varia cor conforme estado ativo/inativo) — não copie para outros usos.
+
+## 6b. Campos de formulário — `gestao/pessoas/+page.svelte:~212`
 
 ```svelte
 <label class="block">

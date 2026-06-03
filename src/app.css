@@ -102,6 +102,43 @@ html {
   @apply inline-flex items-center justify-center px-3 py-2 rounded-md text-white bg-red-600 hover:bg-red-700;
 }
 
+/* --- THEMED CHECKBOX (canônico — use em todo input[type=checkbox] do app) --- */
+.themed-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: 0 0 auto;
+  margin-top: 0.0625rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 0.3rem;
+  background-color: var(--bg-card);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.themed-checkbox:hover {
+  border-color: var(--primary);
+}
+.themed-checkbox:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+.themed-checkbox:checked::after {
+  content: "";
+  width: 0.3125rem;
+  height: 0.5625rem;
+  border: solid var(--primary-text, #fff);
+  border-width: 0 0.125rem 0.125rem 0;
+  transform: rotate(45deg) translateY(-0.0625rem);
+}
+.themed-checkbox:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
 /* Modal base */
 .modal-backdrop {
   @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50;

@@ -638,7 +638,7 @@
         {/if}
 
         <label class="print-toggle">
-          <input type="checkbox" bind:checked={imprimirRecibo} />
+          <input class="themed-checkbox" type="checkbox" bind:checked={imprimirRecibo} />
           <span>Imprimir recibo</span>
         </label>
 

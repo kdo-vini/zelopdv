@@ -414,7 +414,7 @@
                     <strong class="line-total">{formatMoney(item.preco * item.quantidade)}</strong>
                   </div>
                   <label class="kitchen-check">
-                    <input type="checkbox" bind:checked={item.enviado_cozinha} />
+                    <input class="themed-checkbox" type="checkbox" bind:checked={item.enviado_cozinha} />
                     <span>Enviar para cozinha</span>
                   </label>
                 </li>

@@ -697,6 +697,7 @@
         <div class="details-body">
           <label class="toggle-line">
             <input
+              class="themed-checkbox"
               type="checkbox"
               checked={productForm.useCustomMarkup}
               on:change={(event) =>
@@ -742,6 +743,7 @@
 
           <label class="toggle-line compact-top">
             <input
+              class="themed-checkbox"
               type="checkbox"
               checked={productForm.includePlatformFee}
               on:change={(event) =>

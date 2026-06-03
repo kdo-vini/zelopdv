@@ -169,7 +169,7 @@
           <input id="motivo-mov" type="text" maxlength="140" bind:value={motivo} class="input-form" placeholder="Ex.: Retirada para cofre / Troco adicional" />
         </div>
         <label class="inline-flex items-center gap-2 text-sm dark:text-gray-200">
-          <input type="checkbox" bind:checked={imprimirRecibo} /> Imprimir recibo
+          <input class="themed-checkbox" type="checkbox" bind:checked={imprimirRecibo} /> Imprimir recibo
         </label>
 
         {#if erro}

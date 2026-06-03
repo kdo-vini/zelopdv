@@ -984,8 +984,7 @@
                         type="checkbox"
                         checked={selectedCatIds.has(cat.id)}
                         on:change={() => toggleCat(cat.id)}
-                        class="w-4 h-4 rounded flex-shrink-0"
-                        style="accent-color: var(--primary);"
+                        class="themed-checkbox flex-shrink-0"
                       />
                       <span class="text-sm font-semibold" style="color: var(--text-main);">{cat.nome}</span>
                       <span class="text-xs px-1.5 py-0.5 rounded" style="background: var(--bg-input); color: var(--text-muted);">{catProds.length}</span>
