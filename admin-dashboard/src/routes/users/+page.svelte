@@ -804,13 +804,13 @@
           type="text"
           bind:value={searchTerm}
           placeholder="Buscar por nome, doc ou email..."
-          class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all shadow-inner"
+          class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all shadow-inner"
         />
       </div>
       
       <button
         on:click={loadUsers}
-        class="flex items-center justify-center w-11 h-11 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
+        class="flex items-center justify-center w-11 h-11 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white transition-all shadow-xs focus:outline-hidden focus:ring-2 focus:ring-slate-700"
         title="Atualizar"
       >
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -821,7 +821,7 @@
       <button
         on:click={exportUsersPdf}
         disabled={loading || filteredUsers.length === 0}
-        class="flex items-center gap-2 shrink-0 px-4 h-11 bg-sky-500/10 border border-sky-500/30 hover:bg-sky-500/20 hover:border-sky-500/50 rounded-xl text-sky-400 hover:text-sky-300 font-medium text-sm transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+        class="flex items-center gap-2 shrink-0 px-4 h-11 bg-sky-500/10 border border-sky-500/30 hover:bg-sky-500/20 hover:border-sky-500/50 rounded-xl text-sky-400 hover:text-sky-300 font-medium text-sm transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-sky-500/40"
         title="Exportar relatório de usuários em PDF"
       >
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -889,7 +889,7 @@
     {/if}
 
     <!-- Desktop Table View -->
-    <div class="hidden md:block overflow-hidden bg-slate-900/40 border border-slate-800/60 rounded-2xl shadow-xl backdrop-blur-sm" in:fade>
+    <div class="hidden md:block overflow-hidden bg-slate-900/40 border border-slate-800/60 rounded-2xl shadow-xl backdrop-blur-xs" in:fade>
       {#if statusFilter === 'sub_users'}
         <table class="w-full text-left border-collapse">
           <thead>
@@ -908,7 +908,7 @@
               <tr class="group hover:bg-slate-800/30 transition-colors">
                 <td class="py-4 px-6">
                   <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-700 to-indigo-900 border border-indigo-700 flex items-center justify-center text-sm font-bold text-white shadow-inner shrink-0">
+                    <div class="w-10 h-10 rounded-full bg-linear-to-br from-indigo-700 to-indigo-900 border border-indigo-700 flex items-center justify-center text-sm font-bold text-white shadow-inner shrink-0">
                       {getInitials(user.email)}
                     </div>
                     <div class="min-w-0">
@@ -1005,7 +1005,7 @@
                     <span class="inline-flex items-center gap-1.5">
                       {effExpiry.toLocaleDateString('pt-BR')}
                       {#if hasActiveManualExtension(sub)}
-                        <span class="inline-flex px-1 py-0.5 text-[8px] font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20" title={`Extensão manual ativa até ${new Date(sub.manually_extended_until).toLocaleDateString('pt-BR')}`}>+EXT</span>
+                        <span class="inline-flex px-1 py-0.5 text-[8px] font-bold rounded-sm bg-amber-500/10 text-amber-400 border border-amber-500/20" title={`Extensão manual ativa até ${new Date(sub.manually_extended_until).toLocaleDateString('pt-BR')}`}>+EXT</span>
                       {/if}
                     </span>
                   {:else}
@@ -1099,7 +1099,7 @@
               </p>
               </div>
             </div>
-            <span class="inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded {status.class}">
+            <span class="inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-sm {status.class}">
               {status.text}
             </span>
           </div>
@@ -1153,7 +1153,7 @@
       transition:slide={{ duration: 300, axis: 'y' }}
     >
       <!-- Top Glow -->
-      <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-sky-500/50 to-transparent"></div>
+      <div class="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-sky-500/50 to-transparent"></div>
       
       <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
         <h3 class="text-lg font-bold text-white tracking-wide">Editar Perfil</h3>
@@ -1168,7 +1168,7 @@
           <input 
             type="text" 
             bind:value={editForm.nome_exibicao} 
-            class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+            class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
           />
         </div>
         
@@ -1177,7 +1177,7 @@
           <input 
             type="text" 
             bind:value={editForm.documento} 
-            class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+            class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white font-mono focus:outline-hidden focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
           />
         </div>
 
@@ -1197,7 +1197,7 @@
             type="text"
             bind:value={editForm.phone}
             placeholder="5511999999999"
-            class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+            class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white font-mono focus:outline-hidden focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
           />
         </div>
 
@@ -1209,7 +1209,7 @@
               <label class="block text-[13px] font-medium text-slate-400">Status da Conta</label>
               <select 
                 bind:value={editSub.status}
-                class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-sky-500 transition-all shadow-inner"
+                class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:border-sky-500 transition-all shadow-inner"
               >
                 <option value="active">Ativo (Lançamento Manual/Assinado)</option>
                 <option value="trialing">Trial (Período de Teste)</option>

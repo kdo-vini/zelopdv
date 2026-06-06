@@ -25,7 +25,7 @@
 <div class="fixed top-4 right-4 z-50 space-y-2 pointer-events-none">
   {#each $toasts as toast (toast.id)}
     <div
-      class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg backdrop-blur-sm animate-slide-in {getToastClass(toast.type)}"
+      class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg backdrop-blur-xs animate-slide-in {getToastClass(toast.type)}"
       role="alert"
     >
       <span class="text-xl">{getIcon(toast.type)}</span>

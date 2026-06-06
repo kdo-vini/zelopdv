@@ -6,7 +6,7 @@
     </div>
 
     <div class="relative max-w-lg mx-auto">
-      <div class="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl blur opacity-30 animate-pulse"></div>
+      <div class="absolute -inset-1 bg-linear-to-r from-sky-500 to-blue-600 rounded-2xl blur-sm opacity-30 animate-pulse"></div>
 
       <div class="relative rounded-2xl p-8 md:p-12 shadow-2xl animate-border-gradient" style="background: var(--bg-card);">
         <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">

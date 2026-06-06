@@ -231,7 +231,7 @@
 
   <!-- EASTER PROMO BANNER -->
   {#if daysUntilEaster > 0}
-  <a href="/pascoa" class="fixed top-0 w-full z-[60] bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 py-2 px-4 text-center text-xs md:text-sm font-bold text-white tracking-wide shadow-[0_2px_20px_rgba(236,72,153,0.4)] flex items-center justify-center gap-2 hover:brightness-110 transition-all">
+  <a href="/pascoa" class="fixed top-0 w-full z-60 bg-linear-to-r from-amber-500 via-pink-500 to-purple-600 py-2 px-4 text-center text-xs md:text-sm font-bold text-white tracking-wide shadow-[0_2px_20px_rgba(236,72,153,0.4)] flex items-center justify-center gap-2 hover:brightness-110 transition-all">
     <span>🐣</span>
     <span>Páscoa em <strong>{daysUntilEaster} {daysUntilEaster === 1 ? 'dia' : 'dias'}</strong> — veja a oferta especial para doceiras e revendedores</span>
     <span class="hidden sm:inline-flex items-center gap-1 bg-white/20 px-2.5 py-0.5 rounded-full text-xs font-extrabold ml-1">Ver →</span>
@@ -257,7 +257,7 @@
 
       <h1 class="text-5xl md:text-7xl font-bold text-white tracking-tight leading-[1.1] mb-8 animate-fade-in-up delay-100">
         Sistema PDV simples <br class="hidden md:block" />
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-400 to-sky-400 animate-gradient">para Lanchonetes</span>
+        <span class="text-transparent bg-clip-text bg-linear-to-r from-sky-400 via-blue-400 to-sky-400 animate-gradient">para Lanchonetes</span>
       </h1>
 
       <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up delay-200">
@@ -268,7 +268,7 @@
         <a href="/cadastro" class="w-full sm:w-auto px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
           Testar 30 dias grátis
         </a>
-        <a href="#features" class="w-full sm:w-auto px-8 py-4 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-semibold backdrop-blur-sm transition-all">
+        <a href="#features" class="w-full sm:w-auto px-8 py-4 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-semibold backdrop-blur-xs transition-all">
           Ver como funciona
         </a>
       </div>
@@ -297,7 +297,7 @@
 
           <!-- Imagem Real do Produto -->
           <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-          <div class="bg-[#161b22] aspect-[16/9] md:aspect-auto relative group cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/dashboard-desktop.png'} role="button" tabindex="0">
+          <div class="bg-[#161b22] aspect-video md:aspect-auto relative group cursor-zoom-in" on:click={() => activeLightboxImage = '/images/screenshots/dashboard-desktop.png'} role="button" tabindex="0">
             <img src="/images/screenshots/dashboard-desktop.png" alt="Tela de Vendas do Zelo PDV para Lanchonetes" class="w-full h-auto object-cover opacity-90 group-hover:blur-[2px] transition-all duration-300" />
             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                <div class="w-16 h-16 bg-sky-600/90 rounded-full flex items-center justify-center shadow-lg shadow-black/50 backdrop-blur-md transform scale-75 group-hover:scale-100 transition-transform duration-300">
@@ -307,7 +307,7 @@
           </div>
 
           <!-- Overlay Gradient for depth -->
-          <div class="absolute inset-0 bg-gradient-to-t from-[#0B0F19]/50 via-transparent to-transparent pointer-events-none"></div>
+          <div class="absolute inset-0 bg-linear-to-t from-[#0B0F19]/50 via-transparent to-transparent pointer-events-none"></div>
         </div>
 
         <!-- Glow under dashboard -->
@@ -317,7 +317,7 @@
   </section>
 
   <!-- BRANDS/TRUST STRIP -->
-  <section class="py-10 border-y border-white/5 bg-white/[0.02]">
+  <section class="py-10 border-y border-white/5 bg-white/2">
     <div class="max-w-7xl mx-auto px-6 text-center">
       <p class="text-sm font-medium text-slate-500 mb-6">Criado especialmente para pequenos negócios brasileiros</p>
       <div class="flex flex-wrap justify-center gap-8 md:gap-16 opacity-70 hover:opacity-100 transition-all duration-500">
@@ -344,7 +344,7 @@
         </div>
 
         <div class="relative">
-          <div class="hidden md:block absolute top-8 left-1/2 w-full h-px bg-gradient-to-r from-transparent via-sky-500/30 to-transparent"></div>
+          <div class="hidden md:block absolute top-8 left-1/2 w-full h-px bg-linear-to-r from-transparent via-sky-500/30 to-transparent"></div>
           <div class="w-16 h-16 mx-auto bg-sky-500/10 rounded-2xl border border-sky-500/20 flex items-center justify-center mb-6">
              <span class="text-2xl font-bold text-sky-400">2</span>
           </div>
@@ -353,7 +353,7 @@
         </div>
 
         <div class="relative">
-          <div class="hidden md:block absolute top-8 left-1/2 w-full h-px bg-gradient-to-r from-transparent via-sky-500/30 to-transparent"></div>
+          <div class="hidden md:block absolute top-8 left-1/2 w-full h-px bg-linear-to-r from-transparent via-sky-500/30 to-transparent"></div>
           <div class="w-16 h-16 mx-auto bg-sky-500/10 rounded-2xl border border-sky-500/20 flex items-center justify-center mb-6">
              <span class="text-2xl font-bold text-sky-400">3</span>
           </div>
@@ -417,7 +417,7 @@
   </section>
 
   <!-- FEATURE 2: FINANCEIRO (IMG Esquerda, Texto Direita) -->
-  <section class="py-24 relative bg-white/[0.02]">
+  <section class="py-24 relative bg-white/2">
     <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
       <div class="order-2 lg:order-1 relative group">
         <div class="absolute inset-0 bg-emerald-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-emerald-500/30 transition-all duration-700"></div>
@@ -441,11 +441,11 @@
           O Zelo PDV cruza vendas com despesas e te mostra seu <strong>Lucro Real</strong> no fim do mês.
         </p>
         <div class="grid grid-cols-2 gap-4">
-           <div class="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
+           <div class="p-4 rounded-xl border border-white/5 bg-white/2">
               <h4 class="text-white font-semibold mb-1">Controle de Despesas</h4>
               <p class="text-sm text-slate-500">Lance aluguel, luz e retiradas.</p>
            </div>
-           <div class="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
+           <div class="p-4 rounded-xl border border-white/5 bg-white/2">
               <h4 class="text-white font-semibold mb-1">Fechamento de Caixa</h4>
               <p class="text-sm text-slate-500">Conferência cega e segura.</p>
            </div>
@@ -492,7 +492,7 @@
   </section>
 
   <!-- FEATURE 4: FIADO (IMG Esquerda, Texto Direita) -->
-  <section class="py-24 relative bg-white/[0.02]">
+  <section class="py-24 relative bg-white/2">
     <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
       <div class="order-2 lg:order-1 relative group">
         <div class="absolute inset-0 bg-amber-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-amber-500/30 transition-all duration-700"></div>
@@ -530,7 +530,7 @@
 
   <!-- FEATURE 5: EXTENSÕES (HUB) -->
   <section id="extensoes" class="py-24 relative overflow-hidden">
-    <div class="absolute inset-0 bg-gradient-to-br from-amber-900/15 via-transparent to-rose-900/10 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-linear-to-br from-amber-900/15 via-transparent to-rose-900/10 pointer-events-none"></div>
 
     <div class="max-w-6xl mx-auto px-6 relative z-10">
       <div class="text-center max-w-3xl mx-auto mb-12">
@@ -596,7 +596,7 @@
   <!-- FEATURE 6: ZELINHO AI -->
   <section id="zelinho" class="py-24 relative overflow-hidden">
     <!-- Background glow -->
-    <div class="absolute inset-0 bg-gradient-to-br from-sky-900/20 via-transparent to-indigo-900/20 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-linear-to-br from-sky-900/20 via-transparent to-indigo-900/20 pointer-events-none"></div>
     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-sky-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
     <div class="max-w-7xl mx-auto px-6 relative z-10">
@@ -610,7 +610,7 @@
         </div>
         <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">
           Zelinho: O Primeiro Assistente de IA<br class="hidden md:block"/>
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-400">Focado no Lucro Real</span>
+          <span class="text-transparent bg-clip-text bg-linear-to-r from-sky-400 to-blue-400">Focado no Lucro Real</span>
         </h2>
         <p class="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
           Não é um chatbot genérico. O Zelinho lê suas vendas, despesas e estoque reais
@@ -621,8 +621,8 @@
       <div class="grid lg:grid-cols-2 gap-16 items-center">
         <!-- Left: Feature bullets -->
         <div class="space-y-6">
-          <div class="flex items-start gap-4 p-5 rounded-2xl border border-white/5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
-            <div class="w-10 h-10 rounded-xl bg-sky-500/20 flex items-center justify-center flex-shrink-0">
+          <div class="flex items-start gap-4 p-5 rounded-2xl border border-white/5 bg-white/3 hover:bg-white/5 transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-sky-500/20 flex items-center justify-center shrink-0">
               <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
             </div>
             <div>
@@ -631,8 +631,8 @@
             </div>
           </div>
 
-          <div class="flex items-start gap-4 p-5 rounded-2xl border border-white/5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
-            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+          <div class="flex items-start gap-4 p-5 rounded-2xl border border-white/5 bg-white/3 hover:bg-white/5 transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
               <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </div>
             <div>
@@ -641,8 +641,8 @@
             </div>
           </div>
 
-          <div class="flex items-start gap-4 p-5 rounded-2xl border border-white/5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
-            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+          <div class="flex items-start gap-4 p-5 rounded-2xl border border-white/5 bg-white/3 hover:bg-white/5 transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
               <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
             </div>
             <div>
@@ -663,7 +663,7 @@
           <div class="rounded-2xl border border-white/10 bg-[#0d1117] shadow-2xl overflow-hidden">
             <!-- Chat header -->
             <div class="border-b border-white/5 px-5 py-4 flex items-center gap-3 bg-[#0B0F19]">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-lg">Z</div>
+              <div class="w-8 h-8 rounded-full bg-linear-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-lg">Z</div>
               <div>
                 <p class="text-white text-sm font-semibold leading-none">Zelinho</p>
                 <p class="text-sky-400 text-xs mt-0.5">Parceiro IA · online</p>
@@ -683,8 +683,8 @@
               </div>
               <!-- AI response -->
               <div class="flex items-start gap-2.5">
-                <div class="w-7 h-7 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">Z</div>
-                <div class="bg-white/[0.05] border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]">
+                <div class="w-7 h-7 rounded-full bg-linear-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">Z</div>
+                <div class="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]">
                   <p class="text-slate-300 text-sm leading-relaxed">Analisando seus dados de <strong class="text-white">seg a dom</strong>...</p>
                   <div class="mt-3 space-y-1.5">
                     <div class="flex justify-between text-xs">
@@ -708,7 +708,7 @@
             <!-- Chat input -->
             <div class="border-t border-white/5 px-4 py-3 flex items-center gap-3 bg-[#0B0F19]/50">
               <div class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-slate-500 text-sm">Pergunte sobre seu negócio...</div>
-              <button class="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center flex-shrink-0" aria-label="Enviar">
+              <button class="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center shrink-0" aria-label="Enviar">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
               </button>
             </div>
@@ -720,7 +720,7 @@
 
   <!-- TESTIMONIALS -->
   <!-- TODO: replace with real testimonials -->
-  <section class="py-24 relative bg-white/[0.02] border-t border-white/5">
+  <section class="py-24 relative bg-white/2 border-t border-white/5">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-16">
         <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Quem já usa o Zelo PDV</h2>
@@ -730,9 +730,9 @@
       <div class="grid md:grid-cols-3 gap-6">
 
         <!-- Testimonial 1 -->
-        <div class="bg-white/[0.03] border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+        <div class="bg-white/3 border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
           <div class="flex items-center gap-3">
-            <div class="w-11 h-11 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold text-lg flex-shrink-0">M</div>
+            <div class="w-11 h-11 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold text-lg shrink-0">M</div>
             <div>
               <p class="text-white font-semibold text-sm leading-tight">Marcos A.</p>
               <p class="text-slate-500 text-xs">Lanchonete do Marcos · Fortaleza, CE</p>
@@ -749,9 +749,9 @@
         </div>
 
         <!-- Testimonial 2 -->
-        <div class="bg-white/[0.03] border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+        <div class="bg-white/3 border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
           <div class="flex items-center gap-3">
-            <div class="w-11 h-11 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg flex-shrink-0">F</div>
+            <div class="w-11 h-11 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg shrink-0">F</div>
             <div>
               <p class="text-white font-semibold text-sm leading-tight">Fernanda S.</p>
               <p class="text-slate-500 text-xs">Hamburgueria da Fê · Ribeirão Preto, SP</p>
@@ -768,9 +768,9 @@
         </div>
 
         <!-- Testimonial 3 -->
-        <div class="bg-white/[0.03] border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+        <div class="bg-white/3 border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
           <div class="flex items-center gap-3">
-            <div class="w-11 h-11 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg flex-shrink-0">C</div>
+            <div class="w-11 h-11 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg shrink-0">C</div>
             <div>
               <p class="text-white font-semibold text-sm leading-tight">Carlos M.</p>
               <p class="text-slate-500 text-xs">Lanchonete Sabor da Praia · Natal, RN</p>
@@ -872,7 +872,7 @@
   </section>
 
   <!-- PRICING (Plano Principal + Add-ons em grid lateral) -->
-  <section id="pricing" class="py-24 relative bg-white/[0.02]">
+  <section id="pricing" class="py-24 relative bg-white/2">
     <div class="max-w-6xl mx-auto px-6">
       <div class="text-center mb-12">
         <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">Preço Único. Tudo Incluso.</h2>
@@ -883,7 +883,7 @@
         <!-- ========== PLANO PRINCIPAL ========== -->
         <div class="relative">
           <!-- Glow Effect behind card -->
-          <div class="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl blur opacity-30 animate-pulse"></div>
+          <div class="absolute -inset-1 bg-linear-to-r from-sky-500 to-blue-600 rounded-2xl blur-sm opacity-30 animate-pulse"></div>
 
           <div class="relative rounded-2xl bg-[#121620] p-8 md:p-12 shadow-2xl animate-border-gradient text-center">
             <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
@@ -942,10 +942,10 @@
           </div>
 
           <!-- Add-on Card: Mesas -->
-          <a href="/extensoes#mesas" class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-rose-500/30 p-6 md:p-7 transition-all duration-300 block">
+          <a href="/extensoes#mesas" class="group relative rounded-2xl bg-white/4 hover:bg-white/6 border border-white/10 hover:border-rose-500/30 p-6 md:p-7 transition-all duration-300 block">
             <div class="flex items-start justify-between gap-4 mb-5">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-11 h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center flex-shrink-0">
+                <div class="w-11 h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
                   <svg class="w-5 h-5 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
                 </div>
                 <div class="min-w-0">
@@ -953,7 +953,7 @@
                   <p class="text-xs text-slate-400">Bares, hamburguerias, salão</p>
                 </div>
               </div>
-              <div class="text-right flex-shrink-0">
+              <div class="text-right shrink-0">
                 <div class="flex items-baseline gap-0.5 justify-end">
                   <span class="text-xs text-slate-400">+R$</span>
                   <span class="text-2xl font-bold text-white">30</span>
@@ -964,15 +964,15 @@
 
             <ul class="space-y-2 mb-5">
               <li class="flex items-center gap-2.5 text-sm text-slate-300">
-                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] shrink-0">✓</div>
                 <span>Mapa visual com status de mesas</span>
               </li>
               <li class="flex items-center gap-2.5 text-sm text-slate-300">
-                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] shrink-0">✓</div>
                 <span>Comandas e divisão de conta</span>
               </li>
               <li class="flex items-center gap-2.5 text-sm text-slate-300">
-                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] shrink-0">✓</div>
                 <span>Taxa de serviço, couvert, pré-conta</span>
               </li>
             </ul>
@@ -984,10 +984,10 @@
           </a>
 
           <!-- Add-on Card: Pedidos + Cozinha -->
-          <a href="/extensoes#pedidos-cozinha" class="group relative rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] border border-white/10 hover:border-amber-500/30 p-6 md:p-7 transition-all duration-300 block">
+          <a href="/extensoes#pedidos-cozinha" class="group relative rounded-2xl bg-white/4 hover:bg-white/6 border border-white/10 hover:border-amber-500/30 p-6 md:p-7 transition-all duration-300 block">
             <div class="flex items-start justify-between gap-4 mb-5">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
                   <svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 3.75h3m-1.5 0v2.25m-6.75 6h13.5M5.25 12A6.75 6.75 0 0112 5.25 6.75 6.75 0 0118.75 12m-13.5 0v2.25a4.5 4.5 0 004.5 4.5h4.5a4.5 4.5 0 004.5-4.5V12"/></svg>
                 </div>
                 <div class="min-w-0">
@@ -995,7 +995,7 @@
                   <p class="text-xs text-slate-400">Lanchonete com cozinha separada</p>
                 </div>
               </div>
-              <div class="text-right flex-shrink-0">
+              <div class="text-right shrink-0">
                 <div class="flex items-baseline gap-0.5 justify-end">
                   <span class="text-xs text-slate-400">+R$</span>
                   <span class="text-2xl font-bold text-white">30</span>
@@ -1006,15 +1006,15 @@
 
             <ul class="space-y-2 mb-5">
               <li class="flex items-center gap-2.5 text-sm text-slate-300">
-                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] shrink-0">✓</div>
                 <span>Atendente lança pedido pelo celular</span>
               </li>
               <li class="flex items-center gap-2.5 text-sm text-slate-300">
-                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] shrink-0">✓</div>
                 <span>Painel de cozinha em tempo real</span>
               </li>
               <li class="flex items-center gap-2.5 text-sm text-slate-300">
-                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] flex-shrink-0">✓</div>
+                <div class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-white text-[10px] shrink-0">✓</div>
                 <span>Caixa cobra pedidos prontos</span>
               </li>
             </ul>
@@ -1043,7 +1043,7 @@
       </div>
 
       <div class="space-y-4">
-        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-all duration-300">
+        <details class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-all duration-300">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
             <span>Preciso de computador potente?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -1053,7 +1053,7 @@
           </div>
         </details>
 
-        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+        <details class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
             <span>Como funciona os 30 dias grátis?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -1063,7 +1063,7 @@
           </div>
         </details>
 
-        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+        <details class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
             <span>Consigo emitir Nota Fiscal?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -1073,7 +1073,7 @@
           </div>
         </details>
 
-        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+        <details class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
             <span>Se eu tiver dúvidas, tem suporte?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -1083,7 +1083,7 @@
           </div>
         </details>
 
-        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+        <details class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
             <span>Funciona sem internet?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -1093,7 +1093,7 @@
           </div>
         </details>
 
-        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+        <details class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
             <span>Funciona no celular?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -1103,7 +1103,7 @@
           </div>
         </details>
 
-        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+        <details class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
             <span>O que são as extensões (add-ons)?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -1113,7 +1113,7 @@
           </div>
         </details>
 
-        <details class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-colors">
+        <details class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
             <span>Consigo usar em mais de um dispositivo?</span>
             <svg class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -1130,7 +1130,7 @@
 
   <!-- LIGHTBOX MODAL -->
   {#if activeLightboxImage}
-    <div role="dialog" aria-modal="true" aria-label="Visualização da imagem" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#0B0F19]/90 backdrop-blur-sm p-4 cursor-zoom-out animate-fade-in-up" style="animation-duration: 0.2s; opacity: 1;" on:click={() => activeLightboxImage = null}>
+    <div role="dialog" aria-modal="true" aria-label="Visualização da imagem" class="fixed inset-0 z-100 flex items-center justify-center bg-[#0B0F19]/90 backdrop-blur-xs p-4 cursor-zoom-out animate-fade-in-up" style="animation-duration: 0.2s; opacity: 1;" on:click={() => activeLightboxImage = null}>
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <div class="relative max-w-7xl w-full max-h-[90vh] flex items-center justify-center" on:click={(e) => e.stopPropagation()}>
           <button class="absolute -top-12 right-0 md:-right-12 z-50 p-2 text-slate-400 hover:text-white transition-colors cursor-pointer" on:click={() => activeLightboxImage = null}>

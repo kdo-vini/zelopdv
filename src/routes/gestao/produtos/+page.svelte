@@ -709,7 +709,7 @@
       <p class="font-bold text-sm" style="color: #3B1F5E;">Kit de categorias pronto para usar</p>
       <p class="text-xs" style="color: #7E6D8A;">Ovos de Páscoa, Trufas, Cestas, Colomba Pascal, Avulso</p>
     </div>
-    <div class="flex gap-2 flex-shrink-0">
+    <div class="flex gap-2 shrink-0">
       <button on:click={aplicarKitPascoa}
         class="px-4 py-2 rounded-lg text-sm font-bold text-white"
         style="background: linear-gradient(135deg, #9B6EBF, #6B3FA0);">
@@ -751,7 +751,7 @@
           ? 'background: var(--sidebar-item-active-bg); color: var(--sidebar-item-active-text);'
           : ''}
       >
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M4 6h16M4 10h16M4 14h16M4 18h16" />
         </svg>
@@ -985,13 +985,13 @@
           </button>
         {:else}
           <div class="flex items-center gap-1.5 min-w-0">
-            <svg class="w-4 h-4 flex-shrink-0" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="w-4 h-4 shrink-0" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
             </svg>
             <span class="text-sm truncate" style="color: var(--text-label);">
               {indicadorFiltro}
             </span>
-            <span class="badge-count flex-shrink-0" style="background: var(--bg-card); color: var(--text-muted); border-color: var(--border-card);">
+            <span class="badge-count shrink-0" style="background: var(--bg-card); color: var(--text-muted); border-color: var(--border-card);">
               {sortedProdutos.length}
             </span>
           </div>
@@ -1001,7 +1001,7 @@
       <!-- Busca + Filtro -->
       <div class="flex items-center gap-2">
         <div class="search-wrapper" style="border-color: var(--border-subtle); background: var(--bg-input);">
-          <svg class="w-4 h-4 flex-shrink-0" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg class="w-4 h-4 shrink-0" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
           </svg>
           <input

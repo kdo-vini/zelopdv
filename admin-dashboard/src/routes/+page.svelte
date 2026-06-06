@@ -373,7 +373,7 @@
     <button
       on:click={exportDashboardPdf}
       disabled={loading}
-      class="flex items-center gap-2 shrink-0 px-4 h-11 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-xl text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+      class="flex items-center gap-2 shrink-0 px-4 h-11 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-xl text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-emerald-500/40"
       title="Exportar painel financeiro em PDF"
     >
       <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -394,7 +394,7 @@
       
       <!-- MRR Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400/0 via-emerald-500 to-emerald-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-emerald-400/0 via-emerald-500 to-emerald-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-4">
           <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">MRR Real</div>
           <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
@@ -409,7 +409,7 @@
       
       <!-- Active Subs Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-sky-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-400/0 via-sky-500 to-sky-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-sky-400/0 via-sky-500 to-sky-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-4">
           <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">Contas com Acesso</div>
           <div class="p-2 bg-sky-500/10 text-sky-400 rounded-lg">
@@ -422,7 +422,7 @@
       
       <!-- New This Month Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-400/0 via-indigo-500 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-indigo-400/0 via-indigo-500 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-4">
           <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">Novos no Mês</div>
           <div class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
@@ -435,7 +435,7 @@
 
       <!-- Expiring Soon Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-amber-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400/0 via-amber-500 to-amber-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-amber-400/0 via-amber-500 to-amber-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-4">
           <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">Expirando (7 dias)</div>
           <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg">
@@ -448,8 +448,8 @@
 
     </div>
 
-    <section class="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 backdrop-blur-sm overflow-hidden relative" in:fade={{delay: 125}}>
-      <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/50 to-transparent"></div>
+    <section class="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 backdrop-blur-xs overflow-hidden relative" in:fade={{delay: 125}}>
+      <div class="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-sky-400/50 to-transparent"></div>
 
       <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between mb-6">
         <div class="max-w-2xl">
@@ -562,7 +562,7 @@
               bind:value={expenseDraft.label}
               type="text"
               placeholder="Ex.: aluguel, folha, contador"
-              class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-sky-500/60"
+              class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-hidden transition focus:border-sky-500/60"
             />
             <div class="flex gap-3">
               <input
@@ -571,7 +571,7 @@
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-sky-500/60"
+                class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-hidden transition focus:border-sky-500/60"
               />
               <button
                 type="button"
@@ -646,7 +646,7 @@
 
       <!-- DAU Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-sky-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-400/0 via-sky-500 to-sky-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-sky-400/0 via-sky-500 to-sky-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-4">
           <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">DAU (hoje)</div>
           <div class="p-2 bg-sky-500/10 text-sky-400 rounded-lg">
@@ -659,7 +659,7 @@
 
       <!-- WAU Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-400/0 via-indigo-500 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-indigo-400/0 via-indigo-500 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-4">
           <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">WAU (7 dias)</div>
           <div class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
@@ -672,7 +672,7 @@
 
       <!-- AI Cost Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-violet-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-violet-400/0 via-violet-500 to-violet-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-violet-400/0 via-violet-500 to-violet-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-4">
           <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">Custo IA (mês)</div>
           <div class="p-2 bg-violet-500/10 text-violet-400 rounded-lg">
@@ -685,7 +685,7 @@
 
       <!-- Churn Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-rose-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-rose-400/0 via-rose-500 to-rose-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-rose-400/0 via-rose-500 to-rose-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-4">
           <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider">Churn (mês)</div>
           <div class="p-2 bg-rose-500/10 text-rose-400 rounded-lg">
@@ -699,7 +699,7 @@
     </div>
     
     <!-- Quick Actions -->
-    <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-8 backdrop-blur-sm mt-8" in:fade={{delay: 200}}>
+    <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-8 backdrop-blur-xs mt-8" in:fade={{delay: 200}}>
       <h3 class="text-lg font-bold text-white mb-6 tracking-wide">Acesso Rápido</h3>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
         
@@ -730,7 +730,7 @@
     <!-- Alerts -->
     {#if stats.expiringSoon > 0}
       <div class="mt-8 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden" in:fade={{delay: 300}}>
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400/0 via-amber-500 to-amber-400/0"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-amber-400/0 via-amber-500 to-amber-400/0"></div>
         <div class="flex items-start gap-4">
           <div class="p-3 bg-amber-500/20 text-amber-400 rounded-full">
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>

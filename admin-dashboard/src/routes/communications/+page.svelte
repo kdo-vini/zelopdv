@@ -421,8 +421,8 @@
       <div class="text-sm font-medium text-slate-400">Carregando destinatários...</div>
     </div>
   {:else}
-    <div class="grid grid-cols-1 xl:grid-cols-[380px,minmax(0,1fr)] gap-6">
-      <section class="overflow-hidden rounded-2xl border border-slate-800/60 bg-slate-900/40 shadow-xl backdrop-blur-sm" in:fade>
+    <div class="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-6">
+      <section class="overflow-hidden rounded-2xl border border-slate-800/60 bg-slate-900/40 shadow-xl backdrop-blur-xs" in:fade>
         <div class="border-b border-slate-800 p-4 space-y-4">
           <div class="relative">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -433,7 +433,7 @@
               bind:value={searchTerm}
               placeholder="Buscar por nome, email ou WhatsApp..."
               aria-label="Buscar destinatário"
-              class="w-full pl-10 pr-4 py-2.5 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all"
+              class="w-full pl-10 pr-4 py-2.5 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all"
             />
           </div>
 
@@ -534,7 +534,7 @@
         </div>
       </section>
 
-      <section class="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-5 shadow-xl backdrop-blur-sm space-y-5" in:fade>
+      <section class="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-5 shadow-xl backdrop-blur-xs space-y-5" in:fade>
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div class="min-w-0">
             <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-1">
@@ -595,7 +595,7 @@
                 bind:this={emailSubjectRef}
                 bind:value={emailSubject}
                 on:focus={() => (focusedField = 'emailSubject')}
-                class="w-full px-4 py-2.5 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all"
+                class="w-full px-4 py-2.5 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white focus:outline-hidden focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all"
               />
             </div>
 
@@ -607,14 +607,14 @@
                 bind:value={emailBody}
                 rows="12"
                 on:focus={() => (focusedField = 'emailBody')}
-                class="w-full px-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white resize-y focus:outline-none focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all"
+                class="w-full px-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white resize-y focus:outline-hidden focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all"
               ></textarea>
             </div>
 
             <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-2">
               <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Preview</p>
-              <p class="text-sm font-semibold text-slate-100 break-words">{resolvedEmailSubject}</p>
-              <div class="text-sm leading-6 text-slate-300 whitespace-pre-wrap break-words">{resolvedEmailBody}</div>
+              <p class="text-sm font-semibold text-slate-100 wrap-break-word">{resolvedEmailSubject}</p>
+              <div class="text-sm leading-6 text-slate-300 whitespace-pre-wrap wrap-break-word">{resolvedEmailBody}</div>
             </div>
           </div>
         {:else}
@@ -630,12 +630,12 @@
               bind:value={whatsappBody}
               rows="16"
               on:focus={() => (focusedField = 'whatsappBody')}
-              class="w-full px-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white resize-y focus:outline-none focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all"
+              class="w-full px-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white resize-y focus:outline-hidden focus:ring-1 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all"
             ></textarea>
 
             <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-2">
               <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Preview</p>
-              <div class="text-sm leading-6 text-slate-300 whitespace-pre-wrap break-words">{resolvedWhatsappBody}</div>
+              <div class="text-sm leading-6 text-slate-300 whitespace-pre-wrap wrap-break-word">{resolvedWhatsappBody}</div>
             </div>
           </div>
         {/if}

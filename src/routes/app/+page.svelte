@@ -1285,7 +1285,7 @@
       <p class="text-main">Carregando produtos...</p>
     {:else}
       <!-- Header: Título + Busca + Botão Avulso -->
-      <div class="flex-shrink-0 flex flex-col gap-3 mb-4">
+      <div class="shrink-0 flex flex-col gap-3 mb-4">
         <div class="flex flex-col gap-4 border-b border-slate-800/70 pb-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Vendas / Frente de Caixa</p>
@@ -1298,7 +1298,7 @@
             <button
               data-testid="btn-avulso"
               on:click={() => modalValorAberto = true}
-              class="btn-primary h-10 md:h-12 px-3 md:px-4 flex items-center gap-2 whitespace-nowrap shadow-sm rounded-lg"
+              class="btn-primary h-10 md:h-12 px-3 md:px-4 flex items-center gap-2 whitespace-nowrap shadow-xs rounded-lg"
               style="background: var(--accent); color: white;"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
@@ -1312,7 +1312,7 @@
             {#each nomesTabelas as nome, i}
               <button
                 type="button"
-                class="flex-shrink-0 pb-1 text-xs font-semibold whitespace-nowrap transition-colors md:text-sm"
+                class="shrink-0 pb-1 text-xs font-semibold whitespace-nowrap transition-colors md:text-sm"
                 style="
                   color: {tabelaAtiva === i + 1 ? 'var(--primary)' : 'var(--text-muted)'};
                   border-bottom: 1.5px solid {tabelaAtiva === i + 1 ? 'var(--primary)' : 'transparent'};
@@ -1330,7 +1330,7 @@
               type="button"
               role="tab"
               aria-selected={categoriaAtiva === cat.id}
-              class="flex-shrink-0 pb-2 font-semibold text-base transition-colors whitespace-nowrap relative"
+              class="shrink-0 pb-2 font-semibold text-base transition-colors whitespace-nowrap relative"
               style="
                 color: {categoriaAtiva === cat.id ? 'var(--text-main)' : 'var(--text-muted)'};
                 border-bottom: 2px solid {categoriaAtiva === cat.id ? 'var(--primary)' : 'transparent'};
@@ -1348,7 +1348,7 @@
           <div class="flex items-center gap-2 overflow-x-auto py-1 px-1 scrollbar-none">
             <button
               type="button"
-              class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors"
+              class="shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors"
               style="
                 background: {subcategoriaAtiva === null ? 'color-mix(in srgb, var(--primary) 16%, transparent)' : 'var(--bg-panel)'};
                 color: {subcategoriaAtiva === null ? 'var(--primary)' : 'var(--text-muted)'};
@@ -1361,7 +1361,7 @@
             {#each subcatsDaCat as sc (sc.id)}
               <button
                 type="button"
-                class="flex-shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors"
+                class="shrink-0 px-3 py-1.5 rounded-full font-medium text-xs transition-colors"
                 style="
                   background: {subcategoriaAtiva === sc.id ? 'color-mix(in srgb, var(--primary) 16%, transparent)' : 'var(--bg-panel)'};
                   color: {subcategoriaAtiva === sc.id ? 'var(--primary)' : 'var(--text-muted)'};
@@ -1391,7 +1391,7 @@
   <!-- Coluna 3: Comanda (Desktop Sidebar / Mobile Drawer) -->
   <aside data-testid="cart" class="
     fixed inset-0 z-50 md:static md:z-auto
-    bg-slate-900/95 md:bg-slate-900/90 backdrop-blur-md md:backdrop-blur-sm
+    bg-slate-900/95 md:bg-slate-900/90 backdrop-blur-md md:backdrop-blur-xs
     w-full md:w-96 
     flex flex-col 
     transition-transform duration-300 ease-in-out
@@ -1428,14 +1428,14 @@
               <div class="flex items-center gap-1 bg-slate-900/50 p-1 rounded-md border border-slate-700/50">
                 <button 
                   on:click={() => decrementarItem(item.id)}
-                  class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
+                  class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-sm transition-all"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 md:w-3.5 md:h-3.5"><path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 10z" clip-rule="evenodd" /></svg>
                 </button>
                 <span class="w-6 text-center text-sm md:text-xs font-bold text-slate-200">{item.quantidade}</span>
                 <button 
                   on:click={() => incrementarItem(item.id)}
-                  class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center text-slate-400 hover:text-green-400 hover:bg-green-500/10 rounded transition-all"
+                  class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center text-slate-400 hover:text-green-400 hover:bg-green-500/10 rounded-sm transition-all"
                 >
                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 md:w-3.5 md:h-3.5"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
                 </button>
@@ -1472,7 +1472,7 @@
             min="0"
             step="0.01"
             bind:value={taxaEntregaInput}
-            class="flex-1 bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-500"
+            class="flex-1 bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 text-sm text-slate-200 focus:outline-hidden focus:border-sky-500"
             placeholder="0,00"
           />
         </div>
@@ -1528,7 +1528,7 @@
           class="col-span-2 h-12 md:h-10 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-green-900/20 text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
         >
           <span>Receber</span>
-          <span class="bg-black/20 px-2 py-0.5 rounded text-xs">R$ {Number(totalComandaComEntrega).toFixed(2)}</span>
+          <span class="bg-black/20 px-2 py-0.5 rounded-sm text-xs">R$ {Number(totalComandaComEntrega).toFixed(2)}</span>
         </button>
       </div>
     </div>

@@ -185,7 +185,7 @@
                 <div class="text-xs" style="color: var(--text-muted);">CNPJ: {maskCNPJ(emp.cnpj)}</div>
               {/if}
             </div>
-            <div class="text-xs rounded px-2 py-1 border" style="background: var(--bg-panel); border-color: var(--border-subtle); color: var(--text-label);">Minha função: {minhaMembership.get(emp.id)}</div>
+            <div class="text-xs rounded-sm px-2 py-1 border" style="background: var(--bg-panel); border-color: var(--border-subtle); color: var(--text-label);">Minha função: {minhaMembership.get(emp.id)}</div>
           </div>
           <div class="p-4 border-t" style="border-color: var(--border-subtle);">
             <h3 class="font-semibold mb-2">Membros</h3>

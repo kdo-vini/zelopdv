@@ -122,7 +122,7 @@
     </section>
 
     <section class="article-body-wrap">
-      <div class="max-w-[46rem] mx-auto px-6">
+      <div class="max-w-184 mx-auto px-6">
         <article class="article-card">
           <div class="article-content">
             {@html post.content}

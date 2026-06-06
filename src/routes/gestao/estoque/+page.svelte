@@ -280,14 +280,14 @@
 <p class="mb-3" style="color: var(--text-muted);">Produtos com estoque individual aparecem agrupados por categoria. Clique na categoria para expandir e editar cada produto separadamente.</p>
 
 {#if toast}
-  <div class="fixed top-4 right-4 bg-emerald-600 text-white px-3 py-2 rounded shadow">
+  <div class="fixed top-4 right-4 bg-emerald-600 text-white px-3 py-2 rounded-sm shadow-sm">
     {toast}
   </div>
 {/if}
 
 <div class="flex flex-col gap-2 mb-4">
   <div class="flex flex-wrap items-center gap-2">
-    <select class="rounded-md px-3 py-2 min-w-[12rem]" style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
+    <select class="rounded-md px-3 py-2 min-w-48" style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
       bind:value={idCategoria}
       on:change={async () => { idCategoria = idCategoria ? Number(idCategoria) : null; idSubcategoria = null; await carregarSubcategorias(); await carregar(); }}>
       <option value={null}>Todas as categorias</option>
@@ -295,7 +295,7 @@
         <option value={c.id}>{c.nome}</option>
       {/each}
     </select>
-    <select class="rounded-md px-3 py-2 min-w-[12rem] disabled:opacity-50" style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
+    <select class="rounded-md px-3 py-2 min-w-48 disabled:opacity-50" style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
       bind:value={idSubcategoria}
       disabled={!idCategoria}
       on:change={async () => { idSubcategoria = idSubcategoria ? Number(idSubcategoria) : null; await carregar(); }}>

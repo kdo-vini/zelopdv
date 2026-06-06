@@ -34,7 +34,7 @@
 
 {#if $isOpen}
   <div
-    class="md:hidden fixed inset-0 z-[89] bg-black/50"
+    class="md:hidden fixed inset-0 z-89 bg-black/50"
     role="presentation"
     on:click={closeAssistant}
     aria-hidden="true"

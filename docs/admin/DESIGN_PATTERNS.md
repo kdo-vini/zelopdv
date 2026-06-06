@@ -57,6 +57,26 @@ Padrões já aplicados em `admin-dashboard/src/routes/users/+page.svelte`:
 - botão destrutivo mais contido;
 - header checkbox sincronizada com seleção total/parcial.
 
+## 8. Tailwind v4
+
+O admin migrou de Tailwind v3 → v4 junto com o app principal.
+
+- `@import 'tailwindcss'` substitui as diretivas `@tailwind base/components/utilities`
+- `postcss.config.js` usa `@tailwindcss/postcss` (não mais `tailwindcss: {}`)
+- `tailwind.config.js` foi removido; configuração vive em `src/app.css`
+- `@apply` em `<style>` de componente precisa de `@reference "tailwindcss";` na primeira linha
+
+## 9. shadcn-svelte no admin
+
+O admin roda Svelte 4, que **não é compatível** com `shadcn-svelte@latest` (requer Svelte 5).
+
+Estratégia atual:
+- O admin usa os padrões visuais do ZeloPDV (checkboxes, botões, tabelas) documentados nas seções acima.
+- Componentes auxiliares como `cn()` podem ser copiados/importados do app principal quando necessário.
+- Quando o admin for migrado para Svelte 5, instalar `shadcn-svelte@latest` e adotar os padrões da seção 11 do [DESIGN_PATTERNS.md principal](../DESIGN_PATTERNS.md).
+
+**Não instalar** `shadcn-svelte@0.x` (Svelte 4 legacy) — o admin não tem volume de telas que justifique a dívida de migração posterior.
+
 ## 7. Comunicação
 
 - A aba `/communications` deve seguir o mesmo princípio operacional do resto do admin: lista de destinatários à esquerda e composer à direita, sem cards de instrução.

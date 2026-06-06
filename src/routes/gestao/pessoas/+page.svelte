@@ -209,13 +209,15 @@
 </div>
 
 <style>
+  @reference "tailwindcss";
+
   .field-label {
     @apply block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-1.5;
   }
   .field-input {
     @apply block w-full px-3 py-2 rounded-lg border bg-slate-900/60 text-slate-100 text-sm
            border-slate-600/60 placeholder-slate-600
-           focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500
+           focus:outline-hidden focus:ring-1 focus:ring-sky-500 focus:border-sky-500
            transition-colors;
   }
   select.field-input {

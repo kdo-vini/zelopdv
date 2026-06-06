@@ -71,7 +71,7 @@
         <select
           bind:value={limit}
           on:change={loadLogs}
-          class="appearance-none pl-4 pr-10 py-2.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-sm font-medium text-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all shadow-inner"
+          class="appearance-none pl-4 pr-10 py-2.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-sm font-medium text-slate-300 focus:outline-hidden focus:ring-1 focus:ring-emerald-500/50 transition-all shadow-inner"
         >
           <option value={50}>50 Recentes</option>
           <option value={100}>100 Recentes</option>
@@ -84,7 +84,7 @@
       
       <button
         on:click={loadLogs}
-        class="flex items-center justify-center w-11 h-11 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
+        class="flex items-center justify-center w-11 h-11 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white transition-all shadow-xs focus:outline-hidden focus:ring-2 focus:ring-slate-700"
         title="Atualizar Logs"
       >
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -112,7 +112,7 @@
     </div>
   {:else}
     <!-- Desktop Table View -->
-    <div class="hidden md:block overflow-hidden bg-slate-900/40 border border-slate-800/60 rounded-2xl shadow-xl backdrop-blur-sm" in:fade>
+    <div class="hidden md:block overflow-hidden bg-slate-900/40 border border-slate-800/60 rounded-2xl shadow-xl backdrop-blur-xs" in:fade>
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="border-b border-slate-800 bg-slate-900/80">
@@ -133,7 +133,7 @@
                 {log.admin_email}
               </td>
               <td class="py-4 px-6">
-                <span class="inline-flex px-2 py-1 text-[11px] font-bold tracking-wide uppercase rounded border {getActionBadgeStyle(log.action)}">
+                <span class="inline-flex px-2 py-1 text-[11px] font-bold tracking-wide uppercase rounded-sm border {getActionBadgeStyle(log.action)}">
                   {getActionLabel(log.action)}
                 </span>
               </td>
@@ -142,8 +142,8 @@
               </td>
               <td class="py-4 px-6 text-[13px] text-slate-400">
                 {#if log.details && Object.keys(log.details).length > 0}
-                  <details class="group/details cursor-pointer outline-none">
-                    <summary class="text-sky-500 hover:text-sky-400 font-medium select-none outline-none list-none flex items-center gap-1">
+                  <details class="group/details cursor-pointer outline-hidden">
+                    <summary class="text-sky-500 hover:text-sky-400 font-medium select-none outline-hidden list-none flex items-center gap-1">
                       <svg class="h-4 w-4 transition-transform group-open/details:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                       Raw Dump
                     </summary>
@@ -166,7 +166,7 @@
       {#each logs as log (log.id)}
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
           <div class="flex justify-between items-start mb-3 border-b border-slate-800 pb-3">
-            <span class="inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border {getActionBadgeStyle(log.action)}">
+            <span class="inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-sm border {getActionBadgeStyle(log.action)}">
               {getActionLabel(log.action)}
             </span>
             <span class="text-xs text-slate-500">{formatDate(log.created_at)}</span>
@@ -184,7 +184,7 @@
             {#if log.details && Object.keys(log.details).length > 0}
               <div class="pt-2">
                 <details class="group/details">
-                  <summary class="text-sky-500 text-xs font-semibold cursor-pointer outline-none">Payload</summary>
+                  <summary class="text-sky-500 text-xs font-semibold cursor-pointer outline-hidden">Payload</summary>
                   <pre class="mt-2 text-[10px] bg-slate-950/50 p-2 rounded-lg text-slate-400 overflow-x-auto border border-slate-800">{JSON.stringify(log.details, null, 2)}</pre>
                 </details>
               </div>

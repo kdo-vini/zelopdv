@@ -151,7 +151,7 @@
                 maxlength="6"
                 inputmode="numeric"
                 pattern="[0-9]*"
-                class="w-full text-center text-3xl tracking-[0.5em] font-mono p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all shadow-sm placeholder:text-slate-400 placeholder:tracking-normal placeholder:text-lg"
+                class="w-full text-center text-3xl tracking-[0.5em] font-mono p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-hidden transition-all shadow-xs placeholder:text-slate-400 placeholder:tracking-normal placeholder:text-lg"
                 class:border-red-500={errorShake}
                 bind:value={inputPin}
                 on:input={(e) => {
@@ -225,7 +225,7 @@
                     }}
                 />
                 {#if showBubbleNew}
-                     <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded shadow-xl whitespace-nowrap z-50 animate-bounce">
+                     <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-sm shadow-xl whitespace-nowrap z-50 animate-bounce">
                         Números apenas!
                         <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-amber-500"></div>
                      </div>

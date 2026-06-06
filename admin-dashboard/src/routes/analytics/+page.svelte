@@ -438,7 +438,7 @@
     <button
       on:click={exportAnalyticsPdf}
       disabled={loading}
-      class="flex items-center gap-2 shrink-0 px-4 h-11 bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 hover:border-indigo-500/50 rounded-xl text-indigo-300 hover:text-indigo-200 font-medium text-sm transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+      class="flex items-center gap-2 shrink-0 px-4 h-11 bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 hover:border-indigo-500/50 rounded-xl text-indigo-300 hover:text-indigo-200 font-medium text-sm transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-indigo-500/40"
       title="Exportar relatório de analytics em PDF"
     >
       <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -459,7 +459,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" in:fade={{delay: 100}}>
 
       <!-- Engagement Chart -->
-      <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 backdrop-blur-sm">
+      <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 backdrop-blur-xs">
         <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Engajamento — DAU / WAU / MAU (90 dias)</h3>
         <div class="h-64 relative">
           <canvas bind:this={engagementCanvas}></canvas>
@@ -467,7 +467,7 @@
       </div>
 
       <!-- Revenue Chart -->
-      <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 backdrop-blur-sm">
+      <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 backdrop-blur-xs">
         <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Receita Mensal — MRR (6 meses)</h3>
         <div class="h-64 relative">
           <canvas bind:this={revenueCanvas}></canvas>
@@ -477,7 +477,7 @@
     </div>
 
     <!-- Funnel -->
-    <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 backdrop-blur-sm" in:fade={{delay: 150}}>
+    <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 backdrop-blur-xs" in:fade={{delay: 150}}>
       <h3 class="text-sm font-semibold text-slate-300 mb-6 uppercase tracking-wider">Funil Trial → Ativo</h3>
       <div class="space-y-4">
         {#each [
@@ -500,7 +500,7 @@
     </div>
 
     <!-- Churn Risk Table -->
-    <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden backdrop-blur-sm" in:fade={{delay: 200}}>
+    <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden backdrop-blur-xs" in:fade={{delay: 200}}>
       <div class="px-6 py-5 border-b border-slate-800">
         <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Tabela de Risco de Churn</h3>
         <p class="text-xs text-slate-500 mt-1">Ordenado por score de risco (maior primeiro)</p>
@@ -532,7 +532,7 @@
                   <span class="text-sm font-bold text-white">{user.score === 100 ? '—' : user.score}</span>
                 </td>
                 <td class="py-3 px-6">
-                  <span class="inline-flex px-2 py-0.5 text-[10px] font-semibold rounded {badge.cls}">{badge.label}</span>
+                  <span class="inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-sm {badge.cls}">{badge.label}</span>
                 </td>
                 <td class="py-3 px-6">
                   <a href="/users" class="text-xs text-sky-400 hover:text-sky-300 transition-colors">Ver usuário →</a>

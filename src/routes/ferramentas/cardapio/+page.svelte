@@ -653,7 +653,7 @@
 </svelte:head>
 
 <!-- ────────────────────────────────────────────────────────────────────── -->
-<div class="max-w-screen-xl mx-auto">
+<div class="max-w-(--breakpoint-xl) mx-auto">
 
   <!-- Header -->
   <div class="mb-6">
@@ -672,7 +672,7 @@
   <div class="flex flex-col xl:flex-row gap-6 items-start">
 
     <!-- ═══════════════════════════════ EDITOR ═══════════════════════════ -->
-    <div class="w-full xl:w-[420px] flex-shrink-0 space-y-4">
+    <div class="w-full xl:w-[420px] shrink-0 space-y-4">
 
       <!-- Mode toggle -->
       <div class="flex rounded-xl p-1 gap-1" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
@@ -708,7 +708,7 @@
             type="text"
             bind:value={cardTitle}
             placeholder="Ex: Cardápio da Semana"
-            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden"
             style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
           />
         </div>
@@ -722,7 +722,7 @@
             type="text"
             bind:value={cardSubtitle}
             placeholder="Ex: Sábado, 19 de Abril"
-            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden"
             style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
           />
         </div>
@@ -736,7 +736,7 @@
             type="text"
             bind:value={cardFooter}
             placeholder="Ex: Promoções válidas até domingo"
-            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden"
             style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
           />
         </div>
@@ -744,12 +744,12 @@
         <!-- 2-column layout toggle -->
         <label class="flex items-center gap-3 cursor-pointer py-1 select-none">
           <div
-            class="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
+            class="relative w-9 h-5 rounded-full transition-colors shrink-0"
             style="background: {twoColumn ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {twoColumn ? 'var(--primary)' : 'var(--border-subtle)'};"
           >
             <input type="checkbox" bind:checked={twoColumn} class="sr-only" />
             <span
-              class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+              class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform"
               style="transform: translateX({twoColumn ? '16px' : '0px'});"
             ></span>
           </div>
@@ -819,10 +819,10 @@
           <div class="flex items-center justify-between gap-3 py-1">
             <div class="flex items-center gap-2 min-w-0">
               {#if perfilLogoBase64}
-                <img src={perfilLogoBase64} alt="Logo" class="w-10 h-10 object-contain rounded-lg flex-shrink-0"
+                <img src={perfilLogoBase64} alt="Logo" class="w-10 h-10 object-contain rounded-lg shrink-0"
                   style="background: var(--bg-input); border: 1px solid var(--border-subtle);" />
               {:else}
-                <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center"
+                <div class="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center"
                   style="background: var(--bg-input); border: 1px solid var(--border-subtle);">
                   <span class="text-xs" style="color: var(--text-muted);">—</span>
                 </div>
@@ -836,12 +836,12 @@
                 {/if}
               </div>
             </div>
-            <label class="flex items-center gap-2 cursor-pointer select-none flex-shrink-0">
+            <label class="flex items-center gap-2 cursor-pointer select-none shrink-0">
               <span class="text-xs" style="color: var(--text-muted);">Exibir</span>
               <div class="relative w-8 h-4 rounded-full transition-colors"
                 style="background: {showLogo ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showLogo ? 'var(--primary)' : 'var(--border-subtle)'};">
                 <input type="checkbox" bind:checked={showLogo} class="sr-only" />
-                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
+                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform"
                   style="transform: translateX({showLogo ? '14px' : '0px'});"></span>
               </div>
             </label>
@@ -856,12 +856,12 @@
                 {#if !perfil.nome_exibicao}<a href="/perfil" style="color: var(--primary);">Adicionar →</a>{/if}
               </p>
             </div>
-            <label class="flex items-center gap-2 cursor-pointer select-none flex-shrink-0">
+            <label class="flex items-center gap-2 cursor-pointer select-none shrink-0">
               <span class="text-xs" style="color: var(--text-muted);">Exibir</span>
               <div class="relative w-8 h-4 rounded-full transition-colors"
                 style="background: {showStoreName ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showStoreName ? 'var(--primary)' : 'var(--border-subtle)'};">
                 <input type="checkbox" bind:checked={showStoreName} class="sr-only" />
-                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
+                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform"
                   style="transform: translateX({showStoreName ? '14px' : '0px'});"></span>
               </div>
             </label>
@@ -876,12 +876,12 @@
                 {#if !perfil.contato}<a href="/perfil" style="color: var(--primary);">Adicionar →</a>{/if}
               </p>
             </div>
-            <label class="flex items-center gap-2 cursor-pointer select-none flex-shrink-0">
+            <label class="flex items-center gap-2 cursor-pointer select-none shrink-0">
               <span class="text-xs" style="color: var(--text-muted);">Exibir</span>
               <div class="relative w-8 h-4 rounded-full transition-colors"
                 style="background: {showPhone ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showPhone ? 'var(--primary)' : 'var(--border-subtle)'};">
                 <input type="checkbox" bind:checked={showPhone} class="sr-only" />
-                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
+                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform"
                   style="transform: translateX({showPhone ? '14px' : '0px'});"></span>
               </div>
             </label>
@@ -896,12 +896,12 @@
                 {#if !perfil.endereco}<a href="/perfil" style="color: var(--primary);">Adicionar →</a>{/if}
               </p>
             </div>
-            <label class="flex items-center gap-2 cursor-pointer select-none flex-shrink-0">
+            <label class="flex items-center gap-2 cursor-pointer select-none shrink-0">
               <span class="text-xs" style="color: var(--text-muted);">Exibir</span>
               <div class="relative w-8 h-4 rounded-full transition-colors"
                 style="background: {showAddress ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showAddress ? 'var(--primary)' : 'var(--border-subtle)'};">
                 <input type="checkbox" bind:checked={showAddress} class="sr-only" />
-                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
+                <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform"
                   style="transform: translateX({showAddress ? '14px' : '0px'});"></span>
               </div>
             </label>
@@ -919,15 +919,15 @@
             <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
           </label>
           <input type="text" bind:value={cardInstagram} placeholder="@seulanche"
-            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none mb-2"
+            class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden mb-2"
             style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" />
 
           <!-- WhatsApp hint toggle -->
           <label class="flex items-center gap-3 cursor-pointer py-1 select-none">
-            <div class="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
+            <div class="relative w-9 h-5 rounded-full transition-colors shrink-0"
               style="background: {showQRHint ? 'var(--primary)' : 'var(--bg-input)'}; border: 1px solid {showQRHint ? 'var(--primary)' : 'var(--border-subtle)'};">
               <input type="checkbox" bind:checked={showQRHint} class="sr-only" />
-              <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+              <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform"
                 style="transform: translateX({showQRHint ? '16px' : '0px'});"></span>
             </div>
             <span class="text-xs font-medium" style="color: var(--text-label);">Mostrar "Peça pelo WhatsApp"</span>
@@ -945,7 +945,7 @@
                 type="text"
                 bind:value={productSearch}
                 placeholder="Buscar produto..."
-                class="flex-1 min-w-0 max-w-[200px] px-2.5 py-1 rounded-lg text-xs focus:outline-none"
+                class="flex-1 min-w-0 max-w-[200px] px-2.5 py-1 rounded-lg text-xs focus:outline-hidden"
                 style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
               />
             {/if}
@@ -984,10 +984,10 @@
                         type="checkbox"
                         checked={selectedCatIds.has(cat.id)}
                         on:change={() => toggleCat(cat.id)}
-                        class="themed-checkbox flex-shrink-0"
+                        class="themed-checkbox shrink-0"
                       />
                       <span class="text-sm font-semibold" style="color: var(--text-main);">{cat.nome}</span>
-                      <span class="text-xs px-1.5 py-0.5 rounded" style="background: var(--bg-input); color: var(--text-muted);">{catProds.length}</span>
+                      <span class="text-xs px-1.5 py-0.5 rounded-sm" style="background: var(--bg-input); color: var(--text-muted);">{catProds.length}</span>
                     </label>
 
                     {#if selectedCatIds.has(cat.id)}
@@ -1000,14 +1000,14 @@
                               <button
                                 on:click={() => destaqueId = destaqueId === prod.id ? null : prod.id}
                                 title={destaqueId === prod.id ? 'Remover destaque' : 'Marcar como Destaque do Dia'}
-                                class="flex-shrink-0 text-base leading-none p-0.5 transition-colors"
+                                class="shrink-0 text-base leading-none p-0.5 transition-colors"
                                 style="color: {destaqueId === prod.id ? '#f59e0b' : 'var(--text-muted)'}; background: none; border: none; cursor: pointer;"
                               >★</button>
                               <!-- Badge toggles -->
                               <button
                                 on:click={() => itemBadges = { ...itemBadges, [prod.id]: itemBadges[prod.id] === 'novo' ? null : 'novo' }}
                                 title="Marcar como Novo"
-                                class="flex-shrink-0 font-bold transition-all"
+                                class="shrink-0 font-bold transition-all"
                                 style="
                                   background: {itemBadges[prod.id] === 'novo' ? '#3b82f6' : 'var(--bg-input)'};
                                   color: {itemBadges[prod.id] === 'novo' ? '#fff' : 'var(--text-muted)'};
@@ -1017,7 +1017,7 @@
                               <button
                                 on:click={() => itemBadges = { ...itemBadges, [prod.id]: itemBadges[prod.id] === 'promo' ? null : 'promo' }}
                                 title="Marcar como Em Promoção"
-                                class="flex-shrink-0 font-bold transition-all"
+                                class="shrink-0 font-bold transition-all"
                                 style="
                                   background: {itemBadges[prod.id] === 'promo' ? '#ef4444' : 'var(--bg-input)'};
                                   color: {itemBadges[prod.id] === 'promo' ? '#fff' : 'var(--text-muted)'};
@@ -1028,7 +1028,7 @@
                                 type="text"
                                 value={getOv(prod.id, 'price', Number(prod.preco).toFixed(2).replace('.', ','))}
                                 on:input={e => setOv(prod.id, 'price', e.target.value)}
-                                class="w-24 px-2 py-1 rounded-lg text-xs text-right focus:outline-none"
+                                class="w-24 px-2 py-1 rounded-lg text-xs text-right focus:outline-hidden"
                                 style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
                                 placeholder="0,00"
                               />
@@ -1037,7 +1037,7 @@
                               type="text"
                               value={getOv(prod.id, 'description', '')}
                               on:input={e => setOv(prod.id, 'description', e.target.value)}
-                              class="w-full px-2 py-1 rounded-lg text-xs focus:outline-none"
+                              class="w-full px-2 py-1 rounded-lg text-xs focus:outline-hidden"
                               style="background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-subtle);"
                               placeholder="Descreva seu produto (Opcional)"
                             />
@@ -1069,7 +1069,7 @@
                   type="text"
                   value={section.name}
                   on:input={e => updateSection(section.id, 'name', e.target.value)}
-                  class="flex-1 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-none"
+                  class="flex-1 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-hidden"
                   style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
                   placeholder="Nome da seção"
                 />
@@ -1077,7 +1077,7 @@
                   <button
                     on:click={() => moveSection(section.id, -1)}
                     disabled={sIdx === 0}
-                    class="p-2 rounded-lg flex-shrink-0 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    class="p-2 rounded-lg shrink-0 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     style="color: var(--text-muted);"
                     title="Mover seção para cima"
                   >
@@ -1088,7 +1088,7 @@
                   <button
                     on:click={() => moveSection(section.id, 1)}
                     disabled={sIdx === sections.length - 1}
-                    class="p-2 rounded-lg flex-shrink-0 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    class="p-2 rounded-lg shrink-0 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     style="color: var(--text-muted);"
                     title="Mover seção para baixo"
                   >
@@ -1098,7 +1098,7 @@
                   </button>
                   <button
                     on:click={() => removeSection(section.id)}
-                    class="p-2 rounded-lg flex-shrink-0 transition-colors"
+                    class="p-2 rounded-lg shrink-0 transition-colors"
                     style="color: var(--error);"
                     title="Remover seção"
                     on:mouseenter={e => e.currentTarget.style.background = 'var(--error-bg)'}
@@ -1118,7 +1118,7 @@
                     <button
                       on:click={() => moveItem(section.id, item.id, -1)}
                       disabled={iIdx === 0}
-                      class="p-0.5 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                      class="p-0.5 rounded-sm transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
                       style="color: var(--text-muted);"
                       title="Mover item para cima"
                     >
@@ -1129,7 +1129,7 @@
                     <button
                       on:click={() => moveItem(section.id, item.id, 1)}
                       disabled={iIdx === section.items.length - 1}
-                      class="p-0.5 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                      class="p-0.5 rounded-sm transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
                       style="color: var(--text-muted);"
                       title="Mover item para baixo"
                     >
@@ -1144,14 +1144,14 @@
                       <button
                         on:click={() => updateItem(section.id, item.id, 'isDestaque', !item.isDestaque)}
                         title={item.isDestaque ? 'Remover destaque' : 'Marcar como Destaque do Dia'}
-                        class="flex-shrink-0 text-base leading-none p-0.5 transition-colors"
+                        class="shrink-0 text-base leading-none p-0.5 transition-colors"
                         style="color: {item.isDestaque ? '#f59e0b' : 'var(--text-muted)'}; background: none; border: none; cursor: pointer;"
                       >★</button>
                       <!-- Badge toggles for "do zero" items -->
                       <button
                         on:click={() => updateItem(section.id, item.id, 'badge', item.badge === 'novo' ? null : 'novo')}
                         title="Marcar como Novo"
-                        class="flex-shrink-0 font-bold transition-all"
+                        class="shrink-0 font-bold transition-all"
                         style="
                           background: {item.badge === 'novo' ? '#3b82f6' : 'var(--bg-input)'};
                           color: {item.badge === 'novo' ? '#fff' : 'var(--text-muted)'};
@@ -1161,7 +1161,7 @@
                       <button
                         on:click={() => updateItem(section.id, item.id, 'badge', item.badge === 'promo' ? null : 'promo')}
                         title="Marcar como Em Promoção"
-                        class="flex-shrink-0 font-bold transition-all"
+                        class="shrink-0 font-bold transition-all"
                         style="
                           background: {item.badge === 'promo' ? '#ef4444' : 'var(--bg-input)'};
                           color: {item.badge === 'promo' ? '#fff' : 'var(--text-muted)'};
@@ -1172,7 +1172,7 @@
                         type="text"
                         value={item.name}
                         on:input={e => updateItem(section.id, item.id, 'name', e.target.value)}
-                        class="flex-1 px-2.5 py-1.5 rounded-lg text-sm focus:outline-none"
+                        class="flex-1 px-2.5 py-1.5 rounded-lg text-sm focus:outline-hidden"
                         style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
                         placeholder="Nome do item"
                       />
@@ -1182,7 +1182,7 @@
                         type="text"
                         value={item.price}
                         on:input={e => updateItem(section.id, item.id, 'price', e.target.value)}
-                        class="w-28 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none"
+                        class="w-28 px-2.5 py-1.5 rounded-lg text-xs focus:outline-hidden"
                         style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
                         placeholder="R$ 0,00"
                       />
@@ -1190,7 +1190,7 @@
                         type="text"
                         value={item.description}
                         on:input={e => updateItem(section.id, item.id, 'description', e.target.value)}
-                        class="flex-1 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none"
+                        class="flex-1 px-2.5 py-1.5 rounded-lg text-xs focus:outline-hidden"
                         style="background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-subtle);"
                         placeholder="Descrição (opcional)"
                       />
@@ -1198,7 +1198,7 @@
                   </div>
                   <button
                     on:click={() => removeItem(section.id, item.id)}
-                    class="mt-2 p-1.5 rounded-lg transition-colors flex-shrink-0"
+                    class="mt-2 p-1.5 rounded-lg transition-colors shrink-0"
                     style="color: var(--text-muted);"
                     title="Remover item"
                     on:mouseenter={e => e.currentTarget.style.color = 'var(--error)'}

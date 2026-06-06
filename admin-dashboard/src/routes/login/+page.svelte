@@ -73,7 +73,7 @@
     <!-- Login Card -->
     <div class="relative bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-8 overflow-hidden">
       <!-- Glow Line -->
-      <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-sky-500/50 to-transparent"></div>
+      <div class="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-sky-500/50 to-transparent"></div>
       
       <h2 class="text-xl font-bold text-white mb-2 tracking-wide">Painel Administrativo</h2>
       <p class="text-sm text-slate-400 mb-8">Insira suas credenciais de segurança.</p>
@@ -98,7 +98,7 @@
               bind:value={email}
               required
               disabled={loading}
-              class="w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-inner disabled:opacity-50"
+              class="w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-hidden focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-inner disabled:opacity-50"
               placeholder="admin@zelopdv.com.br"
             />
           </div>
@@ -116,7 +116,7 @@
               bind:value={password}
               required
               disabled={loading}
-              class="w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-inner disabled:opacity-50"
+              class="w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-hidden focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-inner disabled:opacity-50"
               placeholder="••••••••"
             />
           </div>

@@ -15,7 +15,7 @@
   <!-- Backdrop -->
   <div
     transition:fade={{ duration: 200 }}
-    class="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+    class="fixed inset-0 z-110 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
   >
     <!-- Modal -->
     <div
@@ -33,7 +33,7 @@
           Cancelar
         </button>
         <button
-          class="px-4 py-2 rounded-md text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 transition-colors shadow-sm"
+          class="px-4 py-2 rounded-md text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 transition-colors shadow-xs"
           on:click={handleConfirm}
         >
           Confirmar

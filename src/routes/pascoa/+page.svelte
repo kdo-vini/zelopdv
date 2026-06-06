@@ -71,7 +71,7 @@
 
   <!-- ==================== URGENCY BANNER ==================== -->
   {#if daysUntilEaster > 0}
-  <div class="fixed top-0 w-full z-[60] bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 py-2.5 px-4 text-center text-xs md:text-sm font-black text-white tracking-wide shadow-[0_2px_20px_rgba(236,72,153,0.5)] flex items-center justify-center gap-3">
+  <div class="fixed top-0 w-full z-60 bg-linear-to-r from-amber-500 via-pink-500 to-purple-600 py-2.5 px-4 text-center text-xs md:text-sm font-black text-white tracking-wide shadow-[0_2px_20px_rgba(236,72,153,0.5)] flex items-center justify-center gap-3">
     <span class="text-base">🐣</span>
     <span>PÁSCOA EM <span class="underline underline-offset-2">{daysUntilEaster} {daysUntilEaster === 1 ? 'DIA' : 'DIAS'}</span> — Configure agora e venda no fim de semana</span>
     <a href="/cadastro" class="hidden sm:inline-flex items-center gap-1 bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-full text-xs font-extrabold">
@@ -81,7 +81,7 @@
   {/if}
 
   <!-- ==================== NAVIGATION ==================== -->
-  <nav class="fixed {daysUntilEaster > 0 ? 'top-10' : 'top-0'} w-full z-50 transition-all duration-500 {scrollY > 20 ? 'border-b border-white/[0.04] bg-[#06040A]/70 backdrop-blur-2xl py-2' : 'bg-transparent py-4'}">
+  <nav class="fixed {daysUntilEaster > 0 ? 'top-10' : 'top-0'} w-full z-50 transition-all duration-500 {scrollY > 20 ? 'border-b border-white/4 bg-[#06040A]/70 backdrop-blur-2xl py-2' : 'bg-transparent py-4'}">
     <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
       
       <!-- Brand -->
@@ -94,15 +94,15 @@
       <div class="hidden md:flex items-center gap-10 text-sm font-bold text-slate-300 tracking-wide">
         <a href="#como-funciona" class="hover:text-amber-400 transition-colors relative group">
           Como funciona
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-400 to-pink-500 transition-all group-hover:w-full"></span>
+          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-linear-to-r from-amber-400 to-pink-500 transition-all group-hover:w-full"></span>
         </a>
         <a href="#ferramentas" class="hover:text-amber-400 transition-colors relative group">
           Tudo o que você precisa
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-400 to-pink-500 transition-all group-hover:w-full"></span>
+          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-linear-to-r from-amber-400 to-pink-500 transition-all group-hover:w-full"></span>
         </a>
         <a href="#preco" class="hover:text-amber-400 transition-colors relative group">
           Preço
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-400 to-pink-500 transition-all group-hover:w-full"></span>
+          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-linear-to-r from-amber-400 to-pink-500 transition-all group-hover:w-full"></span>
         </a>
       </div>
 
@@ -112,33 +112,33 @@
           Site Oficial
         </a>
         <a href="/cadastro" class="hidden md:flex relative group px-7 py-2.5 rounded-full overflow-hidden shadow-[0_0_20px_rgba(236,72,153,0.3)] hover:shadow-[0_0_40px_rgba(236,72,153,0.5)] transition-all duration-300 transform hover:-translate-y-0.5">
-          <div class="absolute inset-0 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
+          <div class="absolute inset-0 bg-linear-to-r from-amber-400 via-pink-500 to-purple-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
           <div class="absolute inset-[1.5px] bg-[#06040A] rounded-full transition-colors duration-300 group-hover:bg-opacity-0"></div>
-          <span class="relative text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-100 to-white group-hover:text-white transition-colors duration-300">Testar Grátis</span>
+          <span class="relative text-sm font-extrabold text-transparent bg-clip-text bg-linear-to-r from-amber-100 to-white group-hover:text-white transition-colors duration-300">Testar Grátis</span>
         </a>
 
         <!-- Mobile Menu Toggle -->
         <button
-          class="md:hidden relative z-50 flex flex-col justify-center items-center w-10 h-10 rounded-full bg-white/[0.05] border border-white/[0.1] text-white focus:outline-none backdrop-blur-md"
+          class="md:hidden relative z-50 flex flex-col justify-center items-center w-10 h-10 rounded-full bg-white/5 border border-white/10 text-white focus:outline-hidden backdrop-blur-md"
           on:click={() => showMobileMenu = !showMobileMenu}
         >
-          <span class="bg-white block transition-all duration-300 ease-out h-[2px] w-5 rounded-sm {showMobileMenu ? 'rotate-45 translate-y-[6px]' : '-translate-y-1'}"></span>
-          <span class="bg-white block transition-all duration-300 ease-out h-[2px] w-5 rounded-sm my-0.5 {showMobileMenu ? 'opacity-0' : 'opacity-100'}"></span>
-          <span class="bg-white block transition-all duration-300 ease-out h-[2px] w-5 rounded-sm {showMobileMenu ? '-rotate-45 -translate-y-[6px]' : 'translate-y-1'}"></span>
+          <span class="bg-white block transition-all duration-300 ease-out h-[2px] w-5 rounded-xs {showMobileMenu ? 'rotate-45 translate-y-[6px]' : '-translate-y-1'}"></span>
+          <span class="bg-white block transition-all duration-300 ease-out h-[2px] w-5 rounded-xs my-0.5 {showMobileMenu ? 'opacity-0' : 'opacity-100'}"></span>
+          <span class="bg-white block transition-all duration-300 ease-out h-[2px] w-5 rounded-xs {showMobileMenu ? '-rotate-45 translate-y-[-6px]' : 'translate-y-1'}"></span>
         </button>
       </div>
     </div>
 
     <!-- Mobile Menu Overlay -->
     {#if showMobileMenu}
-      <div class="md:hidden absolute top-0 left-0 w-full h-screen bg-[#06040A]/95 backdrop-blur-3xl border-b border-white/[0.05] flex flex-col items-center justify-center gap-8 animate-fade-in z-40">
+      <div class="md:hidden absolute top-0 left-0 w-full h-screen bg-[#06040A]/95 backdrop-blur-3xl border-b border-white/5 flex flex-col items-center justify-center gap-8 animate-fade-in z-40">
         <a href="#como-funciona" class="text-2xl font-black text-white hover:text-amber-400 transition-colors" on:click={() => showMobileMenu = false}>Como funciona</a>
         <a href="#ferramentas" class="text-2xl font-black text-white hover:text-amber-400 transition-colors" on:click={() => showMobileMenu = false}>Ferramentas</a>
         <a href="#preco" class="text-2xl font-black text-white hover:text-amber-400 transition-colors" on:click={() => showMobileMenu = false}>Preço</a>
         <a href="/" class="text-lg font-bold text-slate-500 hover:text-white transition-colors" on:click={() => showMobileMenu = false}>Voltar ao site principal</a>
         
         <a href="/cadastro" class="mt-8 relative group px-10 py-4 rounded-full overflow-hidden shadow-[0_0_30px_rgba(236,72,153,0.4)]" on:click={() => showMobileMenu = false}>
-          <div class="absolute inset-0 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600"></div>
+          <div class="absolute inset-0 bg-linear-to-r from-amber-400 via-pink-500 to-purple-600"></div>
           <span class="relative text-lg font-extrabold text-white">Criar Conta Grátis</span>
         </a>
       </div>
@@ -148,9 +148,9 @@
   <!-- ==================== HERO SECTION ==================== -->
   <section class="relative min-h-[90vh] flex items-center pt-28 pb-32 overflow-hidden z-10">
     <!-- Abstract Easter Shapes -->
-    <div class="absolute top-[20%] right-[10%] w-[120px] h-[160px] abstract-egg bg-gradient-to-br from-amber-300 to-pink-500 blur-[2px] opacity-80 animate-float-slow shadow-[0_0_80px_rgba(251,191,36,0.3)] hidden lg:block" style="border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;"></div>
-    <div class="absolute bottom-[10%] left-[5%] w-[80px] h-[110px] abstract-egg bg-gradient-to-br from-purple-400 to-indigo-600 blur-[1px] opacity-70 animate-float-fast shadow-[0_0_60px_rgba(168,85,247,0.3)] hidden lg:block" style="border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; animation-delay: 1.5s;"></div>
-    <div class="absolute top-[40%] left-[45%] w-[40px] h-[50px] abstract-egg bg-gradient-to-br from-pink-400 to-rose-600 blur-[3px] opacity-50 animate-float-slow hidden md:block" style="border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; animation-delay: 0.5s;"></div>
+    <div class="absolute top-[20%] right-[10%] w-[120px] h-[160px] abstract-egg bg-linear-to-br from-amber-300 to-pink-500 blur-[2px] opacity-80 animate-float-slow shadow-[0_0_80px_rgba(251,191,36,0.3)] hidden lg:block" style="border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;"></div>
+    <div class="absolute bottom-[10%] left-[5%] w-[80px] h-[110px] abstract-egg bg-linear-to-br from-purple-400 to-indigo-600 blur-[1px] opacity-70 animate-float-fast shadow-[0_0_60px_rgba(168,85,247,0.3)] hidden lg:block" style="border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; animation-delay: 1.5s;"></div>
+    <div class="absolute top-[40%] left-[45%] w-[40px] h-[50px] abstract-egg bg-linear-to-br from-pink-400 to-rose-600 blur-[3px] opacity-50 animate-float-slow hidden md:block" style="border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; animation-delay: 0.5s;"></div>
 
     <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center w-full relative z-20">
       
@@ -158,7 +158,7 @@
       <div class="text-left relative z-20">
         <h1 class="text-5xl md:text-7xl font-black text-white tracking-tighter leading-[1.05] mb-6 drop-shadow-2xl animate-fade-in-up delay-100">
           Venda seus ovos de Páscoa <br class="hidden md:block"/> com <br class="block md:hidden"/>
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-500 animate-gradient-slow drop-shadow-[0_0_30px_rgba(236,72,153,0.3)]">controle total do caixa.</span>
+          <span class="text-transparent bg-clip-text bg-linear-to-r from-amber-300 via-pink-400 to-purple-500 animate-gradient-slow drop-shadow-[0_0_30px_rgba(236,72,153,0.3)]">controle total do caixa.</span>
         </h1>
 
         <p class="text-lg md:text-xl text-slate-400 font-medium max-w-lg mb-10 leading-relaxed animate-fade-in-up delay-200">
@@ -166,12 +166,12 @@
         </p>
 
         <div class="flex flex-col sm:flex-row items-center gap-5 animate-fade-in-up delay-300">
-          <a href="/cadastro" class="w-full sm:w-auto px-8 py-4.5 text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-2xl font-extrabold shadow-[0_0_40px_rgba(219,39,119,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_60px_rgba(219,39,119,0.5)] flex items-center justify-center gap-3 group relative overflow-hidden">
-            <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] skew-x-[-20deg] group-hover:animate-shine"></span>
+          <a href="/cadastro" class="w-full sm:w-auto px-8 py-4.5 text-white bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-2xl font-extrabold shadow-[0_0_40px_rgba(219,39,119,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_60px_rgba(219,39,119,0.5)] flex items-center justify-center gap-3 group relative overflow-hidden">
+            <span class="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/20 to-transparent translate-x-[-150%] skew-x-[-20deg] group-hover:animate-shine"></span>
             Começar Grátis — 30 Dias
             <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
           </a>
-          <a href="#como-funciona" class="w-full sm:w-auto px-8 py-4 text-slate-300 hover:text-white bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] rounded-2xl font-bold backdrop-blur-xl transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-1">
+          <a href="#como-funciona" class="w-full sm:w-auto px-8 py-4 text-slate-300 hover:text-white bg-white/3 hover:bg-white/8 border border-white/8 rounded-2xl font-bold backdrop-blur-xl transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-1">
             Ver como funciona
           </a>
         </div>
@@ -181,11 +181,11 @@
       <!-- Visuals -->
       <div class="relative w-full h-[500px] perspective-[2000px] hidden lg:block animate-fade-in-up delay-300">
         
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-gradient-to-tr from-purple-600/30 to-amber-500/20 blur-[80px] rounded-full z-0"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-linear-to-tr from-purple-600/30 to-amber-500/20 blur-[80px] rounded-full z-0"></div>
 
         <!-- Dashboard Card 1 (Back) -->
-        <div class="absolute top-[40%] left-[60%] -translate-x-1/2 -translate-y-1/2 w-[550px] h-[320px] bg-[#100B1A]/40 backdrop-blur-md border border-white/[0.04] rounded-3xl shadow-[0_30px_100px_rgba(0,0,0,0.9)] transform rotate-y-[-20deg] rotate-x-[15deg] translate-z-[-100px] overflow-hidden z-10">
-          <div class="h-10 border-b border-white/[0.03] flex items-center px-4 gap-2 bg-black/40">
+        <div class="absolute top-[40%] left-[60%] -translate-x-1/2 -translate-y-1/2 w-[550px] h-[320px] bg-[#100B1A]/40 backdrop-blur-md border border-white/4 rounded-3xl shadow-[0_30px_100px_rgba(0,0,0,0.9)] transform rotate-y-[-20deg] rotate-x-15 translate-z-[-100px] overflow-hidden z-10">
+          <div class="h-10 border-b border-white/3 flex items-center px-4 gap-2 bg-black/40">
             <div class="w-2.5 h-2.5 rounded-full bg-white/10"></div>
             <div class="w-2.5 h-2.5 rounded-full bg-white/10"></div>
           </div>
@@ -193,11 +193,11 @@
         </div>
 
         <!-- Dashboard Card 2 (Front) -->
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#100B1A]/80 backdrop-blur-2xl border border-white/[0.1] rounded-3xl shadow-[0_50px_150px_rgba(0,0,0,0.9)] transform rotate-y-[-15deg] rotate-x-[10deg] transition-all duration-700 hover:rotate-y-[-5deg] hover:rotate-x-[5deg] hover:scale-[1.05] overflow-hidden group z-20 cursor-crosshair">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#100B1A]/80 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_50px_150px_rgba(0,0,0,0.9)] transform rotate-y-[-15deg] rotate-x-10 transition-all duration-700 hover:rotate-y-[-5deg] hover:rotate-x-[5deg] hover:scale-[1.05] overflow-hidden group z-20 cursor-crosshair">
           
-          <div class="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.02] to-white/[0.05] pointer-events-none"></div>
+          <div class="absolute inset-0 bg-linear-to-tr from-transparent via-white/2 to-white/5 pointer-events-none"></div>
           
-          <div class="h-12 border-b border-white/[0.05] flex items-center justify-between px-5 bg-black/30 backdrop-blur-md text-[10px] font-mono text-slate-400">
+          <div class="h-12 border-b border-white/5 flex items-center justify-between px-5 bg-black/30 backdrop-blur-md text-[10px] font-mono text-slate-400">
             FRENTE DE CAIXA • ZELO PDV
             <div class="flex gap-2">
               <div class="w-2 h-2 rounded-full bg-amber-500"></div>
@@ -228,17 +228,17 @@
     <div class="max-w-7xl mx-auto px-6">
       
       <div class="text-center mb-24 relative">
-        <h2 class="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-500 mb-6 tracking-tighter">Chega de se perder no caderno.</h2>
+        <h2 class="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-linear-to-br from-white via-slate-200 to-slate-500 mb-6 tracking-tighter">Chega de se perder no caderno.</h2>
         <p class="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto font-medium leading-relaxed">Desenvolvido para ajudar quem vende muito na Páscoa e não tem tempo para aplicativos complicados. O Zelo PDV faz o trabalho duro por você.</p>
-        <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 w-48 h-1 rounded-full bg-gradient-to-r from-transparent via-pink-500 to-transparent blur-[2px]"></div>
+        <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 w-48 h-1 rounded-full bg-linear-to-r from-transparent via-pink-500 to-transparent blur-[2px]"></div>
       </div>
 
       <div class="grid md:grid-cols-3 gap-8">
         
         <!-- Feature Card 1 -->
-        <div class="group relative rounded-3xl bg-[#181326]/50 backdrop-blur-xl border border-white/[0.03] p-10 overflow-hidden hover:border-amber-500/40 transition-all duration-700 hover:-translate-y-2 box-hover-glow">
+        <div class="group relative rounded-3xl bg-[#181326]/50 backdrop-blur-xl border border-white/3 p-10 overflow-hidden hover:border-amber-500/40 transition-all duration-700 hover:-translate-y-2 box-hover-glow">
           <div class="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 blur-[60px] group-hover:bg-amber-500/30 transition-all duration-700 ease-in-out"></div>
-          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-700 flex items-center justify-center shadow-[0_10px_30px_rgba(251,191,36,0.3)] mb-8 transform group-hover:scale-110 transition-transform duration-500">
+          <div class="w-16 h-16 rounded-2xl bg-linear-to-br from-amber-400 to-amber-700 flex items-center justify-center shadow-[0_10px_30px_rgba(251,191,36,0.3)] mb-8 transform group-hover:scale-110 transition-transform duration-500">
              <svg class="w-8 h-8 text-[#0F0A1B]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           </div>
           <h3 class="text-2xl font-black text-white mb-4 tracking-tight">Venda Rápida</h3>
@@ -246,9 +246,9 @@
         </div>
 
         <!-- Feature Card 2 -->
-        <div class="group relative rounded-3xl bg-[#181326]/50 backdrop-blur-xl border border-white/[0.03] p-10 overflow-hidden hover:border-pink-500/40 transition-all duration-700 hover:-translate-y-2 box-hover-glow mt-0 md:mt-12">
+        <div class="group relative rounded-3xl bg-[#181326]/50 backdrop-blur-xl border border-white/3 p-10 overflow-hidden hover:border-pink-500/40 transition-all duration-700 hover:-translate-y-2 box-hover-glow mt-0 md:mt-12">
           <div class="absolute top-0 right-0 w-40 h-40 bg-pink-500/10 blur-[60px] group-hover:bg-pink-500/30 transition-all duration-700 ease-in-out"></div>
-          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-700 flex items-center justify-center shadow-[0_10px_30px_rgba(236,72,153,0.3)] mb-8 transform group-hover:scale-110 transition-transform duration-500">
+          <div class="w-16 h-16 rounded-2xl bg-linear-to-br from-pink-400 to-rose-700 flex items-center justify-center shadow-[0_10px_30px_rgba(236,72,153,0.3)] mb-8 transform group-hover:scale-110 transition-transform duration-500">
              <svg class="w-8 h-8 text-[#0F0A1B]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           </div>
           <h3 class="text-2xl font-black text-white mb-4 tracking-tight">Lucro na mão</h3>
@@ -256,9 +256,9 @@
         </div>
 
         <!-- Feature Card 3 -->
-        <div class="group relative rounded-3xl bg-[#181326]/50 backdrop-blur-xl border border-white/[0.03] p-10 overflow-hidden hover:border-purple-500/40 transition-all duration-700 hover:-translate-y-2 box-hover-glow mt-0 md:mt-24">
+        <div class="group relative rounded-3xl bg-[#181326]/50 backdrop-blur-xl border border-white/3 p-10 overflow-hidden hover:border-purple-500/40 transition-all duration-700 hover:-translate-y-2 box-hover-glow mt-0 md:mt-24">
           <div class="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 blur-[60px] group-hover:bg-purple-500/30 transition-all duration-700 ease-in-out"></div>
-          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-400 to-indigo-700 flex items-center justify-center shadow-[0_10px_30px_rgba(168,85,247,0.3)] mb-8 transform group-hover:scale-110 transition-transform duration-500">
+          <div class="w-16 h-16 rounded-2xl bg-linear-to-br from-purple-400 to-indigo-700 flex items-center justify-center shadow-[0_10px_30px_rgba(168,85,247,0.3)] mb-8 transform group-hover:scale-110 transition-transform duration-500">
              <svg class="w-8 h-8 text-[#0F0A1B]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
           <h3 class="text-2xl font-black text-white mb-4 tracking-tight">Adeus Fiado</h3>
@@ -270,12 +270,12 @@
   </section>
 
   <!-- ==================== FEATURES 2 ==================== -->
-  <section id="ferramentas" class="py-32 bg-[#0F0A1B] relative border-t border-white/[0.02]">
+  <section id="ferramentas" class="py-32 bg-[#0F0A1B] relative border-t border-white/2">
     <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-20 items-center">
       
       <div class="relative group perspective-[1000px] order-2 md:order-1">
-        <div class="absolute inset-0 bg-gradient-to-tr from-pink-500/20 to-purple-600/20 blur-[80px] rounded-full z-0 transition-opacity duration-700 group-hover:opacity-100 opacity-60"></div>
-        <div class="relative bg-[#06040A] rounded-3xl border border-white/[0.05] p-2 shadow-2xl z-10 transform rotate-y-[5deg] rotate-x-[5deg] group-hover:rotate-y-0 group-hover:rotate-x-0 transition-all duration-700">
+        <div class="absolute inset-0 bg-linear-to-tr from-pink-500/20 to-purple-600/20 blur-[80px] rounded-full z-0 transition-opacity duration-700 group-hover:opacity-100 opacity-60"></div>
+        <div class="relative bg-[#06040A] rounded-3xl border border-white/5 p-2 shadow-2xl z-10 transform rotate-y-[5deg] rotate-x-[5deg] group-hover:rotate-y-0 group-hover:rotate-x-0 transition-all duration-700">
            <img src="/images/screenshots/customers-screen.png" alt="Gestão de Clientes" class="w-full h-auto rounded-2xl opacity-80 group-hover:opacity-100 transition-opacity" />
            <div class="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10 pointer-events-none"></div>
         </div>
@@ -283,7 +283,7 @@
 
       <div class="order-1 md:order-2">
         <div class="inline-flex py-1 px-3 rounded-full border border-pink-500/20 bg-pink-500/10 text-pink-400 text-xs font-bold tracking-widest uppercase mb-6">Funciona no Celular e no PC</div>
-        <h2 class="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight leading-tight">Venda de qualquer lugar.<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-500">Mesmo sem internet.</span></h2>
+        <h2 class="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight leading-tight">Venda de qualquer lugar.<br/><span class="text-transparent bg-clip-text bg-linear-to-r from-pink-400 to-purple-500">Mesmo sem internet.</span></h2>
         <p class="text-lg text-slate-400 font-medium mb-4 leading-relaxed">
           O Zelo funciona como um <strong class="text-white">aplicativo instalado no celular</strong>, sem precisar de loja de apps. É só abrir o site, clicar em "Instalar" e o ícone aparece na sua tela inicial — igual a um app normal.
         </p>
@@ -293,7 +293,7 @@
 
         <ul class="space-y-5">
           <li class="flex items-start gap-4">
-             <div class="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-pink-500/20">
+             <div class="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center shrink-0 mt-0.5 border border-pink-500/20">
                <svg class="w-4 h-4 text-pink-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
              </div>
              <div>
@@ -302,7 +302,7 @@
              </div>
           </li>
           <li class="flex items-start gap-4">
-             <div class="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-pink-500/20">
+             <div class="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center shrink-0 mt-0.5 border border-pink-500/20">
                <svg class="w-4 h-4 text-pink-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
              </div>
              <div>
@@ -317,7 +317,7 @@
   </section>
 
   <!-- ==================== TESTIMONIALS ==================== -->
-  <section class="py-24 bg-[#0F0A1B] relative border-t border-white/[0.02]">
+  <section class="py-24 bg-[#0F0A1B] relative border-t border-white/2">
     <div class="max-w-7xl mx-auto px-6">
 
       <div class="text-center mb-16">
@@ -329,15 +329,15 @@
       <div class="grid md:grid-cols-3 gap-6">
 
         <!-- Testimonial 1 -->
-        <div class="relative rounded-3xl bg-[#181326]/60 border border-white/[0.04] hover:border-amber-500/20 transition-all duration-500 p-8 flex flex-col gap-5">
+        <div class="relative rounded-3xl bg-[#181326]/60 border border-white/4 hover:border-amber-500/20 transition-all duration-500 p-8 flex flex-col gap-5">
           <div class="flex gap-1">
             {#each [1,2,3,4,5] as _}
             <svg class="w-4 h-4 text-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
             {/each}
           </div>
           <p class="text-slate-300 leading-relaxed font-medium flex-1">"Na Páscoa do ano passado eu vendia anotando tudo no caderno e errei várias contas. Esse ano usei o Zelo PDV e fechei o caixa sem errar um centavo. Vendi mais de 180 ovos e soube exatamente quanto lucrei."</p>
-          <div class="flex items-center gap-3 pt-4 border-t border-white/[0.04]">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0">G</div>
+          <div class="flex items-center gap-3 pt-4 border-t border-white/4">
+            <div class="w-10 h-10 rounded-full bg-linear-to-br from-amber-400 to-pink-500 flex items-center justify-center text-white font-black text-sm shrink-0">G</div>
             <div>
               <p class="text-white font-bold text-sm">Gabriela D.</p>
               <p class="text-slate-500 text-xs">Doceira artesanal • São Paulo, SP</p>
@@ -346,15 +346,15 @@
         </div>
 
         <!-- Testimonial 2 -->
-        <div class="relative rounded-3xl bg-[#181326]/60 border border-white/[0.04] hover:border-pink-500/20 transition-all duration-500 p-8 flex flex-col gap-5 md:mt-6">
+        <div class="relative rounded-3xl bg-[#181326]/60 border border-white/4 hover:border-pink-500/20 transition-all duration-500 p-8 flex flex-col gap-5 md:mt-6">
           <div class="flex gap-1">
             {#each [1,2,3,4,5] as _}
             <svg class="w-4 h-4 text-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
             {/each}
           </div>
           <p class="text-slate-300 leading-relaxed font-medium flex-1">"Eu tenho fiado com algumas clientes e sempre me perdia. No Zelinho eu registro a venda no nome da pessoa e sei exatamente quem me deve. Recuperei dinheiro que não sabia que tinha a receber!"</p>
-          <div class="flex items-center gap-3 pt-4 border-t border-white/[0.04]">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0">T</div>
+          <div class="flex items-center gap-3 pt-4 border-t border-white/4">
+            <div class="w-10 h-10 rounded-full bg-linear-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-black text-sm shrink-0">T</div>
             <div>
               <p class="text-white font-bold text-sm">Tatiane R.</p>
               <p class="text-slate-500 text-xs">Confeiteira MEI • Campinas, SP</p>
@@ -363,15 +363,15 @@
         </div>
 
         <!-- Testimonial 3 -->
-        <div class="relative rounded-3xl bg-[#181326]/60 border border-white/[0.04] hover:border-purple-500/20 transition-all duration-500 p-8 flex flex-col gap-5 md:mt-12">
+        <div class="relative rounded-3xl bg-[#181326]/60 border border-white/4 hover:border-purple-500/20 transition-all duration-500 p-8 flex flex-col gap-5 md:mt-12">
           <div class="flex gap-1">
             {#each [1,2,3,4,5] as _}
             <svg class="w-4 h-4 text-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
             {/each}
           </div>
           <p class="text-slate-300 leading-relaxed font-medium flex-1">"Instalei no celular como aplicativo, sem precisar da loja. Fica igualzinho a um app. Uso em feiras e eventos sem depender do WiFi — quando a internet cai, continuo vendendo normalmente."</p>
-          <div class="flex items-center gap-3 pt-4 border-t border-white/[0.04]">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0">M</div>
+          <div class="flex items-center gap-3 pt-4 border-t border-white/4">
+            <div class="w-10 h-10 rounded-full bg-linear-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white font-black text-sm shrink-0">M</div>
             <div>
               <p class="text-white font-bold text-sm">Mariana S.</p>
               <p class="text-slate-500 text-xs">Revendedora de doces • Ribeirão Preto, SP</p>
@@ -395,12 +395,12 @@
     <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
       
       <div class="text-left">
-        <h2 class="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter leading-tight">Tudo o que você precisa<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-pink-500 drop-shadow-[0_0_20px_rgba(251,191,36,0.2)]">por um preço justo.</span></h2>
+        <h2 class="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter leading-tight">Tudo o que você precisa<br/><span class="text-transparent bg-clip-text bg-linear-to-r from-amber-400 to-pink-500 drop-shadow-[0_0_20px_rgba(251,191,36,0.2)]">por um preço justo.</span></h2>
         <p class="text-xl text-slate-400 mb-10 font-medium leading-relaxed max-w-md">Menos que o lucro de um único ovo de Páscoa para ter o controle total da sua empresa.</p>
         
         <div class="hidden lg:flex flex-col gap-5">
           <div class="flex items-center gap-4">
-            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(251,191,36,0.4)]">
+            <div class="w-7 h-7 rounded-full bg-linear-to-br from-amber-400 to-pink-500 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(251,191,36,0.4)]">
               <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </div>
             <div>
@@ -409,7 +409,7 @@
             </div>
           </div>
           <div class="flex items-center gap-4">
-            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(236,72,153,0.4)]">
+            <div class="w-7 h-7 rounded-full bg-linear-to-br from-pink-500 to-purple-600 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(236,72,153,0.4)]">
               <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </div>
             <div>
@@ -418,7 +418,7 @@
             </div>
           </div>
           <div class="flex items-center gap-4">
-            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(168,85,247,0.4)]">
+            <div class="w-7 h-7 rounded-full bg-linear-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(168,85,247,0.4)]">
               <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </div>
             <div>
@@ -431,12 +431,12 @@
 
       <!-- Pricing Card -->
       <div class="relative group max-w-md mx-auto w-full perspective-[1000px]">
-        <div class="absolute -inset-1.5 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 rounded-[2.5rem] blur-[20px] opacity-70 group-hover:opacity-100 transition-opacity duration-1000 animate-pulse-slow"></div>
+        <div class="absolute -inset-1.5 bg-linear-to-r from-amber-400 via-pink-500 to-purple-600 rounded-[2.5rem] blur-[20px] opacity-70 group-hover:opacity-100 transition-opacity duration-1000 animate-pulse-slow"></div>
 
-        <div class="relative bg-gradient-to-b from-[#221840] to-[#160F2E] backdrop-blur-3xl border border-white/[0.18] rounded-[2.5rem] p-10 md:p-12 shadow-[0_30px_80px_rgba(0,0,0,0.8)] transform rotate-x-[2deg] rotate-y-[-2deg] transition-transform duration-700 group-hover:rotate-0">
+        <div class="relative bg-linear-to-b from-[#221840] to-[#160F2E] backdrop-blur-3xl border border-white/18 rounded-[2.5rem] p-10 md:p-12 shadow-[0_30px_80px_rgba(0,0,0,0.8)] transform rotate-x-2 -rotate-y-2 transition-transform duration-700 group-hover:rotate-0">
           
           <div class="absolute top-0 right-10 -translate-y-1/2">
-             <div class="bg-gradient-to-r from-amber-400 to-amber-600 text-[#06040A] font-black tracking-widest uppercase text-xs px-5 py-2 rounded-full shadow-[0_10px_20px_rgba(251,191,36,0.4)]">
+             <div class="bg-linear-to-r from-amber-400 to-amber-600 text-[#06040A] font-black tracking-widest uppercase text-xs px-5 py-2 rounded-full shadow-[0_10px_20px_rgba(251,191,36,0.4)]">
                30 DIAS GRÁTIS
              </div>
           </div>
@@ -460,7 +460,7 @@
               'Ajuda pelo WhatsApp'
             ] as feature}
             <div class="flex items-center gap-4">
-              <div class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(236,72,153,0.4)]">
+              <div class="w-6 h-6 rounded-full bg-linear-to-br from-amber-400 to-pink-500 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(236,72,153,0.4)]">
                 <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
               </div>
               <span class="text-slate-200 font-medium text-sm md:text-base leading-tight">{feature}</span>
@@ -468,8 +468,8 @@
             {/each}
           </div>
 
-          <a href="/cadastro" class="block w-full text-center py-5 text-xl font-black text-white bg-gradient-to-r from-amber-500 to-pink-600 rounded-2xl shadow-[0_10px_40px_rgba(236,72,153,0.4)] transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] hover:shadow-[0_15px_50px_rgba(236,72,153,0.6)] relative overflow-hidden group/btn">
-            <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-[150%] skew-x-[-20deg] group-hover/btn:animate-shine"></span>
+          <a href="/cadastro" class="block w-full text-center py-5 text-xl font-black text-white bg-linear-to-r from-amber-500 to-pink-600 rounded-2xl shadow-[0_10px_40px_rgba(236,72,153,0.4)] transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] hover:shadow-[0_15px_50px_rgba(236,72,153,0.6)] relative overflow-hidden group/btn">
+            <span class="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/30 to-transparent translate-x-[-150%] skew-x-[-20deg] group-hover/btn:animate-shine"></span>
             Testar 30 dias grátis
           </a>
           <p class="text-xs text-slate-500 text-center mt-5 font-medium uppercase tracking-widest">Cancele quando quiser</p>
@@ -480,7 +480,7 @@
   </section>
 
   <!-- ==================== FOOTER ==================== -->
-  <footer class="py-14 border-t border-white/[0.04] bg-[#030206] relative z-20">
+  <footer class="py-14 border-t border-white/4 bg-[#030206] relative z-20">
     <div class="max-w-7xl mx-auto px-6">
       <div class="flex flex-col items-center gap-10">
 
@@ -522,9 +522,9 @@
     target="_blank"
     rel="noopener noreferrer"
     aria-label="Falar no WhatsApp"
-    class="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-[#111111] border border-white/10 hover:border-[#25D366]/50 text-white font-bold text-sm px-5 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-500 hover:scale-105 active:scale-95 group overflow-hidden"
+    class="fixed bottom-8 right-8 z-100 flex items-center gap-3 bg-[#111111] border border-white/10 hover:border-[#25D366]/50 text-white font-bold text-sm px-5 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-500 hover:scale-105 active:scale-95 group overflow-hidden"
   >
-    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-[#25D366]/10 to-transparent -translate-x-[150%] skew-x-[-20deg] group-hover:animate-shine"></div>
+    <div class="absolute inset-0 bg-linear-to-r from-transparent via-[#25D366]/10 to-transparent translate-x-[-150%] skew-x-[-20deg] group-hover:animate-shine"></div>
     <div class="relative z-10 w-6 h-6 rounded-full bg-[#25D366] flex items-center justify-center shadow-[0_0_15px_rgba(37,211,102,0.6)]">
       <svg class="w-3.5 h-3.5 text-black" viewBox="0 0 24 24" fill="currentColor">
         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>

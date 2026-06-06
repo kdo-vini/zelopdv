@@ -317,7 +317,7 @@
 
   const navLinkBase = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150";
   const navLinkInactive = "text-muted hover:bg-black/5 dark:hover:bg-white/10";
-  const navLinkActive = "font-semibold text-[var(--accent)] bg-[var(--accent-light)]";
+  const navLinkActive = "font-semibold text-(--accent) bg-(--accent-light)";
 
   let isOnline = true;
   onMount(() => {
@@ -415,7 +415,7 @@
 {/if}
 
 {#if !isOnline}
-  <div class="text-center text-sm py-1 font-medium z-[60] relative" style="background: var(--error); color: var(--primary-text);">
+  <div class="text-center text-sm py-1 font-medium z-60 relative" style="background: var(--error); color: var(--primary-text);">
     Você está offline. Verifique sua conexão.
   </div>
 {/if}
@@ -443,7 +443,7 @@
 
 
   {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isVsPlanilhaPage && !isReferralPage && !isAuthPage && !hasSidebarLayout}
-  <header class="border-b bg-header-base backdrop-blur sticky top-0 z-50 transition-colors duration-500">
+  <header class="border-b bg-header-base backdrop-blur-sm sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
        <div class="flex items-center gap-4">
@@ -453,14 +453,14 @@
           
           <!-- Botao de Natal desativado pois o natal ja passou -->
           <!-- 
-          <button on:click={toggleChristmas} class="p-1 rounded-full hover:bg-[var(--sidebar-item-hover-bg)] transition-colors group relative" title="Modo Natal">
+          <button on:click={toggleChristmas} class="p-1 rounded-full hover:bg-(--sidebar-item-hover-bg) transition-colors group relative" title="Modo Natal">
             <span class="text-xl filter grayscale group-hover:grayscale-0 transition-all duration-300" style="filter: {isChristmasMode ? 'none' : 'grayscale(100%)'}">🎄</span>
           </button>
           -->
 
           <!-- Botao de Ano Novo desativado pois o ano novo ja passou -->
           <!--
-          <button on:click={toggleNewYear} class="p-1 rounded-full hover:bg-[var(--sidebar-item-hover-bg)] transition-colors group relative" title="Modo Ano Novo">
+          <button on:click={toggleNewYear} class="p-1 rounded-full hover:bg-(--sidebar-item-hover-bg) transition-colors group relative" title="Modo Ano Novo">
             <span class="text-xl filter grayscale group-hover:grayscale-0 transition-all duration-300" style="filter: {isNewYearMode ? 'none' : 'grayscale(100%)'}">🥂</span>
           </button>
           -->
@@ -486,12 +486,12 @@
             
             {#if activeMenu === 'gestao'}
               <div role="menu" tabindex="-1" 
-                   class="absolute left-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-[var(--bg-panel)] border-[var(--border-subtle)]"
+                   class="absolute left-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-(--bg-panel) border-(--border-subtle)"
                    on:mouseenter={cancelCloseMenu} on:mouseleave={scheduleCloseMenu}>
-                <a href="/gestao" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Dashboard</a>
-                <a href="/gestao/pessoas" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Pessoas</a>
-                <a href="/gestao/produtos" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Produtos</a>
-                <a href="/gestao/estoque" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Estoque</a>
+                <a href="/gestao" class="block px-4 py-2 text-sm text-(--text-main) hover:bg-(--sidebar-item-hover-bg)">Dashboard</a>
+                <a href="/gestao/pessoas" class="block px-4 py-2 text-sm text-(--text-main) hover:bg-(--sidebar-item-hover-bg)">Pessoas</a>
+                <a href="/gestao/produtos" class="block px-4 py-2 text-sm text-(--text-main) hover:bg-(--sidebar-item-hover-bg)">Produtos</a>
+                <a href="/gestao/estoque" class="block px-4 py-2 text-sm text-(--text-main) hover:bg-(--sidebar-item-hover-bg)">Estoque</a>
               </div>
             {/if}
           </div>
@@ -507,11 +507,11 @@
             
             {#if activeMenu === 'financeiro'}
               <div role="menu" tabindex="-1" 
-                   class="absolute left-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-[var(--bg-panel)] border-[var(--border-subtle)]"
+                   class="absolute left-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-(--bg-panel) border-(--border-subtle)"
                    on:mouseenter={cancelCloseMenu} on:mouseleave={scheduleCloseMenu}>
-                <a href="/gestao/caixa" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Fechar Caixa</a>
-                <a href="/gestao/fichario" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Fichário (Fiado)</a>
-                <a href="/gestao/despesas" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Despesas</a>
+                <a href="/gestao/caixa" class="block px-4 py-2 text-sm text-(--text-main) hover:bg-(--sidebar-item-hover-bg)">Fechar Caixa</a>
+                <a href="/gestao/fichario" class="block px-4 py-2 text-sm text-(--text-main) hover:bg-(--sidebar-item-hover-bg)">Fichário (Fiado)</a>
+                <a href="/gestao/despesas" class="block px-4 py-2 text-sm text-(--text-main) hover:bg-(--sidebar-item-hover-bg)">Despesas</a>
               </div>
             {/if}
           </div>
@@ -521,7 +521,7 @@
             Relatórios
           </a>
 
-          <div class="mx-2 h-6 w-px bg-[var(--border-subtle)]"></div>
+          <div class="mx-2 h-6 w-px bg-(--border-subtle)"></div>
 
           <!-- Suporte -->
           <a href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)." 
@@ -544,7 +544,7 @@
                on:mouseenter={() => openMenu('user')} on:mouseleave={scheduleCloseMenu}>
              <button class="{navLinkBase} {isPerfil ? navLinkActive : navLinkInactive} flex items-center gap-2"
                  aria-haspopup="true" aria-expanded={activeMenu === 'user'} on:click={() => activeMenu = activeMenu === 'user' ? null : 'user'}>
-               <span class="w-8 h-8 rounded-full bg-[var(--accent-light)] flex items-center justify-center text-[var(--accent)] font-bold text-xs ring-2 ring-transparent group-hover:ring-[var(--accent)] transition-all">
+               <span class="w-8 h-8 rounded-full bg-(--accent-light) flex items-center justify-center text-(--accent) font-bold text-xs ring-2 ring-transparent group-hover:ring-(--accent) transition-all">
                  {(companyName || session.user.email)[0].toUpperCase()}
                </span>
                <span class="max-w-[150px] truncate hidden xl:inline font-semibold">
@@ -554,28 +554,28 @@
 
              {#if activeMenu === 'user'}
               <div role="menu" tabindex="-1" 
-                   class="absolute right-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-[var(--bg-panel)] border-[var(--border-subtle)]"
+                   class="absolute right-0 mt-1 w-48 rounded-md shadow-lg py-1 z-50 border bg-(--bg-panel) border-(--border-subtle)"
                    on:mouseenter={cancelCloseMenu} on:mouseleave={scheduleCloseMenu}>
-                <div class="px-4 py-2 text-xs text-[var(--text-muted)] border-b border-[var(--border-subtle)] mb-1">
+                <div class="px-4 py-2 text-xs text-(--text-muted) border-b border-(--border-subtle) mb-1">
                   {session.user.email}
                 </div>
                 <!-- Exibir Nome da Empresa no menu também -->
                 {#if companyName}
-                  <div class="px-4 py-1 text-xs font-bold text-[var(--text-main)]">
+                  <div class="px-4 py-1 text-xs font-bold text-(--text-main)">
                     {companyName}
                   </div>
                 {/if}
-                <a href="/perfil" class="block px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--sidebar-item-hover-bg)]">Meu Perfil</a>
+                <a href="/perfil" class="block px-4 py-2 text-sm text-(--text-main) hover:bg-(--sidebar-item-hover-bg)">Meu Perfil</a>
                 <button on:click={logout} class="w-full text-left block px-4 py-2 text-sm" style="color: var(--error);" on:mouseenter={e => e.currentTarget.style.background = 'var(--error-bg)'} on:mouseleave={e => e.currentTarget.style.background = ''}>Sair</button>
               </div>
             {/if}
           </div>
 
         {:else}
-          <a href="/login" class="text-sm font-medium text-[var(--accent)] hover:text-[var(--primary)] transition-colors">
+          <a href="/login" class="text-sm font-medium text-(--accent) hover:text-(--primary) transition-colors">
             Entrar
           </a>
-          <a href="/cadastro" class="ml-2 btn-primary px-4 shadow-sm text-sm font-medium border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)]">
+          <a href="/cadastro" class="ml-2 btn-primary px-4 shadow-xs text-sm font-medium border border-transparent focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-(--accent)">
             Criar conta
           </a>
         {/if}
@@ -590,29 +590,29 @@
   </header>
 
   {#if showMobileMenu}
-    <div class="md:hidden border-b backdrop-blur" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
+    <div class="md:hidden border-b backdrop-blur-sm" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
       <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-2 text-sm">
         {#if session}
           <a href="/app" class="{navLinkBase} {isApp ? navLinkActive : navLinkInactive} justify-center text-center py-3" on:click={() => showMobileMenu=false}>
             FRENTE DE CAIXA
           </a>
           
-          <div class="mt-4 px-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Gestão</div>
-          <a href="/gestao" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Dashboard</a>
-          <a href="/gestao/pessoas" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Pessoas</a>
-          <a href="/gestao/produtos" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Produtos</a>
-          <a href="/gestao/estoque" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Estoque</a>
+          <div class="mt-4 px-2 text-xs font-bold text-(--text-muted) uppercase tracking-wider">Gestão</div>
+          <a href="/gestao" class="block px-3 py-2 text-(--text-main) rounded-sm hover:bg-(--sidebar-item-hover-bg)" on:click={() => showMobileMenu=false}>Dashboard</a>
+          <a href="/gestao/pessoas" class="block px-3 py-2 text-(--text-main) rounded-sm hover:bg-(--sidebar-item-hover-bg)" on:click={() => showMobileMenu=false}>Pessoas</a>
+          <a href="/gestao/produtos" class="block px-3 py-2 text-(--text-main) rounded-sm hover:bg-(--sidebar-item-hover-bg)" on:click={() => showMobileMenu=false}>Produtos</a>
+          <a href="/gestao/estoque" class="block px-3 py-2 text-(--text-main) rounded-sm hover:bg-(--sidebar-item-hover-bg)" on:click={() => showMobileMenu=false}>Estoque</a>
 
-          <div class="mt-2 px-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Financeiro</div>
-          <a href="/gestao/caixa" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Fechar Caixa</a>
-          <a href="/gestao/fichario" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Fichário (Fiado)</a>
-          <a href="/gestao/despesas" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Despesas</a>
+          <div class="mt-2 px-2 text-xs font-bold text-(--text-muted) uppercase tracking-wider">Financeiro</div>
+          <a href="/gestao/caixa" class="block px-3 py-2 text-(--text-main) rounded-sm hover:bg-(--sidebar-item-hover-bg)" on:click={() => showMobileMenu=false}>Fechar Caixa</a>
+          <a href="/gestao/fichario" class="block px-3 py-2 text-(--text-main) rounded-sm hover:bg-(--sidebar-item-hover-bg)" on:click={() => showMobileMenu=false}>Fichário (Fiado)</a>
+          <a href="/gestao/despesas" class="block px-3 py-2 text-(--text-main) rounded-sm hover:bg-(--sidebar-item-hover-bg)" on:click={() => showMobileMenu=false}>Despesas</a>
 
-          <div class="mt-2 px-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Outros</div>
-          <a href="/relatorios" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Relatórios</a>
-          <a href="/perfil" class="block px-3 py-2 text-[var(--text-main)] rounded hover:bg-[var(--sidebar-item-hover-bg)]" on:click={() => showMobileMenu=false}>Meu Perfil</a>
+          <div class="mt-2 px-2 text-xs font-bold text-(--text-muted) uppercase tracking-wider">Outros</div>
+          <a href="/relatorios" class="block px-3 py-2 text-(--text-main) rounded-sm hover:bg-(--sidebar-item-hover-bg)" on:click={() => showMobileMenu=false}>Relatórios</a>
+          <a href="/perfil" class="block px-3 py-2 text-(--text-main) rounded-sm hover:bg-(--sidebar-item-hover-bg)" on:click={() => showMobileMenu=false}>Meu Perfil</a>
           
-          <div class="my-2 border-t border-[var(--border-subtle)]"></div>
+          <div class="my-2 border-t border-(--border-subtle)"></div>
           
           <a href="https://wa.me/5514991537503?text=Oi%2C%20vim%20pelo%20sistema%20Zelo%20PDV%20e%20preciso%20de%20suporte%20(d%C3%BAvida%20ou%20problema)." target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 font-medium" style="color: var(--link);" on:click={() => showMobileMenu=false}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -621,12 +621,12 @@
             Suporte Técnico
           </a>
 
-          <button on:click={logout} class="w-full text-left px-3 py-2 rounded" style="color: var(--error);" on:mouseenter={e => e.currentTarget.style.background = 'var(--error-bg)'} on:mouseleave={e => e.currentTarget.style.background = ''}>
+          <button on:click={logout} class="w-full text-left px-3 py-2 rounded-sm" style="color: var(--error);" on:mouseenter={e => e.currentTarget.style.background = 'var(--error-bg)'} on:mouseleave={e => e.currentTarget.style.background = ''}>
             Sair
           </button>
         {:else}
           <a href="/login" class="text-sm font-medium transition-colors" style="color: var(--accent);" on:click={() => showMobileMenu=false}>Entrar</a>
-          <a href="/cadastro" class="btn-primary inline-flex items-center justify-center px-4 py-2 text-sm font-medium border border-transparent rounded-md shadow-sm transition-colors" on:click={() => showMobileMenu=false}>Criar conta</a>
+          <a href="/cadastro" class="btn-primary inline-flex items-center justify-center px-4 py-2 text-sm font-medium border border-transparent rounded-md shadow-xs transition-colors" on:click={() => showMobileMenu=false}>Criar conta</a>
         {/if}
       </div>
     </div>

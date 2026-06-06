@@ -244,28 +244,28 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" in:fade={{delay: 100}}>
 
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-violet-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-violet-400/0 via-violet-500 to-violet-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-violet-400/0 via-violet-500 to-violet-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider mb-4">Total Tokens</div>
         <div class="text-3xl font-extrabold text-white tracking-tight">{summaryCards.totalTokens.toLocaleString('pt-BR')}</div>
         <div class="mt-2 text-xs font-medium text-violet-400/60">Mês atual</div>
       </div>
 
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-purple-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-purple-400/0 via-purple-500 to-purple-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-purple-400/0 via-purple-500 to-purple-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider mb-4">Custo Estimado</div>
         <div class="text-3xl font-extrabold text-white tracking-tight">R$ {summaryCards.costBrl.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
         <div class="mt-2 text-xs font-medium text-purple-400/60">USD × {USD_TO_BRL}</div>
       </div>
 
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-400/0 via-indigo-500 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-indigo-400/0 via-indigo-500 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider mb-4">Empresas com Uso</div>
         <div class="text-3xl font-extrabold text-white tracking-tight">{summaryCards.uniqueCompanies}</div>
         <div class="mt-2 text-xs font-medium text-indigo-400/60">PDV + ZeloChat</div>
       </div>
 
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-sky-500/30 transition-colors">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-400/0 via-sky-500 to-sky-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-sky-400/0 via-sky-500 to-sky-400/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="text-[13px] font-semibold text-slate-400 uppercase tracking-wider mb-4">Média Tokens/Empresa</div>
         <div class="text-3xl font-extrabold text-white tracking-tight">{summaryCards.avgTokensPerCompany.toLocaleString('pt-BR')}</div>
         <div class="mt-2 text-xs font-medium text-sky-400/60">Empresas com consumo</div>
@@ -274,7 +274,7 @@
     </div>
 
     <!-- Daily Chart -->
-    <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 backdrop-blur-sm" in:fade={{delay: 150}}>
+    <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 backdrop-blur-xs" in:fade={{delay: 150}}>
       <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Tokens × Custo por Dia (30 dias)</h3>
       <div class="h-64 relative">
         <canvas bind:this={dailyChartCanvas}></canvas>
@@ -282,7 +282,7 @@
     </div>
 
     <!-- Per-User Table -->
-    <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden backdrop-blur-sm" in:fade={{delay: 200}}>
+    <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden backdrop-blur-xs" in:fade={{delay: 200}}>
       <div class="px-6 py-5 border-b border-slate-800">
         <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Breakdown por Empresa</h3>
       </div>

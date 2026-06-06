@@ -53,11 +53,11 @@
     </div>
 
     <div class="mt-12 grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
-      <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20">
+      <div class="rounded-3xl border border-white/10 bg-white/4 p-6 shadow-2xl shadow-black/20">
         <h2 class="text-xl font-bold text-white">Passo a passo</h2>
         <ol class="mt-5 grid gap-4">
           {#each passos as passo, index}
-            <li class="flex gap-4 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+            <li class="flex gap-4 rounded-2xl border border-white/8 bg-white/3 p-4">
               <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-400/15 text-sm font-bold text-sky-200">{index + 1}</span>
               <p class="text-sm leading-6 text-slate-300">{passo}</p>
             </li>
@@ -83,7 +83,7 @@
           </ul>
         </div>
 
-        <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+        <div class="rounded-3xl border border-white/10 bg-white/4 p-6">
           <h3 class="text-lg font-bold text-white">Depois de instalar</h3>
           <p class="mt-3 text-sm leading-6 text-slate-300">
             Volte ao PDV ou ao Chat, clique em <strong class="text-white">Conectar impressora</strong>, digite o código que aparece na tela do Zelo Impressão

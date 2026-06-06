@@ -135,14 +135,14 @@
       <div class="space-y-4">
         {#each faqItems as item}
           <details
-            class="group rounded-xl border border-white/5 bg-white/[0.02] open:bg-white/[0.04] transition-all duration-300"
+            class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-all duration-300"
           >
             <summary
               class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none"
             >
               <span>{item.question}</span>
               <svg
-                class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180 flex-shrink-0"
+                class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180 shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

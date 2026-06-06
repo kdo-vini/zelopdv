@@ -373,7 +373,7 @@
                       {/each}
                     </select>
                   {:else}
-                    <span class="px-2.5 py-1 rounded text-xs font-semibold uppercase" style="background: var(--accent); color: var(--primary-text);">
+                    <span class="px-2.5 py-1 rounded-sm text-xs font-semibold uppercase" style="background: var(--accent); color: var(--primary-text);">
                       {ex.category}
                     </span>
                   {/if}
@@ -389,7 +389,7 @@
                   <div class="flex items-center justify-end gap-1">
                     {#if editingId === ex.id}
                       <button
-                        class="p-1.5 rounded transition-colors"
+                        class="p-1.5 rounded-sm transition-colors"
                         style="color: var(--success);"
                         on:click={() => saveEdit(ex.id)}
                         title="Salvar"
@@ -397,7 +397,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                       </button>
                       <button
-                        class="p-1.5 rounded transition-colors"
+                        class="p-1.5 rounded-sm transition-colors"
                         style="color: var(--text-muted);"
                         on:click={cancelEdit}
                         title="Cancelar"
@@ -406,7 +406,7 @@
                       </button>
                     {:else}
                       <button
-                        class="p-1.5 rounded transition-colors"
+                        class="p-1.5 rounded-sm transition-colors"
                         style="color: var(--text-muted);"
                         on:click={() => startEdit(ex)}
                         title="Editar"
@@ -416,7 +416,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z" /></svg>
                       </button>
                       <button
-                        class="p-1.5 rounded transition-colors"
+                        class="p-1.5 rounded-sm transition-colors"
                         style="color: var(--text-muted);"
                         on:click={() => deleteExpense(ex.id)}
                         title="Excluir"
@@ -438,14 +438,14 @@
       {#if totalPages > 1}
         <div class="flex items-center justify-center gap-1 py-3 border-t" style="border-color: var(--border-subtle);">
           <button
-            class="px-2 py-1 rounded text-sm transition-colors"
+            class="px-2 py-1 rounded-sm text-sm transition-colors"
             style="color: var(--text-muted);"
             disabled={currentPage <= 1}
             on:click={() => currentPage = Math.max(1, currentPage - 1)}
           >&lt;</button>
           {#each Array(totalPages) as _, i}
             <button
-              class="w-8 h-8 rounded text-sm font-medium transition-colors"
+              class="w-8 h-8 rounded-sm text-sm font-medium transition-colors"
               style="
                 background: {currentPage === i + 1 ? 'var(--primary)' : 'transparent'};
                 color: {currentPage === i + 1 ? 'white' : 'var(--text-muted)'};
@@ -454,7 +454,7 @@
             >{i + 1}</button>
           {/each}
           <button
-            class="px-2 py-1 rounded text-sm transition-colors"
+            class="px-2 py-1 rounded-sm text-sm transition-colors"
             style="color: var(--text-muted);"
             disabled={currentPage >= totalPages}
             on:click={() => currentPage = Math.min(totalPages, currentPage + 1)}

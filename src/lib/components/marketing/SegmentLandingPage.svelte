@@ -21,10 +21,10 @@
 
   <main>
     <section class="relative pt-32 pb-20 overflow-hidden border-b border-white/5">
-      <div class="absolute top-0 left-0 w-full h-72 bg-gradient-to-b from-sky-500/10 to-transparent pointer-events-none"></div>
+      <div class="absolute top-0 left-0 w-full h-72 bg-linear-to-b from-sky-500/10 to-transparent pointer-events-none"></div>
       <div class="absolute -top-8 right-0 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
 
-      <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1.1fr,0.9fr] gap-14 items-center relative z-10">
+      <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-center relative z-10">
         <div>
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-300 text-xs font-medium mb-8">
             <span class="inline-flex w-2 h-2 rounded-full bg-sky-400"></span>
@@ -77,7 +77,7 @@
     </section>
 
     <section class="py-24 border-b border-white/5">
-      <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1.15fr,0.85fr] gap-12 items-start">
+      <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1.15fr_0.85fr] gap-12 items-start">
         <div>
           <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Problema</p>
           <h2 class="text-3xl md:text-4xl font-bold text-white mb-8">{page.problemTitle}</h2>
@@ -154,7 +154,7 @@
 
     <section class="py-24 border-b border-white/5" style="background: var(--bg-panel);">
       <div class="max-w-5xl mx-auto px-6">
-        <div class="rounded-[2rem] border p-8 md:p-10 shadow-2xl" style="background: var(--bg-card); border-color: var(--border-card);">
+        <div class="rounded-4xl border p-8 md:p-10 shadow-2xl" style="background: var(--bg-card); border-color: var(--border-card);">
           <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Depoimento</p>
           <p class="text-2xl md:text-3xl font-semibold leading-relaxed text-white mb-8">
             "{page.testimonial.quote}"
@@ -206,7 +206,7 @@
 
     <section class="py-24">
       <div class="max-w-4xl mx-auto px-6 text-center">
-        <div class="rounded-[2rem] border p-10 md:p-14" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+        <div class="rounded-4xl border p-10 md:p-14" style="background: var(--bg-panel); border-color: var(--border-subtle);">
           <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Teste gratuito</p>
           <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">{page.finalCtaTitle}</h2>
           <p class="text-lg leading-relaxed max-w-2xl mx-auto mb-8" style="color: var(--text-muted);">

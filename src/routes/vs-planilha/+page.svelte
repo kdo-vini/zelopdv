@@ -145,7 +145,7 @@
       </div>
       <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-6">
         Ainda controlando sua lanchonete<br class="hidden md:block" />
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-400">numa planilha?</span>
+        <span class="text-transparent bg-clip-text bg-linear-to-r from-sky-400 to-blue-400">numa planilha?</span>
       </h1>
       <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
         A planilha foi feita para escritório. Seu negócio merece uma ferramenta feita para o balcão.
@@ -166,14 +166,14 @@
   </section>
 
   <!-- PAIN POINTS -->
-  <section class="py-20 bg-white/[0.02] border-y border-white/5">
+  <section class="py-20 bg-white/2 border-y border-white/5">
     <div class="max-w-6xl mx-auto px-6">
       <h2 class="text-2xl md:text-3xl font-bold text-white text-center mb-12">
         O que acontece com quem usa planilha
       </h2>
       <div class="grid md:grid-cols-3 gap-6">
         {#each painPoints as point}
-          <div class="p-6 rounded-2xl border border-white/5 bg-white/[0.03]">
+          <div class="p-6 rounded-2xl border border-white/5 bg-white/3">
             <div class="text-3xl mb-4">{point.icon}</div>
             <h3 class="text-white font-semibold mb-2">{point.title}</h3>
             <p class="text-slate-400 text-sm leading-relaxed">{point.body}</p>
@@ -193,7 +193,7 @@
 
       <div class="rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
         <!-- Table header -->
-        <div class="grid grid-cols-3 bg-white/[0.05] border-b border-white/10">
+        <div class="grid grid-cols-3 bg-white/5 border-b border-white/10">
           <div class="px-6 py-4 text-sm font-semibold text-slate-400">Funcionalidade</div>
           <div class="px-6 py-4 text-sm font-semibold text-slate-500 text-center border-l border-white/5">
             <span class="flex items-center justify-center gap-2">
@@ -208,17 +208,17 @@
         </div>
 
         {#each comparisonRows as row, i}
-          <div class="grid grid-cols-3 border-b border-white/5 {i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]'} hover:bg-white/[0.04] transition-colors">
+          <div class="grid grid-cols-3 border-b border-white/5 {i % 2 === 0 ? 'bg-transparent' : 'bg-white/2'} hover:bg-white/4 transition-colors">
             <div class="px-6 py-4 text-sm text-white font-medium flex items-center">{row.feature}</div>
             <div class="px-6 py-4 border-l border-white/5">
               <div class="flex items-start gap-2">
-                <span class="text-red-400 mt-0.5 flex-shrink-0">✗</span>
+                <span class="text-red-400 mt-0.5 shrink-0">✗</span>
                 <span class="text-slate-500 text-xs leading-relaxed">{row.excel}</span>
               </div>
             </div>
             <div class="px-6 py-4 border-l border-white/5">
               <div class="flex items-start gap-2">
-                <span class="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>
+                <span class="text-emerald-400 mt-0.5 shrink-0">✓</span>
                 <span class="text-slate-300 text-xs leading-relaxed">{row.zelo}</span>
               </div>
             </div>
@@ -226,7 +226,7 @@
         {/each}
 
         <!-- Footer row -->
-        <div class="grid grid-cols-3 bg-white/[0.04]">
+        <div class="grid grid-cols-3 bg-white/4">
           <div class="px-6 py-5 text-sm font-semibold text-white">Custo mensal</div>
           <div class="px-6 py-5 border-l border-white/5 text-center">
             <span class="text-slate-400 text-sm">Grátis — mas custa seu tempo</span>
@@ -241,7 +241,7 @@
   </section>
 
   <!-- TESTIMONIAL -->
-  <section class="py-20 bg-white/[0.02] border-y border-white/5">
+  <section class="py-20 bg-white/2 border-y border-white/5">
     <div class="max-w-2xl mx-auto px-6 text-center">
       <div class="flex justify-center gap-0.5 mb-6">
         {#each Array(5) as _}
@@ -269,10 +269,10 @@
       <h2 class="text-2xl md:text-3xl font-bold text-white text-center mb-12">Dúvidas sobre trocar a planilha</h2>
 
       <div class="space-y-4">
-        <details class="group rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors overflow-hidden">
+        <details class="group rounded-2xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors overflow-hidden">
           <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none">
             <span class="font-semibold text-white text-sm">Vale a pena trocar a planilha de Excel por um sistema PDV?</span>
-            <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180 flex-shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180 shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
           </summary>
@@ -281,10 +281,10 @@
           </div>
         </details>
 
-        <details class="group rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors overflow-hidden">
+        <details class="group rounded-2xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors overflow-hidden">
           <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none">
             <span class="font-semibold text-white text-sm">Quanto tempo leva para migrar da planilha para o Zelo PDV?</span>
-            <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180 flex-shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180 shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
           </summary>
@@ -293,10 +293,10 @@
           </div>
         </details>
 
-        <details class="group rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors overflow-hidden">
+        <details class="group rounded-2xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors overflow-hidden">
           <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none">
             <span class="font-semibold text-white text-sm">Preciso ter computador para usar o Zelo PDV?</span>
-            <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180 flex-shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180 shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
           </summary>
@@ -310,7 +310,7 @@
 
   <!-- FINAL CTA -->
   <section class="py-20 relative overflow-hidden">
-    <div class="absolute inset-0 bg-gradient-to-br from-sky-900/30 via-transparent to-indigo-900/20 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-linear-to-br from-sky-900/30 via-transparent to-indigo-900/20 pointer-events-none"></div>
     <div class="max-w-3xl mx-auto px-6 text-center relative z-10">
       <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
         Pronto para deixar a planilha para trás?

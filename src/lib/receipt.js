@@ -61,9 +61,9 @@ body {
 .items-header { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: #000;
   display: flex; justify-content: space-between; margin-bottom: 3px; }
 .item-row { display: flex; gap: 4px; margin: 3px 0; font-size: 12px; font-weight: 700; }
-.item-qtd { min-width: 24px; font-weight: 900; flex-shrink: 0; }
+.item-qtd { min-width: 24px; font-weight: 900; shrink: 0; }
 .item-nome { flex: 1; font-weight: 800; }
-.item-sub { width: 74px; text-align: right; flex-shrink: 0; white-space: nowrap; font-weight: 900; }
+.item-sub { width: 74px; text-align: right; shrink: 0; white-space: nowrap; font-weight: 900; }
 .item-unit { font-size: 11px; font-weight: 700; color: #000; margin-left: 28px; margin-top: -2px; }
 .item-obs { font-size: 11px; font-weight: 700; color: #000; margin-left: 28px; margin-top: 1px; font-style: italic; }
 

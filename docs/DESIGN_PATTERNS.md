@@ -15,16 +15,13 @@ mudar de propósito, atualize aqui e aponte o novo arquivo canônico.
 
 ## 0. Princípios
 
-- **Nunca hardcode hex em componente.** Use variáveis de tema (`var(--primary)`,
-  `var(--text-main)`…). Classes utilitárias Tailwind do palette slate/sky são
-  toleradas nas telas internas (`text-slate-100`, `bg-slate-800/50`), mas cor de
-  marca/estado sempre via token.
-- **Reutilize, não recrie.** Sidebar, back-link, toasts, confirm, spinner já
-  existem. Importe.
+- **Nunca hardcode hex em componente.** Use variáveis de tema (`var(--primary)`, `var(--text-main)`…). Classes Tailwind do palette slate/sky são toleradas nas telas internas, mas cor de marca/estado sempre via token.
+- **Reutilize, não recrie.** Sidebar, back-link, toasts, confirm, spinner, botões, selects, ícones — tudo já existe. Importe.
 - **Tema escuro único** (navy/slate + acento sky). Sem light mode.
 - **JSON-LD em Svelte** usa `{@html}` (ver [[CLAUDE]]).
-- Depois de mexer em UI relevante: atualizar [[CURRENT]] e, se aplicável,
-  [[FIXES_PROGRESS]].
+- **`cn()` para classes condicionais** — nunca template literal ternário. Importar de `$lib/utils`.
+- **Ícones via `lucide-svelte`** — nunca SVG inline (ver seção 12).
+- Depois de mexer em UI relevante: atualizar [[CURRENT]] e, se aplicável, [[FIXES_PROGRESS]].
 
 ---
 
@@ -43,31 +40,19 @@ Fonte única de cor. Resumo (ver arquivo para a lista completa):
 | Sidebar | `--sidebar-item-active-bg` `--sidebar-item-active-text` `--sidebar-item-hover-bg` |
 | Transições | `--transition-fast` (200ms) `--transition-normal` (300ms) |
 
-> O `var(--primary-text)` existe em base.css — botões primários dentro do app
-> renderizam com texto branco corretamente. Páginas marketing podem sobrescrever
-> `--bg-*` no wrapper (ex.: `.page-shell` em `/precificacao`); os tokens cascateiam
-> para componentes filhos.
+Os tokens shadcn (`--background`, `--foreground`, `--primary`…) são mapeados para os mesmos valores em `src/app.css` e expostos como utilities Tailwind (`bg-primary`, `text-muted-foreground`…). Código legado usa `--bg-card`, `--primary` etc. diretamente — ambos convivem.
 
 ---
 
 ## 2. Shell / layout — quem mostra header x sidebar
 
-- O **root layout** (`src/routes/+layout.svelte`) decide a chrome por rota via
-  `hasSidebarLayout` (~linha 64). Rotas nessa lista **escondem** o header/footer
-  do topo e usam sidebar própria; as demais usam o header horizontal público.
-- **Toda área autenticada com sidebar** precisa estar registrada lá. Hoje:
-  `isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura || isFerramentas`.
-  Também registre em `protectedPaths` (redirect de assinatura) e no
-  `isProtectedArea` (tracking de ads).
-- O layout da seção (`src/routes/gestao/+layout.svelte`, `src/routes/ferramentas/+layout.svelte`)
-  faz: `ensureActiveSubscription` → `<GestaoSidebar/>` + `<main class="flex-1 overflow-y-auto p-6 pt-16 md:p-8">` + `AssistantChat` + `InAppSupportChat`.
+- O **root layout** (`src/routes/+layout.svelte`) decide a chrome por rota via `hasSidebarLayout` (~linha 64). Rotas nessa lista **escondem** o header/footer do topo e usam sidebar própria; as demais usam o header horizontal público.
+- **Toda área autenticada com sidebar** precisa estar registrada lá. Hoje: `isGestaoPrefixed || isApp || isRelatorios || isPerfil || isAssinatura || isFerramentas`. Também registre em `protectedPaths` (redirect de assinatura) e no `isProtectedArea` (tracking de ads).
+- O layout da seção (`src/routes/gestao/+layout.svelte`, `src/routes/ferramentas/+layout.svelte`) faz: `ensureActiveSubscription` → `<GestaoSidebar/>` + `<main>` + `AssistantChat` + `InAppSupportChat`.
 
-> ⚠️ Esquecer de registrar a rota em `hasSidebarLayout` faz aparecer **header do
-> topo + sidebar ao mesmo tempo** (bug real já visto em `/ferramentas`).
+> ⚠️ Esquecer de registrar a rota em `hasSidebarLayout` faz aparecer **header do topo + sidebar ao mesmo tempo** (bug real já visto em `/ferramentas`).
 
-**Sidebar:** `src/lib/components/GestaoSidebar.svelte`. Os itens vivem em `navGroups`
-(grupos: Vendas, Gestão, Financeiro, Outros). Item ativo via `isActive(href, path)`
-(exato para `/app` e `/gestao`, senão prefixo). Para adicionar um item, edite `navGroups`.
+**Sidebar:** `src/lib/components/GestaoSidebar.svelte`. Os itens vivem em `navGroups` (grupos: Vendas, Gestão, Financeiro, Outros). Ícones dos itens usam `lucide-svelte` via `svelte:component`. Para adicionar um item, edite `navGroups` e importe o ícone correspondente.
 
 ---
 
@@ -76,7 +61,7 @@ Fonte única de cor. Resumo (ver arquivo para a lista completa):
 Toda página interna abre com um cabeçalho que dá **contexto + navegação**.
 
 ### 3a. Breadcrumb + título (telas de gestão)
-Padrão canônico — **todas as páginas de gestão devem usar exatamente isto** (`pessoas/+page.svelte:~65`):
+Padrão canônico — **todas as páginas de gestão devem usar exatamente isto**:
 
 ```svelte
 <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
@@ -98,28 +83,22 @@ Padrão canônico — **todas as páginas de gestão devem usar exatamente isto*
 | Título `<h1>` | `text-xl font-bold text-slate-100 tracking-tight` |
 | Container | `mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4` |
 
-- **Nunca use `text-2xl`, `font-semibold`, `color: var(--text-main)` ou `font-family` inline no h1.** Isso quebra a consistência entre páginas.
+- **Nunca use `text-2xl`, `font-semibold`, `color: var(--text-main)` ou `font-family` inline no h1.**
 - **Nunca use classes CSS locais** (`.title`, `.hub-title`, `.pageTitle`) para o h1 — use o Tailwind inline acima.
-- **Nunca use `style="color: var(--text-muted)"`** no breadcrumb — use `text-slate-500`.
-- Metadado/ação opcional à direita (contagem, botão "Atualizar" etc.) dentro do container.
-- Páginas com subtítulo descritivo podem adicionar `<p class="text-sm text-slate-400 mt-1">` após o h1, mas nunca no lugar do padrão acima.
+- Metadado/ação opcional à direita dentro do container.
 
 ### 3b. Back link (sub-páginas de um hub, ex.: ferramentas)
-Quando a página é filha de um hub (`/ferramentas/*`), use o componente
-**`src/lib/components/ui/BackLink.svelte`** no topo do header — clicável, leva ao pai.
-O h1 usa as mesmas classes do padrão 3a:
 
 ```svelte
 <script>
   import BackLink from "$lib/components/ui/BackLink.svelte";
 </script>
 
-    <BackLink href="/ferramentas" label="Ferramentas" />
+<BackLink href="/ferramentas" label="Ferramentas" />
 <h1 class="text-xl font-bold text-slate-100 tracking-tight mt-1">Precificação</h1>
 ```
 
-Usado em `/ferramentas/precificacao` e `/ferramentas/cardapio`. O BackLink substitui
-o breadcrumb `<p>` — não combine os dois. Não duplique o markup do link; use o componente.
+O BackLink substitui o breadcrumb `<p>` — não combine os dois.
 
 ### 3c. Páginas públicas / landing pages externas
 
@@ -279,35 +258,63 @@ FAQ de página externa usa `details/summary` simples, sem componente custom por 
 
 ---
 
-## 4. Botões — `src/app.css:63-103`
+## 4. Botões
+
+### 4a. Código novo — componente `Button` (shadcn-svelte)
+
+```svelte
+<script>
+  import { Button } from '$lib/components/ui/button/index.js';
+  import { Trash2 } from 'lucide-svelte';
+</script>
+
+<Button>Salvar</Button>
+<Button variant="destructive">Excluir</Button>
+<Button variant="outline" size="sm">Cancelar</Button>
+<Button size="icon"><Trash2 /></Button>
+```
+
+| `variant` | Uso |
+| --- | --- |
+| `default` | ação principal (fundo `--primary` = sky-500) |
+| `secondary` | ação secundária |
+| `destructive` | destrutiva (vermelho) |
+| `outline` | ghost com borda |
+| `ghost` | transparente |
+| `link` | estilo link |
+
+| `size` | Dimensão |
+| --- | --- |
+| `default` | h-8 |
+| `sm` / `lg` | h-7 / h-9 |
+| `icon` / `icon-sm` / `icon-lg` | quadrado (size-8/7/9) |
+
+### 4b. Código legado — classes CSS (manter; não retrofitar hotspots)
 
 | Classe | Uso |
 | --- | --- |
-| `.btn-primary` | ação principal (fundo `--primary`, texto `--primary-text`) |
-| `.btn-secondary` | secundária/ghost (suporta `aria-pressed`/`.selected`) |
-| `.btn-danger` | destrutiva (vermelho) |
-| `.icon-btn` / `.icon-btn-danger` | botões de ícone 34px (ver `gestao/mesas`) |
-| `.action-primary` / `.action-ghost` | ações inline de formulário (ver `gestao/pessoas`) |
-
-Botão de ferramenta/CTA com pílula arredondada: ver `PricingCalculator.svelte`
-(`.primary-button`/`.ghost-button`, `border-radius: 999px`).
+| `.btn-primary` | ação principal |
+| `.btn-secondary` | secundária/ghost |
+| `.btn-danger` | destrutiva |
+| `.icon-btn` / `.icon-btn-danger` | botões de ícone 34px |
+| `.action-primary` / `.action-ghost` | ações inline de formulário |
 
 ---
 
 ## 5. Cards / painéis
-
-Container padrão das telas internas:
 
 ```svelte
 <div class="bg-slate-800/50 border border-slate-700/60 rounded-xl p-5 h-fit"> … </div>
 ```
 
 Variante com token (mesas): `background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 16px;`.
-Card "clicável inteiro" (hub de ferramentas): ver `/ferramentas/+page.svelte` (`.tool-card`, hover sobe 2px + borda `--primary`).
+Card clicável (hub de ferramentas): `.tool-card`, hover sobe 2px + borda `--primary`.
 
 ---
 
-## 6. Checkbox
+## 6. Formulários
+
+### 6a. Checkbox
 
 **Classe canônica:** `themed-checkbox` — definida globalmente em `src/app.css`.
 
@@ -318,15 +325,11 @@ Card "clicável inteiro" (hub de ferramentas): ver `/ferramentas/+page.svelte` (
 </label>
 ```
 
-- Usa `appearance: none` + `::after` (checkmark rotacionado), fundo `--bg-card`, borda `--border-strong`.
-- Checked: fundo `--primary`, borda `--primary`, glow com `color-mix`.
-- Hover: borda `--primary`. Focus: ring `--primary` sem outline.
-- Variante compacta para contextos densos: adicione `compact` (width/height 1rem, sem margin-top). Ex.: `class="themed-checkbox compact"`.
-- **Nunca use** `style="accent-color: var(--primary);"` — isso só colore o checkbox nativo; não substitui o padrão.
-- **Não use** para toggle-switch (ver `/gestao/mesas` — padrão `.switch-row` próprio para inputs escondidos com thumb visual).
-- A classe `checkbox-custom` em `/gestao/acessos` é específica daquele contexto de permissões (varia cor conforme estado ativo/inativo) — não copie para outros usos.
+- Variante compacta para contextos densos: `class="themed-checkbox compact"`.
+- **Nunca use** `style="accent-color: var(--primary);"`.
+- `checkbox-custom` em `/gestao/acessos` é específica daquele contexto — não copie.
 
-## 6b. Campos de formulário — `gestao/pessoas/+page.svelte:~212`
+### 6b. Campos de texto
 
 ```svelte
 <label class="block">
@@ -339,36 +342,31 @@ Card "clicável inteiro" (hub de ferramentas): ver `/ferramentas/+page.svelte` (
 - `.field-input`: `w-full px-3 py-2 rounded-lg bg-slate-900/60 border-slate-600/60 focus:ring-1 focus:ring-sky-500`.
 - Cabeçalho de coluna de tabela: `.col-header` (mesma tipografia do label).
 
+### 6c. Select — componente shadcn-svelte (código novo)
+
+Ver **seção 13** para API e exemplos. Não use `<select>` nativo em páginas novas.
+
 ---
 
 ## 7. Modais / diálogos
 
-- **Confirmação:** use o store global — `src/lib/components/ConfirmDialog.svelte`
-  (já montado no root). Não crie confirm próprio.
-- **Modal custom:** padrão overlay + scale. `.modal-overlay` (`fixed inset-0 bg-black/60 backdrop-blur z-100`)
-  + `.modal` (`var(--bg-card)`, `border-radius: 14px`, `max-width: 460px`). Ref: `gestao/mesas/+page.svelte:~677`.
+- **Confirmação:** `confirmAction(title, message)` de `$lib/stores/ui` — retorna `Promise<boolean>`. Usa `AlertDialog` (bits-ui) internamente, com focus trap e dismiss via Escape.
+- **Modal custom:** padrão overlay + scale. `.modal-overlay` (`fixed inset-0 bg-black/60 backdrop-blur z-100`) + `.modal` (`var(--bg-card)`, `border-radius: 14px`, `max-width: 460px`). Ref: `gestao/mesas/+page.svelte`.
 
 ---
 
 ## 8. Feedback
 
-- **Toasts:** `addToast(msg, 'success'|'error'|'warning'|'info')` → `ToastContainer.svelte`
-  (fixo bottom-right). Já montado no root.
-- **Spinner:** `gestao/+layout.svelte:~29`:
-  ```svelte
-  <div class="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-       style="border-color: var(--primary); border-top-color: transparent;"
-       role="status" aria-label="…"></div>
-  ```
+- **Toasts:** `addToast(msg, 'success'|'error'|'warning'|'info')` de `$lib/stores/ui` — wrapper sobre `svelte-sonner`, já montado no root como `<Toaster />`. Em código novo, pode usar `toast.success(msg)` etc. de `svelte-sonner` diretamente.
+- **Spinner:** `<Spinner />` de `$lib/components/ui/Spinner.svelte`. Props: `size` (sm/md/lg, padrão md), `label` (aria-label).
 - **Empty state:** card pontilhado centralizado (`border: 1px dashed var(--border-subtle)`, ícone 56px, título + descrição). Ref: `gestao/mesas`.
 
 ---
 
 ## 9. Responsivo / mobile
 
-- Breakpoint principal: `md` (Tailwind). Sidebar vira off-canvas com hambúrguer
-  (`GestaoSidebar.svelte:~282`, overlay `bg-black/50 z-[55]`, `aside` `fixed md:static`).
-- Header público tem menu mobile próprio (`+layout.svelte:~586`).
+- Breakpoint principal: `md` (Tailwind). Sidebar vira off-canvas com hambúrguer (overlay `bg-black/50 z-[55]`, `aside` `fixed md:static`).
+- Header público tem menu mobile próprio (`+layout.svelte`).
 - Grids de tool/cards: `grid-template-columns` 1 → 2 (`sm`) → 3 (`lg`).
 
 ---
@@ -376,7 +374,7 @@ Card "clicável inteiro" (hub de ferramentas): ver `/ferramentas/+page.svelte` (
 ## 10. Checklist antes de mexer em UI
 
 1. A cor que vou usar tem token em `base.css`? (não hardcode hex)
-2. Já existe componente pra isso? (`BackLink`, `ConfirmDialog`, `ToastContainer`, `GestaoSidebar`…)
+2. Já existe componente pra isso? (`Button`, `Spinner`, `BackLink`, `ConfirmDialog`, `GestaoSidebar`…)
 3. Se é rota nova com sidebar: registrei em `hasSidebarLayout` + `protectedPaths`?
 4. Se é tela interna: a página tem cabeçalho com **título e caminho de volta** (seção 3)?
 5. Se é página pública: usei `SiteHeader` + `MarketingFooter` + hero/CTA dentro do padrão de landing?

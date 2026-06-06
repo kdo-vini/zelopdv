@@ -61,13 +61,13 @@
 
 {#if state}
   <div
-    class="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-md bg-[#0B0F19]/80"
+    class="fixed inset-0 z-60 flex items-center justify-center p-4 backdrop-blur-md bg-[#0B0F19]/80"
     transition:fade={{ duration: 150 }}
     role="dialog"
     aria-modal="true"
   >
     <button
-      class="absolute inset-0 cursor-default focus:outline-none"
+      class="absolute inset-0 cursor-default focus:outline-hidden"
       aria-label="Fechar"
       on:click={onCancel}
     ></button>
@@ -75,7 +75,7 @@
       class="relative w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden"
       transition:slide={{ duration: 200, axis: 'y' }}
     >
-      <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-sky-500/50 to-transparent"></div>
+      <div class="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-sky-500/50 to-transparent"></div>
 
       <div class="px-6 py-5 border-b border-slate-800">
         <h3 class="text-lg font-bold text-white tracking-wide">{state.title}</h3>
@@ -93,14 +93,14 @@
               bind:value={promptValue}
               placeholder={state.placeholder}
               rows="3"
-              class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner resize-none"
+              class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner resize-none"
             ></textarea>
           {:else}
             <input
               bind:this={inputEl}
               bind:value={promptValue}
               placeholder={state.placeholder}
-              class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+              class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
             />
           {/if}
         {/if}
@@ -114,7 +114,7 @@
               bind:this={inputEl}
               bind:value={typedConfirm}
               placeholder={state.requireType}
-              class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all shadow-inner"
+              class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white font-mono placeholder-slate-500 focus:outline-hidden focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all shadow-inner"
             />
           </div>
         {/if}

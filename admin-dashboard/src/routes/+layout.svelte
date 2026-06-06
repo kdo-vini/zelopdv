@@ -127,7 +127,7 @@
     <!-- Mobile Sidebar Backdrop -->
     {#if mobileMenuOpen}
       <button 
-        class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden cursor-default focus:outline-none" 
+        class="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs lg:hidden cursor-default focus:outline-hidden" 
         on:click={closeMenu} 
         on:keydown={(e) => e.key === 'Escape' && closeMenu()} 
         transition:fade={{duration: 200}}>
@@ -135,7 +135,7 @@
     {/if}
 
     <!-- Sidebar -->
-    <aside class="fixed inset-y-0 left-0 z-50 w-72 bg-[#090D14] border-r border-[#1E293B] shadow-2xl lg:relative lg:flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out {mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}">
+    <aside class="fixed inset-y-0 left-0 z-50 w-72 bg-[#090D14] border-r border-[#1E293B] shadow-2xl lg:relative lg:flex flex-col shrink-0 transition-transform duration-300 ease-in-out {mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}">
       
       <!-- Brand Logo -->
       <div class="h-20 flex items-center px-8 border-b border-[#1E293B]">
@@ -172,9 +172,9 @@
       </div>
 
       <!-- User Profile Bottom -->
-      <div class="p-6 border-t border-[#1E293B] bg-gradient-to-b from-transparent to-[#04060A]">
+      <div class="p-6 border-t border-[#1E293B] bg-linear-to-b from-transparent to-[#04060A]">
         <div class="flex items-center mb-4">
-          <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center font-bold shadow-[0_0_15px_rgba(14,165,233,0.4)] border border-white/10 shrink-0">
+          <div class="w-10 h-10 rounded-full bg-linear-to-tr from-sky-600 to-indigo-600 flex items-center justify-center font-bold shadow-[0_0_15px_rgba(14,165,233,0.4)] border border-white/10 shrink-0">
             {getInitials(adminInfo?.email)}
           </div>
           <div class="ml-3 overflow-hidden">
@@ -196,9 +196,9 @@
       <div class="absolute bottom-0 left-1/4 w-[600px] h-[400px] bg-indigo-500/5 rounded-full blur-[150px] pointer-events-none -z-10"></div>
 
       <!-- Topbar (Mobile Hamburger) -->
-      <header class="lg:hidden h-20 flex flex-shrink-0 items-center justify-between px-6 border-b border-[#1E293B] bg-[#090D14]/80 backdrop-blur-md z-30">
+      <header class="lg:hidden h-20 flex shrink-0 items-center justify-between px-6 border-b border-[#1E293B] bg-[#090D14]/80 backdrop-blur-md z-30">
         <div class="flex items-center gap-3">
-          <button on:click={() => mobileMenuOpen = true} class="p-2 -ml-2 text-[#94A3B8] hover:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500">
+          <button on:click={() => mobileMenuOpen = true} class="p-2 -ml-2 text-[#94A3B8] hover:text-white rounded-lg focus:outline-hidden focus:ring-2 focus:ring-sky-500">
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
           <img src="https://zelopdv.com.br/logo-horizontal.png" alt="Zelo PDV" class="h-6 w-auto grayscale brightness-200 invert-[0.1]" />

@@ -529,10 +529,10 @@
                   <span class="px-2 py-0.5 rounded-full text-xs font-semibold" style="background: var(--accent-light); color: var(--accent);">Padrão</span>
                 {/if}
               </div>
-              <div class="flex items-center gap-1 flex-shrink-0">
+              <div class="flex items-center gap-1 shrink-0">
                 {#if !role.is_system}
                   <button
-                    class="p-1.5 rounded transition-colors"
+                    class="p-1.5 rounded-sm transition-colors"
                     style="color: var(--text-muted);"
                     title="Excluir cargo"
                     on:click={() => deleteRole(role)}
@@ -707,7 +707,7 @@
                               {/each}
                             </select>
                             <button
-                              class="p-1.5 rounded"
+                              class="p-1.5 rounded-sm"
                               style="color: var(--success);"
                               title="Salvar"
                               on:click={() => saveRoleChange(user)}
@@ -717,7 +717,7 @@
                               </svg>
                             </button>
                             <button
-                              class="p-1.5 rounded"
+                              class="p-1.5 rounded-sm"
                               style="color: var(--text-muted);"
                               title="Cancelar"
                               on:click={cancelRoleChange}
@@ -748,7 +748,7 @@
                           <!-- Alterar cargo -->
                           {#if editingUserRoleId !== user.id}
                             <button
-                              class="p-1.5 rounded transition-colors"
+                              class="p-1.5 rounded-sm transition-colors"
                               style="color: var(--text-muted);"
                               title="Alterar cargo"
                               on:click={() => startRoleChange(user)}
@@ -762,7 +762,7 @@
 
                             <!-- Bloquear / Desbloquear -->
                             <button
-                              class="p-1.5 rounded transition-colors"
+                              class="p-1.5 rounded-sm transition-colors"
                               style="color: var(--text-muted);"
                               title={user.status === 'active' ? 'Bloquear' : 'Desbloquear'}
                               on:click={() => toggleUserStatus(user)}
@@ -784,7 +784,7 @@
 
                             <!-- Remover -->
                             <button
-                              class="p-1.5 rounded transition-colors"
+                              class="p-1.5 rounded-sm transition-colors"
                               style="color: var(--text-muted);"
                               title="Remover usuário"
                               on:click={() => removeUser(user)}

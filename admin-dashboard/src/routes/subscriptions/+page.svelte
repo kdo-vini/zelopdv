@@ -914,14 +914,14 @@
           type="text"
           bind:value={searchTerm}
           placeholder="Busca (Email/Doc)"
-          class="w-full pl-9 pr-3 h-9 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all"
+          class="w-full pl-9 pr-3 h-9 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500/50 transition-all"
         />
       </div>
 
       <div class="relative">
         <button
           on:click={() => showFilters = !showFilters}
-          class="relative flex items-center justify-center shrink-0 w-9 h-9 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-slate-300 hover:text-white transition-all focus:outline-none focus:ring-2 focus:ring-slate-700"
+          class="relative flex items-center justify-center shrink-0 w-9 h-9 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-slate-300 hover:text-white transition-all focus:outline-hidden focus:ring-2 focus:ring-slate-700"
           title="Filtros"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -942,7 +942,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <label class="space-y-1">
                 <span class="text-[10px] uppercase font-bold text-slate-500">Status</span>
-                <select bind:value={filterStatus} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50">
+                <select bind:value={filterStatus} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-indigo-500/50">
                   {#each statusFilters as option}
                     <option value={option.value}>{option.label}</option>
                   {/each}
@@ -951,7 +951,7 @@
 
               <label class="space-y-1">
                 <span class="text-[10px] uppercase font-bold text-slate-500">Plano</span>
-                <select bind:value={filterPlan} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50">
+                <select bind:value={filterPlan} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-indigo-500/50">
                   {#each planFilters as option}
                     <option value={option.value}>{option.label}</option>
                   {/each}
@@ -960,7 +960,7 @@
 
               <label class="space-y-1">
                 <span class="text-[10px] uppercase font-bold text-slate-500">Origem</span>
-                <select bind:value={filterProvider} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50">
+                <select bind:value={filterProvider} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-indigo-500/50">
                   {#each providerFilters as option}
                     <option value={option.value}>{option.label}</option>
                   {/each}
@@ -969,7 +969,7 @@
 
               <label class="space-y-1">
                 <span class="text-[10px] uppercase font-bold text-slate-500">Add-on</span>
-                <select bind:value={filterAddon} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50">
+                <select bind:value={filterAddon} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-indigo-500/50">
                   {#each addonFilters as option}
                     <option value={option.value}>{option.label}</option>
                   {/each}
@@ -989,7 +989,7 @@
       
       <button
         on:click={loadSubscriptions}
-        class="flex items-center justify-center shrink-0 w-9 h-9 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-slate-300 hover:text-white transition-all focus:outline-none focus:ring-2 focus:ring-slate-700"
+        class="flex items-center justify-center shrink-0 w-9 h-9 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-slate-300 hover:text-white transition-all focus:outline-hidden focus:ring-2 focus:ring-slate-700"
         title="Atualizar"
       >
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1000,7 +1000,7 @@
       <button
         on:click={exportFinancialPdf}
         disabled={loading || filteredSubscriptions.length === 0}
-        class="flex items-center justify-center gap-2 shrink-0 px-3 h-9 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-lg text-emerald-400 hover:text-emerald-300 font-medium text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+        class="flex items-center justify-center gap-2 shrink-0 px-3 h-9 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-lg text-emerald-400 hover:text-emerald-300 font-medium text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-emerald-500/40"
         title="Exportar relatório financeiro em PDF"
       >
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1099,7 +1099,7 @@
                   {formatSubscriptionDate(effectiveExpiry)}
                   {#if onManualExt}
                     <span
-                      class="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold tracking-wider rounded bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                      class="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold tracking-wider rounded-sm bg-amber-500/10 text-amber-400 border border-amber-500/20"
                       title={`Extensão manual ativa até ${formatSubscriptionDate(sub.manually_extended_until)}. Período pago vence em ${formatSubscriptionDate(sub.current_period_end)}.`}
                     >
                       +EXT
@@ -1128,7 +1128,7 @@
                       value={sub.status} 
                       on:change={(e) => handleUpdateStatus(sub, e.target.value)}
                       disabled={statusUpdating}
-                      class="appearance-none bg-slate-800/50 border border-slate-700/50 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-white hover:border-slate-600 focus:outline-none transition-all cursor-pointer disabled:opacity-50"
+                      class="appearance-none bg-slate-800/50 border border-slate-700/50 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-white hover:border-slate-600 focus:outline-hidden transition-all cursor-pointer disabled:opacity-50"
                     >
                       <option value="active">ACTIVE</option>
                       <option value="trialing">TRIAL</option>
@@ -1192,7 +1192,7 @@
                 </span>
               </div>
             </div>
-            <span class="inline-flex px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border {badge.class}">
+            <span class="inline-flex px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-sm border {badge.class}">
               {badge.text}
             </span>
           </div>
@@ -1203,7 +1203,7 @@
               <span class="text-slate-300 font-medium inline-flex items-center gap-1.5">
                 {formatSubscriptionDate(effectiveExpiry)}
                 {#if onManualExt}
-                  <span class="inline-flex px-1 py-0.5 text-[8px] font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">+EXT</span>
+                  <span class="inline-flex px-1 py-0.5 text-[8px] font-bold rounded-sm bg-amber-500/10 text-amber-400 border border-amber-500/20">+EXT</span>
                 {/if}
               </span>
             </div>
@@ -1235,11 +1235,11 @@
     <div class="relative w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden" transition:slide={{ duration: 300, axis: 'y' }}>
       
       <!-- Glow Header -->
-      <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-500/60 to-transparent"></div>
+      <div class="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-emerald-500/60 to-transparent"></div>
       
       <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
         <h3 class="text-lg font-bold text-white tracking-wide">Renovação Manual</h3>
-        <button on:click={closeExtendModal} class="text-slate-500 hover:text-white transition-colors outline-none"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        <button on:click={closeExtendModal} class="text-slate-500 hover:text-white transition-colors outline-hidden"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
       </div>
       
       <div class="p-6 space-y-6">
@@ -1281,7 +1281,7 @@
             id="extend-target-date"
             type="date"
             bind:value={extendTargetDate}
-            class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+            class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
           />
           <p class="mt-2 text-[11px] text-slate-500">
             O admin grava exatamente essa data no vencimento real da assinatura.
@@ -1314,11 +1314,11 @@
 {#if showPlanModal && selectedSub}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-[#0B0F19]/80" transition:fade={{ duration: 200 }}>
     <div class="relative w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden" transition:slide={{ duration: 300, axis: 'y' }}>
-      <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/60 to-transparent"></div>
+      <div class="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-indigo-500/60 to-transparent"></div>
 
       <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
         <h3 class="text-lg font-bold text-white tracking-wide">Plano e Addons</h3>
-        <button on:click={closePlanModal} class="text-slate-500 hover:text-white transition-colors outline-none"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        <button on:click={closePlanModal} class="text-slate-500 hover:text-white transition-colors outline-hidden"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
       </div>
 
       <div class="p-6 space-y-5">

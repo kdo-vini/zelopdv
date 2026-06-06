@@ -83,7 +83,7 @@
         <div class="flex flex-col gap-2 text-sm">
           {#each segments as seg}
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-sm shrink-0" style="background-color: {seg.color}"></div>
+              <div class="w-3 h-3 rounded-xs shrink-0" style="background-color: {seg.color}"></div>
               <span class="text-slate-600 dark:text-slate-300 flex-1">{seg.label}</span>
               <span class="text-slate-500 dark:text-slate-400 font-medium">{formatPct(seg.pct)}</span>
               <span class="text-slate-700 dark:text-slate-200 font-medium">{formatValue(seg.value)}</span>

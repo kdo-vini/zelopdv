@@ -240,7 +240,7 @@
       {/if}
 
       {#if totalDescontos > 0}
-        <div class="p-3 rounded border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+        <div class="p-3 rounded-sm border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
           <div class="text-xs text-amber-700 dark:text-amber-400">Descontos aplicados</div>
           <div class="text-lg font-semibold text-amber-700 dark:text-amber-400">−R$ {Number(totalDescontos).toFixed(2)}</div>
           <div class="text-[11px] text-amber-600 dark:text-amber-500 mt-1">Valor "perdido" em promoções/descontos neste caixa.</div>
@@ -248,14 +248,14 @@
       {/if}
 
       {#if resumoTaxas.byPlatform.length > 0}
-        <div class="p-3 rounded border bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800">
+        <div class="p-3 rounded-sm border bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800">
           <div class="flex items-center justify-between">
             <div class="text-xs text-rose-700 dark:text-rose-400">Custos de plataforma (comissões)</div>
             <div class="text-lg font-semibold text-rose-700 dark:text-rose-400">−R$ {Number(totalCustosPlataforma).toFixed(2)}</div>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
             {#each resumoTaxas.byPlatform as plat}
-              <div class="flex items-center justify-between gap-2 px-2 py-1 rounded bg-white/60 dark:bg-slate-800/60">
+              <div class="flex items-center justify-between gap-2 px-2 py-1 rounded-sm bg-white/60 dark:bg-slate-800/60">
                 <span class="text-xs font-medium text-slate-700 dark:text-slate-200">{plat.nome}</span>
                 <span class="text-xs font-semibold text-rose-700 dark:text-rose-400">−R$ {Number(plat.total).toFixed(2)}</span>
               </div>

@@ -378,14 +378,14 @@
                     <div class="text-slate-200">{reward.reward_type === 'credit' ? fmtMoney(reward.amount_cents) : `${reward.addon_key} grátis`}</div>
                     <div class="text-xs text-slate-500">{REWARD_LABELS[reward.status] || reward.status}</div>
                     {#if reward.reason}
-                      <div class="text-xs text-slate-500 mt-2 break-words">{reward.reason}</div>
+                      <div class="text-xs text-slate-500 mt-2 wrap-break-word">{reward.reason}</div>
                     {/if}
                   {:else}
                     <span class="text-slate-500 text-sm">Sem recompensa</span>
                   {/if}
                 </td>
                 <td class="px-5 py-4">
-                  <div class="text-xs text-slate-500 whitespace-pre-line break-words max-w-[300px]">
+                  <div class="text-xs text-slate-500 whitespace-pre-line wrap-break-word max-w-[300px]">
                     {referral.admin_notes || '-'}
                   </div>
                 </td>

@@ -1,3 +1,10 @@
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs) {
+	return twMerge(clsx(inputs));
+}
+
 /**
  * Wraps a promise with a timeout.
  * @param {Promise} promise - The promise to wrap.

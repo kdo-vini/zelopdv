@@ -174,10 +174,10 @@
         <button
           data-prod={produto.id}
           on:click={() => handleProdutoClick(produto)}
-          class="group min-h-28 bg-slate-800/40 rounded-xl border border-slate-700/50 hover:border-sky-500/50 hover:bg-slate-800/80 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all duration-200 flex flex-col justify-between"
+          class="group min-h-28 bg-slate-800/40 rounded-xl border border-slate-700/50 hover:border-sky-500/50 hover:bg-slate-800/80 focus:outline-hidden focus:ring-1 focus:ring-sky-500 transition-all duration-200 flex flex-col justify-between"
         >
           <div class="p-3 w-full text-left">
-            <span class="text-xs font-bold text-slate-300 uppercase leading-snug break-words line-clamp-3 group-hover:text-white transition-colors">
+            <span class="text-xs font-bold text-slate-300 uppercase leading-snug wrap-break-word line-clamp-3 group-hover:text-white transition-colors">
               {produto.nome}
             </span>
           </div>

@@ -223,7 +223,7 @@
     <section class="relative pt-28 md:pt-32 pb-16 md:pb-20 overflow-hidden border-b border-white/5">
       <!-- Ambient sky glow, centralizado, sutil -->
       <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div class="w-[900px] h-[420px] rounded-full bg-sky-500/[0.06] blur-3xl"></div>
+        <div class="w-[900px] h-[420px] rounded-full bg-sky-500/6 blur-3xl"></div>
       </div>
       <!-- Grid pattern sutil pra dar textura premium -->
       <div
@@ -396,7 +396,7 @@
 
               <div class="flex flex-wrap gap-1.5 mb-5">
                 {#each combo.stack as item, i}
-                  <span class="px-2.5 py-1 rounded-full text-[11px] font-medium border bg-sky-500/[0.08]" style="color: var(--text-label); border-color: rgba(14,165,233,0.25);">
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-medium border bg-sky-500/8" style="color: var(--text-label); border-color: rgba(14,165,233,0.25);">
                     {item}
                   </span>
                   {#if i < combo.stack.length - 1}
@@ -439,7 +439,7 @@
             </div>
             <div class="shrink-0 flex flex-wrap gap-2">
               {#each section.forSegments.slice(0, 4) as segment}
-                <span class="px-2.5 py-1 rounded-full text-[11px] font-medium border border-white/10 bg-white/[0.04]" style="color: var(--text-muted);">
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-medium border border-white/10 bg-white/4" style="color: var(--text-muted);">
                   {segment}
                 </span>
               {/each}
@@ -472,7 +472,7 @@
           </div>
 
           <!-- Steps + Testimonial -->
-          <div class="grid lg:grid-cols-[1.4fr,1fr] gap-8 items-start">
+          <div class="grid lg:grid-cols-[1.4fr_1fr] gap-8 items-start">
             <div>
               <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-3">Como funciona</p>
               <h3 class="text-xl md:text-2xl font-semibold text-white mb-3">{section.howTitle}</h3>
@@ -570,7 +570,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </summary>
-              <div class="px-5 pb-5 pl-[4.5rem] text-sm leading-relaxed" style="color: var(--text-muted);">
+              <div class="px-5 pb-5 pl-18 text-sm leading-relaxed" style="color: var(--text-muted);">
                 {faq.answer}
               </div>
             </details>

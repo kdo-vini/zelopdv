@@ -704,7 +704,7 @@
           <section class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
             <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Logotipo</h2>
             <div class="flex items-center gap-5">
-              <div class="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center" style="background: var(--bg-input); border: 1px solid var(--border-subtle);">
+              <div class="w-20 h-20 rounded-xl overflow-hidden shrink-0 flex items-center justify-center" style="background: var(--bg-input); border: 1px solid var(--border-subtle);">
                 {#if pendingLogoUrl || logo_url}
                   <img src={pendingLogoUrl || logo_url} alt="Logo" class="w-full h-full object-contain" />
                 {:else}
@@ -759,7 +759,7 @@
                 <p class="text-xs mt-0.5" style="color: var(--text-muted);">Defina uma nova senha para sua conta agora.</p>
               </div>
               <button type="button" on:click={resetPassword}
-                class="flex-shrink-0 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                class="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
                 style="background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle);"
                 on:mouseenter={e => (e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)')}
                 on:mouseleave={e => (e.currentTarget.style.background = 'var(--bg-input)')}
@@ -773,7 +773,7 @@
                   <p class="text-xs mt-0.5" style="color: var(--text-muted);">Protege áreas sensíveis como Relatórios e Despesas.</p>
                 </div>
                 <button type="button" on:click={() => (showChangePin = !showChangePin)}
-                  class="flex-shrink-0 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                  class="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
                   style="background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle);"
                   on:mouseenter={e => (e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)')}
                   on:mouseleave={e => (e.currentTarget.style.background = 'var(--bg-input)')}
@@ -791,7 +791,7 @@
                         on:input={(e) => { if (/\D/.test(e.currentTarget.value)) { triggerPinBubble(); newPin = e.currentTarget.value.replace(/\D/g, ''); } }}
                       />
                       {#if showPinBubble}
-                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 text-xs font-bold rounded shadow-xl whitespace-nowrap z-50" style="background: var(--warning); color: #fff;">
+                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 text-xs font-bold rounded-sm shadow-xl whitespace-nowrap z-50" style="background: var(--warning); color: #fff;">
                           Números apenas!
                           <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent" style="border-top-color: var(--warning);"></div>
                         </div>
@@ -1022,7 +1022,7 @@
             {#each plataformas_pagamento as plat, i}
               <div class="flex items-center justify-between gap-4 flex-wrap" style="{i > 0 ? 'border-top: 1px solid var(--border-subtle); padding-top: 1rem;' : ''}">
                 <div class="flex items-center gap-3 flex-1 min-w-0">
-                  <span class="text-xl flex-shrink-0">{plat.icone}</span>
+                  <span class="text-xl shrink-0">{plat.icone}</span>
                   <div class="min-w-0">
                     <p class="text-sm font-medium truncate" style="color: var(--text-main);">{plat.nome}</p>
                     {#if plat.ativo}
@@ -1031,7 +1031,7 @@
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="flex items-center gap-3 shrink-0">
                   {#if plat.ativo}
                     <div class="flex items-center gap-1">
                       <input
@@ -1052,11 +1052,11 @@
                     role="switch"
                     aria-checked={plat.ativo}
                     on:click={() => { plataformas_pagamento[i].ativo = !plataformas_pagamento[i].ativo; plataformas_pagamento = plataformas_pagamento; markDirty(); }}
-                    class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
+                    class="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
                     style="background: {plat.ativo ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {plat.ativo ? 'var(--primary)' : 'var(--border-subtle)'};"
                   >
                     <span
-                      class="inline-block h-5 w-5 transform rounded-full shadow transition duration-200"
+                      class="inline-block h-5 w-5 transform rounded-full shadow-sm transition duration-200"
                       style="background: var(--text-main); transform: translateX({plat.ativo ? '20px' : '0px'});"
                     ></span>
                   </button>
@@ -1081,11 +1081,11 @@
                 role="switch"
                 aria-checked={tabelasPrecoAtivo}
                 on:click={() => tabelasPrecoAtivo = !tabelasPrecoAtivo}
-                class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
+                class="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
                 style="background: {tabelasPrecoAtivo ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {tabelasPrecoAtivo ? 'var(--primary)' : 'var(--border-subtle)'};"
               >
                 <span
-                  class="inline-block h-5 w-5 transform rounded-full shadow transition duration-200"
+                  class="inline-block h-5 w-5 transform rounded-full shadow-sm transition duration-200"
                   style="background: var(--text-main); transform: translateX({tabelasPrecoAtivo ? '20px' : '0px'});"
                 ></span>
               </button>
@@ -1135,11 +1135,11 @@
                 role="switch"
                 aria-checked={notifEstoqueBaixo}
                 on:click={() => (notifEstoqueBaixo = !notifEstoqueBaixo)}
-                class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
+                class="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
                 style="background: {notifEstoqueBaixo ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {notifEstoqueBaixo ? 'var(--primary)' : 'var(--border-subtle)'};"
               >
                 <span
-                  class="inline-block h-5 w-5 transform rounded-full shadow transition duration-200"
+                  class="inline-block h-5 w-5 transform rounded-full shadow-sm transition duration-200"
                   style="background: var(--text-main); transform: translateX({notifEstoqueBaixo ? '20px' : '0px'});"
                 ></span>
               </button>
@@ -1155,11 +1155,11 @@
                 role="switch"
                 aria-checked={notifFechamentoCaixa}
                 on:click={() => (notifFechamentoCaixa = !notifFechamentoCaixa)}
-                class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
+                class="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
                 style="background: {notifFechamentoCaixa ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {notifFechamentoCaixa ? 'var(--primary)' : 'var(--border-subtle)'};"
               >
                 <span
-                  class="inline-block h-5 w-5 transform rounded-full shadow transition duration-200"
+                  class="inline-block h-5 w-5 transform rounded-full shadow-sm transition duration-200"
                   style="background: var(--text-main); transform: translateX({notifFechamentoCaixa ? '20px' : '0px'});"
                 ></span>
               </button>
@@ -1426,7 +1426,7 @@
 
   {#if showDeleteModal}
     <div
-      class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+      class="fixed inset-0 z-80 flex items-center justify-center p-4"
       style="background: rgba(0,0,0,0.6);"
       role="dialog"
       aria-modal="true"
@@ -1450,7 +1450,7 @@
               <strong>não há como recuperar</strong>.
             </p>
             <label class="flex items-start gap-2 text-sm cursor-pointer" style="color: var(--text-main);">
-              <input class="themed-checkbox flex-shrink-0" type="checkbox" bind:checked={ackIrreversible} />
+              <input class="themed-checkbox shrink-0" type="checkbox" bind:checked={ackIrreversible} />
               <span>Entendo que após 14 dias a exclusão é permanente e apaga todos os meus dados.</span>
             </label>
           {:else}

@@ -1082,8 +1082,8 @@
 <!-- Barra de modo / filtros -->
 <section class="rounded-xl p-4 mb-4 space-y-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
 	<div class="flex flex-wrap items-center gap-3 text-sm">
-		<button class="px-3 py-1 rounded border" class:btn-primary={modoRelatorio==='caixa'} on:click={() => modoRelatorio='caixa'}>Por Caixa</button>
-		<button class="px-3 py-1 rounded border" class:btn-primary={modoRelatorio==='periodo'} on:click={() => modoRelatorio='periodo'}>Por Período</button>
+		<button class="px-3 py-1 rounded-sm border" class:btn-primary={modoRelatorio==='caixa'} on:click={() => modoRelatorio='caixa'}>Por Caixa</button>
+		<button class="px-3 py-1 rounded-sm border" class:btn-primary={modoRelatorio==='periodo'} on:click={() => modoRelatorio='periodo'}>Por Período</button>
 	</div>
 	{#if modoRelatorio === 'caixa'}
 		<div class="grid md:grid-cols-2 gap-4 items-end">
@@ -1128,7 +1128,7 @@
 		<div class="space-y-3">
 			<div class="flex flex-wrap gap-2 text-xs">
 				{#each presetOpcoes as op}
-					<button class="px-2 py-1 rounded border" class:bg-sky-600={preset===op.key} class:text-white={preset===op.key} on:click={() => { aplicarPreset(op.key); carregarRelatorioPeriodo(); }}>{op.label}</button>
+					<button class="px-2 py-1 rounded-sm border" class:bg-sky-600={preset===op.key} class:text-white={preset===op.key} on:click={() => { aplicarPreset(op.key); carregarRelatorioPeriodo(); }}>{op.label}</button>
 				{/each}
 			</div>
 			<div class="grid sm:grid-cols-3 gap-4 items-end">
@@ -1209,28 +1209,28 @@
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-[11px]">💰</span>
+						<span class="w-5 h-5 rounded-sm bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-[11px]">💰</span>
 						Vendas Brutas
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(totalGeral)}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[11px]">🛒</span>
+						<span class="w-5 h-5 rounded-sm bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[11px]">🛒</span>
 						Qtd. Vendas
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{qtdVendas}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 text-[11px]">📊</span>
+						<span class="w-5 h-5 rounded-sm bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 text-[11px]">📊</span>
 						Ticket Médio
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(ticketMedio)}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400 text-[11px]">💵</span>
+						<span class="w-5 h-5 rounded-sm bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400 text-[11px]">💵</span>
 						Dinheiro Líq.
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(totalDinheiro)}</div>
@@ -1251,7 +1251,7 @@
 				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
 					{#each caixaPagItems as p}
 						<div class="flex items-center gap-2">
-							<span class="w-2.5 h-2.5 rounded-full {p.color} flex-shrink-0"></span>
+							<span class="w-2.5 h-2.5 rounded-full {p.color} shrink-0"></span>
 							<div>
 								<div class="text-xs text-slate-500 dark:text-slate-400">{p.label}</div>
 								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-slate-400">({caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100).toFixed(1) : 0}%)</span></div>
@@ -1560,7 +1560,7 @@
 							</span>
 							<div class="flex items-center gap-1">
 								<button
-									class="px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+									class="px-2 py-1 text-xs rounded-sm border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
 									disabled={vendasPage === 1}
 									on:click={() => vendasPage--}
 								>← Ant.</button>
@@ -1569,13 +1569,13 @@
 										<span class="px-1 text-xs text-slate-400">…</span>
 									{:else}
 										<button
-											class="px-2 py-1 text-xs rounded border transition-colors {pg === vendasPage ? 'bg-sky-500 text-white border-sky-500' : 'border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'}"
+											class="px-2 py-1 text-xs rounded-sm border transition-colors {pg === vendasPage ? 'bg-sky-500 text-white border-sky-500' : 'border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'}"
 											on:click={() => vendasPage = pg}
 										>{pg}</button>
 									{/if}
 								{/each}
 								<button
-									class="px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+									class="px-2 py-1 text-xs rounded-sm border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
 									disabled={vendasPage === vendasTotalPages}
 									on:click={() => vendasPage++}
 								>Próx. →</button>
@@ -1647,28 +1647,28 @@
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-[11px]">💰</span>
+						<span class="w-5 h-5 rounded-sm bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-[11px]">💰</span>
 						Vendas Brutas
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoTotalGeral)}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[11px]">🛒</span>
+						<span class="w-5 h-5 rounded-sm bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[11px]">🛒</span>
 						Qtd. Vendas
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{periodoQtdVendas}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 text-[11px]">📊</span>
+						<span class="w-5 h-5 rounded-sm bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 text-[11px]">📊</span>
 						Ticket Médio
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoTicketMedio)}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400 text-[11px]">💵</span>
+						<span class="w-5 h-5 rounded-sm bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400 text-[11px]">💵</span>
 						Dinheiro Líq.
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoDinheiroLiquido)}</div>
@@ -1689,7 +1689,7 @@
 				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
 					{#each periodoPagItems as p}
 						<div class="flex items-center gap-2">
-							<span class="w-2.5 h-2.5 rounded-full {p.color} flex-shrink-0"></span>
+							<span class="w-2.5 h-2.5 rounded-full {p.color} shrink-0"></span>
 							<div>
 								<div class="text-xs text-slate-500 dark:text-slate-400">{p.label}</div>
 								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-slate-400">({periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100).toFixed(1) : 0}%)</span></div>
