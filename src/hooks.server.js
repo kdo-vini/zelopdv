@@ -7,6 +7,8 @@ const ADMIN_API_ORIGINS = new Set([
   'https://www.admin.zelopdv.com.br',
   'http://localhost:5174',
   'http://127.0.0.1:5174',
+  'http://localhost:4174',
+  'http://127.0.0.1:4174',
 ]);
 
 const LIMITS = {

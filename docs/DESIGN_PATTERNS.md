@@ -9,6 +9,8 @@
 Este doc reflete os padrões **reais** do código (não um ideal). Quando um padrão
 mudar de propósito, atualize aqui e aponte o novo arquivo canônico.
 
+> Para o app separado `admin-dashboard/`, use também [docs/admin/DESIGN_PATTERNS.md](/home/vinicius/code/zelopdv/docs/admin/DESIGN_PATTERNS.md:1).
+
 ---
 
 ## 0. Princípios

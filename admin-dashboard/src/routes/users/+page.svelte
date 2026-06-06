@@ -25,11 +25,15 @@
   let statusFilter = 'all'
   const PAGE_SIZE = 50
   let pageLimit = PAGE_SIZE
+  let selectedUserIds = []
+  let bulkDeleteLoading = false
+  let headerCheckbox = null
 
   const STATUS_TABS = [
     { key: 'all',       label: 'Todos' },
     { key: 'trialing',  label: 'Trialing' },
     { key: 'active',    label: 'Ativo' },
+    { key: 'inactive',  label: 'Inativo' },
     { key: 'canceled',  label: 'Cancelado' },
     { key: 'no_profile',label: 'Sem Perfil' },
     { key: 'sub_users', label: 'Sub-usuários' },
@@ -45,6 +49,7 @@
   function setStatusFilter(key) {
     statusFilter = key
     pageLimit = PAGE_SIZE
+    selectedUserIds = []
   }
 
   onMount(async () => {
@@ -460,22 +465,117 @@
     if (!ok) return
 
     try {
-      const { error } = await supabase.rpc('admin_delete_user', {
-        target_user_id: user.user_id,
-        target_user_email: user.contato || 'unknown',
-        action_details: {
-            company: user.nome_exibicao,
-            deleted_by: adminInfo.email
-        }
-      })
-
-      if (error) throw error
+      await deleteUserRecord(user, 'single')
 
       success('Conta excluída definitivamente (Cascade).')
       await loadUsers()
     } catch (err) {
       console.error('Delete error', err)
       errorToast(`Erro ao excluir: ${err.message}`)
+    }
+  }
+
+  async function deleteUserRecord(user, source = 'single') {
+    const { error } = await supabase.rpc('admin_delete_user', {
+      target_user_id: user.user_id,
+      target_user_email: user.email || 'unknown',
+      action_details: {
+        company: user.nome_exibicao,
+        deleted_by: adminInfo.email,
+        source,
+      }
+    })
+
+    if (error) throw error
+  }
+
+  function isBulkDeletable(user) {
+    return !user.is_sub_user && !user.subscriptions?.[0]
+  }
+
+  function isUserSelected(userId) {
+    return selectedUserIds.includes(userId)
+  }
+
+  function toggleSelectVisibleUsers(checked) {
+    const visibleIds = pagedUsers.filter(isBulkDeletable).map(user => user.user_id)
+    if (checked) {
+      selectedUserIds = Array.from(new Set([...selectedUserIds, ...visibleIds]))
+      return
+    }
+
+    const visibleIdSet = new Set(visibleIds)
+    selectedUserIds = selectedUserIds.filter(id => !visibleIdSet.has(id))
+  }
+
+  function clearSelection() {
+    selectedUserIds = []
+  }
+
+  async function handleBulkDeleteSelected() {
+    if (!adminInfo) {
+      errorToast('Sessão expirada. Faça login novamente.')
+      return
+    }
+
+    const targetUsers = selectedUsers.filter(isBulkDeletable)
+    if (targetUsers.length === 0) {
+      errorToast('Selecione contas inativas sem assinatura para excluir.')
+      return
+    }
+
+    const ok = await confirmDialog({
+      title: 'Excluir contas inativas',
+      message: `Excluir ${targetUsers.length} conta(s) inativa(s) selecionada(s)? Esta ação é IRREVERSÍVEL.`,
+      confirmLabel: `Excluir ${targetUsers.length}`,
+      cancelLabel: 'Cancelar',
+      confirmStyle: 'danger',
+      requireType: 'delete',
+    })
+    if (!ok) return
+
+    bulkDeleteLoading = true
+
+    const failures = []
+
+    try {
+      for (const user of targetUsers) {
+        try {
+          await deleteUserRecord(user, 'bulk')
+        } catch (err) {
+          console.error('[Users] Bulk delete failed:', user.user_id, err)
+          failures.push({
+            user_id: user.user_id,
+            email: user.email,
+            message: err.message,
+          })
+        }
+      }
+
+      await logAdminAction({
+        adminId: adminInfo.id,
+        action: 'bulk_delete_inactive_users',
+        details: {
+          deleted_count: targetUsers.length - failures.length,
+          attempted_count: targetUsers.length,
+          selected_user_ids: targetUsers.map(user => user.user_id),
+          failures,
+        }
+      })
+
+      if (failures.length > 0) {
+        errorToast(`${failures.length} exclusão(ões) falharam. O restante foi removido.`)
+      } else {
+        success(`${targetUsers.length} conta(s) inativa(s) excluída(s) com sucesso.`)
+      }
+
+      clearSelection()
+      await loadUsers()
+    } catch (err) {
+      console.error('[Users] Bulk delete error:', err)
+      errorToast(`Erro ao excluir em lote: ${err.message}`)
+    } finally {
+      bulkDeleteLoading = false
     }
   }
   
@@ -641,9 +741,10 @@
     if (user.is_sub_user) return false
 
     // Empresa filters
-    if (statusFilter === 'all') return true
-    if (statusFilter === 'no_profile') return user.has_profile === false
     const subStatus = user.subscriptions?.[0]?.status
+    if (statusFilter === 'all') return true
+    if (statusFilter === 'inactive') return !subStatus
+    if (statusFilter === 'no_profile') return user.has_profile === false
     return subStatus === statusFilter
   })
 
@@ -652,6 +753,7 @@
     all:        companies.length,
     trialing:   companies.filter(u => u.subscriptions?.[0]?.status === 'trialing').length,
     active:     companies.filter(u => u.subscriptions?.[0]?.status === 'active').length,
+    inactive:   companies.filter(u => !u.subscriptions?.[0]).length,
     canceled:   companies.filter(u => u.subscriptions?.[0]?.status === 'canceled').length,
     no_profile: companies.filter(u => u.has_profile === false).length,
     sub_users:  users.filter(u => u.is_sub_user).length,
@@ -662,6 +764,20 @@
 
   $: pagedUsers = filteredUsers.slice(0, pageLimit)
   $: hasMore = filteredUsers.length > pageLimit
+  $: selectedUsers = users.filter(user => selectedUserIds.includes(user.user_id))
+  $: visibleBulkCandidates = pagedUsers.filter(isBulkDeletable)
+  $: allVisibleSelected = visibleBulkCandidates.length > 0 && visibleBulkCandidates.every(user => selectedUserIds.includes(user.user_id))
+  $: selectedVisibleCount = visibleBulkCandidates.filter(user => selectedUserIds.includes(user.user_id)).length
+  $: if (headerCheckbox) {
+    headerCheckbox.indeterminate = selectedVisibleCount > 0 && !allVisibleSelected
+  }
+  $: if (selectedUserIds.length > 0) {
+    const filteredUserIds = new Set(filteredUsers.map(user => user.user_id))
+    const nextSelectedIds = selectedUserIds.filter(id => filteredUserIds.has(id))
+    if (nextSelectedIds.length !== selectedUserIds.length) {
+      selectedUserIds = nextSelectedIds
+    }
+  }
 </script>
 
 <svelte:head>
@@ -755,6 +871,23 @@
       <p class="text-sm text-slate-500 mt-1 max-w-sm">Tente ajustar seus termos de busca para encontrar o usuário.</p>
     </div>
   {:else}
+    {#if statusFilter !== 'sub_users' && selectedUserIds.length > 0}
+      <div class="flex items-center justify-end gap-3" in:fade>
+        <span class="text-sm font-medium text-slate-400">{selectedUserIds.length} selecionado(s)</span>
+        <button
+          on:click={handleBulkDeleteSelected}
+          disabled={bulkDeleteLoading}
+          class="inline-flex items-center justify-center gap-1.5 px-3 h-9 rounded-lg border border-rose-500/20 bg-transparent text-sm font-medium text-rose-300 transition-all hover:border-rose-500/40 hover:bg-rose-500/8 disabled:cursor-not-allowed disabled:opacity-40"
+          title="Excluir selecionados"
+        >
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          {bulkDeleteLoading ? 'Excluindo...' : 'Excluir selecionados'}
+        </button>
+      </div>
+    {/if}
+
     <!-- Desktop Table View -->
     <div class="hidden md:block overflow-hidden bg-slate-900/40 border border-slate-800/60 rounded-2xl shadow-xl backdrop-blur-sm" in:fade>
       {#if statusFilter === 'sub_users'}
@@ -816,7 +949,18 @@
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="border-b border-slate-800 bg-slate-900/80">
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</th>
+            <th class="w-14 py-4 pl-6 pr-2 text-center">
+              <input
+                bind:this={headerCheckbox}
+                type="checkbox"
+                checked={allVisibleSelected}
+                disabled={visibleBulkCandidates.length === 0}
+                class="themed-checkbox compact"
+                title={visibleBulkCandidates.length > 0 ? `Selecionar ${visibleBulkCandidates.length} conta(s) inativa(s) visível(is)` : 'Nenhuma conta inativa visível nesta página'}
+                on:change={(event) => toggleSelectVisibleUsers(event.currentTarget.checked)}
+              />
+            </th>
+            <th class="py-4 pl-2 pr-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Assinatura Expira</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Último Acesso</th>
@@ -829,13 +973,19 @@
             {@const status = getUserStatus(user)}
             {@const sub = user.subscriptions?.[0]}
 
-            <tr class="group hover:bg-slate-800/30 transition-colors">
-              <td class="py-4 px-6">
+            <tr class="group transition-colors {isUserSelected(user.user_id) ? 'bg-slate-800/35' : 'hover:bg-slate-800/30'}">
+              <td class="py-4 pl-6 pr-2 text-center align-middle">
+                <input
+                  type="checkbox"
+                  bind:group={selectedUserIds}
+                  value={user.user_id}
+                  disabled={!isBulkDeletable(user)}
+                  class="themed-checkbox compact"
+                  title={isBulkDeletable(user) ? 'Selecionar conta inativa para exclusão em lote' : 'A exclusão em lote fica disponível apenas para contas inativas sem assinatura'}
+                />
+              </td>
+              <td class="py-4 pl-2 pr-6">
                 <div class="flex items-center gap-4">
-                  <!-- Avatar -->
-                  <div class="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center text-sm font-bold text-white shadow-inner shrink-0">
-                    {getInitials(user.nome_exibicao)}
-                  </div>
                   <!-- Name & Email -->
                   <div class="min-w-0">
                     <p class="text-sm font-semibold text-slate-200 truncate group-hover:text-white transition-colors">{user.nome_exibicao || 'Sem Nome'}</p>
@@ -921,7 +1071,18 @@
           <div class="absolute top-0 left-0 w-1 h-full {status.class.split(' ')[0]}"></div>
 
           <div class="flex justify-between items-start mb-4">
-            <div class="min-w-0 pr-2">
+            <div class="flex items-start gap-3 min-w-0 pr-2">
+              {#if !user.is_sub_user}
+                <input
+                  type="checkbox"
+                  bind:group={selectedUserIds}
+                  value={user.user_id}
+                  disabled={!isBulkDeletable(user)}
+                  class="themed-checkbox compact mt-1 shrink-0"
+                  title={isBulkDeletable(user) ? 'Selecionar conta inativa para exclusão em lote' : 'A exclusão em lote fica disponível apenas para contas inativas sem assinatura'}
+                />
+              {/if}
+              <div class="min-w-0">
               <h3 class="text-base font-bold text-slate-100 truncate">
                 {#if user.is_sub_user}
                   {user.email}
@@ -936,6 +1097,7 @@
                   {user.email}
                 {/if}
               </p>
+              </div>
             </div>
             <span class="inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded {status.class}">
               {status.text}

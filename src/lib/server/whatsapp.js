@@ -129,6 +129,14 @@ async function enviar(telefone, mensagem) {
   return result.ok;
 }
 
+export async function sendWhatsAppText(telefone, mensagem) {
+  return enviar(telefone, mensagem);
+}
+
+export async function sendWhatsAppTextDetailed(telefone, mensagem) {
+  return enviarDetalhado(telefone, mensagem);
+}
+
 /**
  * Mensagem 1 — Boas-vindas (disparada na criacao da conta, trial day 0)
  */

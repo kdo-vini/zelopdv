@@ -16,7 +16,10 @@
 ## Validação executada nesta sessão
 
 - `npm test` — **149/149** testes passando (inclui novos testes de gate offline e snapshot de entitlement)
-- `npm run check` — **0 errors / 133 warnings** (warnings pré-existentes em páginas de marketing)
+- `npm run check` — **0 errors / 110 warnings** (warnings pré-existentes em páginas públicas e modais operacionais)
+- `cd admin-dashboard && npm run build` — build concluiu após ajuste na página `users` (seleção em lote + limpeza de contas inativas).
+- `cd admin-dashboard && npm run check` — **falha de script/config**: `svelte-check --tsconfig ./jsconfig.json`, mas o app só possui `.svelte-kit/tsconfig.json`; não é regressão desta mudança.
+- Admin: aba `/communications` agora suporta disparo individual e em lote de email via Resend e WhatsApp via ZeloChat interno, com placeholders clicáveis no composer e filtros por origem (`ZeloPDV`, `ZeloChat`, `Ambos`); validação local segue por `cd admin-dashboard && npm run build` porque `npm run check` continua quebrado por config legada.
 - Ads/marketing: nova rota pública `/contato` com formulário interno de lead para sitelinks sem saída para domínio externo; `npm run check` manteve **0 errors / 133 warnings** e `npm run build` concluiu com warnings pré-existentes/adapter.
 - Marketing: `/vs-planilha` agora usa layout full-width de página pública; CTAs de conversa em home, segmentos, extensões, precificação e comparação abrem o chatbot público sem alterar os botões de teste grátis para `/cadastro`. Rodapé mantém WhatsApp e adiciona link interno de demonstração para `/contato?assunto=demo`.
 
@@ -42,6 +45,9 @@
 
 ## Mudanças recentes visíveis no histórico Git
 
+- Admin dashboard `/users`: avatar da tabela principal trocado por checkbox canônico de seleção, nova aba `Inativo`, barra de ação em lote mais compacta e exclusão em lote restrita a contas sem assinatura.
+- Novo guia vivo do admin em `docs/admin/DESIGN_PATTERNS.md` para registrar preferências de UI/UX operacionais do painel.
+- Admin dashboard `/communications`: aba operacional para comunicação individual e em lote com usuários, com envio server-side por `/api/admin/communications/send`, placeholders (`{{primeiro_nome}}`, `{{link_login}}`, etc.), filtros por origem de produto e WhatsApp saindo do número Techne `5514991537503`.
 - Rota pública `/contato` para campanhas Google Ads: variações por `assunto`/`utm_content`, formulário interno de lead via Resend e entrada no sitemap.
 - Robustez offline do PDV: gate de assinatura tolerante a queda de rede (snapshot de entitlement, carência de 7 dias), leitura offline-first de catálogo/categorias/subcategorias (Dexie v5), retry periódico de sync + badge de pendentes. Ver [[docs/operations/OFFLINE]] e [[TRADEOFFS]] (TA-OFF-01/02).
 - Grace period de 14 dias para deleção de conta + reativação.
