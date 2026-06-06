@@ -1,27 +1,15 @@
 import { writable } from 'svelte/store';
+import { toast } from 'svelte-sonner';
 
-// --- TOASTS ---
-export const toasts = writable([]);
-
-/**
- * Adiciona um toast à fila.
- * @param {string} message Mensagem a ser exibida.
- * @param {'info'|'success'|'error'|'warning'} type Tipo do toast.
- * @param {number} duration Duração em ms (padrão 3000).
- */
+// --- TOASTS — wrapper sobre svelte-sonner, mantém API legada ---
 export function addToast(message, type = 'info', duration = 3000) {
-    const id = Math.random().toString(36).substring(2);
-    toasts.update((all) => [...all, { id, message, type, duration }]);
-
-    if (duration > 0) {
-        setTimeout(() => {
-            removeToast(id);
-        }, duration);
+    const options = duration > 0 ? { duration } : { duration: Infinity };
+    switch (type) {
+        case 'success': toast.success(message, options); break;
+        case 'error':   toast.error(message, options);   break;
+        case 'warning': toast.warning(message, options); break;
+        default:        toast(message, options);
     }
-}
-
-export function removeToast(id) {
-    toasts.update((all) => all.filter((t) => t.id !== id));
 }
 
 // --- CONFIRM DIALOG ---
@@ -49,7 +37,7 @@ export function confirmAction(title, message) {
                 confirmModal.set({ isOpen: false, title: '', message: '', resolve: null, reject: null });
                 resolve(val);
             },
-            reject: () => { // Caso precise lidar com rejeição explícita, mas aqui usaremos resolve(false)
+            reject: () => {
                 confirmModal.set({ isOpen: false, title: '', message: '', resolve: null, reject: null });
                 resolve(false);
             }

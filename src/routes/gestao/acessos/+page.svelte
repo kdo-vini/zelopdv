@@ -3,6 +3,7 @@
   import { getAccessContext } from '$lib/accessControl';
   import { supabase } from '$lib/supabaseClient';
   import { addToast, confirmAction } from '$lib/stores/ui';
+  import Spinner from '$lib/components/ui/Spinner.svelte';
 
   // ─── State ───────────────────────────────────────────────────────────────────
   let loading = true;
@@ -460,7 +461,7 @@
 {:else if loading}
   <div class="flex items-center justify-center h-64">
     <div class="flex flex-col items-center gap-3">
-      <div class="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style="border-color: var(--primary); border-top-color: transparent;"></div>
+      <Spinner />
       <p class="text-sm" style="color: var(--text-muted);">Carregando...</p>
     </div>
   </div>

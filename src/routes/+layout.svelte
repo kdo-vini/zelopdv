@@ -349,7 +349,7 @@
       document.removeEventListener('click', handleContactClick, true);
     };
   });
-  import ToastContainer from '$lib/components/ToastContainer.svelte';
+  import { Toaster } from 'svelte-sonner';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import PinSetupModal from '$lib/components/PinSetupModal.svelte';
   import SupportChat from '$lib/components/SupportChat.svelte';
@@ -406,7 +406,7 @@
   }
 </script>
 
-<ToastContainer />
+<Toaster theme="dark" richColors position="bottom-right" />
 <ConfirmDialog />
 <UpdateAvailable />
 

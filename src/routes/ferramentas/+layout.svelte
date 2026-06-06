@@ -4,6 +4,7 @@
   import GestaoSidebar from '$lib/components/GestaoSidebar.svelte';
   import AssistantChat from '$lib/components/AssistantChat.svelte';
   import InAppSupportChat from '$lib/components/InAppSupportChat.svelte';
+  import Spinner from '$lib/components/ui/Spinner.svelte';
 
   let ready = false;
 
@@ -26,12 +27,7 @@
 {:else}
   <div class="flex h-screen items-center justify-center" style="background: var(--bg-app);">
     <div class="flex flex-col items-center gap-3">
-      <div
-        class="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-        style="border-color: var(--primary); border-top-color: transparent;"
-        role="status"
-        aria-label="Verificando autenticação"
-      ></div>
+      <Spinner label="Verificando autenticação" />
       <p class="text-sm" style="color: var(--text-muted);">Verificando autenticação...</p>
     </div>
   </div>
