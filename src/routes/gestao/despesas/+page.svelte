@@ -5,6 +5,7 @@
   import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import AdminLock from '$lib/components/AdminLock.svelte';
+  import * as Select from '$lib/components/ui/select/index.js';
 
   let uid = null;
   let adminPin = '';
@@ -288,12 +289,17 @@
         <input id="exp-date" type="date" class="input-form w-full" bind:value={newExpense.date} />
       </div>
       <div class="w-full lg:w-44">
-        <label for="exp-cat" class="text-xs mb-1 block" style="color: var(--text-muted);">Categoria/Fornecedor</label>
-        <select id="exp-cat" class="input-form w-full" bind:value={newExpense.category}>
-          {#each categories as cat}
-            <option>{cat}</option>
-          {/each}
-        </select>
+        <label class="text-xs mb-1 block" style="color: var(--text-muted);">Categoria/Fornecedor</label>
+        <Select.Root bind:value={newExpense.category}>
+          <Select.Trigger class="input-form w-full">
+            {newExpense.category || 'Selecione...'}
+          </Select.Trigger>
+          <Select.Content>
+            {#each categories as cat}
+              <Select.Item value={cat} label={cat} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
       </div>
       <button
         class="btn-primary whitespace-nowrap flex items-center gap-2 h-10 px-4"
@@ -322,12 +328,17 @@
           class="input-form text-sm h-9 flex-1 sm:w-48"
           bind:value={searchQuery}
         />
-        <select class="input-form text-sm h-9" bind:value={filterCategory}>
-          <option value="">Filtro de categoria</option>
-          {#each categories as cat}
-            <option value={cat}>{cat}</option>
-          {/each}
-        </select>
+        <Select.Root bind:value={filterCategory}>
+          <Select.Trigger class="input-form text-sm h-9">
+            {filterCategory || 'Filtro de categoria'}
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value="" label="Todas as categorias" />
+            {#each categories as cat}
+              <Select.Item value={cat} label={cat} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
       </div>
     </div>
 
@@ -367,11 +378,16 @@
                 </td>
                 <td class="px-4 py-3">
                   {#if editingId === ex.id}
-                    <select class="input-form text-sm h-8" bind:value={editData.category}>
-                      {#each categories as cat}
-                        <option>{cat}</option>
-                      {/each}
-                    </select>
+                    <Select.Root bind:value={editData.category}>
+                      <Select.Trigger class="input-form text-sm h-8">
+                        {editData.category || 'Selecione...'}
+                      </Select.Trigger>
+                      <Select.Content>
+                        {#each categories as cat}
+                          <Select.Item value={cat} label={cat} />
+                        {/each}
+                      </Select.Content>
+                    </Select.Root>
                   {:else}
                     <span class="px-2.5 py-1 rounded-sm text-xs font-semibold uppercase" style="background: var(--accent); color: var(--primary-text);">
                       {ex.category}

@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { maskPhone } from '$lib/masks';
+  import * as Select from '$lib/components/ui/select/index.js';
   export let params;
 
   let pessoas = [];
@@ -90,10 +91,15 @@
 
         <label class="block">
           <span class="field-label">Tipo</span>
-          <select class="field-input" bind:value={form.tipo}>
-            <option value="cliente">Cliente</option>
-            <option value="funcionario">Funcionário</option>
-          </select>
+          <Select.Root bind:value={form.tipo}>
+            <Select.Trigger class="field-input">
+              {form.tipo === 'funcionario' ? 'Funcionário' : 'Cliente'}
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Item value="cliente" label="Cliente" />
+              <Select.Item value="funcionario" label="Funcionário" />
+            </Select.Content>
+          </Select.Root>
         </label>
 
         <label class="block">
@@ -220,10 +226,6 @@
            focus:outline-hidden focus:ring-1 focus:ring-sky-500 focus:border-sky-500
            transition-colors;
   }
-  select.field-input {
-    @apply cursor-pointer;
-  }
-
   .action-primary {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
            bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white

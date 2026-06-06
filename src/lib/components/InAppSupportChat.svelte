@@ -1,6 +1,7 @@
 <script>
   import { isSupportOpen, supportMessages, closeSupport } from '$lib/stores/support';
   import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
+  import { HelpCircle, Trash2, X, SendHorizontal } from 'lucide-svelte';
 </script>
 
 <!-- Mobile backdrop -->
@@ -39,9 +40,7 @@
     <div class="panel-header">
       <div class="flex items-center gap-2">
         <div class="panel-avatar">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-          </svg>
+          <HelpCircle class="size-5" aria-hidden="true" />
         </div>
         <div>
           <div class="font-semibold text-sm">Suporte Zelo PDV</div>
@@ -50,14 +49,10 @@
       </div>
       <div class="flex items-center gap-1">
         <button on:click={clearMessages} class="icon-btn" title="Limpar conversa" aria-label="Limpar conversa">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-          </svg>
+          <Trash2 class="size-4" />
         </button>
         <button on:click={closeSupport} class="icon-btn" aria-label="Fechar suporte">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <X class="size-4" />
         </button>
       </div>
     </div>
@@ -106,9 +101,7 @@
         class="panel-send-btn"
         aria-label="Enviar"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
-          <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-        </svg>
+        <SendHorizontal class="size-4" />
       </button>
     </div>
   </div>

@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
+  import { X, CheckCircle2, Circle } from 'lucide-svelte';
 
   let visible = false;
   let userId = null;
@@ -83,9 +84,7 @@
         <p class="checklist-sub">{doneCount} de {totalSteps} etapas concluídas</p>
       </div>
       <button class="dismiss-btn" on:click={dismiss} aria-label="Dispensar">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-          <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-        </svg>
+        <X class="size-4" />
       </button>
     </div>
 
@@ -99,9 +98,9 @@
       <li class="step" class:done={hasProdutos}>
         <span class="step-icon" aria-hidden="true">
           {#if hasProdutos}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+            <CheckCircle2 class="size-4" />
           {:else}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><circle cx="10" cy="10" r="7.25" /></svg>
+            <Circle class="size-4" />
           {/if}
         </span>
         <span class="step-label">Cadastre seus produtos</span>
@@ -113,9 +112,9 @@
       <li class="step" class:done={hasCaixa}>
         <span class="step-icon" aria-hidden="true">
           {#if hasCaixa}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+            <CheckCircle2 class="size-4" />
           {:else}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><circle cx="10" cy="10" r="7.25" /></svg>
+            <Circle class="size-4" />
           {/if}
         </span>
         <span class="step-label">Abra o caixa do dia</span>
@@ -127,9 +126,9 @@
       <li class="step" class:done={hasVenda}>
         <span class="step-icon" aria-hidden="true">
           {#if hasVenda}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+            <CheckCircle2 class="size-4" />
           {:else}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><circle cx="10" cy="10" r="7.25" /></svg>
+            <Circle class="size-4" />
           {/if}
         </span>
         <span class="step-label">Registre a primeira venda e recibo</span>
@@ -141,9 +140,9 @@
       <li class="step" class:done={hasRelatorio}>
         <span class="step-icon" aria-hidden="true">
           {#if hasRelatorio}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+            <CheckCircle2 class="size-4" />
           {:else}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><circle cx="10" cy="10" r="7.25" /></svg>
+            <Circle class="size-4" />
           {/if}
         </span>
         <span class="step-label">Opcional: veja seu relatório do dia</span>

@@ -4,6 +4,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { confirmAction } from '$lib/stores/ui';
   import { maskCNPJ } from '$lib/masks';
+  import * as Select from '$lib/components/ui/select/index.js';
 
   let empresas = [];
   let membrosPorEmpresa = new Map(); // id_empresa -> array de { id_usuario, role }
@@ -204,10 +205,15 @@
             {#if podeGerenciar(emp.id)}
               <form class="mt-4 grid md:grid-cols-3 gap-2" on:submit|preventDefault={() => { selectedEmpresaId = emp.id; adicionarMembro(new Event('submit')); }}>
                 <input placeholder="E-mail do usuário" type="email" class="input-form" bind:value={novoMembroEmail} />
-                <select class="input-form" bind:value={novoMembroRole}>
-                  <option value="atendente">Atendente</option>
-                  <option value="admin">Gestão</option>
-                </select>
+                <Select.Root bind:value={novoMembroRole}>
+                  <Select.Trigger class="input-form">
+                    {novoMembroRole === 'admin' ? 'Gestão' : 'Atendente'}
+                  </Select.Trigger>
+                  <Select.Content>
+                    <Select.Item value="atendente" label="Atendente" />
+                    <Select.Item value="admin" label="Gestão" />
+                  </Select.Content>
+                </Select.Root>
                 <button class="btn-primary">Adicionar</button>
               </form>
               <p class="text-xs text-slate-500 mt-1">Dica: o usuário precisa ter uma conta com este e-mail. A função localizará o usuário e criará/atualizará a permissão.</p>
