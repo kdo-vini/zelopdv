@@ -2,6 +2,8 @@
 
 @import 'tailwindcss';
 
+@source "./lib/components/ui/**/*.svelte";
+
 @plugin '@tailwindcss/forms';
 
 @custom-variant dark (&:is(.dark *));
@@ -340,8 +342,8 @@
 
 /* ─── shadcn-svelte: tokens mapeados para a paleta ZeloPDV ─────────────────
    Não alterar estes valores isoladamente — manter alinhados com base.css.
-   Novos componentes shadcn usam estas variáveis; código legado usa --bg-*/
-   --text-*/--primary/* de base.css (que têm o mesmo valor).
+   Novos componentes shadcn usam estas variáveis; código legado usa as
+   variáveis bg / text / primary de base.css (que têm o mesmo valor).
    ─────────────────────────────────────────────────────────────────────── */
 :root {
   --background:           #0F172A;   /* = --bg-app       (slate-900) */

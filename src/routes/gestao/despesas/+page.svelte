@@ -291,7 +291,7 @@
       <div class="w-full lg:w-44">
         <label class="text-xs mb-1 block" style="color: var(--text-muted);">Categoria/Fornecedor</label>
         <Select.Root bind:value={newExpense.category}>
-          <Select.Trigger class="input-form w-full">
+          <Select.Trigger class="input-form w-full !h-10">
             {newExpense.category || 'Selecione...'}
           </Select.Trigger>
           <Select.Content>
@@ -321,15 +321,21 @@
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4" style="color: var(--accent);"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6z" /></svg>
         Gestão de Despesas
       </h3>
-      <div class="flex items-center gap-2 w-full sm:w-auto">
-        <input
-          type="text"
-          placeholder="Buscar Despesa..."
-          class="input-form text-sm h-9 flex-1 sm:w-48"
-          bind:value={searchQuery}
-        />
+      <div class="flex flex-col sm:flex-row items-stretch gap-2 w-full sm:w-auto">
+        <div class="relative w-full sm:w-56">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style="color: var(--text-muted);">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar despesa..."
+            class="input-form text-sm h-9 w-full !pl-9"
+            bind:value={searchQuery}
+          />
+        </div>
+        <div class="w-full sm:w-48">
         <Select.Root bind:value={filterCategory}>
-          <Select.Trigger class="input-form text-sm h-9">
+          <Select.Trigger class="input-form text-sm !h-9 w-full">
             {filterCategory || 'Filtro de categoria'}
           </Select.Trigger>
           <Select.Content>
@@ -339,6 +345,7 @@
             {/each}
           </Select.Content>
         </Select.Root>
+        </div>
       </div>
     </div>
 

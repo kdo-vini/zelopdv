@@ -89,3 +89,35 @@ Não havia um log histórico consolidado de incidentes neste repositório. As en
 - [src/lib/profileUtils.js](/home/vinicius/code/zelopdv/src/lib/profileUtils.js:28)
 - [src/lib/guards.js](/home/vinicius/code/zelopdv/src/lib/guards.js:146)
 - [tests/guards.ensureActiveSubscription.test.js](/home/vinicius/code/zelopdv/tests/guards.ensureActiveSubscription.test.js:85)
+
+---
+
+## INC-2026-06-06-01 — Tokens shadcn vazios: toasts invisíveis e componentes sem cor
+
+**Status:** confirmado em runtime nesta sessão (verificado no navegador via `getComputedStyle`).
+
+**Sintoma**
+
+- Toasts (svelte-sonner) praticamente invisíveis: o toast padrão/`info` renderizava com `background: transparent` e texto preto.
+- Botões do `AlertDialog` (`Cancelar`/`Confirmar`) e demais componentes shadcn apareciam como "blobs" com glow azul e sem preenchimento.
+- Toasts `success`/`error`/`warning` (richColors) continuavam visíveis, mascarando a causa real.
+
+**Causa-raiz**
+
+- Um comentário em [src/app.css](/home/vinicius/code/zelopdv/src/app.css:343) continha a sequência `--bg-*/`. O `*/` **fechou o comentário CSS prematuramente**.
+- O texto restante virou CSS malformado e o parser **descartou todo o bloco `:root` dos tokens shadcn + o `@theme inline`**.
+- Resultado: `--popover`, `--background`, `--border`, `--card`, `--foreground` ficaram **vazios** em runtime (os legados `--bg-*`/`--text-*` continuaram, pois vêm de `base.css`).
+- Componentes shadcn usam `bg-popover`/`bg-background`/`border-border` → sem valor → transparentes. svelte-sonner com `--normal-bg: var(--popover)` → vazio → toast transparente.
+
+**Fix / recovery**
+
+- Reescrever o comentário para não conter `*/` (`--bg-*/` → `bg / text / primary`).
+- Confirmado: todos os tokens shadcn voltaram a resolver (`--popover: #1E293B`, `--background: #0F172A`, `--border: #334155`).
+- Ajuste de polish no Toaster: `--normal-bg/text/border` ligados aos tokens + `closeButton`, para o toast padrão ficar slate on-brand em vez de preto.
+- Regra prática: **nunca usar `*/` em texto de comentário CSS** (ex.: padrões `glob`/wildcards). Um comentário quebrado derruba silenciosamente todo o CSS subsequente.
+
+**Referências**
+
+- [src/app.css](/home/vinicius/code/zelopdv/src/app.css:343)
+- [src/routes/+layout.svelte](/home/vinicius/code/zelopdv/src/routes/+layout.svelte:409)
+- [src/lib/stores/ui.js](/home/vinicius/code/zelopdv/src/lib/stores/ui.js:5)

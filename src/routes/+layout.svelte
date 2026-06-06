@@ -406,7 +406,13 @@
   }
 </script>
 
-<Toaster theme="dark" richColors position="bottom-right" />
+<Toaster
+  theme="dark"
+  richColors
+  closeButton
+  position="bottom-right"
+  style="--normal-bg: var(--popover); --normal-text: var(--popover-foreground); --normal-border: var(--border);"
+/>
 <ConfirmDialog />
 <UpdateAvailable />
 
