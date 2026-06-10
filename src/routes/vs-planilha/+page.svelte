@@ -138,32 +138,33 @@
   <SiteHeader />
 
   <!-- HERO -->
-  <section class="relative pt-40 pb-20 overflow-hidden">
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-sky-600/15 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
-
+  <section class="relative pt-40 pb-20 overflow-hidden border-b border-white/5">
     <div class="max-w-4xl mx-auto px-6 text-center">
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-400 text-xs font-semibold mb-6">
         Comparação Honesta
       </div>
-      <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-6">
+      <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-6" style="text-wrap: balance;">
         Ainda controlando sua lanchonete<br class="hidden md:block" />
-        <span class="text-transparent bg-clip-text bg-linear-to-r from-sky-400 to-blue-400">numa planilha?</span>
+        numa planilha?
       </h1>
-      <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+      <p class="text-lg md:text-xl max-w-2xl mx-auto mb-5 md:mb-8 leading-relaxed" style="color: var(--text-muted);">
         A planilha foi feita para escritório. Seu negócio merece uma ferramenta feita para o balcão.
         Veja o que você está deixando para trás.
       </p>
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a href="/cadastro" class="w-full sm:w-auto px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-3 md:mb-4">
+        <a href="/cadastro" class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center">
           Testar 30 dias grátis — sem cartão
         </a>
-        <a href="#comparacao" class="w-full sm:w-auto px-8 py-4 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-semibold transition-all">
+        <a href="#comparacao" class="px-1 py-2 md:py-4 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">
           Ver comparação
         </a>
       </div>
-      <button type="button" on:click={openSupportChat} class="mt-5 text-sm text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
-        Fala com a gente
-      </button>
+      <p class="text-xs md:text-sm" style="color: var(--text-muted);">
+        30 dias grátis. Sem cartão, sem cobrança automática.
+        <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+          Tem dúvida? Fala com a gente.
+        </button>
+      </p>
     </div>
   </section>
 
@@ -195,7 +196,7 @@
       </h2>
       <p class="text-slate-400 text-center mb-12">Funcionalidade por funcionalidade, lado a lado.</p>
 
-      <div class="rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+      <div class="rounded-2xl border border-white/10 overflow-hidden">
         <!-- Table header -->
         <div class="grid grid-cols-3 bg-white/5 border-b border-white/10">
           <div class="px-6 py-4 text-sm font-semibold text-slate-400">Funcionalidade</div>
@@ -224,7 +225,7 @@
             </div>
             <div class="px-6 py-4 border-l border-white/5">
               <div class="flex items-start gap-2">
-                <CircleCheckBig class="mt-0.5 size-4 shrink-0 text-emerald-400" aria-hidden="true" />
+                <CircleCheckBig class="mt-0.5 size-4 shrink-0 text-sky-400" aria-hidden="true" />
                 <span class="text-slate-300 text-xs leading-relaxed">{row.zelo}</span>
               </div>
             </div>
@@ -320,10 +321,10 @@
         Começar agora grátis
         <ArrowRight class="size-5" aria-hidden="true" />
       </a>
-      <p class="text-xs text-slate-500 mt-3">
-        Sem cobranças durante os 30 dias. Cancele quando quiser.
+      <p class="text-xs md:text-sm" style="color: var(--text-muted);">
+        30 dias grátis. Sem cartão, sem cobrança automática.
         <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
-          Fala com a gente
+          Tem dúvida? Fala com a gente.
         </button>
       </p>
     </div>

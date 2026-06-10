@@ -3,6 +3,7 @@
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
   import MarketingPriceSection from '$lib/components/marketing/MarketingPriceSection.svelte';
   import { competitorComparisons } from '$lib/data/competitorComparisons';
+  import { ArrowRight } from 'lucide-svelte';
 
   const comparisons = Object.values(competitorComparisons);
 
@@ -53,23 +54,37 @@
   <SiteHeader />
 
   <main>
-    <section class="relative pt-32 pb-16 overflow-hidden border-b border-white/5">
-      <div class="absolute top-0 left-0 w-full h-72 bg-linear-to-b from-sky-500/10 to-transparent pointer-events-none"></div>
+    <!-- HERO -->
+    <section class="relative pt-24 md:pt-32 pb-12 md:pb-20 overflow-hidden border-b border-white/5">
       <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-300 text-xs font-medium mb-8">
-          <span class="inline-flex w-2 h-2 rounded-full bg-sky-400"></span>
-          Comparativos honestos
-        </div>
-        <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight mb-6">
+        <h1 class="text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight mb-4 md:mb-6" style="text-wrap: balance;">
           Zelo PDV vs os outros sistemas do mercado
         </h1>
-        <p class="text-lg md:text-xl leading-relaxed" style="color: var(--text-muted);">
+
+        <p class="text-base md:text-xl max-w-2xl mx-auto mb-6 md:mb-8 leading-relaxed" style="color: var(--text-muted);">
           A partir de R$ 59/mês, modular e funcionando offline. Veja, ponto a ponto e com preços datados, como o Zelo PDV se compara aos principais sistemas de PDV e gestão do Brasil.
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-3 md:mb-4">
+          <a href="/cadastro" class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center">
+            Testar 30 dias grátis
+          </a>
+          <a href="#comparativos" class="px-1 py-2 md:py-4 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">
+            Ver comparativos
+          </a>
+        </div>
+
+        <p class="text-xs md:text-sm" style="color: var(--text-muted);">
+          30 dias grátis. Sem cartão, sem cobrança automática.
+          <button type="button" class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+            Tem dúvida? Fala com a gente.
+          </button>
         </p>
       </div>
     </section>
 
-    <section class="py-20 border-b border-white/5">
+    <!-- COMPARISON CARDS -->
+    <section id="comparativos" class="py-20 border-b border-white/5">
       <div class="max-w-7xl mx-auto px-6">
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {#each comparisons as comparison}
@@ -78,15 +93,15 @@
               class="group rounded-3xl border p-7 transition-all hover:-translate-y-1"
               style="background: var(--bg-card); border-color: var(--border-card);"
             >
-              <p class="text-sm uppercase tracking-[0.2em] mb-3 text-sky-300">Comparativo</p>
               <h2 class="text-2xl font-semibold text-white mb-3 group-hover:text-sky-300 transition-colors">
-                Zelo PDV vs {comparison.competitor}
+                Zelo PDV × {comparison.competitor}
               </h2>
               <p class="text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
                 R$ 59/mês vs {comparison.priceAnchor.competitor}
               </p>
-              <span class="text-sm font-semibold text-sky-300 group-hover:text-sky-200 underline underline-offset-4">
+              <span class="text-sm font-semibold text-sky-300 group-hover:text-sky-200 inline-flex items-center gap-1.5">
                 Ver comparativo
+                <ArrowRight class="size-3.5" aria-hidden="true" />
               </span>
             </a>
           {/each}

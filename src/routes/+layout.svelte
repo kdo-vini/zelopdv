@@ -192,7 +192,7 @@
 
     if (!supabase) return;
  
-  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/redefinir-senha', '/privacidade', '/termos', '/pascoa', '/para-lanchonetes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao', '/extensoes', '/vs-planilha', '/auth/callback'];
+  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/redefinir-senha', '/privacidade', '/termos', '/pascoa', '/para-lanchonetes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao', '/extensoes', '/vs-planilha', '/comparativos', '/contato', '/zelo-impressao', '/auth/callback'];
     const path = window.location.pathname;
 
     let navigated = false;
