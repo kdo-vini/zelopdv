@@ -36,6 +36,7 @@
 - [[docs/billing/pix-abacatepay-plan]] — nota histórica do desenho inicial do Pix
 - [[docs/projects/PROJETO_ACESSOS]] — tracker histórico por sprint do add-on Acessos
 - [[docs/projects/PROJETO_MESAS]] — tracker histórico por sprint do add-on Mesas
+- [[docs/projects/PROJETO_RECEBIMENTOS_ABACATEPAY]] — exploração: lojista recebendo de clientes finais via AbacatePay (não implementado)
 - [[docs/roadmap/CLEANUP_FOLLOWUPS]] — backlog curto de limpeza
 - [[docs/features/update-versioning]] — detector de nova versão
 

@@ -21,11 +21,20 @@
 - ✅ FX-RLS-01 — policies de `expenses` foram alinhadas ao modelo owner-scoped para insert/update de subusuários e aplicadas no Supabase real — [.ai/migrations/expenses_owner_scoped_write_policies_2026_06_01.sql](/home/vinicius/code/zelopdv/.ai/migrations/expenses_owner_scoped_write_policies_2026_06_01.sql:1)
 - ✅ FX-SUPPORT-01 — prompt do chat de suporte deixou de expor preço antigo do add-on Acessos; ambas as ocorrências (`R$ 20` → `R$ 30`) alinhadas ao catálogo canônico — [src/routes/api/chat/support/+server.js](/home/vinicius/code/zelopdv/src/routes/api/chat/support/+server.js:26), [src/routes/api/chat/support/+server.js](/home/vinicius/code/zelopdv/src/routes/api/chat/support/+server.js:137). Dívida residual (copy literal, não lê de `pricing.js`) registrada em [[TRADEOFFS]] como DT-BILLING-01.
 
+## Agendado para a próxima sprint (2026-06-02)
+
+> 3 frentes promovidas de [[TRADEOFFS]] (seção "Promovido para a próxima sprint"). Plano completo e
+> definição de pronto ficam lá; aqui fica a trilha de execução. Marque ✅ conforme cada frente fechar.
+
+- ⏳ SPRINT-1 — quebrar os god-components, começando pelo fluxo de pagamento de `src/routes/app/mesas/[id]/+page.svelte` (~3.400 linhas). Reclassifica `DT-ARCH-01` de prioridade baixa → ativa; extrair lógica para componentes/store testável reusando [src/lib/components/modals/ModalPagamento.svelte](/home/vinicius/code/zelopdv/src/lib/components/modals/ModalPagamento.svelte:1)
+- ⏳ SPRINT-2 — defesa em profundidade em acessos: enforcement server-side das mutações sensíveis, decisão sobre o PIN, revisão das tabelas admin sem RLS e testes de escalonamento de papel + edição concorrente. Absorve FX-PENDING-05 e FX-PENDING-06 — [src/lib/server/accessControl.js](/home/vinicius/code/zelopdv/src/lib/server/accessControl.js:106), [src/lib/accessControl.js](/home/vinicius/code/zelopdv/src/lib/accessControl.js:122), [src/lib/components/AdminLock.svelte](/home/vinicius/code/zelopdv/src/lib/components/AdminLock.svelte:37)
+- ⏳ SPRINT-3 — trocar invariantes-por-convenção por enforcement: confirmar/monitorar o sweeper de deleção (LGPD, absorve OPS-DELETE-01), reativação falhar fechada (`DT-RELIABILITY-01`), remover fallback de chave Pix hardcoded (`DT-SEC-01`) e decidir contrato de `subscriptions` (`TA-DATA-01`) — [src/routes/api/account/reactivate/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/reactivate/+server.js:28), [src/lib/server/billingPix.js](/home/vinicius/code/zelopdv/src/lib/server/billingPix.js:5)
+
 ## Pendentes confirmados nesta sessão
 
-- ⏳ FX-PENDING-05 — modelo de permissao do add-on Acessos ainda e majoritariamente gating de UI; falta definir onde precisa de enforcement server-side real — [src/lib/accessControl.js](/home/vinicius/code/zelopdv/src/lib/accessControl.js:122), [docs/modules/ACESSOS.md](/home/vinicius/code/zelopdv/docs/modules/ACESSOS.md:1)
-- ⏳ FX-PENDING-06 — `AdminLock` usa `pin_admin` em claro no cliente; tratar como trava de conveniencia ate redesenho — [src/lib/components/AdminLock.svelte](/home/vinicius/code/zelopdv/src/lib/components/AdminLock.svelte:37), [docs/data/SCHEMA_RLS.md](/home/vinicius/code/zelopdv/docs/data/SCHEMA_RLS.md:1)
+- ⏳ FX-PENDING-05 — modelo de permissao do add-on Acessos ainda e majoritariamente gating de UI; falta definir onde precisa de enforcement server-side real — [src/lib/accessControl.js](/home/vinicius/code/zelopdv/src/lib/accessControl.js:122), [docs/modules/ACESSOS.md](/home/vinicius/code/zelopdv/docs/modules/ACESSOS.md:1) → **agendado em SPRINT-2 (2026-06-02)**
+- ⏳ FX-PENDING-06 — `AdminLock` usa `pin_admin` em claro no cliente; tratar como trava de conveniencia ate redesenho — [src/lib/components/AdminLock.svelte](/home/vinicius/code/zelopdv/src/lib/components/AdminLock.svelte:37), [docs/data/SCHEMA_RLS.md](/home/vinicius/code/zelopdv/docs/data/SCHEMA_RLS.md:1) → **agendado em SPRINT-2 (2026-06-02)**
 
 ## Pendência operacional fora do repo
 
-- ⚠️ OPS-DELETE-01 — purge final de contas agendadas depende de sweeper no ZeloChat, não encontrado neste repo — [.ai/migrations/account_deletion_grace_2026_05_31.sql](/home/vinicius/code/zelopdv/.ai/migrations/account_deletion_grace_2026_05_31.sql:5)
+- ⚠️ OPS-DELETE-01 — purge final de contas agendadas depende de sweeper no ZeloChat, não encontrado neste repo — [.ai/migrations/account_deletion_grace_2026_05_31.sql](/home/vinicius/code/zelopdv/.ai/migrations/account_deletion_grace_2026_05_31.sql:5) → **agendado em SPRINT-3 (2026-06-02)**, prioridade por LGPD

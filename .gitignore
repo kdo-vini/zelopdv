@@ -28,6 +28,13 @@ capture.mjs
 # Claude Code local files (not for repo)
 .claude/settings.local.json
 .claude/agent-memory/
+.claude/skills/
+.agents/
+skills-lock.json
+.worktrees/
+
+# Obsidian trash
+pdvObsidian/.trash/
 
 # Digital certificates (not for repo)
 static/*.pem

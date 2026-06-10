@@ -28,6 +28,7 @@
         <ul class="space-y-2 text-sm" style={`color: ${isLight ? 'var(--blog-muted)' : 'var(--text-muted)'}`}>
           <li><a href={featuresHref} class="transition-colors hover:text-sky-400">Funcionalidades</a></li>
           <li><a href={pricingHref} class="transition-colors hover:text-sky-400">Preços</a></li>
+          <li><a href="/comparativos" class="transition-colors hover:text-sky-400">Comparativos</a></li>
           <li><a href="/atualizacoes" class="transition-colors hover:text-sky-400">Atualizações</a></li>
         </ul>
       </div>

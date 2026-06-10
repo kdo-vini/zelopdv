@@ -21,6 +21,72 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ---
 
+## Promovido para a próxima sprint — 3 críticas a resolver (2026-06-02)
+
+> Estas 3 críticas saíram de uma revisão em 2026-06-02 e foram **commitadas para a próxima sprint**.
+> Não são itens novos: consolidam TA/DT já existentes (abaixo), reordenados por risco real, mais uma
+> lacuna de teste ainda não catalogada. Ao iniciar cada frente, mova o trabalho para [[FIXES_PROGRESS]];
+> se reabrir uma decisão, atualize o TA/DT correspondente aqui.
+
+### SPRINT-1 — Quebrar os god-components, começando pelo fluxo de pagamento
+
+- **Crítica:** `src/routes/app/mesas/[id]/+page.svelte` (~3.400 linhas / ~124 KB) concentra estado, UI e
+  regra de negócio inline, sem componentes filhos. `relatorios` (~96 KB), `gestao/produtos` (~88 KB) e
+  `assinatura` (~80 KB) seguem o mesmo padrão.
+- **Consolida:** `DT-ARCH-01`.
+- **O que muda agora:** a prioridade de `DT-ARCH-01` sobe de *baixa* para *ativa*. Os juros **já estão
+  sendo pagos** — os 133 warnings de `svelte-check` (`DT-QUALITY-01`) se concentram nesses arquivos, e o
+  fluxo de pagamento (maior risco de receita) é o trecho mais ilegível do maior arquivo.
+- **Plano de ação:**
+  1. Extrair o fluxo de pagamento/comanda de `mesas/[id]` para componentes dedicados (puxar lógica do
+     `+page.svelte` para fora, reusando `ModalPagamento`).
+  2. Isolar o estado de pagamento num store/composable testável.
+  3. Repetir o padrão em `relatorios` e `gestao/produtos` só depois que `mesas` estabilizar.
+- **Definição de pronto:** `mesas/[id]` abaixo de um teto de linhas acordado, fluxo de pagamento com teste
+  de unidade próprio, warnings do arquivo zerados.
+
+### SPRINT-2 — Defesa em profundidade em acessos (parar de depender só do RLS)
+
+- **Crítica:** permissão por papel é gating de UI, o PIN é comparado no cliente e o `admin-dashboard` fala
+  direto com Supabase via anon key. Empilhados, esses tradeoffs deixam o sistema com **zero defesa em
+  profundidade**: se uma policy de RLS for mal configurada, cai a única barreira real — e não há snapshot
+  de schema para auditar o RLS contra uma fonte de verdade. Os testes também não cobrem escalonamento de
+  papel nem edição concorrente.
+- **Consolida:** `TA-SEC-01`, `TA-SEC-02`, `TA-ARCH-01`, `TA-DATA-02` + lacuna de testes (nova).
+- **Plano de ação:**
+  1. Enforcement server-side nas **mutações sensíveis** por papel (não só esconder na UI) — definir a
+     lista de rotas/ações que exigem isso (responde à open question de [[CODE_REVIEW]]).
+  2. Decidir o destino do PIN: validar no servidor sem expor o valor, **ou** rebaixar formalmente para
+     "trava de balcão" e parar de chamá-lo de proteção.
+  3. Listar as tabelas do admin sem RLS e mover mutações críticas para handlers server-side.
+  4. Adicionar testes de **escalonamento de papel** (subusuário não eleva o próprio cargo; titular não é
+     trancado por subusuário) e de **edição concorrente** (dois operadores, mesmo caixa/produto).
+- **Definição de pronto:** mutação sensível recusada no servidor para papel sem permissão, com teste
+  cobrindo o caminho negado.
+
+### SPRINT-3 — Trocar invariantes-por-convenção por enforcement (dinheiro + LGPD)
+
+- **Crítica:** garantias críticas dependem de convenção ou de processo externo, não de enforcement: o
+  purge de conta depende de sweeper externo não confirmado (risco LGPD); `subscriptions` usa "última
+  linha vence" sem constraint; a reativação não falha fechada; o webhook Pix tem chave hardcoded de
+  fallback.
+- **Consolida:** `TA-OPS-01`, `TA-DATA-01`, `DT-RELIABILITY-01`, `DT-SEC-01`.
+- **O que muda agora:** ordenar por risco. **Primeiro** confirmar o sweeper de deleção (LGPD é a maior
+  exposição); os demais são quick wins.
+- **Plano de ação:**
+  1. Localizar o sweeper que consome `deletion_scheduled_at` (provável ZeloChat), documentar owner +
+     monitoramento e escrever runbook de reconciliação (`TA-OPS-01` / OPS-DELETE-01).
+  2. `reactivate`: falhar fechada se o Stripe recusar `cancel_at_period_end=false`, ou gravar estado de
+     reconciliação pendente (`DT-RELIABILITY-01`).
+  3. Confirmar com a AbacatePay se `DEFAULT_ABACATEPAY_PUBLIC_KEY` é oficial; se não, remover o fallback e
+     falhar fechado (`DT-SEC-01`).
+  4. Decidir o contrato de `subscriptions`: constraint única por `user_id` **ou** registrar formalmente
+     "última linha vence" e centralizar a leitura (`TA-DATA-01`).
+- **Definição de pronto:** sweeper confirmado e monitorado; reativação com caminho de falha explícito;
+  webhook Pix sem fallback silencioso.
+
+---
+
 ## Tradeoffs aceitos
 
 ### TA-SEC-01 — Permissão por papel é gating de UI, não RBAC forte no servidor
@@ -35,6 +101,7 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
   da mesma empresa*, não entre empresas. O titular já confia nos próprios funcionários.
 - **Gatilho de revisão:** primeiro cliente enterprise que exija separação forte de funções, ou qualquer
   incidente de subusuário abusando de permissão. Ver finding P1 em [[CODE_REVIEW]] e [[docs/modules/ACESSOS]].
+- **Status (2026-06-02):** gatilho puxado por decisão — agendado em SPRINT-2 (enforcement server-side das mutações sensíveis).
 
 ### TA-SEC-02 — `AdminLock` / `pin_admin` é trava de conveniência, não barreira de segurança
 
@@ -57,6 +124,7 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 - **Gatilho de revisão:** confirmar onde o sweeper roda (provável ZeloChat) e ter monitoramento. Enquanto
   não confirmado, continua sendo **risco**, não tradeoff limpo — ver OPS-DELETE-01 em [[FIXES_PROGRESS]]
   e finding P1 em [[CODE_REVIEW]].
+- **Status (2026-06-02):** agendado em SPRINT-3 como item de maior prioridade (exposição LGPD).
 
 ### TA-ARCH-01 — `admin-dashboard/` fala direto com Supabase via anon key
 
@@ -140,6 +208,7 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 - **Juros:** usuário parece reativado enquanto a assinatura segue cancelando no fim do ciclo.
 - **Conserto certo:** falhar fechada ou gravar estado de reconciliação pendente para o suporte.
 - **Custo de conserto:** baixo/médio. **Prioridade:** média. Ver finding P2 em [[CODE_REVIEW]].
+- **Status (2026-06-02):** agendado em SPRINT-3.
 
 ### DT-SEC-01 — Fallback de `DEFAULT_ABACATEPAY_PUBLIC_KEY` hardcoded no webhook Pix
 
@@ -150,6 +219,7 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
   falhar fechado.
 - **Custo de conserto:** baixo (depende de 1 confirmação externa). **Prioridade:** média. Ver finding P2
   em [[CODE_REVIEW]].
+- **Status (2026-06-02):** agendado em SPRINT-3.
 
 ### DT-QUALITY-01 — 133 warnings de `svelte-check`
 
@@ -163,8 +233,9 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 - **Estado:** `mesas/[id]` (~124 KB), `relatorios` (~96 KB), `gestao/produtos` (~88 KB) e outros.
 - **Juros:** onboarding lento, merges frágeis, regressão lateral, difícil paralelizar trabalho.
 - **Conserto certo:** decompor por superfícies de domínio, não por “limpeza geral”.
-- **Custo de conserto:** alto. **Prioridade:** baixa, mas crescente. Ver finding P3 em [[CODE_REVIEW]] e
-  os hotspots listados em [[CLAUDE]].
+- **Custo de conserto:** alto. **Prioridade:** ~~baixa, mas crescente~~ → **ativa** (reclassificada em
+  2026-06-02). Ver finding P3 em [[CODE_REVIEW]] e os hotspots listados em [[CLAUDE]].
+- **Status (2026-06-02):** agendado em SPRINT-1, começando pelo fluxo de pagamento de `mesas/[id]`.
 
 ---
 

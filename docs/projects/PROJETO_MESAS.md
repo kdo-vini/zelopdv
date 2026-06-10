@@ -49,7 +49,7 @@
 - [✅] `/gestao/mesas` (CRUD de mesas — número, capacidade, ativa, status)
 - [✅] `/app/mesas` (mapa visual com tiles coloridos por status)
 - [✅] `/app/mesas/[id]` (comanda: produtos grid + itens + totais + ajustes)
-- [✅] Gate `hasMesasAddon` aplicado nas 3 rotas (redirect/upsell card pra `/assinatura?addon=mesas`)
+- [x] Gate `hasMesasAddon` aplicado nas 3 rotas (redirect/upsell card pra `/assinatura?addon=mesas`)
 - [✅] Link "Mesas" adicionado no sidebar (grupo Vendas, após Frente de Caixa)
 - [✅] `/assinatura?addon=mesas` mostra banner de upsell + pré-marca o checkbox
 
