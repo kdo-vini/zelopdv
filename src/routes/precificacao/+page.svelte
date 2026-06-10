@@ -2,6 +2,7 @@
   import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import MarketingFooter from "$lib/components/marketing/MarketingFooter.svelte";
   import PricingCalculator from "$lib/components/tools/PricingCalculator.svelte";
+  import { ChevronDown } from "lucide-svelte";
 
   const faqItems = [
     {
@@ -123,7 +124,7 @@
     <PricingCalculator variant="marketing" />
   </section>
 
-  <section class="py-24 border-t border-white/5 bg-[#0B0F19]">
+  <section class="py-24 border-t border-white/5" style="background: var(--bg-app);">
     <div class="max-w-3xl mx-auto px-6">
       <div class="text-center mb-12">
         <h2 class="text-3xl font-bold text-white mb-4">Perguntas Frequentes</h2>
@@ -141,18 +142,7 @@
               class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none"
             >
               <span>{item.question}</span>
-              <svg
-                class="w-5 h-5 text-slate-500 transition-transform group-open:rotate-180 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                ><path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                /></svg
-              >
+              <ChevronDown class="size-5 text-slate-500 transition-transform group-open:rotate-180 shrink-0" aria-hidden="true" />
             </summary>
             <div class="px-6 pb-6 text-slate-400 leading-relaxed">
               {item.answer}
@@ -168,9 +158,6 @@
 
 <style>
   .page-shell {
-    --bg-app: #0b0f19; /* Align with main landing page */
-    --bg-panel: #111827;
-    --bg-card: #0f172a;
     background: var(--bg-app);
     color: var(--text-label);
   }

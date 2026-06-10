@@ -21,6 +21,7 @@
   import { withTimeout } from '$lib/utils';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
+  import { resolveAppIcon } from '$lib/icons/appIcons';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { money, validatePaymentCoverage, getPrecoTabela } from '$lib/finance/caixa';
   import { buildVendaPayload } from '$lib/finance/saleOps';
@@ -94,7 +95,7 @@
   // Plataformas de pagamento ativas (derivado de dadosEmpresa)
   $: plataformasAtivas = (dadosEmpresa?.plataformas_pagamento ?? [])
     .filter(p => p.ativo)
-    .map(p => ({ id: p.id, nome: p.nome, icone: p.icone || '📦', taxa_pct: Number(p.taxa_pct || 0) }));
+    .map(p => ({ id: p.id, nome: p.nome, icone: p.icone || 'plataformas', taxa_pct: Number(p.taxa_pct || 0) }));
 
   // Permission gates — owners have all permissions; sub-users check their role
   // Initialized to true (owners); onMount overwrites for sub-users after loading permissions from API
@@ -1450,13 +1451,13 @@
     <div class="p-4 bg-slate-900 border-t border-slate-800 space-y-3">
       <!-- Tipo de Pedido -->
       <div class="flex gap-2">
-        {#each [{ id: 'retirada', label: 'Retirada', icon: '🛍️' }, { id: 'delivery', label: 'Delivery', icon: '🛵' }] as tipo}
+        {#each [{ id: 'retirada', label: 'Retirada', icon: 'retirada' }, { id: 'delivery', label: 'Delivery', icon: 'delivery' }] as tipo}
           <button
             type="button"
             on:click={() => { tipoPedido = tipo.id; if (tipo.id !== 'delivery') taxaEntregaInput = 0; }}
             class="flex-1 px-2 py-1.5 rounded-full font-medium text-xs transition-colors border flex items-center justify-center gap-1 {tipoPedido === tipo.id ? 'bg-sky-600 text-white border-transparent' : 'bg-slate-800 text-slate-400 border-slate-700'}"
           >
-            <span>{tipo.icon}</span>
+            <svelte:component this={resolveAppIcon(tipo.icon)} class="size-3.5" aria-hidden="true" />
             <span>{tipo.label}</span>
           </button>
         {/each}

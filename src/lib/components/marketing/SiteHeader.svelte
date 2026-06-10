@@ -1,9 +1,11 @@
 <script>
   import { page } from '$app/stores';
+  import { Menu, Sparkles, X } from 'lucide-svelte';
 
   // Quando uma página tem banner promocional ABOVE the nav (ex: homepage Easter banner),
   // passa 'top-9' ou similar. Default 'top-0'.
   export let topOffset = 'top-0';
+  export let easterDays = 0;
 
   let showMobileMenu = false;
 
@@ -15,7 +17,7 @@
 </script>
 
 <!-- NAV (Simples e Flutuante) -->
-<nav class="fixed {topOffset} w-full z-50 transition-all duration-300 border-b border-white/5 bg-[#0B0F19]/80 backdrop-blur-md">
+<nav class="fixed {topOffset} w-full z-50 transition-all duration-300 border-b border-white/5 backdrop-blur-md" style="background: color-mix(in srgb, var(--bg-app) 80%, transparent);">
   <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
     <div class="flex items-center gap-2">
       <a href="/" class="flex items-center gap-2">
@@ -33,6 +35,12 @@
     </div>
 
     <div class="flex items-center gap-4">
+      {#if easterDays > 0}
+        <a href="/pascoa" class="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-300 text-xs font-medium hover:bg-sky-500/15 transition-colors">
+          <Sparkles class="size-3.5" aria-hidden="true" />
+          <span>Páscoa em {easterDays} {easterDays === 1 ? 'dia' : 'dias'}</span>
+        </a>
+      {/if}
       <a href="/login" class="text-sm font-medium text-white hover:text-sky-400 transition-colors hidden md:block">Entrar</a>
       <!-- CTA do header: só desktop. Em mobile o usuário tem o CTA grande na hero + opção dentro do menu. -->
       <a href="/cadastro" class="hidden md:inline-block px-5 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 rounded-full shadow-lg shadow-sky-900/40 transition-all hover:scale-105 active:scale-95">
@@ -46,9 +54,9 @@
         on:click={() => showMobileMenu = !showMobileMenu}
       >
         {#if showMobileMenu}
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          <X class="size-5" aria-hidden="true" />
         {:else}
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <Menu class="size-5" aria-hidden="true" />
         {/if}
       </button>
     </div>
@@ -56,7 +64,7 @@
 
   <!-- Mobile menu panel -->
   {#if showMobileMenu}
-    <div class="md:hidden border-t border-white/5 bg-[#0B0F19]/95 backdrop-blur-md px-6 py-4 flex flex-col gap-4">
+    <div class="md:hidden border-t border-white/5 backdrop-blur-md px-6 py-4 flex flex-col gap-4" style="background: color-mix(in srgb, var(--bg-app) 95%, transparent);">
       <a href={featuresHref} class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Funcionalidades</a>
       <a href="/extensoes" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Extensões</a>
       <a href="/precificacao" class="text-sm font-medium text-slate-300 hover:text-white transition-colors py-2" on:click={() => showMobileMenu = false}>Precificação</a>

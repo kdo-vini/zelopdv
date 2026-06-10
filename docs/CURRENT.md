@@ -3,11 +3,11 @@
 > Atualizar a cada sprint/sessão.
 > Referências: [[CLAUDE]] · [[BILLING]] · [[CODE_REVIEW]] · [[FIXES_PROGRESS]] · [[INCIDENTS]]
 
-## Snapshot validado (2026-06-02)
+## Snapshot validado (2026-06-10)
 
 - Branch: `main`
-- HEAD inspecionado: `7761053` — `Fix second Acessos price drift + add TRADEOFFS doc`
-- **Em andamento nesta sessão:** robustez offline do PDV (offline-first na leitura + gate tolerante a queda de rede). Ver [[docs/operations/OFFLINE]].
+- HEAD inspecionado: `e01d908` — `feat(seo): páginas comparativas vs concorrentes + hub + sitemap dinâmico`
+- **Sprint concluída:** marketing redesign 2026-06 — ver [[docs/projects/marketing-redesign-2026-06.md]] para o brief completo. Cover: home hero, 2 templates compartilhados (SegmentLandingPage + CompetitorComparison), pricing section, data files, audit visual.
 - App principal: SvelteKit 2 + Svelte 5 + Vercel.
 - Admin: app separado em `admin-dashboard/`.
 - Backend real: Supabase + Stripe + AbacatePay + Resend + ZeloChat interno para WhatsApp.
@@ -15,10 +15,21 @@
 
 ## Validação executada nesta sessão
 
-- `npm test` — **149/149** testes passando (inclui novos testes de gate offline e snapshot de entitlement)
-- `npm run check` — **0 errors / 112 warnings** (warnings pré-existentes em páginas públicas e modais operacionais; contagem atual após padronização do footer público)
-- `cd admin-dashboard && npm run build` — build concluiu após ajuste na página `users` (seleção em lote + limpeza de contas inativas).
-- `cd admin-dashboard && npm run check` — **falha de script/config**: `svelte-check --tsconfig ./jsconfig.json`, mas o app só possui `.svelte-kit/tsconfig.json`; não é regressão desta mudança.
+- `npm run check` — **0 errors / 104 warnings** (redução de 112 pra 104 com a limpeza de CSS morto e inline SVGs)
+- `npm run build` — **sucesso**
+- `npm test` — **149/149** testes passando
+- **Marketing redesign 2026-06** — sprint completa, ver docs/projects/marketing-redesign-2026-06.md:
+  - Home hero convertido pra conversa Zelinho (2-col, chat mockup, voz operador, 1 glow, sem gradient)
+  - `/vs-*` pivotado pra editorial-dossier (tese, fontes no topo, CTA invertido)
+  - Eyebrow trope removido dos 2 templates (SegmentLandingPage + CompetitorComparison)
+  - Decoração removida: 8 glows → 1, Easter banner → pill, gradient/conic keyframes deletados
+  - Copy em voz operador (zero "sem enrolação", "solução integrada", "plataforma completa")
+  - MarketingPriceSection sem animate-border, checkmarks sky, border estática
+  - 3 hero archetypes distintos (home chat / segment numbered / competitor editorial)
+  - Hex hardcoded → tokens CSS, inline SVGs → lucide-svelte, :root override removido do precificacao
+  - Re-critique: **23/40 → 29/40 (+6)**
+- `cd admin-dashboard && npm run build` — build concluiu.
+- `cd admin-dashboard && npm run check` — falha de script/config (pré-existente, sem regressão).
 - Admin: aba `/communications` agora suporta disparo individual e em lote de email via Resend e WhatsApp via ZeloChat interno, com placeholders clicáveis no composer e filtros por origem (`ZeloPDV`, `ZeloChat`, `Ambos`); validação local segue por `cd admin-dashboard && npm run build` porque `npm run check` continua quebrado por config legada.
 - Ads/marketing: nova rota pública `/contato` com formulário interno de lead para sitelinks sem saída para domínio externo; `npm run check` manteve **0 errors / 133 warnings** e `npm run build` concluiu com warnings pré-existentes/adapter.
 - Marketing: `/vs-planilha` agora usa layout full-width de página pública; CTAs de conversa em home, segmentos, extensões, precificação e comparação abrem o chatbot público sem alterar os botões de teste grátis para `/cadastro`. Rodapé mantém WhatsApp e adiciona link interno de demonstração para `/contato?assunto=demo`.
@@ -47,6 +58,8 @@
 
 ## Mudanças recentes visíveis no histórico Git
 
+- **Marketing redesign sprint (2026-06-10)**: home hero Zelinho-conversação, `/vs-*` editorial-dossier, eyebrow trope removido, copy em voz operador, decoração silenciada, pricing section endurecida, 3 archetypes de hero, token drift corrigido, inline SVGs migrados. Brief completo em `docs/projects/marketing-redesign-2026-06.md`. Score do critique: **23 → 29/40**.
+
 - Admin dashboard `/users`: avatar da tabela principal trocado por checkbox canônico de seleção, nova aba `Inativo`, barra de ação em lote mais compacta e exclusão em lote restrita a contas sem assinatura.
 - Novo guia vivo do admin em `docs/admin/DESIGN_PATTERNS.md` para registrar preferências de UI/UX operacionais do painel.
 - Admin dashboard `/communications`: aba operacional para comunicação individual e em lote com usuários, com envio server-side por `/api/admin/communications/send`, placeholders (`{{primeiro_nome}}`, `{{link_login}}`, etc.), filtros por origem de produto e WhatsApp saindo do número Techne `5514991537503`.
@@ -65,3 +78,4 @@
 2. Revisar e documentar o modelo de segurança do `admin-dashboard/`.
 3. Decidir se `pin_admin` continua como trava de conveniência ou vira proteção real server-side.
 4. Atacar warnings de `svelte-check` por lote, começando pelos arquivos operacionais e não pelas páginas de marketing.
+5. Expandir hero archetypes pra páginas standalone: `/precificacao` e `/vs-planilha` ainda usam layout legado (gradient text, multi-glow) — sprint separada pode ganhar +3-4 pontos no critique.

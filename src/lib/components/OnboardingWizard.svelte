@@ -1,5 +1,6 @@
 <script>
   import { tick } from 'svelte';
+  import { Printer } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import {
     isValidBrazilianTaxId,
@@ -183,7 +184,7 @@
             on:click={() => (largura_bobina = '80mm')}
             aria-pressed={largura_bobina === '80mm'}
           >
-            <span class="printer-icon">🖨️</span>
+            <span class="printer-icon"><Printer class="size-6" aria-hidden="true" /></span>
             <strong>80 mm</strong>
             <span class="printer-sub">Mais comum</span>
           </button>
@@ -194,7 +195,7 @@
             on:click={() => (largura_bobina = '58mm')}
             aria-pressed={largura_bobina === '58mm'}
           >
-            <span class="printer-icon">🖨️</span>
+            <span class="printer-icon"><Printer class="size-6" aria-hidden="true" /></span>
             <strong>58 mm</strong>
             <span class="printer-sub">Estreita</span>
           </button>

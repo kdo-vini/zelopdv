@@ -3,6 +3,7 @@
   import { addToast } from '$lib/stores/ui';
   import { fade } from 'svelte/transition';
   import { supabase } from '$lib/supabaseClient';
+  import { LockKeyhole } from 'lucide-svelte';
 
   export let correctPin; 
   
@@ -129,7 +130,7 @@
   <div class="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 animate-in fade-in zoom-in duration-300">
     <div class="mb-6 relative">
         <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center border-4 border-slate-200 dark:border-slate-700">
-            <span class="text-4xl">🔐</span>
+            <LockKeyhole class="size-10 text-slate-700 dark:text-slate-200" aria-hidden="true" />
         </div>
         {#if errorShake}
             <div class="absolute inset-0 border-4 border-red-500 rounded-full animate-ping opacity-20"></div>

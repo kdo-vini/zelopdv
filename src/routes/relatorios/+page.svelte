@@ -4,6 +4,7 @@
 	import { supabase } from '$lib/supabaseClient';
 	import { ensureActiveSubscription, hasMesasAddon, hasPedidosAddon } from '$lib/guards';
 	import { hasPermission as hasAccessPermission } from '$lib/accessControl';
+	import { resolveAppIcon } from '$lib/icons/appIcons';
 	import { withTimeout } from '$lib/utils';
 	import { addToast } from '$lib/stores/ui';
 	import {
@@ -19,6 +20,7 @@
 	import BarChart from '$lib/components/charts/BarChart.svelte';
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
 	import { PLATAFORMAS_PRESET } from '$lib/profileUtils';
+	import { Banknote, ChartNoAxesColumnIncreasing, FileText, Sheet, ShoppingBag } from 'lucide-svelte';
 
 
 	let loading = true;
@@ -416,13 +418,13 @@
 		if (pedidosAddonAtivo) {
 			const diretas = retiradaVendas.filter(v => !vendaIdsFromPedidosCaixa.has(v.id));
 			const cozinha = retiradaVendas.filter(v => vendaIdsFromPedidosCaixa.has(v.id));
-			if (diretas.length > 0) result.push({ tipo: 'balcao', label: 'Frente de Caixa', icon: '🖥️', qtd: diretas.length, total: diretas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
-			if (cozinha.length > 0) result.push({ tipo: 'cozinha', label: 'Pedidos (Cozinha)', icon: '👨‍🍳', qtd: cozinha.length, total: cozinha.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
+			if (diretas.length > 0) result.push({ tipo: 'balcao', label: 'Frente de Caixa', icon: 'balcao', qtd: diretas.length, total: diretas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
+			if (cozinha.length > 0) result.push({ tipo: 'cozinha', label: 'Pedidos (Cozinha)', icon: 'cozinha', qtd: cozinha.length, total: cozinha.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
 		} else {
-			if (retiradaVendas.length > 0) result.push({ tipo: 'retirada', label: 'Retirada', icon: '🛍️', qtd: retiradaVendas.length, total: retiradaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
+			if (retiradaVendas.length > 0) result.push({ tipo: 'retirada', label: 'Retirada', icon: 'retirada', qtd: retiradaVendas.length, total: retiradaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
 		}
 		const deliveryVendas = (vendas || []).filter(v => v.tipo_pedido === 'delivery');
-		if (deliveryVendas.length > 0) result.push({ tipo: 'delivery', label: 'Delivery', icon: '🛵', qtd: deliveryVendas.length, total: deliveryVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: deliveryVendas.reduce((a, v) => a + Number(v.taxa_entrega || 0), 0) });
+		if (deliveryVendas.length > 0) result.push({ tipo: 'delivery', label: 'Delivery', icon: 'delivery', qtd: deliveryVendas.length, total: deliveryVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: deliveryVendas.reduce((a, v) => a + Number(v.taxa_entrega || 0), 0) });
 		return result;
 	})();
 	$: resumoCozinhaCaixa = (() => {
@@ -950,13 +952,13 @@
 		if (pedidosAddonAtivo) {
 			const diretas = retiradaVendas.filter(v => !vendaIdsFromPedidosPeriodo.has(v.id));
 			const cozinha = retiradaVendas.filter(v => vendaIdsFromPedidosPeriodo.has(v.id));
-			if (diretas.length > 0) result.push({ tipo: 'balcao', label: 'Frente de Caixa', icon: '🖥️', qtd: diretas.length, total: diretas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
-			if (cozinha.length > 0) result.push({ tipo: 'cozinha', label: 'Pedidos (Cozinha)', icon: '👨‍🍳', qtd: cozinha.length, total: cozinha.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
+			if (diretas.length > 0) result.push({ tipo: 'balcao', label: 'Frente de Caixa', icon: 'balcao', qtd: diretas.length, total: diretas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
+			if (cozinha.length > 0) result.push({ tipo: 'cozinha', label: 'Pedidos (Cozinha)', icon: 'cozinha', qtd: cozinha.length, total: cozinha.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
 		} else {
-			if (retiradaVendas.length > 0) result.push({ tipo: 'retirada', label: 'Retirada', icon: '🛍️', qtd: retiradaVendas.length, total: retiradaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
+			if (retiradaVendas.length > 0) result.push({ tipo: 'retirada', label: 'Retirada', icon: 'retirada', qtd: retiradaVendas.length, total: retiradaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
 		}
 		const deliveryVendas = (periodoVendas||[]).filter(v => v.tipo_pedido === 'delivery');
-		if (deliveryVendas.length > 0) result.push({ tipo: 'delivery', label: 'Delivery', icon: '🛵', qtd: deliveryVendas.length, total: deliveryVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: deliveryVendas.reduce((a, v) => a + Number(v.taxa_entrega || 0), 0) });
+		if (deliveryVendas.length > 0) result.push({ tipo: 'delivery', label: 'Delivery', icon: 'delivery', qtd: deliveryVendas.length, total: deliveryVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: deliveryVendas.reduce((a, v) => a + Number(v.taxa_entrega || 0), 0) });
 		return result;
 	})();
 	$: resumoCozinhaPeriodo = (() => {
@@ -1106,7 +1108,7 @@
 					<div class="fixed inset-0 z-40" on:click={() => showExportDropdown = false}></div>
 					<div class="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-xl border py-1 min-w-[200px] animate-fade-in" style="background: var(--bg-card); border-color: var(--border-subtle);">
 						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarPDF}>
-							<span class="text-lg">📄</span>
+							<FileText class="size-4 text-slate-300" aria-hidden="true" />
 							<div class="text-left">
 								<div class="font-medium">Exportar PDF</div>
 								<div class="text-xs" style="color: var(--text-muted);">Relatório visual com gráficos</div>
@@ -1114,7 +1116,7 @@
 						</button>
 						<div class="mx-2" style="border-top: 1px solid var(--border-subtle);"></div>
 						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarExcel}>
-							<span class="text-lg">📗</span>
+							<Sheet class="size-4 text-emerald-300" aria-hidden="true" />
 							<div class="text-left">
 								<div class="font-medium">Exportar Excel</div>
 								<div class="text-xs" style="color: var(--text-muted);">Planilha com abas formatadas</div>
@@ -1152,7 +1154,7 @@
 						<div class="fixed inset-0 z-40" on:click={() => showExportDropdown = false}></div>
 						<div class="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-xl border py-1 min-w-[200px] animate-fade-in" style="background: var(--bg-card); border-color: var(--border-subtle);">
 							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarPDF}>
-								<span class="text-lg">📄</span>
+								<FileText class="size-4 text-slate-300" aria-hidden="true" />
 								<div class="text-left">
 									<div class="font-medium">Exportar PDF</div>
 									<div class="text-xs" style="color: var(--text-muted);">Relatório visual com gráficos</div>
@@ -1160,7 +1162,7 @@
 							</button>
 							<div class="mx-2" style="border-top: 1px solid var(--border-subtle);"></div>
 							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarExcel}>
-								<span class="text-lg">📗</span>
+								<Sheet class="size-4 text-emerald-300" aria-hidden="true" />
 								<div class="text-left">
 									<div class="font-medium">Exportar Excel</div>
 									<div class="text-xs" style="color: var(--text-muted);">Planilha com abas formatadas</div>
@@ -1209,28 +1211,28 @@
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded-sm bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-[11px]">💰</span>
+						<span class="w-5 h-5 rounded-sm bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Vendas Brutas
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(totalGeral)}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded-sm bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[11px]">🛒</span>
+						<span class="w-5 h-5 rounded-sm bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><ShoppingBag class="size-3.5" aria-hidden="true" /></span>
 						Qtd. Vendas
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{qtdVendas}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded-sm bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 text-[11px]">📊</span>
+						<span class="w-5 h-5 rounded-sm bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400"><ChartNoAxesColumnIncreasing class="size-3.5" aria-hidden="true" /></span>
 						Ticket Médio
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(ticketMedio)}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded-sm bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400 text-[11px]">💵</span>
+						<span class="w-5 h-5 rounded-sm bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Dinheiro Líq.
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(totalDinheiro)}</div>
@@ -1297,7 +1299,10 @@
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					{#each vendasPorTipoCaixa as t}
 						<div class="flex flex-col gap-1 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
-							<div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{t.icon} {t.label}</div>
+							<div class="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+								<svelte:component this={resolveAppIcon(t.icon)} class="size-3.5" aria-hidden="true" />
+								<span>{t.label}</span>
+							</div>
 							<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(t.total)}</div>
 							<div class="text-xs text-slate-400">{t.qtd} venda{t.qtd !== 1 ? 's' : ''}</div>
 							{#if t.taxaEntrega > 0}
@@ -1647,28 +1652,28 @@
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded-sm bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-[11px]">💰</span>
+						<span class="w-5 h-5 rounded-sm bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Vendas Brutas
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoTotalGeral)}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded-sm bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[11px]">🛒</span>
+						<span class="w-5 h-5 rounded-sm bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><ShoppingBag class="size-3.5" aria-hidden="true" /></span>
 						Qtd. Vendas
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{periodoQtdVendas}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded-sm bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 text-[11px]">📊</span>
+						<span class="w-5 h-5 rounded-sm bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400"><ChartNoAxesColumnIncreasing class="size-3.5" aria-hidden="true" /></span>
 						Ticket Médio
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoTicketMedio)}</div>
 				</div>
 				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
 					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-5 h-5 rounded-sm bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400 text-[11px]">💵</span>
+						<span class="w-5 h-5 rounded-sm bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Dinheiro Líq.
 					</div>
 					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoDinheiroLiquido)}</div>
@@ -1732,7 +1737,10 @@
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					{#each periodoVendasPorTipo as t}
 						<div class="flex flex-col gap-1 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
-							<div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{t.icon} {t.label}</div>
+							<div class="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+								<svelte:component this={resolveAppIcon(t.icon)} class="size-3.5" aria-hidden="true" />
+								<span>{t.label}</span>
+							</div>
 							<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(t.total)}</div>
 							<div class="text-xs text-slate-400">{t.qtd} venda{t.qtd !== 1 ? 's' : ''}</div>
 							{#if t.taxaEntrega > 0}

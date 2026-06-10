@@ -1,9 +1,9 @@
 <script>
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
-  import MarketingPriceSection from '$lib/components/marketing/MarketingPriceSection.svelte';
   import { generalFaqs } from '$lib/data/segmentLandingPages';
   import { competitorComparisons } from '$lib/data/competitorComparisons';
+  import { resolveAppIcon } from '$lib/icons/appIcons';
   import { cn } from '$lib/utils';
   import { ChevronDown } from 'lucide-svelte';
 
@@ -25,66 +25,28 @@
 
   <main>
     <!-- Hero -->
-    <section class="relative pt-32 pb-20 overflow-hidden border-b border-white/5">
-      <div class="absolute top-0 left-0 w-full h-72 bg-linear-to-b from-sky-500/10 to-transparent pointer-events-none"></div>
-      <div class="absolute -top-8 right-0 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+    <section class="relative pt-32 pb-16 overflow-hidden border-b border-white/5">
+      <div class="max-w-3xl mx-auto px-6">
+        <p class="text-xs tracking-wider" style="color: var(--text-muted);">
+          Comparativo · Atualizado em {comparison.priceCheckedAt} ·
+          <a href="#fontes" class="text-sky-300 hover:text-sky-200 underline underline-offset-4">Fontes</a>
+        </p>
 
-      <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-center relative z-10">
-        <div>
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-300 text-xs font-medium mb-8">
-            <span class="inline-flex w-2 h-2 rounded-full bg-sky-400"></span>
-            {comparison.heroBadge}
-          </div>
+        <h1 class="mt-4 text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight" style="text-wrap: balance;">
+          Zelo PDV × {comparison.competitor}
+        </h1>
 
-          <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight mb-6">
-            {comparison.h1}
-          </h1>
+        <p class="mt-6 text-lg md:text-xl leading-relaxed" style="color: var(--text-label);">
+          {comparison.editorialThesis || comparison.subtitle}
+        </p>
 
-          <p class="text-lg md:text-xl max-w-2xl leading-relaxed mb-10" style="color: var(--text-muted);">
-            {comparison.subtitle}
-          </p>
-
-          <div class="flex flex-col sm:flex-row gap-4 mb-5">
-            <a
-              href="/cadastro"
-              class="w-full sm:w-auto px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center"
-            >
-              Testar 30 dias grátis
-            </a>
-            <a
-              href="#comparativo"
-              class="w-full sm:w-auto px-8 py-4 rounded-full font-semibold border border-white/10 bg-white/5 hover:bg-white/10 text-center transition-all hover:text-white"
-              style="color: var(--text-label);"
-            >
-              Ver comparativo
-            </a>
-          </div>
-
-          <p class="text-sm" style="color: var(--text-muted);">
-            Sem instalar nada. Cancele quando quiser durante o teste.
-            <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
-              Falar com especialista
-            </button>
-          </p>
-        </div>
-
-        <!-- Price anchor card -->
-        <div class="rounded-4xl border p-8 shadow-2xl" style="background: var(--bg-card); border-color: var(--border-card);">
-          <p class="text-sm uppercase tracking-[0.2em] mb-6 text-sky-300">Comparação de preço</p>
-          <div class="space-y-5">
-            <div>
-              <p class="text-xs uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Zelo PDV</p>
-              <p class="text-3xl font-bold text-white">{comparison.priceAnchor.zelo}</p>
-            </div>
-            <div class="h-px w-full" style="background: var(--border-card);"></div>
-            <div>
-              <p class="text-xs uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">{comparison.competitor}</p>
-              <p class="text-2xl font-semibold" style="color: var(--text-main);">{comparison.priceAnchor.competitor}</p>
-            </div>
-          </div>
-          <p class="text-xs leading-relaxed mt-6 pt-5 border-t" style="color: var(--text-muted); border-color: var(--border-card);">
-            {comparison.priceAnchor.note}
-          </p>
+        <div class="mt-10 flex flex-col sm:flex-row gap-4 items-start">
+          <a href="#comparativo" class="px-6 py-3 rounded-full font-semibold border border-sky-500/40 bg-sky-500/10 text-sky-300 hover:bg-sky-500/15 transition-colors">
+            Ver comparativo →
+          </a>
+          <a href="/cadastro" class="px-6 py-3 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">
+            Testar Zelo PDV grátis
+          </a>
         </div>
       </div>
     </section>
@@ -92,7 +54,6 @@
     <!-- Intro / context -->
     <section class="py-24 border-b border-white/5">
       <div class="max-w-4xl mx-auto px-6">
-        <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Contexto</p>
         <h2 class="text-3xl md:text-4xl font-bold text-white mb-8">{comparison.introTitle}</h2>
         {#each comparison.introParagraphs as paragraph}
           <p class="text-lg leading-relaxed mb-6" style="color: var(--text-muted);">
@@ -106,8 +67,7 @@
     <section id="comparativo" class="py-24 border-b border-white/5" style="background: var(--bg-panel);">
       <div class="max-w-5xl mx-auto px-6">
         <div class="max-w-3xl mb-12">
-          <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Comparativo</p>
-          <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Zelo PDV vs {comparison.competitor}, ponto a ponto</h2>
+          <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">Zelo PDV × {comparison.competitor}, lado a lado</h2>
           <p class="text-lg leading-relaxed" style="color: var(--text-muted);">
             {comparison.comparisonIntro}
           </p>
@@ -141,7 +101,6 @@
     <section class="py-24 border-b border-white/5">
       <div class="max-w-7xl mx-auto px-6">
         <div class="max-w-3xl mb-14">
-          <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Por que o Zelo</p>
           <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">{comparison.reasonsTitle}</h2>
         </div>
 
@@ -149,7 +108,7 @@
           {#each comparison.reasons as reason}
             <article class="rounded-3xl border p-7" style="background: var(--bg-card); border-color: var(--border-card);">
               <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-5 bg-sky-500/10 border border-sky-500/20">
-                {reason.icon}
+                <svelte:component this={resolveAppIcon(reason.icon)} class="size-7 text-sky-300" aria-hidden="true" />
               </div>
               <h3 class="text-2xl font-semibold text-white mb-3">{reason.title}</h3>
               <p class="leading-relaxed" style="color: var(--text-muted);">
@@ -168,14 +127,25 @@
       </div>
     </section>
 
-    <MarketingPriceSection />
+    <section class="py-20 border-b border-white/5" style="background: var(--bg-panel);">
+      <div class="max-w-4xl mx-auto px-6">
+        <div class="rounded-2xl border p-6 md:p-7" style="background: var(--bg-card); border-color: var(--border-card);">
+          <h2 class="text-2xl md:text-3xl font-bold text-white mb-3">R$ 59/mês — plano único</h2>
+          <p class="leading-relaxed mb-4" style="color: var(--text-muted);">
+            A base do Zelo PDV inclui frente de caixa, fiado, estoque e controle financeiro. O resto entra como módulo opcional quando fizer sentido.
+          </p>
+          <a href="/precificacao" class="text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+            Ver detalhes da precificação →
+          </a>
+        </div>
+      </div>
+    </section>
 
     <!-- FAQ -->
     <section id="faq" class="py-24 border-b border-white/5">
       <div class="max-w-4xl mx-auto px-6">
         <div class="text-center mb-12">
-          <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Dúvidas comuns</p>
-          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Zelo PDV vs {comparison.competitor}: o que perguntam</h2>
+          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">As perguntas mais comuns: Zelo PDV × {comparison.competitor}</h2>
         </div>
 
         <div class="space-y-4">
@@ -197,8 +167,7 @@
     <!-- Final CTA -->
     <section class="py-24 border-b border-white/5">
       <div class="max-w-4xl mx-auto px-6 text-center">
-        <div class="rounded-4xl border p-10 md:p-14" style="background: var(--bg-panel); border-color: var(--border-subtle);">
-          <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Teste gratuito</p>
+        <div class="border-t pt-12" style="border-color: var(--border-subtle);">
           <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">{comparison.finalCtaTitle}</h2>
           <p class="text-lg leading-relaxed max-w-2xl mx-auto mb-8" style="color: var(--text-muted);">
             {comparison.finalCtaText}
@@ -219,7 +188,7 @@
             </a>
           </div>
           <button type="button" on:click={openSupportChat} class="mt-5 text-sm text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
-            Falar com especialista
+            Fala com a gente
           </button>
         </div>
       </div>
@@ -230,10 +199,9 @@
       <section class="py-20 border-b border-white/5" style="background: var(--bg-panel);">
         <div class="max-w-7xl mx-auto px-6">
           <div class="max-w-3xl mb-10">
-            <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Outros comparativos</p>
             <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Compare o Zelo PDV com outros sistemas</h2>
             <p class="text-lg leading-relaxed" style="color: var(--text-muted);">
-              Veja como o Zelo PDV se compara a outras opções do mercado, sempre com preço a partir de R$ 59/mês.
+              Mais 11 comparativos. Mesmo Zelo PDV, outros competidores.
             </p>
           </div>
 
@@ -245,10 +213,10 @@
                 style="background: var(--bg-card); border-color: var(--border-card);"
               >
                 <p class="text-lg font-semibold text-white mb-1 group-hover:text-sky-300 transition-colors">
-                  Zelo PDV vs {other.competitor}
+                  Zelo PDV × {other.competitor}
                 </p>
                 <p class="text-sm" style="color: var(--text-muted);">
-                  R$ 59/mês vs {other.priceAnchor.competitor}
+                  R$ 59/mês × {other.priceAnchor.competitor}
                 </p>
               </a>
             {/each}
@@ -265,7 +233,7 @@
 
     <!-- Sources -->
     {#if comparison.sources?.length}
-      <section class="py-12">
+      <section id="fontes" class="py-12">
         <div class="max-w-4xl mx-auto px-6">
           <p class="text-xs uppercase tracking-[0.2em] mb-3" style="color: var(--text-muted);">Fontes (consultadas em {comparison.priceCheckedAt})</p>
           <ul class="space-y-1">

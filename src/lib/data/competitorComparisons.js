@@ -27,6 +27,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs Saipos: a alternativa mais barata, modular e que funciona offline',
     subtitle:
       'A Saipos é um sistema robusto para restaurantes, mas o preço começa em mais de R$ 240/mês, depende de internet o tempo todo e o valor final passa por uma conversa com o time de vendas. O Zelo PDV entrega frente de caixa, fiado, estoque e financeiro por R$ 59/mês, funcionando até sem internet.',
+    editorialThesis:
+      'A Saipos atende bem operações maiores de restaurante e delivery que justificam um pacote robusto. O Zelo PDV serve melhor a lanchonetes, hamburguerias e pequenos negócios que precisam de caixa, fiado e financeiro por um preço público menor, mas fica abaixo em recursos avançados de operação grande.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'a partir de R$ 240,79/mês',
@@ -153,6 +155,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs Goomer: PDV completo de verdade x cardápio digital',
     subtitle:
       'A Goomer é uma boa plataforma de cardápio digital, mas ela não é um PDV — para ter frente de caixa você ainda precisa integrar a um sistema externo. O Zelo PDV já é o caixa completo: vendas, fiado, estoque e financeiro em um só lugar, por R$ 59/mês.',
+    editorialThesis:
+      'A Goomer é forte quando a prioridade é cardápio digital, QR Code e autoatendimento. O Zelo PDV é mais direto para quem precisa primeiro de frente de caixa, fiado, estoque e financeiro; não tenta substituir uma plataforma especializada em totem.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'plano com PDV a partir de R$ 224,92/mês',
@@ -279,6 +283,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs Anota AI: frente de caixa completa sem pagar por uma plataforma de IA',
     subtitle:
       'A Anota AI é uma plataforma forte de atendimento por robô de IA no WhatsApp — mas o preço começa em mais de R$ 219/mês e recursos como estoque e cozinha (KDS) só aparecem no plano mais caro. Se você quer mesmo é uma frente de caixa boa e barata, o Zelo PDV entrega por R$ 59/mês.',
+    editorialThesis:
+      'A Anota AI faz sentido para quem quer automação forte de atendimento por WhatsApp. O Zelo PDV é a opção mais enxuta para quem quer bater caixa, controlar estoque e ver lucro sem pagar por uma suíte de IA; se o robô de WhatsApp é o centro da operação, a Anota AI leva vantagem.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'a partir de R$ 219,99/mês',
@@ -339,6 +345,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs WhatsMenu: caixa que funciona offline, por menos',
     subtitle:
       'O WhatsMenu é uma boa opção de cardápio digital com caixa para delivery via WhatsApp, em plano único de R$ 97/mês. O Zelo PDV custa R$ 59/mês, é modular e foi feito para continuar vendendo mesmo quando a internet cai.',
+    editorialThesis:
+      'O WhatsMenu é uma alternativa honesta para delivery por WhatsApp em plano único. O Zelo PDV pesa menos no mês e é melhor para quem quer começar pelo caixa offline e ativar módulos só quando precisar; se o foco é pedido por WhatsApp, o WhatsMenu tem mais especialização.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'R$ 97/mês (plano único)',
@@ -397,6 +405,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs Cardápio Web: comece em R$ 59, sem add-on em cima de add-on',
     subtitle:
       'O Cardápio Web é uma plataforma robusta de cardápio digital e automação de delivery, mas os planos partem de R$ 169/mês e funções como financeiro, fiscal e estoque avançado são cobradas à parte. O Zelo PDV começa em R$ 59/mês e funciona até offline.',
+    editorialThesis:
+      'O Cardápio Web é mais completo para cardápio digital e automação de delivery. O Zelo PDV é mais adequado quando o problema principal é caixa, fiado, estoque básico e preço previsível; não promete a mesma camada de automação de pedido online.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'a partir de R$ 169,99/mês',
@@ -456,6 +466,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs Yooga: a mesma operação de restaurante por uma fração do preço',
     subtitle:
       'A Yooga é um sistema de restaurante completo, mas o plano de entrada custa R$ 249/mês e a operação é 100% online. O Zelo PDV entrega frente de caixa, mesas, fiado e financeiro por R$ 59/mês, com preço transparente e funcionando offline.',
+    editorialThesis:
+      'A Yooga é um sistema maduro para restaurantes com operação mais estruturada. O Zelo PDV é mais simples e barato para pequeno negócio que precisa vender, controlar fiado e fechar caixa; em recursos avançados para redes, a Yooga fica à frente.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'a partir de R$ 249/mês',
@@ -515,6 +527,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs SisFood: caixa que não para sem internet, por menos',
     subtitle:
       'O SisFood é um sistema completo para food service, mas parte de R$ 149,90/mês e, segundo a própria empresa, é 100% cloud e depende de internet estável. O Zelo PDV custa R$ 59/mês e foi feito para continuar vendendo mesmo offline.',
+    editorialThesis:
+      'O SisFood combina PDV, cardápio digital, robô de WhatsApp e módulos fiscais para food service. O Zelo PDV aposta em uma base menor, mais barata e com contingência offline para o balcão; quem precisa de fiscal/totem pode preferir o SisFood.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'a partir de R$ 149,90/mês',
@@ -573,6 +587,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs Conta Azul: PDV de balcão de verdade x ERP financeiro',
     subtitle:
       'A Conta Azul é um ERP forte em financeiro, fiscal e contábil — mas não é uma frente de caixa de balcão, e parte de R$ 159,90/mês (plano anual). O Zelo PDV é o caixa do seu comércio: vendas, fiado e estoque por R$ 59/mês, funcionando offline.',
+    editorialThesis:
+      'A Conta Azul é melhor quando a necessidade principal é ERP financeiro, fiscal e integração com contador. O Zelo PDV é melhor quando o problema está no balcão: vender rápido, controlar fiado e fechar caixa; não tenta substituir um ERP contábil completo.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'a partir de R$ 159,90/mês (plano anual)',
@@ -632,6 +648,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs GestãoClick: PDV de balcão a partir de R$ 59, modular',
     subtitle:
       'A GestãoClick é um ERP bem avaliado para gestão de empresas, mas o plano de entrada custa R$ 119/mês e nem emite nota fiscal. O Zelo PDV foca na frente de caixa do comércio e do food service por R$ 59/mês, modular e funcionando offline.',
+    editorialThesis:
+      'A GestãoClick é um ERP amplo para gestão de empresa. O Zelo PDV é uma frente de caixa mais enxuta para comércio e food service, com preço menor e offline; se você precisa de contratos, orçamentos e gestão empresarial completa, a GestãoClick cobre mais terreno.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'a partir de R$ 119/mês',
@@ -691,6 +709,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs Bling: caixa offline e preço que não escala por trás',
     subtitle:
       'O Bling é um ERP forte para e-commerce, mas o PDV é 100% online e o custo cresce conforme o volume de pedidos. O Zelo PDV é uma frente de caixa de balcão por R$ 59/mês, com preço previsível e funcionando offline.',
+    editorialThesis:
+      'O Bling é forte para marketplace, e-commerce e integração multicanal. O Zelo PDV faz mais sentido para balcão e food service que precisam de caixa offline e preço previsível; se marketplace é o centro do negócio, o Bling é mais completo.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'de R$ 55 a R$ 650+/mês, conforme o volume',
@@ -750,6 +770,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs Tiny: frente de caixa de balcão, sem ERP de marketplace',
     subtitle:
       'O Tiny (Olist) é um ERP completo para quem vende em marketplace e e-commerce, com planos que escalam de R$ 66 a R$ 948/mês. O Zelo PDV é a frente de caixa de balcão do seu comércio por R$ 59/mês, funcionando offline.',
+    editorialThesis:
+      'O Tiny é construído para operação de marketplace e e-commerce com emissão fiscal multicanal. O Zelo PDV é mais simples para o balcão físico e food service, com caixa offline e preço baixo; não substitui um hub multicanal.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'de R$ 66 a R$ 948/mês',
@@ -809,6 +831,8 @@ export const competitorComparisons = {
     h1: 'Zelo PDV vs Omie: preço público de R$ 59 x cotação por faturamento',
     subtitle:
       'A Omie é um ERP completo para PME, mas não publica preço: o valor é cotado por faixa de faturamento e cresce com módulos. O Zelo PDV é uma frente de caixa de balcão por R$ 59/mês, com preço público e funcionando offline.',
+    editorialThesis:
+      'A Omie é um ERP robusto para PME estruturada, com fiscal, financeiro e contador no centro. O Zelo PDV é uma escolha mais direta para pequeno negócio que quer preço público, frente de caixa e offline; quem precisa de ERP completo pode ficar melhor na Omie.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'preço sob cotação por faturamento',

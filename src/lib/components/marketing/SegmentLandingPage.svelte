@@ -3,6 +3,8 @@
   import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import MarketingPriceSection from '$lib/components/marketing/MarketingPriceSection.svelte';
   import { generalFaqs } from '$lib/data/segmentLandingPages';
+  import { resolveAppIcon } from '$lib/icons/appIcons';
+  import { ChevronDown } from 'lucide-svelte';
 
   export let page;
 
@@ -21,17 +23,13 @@
 
   <main>
     <section class="relative pt-32 pb-20 overflow-hidden border-b border-white/5">
-      <div class="absolute top-0 left-0 w-full h-72 bg-linear-to-b from-sky-500/10 to-transparent pointer-events-none"></div>
-      <div class="absolute -top-8 right-0 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+      <div class="absolute right-0 top-1/4 w-[420px] h-[420px] bg-sky-500/15 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
 
-      <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-center relative z-10">
+      <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1.4fr_1fr] gap-16 items-start relative z-10">
         <div>
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-300 text-xs font-medium mb-8">
-            <span class="inline-flex w-2 h-2 rounded-full bg-sky-400"></span>
-            {page.heroBadge}
-          </div>
+          <p class="text-sm font-semibold tracking-tight text-sky-300 mb-3">Para {page.segmentName || page.heroBadge}</p>
 
-          <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight mb-6">
+          <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight mb-6" style="text-wrap: balance;">
             {page.h1}
           </h1>
 
@@ -39,7 +37,7 @@
             {page.subtitle}
           </p>
 
-          <div class="flex flex-col sm:flex-row gap-4 mb-5">
+          <div class="flex flex-col sm:flex-row gap-4 items-start mb-5">
             <a
               href="/cadastro"
               class="w-full sm:w-auto px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center"
@@ -48,38 +46,34 @@
             </a>
             <a
               href="#features"
-              class="w-full sm:w-auto px-8 py-4 rounded-full font-semibold border border-white/10 bg-white/5 hover:bg-white/10 text-center transition-all hover:text-white"
-              style="color: var(--text-label);"
+              class="px-4 py-4 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors text-center"
             >
-              Ver como funciona
+              Ver funcionalidades
             </a>
           </div>
 
           <p class="text-sm" style="color: var(--text-muted);">
-            Sem instalar nada. Cancele quando quiser durante o teste.
+            30 dias grátis, sem instalar nada.
             <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
-              Falar com especialista
+              Fala com a gente
             </button>
           </p>
         </div>
 
-        <div class="grid sm:grid-cols-3 lg:grid-cols-1 gap-4">
-          {#each page.highlights as highlight}
-            <div class="rounded-3xl border p-6 shadow-lg" style="background: var(--bg-card); border-color: var(--border-card);">
-              <p class="text-sm uppercase tracking-[0.2em] mb-3 text-sky-300">Zelo PDV</p>
-              <p class="text-lg font-semibold leading-relaxed" style="color: var(--text-main);">
-                {highlight}
-              </p>
-            </div>
+        <aside class="space-y-5 lg:pt-10">
+          {#each page.highlights as highlight, i}
+            <p class="text-lg leading-relaxed text-white" style="text-wrap: balance;">
+              <span class="text-sky-400 font-bold mr-2 tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+              {highlight}
+            </p>
           {/each}
-        </div>
+        </aside>
       </div>
     </section>
 
     <section class="py-24 border-b border-white/5">
       <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1.15fr_0.85fr] gap-12 items-start">
         <div>
-          <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Problema</p>
           <h2 class="text-3xl md:text-4xl font-bold text-white mb-8">{page.problemTitle}</h2>
 
           {#each page.problemParagraphs as paragraph}
@@ -103,7 +97,6 @@
     <section id="features" class="py-24 border-b border-white/5" style="background: var(--bg-panel);">
       <div class="max-w-7xl mx-auto px-6">
         <div class="max-w-3xl mb-14">
-          <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Funcionalidades</p>
           <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">{page.featuresTitle}</h2>
           <p class="text-lg leading-relaxed" style="color: var(--text-muted);">
             {page.featuresIntro}
@@ -114,7 +107,7 @@
           {#each page.features as feature}
             <article class="rounded-3xl border p-7" style="background: var(--bg-card); border-color: var(--border-card);">
               <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-5 bg-sky-500/10 border border-sky-500/20">
-                {feature.icon}
+                <svelte:component this={resolveAppIcon(feature.icon)} class="size-7 text-sky-300" aria-hidden="true" />
               </div>
               <h3 class="text-2xl font-semibold text-white mb-3">{feature.title}</h3>
               <p class="leading-relaxed" style="color: var(--text-muted);">
@@ -129,7 +122,6 @@
     <section class="py-24 border-b border-white/5">
       <div class="max-w-7xl mx-auto px-6">
         <div class="max-w-3xl mx-auto text-center mb-14">
-          <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Como funciona</p>
           <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">{page.howTitle}</h2>
           <p class="text-lg leading-relaxed" style="color: var(--text-muted);">
             {page.howIntro}
@@ -155,16 +147,15 @@
     <section class="py-24 border-b border-white/5" style="background: var(--bg-panel);">
       <div class="max-w-5xl mx-auto px-6">
         <div class="rounded-4xl border p-8 md:p-10 shadow-2xl" style="background: var(--bg-card); border-color: var(--border-card);">
-          <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Depoimento</p>
+          <p class="text-xs tracking-wide mb-4" style="color: var(--text-muted);">
+            {page.testimonial.name} · {page.testimonial.business}, {page.testimonial.city}
+          </p>
           <p class="text-2xl md:text-3xl font-semibold leading-relaxed text-white mb-8">
             "{page.testimonial.quote}"
           </p>
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <p class="text-lg font-semibold" style="color: var(--text-main);">{page.testimonial.name}</p>
-              <p class="text-sm" style="color: var(--text-muted);">
-                {page.testimonial.business} · {page.testimonial.city}
-              </p>
             </div>
             <p class="text-sm md:max-w-md leading-relaxed" style="color: var(--text-muted);">
               {page.testimonial.note}
@@ -179,10 +170,9 @@
     <section id="faq" class="py-24 border-b border-white/5">
       <div class="max-w-4xl mx-auto px-6">
         <div class="text-center mb-12">
-          <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">FAQ do segmento</p>
-          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Dúvidas comuns antes de começar</h2>
+          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Dúvidas que aparecem</h2>
           <p class="text-lg" style="color: var(--text-muted);">
-            Perguntas específicas da sua operação, junto com as dúvidas gerais mais comuns sobre o Zelo PDV.
+            As do seu segmento + as gerais. Se ficou uma de fora, manda.
           </p>
         </div>
 
@@ -191,9 +181,7 @@
             <details class="group rounded-2xl border transition-all duration-300" style="background: var(--bg-card); border-color: var(--border-card);">
               <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none gap-4">
                 <span>{faq.question}</span>
-                <svg class="w-5 h-5 shrink-0 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
+                <ChevronDown class="size-5 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
               </summary>
               <div class="px-6 pb-6 leading-relaxed" style="color: var(--text-muted);">
                 {faq.answer}
@@ -207,7 +195,6 @@
     <section class="py-24">
       <div class="max-w-4xl mx-auto px-6 text-center">
         <div class="rounded-4xl border p-10 md:p-14" style="background: var(--bg-panel); border-color: var(--border-subtle);">
-          <p class="text-sm uppercase tracking-[0.25em] text-sky-300 mb-4">Teste gratuito</p>
           <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">{page.finalCtaTitle}</h2>
           <p class="text-lg leading-relaxed max-w-2xl mx-auto mb-8" style="color: var(--text-muted);">
             {page.finalCtaText}
@@ -228,7 +215,7 @@
             </a>
           </div>
           <button type="button" on:click={openSupportChat} class="mt-5 text-sm text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
-            Falar com especialista
+            Fala com a gente
           </button>
         </div>
       </div>

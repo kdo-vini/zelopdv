@@ -8,6 +8,16 @@
   import { PLANS, calculateValue } from '$lib/pricing';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGoogleAdsInscricao } from '$lib/googleAds';
+  import {
+    CircleCheckBig,
+    Hourglass,
+    KeyRound,
+    Monitor,
+    PartyPopper,
+    Table2,
+    TriangleAlert,
+    Zap
+  } from 'lucide-svelte';
 
 
   let userId = '';
@@ -785,7 +795,7 @@
 
   {#if camePromptingMesas}
     <div class="status-card info">
-      <div class="status-icon">🪑</div>
+      <div class="status-icon"><Table2 class="size-6" aria-hidden="true" /></div>
       <div>
           <strong>Você quer ativar o Módulo Mesas</strong>
           <div class="status-detail">
@@ -805,7 +815,7 @@
 
   {#if camePromptingPedidos}
     <div class="status-card info">
-      <div class="status-icon">PC</div>
+      <div class="status-icon"><Monitor class="size-6" aria-hidden="true" /></div>
       <div>
           <strong>Você quer ativar Pedidos + Cozinha</strong>
           <div class="status-detail">
@@ -825,7 +835,7 @@
 
   {#if camePromptingAcessos}
     <div class="status-card info">
-      <div class="status-icon">🔑</div>
+      <div class="status-icon"><KeyRound class="size-6" aria-hidden="true" /></div>
       <div>
           <strong>Você quer ativar Controle de Acessos</strong>
           <div class="status-detail">
@@ -845,7 +855,7 @@
 
   {#if cameUpgradingTo && cameUpgradingTo !== activePlanTier}
     <div class="status-card info" style="border-color: rgba(99, 102, 241, 0.45);">
-      <div class="status-icon">⚡</div>
+      <div class="status-icon"><Zap class="size-6" aria-hidden="true" /></div>
       <div>
         <strong>Upgrade para {PLANS[cameUpgradingTo].name}</strong>
         <div class="status-detail">
@@ -864,7 +874,7 @@
 
     {#if subStatus === 'trialing' && trialDaysLeft !== null && trialDaysLeft <= 30}
       <div class="status-card warning">
-        <div class="status-icon">⏳</div>
+        <div class="status-icon"><Hourglass class="size-6" aria-hidden="true" /></div>
         <div>
           <strong>
             {trialDaysLeft === 0 ? 'Seu teste termina hoje!' : `Teste termina em ${trialDaysLeft} dia${trialDaysLeft === 1 ? '' : 's'}`}
@@ -876,7 +886,7 @@
       </div>
     {:else}
       <div class="status-card active">
-        <div class="status-icon">✅</div>
+        <div class="status-icon"><CircleCheckBig class="size-6" aria-hidden="true" /></div>
         <div>
           <strong>Assinatura ativa — {PLANS[activePlanTier]?.name || 'Plano'}</strong>
           {#if expiryDate}
@@ -1071,7 +1081,7 @@
 
             {#if pixPayment && !pixPaymentMatchesSelection}
               <div class="status-card warning compact-status">
-                <div class="status-icon">⚠️</div>
+                <div class="status-icon"><TriangleAlert class="size-6" aria-hidden="true" /></div>
                 <div>Você alterou o plano ou os add-ons depois de gerar o Pix. Gere uma nova cobrança para continuar com a seleção atual.</div>
               </div>
             {/if}
@@ -1128,7 +1138,7 @@
 
   {:else if autoStartingTrial}
     <div class="status-card info">
-      <div class="status-icon">⏳</div>
+      <div class="status-icon"><Hourglass class="size-6" aria-hidden="true" /></div>
       <div>
         <strong>Ativando seu teste gratuito de 30 dias…</strong>
         <div class="status-detail">Você será redirecionado em instantes.</div>
@@ -1139,12 +1149,12 @@
     <!-- NOT-ACTIVE — step-by-step checkout -->
     {#if messageType === 'warning' && message}
       <div class="status-card warning">
-        <div class="status-icon">⚠️</div>
+        <div class="status-icon"><TriangleAlert class="size-6" aria-hidden="true" /></div>
         <div>{message}</div>
       </div>
     {:else}
       <div class="status-card info">
-        <div class="status-icon">🎉</div>
+        <div class="status-icon"><PartyPopper class="size-6" aria-hidden="true" /></div>
         <div>
           <div class="font-medium">{message || defaultMessage}</div>
         </div>
@@ -1332,7 +1342,7 @@
 
             {#if pixPayment && !pixPaymentMatchesSelection}
               <div class="status-card warning compact-status">
-                <div class="status-icon">⚠️</div>
+                <div class="status-icon"><TriangleAlert class="size-6" aria-hidden="true" /></div>
                 <div>Você alterou o plano ou os add-ons depois de gerar o Pix. Gere uma nova cobrança para continuar com a seleção atual.</div>
               </div>
             {/if}
@@ -1541,7 +1551,12 @@
     border: 1px solid rgba(14, 165, 233, 0.25);
     color: #0c4a6e;
   }
-  .status-icon { font-size: 1.5rem; flex-shrink: 0; }
+  .status-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
   .status-detail { font-size: 0.85rem; margin-top: 0.25rem; opacity: 0.8; }
 
   .actions-row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }

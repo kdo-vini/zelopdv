@@ -1,6 +1,7 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import { addToast } from '$lib/stores/ui';
+  import { LockKeyhole } from 'lucide-svelte';
   import { onMount } from 'svelte';
   
   export let userId;
@@ -63,7 +64,7 @@
   <div class="rounded-xl shadow-2xl max-w-md w-full p-6 text-center" style="background: var(--bg-card); border: 1px solid var(--border-card);">
     
     <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background: color-mix(in srgb, var(--primary) 15%, transparent);">
-        <span class="text-3xl">🔒</span>
+        <LockKeyhole class="size-8" style="color: var(--primary);" aria-hidden="true" />
     </div>
 
     <h2 class="text-xl font-bold mb-2" style="color: var(--text-main);">Segurança do Sistema</h2>

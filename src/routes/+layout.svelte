@@ -65,6 +65,7 @@
   $: isExtensoesPage = path === '/extensoes' || path.startsWith('/extensoes/');
   $: isContactPage = path === '/contato';
   $: isVsPlanilhaPage = path === '/vs-planilha';
+  $: isCompetitorComparisonPage = path.startsWith('/vs-');
   $: isReferralPage = path.startsWith('/indica/');
   $: isAuthPage = ['/login', '/cadastro', '/esqueci-senha', '/redefinir-senha'].includes(path);
   $: isFerramentas = path === '/ferramentas' || path.startsWith('/ferramentas/');
@@ -244,7 +245,7 @@
       }
 
       // Helper to check if path is public (includes /loja/* subroutes)
-      const isPublicPath = (p) => publicPaths.includes(p) || p.startsWith('/blog/') || p.startsWith('/indica/');
+      const isPublicPath = (p) => publicPaths.includes(p) || p.startsWith('/blog/') || p.startsWith('/indica/') || p.startsWith('/vs-');
 
       if (!session && !isPublicPath(path)) {
 
@@ -254,7 +255,7 @@
       }
       if (session && isPublicPath(path)) {
         // Allow /loja/* paths without redirect (public storefront)
-        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html' || path === '/redefinir-senha' || path === '/pascoa' || path === '/precificacao' || path === '/vs-planilha' || path.startsWith('/para-') || path.startsWith('/blog') || path.startsWith('/indica/')) {
+        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html' || path === '/redefinir-senha' || path === '/pascoa' || path === '/precificacao' || path.startsWith('/vs-') || path.startsWith('/para-') || path.startsWith('/blog') || path.startsWith('/indica/')) {
 
         } else {
 
@@ -448,7 +449,7 @@
   {/if}
 
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isVsPlanilhaPage && !isReferralPage && !isAuthPage && !hasSidebarLayout}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout}
   <header class="border-b bg-header-base backdrop-blur-sm sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
@@ -639,11 +640,11 @@
   {/if}
   {/if}
 
-  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isContactPage || isVsPlanilhaPage || isReferralPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
+  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isContactPage || isCompetitorComparisonPage || isReferralPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isVsPlanilhaPage && !isReferralPage && !isAuthPage && !hasSidebarLayout && !$page.error}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout && !$page.error}
   <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">

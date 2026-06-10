@@ -5,6 +5,8 @@
 -->
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
+  import { Check, ChevronLeft, Scissors, X } from 'lucide-svelte';
+  import { resolveAppIcon } from '$lib/icons/appIcons';
   import { supabase } from '$lib/supabaseClient';
   import { addToast } from '$lib/stores/ui';
   
@@ -93,11 +95,11 @@
 
   // Formas padrão
   const FORMAS_PADRAO = [
-    { id: 'dinheiro',       label: 'Dinheiro', icone: '💵', atalho: 'D' },
-    { id: 'cartao_debito',  label: 'Débito',   icone: '💳', atalho: 'B' },
-    { id: 'cartao_credito', label: 'Crédito',  icone: '💳', atalho: 'C' },
-    { id: 'pix',            label: 'Pix',      icone: '📱', atalho: 'X' },
-    { id: 'fiado',          label: 'Fiado',    icone: '📒', atalho: 'F' },
+    { id: 'dinheiro',       label: 'Dinheiro', icone: 'dinheiro', atalho: 'D' },
+    { id: 'cartao_debito',  label: 'Débito',   icone: 'cartao_debito', atalho: 'B' },
+    { id: 'cartao_credito', label: 'Crédito',  icone: 'cartao_credito', atalho: 'C' },
+    { id: 'pix',            label: 'Pix',      icone: 'pix', atalho: 'X' },
+    { id: 'fiado',          label: 'Fiado',    icone: 'fiado', atalho: 'F' },
   ];
   
   async function carregarPessoasFiado() {
@@ -465,7 +467,9 @@
                   class:pay-btn-active={formaPagamento === forma.id}
                   on:click={() => selecionarForma(forma.id)}
                 >
-                  <span class="pay-btn-icon">{forma.icone}</span>
+                  <span class="pay-btn-icon">
+                    <svelte:component this={resolveAppIcon(forma.icone)} class="size-5" aria-hidden="true" />
+                  </span>
                   <span class="pay-btn-label">{forma.label}</span>
                   <span class="pay-btn-shortcut">{forma.atalho}</span>
                 </button>
@@ -483,7 +487,9 @@
                     class:pay-btn-active={formaPagamento === plat.id}
                     on:click={() => selecionarForma(plat.id)}
                   >
-                    <span class="pay-btn-icon">{plat.icone}</span>
+                    <span class="pay-btn-icon">
+                      <svelte:component this={resolveAppIcon(plat.icone || 'plataformas')} class="size-5" aria-hidden="true" />
+                    </span>
                     <span class="pay-btn-label">{plat.nome}</span>
                     <span class="pay-btn-tax">{plat.taxa_pct}%</span>
                   </button>
@@ -553,7 +559,7 @@
 
           <!-- Botão dividir pagamento -->
           <button type="button" class="split-btn" on:click={() => { multiPag = true; novoPagValor = Number(totalFinal) - somaPagamentos; }}>
-            ✂ Dividir pagamento
+            <Scissors class="size-4" aria-hidden="true" /> Dividir pagamento
           </button>
 
         {:else}
@@ -561,7 +567,7 @@
           <div class="multi-section">
             <div class="multi-header">
               <span class="zone-label">Múltiplos pagamentos</span>
-              <button type="button" class="split-btn-back" on:click={() => multiPag = false}>← Voltar</button>
+              <button type="button" class="split-btn-back" on:click={() => multiPag = false}><ChevronLeft class="size-4" aria-hidden="true" /> Voltar</button>
             </div>
 
             <div class="multi-form">
@@ -570,10 +576,10 @@
                   <label for="mp-forma" class="context-label">Forma</label>
                   <select id="mp-forma" class="context-input" bind:value={novoPagForma}>
                     {#each FORMAS_PADRAO as f}
-                      <option value={f.id}>{f.icone} {f.label}</option>
+                      <option value={f.id}>{f.label}</option>
                     {/each}
                     {#each plataformasAtivas as plat}
-                      <option value={plat.id}>{plat.icone} {plat.nome} ({plat.taxa_pct}%)</option>
+                      <option value={plat.id}>{plat.nome} ({plat.taxa_pct}%)</option>
                     {/each}
                   </select>
                 </div>
@@ -614,7 +620,9 @@
                         <span class="payment-item-extra">{pessoasFiado.find(x => x.id === p.pessoaId)?.nome || ''}</span>
                       {/if}
                     </div>
-                    <button type="button" class="remove-btn" on:click={() => removerPagamento(i)}>✕</button>
+                    <button type="button" class="remove-btn" on:click={() => removerPagamento(i)} aria-label="Remover pagamento">
+                      <X class="size-4" aria-hidden="true" />
+                    </button>
                   </div>
                 {/each}
               </div>
@@ -648,7 +656,7 @@
             {#if salvandoVenda}
               Salvando…
             {:else}
-              ✓ Confirmar R$ {Number(plataformaSelecionada && valorPlataforma > 0 ? valorPlataforma : totalFinal).toFixed(2)}
+              <Check class="size-4" aria-hidden="true" /> Confirmar R$ {Number(plataformaSelecionada && valorPlataforma > 0 ? valorPlataforma : totalFinal).toFixed(2)}
             {/if}
           </button>
         </div>
@@ -820,7 +828,9 @@
     box-shadow: 0 0 0 1px var(--primary, #0ea5e9), 0 0 12px color-mix(in srgb, var(--primary, #0ea5e9) 25%, transparent);
   }
   .pay-btn-icon {
-    font-size: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
   }
   .pay-btn-label {
@@ -928,7 +938,10 @@
 
   /* Dividir pagamento */
   .split-btn {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     width: 100%;
     margin-top: 12px;
     padding: 8px;
@@ -950,6 +963,9 @@
   .multi-section { display: flex; flex-direction: column; gap: 12px; }
   .multi-header { display: flex; justify-content: space-between; align-items: center; }
   .split-btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--text-muted, #94a3b8);
@@ -1032,6 +1048,9 @@
     color: var(--text-muted, #64748b);
   }
   .remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     color: #f87171;
@@ -1100,6 +1119,10 @@
     background: var(--bg-panel, #0f172a);
   }
   .btn-confirm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
     padding: 10px 24px;
     font-size: 0.875rem;
     font-weight: 700;

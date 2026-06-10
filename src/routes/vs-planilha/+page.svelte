@@ -97,6 +97,8 @@
 <script>
   import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
+  import { resolveAppIcon } from '$lib/icons/appIcons';
+  import { ArrowRight, ChevronDown, CircleCheckBig, CircleX, Sheet, Star, Zap } from 'lucide-svelte';
 
   const comparisonRows = [
     { feature: 'Registrar uma venda', excel: 'Digitar manualmente na célula', zelo: 'Toque no produto — feito em 3 segundos', excelhit: false },
@@ -116,12 +118,12 @@
       body: 'Cada venda precisa ser digitada na planilha. No rush do almoço, isso não acontece — e no fim do dia você passa horas tentando lembrar o que vendeu.'
     },
     {
-      icon: '❌',
+      icon: 'compareFail',
       title: 'Erro humano silencioso',
       body: 'Uma célula errada, uma fórmula quebrada ou uma aba desatualizada e seu "lucro" vira mentira. Você pode estar perdendo dinheiro sem saber.'
     },
     {
-      icon: '📵',
+      icon: 'smartphone',
       title: 'Não funciona no celular de verdade',
       body: 'Abrir Excel no celular no meio do atendimento é inviável. Então você vai para o papel ou o caderno — e volta à estaca zero.'
     }
@@ -132,7 +134,7 @@
   }
 </script>
 
-<div class="min-h-screen bg-[#0B0F19] text-slate-300 font-sans overflow-x-hidden">
+<div class="min-h-screen font-sans overflow-x-hidden" style="background: var(--bg-app); color: var(--text-label);">
   <SiteHeader />
 
   <!-- HERO -->
@@ -160,7 +162,7 @@
         </a>
       </div>
       <button type="button" on:click={openSupportChat} class="mt-5 text-sm text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
-        Falar com especialista
+        Fala com a gente
       </button>
     </div>
   </section>
@@ -174,7 +176,9 @@
       <div class="grid md:grid-cols-3 gap-6">
         {#each painPoints as point}
           <div class="p-6 rounded-2xl border border-white/5 bg-white/3">
-            <div class="text-3xl mb-4">{point.icon}</div>
+            <div class="mb-4 text-sky-300">
+              <svelte:component this={resolveAppIcon(point.icon)} class="size-8" aria-hidden="true" />
+            </div>
             <h3 class="text-white font-semibold mb-2">{point.title}</h3>
             <p class="text-slate-400 text-sm leading-relaxed">{point.body}</p>
           </div>
@@ -187,9 +191,9 @@
   <section id="comparacao" class="py-24">
     <div class="max-w-5xl mx-auto px-6">
       <h2 class="text-2xl md:text-3xl font-bold text-white text-center mb-4">
-        Planilha de Excel vs Zelo PDV
+        Planilha de Excel × Zelo PDV
       </h2>
-      <p class="text-slate-400 text-center mb-12">Funcionalidade por funcionalidade, sem enrolação.</p>
+      <p class="text-slate-400 text-center mb-12">Funcionalidade por funcionalidade, lado a lado.</p>
 
       <div class="rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
         <!-- Table header -->
@@ -197,12 +201,14 @@
           <div class="px-6 py-4 text-sm font-semibold text-slate-400">Funcionalidade</div>
           <div class="px-6 py-4 text-sm font-semibold text-slate-500 text-center border-l border-white/5">
             <span class="flex items-center justify-center gap-2">
-              <span class="text-base">📊</span> Planilha Excel
+              <Sheet class="size-4" aria-hidden="true" />
+              Planilha Excel
             </span>
           </div>
           <div class="px-6 py-4 text-sm font-semibold text-sky-400 text-center border-l border-white/5">
             <span class="flex items-center justify-center gap-2">
-              <span class="text-base">⚡</span> Zelo PDV
+              <Zap class="size-4" aria-hidden="true" />
+              Zelo PDV
             </span>
           </div>
         </div>
@@ -212,13 +218,13 @@
             <div class="px-6 py-4 text-sm text-white font-medium flex items-center">{row.feature}</div>
             <div class="px-6 py-4 border-l border-white/5">
               <div class="flex items-start gap-2">
-                <span class="text-red-400 mt-0.5 shrink-0">✗</span>
+                <CircleX class="mt-0.5 size-4 shrink-0 text-red-400" aria-hidden="true" />
                 <span class="text-slate-500 text-xs leading-relaxed">{row.excel}</span>
               </div>
             </div>
             <div class="px-6 py-4 border-l border-white/5">
               <div class="flex items-start gap-2">
-                <span class="text-emerald-400 mt-0.5 shrink-0">✓</span>
+                <CircleCheckBig class="mt-0.5 size-4 shrink-0 text-emerald-400" aria-hidden="true" />
                 <span class="text-slate-300 text-xs leading-relaxed">{row.zelo}</span>
               </div>
             </div>
@@ -245,9 +251,7 @@
     <div class="max-w-2xl mx-auto px-6 text-center">
       <div class="flex justify-center gap-0.5 mb-6">
         {#each Array(5) as _}
-          <svg class="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-          </svg>
+          <Star class="size-5 fill-amber-400 text-amber-400" aria-hidden="true" />
         {/each}
       </div>
       <blockquote class="text-xl md:text-2xl text-white font-medium leading-relaxed mb-6">
@@ -272,9 +276,7 @@
         <details class="group rounded-2xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors overflow-hidden">
           <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none">
             <span class="font-semibold text-white text-sm">Vale a pena trocar a planilha de Excel por um sistema PDV?</span>
-            <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180 shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
+            <ChevronDown class="ml-4 size-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
           <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed">
             Sim, especialmente se você registra mais de 10 vendas por dia. Um sistema PDV registra vendas em segundos (sem digitar), controla o estoque automaticamente, calcula o lucro real cruzando despesas com receita e funciona no celular sem precisar de arquivo compartilhado. A planilha exige digitação manual e não avisa quando o estoque acaba.
@@ -284,9 +286,7 @@
         <details class="group rounded-2xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors overflow-hidden">
           <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none">
             <span class="font-semibold text-white text-sm">Quanto tempo leva para migrar da planilha para o Zelo PDV?</span>
-            <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180 shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
+            <ChevronDown class="ml-4 size-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
           <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed">
             Em média 15 a 30 minutos. Você cadastra seus produtos, configura as categorias e já está pronto para vender. Não precisa instalar nada — o sistema roda direto no navegador. Se tiver dúvida no meio do caminho, o suporte via WhatsApp está disponível para ajudar.
@@ -296,9 +296,7 @@
         <details class="group rounded-2xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors overflow-hidden">
           <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none">
             <span class="font-semibold text-white text-sm">Preciso ter computador para usar o Zelo PDV?</span>
-            <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180 shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
+            <ChevronDown class="ml-4 size-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
           <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed">
             Não. O Zelo PDV funciona em qualquer celular, tablet ou computador com Chrome ou Edge. Muitas lanchonetes usam apenas o celular no balcão. O sistema também funciona offline e sincroniza quando a internet voltar.
@@ -320,14 +318,12 @@
       </p>
       <a href="/cadastro" class="inline-flex items-center gap-2 px-10 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold text-lg shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
         Começar agora grátis
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
-        </svg>
+        <ArrowRight class="size-5" aria-hidden="true" />
       </a>
       <p class="text-xs text-slate-500 mt-3">
         Sem cobranças durante os 30 dias. Cancele quando quiser.
         <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
-          Falar com especialista
+          Fala com a gente
         </button>
       </p>
     </div>

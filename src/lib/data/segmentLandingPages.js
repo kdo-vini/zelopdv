@@ -51,6 +51,7 @@ export const segmentPages = {
         'Sistema PDV para lanchonete simples e sem mensalidade surpresa. Controle caixa, fiado e veja o lucro real do seu negócio. Teste grátis 30 dias, sem cartão de crédito, sem instalar nada.',
       canonical: 'https://zelopdv.com.br/para-lanchonetes'
     },
+    segmentName: 'lanchonetes',
     heroBadge: 'Feito para balcão, caixa e retaguarda',
     h1: 'Sistema PDV para Lanchonete: Caixa, Estoque e Fiado em Um Só Lugar',
     subtitle:
@@ -167,7 +168,7 @@ export const segmentPages = {
           'Não. O Zelo PDV roda direto no navegador, então você pode começar em um computador, notebook ou tablet sem instalação complicada.'
       }
     ],
-    finalCtaTitle: 'Comece seu teste gratuito agora',
+    finalCtaTitle: 'Teste no seu balcão por 30 dias',
     finalCtaText:
       'Se a sua lanchonete precisa vender rápido e ter um caixa mais organizado, o Zelo PDV foi feito para esse cenário. Em poucos minutos você já consegue testar a operação real do balcão.'
   },
@@ -179,6 +180,7 @@ export const segmentPages = {
         'Sistema PDV para hamburgueria: registre pedidos rápido, controle estoque e saiba quanto sobrou no fim do dia. R$ 59/mês, 30 dias grátis, sem cartão.',
       canonical: 'https://zelopdv.com.br/para-hamburguerias'
     },
+    segmentName: 'hamburguerias',
     heroBadge: 'Operação enxuta para pico de movimento',
     h1: 'PDV para Hamburgueria: Controle Pedidos e Lucro Sem Complicação',
     subtitle:
@@ -289,7 +291,7 @@ export const segmentPages = {
           'Sim. Ao lançar despesas e conferir o caixa, você passa a enxergar muito melhor o que realmente sobrou depois da operação da noite.'
       }
     ],
-    finalCtaTitle: 'Comece seu teste gratuito agora',
+    finalCtaTitle: 'Teste na sua hamburgueria por 30 dias',
     finalCtaText:
       'Se a sua hamburgueria precisa ganhar velocidade no atendimento e clareza no fechamento, vale testar o Zelo na rotina real da casa. O período grátis já mostra se o fluxo encaixa no seu time.'
   },
@@ -301,6 +303,7 @@ export const segmentPages = {
         'Para quem faz delivery por conta própria. Controle pedidos, despesas e lucro sem pagar taxa de marketplace. Sistema simples, R$ 59/mês.',
       canonical: 'https://zelopdv.com.br/para-delivery'
     },
+    segmentName: 'delivery próprio',
     heroBadge: 'Backoffice simples para delivery próprio',
     h1: 'Sistema para Delivery Próprio: Gerencie Pedidos e Finanças Sem iFood',
     subtitle:
@@ -417,7 +420,7 @@ export const segmentPages = {
           'Sim. Ele foi pensado justamente para negócios enxutos que precisam de controle simples, sem montar uma estrutura cara ou complexa.'
       }
     ],
-    finalCtaTitle: 'Comece seu teste gratuito agora',
+    finalCtaTitle: 'Teste no seu delivery por 30 dias',
     finalCtaText:
       'Se você faz delivery por conta própria e quer parar de depender de anotações soltas, o Zelo pode ser o centro da sua operação. Teste por 30 dias grátis, sem cartão, e veja a diferença no fechamento.'
   },
@@ -429,6 +432,7 @@ export const segmentPages = {
         'Sistema de gestão para MEI de alimentação. Substitua planilha e caderno por controle de caixa, despesas e lucro real. R$ 59/mês, teste grátis.',
       canonical: 'https://zelopdv.com.br/para-mei'
     },
+    segmentName: 'MEI e pequeno negócio',
     heroBadge: 'Controle simples para quem faz tudo sozinho',
     h1: 'Sistema de Gestão para MEI: Controle Caixa e Despesas no Celular',
     subtitle:
@@ -538,7 +542,7 @@ export const segmentPages = {
           'Sim. Como vendas e despesas ficam registradas no mesmo lugar, o fechamento fica muito mais claro e menos dependente de planilha paralela.'
       }
     ],
-    finalCtaTitle: 'Comece seu teste gratuito agora',
+    finalCtaTitle: 'Teste no seu negócio por 30 dias',
     finalCtaText:
       'Se você é MEI e precisa de um jeito mais simples de controlar caixa, despesas e lucro, o Zelo foi feito para caber na sua rotina. Teste grátis e veja como fica mais fácil fechar o mês.'
   }
