@@ -196,6 +196,7 @@
 <script>
   import { onMount } from 'svelte';
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
+  import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import { trackViewContent } from '$lib/metaPixel';
 
   let activeLightboxImage = null;
@@ -223,7 +224,10 @@
   });
 </script>
 
-<div class="min-h-screen bg-[#0B0F19] text-slate-300 font-sans selection:bg-sky-500/30 selection:text-sky-200 overflow-x-hidden">
+<div
+  class="min-h-screen overflow-x-hidden font-sans selection:bg-sky-500/30 selection:text-sky-200"
+  style="background: var(--bg-app); color: var(--text-label);"
+>
 
   <!-- EASTER PROMO BANNER -->
   {#if daysUntilEaster > 0}
@@ -1122,56 +1126,7 @@
     </div>
   </section>
 
-  <!-- FOOTER -->
-  <footer class="py-12 border-t border-white/10 bg-[#0B0F19]">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="grid md:grid-cols-4 gap-8 mb-12">
-        <div class="col-span-1 md:col-span-1">
-            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 md:h-40 w-auto" />
-          <p class="text-slate-500 text-sm leading-relaxed">
-            Tecnologia simples para negócios que querem crescer. Controle total do seu caixa e do seu lucro.
-          </p>
-        </div>
-
-        <div>
-          <h4 class="text-white font-semibold mb-4">Produto</h4>
-          <ul class="space-y-2 text-sm text-slate-400">
-            <li><a href="#features" class="hover:text-sky-400 transition-colors">Funcionalidades</a></li>
-            <li><a href="#pricing" class="hover:text-sky-400 transition-colors">Preços</a></li>
-            <li><a href="/atualizacoes" class="hover:text-sky-400 transition-colors">Atualizações</a></li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 class="text-white font-semibold mb-4">Suporte</h4>
-          <ul class="space-y-2 text-sm text-slate-400">
-            <li><a href="#faq" class="hover:text-sky-400 transition-colors">Central de Ajuda</a></li>
-            <li><a href="/contato?assunto=demo" class="hover:text-sky-400 transition-colors">Agendar demonstração</a></li>
-            <li><a href="https://wa.me/5514991537503" class="hover:text-sky-400 transition-colors">Falar no WhatsApp</a></li>
-            <li><a href="mailto:techne.br@gmail.com" class="hover:text-sky-400 transition-colors">Email</a></li>
-          </ul>
-        </div>
-
-        <div>
-           <h4 class="text-white font-semibold mb-4">Legal</h4>
-           <ul class="space-y-2 text-sm text-slate-400">
-             <li><a href="/termos" class="hover:text-sky-400 transition-colors">Termos de Uso</a></li>
-             <li><a href="/privacidade" class="hover:text-sky-400 transition-colors">Privacidade</a></li>
-           </ul>
-        </div>
-      </div>
-
-      <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-600">
-        <div>
-          &copy; {new Date().getFullYear()} <a href="https://techneia.com.br" target="_blank" rel="noopener noreferrer" class="hover:text-slate-500 transition-colors">Téchne Sistemas</a>. <br class="hidden md:block"/>Todos os direitos reservados. <br class="hidden md:block"/>
-          <span class="opacity-60">Techne Sistemas Tecnologia Da Informacao Ltda — CNPJ: 65.679.798/0001-95</span>
-        </div>
-        <div class="flex gap-4">
-           <a href="https://instagram.com/techne.ia" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">@techne.ia</a>
-        </div>
-      </div>
-    </div>
-  </footer>
+  <MarketingFooter />
 
   <!-- LIGHTBOX MODAL -->
   {#if activeLightboxImage}

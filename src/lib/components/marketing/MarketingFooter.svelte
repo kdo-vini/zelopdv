@@ -3,10 +3,10 @@
 
   export let variant = 'dark';
 
-  $: isBlogRoute = $page.url.pathname.startsWith('/blog');
-  $: featuresHref = isBlogRoute ? '/#features' : '#features';
-  $: pricingHref = isBlogRoute ? '/#pricing' : '#pricing';
-  $: faqHref = isBlogRoute ? '/#faq' : '#faq';
+  $: isHomeRoute = $page.url.pathname === '/';
+  $: featuresHref = isHomeRoute ? '#features' : '/#features';
+  $: pricingHref = isHomeRoute ? '#pricing' : '/#pricing';
+  $: faqHref = isHomeRoute ? '#faq' : '/#faq';
   $: isLight = variant === 'light';
 </script>
 
@@ -16,10 +16,10 @@
 >
   <div class="max-w-7xl mx-auto px-6">
     <div class="grid md:grid-cols-4 gap-8 mb-12">
-      <div>
+      <div class="col-span-1 md:col-span-1">
         <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 md:h-40 w-auto" />
         <p class="text-sm leading-relaxed" style={`color: ${isLight ? 'var(--blog-muted)' : 'var(--text-muted)'}`}>
-          Tecnologia simples para negócios de alimentação que precisam vender bem e entender o próprio lucro.
+          Tecnologia simples para negócios que querem crescer. Controle total do seu caixa e do seu lucro.
         </p>
       </div>
 
@@ -28,9 +28,7 @@
         <ul class="space-y-2 text-sm" style={`color: ${isLight ? 'var(--blog-muted)' : 'var(--text-muted)'}`}>
           <li><a href={featuresHref} class="transition-colors hover:text-sky-400">Funcionalidades</a></li>
           <li><a href={pricingHref} class="transition-colors hover:text-sky-400">Preços</a></li>
-          <li><a href="/precificacao" class="transition-colors hover:text-sky-400">Precificação</a></li>
-          <li><a href="/extensoes" class="transition-colors hover:text-sky-400">Extensões</a></li>
-          <li><a href="/blog" class="transition-colors hover:text-sky-400">Blog</a></li>
+          <li><a href="/atualizacoes" class="transition-colors hover:text-sky-400">Atualizações</a></li>
         </ul>
       </div>
 
@@ -58,7 +56,7 @@
       style={`color: ${isLight ? 'var(--blog-muted)' : 'var(--text-muted)'}; border-color: ${isLight ? 'var(--blog-border)' : 'rgba(255,255,255,0.05)'}`}
     >
       <div>
-        &copy; {new Date().getFullYear()} <a href="https://techneia.com.br" target="_blank" rel="noopener noreferrer" class={`transition-colors ${isLight ? 'hover:text-sky-600' : 'hover:text-white'}`}>Téchne Sistemas</a>. <br class="hidden md:block" />
+        &copy; {new Date().getFullYear()} <a href="https://techneia.com.br" target="_blank" rel="noopener noreferrer" class={`transition-colors ${isLight ? 'hover:text-sky-600' : 'hover:text-slate-500'}`}>Téchne Sistemas</a>. <br class="hidden md:block" />
         Todos os direitos reservados. <br class="hidden md:block" />
         <span class="opacity-60">Techne Sistemas Tecnologia Da Informacao Ltda — CNPJ: 65.679.798/0001-95</span>
       </div>
