@@ -217,11 +217,24 @@
     Zap
   } from 'lucide-svelte';
 
+  let visibleMessages = [];
+  let isTyping = false;
+  let chatContainer;
   let activeLightboxImage = null;
   let daysUntilEaster = 0;
 
   function openSupportChat() {
     window.dispatchEvent(new CustomEvent('zelo:open-support-chat'));
+  }
+
+  function scrollBottom() {
+    requestAnimationFrame(() => {
+      if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
+  }
+
+  function addMessage(msg) {
+    visibleMessages = [...visibleMessages, msg];
   }
 
   onMount(() => {
@@ -238,7 +251,44 @@
 
     trackViewContent();
 
-    return () => window.removeEventListener('keydown', handleKeydown);
+    // Mock conversation timeline
+    const timeline = [
+      // Round 1 — lucro semanal
+      { d: 400, fn: () => { addMessage({ role: 'user', text: 'Quanto lucrei essa semana?' }); scrollBottom(); } },
+      { d: 900, fn: () => { isTyping = true; scrollBottom(); } },
+      { d: 2000, fn: () => { isTyping = false; scrollBottom(); } },
+      { d: 2200, fn: () => { addMessage({ role: 'assistant', type: 'thinking', text: 'Analisando seu caixa de <strong class="text-white">seg a dom</strong>…' }); scrollBottom(); } },
+      { d: 3400, fn: () => { addMessage({ role: 'assistant', type: 'numbers', data: { vendas: '3.847', despesas: '1.290', lucro: '2.557' }, prompt: 'Quer ver quais produtos puxaram esse resultado?' }); scrollBottom(); } },
+      // Round 2 — top produtos
+      { d: 4400, fn: () => { addMessage({ role: 'user', text: 'Quais produtos venderam mais?' }); scrollBottom(); } },
+      { d: 4900, fn: () => { isTyping = true; scrollBottom(); } },
+      { d: 6200, fn: () => { isTyping = false; scrollBottom(); } },
+      { d: 6400, fn: () => { addMessage({ role: 'assistant', type: 'thinking', text: 'Puxando os <strong class="text-white">top produtos</strong> dos últimos 7 dias…' }); scrollBottom(); } },
+      { d: 7400, fn: () => { addMessage({ role: 'assistant', type: 'products', items: [
+        { name: 'Hambúrguer Artesanal', qty: 47, revenue: 'R$ 1.128' },
+        { name: 'Batata Cheddar', qty: 38, revenue: 'R$ 570' },
+        { name: 'Refrigerante 2L', qty: 32, revenue: 'R$ 320' },
+      ] }); scrollBottom(); } },
+      // Round 3 — fiado
+      { d: 8600, fn: () => { addMessage({ role: 'user', text: 'Tem fiado em aberto?' }); scrollBottom(); } },
+      { d: 9100, fn: () => { isTyping = true; scrollBottom(); } },
+      { d: 10400, fn: () => { isTyping = false; scrollBottom(); } },
+      { d: 10600, fn: () => { addMessage({ role: 'assistant', type: 'thinking', text: 'Verificando <strong class="text-white">contas a receber</strong>…' }); scrollBottom(); } },
+      { d: 11600, fn: () => { addMessage({ role: 'assistant', type: 'fiado', data: { total: '1.870', clientes: 5, topNome: 'João Silva', topValor: 'R$ 520' } }); scrollBottom(); } },
+      // Round 4 — whatsapp (funcionalidade real implementada via tool calling)
+      { d: 12800, fn: () => { addMessage({ role: 'user', text: 'Manda o resumo no WhatsApp?' }); scrollBottom(); } },
+      { d: 13300, fn: () => { isTyping = true; scrollBottom(); } },
+      { d: 14800, fn: () => { isTyping = false; scrollBottom(); } },
+      { d: 15000, fn: () => { addMessage({ role: 'assistant', type: 'thinking', text: 'Gerando resumo da semana…' }); scrollBottom(); } },
+      { d: 16000, fn: () => { addMessage({ role: 'assistant', type: 'whatsapp' }); scrollBottom(); } },
+    ];
+
+    const timers = timeline.map(({ d, fn }) => setTimeout(fn, d));
+
+    return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener('keydown', handleKeydown);
+    };
   });
 </script>
 
@@ -292,41 +342,113 @@
             </div>
           </div>
 
-          <div class="p-4 md:p-5 space-y-3 md:space-y-4 min-h-[220px] md:min-h-[280px]">
-            <div class="flex justify-end chat-message user-message">
-              <div class="bg-sky-600/30 border border-sky-500/20 rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[82%]">
-                <p class="text-slate-200 text-sm">Quanto lucrei essa semana?</p>
-              </div>
-            </div>
-
-            <div class="flex items-start gap-2.5 chat-message thinking-message">
-              <div class="w-7 h-7 rounded-full bg-sky-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">Z</div>
-              <div class="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[86%]">
-                <p class="text-slate-300 text-sm leading-relaxed">Analisando seu caixa de <strong class="text-white">seg a dom</strong>...</p>
-              </div>
-            </div>
-
-            <div class="flex items-start gap-2.5 chat-message numbers-message">
-              <div class="w-7 h-7 rounded-full bg-sky-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">Z</div>
-              <div class="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[86%]">
-                <div class="space-y-1.5">
-                  <div class="flex justify-between gap-8 text-xs tabular-nums">
-                    <span class="text-slate-400">Vendas</span>
-                    <span class="text-white font-medium">R$ 3.847</span>
-                  </div>
-                  <div class="flex justify-between gap-8 text-xs tabular-nums">
-                    <span class="text-slate-400">Despesas</span>
-                    <span class="text-red-400 font-medium">R$ 1.290</span>
-                  </div>
-                  <div class="h-px bg-white/10 my-2"></div>
-                  <div class="flex justify-between gap-8 text-sm tabular-nums">
-                    <span class="text-emerald-400 font-semibold">Lucro real</span>
-                    <span class="text-emerald-400 font-bold">R$ 2.557</span>
+          <div class="p-4 md:p-5 space-y-3 md:space-y-4 max-h-[360px] md:max-h-[440px] overflow-y-auto chat-scroll" bind:this={chatContainer}>
+            {#each visibleMessages as msg}
+              {#if msg.role === 'user'}
+                <div class="flex justify-end chat-message">
+                  <div class="bg-sky-600/30 border border-sky-500/20 rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[82%]">
+                    <p class="text-slate-200 text-sm">{msg.text}</p>
                   </div>
                 </div>
-                <p class="text-slate-400 text-xs mt-3">Quer ver quais produtos puxaram esse resultado?</p>
+              {:else if msg.type === 'thinking'}
+                <div class="flex items-start gap-2.5 chat-message">
+                  <div class="w-7 h-7 rounded-full bg-sky-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">Z</div>
+                  <div class="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[86%]">
+                    <p class="text-slate-300 text-sm leading-relaxed">{@html msg.text}</p>
+                  </div>
+                </div>
+              {:else if msg.type === 'numbers'}
+                <div class="flex items-start gap-2.5 chat-message">
+                  <div class="w-7 h-7 rounded-full bg-sky-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">Z</div>
+                  <div class="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[86%]">
+                    <div class="space-y-1.5">
+                      <div class="flex justify-between gap-8 text-xs tabular-nums">
+                        <span class="text-slate-400">Vendas</span>
+                        <span class="text-white font-medium">R$ {msg.data.vendas}</span>
+                      </div>
+                      <div class="flex justify-between gap-8 text-xs tabular-nums">
+                        <span class="text-slate-400">Despesas</span>
+                        <span class="text-red-400 font-medium">R$ {msg.data.despesas}</span>
+                      </div>
+                      <div class="h-px bg-white/10 my-2"></div>
+                      <div class="flex justify-between gap-8 text-sm tabular-nums">
+                        <span class="text-emerald-400 font-semibold">Lucro real</span>
+                        <span class="text-emerald-400 font-bold">R$ {msg.data.lucro}</span>
+                      </div>
+                    </div>
+                    {#if msg.prompt}
+                      <p class="text-slate-400 text-xs mt-3">{msg.prompt}</p>
+                    {/if}
+                  </div>
+                </div>
+              {:else if msg.type === 'products'}
+                <div class="flex items-start gap-2.5 chat-message">
+                  <div class="w-7 h-7 rounded-full bg-sky-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">Z</div>
+                  <div class="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[86%]">
+                    <p class="text-white text-xs font-semibold mb-2">Top produtos da semana</p>
+                    <div class="space-y-1.5">
+                      {#each msg.items as item}
+                        <div class="flex justify-between gap-6 text-xs tabular-nums">
+                          <span class="text-slate-400">{item.name}</span>
+                          <div class="flex gap-4">
+                            <span class="text-slate-500">{item.qty} un</span>
+                            <span class="text-white font-medium">{item.revenue}</span>
+                          </div>
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+                </div>
+              {:else if msg.type === 'fiado'}
+                <div class="flex items-start gap-2.5 chat-message">
+                  <div class="w-7 h-7 rounded-full bg-sky-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">Z</div>
+                  <div class="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[86%]">
+                    <div class="space-y-1.5">
+                      <div class="flex justify-between gap-8 text-xs tabular-nums">
+                        <span class="text-slate-400">Total em aberto</span>
+                        <span class="text-amber-400 font-medium">R$ {msg.data.total}</span>
+                      </div>
+                      <div class="flex justify-between gap-8 text-xs tabular-nums">
+                        <span class="text-slate-400">Clientes com débito</span>
+                        <span class="text-white font-medium">{msg.data.clientes}</span>
+                      </div>
+                      <div class="h-px bg-white/10 my-2"></div>
+                      <div class="flex justify-between gap-8 text-xs tabular-nums">
+                        <span class="text-slate-400">Maior devedor</span>
+                        <span class="text-white font-medium">{msg.data.topNome}</span>
+                      </div>
+                      <div class="flex justify-between gap-8 text-xs tabular-nums">
+                        <span class="text-slate-400">Valor</span>
+                        <span class="text-amber-400 font-medium">{msg.data.topValor}</span>
+                      </div>
+                    </div>
+                    <p class="text-slate-400 text-xs mt-3">Quer enviar lembretes no WhatsApp?</p>
+                  </div>
+                </div>
+              {:else if msg.type === 'whatsapp'}
+                <div class="flex items-start gap-2.5 chat-message">
+                  <div class="w-7 h-7 rounded-full bg-sky-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">Z</div>
+                  <div class="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[86%]">
+                    <p class="text-emerald-400 text-sm font-semibold mb-1">✅ Resumo enviado no WhatsApp!</p>
+                    <p class="text-slate-400 text-xs">Faturamento, lucro e fiado da semana foram enviados pro seu telefone.</p>
+                    <p class="text-slate-500 text-xs mt-2">Chame o Zelinho no app pra conversar sobre seus números quando quiser.</p>
+                  </div>
+                </div>
+              {/if}
+            {/each}
+
+            {#if isTyping}
+              <div class="flex items-start gap-2.5 chat-message">
+                <div class="w-7 h-7 rounded-full bg-sky-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">Z</div>
+                <div class="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3.5">
+                  <div class="flex gap-1">
+                    <span class="w-2 h-2 bg-slate-400 rounded-full typing-dot"></span>
+                    <span class="w-2 h-2 bg-slate-400 rounded-full typing-dot" style="animation-delay: 0.16s"></span>
+                    <span class="w-2 h-2 bg-slate-400 rounded-full typing-dot" style="animation-delay: 0.32s"></span>
+                  </div>
+                </div>
               </div>
-            </div>
+            {/if}
           </div>
 
           <div class="border-t border-white/5 px-4 py-3 flex items-center gap-3" style="background: var(--bg-app);">
@@ -1096,12 +1218,28 @@
     animation: fade-in-up 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
   }
 
-  .thinking-message {
-    animation-delay: 180ms;
+  .typing-dot {
+    animation: typing-bounce 1.2s ease-in-out infinite;
   }
 
-  .numbers-message {
-    animation-delay: 420ms;
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+    30% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  .chat-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.08) transparent;
+  }
+  .chat-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .chat-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .chat-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.08);
+    border-radius: 99px;
   }
 
   .segments-section {
@@ -1270,6 +1408,10 @@
       animation: none !important;
       opacity: 1 !important;
       transform: none !important;
+    }
+    .typing-dot {
+      animation: none !important;
+      opacity: 0.5 !important;
     }
   }
 </style>

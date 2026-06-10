@@ -175,6 +175,16 @@
               break;
             }
 
+            if (parsed.type === 'whatsapp_sent') {
+              appendToLastAssistantMessage(
+                parsed.success
+                  ? '\n\n✅ Resumo enviado no WhatsApp!'
+                  : '\n\n❌ Não foi possível enviar o WhatsApp.'
+              );
+              shouldStop = true;
+              break;
+            }
+
             if (parsed.content) {
               appendToLastAssistantMessage(parsed.content);
               scrollToBottom();

@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import { buildRateLimitKey, createRateLimitResponse, enforceRateLimit } from '$lib/server/rateLimit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import OpenAI from 'openai';
+import { sendWhatsAppText, isWhatsAppConfigured } from '$lib/server/whatsapp';
 
 async function buildBusinessContext(userId) {
   try {
@@ -14,7 +15,7 @@ async function buildBusinessContext(userId) {
 
     // Business profile + product catalog (for context-aware responses)
     const [perfilRes, catalogoRes] = await Promise.all([
-      supabaseAdmin.from('empresa_perfil').select('nome_exibicao').eq('user_id', userId).maybeSingle(),
+      supabaseAdmin.from('empresa_perfil').select('nome_exibicao, contato').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('produtos').select('nome, preco').eq('id_usuario', userId).order('nome').limit(40),
     ]);
 
@@ -106,7 +107,9 @@ async function buildBusinessContext(userId) {
     return {
       perfil: {
         nome_negocio: perfilRes.data?.nome_exibicao || null,
+        contato: perfilRes.data?.contato || null,
       },
+      whatsapp_disponivel: isWhatsAppConfigured() && !!perfilRes.data?.contato,
       catalogo_produtos: (catalogoRes.data || []).map(p => `${p.nome} (R$ ${Number(p.preco).toFixed(2)})`),
       periodo: 'últimos 30 dias',
       vendas: {
@@ -222,6 +225,7 @@ IDENTIDADE DO NEGÓCIO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 • Nome do negócio: ${nomeNegocio}
 ${catalogoNomes ? `• Produtos cadastrados no sistema: ${catalogoNomes}` : '• Produtos cadastrados: não informado'}
+${context.whatsapp_disponivel ? '\n• WhatsApp: disponível para envio de resumos. Se o usuário pedir para enviar resumo/relatório, use a ferramenta send_whatsapp_summary.' : ''}
 
 IMPORTANTE: Use os produtos reais acima como referência em todos os exemplos, sugestões e análises. Nunca cite produtos genéricos (como "cachorro quente", "lanche", "prato feito") se não estiverem no catálogo. Se o negócio vende donuts, os exemplos devem ser sobre donuts. Se vende marmitas, sobre marmitas.
 
@@ -332,6 +336,27 @@ export async function POST({ request }) {
 
   const openai = new OpenAI({ apiKey });
 
+  // Expose WhatsApp send tool only when available
+  const tools = businessContext.whatsapp_disponivel
+    ? [{
+        type: 'function',
+        function: {
+          name: 'send_whatsapp_summary',
+          description: 'Envia um resumo financeiro do negócio para o WhatsApp do proprietário.',
+          parameters: {
+            type: 'object',
+            properties: {
+              summary: {
+                type: 'string',
+                description: 'Texto do resumo financeiro (texto limpo, sem formatação markdown, até 500 caracteres)',
+              },
+            },
+            required: ['summary'],
+          },
+        },
+      }]
+    : undefined;
+
   const readable = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
@@ -346,16 +371,53 @@ export async function POST({ request }) {
           stream_options: { include_usage: true },
           max_tokens: 800,
           temperature: 0.7,
+          ...(tools ? { tools, tool_choice: 'auto' } : {}),
         });
 
         let usageData = null;
+        let collectedToolCalls = {};
+
         for await (const chunk of stream) {
           const content = chunk.choices[0]?.delta?.content;
           if (content) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
           }
+
+          const toolCalls = chunk.choices[0]?.delta?.tool_calls;
+          if (toolCalls) {
+            for (const tc of toolCalls) {
+              const idx = tc.index;
+              if (!collectedToolCalls[idx]) {
+                collectedToolCalls[idx] = { id: '', name: '', arguments: '' };
+              }
+              if (tc.id) collectedToolCalls[idx].id = tc.id;
+              if (tc.function?.name) collectedToolCalls[idx].name += tc.function.name;
+              if (tc.function?.arguments) collectedToolCalls[idx].arguments += tc.function.arguments;
+            }
+          }
+
           if (chunk.usage) usageData = chunk.usage;
         }
+
+        // Execute WhatsApp tool calls after stream ends
+        for (const tc of Object.values(collectedToolCalls)) {
+          if (tc.name === 'send_whatsapp_summary') {
+            try {
+              const args = JSON.parse(tc.arguments);
+              const phone = businessContext.perfil?.contato;
+              if (phone && args.summary) {
+                const success = await sendWhatsAppText(phone, args.summary.slice(0, 1000));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'whatsapp_sent', success })}\n\n`));
+              } else {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'whatsapp_sent', success: false })}\n\n`));
+              }
+            } catch (err) {
+              console.error('[Assistant] WhatsApp send error:', err.message);
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'whatsapp_sent', success: false })}\n\n`));
+            }
+          }
+        }
+
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
 
         if (usageData) {
