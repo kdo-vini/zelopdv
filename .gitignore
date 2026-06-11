@@ -15,6 +15,8 @@ SUPPORT_GUIDE_ZELO_PDV.txt
 
 # Internal notes not meant for versioning
 .ai/
+# Exception: migrations must be versioned and ordered
+!.ai/migrations/
 SISTEMA.md
 agents.md
 
@@ -40,3 +42,7 @@ pdvObsidian/.trash/
 static/*.pem
 static/digital-certificate*
 .vercel
+
+# E2E auth tokens (never commit — contain live Supabase sessions)
+e2e/.auth/*.json
+e2e/.auth/.gitkeep

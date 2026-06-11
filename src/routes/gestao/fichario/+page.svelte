@@ -6,10 +6,16 @@
   import { addToast } from '$lib/stores/ui';
   import { printPagamentoFiado } from '$lib/printService';
   import { revertFiadoDebtForVenda } from '$lib/finance/saleOps';
+  import * as Select from '$lib/components/ui/select/index.js';
   export let params;
 
   let pessoas = [];
   let pessoaSelecionada = null;
+  let selectedPessoaId = '';
+
+  $: if (selectedPessoaId) {
+    selecionar(selectedPessoaId);
+  }
   let saldo = 0;
   let valorPagamento = '';
   let addAoCaixa = true;
@@ -221,12 +227,16 @@
   <div class="grid">
     <div class="card">
       <label>Selecionar pessoa
-        <select on:change={(e)=> selecionar(e.target.value)}>
-          <option value="">-- selecione --</option>
-          {#each pessoas as p}
-            <option value={p.id}>{p.nome} • {p.tipo}</option>
-          {/each}
-        </select>
+        <Select.Root bind:value={selectedPessoaId}>
+          <Select.Trigger class="field-input">
+            <Select.Value placeholder="-- selecione --" />
+          </Select.Trigger>
+          <Select.Content>
+            {#each pessoas as p}
+              <Select.Item value={p.id} label={`${p.nome} • ${p.tipo}`} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
       </label>
       {#if pessoaSelecionada}
         <div class="saldo-box">

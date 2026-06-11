@@ -8,6 +8,8 @@ const ALLOWED_ORIGINS = new Set([
   'http://127.0.0.1:5174',
 ]);
 
+const VALID_STATUSES = new Set(['active', 'trialing', 'past_due', 'canceled']);
+
 function buildCorsHeaders(request) {
   const origin = request.headers.get('origin');
   const allowOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : null;
@@ -19,23 +21,6 @@ function buildCorsHeaders(request) {
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin',
   };
-}
-
-function parseDate(value) {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function maxDate(...dates) {
-  return dates.filter(Boolean).reduce((latest, current) => (current > latest ? current : latest), dates.find(Boolean) || null);
-}
-
-function parseTargetDate(dateString) {
-  if (typeof dateString !== 'string') return null;
-  const trimmed = dateString.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
-  return parseDate(`${trimmed}T23:59:59.999-03:00`);
 }
 
 export function OPTIONS({ request }) {
@@ -76,43 +61,43 @@ export async function POST({ request }) {
 
     const body = await request.json().catch(() => ({}));
     const subscriptionId = body.subscriptionId;
-    const targetDate = typeof body.targetDate === 'string' ? body.targetDate : '';
+    const newStatus = typeof body.status === 'string' ? body.status.trim().toLowerCase() : '';
+    const expireImmediately = body.expireImmediately === true;
     const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
 
-    if (!subscriptionId) return json({ error: 'subscriptionId obrigatório.' }, { status: 400, headers: cors });
-    if (!reason) return json({ error: 'Motivo da extensão obrigatório.' }, { status: 400, headers: cors });
-    if (reason.length > 500) return json({ error: 'Motivo muito longo (máx. 500 caracteres).' }, { status: 400, headers: cors });
-
-    const parsedTargetDate = parseTargetDate(targetDate);
-
-    if (!parsedTargetDate) {
-      return json({ error: 'Informe uma data final válida.' }, { status: 400, headers: cors });
+    if (!subscriptionId) {
+      return json({ error: 'subscriptionId obrigatório.' }, { status: 400, headers: cors });
     }
 
+    if (!VALID_STATUSES.has(newStatus)) {
+      return json({ error: `Status inválido. Valores aceitos: ${[...VALID_STATUSES].join(', ')}.` }, { status: 400, headers: cors });
+    }
+
+    // Fetch current subscription to validate and return diff
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, status, current_period_end, manually_extended_until, payment_provider, billing_type, cancel_at_period_end')
+      .select('id, user_id, status, current_period_end, manually_extended_until')
       .eq('id', subscriptionId)
       .maybeSingle();
 
-    if (subErr || !sub) return json({ error: 'Subscription não encontrada.' }, { status: 404, headers: cors });
+    if (subErr || !sub) {
+      return json({ error: 'Subscription não encontrada.' }, { status: 404, headers: cors });
+    }
 
-    const now = new Date();
-    const currentPeriodEnd = parseDate(sub.current_period_end);
-    const manualUntil = parseDate(sub.manually_extended_until);
-    const effectiveExpiry = maxDate(currentPeriodEnd, manualUntil);
-    const newExpiry = parsedTargetDate;
-
-    const nowIso = now.toISOString();
+    const nowIso = new Date().toISOString();
     const updatePayload = {
-      current_period_end: newExpiry.toISOString(),
-      manually_extended_until: newExpiry.toISOString(),
-      status: 'active',
-      cancel_at_period_end: false,
+      status: newStatus,
       last_modified_by: admin.id,
       last_modified_at: nowIso,
       updated_at: nowIso,
     };
+
+    // Cancel logic: expire immediately and clear manual extension
+    if (newStatus === 'canceled' && (expireImmediately || sub.status !== 'canceled')) {
+      updatePayload.current_period_end = nowIso;
+      updatePayload.manually_extended_until = null;
+      updatePayload.cancel_at_period_end = false;
+    }
 
     const { error: updateErr } = await supabaseAdmin
       .from('subscriptions')
@@ -126,19 +111,13 @@ export async function POST({ request }) {
     return json({
       success: true,
       subscriptionId,
-      previousExpiry: effectiveExpiry?.toISOString() || null,
-      previousCurrentPeriodEnd: currentPeriodEnd?.toISOString() || null,
-      previousManualExtension: manualUntil?.toISOString() || null,
-      newExpiry: newExpiry.toISOString(),
-      wasExpired: effectiveExpiry ? effectiveExpiry < now : true,
-      provider: sub.payment_provider || null,
-      billingType: sub.billing_type || null,
-      mode: 'target_date',
-      targetDate,
-      reason,
+      oldStatus: sub.status,
+      newStatus,
+      expiredImmediately: newStatus === 'canceled',
+      reason: reason || null,
     }, { headers: cors });
   } catch (err) {
-    console.error('[admin/extend-subscription] error:', err?.message || err);
-    return json({ error: err?.message || 'Falha ao estender assinatura.' }, { status: 500, headers: cors });
+    console.error('[admin/update-status] error:', err?.message || err);
+    return json({ error: err?.message || 'Falha ao atualizar status.' }, { status: 500, headers: cors });
   }
 }

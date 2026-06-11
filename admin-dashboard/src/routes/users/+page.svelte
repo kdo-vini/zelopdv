@@ -9,6 +9,9 @@
   import { success, error as errorToast } from '$lib/toast'
   import { confirmDialog } from '$lib/confirmDialog'
 
+  // Base do app principal (onde rodam os endpoints /api/admin/billing/*)
+  const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
+
   let users = []
   let loading = true
   let searchTerm = ''
@@ -269,51 +272,42 @@
   async function saveEdit() {
     try {
       subLoading = true
-      // Update profile
-      const { error: profileError } = await supabase
-        .from('empresa_perfil')
-        .update({
-          nome_exibicao: editForm.nome_exibicao,
-          contato: editForm.phone ?? null,
-        })
-        .eq('user_id', editForm.user_id)
-      
-      if (profileError) throw profileError
-      
-      // Update subscription if status, plan_tier, or addon changed
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        errorToast('Sessão expirada. Faça login novamente.')
+        return
+      }
+
+      // Use the server endpoint for both profile and subscription updates
+      const res = await fetch(`${API_BASE}/api/admin/billing/update-user-subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          userId: editForm.user_id,
+          profile: {
+            nome_exibicao: editForm.nome_exibicao,
+            contato: editForm.phone ?? null,
+          },
+          subscription: editSub ? {
+            status: editSub.status,
+            plan_tier: editPlanTier,
+            has_mesas_addon: isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon,
+            has_pedidos_addon: isAddonAllowed(editPlanTier, 'pedidos') && editPedidosAddon,
+          } : undefined,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        errorToast(body.error || 'Erro ao salvar dados')
+        return
+      }
+
+      // Audit logs (client-side, after server mutation succeeds)
       const originalSub = users.find(u => u.user_id === editForm.user_id)?.subscriptions?.[0]
-      const finalMesas = isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon
-      const finalPedidos = isAddonAllowed(editPlanTier, 'pedidos') && editPedidosAddon
-      const subChanged = editSub && originalSub && (
-        editSub.status !== originalSub.status ||
-        editPlanTier !== (originalSub.plan_tier || 'pdv') ||
-        finalMesas !== !!originalSub.has_mesas_addon ||
-        finalPedidos !== !!originalSub.has_pedidos_addon
-      )
-
-      if (subChanged) {
-        const updateData = {
-          status: editSub.status,
-          plan_tier: editPlanTier,
-          has_mesas_addon: finalMesas,
-          has_pedidos_addon: finalPedidos,
-          last_modified_by: adminInfo.id,
-          last_modified_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-
-        // Se cancelar, expira a data imediatamente
-        if (editSub.status === 'canceled') {
-          updateData.current_period_end = new Date().toISOString()
-        }
-
-        const { error: subError } = await supabase
-          .from('subscriptions')
-          .update(updateData)
-          .eq('user_id', editForm.user_id)
-
-        if (subError) throw subError
-
+      if (body.subscriptionUpdated && originalSub) {
         await logAdminAction({
           adminId: adminInfo.id,
           action: 'admin_edit_subscription',
@@ -328,22 +322,22 @@
             new: {
               status: editSub.status,
               plan_tier: editPlanTier,
-              has_mesas_addon: finalMesas,
-              has_pedidos_addon: finalPedidos,
+              has_mesas_addon: isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon,
+              has_pedidos_addon: isAddonAllowed(editPlanTier, 'pedidos') && editPedidosAddon,
             },
             company: editForm.nome_exibicao,
             warning: originalSub.provider_subscription_id ? 'Stripe value NOT synced — use /subscriptions page for Stripe sync' : null,
           },
         })
       }
-      
+
       await logAdminAction({
         adminId: adminInfo.id,
         action: 'edit_user',
         targetUserId: editForm.user_id,
         details: { email: editForm.email, company: editForm.nome_exibicao }
       })
-      
+
       success('Dados salvos com sucesso!')
       closeEdit()
       await loadUsers()
@@ -367,34 +361,41 @@
       confirmLabel: `+${days} dias`,
     })
     if (!ok) return
-    
+
     try {
       subLoading = true
-      const currentEnd = new Date(editSub.current_period_end)
-      const baseDate = currentEnd < new Date() ? new Date() : currentEnd
-      const newEnd = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000)
-      
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          status: 'trialing',
-          current_period_end: newEnd.toISOString(),
-          last_modified_by: adminInfo.id,
-          last_modified_at: new Date().toISOString()
-        })
-        .eq('user_id', editForm.user_id)
-      
-      if (error) throw error
-      
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        errorToast('Sessão expirada. Faça login novamente.')
+        return
+      }
+
+      const res = await fetch(`${API_BASE}/api/admin/billing/extend-trial`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: editSub.id,
+          days,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        errorToast(body.error || 'Erro ao estender trial')
+        return
+      }
+
       await logAdminAction({
         adminId: adminInfo.id,
         action: 'extend_trial',
         targetUserId: editForm.user_id,
-        details: { days, new_expiry: newEnd.toISOString(), company: editForm.nome_exibicao }
+        details: { days, new_expiry: body.newExpiry, company: editForm.nome_exibicao }
       })
-      
-      success(`Trial estendido até ${newEnd.toLocaleDateString('pt-BR')}!`)
-      editSub.current_period_end = newEnd.toISOString()
+
+      success(`Trial estendido até ${new Date(body.newExpiry).toLocaleDateString('pt-BR')}!`)
+      editSub.current_period_end = body.newExpiry
       editSub.status = 'trialing'
       await loadUsers()
     } catch (err) {
@@ -415,28 +416,40 @@
       confirmStyle: 'danger',
     })
     if (!ok) return
-    
+
     try {
       subLoading = true
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        errorToast('Sessão expirada. Faça login novamente.')
+        return
+      }
+
+      const res = await fetch(`${API_BASE}/api/admin/billing/update-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: editSub.id,
           status: 'canceled',
-          current_period_end: new Date().toISOString(), // Expira data imediatamente
-          last_modified_by: adminInfo.id,
-          last_modified_at: new Date().toISOString()
-        })
-        .eq('user_id', editForm.user_id)
-      
-      if (error) throw error
-      
+          expireImmediately: true,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        errorToast(body.error || 'Erro ao cancelar assinatura')
+        return
+      }
+
       await logAdminAction({
         adminId: adminInfo.id,
         action: 'cancel_subscription',
         targetUserId: editForm.user_id,
         details: { subscription_id: editSub.id, company: editForm.nome_exibicao }
       })
-      
+
       success('Assinatura cancelada com sucesso.')
       editSub.status = 'canceled'
       await loadUsers()

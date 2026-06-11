@@ -9,6 +9,7 @@ let db = {};
 function makeQuery(table) {
   const query = {
     eq() { return query; },
+    in() { return query; },
     order() { return query; },
     limit() { return query; },
     async maybeSingle() {

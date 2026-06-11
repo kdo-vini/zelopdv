@@ -5,6 +5,7 @@
   import BarChart from '$lib/components/charts/BarChart.svelte'; // [NEW]
   import OnboardingChecklist from '$lib/components/OnboardingChecklist.svelte';
   import { revertFiadoDebtForVenda } from '$lib/finance/saleOps';
+  import { addToast } from '$lib/stores/ui';
 
   export let params;
 
@@ -180,14 +181,14 @@
     try {
       await revertFiadoDebtForVenda(supabase, id);
     } catch (e) {
-      alert('Não foi possível estornar a dívida no fichário: ' + (e?.message || e));
+      addToast('Não foi possível estornar a dívida no fichário: ' + (e?.message || e), 'error');
       return;
     }
     // Desvincula pedidos que referenciam esta venda antes de deletar
     await supabase.from('pedidos').update({ id_venda: null }).eq('id_venda', id);
     const { error } = await supabase.from('vendas').delete().eq('id', id);
     if (error) {
-      alert('Erro ao excluir: ' + error.message);
+      addToast('Erro ao excluir: ' + error.message, 'error');
     } else {
       vendasItens = vendasItens.filter(i => i.id_venda !== id);
       dash = { ...dash, atividade: dash.atividade.filter(ev => !(ev.tipo === 'venda' && ev.id === id)) };
@@ -346,8 +347,8 @@
   .kpval{font-size:24px;font-weight:700;line-height:1.2;color:var(--text-main)}
   .kpsub{color:var(--text-muted);font-size:12px;margin-top:2px}
   
-  .alerts{background:#fff1f2;border-color:#fecdd3}
-  .alerts ul{margin:4px 0 0 16px;padding:0;list-style:disc;color:#9f1239;font-size:13px}
+  .alerts{background: var(--status-error-bg);border-color: var(--status-error-border)}
+  .alerts ul{margin:4px 0 0 16px;padding:0;list-style:disc;color:var(--status-error-text);font-size:13px}
   
   .timeline{display:flex;flex-direction:column;gap:12px;margin:10px 0 0;padding:0;list-style:none}
   .timeline li {padding-bottom:12px;border-bottom:1px dashed var(--border-card)}
@@ -356,9 +357,9 @@
   .muted{color:var(--text-muted);font-size:11px}
   
   .tag{padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
-  .tag.venda{background:#dcfce7;color:#166534}
-  .tag.sangria{background:#fee2e2;color:#991b1b}
-  .tag.suprimento{background:#f3f4f6;color:#374151}
+  .tag.venda{background:var(--status-success-bg);color:var(--status-success-text)}
+  .tag.sangria{background:var(--status-error-bg);color:var(--status-error-text)}
+  .tag.suprimento{background:var(--bg-input);color:var(--text-label)}
 
   .btn-icon{background:transparent;border:none;padding:4px;cursor:pointer;color:var(--text-muted);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
   .btn-icon:hover{background:var(--border-subtle)}
@@ -369,7 +370,7 @@
   .modal-title{margin:0 0 10px;font-size:17px;font-weight:700;color:var(--text-main)}
   .modal-text{margin:0 0 20px;font-size:13px;color:var(--text-label);line-height:1.5}
   .modal-actions{display:flex;justify-content:flex-end;gap:10px}
-  .btn-danger{padding:8px 18px;border-radius:8px;background:#ef4444;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;transition:background 0.15s}
+  .btn-danger{padding:8px 18px;border-radius:8px;background:var(--error);color:var(--primary-text);font-weight:600;font-size:13px;border:none;cursor:pointer;transition:background 0.15s}
   .btn-danger:hover{background:#dc2626}
 
   .btn{display:inline-flex;align-items:center;justify-content:center;height:44px;border-radius:10px;border:1px solid var(--border-card);background:var(--bg-input);color:var(--text-label);text-decoration:none;font-size:14px;font-weight:500;transition:all 0.2s}

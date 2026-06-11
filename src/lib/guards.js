@@ -202,10 +202,13 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
   }
 
   // 4) Subscription (redirect only if status !== 'active'/'trialing' OR expired)
+  // plan_tier filter: chat-only subscribers should not access PDV routes.
+  // Note: plan_tier is NOT filtered in SQL to avoid blocking NULL (legacy users).
+  // Chat-only redirect happens after fetch.
   try {
     let { data: sub, error } = await supabase
       .from('subscriptions')
-      .select('status, current_period_end, manually_extended_until, user_id')
+      .select('status, current_period_end, manually_extended_until, user_id, plan_tier')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -219,6 +222,13 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
 
     // If there's an error or no subscription, redirect with 'subscribe' (new user)
     if (error || !sub) {
+      if (redirectOnFail) window.location.href = '/assinatura?msg=subscribe';
+      return null;
+    }
+
+    // Chat-only users should not access PDV routes.
+    if (sub.plan_tier === 'chat') {
+      // Redirect to assinatura with a message specific to plan mismatch
       if (redirectOnFail) window.location.href = '/assinatura?msg=subscribe';
       return null;
     }

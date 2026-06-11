@@ -6,7 +6,7 @@
   import { confirmDialog } from '$lib/confirmDialog'
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
-  import { getEffectiveExpiry, getDaysUntilEffectiveExpiry, isSubscriptionExpired, hasActiveManualExtension, parseSubscriptionDate, formatSubscriptionDate } from '$lib/subscriptionHelpers'
+  import { getEffectiveExpiry, getDaysUntilEffectiveExpiry, isSubscriptionExpired, hasActiveManualExtension, parseSubscriptionDate, formatSubscriptionDate, getEntitlement } from '$lib/subscriptionHelpers'
   import { generatePdfReport, formatBRL, formatNumber } from '$lib/pdfReport'
 
   // Base do app principal (onde rodam os endpoints /api/admin/billing/*)
@@ -20,6 +20,7 @@
   let filterPlan = 'all' // 'all', 'pdv', 'chat', 'bundle'
   let filterProvider = 'all'
   let filterAddon = 'all'
+  let filterEntitlement = 'all' // 'all', 'divergent', 'pdv_only', 'chat_only', 'both'
   let adminInfo = null
 
   const statusFilters = [
@@ -60,11 +61,20 @@
     { value: 'acessos', label: 'Acessos' },
   ]
 
+  const entitlementFilters = [
+    { value: 'all', label: 'Todos' },
+    { value: 'divergent', label: 'Divergentes' },
+    { value: 'pdv_only', label: 'Só PDV' },
+    { value: 'chat_only', label: 'Só Chat' },
+    { value: 'both', label: 'Ambos ativos' },
+  ]
+
   // Modal states
   let showExtendModal = false
   let showPlanModal = false
   let selectedSub = null
   let extendTargetDate = ''
+  let extendReason = ''
   let extending = false
   let statusUpdating = false
   let planSaving = false
@@ -156,6 +166,7 @@
   
   function openExtendModal(sub) {
     selectedSub = sub
+    extendReason = ''
     extendTargetDate = formatDateInputValue(getDefaultExtensionTargetDate(sub))
     showExtendModal = true
   }
@@ -164,6 +175,7 @@
     showExtendModal = false
     selectedSub = null
     extendTargetDate = ''
+    extendReason = ''
   }
 
   function openPlanModal(sub) {
@@ -459,6 +471,10 @@
       errorToast('Escolha a data final do acesso.')
       return
     }
+    if (!extendReason.trim()) {
+      errorToast('Informe o motivo da extensão.')
+      return
+    }
     
     extending = true
     
@@ -478,6 +494,7 @@
         body: JSON.stringify({
           subscriptionId: selectedSub.id,
           targetDate: extendTargetDate,
+          reason: extendReason,
         }),
       })
 
@@ -497,6 +514,7 @@
         details: {
           subscription_id: selectedSub.id,
           company: selectedSub.empresa_perfil.nome_exibicao,
+          reason: extendReason,
           mode: body.mode,
           target_date: body.targetDate,
           previous_expiry: body.previousExpiry,
@@ -528,27 +546,39 @@
       confirmStyle: 'danger',
     })
     if (!ok) return
-    
+
     try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        errorToast('Sessão expirada. Faça login novamente.')
+        return
+      }
+
+      const res = await fetch(`${API_BASE}/api/admin/billing/update-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: sub.id,
           status: 'canceled',
-          current_period_end: new Date().toISOString(), // Expira data imediatamente
-          last_modified_by: adminInfo.id,
-          last_modified_at: new Date().toISOString()
-        })
-        .eq('id', sub.id)
-      
-      if (error) throw error
-      
+          expireImmediately: true,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        errorToast(body.error || 'Erro ao cancelar assinatura')
+        return
+      }
+
       await logAdminAction({
         adminId: adminInfo.id,
         action: 'cancel_subscription',
         targetUserId: sub.user_id,
         details: { subscription_id: sub.id, company: sub.empresa_perfil.nome_exibicao }
       })
-      
+
       success('Assinatura cancelada com sucesso')
       await loadSubscriptions()
     } catch (err) {
@@ -564,26 +594,38 @@
       confirmLabel: 'Reativar',
     })
     if (!ok) return
-    
+
     try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        errorToast('Sessão expirada. Faça login novamente.')
+        return
+      }
+
+      const res = await fetch(`${API_BASE}/api/admin/billing/update-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: sub.id,
           status: 'active',
-          last_modified_by: adminInfo.id,
-          last_modified_at: new Date().toISOString()
-        })
-        .eq('id', sub.id)
-      
-      if (error) throw error
-      
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        errorToast(body.error || 'Erro ao reativar assinatura')
+        return
+      }
+
       await logAdminAction({
         adminId: adminInfo.id,
         action: 'reactivate_subscription',
         targetUserId: sub.user_id,
         details: { subscription_id: sub.id, company: sub.empresa_perfil.nome_exibicao }
       })
-      
+
       success('Assinatura reativada com sucesso')
       await loadSubscriptions()
     } catch (err) {
@@ -594,34 +636,40 @@
 
   async function handleUpdateStatus(sub, newStatus) {
     if (sub.status === newStatus) return
-    
+
     try {
       statusUpdating = true
-      const updateData = {
-        status: newStatus,
-        last_modified_by: adminInfo.id,
-        last_modified_at: new Date().toISOString()
-      }
-      
-      // Se cancelar manual, mata a data de expiração para travar o acesso
-      if (newStatus === 'canceled') {
-        updateData.current_period_end = new Date().toISOString()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        errorToast('Sessão expirada. Faça login novamente.')
+        return
       }
 
-      const { error } = await supabase
-        .from('subscriptions')
-        .update(updateData)
-        .eq('id', sub.id)
-      
-      if (error) throw error
-      
+      const res = await fetch(`${API_BASE}/api/admin/billing/update-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: sub.id,
+          status: newStatus,
+          expireImmediately: newStatus === 'canceled',
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        errorToast(body.error || 'Erro ao atualizar status')
+        return
+      }
+
       await logAdminAction({
         adminId: adminInfo.id,
         action: 'update_subscription_status',
         targetUserId: sub.user_id,
         details: { subscription_id: sub.id, old_status: sub.status, new_status: newStatus, company: sub.empresa_perfil.nome_exibicao }
       })
-      
+
       success(`Status atualizado para ${newStatus}`)
       await loadSubscriptions()
     } catch (err) {
@@ -639,33 +687,40 @@
       confirmLabel: `+${days} dias`,
     })
     if (!ok) return
-    
+
     try {
       statusUpdating = true
-      const currentEnd = parseSubscriptionDate(sub.current_period_end)
-      const baseDate = !currentEnd || currentEnd < new Date() ? new Date() : currentEnd
-      const newEnd = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000)
-      
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          status: 'trialing',
-          current_period_end: newEnd.toISOString(),
-          last_modified_by: adminInfo.id,
-          last_modified_at: new Date().toISOString()
-        })
-        .eq('id', sub.id)
-      
-      if (error) throw error
-      
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        errorToast('Sessão expirada. Faça login novamente.')
+        return
+      }
+
+      const res = await fetch(`${API_BASE}/api/admin/billing/extend-trial`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: sub.id,
+          days,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        errorToast(body.error || 'Erro ao estender trial')
+        return
+      }
+
       await logAdminAction({
         adminId: adminInfo.id,
         action: 'extend_trial',
         targetUserId: sub.user_id,
-        details: { subscription_id: sub.id, days, new_expiry: newEnd.toISOString(), company: sub.empresa_perfil.nome_exibicao }
+        details: { subscription_id: sub.id, days, new_expiry: body.newExpiry, company: sub.empresa_perfil.nome_exibicao }
       })
-      
-      success(`Trial estendido até ${newEnd.toLocaleDateString('pt-BR')}`)
+
+      success(`Trial estendido até ${new Date(body.newExpiry).toLocaleDateString('pt-BR')}`)
       await loadSubscriptions()
     } catch (err) {
       console.error('Error extending trial:', err)
@@ -738,6 +793,7 @@
     filterPlan = 'all'
     filterProvider = 'all'
     filterAddon = 'all'
+    filterEntitlement = 'all'
     searchTerm = ''
   }
 
@@ -746,6 +802,7 @@
     filterPlan !== 'all',
     filterProvider !== 'all',
     filterAddon !== 'all',
+    filterEntitlement !== 'all',
     searchTerm.trim(),
   ].filter(Boolean).length
   
@@ -879,6 +936,19 @@
     if (!subscriptionMatchesStatus(sub)) return false
     if (!subscriptionMatchesProvider(sub)) return false
     if (!subscriptionMatchesAddon(sub)) return false
+    // Entitlement filter (PDV × Chat)
+    if (filterEntitlement !== 'all') {
+      const ent = getEntitlement(sub);
+      if (filterEntitlement === 'divergent') {
+        if (!ent.divergent) return false;
+      } else if (filterEntitlement === 'pdv_only') {
+        if (!ent.pdv.active || ent.chat.active) return false;
+      } else if (filterEntitlement === 'chat_only') {
+        if (!ent.chat.active || ent.pdv.active) return false;
+      } else if (filterEntitlement === 'both') {
+        if (!ent.pdv.active || !ent.chat.active) return false;
+      }
+    }
     if (!searchTerm.trim()) return true
 
     const search = searchTerm.toLowerCase()
@@ -975,6 +1045,15 @@
                   {/each}
                 </select>
               </label>
+
+              <label class="space-y-1">
+                <span class="text-[10px] uppercase font-bold text-slate-500">PDV×Chat</span>
+                <select bind:value={filterEntitlement} class="w-full h-9 bg-slate-900 border border-slate-800 rounded-lg px-2 text-xs text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-indigo-500/50">
+                  {#each entitlementFilters as option}
+                    <option value={option.value}>{option.label}</option>
+                  {/each}
+                </select>
+              </label>
             </div>
 
             <div class="mt-3 flex flex-wrap gap-1.5 text-[11px] text-slate-400">
@@ -982,6 +1061,7 @@
               <span class="px-2 py-1 rounded-md bg-slate-900 border border-slate-800">Plano: {getFilterLabel(planFilters, filterPlan)}</span>
               <span class="px-2 py-1 rounded-md bg-slate-900 border border-slate-800">Origem: {getFilterLabel(providerFilters, filterProvider)}</span>
               <span class="px-2 py-1 rounded-md bg-slate-900 border border-slate-800">Add-on: {getFilterLabel(addonFilters, filterAddon)}</span>
+              <span class="px-2 py-1 rounded-md bg-slate-900 border border-slate-800">PDV×Chat: {getFilterLabel(entitlementFilters, filterEntitlement)}</span>
             </div>
           </div>
         {/if}
@@ -1035,6 +1115,7 @@
             <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Plano</th>
             <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Valor</th>
             <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Status</th>
+            <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase" title="PDV × ZeloChat — dots verdes = ativo, vermelhos = bloqueado">Entit.</th>
             <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Vence</th>
             <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase">Criado</th>
             <th class="py-3 px-4 text-[11px] font-semibold text-slate-500 uppercase text-right">Ações</th>
@@ -1093,6 +1174,19 @@
                 <span class="inline-flex px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-md border {badge.class}">
                   {badge.text}
                 </span>
+              </td>
+              <td class="py-3 px-4">
+                <!-- PDV × Chat entitlement dots -->
+                {#if true}
+                {@const ent = getEntitlement(sub)}
+                <div class="flex items-center gap-1.5" title="{ent.divergent ? 'DIVERGENTE: ' : ''}PDV: {ent.pdv.reason} | Chat: {ent.chat.reason}">
+                  <span class="inline-block w-2.5 h-2.5 rounded-full {ent.pdv.active ? 'bg-emerald-400' : 'bg-rose-500'}" title="ZeloPDV: {ent.pdv.active ? 'Ativo' : 'Inativo'} — {ent.pdv.reason}"></span>
+                  <span class="inline-block w-2.5 h-2.5 rounded-full {ent.chat.active ? 'bg-emerald-400' : 'bg-rose-500'}" title="ZeloChat: {ent.chat.active ? 'Ativo' : 'Inativo'} — {ent.chat.reason}"></span>
+                  {#if ent.divergent}
+                    <span class="text-[9px] font-bold text-amber-400 uppercase tracking-wider">!</span>
+                  {/if}
+                </div>
+                {/if}
               </td>
               <td class="py-3 px-4 text-xs">
                 <div class="{isExpired ? 'text-rose-400 font-semibold' : isExpiringSoon ? 'text-amber-400 font-semibold' : 'text-slate-300'} flex items-center gap-1.5">
@@ -1288,6 +1382,17 @@
           </p>
         </div>
 
+        <div>
+          <label for="extend-reason" class="block text-[13px] font-medium text-slate-400 mb-2">Motivo da extensão <span class="text-rose-400">*</span></label>
+          <textarea
+            id="extend-reason"
+            bind:value={extendReason}
+            placeholder="Ex: cortesia por instabilidade, extensão contratual, adjuste manual..."
+            rows="2"
+            class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-sky-500 transition-all shadow-inner resize-none"
+          ></textarea>
+        </div>
+
         <div class="rounded-xl border border-slate-700/60 bg-slate-800/40 p-4">
           <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Novo vencimento efetivo</p>
           <div class="text-base font-semibold text-emerald-300">
@@ -1302,7 +1407,7 @@
       
       <div class="px-6 py-4 bg-slate-800/30 border-t border-slate-800 flex justify-end gap-3">
         <button on:click={closeExtendModal} disabled={extending} class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-50">Cancelar</button>
-        <button on:click={handleExtendSubscription} disabled={extending || !extendTargetDate} class="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
+        <button on:click={handleExtendSubscription} disabled={extending || !extendTargetDate || !extendReason.trim()} class="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
           {extending ? 'Salvando...' : 'Salvar data'}
         </button>
       </div>

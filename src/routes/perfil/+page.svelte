@@ -604,7 +604,7 @@
   <div class="max-w-2xl">
     <div class="mb-6">
       <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Meu Perfil</p>
-      <h1 class="text-2xl font-semibold" style="color: var(--text-main);">Minha conta</h1>
+      <h1 class="text-xl font-bold text-slate-100 tracking-tight">Minha conta</h1>
       <p class="mt-1 text-sm" style="color: var(--text-muted);">Você está acessando como funcionário. Apenas o titular pode editar o perfil da empresa.</p>
     </div>
 
@@ -658,7 +658,7 @@
     <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
       <div>
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Meu Perfil</p>
-        <h1 class="text-2xl font-semibold" style="color: var(--text-main);">Configurações da Conta</h1>
+        <h1 class="text-xl font-bold text-slate-100 tracking-tight">Configurações da Conta</h1>
       </div>
       {#if activeTab !== 'assinatura' && activeTab !== 'integracoes'}
         <button

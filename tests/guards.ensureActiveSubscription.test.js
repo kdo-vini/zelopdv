@@ -19,6 +19,7 @@ function makeQuery(table, initialRows) {
       state.filters.push({ field, value });
       return query;
     },
+    in() { return query; },
     order() {
       return query;
     },

@@ -44,7 +44,7 @@
     position: relative;
     overflow-x: hidden;
     overflow-y: auto;
-    background: linear-gradient(160deg, #070d1a 0%, #0f172a 40%, #0c1425 70%, #091120 100%);
+    background: linear-gradient(160deg, var(--bg-app) 0%, var(--bg-panel) 100%);
   }
 
   /* Radial glow behind the card */
@@ -94,7 +94,7 @@
   .auth-title {
     font-size: 1.375rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: var(--text-main);
     text-align: center;
     margin: 0 0 0.25rem;
     line-height: 1.3;
@@ -102,7 +102,7 @@
 
   .auth-subtitle {
     font-size: 0.875rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     text-align: center;
     margin: 0 0 1.5rem;
     line-height: 1.5;

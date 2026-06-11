@@ -1290,7 +1290,7 @@
         <div class="flex flex-col gap-4 border-b border-slate-800/70 pb-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Vendas / Frente de Caixa</p>
-            <h1 class="text-lg md:text-xl font-bold" style="color: var(--text-main);">Frente de Caixa</h1>
+            <h1 class="text-xl font-bold text-slate-100 tracking-tight">Frente de Caixa</h1>
           </div>
           <div class="flex gap-2 flex-1 max-w-xl">
             <div class="flex-1">

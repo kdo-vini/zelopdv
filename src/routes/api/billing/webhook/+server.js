@@ -253,9 +253,11 @@ export async function POST({ request }) {
         const sub = event.data.object;
         const row = await findSubscriptionRow({ stripeSubId: sub.id, stripeCustomerId: sub.customer, userId: sub.metadata?.user_id });
         if (!row) break;
+        // Clear manual extension on cancellation — admin grant shouldn't survive Stripe cancel.
         await updateSubscriptionRow(row.id, {
           status: 'canceled',
           cancel_at_period_end: true,
+          manually_extended_until: null,
         });
         console.log(`[Stripe Webhook] [CANCELED] sub ${sub.id}`);
         break;
@@ -280,10 +282,20 @@ export async function POST({ request }) {
         // current_period_end vem da subscription, não da invoice. Buscar pra garantir.
         const sub = await stripe.subscriptions.retrieve(stripeSubId, { expand: ['items.data.price'] });
         const periodEndIso = getSubscriptionPeriodEndForDb(sub, row.current_period_end);
-        await updateSubscriptionRow(row.id, {
+        // Clear manually_extended_until if it's expired or older than the new period_end.
+        // A real payment supersedes any admin extension.
+        const newExpiry = new Date(periodEndIso || row.current_period_end);
+        const payload = {
           status: 'active',
           current_period_end: periodEndIso || row.current_period_end,
-        });
+        };
+        if (row.manually_extended_until) {
+          const manualExpiry = new Date(row.manually_extended_until);
+          if (manualExpiry <= new Date() || manualExpiry <= newExpiry) {
+            payload.manually_extended_until = null;
+          }
+        }
+        await updateSubscriptionRow(row.id, payload);
         console.log(`[Stripe Webhook] [PAID] sub ${stripeSubId} active until ${periodEndIso || row.current_period_end || 'unknown'}`);
         break;
       }

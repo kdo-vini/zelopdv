@@ -25,6 +25,7 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import { safeEqualString } from '$lib/server/safeEqual';
 import { sendEmail, isEmailConfigured } from '$lib/server/email';
 import { EMAIL_SEQUENCE, EMAIL_DAYS } from '$lib/server/emailTemplates';
 import {
@@ -48,7 +49,7 @@ export async function GET({ request }) {
   const cronSecret = env.CRON_SECRET;
   const authHeader = request.headers.get('authorization');
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !safeEqualString(authHeader, `Bearer ${cronSecret}`)) {
     return new Response('Unauthorized', { status: 401 });
   }
 

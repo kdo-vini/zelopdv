@@ -629,6 +629,8 @@
 	}
 
 	async function exportarPDF() {
+		if (exporting) return;
+		exporting = true;
 		try {
 			const dados = getExportData();
 			const { generatePDFReport } = await import('$lib/utils/pdfReport');
@@ -638,10 +640,13 @@
 			addToast('Erro ao gerar PDF: ' + e.message, 'error');
 		} finally {
 			showExportDropdown = false;
+			exporting = false;
 		}
 	}
 
 	async function exportarExcel() {
+		if (exporting) return;
+		exporting = true;
 		try {
 			const dados = getExportData();
 			const { generateExcelReport } = await import('$lib/utils/excelReport');
@@ -651,6 +656,7 @@
 			addToast('Erro ao gerar Excel: ' + e.message, 'error');
 		} finally {
 			showExportDropdown = false;
+			exporting = false;
 		}
 	}
 
@@ -669,6 +675,7 @@
 	let dataInicio = null;
 	let dataFim = null;
 	let periodoLoading = false;
+	let exporting = false;
 	let periodoVendas = [];
 	let periodoPagamentos = [];
 	let periodoItens = [];
@@ -1107,7 +1114,7 @@
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
 					<div class="fixed inset-0 z-40" on:click={() => showExportDropdown = false}></div>
 					<div class="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-xl border py-1 min-w-[200px] animate-fade-in" style="background: var(--bg-card); border-color: var(--border-subtle);">
-						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarPDF}>
+						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarPDF} disabled={exporting}>
 							<FileText class="size-4 text-slate-300" aria-hidden="true" />
 							<div class="text-left">
 								<div class="font-medium">Exportar PDF</div>
@@ -1115,7 +1122,7 @@
 							</div>
 						</button>
 						<div class="mx-2" style="border-top: 1px solid var(--border-subtle);"></div>
-						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarExcel}>
+						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarExcel} disabled={exporting}>
 							<Sheet class="size-4 text-emerald-300" aria-hidden="true" />
 							<div class="text-left">
 								<div class="font-medium">Exportar Excel</div>
@@ -1153,7 +1160,7 @@
 						<!-- svelte-ignore a11y-click-events-have-key-events -->
 						<div class="fixed inset-0 z-40" on:click={() => showExportDropdown = false}></div>
 						<div class="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-xl border py-1 min-w-[200px] animate-fade-in" style="background: var(--bg-card); border-color: var(--border-subtle);">
-							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarPDF}>
+							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarPDF} disabled={exporting}>
 								<FileText class="size-4 text-slate-300" aria-hidden="true" />
 								<div class="text-left">
 									<div class="font-medium">Exportar PDF</div>
@@ -1161,7 +1168,7 @@
 								</div>
 							</button>
 							<div class="mx-2" style="border-top: 1px solid var(--border-subtle);"></div>
-							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarExcel}>
+							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarExcel} disabled={exporting}>
 								<Sheet class="size-4 text-emerald-300" aria-hidden="true" />
 								<div class="text-left">
 									<div class="font-medium">Exportar Excel</div>

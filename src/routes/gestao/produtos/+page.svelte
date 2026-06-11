@@ -6,6 +6,7 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { waitAuthReady } from '$lib/authStore';
   import { getAccessContext } from '$lib/accessControl';
+  import * as Select from '$lib/components/ui/select/index.js';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
@@ -1161,27 +1162,26 @@
                             style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
                           />
                         {/if}
-                        <select
-                          class="edit-input flex-1 min-w-32"
-                          bind:value={editProdForm.id_categoria}
-                          style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                        >
-                          <option value={null}>— Categoria —</option>
-                          {#each categorias as c}
-                            <option value={c.id}>{c.nome}</option>
-                          {/each}
-                        </select>
-                        <select
-                          class="edit-input flex-1 min-w-32"
-                          bind:value={editProdForm.id_subcategoria}
-                          disabled={!editProdForm.id_categoria}
-                          style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                        >
-                          <option value={null}>— Subcategoria —</option>
-                          {#each filteredSubcatsForEditForm as s}
-                            <option value={s.id}>{s.nome}</option>
-                          {/each}
-                        </select>
+                        <Select.Root bind:value={editProdForm.id_categoria}>
+                          <Select.Trigger class="field-input">
+                            <Select.Value placeholder="— Categoria —" />
+                          </Select.Trigger>
+                          <Select.Content>
+                            {#each categorias as c}
+                              <Select.Item value={c.id} label={c.nome} />
+                            {/each}
+                          </Select.Content>
+                        </Select.Root>
+                        <Select.Root bind:value={editProdForm.id_subcategoria} disabled={!editProdForm.id_categoria}>
+                          <Select.Trigger class="field-input">
+                            <Select.Value placeholder="— Subcategoria —" />
+                          </Select.Trigger>
+                          <Select.Content>
+                            {#each filteredSubcatsForEditForm as s}
+                              <Select.Item value={s.id} label={s.nome} />
+                            {/each}
+                          </Select.Content>
+                        </Select.Root>
                       </div>
                       <div class="flex items-center justify-between flex-wrap gap-3">
                         <div class="flex items-center gap-4 text-sm flex-wrap" style="color: var(--text-label);">
@@ -1440,17 +1440,16 @@
       <form on:submit={criarSubcategoria} class="modal-body flex flex-col gap-4">
         <div>
           <label class="form-label" style="color: var(--text-label);">Categoria Pai</label>
-          <select
-            class="form-input"
-            bind:value={newSubForm.id_categoria}
-            required
-            style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-          >
-            <option value={null} disabled>Selecione uma categoria...</option>
-            {#each categorias as c}
-              <option value={c.id}>{c.nome}</option>
-            {/each}
-          </select>
+          <Select.Root bind:value={newSubForm.id_categoria}>
+            <Select.Trigger class="field-input">
+              <Select.Value placeholder="Selecione uma categoria..." />
+            </Select.Trigger>
+            <Select.Content>
+              {#each categorias as c}
+                <Select.Item value={c.id} label={c.nome} />
+              {/each}
+            </Select.Content>
+          </Select.Root>
         </div>
         <div>
           <label class="form-label" style="color: var(--text-label);">Nome da Subcategoria</label>
@@ -1554,31 +1553,29 @@
           {/if}
           <div>
             <label class="form-label" style="color: var(--text-label);">Categoria</label>
-            <select
-              class="form-input"
-              bind:value={newProdForm.id_categoria}
-              required
-              style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-            >
-              <option value={null} disabled>Selecione...</option>
-              {#each categorias as c}
-                <option value={c.id}>{c.nome}</option>
-              {/each}
-            </select>
+            <Select.Root bind:value={newProdForm.id_categoria}>
+              <Select.Trigger class="field-input">
+                <Select.Value placeholder="Selecione..." />
+              </Select.Trigger>
+              <Select.Content>
+                {#each categorias as c}
+                  <Select.Item value={c.id} label={c.nome} />
+                {/each}
+              </Select.Content>
+            </Select.Root>
           </div>
           <div>
             <label class="form-label" style="color: var(--text-label);">Subcategoria</label>
-            <select
-              class="form-input"
-              bind:value={newProdForm.id_subcategoria}
-              disabled={!newProdForm.id_categoria}
-              style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-            >
-              <option value={null}>— Nenhuma —</option>
-              {#each filteredSubcatsForProdForm as s}
-                <option value={s.id}>{s.nome}</option>
-              {/each}
-            </select>
+            <Select.Root bind:value={newProdForm.id_subcategoria} disabled={!newProdForm.id_categoria}>
+              <Select.Trigger class="field-input">
+                <Select.Value placeholder="— Nenhuma —" />
+              </Select.Trigger>
+              <Select.Content>
+                {#each filteredSubcatsForProdForm as s}
+                  <Select.Item value={s.id} label={s.nome} />
+                {/each}
+              </Select.Content>
+            </Select.Root>
           </div>
         </div>
 

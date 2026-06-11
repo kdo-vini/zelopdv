@@ -219,14 +219,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #64748b;
+    color: var(--text-muted);
     background: none;
     border: none;
     cursor: pointer;
     transition: color 0.15s;
   }
   .toggle-btn:hover {
-    color: #94a3b8;
+    color: var(--text-main);
   }
   .toggle-icon {
     width: 1.25rem;
@@ -249,7 +249,7 @@
     transition: color 0.2s;
   }
   .pw-rules li.ok {
-    color: #22c55e;
+    color: var(--status-success-text);
   }
   .rule-icon {
     font-weight: 700;

@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 
-const DEFAULT_ABACATEPAY_PUBLIC_KEY = 't9dXRhHHo3yDEj5pVDYz0frf7q6bMKyMRmxxCPIPp3RCplBfXRxqlC6ZpiWmOqj4L63qEaeUOtrCI8P0VMUgo6iIga2ri9ogaHFs0WIIywSMg0q7RmBfybe1E5XJcfC4IW3alNqym0tXoAKkzvfEjZxV6bE0oG2zJrNNYmUCKZyV0KZ3JS8Votf9EAWWYdiDkMkpbMdPggfh1EqHlVkMiTady6jOR3hyzGEHrIz2Ret0xHKMbiqkr9HS1JhNHDX9';
 const BILLING_CYCLE_MONTHS = 1;
 
 export function serializeBillingPayment(row) {
@@ -119,8 +118,10 @@ async function activateSubscriptionFromPayment({ payment, userId, nowIso }) {
 }
 
 export function verifyAbacateWebhookSignature(rawBody, signatureFromHeader) {
-  const publicKey = env.ABACATEPAY_PUBLIC_KEY || process.env.ABACATEPAY_PUBLIC_KEY || DEFAULT_ABACATEPAY_PUBLIC_KEY;
-  if (!rawBody || !signatureFromHeader || !publicKey) return false;
+  const publicKey = env.ABACATEPAY_PUBLIC_KEY || process.env.ABACATEPAY_PUBLIC_KEY;
+  if (!rawBody || !signatureFromHeader || !publicKey) {
+    throw new Error('ABACATEPAY_PUBLIC_KEY não configurada. Recusando webhook.');
+  }
 
   const expectedSig = crypto
     .createHmac('sha256', publicKey)

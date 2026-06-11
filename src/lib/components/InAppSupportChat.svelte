@@ -136,7 +136,7 @@
 
   .panel-header {
     padding: 14px 16px;
-    background: #0f766e;
+    background: var(--primary);
     color: white;
     display: flex;
     align-items: center;
@@ -218,7 +218,7 @@
     font-weight: 700;
   }
   .markdown-content :global(a) {
-    color: #0f766e;
+    color: var(--primary);
     text-decoration: underline;
   }
   .markdown-content :global(code) {
@@ -229,7 +229,7 @@
   }
 
   .p-user {
-    background: #0f766e;
+    background: var(--primary);
     color: white;
     align-self: flex-end;
     border-bottom-right-radius: 4px;
@@ -292,7 +292,7 @@
     transition: border-color 0.15s;
   }
   .panel-input:focus {
-    border-color: #0f766e;
+    border-color: var(--primary);
   }
   .panel-input:disabled {
     opacity: 0.6;
@@ -302,7 +302,7 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: #0f766e;
+    background: var(--primary);
     color: white;
     border: none;
     cursor: pointer;
@@ -313,7 +313,7 @@
     transition: background 0.15s, opacity 0.15s;
   }
   .panel-send-btn:hover:not(:disabled) {
-    background: #0d6460;
+    background: var(--primary-hover);
   }
   .panel-send-btn:disabled {
     opacity: 0.4;

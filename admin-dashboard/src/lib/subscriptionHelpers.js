@@ -90,3 +90,66 @@ export function hasActiveManualExtension(sub) {
   if (!periodEnd) return true
   return manualEnd > periodEnd
 }
+
+/**
+ * Mirrors ZeloPDV isSubscriptionActiveStrict (src/lib/guards.js).
+ * Returns { active: boolean, reason: string } for debugging.
+ */
+export function isPdvActive(sub) {
+  if (!sub) return { active: false, reason: 'sem row' };
+  const now = new Date();
+  const manualEnd = parseSubscriptionDate(sub.manually_extended_until);
+  // Extension manual vence status
+  if (manualEnd && manualEnd > now) return { active: true, reason: 'extensão manual' };
+  // Normal path: status + expiry
+  if (sub.status === 'active' || sub.status === 'trialing') {
+    const periodEnd = parseSubscriptionDate(sub.current_period_end);
+    if (periodEnd && periodEnd > now) return { active: true, reason: `status=${sub.status}, período futuro` };
+    // Fallback: só status (sem period_end)
+    if (!periodEnd && sub.status === 'active') return { active: true, reason: 'status sem period_end' };
+    return { active: false, reason: `status=${sub.status}, período vencido` };
+  }
+  // Sem period_end, só status
+  if (!parseSubscriptionDate(sub.current_period_end) && (sub.status === 'active' || sub.status === 'trialing')) {
+    return { active: true, reason: 'status sem period_end' };
+  }
+  return { active: false, reason: `status=${sub.status} inativo` };
+}
+
+/**
+ * Mirrors ZeloChat isSubscriptionCurrentlyActive (src/domain/subscription.ts).
+ * Returns { active: boolean, reason: string } for debugging.
+ */
+export function isChatActive(sub) {
+  if (!sub) return { active: false, reason: 'sem row' };
+  // ZeloChat só aceita chat/bundle tiers
+  if (!['chat', 'bundle'].includes(sub.plan_tier)) {
+    return { active: false, reason: `plan_tier=${sub.plan_tier} não é chat/bundle` };
+  }
+  const now = Date.now();
+  const manualEnd = parseSubscriptionDate(sub.manually_extended_until);
+  // Extension manual vence status (pós-fix de 2026-06-11)
+  if (manualEnd && manualEnd > now) return { active: true, reason: 'extensão manual' };
+  // ZeloChat exige status='active' estrito (trialing rejeitado)
+  if (sub.status !== 'active') return { active: false, reason: `status=${sub.status} (Chat exige active)` };
+  // Effective expiry = max(current_period_end, manually_extended_until)
+  const periodEnd = parseSubscriptionDate(sub.current_period_end);
+  const effectiveExpiry = periodEnd ? (manualEnd && manualEnd > periodEnd ? manualEnd : periodEnd) : null;
+  if (!effectiveExpiry) return { active: false, reason: 'sem expiry' };
+  if (effectiveExpiry <= now) return { active: false, reason: 'efectivo vencido' };
+  return { active: true, reason: `status=active, expiry futuro` };
+}
+
+/**
+ * Combined entitlement check for a subscription row.
+ * Returns { pdv: {active, reason}, chat: {active, reason}, divergent: boolean }.
+ */
+export function getEntitlement(sub) {
+  const pdv = isPdvActive(sub);
+  const chat = isChatActive(sub);
+  return {
+    pdv,
+    chat,
+    divergent: pdv.active !== chat.active,
+  };
+}

@@ -27,17 +27,6 @@ function parseDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function maxDate(...dates) {
-  return dates.filter(Boolean).reduce((latest, current) => (current > latest ? current : latest), dates.find(Boolean) || null);
-}
-
-function parseTargetDate(dateString) {
-  if (typeof dateString !== 'string') return null;
-  const trimmed = dateString.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
-  return parseDate(`${trimmed}T23:59:59.999-03:00`);
-}
-
 export function OPTIONS({ request }) {
   const cors = buildCorsHeaders(request);
   const origin = request.headers.get('origin');
@@ -76,47 +65,43 @@ export async function POST({ request }) {
 
     const body = await request.json().catch(() => ({}));
     const subscriptionId = body.subscriptionId;
-    const targetDate = typeof body.targetDate === 'string' ? body.targetDate : '';
+    const days = Number(body.days);
     const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
 
-    if (!subscriptionId) return json({ error: 'subscriptionId obrigatório.' }, { status: 400, headers: cors });
-    if (!reason) return json({ error: 'Motivo da extensão obrigatório.' }, { status: 400, headers: cors });
-    if (reason.length > 500) return json({ error: 'Motivo muito longo (máx. 500 caracteres).' }, { status: 400, headers: cors });
+    if (!subscriptionId) {
+      return json({ error: 'subscriptionId obrigatório.' }, { status: 400, headers: cors });
+    }
 
-    const parsedTargetDate = parseTargetDate(targetDate);
-
-    if (!parsedTargetDate) {
-      return json({ error: 'Informe uma data final válida.' }, { status: 400, headers: cors });
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      return json({ error: 'days deve ser um inteiro entre 1 e 365.' }, { status: 400, headers: cors });
     }
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, status, current_period_end, manually_extended_until, payment_provider, billing_type, cancel_at_period_end')
+      .select('id, user_id, status, current_period_end')
       .eq('id', subscriptionId)
       .maybeSingle();
 
-    if (subErr || !sub) return json({ error: 'Subscription não encontrada.' }, { status: 404, headers: cors });
+    if (subErr || !sub) {
+      return json({ error: 'Subscription não encontrada.' }, { status: 404, headers: cors });
+    }
 
     const now = new Date();
-    const currentPeriodEnd = parseDate(sub.current_period_end);
-    const manualUntil = parseDate(sub.manually_extended_until);
-    const effectiveExpiry = maxDate(currentPeriodEnd, manualUntil);
-    const newExpiry = parsedTargetDate;
-
+    const currentEnd = parseDate(sub.current_period_end);
+    const baseDate = !currentEnd || currentEnd < now ? now : currentEnd;
+    const newEnd = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
     const nowIso = now.toISOString();
-    const updatePayload = {
-      current_period_end: newExpiry.toISOString(),
-      manually_extended_until: newExpiry.toISOString(),
-      status: 'active',
-      cancel_at_period_end: false,
-      last_modified_by: admin.id,
-      last_modified_at: nowIso,
-      updated_at: nowIso,
-    };
+    const newEndIso = newEnd.toISOString();
 
     const { error: updateErr } = await supabaseAdmin
       .from('subscriptions')
-      .update(updatePayload)
+      .update({
+        status: 'trialing',
+        current_period_end: newEndIso,
+        last_modified_by: admin.id,
+        last_modified_at: nowIso,
+        updated_at: nowIso,
+      })
       .eq('id', subscriptionId);
 
     if (updateErr) {
@@ -126,19 +111,14 @@ export async function POST({ request }) {
     return json({
       success: true,
       subscriptionId,
-      previousExpiry: effectiveExpiry?.toISOString() || null,
-      previousCurrentPeriodEnd: currentPeriodEnd?.toISOString() || null,
-      previousManualExtension: manualUntil?.toISOString() || null,
-      newExpiry: newExpiry.toISOString(),
-      wasExpired: effectiveExpiry ? effectiveExpiry < now : true,
-      provider: sub.payment_provider || null,
-      billingType: sub.billing_type || null,
-      mode: 'target_date',
-      targetDate,
-      reason,
+      days,
+      newExpiry: newEndIso,
+      previousExpiry: currentEnd?.toISOString() || null,
+      previousStatus: sub.status,
+      reason: reason || null,
     }, { headers: cors });
   } catch (err) {
-    console.error('[admin/extend-subscription] error:', err?.message || err);
-    return json({ error: err?.message || 'Falha ao estender assinatura.' }, { status: 500, headers: cors });
+    console.error('[admin/extend-trial] error:', err?.message || err);
+    return json({ error: err?.message || 'Falha ao estender trial.' }, { status: 500, headers: cors });
   }
 }

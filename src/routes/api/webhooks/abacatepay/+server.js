@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import { safeEqualString } from '$lib/server/safeEqual';
 import {
   findBillingPaymentByProviderId,
   syncPixPaymentWithRemote,
@@ -63,7 +64,7 @@ export async function POST({ request, url }) {
   }
 
   const webhookSecret = url.searchParams.get('webhookSecret');
-  if (!webhookSecret || webhookSecret !== webhookSecretConfig) {
+  if (!webhookSecret || !safeEqualString(webhookSecret, webhookSecretConfig)) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
 

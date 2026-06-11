@@ -4,6 +4,7 @@
   import { ensureActiveSubscription } from '$lib/guards';
   import { logAuditAction } from '$lib/accessControl';
   import { pdvCache } from '$lib/stores/pdvCache';
+  import * as Select from '$lib/components/ui/select/index.js';
 
   let loading = true;
   let erro = '';
@@ -287,23 +288,41 @@
 
 <div class="flex flex-col gap-2 mb-4">
   <div class="flex flex-wrap items-center gap-2">
-    <select class="rounded-md px-3 py-2 min-w-48" style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
-      bind:value={idCategoria}
-      on:change={async () => { idCategoria = idCategoria ? Number(idCategoria) : null; idSubcategoria = null; await carregarSubcategorias(); await carregar(); }}>
-      <option value={null}>Todas as categorias</option>
-      {#each categorias as c}
-        <option value={c.id}>{c.nome}</option>
-      {/each}
-    </select>
-    <select class="rounded-md px-3 py-2 min-w-48 disabled:opacity-50" style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);"
-      bind:value={idSubcategoria}
+    <Select.Root
+      value={idCategoria ?? ""}
+      onValueChange={(v) => {
+        idCategoria = v || null;
+        idSubcategoria = null;
+        carregarSubcategorias();
+        carregar();
+      }}
+    >
+      <Select.Trigger class="rounded-md px-3 py-2 min-w-48" style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);">
+        <Select.Value placeholder="Filtrar por categoria" />
+      </Select.Trigger>
+      <Select.Content>
+        {#each categorias as c}
+          <Select.Item value={String(c.id)} label={c.nome} />
+        {/each}
+      </Select.Content>
+    </Select.Root>
+    <Select.Root
+      value={idSubcategoria ?? ""}
       disabled={!idCategoria}
-      on:change={async () => { idSubcategoria = idSubcategoria ? Number(idSubcategoria) : null; await carregar(); }}>
-      <option value={null}>Todas as subcategorias</option>
-      {#each subcategorias as s}
-        <option value={s.id}>{s.nome}</option>
-      {/each}
-    </select>
+      onValueChange={(v) => {
+        idSubcategoria = v || null;
+        carregar();
+      }}
+    >
+      <Select.Trigger class="rounded-md px-3 py-2 min-w-48 disabled:opacity-50" style="border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main);">
+        <Select.Value placeholder="Filtrar por subcategoria" />
+      </Select.Trigger>
+      <Select.Content>
+        {#each subcategorias as s}
+          <Select.Item value={String(s.id)} label={s.nome} />
+        {/each}
+      </Select.Content>
+    </Select.Root>
     <input
       placeholder="Buscar produto ou grupo..."
       class="w-full sm:w-80 rounded-md px-3 py-2"

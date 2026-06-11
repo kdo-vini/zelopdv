@@ -789,7 +789,7 @@
         }).filter(l => l.valor > 0);
         if (linhasInsert.length > 0) {
           const { error: pagErr } = await supabase.from('vendas_pagamentos').insert(linhasInsert);
-          if (pagErr) console.warn('[Mesa.fechar] vendas_pagamentos insert falhou:', pagErr.message);
+          if (pagErr) throw new Error('Falha ao registrar pagamentos: ' + pagErr.message);
         }
       }
 
@@ -2243,8 +2243,8 @@
     .item-card { padding: 0.65rem 0.7rem; }
 
     /* Tap targets maiores */
-    .qty-btn { width: 32px; height: 32px; }
-    .qty-btn svg { width: 14px; height: 14px; }
+    .qty-btn { width: 44px; height: 44px; }
+    .qty-btn svg { width: 18px; height: 18px; }
     .pessoas-row { padding: 0.7rem 0.85rem; }
 
     /* Categoria tabs mais altas */
@@ -2598,8 +2598,11 @@
     padding: 2px;
     flex-shrink: 0;
   }
+  .qty-cluster:has(.qty-btn) {
+    padding: 1px;
+  }
   .qty-btn {
-    width: 26px; height: 26px;
+    width: 36px; height: 36px;
     display: inline-flex; align-items: center; justify-content: center;
     background: transparent;
     border: none;
@@ -2608,7 +2611,7 @@
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
   }
-  .qty-btn svg { width: 13px; height: 13px; }
+  .qty-btn svg { width: 16px; height: 16px; }
   .qty-btn:hover:not(:disabled) { color: var(--text-main); background: rgba(255,255,255,0.05); }
   .qty-minus:hover:not(:disabled) { color: var(--status-error-text); background: var(--status-error-bg); }
   .qty-plus:hover:not(:disabled) { color: var(--status-success-text); background: var(--status-success-bg); }

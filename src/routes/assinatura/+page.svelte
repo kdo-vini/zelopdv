@@ -790,7 +790,7 @@
 
 <section class="assinatura-container">
   <p class="breadcrumb">Conta / Assinatura</p>
-  <h1 class="title">Sua assinatura Zelo</h1>
+  <h1 class="text-xl font-bold text-slate-100 tracking-tight">Sua assinatura Zelo</h1>
   <p class="subtitle">Escolha o pacote, ajuste os módulos e finalize com Pix ou cartão em poucos passos.</p>
 
   {#if camePromptingMesas}
@@ -1539,17 +1539,17 @@
   .status-card.active {
     background: rgba(34, 197, 94, 0.08);
     border: 1px solid rgba(34, 197, 94, 0.25);
-    color: #166534;
+    color: var(--status-success-text);
   }
   .status-card.warning {
     background: rgba(245, 158, 11, 0.08);
     border: 1px solid rgba(245, 158, 11, 0.25);
-    color: #92400e;
+    color: var(--status-warning-text);
   }
   .status-card.info {
     background: rgba(14, 165, 233, 0.08);
     border: 1px solid rgba(14, 165, 233, 0.25);
-    color: #0c4a6e;
+    color: var(--primary);
   }
   .status-icon {
     flex-shrink: 0;
@@ -2334,9 +2334,9 @@
   .legal-text { font-size: 0.78rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
   .legal-text a { color: var(--primary); text-decoration: underline; }
 
-  :global(.dark) .status-card.active { color: #bbf7d0; }
-  :global(.dark) .status-card.warning { color: #fde68a; }
-  :global(.dark) .status-card.info { color: #bae6fd; }
+  :global(.dark) .status-card.active { color: var(--status-success-text); }
+  :global(.dark) .status-card.warning { color: var(--status-warning-text); }
+  :global(.dark) .status-card.info { color: var(--primary); }
 
   @media (max-width: 760px) {
     .checkout-summary,

@@ -4,6 +4,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import Spinner from '$lib/components/ui/Spinner.svelte';
+  import * as Select from '$lib/components/ui/select/index.js';
 
   // ─── State ───────────────────────────────────────────────────────────────────
   let loading = true;
@@ -699,14 +700,16 @@
                       <td class="px-4 py-3">
                         {#if editingUserRoleId === user.id}
                           <div class="flex items-center gap-1">
-                            <select
-                              class="input-form text-sm h-8"
-                              bind:value={editingUserRoleValue}
-                            >
-                              {#each roles as r}
-                                <option value={r.id}>{r.name}</option>
-                              {/each}
-                            </select>
+                            <Select.Root bind:value={editingUserRoleValue}>
+                              <Select.Trigger class="field-input h-8">
+                                <Select.Value placeholder="Selecione um cargo" />
+                              </Select.Trigger>
+                              <Select.Content>
+                                {#each roles as r}
+                                  <Select.Item value={r.id} label={r.name} />
+                                {/each}
+                              </Select.Content>
+                            </Select.Root>
                             <button
                               class="p-1.5 rounded-sm"
                               style="color: var(--success);"
@@ -860,15 +863,20 @@
           />
         </div>
         <div>
-          <label for="invite-role" class="block text-xs font-medium mb-1" style="color: var(--text-muted);">Cargo</label>
-          <select id="invite-role" class="input-form w-full" bind:value={inviteRoleId}>
-            {#if roles.length === 0}
-              <option value="">Nenhum cargo disponível</option>
-            {/if}
-            {#each roles as r}
-              <option value={r.id}>{r.name}</option>
-            {/each}
-          </select>
+          <label class="block text-xs font-medium mb-1" style="color: var(--text-muted);">Cargo</label>
+          <Select.Root bind:value={inviteRoleId}>
+            <Select.Trigger class="field-input w-full">
+              <Select.Value placeholder="Selecione um cargo" />
+            </Select.Trigger>
+            <Select.Content>
+              {#if roles.length === 0}
+                <Select.Item value="" label="Nenhum cargo disponível" />
+              {/if}
+              {#each roles as r}
+                <Select.Item value={r.id} label={r.name} />
+              {/each}
+            </Select.Content>
+          </Select.Root>
         </div>
       </div>
 
