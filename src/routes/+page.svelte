@@ -756,7 +756,7 @@
             <SendHorizontal class="size-5 text-sky-400" aria-hidden="true" />
           </div>
           <p class="text-white font-semibold text-sm leading-tight">Suporte de gente de verdade</p>
-          <p class="text-slate-300 text-sm leading-relaxed">WhatsApp em horário comercial, direto com quem constrói o produto. Sem robô de triagem, sem fila de protocolo.</p>
+          <p class="text-slate-300 text-sm leading-relaxed">WhatsApp em horário comercial, direto com quem constrói o produto. Sem fila de protocolo.</p>
         </div>
 
         <div class="bg-white/3 border border-white/5 rounded-2xl p-6 flex flex-col gap-3">
