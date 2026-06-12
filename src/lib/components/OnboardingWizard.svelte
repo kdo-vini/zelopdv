@@ -10,7 +10,7 @@
     normalizeBrazilianTaxId,
   } from '$lib/masks';
   import { trackStartTrial } from '$lib/metaPixel';
-  import { trackGoogleAdsInscricao } from '$lib/googleAds';
+  import { trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
 
   export let show = false;
   export let userId = '';
@@ -93,6 +93,8 @@
 
       let didTrackTrial = false;
       if (!trialPayload?.alreadyExists) {
+        // gtag carrega async; sem esperar, a conversão de inscrição se perde silenciosamente
+        await waitForGtag();
         const trackedMetaTrial = trackStartTrial();
         const trackedGoogleTrial = trackGoogleAdsInscricao();
         didTrackTrial = trackedMetaTrial || trackedGoogleTrial;
