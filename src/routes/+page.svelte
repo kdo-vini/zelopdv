@@ -58,35 +58,6 @@
     ],
     "screenshot": "https://zelopdv.com.br/images/screenshots/dashboard-desktop.png",
     "description": "Sistema PDV online para lanchonetes, hamburguerias e pequenos negócios. Controle caixa, fiado, despesas e veja seu lucro real sem instalar nada.",
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "38",
-      "bestRating": "5"
-    },
-    "review": [
-      {
-        "@type": "Review",
-        "author": { "@type": "Person", "name": "Marcos A." },
-        "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
-        "reviewBody": "Abri o caixa no celular e em 10 minutos já tava vendendo. Nunca vi sistema tão fácil.",
-        "datePublished": "2026-01-15"
-      },
-      {
-        "@type": "Review",
-        "author": { "@type": "Person", "name": "Fernanda S." },
-        "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
-        "reviewBody": "O controle de fiado mudou minha vida. Acabou a briga com cliente por causa de dívida.",
-        "datePublished": "2026-02-03"
-      },
-      {
-        "@type": "Review",
-        "author": { "@type": "Person", "name": "Patrícia N." },
-        "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
-        "reviewBody": "Eu fazia tudo no caderno. Hoje sei exatamente quanto lucrei no mês.",
-        "datePublished": "2026-03-10"
-      }
-    ],
     "publisher": {
       "@type": "Organization",
       "name": "Téchne Sistemas",
@@ -210,7 +181,6 @@
     ScanSearch,
     SendHorizontal,
     Smartphone,
-    Star,
     Table2,
     Wallet,
     X,
@@ -303,11 +273,11 @@
     <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1.2fr_0.8fr] gap-8 lg:gap-16 items-center relative z-10">
       <div>
         <h1 class="text-3xl md:text-6xl font-bold text-white tracking-tight leading-tight mb-4 md:mb-6 hero-title">
-          Você pergunta. Ele responde com os seus números.
+          O PDV simples que mostra quanto sua lanchonete lucra de verdade.
         </h1>
 
         <p class="text-base md:text-xl max-w-2xl mb-5 md:mb-8 leading-relaxed" style="color: var(--text-muted);">
-          Quanto lucrei essa semana? Quais produtos venderam mais? Onde tô perdendo dinheiro? O Zelinho responde a partir do seu próprio caixa.
+          Registre vendas em segundos, controle fiado e despesas e feche o caixa sem dor de cabeça. E quando bater a dúvida, pergunte ao Zelinho — ele responde com os números do seu próprio caixa.
         </p>
 
         <div class="flex flex-col sm:flex-row items-start gap-3 md:gap-4 mb-3 md:mb-4">
@@ -763,72 +733,38 @@
     </div>
   </section>
 
-  <!-- TESTIMONIALS -->
-  <!-- TODO: replace with real testimonials -->
+  <!-- TRUST / COMPROMISSOS -->
   <section class="py-24 relative bg-white/2 border-t border-white/5">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-16">
-        <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Quem já usa o Zelo PDV</h2>
-        <p class="text-slate-400 text-lg">Negócios que deixaram o caderno e a planilha para trás</p>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Sem pegadinha, sem letra miúda</h2>
+        <p class="text-slate-400 text-lg">O que você pode cobrar da gente desde o primeiro dia</p>
       </div>
 
       <div class="grid md:grid-cols-3 gap-6">
 
-        <!-- Testimonial 1 -->
-        <div class="bg-white/3 border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
-          <div class="flex items-center gap-3">
-            <div class="w-11 h-11 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold text-lg shrink-0">M</div>
-            <div>
-              <p class="text-white font-semibold text-sm leading-tight">Marcos A.</p>
-              <p class="text-slate-500 text-xs">Lanchonete do Marcos · Fortaleza, CE</p>
-            </div>
+        <div class="bg-white/3 border border-white/5 rounded-2xl p-6 flex flex-col gap-3">
+          <div class="w-11 h-11 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0">
+            <Check class="size-5 text-sky-400" aria-hidden="true" />
           </div>
-          <div class="flex gap-0.5">
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-          </div>
-          <p class="text-slate-300 text-sm leading-relaxed">"Abri o caixa no celular e em 10 minutos já tava vendendo. Nunca pensei que fosse tão fácil."</p>
+          <p class="text-white font-semibold text-sm leading-tight">30 dias grátis de verdade</p>
+          <p class="text-slate-300 text-sm leading-relaxed">Não pedimos cartão e não existe cobrança automática. Testou e não gostou? Não acontece nada — sua conta simplesmente não vira assinatura.</p>
         </div>
 
-        <!-- Testimonial 2 -->
-        <div class="bg-white/3 border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
-          <div class="flex items-center gap-3">
-            <div class="w-11 h-11 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold text-lg shrink-0">F</div>
-            <div>
-              <p class="text-white font-semibold text-sm leading-tight">Fernanda S.</p>
-              <p class="text-slate-500 text-xs">Hamburgueria da Fê · Ribeirão Preto, SP</p>
-            </div>
+        <div class="bg-white/3 border border-white/5 rounded-2xl p-6 flex flex-col gap-3">
+          <div class="w-11 h-11 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0">
+            <SendHorizontal class="size-5 text-sky-400" aria-hidden="true" />
           </div>
-          <div class="flex gap-0.5">
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-          </div>
-          <p class="text-slate-300 text-sm leading-relaxed">"O controle de fiado mudou minha vida. Antes eu perdia dinheiro toda semana sem perceber."</p>
+          <p class="text-white font-semibold text-sm leading-tight">Suporte de gente de verdade</p>
+          <p class="text-slate-300 text-sm leading-relaxed">WhatsApp em horário comercial, direto com quem constrói o produto. Sem robô de triagem, sem fila de protocolo.</p>
         </div>
 
-        <!-- Testimonial 3 -->
-        <div class="bg-white/3 border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
-          <div class="flex items-center gap-3">
-            <div class="w-11 h-11 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold text-lg shrink-0">C</div>
-            <div>
-              <p class="text-white font-semibold text-sm leading-tight">Carlos M.</p>
-              <p class="text-slate-500 text-xs">Lanchonete Sabor da Praia · Natal, RN</p>
-            </div>
+        <div class="bg-white/3 border border-white/5 rounded-2xl p-6 flex flex-col gap-3">
+          <div class="w-11 h-11 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0">
+            <Zap class="size-5 text-sky-400" aria-hidden="true" />
           </div>
-          <div class="flex gap-0.5">
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <Star class="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-          </div>
-          <p class="text-slate-300 text-sm leading-relaxed">"Simples, rápido e com suporte no WhatsApp. Exatamente o que eu precisava."</p>
+          <p class="text-white font-semibold text-sm leading-tight">Internet caiu? Continua vendendo</p>
+          <p class="text-slate-300 text-sm leading-relaxed">O Zelo funciona offline e sincroniza sozinho quando a conexão voltar. Seu caixa não para porque a operadora falhou.</p>
         </div>
 
       </div>

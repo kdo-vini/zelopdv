@@ -84,12 +84,6 @@
       "priceCurrency": "BRL",
       "priceValidUntil": "2027-12-31",
       "availability": "https://schema.org/InStock"
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "38",
-      "bestRating": "5"
     }
   })}</script>`}
 </svelte:head>
@@ -98,7 +92,7 @@
   import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import { resolveAppIcon } from '$lib/icons/appIcons';
-  import { ArrowRight, ChevronDown, CircleCheckBig, CircleX, Sheet, Star, Zap } from 'lucide-svelte';
+  import { ArrowRight, ChevronDown, CircleCheckBig, CircleX, Sheet, Zap } from 'lucide-svelte';
 
   const comparisonRows = [
     { feature: 'Registrar uma venda', excel: 'Digitar manualmente na célula', zelo: 'Toque no produto — feito em 3 segundos', excelhit: false },
@@ -247,24 +241,19 @@
     </div>
   </section>
 
-  <!-- TESTIMONIAL -->
+  <!-- MIGRAÇÃO -->
   <section class="py-20 bg-white/2 border-y border-white/5">
     <div class="max-w-2xl mx-auto px-6 text-center">
-      <div class="flex justify-center gap-0.5 mb-6">
-        {#each Array(5) as _}
-          <Star class="size-5 fill-amber-400 text-amber-400" aria-hidden="true" />
-        {/each}
-      </div>
-      <blockquote class="text-xl md:text-2xl text-white font-medium leading-relaxed mb-6">
-        "Eu fazia tudo no caderno e numa planilha que eu mesma montei. Migrei pro Zelo PDV em meia hora e nunca mais voltei. Hoje sei exatamente quanto lucrei no mês."
-      </blockquote>
-      <div class="flex items-center justify-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold">P</div>
-        <div class="text-left">
-          <p class="text-white font-semibold text-sm">Patrícia N.</p>
-          <p class="text-slate-500 text-xs">Lanchonete · Sorocaba, SP</p>
-        </div>
-      </div>
+      <h2 class="text-xl md:text-2xl text-white font-bold leading-relaxed mb-4">
+        Da planilha pro Zelo em 15 a 30 minutos
+      </h2>
+      <p class="text-slate-400 leading-relaxed mb-8">
+        Cadastre seus produtos, configure as categorias e comece a vender. Não precisa instalar nada e ninguém pede seu cartão. Se travar em qualquer passo, chama no WhatsApp que a gente migra junto com você.
+      </p>
+      <a href="/cadastro" class="inline-flex items-center gap-2 px-8 py-3.5 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
+        Começar agora — 30 dias grátis
+        <ArrowRight class="size-4" aria-hidden="true" />
+      </a>
     </div>
   </section>
 
