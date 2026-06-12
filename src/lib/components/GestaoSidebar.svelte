@@ -325,7 +325,7 @@
       title="Ir para Frente de Caixa"
       on:click={closeMobile}
     >
-      <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-24 w-auto shrink-0" />
+      <img src="/logo-horizontal.webp" alt="Zelo PDV" class="h-24 w-auto shrink-0" />
     </a>
 
     <!-- Botão de colapsar — oculto em mobile -->
@@ -380,7 +380,7 @@
   {/if}
 
   <!-- Grupos de navegação -->
-  <nav class="flex-1 overflow-y-auto px-3 py-2 space-y-1" aria-label="Navegação principal de gestão">
+  <nav class="flex-1 overflow-y-auto px-3 py-2 space-y-1 sidebar-nav" class:nav-collapsed={collapsed} aria-label="Navegação principal de gestão">
     {#each navGroups as group}
       <div class="pt-3">
         <p class="px-3 pb-1 text-xs font-bold uppercase tracking-wider overflow-hidden label-text" style="color: var(--text-muted);">
@@ -542,5 +542,29 @@
   .toggle-btn:hover {
     background: var(--sidebar-item-hover-bg);
     color: var(--text-main);
+  }
+
+  /* Collapsed: esconde scrollbar visualmente, reduz padding/gap */
+  .sidebar-shell.collapsed .sidebar-nav {
+    scrollbar-width: none;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .sidebar-shell.collapsed .sidebar-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .sidebar-shell.collapsed .sidebar-nav :global(a),
+  .sidebar-shell.collapsed .sidebar-nav :global(button) {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Collapsed: bottom area (user + sair) */
+  .sidebar-shell.collapsed > :global(.shrink-0) :global(a),
+  .sidebar-shell.collapsed > :global(.shrink-0) :global(button) {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+    gap: 0.35rem !important;
   }
 </style>
