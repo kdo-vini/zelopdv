@@ -18,12 +18,23 @@
       }
       gtag('js', new Date());
 
+      // Consent Mode V2: default granted (tráfego BR/LGPD, sem banner por ora).
+      // Mantém a modelagem do Google disponível e fica pronto pra um futuro
+      // banner chamar gtag('consent', 'update', ...).
+      gtag('consent', 'default', {
+        ad_storage: 'granted',
+        ad_user_data: 'granted',
+        ad_personalization: 'granted',
+        analytics_storage: 'granted'
+      });
+
       gtag('config', 'G-6XMEDGM8H6');
       gtag('config', 'AW-17382733965');
     </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Zelo PDV</title>
+    <!-- <title> vem de cada rota via svelte:head; título estático aqui duplicaria a tag no SSR -->
+
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="theme-color" content="#0ea5e9" />
 

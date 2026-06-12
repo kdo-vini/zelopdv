@@ -86,7 +86,7 @@
       
       <!-- Brand -->
       <a href="/pascoa" class="flex items-center gap-4 group relative z-50">
-        <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 md:h-40 w-auto drop-shadow-[0_0_15px_rgba(236,72,153,0.3)] transition-transform group-hover:scale-105" />
+        <img src="/logo-horizontal.webp" alt="Zelo PDV" class="h-32 md:h-40 w-auto drop-shadow-[0_0_15px_rgba(236,72,153,0.3)] transition-transform group-hover:scale-105" />
         <span class="text-3xl filter drop-shadow-[0_0_10px_rgba(251,191,36,0.5)] animate-bounce" style="animation-duration: 3s">🐰</span>
       </a>
 
@@ -487,7 +487,7 @@
         <!-- Logo + tagline -->
         <div class="flex flex-col items-center gap-3">
           <div class="flex items-center gap-3">
-            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-28 md:h-36 w-auto opacity-80" />
+            <img src="/logo-horizontal.webp" alt="Zelo PDV" class="h-28 md:h-36 w-auto opacity-80" />
             <span class="text-xl">🐰</span>
           </div>
           <p class="text-slate-600 text-sm font-medium text-center max-w-xs">O sistema de vendas para quem produz com amor e quer lucrar com controle.</p>

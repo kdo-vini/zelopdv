@@ -17,7 +17,7 @@
   <div class="max-w-7xl mx-auto px-6">
     <div class="grid md:grid-cols-4 gap-8 mb-12">
       <div class="col-span-1 md:col-span-1">
-        <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 md:h-40 w-auto" />
+        <img src="/logo-horizontal.webp" alt="Zelo PDV" class="h-32 md:h-40 w-auto" />
         <p class="text-sm leading-relaxed" style={`color: ${isLight ? 'var(--blog-muted)' : 'var(--text-muted)'}`}>
           Tecnologia simples para negócios que querem crescer. Controle total do seu caixa e do seu lucro.
         </p>

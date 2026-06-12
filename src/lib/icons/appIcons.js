@@ -92,6 +92,8 @@ const iconMap = {
   '✕': X,
   '✂': Scissors,
   '🪑': Table2,
+  '🍽️': Table2,
+  '💳': CreditCard,
   '🔑': KeyRound,
   PC: Monitor,
   '✅': CircleCheckBig,

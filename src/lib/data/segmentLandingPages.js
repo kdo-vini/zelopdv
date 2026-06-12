@@ -11,12 +11,7 @@ export const softwareApplicationSchema = {
     priceCurrency: 'BRL',
     priceValidUntil: '2027-12-31'
   },
-  description: 'Sistema de gestão e frente de caixa para pequenos negócios.',
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.9',
-    reviewCount: '38'
-  }
+  description: 'Sistema de gestão e frente de caixa para pequenos negócios.'
 };
 
 export const generalFaqs = [
@@ -137,15 +132,6 @@ export const segmentPages = {
           'Ao lançar despesas e conferir o movimento, você enxerga vendas, fiado, retiradas e lucro com muito mais segurança do que no papel.'
       }
     ],
-    testimonial: {
-      name: 'Marcos A.',
-      business: 'Lanchonete do Marcos',
-      city: 'Fortaleza, CE',
-      quote:
-        'Abri o caixa no celular e em 10 minutos já tava vendendo. Nunca pensei que fosse tão fácil.',
-      note:
-        'Hoje ele usa o sistema para registrar o movimento do balcão e não perder mais o controle do fiado.'
-    },
     faqSpecific: [
       {
         question: 'O Zelo PDV funciona para lanchonete pequena?',
@@ -171,6 +157,126 @@ export const segmentPages = {
     finalCtaTitle: 'Teste no seu balcão por 30 dias',
     finalCtaText:
       'Se a sua lanchonete precisa vender rápido e ter um caixa mais organizado, o Zelo PDV foi feito para esse cenário. Em poucos minutos você já consegue testar a operação real do balcão.'
+  },
+  restaurantes: {
+    slug: 'para-restaurantes',
+    meta: {
+      title: 'Sistema para Restaurante — Mesas, Comandas e Caixa | Zelo PDV',
+      description:
+        'Sistema para restaurante pequeno e médio: controle mesas, comandas, caixa e lucro real. R$ 59/mês + módulo de mesas opcional. Teste grátis 30 dias, sem cartão.',
+      canonical: 'https://zelopdv.com.br/para-restaurantes'
+    },
+    segmentName: 'restaurantes',
+    heroBadge: 'Do salão ao fechamento do caixa',
+    h1: 'Sistema para Restaurante: Mesas, Comandas e Caixa em Um Só Lugar',
+    subtitle:
+      'Abra comandas por mesa, registre os pedidos do salão, receba com taxa de serviço e feche o caixa sabendo quanto sobrou. Tudo no navegador, sem instalar nada e sem sistema pesado.',
+    highlights: [
+      'Mesas e comandas organizadas no salão',
+      'Caixa e pagamentos sem papelzinho',
+      'Lucro real com despesas lançadas',
+      'Vendas por iFood e apps com taxa configurável'
+    ],
+    problemTitle: 'O salão funciona, mas o controle fica para trás',
+    problemParagraphs: [
+      'Em restaurante pequeno, o movimento do almoço não espera: mesa abre, pedido sai, conta junta itens de três pessoas diferentes e alguém anota tudo em papel. Quando chega a hora de fechar a conta, começa a conferência manual — e é aí que entram os erros, os esquecimentos e a fila no caixa.',
+      'Depois do expediente vem a segunda rodada: somar o que entrou, separar taxa de serviço, lembrar das despesas do dia e tentar entender se o movimento bom virou resultado bom. Sem um sistema simples, esse fechamento toma tempo e quase sempre fica pela metade.',
+      'O Zelo PDV foi feito para esse cenário: um sistema direto para abrir mesas, controlar comandas, receber de formas diferentes e enxergar o resultado real — sem o peso nem o preço dos sistemas grandes de restaurante.'
+    ],
+    problemPoints: [
+      {
+        label: 'Comandas no papel',
+        value: 'Item esquecido, conta errada e conferência manual na hora de pico.'
+      },
+      {
+        label: 'Fechamento demorado',
+        value: 'Somar vendas, taxa de serviço e despesas no fim do dia vira segunda jornada.'
+      },
+      {
+        label: 'Lucro invisível',
+        value: 'Salão cheio não garante margem quando despesas e taxas ficam fora da conta.'
+      }
+    ],
+    featuresTitle: 'Sistema para Restaurante: o essencial do salão ao caixa',
+    featuresIntro:
+      'O restaurante precisa de agilidade no salão e clareza no fechamento. O Zelo junta frente de caixa, mesas, comandas e gestão financeira em uma operação simples de aprender.',
+    features: [
+      {
+        icon: '🍽️',
+        title: 'Mesas e comandas digitais',
+        description:
+          'Com o módulo de Mesas, você abre comandas por mesa, lança pedidos conforme saem e acompanha o consumo de cada conta em tempo real. Sem papelzinho, sem conferência manual no fim.'
+      },
+      {
+        icon: '💳',
+        title: 'Recebimento flexível no fechamento',
+        description:
+          'Pix, dinheiro, cartão e pagamento dividido ficam registrados na conta da mesa, com taxa de serviço quando fizer sentido. A conta fecha rápido e o caixa fica redondo.'
+      },
+      {
+        icon: '📦',
+        title: 'Cardápio e estoque em ordem',
+        description:
+          'Monte o cardápio, organize categorias e acompanhe os itens que pedem atenção. Menos ruptura no meio do serviço e menos compra no susto.'
+      },
+      {
+        icon: '💰',
+        title: 'Lucro real no fim do dia',
+        description:
+          'Lance despesas, acompanhe entradas e veja o resultado da operação com clareza. Em vez de olhar só o faturamento, você entende o que realmente sobrou.'
+      },
+      {
+        icon: '📲',
+        title: 'Vendas de apps com taxa embutida',
+        description:
+          'Se o restaurante também vende por iFood ou outros apps, registre essas vendas com a taxa da plataforma configurada e saiba na hora quanto entrou de verdade.'
+      }
+    ],
+    howTitle: 'Como funciona na rotina do seu restaurante',
+    howIntro:
+      'A proposta é organizar o serviço sem criar burocracia. Em poucos passos, o salão e o caixa passam a falar a mesma língua.',
+    steps: [
+      {
+        title: 'Cadastre cardápio e mesas',
+        description:
+          'Você monta os pratos e bebidas, ajusta preços e configura as mesas do salão. A operação fica pronta para abrir comandas no primeiro serviço.'
+      },
+      {
+        title: 'Lance pedidos durante o serviço',
+        description:
+          'Cada mesa tem sua comanda: os pedidos entram conforme saem para a cozinha e o consumo fica registrado, sem depender de anotação solta.'
+      },
+      {
+        title: 'Feche contas e o dia com segurança',
+        description:
+          'Na saída do cliente, a conta fecha rápido com a forma de pagamento certa. No fim do dia, vendas, despesas e taxas já estão organizadas para o fechamento.'
+      }
+    ],
+    faqSpecific: [
+      {
+        question: 'O Zelo PDV controla mesas e comandas?',
+        answer:
+          'Sim. O módulo de Mesas (R$ 30/mês além do plano) permite abrir comandas por mesa, lançar pedidos, acompanhar consumo e fechar a conta com taxa de serviço. O plano base já cobre caixa, produtos, estoque e financeiro.'
+      },
+      {
+        question: 'Serve para restaurante pequeno, tipo self-service ou marmitaria?',
+        answer:
+          'Sim. Para operação de balcão e marmita, o plano base resolve. Se o serviço é à la carte com mesas, o módulo de Mesas completa o fluxo do salão.'
+      },
+      {
+        question: 'Consigo dividir a conta ou receber de formas diferentes na mesma mesa?',
+        answer:
+          'Sim. O fechamento aceita formas de pagamento combinadas, e a taxa de serviço pode ser aplicada quando fizer sentido para a casa.'
+      },
+      {
+        question: 'Preciso instalar algum programa ou comprar equipamento?',
+        answer:
+          'Não. O Zelo PDV roda no navegador, em computador, tablet ou celular. Dá para começar com o equipamento que você já tem.'
+      }
+    ],
+    finalCtaTitle: 'Teste no seu restaurante por 30 dias',
+    finalCtaText:
+      'Se o seu restaurante precisa de salão organizado e fechamento claro, o Zelo foi feito para esse tamanho de operação. Teste grátis no movimento real da casa, sem cartão e sem compromisso.'
   },
   hamburguerias: {
     slug: 'para-hamburguerias',
@@ -260,15 +366,6 @@ export const segmentPages = {
           'Depois do expediente, você cruza movimento e despesas no mesmo sistema e entende melhor se a noite foi boa de verdade ou só pareceu corrida.'
       }
     ],
-    testimonial: {
-      name: 'Fernanda S.',
-      business: 'Hamburgueria da Fê',
-      city: 'Ribeirão Preto, SP',
-      quote:
-        'O controle de fiado mudou minha vida. Antes eu perdia dinheiro toda semana sem perceber.',
-      note:
-        'Além do atendimento mais rápido, ela usa o sistema para não deixar o financeiro da hamburgueria no improviso.'
-    },
     faqSpecific: [
       {
         question: 'O Zelo PDV serve para hamburgueria com combos e promoções?',
@@ -389,15 +486,6 @@ export const segmentPages = {
           'Ao lançar os custos do delivery, você consegue enxergar se o volume de vendas está realmente virando lucro, sem a distorção comum de olhar só o faturamento.'
       }
     ],
-    testimonial: {
-      name: 'Juliana R.',
-      business: 'Sabor em Casa Delivery',
-      city: 'Goiânia, GO',
-      quote:
-        'Eu queria vender pelo meu próprio WhatsApp sem virar refém de taxa. Quando organizei pedidos e despesas no Zelo, o delivery finalmente começou a fazer sentido.',
-      note:
-        'Ela usa a operação no celular e no notebook para não perder pedido nem confundir o caixa do delivery.'
-    },
     faqSpecific: [
       {
         question: 'O Zelo PDV serve para quem vende por WhatsApp e Instagram?',
@@ -511,15 +599,6 @@ export const segmentPages = {
           'No fechamento do dia ou do mês, você entende melhor o caixa e o lucro, sem precisar organizar tudo de novo em planilha paralela.'
       }
     ],
-    testimonial: {
-      name: 'Patrícia N.',
-      business: 'Salgados da Paty',
-      city: 'Sorocaba, SP',
-      quote:
-        'Eu fazia tudo no caderno e sempre terminava o mês sem saber quanto tinha sobrado. Com o Zelo, comecei a enxergar minhas despesas e parei de trabalhar no escuro.',
-      note:
-        'Ela usa o sistema no celular para registrar vendas e despesas sem interromper a rotina corrida do negócio.'
-    },
     faqSpecific: [
       {
         question: 'O Zelo PDV é indicado para MEI de alimentação?',

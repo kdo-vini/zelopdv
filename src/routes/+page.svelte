@@ -798,6 +798,20 @@
             </span>
           </a>
 
+          <a href="/para-restaurantes" class="segment-card">
+            <div class="segment-card-top">
+              <span class="segment-icon"><ChefHat class="size-7 text-sky-300" aria-hidden="true" /></span>
+            </div>
+            <h3 class="segment-title">Restaurantes</h3>
+            <p class="segment-text">
+              Mesas, comandas e fechamento de conta organizados, do salão ao caixa, sem sistema pesado.
+            </p>
+            <span class="segment-link">
+              Ver página do segmento
+              <ChevronRight class="size-4" aria-hidden="true" />
+            </span>
+          </a>
+
           <a href="/para-hamburguerias" class="segment-card">
             <div class="segment-card-top">
               <span class="segment-icon"><Sandwich class="size-7 text-sky-300" aria-hidden="true" /></span>

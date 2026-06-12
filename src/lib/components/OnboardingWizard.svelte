@@ -10,7 +10,7 @@
     normalizeBrazilianTaxId,
   } from '$lib/masks';
   import { trackStartTrial } from '$lib/metaPixel';
-  import { trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
+  import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
 
   export let show = false;
   export let userId = '';
@@ -94,9 +94,14 @@
       let didTrackTrial = false;
       if (!trialPayload?.alreadyExists) {
         // gtag carrega async; sem esperar, a conversão de inscrição se perde silenciosamente
-        await waitForGtag();
+        const gtagReady = await waitForGtag();
+        if (!gtagReady) console.warn('[tracking] gtag indisponível no fim do onboarding');
         const trackedMetaTrial = trackStartTrial();
-        const trackedGoogleTrial = trackGoogleAdsInscricao();
+        trackGa4Event('begin_trial');
+        const trackedGoogleTrial = await trackGoogleAdsInscricao({
+          email,
+          transactionId: userId,
+        });
         didTrackTrial = trackedMetaTrial || trackedGoogleTrial;
       }
       setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 2000 : 0);

@@ -1,7 +1,3 @@
-<svelte:head>
-  <title>Zelo PDV</title>
-</svelte:head>
-
 <script>
   import "../app.css";
   import { onMount } from 'svelte';
@@ -16,6 +12,11 @@
   afterNavigate(() => {
     if (typeof window !== 'undefined' && window.fbq) {
       window.fbq('track', 'PageView');
+    }
+    // Fallback de título pra rotas internas sem <title> próprio; um <title>
+    // estático aqui duplicaria a tag no SSR das páginas públicas (SEO)
+    if (typeof document !== 'undefined' && !document.title) {
+      document.title = 'Zelo PDV';
     }
   });
 
@@ -192,7 +193,7 @@
 
     if (!supabase) return;
  
-  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/redefinir-senha', '/privacidade', '/termos', '/pascoa', '/para-lanchonetes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao', '/extensoes', '/vs-planilha', '/comparativos', '/contato', '/zelo-impressao', '/auth/callback'];
+  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/redefinir-senha', '/privacidade', '/termos', '/pascoa', '/para-lanchonetes', '/para-restaurantes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao', '/extensoes', '/vs-planilha', '/comparativos', '/contato', '/zelo-impressao', '/auth/callback'];
     const path = window.location.pathname;
 
     let navigated = false;
@@ -455,7 +456,7 @@
       
        <div class="flex items-center gap-4">
           <a href={session ? '/app' : '/'} class="flex items-center gap-2">
-            <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-20 sm:h-24 w-auto" />
+            <img src="/logo-horizontal.webp" alt="Zelo PDV" class="h-20 sm:h-24 w-auto" />
           </a>
           
           <!-- Botao de Natal desativado pois o natal ja passou -->

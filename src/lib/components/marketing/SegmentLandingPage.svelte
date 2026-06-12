@@ -4,7 +4,7 @@
   import MarketingPriceSection from '$lib/components/marketing/MarketingPriceSection.svelte';
   import { generalFaqs } from '$lib/data/segmentLandingPages';
   import { resolveAppIcon } from '$lib/icons/appIcons';
-  import { ChevronDown } from 'lucide-svelte';
+  import { Check, ChevronDown, SendHorizontal, Zap } from 'lucide-svelte';
 
   export let page;
 
@@ -19,7 +19,7 @@
   class="min-h-screen overflow-x-hidden font-sans selection:bg-sky-500/30 selection:text-white"
   style="background: var(--bg-app); color: var(--text-label);"
 >
-  <SiteHeader />
+  <SiteHeader localAnchors />
 
   <main>
     <section class="relative pt-32 pb-20 overflow-hidden border-b border-white/5">
@@ -145,21 +145,35 @@
     </section>
 
     <section class="py-24 border-b border-white/5" style="background: var(--bg-panel);">
-      <div class="max-w-5xl mx-auto px-6">
-        <div class="rounded-4xl border p-8 md:p-10 shadow-2xl" style="background: var(--bg-card); border-color: var(--border-card);">
-          <p class="text-xs tracking-wide mb-4" style="color: var(--text-muted);">
-            {page.testimonial.name} · {page.testimonial.business}, {page.testimonial.city}
-          </p>
-          <p class="text-2xl md:text-3xl font-semibold leading-relaxed text-white mb-8">
-            "{page.testimonial.quote}"
-          </p>
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <p class="text-lg font-semibold" style="color: var(--text-main);">{page.testimonial.name}</p>
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="max-w-3xl mx-auto text-center mb-14">
+          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Sem pegadinha, sem letra miúda</h2>
+          <p class="text-lg" style="color: var(--text-muted);">O que você pode cobrar da gente desde o primeiro dia</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
+          <div class="rounded-2xl border p-6 flex flex-col gap-3" style="background: var(--bg-card); border-color: var(--border-card);">
+            <div class="w-11 h-11 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0">
+              <Check class="size-5 text-sky-400" aria-hidden="true" />
             </div>
-            <p class="text-sm md:max-w-md leading-relaxed" style="color: var(--text-muted);">
-              {page.testimonial.note}
-            </p>
+            <p class="text-white font-semibold text-sm leading-tight">30 dias grátis de verdade</p>
+            <p class="text-sm leading-relaxed" style="color: var(--text-muted);">Não pedimos cartão e não existe cobrança automática. Testou e não gostou? Não acontece nada — sua conta simplesmente não vira assinatura.</p>
+          </div>
+
+          <div class="rounded-2xl border p-6 flex flex-col gap-3" style="background: var(--bg-card); border-color: var(--border-card);">
+            <div class="w-11 h-11 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0">
+              <SendHorizontal class="size-5 text-sky-400" aria-hidden="true" />
+            </div>
+            <p class="text-white font-semibold text-sm leading-tight">Suporte de gente de verdade</p>
+            <p class="text-sm leading-relaxed" style="color: var(--text-muted);">WhatsApp em horário comercial, direto com quem constrói o produto. Sem fila de protocolo.</p>
+          </div>
+
+          <div class="rounded-2xl border p-6 flex flex-col gap-3" style="background: var(--bg-card); border-color: var(--border-card);">
+            <div class="w-11 h-11 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0">
+              <Zap class="size-5 text-sky-400" aria-hidden="true" />
+            </div>
+            <p class="text-white font-semibold text-sm leading-tight">Internet caiu? Continua vendendo</p>
+            <p class="text-sm leading-relaxed" style="color: var(--text-muted);">O Zelo funciona offline e sincroniza sozinho quando a conexão voltar. Seu caixa não para porque a operadora falhou.</p>
           </div>
         </div>
       </div>

@@ -6,14 +6,17 @@
   // passa 'top-9' ou similar. Default 'top-0'.
   export let topOffset = 'top-0';
   export let easterDays = 0;
+  // Páginas com seções #features/#pricing/#faq próprias (ex: landings de segmento)
+  // passam true pra não mandar o visitante de volta pra home.
+  export let localAnchors = false;
 
   let showMobileMenu = false;
 
-  // Hash anchors só funcionam na própria homepage. Em outras páginas, ir pra /#anchor.
-  $: isHomeRoute = $page.url.pathname === '/';
-  $: featuresHref = isHomeRoute ? '#features' : '/#features';
-  $: pricingHref = isHomeRoute ? '#pricing' : '/#pricing';
-  $: faqHref = isHomeRoute ? '#faq' : '/#faq';
+  // Hash anchors só funcionam quando a seção existe na própria página. Senão, /#anchor.
+  $: useLocal = localAnchors || $page.url.pathname === '/';
+  $: featuresHref = useLocal ? '#features' : '/#features';
+  $: pricingHref = useLocal ? '#pricing' : '/#pricing';
+  $: faqHref = useLocal ? '#faq' : '/#faq';
 </script>
 
 <!-- NAV (Simples e Flutuante) -->
@@ -21,7 +24,7 @@
   <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
     <div class="flex items-center gap-2">
       <a href="/" class="flex items-center gap-2">
-        <img src="/logo-horizontal.png" alt="Zelo PDV" class="h-32 md:h-40 w-auto" />
+        <img src="/logo-horizontal.webp" alt="Zelo PDV" class="h-32 md:h-40 w-auto" />
       </a>
     </div>
 

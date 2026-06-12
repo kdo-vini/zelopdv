@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { trackLead } from '$lib/metaPixel';
+  import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
   import { claimStoredReferral } from '$lib/referrals/client';
 
   let status = 'Autenticando...';
@@ -27,17 +28,27 @@
       return;
     }
 
-    function maybeFireLeadPixel(session) {
+    async function maybeFireLeadPixel(session) {
       const createdAt = new Date(session.user.created_at);
       const isNewUser = Date.now() - createdAt.getTime() < 60_000;
-      if (isNewUser) trackLead();
+      if (!isNewUser) return;
+      trackLead();
+      // Mesmo sinal antecipado do /cadastro, para signup via Google OAuth
+      await waitForGtag({ attempts: 20 });
+      trackGa4Event('sign_up', { method: 'google' });
+      await trackGoogleAdsInscricao({
+        email: session.user.email || '',
+        transactionId: session.user.id || '',
+      });
+      // Pequena folga pro ping de conversão sair antes do redirect matar a página
+      await new Promise((resolve) => setTimeout(resolve, 800));
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         subscription.unsubscribe();
         clearTimeout(timeout);
-        maybeFireLeadPixel(session);
+        await maybeFireLeadPixel(session);
         await logSubUserLogin(session, 'oauth-signed-in');
         await claimStoredReferral(session, 'oauth-signed-in');
         window.location.href = '/app';
@@ -51,7 +62,7 @@
       if (data?.session) {
         subscription.unsubscribe();
         clearTimeout(timeout);
-        maybeFireLeadPixel(data.session);
+        await maybeFireLeadPixel(data.session);
         await logSubUserLogin(data.session, 'oauth-existing-session');
         await claimStoredReferral(data.session, 'oauth-existing-session');
         window.location.href = '/app';

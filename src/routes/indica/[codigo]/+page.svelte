@@ -19,7 +19,7 @@
 <section class="referral-page">
   <div class="shell">
     <a class="brand" href="/" aria-label="ZeloPDV">
-      <img src="/logo-horizontal.png" alt="ZeloPDV" />
+      <img src="/logo-horizontal.webp" alt="ZeloPDV" />
     </a>
 
     {#if data.valid}

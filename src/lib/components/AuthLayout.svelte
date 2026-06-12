@@ -5,6 +5,10 @@
   export let subtitle = '';
 </script>
 
+<svelte:head>
+  <title>{title ? `${title} — Zelo PDV` : 'Zelo PDV'}</title>
+</svelte:head>
+
 <div class="auth-page">
   <!-- Subtle radial glow (CSS-only, zero images) -->
   <div class="auth-glow" aria-hidden="true"></div>
@@ -12,7 +16,7 @@
   <div class="auth-card">
     <!-- Logo -->
     <a href="/" class="auth-logo">
-      <img src="/logo-horizontal.png" alt="Zelo PDV" class="auth-logo-img" />
+      <img src="/logo-horizontal.webp" alt="Zelo PDV" class="auth-logo-img" />
     </a>
 
     {#if title}
