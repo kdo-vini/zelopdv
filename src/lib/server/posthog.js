@@ -1,13 +1,16 @@
 import { PostHog } from 'posthog-node';
-import { PUBLIC_POSTHOG_KEY, PUBLIC_POSTHOG_HOST } from '$env/static/public';
+import { env as publicEnv } from '$env/dynamic/public';
+
+const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com';
 
 let posthogClient = null;
 
 export function getPostHogClient() {
-  if (!PUBLIC_POSTHOG_KEY) return null;
+  const posthogKey = publicEnv.PUBLIC_POSTHOG_KEY || '';
+  if (!posthogKey) return null;
   if (!posthogClient) {
-    posthogClient = new PostHog(PUBLIC_POSTHOG_KEY, {
-      host: PUBLIC_POSTHOG_HOST,
+    posthogClient = new PostHog(posthogKey, {
+      host: publicEnv.PUBLIC_POSTHOG_HOST || DEFAULT_POSTHOG_HOST,
       flushAt: 1,
       flushInterval: 0,
     });
