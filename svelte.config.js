@@ -7,7 +7,10 @@ const config = {
   kit: {
     adapter: adapterVercel({
       runtime: 'nodejs20.x'
-    })
+    }),
+    paths: {
+      relative: false,
+    },
   }
 };
 

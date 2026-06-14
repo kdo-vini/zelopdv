@@ -1,7 +1,7 @@
 # ZeloPDV.memory
 
 > Memória viva. Guardar só fatos confirmados e úteis para continuidade técnica.
-> Atualizado em 2026-06-01.
+> Atualizado em 2026-06-14.
 
 - O app principal roda em SvelteKit 2 + Svelte 5 e usa `@sveltejs/adapter-vercel` com runtime Node 20.
 - Existe um segundo app em `admin-dashboard/`, separado do app principal.
@@ -13,6 +13,8 @@
 - O replay offline depende de `client_sale_id` e da RPC `criar_venda_completa`.
 - A fila offline Dexie está na versão 4 e guarda `ownerUserId` / `operatorUserId`.
 - O onboarding usa Resend para email e ZeloChat interno para WhatsApp.
+- O cadastro por senha auto-confirma o usuário via service role, grava sessão no cliente e envia o usuário para `/perfil?msg=complete`; não depende mais de confirmação por e-mail.
+- PostHog roda somente em rotas publicas externas via `src/lib/posthogClient.js`; areas internas, onboarding (`/perfil`), billing (`/assinatura`) e callback OAuth ficam bloqueados.
 - O purge final de conta agendada não está neste repo; a migration diz que roda em um sweeper do ZeloChat.
 - O modelo de subusuário mistura duas camadas: contexto server-side/RLS por owner e gating fino de permissões majoritariamente no cliente.
 - `AdminLock`/`pin_admin` hoje é barreira de UI no browser, não proteção forte de segredo.

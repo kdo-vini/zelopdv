@@ -9,6 +9,7 @@ import {
   ensureReferralCodeForEmpresa,
   progressReferralForUser,
 } from '$lib/server/referrals';
+import { getPostHogClient } from '$lib/server/posthog';
 
 async function fetchPerfil(userId) {
   const { data: perfil, error } = await supabaseAdmin
@@ -315,6 +316,20 @@ export async function POST({ request, cookies }) {
       if (result.status === 'rejected') {
         console.warn('[start-trial] Side effect rejected:', result.reason?.message || result.reason);
       }
+    }
+
+    const posthog = getPostHogClient();
+    if (posthog) {
+      posthog.capture({
+        distinctId: userId,
+        event: 'trial_started',
+        properties: {
+          $set: { email },
+          plan: 'pdv',
+          trial_end: trialEnd.toISOString(),
+        },
+      });
+      await posthog.flush();
     }
 
     return json({

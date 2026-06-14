@@ -15,6 +15,7 @@ import { stripe } from '$lib/server/stripe';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { env } from '$env/dynamic/private';
 import { parseStripeSubscriptionItems } from '$lib/pricing';
+import { getPostHogClient } from '$lib/server/posthog';
 
 const WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
 
@@ -213,6 +214,22 @@ export async function POST({ request }) {
           billing_type: 'CREDIT_CARD',
           cancel_at_period_end: !!sub.cancel_at_period_end,
         });
+        if (userId && ['active', 'trialing'].includes(mapStripeStatus(sub.status))) {
+          const posthog = getPostHogClient();
+          if (posthog) {
+            posthog.capture({
+              distinctId: userId,
+              event: 'subscription_activated',
+              properties: {
+                plan: planTier || row.plan_tier || 'pdv',
+                addons,
+                payment_method: 'card',
+                stripe_sub_id: stripeSubId,
+              },
+            });
+            await posthog.flush();
+          }
+        }
         console.log(`[Stripe Webhook] [OK] Subscription created/updated for user ${userId} → ${planTier}`);
         break;
       }
@@ -251,7 +268,8 @@ export async function POST({ request }) {
 
       case 'customer.subscription.deleted': {
         const sub = event.data.object;
-        const row = await findSubscriptionRow({ stripeSubId: sub.id, stripeCustomerId: sub.customer, userId: sub.metadata?.user_id });
+        const canceledUserId = sub.metadata?.user_id;
+        const row = await findSubscriptionRow({ stripeSubId: sub.id, stripeCustomerId: sub.customer, userId: canceledUserId });
         if (!row) break;
         // Clear manual extension on cancellation — admin grant shouldn't survive Stripe cancel.
         await updateSubscriptionRow(row.id, {
@@ -259,6 +277,17 @@ export async function POST({ request }) {
           cancel_at_period_end: true,
           manually_extended_until: null,
         });
+        if (canceledUserId || row.user_id) {
+          const posthog = getPostHogClient();
+          if (posthog) {
+            posthog.capture({
+              distinctId: canceledUserId || row.user_id,
+              event: 'subscription_canceled',
+              properties: { stripe_sub_id: sub.id },
+            });
+            await posthog.flush();
+          }
+        }
         console.log(`[Stripe Webhook] [CANCELED] sub ${sub.id}`);
         break;
       }
@@ -309,6 +338,20 @@ export async function POST({ request }) {
         await updateSubscriptionRow(row.id, {
           status: 'past_due',
         });
+        if (row.user_id) {
+          const posthog = getPostHogClient();
+          if (posthog) {
+            posthog.capture({
+              distinctId: row.user_id,
+              event: 'payment_failed',
+              properties: {
+                stripe_sub_id: stripeSubId,
+                attempt_count: invoice.attempt_count,
+              },
+            });
+            await posthog.flush();
+          }
+        }
         console.log(`[Stripe Webhook] [FAILED] sub ${stripeSubId} past_due`);
         break;
       }

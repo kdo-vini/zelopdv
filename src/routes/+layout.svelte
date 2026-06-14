@@ -8,10 +8,14 @@
   import { get } from 'svelte/store';
   import { afterNavigate } from '$app/navigation';
   import { isZeloContactWhatsAppHref, trackGoogleAdsContato } from '$lib/googleAds';
+  import { capturePostHogPageview } from '$lib/posthogClient';
 
   afterNavigate(() => {
     if (typeof window !== 'undefined' && window.fbq) {
       window.fbq('track', 'PageView');
+    }
+    if (typeof window !== 'undefined') {
+      void capturePostHogPageview(window.location.pathname, window.location.href);
     }
     // Fallback de título pra rotas internas sem <title> próprio; um <title>
     // estático aqui duplicaria a tag no SSR das páginas públicas (SEO)

@@ -4,6 +4,7 @@ import { buildRateLimitKey, createRateLimitResponse, enforceRateLimit } from '$l
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import OpenAI from 'openai';
 import { sendWhatsAppText, isWhatsAppConfigured } from '$lib/server/whatsapp';
+import { captureAiGeneration } from '$lib/server/posthog';
 
 async function buildBusinessContext(userId) {
   try {
@@ -335,6 +336,7 @@ export async function POST({ request }) {
   const systemPrompt = buildSystemPrompt(businessContext, context_type);
 
   const openai = new OpenAI({ apiKey });
+  const traceId = crypto.randomUUID();
 
   // Expose WhatsApp send tool only when available
   const tools = businessContext.whatsapp_disponivel
@@ -360,6 +362,10 @@ export async function POST({ request }) {
   const readable = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
+      const startMs = performance.now();
+      let timeToFirstTokenMs = null;
+      let usageData = null;
+
       try {
         const stream = await openai.chat.completions.create({
           model: 'gpt-4.1',
@@ -374,12 +380,12 @@ export async function POST({ request }) {
           ...(tools ? { tools, tool_choice: 'auto' } : {}),
         });
 
-        let usageData = null;
         let collectedToolCalls = {};
 
         for await (const chunk of stream) {
           const content = chunk.choices[0]?.delta?.content;
           if (content) {
+            if (timeToFirstTokenMs === null) timeToFirstTokenMs = performance.now() - startMs;
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
           }
 
@@ -420,6 +426,8 @@ export async function POST({ request }) {
 
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
 
+        const latencyMs = performance.now() - startMs;
+
         if (usageData) {
           const pt = usageData.prompt_tokens || 0;
           const ct = usageData.completion_tokens || 0;
@@ -430,9 +438,32 @@ export async function POST({ request }) {
             total_tokens: usageData.total_tokens || 0,
             cost_usd: Math.round(cost * 1_000_000) / 1_000_000,
           }).then(({ error }) => { if (error) console.warn('[Assistant] ai_usage_logs:', error.message) });
+
+          captureAiGeneration({
+            distinctId: user.id,
+            traceId,
+            spanName: 'assistant_chat',
+            model: 'gpt-4.1',
+            inputTokens: pt,
+            outputTokens: ct,
+            latencySeconds: latencyMs / 1000,
+            timeToFirstTokenSeconds: timeToFirstTokenMs !== null ? timeToFirstTokenMs / 1000 : null,
+          }).catch(() => {});
         }
       } catch (err) {
         console.error('[AssistantChat] OpenAI error:', err.message);
+        const latencyMs = performance.now() - startMs;
+        captureAiGeneration({
+          distinctId: user.id,
+          traceId,
+          spanName: 'assistant_chat',
+          model: 'gpt-4.1',
+          inputTokens: 0,
+          outputTokens: 0,
+          latencySeconds: latencyMs / 1000,
+          isError: true,
+          errorMessage: err.message,
+        }).catch(() => {});
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify({ error: 'Erro ao gerar resposta. Tente novamente.' })}\n\n`)
         );

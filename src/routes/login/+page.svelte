@@ -7,6 +7,7 @@
   import AuthLayout from '$lib/components/AuthLayout.svelte';
   import GoogleAuthButton from '$lib/components/GoogleAuthButton.svelte';
   import { claimStoredReferral, persistReferralAttributionFromUrl } from '$lib/referrals/client';
+  import { capturePostHogEvent, identifyPostHogUser } from '$lib/posthogClient';
 
   let email = '';
   let password = '';
@@ -67,6 +68,8 @@
           throw error;
         }
         if (data?.session) {
+          void identifyPostHogUser(data.session.user.id, { email });
+          void capturePostHogEvent('user_logged_in', { method: 'email' });
           await logSubUserLogin(data.session, 'login-password');
           await claimStoredReferral(data.session, 'login-password');
           addToast('Login realizado com sucesso!', 'success');

@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { getServerAccessContext } from '$lib/server/accessControl';
 import { createTransparentPixCharge, isAbacatePayConfigured } from '$lib/server/abacatePay';
+import { getPostHogClient } from '$lib/server/posthog';
 import {
   isValidBrazilianTaxId,
   normalizeBrazilianPhone,
@@ -239,6 +240,22 @@ export async function POST({ request }) {
     if (insertError || !insertedPayment) {
       console.error('[billing/pix/create] DB insert error:', insertError);
       return json({ error: 'Falha ao salvar cobrança Pix.' }, { status: 500 });
+    }
+
+    const posthog = getPostHogClient();
+    if (posthog) {
+      posthog.capture({
+        distinctId: user.id,
+        event: 'pix_charge_created',
+        properties: {
+          plan: planTier,
+          addons,
+          amount_cents: amountCents,
+          kind,
+          payment_id: insertedPayment.id,
+        },
+      });
+      await posthog.flush();
     }
 
     return json(serializePendingPayment(insertedPayment));

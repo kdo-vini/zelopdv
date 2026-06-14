@@ -157,6 +157,29 @@
 - produto nao para
 - atribuicao de marketing degrada
 
+## PostHog
+
+**Papel**
+
+- heatmaps e autocapture anonimo nas paginas externas/publicas
+- diagnostico de scroll, clique e friccao em landing pages, cadastro e contato
+
+**Codigo-chave**
+
+- `src/lib/posthogClient.js`
+- `src/routes/+layout.svelte`
+
+**Escopo de captura**
+
+- permitido: `/`, `/para-*`, `/vs-*`, `/blog/*`, `/cadastro`, `/login`, `/contato`, `/precificacao`, `/extensoes`, `/comparativos`, `/zelo-impressao`, `/pascoa`, `/termos`, `/privacidade`, `/indica/*`
+- bloqueado: `/app`, `/gestao`, `/relatorios`, `/perfil`, `/assinatura`, `/ferramentas`, `/auth/callback`
+- session recording fica desabilitado no client; o objetivo inicial e heatmap/autocapture, nao replay de telas internas
+
+**Quando cai**
+
+- produto nao para
+- heatmaps e analise comportamental de marketing degradam
+
 ## Vercel cron
 
 **Papel**
@@ -203,6 +226,7 @@
 - AbacatePay: `ABACATEPAY_API_KEY`, `ABACATEPAY_WEBHOOK_SECRET`, `ABACATEPAY_PUBLIC_KEY`, `ABACATEPAY_BASE_URL`
 - Resend: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
 - App: `PUBLIC_APP_URL`
+- PostHog: `PUBLIC_POSTHOG_KEY`, `PUBLIC_POSTHOG_HOST` (opcional; default `https://us.i.posthog.com`), `PUBLIC_POSTHOG_UI_HOST` (opcional)
 - Cron: `CRON_SECRET`
 - ZeloChat: `ZELOCHAT_INTERNAL_API_KEY`, `ZELOCHAT_INTERNAL_SEND_URL`, `ZELOCHAT_API_BASE_URL`
 

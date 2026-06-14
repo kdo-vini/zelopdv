@@ -8,6 +8,7 @@
   import { PLANS, calculateValue } from '$lib/pricing';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao } from '$lib/googleAds';
+  import { capturePostHogEvent } from '$lib/posthogClient';
   import {
     CircleCheckBig,
     Hourglass,
@@ -435,6 +436,7 @@
                   trackStartTrial();
                   trackGa4Event('begin_trial');
                   trackGoogleAdsInscricao({ email, transactionId: userId });
+                  void capturePostHogEvent('trial_auto_started', { plan: 'pdv' });
                 }
                 setTimeout(() => { window.location.href = '/gestao'; }, 2000);
                 return;
@@ -558,6 +560,13 @@
         if (typeof window.fbq === 'function') {
           window.fbq('track', 'InitiateCheckout', { value: planPrice, currency: 'BRL' });
         }
+        void capturePostHogEvent('subscription_checkout_started', {
+          plan: selectedPlan,
+          addons: { mesas: mesasAddonOn, pedidos: pedidosAddonOn, acessos: acessosAddonOn },
+          amount: planPrice,
+          payment_method: 'card',
+          is_renewal: isActiveStrict,
+        });
         window.location.href = data.url;
         return;
       }
@@ -620,6 +629,14 @@
       pixModalOpen = true;
       goToCheckoutStep(3);
       startPixStatusPolling();
+      if (!data.reused) {
+        void capturePostHogEvent('pix_payment_initiated', {
+          plan: selectedPlan,
+          addons: { mesas: mesasAddonOn, pedidos: pedidosAddonOn, acessos: acessosAddonOn },
+          amount: planPrice,
+          is_renewal: isActiveStrict,
+        });
+      }
       messageType = 'info';
       if (autoRenew) {
         message = 'O Pix venceu e uma nova cobrança foi gerada automaticamente.';

@@ -10,6 +10,7 @@
 - Use `/contato?assunto=demo` para demonstracao agendada ou captura formal de lead.
 - Mantenha `wa.me` apenas onde a pagina ja oferece WhatsApp como fallback ou contato direto.
 - Nao use rotas de `/app`, `/gestao`, `/perfil`, `/relatorios` ou `/assinatura` em campanha para lead frio.
+- PostHog/heatmap roda apenas nas superficies publicas de marketing/auth permitidas em `src/lib/posthogClient.js`; nao habilitar em `/perfil`, `/assinatura`, `/auth/callback` nem areas internas.
 
 ## Rotas principais de marketing
 

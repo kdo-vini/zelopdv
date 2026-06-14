@@ -1,12 +1,14 @@
 <script>
   import { onMount } from 'svelte';
   import { persistReferralAttribution } from '$lib/referrals/client';
+  import { capturePostHogEvent } from '$lib/posthogClient';
 
   export let data;
 
   onMount(() => {
     if (data?.valid) {
       persistReferralAttribution({ code: data.code, referralId: data.referralId });
+      void capturePostHogEvent('referral_landing_viewed', { referral_id: data.referralId });
     }
   });
 </script>

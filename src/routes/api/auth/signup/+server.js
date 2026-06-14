@@ -1,11 +1,27 @@
 import { json } from '@sveltejs/kit';
-import { buildServerAuthRedirectUrl, isValidEmail } from '$lib/server/authFlow';
+import { isValidEmail } from '$lib/server/authFlow';
 import { buildRateLimitKey, createRateLimitResponse, enforceRateLimit, getRequestIp, maskEmail, normalizeEmail } from '$lib/server/rateLimit';
+import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { supabaseAuth } from '$lib/server/supabaseAuth';
+import { getPostHogClient } from '$lib/server/posthog';
 
-export async function POST({ request, url, getClientAddress }) {
+function isExistingUserError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    error?.status === 409
+    || message.includes('already registered')
+    || message.includes('already been registered')
+    || message.includes('already exists')
+    || message.includes('user already')
+  );
+}
+
+export async function POST({ request, getClientAddress }) {
   if (!supabaseAuth) {
     return json({ error: 'Autenticação indisponível no momento.' }, { status: 500 });
+  }
+  if (!supabaseAdmin) {
+    return json({ error: 'Cadastro automático indisponível no momento.' }, { status: 500 });
   }
 
   const body = await request.json().catch(() => ({}));
@@ -45,31 +61,52 @@ export async function POST({ request, url, getClientAddress }) {
     }
   }
 
-  const redirectTo = buildServerAuthRedirectUrl('/login?confirmed=1', url.origin);
-  const { data, error } = await supabaseAuth.auth.signUp({
+  const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
-    options: {
-      emailRedirectTo: redirectTo,
-      data: referralCode ? { referral_code: referralCode } : undefined,
-    },
+    email_confirm: true,
+    user_metadata: referralCode ? { referral_code: referralCode } : undefined,
   });
 
-  if (error) {
-    return json({ error: error.message }, { status: 400 });
+  if (createError) {
+    if (isExistingUserError(createError)) {
+      return json({
+        error: 'Este e-mail já está cadastrado. Clique aqui para fazer login.',
+        existingUser: true,
+      }, { status: 409 });
+    }
+    return json({ error: createError.message }, { status: 400 });
   }
 
-  const existingUser = !!(data?.user?.identities && data.user.identities.length === 0);
-  if (existingUser) {
+  const { data: signedIn, error: signInError } = await supabaseAuth.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError || !signedIn?.session) {
     return json({
-      error: 'Este e-mail já está cadastrado. Clique aqui para fazer login.',
-      existingUser: true,
-    }, { status: 409 });
+      error: 'Conta criada, mas não foi possível iniciar sessão automaticamente. Tente entrar com e-mail e senha.',
+    }, { status: 500 });
+  }
+
+  const newUser = signedIn.user || created.user;
+  const posthog = getPostHogClient();
+  if (posthog && newUser?.id) {
+    posthog.capture({
+      distinctId: newUser.id,
+      event: 'user_registered',
+      properties: {
+        $set: { email: newUser.email },
+        method: 'email',
+        has_referral: !!referralCode,
+      },
+    });
+    await posthog.flush();
   }
 
   return json({
     success: true,
-    user: data.user,
-    session: data.session,
+    user: newUser,
+    session: signedIn.session,
   });
 }

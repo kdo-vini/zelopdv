@@ -50,6 +50,8 @@
     "lucide-svelte": "^1.0.1",
     "marked": "^17.0.5",
     "openai": "^6.33.0",
+    "posthog-js": "^1.386.6",
+    "posthog-node": "^5.37.0",
     "resend": "^6.10.0",
     "stripe": "^19.2.0",
     "svelte-sonner": "^1.1.1",

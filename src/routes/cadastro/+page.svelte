@@ -4,10 +4,10 @@
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import AuthLayout from '$lib/components/AuthLayout.svelte';
   import GoogleAuthButton from '$lib/components/GoogleAuthButton.svelte';
-  import EmailSentHelper from '$lib/components/EmailSentHelper.svelte';
   import { trackLead } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
-  import { getStoredReferralAttribution, persistReferralAttributionFromUrl } from '$lib/referrals/client';
+  import { claimStoredReferral, getStoredReferralAttribution, persistReferralAttributionFromUrl } from '$lib/referrals/client';
+  import { capturePostHogEvent, identifyPostHogUser } from '$lib/posthogClient';
   import { onMount } from 'svelte';
 
   let email = '';
@@ -21,7 +21,18 @@
     persistReferralAttributionFromUrl();
   });
 
-  /** Cria conta com e-mail/senha; supõe confirmação por e-mail ativa. */
+  async function waitStableSession(tries = 15) {
+    for (let i = 0; i < tries; i += 1) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session?.user?.id) return true;
+      } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    return false;
+  }
+
+  /** Cria conta com e-mail/senha e entra direto no onboarding. */
   async function handleSignUp(e) {
     e.preventDefault();
     errorMessage = '';
@@ -30,43 +41,64 @@
     if (!email || !password) { errorMessage = 'Informe e-mail e senha'; return; }
     if (password.length < 8) { errorMessage = 'A senha deve ter pelo menos 8 caracteres.'; return; }
     loading = true;
-    const referral = getStoredReferralAttribution();
-    const response = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password,
-        referralCode: referral.code || '',
-      }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    loading = false;
-    if (!response.ok) {
-       if (payload?.existingUser) {
-         errorMessage = `Este e-mail já está cadastrado. <a href="/login" class="auth-link font-bold">Clique aqui</a> para fazer login.`;
-         return;
-       }
-       errorMessage = getFriendlyErrorMessage(payload?.error || 'Falha ao criar conta.');
-       return;
-    }
+    let redirecting = false;
+    try {
+      const referral = getStoredReferralAttribution();
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          referralCode: referral.code || '',
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (payload?.existingUser) {
+          errorMessage = `Este e-mail já está cadastrado. <a href="/login" class="auth-link font-bold">Clique aqui</a> para fazer login.`;
+          return;
+        }
+        errorMessage = getFriendlyErrorMessage(payload?.error || 'Falha ao criar conta.');
+        return;
+      }
 
-    // Em projetos com confirmação por e-mail, o usuário precisa confirmar antes de logar
-    successMessage = 'Conta criada! Verifique seu e-mail para confirmar e então faça login.';
-    trackLead();
-    // Sinal antecipado pro Google Ads: a conversão no fim do wizard se perde quando o
-    // usuário troca de sessão/dispositivo entre confirmação de e-mail e onboarding.
-    // O transaction_id (user id) deduplica com o disparo posterior no wizard.
-    await waitForGtag();
-    trackGa4Event('sign_up', { method: 'email' });
-    trackGoogleAdsInscricao({ email, transactionId: payload?.user?.id || '' });
+      if (!payload?.session?.access_token || !payload?.session?.refresh_token) {
+        throw new Error('Conta criada, mas não foi possível iniciar a sessão automaticamente. Entre com e-mail e senha.');
+      }
+
+      const { data, error } = await supabase.auth.setSession({
+        access_token: payload.session.access_token,
+        refresh_token: payload.session.refresh_token,
+      });
+      if (error) throw error;
+
+      const session = data?.session || payload.session;
+      const newUserId = payload?.user?.id || session?.user?.id || '';
+      successMessage = 'Conta criada! Abrindo configuração inicial...';
+      void identifyPostHogUser(newUserId, { email });
+      void capturePostHogEvent('user_signed_up', { method: 'email', has_referral: !!(referral.code) });
+      trackLead();
+      // Sinal antecipado pro Google Ads: a conversão no fim do wizard se perde silenciosamente
+      // quando o usuário troca de sessão/dispositivo antes de terminar o onboarding.
+      await waitForGtag();
+      trackGa4Event('sign_up', { method: 'email' });
+      await trackGoogleAdsInscricao({ email, transactionId: payload?.user?.id || session?.user?.id || '' });
+      await claimStoredReferral(session, 'signup-password');
+      await waitStableSession();
+      redirecting = true;
+      window.location.assign('/perfil?msg=complete');
+    } catch (err) {
+      errorMessage = getFriendlyErrorMessage(err);
+    } finally {
+      if (!redirecting) loading = false;
+    }
   }
 </script>
 
 <AuthLayout title="Criar conta" subtitle="Teste grátis por 30 dias. Sem cartão, sem cobrança automática.">
   {#if successMessage}
     <div class="auth-success">{successMessage}</div>
-    <EmailSentHelper {email} />
   {/if}
   {#if errorMessage}
     <div class="auth-error">{@html errorMessage}</div>

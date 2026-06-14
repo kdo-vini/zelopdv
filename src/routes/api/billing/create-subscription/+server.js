@@ -13,6 +13,7 @@ import {
   PLANS,
 } from '$lib/pricing';
 import { progressReferralForUser } from '$lib/server/referrals';
+import { getPostHogClient } from '$lib/server/posthog';
 
 const ORIGIN = env.PUBLIC_APP_URL || 'https://zelopdv.com.br';
 const TRIAL_DAYS = 30;
@@ -191,6 +192,22 @@ export async function POST({ request, url, cookies }) {
     }).catch((err) => {
       console.warn('[create-subscription] referral progress error:', err?.message || err);
     });
+
+    const posthog = getPostHogClient();
+    if (posthog) {
+      posthog.capture({
+        distinctId: userId,
+        event: 'stripe_checkout_created',
+        properties: {
+          plan: planTier,
+          addons: { mesas: hasMesasAddon, pedidos: hasPedidosAddon, acessos: hasAcessosAddon },
+          amount: successValue,
+          is_first_time: isFirstTime,
+          session_id: session.id,
+        },
+      });
+      await posthog.flush();
+    }
 
     return json({ url: session.url, sessionId: session.id });
   } catch (err) {

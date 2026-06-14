@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import { createRateLimitResponse, enforceRateLimit, getRequestIp } from '$lib/server/rateLimit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import OpenAI from 'openai';
+import { captureAiGeneration } from '$lib/server/posthog';
 
 const SYSTEM_PROMPT = `Você é o assistente de suporte do Zelo PDV. Atende tanto visitantes que ainda não conhecem o sistema quanto clientes que já usam e têm uma dúvida sobre como usar alguma funcionalidade. Seu papel é ajudar de verdade — com tutoriais passo a passo, precisos e sem inventar nada — e, quando fizer sentido naturalmente, mencionar que dá pra testar grátis. Sem forçar venda.
 
@@ -363,10 +364,16 @@ export async function POST({ request, getClientAddress }) {
     .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
 
   const openai = new OpenAI({ apiKey });
+  const traceId = crypto.randomUUID();
 
   const readable = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
+      const startMs = performance.now();
+      let timeToFirstTokenMs = null;
+      let usageData = null;
+      let streamError = null;
+
       try {
         const stream = await openai.chat.completions.create({
           model: 'gpt-4o-mini',
@@ -380,15 +387,17 @@ export async function POST({ request, getClientAddress }) {
           temperature: 0.7,
         });
 
-        let usageData = null;
         for await (const chunk of stream) {
           const content = chunk.choices[0]?.delta?.content;
           if (content) {
+            if (timeToFirstTokenMs === null) timeToFirstTokenMs = performance.now() - startMs;
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
           }
           if (chunk.usage) usageData = chunk.usage;
         }
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+
+        const latencyMs = performance.now() - startMs;
 
         if (usageData) {
           const pt = usageData.prompt_tokens || 0;
@@ -400,9 +409,33 @@ export async function POST({ request, getClientAddress }) {
             total_tokens: usageData.total_tokens || 0,
             cost_usd: Math.round(cost * 1_000_000) / 1_000_000,
           }).then(({ error }) => { if (error) console.warn('[Support] ai_usage_logs:', error.message) });
+
+          captureAiGeneration({
+            distinctId: 'anonymous',
+            traceId,
+            spanName: 'support_chat',
+            model: 'gpt-4o-mini',
+            inputTokens: pt,
+            outputTokens: ct,
+            latencySeconds: latencyMs / 1000,
+            timeToFirstTokenSeconds: timeToFirstTokenMs !== null ? timeToFirstTokenMs / 1000 : null,
+          }).catch(() => {});
         }
       } catch (err) {
+        streamError = err;
         console.error('[SupportChat] OpenAI error:', err.message);
+        const latencyMs = performance.now() - startMs;
+        captureAiGeneration({
+          distinctId: 'anonymous',
+          traceId,
+          spanName: 'support_chat',
+          model: 'gpt-4o-mini',
+          inputTokens: 0,
+          outputTokens: 0,
+          latencySeconds: latencyMs / 1000,
+          isError: true,
+          errorMessage: err.message,
+        }).catch(() => {});
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify({ error: 'Erro ao gerar resposta. Tente novamente.' })}\n\n`)
         );
