@@ -6,7 +6,7 @@
   import { confirmDialog } from '$lib/confirmDialog'
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
-  import { getEffectiveExpiry, getDaysUntilEffectiveExpiry, isSubscriptionExpired, hasActiveManualExtension, parseSubscriptionDate, formatSubscriptionDate, getEntitlement } from '$lib/subscriptionHelpers'
+  import { getEffectiveExpiry, getDaysUntilEffectiveExpiry, isSubscriptionExpired, hasActiveManualExtension, parseSubscriptionDate, formatSubscriptionDate, getEntitlement, getSubscriptionAdminStatus } from '$lib/subscriptionHelpers'
   import { generatePdfReport, formatBRL, formatNumber } from '$lib/pdfReport'
 
   // Base do app principal (onde rodam os endpoints /api/admin/billing/*)
@@ -27,6 +27,7 @@
     { value: 'all', label: 'Todas' },
     { value: 'active', label: 'Ativas' },
     { value: 'trialing', label: 'Trial' },
+    { value: 'trial_expired', label: 'Trial vencido' },
     { value: 'past_due', label: 'Past due' },
     { value: 'canceled', label: 'Canceladas' },
     { value: 'expired', label: 'Expiradas' },
@@ -731,17 +732,17 @@
   }
   
   function getStatusBadge(sub) {
-    if (sub.status === 'active' && isSubscriptionExpired(sub)) {
-      return { text: 'EXPIRADA', class: 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.1)]' }
-    }
+    const adminStatus = getSubscriptionAdminStatus(sub)
 
     const badges = {
       active: { text: 'ATIVA', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.1)]' },
+      expired: { text: 'EXPIRADA', class: 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.1)]' },
+      trial_expired: { text: 'TRIAL VENCIDO', class: 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.1)]' },
       canceled: { text: 'CANCELADA', class: 'bg-slate-500/10 text-slate-400 border-slate-500/20 shadow-[0_0_8px_rgba(100,116,139,0.1)]' },
       past_due: { text: 'VENCIDA', class: 'bg-orange-500/10 text-orange-400 border-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.1)]' },
       trialing: { text: 'TRIAL', class: 'bg-sky-500/10 text-sky-400 border-sky-500/20 shadow-[0_0_8px_rgba(14,165,233,0.1)]' }
     }
-    return badges[sub.status] || { text: sub.status.toUpperCase(), class: 'bg-slate-700 text-slate-300 border-slate-600' }
+    return badges[adminStatus] || { text: adminStatus.toUpperCase(), class: 'bg-slate-700 text-slate-300 border-slate-600' }
   }
 
   function getInitials(name) {
@@ -767,7 +768,7 @@
     if (filterStatus === 'expiring_30') return days > 0 && days <= 30
     if (filterStatus === 'manual_extension') return hasActiveManualExtension(sub)
     if (filterStatus === 'cancel_at_period_end') return !!sub.cancel_at_period_end
-    return sub.status === filterStatus
+    return getSubscriptionAdminStatus(sub) === filterStatus
   }
 
   function subscriptionMatchesProvider(sub) {
@@ -808,8 +809,8 @@
   
   function exportFinancialPdf() {
     const list = filteredSubscriptions
-    const activeSubs   = list.filter(s => s.status === 'active' && !isSubscriptionExpired(s))
-    const trialSubs    = list.filter(s => s.status === 'trialing')
+    const activeSubs   = list.filter(s => getSubscriptionAdminStatus(s) === 'active')
+    const trialSubs    = list.filter(s => getSubscriptionAdminStatus(s) === 'trialing')
     const canceledSubs = list.filter(s => s.status === 'canceled')
     const expiredSubs  = list.filter(s => isSubscriptionExpired(s))
 
@@ -1125,7 +1126,7 @@
           {#each filteredSubscriptions as sub (sub.id)}
             {@const badge = getStatusBadge(sub)}
             {@const daysLeft = getDaysUntilEffectiveExpiry(sub)}
-            {@const isExpiringSoon = ['active', 'trialing'].includes(sub.status) && daysLeft <= 7 && daysLeft > 0}
+            {@const isExpiringSoon = ['active', 'trialing'].includes(getSubscriptionAdminStatus(sub)) && daysLeft <= 7 && daysLeft > 0}
             {@const isExpired = isSubscriptionExpired(sub)}
             {@const effectiveExpiry = getEffectiveExpiry(sub)}
             {@const onManualExt = hasActiveManualExtension(sub)}
@@ -1226,6 +1227,7 @@
                     >
                       <option value="active">ACTIVE</option>
                       <option value="trialing">TRIAL</option>
+                      <option value="trial_expired">TRIAL EXPIRED</option>
                       <option value="past_due">PAST DUE</option>
                       <option value="canceled">CANCELED</option>
                     </select>

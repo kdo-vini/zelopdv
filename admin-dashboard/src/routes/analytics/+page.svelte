@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient'
   import { fade } from 'svelte/transition'
   import { generatePdfReport, canvasToImage, formatBRL, formatNumber } from '$lib/pdfReport'
+  import { getSubscriptionAdminStatus } from '$lib/subscriptionHelpers'
 
   let adminEmail = null
 
@@ -45,9 +46,13 @@
     else if (dias > 7)  reasons.push({ label: `Sem acesso há ${dias} dias`, points: 15 })
     else if (dias > 3)  reasons.push({ label: `Sem acesso há ${dias} dias`, points: 5 })
 
-    if (sub.status === 'past_due') {
+    const adminStatus = getSubscriptionAdminStatus(sub)
+
+    if (adminStatus === 'trial_expired') {
+      reasons.push({ label: 'Trial expirado sem conversão', points: 45 })
+    } else if (sub.status === 'past_due') {
       reasons.push({ label: 'Pagamento atrasado', points: 40 })
-    } else if (sub.status === 'trialing') {
+    } else if (adminStatus === 'trialing') {
       const daysLeft = sub.current_period_end
         ? Math.floor((new Date(sub.current_period_end) - Date.now()) / 86400000) : 0
       if (daysLeft <= 3 && (profile.sales_last_30d || 0) === 0)
@@ -87,7 +92,7 @@
     const wau = profiles.filter(p => p.effective_last_seen && (now - new Date(p.effective_last_seen)) < 7 * dayMs).length
     const mau = profiles.filter(p => p.effective_last_seen && (now - new Date(p.effective_last_seen)) < 30 * dayMs).length
 
-    const activeSubs = subs.filter(s => s.status === 'active').length
+    const activeSubs = subs.filter(s => getSubscriptionAdminStatus(s) === 'active').length
     const mrr = activeSubs * 59 // estimativa simples como no buildMrrSeries
 
     const highRisk   = churnUsers.filter(u => u.score >= 50 && u.score < 100).length
@@ -204,7 +209,7 @@
   async function loadData() {
     const [profilesRes, subsRes, lastSeenRes, salesRes, adminsRes] = await Promise.all([
       supabase.from('empresa_perfil').select('user_id, nome_exibicao, created_at'),
-      supabase.from('subscriptions').select('user_id, status, created_at, current_period_end, updated_at'),
+      supabase.from('subscriptions').select('user_id, status, created_at, current_period_end, manually_extended_until, updated_at'),
       supabase.rpc('admin_get_users_last_seen'),
       supabase.rpc('admin_get_sales_counts', { days_ago: 30 }),
       supabase.from('super_admins').select('user_id'),
@@ -231,8 +236,8 @@
 
     // Funnel
     funnelData.signups = profiles.length
-    funnelData.trialing = subs.filter(s => s.status === 'trialing').length
-    funnelData.converted = subs.filter(s => s.status === 'active').length
+    funnelData.trialing = subs.filter(s => getSubscriptionAdminStatus(s) === 'trialing').length
+    funnelData.converted = subs.filter(s => getSubscriptionAdminStatus(s) === 'active').length
 
     // Churn risk table (all users with score)
     churnUsers = profiles.map(p => {
@@ -246,6 +251,7 @@
   // Fatores principais: inatividade, pagamento atrasado, adoção (vendas)
   // Trial em si NÃO penaliza — só penaliza se trial está vencendo sem uso
   function calcChurnScore(profile, sub) {
+    const adminStatus = getSubscriptionAdminStatus(sub)
     if (!sub || sub.status === 'canceled') return 100
 
     let s = 0
@@ -260,9 +266,11 @@
     // < 3 dias = sem penalidade (usuário ativo)
 
     // Status de pagamento
-    if (sub.status === 'past_due') {
+    if (adminStatus === 'trial_expired') {
+      s += 45 // trial expirado sem conversão = ação comercial
+    } else if (sub.status === 'past_due') {
       s += 40 // pagamento atrasado = risco crítico
-    } else if (sub.status === 'trialing') {
+    } else if (adminStatus === 'trialing') {
       // Trial vencendo em breve SEM engajamento = risco
       const daysLeft = sub.current_period_end
         ? Math.floor((new Date(sub.current_period_end) - Date.now()) / 86400000) : 0
@@ -355,7 +363,7 @@
       const active = subs.filter(s => {
         const created = new Date(s.created_at)
         const end = new Date(s.current_period_end || dEnd)
-        return created < dEnd && end >= d && s.status === 'active'
+        return created < dEnd && end >= d && getSubscriptionAdminStatus(s) === 'active'
       }).length
       mrrData.push(active * 59)
     }

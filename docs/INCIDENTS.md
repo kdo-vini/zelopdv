@@ -9,6 +9,38 @@ Não havia um log histórico consolidado de incidentes neste repositório. As en
 
 ---
 
+## INC-2026-06-17-01 — Trial grátis vencido permanece `trialing`
+
+**Status:** confirmado em produção com MaisQ Salgados.
+
+**Sintoma**
+
+- Cliente com trial grátis local vencido continua aparecendo como `trialing` no ZeloAdmin.
+- O caso confirmado tinha `current_period_end=2026-06-13T13:33:00.084+00:00`, sem provedor de pagamento e sem extensão manual.
+- O acesso do app principal já era bloqueado por data, mas relatórios, filtros e automações podiam tratar o usuário como trial ativo.
+
+**Causa-raiz**
+
+- `subscriptions.status` não tinha estado persistente para trial local expirado.
+- `past_due` não era o estado correto para esse caso, porque significa atraso/falha de cobrança, não fim de teste grátis sem cobrança.
+- Não havia cron/backfill convertendo `trialing` vencido e sem provedor para um estado terminal de trial.
+
+**Fix / recovery**
+
+- Adicionado status canônico `trial_expired`, migration de constraint/backfill e cron Vercel `/api/cron/expire-trials`.
+- Guards e endpoints sensíveis de billing/Acessos agora usam validade por data, então trial vencido não preserva entitlement mesmo antes do cron rodar.
+- ZeloAdmin diferencia `TRIAL VENCIDO` de `PAST DUE` em assinaturas, usuários e analytics.
+- Recovery operacional: aplicar `.ai/migrations/trial_expired_status_2026_06_17.sql` em produção antes do deploy/cron reconciliar. A tentativa direta via REST falhou com `subscriptions_status_check` porque produção ainda não aceitava `trial_expired`.
+
+**Referências**
+
+- [.ai/migrations/trial_expired_status_2026_06_17.sql](/home/vinicius/code/zelopdv/.ai/migrations/trial_expired_status_2026_06_17.sql:1)
+- [src/routes/api/cron/expire-trials/+server.js](/home/vinicius/code/zelopdv/src/routes/api/cron/expire-trials/+server.js:1)
+- [src/lib/subscriptionStatus.js](/home/vinicius/code/zelopdv/src/lib/subscriptionStatus.js:1)
+- [docs/BILLING.md](/home/vinicius/code/zelopdv/docs/BILLING.md:1)
+
+---
+
 ## INC-2026-06-01-01 — Conta marcada para exclusão não some após 14 dias
 
 **Status:** padrão confirmado no código; ocorrência em produção não confirmada.

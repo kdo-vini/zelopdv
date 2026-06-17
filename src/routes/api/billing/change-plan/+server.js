@@ -12,6 +12,7 @@ import {
   isValidPlanTier,
   isAddonAllowed,
 } from '$lib/pricing';
+import { isSubscriptionActiveStrict } from '$lib/subscriptionStatus';
 
 export async function POST({ request }) {
   try {
@@ -33,7 +34,7 @@ export async function POST({ request }) {
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, plan_tier, status, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
+      .select('id, provider_subscription_id, plan_tier, status, current_period_end, manually_extended_until, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -42,7 +43,7 @@ export async function POST({ request }) {
     if (subErr || !sub) return json({ error: 'Assinatura não encontrada.' }, { status: 404 });
     if (!sub.provider_subscription_id) return json({ error: 'Assinatura sem provedor.' }, { status: 400 });
     if (sub.payment_provider !== 'stripe') return json({ error: 'Esta assinatura não está no Stripe.' }, { status: 400 });
-    if (!['active', 'trialing'].includes(sub.status)) {
+    if (!isSubscriptionActiveStrict(sub)) {
       return json({ error: 'Apenas assinaturas ativas ou em trial podem trocar de plano.' }, { status: 400 });
     }
     if (sub.plan_tier === targetTier) return json({ success: true, planTier: targetTier, unchanged: true });

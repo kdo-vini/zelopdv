@@ -78,6 +78,12 @@ function makeStripe(state) {
 beforeEach(() => {
   vi.resetModules();
   vi.unstubAllEnvs();
+  vi.doMock('$lib/server/referrals', () => ({
+    progressReferralForUser: vi.fn(async () => null),
+  }));
+  vi.doMock('$lib/server/posthog', () => ({
+    getPostHogClient: () => null,
+  }));
 });
 
 describe('API: create-subscription', () => {
@@ -88,7 +94,7 @@ describe('API: create-subscription', () => {
         provider_subscription_id: null,
         provider_customer_id: null,
         status: 'trialing',
-        current_period_end: '2026-06-01T00:00:00.000Z',
+        current_period_end: '2099-06-01T00:00:00.000Z',
         plan_tier: 'pdv',
         has_mesas_addon: false,
         has_pedidos_addon: false,
@@ -128,6 +134,56 @@ describe('API: create-subscription', () => {
       has_mesas_addon: false,
       has_pedidos_addon: false,
       has_acessos_addon: false,
+    });
+  });
+
+  it('does not preserve an expired trial when Stripe checkout starts', async () => {
+    const state = {
+      existingSub: {
+        id: 'sub-row-1',
+        provider_subscription_id: null,
+        provider_customer_id: null,
+        status: 'trialing',
+        current_period_end: '2020-06-01T00:00:00.000Z',
+        manually_extended_until: null,
+        plan_tier: 'pdv',
+        has_mesas_addon: false,
+        has_pedidos_addon: false,
+        has_acessos_addon: false,
+        payment_provider: null,
+      },
+      updatedSubscriptions: [],
+      insertedSubscriptions: [],
+    };
+
+    vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({
+      supabaseAdmin: makeSupabaseAdmin(state),
+    }));
+    vi.doMock('../src/lib/server/stripe.js', () => ({
+      stripe: makeStripe(state),
+    }));
+
+    const { POST } = await loadHandler();
+    const response = await POST({
+      request: {
+        headers: { get: (name) => (name === 'authorization' ? 'Bearer token' : null) },
+        json: async () => ({
+          planTier: 'bundle',
+          addons: { mesas: true, pedidos: true, acessos: true },
+        }),
+      },
+      url: new URL('https://zelopdv.com.br/assinatura'),
+    });
+
+    expect(response.status).toBe(200);
+    expect(state.updatedSubscriptions).toHaveLength(1);
+    expect(state.updatedSubscriptions[0]).toMatchObject({
+      payment_provider: 'stripe',
+      status: 'incomplete',
+      plan_tier: 'bundle',
+      has_mesas_addon: true,
+      has_pedidos_addon: true,
+      has_acessos_addon: true,
     });
   });
 

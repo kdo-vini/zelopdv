@@ -8,7 +8,7 @@ const ALLOWED_ORIGINS = new Set([
   'http://127.0.0.1:5174',
 ]);
 
-const VALID_STATUSES = new Set(['active', 'trialing', 'past_due', 'canceled']);
+const VALID_STATUSES = new Set(['active', 'trialing', 'trial_expired', 'past_due', 'canceled']);
 
 function buildCorsHeaders(request) {
   const origin = request.headers.get('origin');
@@ -99,6 +99,12 @@ export async function POST({ request }) {
       updatePayload.cancel_at_period_end = false;
     }
 
+    if (newStatus === 'trial_expired') {
+      updatePayload.current_period_end = nowIso;
+      updatePayload.manually_extended_until = null;
+      updatePayload.cancel_at_period_end = false;
+    }
+
     const { error: updateErr } = await supabaseAdmin
       .from('subscriptions')
       .update(updatePayload)
@@ -113,7 +119,7 @@ export async function POST({ request }) {
       subscriptionId,
       oldStatus: sub.status,
       newStatus,
-      expiredImmediately: newStatus === 'canceled',
+      expiredImmediately: newStatus === 'canceled' || newStatus === 'trial_expired',
       reason: reason || null,
     }, { headers: cors });
   } catch (err) {

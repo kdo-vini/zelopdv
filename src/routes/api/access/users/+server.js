@@ -3,6 +3,7 @@
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { inviteSubUser, ensureDefaultRoles, logServerAuditAction } from '$lib/server/accessControl';
+import { isSubscriptionActiveStrict } from '$lib/subscriptionStatus';
 
 async function getAuthUser(request) {
   const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -14,12 +15,12 @@ async function getAuthUser(request) {
 async function verifyAddonActive(userId) {
   const { data } = await supabaseAdmin
     .from('subscriptions')
-    .select('has_acessos_addon, status')
+    .select('has_acessos_addon, status, current_period_end, manually_extended_until')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  return data && data.has_acessos_addon && ['active', 'trialing'].includes(data.status);
+  return data && data.has_acessos_addon && isSubscriptionActiveStrict(data);
 }
 
 export async function GET({ request }) {

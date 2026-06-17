@@ -4,6 +4,7 @@ import { json } from '@sveltejs/kit';
 import { stripe } from '$lib/server/stripe';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { ADDONS, isAddonAllowed, VALID_ADDONS } from '$lib/pricing';
+import { isSubscriptionActiveStrict } from '$lib/subscriptionStatus';
 
 const ADDON_DB_COLUMN = {
   mesas: 'has_mesas_addon',
@@ -32,7 +33,7 @@ export async function POST({ request }) {
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, status, payment_provider')
+      .select('id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, status, current_period_end, manually_extended_until, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -41,7 +42,7 @@ export async function POST({ request }) {
     if (subErr || !sub) {
       return json({ error: 'Assinatura não encontrada.' }, { status: 404 });
     }
-    if (!['active', 'trialing'].includes(sub.status)) {
+    if (!isSubscriptionActiveStrict(sub)) {
       return json({ error: 'Apenas assinaturas ativas ou em trial podem modificar add-ons.' }, { status: 400 });
     }
 

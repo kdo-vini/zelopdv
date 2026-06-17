@@ -14,9 +14,12 @@ vite.config.js.timestamp-*
 SUPPORT_GUIDE_ZELO_PDV.txt
 
 # Internal notes not meant for versioning
-.ai/
-# Exception: migrations must be versioned and ordered
+.ai/*
+# Exception: this production migration must ship with the billing fix
+!.ai/
 !.ai/migrations/
+.ai/migrations/*
+!.ai/migrations/trial_expired_status_2026_06_17.sql
 SISTEMA.md
 agents.md
 

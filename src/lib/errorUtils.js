@@ -98,6 +98,7 @@ export function translateSubscriptionStatus(status) {
     const map = {
         'active': 'Ativa',
         'trialing': 'Período de Testes',
+        'trial_expired': 'Teste Expirado',
         'past_due': 'Pagamento Pendente',
         'canceled': 'Cancelada',
         'unpaid': 'Não Paga',

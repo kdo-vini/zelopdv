@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/expire-trials",
+      "schedule": "30 8 * * *"
+    },
+    {
       "path": "/api/cron/onboarding-emails",
       "schedule": "0 9 * * *"
     },

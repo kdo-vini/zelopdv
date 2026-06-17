@@ -4,6 +4,9 @@ import { requiredOk } from './profileUtils';
 import { addToast } from './stores/ui';
 import { isNetworkError } from './netStatus';
 import { saveEntitlementSnapshot, loadEntitlementSnapshot } from './offlineEntitlement';
+import { isSubscriptionActiveStrict } from './subscriptionStatus';
+
+export { isSubscriptionActiveStrict };
 
 /**
  * For pages gated by an add-on: when the addon is inactive AND the current
@@ -42,36 +45,6 @@ async function resolveSubscriptionUserId(userId) {
   } catch {
     return userId;
   }
-}
-
-/**
- * Normalize and strictly validate subscription status AND expiration date.
- * Both "active" and "trialing" status grant access (trialing = free trial period).
- * Also checks manually_extended_until for admin-extended subscriptions.
- * @param {Object} subscription - Subscription object
- * @returns {boolean} - True if subscription is active/trialing and not expired
- */
-export function isSubscriptionActiveStrict(subscription) {
-  if (!subscription) return false;
-
-  const status = (subscription.status ?? '').toString().trim().toLowerCase();
-  const isActive = status === 'active' || status === 'trialing';
-
-  // Check manually_extended_until (admin extension overrides expiry)
-  if (subscription.manually_extended_until) {
-    const extendedUntil = new Date(subscription.manually_extended_until);
-    if (extendedUntil > new Date()) return true;
-  }
-
-  // Validate expiration date
-  if (subscription.current_period_end) {
-    const expiryDate = new Date(subscription.current_period_end);
-    const notExpired = expiryDate > new Date();
-    return isActive && notExpired;
-  }
-
-  // If no expiration date, only check status (fallback)
-  return isActive;
 }
 
 /**
@@ -201,7 +174,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     }
   }
 
-  // 4) Subscription (redirect only if status !== 'active'/'trialing' OR expired)
+  // 4) Subscription (redirect only if status is inactive OR effective expiry passed)
   // plan_tier filter: chat-only subscribers should not access PDV routes.
   // Note: plan_tier is NOT filtered in SQL to avoid blocking NULL (legacy users).
   // Chat-only redirect happens after fetch.

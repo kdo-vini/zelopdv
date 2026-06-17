@@ -31,6 +31,8 @@ Regra prática:
 
 - Endpoint: [src/routes/api/billing/start-trial/+server.js](/home/vinicius/code/zelopdv/src/routes/api/billing/start-trial/+server.js:191)
 - Cria `subscriptions.status='trialing'` quando ainda não existe assinatura.
+- Expiração automática: [src/routes/api/cron/expire-trials/+server.js](/home/vinicius/code/zelopdv/src/routes/api/cron/expire-trials/+server.js:1) roda diariamente antes do onboarding e muda trials locais vencidos para `subscriptions.status='trial_expired'`.
+- `past_due` fica reservado para falha de cobrança / atraso de pagamento, normalmente vindo de provider webhook ou ajuste manual. Trial grátis encerrado sem cobrança não deve virar `past_due`.
 - Também aciona:
   - referral progress
   - email day 0
@@ -84,6 +86,7 @@ Regra prática:
 | Fluxo | Endpoint | Auth | Notas |
 | --- | --- | --- | --- |
 | Iniciar trial | `POST /api/billing/start-trial` | owner | dispara onboarding e referral progress |
+| Expirar trials locais | `GET /api/cron/expire-trials` | `CRON_SECRET` | muda `trialing` vencido sem provider para `trial_expired` |
 | Criar checkout Stripe | `POST /api/billing/create-subscription` | owner | cartão only |
 | Portal Stripe | `POST /api/billing/create-portal-session` | owner | usa `provider_customer_id` |
 | Cancelar assinatura | `POST /api/billing/cancel-subscription` | owner | `cancel_at_period_end=true` |
@@ -112,6 +115,7 @@ Regra prática:
 ## Invariantes
 
 - `subscriptions` é a referência final de acesso.
+- Status canônicos no app: `active`, `trialing`, `trial_expired`, `past_due`, `canceled`, `incomplete`.
 - Subusuários não gerenciam billing; endpoints de billing owner-facing bloqueiam `accessContext.isSubUser`.
 - O checkout Stripe preserva acesso atual até o webhook confirmar.
 - O Pix só ativa assinatura quando `syncPixPaymentWithRemote` confirma valor pago suficiente.

@@ -4,6 +4,7 @@
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logServerAuditAction } from '$lib/server/accessControl';
+import { isSubscriptionActiveStrict } from '$lib/subscriptionStatus';
 
 async function getAuthUser(request) {
   const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -19,13 +20,13 @@ export async function GET({ request }) {
   // Verify owner has the add-on active
   const { data: sub } = await supabaseAdmin
     .from('subscriptions')
-    .select('has_acessos_addon, plan_tier, status')
+    .select('has_acessos_addon, plan_tier, status, current_period_end, manually_extended_until')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (!sub || !sub.has_acessos_addon || !['active', 'trialing'].includes(sub.status)) {
+  if (!sub || !sub.has_acessos_addon || !isSubscriptionActiveStrict(sub)) {
     return json({ error: 'Add-on Controle de Acessos não está ativo.' }, { status: 403 });
   }
 
@@ -46,13 +47,13 @@ export async function POST({ request }) {
 
   const { data: sub } = await supabaseAdmin
     .from('subscriptions')
-    .select('has_acessos_addon, status')
+    .select('has_acessos_addon, status, current_period_end, manually_extended_until')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (!sub || !sub.has_acessos_addon || !['active', 'trialing'].includes(sub.status)) {
+  if (!sub || !sub.has_acessos_addon || !isSubscriptionActiveStrict(sub)) {
     return json({ error: 'Add-on Controle de Acessos não está ativo.' }, { status: 403 });
   }
 

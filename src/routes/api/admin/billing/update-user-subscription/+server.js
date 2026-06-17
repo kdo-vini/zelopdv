@@ -8,7 +8,7 @@ const ALLOWED_ORIGINS = new Set([
   'http://127.0.0.1:5174',
 ]);
 
-const VALID_STATUSES = new Set(['active', 'trialing', 'past_due', 'canceled']);
+const VALID_STATUSES = new Set(['active', 'trialing', 'trial_expired', 'past_due', 'canceled']);
 const VALID_PLAN_TIERS = new Set(['pdv', 'chat', 'bundle']);
 
 function buildCorsHeaders(request) {
@@ -115,9 +115,14 @@ export async function POST({ request }) {
       if (subscription.has_mesas_addon !== undefined) subUpdate.has_mesas_addon = subscription.has_mesas_addon;
       if (subscription.has_pedidos_addon !== undefined) subUpdate.has_pedidos_addon = subscription.has_pedidos_addon;
 
-      // If canceling, expire immediately
+      // If ending access, expire immediately and clear manual extension.
       if (subscription.status === 'canceled') {
         subUpdate.current_period_end = nowIso;
+      }
+      if (subscription.status === 'trial_expired') {
+        subUpdate.current_period_end = nowIso;
+        subUpdate.manually_extended_until = null;
+        subUpdate.cancel_at_period_end = false;
       }
 
       const { error: subErr } = await supabaseAdmin

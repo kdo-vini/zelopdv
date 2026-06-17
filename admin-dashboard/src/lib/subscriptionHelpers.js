@@ -74,6 +74,14 @@ export function isSubscriptionExpired(sub) {
   return expiry ? expiry.getTime() < Date.now() : true
 }
 
+export function getSubscriptionAdminStatus(sub) {
+  if (!sub) return 'unknown'
+  if (isSubscriptionExpired(sub) && (sub.status === 'active' || sub.status === 'trialing')) {
+    return sub.status === 'trialing' ? 'trial_expired' : 'expired'
+  }
+  return sub.status || 'unknown'
+}
+
 /**
  * True when manually_extended_until is set, in the future, AND extends
  * past current_period_end. Used to surface a UI badge so the admin can

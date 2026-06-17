@@ -4,7 +4,7 @@
   import { logAdminAction } from '$lib/logger'
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
-  import { getEffectiveExpiry, hasActiveManualExtension } from '$lib/subscriptionHelpers'
+  import { getEffectiveExpiry, getSubscriptionAdminStatus, hasActiveManualExtension } from '$lib/subscriptionHelpers'
   import { generatePdfReport, formatNumber } from '$lib/pdfReport'
   import { success, error as errorToast } from '$lib/toast'
   import { confirmDialog } from '$lib/confirmDialog'
@@ -35,6 +35,7 @@
   const STATUS_TABS = [
     { key: 'all',       label: 'Todos' },
     { key: 'trialing',  label: 'Trialing' },
+    { key: 'trial_expired', label: 'Trial vencido' },
     { key: 'active',    label: 'Ativo' },
     { key: 'inactive',  label: 'Inativo' },
     { key: 'canceled',  label: 'Cancelado' },
@@ -595,14 +596,19 @@
   function getUserStatus(user) {
     const sub = user.subscriptions?.[0]
     if (!sub) return { text: 'Inativo', class: 'bg-slate-500/10 text-slate-400 border border-slate-500/20 shadow-[0_0_8px_rgba(100,116,139,0.1)]' }
-    
-    if (sub.status === 'active') {
+
+    const adminStatus = getSubscriptionAdminStatus(sub)
+    if (adminStatus === 'active') {
       return { text: 'Ativo', class: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.2)]' }
-    } else if (sub.status === 'canceled') {
+    } else if (adminStatus === 'trialing') {
+      return { text: 'Trial', class: 'bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-[0_0_8px_rgba(14,165,233,0.2)]' }
+    } else if (adminStatus === 'trial_expired') {
+      return { text: 'Trial vencido', class: 'bg-rose-500/10 text-rose-400 border border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.2)]' }
+    } else if (adminStatus === 'canceled') {
       return { text: 'Cancelado', class: 'bg-rose-500/10 text-rose-400 border border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.2)]' }
     }
     
-    return { text: sub.status, class: 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.2)]' }
+    return { text: adminStatus, class: 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.2)]' }
   }
 
   function getInitials(name) {
@@ -626,9 +632,9 @@
     const dormant30plus = list.filter(u => !u.effective_last_seen || (now - new Date(u.effective_last_seen)) >= 30 * dayMs).length
 
     // Distribuição por status de assinatura
-    const statusBuckets = { active: 0, trialing: 0, canceled: 0, past_due: 0, no_sub: 0 }
+    const statusBuckets = { active: 0, trialing: 0, trial_expired: 0, canceled: 0, past_due: 0, no_sub: 0 }
     for (const u of list) {
-      const s = u.subscriptions?.[0]?.status
+      const s = u.subscriptions?.[0] ? getSubscriptionAdminStatus(u.subscriptions[0]) : null
       if (!s) statusBuckets.no_sub++
       else if (statusBuckets[s] !== undefined) statusBuckets[s]++
       else statusBuckets[s] = (statusBuckets[s] || 0) + 1
@@ -670,6 +676,7 @@
           rows: [
             { status: 'Ativo',     count: statusBuckets.active,    share: list.length ? Math.round(statusBuckets.active / list.length * 100) : 0 },
             { status: 'Trial',     count: statusBuckets.trialing,  share: list.length ? Math.round(statusBuckets.trialing / list.length * 100) : 0 },
+            { status: 'Trial vencido', count: statusBuckets.trial_expired, share: list.length ? Math.round(statusBuckets.trial_expired / list.length * 100) : 0 },
             { status: 'Cancelado', count: statusBuckets.canceled,  share: list.length ? Math.round(statusBuckets.canceled / list.length * 100) : 0 },
             { status: 'Past Due',  count: statusBuckets.past_due,  share: list.length ? Math.round(statusBuckets.past_due / list.length * 100) : 0 },
             { status: 'Sem assinatura', count: statusBuckets.no_sub, share: list.length ? Math.round(statusBuckets.no_sub / list.length * 100) : 0 },
@@ -754,7 +761,8 @@
     if (user.is_sub_user) return false
 
     // Empresa filters
-    const subStatus = user.subscriptions?.[0]?.status
+    const sub = user.subscriptions?.[0]
+    const subStatus = sub ? getSubscriptionAdminStatus(sub) : null
     if (statusFilter === 'all') return true
     if (statusFilter === 'inactive') return !subStatus
     if (statusFilter === 'no_profile') return user.has_profile === false
@@ -764,8 +772,9 @@
   $: companies = users.filter(u => !u.is_sub_user)
   $: counts = {
     all:        companies.length,
-    trialing:   companies.filter(u => u.subscriptions?.[0]?.status === 'trialing').length,
-    active:     companies.filter(u => u.subscriptions?.[0]?.status === 'active').length,
+    trialing:   companies.filter(u => getSubscriptionAdminStatus(u.subscriptions?.[0]) === 'trialing').length,
+    trial_expired: companies.filter(u => getSubscriptionAdminStatus(u.subscriptions?.[0]) === 'trial_expired').length,
+    active:     companies.filter(u => getSubscriptionAdminStatus(u.subscriptions?.[0]) === 'active').length,
     inactive:   companies.filter(u => !u.subscriptions?.[0]).length,
     canceled:   companies.filter(u => u.subscriptions?.[0]?.status === 'canceled').length,
     no_profile: companies.filter(u => u.has_profile === false).length,
@@ -1226,6 +1235,7 @@
               >
                 <option value="active">Ativo (Lançamento Manual/Assinado)</option>
                 <option value="trialing">Trial (Período de Teste)</option>
+                <option value="trial_expired">Trial vencido</option>
                 <option value="past_due">Vencido (Atraso no Pagamento)</option>
                 <option value="canceled">Cancelado (Sem Acesso)</option>
               </select>

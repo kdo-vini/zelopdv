@@ -397,7 +397,10 @@
           await loadSubscriptionState();
 
           if (hasHadSubscription && !isActiveStrict) {
-            if (expiryDate) {
+            if (subStatus === 'trial_expired') {
+              message = 'Seu teste gratuito expirou. Escolha um plano para continuar usando o sistema.';
+              messageType = 'warning';
+            } else if (expiryDate) {
               const expiry = new Date(expiryDate);
               if (expiry < new Date()) {
                 message = `Sua assinatura expirou em ${expiry.toLocaleDateString('pt-BR')}. Renove para continuar usando o sistema.`;

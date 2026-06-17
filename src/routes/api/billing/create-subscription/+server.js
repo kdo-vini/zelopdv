@@ -14,6 +14,7 @@ import {
 } from '$lib/pricing';
 import { progressReferralForUser } from '$lib/server/referrals';
 import { getPostHogClient } from '$lib/server/posthog';
+import { isSubscriptionActiveStrict } from '$lib/subscriptionStatus';
 
 const ORIGIN = env.PUBLIC_APP_URL || 'https://zelopdv.com.br';
 const TRIAL_DAYS = 30;
@@ -80,14 +81,14 @@ export async function POST({ request, url, cookies }) {
     // Existing subscription check
     const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, provider_customer_id, status, current_period_end, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
+      .select('id, provider_subscription_id, provider_customer_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     const isFirstTime = !existingSub;
-    const shouldPreserveCurrentAccess = ['active', 'trialing'].includes(existingSub?.status || '');
+    const shouldPreserveCurrentAccess = isSubscriptionActiveStrict(existingSub);
 
     // Find or create Stripe customer
     let stripeCustomerId = existingSub?.provider_customer_id && existingSub.payment_provider === 'stripe'

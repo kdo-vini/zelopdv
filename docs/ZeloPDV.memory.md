@@ -7,6 +7,7 @@
 - Existe um segundo app em `admin-dashboard/`, separado do app principal.
 - O backend real do produto é Supabase; service role só existe em código server-side.
 - `subscriptions` é a fonte de verdade de acesso/entitlement.
+- Trial grátis local vencido usa status `trial_expired`; `past_due` é reservado para falha/atraso de pagamento.
 - `billing_payments` registra o fluxo Pix da AbacatePay.
 - `src/lib/pricing.js` é o catálogo canônico de planos, add-ons e Stripe price IDs.
 - O fluxo offline do PDV é contingência, não offline-first completo.

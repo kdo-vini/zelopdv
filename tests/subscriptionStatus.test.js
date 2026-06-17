@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isSubscriptionActiveStrict } from '../src/lib/guards.js';
+import { isSubscriptionActiveStrict } from '../src/lib/subscriptionStatus.js';
 
 describe('isSubscriptionActiveStrict', () => {
   it('returns true for status "active" (any casing/whitespace)', () => {
@@ -15,6 +15,7 @@ describe('isSubscriptionActiveStrict', () => {
   });
 
   it('returns false for non-active/non-trialing statuses or falsy', () => {
+    expect(isSubscriptionActiveStrict({ status: 'trial_expired' })).toBe(false);
     expect(isSubscriptionActiveStrict({ status: 'past_due' })).toBe(false);
     expect(isSubscriptionActiveStrict({ status: 'canceled' })).toBe(false);
     expect(isSubscriptionActiveStrict({ status: 'incomplete' })).toBe(false);
@@ -33,5 +34,14 @@ describe('isSubscriptionActiveStrict', () => {
     const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days from now
     expect(isSubscriptionActiveStrict({ status: 'active', current_period_end: futureDate })).toBe(true);
     expect(isSubscriptionActiveStrict({ status: 'trialing', current_period_end: futureDate })).toBe(true);
+  });
+
+  it('returns true for a manual extension even when trial was marked expired', () => {
+    const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    expect(isSubscriptionActiveStrict({
+      status: 'trial_expired',
+      current_period_end: '2026-01-01T00:00:00.000Z',
+      manually_extended_until: futureDate,
+    })).toBe(true);
   });
 });
