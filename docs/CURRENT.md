@@ -15,6 +15,7 @@
 
 ## Validação executada nesta sessão
 
+- ZeloMenu schema (2026-06-23): criada a migration `.ai/migrations/zelomenu_publication_schema_2026_06_23.sql` com a camada PDV-owned de publicação do ZeloMenu (`zelomenu_product_publications`) e modificadores por produto (`zelomenu_modifier_groups`, `zelomenu_modifier_options`). A visibilidade online fica separada de `produtos.ocultar_no_pdv`; preço base continua em `produtos.preco`; opções usam `price_delta`. Todas as tabelas nascem com RLS por `get_owner_user_id(auth.uid())`, checagem de posse do produto/grupo em writes e grants explícitos para `authenticated`/`service_role`. Validação: `npm test -- tests/zelomenuPublicationSchema.test.js` — 5/5; `npm test` — 166/166; `npm run check` — 0 errors / 106 warnings; `npm run build` — ok com warnings pré-existentes de Svelte/PWA/dependências opcionais. Migration ainda não aplicada em produção.
 - Billing/admin (2026-06-17): trial grátis local vencido agora tem status persistente próprio `trial_expired`; `past_due` fica reservado para inadimplência/falha de cobrança. Correção inclui migration do constraint/backfill, cron Vercel `/api/cron/expire-trials`, helper canônico de status, guards/endpoints de billing e Acessos usando validade por data, admin `/subscriptions`/`/users`/`/analytics` com status operacional e copy de trial expirado no app. Confirmado no Supabase real que MaisQ Salgados ainda está `trialing` vencido (`current_period_end=2026-06-13T13:33:00.084+00:00`, sem provedor/extensão); tentativa de reconciliação direta falhou porque produção ainda não aceitou `trial_expired` no `subscriptions_status_check`. Aplicar `.ai/migrations/trial_expired_status_2026_06_17.sql` antes do deploy/cron reconciliar. Validação: `npm test` 161/161, `npm run check` 0 errors / 106 warnings, `npm run build` ok, `cd admin-dashboard && npm run build` ok; `cd admin-dashboard && npm run check` continua quebrado por `./jsconfig.json` ausente (pré-existente).
 - Marketing analytics (2026-06-14): PostHog instalado para heatmap/autocapture anonimo apenas em rotas externas permitidas (`/`, `/para-*`, `/vs-*`, `/blog/*`, `/cadastro`, `/login`, `/contato`, etc.). Bloqueado em `/app`, `/gestao`, `/relatorios`, `/perfil`, `/assinatura`, `/ferramentas` e `/auth/callback`; session recording fica desabilitado no client. Requer `PUBLIC_POSTHOG_KEY` no ambiente para ativar. Validado com `tests/posthogClient.test.js`.
 - Auth/onboarding (2026-06-14): `/cadastro` deixou de exigir confirmação por e-mail. `POST /api/auth/signup` agora cria usuário confirmado via service role (`email_confirm: true`), faz login server-side com senha e devolve sessão; o cliente grava a sessão Supabase, preserva/reforça referral, dispara `sign_up`/Google Ads e manda direto para `/perfil?msg=complete` (OnboardingWizard). Requer `SUPABASE_SERVICE_ROLE_KEY` no servidor.
@@ -88,10 +89,17 @@
 - CORS global para API admin.
 - Logging de atividade admin no servidor.
 
+## Planejamento cross-produto
+
+- ZeloMenu/ZeloChat/ZeloPDV: decisões completas e backlog por fases em [[docs/projects/zelomenu-linear-plan.md]]. Impacta pricing, catálogo comum, Pedidos como motor interno, entitlements, ZeloChat e integração futura com Mesas.
+- A base de schema PDV-owned para publicação/modificadores do ZeloMenu já existe em migration local, mas a UI self-service e o rollout por entitlement ainda dependem dos próximos cortes (`ZLM-201`/`ZLM-205`).
+
 ## Próximas fatias recomendadas
 
-1. Validar fim-a-fim o fluxo de deleção agendada com o sweeper externo.
-2. Revisar e documentar o modelo de segurança do `admin-dashboard/`.
-3. Decidir se `pin_admin` continua como trava de conveniência ou vira proteção real server-side.
-4. Atacar warnings de `svelte-check` por lote, começando pelos arquivos operacionais e não pelas páginas de marketing.
-5. Expandir hero archetypes pra páginas standalone: `/precificacao` e `/vs-planilha` ainda usam layout legado (gradient text, multi-glow) — sprint separada pode ganhar +3-4 pontos no critique.
+1. Construir a UI self-service de publicação do ZeloMenu sobre as tabelas `zelomenu_*` e só então ligar a leitura no menu público.
+2. Validar/aplicar a migration `.ai/migrations/zelomenu_publication_schema_2026_06_23.sql` em staging/prod antes de consumir pelo ZeloChat.
+3. Validar fim-a-fim o fluxo de deleção agendada com o sweeper externo.
+4. Revisar e documentar o modelo de segurança do `admin-dashboard/`.
+5. Decidir se `pin_admin` continua como trava de conveniência ou vira proteção real server-side.
+6. Atacar warnings de `svelte-check` por lote, começando pelos arquivos operacionais e não pelas páginas de marketing.
+7. Expandir hero archetypes pra páginas standalone: `/precificacao` e `/vs-planilha` ainda usam layout legado (gradient text, multi-glow) — sprint separada pode ganhar +3-4 pontos no critique.

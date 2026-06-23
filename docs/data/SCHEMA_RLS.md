@@ -44,6 +44,7 @@ Padrao recorrente:
 | Billing | `subscriptions`, `billing_payments`, `webhook_events_processed`, `billing_webhook_events` | acesso final depende de `subscriptions` |
 | Acessos | `access_users`, `access_roles`, `access_settings`, `access_audit_logs` | papeis e permissoes vivem em JSON |
 | Operacao | `vendas*`, `caixas*`, `pessoas`, `produtos`, `mesas`, `comandas*`, `pedidos*` | escopo por owner via RLS |
+| ZeloMenu | `zelomenu_product_publications`, `zelomenu_modifier_groups`, `zelomenu_modifier_options` | camada PDV-owned de publicação/modificadores, escopo por owner via RLS |
 | Perfil | `empresa_perfil` | contem dados operacionais e `pin_admin` |
 | RPC critica | `criar_venda_completa(jsonb)` | usa `get_owner_user_id(auth.uid())` |
 
@@ -66,6 +67,17 @@ Padrao recorrente:
 - Resolve owner de owner ou subusuario.
 - E a base do tenant scoping atual.
 - Nao implementa permissao por papel; apenas decide "em nome de qual empresa" a consulta roda.
+
+## ZeloMenu publication layer
+
+Migration local: `.ai/migrations/zelomenu_publication_schema_2026_06_23.sql`.
+
+- `zelomenu_product_publications` guarda visibilidade online, nome/descricao/foto publicos, ordem e pausa manual por produto.
+- `zelomenu_modifier_groups` e `zelomenu_modifier_options` guardam adicionais/variacoes vinculados ao produto comum.
+- O produto base segue em `produtos`; preco base segue em `produtos.preco`.
+- `produtos.ocultar_no_pdv` nao controla publicacao online. A visibilidade do ZeloMenu e `zelomenu_product_publications.visivel_online` + `pausado_manualmente`.
+- RLS usa `get_owner_user_id(auth.uid()) = id_usuario`; writes tambem verificam que o produto/grupo pertence ao mesmo `id_usuario`.
+- As tabelas novas incluem grants explicitos para `authenticated`/`service_role` e revogam `anon`, porque RLS sozinho nao deve ser assumido como permissao de acesso ao PostgREST.
 
 ## O que o add-on Acessos realmente garante hoje
 
