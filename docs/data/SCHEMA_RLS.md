@@ -71,6 +71,7 @@ Padrao recorrente:
 ## ZeloMenu publication layer
 
 Migration local: `.ai/migrations/zelomenu_publication_schema_2026_06_23.sql`.
+Estado produção em 2026-06-23: ainda não aplicada; verificação via service role retornou `PGRST205` para `zelomenu_product_publications` após queda do conector Supabase durante o rollout.
 
 - `zelomenu_product_publications` guarda visibilidade online, nome/descricao/foto publicos, ordem e pausa manual por produto.
 - `zelomenu_modifier_groups` e `zelomenu_modifier_options` guardam adicionais/variacoes vinculados ao produto comum.
