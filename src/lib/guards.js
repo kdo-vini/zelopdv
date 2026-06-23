@@ -309,6 +309,90 @@ export async function hasAcessosAddon(userId) {
 }
 
 /**
+ * Returns whether the user has access to ZeloMenu (publicação self-service + menu público).
+ * Read-only; does not redirect. Espelha o resolver de domínio do ZeloChat
+ * (src/domain/zelomenuEntitlements.ts) — os dois repos precisam concordar.
+ *  - chat/bundle incluem ZeloMenu por política de produto (D-014), independente da flag.
+ *  - pdv puro precisa do addon ZeloMenu (has_zelo_menu, R$99). Legado has_pedidos_addon
+ *    NÃO concede publicação (D-099).
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function hasZeloMenuAccess(userId) {
+  if (!userId) return false;
+  try {
+    const subUserId = await resolveSubscriptionUserId(userId);
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('has_zelo_menu, plan_tier')
+      .eq('user_id', subUserId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return false;
+    if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
+    return data.plan_tier === 'pdv' && !!data.has_zelo_menu;
+  } catch (err) {
+    console.warn('[Guards] hasZeloMenuAccess error:', err?.message);
+    return false;
+  }
+}
+
+/**
+ * Returns whether the user can review/accept online orders (ordering_review, ZLM-005).
+ * chat/bundle sim; pdv com ZeloMenu novo OU legado Pedidos/Cozinha grandfathered (D-099).
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function hasOrderingReviewAccess(userId) {
+  if (!userId) return false;
+  try {
+    const subUserId = await resolveSubscriptionUserId(userId);
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('has_zelo_menu, has_pedidos_addon, plan_tier')
+      .eq('user_id', subUserId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return false;
+    if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
+    return data.plan_tier === 'pdv' && (!!data.has_zelo_menu || !!data.has_pedidos_addon);
+  } catch (err) {
+    console.warn('[Guards] hasOrderingReviewAccess error:', err?.message);
+    return false;
+  }
+}
+
+/**
+ * Returns whether the user can use the kitchen queue (kitchen_queue, ZLM-005 / D-100).
+ * Tudo que libera ordering_review, mais Mesas com cozinha (mesa pode usar cozinha
+ * sem implicar pedidos online).
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function hasKitchenQueueAccess(userId) {
+  if (!userId) return false;
+  try {
+    const subUserId = await resolveSubscriptionUserId(userId);
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('has_zelo_menu, has_pedidos_addon, has_mesas_addon, plan_tier')
+      .eq('user_id', subUserId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return false;
+    if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
+    return data.plan_tier === 'pdv'
+      && (!!data.has_zelo_menu || !!data.has_pedidos_addon || !!data.has_mesas_addon);
+  } catch (err) {
+    console.warn('[Guards] hasKitchenQueueAccess error:', err?.message);
+    return false;
+  }
+}
+
+/**
  * Returns whether the user has access to ZeloChat (plan_tier 'chat' ou 'bundle' + sub ativa).
  * Read-only — não redireciona. Pode ser usado pelo app ZeloChat (separado) lendo do mesmo DB,
  * ou por upsell cards no PDV.

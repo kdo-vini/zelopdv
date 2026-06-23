@@ -83,6 +83,7 @@
   let editMesasAddon = false
   let editPedidosAddon = false
   let editAcessosAddon = false
+  let editZeloMenuAddon = false
   
   onMount(async () => {
     await loadAdminInfo()
@@ -185,6 +186,7 @@
     editMesasAddon = !!sub.has_mesas_addon
     editPedidosAddon = !!sub.has_pedidos_addon
     editAcessosAddon = !!sub.has_acessos_addon
+    editZeloMenuAddon = !!sub.has_zelo_menu
     showPlanModal = true
   }
 
@@ -279,6 +281,10 @@
     const finalMesas = isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon
     const finalPedidos = isAddonAllowed(editPlanTier, 'pedidos') && editPedidosAddon
     const finalAcessos = isAddonAllowed(editPlanTier, 'acessos') && editAcessosAddon
+    // chat/bundle incluem ZeloMenu por política (D-014) — sempre true; pdv via addon menu.
+    const finalZeloMenu = (editPlanTier === 'chat' || editPlanTier === 'bundle')
+      ? true
+      : (isAddonAllowed(editPlanTier, 'menu') && editZeloMenuAddon)
 
     if (editMesasAddon && !isAddonAllowed(editPlanTier, 'mesas')) {
       const ok = await confirmDialog({
@@ -388,6 +394,7 @@
         has_mesas_addon: finalMesas,
         has_pedidos_addon: finalPedidos,
         has_acessos_addon: finalAcessos,
+        has_zelo_menu: finalZeloMenu,
         last_modified_by: adminInfo?.id || null,
         last_modified_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -1512,6 +1519,26 @@
               {/if}
             </div>
           </label>
+
+          <label class="flex items-center cursor-pointer group {(editPlanTier === 'chat' || editPlanTier === 'bundle' || !isAddonAllowed(editPlanTier, 'menu')) ? 'opacity-40 cursor-not-allowed' : ''}">
+            <div class="relative flex items-center justify-center">
+              <input
+                type="checkbox"
+                bind:checked={editZeloMenuAddon}
+                disabled={editPlanTier === 'chat' || editPlanTier === 'bundle' || !isAddonAllowed(editPlanTier, 'menu')}
+                class="sr-only peer"
+              />
+              <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-violet-500 shadow-inner"></div>
+            </div>
+            <div class="ml-3">
+              <span class="text-sm font-medium text-slate-300">ZeloMenu (+R$ 40/mês)</span>
+              {#if editPlanTier === 'chat' || editPlanTier === 'bundle'}
+                <p class="text-[11px] text-emerald-400 mt-0.5">Já incluso no {PLANS[editPlanTier].name}.</p>
+              {:else if !isAddonAllowed(editPlanTier, 'menu')}
+                <p class="text-[11px] text-amber-400 mt-0.5">Indisponível em {PLANS[editPlanTier].name} (precisa de PDV).</p>
+              {/if}
+            </div>
+          </label>
         </div>
 
         <div class="pt-4 border-t border-slate-800 grid grid-cols-2 gap-4">
@@ -1525,6 +1552,7 @@
               mesas: editMesasAddon && isAddonAllowed(editPlanTier, 'mesas'),
               pedidos: editPedidosAddon && isAddonAllowed(editPlanTier, 'pedidos'),
               acessos: editAcessosAddon && isAddonAllowed(editPlanTier, 'acessos'),
+              menu: editZeloMenuAddon && isAddonAllowed(editPlanTier, 'menu'),
             }).toFixed(2)}</div>
           </div>
         </div>

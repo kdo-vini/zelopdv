@@ -201,14 +201,17 @@ export async function POST({ request }) {
           break;
         }
 
+        const effectiveTier = planTier || row.plan_tier || 'pdv';
         await updateSubscriptionRow(row.id, {
           provider_subscription_id: stripeSubId,
           provider_customer_id: stripeCustomerId,
           payment_provider: 'stripe',
-          plan_tier: planTier || row.plan_tier || 'pdv',
+          plan_tier: effectiveTier,
           has_mesas_addon: !!addons.mesas,
           has_pedidos_addon: !!addons.pedidos,
           has_acessos_addon: !!addons.acessos,
+          // chat/bundle incluem ZeloMenu (D-014); pdv liga via addon menu.
+          has_zelo_menu: effectiveTier === 'chat' || effectiveTier === 'bundle' || !!addons.menu,
           status: mapStripeStatus(sub.status),
           current_period_end: getSubscriptionPeriodEndForDb(sub, row.current_period_end),
           billing_type: 'CREDIT_CARD',
@@ -250,19 +253,21 @@ export async function POST({ request }) {
           break;
         }
 
+        const effectiveTier = planTier || row.plan_tier || 'pdv';
         await updateSubscriptionRow(row.id, {
           provider_subscription_id: stripeSubId,
           provider_customer_id: stripeCustomerId,
           payment_provider: 'stripe',
-          plan_tier: planTier || row.plan_tier || 'pdv',
+          plan_tier: effectiveTier,
           has_mesas_addon: !!addons.mesas,
           has_pedidos_addon: !!addons.pedidos,
           has_acessos_addon: !!addons.acessos,
+          has_zelo_menu: effectiveTier === 'chat' || effectiveTier === 'bundle' || !!addons.menu,
           status: mapStripeStatus(sub.status),
           current_period_end: getSubscriptionPeriodEndForDb(sub, row.current_period_end),
           cancel_at_period_end: !!sub.cancel_at_period_end,
         });
-        console.log(`[Stripe Webhook] [SYNC] sub ${stripeSubId} → status=${sub.status}, plan=${planTier}, mesas=${!!addons.mesas}, pedidos=${!!addons.pedidos}, acessos=${!!addons.acessos}`);
+        console.log(`[Stripe Webhook] [SYNC] sub ${stripeSubId} → status=${sub.status}, plan=${effectiveTier}, mesas=${!!addons.mesas}, pedidos=${!!addons.pedidos}, acessos=${!!addons.acessos}, zelomenu=${effectiveTier === 'chat' || effectiveTier === 'bundle' || !!addons.menu}`);
         break;
       }
 
