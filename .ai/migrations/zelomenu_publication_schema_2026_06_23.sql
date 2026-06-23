@@ -95,10 +95,10 @@ create policy zelomenu_product_publications_actor_delete
   to authenticated
   using (get_owner_user_id(auth.uid()) = id_usuario);
 
+revoke all on public.zelomenu_product_publications from anon, authenticated, service_role;
 grant select, insert, update, delete
   on public.zelomenu_product_publications
   to authenticated, service_role;
-revoke all on public.zelomenu_product_publications from anon;
 
 create table if not exists public.zelomenu_modifier_groups (
   id uuid primary key default gen_random_uuid(),
@@ -188,10 +188,10 @@ create policy zelomenu_modifier_groups_actor_delete
   to authenticated
   using (get_owner_user_id(auth.uid()) = id_usuario);
 
+revoke all on public.zelomenu_modifier_groups from anon, authenticated, service_role;
 grant select, insert, update, delete
   on public.zelomenu_modifier_groups
   to authenticated, service_role;
-revoke all on public.zelomenu_modifier_groups from anon;
 
 create table if not exists public.zelomenu_modifier_options (
   id uuid primary key default gen_random_uuid(),
@@ -275,9 +275,9 @@ create policy zelomenu_modifier_options_actor_delete
   to authenticated
   using (get_owner_user_id(auth.uid()) = id_usuario);
 
+revoke all on public.zelomenu_modifier_options from anon, authenticated, service_role;
 grant select, insert, update, delete
   on public.zelomenu_modifier_options
   to authenticated, service_role;
-revoke all on public.zelomenu_modifier_options from anon;
 
 notify pgrst, 'reload schema';

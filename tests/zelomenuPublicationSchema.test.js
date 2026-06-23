@@ -39,10 +39,10 @@ describe('ZeloMenu publication schema migration', () => {
 
   it('requires explicit authenticated grants and keeps anon out of editor tables', () => {
     for (const table of tables) {
+      expect(migration).toContain(`revoke all on public.${table} from anon, authenticated, service_role`);
       expect(migration).toContain(
         `grant select, insert, update, delete\n  on public.${table}\n  to authenticated, service_role`,
       );
-      expect(migration).toContain(`revoke all on public.${table} from anon`);
     }
   });
 

@@ -71,14 +71,15 @@ Padrao recorrente:
 ## ZeloMenu publication layer
 
 Migration local: `.ai/migrations/zelomenu_publication_schema_2026_06_23.sql`.
-Estado produção em 2026-06-23: ainda não aplicada; verificação via service role retornou `PGRST205` para `zelomenu_product_publications` após queda do conector Supabase durante o rollout.
+Estado produção em 2026-06-23: aplicada no Supabase real como `zelomenu_publication_schema_2026_06_23`.
 
 - `zelomenu_product_publications` guarda visibilidade online, nome/descricao/foto publicos, ordem e pausa manual por produto.
 - `zelomenu_modifier_groups` e `zelomenu_modifier_options` guardam adicionais/variacoes vinculados ao produto comum.
 - O produto base segue em `produtos`; preco base segue em `produtos.preco`.
 - `produtos.ocultar_no_pdv` nao controla publicacao online. A visibilidade do ZeloMenu e `zelomenu_product_publications.visivel_online` + `pausado_manualmente`.
 - RLS usa `get_owner_user_id(auth.uid()) = id_usuario`; writes tambem verificam que o produto/grupo pertence ao mesmo `id_usuario`.
-- As tabelas novas incluem grants explicitos para `authenticated`/`service_role` e revogam `anon`, porque RLS sozinho nao deve ser assumido como permissao de acesso ao PostgREST.
+- As tabelas novas incluem grants explicitos mínimos (`select`, `insert`, `update`, `delete`) para `authenticated`/`service_role` e revogam `anon`, porque RLS sozinho nao deve ser assumido como permissao de acesso ao PostgREST.
+- Verificação pós-rollout: RLS ligado nas 3 tabelas, 4 policies por tabela, constraints/FKs/índices presentes, nenhum grant para `anon` e chave pública bloqueada para acesso anônimo.
 
 ## O que o add-on Acessos realmente garante hoje
 

@@ -10,7 +10,7 @@
 - Trial grátis local vencido usa status `trial_expired`; `past_due` é reservado para falha/atraso de pagamento.
 - `billing_payments` registra o fluxo Pix da AbacatePay.
 - A camada PDV-owned de publicação do ZeloMenu fica em `zelomenu_product_publications`, `zelomenu_modifier_groups` e `zelomenu_modifier_options`; o catálogo base continua em `produtos`/`categorias`, visibilidade online não usa `produtos.ocultar_no_pdv` e preço base não tem override no v1.
-- Em 2026-06-23, a migration local de publicação do ZeloMenu ainda não estava aplicada no Supabase real; verificação via service role retornou `PGRST205` para `zelomenu_product_publications` depois de queda do conector Supabase.
+- Em 2026-06-23, a migration de publicação do ZeloMenu foi aplicada no Supabase real como `zelomenu_publication_schema_2026_06_23`; verificado RLS ligado, policies por owner, grants mínimos para `authenticated`/`service_role`, nenhum grant para `anon`, constraints/FKs/índices presentes e acesso anônimo bloqueado por chave pública.
 - `src/lib/pricing.js` é o catálogo canônico de planos, add-ons e Stripe price IDs.
 - O fluxo offline do PDV é contingência, não offline-first completo.
 - O replay offline depende de `client_sale_id` e da RPC `criar_venda_completa`.

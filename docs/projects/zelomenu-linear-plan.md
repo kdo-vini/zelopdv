@@ -882,8 +882,8 @@ Resultado (2026-06-23, ZeloPDV):
 - Catálogo base continua em `produtos`/`categorias`; preço base continua em `produtos.preco`; v1 não tem override de preço.
 - `produtos.ocultar_no_pdv` não é usado para publicação online.
 - RLS por `get_owner_user_id(auth.uid())`, writes com checagem de posse do produto/grupo e grants explícitos para `authenticated`/`service_role`.
-- Validação: `npm test -- tests/zelomenuPublicationSchema.test.js` — 5/5; `npm test` — 166/166; `npm run check` — 0 errors / 106 warnings; `npm run build` — ok com warnings pré-existentes de Svelte/PWA/dependências opcionais. Migration ainda não aplicada em produção.
-- Rollout Supabase (2026-06-23): tentativa de aplicação interrompida antes desta migration porque o conector Supabase passou a retornar HTTP 500/-32603. Verificação via service role retornou `PGRST205` para `zelomenu_product_publications`; produção ainda não tem a camada de publicação.
+- Validação: `npm test -- tests/zelomenuPublicationSchema.test.js` — 5/5; `npm test` — 166/166; `npm run check` — 0 errors / 106 warnings; `npm run build` — ok com warnings pré-existentes de Svelte/PWA/dependências opcionais.
+- Rollout Supabase (2026-06-23): migration aplicada no Supabase real como `zelomenu_publication_schema_2026_06_23`. Verificado RLS ligado nas 3 tabelas, 4 policies por tabela, grants mínimos para `authenticated`/`service_role`, nenhum grant para `anon`, constraints/FKs/índices presentes e acesso anônimo bloqueado por chave pública.
 
 #### ZLM-005 — Definir entitlements e navegação
 
@@ -1034,8 +1034,8 @@ Aceite:
 Progresso (2026-06-23, ZeloPDV):
 - Base de dados desbloqueada por ZLM-004: publicação e modificadores já têm contrato versionado em migration local.
 - Ainda falta a UI self-service autenticada para criar/editar essas linhas e o consumo pelo menu público.
-- Ainda falta aplicar/validar a migration em staging/prod antes de conectar ZeloChat/ZeloMenu a essa camada.
-- Tentativa de rollout em produção parou por indisponibilidade do conector Supabase antes da migration PDV-owned; retomar pela aplicação de `.ai/migrations/zelomenu_publication_schema_2026_06_23.sql`.
+- Migration aplicada e validada no Supabase real; conectar ZeloChat/ZeloMenu a essa camada agora depende de adapter/UI, não de novo schema.
+- Próximo corte: consumir `zelomenu_product_publications`, `zelomenu_modifier_groups` e `zelomenu_modifier_options` preservando `produtos` como catálogo base.
 
 #### ZLM-202 — Tela comum de Pedidos liberada por ZeloMenu
 
