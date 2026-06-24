@@ -9,7 +9,8 @@
   import { hasZeloMenuAccess } from '$lib/guards';
   import { publishProductsToZeloMenu, unpublishProductsFromZeloMenu } from '$lib/zelomenuPublications';
   import * as Select from '$lib/components/ui/select/index.js';
-  import { Upload, Pencil, Trash2, EyeOff, Plus } from 'lucide-svelte';
+  import { Upload, Pencil, Trash2, EyeOff, Plus, SlidersHorizontal } from 'lucide-svelte';
+  import ModalModificadores from '$lib/components/modals/ModalModificadores.svelte';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
@@ -50,6 +51,15 @@
   let publicacoes = new Map(); // id_produto -> { visivel_online }
   let publishingSingle = null; // id_produto being toggled
   let ownerUserId = null; // cached from getAccessContext
+
+  // Modificadores ZeloMenu
+  let modificadoresAberto = false;
+  let produtoParaModificadores = null;
+
+  function abrirModificadores(prod) {
+    produtoParaModificadores = { id: prod.id, nome: prod.nome };
+    modificadoresAberto = true;
+  }
 
   // Edição inline
   let editingProdId = null;
@@ -1524,6 +1534,16 @@
                   </div>
 
                   <div class="row-actions">
+                    {#if hasMenuAccess}
+                      <button
+                        class="row-action-btn"
+                        title="Grupos de modificadores"
+                        on:click={() => abrirModificadores(prod)}
+                        style="color: var(--text-muted);"
+                      >
+                        <SlidersHorizontal class="w-4 h-4" />
+                      </button>
+                    {/if}
                     <button
                       class="row-action-btn"
                       title="Editar"
@@ -1798,6 +1818,16 @@
                   <!-- Ações -->
                   <td class="td-cell text-right">
                     <div class="row-actions">
+                      {#if hasMenuAccess}
+                        <button
+                          class="row-action-btn"
+                          title="Grupos de modificadores"
+                          on:click={() => abrirModificadores(prod)}
+                          style="color: var(--text-muted);"
+                        >
+                          <SlidersHorizontal class="w-4 h-4" />
+                        </button>
+                      {/if}
                       <button
                         class="row-action-btn"
                         title="Editar"
@@ -2139,6 +2169,12 @@
     </div>
   </div>
 {/if}
+
+<ModalModificadores
+  bind:open={modificadoresAberto}
+  produto={produtoParaModificadores}
+  {ownerUserId}
+/>
 
 <style>
   /* ─── Layout ──────────────────────────────────────────────────────────────── */

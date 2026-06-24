@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { hasMesasAddon, hasPedidosAddon, hasZeloChatAccess, hasAcessosAddon, hasZeloMenuAccess } from '$lib/guards';
   import { PLANS, ADDONS } from '$lib/pricing';
+  import { addToast } from '$lib/stores/ui';
 
   let userId = '';
   let ready = false;
@@ -12,6 +13,62 @@
   let chatActive = false;
   let menuActive = false;
   let planTier = null;
+
+  // Slug do cardápio público
+  let slugAtual = null;
+  let slugInput = '';
+  let salvandoSlug = false;
+  let slugCopiado = false;
+
+  async function carregarSlug() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/zelomenu/slug', {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
+      if (!res.ok) return;
+      const { slug } = await res.json();
+      slugAtual = slug;
+      slugInput = slug || '';
+    } catch {}
+  }
+
+  async function salvarSlug() {
+    const valor = slugInput.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!valor) { addToast('O link não pode ser vazio.', 'warning'); return; }
+    salvandoSlug = true;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/zelomenu/slug', {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ slug: valor })
+      });
+      const json = await res.json();
+      if (!res.ok) { addToast(json.error || 'Erro ao salvar.', 'error'); return; }
+      slugAtual = json.slug;
+      slugInput = json.slug;
+      addToast('Link salvo com sucesso.', 'success');
+    } catch (err) {
+      addToast('Erro ao salvar: ' + err.message, 'error');
+    } finally {
+      salvandoSlug = false;
+    }
+  }
+
+  async function copiarLink() {
+    if (!slugAtual) return;
+    try {
+      await navigator.clipboard.writeText(`https://menu.zelopdv.com.br/${slugAtual}`);
+      slugCopiado = true;
+      setTimeout(() => { slugCopiado = false; }, 2000);
+    } catch {
+      addToast('Não foi possível copiar. Copie manualmente.', 'warning');
+    }
+  }
 
   onMount(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -50,6 +107,7 @@
       hasZeloMenuAccess(userId),
     ]);
     ready = true;
+    if (menuActive) carregarSlug();
   });
 
   // Catálogo de extensões. ZeloChat aparece como produto/plano (não addon),
@@ -145,6 +203,35 @@
       </p>
     </header>
 
+    {#if menuActive}
+      <div class="link-panel">
+        <div class="link-panel-header">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">ZeloMenu · Cardápio online</p>
+          <h2 class="text-base font-bold text-slate-100 tracking-tight">Link público do cardápio</h2>
+          <p class="link-panel-desc">Seu cardápio online estará disponível em <strong>menu.zelopdv.com.br/{slugAtual || '…'}</strong></p>
+        </div>
+        <div class="link-form">
+          <span class="link-prefix">menu.zelopdv.com.br/</span>
+          <input
+            type="text"
+            class="field-input link-input"
+            placeholder="nome-do-seu-negocio"
+            bind:value={slugInput}
+            on:keydown={(e) => e.key === 'Enter' && salvarSlug()}
+          />
+          <button type="button" class="btn-cta" on:click={salvarSlug} disabled={salvandoSlug}>
+            {salvandoSlug ? 'Salvando…' : 'Salvar'}
+          </button>
+          {#if slugAtual}
+            <button type="button" class="btn-copy" on:click={copiarLink}>
+              {slugCopiado ? '✓ Copiado' : 'Copiar link'}
+            </button>
+          {/if}
+        </div>
+        <p class="link-hint">Use apenas letras minúsculas, números e hífens. Ex: <code>minha-lanchonete</code></p>
+      </div>
+    {/if}
+
     <div class="addons-grid">
       {#each extensions as ext (ext.id)}
         <article class="addon-card" class:active={ext.active} class:disabled={!ext.compatible}>
@@ -221,6 +308,69 @@
 
   .centered-state { height: 60vh; display: flex; align-items: center; justify-content: center; }
   .muted { color: var(--text-muted); }
+
+  .link-panel {
+    margin-bottom: 1.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-left: 3px solid var(--primary);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .link-panel-header { display: flex; flex-direction: column; gap: 0; }
+  .link-panel-desc { font-size: 0.85rem; color: var(--text-label); margin: 0.3rem 0 0; line-height: 1.5; }
+  .link-panel-desc strong { color: var(--text-main); }
+
+  .link-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .link-prefix {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .link-input {
+    flex: 1;
+    min-width: 160px;
+    padding: 0.45rem 0.75rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 120ms;
+  }
+  .link-input:focus { border-color: var(--primary); }
+
+  .btn-copy {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-panel);
+    color: var(--text-label);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 150ms, border-color 150ms;
+    white-space: nowrap;
+  }
+  .btn-copy:hover { background: var(--bg-card); border-color: var(--border-strong); color: var(--text-main); }
+
+  .link-hint { font-size: 0.76rem; color: var(--text-muted); margin: 0; }
+  .link-hint code { font-size: 0.73rem; color: var(--accent); background: var(--accent-light); padding: 1px 4px; border-radius: 3px; }
 
   .page-header { margin-bottom: 1.75rem; }
   .title {

@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { ensureActiveSubscription, hasPedidosAddon, bounceSubUserMissingAddon } from '$lib/guards';
+  import { ensureActiveSubscription, hasPedidosAddon, hasZeloMenuAccess, bounceSubUserMissingAddon } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -16,6 +16,7 @@
   let ready = false;
   let loading = true;
   let addonActive = false;
+  let menuActive = false;
   let userId = '';
   let ownerUserId = '';
   let operadorUserId = '';
@@ -65,11 +66,15 @@
       return;
     }
     pdvCache.setUserId(ownerUserId);
-    addonActive = await hasPedidosAddon(ownerUserId);
-    if (bounceSubUserMissingAddon({ addonActive, isSubUser, addonLabel: 'Pedidos' })) return;
+    [addonActive, menuActive] = await Promise.all([
+      hasPedidosAddon(ownerUserId),
+      hasZeloMenuAccess(ownerUserId)
+    ]);
+    const canAccess = addonActive || menuActive;
+    if (bounceSubUserMissingAddon({ addonActive: canAccess, isSubUser, addonLabel: 'Pedidos / ZeloMenu' })) return;
     ready = true;
 
-    if (!addonActive) {
+    if (!canAccess) {
       loading = false;
       return;
     }
@@ -123,13 +128,19 @@
     if (polling || fechandoPedido || !userId) return;
     polling = true;
     try {
-      // Origem 'comanda' é cobrada no fluxo de mesas (evita double-charge).
-      // Origem 'zelochat' (futuro) seguirá fluxo próprio. Caixa só recebe pedidos de balcão.
+      // Origens carregadas dependem dos addons ativos:
+      // balcao → sempre (se addonActive); zelomenu → se menuActive.
+      // comanda segue fluxo de mesas; zelochat tem fluxo próprio.
+      const origensParaCarregar = [];
+      if (addonActive) origensParaCarregar.push('balcao');
+      if (menuActive) origensParaCarregar.push('zelomenu');
+      if (!origensParaCarregar.length) { polling = false; loading = false; return; }
+
       const { data, error } = await supabase
         .from('pedidos')
         .select('id, numero_pedido, status, observacoes, nome_cliente, origem, criado_em, pedido_itens(id, id_produto, nome, preco_unitario, quantidade, subtotal, enviado_cozinha, status_cozinha)')
         .eq('id_usuario', ownerUserId || userId)
-        .eq('origem', 'balcao')
+        .in('origem', origensParaCarregar)
         .in('status', ['aberto', 'pronto'])
         .order('criado_em', { ascending: true });
 
@@ -368,9 +379,40 @@
   }
 
   function origemLabel(pedido) {
+    if (pedido?.origem === 'zelomenu') return 'Online';
     if (pedido?.origem === 'comanda') return 'Mesa';
     if (pedido?.origem === 'zelochat') return 'ZeloChat';
     return 'Balcão';
+  }
+
+  async function fecharPedidoZeloMenu(pedido) {
+    const ok = await confirmAction(
+      `Confirmar entrega — Pedido #${pedido.numero_pedido}`,
+      'Marcar como entregue? O pagamento já foi coletado pelo cardápio online.'
+    );
+    if (!ok) return;
+    fechandoPedido = true;
+    try {
+      const { error, data: atualizado } = await supabase
+        .from('pedidos')
+        .update({ status: 'fechado', fechado_em: new Date().toISOString(), id_operador: operadorUserId })
+        .eq('id', pedido.id)
+        .eq('id_usuario', ownerUserId || userId)
+        .in('status', ['aberto', 'pronto'])
+        .select('id');
+      if (error) throw error;
+      if (!atualizado || atualizado.length === 0) {
+        addToast('Pedido já havia sido fechado em outro dispositivo.', 'warning');
+      } else {
+        addToast(`Pedido #${pedido.numero_pedido} marcado como entregue.`, 'success');
+      }
+      mobileDetailOpen = false;
+      await carregarPedidos();
+    } catch (err) {
+      addToast('Erro: ' + getFriendlyErrorMessage(err), 'error');
+    } finally {
+      fechandoPedido = false;
+    }
   }
 
   function formatMoney(value) {
@@ -396,12 +438,12 @@
     <div class="state-card">
       <p>Carregando...</p>
     </div>
-  {:else if !addonActive}
+  {:else if !addonActive && !menuActive}
     <section class="upsell">
       <p class="eyebrow">Módulo Pedidos</p>
-      <h1>Pedidos + Cozinha</h1>
-      <p>O módulo de pedidos não está ativo nesta assinatura.</p>
-      <a href="/assinatura?addon=pedidos">Ativar módulo</a>
+      <h1>Fila de Pedidos</h1>
+      <p>Ative o ZeloMenu ou o módulo de Pedidos para receber e gerenciar pedidos.</p>
+      <a href="/gestao/extensoes">Ver extensões</a>
     </section>
   {:else}
     <header class="page-header">
@@ -452,7 +494,12 @@
                   <span class="status-pill" data-status={pedido.status} aria-label="Status: {statusLabel(pedido.status)}">{statusLabel(pedido.status)}</span>
                 </div>
                 <div class="qi-mid">
-                  <strong class="qi-cliente">{clienteLabel(pedido)}</strong>
+                  <div class="qi-cliente-row">
+                    <strong class="qi-cliente">{clienteLabel(pedido)}</strong>
+                    {#if pedido.origem === 'zelomenu'}
+                      <span class="online-badge">Online</span>
+                    {/if}
+                  </div>
                   <span class="qi-meta">{origemLabel(pedido)} · {formatTime(pedido.criado_em)}</span>
                 </div>
                 <div class="qi-foot">
@@ -523,14 +570,25 @@
                 <span>Total</span>
                 <strong>{formatMoney(totalPedido)}</strong>
               </div>
-              <button type="button" class="btn-success" on:click={abrirPagamento} disabled={fechandoPedido || totalPedido <= 0}>
-                {#if fechandoPedido}
-                  Fechando...
-                {:else}
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>
-                  <span>Receber</span>
-                {/if}
-              </button>
+              {#if pedidoSelecionado?.origem === 'zelomenu'}
+                <button type="button" class="btn-success" on:click={() => fecharPedidoZeloMenu(pedidoSelecionado)} disabled={fechandoPedido}>
+                  {#if fechandoPedido}
+                    Confirmando...
+                  {:else}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Confirmar entrega</span>
+                  {/if}
+                </button>
+              {:else}
+                <button type="button" class="btn-success" on:click={abrirPagamento} disabled={fechandoPedido || totalPedido <= 0}>
+                  {#if fechandoPedido}
+                    Fechando...
+                  {:else}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>
+                    <span>Receber</span>
+                  {/if}
+                </button>
+              {/if}
             </footer>
 
             {#if erroPagamento}
@@ -777,6 +835,25 @@
     display: grid;
     gap: 2px;
     min-width: 0;
+  }
+  .qi-cliente-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .online-badge {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+    border-radius: 4px;
+    padding: 1px 5px;
+    line-height: 1.4;
   }
   .qi-cliente {
     font-size: 1rem;
