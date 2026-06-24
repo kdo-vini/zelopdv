@@ -6,7 +6,10 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { waitAuthReady } from '$lib/authStore';
   import { getAccessContext } from '$lib/accessControl';
+  import { hasZeloMenuAccess } from '$lib/guards';
+  import { publishProductsToZeloMenu } from '$lib/zelomenuPublications';
   import * as Select from '$lib/components/ui/select/index.js';
+  import { Upload } from 'lucide-svelte';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
@@ -39,6 +42,8 @@
 
   // Seleção em massa
   let selectedItems = new Set();
+  let hasMenuAccess = false;
+  let publishingToMenu = false;
 
   // Edição inline
   let editingProdId = null;
@@ -113,8 +118,13 @@
     kitPascoaInserted = localStorage.getItem('zelo_kit_pascoa_2026') === 'done';
     await carregarTudo();
     try {
-      const ctx = await getAccessContext();
+      const [{ data: userData }, ctx] = await Promise.all([
+        supabase.auth.getUser(),
+        getAccessContext()
+      ]);
+      const userId = userData?.user?.id;
       const ownerId = ctx?.ownerUserId;
+      hasMenuAccess = userId ? await hasZeloMenuAccess(userId) : false;
       if (ownerId) {
         const { data: perfil } = await supabase
           .from('empresa_perfil')
@@ -131,7 +141,8 @@
         }
       }
     } catch (e) {
-      console.warn('[tabelas-preco] perfil load failed:', e?.message);
+      hasMenuAccess = false;
+      console.warn('[produtos] setup load failed:', e?.message);
     }
   });
 
@@ -644,6 +655,62 @@
     await carregarProdutos();
   }
 
+  async function publicarNoMenuEmMassa() {
+    if (selectedItems.size === 0 || publishingToMenu) return;
+
+    const [{ data: userData }, ctx] = await Promise.all([
+      supabase.auth.getUser(),
+      getAccessContext()
+    ]);
+    const userId = userData?.user?.id;
+    const ownerUserId = ctx?.ownerUserId;
+
+    if (!userId || !ownerUserId) {
+      addToast('Sua sessão expirou. Entre novamente para continuar.', 'error');
+      return;
+    }
+
+    const menuAccessActive = await hasZeloMenuAccess(userId);
+    hasMenuAccess = menuAccessActive;
+    if (!menuAccessActive) {
+      addToast('O módulo ZeloMenu não está ativo para esta empresa.', 'warning');
+      return;
+    }
+
+    const productIds = Array.from(selectedItems);
+    const ok = await confirmAction(
+      'Publicar no menu',
+      `Publicar ${productIds.length} produto(s) selecionado(s)? Eles ficarão disponíveis no menu da empresa.`
+    );
+    if (!ok) return;
+
+    publishingToMenu = true;
+    try {
+      const { publishedIds, failedIds } = await publishProductsToZeloMenu(supabase, {
+        ownerUserId,
+        productIds
+      });
+
+      selectedItems = new Set(failedIds);
+
+      if (failedIds.length === 0) {
+        addToast(`${publishedIds.length} produto(s) publicado(s) no menu.`, 'success');
+      } else if (publishedIds.length > 0) {
+        addToast(
+          `${publishedIds.length} produto(s) publicado(s); ${failedIds.length} não foram publicados e continuam selecionados.`,
+          'warning'
+        );
+      } else {
+        addToast('Não foi possível publicar os produtos selecionados. Tente novamente.', 'error');
+      }
+    } catch (error) {
+      console.warn('[ZeloMenu] bulk publication failed:', error?.message);
+      addToast('Não foi possível publicar os produtos selecionados. Tente novamente.', 'error');
+    } finally {
+      publishingToMenu = false;
+    }
+  }
+
   // ─── Helpers ──────────────────────────────────────────────────────────────────
   function formatPreco(valor) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
@@ -973,17 +1040,31 @@
       <!-- Indicador de filtro ativo -->
       <div class="flex items-center gap-2 min-w-0">
         {#if selectedItems.size > 0}
-          <button
-            class="bulk-delete-btn"
-            on:click={excluirEmMassa}
-            style="background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error); border-color: var(--error);"
-          >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Excluir ({selectedItems.size})
-          </button>
+          <div class="flex items-center gap-2 flex-wrap">
+            {#if hasMenuAccess}
+              <button
+                class="bulk-action-btn"
+                on:click={publicarNoMenuEmMassa}
+                disabled={publishingToMenu}
+                style="background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); border-color: var(--primary);"
+              >
+                <Upload class="w-4 h-4" />
+                {publishingToMenu ? 'Publicando...' : `Publicar no menu (${selectedItems.size})`}
+              </button>
+            {/if}
+            <button
+              class="bulk-action-btn"
+              on:click={excluirEmMassa}
+              disabled={publishingToMenu}
+              style="background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error); border-color: var(--error);"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Excluir ({selectedItems.size})
+            </button>
+          </div>
         {:else}
           <div class="flex items-center gap-1.5 min-w-0">
             <svg class="w-4 h-4 shrink-0" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2021,7 +2102,7 @@
     border: 1px solid;
   }
 
-  .bulk-delete-btn {
+  .bulk-action-btn {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -2031,6 +2112,11 @@
     font-size: 0.875rem;
     font-weight: 500;
     transition: all var(--transition-fast);
+  }
+
+  .bulk-action-btn:disabled {
+    cursor: wait;
+    opacity: 0.65;
   }
 
   /* ─── Edit inline na tabela ──────────────────────────────────────────────── */

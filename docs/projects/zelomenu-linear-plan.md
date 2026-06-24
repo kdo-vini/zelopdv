@@ -1031,11 +1031,13 @@ Aceite:
 - Cliente configura sozinho o básico.
 - Equipe Zelo não precisa cadastrar tudo manualmente.
 
-Progresso (2026-06-23, ZeloPDV):
+Progresso (2026-06-24, ZeloPDV):
 - Base de dados desbloqueada por ZLM-004: publicação e modificadores já têm contrato versionado em migration local.
-- Ainda falta a UI self-service autenticada para criar/editar essas linhas e o consumo pelo menu público.
+- Gestão → Produtos agora publica em lote via `zelomenu_product_publications`, somente com `hasZeloMenuAccess`; falhas parciais permanecem selecionadas para nova tentativa.
+- O write path foi encapsulado em `src/lib/zelomenuPublications.js`, seam reutilizável por futura ação individual, despublicação ou pausa.
+- Ainda faltam edição self-service de nome/descrição/foto/ordem, despublicação/pausa, modificadores e o consumo pelo menu público.
 - Migration aplicada e validada no Supabase real; conectar ZeloChat/ZeloMenu a essa camada agora depende de adapter/UI, não de novo schema.
-- Próximo corte: consumir `zelomenu_product_publications`, `zelomenu_modifier_groups` e `zelomenu_modifier_options` preservando `produtos` como catálogo base.
+- Próximo corte: ler/editar `zelomenu_product_publications` e consumir `zelomenu_modifier_groups`/`zelomenu_modifier_options`, preservando `produtos` como catálogo base.
 
 #### ZLM-202 — Tela comum de Pedidos liberada por ZeloMenu
 
