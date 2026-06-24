@@ -9,7 +9,7 @@
   import { hasZeloMenuAccess } from '$lib/guards';
   import { publishProductsToZeloMenu, unpublishProductsFromZeloMenu } from '$lib/zelomenuPublications';
   import * as Select from '$lib/components/ui/select/index.js';
-  import { Upload, Pencil, Trash2, EyeOff } from 'lucide-svelte';
+  import { Upload, Pencil, Trash2, EyeOff, Plus } from 'lucide-svelte';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
@@ -854,22 +854,25 @@
 <svelte:window on:click={handleClickOutside} />
 
 <!-- ─── Cabeçalho da Página ──────────────────────────────────────────────────── -->
-<div class="mb-6 flex items-end justify-between pb-4" style="border-bottom: 1px solid var(--border-subtle);">
-  <div>
+<div class="page-header" style="border-bottom: 1px solid var(--border-subtle);">
+  <div class="page-title-block">
     <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Produtos</p>
     <h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Produtos</h1>
   </div>
 
   <!-- Botões de ação globais -->
-  <div class="flex items-center gap-2 flex-wrap">
+  <div class="page-actions">
     <button class="btn-secondary" on:click={() => showSubModal = true}>
-      + Nova Subcategoria
+      <Plus class="w-4 h-4" />
+      <span>Nova Subcategoria</span>
     </button>
     <button class="btn-secondary" on:click={() => showCatModal = true}>
-      + Nova Categoria
+      <Plus class="w-4 h-4" />
+      <span>Nova Categoria</span>
     </button>
     <button class="btn-primary" on:click={abrirModalProduto}>
-      + Novo Produto
+      <Plus class="w-4 h-4" />
+      <span>Novo Produto</span>
     </button>
   </div>
 </div>
@@ -1053,7 +1056,7 @@
 
           <!-- Subcategorias (expandidas) -->
           {#if expandedCats.has(cat.id)}
-            <div transition:slide|local={{ duration: 150 }}>
+            <div class="subcat-list" transition:slide|local={{ duration: 150 }}>
               {#each getSubcats(cat.id) as sub (sub.id)}
                 {#if editingSubId === sub.id}
                   <!-- Formulário de edição inline da subcategoria -->
@@ -1298,7 +1301,7 @@
     </div>
 
     <!-- Tabela -->
-    <div class="overflow-x-auto" style="background: var(--bg-panel);">
+    <div class="products-table-shell" style="background: var(--bg-panel);">
       {#if loading}
         <div class="p-12 text-center" style="color: var(--text-muted);">
           <div class="loading-spinner mx-auto mb-3" style="border-color: var(--primary); border-top-color: transparent;"></div>
@@ -1336,6 +1339,214 @@
           {/if}
         </div>
       {:else}
+        <div class="mobile-products-list">
+          {#each paginatedProdutos as prod (prod.id)}
+            <article
+              class="mobile-product-card"
+              class:mobile-product-card-selected={selectedItems.has(prod.id)}
+              style="border-color: var(--border-subtle);"
+            >
+              {#if editingProdId === prod.id}
+                <form on:submit={salvarEdicaoProduto} class="mobile-edit-form">
+                  <div class="mobile-edit-grid">
+                    <input
+                      class="edit-input"
+                      bind:value={editProdForm.nome}
+                      placeholder="Nome"
+                      required
+                      style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                    />
+                    <input
+                      class="edit-input"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      bind:value={editProdForm.preco}
+                      placeholder={tabelasPrecoAtivo ? nomesTabelas[0] : 'Preço'}
+                      required
+                      style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                    />
+                    {#if tabelasPrecoAtivo}
+                      <input
+                        class="edit-input"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        bind:value={editProdForm.preco_2}
+                        placeholder={nomesTabelas[1]}
+                        style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                      />
+                      <input
+                        class="edit-input"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        bind:value={editProdForm.preco_3}
+                        placeholder={nomesTabelas[2]}
+                        style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                      />
+                    {/if}
+                    <Select.Root bind:value={editProdForm.id_categoria}>
+                      <Select.Trigger class="field-input">
+                        <Select.Value placeholder="— Categoria —" />
+                      </Select.Trigger>
+                      <Select.Content>
+                        {#each categorias as c}
+                          <Select.Item value={c.id} label={c.nome} />
+                        {/each}
+                      </Select.Content>
+                    </Select.Root>
+                    <Select.Root bind:value={editProdForm.id_subcategoria} disabled={!editProdForm.id_categoria}>
+                      <Select.Trigger class="field-input">
+                        <Select.Value placeholder="— Subcategoria —" />
+                      </Select.Trigger>
+                      <Select.Content>
+                        {#each filteredSubcatsForEditForm as s}
+                          <Select.Item value={s.id} label={s.nome} />
+                        {/each}
+                      </Select.Content>
+                    </Select.Root>
+                  </div>
+
+                  <div class="mobile-edit-options" style="color: var(--text-label);">
+                    {#if editProdCategoriaCompartilhada}
+                      <span class="mobile-meta-note">Estoque compartilhado pela categoria</span>
+                    {:else}
+                      <label>
+                        <input type="checkbox" bind:checked={editProdForm.controlar_estoque} class="themed-checkbox" />
+                        Controlar estoque
+                      </label>
+                    {/if}
+                    {#if !editProdCategoriaCompartilhada && editProdForm.controlar_estoque}
+                      <label>
+                        Qtd.
+                        <input
+                          type="number"
+                          class="edit-input mobile-stock-input"
+                          bind:value={editProdForm.estoque_atual}
+                          style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                        />
+                      </label>
+                    {/if}
+                    <label>
+                      <input type="checkbox" bind:checked={editProdForm.ocultar_no_pdv} class="themed-checkbox" />
+                      Ocultar no PDV
+                    </label>
+                    <label>
+                      <input type="checkbox" bind:checked={editProdForm.eh_item_por_unidade} class="themed-checkbox" />
+                      Venda por unidade
+                    </label>
+                  </div>
+
+                  <div class="mobile-card-actions">
+                    <button type="button" class="btn-xs-ghost" on:click={cancelarEdicaoProduto} style="color: var(--text-muted); border-color: var(--border-subtle);">
+                      Cancelar
+                    </button>
+                    <button type="submit" class="btn-xs-primary" style="background: var(--primary); color: var(--primary-text);">
+                      Salvar
+                    </button>
+                  </div>
+                </form>
+              {:else}
+                <div class="mobile-product-main">
+                  <label class="mobile-select-box" aria-label={'Selecionar ' + prod.nome}>
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(prod.id)}
+                      on:change={() => toggleSelect(prod.id)}
+                      class="themed-checkbox"
+                    />
+                  </label>
+
+                  <div class="prod-avatar" style="background: color-mix(in srgb, {getInicialColor(prod.nome)} 18%, transparent); color: {getInicialColor(prod.nome)};">
+                    {(prod.nome || '?').charAt(0).toUpperCase()}
+                  </div>
+
+                  <div class="mobile-product-info">
+                    <div class="mobile-product-title-row">
+                      <h2>{prod.nome}</h2>
+                      {#if prod.ocultar_no_pdv}
+                        <span class="badge-oculto">Oculto</span>
+                      {/if}
+                    </div>
+                    <div class="mobile-product-meta">
+                      <span class="mobile-price">{formatPreco(prod.preco)}</span>
+                      {#if prod.controlar_estoque || estoqueProdutoCompartilhado(prod)}
+                        <span
+                          class="badge-estoque"
+                          title={estoqueProdutoCompartilhado(prod) ? 'Estoque compartilhado pela categoria' : 'Estoque individual'}
+                          style={estoqueExibido(prod) < 5
+                            ? 'background: color-mix(in srgb, var(--error) 12%, transparent); color: var(--error);'
+                            : 'background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);'}
+                        >
+                          Estoque {estoqueExibido(prod)}
+                        </span>
+                      {:else}
+                        <span style="color: var(--text-muted);">Sem estoque</span>
+                      {/if}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mobile-product-footer">
+                  <div class="mobile-status-row">
+                    {#if prod.ocultar_no_pdv}
+                      <span class="badge-status" style="background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text-muted);">Inativo</span>
+                    {:else}
+                      <span class="badge-status" style="background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);">Ativo</span>
+                    {/if}
+
+                    {#if hasMenuAccess}
+                      {#if publicacoes.get(prod.id)?.visivel_online}
+                        <button
+                          class="badge-status cursor-pointer"
+                          style="background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);"
+                          on:click={() => togglePublicacaoProduto(prod)}
+                          disabled={publishingSingle === prod.id}
+                          aria-pressed="true"
+                          aria-label={'Remover "' + prod.nome + '" do menu'}
+                        >
+                          No menu
+                        </button>
+                      {:else}
+                        <button
+                          class="badge-status cursor-pointer"
+                          style="background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text-muted);"
+                          on:click={() => togglePublicacaoProduto(prod)}
+                          disabled={publishingSingle === prod.id}
+                          aria-pressed="false"
+                          aria-label={'Publicar "' + prod.nome + '" no menu'}
+                        >
+                          Fora do menu
+                        </button>
+                      {/if}
+                    {/if}
+                  </div>
+
+                  <div class="row-actions">
+                    <button
+                      class="row-action-btn"
+                      title="Editar"
+                      on:click={() => iniciarEdicaoProduto(prod)}
+                      style="color: var(--text-muted);"
+                    >
+                      <Pencil class="w-4 h-4" />
+                    </button>
+                    <button
+                      class="row-action-btn row-action-danger"
+                      title="Excluir"
+                      on:click={() => excluirProduto(prod)}
+                      style="color: var(--error);"
+                    >
+                      <Trash2 class="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              {/if}
+            </article>
+          {/each}
+        </div>
+
         <table class="products-table">
           <thead style="background: var(--bg-card);">
             <tr>
@@ -1488,7 +1699,7 @@
 
                   <!-- Miniatura/Avatar -->
                   <td class="td-cell">
-                    <div class="prod-avatar" style="background: {getInicialColor(prod.nome)}20; color: {getInicialColor(prod.nome)};">
+                    <div class="prod-avatar" style="background: color-mix(in srgb, {getInicialColor(prod.nome)} 18%, transparent); color: {getInicialColor(prod.nome)};">
                       {(prod.nome || '?').charAt(0).toUpperCase()}
                     </div>
                   </td>
@@ -1931,6 +2142,27 @@
 
 <style>
   /* ─── Layout ──────────────────────────────────────────────────────────────── */
+  .page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+  }
+
+  .page-title-block {
+    min-width: 0;
+  }
+
+  .page-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
   .split-view {
     display: flex;
     gap: 0;
@@ -1989,10 +2221,6 @@
 
   .tree-item-root {
     margin-bottom: 0.25rem;
-  }
-
-  .tree-item-cat {
-    /* Categoria: indent normal */
   }
 
   .tree-item-sub {
@@ -2103,6 +2331,12 @@
     flex-wrap: wrap;
   }
 
+  .products-table-shell {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
   .search-wrapper {
     display: flex;
     align-items: center;
@@ -2170,6 +2404,10 @@
     text-align: left;
     font-size: 0.875rem;
     border-collapse: collapse;
+  }
+
+  .mobile-products-list {
+    display: none;
   }
 
   .th-cell {
@@ -2240,6 +2478,7 @@
     font-weight: 600;
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
+    border: 0;
   }
 
   .row-actions {
@@ -2594,20 +2833,393 @@
 
   /* ─── Responsividade mobile ───────────────────────────────────────────────── */
   @media (max-width: 640px) {
+    .page-header {
+      align-items: stretch;
+      gap: 0.875rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.875rem;
+    }
+
+    .page-title-block h1 {
+      font-size: 1.35rem;
+      line-height: 1.15;
+    }
+
+    .page-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .page-actions .btn-primary {
+      grid-column: 1 / -1;
+    }
+
+    .page-actions .btn-primary,
+    .page-actions .btn-secondary {
+      justify-content: center;
+      min-height: 2.75rem;
+      width: 100%;
+      padding: 0.625rem 0.75rem;
+      font-size: 0.8125rem;
+      white-space: nowrap;
+    }
+
     .split-view {
       flex-direction: column;
       height: auto;
+      min-height: 0;
+      gap: 0.75rem;
+      overflow: visible;
+      border: 0;
+      border-radius: 0;
+      background: transparent !important;
     }
 
     .tree-panel {
       width: 100%;
-      max-height: 240px;
+      max-height: none;
       border-right: none;
-      border-bottom: 1px solid var(--border-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      flex-shrink: 1;
+    }
+
+    .tree-header {
+      padding: 0.75rem 0.875rem;
+    }
+
+    .tree-list {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.75rem;
+      scrollbar-width: none;
+    }
+
+    .tree-list::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tree-cat-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 0 0 auto;
+      margin-bottom: 0;
+    }
+
+    .subcat-list {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tree-item {
+      min-height: 2.75rem;
+      width: auto;
+      max-width: 15rem;
+      flex: 0 0 auto;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      white-space: nowrap;
+    }
+
+    .tree-item-root {
+      margin-bottom: 0;
+    }
+
+    .tree-item-sub {
+      padding-left: 0.75rem;
+    }
+
+    .tree-item-actions {
+      display: none;
+    }
+
+    .tree-edit-form {
+      width: min(18rem, calc(100vw - 3rem));
+      flex: 0 0 auto;
+      margin: 0;
+    }
+
+    .chevron-btn {
+      min-width: 2rem;
+      min-height: 2rem;
+      margin-left: -0.25rem;
+    }
+
+    .sub-dot {
+      margin-left: 0;
+    }
+
+    .products-panel {
+      overflow: visible;
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem;
+      background: var(--bg-panel);
+    }
+
+    .products-toolbar {
+      align-items: stretch;
+      gap: 0.75rem;
+      padding: 0.875rem;
+    }
+
+    .products-toolbar > div {
+      width: 100%;
+    }
+
+    .products-toolbar > div:last-child {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 2.75rem;
+      gap: 0.5rem;
+    }
+
+    .search-wrapper {
+      width: 100%;
+      min-height: 2.75rem;
+      padding: 0.5rem 0.75rem;
     }
 
     .search-input {
-      width: 120px;
+      width: 100%;
+      min-width: 0;
+      font-size: 1rem;
+    }
+
+    .filter-dropdown-wrapper {
+      position: static;
+    }
+
+    .filter-btn {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+
+    .filter-dropdown {
+      position: fixed;
+      top: auto;
+      right: 0.75rem;
+      left: 0.75rem;
+      bottom: 0.75rem;
+      z-index: 80;
+      min-width: 0;
+      border-radius: 0.75rem;
+      padding: 1rem;
+    }
+
+    .filter-option {
+      min-height: 2.75rem;
+      font-size: 0.9375rem;
+    }
+
+    .products-table-shell {
+      overflow: visible;
+    }
+
+    .products-table {
+      display: none;
+    }
+
+    .mobile-products-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+      padding: 0.75rem;
+      background: var(--bg-panel);
+    }
+
+    .mobile-product-card {
+      border: 1px solid;
+      border-radius: 0.75rem;
+      background: var(--bg-card);
+      padding: 0.75rem;
+      transition: border-color var(--transition-fast), background var(--transition-fast);
+    }
+
+    .mobile-product-card-selected {
+      border-color: var(--primary) !important;
+      background: color-mix(in srgb, var(--primary) 8%, var(--bg-card));
+    }
+
+    .mobile-product-main {
+      display: grid;
+      grid-template-columns: 2.75rem 2.5rem minmax(0, 1fr);
+      align-items: center;
+      gap: 0.625rem;
+    }
+
+    .mobile-select-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+
+    .mobile-product-info {
+      min-width: 0;
+    }
+
+    .mobile-product-title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    .mobile-product-title-row h2 {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      color: var(--text-main);
+      font-size: 0.9375rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .mobile-product-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.375rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+
+    .mobile-price {
+      color: var(--text-label);
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+
+    .mobile-product-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .mobile-status-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .row-action-btn {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
+
+    .mobile-edit-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .mobile-edit-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.625rem;
+    }
+
+    .mobile-edit-grid .edit-input,
+    .mobile-edit-grid :global(.field-input) {
+      width: 100%;
+      min-height: 2.75rem;
+    }
+
+    .mobile-edit-options {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.625rem;
+      font-size: 0.875rem;
+    }
+
+    .mobile-edit-options label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 2.5rem;
+    }
+
+    .mobile-meta-note {
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+    }
+
+    .mobile-stock-input {
+      width: 5rem;
+      min-height: 2.5rem;
+    }
+
+    .mobile-card-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0.5rem;
+    }
+
+    .mobile-card-actions button {
+      min-height: 2.75rem;
+      justify-content: center;
+    }
+
+    .pagination {
+      align-items: stretch;
+      gap: 0.75rem;
+      flex-direction: column;
+      padding: 0.875rem;
+    }
+
+    .pagination > div {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0.5rem;
+    }
+
+    .page-btn {
+      min-height: 2.75rem;
+      padding: 0.625rem 0.75rem;
+    }
+
+    .prod-avatar {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 0.5rem;
+    }
+
+    .badge-estoque,
+    .badge-status,
+    .badge-oculto {
+      white-space: nowrap;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tree-item,
+    .filter-btn,
+    .product-row,
+    .mobile-product-card,
+    .row-action-btn,
+    .btn-primary,
+    .btn-secondary,
+    .page-btn {
+      transition: none;
+    }
+
+    .loading-spinner {
+      animation: none;
     }
   }
 </style>
