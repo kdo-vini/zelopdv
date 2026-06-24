@@ -658,7 +658,7 @@ export const extensoes = {
     ],
     finalCtaTitle: 'Teste o ZeloMenu por 30 dias grátis',
     finalCtaText:
-      'Cria conta sem cartão, ativa o ZeloMenu no checkout e publique seu cardápio online. Se não fizer diferença pros seus clientes, é só deixar o trial expirar.'
+      'Cria conta sem cartão, ativa o ZeloMenu no checkout e publique seu cardápio online. Se não fizer diferença pros seus clientes, é só deixar o trial expirar.',
     testimonial: {
       name: 'Marcos V.',
       business: 'Hamburgueria do Marcos',
