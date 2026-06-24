@@ -39,6 +39,8 @@
   let activeMesasAddon = false;
   let activePedidosAddon = false;
   let activeAcessosAddon = false;
+  let menuAddonOn = false;
+  let activeMenuAddon = false;
   let camePromptingMesas = false;
   let camePromptingPedidos = false;
   let camePromptingAcessos = false;
@@ -73,11 +75,11 @@
       painPoint: 'Evita conta perdida, fechamento demorado e atendimento travado nas mesas.',
     },
     {
-      id: 'pedidos',
-      name: 'Pedidos + Cozinha',
-      priceLabel: '+R$ 30/mês',
-      teaser: 'Pedidos saem do papel e chegam organizados na produção.',
-      painPoint: 'Reduz erro de pedido, atraso na cozinha e ruído entre atendimento e produção.',
+      id: 'menu',
+      name: 'ZeloMenu',
+      priceLabel: '+R$ 40/mês',
+      teaser: 'Cardápio online com publicação no menu digital do seu negócio.',
+      painPoint: 'Evita cardápio desatualizado, lista impressa e cliente sem acesso ao menu pelo celular.',
     },
     {
       id: 'acessos',
@@ -92,12 +94,14 @@
     mesas: mesasAddonOn,
     pedidos: pedidosAddonOn,
     acessos: acessosAddonOn,
+    menu: menuAddonOn,
   });
   $: activePlanPrice = activePlanTier
     ? calculateValue(activePlanTier, {
         mesas: activeMesasAddon,
         pedidos: activePedidosAddon,
         acessos: activeAcessosAddon,
+        menu: activeMenuAddon,
       })
     : 0;
   $: selectedPlanAllowsMesas = PLANS[selectedPlan]?.allowsMesas;
@@ -112,6 +116,10 @@
   $: activePlanAllowsAcessos = activePlanTier
     ? PLANS[activePlanTier]?.allowsAcessos
     : false;
+  $: selectedPlanAllowsMenu = PLANS[selectedPlan]?.allowsMenu;
+  $: activePlanAllowsMenu = activePlanTier
+    ? PLANS[activePlanTier]?.allowsMenu
+    : false;
   $: wizardPlanIds = isActiveStrict && activePlanTier === 'chat'
     ? ['chat', ...primaryPlanIds]
     : primaryPlanIds;
@@ -120,6 +128,7 @@
   $: selectedAddons = addonCatalog.filter((addon) => {
     if (addon.id === 'mesas') return mesasAddonOn;
     if (addon.id === 'pedidos') return pedidosAddonOn;
+    if (addon.id === 'menu') return menuAddonOn;
     if (addon.id === 'acessos') return acessosAddonOn;
     return false;
   });
@@ -136,6 +145,7 @@
     || !!mesasAddonOn !== !!activeMesasAddon
     || !!pedidosAddonOn !== !!activePedidosAddon
     || !!acessosAddonOn !== !!activeAcessosAddon
+    || !!menuAddonOn !== !!activeMenuAddon
   );
   $: wizardModeLabel = isActiveStrict ? 'Mudar de plano' : 'Assinatura';
   $: wizardStepOneTitle = isActiveStrict
@@ -183,6 +193,7 @@
     mesas: mesasAddonOn,
     pedidos: pedidosAddonOn,
     acessos: acessosAddonOn,
+    menu: menuAddonOn,
   });
   $: pixPaymentMatchesSelection = !pixPayment || pixSelectionKey === currentSelectionKey;
   $: pixExpiresAtMs = pixPayment?.expiresAt ? new Date(pixPayment.expiresAt).getTime() : null;
@@ -207,6 +218,7 @@
   $: if (!selectedPlanAllowsMesas && mesasAddonOn) mesasAddonOn = false;
   $: if (!selectedPlanAllowsPedidos && pedidosAddonOn) pedidosAddonOn = false;
   $: if (!selectedPlanAllowsAcessos && acessosAddonOn) acessosAddonOn = false;
+  $: if (!selectedPlanAllowsMenu && menuAddonOn) menuAddonOn = false;
   $: if (!isActiveStrict && selectedPlan === 'chat') selectedPlan = 'bundle';
 
   let autoStartingTrial = false;
@@ -270,9 +282,11 @@
     activeMesasAddon = !!data?.has_mesas_addon;
     activePedidosAddon = !!data?.has_pedidos_addon;
     activeAcessosAddon = !!data?.has_acessos_addon;
+    activeMenuAddon = !!data?.has_zelo_menu;
     mesasAddonOn = activeMesasAddon;
     pedidosAddonOn = activePedidosAddon;
     acessosAddonOn = activeAcessosAddon;
+    menuAddonOn = activeMenuAddon;
     activePlanTier = data?.plan_tier || 'pdv';
     selectedPlan = activePlanTier;
 
@@ -287,7 +301,7 @@
   async function loadSubscriptionState() {
     const { data, error } = await supabase
       .from('subscriptions')
-      .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_pedidos_addon, has_acessos_addon, plan_tier')
+      .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, plan_tier')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -311,12 +325,14 @@
   function toggleAddonSelection(addonId) {
     if (addonId === 'mesas' && selectedPlanAllowsMesas) mesasAddonOn = !mesasAddonOn;
     if (addonId === 'pedidos' && selectedPlanAllowsPedidos) pedidosAddonOn = !pedidosAddonOn;
+    if (addonId === 'menu' && selectedPlanAllowsMenu) menuAddonOn = !menuAddonOn;
     if (addonId === 'acessos' && selectedPlanAllowsAcessos) acessosAddonOn = !acessosAddonOn;
   }
 
   function addonAvailable(addonId) {
     if (addonId === 'mesas') return selectedPlanAllowsMesas;
     if (addonId === 'pedidos') return selectedPlanAllowsPedidos;
+    if (addonId === 'menu') return selectedPlanAllowsMenu;
     if (addonId === 'acessos') return selectedPlanAllowsAcessos;
     return false;
   }
@@ -324,6 +340,7 @@
   function addonSelected(addonId) {
     if (addonId === 'mesas') return mesasAddonOn;
     if (addonId === 'pedidos') return pedidosAddonOn;
+    if (addonId === 'menu') return menuAddonOn;
     if (addonId === 'acessos') return acessosAddonOn;
     return false;
   }
@@ -463,6 +480,7 @@
                 mesas: activeMesasAddon,
                 pedidos: activePedidosAddon,
                 acessos: activeAcessosAddon,
+                menu: activeMenuAddon,
               })
             : null;
           window.location.href = buildSuccessPageUrl({
@@ -542,6 +560,7 @@
             mesas: mesasAddonOn,
             pedidos: pedidosAddonOn,
             acessos: acessosAddonOn,
+            menu: menuAddonOn,
           },
         }),
       });
@@ -565,7 +584,7 @@
         }
         void capturePostHogEvent('subscription_checkout_started', {
           plan: selectedPlan,
-          addons: { mesas: mesasAddonOn, pedidos: pedidosAddonOn, acessos: acessosAddonOn },
+          addons: { mesas: mesasAddonOn, pedidos: pedidosAddonOn, acessos: acessosAddonOn, menu: menuAddonOn },
           amount: planPrice,
           payment_method: 'card',
           is_renewal: isActiveStrict,
@@ -611,6 +630,7 @@
             mesas: mesasAddonOn,
             pedidos: pedidosAddonOn,
             acessos: acessosAddonOn,
+            menu: menuAddonOn,
           },
         }),
       });
@@ -635,7 +655,7 @@
       if (!data.reused) {
         void capturePostHogEvent('pix_payment_initiated', {
           plan: selectedPlan,
-          addons: { mesas: mesasAddonOn, pedidos: pedidosAddonOn, acessos: acessosAddonOn },
+          addons: { mesas: mesasAddonOn, pedidos: pedidosAddonOn, acessos: acessosAddonOn, menu: menuAddonOn },
           amount: planPrice,
           is_renewal: isActiveStrict,
         });

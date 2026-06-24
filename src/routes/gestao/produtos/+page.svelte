@@ -9,7 +9,7 @@
   import { hasZeloMenuAccess } from '$lib/guards';
   import { publishProductsToZeloMenu, unpublishProductsFromZeloMenu } from '$lib/zelomenuPublications';
   import * as Select from '$lib/components/ui/select/index.js';
-  import { Upload, Pencil, Trash2 } from 'lucide-svelte';
+  import { Upload, Pencil, Trash2, EyeOff } from 'lucide-svelte';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
@@ -32,6 +32,7 @@
   let buscaFilter = '';
   let filterOcultosOnly = false;
   let filterEstoqueOnly = false;
+  let filterPublicados = 'all'; // 'all' | 'published' | 'unpublished'
   let showFilterDropdown = false;
 
   // Paginação
@@ -226,14 +227,15 @@
   }
 
   async function carregarPublicacoes() {
-    if (!hasMenuAccess || produtos.length === 0) {
+    if (!hasMenuAccess || produtos.length === 0 || !ownerUserId) {
       publicacoes = new Map();
       return;
     }
     const { data: pubs } = await supabase
       .from('zelomenu_product_publications')
       .select('id_produto, visivel_online')
-      .in('id_produto', produtos.map(p => p.id));
+      .in('id_produto', produtos.map(p => p.id))
+      .eq('id_usuario', ownerUserId);
     publicacoes = new Map((pubs || []).map(p => [p.id_produto, p]));
   }
 
@@ -296,6 +298,11 @@
     let list = [...produtos];
     if (filterOcultosOnly) list = list.filter(p => p.ocultar_no_pdv);
     if (filterEstoqueOnly) list = list.filter(p => p.controlar_estoque || estoqueProdutoCompartilhado(p));
+    if (filterPublicados === 'published') {
+      list = list.filter(p => publicacoes.get(p.id)?.visivel_online === true);
+    } else if (filterPublicados === 'unpublished') {
+      list = list.filter(p => publicacoes.get(p.id)?.visivel_online !== true);
+    }
     return list;
   })();
 
@@ -694,17 +701,21 @@
 
   async function togglePublicacaoProduto(prod) {
     if (publishingSingle) return;
-
-    const [{ data: userData }, ctx] = await Promise.all([
-      supabase.auth.getUser(),
-      getAccessContext()
-    ]);
-    const userId = userData?.user?.id;
-    const ownerUserId = ctx?.ownerUserId;
-    if (!userId || !ownerUserId) return;
+    if (!ownerUserId) {
+      addToast('Sua sessão expirou. Entre novamente para continuar.', 'error');
+      return;
+    }
 
     const pub = publicacoes.get(prod.id);
     const estaPublicado = pub?.visivel_online === true;
+
+    const ok = await confirmAction(
+      estaPublicado ? 'Remover do menu' : 'Publicar no menu',
+      estaPublicado
+        ? `Remover "${prod.nome}" do menu online? Clientes não conseguirão ver este produto.`
+        : `Publicar "${prod.nome}" no menu online? Ficará visível para os clientes.`
+    );
+    if (!ok) return;
 
     publishingSingle = prod.id;
     try {
@@ -715,6 +726,9 @@
           .eq('id_produto', prod.id)
           .eq('id_usuario', ownerUserId);
         if (error) throw error;
+        // Update otimista no Map
+        publicacoes.set(prod.id, { id_produto: prod.id, visivel_online: false });
+        publicacoes = new Map(publicacoes);
         addToast(`"${prod.nome}" removido do menu.`, 'success');
       } else {
         const { publishedIds, failedIds } = await publishProductsToZeloMenu(supabase, {
@@ -722,11 +736,14 @@
           productIds: [prod.id]
         });
         if (failedIds.length > 0) throw new Error('Falha ao publicar');
+        // Update otimista no Map
+        publicacoes.set(prod.id, { id_produto: prod.id, visivel_online: true });
+        publicacoes = new Map(publicacoes);
         addToast(`"${prod.nome}" publicado no menu.`, 'success');
       }
-      await carregarProdutos();
     } catch (e) {
       addToast('Erro ao alterar publicação: ' + (e?.message || e), 'error');
+      await carregarPublicacoes();
     } finally {
       publishingSingle = null;
     }
@@ -734,22 +751,11 @@
 
   async function alterarPublicacaoEmMassa(publicar) {
     if (selectedItems.size === 0 || publishingToMenu) return;
-
-    const [{ data: userData }, ctx] = await Promise.all([
-      supabase.auth.getUser(),
-      getAccessContext()
-    ]);
-    const userId = userData?.user?.id;
-    const ownerUserId = ctx?.ownerUserId;
-
-    if (!userId || !ownerUserId) {
+    if (!ownerUserId) {
       addToast('Sua sessão expirou. Entre novamente para continuar.', 'error');
       return;
     }
-
-    const menuAccessActive = await hasZeloMenuAccess(userId);
-    hasMenuAccess = menuAccessActive;
-    if (!menuAccessActive) {
+    if (!hasMenuAccess) {
       addToast('O módulo ZeloMenu não está ativo para esta empresa.', 'warning');
       return;
     }
@@ -848,10 +854,10 @@
 <svelte:window on:click={handleClickOutside} />
 
 <!-- ─── Cabeçalho da Página ──────────────────────────────────────────────────── -->
-<div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
+<div class="mb-6 flex items-end justify-between pb-4" style="border-bottom: 1px solid var(--border-subtle);">
   <div>
-    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Produtos</p>
-    <h1 class="text-xl font-bold text-slate-100 tracking-tight">Produtos</h1>
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Produtos</p>
+    <h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Produtos</h1>
   </div>
 
   <!-- Botões de ação globais -->
@@ -870,12 +876,12 @@
 
 <!-- ─── Kit Páscoa Banner ─────────────────────────────────────────────────────── -->
 {#if showKitPascoa}
-  <div style="background: linear-gradient(135deg, #F9F4FF, #FDE8F0); border: 1.5px solid #D4BBE8;"
+  <div style="background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--bg-panel)), color-mix(in srgb, #9B6EBF 12%, var(--bg-panel))); border: 1.5px solid color-mix(in srgb, #9B6EBF 30%, var(--border-subtle));"
        class="rounded-xl p-4 mb-4 flex items-center justify-between gap-4">
     <div>
-      <p class="text-xs font-bold uppercase tracking-wider mb-0.5" style="color: #9B6EBF;">Especial Páscoa 2026 🥚</p>
-      <p class="font-bold text-sm" style="color: #3B1F5E;">Kit de categorias pronto para usar</p>
-      <p class="text-xs" style="color: #7E6D8A;">Ovos de Páscoa, Trufas, Cestas, Colomba Pascal, Avulso</p>
+      <p class="text-xs font-bold uppercase tracking-wider mb-0.5" style="color: #C084FC;">Especial Páscoa 2026 🥚</p>
+      <p class="font-bold text-sm" style="color: var(--text-main);">Kit de categorias pronto para usar</p>
+      <p class="text-xs" style="color: var(--text-muted);">Ovos de Páscoa, Trufas, Cestas, Colomba Pascal, Avulso</p>
     </div>
     <div class="flex gap-2 shrink-0">
       <button on:click={aplicarKitPascoa}
@@ -884,7 +890,7 @@
         Ativar Kit
       </button>
       <button on:click={() => kitPascoaInserted = true} class="px-2 py-2 text-xs rounded-lg"
-        style="color: #7E6D8A; background: rgba(0,0,0,0.05);">✕</button>
+        style="color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 10%, transparent);">✕</button>
     </div>
   </div>
 {/if}
@@ -1018,7 +1024,7 @@
               {/if}
 
               <!-- Ações (aparecem no hover) -->
-              <div class="tree-item-actions group-hover:opacity-100">
+              <div class="tree-item-actions">
                 <button
                   class="tree-action-btn"
                   title="Editar categoria"
@@ -1083,7 +1089,7 @@
                     <span class="flex-1 text-sm truncate">{sub.nome}</span>
 
                     <!-- Ações (hover) -->
-                    <div class="tree-item-actions group-hover:opacity-100">
+                    <div class="tree-item-actions">
                       <button
                         class="tree-action-btn"
                         title="Editar subcategoria"
@@ -1149,7 +1155,7 @@
                   disabled={publishingToMenu}
                   style="background: color-mix(in srgb, var(--warning) 10%, transparent); color: var(--warning); border-color: var(--warning);"
                 >
-                  <Upload class="w-4 h-4" />
+                  <EyeOff class="w-4 h-4" />
                   {publishingToMenu ? 'Alterando...' : `Despublicar (${selectedItems.size})`}
                 </button>
               {:else if selectedAnyPublished}
@@ -1168,7 +1174,7 @@
                   disabled={publishingToMenu}
                   style="background: color-mix(in srgb, var(--warning) 10%, transparent); color: var(--warning); border-color: var(--warning);"
                 >
-                  <Upload class="w-4 h-4" />
+                  <EyeOff class="w-4 h-4" />
                   {publishingToMenu ? 'Alterando...' : `Despublicar (${selectedItems.size})`}
                 </button>
               {:else}
@@ -1231,17 +1237,17 @@
         <div class="filter-dropdown-wrapper relative">
           <button
             class="filter-btn"
-            class:filter-btn-active={filterOcultosOnly || filterEstoqueOnly}
+            class:filter-btn-active={filterOcultosOnly || filterEstoqueOnly || filterPublicados !== 'all'}
             on:click|stopPropagation={() => showFilterDropdown = !showFilterDropdown}
             style="border-color: var(--border-subtle); color: var(--text-muted);
-              {filterOcultosOnly || filterEstoqueOnly ? 'color: var(--primary); border-color: var(--primary);' : ''}"
+              {filterOcultosOnly || filterEstoqueOnly || filterPublicados !== 'all' ? 'color: var(--primary); border-color: var(--primary);' : ''}"
             title="Filtros adicionais"
           >
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707l-6.414 6.414A1 1 0 0013 14v5a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7a1 1 0 01-.293-.707L3.293 6.707A1 1 0 013 6V4z" />
             </svg>
-            {#if filterOcultosOnly || filterEstoqueOnly}
+            {#if filterOcultosOnly || filterEstoqueOnly || filterPublicados !== 'all'}
               <span class="filter-active-dot" style="background: var(--primary);"></span>
             {/if}
           </button>
@@ -1260,11 +1266,27 @@
                 <input type="checkbox" bind:checked={filterEstoqueOnly} class="themed-checkbox" />
                 <span>Somente com estoque controlado</span>
               </label>
-              {#if filterOcultosOnly || filterEstoqueOnly}
+              {#if hasMenuAccess}
+                <div class="filter-divider" style="border-top: 1px solid var(--border-subtle); margin: 0.25rem 0;"></div>
+                <span class="filter-option-label" style="color: var(--text-muted); font-size: 10px; padding: 0.25rem 0.75rem; text-transform: uppercase; letter-spacing: 0.1em;">Visível no Menu</span>
+                <label class="filter-option" style="color: var(--text-label);">
+                  <input type="radio" name="filterPublicados" bind:group={filterPublicados} value="all" class="themed-radio" />
+                  <span>Todos</span>
+                </label>
+                <label class="filter-option" style="color: var(--text-label);">
+                  <input type="radio" name="filterPublicados" bind:group={filterPublicados} value="published" class="themed-radio" />
+                  <span>Publicados</span>
+                </label>
+                <label class="filter-option" style="color: var(--text-label);">
+                  <input type="radio" name="filterPublicados" bind:group={filterPublicados} value="unpublished" class="themed-radio" />
+                  <span>Não publicados</span>
+                </label>
+              {/if}
+              {#if filterOcultosOnly || filterEstoqueOnly || filterPublicados !== 'all'}
                 <button
                   class="text-xs mt-1 pt-2"
                   style="color: var(--primary); border-top: 1px solid var(--border-subtle); width: 100%; text-align: left;"
-                  on:click={() => { filterOcultosOnly = false; filterEstoqueOnly = false; showFilterDropdown = false; }}
+                  on:click={() => { filterOcultosOnly = false; filterEstoqueOnly = false; filterPublicados = 'all'; showFilterDropdown = false; }}
                 >
                   Limpar filtros extras
                 </button>
@@ -1288,8 +1310,22 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
               d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
           </svg>
-          <p class="text-sm">Nenhum produto encontrado.</p>
-          {#if selectedCategoriaId || buscaFilter}
+          <p class="text-sm">
+            {#if filterPublicados === 'published'}
+              Nenhum produto publicado no menu online.
+            {:else if filterPublicados === 'unpublished'}
+              {#if sortedProdutos.length === 0 && produtos.length > 0}
+                Todos os produtos já estão publicados no menu online!
+              {:else}
+                Nenhum produto cadastrado. Comece criando um produto.
+              {/if}
+            {:else if produtos.length > 0}
+              Nenhum produto encontrado com os filtros atuais.
+            {:else}
+              Nenhum produto cadastrado. Comece criando um produto.
+            {/if}
+          </p>
+          {#if selectedCategoriaId || buscaFilter || filterPublicados !== 'all'}
             <button
               class="text-xs mt-2"
               style="color: var(--primary);"
@@ -1512,6 +1548,8 @@
                             on:click={() => togglePublicacaoProduto(prod)}
                             disabled={publishingSingle === prod.id}
                             title="Clique para despublicar"
+                            aria-pressed="true"
+                            aria-label={'Remover "' + prod.nome + '" do menu'}
                           >
                             Sim
                           </button>
@@ -1522,6 +1560,8 @@
                             on:click={() => togglePublicacaoProduto(prod)}
                             disabled={publishingSingle === prod.id}
                             title="Clique para publicar"
+                            aria-pressed="false"
+                            aria-label={'Publicar "' + prod.nome + '" no menu'}
                           >
                             Não
                           </button>
@@ -1533,6 +1573,8 @@
                           on:click={() => togglePublicacaoProduto(prod)}
                           disabled={publishingSingle === prod.id}
                           title="Clique para publicar"
+                          aria-pressed="false"
+                          aria-label={'Publicar "' + prod.nome + '" no menu'}
                         >
                           Não
                         </button>
@@ -1984,17 +2026,22 @@
     display: flex;
     align-items: center;
     gap: 2px;
-    opacity: 0;
-    transition: opacity var(--transition-fast);
     flex-shrink: 0;
+  }
+
+  @media (hover: none), (max-width: 768px) {
+    .tree-item-actions {
+      opacity: 1;
+    }
   }
 
   .tree-action-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.5rem;
-    height: 1.5rem;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0.375rem;
     border-radius: 0.25rem;
     transition: background var(--transition-fast);
   }
@@ -2079,8 +2126,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
     border: 1px solid;
     border-radius: 0.5rem;
     position: relative;
@@ -2206,8 +2253,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.5rem;
     border-radius: 0.375rem;
     transition: background var(--transition-fast);
   }

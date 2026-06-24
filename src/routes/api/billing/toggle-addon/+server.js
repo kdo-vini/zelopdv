@@ -10,6 +10,7 @@ const ADDON_DB_COLUMN = {
   mesas: 'has_mesas_addon',
   pedidos: 'has_pedidos_addon',
   acessos: 'has_acessos_addon',
+  menu: 'has_zelo_menu',
 };
 
 export async function POST({ request }) {
@@ -33,7 +34,7 @@ export async function POST({ request }) {
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, status, current_period_end, manually_extended_until, payment_provider')
+      .select('id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, status, current_period_end, manually_extended_until, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)

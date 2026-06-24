@@ -533,6 +533,165 @@ export const extensoes = {
     finalCtaTitle: 'Conheça o Zelo Chat em chat.zelopdv.com.br',
     finalCtaText:
       'Site oficial com demo, configurador e cadastro. Ou ative direto no Zelo PDV escolhendo o Pacote Gestão + Atendimento no checkout.'
+  },
+
+  menu: {
+    slug: 'menu',
+    addonId: 'menu',
+    meta: {
+      title: 'ZeloMenu — Cardápio Online com Publicação para Clientes | Zelo PDV',
+      description:
+        'Publique o cardápio do seu negócio online. +R$ 40/mês como add-on do Zelo PDV. Clientes acessam produtos, preços e variações pelo celular.',
+      canonical: `${BASE_URL}/extensoes#menu`
+    },
+    heroBadge: 'Add-on Zelo PDV',
+    h1: 'ZeloMenu: seu cardápio online direto do estoque',
+    subtitle:
+      'Publique os produtos que já cadastrou no PDV. Clientes acessam preços, variações e adicionais pelo celular. Sem cadastro paralelo, sem taxa por pedido, sem imprimir de novo.',
+    forSegments: ['Hamburguerias', 'Lanchonetes', 'Pizzarias', 'Restaurantes pequenos', 'Açaiterias'],
+    highlights: [
+      'Publica os produtos que já estão no estoque — sem redigitar',
+      'Cardápio acessível por link e QR code, sem baixar app',
+      'Preço e disponibilidade sempre atualizados com o PDV',
+      'Publicação em lote de vários produtos de uma vez'
+    ],
+    problemTitle: 'Cardápio impresso desatualizado? Cliente não confia',
+    problemParagraphs: [
+      'Lanchonete que imprime cardápio no começo do mês convive com preço riscado a caneta, item em falta que o cliente pede e descobre na hora, e sabor sazonal que nunca entra no papel porque "vai que volta". O cliente que pesquisa pelo celular antes de sair de casa vê um cardápio diferente do que está na cozinha.',
+      'Sistema de cardápio digital separado (WhatsMenu, iFood Cardápio) custa R$ 100, R$ 200 por mês ou depende de marketplace que cobra comissão por pedido. O ZeloMenu publica o que já está no seu estoque, online, sem cadastro paralelo, sem taxa extra por pedido. R$ 40 extras no plano que já gerencia seu negócio.'
+    ],
+    problemPoints: [
+      { label: 'Cardápio desatualizado', value: 'Preço riscado a caneta, item que acabou e cliente só descobre na hora de pedir.' },
+      { label: 'Cadastro duplicado', value: 'Manter estoque no PDV e cardápio online em separado é trabalhar dobrado e errar nos dois.' },
+      { label: 'Sem presença digital', value: 'Cliente pesquisa "lanche perto de mim" no celular e não encontra seu cardápio. Perde pro concorrente que tem.' }
+    ],
+    featuresTitle: 'O ZeloMenu faz o cardápio que seus clientes já esperam',
+    featuresIntro:
+      'Publicação automática, sem configuração técnica. O que o cliente vê online é exatamente o que está no seu estoque.',
+    features: [
+      {
+        icon: '📦',
+        title: 'Publique o que já está no estoque',
+        description:
+          'Os produtos que você cadastrou no Zelo PDV viram cardápio online sem redigitar nada. Preço, descrição, categoria e variações — tudo sai do cadastro que você já mantém.'
+      },
+      {
+        icon: '🔗',
+        title: 'Link único para compartilhar',
+        description:
+          'Cada negócio ganha uma URL pública de cardápio. Coloca no Instagram, no WhatsApp, no QR code da mesa. O cliente abre no celular sem baixar app.'
+      },
+      {
+        icon: '⚡',
+        title: 'Publicação em lote',
+        description:
+          'Seleciona vários produtos de uma vez no estoque e publica todos no cardápio digital. Ideal para quem tem dezenas de itens e não quer publicar um por um.'
+      },
+      {
+        icon: '🔄',
+        title: 'Sincronizado em tempo real',
+        description:
+          'Alterou preço, esgotou um item ou criou uma variação nova? O cardápio online reflete na hora. Cliente não vê preço velho nem promoção que já acabou.'
+      },
+      {
+        icon: '🎛️',
+        title: 'Controle produto a produto',
+        description:
+          'Escolhe quais itens aparecem no cardápio digital e quais ficam só no PDV. Ideal para item sazonal, promoção relâmpago ou produto que só vende no balcão.'
+      },
+      {
+        icon: '📱',
+        title: 'Design que funciona no celular',
+        description:
+          'O cardápio adapta automático pra tela do cliente. Fotos, preços e descrições organizados pra navegação rápida. Sem zoom, sem rolagem infinita.'
+      }
+    ],
+    howTitle: 'Em três passos seu cardápio está no ar',
+    howIntro:
+      'Nada de configuração técnica. Ativou, selecionou, compartilhou.',
+    steps: [
+      {
+        title: 'Ative o ZeloMenu',
+        description:
+          'Adicione o ZeloMenu como extensão na sua assinatura (R$ 40/mês). A ativação é instantânea e o primeiro mês é grátis durante o trial.'
+      },
+      {
+        title: 'Publique os produtos do estoque',
+        description:
+          'Em Gestão > Produtos, marque os itens que quer no cardápio online e clique em "Publicar no menu". Pode publicar um por um ou em lote.'
+      },
+      {
+        title: 'Compartilhe o link do cardápio',
+        description:
+          'Pronto. O cardápio está no ar com uma URL própria. Coloca no Instagram, no WhatsApp do negócio, ou imprime um QR code pra colocar nas mesas.'
+      }
+    ],
+    testimonial: {
+      name: 'Marcos V.',
+      business: 'Hamburgueria do Marcos',
+      city: 'São José dos Campos, SP',
+      quote:
+        'Antes eu tirava foto de cardápio impresso e mandava no WhatsApp toda semana. Agora o cliente abre o link e vê exatamente o que tem hoje. Acabou o "tem X?" no direct.',
+      note: 'Usa ZeloMenu + Zelo PDV. Publicou 40 produtos em lote direto do estoque.'
+    },
+    faqSpecific: [
+      {
+        question: 'O ZeloMenu substitui o cardápio impresso?',
+        answer:
+          'Pode substituir ou complementar. Muitos negócios mantêm o cardápio impresso pros clientes que estão no salão e usam o ZeloMenu como cardápio digital pro WhatsApp, Instagram e QR code. O cliente vê o cardápio atualizado antes mesmo de sair de casa.'
+      },
+      {
+        question: 'Precisa de site ou domínio próprio?',
+        answer:
+          'Não. O ZeloMenu gera uma URL pública dentro do domínio zelopdv.com.br. Você pode compartilhar o link em qualquer lugar — Instagram, WhatsApp, QR code — sem precisar de site próprio.'
+      },
+      {
+        question: 'Funciona com Mesas e Pedidos + Cozinha?',
+        answer:
+          'Sim. O ZeloMenu é independente dos outros add-ons. Você pode usar só o menu digital, ou combinar com Mesas (cliente vê o cardápio no QR code da mesa) e Pedidos + Cozinha (pedido que chega via WhatsApp vira pedido no sistema).'
+      },
+      {
+        question: 'Quanto custa?',
+        answer:
+          '+R$ 40/mês sobre o plano base de R$ 59. Total fica R$ 99/mês. Sem taxa de adesão. Primeiro mês grátis durante o trial.'
+      }
+    ],
+    finalCtaTitle: 'Teste o ZeloMenu por 30 dias grátis',
+    finalCtaText:
+      'Cria conta sem cartão, ativa o ZeloMenu no checkout e publique seu cardápio online. Se não fizer diferença pros seus clientes, é só deixar o trial expirar.'
+    testimonial: {
+      name: 'Marcos V.',
+      business: 'Hamburgueria do Marcos',
+      city: 'São José dos Campos, SP',
+      quote:
+        'Antes eu tirava foto de cardápio impresso e mandava no WhatsApp toda semana. Agora o cliente abre o link e vê exatamente o que tem hoje. Acabou o "tem X?" no direct.',
+      note: 'Usa ZeloMenu + Zelo PDV. Publicou 40 produtos em lote direto do estoque.'
+    },
+    faqSpecific: [
+      {
+        question: 'O ZeloMenu substitui o cardápio impresso?',
+        answer:
+          'Pode substituir ou complementar. Muitos negócios mantêm o cardápio impresso pros clientes que estão no salão e usam o ZeloMenu como cardápio digital pro WhatsApp, Instagram e QR code. O cliente vê o cardápio atualizado antes mesmo de sair de casa.'
+      },
+      {
+        question: 'Precisa de site ou domínio próprio?',
+        answer:
+          'Não. O ZeloMenu gera uma URL pública dentro do domínio zelopdv.com.br. Você pode compartilhar o link em qualquer lugar — Instagram, WhatsApp, QR code — sem precisar de site próprio.'
+      },
+      {
+        question: 'Funciona com Mesas e Pedidos + Cozinha?',
+        answer:
+          'Sim. O ZeloMenu é independente dos outros add-ons. Você pode usar só o menu digital, ou combinar com Mesas (cliente vê o cardápio no QR code da mesa) e Pedidos + Cozinha (pedido que chega via WhatsApp vira pedido no sistema).'
+      },
+      {
+        question: 'Quanto custa?',
+        answer:
+          '+R$ 40/mês sobre o plano base de R$ 59. Total fica R$ 99/mês. Sem taxa de adesão. Primeiro mês grátis durante o trial.'
+      }
+    ],
+    finalCtaTitle: 'Teste o ZeloMenu por 30 dias grátis',
+    finalCtaText:
+      'Cria conta sem cartão, ativa o ZeloMenu no checkout e publique seu cardápio online. Se não fizer diferença pros seus clientes, é só deixar o trial expirar.'
   }
 };
 

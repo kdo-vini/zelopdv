@@ -37,6 +37,7 @@ function serializePendingPayment(row) {
       mesas: !!row.has_mesas_addon,
       pedidos: !!row.has_pedidos_addon,
       acessos: !!row.has_acessos_addon,
+      menu: !!row.has_zelo_menu,
     },
   };
 }
@@ -46,6 +47,7 @@ function pendingPaymentMatchesSelection(payment, planTier, addons, amountCents) 
     && !!payment?.has_mesas_addon === !!addons.mesas
     && !!payment?.has_pedidos_addon === !!addons.pedidos
     && !!payment?.has_acessos_addon === !!addons.acessos
+    && !!payment?.has_zelo_menu === !!addons.menu
     && Number(payment?.amount_expected_cents) === Number(amountCents);
 }
 
@@ -80,7 +82,7 @@ export async function POST({ request }) {
       return json({ error: `Plano inválido. Use: ${Object.keys(PLANS).join(', ')}.` }, { status: 400 });
     }
 
-    for (const addonId of ['mesas', 'pedidos', 'acessos']) {
+    for (const addonId of ['mesas', 'pedidos', 'acessos', 'menu']) {
       if (requestedAddons[addonId] && !isAddonAllowed(planTier, addonId)) {
         return json({ error: `Plano ${planTier} não suporta o add-on ${addonId}.` }, { status: 400 });
       }
@@ -124,7 +126,7 @@ export async function POST({ request }) {
 
     const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
+      .select('id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, payment_provider')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -132,7 +134,7 @@ export async function POST({ request }) {
 
     const { data: latestPendingPayment } = await supabaseAdmin
       .from('billing_payments')
-      .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon')
+      .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu')
       .eq('user_id', user.id)
       .eq('provider', 'abacatepay')
       .eq('method', 'pix')
@@ -213,6 +215,7 @@ export async function POST({ request }) {
       has_mesas_addon: !!addons.mesas,
       has_pedidos_addon: !!addons.pedidos,
       has_acessos_addon: !!addons.acessos,
+      has_zelo_menu: !!addons.menu,
       amount_expected_cents: amountCents,
       amount_paid_cents: null,
       currency: 'BRL',
@@ -234,7 +237,7 @@ export async function POST({ request }) {
     const { data: insertedPayment, error: insertError } = await supabaseAdmin
       .from('billing_payments')
       .insert(insertPayload)
-      .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon')
+      .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu')
       .single();
 
     if (insertError || !insertedPayment) {

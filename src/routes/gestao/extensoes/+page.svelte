@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-  import { hasMesasAddon, hasPedidosAddon, hasZeloChatAccess, hasAcessosAddon } from '$lib/guards';
+  import { hasMesasAddon, hasPedidosAddon, hasZeloChatAccess, hasAcessosAddon, hasZeloMenuAccess } from '$lib/guards';
   import { PLANS, ADDONS } from '$lib/pricing';
 
   let userId = '';
@@ -10,6 +10,7 @@
   let pedidosActive = false;
   let acessosActive = false;
   let chatActive = false;
+  let menuActive = false;
   let planTier = null;
 
   onMount(async () => {
@@ -41,17 +42,20 @@
       .maybeSingle();
     planTier = data?.plan_tier || 'pdv';
 
-    [mesasActive, pedidosActive, acessosActive, chatActive] = await Promise.all([
+    [mesasActive, pedidosActive, acessosActive, chatActive, menuActive] = await Promise.all([
       hasMesasAddon(userId),
       hasPedidosAddon(userId),
       hasAcessosAddon(userId),
       hasZeloChatAccess(userId),
+      hasZeloMenuAccess(userId),
     ]);
     ready = true;
   });
 
   // Catálogo de extensões. ZeloChat aparece como produto/plano (não addon),
   // mas é apresentado aqui pra discovery — CTA leva pra /assinatura?upgrade=bundle.
+  // Pedidos+Cozinha (legacy) só aparece se já estiver ativo — não é mais vendido como
+  // addon separado; foi absorvido pelo ZeloMenu.
   $: extensions = [
     {
       id: 'mesas',
@@ -67,18 +71,32 @@
       incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Pacote Gestão + Atendimento).',
     },
     {
+      id: 'menu',
+      kind: 'addon',
+      name: 'ZeloMenu',
+      tagline: 'Cardápio digital com publicação online',
+      description: 'Publique seus produtos no cardápio online do seu negócio. Clientes acessam o menu pelo celular, veem fotos, preços e variações.',
+      price: ADDONS.menu.price,
+      active: menuActive,
+      compatible: planTier === 'pdv' || planTier === 'bundle',
+      cta: '/assinatura?addon=menu',
+      manage: null,
+      incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Pacote Gestão + Atendimento).',
+    },
+    // Pedidos + Cozinha (legado): só exibe se já estiver ativo — não é mais vendido separadamente
+    ...(pedidosActive ? [{
       id: 'pedidos',
       kind: 'addon',
       name: 'Pedidos + Cozinha',
-      tagline: 'Para delivery, retirada e produção',
-      description: 'Controle pedidos, acompanhe preparo na cozinha e organize entregas sem misturar tudo no caixa.',
+      tagline: 'Legado — agora parte do ZeloMenu',
+      description: 'Este módulo foi absorvido pelo ZeloMenu. Seu acesso continua ativo normalmente.',
       price: ADDONS.pedidos.price,
-      active: pedidosActive,
-      compatible: planTier === 'pdv' || planTier === 'bundle',
-      cta: '/assinatura?addon=pedidos',
+      active: true,
+      compatible: true,
+      cta: '/assinatura',
       manage: '/app/pedidos',
-      incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Pacote Gestão + Atendimento).',
-    },
+      incompatibleNote: '',
+    }] : []),
     {
       id: 'acessos',
       kind: 'addon',
@@ -135,6 +153,11 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/>
               </svg>
+            {:else if ext.id === 'menu'}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 18.75L21 12l-5.25-6.75"/>
+              </svg>
             {:else if ext.id === 'pedidos'}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 3.75h9l1.5 3h-12l1.5-3Z"/>
@@ -184,15 +207,6 @@
         </article>
       {/each}
 
-      <article class="addon-card addon-card-soon" aria-label="Mais addons em breve">
-        <div class="soon-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-          </svg>
-        </div>
-        <p class="soon-title">Em breve</p>
-        <p class="soon-desc">Novos addons serão lançados conforme o feedback dos clientes.</p>
-      </article>
     </div>
   {/if}
 </div>
@@ -319,36 +333,6 @@
     border: 1px solid var(--border-subtle);
     border-radius: 999px;
     padding: 0.3rem 0.7rem;
-  }
-
-  .addon-card-soon {
-    align-items: center; justify-content: center;
-    text-align: center;
-    background: transparent;
-    border: 1px dashed var(--border-subtle);
-    color: var(--text-muted);
-    min-height: 220px;
-  }
-  .addon-card-soon:hover { border-color: var(--border-strong); transform: none; }
-  .soon-icon {
-    width: 40px; height: 40px;
-    display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 999px;
-    border: 1px dashed var(--border-strong);
-    color: var(--text-muted);
-  }
-  .soon-icon svg { width: 18px; height: 18px; }
-  .soon-title {
-    font-size: 0.78rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.1em;
-    color: var(--text-label);
-    margin: 0;
-  }
-  .soon-desc {
-    font-size: 0.82rem; color: var(--text-muted);
-    line-height: 1.5;
-    margin: 0;
-    max-width: 220px;
   }
 
   @media (max-width: 768px) {

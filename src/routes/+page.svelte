@@ -705,17 +705,20 @@
           </span>
         </a>
 
-        <!-- Pedidos + Cozinha -->
-        <a href="/extensoes#pedidos-cozinha" class="group rounded-2xl border border-white/10 p-7 transition-all hover:border-sky-500/40 hover:-translate-y-1" style="background: var(--bg-card);">
+        <!-- ZeloMenu -->
+        <a href="/extensoes#menu" class="group rounded-2xl border border-white/10 p-7 transition-all hover:border-sky-500/40 hover:-translate-y-1" style="background: var(--bg-card);">
           <div class="flex items-start justify-between gap-3 mb-4">
             <div class="w-12 h-12 rounded-xl bg-sky-500/15 flex items-center justify-center">
-              <ChefHat class="size-6 text-sky-300" aria-hidden="true" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6 text-sky-300">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 18.75L21 12l-5.25-6.75"/>
+              </svg>
             </div>
-            <span class="text-xs font-bold text-sky-300">+R$ 30/mês</span>
+            <span class="text-xs font-bold text-sky-300">+R$ 40/mês</span>
           </div>
-          <h3 class="text-xl font-bold text-white mb-2 group-hover:text-sky-200 transition-colors">Pedidos + Cozinha</h3>
+          <h3 class="text-xl font-bold text-white mb-2 group-hover:text-sky-200 transition-colors">ZeloMenu</h3>
           <p class="text-sm text-slate-400 leading-relaxed mb-4">
-            Atendente lança pedidos pelo celular, cozinha acompanha em painel kiosk em tempo real, caixa recebe e cobra. Pra lanchonete com atendente, cozinha e caixa separados.
+            Publique seus produtos no cardápio online do seu negócio. O cliente acessa o menu pelo celular, vê preços e variações. Publica direto do estoque, sem duplicar cadastro.
           </p>
           <span class="inline-flex items-center gap-2 text-sm font-semibold text-sky-300 group-hover:gap-3 transition-all">
             Ver detalhes

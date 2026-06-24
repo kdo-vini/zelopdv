@@ -18,6 +18,7 @@ const ADDON_DB_COLUMN = {
   mesas: 'has_mesas_addon',
   pedidos: 'has_pedidos_addon',
   acessos: 'has_acessos_addon',
+  menu: 'has_zelo_menu',
 };
 
 // Ajuste o domínio admin aqui se diferir.
@@ -85,6 +86,7 @@ export async function POST({ request }) {
       mesas: addons?.mesas ?? hasMesasAddon ?? false,
       pedidos: addons?.pedidos ?? hasPedidosAddon ?? false,
       acessos: addons?.acessos ?? hasAcessosAddon ?? false,
+      menu: addons?.menu ?? false,
     };
 
     if (!subscriptionId) return json({ error: 'subscriptionId obrigatório.' }, { status: 400, headers: cors });
@@ -94,7 +96,7 @@ export async function POST({ request }) {
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, status, payment_provider')
+      .select('id, user_id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, status, payment_provider')
       .eq('id', subscriptionId)
       .maybeSingle();
 
@@ -140,9 +142,14 @@ export async function POST({ request }) {
 
     // Para cada addon válido, calcula estado desejado considerando se o plano permite.
     // Addon não permitido pelo novo plano é forçado a OFF (admin/sync = autoridade).
+    // Exceção: planos com includesMenu (chat/bundle) mantêm menu=true independente.
     const finalAddons = {};
     for (const addonId of VALID_ADDONS) {
-      finalAddons[addonId] = !!wantedAddons[addonId] && isAddonAllowed(planTier, addonId);
+      if (addonId === 'menu' && PLANS[planTier]?.includesMenu) {
+        finalAddons[addonId] = true;
+      } else {
+        finalAddons[addonId] = !!wantedAddons[addonId] && isAddonAllowed(planTier, addonId);
+      }
     }
 
     const newItems = [];

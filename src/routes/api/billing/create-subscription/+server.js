@@ -63,6 +63,10 @@ export async function POST({ request, url, cookies }) {
     if (hasAcessosAddon && !isAddonAllowed(planTier, 'acessos')) {
       return json({ error: `Plano ${planTier} não suporta o add-on Controle de Acessos.` }, { status: 400 });
     }
+    const hasMenuAddon = !!requestedAddons.menu;
+    if (hasMenuAddon && !isAddonAllowed(planTier, 'menu')) {
+      return json({ error: `Plano ${planTier} não suporta o add-on ZeloMenu.` }, { status: 400 });
+    }
 
     // Profile gate: precisa ter CNPJ/CPF preenchido (Stripe não exige, mas usamos pra emitir nota fiscal e validar negócio)
     const { data: perfil } = await supabaseAdmin
@@ -81,7 +85,7 @@ export async function POST({ request, url, cookies }) {
     // Existing subscription check
     const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, provider_customer_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
+      .select('id, provider_subscription_id, provider_customer_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -116,6 +120,7 @@ export async function POST({ request, url, cookies }) {
       mesas: hasMesasAddon,
       pedidos: hasPedidosAddon,
       acessos: hasAcessosAddon,
+      menu: hasMenuAddon,
     });
 
     const subscriptionMetadata = {
@@ -124,6 +129,7 @@ export async function POST({ request, url, cookies }) {
       has_mesas_addon: String(hasMesasAddon),
       has_pedidos_addon: String(hasPedidosAddon),
       has_acessos_addon: String(hasAcessosAddon),
+      has_zelo_menu: String(hasMenuAddon),
       early_renewal: String(shouldPreserveCurrentAccess),
       renewal_base_period_end: shouldPreserveCurrentAccess ? existingSub?.current_period_end || '' : '',
     };
@@ -144,6 +150,7 @@ export async function POST({ request, url, cookies }) {
       mesas: hasMesasAddon,
       pedidos: hasPedidosAddon,
       acessos: hasAcessosAddon,
+      menu: hasMenuAddon,
     });
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -172,6 +179,7 @@ export async function POST({ request, url, cookies }) {
       has_mesas_addon: shouldPreserveCurrentAccess ? !!existingSub?.has_mesas_addon : hasMesasAddon,
       has_pedidos_addon: shouldPreserveCurrentAccess ? !!existingSub?.has_pedidos_addon : hasPedidosAddon,
       has_acessos_addon: shouldPreserveCurrentAccess ? !!existingSub?.has_acessos_addon : hasAcessosAddon,
+      has_zelo_menu: shouldPreserveCurrentAccess ? !!existingSub?.has_zelo_menu : hasMenuAddon,
       status: shouldPreserveCurrentAccess ? existingSub.status : 'incomplete',
       updated_at: nowIso,
     };
@@ -201,7 +209,7 @@ export async function POST({ request, url, cookies }) {
         event: 'stripe_checkout_created',
         properties: {
           plan: planTier,
-          addons: { mesas: hasMesasAddon, pedidos: hasPedidosAddon, acessos: hasAcessosAddon },
+          addons: { mesas: hasMesasAddon, pedidos: hasPedidosAddon, acessos: hasAcessosAddon, menu: hasMenuAddon },
           amount: successValue,
           is_first_time: isFirstTime,
           session_id: session.id,

@@ -6,9 +6,9 @@
   import { PLANS } from '$lib/pricing';
 
   const meta = {
-    title: 'Extensões Zelo PDV — Mesas, Pedidos+Cozinha, Controle de Acessos e WhatsApp | Zelo PDV',
+    title: 'Extensões Zelo PDV — Mesas, ZeloMenu, Controle de Acessos e WhatsApp | Zelo PDV',
     description:
-      'O Zelo PDV cobre o essencial por R$ 59/mês. Adicione apenas o que sua operação pedir: Módulo Mesas, Pedidos + Cozinha, Controle de Acessos ou Zelo Chat (WhatsApp com IA). Cancele quando quiser.',
+      'O Zelo PDV cobre o essencial por R$ 59/mês. Adicione apenas o que sua operação pedir: Módulo Mesas, ZeloMenu, Pedidos + Cozinha, Controle de Acessos ou Zelo Chat (WhatsApp com IA). Cancele quando quiser.',
     canonical: 'https://zelopdv.com.br/extensoes'
   };
 
@@ -16,12 +16,14 @@
   const mesasPrice = getAddonPrice('mesas');
   const pedidosPrice = getAddonPrice('pedidos');
   const acessosPrice = getAddonPrice('acessos');
+  const menuPrice = getAddonPrice('menu');
   const chatDelta = getChatBundleDelta();
 
   const mesas = extensoes.mesas;
   const pedidos = extensoes['pedidos-cozinha'];
   const acessos = extensoes.acessos;
   const chat = extensoes.chat;
+  const menu = extensoes.menu;
 
   function openSupportChat() {
     window.dispatchEvent(new CustomEvent('zelo:open-support-chat'));
@@ -51,12 +53,12 @@
       anchor: 'pedidos-cozinha',
       data: pedidos,
       name: 'Pedidos + Cozinha',
-      tagline: 'Atendente, painel de cozinha e fila do caixa',
+      tagline: 'Agora incluso no ZeloMenu',
       bullets: [
         'Atendente lança pedido pelo celular',
         'Cozinha acompanha em painel kiosk',
         'Caixa cobra pedidos prontos',
-        'Funciona junto com o Módulo Mesas'
+        'Legado: disponível como addon independente'
       ],
       priceLabel: `+R$ ${pedidosPrice.toFixed(0)}`,
       priceSuffix: '/mês',
@@ -82,6 +84,24 @@
       ctaPrimary: { href: '/cadastro?addon=acessos', label: 'Adicionar ao plano' },
       ctaSecondary: { href: '#acessos', label: 'Ver detalhes' },
       iconKey: 'access'
+    },
+    {
+      anchor: 'menu',
+      data: menu,
+      name: 'ZeloMenu',
+      tagline: 'Cardápio digital publicado online',
+      bullets: [
+        'Publique direto do estoque sem duplicar cadastro',
+        'Cardápio acessível por QR code no menu digital',
+        'Publicação em lote de múltiplos produtos',
+        'Sincronizado em tempo real com o PDV'
+      ],
+      priceLabel: `+R$ ${menuPrice.toFixed(0)}`,
+      priceSuffix: '/mês',
+      priceNote: 'Adicional ao plano base',
+      ctaPrimary: { href: '/cadastro?addon=menu', label: 'Adicionar ZeloMenu' },
+      ctaSecondary: { href: '#menu', label: 'Ver detalhes' },
+      iconKey: 'menu'
     },
     {
       anchor: 'chat',
@@ -135,6 +155,13 @@
       notes: 'Pedido digital fluindo entre os três papéis. Sem ticket de papel.'
     },
     {
+      profile: 'Negócio com cardápio digital',
+      example: 'Cliente vê preços e produtos pelo celular antes de pedir.',
+      stack: ['Plano base', 'ZeloMenu'],
+      total: basePrice + menuPrice,
+      notes: 'Cardápio online publicado do estoque. Link pro WhatsApp, Instagram e QR code.'
+    },
+    {
       profile: 'Bar / restaurante completo',
       example: 'Salão com mesas + cozinha que precisa enxergar a fila.',
       stack: ['Plano base', 'Mesas', 'Pedidos + Cozinha'],
@@ -156,6 +183,7 @@
     ...mesas.faqSpecific.map((f) => ({ ...f, group: 'Mesas' })),
     ...pedidos.faqSpecific.map((f) => ({ ...f, group: 'Pedidos + Cozinha' })),
     ...acessos.faqSpecific.map((f) => ({ ...f, group: 'Controle de Acessos' })),
+    ...menu.faqSpecific.map((f) => ({ ...f, group: 'ZeloMenu' })),
     ...chat.faqSpecific.map((f) => ({ ...f, group: 'Zelo Chat' })),
     ...generalFaqs.map((f) => ({ ...f, group: 'Geral' }))
   ];
@@ -165,6 +193,7 @@
     { ...mesas, anchor: 'mesas', name: 'Módulo Mesas', priceLabel: `+R$ ${mesasPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=mesas', ctaLabel: 'Adicionar ao plano' },
     { ...pedidos, anchor: 'pedidos-cozinha', name: 'Pedidos + Cozinha', priceLabel: `+R$ ${pedidosPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=pedidos', ctaLabel: 'Adicionar ao plano' },
     { ...acessos, anchor: 'acessos', name: 'Controle de Acessos', priceLabel: `+R$ ${acessosPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=acessos', ctaLabel: 'Adicionar ao plano' },
+    { ...menu, anchor: 'menu', name: 'ZeloMenu', priceLabel: `+R$ ${menuPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=menu', ctaLabel: 'Adicionar ZeloMenu' },
     { ...chat, anchor: 'chat', name: 'Zelo Chat', priceLabel: `+R$ ${chatDelta.toFixed(0)}/mês no Bundle`, ctaHref: chat.upgradeHref, ctaLabel: 'Upgrade pro pacote', external: true, externalUrl: chat.externalUrl }
   ];
 
@@ -271,17 +300,17 @@
       </div>
     </section>
 
-    <!-- ============ GRID DAS 3 EXTENSÕES ============ -->
+    <!-- ============ GRID DAS 5 EXTENSÕES ============ -->
     <section id="extensoes" class="py-16 md:py-20 border-b border-white/5">
       <div class="max-w-7xl mx-auto px-6">
         <div class="max-w-2xl mb-12">
           <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-3">As extensões</p>
           <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight">
-            Quatro módulos opcionais. Você escolhe.
+            Cinco módulos opcionais. Você escolhe.
           </h2>
         </div>
 
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
           {#each cards as card}
             <article
               class="relative rounded-2xl border p-7 flex flex-col transition-colors hover:border-sky-500/30"
@@ -300,6 +329,10 @@
                 {:else if card.iconKey === 'access'}
                   <svg class="w-6 h-6 text-sky-300" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                  </svg>
+                {:else if card.iconKey === 'menu'}
+                  <svg class="w-6 h-6 text-sky-300" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6h16.5M3.75 12h16.5m-16.5 6h16.5" />
                   </svg>
                 {:else if card.iconKey === 'chat'}
                   <svg class="w-6 h-6 text-sky-300" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">

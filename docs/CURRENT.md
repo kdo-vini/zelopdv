@@ -95,14 +95,18 @@
 ## Planejamento cross-produto
 
 - ZeloMenu/ZeloChat/ZeloPDV: decisões completas e backlog por fases em [[docs/projects/zelomenu-linear-plan.md]]. Impacta pricing, catálogo comum, Pedidos como motor interno, entitlements, ZeloChat e integração futura com Mesas.
-- A base de schema PDV-owned para publicação/modificadores do ZeloMenu já está aplicada no Supabase real. A UI self-service e o rollout por entitlement seguem dependentes dos próximos cortes (`ZLM-201`/`ZLM-205`).
+- A base de schema PDV-owned para publicação/modificadores do ZeloMenu já está aplicada no Supabase real.
+- ZLM-205 (billing e planos) concluído: ZeloMenu como addon (R$40) no checkout, billing APIs, webhook, admin dashboard.
+- ZLM-201 bulk publish concluído; self-service individual (nome/descrição/foto/ordem) ainda pendente.
+- Status completo em [[docs/projects/zelomenu-zelopdv-status.md]].
 
 ## Próximas fatias recomendadas
 
 1. Completar a UI self-service de publicação do ZeloMenu com edição de nome/descrição/foto/ordem, despublicação, pausa e modificadores; a publicação em lote básica já existe em Gestão → Produtos.
 2. Expandir o adapter atual de `zelomenu_product_publications` para leitura/edição e adicionar adapters de `zelomenu_modifier_groups`/`zelomenu_modifier_options`, sem alterar o catálogo base `produtos`.
-3. Validar fim-a-fim o fluxo de deleção agendada com o sweeper externo.
-4. Revisar e documentar o modelo de segurança do `admin-dashboard/`.
-5. Decidir se `pin_admin` continua como trava de conveniência ou vira proteção real server-side.
-6. Atacar warnings de `svelte-check` por lote, começando pelos arquivos operacionais e não pelas páginas de marketing.
-7. Expandir hero archetypes pra páginas standalone: `/precificacao` e `/vs-planilha` ainda usam layout legado (gradient text, multi-glow) — sprint separada pode ganhar +3-4 pontos no critique.
+3. Finalizar landing page de marketing do ZeloMenu em `/extensoes` (card + seção detalhada + FAQ + entrada em `extensoes.js`).
+4. Validar fim-a-fim o fluxo de deleção agendada com o sweeper externo.
+5. Revisar e documentar o modelo de segurança do `admin-dashboard/`.
+6. Decidir se `pin_admin` continua como trava de conveniência ou vira proteção real server-side.
+7. Atacar warnings de `svelte-check` por lote, começando pelos arquivos operacionais e não pelas páginas de marketing.
+8. Expandir hero archetypes pra páginas standalone: `/precificacao` e `/vs-planilha` ainda usam layout legado (gradient text, multi-glow) — sprint separada pode ganhar +3-4 pontos no critique.

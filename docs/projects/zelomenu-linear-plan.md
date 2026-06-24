@@ -1015,7 +1015,7 @@ Aceite:
 
 #### ZLM-201 — Publicação self-service do ZeloMenu
 
-Status: In Progress  
+Status: Done (bulk publish) / Doing (individual self-service)  
 Type: Prototype  
 Depends on: ZLM-004, ZLM-005  
 Owner: Frontend/Produto  
@@ -1032,12 +1032,11 @@ Aceite:
 - Equipe Zelo não precisa cadastrar tudo manualmente.
 
 Progresso (2026-06-24, ZeloPDV):
-- Base de dados desbloqueada por ZLM-004: publicação e modificadores já têm contrato versionado em migration local.
-- Gestão → Produtos agora publica em lote via `zelomenu_product_publications`, somente com `hasZeloMenuAccess`; falhas parciais permanecem selecionadas para nova tentativa.
-- O write path foi encapsulado em `src/lib/zelomenuPublications.js`, seam reutilizável por futura ação individual, despublicação ou pausa.
-- Ainda faltam edição self-service de nome/descrição/foto/ordem, despublicação/pausa, modificadores e o consumo pelo menu público.
-- Migration aplicada e validada no Supabase real; conectar ZeloChat/ZeloMenu a essa camada agora depende de adapter/UI, não de novo schema.
-- Próximo corte: ler/editar `zelomenu_product_publications` e consumir `zelomenu_modifier_groups`/`zelomenu_modifier_options`, preservando `produtos` como catálogo base.
+- Entitlement `hasZeloMenuAccess()` implementado em `src/lib/guards.js`: chat/bundle sempre true, pdv verifica flag `has_zelo_menu` na subscription.
+- Bulk publish implementado em `src/routes/gestao/produtos/+page.svelte`: botão "Publicar no menu" na toolbar de seleção em massa, visível apenas quando `hasZeloMenuAccess()` retorna true.
+- Bulk unpublish implementado em `src/lib/zelomenuPublications.js` via `unpublishProductsFromZeloMenu()`.
+- Testes: `tests/zelomenuPublications.test.js`, `tests/guards.zelomenu.test.js`, `tests/zelomenuPublicationSchema.test.js`.
+- Ainda faltam: edição individual de nome/descrição/foto/ordem, despublicação/pausa por produto, gerenciamento de modificadores e consumo pelo menu público.
 
 #### ZLM-202 — Tela comum de Pedidos liberada por ZeloMenu
 
@@ -1094,7 +1093,7 @@ Aceite:
 
 #### ZLM-205 — Billing e planos novos
 
-Status: Todo  
+Status: Done  
 Type: Research  
 Depends on: ZLM-001, ZLM-005  
 Owner: Produto/Engenharia  
@@ -1110,6 +1109,17 @@ Aceite:
 - Checkout e paywall mostram preços corretos.
 - Entitlements batem com planos.
 - Clientes antigos não quebram.
+
+Progresso (2026-06-24, ZeloPDV):
+- ADDONS.menu definido em `src/lib/pricing.js` (R$40, price_1TlbH4LUJWyE4PkYX0kdJhAw, setsEntitlement: 'has_zelo_menu').
+- PLANS.pdv.allowsMenu: true; PLANS.bundle.allowsMenu: false (incluso); PLANS.chat.includesMenu: true.
+- Webhook Stripe define `has_zelo_menu` com base em plan_tier + menu addon.
+- `/assinatura` (checkout): ZeloMenu como addon no catálogo (R$40), substituindo Pedidos+Cozinha como addon vendido.
+- `/gestao/extensoes`: ZeloMenu como card principal; Pedidos+Cozinha só aparece se já ativo (legado).
+- Billing APIs (create-subscription, toggle-addon, change-plan, pix/create, sync-plan, update-user-subscription) atualizadas para suportar menu addon com coluna `has_zelo_menu`.
+- Admin dashboard: flag `has_zelo_menu` editável, respeitando regras de plano (chat/bundle = sempre true).
+- Pedidos+Cozinha como addon novo removido: não aparece nos catálogos de venda, apenas como legado se já ativo.
+- Compatibilidade Mesas sem Menu mantida: `hasMesasAddon` independente de `has_zelo_menu`.
 
 ### Phase 3 — Integração Profunda com ZeloPDV
 

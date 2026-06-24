@@ -20,6 +20,7 @@ export function serializeBillingPayment(row) {
       mesas: !!row.has_mesas_addon,
       pedidos: !!row.has_pedidos_addon,
       acessos: !!row.has_acessos_addon,
+      menu: !!row.has_zelo_menu,
     },
   };
 }
@@ -88,6 +89,7 @@ async function activateSubscriptionFromPayment({ payment, userId, nowIso }) {
     has_mesas_addon: !!payment.has_mesas_addon,
     has_pedidos_addon: !!payment.has_pedidos_addon,
     has_acessos_addon: !!payment.has_acessos_addon,
+    has_zelo_menu: !!payment.has_zelo_menu,
     updated_at: nowIso,
   };
 
@@ -155,7 +157,7 @@ export async function markWebhookEventProcessed({ provider, eventId, eventType }
 export async function findBillingPaymentForUser(paymentId, userId) {
   const { data, error } = await supabaseAdmin
     .from('billing_payments')
-    .select('id, user_id, subscription_id, provider, method, status, amount_expected_cents, amount_paid_cents, currency, external_reference, br_code, qr_code_base64, expires_at, paid_at, provider_payment_id, provider_status, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, metadata')
+    .select('id, user_id, subscription_id, provider, method, status, amount_expected_cents, amount_paid_cents, currency, external_reference, br_code, qr_code_base64, expires_at, paid_at, provider_payment_id, provider_status, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, metadata')
     .eq('id', paymentId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -167,7 +169,7 @@ export async function findBillingPaymentForUser(paymentId, userId) {
 export async function findBillingPaymentByProviderId(providerPaymentId) {
   const { data, error } = await supabaseAdmin
     .from('billing_payments')
-    .select('id, user_id, subscription_id, provider, method, status, amount_expected_cents, amount_paid_cents, currency, external_reference, br_code, qr_code_base64, expires_at, paid_at, provider_payment_id, provider_status, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, metadata')
+    .select('id, user_id, subscription_id, provider, method, status, amount_expected_cents, amount_paid_cents, currency, external_reference, br_code, qr_code_base64, expires_at, paid_at, provider_payment_id, provider_status, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, metadata')
     .eq('provider', 'abacatepay')
     .eq('provider_payment_id', providerPaymentId)
     .maybeSingle();

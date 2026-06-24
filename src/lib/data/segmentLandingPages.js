@@ -100,6 +100,12 @@ export const segmentPages = {
           'Monte seu cardápio, organize categorias e acompanhe os itens que precisam de mais atenção. Isso ajuda a evitar ruptura, compra no susto e confusão na hora de vender.'
       },
       {
+        icon: '📱',
+        title: 'Cardápio online com publicação do estoque',
+        description:
+          'Publique os produtos direto do estoque no cardápio digital do seu negócio. Clientes acessam o menu pelo celular, veem preços e variações. Sem cadastro paralelo, sem taxa por pedido, sem imprimir cardápio de novo.'
+      },
+      {
         icon: '💰',
         title: 'Lucro real no fim do dia',
         description:
@@ -142,6 +148,11 @@ export const segmentPages = {
         question: 'Consigo controlar o fiado dos meus clientes?',
         answer:
           'Sim. O sistema tem carteira de clientes integrada para você acompanhar histórico, limite e saldo de cada cliente com muito mais clareza do que no caderno.'
+      },
+      {
+        question: 'Meus clientes podem ver o cardápio pelo celular?',
+        answer:
+          'Sim. Se você ativar o ZeloMenu (adicional de R$ 40/mês), os produtos que você já cadastrou no estoque viram um cardápio online acessível por link. Clientes veem preços, variações e adicionais direto do celular. Sem fotografar cardápio impresso, sem publicar em rede social todo dia.'
       },
       {
         question: 'Dá para fechar o caixa sem usar papel?',
@@ -220,6 +231,12 @@ export const segmentPages = {
           'Monte o cardápio, organize categorias e acompanhe os itens que pedem atenção. Menos ruptura no meio do serviço e menos compra no susto.'
       },
       {
+        icon: '📱',
+        title: 'Cardápio online com publicação do estoque',
+        description:
+          'Publique os produtos direto do estoque no cardápio digital do seu negócio. Clientes acessam o menu pelo celular, veem preços e variações. Sem cadastro paralelo, sem taxa por pedido, sem imprimir cardápio de novo.'
+      },
+      {
         icon: '💰',
         title: 'Lucro real no fim do dia',
         description:
@@ -267,6 +284,11 @@ export const segmentPages = {
         question: 'Consigo dividir a conta ou receber de formas diferentes na mesma mesa?',
         answer:
           'Sim. O fechamento aceita formas de pagamento combinadas, e a taxa de serviço pode ser aplicada quando fizer sentido para a casa.'
+      },
+      {
+        question: 'Dá para ter um cardápio online acessível por QR code?',
+        answer:
+          'Sim. O ZeloMenu (adicional de R$ 40/mês) publica os produtos do seu cardápio direto do estoque em um link público. O cliente escaneia o QR code, vê o menu no celular e confere preços, descrições e variações. Publica uma vez, atualiza direto do sistema.'
       },
       {
         question: 'Preciso instalar algum programa ou comprar equipamento?',
@@ -334,6 +356,12 @@ export const segmentPages = {
           'Você cadastra o menu da casa de um jeito limpo e deixa a operação mais previsível. Isso facilita a rotina de quem precisa vender combos, adicionais e promoções frequentes.'
       },
       {
+        icon: '📱',
+        title: 'Cardápio online com publicação do estoque',
+        description:
+          'Publique os produtos direto do estoque no cardápio digital do seu negócio. Clientes acessam o menu pelo celular, veem preços e variações. Sem cadastro paralelo, sem taxa por pedido, sem imprimir cardápio de novo.'
+      },
+      {
         icon: '📦',
         title: 'Acompanhamento do estoque',
         description:
@@ -381,6 +409,11 @@ export const segmentPages = {
         question: 'Funciona bem no pico da noite?',
         answer:
           'Foi pensado para operação rápida. A tela de venda é direta e ajuda a registrar pedidos e pagamentos com agilidade quando a fila aumenta.'
+      },
+      {
+        question: 'Meus clientes conseguem ver o cardápio online?',
+        answer:
+          'Com o ZeloMenu (adicional de R$ 40/mês), sim. Os produtos do seu estoque viram um cardápio digital acessível por link. Clientes veem combos, preços e adicionais pelo celular, sem você precisar manter cardápio impresso atualizado.'
       },
       {
         question: 'Dá para acompanhar o lucro sem usar planilha?',
@@ -448,6 +481,12 @@ export const segmentPages = {
           'Pix, dinheiro, cartão e combinações de pagamento ficam registrados com mais clareza. Isso ajuda bastante quem precisa fechar o dia sem depender de conversa e memória.'
       },
       {
+        icon: '📱',
+        title: 'Cardápio online com publicação do estoque',
+        description:
+          'Publique os produtos direto do estoque no cardápio digital do seu negócio. Clientes acessam o menu pelo celular, veem preços e variações. Sem cadastro paralelo, sem taxa por pedido, sem imprimir cardápio de novo.'
+      },
+      {
         icon: '🧾',
         title: 'Despesas do delivery sob controle',
         description:
@@ -506,6 +545,11 @@ export const segmentPages = {
         question: 'Funciona para operação pequena, com poucos pedidos por dia?',
         answer:
           'Sim. Ele foi pensado justamente para negócios enxutos que precisam de controle simples, sem montar uma estrutura cara ou complexa.'
+      },
+      {
+        question: 'Meus clientes podem ver o cardápio online?',
+        answer:
+          'Com o ZeloMenu (adicional de R$ 40/mês), sim. Os produtos do seu estoque viram um cardápio digital acessível por link. Clientes veem preços e variações pelo celular, sem você precisar manter fotos de cardápio impresso no WhatsApp.'
       }
     ],
     finalCtaTitle: 'Teste no seu delivery por 30 dias',

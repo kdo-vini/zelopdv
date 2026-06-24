@@ -101,7 +101,9 @@ export async function POST({ request }) {
     const hasSubFields = subscription.status !== undefined
       || subscription.plan_tier !== undefined
       || subscription.has_mesas_addon !== undefined
-      || subscription.has_pedidos_addon !== undefined;
+      || subscription.has_pedidos_addon !== undefined
+      || subscription.has_acessos_addon !== undefined
+      || subscription.has_zelo_menu !== undefined;
 
     if (hasSubFields) {
       const subUpdate = {
@@ -114,6 +116,7 @@ export async function POST({ request }) {
       if (subscription.plan_tier !== undefined) subUpdate.plan_tier = subscription.plan_tier;
       if (subscription.has_mesas_addon !== undefined) subUpdate.has_mesas_addon = subscription.has_mesas_addon;
       if (subscription.has_pedidos_addon !== undefined) subUpdate.has_pedidos_addon = subscription.has_pedidos_addon;
+      if (subscription.has_zelo_menu !== undefined) subUpdate.has_zelo_menu = subscription.has_zelo_menu;
 
       // If ending access, expire immediately and clear manual extension.
       if (subscription.status === 'canceled') {

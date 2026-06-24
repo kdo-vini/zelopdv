@@ -69,6 +69,17 @@
           Sem cartão. Cancele a qualquer hora.
         </p>
       </div>
+
+      <div class="mt-6 max-w-lg mx-auto text-center">
+        <p class="text-sm" style="color: var(--text-label);">
+          Precisa de <strong style="color: var(--text-main);">cardápio online</strong> publicado do estoque?
+          <a href="/extensoes#menu" class="text-sky-400 hover:text-sky-300 underline underline-offset-2">ZeloMenu +R$ 40/mês</a>
+          ·
+          <a href="/extensoes#mesas" class="text-sky-400 hover:text-sky-300 underline underline-offset-2">Mesas +R$ 30/mês</a>
+          ·
+          <a href="/extensoes#acessos" class="text-sky-400 hover:text-sky-300 underline underline-offset-2">Acessos +R$ 30/mês</a>
+        </p>
+      </div>
     </div>
   </div>
 </section>
