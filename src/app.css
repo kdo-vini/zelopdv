@@ -162,6 +162,42 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
+/* --- THEMED RADIO (use em input[type=radio] do app) --- */
+.themed-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: 0 0 auto;
+  margin-top: 0.0625rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  background-color: var(--bg-card);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.themed-radio:hover {
+  border-color: var(--primary);
+}
+.themed-radio:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+.themed-radio:checked::after {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--primary-text, #fff);
+}
+.themed-radio:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
 /* Modal base */
 .modal-backdrop {
   @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50;

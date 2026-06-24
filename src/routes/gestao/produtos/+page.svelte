@@ -1329,7 +1329,7 @@
             <button
               class="text-xs mt-2"
               style="color: var(--primary);"
-              on:click={() => { limparSelecao(); buscaFilter = ''; }}
+              on:click={() => { limparSelecao(); buscaFilter = ''; filterPublicados = 'all'; }}
             >
               Limpar filtros
             </button>
