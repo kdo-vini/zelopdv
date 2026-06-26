@@ -6,11 +6,8 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { waitAuthReady } from '$lib/authStore';
   import { getAccessContext } from '$lib/accessControl';
-  import { hasZeloMenuAccess } from '$lib/guards';
-  import { publishProductsToZeloMenu, unpublishProductsFromZeloMenu } from '$lib/zelomenuPublications';
   import * as Select from '$lib/components/ui/select/index.js';
-  import { Upload, Pencil, Trash2, EyeOff, Plus, SlidersHorizontal } from 'lucide-svelte';
-  import ModalModificadores from '$lib/components/modals/ModalModificadores.svelte';
+  import { Pencil, Trash2, EyeOff, Plus } from 'lucide-svelte';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
@@ -33,7 +30,6 @@
   let buscaFilter = '';
   let filterOcultosOnly = false;
   let filterEstoqueOnly = false;
-  let filterPublicados = 'all'; // 'all' | 'published' | 'unpublished'
   let showFilterDropdown = false;
 
   // Paginação
@@ -44,22 +40,6 @@
 
   // Seleção em massa
   let selectedItems = new Set();
-  let hasMenuAccess = false;
-  let publishingToMenu = false;
-
-  // ZeloMenu publication state
-  let publicacoes = new Map(); // id_produto -> { visivel_online }
-  let publishingSingle = null; // id_produto being toggled
-  let ownerUserId = null; // cached from getAccessContext
-
-  // Modificadores ZeloMenu
-  let modificadoresAberto = false;
-  let produtoParaModificadores = null;
-
-  function abrirModificadores(prod) {
-    produtoParaModificadores = { id: prod.id, nome: prod.nome };
-    modificadoresAberto = true;
-  }
 
   // Edição inline
   let editingProdId = null;
@@ -138,16 +118,7 @@
         supabase.auth.getUser(),
         getAccessContext()
       ]);
-      const userId = userData?.user?.id;
       const ownerId = ctx?.ownerUserId;
-
-      ownerUserId = ownerId || null;
-      hasMenuAccess = userId ? await hasZeloMenuAccess(userId) : false;
-
-      // Reload products now that hasMenuAccess is known (loads publications)
-      if (hasMenuAccess && produtos.length > 0) {
-        await carregarPublicacoes();
-      }
 
       if (ownerId) {
         const { data: perfil } = await supabase
@@ -165,7 +136,6 @@
         }
       }
     } catch (e) {
-      hasMenuAccess = false;
       console.warn('[produtos] setup load failed:', e?.message);
     }
   });
@@ -236,19 +206,6 @@
     }
   }
 
-  async function carregarPublicacoes() {
-    if (!hasMenuAccess || produtos.length === 0 || !ownerUserId) {
-      publicacoes = new Map();
-      return;
-    }
-    const { data: pubs } = await supabase
-      .from('zelomenu_product_publications')
-      .select('id_produto, visivel_online')
-      .in('id_produto', produtos.map(p => p.id))
-      .eq('id_usuario', ownerUserId);
-    publicacoes = new Map((pubs || []).map(p => [p.id_produto, p]));
-  }
-
   // ─── Computed: Tree ───────────────────────────────────────────────────────────
   function getSubcats(catId) {
     return subcategorias.filter(s => s.id_categoria === catId);
@@ -308,11 +265,6 @@
     let list = [...produtos];
     if (filterOcultosOnly) list = list.filter(p => p.ocultar_no_pdv);
     if (filterEstoqueOnly) list = list.filter(p => p.controlar_estoque || estoqueProdutoCompartilhado(p));
-    if (filterPublicados === 'published') {
-      list = list.filter(p => publicacoes.get(p.id)?.visivel_online === true);
-    } else if (filterPublicados === 'unpublished') {
-      list = list.filter(p => publicacoes.get(p.id)?.visivel_online !== true);
-    }
     return list;
   })();
 
@@ -337,16 +289,6 @@
   $: filteredSubcatsForEditForm = editProdForm.id_categoria
     ? subcategorias.filter(s => s.id_categoria === editProdForm.id_categoria)
     : [];
-
-  // Determina se todos os itens selecionados estão publicados no menu
-  $: selectedAllPublished = (() => {
-    if (selectedItems.size === 0) return false;
-    return Array.from(selectedItems).every(id => publicacoes.get(id)?.visivel_online === true);
-  })();
-  $: selectedAnyPublished = (() => {
-    if (selectedItems.size === 0) return false;
-    return Array.from(selectedItems).some(id => publicacoes.get(id)?.visivel_online === true);
-  })();
 
   $: newProdCategoriaCompartilhada = categoriaTemEstoqueCompartilhado(newProdForm.id_categoria);
   $: editProdCategoriaCompartilhada = categoriaTemEstoqueCompartilhado(editProdForm.id_categoria);
@@ -709,124 +651,6 @@
     await carregarProdutos();
   }
 
-  async function togglePublicacaoProduto(prod) {
-    if (publishingSingle) return;
-    if (!ownerUserId) {
-      addToast('Sua sessão expirou. Entre novamente para continuar.', 'error');
-      return;
-    }
-
-    const pub = publicacoes.get(prod.id);
-    const estaPublicado = pub?.visivel_online === true;
-
-    const ok = await confirmAction(
-      estaPublicado ? 'Remover do menu' : 'Publicar no menu',
-      estaPublicado
-        ? `Remover "${prod.nome}" do menu online? Clientes não conseguirão ver este produto.`
-        : `Publicar "${prod.nome}" no menu online? Ficará visível para os clientes.`
-    );
-    if (!ok) return;
-
-    publishingSingle = prod.id;
-    try {
-      if (estaPublicado) {
-        const { error } = await supabase
-          .from('zelomenu_product_publications')
-          .update({ visivel_online: false })
-          .eq('id_produto', prod.id)
-          .eq('id_usuario', ownerUserId);
-        if (error) throw error;
-        // Update otimista no Map
-        publicacoes.set(prod.id, { id_produto: prod.id, visivel_online: false });
-        publicacoes = new Map(publicacoes);
-        addToast(`"${prod.nome}" removido do menu.`, 'success');
-      } else {
-        const { publishedIds, failedIds } = await publishProductsToZeloMenu(supabase, {
-          ownerUserId,
-          productIds: [prod.id]
-        });
-        if (failedIds.length > 0) throw new Error('Falha ao publicar');
-        // Update otimista no Map
-        publicacoes.set(prod.id, { id_produto: prod.id, visivel_online: true });
-        publicacoes = new Map(publicacoes);
-        addToast(`"${prod.nome}" publicado no menu.`, 'success');
-      }
-    } catch (e) {
-      addToast('Erro ao alterar publicação: ' + (e?.message || e), 'error');
-      await carregarPublicacoes();
-    } finally {
-      publishingSingle = null;
-    }
-  }
-
-  async function alterarPublicacaoEmMassa(publicar) {
-    if (selectedItems.size === 0 || publishingToMenu) return;
-    if (!ownerUserId) {
-      addToast('Sua sessão expirou. Entre novamente para continuar.', 'error');
-      return;
-    }
-    if (!hasMenuAccess) {
-      addToast('O módulo ZeloMenu não está ativo para esta empresa.', 'warning');
-      return;
-    }
-
-    const productIds = Array.from(selectedItems);
-    const actionLabel = publicar ? 'Publicar no menu' : 'Remover do menu';
-    const actionDesc = publicar
-      ? `Publicar ${productIds.length} produto(s) selecionado(s)? Eles ficarão disponíveis no menu da empresa.`
-      : `Remover ${productIds.length} produto(s) selecionado(s) do menu online?`;
-
-    const ok = await confirmAction(actionLabel, actionDesc);
-    if (!ok) return;
-
-    publishingToMenu = true;
-    try {
-      if (publicar) {
-        const { publishedIds, failedIds } = await publishProductsToZeloMenu(supabase, {
-          ownerUserId,
-          productIds
-        });
-
-        selectedItems = new Set(failedIds);
-
-        if (failedIds.length === 0) {
-          addToast(`${publishedIds.length} produto(s) publicado(s) no menu.`, 'success');
-        } else if (publishedIds.length > 0) {
-          addToast(
-            `${publishedIds.length} produto(s) publicado(s); ${failedIds.length} não foram publicados e continuam selecionados.`,
-            'warning'
-          );
-        } else {
-          addToast('Não foi possível publicar os produtos selecionados. Tente novamente.', 'error');
-        }
-      } else {
-        const { unpublishedIds, failedIds } = await unpublishProductsFromZeloMenu(supabase, {
-          ownerUserId,
-          productIds
-        });
-
-        selectedItems = new Set(failedIds);
-
-        if (failedIds.length === 0) {
-          addToast(`${unpublishedIds.length} produto(s) removido(s) do menu.`, 'success');
-        } else if (unpublishedIds.length > 0) {
-          addToast(
-            `${unpublishedIds.length} produto(s) removido(s); ${failedIds.length} não foram alterados e continuam selecionados.`,
-            'warning'
-          );
-        } else {
-          addToast('Não foi possível alterar os produtos selecionados. Tente novamente.', 'error');
-        }
-      }
-    } catch (error) {
-      console.warn('[ZeloMenu] bulk publication failed:', error?.message);
-      addToast('Não foi possível alterar os produtos selecionados. Tente novamente.', 'error');
-    } finally {
-      await carregarProdutos();
-      publishingToMenu = false;
-    }
-  }
-
   // ─── Helpers ──────────────────────────────────────────────────────────────────
   function formatPreco(valor) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
@@ -872,6 +696,14 @@
 
   <!-- Botões de ação globais -->
   <div class="page-actions">
+    <a href="https://menu.zelopdv.com.br/admin" target="_blank" rel="noopener"
+       class="btn-secondary" style="text-decoration: none;">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      </svg>
+      <span>Configurar cardápio</span>
+    </a>
     <button class="btn-secondary" on:click={() => showSubModal = true}>
       <Plus class="w-4 h-4" />
       <span>Nova Subcategoria</span>
@@ -1160,52 +992,9 @@
       <div class="flex items-center gap-2 min-w-0">
         {#if selectedItems.size > 0}
           <div class="flex items-center gap-2 flex-wrap">
-            {#if hasMenuAccess}
-              {#if selectedAllPublished}
-                <button
-                  class="bulk-action-btn"
-                  on:click={() => alterarPublicacaoEmMassa(false)}
-                  disabled={publishingToMenu}
-                  style="background: color-mix(in srgb, var(--warning) 10%, transparent); color: var(--warning); border-color: var(--warning);"
-                >
-                  <EyeOff class="w-4 h-4" />
-                  {publishingToMenu ? 'Alterando...' : `Despublicar (${selectedItems.size})`}
-                </button>
-              {:else if selectedAnyPublished}
-                <button
-                  class="bulk-action-btn"
-                  on:click={() => alterarPublicacaoEmMassa(true)}
-                  disabled={publishingToMenu}
-                  style="background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); border-color: var(--primary);"
-                >
-                  <Upload class="w-4 h-4" />
-                  {publishingToMenu ? 'Alterando...' : `Publicar (${selectedItems.size})`}
-                </button>
-                <button
-                  class="bulk-action-btn"
-                  on:click={() => alterarPublicacaoEmMassa(false)}
-                  disabled={publishingToMenu}
-                  style="background: color-mix(in srgb, var(--warning) 10%, transparent); color: var(--warning); border-color: var(--warning);"
-                >
-                  <EyeOff class="w-4 h-4" />
-                  {publishingToMenu ? 'Alterando...' : `Despublicar (${selectedItems.size})`}
-                </button>
-              {:else}
-                <button
-                  class="bulk-action-btn"
-                  on:click={() => alterarPublicacaoEmMassa(true)}
-                  disabled={publishingToMenu}
-                  style="background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); border-color: var(--primary);"
-                >
-                  <Upload class="w-4 h-4" />
-                  {publishingToMenu ? 'Publicando...' : `Publicar no menu (${selectedItems.size})`}
-                </button>
-              {/if}
-            {/if}
             <button
               class="bulk-action-btn"
               on:click={excluirEmMassa}
-              disabled={publishingToMenu}
               style="background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error); border-color: var(--error);"
             >
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1250,17 +1039,17 @@
         <div class="filter-dropdown-wrapper relative">
           <button
             class="filter-btn"
-            class:filter-btn-active={filterOcultosOnly || filterEstoqueOnly || filterPublicados !== 'all'}
+            class:filter-btn-active={filterOcultosOnly || filterEstoqueOnly}
             on:click|stopPropagation={() => showFilterDropdown = !showFilterDropdown}
             style="border-color: var(--border-subtle); color: var(--text-muted);
-              {filterOcultosOnly || filterEstoqueOnly || filterPublicados !== 'all' ? 'color: var(--primary); border-color: var(--primary);' : ''}"
+              {filterOcultosOnly || filterEstoqueOnly ? 'color: var(--primary); border-color: var(--primary);' : ''}"
             title="Filtros adicionais"
           >
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707l-6.414 6.414A1 1 0 0013 14v5a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7a1 1 0 01-.293-.707L3.293 6.707A1 1 0 013 6V4z" />
             </svg>
-            {#if filterOcultosOnly || filterEstoqueOnly || filterPublicados !== 'all'}
+            {#if filterOcultosOnly || filterEstoqueOnly}
               <span class="filter-active-dot" style="background: var(--primary);"></span>
             {/if}
           </button>
@@ -1279,27 +1068,11 @@
                 <input type="checkbox" bind:checked={filterEstoqueOnly} class="themed-checkbox" />
                 <span>Somente com estoque controlado</span>
               </label>
-              {#if hasMenuAccess}
-                <div class="filter-divider" style="border-top: 1px solid var(--border-subtle); margin: 0.25rem 0;"></div>
-                <span class="filter-option-label" style="color: var(--text-muted); font-size: 10px; padding: 0.25rem 0.75rem; text-transform: uppercase; letter-spacing: 0.1em;">Visível no Menu</span>
-                <label class="filter-option" style="color: var(--text-label);">
-                  <input type="radio" name="filterPublicados" bind:group={filterPublicados} value="all" class="themed-radio" />
-                  <span>Todos</span>
-                </label>
-                <label class="filter-option" style="color: var(--text-label);">
-                  <input type="radio" name="filterPublicados" bind:group={filterPublicados} value="published" class="themed-radio" />
-                  <span>Publicados</span>
-                </label>
-                <label class="filter-option" style="color: var(--text-label);">
-                  <input type="radio" name="filterPublicados" bind:group={filterPublicados} value="unpublished" class="themed-radio" />
-                  <span>Não publicados</span>
-                </label>
-              {/if}
-              {#if filterOcultosOnly || filterEstoqueOnly || filterPublicados !== 'all'}
+              {#if filterOcultosOnly || filterEstoqueOnly}
                 <button
                   class="text-xs mt-1 pt-2"
                   style="color: var(--primary); border-top: 1px solid var(--border-subtle); width: 100%; text-align: left;"
-                  on:click={() => { filterOcultosOnly = false; filterEstoqueOnly = false; filterPublicados = 'all'; showFilterDropdown = false; }}
+                  on:click={() => { filterOcultosOnly = false; filterEstoqueOnly = false; showFilterDropdown = false; }}
                 >
                   Limpar filtros extras
                 </button>
@@ -1324,15 +1097,7 @@
               d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
           </svg>
           <p class="text-sm">
-            {#if filterPublicados === 'published'}
-              Nenhum produto publicado no menu online.
-            {:else if filterPublicados === 'unpublished'}
-              {#if sortedProdutos.length === 0 && produtos.length > 0}
-                Todos os produtos já estão publicados no menu online!
-              {:else}
-                Nenhum produto cadastrado. Comece criando um produto.
-              {/if}
-            {:else if produtos.length > 0}
+            {#if produtos.length > 0}
               Nenhum produto encontrado com os filtros atuais.
             {:else}
               Nenhum produto cadastrado. Comece criando um produto.
@@ -1506,44 +1271,9 @@
                       <span class="badge-status" style="background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);">Ativo</span>
                     {/if}
 
-                    {#if hasMenuAccess}
-                      {#if publicacoes.get(prod.id)?.visivel_online}
-                        <button
-                          class="badge-status cursor-pointer"
-                          style="background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);"
-                          on:click={() => togglePublicacaoProduto(prod)}
-                          disabled={publishingSingle === prod.id}
-                          aria-pressed="true"
-                          aria-label={'Remover "' + prod.nome + '" do menu'}
-                        >
-                          No menu
-                        </button>
-                      {:else}
-                        <button
-                          class="badge-status cursor-pointer"
-                          style="background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text-muted);"
-                          on:click={() => togglePublicacaoProduto(prod)}
-                          disabled={publishingSingle === prod.id}
-                          aria-pressed="false"
-                          aria-label={'Publicar "' + prod.nome + '" no menu'}
-                        >
-                          Fora do menu
-                        </button>
-                      {/if}
-                    {/if}
                   </div>
 
                   <div class="row-actions">
-                    {#if hasMenuAccess}
-                      <button
-                        class="row-action-btn"
-                        title="Grupos de modificadores"
-                        on:click={() => abrirModificadores(prod)}
-                        style="color: var(--text-muted);"
-                      >
-                        <SlidersHorizontal class="w-4 h-4" />
-                      </button>
-                    {/if}
                     <button
                       class="row-action-btn"
                       title="Editar"
@@ -1592,7 +1322,6 @@
                 {#if sortField === 'estoque_atual'}<span class="sort-arrow">{sortDesc ? '↓' : '↑'}</span>{/if}
               </th>
               <th class="th-cell text-center">Status</th>
-              <th class="th-cell text-center">Visível no Menu</th>
               <th class="th-cell text-right">Ações</th>
             </tr>
           </thead>
@@ -1768,66 +1497,9 @@
                     {/if}
                   </td>
 
-                  <!-- Visível no Menu Online -->
-                  <td class="td-cell text-center">
-                    {#if hasMenuAccess}
-                      {#if publicacoes.has(prod.id)}
-                        {#if publicacoes.get(prod.id).visivel_online}
-                          <button
-                            class="badge-status cursor-pointer"
-                            style="background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);"
-                            on:click={() => togglePublicacaoProduto(prod)}
-                            disabled={publishingSingle === prod.id}
-                            title="Clique para despublicar"
-                            aria-pressed="true"
-                            aria-label={'Remover "' + prod.nome + '" do menu'}
-                          >
-                            Sim
-                          </button>
-                        {:else}
-                          <button
-                            class="badge-status cursor-pointer"
-                            style="background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text-muted);"
-                            on:click={() => togglePublicacaoProduto(prod)}
-                            disabled={publishingSingle === prod.id}
-                            title="Clique para publicar"
-                            aria-pressed="false"
-                            aria-label={'Publicar "' + prod.nome + '" no menu'}
-                          >
-                            Não
-                          </button>
-                        {/if}
-                      {:else}
-                        <button
-                          class="badge-status cursor-pointer"
-                          style="background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text-muted);"
-                          on:click={() => togglePublicacaoProduto(prod)}
-                          disabled={publishingSingle === prod.id}
-                          title="Clique para publicar"
-                          aria-pressed="false"
-                          aria-label={'Publicar "' + prod.nome + '" no menu'}
-                        >
-                          Não
-                        </button>
-                      {/if}
-                    {:else}
-                      <span class="text-xs" style="color: var(--text-muted);">—</span>
-                    {/if}
-                  </td>
-
                   <!-- Ações -->
                   <td class="td-cell text-right">
                     <div class="row-actions">
-                      {#if hasMenuAccess}
-                        <button
-                          class="row-action-btn"
-                          title="Grupos de modificadores"
-                          on:click={() => abrirModificadores(prod)}
-                          style="color: var(--text-muted);"
-                        >
-                          <SlidersHorizontal class="w-4 h-4" />
-                        </button>
-                      {/if}
                       <button
                         class="row-action-btn"
                         title="Editar"
@@ -2169,12 +1841,6 @@
     </div>
   </div>
 {/if}
-
-<ModalModificadores
-  bind:open={modificadoresAberto}
-  produto={produtoParaModificadores}
-  {ownerUserId}
-/>
 
 <style>
   /* ─── Layout ──────────────────────────────────────────────────────────────── */
