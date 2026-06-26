@@ -2,7 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { ensureActiveSubscription, hasPedidosAddon, bounceSubUserMissingAddon } from '$lib/guards';
+  import { ensureActiveSubscription, hasKitchenQueueAccess, bounceSubUserMissingAddon } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -48,7 +48,7 @@
       goto('/app');
       return;
     }
-    addonActive = await hasPedidosAddon(ownerUserId);
+    addonActive = await hasKitchenQueueAccess(ownerUserId);
     if (bounceSubUserMissingAddon({ addonActive, isSubUser, addonLabel: 'Pedidos' })) return;
     ready = true;
     if (!addonActive) {

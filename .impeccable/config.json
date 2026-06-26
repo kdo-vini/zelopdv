@@ -1,0 +1,9 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [
+      "src/routes/gestao/extensoes/+page.svelte"
+    ],
+    "ignoreValues": []
+  }
+}

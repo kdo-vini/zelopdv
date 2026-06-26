@@ -14,62 +14,6 @@
   let menuActive = false;
   let planTier = null;
 
-  // Slug do cardápio público
-  let slugAtual = null;
-  let slugInput = '';
-  let salvandoSlug = false;
-  let slugCopiado = false;
-
-  async function carregarSlug() {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/zelomenu/slug', {
-        headers: { Authorization: `Bearer ${session?.access_token}` }
-      });
-      if (!res.ok) return;
-      const { slug } = await res.json();
-      slugAtual = slug;
-      slugInput = slug || '';
-    } catch {}
-  }
-
-  async function salvarSlug() {
-    const valor = slugInput.trim().toLowerCase().replace(/\s+/g, '-');
-    if (!valor) { addToast('O link não pode ser vazio.', 'warning'); return; }
-    salvandoSlug = true;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/zelomenu/slug', {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ slug: valor })
-      });
-      const json = await res.json();
-      if (!res.ok) { addToast(json.error || 'Erro ao salvar.', 'error'); return; }
-      slugAtual = json.slug;
-      slugInput = json.slug;
-      addToast('Link salvo com sucesso.', 'success');
-    } catch (err) {
-      addToast('Erro ao salvar: ' + err.message, 'error');
-    } finally {
-      salvandoSlug = false;
-    }
-  }
-
-  async function copiarLink() {
-    if (!slugAtual) return;
-    try {
-      await navigator.clipboard.writeText(`https://menu.zelopdv.com.br/${slugAtual}`);
-      slugCopiado = true;
-      setTimeout(() => { slugCopiado = false; }, 2000);
-    } catch {
-      addToast('Não foi possível copiar. Copie manualmente.', 'warning');
-    }
-  }
-
   onMount(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     userId = user?.id || '';
@@ -107,7 +51,6 @@
       hasZeloMenuAccess(userId),
     ]);
     ready = true;
-    if (menuActive) carregarSlug();
   });
 
   // Catálogo de extensões. ZeloChat aparece como produto/plano (não addon),
@@ -141,16 +84,20 @@
       manage: null,
       incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Pacote Gestão + Atendimento).',
     },
-    // Pedidos + Cozinha (legado): só exibe se já estiver ativo — não é mais vendido separadamente
-    ...(pedidosActive ? [{
+    // Pedidos + Cozinha: exibe se estiver ativo isolado (legado) ou se Mesas estiver ativo
+    // (já que Mesas inclui este módulo). Quando incluso via Mesas, mostra como não comprável.
+    ...(pedidosActive || mesasActive ? [{
       id: 'pedidos',
       kind: 'addon',
       name: 'Pedidos + Cozinha',
-      tagline: 'Legado — agora parte do ZeloMenu',
-      description: 'Este módulo foi absorvido pelo ZeloMenu. Seu acesso continua ativo normalmente.',
+      tagline: mesasActive ? 'Incluído no Módulo Mesas' : 'Legado — agora parte do ZeloMenu',
+      description: mesasActive
+        ? 'Fila de cozinha, envio de pedidos e controle de status — inclusos automaticamente no Módulo Mesas.'
+        : 'Este módulo foi absorvido pelo ZeloMenu. Seu acesso continua ativo normalmente.',
       price: ADDONS.pedidos.price,
       active: true,
       compatible: true,
+      includedInMesas: mesasActive,
       cta: '/assinatura',
       manage: '/app/pedidos',
       incompatibleNote: '',
@@ -207,28 +154,14 @@
       <div class="link-panel">
         <div class="link-panel-header">
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">ZeloMenu · Cardápio online</p>
-          <h2 class="text-base font-bold text-slate-100 tracking-tight">Link público do cardápio</h2>
-          <p class="link-panel-desc">Seu cardápio online estará disponível em <strong>menu.zelopdv.com.br/{slugAtual || '…'}</strong></p>
+          <h2 class="text-base font-bold text-slate-100 tracking-tight">Configurar cardápio</h2>
+          <p class="link-panel-desc">Gerencie produtos, fotos, modificadores e o link público do seu cardápio em um só lugar.</p>
         </div>
-        <div class="link-form">
-          <span class="link-prefix">menu.zelopdv.com.br/</span>
-          <input
-            type="text"
-            class="field-input link-input"
-            placeholder="nome-do-seu-negocio"
-            bind:value={slugInput}
-            on:keydown={(e) => e.key === 'Enter' && salvarSlug()}
-          />
-          <button type="button" class="btn-cta" on:click={salvarSlug} disabled={salvandoSlug}>
-            {salvandoSlug ? 'Salvando…' : 'Salvar'}
-          </button>
-          {#if slugAtual}
-            <button type="button" class="btn-copy" on:click={copiarLink}>
-              {slugCopiado ? '✓ Copiado' : 'Copiar link'}
-            </button>
-          {/if}
+        <div>
+          <a href="https://menu.zelopdv.com.br/admin" target="_blank" rel="noopener" class="btn-cta">
+            Abrir ZeloMenu →
+          </a>
         </div>
-        <p class="link-hint">Use apenas letras minúsculas, números e hífens. Ex: <code>minha-lanchonete</code></p>
       </div>
     {/if}
 
@@ -277,8 +210,16 @@
           </div>
 
           <div class="addon-footer">
-            <span class="addon-price">{ext.priceLabel || `+R$ ${ext.price}/mês`}</span>
-            {#if ext.active}
+            <span class="addon-price">
+              {#if ext.includedInMesas}
+                Incluído no Módulo Mesas
+              {:else}
+                {ext.priceLabel || `+R$ ${ext.price}/mês`}
+              {/if}
+            </span>
+            {#if ext.includedInMesas}
+              <span class="included-badge">Incluído</span>
+            {:else if ext.active}
               <span class="active-badge">
                 <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fill-rule="evenodd" d="M16.704 5.296a1 1 0 0 1 0 1.408l-7.5 7.5a1 1 0 0 1-1.408 0l-3.5-3.5a1 1 0 0 1 1.408-1.408L8.5 12.092l6.796-6.796a1 1 0 0 1 1.408 0Z" clip-rule="evenodd"/>
@@ -313,8 +254,8 @@
     margin-bottom: 1.75rem;
     background: var(--bg-card);
     border: 1px solid var(--border-card);
-    border-left: 3px solid var(--primary);
     border-radius: 12px;
+    box-shadow: inset 0 2px 0 0 var(--primary);
     padding: 1.25rem 1.5rem;
     display: flex;
     flex-direction: column;
@@ -323,54 +264,6 @@
 
   .link-panel-header { display: flex; flex-direction: column; gap: 0; }
   .link-panel-desc { font-size: 0.85rem; color: var(--text-label); margin: 0.3rem 0 0; line-height: 1.5; }
-  .link-panel-desc strong { color: var(--text-main); }
-
-  .link-form {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .link-prefix {
-    font-size: 0.82rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .link-input {
-    flex: 1;
-    min-width: 160px;
-    padding: 0.45rem 0.75rem;
-    background: var(--bg-input);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    color: var(--text-main);
-    font-size: 0.88rem;
-    outline: none;
-    transition: border-color 120ms;
-  }
-  .link-input:focus { border-color: var(--primary); }
-
-  .btn-copy {
-    display: inline-flex;
-    align-items: center;
-    background: var(--bg-panel);
-    color: var(--text-label);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    padding: 0.45rem 0.85rem;
-    font-size: 0.8rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 150ms, border-color 150ms;
-    white-space: nowrap;
-  }
-  .btn-copy:hover { background: var(--bg-card); border-color: var(--border-strong); color: var(--text-main); }
-
-  .link-hint { font-size: 0.76rem; color: var(--text-muted); margin: 0; }
-  .link-hint code { font-size: 0.73rem; color: var(--accent); background: var(--accent-light); padding: 1px 4px; border-radius: 3px; }
 
   .page-header { margin-bottom: 1.75rem; }
   .title {
@@ -483,6 +376,17 @@
     border: 1px solid var(--border-subtle);
     border-radius: 999px;
     padding: 0.3rem 0.7rem;
+  }
+
+  .included-badge {
+    font-size: 0.7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--primary);
+    background: var(--accent-light);
+    border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+    border-radius: 999px;
+    padding: 0.3rem 0.7rem;
+    white-space: nowrap;
   }
 
   @media (max-width: 768px) {
