@@ -21,6 +21,7 @@ SUPPORT_GUIDE_ZELO_PDV.txt
 .ai/migrations/*
 !.ai/migrations/trial_expired_status_2026_06_17.sql
 !.ai/migrations/zelomenu_publication_schema_2026_06_23.sql
+!.ai/migrations/pedidos_preparando_status_2026_06_25.sql
 SISTEMA.md
 agents.md
 
