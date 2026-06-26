@@ -21,7 +21,7 @@
   let realtimeChannel = null;
   let refreshTimer = null;
 
-  $: pedidosAbertos = pedidos.filter(p => p.status !== 'pronto');
+  $: pedidosAbertos = pedidos.filter(p => p.status === 'aberto' || p.status === 'preparando');
   $: pedidosProntos = pedidos.filter(p => p.status === 'pronto');
   $: totalItensPendentes = pedidosAbertos.reduce(
     (acc, p) => acc + p.itens.filter(i => i.status_cozinha !== 'pronto').length,
@@ -87,7 +87,7 @@
         )
       `)
       .eq('id_usuario', ownerUserId)
-      .in('status', ['aberto', 'pronto'])
+      .in('status', ['aberto', 'preparando', 'pronto'])
       .eq('pedido_itens.enviado_cozinha', true)
       .order('criado_em', { ascending: true });
 
@@ -159,6 +159,7 @@
   function origemLabel(pedido) {
     if (pedido.origem === 'comanda') return pedido.id_comanda ? `Comanda ${String(pedido.id_comanda).slice(0, 8)}` : 'Comanda';
     if (pedido.origem === 'zelochat') return 'ZeloChat';
+    if (pedido.origem === 'zelomenu') return '📱 App';
     return 'Balcão';
   }
 
@@ -225,6 +226,37 @@
     await loadPedidos();
   }
 
+  async function marcarPedidoPreparando(pedido) {
+    if (pedido.status !== 'aberto') return;
+
+    const { error } = await supabase
+      .from('pedidos')
+      .update({ status: 'preparando', id_operador: operadorUserId })
+      .eq('id', pedido.id)
+      .eq('id_usuario', ownerUserId)
+      .eq('status', 'aberto');
+
+    if (error) {
+      addToast('Erro ao iniciar preparo: ' + (error?.message || error), 'error');
+      return;
+    }
+
+    if (isSubUser) {
+      logAuditAction({
+        ownerUserId,
+        action: 'pedido.preparando',
+        entityType: 'pedido',
+        entityId: String(pedido.id),
+        details: {
+          numero_pedido: pedido.numero_pedido,
+          origem: pedido.origem,
+          origem_painel: 'cozinha'
+        }
+      });
+    }
+    await loadPedidos();
+  }
+
   async function marcarItemPronto(pedido, item) {
     if (itemPronto(item) || isMarking(item)) return;
     markingIds = new Set(markingIds).add(item.id);
@@ -249,13 +281,13 @@
         && (itensPedido || []).every(i => i.status_cozinha === 'pronto');
 
       if (todosProntos) {
-        // Guard com .eq('status', 'aberto') evita reabrir um pedido já fechado pelo caixa.
+        // Guard com .in evita reabrir um pedido já fechado pelo caixa.
         const { error: pedidoErr } = await supabase
           .from('pedidos')
           .update({ status: 'pronto', id_operador: operadorUserId })
           .eq('id', pedido.id)
           .eq('id_usuario', ownerUserId)
-          .eq('status', 'aberto');
+          .in('status', ['aberto', 'preparando']);
         if (pedidoErr) throw pedidoErr;
       }
 
@@ -358,8 +390,12 @@
                     <h3>{pedidoTitulo(pedido)}</h3>
                     <p>
                       {#if pedidoSubtitulo(pedido)}<span class="num-tag">{pedidoSubtitulo(pedido)}</span> · {/if}
-                      {origemLabel(pedido)} · {minutosDesde(pedido.criado_em)}
+                      {#if pedido.origem === 'zelomenu'}<span class="origem-badge origem-zelomenu">{origemLabel(pedido)}</span>{:else}{origemLabel(pedido)}{/if}
+                      · {minutosDesde(pedido.criado_em)}
                     </p>
+                    {#if pedido.status === 'preparando'}
+                      <span class="status-preparando">Em preparo</span>
+                    {/if}
                   </div>
                   <span>{pedido.itens.filter(i => !itemPronto(i)).length}/{pedido.itens.length}</span>
                 </div>
@@ -387,6 +423,15 @@
                     </li>
                   {/each}
                 </ul>
+                {#if pedido.status === 'aberto'}
+                  <button
+                    type="button"
+                    class="pedido-action-btn"
+                    on:click={() => marcarPedidoPreparando(pedido)}
+                  >
+                    Iniciar preparo
+                  </button>
+                {/if}
               </article>
             {/each}
           </div>
@@ -746,6 +791,49 @@
     font-size: 0.75rem;
     text-transform: uppercase;
     font-weight: 900;
+  }
+
+  .origem-badge {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 900;
+    vertical-align: middle;
+  }
+
+  .origem-zelomenu {
+    background: rgba(59, 130, 246, 0.15);
+    color: color-mix(in srgb, #3b82f6 70%, white);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+
+  .status-preparando {
+    display: inline-block;
+    margin-top: 0.3rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(250, 204, 21, 0.12);
+    color: color-mix(in srgb, var(--warning) 70%, white);
+    font-size: 0.68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .pedido-action-btn {
+    display: block;
+    width: 100%;
+    margin-top: 0.85rem;
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
+    color: color-mix(in srgb, var(--primary) 80%, white);
+    border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+    font-size: 0.88rem;
+  }
+
+  .pedido-action-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--primary) 24%, transparent);
+    border-color: color-mix(in srgb, var(--primary) 55%, transparent);
   }
 
   .empty-state,
