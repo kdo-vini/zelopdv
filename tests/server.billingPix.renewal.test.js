@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   validatePixCustomerProfile,
   buildPixDescription,
@@ -73,5 +73,116 @@ describe('buildRenewalPixWhatsAppMessage', () => {
 describe('PIX_EXPIRATION_SECONDS', () => {
   it('vale 3600', () => {
     expect(PIX_EXPIRATION_SECONDS).toBe(3600);
+  });
+});
+
+function makeSelectChain(result) {
+  const chain = {
+    eq: vi.fn(() => chain),
+    order: vi.fn(() => chain),
+    limit: vi.fn(() => chain),
+    maybeSingle: vi.fn(async () => ({ data: result ?? null, error: null })),
+    single: vi.fn(async () => ({ data: result ?? null, error: null })),
+  };
+  return chain;
+}
+
+function makeSupabaseAdmin(state) {
+  return {
+    from: vi.fn((table) => ({
+      select: vi.fn(() => makeSelectChain(state.selectResults?.[table] ?? null)),
+      insert: vi.fn((payload) => {
+        state.writes.push({ table, operation: 'insert', payload });
+        return {
+          select: vi.fn(() => ({
+            single: vi.fn(async () => ({ data: Array.isArray(payload) ? payload[0] : payload, error: null })),
+          })),
+        };
+      }),
+      update: vi.fn((payload) => ({
+        eq: vi.fn(async () => {
+          state.writes.push({ table, operation: 'update', payload });
+          return { error: null };
+        }),
+      })),
+    })),
+  };
+}
+
+describe('createOrReusePixCharge', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.unstubAllEnvs();
+    vi.stubEnv('ABACATEPAY_API_KEY', 'abc_dev_test_key');
+  });
+
+  async function load(state, chargeImpl) {
+    vi.doMock('$lib/server/supabaseAdmin', () => ({ supabaseAdmin: makeSupabaseAdmin(state) }));
+    vi.doMock('$lib/server/abacatePay', () => ({
+      isAbacatePayConfigured: () => true,
+      createTransparentPixCharge: chargeImpl,
+    }));
+    return await import('../src/lib/server/billingPix.js');
+  }
+
+  it('cria charge nova e insere billing_payments pending com kind subscription_renewal', async () => {
+    const state = {
+      writes: [],
+      selectResults: {
+        subscriptions: { id: 'sub-1', status: 'active', current_period_end: '2026-08-01T00:00:00Z' },
+        billing_payments: null,
+      },
+    };
+    const charge = vi.fn(async () => ({
+      id: 'pix_1', status: 'PENDING', brCode: 'BR-CODE-1',
+      brCodeBase64: 'data:image/png;base64,xx', expiresAt: '2026-07-01T18:00:00Z',
+    }));
+    const { createOrReusePixCharge } = await load(state, charge);
+
+    const res = await createOrReusePixCharge({
+      userId: 'user-1', email: 'u@test.com', planTier: 'pdv',
+      addons: { mesas: false, pedidos: false, acessos: false, menu: false },
+      name: 'Loja', taxId: '52998224725', phone: '5511999999999', source: 'admin_renewal_pix',
+    });
+
+    expect(res.reused).toBe(false);
+    expect(charge).toHaveBeenCalledOnce();
+    const insert = state.writes.find(w => w.table === 'billing_payments' && w.operation === 'insert');
+    expect(insert.payload.status).toBe('pending');
+    expect(insert.payload.kind).toBe('subscription_renewal');
+    expect(insert.payload.user_id).toBe('user-1');
+    expect(insert.payload.subscription_id).toBe('sub-1');
+    expect(insert.payload.plan_tier).toBe('pdv');
+    expect(insert.payload.amount_expected_cents).toBe(5900);
+    expect(insert.payload.metadata.source).toBe('admin_renewal_pix');
+    expect(res.row.br_code).toBe('BR-CODE-1');
+  });
+
+  it('reusa pending valido com mesma selecao sem criar charge nova', async () => {
+    const state = {
+      writes: [],
+      selectResults: {
+        subscriptions: { id: 'sub-1', status: 'active' },
+        billing_payments: {
+          id: 'pay-existing', status: 'pending', amount_expected_cents: 5900,
+          plan_tier: 'pdv', has_mesas_addon: false, has_pedidos_addon: false,
+          has_acessos_addon: false, has_zelo_menu: false,
+          br_code: 'BR-OLD', qr_code_base64: 'data:x', provider_payment_id: 'pix_old',
+          expires_at: new Date(Date.now() + 3600_000).toISOString(),
+        },
+      },
+    };
+    const charge = vi.fn();
+    const { createOrReusePixCharge } = await load(state, charge);
+
+    const res = await createOrReusePixCharge({
+      userId: 'user-1', email: 'u@test.com', planTier: 'pdv',
+      addons: { mesas: false, pedidos: false, acessos: false, menu: false },
+      name: 'Loja', taxId: '52998224725', phone: '5511999999999', source: 'zelo_saas_pix',
+    });
+
+    expect(res.reused).toBe(true);
+    expect(charge).not.toHaveBeenCalled();
+    expect(res.row.id).toBe('pay-existing');
   });
 });
