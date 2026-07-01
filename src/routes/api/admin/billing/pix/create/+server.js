@@ -75,6 +75,67 @@ export async function POST({ request }) {
       return json({ error: 'userId obrigatório.' }, { status: 400, headers: cors });
     }
 
+    // Load profile (needed in both normal and resend flows)
+    const { data: perfil, error: perfilError } = await supabaseAdmin
+      .from('empresa_perfil')
+      .select('nome_exibicao, documento, contato')
+      .eq('user_id', targetUserId)
+      .maybeSingle();
+
+    if (perfilError) {
+      return json({ error: 'Erro ao carregar perfil da empresa.' }, { status: 500, headers: cors });
+    }
+
+    const profileValidation = validatePixCustomerProfile(perfil);
+    if (!profileValidation.ok) {
+      return json({ error: profileValidation.message }, { status: 400, headers: cors });
+    }
+
+    // --- Resend-only flow: skip charge creation, just resend WhatsApp ---
+    if (body.resendOnly) {
+      const { data: latestPayment } = await supabaseAdmin
+        .from('billing_payments')
+        .select('id, br_code, amount_expected_cents, plan_tier, provider, method, status')
+        .eq('user_id', targetUserId)
+        .eq('provider', 'abacatepay')
+        .eq('method', 'pix')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!latestPayment?.br_code) {
+        return json({ error: 'Nenhum PIX pendente encontrado para reenvio.' }, { status: 400, headers: cors });
+      }
+
+      let whatsappSent = false;
+      let whatsappError = null;
+      try {
+        const msg = buildRenewalPixWhatsAppMessage({
+          nome: profileValidation.name,
+          planName: 'ZeloPDV',
+          amountCents: latestPayment.amount_expected_cents,
+          brCode: latestPayment.br_code,
+        });
+        const result = await sendWhatsAppTextDetailed(profileValidation.phone, msg);
+        whatsappSent = result.ok;
+        if (!result.ok) {
+          whatsappError = result.error || 'Falha ao enviar WhatsApp';
+        }
+      } catch (waErr) {
+        whatsappError = waErr?.message || 'Erro ao disparar WhatsApp';
+      }
+
+      return json({
+        success: true,
+        reused: false,
+        whatsappSent,
+        ...(whatsappError ? { whatsappError } : {}),
+        payment: serializePixCharge(latestPayment),
+      }, { headers: cors });
+    }
+
+    // --- Normal flow: create/reuse charge + send WhatsApp ---
     // Load subscription to derive current plan
     const { data: subscription } = await supabaseAdmin
       .from('subscriptions')
@@ -95,22 +156,6 @@ export async function POST({ request }) {
       acessos: body.addons?.acessos ?? !!subscription.has_acessos_addon,
       menu: body.addons?.menu ?? !!subscription.has_zelo_menu,
     };
-
-    // Load profile
-    const { data: perfil, error: perfilError } = await supabaseAdmin
-      .from('empresa_perfil')
-      .select('nome_exibicao, documento, contato')
-      .eq('user_id', targetUserId)
-      .maybeSingle();
-
-    if (perfilError) {
-      return json({ error: 'Erro ao carregar perfil da empresa.' }, { status: 500, headers: cors });
-    }
-
-    const profileValidation = validatePixCustomerProfile(perfil);
-    if (!profileValidation.ok) {
-      return json({ error: profileValidation.message }, { status: 400, headers: cors });
-    }
 
     const { reused, row: paymentRow } = await createOrReusePixCharge({
       userId: targetUserId,

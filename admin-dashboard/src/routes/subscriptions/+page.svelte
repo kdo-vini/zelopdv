@@ -233,6 +233,7 @@
 
       pixResult = data
       pixWhatsappSent = !!data.whatsappSent
+      if (data.whatsappError) pixError = data.whatsappError
     } catch (err) {
       pixError = err?.message || 'Erro de conexão ao gerar PIX.'
     } finally {
@@ -253,7 +254,7 @@
           'Content-Type': 'application/json',
           authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ userId: pixSub.user_id }),
+        body: JSON.stringify({ userId: pixSub.user_id, resendOnly: true }),
       })
       const data = await res.json()
 
@@ -263,7 +264,7 @@
       }
 
       pixWhatsappSent = !!data.whatsappSent
-      pixError = ''
+      pixError = data.whatsappError || ''
     } catch (err) {
       pixError = err?.message || 'Erro de conexão ao reenviar WhatsApp.'
     }
@@ -1834,7 +1835,7 @@
                   class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-[11px] font-mono text-slate-300 resize-none focus:outline-hidden"
                 >{pixResult.payment.brCode}</textarea>
                 <button
-                  on:click={() => { navigator.clipboard.writeText(pixResult.payment.brCode); }}
+                  on:click={async (e) => { try { await navigator.clipboard.writeText(pixResult.payment.brCode); } catch { const ta = e.currentTarget.parentElement.querySelector('textarea'); if (ta) { ta.select(); document.execCommand('copy'); } } }}
                   class="absolute top-2 right-2 px-2 py-1 text-[9px] font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-md transition-colors"
                   title="Copiar código"
                 >

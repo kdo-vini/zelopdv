@@ -140,7 +140,10 @@ describe('POST /api/admin/billing/pix/create', () => {
 
   it('recusa requisição sem super admin', async () => {
     const handler = await load(defaultState({
-      selectResults: { super_admins: null },
+      selectResults: {
+        super_admins: null,
+        empresa_perfil: { nome_exibicao: 'Loja Teste', documento: '529.982.247-25', contato: '(11) 99999-9999' },
+      },
     }));
 
     const response = await handler.POST({ request: makeRequest({ userId: 'user-target' }) });
@@ -154,6 +157,7 @@ describe('POST /api/admin/billing/pix/create', () => {
     const handler = await load(defaultState({
       selectResults: {
         super_admins: { id: 1, is_active: true },
+        empresa_perfil: { nome_exibicao: 'Loja Teste', documento: '529.982.247-25', contato: '(11) 99999-9999' },
         subscriptions: null,
       },
     }));

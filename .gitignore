@@ -58,3 +58,4 @@ static/digital-certificate*
 # E2E auth tokens (never commit — contain live Supabase sessions)
 e2e/.auth/*.json
 e2e/.auth/.gitkeep
+.env*
