@@ -123,6 +123,7 @@
         has_mesas_addon,
         has_pedidos_addon,
         has_acessos_addon,
+        has_zelo_menu,
         payment_provider,
         provider_subscription_id,
         provider_customer_id,
@@ -178,6 +179,87 @@
     selectedSub = null
     extendTargetDate = ''
     extendReason = ''
+  }
+
+  let showPixModal = false
+  let pixSub = null
+  let pixResult = null
+  let generatingPix = false
+  let pixError = ''
+  let pixWhatsappSent = false
+
+  function openPixModal(sub) {
+    pixSub = sub
+    pixResult = null
+    pixError = ''
+    pixWhatsappSent = false
+    showPixModal = true
+  }
+
+  function closePixModal() {
+    showPixModal = false
+    pixSub = null
+    pixResult = null
+    pixError = ''
+    pixWhatsappSent = false
+  }
+
+  async function handlePixCreate() {
+    if (!pixSub || generatingPix) return
+    generatingPix = true
+    pixError = ''
+    pixResult = null
+    pixWhatsappSent = false
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/billing/pix/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId: pixSub.user_id }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        pixError = data.error || 'Falha ao gerar PIX.'
+        return
+      }
+
+      pixResult = data
+      pixWhatsappSent = !!data.whatsappSent
+    } catch (err) {
+      pixError = err?.message || 'Erro de conexão ao gerar PIX.'
+    } finally {
+      generatingPix = false
+    }
+  }
+
+  async function handleResendWhatsApp() {
+    if (!pixResult?.payment?.brCode || !pixSub) return
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/billing/pix/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId: pixSub.user_id }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        pixError = data.error || 'Falha ao reenviar WhatsApp.'
+        return
+      }
+
+      pixWhatsappSent = !!data.whatsappSent
+      pixError = ''
+    } catch (err) {
+      pixError = err?.message || 'Erro de conexão ao reenviar WhatsApp.'
+    }
   }
 
   function openPlanModal(sub) {
@@ -1257,6 +1339,11 @@
                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                        Renovar
                     </button>
+                    <!-- PIX -->
+                    <button on:click={() => openPixModal(sub)} class="px-2.5 py-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded-lg transition-all" title="Gerar PIX de renovação">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      PIX
+                    </button>
                     <!-- Cancel -->
                     <button on:click={() => handleCancelSubscription(sub)} class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors border border-transparent hover:border-rose-500/20" title="Cancelar Imediatamente">
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -1266,6 +1353,11 @@
                     <button on:click={() => handleReactivateSubscription(sub)} class="px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-all" title="Reativar Inscrição">
                       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                        Reativar
+                    </button>
+                    <!-- PIX -->
+                    <button on:click={() => openPixModal(sub)} class="px-2.5 py-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded-lg transition-all" title="Gerar PIX de renovação">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      PIX
                     </button>
                   {/if}
                 </div>
@@ -1283,8 +1375,12 @@
         {@const daysLeft = getDaysUntilEffectiveExpiry(sub)}
         {@const effectiveExpiry = getEffectiveExpiry(sub)}
         {@const onManualExt = hasActiveManualExtension(sub)}
+        {@const isExpiringSoon = ['active', 'trialing'].includes(getSubscriptionAdminStatus(sub)) && daysLeft <= 7 && daysLeft > 0}
+        {@const isExpired = isSubscriptionExpired(sub)}
+        {@const ent = getEntitlement(sub)}
 
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+          <!-- Header: name + badge -->
           <div class="flex justify-between items-start mb-3">
             <div>
               <h3 class="text-sm font-bold text-slate-100">{sub.empresa_perfil.nome_exibicao || 'S/N'}</h3>
@@ -1300,31 +1396,139 @@
             </span>
           </div>
 
-          <div class="grid grid-cols-2 gap-4 text-xs py-3 border-t border-slate-800 mt-2">
+          <!-- Grid: entit + plan + value -->
+          <div class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs py-3 border-t border-slate-800 mt-2">
+            <!-- Entitlement dots -->
             <div>
+              <span class="text-slate-500 block mb-1">Entitlement:</span>
+              <div class="flex items-center gap-1.5" title="{ent.divergent ? 'DIVERGENTE: ' : ''}PDV: {ent.pdv.reason} | Chat: {ent.chat.reason}">
+                <span class="inline-block w-2.5 h-2.5 rounded-full {ent.pdv.active ? 'bg-emerald-400' : 'bg-rose-500'}" title="ZeloPDV: {ent.pdv.active ? 'Ativo' : 'Inativo'}"></span>
+                <span class="inline-block w-2.5 h-2.5 rounded-full {ent.chat.active ? 'bg-emerald-400' : 'bg-rose-500'}" title="ZeloChat: {ent.chat.active ? 'Ativo' : 'Inativo'}"></span>
+                {#if ent.divergent}
+                  <span class="text-[9px] font-bold text-amber-400 uppercase tracking-wider">!</span>
+                {/if}
+              </div>
+            </div>
+            <!-- Value -->
+            <div class="text-right">
+              <span class="text-slate-500 block mb-1">Valor:</span>
+              <span class="font-mono text-slate-200 font-medium">R$ {subscriptionValue(sub).toFixed(2)}</span>
+            </div>
+            <!-- Plan pill (clickable) -->
+            <div class="col-span-2">
+              <span class="text-slate-500 block mb-1">Plano:</span>
+              <button
+                on:click={() => openPlanModal(sub)}
+                class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700/40 hover:border-slate-600 hover:bg-slate-800/40 transition-all text-left"
+                title="Mudar plano/addons"
+              >
+                <span class="text-[11px] font-semibold tracking-wide {sub.plan_tier === 'bundle' ? 'text-indigo-300' : sub.plan_tier === 'chat' ? 'text-violet-300' : 'text-sky-300'}">
+                  {planLabel(sub.plan_tier || 'pdv')}
+                </span>
+                {#if sub.has_mesas_addon || sub.has_pedidos_addon || sub.has_acessos_addon}
+                  <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
+                    {[
+                      sub.has_mesas_addon ? '+Mesas' : null,
+                      sub.has_pedidos_addon ? '+Pedidos' : null,
+                      sub.has_acessos_addon ? '+Acessos' : null,
+                    ].filter(Boolean).join(' · ')}
+                  </span>
+                {/if}
+              </button>
+            </div>
+            <!-- Expiry -->
+            <div class="col-span-2">
               <span class="text-slate-500 block mb-0.5">Expiração:</span>
               <span class="text-slate-300 font-medium inline-flex items-center gap-1.5">
-                {formatSubscriptionDate(effectiveExpiry)}
+                <span class="{isExpired ? 'text-rose-400 font-semibold' : isExpiringSoon ? 'text-amber-400 font-semibold' : 'text-slate-300'}">{formatSubscriptionDate(effectiveExpiry)}</span>
                 {#if onManualExt}
                   <span class="inline-flex px-1 py-0.5 text-[8px] font-bold rounded-sm bg-amber-500/10 text-amber-400 border border-amber-500/20">+EXT</span>
                 {/if}
               </span>
+              {#if sub.status === 'active'}
+                <div class="text-[11px] font-medium mt-0.5 {isExpired ? 'text-rose-400/80' : isExpiringSoon ? 'text-amber-400/80' : 'text-slate-500'}">
+                  {#if isExpired}
+                    Em atraso há {Math.abs(daysLeft)}d
+                  {:else}
+                    Restam {daysLeft} dias
+                  {/if}
+                </div>
+              {/if}
             </div>
           </div>
 
-          <div class="flex items-center gap-2 border-t border-slate-800 pt-3 mt-1">
-             {#if sub.status === 'active'}
-              <button on:click={() => openExtendModal(sub)} class="flex-1 py-1.5 bg-emerald-500/10 text-emerald-400 font-medium text-xs rounded-lg border border-emerald-500/20">
-                Prorrogar
+          <!-- Status quick change -->
+          <div class="flex items-center justify-between border-t border-slate-800 pt-3 mt-1">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Status:</span>
+              <select
+                value={sub.status}
+                on:change={(e) => handleUpdateStatus(sub, e.target.value)}
+                disabled={statusUpdating}
+                class="appearance-none bg-slate-800/50 border border-slate-700/50 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-white hover:border-slate-600 focus:outline-hidden transition-all cursor-pointer disabled:opacity-50"
+              >
+                <option value="active">ACTIVE</option>
+                <option value="trialing">TRIAL</option>
+                <option value="trial_expired">TRIAL EXPIRED</option>
+                <option value="past_due">PAST DUE</option>
+                <option value="canceled">CANCELED</option>
+              </select>
+            </div>
+
+            <!-- +7D Trial button -->
+            {#if sub.status === 'trialing' || isExpired}
+              <button
+                on:click={() => handleExtendTrialOnly(sub, 7)}
+                disabled={statusUpdating}
+                class="px-2 py-1.5 text-[10px] font-bold text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded-lg transition-all disabled:opacity-50"
+              >
+                +7D Trial
               </button>
-              <button on:click={() => handleCancelSubscription(sub)} class="px-2 py-1.5 bg-slate-800 text-rose-400 hover:text-rose-300 rounded-lg border border-slate-700">
+            {/if}
+          </div>
+
+          <!-- Action buttons -->
+          <div class="flex items-center gap-2 border-t border-slate-800 pt-3 mt-2">
+            {#if sub.status === 'active'}
+              <!-- Renovar / Extend -->
+              <button on:click={() => openExtendModal(sub)} class="flex-1 py-1.5 bg-emerald-500/10 text-emerald-400 font-medium text-xs rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">
+                Renovar
+              </button>
+              <!-- Gerar PIX -->
+              <button
+                on:click={() => openPixModal(sub)}
+                class="flex-1 py-1.5 bg-sky-500/10 text-sky-400 font-medium text-xs rounded-lg border border-sky-500/20 hover:bg-sky-500/20 transition-all"
+                title="Gerar PIX de renovação"
+              >
+                Gerar PIX
+              </button>
+              <!-- Cancel -->
+              <button on:click={() => handleCancelSubscription(sub)} class="px-2 py-1.5 bg-slate-800 text-rose-400 hover:text-rose-300 rounded-lg border border-slate-700 hover:border-rose-500/20 transition-all">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-             {:else if sub.status === 'canceled'}
-              <button on:click={() => handleReactivateSubscription(sub)} class="flex-1 py-1.5 bg-emerald-500/10 text-emerald-400 font-medium text-xs rounded-lg border border-emerald-500/20">
+            {:else if sub.status === 'canceled'}
+              <!-- Reativar -->
+              <button on:click={() => handleReactivateSubscription(sub)} class="flex-1 py-1.5 bg-emerald-500/10 text-emerald-400 font-medium text-xs rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">
                 Reativar
               </button>
-             {/if}
+              <!-- Gerar PIX (also for canceled) -->
+              <button
+                on:click={() => openPixModal(sub)}
+                class="flex-1 py-1.5 bg-sky-500/10 text-sky-400 font-medium text-xs rounded-lg border border-sky-500/20 hover:bg-sky-500/20 transition-all"
+                title="Gerar PIX de renovação"
+              >
+                Gerar PIX
+              </button>
+            {:else}
+              <!-- Gerar PIX for other statuses -->
+              <button
+                on:click={() => openPixModal(sub)}
+                class="flex-1 py-1.5 bg-sky-500/10 text-sky-400 font-medium text-xs rounded-lg border border-sky-500/20 hover:bg-sky-500/20 transition-all"
+                title="Gerar PIX de renovação"
+              >
+                Gerar PIX
+              </button>
+            {/if}
           </div>
         </div>
       {/each}
@@ -1568,6 +1772,159 @@
         <button on:click={handleSavePlan} disabled={planSaving} class="px-5 py-2 text-sm font-semibold text-white bg-indigo-500 hover:bg-indigo-400 rounded-xl transition-all shadow-[0_0_15px_rgba(99,102,241,0.4)] disabled:opacity-50">
           {planSaving ? 'Salvando...' : 'Salvar Plano'}
         </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Pix Modal -->
+{#if showPixModal && pixSub}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-[#0B0F19]/80" transition:fade={{ duration: 200 }}>
+    <div class="relative w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden" transition:slide={{ duration: 300, axis: 'y' }}>
+      <div class="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-sky-500/60 to-transparent"></div>
+
+      <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white tracking-wide">PIX de Renovação</h3>
+        <button on:click={closePixModal} class="text-slate-500 hover:text-white transition-colors outline-hidden"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <!-- Cliente info -->
+        <div>
+          <p class="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-1">Empresa</p>
+          <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
+            <div class="w-8 h-8 bg-sky-500/20 text-sky-400 flex items-center justify-center rounded-full font-bold text-xs">{getInitials(pixSub.empresa_perfil.nome_exibicao)}</div>
+            <div>
+              <div class="text-sm font-medium text-slate-200">{pixSub.empresa_perfil.nome_exibicao}</div>
+              <div class={`text-[11px] font-semibold uppercase tracking-wide ${getProviderTone(pixSub.payment_provider)}`}>
+                {getProviderLabel(pixSub.payment_provider)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {#if pixResult}
+          <!-- QR Code -->
+          <div class="flex flex-col items-center space-y-3">
+            <div class="relative w-48 h-48 bg-white rounded-xl p-3 shadow-lg">
+              {#if pixResult.payment?.qrCodeBase64}
+                <img src={pixResult.payment.qrCodeBase64} alt="QR Code PIX" class="w-full h-full object-contain" />
+              {:else}
+                <div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">QR indisponível</div>
+              {/if}
+            </div>
+            <p class="text-[11px] text-slate-400 font-medium">Escaneie o QR com o app do seu banco</p>
+          </div>
+
+          <!-- Copia e Cola -->
+          {#if pixResult.payment?.brCode}
+            <div>
+              <p class="text-[11px] font-medium text-slate-500 mb-1.5">Código Copia e Cola</p>
+              <div class="relative">
+                <textarea
+                  readonly
+                  rows="3"
+                  class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-[11px] font-mono text-slate-300 resize-none focus:outline-hidden"
+                >{pixResult.payment.brCode}</textarea>
+                <button
+                  on:click={() => { navigator.clipboard.writeText(pixResult.payment.brCode); }}
+                  class="absolute top-2 right-2 px-2 py-1 text-[9px] font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-md transition-colors"
+                  title="Copiar código"
+                >
+                  Copiar
+                </button>
+              </div>
+            </div>
+          {/if}
+
+          <!-- Value -->
+          <div class="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-700/30">
+            <span class="text-sm text-slate-400">Valor</span>
+            <span class="text-lg font-mono font-bold text-slate-100">
+              R$ {((pixResult.payment?.amountCents || 0) / 100).toFixed(2).replace('.', ',')}
+            </span>
+          </div>
+
+          <!-- Vencimento -->
+          {#if pixResult.payment?.expiresAt}
+            <div class="text-xs text-slate-500 text-center">
+              Vence em {new Date(pixResult.payment.expiresAt).toLocaleString('pt-BR')}
+            </div>
+          {/if}
+
+          <!-- Aviso Stripe -->
+          {#if pixSub.payment_provider === 'stripe'}
+            <div class="rounded-lg p-3 border border-amber-500/20 bg-amber-500/5 text-[11px] leading-relaxed text-amber-300">
+              <strong class="block">Atenção: cliente Stripe</strong>
+              Essa assinatura é gerenciada pelo Stripe. O PIX de renovação pode ser usado como pagamento avulso, mas a cobrança recorrente continuará no Stripe até que o plano seja alterado para Abacate Pay.
+            </div>
+          {/if}
+
+          <!-- WhatsApp status -->
+          <div class="flex items-center gap-3 p-3 rounded-xl border {pixWhatsappSent ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-slate-800/30 border-slate-700/30'}">
+            {#if pixWhatsappSent}
+              <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-medium text-emerald-400">WhatsApp enviado</p>
+                <p class="text-[10px] text-slate-500 mt-0.5 truncate">PIX enviado para o WhatsApp da empresa</p>
+              </div>
+            {:else if pixError}
+              <svg class="w-5 h-5 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-medium text-rose-400">Falha no WhatsApp</p>
+                <p class="text-[10px] text-rose-400/60 mt-0.5 truncate">{pixError}</p>
+              </div>
+            {:else}
+              <svg class="w-5 h-5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-medium text-slate-400">WhatsApp não enviado</p>
+                <p class="text-[10px] text-slate-500 mt-0.5">Disparo manual disponível</p>
+              </div>
+            {/if}
+            {#if pixResult.payment?.brCode}
+              <button on:click={handleResendWhatsApp} class="px-2.5 py-1.5 text-[10px] font-semibold text-white bg-emerald-500/80 hover:bg-emerald-500 rounded-lg transition-colors shrink-0">
+                Reenviar
+              </button>
+            {/if}
+          </div>
+
+          <!-- Reused info -->
+          {#if pixResult.reused}
+            <div class="text-xs text-amber-400/80 bg-amber-500/5 rounded-lg px-3 py-2 border border-amber-500/10 text-center">
+              PIX pendente reutilizado — mesma cobrança já existente.
+            </div>
+          {/if}
+        {:else}
+          <!-- Loading / Initial State -->
+          <div class="py-8 text-center space-y-4">
+            <div class="w-16 h-16 mx-auto rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
+              <svg class="w-8 h-8 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+            <p class="text-sm text-slate-400">Gere um PIX de renovação para esta assinatura.</p>
+            <p class="text-xs text-slate-500">O código será enviado por WhatsApp para o contato da empresa.</p>
+          </div>
+
+          {#if pixError}
+            <div class="rounded-lg p-3 border border-rose-500/20 bg-rose-500/5 text-xs text-rose-400">
+              {pixError}
+            </div>
+          {/if}
+        {/if}
+      </div>
+
+      <div class="px-6 py-4 bg-slate-800/30 border-t border-slate-800 flex justify-end gap-3">
+        <button on:click={closePixModal} disabled={generatingPix} class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-50">Fechar</button>
+        {#if !pixResult}
+          <button on:click={handlePixCreate} disabled={generatingPix} class="px-5 py-2 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-xl transition-all shadow-[0_0_15px_rgba(14,165,233,0.4)] disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
+            {#if generatingPix}
+              <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              Gerando...
+            {:else}
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
+              Gerar PIX
+            {/if}
+          </button>
+        {/if}
       </div>
     </div>
   </div>
