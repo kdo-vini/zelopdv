@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import { isAbacatePayConfigured } from '$lib/server/abacatePay';
 import { sendWhatsAppTextDetailed } from '$lib/server/whatsapp';
 import {
   createOrReusePixCharge,
@@ -47,6 +48,9 @@ export async function POST({ request }) {
   try {
     if (!supabaseAdmin) {
       return json({ error: 'Supabase admin não configurado.' }, { status: 500, headers: cors });
+    }
+    if (!isAbacatePayConfigured()) {
+      return json({ error: 'AbacatePay não configurado.' }, { status: 500, headers: cors });
     }
 
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
