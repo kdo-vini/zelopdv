@@ -1,55 +1,14 @@
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { getServerAccessContext } from '$lib/server/accessControl';
-import { createTransparentPixCharge, isAbacatePayConfigured } from '$lib/server/abacatePay';
+import { isAbacatePayConfigured } from '$lib/server/abacatePay';
 import { getPostHogClient } from '$lib/server/posthog';
+import { isValidPlanTier, isAddonAllowed, PLANS } from '$lib/pricing';
 import {
-  isValidBrazilianTaxId,
-  normalizeBrazilianPhone,
-  normalizeBrazilianTaxId,
-} from '$lib/masks';
-import {
-  calculateValue,
-  isValidPlanTier,
-  isAddonAllowed,
-  PLANS,
-  sanitizeAddons,
-} from '$lib/pricing';
-
-const PIX_EXPIRATION_SECONDS = 60 * 60;
-
-function buildPixDescription(planTier) {
-  const base = `Assinatura ${PLANS[planTier]?.name || 'Zelo'}`;
-  return base.slice(0, 37);
-}
-
-function serializePendingPayment(row) {
-  return {
-    paymentId: row.id,
-    status: row.status,
-    amountCents: row.amount_expected_cents,
-    brCode: row.br_code,
-    qrCodeBase64: row.qr_code_base64,
-    expiresAt: row.expires_at,
-    providerPaymentId: row.provider_payment_id,
-    planTier: row.plan_tier,
-    addons: {
-      mesas: !!row.has_mesas_addon,
-      pedidos: !!row.has_pedidos_addon,
-      acessos: !!row.has_acessos_addon,
-      menu: !!row.has_zelo_menu,
-    },
-  };
-}
-
-function pendingPaymentMatchesSelection(payment, planTier, addons, amountCents) {
-  return payment?.plan_tier === planTier
-    && !!payment?.has_mesas_addon === !!addons.mesas
-    && !!payment?.has_pedidos_addon === !!addons.pedidos
-    && !!payment?.has_acessos_addon === !!addons.acessos
-    && !!payment?.has_zelo_menu === !!addons.menu
-    && Number(payment?.amount_expected_cents) === Number(amountCents);
-}
+  createOrReusePixCharge,
+  serializePixCharge,
+  validatePixCustomerProfile,
+} from '$lib/server/billingPix';
 
 export async function POST({ request }) {
   try {
@@ -88,8 +47,6 @@ export async function POST({ request }) {
       }
     }
 
-    const addons = sanitizeAddons(planTier, requestedAddons);
-
     const { data: perfil, error: perfilError } = await supabaseAdmin
       .from('empresa_perfil')
       .select('nome_exibicao, documento, contato')
@@ -100,149 +57,30 @@ export async function POST({ request }) {
       return json({ error: 'Erro ao carregar perfil da empresa.' }, { status: 500 });
     }
 
-    if (!perfil?.nome_exibicao || !perfil?.documento || !perfil?.contato) {
+    const profileValidation = validatePixCustomerProfile(perfil);
+    if (!profileValidation.ok) {
       return json({
-        error: 'Complete nome da empresa, CPF/CNPJ e telefone antes de gerar um Pix.',
+        error: profileValidation.message,
         redirect: '/perfil?msg=complete',
       }, { status: 400 });
     }
 
-    const normalizedTaxId = normalizeBrazilianTaxId(perfil.documento);
-    const normalizedPhone = normalizeBrazilianPhone(perfil.contato);
-
-    if (!normalizedTaxId || !isValidBrazilianTaxId(normalizedTaxId)) {
-      return json({
-        error: 'CPF/CNPJ inválido no perfil da empresa. Atualize o cadastro antes de gerar Pix.',
-        redirect: '/perfil?msg=complete',
-      }, { status: 400 });
-    }
-
-    if (!normalizedPhone) {
-      return json({
-        error: 'Telefone inválido no perfil da empresa. Atualize o cadastro antes de gerar Pix.',
-        redirect: '/perfil?msg=complete',
-      }, { status: 400 });
-    }
-
-    const { data: existingSub } = await supabaseAdmin
-      .from('subscriptions')
-      .select('id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, payment_provider')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const { data: latestPendingPayment } = await supabaseAdmin
-      .from('billing_payments')
-      .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu')
-      .eq('user_id', user.id)
-      .eq('provider', 'abacatepay')
-      .eq('method', 'pix')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const amountCents = Math.round(calculateValue(planTier, addons) * 100);
-    const now = new Date();
-    if (latestPendingPayment?.expires_at) {
-      const expiresAt = new Date(latestPendingPayment.expires_at);
-      if (expiresAt > now) {
-        if (pendingPaymentMatchesSelection(latestPendingPayment, planTier, addons, amountCents)) {
-          return json({
-            reused: true,
-            ...serializePendingPayment(latestPendingPayment),
-          });
-        }
-
-        await supabaseAdmin
-          .from('billing_payments')
-          .update({
-            status: 'cancelled',
-            provider_status: 'REPLACED',
-            updated_at: now.toISOString(),
-          })
-          .eq('id', latestPendingPayment.id);
-      }
-
-      if (expiresAt <= now) {
-        await supabaseAdmin
-          .from('billing_payments')
-          .update({
-            status: 'expired',
-            provider_status: 'EXPIRED',
-            updated_at: now.toISOString(),
-          })
-          .eq('id', latestPendingPayment.id);
-      }
-    }
-
-    const externalReference = `pix_${user.id}_${Date.now()}`;
-    const kind = existingSub ? 'subscription_renewal' : 'subscription_start';
-    const metadata = {
-      source: 'zelo_saas_pix',
+    const { reused, row: paymentRow } = await createOrReusePixCharge({
       userId: user.id,
       email: user.email,
       planTier,
-      addons,
-      kind,
-      billingCycle: 'monthly',
-    };
-
-    const remotePayment = await createTransparentPixCharge({
-      amount: amountCents,
-      expiresIn: PIX_EXPIRATION_SECONDS,
-      description: buildPixDescription(planTier),
-      externalId: externalReference,
-      metadata,
-      customer: {
-        name: perfil.nome_exibicao,
-        email: user.email,
-        taxId: normalizedTaxId,
-        cellphone: normalizedPhone,
-      },
+      addons: requestedAddons,
+      name: profileValidation.name,
+      taxId: profileValidation.taxId,
+      phone: profileValidation.phone,
+      source: 'zelo_saas_pix',
     });
 
-    const nowIso = new Date().toISOString();
-    const insertPayload = {
-      user_id: user.id,
-      subscription_id: existingSub?.id || null,
-      provider: 'abacatepay',
-      method: 'pix',
-      kind,
-      status: 'pending',
-      plan_tier: planTier,
-      has_mesas_addon: !!addons.mesas,
-      has_pedidos_addon: !!addons.pedidos,
-      has_acessos_addon: !!addons.acessos,
-      has_zelo_menu: !!addons.menu,
-      amount_expected_cents: amountCents,
-      amount_paid_cents: null,
-      currency: 'BRL',
-      external_reference: externalReference,
-      provider_payment_id: remotePayment?.id || null,
-      provider_checkout_id: remotePayment?.id || null,
-      provider_customer_id: null,
-      provider_subscription_id: null,
-      provider_status: remotePayment?.status || 'PENDING',
-      br_code: remotePayment?.brCode || null,
-      qr_code_base64: remotePayment?.brCodeBase64 || null,
-      expires_at: remotePayment?.expiresAt || null,
-      paid_at: null,
-      metadata,
-      created_at: nowIso,
-      updated_at: nowIso,
-    };
-
-    const { data: insertedPayment, error: insertError } = await supabaseAdmin
-      .from('billing_payments')
-      .insert(insertPayload)
-      .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu')
-      .single();
-
-    if (insertError || !insertedPayment) {
-      console.error('[billing/pix/create] DB insert error:', insertError);
-      return json({ error: 'Falha ao salvar cobrança Pix.' }, { status: 500 });
+    if (reused) {
+      return json({
+        reused: true,
+        ...serializePixCharge(paymentRow),
+      });
     }
 
     const posthog = getPostHogClient();
@@ -252,16 +90,16 @@ export async function POST({ request }) {
         event: 'pix_charge_created',
         properties: {
           plan: planTier,
-          addons,
-          amount_cents: amountCents,
-          kind,
-          payment_id: insertedPayment.id,
+          addons: requestedAddons,
+          amount_cents: paymentRow.amount_expected_cents,
+          kind: paymentRow.kind || 'subscription_renewal',
+          payment_id: paymentRow.id,
         },
       });
       await posthog.flush();
     }
 
-    return json(serializePendingPayment(insertedPayment));
+    return json(serializePixCharge(paymentRow));
   } catch (error) {
     console.error('[billing/pix/create] error:', error?.message || error);
     return json({ error: error?.message || 'Falha ao gerar cobrança Pix.' }, { status: 500 });
