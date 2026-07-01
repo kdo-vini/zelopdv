@@ -206,6 +206,10 @@
 
   async function handlePixCreate() {
     if (!pixSub || generatingPix) return
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { pixError = 'Sessão expirada.'; return }
+
     generatingPix = true
     pixError = ''
     pixResult = null
@@ -238,6 +242,9 @@
 
   async function handleResendWhatsApp() {
     if (!pixResult?.payment?.brCode || !pixSub) return
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { pixError = 'Sessão expirada.'; return }
 
     try {
       const res = await fetch(`${API_BASE}/api/admin/billing/pix/create`, {
