@@ -36,9 +36,15 @@ capture.mjs
 .claude/settings.local.json
 .claude/agent-memory/
 .claude/skills/
+.claude/worktrees/
 .agents/
 skills-lock.json
 .worktrees/
+
+# Local tooling / generated reports
+.impeccable/
+playwright-report/
+test-results/
 
 # Obsidian trash
 pdvObsidian/.trash/
