@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription } from '$lib/guards';
   import { logAuditAction } from '$lib/accessControl';
+  import { formatStoredDateForPtBr, getLocalDateInputValue, localDateInputToIso } from '$lib/dateRange';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import AdminLock from '$lib/components/AdminLock.svelte';
   import * as Select from '$lib/components/ui/select/index.js';
@@ -18,8 +19,8 @@
   let dataInicio = new Date(today.getFullYear(), today.getMonth(), 1);
   let dataFim = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-  $: dataInicioStr = dataInicio.toISOString().split('T')[0];
-  $: dataFimStr = dataFim.toISOString().split('T')[0];
+  $: dataInicioStr = getLocalDateInputValue(dataInicio);
+  $: dataFimStr = getLocalDateInputValue(dataFim);
 
   // Expenses data
   let expenses = [];
@@ -31,7 +32,7 @@
     description: '',
     amount: '',
     category: 'Fornecedor',
-    date: new Date().toISOString().slice(0, 10)
+    date: getLocalDateInputValue()
   };
 
   const categories = ['Fornecedor', 'Insumos', 'Aluguel', 'Contas fixas', 'Pessoal', 'Manutenção', 'Outros'];
@@ -70,43 +71,73 @@
   // Reset page when filters change
   $: if (searchQuery || filterCategory) currentPage = 1;
 
+  function getErrorMessage(error, fallback = 'Erro inesperado. Tente novamente.') {
+    if (!error) return fallback;
+    if (typeof error === 'string') return error;
+    return error.message || error.error_description || error.details || fallback;
+  }
+
+  function ensureSupabaseReady() {
+    if (!supabase) {
+      throw new Error('Configuração do Supabase ausente. Recarregue a página ou acione o suporte.');
+    }
+    if (!uid) {
+      throw new Error('Sessão não carregada. Recarregue a página e tente novamente.');
+    }
+  }
+
   async function loadExpenses() {
     if (!uid) return;
     loading = true;
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('user_id', uid)
-      .gte('date', dataInicio.toISOString())
-      .lte('date', dataFim.toISOString())
-      .order('date', { ascending: false });
-    if (error) {
-      console.error('Error loading expenses:', error);
-      addToast('Erro ao carregar despesas', 'error');
-    } else {
+    try {
+      ensureSupabaseReady();
+      const startIso = localDateInputToIso(dataInicioStr);
+      const endIso = localDateInputToIso(dataFimStr, { endOfDay: true });
+      if (!startIso || !endIso) throw new Error('Período inválido.');
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', uid)
+        .gte('date', startIso)
+        .lte('date', endIso)
+        .order('date', { ascending: false });
+      if (error) throw error;
       expenses = data || [];
+    } catch (error) {
+      console.error('[despesas] loadExpenses:', error);
+      addToast('Erro ao carregar despesas: ' + getErrorMessage(error), 'error', 5000);
+    } finally {
+      loading = false;
     }
-    loading = false;
   }
 
   $: if (uid && dataInicio && dataFim) loadExpenses();
 
   async function addExpense() {
-    if (!newExpense.description || !newExpense.amount || Number(newExpense.amount) <= 0) {
+    const amount = Number(newExpense.amount);
+    if (!newExpense.description || !Number.isFinite(amount) || amount <= 0) {
       addToast('Preencha descrição e valor positivo', 'warning');
       return;
     }
     loadingOp = true;
     try {
-      const { error } = await supabase.from('expenses').insert({
+      ensureSupabaseReady();
+      const dateIso = localDateInputToIso(newExpense.date);
+      if (!dateIso) throw new Error('Data inválida.');
+
+      const { data: insertedExpense, error } = await supabase.from('expenses').insert({
         user_id: uid,
         id_operador: operadorUserId,
         description: newExpense.description,
-        amount: parseFloat(newExpense.amount),
+        amount,
         category: newExpense.category,
-        date: new Date(newExpense.date).toISOString()
-      });
+        date: dateIso
+      })
+      .select('*')
+      .single();
       if (error) throw error;
+      if (!insertedExpense?.id) throw new Error('O banco não confirmou o cadastro da despesa.');
       if (isSubUser) {
         logAuditAction({
           ownerUserId,
@@ -114,16 +145,17 @@
           entityType: 'expense',
           details: {
             description: newExpense.description,
-            amount: parseFloat(newExpense.amount),
+            amount,
             category: newExpense.category
           }
         });
       }
       addToast('Despesa lançada!', 'success');
       newExpense = { ...newExpense, description: '', amount: '' };
-      loadExpenses();
+      await loadExpenses();
     } catch (e) {
-      addToast('Erro ao salvar: ' + e.message, 'error');
+      console.error('[despesas] addExpense:', e);
+      addToast('Erro ao salvar despesa: ' + getErrorMessage(e), 'error', 6000);
     } finally {
       loadingOp = false;
     }
@@ -142,14 +174,19 @@
   async function saveEdit(id) {
     loadingOp = true;
     try {
+      ensureSupabaseReady();
       const newAmount = parseFloat(editData.amount);
+      if (!editData.description || !Number.isFinite(newAmount) || newAmount <= 0) {
+        throw new Error('Preencha descrição e valor positivo.');
+      }
       const previous = expenses.find((ex) => ex.id === id);
-      const { error } = await supabase.from('expenses').update({
+      const { data: updatedExpense, error } = await supabase.from('expenses').update({
         description: editData.description,
         amount: newAmount,
         category: editData.category
-      }).eq('id', id).eq('user_id', uid);
+      }).eq('id', id).eq('user_id', uid).select('*').single();
       if (error) throw error;
+      if (!updatedExpense?.id) throw new Error('Nenhuma despesa foi atualizada. Recarregue a página e tente novamente.');
       // Optimistically update local array immediately so UI reflects the change
       expenses = expenses.map(ex =>
         ex.id === id
@@ -180,7 +217,8 @@
       editingId = null;
       editData = {};
     } catch (e) {
-      addToast('Erro ao atualizar: ' + e.message, 'error');
+      console.error('[despesas] saveEdit:', e);
+      addToast('Erro ao atualizar despesa: ' + getErrorMessage(e), 'error', 6000);
     } finally {
       loadingOp = false;
     }
@@ -190,9 +228,11 @@
     const confirmed = await confirmAction('Apagar despesa?', 'Tem certeza que deseja remover esta despesa permanentemente?');
     if (!confirmed) return;
     try {
+      ensureSupabaseReady();
       const previous = expenses.find((ex) => ex.id === id);
-      const { error } = await supabase.from('expenses').delete().eq('id', id).eq('user_id', uid);
+      const { data: deletedExpense, error } = await supabase.from('expenses').delete().eq('id', id).eq('user_id', uid).select('id').single();
       if (error) throw error;
+      if (!deletedExpense?.id) throw new Error('Nenhuma despesa foi removida. Recarregue a página e tente novamente.');
       if (isSubUser) {
         logAuditAction({
           ownerUserId,
@@ -207,25 +247,33 @@
         });
       }
       addToast('Despesa removida', 'success');
-      loadExpenses();
+      await loadExpenses();
     } catch (e) {
-      addToast('Erro ao excluir: ' + e.message, 'error');
+      console.error('[despesas] deleteExpense:', e);
+      addToast('Erro ao excluir despesa: ' + getErrorMessage(e), 'error', 6000);
     }
   }
 
   onMount(async () => {
-    const authCtx = await ensureActiveSubscription({ requireProfile: true });
-    if (!authCtx) return;
-    uid = authCtx.userId;
-    ownerUserId = authCtx.ownerUserId;
-    operadorUserId = authCtx.userId;
-    isSubUser = authCtx.isSubUser;
-    if (uid) {
-      const { data: perfil } = await supabase.from('empresa_perfil').select('pin_admin').eq('user_id', ownerUserId).maybeSingle();
-      if (perfil?.pin_admin) adminPin = perfil.pin_admin;
-      // Override uid with ownerUserId for all DB operations
-      uid = ownerUserId;
-      loadExpenses();
+    try {
+      if (!supabase) throw new Error('Configuração do Supabase ausente.');
+      const authCtx = await ensureActiveSubscription({ requireProfile: true });
+      if (!authCtx) return;
+      uid = authCtx.userId;
+      ownerUserId = authCtx.ownerUserId;
+      operadorUserId = authCtx.userId;
+      isSubUser = authCtx.isSubUser;
+      if (uid) {
+        const { data: perfil, error } = await supabase.from('empresa_perfil').select('pin_admin').eq('user_id', ownerUserId).maybeSingle();
+        if (error) throw error;
+        if (perfil?.pin_admin) adminPin = perfil.pin_admin;
+        // Override uid with ownerUserId for all DB operations
+        uid = ownerUserId;
+        await loadExpenses();
+      }
+    } catch (error) {
+      console.error('[despesas] onMount:', error);
+      addToast('Erro ao iniciar despesas: ' + getErrorMessage(error), 'error', 6000);
     }
   });
 </script>
@@ -374,7 +422,7 @@
                 on:mouseleave={e => e.currentTarget.style.background = 'transparent'}
               >
                 <td class="px-4 py-3 whitespace-nowrap" style="color: var(--text-muted);">
-                  {new Date(ex.date).toLocaleDateString('pt-BR')}
+                  {formatStoredDateForPtBr(ex.date)}
                 </td>
                 <td class="px-4 py-3 font-medium" style="color: var(--text-main);">
                   {#if editingId === ex.id}

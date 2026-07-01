@@ -9,6 +9,39 @@ Não havia um log histórico consolidado de incidentes neste repositório. As en
 
 ---
 
+## INC-2026-07-01-01 - Despesa mostra toast de sucesso, mas nao aparece cadastrada
+
+**Status:** confirmado por relato da cliente Bem Servido e reproduzido na conta de testes Unutopia.
+
+**Sintoma**
+
+- Ao lancar uma despesa em `/gestao/despesas`, o toast "Despesa lancada!" aparece.
+- A lista continua sem o lancamento, dando aparencia de erro silencioso.
+- O problema e mais visivel no primeiro dia do mes.
+
+**Causa-raiz**
+
+- A tela gravava e filtrava datas com `new Date('YYYY-MM-DD').toISOString()`.
+- Em fuso brasileiro, uma data como `2026-07-01` vira o dia anterior em UTC ao ser serializada a partir de meia-noite.
+- Como a tela filtra o mes atual a partir de `2026-07-01`, uma despesa lancada no dia 1 podia ser salva como `2026-06-30T...Z` e desaparecer do filtro.
+- O fim do periodo tambem usava meia-noite do ultimo dia, excluindo despesas feitas no decorrer desse dia.
+- O insert nao exigia retorno da linha cadastrada antes de mostrar sucesso.
+
+**Fix / recovery**
+
+- Adicionado helper de datas locais para input `YYYY-MM-DD`, faixa inclusiva do dia inteiro e formatacao sem deslocamento por fuso.
+- `insert`, `update` e `delete` em `expenses` agora usam `.select(...).single()` e so mostram sucesso quando o Supabase confirma a linha afetada.
+- Tratamento de erro explicito para Supabase ausente, sessao nao carregada, periodo/data invalidos, falha de carregamento, operacao sem linha afetada e erros PostgREST.
+- Validacao local: `npx vitest run tests/dateRange.test.js` 3/3 e `npm run check` 0 errors / 110 warnings.
+
+**Referencias**
+
+- [src/routes/gestao/despesas/+page.svelte](/home/vinicius/code/zelopdv/src/routes/gestao/despesas/+page.svelte:1)
+- [src/lib/dateRange.js](/home/vinicius/code/zelopdv/src/lib/dateRange.js:1)
+- [tests/dateRange.test.js](/home/vinicius/code/zelopdv/tests/dateRange.test.js:1)
+
+---
+
 ## INC-2026-06-17-01 — Trial grátis vencido permanece `trialing`
 
 **Status:** confirmado em produção com MaisQ Salgados.
