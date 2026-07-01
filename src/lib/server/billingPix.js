@@ -1,6 +1,12 @@
 import crypto from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import {
+  isValidBrazilianTaxId,
+  normalizeBrazilianPhone,
+  normalizeBrazilianTaxId,
+} from '$lib/masks';
+import { PLANS } from '$lib/pricing';
 
 const BILLING_CYCLE_MONTHS = 1;
 
@@ -231,4 +237,54 @@ export async function syncPixPaymentWithRemote({ payment, remotePayment, source 
     ...payment,
     ...updates,
   };
+}
+
+export const PIX_EXPIRATION_SECONDS = 60 * 60;
+
+export function buildPixDescription(planTier) {
+  const base = `Assinatura ${PLANS[planTier]?.name || 'Zelo'}`;
+  return base.slice(0, 37);
+}
+
+export function validatePixCustomerProfile(perfil) {
+  if (!perfil?.nome_exibicao || !perfil?.documento || !perfil?.contato) {
+    return {
+      ok: false,
+      code: 'missing_fields',
+      message: 'Complete nome da empresa, CPF/CNPJ e telefone antes de gerar um Pix.',
+    };
+  }
+  const taxId = normalizeBrazilianTaxId(perfil.documento);
+  if (!taxId || !isValidBrazilianTaxId(taxId)) {
+    return {
+      ok: false,
+      code: 'invalid_tax_id',
+      message: 'CPF/CNPJ inválido no perfil da empresa. Atualize o cadastro antes de gerar Pix.',
+    };
+  }
+  const phone = normalizeBrazilianPhone(perfil.contato);
+  if (!phone) {
+    return {
+      ok: false,
+      code: 'invalid_phone',
+      message: 'Telefone inválido no perfil da empresa. Atualize o cadastro antes de gerar Pix.',
+    };
+  }
+  return { ok: true, name: perfil.nome_exibicao, taxId, phone };
+}
+
+function formatBrlFromCents(amountCents) {
+  return (Number(amountCents || 0) / 100).toFixed(2).replace('.', ',');
+}
+
+export function buildRenewalPixWhatsAppMessage({ nome, planName, amountCents, brCode }) {
+  const primeiroNome = (nome || 'tudo bem').split(' ')[0];
+  return (
+    `Ola ${primeiroNome}! Aqui esta o PIX para renovar sua assinatura ${planName} do ZeloPDV, ` +
+    `no valor de R$ ${formatBrlFromCents(amountCents)}. ` +
+    `Copie o codigo abaixo e pague no app do seu banco (PIX Copia e Cola). ` +
+    `Assim que o pagamento for confirmado, sua assinatura e renovada automaticamente.\n\n` +
+    `${brCode}\n\n` +
+    `Qualquer duvida e so chamar. — Equipe ZeloPDV`
+  );
 }
