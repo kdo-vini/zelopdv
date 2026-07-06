@@ -9,6 +9,37 @@ Não havia um log histórico consolidado de incidentes neste repositório. As en
 
 ---
 
+## INC-2026-07-06-01 - Caixa duplicado aberto vira "orfao" que nunca fecha
+
+**Status:** confirmado por relato de usuario em producao (relatorios sempre mostram um caixa aberto, geralmente o penultimo).
+
+**Sintoma**
+
+- Usuario abre um caixa e, logo em seguida, abre outro sem perceber (duas abas/dispositivos ou retry apos falha de rede). As vendas caem no caixa mais novo.
+- Ao fechar, `/gestao/caixa` fecha so o caixa mais novo; o mais antigo continua com `data_fechamento` null.
+- No dia seguinte o PDV encontra o caixa antigo aberto e nao oferece o modal de abertura; o dashboard `/gestao` mostra "caixa fechado" (le o caixa mais recente por data, sem filtrar por aberto). Estado parece contraditorio: "nem aberto nem fechado".
+
+**Causa-raiz**
+
+- A invariante "no maximo um caixa aberto por empresa" nao era garantida em lugar nenhum: sem indice unico no banco e `handleAbrirCaixa` inserindo sem checar caixa aberto existente.
+- Todos os consumidores (`verificarCaixaAberto`, `/gestao/caixa`, RPC `criar_venda_completa`) assumem no maximo um aberto via `order by data_abertura desc limit 1`, entao o segundo caixa aberto tornava o primeiro invisivel.
+- Agravante: o `ModalAbrirCaixa` travava o botao em "Abrindo..." apos uma falha (flag `submitting` nunca resetava), forcando reload e novas tentativas cegas.
+
+**Fix / recovery**
+
+- Migration `.ai/migrations/caixas_one_open_per_user_2026_07_06.sql`: fecha os caixas orfaos existentes (herda `data_fechamento` da abertura do caixa seguinte; preserva caixa antigo se tiver venda posterior) e cria indice unico parcial `caixas_one_open_per_user` em `caixas (id_usuario) where data_fechamento is null`.
+- Novo helper `src/lib/finance/caixaOps.js` (`abrirCaixaIdempotente`): checa caixa aberto antes de inserir e, em corrida (23505 do indice), adota o caixa vencedor em vez de falhar.
+- `src/routes/app/+page.svelte` usa o helper com guarda de reentrada; `ModalAbrirCaixa` passou a receber `busy` do pai, reabilitando o botao apos falha.
+- Cobertura: `tests/finance.caixaOps.test.js` (6 testes).
+
+**Referencias**
+
+- [src/lib/finance/caixaOps.js](/home/vinicius/code/zelopdv/src/lib/finance/caixaOps.js:1)
+- [src/routes/app/+page.svelte](/home/vinicius/code/zelopdv/src/routes/app/+page.svelte:795)
+- [.ai/migrations/caixas_one_open_per_user_2026_07_06.sql](/home/vinicius/code/zelopdv/.ai/migrations/caixas_one_open_per_user_2026_07_06.sql:1)
+
+---
+
 ## INC-2026-07-01-01 - Despesa mostra toast de sucesso, mas nao aparece cadastrada
 
 **Status:** confirmado por relato da cliente Bem Servido e reproduzido na conta de testes Unutopia.

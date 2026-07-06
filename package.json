@@ -26,6 +26,7 @@
     "@types/node": "^25.9.1",
     "playwright": "^1.58.2",
     "postcss": "^8.4.47",
+    "supabase": "^2.109.0",
     "svelte": "^5.0.0",
     "svelte-check": "^4.4.8",
     "tailwind-variants": "^3.2.2",

@@ -54,19 +54,23 @@ describe('buildPixDescription', () => {
 });
 
 describe('buildRenewalPixWhatsAppMessage', () => {
-  it('inclui nome, valor formatado, plano e brCode, sem emoji', () => {
-    const msg = buildRenewalPixWhatsAppMessage({
+  it('retorna message1 com texto e message2 com apenas o brCode, sem emoji', () => {
+    const { message1, message2 } = buildRenewalPixWhatsAppMessage({
       nome: 'João Silva',
       planName: 'ZeloPDV',
       amountCents: 5900,
       brCode: '00020101-BRCODE-XYZ',
     });
-    expect(msg).toContain('João');
-    expect(msg).toContain('ZeloPDV');
-    expect(msg).toContain('59,00');
-    expect(msg).toContain('00020101-BRCODE-XYZ');
+    // message1: texto explicativo com nome, plano, valor
+    expect(message1).toContain('João');
+    expect(message1).toContain('ZeloPDV');
+    expect(message1).toContain('59,00');
+    // message1 NÃO inclui o brCode (fica na message2)
+    expect(message1).not.toContain('00020101-BRCODE-XYZ');
+    // message2: apenas o brCode (fácil de copiar)
+    expect(message2).toBe('00020101-BRCODE-XYZ');
     // sem emoji: só ASCII + acentos latinos
-    expect(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(msg)).toBe(false);
+    expect(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(message1)).toBe(false);
   });
 });
 

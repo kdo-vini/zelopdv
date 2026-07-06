@@ -280,14 +280,17 @@ function formatBrlFromCents(amountCents) {
 
 export function buildRenewalPixWhatsAppMessage({ nome, planName, amountCents, brCode }) {
   const primeiroNome = (nome || 'tudo bem').split(' ')[0];
-  return (
-    `Ola ${primeiroNome}! Aqui esta o PIX para renovar sua assinatura ${planName} do ZeloPDV, ` +
-    `no valor de R$ ${formatBrlFromCents(amountCents)}. ` +
-    `Copie o codigo abaixo e pague no app do seu banco (PIX Copia e Cola). ` +
-    `Assim que o pagamento for confirmado, sua assinatura e renovada automaticamente.\n\n` +
-    `${brCode}\n\n` +
-    `Qualquer duvida e so chamar. — Equipe ZeloPDV`
-  );
+  return {
+    // Mensagem 1: texto explicativo (fácil de ler)
+    message1:
+      `Ola ${primeiroNome}! Aqui esta o PIX para renovar sua assinatura ${planName} do ZeloPDV, ` +
+      `no valor de R$ ${formatBrlFromCents(amountCents)}. ` +
+      `Copie o codigo da proxima mensagem e pague no app do seu banco (PIX Copia e Cola). ` +
+      `Assim que o pagamento for confirmado, sua assinatura e renovada automaticamente.\n\n` +
+      `Qualquer duvida e so chamar. — Equipe ZeloPDV`,
+    // Mensagem 2: apenas o código (fácil de copiar)
+    message2: brCode,
+  };
 }
 
 export function serializePixCharge(row) {

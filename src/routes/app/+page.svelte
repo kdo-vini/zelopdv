@@ -24,6 +24,7 @@
   import { resolveAppIcon } from '$lib/icons/appIcons';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { money, validatePaymentCoverage, getPrecoTabela } from '$lib/finance/caixa';
+  import { abrirCaixaIdempotente } from '$lib/finance/caixaOps';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
   
@@ -187,6 +188,7 @@
   let caixaAberto = true; // será verificado no banco
   let modalAbrirCaixaAberto = false;
   let trocoInicialInput = 0.00;
+  let abrindoCaixa = false;
   let idCaixaAberto = null;
   let saldoCaixa = 0; // saldo atual em dinheiro no caixa
   let carregandoSaldo = false;
@@ -787,35 +789,42 @@
   // --- 5. AÇÕES DOS MODAIS ---
 
   // Módulo 1.1 (Simplificado)
-  /** Abre um caixa com o troco inicial para o usuário autenticado. */
+  /**
+   * Abre um caixa com o troco inicial para o usuário autenticado.
+   * Idempotente: se já houver caixa aberto (outra aba/dispositivo, retry
+   * após falha de rede), adota o existente em vez de criar um duplicado.
+   */
   async function handleAbrirCaixa() {
+    if (abrindoCaixa) return;
     if (trocoInicialInput < 0) return;
     const id_usuario = ownerUserId;
     if (!id_usuario) {
       addToast('Sessão inválida. Faça login novamente.', 'error');
       return;
     }
-    const { data, error } = await supabase
-      .from('caixas')
-      .insert({
-        data_abertura: new Date().toISOString(),
-        valor_inicial: Number(trocoInicialInput),
-        id_usuario,
-        id_operador: operadorUserId
-      })
-      .select('id')
-      .single();
-    if (error) {
-      addToast('Erro ao abrir caixa: ' + error.message, 'error');
-      return;
+    abrindoCaixa = true;
+    try {
+      const { caixa, jaExistia, error } = await abrirCaixaIdempotente(supabase, {
+        ownerUserId: id_usuario,
+        operadorUserId,
+        valorInicial: Number(trocoInicialInput)
+      });
+      if (error || !caixa) {
+        addToast('Erro ao abrir caixa: ' + (error?.message || 'tente novamente.'), 'error');
+        return;
+      }
+      idCaixaAberto = caixa.id;
+      caixaAberto = true;
+      modalAbrirCaixaAberto = false;
+      if (jaExistia) {
+        addToast('Já havia um caixa aberto. Continuando nele.', 'info');
+      } else if (isSubUser) {
+        logAuditAction({ ownerUserId, action: 'caixa.aberto', entityType: 'caixa', entityId: String(caixa.id), details: { valor_inicial: Number(trocoInicialInput) } });
+      }
+      await atualizarSaldoCaixa();
+    } finally {
+      abrindoCaixa = false;
     }
-    idCaixaAberto = data.id;
-    caixaAberto = true;
-    modalAbrirCaixaAberto = false;
-    if (isSubUser) {
-      logAuditAction({ ownerUserId, action: 'caixa.aberto', entityType: 'caixa', entityId: String(data.id), details: { valor_inicial: Number(trocoInicialInput) } });
-    }
-    await atualizarSaldoCaixa();
   }
 
   // Removido: Fluxo de quantidade por modal (click adiciona diretamente)
@@ -1560,6 +1569,7 @@
 <!-- Modal: Abrir Caixa -->
 <ModalAbrirCaixa
   open={modalAbrirCaixaAberto}
+  busy={abrindoCaixa}
   on:submit={async (e) => {
     if (!canAbrirCaixa) { addToast('Sem permissão para abrir caixa.', 'error'); return; }
     trocoInicialInput = e.detail.trocoInicial;

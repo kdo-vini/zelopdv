@@ -111,16 +111,22 @@ export async function POST({ request }) {
       let whatsappSent = false;
       let whatsappError = null;
       try {
-        const msg = buildRenewalPixWhatsAppMessage({
+        const { message1, message2 } = buildRenewalPixWhatsAppMessage({
           nome: profileValidation.name,
           planName: 'ZeloPDV',
           amountCents: latestPayment.amount_expected_cents,
           brCode: latestPayment.br_code,
         });
-        const result = await sendWhatsAppTextDetailed(profileValidation.phone, msg);
-        whatsappSent = result.ok;
-        if (!result.ok) {
-          whatsappError = result.error || 'Falha ao enviar WhatsApp';
+        const result1 = await sendWhatsAppTextDetailed(profileValidation.phone, message1);
+        if (result1.ok) {
+          const result2 = await sendWhatsAppTextDetailed(profileValidation.phone, message2);
+          whatsappSent = result2.ok;
+          if (!result2.ok) {
+            whatsappError = result2.error || 'Falha ao enviar código PIX';
+          }
+        } else {
+          whatsappSent = false;
+          whatsappError = result1.error || 'Falha ao enviar WhatsApp';
         }
       } catch (waErr) {
         whatsappError = waErr?.message || 'Erro ao disparar WhatsApp';
@@ -169,22 +175,28 @@ export async function POST({ request }) {
       metadataExtra: { adminId: admin.id },
     });
 
-    // Send WhatsApp with PIX details (fire-and-forget)
+    // Send WhatsApp with PIX details (fire-and-forget, 2 messages)
     let whatsappSent = false;
     let whatsappError = null;
     if (paymentRow.br_code) {
       try {
         const planName = subscription.plan_tier || planTier;
-        const msg = buildRenewalPixWhatsAppMessage({
+        const { message1, message2 } = buildRenewalPixWhatsAppMessage({
           nome: profileValidation.name,
           planName: planName.charAt(0).toUpperCase() + planName.slice(1),
           amountCents: paymentRow.amount_expected_cents,
           brCode: paymentRow.br_code,
         });
-        const result = await sendWhatsAppTextDetailed(profileValidation.phone, msg);
-        whatsappSent = result.ok;
-        if (!result.ok) {
-          whatsappError = result.error || 'Falha ao enviar WhatsApp';
+        const result1 = await sendWhatsAppTextDetailed(profileValidation.phone, message1);
+        if (result1.ok) {
+          const result2 = await sendWhatsAppTextDetailed(profileValidation.phone, message2);
+          whatsappSent = result2.ok;
+          if (!result2.ok) {
+            whatsappError = result2.error || 'Falha ao enviar código PIX';
+          }
+        } else {
+          whatsappSent = false;
+          whatsappError = result1.error || 'Falha ao enviar WhatsApp';
         }
       } catch (waErr) {
         whatsappError = waErr?.message || 'Erro ao disparar WhatsApp';

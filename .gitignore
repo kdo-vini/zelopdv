@@ -23,6 +23,9 @@ SUPPORT_GUIDE_ZELO_PDV.txt
 !.ai/migrations/zelomenu_publication_schema_2026_06_23.sql
 !.ai/migrations/pedidos_preparando_status_2026_06_25.sql
 !.ai/migrations/billing_payments_has_zelo_menu_2026_07_01.sql
+!.ai/migrations/caixas_one_open_per_user_2026_07_06.sql
+!.ai/migrations/billing_webhook_events_enable_rls_2026_07_06.sql
+!.ai/migrations/leadbot_tables_enable_rls_2026_07_06.sql
 SISTEMA.md
 agents.md
 
@@ -59,3 +62,6 @@ static/digital-certificate*
 e2e/.auth/*.json
 e2e/.auth/.gitkeep
 .env*
+
+# Supabase CLI link state (local only)
+supabase/.temp/

@@ -30,6 +30,14 @@
 - Impacto: a segurança do painel depende de `super_admins` + ausência de RLS nas tabelas administrativas. Qualquer relaxamento indevido em policies/dados pode expor operações sensíveis no cliente.
 - Ação recomendada: revisar a lista de tabelas acessadas pelo admin, preferir handlers server-side para mutações críticas e registrar explicitamente quais tabelas estão com RLS desligado por design.
 
+### P0 (resolvido 2026-07-06) — Tabelas em `public` sem RLS e com grants completos para `anon`/`authenticated`
+
+- Evidência: `supabase db advisors` no projeto real em 2026-07-06 + consulta a `information_schema.role_table_grants`. Tabelas com RLS desligado e SELECT/INSERT/UPDATE/DELETE/TRUNCATE liberados para `anon` e `authenticated`: `billing_webhook_events`, `leads`, `lead_events`, `outreach_messages`, `approvals`, `agent_runs`, `suppression_list`.
+- Impacto: qualquer portador da anon key (embutida no bundle do client) podia ler/alterar/apagar essas tabelas via Data API. `leads`/`outreach_messages` contêm dados pessoais de prospecção; `billing_webhook_events` é auditoria de billing.
+- Status parcial: `billing_webhook_events` corrigida em 2026-07-06 (RLS ligado + grants revogados de anon/authenticated; único consumidor é o webhook AbacatePay via service role, verificado). Migration: `.ai/migrations/billing_webhook_events_enable_rls_2026_07_06.sql`.
+- Resolvido: as outras 6 tabelas eram de um bot antigo de captação de leads (confirmado pelo dono, sem consumidor ativo). RLS ligado + grants revogados em 2026-07-06 via `.ai/migrations/leadbot_tables_enable_rls_2026_07_06.sql`; dados preservados (`leads`=72, `lead_events`=1865, `outreach_messages`=4, demais vazias). Follow-up recomendado: dropar/anonimizar essas tabelas — contêm dados pessoais de prospecção sem uso (minimização LGPD).
+- Advisor também acumula (pré-existentes, menor severidade): 4 views SECURITY DEFINER em `public` (`user_entitlements`, `v_leads_pending_followup`, `v_daily_metrics`, +1), 157 policies com `auth.uid()` sem initplan, 28 funções SECURITY DEFINER executáveis por anon/authenticated, buckets públicos com listagem. Rastrear em rodada própria de hardening.
+
 ### P2 — Reativação de conta limpa o agendamento local mesmo se a retomada no Stripe falhar
 
 - Evidência: [src/routes/api/account/reactivate/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/reactivate/+server.js:28), [src/routes/api/account/reactivate/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/reactivate/+server.js:47)

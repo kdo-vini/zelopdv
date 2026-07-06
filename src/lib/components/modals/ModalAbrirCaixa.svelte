@@ -9,28 +9,28 @@
   
   /** @type {boolean} */
   export let open = false;
-  
+  /** Controlado pelo pai: true enquanto a abertura está em andamento. Volta a false em caso de falha, reabilitando o botão. */
+  export let busy = false;
+
   let trocoInicial = 0;
-  let submitting = false;
-  
+
   function handleSubmit() {
+    if (busy) return;
     if (trocoInicial < 0) return;
-    submitting = true;
     dispatch('submit', { trocoInicial: Number(trocoInicial) });
   }
-  
+
   function handleClose() {
     dispatch('close');
   }
-  
+
   // Reset ao abrir
   $: if (open) {
     trocoInicial = 0;
-    submitting = false;
   }
-  
+
   function handleKeydown(e) {
-    if (e.key === 'Escape' && !submitting) {
+    if (e.key === 'Escape' && !busy) {
       // Don't close during submission, but Escape is less critical here since it's a required action
     }
   }
@@ -56,14 +56,14 @@
           bind:value={trocoInicial}
           class="mt-1 input-form"
           required
-          disabled={submitting}
+          disabled={busy}
         />
         <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
           Troco inicial é apenas o dinheiro que já começa na gaveta para dar troco.
         </p>
         <div class="mt-6 flex justify-end">
-          <button type="submit" class="btn-primary" disabled={submitting}>
-            {submitting ? 'Abrindo...' : 'Abrir Caixa'}
+          <button type="submit" class="btn-primary" disabled={busy}>
+            {busy ? 'Abrindo...' : 'Abrir Caixa'}
           </button>
         </div>
       </form>
