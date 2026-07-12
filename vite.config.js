@@ -20,6 +20,9 @@ export default defineConfig({
     __ZELO_BUILD_VERSION__: JSON.stringify(buildVersion)
   },
   test: {
+    // Several legacy guard suites share module-level Supabase mocks. Running
+    // files concurrently makes those mocks race and creates false timeouts.
+    fileParallelism: false,
     include: ['tests/**/*.test.js'],
     exclude: [
       'node_modules/**',
