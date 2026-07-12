@@ -40,6 +40,7 @@ export async function GET({ request }) {
   if (!isWhatsAppConfigured()) return json({ ok: true, skipped: true, reason: 'whatsapp not configured' });
 
   const { date: today, hour } = brtNow();
+  const dailyFallback = request.headers.get('x-intelligence-daily') === '1';
   const { data: profiles, error } = await supabaseAdmin
     .from('empresa_perfil')
     .select('user_id, nome_exibicao, razao_social, contato, gerente_prefs, gerente_whatsapp_last_sent_date, intelligence_enabled_at')
@@ -49,7 +50,7 @@ export async function GET({ request }) {
   const results = { sent: 0, skipped: 0, errors: 0, details: [] };
   for (const profile of profiles || []) {
     const prefs = readPrefs(profile);
-    if (!prefs.enabled || prefs.hour !== hour || !isDigestDue(profile.gerente_whatsapp_last_sent_date, today)) {
+    if (!prefs.enabled || (!dailyFallback && prefs.hour !== hour) || !isDigestDue(profile.gerente_whatsapp_last_sent_date, today)) {
       results.skipped++;
       continue;
     }
@@ -104,5 +105,5 @@ export async function GET({ request }) {
       console.error('[intelligence-notify] Falha para', profile.user_id, sendError);
     }
   }
-  return json({ ok: true, date: today, hour, ...results });
+  return json({ ok: true, date: today, hour, daily_fallback: dailyFallback, ...results });
 }

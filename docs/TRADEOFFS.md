@@ -25,10 +25,10 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 - Motivo: preservar histórico auditável e permitir que o dono reveja um tipo silenciado no feed.
 - Reabrir se houver demanda por reduzir custo do motor por empresa.
 
-## TA-INTELLIGENCE-02 — Digest em cron horário
+## TA-INTELLIGENCE-02 — Digest no cron diário
 
-- O resumo WhatsApp usa `/api/cron/intelligence-notify` a cada hora e respeita a hora BRT escolhida.
-- O projeto já opera acima do limite de crons do plano Hobby; a configuração exige manter capacidade compatível na Vercel.
+- A conta Vercel atual é Hobby e não aceita crons horários. O resumo WhatsApp é disparado pelo `/api/cron/intelligence-daily` após o processamento dos sinais.
+- A preferência de horário sai da V1; uma futura migração para Pro pode reintroduzi-la sem mudar o contrato de opt-in ou idempotência.
 
 ---
 

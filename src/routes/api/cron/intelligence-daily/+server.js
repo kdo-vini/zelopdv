@@ -25,7 +25,7 @@ export const config = {
 
 const TARGET_OFFSET_DAYS = 1; // D-1: processa o dia anterior
 
-export async function GET({ request }) {
+export async function GET({ request, fetch }) {
   // ── Auth ──────────────────────────────────────────────────────────────
   const cronSecret = env.CRON_SECRET;
   const authHeader = request.headers.get('authorization');
@@ -63,10 +63,20 @@ export async function GET({ request }) {
 
   try {
     const result = await runDaily(supabaseAdmin, targetDateStr);
+    let digest = null;
+    try {
+      const notifyResponse = await fetch(new URL('/api/cron/intelligence-notify', request.url), {
+        headers: { authorization: authHeader, 'x-intelligence-daily': '1' },
+      });
+      digest = await notifyResponse.json();
+    } catch (notifyError) {
+      console.error('[intelligence-cron] Erro ao enviar digest:', notifyError.message);
+    }
     return json({
       ok: true,
       target_date: targetDateStr,
       ...result,
+      digest,
     });
   } catch (err) {
     console.error('[intelligence-cron] Erro fatal:', err.message);

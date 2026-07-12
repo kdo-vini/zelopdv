@@ -6,12 +6,6 @@
   import { addToast } from '$lib/stores/ui.js';
   import { maskPhone, normalizeBrazilianPhone } from '$lib/masks.js';
   import Button from '$lib/components/ui/button/button.svelte';
-  import * as Select from '$lib/components/ui/select/index.js';
-
-  const hours = [
-    { value: '06', label: '06h30' }, { value: '07', label: '07h30' },
-    { value: '09', label: '09h00' }, { value: '12', label: '12h00' }, { value: '18', label: '18h00' },
-  ];
   const signalGroups = [
     { label: 'Vendas', types: [['REVENUE_BELOW_WEEKDAY_AVG', 'Vendas abaixo do ritmo'], ['REVENUE_ABOVE_WEEKDAY_AVG', 'Vendas acima do ritmo'], ['AVG_TICKET_DOWN', 'Ticket médio menor'], ['PRODUCT_SALES_DROP', 'Produto com menos saída'], ['TOP_PRODUCT_CONCENTRATION', 'Concentração em produto']] },
     { label: 'Financeiro', types: [['PAYMENT_MIX_SHIFT', 'Mudança no mix de pagamento'], ['FIADO_ISSUED_SHARE_HIGH', 'Fiado emitido'], ['CASH_DIFFERENCE_RECURRING', 'Diferença recorrente no caixa']] },
@@ -26,7 +20,6 @@
   let ownerUserId = null;
   let contact = '';
   let whatsappEnabled = false;
-  let selectedHour = '07';
   let mutedTypes = [];
   let showExample = false;
 
@@ -46,7 +39,6 @@
       contact = maskPhone(data?.contato || '');
       const prefs = data?.gerente_prefs || {};
       whatsappEnabled = prefs?.whatsapp?.enabled === true;
-      selectedHour = String(prefs?.whatsapp?.hora || '07');
       mutedTypes = Array.isArray(prefs?.muted_types) ? prefs.muted_types.filter((type) => !lockedTypes.has(type)) : [];
     } catch (error) {
       addToast(error?.message || 'Não foi possível carregar as preferências.', 'error');
@@ -68,7 +60,7 @@
     }
     saving = true;
     try {
-      const prefs = { whatsapp: { enabled: whatsappEnabled, hora: selectedHour }, muted_types: mutedTypes };
+      const prefs = { whatsapp: { enabled: whatsappEnabled, hora: 'daily' }, muted_types: mutedTypes };
       const { error } = await supabase.from('empresa_perfil').update({ gerente_prefs: prefs, contato: normalizeBrazilianPhone(contact) || contact }).eq('user_id', ownerUserId);
       if (error) throw error;
       addToast('Preferências do Zelinho atualizadas.', 'success');
@@ -103,8 +95,8 @@
       {#if whatsappEnabled}
         <div class="form-grid">
           <label><span>WhatsApp</span><input value={contact} inputmode="numeric" placeholder="(00) 00000-0000" disabled={isSubUser} on:input={(event) => { contact = maskPhone(event.currentTarget.value); event.currentTarget.value = contact; }} /></label>
-          <label><span>Horário</span><Select.Root bind:value={selectedHour} disabled={isSubUser}><Select.Trigger class="select-trigger">{hours.find((hour) => hour.value === selectedHour)?.label || 'Escolha um horário'}</Select.Trigger><Select.Content>{#each hours as hour}<Select.Item value={hour.value} label={hour.label} />{/each}</Select.Content></Select.Root></label>
         </div>
+        <p class="schedule-note">Enviado após a análise diária do Zelinho.</p>
         <button class="example-toggle" on:click={() => showExample = !showExample}>{showExample ? 'Fechar exemplo' : 'Ver um exemplo'}</button>
         {#if showExample}<div class="example">Zelinho Gerente - sua empresa<br />Ontem: R$ 1.240,00 em 38 vendas, ticket médio de R$ 32,63.<br />Veja os números: zelopdv.com.br/gestao/gerente</div>{/if}
       {/if}
@@ -121,5 +113,5 @@
 </section>
 
 <style>
-  .prefs-page { max-width: 820px; margin: 0 auto; }.preference-card { padding: 20px; margin-bottom: 16px; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-card); }.card-heading { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 18px; color: var(--primary); }.card-heading h2 { color: var(--text-main); font-size: 15px; font-weight: 700; }.card-heading p, .notice { margin-top: 3px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }.notice { padding: 10px 12px; margin: 0 0 16px; border: 1px solid var(--status-warning-border); background: var(--status-warning-bg); color: var(--status-warning-text); border-radius: 6px; }.switch-row, .signal-option { display: flex; align-items: center; gap: 9px; color: var(--text-label); font-size: 14px; }.switch-row { margin-bottom: 18px; }.switch-row input, .signal-option input { accent-color: var(--primary); }.form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(170px, .55fr); gap: 12px; }.form-grid label { display: grid; gap: 6px; color: var(--text-muted); font-size: 12px; }.form-grid input, .select-trigger { width: 100%; height: 36px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-input); color: var(--text-main); padding: 0 10px; font-size: 14px; }.example-toggle { margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--link); font-size: 13px; cursor: pointer; }.example { margin-top: 10px; padding: 12px; border-left: 3px solid var(--primary); background: var(--bg-panel); color: var(--text-muted); white-space: pre-line; font-size: 13px; line-height: 1.55; }.groups { display: grid; gap: 18px; }.signal-group h3 { margin-bottom: 7px; color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }.signal-option { min-height: 32px; border-bottom: 1px solid var(--border-subtle); }.signal-option:last-child { border-bottom: 0; }.locked { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--text-muted); font-size: 11px; }.save-row { display: flex; justify-content: flex-end; padding-top: 4px; }.skeleton { height: 230px; border-radius: 8px; background: var(--bg-panel); animation: pulse 1.2s ease-in-out infinite; }.skeleton.short { height: 280px; margin-top: 16px; } @keyframes pulse { 50% { opacity: .5; } } @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; }.locked { font-size: 10px; } }
+  .prefs-page { max-width: 820px; margin: 0 auto; }.preference-card { padding: 20px; margin-bottom: 16px; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-card); }.card-heading { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 18px; color: var(--primary); }.card-heading h2 { color: var(--text-main); font-size: 15px; font-weight: 700; }.card-heading p, .notice, .schedule-note { margin-top: 3px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }.schedule-note { margin-top: 8px; }.notice { padding: 10px 12px; margin: 0 0 16px; border: 1px solid var(--status-warning-border); background: var(--status-warning-bg); color: var(--status-warning-text); border-radius: 6px; }.switch-row, .signal-option { display: flex; align-items: center; gap: 9px; color: var(--text-label); font-size: 14px; }.switch-row { margin-bottom: 18px; }.switch-row input, .signal-option input { accent-color: var(--primary); }.form-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }.form-grid label { display: grid; gap: 6px; color: var(--text-muted); font-size: 12px; }.form-grid input { width: 100%; height: 36px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-input); color: var(--text-main); padding: 0 10px; font-size: 14px; }.example-toggle { margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--link); font-size: 13px; cursor: pointer; }.example { margin-top: 10px; padding: 12px; border-left: 3px solid var(--primary); background: var(--bg-panel); color: var(--text-muted); white-space: pre-line; font-size: 13px; line-height: 1.55; }.groups { display: grid; gap: 18px; }.signal-group h3 { margin-bottom: 7px; color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }.signal-option { min-height: 32px; border-bottom: 1px solid var(--border-subtle); }.signal-option:last-child { border-bottom: 0; }.locked { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--text-muted); font-size: 11px; }.save-row { display: flex; justify-content: flex-end; padding-top: 4px; }.skeleton { height: 230px; border-radius: 8px; background: var(--bg-panel); animation: pulse 1.2s ease-in-out infinite; }.skeleton.short { height: 280px; margin-top: 16px; } @keyframes pulse { 50% { opacity: .5; } } @media (max-width: 520px) { .locked { font-size: 10px; } }
 </style>
