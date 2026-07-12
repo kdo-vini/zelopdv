@@ -4,6 +4,7 @@
   import { supabase } from '$lib/supabaseClient.js';
   import { getAccessContext } from '$lib/accessControl.js';
   import { addToast } from '$lib/stores/ui.js';
+  import { capturePostHogEvent } from '$lib/posthogClient.js';
   import { maskPhone, normalizeBrazilianPhone } from '$lib/masks.js';
   import Button from '$lib/components/ui/button/button.svelte';
   const signalGroups = [
@@ -63,6 +64,7 @@
       const prefs = { whatsapp: { enabled: whatsappEnabled, hora: 'daily' }, muted_types: mutedTypes };
       const { error } = await supabase.from('empresa_perfil').update({ gerente_prefs: prefs, contato: normalizeBrazilianPhone(contact) || contact }).eq('user_id', ownerUserId);
       if (error) throw error;
+      if (whatsappEnabled) void capturePostHogEvent('gerente_whatsapp_optin');
       addToast('Preferências do Zelinho atualizadas.', 'success');
     } catch (error) {
       addToast(error?.message || 'Não foi possível salvar as preferências.', 'error');

@@ -4,6 +4,7 @@
   import { supabase } from '$lib/supabaseClient.js';
   import { getAccessContext } from '$lib/accessControl.js';
   import { addToast } from '$lib/stores/ui.js';
+  import { capturePostHogEvent } from '$lib/posthogClient.js';
   import { markRead } from '$lib/stores/gerente.js';
   import ZelinhoBriefing from '$lib/components/gerente/ZelinhoBriefing.svelte';
   import SignalFeed from '$lib/components/gerente/SignalFeed.svelte';
@@ -45,6 +46,7 @@
       if (snapshotsError) throw snapshotsError;
       signals = signalRows || [];
       snapshots = snapshotRows || [];
+      if (!silent) void capturePostHogEvent('gerente_briefing_view', { signal_count: signals.length, learning });
       failures = 0;
     } catch (loadError) {
       error = loadError?.message || 'Não foi possível carregar o gerente.';

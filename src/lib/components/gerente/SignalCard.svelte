@@ -5,6 +5,7 @@
   import { getSignalPresenter, confiancaHumana } from '$lib/gerente/signalPresenter.js';
   import { openAssistantWithSignal } from '$lib/stores/assistant.js';
   import { closeSupport } from '$lib/stores/support.js';
+  import { capturePostHogEvent } from '$lib/posthogClient.js';
   export let signal;
   export let onRead = () => {};
   export let onAsk = () => {};
@@ -33,11 +34,11 @@
   </div>
   <p class="narrative">{signal?.narrative || 'Há um ponto para acompanhar nos números recentes.'}</p>
   <p class="confidence">{confiancaHumana(signal?.confidence, signal?.evidence)}</p>
-  <button class="numbers-toggle" aria-expanded={open} on:click={() => { open = !open; onRead(signal.id); }}><span>Ver os números</span><span class:rotated={open}><ChevronDown size={15} /></span></button>
+  <button class="numbers-toggle" aria-expanded={open} on:click={() => { open = !open; if (open) void capturePostHogEvent('gerente_signal_expand', { signal_type: signal.type, severity: signal.severity }); onRead(signal.id); }}><span>Ver os números</span><span class:rotated={open}><ChevronDown size={15} /></span></button>
   <div class:expanded={open} class="evidence"><div><dl>{#each presenter.formatEvidence(signal?.evidence || {}) as item}<div><dt>{item.label}</dt><dd class="tabular-nums">{item.valor}</dd></div>{/each}</dl></div></div>
   <div class="signal-actions">
     <a href={presenter.acaoSugerida.href} on:click={() => onRead(signal.id)}>{presenter.acaoSugerida.label}</a>
-    <Button variant="outline" size="sm" on:click={() => { onRead(signal.id); closeSupport(); if (!openAssistantWithSignal(signal)) onAsk(signal); }}><MessageCircle />Perguntar ao Zelinho</Button>
+    <Button variant="outline" size="sm" on:click={() => { void capturePostHogEvent('gerente_ask_zelinho', { signal_type: signal.type, severity: signal.severity }); onRead(signal.id); closeSupport(); if (!openAssistantWithSignal(signal)) onAsk(signal); }}><MessageCircle />Perguntar ao Zelinho</Button>
   </div>
 </article>
 
