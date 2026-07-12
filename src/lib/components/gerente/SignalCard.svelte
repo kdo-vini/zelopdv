@@ -3,6 +3,8 @@
   import { ChevronDown, MessageCircle, MoreHorizontal } from 'lucide-svelte';
   import { Button } from '$lib/components/ui/button';
   import { getSignalPresenter, confiancaHumana } from '$lib/gerente/signalPresenter.js';
+  import { openAssistantWithSignal } from '$lib/stores/assistant.js';
+  import { closeSupport } from '$lib/stores/support.js';
   export let signal;
   export let onRead = () => {};
   export let onAsk = () => {};
@@ -35,7 +37,7 @@
   <div class:expanded={open} class="evidence"><div><dl>{#each presenter.formatEvidence(signal?.evidence || {}) as item}<div><dt>{item.label}</dt><dd class="tabular-nums">{item.valor}</dd></div>{/each}</dl></div></div>
   <div class="signal-actions">
     <a href={presenter.acaoSugerida.href} on:click={() => onRead(signal.id)}>{presenter.acaoSugerida.label}</a>
-    <Button variant="outline" size="sm" on:click={() => { onRead(signal.id); onAsk(signal); }}><MessageCircle />Perguntar ao Zelinho</Button>
+    <Button variant="outline" size="sm" on:click={() => { onRead(signal.id); closeSupport(); if (!openAssistantWithSignal(signal)) onAsk(signal); }}><MessageCircle />Perguntar ao Zelinho</Button>
   </div>
 </article>
 

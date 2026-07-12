@@ -3,10 +3,12 @@
   import { supabase } from '$lib/supabaseClient';
   import { sessionStore, companyNameStore } from '$lib/stores/session';
   import { toggleAssistant, closeAssistant } from '$lib/stores/assistant';
+  import { unreadCount } from '$lib/stores/gerente';
+  import SidebarBadge from '$lib/components/gerente/SidebarBadge.svelte';
   import { toggleSupport, closeSupport, isSupportOpen } from '$lib/stores/support';
   import { getAccessContext, getAccessContextSync } from '$lib/accessControl';
   import { onMount } from 'svelte';
-  import { X, Menu, ChevronLeft, ChevronRight, HelpCircle, Sparkles, LogOut, ShoppingBag, Table2, ListChecks, LayoutGrid, Package, Users, Boxes, BarChart3, Wrench, ArrowUpRight, Wallet, Puzzle, ChefHat, BookOpen, Receipt } from 'lucide-svelte';
+  import { X, Menu, ChevronLeft, ChevronRight, HelpCircle, Sparkles, LogOut, ShoppingBag, Table2, ListChecks, LayoutGrid, Package, Users, Boxes, BarChart3, Wrench, ArrowUpRight, Wallet, Puzzle, ChefHat, BookOpen, Receipt, Radar } from 'lucide-svelte';
 
   let mobileOpen = false;
   let collapsed = false;
@@ -18,6 +20,7 @@
   let acessosAddonActive = false;
   let isSubUserMode = false;
   let subUserPermissions = {};
+  let hasUnreadCritical = false;
   // Until access context is known, suppress permission-gated nav items so the
   // sidebar never flashes owner-only links to a freshly-mounted sub-user
   // (happens on cross-section nav like /app ↔ /gestao because each section has
@@ -66,7 +69,7 @@
             .maybeSingle(),
           supabase
             .from('empresa_perfil')
-            .select('logo_url')
+            .select('logo_url, intelligence_enabled_at')
             .eq('user_id', subscriptionUserId)
             .maybeSingle()
         ]);
@@ -80,6 +83,17 @@
         mesasAddonActive = planAllowsAddons && !!sub?.has_mesas_addon;
         acessosAddonActive = planAllowsAddons && !!sub?.has_acessos_addon;
         if (perfil?.logo_url) companyLogoUrl = perfil.logo_url;
+        if (perfil?.intelligence_enabled_at) {
+          const [{ count }, { data: unreadSignals }] = await Promise.all([
+            supabase.from('business_signals').select('id', { count: 'exact', head: true }).is('read_at', null),
+            supabase.from('business_signals').select('id').is('read_at', null).eq('severity', 'critical').limit(1),
+          ]);
+          unreadCount.set(count || 0);
+          hasUnreadCritical = Boolean(unreadSignals?.length);
+        } else {
+          unreadCount.set(0);
+          hasUnreadCritical = false;
+        }
       } catch (e) {
         // silent fail - non-critical
       }
@@ -190,6 +204,12 @@
           icon: LayoutGrid
         },
         {
+          href: '/gestao/gerente',
+          label: 'Zelinho Gerente',
+          icon: Radar,
+          badge: true,
+        },
+        {
           href: '/gestao/produtos',
           label: 'Produtos',
           requiredPermission: 'produtos.visualizar',
@@ -288,6 +308,7 @@
   aria-expanded={mobileOpen}
   aria-controls="gestao-sidebar"
 >
+  {#if $unreadCount > 0}<span class:critical-dot={hasUnreadCritical} class="mobile-gerente-dot" aria-hidden="true"></span>{/if}
   {#if mobileOpen}
     <X class="size-5" aria-hidden="true" />
   {:else}
@@ -404,8 +425,9 @@
                   aria-current={active ? 'page' : undefined}
                   title={item.label}
                 >
-                  <svelte:component this={item.icon} class="size-5 shrink-0" aria-hidden="true" />
+                  <span class="nav-icon"><svelte:component this={item.icon} class="size-5 shrink-0" aria-hidden="true" />{#if item.badge && collapsed && $unreadCount > 0}<span class:critical-dot={hasUnreadCritical} class="collapsed-gerente-dot" aria-hidden="true"></span>{/if}</span>
                   <span class="label-text whitespace-nowrap">{item.label}</span>
+                  {#if item.badge}<span class="ml-auto label-text"><SidebarBadge count={$unreadCount} hasCritical={hasUnreadCritical} /></span>{/if}
                 </a>
               </li>
             {/if}
@@ -567,4 +589,5 @@
     padding-right: 0.25rem !important;
     gap: 0.35rem !important;
   }
+  .nav-icon { position: relative; display: inline-flex; flex: 0 0 auto; }.collapsed-gerente-dot, .mobile-gerente-dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }.collapsed-gerente-dot.critical-dot, .mobile-gerente-dot.critical-dot { background: var(--status-error-text); }.collapsed-gerente-dot { top: -3px; right: -4px; }.mobile-gerente-dot { top: 4px; right: 4px; }
 </style>

@@ -5,6 +5,8 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import OpenAI from 'openai';
 import { sendWhatsAppText, isWhatsAppConfigured } from '$lib/server/whatsapp';
 import { captureAiGeneration } from '$lib/server/posthog';
+import { resolveOwnerUserId } from '$lib/server/accessControl';
+import { buildSignalContextPrompt, getSignalContextForOwner } from '$lib/server/intelligence/signalContext';
 
 async function buildBusinessContext(userId) {
   try {
@@ -133,7 +135,7 @@ async function buildBusinessContext(userId) {
   }
 }
 
-function buildSystemPrompt(context, contextType) {
+function buildSystemPrompt(context, contextType, signalContext = null) {
   const nomeNegocio = context.perfil?.nome_negocio || 'este negócio'
   const catalogoNomes = (context.catalogo_produtos || []).join(', ') || null
 
@@ -220,6 +222,7 @@ DADOS REAIS DO NEGÓCIO (últimos 30 dias + mês atual)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${JSON.stringify(context)}
 ${metricsBlock}
+${buildSignalContextPrompt(signalContext)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 IDENTIDADE DO NEGÓCIO
@@ -307,13 +310,6 @@ export async function POST({ request }) {
     return createRateLimitResponse(rateLimit, 'Muitas mensagens. Tente novamente em 1 hora.');
   }
 
-  // Fire-and-forget: track last activity
-  supabaseAdmin
-    .from('empresa_perfil')
-    .update({ last_seen_at: new Date().toISOString() })
-    .eq('user_id', user.id)
-    .then(({ error }) => { if (error) console.warn('[Assistant] last_seen_at:', error.message) });
-
   let body;
   try {
     body = await request.json();
@@ -321,19 +317,40 @@ export async function POST({ request }) {
     return json({ error: 'Requisição inválida.' }, { status: 400 });
   }
 
-  const { messages, context_type = 'geral' } = body;
+  const { messages, context_type = 'geral', signal_id: signalId } = body;
   if (!Array.isArray(messages) || messages.length === 0) {
     return json({ error: 'Mensagens inválidas.' }, { status: 400 });
   }
 
-  const businessContext = await buildBusinessContext(user.id);
+  const ownerUserId = await resolveOwnerUserId(user.id);
+
+  // Track activity against the company owner; sub-users do not have a profile row.
+  supabaseAdmin
+    .from('empresa_perfil')
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq('user_id', ownerUserId)
+    .then(({ error }) => { if (error) console.warn('[Assistant] last_seen_at:', error.message) });
+
+  let signalContext = null;
+  if (signalId !== undefined && signalId !== null) {
+    if (typeof signalId !== 'string' || !signalId.trim()) return json({ error: 'Aviso invÃ¡lido.' }, { status: 400 });
+    try {
+      signalContext = await getSignalContextForOwner(signalId, ownerUserId, supabaseAdmin);
+    } catch (error) {
+      console.error('[Assistant] signal context:', error.message);
+      return json({ error: 'NÃ£o foi possÃ­vel carregar o aviso.' }, { status: 500 });
+    }
+    if (!signalContext) return json({ error: 'Aviso nÃ£o encontrado.' }, { status: 403 });
+  }
+
+  const businessContext = await buildBusinessContext(ownerUserId);
 
   const limitedMessages = messages
     .slice(-20)
     .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content && typeof m.content === 'string')
     .map(m => ({ role: m.role, content: m.content.slice(0, 3000) }));
 
-  const systemPrompt = buildSystemPrompt(businessContext, context_type);
+  const systemPrompt = buildSystemPrompt(businessContext, context_type, signalContext);
 
   const openai = new OpenAI({ apiKey });
   const traceId = crypto.randomUUID();

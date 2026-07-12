@@ -1,8 +1,9 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
-  import { isOpen, messages as assistantMessages, contextType, closeAssistant } from '$lib/stores/assistant';
+  import { isOpen, messages as assistantMessages, contextType, signalContext, closeAssistant, clearSignalContext } from '$lib/stores/assistant';
   import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
   import { Sparkles, Trash2, X, SendHorizontal } from 'lucide-svelte';
+  import { getSignalPresenter } from '$lib/gerente/signalPresenter.js';
 
   const CONTEXT_CHIPS = [
     { value: 'geral', label: 'Geral' },
@@ -28,9 +29,21 @@
       },
       body: {
         context_type: $contextType,
+        signal_id: $signalContext?.id || undefined,
       },
     };
   }
+
+  function prefillSignalQuestion(node, { question, setInput }) {
+    if (question) setInput(question);
+    return {
+      update({ question: nextQuestion, setInput: nextSetInput }) {
+        if (nextQuestion) nextSetInput(nextQuestion);
+      },
+    };
+  }
+
+  $: activeSignalPresenter = $signalContext ? getSignalPresenter($signalContext) : null;
 </script>
 
 {#if $isOpen}
@@ -87,18 +100,28 @@
       </div>
     </div>
 
-    <div class="context-chips">
-      {#each CONTEXT_CHIPS as chip}
-        <button
-          class="chip"
-          class:chip-active={$contextType === chip.value}
-          on:click={() => ($contextType = chip.value)}
-          aria-pressed={$contextType === chip.value}
-        >
-          {chip.label}
-        </button>
-      {/each}
-    </div>
+    {#if $signalContext}
+      <div class="signal-context" use:prefillSignalQuestion={{ question: activeSignalPresenter.perguntaSugerida, setInput }}>
+        <span class:critical={$signalContext.severity === 'critical'} class:attention={$signalContext.severity === 'attention'} class="signal-context-tag">
+          {$signalContext.severity === 'critical' ? 'PRECISA DE VOCÊ' : $signalContext.severity === 'attention' ? 'FICA DE OLHO' : 'PRA SABER'}
+        </span>
+        <span class="signal-context-title">{activeSignalPresenter.titulo}</span>
+        <button class="signal-context-close" on:click={clearSignalContext} aria-label="Remover contexto do aviso"><X class="size-4" /></button>
+      </div>
+    {:else}
+      <div class="context-chips">
+        {#each CONTEXT_CHIPS as chip}
+          <button
+            class="chip"
+            class:chip-active={$contextType === chip.value}
+            on:click={() => ($contextType = chip.value)}
+            aria-pressed={$contextType === chip.value}
+          >
+            {chip.label}
+          </button>
+        {/each}
+      </div>
+    {/if}
 
     <div class="panel-messages" use:registerMessagesContainer>
       {#if messages.length === 0}
@@ -221,6 +244,11 @@
     flex-shrink: 0;
     flex-wrap: wrap;
   }
+
+  .signal-context { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 9px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-input); }
+  .signal-context-tag { flex: 0 0 auto; color: var(--primary); font-size: 10px; font-weight: 700; letter-spacing: .06em; }.signal-context-tag.attention { color: var(--status-warning-text); }.signal-context-tag.critical { color: var(--status-error-text); }
+  .signal-context-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-main); font-size: 12px; font-weight: 600; }
+  .signal-context-close { display: grid; place-items: center; flex: 0 0 auto; margin-left: auto; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 3px; }
 
   .chip {
     padding: 4px 12px;
