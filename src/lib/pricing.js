@@ -67,12 +67,13 @@ export const ADDONS = {
   },
   pedidos: {
     id: 'pedidos',
-    name: 'Pedidos + Cozinha',
-    tagline: 'Pedidos, delivery e painel de cozinha',
+    name: 'Pedidos + Cozinha (legado)',
+    tagline: 'Entitlement legado migrado para ZeloMenu',
     price: 30.00,
     requiresFlag: 'allowsPedidos',
     stripePriceId: 'price_1TTjDcLUJWyE4PkYbHDHq9gw',
     stripeLookupKey: 'zelo_addon_pedidos_monthly_v1',
+    deprecated: true,
   },
   acessos: {
     id: 'acessos',
@@ -96,7 +97,11 @@ export const ADDONS = {
 };
 
 export const VALID_PLAN_TIERS = Object.keys(PLANS);
-export const VALID_ADDONS = Object.keys(ADDONS);
+// Pedidos/Cozinha is now included in ZeloMenu. Keep its legacy Stripe mapping
+// above so existing subscriptions remain recognized, but never sell it again.
+export const VALID_ADDONS = Object.values(ADDONS)
+  .filter((addon) => !addon.deprecated)
+  .map((addon) => addon.id);
 
 // Reverse lookups: stripe price_id → plan_tier or addon_id. Webhook usa pra mapear items recebidos.
 // IMPORTANTE: inclui legacyPriceIds para que assinantes em price IDs antigos (v1)
@@ -126,7 +131,7 @@ export function isValidPlanTier(tier) {
 export function isAddonAllowed(planTier, addonId) {
   const plan = PLANS[planTier];
   const addon = ADDONS[addonId];
-  if (!plan || !addon) return false;
+  if (!plan || !addon || addon.deprecated) return false;
   return plan[addon.requiresFlag] === true;
 }
 

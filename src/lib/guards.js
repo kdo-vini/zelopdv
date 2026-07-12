@@ -267,14 +267,14 @@ export async function hasPedidosAddon(userId) {
     const subUserId = await resolveSubscriptionUserId(userId);
     const { data } = await supabase
       .from('subscriptions')
-      .select('has_pedidos_addon, plan_tier')
+      .select('has_pedidos_addon, has_zelo_menu, plan_tier')
       .eq('user_id', subUserId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
     if (!data) return false;
-    const planAllowsPedidos = data.plan_tier === 'pdv' || data.plan_tier === 'bundle';
-    return planAllowsPedidos && !!data.has_pedidos_addon;
+    if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
+    return data.plan_tier === 'pdv' && (!!data.has_zelo_menu || !!data.has_pedidos_addon);
   } catch (err) {
     console.warn('[Guards] hasPedidosAddon error:', err?.message);
     return false;

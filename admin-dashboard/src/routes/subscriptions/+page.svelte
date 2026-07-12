@@ -58,7 +58,7 @@
     { value: 'with_any', label: 'Com addon' },
     { value: 'none', label: 'Sem addon' },
     { value: 'mesas', label: 'Mesas' },
-    { value: 'pedidos', label: 'Pedidos' },
+    { value: 'menu', label: 'ZeloMenu' },
     { value: 'acessos', label: 'Acessos' },
   ]
 
@@ -369,25 +369,19 @@
       return
     }
     const finalMesas = isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon
-    const finalPedidos = isAddonAllowed(editPlanTier, 'pedidos') && editPedidosAddon
     const finalAcessos = isAddonAllowed(editPlanTier, 'acessos') && editAcessosAddon
     // chat/bundle incluem ZeloMenu por política (D-014) — sempre true; pdv via addon menu.
     const finalZeloMenu = (editPlanTier === 'chat' || editPlanTier === 'bundle')
       ? true
       : (isAddonAllowed(editPlanTier, 'menu') && editZeloMenuAddon)
+    // ZeloMenu now includes Pedidos + Cozinha. Preserve the legacy flag so
+    // older consumers continue to recognize the entitlement during migration.
+    const finalPedidos = finalZeloMenu || !!selectedSub.has_pedidos_addon
 
     if (editMesasAddon && !isAddonAllowed(editPlanTier, 'mesas')) {
       const ok = await confirmDialog({
         title: 'Add-on incompatível',
         message: `O plano ${planLabel(editPlanTier)} não suporta o Módulo Mesas. Vamos desativar o add-on. Continuar?`,
-        confirmStyle: 'warning',
-      })
-      if (!ok) return
-    }
-    if (editPedidosAddon && !isAddonAllowed(editPlanTier, 'pedidos')) {
-      const ok = await confirmDialog({
-        title: 'Add-on incompatível',
-        message: `O plano ${planLabel(editPlanTier)} não suporta Pedidos + Cozinha. Vamos desativar o add-on. Continuar?`,
         confirmStyle: 'warning',
       })
       if (!ok) return
@@ -875,13 +869,13 @@
   }
 
   function subscriptionMatchesAddon(sub) {
-    const hasAnyAddon = !!(sub.has_mesas_addon || sub.has_pedidos_addon || sub.has_acessos_addon)
+    const hasAnyAddon = !!(sub.has_mesas_addon || sub.has_zelo_menu || sub.has_acessos_addon)
 
     if (filterAddon === 'all') return true
     if (filterAddon === 'with_any') return hasAnyAddon
     if (filterAddon === 'none') return !hasAnyAddon
     if (filterAddon === 'mesas') return !!sub.has_mesas_addon
-    if (filterAddon === 'pedidos') return !!sub.has_pedidos_addon
+    if (filterAddon === 'menu') return !!sub.has_zelo_menu
     if (filterAddon === 'acessos') return !!sub.has_acessos_addon
     return true
   }
@@ -933,10 +927,10 @@
     // Add-ons receita
     const addonRevenue = activeSubs.reduce((acc, s) => {
       if (s.has_mesas_addon)   acc.mesas   += 30
-      if (s.has_pedidos_addon) acc.pedidos += 30
+      if (s.has_zelo_menu) acc.menu += 40
       if (s.has_acessos_addon) acc.acessos += 30
       return acc
-    }, { mesas: 0, pedidos: 0, acessos: 0 })
+    }, { mesas: 0, menu: 0, acessos: 0 })
 
     // Filtro aplicado
     const filterDesc = [
@@ -956,7 +950,7 @@
         { label: 'Clientes Pagantes',  value: formatNumber(activeSubs.length), hint: `${trialSubs.length} em trial` },
         { label: 'Cancelados',         value: formatNumber(canceledSubs.length) },
         { label: 'Expiradas',          value: formatNumber(expiredSubs.length), hint: 'Pagamento atrasado' },
-        { label: 'Receita Add-ons/mês',value: formatBRL(addonRevenue.mesas + addonRevenue.pedidos + addonRevenue.acessos) },
+        { label: 'Receita Add-ons/mês',value: formatBRL(addonRevenue.mesas + addonRevenue.menu + addonRevenue.acessos) },
         { label: 'Total Analisado',    value: formatNumber(list.length) },
       ],
       sections: [
@@ -986,11 +980,11 @@
           ],
           rows: [
             { addon: 'Módulo Mesas',         count: activeSubs.filter(s => s.has_mesas_addon).length,   mrr: addonRevenue.mesas },
-            { addon: 'Pedidos + Cozinha',    count: activeSubs.filter(s => s.has_pedidos_addon).length, mrr: addonRevenue.pedidos },
+            { addon: 'ZeloMenu (inclui Pedidos + Cozinha)', count: activeSubs.filter(s => s.has_zelo_menu).length, mrr: addonRevenue.menu },
             { addon: 'Controle de Acessos',  count: activeSubs.filter(s => s.has_acessos_addon).length, mrr: addonRevenue.acessos },
           ],
           footer: [
-            { label: 'Total Add-ons', value: formatBRL(addonRevenue.mesas + addonRevenue.pedidos + addonRevenue.acessos) },
+            { label: 'Total Add-ons', value: formatBRL(addonRevenue.mesas + addonRevenue.menu + addonRevenue.acessos) },
           ],
         },
         {
@@ -1009,7 +1003,7 @@
             const eff = getEffectiveExpiry(s)
             const addons = [
               s.has_mesas_addon   ? 'Mesas'   : null,
-              s.has_pedidos_addon ? 'Pedidos' : null,
+              s.has_zelo_menu ? 'ZeloMenu (inclui Pedidos + Cozinha)' : null,
               s.has_acessos_addon ? 'Acessos' : null,
             ].filter(Boolean).join(', ')
             return {
@@ -1254,11 +1248,11 @@
                   <span class="text-[11px] font-semibold tracking-wide {sub.plan_tier === 'bundle' ? 'text-indigo-300' : sub.plan_tier === 'chat' ? 'text-violet-300' : 'text-sky-300'}">
                     {planLabel(sub.plan_tier || 'pdv')}
                   </span>
-                  {#if sub.has_mesas_addon || sub.has_pedidos_addon || sub.has_acessos_addon}
+                  {#if sub.has_mesas_addon || sub.has_zelo_menu || sub.has_acessos_addon}
                     <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
                       {[
                         sub.has_mesas_addon ? '+Mesas' : null,
-                        sub.has_pedidos_addon ? '+Pedidos' : null,
+                        sub.has_zelo_menu ? '+ZeloMenu' : null,
                         sub.has_acessos_addon ? '+Acessos' : null,
                       ].filter(Boolean).join(' · ')}
                     </span>
@@ -1433,11 +1427,11 @@
                 <span class="text-[11px] font-semibold tracking-wide {sub.plan_tier === 'bundle' ? 'text-indigo-300' : sub.plan_tier === 'chat' ? 'text-violet-300' : 'text-sky-300'}">
                   {planLabel(sub.plan_tier || 'pdv')}
                 </span>
-                {#if sub.has_mesas_addon || sub.has_pedidos_addon || sub.has_acessos_addon}
+                {#if sub.has_mesas_addon || sub.has_zelo_menu || sub.has_acessos_addon}
                   <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
                     {[
                       sub.has_mesas_addon ? '+Mesas' : null,
-                      sub.has_pedidos_addon ? '+Pedidos' : null,
+                      sub.has_zelo_menu ? '+ZeloMenu' : null,
                       sub.has_acessos_addon ? '+Acessos' : null,
                     ].filter(Boolean).join(' · ')}
                   </span>
@@ -1696,24 +1690,6 @@
             </div>
           </label>
 
-          <label class="flex items-center cursor-pointer group {!isAddonAllowed(editPlanTier, 'pedidos') ? 'opacity-40 cursor-not-allowed' : ''}">
-            <div class="relative flex items-center justify-center">
-              <input
-                type="checkbox"
-                bind:checked={editPedidosAddon}
-                disabled={!isAddonAllowed(editPlanTier, 'pedidos')}
-                class="sr-only peer"
-              />
-              <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500 shadow-inner"></div>
-            </div>
-            <div class="ml-3">
-              <span class="text-sm font-medium text-slate-300">Pedidos + Cozinha (+R$ 30/mês)</span>
-              {#if !isAddonAllowed(editPlanTier, 'pedidos')}
-                <p class="text-[11px] text-amber-400 mt-0.5">Indisponível em {PLANS[editPlanTier].name} (precisa de PDV).</p>
-              {/if}
-            </div>
-          </label>
-
           <label class="flex items-center cursor-pointer group {!isAddonAllowed(editPlanTier, 'acessos') ? 'opacity-40 cursor-not-allowed' : ''}">
             <div class="relative flex items-center justify-center">
               <input
@@ -1743,7 +1719,7 @@
               <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-violet-500 shadow-inner"></div>
             </div>
             <div class="ml-3">
-              <span class="text-sm font-medium text-slate-300">ZeloMenu (+R$ 40/mês)</span>
+              <span class="text-sm font-medium text-slate-300">ZeloMenu (+R$ 40/mês, inclui Pedidos + Cozinha)</span>
               {#if editPlanTier === 'chat' || editPlanTier === 'bundle'}
                 <p class="text-[11px] text-emerald-400 mt-0.5">Já incluso no {PLANS[editPlanTier].name}.</p>
               {:else if !isAddonAllowed(editPlanTier, 'menu')}
@@ -1762,7 +1738,6 @@
             <p class="text-[11px] font-medium text-slate-500 mb-1 leading-none">Novo valor</p>
             <div class="text-sm font-mono font-semibold text-emerald-300">R$ {calculateValue(editPlanTier, {
               mesas: editMesasAddon && isAddonAllowed(editPlanTier, 'mesas'),
-              pedidos: editPedidosAddon && isAddonAllowed(editPlanTier, 'pedidos'),
               acessos: editAcessosAddon && isAddonAllowed(editPlanTier, 'acessos'),
               menu: editZeloMenuAddon && isAddonAllowed(editPlanTier, 'menu'),
             }).toFixed(2)}</div>

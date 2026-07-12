@@ -20,13 +20,13 @@ describe('pricing - add-on acessos', () => {
     expect(calculateValue('pdv', { acessos: true })).toBe(89);
   });
 
-  it('sanitizes invalid acessos selection off chat plans', () => {
+  it('does not offer the retired Pedidos add-on', () => {
     expect(sanitizeAddons('chat', { acessos: true, mesas: true, pedidos: true })).toEqual({
       mesas: false,
-      pedidos: false,
       acessos: false,
       menu: false,
     });
+    expect(isAddonAllowed('pdv', 'pedidos')).toBe(false);
   });
 
   it('includes acessos price in Stripe line items when enabled', () => {

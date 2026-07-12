@@ -83,3 +83,17 @@ describe('hasZeloMenuAccess', () => {
     await expect(hasZeloMenuAccess('bundle-1')).resolves.toBe(true);
   });
 });
+
+describe('hasPedidosAddon', () => {
+  it('treats ZeloMenu as the current Pedidos + Cozinha entitlement', async () => {
+    db.subscriptions = [
+      { user_id: 'menu-owner', plan_tier: 'pdv', has_zelo_menu: true, has_pedidos_addon: false },
+      { user_id: 'legacy-owner', plan_tier: 'pdv', has_zelo_menu: false, has_pedidos_addon: true },
+    ];
+
+    const { hasPedidosAddon } = await import('../src/lib/guards.js');
+
+    await expect(hasPedidosAddon('menu-owner')).resolves.toBe(true);
+    await expect(hasPedidosAddon('legacy-owner')).resolves.toBe(true);
+  });
+});
