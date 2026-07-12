@@ -16,6 +16,7 @@
   let signals = [];
   let snapshots = [];
   let profile = null;
+  let ownerUserId = null;
   $: latestSnapshot = snapshots[0] || null;
   $: latestDate = latestSnapshot?.snapshot_date || signals[0]?.signal_date || null;
   $: todaySignals = signals.filter((signal) => signal.signal_date === latestDate);
@@ -34,7 +35,7 @@
       if (authError) throw authError;
       if (!userData.user) throw new Error('Sessão expirada.');
       const access = await getAccessContext();
-      const ownerUserId = access?.ownerUserId || userData.user.id;
+      ownerUserId = access?.ownerUserId || userData.user.id;
       const [{ data: perfil, error: profileError }, { data: signalRows, error: signalsError }, { data: snapshotRows, error: snapshotsError }] = await Promise.all([
         supabase.from('empresa_perfil').select('intelligence_enabled_at, gerente_prefs').eq('user_id', ownerUserId).maybeSingle(),
         supabase.from('business_signals').select('id, signal_date, type, severity, confidence, evidence, narrative, narrative_source, read_at, created_at').order('signal_date', { ascending: false }).limit(200),
@@ -57,6 +58,7 @@
     } finally { loading = false; refreshing = false; }
   }
   async function read(signalId) { const signal = signals.find((item) => item.id === signalId); if (!signal || signal.read_at) return; signal.read_at = new Date().toISOString(); signals = [...signals]; try { await markRead([signalId], supabase); } catch { addToast('Não foi possível marcar o aviso como lido.', 'warning'); } }
+  async function mute(type) { if (!profile || !ownerUserId || ['CASH_DIFFERENCE_RECURRING', 'STOCK_ZERO_WITH_DEMAND'].includes(type)) { addToast('Esse aviso permanece sempre ativo.', 'info'); return; } const muted = [...new Set([...mutedTypes, type])]; const gerente_prefs = { ...(profile.gerente_prefs || {}), muted_types: muted }; const { error: muteError } = await supabase.from('empresa_perfil').update({ gerente_prefs }).eq('user_id', ownerUserId); if (muteError) { addToast('Não foi possível silenciar esse tipo.', 'error'); return; } profile = { ...profile, gerente_prefs }; addToast('Esse tipo foi silenciado no briefing e no WhatsApp.', 'success'); }
   function ask() { addToast('O contexto deste aviso estará disponível no chat em breve.', 'info'); }
   function refresh() { refreshing = true; load({ silent: true }); }
   onMount(() => { load(); const visibility = () => { if (document.visibilityState === 'visible') load({ silent: true }); }; document.addEventListener('visibilitychange', visibility); return () => document.removeEventListener('visibilitychange', visibility); });
@@ -68,7 +70,7 @@
   {#if loading}<div class="skeleton hero"></div><div class="skeleton card"></div><div class="skeleton card"></div><div class="skeleton card"></div>
   {:else if error}<div class="error-state"><CloudOff size={56} /><p>{error}</p><button on:click={() => load()}>Tentar novamente</button></div>
   {:else if !enabled}<div class="empty-state"><h2>O Zelinho Gerente ainda não está disponível para esta empresa.</h2><p>Quando o piloto estiver habilitado, os resumos e avisos aparecerão aqui.</p></div>
-  {:else}<ZelinhoBriefing signals={briefingSignals} snapshot={latestSnapshot} {learning} {salesDays} onRead={read} onAsk={ask} /><SignalFeed {signals} {snapshots} onRead={read} onAsk={ask} />{/if}
+  {:else}<ZelinhoBriefing signals={briefingSignals} snapshot={latestSnapshot} {learning} {salesDays} onRead={read} onAsk={ask} onMute={mute} /><SignalFeed {signals} {snapshots} onRead={read} onAsk={ask} onMute={mute} />{/if}
 </section>
 
 <style>

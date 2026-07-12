@@ -9,7 +9,9 @@
   export let signal;
   export let onRead = () => {};
   export let onAsk = () => {};
+  export let onMute = () => {};
   let open = false;
+  let menuOpen = false;
   let card;
   $: presenter = getSignalPresenter(signal);
   $: Icon = presenter.icone;
@@ -30,7 +32,7 @@
 <article bind:this={card} class:critical={signal?.severity === 'critical'} class:attention={signal?.severity === 'attention'} class="signal-card">
   <div class="signal-top">
     <div class="signal-title"><svelte:component this={Icon} size={18} /><div><span class="tag {presenter.tagClass}">{tag}</span>{#if !signal?.read_at}<i class:critical-dot={signal?.severity === 'critical'} class="new-dot" aria-label="Novo"></i>{/if}<h3>{presenter.titulo}</h3></div></div>
-    <button class="icon-button" title="Mais opções" aria-label="Mais opções"><MoreHorizontal size={18} /></button>
+    <div class="menu-wrap"><button class="icon-button" title="Mais opções" aria-label="Mais opções" on:click={() => menuOpen = !menuOpen}><MoreHorizontal size={18} /></button>{#if menuOpen}<div class="signal-menu"><button on:click={() => { onMute(signal.type); menuOpen = false; }}>Silenciar esse tipo</button><button on:click={() => { menuOpen = false; closeSupport(); openAssistantWithSignal(signal); }}>Esse aviso não faz sentido?</button></div>{/if}</div>
   </div>
   <p class="narrative">{signal?.narrative || 'Há um ponto para acompanhar nos números recentes.'}</p>
   <p class="confidence">{confiancaHumana(signal?.confidence, signal?.evidence)}</p>
@@ -53,7 +55,7 @@
   .tag { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--text-muted); }
   .tag.attention { color: var(--status-warning-text); }.tag.critical { color: var(--status-error-text); }.tag.info { color: var(--primary); }
   .new-dot { display: inline-block; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: var(--primary); }.new-dot.critical-dot { background: var(--status-error-text); animation: pulse 900ms ease-in-out 3; }
-  .icon-button { display: inline-grid; place-items: center; color: var(--text-muted); background: transparent; border: 0; padding: 5px; cursor: pointer; }
+  .menu-wrap { position: relative; }.icon-button { display: inline-grid; place-items: center; color: var(--text-muted); background: transparent; border: 0; padding: 5px; cursor: pointer; }.signal-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 4; display: grid; width: 190px; padding: 4px; border: 1px solid var(--border-card); border-radius: 6px; background: var(--bg-card); box-shadow: 0 8px 20px rgb(0 0 0 / 0.25); }.signal-menu button { padding: 7px 8px; border: 0; border-radius: 4px; background: transparent; color: var(--text-label); text-align: left; font-size: 12px; cursor: pointer; }.signal-menu button:hover { background: var(--bg-input); }
   .narrative { margin: 13px 0 7px; color: var(--text-label); font-size: 14px; line-height: 1.5; }.confidence { margin: 0; color: var(--text-muted); font-size: 12px; font-style: italic; }
   .numbers-toggle { margin-top: 12px; display: inline-flex; gap: 5px; align-items: center; padding: 0; border: 0; background: transparent; color: var(--link); font-size: 12px; cursor: pointer; }.rotated { transform: rotate(180deg); }
   .evidence { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--transition-normal); }.evidence.expanded { grid-template-rows: 1fr; }.evidence > div { overflow: hidden; }.evidence dl { margin: 10px 0 0; padding: 10px; border: 1px solid var(--border-card); border-radius: 6px; background: var(--bg-input); }.evidence dl div { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; font-size: 12px; }.evidence dt { color: var(--text-muted); }.evidence dd { margin: 0; color: var(--text-label); text-align: right; }
