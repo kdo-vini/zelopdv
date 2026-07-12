@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/intelligence-daily",
       "schedule": "4 6 * * *"
+    },
+    {
+      "path": "/api/cron/intelligence-notify",
+      "schedule": "0 * * * *"
     }
   ]
 }

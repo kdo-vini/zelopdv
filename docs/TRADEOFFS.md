@@ -19,6 +19,17 @@ A diferença importa:
 Regra de uso: antes de criar um TA/DT novo, confira se já não está em [[CODE_REVIEW]] como finding.
 Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidência* técnica.
 
+## TA-INTELLIGENCE-01 — Silenciar sinais é apresentação, não detecção
+
+- `muted_types` filtra o briefing e o digest WhatsApp, mas o motor continua calculando e persistindo todos os sinais.
+- Motivo: preservar histórico auditável e permitir que o dono reveja um tipo silenciado no feed.
+- Reabrir se houver demanda por reduzir custo do motor por empresa.
+
+## TA-INTELLIGENCE-02 — Digest em cron horário
+
+- O resumo WhatsApp usa `/api/cron/intelligence-notify` a cada hora e respeita a hora BRT escolhida.
+- O projeto já opera acima do limite de crons do plano Hobby; a configuração exige manter capacidade compatível na Vercel.
+
 ---
 
 ## Promovido para a próxima sprint — 3 críticas a resolver (2026-06-02)

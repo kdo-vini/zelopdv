@@ -15,6 +15,8 @@
 
 ## Validação executada nesta sessão
 
+- Zelinho Gerente (2026-07-12): briefing/feed, badge/sidebar, chat contextual owner-scoped, relatório semanal, preferências e digest WhatsApp foram implementados. As migrations de engine, narrativa e preferências estão aplicadas e auditadas no Supabase real. O digest é protegido por `CRON_SECRET`, kill switch e idempotência diária. Pendente operacional: selecionar/habilitar 1–3 empresas piloto, configurar `INTELLIGENCE_ENGINE_ENABLED=true` na Vercel e observar três execuções diárias.
+
 - Zelo Intelligence Engine V1 (2026-07-12, commits `0b7bbdf` + `9958268`): motor determinístico, cron `GET /api/cron/intelligence-daily` (vercel `4 6 * * *`) e migration `.ai/migrations/intelligence_engine_v1_2026_07_10.sql` estão versionados. A migration foi aplicada e auditada no Supabase real: RLS ativo nas três tabelas, policies owner-scoped para snapshots/sinais e grant de `UPDATE` do run log para service role. A Fase 1 também está aplicada: templates determinísticos para os 11 sinais, LLM opcional com fallback e uso/custo no run log; `.ai/migrations/intelligence_narratives_2026_07_12.sql` ampliou `ai_usage_logs_chat_type_check` para `intelligence` e foi verificada no banco. Validação local: 13/13 testes direcionados e `npm run check` 0 errors / 110 warnings pré-existentes. Pendente: confirmar a capacidade de crons da Vercel, escolher/habilitar empresas piloto e validar três execuções diárias.
 
 - Supabase CLI conectado (2026-07-06): CLI v2.109.0 instalado como devDependency (`npx supabase`), logado e linkado ao projeto `xnnjyrblpvsqrtsshawa` (ZeloPDV). Migrations agora podem ser aplicadas via `npx supabase db query --file <sql> --linked`. Estado do link fica em `supabase/.temp/` (gitignored).
