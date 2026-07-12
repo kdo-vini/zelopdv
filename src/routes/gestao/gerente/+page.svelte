@@ -19,6 +19,8 @@
   $: latestSnapshot = snapshots[0] || null;
   $: latestDate = latestSnapshot?.snapshot_date || signals[0]?.signal_date || null;
   $: todaySignals = signals.filter((signal) => signal.signal_date === latestDate);
+  $: mutedTypes = Array.isArray(profile?.gerente_prefs?.muted_types) ? profile.gerente_prefs.muted_types : [];
+  $: briefingSignals = todaySignals.filter((signal) => !mutedTypes.includes(signal.type));
   $: salesDays = snapshots.filter((snapshot) => Number(snapshot.qtd_vendas) > 0).length;
   $: learning = salesDays < 28;
   $: analysedAt = latestSnapshot?.computed_at ? new Date(latestSnapshot.computed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
@@ -34,7 +36,7 @@
       const access = await getAccessContext();
       const ownerUserId = access?.ownerUserId || userData.user.id;
       const [{ data: perfil, error: profileError }, { data: signalRows, error: signalsError }, { data: snapshotRows, error: snapshotsError }] = await Promise.all([
-        supabase.from('empresa_perfil').select('intelligence_enabled_at').eq('user_id', ownerUserId).maybeSingle(),
+        supabase.from('empresa_perfil').select('intelligence_enabled_at, gerente_prefs').eq('user_id', ownerUserId).maybeSingle(),
         supabase.from('business_signals').select('id, signal_date, type, severity, confidence, evidence, narrative, narrative_source, read_at, created_at').order('signal_date', { ascending: false }).limit(200),
         supabase.from('business_daily_snapshots').select('snapshot_date, receita_bruta, qtd_vendas, ticket_medio, computed_at').order('snapshot_date', { ascending: false }).limit(56),
       ]);
@@ -66,7 +68,7 @@
   {#if loading}<div class="skeleton hero"></div><div class="skeleton card"></div><div class="skeleton card"></div><div class="skeleton card"></div>
   {:else if error}<div class="error-state"><CloudOff size={56} /><p>{error}</p><button on:click={() => load()}>Tentar novamente</button></div>
   {:else if !enabled}<div class="empty-state"><h2>O Zelinho Gerente ainda não está disponível para esta empresa.</h2><p>Quando o piloto estiver habilitado, os resumos e avisos aparecerão aqui.</p></div>
-  {:else}<ZelinhoBriefing signals={todaySignals} snapshot={latestSnapshot} {learning} {salesDays} onRead={read} onAsk={ask} /><SignalFeed {signals} {snapshots} onRead={read} onAsk={ask} />{/if}
+  {:else}<ZelinhoBriefing signals={briefingSignals} snapshot={latestSnapshot} {learning} {salesDays} onRead={read} onAsk={ask} /><SignalFeed {signals} {snapshots} onRead={read} onAsk={ask} />{/if}
 </section>
 
 <style>
