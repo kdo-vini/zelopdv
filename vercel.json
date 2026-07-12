@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/nudge-incomplete-registration",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/intelligence-daily",
+      "schedule": "4 6 * * *"
     }
   ]
 }
