@@ -179,7 +179,7 @@ export async function fetchVendasItens(db, vendaIds) {
  * @returns {Promise<Array>}
  */
 export async function fetchVendasPagamentos(db, vendaIds) {
-  return fetchAllByVendaIds(db, 'vendas_pagamentos', 'id_venda, forma_pagamento, forma, valor', vendaIds);
+  return fetchAllByVendaIds(db, 'vendas_pagamentos', 'id_venda, forma_pagamento, valor', vendaIds);
 }
 
 /**
