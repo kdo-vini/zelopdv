@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+// Normaliza CRLF→LF: em checkout Windows com core.autocrlf o arquivo vem com
+// \r\n e as asserções multilinha (\n literal) falhariam só por line ending.
 const migration = readFileSync(
   resolve('.ai/migrations/zelomenu_publication_schema_2026_06_23.sql'),
   'utf8',
-).toLowerCase();
+)
+  .replace(/\r\n/g, '\n')
+  .toLowerCase();
 
 describe('ZeloMenu publication schema migration', () => {
   const tables = [
