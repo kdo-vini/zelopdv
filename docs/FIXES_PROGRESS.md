@@ -5,6 +5,8 @@
 
 ## Fechados / presentes no código
 
+- ✅ FX-ZELOMENU-03 (2026-07-12) — `/app/pedidos`, Cozinha e sidebar passaram a reconhecer `pdv + has_zelo_menu`, ler pedidos online do motor canônico e operar estados por RPC com CAS. Balcão/comanda permanecem no fluxo legado e o fechamento financeiro online usa `close_zelo_order` exatamente uma vez.
+
 - ✅ FX-DESPESAS-01 (2026-07-01) - lancamento de despesas deixou de mostrar sucesso sem confirmacao efetiva: datas de input agora sao convertidas como dia local, o filtro final inclui o dia inteiro e create/update/delete exigem linha retornada do Supabase antes de mostrar toast de sucesso. Adicionado tratamento explicito para Supabase ausente, sessao nao carregada, periodo/data invalidos, falhas de carregamento, insert/update/delete sem linha afetada e erros retornados pelo PostgREST - [src/routes/gestao/despesas/+page.svelte](/home/vinicius/code/zelopdv/src/routes/gestao/despesas/+page.svelte:1), [src/lib/dateRange.js](/home/vinicius/code/zelopdv/src/lib/dateRange.js:1), [tests/dateRange.test.js](/home/vinicius/code/zelopdv/tests/dateRange.test.js:1)
 
 - ✅ FX-DOCS-01 — núcleo documental AI-first consolidado em `docs/` + vault `pdvObsidian/`, com runbooks, auditoria, memória e hub operacional — [README.md](/home/vinicius/code/zelopdv/README.md:1), [docs/CURRENT.md](/home/vinicius/code/zelopdv/docs/CURRENT.md:1), [CLAUDE.md](/home/vinicius/code/zelopdv/CLAUDE.md:1), [pdvObsidian/HOME.md](/home/vinicius/code/zelopdv/pdvObsidian/HOME.md:1)

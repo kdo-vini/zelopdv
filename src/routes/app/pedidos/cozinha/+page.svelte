@@ -7,11 +7,14 @@
   import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import BackLink from '$lib/components/ui/BackLink.svelte';
+  import { loadCanonicalOrders, transitionCanonicalOrder } from '$lib/onlineOrders';
 
   let userId = '';
   let ownerUserId = '';
+  let empresaId = '';
   let operadorUserId = '';
   let isSubUser = false;
+  let canCancelOrders = true;
   let addonActive = false;
   let ready = false;
   let loading = true;
@@ -21,8 +24,8 @@
   let realtimeChannel = null;
   let refreshTimer = null;
 
-  $: pedidosAbertos = pedidos.filter(p => p.status === 'aberto' || p.status === 'preparando');
-  $: pedidosProntos = pedidos.filter(p => p.status === 'pronto');
+  $: pedidosAbertos = pedidos.filter(p => ['aberto', 'accepted', 'preparando', 'preparing'].includes(p.status));
+  $: pedidosProntos = pedidos.filter(p => p.status === 'pronto' || p.status === 'ready');
   $: totalItensPendentes = pedidosAbertos.reduce(
     (acc, p) => acc + p.itens.filter(i => i.status_cozinha !== 'pronto').length,
     0
@@ -56,6 +59,19 @@
       return;
     }
 
+    const { data: empresa, error: empresaError } = await supabase
+      .from('empresa_perfil')
+      .select('id')
+      .eq('user_id', ownerUserId)
+      .maybeSingle();
+    if (empresaError || !empresa?.id) {
+      addToast('Não foi possível identificar a empresa para carregar pedidos online.', 'error');
+      loading = false;
+      return;
+    }
+    if (isSubUser) canCancelOrders = await hasAccessPermission('pedidos.cancelar');
+    empresaId = empresa.id;
+
     await loadPedidos();
     setupRealtime();
   }
@@ -64,7 +80,7 @@
     if (!ownerUserId) return;
     if (!loading) refreshing = true;
 
-    const { data, error } = await supabase
+    const legacyPromise = supabase
       .from('pedidos')
       .select(`
         id,
@@ -91,6 +107,21 @@
       .eq('pedido_itens.enviado_cozinha', true)
       .order('criado_em', { ascending: true });
 
+    let data;
+    let error;
+    let online = [];
+    try {
+      const [legacy, canonical] = await Promise.all([
+        legacyPromise,
+        loadCanonicalOrders(supabase, empresaId, { kitchen: true })
+      ]);
+      data = legacy.data;
+      error = legacy.error;
+      online = canonical;
+    } catch (err) {
+      error = err;
+    }
+
     if (error) {
       addToast('Erro ao carregar cozinha: ' + error.message, 'error');
       loading = false;
@@ -98,12 +129,13 @@
       return;
     }
 
-    pedidos = (data || [])
+    const legacyPedidos = (data || [])
       .map(p => ({
         ...p,
         itens: (p.pedido_itens || []).filter(i => i.enviado_cozinha === true),
       }))
       .filter(p => p.itens.length > 0);
+    pedidos = [...legacyPedidos, ...online].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em));
     loading = false;
     refreshing = false;
   }
@@ -122,6 +154,12 @@
         { event: '*', schema: 'public', table: 'pedido_itens' },
         scheduleRefresh
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'zelo_orders', filter: `empresa_id=eq.${empresaId}` },
+        scheduleRefresh
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'zelo_order_items' }, scheduleRefresh)
       .subscribe();
   }
 
@@ -184,6 +222,21 @@
   }
 
   async function excluirPedido(pedido) {
+    if (!canCancelOrders) {
+      addToast('Seu cargo não pode cancelar pedidos.', 'warning');
+      return;
+    }
+    if (pedido.canonical) {
+      const ok = await confirmAction('Cancelar pedido', 'Esta ação será registrada no histórico do pedido.');
+      if (!ok) return;
+      try {
+        await transitionCanonicalOrder(supabase, pedido, 'cancel', operadorUserId);
+        await loadPedidos();
+      } catch (error) {
+        addToast('Erro ao cancelar pedido: ' + (error?.message || error), 'error');
+      }
+      return;
+    }
     const titulo = `Pedido #${pedido.numero_pedido}`;
     const itensProntos = (pedido.itens || []).some((i) => i.status_cozinha === 'pronto');
     const mensagem = itensProntos
@@ -227,6 +280,16 @@
   }
 
   async function marcarPedidoPreparando(pedido) {
+    if (pedido.canonical) {
+      if (pedido.status !== 'accepted') return;
+      try {
+        await transitionCanonicalOrder(supabase, pedido, 'start_preparing', operadorUserId);
+        await loadPedidos();
+      } catch (error) {
+        addToast('Erro ao iniciar preparo: ' + (error?.message || error), 'error');
+      }
+      return;
+    }
     if (pedido.status !== 'aberto') return;
 
     const { error } = await supabase
@@ -258,6 +321,19 @@
   }
 
   async function marcarItemPronto(pedido, item) {
+    if (pedido.canonical) {
+      if (pedido.status !== 'preparing' || markingIds.has(pedido.id)) return;
+      markingIds = new Set(markingIds).add(pedido.id);
+      try {
+        await transitionCanonicalOrder(supabase, pedido, 'mark_ready', operadorUserId);
+        await loadPedidos();
+      } catch (error) {
+        addToast('Erro ao concluir preparo: ' + (error?.message || error), 'error');
+      } finally {
+        const next = new Set(markingIds); next.delete(pedido.id); markingIds = next;
+      }
+      return;
+    }
     if (itemPronto(item) || isMarking(item)) return;
     markingIds = new Set(markingIds).add(item.id);
 
@@ -379,7 +455,8 @@
                     type="button"
                     class="action-btn action-btn-danger"
                     aria-label="Cancelar pedido"
-                    title="Cancelar pedido"
+                    title={canCancelOrders ? 'Cancelar pedido' : 'Seu cargo não pode cancelar pedidos'}
+                    disabled={!canCancelOrders}
                     on:click={() => excluirPedido(pedido)}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -423,7 +500,7 @@
                     </li>
                   {/each}
                 </ul>
-                {#if pedido.status === 'aberto'}
+                {#if pedido.status === 'aberto' || pedido.status === 'accepted'}
                   <button
                     type="button"
                     class="pedido-action-btn"
@@ -467,7 +544,8 @@
                     type="button"
                     class="action-btn action-btn-danger"
                     aria-label="Cancelar pedido"
-                    title="Cancelar pedido"
+                    title={canCancelOrders ? 'Cancelar pedido' : 'Seu cargo não pode cancelar pedidos'}
+                    disabled={!canCancelOrders}
                     on:click={() => excluirPedido(pedido)}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>

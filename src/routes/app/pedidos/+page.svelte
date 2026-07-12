@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { ensureActiveSubscription, hasPedidosAddon, hasZeloMenuAccess, bounceSubUserMissingAddon } from '$lib/guards';
+  import { ensureActiveSubscription, hasPedidosAddon, hasZeloMenuAccess, hasOrderingReviewAccess, bounceSubUserMissingAddon } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -12,15 +12,19 @@
   import { money } from '$lib/finance/caixa';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { somarQuantidadePorEstoque } from '$lib/stock';
+  import { loadCanonicalOrders, transitionCanonicalOrder, closeCanonicalOrder } from '$lib/onlineOrders';
 
   let ready = false;
   let loading = true;
   let addonActive = false;
   let menuActive = false;
+  let orderingReviewActive = false;
   let userId = '';
   let ownerUserId = '';
   let operadorUserId = '';
   let isSubUser = false;
+  let canCancelOrders = true;
+  let canReceiveOrders = true;
   let pedidos = [];
   let pedidoSelecionadoId = null;
   let produtos = [];
@@ -65,12 +69,19 @@
       goto('/app');
       return;
     }
+    if (isSubUser) {
+      [canCancelOrders, canReceiveOrders] = await Promise.all([
+        hasAccessPermission('pedidos.cancelar'),
+        hasAccessPermission('pedidos.receber')
+      ]);
+    }
     pdvCache.setUserId(ownerUserId);
-    [addonActive, menuActive] = await Promise.all([
+    [addonActive, menuActive, orderingReviewActive] = await Promise.all([
       hasPedidosAddon(ownerUserId),
-      hasZeloMenuAccess(ownerUserId)
+      hasZeloMenuAccess(ownerUserId),
+      hasOrderingReviewAccess(ownerUserId)
     ]);
-    const canAccess = addonActive || menuActive;
+    const canAccess = orderingReviewActive;
     if (bounceSubUserMissingAddon({ addonActive: canAccess, isSubUser, addonLabel: 'Pedidos / ZeloMenu' })) return;
     ready = true;
 
@@ -133,19 +144,22 @@
       // comanda segue fluxo de mesas; zelochat tem fluxo próprio.
       const origensParaCarregar = [];
       if (addonActive) origensParaCarregar.push('balcao');
-      if (menuActive) origensParaCarregar.push('zelomenu');
-      if (!origensParaCarregar.length) { polling = false; loading = false; return; }
-
-      const { data, error } = await supabase
-        .from('pedidos')
-        .select('id, numero_pedido, status, observacoes, nome_cliente, origem, criado_em, pedido_itens(id, id_produto, nome, preco_unitario, quantidade, subtotal, enviado_cozinha, status_cozinha)')
-        .eq('id_usuario', ownerUserId || userId)
-        .in('origem', origensParaCarregar)
-        .in('status', ['aberto', 'pronto'])
-        .order('criado_em', { ascending: true });
-
-      if (error) throw error;
-      pedidos = data || [];
+      const legacyPromise = origensParaCarregar.length
+        ? supabase
+          .from('pedidos')
+          .select('id, numero_pedido, status, observacoes, nome_cliente, origem, criado_em, pedido_itens(id, id_produto, nome, preco_unitario, quantidade, subtotal, enviado_cozinha, status_cozinha)')
+          .eq('id_usuario', ownerUserId || userId)
+          .in('origem', origensParaCarregar)
+          .in('status', ['aberto', 'pronto'])
+          .order('criado_em', { ascending: true })
+        : Promise.resolve({ data: [], error: null });
+      const [legacy, online] = await Promise.all([
+        legacyPromise,
+        orderingReviewActive ? loadCanonicalOrders(supabase, dadosEmpresa?.id) : Promise.resolve([])
+      ]);
+      if (legacy.error) throw legacy.error;
+      pedidos = [...(legacy.data || []), ...online]
+        .sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em));
       if (!pedidos.some((p) => p.id === pedidoSelecionadoId)) {
         pedidoSelecionadoId = pedidos[0]?.id || null;
       }
@@ -165,10 +179,19 @@
   }
 
   function editarPedido(pedido) {
+    if (pedido.canonical) {
+      addToast('Pedidos online devem ser operados pelas ações de status.', 'warning');
+      return;
+    }
     goto(`/app/pedidos/${pedido.id}/editar`);
   }
 
   async function excluirPedido(pedido) {
+    if (!canCancelOrders) {
+      addToast('Seu cargo não pode cancelar ou rejeitar pedidos.', 'warning');
+      return;
+    }
+    if (pedido.canonical) return cancelarPedidoCanonico(pedido);
     const titulo = `Pedido #${pedido.numero_pedido}`;
     const itensPronto = (pedido.pedido_itens || []).some((i) => i.status_cozinha === 'pronto');
     const mensagem = itensPronto
@@ -375,7 +398,12 @@
   }
 
   function statusLabel(status) {
-    return status === 'pronto' ? 'Pronto' : 'Aberto';
+    const labels = {
+      pending_payment: 'Aguardando pagamento', pending_review: 'Revisar', accepted: 'Aceito',
+      preparing: 'Preparando', ready: 'Pronto', out_for_delivery: 'Saiu para entrega',
+      delivered: 'Entregue', rejected: 'Rejeitado', cancelled: 'Cancelado', pronto: 'Pronto', aberto: 'Aberto'
+    };
+    return labels[status] || status;
   }
 
   function origemLabel(pedido) {
@@ -386,6 +414,7 @@
   }
 
   async function fecharPedidoZeloMenu(pedido) {
+    if (pedido.canonical) return avancarPedidoCanonico(pedido);
     const ok = await confirmAction(
       `Confirmar entrega — Pedido #${pedido.numero_pedido}`,
       'Marcar como entregue? O pagamento já foi coletado pelo cardápio online.'
@@ -412,6 +441,72 @@
       addToast('Erro: ' + getFriendlyErrorMessage(err), 'error');
     } finally {
       fechandoPedido = false;
+    }
+  }
+
+  function canonicalActionLabel(pedido) {
+    if (pedido.status === 'pending_review') return 'Aceitar pedido';
+    if (pedido.status === 'accepted') return 'Iniciar preparo';
+    if (pedido.status === 'preparing') return 'Marcar como pronto';
+    if (pedido.status === 'ready' && pedido.fulfillment?.mode === 'delivery') return 'Saiu para entrega';
+    if (pedido.status === 'ready' || pedido.status === 'out_for_delivery') return 'Concluir pedido';
+    return 'Aguardando pagamento';
+  }
+
+  async function avancarPedidoCanonico(pedido) {
+    if (pedido.status === 'pending_payment') return;
+    const actionByStatus = {
+      pending_review: 'accept', accepted: 'start_preparing', preparing: 'mark_ready',
+      ready: pedido.fulfillment?.mode === 'delivery' ? 'dispatch' : 'close',
+      out_for_delivery: 'close'
+    };
+    const action = actionByStatus[pedido.status];
+    if (!action) return;
+    if (action === 'close' && !canReceiveOrders) {
+      addToast('Seu cargo não pode receber ou concluir pedidos.', 'warning');
+      return;
+    }
+    fechandoPedido = true;
+    try {
+      if (action === 'close') {
+        if (!idCaixaAberto) await carregarCaixaAberto();
+        if (!idCaixaAberto) {
+          addToast('Abra o caixa antes de concluir pedidos online.', 'warning');
+          return;
+        }
+        const { payload } = buildVendaPayload({
+          formaPagamento: pedido.payment?.method || pedido.payment?.forma_pagamento || 'outro',
+          valorRecebido: pedido.total,
+          pagamentos: [], totalFinal: pedido.total, valorDesconto: 0, descontoTipo: null,
+          taxaEntrega: Number(pedido.delivery_fee || 0),
+          tipoPedido: pedido.fulfillment?.mode || 'retirada', idCaixa: idCaixaAberto,
+          idCliente: null, itens: itensSelecionados, taxasPlataforma: [], operadorId: operadorUserId
+        });
+        await closeCanonicalOrder(supabase, pedido, payload, operadorUserId);
+      }
+      else await transitionCanonicalOrder(supabase, pedido, action, operadorUserId);
+      addToast(`Pedido #${pedido.numero_pedido} atualizado.`, 'success');
+      mobileDetailOpen = false;
+      await carregarPedidos();
+    } catch (err) {
+      addToast('Erro: ' + getFriendlyErrorMessage(err), 'error');
+      await carregarPedidos();
+    } finally {
+      fechandoPedido = false;
+    }
+  }
+
+  async function cancelarPedidoCanonico(pedido) {
+    const action = pedido.status === 'pending_review' ? 'reject' : 'cancel';
+    const ok = await confirmAction(action === 'reject' ? 'Rejeitar pedido' : 'Cancelar pedido', 'Esta ação será registrada no histórico do pedido.');
+    if (!ok) return;
+    try {
+      await transitionCanonicalOrder(supabase, pedido, action, operadorUserId);
+      addToast(`Pedido #${pedido.numero_pedido} ${action === 'reject' ? 'rejeitado' : 'cancelado'}.`, 'success');
+      await carregarPedidos();
+    } catch (err) {
+      addToast('Erro: ' + getFriendlyErrorMessage(err), 'error');
+      await carregarPedidos();
     }
   }
 
@@ -521,7 +616,8 @@
                   type="button"
                   class="action-btn action-btn-danger"
                   aria-label="Cancelar pedido #{pedido.numero_pedido}"
-                  title="Cancelar pedido"
+                  title={canCancelOrders ? 'Cancelar pedido' : 'Seu cargo não pode cancelar pedidos'}
+                  disabled={!canCancelOrders}
                   on:click|stopPropagation={() => excluirPedido(pedido)}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -571,12 +667,12 @@
                 <strong>{formatMoney(totalPedido)}</strong>
               </div>
               {#if pedidoSelecionado?.origem === 'zelomenu'}
-                <button type="button" class="btn-success" on:click={() => fecharPedidoZeloMenu(pedidoSelecionado)} disabled={fechandoPedido}>
+                <button type="button" class="btn-success" on:click={() => fecharPedidoZeloMenu(pedidoSelecionado)} disabled={fechandoPedido || (pedidoSelecionado.canonical && (pedidoSelecionado.status === 'pending_payment' || (['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders)))} title={pedidoSelecionado.canonical && ['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders ? 'Seu cargo não pode concluir pedidos' : ''}>
                   {#if fechandoPedido}
                     Confirmando...
                   {:else}
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>Confirmar entrega</span>
+                    <span>{pedidoSelecionado.canonical ? canonicalActionLabel(pedidoSelecionado) : 'Confirmar entrega'}</span>
                   {/if}
                 </button>
               {:else}

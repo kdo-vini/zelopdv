@@ -47,6 +47,8 @@ Padrao recorrente:
 | ZeloMenu | `zelomenu_product_publications`, `zelomenu_modifier_groups`, `zelomenu_modifier_options` | camada PDV-owned de publicação/modificadores, escopo por owner via RLS |
 | Perfil | `empresa_perfil` | contem dados operacionais e `pin_admin` |
 | RPC critica | `criar_venda_completa(jsonb)` | usa `get_owner_user_id(auth.uid())` |
+| Pedidos online | `zelo_orders`, `zelo_order_items`, `zelo_order_events` | leitura owner-scoped; mutacoes somente por RPC |
+| Outbox online | `zelo_order_outbox` | somente `service_role`; sem acesso pelo browser |
 
 ## Trust boundaries reais
 
@@ -114,6 +116,17 @@ Conclusao operacional:
    - se basta gating de UI
    - se precisa de enforcement server-side
 4. Se mudar `criar_venda_completa`, revalidar offline, `id_operador` e idempotencia.
+
+## Motor canonico de pedidos online
+
+Migration local: `.ai/migrations/canonical_online_orders_2026_07_12.sql` (ainda nao aplicada em producao).
+
+- `zelo_orders` e `zelo_order_items` sao a fonte canonica para pedidos online de ZeloMenu/ZeloChat; pedidos de mesa continuam em `pedidos`/`pedido_itens`.
+- Criacao, transicao e fechamento passam pelas RPCs `create_zelo_order`, `transition_zelo_order` e `close_zelo_order`, com idempotencia e CAS por `revision`.
+- Usuarios autenticados podem ler o tenant do owner e executar transicoes; inserts/updates diretos sao revogados. Integracoes publicas criam via `service_role`.
+- Para subusuarios, as RPCs tambem consultam `access_users`/`access_roles.permissions`: acesso, cozinha, recebimento e cancelamento exigem suas respectivas chaves `pedidos.*`; owner e `service_role` mantem bypass deliberado.
+- `zelo_order_events` preserva a auditoria e `zelo_order_outbox` desacopla notificacao/impressao com retry.
+- O backfill preserva tabelas antigas e IDs legados. A migracao deve ser auditada por contagem, totais e itens antes de qualquer cutover de aplicacao.
 
 ## Zelo Intelligence Engine — tabelas adicionadas em 2026-07-10
 

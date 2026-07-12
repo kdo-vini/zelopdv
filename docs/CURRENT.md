@@ -15,6 +15,8 @@
 
 ## Validação executada nesta sessão
 
+- Motor canônico de pedidos online (2026-07-12): migration aditiva `.ai/migrations/canonical_online_orders_2026_07_12.sql` criada, mas **não aplicada em produção**. Inclui pedido/itens/eventos/outbox, RLS/grants, criação idempotente ligada atomicamente à sessão ZeloMenu, transições com revisão, fechamento financeiro e backfill não destrutivo das fontes legadas. O cutover e a auditoria no banco real continuam pendentes.
+
 - Zelinho Gerente (2026-07-12): briefing/feed, badge/sidebar, chat contextual owner-scoped, relatório semanal, preferências e digest WhatsApp foram implementados. As migrations de engine, narrativa e preferências estão aplicadas e auditadas no Supabase real. O digest é protegido por `CRON_SECRET`, kill switch e idempotência diária. Pendente operacional: selecionar/habilitar 1–3 empresas piloto, configurar `INTELLIGENCE_ENGINE_ENABLED=true` na Vercel e observar três execuções diárias.
 - Rollout Zelinho (2026-07-12): `INTELLIGENCE_ENGINE_ENABLED=true` foi configurado em Production e o deploy `dpl_Fk7Lso7W5rL9sxQBx29TBwhzBGZR` está `Ready`/associado a `www.zelopdv.com.br`. A conta Vercel é Hobby e recusou cron horário; o digest usa o fallback no cron diário e a preferência de horário saiu da V1. Faltam uma conta piloto aprovada e credenciais E2E para validar o fluxo autenticado real.
 - Validação final local do Zelinho: 18 testes direcionados passaram; `npm run check` permanece com 0 errors / 111 warnings. `npm test` está verde (48 arquivos, 298 testes) após serializar suites que compartilham mocks de Supabase. `INTELLIGENCE_ENGINE_ENABLED=true` foi configurado na Vercel Production; sem `intelligence_enabled_at`, nenhuma empresa é processada.
