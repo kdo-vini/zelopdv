@@ -60,14 +60,14 @@ async function fetchAllByVendaIds(db, table, columns, vendaIds) {
 /**
  * Lista empresas com intelligence habilitado.
  * @param {SupabaseClient} db
- * @returns {Promise<Array<{id: string}>>}
+ * @returns {Promise<Array<{id: string, nome_exibicao?: string, razao_social?: string}>>}
  */
 export async function fetchIntelligenceEnabledCompanies(db) {
   // empresa_perfil chaveia o owner por `user_id` (não `id_usuario`, que é a
   // convenção das tabelas operacionais). Ver discovery §1.7.
   const enabledRows = await fetchAllPages((from, to) => db
     .from('empresa_perfil')
-    .select('user_id')
+    .select('user_id, nome_exibicao, razao_social')
     .not('intelligence_enabled_at', 'is', null)
     .order('user_id')
     .range(from, to));
@@ -89,7 +89,11 @@ export async function fetchIntelligenceEnabledCompanies(db) {
     subscriptions.push(...rows);
   }
 
-  return selectEligibleCompanyIds(enabledIds, subscriptions);
+  const enabledProfiles = new Map(enabledRows.map((row) => [row.user_id, row]));
+  return selectEligibleCompanyIds(enabledIds, subscriptions).map(({ id }) => {
+    const profile = enabledProfiles.get(id) || {};
+    return { id, nome_exibicao: profile.nome_exibicao, razao_social: profile.razao_social };
+  });
 }
 
 /**

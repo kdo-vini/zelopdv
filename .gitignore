@@ -26,6 +26,7 @@ SUPPORT_GUIDE_ZELO_PDV.txt
 !.ai/migrations/caixas_one_open_per_user_2026_07_06.sql
 !.ai/migrations/billing_webhook_events_enable_rls_2026_07_06.sql
 !.ai/migrations/leadbot_tables_enable_rls_2026_07_06.sql
+!.ai/migrations/intelligence_narratives_2026_07_12.sql
 SISTEMA.md
 agents.md
 

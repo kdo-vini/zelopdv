@@ -22,7 +22,12 @@ import {
   INACTIVITY_DAYS,
   BACKFILL_DAYS,
   SNAPSHOT_HISTORY_WEEKS,
+  INTELLIGENCE_LLM_ENABLED,
+  INTELLIGENCE_LLM_INPUT_COST_PER_MILLION_USD,
+  INTELLIGENCE_LLM_OUTPUT_COST_PER_MILLION_USD,
 } from './config.js';
+import OpenAI from 'openai';
+import { generateNarratives } from './narrative.js';
 import { dayRangeUtc, dateRange, localDateOf, addDays } from './tz.js';
 import { computeDailyMetrics } from './metrics.js';
 import { detectSignals } from './signals.js';
@@ -79,15 +84,27 @@ export async function runDaily(db, targetDate) {
     signals_created: 0,
     signals_suppressed: 0,
     errors: [],
+    llm_calls: 0,
+    llm_tokens_in: 0,
+    llm_tokens_out: 0,
+    llm_cost_usd: 0,
   };
+
+  const openai = INTELLIGENCE_LLM_ENABLED && process.env.OPENAI_API_KEY
+    ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    : null;
 
   for (const company of companies) {
     try {
-      const result = await runForCompany(db, company.id, targetDate);
+      const result = await runForCompany(db, company.id, targetDate, { openai, perfil: company });
       if (result.status === 'processed') {
         results.companies_processed++;
         results.signals_created += result.signalsCreated;
         results.signals_suppressed += result.signalsSuppressed;
+        results.llm_calls += result.llmCalls;
+        results.llm_tokens_in += result.llmTokensIn;
+        results.llm_tokens_out += result.llmTokensOut;
+        results.llm_cost_usd += result.llmCostUsd;
       } else {
         results.companies_skipped++;
       }
@@ -110,6 +127,10 @@ export async function runDaily(db, targetDate) {
         signals_created: results.signals_created,
         signals_suppressed: results.signals_suppressed,
         errors: results.errors,
+        llm_calls: results.llm_calls,
+        llm_tokens_in: results.llm_tokens_in,
+        llm_tokens_out: results.llm_tokens_out,
+        llm_cost_usd: Math.round(results.llm_cost_usd * 1_000_000) / 1_000_000,
       });
     }
   } catch (err) {
@@ -126,12 +147,12 @@ export async function runDaily(db, targetDate) {
  * @param {string} targetDate - 'YYYY-MM-DD' local
  * @returns {Promise<{status: string, signalsCreated: number, signalsSuppressed: number}>}
  */
-export async function runForCompany(db, userId, targetDate) {
+export async function runForCompany(db, userId, targetDate, { openai = null, perfil = {} } = {}) {
   // ── Gate de inatividade: empresa sem venda em INACTIVITY_DAYS é pulada ──
   const inactivityStart = dayRangeUtc(addDays(targetDate, -(INACTIVITY_DAYS - 1))).startIso;
   const active = await hasRecentSales(db, userId, inactivityStart);
   if (!active) {
-    return { status: 'skipped_inactive', signalsCreated: 0, signalsSuppressed: 0 };
+    return { status: 'skipped_inactive', signalsCreated: 0, signalsSuppressed: 0, llmCalls: 0, llmTokensIn: 0, llmTokensOut: 0, llmCostUsd: 0 };
   }
 
   // ── Janela: recompute normal ou backfill na primeira execução ───────────
@@ -266,8 +287,29 @@ export async function runForCompany(db, userId, targetDate) {
 
   // ── Persist ────────────────────────────────────────────────────────────
   let inserted = 0;
+  let llmCalls = 0;
+  let llmTokensIn = 0;
+  let llmTokensOut = 0;
+  let llmCostUsd = 0;
   if (selected.length > 0) {
-    const signalRecords = selected.map((s) => ({
+    const { narratives, usage } = await generateNarratives(selected, perfil, { openai });
+    if (usage) {
+      llmCalls = 1;
+      llmTokensIn = usage.prompt_tokens || 0;
+      llmTokensOut = usage.completion_tokens || 0;
+      llmCostUsd = (llmTokensIn / 1_000_000 * INTELLIGENCE_LLM_INPUT_COST_PER_MILLION_USD)
+        + (llmTokensOut / 1_000_000 * INTELLIGENCE_LLM_OUTPUT_COST_PER_MILLION_USD);
+      db.from('ai_usage_logs').insert({
+        user_id: userId,
+        chat_type: 'intelligence',
+        model: 'gpt-4.1-mini',
+        prompt_tokens: llmTokensIn,
+        completion_tokens: llmTokensOut,
+        total_tokens: usage.total_tokens || llmTokensIn + llmTokensOut,
+        cost_usd: Math.round(llmCostUsd * 1_000_000) / 1_000_000,
+      }).then(({ error }) => { if (error) console.warn('[intelligence] ai_usage_logs:', error.message); });
+    }
+    const signalRecords = selected.map((s, index) => ({
       user_id: userId,
       signal_date: targetDate,
       type: s.type,
@@ -276,6 +318,8 @@ export async function runForCompany(db, userId, targetDate) {
       score: s.score,
       confidence: s.confidence,
       evidence: s.evidence,
+      narrative: narratives[index].narrative,
+      narrative_source: narratives[index].narrative_source,
       engine_version: ENGINE_VERSION,
       created_at: nowIso,
     }));
@@ -288,5 +332,9 @@ export async function runForCompany(db, userId, targetDate) {
     status: 'processed',
     signalsCreated: inserted,
     signalsSuppressed: suppressed + suppressedCooldown,
+    llmCalls,
+    llmTokensIn,
+    llmTokensOut,
+    llmCostUsd,
   };
 }

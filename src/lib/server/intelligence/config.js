@@ -126,6 +126,13 @@ export const INACTIVITY_DAYS = 7;
 export const BACKFILL_DAYS = 56;
 export const SNAPSHOT_HISTORY_WEEKS = 8;
 
+// Narrative generation is strictly optional. Templates remain the default.
+export const INTELLIGENCE_LLM_ENABLED = process.env.INTELLIGENCE_LLM_ENABLED === 'true';
+export const INTELLIGENCE_LLM_MODEL = 'gpt-4.1-mini';
+export const INTELLIGENCE_LLM_MAX_TOKENS = 400;
+export const INTELLIGENCE_LLM_INPUT_COST_PER_MILLION_USD = 0.40;
+export const INTELLIGENCE_LLM_OUTPUT_COST_PER_MILLION_USD = 1.60;
+
 /**
  * @typedef {Object} DailyMetrics — corpo de business_daily_snapshots.metrics
  * @property {number} receita_bruta - Σ valor_total (valor comercial vendido, inclui fiado)
