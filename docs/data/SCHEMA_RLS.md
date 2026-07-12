@@ -115,6 +115,19 @@ Conclusao operacional:
    - se precisa de enforcement server-side
 4. Se mudar `criar_venda_completa`, revalidar offline, `id_operador` e idempotencia.
 
+## Zelo Intelligence Engine — tabelas adicionadas em 2026-07-10
+
+Migration: `.ai/migrations/intelligence_engine_v1_2026_07_10.sql`.
+
+| Tabela | Finalidade | RLS | Grants |
+|--------|-----------|-----|--------|
+| `business_daily_snapshots` | Snapshots diários de métricas por empresa | SELECT owner-scoped; INSERT/UPDATE/DELETE service_role | `authenticated`: select; `service_role`: full |
+| `business_signals` | Sinais determinísticos detectados | SELECT owner-scoped; UPDATE read_at owner-scoped; INSERT/DELETE service_role | `authenticated`: select, update(read_at); `service_role`: full |
+| `business_intelligence_runs` | Logs de execução do cron | RLS ligado, sem policy para `authenticated` | só `service_role` |
+
+`empresa_perfil` ganhou coluna `intelligence_enabled_at timestamptz` (null = off). O rollout é controlado por UPDATE manual
+dessa coluna; a UI só expõe a feature quando o valor não é null.
+
 ## Pendente de validacao
 
 - Confirmar no banco real se todas as policies de `.ai/migrations/rls_subuser_access.sql` batem com producao.
