@@ -30,6 +30,30 @@ describe('assistant seasonal context', () => {
     expect(getActiveSeasonalContext('2026-02-01')).toEqual([]);
   });
 
+  it('flags Carnaval (computed from Easter, not hardcoded) as in progress during its window', () => {
+    // Verified against independent sources for 2026: sábado 13/02 a Cinzas 18/02.
+    const result = getActiveSeasonalContext('2026-02-14');
+
+    expect(result).toContainEqual({ nome: 'Carnaval', sugestao: expect.any(String), dias_ate: 0, em_andamento: true });
+  });
+
+  it('looks ahead to Carnaval before it starts', () => {
+    const result = getActiveSeasonalContext('2026-02-10');
+
+    expect(result).toContainEqual({ nome: 'Carnaval', sugestao: expect.any(String), dias_ate: 3 });
+  });
+
+  it('flags Semana do Consumidor (fixed window) as in progress', () => {
+    const result = getActiveSeasonalContext('2026-03-12');
+
+    expect(result).toContainEqual({ nome: 'Semana do Consumidor', sugestao: expect.any(String), dias_ate: 0, em_andamento: true });
+  });
+
+  it('reports the Brazil-specific Dia dos Namorados and Dia do Cliente dates', () => {
+    expect(getActiveSeasonalContext('2026-06-08')).toContainEqual({ nome: 'Dia dos Namorados', sugestao: expect.any(String), dias_ate: 4 });
+    expect(getActiveSeasonalContext('2026-09-10')).toContainEqual({ nome: 'Dia do Cliente', sugestao: expect.any(String), dias_ate: 5 });
+  });
+
   it('sorts multiple matches by days until, soonest first', () => {
     // Dec 25 (Natal) and Dec 31 (Véspera de Ano Novo) both fall inside a 10-day lookahead from Dec 22.
     const result = getActiveSeasonalContext('2026-12-22');
