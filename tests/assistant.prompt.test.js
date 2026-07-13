@@ -23,6 +23,36 @@ describe('assistant prompt', () => {
     expect(prompt).not.toMatch(/lucro|margem|margens|vai acabar/i);
   });
 
+  it('surfaces the latest day of active, non-muted signals for general awareness', () => {
+    const prompt = _buildSystemPrompt({
+      perfil: { nome_negocio: 'Teste' },
+      vendas: { receita_total: '100.00', quantidade: 2, por_metodo_pagamento: {} },
+      despesas: { total_mes_atual: '25.00', por_categoria: {} },
+      resultado_operacional_aproximado: '75.00',
+      fiado_em_aberto: [],
+      catalogo_produtos: [],
+      sinais_ativos: [{ severidade: 'Precisa de você', narrativa: 'X-Bacon zerou o estoque.' }],
+    }, 'geral');
+
+    expect(prompt).toContain('SINAIS DETECTADOS PELO ZELINHO GERENTE');
+    expect(prompt).toContain('[Precisa de você] X-Bacon zerou o estoque.');
+    expect(prompt).toContain('Não invente sinais além destes.');
+  });
+
+  it('omits the signals block entirely when there are no active signals', () => {
+    const prompt = _buildSystemPrompt({
+      perfil: { nome_negocio: 'Teste' },
+      vendas: { receita_total: '0.00', quantidade: 0, por_metodo_pagamento: {} },
+      despesas: { total_mes_atual: '0.00', por_categoria: {} },
+      resultado_operacional_aproximado: '0.00',
+      fiado_em_aberto: [],
+      catalogo_produtos: [],
+      sinais_ativos: [],
+    }, 'geral');
+
+    expect(prompt).not.toContain('SINAIS DETECTADOS PELO ZELINHO GERENTE');
+  });
+
   it('surfaces yesterday vs. same-weekday-average precomputed figures so the model never claims the data is missing', () => {
     const prompt = _buildSystemPrompt({
       perfil: { nome_negocio: 'Teste' },

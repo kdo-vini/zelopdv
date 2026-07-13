@@ -1,7 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import { buildCatalogSalesContext, buildRecentDaysContext, buildStockContext } from '../src/lib/server/assistant/businessContext.js';
+import { buildActiveSignalsContext, buildCatalogSalesContext, buildRecentDaysContext, buildStockContext } from '../src/lib/server/assistant/businessContext.js';
 
 describe('assistant business context', () => {
+  describe('buildActiveSignalsContext', () => {
+    it('keeps only the most recent signal_date and excludes muted types, humanizing severity', () => {
+      const signals = [
+        { type: 'STOCK_ZERO_WITH_DEMAND', severity: 'critical', signal_date: '2026-07-09', narrative: 'X-Bacon zerou o estoque.' },
+        { type: 'REVENUE_ABOVE_WEEKDAY_AVG', severity: 'info', signal_date: '2026-07-09' },
+        { type: 'FIADO_ISSUED_SHARE_HIGH', severity: 'attention', signal_date: '2026-07-09' },
+        { type: 'CASH_DIFFERENCE_RECURRING', severity: 'critical', signal_date: '2026-07-08' }, // older day — excluded
+      ];
+
+      const result = buildActiveSignalsContext({ signals, mutedTypes: ['FIADO_ISSUED_SHARE_HIGH'] });
+
+      expect(result).toEqual([
+        { severidade: 'Precisa de você', narrativa: 'X-Bacon zerou o estoque.' },
+        { severidade: 'Pra saber', narrativa: expect.stringContaining('R$') },
+      ]);
+    });
+
+    it('falls back to templateNarrative when the row has no stored narrative', () => {
+      const result = buildActiveSignalsContext({
+        signals: [{ type: 'STOCK_ZERO_WITH_DEMAND', severity: 'critical', signal_date: '2026-07-09', evidence: { nome_produto: 'Coxinha', estoque_atual: 0, dias_com_venda_7d: 5, consumo_diario_medio_7d: 3 } }],
+      });
+
+      expect(result[0].narrativa).toContain('Coxinha');
+    });
+
+    it('returns an empty list when there are no signals', () => {
+      expect(buildActiveSignalsContext({ signals: [] })).toEqual([]);
+    });
+  });
   describe('buildRecentDaysContext', () => {
     // 2026-07-09 is a Thursday; "yesterday" from that reference is 2026-07-08 (Wednesday).
     const todayIso = '2026-07-09T15:00:00.000Z';

@@ -1,4 +1,27 @@
 import { addDays, localDateOf, weekdayOf } from '$lib/server/intelligence/tz.js';
+import { templateNarrative } from '$lib/server/intelligence/narrative.js';
+
+const SIGNAL_SEVERITY_LABELS = { critical: 'Precisa de você', attention: 'Fica de olho', info: 'Pra saber' };
+
+/**
+ * Surfaces the Zelo Intelligence Engine's most recent day of signals (the
+ * same ones shown in the Zelinho Gerente briefing) so the general assistant
+ * is signal-aware even when the user didn't open the chat from a specific
+ * signal card. Muted types are excluded, mirroring the Gerente briefing.
+ */
+export function buildActiveSignalsContext({ signals = [], mutedTypes = [] } = {}) {
+  if (!signals.length) return [];
+  const latestDate = signals.reduce((latest, signal) => (
+    !latest || signal.signal_date > latest ? signal.signal_date : latest
+  ), null);
+
+  return signals
+    .filter((signal) => signal.signal_date === latestDate && !mutedTypes.includes(signal.type))
+    .map((signal) => ({
+      severidade: SIGNAL_SEVERITY_LABELS[signal.severity] || signal.severity,
+      narrativa: signal.narrative || templateNarrative(signal),
+    }));
+}
 
 function number(value) {
   return Number(value) || 0;

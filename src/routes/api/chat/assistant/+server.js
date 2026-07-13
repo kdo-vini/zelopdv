@@ -8,7 +8,7 @@ import { captureAiGeneration } from '$lib/server/posthog';
 import { resolveOwnerUserId } from '$lib/server/accessControl';
 import { buildSignalContextPrompt, getSignalContextForOwner } from '$lib/server/intelligence/signalContext';
 import { fetchVendas, fetchVendasItens, fetchVendasPagamentos } from '$lib/server/intelligence/fetchers';
-import { buildCatalogSalesContext, buildRecentDaysContext, buildStockContext } from '$lib/server/assistant/businessContext';
+import { buildActiveSignalsContext, buildCatalogSalesContext, buildRecentDaysContext, buildStockContext } from '$lib/server/assistant/businessContext';
 
 const BUSINESS_CONTEXT_CACHE_TTL_MS = 20_000;
 const BUSINESS_CONTEXT_CACHE_MAX_ENTRIES = 100;
@@ -31,16 +31,19 @@ async function buildBusinessContext(userId) {
 
     // The assistant uses stored catalog relations and every sale item in the
     // window. Do not infer categories from product names or truncate sales.
-    const [perfilRes, produtosRes, categoriasRes, expensesRes, caixaRes, topFiadoRes, vendas] = await Promise.all([
-      supabaseAdmin.from('empresa_perfil').select('nome_exibicao, contato').eq('user_id', userId).maybeSingle(),
+    const [perfilRes, produtosRes, categoriasRes, expensesRes, caixaRes, topFiadoRes, signalsRes, vendas] = await Promise.all([
+      supabaseAdmin.from('empresa_perfil').select('nome_exibicao, contato, intelligence_enabled_at, gerente_prefs').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('produtos').select('id, nome, preco, id_categoria, estoque_atual, controlar_estoque, ocultar_no_pdv').eq('id_usuario', userId).order('nome'),
       supabaseAdmin.from('categorias').select('id, nome, ordem, controlar_estoque_compartilhado, estoque_compartilhado_atual').eq('id_usuario', userId).order('ordem'),
       supabaseAdmin.from('expenses').select('amount, category').eq('user_id', userId).gte('date', startOfMonth.toISOString()),
       supabaseAdmin.from('caixas').select('valor_inicial, data_abertura, data_fechamento').eq('id_usuario', userId).order('data_abertura', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('pessoas').select('nome, saldo_fiado').eq('id_usuario', userId).gt('saldo_fiado', 0).order('saldo_fiado', { ascending: false }).limit(5),
+      // Cheap and indexed even for companies outside the intelligence pilot,
+      // where it just returns no rows; the flag below gates its use.
+      supabaseAdmin.from('business_signals').select('type, severity, evidence, narrative, signal_date').eq('user_id', userId).order('signal_date', { ascending: false }).limit(20),
       fetchVendas(supabaseAdmin, userId, thirtyDaysAgo.toISOString(), new Date().toISOString()),
     ]);
-    for (const result of [perfilRes, produtosRes, categoriasRes, expensesRes, caixaRes, topFiadoRes]) {
+    for (const result of [perfilRes, produtosRes, categoriasRes, expensesRes, caixaRes, topFiadoRes, signalsRes]) {
       if (result.error) throw result.error;
     }
 
@@ -57,6 +60,10 @@ async function buildBusinessContext(userId) {
       categorias: categoriasRes.data || [],
     });
     const recentDaysContext = buildRecentDaysContext({ vendas });
+    const mutedSignalTypes = Array.isArray(perfilRes.data?.gerente_prefs?.muted_types) ? perfilRes.data.gerente_prefs.muted_types : [];
+    const activeSignalsContext = perfilRes.data?.intelligence_enabled_at
+      ? buildActiveSignalsContext({ signals: signalsRes.data || [], mutedTypes: mutedSignalTypes })
+      : [];
 
     // Aggregate expenses
     const expenses = expensesRes.data || [];
@@ -81,6 +88,7 @@ async function buildBusinessContext(userId) {
       ontem: recentDaysContext.ontem,
       media_mesmo_dia_semana: recentDaysContext.media_mesmo_dia_semana,
       media_diaria_periodo: recentDaysContext.media_diaria_periodo,
+      sinais_ativos: activeSignalsContext,
       vendas: salesContext.vendas,
       itens_vendidos: salesContext.itens_vendidos,
       categorias: salesContext.categorias,
@@ -147,6 +155,13 @@ MÉTRICAS JÁ CALCULADAS (use exatamente estes valores, não recalcule):
 • Produto mais vendido: ${produtoTop ?? 'sem dados'}
 • Total em fiado em aberto: R$ ${totalFiado}${fiadoPct ? ` (${fiadoPct}% da receita)` : ''}${diaAnteriorBlock}`;
 
+  const sinaisAtivos = context.sinais_ativos || [];
+  const sinaisBlock = sinaisAtivos.length ? `
+
+SINAIS DETECTADOS PELO ZELINHO GERENTE (dia mais recente processado):
+${sinaisAtivos.map((s) => `• [${s.severidade}] ${s.narrativa}`).join('\n')}
+Considere estes sinais quando forem relevantes à pergunta do usuário, mesmo que ele não tenha aberto a conversa a partir de um aviso específico. Não invente sinais além destes.` : '';
+
   const contextFocusBlocks = {
     vendas: `
 FOCO ATIVO — VENDAS E RECEITA:
@@ -209,6 +224,7 @@ DADOS REAIS DO NEGÓCIO (últimos 30 dias + mês atual)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${JSON.stringify(context)}
 ${metricsBlock}
+${sinaisBlock}
 ${buildSignalContextPrompt(signalContext)}
 ${_buildScreenContextPrompt(screenContext)}
 
