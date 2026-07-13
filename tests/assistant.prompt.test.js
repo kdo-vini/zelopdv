@@ -23,6 +23,41 @@ describe('assistant prompt', () => {
     expect(prompt).not.toMatch(/lucro|margem|margens|vai acabar/i);
   });
 
+  it('surfaces yesterday vs. same-weekday-average precomputed figures so the model never claims the data is missing', () => {
+    const prompt = _buildSystemPrompt({
+      perfil: { nome_negocio: 'Teste' },
+      vendas: { receita_total: '100.00', quantidade: 2, por_metodo_pagamento: {} },
+      despesas: { total_mes_atual: '25.00', por_categoria: {} },
+      resultado_operacional_aproximado: '75.00',
+      fiado_em_aberto: [],
+      catalogo_produtos: [],
+      ontem: { data: '2026-07-08', receita: 100, quantidade: 1 },
+      media_mesmo_dia_semana: { receita: 50, quantidade: 1, dias_considerados: 2 },
+      media_diaria_periodo: { receita: 100, quantidade: 1, dias_considerados: 3 },
+    }, 'vendas');
+
+    expect(prompt).toContain('Vendas de ontem (quarta-feira, 2026-07-08): R$ 100.00 em 1 vendas');
+    expect(prompt).toContain('Média das últimas 2 ocorrências de quarta-feira: R$ 50.00 em 1 vendas');
+    expect(prompt).toContain('Média diária do período, excluindo ontem (3 dias): R$ 100.00 em 1 vendas');
+    expect(prompt).toContain('nunca diga que falta esse dado');
+  });
+
+  it('falls back to the general daily average when there is no same-weekday history yet', () => {
+    const prompt = _buildSystemPrompt({
+      perfil: { nome_negocio: 'Teste' },
+      vendas: { receita_total: '0.00', quantidade: 0, por_metodo_pagamento: {} },
+      despesas: { total_mes_atual: '0.00', por_categoria: {} },
+      resultado_operacional_aproximado: '0.00',
+      fiado_em_aberto: [],
+      catalogo_produtos: [],
+      ontem: { data: '2026-07-08', receita: 0, quantidade: 0 },
+      media_mesmo_dia_semana: null,
+      media_diaria_periodo: null,
+    }, 'geral');
+
+    expect(prompt).toContain('Ainda não há ocorrências anteriores de quarta-feira suficientes no período para uma média por dia da semana');
+  });
+
   it('normalizes prohibited terms before a model response reaches the client', () => {
     expect(_sanitizeAssistantCopy('O lucro caiu e a margem apertou; o estoque vai acabar amanhã.'))
       .toBe('O resultado operacional aproximado caiu e a diferença entre preço e custo apertou; o estoque tem cobertura ao ritmo médio.');

@@ -1,7 +1,39 @@
 import { describe, expect, it } from 'vitest';
-import { buildCatalogSalesContext, buildStockContext } from '../src/lib/server/assistant/businessContext.js';
+import { buildCatalogSalesContext, buildRecentDaysContext, buildStockContext } from '../src/lib/server/assistant/businessContext.js';
 
 describe('assistant business context', () => {
+  describe('buildRecentDaysContext', () => {
+    // 2026-07-09 is a Thursday; "yesterday" from that reference is 2026-07-08 (Wednesday).
+    const todayIso = '2026-07-09T15:00:00.000Z';
+
+    function saleOn(localDate, valor) {
+      return { created_at: `${localDate}T18:00:00.000Z`, valor_total: valor };
+    }
+
+    it('reports yesterday and a same-weekday average from prior weeks, excluding today and yesterday', () => {
+      const vendas = [
+        saleOn('2026-07-08', 100), // yesterday (Wednesday)
+        saleOn('2026-07-01', 60), // last Wednesday
+        saleOn('2026-06-24', 40), // Wednesday before that
+        saleOn('2026-07-07', 200), // Tuesday — different weekday, only counts toward the general daily average
+        saleOn('2026-07-09', 999), // "today" — must be excluded entirely
+      ];
+
+      const result = buildRecentDaysContext({ vendas, todayIso });
+
+      expect(result.ontem).toEqual({ data: '2026-07-08', receita: 100, quantidade: 1 });
+      expect(result.media_mesmo_dia_semana).toEqual({ receita: 50, quantidade: 1, dias_considerados: 2 });
+      expect(result.media_diaria_periodo).toEqual({ receita: 100, quantidade: 1, dias_considerados: 3 });
+    });
+
+    it('returns a zeroed yesterday and null averages when there is no sales history', () => {
+      const result = buildRecentDaysContext({ vendas: [], todayIso });
+
+      expect(result.ontem).toEqual({ data: '2026-07-08', receita: 0, quantidade: 0 });
+      expect(result.media_mesmo_dia_semana).toBeNull();
+      expect(result.media_diaria_periodo).toBeNull();
+    });
+  });
   it('derives a category average from all registered sale items', () => {
     const context = buildCatalogSalesContext({
       vendas: [

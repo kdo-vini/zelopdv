@@ -1,9 +1,60 @@
+import { addDays, localDateOf, weekdayOf } from '$lib/server/intelligence/tz.js';
+
 function number(value) {
   return Number(value) || 0;
 }
 
 function round(value) {
   return Math.round((number(value) + Number.EPSILON) * 100) / 100;
+}
+
+function averageOfDays(days) {
+  if (!days.length) return null;
+  const totalReceita = days.reduce((sum, day) => sum + day.receita, 0);
+  const totalVendas = days.reduce((sum, day) => sum + day.quantidade, 0);
+  return {
+    receita: round(totalReceita / days.length),
+    quantidade: round(totalVendas / days.length),
+    dias_considerados: days.length,
+  };
+}
+
+/**
+ * Groups already-fetched sales by local (America/Sao_Paulo) calendar day so
+ * the assistant can answer "how was yesterday vs. the average" without
+ * recalculating — the aggregate-only `vendas` block in
+ * buildCatalogSalesContext has no daily granularity at all.
+ * `todayIso` is only ever "now" in production; tests inject a fixed instant.
+ */
+export function buildRecentDaysContext({ vendas = [], todayIso = new Date().toISOString() } = {}) {
+  const today = localDateOf(todayIso);
+  const yesterday = addDays(today, -1);
+
+  const byDate = new Map();
+  for (const sale of vendas) {
+    if (!sale?.created_at) continue;
+    const date = localDateOf(sale.created_at);
+    const bucket = byDate.get(date) || { receita: 0, quantidade: 0 };
+    bucket.receita = round(bucket.receita + number(sale.valor_total));
+    bucket.quantidade += 1;
+    byDate.set(date, bucket);
+  }
+
+  const yesterdayBucket = byDate.get(yesterday) || { receita: 0, quantidade: 0 };
+  const yesterdayWeekday = weekdayOf(yesterday);
+
+  // Exclude today (partial, still accumulating) and yesterday itself (the
+  // thing being compared) from both averages.
+  const priorDays = [...byDate.entries()]
+    .filter(([date]) => date !== yesterday && date < today)
+    .map(([date, bucket]) => ({ date, ...bucket }));
+  const priorSameWeekdayDays = priorDays.filter((day) => weekdayOf(day.date) === yesterdayWeekday);
+
+  return {
+    ontem: { data: yesterday, receita: round(yesterdayBucket.receita), quantidade: yesterdayBucket.quantidade },
+    media_mesmo_dia_semana: averageOfDays(priorSameWeekdayDays),
+    media_diaria_periodo: averageOfDays(priorDays),
+  };
 }
 
 const CATEGORY_GROUP_STOP_WORDS = new Set(['com', 'sem', 'para', 'dos', 'das', 'por', 'mais', 'menos']);

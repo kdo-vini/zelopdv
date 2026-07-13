@@ -8,7 +8,7 @@ import { captureAiGeneration } from '$lib/server/posthog';
 import { resolveOwnerUserId } from '$lib/server/accessControl';
 import { buildSignalContextPrompt, getSignalContextForOwner } from '$lib/server/intelligence/signalContext';
 import { fetchVendas, fetchVendasItens, fetchVendasPagamentos } from '$lib/server/intelligence/fetchers';
-import { buildCatalogSalesContext, buildStockContext } from '$lib/server/assistant/businessContext';
+import { buildCatalogSalesContext, buildRecentDaysContext, buildStockContext } from '$lib/server/assistant/businessContext';
 
 const BUSINESS_CONTEXT_CACHE_TTL_MS = 20_000;
 const BUSINESS_CONTEXT_CACHE_MAX_ENTRIES = 100;
@@ -56,6 +56,7 @@ async function buildBusinessContext(userId) {
       produtos: produtosRes.data || [],
       categorias: categoriasRes.data || [],
     });
+    const recentDaysContext = buildRecentDaysContext({ vendas });
 
     // Aggregate expenses
     const expenses = expensesRes.data || [];
@@ -77,6 +78,9 @@ async function buildBusinessContext(userId) {
       whatsapp_disponivel: isWhatsAppConfigured() && !!perfilRes.data?.contato,
       catalogo_produtos: (produtosRes.data || []).map((product) => `${product.nome} (R$ ${Number(product.preco).toFixed(2)})`),
       periodo: 'últimos 30 dias',
+      ontem: recentDaysContext.ontem,
+      media_mesmo_dia_semana: recentDaysContext.media_mesmo_dia_semana,
+      media_diaria_periodo: recentDaysContext.media_diaria_periodo,
       vendas: salesContext.vendas,
       itens_vendidos: salesContext.itens_vendidos,
       categorias: salesContext.categorias,
@@ -120,6 +124,17 @@ export function _buildSystemPrompt(context, contextType, signalContext = null, s
   const totalFiado = context.fiado_em_aberto?.reduce((s, p) => s + (Number(p.saldo) || 0), 0).toFixed(2) ?? '0.00';
   const fiadoPct = receita > 0 ? ((parseFloat(totalFiado) / receita) * 100).toFixed(1) : null;
 
+  const DIAS_SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const weekdayName = (dateStr) => DIAS_SEMANA[new Date(`${dateStr}T12:00:00Z`).getUTCDay()];
+  const ontem = context.ontem;
+  const mediaMesmoDiaSemana = context.media_mesmo_dia_semana;
+  const mediaDiariaPeriodo = context.media_diaria_periodo;
+
+  const diaAnteriorBlock = ontem ? `
+• Vendas de ontem (${weekdayName(ontem.data)}, ${ontem.data}): R$ ${ontem.receita.toFixed(2)} em ${ontem.quantidade} vendas
+• ${mediaMesmoDiaSemana ? `Média das últimas ${mediaMesmoDiaSemana.dias_considerados} ocorrências de ${weekdayName(ontem.data)}: R$ ${mediaMesmoDiaSemana.receita.toFixed(2)} em ${mediaMesmoDiaSemana.quantidade} vendas` : `Ainda não há ocorrências anteriores de ${weekdayName(ontem.data)} suficientes no período para uma média por dia da semana`}
+${mediaDiariaPeriodo ? `• Média diária do período, excluindo ontem (${mediaDiariaPeriodo.dias_considerados} dias): R$ ${mediaDiariaPeriodo.receita.toFixed(2)} em ${mediaDiariaPeriodo.quantidade} vendas` : ''}` : '';
+
   const metricsBlock = `
 MÉTRICAS JÁ CALCULADAS (use exatamente estes valores, não recalcule):
 • Receita total (30 dias): R$ ${receita.toFixed(2)}
@@ -130,7 +145,7 @@ MÉTRICAS JÁ CALCULADAS (use exatamente estes valores, não recalcule):
 • Resultado operacional aproximado: R$ ${resultadoOperacional.toFixed(2)} (não inclui o custo dos produtos)
 • Método de pagamento dominante: ${metodoDominante ?? 'sem dados'}
 • Produto mais vendido: ${produtoTop ?? 'sem dados'}
-• Total em fiado em aberto: R$ ${totalFiado}${fiadoPct ? ` (${fiadoPct}% da receita)` : ''}`;
+• Total em fiado em aberto: R$ ${totalFiado}${fiadoPct ? ` (${fiadoPct}% da receita)` : ''}${diaAnteriorBlock}`;
 
   const contextFocusBlocks = {
     vendas: `
@@ -140,6 +155,7 @@ Ao responder sobre vendas, sempre mencione:
 • O método de pagamento dominante e implicações (muito fiado = risco; muito dinheiro = difícil rastrear)
 • Se a quantidade de vendas parece consistente com o período
 • Uma sugestão concreta para aumentar receita usando os produtos reais do negócio (upsell, combo, promoção)
+Se o usuário perguntar como foram as vendas de ontem, comparadas à média, ou qualquer variação disso, use diretamente as linhas "Vendas de ontem" e "Média das últimas ocorrências de [dia da semana]" já calculadas acima — nunca diga que falta esse dado quando essas linhas estiverem presentes. Se a média por dia da semana ainda não existir, use a média diária do período como comparação e explique que a média por dia da semana chega com mais histórico.
 Evite análises genéricas — use os números e produtos reais.`,
 
     produtos: `
