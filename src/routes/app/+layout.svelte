@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import GestaoSidebar from '$lib/components/GestaoSidebar.svelte';
   import AssistantChat from '$lib/components/AssistantChat.svelte';
+  import { isOpen as isZelinhoOpen } from '$lib/stores/assistant';
   import InAppSupportChat from '$lib/components/InAppSupportChat.svelte';
   import { supabase } from '$lib/supabaseClient';
   import { addToast } from '$lib/stores/ui';
@@ -113,7 +114,7 @@
   });
 </script>
 
-<div class="flex h-screen overflow-hidden" style="background: var(--bg-app);">
+<div class:zelinho-open={$isZelinhoOpen} class="zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app);">
   <GestaoSidebar />
   <div class="flex-1 flex flex-col overflow-hidden min-w-0 pt-14 md:pt-0">
     {#if deletionScheduledAt}
@@ -136,3 +137,11 @@
 </div>
 <AssistantChat />
 <InAppSupportChat />
+
+<style>
+  @media (min-width: 1280px) {
+    .zelinho-workspace { padding-right: 24rem; }
+    .zelinho-workspace:not(.zelinho-open) { padding-right: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .zelinho-workspace { transition: none; } }
+</style>

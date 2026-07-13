@@ -7,6 +7,21 @@ function addDays(date, amount) { const value = dateAtNoon(date); value.setUTCDat
 function sum(values) { return values.reduce((total, value) => total + (Number(value) || 0), 0); }
 function delta(current, previous) { return previous > 0 ? (current - previous) / previous : null; }
 function weekRows(snapshots, start) { const end = addDays(start, 6); return snapshots.filter((row) => row.snapshot_date >= start && row.snapshot_date <= end); }
+function isDateKey(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = dateAtNoon(value);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+export function normalizeWeekStart(value, today = new Date().toISOString().slice(0, 10)) {
+  const reference = isDateKey(today) ? today : new Date().toISOString().slice(0, 10);
+  const current = getWeekStart(reference);
+  const candidate = isDateKey(value) ? getWeekStart(value) : current;
+  const oldest = shiftWeek(current, -7);
+  if (candidate < oldest) return oldest;
+  if (candidate > current) return current;
+  return candidate;
+}
 
 function aggregate(rows) {
   const receita = sum(rows.map((row) => row.receita_bruta));
@@ -53,7 +68,7 @@ function opening(current, previous) {
 }
 
 export function buildWeekReport(snapshots = [], signals = [], weekStart, { today = new Date().toISOString().slice(0, 10) } = {}) {
-  const start = weekStart || toDateKey(dateAtNoon(today));
+  const start = normalizeWeekStart(weekStart, today);
   const end = addDays(start, 6);
   const currentRows = weekRows(snapshots, start);
   const previousRows = weekRows(snapshots, addDays(start, -7));

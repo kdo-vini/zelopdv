@@ -6,8 +6,9 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { waitAuthReady } from '$lib/authStore';
   import { getAccessContext } from '$lib/accessControl';
+  import { clearScreenContext, openAssistantWithContext, screenContext } from '$lib/stores/assistant';
   import * as Select from '$lib/components/ui/select/index.js';
-  import { Pencil, Trash2, EyeOff, Plus } from 'lucide-svelte';
+  import { MessageCircle, Pencil, Trash2, EyeOff, Plus } from 'lucide-svelte';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
@@ -44,6 +45,12 @@
   // Edição inline
   let editingProdId = null;
   let editProdForm = {};
+
+  $: if ($screenContext?.source === 'gestao-produtos' && (
+    editingProdId === null || String($screenContext.entity?.id) !== String(editingProdId)
+  )) {
+    clearScreenContext();
+  }
 
   // ─── State: Modais de Criação ────────────────────────────────────────────────
   let showCatModal = false;
@@ -587,6 +594,18 @@
   function cancelarEdicaoProduto() {
     editingProdId = null;
     editProdForm = {};
+  }
+
+  function perguntarSobreProduto(prod) {
+    const opened = openAssistantWithContext({
+      source: 'gestao-produtos',
+      title: `Produto: ${prod.nome}`,
+      route: '/gestao/produtos',
+      contextType: 'produtos',
+      entity: { type: 'product', id: prod.id, name: prod.nome }
+    });
+
+    if (!opened) addToast('Não foi possível abrir o contexto deste produto.', 'error');
   }
 
   async function salvarEdicaoProduto(e) {
@@ -1214,6 +1233,15 @@
                   </div>
 
                   <div class="mobile-card-actions">
+                    <button
+                      type="button"
+                      class="btn-xs-ghost ask-zelinho-button inline-flex items-center gap-1.5"
+                      on:click={() => perguntarSobreProduto(prod)}
+                      style="color: var(--primary); border-color: var(--primary);"
+                    >
+                      <MessageCircle class="w-4 h-4" />
+                      Perguntar ao Zelinho
+                    </button>
                     <button type="button" class="btn-xs-ghost" on:click={cancelarEdicaoProduto} style="color: var(--text-muted); border-color: var(--border-subtle);">
                       Cancelar
                     </button>
@@ -1423,6 +1451,15 @@
                           </label>
                         </div>
                         <div class="flex gap-2">
+                          <button
+                            type="button"
+                            class="btn-xs-ghost ask-zelinho-button inline-flex items-center gap-1.5"
+                            on:click={() => perguntarSobreProduto(prod)}
+                            style="color: var(--primary); border-color: var(--primary);"
+                          >
+                            <MessageCircle class="w-4 h-4" />
+                            Perguntar ao Zelinho
+                          </button>
                           <button type="button" class="btn-xs-ghost" on:click={cancelarEdicaoProduto} style="color: var(--text-muted); border-color: var(--border-subtle);">
                             Cancelar
                           </button>
@@ -2875,6 +2912,10 @@
     .mobile-card-actions button {
       min-height: 2.75rem;
       justify-content: center;
+    }
+
+    .mobile-card-actions .ask-zelinho-button {
+      grid-column: 1 / -1;
     }
 
     .pagination {

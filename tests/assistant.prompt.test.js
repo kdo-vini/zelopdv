@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { _buildSystemPrompt, _sanitizeAssistantCopy, _takeCompleteAssistantCopy } from '../src/routes/api/chat/assistant/+server.js';
+import { _buildScreenContextPrompt, _buildSystemPrompt, _parseScreenContext, _sanitizeAssistantCopy, _takeCompleteAssistantCopy } from '../src/routes/api/chat/assistant/+server.js';
 
 describe('assistant prompt', () => {
   it('uses the gerente financial wording without prohibited terms', () => {
@@ -17,6 +17,8 @@ describe('assistant prompt', () => {
     expect(prompt).toContain('não inclui o custo dos produtos');
     expect(prompt).toContain('categorias.nome');
     expect(prompt).toContain('media_unidades_por_venda');
+    expect(prompt).toContain('grupos_de_categorias');
+    expect(prompt).toContain('nunca diga que elas não existem');
     expect(prompt).not.toMatch(/lucro|margem|margens|vai acabar/i);
   });
 
@@ -43,5 +45,30 @@ describe('assistant prompt', () => {
       content: 'A receita foi R$ 1.234,56.',
       pending: ' Revise o caixa',
     });
+  });
+
+  it('accepts only supported, minimally scoped screen contexts', () => {
+    expect(_parseScreenContext({
+      source: 'gestao-produtos',
+      entity: { type: 'product', id: 'product-1' },
+    })).toEqual({ kind: 'product', id: 'product-1' });
+    expect(_parseScreenContext({
+      source: 'gerente-semana',
+      entity: { type: 'weekly_report', id: '2026-07-06' },
+    })).toEqual({ kind: 'week', weekStart: '2026-07-06' });
+    expect(_parseScreenContext({
+      source: 'untrusted',
+      entity: { type: 'product', id: 'product-1' },
+    })).toBeNull();
+  });
+
+  it('adds owner-loaded screen facts to the system prompt', () => {
+    const prompt = _buildScreenContextPrompt({
+      kind: 'product',
+      product: { id: 'product-1', nome: 'Coxinha', preco: 8 },
+    });
+
+    expect(prompt).toContain('CONTEXTO DO PRODUTO SELECIONADO');
+    expect(prompt).toContain('Coxinha');
   });
 });

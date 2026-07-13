@@ -1436,16 +1436,18 @@
               </div>
               
               <div class="flex items-center gap-1 bg-slate-900/50 p-1 rounded-md border border-slate-700/50">
-                <button 
+                <button
                   on:click={() => decrementarItem(item.id)}
-                  class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-sm transition-all"
+                  aria-label="Diminuir quantidade"
+                  class="w-11 h-11 md:w-10 md:h-10 flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 md:w-3.5 md:h-3.5"><path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 10z" clip-rule="evenodd" /></svg>
                 </button>
                 <span class="w-6 text-center text-sm md:text-xs font-bold text-slate-200">{item.quantidade}</span>
-                <button 
+                <button
                   on:click={() => incrementarItem(item.id)}
-                  class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center text-slate-400 hover:text-green-400 hover:bg-green-500/10 rounded-sm transition-all"
+                  aria-label="Aumentar quantidade"
+                  class="w-11 h-11 md:w-10 md:h-10 flex items-center justify-center text-slate-400 hover:text-green-400 hover:bg-green-500/10 rounded-md transition-all"
                 >
                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 md:w-3.5 md:h-3.5"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
                 </button>
@@ -1494,8 +1496,8 @@
       </div>
       {#if tipoPedido === 'delivery' && Number(taxaEntregaInput) > 0}
         <div class="flex justify-between items-center px-1">
-          <span class="text-xs text-purple-400 font-medium">Taxa entrega</span>
-          <span class="text-sm font-bold text-purple-400">+ R$ {Number(taxaEntregaInput).toFixed(2)}</span>
+          <span class="text-xs text-sky-400 font-medium">Taxa entrega</span>
+          <span class="text-sm font-bold text-sky-400">+ R$ {Number(taxaEntregaInput).toFixed(2)}</span>
         </div>
       {/if}
       
@@ -1521,6 +1523,7 @@
               addToast('Comanda limpa', 'info');
             }
           }}
+          aria-label="Limpar comanda"
           disabled={!canCancelar}
           class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/30 transition-colors flex items-center justify-center border border-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
           title="Limpar Comanda"

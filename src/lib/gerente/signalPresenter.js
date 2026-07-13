@@ -3,10 +3,107 @@ import {
   PackageSearch, ShoppingBag, WalletCards
 } from 'lucide-svelte';
 
-const money = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
-const number = (value, digits = 0) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: digits }).format(Number(value) || 0);
-const percent = (value) => `${number((Number(value) || 0) * 100, 0)}%`;
+const isMissing = (value) => value === null || value === undefined || value === '';
+const money = (value) => isMissing(value) ? 'Não informado' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
+const number = (value, digits = 0) => isMissing(value) ? 'Não informado' : new Intl.NumberFormat('pt-BR', { maximumFractionDigits: digits }).format(Number(value) || 0);
+const percent = (value) => isMissing(value) ? 'Não informado' : `${number(Number(value) * 100, 0)}%`;
 const field = (label, value) => ({ label, valor: value });
+
+// Keep the hand-written rows concise, then append every remaining evidence
+// leaf so the disclosure remains an audit trail when the engine adds metadata.
+const knownEvidenceKeys = {
+  revenue: new Set(['revenue_today', 'baseline_avg', 'delta_pct', 'n_baseline']),
+  ticket: new Set(['ticket_today', 'ticket_baseline', 'delta_ticket_pct', 'qtd_today']),
+  productDrop: new Set(['nome_produto', 'qty_last7', 'baseline_avg_7d', 'delta_pct']),
+  concentration: new Set(['nome_produto', 'share_pct', 'revenue_product_30d', 'revenue_total_30d']),
+  payment: new Set(['forma', 'share_recent', 'share_previous', 'shift_pp']),
+  fiado: new Set(['fiado_issued_30d', 'share_pct', 'revenue_30d', 'saldo_fiado_total_atual']),
+  cash: new Set(['n_closures_checked', 'n_with_difference', 'sum_differences', 'avg_difference']),
+  stockCoverage: new Set(['nome_produto', 'estoque_atual', 'coverage_days', 'consumo_diario_medio']),
+  stockZero: new Set(['nome_produto', 'estoque_atual', 'dias_com_venda_7d', 'consumo_diario_medio_7d']),
+  openCash: new Set(['data_abertura', 'horas_aberto', 'valor_inicial']),
+};
+
+const evidenceLabels = {
+  computed_at: 'Calculado em',
+  engine_version: 'Versao do motor',
+  baseline_values: 'Valores da referencia',
+  baseline_kind: 'Tipo de referencia',
+  window: 'Janela',
+  start: 'Inicio',
+  end: 'Fim',
+  days: 'Dias',
+  sample_size: 'Tamanho da amostra',
+  is_record: 'Foi recorde',
+  blocks: 'Blocos anteriores',
+  worst: 'Pior fechamento',
+  last_dates: 'Fechamentos considerados',
+  top_devedores: 'Maiores saldos',
+  nome: 'Nome',
+  saldo: 'Saldo',
+  diferenca: 'Diferenca',
+};
+
+const moneyEvidenceKeys = new Set([
+  'valor_inicial', 'diferenca', 'saldo', 'saldo_fiado_total_atual', 'baseline_values',
+]);
+const percentEvidenceKeys = new Set([
+  'delta_pct', 'delta_ticket_pct', 'delta_qtd_pct', 'revenue_share_28d',
+  'share_pct', 'share_recent', 'share_previous', 'shift_pp',
+]);
+
+function humanizeEvidenceKey(key) {
+  return evidenceLabels[key] || String(key).replaceAll('_', ' ');
+}
+
+function labelForEvidencePath(path) {
+  if (!path.length) return 'Valor';
+  const labels = [];
+  for (const part of path) {
+    if (typeof part === 'number') {
+      labels[labels.length - 1] = `${labels[labels.length - 1]} ${part + 1}`;
+    } else {
+      labels.push(humanizeEvidenceKey(part));
+    }
+  }
+  return labels.join(' · ');
+}
+
+function formatEvidenceValue(value, path) {
+  if (value == null) return 'Nao informado';
+  if (typeof value === 'boolean') return value ? 'Sim' : 'Nao';
+  if (typeof value !== 'number') return String(value);
+  const key = [...path].reverse().find((part) => typeof part === 'string');
+  if (moneyEvidenceKeys.has(key)) return money(value);
+  if (percentEvidenceKeys.has(key)) return percent(value);
+  return number(value, Number.isInteger(value) ? 0 : 2);
+}
+
+function appendAdditionalEvidence(evidenceData, rows, kind) {
+  const evidence = evidenceData && typeof evidenceData === 'object' ? evidenceData : {};
+  const known = knownEvidenceKeys[kind] || new Set();
+  const extras = [];
+
+  function visit(value, path) {
+    if (Array.isArray(value)) {
+      if (value.length === 0) extras.push(field(labelForEvidencePath(path), 'Nenhum'));
+      value.forEach((item, index) => visit(item, [...path, index]));
+      return;
+    }
+    if (value && typeof value === 'object') {
+      const entries = Object.entries(value);
+      if (entries.length === 0) extras.push(field(labelForEvidencePath(path), 'Nenhum'));
+      entries.forEach(([key, item]) => visit(item, [...path, key]));
+      return;
+    }
+    extras.push(field(labelForEvidencePath(path), formatEvidenceValue(value, path)));
+  }
+
+  Object.entries(evidence).forEach(([key, value]) => {
+    if (!known.has(key)) visit(value, [key]);
+  });
+  return [...rows, ...extras];
+}
 
 const routes = {
   estoque: { href: '/gestao/produtos', label: 'Abrir estoque' },
@@ -28,6 +125,10 @@ const evidence = {
   stockZero: (e) => [field('Produto', e.nome_produto || 'Produto'), field('Estoque atual', number(e.estoque_atual)), field('Dias com saída em 7 dias', number(e.dias_com_venda_7d)), field('Consumo médio diário', number(e.consumo_diario_medio_7d, 1))],
   openCash: (e) => [field('Aberto desde', e.data_abertura || 'Não informado'), field('Tempo aberto', `${number(e.horas_aberto, 1)} horas`), field('Valor inicial', money(e.valor_inicial))],
 };
+
+Object.entries(evidence).forEach(([kind, formatter]) => {
+  evidence[kind] = (e) => appendAdditionalEvidence(e, formatter(e), kind);
+});
 
 export const signalPresenters = {
   REVENUE_BELOW_WEEKDAY_AVG: { titulo: 'Vendas abaixo do ritmo habitual', icone: ArrowDownRight, tagClass: 'attention', perguntaSugerida: 'O que pode explicar essa queda nas vendas?', acaoSugerida: routes.relatorios, formatEvidence: evidence.revenue },
@@ -53,4 +154,3 @@ export function confiancaHumana(confidence, evidenceData = {}) {
   if (Number(confidence) >= 0.7) return `Comparando com${suffix}.`;
   return `Comparando com${suffix}; ainda com pouco histórico, leve como indício.`;
 }
-

@@ -398,7 +398,7 @@
             <span class="summary-label">Subtotal (produtos)</span>
             <span class="summary-value">R$ {Number(subtotalProdutos || totalComanda - taxaEntrega).toFixed(2)}</span>
           </div>
-          <div class="summary-row" style="color: #a78bfa; font-size: 0.85em;">
+          <div class="summary-row" style="color: var(--primary); font-size: 0.85em;">
             <span>Taxa de entrega (entregador)</span>
             <span>+ R$ {Number(taxaEntrega).toFixed(2)}</span>
           </div>

@@ -143,7 +143,7 @@
     border: 1px solid var(--border-card);
     border-radius: 24px;
     background: color-mix(in srgb, var(--bg-card) 92%, var(--bg-panel));
-    box-shadow: 0 24px 80px color-mix(in srgb, var(--bg-app) 70%, transparent);
+    box-shadow: 0 12px 24px color-mix(in srgb, var(--bg-app) 70%, transparent);
     display: grid;
     gap: 1.25rem;
   }

@@ -6,7 +6,7 @@
 </script>
 
 {#if count > 0}
-  <span class:critical={hasCritical} class="sidebar-badge" aria-label={`${count} avisos novos`}>
+  <span class:critical={hasCritical} class="sidebar-badge" role="status" aria-live="polite" aria-label={`${count} avisos novos`}>
     {label}
   </span>
 {/if}
@@ -20,7 +20,7 @@
     padding: 0 5px;
     border-radius: 999px;
     background: var(--primary);
-    color: white;
+    color: var(--text-inverse);
     font-size: 10px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;

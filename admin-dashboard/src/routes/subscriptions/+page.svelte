@@ -729,6 +729,15 @@
   async function handleUpdateStatus(sub, newStatus) {
     if (sub.status === newStatus) return
 
+    if (newStatus === 'canceled' && sub.status !== 'canceled') {
+      const confirmed = await confirmDialog({
+        title: 'Cancelar assinatura?',
+        message: `Tem certeza que deseja cancelar a assinatura de ${sub.store_name}? Esta ação é irreversível.`,
+        confirmStyle: 'danger',
+      });
+      if (!confirmed) return;
+    }
+
     try {
       statusUpdating = true
       const { data: { session } } = await supabase.auth.getSession()

@@ -1,7 +1,10 @@
 <script>
+  import { onMount, tick } from 'svelte';
+  import { page } from '$app/stores';
   import { supabase } from '$lib/supabaseClient';
-  import { isOpen, messages as assistantMessages, contextType, signalContext, closeAssistant, clearSignalContext } from '$lib/stores/assistant';
+  import { isOpen, messages as assistantMessages, contextType, signalContext, screenContext, closeAssistant, clearSignalContext, clearScreenContext, screenContextMatchesLocation } from '$lib/stores/assistant';
   import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
+  import ZelinhoRail from '$lib/components/zelinho/ZelinhoRail.svelte';
   import { Sparkles, Trash2, X, SendHorizontal } from 'lucide-svelte';
   import { getSignalPresenter } from '$lib/gerente/signalPresenter.js';
 
@@ -30,6 +33,7 @@
       body: {
         context_type: $contextType,
         signal_id: $signalContext?.id || undefined,
+        screen_context: $signalContext ? undefined : ($screenContext || undefined),
       },
     };
   }
@@ -44,13 +48,69 @@
   }
 
   $: activeSignalPresenter = $signalContext ? getSignalPresenter($signalContext) : null;
+  $: if ($screenContext && !screenContextMatchesLocation($screenContext, $page.url.pathname, $page.url.search)) {
+    clearSignalContext();
+    clearScreenContext();
+  }
+  let inputElement;
+  let panelElement;
+  let isModalViewport = false;
+  let wasOpen = false;
+
+  onMount(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1279px)');
+    const updateViewport = () => { isModalViewport = mediaQuery.matches; };
+    updateViewport();
+    mediaQuery.addEventListener?.('change', updateViewport);
+    return () => mediaQuery.removeEventListener?.('change', updateViewport);
+  });
+
+  $: if ($isOpen && !wasOpen) {
+    wasOpen = true;
+    void tick().then(() => inputElement?.focus());
+  } else if (!$isOpen) {
+    wasOpen = false;
+  }
+
+  async function closePanel() {
+    closeAssistant();
+    await tick();
+    document.querySelector('[data-zelinho-rail]')?.focus();
+  }
+
+  function handleEscape(event) {
+    if (event.key === 'Escape' && $isOpen) void closePanel();
+  }
+
+  function handlePanelKeydown(event) {
+    if (!$isOpen || !isModalViewport || event.key !== 'Tab' || !panelElement) return;
+
+    const focusable = [...panelElement.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+    )].filter((element) => !element.hasAttribute('inert') && element.getClientRects().length > 0);
+    if (!focusable.length) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 </script>
+
+<svelte:window on:keydown={handleEscape} />
+
+<ZelinhoRail />
 
 {#if $isOpen}
   <div
-    class="md:hidden fixed inset-0 z-89 bg-black/50"
+    class="assistant-backdrop"
     role="presentation"
-    on:click={closeAssistant}
+    on:click={() => void closePanel()}
     aria-hidden="true"
   ></div>
 {/if}
@@ -74,11 +134,15 @@
   let:setInput
 >
   <div
+    bind:this={panelElement}
     class="assistant-panel"
     class:open={$isOpen}
-    role="complementary"
-    aria-label="Parceiro Zelinho"
+    role={$isOpen && isModalViewport ? 'dialog' : 'complementary'}
+    aria-label="Zelinho"
+    aria-modal={$isOpen && isModalViewport ? 'true' : undefined}
     aria-hidden={!$isOpen}
+    inert={!$isOpen}
+    on:keydown={handlePanelKeydown}
   >
     <div class="panel-header">
       <div class="flex items-center gap-2">
@@ -86,15 +150,15 @@
           <Sparkles class="size-5" aria-hidden="true" />
         </div>
         <div>
-          <div class="font-semibold text-sm">Parceiro Zelinho</div>
-          <div class="text-xs" style="opacity: 0.75;">Assistente IA do seu negócio</div>
+          <div class="font-semibold text-sm">Zelinho</div>
+          <div class="text-xs" style="opacity: 0.75;">{$screenContext?.title || 'Dados do seu negócio'}</div>
         </div>
       </div>
       <div class="flex items-center gap-1">
-        <button on:click={clearMessages} class="icon-btn" title="Limpar conversa" aria-label="Limpar conversa">
+        <button type="button" on:click={clearMessages} class="icon-btn" title="Limpar conversa" aria-label="Limpar conversa">
           <Trash2 class="size-4" />
         </button>
-        <button on:click={closeAssistant} class="icon-btn" aria-label="Fechar parceiro">
+        <button type="button" on:click={() => void closePanel()} class="icon-btn" aria-label="Fechar Zelinho">
           <X class="size-4" />
         </button>
       </div>
@@ -106,12 +170,19 @@
           {$signalContext.severity === 'critical' ? 'PRECISA DE VOCÊ' : $signalContext.severity === 'attention' ? 'FICA DE OLHO' : 'PRA SABER'}
         </span>
         <span class="signal-context-title">{activeSignalPresenter.titulo}</span>
-        <button class="signal-context-close" on:click={clearSignalContext} aria-label="Remover contexto do aviso"><X class="size-4" /></button>
+        <button type="button" class="signal-context-close" on:click={clearSignalContext} aria-label="Remover contexto do aviso"><X class="size-4" /></button>
+      </div>
+    {:else if $screenContext}
+      <div class="screen-context">
+        <span>Sobre</span>
+        <strong>{$screenContext.title}</strong>
+        <button type="button" class="signal-context-close" on:click={clearScreenContext} aria-label="Remover contexto da tela"><X class="size-4" /></button>
       </div>
     {:else}
       <div class="context-chips">
         {#each CONTEXT_CHIPS as chip}
           <button
+            type="button"
             class="chip"
             class:chip-active={$contextType === chip.value}
             on:click={() => ($contextType = chip.value)}
@@ -127,15 +198,14 @@
       {#if messages.length === 0}
         <div class="welcome-msg">
           <p class="font-semibold mb-1">Olá! Sou o Zelinho ✨</p>
-          <p class="text-sm" style="opacity: 0.75;">Tenho acesso aos dados do seu negócio e posso ajudar com análise de vendas, precificação, controle de despesas e muito mais.</p>
-          <p class="text-sm mt-2" style="opacity: 0.65;">Escolha um foco acima ou pergunte qualquer coisa sobre seu negócio.</p>
+          <p class="text-sm" style="opacity: 0.75;">Pergunte sobre vendas, produtos, despesas ou o que está aberto nesta tela.</p>
         </div>
       {/if}
 
       {#each messages as msg}
         <div class="p-msg {msg.role === 'user' ? 'p-user' : 'p-assistant'}">
           {#if msg.role === 'assistant' && !msg.content && isStreaming}
-            <span class="typing-dots" aria-label="Digitando...">
+            <span class="typing-dots" role="status" aria-live="polite" aria-label="Zelinho está digitando">
               <span></span><span></span><span></span>
             </span>
           {:else if msg.role === 'assistant'}
@@ -150,8 +220,11 @@
     </div>
 
     <div class="panel-input-area">
+      <label class="sr-only" for="zelinho-message">Mensagem para o Zelinho</label>
       <input
+        id="zelinho-message"
         type="text"
+        bind:this={inputElement}
         value={input}
         on:input={(event) => setInput(event.currentTarget.value)}
         on:keydown={onKeyDown}
@@ -162,12 +235,13 @@
         maxlength="1000"
       />
       <button
+        type="button"
         on:click={sendMessage}
         disabled={isStreaming || !input.trim()}
         class="panel-send-btn"
         aria-label="Enviar"
       >
-        <SendHorizontal class="size-4" />
+        <SendHorizontal class="size-4" aria-hidden="true" />
       </button>
     </div>
   </div>
@@ -178,32 +252,45 @@
     position: fixed;
     top: 0;
     right: 0;
-    width: 400px;
+    width: 24rem;
+    max-width: 100vw;
     height: 100vh;
-    background: var(--bg-card);
+    background: var(--bg-panel);
     border-left: 1px solid var(--border-card);
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
     z-index: 90;
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
-    transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform var(--transition-fast);
   }
 
   .assistant-panel.open {
     transform: translateX(0);
   }
 
-  @media (max-width: 640px) {
+  .assistant-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 89;
+    background: color-mix(in srgb, var(--text-inverse) 62%, transparent);
+  }
+
+  @media (min-width: 1280px) {
+    .assistant-backdrop { display: none; }
+  }
+
+  @media (max-width: 767px) {
     .assistant-panel {
       width: 100vw;
+      border-left: 0;
     }
   }
 
   .panel-header {
     padding: 14px 16px;
-    background: var(--primary);
-    color: white;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-main);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -214,7 +301,8 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
+    background: color-mix(in srgb, var(--primary) 16%, var(--bg-panel));
+    color: var(--primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -222,18 +310,30 @@
   }
 
   .icon-btn {
-    background: none;
-    border: none;
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    background: transparent;
+    border: 0;
     cursor: pointer;
-    color: white;
-    opacity: 0.8;
-    padding: 5px;
-    border-radius: 4px;
+    color: var(--text-muted);
+    padding: 0;
+    border-radius: 8px;
     line-height: 0;
     transition: opacity 0.15s;
   }
   .icon-btn:hover {
-    opacity: 1;
+    background: var(--sidebar-item-hover-bg);
+    color: var(--text-main);
+  }
+
+  .icon-btn:focus-visible,
+  .signal-context-close:focus-visible,
+  .chip:focus-visible,
+  .panel-send-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
   }
 
   .context-chips {
@@ -248,11 +348,14 @@
   .signal-context { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 9px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-input); }
   .signal-context-tag { flex: 0 0 auto; color: var(--primary); font-size: 10px; font-weight: 700; letter-spacing: .06em; }.signal-context-tag.attention { color: var(--status-warning-text); }.signal-context-tag.critical { color: var(--status-error-text); }
   .signal-context-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-main); font-size: 12px; font-weight: 600; }
-  .signal-context-close { display: grid; place-items: center; flex: 0 0 auto; margin-left: auto; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 3px; }
+  .signal-context-close { display: grid; place-items: center; width: 44px; height: 44px; place-self: center; flex: 0 0 auto; margin-left: auto; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer; padding: 0; }
+  .screen-context { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 9px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-muted); font-size: 12px; }
+  .screen-context strong { min-width: 0; overflow: hidden; color: var(--text-main); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 
   .chip {
     padding: 4px 12px;
-    border-radius: 20px;
+    min-height: 44px;
+    border-radius: 9999px;
     font-size: 12px;
     font-weight: 500;
     border: 1px solid var(--border-subtle);
@@ -267,7 +370,7 @@
   }
   .chip-active {
     background: var(--primary);
-    color: white;
+    color: var(--text-inverse);
     border-color: var(--primary);
   }
 
@@ -283,16 +386,17 @@
   .welcome-msg {
     color: var(--text-muted);
     font-size: 13px;
-    text-align: center;
-    padding: 20px 10px;
-    background: var(--bg-input);
-    border-radius: 12px;
+    text-align: left;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
   }
 
   .p-msg {
     max-width: 88%;
     padding: 10px 14px;
-    border-radius: 14px;
+    border-radius: 8px;
     font-size: 13px;
     line-height: 1.5;
     word-break: break-word;
@@ -319,7 +423,7 @@
     font-weight: 700;
   }
   .markdown-content :global(code) {
-    background: rgba(0, 0, 0, 0.1);
+    background: color-mix(in srgb, var(--text-main) 8%, var(--bg-input));
     padding: 0.1rem 0.3rem;
     border-radius: 4px;
     font-family: monospace;
@@ -327,7 +431,7 @@
 
   .p-user {
     background: var(--primary);
-    color: white;
+    color: var(--text-inverse);
     align-self: flex-end;
     border-bottom-right-radius: 4px;
   }
@@ -350,7 +454,7 @@
     height: 6px;
     background: var(--text-muted);
     border-radius: 50%;
-    animation: dot-bounce 1.2s infinite ease-in-out;
+    animation: dot-pulse 1.2s infinite ease-in-out;
   }
   .typing-dots span:nth-child(2) {
     animation-delay: 0.2s;
@@ -358,15 +462,13 @@
   .typing-dots span:nth-child(3) {
     animation-delay: 0.4s;
   }
-  @keyframes dot-bounce {
+  @keyframes dot-pulse {
     0%,
     60%,
     100% {
-      transform: translateY(0);
       opacity: 0.4;
     }
     30% {
-      transform: translateY(-4px);
       opacity: 1;
     }
   }
@@ -382,7 +484,7 @@
   .panel-input {
     flex: 1;
     padding: 10px 14px;
-    border-radius: 22px;
+    border-radius: 8px;
     border: 1px solid var(--border-subtle);
     background: var(--bg-input);
     color: var(--text-main);
@@ -398,11 +500,11 @@
   }
 
   .panel-send-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
     background: var(--primary);
-    color: white;
+    color: var(--text-inverse);
     border: none;
     cursor: pointer;
     display: flex;
@@ -417,5 +519,10 @@
   .panel-send-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .assistant-panel { transition: none; }
+    .typing-dots span { animation: none; }
   }
 </style>

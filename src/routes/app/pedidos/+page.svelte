@@ -92,7 +92,7 @@
 
     await Promise.all([carregarProdutos(true), carregarEmpresa(), carregarCaixaAberto()]);
     await carregarPedidos();
-    pollTimer = setInterval(carregarPedidos, 3000);
+    pollTimer = setInterval(carregarPedidos, 30000);
   });
 
   onDestroy(() => {

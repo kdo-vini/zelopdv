@@ -62,8 +62,8 @@
 
         <aside class="space-y-5 lg:pt-10">
           {#each page.highlights as highlight, i}
-            <p class="text-lg leading-relaxed text-white" style="text-wrap: balance;">
-              <span class="text-sky-400 font-bold mr-2 tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+            <p class="text-lg leading-relaxed text-white flex items-start gap-3" style="text-wrap: balance;">
+              <Check class="size-5 text-sky-400 shrink-0 mt-0.5" aria-hidden="true" />
               {highlight}
             </p>
           {/each}
@@ -131,8 +131,8 @@
         <div class="grid md:grid-cols-3 gap-6">
           {#each page.steps as step, index}
             <div class="rounded-3xl border p-7 text-center" style="background: var(--bg-card); border-color: var(--border-card);">
-              <div class="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center text-2xl font-bold text-sky-300 bg-sky-500/10 border border-sky-500/20 mb-5">
-                {index + 1}
+              <div class="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center bg-sky-500/10 border border-sky-500/20 mb-5">
+                <Check class="size-7 text-sky-300" aria-hidden="true" />
               </div>
               <h3 class="text-2xl font-semibold text-white mb-3">{step.title}</h3>
               <p class="leading-relaxed" style="color: var(--text-muted);">

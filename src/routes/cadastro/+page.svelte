@@ -123,12 +123,9 @@
         {/if}
         <button type="button"
           aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-          title="Pressione e segure para ver a senha"
-          on:mousedown={() => showPassword = true}
-          on:mouseup={() => showPassword = false}
-          on:mouseleave={() => showPassword = false}
-          on:touchstart={() => showPassword = true}
-          on:touchend={() => showPassword = false}
+          title="Clique para alternar a visualização da senha"
+          on:click={() => showPassword = !showPassword}
+          on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showPassword = !showPassword; }}}
           class="toggle-btn">
           {#if showPassword}
             <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -178,14 +175,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #64748b;
+    color: var(--text-muted);
     background: none;
     border: none;
     cursor: pointer;
     transition: color 0.15s;
   }
   .toggle-btn:hover {
-    color: #94a3b8;
+    color: var(--text-label);
   }
   .toggle-icon {
     width: 1.25rem;

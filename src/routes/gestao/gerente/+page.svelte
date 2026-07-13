@@ -57,7 +57,20 @@
       if (failures >= 2) addToast('O Zelinho ainda não conseguiu atualizar os dados.', 'error');
     } finally { loading = false; refreshing = false; }
   }
-  async function read(signalId) { const signal = signals.find((item) => item.id === signalId); if (!signal || signal.read_at) return; signal.read_at = new Date().toISOString(); signals = [...signals]; try { await markRead([signalId], supabase); } catch { addToast('Não foi possível marcar o aviso como lido.', 'warning'); } }
+  async function read(signalId) {
+    const signal = signals.find((item) => item.id === signalId);
+    if (!signal || signal.read_at) return;
+    const previousReadAt = signal.read_at;
+    signal.read_at = new Date().toISOString();
+    signals = [...signals];
+    try {
+      await markRead([signalId], supabase);
+    } catch {
+      signal.read_at = previousReadAt;
+      signals = [...signals];
+      addToast('Não foi possível marcar o aviso como lido.', 'warning');
+    }
+  }
   async function mute(type) { if (!profile || !ownerUserId || ['CASH_DIFFERENCE_RECURRING', 'STOCK_ZERO_WITH_DEMAND'].includes(type)) { addToast('Esse aviso permanece sempre ativo.', 'info'); return; } const muted = [...new Set([...mutedTypes, type])]; const gerente_prefs = { ...(profile.gerente_prefs || {}), muted_types: muted }; const { error: muteError } = await supabase.from('empresa_perfil').update({ gerente_prefs }).eq('user_id', ownerUserId); if (muteError) { addToast('Não foi possível silenciar esse tipo.', 'error'); return; } profile = { ...profile, gerente_prefs }; addToast('Esse tipo foi silenciado no briefing e no WhatsApp.', 'success'); }
   function ask() { addToast('O contexto deste aviso estará disponível no chat em breve.', 'info'); }
   function refresh() { refreshing = true; load({ silent: true }); }
@@ -66,13 +79,13 @@
 
 <svelte:head><title>Zelinho Gerente | ZeloPDV</title></svelte:head>
 <section class="manager-page">
-  <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4"><div><p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Zelinho</p><h1 class="text-xl font-bold text-slate-100 tracking-tight">Zelinho Gerente</h1></div>{#if enabled && analysedAt}<button class="refresh" on:click={refresh} disabled={refreshing} title="Atualizar dados">Analisado às {analysedAt}<span class:spinning={refreshing}><RefreshCw size={15} /></span></button>{/if}</div>
+  <div class="mb-6 flex items-end justify-between border-b  pb-4" style="border-color: var(--border-card);"><div><p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p><h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Zelinho Gerente</h1></div>{#if enabled && analysedAt}<button class="refresh" on:click={refresh} disabled={refreshing} title="Atualizar dados">Analisado às {analysedAt}<span class:spinning={refreshing}><RefreshCw size={15} /></span></button>{/if}</div>
   {#if loading}<div class="skeleton hero"></div><div class="skeleton card"></div><div class="skeleton card"></div><div class="skeleton card"></div>
-  {:else if error}<div class="error-state"><CloudOff size={56} /><p>{error}</p><button on:click={() => load()}>Tentar novamente</button></div>
+  {:else if error}<div class="error-state"><CloudOff size={56} aria-hidden="true" /><p>{error}</p><button type="button" on:click={() => load()}>Tentar novamente</button></div>
   {:else if !enabled}<div class="empty-state"><h2>O Zelinho Gerente ainda não está disponível para esta empresa.</h2><p>Quando o piloto estiver habilitado, os resumos e avisos aparecerão aqui.</p></div>
-  {:else}<ZelinhoBriefing signals={briefingSignals} snapshot={latestSnapshot} {learning} {salesDays} onRead={read} onAsk={ask} onMute={mute} /><SignalFeed {signals} {snapshots} onRead={read} onAsk={ask} onMute={mute} />{/if}
+  {:else}<ZelinhoBriefing signals={briefingSignals} snapshot={latestSnapshot} {learning} {salesDays} onRead={read} onAsk={ask} onMute={mute} /><SignalFeed {signals} {snapshots} {mutedTypes} onRead={read} onAsk={ask} onMute={mute} />{/if}
 </section>
 
 <style>
-  .manager-page { max-width: 900px; margin: 0 auto; }.refresh { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; }.refresh:disabled { opacity: .6; }.spinning { animation: spin .7s linear infinite; }.skeleton { border-radius: 8px; background: var(--bg-panel); animation: pulse 1.2s ease-in-out infinite; }.skeleton.hero { height: 260px; }.skeleton.card { height: 136px; margin-top: 10px; border-left: 3px solid var(--border-strong); }.error-state, .empty-state { padding: 40px 20px; text-align: center; border: 1px dashed var(--border-strong); border-radius: 8px; color: var(--text-muted); }.error-state :global(svg) { color: var(--text-muted); }.error-state button { margin-top: 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--bg-input); color: var(--text-label); padding: 7px 10px; cursor: pointer; }.empty-state h2 { color: var(--text-main); font-size: 16px; } @keyframes pulse { 50% { opacity: .5; } } @keyframes spin { to { transform: rotate(360deg); } } @media (max-width: 520px) { .manager-page { max-width: 100%; } }
+  .manager-page { max-width: 900px; margin: 0 auto; }.refresh { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; border: 0; background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; }.refresh:disabled { opacity: .6; }.spinning { animation: spin .7s linear infinite; }.skeleton { border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-panel); animation: pulse 1.2s ease-in-out infinite; }.skeleton.hero { height: 260px; }.skeleton.card { height: 136px; margin-top: 10px; }.error-state, .empty-state { padding: 40px 20px; text-align: center; border: 1px dashed var(--border-strong); border-radius: 8px; color: var(--text-muted); }.error-state :global(svg) { color: var(--text-muted); }.error-state button { min-height: 44px; margin-top: 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--bg-input); color: var(--text-label); padding: 7px 10px; cursor: pointer; }.empty-state h2 { color: var(--text-main); font-size: 16px; } @keyframes pulse { 50% { opacity: .5; } } @keyframes spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .spinning, .skeleton { animation: none; } } @media (max-width: 520px) { .manager-page { max-width: 100%; } }
 </style>

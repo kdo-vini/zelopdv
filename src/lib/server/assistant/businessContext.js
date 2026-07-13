@@ -6,6 +6,45 @@ function round(value) {
   return Math.round((number(value) + Number.EPSILON) * 100) / 100;
 }
 
+const CATEGORY_GROUP_STOP_WORDS = new Set(['com', 'sem', 'para', 'dos', 'das', 'por', 'mais', 'menos']);
+
+function categoryTerms(name) {
+  return [...new Set(
+    String(name || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('pt-BR')
+      .split(/[^a-z]+/)
+      .filter((term) => term.length >= 4 && !CATEGORY_GROUP_STOP_WORDS.has(term))
+      .map((term) => term.replace(/s$/, ''))
+  )];
+}
+
+function buildCategoryGroups(categories, totalSales) {
+  const groupsByTerm = new Map();
+
+  for (const category of categories) {
+    for (const term of categoryTerms(category.nome)) {
+      const group = groupsByTerm.get(term) || [];
+      group.push(category);
+      groupsByTerm.set(term, group);
+    }
+  }
+
+  return Array.from(groupsByTerm.entries())
+    .filter(([, categoriesForTerm]) => categoriesForTerm.length > 1)
+    .map(([termo, categoriesForTerm]) => ({
+      termo,
+      categorias: categoriesForTerm.map((category) => category.nome).sort((left, right) => left.localeCompare(right, 'pt-BR')),
+      unidades_vendidas_30d: categoriesForTerm.reduce((sum, category) => sum + number(category.unidades_vendidas_30d), 0),
+      receita_30d: round(categoriesForTerm.reduce((sum, category) => sum + number(category.receita_30d), 0)),
+      media_unidades_por_venda: totalSales
+        ? round(categoriesForTerm.reduce((sum, category) => sum + number(category.unidades_vendidas_30d), 0) / totalSales)
+        : 0,
+    }))
+    .sort((left, right) => right.receita_30d - left.receita_30d || left.termo.localeCompare(right.termo, 'pt-BR'));
+}
+
 /**
  * Produces compact, auditable sales and catalog facts for the assistant.
  * It deliberately groups only by stored product/category relations: names are
@@ -77,6 +116,7 @@ export function buildCatalogSalesContext({ vendas = [], itens = [], pagamentos =
       };
     })
     .sort((left, right) => right.receita_30d - left.receita_30d || left.nome.localeCompare(right.nome, 'pt-BR'));
+  const categoryGroups = buildCategoryGroups(categories, totalSales);
 
   return {
     vendas: {
@@ -93,6 +133,7 @@ export function buildCatalogSalesContext({ vendas = [], itens = [], pagamentos =
         .slice(0, 10),
     },
     categorias: categories,
+    grupos_de_categorias: categoryGroups,
     classificacao_categorias: 'As vendas por categoria usam a categoria atual de cada produto. Itens vendidos antes de uma recategorização seguem essa classificação atual.',
     catalogo: {
       produtos_cadastrados: produtos.length,

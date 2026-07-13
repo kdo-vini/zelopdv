@@ -1608,7 +1608,7 @@
     justify-content: center;
     padding: 0.75rem 1.5rem;
     background: var(--primary);
-    color: #fff;
+    color: var(--primary-text);
     border: none;
     border-radius: 8px;
     font-weight: 600;
@@ -1673,15 +1673,15 @@
   .plan-card.current { border-color: var(--success, #16a34a); background: rgba(34,197,94,0.04); }
   .plan-card.current:hover { transform: none; }
   .plan-card.bundle { border-color: rgba(99, 102, 241, 0.5); }
-  .plan-card.bundle.selected { border-color: rgb(99, 102, 241); box-shadow: 0 0 0 1px rgb(99, 102, 241); }
+  .plan-card.bundle.selected { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
   .plan-card:disabled { cursor: default; opacity: 0.85; }
 
   .plan-badge {
     position: absolute;
     top: -10px;
     right: 12px;
-    background: rgb(99, 102, 241);
-    color: #fff;
+    background: var(--primary);
+    color: var(--primary-text);
     font-size: 0.65rem;
     font-weight: 800;
     text-transform: uppercase;
@@ -1700,7 +1700,7 @@
   .plan-savings {
     font-size: 0.75rem;
     font-weight: 700;
-    color: rgb(99, 102, 241);
+    color: var(--primary);
     background: rgba(99, 102, 241, 0.1);
     padding: 0.15rem 0.4rem;
     border-radius: 4px;
@@ -1859,7 +1859,7 @@
     border: 1px solid var(--border-subtle);
     border-radius: 14px;
     background: var(--bg-card);
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
   }
 
   .checkout-track {
@@ -2051,7 +2051,7 @@
     color: var(--text-main);
     font-size: 0.82rem;
     line-height: 1.45;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
     opacity: 0;
     pointer-events: none;
     transform: translateY(4px);
@@ -2176,7 +2176,7 @@
     object-fit: contain;
     border-radius: 8px;
     border: 1px solid var(--border-subtle);
-    background: white;
+    background: var(--bg-card);
     padding: 0.75rem;
     justify-self: center;
   }
@@ -2248,7 +2248,7 @@
     border-radius: 18px;
     background: var(--bg-card);
     color: var(--text-main);
-    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.32);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.32);
   }
 
   .pix-modal-close {
@@ -2414,7 +2414,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: 14px;
       background: var(--bg-card);
-      box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
     }
 
     .mobile-step-copy {
@@ -2472,7 +2472,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: 16px;
       background: var(--bg-card);
-      box-shadow: 0 22px 60px rgba(15, 23, 42, 0.26);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.26);
     }
 
     .mobile-sticky-copy {
@@ -2527,7 +2527,7 @@
 
     .checkout-shell {
       border-radius: 18px;
-      box-shadow: 0 28px 60px rgba(15, 23, 42, 0.16);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
     }
 
     .step-panel-header-large {

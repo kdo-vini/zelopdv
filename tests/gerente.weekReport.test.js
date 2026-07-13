@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWeekReport } from '../src/lib/gerente/weekReport.js';
+import { buildWeekReport, normalizeWeekStart } from '../src/lib/gerente/weekReport.js';
 
 const snapshot = (date, receita, vendas, metrics = {}) => ({
   snapshot_date: date,
@@ -11,6 +11,13 @@ const snapshot = (date, receita, vendas, metrics = {}) => ({
 });
 
 describe('buildWeekReport', () => {
+  it('normalizes arbitrary dates and clamps navigation to eight weeks', () => {
+    expect(normalizeWeekStart('2026-07-12', '2026-07-13')).toBe('2026-07-06');
+    expect(normalizeWeekStart('2026-07-20', '2026-07-13')).toBe('2026-07-13');
+    expect(normalizeWeekStart('2026-05-01', '2026-07-13')).toBe('2026-05-25');
+    expect(normalizeWeekStart('2026-02-31', '2026-07-13')).toBe('2026-07-13');
+  });
+
   it('aggregates a selected Monday-to-Sunday week and compares it to the prior week', () => {
     const snapshots = [
       snapshot('2026-07-06', 100, 10, { por_produto: [{ id_produto: 1, nome: 'X-Salada', qtd: 4, receita: 40 }], mix_pagamentos: { pix: 70, dinheiro: 30 }, custos_plataforma: 5 }),

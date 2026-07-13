@@ -131,11 +131,10 @@
           required
         />
         <button type="button"
-          on:mousedown={() => showPassword = true}
-          on:mouseup={() => showPassword = false}
-          on:mouseleave={() => showPassword = false}
-          on:touchstart={() => showPassword = true}
-          on:touchend={() => showPassword = false}
+          aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+          title="Clique para alternar a visualização da senha"
+          on:click={() => showPassword = !showPassword}
+          on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showPassword = !showPassword; }}}
           class="toggle-btn">
           {#if showPassword}
             <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
@@ -173,11 +172,10 @@
           required
         />
         <button type="button"
-          on:mousedown={() => showConfirm = true}
-          on:mouseup={() => showConfirm = false}
-          on:mouseleave={() => showConfirm = false}
-          on:touchstart={() => showConfirm = true}
-          on:touchend={() => showConfirm = false}
+          aria-label={showConfirm ? 'Ocultar senha' : 'Mostrar senha'}
+          title="Clique para alternar a visualização da senha"
+          on:click={() => showConfirm = !showConfirm}
+          on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showConfirm = !showConfirm; }}}
           class="toggle-btn">
           {#if showConfirm}
             <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>

@@ -3,6 +3,7 @@
   import { ensureActiveSubscription } from '$lib/guards';
   import GestaoSidebar from '$lib/components/GestaoSidebar.svelte';
   import AssistantChat from '$lib/components/AssistantChat.svelte';
+  import { isOpen as isZelinhoOpen } from '$lib/stores/assistant';
   import Spinner from '$lib/components/ui/Spinner.svelte';
 
   let ready = false;
@@ -17,7 +18,7 @@
 </script>
 
 {#if ready}
-  <div class="flex h-screen overflow-hidden" style="background: var(--bg-app);">
+  <div class:zelinho-open={$isZelinhoOpen} class="zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app);">
     <GestaoSidebar />
     <div class="flex-1 flex flex-col overflow-hidden min-w-0">
       <main class="flex-1 overflow-y-auto p-6 pt-16 md:p-8">
@@ -34,3 +35,11 @@
   </div>
 {/if}
 <AssistantChat />
+
+<style>
+  @media (min-width: 1280px) {
+    .zelinho-workspace { padding-right: 24rem; }
+    .zelinho-workspace:not(.zelinho-open) { padding-right: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .zelinho-workspace { transition: none; } }
+</style>

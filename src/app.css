@@ -60,6 +60,11 @@
   color: var(--accent);
 }
 
+/* Tabular numbers — use on ALL monetary values, counts, and numeric data */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- GLOBAL COMPONENTS --- */
 
 .input-form {
@@ -244,7 +249,7 @@
   border-radius: 0.5rem;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--primary-text);
   background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
   border: none;
   cursor: pointer;
@@ -283,14 +288,14 @@
 }
 
 .auth-link {
-  color: #38bdf8;
+  color: var(--link);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.15s ease;
 }
 
 .auth-link:hover {
-  color: #7dd3fc;
+  color: var(--link-hover);
   text-decoration: underline;
 }
 
@@ -328,7 +333,7 @@
   align-items: center;
   gap: 0.75rem;
   margin: 1.25rem 0;
-  color: #475569;
+  color: #64748b;
   font-size: 0.8125rem;
 }
 

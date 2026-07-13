@@ -2,13 +2,13 @@
   import { page } from '$app/stores';
   import { supabase } from '$lib/supabaseClient';
   import { sessionStore, companyNameStore } from '$lib/stores/session';
-  import { toggleAssistant, closeAssistant } from '$lib/stores/assistant';
+  import { closeAssistant } from '$lib/stores/assistant';
   import { unreadCount } from '$lib/stores/gerente';
   import SidebarBadge from '$lib/components/gerente/SidebarBadge.svelte';
   import { toggleSupport, closeSupport, isSupportOpen } from '$lib/stores/support';
   import { getAccessContext, getAccessContextSync } from '$lib/accessControl';
   import { onMount } from 'svelte';
-  import { X, Menu, ChevronLeft, ChevronRight, HelpCircle, Sparkles, LogOut, ShoppingBag, Table2, ListChecks, LayoutGrid, Package, Users, Boxes, BarChart3, Wrench, ArrowUpRight, Wallet, Puzzle, ChefHat, BookOpen, Receipt, Radar } from 'lucide-svelte';
+  import { X, Menu, ChevronLeft, ChevronRight, HelpCircle, LogOut, ShoppingBag, Table2, ListChecks, LayoutGrid, Package, Users, Boxes, BarChart3, Wrench, ArrowUpRight, Wallet, Puzzle, ChefHat, BookOpen, Receipt, Radar } from 'lucide-svelte';
 
   let mobileOpen = false;
   let collapsed = false;
@@ -462,20 +462,6 @@
           >
             <HelpCircle class="size-5 shrink-0" style="color: {$isSupportOpen ? '#0f766e' : 'var(--link)'};" aria-hidden="true" />
             <span class="label-text whitespace-nowrap">Suporte</span>
-          </button>
-        </li>
-        <li>
-          <button
-            on:click={() => { toggleAssistant(); closeSupport(); closeMobile(); }}
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden w-full text-left"
-            style="color: var(--text-main);"
-            on:mouseenter={e => e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'}
-            on:mouseleave={e => e.currentTarget.style.background = ''}
-            title="Parceiro IA"
-            aria-label="Abrir Parceiro IA"
-          >
-            <Sparkles class="size-5 shrink-0" aria-hidden="true" />
-            <span class="label-text whitespace-nowrap">Parceiro IA</span>
           </button>
         </li>
       </ul>

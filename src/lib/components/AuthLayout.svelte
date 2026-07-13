@@ -71,15 +71,13 @@
     z-index: 1;
     width: 100%;
     max-width: 420px;
-    background: rgba(30, 41, 59, 0.65);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(51, 65, 85, 0.5);
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
     border-radius: 1rem;
     padding: 2rem 1.75rem;
     box-shadow:
-      0 0 0 1px rgba(14,165,233,0.04),
-      0 8px 32px rgba(0,0,0,0.35),
+      0 0 0 1px color-mix(in srgb, var(--primary) 4%, transparent),
+      0 8px 24px rgba(0,0,0,0.35),
       0 2px 8px rgba(0,0,0,0.2);
   }
 

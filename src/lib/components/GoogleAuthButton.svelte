@@ -62,9 +62,9 @@
     border-radius: 0.5rem;
     font-size: 0.9375rem;
     font-weight: 500;
-    color: #1f2937;
-    background-color: #ffffff;
-    border: 1px solid #d1d5db;
+    color: var(--text-main);
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
     cursor: pointer;
     transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
     -webkit-appearance: none;
@@ -73,8 +73,8 @@
   }
 
   .google-btn:hover:not(:disabled) {
-    background-color: #f9fafb;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+    background-color: var(--bg-panel);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent);
   }
 
   .google-btn:active:not(:disabled) {
@@ -96,8 +96,8 @@
   .google-spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(66, 133, 244, 0.25);
-    border-top-color: #4285F4;
+    border: 2px solid color-mix(in srgb, var(--primary) 25%, transparent);
+    border-top-color: var(--primary);
     border-radius: 50%;
     animation: google-spin 0.65s linear infinite;
     flex-shrink: 0;

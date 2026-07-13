@@ -79,8 +79,8 @@
 <svelte:head><title>Preferências do Zelinho | ZeloPDV</title></svelte:head>
 
 <section class="prefs-page">
-  <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
-    <div><p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Zelinho</p><h1 class="text-xl font-bold text-slate-100 tracking-tight">Preferências</h1></div>
+  <div class="mb-6 flex items-end justify-between border-b  pb-4" style="border-color: var(--border-card);">
+    <div><p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p><h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Preferências</h1></div>
   </div>
 
   {#if loading}
@@ -93,7 +93,7 @@
     {/if}
     <section class="preference-card">
       <div class="card-heading"><MessageCircle size={20} /><div><h2>Resumo no WhatsApp</h2><p>Uma mensagem por dia com os números e pontos que merecem atenção.</p></div></div>
-      <label class="switch-row"><input type="checkbox" bind:checked={whatsappEnabled} disabled={isSubUser} /><span>Receber resumo diário</span></label>
+      <label class="switch-row"><input type="checkbox" class="themed-checkbox" bind:checked={whatsappEnabled} disabled={isSubUser} /><span>Receber resumo diário</span></label>
       {#if whatsappEnabled}
         <div class="form-grid">
           <label><span>WhatsApp</span><input value={contact} inputmode="numeric" placeholder="(00) 00000-0000" disabled={isSubUser} on:input={(event) => { contact = maskPhone(event.currentTarget.value); event.currentTarget.value = contact; }} /></label>
@@ -107,7 +107,7 @@
     <section class="preference-card">
       <div class="card-heading"><div><h2>O que o Zelinho te avisa</h2><p>Silenciar tira o aviso do briefing e do WhatsApp, mas ele continua disponível no histórico.</p></div></div>
       <div class="groups">
-        {#each signalGroups as group}<div class="signal-group"><h3>{group.label}</h3>{#each group.types as [type, label]}<label class="signal-option"><input type="checkbox" checked={lockedTypes.has(type) ? false : mutedTypes.includes(type)} disabled={lockedTypes.has(type) || isSubUser} on:change={() => toggleMuted(type)} /><span>{label}</span>{#if lockedTypes.has(type)}<span class="locked"><Lock size={13} /> Sempre ativo</span>{/if}</label>{/each}</div>{/each}
+        {#each signalGroups as group}<div class="signal-group"><h3>{group.label}</h3>{#each group.types as [type, label]}<label class="signal-option"><input type="checkbox" class="themed-checkbox" checked={lockedTypes.has(type) ? false : mutedTypes.includes(type)} disabled={lockedTypes.has(type) || isSubUser} on:change={() => toggleMuted(type)} /><span>{label}</span>{#if lockedTypes.has(type)}<span class="locked"><Lock size={13} /> Sempre ativo</span>{/if}</label>{/each}</div>{/each}
       </div>
     </section>
     {#if !isSubUser}<div class="save-row"><Button on:click={save} disabled={saving}><Save />{saving ? 'Salvando...' : 'Salvar preferências'}</Button></div>{/if}
@@ -115,5 +115,13 @@
 </section>
 
 <style>
-  .prefs-page { max-width: 820px; margin: 0 auto; }.preference-card { padding: 20px; margin-bottom: 16px; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-card); }.card-heading { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 18px; color: var(--primary); }.card-heading h2 { color: var(--text-main); font-size: 15px; font-weight: 700; }.card-heading p, .notice, .schedule-note { margin-top: 3px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }.schedule-note { margin-top: 8px; }.notice { padding: 10px 12px; margin: 0 0 16px; border: 1px solid var(--status-warning-border); background: var(--status-warning-bg); color: var(--status-warning-text); border-radius: 6px; }.switch-row, .signal-option { display: flex; align-items: center; gap: 9px; color: var(--text-label); font-size: 14px; }.switch-row { margin-bottom: 18px; }.switch-row input, .signal-option input { accent-color: var(--primary); }.form-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }.form-grid label { display: grid; gap: 6px; color: var(--text-muted); font-size: 12px; }.form-grid input { width: 100%; height: 36px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-input); color: var(--text-main); padding: 0 10px; font-size: 14px; }.example-toggle { margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--link); font-size: 13px; cursor: pointer; }.example { margin-top: 10px; padding: 12px; border-left: 3px solid var(--primary); background: var(--bg-panel); color: var(--text-muted); white-space: pre-line; font-size: 13px; line-height: 1.55; }.groups { display: grid; gap: 18px; }.signal-group h3 { margin-bottom: 7px; color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }.signal-option { min-height: 32px; border-bottom: 1px solid var(--border-subtle); }.signal-option:last-child { border-bottom: 0; }.locked { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--text-muted); font-size: 11px; }.save-row { display: flex; justify-content: flex-end; padding-top: 4px; }.skeleton { height: 230px; border-radius: 8px; background: var(--bg-panel); animation: pulse 1.2s ease-in-out infinite; }.skeleton.short { height: 280px; margin-top: 16px; } @keyframes pulse { 50% { opacity: .5; } } @media (max-width: 520px) { .locked { font-size: 10px; } }
+  .prefs-page { max-width: 820px; margin: 0 auto; }.preference-card { padding: 20px; margin-bottom: 16px; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-card); }.card-heading { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 18px; color: var(--primary); }.card-heading h2 { color: var(--text-main); font-size: 15px; font-weight: 700; }.card-heading p, .notice, .schedule-note { margin-top: 3px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }.schedule-note { margin-top: 8px; }.notice { padding: 10px 12px; margin: 0 0 16px; border: 1px solid var(--status-warning-border); background: var(--status-warning-bg); color: var(--status-warning-text); border-radius: 6px; }.switch-row, .signal-option { display: flex; align-items: center; gap: 9px; color: var(--text-label); font-size: 14px; }.switch-row { margin-bottom: 18px; }.form-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }.form-grid label { display: grid; gap: 6px; color: var(--text-muted); font-size: 12px; }.form-grid input { width: 100%; height: 36px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-input); color: var(--text-main); padding: 0 10px; font-size: 14px; }.example-toggle { margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--link); font-size: 13px; cursor: pointer; }.example { margin-top: 10px; padding: 12px;  background: var(--bg-panel); color: var(--text-muted); white-space: pre-line; font-size: 13px; line-height: 1.55; }.groups { display: grid; gap: 18px; }.signal-group h3 { margin-bottom: 7px; color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }.signal-option { min-height: 32px; border-bottom: 1px solid var(--border-subtle); }.signal-option:last-child { border-bottom: 0; }.locked { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--text-muted); font-size: 11px; }.save-row { display: flex; justify-content: flex-end; padding-top: 4px; }.skeleton { height: 230px; border-radius: 8px; background: var(--bg-panel); animation: pulse 1.2s ease-in-out infinite; }.skeleton.short { height: 280px; margin-top: 16px; } @keyframes pulse { 50% { opacity: .5; } } @media (max-width: 520px) { .locked { font-size: 10px; } }
+  .switch-row { min-height: 44px; }
+  .signal-option { min-height: 44px; }
+  .form-grid input { height: 44px; }
+  .example-toggle { min-height: 44px; }
+  .save-row :global(button) { min-height: 44px; }
+  .example { border: 1px solid var(--border-subtle); border-radius: 6px; }
+  .skeleton { border: 1px solid var(--border-card); }
+  @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
 </style>
