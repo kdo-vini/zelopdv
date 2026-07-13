@@ -58,6 +58,17 @@ describe('rankSignals', () => {
     expect(result.selected[0].dedupe_key).toBe('CRIT');
   });
 
+  it('never lets a high-magnitude info signal outrank a critical signal without delta evidence', () => {
+    const signals = [
+      // No delta_pct/shift_pp evidence, so magnitude is capped at 1 (e.g. STOCK_ZERO_WITH_DEMAND).
+      makeSignal({ severity: 'critical', confidence: 0.9, dedupe_key: 'CRIT_NO_DELTA', evidence: {} }),
+      // Large positive delta (a 62% sales spike) pushes magnitude to its 3.0 cap.
+      makeSignal({ severity: 'info', confidence: 0.98, dedupe_key: 'INFO_BIG_DELTA', evidence: { delta_pct: 0.62 } }),
+    ];
+    const result = rankSignals(signals, { maxPerDay: 1 });
+    expect(result.selected[0].dedupe_key).toBe('CRIT_NO_DELTA');
+  });
+
   it('all selected signals have score > 0', () => {
     const signals = [
       makeSignal({ severity: 'critical', confidence: 0.9, evidence: { delta_pct: -0.5 } }),

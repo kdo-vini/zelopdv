@@ -3,7 +3,11 @@
  *
  * Fluxo:
  * 1. Gate mínimo de confiança (confidence ≥ 0.5).
- * 2. Score = severityWeight × magnitudeFactor × confidence.
+ * 2. Score = severityWeight × 1000 + magnitudeFactor × confidence.
+ *    Severidade é a camada de prioridade primária; magnitude × confidence
+ *    só desempata sinais da mesma severidade (nunca ultrapassa a diferença
+ *    entre duas camadas), então um sinal "info" com delta grande não pode
+ *    roubar a vaga de um sinal "critical" sem evidência de delta.
  * 3. Seleciona top N (MAX_SIGNALS_PER_DAY) do dia.
  * 4. Cooldown: verifica último sinal do mesmo dedupe_key.
  */
@@ -36,7 +40,11 @@ function magnitudeFactor(signal) {
 
 /**
  * Calcula o score de um sinal.
- * score = severityWeight × magnitudeFactor × confidence
+ * score = severityWeight × 1000 + magnitudeFactor × confidence
+ *
+ * O termo `magnitudeFactor × confidence` fica no intervalo [0, 3], bem menor
+ * que os 1000 pontos que separam cada camada de severidade — então ele nunca
+ * pode elevar um sinal para a camada de severidade acima da sua.
  * @param {BusinessSignal} signal
  * @returns {number}
  */
@@ -44,7 +52,7 @@ function computeScore(signal) {
   const severityWeight = SEVERITY_WEIGHTS[signal.severity] || 1;
   const magnitude = magnitudeFactor(signal);
   const confidence = signal.confidence || 0;
-  return Math.round(severityWeight * magnitude * confidence * 10000) / 10000;
+  return Math.round((severityWeight * 1000 + magnitude * confidence) * 10000) / 10000;
 }
 
 /**
