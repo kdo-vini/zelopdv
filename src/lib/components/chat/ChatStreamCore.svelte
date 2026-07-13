@@ -18,6 +18,15 @@
   let input = '';
   let isStreaming = false;
   let messagesEl;
+  let abortController = null;
+
+  // If the caller resets the conversation (switching signal/screen context)
+  // while a response is still streaming in, that stream is now stale — abort
+  // it instead of leaving isStreaming stuck true, which would silently
+  // ignore the next send until the abandoned request finishes on its own.
+  $: if ($messagesStore.length === 0 && isStreaming) {
+    abortController?.abort();
+  }
 
   marked.use({
     renderer: {
@@ -125,6 +134,8 @@
     const currentMessages = $messagesStore;
     dispatch('send', { content, messages: currentMessages });
 
+    abortController = new AbortController();
+
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -135,7 +146,8 @@
         body: JSON.stringify({
           messages: getRequestMessages(currentMessages),
           ...(requestConfig?.body || {})
-        })
+        }),
+        signal: abortController.signal
       });
 
       if (!response.ok || !response.body) {
@@ -194,9 +206,14 @@
           }
         }
       }
-    } catch {
-      updateLastAssistantMessage(connectionErrorMessage);
+    } catch (err) {
+      // Aborted because the conversation was reset out from under this
+      // request (see the reactive abort above) — the array it would touch
+      // now belongs to a different conversation, so stay quiet instead of
+      // showing a connection error on it.
+      if (err?.name !== 'AbortError') updateLastAssistantMessage(connectionErrorMessage);
     } finally {
+      abortController = null;
       isStreaming = false;
       scrollToBottom();
       dispatch('streamComplete', {
