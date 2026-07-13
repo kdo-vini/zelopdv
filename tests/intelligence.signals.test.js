@@ -254,6 +254,9 @@ describe('S10 — STOCK_ZERO_WITH_DEMAND', () => {
     const s10 = detectSignals(ctx).find((s) => s.type === 'STOCK_ZERO_WITH_DEMAND');
     expect(s10).toBeDefined();
     expect(s10.evidence.id_produto).toBe(1);
+    // window.start must reflect the actual 7-day lookback, not just equal end
+    // (a stale copy-paste bug made every multi-day signal report a 0-day window).
+    expect(s10.evidence.window).toEqual({ start: '2026-07-03', end: '2026-07-09', days: 7 });
   });
 
   it('supressão: S10 suprime S4 do mesmo produto', () => {

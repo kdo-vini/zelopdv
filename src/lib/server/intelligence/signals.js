@@ -10,7 +10,7 @@
  * - Nenhum dado bruto (vendas, itens) — apenas agregações de DailyMetrics.
  */
 
-import { weekdayOf } from './tz.js';
+import { addDays, weekdayOf } from './tz.js';
 import {
   SIGNAL_THRESHOLDS,
   CLOSED_DAY_HEURISTIC_RATIO,
@@ -385,7 +385,7 @@ DETECTORS.push({
           delta_pct: roundDelta(delta),
           revenue_share_28d: revenue28d.get(key) / Math.max(1, [...revenue28d.values()].reduce((s, v) => s + v, 0)),
           blocks: baselineQtys.map(Math.round),
-          window: { start: ctx.targetDate, end: ctx.targetDate, days: 35 },
+          window: { start: addDays(ctx.targetDate, -34), end: ctx.targetDate, days: 35 },
           sample_size: baselineQtys.filter((q) => q > 0).length,
           baseline_kind: 'prev_4_blocks_7d',
         },
@@ -459,7 +459,7 @@ DETECTORS.push({
         revenue_product_30d: roundMoney(topProduct[1]),
         revenue_total_30d: roundMoney(totalRevenue30d),
         qtd_vendas_30d: totalVendas30d,
-        window: { start: ctx.targetDate, end: ctx.targetDate, days: 30 },
+        window: { start: addDays(ctx.targetDate, -29), end: ctx.targetDate, days: 30 },
         sample_size: totalVendas30d,
         baseline_kind: 'absolute',
       },
@@ -545,7 +545,7 @@ DETECTORS.push({
         shift_pp: roundDelta(top.shift),
         n_recent: nRecent,
         n_previous: nPrevious,
-        window: { start: ctx.targetDate, end: ctx.targetDate, days: 35 },
+        window: { start: addDays(ctx.targetDate, -34), end: ctx.targetDate, days: 35 },
         sample_size: nRecent,
         baseline_kind: 'prev_28d_share',
       },
@@ -599,7 +599,7 @@ DETECTORS.push({
         share_pct: roundDelta(share),
         saldo_fiado_total_atual: ctx.today?.fiado_saldo_total ?? null,
         top_devedores: (ctx.topDevedores || []).slice(0, 3),
-        window: { start: ctx.targetDate, end: ctx.targetDate, days: 30 },
+        window: { start: addDays(ctx.targetDate, -29), end: ctx.targetDate, days: 30 },
         sample_size: totalVendas30d,
         baseline_kind: 'absolute_benchmark',
       },
@@ -644,7 +644,7 @@ DETECTORS.push({
           .map((f) => ({ date: f.data_fechamento, diferenca: f.diferenca }))
           .sort((a, b) => Math.abs(b.diferenca) - Math.abs(a.diferenca))[0] || null,
         last_dates: fechamentos.map((f) => f.data_fechamento),
-        window: { start: ctx.targetDate, end: ctx.targetDate, days: 30 },
+        window: { start: addDays(ctx.targetDate, -29), end: ctx.targetDate, days: 30 },
         sample_size: fechamentos.length,
         baseline_kind: 'absolute_count',
       },
@@ -740,7 +740,7 @@ DETECTORS.push({
           consumo_diario_medio: roundMoney(consumoDiario),
           coverage_days: roundMoney(coverage),
           dias_com_venda_14d: dias,
-          window: { start: ctx.targetDate, end: ctx.targetDate, days: 14 },
+          window: { start: addDays(ctx.targetDate, -13), end: ctx.targetDate, days: 14 },
           sample_size: dias,
           baseline_kind: 'self_consumption_14d',
         },
@@ -810,7 +810,7 @@ DETECTORS.push({
           estoque_atual: estoque,
           consumo_diario_medio_7d: roundMoney(consumoDiario),
           dias_com_venda_7d: dias,
-          window: { start: ctx.targetDate, end: ctx.targetDate, days: 7 },
+          window: { start: addDays(ctx.targetDate, -6), end: ctx.targetDate, days: 7 },
           sample_size: dias,
           baseline_kind: 'self_consumption_7d',
         },
