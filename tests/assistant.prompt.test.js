@@ -19,6 +19,7 @@ describe('assistant prompt', () => {
     expect(prompt).toContain('media_unidades_por_venda');
     expect(prompt).toContain('grupos_de_categorias');
     expect(prompt).toContain('nunca diga que elas não existem');
+    expect(prompt).toContain('nunca escreva os nomes dos campos');
     expect(prompt).not.toMatch(/lucro|margem|margens|vai acabar/i);
   });
 
