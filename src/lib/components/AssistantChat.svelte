@@ -5,14 +5,13 @@
   import { isOpen, messages as assistantMessages, contextType, signalContext, screenContext, closeAssistant, clearSignalContext, clearScreenContext, screenContextMatchesLocation } from '$lib/stores/assistant';
   import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
   import ZelinhoRail from '$lib/components/zelinho/ZelinhoRail.svelte';
-  import { Sparkles, Trash2, X, SendHorizontal } from 'lucide-svelte';
+  import { BarChart3, PackageSearch, Sparkles, Trash2, X, SendHorizontal } from 'lucide-svelte';
   import { getSignalPresenter } from '$lib/gerente/signalPresenter.js';
 
-  const CONTEXT_CHIPS = [
-    { value: 'geral', label: 'Geral' },
-    { value: 'vendas', label: 'Vendas' },
-    { value: 'produtos', label: 'Produtos' },
-    { value: 'despesas', label: 'Despesas' },
+  const ICEBREAKERS = [
+    { icon: BarChart3, title: 'Entenda suas vendas', prompt: 'Como foram minhas vendas de ontem comparadas à média?' },
+    { icon: PackageSearch, title: 'Acompanhe seus produtos', prompt: 'Quais produtos merecem minha atenção hoje?' },
+    { icon: Sparkles, title: 'Escolha um próximo passo', prompt: 'O que devo priorizar hoje no meu negócio?' },
   ];
 
   async function getToken() {
@@ -45,6 +44,11 @@
         if (nextQuestion) nextSetInput(nextQuestion);
       },
     };
+  }
+
+  function chooseIcebreaker(prompt) {
+    setInput(prompt);
+    void tick().then(() => inputElement?.focus());
   }
 
   $: activeSignalPresenter = $signalContext ? getSignalPresenter($signalContext) : null;
@@ -178,27 +182,21 @@
         <strong>{$screenContext.title}</strong>
         <button type="button" class="signal-context-close" on:click={clearScreenContext} aria-label="Remover contexto da tela"><X class="size-4" /></button>
       </div>
-    {:else}
-      <div class="context-chips">
-        {#each CONTEXT_CHIPS as chip}
-          <button
-            type="button"
-            class="chip"
-            class:chip-active={$contextType === chip.value}
-            on:click={() => ($contextType = chip.value)}
-            aria-pressed={$contextType === chip.value}
-          >
-            {chip.label}
-          </button>
-        {/each}
-      </div>
     {/if}
 
     <div class="panel-messages" use:registerMessagesContainer>
       {#if messages.length === 0}
         <div class="welcome-msg">
           <p class="font-semibold mb-1">Olá! Sou o Zelinho ✨</p>
-          <p class="text-sm" style="opacity: 0.75;">Pergunte sobre vendas, produtos, despesas ou o que está aberto nesta tela.</p>
+          <p class="text-sm" style="opacity: 0.75;">Escolha uma pergunta para começar ou escreva a sua.</p>
+          <div class="icebreakers" aria-label="Sugestões para começar">
+            {#each ICEBREAKERS as icebreaker}
+              <button type="button" class="icebreaker" on:click={() => chooseIcebreaker(icebreaker.prompt)}>
+                <span class="icebreaker-icon"><svelte:component this={icebreaker.icon} size={17} aria-hidden="true" /></span>
+                <span class="icebreaker-copy"><strong>{icebreaker.title}</strong><small>{icebreaker.prompt}</small></span>
+              </button>
+            {/each}
+          </div>
         </div>
       {/if}
 
@@ -330,19 +328,10 @@
 
   .icon-btn:focus-visible,
   .signal-context-close:focus-visible,
-  .chip:focus-visible,
+  .icebreaker:focus-visible,
   .panel-send-btn:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
-  }
-
-  .context-chips {
-    display: flex;
-    gap: 6px;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border-subtle);
-    flex-shrink: 0;
-    flex-wrap: wrap;
   }
 
   .signal-context { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 9px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-input); }
@@ -351,28 +340,6 @@
   .signal-context-close { display: grid; place-items: center; width: 44px; height: 44px; place-self: center; flex: 0 0 auto; margin-left: auto; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer; padding: 0; }
   .screen-context { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 9px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-muted); font-size: 12px; }
   .screen-context strong { min-width: 0; overflow: hidden; color: var(--text-main); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-
-  .chip {
-    padding: 4px 12px;
-    min-height: 44px;
-    border-radius: 9999px;
-    font-size: 12px;
-    font-weight: 500;
-    border: 1px solid var(--border-subtle);
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .chip:hover {
-    background: var(--bg-input);
-    color: var(--text-main);
-  }
-  .chip-active {
-    background: var(--primary);
-    color: var(--text-inverse);
-    border-color: var(--primary);
-  }
 
   .panel-messages {
     flex: 1;
@@ -391,6 +358,67 @@
     background: var(--bg-card);
     border: 1px solid var(--border-card);
     border-radius: 8px;
+  }
+
+  .icebreakers {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .icebreaker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 58px;
+    padding: 9px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-input);
+    color: var(--text-main);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+  }
+
+  .icebreaker:hover {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 7%, var(--bg-input));
+  }
+
+  .icebreaker-icon {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+    border-radius: 7px;
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 13%, var(--bg-panel));
+  }
+
+  .icebreaker-copy {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .icebreaker-copy strong {
+    color: var(--text-label);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .icebreaker-copy small {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.35;
+    line-clamp: 2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .p-msg {
@@ -524,5 +552,6 @@
   @media (prefers-reduced-motion: reduce) {
     .assistant-panel { transition: none; }
     .typing-dots span { animation: none; }
+    .icebreaker { transition: none; }
   }
 </style>

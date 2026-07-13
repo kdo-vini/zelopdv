@@ -6,6 +6,7 @@ import {
   contextType,
   closeAssistant,
   isOpen,
+  openAssistant,
   openAssistantWithContext,
   openAssistantWithSignal,
   screenContext,
@@ -70,6 +71,19 @@ describe('assistant context store', () => {
     closeAssistant();
     expect(get(isOpen)).toBe(false);
     expect(get(screenContext)).toBeNull();
+  });
+
+  it('opens the rail in the general focus after a previous contextual session', () => {
+    openAssistantWithContext({
+      source: 'relatorios',
+      title: 'Relatorio',
+      route: '/relatorios',
+      contextType: 'vendas',
+    });
+
+    closeAssistant();
+    openAssistant();
+    expect(get(contextType)).toBe('geral');
   });
 
   it('matches the full route, including query parameters, for screen context', () => {

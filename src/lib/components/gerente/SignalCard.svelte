@@ -1,7 +1,6 @@
 <script>
   import { onMount } from 'svelte';
   import { ChevronDown, MessageCircle, MoreHorizontal } from 'lucide-svelte';
-  import { Button } from '$lib/components/ui/button';
   import { getSignalPresenter, confiancaHumana } from '$lib/gerente/signalPresenter.js';
   import { openAssistantWithSignal } from '$lib/stores/assistant.js';
   import { closeSupport } from '$lib/stores/support.js';
@@ -54,7 +53,7 @@
   <div class:expanded={open} class="evidence"><div><dl>{#each presenter.formatEvidence(signal?.evidence || {}) as item}<div><dt>{item.label}</dt><dd class="tabular-nums">{item.valor}</dd></div>{/each}</dl></div></div>
   <div class="signal-actions">
     <a href={presenter.acaoSugerida.href} on:click={() => onRead(signal.id)}>{presenter.acaoSugerida.label}</a>
-    <Button variant="outline" size="sm" on:click={() => { void capturePostHogEvent('gerente_ask_zelinho', { signal_type: signal.type, severity: signal.severity }); onRead(signal.id); closeSupport(); if (!openAssistantWithSignal(signal)) onAsk(signal); }}><MessageCircle />Perguntar ao Zelinho</Button>
+    <button type="button" class="ask-zelinho" on:click={() => { void capturePostHogEvent('gerente_ask_zelinho', { signal_type: signal.type, severity: signal.severity }); onRead(signal.id); onAsk(signal); }}><MessageCircle aria-hidden="true" />Perguntar ao Zelinho</button>
   </div>
 </article>
 
@@ -74,6 +73,9 @@
   .numbers-toggle { min-height: 44px; margin-top: 12px; display: inline-flex; gap: 5px; align-items: center; padding: 0; border: 0; background: transparent; color: var(--link); font-size: 12px; cursor: pointer; }.rotated { transform: rotate(180deg); }
   .evidence { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--transition-normal); }.evidence.expanded { grid-template-rows: 1fr; }.evidence > div { overflow: hidden; }.evidence dl { margin: 10px 0 0; padding: 10px; border: 1px solid var(--border-card); border-radius: 6px; background: var(--bg-input); }.evidence dl div { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; font-size: 12px; }.evidence dt { color: var(--text-muted); }.evidence dd { margin: 0; color: var(--text-label); text-align: right; }
   .signal-actions { justify-content: space-between; gap: 10px; margin-top: 14px; }.signal-actions a { color: var(--link); font-size: 12px; text-decoration: none; }.signal-actions :global(button) { min-height: 44px; flex-shrink: 0; }
+  .ask-zelinho { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--bg-input); color: var(--text-label); font-size: 0.8rem; font-weight: 500; cursor: pointer; }
+  .ask-zelinho:hover { background: var(--bg-panel); color: var(--text-main); }
+  .ask-zelinho:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
   .signal-card.muted { opacity: .58; }.signal-card.muted .narrative, .signal-card.muted .confidence, .signal-card.muted .numbers-toggle, .signal-card.muted .evidence, .signal-card.muted .signal-actions { display: none; }.signal-card.muted::after { content: 'Silenciado nas preferências'; display: block; margin-top: 8px; color: var(--text-muted); font-size: 12px; }
   @keyframes dot-fade { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .new-dot { animation: none; }.evidence { transition: none; } }

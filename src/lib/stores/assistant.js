@@ -67,11 +67,13 @@ export function toggleAssistant() {
 }
 
 export function openAssistant() {
+  contextType.set('geral');
   isOpen.set(true);
 }
 
 export function closeAssistant() {
   isOpen.set(false);
+  contextType.set('geral');
   signalContext.set(null);
   screenContext.set(null);
 }
@@ -111,5 +113,6 @@ export function openAssistantWithSignal(signal) {
 
 export function clearSignalContext() {
   signalContext.set(null);
+  contextType.set('geral');
   screenContext.update((current) => current?.source === 'gerente-sinal' ? null : current);
 }

@@ -6,6 +6,8 @@
   import { addToast } from '$lib/stores/ui.js';
   import { capturePostHogEvent } from '$lib/posthogClient.js';
   import { markRead } from '$lib/stores/gerente.js';
+  import { openAssistantWithSignal } from '$lib/stores/assistant.js';
+  import { closeSupport } from '$lib/stores/support.js';
   import ZelinhoBriefing from '$lib/components/gerente/ZelinhoBriefing.svelte';
   import SignalFeed from '$lib/components/gerente/SignalFeed.svelte';
   let loading = true;
@@ -17,6 +19,7 @@
   let snapshots = [];
   let profile = null;
   let ownerUserId = null;
+  let loadVersion = 0;
   $: latestSnapshot = snapshots[0] || null;
   $: latestDate = latestSnapshot?.snapshot_date || signals[0]?.signal_date || null;
   $: todaySignals = signals.filter((signal) => signal.signal_date === latestDate);
@@ -27,6 +30,7 @@
   $: analysedAt = latestSnapshot?.computed_at ? new Date(latestSnapshot.computed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
 
   async function load({ silent = false } = {}) {
+    const requestVersion = ++loadVersion;
     if (!supabase) { error = 'Não foi possível iniciar a conexão.'; loading = false; return; }
     if (!silent) loading = true;
     error = '';
@@ -41,6 +45,7 @@
         supabase.from('business_signals').select('id, signal_date, type, severity, confidence, evidence, narrative, narrative_source, read_at, created_at').order('signal_date', { ascending: false }).limit(200),
         supabase.from('business_daily_snapshots').select('snapshot_date, receita_bruta, qtd_vendas, ticket_medio, computed_at').order('snapshot_date', { ascending: false }).limit(56),
       ]);
+      if (requestVersion !== loadVersion) return;
       if (profileError) throw profileError;
       profile = perfil;
       enabled = Boolean(perfil?.intelligence_enabled_at);
@@ -52,10 +57,16 @@
       if (!silent) void capturePostHogEvent('gerente_briefing_view', { signal_count: signals.length, learning });
       failures = 0;
     } catch (loadError) {
+      if (requestVersion !== loadVersion) return;
       error = loadError?.message || 'Não foi possível carregar o gerente.';
       failures += 1;
       if (failures >= 2) addToast('O Zelinho ainda não conseguiu atualizar os dados.', 'error');
-    } finally { loading = false; refreshing = false; }
+    } finally {
+      if (requestVersion === loadVersion) {
+        loading = false;
+        refreshing = false;
+      }
+    }
   }
   async function read(signalId) {
     const signal = signals.find((item) => item.id === signalId);
@@ -72,14 +83,22 @@
     }
   }
   async function mute(type) { if (!profile || !ownerUserId || ['CASH_DIFFERENCE_RECURRING', 'STOCK_ZERO_WITH_DEMAND'].includes(type)) { addToast('Esse aviso permanece sempre ativo.', 'info'); return; } const muted = [...new Set([...mutedTypes, type])]; const gerente_prefs = { ...(profile.gerente_prefs || {}), muted_types: muted }; const { error: muteError } = await supabase.from('empresa_perfil').update({ gerente_prefs }).eq('user_id', ownerUserId); if (muteError) { addToast('Não foi possível silenciar esse tipo.', 'error'); return; } profile = { ...profile, gerente_prefs }; addToast('Esse tipo foi silenciado no briefing e no WhatsApp.', 'success'); }
-  function ask() { addToast('O contexto deste aviso estará disponível no chat em breve.', 'info'); }
-  function refresh() { refreshing = true; load({ silent: true }); }
+  function ask(signal) {
+    closeSupport();
+    if (!openAssistantWithSignal(signal)) addToast('Não foi possível abrir o contexto deste aviso.', 'error');
+  }
+  async function refresh(event) {
+    event?.preventDefault();
+    if (refreshing) return;
+    refreshing = true;
+    await load({ silent: true });
+  }
   onMount(() => { load(); const visibility = () => { if (document.visibilityState === 'visible') load({ silent: true }); }; document.addEventListener('visibilitychange', visibility); return () => document.removeEventListener('visibilitychange', visibility); });
 </script>
 
 <svelte:head><title>Zelinho Gerente | ZeloPDV</title></svelte:head>
 <section class="manager-page">
-  <div class="mb-6 flex items-end justify-between border-b  pb-4" style="border-color: var(--border-card);"><div><p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p><h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Zelinho Gerente</h1></div>{#if enabled && analysedAt}<button class="refresh" on:click={refresh} disabled={refreshing} title="Atualizar dados">Analisado às {analysedAt}<span class:spinning={refreshing}><RefreshCw size={15} /></span></button>{/if}</div>
+  <div class="mb-6 flex items-end justify-between border-b  pb-4" style="border-color: var(--border-card);"><div><p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p><h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Zelinho Gerente</h1></div>{#if enabled && analysedAt}<button type="button" class="refresh" on:click={refresh} disabled={refreshing} title="Atualizar dados">Analisado às {analysedAt}<span class:spinning={refreshing}><RefreshCw size={15} /></span></button>{/if}</div>
   {#if loading}<div class="skeleton hero"></div><div class="skeleton card"></div><div class="skeleton card"></div><div class="skeleton card"></div>
   {:else if error}<div class="error-state"><CloudOff size={56} aria-hidden="true" /><p>{error}</p><button type="button" on:click={() => load()}>Tentar novamente</button></div>
   {:else if !enabled}<div class="empty-state"><h2>O Zelinho Gerente ainda não está disponível para esta empresa.</h2><p>Quando o piloto estiver habilitado, os resumos e avisos aparecerão aqui.</p></div>
