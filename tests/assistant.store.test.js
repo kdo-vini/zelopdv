@@ -6,6 +6,7 @@ import {
   contextType,
   closeAssistant,
   isOpen,
+  messages,
   openAssistant,
   openAssistantWithContext,
   openAssistantWithSignal,
@@ -18,6 +19,7 @@ beforeEach(() => {
   contextType.set('geral');
   clearSignalContext();
   clearScreenContext();
+  messages.set([]);
 });
 
 describe('assistant context store', () => {
@@ -84,6 +86,24 @@ describe('assistant context store', () => {
     closeAssistant();
     openAssistant();
     expect(get(contextType)).toBe('geral');
+  });
+
+  it('clears the conversation history when switching to a different signal without closing the panel', () => {
+    openAssistantWithSignal({ id: 1, type: 'STOCK_ZERO_WITH_DEMAND' });
+    messages.set([{ role: 'user', content: 'O que houve com o produto A?' }, { role: 'assistant', content: 'Resposta sobre A.' }]);
+
+    openAssistantWithSignal({ id: 2, type: 'REVENUE_BELOW_WEEKDAY_AVG' });
+
+    expect(get(messages)).toEqual([]);
+  });
+
+  it('clears the conversation history when opening a new screen context', () => {
+    openAssistantWithContext({ source: 'relatorios', title: 'Relatorio', route: '/relatorios', contextType: 'vendas' });
+    messages.set([{ role: 'user', content: 'pergunta antiga' }]);
+
+    openAssistantWithContext({ source: 'gerente-semana', title: 'Resumo semanal', route: '/gestao/gerente/semana', contextType: 'vendas' });
+
+    expect(get(messages)).toEqual([]);
   });
 
   it('matches the full route, including query parameters, for screen context', () => {

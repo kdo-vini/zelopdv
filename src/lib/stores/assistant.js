@@ -68,6 +68,9 @@ export function toggleAssistant() {
 
 export function openAssistant() {
   contextType.set('geral');
+  signalContext.set(null);
+  screenContext.set(null);
+  messages.set([]);
   isOpen.set(true);
 }
 
@@ -93,6 +96,7 @@ export function clearScreenContext() {
 export function openAssistantWithContext(context) {
   if (!setScreenContext(context)) return false;
   signalContext.set(null);
+  messages.set([]);
   isOpen.set(true);
   return true;
 }
@@ -107,6 +111,7 @@ export function openAssistantWithSignal(signal) {
     contextType: signalContextTypes[signal.type] || 'geral',
     entity: { type: 'business_signal', id: signal.id },
   });
+  messages.set([]);
   isOpen.set(true);
   return true;
 }
