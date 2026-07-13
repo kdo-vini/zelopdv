@@ -36,6 +36,8 @@
   $: donutData = report.paymentMix.map((entry, index) => ({ ...entry, color: colors[index % colors.length] }));
 
   function formatMoney(value) { return money.format(Number(value) || 0); }
+  // Guards against NaN% when the week's top product has 0 receita (e.g. a free/promo item ranked first by quantity ties).
+  function productBarWidth(product, topReceita) { return topReceita > 0 ? Math.max(8, (product.receita / topReceita) * 100) : 8; }
   function setWeek(week) { goto(`/gestao/gerente/semana?semana=${week}`); }
   function askZelinhoAboutWeek() {
     openAssistantWithContext({
@@ -105,7 +107,7 @@
     </div>
     <section class="panel"><BarChart title="Receita por dia" data={chartData} barColor="bg-sky-500" /></section>
     <div class="split">
-      <section class="panel"><h2>Produtos com mais saída</h2>{#if report.products.length}<ol class="products">{#each report.products as product}<li><div><strong>{product.nome}</strong><span>{formatMoney(product.receita)} · {product.qtd} itens</span></div><div class="product-rank"><i style={`width: ${Math.max(8, product.receita / report.products[0].receita * 100)}%`}></i><b class:up={product.positionChange > 0} class:down={product.positionChange < 0}>{product.positionChange > 0 ? `↑ ${product.positionChange}` : product.positionChange < 0 ? `↓ ${Math.abs(product.positionChange)}` : '—'}</b></div></li>{/each}</ol>{:else}<p class="muted">Ainda não há produtos vendidos nesta semana.</p>{/if}</section>
+      <section class="panel"><h2>Produtos com mais saída</h2>{#if report.products.length}<ol class="products">{#each report.products as product}<li><div><strong>{product.nome}</strong><span>{formatMoney(product.receita)} · {product.qtd} itens</span></div><div class="product-rank"><i style={`width: ${productBarWidth(product, report.products[0].receita)}%`}></i><b class:up={product.positionChange > 0} class:down={product.positionChange < 0}>{product.positionChange > 0 ? `↑ ${product.positionChange}` : product.positionChange < 0 ? `↓ ${Math.abs(product.positionChange)}` : '—'}</b></div></li>{/each}</ol>{:else}<p class="muted">Ainda não há produtos vendidos nesta semana.</p>{/if}</section>
       <section class="panel"><DonutChart title="Formas de pagamento" data={donutData} size={150} />{#if report.paymentMixSentence}<p class="muted">{report.paymentMixSentence}</p>{/if}</section>
     </div>
     <section class="panel"><h2>Sinais da semana</h2>{#if report.signals.length}<ul class="signals">{#each report.signals as signal}<li><a href={`/gestao/gerente#${signal.signal_date}`}><span class={`tag ${signal.severity}`}>{signal.severity === 'critical' ? 'Precisa de você' : signal.severity === 'attention' ? 'Fica de olho' : 'Pra saber'}</span>{getSignalPresenter(signal).titulo}</a></li>{/each}</ul>{:else}<p class="muted">Nenhum aviso novo nesta semana.</p>{/if}</section>
