@@ -5,6 +5,8 @@
 
 ## Snapshot validado (2026-07-13)
 
+- Pos-publicacao do Zelinho (2026-07-13): o CTA de contexto usa botao nativo (o wrapper Svelte 5 descartava eventos), o refresh do Gerente aguarda a requisicao mais recente e o chat inicial usa tres icebreakers no lugar dos quatro pills de foco. Commit enviado ao `main` para o deploy automatico da Vercel; nenhuma publicacao direta foi mantida.
+
 - Branch: `main`
 - HEAD inspecionado: `acc90cc` — `fix(caixa): impedir abertura duplicada + fechar orfaos`
 - **Audit de design system concluído (2026-07-13):** auditoria impecable em 5 superfícies (PDV, marketing, auth+billing, gestão, admin-dashboard). Health score médio 13.8/20. 14 correções aplicadas (P0-P3): touch targets 44px no carrinho PDV, purple/indigo substituídos por sky-500, glassmorphism do card auth removido, tabular-nums global, tokens CSS em auth pages, shadows do assinatura capadas, numbered markers substituídos por ícones, aria-labels em toggles de senha, polling de pedidos reduzido (3s→30s), guardrail de cancelamento no admin. Detalhes em [[docs/projects/impeccable-audit-2026-07.md]]
