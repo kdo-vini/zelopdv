@@ -8,7 +8,8 @@ import { captureAiGeneration } from '$lib/server/posthog';
 import { resolveOwnerUserId } from '$lib/server/accessControl';
 import { buildSignalContextPrompt, getSignalContextForOwner } from '$lib/server/intelligence/signalContext';
 import { fetchVendas, fetchVendasItens, fetchVendasPagamentos } from '$lib/server/intelligence/fetchers';
-import { buildActiveSignalsContext, buildCatalogSalesContext, buildRecentDaysContext, buildStockContext } from '$lib/server/assistant/businessContext';
+import { buildActiveSignalsContext, buildCatalogSalesContext, buildMonthOverMonthContext, buildPeakHoursContext, buildRecentDaysContext, buildStockContext } from '$lib/server/assistant/businessContext';
+import { getActiveSeasonalContext } from '$lib/server/assistant/seasonalContext';
 
 const BUSINESS_CONTEXT_CACHE_TTL_MS = 20_000;
 const BUSINESS_CONTEXT_CACHE_MAX_ENTRIES = 100;
@@ -28,22 +29,28 @@ async function buildBusinessContext(userId) {
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
+    const startOfPrevMonth = new Date(startOfMonth);
+    startOfPrevMonth.setMonth(startOfPrevMonth.getMonth() - 1);
 
     // The assistant uses stored catalog relations and every sale item in the
     // window. Do not infer categories from product names or truncate sales.
-    const [perfilRes, produtosRes, categoriasRes, expensesRes, caixaRes, topFiadoRes, signalsRes, vendas] = await Promise.all([
+    const [perfilRes, produtosRes, categoriasRes, expensesRes, prevMonthExpensesRes, caixaRes, topFiadoRes, signalsRes, prevMonthVendasRes, vendas] = await Promise.all([
       supabaseAdmin.from('empresa_perfil').select('nome_exibicao, contato, intelligence_enabled_at, gerente_prefs').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('produtos').select('id, nome, preco, id_categoria, estoque_atual, controlar_estoque, ocultar_no_pdv').eq('id_usuario', userId).order('nome'),
       supabaseAdmin.from('categorias').select('id, nome, ordem, controlar_estoque_compartilhado, estoque_compartilhado_atual').eq('id_usuario', userId).order('ordem'),
       supabaseAdmin.from('expenses').select('amount, category').eq('user_id', userId).gte('date', startOfMonth.toISOString()),
+      // Lightweight: only the previous-month totals needed for the month-over-month comparison, no category breakdown.
+      supabaseAdmin.from('expenses').select('amount').eq('user_id', userId).gte('date', startOfPrevMonth.toISOString()).lt('date', startOfMonth.toISOString()),
       supabaseAdmin.from('caixas').select('valor_inicial, data_abertura, data_fechamento').eq('id_usuario', userId).order('data_abertura', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('pessoas').select('nome, saldo_fiado').eq('id_usuario', userId).gt('saldo_fiado', 0).order('saldo_fiado', { ascending: false }).limit(5),
       // Cheap and indexed even for companies outside the intelligence pilot,
       // where it just returns no rows; the flag below gates its use.
       supabaseAdmin.from('business_signals').select('type, severity, evidence, narrative, signal_date').eq('user_id', userId).order('signal_date', { ascending: false }).limit(20),
+      // Lightweight: only the previous-month revenue needed for the month-over-month comparison.
+      supabaseAdmin.from('vendas').select('valor_total').eq('id_usuario', userId).gte('created_at', startOfPrevMonth.toISOString()).lt('created_at', startOfMonth.toISOString()),
       fetchVendas(supabaseAdmin, userId, thirtyDaysAgo.toISOString(), new Date().toISOString()),
     ]);
-    for (const result of [perfilRes, produtosRes, categoriasRes, expensesRes, caixaRes, topFiadoRes, signalsRes]) {
+    for (const result of [perfilRes, produtosRes, categoriasRes, expensesRes, prevMonthExpensesRes, caixaRes, topFiadoRes, signalsRes, prevMonthVendasRes]) {
       if (result.error) throw result.error;
     }
 
@@ -60,6 +67,8 @@ async function buildBusinessContext(userId) {
       categorias: categoriasRes.data || [],
     });
     const recentDaysContext = buildRecentDaysContext({ vendas });
+    const peakHoursContext = buildPeakHoursContext({ vendas });
+    const seasonalContext = getActiveSeasonalContext();
     const mutedSignalTypes = Array.isArray(perfilRes.data?.gerente_prefs?.muted_types) ? perfilRes.data.gerente_prefs.muted_types : [];
     const activeSignalsContext = perfilRes.data?.intelligence_enabled_at
       ? buildActiveSignalsContext({ signals: signalsRes.data || [], mutedTypes: mutedSignalTypes })
@@ -77,6 +86,18 @@ async function buildBusinessContext(userId) {
       despesasPorCat[k] = Number(despesasPorCat[k].toFixed(2));
     }
 
+    // Current-month revenue is derived from the already-fetched 30-day
+    // window (it always fully contains the elapsed days of the current
+    // month) instead of an extra query.
+    const receitaMesAtual = (vendas || [])
+      .filter((venda) => venda.created_at >= startOfMonth.toISOString())
+      .reduce((sum, venda) => sum + (Number(venda.valor_total) || 0), 0);
+    const receitaMesAnterior = (prevMonthVendasRes.data || []).reduce((sum, venda) => sum + (Number(venda.valor_total) || 0), 0);
+    const despesasMesAnterior = (prevMonthExpensesRes.data || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const monthOverMonthContext = buildMonthOverMonthContext({
+      receitaMesAtual, receitaMesAnterior, despesasMesAtual: totalDespesas, despesasMesAnterior,
+    });
+
     const context = {
       perfil: {
         nome_negocio: perfilRes.data?.nome_exibicao || null,
@@ -89,6 +110,9 @@ async function buildBusinessContext(userId) {
       media_mesmo_dia_semana: recentDaysContext.media_mesmo_dia_semana,
       media_diaria_periodo: recentDaysContext.media_diaria_periodo,
       sinais_ativos: activeSignalsContext,
+      horarios_de_pico: peakHoursContext,
+      comparativo_mes_anterior: monthOverMonthContext,
+      datas_comemorativas_proximas: seasonalContext,
       vendas: salesContext.vendas,
       itens_vendidos: salesContext.itens_vendidos,
       categorias: salesContext.categorias,
@@ -143,6 +167,22 @@ export function _buildSystemPrompt(context, contextType, signalContext = null, s
 • ${mediaMesmoDiaSemana ? `Média das últimas ${mediaMesmoDiaSemana.dias_considerados} ocorrências de ${weekdayName(ontem.data)}: R$ ${mediaMesmoDiaSemana.receita.toFixed(2)} em ${mediaMesmoDiaSemana.quantidade} vendas` : `Ainda não há ocorrências anteriores de ${weekdayName(ontem.data)} suficientes no período para uma média por dia da semana`}
 ${mediaDiariaPeriodo ? `• Média diária do período, excluindo ontem (${mediaDiariaPeriodo.dias_considerados} dias): R$ ${mediaDiariaPeriodo.receita.toFixed(2)} em ${mediaDiariaPeriodo.quantidade} vendas` : ''}` : '';
 
+  const horariosDePico = context.horarios_de_pico;
+  const picoBlock = horariosDePico?.top_horarios?.length ? `
+• Horários de mais movimento: ${horariosDePico.top_horarios.map((h) => `${h.hora}h (${(h.participacao * 100).toFixed(0)}% das vendas)`).join(', ')}` : '';
+
+  const comparativoMes = context.comparativo_mes_anterior;
+  const comparativoMesBlock = comparativoMes ? `
+• Receita deste mês até agora: R$ ${comparativoMes.receita_mes_atual.toFixed(2)}${comparativoMes.delta_receita_pct != null ? ` (${comparativoMes.delta_receita_pct >= 0 ? '+' : ''}${(comparativoMes.delta_receita_pct * 100).toFixed(1)}% vs. R$ ${comparativoMes.receita_mes_anterior.toFixed(2)} no mês anterior completo)` : ', ainda sem mês anterior completo para comparar'}
+• Despesas deste mês até agora: R$ ${comparativoMes.despesas_mes_atual.toFixed(2)}${comparativoMes.delta_despesas_pct != null ? ` (${comparativoMes.delta_despesas_pct >= 0 ? '+' : ''}${(comparativoMes.delta_despesas_pct * 100).toFixed(1)}% vs. R$ ${comparativoMes.despesas_mes_anterior.toFixed(2)} no mês anterior completo)` : ', ainda sem mês anterior completo para comparar'}
+IMPORTANTE: "deste mês até agora" é parcial (o mês não terminou) — nunca compare esse valor diretamente ao mês anterior completo sem deixar claro que um dos dois está incompleto.` : '';
+
+  const datasComemorativas = context.datas_comemorativas_proximas || [];
+  const datasComemorativasBlock = datasComemorativas.length ? `
+DATAS COMEMORATIVAS PRÓXIMAS OU EM ANDAMENTO:
+${datasComemorativas.map((d) => `• ${d.nome} (${d.em_andamento ? 'em andamento' : d.dias_ate === 0 ? 'hoje' : `em ${d.dias_ate} dia${d.dias_ate === 1 ? '' : 's'}`}): ${d.sugestao}`).join('\n')}
+Só mencione essas datas se forem relevantes à pergunta ou se o usuário perguntar sobre oportunidades/promoções; não force o assunto em toda resposta.` : '';
+
   const metricsBlock = `
 MÉTRICAS JÁ CALCULADAS (use exatamente estes valores, não recalcule):
 • Receita total (30 dias): R$ ${receita.toFixed(2)}
@@ -153,7 +193,7 @@ MÉTRICAS JÁ CALCULADAS (use exatamente estes valores, não recalcule):
 • Resultado operacional aproximado: R$ ${resultadoOperacional.toFixed(2)} (não inclui o custo dos produtos)
 • Método de pagamento dominante: ${metodoDominante ?? 'sem dados'}
 • Produto mais vendido: ${produtoTop ?? 'sem dados'}
-• Total em fiado em aberto: R$ ${totalFiado}${fiadoPct ? ` (${fiadoPct}% da receita)` : ''}${diaAnteriorBlock}`;
+• Total em fiado em aberto: R$ ${totalFiado}${fiadoPct ? ` (${fiadoPct}% da receita)` : ''}${diaAnteriorBlock}${picoBlock}${comparativoMesBlock}`;
 
   const sinaisAtivos = context.sinais_ativos || [];
   const sinaisBlock = sinaisAtivos.length ? `
@@ -171,6 +211,8 @@ Ao responder sobre vendas, sempre mencione:
 • Se a quantidade de vendas parece consistente com o período
 • Uma sugestão concreta para aumentar receita usando os produtos reais do negócio (upsell, combo, promoção)
 Se o usuário perguntar como foram as vendas de ontem, comparadas à média, ou qualquer variação disso, use diretamente as linhas "Vendas de ontem" e "Média das últimas ocorrências de [dia da semana]" já calculadas acima — nunca diga que falta esse dado quando essas linhas estiverem presentes. Se a média por dia da semana ainda não existir, use a média diária do período como comparação e explique que a média por dia da semana chega com mais histórico.
+Se o usuário perguntar sobre horário de mais movimento, escala de equipe ou quando reforçar o time, use a linha "Horários de mais movimento" já calculada acima.
+Se o usuário perguntar como o mês está indo comparado ao anterior, use as linhas de receita e despesas "deste mês até agora" já calculadas acima, sempre deixando claro que o mês atual está parcial.
 Evite análises genéricas — use os números e produtos reais.`,
 
     produtos: `
@@ -225,6 +267,7 @@ DADOS REAIS DO NEGÓCIO (últimos 30 dias + mês atual)
 ${JSON.stringify(context)}
 ${metricsBlock}
 ${sinaisBlock}
+${datasComemorativasBlock}
 ${buildSignalContextPrompt(signalContext)}
 ${_buildScreenContextPrompt(screenContext)}
 

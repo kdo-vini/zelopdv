@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildActiveSignalsContext, buildCatalogSalesContext, buildRecentDaysContext, buildStockContext } from '../src/lib/server/assistant/businessContext.js';
+import { buildActiveSignalsContext, buildCatalogSalesContext, buildMonthOverMonthContext, buildPeakHoursContext, buildRecentDaysContext, buildStockContext } from '../src/lib/server/assistant/businessContext.js';
 
 describe('assistant business context', () => {
   describe('buildActiveSignalsContext', () => {
@@ -61,6 +61,50 @@ describe('assistant business context', () => {
       expect(result.ontem).toEqual({ data: '2026-07-08', receita: 0, quantidade: 0 });
       expect(result.media_mesmo_dia_semana).toBeNull();
       expect(result.media_diaria_periodo).toBeNull();
+    });
+  });
+
+  describe('buildPeakHoursContext', () => {
+    // America/Sao_Paulo is UTC-3 with no DST, so 18:00Z = 15h local, 22:00Z = 19h local.
+    function saleAt(isoHourUtc) {
+      return { created_at: `2026-07-08T${isoHourUtc}:00:00.000Z`, valor_total: 10 };
+    }
+
+    it('ranks local hours by sale count and reports each hour\'s share of the total', () => {
+      const vendas = [saleAt('18'), saleAt('18'), saleAt('18'), saleAt('22'), saleAt('22'), saleAt('12')];
+
+      const result = buildPeakHoursContext({ vendas });
+
+      expect(result.top_horarios).toEqual([
+        { hora: 15, vendas: 3, participacao: 0.5 },
+        { hora: 19, vendas: 2, participacao: 0.33 },
+        { hora: 9, vendas: 1, participacao: 0.17 },
+      ]);
+    });
+
+    it('returns null when there is no sales history', () => {
+      expect(buildPeakHoursContext({ vendas: [] })).toBeNull();
+    });
+  });
+
+  describe('buildMonthOverMonthContext', () => {
+    it('computes revenue and expense deltas against the previous month', () => {
+      const result = buildMonthOverMonthContext({
+        receitaMesAtual: 1200, receitaMesAnterior: 1000,
+        despesasMesAtual: 300, despesasMesAnterior: 400,
+      });
+
+      expect(result).toEqual({
+        receita_mes_atual: 1200, receita_mes_anterior: 1000, delta_receita_pct: 0.2,
+        despesas_mes_atual: 300, despesas_mes_anterior: 400, delta_despesas_pct: -0.25,
+      });
+    });
+
+    it('reports a null delta instead of dividing by zero when there is no prior-month data', () => {
+      const result = buildMonthOverMonthContext({ receitaMesAtual: 500, receitaMesAnterior: 0, despesasMesAtual: 100, despesasMesAnterior: 0 });
+
+      expect(result.delta_receita_pct).toBeNull();
+      expect(result.delta_despesas_pct).toBeNull();
     });
   });
   it('derives a category average from all registered sale items', () => {

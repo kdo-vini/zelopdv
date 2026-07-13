@@ -1,4 +1,4 @@
-import { addDays, localDateOf, weekdayOf } from '$lib/server/intelligence/tz.js';
+import { addDays, getHourInTimezone, localDateOf, weekdayOf } from '$lib/server/intelligence/tz.js';
 import { templateNarrative } from '$lib/server/intelligence/narrative.js';
 
 const SIGNAL_SEVERITY_LABELS = { critical: 'Precisa de você', attention: 'Fica de olho', info: 'Pra saber' };
@@ -77,6 +77,51 @@ export function buildRecentDaysContext({ vendas = [], todayIso = new Date().toIS
     ontem: { data: yesterday, receita: round(yesterdayBucket.receita), quantidade: yesterdayBucket.quantidade },
     media_mesmo_dia_semana: averageOfDays(priorSameWeekdayDays),
     media_diaria_periodo: averageOfDays(priorDays),
+  };
+}
+
+/**
+ * Buckets already-fetched sales by local (America/Sao_Paulo) hour of day to
+ * find peak selling hours over the window — useful for staffing/scheduling
+ * questions ("what time should I have more people working?").
+ */
+export function buildPeakHoursContext({ vendas = [] } = {}) {
+  const countByHour = new Map();
+  for (const sale of vendas) {
+    if (!sale?.created_at) continue;
+    const hour = getHourInTimezone(sale.created_at);
+    countByHour.set(hour, (countByHour.get(hour) || 0) + 1);
+  }
+  if (!countByHour.size) return null;
+
+  const totalVendas = [...countByHour.values()].reduce((sum, count) => sum + count, 0);
+  const ranked = [...countByHour.entries()].sort((a, b) => b[1] - a[1]);
+
+  return {
+    top_horarios: ranked.slice(0, 3).map(([hora, vendas_no_horario]) => ({
+      hora,
+      vendas: vendas_no_horario,
+      participacao: round(vendas_no_horario / totalVendas),
+    })),
+  };
+}
+
+/**
+ * Compares current-calendar-month revenue/expenses to the previous calendar
+ * month. Callers supply already-fetched, already-summed totals — this stays
+ * a pure function so the month-boundary queries live only in the server
+ * route that has DB access.
+ */
+export function buildMonthOverMonthContext({
+  receitaMesAtual = 0, receitaMesAnterior = 0, despesasMesAtual = 0, despesasMesAnterior = 0,
+} = {}) {
+  return {
+    receita_mes_atual: round(receitaMesAtual),
+    receita_mes_anterior: round(receitaMesAnterior),
+    delta_receita_pct: receitaMesAnterior > 0 ? round((receitaMesAtual - receitaMesAnterior) / receitaMesAnterior) : null,
+    despesas_mes_atual: round(despesasMesAtual),
+    despesas_mes_anterior: round(despesasMesAnterior),
+    delta_despesas_pct: despesasMesAnterior > 0 ? round((despesasMesAtual - despesasMesAnterior) / despesasMesAnterior) : null,
   };
 }
 

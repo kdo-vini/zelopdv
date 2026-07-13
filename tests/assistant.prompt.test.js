@@ -53,6 +53,77 @@ describe('assistant prompt', () => {
     expect(prompt).not.toContain('SINAIS DETECTADOS PELO ZELINHO GERENTE');
   });
 
+  it('surfaces peak-hour figures for staffing questions', () => {
+    const prompt = _buildSystemPrompt({
+      perfil: { nome_negocio: 'Teste' },
+      vendas: { receita_total: '100.00', quantidade: 2, por_metodo_pagamento: {} },
+      despesas: { total_mes_atual: '25.00', por_categoria: {} },
+      resultado_operacional_aproximado: '75.00',
+      fiado_em_aberto: [],
+      catalogo_produtos: [],
+      horarios_de_pico: { top_horarios: [{ hora: 19, vendas: 12, participacao: 0.4 }] },
+    }, 'vendas');
+
+    expect(prompt).toContain('Horários de mais movimento: 19h (40% das vendas)');
+    expect(prompt).toContain('Horários de mais movimento" já calculada acima');
+  });
+
+  it('surfaces month-over-month revenue and expenses, flagging the current month as partial', () => {
+    const prompt = _buildSystemPrompt({
+      perfil: { nome_negocio: 'Teste' },
+      vendas: { receita_total: '100.00', quantidade: 2, por_metodo_pagamento: {} },
+      despesas: { total_mes_atual: '25.00', por_categoria: {} },
+      resultado_operacional_aproximado: '75.00',
+      fiado_em_aberto: [],
+      catalogo_produtos: [],
+      comparativo_mes_anterior: {
+        receita_mes_atual: 600, receita_mes_anterior: 500, delta_receita_pct: 0.2,
+        despesas_mes_atual: 100, despesas_mes_anterior: 150, delta_despesas_pct: -0.3333,
+      },
+    }, 'geral');
+
+    expect(prompt).toContain('Receita deste mês até agora: R$ 600.00 (+20.0% vs. R$ 500.00 no mês anterior completo)');
+    expect(prompt).toContain('Despesas deste mês até agora: R$ 100.00 (-33.3% vs. R$ 150.00 no mês anterior completo)');
+    expect(prompt).toContain('é parcial');
+  });
+
+  it('reports missing prior-month data plainly instead of a fabricated percentage', () => {
+    const prompt = _buildSystemPrompt({
+      perfil: { nome_negocio: 'Teste' },
+      vendas: { receita_total: '100.00', quantidade: 2, por_metodo_pagamento: {} },
+      despesas: { total_mes_atual: '25.00', por_categoria: {} },
+      resultado_operacional_aproximado: '75.00',
+      fiado_em_aberto: [],
+      catalogo_produtos: [],
+      comparativo_mes_anterior: {
+        receita_mes_atual: 600, receita_mes_anterior: 0, delta_receita_pct: null,
+        despesas_mes_atual: 100, despesas_mes_anterior: 0, delta_despesas_pct: null,
+      },
+    }, 'geral');
+
+    expect(prompt).toContain('ainda sem mês anterior completo para comparar');
+  });
+
+  it('surfaces nearby commemorative dates with a suggestion, without forcing them into every reply', () => {
+    const prompt = _buildSystemPrompt({
+      perfil: { nome_negocio: 'Teste' },
+      vendas: { receita_total: '100.00', quantidade: 2, por_metodo_pagamento: {} },
+      despesas: { total_mes_atual: '25.00', por_categoria: {} },
+      resultado_operacional_aproximado: '75.00',
+      fiado_em_aberto: [],
+      catalogo_produtos: [],
+      datas_comemorativas_proximas: [
+        { nome: 'Copa do Mundo FIFA 2026', sugestao: 'aproveitar dias de jogo para promoções', dias_ate: 0, em_andamento: true },
+        { nome: 'Black Friday', sugestao: 'considerar descontos especiais', dias_ate: 5 },
+      ],
+    }, 'geral');
+
+    expect(prompt).toContain('DATAS COMEMORATIVAS PRÓXIMAS OU EM ANDAMENTO');
+    expect(prompt).toContain('Copa do Mundo FIFA 2026 (em andamento): aproveitar dias de jogo para promoções');
+    expect(prompt).toContain('Black Friday (em 5 dias): considerar descontos especiais');
+    expect(prompt).toContain('não force o assunto em toda resposta');
+  });
+
   it('surfaces yesterday vs. same-weekday-average precomputed figures so the model never claims the data is missing', () => {
     const prompt = _buildSystemPrompt({
       perfil: { nome_negocio: 'Teste' },
