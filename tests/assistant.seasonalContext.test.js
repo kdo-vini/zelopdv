@@ -2,10 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { getActiveSeasonalContext } from '../src/lib/server/assistant/seasonalContext.js';
 
 describe('assistant seasonal context', () => {
-  it('flags an ongoing one-off window (World Cup 2026) as in progress', () => {
-    const result = getActiveSeasonalContext('2026-07-13');
+  it('produces the same result on the same calendar date regardless of year, with no year-specific hardcoded entries', () => {
+    // Fixed-date entries (Natal) must fire identically far into the future —
+    // there is nothing in the calendar keyed to a specific year like 2026.
+    const result2026 = getActiveSeasonalContext('2026-12-20');
+    const result2030 = getActiveSeasonalContext('2030-12-20');
 
-    expect(result).toContainEqual({ nome: 'Copa do Mundo FIFA 2026', sugestao: expect.any(String), dias_ate: 0, em_andamento: true });
+    expect(result2026.map((entry) => entry.nome)).toEqual(result2030.map((entry) => entry.nome));
+    expect(result2026).toContainEqual(expect.objectContaining({ nome: 'Natal' }));
+  });
+
+  it('computes Carnaval correctly for a year far from when this list was written, proving it is a formula and not a hardcoded date', () => {
+    // Independently verified via the same Easter algorithm: Carnaval 2030 falls in March, not February like 2026.
+    expect(getActiveSeasonalContext('2030-03-02')).toContainEqual(expect.objectContaining({ nome: 'Carnaval', em_andamento: true }));
+    expect(getActiveSeasonalContext('2030-02-14').find((entry) => entry.nome === 'Carnaval')).toBeUndefined();
   });
 
   it('looks ahead to a computed date (Black Friday) within the lookahead window', () => {

@@ -1,17 +1,20 @@
 /**
  * @file Small, hand-curated calendar of commemorative/commercial dates
- * relevant to Brazilian food-service businesses, plus one-off windows for
- * known events (e.g. a World Cup). This is NOT live event data pulled from
- * anywhere — it is a static seed list, Brazil-only by design (Zelo's
- * customer base). Movable dates (Carnaval) are computed from a verified
- * algorithm rather than hardcoded per year; uncertain ones ("dia do
- * hambúrguer") are deliberately left out rather than risk feeding the
- * assistant a wrong date as fact. Expect to keep expanding this list.
+ * relevant to Brazilian food-service businesses. This is NOT live event data
+ * pulled from anywhere — it is a static seed list, Brazil-only by design
+ * (Zelo's customer base). Every entry is either a fixed month/day or a
+ * formula (e.g. Carnaval from the Easter algorithm below), so the whole list
+ * works correctly for any year with zero yearly maintenance — deliberately
+ * no year-specific one-off entries (a past attempt to hardcode a single
+ * year's World Cup window was removed for exactly this reason). Uncertain
+ * dates ("dia do hambúrguer") are left out rather than risk feeding the
+ * assistant a wrong date as fact.
  *
  * Sources checked when this was written (2026-07): nuvemshop.com.br,
  * serasa.com.br and querobolsa.com.br for Dia/Semana do Consumidor and Dia
  * do Cliente; calendarr.com, ifood institucional and camarotecarnaval.com
- * for Carnaval 2026 (all agree on terça-feira 17/02/2026).
+ * for Carnaval 2026 (all agree on terça-feira 17/02/2026, cross-checked
+ * against the Easter algorithm below).
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -107,19 +110,13 @@ const RECURRING_COMPUTED_WINDOWS = [
   },
 ];
 
-// One-off windows for specific, well-documented events. Remove/replace once
-// the date has passed and the next occurrence is confirmed.
-const ONE_OFF_WINDOWS = [
-  { start: '2026-06-11', end: '2026-07-19', nome: 'Copa do Mundo FIFA 2026', sugestao: 'aproveitar dias de jogo (principalmente do Brasil) para promoções, telão e horário estendido' },
-];
-
 /**
  * Returns commemorative dates/events happening today or within the next
  * `lookaheadDays` days, so the assistant can suggest planning ahead instead
- * of only reacting on the day. Ongoing windows (Carnaval, a World Cup, the
- * Semana do Consumidor) are flagged with `em_andamento: true` and
- * `dias_ate: 0` while active; otherwise they surface once their start date
- * enters the lookahead window.
+ * of only reacting on the day. Ongoing windows (Carnaval, Semana do
+ * Consumidor) are flagged with `em_andamento: true` and `dias_ate: 0` while
+ * active; otherwise they surface once their start date enters the lookahead
+ * window.
  */
 export function getActiveSeasonalContext(referenceDate = new Date().toISOString().slice(0, 10), { lookaheadDays = LOOKAHEAD_DAYS } = {}) {
   const [year, month, day] = referenceDate.split('-').map(Number);
@@ -154,9 +151,6 @@ export function getActiveSeasonalContext(referenceDate = new Date().toISOString(
   for (const entry of RECURRING_COMPUTED_WINDOWS) {
     considerWindow(entry.start(year), entry.end(year), entry.nome, entry.sugestao);
     considerWindow(entry.start(year + 1), entry.end(year + 1), entry.nome, entry.sugestao);
-  }
-  for (const entry of ONE_OFF_WINDOWS) {
-    considerWindow(entry.start, entry.end, entry.nome, entry.sugestao);
   }
 
   return matches.sort((a, b) => a.dias_ate - b.dias_ate);
