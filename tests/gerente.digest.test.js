@@ -23,6 +23,20 @@ describe('gerente daily digest', () => {
     expect(text).toContain('38 vendas');
   });
 
+  it('never fragments or duplicates the link when the body lands just over the length cap', () => {
+    // Long narratives push total length into the 800-815 range that used to
+    // slice through the middle of the link line itself.
+    const longSignals = [
+      { type: 'REVENUE_BELOW_WEEKDAY_AVG', severity: 'attention', narrative: 'A'.repeat(300) },
+      { type: 'STOCK_ZERO_WITH_DEMAND', severity: 'critical', narrative: 'B'.repeat(300) },
+    ];
+    const text = buildDailyDigestText(longSignals, snapshot, { nome_exibicao: 'Lanchonete da Ana' });
+
+    expect(text.length).toBeLessThanOrEqual(800);
+    expect(text.match(/zelopdv\.com\.br\/gestao\/gerente/g)).toHaveLength(1);
+    expect(text.endsWith('Veja os números: https://zelopdv.com.br/gestao/gerente')).toBe(true);
+  });
+
   it('is idempotent by local date and rejects prohibited copy', () => {
     expect(isDigestDue(null, '2026-07-12')).toBe(true);
     expect(isDigestDue('2026-07-11', '2026-07-12')).toBe(true);

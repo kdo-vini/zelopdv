@@ -17,6 +17,9 @@ export function isDigestDue(lastSentDate, todayDate) {
  * This intentionally never calls an LLM and always retains a useful message
  * when the day did not produce signals.
  */
+const LINK_LINE = 'Veja os números: https://zelopdv.com.br/gestao/gerente';
+const MAX_LENGTH = 800;
+
 export function buildDailyDigestText(signals = [], snapshot = {}, perfil = {}, { mutedTypes = [] } = {}) {
   const businessName = perfil.nome_exibicao || perfil.razao_social || 'seu negócio';
   const muted = new Set(mutedTypes);
@@ -33,7 +36,14 @@ export function buildDailyDigestText(signals = [], snapshot = {}, perfil = {}, {
     lines.push('Dia tranquilo: não apareceu nenhum aviso novo nos números de ontem.');
   }
 
-  lines.push('Veja os números: https://zelopdv.com.br/gestao/gerente');
-  const text = lines.join('\n');
-  return text.length <= 800 ? text : `${text.slice(0, 759).trimEnd()}...\nVeja os números: https://zelopdv.com.br/gestao/gerente`;
+  const body = lines.join('\n');
+  const withLink = `${body}\n${LINK_LINE}`;
+  if (withLink.length <= MAX_LENGTH) return withLink;
+
+  // Truncate the body only, then append the link fresh — appending it to an
+  // already-computed slice risked cutting the link itself in half and
+  // duplicating a fragment of it right before the full link line.
+  const reserved = `...\n${LINK_LINE}`.length;
+  const truncatedBody = body.slice(0, MAX_LENGTH - reserved).trimEnd();
+  return `${truncatedBody}...\n${LINK_LINE}`;
 }
