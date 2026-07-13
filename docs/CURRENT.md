@@ -5,7 +5,7 @@
 
 ## Snapshot validado (2026-07-13)
 
-- Pos-publicacao do Zelinho (2026-07-13): o CTA de contexto usa botao nativo (o wrapper Svelte 5 descartava eventos), o refresh do Gerente aguarda a requisicao mais recente e o chat inicial usa tres icebreakers no lugar dos quatro pills de foco. Commit enviado ao `main` para o deploy automatico da Vercel; nenhuma publicacao direta foi mantida.
+- Pos-publicacao do Zelinho (2026-07-13): o CTA de contexto usa botao nativo (o wrapper Svelte 5 descartava eventos), o refresh do Gerente aguarda a requisicao mais recente e o chat inicial usa tres icebreakers clicaveis que preenchem o input. Commit enviado ao `main` para o deploy automatico da Vercel; nenhuma publicacao direta foi mantida.
 
 - Branch: `main`
 - HEAD inspecionado: `acc90cc` — `fix(caixa): impedir abertura duplicada + fechar orfaos`

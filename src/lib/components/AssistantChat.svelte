@@ -46,7 +46,9 @@
     };
   }
 
-  function chooseIcebreaker(prompt) {
+  function chooseIcebreaker(prompt, setInput) {
+    if (typeof setInput !== 'function') return;
+
     setInput(prompt);
     void tick().then(() => inputElement?.focus());
   }
@@ -191,7 +193,7 @@
           <p class="text-sm" style="opacity: 0.75;">Escolha uma pergunta para começar ou escreva a sua.</p>
           <div class="icebreakers" aria-label="Sugestões para começar">
             {#each ICEBREAKERS as icebreaker}
-              <button type="button" class="icebreaker" on:click={() => chooseIcebreaker(icebreaker.prompt)}>
+              <button type="button" class="icebreaker" on:click={() => chooseIcebreaker(icebreaker.prompt, setInput)}>
                 <span class="icebreaker-icon"><svelte:component this={icebreaker.icon} size={17} aria-hidden="true" /></span>
                 <span class="icebreaker-copy"><strong>{icebreaker.title}</strong><small>{icebreaker.prompt}</small></span>
               </button>
