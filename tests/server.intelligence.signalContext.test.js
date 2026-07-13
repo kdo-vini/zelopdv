@@ -37,6 +37,14 @@ describe('intelligence signal chat context', () => {
     ]);
   });
 
+  it('accepts a numeric signal id, matching the bigint identity column in business_signals', async () => {
+    const client = makeClient([{ id: 42, user_id: 'owner-current', type: 'REVENUE_BELOW_WEEKDAY_AVG' }]);
+
+    const signal = await getSignalContextForOwner(42, 'owner-current', client);
+
+    expect(signal).toEqual({ id: 42, user_id: 'owner-current', type: 'REVENUE_BELOW_WEEKDAY_AVG' });
+  });
+
   it('includes only the selected signal evidence and its stored narrative in the prompt', () => {
     const prompt = buildSignalContextPrompt({
       type: 'STOCK_COVERAGE_LOW', severity: 'attention', signal_date: '2026-07-12',

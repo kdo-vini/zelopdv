@@ -4,7 +4,10 @@
  * IDs from becoming contextual chat access.
  */
 export async function getSignalContextForOwner(signalId, ownerUserId, client) {
-  if (!signalId || typeof signalId !== 'string' || !ownerUserId || !client) return null;
+  const validId = typeof signalId === 'string' ? signalId.trim().length > 0
+    : typeof signalId === 'number' ? Number.isFinite(signalId)
+    : false;
+  if (!validId || !ownerUserId || !client) return null;
 
   const { data, error } = await client
     .from('business_signals')

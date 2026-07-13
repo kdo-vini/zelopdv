@@ -406,14 +406,17 @@ export async function POST({ request }) {
 
   let signalContext = null;
   if (signalId !== undefined && signalId !== null) {
-    if (typeof signalId !== 'string' || !signalId.trim()) return json({ error: 'Aviso invÃ¡lido.' }, { status: 400 });
+    const isValidSignalId = typeof signalId === 'string' ? signalId.trim().length > 0
+      : typeof signalId === 'number' ? Number.isFinite(signalId)
+      : false;
+    if (!isValidSignalId) return json({ error: 'Aviso inválido.' }, { status: 400 });
     try {
       signalContext = await getSignalContextForOwner(signalId, ownerUserId, supabaseAdmin);
     } catch (error) {
       console.error('[Assistant] signal context:', error.message);
-      return json({ error: 'NÃ£o foi possÃ­vel carregar o aviso.' }, { status: 500 });
+      return json({ error: 'Não foi possível carregar o aviso.' }, { status: 500 });
     }
-    if (!signalContext) return json({ error: 'Aviso nÃ£o encontrado.' }, { status: 403 });
+    if (!signalContext) return json({ error: 'Aviso não encontrado.' }, { status: 403 });
   }
 
   let screenContext = null;
