@@ -97,6 +97,16 @@ describe('assistant context store', () => {
     expect(get(messages)).toEqual([]);
   });
 
+  it('resets contextType to geral when the screen context is cleared', () => {
+    openAssistantWithContext({ source: 'produtos', title: 'Produto X', route: '/gestao/produtos', contextType: 'produtos' });
+    expect(get(contextType)).toBe('produtos');
+
+    clearScreenContext();
+
+    expect(get(screenContext)).toBeNull();
+    expect(get(contextType)).toBe('geral');
+  });
+
   it('clears the conversation history when opening a new screen context', () => {
     openAssistantWithContext({ source: 'relatorios', title: 'Relatorio', route: '/relatorios', contextType: 'vendas' });
     messages.set([{ role: 'user', content: 'pergunta antiga' }]);

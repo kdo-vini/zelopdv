@@ -91,6 +91,7 @@ export function setScreenContext(context) {
 
 export function clearScreenContext() {
   screenContext.set(null);
+  contextType.set('geral');
 }
 
 export function openAssistantWithContext(context) {
