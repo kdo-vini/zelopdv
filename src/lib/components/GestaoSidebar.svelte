@@ -71,7 +71,7 @@
             .maybeSingle(),
           supabase
             .from('empresa_perfil')
-            .select('logo_url, intelligence_enabled_at')
+            .select('logo_url, intelligence_enabled_at, gerente_prefs')
             .eq('user_id', subscriptionUserId)
             .maybeSingle()
         ]);
@@ -90,10 +90,19 @@
           || (sub?.plan_tier === 'pdv' && !!sub?.has_mesas_addon);
         if (perfil?.logo_url) companyLogoUrl = perfil.logo_url;
         if (perfil?.intelligence_enabled_at) {
-          const [{ count }, { data: unreadSignals }] = await Promise.all([
-            supabase.from('business_signals').select('id', { count: 'exact', head: true }).is('read_at', null),
-            supabase.from('business_signals').select('id').is('read_at', null).eq('severity', 'critical').limit(1),
-          ]);
+          // Muted types only hide a signal from the briefing/WhatsApp digest
+          // (TA-INTELLIGENCE-01 in docs/TRADEOFFS.md keeps the engine detecting
+          // and the feed showing them for audit purposes) — the "new alert"
+          // badge should still respect it, since silencing a type means the
+          // owner asked to stop being nudged about it.
+          const mutedTypes = Array.isArray(perfil?.gerente_prefs?.muted_types) ? perfil.gerente_prefs.muted_types : [];
+          let unreadQuery = supabase.from('business_signals').select('id', { count: 'exact', head: true }).is('read_at', null);
+          let criticalQuery = supabase.from('business_signals').select('id').is('read_at', null).eq('severity', 'critical').limit(1);
+          if (mutedTypes.length) {
+            unreadQuery = unreadQuery.not('type', 'in', `(${mutedTypes.join(',')})`);
+            criticalQuery = criticalQuery.not('type', 'in', `(${mutedTypes.join(',')})`);
+          }
+          const [{ count }, { data: unreadSignals }] = await Promise.all([unreadQuery, criticalQuery]);
           unreadCount.set(count || 0);
           hasUnreadCritical = Boolean(unreadSignals?.length);
         } else {
