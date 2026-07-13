@@ -16,7 +16,7 @@
 <section class="briefing">
   <div class="briefing-intro"><div class="avatar"><Sparkles size={20} aria-hidden="true" /></div><div><p class="eyebrow">ZELINHO GERENTE</p><h2>{greeting}</h2></div></div>
   {#if learning}<div class="learning"><span>Semana {Math.min(4, Math.max(1, Math.ceil(salesDays / 7)))} de 4</span><div><i style={`width: ${Math.min(100, salesDays / 28 * 100)}%`}></i></div><small>{salesDays} dias com venda de 28</small></div>{/if}
-  {#if signals.length}<div class="briefing-signals">{#each signals.slice(0, 3) as signal, index}<div style={`animation-delay: ${index * 60}ms`} class="briefing-signal"><SignalCard {signal} {onRead} {onAsk} {onMute} /></div>{/each}</div>{:else if snapshot}<DaySnapshotSummary {snapshot} />{:else}<div class="briefing-empty"><strong>O Zelinho ainda está reunindo seu histórico.</strong><span>Continue registrando as vendas e o resumo aparece aqui.</span></div>{/if}
+  {#if signals.length}<div class="briefing-signals">{#each signals.slice(0, 3) as signal, index (signal.id)}<div style={`animation-delay: ${index * 60}ms`} class="briefing-signal"><SignalCard {signal} {onRead} {onAsk} {onMute} /></div>{/each}</div>{:else if snapshot}<DaySnapshotSummary {snapshot} />{:else}<div class="briefing-empty"><strong>O Zelinho ainda está reunindo seu histórico.</strong><span>Continue registrando as vendas e o resumo aparece aqui.</span></div>{/if}
 </section>
 
 <style>
