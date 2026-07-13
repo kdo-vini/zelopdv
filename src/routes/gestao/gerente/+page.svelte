@@ -75,7 +75,7 @@
     signal.read_at = new Date().toISOString();
     signals = [...signals];
     try {
-      await markRead([signalId], supabase);
+      await markRead([signalId], supabase, { signalType: signal.type, severity: signal.severity, mutedTypes });
     } catch {
       signal.read_at = previousReadAt;
       signals = [...signals];

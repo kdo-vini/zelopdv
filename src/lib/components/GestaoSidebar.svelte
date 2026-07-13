@@ -3,7 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { sessionStore, companyNameStore } from '$lib/stores/session';
   import { closeAssistant } from '$lib/stores/assistant';
-  import { unreadCount } from '$lib/stores/gerente';
+  import { unreadCount, hasUnreadCritical } from '$lib/stores/gerente';
   import SidebarBadge from '$lib/components/gerente/SidebarBadge.svelte';
   import { toggleSupport, closeSupport, isSupportOpen } from '$lib/stores/support';
   import { getAccessContext, getAccessContextSync } from '$lib/accessControl';
@@ -22,7 +22,6 @@
   let acessosAddonActive = false;
   let isSubUserMode = false;
   let subUserPermissions = {};
-  let hasUnreadCritical = false;
   // Until access context is known, suppress permission-gated nav items so the
   // sidebar never flashes owner-only links to a freshly-mounted sub-user
   // (happens on cross-section nav like /app ↔ /gestao because each section has
@@ -104,10 +103,10 @@
           }
           const [{ count }, { data: unreadSignals }] = await Promise.all([unreadQuery, criticalQuery]);
           unreadCount.set(count || 0);
-          hasUnreadCritical = Boolean(unreadSignals?.length);
+          hasUnreadCritical.set(Boolean(unreadSignals?.length));
         } else {
           unreadCount.set(0);
-          hasUnreadCritical = false;
+          hasUnreadCritical.set(false);
         }
       } catch (e) {
         // silent fail - non-critical
@@ -324,7 +323,7 @@
   aria-expanded={mobileOpen}
   aria-controls="gestao-sidebar"
 >
-  {#if $unreadCount > 0}<span class:critical-dot={hasUnreadCritical} class="mobile-gerente-dot" aria-hidden="true"></span>{/if}
+  {#if $unreadCount > 0}<span class:critical-dot={$hasUnreadCritical} class="mobile-gerente-dot" aria-hidden="true"></span>{/if}
   {#if mobileOpen}
     <X class="size-5" aria-hidden="true" />
   {:else}
@@ -441,9 +440,9 @@
                   aria-current={active ? 'page' : undefined}
                   title={item.label}
                 >
-                  <span class="nav-icon"><svelte:component this={item.icon} class="size-5 shrink-0" aria-hidden="true" />{#if item.badge && collapsed && $unreadCount > 0}<span class:critical-dot={hasUnreadCritical} class="collapsed-gerente-dot" aria-hidden="true"></span>{/if}</span>
+                  <span class="nav-icon"><svelte:component this={item.icon} class="size-5 shrink-0" aria-hidden="true" />{#if item.badge && collapsed && $unreadCount > 0}<span class:critical-dot={$hasUnreadCritical} class="collapsed-gerente-dot" aria-hidden="true"></span>{/if}</span>
                   <span class="label-text whitespace-nowrap">{item.label}</span>
-                  {#if item.badge}<span class="ml-auto label-text"><SidebarBadge count={$unreadCount} hasCritical={hasUnreadCritical} /></span>{/if}
+                  {#if item.badge}<span class="ml-auto label-text"><SidebarBadge count={$unreadCount} hasCritical={$hasUnreadCritical} /></span>{/if}
                 </a>
               </li>
             {/if}
