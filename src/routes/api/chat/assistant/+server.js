@@ -7,97 +7,59 @@ import { sendWhatsAppText, isWhatsAppConfigured } from '$lib/server/whatsapp';
 import { captureAiGeneration } from '$lib/server/posthog';
 import { resolveOwnerUserId } from '$lib/server/accessControl';
 import { buildSignalContextPrompt, getSignalContextForOwner } from '$lib/server/intelligence/signalContext';
+import { fetchVendas, fetchVendasItens, fetchVendasPagamentos } from '$lib/server/intelligence/fetchers';
+import { buildCatalogSalesContext, buildStockContext } from '$lib/server/assistant/businessContext';
+
+const BUSINESS_CONTEXT_CACHE_TTL_MS = 20_000;
+const BUSINESS_CONTEXT_CACHE_MAX_ENTRIES = 100;
+const businessContextCache = new Map();
 
 async function buildBusinessContext(userId) {
   try {
+    const now = Date.now();
+    for (const [cachedUserId, entry] of businessContextCache) {
+      if (now - entry.createdAt >= BUSINESS_CONTEXT_CACHE_TTL_MS) businessContextCache.delete(cachedUserId);
+    }
+    const cached = businessContextCache.get(userId);
+    if (cached) return cached.value;
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // Business profile + product catalog (for context-aware responses)
-    const [perfilRes, catalogoRes] = await Promise.all([
+    // The assistant uses stored catalog relations and every sale item in the
+    // window. Do not infer categories from product names or truncate sales.
+    const [perfilRes, produtosRes, categoriasRes, expensesRes, caixaRes, topFiadoRes, vendas] = await Promise.all([
       supabaseAdmin.from('empresa_perfil').select('nome_exibicao, contato').eq('user_id', userId).maybeSingle(),
-      supabaseAdmin.from('produtos').select('nome, preco').eq('id_usuario', userId).order('nome').limit(40),
+      supabaseAdmin.from('produtos').select('id, nome, preco, id_categoria, estoque_atual, controlar_estoque, ocultar_no_pdv').eq('id_usuario', userId).order('nome'),
+      supabaseAdmin.from('categorias').select('id, nome, ordem, controlar_estoque_compartilhado, estoque_compartilhado_atual').eq('id_usuario', userId).order('ordem'),
+      supabaseAdmin.from('expenses').select('amount, category').eq('user_id', userId).gte('date', startOfMonth.toISOString()),
+      supabaseAdmin.from('caixas').select('valor_inicial, data_abertura, data_fechamento').eq('id_usuario', userId).order('data_abertura', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('pessoas').select('nome, saldo_fiado').eq('id_usuario', userId).gt('saldo_fiado', 0).order('saldo_fiado', { ascending: false }).limit(5),
+      fetchVendas(supabaseAdmin, userId, thirtyDaysAgo.toISOString(), new Date().toISOString()),
     ]);
-
-    // Sales last 30 days
-    const { data: vendas } = await supabaseAdmin
-      .from('vendas')
-      .select('valor_total, forma_pagamento')
-      .eq('id_usuario', userId)
-      .gte('created_at', thirtyDaysAgo.toISOString());
-
-    // Sale IDs for product lookup
-    const { data: vendaIds } = await supabaseAdmin
-      .from('vendas')
-      .select('id')
-      .eq('id_usuario', userId)
-      .gte('created_at', thirtyDaysAgo.toISOString());
-
-    // Top products by quantity sold
-    let topProducts = [];
-    if (vendaIds?.length > 0) {
-      const ids = vendaIds.map(v => v.id).slice(0, 500);
-      const { data: items } = await supabaseAdmin
-        .from('vendas_itens')
-        .select('id_produto, quantidade, preco_unitario_na_venda, nome_produto_na_venda')
-        .in('id_venda', ids);
-
-      const productMap = {};
-      for (const item of items || []) {
-        const key = item.id_produto;
-        const nome = item.nome_produto_na_venda || 'Desconhecido';
-        if (!productMap[key]) productMap[key] = { nome, qtd: 0, receita: 0 };
-        productMap[key].qtd += Number(item.quantidade) || 0;
-        productMap[key].receita += (Number(item.preco_unitario_na_venda) || 0) * (Number(item.quantidade) || 0);
-      }
-      topProducts = Object.values(productMap)
-        .sort((a, b) => b.qtd - a.qtd)
-        .slice(0, 10)
-        .map(p => ({ nome: p.nome, qtd: p.qtd, receita: p.receita.toFixed(2) }));
+    for (const result of [perfilRes, produtosRes, categoriasRes, expensesRes, caixaRes, topFiadoRes]) {
+      if (result.error) throw result.error;
     }
 
-    // Expenses this month
-    const { data: expenses } = await supabaseAdmin
-      .from('expenses')
-      .select('amount, category')
-      .eq('user_id', userId)
-      .gte('date', startOfMonth.toISOString());
-
-    // Latest cash register
-    const { data: caixa } = await supabaseAdmin
-      .from('caixas')
-      .select('valor_inicial, data_abertura, data_fechamento')
-      .eq('id_usuario', userId)
-      .order('data_abertura', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    // Top 5 customers with highest fiado balance
-    const { data: topFiado } = await supabaseAdmin
-      .from('pessoas')
-      .select('nome, saldo_fiado')
-      .eq('id_usuario', userId)
-      .gt('saldo_fiado', 0)
-      .order('saldo_fiado', { ascending: false })
-      .limit(5);
-
-    // Aggregate sales
-    const totalVendas = vendas?.length || 0;
-    const receitaTotal = vendas?.reduce((s, v) => s + (Number(v.valor_total) || 0), 0) || 0;
-    const porMetodo = {};
-    for (const v of vendas || []) {
-      const fp = v.forma_pagamento || 'outros';
-      porMetodo[fp] = (porMetodo[fp] || 0) + (Number(v.valor_total) || 0);
-    }
-    for (const k of Object.keys(porMetodo)) {
-      porMetodo[k] = Number(porMetodo[k].toFixed(2));
-    }
+    const vendaIds = (vendas || []).map((venda) => venda.id);
+    const [itens, pagamentos] = await Promise.all([
+      fetchVendasItens(supabaseAdmin, vendaIds),
+      fetchVendasPagamentos(supabaseAdmin, vendaIds),
+    ]);
+    const salesContext = buildCatalogSalesContext({
+      vendas,
+      itens,
+      pagamentos,
+      produtos: produtosRes.data || [],
+      categorias: categoriasRes.data || [],
+    });
 
     // Aggregate expenses
-    const totalDespesas = expenses?.reduce((s, e) => s + (Number(e.amount) || 0), 0) || 0;
+    const expenses = expensesRes.data || [];
+    const totalDespesas = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0) || 0;
     const despesasPorCat = {};
     for (const e of expenses || []) {
       const cat = e.category || 'outros';
@@ -107,28 +69,32 @@ async function buildBusinessContext(userId) {
       despesasPorCat[k] = Number(despesasPorCat[k].toFixed(2));
     }
 
-    return {
+    const context = {
       perfil: {
         nome_negocio: perfilRes.data?.nome_exibicao || null,
         contato: perfilRes.data?.contato || null,
       },
       whatsapp_disponivel: isWhatsAppConfigured() && !!perfilRes.data?.contato,
-      catalogo_produtos: (catalogoRes.data || []).map(p => `${p.nome} (R$ ${Number(p.preco).toFixed(2)})`),
+      catalogo_produtos: (produtosRes.data || []).map((product) => `${product.nome} (R$ ${Number(product.preco).toFixed(2)})`),
       periodo: 'últimos 30 dias',
-      vendas: {
-        quantidade: totalVendas,
-        receita_total: receitaTotal.toFixed(2),
-        por_metodo_pagamento: porMetodo,
-      },
-      top_produtos: topProducts,
+      vendas: salesContext.vendas,
+      itens_vendidos: salesContext.itens_vendidos,
+      categorias: salesContext.categorias,
+      catalogo: salesContext.catalogo,
       despesas: {
         total_mes_atual: totalDespesas.toFixed(2),
         por_categoria: despesasPorCat,
       },
-      resultado_operacional_aproximado: (receitaTotal - totalDespesas).toFixed(2),
-      caixa: caixa ? { aberto: !caixa.data_fechamento, valor_inicial: caixa.valor_inicial, data_abertura: caixa.data_abertura } : null,
-      fiado_em_aberto: topFiado?.map(p => ({ cliente: p.nome, saldo: p.saldo_fiado })) || [],
+      resultado_operacional_aproximado: (Number(salesContext.vendas.receita_total) - totalDespesas).toFixed(2),
+      estoque_controlado: buildStockContext({ produtos: produtosRes.data || [], categorias: categoriasRes.data || [] }),
+      caixa: caixaRes.data ? { aberto: !caixaRes.data.data_fechamento, valor_inicial: caixaRes.data.valor_inicial, data_abertura: caixaRes.data.data_abertura } : null,
+      fiado_em_aberto: topFiadoRes.data?.map(p => ({ cliente: p.nome, saldo: p.saldo_fiado })) || [],
     };
+    if (businessContextCache.size >= BUSINESS_CONTEXT_CACHE_MAX_ENTRIES) {
+      businessContextCache.delete(businessContextCache.keys().next().value);
+    }
+    businessContextCache.set(userId, { createdAt: Date.now(), value: context });
+    return context;
   } catch (err) {
     console.error('[Assistant] buildBusinessContext error:', err.message);
     return { erro: 'Não foi possível carregar os dados do negócio no momento.' };
@@ -144,11 +110,13 @@ export function _buildSystemPrompt(context, contextType, signalContext = null) {
   const numVendas = context.vendas?.quantidade || 0;
   const despesasMes = parseFloat(context.despesas?.total_mes_atual || 0);
   const resultadoOperacional = parseFloat(context.resultado_operacional_aproximado || 0);
-  const ticketMedio = numVendas > 0 ? (receita / numVendas).toFixed(2) : null;
+  const ticketMedio = context.vendas?.ticket_medio || (numVendas > 0 ? (receita / numVendas).toFixed(2) : null);
   const despesasPct = receita > 0 ? ((despesasMes / receita) * 100).toFixed(1) : null;
   const metodoDominante = Object.entries(context.vendas?.por_metodo_pagamento || {})
     .sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-  const produtoTop = context.top_produtos?.[0]?.nome ?? null;
+  const produtoTop = context.itens_vendidos?.top_produtos?.[0]?.nome ?? null;
+  const unidadesRegistradas = context.itens_vendidos?.unidades_registradas ?? 0;
+  const mediaItensPorVenda = context.itens_vendidos?.media_itens_por_venda ?? null;
   const totalFiado = context.fiado_em_aberto?.reduce((s, p) => s + (Number(p.saldo) || 0), 0).toFixed(2) ?? '0.00';
   const fiadoPct = receita > 0 ? ((parseFloat(totalFiado) / receita) * 100).toFixed(1) : null;
 
@@ -157,6 +125,7 @@ MÉTRICAS JÁ CALCULADAS (use exatamente estes valores, não recalcule):
 • Receita total (30 dias): R$ ${receita.toFixed(2)}
 • Número de vendas: ${numVendas}
 • Ticket médio: ${ticketMedio ? `R$ ${ticketMedio}` : 'sem dados'}
+• Unidades de itens registradas: ${unidadesRegistradas}${mediaItensPorVenda != null ? ` (${mediaItensPorVenda} itens por venda, em média)` : ''}
 • Despesas do mês: R$ ${despesasMes.toFixed(2)}${despesasPct ? ` (${despesasPct}% da receita)` : ''}
 • Resultado operacional aproximado: R$ ${resultadoOperacional.toFixed(2)} (não inclui o custo dos produtos)
 • Método de pagamento dominante: ${metodoDominante ?? 'sem dados'}
@@ -176,6 +145,8 @@ Evite análises genéricas — use os números e produtos reais.`,
     produtos: `
 FOCO ATIVO — PRODUTOS E PRECIFICAÇÃO:
 Ao responder sobre produtos:
+• Categorias e médias por categoria vêm da seção categorias dos dados reais; use esses valores, sem inferir categoria pelo nome do produto. Para histórico por categoria, deixe claro que a classificação segue o catálogo atual quando isso for relevante
+• Para "quantos itens de uma categoria por venda", use media_unidades_por_venda da categoria correspondente e mostre a conta em uma frase
 • Diferencie "mais vendido em quantidade" de "produto com maior receita" — podem ser diferentes
 • Se o usuário perguntar o preço de um produto: peça o custo de produção e calcule o markup
   - Markup = preço_venda / custo. Saudável para food service: 2,5x a 4x (depende do produto)
@@ -210,11 +181,11 @@ Seja específico — use os números reais, não genéricos.`,
 
 TOM E FORMATO:
 • Português brasileiro informal mas profissional. Nunca pedante.
-• Máximo 3–4 parágrafos ou uma lista estruturada. Nunca longos.
+• Responda primeiro à pergunta em 1 frase objetiva; depois mostre no máximo uma conta e uma ação prática. Não dê aula longa quando o dado existe.
 • Use números em formato brasileiro: R$ 1.234,56
 • Para resultado financeiro, use somente "resultado operacional aproximado" e deixe claro que não inclui o custo dos produtos
 • Termine respostas de análise com uma sugestão concreta de ação
-• Se os dados forem insuficientes (negócio novo), dê orientações gerais e incentive o registro de vendas/despesas no sistema
+• Só diga que um dado está indisponível depois de conferir a seção DADOS REAIS. Nunca recomende registrar itens ou categorias que já estejam presentes nela.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DADOS REAIS DO NEGÓCIO (últimos 30 dias + mês atual)
@@ -230,7 +201,7 @@ IDENTIDADE DO NEGÓCIO
 ${catalogoNomes ? `• Produtos cadastrados no sistema: ${catalogoNomes}` : '• Produtos cadastrados: não informado'}
 ${context.whatsapp_disponivel ? '\n• WhatsApp: disponível para envio de resumos. Se o usuário pedir para enviar resumo/relatório, use a ferramenta send_whatsapp_summary.' : ''}
 
-IMPORTANTE: Use os produtos reais acima como referência em todos os exemplos, sugestões e análises. Nunca cite produtos genéricos (como "cachorro quente", "lanche", "prato feito") se não estiverem no catálogo. Se o negócio vende donuts, os exemplos devem ser sobre donuts. Se vende marmitas, sobre marmitas.
+IMPORTANTE: Os DADOS REAIS são a fonte de verdade e prevalecem sobre mensagens anteriores do assistente. Use os produtos e as categorias reais em todos os exemplos. Ao perguntarem pelas categorias, liste o campo categorias.nome; se houver categorias cadastradas, nunca diga que elas não existem. Para médias de uma categoria, use somente categorias.media_unidades_por_venda e explique a divisão por vendas.quantidade.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CONHECIMENTO DE DOMÍNIO — FOOD SERVICE E PEQUENOS NEGÓCIOS BRASIL

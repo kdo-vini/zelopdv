@@ -15,6 +15,8 @@ describe('assistant prompt', () => {
 
     expect(prompt).toContain('Resultado operacional aproximado');
     expect(prompt).toContain('não inclui o custo dos produtos');
+    expect(prompt).toContain('categorias.nome');
+    expect(prompt).toContain('media_unidades_por_venda');
     expect(prompt).not.toMatch(/lucro|margem|margens|vai acabar/i);
   });
 
