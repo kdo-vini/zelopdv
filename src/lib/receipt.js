@@ -337,6 +337,7 @@ export function buildPagamentoFiadoHTML({ estabelecimento = {}, pagamento = {} }
 <div class="cupom">
   <div class="nome-empresa">${nome}</div>
   ${estabelecimento.contato ? `<div class="meta-empresa">${escHtml(maskPhone(estabelecimento.contato))}</div>` : ''}
+  ${estabelecimento.documento ? `<div class="meta-empresa">CNPJ/CPF: ${escHtml(maskDocumento(estabelecimento.documento))}</div>` : ''}
   <div class="titulo-cupom">RECIBO DE PAGAMENTO (FIADO)</div>
 
   <hr class="sep">
