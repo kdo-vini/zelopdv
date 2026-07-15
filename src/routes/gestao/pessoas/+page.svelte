@@ -61,7 +61,7 @@
   });
 </script>
 
-<div class="p-6 max-w-6xl mx-auto">
+<div class="p-4 sm:p-6 max-w-6xl mx-auto">
 
   <!-- Page header -->
   <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
@@ -143,33 +143,33 @@
       {:else if pessoas.length === 0}
         <div class="p-10 text-center text-slate-500 text-sm">Nenhuma pessoa cadastrada.</div>
       {:else}
-        <div class="overflow-x-auto">
+        <div class="table-scroll-wrapper">
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-slate-700/60">
-                <th class="col-header px-5 py-3 text-left">Nome</th>
-                <th class="col-header px-4 py-3 text-left">Tipo</th>
-                <th class="col-header px-4 py-3 text-left">Contato</th>
-                <th class="col-header px-4 py-3 text-right">Situação do fiado</th>
-                <th class="px-4 py-3 w-28"></th>
+                <th class="col-header px-4 sm:px-5 py-3 text-left min-w-[140px]">Nome</th>
+                <th class="col-header px-3 sm:px-4 py-3 text-left min-w-[80px]">Tipo</th>
+                <th class="col-header px-3 sm:px-4 py-3 text-left min-w-[130px]">Contato</th>
+                <th class="col-header px-3 sm:px-4 py-3 text-right min-w-[120px]">Situação do fiado</th>
+                <th class="px-3 sm:px-4 py-3 min-w-[100px]"></th>
               </tr>
             </thead>
             <tbody>
               {#each pessoas as p (p.id)}
                 <tr class="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors group">
-                  <td class="px-5 py-3 font-medium text-slate-100">{p.nome}</td>
-                  <td class="px-4 py-3">
+                  <td class="px-4 sm:px-5 py-3 font-medium text-slate-100 whitespace-nowrap">{p.nome}</td>
+                  <td class="px-3 sm:px-4 py-3">
                     <span class="type-badge {p.tipo === 'funcionario' ? 'type-func' : 'type-cli'}">
                       {p.tipo === 'funcionario' ? 'Func.' : 'Cliente'}
                     </span>
                   </td>
-                  <td class="px-4 py-3 text-slate-400 tabular-nums">{maskPhone(p.contato) || '—'}</td>
-                  <td class={`px-4 py-3 text-right tabular-nums font-medium fiado-${getFiadoState(p.saldo_fiado).key}`}>
+                  <td class="px-3 sm:px-4 py-3 text-slate-400 tabular-nums whitespace-nowrap">{maskPhone(p.contato) || '—'}</td>
+                  <td class={`px-3 sm:px-4 py-3 text-right tabular-nums font-medium fiado-${getFiadoState(p.saldo_fiado).key}`}>
                     <span class="fiado-label">{getFiadoState(p.saldo_fiado).label}</span>
                     <span>R$ {Number(getFiadoState(p.saldo_fiado).value).toFixed(2)}</span>
                   </td>
-                  <td class="px-4 py-3">
-                    <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <td class="px-3 sm:px-4 py-3">
+                    <div class="flex items-center justify-end gap-1 actions-cell">
                       <!-- Fichário -->
                       <a
                         href="/gestao/fichario?p={p.id}"
@@ -260,4 +260,26 @@
   .fiado-devedor { color: var(--status-warning-text); }
   .fiado-credor { color: var(--status-success-text); }
   .fiado-neutro { color: var(--text-muted); }
+
+  /* Table horizontal scroll with fade hint */
+  .table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-subtle) transparent;
+  }
+  .table-scroll-wrapper::-webkit-scrollbar { height: 6px; }
+  .table-scroll-wrapper::-webkit-scrollbar-track { background: transparent; }
+  .table-scroll-wrapper::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
+
+  /* Actions: hidden on desktop hover, visible on mobile touch */
+  .actions-cell {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .group:hover .actions-cell { opacity: 1; }
+
+  @media (hover: none) and (pointer: coarse) {
+    .actions-cell { opacity: 1; }
+  }
 </style>
