@@ -1,12 +1,13 @@
 <script>
   import { onMount } from 'svelte';
-  import { Search, WalletCards, CircleDollarSign, ReceiptText, ArrowDownLeft, ArrowUpRight, RefreshCw, Users } from 'lucide-svelte';
+  import { Search, WalletCards, CircleDollarSign, ReceiptText, ArrowDownLeft, ArrowUpRight, RefreshCw, Users, MessageCircle } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription } from '$lib/guards';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast } from '$lib/stores/ui';
   import { printPagamentoFiado } from '$lib/printService';
   import { buildFiadoStatement, getFiadoState } from '$lib/finance/fiado';
+  import { normalizeBrazilianPhone } from '$lib/masks';
 
   let pessoas = [];
   let pessoaSelecionada = null;
@@ -25,6 +26,9 @@
   let ownerUserId = '';
   let operadorUserId = '';
   let isSubUser = false;
+  let vendasDetalhes = {};
+  let vendasItensMap = {};
+  let expandedEntries = new Set();
 
   $: pessoasFiltradas = pessoas.filter((p) => p.nome.toLocaleLowerCase('pt-BR').includes(busca.trim().toLocaleLowerCase('pt-BR')));
   $: estadoAtual = getFiadoState(pessoaSelecionada?.saldo_fiado || 0);
@@ -47,6 +51,29 @@
 
   function entryState(natureza) {
     return natureza === 'debito_venda' || natureza === 'saldo_inicial' ? 'debit' : 'credit';
+  }
+
+  function toggleEntry(id) {
+    if (expandedEntries.has(id)) {
+      expandedEntries.delete(id);
+    } else {
+      expandedEntries.add(id);
+    }
+    expandedEntries = expandedEntries;
+  }
+
+  function tipoPedidoLabel(tipo) {
+    const map = { retirada: 'Retirada', delivery: 'Delivery', mesa: 'Mesa' };
+    return map[tipo] || tipo || 'Retirada';
+  }
+
+  function buildCobrancaUrl() {
+    const phone = normalizeBrazilianPhone(pessoaSelecionada?.contato);
+    if (!phone) return null;
+    const nome = pessoaSelecionada.nome;
+    const valor = money(estadoAtual.value);
+    const text = `*${nome}*, identificamos que o seu saldo em fiado é de *${valor}*. Gostaríamos de solicitar a regularização. Entre em contato para acertar!`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
   }
 
   async function loadPessoas() {
@@ -76,6 +103,28 @@
         .order('id', { ascending: true });
       if (error) throw error;
       lancamentos = data || [];
+
+      // Fetch sale details for debito_venda entries
+      const vendaIds = [...new Set(
+        lancamentos
+          .filter(l => l.natureza === 'debito_venda' && l.id_venda)
+          .map(l => l.id_venda)
+      )];
+      vendasDetalhes = {};
+      vendasItensMap = {};
+      if (vendaIds.length > 0) {
+        const [vendasRes, itensRes] = await Promise.all([
+          supabase.from('vendas').select('id, numero_venda, valor_total, tipo_pedido, created_at').in('id', vendaIds),
+          supabase.from('vendas_itens').select('id_venda, nome_produto_na_venda, quantidade, preco_unitario_na_venda').in('id_venda', vendaIds)
+        ]);
+        if (vendasRes.data) for (const v of vendasRes.data) vendasDetalhes[v.id] = v;
+        if (itensRes.data) {
+          for (const item of itensRes.data) {
+            if (!vendasItensMap[item.id_venda]) vendasItensMap[item.id_venda] = [];
+            vendasItensMap[item.id_venda].push(item);
+          }
+        }
+      }
     } catch (error) {
       errorMsg = 'Não foi possível carregar o extrato. Confirme se a atualização de fiado já foi aplicada.';
     } finally {
@@ -237,7 +286,14 @@
 
           <section class="balance-summary" aria-label="Situação atual do fiado">
             <div><span>Situação atual</span><strong class={estadoAtual.key}>{estadoAtual.label}</strong></div>
-            <output class="balance-value {estadoAtual.key}">{money(estadoAtual.value)}</output>
+            <div class="balance-right">
+              <output class="balance-value {estadoAtual.key}">{money(estadoAtual.value)}</output>
+              {#if estadoAtual.key === 'devedor' && buildCobrancaUrl()}
+                <a class="whatsapp-action" href={buildCobrancaUrl()} target="_blank" rel="noopener noreferrer" aria-label="Enviar cobrança via WhatsApp">
+                  <MessageCircle size={16} /> Cobrar via WhatsApp
+                </a>
+              {/if}
+            </div>
           </section>
 
           <section class="payment-form" aria-labelledby="payment-title">
@@ -263,9 +319,28 @@
               <ol class="statement-list">
                 {#each extrato as entry (entry.id)}
                   {@const Icon = entryIcon(entry.natureza)}
+                  {@const venda = vendasDetalhes[entry.id_venda]}
+                  {@const itens = vendasItensMap[entry.id_venda] || []}
+                  {@const isDebito = entry.natureza === 'debito_venda' && venda}
                   <li class="statement-entry">
                     <span class="entry-icon {entryState(entry.natureza)}"><Icon size={17} /></span>
-                    <div class="entry-main"><strong>{entry.meta.label}</strong><span>{entry.descricao || 'Movimento de fiado'} · {formatDate(entry.created_at)}</span></div>
+                    <div class="entry-main">
+                      <strong>{entry.meta.label}</strong>
+                      <span>{entry.descricao || 'Movimento de fiado'} · {formatDate(entry.created_at)}</span>
+                      {#if isDebito && itens.length > 0}
+                        <button class="detail-toggle" on:click={() => toggleEntry(entry.id)} aria-expanded={expandedEntries.has(entry.id)}>
+                          Venda #{venda.numero_venda} · {tipoPedidoLabel(venda.tipo_pedido)}
+                          <svg class="toggle-chevron" class:open={expandedEntries.has(entry.id)} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+                        </button>
+                        {#if expandedEntries.has(entry.id)}
+                          <ul class="detail-items">
+                            {#each itens as item}
+                              <li><span>{item.quantidade}x {item.nome_produto_na_venda}</span><span>{money(Number(item.preco_unitario_na_venda))}</span></li>
+                            {/each}
+                          </ul>
+                        {/if}
+                      {/if}
+                    </div>
                     <div class="entry-values"><strong class:debit={Number(entry.valor) > 0} class:credit={Number(entry.valor) < 0}>{Number(entry.valor) > 0 ? '+' : '−'}{money(Math.abs(Number(entry.valor)))}</strong><span>Saldo: {money(getFiadoState(entry.balanceAfter).value)} {entry.balanceAfter < 0 ? 'de crédito' : ''}</span></div>
                   </li>
                 {/each}
@@ -293,4 +368,25 @@
   .statement { padding-top: 1.25rem; }.statement-list { display: grid; margin: 1rem 0 0; padding: 0; list-style: none; }.statement-entry { display: grid; grid-template-columns: 32px minmax(0, 1fr) max-content; gap: .75rem; align-items: center; padding: .875rem 0; border-bottom: 1px solid var(--border-card); }.entry-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--bg-input); }.entry-icon.debit { color: var(--status-warning-text); }.entry-icon.credit { color: var(--status-success-text); }.entry-main { min-width: 0; display: grid; gap: .125rem; }.entry-main strong { color: var(--text-main); font-size: .875rem; }.entry-main span { overflow: hidden; color: var(--text-muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }.entry-values { display: grid; gap: .125rem; text-align: right; font-variant-numeric: tabular-nums; }.entry-values strong { font-size: .875rem; }.statement-loading, .statement-empty { min-height: 9rem; margin-top: 1rem; border: 1px dashed var(--border-subtle); border-radius: 8px; }.loading-layout { display: grid; grid-template-columns: minmax(230px, .72fr) minmax(0, 1.6fr); gap: 1.25rem; }.loading-layout div { min-height: 28rem; border-radius: 12px; background: var(--bg-card); animation: pulse 1.2s ease-in-out infinite alternate; } @keyframes pulse { to { background: var(--bg-panel); } } .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
   @media (max-width: 760px) { .fichario-page { padding: 1rem; }.page-header { align-items: start; flex-direction: column; }.secondary-action { width: 100%; }.fichario-layout, .loading-layout { grid-template-columns: 1fr; }.people-panel { padding: .75rem; }.people-list { max-height: 19rem; }.detail-panel { padding: 1rem; }.payment-controls { grid-template-columns: 1fr; }.primary-action { width: 100%; }.statement-entry { grid-template-columns: 32px minmax(0, 1fr); }.entry-values { grid-column: 2; text-align: left; }.entry-main span { white-space: normal; }.payment-options { display: grid; gap: .625rem; }.balance-summary { align-items: start; flex-direction: column; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
+
+  /* Inline detail toggle */
+  .detail-toggle { display: inline-flex; align-items: center; gap: .25rem; margin-top: .25rem; padding: .125rem .375rem; border: 0; border-radius: 4px; background: transparent; color: var(--text-label); font: inherit; font-size: .75rem; font-weight: 600; cursor: pointer; transition: background-color 150ms ease; }
+  .detail-toggle:hover { background: var(--bg-panel); }
+  .detail-toggle:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 22%, transparent); }
+  .toggle-chevron { display: inline-block; transition: transform 150ms ease; }
+  .toggle-chevron.open { transform: rotate(180deg); }
+
+  /* Compact item list */
+  .detail-items { margin: .375rem 0 0; padding: 0; list-style: none; }
+  .detail-items li { display: flex; justify-content: space-between; gap: .5rem; padding: .125rem 0; font-size: .75rem; color: var(--text-muted); }
+  .detail-items li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .detail-items li span:last-child { flex-shrink: 0; font-variant-numeric: tabular-nums; color: var(--text-label); }
+
+  /* Mobile overrides for new elements */
+  @media (max-width: 760px) {
+    .balance-right { align-items: flex-start; width: 100%; }
+    .whatsapp-action { width: 100%; justify-content: center; min-height: 44px; }
+    .detail-toggle { min-height: 44px; width: 100%; justify-content: flex-start; }
+    .detail-items li { font-size: .75rem; }
+  }
 </style>

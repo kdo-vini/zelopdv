@@ -1158,6 +1158,7 @@
       pagamentos = [];
       tipoPedido = 'retirada';
       taxaEntregaInput = 0;
+      showMobileCart = false;
       addToast('Pronto para próxima venda', 'info');
   }
 
