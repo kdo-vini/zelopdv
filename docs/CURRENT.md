@@ -5,6 +5,14 @@
 
 ## Snapshot validado (2026-07-13)
 
+- Fiado auditável (2026-07-15): implementados localmente o razão `fiado_lancamentos`, RPCs atômicas de recebimento/estorno, backfill por saldo inicial, fichário pesquisável e responsivo, situação de crédito em Pessoas e nomes no resumo de fechamento. A migration `.ai/migrations/fiado_ledger_2026_07_15.sql` **não foi aplicada em produção**: a consulta de validação via `supabase db query --linked` recebeu 403 da Management API e precisa ser refeita com credencial autorizada antes do rollout. Validação local: 41 testes financeiros direcionados passaram; `npm run check` terminou com 0 errors / 93 warnings pré-existentes; `npm run build` compilou os bundles, mas parou no adapter Vercel por `EPERM` ao criar symlink em `.vercel/output` (limitação local já observada).
+
+- Relatórios — vendas do caixa (2026-07-15): produtos vendidos agora deixam explícito que são um resumo agrupado; vendas do caixa são cupons individuais. O antigo tooltip de itens/cliente dentro de um contêiner rolável foi substituído por detalhes expansíveis, operáveis por mouse, teclado e toque, sem conteúdo essencial depender de hover ou scroll lateral. Rotas com sidebar agora bypassam a shell de viewport do layout raiz. Em telas pequenas, Relatórios usa a rolagem natural do documento; no desktop, a rolagem interna é contida no painel para não vazar ao documento externo e revelar área vazia. O encerramento sem movimentações ocupa o espaço restante como estado vazio explícito. A workspace declara `--text-main` como cor-base, impedindo textos pretos herdados sobre o fundo navy.
+
+- Contraste das áreas autenticadas (2026-07-15): as shells de Gestão, PDV, Ferramentas, Perfil e Assinatura agora declaram `--text-main` junto de `--bg-app`. Isso impede que conteúdo sem cor explícita herde preto quando o layout raiz é bypassado; a varredura também removeu utilitários de texto escuro remanescentes no Dashboard e no Fechar Caixa.
+
+- Selects (2026-07-15): o wrapper compartilhado deixou de passar um slot vazio ao `bits-ui`, que anulava o placeholder nativo, e agora repassa o `label` de cada item ao primitive. Filtros e formulários exibem o placeholder até uma opção ser escolhida e, depois, mostram o nome legível em vez do ID interno.
+
 - Pos-publicacao do Zelinho (2026-07-13): o CTA de contexto usa botao nativo (o wrapper Svelte 5 descartava eventos), o refresh do Gerente aguarda a requisicao mais recente e o chat inicial usa tres icebreakers clicaveis que preenchem o input. Commit enviado ao `main` para o deploy automatico da Vercel; nenhuma publicacao direta foi mantida.
 
 - Branch: `main`
