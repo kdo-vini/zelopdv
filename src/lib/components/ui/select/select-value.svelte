@@ -4,13 +4,14 @@
 	let {
 		ref = $bindable(null),
 		placeholder,
-		children,
 		...restProps
 	} = $props();
 </script>
 
-<SelectPrimitive.Value bind:ref {placeholder} {...restProps}>
-	{#if children}
-		{@render children?.()}
-	{/if}
-</SelectPrimitive.Value>
+<SelectPrimitive.Value bind:ref {placeholder} data-slot="select-value" {...restProps} />
+
+<style>
+	:global([data-slot='select-value'][data-placeholder]) {
+		color: var(--text-muted);
+	}
+</style>

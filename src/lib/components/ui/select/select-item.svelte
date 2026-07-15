@@ -16,6 +16,7 @@
 <SelectPrimitive.Item
 	bind:ref
 	{value}
+	{label}
 	data-slot="select-item"
 	class={cn(
 		"select-item gap-1.5 rounded-md py-1.5 pr-8 pl-2 text-sm relative flex w-full cursor-default items-center outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
