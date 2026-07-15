@@ -20,7 +20,7 @@
 	import BarChart from '$lib/components/charts/BarChart.svelte';
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
 	import { PLATAFORMAS_PRESET } from '$lib/profileUtils';
-	import { Banknote, ChartNoAxesColumnIncreasing, FileText, Sheet, ShoppingBag } from 'lucide-svelte';
+	import { Banknote, ChartNoAxesColumnIncreasing, ChevronDown, FileText, Sheet, ShoppingBag } from 'lucide-svelte';
 
 
 	let loading = true;
@@ -71,6 +71,11 @@
 	// Pagination state for "Vendas do Caixa" table
 	const VENDAS_PER_PAGE = 10;
 	let vendasPage = 1;
+	let vendaDetalheAbertaId = null;
+
+	function alternarDetalheVenda(vendaId) {
+		vendaDetalheAbertaId = vendaDetalheAbertaId === vendaId ? null : vendaId;
+	}
 
 	// Helpers
 	const fmt = (n) => `R$ ${Number(n || 0).toFixed(2)}`;
@@ -244,6 +249,7 @@
 	async function carregarRelatorioDoCaixa(idCaixa) {
 		if (!idCaixa) return;
 		vendasPage = 1;
+		vendaDetalheAbertaId = null;
 		try {
 			loading = true;
 			errorMessage = '';
@@ -1078,10 +1084,9 @@
 </script>
 
 <AdminLock correctPin={adminPin}>
-<div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
+<div class="mb-6 flex items-end justify-between">
 	<div>
-		<p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Outros / Relatórios</p>
-		<h1 class="text-xl font-bold text-slate-100 tracking-tight">Relatórios</h1>
+		<h1 class="text-xl font-bold" style="color: var(--text-main);">Relatórios</h1>
 	</div>
 </div>
 {#if errorMessage}
@@ -1179,28 +1184,34 @@
 					{/if}
 				</div>
 			</div>
-			<div class="text-xs text-slate-600 dark:text-slate-400">Período: {dataInicio ? dataInicio.toLocaleDateString() : ''} – {dataFim ? dataFim.toLocaleDateString() : ''}</div>
+			<div class="text-xs text-muted">Período: {dataInicio ? dataInicio.toLocaleDateString() : ''} – {dataFim ? dataFim.toLocaleDateString() : ''}</div>
 		</div>
 	{/if}
 </section>
 
 
 {#if loading}
-	<div>Carregando...</div>
+	<div class="flex flex-col items-center justify-center py-16 gap-3">
+		<div class="w-8 h-8 rounded-full border-2 border-[var(--border-card)] border-t-[var(--accent)] animate-spin"></div>
+		<p class="text-sm text-muted">Carregando relatórios...</p>
+	</div>
 {:else}
 	{#if modoRelatorio === 'caixa'}
 		{#if !caixaSelecionado}
-			<div class="text-sm text-slate-700 dark:text-slate-300">Nenhum caixa selecionado.</div>
+			<div class="flex flex-col items-center justify-center py-16 gap-2">
+				<ChartNoAxesColumnIncreasing class="size-10 text-muted" />
+				<p class="text-sm text-muted">Selecione um caixa ao lado para visualizar os relatórios.</p>
+			</div>
 		{:else}
-		<section class="space-y-5">
+		<section class="flex min-h-full flex-col gap-5">
 			<!-- ✦ HERO: Receita Líquida -->
-			<div class="rounded-xl bg-slate-800 dark:bg-slate-900 border border-slate-700 p-5">
-				<div class="flex items-center gap-2 text-slate-400 text-sm font-medium mb-1">
+			<div class="card-hero">
+				<div class="flex items-center gap-2 text-sm font-medium mb-1" style="color: var(--text-muted);">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
 					Receita Líquida
 				</div>
-				<div class="text-3xl font-bold text-white tracking-tight">{fmt(totalTaxaEntregaCaixa > 0 ? receitaRestauranteCaixa : receitaLiquidaCaixa)}</div>
-				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-slate-400">
+				<div class="text-3xl font-bold tracking-tight tabular-nums" style="color: var(--text-main);">{fmt(totalTaxaEntregaCaixa > 0 ? receitaRestauranteCaixa : receitaLiquidaCaixa)}</div>
+				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm" style="color: var(--text-muted);">
 					<span>Bruto: {fmt(totalGeral)}</span>
 					{#if totalDescontosCaixa > 0}
 						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(totalDescontosCaixa)}</span>
@@ -1216,40 +1227,40 @@
 
 			<!-- ✦ KPIs -->
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-5 h-5 rounded-sm bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Vendas Brutas
 					</div>
-					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(totalGeral)}</div>
+					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(totalGeral)}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-5 h-5 rounded-sm bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><ShoppingBag class="size-3.5" aria-hidden="true" /></span>
 						Qtd. Vendas
 					</div>
-					<div class="text-xl font-bold text-slate-800 dark:text-white">{qtdVendas}</div>
+					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{qtdVendas}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-5 h-5 rounded-sm bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400"><ChartNoAxesColumnIncreasing class="size-3.5" aria-hidden="true" /></span>
 						Ticket Médio
 					</div>
-					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(ticketMedio)}</div>
+					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(ticketMedio)}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-5 h-5 rounded-sm bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Dinheiro Líq.
 					</div>
-					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(totalDinheiro)}</div>
+					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(totalDinheiro)}</div>
 				</div>
 			</div>
 
 			<!-- ✦ Formas de Pagamento (unified card) -->
 			{#if caixaPagItems.length > 0}
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-				<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Formas de Pagamento</h3>
+			<div class="card-mini">
+				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-main);">Formas de Pagamento</h3>
 				<!-- Proportional bar -->
 				<div class="flex h-3 rounded-full overflow-hidden mb-4">
 					{#each caixaPagItems as p}
@@ -1262,37 +1273,37 @@
 						<div class="flex items-center gap-2">
 							<span class="w-2.5 h-2.5 rounded-full {p.color} shrink-0"></span>
 							<div>
-								<div class="text-xs text-slate-500 dark:text-slate-400">{p.label}</div>
-								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-slate-400">({caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100).toFixed(1) : 0}%)</span></div>
+								<div class="text-xs text-muted">{p.label}</div>
+								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-muted">({caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100).toFixed(1) : 0}%)</span></div>
 							</div>
 						</div>
 					{/each}
 				</div>
 				{#if totalCartaoLegacy > 0}
-					<div class="mt-2 text-xs text-slate-500 dark:text-slate-400">Cartão (legado): {fmt(totalCartaoLegacy)}</div>
+					<div class="mt-2 text-xs text-muted">Cartão (legado): {fmt(totalCartaoLegacy)}</div>
 				{/if}
 			</div>
 			{/if}
 
 			<!-- ✦ Custos de Plataforma (caixa) -->
 			{#if resumoTaxasCaixa.byPlatform.length > 0}
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+			<div class="card-mini">
 				<div class="flex items-center justify-between gap-3 mb-3">
-					<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Custos de Plataforma</h3>
+					<h3 class="text-sm font-semibold" style="color: var(--text-main);">Custos de Plataforma</h3>
 					<div class="text-sm font-bold text-rose-600 dark:text-rose-400">-{fmt(totalCustosPlataformaCaixa)}</div>
 				</div>
-				<p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+				<p class="text-xs mb-3" style="color: var(--text-muted);">
 					Comissão das plataformas (snapshot da taxa configurada no momento da venda). Já descontado da Receita Líquida acima.
 				</p>
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 					{#each resumoTaxasCaixa.byPlatform as plat}
-						<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+						<div class="rounded-lg card-inset">
 							<div class="flex items-center justify-between mb-1">
-								<span class="text-xs font-medium text-slate-700 dark:text-slate-200">{plat.nome}</span>
-								<span class="text-xs text-slate-500 dark:text-slate-400">{plat.qtdVendas} venda{plat.qtdVendas === 1 ? '' : 's'}</span>
+								<span class="text-xs font-medium text-main">{plat.nome}</span>
+								<span class="text-xs text-muted">{plat.qtdVendas} venda{plat.qtdVendas === 1 ? '' : 's'}</span>
 							</div>
 							<div class="text-base font-bold text-rose-600 dark:text-rose-400">-{fmt(plat.total)}</div>
-							<div class="text-[11px] text-slate-400 mt-0.5">Bruto na plataforma: {fmt(plat.brutoTotal)}</div>
+							<div class="text-xs text-muted mt-0.5">Bruto na plataforma: {fmt(plat.brutoTotal)}</div>
 						</div>
 					{/each}
 				</div>
@@ -1301,17 +1312,17 @@
 
 			<!-- ✦ Tipos de Pedido (caixa) -->
 			{#if vendasPorTipoCaixa.length > 0}
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-				<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Tipos de Pedido</h3>
+			<div class="card-mini">
+				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-main);">Tipos de Pedido</h3>
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					{#each vendasPorTipoCaixa as t}
-						<div class="flex flex-col gap-1 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
-							<div class="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+						<div class="flex flex-col gap-1 p-3 rounded-lg card-inset">
+							<div class="text-xs text-muted font-medium flex items-center gap-1.5">
 								<svelte:component this={resolveAppIcon(t.icon)} class="size-3.5" aria-hidden="true" />
 								<span>{t.label}</span>
 							</div>
-							<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(t.total)}</div>
-							<div class="text-xs text-slate-400">{t.qtd} venda{t.qtd !== 1 ? 's' : ''}</div>
+							<div class="text-lg font-bold text-main">{fmt(t.total)}</div>
+							<div class="text-xs text-muted">{t.qtd} venda{t.qtd !== 1 ? 's' : ''}</div>
 							{#if t.taxaEntrega > 0}
 								<div class="text-xs text-purple-500 dark:text-purple-400">Taxa entrega: {fmt(t.taxaEntrega)}</div>
 							{/if}
@@ -1319,10 +1330,10 @@
 					{/each}
 				</div>
 				{#if totalTaxaEntregaCaixa > 0}
-					<div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-4">
+					<div class="mt-3 pt-3 border-t border-[var(--border-card)] grid grid-cols-2 gap-4">
 						<div>
-							<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Receita do Restaurante</div>
-							<div class="text-base font-bold text-slate-800 dark:text-white">{fmt(receitaRestauranteCaixa)}</div>
+							<div class="text-xs text-muted mb-1">Receita do Restaurante</div>
+							<div class="text-base font-bold text-main">{fmt(receitaRestauranteCaixa)}</div>
 						</div>
 						<div>
 							<div class="text-xs text-purple-500 dark:text-purple-400 mb-1">Taxas de Entrega (entregador)</div>
@@ -1335,107 +1346,108 @@
 
 			<!-- ✦ Movimentações & Caixa -->
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-2 h-2 rounded-full bg-red-500"></span>
 						Sangrias
 					</div>
 					<div class="text-lg font-bold text-red-600 dark:text-red-400">{totalSangria > 0 ? '-' : ''}{fmt(totalSangria)}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-2 h-2 rounded-full bg-green-500"></span>
 						Suprimentos
 					</div>
 					<div class="text-lg font-bold text-green-600 dark:text-green-400">+{fmt(totalSuprimento)}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-2 h-2 rounded-full bg-amber-500"></span>
 						Descontos
 					</div>
 					<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{totalDescontosCaixa > 0 ? '-' : ''}{fmt(totalDescontosCaixa)}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-						<span class="w-2 h-2 rounded-full bg-slate-400"></span>
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
+						<span class="w-2 h-2 rounded-full" style="background: var(--text-muted);"></span>
 						Saldo Gaveta
 					</div>
-					<div class="text-lg font-bold text-slate-700 dark:text-white">{fmt(saldoEsperadoGaveta)}</div>
-					<div class="text-[10px] text-slate-400 mt-0.5">Inicial: {fmt(caixaInfo?.valor_inicial || 0)}</div>
+					<div class="text-lg font-bold text-main">{fmt(saldoEsperadoGaveta)}</div>
+					<div class="text-[10px] text-muted mt-0.5">Inicial: {fmt(caixaInfo?.valor_inicial || 0)}</div>
 				</div>
 			</div>
 
 			{#if mesasAddonAtivo}
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+			<div class="card-mini">
 				<div class="flex items-center justify-between gap-3 mb-3">
 					<div>
-						<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Resumo do Módulo Mesas</h3>
-						<div class="text-xs text-slate-500 dark:text-slate-400">Ajustes vindos das comandas fechadas do salão.</div>
+						<h3 class="text-sm font-semibold" style="color: var(--text-main);">Resumo do Módulo Mesas</h3>
+						<div class="text-xs text-muted">Ajustes vindos das comandas fechadas do salão.</div>
 					</div>
-					<div class="text-xs text-slate-500 dark:text-slate-400">{resumoMesasCaixa.comandas} comanda{resumoMesasCaixa.comandas === 1 ? '' : 's'}</div>
+					<div class="text-xs text-muted">{resumoMesasCaixa.comandas} comanda{resumoMesasCaixa.comandas === 1 ? '' : 's'}</div>
 				</div>
 				<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Couvert / repasse músico</div>
-						<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(resumoMesasCaixa.couvert)}</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Couvert / repasse músico</div>
+						<div class="text-lg font-bold text-main">{fmt(resumoMesasCaixa.couvert)}</div>
 					</div>
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Descontos em comandas</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Descontos em comandas</div>
 						<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{resumoMesasCaixa.descontos > 0 ? '-' : ''}{fmt(resumoMesasCaixa.descontos)}</div>
 					</div>
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Taxa de serviço</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Taxa de serviço</div>
 						<div class="text-lg font-bold text-emerald-600 dark:text-emerald-400">+{fmt(resumoMesasCaixa.taxaServico)}</div>
 					</div>
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Comandas fechadas</div>
-						<div class="text-lg font-bold text-slate-800 dark:text-white">{resumoMesasCaixa.comandas}</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Comandas fechadas</div>
+						<div class="text-lg font-bold text-main">{resumoMesasCaixa.comandas}</div>
 					</div>
 				</div>
 			</div>
 			{/if}
 
 			{#if pedidosAddonAtivo && resumoCozinhaCaixa.qtd > 0}
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+			<div class="card-mini">
 				<div class="flex items-center justify-between gap-3 mb-3">
 					<div>
-						<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Resumo do Módulo Pedidos</h3>
-						<div class="text-xs text-slate-500 dark:text-slate-400">Pedidos fechados pelo módulo de cozinha neste caixa.</div>
+						<h3 class="text-sm font-semibold" style="color: var(--text-main);">Resumo do Módulo Pedidos</h3>
+						<div class="text-xs text-muted">Pedidos fechados pelo módulo de cozinha neste caixa.</div>
 					</div>
-					<div class="text-xs text-slate-500 dark:text-slate-400">{resumoCozinhaCaixa.qtd} pedido{resumoCozinhaCaixa.qtd === 1 ? '' : 's'}</div>
+					<div class="text-xs text-muted">{resumoCozinhaCaixa.qtd} pedido{resumoCozinhaCaixa.qtd === 1 ? '' : 's'}</div>
 				</div>
 				<div class="grid grid-cols-2 gap-3">
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Valor total</div>
-						<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(resumoCozinhaCaixa.total)}</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Valor total</div>
+						<div class="text-lg font-bold text-main">{fmt(resumoCozinhaCaixa.total)}</div>
 					</div>
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Pedidos fechados</div>
-						<div class="text-lg font-bold text-slate-800 dark:text-white">{resumoCozinhaCaixa.qtd}</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Pedidos fechados</div>
+						<div class="text-lg font-bold text-main">{resumoCozinhaCaixa.qtd}</div>
 					</div>
 				</div>
 			</div>
 			{/if}
 
 			<!-- Produtos Vendidos (lista completa, com filtro por categoria) -->
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+			<div class="card-mini">
 				<div class="flex items-center justify-between mb-3 gap-2">
 					<div class="min-w-0">
-						<h2 class="font-semibold text-slate-800 dark:text-white">
+						<h2 class="font-semibold text-main">
 							Produtos Vendidos
-							<span class="text-sm font-normal text-slate-500 dark:text-slate-400">({topProdutos.length})</span>
+							<span class="text-sm font-normal text-muted">({topProdutos.length})</span>
 						</h2>
+						<p class="mt-0.5 text-xs text-muted">Resumo agrupado por produto.</p>
 						{#if categoriaFiltro}
 							{@const _cat = categoriasDoCaixa.find(c => c.id === categoriaFiltro)}
-							<div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-								Filtrado: <span class="text-slate-700 dark:text-slate-200 font-medium">{_cat?.nome || 'Categoria'}</span>
+							<div class="text-xs text-muted mt-0.5">
+								Filtrado: <span class="text-main font-medium">{_cat?.nome || 'Categoria'}</span>
 								<button class="ml-1 underline" on:click={() => categoriaFiltro = ''}>limpar</button>
 							</div>
 						{/if}
 					</div>
 					<button
-						class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors {mostrarFiltrosProdutos || categoriaFiltro ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-400 text-sky-700 dark:text-sky-300' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}"
+						class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors {mostrarFiltrosProdutos || categoriaFiltro ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-400 text-sky-700 dark:text-sky-300' : 'border-[var(--border-card)] text-main hover:bg-[var(--accent-light)]'}"
 						aria-label="Abrir filtros"
 						title="Filtros"
 						on:click={() => mostrarFiltrosProdutos = !mostrarFiltrosProdutos}
@@ -1448,9 +1460,9 @@
 					</button>
 				</div>
 				{#if mostrarFiltrosProdutos}
-					<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700">
+					<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 p-3 rounded-lg card-inset">
 						<div>
-							<label for="top-order" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Ordenar por</label>
+							<label for="top-order" class="block text-xs uppercase tracking-wide text-muted mb-1">Ordenar por</label>
 							<select id="top-order" class="input-form w-full" bind:value={ordenarTop}>
 								<option value="receita">Receita</option>
 								<option value="quantidade">Quantidade</option>
@@ -1458,14 +1470,14 @@
 							</select>
 						</div>
 						<div>
-							<label for="top-dir" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Direção</label>
+							<label for="top-dir" class="block text-xs uppercase tracking-wide text-muted mb-1">Direção</label>
 							<select id="top-dir" class="input-form w-full" bind:value={ordenarDirecao}>
 								<option value="desc">Maior → menor</option>
 								<option value="asc">Menor → maior</option>
 							</select>
 						</div>
 						<div>
-							<label for="top-cat" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Categoria</label>
+							<label for="top-cat" class="block text-xs uppercase tracking-wide text-muted mb-1">Categoria</label>
 							<select id="top-cat" class="input-form w-full" bind:value={categoriaFiltro}>
 								<option value="">Todas</option>
 								{#each categoriasDoCaixa as c}
@@ -1476,29 +1488,29 @@
 					</div>
 				{/if}
 				{#if topProdutos.length === 0}
-					<div class="text-sm text-slate-700 dark:text-slate-300">Sem itens em vendas para este caixa{categoriaFiltro ? ' nesta categoria' : ''}.</div>
+					<div class="text-sm text-muted text-center py-8">Nenhum produto vendido neste caixa{categoriaFiltro ? ' nesta categoria' : ''}.</div>
 				{:else}
-					<div class="overflow-x-auto max-h-[480px] overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-700">
+					<div class="overflow-x-auto max-h-[480px] overflow-y-auto rounded-lg border border-[var(--border-card)]">
 						<table class="min-w-full text-sm">
-							<thead class="bg-slate-50 dark:bg-slate-900/60 sticky top-0">
-								<tr class="text-left text-xs text-slate-500 dark:text-slate-400">
+							<thead class="sticky top-0" style="background: var(--bg-panel);">
+								<tr class="text-left text-xs text-muted">
 									<th class="py-2 px-3 font-medium">Produto</th>
 									<th class="py-2 px-3 font-medium hidden sm:table-cell">Categoria</th>
 									<th class="py-2 px-3 font-medium text-center">Qtd.</th>
 									<th class="py-2 px-3 font-medium text-right">Receita</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+							<tbody class="divide-y divide-[var(--border-card)]">
 								{#each topProdutos as p}
-									<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-										<td class="py-2 px-3 text-slate-800 dark:text-slate-100">{p.nome}</td>
-										<td class="py-2 px-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">{p.categoria || '—'}</td>
-										<td class="py-2 px-3 text-center">{p.quantidade}</td>
-										<td class="py-2 px-3 text-right font-medium">{fmt(p.receita)}</td>
+									<tr class="hover:bg-[var(--accent-light)]">
+										<td class="py-2 px-3 text-main">{p.nome}</td>
+										<td class="py-2 px-3 text-xs text-muted hidden sm:table-cell">{p.categoria || '—'}</td>
+										<td class="py-2 px-3 text-center tabular-nums">{p.quantidade}</td>
+										<td class="py-2 px-3 text-right font-medium tabular-nums">{fmt(p.receita)}</td>
 									</tr>
 								{/each}
 							</tbody>
-							<tfoot class="bg-slate-50 dark:bg-slate-900/60 sticky bottom-0">
+							<tfoot class="sticky bottom-0" style="background: var(--bg-panel);">
 								<tr class="text-sm font-semibold">
 									<td class="py-2 px-3" colspan="2">Total</td>
 									<td class="py-2 px-3 text-center">{topProdutos.reduce((a,p)=>a+p.quantidade,0)}</td>
@@ -1510,55 +1522,95 @@
 				{/if}
 			</div>
 
-			<!-- Vendas -->
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-				<div class="flex items-center justify-between mb-3">
-					<h2 class="font-semibold text-slate-800 dark:text-white">
+			<!-- Vendas: cupons individuais do caixa -->
+			<div class="card-mini">
+				<div class="mb-3">
+					<h2 class="font-semibold text-main">
 						Vendas do Caixa
-						<span class="text-sm font-normal text-slate-500 dark:text-slate-400">({vendas.length})</span>
+						<span class="text-sm font-normal text-muted">({vendas.length})</span>
 					</h2>
-
+					<p class="mt-0.5 text-xs text-muted">Cupons individuais. Abra uma venda para conferir cliente, itens e valores.</p>
 				</div>
 				{#if vendas.length === 0}
-					<div class="text-sm text-slate-500 dark:text-slate-400">Sem vendas para este caixa.</div>
+					<div class="text-sm text-muted">Sem vendas para este caixa.</div>
 				{:else}
-					<div class="overflow-x-auto">
-						<table class="min-w-full text-sm">
+					<div class="rounded-lg border border-[var(--border-card)]">
+						<table class="w-full text-sm">
 							<thead>
-								<tr class="text-left text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+								<tr class="text-left text-xs text-muted border-b border-[var(--border-card)]">
 									<th class="py-2 pr-3 font-medium">#</th>
 									<th class="py-2 pr-3 font-medium">Horário</th>
 									<th class="py-2 pr-3 font-medium">Forma</th>
 									<th class="py-2 text-right font-medium">Total</th>
+									<th class="py-2 pl-3 text-right font-medium"><span class="sr-only">Detalhes</span></th>
 								</tr>
 							</thead>
-							<tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+							<tbody class="divide-y divide-[var(--border-card)]">
 								{#each vendasExibidas as v}
 									{@const hasFiado = v.forma_pagamento === 'fiado' || (v.forma_pagamento === 'multiplo' && vendasPagamentos.some(p => p.id_venda === v.id && p.forma_pagamento === 'fiado'))}
-									{@const cliente = hasFiado && v.id_cliente ? pessoasMap.get(v.id_cliente) : null}
+									{@const cliente = v.id_cliente ? pessoasMap.get(v.id_cliente) : null}
 									{@const itens = vendasItens.filter(i => i.id_venda === v.id)}
-									<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-										<td class="py-2 pr-3 text-slate-500 dark:text-slate-400 text-xs">{v.numero_venda || v.id}</td>
-										<td class="py-2 pr-3 text-slate-600 dark:text-slate-300 text-xs">{v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+									{@const pagamentos = vendasPagamentos.filter(p => p.id_venda === v.id)}
+									<tr class="hover:bg-[var(--accent-light)]">
+										<td class="py-2 pr-3 text-muted text-xs">{v.numero_venda || v.id}</td>
+										<td class="py-2 pr-3 text-main text-xs">{v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
 										<td class="py-2 pr-3">
-											<span class="relative group cursor-default">
-												<span class="text-xs font-medium {v.forma_pagamento === 'fiado' ? 'text-amber-500' : 'text-slate-700 dark:text-slate-200'}">{formatForma(v.forma_pagamento)}</span>
-												{#if itens.length}
-													<div class="absolute left-0 top-full mt-1 z-50 hidden group-hover:block w-56 rounded-lg shadow-xl border border-slate-600 bg-slate-800 text-slate-100 text-xs p-3 space-y-1">
-														{#if cliente}
-															<div class="font-semibold text-white border-b border-slate-700 pb-1 mb-1">{cliente.nome}</div>
-														{/if}
-														<ul class="space-y-0.5">
-															{#each itens as it}
-																<li>{it.quantidade}× {it.nome_produto_na_venda}</li>
-															{/each}
-														</ul>
-													</div>
-												{/if}
-											</span>
+											<span class="text-xs font-medium {hasFiado ? 'text-amber-500' : 'text-main'}">{formatForma(v.forma_pagamento)}</span>
 										</td>
-										<td class="py-2 text-right font-semibold text-slate-800 dark:text-white text-xs">{fmt(v.valor_total)}</td>
+										<td class="py-2 text-right font-semibold text-main text-xs tabular-nums">{fmt(v.valor_total)}</td>
+										<td class="py-2 pl-3 text-right">
+											<button
+												type="button"
+												class="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-xs font-medium text-sky-700 transition-colors hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:text-sky-300 dark:hover:bg-sky-900/30"
+												aria-expanded={vendaDetalheAbertaId === v.id}
+												aria-controls={`venda-detalhes-${v.id}`}
+												on:click={() => alternarDetalheVenda(v.id)}
+											>
+												<span>{vendaDetalheAbertaId === v.id ? 'Ocultar' : 'Detalhes'}</span>
+												<span class="transition-transform" class:rotate-180={vendaDetalheAbertaId === v.id}><ChevronDown class="size-4" aria-hidden="true" /></span>
+											</button>
+										</td>
 									</tr>
+									{#if vendaDetalheAbertaId === v.id}
+										<tr id={`venda-detalhes-${v.id}`} style="background: var(--bg-card);">
+											<td colspan="5" class="p-3">
+												<div class="grid gap-3 md:grid-cols-3">
+													<section class="min-w-0">
+														<p class="text-xs font-medium text-muted">Itens</p>
+														{#if itens.length}
+															<ul class="mt-1 space-y-1 text-sm text-main">
+																{#each itens as it}
+																	<li class="break-words">{it.quantidade}× {it.nome_produto_na_venda}</li>
+																{/each}
+															</ul>
+														{:else}
+															<p class="mt-1 text-sm text-muted">Sem itens registrados.</p>
+														{/if}
+													</section>
+													<section>
+														<p class="text-xs font-medium text-muted">Pagamento</p>
+														{#if pagamentos.length}
+															<ul class="mt-1 space-y-1 text-sm text-main">
+																{#each pagamentos as pagamento}
+																	<li>{formatForma(pagamento.forma_pagamento)} · {fmt(pagamento.valor)}</li>
+																{/each}
+															</ul>
+														{:else}
+															<p class="mt-1 text-sm text-main">{formatForma(v.forma_pagamento)}</p>
+														{/if}
+														{#if Number(v.valor_desconto || 0) > 0 || Number(v.valor_troco || 0) > 0}
+															<p class="mt-2 text-xs text-muted">{#if Number(v.valor_desconto || 0) > 0}Desconto: {fmt(v.valor_desconto)}{/if}{#if Number(v.valor_desconto || 0) > 0 && Number(v.valor_troco || 0) > 0} · {/if}{#if Number(v.valor_troco || 0) > 0}Troco: {fmt(v.valor_troco)}{/if}</p>
+														{/if}
+													</section>
+													<section>
+														<p class="text-xs font-medium text-muted">Cliente</p>
+														<p class="mt-1 text-sm text-main">{cliente?.nome || 'Não informado'}</p>
+														<p class="mt-2 text-xs text-muted">Total: <span class="font-semibold text-main">{fmt(v.valor_total)}</span></p>
+													</section>
+												</div>
+											</td>
+										</tr>
+									{/if}
 								{/each}
 							</tbody>
 						</table>
@@ -1566,28 +1618,28 @@
 
 					<!-- Controles de paginação -->
 					{#if vendasTotalPages > 1}
-						<div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-							<span class="text-xs text-slate-500 dark:text-slate-400">
+						<div class="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border-card)]">
+							<span class="text-xs text-muted">
 								{(vendasPage-1)*VENDAS_PER_PAGE + 1}–{Math.min(vendasPage*VENDAS_PER_PAGE, vendas.length)} de {vendas.length} vendas
 							</span>
 							<div class="flex items-center gap-1">
 								<button
-									class="px-2 py-1 text-xs rounded-sm border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+									class="px-2 py-1 text-xs rounded-sm border border-[var(--border-card)] hover:bg-[var(--accent-light)] disabled:opacity-40 transition-colors"
 									disabled={vendasPage === 1}
 									on:click={() => vendasPage--}
 								>← Ant.</button>
 								{#each vendasPageButtons as pg}
 									{#if pg === null}
-										<span class="px-1 text-xs text-slate-400">…</span>
+										<span class="px-1 text-xs text-muted">…</span>
 									{:else}
 										<button
-											class="px-2 py-1 text-xs rounded-sm border transition-colors {pg === vendasPage ? 'bg-sky-500 text-white border-sky-500' : 'border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'}"
+											class="px-2 py-1 text-xs rounded-sm border transition-colors {pg === vendasPage ? 'bg-sky-500 text-white border-sky-500' : 'border-[var(--border-card)] hover:bg-[var(--accent-light)]'}"
 											on:click={() => vendasPage = pg}
 										>{pg}</button>
 									{/if}
 								{/each}
 								<button
-									class="px-2 py-1 text-xs rounded-sm border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+									class="px-2 py-1 text-xs rounded-sm border border-[var(--border-card)] hover:bg-[var(--accent-light)] disabled:opacity-40 transition-colors"
 									disabled={vendasPage === vendasTotalPages}
 									on:click={() => vendasPage++}
 								>Próx. →</button>
@@ -1598,15 +1650,17 @@
 			</div>
 
 			<!-- Movimentações de Caixa -->
-			<div>
-				<h2 class="font-semibold mb-2">Movimentações do Caixa</h2>
+			<div class="card-mini">
+				<h2 class="font-semibold" style="color: var(--text-main);">Movimentações do Caixa</h2>
 				{#if movs.length === 0}
-					<div class="text-sm text-slate-700 dark:text-slate-300">Sem sangrias/suprimentos.</div>
+					<div class="mt-3 flex flex-1 items-center justify-center rounded-md border border-dashed px-4 text-center text-sm" style="border-color: var(--border-subtle); color: var(--text-muted);">
+						Sem sangrias ou suprimentos neste caixa.
+					</div>
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="min-w-full text-sm">
 							<thead>
-								<tr class="text-left text-slate-600 dark:text-slate-400">
+								<tr class="text-left text-xs" style="color: var(--text-muted);">
 									<th class="py-2 pr-4">Quando</th>
 									<th class="py-2 pr-4">Tipo</th>
 									<th class="py-2 pr-4">Valor</th>
@@ -1632,13 +1686,13 @@
 	{:else}
 		<section class="space-y-5">
 			<!-- ✦ HERO: Receita Líquida -->
-			<div class="rounded-xl bg-slate-800 dark:bg-slate-900 border border-slate-700 p-5">
-				<div class="flex items-center gap-2 text-slate-400 text-sm font-medium mb-1">
+			<div class="card-hero">
+				<div class="flex items-center gap-2 text-muted text-sm font-medium mb-1">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
 					Receita Líquida
 				</div>
 				<div class="text-3xl font-bold text-white tracking-tight">{fmt(periodoTotalTaxaEntrega > 0 ? periodoReceitaRestaurante : periodoReceitaLiquida)}</div>
-				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-slate-400">
+				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm" style="color: var(--text-muted);">
 					<span>Bruto: {fmt(periodoTotalGeral)}</span>
 					{#if periodoTotalDescontos > 0}
 						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(periodoTotalDescontos)}</span>
@@ -1657,40 +1711,40 @@
 
 			<!-- ✦ KPIs -->
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-5 h-5 rounded-sm bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Vendas Brutas
 					</div>
-					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoTotalGeral)}</div>
+					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(periodoTotalGeral)}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-5 h-5 rounded-sm bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><ShoppingBag class="size-3.5" aria-hidden="true" /></span>
 						Qtd. Vendas
 					</div>
-					<div class="text-xl font-bold text-slate-800 dark:text-white">{periodoQtdVendas}</div>
+					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{periodoQtdVendas}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-5 h-5 rounded-sm bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400"><ChartNoAxesColumnIncreasing class="size-3.5" aria-hidden="true" /></span>
 						Ticket Médio
 					</div>
-					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoTicketMedio)}</div>
+					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(periodoTicketMedio)}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-5 h-5 rounded-sm bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Dinheiro Líq.
 					</div>
-					<div class="text-xl font-bold text-slate-800 dark:text-white">{fmt(periodoDinheiroLiquido)}</div>
+					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(periodoDinheiroLiquido)}</div>
 				</div>
 			</div>
 
 			<!-- ✦ Formas de Pagamento (unified card) -->
 			{#if periodoPagItems.length > 0}
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-				<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Formas de Pagamento</h3>
+			<div class="card-mini">
+				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-main);">Formas de Pagamento</h3>
 				<!-- Proportional bar -->
 				<div class="flex h-3 rounded-full overflow-hidden mb-4">
 					{#each periodoPagItems as p}
@@ -1703,8 +1757,8 @@
 						<div class="flex items-center gap-2">
 							<span class="w-2.5 h-2.5 rounded-full {p.color} shrink-0"></span>
 							<div>
-								<div class="text-xs text-slate-500 dark:text-slate-400">{p.label}</div>
-								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-slate-400">({periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100).toFixed(1) : 0}%)</span></div>
+								<div class="text-xs text-muted">{p.label}</div>
+								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-muted">({periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100).toFixed(1) : 0}%)</span></div>
 							</div>
 						</div>
 					{/each}
@@ -1714,23 +1768,23 @@
 
 			<!-- ✦ Custos de Plataforma (periodo) -->
 			{#if resumoTaxasPeriodo.byPlatform.length > 0}
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+			<div class="card-mini">
 				<div class="flex items-center justify-between gap-3 mb-3">
-					<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Custos de Plataforma</h3>
+					<h3 style="color: var(--text-main);">Custos de Plataforma</h3>
 					<div class="text-sm font-bold text-rose-600 dark:text-rose-400">-{fmt(periodoTotalCustosPlataforma)}</div>
 				</div>
-				<p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+				<p class="text-xs mb-3" style="color: var(--text-muted);">
 					Comissão das plataformas (snapshot da taxa configurada no momento da venda). Já descontado da Receita Líquida acima.
 				</p>
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 					{#each resumoTaxasPeriodo.byPlatform as plat}
-						<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+						<div class="rounded-lg card-inset">
 							<div class="flex items-center justify-between mb-1">
-								<span class="text-xs font-medium text-slate-700 dark:text-slate-200">{plat.nome}</span>
-								<span class="text-xs text-slate-500 dark:text-slate-400">{plat.qtdVendas} venda{plat.qtdVendas === 1 ? '' : 's'}</span>
+								<span class="text-xs font-medium text-main">{plat.nome}</span>
+								<span class="text-xs text-muted">{plat.qtdVendas} venda{plat.qtdVendas === 1 ? '' : 's'}</span>
 							</div>
 							<div class="text-base font-bold text-rose-600 dark:text-rose-400">-{fmt(plat.total)}</div>
-							<div class="text-[11px] text-slate-400 mt-0.5">Bruto na plataforma: {fmt(plat.brutoTotal)}</div>
+							<div class="text-xs text-muted mt-0.5">Bruto na plataforma: {fmt(plat.brutoTotal)}</div>
 						</div>
 					{/each}
 				</div>
@@ -1739,17 +1793,17 @@
 
 			<!-- ✦ Tipos de Pedido (periodo) -->
 			{#if periodoVendasPorTipo.length > 0}
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-				<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Tipos de Pedido</h3>
+			<div class="card-mini">
+				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-main);">Tipos de Pedido</h3>
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					{#each periodoVendasPorTipo as t}
-						<div class="flex flex-col gap-1 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
-							<div class="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+						<div class="flex flex-col gap-1 p-3 rounded-lg card-inset">
+							<div class="text-xs text-muted font-medium flex items-center gap-1.5">
 								<svelte:component this={resolveAppIcon(t.icon)} class="size-3.5" aria-hidden="true" />
 								<span>{t.label}</span>
 							</div>
-							<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(t.total)}</div>
-							<div class="text-xs text-slate-400">{t.qtd} venda{t.qtd !== 1 ? 's' : ''}</div>
+							<div class="text-lg font-bold text-main">{fmt(t.total)}</div>
+							<div class="text-xs text-muted">{t.qtd} venda{t.qtd !== 1 ? 's' : ''}</div>
 							{#if t.taxaEntrega > 0}
 								<div class="text-xs text-purple-500 dark:text-purple-400">Taxa entrega: {fmt(t.taxaEntrega)}</div>
 							{/if}
@@ -1757,10 +1811,10 @@
 					{/each}
 				</div>
 				{#if periodoTotalTaxaEntrega > 0}
-					<div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-4">
+					<div class="mt-3 pt-3 border-t border-[var(--border-card)] grid grid-cols-2 gap-4">
 						<div>
-							<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Receita do Restaurante</div>
-							<div class="text-base font-bold text-slate-800 dark:text-white">{fmt(periodoReceitaRestaurante)}</div>
+							<div class="text-xs text-muted mb-1">Receita do Restaurante</div>
+							<div class="text-base font-bold text-main">{fmt(periodoReceitaRestaurante)}</div>
 						</div>
 						<div>
 							<div class="text-xs text-purple-500 dark:text-purple-400 mb-1">Taxas de Entrega (entregador)</div>
@@ -1773,22 +1827,22 @@
 
 			<!-- ✦ Movimentações -->
 			<div class="grid grid-cols-3 gap-3">
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-2 h-2 rounded-full bg-red-500"></span>
 						Sangrias
 					</div>
 					<div class="text-lg font-bold text-red-600 dark:text-red-400">{periodoTotalSangria > 0 ? '-' : ''}{fmt(periodoTotalSangria)}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-2 h-2 rounded-full bg-green-500"></span>
 						Suprimentos
 					</div>
 					<div class="text-lg font-bold text-green-600 dark:text-green-400">+{fmt(periodoTotalSuprimento)}</div>
 				</div>
-				<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-					<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+				<div class="card-mini">
+					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
 						<span class="w-2 h-2 rounded-full bg-amber-500"></span>
 						Descontos
 					</div>
@@ -1799,52 +1853,52 @@
 
 			<!-- Gráficos Visuais -->
 			{#if mesasAddonAtivo}
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+			<div class="card-mini">
 				<div class="flex items-center justify-between gap-3 mb-3">
 					<div>
-						<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Resumo do Módulo Mesas</h3>
-						<div class="text-xs text-slate-500 dark:text-slate-400">Totais das comandas fechadas dentro do período selecionado.</div>
+						<h3 class="text-sm font-semibold" style="color: var(--text-main);">Resumo do Módulo Mesas</h3>
+						<div class="text-xs text-muted">Totais das comandas fechadas dentro do período selecionado.</div>
 					</div>
-					<div class="text-xs text-slate-500 dark:text-slate-400">{resumoMesasPeriodo.comandas} comanda{resumoMesasPeriodo.comandas === 1 ? '' : 's'}</div>
+					<div class="text-xs text-muted">{resumoMesasPeriodo.comandas} comanda{resumoMesasPeriodo.comandas === 1 ? '' : 's'}</div>
 				</div>
 				<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Couvert / repasse músico</div>
-						<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(resumoMesasPeriodo.couvert)}</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Couvert / repasse músico</div>
+						<div class="text-lg font-bold text-main">{fmt(resumoMesasPeriodo.couvert)}</div>
 					</div>
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Descontos em comandas</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Descontos em comandas</div>
 						<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{resumoMesasPeriodo.descontos > 0 ? '-' : ''}{fmt(resumoMesasPeriodo.descontos)}</div>
 					</div>
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Taxa de serviço</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Taxa de serviço</div>
 						<div class="text-lg font-bold text-emerald-600 dark:text-emerald-400">+{fmt(resumoMesasPeriodo.taxaServico)}</div>
 					</div>
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Comandas fechadas</div>
-						<div class="text-lg font-bold text-slate-800 dark:text-white">{resumoMesasPeriodo.comandas}</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Comandas fechadas</div>
+						<div class="text-lg font-bold text-main">{resumoMesasPeriodo.comandas}</div>
 					</div>
 				</div>
 			</div>
 			{/if}
 
 			{#if pedidosAddonAtivo && resumoCozinhaPeriodo.qtd > 0}
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+			<div class="card-mini">
 				<div class="flex items-center justify-between gap-3 mb-3">
 					<div>
-						<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Resumo do Módulo Pedidos</h3>
-						<div class="text-xs text-slate-500 dark:text-slate-400">Pedidos fechados pelo módulo de cozinha no período selecionado.</div>
+						<h3 class="text-sm font-semibold" style="color: var(--text-main);">Resumo do Módulo Pedidos</h3>
+						<div class="text-xs text-muted">Pedidos fechados pelo módulo de cozinha no período selecionado.</div>
 					</div>
-					<div class="text-xs text-slate-500 dark:text-slate-400">{resumoCozinhaPeriodo.qtd} pedido{resumoCozinhaPeriodo.qtd === 1 ? '' : 's'}</div>
+					<div class="text-xs text-muted">{resumoCozinhaPeriodo.qtd} pedido{resumoCozinhaPeriodo.qtd === 1 ? '' : 's'}</div>
 				</div>
 				<div class="grid grid-cols-2 gap-3">
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Valor total</div>
-						<div class="text-lg font-bold text-slate-800 dark:text-white">{fmt(resumoCozinhaPeriodo.total)}</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Valor total</div>
+						<div class="text-lg font-bold text-main">{fmt(resumoCozinhaPeriodo.total)}</div>
 					</div>
-					<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-						<div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Pedidos fechados</div>
-						<div class="text-lg font-bold text-slate-800 dark:text-white">{resumoCozinhaPeriodo.qtd}</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Pedidos fechados</div>
+						<div class="text-lg font-bold text-main">{resumoCozinhaPeriodo.qtd}</div>
 					</div>
 				</div>
 			</div>
@@ -1852,7 +1906,7 @@
 
 			<div class="grid lg:grid-cols-2 gap-6">
 				<!-- Gráfico de Barras: Vendas diárias -->
-				<div class="p-4 rounded-lg border bg-slate-50 dark:bg-slate-900/50">
+				<div class="p-4 rounded-lg border card-inset">
 					<BarChart 
 						title="Vendas por Dia"
 						data={periodoSerieDiaria.slice(-14).map(d => ({
@@ -1866,7 +1920,7 @@
 				</div>
 				
 				<!-- Gráfico de Rosca: Formas de Pagamento -->
-				<div class="p-4 rounded-lg border bg-slate-50 dark:bg-slate-900/50">
+				<div class="p-4 rounded-lg border card-inset">
 					<DonutChart
 						title="Formas de Pagamento"
 						data={[
@@ -1884,14 +1938,14 @@
 
 			<!-- Série diária -->
 			<div>
-				<h2 class="font-semibold mb-2">Série Diária</h2>
+				<h2 class="font-semibold text-main mb-2">Série Diária</h2>
 				{#if periodoSerieDiaria.length === 0}
-					<div class="text-sm text-slate-700 dark:text-slate-300">Sem vendas no período.</div>
+					<div class="text-sm text-muted">Sem vendas no período.</div>
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="min-w-full text-sm">
 							<thead>
-								<tr class="text-left text-slate-600 dark:text-slate-400">
+								<tr class="text-left text-xs" style="color: var(--text-muted);">
 									<th class="py-2 pr-4">Dia</th>
 									<th class="py-2 pr-4">Qtd</th>
 									<th class="py-2">Total</th>
@@ -1912,23 +1966,23 @@
 			</div>
 
 			<!-- Produtos Vendidos (Período) — lista completa com filtro por categoria -->
-			<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+			<div class="card-mini">
 				<div class="flex items-center justify-between mb-3 gap-2">
 					<div class="min-w-0">
-						<h2 class="font-semibold text-slate-800 dark:text-white">
+						<h2 class="font-semibold text-main">
 							Produtos Vendidos (Período)
-							<span class="text-sm font-normal text-slate-500 dark:text-slate-400">({periodoTopProdutos.length})</span>
+							<span class="text-sm font-normal text-muted">({periodoTopProdutos.length})</span>
 						</h2>
 						{#if periodoCategoriaFiltro}
 							{@const _cat = categoriasDoPeriodo.find(c => c.id === periodoCategoriaFiltro)}
-							<div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-								Filtrado: <span class="text-slate-700 dark:text-slate-200 font-medium">{_cat?.nome || 'Categoria'}</span>
+							<div class="text-xs text-muted mt-0.5">
+								Filtrado: <span class="text-main font-medium">{_cat?.nome || 'Categoria'}</span>
 								<button class="ml-1 underline" on:click={() => periodoCategoriaFiltro = ''}>limpar</button>
 							</div>
 						{/if}
 					</div>
 					<button
-						class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors {periodoMostrarFiltros || periodoCategoriaFiltro ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-400 text-sky-700 dark:text-sky-300' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}"
+						class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors {periodoMostrarFiltros || periodoCategoriaFiltro ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-400 text-sky-700 dark:text-sky-300' : 'border-[var(--border-card)] text-main hover:bg-[var(--accent-light)]'}"
 						aria-label="Abrir filtros"
 						title="Filtros"
 						on:click={() => periodoMostrarFiltros = !periodoMostrarFiltros}
@@ -1941,9 +1995,9 @@
 					</button>
 				</div>
 				{#if periodoMostrarFiltros}
-					<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700">
+					<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 p-3 rounded-lg card-inset">
 						<div>
-							<label for="p-top-order" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Ordenar por</label>
+							<label for="p-top-order" class="block text-xs uppercase tracking-wide text-muted mb-1">Ordenar por</label>
 							<select id="p-top-order" class="input-form w-full" bind:value={periodoOrdenarTop}>
 								<option value="receita">Receita</option>
 								<option value="quantidade">Quantidade</option>
@@ -1951,14 +2005,14 @@
 							</select>
 						</div>
 						<div>
-							<label for="p-top-dir" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Direção</label>
+							<label for="p-top-dir" class="block text-xs uppercase tracking-wide text-muted mb-1">Direção</label>
 							<select id="p-top-dir" class="input-form w-full" bind:value={periodoOrdenarDirecao}>
 								<option value="desc">Maior → menor</option>
 								<option value="asc">Menor → maior</option>
 							</select>
 						</div>
 						<div>
-							<label for="p-top-cat" class="block text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Categoria</label>
+							<label for="p-top-cat" class="block text-xs uppercase tracking-wide text-muted mb-1">Categoria</label>
 							<select id="p-top-cat" class="input-form w-full" bind:value={periodoCategoriaFiltro}>
 								<option value="">Todas</option>
 								{#each categoriasDoPeriodo as c}
@@ -1969,29 +2023,29 @@
 					</div>
 				{/if}
 				{#if periodoTopProdutos.length === 0}
-					<div class="text-sm text-slate-700 dark:text-slate-300">Sem itens no período{periodoCategoriaFiltro ? ' nesta categoria' : ''}.</div>
+					<div class="text-sm text-muted">Sem itens no período{periodoCategoriaFiltro ? ' nesta categoria' : ''}.</div>
 				{:else}
-					<div class="overflow-x-auto max-h-[480px] overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-700">
+					<div class="overflow-x-auto max-h-[480px] overflow-y-auto rounded-lg border border-[var(--border-card)]">
 						<table class="min-w-full text-sm">
-							<thead class="bg-slate-50 dark:bg-slate-900/60 sticky top-0">
-								<tr class="text-left text-xs text-slate-500 dark:text-slate-400">
+							<thead class="sticky top-0" style="background: var(--bg-panel);">
+								<tr class="text-left text-xs text-muted">
 									<th class="py-2 px-3 font-medium">Produto</th>
 									<th class="py-2 px-3 font-medium hidden sm:table-cell">Categoria</th>
 									<th class="py-2 px-3 font-medium text-center">Qtd.</th>
 									<th class="py-2 px-3 font-medium text-right">Receita</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+							<tbody class="divide-y divide-[var(--border-card)]">
 								{#each periodoTopProdutos as p}
-									<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-										<td class="py-2 px-3 text-slate-800 dark:text-slate-100">{p.nome}</td>
-										<td class="py-2 px-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">{p.categoria || '—'}</td>
-										<td class="py-2 px-3 text-center">{p.quantidade}</td>
-										<td class="py-2 px-3 text-right font-medium">{fmt(p.receita)}</td>
+									<tr class="hover:bg-[var(--accent-light)]">
+										<td class="py-2 px-3 text-main">{p.nome}</td>
+										<td class="py-2 px-3 text-xs text-muted hidden sm:table-cell">{p.categoria || '—'}</td>
+										<td class="py-2 px-3 text-center tabular-nums">{p.quantidade}</td>
+										<td class="py-2 px-3 text-right font-medium tabular-nums">{fmt(p.receita)}</td>
 									</tr>
 								{/each}
 							</tbody>
-							<tfoot class="bg-slate-50 dark:bg-slate-900/60 sticky bottom-0">
+							<tfoot class="sticky bottom-0" style="background: var(--bg-panel);">
 								<tr class="text-sm font-semibold">
 									<td class="py-2 px-3" colspan="2">Total</td>
 									<td class="py-2 px-3 text-center">{periodoTopProdutos.reduce((a,p)=>a+p.quantidade,0)}</td>
@@ -2006,3 +2060,31 @@
 	{/if}
 {/if}
 </AdminLock>
+
+<style>
+  /* ── Card vocabulary ─────────────────────────────────────── */
+  .card-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-card);
+    border-radius: 0.5rem;
+    padding: 1rem;
+  }
+  .card-hero {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+  }
+  .card-mini {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-card);
+    border-radius: 0.5rem;
+    padding: 1rem;
+  }
+  .card-inset {
+    background: rgba(15, 23, 42, 0.3);
+    border: 1px solid var(--border-card);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+  }
+</style>
