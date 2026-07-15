@@ -43,7 +43,7 @@ Padrao recorrente:
 | --- | --- | --- |
 | Billing | `subscriptions`, `billing_payments`, `webhook_events_processed`, `billing_webhook_events` | acesso final depende de `subscriptions` |
 | Acessos | `access_users`, `access_roles`, `access_settings`, `access_audit_logs` | papeis e permissoes vivem em JSON |
-| Operacao | `vendas*`, `caixas*`, `pessoas`, `produtos`, `mesas`, `comandas*`, `pedidos*` | escopo por owner via RLS |
+| Operacao | `vendas*`, `caixas*`, `pessoas`, `fiado_lancamentos`, `produtos`, `mesas`, `comandas*`, `pedidos*` | escopo por owner via RLS |
 | ZeloMenu | `zelomenu_product_publications`, `zelomenu_modifier_groups`, `zelomenu_modifier_options` | camada PDV-owned de publicação/modificadores, escopo por owner via RLS |
 | Perfil | `empresa_perfil` | contem dados operacionais e `pin_admin` |
 | RPC critica | `criar_venda_completa(jsonb)` | usa `get_owner_user_id(auth.uid())` |
@@ -69,6 +69,15 @@ Padrao recorrente:
 - Resolve owner de owner ou subusuario.
 - E a base do tenant scoping atual.
 - Nao implementa permissao por papel; apenas decide "em nome de qual empresa" a consulta roda.
+
+## Fiado auditável
+
+Migration local: `.ai/migrations/fiado_ledger_2026_07_15.sql` (aguarda validação/aplicação no banco real).
+
+- `fiado_lancamentos` é leitura owner-scoped para usuários autenticados; escrita direta pelo browser é revogada.
+- `fiado_registrar_pagamento_v2(...)` valida `fiado.receber` para subusuários, bloqueia a pessoa durante a operação e grava pagamento, saldo e suprimento de caixa na mesma transação.
+- `fiado_estornar_venda(...)` cria evento compensatório ao desfazer uma venda; o razão não perde histórico.
+- Triggers registram novos débitos de vendas fiado simples e de parcelas fiado em venda múltipla. Saldos anteriores entram como um lançamento único `saldo_inicial` porque pagamentos antigos não são reconstituíveis.
 
 ## ZeloMenu publication layer
 

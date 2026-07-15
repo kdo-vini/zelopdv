@@ -58,7 +58,7 @@
 
       const { data: vs, error: vErr } = await supabase
         .from('vendas')
-        .select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto')
+        .select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, id_cliente, pessoas!vendas_id_cliente_fkey(nome)')
         .eq('id_caixa', caixa.id)
         .order('id', { ascending: true });
       if (vErr) throw vErr;
@@ -118,6 +118,27 @@
   $: resumoMovs = calculateMovementSummary(movs);
   $: totalSangria = resumoMovs.sangria;
   $: totalSuprimento = resumoMovs.suprimento;
+  $: fiadosDoCaixa = [
+    ...(vendas || [])
+      .filter((v) => v.forma_pagamento === 'fiado')
+      .map((v) => ({
+        id: `venda-${v.id}`,
+        venda: v.numero_venda,
+        nome: Array.isArray(v.pessoas) ? v.pessoas[0]?.nome : v.pessoas?.nome,
+        valor: Number(v.valor_total || 0)
+      })),
+    ...(vendasPagamentos || [])
+      .filter((p) => p.forma_pagamento === 'fiado')
+      .map((p) => {
+        const venda = (vendas || []).find((v) => v.id === p.id_venda);
+        return {
+          id: `pagamento-${p.id_venda}-${p.valor}`,
+          venda: venda?.numero_venda,
+          nome: Array.isArray(venda?.pessoas) ? venda.pessoas[0]?.nome : venda?.pessoas?.nome,
+          valor: Number(p.valor || 0)
+        };
+      })
+  ];
   $: esperadoEmGaveta = caixa ? calculateExpectedDrawer({
     valorInicial: caixa.valor_inicial,
     dinheiroLiquido: totalDinheiroLiquido,
@@ -239,11 +260,28 @@
         </div>
       {/if}
 
+      {#if fiadosDoCaixa.length > 0}
+        <section class="fiado-summary" aria-labelledby="fiados-caixa-title">
+          <div>
+            <h2 id="fiados-caixa-title">Fiados lançados neste caixa</h2>
+            <p>Confira quem ficou responsável por cada valor em aberto.</p>
+          </div>
+          <ul>
+            {#each fiadosDoCaixa as fiado (fiado.id)}
+              <li>
+                <div><strong>{fiado.nome || 'Cliente não identificado'}</strong><span>{fiado.venda ? `Venda #${fiado.venda}` : 'Venda registrada'}</span></div>
+                <strong>R$ {Number(fiado.valor).toFixed(2)}</strong>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
+
       {#if totalDescontos > 0}
         <div class="p-3 rounded-sm border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
           <div class="text-xs text-amber-700 dark:text-amber-400">Descontos aplicados</div>
           <div class="text-lg font-semibold text-amber-700 dark:text-amber-400">−R$ {Number(totalDescontos).toFixed(2)}</div>
-          <div class="text-[11px] text-amber-600 dark:text-amber-500 mt-1">Valor "perdido" em promoções/descontos neste caixa.</div>
+          <div class="text-xs text-amber-600 dark:text-amber-500 mt-1">Valor "perdido" em promoções/descontos neste caixa.</div>
         </div>
       {/if}
 
@@ -256,12 +294,12 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
             {#each resumoTaxas.byPlatform as plat}
               <div class="flex items-center justify-between gap-2 px-2 py-1 rounded-sm bg-white/60 dark:bg-slate-800/60">
-                <span class="text-xs font-medium text-slate-700 dark:text-slate-200">{plat.nome}</span>
+                <span class="text-xs font-medium" style="color: var(--text-main);">{plat.nome}</span>
                 <span class="text-xs font-semibold text-rose-700 dark:text-rose-400">−R$ {Number(plat.total).toFixed(2)}</span>
               </div>
             {/each}
           </div>
-          <div class="text-[11px] text-rose-600 dark:text-rose-500 mt-2">Não impacta o saldo da gaveta (comissão é descontada do repasse da plataforma).</div>
+          <div class="text-xs text-rose-600 dark:text-rose-500 mt-2">Não impacta o saldo da gaveta (comissão é descontada do repasse da plataforma).</div>
         </div>
       {/if}
 
@@ -271,13 +309,13 @@
           <input id="valor-em-gaveta" type="number" step="0.01" min="0" class="input-form" bind:value={valorEmGaveta} />
         </div>
         <div>
-          <div class="text-sm text-slate-500">Esperado na gaveta</div>
+          <div class="text-sm" style="color: var(--text-muted);">Esperado na gaveta</div>
           <div class="text-lg font-semibold">R$ {Number(esperadoEmGaveta).toFixed(2)}</div>
-          <div class="text-[11px] text-slate-500 mt-1">Inclui troco inicial, vendas em dinheiro (recebido − troco), sangrias e suprimentos.</div>
+          <div class="text-xs mt-1" style="color: var(--text-muted);">Inclui troco inicial, vendas em dinheiro (recebido − troco), sangrias e suprimentos.</div>
         </div>
         <div>
-          <div class="text-sm text-slate-500">Diferença</div>
-          <div class="text-lg font-semibold {diferenca === 0 ? 'text-slate-900' : (diferenca > 0 ? 'text-green-700' : 'text-red-700')}">R$ {Number(diferenca).toFixed(2)}</div>
+          <div class="text-sm" style="color: var(--text-muted);">Diferença</div>
+          <div class="text-lg font-semibold" style={`color: ${diferenca === 0 ? 'var(--text-main)' : diferenca > 0 ? 'var(--success)' : 'var(--error)'}`}>R$ {Number(diferenca).toFixed(2)}</div>
         </div>
       </div>
 
@@ -291,4 +329,13 @@
 
 <style lang="postcss">
   /* Usa classes globais em src/app.css (.input-form, .btn-*) */
+  .fiado-summary { padding: 1rem 0; border-top: 1px solid var(--border-card); }
+  .fiado-summary h2 { margin: 0; color: var(--text-main); font-size: .875rem; }
+  .fiado-summary p { margin: .25rem 0 0; color: var(--text-muted); font-size: .875rem; }
+  .fiado-summary ul { display: grid; gap: .375rem; padding: 0; margin: .875rem 0 0; list-style: none; }
+  .fiado-summary li { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-input); }
+  .fiado-summary li div { min-width: 0; display: grid; gap: .125rem; }
+  .fiado-summary li div strong { overflow: hidden; color: var(--text-main); font-size: .875rem; text-overflow: ellipsis; white-space: nowrap; }
+  .fiado-summary li span { color: var(--text-muted); font-size: .875rem; }
+  .fiado-summary li > strong { color: var(--status-warning-text); font-size: .875rem; font-variant-numeric: tabular-nums; }
 </style>

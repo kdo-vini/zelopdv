@@ -371,30 +371,31 @@ describe('revertFiadoDebtForVenda', () => {
 
   test('reverts full valor_total for single-fiado sale', async () => {
     const supabase = makeSupabase({
-      venda: { id: 10, forma_pagamento: 'fiado', valor_total: 75, id_cliente: 'pessoa-1' }
+      venda: { id: 10, forma_pagamento: 'fiado', valor_total: 75, id_cliente: 'pessoa-1' },
+      rpcImpl: () => Promise.resolve({ data: { valor_estornado: 75 }, error: null })
     });
 
     const result = await revertFiadoDebtForVenda(supabase, 10);
 
     expect(result.revertedTotal).toBe(75);
     expect(result.lines).toEqual([{ id_pessoa: 'pessoa-1', valor: 75 }]);
-    expect(supabase.rpc).toHaveBeenCalledWith('fiado_registrar_pagamento', {
-      p_id_pessoa: 'pessoa-1',
-      p_valor: 75
+    expect(supabase.rpc).toHaveBeenCalledWith('fiado_estornar_venda', {
+      p_id_venda: 10
     });
   });
 
   test('reverts only fiado portion of multi-pay sale', async () => {
     const supabase = makeSupabase({
       venda: { id: 11, forma_pagamento: 'multiplo', valor_total: 100, id_cliente: 'pessoa-2' },
-      fiadoPagamentos: [{ forma_pagamento: 'fiado', valor: 30 }]
+      fiadoPagamentos: [{ forma_pagamento: 'fiado', valor: 30 }],
+      rpcImpl: () => Promise.resolve({ data: { valor_estornado: 30 }, error: null })
     });
 
     const result = await revertFiadoDebtForVenda(supabase, 11);
 
     expect(result.revertedTotal).toBe(30);
     expect(result.lines).toEqual([{ id_pessoa: 'pessoa-2', valor: 30 }]);
-    expect(supabase.rpc).toHaveBeenCalledTimes(1);
+    expect(supabase.rpc).toHaveBeenCalledWith('fiado_estornar_venda', { p_id_venda: 11 });
   });
 
   test('does nothing for non-fiado sale', async () => {

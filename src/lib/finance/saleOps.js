@@ -3,8 +3,8 @@ import { calculateSaleSettlement, money } from './caixa.js';
 /**
  * Reverte o débito fiado vinculado a uma venda antes de excluí-la.
  * Lê forma_pagamento, valor_total, id_cliente e (se múltiplo) pagamentos fiado,
- * e chama o RPC `fiado_registrar_pagamento` (decrementa pessoas.saldo_fiado)
- * para cada lançamento que precisa ser estornado.
+ * e chama o RPC auditável `fiado_estornar_venda`, que cria um evento compensatório
+ * no razão e atualiza o saldo em uma única transação.
  *
  * Idempotência: a venda já existe no banco; o RPC apenas ajusta o saldo.
  * Falhas no estorno são repassadas ao chamador para abortar o delete.
@@ -26,36 +26,20 @@ export async function revertFiadoDebtForVenda(supabase, vendaId) {
   if (vendaErr) throw vendaErr;
   if (!venda) return { revertedTotal: 0, lines: [] };
 
-  const lines = [];
-
-  if (venda.forma_pagamento === 'fiado') {
-    const valor = money(venda.valor_total);
-    if (valor > 0 && venda.id_cliente) {
-      lines.push({ id_pessoa: venda.id_cliente, valor });
-    }
-  } else if (venda.forma_pagamento === 'multiplo') {
-    const { data: pags, error: pagsErr } = await supabase
-      .from('vendas_pagamentos')
-      .select('forma_pagamento, valor')
-      .eq('id_venda', vendaId)
-      .eq('forma_pagamento', 'fiado');
-    if (pagsErr) throw pagsErr;
-    const totalFiado = money((pags || []).reduce((acc, p) => acc + Number(p?.valor || 0), 0));
-    if (totalFiado > 0 && venda.id_cliente) {
-      lines.push({ id_pessoa: venda.id_cliente, valor: totalFiado });
-    }
+  if (!venda.id_cliente || !['fiado', 'multiplo'].includes(venda.forma_pagamento)) {
+    return { revertedTotal: 0, lines: [] };
   }
 
-  for (const line of lines) {
-    const { error: rpcErr } = await supabase.rpc('fiado_registrar_pagamento', {
-      p_id_pessoa: line.id_pessoa,
-      p_valor: line.valor,
-    });
-    if (rpcErr) throw rpcErr;
-  }
+  const { data, error: rpcErr } = await supabase.rpc('fiado_estornar_venda', {
+    p_id_venda: vendaId
+  });
+  if (rpcErr) throw rpcErr;
 
-  const revertedTotal = money(lines.reduce((acc, l) => acc + l.valor, 0));
-  return { revertedTotal, lines };
+  const revertedTotal = money(data?.valor_estornado || 0);
+  return {
+    revertedTotal,
+    lines: revertedTotal > 0 ? [{ id_pessoa: venda.id_cliente, valor: revertedTotal }] : []
+  };
 }
 
 export function createClientSaleId() {

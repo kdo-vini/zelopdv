@@ -30,7 +30,7 @@ A causa do "fica faltando produto offline" não era a fila de vendas (já estava
 | Desconto, taxa de entrega e múltiplos pagamentos | Sim | Entram no mesmo payload offline da venda. |
 | Sincronização ao voltar internet | Sim | O evento `online` chama `syncVendasPendentes(supabase)`. |
 | Baixa de estoque na sincronização | Sim | A RPC aplica estoque de forma atômica no servidor quando a venda pendente sincroniza. |
-| Débito de fiado na sincronização | Sim | O payload envia `fiados`, e a RPC aplica no servidor. |
+| Débito de fiado na sincronização | Sim | O payload envia `fiados`; após a migration de razão auditável, a venda também gera o lançamento de débito idempotente no extrato. |
 | Preservar data da venda offline | Sim | `created_at` é preenchido com o horário original salvo no IndexedDB. |
 
 ## Não funciona offline hoje
@@ -86,7 +86,8 @@ O snapshot de entitlement do gate de assinatura vive em **localStorage** (`zelo_
 - A RPC centraliza venda, itens, pagamentos, estoque, fiado e taxas de plataforma.
 - A sincronização apaga do IndexedDB somente vendas que retornam `data.id`.
 - Cada venda enviada pela RPC carrega `client_sale_id`, uma chave gerada no navegador para idempotência.
-- Se a mesma venda for reenviada com o mesmo `client_sale_id`, a RPC retorna a venda existente e não baixa estoque nem lança fiado de novo.
+- Se a mesma venda for reenviada com o mesmo `client_sale_id`, a RPC retorna a venda existente e não baixa estoque nem lança fiado nem cria evento de extrato de novo.
+- Recebimentos de fiado continuam online: exigem a RPC atômica para manter saldo, extrato e suprimento de caixa consistentes.
 - Erros de regra de negócio não são mais colocados na fila offline.
 - Vendas pendentes antigas são removidas por `limparVendasAntigas(30)` como limpeza de segurança.
 

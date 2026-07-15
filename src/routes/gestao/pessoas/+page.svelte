@@ -4,6 +4,7 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { maskPhone } from '$lib/masks';
   import * as Select from '$lib/components/ui/select/index.js';
+  import { getFiadoState } from '$lib/finance/fiado';
   export let params;
 
   let pessoas = [];
@@ -149,7 +150,7 @@
                 <th class="col-header px-5 py-3 text-left">Nome</th>
                 <th class="col-header px-4 py-3 text-left">Tipo</th>
                 <th class="col-header px-4 py-3 text-left">Contato</th>
-                <th class="col-header px-4 py-3 text-right">Fiado</th>
+                <th class="col-header px-4 py-3 text-right">Situação do fiado</th>
                 <th class="px-4 py-3 w-28"></th>
               </tr>
             </thead>
@@ -163,8 +164,9 @@
                     </span>
                   </td>
                   <td class="px-4 py-3 text-slate-400 tabular-nums">{maskPhone(p.contato) || '—'}</td>
-                  <td class="px-4 py-3 text-right tabular-nums font-medium {Number(p.saldo_fiado || 0) > 0 ? 'text-amber-400' : 'text-slate-500'}">
-                    R$ {Number(p.saldo_fiado || 0).toFixed(2)}
+                  <td class={`px-4 py-3 text-right tabular-nums font-medium fiado-${getFiadoState(p.saldo_fiado).key}`}>
+                    <span class="fiado-label">{getFiadoState(p.saldo_fiado).label}</span>
+                    <span>R$ {Number(getFiadoState(p.saldo_fiado).value).toFixed(2)}</span>
                   </td>
                   <td class="px-4 py-3">
                     <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -245,7 +247,7 @@
     @apply inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full;
   }
   .type-cli  { @apply bg-sky-500/10 text-sky-400 border border-sky-500/20; }
-  .type-func { @apply bg-violet-500/10 text-violet-400 border border-violet-500/20; }
+  .type-func { background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle); }
 
   .icon-btn {
     @apply p-1.5 rounded-md text-slate-500 hover:text-slate-200 hover:bg-slate-600/60
@@ -254,4 +256,8 @@
   .icon-btn-danger {
     @apply hover:text-red-400 hover:bg-red-500/10;
   }
+  .fiado-label { display: block; margin-bottom: .125rem; font-size: .75rem; font-weight: 500; }
+  .fiado-devedor { color: var(--status-warning-text); }
+  .fiado-credor { color: var(--status-success-text); }
+  .fiado-neutro { color: var(--text-muted); }
 </style>
