@@ -17,7 +17,7 @@
 </script>
 
 {#if ready}
-  <div class:zelinho-open={$isZelinhoOpen} class="zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app);">
+  <div class:zelinho-open={$isZelinhoOpen} class="zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app); color: var(--text-main);">
     <GestaoSidebar />
     <div class="flex-1 flex flex-col overflow-hidden min-w-0">
       <main class="flex-1 overflow-y-auto p-6 pt-16 md:p-8" id="ferramentas-main-content">
@@ -26,7 +26,7 @@
     </div>
   </div>
 {:else}
-  <div class="flex h-screen items-center justify-center" style="background: var(--bg-app);">
+  <div class="flex h-screen items-center justify-center" style="background: var(--bg-app); color: var(--text-main);">
     <div class="flex flex-col items-center gap-3">
       <Spinner label="Verificando autenticação" />
       <p class="text-sm" style="color: var(--text-muted);">Verificando autenticação...</p>

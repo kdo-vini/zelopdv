@@ -522,6 +522,8 @@
   /* Largura da sidebar com transição suave */
   .sidebar-shell {
     width: 240px;
+    height: 100vh;
+    height: 100dvh;
     transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 

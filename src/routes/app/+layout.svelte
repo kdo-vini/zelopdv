@@ -114,7 +114,7 @@
   });
 </script>
 
-<div class:zelinho-open={$isZelinhoOpen} class="zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app);">
+<div class:zelinho-open={$isZelinhoOpen} class="zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app); color: var(--text-main);">
   <GestaoSidebar />
   <div class="flex-1 flex flex-col overflow-hidden min-w-0 pt-14 md:pt-0">
     {#if deletionScheduledAt}

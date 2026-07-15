@@ -434,6 +434,8 @@
 
 {#if $page.url.pathname === '/pascoa'}
   <slot />
+{:else if hasSidebarLayout}
+  <slot />
 {:else}
 <div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode}>
   
@@ -645,7 +647,7 @@
   {/if}
   {/if}
 
-  <main class="flex-1 mx-auto w-full {hasSidebarLayout || $page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isContactPage || isCompetitorComparisonPage || isReferralPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
+  <main class="flex-1 mx-auto w-full {$page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isContactPage || isCompetitorComparisonPage || isReferralPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
