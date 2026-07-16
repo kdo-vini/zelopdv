@@ -79,6 +79,8 @@ Migration local: `.ai/migrations/fiado_ledger_2026_07_15.sql` (aguarda validaç�
 - `fiado_estornar_venda(...)` cria evento compensatório ao desfazer uma venda; o razão não perde histórico.
 - Triggers registram novos débitos de vendas fiado simples e de parcelas fiado em venda múltipla. Saldos anteriores entram como um lançamento único `saldo_inicial` porque pagamentos antigos não são reconstituíveis.
 
+- `fiado_excluir_pagamento(...)` e uma exclusao intencional para corrigir lancamentos feitos por engano: remove o recebimento, a movimentacao de caixa vinculada e ajusta o saldo na mesma transacao.
+
 ## ZeloMenu publication layer
 
 Migration local: `.ai/migrations/zelomenu_publication_schema_2026_06_23.sql`.

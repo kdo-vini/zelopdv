@@ -22,6 +22,12 @@ create table if not exists public.fiado_lancamentos (
   created_at timestamptz not null default now()
 );
 
+-- Referência da entrada de caixa criada junto com um recebimento.
+-- Permite excluir um pagamento lançado por engano sem deixar o caixa divergente.
+alter table public.fiado_lancamentos
+  add column if not exists id_caixa_movimentacao integer null
+  references public.caixa_movimentacoes(id) on delete set null;
+
 create index if not exists fiado_lancamentos_pessoa_created_idx
   on public.fiado_lancamentos (id_pessoa, created_at desc, id desc);
 create index if not exists fiado_lancamentos_usuario_created_idx
@@ -32,6 +38,9 @@ create unique index if not exists fiado_lancamentos_idempotency_idx
 
 comment on table public.fiado_lancamentos is
   'Razão imutável do fiado. Valor positivo é débito; negativo é pagamento, crédito ou estorno.';
+
+comment on table public.fiado_lancamentos is
+  'Razao do fiado. Valor positivo e debito; negativo e pagamento, credito ou estorno. Recebimentos podem ser excluidos por RPC autorizada para corrigir erros de lancamento.';
 
 alter table public.fiado_lancamentos enable row level security;
 drop policy if exists fiado_lancamentos_select_owner on public.fiado_lancamentos;
@@ -171,6 +180,7 @@ declare
   v_owner uuid;
   v_pessoa public.pessoas%rowtype;
   v_caixa_id integer;
+  v_caixa_movimentacao_id integer;
   v_saldo_anterior numeric(12,2);
   v_saldo_atual numeric(12,2);
   v_lancamento public.fiado_lancamentos%rowtype;
@@ -209,7 +219,8 @@ begin
       raise exception 'Abra um caixa para adicionar este recebimento à gaveta.' using errcode = 'P0001';
     end if;
     insert into public.caixa_movimentacoes (id_caixa, id_usuario, id_operador, tipo, valor, motivo)
-      values (v_caixa_id, v_owner, v_actor, 'suprimento', p_valor, 'Pagamento fiado de ' || v_pessoa.nome);
+      values (v_caixa_id, v_owner, v_actor, 'suprimento', p_valor, 'Pagamento fiado de ' || v_pessoa.nome)
+      returning id into v_caixa_movimentacao_id;
   end if;
 
   update public.pessoas
@@ -218,9 +229,9 @@ begin
     returning saldo_fiado into v_saldo_atual;
 
   insert into public.fiado_lancamentos (
-    id_usuario, id_pessoa, id_caixa, id_operador, natureza, valor, descricao, idempotency_key
+    id_usuario, id_pessoa, id_caixa, id_caixa_movimentacao, id_operador, natureza, valor, descricao, idempotency_key
   ) values (
-    v_owner, v_pessoa.id, v_caixa_id, v_actor, 'pagamento', -p_valor,
+    v_owner, v_pessoa.id, v_caixa_id, v_caixa_movimentacao_id, v_actor, 'pagamento', -p_valor,
     'Pagamento recebido' || case when p_adicionar_ao_caixa then ' e adicionado ao caixa.' else '.' end,
     p_idempotency_key
   ) returning * into v_lancamento;
@@ -231,6 +242,89 @@ begin
     'saldo_anterior', v_saldo_anterior,
     'saldo_atual', v_saldo_atual,
     'credito_gerado', greatest(0, -v_saldo_atual)
+  );
+end;
+$$;
+
+create or replace function public.fiado_excluir_pagamento(p_id_lancamento bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_owner uuid;
+  v_lancamento public.fiado_lancamentos%rowtype;
+  v_pessoa public.pessoas%rowtype;
+  v_saldo_anterior numeric(12,2);
+  v_saldo_atual numeric(12,2);
+  v_valor numeric(12,2);
+begin
+  if v_actor is null then
+    raise exception 'Não autenticado.' using errcode = '28000';
+  end if;
+
+  v_owner := public.get_owner_user_id(v_actor);
+  if not public.fiado_actor_can('fiado.receber', v_owner) then
+    raise exception 'Você não tem permissão para excluir recebimentos de fiado.' using errcode = '42501';
+  end if;
+
+  -- Lock order: pessoa antes do lançamento, igual ao recebimento, para evitar corrida.
+  select p.* into v_pessoa
+    from public.pessoas p
+    join public.fiado_lancamentos l on l.id_pessoa = p.id
+   where l.id = p_id_lancamento
+     and l.id_usuario = v_owner
+     and l.natureza = 'pagamento'
+     and p.id_usuario = v_owner
+   for update of p;
+  if not found then
+    raise exception 'Pagamento recebido não encontrado.' using errcode = 'P0002';
+  end if;
+
+  select * into v_lancamento
+    from public.fiado_lancamentos
+   where id = p_id_lancamento
+     and id_usuario = v_owner
+     and id_pessoa = v_pessoa.id
+     and natureza = 'pagamento'
+   for update;
+  if not found then
+    raise exception 'Pagamento recebido não encontrado.' using errcode = 'P0002';
+  end if;
+
+  v_valor := abs(v_lancamento.valor);
+  if v_valor <= 0 then
+    raise exception 'O pagamento não possui um valor válido.' using errcode = '22023';
+  end if;
+  v_saldo_anterior := coalesce(v_pessoa.saldo_fiado, 0);
+
+  if v_lancamento.id_caixa_movimentacao is not null then
+    delete from public.caixa_movimentacoes
+     where id = v_lancamento.id_caixa_movimentacao
+       and id_caixa = v_lancamento.id_caixa
+       and id_usuario = v_owner;
+  elsif v_lancamento.id_caixa is not null and v_lancamento.descricao like '%adicionado ao caixa%' then
+    raise exception 'Este pagamento não tem a movimentação de caixa vinculada. Atualize o fichário ou faça o ajuste no caixa.' using errcode = 'P0001';
+  end if;
+
+  update public.pessoas
+     set saldo_fiado = v_saldo_anterior + v_valor
+   where id = v_pessoa.id
+     and id_usuario = v_owner
+   returning saldo_fiado into v_saldo_atual;
+
+  delete from public.fiado_lancamentos
+   where id = v_lancamento.id
+     and id_usuario = v_owner;
+
+  return jsonb_build_object(
+    'excluido', true,
+    'lancamento_id', v_lancamento.id,
+    'valor_excluido', v_valor,
+    'saldo_anterior', v_saldo_anterior,
+    'saldo_atual', v_saldo_atual
   );
 end;
 $$;
@@ -276,5 +370,7 @@ revoke all on function public.fiado_registrar_pagamento_v2(uuid, numeric, boolea
 grant execute on function public.fiado_registrar_pagamento_v2(uuid, numeric, boolean, integer, text) to authenticated, service_role;
 revoke all on function public.fiado_estornar_venda(bigint) from public, anon;
 grant execute on function public.fiado_estornar_venda(bigint) to authenticated, service_role;
+revoke all on function public.fiado_excluir_pagamento(bigint) from public, anon;
+grant execute on function public.fiado_excluir_pagamento(bigint) to authenticated, service_role;
 
 commit;
