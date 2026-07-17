@@ -8,7 +8,7 @@
   import { getAccessContext } from '$lib/accessControl';
   import { clearScreenContext, openAssistantWithContext, screenContext } from '$lib/stores/assistant';
   import * as Select from '$lib/components/ui/select/index.js';
-  import { MessageCircle, Pencil, Trash2, EyeOff, Plus } from 'lucide-svelte';
+  import { MessageCircle, Pencil, Trash2, Plus, ChevronDown, SlidersHorizontal, ArrowUpDown, List, ExternalLink } from 'lucide-svelte';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
@@ -32,6 +32,9 @@
   let filterOcultosOnly = false;
   let filterEstoqueOnly = false;
   let showFilterDropdown = false;
+  let showSortDropdown = false;
+  let showDesktopActions = false;
+  let showMobileCreateMenu = false;
 
   // Paginação
   let currentPage = 1;
@@ -290,11 +293,11 @@
   );
 
   $: filteredSubcatsForProdForm = newProdForm.id_categoria
-    ? subcategorias.filter(s => s.id_categoria === newProdForm.id_categoria)
+    ? subcategorias.filter(s => String(s.id_categoria) === String(newProdForm.id_categoria))
     : [];
 
   $: filteredSubcatsForEditForm = editProdForm.id_categoria
-    ? subcategorias.filter(s => s.id_categoria === editProdForm.id_categoria)
+    ? subcategorias.filter(s => String(s.id_categoria) === String(editProdForm.id_categoria))
     : [];
 
   $: newProdCategoriaCompartilhada = categoriaTemEstoqueCompartilhado(newProdForm.id_categoria);
@@ -312,6 +315,24 @@
   function categoriaTemEstoqueCompartilhado(idCategoria) {
     if (!idCategoria) return false;
     return !!categorias.find((cat) => cat.id === Number(idCategoria))?.controlar_estoque_compartilhado;
+  }
+
+  function toSelectId(value) {
+    return value === null || value === undefined || value === '' ? null : String(value);
+  }
+
+  function toDatabaseId(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  function getCategoriaNome(idCategoria) {
+    return categorias.find((categoria) => String(categoria.id) === String(idCategoria))?.nome ?? '';
+  }
+
+  function getSubcategoriaNome(idSubcategoria) {
+    return subcategorias.find((subcategoria) => String(subcategoria.id) === String(idSubcategoria))?.nome ?? '';
   }
 
   function estoqueProdutoCompartilhado(prod) {
@@ -458,7 +479,7 @@
     const { error } = await supabase.from('subcategorias').insert({
       nome: newSubForm.nome,
       ordem: newSubForm.ordem,
-      id_categoria: newSubForm.id_categoria,
+      id_categoria: toDatabaseId(newSubForm.id_categoria),
       id_usuario
     });
 
@@ -557,7 +578,8 @@
     const payload = {
       ...newProdForm,
       id_usuario,
-      id_subcategoria: newProdForm.id_subcategoria || null,
+      id_categoria: toDatabaseId(newProdForm.id_categoria),
+      id_subcategoria: toDatabaseId(newProdForm.id_subcategoria),
       controlar_estoque: newProdCategoriaCompartilhada ? false : newProdForm.controlar_estoque,
       estoque_atual: !newProdCategoriaCompartilhada && newProdForm.controlar_estoque ? newProdForm.estoque_atual : 0
     };
@@ -588,7 +610,11 @@
 
   function iniciarEdicaoProduto(prod) {
     editingProdId = prod.id;
-    editProdForm = { ...prod };
+    editProdForm = {
+      ...prod,
+      id_categoria: toSelectId(prod.id_categoria),
+      id_subcategoria: toSelectId(prod.id_subcategoria)
+    };
   }
 
   function cancelarEdicaoProduto() {
@@ -615,8 +641,8 @@
       preco: editProdForm.preco,
       preco_2: editProdForm.preco_2 ?? null,
       preco_3: editProdForm.preco_3 ?? null,
-      id_categoria: editProdForm.id_categoria,
-      id_subcategoria: editProdForm.id_subcategoria || null,
+      id_categoria: toDatabaseId(editProdForm.id_categoria),
+      id_subcategoria: toDatabaseId(editProdForm.id_subcategoria),
       eh_item_por_unidade: editProdForm.eh_item_por_unidade,
       ocultar_no_pdv: editProdForm.ocultar_no_pdv,
       controlar_estoque: editProdCategoriaCompartilhada ? false : editProdForm.controlar_estoque,
@@ -686,20 +712,43 @@
 
   function abrirModalProduto() {
     // Pré-preenche categoria/subcategoria com a seleção atual
-    newProdForm.id_categoria = selectedCategoriaId;
-    newProdForm.id_subcategoria = selectedSubcategoriaId;
+    newProdForm.id_categoria = toSelectId(selectedCategoriaId);
+    newProdForm.id_subcategoria = toSelectId(selectedSubcategoriaId);
+    showDesktopActions = false;
+    showMobileCreateMenu = false;
     showProdModal = true;
   }
 
   function abrirModalSubcategoria() {
-    newSubForm.id_categoria = selectedCategoriaId;
+    newSubForm.id_categoria = toSelectId(selectedCategoriaId);
+    showDesktopActions = false;
+    showMobileCreateMenu = false;
     showSubModal = true;
+  }
+
+  function abrirModalCategoria() {
+    showDesktopActions = false;
+    showMobileCreateMenu = false;
+    showCatModal = true;
+  }
+
+  function toggleMobileCreateMenu() {
+    showMobileCreateMenu = !showMobileCreateMenu;
   }
 
   // Fecha dropdowns ao clicar fora
   function handleClickOutside(e) {
     if (showFilterDropdown && !e.target.closest('.filter-dropdown-wrapper')) {
       showFilterDropdown = false;
+    }
+    if (showSortDropdown && !e.target.closest('.sort-dropdown-wrapper')) {
+      showSortDropdown = false;
+    }
+    if (showDesktopActions && !e.target.closest('.desktop-actions-menu')) {
+      showDesktopActions = false;
+    }
+    if (showMobileCreateMenu && !e.target.closest('.mobile-create-menu')) {
+      showMobileCreateMenu = false;
     }
   }
 </script>
@@ -714,43 +763,54 @@
   </div>
 
   <!-- Botões de ação globais -->
-  <div class="page-actions">
-    <a href="https://menu.zelopdv.com.br/admin" target="_blank" rel="noopener"
-       class="btn-secondary" style="text-decoration: none;">
-      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-      </svg>
-      <span>Configurar cardápio</span>
-    </a>
-    <button class="btn-secondary" on:click={() => showSubModal = true}>
-      <Plus class="w-4 h-4" />
-      <span>Nova Subcategoria</span>
+  <div class="desktop-page-actions">
+    <button class="btn-primary page-new-product" on:click={abrirModalProduto}>
+      <Plus class="w-4 h-4" aria-hidden="true" />
+      <span>Novo produto</span>
+      <ChevronDown class="w-4 h-4" aria-hidden="true" />
     </button>
-    <button class="btn-secondary" on:click={() => showCatModal = true}>
-      <Plus class="w-4 h-4" />
-      <span>Nova Categoria</span>
-    </button>
-    <button class="btn-primary" on:click={abrirModalProduto}>
-      <Plus class="w-4 h-4" />
-      <span>Novo Produto</span>
-    </button>
+
+    <div class="desktop-actions-menu">
+      <button
+        class="btn-secondary"
+        aria-expanded={showDesktopActions}
+        on:click|stopPropagation={() => showDesktopActions = !showDesktopActions}
+      >
+        <SlidersHorizontal class="w-4 h-4" aria-hidden="true" />
+        <span>Ações</span>
+        <ChevronDown class="w-4 h-4" aria-hidden="true" />
+      </button>
+      {#if showDesktopActions}
+        <div class="desktop-actions-popover">
+          <button class="desktop-action-item" on:click={abrirModalCategoria}>
+            <Plus class="w-4 h-4" aria-hidden="true" /> Nova categoria
+          </button>
+          <button class="desktop-action-item" on:click={abrirModalSubcategoria}>
+            <Plus class="w-4 h-4" aria-hidden="true" /> Nova subcategoria
+          </button>
+          <a class="desktop-action-item" href="https://menu.zelopdv.com.br/admin" target="_blank" rel="noopener">
+            <ExternalLink class="w-4 h-4" aria-hidden="true" /> Configurar cardápio
+          </a>
+        </div>
+      {/if}
+    </div>
   </div>
+
 </div>
 
 <!-- ─── Kit Páscoa Banner ─────────────────────────────────────────────────────── -->
 {#if showKitPascoa}
-  <div style="background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--bg-panel)), color-mix(in srgb, #9B6EBF 12%, var(--bg-panel))); border: 1.5px solid color-mix(in srgb, #9B6EBF 30%, var(--border-subtle));"
+  <div style="background: color-mix(in srgb, var(--accent) 10%, var(--bg-panel)); border: 1.5px solid color-mix(in srgb, var(--accent) 30%, var(--border-subtle));"
        class="rounded-xl p-4 mb-4 flex items-center justify-between gap-4">
     <div>
-      <p class="text-xs font-bold uppercase tracking-wider mb-0.5" style="color: #C084FC;">Especial Páscoa 2026 🥚</p>
+      <p class="text-xs font-bold uppercase tracking-wider mb-0.5" style="color: var(--accent);">Especial Páscoa 2026 🥚</p>
       <p class="font-bold text-sm" style="color: var(--text-main);">Kit de categorias pronto para usar</p>
       <p class="text-xs" style="color: var(--text-muted);">Ovos de Páscoa, Trufas, Cestas, Colomba Pascal, Avulso</p>
     </div>
     <div class="flex gap-2 shrink-0">
       <button on:click={aplicarKitPascoa}
-        class="px-4 py-2 rounded-lg text-sm font-bold text-white"
-        style="background: linear-gradient(135deg, #9B6EBF, #6B3FA0);">
+        class="px-4 py-2 rounded-lg text-sm font-bold"
+        style="background: var(--accent); color: var(--primary-text);">
         Ativar Kit
       </button>
       <button on:click={() => kitPascoaInserted = true} class="px-2 py-2 text-xs rounded-lg"
@@ -769,12 +829,59 @@
 
     <!-- Header do painel -->
     <div class="tree-header" style="border-color: var(--border-subtle);">
-      <span class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">
-        Categorias
-      </span>
-      <span class="badge-count" style="background: var(--bg-card); color: var(--text-muted); border-color: var(--border-card);">
-        {categorias.length}
-      </span>
+      <div class="tree-heading">
+        <span class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">
+          Categorias
+        </span>
+        <span class="badge-count" style="background: var(--bg-card); color: var(--text-muted); border-color: var(--border-card);">
+          {categorias.length}
+        </span>
+      </div>
+      <button class="tree-add-btn" type="button" on:click={abrirModalCategoria} aria-label="Nova categoria" title="Nova categoria">
+        <Plus class="w-4 h-4" aria-hidden="true" />
+      </button>
+    </div>
+
+    <div class="mobile-category-nav" aria-label="Filtros por categoria">
+      <div class="mobile-category-row">
+        <button
+          class="mobile-category-chip"
+          class:active={selectedCategoriaId === null && selectedSubcategoriaId === null}
+          on:click={limparSelecao}
+        >
+          Todos
+        </button>
+        {#each categorias as cat (cat.id)}
+          <button
+            class="mobile-category-chip"
+            class:active={selectedCategoriaId === cat.id}
+            on:click={() => selectCategoria(cat.id)}
+          >
+            {cat.nome}
+          </button>
+        {/each}
+      </div>
+
+      {#if selectedCategoriaId}
+        <div class="mobile-subcategory-row">
+          <button
+            class="mobile-subcategory-chip"
+            class:active={selectedSubcategoriaId === null}
+            on:click={() => selectCategoria(selectedCategoriaId)}
+          >
+            Todas
+          </button>
+          {#each getSubcats(selectedCategoriaId) as sub (sub.id)}
+            <button
+              class="mobile-subcategory-chip"
+              class:active={selectedSubcategoriaId === sub.id}
+              on:click={() => selectSubcategoria(sub.id, selectedCategoriaId)}
+            >
+              {sub.nome}
+            </button>
+          {/each}
+        </div>
+      {/if}
     </div>
 
     <!-- Lista -->
@@ -882,7 +989,7 @@
               {#if getSubcatCount(cat.id) > 0}
                 <span class="subcat-badge"
                   style="background: var(--accent-light); color: var(--accent);
-                    {selectedCategoriaId === cat.id && selectedSubcategoriaId === null ? 'background: rgba(0,0,0,0.15); color: inherit;' : ''}">
+                    {selectedCategoriaId === cat.id && selectedSubcategoriaId === null ? 'background: color-mix(in srgb, var(--bg-app) 15%, transparent); color: inherit;' : ''}">
                   {getSubcatCount(cat.id)}
                 </span>
               {/if}
@@ -1039,7 +1146,7 @@
       </div>
 
       <!-- Busca + Filtro -->
-      <div class="flex items-center gap-2">
+      <div class="toolbar-controls flex items-center gap-2">
         <div class="search-wrapper" style="border-color: var(--border-subtle); background: var(--bg-input);">
           <svg class="w-4 h-4 shrink-0" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
@@ -1059,7 +1166,7 @@
           <button
             class="filter-btn"
             class:filter-btn-active={filterOcultosOnly || filterEstoqueOnly}
-            on:click|stopPropagation={() => showFilterDropdown = !showFilterDropdown}
+            on:click|stopPropagation={() => { showFilterDropdown = !showFilterDropdown; showSortDropdown = false; }}
             style="border-color: var(--border-subtle); color: var(--text-muted);
               {filterOcultosOnly || filterEstoqueOnly ? 'color: var(--primary); border-color: var(--primary);' : ''}"
             title="Filtros adicionais"
@@ -1099,6 +1206,39 @@
             </div>
           {/if}
         </div>
+
+        <div class="sort-dropdown-wrapper relative">
+          <button
+            class="sort-btn"
+            on:click|stopPropagation={() => { showSortDropdown = !showSortDropdown; showFilterDropdown = false; }}
+            aria-expanded={showSortDropdown}
+            title="Ordenar produtos"
+          >
+            <ArrowUpDown class="w-4 h-4" aria-hidden="true" />
+            <span class="sort-btn-label">Ordenar</span>
+          </button>
+
+          {#if showSortDropdown}
+            <div class="sort-dropdown" transition:slide={{ duration: 150 }}>
+              <button class="sort-option" class:active={sortField === 'nome' && !sortDesc} on:click={() => { sortField = 'nome'; sortDesc = false; showSortDropdown = false; }}>
+                Nome A–Z
+              </button>
+              <button class="sort-option" class:active={sortField === 'preco' && !sortDesc} on:click={() => { sortField = 'preco'; sortDesc = false; showSortDropdown = false; }}>
+                Menor preço
+              </button>
+              <button class="sort-option" class:active={sortField === 'preco' && sortDesc} on:click={() => { sortField = 'preco'; sortDesc = true; showSortDropdown = false; }}>
+                Maior preço
+              </button>
+              <button class="sort-option" class:active={sortField === 'estoque_atual' && !sortDesc} on:click={() => { sortField = 'estoque_atual'; sortDesc = false; showSortDropdown = false; }}>
+                Menor estoque
+              </button>
+            </div>
+          {/if}
+        </div>
+
+        <button class="view-toggle" type="button" disabled aria-label="Visualização em lista (atual)" title="Visualização em lista">
+          <List class="w-4 h-4" aria-hidden="true" />
+        </button>
       </div>
     </div>
 
@@ -1122,11 +1262,11 @@
               Nenhum produto cadastrado. Comece criando um produto.
             {/if}
           </p>
-          {#if selectedCategoriaId || buscaFilter || filterPublicados !== 'all'}
+          {#if selectedCategoriaId || selectedSubcategoriaId || buscaFilter || filterOcultosOnly || filterEstoqueOnly}
             <button
               class="text-xs mt-2"
               style="color: var(--primary);"
-              on:click={() => { limparSelecao(); buscaFilter = ''; filterPublicados = 'all'; }}
+              on:click={() => { limparSelecao(); buscaFilter = ''; filterOcultosOnly = false; filterEstoqueOnly = false; }}
             >
               Limpar filtros
             </button>
@@ -1150,53 +1290,62 @@
                       required
                       style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
                     />
-                    <input
-                      class="edit-input"
-                      type="number"
+                    <div class="currency-field">
+                      <span class="currency-prefix" aria-hidden="true">R$</span>
+                      <input
+                        class="edit-input currency-input"
+                        type="number"
                       step="0.01"
                       min="0"
                       bind:value={editProdForm.preco}
                       placeholder={tabelasPrecoAtivo ? nomesTabelas[0] : 'Preço'}
                       required
                       style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                    />
+                      />
+                    </div>
                     {#if tabelasPrecoAtivo}
-                      <input
-                        class="edit-input"
+                      <div class="currency-field">
+                        <span class="currency-prefix" aria-hidden="true">R$</span>
+                        <input
+                        class="edit-input currency-input"
                         type="number"
                         step="0.01"
                         min="0"
                         bind:value={editProdForm.preco_2}
                         placeholder={nomesTabelas[1]}
                         style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                      />
-                      <input
-                        class="edit-input"
+                        />
+                      </div>
+                      <div class="currency-field">
+                        <span class="currency-prefix" aria-hidden="true">R$</span>
+                        <input
+                        class="edit-input currency-input"
                         type="number"
                         step="0.01"
                         min="0"
                         bind:value={editProdForm.preco_3}
                         placeholder={nomesTabelas[2]}
                         style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                      />
+                        />
+                      </div>
                     {/if}
                     <Select.Root bind:value={editProdForm.id_categoria}>
                       <Select.Trigger class="field-input">
-                        <Select.Value placeholder="— Categoria —" />
+                        <span class="select-value-label">{getCategoriaNome(editProdForm.id_categoria) || '— Categoria —'}</span>
                       </Select.Trigger>
                       <Select.Content>
                         {#each categorias as c}
-                          <Select.Item value={c.id} label={c.nome} />
+                          <Select.Item value={String(c.id)} label={c.nome} />
                         {/each}
                       </Select.Content>
                     </Select.Root>
                     <Select.Root bind:value={editProdForm.id_subcategoria} disabled={!editProdForm.id_categoria}>
                       <Select.Trigger class="field-input">
-                        <Select.Value placeholder="— Subcategoria —" />
+                        <span class="select-value-label">{getSubcategoriaNome(editProdForm.id_subcategoria) || '— Subcategoria —'}</span>
                       </Select.Trigger>
                       <Select.Content>
                         {#each filteredSubcatsForEditForm as s}
-                          <Select.Item value={s.id} label={s.nome} />
+                          <Select.Item value={String(s.id)} label={s.nome} />
                         {/each}
                       </Select.Content>
                     </Select.Root>
@@ -1228,7 +1377,7 @@
                     </label>
                     <label>
                       <input type="checkbox" bind:checked={editProdForm.eh_item_por_unidade} class="themed-checkbox" />
-                      Venda por unidade
+                      Venda em atacado
                     </label>
                   </div>
 
@@ -1369,53 +1518,62 @@
                           required
                           style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
                         />
-                        <input
-                          class="edit-input w-28"
-                          type="number"
+                        <div class="currency-field w-28">
+                          <span class="currency-prefix" aria-hidden="true">R$</span>
+                          <input
+                            class="edit-input currency-input w-full"
+                            type="number"
                           step="0.01"
                           min="0"
                           bind:value={editProdForm.preco}
                           placeholder={tabelasPrecoAtivo ? nomesTabelas[0] : 'Preço'}
                           required
                           style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                        />
+                          />
+                        </div>
                         {#if tabelasPrecoAtivo}
-                          <input
-                            class="edit-input w-28"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            bind:value={editProdForm.preco_2}
-                            placeholder={nomesTabelas[1]}
-                            style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                          />
-                          <input
-                            class="edit-input w-28"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            bind:value={editProdForm.preco_3}
-                            placeholder={nomesTabelas[2]}
-                            style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                          />
+                          <div class="currency-field w-28">
+                            <span class="currency-prefix" aria-hidden="true">R$</span>
+                            <input
+                              class="edit-input currency-input w-full"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              bind:value={editProdForm.preco_2}
+                              placeholder={nomesTabelas[1]}
+                              style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                            />
+                          </div>
+                          <div class="currency-field w-28">
+                            <span class="currency-prefix" aria-hidden="true">R$</span>
+                            <input
+                              class="edit-input currency-input w-full"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              bind:value={editProdForm.preco_3}
+                              placeholder={nomesTabelas[2]}
+                              style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                            />
+                          </div>
                         {/if}
                         <Select.Root bind:value={editProdForm.id_categoria}>
                           <Select.Trigger class="field-input">
-                            <Select.Value placeholder="— Categoria —" />
+                            <span class="select-value-label">{getCategoriaNome(editProdForm.id_categoria) || '— Categoria —'}</span>
                           </Select.Trigger>
                           <Select.Content>
                             {#each categorias as c}
-                              <Select.Item value={c.id} label={c.nome} />
+                              <Select.Item value={String(c.id)} label={c.nome} />
                             {/each}
                           </Select.Content>
                         </Select.Root>
                         <Select.Root bind:value={editProdForm.id_subcategoria} disabled={!editProdForm.id_categoria}>
                           <Select.Trigger class="field-input">
-                            <Select.Value placeholder="— Subcategoria —" />
+                            <span class="select-value-label">{getSubcategoriaNome(editProdForm.id_subcategoria) || '— Subcategoria —'}</span>
                           </Select.Trigger>
                           <Select.Content>
                             {#each filteredSubcatsForEditForm as s}
-                              <Select.Item value={s.id} label={s.nome} />
+                              <Select.Item value={String(s.id)} label={s.nome} />
                             {/each}
                           </Select.Content>
                         </Select.Root>
@@ -1447,7 +1605,7 @@
                           </label>
                           <label class="flex items-center gap-1.5 cursor-pointer">
                             <input type="checkbox" bind:checked={editProdForm.eh_item_por_unidade} class="themed-checkbox" />
-                            Venda por unidade
+                            Venda em atacado
                           </label>
                         </div>
                         <div class="flex gap-2">
@@ -1596,6 +1754,35 @@
 <!-- ═══════════════════════════════════════════════════════════════════════════
      MODAL — Nova Categoria
      ═══════════════════════════════════════════════════════════════════════ -->
+<div class="mobile-create-menu" class:open={showMobileCreateMenu}>
+  {#if showMobileCreateMenu}
+    <div class="mobile-create-options" aria-label="Criar novo item">
+      <button class="mobile-create-option" type="button" on:click={abrirModalCategoria}>
+        <span class="mobile-create-option-icon"><Plus class="w-4 h-4" aria-hidden="true" /></span>
+        <span>Categoria</span>
+      </button>
+      <button class="mobile-create-option" type="button" on:click={abrirModalSubcategoria}>
+        <span class="mobile-create-option-icon"><Plus class="w-4 h-4" aria-hidden="true" /></span>
+        <span>Subcategoria</span>
+      </button>
+      <button class="mobile-create-option" type="button" on:click={abrirModalProduto}>
+        <span class="mobile-create-option-icon"><Plus class="w-4 h-4" aria-hidden="true" /></span>
+        <span>Produto</span>
+      </button>
+    </div>
+  {/if}
+  <button
+    class="mobile-create-fab"
+    class:open={showMobileCreateMenu}
+    type="button"
+    aria-expanded={showMobileCreateMenu}
+    aria-label={showMobileCreateMenu ? 'Fechar opções de criação' : 'Criar novo item'}
+    on:click|stopPropagation={toggleMobileCreateMenu}
+  >
+    <Plus class="mobile-create-fab-icon" aria-hidden="true" />
+  </button>
+</div>
+
 {#if showCatModal}
   <div class="modal-backdrop" on:click|self={() => showCatModal = false} transition:slide={{ duration: 200 }}>
     <div class="modal-box" style="background: var(--bg-card); border-color: var(--border-card);">
@@ -1682,11 +1869,11 @@
           <label class="form-label" style="color: var(--text-label);">Categoria Pai</label>
           <Select.Root bind:value={newSubForm.id_categoria}>
             <Select.Trigger class="field-input">
-              <Select.Value placeholder="Selecione uma categoria..." />
+              <span class="select-value-label">{getCategoriaNome(newSubForm.id_categoria) || 'Selecione uma categoria...'}</span>
             </Select.Trigger>
             <Select.Content>
               {#each categorias as c}
-                <Select.Item value={c.id} label={c.nome} />
+                <Select.Item value={String(c.id)} label={c.nome} />
               {/each}
             </Select.Content>
           </Select.Root>
@@ -1755,51 +1942,60 @@
           </div>
           <div>
             <label class="form-label" style="color: var(--text-label);">{tabelasPrecoAtivo ? `Preço ${nomesTabelas[0]} (R$)` : 'Preço (R$)'}</label>
-            <input
-              class="form-input"
-              type="number"
-              step="0.01"
-              min="0"
-              bind:value={newProdForm.preco}
-              required
-              style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-            />
+            <div class="currency-field">
+              <span class="currency-prefix" aria-hidden="true">R$</span>
+              <input
+                class="form-input currency-input"
+                type="number"
+                step="0.01"
+                min="0"
+                bind:value={newProdForm.preco}
+                required
+                style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+              />
+            </div>
           </div>
           {#if tabelasPrecoAtivo}
             <div>
               <label class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[1]} (R$)</label>
-              <input
-                class="form-input"
-                type="number"
-                step="0.01"
-                min="0"
-                bind:value={newProdForm.preco_2}
-                placeholder="Opcional"
-                style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-              />
+              <div class="currency-field">
+                <span class="currency-prefix" aria-hidden="true">R$</span>
+                <input
+                  class="form-input currency-input"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  bind:value={newProdForm.preco_2}
+                  placeholder="Opcional"
+                  style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                />
+              </div>
             </div>
             <div>
               <label class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[2]} (R$)</label>
-              <input
-                class="form-input"
-                type="number"
-                step="0.01"
-                min="0"
-                bind:value={newProdForm.preco_3}
-                placeholder="Opcional"
-                style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-              />
+              <div class="currency-field">
+                <span class="currency-prefix" aria-hidden="true">R$</span>
+                <input
+                  class="form-input currency-input"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  bind:value={newProdForm.preco_3}
+                  placeholder="Opcional"
+                  style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                />
+              </div>
             </div>
           {/if}
           <div>
             <label class="form-label" style="color: var(--text-label);">Categoria</label>
             <Select.Root bind:value={newProdForm.id_categoria}>
               <Select.Trigger class="field-input">
-                <Select.Value placeholder="Selecione..." />
+                <span class="select-value-label">{getCategoriaNome(newProdForm.id_categoria) || 'Selecione...'}</span>
               </Select.Trigger>
               <Select.Content>
                 {#each categorias as c}
-                  <Select.Item value={c.id} label={c.nome} />
+                  <Select.Item value={String(c.id)} label={c.nome} />
                 {/each}
               </Select.Content>
             </Select.Root>
@@ -1808,11 +2004,11 @@
             <label class="form-label" style="color: var(--text-label);">Subcategoria</label>
             <Select.Root bind:value={newProdForm.id_subcategoria} disabled={!newProdForm.id_categoria}>
               <Select.Trigger class="field-input">
-                <Select.Value placeholder="— Nenhuma —" />
+                <span class="select-value-label">{getSubcategoriaNome(newProdForm.id_subcategoria) || '— Nenhuma —'}</span>
               </Select.Trigger>
               <Select.Content>
                 {#each filteredSubcatsForProdForm as s}
-                  <Select.Item value={s.id} label={s.nome} />
+                  <Select.Item value={String(s.id)} label={s.nome} />
                 {/each}
               </Select.Content>
             </Select.Root>
@@ -1824,8 +2020,8 @@
           <label class="prod-option-label" style="color: var(--text-label);">
             <input type="checkbox" bind:checked={newProdForm.eh_item_por_unidade} class="themed-checkbox" />
             <div>
-              <span class="font-medium text-sm">Venda por unidade</span>
-              <p class="text-xs mt-0.5" style="color: var(--text-muted);">O produto é vendido em unidades inteiras</p>
+              <span class="font-medium text-sm">Venda em atacado</span>
+              <p class="text-xs mt-0.5" style="color: var(--text-muted);">Define como este produto será vendido no PDV</p>
             </div>
           </label>
           <label class="prod-option-label" style="color: var(--text-label);">
@@ -1892,6 +2088,95 @@
 
   .page-title-block {
     min-width: 0;
+  }
+
+  .desktop-page-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .page-new-product {
+    min-height: 2.75rem;
+  }
+
+  .desktop-actions-menu,
+  .sort-dropdown-wrapper {
+    position: relative;
+  }
+
+  .desktop-actions-popover,
+  .sort-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 70;
+    min-width: 13rem;
+    padding: 0.25rem;
+    border: 1px solid var(--border-card);
+    border-radius: 0.625rem;
+    background: var(--bg-card);
+  }
+
+  .desktop-action-item,
+  .sort-option {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.375rem;
+    color: var(--text-label);
+    text-align: left;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: background var(--transition-fast), color var(--transition-fast);
+  }
+
+  .desktop-action-item:hover,
+  .sort-option:hover,
+  .sort-option.active {
+    background: var(--sidebar-item-hover-bg);
+    color: var(--text-main);
+  }
+
+  .tree-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .tree-add-btn,
+  .view-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    border: 1px solid var(--border-card);
+    border-radius: 0.5rem;
+    color: var(--text-label);
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  }
+
+  .tree-add-btn:hover,
+  .view-toggle:not(:disabled):hover {
+    background: var(--sidebar-item-hover-bg);
+    border-color: var(--primary);
+    color: var(--text-main);
+  }
+
+  .view-toggle:disabled {
+    cursor: default;
+    opacity: 0.75;
+  }
+
+  .mobile-category-nav {
+    display: none;
   }
 
   .page-actions {
@@ -2095,6 +2380,59 @@
     color: var(--text-muted);
   }
 
+  .toolbar-controls {
+    min-width: 0;
+  }
+
+  .select-value-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-main);
+  }
+
+  .sort-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    color: var(--text-muted);
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  }
+
+  .sort-btn:hover,
+  .sort-btn[aria-expanded="true"] {
+    background: var(--sidebar-item-hover-bg);
+    border-color: var(--primary);
+    color: var(--text-main);
+  }
+
+  .sort-option {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .mobile-create-menu {
+    display: none;
+  }
+
+  @keyframes create-option-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
   .filter-btn {
     display: flex;
     align-items: center;
@@ -2125,7 +2463,7 @@
     border: 1px solid;
     padding: 0.75rem;
     min-width: 220px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-app) 30%, transparent);
   }
 
   .filter-option {
@@ -2397,7 +2735,7 @@
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: color-mix(in srgb, var(--bg-app) 60%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2411,7 +2749,7 @@
     border-radius: 0.75rem;
     border: 1px solid;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    box-shadow: 0 20px 60px color-mix(in srgb, var(--bg-app) 50%, transparent);
   }
 
   .modal-box-lg {
@@ -2514,6 +2852,26 @@
     transition: border-color var(--transition-fast);
   }
 
+  .currency-field {
+    position: relative;
+  }
+
+  .currency-prefix {
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    z-index: 1;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  .currency-input {
+    padding-left: 2.25rem;
+  }
+
   .form-input:focus {
     border-color: var(--primary);
   }
@@ -2572,6 +2930,11 @@
 
   /* ─── Responsividade mobile ───────────────────────────────────────────────── */
   @media (max-width: 640px) {
+    .desktop-page-actions,
+    .page-actions {
+      display: none;
+    }
+
     .page-header {
       align-items: stretch;
       gap: 0.875rem;
@@ -2584,27 +2947,6 @@
       line-height: 1.15;
     }
 
-    .page-actions {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 0.5rem;
-      width: 100%;
-    }
-
-    .page-actions .btn-primary {
-      grid-column: 1 / -1;
-    }
-
-    .page-actions .btn-primary,
-    .page-actions .btn-secondary {
-      justify-content: center;
-      min-height: 2.75rem;
-      width: 100%;
-      padding: 0.625rem 0.75rem;
-      font-size: 0.8125rem;
-      white-space: nowrap;
-    }
-
     .split-view {
       flex-direction: column;
       height: auto;
@@ -2614,6 +2956,7 @@
       border: 0;
       border-radius: 0;
       background: transparent !important;
+      padding-bottom: 1rem;
     }
 
     .tree-panel {
@@ -2630,17 +2973,51 @@
       padding: 0.75rem 0.875rem;
     }
 
-    .tree-list {
+    .mobile-category-nav {
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      gap: 0.625rem;
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .mobile-category-row,
+    .mobile-subcategory-row {
+      display: flex;
       gap: 0.5rem;
       overflow-x: auto;
-      overflow-y: hidden;
-      padding: 0.75rem;
       scrollbar-width: none;
     }
 
-    .tree-list::-webkit-scrollbar {
+    .mobile-category-row::-webkit-scrollbar,
+    .mobile-subcategory-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mobile-category-chip,
+    .mobile-subcategory-chip {
+      min-height: 2.75rem;
+      flex: 0 0 auto;
+      padding: 0.5rem 0.875rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: 9999px;
+      background: var(--bg-card);
+      color: var(--text-label);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    .mobile-category-chip.active,
+    .mobile-subcategory-chip.active {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: var(--primary-text);
+    }
+
+    .tree-list {
       display: none;
     }
 
@@ -2714,10 +3091,38 @@
       width: 100%;
     }
 
-    .products-toolbar > div:last-child {
+    .products-toolbar > div:first-child {
+      order: 2;
+    }
+
+    .products-toolbar > .toolbar-controls {
+      order: 1;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 2.75rem;
+      grid-template-columns: minmax(0, 1fr) 2.75rem 2.75rem;
       gap: 0.5rem;
+    }
+
+    .toolbar-controls .search-wrapper {
+      min-width: 0;
+    }
+
+    .toolbar-controls .filter-dropdown-wrapper,
+    .toolbar-controls .sort-dropdown-wrapper {
+      min-width: 0;
+    }
+
+    .toolbar-controls .filter-btn,
+    .toolbar-controls .sort-btn {
+      width: 100%;
+      height: 2.75rem;
+    }
+
+    .sort-btn-label {
+      display: none;
+    }
+
+    .view-toggle {
+      display: none;
     }
 
     .search-wrapper {
@@ -2751,6 +3156,22 @@
       min-width: 0;
       border-radius: 0.75rem;
       padding: 1rem;
+    }
+
+    .sort-dropdown {
+      position: fixed;
+      top: auto;
+      right: 0.75rem;
+      bottom: 0.75rem;
+      left: 0.75rem;
+      min-width: 0;
+      padding: 0.5rem;
+      border-radius: 0.75rem;
+    }
+
+    .sort-option {
+      min-height: 2.75rem;
+      font-size: 0.9375rem;
     }
 
     .filter-option {
@@ -2879,6 +3300,10 @@
       min-height: 2.75rem;
     }
 
+    .mobile-edit-grid .currency-field {
+      width: 100%;
+    }
+
     .mobile-edit-options {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
@@ -2947,6 +3372,86 @@
     .badge-oculto {
       white-space: nowrap;
     }
+
+    .mobile-create-menu {
+      position: fixed;
+      right: 1rem;
+      bottom: calc(1rem + env(safe-area-inset-bottom));
+      z-index: 75;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .mobile-create-options {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .mobile-create-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.625rem;
+      min-height: 2.75rem;
+      padding: 0.5rem 0.75rem 0.5rem 0.625rem;
+      border: 1px solid var(--border-card);
+      border-radius: 9999px;
+      background: var(--bg-card);
+      color: var(--text-main);
+      font-size: 0.875rem;
+      font-weight: 600;
+      animation: create-option-in 180ms ease-out both;
+    }
+
+    .mobile-create-option:nth-child(2) {
+      animation-delay: 35ms;
+    }
+
+    .mobile-create-option:nth-child(3) {
+      animation-delay: 70ms;
+    }
+
+    .mobile-create-option-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--primary) 16%, transparent);
+      color: var(--primary);
+    }
+
+    .mobile-create-fab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 3.5rem;
+      height: 3.5rem;
+      border: 1px solid var(--primary);
+      border-radius: 50%;
+      background: var(--primary);
+      color: var(--primary-text);
+      transition: background var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .mobile-create-fab:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .mobile-create-fab :global(svg) {
+      width: 1.5rem;
+      height: 1.5rem;
+      transition: transform var(--transition-fast);
+    }
+
+    .mobile-create-fab.open :global(svg) {
+      transform: rotate(45deg);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -2963,6 +3468,15 @@
 
     .loading-spinner {
       animation: none;
+    }
+
+    .mobile-create-option {
+      animation: none;
+      transition: none;
+    }
+
+    .mobile-create-fab :global(svg) {
+      transition: none;
     }
   }
 </style>

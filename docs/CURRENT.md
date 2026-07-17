@@ -5,6 +5,20 @@
 
 ## Snapshot validado (2026-07-13)
 
+- Copy e moeda em Produtos (2026-07-17): a opcao "Venda por unidade" foi renomeada para "Venda em atacado" nos fluxos de criacao/edicao. Os campos de preco do modal de novo produto agora exibem o prefixo visual `R$` sem alterar o valor numerico enviado ao formulario. `npm run check` segue em 0 erros / 94 avisos.
+
+- Precos na edicao de Produtos (2026-07-17): os campos de preco do editor inline desktop e do editor em card mobile agora exibem o prefixo visual `R$`, incluindo as tabelas de preco opcionais, sem alterar o valor numerico persistido.
+
+- Acoes duplicadas em Produtos (2026-07-17): o bloco legado com quatro botoes no lado direito do cabecalho foi removido. O novo conjunto `Novo produto` + `Acoes` agora e o unico grupo global visivel e permanece alinhado a direita no desktop; no mobile, os atalhos continuam no fluxo do FAB.
+
+- Triggers de categoria em Produtos (2026-07-17): os formularios deixaram de depender do label interno do Bits UI para renderizar o valor selecionado. Os triggers agora resolvem diretamente o nome da categoria/subcategoria pelo catalogo carregado, evitando que o ID apareca ao editar ou apos selecionar um novo produto. `npm run check` segue em 0 erros / 94 avisos.
+
+- Labels dos selects de Produtos (2026-07-17): categorias e subcategorias nos formularios de criacao/edicao agora usam IDs string na camada do Bits UI para resolver corretamente o label visivel; inserts/updates convertem os IDs de volta para numero antes de persistir. `npm run check` segue em 0 erros / 94 avisos.
+
+- Selects em modais (2026-07-17): o `Select.Content` compartilhado agora usa `z-[300]`, acima do backdrop dos modais de criacao (`z-index: 200`). Isso corrige os dropdowns de categoria/subcategoria nos modais de categoria, subcategoria e produto sem duplicar ajustes por rota.
+
+- Produtos (2026-07-16): a rota `src/routes/gestao/produtos/+page.svelte` foi alinhada ao layout de referencia no desktop e mobile. Desktop ganhou acoes globais com "Novo produto" e menu de acoes; mobile usa filtros compactos, chips de categoria/subcategoria, cards de produto e um FAB de `+` com drop-up animado para criar categoria, subcategoria ou produto. O hamburger e o Zelinho existentes foram preservados e nenhum bottom nav foi adicionado. `npm run check` terminou com 0 erros / 94 avisos; `npm test` ficou em 367/369, com as duas falhas conhecidas de `api.create-subscription`. A validacao visual automatizada ficou pendente porque o navegador embutido nao iniciou nesta sessao.
+
 - Fichario — exclusao de pagamento (2026-07-16): recebimentos exibem um botao X alinhado a direita do valor/saldo. A confirmacao usa um modal nativo do ZeloPDV e chama a RPC `fiado_excluir_pagamento`, que remove o lancamento e a movimentacao de caixa vinculada atomicamente e devolve o valor ao saldo da pessoa. A migration do ledger continua pendente de validacao/aplicacao no banco real.
 
 - Fichário (2026-07-16): a página foi reorganizada em um workspace de três camadas no desktop, com lista de pessoas, ficha ativa e extrato/recebimento no mesmo quadro. Em telas pequenas, a seleção virou um fluxo em duas telas: pessoas primeiro e ficha da pessoa depois, com voltar, ações de pagamento/cobrança e bottom sheets de recebimento/cobrança. A rota mantém a lógica do razão `fiado_lancamentos` e a leitura opcional de `?p=<id>`; `npm run check` segue em 0 errors / 93 warnings pré-existentes. A validação visual automatizada ficou pendente nesta sessão porque o navegador embutido falhou ao iniciar. `npm test` ficou em 367/369, com as duas falhas já conhecidas de `api.create-subscription` (400 onde os testes esperam 200).
