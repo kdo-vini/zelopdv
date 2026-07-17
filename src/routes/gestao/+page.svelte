@@ -6,6 +6,7 @@
   import OnboardingChecklist from '$lib/components/OnboardingChecklist.svelte';
   import { revertFiadoDebtForVenda } from '$lib/finance/saleOps';
   import { addToast } from '$lib/stores/ui';
+  import { ArrowUpRight } from 'lucide-svelte';
 
   export let params;
 
@@ -28,7 +29,10 @@
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData?.user?.id;
       if(!uid){ window.location.href = '/login'; return; }
-      
+
+      // O dashboard reflete a SESSÃO DO CAIXA ATUAL, não o dia de calendário.
+      // Motivo: empresas que atravessam a meia-noite (bar, lanchonete) precisam
+      // ver a noite inteira num único caixa, sem zerar às 00h.
       // Busca caixa aberto mais recente
       const { data: cx } = await supabase
         .from('caixas')
@@ -37,10 +41,10 @@
         .order('data_abertura', { ascending:false })
         .limit(1);
       const caixaAtual = (cx&&cx[0])||null;
-      
+
       let vendasCaixa = [];
       let movimentacoes = [];
-      
+
       if(caixaAtual){
         // Busca TODAS as vendas do caixa atual
         const { data: vs } = await supabase
@@ -70,10 +74,10 @@
           .order('created_at', { ascending: false });
         movimentacoes = movs||[];
       }
-      
+
       // Fiado é dívida (a receber), não receita realizada — exclui do total do caixa.
       // Para vendas múltiplas com parcela fiado, descontamos apenas a parcela fiado via vendas_pagamentos.
-      const vendaIdsCaixa = (vendasCaixa||[]).map(v=>v.id);
+      const vendaIdsCaixa = vendasCaixa.map(v=>v.id);
       let pagFiadoMulti = 0;
       if (vendaIdsCaixa.length) {
         const { data: pagsMulti } = await supabase
@@ -83,20 +87,19 @@
           .eq('forma_pagamento', 'fiado');
         pagFiadoMulti = (pagsMulti||[]).reduce((a,p)=> a + Number(p.valor||0), 0);
       }
-      const totalCaixa = (vendasCaixa||[]).reduce((a,v)=> {
+      const totalCaixa = vendasCaixa.reduce((a,v)=> {
         // Venda fiado pura: ignora valor inteiro.
         if (v.forma_pagamento === 'fiado') return a;
         return a + Number(v.valor_total||0);
       }, 0) - pagFiadoMulti;
-      const countCaixa = (vendasCaixa||[]).length;
+      const countCaixa = vendasCaixa.length;
       const ticketMedioCaixa = countCaixa ? totalCaixa/countCaixa : null;
-      
+
       // [NEW] Process hourly sales for the chart
       const vendasPorHoraMap = new Array(24).fill(0);
       let temVendas = false;
       
-      // Filter sales from 'today' based on local time logic or just strictly follow current open box context
-      // Since we want "Vendas Hoje" (or current box session), we stick to sales in `vendasCaixa`
+      // Vendas do caixa agrupadas por hora do dia.
       for(const v of vendasCaixa){
         // Vendas fiado puras não contam como receita realizada do horário.
         if (v.forma_pagamento === 'fiado') continue;
@@ -130,7 +133,7 @@
       }
 
       // Combina vendas e movimentações para atividade recente
-      const atividadeVendas = (vendasCaixa||[]).map(v=>({ tipo:'venda', id:v.id, numero_venda:v.numero_venda, valor:v.valor_total, ts:v.created_at }));
+      const atividadeVendas = vendasCaixa.map(v=>({ tipo:'venda', id:v.id, numero_venda:v.numero_venda, valor:v.valor_total, ts:v.created_at }));
       const atividadeMovs = (movimentacoes||[]).map(m=>({ tipo:m.tipo, id:m.id, valor:m.valor, ts:m.created_at, motivo:m.motivo }));
       const atividadeCombinada = [...atividadeVendas, ...atividadeMovs]
         .sort((a,b) => new Date(b.ts) - new Date(a.ts))
@@ -141,7 +144,11 @@
       if(caixaAtual && !caixaAtual.data_fechamento){
         const horasAberto = Math.round((Date.now()-new Date(caixaAtual.data_abertura).getTime())/36e5);
         if(horasAberto >= 10){
-          alertas.push({ mensagem: 'Caixa aberto há mais de 10h. Considere fechar.' });
+          alertas.push({
+            mensagem: 'Caixa aberto há mais de 10h. Considere fechar.',
+            actionHref: '/gestao/caixa',
+            actionLabel: 'Fechar caixa'
+          });
         }
       }
       
@@ -169,6 +176,10 @@
   onMount(async () => { await waitAuthReady(); await loadDash(); });
 
   const fmt = (v)=> `R$ ${Number(v||0).toFixed(2)}`;
+  const fmtDataHora = (v)=> v ? new Date(v).toLocaleString('pt-BR',{ day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+  $: caixaTooltip = dash.caixa.aberto && dash.caixa.desde
+    ? `Caixa aberto desde ${fmtDataHora(dash.caixa.desde)} · ${dash.caixa.horasAberto}h ativo`
+    : '';
 
   function solicitarDelecaoVenda(id) { vendaParaDeletarId = id; }
   function cancelarDelecaoVenda() { vendaParaDeletarId = null; }
@@ -213,17 +224,19 @@
   {:else}
     <!-- [NEW] Mobile-First Grid Layout: 2 cols on mobile, 4 on desktop -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-      <!-- Vendas Hoje (Most Important) -->
+      <!-- Vendas do Caixa Atual (Most Important) -->
       <div
         class="card col-span-2 sm:col-span-1"
+        title={caixaTooltip}
         style="
           background: color-mix(in srgb, var(--primary) 10%, var(--bg-card));
           border-color: color-mix(in srgb, var(--primary) 28%, var(--border-card));
+          {caixaTooltip ? 'cursor:help;' : ''}
         "
       >
-        <div class="kptitle font-semibold" style="color: var(--primary);">Vendas Hoje</div>
+        <div class="kptitle font-semibold" style="color: var(--primary);">Vendas do Caixa</div>
         <div class="kpval" style="color: var(--text-main);">{fmt(dash.vendas.totalHoje)}</div>
-        <div class="kpsub" style="color: var(--text-label);">{dash.vendas.countHoje} cupons</div>
+        <div class="kpsub" style="color: var(--text-label);">{dash.vendas.countHoje} cupons no caixa atual</div>
       </div>
       
       <!-- Chart spanning 2 cols on mobile if we want, or just generic kpis first -->
@@ -236,7 +249,7 @@
       </div>
 
        <!-- Status Caixa -->
-       <div class="card">
+       <div class="card" title={caixaTooltip} style={caixaTooltip ? 'cursor:help' : ''}>
         <div class="kptitle">Caixa</div>
         <!-- Status indicator dot -->
         <div class="flex items-center gap-2">
@@ -258,7 +271,7 @@
     {#if dash.vendasPorHora.length > 0}
       <div class="card mb-4">
         <BarChart 
-          title="Vendas por Hora (Hoje)" 
+          title="Vendas por Hora (Caixa Atual)"
           data={dash.vendasPorHora} 
           maxHeight={140} 
           barColor="bg-indigo-500" 
@@ -270,14 +283,28 @@
     {#if dash.alertas?.length}
       <div class="card alerts mb-4">
         <strong>Alertas</strong>
-        <ul>{#each dash.alertas as a}<li>{a.mensagem}</li>{/each}</ul>
+        <ul>{#each dash.alertas as a}
+          <li>
+            <span>{a.mensagem}</span>
+            {#if a.actionHref}
+              <a href={a.actionHref} class="alert-action">
+                <span>{a.actionLabel}</span>
+                <ArrowUpRight class="size-3.5" aria-hidden="true" />
+              </a>
+            {/if}
+          </li>
+        {/each}</ul>
       </div>
     {/if}
 
     <!-- Recent Activity -->
     <div class="card">
-      <div class="flex justify-between items-center mb-2">
+      <div class="flex justify-between items-center mb-2 gap-2">
          <div class="kptitle text-base font-semibold" style="color: var(--text-main);">Atividade Recente</div>
+         <a href="/relatorios" class="caixa-link">
+           <span>Ver relatório completo</span>
+           <ArrowUpRight class="size-3.5" aria-hidden="true" />
+         </a>
       </div>
       <ul class="timeline">{#each dash.atividade as ev}
         {@const itensVenda = ev.tipo === 'venda' ? vendasItens.filter(i => i.id_venda === ev.id) : []}
@@ -349,6 +376,9 @@
   
   .alerts{background: var(--status-error-bg);border-color: var(--status-error-border)}
   .alerts ul{margin:4px 0 0 16px;padding:0;list-style:disc;color:var(--status-error-text);font-size:13px}
+  .alerts li + li{margin-top:4px}
+  .alert-action{display:inline-flex;align-items:center;gap:3px;margin-left:8px;font-weight:600;color:var(--status-error-text);text-decoration:underline;text-underline-offset:2px;vertical-align:middle;transition:opacity 0.15s}
+  .alert-action:hover{opacity:0.75}
   
   .timeline{display:flex;flex-direction:column;gap:12px;margin:10px 0 0;padding:0;list-style:none}
   .timeline li {padding-bottom:12px;border-bottom:1px dashed var(--border-card)}
@@ -379,6 +409,9 @@
   .btn-primary:hover{background:var(--primary-dark)}
   
   .btn-sm{padding:4px 12px;font-size:12px;border-radius:6px;border:1px solid var(--border-card)}
+
+  .caixa-link{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-size:12px;font-weight:500;color:var(--primary);text-decoration:none;white-space:nowrap;transition:color 0.15s}
+  .caixa-link:hover{color:var(--primary-hover);text-decoration:underline}
 
   .loading{height:100px;border-radius:12px;background:linear-gradient(90deg,var(--bg-card),var(--bg-panel),var(--bg-card));animation:sh 1.2s infinite}
   @keyframes sh{0%{background-position:-120px}100%{background-position:240px}}
