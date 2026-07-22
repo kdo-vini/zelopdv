@@ -128,7 +128,8 @@
         provider_subscription_id,
         provider_customer_id,
         billing_type,
-        cancel_at_period_end
+        cancel_at_period_end,
+        monthly_value_cents
       `)
       .order('created_at', { ascending: false })
 

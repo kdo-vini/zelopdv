@@ -98,7 +98,7 @@
       const [subsResult, aiResult, salesResult, lastSeenResult, accessUsersResult] = await Promise.all([
         supabase
           .from('subscriptions')
-          .select('id, user_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, provider_subscription_id')
+          .select('id, user_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, provider_subscription_id, monthly_value_cents')
           .in('user_id', userIds)
           .order('updated_at', { ascending: false }),
         supabase

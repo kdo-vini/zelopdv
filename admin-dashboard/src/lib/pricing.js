@@ -91,6 +91,12 @@ export function calculateValue(planTier, addons = {}) {
 
 export function subscriptionValue(sub) {
   if (!sub) return 0;
+  // Preferir o valor REAL cobrado (gravado pelo webhook Stripe/fluxo Pix).
+  // Sem isso, cliente grandfathered num price antigo aparece pelo preço de
+  // tabela atual, não pelo que ele de fato paga.
+  if (sub.monthly_value_cents != null) {
+    return Math.round(Number(sub.monthly_value_cents)) / 100;
+  }
   const tier = sub.plan_tier || 'pdv';
   return calculateValue(tier, {
     mesas: !!sub.has_mesas_addon,

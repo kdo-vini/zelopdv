@@ -180,7 +180,7 @@
 
     const { data: subs } = await supabase
       .from('subscriptions')
-      .select('id, user_id, status, current_period_end, manually_extended_until, created_at, plan_tier, has_mesas_addon, has_zelo_menu, has_acessos_addon')
+      .select('id, user_id, status, current_period_end, manually_extended_until, created_at, plan_tier, has_mesas_addon, has_zelo_menu, has_acessos_addon, monthly_value_cents')
 
     const allSubs = subs || []
     const externalSubs = filterExternalAccounts(allSubs)
