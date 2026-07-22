@@ -1,5 +1,11 @@
 // Espelho de src/lib/pricing.js do app principal. Manter sincronizado.
 // Quando preço mudar, mudar nos DOIS arquivos.
+//
+// ATENÇÃO — subscriptionValue()/calculateValue() usam o preço ATUAL do plano
+// pra estimar o valor de CADA assinatura, não o valor realmente cobrado dela
+// no Stripe. Clientes grandfathered num price antigo (ex.: Casa dos Salgados,
+// bundle real R$147) aparecem no MRR pelo preço de tabela atual (R$198), não
+// pelo que ela paga de fato. É uma estimativa, não o valor faturado real.
 
 export const PLANS = {
   pdv: {
@@ -16,24 +22,24 @@ export const PLANS = {
   chat: {
     id: 'chat',
     name: 'ZeloChat',
-    price: 97.00,
+    price: 149.00, // v2 — R$149 a partir de 2026-07-22 (inclui ZeloMenu)
     includesPdv: false,
     includesChat: true,
     allowsMesas: false,
     allowsPedidos: false,
     allowsAcessos: false,
-    stripePriceId: 'price_1TR0xGLUJWyE4PkYcBy0cOoD',
+    stripePriceId: 'price_1TlbH2LUJWyE4PkYSqFSXXVY',
   },
   bundle: {
     id: 'bundle',
     name: 'Pacote Gestão + Atendimento',
-    price: 147.00,
+    price: 198.00, // v2 — R$198 a partir de 2026-07-22
     includesPdv: true,
     includesChat: true,
     allowsMesas: true,
     allowsPedidos: true,
     allowsAcessos: true,
-    stripePriceId: 'price_1TR0xGLUJWyE4PkYY0DMOWLI',
+    stripePriceId: 'price_1TlbH2LUJWyE4PkYlS4IxMhs',
   },
 };
 
