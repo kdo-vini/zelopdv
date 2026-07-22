@@ -24,14 +24,18 @@ export const PLANS = {
     id: 'chat',
     name: 'ZeloChat',
     tagline: 'Atendimento WhatsApp com IA + cardápio online',
-    price: 147.00, // R$147 a partir de 2026-06-23 (inclui ZeloMenu, D-014/D-104)
+    // R$149 a partir de 2026-07-21 (inclui ZeloMenu, D-014/D-104). Este é o valor
+    // EXIBIDO e o cobrado no PIX (calculateValue). ATENÇÃO: o stripePriceId abaixo
+    // ainda aponta para o price v2 R$147 — o cartão cobra 147 até criar o price
+    // R$149 no Stripe e trocar aqui. Descasamento temporário conhecido.
+    price: 149.00,
     includesPdv: false,
     includesChat: true,
     includesMenu: true, // ZeloChat inclui ZeloMenu obrigatoriamente (D-014)
     allowsMesas: false,
     allowsPedidos: false,
     allowsMenu: false, // já incluso — não é addon comprável
-    stripePriceId: 'price_1TlbH2LUJWyE4PkYSqFSXXVY', // v2 R$147
+    stripePriceId: 'price_1TlbH2LUJWyE4PkYSqFSXXVY', // v2 R$147 — atualizar p/ price R$149 quando a conta Stripe permitir
     stripeLookupKey: 'zelo_chat_monthly_v2',
     // Price IDs antigos continuam mapeando p/ 'chat' no webhook de assinantes legados.
     legacyPriceIds: ['price_1TR0xGLUJWyE4PkYcBy0cOoD'], // v1 R$97
@@ -40,7 +44,9 @@ export const PLANS = {
     id: 'bundle',
     name: 'Pacote Gestão + Atendimento',
     tagline: 'ZeloPDV (gestão completa) + ZeloChat (atendimento com IA) + ZeloMenu',
-    price: 197.00, // R$197 a partir de 2026-06-23 (D-104)
+    // R$198 a partir de 2026-07-21 (D-104). Valor EXIBIDO e cobrado no PIX.
+    // ATENÇÃO: stripePriceId ainda é o v2 R$197 — cartão cobra 197 até trocar.
+    price: 198.00,
     includesPdv: true,
     includesChat: true,
     includesMenu: true,
@@ -48,8 +54,8 @@ export const PLANS = {
     allowsPedidos: true,
     allowsAcessos: true,
     allowsMenu: false, // já incluso
-    bundleSavings: 9.00, // pdv 59 + chat 147 = 206 → bundle 197
-    stripePriceId: 'price_1TlbH2LUJWyE4PkYlS4IxMhs', // v2 R$197
+    bundleSavings: 10.00, // pdv 59 + chat 149 = 208 → bundle 198
+    stripePriceId: 'price_1TlbH2LUJWyE4PkYlS4IxMhs', // v2 R$197 — atualizar p/ price R$198 quando a conta Stripe permitir
     stripeLookupKey: 'zelo_bundle_monthly_v2',
     legacyPriceIds: ['price_1TR0xGLUJWyE4PkYY0DMOWLI'], // v1 R$147
   },
