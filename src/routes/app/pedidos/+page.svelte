@@ -12,7 +12,14 @@
   import { money } from '$lib/finance/caixa';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { somarQuantidadePorEstoque } from '$lib/stock';
-  import { loadCanonicalOrders, transitionCanonicalOrder, closeCanonicalOrder } from '$lib/onlineOrders';
+  import {
+    canonicalFulfillmentMode,
+    canonicalPaymentMethod,
+    loadCanonicalOrders,
+    subscribeCanonicalOrderUpdates,
+    transitionCanonicalOrder,
+    closeCanonicalOrder
+  } from '$lib/onlineOrders';
 
   let ready = false;
   let loading = true;
@@ -34,6 +41,8 @@
   let fechandoPedido = false;
   let erroPagamento = '';
   let pollTimer = null;
+  let realtimeRefreshTimer = null;
+  let realtimeChannel = null;
   let polling = false;
   let modalPagamentoRef;
   let mobileDetailOpen = false;
@@ -51,7 +60,9 @@
     preco: Number(item.preco_unitario || 0),
     quantidade: Number(item.quantidade || 0)
   }));
-  $: totalPedido = itensSelecionados.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
+  $: totalPedido = pedidoSelecionado?.canonical
+    ? Number(pedidoSelecionado.total || 0)
+    : itensSelecionados.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
   $: plataformasAtivas = (dadosEmpresa?.plataformas_pagamento || [])
     .filter((p) => p.ativo)
     .map((p) => ({ id: p.id, nome: p.nome, icone: p.icone || '[]', taxa_pct: Number(p.taxa_pct || 0) }));
@@ -92,11 +103,22 @@
 
     await Promise.all([carregarProdutos(true), carregarEmpresa(), carregarCaixaAberto()]);
     await carregarPedidos();
+    if (orderingReviewActive) {
+      realtimeChannel = subscribeCanonicalOrderUpdates(supabase, dadosEmpresa?.id, () => {
+        if (realtimeRefreshTimer) return;
+        realtimeRefreshTimer = setTimeout(() => {
+          realtimeRefreshTimer = null;
+          void carregarPedidos();
+        }, 150);
+      });
+    }
     pollTimer = setInterval(carregarPedidos, 30000);
   });
 
   onDestroy(() => {
     if (pollTimer) clearInterval(pollTimer);
+    if (realtimeRefreshTimer) clearTimeout(realtimeRefreshTimer);
+    if (realtimeChannel) void supabase.removeChannel(realtimeChannel);
   });
 
   async function carregarProdutos(forceRefresh = false) {
@@ -448,7 +470,7 @@
     if (pedido.status === 'pending_review') return 'Aceitar pedido';
     if (pedido.status === 'accepted') return 'Iniciar preparo';
     if (pedido.status === 'preparing') return 'Marcar como pronto';
-    if (pedido.status === 'ready' && pedido.fulfillment?.mode === 'delivery') return 'Saiu para entrega';
+    if (pedido.status === 'ready' && canonicalFulfillmentMode(pedido) === 'delivery') return 'Saiu para entrega';
     if (pedido.status === 'ready' || pedido.status === 'out_for_delivery') return 'Concluir pedido';
     return 'Aguardando pagamento';
   }
@@ -457,7 +479,7 @@
     if (pedido.status === 'pending_payment') return;
     const actionByStatus = {
       pending_review: 'accept', accepted: 'start_preparing', preparing: 'mark_ready',
-      ready: pedido.fulfillment?.mode === 'delivery' ? 'dispatch' : 'close',
+      ready: canonicalFulfillmentMode(pedido) === 'delivery' ? 'dispatch' : 'close',
       out_for_delivery: 'close'
     };
     const action = actionByStatus[pedido.status];
@@ -475,11 +497,11 @@
           return;
         }
         const { payload } = buildVendaPayload({
-          formaPagamento: pedido.payment?.method || pedido.payment?.forma_pagamento || 'outro',
+          formaPagamento: canonicalPaymentMethod(pedido),
           valorRecebido: pedido.total,
           pagamentos: [], totalFinal: pedido.total, valorDesconto: 0, descontoTipo: null,
           taxaEntrega: Number(pedido.delivery_fee || 0),
-          tipoPedido: pedido.fulfillment?.mode || 'retirada', idCaixa: idCaixaAberto,
+          tipoPedido: canonicalFulfillmentMode(pedido), idCaixa: idCaixaAberto,
           idCliente: null, itens: itensSelecionados, taxasPlataforma: [], operadorId: operadorUserId
         });
         await closeCanonicalOrder(supabase, pedido, payload, operadorUserId);
@@ -574,7 +596,9 @@
       <div class="queue-layout" class:detail-open={mobileDetailOpen}>
         <section class="queue-list" aria-label="Fila de pedidos">
           {#each pedidos as pedido (pedido.id)}
-            {@const totalCard = (pedido.pedido_itens || []).reduce((acc, item) => acc + Number(item.subtotal || Number(item.preco_unitario || 0) * Number(item.quantidade || 0)), 0)}
+            {@const totalCard = pedido.canonical
+              ? Number(pedido.total || 0)
+              : (pedido.pedido_itens || []).reduce((acc, item) => acc + Number(item.subtotal || Number(item.preco_unitario || 0) * Number(item.quantidade || 0)), 0)}
             {@const qtdItens = (pedido.pedido_itens || []).reduce((acc, item) => acc + Number(item.quantidade || 0), 0)}
             <div class="queue-card">
               <button

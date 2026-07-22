@@ -53,3 +53,17 @@ describe('canonical legacy totals repair', () => {
     expect(repairSql).toContain('legacy_zelochat_order_id is not null');
   });
 });
+
+describe('canonical online order payment mapping patch', () => {
+  const patch = readFileSync(resolve('.ai/migrations/canonical_online_orders_payment_mapping_2026_07_22.sql'), 'utf8')
+    .replace(/\r\n/g, '\n')
+    .toLowerCase();
+
+  it('falls back to current ZeloMenu snapshot names before creating the sale', () => {
+    expect(patch).toContain("o.payment->>'declaredmethod'");
+    expect(patch).toContain("o.fulfillment->>'type'");
+    expect(patch).toContain("'tipo_pedido'");
+    expect(patch).toContain("'forma_pagamento'");
+    expect(patch).toContain("public.criar_venda_completa(v_sale_payload)");
+  });
+});

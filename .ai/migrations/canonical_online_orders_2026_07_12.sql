@@ -318,8 +318,15 @@ begin
   if o.status not in ('ready','out_for_delivery') then raise exception using errcode='ZL409',message='INVALID_ORDER_TRANSITION'; end if;
   v_sale_payload:=coalesce(p_payment,'{}')||jsonb_build_object(
     'client_sale_id','zelo-order:'||o.id,'valor_total',o.total,
-    'forma_pagamento',coalesce(nullif(p_payment->>'forma_pagamento',''),nullif(o.payment->>'method',''),'outro'),
-    'tipo_pedido',coalesce(nullif(o.fulfillment->>'mode',''),'retirada'),
+    'forma_pagamento',coalesce(
+      nullif(nullif(p_payment->>'forma_pagamento',''),'outro'),
+      nullif(nullif(p_payment->>'formaPagamento',''),'outro'),
+      nullif(o.payment->>'declaredMethod',''),
+      nullif(o.payment->>'method',''),
+      'outro'
+    ),
+    'tipo_pedido',case when coalesce(o.fulfillment->>'mode',o.fulfillment->>'type')='delivery'
+      then 'delivery' else 'retirada' end,
     'taxa_entrega',o.delivery_fee,
     'itens',(select coalesce(jsonb_agg(jsonb_build_object('id_produto',i.product_id,'nome_produto_na_venda',i.name,
       'preco_unitario_na_venda',i.unit_price,'quantidade',i.quantity) order by i.position),'[]'::jsonb)

@@ -7,6 +7,23 @@ const ONLINE_QUEUE_STATUSES = [
   'out_for_delivery'
 ];
 
+/**
+ * Canonical public orders use ZeloMenu snapshot names (`type` and
+ * `declaredMethod`). Older producers used the shorter PDV names (`mode` and
+ * `method`), so keep this adapter tolerant of both contracts.
+ */
+export function canonicalFulfillmentMode(orderOrFulfillment) {
+  const fulfillment = orderOrFulfillment?.fulfillment || orderOrFulfillment || {};
+  return fulfillment.mode === 'delivery' || fulfillment.type === 'delivery'
+    ? 'delivery'
+    : 'retirada';
+}
+
+export function canonicalPaymentMethod(orderOrPayment) {
+  const payment = orderOrPayment?.payment || orderOrPayment || {};
+  return payment.declaredMethod || payment.method || payment.forma_pagamento || 'outro';
+}
+
 export function mapCanonicalOrder(row) {
   const customer = row?.customer || {};
   const fulfillment = row?.fulfillment || {};
@@ -35,6 +52,8 @@ export function mapCanonicalOrder(row) {
     delivery_fee: Number(row.delivery_fee || 0),
     payment: row.payment || {},
     fulfillment,
+    forma_pagamento: canonicalPaymentMethod(row),
+    tipo_pedido: canonicalFulfillmentMode(row),
     pedido_itens: items,
     itens: items,
     canonical: true
@@ -77,4 +96,21 @@ export async function closeCanonicalOrder(supabase, order, payment, actorId) {
   });
   if (error) throw error;
   return data;
+}
+
+/**
+ * Subscribe to the shared canonical aggregate so a status change made by
+ * ZeloChat (including cancellation) disappears from the PDV queue promptly.
+ */
+export function subscribeCanonicalOrderUpdates(supabase, empresaId, onChange) {
+  if (!supabase || !empresaId || typeof onChange !== 'function') return null;
+
+  return supabase
+    .channel(`zelo-pdv-orders-${empresaId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'zelo_orders', filter: `empresa_id=eq.${empresaId}` },
+      onChange
+    )
+    .subscribe();
 }

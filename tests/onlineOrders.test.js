@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { closeCanonicalOrder, loadCanonicalOrders, mapCanonicalOrder, transitionCanonicalOrder } from '../src/lib/onlineOrders.js';
+import {
+  canonicalFulfillmentMode,
+  canonicalPaymentMethod,
+  closeCanonicalOrder,
+  loadCanonicalOrders,
+  mapCanonicalOrder,
+  subscribeCanonicalOrderUpdates,
+  transitionCanonicalOrder
+} from '../src/lib/onlineOrders.js';
 
 describe('onlineOrders', () => {
   const order = {
@@ -14,6 +22,18 @@ describe('onlineOrders', () => {
     const mapped = mapCanonicalOrder(order);
     expect(mapped).toMatchObject({ canonical: true, nome_cliente: 'Ana', status: 'pending_review', revision: 3, total: 25 });
     expect(mapped.pedido_itens[0]).toMatchObject({ id_produto: 9, nome: 'Combo', quantidade: 2, preco_unitario: 12.5 });
+  });
+
+  it('maps current ZeloMenu snapshots into the financial sale contract', () => {
+    const mapped = mapCanonicalOrder({
+      ...order,
+      fulfillment: { type: 'delivery' },
+      payment: { declaredMethod: 'pix' }
+    });
+
+    expect(mapped).toMatchObject({ forma_pagamento: 'pix', tipo_pedido: 'delivery' });
+    expect(canonicalPaymentMethod(mapped)).toBe('pix');
+    expect(canonicalFulfillmentMode(mapped)).toBe('delivery');
   });
 
   it('transitions with optimistic revision and actor context', async () => {
@@ -40,5 +60,22 @@ describe('onlineOrders', () => {
     expect(rpc).toHaveBeenCalledWith('close_zelo_order', {
       p_order_id: order.id, p_expected_revision: 3, p_payment: { method: 'pix' }, p_actor_id: 'actor-1'
     });
+  });
+
+  it('subscribes the PDV queue to canonical status changes from other surfaces', () => {
+    const subscribe = vi.fn();
+    const on = vi.fn(() => ({ on, subscribe }));
+    const channel = vi.fn(() => ({ on, subscribe }));
+    const callback = vi.fn();
+
+    subscribeCanonicalOrderUpdates({ channel }, 'empresa-1', callback);
+
+    expect(channel).toHaveBeenCalledWith('zelo-pdv-orders-empresa-1');
+    expect(on).toHaveBeenCalledWith(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'zelo_orders', filter: 'empresa_id=eq.empresa-1' },
+      callback
+    );
+    expect(subscribe).toHaveBeenCalledOnce();
   });
 });

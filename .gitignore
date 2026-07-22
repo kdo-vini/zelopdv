@@ -29,6 +29,7 @@ SUPPORT_GUIDE_ZELO_PDV.txt
 !.ai/migrations/intelligence_narratives_2026_07_12.sql
 !.ai/migrations/canonical_online_orders_2026_07_12.sql
 !.ai/migrations/canonical_online_orders_legacy_totals_fix_2026_07_12.sql
+!.ai/migrations/canonical_online_orders_payment_mapping_2026_07_22.sql
 !.ai/migrations/fiado_ledger_2026_07_15.sql
 SISTEMA.md
 agents.md
