@@ -60,9 +60,9 @@ describe('pricing - ZeloMenu addon + price rollout (D-104)', () => {
     expect(calculateValue('pdv', { menu: true })).toBe(99);
   });
 
-  it('new tier prices: chat R$147, bundle R$197', () => {
-    expect(PLANS.chat.price).toBe(147);
-    expect(PLANS.bundle.price).toBe(197);
+  it('new tier prices: chat R$149, bundle R$198', () => {
+    expect(PLANS.chat.price).toBe(149);
+    expect(PLANS.bundle.price).toBe(198);
   });
 
   it('LEGACY price IDs still map to the right plan (existing subscribers do not break)', () => {
