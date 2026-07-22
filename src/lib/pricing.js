@@ -24,10 +24,10 @@ export const PLANS = {
     id: 'chat',
     name: 'ZeloChat',
     tagline: 'Atendimento WhatsApp com IA + cardápio online',
-    // R$149 a partir de 2026-07-21 (inclui ZeloMenu, D-014/D-104). Este é o valor
-    // EXIBIDO e o cobrado no PIX (calculateValue). ATENÇÃO: o stripePriceId abaixo
-    // ainda aponta para o price v2 R$147 — o cartão cobra 147 até criar o price
-    // R$149 no Stripe e trocar aqui. Descasamento temporário conhecido.
+    // R$149 a partir de 2026-07-21 (inclui ZeloMenu, D-014/D-104). Valor EXIBIDO,
+    // cobrado no PIX (calculateValue) e no Stripe (2026-07-22: price v2 nunca teve
+    // assinante, então o valor foi editado in-place no Stripe pra 149 — mesmo
+    // price_id, sem migração de subscription necessária).
     price: 149.00,
     includesPdv: false,
     includesChat: true,
@@ -35,7 +35,7 @@ export const PLANS = {
     allowsMesas: false,
     allowsPedidos: false,
     allowsMenu: false, // já incluso — não é addon comprável
-    stripePriceId: 'price_1TlbH2LUJWyE4PkYSqFSXXVY', // v2 R$147 — atualizar p/ price R$149 quando a conta Stripe permitir
+    stripePriceId: 'price_1TlbH2LUJWyE4PkYSqFSXXVY', // v2 — agora R$149 no Stripe
     stripeLookupKey: 'zelo_chat_monthly_v2',
     // Price IDs antigos continuam mapeando p/ 'chat' no webhook de assinantes legados.
     legacyPriceIds: ['price_1TR0xGLUJWyE4PkYcBy0cOoD'], // v1 R$97
@@ -44,8 +44,10 @@ export const PLANS = {
     id: 'bundle',
     name: 'Pacote Gestão + Atendimento',
     tagline: 'ZeloPDV (gestão completa) + ZeloChat (atendimento com IA) + ZeloMenu',
-    // R$198 a partir de 2026-07-21 (D-104). Valor EXIBIDO e cobrado no PIX.
-    // ATENÇÃO: stripePriceId ainda é o v2 R$197 — cartão cobra 197 até trocar.
+    // R$198 a partir de 2026-07-21 (D-104). Valor EXIBIDO, cobrado no PIX e no
+    // Stripe (2026-07-22: price v2 sem assinante, editado in-place pra 198 —
+    // mesmo price_id). O price v1 R$147 (legacyPriceIds) NÃO foi tocado —
+    // é o da Casa dos Salgados, grandfathered.
     price: 198.00,
     includesPdv: true,
     includesChat: true,
@@ -55,7 +57,7 @@ export const PLANS = {
     allowsAcessos: true,
     allowsMenu: false, // já incluso
     bundleSavings: 10.00, // pdv 59 + chat 149 = 208 → bundle 198
-    stripePriceId: 'price_1TlbH2LUJWyE4PkYlS4IxMhs', // v2 R$197 — atualizar p/ price R$198 quando a conta Stripe permitir
+    stripePriceId: 'price_1TlbH2LUJWyE4PkYlS4IxMhs', // v2 — agora R$198 no Stripe
     stripeLookupKey: 'zelo_bundle_monthly_v2',
     legacyPriceIds: ['price_1TR0xGLUJWyE4PkYY0DMOWLI'], // v1 R$147
   },
