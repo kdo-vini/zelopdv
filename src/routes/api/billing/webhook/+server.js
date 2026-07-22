@@ -14,7 +14,7 @@ import { json } from '@sveltejs/kit';
 import { stripe } from '$lib/server/stripe';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { env } from '$env/dynamic/private';
-import { parseStripeSubscriptionItems } from '$lib/pricing';
+import { computeStripeMonthlyValueCents, parseStripeSubscriptionItems } from '$lib/pricing';
 import { getPostHogClient } from '$lib/server/posthog';
 
 const WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
@@ -194,6 +194,7 @@ export async function POST({ request }) {
         // Buscar a subscription completa pra ler os items (precisamos saber plan + addons reais)
         const sub = await stripe.subscriptions.retrieve(stripeSubId, { expand: ['items.data.price'] });
         const { planTier, addons } = parseStripeSubscriptionItems(sub.items?.data);
+        const monthlyValueCents = computeStripeMonthlyValueCents(sub.items?.data);
 
         const row = await findSubscriptionRow({ stripeSubId, stripeCustomerId, userId });
         if (!row) {
@@ -216,6 +217,7 @@ export async function POST({ request }) {
           current_period_end: getSubscriptionPeriodEndForDb(sub, row.current_period_end),
           billing_type: 'CREDIT_CARD',
           cancel_at_period_end: !!sub.cancel_at_period_end,
+          ...(monthlyValueCents != null ? { monthly_value_cents: monthlyValueCents } : {}),
         });
         if (userId && ['active', 'trialing'].includes(mapStripeStatus(sub.status))) {
           const posthog = getPostHogClient();
@@ -246,6 +248,7 @@ export async function POST({ request }) {
 
         const items = sub.items?.data;
         const { planTier, addons } = parseStripeSubscriptionItems(items);
+        const monthlyValueCents = computeStripeMonthlyValueCents(items);
 
         const row = await findSubscriptionRow({ stripeSubId, stripeCustomerId, userId });
         if (!row) {
@@ -266,6 +269,7 @@ export async function POST({ request }) {
           status: mapStripeStatus(sub.status),
           current_period_end: getSubscriptionPeriodEndForDb(sub, row.current_period_end),
           cancel_at_period_end: !!sub.cancel_at_period_end,
+          ...(monthlyValueCents != null ? { monthly_value_cents: monthlyValueCents } : {}),
         });
         console.log(`[Stripe Webhook] [SYNC] sub ${stripeSubId} → status=${sub.status}, plan=${effectiveTier}, mesas=${!!addons.mesas}, pedidos=${!!addons.pedidos}, acessos=${!!addons.acessos}, zelomenu=${effectiveTier === 'chat' || effectiveTier === 'bundle' || !!addons.menu}`);
         break;
@@ -316,12 +320,14 @@ export async function POST({ request }) {
         // current_period_end vem da subscription, não da invoice. Buscar pra garantir.
         const sub = await stripe.subscriptions.retrieve(stripeSubId, { expand: ['items.data.price'] });
         const periodEndIso = getSubscriptionPeriodEndForDb(sub, row.current_period_end);
+        const monthlyValueCents = computeStripeMonthlyValueCents(sub.items?.data);
         // Clear manually_extended_until if it's expired or older than the new period_end.
         // A real payment supersedes any admin extension.
         const newExpiry = new Date(periodEndIso || row.current_period_end);
         const payload = {
           status: 'active',
           current_period_end: periodEndIso || row.current_period_end,
+          ...(monthlyValueCents != null ? { monthly_value_cents: monthlyValueCents } : {}),
         };
         if (row.manually_extended_until) {
           const manualExpiry = new Date(row.manually_extended_until);

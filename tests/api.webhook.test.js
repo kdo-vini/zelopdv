@@ -139,4 +139,71 @@ describe('API: stripe webhook', () => {
     expect(updates.find((u) => u.table === 'subscriptions')?.payload.current_period_end)
       .toBe(new Date(itemPeriodEnd * 1000).toISOString());
   });
+
+  it('writes monthly_value_cents from the sum of expanded item prices (real MRR, not estimated)', async () => {
+    mockWebhookSecret();
+    const updates = [];
+    const periodEnd = Math.floor(Date.now() / 1000) + 3600;
+    const constructEvent = vi.fn(() => ({
+      id: 'evt_3',
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          id: 'sub_123',
+          customer: 'cus_123',
+          status: 'active',
+          metadata: { user_id: 'u1' },
+          current_period_end: periodEnd,
+          cancel_at_period_end: false,
+          items: {
+            data: [
+              { price: { id: 'price_123', unit_amount: 19800 }, quantity: 1 },
+              { price: { id: 'price_addon', unit_amount: 3000 }, quantity: 1 },
+            ],
+          },
+        },
+      },
+    }));
+
+    vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({ supabaseAdmin: makeSupabaseAdmin(undefined, updates) }));
+    vi.doMock('../src/lib/server/stripe.js', () => ({
+      stripe: { webhooks: { constructEvent } }
+    }));
+
+    const { POST } = await loadHandler();
+    const res = await POST({ request: { text: async () => 'raw', headers: { get: () => 'sig' } } });
+
+    expect(res.status).toBe(200);
+    expect(updates.find((u) => u.table === 'subscriptions')?.payload.monthly_value_cents).toBe(22800);
+  });
+
+  it('omits monthly_value_cents when prices are unexpanded (does not overwrite with garbage)', async () => {
+    mockWebhookSecret();
+    const updates = [];
+    const constructEvent = vi.fn(() => ({
+      id: 'evt_4',
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          id: 'sub_123',
+          customer: 'cus_123',
+          status: 'active',
+          metadata: { user_id: 'u1' },
+          cancel_at_period_end: false,
+          items: { data: [{ price: { id: 'price_123' } }] },
+        },
+      },
+    }));
+
+    vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({ supabaseAdmin: makeSupabaseAdmin(undefined, updates) }));
+    vi.doMock('../src/lib/server/stripe.js', () => ({
+      stripe: { webhooks: { constructEvent } }
+    }));
+
+    const { POST } = await loadHandler();
+    const res = await POST({ request: { text: async () => 'raw', headers: { get: () => 'sig' } } });
+
+    expect(res.status).toBe(200);
+    expect(updates.find((u) => u.table === 'subscriptions')?.payload).not.toHaveProperty('monthly_value_cents');
+  });
 });

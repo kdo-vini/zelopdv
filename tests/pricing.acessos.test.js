@@ -4,6 +4,7 @@ import {
   PLANS,
   buildStripeLineItems,
   calculateValue,
+  computeStripeMonthlyValueCents,
   isAddonAllowed,
   parseStripeSubscriptionItems,
   sanitizeAddons,
@@ -78,5 +79,27 @@ describe('pricing - ZeloMenu addon + price rollout (D-104)', () => {
       .toEqual({ planTier: 'chat', addons: {} });
     expect(parseStripeSubscriptionItems([{ price: { id: PLANS.bundle.stripePriceId } }]))
       .toEqual({ planTier: 'bundle', addons: {} });
+  });
+});
+
+describe('computeStripeMonthlyValueCents — MRR real, não estimado', () => {
+  it('sums unit_amount x quantity across plan + addon items', () => {
+    expect(computeStripeMonthlyValueCents([
+      { price: { unit_amount: 19800 }, quantity: 1 },
+      { price: { unit_amount: 3000 }, quantity: 1 },
+    ])).toBe(22800);
+  });
+
+  it('respects quantity > 1', () => {
+    expect(computeStripeMonthlyValueCents([{ price: { unit_amount: 5000 }, quantity: 3 }])).toBe(15000);
+  });
+
+  it('returns null when items are unexpanded (price is just an id string)', () => {
+    expect(computeStripeMonthlyValueCents([{ price: 'price_123' }])).toBeNull();
+  });
+
+  it('returns null for empty/missing items — caller must not overwrite existing value', () => {
+    expect(computeStripeMonthlyValueCents([])).toBeNull();
+    expect(computeStripeMonthlyValueCents(undefined)).toBeNull();
   });
 });

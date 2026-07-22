@@ -182,6 +182,23 @@ export function buildStripeLineItems(planTier, addons = {}) {
   return items;
 }
 
+// Soma unit_amount x quantity de todos os itens de uma Stripe subscription
+// (plano + add-ons) — valor REAL cobrado, pra gravar em
+// subscriptions.monthly_value_cents (MRR exato, não estimado por plan_tier).
+// Retorna null se os itens não vierem com price expandido (sem unit_amount) —
+// nesse caso o chamador não deve sobrescrever o valor já gravado.
+export function computeStripeMonthlyValueCents(items) {
+  let total = 0;
+  let sawAny = false;
+  for (const item of items || []) {
+    const unitAmount = item?.price?.unit_amount;
+    if (typeof unitAmount !== 'number') continue;
+    total += unitAmount * (item?.quantity || 1);
+    sawAny = true;
+  }
+  return sawAny ? total : null;
+}
+
 // Inverso: dado os items de uma Stripe subscription, retorna { planTier, addons }
 export function parseStripeSubscriptionItems(items) {
   let planTier = null;

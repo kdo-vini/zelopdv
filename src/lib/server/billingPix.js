@@ -97,6 +97,8 @@ async function activateSubscriptionFromPayment({ payment, userId, nowIso }) {
     has_pedidos_addon: !!payment.has_pedidos_addon,
     has_acessos_addon: !!payment.has_acessos_addon,
     has_zelo_menu: !!payment.has_zelo_menu,
+    // Valor real travado no momento da cobrança Pix (não o preço de tabela atual).
+    monthly_value_cents: payment.amount_expected_cents,
     updated_at: nowIso,
   };
 

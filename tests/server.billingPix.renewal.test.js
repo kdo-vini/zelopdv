@@ -113,6 +113,40 @@ function makeSupabaseAdmin(state) {
   };
 }
 
+describe('syncPixPaymentWithRemote — grava monthly_value_cents real na subscription', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.unstubAllEnvs();
+  });
+
+  it('ativa subscription nova com monthly_value_cents = amount_expected_cents do pagamento (valor real travado na cobranca)', async () => {
+    const state = {
+      writes: [],
+      selectResults: { subscriptions: null }, // sem assinatura existente -> insert
+    };
+    vi.doMock('$lib/server/supabaseAdmin', () => ({ supabaseAdmin: makeSupabaseAdmin(state) }));
+    const { syncPixPaymentWithRemote } = await import('../src/lib/server/billingPix.js');
+
+    const payment = {
+      id: 'pay-1', user_id: 'user-1', status: 'pending',
+      amount_expected_cents: 14900, plan_tier: 'chat',
+      has_mesas_addon: false, has_pedidos_addon: false, has_acessos_addon: false, has_zelo_menu: true,
+      external_reference: 'pix_user-1_123', paid_at: null,
+    };
+    const remotePayment = {
+      status: 'PAID', paidAmount: 14900,
+      updatedAt: '2026-07-22T12:00:00Z', externalId: 'pix_user-1_123',
+    };
+
+    await syncPixPaymentWithRemote({ payment, remotePayment, source: 'test' });
+
+    const subInsert = state.writes.find((w) => w.table === 'subscriptions' && w.operation === 'insert');
+    expect(subInsert).toBeTruthy();
+    expect(subInsert.payload.monthly_value_cents).toBe(14900);
+    expect(subInsert.payload.plan_tier).toBe('chat');
+  });
+});
+
 describe('createOrReusePixCharge', () => {
   beforeEach(() => {
     vi.resetModules();
