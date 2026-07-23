@@ -78,13 +78,14 @@ begin
     v_order.payment ->> 'method',
     ''
   )));
+  v_payment_method := translate(v_payment_method, 'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc');
   v_forma_pagamento := case
     when v_payment_method in ('pix', 'pix online') then 'pix'
     when v_payment_method in ('dinheiro', 'cash') then 'dinheiro'
     when v_payment_method in ('cartao_debito', 'debito') then 'cartao_debito'
     when v_payment_method in ('cartao_credito', 'credito', 'cartao') then 'cartao_credito'
     when v_payment_method = 'fiado' then 'fiado'
-    else 'dinheiro'
+    else coalesce(nullif(v_payment_method, ''), 'outro')
   end;
   v_tipo_pedido := case
     when coalesce(v_order.fulfillment ->> 'mode', v_order.fulfillment ->> 'type') = 'delivery'

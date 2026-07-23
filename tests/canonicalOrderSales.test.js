@@ -14,6 +14,9 @@ describe('lancamento financeiro de pedidos canonicos', () => {
     expect(sql).toContain("client_sale_id := 'zelo-order:' || v_order.id");
     expect(sql).toContain('created_at = least(created_at, v_sale_at)');
     expect(sql).toContain('set created_at = least(v.created_at, o.closed_at)');
+    expect(sql).toContain('translate(v_payment_method');
+    expect(sql).toContain("else coalesce(nullif(v_payment_method, ''), 'outro')");
+    expect(sql).not.toContain("else 'dinheiro'");
     expect(sql).toContain('insert into public.vendas_itens');
     expect(sql).toContain('create trigger zelo_order_sale_on_deliver');
   });
