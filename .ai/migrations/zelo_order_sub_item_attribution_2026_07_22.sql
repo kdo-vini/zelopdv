@@ -32,7 +32,7 @@ begin
     select b.id, b.name, (b.unit_price - coalesce(lt.per_unit_contribution,0)) as computed
     from (select id,name,unit_price,modifiers from public.zelo_order_items where order_id=o.id) b
     left join lateral (
-      select sum((opt->>'priceDelta')::numeric * coalesce((opt->>'quantity')::integer,1)) as per_unit_contribution
+      select sum((opt->>'priceDelta')::numeric * (case when (opt->>'quantity') ~ '^[0-9]+$' then (opt->>'quantity')::integer else 1 end)) as per_unit_contribution
       from jsonb_array_elements(coalesce(b.modifiers,'[]'::jsonb)) grp
       cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) opt
       join public.zelomenu_modifier_option_products lp
@@ -67,7 +67,7 @@ begin
           lp.id_produto,
           (opt->>'optionName') as nome,
           (opt->>'priceDelta')::numeric as preco_unitario,
-          coalesce((opt->>'quantity')::integer,1) as option_quantity
+          (case when (opt->>'quantity') ~ '^[0-9]+$' then (opt->>'quantity')::integer else 1 end) as option_quantity
         from base b
         cross join lateral jsonb_array_elements(coalesce(b.modifiers,'[]'::jsonb)) as grp
         cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) as opt
@@ -146,7 +146,7 @@ begin
       from (
         select oi.product_id, oi.quantity from public.zelo_order_items oi where oi.order_id=o.id
         union all
-        select lp.id_produto,greatest(coalesce((opt->>'quantity')::integer,1),0)*oi.quantity
+        select lp.id_produto,(case when (opt->>'quantity') ~ '^[0-9]+$' then (opt->>'quantity')::integer else 1 end)*oi.quantity
         from public.zelo_order_items oi
         cross join lateral jsonb_array_elements(coalesce(oi.modifiers,'[]'::jsonb)) grp
         cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) opt
@@ -170,7 +170,7 @@ begin
       from (
         select oi.product_id, oi.quantity from public.zelo_order_items oi where oi.order_id=o.id
         union all
-        select lp.id_produto,greatest(coalesce((opt->>'quantity')::integer,1),0)*oi.quantity
+        select lp.id_produto,(case when (opt->>'quantity') ~ '^[0-9]+$' then (opt->>'quantity')::integer else 1 end)*oi.quantity
         from public.zelo_order_items oi
         cross join lateral jsonb_array_elements(coalesce(oi.modifiers,'[]'::jsonb)) grp
         cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) opt
@@ -197,7 +197,7 @@ begin
       select p2.id_categoria as cat_id, sum(y.quantity)::integer quantity from (
         select oi.product_id, oi.quantity from public.zelo_order_items oi where oi.order_id=o.id
         union all
-        select lp.id_produto,greatest(coalesce((opt->>'quantity')::integer,1),0)*oi.quantity
+        select lp.id_produto,(case when (opt->>'quantity') ~ '^[0-9]+$' then (opt->>'quantity')::integer else 1 end)*oi.quantity
         from public.zelo_order_items oi
         cross join lateral jsonb_array_elements(coalesce(oi.modifiers,'[]'::jsonb)) grp
         cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) opt
@@ -216,7 +216,7 @@ begin
       select y.product_id, sum(y.quantity)::integer quantity from (
         select oi.product_id, oi.quantity from public.zelo_order_items oi where oi.order_id=o.id
         union all
-        select lp.id_produto,greatest(coalesce((opt->>'quantity')::integer,1),0)*oi.quantity
+        select lp.id_produto,(case when (opt->>'quantity') ~ '^[0-9]+$' then (opt->>'quantity')::integer else 1 end)*oi.quantity
         from public.zelo_order_items oi
         cross join lateral jsonb_array_elements(coalesce(oi.modifiers,'[]'::jsonb)) grp
         cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) opt
