@@ -36,8 +36,8 @@ begin
       from jsonb_array_elements(coalesce(b.modifiers,'[]'::jsonb)) grp
       cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) opt
       join public.zelomenu_modifier_option_products lp
-        on (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-        and lp.id_opcao=(opt->>'optionId')::uuid
+        on lp.id_opcao = (case when (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+          then (opt->>'optionId')::uuid end)
     ) lt on true
     where (b.unit_price - coalesce(lt.per_unit_contribution,0)) < 0
   loop
@@ -72,8 +72,8 @@ begin
         cross join lateral jsonb_array_elements(coalesce(b.modifiers,'[]'::jsonb)) as grp
         cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) as opt
         join public.zelomenu_modifier_option_products lp
-          on (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-          and lp.id_opcao=(opt->>'optionId')::uuid
+          on lp.id_opcao = (case when (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            then (opt->>'optionId')::uuid end)
       ),
       linked_totals as (
         select item_id, sum(preco_unitario*option_quantity) as per_unit_contribution
@@ -146,13 +146,13 @@ begin
       from (
         select oi.product_id, oi.quantity from public.zelo_order_items oi where oi.order_id=o.id
         union all
-        select lp.id_produto,(opt->>'quantity')::integer*oi.quantity
+        select lp.id_produto,greatest(coalesce((opt->>'quantity')::integer,1),0)*oi.quantity
         from public.zelo_order_items oi
         cross join lateral jsonb_array_elements(coalesce(oi.modifiers,'[]'::jsonb)) grp
         cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) opt
         join public.zelomenu_modifier_option_products lp
-          on (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-          and lp.id_opcao=(opt->>'optionId')::uuid
+          on lp.id_opcao = (case when (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            then (opt->>'optionId')::uuid end)
         where oi.order_id=o.id
       ) x
       join public.produtos p on p.id=x.product_id
@@ -170,13 +170,13 @@ begin
       from (
         select oi.product_id, oi.quantity from public.zelo_order_items oi where oi.order_id=o.id
         union all
-        select lp.id_produto,(opt->>'quantity')::integer*oi.quantity
+        select lp.id_produto,greatest(coalesce((opt->>'quantity')::integer,1),0)*oi.quantity
         from public.zelo_order_items oi
         cross join lateral jsonb_array_elements(coalesce(oi.modifiers,'[]'::jsonb)) grp
         cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) opt
         join public.zelomenu_modifier_option_products lp
-          on (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-          and lp.id_opcao=(opt->>'optionId')::uuid
+          on lp.id_opcao = (case when (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            then (opt->>'optionId')::uuid end)
         where oi.order_id=o.id
       ) x
       join public.produtos p on p.id=x.product_id
@@ -197,16 +197,17 @@ begin
       select p2.id_categoria as cat_id, sum(y.quantity)::integer quantity from (
         select oi.product_id, oi.quantity from public.zelo_order_items oi where oi.order_id=o.id
         union all
-        select lp.id_produto,(opt->>'quantity')::integer*oi.quantity
+        select lp.id_produto,greatest(coalesce((opt->>'quantity')::integer,1),0)*oi.quantity
         from public.zelo_order_items oi
         cross join lateral jsonb_array_elements(coalesce(oi.modifiers,'[]'::jsonb)) grp
         cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) opt
         join public.zelomenu_modifier_option_products lp
-          on (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-          and lp.id_opcao=(opt->>'optionId')::uuid
+          on lp.id_opcao = (case when (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            then (opt->>'optionId')::uuid end)
         where oi.order_id=o.id
       ) y
       join public.produtos p2 on p2.id=y.product_id
+      join public.empresa_perfil ep on ep.id=o.empresa_id and ep.user_id=p2.id_usuario
       join public.categorias c2 on c2.id=p2.id_categoria and coalesce(c2.controlar_estoque_compartilhado,false)
       group by p2.id_categoria
     ) x(cat_id,quantity) where c.id=x.cat_id;
@@ -215,16 +216,17 @@ begin
       select y.product_id, sum(y.quantity)::integer quantity from (
         select oi.product_id, oi.quantity from public.zelo_order_items oi where oi.order_id=o.id
         union all
-        select lp.id_produto,(opt->>'quantity')::integer*oi.quantity
+        select lp.id_produto,greatest(coalesce((opt->>'quantity')::integer,1),0)*oi.quantity
         from public.zelo_order_items oi
         cross join lateral jsonb_array_elements(coalesce(oi.modifiers,'[]'::jsonb)) grp
         cross join lateral jsonb_array_elements(coalesce(grp->'selectedOptions','[]'::jsonb)) opt
         join public.zelomenu_modifier_option_products lp
-          on (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-          and lp.id_opcao=(opt->>'optionId')::uuid
+          on lp.id_opcao = (case when (opt->>'optionId') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            then (opt->>'optionId')::uuid end)
         where oi.order_id=o.id
       ) y
       join public.produtos p2 on p2.id=y.product_id
+      join public.empresa_perfil ep on ep.id=o.empresa_id and ep.user_id=p2.id_usuario
       left join public.categorias c2 on c2.id=p2.id_categoria
       where coalesce(p2.controlar_estoque,false) and not coalesce(c2.controlar_estoque_compartilhado,false)
       group by y.product_id
