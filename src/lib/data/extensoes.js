@@ -416,12 +416,12 @@ export const extensoes = {
     meta: {
       title: 'Zelo Chat — Atendimento WhatsApp com IA | Zelo PDV',
       description:
-        'Atendimento automático via WhatsApp com IA. Responde clientes, anota pedidos, dispara alertas humanos quando precisar. Disponível como upgrade do Zelo PDV (+R$ 88/mês no pacote completo) ou standalone.',
+        'Atendimento automático via WhatsApp com IA. Responde clientes, anota pedidos, dispara alertas humanos quando precisar. Inclui ZeloMenu. Disponível como upgrade do Zelo PDV (+R$ 139/mês no pacote completo) ou standalone R$ 149.',
       canonical: `${BASE_URL}/extensoes#chat`
     },
-    h1: 'Zelo Chat: WhatsApp atendido por IA',
+    h1: 'Zelo Chat: WhatsApp atendido por IA + ZeloMenu incluso',
     subtitle:
-      'Para quem perde venda no WhatsApp porque ninguém responde a tempo. A IA atende, anota o pedido e te chama só quando precisar de humano.',
+      'Para quem perde venda no WhatsApp porque ninguém responde a tempo. A IA atende, anota o pedido e te chama só quando precisar de humano. ZeloMenu incluso — cardápio digital, pedidos online e painel de cozinha.',
     forSegments: ['Lanchonetes', 'Hamburguerias', 'Pequenos deliveries', 'Restaurantes', 'Pizzarias'],
     highlights: [
       'IA responde clientes 24/7 com tom da sua marca',
@@ -512,7 +512,7 @@ export const extensoes = {
       {
         question: 'Zelo Chat é o mesmo plano do Zelo PDV?',
         answer:
-          'Não. O Zelo Chat é um produto separado, mas que se conecta ao Zelo PDV. Quem já assina o PDV pode adicionar o Chat fazendo upgrade pro Pacote Gestão + Atendimento por +R$ 88/mês (em vez de R$ 97 standalone — R$ 9 de desconto). O Chat funciona sem PDV também, se for o caso.'
+          'Não. O Zelo Chat é um produto separado, mas que se conecta ao Zelo PDV. O Zelo Chat já inclui o ZeloMenu (cardápio digital, pedidos online e painel de cozinha). Quem já assina o PDV pode adicionar o Chat fazendo upgrade pro Pacote Gestão + Atendimento por +R$ 139/mês (em vez de R$ 149 standalone). O Chat funciona sem PDV também, se for o caso.'
       },
       {
         question: 'Posso testar antes de assinar?',
@@ -545,14 +545,15 @@ export const extensoes = {
       canonical: `${BASE_URL}/extensoes#menu`
     },
     heroBadge: 'Add-on Zelo PDV',
-    h1: 'ZeloMenu: seu cardápio online direto do estoque',
+    h1: 'ZeloMenu: cardápio digital, pedidos online e painel de cozinha',
     subtitle:
-      'Publique os produtos que já cadastrou no PDV. Clientes acessam preços, variações e adicionais pelo celular. Sem cadastro paralelo, sem taxa por pedido, sem imprimir de novo.',
-    forSegments: ['Hamburguerias', 'Lanchonetes', 'Pizzarias', 'Restaurantes pequenos', 'Açaiterias'],
+      'A extensão mais completa do Zelo PDV. Publique seu cardápio online, receba pedidos do WhatsApp e iFood, e acompanhe a fila da cozinha em tempo real. Tudo integrado, sem taxa por pedido.',
+    forSegments: ['Hamburguerias', 'Lanchonetes', 'Pizzarias', 'Restaurantes pequenos', 'Açaiterias', 'Deliveries'],
     highlights: [
-      'Publica os produtos que já estão no estoque — sem redigitar',
-      'Cardápio acessível por link e QR code, sem baixar app',
-      'Preço e disponibilidade sempre atualizados com o PDV',
+      'Cardápio online publicado direto do estoque — sem redigitar',
+      'Pedidos do WhatsApp, Instagram e iFood integrados',
+      'Cozinha acompanha em painel em tempo real com fila organizada',
+      'Caixa recebe pedidos prontos e cobra direto — tudo sincronizado',
       'Publicação em lote de vários produtos de uma vez'
     ],
     problemTitle: 'Cardápio impresso desatualizado? Cliente não confia',
@@ -562,18 +563,36 @@ export const extensoes = {
     ],
     problemPoints: [
       { label: 'Cardápio desatualizado', value: 'Preço riscado a caneta, item que acabou e cliente só descobre na hora de pedir.' },
-      { label: 'Cadastro duplicado', value: 'Manter estoque no PDV e cardápio online em separado é trabalhar dobrado e errar nos dois.' },
+      { label: 'Pedido perdido no vai e vem', value: 'Ticket de papel some entre atendente e cozinha. Item esquecido, fila parada, cliente esperando.' },
       { label: 'Sem presença digital', value: 'Cliente pesquisa "lanche perto de mim" no celular e não encontra seu cardápio. Perde pro concorrente que tem.' }
     ],
-    featuresTitle: 'O ZeloMenu faz o cardápio que seus clientes já esperam',
+    featuresTitle: 'Cardápio digital + pedidos online + painel de cozinha',
     featuresIntro:
-      'Publicação automática, sem configuração técnica. O que o cliente vê online é exatamente o que está no seu estoque.',
+      'O ZeloMenu agora unifica cardápio digital, pedidos online e painel de cozinha. O cliente vê o cardápio, faz o pedido, a cozinha prepara e o caixa fecha — tudo no mesmo ecossistema.',
     features: [
       {
         icon: '📦',
         title: 'Publique o que já está no estoque',
         description:
           'Os produtos que você cadastrou no Zelo PDV viram cardápio online sem redigitar nada. Preço, descrição, categoria e variações — tudo sai do cadastro que você já mantém.'
+      },
+      {
+        icon: '📱',
+        title: 'Pedidos integrados (WhatsApp, Instagram, iFood)',
+        description:
+          'Cliente pede pelo WhatsApp, Instagram ou cardápio digital. O pedido cai direto no sistema — atendente vê, cozinha prepara, caixa cobra. Integração com Anota AI, WhatsMenu e iFood.'
+      },
+      {
+        icon: '👨‍🍳',
+        title: 'Painel da cozinha em tempo real',
+        description:
+          'Cozinha acompanha a fila de pedidos em uma tela dedicada. Cada pedido aparece com itens, observações e horário. Quando fica pronto, o caixa é avisado na hora.'
+      },
+      {
+        icon: '🔄',
+        title: 'Sincronizado em tempo real',
+        description:
+          'Alterou preço, esgotou um item ou criou uma variação nova? O cardápio online reflete na hora. Pedido entra, cozinha prepara, caixa fecha — tudo sincronizado.'
       },
       {
         icon: '🔗',
@@ -586,29 +605,11 @@ export const extensoes = {
         title: 'Publicação em lote',
         description:
           'Seleciona vários produtos de uma vez no estoque e publica todos no cardápio digital. Ideal para quem tem dezenas de itens e não quer publicar um por um.'
-      },
-      {
-        icon: '🔄',
-        title: 'Sincronizado em tempo real',
-        description:
-          'Alterou preço, esgotou um item ou criou uma variação nova? O cardápio online reflete na hora. Cliente não vê preço velho nem promoção que já acabou.'
-      },
-      {
-        icon: '🎛️',
-        title: 'Controle produto a produto',
-        description:
-          'Escolhe quais itens aparecem no cardápio digital e quais ficam só no PDV. Ideal para item sazonal, promoção relâmpago ou produto que só vende no balcão.'
-      },
-      {
-        icon: '📱',
-        title: 'Design que funciona no celular',
-        description:
-          'O cardápio adapta automático pra tela do cliente. Fotos, preços e descrições organizados pra navegação rápida. Sem zoom, sem rolagem infinita.'
       }
     ],
-    howTitle: 'Em três passos seu cardápio está no ar',
+    howTitle: 'Em três passos seu cardápio e pedidos estão no ar',
     howIntro:
-      'Nada de configuração técnica. Ativou, selecionou, compartilhou.',
+      'Nada de configuração técnica. Ativou, publicou, seus pedidos começam a fluir.',
     steps: [
       {
         title: 'Ative o ZeloMenu',
@@ -621,9 +622,9 @@ export const extensoes = {
           'Em Gestão > Produtos, marque os itens que quer no cardápio online e clique em "Publicar no menu". Pode publicar um por um ou em lote.'
       },
       {
-        title: 'Compartilhe o link do cardápio',
+        title: 'Compartilhe e receba pedidos',
         description:
-          'Pronto. O cardápio está no ar com uma URL própria. Coloca no Instagram, no WhatsApp do negócio, ou imprime um QR code pra colocar nas mesas.'
+          'O cardápio está no ar. Compartilhe o link no WhatsApp e Instagram. Pedidos entram direto no sistema — atendente recebe, cozinha prepara, caixa cobra sem papel.'
       }
     ],
     testimonial: {
@@ -646,9 +647,14 @@ export const extensoes = {
           'Não. O ZeloMenu gera uma URL pública dentro do domínio zelopdv.com.br. Você pode compartilhar o link em qualquer lugar — Instagram, WhatsApp, QR code — sem precisar de site próprio.'
       },
       {
-        question: 'Funciona com Mesas e Pedidos + Cozinha?',
+        question: 'Funciona com Mesas?',
         answer:
-          'Sim. O ZeloMenu é independente dos outros add-ons. Você pode usar só o menu digital, ou combinar com Mesas (cliente vê o cardápio no QR code da mesa) e Pedidos + Cozinha (pedido que chega via WhatsApp vira pedido no sistema).'
+          'Sim. O ZeloMenu é compatível com o Módulo Mesas. O cliente vê o cardápio no QR code da mesa, faz o pedido, que vai direto pro painel da cozinha e fecha no caixa. Tudo integrado.'
+      },
+      {
+        question: 'O ZeloMenu inclui pedidos e painel de cozinha?',
+        answer:
+          'Sim. O ZeloMenu agora unifica cardápio digital, pedidos online e painel de cozinha em uma única extensão. O cliente vê o cardápio, faz o pedido pelo WhatsApp ou cardápio digital, a cozinha acompanha a fila em tempo real e o caixa recebe o pedido pronto para cobrar — tudo integrado, sem papel, sem redigitar.'
       },
       {
         question: 'Quanto custa?',
@@ -679,9 +685,14 @@ export const extensoes = {
           'Não. O ZeloMenu gera uma URL pública dentro do domínio zelopdv.com.br. Você pode compartilhar o link em qualquer lugar — Instagram, WhatsApp, QR code — sem precisar de site próprio.'
       },
       {
-        question: 'Funciona com Mesas e Pedidos + Cozinha?',
+        question: 'Funciona com Mesas?',
         answer:
-          'Sim. O ZeloMenu é independente dos outros add-ons. Você pode usar só o menu digital, ou combinar com Mesas (cliente vê o cardápio no QR code da mesa) e Pedidos + Cozinha (pedido que chega via WhatsApp vira pedido no sistema).'
+          'Sim. O ZeloMenu é compatível com o Módulo Mesas. O cliente vê o cardápio no QR code da mesa, faz o pedido, que vai direto pro painel da cozinha e fecha no caixa. Tudo integrado.'
+      },
+      {
+        question: 'O ZeloMenu inclui pedidos e painel de cozinha?',
+        answer:
+          'Sim. O ZeloMenu agora unifica cardápio digital, pedidos online e painel de cozinha em uma única extensão. O cliente vê o cardápio, faz o pedido pelo WhatsApp ou cardápio digital, a cozinha acompanha a fila em tempo real e o caixa recebe o pedido pronto para cobrar — tudo integrado, sem papel, sem redigitar.'
       },
       {
         question: 'Quanto custa?',

@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 
-const KNOWN_SLUGS = new Set(['mesas', 'pedidos-cozinha', 'chat']);
+const KNOWN_SLUGS = new Set(['mesas', 'chat']);
 
 export async function load({ params }) {
   if (KNOWN_SLUGS.has(params.slug)) {

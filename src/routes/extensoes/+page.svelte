@@ -8,19 +8,17 @@
   const meta = {
     title: 'Extensões Zelo PDV — Mesas, ZeloMenu, Controle de Acessos e WhatsApp | Zelo PDV',
     description:
-      'O Zelo PDV cobre o essencial por R$ 59/mês. Adicione apenas o que sua operação pedir: Módulo Mesas, ZeloMenu, Pedidos + Cozinha, Controle de Acessos ou Zelo Chat (WhatsApp com IA). Cancele quando quiser.',
+      'O Zelo PDV cobre o essencial por R$ 59/mês. Adicione apenas o que sua operação pedir: Módulo Mesas, ZeloMenu, Controle de Acessos ou Zelo Chat (WhatsApp com IA). Cancele quando quiser.',
     canonical: 'https://zelopdv.com.br/extensoes'
   };
 
   const basePrice = PLANS.pdv.price;
   const mesasPrice = getAddonPrice('mesas');
-  const pedidosPrice = getAddonPrice('pedidos');
   const acessosPrice = getAddonPrice('acessos');
   const menuPrice = getAddonPrice('menu');
   const chatDelta = getChatBundleDelta();
 
   const mesas = extensoes.mesas;
-  const pedidos = extensoes['pedidos-cozinha'];
   const acessos = extensoes.acessos;
   const chat = extensoes.chat;
   const menu = extensoes.menu;
@@ -50,24 +48,6 @@
       iconKey: 'tables'
     },
     {
-      anchor: 'pedidos-cozinha',
-      data: pedidos,
-      name: 'Pedidos + Cozinha',
-      tagline: 'Agora incluso no ZeloMenu',
-      bullets: [
-        'Atendente lança pedido pelo celular',
-        'Cozinha acompanha em painel kiosk',
-        'Caixa cobra pedidos prontos',
-        'Legado: disponível como addon independente'
-      ],
-      priceLabel: `+R$ ${pedidosPrice.toFixed(0)}`,
-      priceSuffix: '/mês',
-      priceNote: 'Adicional ao plano base',
-      ctaPrimary: { href: '/cadastro?addon=pedidos', label: 'Adicionar ao plano' },
-      ctaSecondary: { href: '#pedidos-cozinha', label: 'Ver detalhes' },
-      iconKey: 'kitchen'
-    },
-    {
       anchor: 'acessos',
       data: acessos,
       name: 'Controle de Acessos',
@@ -89,12 +69,12 @@
       anchor: 'menu',
       data: menu,
       name: 'ZeloMenu',
-      tagline: 'Cardápio digital publicado online',
+      tagline: 'Cardápio digital, pedidos online e painel de cozinha',
       bullets: [
-        'Publique direto do estoque sem duplicar cadastro',
-        'Cardápio acessível por QR code no menu digital',
-        'Publicação em lote de múltiplos produtos',
-        'Sincronizado em tempo real com o PDV'
+        'Cardápio online publicado direto do estoque — sem duplicar cadastro',
+        'Pedidos do WhatsApp, Instagram e iFood integrados',
+        'Cozinha acompanha em painel em tempo real com fila organizada',
+        'Caixa recebe pedidos prontos e cobra direto — tudo sincronizado'
       ],
       priceLabel: `+R$ ${menuPrice.toFixed(0)}`,
       priceSuffix: '/mês',
@@ -108,6 +88,7 @@
       data: chat,
       name: 'Zelo Chat',
       tagline: 'Atendimento WhatsApp com IA',
+      badge: 'Mais vendido',
       bullets: [
         'IA responde clientes 24/7 no seu tom',
         'Anota pedido com cardápio em mãos',
@@ -116,7 +97,7 @@
       ],
       priceLabel: `+R$ ${chatDelta.toFixed(0)}`,
       priceSuffix: '/mês',
-      priceNote: 'No pacote Gestão + Atendimento',
+      priceNote: 'No pacote Gestão + Atendimento (inclui ZeloMenu)',
       ctaPrimary: { href: chat.upgradeHref, label: 'Upgrade pro pacote' },
       ctaSecondary: { href: chat.externalUrl, label: 'Ver chat.zelopdv.com.br', external: true },
       iconKey: 'chat',
@@ -150,9 +131,9 @@
     {
       profile: 'Operação com cozinha separada',
       example: 'Atendente, cozinha de fundo, caixa separado.',
-      stack: ['Plano base', 'Pedidos + Cozinha'],
-      total: basePrice + pedidosPrice,
-      notes: 'Pedido digital fluindo entre os três papéis. Sem ticket de papel.'
+      stack: ['Plano base', 'ZeloMenu'],
+      total: basePrice + menuPrice,
+      notes: 'Pedido digital fluindo entre os três papéis. Cardápio online incluso. Sem ticket de papel.'
     },
     {
       profile: 'Negócio com cardápio digital',
@@ -164,16 +145,16 @@
     {
       profile: 'Bar / restaurante completo',
       example: 'Salão com mesas + cozinha que precisa enxergar a fila.',
-      stack: ['Plano base', 'Mesas', 'Pedidos + Cozinha'],
-      total: basePrice + mesasPrice + pedidosPrice,
-      notes: 'Comanda na mesa, item vai pra cozinha, conta divide e fecha.'
+      stack: ['Plano base', 'Mesas', 'ZeloMenu'],
+      total: basePrice + mesasPrice + menuPrice,
+      notes: 'Comanda na mesa, item vai pra cozinha via ZeloMenu, conta divide e fecha.'
     },
     {
-      profile: 'Negócio com WhatsApp ativo',
-      example: 'Pedidos chegam pelo WhatsApp e ninguém dá conta de responder.',
-      stack: ['Plano base', 'Zelo Chat'],
-      total: basePrice + chatDelta,
-      notes: 'IA responde, anota pedido, e o pedido cai no Zelo PDV.',
+      profile: 'Pacote Gestão + Atendimento',
+      example: 'PDV, cardápio digital e WhatsApp com IA — tudo integrado.',
+      stack: ['Plano base', 'ZeloMenu', 'Zelo Chat'],
+      total: PLANS.bundle.price,
+      notes: 'O pacote mais completo. Inclui PDV, ZeloMenu e atendimento por IA no WhatsApp.',
       featured: true
     }
   ];
@@ -181,7 +162,6 @@
   // FAQ consolidada
   const allFaqs = [
     ...mesas.faqSpecific.map((f) => ({ ...f, group: 'Mesas' })),
-    ...pedidos.faqSpecific.map((f) => ({ ...f, group: 'Pedidos + Cozinha' })),
     ...acessos.faqSpecific.map((f) => ({ ...f, group: 'Controle de Acessos' })),
     ...menu.faqSpecific.map((f) => ({ ...f, group: 'ZeloMenu' })),
     ...chat.faqSpecific.map((f) => ({ ...f, group: 'Zelo Chat' })),
@@ -191,7 +171,6 @@
   // Detalhe expandido das extensões
   const detailSections = [
     { ...mesas, anchor: 'mesas', name: 'Módulo Mesas', priceLabel: `+R$ ${mesasPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=mesas', ctaLabel: 'Adicionar ao plano' },
-    { ...pedidos, anchor: 'pedidos-cozinha', name: 'Pedidos + Cozinha', priceLabel: `+R$ ${pedidosPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=pedidos', ctaLabel: 'Adicionar ao plano' },
     { ...acessos, anchor: 'acessos', name: 'Controle de Acessos', priceLabel: `+R$ ${acessosPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=acessos', ctaLabel: 'Adicionar ao plano' },
     { ...menu, anchor: 'menu', name: 'ZeloMenu', priceLabel: `+R$ ${menuPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=menu', ctaLabel: 'Adicionar ZeloMenu' },
     { ...chat, anchor: 'chat', name: 'Zelo Chat', priceLabel: `+R$ ${chatDelta.toFixed(0)}/mês no Bundle`, ctaHref: chat.upgradeHref, ctaLabel: 'Upgrade pro pacote', external: true, externalUrl: chat.externalUrl }
@@ -272,7 +251,7 @@
         </h1>
         <p class="text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-8" style="color: var(--text-muted);">
           O Zelo PDV cobre caixa, fiado, estoque e relatórios por <strong class="text-white font-semibold">R$ {basePrice}/mês</strong>.
-          Adicione mesas, pedidos com cozinha ou atendimento por WhatsApp conforme sua operação cresce. Cada extensão é individual e cancelável a qualquer momento.
+          O <strong class="text-white font-semibold">Pacote Gestão + Atendimento (R$ {PLANS.bundle.price}/mês)</strong> une PDV, ZeloMenu e ZeloChat — o mais completo para vender no WhatsApp com cardápio digital. Ou monte seu plano com mesas, ZeloMenu e outras extensões. Cada extensão é individual e cancelável a qualquer momento.
         </p>
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
           <a
@@ -306,15 +285,15 @@
         <div class="max-w-2xl mb-12">
           <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-3">As extensões</p>
           <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight">
-            Cinco módulos opcionais. Você escolhe.
+            Quatro módulos opcionais. Você escolhe.
           </h2>
         </div>
 
-        <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
           {#each cards as card}
             <article
               class="relative rounded-2xl border p-7 flex flex-col transition-colors hover:border-sky-500/30"
-              style="background: var(--bg-card); border-color: var(--border-card);"
+              style={card.badge ? 'background: linear-gradient(135deg, rgba(14,165,233,0.10), rgba(14,165,233,0.02)); border-color: rgba(14,165,233,0.4);' : 'background: var(--bg-card); border-color: var(--border-card);'}
             >
               <!-- Icon -->
               <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6 bg-sky-500/10 border border-sky-500/20" aria-hidden="true">
@@ -340,6 +319,12 @@
                   </svg>
                 {/if}
               </div>
+
+              {#if card.badge}
+                <div class="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-400/30 text-[10px] font-bold text-amber-300 uppercase tracking-wider">
+                  {card.badge}
+                </div>
+              {/if}
 
               <!-- Header -->
               <div class="flex items-start justify-between gap-4 mb-2">
@@ -424,7 +409,10 @@
               class={combo.featured ? 'rounded-2xl border p-6 transition-colors lg:col-span-2' : 'rounded-2xl border p-6 transition-colors'}
               style={combo.featured ? 'background: linear-gradient(135deg, rgba(14,165,233,0.06), transparent); border-color: rgba(14,165,233,0.3);' : 'background: var(--bg-card); border-color: var(--border-card);'}
             >
-              <p class="text-base font-bold text-white mb-1.5">{combo.profile}</p>
+              <p class="text-base font-bold text-white mb-1">{combo.profile}</p>
+              {#if combo.featured}
+                <p class="text-sm font-bold text-sky-300 mb-3">Inclui ZeloPDV + ZeloChat + ZeloMenu</p>
+              {/if}
               <p class="text-sm leading-relaxed mb-5" style="color: var(--text-muted);">{combo.example}</p>
 
               <div class="flex flex-wrap gap-1.5 mb-5">
