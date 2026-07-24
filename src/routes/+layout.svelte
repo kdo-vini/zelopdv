@@ -121,80 +121,7 @@
 
 
 
-  // NEW YEAR THEME STATE (DEPRECATED - New Year is over)
-  let isNewYearMode = false;
-  let sparkles = [];
-
-  function createSparkles() {
-    return Array(20).fill(0).map((_, i) => ({
-      left: Math.random() * 100 + '%',
-      top: Math.random() * 100 + '%',
-      size: (Math.random() * 4 + 2) + 'px',
-      animDuration: (Math.random() * 2 + 1) + 's',
-      delay: (Math.random() * 3) + 's',
-      opacity: Math.random()
-    }));
-  }
-
-  function toggleNewYear() {
-     isNewYearMode = !isNewYearMode;
-     if(typeof window !== 'undefined'){
-       localStorage.setItem('zelo_newyear_theme', String(isNewYearMode));
-       // Desativar natal se ativar ano novo (opcional, mas limpo)
-       if (isNewYearMode) {
-          isChristmasMode = false;
-          localStorage.setItem('zelo_xmas_theme', 'false');
-       }
-     }
-  }
-
-  // CHRISTMAS THEME STATE (DEPRECATED - Christmas is over)
-  let isChristmasMode = false;
-  let flakes = [];
-
-  function createSnowflakes() {
-    return Array(30).fill(0).map((_,i) => ({
-      left: Math.random() * 100 + '%',
-      animDuration: (Math.random() * 5 + 5) + 's',
-      delay: (Math.random() * 5) + 's',
-      opacity: Math.random()
-    }));
-  }
-
-  function toggleChristmas() {
-     isChristmasMode = !isChristmasMode;
-     if(typeof window !== 'undefined'){
-       localStorage.setItem('zelo_xmas_theme', String(isChristmasMode));
-     }
-  }
-
   onMount(async () => {
-    // SEASONAL INIT
-    if(typeof window !== 'undefined'){
-        flakes = createSnowflakes();
-        sparkles = createSparkles();
-        
-        const savedXmas = localStorage.getItem('zelo_xmas_theme');
-        // FORCE DISABLE CHRISTMAS (Christmas is over)
-        if(savedXmas === 'true') {
-          localStorage.setItem('zelo_xmas_theme', 'false');
-          isChristmasMode = false;
-        } else {
-          isChristmasMode = false;
-        }
-
-        const savedNY = localStorage.getItem('zelo_newyear_theme');
-        // FORCE DISABLE NEW YEAR (New Year is over)
-        if(savedNY === 'true') {
-          localStorage.setItem('zelo_newyear_theme', 'false');
-          isNewYearMode = false;
-        } else {
-          isNewYearMode = false;
-        }
-
-
-    }
-
     if (!supabase) return;
  
   const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/redefinir-senha', '/privacidade', '/termos', '/pascoa', '/para-lanchonetes', '/para-restaurantes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao', '/extensoes', '/vs-planilha', '/comparativos', '/contato', '/zelo-impressao', '/auth/callback'];
@@ -437,25 +364,8 @@
 {:else if hasSidebarLayout}
   <slot />
 {:else}
-<div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden" class:christmas-theme={isChristmasMode} class:newyear-theme={isNewYearMode}>
+<div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden">
   
-  {#if isChristmasMode}
-    <div class="snow-container">
-      {#each flakes as f}
-         <div class="snowflake" style="left: {f.left}; animation-duration: {f.animDuration}; animation-delay: {f.delay}; opacity: {f.opacity}">❄</div>
-      {/each}
-    </div>
-  {/if}
-
-  {#if isNewYearMode}
-    <div class="sparkle-container">
-      {#each sparkles as s}
-         <div class="sparkle" style="left: {s.left}; top: {s.top}; width: {s.size}; height: {s.size}; animation-duration: {s.animDuration}; animation-delay: {s.delay}; opacity: {s.opacity}">✨</div>
-      {/each}
-    </div>
-  {/if}
-
-
   {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout}
   <header class="border-b bg-header-base backdrop-blur-sm sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -464,21 +374,6 @@
           <a href={session ? '/app' : '/'} class="flex items-center gap-2">
             <img src="/logo-horizontal.webp" alt="Zelo PDV" class="h-20 sm:h-24 w-auto" />
           </a>
-          
-          <!-- Botao de Natal desativado pois o natal ja passou -->
-          <!-- 
-          <button on:click={toggleChristmas} class="p-1 rounded-full hover:bg-(--sidebar-item-hover-bg) transition-colors group relative" title="Modo Natal">
-            <span class="text-xl filter grayscale group-hover:grayscale-0 transition-all duration-300" style="filter: {isChristmasMode ? 'none' : 'grayscale(100%)'}">🎄</span>
-          </button>
-          -->
-
-          <!-- Botao de Ano Novo desativado pois o ano novo ja passou -->
-          <!--
-          <button on:click={toggleNewYear} class="p-1 rounded-full hover:bg-(--sidebar-item-hover-bg) transition-colors group relative" title="Modo Ano Novo">
-            <span class="text-xl filter grayscale group-hover:grayscale-0 transition-all duration-300" style="filter: {isNewYearMode ? 'none' : 'grayscale(100%)'}">🥂</span>
-          </button>
-          -->
-
 
        </div>
 

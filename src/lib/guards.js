@@ -5,6 +5,7 @@ import { addToast } from './stores/ui';
 import { isNetworkError } from './netStatus';
 import { saveEntitlementSnapshot, loadEntitlementSnapshot } from './offlineEntitlement';
 import { isSubscriptionActiveStrict } from './subscriptionStatus';
+import { withTimeout } from './utils';
 
 export { isSubscriptionActiveStrict };
 
@@ -54,13 +55,6 @@ async function resolveSubscriptionUserId(userId) {
  * Sub-users are detected before the profile check and short-circuit to the owner's subscription validation.
  */
 export async function ensureActiveSubscription({ requireProfile = false, redirectOnFail = true } = {}) {
-  // Helper: wrap promise with timeout
-  const withTimeout = (promise, ms = 8000) =>
-    Promise.race([
-      promise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
-    ]);
-
   // 1) Session - with timeout to prevent infinite hang
   let userId = null;
   let email = null;

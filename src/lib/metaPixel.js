@@ -1,13 +1,11 @@
 export const META_EVENTS = {
   lead: 'Lead',
   startTrial: 'StartTrial',
-  subscribe: 'Subscribe',
   viewContent: 'ViewContent',
 };
 
 export const META_CUSTOM_EVENTS = {
   startTrial: 'ZeloStartTrial',
-  subscribe: 'ZeloSubscribe',
 };
 
 export function trackMetaEvent(eventName, params = {}) {
@@ -39,19 +37,6 @@ export function trackStartTrial(params = {}) {
 
   const trackedStandard = trackMetaEvent(META_EVENTS.startTrial, payload);
   const trackedCustom = trackMetaCustomEvent(META_CUSTOM_EVENTS.startTrial, payload);
-
-  return trackedStandard || trackedCustom;
-}
-
-export function trackSubscribe(params = {}) {
-  const payload = {
-    currency: 'BRL',
-    plan_id: 'zelo_paid_subscription',
-    ...params,
-  };
-
-  const trackedStandard = trackMetaEvent(META_EVENTS.subscribe, payload);
-  const trackedCustom = trackMetaCustomEvent(META_CUSTOM_EVENTS.subscribe, payload);
 
   return trackedStandard || trackedCustom;
 }

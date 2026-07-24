@@ -74,30 +74,3 @@ export async function getRecentLogs(limit = 50) {
         return []
     }
 }
-
-/**
- * Get logs for specific admin
- */
-export async function getLogsByAdmin(adminId, limit = 50) {
-    try {
-        const token = await getAccessToken()
-        if (!token) return []
-
-        const response = await fetch(`${API_BASE}/api/admin/activity-logs?adminId=${encodeURIComponent(adminId)}&limit=${limit}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        })
-
-        const body = await response.json().catch(() => ({}))
-        if (!response.ok) {
-            console.error('[Logger] Failed to fetch admin logs:', body.error || response.statusText)
-            return []
-        }
-
-        return body.logs || []
-    } catch (err) {
-        console.error('[Logger] Failed to fetch admin logs:', err)
-        return []
-    }
-}

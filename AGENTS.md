@@ -188,6 +188,6 @@ Never hardcode hex colors in components. Always use CSS variables:
 <div style="background: var(--bg-card); color: var(--text-label)">
 ```
 
-If you need to add a new CSS variable, define it in `src/themes/base.css` **and** add overrides to `src/themes/christmas.css` and `src/themes/newyear.css`.
+If you need to add a new CSS variable, define it in `src/themes/base.css`.
 
 The blog pages use a separate set of CSS variables (prefixed `--blog-*`) defined in the same theme files. Do not mix blog variables into non-blog components.
