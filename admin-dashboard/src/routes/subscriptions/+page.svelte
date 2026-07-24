@@ -378,6 +378,11 @@
     // ZeloMenu now includes Pedidos + Cozinha. Preserve the legacy flag so
     // older consumers continue to recognize the entitlement during migration.
     const finalPedidos = finalZeloMenu || !!selectedSub.has_pedidos_addon
+    const nextMonthlyValueCents = Math.round(calculateValue(editPlanTier, {
+      mesas: finalMesas,
+      acessos: finalAcessos,
+      menu: finalZeloMenu,
+    }) * 100)
 
     if (editMesasAddon && !isAddonAllowed(editPlanTier, 'mesas')) {
       const ok = await confirmDialog({
@@ -480,6 +485,7 @@
         has_pedidos_addon: finalPedidos,
         has_acessos_addon: finalAcessos,
         has_zelo_menu: finalZeloMenu,
+        monthly_value_cents: nextMonthlyValueCents,
         last_modified_by: adminInfo?.id || null,
         last_modified_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -503,12 +509,14 @@
             has_mesas_addon: selectedSub.has_mesas_addon,
             has_pedidos_addon: selectedSub.has_pedidos_addon,
             has_acessos_addon: selectedSub.has_acessos_addon,
+            monthly_value_cents: selectedSub.monthly_value_cents,
           },
           new: {
             plan_tier: editPlanTier,
             has_mesas_addon: finalMesas,
             has_pedidos_addon: finalPedidos,
             has_acessos_addon: finalAcessos,
+            monthly_value_cents: nextMonthlyValueCents,
           },
           provider: provider || 'none',
         },

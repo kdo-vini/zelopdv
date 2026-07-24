@@ -9,6 +9,7 @@ import {
   VALID_ADDONS,
   STRIPE_PRICE_TO_PLAN,
   STRIPE_PRICE_TO_ADDON,
+  calculateValue,
   isValidPlanTier,
   isAddonAllowed,
 } from '$lib/pricing';
@@ -176,6 +177,7 @@ export async function POST({ request }) {
 
     const updatePayload = {
       plan_tier: planTier,
+      monthly_value_cents: Math.round(calculateValue(planTier, finalAddons) * 100),
       last_modified_by: admin.id,
       last_modified_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

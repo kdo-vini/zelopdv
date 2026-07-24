@@ -14,9 +14,11 @@ export const PLANS = {
     price: 59.00,
     includesPdv: true,
     includesChat: false,
+    includesMenu: false,
     allowsMesas: true,
     allowsPedidos: true,
     allowsAcessos: true,
+    allowsMenu: true,
     stripePriceId: 'price_1SO4yvLUJWyE4PkYwoYAYc6h',
   },
   chat: {
@@ -25,9 +27,11 @@ export const PLANS = {
     price: 149.00, // v2 — R$149 a partir de 2026-07-22 (inclui ZeloMenu)
     includesPdv: false,
     includesChat: true,
+    includesMenu: true,
     allowsMesas: false,
     allowsPedidos: false,
     allowsAcessos: false,
+    allowsMenu: false,
     stripePriceId: 'price_1TlbH2LUJWyE4PkYSqFSXXVY',
   },
   bundle: {
@@ -36,9 +40,11 @@ export const PLANS = {
     price: 198.00, // v2 — R$198 a partir de 2026-07-22
     includesPdv: true,
     includesChat: true,
+    includesMenu: true,
     allowsMesas: true,
     allowsPedidos: true,
     allowsAcessos: true,
+    allowsMenu: false,
     stripePriceId: 'price_1TlbH2LUJWyE4PkYlS4IxMhs',
   },
 };
@@ -57,6 +63,7 @@ export const ADDONS = {
     price: 30.00,
     requiresFlag: 'allowsPedidos',
     stripePriceId: 'price_1TTjDcLUJWyE4PkYbHDHq9gw',
+    deprecated: true,
   },
   acessos: {
     id: 'acessos',
@@ -65,10 +72,21 @@ export const ADDONS = {
     requiresFlag: 'allowsAcessos',
     stripePriceId: 'price_1TWMi0LUJWyE4PkYQl4rBlQs',
   },
+  menu: {
+    id: 'menu',
+    name: 'ZeloMenu',
+    price: 40.00,
+    requiresFlag: 'allowsMenu',
+    stripePriceId: 'price_1TlbH4LUJWyE4PkYX0kdJhAw',
+  },
 };
 
 export const VALID_PLAN_TIERS = Object.keys(PLANS);
-export const VALID_ADDONS = Object.keys(ADDONS);
+// Pedidos permanece no catalogo apenas para compatibilidade com a flag legada;
+// nao e mais um item cobrado desde que passou a fazer parte do ZeloMenu.
+export const VALID_ADDONS = Object.values(ADDONS)
+  .filter((addon) => !addon.deprecated)
+  .map((addon) => addon.id);
 
 export function isAddonAllowed(planTier, addonId) {
   const plan = PLANS[planTier];
@@ -100,8 +118,8 @@ export function subscriptionValue(sub) {
   const tier = sub.plan_tier || 'pdv';
   return calculateValue(tier, {
     mesas: !!sub.has_mesas_addon,
-    pedidos: !!sub.has_pedidos_addon,
     acessos: !!sub.has_acessos_addon,
+    menu: !!sub.has_zelo_menu,
   });
 }
 
