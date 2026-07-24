@@ -1,12 +1,17 @@
 <script>
+  import { page } from '$app/stores';
   import CompetitorComparison from '$lib/components/marketing/CompetitorComparison.svelte';
   import {
     buildComparisonFaqSchema,
     competitorComparisons,
     softwareApplicationSchema
   } from '$lib/data/competitorComparisons';
+  import { error } from '@sveltejs/kit';
 
-  const comparison = competitorComparisons.saipos;
+  const comparison = Object.values(competitorComparisons).find(c => c.slug === `vs-${$page.params.slug}`);
+  if (!comparison) {
+    throw error(404, 'Comparação não encontrada');
+  }
   const faqSchema = buildComparisonFaqSchema(comparison);
 </script>
 

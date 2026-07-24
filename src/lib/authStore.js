@@ -1,8 +1,8 @@
 import { writable } from 'svelte/store';
 import { supabase } from './supabaseClient';
 
-// Session store (null | Session)
-export const sessionStore = writable(null);
+// Session store (null | Session) — local only, stores/session.js is the public source
+const sessionStore = writable(null);
 export const authReadyStore = writable(false);
 
 let initialized = false;

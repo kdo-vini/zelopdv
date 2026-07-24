@@ -25,13 +25,3 @@ export async function withTimeout(promise, ms = 10000, errorMsg = 'A solicita√ß√
         clearTimeout(timer);
     }
 }
-
-/**
- * Helper to run multiple async operations in parallel and return results.
- * Throws if any operation fails.
- * @param {Array<Promise>} promises 
- * @returns {Promise<Array>}
- */
-export async function fetchAll(promises) {
-    return Promise.all(promises);
-}
