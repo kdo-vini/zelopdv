@@ -12,6 +12,9 @@
   import { money } from '$lib/finance/caixa';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { somarQuantidadePorEstoque } from '$lib/stock';
+  import { printOrder } from '$lib/printService';
+  import { detectZeloImpressao } from '$lib/zeloImpressaoClient.js';
+  import { createPrintedOrderStore, selectOrdersToAutoPrint } from '$lib/orderAutoPrint.js';
   import {
     canonicalFulfillmentMode,
     canonicalPaymentMethod,
@@ -41,8 +44,14 @@
   let fechandoPedido = false;
   let erroPagamento = '';
   let pollTimer = null;
+  let printerStatusTimer = null;
   let realtimeRefreshTimer = null;
   let realtimeChannel = null;
+  let printerStatusRequest = null;
+  let printerConnected = false;
+  let printedOrderStore = null;
+  let autoPrintRetryIds = new Set();
+  let orderBaselineReady = false;
   let polling = false;
   let modalPagamentoRef;
   let mobileDetailOpen = false;
@@ -103,6 +112,10 @@
 
     await Promise.all([carregarProdutos(true), carregarEmpresa(), carregarCaixaAberto()]);
     await carregarPedidos();
+    printedOrderStore = createPrintedOrderStore();
+    void atualizarStatusImpressora();
+    printerStatusTimer = setInterval(atualizarStatusImpressora, 20000);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     if (orderingReviewActive) {
       realtimeChannel = subscribeCanonicalOrderUpdates(supabase, dadosEmpresa?.id, () => {
         if (realtimeRefreshTimer) return;
@@ -117,9 +130,81 @@
 
   onDestroy(() => {
     if (pollTimer) clearInterval(pollTimer);
+    if (printerStatusTimer) clearInterval(printerStatusTimer);
     if (realtimeRefreshTimer) clearTimeout(realtimeRefreshTimer);
     if (realtimeChannel) void supabase.removeChannel(realtimeChannel);
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', handleVisibilityChange);
   });
+
+  async function atualizarStatusImpressora() {
+    if (printerStatusRequest) return printerStatusRequest;
+    printerStatusRequest = detectZeloImpressao()
+      .then((detection) => {
+        printerConnected = Boolean(detection?.running && detection?.paired);
+        return printerConnected;
+      })
+      .catch(() => {
+        printerConnected = false;
+        return false;
+      })
+      .finally(() => {
+        printerStatusRequest = null;
+      });
+    return printerStatusRequest;
+  }
+
+  function handleVisibilityChange() {
+    if (document.visibilityState !== 'visible') return;
+    void atualizarStatusImpressora();
+    void carregarPedidos();
+  }
+
+  async function imprimirPedidoAutomaticamente(pedido) {
+    if (!pedido?.canonical || !printedOrderStore) return;
+    if (!(await atualizarStatusImpressora())) {
+      autoPrintRetryIds.add(pedido.id);
+      return;
+    }
+    if (!printedOrderStore.reserve(pedido.id)) {
+      autoPrintRetryIds.delete(pedido.id);
+      return;
+    }
+
+    try {
+      await printOrder(
+        pedido,
+        dadosEmpresa?.nome_exibicao || dadosEmpresa?.razao_social || 'Zelo PDV',
+        dadosEmpresa?.id,
+      );
+      autoPrintRetryIds.delete(pedido.id);
+    } catch (error) {
+      printedOrderStore.release(pedido.id);
+      autoPrintRetryIds.add(pedido.id);
+      printerConnected = false;
+      console.error('[printer] auto-print falhou para pedido', pedido.id, error);
+      addToast('Não consegui imprimir o pedido automaticamente. Verifique a impressora.', 'warning');
+    }
+  }
+
+  function reconciliarImpressaoAutomatica(proximosPedidos) {
+    if (!orderBaselineReady) {
+      orderBaselineReady = true;
+      return;
+    }
+
+    const autoPrintOptions = {
+      maxAgeMs: 15 * 60 * 1000,
+      now: Date.now(),
+    };
+    const novosPedidos = selectOrdersToAutoPrint(pedidos, proximosPedidos, autoPrintOptions);
+    const pedidosParaRetry = selectOrdersToAutoPrint(
+      [],
+      proximosPedidos.filter((pedido) => autoPrintRetryIds.has(pedido.id)),
+      autoPrintOptions,
+    );
+    const candidatos = new Map([...novosPedidos, ...pedidosParaRetry].map((pedido) => [pedido.id, pedido]));
+    for (const pedido of candidatos.values()) void imprimirPedidoAutomaticamente(pedido);
+  }
 
   async function carregarProdutos(forceRefresh = false) {
     try {
@@ -180,8 +265,10 @@
         orderingReviewActive ? loadCanonicalOrders(supabase, dadosEmpresa?.id) : Promise.resolve([])
       ]);
       if (legacy.error) throw legacy.error;
-      pedidos = [...(legacy.data || []), ...online]
+      const proximosPedidos = [...(legacy.data || []), ...online]
         .sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em));
+      reconciliarImpressaoAutomatica(proximosPedidos);
+      pedidos = proximosPedidos;
       if (!pedidos.some((p) => p.id === pedidoSelecionadoId)) {
         pedidoSelecionadoId = pedidos[0]?.id || null;
       }

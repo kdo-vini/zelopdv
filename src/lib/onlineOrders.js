@@ -24,19 +24,44 @@ export function canonicalPaymentMethod(orderOrPayment) {
   return payment.declaredMethod || payment.method || payment.forma_pagamento || 'outro';
 }
 
+function mapModifierGroups(rawModifiers) {
+  if (!Array.isArray(rawModifiers)) return [];
+
+  return rawModifiers.map((group) => {
+    const selectedOptions = Array.isArray(group?.selectedOptions) ? group.selectedOptions : [];
+    const optionNames = selectedOptions
+      .map((option) => {
+        const name = option?.optionName || option?.name;
+        if (!name) return '';
+        const quantity = Number(option?.quantity || 1);
+        return quantity > 1 ? `${quantity}x ${name}` : name;
+      })
+      .filter(Boolean);
+
+    return {
+      groupName: group?.groupName || group?.name || 'Opções',
+      optionNames,
+    };
+  }).filter((group) => group.optionNames.length > 0);
+}
+
 export function mapCanonicalOrder(row) {
   const customer = row?.customer || {};
   const fulfillment = row?.fulfillment || {};
-  const items = (row?.zelo_order_items || []).map((item) => ({
-    id: item.id,
-    id_produto: item.product_id,
-    nome: item.name,
-    preco_unitario: Number(item.unit_price || 0),
-    quantidade: Number(item.quantity || 0),
-    subtotal: Number(item.subtotal || 0),
-    enviado_cozinha: ['accepted', 'preparing', 'ready', 'out_for_delivery'].includes(row.status),
-    status_cozinha: ['ready', 'out_for_delivery'].includes(row.status) ? 'pronto' : 'aguardando'
-  }));
+  const items = (row?.zelo_order_items || []).map((item) => {
+    const modifierGroups = mapModifierGroups(item.modifiers);
+    return {
+      ...(modifierGroups.length ? { modifierGroups } : {}),
+      id: item.id,
+      id_produto: item.product_id,
+      nome: item.name,
+      preco_unitario: Number(item.unit_price || 0),
+      quantidade: Number(item.quantity || 0),
+      subtotal: Number(item.subtotal || 0),
+      enviado_cozinha: ['accepted', 'preparing', 'ready', 'out_for_delivery'].includes(row.status),
+      status_cozinha: ['ready', 'out_for_delivery'].includes(row.status) ? 'pronto' : 'aguardando'
+    };
+  });
 
   return {
     id: row.id,
@@ -45,6 +70,7 @@ export function mapCanonicalOrder(row) {
     revision: Number(row.revision || 0),
     observacoes: row.observations || fulfillment.observations || '',
     nome_cliente: customer.name || customer.nome || '',
+    customer_phone: customer.phone || customer.telefone || '',
     origem: 'zelomenu',
     source: row.source,
     criado_em: row.created_at,

@@ -36,6 +36,25 @@ describe('onlineOrders', () => {
     expect(canonicalFulfillmentMode(mapped)).toBe('delivery');
   });
 
+  it('preserves selected modifier groups for the queue and printer ticket', () => {
+    const mapped = mapCanonicalOrder({
+      ...order,
+      zelo_order_items: [{
+        ...order.zelo_order_items[0],
+        name: 'Monte sua Massa',
+        modifiers: [{
+          groupName: 'Proteína',
+          selectedOptions: [{ optionName: 'Frango', quantity: 1 }],
+        }],
+      }],
+    });
+
+    expect(mapped.pedido_itens[0].modifierGroups).toEqual([{
+      groupName: 'Proteína',
+      optionNames: ['Frango'],
+    }]);
+  });
+
   it('transitions with optimistic revision and actor context', async () => {
     const rpc = vi.fn().mockResolvedValue({ data: { orderId: order.id, revision: 4 }, error: null });
     await transitionCanonicalOrder({ rpc }, mapCanonicalOrder(order), 'accept', 'actor-1');

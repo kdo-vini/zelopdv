@@ -6,6 +6,7 @@ import { sendBytes, isWebUsbSupported, getPairedInfo } from '$lib/printer.js';
 import {
   fallbackToBrowserPrint,
   getZeloImpressaoFriendlyMessage,
+  sendPrintJob,
   sendRawEscposPrintJob,
   sendTestPrint,
 } from '$lib/zeloImpressaoClient.js';
@@ -20,6 +21,7 @@ import {
   buildMovCaixaHTML,
   buildPagamentoFiadoHTML,
 } from '$lib/receipt.js';
+import { buildOrderText } from '$lib/orderPrint.js';
 import { addToast } from '$lib/stores/ui.js';
 
 /* --------------------------------------------------------------------------
@@ -114,6 +116,22 @@ export async function printPagamentoFiado(payload) {
     const html = buildPagamentoFiadoHTML(payload);
     await printViaIframe(html);
   }
+}
+
+export async function printOrder(order, businessName = 'ZeloPDV', companyStoreId) {
+  const text = buildOrderText(order, businessName);
+  await sendPrintJob({
+    source: 'zelopdv',
+    ...(companyStoreId ? { companyStoreId } : {}),
+    type: 'kitchen_order',
+    timestamp: new Date().toISOString(),
+    content: { format: 'text', text },
+    metadata: {
+      orderId: order?.id,
+      status: order?.status,
+      customerPhone: order?.customerPhone || order?.customer_phone || order?.telefone_cliente,
+    },
+  });
 }
 
 /**
