@@ -24,19 +24,27 @@ export function canonicalPaymentMethod(orderOrPayment) {
   return payment.declaredMethod || payment.method || payment.forma_pagamento || 'outro';
 }
 
-function mapModifierGroups(rawModifiers) {
+/**
+ * Normaliza a montagem de um item (grupos de modificadores) para
+ * `{ groupName, optionNames }`. Tolera tanto o payload cru do banco
+ * (`selectedOptions`) quanto grupos já mapeados (`optionNames`), porque a
+ * mesma função serve o mapeamento canônico e a renderização na tela.
+ */
+export function normalizeModifierGroups(rawModifiers) {
   if (!Array.isArray(rawModifiers)) return [];
 
   return rawModifiers.map((group) => {
     const selectedOptions = Array.isArray(group?.selectedOptions) ? group.selectedOptions : [];
-    const optionNames = selectedOptions
-      .map((option) => {
-        const name = option?.optionName || option?.name;
-        if (!name) return '';
-        const quantity = Number(option?.quantity || 1);
-        return quantity > 1 ? `${quantity}x ${name}` : name;
-      })
-      .filter(Boolean);
+    const optionNames = Array.isArray(group?.optionNames)
+      ? group.optionNames.filter(Boolean)
+      : selectedOptions
+        .map((option) => {
+          const name = option?.optionName || option?.name;
+          if (!name) return '';
+          const quantity = Number(option?.quantity || 1);
+          return quantity > 1 ? `${quantity}x ${name}` : name;
+        })
+        .filter(Boolean);
 
     return {
       groupName: group?.groupName || group?.name || 'Opções',
@@ -45,11 +53,16 @@ function mapModifierGroups(rawModifiers) {
   }).filter((group) => group.optionNames.length > 0);
 }
 
+/** Grupos de montagem de um item da fila, venha ele do mapeamento ou do banco. */
+export function itemModifierGroups(item) {
+  return normalizeModifierGroups(item?.modifierGroups || item?.modifiers);
+}
+
 export function mapCanonicalOrder(row) {
   const customer = row?.customer || {};
   const fulfillment = row?.fulfillment || {};
   const items = (row?.zelo_order_items || []).map((item) => {
-    const modifierGroups = mapModifierGroups(item.modifiers);
+    const modifierGroups = normalizeModifierGroups(item.modifiers);
     return {
       ...(modifierGroups.length ? { modifierGroups } : {}),
       id: item.id,

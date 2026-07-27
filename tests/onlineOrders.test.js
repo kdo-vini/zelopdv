@@ -3,6 +3,7 @@ import {
   canonicalFulfillmentMode,
   canonicalPaymentMethod,
   closeCanonicalOrder,
+  itemModifierGroups,
   loadCanonicalOrders,
   mapCanonicalOrder,
   subscribeCanonicalOrderUpdates,
@@ -53,6 +54,30 @@ describe('onlineOrders', () => {
       groupName: 'Proteína',
       optionNames: ['Frango'],
     }]);
+  });
+
+  it('reads the item assembly from either the mapped or the raw shape', () => {
+    const raw = {
+      modifiers: [
+        {
+          groupName: 'Massa',
+          selectedOptions: [{ optionName: 'Penne', priceDelta: 32, quantity: 1 }],
+        },
+        {
+          groupName: 'Adicionais',
+          selectedOptions: [{ optionName: 'Bacon', priceDelta: 5, quantity: 3 }],
+        },
+        { groupName: 'Vazio', selectedOptions: [] },
+      ],
+    };
+
+    const groups = itemModifierGroups(raw);
+    expect(groups).toEqual([
+      { groupName: 'Massa', optionNames: ['Penne'] },
+      { groupName: 'Adicionais', optionNames: ['3x Bacon'] },
+    ]);
+    expect(itemModifierGroups({ modifierGroups: groups })).toEqual(groups);
+    expect(itemModifierGroups({})).toEqual([]);
   });
 
   it('transitions with optimistic revision and actor context', async () => {

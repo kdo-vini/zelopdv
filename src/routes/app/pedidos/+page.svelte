@@ -18,11 +18,13 @@
   import {
     canonicalFulfillmentMode,
     canonicalPaymentMethod,
+    itemModifierGroups,
     loadCanonicalOrders,
     subscribeCanonicalOrderUpdates,
     transitionCanonicalOrder,
     closeCanonicalOrder
   } from '$lib/onlineOrders';
+  import { Printer } from 'lucide-svelte';
 
   let ready = false;
   let loading = true;
@@ -51,6 +53,7 @@
   let printerConnected = false;
   let printedOrderStore = null;
   let autoPrintRetryIds = new Set();
+  let reimprimindo = false;
   let orderBaselineReady = false;
   let polling = false;
   let modalPagamentoRef;
@@ -67,7 +70,8 @@
     id_produto: item.id_produto,
     nome: item.nome,
     preco: Number(item.preco_unitario || 0),
-    quantidade: Number(item.quantidade || 0)
+    quantidade: Number(item.quantidade || 0),
+    modifierGroups: itemModifierGroups(item)
   }));
   $: totalPedido = pedidoSelecionado?.canonical
     ? Number(pedidoSelecionado.total || 0)
@@ -183,6 +187,33 @@
       printerConnected = false;
       console.error('[printer] auto-print falhou para pedido', pedido.id, error);
       addToast('Não consegui imprimir o pedido automaticamente. Verifique a impressora.', 'warning');
+    }
+  }
+
+  /**
+   * Reimpressão manual: ignora o dedupe de 48h de propósito (o caso de uso é
+   * justamente a via que não saiu). Em caso de sucesso, reserva o pedido no
+   * store para a reconciliação não imprimir uma terceira via sozinha.
+   */
+  async function reimprimirPedido(pedido) {
+    if (!pedido || reimprimindo) return;
+    reimprimindo = true;
+    try {
+      await printOrder(
+        pedido,
+        dadosEmpresa?.nome_exibicao || dadosEmpresa?.razao_social || 'Zelo PDV',
+        dadosEmpresa?.id,
+      );
+      printedOrderStore?.reserve(pedido.id);
+      autoPrintRetryIds.delete(pedido.id);
+      printerConnected = true;
+      addToast('Pedido enviado para a impressora.', 'success');
+    } catch (error) {
+      printerConnected = false;
+      console.error('[printer] reimpressão falhou para pedido', pedido.id, error);
+      addToast('Não consegui imprimir o pedido. Verifique a impressora.', 'error');
+    } finally {
+      reimprimindo = false;
     }
   }
 
@@ -750,7 +781,19 @@
                 <h2>{clienteLabel(pedidoSelecionado)}</h2>
                 <span class="details-meta">{origemLabel(pedidoSelecionado)} · {formatTime(pedidoSelecionado.criado_em)}</span>
               </div>
-              <span class="status-pill" data-status={pedidoSelecionado.status}>{statusLabel(pedidoSelecionado.status)}</span>
+              <div class="details-head-actions">
+                <span class="status-pill" data-status={pedidoSelecionado.status}>{statusLabel(pedidoSelecionado.status)}</span>
+                <button
+                  type="button"
+                  class="btn-secondary btn-reprint"
+                  on:click={() => reimprimirPedido(pedidoSelecionado)}
+                  disabled={reimprimindo}
+                  title="Enviar o pedido novamente para a impressora"
+                >
+                  <Printer class="size-4" aria-hidden="true" />
+                  <span>{reimprimindo ? 'Imprimindo...' : (pedidoSelecionado.canonical ? 'Reimprimir' : 'Imprimir')}</span>
+                </button>
+              </div>
             </div>
 
             {#if pedidoSelecionado.observacoes}
@@ -765,6 +808,13 @@
                 <li>
                   <div class="item-info">
                     <strong>{item.quantidade}× {item.nome}</strong>
+                    {#if item.modifierGroups.length}
+                      <ul class="item-modifiers">
+                        {#each item.modifierGroups as grupo (grupo.groupName)}
+                          <li><span class="modifier-group">{grupo.groupName}:</span> {grupo.optionNames.join(', ')}</li>
+                        {/each}
+                      </ul>
+                    {/if}
                     <span>{formatMoney(item.preco)} cada</span>
                   </div>
                   <strong class="item-total">{formatMoney(item.preco * item.quantidade)}</strong>
@@ -1148,6 +1198,17 @@
     font-size: 0.85rem;
     font-weight: 600;
   }
+  .details-head-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .btn-reprint {
+    font-size: 0.82rem;
+    padding: 7px 12px;
+  }
 
   .note {
     margin: 16px 0 0;
@@ -1173,18 +1234,34 @@
     margin: 16px 0 0;
     list-style: none;
   }
-  .items-list li {
+  .items-list > li {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
     padding: 14px 0;
     border-bottom: 1px solid var(--border-subtle);
   }
-  .items-list li:last-child { border-bottom: 0; }
+  .items-list > li:last-child { border-bottom: 0; }
   .item-info { display: grid; gap: 4px; min-width: 0; }
   .item-info strong { color: var(--text-main); font-weight: 700; }
-  .item-info span { color: var(--text-muted); font-size: 0.82rem; }
+  .item-info > span { color: var(--text-muted); font-size: 0.82rem; }
+
+  /* Montagem do item (grupos de modificadores do ZeloMenu). */
+  .item-modifiers {
+    display: grid;
+    gap: 2px;
+    margin: 2px 0 0;
+    padding: 0 0 0 12px;
+    list-style: none;
+    border-left: 2px solid var(--border-strong);
+    color: var(--text-main);
+    font-size: 0.85rem;
+  }
+  .modifier-group {
+    color: var(--text-muted);
+    font-weight: 700;
+  }
   .item-total { color: var(--text-main); font-weight: 800; }
 
   .checkout-bar {

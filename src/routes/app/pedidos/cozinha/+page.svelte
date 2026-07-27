@@ -7,7 +7,7 @@
   import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import BackLink from '$lib/components/ui/BackLink.svelte';
-  import { loadCanonicalOrders, transitionCanonicalOrder } from '$lib/onlineOrders';
+  import { itemModifierGroups, loadCanonicalOrders, transitionCanonicalOrder } from '$lib/onlineOrders';
 
   let userId = '';
   let ownerUserId = '';
@@ -481,9 +481,17 @@
                 {/if}
                 <ul>
                   {#each pedido.itens as item (item.id)}
+                    {@const montagem = itemModifierGroups(item)}
                     <li class:done={itemPronto(item)}>
                       <div>
                         <strong>{Number(item.quantidade)}x {item.nome}</strong>
+                        {#if montagem.length}
+                          <div class="item-modifiers">
+                            {#each montagem as grupo (grupo.groupName)}
+                              <p><span class="modifier-group">{grupo.groupName}:</span> {grupo.optionNames.join(', ')}</p>
+                            {/each}
+                          </div>
+                        {/if}
                         {#if item.status_cozinha}
                           <small>{item.status_cozinha}</small>
                         {:else}
@@ -831,6 +839,21 @@
     text-transform: uppercase;
     font-size: 0.68rem;
     font-weight: 900;
+  }
+
+  /* Montagem do item (grupos de modificadores do ZeloMenu). */
+  .item-modifiers {
+    margin: 0.3rem 0 0.1rem;
+    padding-left: 0.6rem;
+    border-left: 2px solid var(--border-strong);
+    color: var(--text-main);
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+  }
+  .item-modifiers p { margin: 0 0 0.1rem; }
+  .modifier-group {
+    color: var(--text-muted);
+    font-weight: 800;
   }
 
   li.done button {
