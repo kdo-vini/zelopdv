@@ -169,6 +169,7 @@
           { key: 'status',  label: 'Status' },
           { key: 'ultimo',  label: 'Último Acesso' },
           { key: 'vendas',  label: 'Vendas 30d', align: 'right', format: v => formatNumber(v) },
+          { key: 'fatMedio', label: 'Faturamento Médio/mês', align: 'right', format: v => formatBRL(v) },
           { key: 'score',   label: 'Score',      align: 'right' },
         ],
         rows: topRisk.map(u => ({
@@ -178,6 +179,7 @@
             ? new Date(u.effective_last_seen).toLocaleDateString('pt-BR')
             : 'Nunca',
           vendas: u.sales_last_30d || 0,
+          fatMedio: u.avgMonthlyRevenue,
           score: u.score,
         })),
       })
@@ -207,12 +209,13 @@
   })
 
   async function loadData() {
-    const [profilesRes, subsRes, lastSeenRes, salesRes, adminsRes] = await Promise.all([
+    const [profilesRes, subsRes, lastSeenRes, salesRes, adminsRes, revenueRes] = await Promise.all([
       supabase.from('empresa_perfil').select('user_id, nome_exibicao, created_at'),
       supabase.from('subscriptions').select('user_id, status, created_at, current_period_end, manually_extended_until, updated_at'),
       supabase.rpc('admin_get_users_last_seen'),
       supabase.rpc('admin_get_sales_counts', { days_ago: 30 }),
       supabase.from('super_admins').select('user_id'),
+      supabase.rpc('admin_get_total_sales_value'),
     ])
 
     const adminIds = new Set((adminsRes.data || []).map(a => a.user_id))
@@ -223,6 +226,11 @@
     const salesMap = {}
     for (const v of salesRes.data || []) {
       salesMap[v.id_usuario] = Number(v.sales_count)
+    }
+
+    const revenueMap = {}
+    for (const r of revenueRes.data || []) {
+      revenueMap[r.id_usuario] = Number(r.total_revenue)
     }
 
     profiles = (profilesRes.data || [])
@@ -243,7 +251,11 @@
     churnUsers = profiles.map(p => {
       const sub = subs.find(s => s.user_id === p.user_id)
       const score = calcChurnScore(p, sub)
-      return { ...p, sub, score }
+      const created = p.created_at ? new Date(p.created_at) : new Date()
+      const now = new Date()
+      const months = Math.max(1, (now.getFullYear() - created.getFullYear()) * 12 + (now.getMonth() - created.getMonth()))
+      const totalRevenue = revenueMap[p.user_id] || 0
+      return { ...p, sub, score, avgMonthlyRevenue: totalRevenue / months }
     }).sort((a, b) => b.score - a.score)
   }
 
@@ -520,6 +532,7 @@
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Usuário</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Último Acesso</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+              <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Fat. Médio/mês</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Vendas 30d</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">Score</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Risco</th>
@@ -533,6 +546,7 @@
                 <td class="py-3 px-6 text-sm text-slate-200">{user.nome_exibicao || user.user_id.slice(0, 8) + '…'}</td>
                 <td class="py-3 px-6 text-xs text-slate-400">{formatLastSeen(user.effective_last_seen)}</td>
                 <td class="py-3 px-6 text-xs text-slate-400">{user.sub?.status || '—'}</td>
+                <td class="py-3 px-6 text-xs text-slate-400 text-right font-mono">{formatBRL(user.avgMonthlyRevenue)}</td>
                 <td class="py-3 px-6 text-xs text-slate-400 text-right">{user.sales_last_30d ?? 0}</td>
                 <td class="py-3 px-6 text-center cursor-help"
                     on:mouseenter={(e) => showTooltip(e, user)}
