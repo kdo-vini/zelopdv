@@ -16,10 +16,11 @@
 Canônico em [src/lib/pricing.js](/home/vinicius/code/zelopdv/src/lib/pricing.js:7).
 
 - Plano `pdv`: R$ 59/mês
-- Plano `chat`: R$ 97/mês
-- Plano `bundle`: R$ 147/mês
+- Plano `chat`: R$ 149/mês
+- Plano `bundle`: R$ 198/mês
 - Add-ons `mesas` e `acessos`: R$ 30/mês cada; `menu` (ZeloMenu): R$ 40/mês
 - O add-on `pedidos` (Pedidos + Cozinha) foi aposentado em 2026-07-28 e saiu do catálogo; a capacidade vive no ZeloMenu
+- As colunas legadas `subscriptions.has_pedidos_addon` e `billing_payments.has_pedidos_addon` ainda aguardam a migration transacional da fase 2; nenhum fluxo runtime atual deve selecioná-las.
 
 Regra prática:
 

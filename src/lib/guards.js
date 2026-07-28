@@ -310,9 +310,8 @@ export async function hasZeloMenuAccess(userId) {
  * chat/bundle sim; pdv precisa do ZeloMenu.
  *
  * 2026-07-28: o fallback pelo legado `has_pedidos_addon` (D-099) saiu daqui junto
- * com o módulo Pedidos + Cozinha. Verificado em produção antes de remover: as 3
- * assinaturas que ainda carregam a flag legada já têm `has_zelo_menu = true`, então
- * nenhuma perdeu acesso. A coluna segue no banco porque o repo ZeloMenu ainda a lê.
+ * com o módulo Pedidos + Cozinha. A coluna será removida depois do deploy dos
+ * consumidores cross-repo, sem mudar o contrato atual de acesso.
  * @param {string} userId
  * @returns {Promise<boolean>}
  */

@@ -130,7 +130,7 @@ describe('syncPixPaymentWithRemote — grava monthly_value_cents real na subscri
     const payment = {
       id: 'pay-1', user_id: 'user-1', status: 'pending',
       amount_expected_cents: 14900, plan_tier: 'chat',
-      has_mesas_addon: false, has_pedidos_addon: false, has_acessos_addon: false, has_zelo_menu: true,
+      has_mesas_addon: false, has_acessos_addon: false, has_zelo_menu: true,
       external_reference: 'pix_user-1_123', paid_at: null,
     };
     const remotePayment = {
@@ -203,7 +203,7 @@ describe('createOrReusePixCharge', () => {
         subscriptions: { id: 'sub-1', status: 'active' },
         billing_payments: {
           id: 'pay-existing', status: 'pending', amount_expected_cents: 5900,
-          plan_tier: 'pdv', has_mesas_addon: false, has_pedidos_addon: false,
+          plan_tier: 'pdv', has_mesas_addon: false,
           has_acessos_addon: false, has_zelo_menu: false,
           br_code: 'BR-OLD', qr_code_base64: 'data:x', provider_payment_id: 'pix_old',
           expires_at: new Date(Date.now() + 3600_000).toISOString(),

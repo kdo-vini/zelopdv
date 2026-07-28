@@ -209,7 +209,6 @@ describe('API: abacatepay webhook', () => {
         provider_status: 'PENDING',
         plan_tier: 'pdv',
         has_mesas_addon: false,
-        has_pedidos_addon: false,
         has_acessos_addon: false,
         metadata: {},
       },

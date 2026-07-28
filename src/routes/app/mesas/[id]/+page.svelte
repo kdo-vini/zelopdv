@@ -3,7 +3,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { ensureActiveSubscription, hasMesasAddon, bounceSubUserMissingAddon } from '$lib/guards';
+  import { ensureActiveSubscription, hasMesasAddon, hasKitchenQueueAccess, bounceSubUserMissingAddon } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -27,6 +27,10 @@
   let categorias = [];
   let loading = true;
   let savingItem = false;
+  let kitchenQueueActive = false;
+  let empresaId = '';
+  let itensEnviadosCozinha = new Set();
+  let sendingCozinhaIds = new Set();
 
   // Filtros / busca
   let busca = '';
@@ -143,6 +147,8 @@
       return;
     }
 
+    kitchenQueueActive = await hasKitchenQueueAccess(ownerUserId);
+
     pdvCache.setUserId(ownerUserId);
     ready = true;
 
@@ -154,6 +160,7 @@
 
     // Carrega pagamentos parciais depois de garantir que a comanda existe
     await loadPagamentosParciais();
+    await loadItensEnviadosCozinha();
   });
 
   async function loadPagamentosParciais() {
@@ -185,10 +192,11 @@
     // Perfil completo para impressão
     const { data: perfil } = await supabase
       .from('empresa_perfil')
-      .select('nome_exibicao, documento, contato, endereco, largura_bobina, rodape_recibo, logo_url')
+      .select('id, nome_exibicao, documento, contato, endereco, largura_bobina, rodape_recibo, logo_url')
       .eq('user_id', ownerUserId)
       .maybeSingle();
     nomeEmpresa = perfil?.nome_exibicao || '';
+    empresaId = perfil?.id || '';
     if (perfil) {
       const pUrl = !perfil.logo_url
         ? supabase.storage.from('logos').getPublicUrl(`${ownerUserId}.png`)?.data?.publicUrl
@@ -277,6 +285,78 @@
     }));
   }
 
+  function canSendItemToKitchen() {
+    return kitchenQueueActive && (!isSubUser || hasAccessPermission('pedidos.cozinha'));
+  }
+
+  function itemEnviadoCozinha(item) {
+    return itensEnviadosCozinha.has(item?.id);
+  }
+
+  function isSendingCozinha(item) {
+    return sendingCozinhaIds.has(item?.id);
+  }
+
+  async function loadItensEnviadosCozinha() {
+    if (!canSendItemToKitchen() || !comanda?.id || !empresaId) {
+      itensEnviadosCozinha = new Set();
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('zelo_orders')
+      .select('id, source, status, fulfillment')
+      .eq('empresa_id', empresaId)
+      .eq('source', 'mesa')
+      .eq('fulfillment->>comandaId', comanda.id)
+      .in('status', ['pending_review', 'accepted', 'preparing', 'ready', 'out_for_delivery', 'delivered']);
+
+    if (error) {
+      console.warn('[Mesa] loadItensEnviadosCozinha falhou:', error.message);
+      return;
+    }
+
+    itensEnviadosCozinha = new Set(
+      (data || []).map((order) => order.fulfillment?.comandaItemId).filter(Boolean),
+    );
+  }
+
+  async function enviarItemCozinha(item) {
+    if (!canSendItemToKitchen() || !comanda?.id || !item || isSendingCozinha(item)) return;
+
+    if (itemEnviadoCozinha(item)) {
+      addToast('Item já enviado para a cozinha.', 'info');
+      return;
+    }
+
+    sendingCozinhaIds = new Set(sendingCozinhaIds).add(item.id);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+      const response = await fetch('/api/mesas/cozinha', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ comandaId: comanda.id, itemId: item.id }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Não foi possível enviar o item à cozinha.');
+
+      itensEnviadosCozinha = new Set(itensEnviadosCozinha).add(item.id);
+      addToast(payload.alreadyConfirmed ? 'Este item já estava na cozinha.' : 'Item enviado para a cozinha.', 'success');
+    } catch (error) {
+      addToast('Erro ao enviar para a cozinha: ' + errorMessageFrom(error), 'error');
+    } finally {
+      const next = new Set(sendingCozinhaIds);
+      next.delete(item.id);
+      sendingCozinhaIds = next;
+    }
+  }
+
   async function loadProdutos(forceRefresh = false) {
     produtos = await pdvCache.getProdutos(forceRefresh);
     categorias = await pdvCache.getCategorias();
@@ -327,6 +407,10 @@
 
   async function alterarQuantidade(item, delta) {
     if (!comanda || savingItem) return;
+    if (itemEnviadoCozinha(item)) {
+      addToast('Item já enviado para a cozinha; não altere a quantidade.', 'info');
+      return;
+    }
 
     const novaQtd = Number(item.quantidade) + delta;
     if (novaQtd <= 0) {
@@ -1259,14 +1343,30 @@
                 </div>
                 <div class="item-actions">
                   <div class="qty-cluster">
-                    <button class="qty-btn qty-minus" on:click={() => alterarQuantidade(item, -1)} disabled={savingItem} aria-label="Diminuir">
+                    <button class="qty-btn qty-minus" on:click={() => alterarQuantidade(item, -1)} disabled={savingItem || itemEnviadoCozinha(item)} aria-label="Diminuir">
                       <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 10Z" clip-rule="evenodd"/></svg>
                     </button>
                     <span class="qty-val">{item.quantidade}</span>
-                    <button class="qty-btn qty-plus" on:click={() => alterarQuantidade(item, +1)} disabled={savingItem} aria-label="Aumentar">
+                    <button class="qty-btn qty-plus" on:click={() => alterarQuantidade(item, +1)} disabled={savingItem || itemEnviadoCozinha(item)} aria-label="Aumentar">
                       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/></svg>
                     </button>
                   </div>
+                  {#if canSendItemToKitchen()}
+                    <button
+                      type="button"
+                      class="kitchen-btn"
+                      class:sent={itemEnviadoCozinha(item)}
+                      on:click={() => enviarItemCozinha(item)}
+                      disabled={itemEnviadoCozinha(item) || isSendingCozinha(item)}
+                      title={itemEnviadoCozinha(item) ? 'Item já enviado para a cozinha' : 'Enviar item para a cozinha'}
+                      aria-label={itemEnviadoCozinha(item) ? 'Item já enviado para a cozinha' : 'Enviar item para a cozinha'}
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M10 2.5a.75.75 0 0 1 .75.75v1.308a5.75 5.75 0 0 1 5 5.692v.5H4.25v-.5a5.75 5.75 0 0 1 5-5.692V3.25A.75.75 0 0 1 10 2.5Zm-6.5 10a.75.75 0 0 1 .75-.75h11.5a.75.75 0 0 1 .75.75v.25a3.75 3.75 0 0 1-3.75 3.75h-5.5a3.75 3.75 0 0 1-3.75-3.75v-.25Z"/>
+                      </svg>
+                      <span>{itemEnviadoCozinha(item) ? 'Enviado' : (isSendingCozinha(item) ? '...' : 'Cozinha')}</span>
+                    </button>
+                  {/if}
                 </div>
               </li>
             {/each}
@@ -2411,6 +2511,31 @@
     display: inline-flex; align-items: center; gap: 0.35rem;
     flex-shrink: 0;
   }
+
+  .kitchen-btn {
+    min-height: 36px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .kitchen-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+  .kitchen-btn:hover:not(:disabled) {
+    background: var(--accent-light);
+    border-color: var(--primary);
+  }
+  .kitchen-btn.sent {
+    color: var(--status-success-text);
+    border-color: var(--status-success-border);
+    background: var(--status-success-bg);
+  }
+  .kitchen-btn:disabled { opacity: 0.68; cursor: not-allowed; }
 
   .qty-cluster {
     display: inline-flex; align-items: center; gap: 0.15rem;
