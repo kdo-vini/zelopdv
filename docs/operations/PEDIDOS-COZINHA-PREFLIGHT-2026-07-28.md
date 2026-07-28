@@ -56,4 +56,10 @@ Nomes, observacoes, emails, telefones e documentos nao foram persistidos neste a
 
 ## Gate restante
 
-O preflight, DDL, deploy, smoke técnico e reconciliação comercial estão concluídos. A rota QR pública também respondeu 200 sem escrita. O único teste ainda não executado é `delete_account` com conta/tenant descartável; nenhuma conta real deve ser usada para esse teste. A assinatura `d5625be9` ficou em bundle + Mesas por R$228/mês; Acessos foi removido com auditoria e sem estorno.
+O preflight, DDL, deploy, smoke técnico e reconciliação comercial estão concluídos. A rota QR pública respondeu 200 sem escrita, o fluxo QR transacional passou com rollback e `delete_account` passou com usuário sintético dentro de transação; nenhuma conta real foi usada. A assinatura `d5625be9` ficou em bundle + Mesas por R$228/mês; Acessos foi removido com auditoria e sem estorno.
+
+## Limitação de evidência histórica
+
+- O backup físico `1231217586` existe, mas `pitr_enabled=false` e o dump SQL completo não foi capturado porque o CLI exigiu Docker Desktop.
+- As definições das policies antigas `pedidos_actor` e `pedido_itens_actor` não estavam versionadas no repositório e não podem ser recuperadas após o `DROP TABLE`. As migrations e as asserções pós-DDL são a fonte de verdade do estado aplicado; este artefato não afirma reversibilidade completa do DDL.
+- O `delete_account` foi exercitado com usuário sintético dentro de transação: remoção e `account_deletion_log` passaram, e a consulta posterior confirmou zero usuário/log persistido.
