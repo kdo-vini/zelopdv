@@ -13,6 +13,7 @@
 - O DDL foi executado em duas transacoes no projeto linkado, com backup fisico existente; as assercoes de schema e ACL passaram.
 - O PR #27 foi mergeado em `5a6f45a3` e esta em producao; `/api/version` confirma esse commit. As rotas dependentes do schema retornam 200 e o endpoint de cozinha sem bearer retorna 401.
 - Nao ha credenciais E2E nem tenant descartavel configurado. Um smoke transacional com rollback passou 3/3 (cancelamento de item de comanda, entrega sem venda e bloqueio de fechamento); `delete_account` real continua pendente.
+- A assinatura `d5625be9` foi corrigida com guardas de drift: sem assinatura de provedor ativa, o add-on Acessos foi removido, o valor caiu de R$258 para R$228 (bundle + Mesas) e a alteração foi registrada em `admin_activity_logs`; nenhum histórico de `billing_payments` foi alterado.
 
 ## To-do executivo (atualizado em 2026-07-28)
 
@@ -24,8 +25,8 @@
 - [x] Preparar e executar as migrations transacionais revisadas que removem `pedidos`, `pedido_itens`, `proximo_numero_pedido`, `subscriptions.has_pedidos_addon` e `billing_payments.has_pedidos_addon` na ordem correta. As duas transações passaram e as asserções de schema/ACL foram aprovadas.
 - [x] Deployar os consumidores cross-repo, aguardar soak e só então executar DDL em produção. ZeloMenu e ZeloChat foram publicados antes do DDL; o ZeloPDV foi publicado depois.
 - [ ] Validar entitlement, QR público, comanda/cozinha, estoque, ausência de venda duplicada e deleção de conta. O entitlement/QR e o caminho canônico de produção já passaram verificações técnicas; falta apenas exercitar `delete_account` com conta descartável.
-- [x] Reconciliar tecnicamente a assinatura `d5625be9`: o valor atual é R$258 e bate com bundle R$198 + Mesas R$30 + Acessos R$30; o `has_pedidos_addon` antigo aparece só como flag histórica nos logs, não como componente do preço atual.
-- [ ] Decisão humana sobre eventual crédito/estorno ou retirada de algum add-on da assinatura `d5625be9`; não há evidência suficiente para alterar cobrança automaticamente.
+- [x] Reconciliar tecnicamente a assinatura `d5625be9`: o último pagamento confirmado foi R$89 (PDV + Mesas, sem Acessos), não há `provider_subscription_id` ativo, e a alteração manual que adicionou Acessos não tinha evidência contratual.
+- [x] Aplicar a decisão comercial: remover Acessos (+R$30), manter bundle + Mesas em R$228/mês e registrar a mudança; nenhum estorno foi emitido e nenhum histórico de cobrança foi apagado.
 
 > Decisão do dono do produto: o snapshot financeiro histórico de `billing_payments.has_pedidos_addon` não precisa ser preservado; a coluna entra no escopo de remoção, sem apagar os demais registros de cobrança.
 
@@ -249,7 +250,7 @@ O endpoint tem cobertura de 4 cenários de autenticação, autorização, escopo
 
 ## 4. Item aberto de cobrança (decisão humana, não automatizar)
 
-Assinatura `d5625be9` (prefixo do usuário): `monthly_value_cents = 25800`, ou seja R$ 258/mês. O catálogo vigente soma R$ 258 (bundle 198 + Mesas 30 + Acessos 30). O `has_pedidos_addon=true` aparece nos logs administrativos como flag histórica, mas não explica um excedente no `monthly_value_cents` atual. Stripe não retornou assinatura ativa para o `provider_customer_id`; a linha atual foi mantida manualmente no Supabase.
+Assinatura `d5625be9` (prefixo do usuário): o último pagamento confirmado foi R$89 (PDV + Mesas, sem Acessos), e não há `provider_subscription_id` ativo. A alteração manual sem evidência contratual foi corrigida para bundle + Mesas, `monthly_value_cents = 22800` (R$228/mês), com auditoria em `admin_activity_logs`; nenhum histórico ou estorno foi alterado.
 
 Não foi tocado de propósito. Conferir no provedor antes da próxima renovação. Mudança de cobrança, estorno ou crédito **é decisão humana**, nunca execução automática.
 
