@@ -5,6 +5,27 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { supabaseAuth } from '$lib/server/supabaseAuth';
 import { getPostHogClient } from '$lib/server/posthog';
 
+// Campos de atribuição aceitos do cliente. Whitelist explícita: o payload vem do
+// localStorage do navegador, então é entrada não confiável e não pode virar um saco
+// aberto de chaves arbitrárias dentro do user_metadata.
+const ACQUISITION_KEYS = [
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+  'gclid', 'fbclid', 'ttclid', 'msclkid',
+  'origem', 'referrer', 'landing', 'captured_at',
+];
+
+function sanitizeAcquisition(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const clean = {};
+  for (const key of ACQUISITION_KEYS) {
+    const value = raw[key];
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim().slice(0, 200);
+    if (trimmed) clean[key] = trimmed;
+  }
+  return Object.keys(clean).length ? clean : null;
+}
+
 function isExistingUserError(error) {
   const message = String(error?.message || '').toLowerCase();
   return (
@@ -28,6 +49,7 @@ export async function POST({ request, getClientAddress }) {
   const email = normalizeEmail(body.email);
   const password = String(body.password || '');
   const referralCode = String(body.referralCode || '').trim();
+  const acquisition = sanitizeAcquisition(body.acquisition);
 
   if (!email || !password || !isValidEmail(email)) {
     return json({ error: 'Informe e-mail e senha.' }, { status: 400 });
@@ -61,11 +83,18 @@ export async function POST({ request, getClientAddress }) {
     }
   }
 
+  // A origem entra já aqui, e não só no `empresa_perfil`: boa parte de quem cria conta
+  // não termina o onboarding (é justamente pra esses que existe o cron de nudge). Se a
+  // atribuição só existisse no perfil, todo abandono viraria origem desconhecida.
+  const userMetadata = {};
+  if (referralCode) userMetadata.referral_code = referralCode;
+  if (acquisition) userMetadata.acquisition = acquisition;
+
   const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: referralCode ? { referral_code: referralCode } : undefined,
+    user_metadata: Object.keys(userMetadata).length ? userMetadata : undefined,
   });
 
   if (createError) {
@@ -99,6 +128,7 @@ export async function POST({ request, getClientAddress }) {
         $set: { email: newUser.email },
         method: 'email',
         has_referral: !!referralCode,
+        ...(acquisition || {}),
       },
     });
     await posthog.flush();

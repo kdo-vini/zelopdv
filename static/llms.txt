@@ -7,7 +7,7 @@
 - **URL:** https://zelopdv.com.br
 - **Categoria:** SaaS · POS (Point of Sale) · Gestão de Negócios
 - **Público-alvo:** Donos de lanchonetes, hamburguerias, deliveries próprios e MEIs do setor de alimentação no Brasil
-- **Preço:** R$ 59/mês — plano único com acesso completo. 30 dias grátis, sem cartão.
+- **Preço:** R$ 59/mês — plano único com acesso completo. 14 dias grátis, sem cartão.
 - **Desenvolvido por:** Téchne Sistemas (CNPJ: 65.679.798/0001-95)
 
 ## Funcionalidades Principais
@@ -30,7 +30,7 @@
 - [Para MEIs](https://zelopdv.com.br/para-mei) — landing page específica
 - [Precificação](https://zelopdv.com.br/precificacao) — calculadora de preço de venda
 - [Blog](https://zelopdv.com.br/blog) — artigos sobre gestão de lanchonetes e pequenos negócios
-- [Cadastro](https://zelopdv.com.br/cadastro) — criação de conta (começa trial de 30 dias)
+- [Cadastro](https://zelopdv.com.br/cadastro) — criação de conta (começa trial de 14 dias)
 
 ## Blog — Artigos Publicados
 

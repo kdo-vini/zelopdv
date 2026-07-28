@@ -1,3 +1,5 @@
+import { TRIAL_DAYS } from '$lib/pricing';
+
 export const META_EVENTS = {
   lead: 'Lead',
   startTrial: 'StartTrial',
@@ -30,8 +32,8 @@ export function trackStartTrial(params = {}) {
   const payload = {
     value: 0,
     currency: 'BRL',
-    plan_id: 'zelo_pdv_trial_30d',
-    trial_days: 30,
+    plan_id: `zelo_pdv_trial_${TRIAL_DAYS}d`,
+    trial_days: TRIAL_DAYS,
     ...params,
   };
 

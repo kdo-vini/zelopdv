@@ -11,6 +11,7 @@
   } from '$lib/masks';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
+  import { getStoredAcquisitionOrigin } from '$lib/attribution/client';
 
   export let show = false;
   export let userId = '';
@@ -63,16 +64,23 @@
     saving = true;
     error = '';
     try {
+      const perfilPayload = {
+        user_id: userId,
+        nome_exibicao: nome.trim(),
+        documento: normalizeBrazilianTaxId(documento),
+        contato: normalizeBrazilianPhone(contato),
+        largura_bobina,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Só manda a origem quando existe de fato. Como isto é um upsert, enviar null
+      // apagaria uma atribuição já gravada caso o wizard rode de novo.
+      const origemAquisicao = getStoredAcquisitionOrigin();
+      if (origemAquisicao) perfilPayload.origem_aquisicao = origemAquisicao;
+
       const { error: dbError } = await supabase
         .from('empresa_perfil')
-        .upsert({
-          user_id: userId,
-          nome_exibicao: nome.trim(),
-          documento: normalizeBrazilianTaxId(documento),
-          contato: normalizeBrazilianPhone(contato),
-          largura_bobina,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' });
+        .upsert(perfilPayload, { onConflict: 'user_id' });
 
       if (dbError) throw dbError;
 

@@ -1,6 +1,6 @@
 <svelte:head>
   <title>Sistema PDV para Lanchonete — Zelo PDV: Simples, Rápido e Online</title>
-  <meta name="description" content="Sistema PDV para lanchonete, hamburgueria e pequenos negócios. Controle caixa, fiado, despesas e veja seu lucro real. Sem instalar nada. Teste grátis 30 dias, sem cartão." />
+  <meta name="description" content="Sistema PDV para lanchonete, hamburgueria e pequenos negócios. Controle caixa, fiado, despesas e veja seu lucro real. Sem instalar nada. Teste grátis 14 dias, sem cartão." />
   <meta name="keywords" content="sistema PDV, PDV para lanchonete, sistema para lanchonete, controle de caixa, sistema de vendas simples, lanchonete, hamburgueria, mercadinho, PDV grátis" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://zelopdv.com.br/" />
@@ -122,10 +122,10 @@
       },
       {
         "@type": "Question",
-        "name": "Como funcionam os 30 dias grátis?",
+        "name": "Como funcionam os 14 dias grátis?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Você cria a conta e começa seu período de teste de 30 dias, sem precisar cadastrar cartão. Se assinar e quiser cancelar, pode fazer isso a qualquer momento."
+          "text": "Você cria a conta e começa seu período de teste de 14 dias, sem precisar cadastrar cartão. Se assinar e quiser cancelar, pode fazer isso a qualquer momento."
         }
       },
       {
@@ -157,7 +157,7 @@
         "name": "Quanto custa o sistema PDV para lanchonete?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "O Zelo PDV custa R$ 59 por mês, com acesso completo a todas as funcionalidades. Os primeiros 30 dias são grátis, sem precisar de cartão de crédito. Add-ons opcionais (Mesas, Pedidos + Cozinha) custam R$ 30/mês cada e podem ser ativados ou desativados a qualquer momento."
+          "text": "O Zelo PDV custa R$ 59 por mês, com acesso completo a todas as funcionalidades. Os primeiros 14 dias são grátis, sem precisar de cartão de crédito. Add-ons opcionais (Mesas, Pedidos + Cozinha) custam R$ 30/mês cada e podem ser ativados ou desativados a qualquer momento."
         }
       }
     ]
@@ -282,7 +282,7 @@
 
         <div class="flex flex-col sm:flex-row items-start gap-3 md:gap-4 mb-3 md:mb-4">
           <a href="/cadastro" class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center">
-            Testar 30 dias grátis
+            Testar 14 dias grátis
           </a>
           <a href="#por-dentro" class="px-1 py-2 md:py-4 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">
             Ver por dentro
@@ -290,7 +290,7 @@
         </div>
 
         <p class="text-xs md:text-sm" style="color: var(--text-muted);">
-          30 dias grátis. Sem cartão, sem cobrança automática.
+          14 dias grátis. Sem cartão, sem cobrança automática.
           <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
             Tem dúvida? Fala com a gente.
           </button>
@@ -510,9 +510,9 @@
 
       <div class="mt-16">
         <a href="/cadastro" class="inline-flex px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
-          Testar 30 dias grátis
+          Testar 14 dias grátis
         </a>
-        <p class="text-xs text-slate-500 mt-3">Sem cobranças durante os 30 dias. Cancele quando quiser.</p>
+        <p class="text-xs text-slate-500 mt-3">Sem cobranças durante os 14 dias. Cancele quando quiser.</p>
       </div>
     </div>
   </section>
@@ -750,7 +750,7 @@
           <div class="w-11 h-11 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0">
             <Check class="size-5 text-sky-400" aria-hidden="true" />
           </div>
-          <p class="text-white font-semibold text-sm leading-tight">30 dias grátis de verdade</p>
+          <p class="text-white font-semibold text-sm leading-tight">14 dias grátis de verdade</p>
           <p class="text-slate-300 text-sm leading-relaxed">Não pedimos cartão e não existe cobrança automática. Testou e não gostou? Não acontece nada — sua conta simplesmente não vira assinatura.</p>
         </div>
 
@@ -888,8 +888,8 @@
             </div>
 
             <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 mb-8">
-              <p class="text-sky-400 font-bold text-lg">30 Dias Grátis</p>
-              <p class="text-sm text-sky-300/80">30 dias pra testar. Se não rolar, é só cancelar.</p>
+              <p class="text-sky-400 font-bold text-lg">14 Dias Grátis</p>
+              <p class="text-sm text-sky-300/80">14 dias pra testar. Se não rolar, é só cancelar.</p>
             </div>
 
             <ul class="space-y-4 text-left mb-10 max-w-xs mx-auto">
@@ -1045,11 +1045,11 @@
 
         <details class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-colors">
           <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none">
-            <span>Como funciona os 30 dias grátis?</span>
+            <span>Como funciona os 14 dias grátis?</span>
             <ChevronDown class="size-5 text-slate-500 transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
           <div class="px-6 pb-6 text-slate-400 leading-relaxed animate-fade-in-down">
-            Você cria a conta e começa seu período de teste de 30 dias, sem precisar cadastrar cartão. Se assinar e quiser cancelar, pode fazer isso a qualquer momento.
+            Você cria a conta e começa seu período de teste de 14 dias, sem precisar cadastrar cartão. Se assinar e quiser cancelar, pode fazer isso a qualquer momento.
           </div>
         </details>
 

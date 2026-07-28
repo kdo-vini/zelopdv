@@ -21,9 +21,9 @@ export const generalFaqs = [
       'Não. O Zelo PDV roda direto no navegador e funciona em computador, notebook e tablet básicos. Para muitos negócios, isso já resolve sem compra de equipamento novo.'
   },
   {
-    question: 'Como funciona os 30 dias grátis?',
+    question: 'Como funciona os 14 dias grátis?',
     answer:
-      'Você cria a conta e usa o sistema por trinta dias completos, sem precisar cadastrar cartão. É tempo de sobra para testar a rotina do negócio. Se assinar e quiser cancelar depois, pode fazer isso a qualquer momento.'
+      'Você cria a conta e usa o sistema por quatorze dias completos, sem precisar cadastrar cartão. São duas semanas de operação real, com movimento de semana e de fim de semana, para você decidir com dado e não com achismo. Se assinar e quiser cancelar depois, pode fazer isso a qualquer momento.'
   },
   {
     question: 'Funciona no celular?',
@@ -43,7 +43,7 @@ export const segmentPages = {
     meta: {
       title: 'Sistema PDV para Lanchonete — Caixa, Fiado e Lucro Real | Zelo PDV',
       description:
-        'Sistema PDV para lanchonete simples e sem mensalidade surpresa. Controle caixa, fiado e veja o lucro real do seu negócio. Teste grátis 30 dias, sem cartão de crédito, sem instalar nada.',
+        'Sistema PDV para lanchonete simples e sem mensalidade surpresa. Controle caixa, fiado e veja o lucro real do seu negócio. Teste grátis 14 dias, sem cartão de crédito, sem instalar nada.',
       canonical: 'https://zelopdv.com.br/para-lanchonetes'
     },
     segmentName: 'lanchonetes',
@@ -165,7 +165,7 @@ export const segmentPages = {
           'Não. O Zelo PDV roda direto no navegador, então você pode começar em um computador, notebook ou tablet sem instalação complicada.'
       }
     ],
-    finalCtaTitle: 'Teste no seu balcão por 30 dias',
+    finalCtaTitle: 'Teste no seu balcão por 14 dias',
     finalCtaText:
       'Se a sua lanchonete precisa vender rápido e ter um caixa mais organizado, o Zelo PDV foi feito para esse cenário. Em poucos minutos você já consegue testar a operação real do balcão.'
   },
@@ -174,7 +174,7 @@ export const segmentPages = {
     meta: {
       title: 'Sistema para Restaurante — Mesas, Comandas e Caixa | Zelo PDV',
       description:
-        'Sistema para restaurante pequeno e médio: controle mesas, comandas, caixa e lucro real. R$ 59/mês + módulo de mesas opcional. Teste grátis 30 dias, sem cartão.',
+        'Sistema para restaurante pequeno e médio: controle mesas, comandas, caixa e lucro real. R$ 59/mês + módulo de mesas opcional. Teste grátis 14 dias, sem cartão.',
       canonical: 'https://zelopdv.com.br/para-restaurantes'
     },
     segmentName: 'restaurantes',
@@ -296,7 +296,7 @@ export const segmentPages = {
           'Não. O Zelo PDV roda no navegador, em computador, tablet ou celular. Dá para começar com o equipamento que você já tem.'
       }
     ],
-    finalCtaTitle: 'Teste no seu restaurante por 30 dias',
+    finalCtaTitle: 'Teste no seu restaurante por 14 dias',
     finalCtaText:
       'Se o seu restaurante precisa de salão organizado e fechamento claro, o Zelo foi feito para esse tamanho de operação. Teste grátis no movimento real da casa, sem cartão e sem compromisso.'
   },
@@ -305,7 +305,7 @@ export const segmentPages = {
     meta: {
       title: 'PDV para Hamburgueria — Controle Pedidos e Lucro Sem Complicação | Zelo PDV',
       description:
-        'Sistema PDV para hamburgueria: registre pedidos rápido, controle estoque e saiba quanto sobrou no fim do dia. R$ 59/mês, 30 dias grátis, sem cartão.',
+        'Sistema PDV para hamburgueria: registre pedidos rápido, controle estoque e saiba quanto sobrou no fim do dia. R$ 59/mês, 14 dias grátis, sem cartão.',
       canonical: 'https://zelopdv.com.br/para-hamburguerias'
     },
     segmentName: 'hamburguerias',
@@ -421,7 +421,7 @@ export const segmentPages = {
           'Sim. Ao lançar despesas e conferir o caixa, você passa a enxergar muito melhor o que realmente sobrou depois da operação da noite.'
       }
     ],
-    finalCtaTitle: 'Teste na sua hamburgueria por 30 dias',
+    finalCtaTitle: 'Teste na sua hamburgueria por 14 dias',
     finalCtaText:
       'Se a sua hamburgueria precisa ganhar velocidade no atendimento e clareza no fechamento, vale testar o Zelo na rotina real da casa. O período grátis já mostra se o fluxo encaixa no seu time.'
   },
@@ -552,9 +552,9 @@ export const segmentPages = {
           'Com o ZeloMenu (adicional de R$ 40/mês), sim. Os produtos do seu estoque viram um cardápio digital acessível por link. Clientes veem preços e variações pelo celular, sem você precisar manter fotos de cardápio impresso no WhatsApp.'
       }
     ],
-    finalCtaTitle: 'Teste no seu delivery por 30 dias',
+    finalCtaTitle: 'Teste no seu delivery por 14 dias',
     finalCtaText:
-      'Se você faz delivery por conta própria e quer parar de depender de anotações soltas, o Zelo pode ser o centro da sua operação. Teste por 30 dias grátis, sem cartão, e veja a diferença no fechamento.'
+      'Se você faz delivery por conta própria e quer parar de depender de anotações soltas, o Zelo pode ser o centro da sua operação. Teste por 14 dias grátis, sem cartão, e veja a diferença no fechamento.'
   },
   mei: {
     slug: 'para-mei',
@@ -665,7 +665,7 @@ export const segmentPages = {
           'Sim. Como vendas e despesas ficam registradas no mesmo lugar, o fechamento fica muito mais claro e menos dependente de planilha paralela.'
       }
     ],
-    finalCtaTitle: 'Teste no seu negócio por 30 dias',
+    finalCtaTitle: 'Teste no seu negócio por 14 dias',
     finalCtaText:
       'Se você é MEI e precisa de um jeito mais simples de controlar caixa, despesas e lucro, o Zelo foi feito para caber na sua rotina. Teste grátis e veja como fica mais fácil fechar o mês.'
   }

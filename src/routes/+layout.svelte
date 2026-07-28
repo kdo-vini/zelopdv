@@ -9,6 +9,7 @@
   import { afterNavigate } from '$app/navigation';
   import { isZeloContactWhatsAppHref, trackGoogleAdsContato } from '$lib/googleAds';
   import { capturePostHogPageview } from '$lib/posthogClient';
+  import { captureAcquisitionOrigin } from '$lib/attribution/client';
 
   afterNavigate(() => {
     if (typeof window !== 'undefined' && window.fbq) {
@@ -251,6 +252,12 @@
   const navLinkBase = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150";
   const navLinkInactive = "text-muted hover:bg-black/5 dark:hover:bg-white/10";
   const navLinkActive = "font-semibold text-(--accent) bg-(--accent-light)";
+
+  // First touch da sessão. Roda antes de qualquer navegação interna apagar a query
+  // original; é idempotente, então só grava na primeira visita.
+  onMount(() => {
+    captureAcquisitionOrigin();
+  });
 
   let isOnline = true;
   onMount(() => {

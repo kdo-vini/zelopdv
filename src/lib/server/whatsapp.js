@@ -3,13 +3,16 @@
  * Uses ZeloChat's internal WhatsApp POST API (fire-and-forget, no emoji).
  *
  * Messages:
- *  - enviarBoasVindas   : sent immediately on first account creation
- *  - enviarFollowup7d  : sent ~7 days after trial start
- *  - enviarFollowup28d : sent ~28 days after trial start (trial ending soon)
+ *  - enviarBoasVindas     : sent immediately on first account creation
+ *  - enviarFollowup7d     : sent ~7 days after trial start
+ *  - enviarFollowupFinal  : sent 1 day before the trial ends (day TRIAL_DAYS - 1)
+ *
+ * Os dias de disparo vivem em WHATSAPP_DAYS no cron de onboarding.
  */
 
 import { env } from '$env/dynamic/private';
 import { normalizeBrazilianPhone } from '$lib/masks';
+import { TRIAL_DAYS } from '$lib/pricing';
 
 const DEFAULT_ZELOCHAT_SEND_URL = 'https://chat.zelopdv.com.br/internal/whatsapp/send-text';
 
@@ -138,6 +141,16 @@ export async function sendWhatsAppTextDetailed(telefone, mensagem) {
 }
 
 /**
+ * O `nomeUsuario` que chega aqui é `empresa_perfil.nome_exibicao`, ou seja o nome da
+ * LOJA e não o de uma pessoa. O código antigo fazia `.split(' ')[0]` e tratava como
+ * primeiro nome, então "Lanchonete do Zé" virava "Oi Lanchonete!". As mensagens agora
+ * tratam o valor pelo que ele é, e caem numa saudação sem nome quando vier vazio.
+ */
+function nomeDaLoja(nomeExibicao) {
+  return String(nomeExibicao || '').trim();
+}
+
+/**
  * Mensagem 1 — Boas-vindas (disparada na criacao da conta, trial day 0)
  */
 export async function enviarBoasVindas(telefone, nomeUsuario) {
@@ -146,12 +159,20 @@ export async function enviarBoasVindas(telefone, nomeUsuario) {
 }
 
 export async function enviarBoasVindasDetalhado(telefone, nomeUsuario) {
-  const nome = (nomeUsuario || 'você').split(' ')[0];
+  const loja = nomeDaLoja(nomeUsuario);
+  // A oferta de configurar junto vem já no dia 0, de propósito: em ticket baixo o que
+  // converte não é o tempo de trial, é alguém sentar do lado logo no começo.
   const mensagem =
-    `Oi ${nome}! Vi que você acabou de criar sua conta no ZeloPDV. ` +
-    `Que ótimo ter você por aqui! Se tiver qualquer dúvida na hora de configurar, ` +
-    `é só me chamar aqui no WhatsApp — estou disponível para ajudar. ` +
-    `Boa sorte com os primeiros pedidos! — Vinicius, Fundador do ZeloPDV`;
+    `Oi! Aqui é o Vinicius, do Zelo.\n\n` +
+    (loja
+      ? `Vi que a conta da ${loja} acabou de ser criada. `
+      : `Vi que você acabou de criar sua conta. `) +
+    `A parte chata de começar é sempre a mesma: cadastrar produto, montar categoria, ` +
+    `acertar preço.\n\n` +
+    `Se quiser, a gente faz isso junto com você. Uns 15 minutos por aqui mesmo, sem custo, ` +
+    `e você já sai com tudo pronto pra usar no balcão.\n\n` +
+    `Topa? Só me dizer um horário que funciona pra você. E se preferir ir sozinho mesmo, ` +
+    `tranquilo, é só me chamar se travar em alguma coisa.`;
   return enviarDetalhado(telefone, mensagem);
 }
 
@@ -164,32 +185,39 @@ export async function enviarFollowup7d(telefone, nomeUsuario) {
 }
 
 export async function enviarFollowup7dDetalhado(telefone, nomeUsuario) {
-  const nome = (nomeUsuario || 'você').split(' ')[0];
+  const loja = nomeDaLoja(nomeUsuario);
   const mensagem =
-    `Oi ${nome}, tudo bem? Faz uma semana que você criou sua conta no ZeloPDV ` +
-    `e queria passar pra saber como está sendo a experiência. ` +
-    `Já conseguiu configurar o cardápio e fazer seu primeiro pedido? ` +
-    `Se tiver alguma dúvida ou dificuldade, pode falar comigo à vontade. ` +
-    `Estou aqui pra ajudar no que precisar. — Vinicius, ZeloPDV`;
+    `Oi, tudo bem? Vinicius aqui do Zelo.\n\n` +
+    (loja
+      ? `Faz uma semana que a ${loja} começou a usar o sistema `
+      : `Faz uma semana que você começou a usar o sistema `) +
+    `e eu queria saber como está indo de verdade. Já deu pra cadastrar os produtos ` +
+    `e rodar as primeiras vendas?\n\n` +
+    `Se estiver travando em alguma coisa, me conta que eu te ajudo. E se estiver tudo ` +
+    `certo, também quero saber, isso me ajuda a melhorar o sistema.`;
   return enviarDetalhado(telefone, mensagem);
 }
 
 /**
- * Mensagem 3 — Followup 28 dias / trial encerrando (disparada pela cron ~dia 28)
+ * Mensagem 3 — Trial encerrando (disparada pela cron na véspera do fim do trial)
  */
-export async function enviarFollowup28d(telefone, nomeUsuario) {
-  const result = await enviarFollowup28dDetalhado(telefone, nomeUsuario);
+export async function enviarFollowupFinal(telefone, nomeUsuario) {
+  const result = await enviarFollowupFinalDetalhado(telefone, nomeUsuario);
   return result.ok;
 }
 
-export async function enviarFollowup28dDetalhado(telefone, nomeUsuario) {
-  const nome = (nomeUsuario || 'você').split(' ')[0];
+export async function enviarFollowupFinalDetalhado(telefone, nomeUsuario) {
+  const loja = nomeDaLoja(nomeUsuario);
   const mensagem =
-    `Oi ${nome}! O seu período de teste no ZeloPDV está chegando ao fim em breve. ` +
-    `Queria saber como foi a experiência nesses 30 dias — o sistema atendeu o que você precisava? ` +
-    `Se tiver qualquer dúvida antes de decidir continuar, é só me chamar. ` +
-    `Para manter o acesso, basta entrar em zelopdv.com.br e escolher a forma de pagamento. ` +
-    `Será um prazer continuar com você! — Vinicius, ZeloPDV`;
+    `Oi! Vinicius aqui. ` +
+    (loja
+      ? `Passando pra avisar que o teste da ${loja} termina amanhã.\n\n`
+      : `Passando pra avisar que o seu teste termina amanhã.\n\n`) +
+    `Queria te perguntar com sinceridade: nesses ${TRIAL_DAYS} dias o sistema deu conta ` +
+    `do que você precisava? Se faltou alguma coisa ou ficou alguma dúvida, me fala antes ` +
+    `de decidir, que ainda dá tempo de resolver.\n\n` +
+    `Se quiser seguir com a gente, é só entrar em zelopdv.com.br e escolher como prefere ` +
+    `pagar. Ia ser bom continuar te acompanhando por aqui.`;
   return enviarDetalhado(telefone, mensagem);
 }
 

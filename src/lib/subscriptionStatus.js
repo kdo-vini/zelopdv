@@ -44,6 +44,35 @@ export function isSubscriptionActiveStrict(subscription, now = new Date()) {
   return isActiveStatus;
 }
 
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Duração real do trial DESTA assinatura, em dias.
+ *
+ * Não dá pra assumir TRIAL_DAYS: quem entrou antes de 2026-07-27 tem trial de 30 dias
+ * gravado em `current_period_end`, e extensão manual do admin estica ainda mais. Usar a
+ * constante nesses casos quebrava o progresso na UI ("Dia 1 de 14" pra quem tinha 20
+ * dias pela frente, e barra travada em 0%).
+ *
+ * Deriva de created_at -> current_period_end quando ambos existem; senão cai no
+ * fallback (a constante), que é o certo para contas novas.
+ *
+ * @param {{ created_at?: string, current_period_end?: string, manually_extended_until?: string }} subscription
+ * @param {number} fallbackDays
+ */
+export function getTrialTotalDays(subscription, fallbackDays) {
+  const inicio = subscription?.created_at ? new Date(subscription.created_at) : null;
+  const fimBruto = subscription?.manually_extended_until || subscription?.current_period_end;
+  const fim = fimBruto ? new Date(fimBruto) : null;
+
+  if (!inicio || !fim || Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) {
+    return fallbackDays;
+  }
+
+  const dias = Math.round((fim.getTime() - inicio.getTime()) / DIA_MS);
+  return dias > 0 ? dias : fallbackDays;
+}
+
 export function getOperationalSubscriptionStatus(subscription, now = new Date()) {
   if (!subscription) return 'unknown';
   const status = normalizeSubscriptionStatus(subscription.status);

@@ -5,7 +5,7 @@
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { onMount, onDestroy } from 'svelte';
   import { addToast, confirmAction } from '$lib/stores/ui';
-  import { PLANS, calculateValue } from '$lib/pricing';
+  import { PLANS, calculateValue, TRIAL_DAYS } from '$lib/pricing';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao } from '$lib/googleAds';
   import { capturePostHogEvent } from '$lib/posthogClient';
@@ -301,7 +301,7 @@
   async function loadSubscriptionState() {
     const { data, error } = await supabase
       .from('subscriptions')
-      .select('status, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, plan_tier')
+      .select('status, created_at, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, plan_tier')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -452,7 +452,7 @@
               const data = await res.json();
               if (res.ok) {
                 if (!data.alreadyExists) {
-                  addToast('Seu teste gratuito de 30 dias foi ativado!', 'success');
+                  addToast(`Seu teste gratuito de ${TRIAL_DAYS} dias foi ativado!`, 'success');
                   trackStartTrial();
                   trackGa4Event('begin_trial');
                   trackGoogleAdsInscricao({ email, transactionId: userId });
@@ -817,7 +817,7 @@
 
   $: defaultMessage = hasHadSubscription
     ? 'Renove sua assinatura para continuar usando o sistema.'
-    : '30 dias grátis! Escolha o plano que faz sentido pro seu negócio.';
+    : `${TRIAL_DAYS} dias grátis! Escolha o plano que faz sentido pro seu negócio.`;
 
   $: if (pixPayment && pixSelectionKey && pixSelectionKey !== currentSelectionKey) {
     stopPixStatusPolling();
@@ -913,7 +913,10 @@
   {#if isActiveStrict}
     <!-- ACTIVE / TRIALING — show current plan + plan switcher + addon controls -->
 
-    {#if subStatus === 'trialing' && trialDaysLeft !== null && trialDaysLeft <= 30}
+    <!-- Sem teto de dias: `trialing` já delimita o aviso. O antigo `<= 30` era sempre
+         verdadeiro no trial de 30 dias, mas virou filtro real ao cair pra 14 e escondia
+         o aviso de quem ainda tem trial longo (conta antiga ou extensão manual). -->
+    {#if subStatus === 'trialing' && trialDaysLeft !== null}
       <div class="status-card warning">
         <div class="status-icon"><Hourglass class="size-6" aria-hidden="true" /></div>
         <div>
@@ -1181,7 +1184,7 @@
     <div class="status-card info">
       <div class="status-icon"><Hourglass class="size-6" aria-hidden="true" /></div>
       <div>
-        <strong>Ativando seu teste gratuito de 30 dias…</strong>
+        <strong>Ativando seu teste gratuito de {TRIAL_DAYS} dias…</strong>
         <div class="status-detail">Você será redirecionado em instantes.</div>
       </div>
     </div>
@@ -1436,7 +1439,7 @@
       Ao assinar, você concorda com nossos <a href="/termos">Termos de Uso</a> e <a href="/privacidade">Política de Privacidade</a>.
       Pagamento via cartão ou Pix.
       {#if !hasHadSubscription}
-        A cobrança de R$ {planPrice}/mês será iniciada após o período de teste de 30 dias.
+        A cobrança de R$ {planPrice}/mês será iniciada após o período de teste de {TRIAL_DAYS} dias.
       {:else}
         A cobrança de R$ {planPrice}/mês será iniciada imediatamente.
       {/if}

@@ -4,6 +4,13 @@
 // stripePriceId: ID do price recorrente no Stripe LIVE. Não muda. Lookup_key é o
 // canonical alternative ('zelo_pdv_monthly_v1' etc) — útil pra apontar pra v2 no futuro.
 
+// Duração do teste grátis, em dias. Fonte única: start-trial (trial local sem cartão),
+// create-subscription (trial_period_days do Stripe) e a UI de progresso leem daqui.
+// 2026-07-27: reduzido de 30 para 14. Mudar aqui exige revisar a cadência de onboarding
+// em emailTemplates.js (EMAIL_DAYS) e no cron de onboarding (WHATSAPP_DAYS), que precisam
+// caber dentro da janela — disparo agendado depois do fim do trial nunca acontece.
+export const TRIAL_DAYS = 14;
+
 export const PLANS = {
   pdv: {
     id: 'pdv',

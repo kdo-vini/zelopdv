@@ -158,7 +158,7 @@ Padrão base vindo da home e das segment pages:
 
       <div class="flex flex-col sm:flex-row gap-4 mb-5">
         <a href="/cadastro" class="w-full sm:w-auto px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center">
-          Testar 30 dias grátis
+          Testar 14 dias grátis
         </a>
         <a href="#features" class="w-full sm:w-auto px-8 py-4 rounded-full font-semibold border border-white/10 bg-white/5 hover:bg-white/10 text-center transition-all hover:text-white" style="color: var(--text-label);">
           Ver como funciona

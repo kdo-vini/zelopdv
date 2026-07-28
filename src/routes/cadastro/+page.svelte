@@ -7,6 +7,7 @@
   import { trackLead } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
   import { claimStoredReferral, getStoredReferralAttribution, persistReferralAttributionFromUrl } from '$lib/referrals/client';
+  import { captureAcquisitionOrigin, getStoredAcquisitionOrigin } from '$lib/attribution/client';
   import { capturePostHogEvent, identifyPostHogUser } from '$lib/posthogClient';
   import { onMount } from 'svelte';
 
@@ -19,6 +20,9 @@
 
   onMount(() => {
     persistReferralAttributionFromUrl();
+    // Rede de segurança: cobre quem cai direto em /cadastro com utm/gclid na URL
+    // sem passar por outra página antes.
+    captureAcquisitionOrigin();
   });
 
   async function waitStableSession(tries = 15) {
@@ -51,6 +55,7 @@
           email,
           password,
           referralCode: referral.code || '',
+          acquisition: getStoredAcquisitionOrigin(),
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -96,7 +101,7 @@
   }
 </script>
 
-<AuthLayout title="Criar conta" subtitle="Teste grátis por 30 dias. Sem cartão, sem cobrança automática.">
+<AuthLayout title="Criar conta" subtitle="Teste grátis por 14 dias. Sem cartão, sem cobrança automática.">
   {#if successMessage}
     <div class="auth-success">{successMessage}</div>
   {/if}

@@ -65,7 +65,7 @@
           {#if messages.length === 0}
             <div class="welcome-message">
               <p>Olá! 👋 Sou o assistente de suporte do Zelo PDV.</p>
-              <p class="text-xs mt-2" style="opacity: 0.65;">Como posso te ajudar hoje? Pergunte sobre funcionalidades, o trial de 30 dias grátis ou como começar.</p>
+              <p class="text-xs mt-2" style="opacity: 0.65;">Como posso te ajudar hoje? Pergunte sobre funcionalidades, o trial de 14 dias grátis ou como começar.</p>
             </div>
           {/if}
 

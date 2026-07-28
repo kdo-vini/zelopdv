@@ -19,7 +19,7 @@ SOBRE O ZELO PDV
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Sistema de PDV (ponto de venda) 100% online — roda no navegador, sem instalar nada. Também funciona como app instalável no celular (PWA). Feito para lanchonetes, hamburguerias, deliveries próprios e MEIs de alimentação no Brasil.
 
-Preço: R$ 59/mês. Os primeiros 30 dias são completamente gratuitos, sem precisar cadastrar cartão. Cancele quando quiser, sem multa.
+Preço: R$ 59/mês. Os primeiros 14 dias são completamente gratuitos, sem precisar cadastrar cartão. Cancele quando quiser, sem multa.
 
 ADD-ONS PAGOS (além da assinatura base):
 • Módulo Mesas (+R$ 30/mês): controle de mesas e comandas abertas
@@ -287,12 +287,12 @@ COMO CRIAR CONTA
 2. Informe e-mail e crie uma senha (mínimo 8 caracteres)
 3. Confirme o e-mail que chegará na sua caixa de entrada (verifique spam)
 4. Faça login e complete o perfil da empresa (nome, CPF/CNPJ)
-5. Pronto — os primeiros 30 dias são grátis, sem precisar colocar cartão
+5. Pronto — os primeiros 14 dias são grátis, sem precisar colocar cartão
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 QUANDO MENCIONAR O TRIAL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Se a pessoa ainda não tem conta e demonstra interesse, mencione naturalmente que dá pra testar 30 dias grátis sem colocar cartão. Não repita isso toda hora — uma vez bem colocada já basta. Se a pergunta for puramente técnica ou de suporte, não force o assunto comercial.
+Se a pessoa ainda não tem conta e demonstra interesse, mencione naturalmente que dá pra testar 14 dias grátis sem colocar cartão. Não repita isso toda hora — uma vez bem colocada já basta. Se a pergunta for puramente técnica ou de suporte, não force o assunto comercial.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 QUANDO ENCAMINHAR PARA O WHATSAPP

@@ -147,14 +147,14 @@
       </p>
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-3 md:mb-4">
         <a href="/cadastro" class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center">
-          Testar 30 dias grátis — sem cartão
+          Testar 14 dias grátis — sem cartão
         </a>
         <a href="#comparacao" class="px-1 py-2 md:py-4 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">
           Ver comparação
         </a>
       </div>
       <p class="text-xs md:text-sm" style="color: var(--text-muted);">
-        30 dias grátis. Sem cartão, sem cobrança automática.
+        14 dias grátis. Sem cartão, sem cobrança automática.
         <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
           Tem dúvida? Fala com a gente.
         </button>
@@ -234,7 +234,7 @@
           </div>
           <div class="px-6 py-5 border-l border-white/5 text-center">
             <span class="text-emerald-400 font-bold text-lg">R$ 59/mês</span>
-            <span class="block text-slate-500 text-xs mt-0.5">30 dias grátis para testar</span>
+            <span class="block text-slate-500 text-xs mt-0.5">14 dias grátis para testar</span>
           </div>
         </div>
       </div>
@@ -251,7 +251,7 @@
         Cadastre seus produtos, configure as categorias e comece a vender. Não precisa instalar nada e ninguém pede seu cartão. Se travar em qualquer passo, chama no WhatsApp que a gente migra junto com você.
       </p>
       <a href="/cadastro" class="inline-flex items-center gap-2 px-8 py-3.5 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
-        Começar agora — 30 dias grátis
+        Começar agora — 14 dias grátis
         <ArrowRight class="size-4" aria-hidden="true" />
       </a>
     </div>
@@ -304,14 +304,14 @@
         Pronto para deixar a planilha para trás?
       </h2>
       <p class="text-slate-400 text-lg mb-8">
-        30 dias grátis. Sem cartão. Sem burocracia.
+        14 dias grátis. Sem cartão. Sem burocracia.
       </p>
       <a href="/cadastro" class="inline-flex items-center gap-2 px-10 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold text-lg shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
         Começar agora grátis
         <ArrowRight class="size-5" aria-hidden="true" />
       </a>
       <p class="text-xs md:text-sm" style="color: var(--text-muted);">
-        30 dias grátis. Sem cartão, sem cobrança automática.
+        14 dias grátis. Sem cartão, sem cobrança automática.
         <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
           Tem dúvida? Fala com a gente.
         </button>

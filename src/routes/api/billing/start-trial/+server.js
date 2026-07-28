@@ -10,6 +10,7 @@ import {
   progressReferralForUser,
 } from '$lib/server/referrals';
 import { getPostHogClient } from '$lib/server/posthog';
+import { TRIAL_DAYS } from '$lib/pricing';
 
 async function fetchPerfil(userId) {
   const { data: perfil, error } = await supabaseAdmin
@@ -254,7 +255,7 @@ export async function POST({ request, cookies }) {
     }
 
     const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 30);
+    trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
     const nowIso = new Date().toISOString();
 
     const { error: insertError } = await supabaseAdmin

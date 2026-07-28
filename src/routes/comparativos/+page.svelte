@@ -67,7 +67,7 @@
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-3 md:mb-4">
           <a href="/cadastro" class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center">
-            Testar 30 dias grátis
+            Testar 14 dias grátis
           </a>
           <a href="#comparativos" class="px-1 py-2 md:py-4 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">
             Ver comparativos
@@ -75,7 +75,7 @@
         </div>
 
         <p class="text-xs md:text-sm" style="color: var(--text-muted);">
-          30 dias grátis. Sem cartão, sem cobrança automática.
+          14 dias grátis. Sem cartão, sem cobrança automática.
           <button type="button" class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
             Tem dúvida? Fala com a gente.
           </button>

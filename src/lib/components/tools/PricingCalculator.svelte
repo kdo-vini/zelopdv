@@ -882,7 +882,7 @@
             Falar com especialista
           </button>
           <p style="font-size: 0.85rem; color: var(--text-muted)">
-            Teste grátis de 7 dias. Aceitamos PIX, e Cartão.
+            Teste grátis de 14 dias. Aceitamos PIX e Cartão.
           </p>
         </div>
       </section>

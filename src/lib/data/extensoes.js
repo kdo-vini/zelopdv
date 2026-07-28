@@ -132,12 +132,12 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          '+R$ 30/mês sobre o plano base de R$ 59. Total fica R$ 89/mês. Não tem taxa de adesão e o primeiro mês é grátis durante o trial de 30 dias.'
+          '+R$ 30/mês sobre o plano base de R$ 59. Total fica R$ 89/mês. Não tem taxa de adesão e o add-on sai de graça durante os 14 dias de trial.'
       }
     ],
-    finalCtaTitle: 'Teste o Zelo PDV com Mesas por 30 dias grátis',
+    finalCtaTitle: 'Teste o Zelo PDV com Mesas por 14 dias grátis',
     finalCtaText:
-      'Cria conta sem cartão, ativa o Módulo Mesas no checkout e usa por trinta dias completos. Se não fizer sentido pra sua casa, é só deixar o trial expirar.'
+      'Cria conta sem cartão, ativa o Módulo Mesas no checkout e usa por duas semanas completas. Se não fizer sentido pra sua casa, é só deixar o trial expirar.'
   },
 
   'pedidos-cozinha': {
@@ -264,12 +264,12 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          '+R$ 30/mês sobre o plano base de R$ 59. Total fica R$ 89/mês. Sem taxa de adesão. Primeiro mês grátis durante o trial.'
+          '+R$ 30/mês sobre o plano base de R$ 59. Total fica R$ 89/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.'
       }
     ],
-    finalCtaTitle: 'Teste Pedidos + Cozinha por 30 dias grátis',
+    finalCtaTitle: 'Teste Pedidos + Cozinha por 14 dias grátis',
     finalCtaText:
-      'Cria conta sem cartão, ativa o add-on no checkout e usa por trinta dias completos. Se não fizer diferença na sua fila, é só deixar o trial expirar.'
+      'Cria conta sem cartão, ativa o add-on no checkout e usa por duas semanas completas. Se não fizer diferença na sua fila, é só deixar o trial expirar.'
   },
 
   acessos: {
@@ -396,10 +396,10 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          '+R$ 30/mês sobre o plano base de R$ 59. Total fica R$ 89/mês. Sem taxa de adesão. Primeiro mês grátis durante o trial.'
+          '+R$ 30/mês sobre o plano base de R$ 59. Total fica R$ 89/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.'
       }
     ],
-    finalCtaTitle: 'Teste o Controle de Acessos por 30 dias grátis',
+    finalCtaTitle: 'Teste o Controle de Acessos por 14 dias grátis',
     finalCtaText:
       'Cria conta sem cartão, ativa o add-on no checkout e convide sua equipe. Se não fizer sentido pra sua operação, é só deixar o trial expirar.'
   },
@@ -614,7 +614,7 @@ export const extensoes = {
       {
         title: 'Ative o ZeloMenu',
         description:
-          'Adicione o ZeloMenu como extensão na sua assinatura (R$ 40/mês). A ativação é instantânea e o primeiro mês é grátis durante o trial.'
+          'Adicione o ZeloMenu como extensão na sua assinatura (R$ 40/mês). A ativação é instantânea e o add-on sai de graça durante os 14 dias de trial.'
       },
       {
         title: 'Publique os produtos do estoque',
@@ -659,10 +659,10 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          '+R$ 40/mês sobre o plano base de R$ 59. Total fica R$ 99/mês. Sem taxa de adesão. Primeiro mês grátis durante o trial.'
+          '+R$ 40/mês sobre o plano base de R$ 59. Total fica R$ 99/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.'
       }
     ],
-    finalCtaTitle: 'Teste o ZeloMenu por 30 dias grátis',
+    finalCtaTitle: 'Teste o ZeloMenu por 14 dias grátis',
     finalCtaText:
       'Cria conta sem cartão, ativa o ZeloMenu no checkout e publique seu cardápio online. Se não fizer diferença pros seus clientes, é só deixar o trial expirar.',
     testimonial: {
@@ -697,10 +697,10 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          '+R$ 40/mês sobre o plano base de R$ 59. Total fica R$ 99/mês. Sem taxa de adesão. Primeiro mês grátis durante o trial.'
+          '+R$ 40/mês sobre o plano base de R$ 59. Total fica R$ 99/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.'
       }
     ],
-    finalCtaTitle: 'Teste o ZeloMenu por 30 dias grátis',
+    finalCtaTitle: 'Teste o ZeloMenu por 14 dias grátis',
     finalCtaText:
       'Cria conta sem cartão, ativa o ZeloMenu no checkout e publique seu cardápio online. Se não fizer diferença pros seus clientes, é só deixar o trial expirar.'
   }

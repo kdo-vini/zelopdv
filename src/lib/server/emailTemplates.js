@@ -4,8 +4,17 @@
  * Each function returns { subject, html } for that email day.
  * All emails are in Portuguese, signed by Vinicius (founder).
  *
- * Email days: 0, 1, 3, 7, 14, 25, 28
+ * Email days: 0, 2, 5, 9, 11, 13 (ver EMAIL_DAYS no fim do arquivo)
+ *
+ * Um template pode devolver `null` para dizer "não faz sentido pra esta empresa";
+ * nesse caso o cron pula o envio e não grava log. Hoje só `emailDay9` faz isso.
+ *
+ * A sequência tem que caber dentro de TRIAL_DAYS. O cron só busca assinaturas com
+ * status 'trialing' e current_period_end no futuro, então qualquer dia agendado
+ * depois do fim do trial simplesmente nunca dispara — falha silenciosa.
  */
+
+import { TRIAL_DAYS } from '$lib/pricing';
 
 const APP_URL = 'https://zelopdv.com.br';
 const WHATSAPP_NUMBER = '5514991537503'; // Public support WhatsApp number
@@ -17,6 +26,19 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+/**
+ * O `nome` que os templates recebem é `empresa_perfil.nome_exibicao`: o nome da LOJA,
+ * não o de uma pessoa (em `start-trial` a variável se chama literalmente `nomeLoja`).
+ * O código antigo fazia `.split(' ')[0]` e tratava como primeiro nome, então
+ * "Lanchonete do Zé" virava "Oi, Lanchonete!". Agora o valor é usado pelo que é, já
+ * escapado — nome de loja é entrada do usuário e ia cru pro HTML do e-mail.
+ * Retorna '' quando não há nome, e cada template cai numa saudação sem nome.
+ */
+function lojaLabel(nome) {
+  const limpo = String(nome || '').trim();
+  return limpo ? escapeHtml(limpo) : '';
 }
 
 /** Shared HTML wrapper — applies branding and works in Gmail/Outlook/Apple Mail */
@@ -91,14 +113,24 @@ function signature(extra = '') {
 }
 
 // ---------------------------------------------------------------------------
-// DAY 0 — Boas-vindas
+// DAY 0 — Boas-vindas + oferta de configurar junto
+//
+// A mesma oferta vai no WhatsApp de boas-vindas, mas aquele só dispara quando o
+// perfil tem `contato` preenchido e o ZeloChat está configurado. Sem a oferta aqui,
+// quem cadastrou sem telefone não recebe convite nenhum no dia 0.
 // ---------------------------------------------------------------------------
 export function emailDay0(nome) {
-  const primeiroNome = (nome || 'você').split(' ')[0];
+  const loja = lojaLabel(nome);
+  // Texto que o CLIENTE envia ao tocar no botão. Curto e falado, do jeito que uma
+  // pessoa realmente escreve no WhatsApp.
+  const setupMsg = encodeURIComponent(
+    `Oi Vinicius! Criei minha conta agora e queria aquela ajuda pra deixar tudo configurado. Quando dá pra gente falar?`
+  );
+  const whatsappSetupUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${setupMsg}`;
   const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Oi, ${primeiroNome}! 👋</p>
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Tudo pronto pra começar! 👋</p>
 
-<p style="margin:0 0 16px;">Seu acesso ao Zelo PDV está pronto. Você tem <strong>30 dias gratuitos</strong> para testar tudo sem precisar colocar o cartão.</p>
+<p style="margin:0 0 16px;">${loja ? `A conta da <strong>${loja}</strong> no Zelo PDV já está ativa` : 'Seu acesso ao Zelo PDV está pronto'}. São <strong>${TRIAL_DAYS} dias gratuitos</strong> para testar tudo sem precisar colocar o cartão.</p>
 
 <p style="margin:0 0 16px;">Para começar, é simples:</p>
 
@@ -108,9 +140,15 @@ export function emailDay0(nome) {
   <li style="margin-bottom:8px;">Faça sua <strong>primeira venda</strong> no PDV</li>
 </ol>
 
-<p style="margin:0 0 16px;">Qualquer dúvida, pode responder este email ou me chamar diretamente no WhatsApp — sou o Vinicius, fundador do Zelo, e acompanho cada novo usuário de perto.</p>
+<p style="margin:0 0 16px;">E se não quiser fazer isso sozinho, <strong>a gente faz junto com você</strong>. São uns 15 minutos no WhatsApp: eu ou alguém do time senta com você, cadastra os produtos e deixa tudo pronto pra usar no balcão. Não custa nada.</p>
+
+${ctaButton('Configurar junto com o time →', whatsappSetupUrl, '#16a34a')}
+
+<p style="margin:24px 0 16px;">Ou, se quiser começar por conta:</p>
 
 ${ctaButton('Acessar o Zelo PDV →', `${APP_URL}/login`)}
+
+<p style="margin:24px 0 0;">Qualquer dúvida, pode responder este email ou me chamar diretamente no WhatsApp. Sou o Vinicius, fundador do Zelo, e acompanho cada novo usuário de perto.</p>
 
 ${signature()}
 `);
@@ -122,16 +160,16 @@ ${signature()}
 }
 
 // ---------------------------------------------------------------------------
-// DAY 1 — Ativação
+// DAY 2 — Ativação
 // ---------------------------------------------------------------------------
-export function emailDay1(nome) {
-  const primeiroNome = (nome || 'você').split(' ')[0];
+export function emailDay2(nome) {
+  const loja = lojaLabel(nome);
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Oi Vinicius! Criei minha conta no Zelo PDV mas estou com dúvidas para começar. Pode me ajudar?`)}`;
 
   const html = wrapEmail(`
 <p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Você já registrou sua primeira venda? 🛒</p>
 
-<p style="margin:0 0 16px;">Oi, ${primeiroNome}! Vi que você criou sua conta no Zelo PDV ontem.</p>
+<p style="margin:0 0 16px;">Oi! Vi que ${loja ? `a conta da <strong>${loja}</strong> foi criada` : 'você criou sua conta'} no Zelo PDV há alguns dias.</p>
 
 <p style="margin:0 0 16px;">A primeira venda é sempre um marco — e quero saber se você já chegou lá. Se ainda não registrou nada, é bem rápido:</p>
 
@@ -155,15 +193,183 @@ ${signature(`<br /><a href="${whatsappUrl}" style="color:#1d4ed8;">Me chame no W
 }
 
 // ---------------------------------------------------------------------------
-// DAY 3 — Valor escondido: relatório financeiro
+// DAY 5 — Toque humano: configurar junto (o que realmente converte em ticket baixo)
+//
+// Fica na PRIMEIRA semana de propósito. Convite pra configurar junto no fim do
+// trial não serve: não sobra tempo de configurar nem de ver resultado.
 // ---------------------------------------------------------------------------
-export function emailDay3(nome) {
-  const primeiroNome = (nome || 'você').split(' ')[0];
+export function emailDay5(nome) {
+  const loja = lojaLabel(nome);
+  const callMsg = encodeURIComponent(
+    `Oi Vinicius! Recebi seu email. Queria marcar aqueles 15 minutos pra configurar o sistema junto. Quando dá?`
+  );
+  const whatsappCallUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${callMsg}`;
+
+  const html = wrapEmail(`
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Quer que a gente configure o Zelo com você? 🤝</p>
+
+<p style="margin:0 0 16px;">Oi! ${loja ? `A <strong>${loja}</strong> começou o teste` : 'Você começou o teste'} faz alguns dias, e eu queria repetir uma oferta que fiz lá no começo, porque quase ninguém aceita de primeira.</p>
+
+<p style="margin:0 0 16px;">A parte chata de trocar de sistema é sempre o começo: cadastrar produto, montar categoria, acertar preço. Ninguém tem tempo pra isso entre um pedido e outro. Então <strong>a gente faz junto com você</strong>, numa conversa de 15 minutos por WhatsApp ou chamada.</p>
+
+<p style="margin:0 0 16px;">Nesses 15 minutos a gente:</p>
+
+<ul style="margin:0 0 16px;padding-left:24px;color:#374151;">
+  <li style="margin-bottom:8px;">Cadastra seus produtos e categorias junto com você</li>
+  <li style="margin-bottom:8px;">Deixa o estoque e os preços prontos pra usar no balcão</li>
+  <li style="margin-bottom:8px;">Mostra o fechamento de caixa e o relatório de lucro real</li>
+  <li style="margin-bottom:8px;">Responde qualquer dúvida que ficou</li>
+</ul>
+
+<p style="margin:0 0 16px;">Não custa nada e não tem compromisso nenhum de assinar depois. A ideia é você passar o resto do teste usando o sistema de verdade, com tudo já cadastrado, e aí decidir com conhecimento de causa.</p>
+
+${ctaButton('Marcar os 15 minutos →', whatsappCallUrl, '#16a34a')}
+
+${signature()}
+`);
+
+  return {
+    subject: 'Quer que a gente configure o Zelo com você? 🤝',
+    html,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// DAY 9 — Extensões, só pra quem faz sentido
+//
+// Duas travas de relevância, porque oferta genérica em base pequena queima confiança:
+// 1. Quem não registrou nenhuma venda não recebe. Ainda não usou o básico, oferecer
+//    add-on é ruído.
+// 2. Extensão já ativa não aparece.
+// Se sobrar nada pra oferecer, `montarEmailExtensoes` devolve null e o cron pula.
+//
+// `ADDONS.pedidos` está deprecated (entitlement legado migrado pro ZeloMenu), então
+// não entra na lista. ZeloChat não é add-on: é troca de plano, e vai por último.
+// ---------------------------------------------------------------------------
+
+/** Bloco visual de uma extensão dentro do e-mail. */
+function blocoExtensao({ titulo, preco, paraQuem, descricao, url }) {
+  return `
+<table cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 12px;border-collapse:collapse;">
+  <tr>
+    <td style="padding:16px 18px;border:1px solid #e5e7eb;border-radius:8px;background-color:#ffffff;">
+      <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#111827;">${titulo} <span style="font-weight:400;color:#6b7280;font-size:14px;">${preco}</span></p>
+      <p style="margin:0 0 8px;font-size:13px;color:#1d4ed8;font-weight:600;">${paraQuem}</p>
+      <p style="margin:0 0 10px;font-size:14px;color:#374151;line-height:1.6;">${descricao}</p>
+      <a href="${url}" style="font-size:14px;color:#1d4ed8;font-weight:600;text-decoration:none;">Ver detalhes &rarr;</a>
+    </td>
+  </tr>
+</table>`;
+}
+
+/**
+ * @param {string} nome
+ * @param {{ vendas?: number, produtos?: number, acessos?: number,
+ *           temMesas?: boolean, temAcessos?: boolean, temMenu?: boolean,
+ *           planoChat?: boolean }} [ctx]
+ * @returns {{ subject: string, html: string } | null} null = não faz sentido pra esta empresa
+ */
+export function emailDay9(nome, ctx = {}) {
+  const loja = lojaLabel(nome);
+  const vendas = Number(ctx.vendas || 0);
+  const produtos = Number(ctx.produtos || 0);
+
+  // Trava 1: sem venda registrada, não oferece nada.
+  if (vendas < 1) return null;
+
+  const blocos = [];
+
+  if (!ctx.temMenu && !ctx.planoChat) {
+    blocos.push({
+      peso: produtos >= 8 ? 0 : 2,
+      html: blocoExtensao({
+        titulo: 'ZeloMenu',
+        preco: '+R$ 40/mês',
+        paraQuem: 'Pra quem quer receber pedido sem atender telefone',
+        descricao: 'Cardápio digital com link próprio. O cliente pede pelo celular e o pedido cai direto na sua tela de pedidos, já com os itens e a montagem. Sem app, sem comissão por pedido.',
+        url: `${APP_URL}/extensoes#menu`,
+      }),
+    });
+  }
+
+  if (!ctx.temMesas) {
+    blocos.push({
+      peso: 3,
+      html: blocoExtensao({
+        titulo: 'Módulo Mesas',
+        preco: '+R$ 30/mês',
+        paraQuem: 'Pra quem tem salão, e não só balcão',
+        descricao: 'Mapa de mesas, comanda que vai acumulando, divisão de conta entre pessoas, taxa de serviço e pré-conta. Fecha a comanda e vira venda no caixa, sem digitar de novo.',
+        url: `${APP_URL}/extensoes#mesas`,
+      }),
+    });
+  }
+
+  if (!ctx.temAcessos) {
+    const temEquipe = Number(ctx.acessos || 0) >= 1 || vendas >= 40;
+    blocos.push({
+      peso: temEquipe ? 1 : 4,
+      html: blocoExtensao({
+        titulo: 'Controle de Acessos',
+        preco: '+R$ 30/mês',
+        paraQuem: 'Pra quem não fica sozinho no caixa',
+        descricao: 'Até 5 usuários com login próprio, organizados em cargos como Caixa, Atendente e Gerente. Você decide quem pode dar desconto, cancelar venda ou ver o financeiro.',
+        url: `${APP_URL}/extensoes#acessos`,
+      }),
+    });
+  }
+
+  if (!ctx.planoChat) {
+    blocos.push({
+      peso: 5,
+      html: blocoExtensao({
+        titulo: 'ZeloChat',
+        preco: 'plano de R$ 149/mês, já com o ZeloMenu',
+        paraQuem: 'Pra quem perde pedido por demorar a responder no WhatsApp',
+        descricao: 'Atendimento automatizado no WhatsApp: responde cardápio, tira dúvida e registra o pedido sozinho, a qualquer hora. É troca de plano, não add-on.',
+        url: `${APP_URL}/extensoes#chat`,
+      }),
+    });
+  }
+
+  // Trava 2: já tem tudo que dava pra oferecer.
+  if (!blocos.length) return null;
+
+  blocos.sort((a, b) => a.peso - b.peso);
+
+  const html = wrapEmail(`
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Tem peça extra que talvez encaixe no seu negócio 🧩</p>
+
+<p style="margin:0 0 16px;">${loja ? `A <strong>${loja}</strong> já está usando` : 'Você já está usando'} o Zelo de verdade, então vale conhecer o que dá pra plugar em cima do plano base. Não precisa de nada disso pra operar, e nenhuma é obrigatória.</p>
+
+<p style="margin:0 0 20px;">Dá pra ligar e desligar quando quiser, e durante o teste elas saem de graça:</p>
+
+${blocos.map((bloco) => bloco.html).join('\n')}
+
+<p style="margin:20px 0 16px;">Se ficar em dúvida sobre qual faz sentido pro seu caso, me responde este email contando como é a sua operação (balcão, salão, delivery, quantas pessoas trabalham) que eu te digo com sinceridade se compensa ou não.</p>
+
+${ctaButton('Ver todas as extensões →', `${APP_URL}/extensoes`)}
+
+${signature()}
+`);
+
+  return {
+    // Assunto sem nome: `nome_exibicao` é nome de loja e fica esquisito como vocativo.
+    subject: 'Tem peça extra que talvez encaixe no seu negócio 🧩',
+    html,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// DAY 11 — Valor escondido: relatório financeiro
+// ---------------------------------------------------------------------------
+export function emailDay11(nome) {
+  const loja = lojaLabel(nome);
 
   const html = wrapEmail(`
 <p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Você já viu o relatório financeiro do Zelo? 📊</p>
 
-<p style="margin:0 0 16px;">Oi, ${primeiroNome}! Existe uma funcionalidade que a maioria dos usuários descobre só depois de algumas semanas — e eu quero te mostrar agora.</p>
+<p style="margin:0 0 16px;">Oi! Existe uma funcionalidade que a maioria dos usuários descobre só depois de algumas semanas, e eu quero te mostrar agora.</p>
 
 <p style="margin:0 0 16px;">É o <strong>Relatório Financeiro</strong>. Ele te mostra:</p>
 
@@ -190,139 +396,17 @@ ${signature()}
 }
 
 // ---------------------------------------------------------------------------
-// DAY 7 — Prova social: estoque
+// DAY 13 — Último aviso
 // ---------------------------------------------------------------------------
-export function emailDay7(nome) {
-  const primeiroNome = (nome || 'você').split(' ')[0];
-
-  const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Como a Dona Maria organiza o estoque com o Zelo 🏪</p>
-
-<p style="margin:0 0 16px;">Oi, ${primeiroNome}! Quero te contar uma história rápida.</p>
-
-<p style="margin:0 0 16px;">A Dona Maria tem uma lanchonete em São Paulo. Antes do Zelo, ela anotava o estoque num caderno e, toda semana, descobria que tinha ficado sem ingrediente porque ninguém atualizou a lista.</p>
-
-<p style="margin:0 0 16px;">Depois de uma semana usando o Zelo, ela configurou o estoque dos itens principais. Agora, toda vez que uma venda é registrada, o sistema desconta automaticamente. Quando o estoque chega no nível mínimo, ela recebe um aviso.</p>
-
-<blockquote style="margin:16px 0;padding:16px 20px;background-color:#f0f9ff;border-left:4px solid #1d4ed8;border-radius:0 4px 4px 0;">
-  <p style="margin:0;color:#1e3a5f;font-style:italic;font-size:14px;">"Parece bobagem, mas saber que não vou ficar sem pão de queijo no meio do sábado mudou completamente minha semana."</p>
-  <p style="margin:8px 0 0;color:#374151;font-size:13px;">— Dona Maria, lanchonete em Campinas/SP</p>
-</blockquote>
-
-<p style="margin:16px 0;">Se você ainda não configurou o estoque no Zelo, é um bom momento. Vai em <strong>Gestão → Estoque</strong>, cadastra os produtos que você mais vende e define o estoque mínimo.</p>
-
-${ctaButton('Configurar meu estoque →', `${APP_URL}/gestao/estoque`)}
-
-${signature()}
-`);
-
-  return {
-    subject: 'Como um cliente real organiza o estoque com o Zelo 🏪',
-    html,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// DAY 14 — Urgência suave: o que você perde sem o Zelo
-// ---------------------------------------------------------------------------
-export function emailDay14(nome) {
-  const primeiroNome = (nome || 'você').split(' ')[0];
-
-  const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Faltam 16 dias do trial — o que você teria que abrir mão 👀</p>
-
-<p style="margin:0 0 16px;">Oi, ${primeiroNome}! Você já está há duas semanas usando o Zelo PDV. Metade do trial foi.</p>
-
-<p style="margin:0 0 16px;">Quero ser direto: se o trial acabar sem assinatura, você perde acesso a tudo isso:</p>
-
-<table cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 16px;border-collapse:collapse;">
-  <tr style="background-color:#fef2f2;">
-    <td style="padding:12px 16px;border:1px solid #fecaca;font-size:14px;color:#991b1b;">❌ Histórico de vendas e relatórios</td>
-  </tr>
-  <tr style="background-color:#fef2f2;">
-    <td style="padding:12px 16px;border:1px solid #fecaca;border-top:none;font-size:14px;color:#991b1b;">❌ Controle de fiado e saldo dos clientes</td>
-  </tr>
-  <tr style="background-color:#fef2f2;">
-    <td style="padding:12px 16px;border:1px solid #fecaca;border-top:none;font-size:14px;color:#991b1b;">❌ Fechamento de caixa e registro de despesas</td>
-  </tr>
-  <tr style="background-color:#fef2f2;">
-    <td style="padding:12px 16px;border:1px solid #fecaca;border-top:none;font-size:14px;color:#991b1b;">❌ Controle de estoque automático</td>
-  </tr>
-  <tr style="background-color:#fef2f2;">
-    <td style="padding:12px 16px;border:1px solid #fecaca;border-top:none;font-size:14px;color:#991b1b;">❌ Relatório de lucro real (faturamento - despesas)</td>
-  </tr>
-</table>
-
-<p style="margin:0 0 16px;">Voltar para caderno, planilha ou "na memória" é uma opção. Mas com <strong>R$ 59/mês</strong> — menos de R$ 2 por dia — você mantém tudo funcionando.</p>
-
-<p style="margin:0 0 16px;">Não precisa decidir agora. Você ainda tem 16 dias. Mas se já sabe que quer continuar, pode assinar agora e garantir que não vai perder nada.</p>
-
-${ctaButton('Assinar por R$ 59/mês →', `${APP_URL}/assinatura`)}
-
-${signature()}
-`);
-
-  return {
-    subject: 'Faltam 16 dias do seu trial — veja o que você teria que abrir mão 👀',
-    html,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// DAY 25 — Toque humano: oferta de call
-// ---------------------------------------------------------------------------
-export function emailDay25(nome) {
-  const primeiroNome = (nome || 'você').split(' ')[0];
-  const callMsg = encodeURIComponent(
-    `Oi Vinicius! Recebi seu email sobre o trial do Zelo PDV. Gostaria de agendar uma call de 15 minutos para você me ajudar a configurar tudo antes do encerramento. Qual horário funciona pra você?`
-  );
-  const whatsappCallUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${callMsg}`;
-
-  const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Seu trial termina em 5 dias — posso te ajudar pessoalmente 🤝</p>
-
-<p style="margin:0 0 16px;">Oi, ${primeiroNome}! São 5 dias para o fim do seu trial.</p>
-
-<p style="margin:0 0 16px;">Quero fazer uma oferta direta: se você ainda tem dúvidas ou não configurou tudo como queria, eu me coloco à disposição para uma <strong>call de 15 minutos</strong> com você.</p>
-
-<p style="margin:0 0 16px;">Nessa call eu:</p>
-
-<ul style="margin:0 0 16px;padding-left:24px;color:#374151;">
-  <li style="margin-bottom:8px;">Ajudo a configurar produtos, categorias e estoque</li>
-  <li style="margin-bottom:8px;">Explico como funciona o fechamento de caixa</li>
-  <li style="margin-bottom:8px;">Mostro o relatório de lucro real na prática</li>
-  <li style="margin-bottom:8px;">Respondo qualquer dúvida que você tiver</li>
-</ul>
-
-<p style="margin:0 0 16px;">Para agendar, é só clicar no botão abaixo e me mandar uma mensagem no WhatsApp. Respondo na hora.</p>
-
-${ctaButton('Agendar call com Vinicius →', whatsappCallUrl, '#16a34a')}
-
-<p style="margin:24px 0 0;color:#6b7280;font-size:14px;">Ou, se já decidiu continuar:</p>
-
-${ctaButton('Assinar por R$ 59/mês →', `${APP_URL}/assinatura`)}
-
-${signature()}
-`);
-
-  return {
-    subject: 'Seu trial termina em 5 dias — posso te ajudar pessoalmente 🤝',
-    html,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// DAY 28 — Último aviso
-// ---------------------------------------------------------------------------
-export function emailDay28(nome) {
-  const primeiroNome = (nome || 'você').split(' ')[0];
+export function emailDay13(nome) {
+  const loja = lojaLabel(nome);
 
   const html = wrapEmail(`
 <p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#dc2626;">⚠️ Último aviso: seu trial encerra amanhã</p>
 
-<p style="margin:0 0 16px;">${primeiroNome}, amanhã seu período de teste no Zelo PDV encerra.</p>
+<p style="margin:0 0 16px;">Amanhã o período de teste ${loja ? `da <strong>${loja}</strong> ` : ''}no Zelo PDV encerra.</p>
 
-<p style="margin:0 0 16px;">Se você não assinar até amanhã, perde acesso ao sistema — incluindo todo o histórico de vendas, relatórios e configurações que você criou nesses 30 dias.</p>
+<p style="margin:0 0 16px;">Se você não assinar até amanhã, perde acesso ao sistema — incluindo todo o histórico de vendas, relatórios e configurações que você criou nesses ${TRIAL_DAYS} dias.</p>
 
 <p style="margin:0 0 16px;"><strong>Plano único: R$ 59/mês.</strong><br />Aceita PIX, boleto e cartão de crédito.</p>
 
@@ -348,7 +432,7 @@ export function emailNudgeCompleteProfile(email) {
   const html = wrapEmail(`
 <p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Você criou uma conta no Zelo PDV — mas não terminou o cadastro 👀</p>
 
-<p style="margin:0 0 16px;">Oi! Vi aqui que você criou sua conta, mas ainda não configurou o perfil da sua empresa. Isso leva menos de 2 minutos e é o único passo que falta para ativar seu <strong>teste gratuito de 30 dias</strong>.</p>
+<p style="margin:0 0 16px;">Oi! Vi aqui que você criou sua conta, mas ainda não configurou o perfil da sua empresa. Isso leva menos de 2 minutos e é o único passo que falta para ativar seu <strong>teste gratuito de ${TRIAL_DAYS} dias</strong>.</p>
 
 <p style="margin:0 0 16px;">Depois de completar o cadastro você já pode registrar vendas, controlar o caixa e ver os relatórios financeiros — sem pagar nada agora.</p>
 
@@ -408,13 +492,12 @@ ${signature()}
 
 /** @type {Map<number, (nome: string) => { subject: string, html: string }>} */
 export const EMAIL_SEQUENCE = new Map([
-  [0, emailDay0],
-  [1, emailDay1],
-  [3, emailDay3],
-  [7, emailDay7],
-  [14, emailDay14],
-  [25, emailDay25],
-  [28, emailDay28],
+  [0, emailDay0],   // boas-vindas + oferta de configurar junto
+  [2, emailDay2],   // ativação: primeira venda
+  [5, emailDay5],   // toque humano: configurar junto (primeira semana, de propósito)
+  [9, emailDay9],   // extensões: condicional, pode devolver null
+  [11, emailDay11], // valor: relatório de lucro real
+  [13, emailDay13], // último aviso: encerra amanhã
 ]);
 
-export const EMAIL_DAYS = [0, 1, 3, 7, 14, 25, 28];
+export const EMAIL_DAYS = [0, 2, 5, 9, 11, 13];

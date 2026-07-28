@@ -61,7 +61,7 @@
   const quickRoutes = [
     {
       title: 'Começar agora',
-      description: 'Criar conta e testar o PDV por 30 dias, sem cartão.',
+      description: 'Criar conta e testar o PDV por 14 dias, sem cartão.',
       href: '/cadastro?origem=contato',
       label: 'Criar conta grátis',
     },
@@ -211,7 +211,7 @@
           <p class="hero-description">{copy.description}</p>
 
           <div class="hero-actions">
-            <a class="primary-action" href="/cadastro?origem=contato">Testar 30 dias grátis</a>
+            <a class="primary-action" href="/cadastro?origem=contato">Testar 14 dias grátis</a>
             <a class="secondary-action" href="#formulario">Enviar mensagem</a>
           </div>
 

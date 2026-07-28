@@ -42,7 +42,7 @@
               href="/cadastro"
               class="w-full sm:w-auto px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center"
             >
-              Testar 30 dias grátis
+              Testar 14 dias grátis
             </a>
             <a
               href="#features"
@@ -53,7 +53,7 @@
           </div>
 
           <p class="text-sm" style="color: var(--text-muted);">
-            30 dias grátis, sem instalar nada.
+            14 dias grátis, sem instalar nada.
             <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
               Fala com a gente
             </button>
@@ -156,7 +156,7 @@
             <div class="w-11 h-11 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0">
               <Check class="size-5 text-sky-400" aria-hidden="true" />
             </div>
-            <p class="text-white font-semibold text-sm leading-tight">30 dias grátis de verdade</p>
+            <p class="text-white font-semibold text-sm leading-tight">14 dias grátis de verdade</p>
             <p class="text-sm leading-relaxed" style="color: var(--text-muted);">Não pedimos cartão e não existe cobrança automática. Testou e não gostou? Não acontece nada — sua conta simplesmente não vira assinatura.</p>
           </div>
 
@@ -218,7 +218,7 @@
               href="/cadastro"
               class="px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1"
             >
-              Testar 30 dias grátis
+              Testar 14 dias grátis
             </a>
             <a
               href="#features"

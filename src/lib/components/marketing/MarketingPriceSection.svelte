@@ -28,8 +28,8 @@
         </div>
 
         <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 mb-8">
-          <p class="text-sky-400 font-bold text-lg">30 Dias Grátis</p>
-          <p class="text-sm text-sky-300/80">30 dias pra testar. Se não rolar, é só cancelar.</p>
+          <p class="text-sky-400 font-bold text-lg">14 Dias Grátis</p>
+          <p class="text-sm text-sky-300/80">14 dias pra testar. Se não rolar, é só cancelar.</p>
         </div>
 
         <ul class="space-y-4 text-left mb-10 max-w-xs mx-auto">

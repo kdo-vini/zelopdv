@@ -177,7 +177,7 @@
               href="/cadastro"
               class="px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1"
             >
-              Testar 30 dias grátis
+              Testar 14 dias grátis
             </a>
             <a
               href="#comparativo"

@@ -8,12 +8,16 @@
   import { toggleSupport, closeSupport, isSupportOpen } from '$lib/stores/support';
   import { getAccessContext, getAccessContextSync } from '$lib/accessControl';
   import { onMount } from 'svelte';
+  import { TRIAL_DAYS } from '$lib/pricing';
+  import { getTrialTotalDays } from '$lib/subscriptionStatus';
   import { X, Menu, ChevronLeft, ChevronRight, HelpCircle, LogOut, ShoppingBag, Table2, ListChecks, LayoutGrid, Package, Users, Boxes, BarChart3, Wrench, ArrowUpRight, Wallet, Puzzle, ChefHat, BookOpen, Receipt, Radar } from 'lucide-svelte';
 
   let mobileOpen = false;
   let collapsed = false;
   let subStatus = null;
   let trialDaysLeft = null;
+  // Duração real do trial desta conta. Contas anteriores a 2026-07-27 têm 30 dias.
+  let trialTotalDays = TRIAL_DAYS;
   let companyLogoUrl = null;
   let pedidosAddonActive = false;
   let orderingReviewActive = false;
@@ -63,7 +67,7 @@
         const [{ data: sub }, { data: perfil }] = await Promise.all([
           supabase
             .from('subscriptions')
-            .select('status, current_period_end, plan_tier, has_pedidos_addon, has_mesas_addon, has_acessos_addon, has_zelo_menu')
+            .select('status, created_at, current_period_end, manually_extended_until, plan_tier, has_pedidos_addon, has_mesas_addon, has_acessos_addon, has_zelo_menu')
             .eq('user_id', subscriptionUserId)
             .order('updated_at', { ascending: false })
             .limit(1)
@@ -78,6 +82,7 @@
           subStatus = sub.status;
           const diff = new Date(sub.current_period_end) - new Date();
           trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+          trialTotalDays = getTrialTotalDays(sub, TRIAL_DAYS);
         }
         const planAllowsAddons = sub?.plan_tier === 'pdv' || sub?.plan_tier === 'bundle';
         pedidosAddonActive = planAllowsAddons && !!sub?.has_pedidos_addon;
@@ -381,9 +386,10 @@
   </div>
 
   {#if subStatus === 'trialing' && trialDaysLeft !== null && !collapsed && !isSubUserMode}
-    {@const trialDay = Math.min(30, Math.max(1, 30 - trialDaysLeft))}
-    {@const pct = Math.round((trialDay / 30) * 100)}
-    {@const urgent = trialDaysLeft <= 7}
+    {@const trialDay = Math.min(trialTotalDays, Math.max(1, trialTotalDays - trialDaysLeft))}
+    {@const pct = Math.round((trialDay / trialTotalDays) * 100)}
+    <!-- último quarto do trial vira aviso urgente (era 7 de 30; agora 4 de 14) -->
+    {@const urgent = trialDaysLeft <= Math.ceil(trialTotalDays / 4)}
     <div
       class="mx-3 mt-2 mb-1 rounded-lg p-3 text-xs label-text"
       style="background: {urgent ? 'var(--warning)' : 'var(--bg-input)'}; color: {urgent ? '#1a1a00' : 'var(--text-main)'}; border: 1px solid {urgent ? 'rgba(0,0,0,0.12)' : 'var(--border-subtle)'};"
@@ -395,7 +401,7 @@
           {:else if urgent}
             Termina em {trialDaysLeft} dia{trialDaysLeft === 1 ? '' : 's'}
           {:else}
-            Dia {trialDay} de 30
+            Dia {trialDay} de {trialTotalDays}
           {/if}
         </span>
         <a

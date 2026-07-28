@@ -107,8 +107,8 @@ describe('server WhatsApp sender', () => {
     ));
     vi.stubGlobal('fetch', fetchMock);
 
-    const { enviarFollowup28dDetalhado, getWhatsAppSendError } = await loadWhatsapp();
-    const result = await enviarFollowup28dDetalhado('5511999999999', 'Vini');
+    const { enviarFollowupFinalDetalhado, getWhatsAppSendError } = await loadWhatsapp();
+    const result = await enviarFollowupFinalDetalhado('5511999999999', 'Vini');
 
     expect(result.ok).toBe(false);
     expect(result.status).toBe(409);

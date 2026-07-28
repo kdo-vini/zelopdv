@@ -169,7 +169,7 @@
               </div>
               <div>
                 <div class="highlight-card-title">Teste Gratuito</div>
-                <div class="highlight-card-value">30 dias</div>
+                <div class="highlight-card-value">14 dias</div>
                 <div class="highlight-card-sub">sem cobrança</div>
               </div>
             </div>

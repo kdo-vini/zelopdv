@@ -11,13 +11,13 @@ import {
   buildStripeLineItems,
   calculateValue,
   PLANS,
+  TRIAL_DAYS,
 } from '$lib/pricing';
 import { progressReferralForUser } from '$lib/server/referrals';
 import { getPostHogClient } from '$lib/server/posthog';
 import { isSubscriptionActiveStrict } from '$lib/subscriptionStatus';
 
 const ORIGIN = env.PUBLIC_APP_URL || 'https://zelopdv.com.br';
-const TRIAL_DAYS = 30;
 
 export async function POST({ request, url, cookies }) {
   try {

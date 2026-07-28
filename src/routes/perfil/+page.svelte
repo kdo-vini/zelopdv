@@ -4,7 +4,8 @@
   import { translateSubscriptionStatus } from '$lib/errorUtils';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { ADDONS, PLANS, calculateValue } from '$lib/pricing';
+  import { ADDONS, PLANS, calculateValue, TRIAL_DAYS } from '$lib/pricing';
+  import { getTrialTotalDays } from '$lib/subscriptionStatus';
   import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina, PLATAFORMAS_PRESET } from '$lib/profileUtils';
   import { maskPhone, maskDocumento } from '$lib/masks';
   import { addToast } from '$lib/stores/ui';
@@ -233,7 +234,10 @@
     const diff = new Date(currentPeriodEnd) - new Date();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   })();
-  $: trialProgressPct = trialDaysLeft !== null ? Math.min(100, Math.max(0, Math.round(((30 - trialDaysLeft) / 30) * 100))) : 0;
+  // Duração real desta conta, não a constante: contas anteriores a 2026-07-27 têm 30 dias
+  // e extensão manual estica ainda mais. Usar TRIAL_DAYS aqui travava a barra em 0%.
+  let trialTotalDays = TRIAL_DAYS;
+  $: trialProgressPct = trialDaysLeft !== null ? Math.min(100, Math.max(0, Math.round(((trialTotalDays - trialDaysLeft) / trialTotalDays) * 100))) : 0;
   $: activePlan = subscriptionPlanTier ? PLANS[subscriptionPlanTier] ?? null : null;
   $: activeAddons = [
     hasMesasAddon ? ADDONS.mesas.name : null,
@@ -435,7 +439,7 @@
     try {
       const { data: sub } = await supabase
         .from('subscriptions')
-        .select('status, provider_customer_id, cancel_at_period_end, current_period_end, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon')
+        .select('status, provider_customer_id, cancel_at_period_end, created_at, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -444,6 +448,7 @@
       providerCustomerId = sub?.provider_customer_id ?? null;
       cancelAtPeriodEnd = !!sub?.cancel_at_period_end;
       currentPeriodEnd = sub?.current_period_end ?? null;
+      trialTotalDays = getTrialTotalDays(sub, TRIAL_DAYS);
       subscriptionPlanTier = sub?.plan_tier ?? null;
       hasMesasAddon = !!sub?.has_mesas_addon;
       hasPedidosAddon = !!sub?.has_pedidos_addon;

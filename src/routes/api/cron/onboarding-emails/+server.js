@@ -31,18 +31,74 @@ import { EMAIL_SEQUENCE, EMAIL_DAYS } from '$lib/server/emailTemplates';
 import {
   enviarBoasVindasDetalhado,
   enviarFollowup7dDetalhado,
-  enviarFollowup28dDetalhado,
+  enviarFollowupFinalDetalhado,
   getWhatsAppSendError,
   isWhatsAppConfigured,
 } from '$lib/server/whatsapp';
 import { logOnboardingCommunication } from '$lib/server/onboardingEvents';
+import { deveDisparar, diasDesdeInicio, diasRestantes } from '$lib/server/onboardingSchedule';
 
 const WHATSAPP_SEQUENCE = new Map([
   [0, enviarBoasVindasDetalhado],
   [7, enviarFollowup7dDetalhado],
-  [28, enviarFollowup28dDetalhado],
+  [13, enviarFollowupFinalDetalhado],
 ]);
-const WHATSAPP_DAYS = [0, 7, 28];
+const WHATSAPP_DAYS = [0, 7, 13];
+
+// Colunas de controle no banco. Os nomes `..._28d_...` são legado do trial de 30 dias;
+// a coluna continua a mesma, só o dia de disparo mudou (28 -> 13). Renomear exigiria
+// migration sem ganho real.
+const WHATSAPP_SENT_FIELD = {
+  0: 'whatsapp_onboarding_sent_at',
+  7: 'whatsapp_followup_7d_sent_at',
+  13: 'whatsapp_followup_28d_sent_at',
+};
+
+// Um disparo de onboarding só faz sentido perto do dia planejado. Sem esse teto, qualquer
+// mudança em EMAIL_DAYS/WHATSAPP_DAYS faria o cron "recuperar" todos os dias novos de uma
+// vez e despejar a sequência inteira na caixa de quem já está no meio do trial.
+// Regras de agendamento (catch-up e âncora no fim do trial) vivem em
+// $lib/server/onboardingSchedule.js — `+server.js` só pode exportar métodos HTTP,
+// e aquela é a parte que precisa de teste.
+
+/**
+ * Sinais de uso para decidir se as extensões fazem sentido pra cada empresa.
+ *
+ * Uma query por tabela, contando em memória, em vez de N queries por usuário. Isso é
+ * O(linhas dos trials ativos), o que serve enquanto a base de trials é pequena. Se um
+ * dia houver centenas de trials simultâneos, isto vira uma view agregada no banco.
+ */
+async function fetchUsageSignals(userIds) {
+  const empty = () => ({ produtos: 0, vendas: 0, acessos: 0 });
+  const signals = new Map(userIds.map((id) => [id, empty()]));
+
+  const sources = [
+    { table: 'produtos', column: 'id_usuario', field: 'produtos' },
+    { table: 'vendas', column: 'id_usuario', field: 'vendas' },
+    { table: 'access_users', column: 'owner_user_id', field: 'acessos' },
+  ];
+
+  await Promise.all(sources.map(async ({ table, column, field }) => {
+    const { data, error } = await supabaseAdmin
+      .from(table)
+      .select(column)
+      .in(column, userIds);
+
+    if (error) {
+      // Sinal ausente degrada pra zero, e zero venda significa "não oferece nada".
+      // Falhar em silêncio aqui é melhor que abortar a sequência inteira de onboarding.
+      console.warn(`[onboarding-emails] sinal ${table} indisponível:`, error.message);
+      return;
+    }
+
+    for (const row of data || []) {
+      const bucket = signals.get(row[column]);
+      if (bucket) bucket[field] += 1;
+    }
+  }));
+
+  return signals;
+}
 
 export async function GET({ request }) {
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -79,7 +135,7 @@ export async function GET({ request }) {
   const { data: trials, error: trialsErr } = await supabaseAdmin
     .from('subscriptions')
     .select(
-      'user_id, created_at, current_period_end, whatsapp_onboarding_sent_at, whatsapp_followup_7d_sent_at, whatsapp_followup_28d_sent_at'
+      'user_id, created_at, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu, whatsapp_onboarding_sent_at, whatsapp_followup_7d_sent_at, whatsapp_followup_28d_sent_at'
     )
     .eq('status', 'trialing')
     .gt('current_period_end', now.toISOString());
@@ -116,7 +172,7 @@ export async function GET({ request }) {
     for (const trial of trials) {
       if (trial.whatsapp_onboarding_sent_at) whatsappSentSet.add(`${trial.user_id}:0`);
       if (trial.whatsapp_followup_7d_sent_at) whatsappSentSet.add(`${trial.user_id}:7`);
-      if (trial.whatsapp_followup_28d_sent_at) whatsappSentSet.add(`${trial.user_id}:28`);
+      if (trial.whatsapp_followup_28d_sent_at) whatsappSentSet.add(`${trial.user_id}:13`);
     }
   }
 
@@ -128,14 +184,25 @@ export async function GET({ request }) {
 
   const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
 
+  // ── 3b. Sinais de uso (fit das extensões) ─────────────────────────────────
+  const usageSignals = await fetchUsageSignals(userIds);
+
   // ── 4. Process each trial ─────────────────────────────────────────────────
   for (const trial of trials) {
-    const { user_id, created_at } = trial;
+    const { user_id } = trial;
 
-    // Calculate how many full days have elapsed since trial start
-    const daysSince = Math.floor(
-      (now.getTime() - new Date(created_at).getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const usage = usageSignals.get(user_id) || { produtos: 0, vendas: 0, acessos: 0 };
+    const templateContext = {
+      ...usage,
+      temMesas: !!trial.has_mesas_addon,
+      temAcessos: !!trial.has_acessos_addon,
+      temMenu: !!trial.has_zelo_menu,
+      planoChat: trial.plan_tier === 'chat' || trial.plan_tier === 'bundle',
+    };
+
+    const daysSince = diasDesdeInicio(trial, now);
+    const daysLeft = diasRestantes(trial, now);
+    const agenda = { daysSince, daysLeft };
 
     // Fetch user email from auth (only once per user)
     let userEmail = null;
@@ -158,13 +225,23 @@ export async function GET({ request }) {
     // Find all email days that should be sent but haven't been yet
     if (userEmail) {
       for (const emailDay of EMAIL_DAYS) {
-      if (daysSince < emailDay) continue; // not yet time
+      if (!deveDisparar(emailDay, agenda)) continue;
       if (sentSet.has(`${user_id}:${emailDay}`)) continue; // already sent
 
       const templateFn = EMAIL_SEQUENCE.get(emailDay);
       if (!templateFn) continue;
 
-      const { subject, html } = templateFn(nome);
+      // Template pode recusar o envio devolvendo null ("não faz sentido pra esta
+      // empresa"). Não gravamos log nesse caso: se o perfil de uso mudar amanhã e a
+      // oferta passar a fazer sentido, ela ainda pode sair dentro da janela de catch-up.
+      const rendered = templateFn(nome, templateContext);
+      if (!rendered) {
+        results.skipped++;
+        results.details.push({ user_id, emailDay, reason: 'template opted out' });
+        continue;
+      }
+
+      const { subject, html } = rendered;
 
       await logOnboardingCommunication({
         userId: user_id,
@@ -231,7 +308,7 @@ export async function GET({ request }) {
     }
 
     for (const messageDay of WHATSAPP_DAYS) {
-      if (daysSince < messageDay) continue;
+      if (!deveDisparar(messageDay, agenda)) continue;
       if (whatsappSentSet.has(`${user_id}:${messageDay}`)) continue;
 
       const sendWhatsApp = WHATSAPP_SEQUENCE.get(messageDay);
@@ -250,11 +327,7 @@ export async function GET({ request }) {
 
       if (sendResult.ok) {
         whatsappSentSet.add(`${user_id}:${messageDay}`);
-        const sentField = {
-          0: 'whatsapp_onboarding_sent_at',
-          7: 'whatsapp_followup_7d_sent_at',
-          28: 'whatsapp_followup_28d_sent_at',
-        }[messageDay];
+        const sentField = WHATSAPP_SENT_FIELD[messageDay];
         if (sentField) {
           await supabaseAdmin
             .from('subscriptions')

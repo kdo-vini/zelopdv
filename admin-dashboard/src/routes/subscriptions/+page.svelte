@@ -352,7 +352,9 @@
   function getDefaultExtensionTargetDate(sub) {
     const base = getEffectiveExpiry(sub) || new Date()
     const reference = base > new Date() ? base : new Date()
-    return addDays(reference, 30)
+    // Default de extensão manual alinhado ao trial padrão (14 dias desde 2026-07-27).
+    // O campo continua editável; isso é só o valor pré-preenchido.
+    return addDays(reference, 14)
   }
 
   function getExtensionPreviewDate(sub) {

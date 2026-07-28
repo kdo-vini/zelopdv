@@ -258,7 +258,7 @@
             href="/cadastro"
             class="px-7 py-3.5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-full shadow-lg shadow-sky-950/40 transition-colors"
           >
-            Testar 30 dias grátis
+            Testar 14 dias grátis
           </a>
           <button
             type="button"
@@ -603,19 +603,19 @@
     <!-- ============ FINAL CTA ============ -->
     <section class="py-16 md:py-24">
       <div class="max-w-3xl mx-auto px-6 text-center">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-4">Teste 30 dias grátis</p>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-4">Teste 14 dias grátis</p>
         <h2 class="text-2xl md:text-4xl font-bold text-white tracking-tight leading-tight mb-5">
           Comece pelo essencial. Cresça quando precisar.
         </h2>
         <p class="text-base md:text-lg leading-relaxed mb-8" style="color: var(--text-muted);">
-          Cria conta sem cartão, ativa as extensões que fizerem sentido no checkout, e usa por trinta dias completos. Se não fizer diferença, é só deixar o trial expirar.
+          Cria conta sem cartão, ativa as extensões que fizerem sentido no checkout, e usa por duas semanas completas. Se não fizer diferença, é só deixar o trial expirar.
         </p>
         <div class="flex flex-col sm:flex-row justify-center gap-3">
           <a
             href="/cadastro"
             class="px-7 py-3.5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-full shadow-lg shadow-sky-950/40 transition-colors"
           >
-            Começar trial 30 dias
+            Começar trial 14 dias
           </a>
           <button
             type="button"
