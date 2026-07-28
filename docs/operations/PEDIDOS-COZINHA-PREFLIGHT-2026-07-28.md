@@ -56,4 +56,4 @@ Nomes, observacoes, emails, telefones e documentos nao foram persistidos neste a
 
 ## Gate restante
 
-O preflight, DDL, deploy e smoke técnico estão concluídos. A rota QR pública também respondeu 200 sem escrita. Ainda falta `delete_account` com conta/tenant de teste descartável; nenhuma conta real deve ser usada para esse teste. A assinatura `d5625be9` continua pendente de decisão humana sobre qualquer ação comercial; nenhum estorno ou alteração foi feito.
+O preflight, DDL, deploy, smoke técnico e reconciliação comercial estão concluídos. A rota QR pública também respondeu 200 sem escrita. O único teste ainda não executado é `delete_account` com conta/tenant descartável; nenhuma conta real deve ser usada para esse teste. A assinatura `d5625be9` ficou em bundle + Mesas por R$228/mês; Acessos foi removido com auditoria e sem estorno.
