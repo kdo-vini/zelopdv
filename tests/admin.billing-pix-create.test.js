@@ -21,7 +21,6 @@ const DEFAULT_PAYMENT_ROW = {
   provider_payment_id: 'pix_provider_1',
   plan_tier: 'pdv',
   has_mesas_addon: false,
-  has_pedidos_addon: false,
   has_acessos_addon: false,
   has_zelo_menu: false,
 };
@@ -99,7 +98,7 @@ describe('POST /api/admin/billing/pix/create', () => {
       writes: [],
       selectResults: {
         super_admins: { id: 1, is_active: true },
-        subscriptions: { id: 'sub-1', user_id: 'user-target', plan_tier: 'pdv', has_mesas_addon: false, has_pedidos_addon: false, has_acessos_addon: false, has_zelo_menu: false, status: 'active', payment_provider: 'abacatepay' },
+        subscriptions: { id: 'sub-1', user_id: 'user-target', plan_tier: 'pdv', has_mesas_addon: false, has_acessos_addon: false, has_zelo_menu: false, status: 'active', payment_provider: 'abacatepay' },
         empresa_perfil: { nome_exibicao: 'Loja Teste', documento: '529.982.247-25', contato: '(11) 99999-9999' },
         billing_payments: null,
       },
@@ -124,7 +123,7 @@ describe('POST /api/admin/billing/pix/create', () => {
     const handler = await load(defaultState({
       selectResults: {
         super_admins: { id: 1, is_active: true },
-        subscriptions: { id: 'sub-1', user_id: 'user-target', plan_tier: 'pdv', has_mesas_addon: false, has_pedidos_addon: false, has_acessos_addon: false, has_zelo_menu: false, status: 'active', payment_provider: 'abacatepay' },
+        subscriptions: { id: 'sub-1', user_id: 'user-target', plan_tier: 'pdv', has_mesas_addon: false, has_acessos_addon: false, has_zelo_menu: false, status: 'active', payment_provider: 'abacatepay' },
         empresa_perfil: { nome_exibicao: 'Loja Teste', documento: '529.982.247-25', contato: '(11) 99999-9999' },
         billing_payments: { ...DEFAULT_PAYMENT_ROW, status: 'pending', expires_at: new Date(Date.now() + 3600_000).toISOString() },
       },
@@ -173,7 +172,7 @@ describe('POST /api/admin/billing/pix/create', () => {
     const handler = await load(defaultState({
       selectResults: {
         super_admins: { id: 1, is_active: true },
-        subscriptions: { id: 'sub-1', user_id: 'user-target', plan_tier: 'pdv', has_mesas_addon: false, has_pedidos_addon: false, has_acessos_addon: false, has_zelo_menu: false, status: 'active', payment_provider: 'abacatepay' },
+        subscriptions: { id: 'sub-1', user_id: 'user-target', plan_tier: 'pdv', has_mesas_addon: false, has_acessos_addon: false, has_zelo_menu: false, status: 'active', payment_provider: 'abacatepay' },
         empresa_perfil: { nome_exibicao: 'Loja', documento: null, contato: '11999999999' },
       },
     }));

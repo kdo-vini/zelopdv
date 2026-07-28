@@ -2,7 +2,9 @@
 
 - O catalogo canonico de precos esta em `src/lib/pricing.js`: ZeloMenu custa R$40 como add-on do ZeloPDV, e e incluido no ZeloChat/Pacote Gestao + Atendimento. O espelho do Admin precisa manter essa regra.
 
-- O add-on `pedidos` (Pedidos + Cozinha) foi removido do codigo em 2026-07-28. A coluna `subscriptions.has_pedidos_addon` **continua no banco** e nao pode ser dropada antes de `~/orca/zelomenu/src/hooks/useZeloMenuEntitlement.ts` parar de inclui-la no `.select()` — PostgREST rejeita o select inteiro quando a coluna nao existe. A view `user_entitlements` tambem expoe a coluna.
+- O add-on `pedidos` (Pedidos + Cozinha) foi removido do codigo em 2026-07-28. ZeloMenu, ZeloChat e a copia `delivery-frontend` ja nao leem `has_pedidos_addon`; a coluna **continua no banco somente ate o deploy/soak e a migration de aposentadoria**. A view `user_entitlements` ainda expoe a coluna antes do DDL.
+
+- `source='mesa'` e o contrato comum do QR publico de mesa e do botao "Enviar pra cozinha" da comanda. QR chega sem `fulfillment.comandaItemId` e baixa estoque ao aceitar; item da comanda ja consumiu estoque, carrega esse campo e nao deve ser restaurado em cancelamento. Pedidos mesa nunca criam venda por `ensure_zelo_order_sale`/`close_zelo_order`; a venda e do fechamento da comanda.
 
 - As chaves de permissao de subusuario `pedidos.*` (`pedidos.acessar`, `pedidos.cozinha`, `pedidos.receber`, `pedidos.cancelar`) ficam com o prefixo antigo de proposito: estao persistidas no JSON de `access_roles` e renomea-las apaga silenciosamente a permissao de quem ja esta cadastrado.
 
