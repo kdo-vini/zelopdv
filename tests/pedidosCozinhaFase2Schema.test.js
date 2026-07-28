@@ -12,6 +12,11 @@ const entitlementSql = readFileSync(
   'utf8',
 ).replace(/\r\n/g, '\n').toLowerCase();
 
+const cancelMarkerCorrectionSql = readFileSync(
+  resolve('.ai/migrations/pedidos_cozinha_mesa_cancel_marker_2026_07_28.sql'),
+  'utf8',
+).replace(/\r\n/g, '\n').toLowerCase();
+
 describe('fase 2A — pedidos/cozinha e source mesa', () => {
   it('keeps the legacy drop and delete_account replacement in one transaction', () => {
     expect(sourceMesaSql.indexOf('begin;')).toBeGreaterThanOrEqual(0);
@@ -39,8 +44,17 @@ describe('fase 2A — pedidos/cozinha e source mesa', () => {
     expect(sourceMesaSql).toContain("v_source='mesa'\n      and nullif(p_snapshots#>>'{fulfillment,comandaitemid}','') is not null");
     expect(sourceMesaSql).toContain("case when v_stock_already_committed then now() else null end");
     expect(sourceMesaSql).toContain("o.source <> ''mesa'' or o.fulfillment->>''comandaitemid'' is null");
+    expect(sourceMesaSql).toContain("stock_released_at=case when v_to=''cancelled'' and stock_committed_at is not null");
+    expect(sourceMesaSql).toContain("and (o.source <> ''mesa'' or o.fulfillment->>''comandaitemid'' is null)");
     expect(sourceMesaSql).toContain("v_order.source = ''mesa''");
     expect(sourceMesaSql).toContain('mesa_order_financial_close_not_allowed');
+  });
+
+  it('guards both stock restoration and the released marker for comanda items', () => {
+    expect(cancelMarkerCorrectionSql).toContain('begin;');
+    expect(cancelMarkerCorrectionSql).toContain('create or replace');
+    expect(cancelMarkerCorrectionSql).toContain("o.source <> ''mesa'' or o.fulfillment->>''comandaitemid'' is null");
+    expect(cancelMarkerCorrectionSql).toContain('commit;');
   });
 });
 

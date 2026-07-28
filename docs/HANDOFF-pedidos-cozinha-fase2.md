@@ -1,9 +1,18 @@
 # HANDOFF: aposentadoria do módulo Pedidos + Cozinha
 
-> Escrito em 2026-07-28. A fase 1 está commitada em `8945f17` e já faz parte de `origin/main`; a fase 2 (banco) continua planejada e **não executada**.
+> Escrito em 2026-07-28. A fase 1 está commitada em `8945f17`; a fase 2 foi executada em produção e publicada no merge `5a6f45a3`. Este documento agora serve como registro de execução e dos testes funcionais ainda pendentes.
 > Docs relacionadas: [[CURRENT]] · [[FIXES_PROGRESS]] · [[BILLING]] · [[ZeloPDV.memory]]
 
 ---
+
+## Atualizacao da retomada (2026-07-28)
+
+- ZeloMenu e ZeloChat ja foram mergeados em producao e passaram o soak inicial; os commits e evidencias estao em `docs/operations/PEDIDOS-COZINHA-PREFLIGHT-2026-07-28.md`.
+- O preflight sanitizado foi concluido: 3 pedidos, 5 itens, R$ 65 em subtotais e nenhuma venda vinculada.
+- O projeto tem backup fisico recente, mas `pitr_enabled=false`; o dump SQL completo nao foi capturado porque o CLI exigiu Docker Desktop.
+- O DDL foi executado em duas transacoes no projeto linkado, com backup fisico existente; as assercoes de schema e ACL passaram.
+- O PR #27 foi mergeado em `5a6f45a3` e esta em producao; `/api/version` confirma esse commit. As rotas dependentes do schema retornam 200 e o endpoint de cozinha sem bearer retorna 401.
+- Nao ha credenciais E2E nem tenant descartavel configurado. Um smoke transacional com rollback passou 3/3 (cancelamento de item de comanda, entrega sem venda e bloqueio de fechamento); `delete_account` real continua pendente.
 
 ## To-do executivo (atualizado em 2026-07-28)
 
@@ -12,15 +21,15 @@
 - [x] Especificar o contrato canônico de `source='mesa'` para QR público e comanda, incluindo idempotência, ownership, estoque, cancelamento e fechamento financeiro. O QR consome estoque no aceite; o item já reservado pela comanda leva `fulfillment.comandaItemId` e não sofre baixa/restauração duplicada.
 - [x] Ajustar e testar ZeloMenu, incluindo a cópia órfã de `delivery-frontend`, para parar de selecionar `subscriptions.has_pedidos_addon` e materializar `table_order` em `zelo_orders`. ZeloMenu passou `typecheck` e 262 testes; a cópia órfã recebeu o mesmo ajuste.
 - [ ] Capturar export sanitizado, DDL das funções/views/policies e janela de PITR antes do ponto de não retorno.
-- [x] Preparar uma migration transacional revisada que remova `pedidos`, `pedido_itens`, `proximo_numero_pedido`, `subscriptions.has_pedidos_addon` e `billing_payments.has_pedidos_addon` na ordem correta. As migrations e os 10 testes estruturais estão versionados; ainda não foram executados.
-- [ ] Deployar os consumidores cross-repo, aguardar soak e só então executar DDL em produção.
-- [ ] Validar entitlement, QR público, comanda/cozinha, estoque, ausência de venda duplicada e deleção de conta.
+- [x] Preparar e executar as migrations transacionais revisadas que removem `pedidos`, `pedido_itens`, `proximo_numero_pedido`, `subscriptions.has_pedidos_addon` e `billing_payments.has_pedidos_addon` na ordem correta. As duas transações passaram e as asserções de schema/ACL foram aprovadas.
+- [x] Deployar os consumidores cross-repo, aguardar soak e só então executar DDL em produção. ZeloMenu e ZeloChat foram publicados antes do DDL; o ZeloPDV foi publicado depois.
+- [ ] Validar entitlement, QR público, comanda/cozinha, estoque, ausência de venda duplicada e deleção de conta. O entitlement/QR e o caminho canônico de produção já passaram verificações técnicas; falta apenas exercitar `delete_account` com conta descartável.
 - [x] Reconciliar tecnicamente a assinatura `d5625be9`: o valor atual é R$258 e bate com bundle R$198 + Mesas R$30 + Acessos R$30; o `has_pedidos_addon` antigo aparece só como flag histórica nos logs, não como componente do preço atual.
 - [ ] Decisão humana sobre eventual crédito/estorno ou retirada de algum add-on da assinatura `d5625be9`; não há evidência suficiente para alterar cobrança automaticamente.
 
 > Decisão do dono do produto: o snapshot financeiro histórico de `billing_payments.has_pedidos_addon` não precisa ser preservado; a coluna entra no escopo de remoção, sem apagar os demais registros de cobrança.
 
-> Validação cross-repo: ZeloPDV passou 438/438 e os testes direcionados da fase 2 passaram 10/10; ZeloMenu passou typecheck, build e 262/262; ZeloChat passou lint e os testes direcionados. A suíte completa do ZeloChat tem uma falha preexistente fora deste diff em `tests/zelomenuSlug.test.ts` (expectativa `/menu/:slug` contra runtime `/:slug`).
+> Validação cross-repo: ZeloPDV passou 441/441 e os testes direcionados da fase 2 passaram 11/11; ZeloMenu passou typecheck, build e 262/262; ZeloChat passou lint e os testes direcionados. A suíte completa do ZeloChat tem uma falha preexistente fora deste diff em `tests/zelomenuSlug.test.ts` (expectativa `/menu/:slug` contra runtime `/:slug`).
 
 ## 0. LEIA ISTO PRIMEIRO: correção de uma conclusão anterior
 
@@ -206,7 +215,7 @@ Mesmo diff nas **duas** cópias: `~/orca/zelomenu/src/domain/zelomenuEntitlement
 
 ---
 
-## 3. `source='mesa'`: contrato implementado, DDL ainda não executada
+## 3. `source='mesa'`: contrato implementado e DDL executada
 
 O botão "Enviar pra cozinha" das Mesas foi removido na fase 1. Restaurá-lo apontando para o motor canônico **como está hoje causa baixa dupla de estoque e cobrança dupla**. Confirmado por mim no banco:
 
