@@ -94,6 +94,13 @@ Estado produção em 2026-06-23: aplicada no Supabase real como `zelomenu_public
 - As tabelas novas incluem grants explicitos mínimos (`select`, `insert`, `update`, `delete`) para `authenticated`/`service_role` e revogam `anon`, porque RLS sozinho nao deve ser assumido como permissao de acesso ao PostgREST.
 - Verificação pós-rollout: RLS ligado nas 3 tabelas, 4 policies por tabela, constraints/FKs/índices presentes, nenhum grant para `anon` e chave pública bloqueada para acesso anônimo.
 
+## ZeloMenu table capabilities
+
+- `public.zelomenu_table_capabilities` e uma tabela server-owned para capacidades temporarias de mesa.
+- Em producao (2026-07-28), RLS esta ligado, nao ha policies para browser roles e os grants de `anon`/`authenticated` foram revogados.
+- As RPCs `issue_table_capability(...)` e `revoke_table_capability(...)` sao `SECURITY DEFINER` e aceitam somente `service_role`; nao devem ser expostas pelo PostgREST a usuarios ou ao cliente publico.
+- A tabela estava vazia e nenhuma sessao de carrinho usava `capability_id` no momento da correcao.
+
 ## O que o add-on Acessos realmente garante hoje
 
 - Contexto owner/subusuario existe no servidor (`src/lib/server/accessControl.js`).
@@ -128,16 +135,19 @@ Conclusao operacional:
    - se precisa de enforcement server-side
 4. Se mudar `criar_venda_completa`, revalidar offline, `id_operador` e idempotencia.
 
-## Motor canonico de pedidos online
+## Motor canonico de pedidos online e cozinha de mesa
 
-Migration local: `.ai/migrations/canonical_online_orders_2026_07_12.sql` (ainda nao aplicada em producao).
+Migration base: `.ai/migrations/canonical_online_orders_2026_07_12.sql`; o contrato adicional de mesa e a aposentadoria do legado foram aplicados em produção em 2026-07-28 pelas migrations listadas abaixo.
 
-- `zelo_orders` e `zelo_order_items` sao a fonte canonica para pedidos online de ZeloMenu/ZeloChat; pedidos de mesa continuam em `pedidos`/`pedido_itens`.
+- `zelo_orders` e `zelo_order_items` sao a fonte canonica para pedidos online de ZeloMenu/ZeloChat e para os bilhetes `source='mesa'`; a rota QR `table_order` e o envio da comanda convergem nesse agregado.
+- O item da comanda enviado pelo PDV carrega `fulfillment.comandaItemId` e ja consumiu estoque no momento em que entrou na comanda; o QR publico nao carrega esse campo e consome estoque na transicao para `accepted`.
 - Criacao, transicao e fechamento passam pelas RPCs `create_zelo_order`, `transition_zelo_order` e `close_zelo_order`, com idempotencia e CAS por `revision`.
 - Usuarios autenticados podem ler o tenant do owner e executar transicoes; inserts/updates diretos sao revogados. Integracoes publicas criam via `service_role`.
 - Para subusuarios, as RPCs tambem consultam `access_users`/`access_roles.permissions`: acesso, cozinha, recebimento e cancelamento exigem suas respectivas chaves `pedidos.*`; owner e `service_role` mantem bypass deliberado.
 - `zelo_order_events` preserva a auditoria e `zelo_order_outbox` desacopla notificacao/impressao com retry.
-- O backfill preserva tabelas antigas e IDs legados. A migracao deve ser auditada por contagem, totais e itens antes de qualquer cutover de aplicacao.
+- O cutover preservou os IDs do motor canônico; as tabelas legadas `pedidos`/`pedido_itens` foram removidas depois do snapshot sanitizado e da validação do DDL, conforme decisão registrada no handoff.
+
+Migration de aposentadoria aplicada em producao em 2026-07-28: `.ai/migrations/pedidos_cozinha_source_mesa_and_drop_2026_07_28.sql` removeu `pedidos`/`pedido_itens`/`proximo_numero_pedido` na mesma transacao em que atualizou `delete_account`; `.ai/migrations/pedidos_cozinha_entitlement_columns_drop_2026_07_28.sql` recriou `user_entitlements` sem `has_pedidos_addon` e removeu as colunas legadas de `subscriptions` e `billing_payments`. As assercoes pos-DDL confirmaram os objetos ausentes, o `CHECK` de `source='mesa'` e os ACLs esperados.
 
 ## Zelo Intelligence Engine — tabelas adicionadas em 2026-07-10
 

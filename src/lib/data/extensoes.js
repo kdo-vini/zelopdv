@@ -12,6 +12,17 @@ import { ADDONS, PLANS } from '$lib/pricing';
 
 const BASE_URL = 'https://zelopdv.com.br';
 
+const currentPrices = {
+  base: PLANS.pdv.price,
+  mesas: ADDONS.mesas.price,
+  acessos: ADDONS.acessos.price,
+  menu: ADDONS.menu.price,
+  chat: PLANS.chat.price,
+  chatBundleDelta: PLANS.bundle.price - PLANS.pdv.price
+};
+
+const formatPrice = (value) => `R$ ${Number(value).toFixed(0)}`;
+
 export const extensoes = {
   mesas: {
     slug: 'mesas',
@@ -19,7 +30,7 @@ export const extensoes = {
     meta: {
       title: 'Módulo Mesas — Comandas, Divisão de Conta e Mapa de Salão | Zelo PDV',
       description:
-        'Add-on do Zelo PDV para bares, hamburguerias e restaurantes pequenos. Mapa de mesas, comanda acumulativa, divisão entre N pessoas, taxa de serviço, couvert e pré-conta. +R$ 30/mês sobre o plano base.',
+        `Add-on do Zelo PDV para bares, hamburguerias e restaurantes pequenos. Mapa de mesas, comanda acumulativa, divisão entre N pessoas, taxa de serviço, couvert e pré-conta. +${formatPrice(currentPrices.mesas)}/mês sobre o plano base.`,
       canonical: `${BASE_URL}/extensoes#mesas`
     },
     heroBadge: 'Add-on Zelo PDV',
@@ -132,7 +143,7 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          '+R$ 30/mês sobre o plano base de R$ 59. Total fica R$ 89/mês. Não tem taxa de adesão e o add-on sai de graça durante os 14 dias de trial.'
+          `+${formatPrice(currentPrices.mesas)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.mesas)}/mês. Não tem taxa de adesão e o add-on sai de graça durante os 14 dias de trial.`
       }
     ],
     finalCtaTitle: 'Teste o Zelo PDV com Mesas por 14 dias grátis',
@@ -146,7 +157,7 @@ export const extensoes = {
     meta: {
       title: 'Controle de Acessos — Equipe com Cargos e Permissões | Zelo PDV',
       description:
-        'Add-on do Zelo PDV para negócios com equipe. Crie até 5 subusuários por e-mail, organize em cargos como Caixa, Atendente e Gerente, e controle quem pode fazer o quê no sistema. +R$ 30/mês.',
+        `Add-on do Zelo PDV para negócios com equipe. Crie até 5 subusuários por e-mail, organize em cargos como Caixa, Atendente e Gerente, e controle quem pode fazer o quê no sistema. +${formatPrice(currentPrices.acessos)}/mês.`,
       canonical: `${BASE_URL}/extensoes#acessos`
     },
     heroBadge: 'Add-on Zelo PDV',
@@ -264,7 +275,7 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          '+R$ 30/mês sobre o plano base de R$ 59. Total fica R$ 89/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.'
+          `+${formatPrice(currentPrices.acessos)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.acessos)}/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.`
       }
     ],
     finalCtaTitle: 'Teste o Controle de Acessos por 14 dias grátis',
@@ -284,7 +295,7 @@ export const extensoes = {
     meta: {
       title: 'Zelo Chat — Atendimento WhatsApp com IA | Zelo PDV',
       description:
-        'Atendimento automático via WhatsApp com IA. Responde clientes, anota pedidos, dispara alertas humanos quando precisar. Inclui ZeloMenu. Disponível como upgrade do Zelo PDV (+R$ 139/mês no pacote completo) ou standalone R$ 149.',
+        `Atendimento automático via WhatsApp com IA. Responde clientes, anota pedidos, dispara alertas humanos quando precisar. Inclui ZeloMenu. Disponível como upgrade do Zelo PDV (+${formatPrice(currentPrices.chatBundleDelta)}/mês no pacote completo) ou standalone ${formatPrice(currentPrices.chat)}.`,
       canonical: `${BASE_URL}/extensoes#chat`
     },
     h1: 'Zelo Chat: WhatsApp atendido por IA + ZeloMenu incluso',
@@ -380,7 +391,7 @@ export const extensoes = {
       {
         question: 'Zelo Chat é o mesmo plano do Zelo PDV?',
         answer:
-          'Não. O Zelo Chat é um produto separado, mas que se conecta ao Zelo PDV. O Zelo Chat já inclui o ZeloMenu (cardápio digital, pedidos online e painel de cozinha). Quem já assina o PDV pode adicionar o Chat fazendo upgrade pro Pacote Gestão + Atendimento por +R$ 139/mês (em vez de R$ 149 standalone). O Chat funciona sem PDV também, se for o caso.'
+          `Não. O Zelo Chat é um produto separado, mas que se conecta ao Zelo PDV. O Zelo Chat já inclui o ZeloMenu (cardápio digital, pedidos online e painel de cozinha). Quem já assina o PDV pode adicionar o Chat fazendo upgrade pro Pacote Gestão + Atendimento por +${formatPrice(currentPrices.chatBundleDelta)}/mês (em vez de ${formatPrice(currentPrices.chat)} standalone). O Chat funciona sem PDV também, se for o caso.`
       },
       {
         question: 'Posso testar antes de assinar?',
@@ -409,7 +420,7 @@ export const extensoes = {
     meta: {
       title: 'ZeloMenu — Cardápio Online com Publicação para Clientes | Zelo PDV',
       description:
-        'Publique o cardápio do seu negócio online. +R$ 40/mês como add-on do Zelo PDV. Clientes acessam produtos, preços e variações pelo celular.',
+        `Publique o cardápio do seu negócio online. +${formatPrice(currentPrices.menu)}/mês como add-on do Zelo PDV. Clientes acessam produtos, preços e variações pelo celular.`,
       canonical: `${BASE_URL}/extensoes#menu`
     },
     heroBadge: 'Add-on Zelo PDV',
@@ -427,7 +438,7 @@ export const extensoes = {
     problemTitle: 'Cardápio impresso desatualizado? Cliente não confia',
     problemParagraphs: [
       'Lanchonete que imprime cardápio no começo do mês convive com preço riscado a caneta, item em falta que o cliente pede e descobre na hora, e sabor sazonal que nunca entra no papel porque "vai que volta". O cliente que pesquisa pelo celular antes de sair de casa vê um cardápio diferente do que está na cozinha.',
-      'Sistema de cardápio digital separado (WhatsMenu, iFood Cardápio) custa R$ 100, R$ 200 por mês ou depende de marketplace que cobra comissão por pedido. O ZeloMenu publica o que já está no seu estoque, online, sem cadastro paralelo, sem taxa extra por pedido. R$ 40 extras no plano que já gerencia seu negócio.'
+      `Sistema de cardápio digital separado (WhatsMenu, iFood Cardápio) custa R$ 100, R$ 200 por mês ou depende de marketplace que cobra comissão por pedido. O ZeloMenu publica o que já está no seu estoque, online, sem cadastro paralelo, sem taxa extra por pedido. ${formatPrice(currentPrices.menu)} extras no plano que já gerencia seu negócio.`
     ],
     problemPoints: [
       { label: 'Cardápio desatualizado', value: 'Preço riscado a caneta, item que acabou e cliente só descobre na hora de pedir.' },
@@ -482,7 +493,7 @@ export const extensoes = {
       {
         title: 'Ative o ZeloMenu',
         description:
-          'Adicione o ZeloMenu como extensão na sua assinatura (R$ 40/mês). A ativação é instantânea e o add-on sai de graça durante os 14 dias de trial.'
+          `Adicione o ZeloMenu como extensão na sua assinatura (${formatPrice(currentPrices.menu)}/mês). A ativação é instantânea e o add-on sai de graça durante os 14 dias de trial.`
       },
       {
         title: 'Publique os produtos do estoque',
@@ -527,7 +538,7 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          '+R$ 40/mês sobre o plano base de R$ 59. Total fica R$ 99/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.'
+          `+${formatPrice(currentPrices.menu)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.menu)}/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.`
       }
     ],
     finalCtaTitle: 'Teste o ZeloMenu por 14 dias grátis',
@@ -565,7 +576,7 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          '+R$ 40/mês sobre o plano base de R$ 59. Total fica R$ 99/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.'
+          `+${formatPrice(currentPrices.menu)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.menu)}/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.`
       }
     ],
     finalCtaTitle: 'Teste o ZeloMenu por 14 dias grátis',
@@ -576,7 +587,8 @@ export const extensoes = {
 
 export function getAddonPrice(addonId) {
   const addon = ADDONS[addonId];
-  return addon ? Number(addon.price) : 30;
+  if (!addon) throw new Error(`Extensão inválida: ${addonId}`);
+  return Number(addon.price);
 }
 
 // Preço da extensão Chat quando agregada ao Zelo PDV (delta no Bundle)

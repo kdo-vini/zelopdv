@@ -88,6 +88,17 @@
     --marketing-ink-soft: #526B82;
     --marketing-line: #D7E3EE;
 
+    /* ZeloMenu product identity — sourced from the product brand assets */
+    --zelomenu-brand: #7A46FF;
+    --zelomenu-brand-deep: #5520E8;
+    --zelomenu-brand-light: #DDD6FE;
+
+    /* ZeloChat product identity — sourced from the ZeloChat landing tokens */
+    --zelochat-brand: #25D366;
+    --zelochat-brand-hover: #1EBE5D;
+    --zelochat-brand-deep: #0b9778;
+    --zelochat-ink: #0B1120;
+
     /* Status Colors */
     --error: #ef4444;
     /* red-500 */
