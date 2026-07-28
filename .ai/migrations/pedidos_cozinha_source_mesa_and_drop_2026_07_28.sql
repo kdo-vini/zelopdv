@@ -245,6 +245,7 @@ end $$;
 do $$
 declare
   v_definition text;
+  v_changed boolean := false;
 begin
   select pg_get_functiondef('public.transition_zelo_order(uuid,integer,text,uuid,jsonb)'::regprocedure)
     into v_definition;
@@ -256,6 +257,19 @@ begin
       'if v_to=''cancelled'' and o.stock_committed_at is not null and o.stock_released_at is null then',
       'if v_to=''cancelled'' and o.stock_committed_at is not null and o.stock_released_at is null
          and (o.source <> ''mesa'' or o.fulfillment->>''comandaItemId'' is null) then');
+    v_changed := true;
+  end if;
+  if position('stock_released_at=case when v_to=''cancelled'' and stock_committed_at is not null then now() else stock_released_at end,' in v_definition)>0 then
+    v_definition:=replace(v_definition,
+      'stock_released_at=case when v_to=''cancelled'' and stock_committed_at is not null then now() else stock_released_at end,',
+      'stock_released_at=case when v_to=''cancelled'' and stock_committed_at is not null
+        and (o.source <> ''mesa'' or o.fulfillment->>''comandaItemId'' is null)
+        then now() else stock_released_at end,');
+    v_changed := true;
+  elsif position('stock_released_at=case when v_to=''cancelled'' and stock_committed_at is not null' in v_definition)=0 then
+    raise exception 'PRECONDITION_FAILED: transition_zelo_order stock marker drifted';
+  end if;
+  if v_changed then
     execute v_definition;
   end if;
 end $$;
