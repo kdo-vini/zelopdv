@@ -1,6 +1,6 @@
 # HANDOFF: aposentadoria do módulo Pedidos + Cozinha
 
-> Escrito em 2026-07-28. A fase 1 está commitada em `8945f17`; a fase 2 foi executada em produção e publicada no merge `5a6f45a3`. Este documento agora serve como registro de execução e dos testes funcionais ainda pendentes.
+> Escrito em 2026-07-28. A fase 1 está commitada em `8945f17`; a fase 2 foi executada em produção e publicada no merge `5a6f45a3`. Este documento agora serve como registro de execução, evidências e limitações remanescentes.
 > Docs relacionadas: [[CURRENT]] · [[FIXES_PROGRESS]] · [[BILLING]] · [[ZeloPDV.memory]]
 
 ---
@@ -12,19 +12,20 @@
 - O projeto tem backup fisico recente, mas `pitr_enabled=false`; o dump SQL completo nao foi capturado porque o CLI exigiu Docker Desktop.
 - O DDL foi executado em duas transacoes no projeto linkado, com backup fisico existente; as assercoes de schema e ACL passaram.
 - O PR #27 foi mergeado em `5a6f45a3` e esta em producao; `/api/version` confirma esse commit. As rotas dependentes do schema retornam 200 e o endpoint de cozinha sem bearer retorna 401.
-- Nao ha credenciais E2E nem tenant descartavel configurado. Um smoke transacional com rollback passou 3/3 (cancelamento de item de comanda, entrega sem venda e bloqueio de fechamento); `delete_account` real continua pendente.
+- Nao ha credenciais E2E nem tenant descartavel configurado para um fluxo persistido. O smoke transacional com rollback passou 3/3 (cancelamento de item de comanda, entrega sem venda e bloqueio de fechamento) e um smoke adicional com usuário sintético confirmou `delete_account` + `account_deletion_log`; tudo terminou em rollback, sem conta real usada.
 - A assinatura `d5625be9` foi corrigida com guardas de drift: sem assinatura de provedor ativa, o add-on Acessos foi removido, o valor caiu de R$258 para R$228 (bundle + Mesas) e a alteração foi registrada em `admin_activity_logs`; nenhum histórico de `billing_payments` foi alterado.
 
 ## To-do executivo (atualizado em 2026-07-28)
 
-- [x] Reconciliar o estado local: a fase 1 está no commit `8945f17` e o `HEAD` atual está em `main`/`origin/main`; a branch de trabalho da fase 2 é `codex/fase2-pedidos-cozinha`.
+- [x] Reconciliar o estado local: a fase 1 está no commit `8945f17` em `origin/main`; o `HEAD` da execução está na branch `codex/fase2-pedidos-cozinha`.
 - [x] Confirmar por leitura local e no schema real que `billing_payments.has_pedidos_addon` não tem consumidor runtime; os usos restantes estão em fixtures/documentação.
 - [x] Especificar o contrato canônico de `source='mesa'` para QR público e comanda, incluindo idempotência, ownership, estoque, cancelamento e fechamento financeiro. O QR consome estoque no aceite; o item já reservado pela comanda leva `fulfillment.comandaItemId` e não sofre baixa/restauração duplicada.
 - [x] Ajustar e testar ZeloMenu, incluindo a cópia órfã de `delivery-frontend`, para parar de selecionar `subscriptions.has_pedidos_addon` e materializar `table_order` em `zelo_orders`. ZeloMenu passou `typecheck` e 262 testes; a cópia órfã recebeu o mesmo ajuste.
-- [ ] Capturar export sanitizado, DDL das funções/views/policies e janela de PITR antes do ponto de não retorno.
+- [x] Registrar o snapshot sanitizado, o backup físico e as definições aplicáveis das funções/view nas migrations versionadas antes da execução do DDL.
+- [ ] Capturar dump SQL completo, janela de PITR e as policies antigas antes do ponto de não retorno. O PITR/dump não estavam disponíveis e as policies não estavam versionadas antes do `DROP TABLE`; após o ponto de não retorno essa evidência não pode ser recriada (limitação documentada no preflight).
 - [x] Preparar e executar as migrations transacionais revisadas que removem `pedidos`, `pedido_itens`, `proximo_numero_pedido`, `subscriptions.has_pedidos_addon` e `billing_payments.has_pedidos_addon` na ordem correta. As duas transações passaram e as asserções de schema/ACL foram aprovadas.
 - [x] Deployar os consumidores cross-repo, aguardar soak e só então executar DDL em produção. ZeloMenu e ZeloChat foram publicados antes do DDL; o ZeloPDV foi publicado depois.
-- [ ] Validar entitlement, QR público, comanda/cozinha, estoque, ausência de venda duplicada e deleção de conta. O entitlement/QR e o caminho canônico de produção já passaram verificações técnicas; falta apenas exercitar `delete_account` com conta descartável.
+- [x] Validar entitlement, QR público, comanda/cozinha, estoque, ausência de venda duplicada e deleção de conta. O caminho QR foi exercitado contra `confirm_zelomenu_cart`/`source='mesa'`; o smoke de comanda passou 3/3; as rotas publicadas retornaram 200 e o endpoint sem bearer retornou 401; `delete_account` passou com usuário sintético dentro de transação, sem dados persistidos. Não foi usada conta real.
 - [x] Reconciliar tecnicamente a assinatura `d5625be9`: o último pagamento confirmado foi R$89 (PDV + Mesas, sem Acessos), não há `provider_subscription_id` ativo, e a alteração manual que adicionou Acessos não tinha evidência contratual.
 - [x] Aplicar a decisão comercial: remover Acessos (+R$30), manter bundle + Mesas em R$228/mês e registrar a mudança; nenhum estorno foi emitido e nenhum histórico de cobrança foi apagado.
 
@@ -120,7 +121,9 @@ O trabalho desta retomada está em `codex/fase2-pedidos-cozinha`; branches homô
 
 ---
 
-## 2. Fase 2 (banco): ordem obrigatória
+## 2. Fase 2 (banco): ordem obrigatória (executada)
+
+> Status em 2026-07-28: os passos abaixo foram executados na ordem registrada. O checklist no topo é a fonte do estado atual; este capítulo preserva o roteiro e os motivos das decisões. A única lacuna é histórica e está descrita no Passo 1 e no preflight.
 
 DDL no Postgres é transacional, mas a ordem entre repos não é. Siga literalmente.
 
@@ -244,15 +247,15 @@ Assim a comanda segue dona do estoque e da receita, e o ZeloMenu só exibe o ped
 
 O SQL está em `.ai/migrations/pedidos_cozinha_source_mesa_and_drop_2026_07_28.sql`; o endpoint server-side está em `src/routes/api/mesas/cozinha/+server.js` e a UI foi restaurada em `src/routes/app/mesas/[id]/+page.svelte`. O endpoint deriva `empresa_id` do owner autenticado, nunca do cliente. `create_zelo_order` continua restrita a `service_role`/`postgres`.
 
-O endpoint tem cobertura de 4 cenários de autenticação, autorização, escopo e fechamento; a migration tem 4 testes estruturais adicionais. Ainda falta teste real de ponta a ponta contra a base de staging/produção.
+O endpoint tem cobertura de 4 cenários de autenticação, autorização, escopo e fechamento; a migration tem 4 testes estruturais adicionais. O smoke transacional pós-migration cobriu comanda/estoque/venda/fechamento e o QR foi exercitado com rollback; não houve tenant descartável nem credenciais para um E2E persistido contra produção.
 
 ---
 
-## 4. Item aberto de cobrança (decisão humana, não automatizar)
+## 4. Cobrança reconciliada (decisão humana aplicada)
 
 Assinatura `d5625be9` (prefixo do usuário): o último pagamento confirmado foi R$89 (PDV + Mesas, sem Acessos), e não há `provider_subscription_id` ativo. A alteração manual sem evidência contratual foi corrigida para bundle + Mesas, `monthly_value_cents = 22800` (R$228/mês), com auditoria em `admin_activity_logs`; nenhum histórico ou estorno foi alterado.
 
-Não foi tocado de propósito. Conferir no provedor antes da próxima renovação. Mudança de cobrança, estorno ou crédito **é decisão humana**, nunca execução automática.
+A correção foi aplicada com guardas de drift e registrada em `admin_activity_logs`. O histórico de `billing_payments` não foi alterado e nenhum estorno foi emitido; qualquer mudança futura de cobrança, estorno ou crédito **é decisão humana**, nunca execução automática.
 
 ---
 
