@@ -20,7 +20,8 @@ Canônico em [src/lib/pricing.js](/home/vinicius/code/zelopdv/src/lib/pricing.js
 - Plano `bundle`: R$ 198/mês
 - Add-ons `mesas` e `acessos`: R$ 30/mês cada; `menu` (ZeloMenu): R$ 40/mês
 - O add-on `pedidos` (Pedidos + Cozinha) foi aposentado em 2026-07-28 e saiu do catálogo; a capacidade vive no ZeloMenu
-- As colunas legadas `subscriptions.has_pedidos_addon` e `billing_payments.has_pedidos_addon` ainda aguardam a migration transacional da fase 2; nenhum fluxo runtime atual deve selecioná-las.
+- As colunas legadas `subscriptions.has_pedidos_addon` e `billing_payments.has_pedidos_addon` foram removidas na fase 2 em 2026-07-28. O histórico financeiro legado dessa flag não foi preservado por decisão do dono do produto; os demais registros e campos de `billing_payments` permanecem.
+- A assinatura `d5625be9` foi reconciliada em 2026-07-28: Acessos sem evidência contratual foi removido, bundle + Mesas ficou em R$228/mês, e a alteração foi auditada sem estorno ou alteração do histórico de pagamentos.
 
 Regra prática:
 
