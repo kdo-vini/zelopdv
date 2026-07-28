@@ -243,8 +243,8 @@ ${signature()}
 // 2. Extensão já ativa não aparece.
 // Se sobrar nada pra oferecer, `montarEmailExtensoes` devolve null e o cron pula.
 //
-// `ADDONS.pedidos` está deprecated (entitlement legado migrado pro ZeloMenu), então
-// não entra na lista. ZeloChat não é add-on: é troca de plano, e vai por último.
+// O add-on Pedidos + Cozinha foi aposentado (2026-07-28) e saiu do catálogo, então não
+// existe mais para oferecer. ZeloChat não é add-on: é troca de plano, e vai por último.
 // ---------------------------------------------------------------------------
 
 /** Bloco visual de uma extensão dentro do e-mail. */

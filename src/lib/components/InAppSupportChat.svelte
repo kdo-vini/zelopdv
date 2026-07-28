@@ -61,7 +61,7 @@
       {#if messages.length === 0}
         <div class="welcome-msg">
           <p class="font-semibold mb-1">Como posso ajudar? 👋</p>
-          <p class="text-sm" style="opacity: 0.75;">Posso explicar como cadastrar produtos, criar cargos e usuários, usar o módulo de Mesas, Pedidos, Cozinha e muito mais.</p>
+          <p class="text-sm" style="opacity: 0.75;">Posso explicar como cadastrar produtos, criar cargos e usuários, usar o Módulo Mesas, os pedidos do ZeloMenu e muito mais.</p>
           <p class="text-sm mt-2" style="opacity: 0.65;">Se eu não souber responder, te conecto direto com nossa equipe pelo WhatsApp.</p>
         </div>
       {/if}

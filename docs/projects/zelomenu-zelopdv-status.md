@@ -4,6 +4,14 @@ Data: 2026-06-24
 Autor: Verboo Code  
 Formato: entregue vs pendente, riscos, regras de negócio
 
+> **Snapshot histórico (2026-06-24) — não é mais fonte viva para entitlements.**
+> Os fallbacks descritos abaixo foram removidos depois: `has_pedidos_addon` saiu de
+> `hasOrderingReviewAccess`/`hasKitchenQueueAccess` com a aposentadoria do módulo
+> Pedidos + Cozinha, e `has_mesas_addon` saiu de `hasKitchenQueueAccess` em
+> 2026-07-28. Hoje as duas capabilities são idênticas e dependem só do ZeloMenu
+> (chat/bundle por política, ou pdv com `has_zelo_menu`). Fonte canônica:
+> [[CURRENT]] e `src/lib/guards.js`.
+
 ---
 
 ## Resumo Executivo

@@ -81,7 +81,6 @@
   let planSaving = false
   let editPlanTier = 'pdv'
   let editMesasAddon = false
-  let editPedidosAddon = false
   let editAcessosAddon = false
   let editZeloMenuAddon = false
   
@@ -121,7 +120,6 @@
         updated_at,
         plan_tier,
         has_mesas_addon,
-        has_pedidos_addon,
         has_acessos_addon,
         has_zelo_menu,
         payment_provider,
@@ -275,7 +273,6 @@
     selectedSub = sub
     editPlanTier = sub.plan_tier || 'pdv'
     editMesasAddon = !!sub.has_mesas_addon
-    editPedidosAddon = !!sub.has_pedidos_addon
     editAcessosAddon = !!sub.has_acessos_addon
     editZeloMenuAddon = !!sub.has_zelo_menu
     showPlanModal = true
@@ -286,7 +283,6 @@
     selectedSub = null
     editPlanTier = 'pdv'
     editMesasAddon = false
-    editPedidosAddon = false
     editAcessosAddon = false
   }
 
@@ -377,9 +373,6 @@
     const finalZeloMenu = (editPlanTier === 'chat' || editPlanTier === 'bundle')
       ? true
       : (isAddonAllowed(editPlanTier, 'menu') && editZeloMenuAddon)
-    // ZeloMenu now includes Pedidos + Cozinha. Preserve the legacy flag so
-    // older consumers continue to recognize the entitlement during migration.
-    const finalPedidos = finalZeloMenu || !!selectedSub.has_pedidos_addon
     const nextMonthlyValueCents = Math.round(calculateValue(editPlanTier, {
       mesas: finalMesas,
       acessos: finalAcessos,
@@ -423,10 +416,9 @@
           body: JSON.stringify({
             subscriptionId: selectedSub.id,
             planTier: editPlanTier,
-            addons: { mesas: finalMesas, pedidos: finalPedidos, acessos: finalAcessos },
+            addons: { mesas: finalMesas, acessos: finalAcessos },
             // back-compat com versões antigas do endpoint:
             hasMesasAddon: finalMesas,
-            hasPedidosAddon: finalPedidos,
             hasAcessosAddon: finalAcessos,
           }),
         })
@@ -461,13 +453,11 @@
             old: {
               plan_tier: selectedSub.plan_tier,
               has_mesas_addon: selectedSub.has_mesas_addon,
-              has_pedidos_addon: selectedSub.has_pedidos_addon,
               has_acessos_addon: selectedSub.has_acessos_addon,
             },
             new: {
               plan_tier: editPlanTier,
               has_mesas_addon: finalMesas,
-              has_pedidos_addon: finalPedidos,
               has_acessos_addon: finalAcessos,
             },
             stripe_updated: body.stripeUpdated,
@@ -484,7 +474,6 @@
       const updatePayload = {
         plan_tier: editPlanTier,
         has_mesas_addon: finalMesas,
-        has_pedidos_addon: finalPedidos,
         has_acessos_addon: finalAcessos,
         has_zelo_menu: finalZeloMenu,
         monthly_value_cents: nextMonthlyValueCents,
@@ -509,15 +498,13 @@
           old: {
             plan_tier: selectedSub.plan_tier,
             has_mesas_addon: selectedSub.has_mesas_addon,
-            has_pedidos_addon: selectedSub.has_pedidos_addon,
             has_acessos_addon: selectedSub.has_acessos_addon,
             monthly_value_cents: selectedSub.monthly_value_cents,
           },
           new: {
             plan_tier: editPlanTier,
             has_mesas_addon: finalMesas,
-            has_pedidos_addon: finalPedidos,
-            has_acessos_addon: finalAcessos,
+                has_acessos_addon: finalAcessos,
             monthly_value_cents: nextMonthlyValueCents,
           },
           provider: provider || 'none',
@@ -1000,7 +987,7 @@
           ],
           rows: [
             { addon: 'Módulo Mesas',         count: activeSubs.filter(s => s.has_mesas_addon).length,   mrr: addonRevenue.mesas },
-            { addon: 'ZeloMenu (inclui Pedidos + Cozinha)', count: activeSubs.filter(s => s.has_zelo_menu).length, mrr: addonRevenue.menu },
+            { addon: 'ZeloMenu', count: activeSubs.filter(s => s.has_zelo_menu).length, mrr: addonRevenue.menu },
             { addon: 'Controle de Acessos',  count: activeSubs.filter(s => s.has_acessos_addon).length, mrr: addonRevenue.acessos },
           ],
           footer: [
@@ -1023,7 +1010,7 @@
             const eff = getEffectiveExpiry(s)
             const addons = [
               s.has_mesas_addon   ? 'Mesas'   : null,
-              s.has_zelo_menu ? 'ZeloMenu (inclui Pedidos + Cozinha)' : null,
+              s.has_zelo_menu ? 'ZeloMenu' : null,
               s.has_acessos_addon ? 'Acessos' : null,
             ].filter(Boolean).join(', ')
             return {
@@ -1739,7 +1726,7 @@
               <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-violet-500 shadow-inner"></div>
             </div>
             <div class="ml-3">
-              <span class="text-sm font-medium text-slate-300">ZeloMenu (+R$ 40/mês, inclui Pedidos + Cozinha)</span>
+              <span class="text-sm font-medium text-slate-300">ZeloMenu (+R$ 40/mês)</span>
               {#if editPlanTier === 'chat' || editPlanTier === 'bundle'}
                 <p class="text-[11px] text-emerald-400 mt-0.5">Já incluso no {PLANS[editPlanTier].name}.</p>
               {:else if !isAddonAllowed(editPlanTier, 'menu')}

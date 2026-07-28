@@ -1,7 +1,17 @@
 # ZeloPDV.memory
 
+- O catalogo canonico de precos esta em `src/lib/pricing.js`: ZeloMenu custa R$40 como add-on do ZeloPDV, e e incluido no ZeloChat/Pacote Gestao + Atendimento. O espelho do Admin precisa manter essa regra.
+
+- O add-on `pedidos` (Pedidos + Cozinha) foi removido do codigo em 2026-07-28. A coluna `subscriptions.has_pedidos_addon` **continua no banco** e nao pode ser dropada antes de `~/orca/zelomenu/src/hooks/useZeloMenuEntitlement.ts` parar de inclui-la no `.select()` — PostgREST rejeita o select inteiro quando a coluna nao existe. A view `user_entitlements` tambem expoe a coluna.
+
+- As chaves de permissao de subusuario `pedidos.*` (`pedidos.acessar`, `pedidos.cozinha`, `pedidos.receber`, `pedidos.cancelar`) ficam com o prefixo antigo de proposito: estao persistidas no JSON de `access_roles` e renomea-las apaga silenciosamente a permissao de quem ja esta cadastrado.
+
+- `/app/pedidos` e `/app/pedidos/cozinha` leem **so** `zelo_orders` (motor canonico). No painel de cozinha o preparo conclui o pedido inteiro via `mark_ready`; nao existe estado por item.
+
+- `subscriptions.monthly_value_cents` e nullable e guarda o valor mensal real em centavos; a coluna foi aplicada no Supabase real em 2026-07-24 apos o ZeloAdmin zerar consultas por coluna ausente. Linhas antigas ainda usam fallback por `plan_tier` no admin ate o backfill.
+
 > Memória viva. Guardar só fatos confirmados e úteis para continuidade técnica.
-> Atualizado em 2026-06-23.
+> Atualizado em 2026-07-27.
 
 - O app principal roda em SvelteKit 2 + Svelte 5 e usa `@sveltejs/adapter-vercel` com runtime Node 20.
 - Existe um segundo app em `admin-dashboard/`, separado do app principal.
@@ -10,6 +20,7 @@
 - Trial grátis local vencido usa status `trial_expired`; `past_due` é reservado para falha/atraso de pagamento.
 - `billing_payments` registra o fluxo Pix da AbacatePay.
 - A camada PDV-owned de publicação do ZeloMenu fica em `zelomenu_product_publications`, `zelomenu_modifier_groups` e `zelomenu_modifier_options`; o catálogo base continua em `produtos`/`categorias`, visibilidade online não usa `produtos.ocultar_no_pdv` e preço base não tem override no v1.
+- A tela `/app/pedidos` é uma superfície operacional client-side: assina/poll `zelo_orders` e, para pedidos canônicos novos, envia um job `kitchen_order` de texto ao Zelo Impressão. O auto-print usa reconciliação de 15 minutos, dedupe persistente de 48 horas e preserva `zelo_order_items.modifiers` no bilhete.
 - Em 2026-06-23, a migration de publicação do ZeloMenu foi aplicada no Supabase real como `zelomenu_publication_schema_2026_06_23`; verificado RLS ligado, policies por owner, grants mínimos para `authenticated`/`service_role`, nenhum grant para `anon`, constraints/FKs/índices presentes e acesso anônimo bloqueado por chave pública.
 - `src/lib/pricing.js` é o catálogo canônico de planos, add-ons e Stripe price IDs.
 - O fluxo offline do PDV é contingência, não offline-first completo.

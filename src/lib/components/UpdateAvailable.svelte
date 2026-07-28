@@ -112,10 +112,7 @@
   function isCriticalFlowActive() {
     const path = window.location.pathname;
     const activeSaleRoute = path === '/app' && hasActiveComanda();
-    const orderEditorRoute =
-      path === '/app/pedidos/novo' ||
-      /^\/app\/pedidos\/[^/]+\/editar\/?$/.test(path);
-    return userIsTyping() || hasOpenModal() || activeSaleRoute || orderEditorRoute;
+    return userIsTyping() || hasOpenModal() || activeSaleRoute;
   }
 
   function schedulePromptWhenSafe(version) {

@@ -37,7 +37,7 @@ export async function GET({ request }) {
       .order('created_at', { ascending: false }),
     supabaseAdmin
       .from('subscriptions')
-      .select('has_mesas_addon, has_pedidos_addon')
+      .select('has_mesas_addon, has_zelo_menu, plan_tier')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -46,7 +46,13 @@ export async function GET({ request }) {
 
   return json({
     users: (users || []).map(u => ({ ...u, role_name: u.access_roles?.name || null })),
-    addons: { mesas: !!sub?.has_mesas_addon, pedidos: !!sub?.has_pedidos_addon },
+    // `zeloMenu` espelha o gate de ordering_review de guards.js: chat/bundle
+    // incluem ZeloMenu por política (D-014); pdv puro precisa da flag.
+    addons: {
+      mesas: !!sub?.has_mesas_addon,
+      zeloMenu: sub?.plan_tier === 'chat' || sub?.plan_tier === 'bundle'
+        || (sub?.plan_tier === 'pdv' && !!sub?.has_zelo_menu),
+    },
   });
 }
 

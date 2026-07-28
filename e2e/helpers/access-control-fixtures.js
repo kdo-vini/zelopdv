@@ -167,7 +167,7 @@ async function ensureOwnerSubscription(admin, ownerUserId) {
     .from('subscriptions')
     .update({
       has_acessos_addon: true,
-      has_pedidos_addon: true,
+      has_zelo_menu: true,
       has_mesas_addon: true,
       updated_at: new Date().toISOString(),
     })
@@ -196,7 +196,7 @@ async function updateOwnerSubscriptionAddons(admin, ownerUserId, addons) {
 
   if (addons.acessos !== undefined) patch.has_acessos_addon = Boolean(addons.acessos);
   if (addons.mesas !== undefined) patch.has_mesas_addon = Boolean(addons.mesas);
-  if (addons.pedidos !== undefined) patch.has_pedidos_addon = Boolean(addons.pedidos);
+  if (addons.zeloMenu !== undefined) patch.has_zelo_menu = Boolean(addons.zeloMenu);
 
   const { error: updateError } = await admin
     .from('subscriptions')

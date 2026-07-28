@@ -12,7 +12,7 @@
 
   let roles = [];
   let users = [];
-  let addons = { mesas: false, pedidos: false };
+  let addons = { mesas: false, zeloMenu: false };
 
   let activeTab = 'cargos'; // 'cargos' | 'usuarios'
 
@@ -101,14 +101,16 @@
       ],
     },
     {
-      label: 'Pedidos / Cozinha',
-      requiresAddon: 'pedidos',
+      label: 'Pedidos do ZeloMenu',
+      requiresAddon: 'zeloMenu',
+      // As chaves seguem com o prefixo `pedidos.` de propósito: estão persistidas
+      // no JSON de `access_roles` e renomeá-las apagaria a permissão de quem já
+      // está cadastrado. O rótulo é o que mudou.
       items: [
-        { key: 'pedidos.acessar', label: 'Acessar pedidos' },
-        { key: 'pedidos.criar', label: 'Criar/editar pedidos' },
+        { key: 'pedidos.acessar', label: 'Acessar fila de pedidos' },
         { key: 'pedidos.cozinha', label: 'Painel de cozinha' },
-        { key: 'pedidos.receber', label: 'Receber pedido no caixa' },
-        { key: 'pedidos.cancelar', label: 'Cancelar pedido' },
+        { key: 'pedidos.receber', label: 'Concluir pedido no caixa' },
+        { key: 'pedidos.cancelar', label: 'Cancelar/rejeitar pedido' },
       ],
     },
   ];
@@ -152,7 +154,7 @@
 
       roles = rolesData.roles ?? [];
       users = usersData.users ?? [];
-      addons = usersData.addons ?? { mesas: false, pedidos: false };
+      addons = usersData.addons ?? { mesas: false, zeloMenu: false };
 
       // NOTE: default roles (Proprietário, Gerente, Operador) are created
       // automatically by ensureDefaultRoles() inside POST /api/access/users,

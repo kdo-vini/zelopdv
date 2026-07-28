@@ -8,7 +8,6 @@ import { isSubscriptionActiveStrict } from '$lib/subscriptionStatus';
 
 const ADDON_DB_COLUMN = {
   mesas: 'has_mesas_addon',
-  pedidos: 'has_pedidos_addon',
   acessos: 'has_acessos_addon',
   menu: 'has_zelo_menu',
 };
@@ -34,7 +33,7 @@ export async function POST({ request }) {
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, status, current_period_end, manually_extended_until, payment_provider')
+      .select('id, provider_subscription_id, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu, status, current_period_end, manually_extended_until, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -54,9 +53,7 @@ export async function POST({ request }) {
           error: `Add-on "${ADDONS[addon].name}" não é compatível com o plano atual.`,
         }, { status: 400 });
       }
-      // Mesas e Pedidos+Cozinha são o mesmo produto — mantém os dois em sincronia.
       const dbUpdate = { [ADDON_DB_COLUMN[addon]]: enabled, updated_at: new Date().toISOString() };
-      if (addon === 'mesas') dbUpdate.has_pedidos_addon = enabled;
       await supabaseAdmin
         .from('subscriptions')
         .update(dbUpdate)
@@ -110,9 +107,7 @@ export async function POST({ request }) {
     });
 
     // DB sync acontece via webhook customer.subscription.updated, mas atualizamos sincrono pra UX imediata.
-    // Mesas e Pedidos+Cozinha são o mesmo produto — mantém os dois em sincronia.
     const dbUpdate = { [ADDON_DB_COLUMN[addon]]: enabled, updated_at: new Date().toISOString() };
-    if (addon === 'mesas') dbUpdate.has_pedidos_addon = enabled;
     await supabaseAdmin
       .from('subscriptions')
       .update(dbUpdate)

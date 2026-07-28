@@ -2,16 +2,12 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { ensureActiveSubscription, hasPedidosAddon, hasZeloMenuAccess, hasOrderingReviewAccess, bounceSubUserMissingAddon } from '$lib/guards';
+  import { ensureActiveSubscription, hasOrderingReviewAccess, bounceSubUserMissingAddon } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
-  import { logAuditAction } from '$lib/accessControl';
-  import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
-  import { money } from '$lib/finance/caixa';
   import { buildVendaPayload } from '$lib/finance/saleOps';
-  import { somarQuantidadePorEstoque } from '$lib/stock';
   import { printOrder } from '$lib/printService';
   import { detectZeloImpressao } from '$lib/zeloImpressaoClient.js';
   import { createPrintedOrderStore, selectOrdersToAutoPrint } from '$lib/orderAutoPrint.js';
@@ -28,8 +24,6 @@
 
   let ready = false;
   let loading = true;
-  let addonActive = false;
-  let menuActive = false;
   let orderingReviewActive = false;
   let userId = '';
   let ownerUserId = '';
@@ -39,12 +33,9 @@
   let canReceiveOrders = true;
   let pedidos = [];
   let pedidoSelecionadoId = null;
-  let produtos = [];
   let dadosEmpresa = null;
   let idCaixaAberto = null;
-  let modalPagamentoAberto = false;
   let fechandoPedido = false;
-  let erroPagamento = '';
   let pollTimer = null;
   let printerStatusTimer = null;
   let realtimeRefreshTimer = null;
@@ -56,13 +47,7 @@
   let reimprimindo = false;
   let orderBaselineReady = false;
   let polling = false;
-  let modalPagamentoRef;
   let mobileDetailOpen = false;
-  // Snapshot do pedido no momento de abrir o modal — protege contra o poll
-  // trocar a seleção enquanto o caixa confirma o pagamento.
-  let pedidoEmFechamento = null;
-  let totalEmFechamento = 0;
-  let itensEmFechamento = [];
 
   $: pedidoSelecionado = pedidos.find((p) => p.id === pedidoSelecionadoId) || pedidos[0] || null;
   $: itensSelecionados = (pedidoSelecionado?.pedido_itens || []).map((item) => ({
@@ -73,12 +58,7 @@
     quantidade: Number(item.quantidade || 0),
     modifierGroups: itemModifierGroups(item)
   }));
-  $: totalPedido = pedidoSelecionado?.canonical
-    ? Number(pedidoSelecionado.total || 0)
-    : itensSelecionados.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
-  $: plataformasAtivas = (dadosEmpresa?.plataformas_pagamento || [])
-    .filter((p) => p.ativo)
-    .map((p) => ({ id: p.id, nome: p.nome, icone: p.icone || '[]', taxa_pct: Number(p.taxa_pct || 0) }));
+  $: totalPedido = Number(pedidoSelecionado?.total || 0);
 
   onMount(async () => {
     const auth = await ensureActiveSubscription({ requireProfile: true });
@@ -89,7 +69,7 @@
     operadorUserId = auth.userId;
     isSubUser = auth.isSubUser;
     if (isSubUser && !(await hasAccessPermission('pedidos.acessar'))) {
-      addToast('Seu cargo não tem acesso ao módulo de pedidos.', 'warning');
+      addToast('Seu cargo não tem acesso à fila de pedidos.', 'warning');
       goto('/app');
       return;
     }
@@ -100,35 +80,28 @@
       ]);
     }
     pdvCache.setUserId(ownerUserId);
-    [addonActive, menuActive, orderingReviewActive] = await Promise.all([
-      hasPedidosAddon(ownerUserId),
-      hasZeloMenuAccess(ownerUserId),
-      hasOrderingReviewAccess(ownerUserId)
-    ]);
-    const canAccess = orderingReviewActive;
-    if (bounceSubUserMissingAddon({ addonActive: canAccess, isSubUser, addonLabel: 'Pedidos / ZeloMenu' })) return;
+    orderingReviewActive = await hasOrderingReviewAccess(ownerUserId);
+    if (bounceSubUserMissingAddon({ addonActive: orderingReviewActive, isSubUser, addonLabel: 'ZeloMenu' })) return;
     ready = true;
 
-    if (!canAccess) {
+    if (!orderingReviewActive) {
       loading = false;
       return;
     }
 
-    await Promise.all([carregarProdutos(true), carregarEmpresa(), carregarCaixaAberto()]);
+    await Promise.all([carregarEmpresa(), carregarCaixaAberto()]);
     await carregarPedidos();
     printedOrderStore = createPrintedOrderStore();
     void atualizarStatusImpressora();
     printerStatusTimer = setInterval(atualizarStatusImpressora, 20000);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    if (orderingReviewActive) {
-      realtimeChannel = subscribeCanonicalOrderUpdates(supabase, dadosEmpresa?.id, () => {
-        if (realtimeRefreshTimer) return;
-        realtimeRefreshTimer = setTimeout(() => {
-          realtimeRefreshTimer = null;
-          void carregarPedidos();
-        }, 150);
-      });
-    }
+    realtimeChannel = subscribeCanonicalOrderUpdates(supabase, dadosEmpresa?.id, () => {
+      if (realtimeRefreshTimer) return;
+      realtimeRefreshTimer = setTimeout(() => {
+        realtimeRefreshTimer = null;
+        void carregarPedidos();
+      }, 150);
+    });
     pollTimer = setInterval(carregarPedidos, 30000);
   });
 
@@ -237,14 +210,6 @@
     for (const pedido of candidatos.values()) void imprimirPedidoAutomaticamente(pedido);
   }
 
-  async function carregarProdutos(forceRefresh = false) {
-    try {
-      produtos = await pdvCache.getProdutos(forceRefresh);
-    } catch (err) {
-      addToast('Erro ao carregar produtos: ' + getFriendlyErrorMessage(err), 'error');
-    }
-  }
-
   async function carregarEmpresa() {
     try {
       const { data } = await supabase
@@ -277,27 +242,7 @@
     if (polling || fechandoPedido || !userId) return;
     polling = true;
     try {
-      // Origens carregadas dependem dos addons ativos:
-      // balcao → sempre (se addonActive); zelomenu → se menuActive.
-      // comanda segue fluxo de mesas; zelochat tem fluxo próprio.
-      const origensParaCarregar = [];
-      if (addonActive) origensParaCarregar.push('balcao');
-      const legacyPromise = origensParaCarregar.length
-        ? supabase
-          .from('pedidos')
-          .select('id, numero_pedido, status, observacoes, nome_cliente, origem, criado_em, pedido_itens(id, id_produto, nome, preco_unitario, quantidade, subtotal, enviado_cozinha, status_cozinha)')
-          .eq('id_usuario', ownerUserId || userId)
-          .in('origem', origensParaCarregar)
-          .in('status', ['aberto', 'pronto'])
-          .order('criado_em', { ascending: true })
-        : Promise.resolve({ data: [], error: null });
-      const [legacy, online] = await Promise.all([
-        legacyPromise,
-        orderingReviewActive ? loadCanonicalOrders(supabase, dadosEmpresa?.id) : Promise.resolve([])
-      ]);
-      if (legacy.error) throw legacy.error;
-      const proximosPedidos = [...(legacy.data || []), ...online]
-        .sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em));
+      const proximosPedidos = await loadCanonicalOrders(supabase, dadosEmpresa?.id);
       reconciliarImpressaoAutomatica(proximosPedidos);
       pedidos = proximosPedidos;
       if (!pedidos.some((p) => p.id === pedidoSelecionadoId)) {
@@ -318,270 +263,21 @@
     }
   }
 
-  function editarPedido(pedido) {
-    if (pedido.canonical) {
-      addToast('Pedidos online devem ser operados pelas ações de status.', 'warning');
-      return;
-    }
-    goto(`/app/pedidos/${pedido.id}/editar`);
-  }
-
   async function excluirPedido(pedido) {
     if (!canCancelOrders) {
       addToast('Seu cargo não pode cancelar ou rejeitar pedidos.', 'warning');
       return;
     }
-    if (pedido.canonical) return cancelarPedidoCanonico(pedido);
-    const titulo = `Pedido #${pedido.numero_pedido}`;
-    const itensPronto = (pedido.pedido_itens || []).some((i) => i.status_cozinha === 'pronto');
-    const mensagem = itensPronto
-      ? `Cancelar o ${titulo}? Há itens já marcados como prontos pela cozinha — eles serão descartados.`
-      : `Cancelar o ${titulo}? Esta ação não pode ser desfeita.`;
-
-    const ok = await confirmAction('Cancelar pedido', mensagem);
-    if (!ok) return;
-
-    const { error, data } = await supabase
-      .from('pedidos')
-      .delete()
-      .eq('id', pedido.id)
-      .eq('id_usuario', ownerUserId || userId)
-      .in('status', ['aberto', 'pronto'])
-      .select('id');
-
-    if (error) {
-      addToast('Erro ao cancelar pedido: ' + getFriendlyErrorMessage(error), 'error');
-      return;
-    }
-    if (!data || data.length === 0) {
-      addToast('Pedido já foi fechado em outro dispositivo.', 'warning');
-    } else {
-      if (isSubUser) {
-        logAuditAction({
-          ownerUserId,
-          action: 'pedido.cancelado',
-          entityType: 'pedido',
-          entityId: String(pedido.id),
-          details: {
-            numero_pedido: pedido.numero_pedido,
-            origem: pedido.origem
-          }
-        });
-      }
-      addToast(`${titulo} cancelado.`, 'success');
-    }
-    if (pedidoSelecionadoId === pedido.id) pedidoSelecionadoId = null;
-    await carregarPedidos();
-  }
-
-  async function abrirPagamento() {
-    if (!pedidoSelecionado || totalPedido <= 0) return;
-    if (!idCaixaAberto) {
-      await carregarCaixaAberto();
-      if (!idCaixaAberto) {
-        addToast('Abra o caixa antes de fechar pedidos.', 'warning');
-        return;
-      }
-    }
-    erroPagamento = '';
-    pedidoEmFechamento = pedidoSelecionado;
-    totalEmFechamento = totalPedido;
-    itensEmFechamento = itensSelecionados.map((i) => ({ ...i }));
-    modalPagamentoAberto = true;
-  }
-
-  async function handlePagamentoConfirmado(event) {
-    const alvo = pedidoEmFechamento;
-    if (!alvo || fechandoPedido) return;
-    modalPagamentoRef?.setSalvando?.(true);
-    fechandoPedido = true;
-    erroPagamento = '';
-
-    try {
-      const pagamento = event.detail;
-      const venda = await criarVendaParaPedido(alvo, pagamento);
-
-      // Guard com .eq('status', 'aberto') / 'pronto' evita reabrir um pedido já fechado.
-      const { error: pedidoError, data: atualizado } = await supabase
-        .from('pedidos')
-        .update({
-          status: 'fechado',
-          id_venda: venda.id,
-          fechado_em: new Date().toISOString(),
-          id_operador: operadorUserId
-        })
-        .eq('id', alvo.id)
-        .eq('id_usuario', ownerUserId || userId)
-        .in('status', ['aberto', 'pronto'])
-        .select('id');
-
-      if (pedidoError) {
-        addToast('Venda criada, mas falhou ao fechar o pedido. Verifique manualmente.', 'warning');
-        throw pedidoError;
-      }
-      if (!atualizado || atualizado.length === 0) {
-        // Pedido já estava fechado em outro device — venda foi criada por engano.
-        addToast('Pedido já havia sido fechado em outro dispositivo. Reverta a venda manualmente se duplicada.', 'warning');
-      }
-
-      if (isSubUser) {
-        logAuditAction({
-          ownerUserId,
-          action: 'pedido.fechado',
-          entityType: 'pedido',
-          entityId: String(alvo.id),
-          details: {
-            numero_pedido: alvo.numero_pedido,
-            venda_id: venda.id
-          }
-        });
-      }
-      addToast(`Pedido #${alvo.numero_pedido} fechado com sucesso.`, 'success');
-      modalPagamentoAberto = false;
-      modalPagamentoRef?.resetState?.();
-      mobileDetailOpen = false;
-      pedidoEmFechamento = null;
-      itensEmFechamento = [];
-      totalEmFechamento = 0;
-      pdvCache.invalidateProdutos();
-      await Promise.all([carregarPedidos(), carregarProdutos(true)]);
-    } catch (err) {
-      const msg = getFriendlyErrorMessage(err);
-      erroPagamento = msg;
-      modalPagamentoRef?.setErro?.(msg);
-    } finally {
-      fechandoPedido = false;
-      modalPagamentoRef?.setSalvando?.(false);
-    }
-  }
-
-  async function criarVendaParaPedido(pedido, pagamento) {
-    const itens = (pedido.pedido_itens || []).map((item) => ({
-      id_produto: item.id_produto ?? null,
-      nome: item.nome,
-      quantidade: Number(item.quantidade || 0),
-      preco: Number(item.preco_unitario || 0)
-    }));
-
-    if (!itens.length) throw new Error('Pedido sem itens.');
-
-    const totalBase = money(totalEmFechamento || totalPedido);
-    const totalFinal = money(pagamento.totalFinal ?? totalBase);
-
-    // Pre-flight estoque check (UX: mensagem amigável antes de submeter o RPC)
-    await validarEstoque(itens);
-
-    const { payload } = buildVendaPayload({
-      formaPagamento: pagamento.formaPagamento,
-      valorRecebido: pagamento.valorRecebido,
-      pagamentos: Array.isArray(pagamento.pagamentos) ? pagamento.pagamentos : [],
-      totalFinal,
-      valorDesconto: pagamento.valorDesconto || 0,
-      descontoTipo: pagamento.descontoTipo || null,
-      taxaEntrega: 0,
-      tipoPedido: 'retirada',
-      idCaixa: idCaixaAberto,
-      idCliente: pagamento.idCliente || null,
-      itens,
-      taxasPlataforma: Array.isArray(pagamento.taxasPlataforma) ? pagamento.taxasPlataforma : [],
-      operadorId: operadorUserId
-    });
-
-    const { data, error: rpcError } = await supabase.rpc('criar_venda_completa', {
-      p_payload: payload
-    });
-    if (rpcError) throw rpcError;
-
-    return { id: data?.id, numero_venda: data?.numero_venda };
-  }
-
-  async function validarEstoque(itens) {
-    const ids = [...new Set(itens.filter((item) => item.id_produto).map((item) => item.id_produto))];
-    if (!ids.length) return;
-
-    const { data, error } = await supabase
-      .from('produtos')
-      .select('id, nome, id_categoria, controlar_estoque, estoque_atual, categorias(id, nome, controlar_estoque_compartilhado, estoque_compartilhado_atual)')
-      .in('id', ids);
-    if (error) throw error;
-
-    const produtosMap = new Map((data || []).map((produto) => [produto.id, produto]));
-
-    // Produto referenciado pelo pedido não existe mais — bloqueia a venda
-    // pra evitar FK violation em vendas_itens e venda fantasma.
-    const removidos = [];
-    for (const item of itens) {
-      if (item.id_produto && !produtosMap.has(item.id_produto)) {
-        removidos.push(item.nome);
-      }
-    }
-    if (removidos.length) {
-      throw new Error(`Produto removido do cadastro: ${removidos.join(', ')}. Edite o pedido antes de receber.`);
-    }
-
-    const itensComInfo = itens
-      .filter((item) => item.id_produto)
-      .map((item) => ({
-        ...produtosMap.get(item.id_produto),
-        id_produto: item.id_produto,
-        nome: produtosMap.get(item.id_produto)?.nome || item.nome,
-        quantidade: Number(item.quantidade || 0)
-      }));
-
-    const insuficientes = somarQuantidadePorEstoque(itensComInfo, itensComInfo)
-      .filter((item) => item.quantidade > item.disponivel)
-      .map((item) => `${item.nome} (disp: ${item.disponivel}, ped: ${item.quantidade})`);
-
-    if (insuficientes.length) {
-      throw new Error(`Estoque insuficiente para: ${insuficientes.join(', ')}`);
-    }
+    return cancelarPedidoCanonico(pedido);
   }
 
   function statusLabel(status) {
     const labels = {
       pending_payment: 'Aguardando pagamento', pending_review: 'Revisar', accepted: 'Aceito',
       preparing: 'Preparando', ready: 'Pronto', out_for_delivery: 'Saiu para entrega',
-      delivered: 'Entregue', rejected: 'Rejeitado', cancelled: 'Cancelado', pronto: 'Pronto', aberto: 'Aberto'
+      delivered: 'Entregue', rejected: 'Rejeitado', cancelled: 'Cancelado'
     };
     return labels[status] || status;
-  }
-
-  function origemLabel(pedido) {
-    if (pedido?.origem === 'zelomenu') return 'Online';
-    if (pedido?.origem === 'comanda') return 'Mesa';
-    if (pedido?.origem === 'zelochat') return 'ZeloChat';
-    return 'Balcão';
-  }
-
-  async function fecharPedidoZeloMenu(pedido) {
-    if (pedido.canonical) return avancarPedidoCanonico(pedido);
-    const ok = await confirmAction(
-      `Confirmar entrega — Pedido #${pedido.numero_pedido}`,
-      'Marcar como entregue? O pagamento já foi coletado pelo cardápio online.'
-    );
-    if (!ok) return;
-    fechandoPedido = true;
-    try {
-      const { error, data: atualizado } = await supabase
-        .from('pedidos')
-        .update({ status: 'fechado', fechado_em: new Date().toISOString(), id_operador: operadorUserId })
-        .eq('id', pedido.id)
-        .eq('id_usuario', ownerUserId || userId)
-        .in('status', ['aberto', 'pronto'])
-        .select('id');
-      if (error) throw error;
-      if (!atualizado || atualizado.length === 0) {
-        addToast('Pedido já havia sido fechado em outro dispositivo.', 'warning');
-      } else {
-        addToast(`Pedido #${pedido.numero_pedido} marcado como entregue.`, 'success');
-      }
-      mobileDetailOpen = false;
-      await carregarPedidos();
-    } catch (err) {
-      addToast('Erro: ' + getFriendlyErrorMessage(err), 'error');
-    } finally {
-      fechandoPedido = false;
-    }
   }
 
   function canonicalActionLabel(pedido) {
@@ -673,11 +369,11 @@
     <div class="state-card">
       <p>Carregando...</p>
     </div>
-  {:else if !addonActive && !menuActive}
+  {:else if !orderingReviewActive}
     <section class="upsell">
-      <p class="eyebrow">Módulo Pedidos</p>
+      <p class="eyebrow">ZeloMenu</p>
       <h1>Fila de Pedidos</h1>
-      <p>Ative o ZeloMenu ou o módulo de Pedidos para receber e gerenciar pedidos.</p>
+      <p>Ative o ZeloMenu para receber e gerenciar pedidos online.</p>
       <a href="/gestao/extensoes">Ver extensões</a>
     </section>
   {:else}
@@ -692,10 +388,6 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M19.5 15a7.5 7.5 0 11-2.197-5.303l3.722 3.722M3 12a9 9 0 0114.85-6.85"/></svg>
           <span>Atualizar</span>
         </button>
-        <button type="button" class="btn-primary" on:click={() => goto('/app/pedidos/novo')}>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-          <span>Novo pedido</span>
-        </button>
       </div>
     </header>
 
@@ -707,16 +399,13 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h10.5M8.25 12h10.5M8.25 17.25h10.5M3.75 6.75h.008v.008H3.75V6.75Zm0 5.25h.008v.008H3.75V12Zm0 5.25h.008v.008H3.75v-.008Z"/></svg>
         </div>
         <h2>Nenhum pedido na fila</h2>
-        <p>Pedidos abertos e prontos aparecem aqui automaticamente.</p>
-        <button type="button" class="btn-primary" on:click={() => goto('/app/pedidos/novo')}>Criar pedido</button>
+        <p>Pedidos do ZeloMenu aparecem aqui automaticamente.</p>
       </div>
     {:else}
       <div class="queue-layout" class:detail-open={mobileDetailOpen}>
         <section class="queue-list" aria-label="Fila de pedidos">
           {#each pedidos as pedido (pedido.id)}
-            {@const totalCard = pedido.canonical
-              ? Number(pedido.total || 0)
-              : (pedido.pedido_itens || []).reduce((acc, item) => acc + Number(item.subtotal || Number(item.preco_unitario || 0) * Number(item.quantidade || 0)), 0)}
+            {@const totalCard = Number(pedido.total || 0)}
             {@const qtdItens = (pedido.pedido_itens || []).reduce((acc, item) => acc + Number(item.quantidade || 0), 0)}
             <div class="queue-card">
               <button
@@ -733,11 +422,8 @@
                 <div class="qi-mid">
                   <div class="qi-cliente-row">
                     <strong class="qi-cliente">{clienteLabel(pedido)}</strong>
-                    {#if pedido.origem === 'zelomenu'}
-                      <span class="online-badge">Online</span>
-                    {/if}
                   </div>
-                  <span class="qi-meta">{origemLabel(pedido)} · {formatTime(pedido.criado_em)}</span>
+                  <span class="qi-meta">{formatTime(pedido.criado_em)}</span>
                 </div>
                 <div class="qi-foot">
                   <span>{qtdItens} {qtdItens === 1 ? 'item' : 'itens'}</span>
@@ -745,15 +431,6 @@
                 </div>
               </button>
               <div class="queue-actions">
-                <button
-                  type="button"
-                  class="action-btn"
-                  aria-label="Editar pedido #{pedido.numero_pedido}"
-                  title="Editar pedido"
-                  on:click|stopPropagation={() => editarPedido(pedido)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
-                </button>
                 <button
                   type="button"
                   class="action-btn action-btn-danger"
@@ -779,7 +456,7 @@
               <div>
                 <p class="eyebrow">Pedido #{pedidoSelecionado.numero_pedido}</p>
                 <h2>{clienteLabel(pedidoSelecionado)}</h2>
-                <span class="details-meta">{origemLabel(pedidoSelecionado)} · {formatTime(pedidoSelecionado.criado_em)}</span>
+                <span class="details-meta">{formatTime(pedidoSelecionado.criado_em)}</span>
               </div>
               <div class="details-head-actions">
                 <span class="status-pill" data-status={pedidoSelecionado.status}>{statusLabel(pedidoSelecionado.status)}</span>
@@ -791,7 +468,7 @@
                   title="Enviar o pedido novamente para a impressora"
                 >
                   <Printer class="size-4" aria-hidden="true" />
-                  <span>{reimprimindo ? 'Imprimindo...' : (pedidoSelecionado.canonical ? 'Reimprimir' : 'Imprimir')}</span>
+                  <span>{reimprimindo ? 'Imprimindo...' : 'Reimprimir'}</span>
                 </button>
               </div>
             </div>
@@ -827,30 +504,15 @@
                 <span>Total</span>
                 <strong>{formatMoney(totalPedido)}</strong>
               </div>
-              {#if pedidoSelecionado?.origem === 'zelomenu'}
-                <button type="button" class="btn-success" on:click={() => fecharPedidoZeloMenu(pedidoSelecionado)} disabled={fechandoPedido || (pedidoSelecionado.canonical && (pedidoSelecionado.status === 'pending_payment' || (['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders)))} title={pedidoSelecionado.canonical && ['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders ? 'Seu cargo não pode concluir pedidos' : ''}>
-                  {#if fechandoPedido}
-                    Confirmando...
-                  {:else}
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>{pedidoSelecionado.canonical ? canonicalActionLabel(pedidoSelecionado) : 'Confirmar entrega'}</span>
-                  {/if}
-                </button>
-              {:else}
-                <button type="button" class="btn-success" on:click={abrirPagamento} disabled={fechandoPedido || totalPedido <= 0}>
-                  {#if fechandoPedido}
-                    Fechando...
-                  {:else}
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>
-                    <span>Receber</span>
-                  {/if}
-                </button>
-              {/if}
+              <button type="button" class="btn-success" on:click={() => avancarPedidoCanonico(pedidoSelecionado)} disabled={fechandoPedido || pedidoSelecionado.status === 'pending_payment' || (['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders)} title={['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders ? 'Seu cargo não pode concluir pedidos' : ''}>
+                {#if fechandoPedido}
+                  Confirmando...
+                {:else}
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <span>{canonicalActionLabel(pedidoSelecionado)}</span>
+                {/if}
+              </button>
             </footer>
-
-            {#if erroPagamento}
-              <p class="error-text">{erroPagamento}</p>
-            {/if}
           {:else}
             <div class="empty-detail">
               <p>Selecione um pedido na fila para ver os detalhes.</p>
@@ -861,21 +523,6 @@
     {/if}
   {/if}
 </div>
-
-<ModalPagamento
-  bind:this={modalPagamentoRef}
-  open={modalPagamentoAberto}
-  totalComanda={totalEmFechamento || totalPedido}
-  subtotalProdutos={totalEmFechamento || totalPedido}
-  comanda={itensEmFechamento.length ? itensEmFechamento : itensSelecionados}
-  {idCaixaAberto}
-  {produtos}
-  {plataformasAtivas}
-  tipoPedido="retirada"
-  taxaEntrega={0}
-  on:confirmar={handlePagamentoConfirmado}
-  on:close={() => { modalPagamentoAberto = false; pedidoEmFechamento = null; itensEmFechamento = []; totalEmFechamento = 0; }}
-/>
 
 <style>
   .pedidos-page {
@@ -922,7 +569,6 @@
     flex-wrap: wrap;
   }
 
-  .btn-primary,
   .btn-secondary,
   .btn-success,
   .upsell a {
@@ -941,12 +587,10 @@
     transition: background 160ms ease, transform 80ms ease;
   }
 
-  .btn-primary,
   .upsell a {
     background: var(--primary);
     color: var(--primary-text);
   }
-  .btn-primary:hover:not(:disabled),
   .upsell a:hover { background: var(--primary-hover); }
 
   .btn-secondary {
@@ -1098,19 +742,6 @@
     align-items: center;
     gap: 6px;
     min-width: 0;
-  }
-  .online-badge {
-    flex-shrink: 0;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--primary);
-    background: color-mix(in srgb, var(--primary) 15%, transparent);
-    border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
-    border-radius: 4px;
-    padding: 1px 5px;
-    line-height: 1.4;
   }
   .qi-cliente {
     font-size: 1rem;
@@ -1317,12 +948,6 @@
   }
   .empty-icon svg { width: 28px; height: 28px; }
 
-  .error-text {
-    margin: 12px 0 0;
-    color: var(--error);
-    font-weight: 700;
-  }
-
   /* Mobile-first: single column, drill-down */
   @media (max-width: 860px) {
     .queue-layout {
@@ -1360,7 +985,6 @@
 
   @media (max-width: 480px) {
     .header-actions { width: 100%; }
-    .header-actions .btn-secondary,
-    .header-actions .btn-primary { flex: 1; }
+    .header-actions .btn-secondary { flex: 1; }
   }
 </style>

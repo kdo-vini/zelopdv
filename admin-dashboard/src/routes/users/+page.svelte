@@ -22,7 +22,6 @@
   let subLoading = false
   let editPlanTier = 'pdv'
   let editMesasAddon = false
-  let editPedidosAddon = false
 
   // Status filter + pagination
   let statusFilter = 'all'
@@ -98,7 +97,7 @@
       const [subsResult, aiResult, salesResult, lastSeenResult, accessUsersResult] = await Promise.all([
         supabase
           .from('subscriptions')
-          .select('id, user_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, provider_subscription_id, monthly_value_cents')
+          .select('id, user_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, provider_subscription_id, monthly_value_cents')
           .in('user_id', userIds)
           .order('updated_at', { ascending: false }),
         supabase
@@ -257,7 +256,6 @@
     editSub = user.subscriptions?.[0] ? { ...user.subscriptions[0] } : null
     editPlanTier = editSub?.plan_tier || 'pdv'
     editMesasAddon = !!editSub?.has_mesas_addon
-    editPedidosAddon = !!editSub?.has_pedidos_addon
     isEditing = true
   }
 
@@ -267,7 +265,6 @@
     editSub = null
     editPlanTier = 'pdv'
     editMesasAddon = false
-    editPedidosAddon = false
   }
 
   async function saveEdit() {
@@ -296,7 +293,6 @@
             status: editSub.status,
             plan_tier: editPlanTier,
             has_mesas_addon: isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon,
-            has_pedidos_addon: isAddonAllowed(editPlanTier, 'pedidos') && editPedidosAddon,
           } : undefined,
         }),
       })
@@ -318,14 +314,12 @@
               status: originalSub.status,
               plan_tier: originalSub.plan_tier,
               has_mesas_addon: originalSub.has_mesas_addon,
-              has_pedidos_addon: originalSub.has_pedidos_addon,
             },
             new: {
               status: editSub.status,
               plan_tier: editPlanTier,
               has_mesas_addon: isAddonAllowed(editPlanTier, 'mesas') && editMesasAddon,
-              has_pedidos_addon: isAddonAllowed(editPlanTier, 'pedidos') && editPedidosAddon,
-            },
+              },
             company: editForm.nome_exibicao,
             warning: originalSub.provider_subscription_id ? 'Stripe value NOT synced — use /subscriptions page for Stripe sync' : null,
           },

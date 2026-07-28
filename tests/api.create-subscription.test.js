@@ -97,7 +97,6 @@ describe('API: create-subscription', () => {
         current_period_end: '2099-06-01T00:00:00.000Z',
         plan_tier: 'pdv',
         has_mesas_addon: false,
-        has_pedidos_addon: false,
         has_acessos_addon: false,
         payment_provider: null,
       },
@@ -118,7 +117,7 @@ describe('API: create-subscription', () => {
         headers: { get: (name) => (name === 'authorization' ? 'Bearer token' : null) },
         json: async () => ({
           planTier: 'bundle',
-          addons: { mesas: true, pedidos: true, acessos: true },
+          addons: { mesas: true, acessos: true },
         }),
       },
       url: new URL('https://zelopdv.com.br/assinatura'),
@@ -132,7 +131,6 @@ describe('API: create-subscription', () => {
       status: 'trialing',
       plan_tier: 'pdv',
       has_mesas_addon: false,
-      has_pedidos_addon: false,
       has_acessos_addon: false,
     });
   });
@@ -148,7 +146,6 @@ describe('API: create-subscription', () => {
         manually_extended_until: null,
         plan_tier: 'pdv',
         has_mesas_addon: false,
-        has_pedidos_addon: false,
         has_acessos_addon: false,
         payment_provider: null,
       },
@@ -169,7 +166,7 @@ describe('API: create-subscription', () => {
         headers: { get: (name) => (name === 'authorization' ? 'Bearer token' : null) },
         json: async () => ({
           planTier: 'bundle',
-          addons: { mesas: true, pedidos: true, acessos: true },
+          addons: { mesas: true, acessos: true },
         }),
       },
       url: new URL('https://zelopdv.com.br/assinatura'),
@@ -182,7 +179,6 @@ describe('API: create-subscription', () => {
       status: 'incomplete',
       plan_tier: 'bundle',
       has_mesas_addon: true,
-      has_pedidos_addon: true,
       has_acessos_addon: true,
     });
   });
@@ -207,7 +203,7 @@ describe('API: create-subscription', () => {
         headers: { get: (name) => (name === 'authorization' ? 'Bearer token' : null) },
         json: async () => ({
           planTier: 'pdv',
-          addons: { mesas: true, pedidos: false, acessos: true },
+          addons: { mesas: true, acessos: true },
         }),
       },
       url: new URL('https://zelopdv.com.br/assinatura'),
@@ -219,7 +215,6 @@ describe('API: create-subscription', () => {
       payment_provider: 'stripe',
       plan_tier: 'pdv',
       has_mesas_addon: true,
-      has_pedidos_addon: false,
       has_acessos_addon: true,
       status: 'incomplete',
     });

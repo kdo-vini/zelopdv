@@ -21,7 +21,6 @@ export const PLANS = {
     includesChat: false,
     includesMenu: false,
     allowsMesas: true,
-    allowsPedidos: true,
     allowsAcessos: true,
     allowsMenu: true, // ZeloMenu como addon do ZeloPDV (R$99 = pdv + menu, D-013)
     stripePriceId: 'price_1SO4yvLUJWyE4PkYwoYAYc6h',
@@ -40,7 +39,6 @@ export const PLANS = {
     includesChat: true,
     includesMenu: true, // ZeloChat inclui ZeloMenu obrigatoriamente (D-014)
     allowsMesas: false,
-    allowsPedidos: false,
     allowsMenu: false, // já incluso — não é addon comprável
     stripePriceId: 'price_1TlbH2LUJWyE4PkYSqFSXXVY', // v2 — agora R$149 no Stripe
     stripeLookupKey: 'zelo_chat_monthly_v2',
@@ -60,7 +58,6 @@ export const PLANS = {
     includesChat: true,
     includesMenu: true,
     allowsMesas: true,
-    allowsPedidos: true,
     allowsAcessos: true,
     allowsMenu: false, // já incluso
     bundleSavings: 10.00, // pdv 59 + chat 149 = 208 → bundle 198
@@ -79,16 +76,6 @@ export const ADDONS = {
     requiresFlag: 'allowsMesas',
     stripePriceId: 'price_1TR0xHLUJWyE4PkYlvTgAub7',
     stripeLookupKey: 'zelo_addon_mesas_monthly_v1',
-  },
-  pedidos: {
-    id: 'pedidos',
-    name: 'Pedidos + Cozinha (legado)',
-    tagline: 'Entitlement legado migrado para ZeloMenu',
-    price: 30.00,
-    requiresFlag: 'allowsPedidos',
-    stripePriceId: 'price_1TTjDcLUJWyE4PkYbHDHq9gw',
-    stripeLookupKey: 'zelo_addon_pedidos_monthly_v1',
-    deprecated: true,
   },
   acessos: {
     id: 'acessos',
@@ -112,13 +99,15 @@ export const ADDONS = {
 };
 
 export const VALID_PLAN_TIERS = Object.keys(PLANS);
-// Pedidos/Cozinha is now included in ZeloMenu. Keep its legacy Stripe mapping
-// above so existing subscriptions remain recognized, but never sell it again.
-export const VALID_ADDONS = Object.values(ADDONS)
-  .filter((addon) => !addon.deprecated)
-  .map((addon) => addon.id);
+export const VALID_ADDONS = Object.keys(ADDONS);
 
 // Reverse lookups: stripe price_id → plan_tier or addon_id. Webhook usa pra mapear items recebidos.
+//
+// 2026-07-28: o add-on "Pedidos + Cozinha" (`price_1TTjDcLUJWyE4PkYbHDHq9gw`) foi
+// aposentado e saiu deste catálogo — a capacidade vive no ZeloMenu. Se um webhook
+// ainda chegar com esse price, `parseStripeSubscriptionItems` ignora o item (não
+// vira plan nem addon) e `computeStripeMonthlyValueCents` continua somando o
+// `unit_amount` real, então o MRR persistido não é afetado.
 // IMPORTANTE: inclui legacyPriceIds para que assinantes em price IDs antigos (v1)
 // continuem mapeando pro plano certo depois da virada de preço (D-104). Remover um
 // price antigo daqui quebraria o webhook de quem ainda está nele.
@@ -146,7 +135,7 @@ export function isValidPlanTier(tier) {
 export function isAddonAllowed(planTier, addonId) {
   const plan = PLANS[planTier];
   const addon = ADDONS[addonId];
-  if (!plan || !addon || addon.deprecated) return false;
+  if (!plan || !addon) return false;
   return plan[addon.requiresFlag] === true;
 }
 

@@ -19,7 +19,6 @@
   // Duração real do trial desta conta. Contas anteriores a 2026-07-27 têm 30 dias.
   let trialTotalDays = TRIAL_DAYS;
   let companyLogoUrl = null;
-  let pedidosAddonActive = false;
   let orderingReviewActive = false;
   let kitchenQueueActive = false;
   let mesasAddonActive = false;
@@ -67,7 +66,7 @@
         const [{ data: sub }, { data: perfil }] = await Promise.all([
           supabase
             .from('subscriptions')
-            .select('status, created_at, current_period_end, manually_extended_until, plan_tier, has_pedidos_addon, has_mesas_addon, has_acessos_addon, has_zelo_menu')
+            .select('status, created_at, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu')
             .eq('user_id', subscriptionUserId)
             .order('updated_at', { ascending: false })
             .limit(1)
@@ -85,13 +84,15 @@
           trialTotalDays = getTrialTotalDays(sub, TRIAL_DAYS);
         }
         const planAllowsAddons = sub?.plan_tier === 'pdv' || sub?.plan_tier === 'bundle';
-        pedidosAddonActive = planAllowsAddons && !!sub?.has_pedidos_addon;
         mesasAddonActive = planAllowsAddons && !!sub?.has_mesas_addon;
         acessosAddonActive = planAllowsAddons && !!sub?.has_acessos_addon;
         orderingReviewActive = (sub?.plan_tier === 'chat' || sub?.plan_tier === 'bundle')
-          || (sub?.plan_tier === 'pdv' && (!!sub?.has_zelo_menu || !!sub?.has_pedidos_addon));
-        kitchenQueueActive = orderingReviewActive
-          || (sub?.plan_tier === 'pdv' && !!sub?.has_mesas_addon);
+          || (sub?.plan_tier === 'pdv' && !!sub?.has_zelo_menu);
+        // Espelha `hasKitchenQueueAccess`: a fila de preparo é alimentada só pelo
+        // motor canônico `zelo_orders` (domínio ZeloMenu), então o fallback por
+        // `has_mesas_addon` saiu junto com o módulo legado. Cliente só-Mesas
+        // deixa de ver o item Cozinha em vez de abrir uma tela sempre vazia.
+        kitchenQueueActive = orderingReviewActive;
         if (perfil?.logo_url) companyLogoUrl = perfil.logo_url;
         if (perfil?.intelligence_enabled_at) {
           // Muted types only hide a signal from the briefing/WhatsApp digest
@@ -154,8 +155,8 @@
   // Mapa central de addons → flag reativa. Quando um novo addon for adicionado,
   // basta criar a flag (ex: deliveryAddonActive) e registrar aqui.
   $: addonFlags = {
-    pedidos: orderingReviewActive,
-    cozinha: kitchenQueueActive,
+    orderingReview: orderingReviewActive,
+    kitchenQueue: kitchenQueueActive,
     mesas: mesasAddonActive,
     acessos: acessosAddonActive
   };
@@ -202,14 +203,17 @@
         {
           href: '/app/pedidos',
           label: 'Pedidos',
-          requiresAddon: 'pedidos',
+          requiresAddon: 'orderingReview',
+          // Chaves de permissão `pedidos.*` seguem as originais de propósito:
+          // estão persistidas no JSON de `access_roles`, e renomeá-las apagaria
+          // silenciosamente a permissão dos subusuários já cadastrados.
           requiredPermission: 'pedidos.acessar',
           icon: ListChecks
         },
         {
           href: '/app/pedidos/cozinha',
           label: 'Cozinha',
-          requiresAddon: 'cozinha',
+          requiresAddon: 'kitchenQueue',
           requiredPermission: 'pedidos.cozinha',
           icon: ChefHat
         }

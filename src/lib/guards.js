@@ -250,32 +250,6 @@ export async function hasMesasAddon(userId) {
 }
 
 /**
- * Returns whether the given user has the Pedidos + Cozinha add-on active.
- * Read-only; does not redirect. Only plans with PDV can use this add-on.
- * @param {string} userId
- * @returns {Promise<boolean>}
- */
-export async function hasPedidosAddon(userId) {
-  if (!userId) return false;
-  try {
-    const subUserId = await resolveSubscriptionUserId(userId);
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('has_pedidos_addon, has_zelo_menu, plan_tier')
-      .eq('user_id', subUserId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!data) return false;
-    if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
-    return data.plan_tier === 'pdv' && (!!data.has_zelo_menu || !!data.has_pedidos_addon);
-  } catch (err) {
-    console.warn('[Guards] hasPedidosAddon error:', err?.message);
-    return false;
-  }
-}
-
-/**
  * Returns whether the given user has the Acessos (Access Control) add-on active on their subscription.
  * Read-only — does not redirect. Call AFTER ensureActiveSubscription so an active sub is guaranteed.
  * Only pdv or bundle plans can use this add-on.
@@ -307,8 +281,7 @@ export async function hasAcessosAddon(userId) {
  * Read-only; does not redirect. Espelha o resolver de domínio do ZeloChat
  * (src/domain/zelomenuEntitlements.ts) — os dois repos precisam concordar.
  *  - chat/bundle incluem ZeloMenu por política de produto (D-014), independente da flag.
- *  - pdv puro precisa do addon ZeloMenu (has_zelo_menu, R$99). Legado has_pedidos_addon
- *    NÃO concede publicação (D-099).
+ *  - pdv puro precisa do addon ZeloMenu (has_zelo_menu, R$99).
  * @param {string} userId
  * @returns {Promise<boolean>}
  */
@@ -334,7 +307,12 @@ export async function hasZeloMenuAccess(userId) {
 
 /**
  * Returns whether the user can review/accept online orders (ordering_review, ZLM-005).
- * chat/bundle sim; pdv com ZeloMenu novo OU legado Pedidos/Cozinha grandfathered (D-099).
+ * chat/bundle sim; pdv precisa do ZeloMenu.
+ *
+ * 2026-07-28: o fallback pelo legado `has_pedidos_addon` (D-099) saiu daqui junto
+ * com o módulo Pedidos + Cozinha. Verificado em produção antes de remover: as 3
+ * assinaturas que ainda carregam a flag legada já têm `has_zelo_menu = true`, então
+ * nenhuma perdeu acesso. A coluna segue no banco porque o repo ZeloMenu ainda a lê.
  * @param {string} userId
  * @returns {Promise<boolean>}
  */
@@ -344,14 +322,14 @@ export async function hasOrderingReviewAccess(userId) {
     const subUserId = await resolveSubscriptionUserId(userId);
     const { data } = await supabase
       .from('subscriptions')
-      .select('has_zelo_menu, has_pedidos_addon, plan_tier')
+      .select('has_zelo_menu, plan_tier')
       .eq('user_id', subUserId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
     if (!data) return false;
     if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
-    return data.plan_tier === 'pdv' && (!!data.has_zelo_menu || !!data.has_pedidos_addon);
+    return data.plan_tier === 'pdv' && !!data.has_zelo_menu;
   } catch (err) {
     console.warn('[Guards] hasOrderingReviewAccess error:', err?.message);
     return false;
@@ -359,9 +337,18 @@ export async function hasOrderingReviewAccess(userId) {
 }
 
 /**
- * Returns whether the user can use the kitchen queue (kitchen_queue, ZLM-005 / D-100).
- * Tudo que libera ordering_review, mais Mesas com cozinha (mesa pode usar cozinha
- * sem implicar pedidos online).
+ * Returns whether the user can use the kitchen queue (kitchen_queue, ZLM-005).
+ *
+ * 2026-07-28: o fallback por `has_mesas_addon` (D-100) saiu daqui. Com o módulo
+ * legado aposentado, a fila de preparo é alimentada exclusivamente pelo motor
+ * canônico `zelo_orders`, cujo domínio é o ZeloMenu — um cliente só-Mesas não
+ * tem produtor de pedido nenhum e via a tela vazia. Consequência aceita: quem
+ * tem só Mesas deixa de ver o item Cozinha.
+ *
+ * Hoje isto é idêntico a `hasOrderingReviewAccess` de propósito: as duas
+ * capabilities derivam do mesmo domínio compartilhado do ZeloMenu. As funções
+ * seguem separadas porque os chamadores são distintos (revisão de pedido vs.
+ * painel de preparo) e a distinção pode voltar a divergir sem virar refactor.
  * @param {string} userId
  * @returns {Promise<boolean>}
  */
@@ -371,15 +358,14 @@ export async function hasKitchenQueueAccess(userId) {
     const subUserId = await resolveSubscriptionUserId(userId);
     const { data } = await supabase
       .from('subscriptions')
-      .select('has_zelo_menu, has_pedidos_addon, has_mesas_addon, plan_tier')
+      .select('has_zelo_menu, plan_tier')
       .eq('user_id', subUserId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
     if (!data) return false;
     if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
-    return data.plan_tier === 'pdv'
-      && (!!data.has_zelo_menu || !!data.has_pedidos_addon || !!data.has_mesas_addon);
+    return data.plan_tier === 'pdv' && !!data.has_zelo_menu;
   } catch (err) {
     console.warn('[Guards] hasKitchenQueueAccess error:', err?.message);
     return false;

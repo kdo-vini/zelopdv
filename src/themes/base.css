@@ -74,6 +74,20 @@
     --blog-glow-b: rgb(244 114 182 / 0.12);
     --blog-glow-c: rgb(99 102 241 / 0.12);
 
+    /* Marketing landing surfaces */
+    --marketing-dark: #020815;
+    --marketing-dark-soft: #050E1F;
+    --marketing-dark-panel: #07172E;
+    --marketing-dark-border: rgba(121, 176, 255, 0.18);
+    --marketing-dark-muted: #B8C7DE;
+    --marketing-action: #0369A1;
+    --marketing-paper: #F5F8FC;
+    --marketing-paper-strong: #FFFFFF;
+    --marketing-paper-tint: #EAF6FD;
+    --marketing-ink: #0F2B46;
+    --marketing-ink-soft: #526B82;
+    --marketing-line: #D7E3EE;
+
     /* Status Colors */
     --error: #ef4444;
     /* red-500 */

@@ -191,8 +191,8 @@
   let currentPeriodEnd = null;
   let subscriptionPlanTier = null;
   let hasMesasAddon = false;
-  let hasPedidosAddon = false;
   let hasAcessosAddon = false;
+  let hasZeloMenuAddon = false;
 
   // Form fields — Aba Perfil
   let nome_exibicao = '';
@@ -241,14 +241,14 @@
   $: activePlan = subscriptionPlanTier ? PLANS[subscriptionPlanTier] ?? null : null;
   $: activeAddons = [
     hasMesasAddon ? ADDONS.mesas.name : null,
-    hasPedidosAddon ? ADDONS.pedidos.name : null,
+    hasZeloMenuAddon ? ADDONS.menu.name : null,
     hasAcessosAddon ? ADDONS.acessos.name : null,
   ].filter(Boolean);
   $: activePlanLabel = activePlan?.name || 'Sem assinatura ativa';
   $: activePlanAmount = activePlan
     ? calculateValue(subscriptionPlanTier, {
         mesas: hasMesasAddon,
-        pedidos: hasPedidosAddon,
+        menu: hasZeloMenuAddon,
         acessos: hasAcessosAddon,
       })
     : null;
@@ -439,7 +439,7 @@
     try {
       const { data: sub } = await supabase
         .from('subscriptions')
-        .select('status, provider_customer_id, cancel_at_period_end, created_at, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon')
+        .select('status, provider_customer_id, cancel_at_period_end, created_at, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -451,8 +451,8 @@
       trialTotalDays = getTrialTotalDays(sub, TRIAL_DAYS);
       subscriptionPlanTier = sub?.plan_tier ?? null;
       hasMesasAddon = !!sub?.has_mesas_addon;
-      hasPedidosAddon = !!sub?.has_pedidos_addon;
       hasAcessosAddon = !!sub?.has_acessos_addon;
+      hasZeloMenuAddon = !!sub?.has_zelo_menu;
     } catch (e) {
       console.warn('Falha ao carregar assinatura:', e?.message || e);
     } finally {

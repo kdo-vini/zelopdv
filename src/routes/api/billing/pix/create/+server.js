@@ -41,7 +41,7 @@ export async function POST({ request }) {
       return json({ error: `Plano inválido. Use: ${Object.keys(PLANS).join(', ')}.` }, { status: 400 });
     }
 
-    for (const addonId of ['mesas', 'pedidos', 'acessos', 'menu']) {
+    for (const addonId of ['mesas', 'acessos', 'menu']) {
       if (requestedAddons[addonId] && !isAddonAllowed(planTier, addonId)) {
         return json({ error: `Plano ${planTier} não suporta o add-on ${addonId}.` }, { status: 400 });
       }

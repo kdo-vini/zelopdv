@@ -1,14 +1,13 @@
 <script>
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-  import { hasMesasAddon, hasPedidosAddon, hasZeloChatAccess, hasAcessosAddon, hasZeloMenuAccess } from '$lib/guards';
+  import { hasMesasAddon, hasZeloChatAccess, hasAcessosAddon, hasZeloMenuAccess } from '$lib/guards';
   import { PLANS, ADDONS } from '$lib/pricing';
   import { addToast } from '$lib/stores/ui';
 
   let userId = '';
   let ready = false;
   let mesasActive = false;
-  let pedidosActive = false;
   let acessosActive = false;
   let chatActive = false;
   let menuActive = false;
@@ -43,9 +42,8 @@
       .maybeSingle();
     planTier = data?.plan_tier || 'pdv';
 
-    [mesasActive, pedidosActive, acessosActive, chatActive, menuActive] = await Promise.all([
+    [mesasActive, acessosActive, chatActive, menuActive] = await Promise.all([
       hasMesasAddon(userId),
-      hasPedidosAddon(userId),
       hasAcessosAddon(userId),
       hasZeloChatAccess(userId),
       hasZeloMenuAccess(userId),
@@ -55,8 +53,6 @@
 
   // Catálogo de extensões. ZeloChat aparece como produto/plano (não addon),
   // mas é apresentado aqui pra discovery — CTA leva pra /assinatura?upgrade=bundle.
-  // Pedidos+Cozinha (legacy) só aparece se já estiver ativo — não é mais vendido como
-  // addon separado; foi absorvido pelo ZeloMenu.
   $: extensions = [
     {
       id: 'mesas',
@@ -76,32 +72,14 @@
       kind: 'addon',
       name: 'ZeloMenu',
       tagline: 'Cardápio digital com publicação online',
-      description: 'Publique seus produtos no cardápio online do seu negócio. Clientes acessam o menu pelo celular, veem fotos, preços e variações.',
+      description: 'Publique seus produtos no cardápio online do seu negócio. Clientes acessam o menu pelo celular, veem fotos, preços e variações. Pedidos entram na fila do PDV e no painel da cozinha.',
       price: ADDONS.menu.price,
       active: menuActive,
       compatible: planTier === 'pdv' || planTier === 'bundle',
       cta: '/assinatura?addon=menu',
-      manage: null,
+      manage: menuActive ? '/app/pedidos' : null,
       incompatibleNote: 'Requer plano com PDV (ZeloPDV ou Pacote Gestão + Atendimento).',
     },
-    // Pedidos + Cozinha: exibe se estiver ativo isolado (legado) ou se Mesas estiver ativo
-    // (já que Mesas inclui este módulo). Quando incluso via Mesas, mostra como não comprável.
-    ...(pedidosActive || mesasActive ? [{
-      id: 'pedidos',
-      kind: 'addon',
-      name: 'Pedidos + Cozinha',
-      tagline: mesasActive ? 'Incluído no Módulo Mesas' : 'Legado — agora parte do ZeloMenu',
-      description: mesasActive
-        ? 'Fila de cozinha, envio de pedidos e controle de status — inclusos automaticamente no Módulo Mesas.'
-        : 'Este módulo foi absorvido pelo ZeloMenu. Seu acesso continua ativo normalmente.',
-      price: ADDONS.pedidos.price,
-      active: true,
-      compatible: true,
-      includedInMesas: mesasActive,
-      cta: '/assinatura',
-      manage: '/app/pedidos',
-      incompatibleNote: '',
-    }] : []),
     {
       id: 'acessos',
       kind: 'addon',
@@ -178,12 +156,6 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 18.75L21 12l-5.25-6.75"/>
               </svg>
-            {:else if ext.id === 'pedidos'}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 3.75h9l1.5 3h-12l1.5-3Z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 6.75h13.5v11.5a2 2 0 0 1-2 2H7.25a2 2 0 0 1-2-2V6.75Z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 11h7.5M8.25 14h5.25M16 18.25h.01"/>
-              </svg>
             {:else if ext.id === 'acessos'}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
@@ -211,15 +183,9 @@
 
           <div class="addon-footer">
             <span class="addon-price">
-              {#if ext.includedInMesas}
-                Incluído no Módulo Mesas
-              {:else}
-                {ext.priceLabel || `+R$ ${ext.price}/mês`}
-              {/if}
+              {ext.priceLabel || `+R$ ${ext.price}/mês`}
             </span>
-            {#if ext.includedInMesas}
-              <span class="included-badge">Incluído</span>
-            {:else if ext.active}
+            {#if ext.active}
               <span class="active-badge">
                 <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fill-rule="evenodd" d="M16.704 5.296a1 1 0 0 1 0 1.408l-7.5 7.5a1 1 0 0 1-1.408 0l-3.5-3.5a1 1 0 0 1 1.408-1.408L8.5 12.092l6.796-6.796a1 1 0 0 1 1.408 0Z" clip-rule="evenodd"/>
@@ -376,17 +342,6 @@
     border: 1px solid var(--border-subtle);
     border-radius: 999px;
     padding: 0.3rem 0.7rem;
-  }
-
-  .included-badge {
-    font-size: 0.7rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.05em;
-    color: var(--primary);
-    background: var(--accent-light);
-    border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
-    border-radius: 999px;
-    padding: 0.3rem 0.7rem;
-    white-space: nowrap;
   }
 
   @media (max-width: 768px) {

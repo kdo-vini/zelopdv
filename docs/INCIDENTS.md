@@ -1,5 +1,61 @@
 # Incidents
 
+---
+
+## INC-2026-07-24-02 - ZeloAdmin nao altera o preco ao salvar plano
+
+**Status:** corrigido no codigo em 2026-07-24; aguardando deploy via push para `main`.
+
+**Sintoma**
+
+- No modal de Plano e Addons, o novo valor aparecia como R$ 198, mas apos salvar a assinatura continuava em R$ 228.
+
+**Causa-raiz**
+
+- O fluxo manual/Abacate Pay atualizava flags e `plan_tier`, mas nao atualizava `monthly_value_cents`, que passou a ter prioridade na leitura do Admin.
+- O espelho de precos do Admin ainda tratava `Pedidos` como add-on cobrado, embora o ZeloMenu ja o inclua.
+
+**Fix / recovery**
+
+- O salvamento manual/Abacate Pay agora grava o novo valor em centavos.
+- O catalogo do Admin foi alinhado ao catalogo canonico: ZeloMenu = R$ 40 no ZeloPDV; Pacote Gestao + Atendimento = R$ 198; Pedidos = legado nao cobrado.
+- O endpoint de sincronizacao Stripe tambem persiste o valor calculado apos a troca.
+- Cobertura: `tests/admin.pricing.test.js` (3/3); `cd admin-dashboard && npm run build` passou com warnings pre-existentes.
+
+---
+
+## INC-2026-07-24-01 - ZeloAdmin exibe Dashboard e Assinaturas zerados
+
+**Status:** confirmado em producao e corrigido em 2026-07-24.
+
+**Sintoma**
+
+- `/` no ZeloAdmin mostrava MRR, contas com acesso, novos no mes e expiracoes como zero.
+- `/subscriptions` nao encontrava registros, embora as assinaturas continuassem presentes no banco.
+- O problema afetava tambem a leitura de assinaturas em `/users`.
+
+**Causa-raiz**
+
+- O commit `76fad99` adicionou `monthly_value_cents` aos campos selecionados pelo admin-dashboard.
+- A migration `.ai/migrations/subscriptions_monthly_value_cents_2026_07_22.sql` estava versionada no repositorio, mas nao aplicada no banco real.
+- O PostgREST rejeitava cada select por coluna inexistente. As telas ignoravam o objeto `error` e convertiam `data` nulo em lista vazia, produzindo zeros silenciosos.
+
+**Fix / recovery**
+
+- Aplicada a migration aditiva no projeto Supabase real `xnnjyrblpvsqrtsshawa`.
+- A coluna `subscriptions.monthly_value_cents` agora existe; nenhuma linha foi removida ou alterada.
+- O select do Dashboard tambem inclui `has_pedidos_addon`, evitando subcontagem do MRR pelo fallback de precos quando o valor real ainda esta nulo.
+- Validacao do banco: 18 assinaturas no total - 5 `active`, 7 `trialing`, 5 `trial_expired`, 1 `canceled`.
+- Linhas antigas permanecem com valor real nulo e usam o fallback por plano no admin; o backfill de valores cobrados fica pendente.
+- `cd admin-dashboard && npm run build` passou, com warnings pre-existentes de a11y/Vite/Svelte. `npm run check` continua bloqueado pela ausencia pre-existente de `admin-dashboard/jsconfig.json`.
+
+**Referencias**
+
+- [.ai/migrations/subscriptions_monthly_value_cents_2026_07_22.sql](/home/vinicius/code/zelopdv/.ai/migrations/subscriptions_monthly_value_cents_2026_07_22.sql:1)
+- [admin-dashboard/src/routes/+page.svelte](/home/vinicius/code/zelopdv/admin-dashboard/src/routes/+page.svelte:182)
+- [admin-dashboard/src/routes/subscriptions/+page.svelte](/home/vinicius/code/zelopdv/admin-dashboard/src/routes/subscriptions/+page.svelte:113)
+
+
 > Histórico operacional e padrões já conhecidos.
 > Quando houver outage real, registrar sintoma, causa-raiz, fix e referência de código.
 

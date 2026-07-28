@@ -38,7 +38,7 @@ export const competitorComparisons = {
     introParagraphs: [
       'A Saipos se posiciona como plataforma completa para bares e restaurantes, com mais de 70 recursos e forte integração com iFood. É um bom produto — mas é construído para uma operação que justifica pagar a partir de R$ 240 por mês, e cujo preço real só aparece depois de informar seu faturamento e falar com um vendedor.',
       'Para uma lanchonete de bairro, uma hamburgueria enxuta ou um delivery próprio, isso costuma ser caro demais e complexo demais. Você acaba pagando por um pacote inteiro de funcionalidades que talvez nunca use, com mensalidade que pesa logo no começo, quando o caixa ainda é apertado.',
-      'O Zelo PDV nasceu para o outro lado dessa conta: começar barato, mostrar o preço de forma transparente e crescer por módulos. Você paga R$ 59/mês pela base e adiciona só o que faz sentido (mesas, pedidos/cozinha, acessos) — sem assinar uma plataforma cara para depois descobrir que usa um terço dela.'
+      'O Zelo PDV nasceu para o outro lado dessa conta: começar barato, mostrar o preço de forma transparente e crescer por módulos. Você paga R$ 59/mês pela base e adiciona só o que faz sentido (mesas, ZeloMenu, acessos) — sem assinar uma plataforma cara para depois descobrir que usa um terço dela.'
     ],
     comparisonIntro:
       'Comparação ponto a ponto entre Zelo PDV e Saipos, com base no que cada um divulga publicamente em junho de 2026.',
@@ -98,7 +98,7 @@ export const competitorComparisons = {
         icon: '🧩',
         title: 'Você paga só pelos módulos que usa',
         description:
-          'Em vez de um pacote fechado de mais de 70 recursos, o Zelo começa na base de R$ 59 e você ativa mesas, pedidos/cozinha ou controle de acessos só quando precisar.'
+          'Em vez de um pacote fechado de mais de 70 recursos, o Zelo começa na base de R$ 59 e você ativa mesas, ZeloMenu ou controle de acessos só quando precisar.'
       },
       {
         icon: '🏷️',
@@ -356,7 +356,7 @@ export const competitorComparisons = {
     introParagraphs: [
       'O WhatsMenu resolve bem o delivery por WhatsApp e inclui sistema de caixa, estoque e app de garçom em um plano único de R$ 97/mês. É uma proposta honesta — mas "plano único" significa que você paga por tudo, mesmo que use só uma parte.',
       'Para um negócio enxuto, isso é o oposto do ideal: você quer começar barato e crescer conforme a necessidade. E há um ponto que o WhatsMenu não destaca: a operação é via navegador e não há menção a modo offline, então uma queda de internet no horário de pico pode travar o caixa.',
-      'O Zelo PDV parte de R$ 59/mês e é modular — você ativa mesas, pedidos/cozinha ou acessos só quando fizer sentido. E continua registrando vendas offline, sincronizando quando a conexão volta.'
+      'O Zelo PDV parte de R$ 59/mês e é modular — você ativa mesas, ZeloMenu ou acessos só quando fizer sentido. E continua registrando vendas offline, sincronizando quando a conexão volta.'
     ],
     comparisonIntro:
       'Comparação ponto a ponto entre Zelo PDV e WhatsMenu, com base no que cada um divulga publicamente em junho de 2026.',
@@ -371,7 +371,7 @@ export const competitorComparisons = {
     reasons: [
       { icon: '💸', title: 'R$ 59 contra R$ 97 por mês', description: 'O Zelo é mais barato no mês e ainda permite crescer por módulo, em vez de pagar um plano único cheio desde o começo.' },
       { icon: '📶', title: 'Não para quando a internet cai', description: 'O WhatsMenu não anuncia operação offline. O Zelo PDV continua vendendo sem internet e sincroniza depois — essencial em horário de pico.' },
-      { icon: '🧩', title: 'Modular de verdade', description: 'Você começa na base de R$ 59 e ativa mesas, pedidos/cozinha ou acessos só quando precisar. Sem pagar por recurso que não usa.' },
+      { icon: '🧩', title: 'Modular de verdade', description: 'Você começa na base de R$ 59 e ativa mesas, ZeloMenu ou acessos só quando precisar. Sem pagar por recurso que não usa.' },
       { icon: '📒', title: 'Fiado e gestão na base', description: 'Controle de fiado, estoque e financeiro já vêm no Zelo. Você organiza o caixa do negócio inteiro, não só os pedidos de delivery.' }
     ],
     fairnessNote:
@@ -493,7 +493,7 @@ export const competitorComparisons = {
       { icon: '💸', title: 'Cerca de 4x mais barato no piso', description: 'R$ 59/mês contra R$ 249/mês do plano de entrada da Yooga. Para quem está começando, é a conta de meses de sistema economizada.' },
       { icon: '📶', title: 'Vende mesmo sem internet', description: 'A Yooga não anuncia operação offline. O Zelo PDV continua registrando vendas sem conexão e sincroniza quando a internet volta.' },
       { icon: '🏷️', title: 'Preço transparente', description: 'Há relatos públicos de clientes da Yooga no Reclame Aqui sobre cobrança acima do anunciado. O Zelo comunica R$ 59/mês fixos, sem pegadinha.' },
-      { icon: '🧩', title: 'Modular', description: 'Você ativa mesas, pedidos/cozinha ou acessos só quando precisar, em vez de subir de plano inteiro por uma função.' }
+      { icon: '🧩', title: 'Modular', description: 'Você ativa mesas, ZeloMenu ou acessos só quando precisar, em vez de subir de plano inteiro por uma função.' }
     ],
     fairnessNote:
       'Para ser justo: a Yooga é um sistema completo e tem recursos avançados (como KDS e IA no Premium) para operações maiores. Este comparativo é para quem busca preço de pequeno negócio, transparência e operação offline.',

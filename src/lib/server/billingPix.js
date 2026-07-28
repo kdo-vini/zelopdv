@@ -25,7 +25,6 @@ export function serializeBillingPayment(row) {
     planTier: row.plan_tier,
     addons: {
       mesas: !!row.has_mesas_addon,
-      pedidos: !!row.has_pedidos_addon,
       acessos: !!row.has_acessos_addon,
       menu: !!row.has_zelo_menu,
     },
@@ -94,7 +93,6 @@ async function activateSubscriptionFromPayment({ payment, userId, nowIso }) {
     billing_type: 'PIX',
     plan_tier: payment.plan_tier || 'pdv',
     has_mesas_addon: !!payment.has_mesas_addon,
-    has_pedidos_addon: !!payment.has_pedidos_addon,
     has_acessos_addon: !!payment.has_acessos_addon,
     has_zelo_menu: !!payment.has_zelo_menu,
     // Valor real travado no momento da cobrança Pix (não o preço de tabela atual).
@@ -166,7 +164,7 @@ export async function markWebhookEventProcessed({ provider, eventId, eventType }
 export async function findBillingPaymentForUser(paymentId, userId) {
   const { data, error } = await supabaseAdmin
     .from('billing_payments')
-    .select('id, user_id, subscription_id, provider, method, status, amount_expected_cents, amount_paid_cents, currency, external_reference, br_code, qr_code_base64, expires_at, paid_at, provider_payment_id, provider_status, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, metadata')
+    .select('id, user_id, subscription_id, provider, method, status, amount_expected_cents, amount_paid_cents, currency, external_reference, br_code, qr_code_base64, expires_at, paid_at, provider_payment_id, provider_status, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu, metadata')
     .eq('id', paymentId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -178,7 +176,7 @@ export async function findBillingPaymentForUser(paymentId, userId) {
 export async function findBillingPaymentByProviderId(providerPaymentId) {
   const { data, error } = await supabaseAdmin
     .from('billing_payments')
-    .select('id, user_id, subscription_id, provider, method, status, amount_expected_cents, amount_paid_cents, currency, external_reference, br_code, qr_code_base64, expires_at, paid_at, provider_payment_id, provider_status, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, metadata')
+    .select('id, user_id, subscription_id, provider, method, status, amount_expected_cents, amount_paid_cents, currency, external_reference, br_code, qr_code_base64, expires_at, paid_at, provider_payment_id, provider_status, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu, metadata')
     .eq('provider', 'abacatepay')
     .eq('provider_payment_id', providerPaymentId)
     .maybeSingle();
@@ -307,7 +305,6 @@ export function serializePixCharge(row) {
     planTier: row.plan_tier,
     addons: {
       mesas: !!row.has_mesas_addon,
-      pedidos: !!row.has_pedidos_addon,
       acessos: !!row.has_acessos_addon,
       menu: !!row.has_zelo_menu,
     },
@@ -317,7 +314,6 @@ export function serializePixCharge(row) {
 export function pendingPaymentMatchesSelection(payment, planTier, addons, amountCents) {
   return payment?.plan_tier === planTier
     && !!payment?.has_mesas_addon === !!addons.mesas
-    && !!payment?.has_pedidos_addon === !!addons.pedidos
     && !!payment?.has_acessos_addon === !!addons.acessos
     && !!payment?.has_zelo_menu === !!addons.menu
     && Number(payment?.amount_expected_cents) === Number(amountCents);
@@ -339,7 +335,7 @@ export async function createOrReusePixCharge({
 
   const { data: latestPending } = await supabaseAdmin
     .from('billing_payments')
-    .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu')
+    .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu')
     .eq('user_id', userId)
     .eq('provider', 'abacatepay')
     .eq('method', 'pix')
@@ -397,7 +393,6 @@ export async function createOrReusePixCharge({
     status: 'pending',
     plan_tier: planTier,
     has_mesas_addon: !!safeAddons.mesas,
-    has_pedidos_addon: !!safeAddons.pedidos,
     has_acessos_addon: !!safeAddons.acessos,
     has_zelo_menu: !!safeAddons.menu,
     amount_expected_cents: amountCents,
@@ -421,7 +416,7 @@ export async function createOrReusePixCharge({
   const { data: insertedRow, error: insertError } = await supabaseAdmin
     .from('billing_payments')
     .insert(insertPayload)
-    .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu')
+    .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu')
     .single();
 
   if (insertError || !insertedRow) {

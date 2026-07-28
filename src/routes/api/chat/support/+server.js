@@ -23,9 +23,13 @@ Preço: R$ 59/mês. Os primeiros 14 dias são completamente gratuitos, sem preci
 
 ADD-ONS PAGOS (além da assinatura base):
 • Módulo Mesas (+R$ 30/mês): controle de mesas e comandas abertas
-• Módulo Pedidos + Cozinha (+R$ 30/mês): fila de pedidos e painel de cozinha
+• ZeloMenu (+R$ 40/mês): cardápio digital online, pedidos online e painel de cozinha
 • Controle de Acessos (+R$ 30/mês): usuários adicionais com cargos e permissões configuráveis
 Para ativar: acesse a sidebar → Extensões.
+
+O antigo add-on "Pedidos + Cozinha" foi aposentado: a fila de pedidos e o painel de
+cozinha agora fazem parte do ZeloMenu. Não existe mais criação manual de pedido pelo
+caixa — os pedidos entram pelo cardápio online. Nunca ofereça esse add-on.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FUNCIONALIDADES
@@ -151,7 +155,7 @@ CRIAR UM CARGO:
    • Financeiro: Ver despesas, Gerenciar, Ver relatórios, Exportar
    • Perfil: Editar dados operacionais
    • Mesas (se add-on ativo): Acessar, Abrir comanda, Editar itens, Fechar/receber, Cancelar
-   • Pedidos/Cozinha (se add-on ativo): Acessar, Criar/editar, Painel de cozinha, Receber, Cancelar
+   • Pedidos do ZeloMenu (se ZeloMenu ativo): Acessar fila, Painel de cozinha, Concluir no caixa, Cancelar/rejeitar
 5. As alterações são salvas automaticamente após ~1 segundo sem modificações (não precisa clicar em Salvar)
 
 CONVIDAR UM USUÁRIO:
@@ -196,31 +200,39 @@ USAR AS MESAS NO DIA A DIA:
 Filtros disponíveis: Todas / Livres / Ocupadas / Fechando (chips no topo da tela)
 
 ──────────────────────────────────
-COMO USAR O MÓDULO DE PEDIDOS E COZINHA
+COMO USAR OS PEDIDOS DO ZELOMENU
 ──────────────────────────────────
-Este módulo é um add-on pago (+R$ 30/mês). Se não aparecer na sidebar, ative em Extensões.
+A fila de pedidos e o painel de cozinha vêm com o ZeloMenu (+R$ 40/mês, já incluso no
+ZeloChat e no Pacote Gestão + Atendimento). Se não aparecerem na sidebar, ative o
+ZeloMenu em Extensões.
 
-O módulo tem duas telas: Pedidos (caixa) e Cozinha (preparo).
+São duas telas: Pedidos (fila do caixa) e Cozinha (preparo).
 
-CRIAR UM PEDIDO (tela do caixa):
+DE ONDE VÊM OS PEDIDOS:
+Os pedidos entram pelo cardápio online do ZeloMenu — o cliente monta o pedido pelo
+celular (link do cardápio, WhatsApp ou Instagram) e ele cai direto na fila. O caixa não
+digita pedido à mão; para venda de balcão, use a Frente de Caixa (/app).
+
+FILA DE PEDIDOS (tela do caixa):
 1. Acesse Vendas → Pedidos no menu lateral
-2. Clique em "+ Novo pedido"
-3. Adicione os itens, informe o nome do cliente (opcional) e observações (opcional)
-4. Salve — o pedido aparece na fila com status "Aberto" e é enviado automaticamente para o painel da cozinha
-
-ACOMPANHAR E RECEBER:
-• A fila mostra todos os pedidos em aberto — clique em um para ver os detalhes
-• Quando a cozinha marcar o pedido como pronto, o status muda para "Pronto"
-• Clique em "Receber" para processar o pagamento e fechar o pedido
+2. Cada pedido novo aparece sozinho na fila e, se o Zelo Impressão estiver conectado, o
+   bilhete é impresso automaticamente
+3. Clique no pedido para ver itens, montagem (adicionais) e observações
+4. O botão principal avança o pedido: Aceitar → Iniciar preparo → Marcar como pronto →
+   Saiu para entrega (delivery) ou Concluir pedido
+5. "Concluir pedido" registra a venda e baixa o estoque — exige caixa aberto
+6. "Reimprimir" manda o bilhete de novo para a impressora
 
 PAINEL DA COZINHA:
-1. Acesse Vendas → Cozinha (ou Pedidos → Cozinha) no menu lateral
+1. Acesse Vendas → Cozinha no menu lateral
 2. A tela escura mostra dois painéis: "Em preparo" (esquerda) e "Prontos" (direita)
-3. Para cada pedido, marque os itens conforme forem ficando prontos clicando em "Marcar"
-4. Quando todos os itens estiverem prontos, o pedido vai automaticamente para o painel "Prontos"
-5. O caixa recebe a notificação de status e pode processar o pagamento
+3. Em pedido aceito, clique em "Iniciar preparo"
+4. Com o preparo iniciado, clique em "Marcar" para concluir o pedido e mandá-lo para
+   "Prontos" — o preparo é do pedido inteiro, não item por item
+5. O caixa vê o status mudar na hora e pode concluir
 
-A tela da cozinha é atualizada automaticamente — ideal para rodar em um tablet ou monitor separado.
+A tela da cozinha atualiza sozinha em tempo real — ideal para rodar em um tablet ou
+monitor separado.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PROBLEMAS COMUNS
@@ -241,8 +253,8 @@ Venda não aparece no fechamento de caixa
 Erro ao vender fiado
 → O cliente precisa estar cadastrado em Pessoas antes. Cadastre e tente novamente.
 
-Módulo não aparece na sidebar (Mesas, Pedidos ou Acessos)
-→ O módulo é um add-on que precisa ser ativado. Acesse a sidebar → Extensões para ver os módulos disponíveis e ativá-los.
+Módulo não aparece na sidebar (Mesas, Pedidos/Cozinha ou Acessos)
+→ O módulo é uma extensão que precisa ser ativada. Acesse a sidebar → Extensões para ver as extensões disponíveis e ativá-las. Pedidos e Cozinha vêm com o ZeloMenu.
 
 Como instalar no celular
 → Android (Chrome): toque nos 3 pontinhos → "Adicionar à tela inicial". iPhone (Safari): botão compartilhar → "Adicionar à tela de início".

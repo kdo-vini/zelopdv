@@ -162,7 +162,6 @@ describe('API: billing/pix/status', () => {
           provider_status: 'PENDING',
           plan_tier: 'pdv',
           has_mesas_addon: false,
-          has_pedidos_addon: false,
           has_acessos_addon: false,
         },
         subscriptions: null,
@@ -219,7 +218,6 @@ describe('API: billing/pix/status', () => {
           provider_status: 'PENDING',
           plan_tier: 'bundle',
           has_mesas_addon: true,
-          has_pedidos_addon: true,
           has_acessos_addon: true,
         },
         subscriptions: {
@@ -267,7 +265,6 @@ describe('API: billing/pix/status', () => {
       billing_type: 'PIX',
       plan_tier: 'bundle',
       has_mesas_addon: true,
-      has_pedidos_addon: true,
       has_acessos_addon: true,
       cancel_at_period_end: false,
     });

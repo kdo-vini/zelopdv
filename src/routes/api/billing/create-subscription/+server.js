@@ -55,10 +55,6 @@ export async function POST({ request, url, cookies }) {
     if (hasMesasAddon && !isAddonAllowed(planTier, 'mesas')) {
       return json({ error: `Plano ${planTier} não suporta o add-on Mesas.` }, { status: 400 });
     }
-    const hasPedidosAddon = !!requestedAddons.pedidos;
-    if (hasPedidosAddon && !isAddonAllowed(planTier, 'pedidos')) {
-      return json({ error: `Plano ${planTier} não suporta o add-on Pedidos + Cozinha.` }, { status: 400 });
-    }
     const hasAcessosAddon = !!requestedAddons.acessos;
     if (hasAcessosAddon && !isAddonAllowed(planTier, 'acessos')) {
       return json({ error: `Plano ${planTier} não suporta o add-on Controle de Acessos.` }, { status: 400 });
@@ -85,7 +81,7 @@ export async function POST({ request, url, cookies }) {
     // Existing subscription check
     const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, provider_subscription_id, provider_customer_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, payment_provider')
+      .select('id, provider_subscription_id, provider_customer_id, status, current_period_end, manually_extended_until, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -118,7 +114,6 @@ export async function POST({ request, url, cookies }) {
     // Build line_items
     const lineItems = buildStripeLineItems(planTier, {
       mesas: hasMesasAddon,
-      pedidos: hasPedidosAddon,
       acessos: hasAcessosAddon,
       menu: hasMenuAddon,
     });
@@ -127,7 +122,6 @@ export async function POST({ request, url, cookies }) {
       user_id: userId,
       plan_tier: planTier,
       has_mesas_addon: String(hasMesasAddon),
-      has_pedidos_addon: String(hasPedidosAddon),
       has_acessos_addon: String(hasAcessosAddon),
       has_zelo_menu: String(hasMenuAddon),
       early_renewal: String(shouldPreserveCurrentAccess),
@@ -148,7 +142,6 @@ export async function POST({ request, url, cookies }) {
     const requestOrigin = url?.origin || ORIGIN;
     const successValue = calculateValue(planTier, {
       mesas: hasMesasAddon,
-      pedidos: hasPedidosAddon,
       acessos: hasAcessosAddon,
       menu: hasMenuAddon,
     });
@@ -177,7 +170,6 @@ export async function POST({ request, url, cookies }) {
       payment_provider: 'stripe',
       plan_tier: shouldPreserveCurrentAccess ? existingSub?.plan_tier || planTier : planTier,
       has_mesas_addon: shouldPreserveCurrentAccess ? !!existingSub?.has_mesas_addon : hasMesasAddon,
-      has_pedidos_addon: shouldPreserveCurrentAccess ? !!existingSub?.has_pedidos_addon : hasPedidosAddon,
       has_acessos_addon: shouldPreserveCurrentAccess ? !!existingSub?.has_acessos_addon : hasAcessosAddon,
       has_zelo_menu: shouldPreserveCurrentAccess ? !!existingSub?.has_zelo_menu : hasMenuAddon,
       status: shouldPreserveCurrentAccess ? existingSub.status : 'incomplete',
@@ -209,7 +201,7 @@ export async function POST({ request, url, cookies }) {
         event: 'stripe_checkout_created',
         properties: {
           plan: planTier,
-          addons: { mesas: hasMesasAddon, pedidos: hasPedidosAddon, acessos: hasAcessosAddon, menu: hasMenuAddon },
+          addons: { mesas: hasMesasAddon, acessos: hasAcessosAddon, menu: hasMenuAddon },
           amount: successValue,
           is_first_time: isFirstTime,
           session_id: session.id,

@@ -55,11 +55,11 @@ Use anchors da rota consolidada:
 | URL | Uso |
 | --- | --- |
 | `/extensoes#mesas` | Modulo Mesas |
-| `/extensoes#pedidos-cozinha` | Pedidos + Cozinha |
+| `/extensoes#menu` | ZeloMenu |
 | `/extensoes#acessos` | Controle de Acessos |
 | `/extensoes#chat` | Zelo Chat / WhatsApp com IA |
 
-As rotas `/extensoes/mesas`, `/extensoes/pedidos-cozinha` e `/extensoes/chat` redirecionam para anchors. Evite usar rota dinamica em campanha; use a URL final com `#anchor`.
+As rotas `/extensoes/mesas` e `/extensoes/chat` redirecionam para anchors. `/extensoes/pedidos-cozinha` foi aposentada e cai em `/extensoes`. Evite usar rota dinamica em campanha; use a URL final com `#anchor`.
 
 ## Blog e SEO editorial
 
@@ -111,9 +111,7 @@ Estas rotas nao devem ser usadas como destino para leads ou usuarios sem login:
 - `/app/mesas`
 - `/app/mesas/[id]`
 - `/app/pedidos`
-- `/app/pedidos/novo`
 - `/app/pedidos/cozinha`
-- `/app/pedidos/[id]/editar`
 - `/ferramentas`
 - `/ferramentas/cardapio`
 - `/ferramentas/precificacao`

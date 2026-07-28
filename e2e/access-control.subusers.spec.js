@@ -61,7 +61,7 @@ test.describe('Permissões do cargo Atendente', () => {
   test('atendente acessa mesas e pedidos, mas não relatórios ou acessos', async ({ page }) => {
     await page.goto('/app/pedidos');
     await expect(page).toHaveURL(/\/app\/pedidos/);
-    await expect(page.getByRole('button', { name: /novo pedido|criar pedido/i }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Pedidos', exact: true })).toBeVisible();
 
     await page.goto('/app/pedidos/cozinha');
     await expect(page).toHaveURL(/\/app\/pedidos\/cozinha/);
@@ -108,26 +108,26 @@ test.describe('Permissões do cargo Gerente', () => {
 
 test.describe('Add-ons inativos no Controle de Acessos', () => {
   test('esconde grupos de Mesas e Pedidos da matriz quando os módulos estão inativos', async ({ page }) => {
-    await setOwnerAddons(ownerEmail, { acessos: true, mesas: false, pedidos: false });
+    await setOwnerAddons(ownerEmail, { acessos: true, mesas: false, zeloMenu: false });
 
     try {
       await page.goto('/gestao/acessos');
       await expect(page).toHaveURL(/\/gestao\/acessos/);
 
       await expect(page.getByText(/^Mesas$/)).toHaveCount(0);
-      await expect(page.getByText(/Pedidos \/ Cozinha/)).toHaveCount(0);
+      await expect(page.getByText(/Pedidos do ZeloMenu/)).toHaveCount(0);
       await expect(page.getByRole('link', { name: /^Mesas$/ })).toHaveCount(0);
       await expect(page.getByRole('link', { name: /^Pedidos$/ })).toHaveCount(0);
       await expect(page.getByRole('link', { name: /^Cozinha$/ })).toHaveCount(0);
     } finally {
-      await setOwnerAddons(ownerEmail, { acessos: true, mesas: true, pedidos: true });
+      await setOwnerAddons(ownerEmail, { acessos: true, mesas: true, zeloMenu: true });
     }
   });
 });
 
 test.describe('Desligamento do add-on de acessos', () => {
   test('titular continua acessando o app quando o add-on é desligado', async ({ page }) => {
-    await setOwnerAddons(ownerEmail, { acessos: false, mesas: true, pedidos: true });
+    await setOwnerAddons(ownerEmail, { acessos: false, mesas: true, zeloMenu: true });
 
     try {
       await page.goto('/app');
@@ -137,7 +137,7 @@ test.describe('Desligamento do add-on de acessos', () => {
       await expect(page).toHaveURL(/\/gestao\/acessos/);
       await expect(page.getByText(/controle de acessos não está ativo/i)).toBeVisible();
     } finally {
-      await setOwnerAddons(ownerEmail, { acessos: true, mesas: true, pedidos: true });
+      await setOwnerAddons(ownerEmail, { acessos: true, mesas: true, zeloMenu: true });
     }
   });
 });
@@ -146,14 +146,14 @@ test.describe('Desligamento do add-on de acessos para subusuário', () => {
   test.use({ storageState: 'e2e/.auth/caixa.json' });
 
   test('subusuário perde acesso quando o add-on é desligado', async ({ page }) => {
-    await setOwnerAddons(ownerEmail, { acessos: false, mesas: true, pedidos: true });
+    await setOwnerAddons(ownerEmail, { acessos: false, mesas: true, zeloMenu: true });
 
     try {
       await page.goto('/app');
       await page.waitForURL((url) => !url.pathname.startsWith('/app'), { timeout: 15_000 });
       expect(page.url()).not.toContain('/app');
     } finally {
-      await setOwnerAddons(ownerEmail, { acessos: true, mesas: true, pedidos: true });
+      await setOwnerAddons(ownerEmail, { acessos: true, mesas: true, zeloMenu: true });
     }
   });
 });

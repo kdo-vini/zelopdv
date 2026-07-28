@@ -34,15 +34,12 @@
   let isActiveStrict = false;
   let trialDaysLeft = null;
   let mesasAddonOn = false;
-  let pedidosAddonOn = false;
   let acessosAddonOn = false;
   let activeMesasAddon = false;
-  let activePedidosAddon = false;
   let activeAcessosAddon = false;
   let menuAddonOn = false;
   let activeMenuAddon = false;
   let camePromptingMesas = false;
-  let camePromptingPedidos = false;
   let camePromptingAcessos = false;
   let cameUpgradingTo = '';
 
@@ -92,26 +89,20 @@
 
   $: planPrice = calculateValue(selectedPlan, {
     mesas: mesasAddonOn,
-    pedidos: pedidosAddonOn,
     acessos: acessosAddonOn,
     menu: menuAddonOn,
   });
   $: activePlanPrice = activePlanTier
     ? calculateValue(activePlanTier, {
         mesas: activeMesasAddon,
-        pedidos: activePedidosAddon,
         acessos: activeAcessosAddon,
         menu: activeMenuAddon,
       })
     : 0;
   $: selectedPlanAllowsMesas = PLANS[selectedPlan]?.allowsMesas;
-  $: selectedPlanAllowsPedidos = PLANS[selectedPlan]?.allowsPedidos;
   $: selectedPlanAllowsAcessos = PLANS[selectedPlan]?.allowsAcessos;
   $: activePlanAllowsMesas = activePlanTier
     ? PLANS[activePlanTier]?.allowsMesas
-    : false;
-  $: activePlanAllowsPedidos = activePlanTier
-    ? PLANS[activePlanTier]?.allowsPedidos
     : false;
   $: activePlanAllowsAcessos = activePlanTier
     ? PLANS[activePlanTier]?.allowsAcessos
@@ -127,7 +118,6 @@
   $: selectedPlanTagline = PLANS[selectedPlan]?.tagline || '';
   $: selectedAddons = addonCatalog.filter((addon) => {
     if (addon.id === 'mesas') return mesasAddonOn;
-    if (addon.id === 'pedidos') return pedidosAddonOn;
     if (addon.id === 'menu') return menuAddonOn;
     if (addon.id === 'acessos') return acessosAddonOn;
     return false;
@@ -143,7 +133,6 @@
   $: activePackageChanged = isActiveStrict && (
     selectedPlan !== activePlanTier
     || !!mesasAddonOn !== !!activeMesasAddon
-    || !!pedidosAddonOn !== !!activePedidosAddon
     || !!acessosAddonOn !== !!activeAcessosAddon
     || !!menuAddonOn !== !!activeMenuAddon
   );
@@ -191,7 +180,6 @@
   $: currentSelectionKey = JSON.stringify({
     selectedPlan,
     mesas: mesasAddonOn,
-    pedidos: pedidosAddonOn,
     acessos: acessosAddonOn,
     menu: menuAddonOn,
   });
@@ -216,7 +204,6 @@
 
   // Se selectedPlan não permite os addons, força off (UX clara)
   $: if (!selectedPlanAllowsMesas && mesasAddonOn) mesasAddonOn = false;
-  $: if (!selectedPlanAllowsPedidos && pedidosAddonOn) pedidosAddonOn = false;
   $: if (!selectedPlanAllowsAcessos && acessosAddonOn) acessosAddonOn = false;
   $: if (!selectedPlanAllowsMenu && menuAddonOn) menuAddonOn = false;
   $: if (!isActiveStrict && selectedPlan === 'chat') selectedPlan = 'bundle';
@@ -280,11 +267,9 @@
     expiryDate = data?.current_period_end || null;
     hasHadSubscription = !!data;
     activeMesasAddon = !!data?.has_mesas_addon;
-    activePedidosAddon = !!data?.has_pedidos_addon;
     activeAcessosAddon = !!data?.has_acessos_addon;
     activeMenuAddon = !!data?.has_zelo_menu;
     mesasAddonOn = activeMesasAddon;
-    pedidosAddonOn = activePedidosAddon;
     acessosAddonOn = activeAcessosAddon;
     menuAddonOn = activeMenuAddon;
     activePlanTier = data?.plan_tier || 'pdv';
@@ -301,7 +286,7 @@
   async function loadSubscriptionState() {
     const { data, error } = await supabase
       .from('subscriptions')
-      .select('status, created_at, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, plan_tier')
+      .select('status, created_at, current_period_end, manually_extended_until, billing_type, payment_provider, has_mesas_addon, has_acessos_addon, has_zelo_menu, plan_tier')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -324,14 +309,12 @@
 
   function toggleAddonSelection(addonId) {
     if (addonId === 'mesas' && selectedPlanAllowsMesas) mesasAddonOn = !mesasAddonOn;
-    if (addonId === 'pedidos' && selectedPlanAllowsPedidos) pedidosAddonOn = !pedidosAddonOn;
     if (addonId === 'menu' && selectedPlanAllowsMenu) menuAddonOn = !menuAddonOn;
     if (addonId === 'acessos' && selectedPlanAllowsAcessos) acessosAddonOn = !acessosAddonOn;
   }
 
   function addonAvailable(addonId) {
     if (addonId === 'mesas') return selectedPlanAllowsMesas;
-    if (addonId === 'pedidos') return selectedPlanAllowsPedidos;
     if (addonId === 'menu') return selectedPlanAllowsMenu;
     if (addonId === 'acessos') return selectedPlanAllowsAcessos;
     return false;
@@ -339,7 +322,6 @@
 
   function addonSelected(addonId) {
     if (addonId === 'mesas') return mesasAddonOn;
-    if (addonId === 'pedidos') return pedidosAddonOn;
     if (addonId === 'menu') return menuAddonOn;
     if (addonId === 'acessos') return acessosAddonOn;
     return false;
@@ -478,8 +460,7 @@
           const subscribeValue = activePlanTier
             ? calculateValue(activePlanTier, {
                 mesas: activeMesasAddon,
-                pedidos: activePedidosAddon,
-                acessos: activeAcessosAddon,
+                        acessos: activeAcessosAddon,
                 menu: activeMenuAddon,
               })
             : null;
@@ -493,12 +474,6 @@
           camePromptingMesas = true;
           if (!activeMesasAddon) mesasAddonOn = true;
           // Se user veio querendo Mesas mas tá no plano errado, sugere bundle
-          if (selectedPlan === 'chat') selectedPlan = 'bundle';
-          checkoutStep = 2;
-        }
-        if (params.get('addon') === 'pedidos') {
-          camePromptingPedidos = true;
-          if (!activePedidosAddon) pedidosAddonOn = true;
           if (selectedPlan === 'chat') selectedPlan = 'bundle';
           checkoutStep = 2;
         }
@@ -558,8 +533,7 @@
           planTier: selectedPlan,
           addons: {
             mesas: mesasAddonOn,
-            pedidos: pedidosAddonOn,
-            acessos: acessosAddonOn,
+                    acessos: acessosAddonOn,
             menu: menuAddonOn,
           },
         }),
@@ -584,7 +558,7 @@
         }
         void capturePostHogEvent('subscription_checkout_started', {
           plan: selectedPlan,
-          addons: { mesas: mesasAddonOn, pedidos: pedidosAddonOn, acessos: acessosAddonOn, menu: menuAddonOn },
+          addons: { mesas: mesasAddonOn, acessos: acessosAddonOn, menu: menuAddonOn },
           amount: planPrice,
           payment_method: 'card',
           is_renewal: isActiveStrict,
@@ -628,8 +602,7 @@
           planTier: selectedPlan,
           addons: {
             mesas: mesasAddonOn,
-            pedidos: pedidosAddonOn,
-            acessos: acessosAddonOn,
+                    acessos: acessosAddonOn,
             menu: menuAddonOn,
           },
         }),
@@ -655,7 +628,7 @@
       if (!data.reused) {
         void capturePostHogEvent('pix_payment_initiated', {
           plan: selectedPlan,
-          addons: { mesas: mesasAddonOn, pedidos: pedidosAddonOn, acessos: acessosAddonOn, menu: menuAddonOn },
+          addons: { mesas: mesasAddonOn, acessos: acessosAddonOn, menu: menuAddonOn },
           amount: planPrice,
           is_renewal: isActiveStrict,
         });
@@ -848,26 +821,6 @@
             Já está ativo. Acesse <a href="/app/mesas" style="color: var(--primary);">/app/mesas</a>.
           {:else}
             Marque "Módulo Mesas" no formulário de assinatura abaixo.
-          {/if}
-        </div>
-      </div>
-    </div>
-  {/if}
-
-  {#if camePromptingPedidos}
-    <div class="status-card info">
-      <div class="status-icon"><Monitor class="size-6" aria-hidden="true" /></div>
-      <div>
-          <strong>Você quer ativar Pedidos + Cozinha</strong>
-          <div class="status-detail">
-            {#if isActiveStrict && activePlanAllowsPedidos && !activePedidosAddon}
-            Marque "Pedidos + Cozinha" no wizard abaixo e confirme a renovação.
-          {:else if isActiveStrict && !activePlanAllowsPedidos}
-            Pedidos + Cozinha precisa de um plano com PDV. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.
-          {:else if activePedidosAddon}
-            Já está ativo.
-          {:else}
-            Marque "Pedidos + Cozinha" no formulário de assinatura abaixo.
           {/if}
         </div>
       </div>

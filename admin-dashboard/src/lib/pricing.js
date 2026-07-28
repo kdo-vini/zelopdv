@@ -16,7 +16,6 @@ export const PLANS = {
     includesChat: false,
     includesMenu: false,
     allowsMesas: true,
-    allowsPedidos: true,
     allowsAcessos: true,
     allowsMenu: true,
     stripePriceId: 'price_1SO4yvLUJWyE4PkYwoYAYc6h',
@@ -29,7 +28,6 @@ export const PLANS = {
     includesChat: true,
     includesMenu: true,
     allowsMesas: false,
-    allowsPedidos: false,
     allowsAcessos: false,
     allowsMenu: false,
     stripePriceId: 'price_1TlbH2LUJWyE4PkYSqFSXXVY',
@@ -42,7 +40,6 @@ export const PLANS = {
     includesChat: true,
     includesMenu: true,
     allowsMesas: true,
-    allowsPedidos: true,
     allowsAcessos: true,
     allowsMenu: false,
     stripePriceId: 'price_1TlbH2LUJWyE4PkYlS4IxMhs',
@@ -56,14 +53,6 @@ export const ADDONS = {
     price: 30.00,
     requiresFlag: 'allowsMesas',
     stripePriceId: 'price_1TR0xHLUJWyE4PkYlvTgAub7',
-  },
-  pedidos: {
-    id: 'pedidos',
-    name: 'Pedidos + Cozinha',
-    price: 30.00,
-    requiresFlag: 'allowsPedidos',
-    stripePriceId: 'price_1TTjDcLUJWyE4PkYbHDHq9gw',
-    deprecated: true,
   },
   acessos: {
     id: 'acessos',
@@ -82,11 +71,7 @@ export const ADDONS = {
 };
 
 export const VALID_PLAN_TIERS = Object.keys(PLANS);
-// Pedidos permanece no catalogo apenas para compatibilidade com a flag legada;
-// nao e mais um item cobrado desde que passou a fazer parte do ZeloMenu.
-export const VALID_ADDONS = Object.values(ADDONS)
-  .filter((addon) => !addon.deprecated)
-  .map((addon) => addon.id);
+export const VALID_ADDONS = Object.keys(ADDONS);
 
 export function isAddonAllowed(planTier, addonId) {
   const plan = PLANS[planTier];

@@ -3,7 +3,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { ensureActiveSubscription, hasMesasAddon, hasPedidosAddon, bounceSubUserMissingAddon } from '$lib/guards';
+  import { ensureActiveSubscription, hasMesasAddon, bounceSubUserMissingAddon } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -17,7 +17,6 @@
   let operadorUserId = '';
   let isSubUser = false;
   let addonActive = false;
-  let pedidosAddonActive = false;
   let ready = false;
 
   let mesaId = '';
@@ -28,8 +27,6 @@
   let categorias = [];
   let loading = true;
   let savingItem = false;
-  let sendingCozinhaIds = new Set();
-  let itensEnviadosCozinha = new Set();
 
   // Filtros / busca
   let busca = '';
@@ -146,7 +143,6 @@
       return;
     }
 
-    pedidosAddonActive = await hasPedidosAddon(ownerUserId);
     pdvCache.setUserId(ownerUserId);
     ready = true;
 
@@ -279,164 +275,6 @@
       ...i,
       nome_produto: i.produtos?.nome || '(produto removido)',
     }));
-    await loadItensEnviadosCozinha();
-  }
-
-  function cozinhaKeyFromParts(idProduto, nome) {
-    return `${idProduto ?? 'sem-produto'}::${String(nome || '').trim().toLowerCase()}`;
-  }
-
-  function cozinhaKeyFromItem(item) {
-    return cozinhaKeyFromParts(item?.id_produto, item?.nome_produto);
-  }
-
-  function itemEnviadoCozinha(item) {
-    return itensEnviadosCozinha.has(cozinhaKeyFromItem(item));
-  }
-
-  function isSendingCozinha(item) {
-    return sendingCozinhaIds.has(item?.id);
-  }
-
-  async function loadItensEnviadosCozinha() {
-    if (!pedidosAddonActive || !comanda?.id) {
-      itensEnviadosCozinha = new Set();
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('pedidos')
-      .select('id, pedido_itens(id, id_produto, nome, enviado_cozinha)')
-      .eq('id_usuario', ownerUserId)
-      .eq('id_comanda', comanda.id)
-      .eq('origem', 'comanda')
-      .in('status', ['aberto', 'pronto']);
-
-    if (error) {
-      console.warn('[Mesa] loadItensEnviadosCozinha falhou:', error.message);
-      return;
-    }
-
-    const enviados = new Set();
-    for (const pedido of data || []) {
-      for (const item of pedido.pedido_itens || []) {
-        if (item.enviado_cozinha) {
-          enviados.add(cozinhaKeyFromParts(item.id_produto, item.nome));
-        }
-      }
-    }
-    itensEnviadosCozinha = enviados;
-  }
-
-  async function encontrarItemAbertoNaCozinha(item) {
-    if (!comanda?.id) return false;
-    const key = cozinhaKeyFromItem(item);
-
-    const { data, error } = await supabase
-      .from('pedidos')
-      .select('id, pedido_itens(id_produto, nome, enviado_cozinha)')
-      .eq('id_usuario', ownerUserId)
-      .eq('id_comanda', comanda.id)
-      .eq('origem', 'comanda')
-      .in('status', ['aberto', 'pronto']);
-
-    if (error) throw error;
-
-    return (data || []).some(pedido =>
-      (pedido.pedido_itens || []).some(pi =>
-        pi.enviado_cozinha && cozinhaKeyFromParts(pi.id_produto, pi.nome) === key
-      )
-    );
-  }
-
-  async function proximoNumeroPedido() {
-    const { data, error } = await supabase.rpc('proximo_numero_pedido', { p_id_usuario: ownerUserId });
-    if (error) throw error;
-    return Number(data || 1);
-  }
-
-  async function inserirPedidoComRetry(insertBase) {
-    const MAX_TENTATIVAS = 3;
-    let ultimoErro = null;
-    for (let tentativa = 0; tentativa < MAX_TENTATIVAS; tentativa++) {
-      const numeroPedido = await proximoNumeroPedido();
-      const { data, error } = await supabase
-        .from('pedidos')
-        .insert({ ...insertBase, numero_pedido: numeroPedido })
-        .select('id, numero_pedido')
-        .single();
-      if (!error) return data;
-      ultimoErro = error;
-      if (error.code !== '23505') throw error;
-    }
-    throw ultimoErro || new Error('Não foi possível gerar número de pedido único.');
-  }
-
-  async function enviarItemCozinha(item) {
-    if (!addonActive || !pedidosAddonActive || !comanda?.id || !item || isSendingCozinha(item)) return;
-
-    if (itemEnviadoCozinha(item)) {
-      addToast('Item ja enviado para a cozinha.', 'info');
-      return;
-    }
-
-    sendingCozinhaIds = new Set(sendingCozinhaIds).add(item.id);
-
-    try {
-      const duplicado = await encontrarItemAbertoNaCozinha(item);
-      if (duplicado) {
-        itensEnviadosCozinha = new Set(itensEnviadosCozinha).add(cozinhaKeyFromItem(item));
-        addToast('Este item ja esta em um pedido aberto da cozinha.', 'info');
-        return;
-      }
-
-      const quantidade = Number(item.quantidade || 0);
-      const preco = Number(item.preco_unitario || 0);
-      const subtotalItem = Math.round(quantidade * preco * 100) / 100;
-
-      const pedido = await inserirPedidoComRetry({
-        id_usuario: ownerUserId,
-        id_operador: operadorUserId,
-        status: 'aberto',
-        origem: 'comanda',
-        id_comanda: comanda.id,
-        observacoes: mesa?.numero ? `Mesa ${mesa.numero}` : 'Comanda',
-      });
-
-      const { error: itemErr } = await supabase
-        .from('pedido_itens')
-        .insert({
-          id_pedido: pedido.id,
-          id_produto: item.id_produto ?? null,
-          nome: item.nome_produto || '',
-          preco_unitario: preco,
-          quantidade,
-          subtotal: subtotalItem,
-          enviado_cozinha: true,
-          status_cozinha: 'aguardando',
-        });
-
-      if (itemErr) {
-        await supabase.from('pedidos').delete().eq('id', pedido.id).eq('id_usuario', ownerUserId);
-        throw itemErr;
-      }
-
-      itensEnviadosCozinha = new Set(itensEnviadosCozinha).add(cozinhaKeyFromItem(item));
-      await auditMesa('mesa.item_enviado_cozinha', 'comanda', comanda.id, {
-        mesa_id: mesaId,
-        pedido_id: pedido.id,
-        produto_id: item.id_produto,
-        nome: item.nome_produto,
-        quantidade,
-      });
-      addToast('Item enviado para a cozinha.', 'success');
-    } catch (error) {
-      addToast('Erro ao enviar para a cozinha: ' + (error?.message || error), 'error');
-    } finally {
-      const next = new Set(sendingCozinhaIds);
-      next.delete(item.id);
-      sendingCozinhaIds = next;
-    }
   }
 
   async function loadProdutos(forceRefresh = false) {
@@ -1429,22 +1267,6 @@
                       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/></svg>
                     </button>
                   </div>
-                  {#if pedidosAddonActive}
-                    <button
-                      type="button"
-                      class="kitchen-btn"
-                      class:sent={itemEnviadoCozinha(item)}
-                      on:click={() => enviarItemCozinha(item)}
-                      disabled={itemEnviadoCozinha(item) || isSendingCozinha(item)}
-                      title={itemEnviadoCozinha(item) ? 'Item ja enviado para a cozinha' : 'Enviar item para a cozinha'}
-                      aria-label={itemEnviadoCozinha(item) ? 'Item ja enviado para a cozinha' : 'Enviar item para a cozinha'}
-                    >
-                      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M10 2.5a.75.75 0 0 1 .75.75v1.308a5.75 5.75 0 0 1 5 5.692v.5H4.25v-.5a5.75 5.75 0 0 1 5-5.692V3.25A.75.75 0 0 1 10 2.5Zm-6.5 10a.75.75 0 0 1 .75-.75h11.5a.75.75 0 0 1 .75.75v.25a3.75 3.75 0 0 1-3.75 3.75h-5.5a3.75 3.75 0 0 1-3.75-3.75v-.25Z"/>
-                      </svg>
-                      <span>{itemEnviadoCozinha(item) ? 'Enviado' : (isSendingCozinha(item) ? '...' : 'Cozinha')}</span>
-                    </button>
-                  {/if}
                 </div>
               </li>
             {/each}
@@ -2622,31 +2444,6 @@
     font-variant-numeric: tabular-nums;
     padding: 0 0.15rem;
   }
-
-  .kitchen-btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;
-    min-height: 30px;
-    padding: 0.35rem 0.5rem;
-    border: 1px solid rgba(14, 165, 233, 0.35);
-    border-radius: 8px;
-    background: rgba(14, 165, 233, 0.1);
-    color: var(--primary);
-    font-size: 0.72rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-  }
-  .kitchen-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
-  .kitchen-btn:hover:not(:disabled) {
-    background: rgba(14, 165, 233, 0.18);
-    border-color: var(--primary);
-  }
-  .kitchen-btn.sent {
-    color: var(--status-success-text);
-    border-color: var(--status-success-border);
-    background: var(--status-success-bg);
-  }
-  .kitchen-btn:disabled { opacity: 0.68; cursor: not-allowed; }
 
   .ajustes { display: flex; flex-direction: column; gap: 0.5rem; }
   .ajustes-toggle {

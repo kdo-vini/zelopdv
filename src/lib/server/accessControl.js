@@ -48,7 +48,7 @@ const DEFAULT_ROLES = [
     permissions: {
       'pdv.acessar': true,
       'mesas.acessar': true, 'mesas.abrir_comanda': true, 'mesas.editar_itens': true,
-      'pedidos.acessar': true, 'pedidos.criar': true, 'pedidos.cozinha': true,
+      'pedidos.acessar': true, 'pedidos.cozinha': true,
     },
   },
   {

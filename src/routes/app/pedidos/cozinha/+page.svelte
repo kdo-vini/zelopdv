@@ -4,12 +4,10 @@
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription, hasKitchenQueueAccess, bounceSubUserMissingAddon } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
-  import { logAuditAction } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import BackLink from '$lib/components/ui/BackLink.svelte';
   import { itemModifierGroups, loadCanonicalOrders, transitionCanonicalOrder } from '$lib/onlineOrders';
 
-  let userId = '';
   let ownerUserId = '';
   let empresaId = '';
   let operadorUserId = '';
@@ -24,8 +22,8 @@
   let realtimeChannel = null;
   let refreshTimer = null;
 
-  $: pedidosAbertos = pedidos.filter(p => ['aberto', 'accepted', 'preparando', 'preparing'].includes(p.status));
-  $: pedidosProntos = pedidos.filter(p => p.status === 'pronto' || p.status === 'ready');
+  $: pedidosAbertos = pedidos.filter(p => ['accepted', 'preparing'].includes(p.status));
+  $: pedidosProntos = pedidos.filter(p => p.status === 'ready');
   $: totalItensPendentes = pedidosAbertos.reduce(
     (acc, p) => acc + p.itens.filter(i => i.status_cozinha !== 'pronto').length,
     0
@@ -42,7 +40,6 @@
     const auth = await ensureActiveSubscription({ requireProfile: true });
     if (!auth?.userId) return;
 
-    userId = auth.userId;
     ownerUserId = auth.ownerUserId || auth.userId;
     operadorUserId = auth.userId;
     isSubUser = auth.isSubUser;
@@ -52,7 +49,7 @@
       return;
     }
     addonActive = await hasKitchenQueueAccess(ownerUserId);
-    if (bounceSubUserMissingAddon({ addonActive, isSubUser, addonLabel: 'Pedidos' })) return;
+    if (bounceSubUserMissingAddon({ addonActive, isSubUser, addonLabel: 'ZeloMenu' })) return;
     ready = true;
     if (!addonActive) {
       loading = false;
@@ -77,83 +74,23 @@
   }
 
   async function loadPedidos() {
-    if (!ownerUserId) return;
+    if (!empresaId) return;
     if (!loading) refreshing = true;
 
-    const legacyPromise = supabase
-      .from('pedidos')
-      .select(`
-        id,
-        numero_pedido,
-        status,
-        origem,
-        id_comanda,
-        observacoes,
-        nome_cliente,
-        criado_em,
-        pedido_itens!inner (
-          id,
-          id_produto,
-          nome,
-          preco_unitario,
-          quantidade,
-          subtotal,
-          enviado_cozinha,
-          status_cozinha
-        )
-      `)
-      .eq('id_usuario', ownerUserId)
-      .in('status', ['aberto', 'preparando', 'pronto'])
-      .eq('pedido_itens.enviado_cozinha', true)
-      .order('criado_em', { ascending: true });
-
-    let data;
-    let error;
-    let online = [];
     try {
-      const [legacy, canonical] = await Promise.all([
-        legacyPromise,
-        loadCanonicalOrders(supabase, empresaId, { kitchen: true })
-      ]);
-      data = legacy.data;
-      error = legacy.error;
-      online = canonical;
+      pedidos = await loadCanonicalOrders(supabase, empresaId, { kitchen: true });
     } catch (err) {
-      error = err;
-    }
-
-    if (error) {
-      addToast('Erro ao carregar cozinha: ' + error.message, 'error');
+      addToast('Erro ao carregar cozinha: ' + (err?.message || err), 'error');
+    } finally {
       loading = false;
       refreshing = false;
-      return;
     }
-
-    const legacyPedidos = (data || [])
-      .map(p => ({
-        ...p,
-        itens: (p.pedido_itens || []).filter(i => i.enviado_cozinha === true),
-      }))
-      .filter(p => p.itens.length > 0);
-    pedidos = [...legacyPedidos, ...online].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em));
-    loading = false;
-    refreshing = false;
   }
 
   function setupRealtime() {
     cleanupRealtime();
     realtimeChannel = supabase
       .channel(`cozinha-${ownerUserId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'pedidos', filter: `id_usuario=eq.${ownerUserId}` },
-        scheduleRefresh
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'pedido_itens' },
-        scheduleRefresh
-      )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'zelo_orders', filter: `empresa_id=eq.${empresaId}` },
@@ -194,13 +131,6 @@
     return '';
   }
 
-  function origemLabel(pedido) {
-    if (pedido.origem === 'comanda') return pedido.id_comanda ? `Comanda ${String(pedido.id_comanda).slice(0, 8)}` : 'Comanda';
-    if (pedido.origem === 'zelochat') return 'ZeloChat';
-    if (pedido.origem === 'zelomenu') return '📱 App';
-    return 'Balcão';
-  }
-
   function minutosDesde(dataIso) {
     if (!dataIso) return '';
     const diff = Math.max(0, Date.now() - new Date(dataIso).getTime());
@@ -213,12 +143,8 @@
     return item.status_cozinha === 'pronto';
   }
 
-  function isMarking(item) {
-    return markingIds.has(item.id);
-  }
-
-  function editarPedido(pedido) {
-    goto(`/app/pedidos/${pedido.id}/editar`);
+  function isMarking(pedido) {
+    return markingIds.has(pedido.id);
   }
 
   async function excluirPedido(pedido) {
@@ -226,166 +152,42 @@
       addToast('Seu cargo não pode cancelar pedidos.', 'warning');
       return;
     }
-    if (pedido.canonical) {
-      const ok = await confirmAction('Cancelar pedido', 'Esta ação será registrada no histórico do pedido.');
-      if (!ok) return;
-      try {
-        await transitionCanonicalOrder(supabase, pedido, 'cancel', operadorUserId);
-        await loadPedidos();
-      } catch (error) {
-        addToast('Erro ao cancelar pedido: ' + (error?.message || error), 'error');
-      }
-      return;
-    }
-    const titulo = `Pedido #${pedido.numero_pedido}`;
-    const itensProntos = (pedido.itens || []).some((i) => i.status_cozinha === 'pronto');
-    const mensagem = itensProntos
-      ? `Cancelar o ${titulo}? Há itens já marcados como prontos — eles serão descartados.`
-      : `Cancelar o ${titulo}? Esta ação não pode ser desfeita.`;
-
-    const ok = await confirmAction('Cancelar pedido', mensagem);
+    const ok = await confirmAction('Cancelar pedido', 'Esta ação será registrada no histórico do pedido.');
     if (!ok) return;
-
-    const { error, data } = await supabase
-      .from('pedidos')
-      .delete()
-      .eq('id', pedido.id)
-      .eq('id_usuario', ownerUserId)
-      .in('status', ['aberto', 'pronto'])
-      .select('id');
-
-    if (error) {
+    try {
+      await transitionCanonicalOrder(supabase, pedido, 'cancel', operadorUserId);
+      await loadPedidos();
+    } catch (error) {
       addToast('Erro ao cancelar pedido: ' + (error?.message || error), 'error');
-      return;
     }
-    if (!data || data.length === 0) {
-      addToast('Pedido já foi fechado em outro dispositivo.', 'warning');
-    } else {
-      if (isSubUser) {
-        logAuditAction({
-          ownerUserId,
-          action: 'pedido.cancelado',
-          entityType: 'pedido',
-          entityId: String(pedido.id),
-          details: {
-            numero_pedido: pedido.numero_pedido,
-            origem: pedido.origem,
-            origem_painel: 'cozinha'
-          }
-        });
-      }
-      addToast(`${titulo} cancelado.`, 'success');
-    }
-    await loadPedidos();
   }
 
   async function marcarPedidoPreparando(pedido) {
-    if (pedido.canonical) {
-      if (pedido.status !== 'accepted') return;
-      try {
-        await transitionCanonicalOrder(supabase, pedido, 'start_preparing', operadorUserId);
-        await loadPedidos();
-      } catch (error) {
-        addToast('Erro ao iniciar preparo: ' + (error?.message || error), 'error');
-      }
-      return;
-    }
-    if (pedido.status !== 'aberto') return;
-
-    const { error } = await supabase
-      .from('pedidos')
-      .update({ status: 'preparando', id_operador: operadorUserId })
-      .eq('id', pedido.id)
-      .eq('id_usuario', ownerUserId)
-      .eq('status', 'aberto');
-
-    if (error) {
-      addToast('Erro ao iniciar preparo: ' + (error?.message || error), 'error');
-      return;
-    }
-
-    if (isSubUser) {
-      logAuditAction({
-        ownerUserId,
-        action: 'pedido.preparando',
-        entityType: 'pedido',
-        entityId: String(pedido.id),
-        details: {
-          numero_pedido: pedido.numero_pedido,
-          origem: pedido.origem,
-          origem_painel: 'cozinha'
-        }
-      });
-    }
-    await loadPedidos();
-  }
-
-  async function marcarItemPronto(pedido, item) {
-    if (pedido.canonical) {
-      if (pedido.status !== 'preparing' || markingIds.has(pedido.id)) return;
-      markingIds = new Set(markingIds).add(pedido.id);
-      try {
-        await transitionCanonicalOrder(supabase, pedido, 'mark_ready', operadorUserId);
-        await loadPedidos();
-      } catch (error) {
-        addToast('Erro ao concluir preparo: ' + (error?.message || error), 'error');
-      } finally {
-        const next = new Set(markingIds); next.delete(pedido.id); markingIds = next;
-      }
-      return;
-    }
-    if (itemPronto(item) || isMarking(item)) return;
-    markingIds = new Set(markingIds).add(item.id);
-
+    if (pedido.status !== 'accepted') return;
     try {
-      // Idempotência: só marca se ainda estiver aguardando — se outro KDS marcou primeiro, no-op.
-      const { error } = await supabase
-        .from('pedido_itens')
-        .update({ status_cozinha: 'pronto' })
-        .eq('id', item.id)
-        .eq('status_cozinha', 'aguardando');
-      if (error) throw error;
-
-      const { data: itensPedido, error: itensErr } = await supabase
-        .from('pedido_itens')
-        .select('id, status_cozinha, enviado_cozinha')
-        .eq('id_pedido', pedido.id)
-        .eq('enviado_cozinha', true);
-      if (itensErr) throw itensErr;
-
-      const todosProntos = (itensPedido || []).length > 0
-        && (itensPedido || []).every(i => i.status_cozinha === 'pronto');
-
-      if (todosProntos) {
-        // Guard com .in evita reabrir um pedido já fechado pelo caixa.
-        const { error: pedidoErr } = await supabase
-          .from('pedidos')
-          .update({ status: 'pronto', id_operador: operadorUserId })
-          .eq('id', pedido.id)
-          .eq('id_usuario', ownerUserId)
-          .in('status', ['aberto', 'preparando']);
-        if (pedidoErr) throw pedidoErr;
-      }
-
-      if (isSubUser) {
-        logAuditAction({
-          ownerUserId,
-          action: 'pedido.item_pronto',
-          entityType: 'pedido_item',
-          entityId: String(item.id),
-          details: {
-            pedido_id: pedido.id,
-            numero_pedido: pedido.numero_pedido,
-            nome: item.nome
-          }
-        });
-      }
+      await transitionCanonicalOrder(supabase, pedido, 'start_preparing', operadorUserId);
       await loadPedidos();
     } catch (error) {
-      addToast('Erro ao marcar item pronto: ' + (error?.message || error), 'error');
+      addToast('Erro ao iniciar preparo: ' + (error?.message || error), 'error');
+    }
+  }
+
+  /**
+   * O motor canônico não tem estado por item: o preparo conclui o pedido inteiro
+   * (`mark_ready`). O botão aparece por item só para manter o alvo de toque grande
+   * na tela da cozinha, mas a transição é sempre do pedido.
+   */
+  async function marcarPedidoPronto(pedido) {
+    if (pedido.status !== 'preparing' || markingIds.has(pedido.id)) return;
+    markingIds = new Set(markingIds).add(pedido.id);
+    try {
+      await transitionCanonicalOrder(supabase, pedido, 'mark_ready', operadorUserId);
+      await loadPedidos();
+    } catch (error) {
+      addToast('Erro ao concluir preparo: ' + (error?.message || error), 'error');
     } finally {
       const next = new Set(markingIds);
-      next.delete(item.id);
+      next.delete(pedido.id);
       markingIds = next;
     }
   }
@@ -394,10 +196,10 @@
 {#if ready && !addonActive}
   <main class="blocked">
     <section class="blocked-panel">
-      <p class="eyebrow">Módulo Pedidos</p>
+      <p class="eyebrow">ZeloMenu</p>
       <h1>Cozinha indisponível</h1>
-      <p>Ative o módulo Pedidos para usar o painel de preparo.</p>
-      <a href="/assinatura?addon=pedidos">Ativar módulo</a>
+      <p>Ative o ZeloMenu para usar o painel de preparo.</p>
+      <a href="/assinatura?addon=menu">Ativar ZeloMenu</a>
     </section>
   </main>
 {:else}
@@ -444,15 +246,6 @@
                 <div class="card-actions">
                   <button
                     type="button"
-                    class="action-btn"
-                    aria-label="Editar pedido"
-                    title="Editar pedido"
-                    on:click={() => editarPedido(pedido)}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
-                  </button>
-                  <button
-                    type="button"
                     class="action-btn action-btn-danger"
                     aria-label="Cancelar pedido"
                     title={canCancelOrders ? 'Cancelar pedido' : 'Seu cargo não pode cancelar pedidos'}
@@ -467,10 +260,9 @@
                     <h3>{pedidoTitulo(pedido)}</h3>
                     <p>
                       {#if pedidoSubtitulo(pedido)}<span class="num-tag">{pedidoSubtitulo(pedido)}</span> · {/if}
-                      {#if pedido.origem === 'zelomenu'}<span class="origem-badge origem-zelomenu">{origemLabel(pedido)}</span>{:else}{origemLabel(pedido)}{/if}
-                      · {minutosDesde(pedido.criado_em)}
+                      {minutosDesde(pedido.criado_em)}
                     </p>
-                    {#if pedido.status === 'preparando'}
+                    {#if pedido.status === 'preparing'}
                       <span class="status-preparando">Em preparo</span>
                     {/if}
                   </div>
@@ -500,15 +292,16 @@
                       </div>
                       <button
                         type="button"
-                        on:click={() => marcarItemPronto(pedido, item)}
-                        disabled={itemPronto(item) || isMarking(item)}
+                        on:click={() => marcarPedidoPronto(pedido)}
+                        disabled={itemPronto(item) || isMarking(pedido) || pedido.status !== 'preparing'}
+                        title={pedido.status === 'accepted' ? 'Inicie o preparo antes de marcar como pronto' : ''}
                       >
-                        {itemPronto(item) ? 'Pronto' : (isMarking(item) ? '...' : 'Marcar')}
+                        {itemPronto(item) ? 'Pronto' : (isMarking(pedido) ? '...' : 'Marcar')}
                       </button>
                     </li>
                   {/each}
                 </ul>
-                {#if pedido.status === 'aberto' || pedido.status === 'accepted'}
+                {#if pedido.status === 'accepted'}
                   <button
                     type="button"
                     class="pedido-action-btn"
@@ -534,20 +327,11 @@
                   <h3>{pedidoTitulo(pedido)}</h3>
                   <p>
                     {#if pedidoSubtitulo(pedido)}<span class="num-tag">{pedidoSubtitulo(pedido)}</span> · {/if}
-                    {origemLabel(pedido)} · {pedido.itens.length} {pedido.itens.length === 1 ? 'item' : 'itens'}
+                    {pedido.itens.length} {pedido.itens.length === 1 ? 'item' : 'itens'}
                   </p>
                 </div>
                 <div class="ready-actions">
                   <span class="ready-tag">Pronto</span>
-                  <button
-                    type="button"
-                    class="action-btn"
-                    aria-label="Editar pedido"
-                    title="Editar pedido"
-                    on:click={() => editarPedido(pedido)}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
-                  </button>
                   <button
                     type="button"
                     class="action-btn action-btn-danger"
@@ -892,21 +676,6 @@
     font-size: 0.75rem;
     text-transform: uppercase;
     font-weight: 900;
-  }
-
-  .origem-badge {
-    display: inline-block;
-    padding: 0.1rem 0.45rem;
-    border-radius: 4px;
-    font-size: 0.72rem;
-    font-weight: 900;
-    vertical-align: middle;
-  }
-
-  .origem-zelomenu {
-    background: rgba(59, 130, 246, 0.15);
-    color: color-mix(in srgb, #3b82f6 70%, white);
-    border: 1px solid rgba(59, 130, 246, 0.3);
   }
 
   .status-preparando {

@@ -41,7 +41,7 @@ async function findSubscriptionRow({ stripeSubId, stripeCustomerId, userId }) {
   if (stripeSubId) {
     const { data } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
+      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_acessos_addon, payment_provider')
       .eq('provider_subscription_id', stripeSubId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -51,7 +51,7 @@ async function findSubscriptionRow({ stripeSubId, stripeCustomerId, userId }) {
   if (userId) {
     const { data } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
+      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_acessos_addon, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -61,7 +61,7 @@ async function findSubscriptionRow({ stripeSubId, stripeCustomerId, userId }) {
   if (stripeCustomerId) {
     const { data } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, payment_provider')
+      .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_acessos_addon, payment_provider')
       .eq('provider_customer_id', stripeCustomerId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -209,7 +209,6 @@ export async function POST({ request }) {
           payment_provider: 'stripe',
           plan_tier: effectiveTier,
           has_mesas_addon: !!addons.mesas,
-          has_pedidos_addon: !!addons.pedidos,
           has_acessos_addon: !!addons.acessos,
           // chat/bundle incluem ZeloMenu (D-014); pdv liga via addon menu.
           has_zelo_menu: effectiveTier === 'chat' || effectiveTier === 'bundle' || !!addons.menu,
@@ -263,7 +262,6 @@ export async function POST({ request }) {
           payment_provider: 'stripe',
           plan_tier: effectiveTier,
           has_mesas_addon: !!addons.mesas,
-          has_pedidos_addon: !!addons.pedidos,
           has_acessos_addon: !!addons.acessos,
           has_zelo_menu: effectiveTier === 'chat' || effectiveTier === 'bundle' || !!addons.menu,
           status: mapStripeStatus(sub.status),
@@ -271,7 +269,7 @@ export async function POST({ request }) {
           cancel_at_period_end: !!sub.cancel_at_period_end,
           ...(monthlyValueCents != null ? { monthly_value_cents: monthlyValueCents } : {}),
         });
-        console.log(`[Stripe Webhook] [SYNC] sub ${stripeSubId} → status=${sub.status}, plan=${effectiveTier}, mesas=${!!addons.mesas}, pedidos=${!!addons.pedidos}, acessos=${!!addons.acessos}, zelomenu=${effectiveTier === 'chat' || effectiveTier === 'bundle' || !!addons.menu}`);
+        console.log(`[Stripe Webhook] [SYNC] sub ${stripeSubId} → status=${sub.status}, plan=${effectiveTier}, mesas=${!!addons.mesas}, acessos=${!!addons.acessos}, zelomenu=${effectiveTier === 'chat' || effectiveTier === 'bundle' || !!addons.menu}`);
         break;
       }
 

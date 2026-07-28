@@ -145,7 +145,7 @@ export async function POST({ request }) {
     // Load subscription to derive current plan
     const { data: subscription } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, status, plan_tier, has_mesas_addon, has_pedidos_addon, has_acessos_addon, has_zelo_menu, payment_provider')
+      .select('id, user_id, status, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu, payment_provider')
       .eq('user_id', targetUserId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -158,7 +158,6 @@ export async function POST({ request }) {
     const planTier = body.planTier || subscription.plan_tier;
     const addons = {
       mesas: body.addons?.mesas ?? !!subscription.has_mesas_addon,
-      pedidos: body.addons?.pedidos ?? !!subscription.has_pedidos_addon,
       acessos: body.addons?.acessos ?? !!subscription.has_acessos_addon,
       menu: body.addons?.menu ?? !!subscription.has_zelo_menu,
     };

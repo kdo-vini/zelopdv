@@ -2,7 +2,7 @@
 	// Relatórios: modo por caixa e por período (multi-caixas agregados)
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabaseClient';
-	import { ensureActiveSubscription, hasMesasAddon, hasPedidosAddon } from '$lib/guards';
+	import { ensureActiveSubscription, hasMesasAddon } from '$lib/guards';
 	import { hasPermission as hasAccessPermission } from '$lib/accessControl';
 	import { resolveAppIcon } from '$lib/icons/appIcons';
 	import { withTimeout } from '$lib/utils';
@@ -32,11 +32,6 @@
 	// UID do usuário autenticado
 	let uid = null;
 	let mesasAddonAtivo = false;
-	let pedidosAddonAtivo = false;
-
-	// Conjuntos de id_venda que vieram do módulo de pedidos (cozinha)
-	let vendaIdsFromPedidosCaixa = new Set();
-	let vendaIdsFromPedidosPeriodo = new Set();
 
 	// Filtro: lista de caixas do usuário (últimos 60 dias) e caixa selecionado
 	let caixas = [];
@@ -152,25 +147,6 @@
 		return comandas;
 	}
 
-	async function carregarVendaIdsFromPedidos(vendaIds) {
-		if (!pedidosAddonAtivo || !vendaIds?.length) return new Set();
-		let all = [];
-		const resultados = await withTimeout(Promise.all(
-			chunkArray(vendaIds, 1000).map((batch) =>
-				supabase
-					.from('pedidos')
-					.select('id_venda')
-					.eq('id_usuario', uid)
-					.in('id_venda', batch)
-					.not('id_venda', 'is', null)
-			)
-		));
-		for (const resultado of resultados) {
-			if (!resultado.error && resultado.data) all = all.concat(resultado.data);
-		}
-		return new Set(all.map((p) => p.id_venda).filter(Boolean));
-	}
-
 	onMount(async () => {
 		const authCtx = await ensureActiveSubscription({ requireProfile: true });
 		if (!authCtx) return;
@@ -185,7 +161,6 @@
 			uid = authCtx.ownerUserId || authCtx.userId;
 			if (!uid) { window.location.href = '/login'; return; }
 			mesasAddonAtivo = await hasMesasAddon(uid);
-			pedidosAddonAtivo = await hasPedidosAddon(uid);
 
 			// Carrega PIN administrativo
 			const { data: perfilData } = await supabase
@@ -292,7 +267,6 @@
 			vendasPagamentos = [];
 			vendasTaxasPlataforma = [];
 			comandasMesaCaixa = [];
-			vendaIdsFromPedidosCaixa = new Set();
 
 			if (ids.length) {
 				const pItens = supabase
@@ -311,8 +285,7 @@
 					.in('id_venda', ids);
 
 				const pComandasMesa = carregarComandasMesaPorVendas(ids);
-				const pPedidosIds = carregarVendaIdsFromPedidos(ids);
-				const [resItens, resPags, resTaxas, comandasMesa, pedidosIds] = await withTimeout(Promise.all([pItens, pPags, pTaxas, pComandasMesa, pPedidosIds]));
+				const [resItens, resPags, resTaxas, comandasMesa] = await withTimeout(Promise.all([pItens, pPags, pTaxas, pComandasMesa]));
 
 				if (resItens.error) throw resItens.error;
 				vendasItens = resItens.data || [];
@@ -322,7 +295,6 @@
 
 				if (!resTaxas.error) vendasTaxasPlataforma = resTaxas.data || [];
 				comandasMesaCaixa = comandasMesa || [];
-				vendaIdsFromPedidosCaixa = pedidosIds || new Set();
 
 				// Produtos map (com categoria para permitir filtro nos relatórios)
 				const pids = Array.from(new Set(vendasItens.map(it => it.id_produto).filter(Boolean)));
@@ -421,23 +393,11 @@
 	$: vendasPorTipoCaixa = (() => {
 		const result = [];
 		const retiradaVendas = (vendas || []).filter(v => (v.tipo_pedido || 'retirada') === 'retirada');
-		if (pedidosAddonAtivo) {
-			const diretas = retiradaVendas.filter(v => !vendaIdsFromPedidosCaixa.has(v.id));
-			const cozinha = retiradaVendas.filter(v => vendaIdsFromPedidosCaixa.has(v.id));
-			if (diretas.length > 0) result.push({ tipo: 'balcao', label: 'Frente de Caixa', icon: 'balcao', qtd: diretas.length, total: diretas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
-			if (cozinha.length > 0) result.push({ tipo: 'cozinha', label: 'Pedidos (Cozinha)', icon: 'cozinha', qtd: cozinha.length, total: cozinha.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
-		} else {
-			if (retiradaVendas.length > 0) result.push({ tipo: 'retirada', label: 'Retirada', icon: 'retirada', qtd: retiradaVendas.length, total: retiradaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
-		}
+		if (retiradaVendas.length > 0) result.push({ tipo: 'retirada', label: 'Retirada', icon: 'retirada', qtd: retiradaVendas.length, total: retiradaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
 		const deliveryVendas = (vendas || []).filter(v => v.tipo_pedido === 'delivery');
 		if (deliveryVendas.length > 0) result.push({ tipo: 'delivery', label: 'Delivery', icon: 'delivery', qtd: deliveryVendas.length, total: deliveryVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: deliveryVendas.reduce((a, v) => a + Number(v.taxa_entrega || 0), 0) });
 		return result;
 	})();
-	$: resumoCozinhaCaixa = (() => {
-		const cozinhaVendas = (vendas || []).filter(v => (v.tipo_pedido || 'retirada') === 'retirada' && vendaIdsFromPedidosCaixa.has(v.id));
-		return { qtd: cozinhaVendas.length, total: cozinhaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0) };
-	})();
-
 	// Plataformas nas vendas do caixa (detecta todas, inclusive desativadas com histórico)
 	$: platTotaisCaixa = (() => {
 		const _ = plataformasAtivas;
@@ -789,7 +749,6 @@
 			periodoComandasMesa = [];
 			periodoMovs = [];
 			periodoTaxasPlataforma = [];
-			vendaIdsFromPedidosPeriodo = new Set();
 
 			const promises = [];
 
@@ -889,12 +848,7 @@
 
 			if (resDespesas.error) console.error('Error fetching expenses:', resDespesas.error); // optional log
 			periodoDespesas = resDespesas.data || [];
-			const [pComandasPeriodo, pPedidosPeriodo] = await Promise.all([
-				vendaIds.length ? carregarComandasMesaPorVendas(vendaIds) : Promise.resolve([]),
-				vendaIds.length ? carregarVendaIdsFromPedidos(vendaIds) : Promise.resolve(new Set()),
-			]);
-			periodoComandasMesa = pComandasPeriodo;
-			vendaIdsFromPedidosPeriodo = pPedidosPeriodo;
+			periodoComandasMesa = vendaIds.length ? await carregarComandasMesaPorVendas(vendaIds) : [];
 
 			// Produtos do período com categoria (para filtro por categoria)
 			const pPids = Array.from(new Set((periodoItens || []).map(it => it.id_produto).filter(Boolean)));
@@ -962,23 +916,11 @@
 	$: periodoVendasPorTipo = (() => {
 		const result = [];
 		const retiradaVendas = (periodoVendas||[]).filter(v => (v.tipo_pedido || 'retirada') === 'retirada');
-		if (pedidosAddonAtivo) {
-			const diretas = retiradaVendas.filter(v => !vendaIdsFromPedidosPeriodo.has(v.id));
-			const cozinha = retiradaVendas.filter(v => vendaIdsFromPedidosPeriodo.has(v.id));
-			if (diretas.length > 0) result.push({ tipo: 'balcao', label: 'Frente de Caixa', icon: 'balcao', qtd: diretas.length, total: diretas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
-			if (cozinha.length > 0) result.push({ tipo: 'cozinha', label: 'Pedidos (Cozinha)', icon: 'cozinha', qtd: cozinha.length, total: cozinha.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
-		} else {
-			if (retiradaVendas.length > 0) result.push({ tipo: 'retirada', label: 'Retirada', icon: 'retirada', qtd: retiradaVendas.length, total: retiradaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
-		}
+		if (retiradaVendas.length > 0) result.push({ tipo: 'retirada', label: 'Retirada', icon: 'retirada', qtd: retiradaVendas.length, total: retiradaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
 		const deliveryVendas = (periodoVendas||[]).filter(v => v.tipo_pedido === 'delivery');
 		if (deliveryVendas.length > 0) result.push({ tipo: 'delivery', label: 'Delivery', icon: 'delivery', qtd: deliveryVendas.length, total: deliveryVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: deliveryVendas.reduce((a, v) => a + Number(v.taxa_entrega || 0), 0) });
 		return result;
 	})();
-	$: resumoCozinhaPeriodo = (() => {
-		const cozinhaVendas = (periodoVendas||[]).filter(v => (v.tipo_pedido || 'retirada') === 'retirada' && vendaIdsFromPedidosPeriodo.has(v.id));
-		return { qtd: cozinhaVendas.length, total: cozinhaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0) };
-	})();
-
 	// Plataformas nas vendas do período
 	$: platTotaisPeriodo = (() => {
 		const _ = plataformasAtivas;
@@ -1402,28 +1344,6 @@
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Comandas fechadas</div>
 						<div class="text-lg font-bold text-main">{resumoMesasCaixa.comandas}</div>
-					</div>
-				</div>
-			</div>
-			{/if}
-
-			{#if pedidosAddonAtivo && resumoCozinhaCaixa.qtd > 0}
-			<div class="card-mini">
-				<div class="flex items-center justify-between gap-3 mb-3">
-					<div>
-						<h3 class="text-sm font-semibold" style="color: var(--text-main);">Resumo do Módulo Pedidos</h3>
-						<div class="text-xs text-muted">Pedidos fechados pelo módulo de cozinha neste caixa.</div>
-					</div>
-					<div class="text-xs text-muted">{resumoCozinhaCaixa.qtd} pedido{resumoCozinhaCaixa.qtd === 1 ? '' : 's'}</div>
-				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<div class="rounded-lg card-inset">
-						<div class="text-xs text-muted mb-1">Valor total</div>
-						<div class="text-lg font-bold text-main">{fmt(resumoCozinhaCaixa.total)}</div>
-					</div>
-					<div class="rounded-lg card-inset">
-						<div class="text-xs text-muted mb-1">Pedidos fechados</div>
-						<div class="text-lg font-bold text-main">{resumoCozinhaCaixa.qtd}</div>
 					</div>
 				</div>
 			</div>
@@ -1877,28 +1797,6 @@
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Comandas fechadas</div>
 						<div class="text-lg font-bold text-main">{resumoMesasPeriodo.comandas}</div>
-					</div>
-				</div>
-			</div>
-			{/if}
-
-			{#if pedidosAddonAtivo && resumoCozinhaPeriodo.qtd > 0}
-			<div class="card-mini">
-				<div class="flex items-center justify-between gap-3 mb-3">
-					<div>
-						<h3 class="text-sm font-semibold" style="color: var(--text-main);">Resumo do Módulo Pedidos</h3>
-						<div class="text-xs text-muted">Pedidos fechados pelo módulo de cozinha no período selecionado.</div>
-					</div>
-					<div class="text-xs text-muted">{resumoCozinhaPeriodo.qtd} pedido{resumoCozinhaPeriodo.qtd === 1 ? '' : 's'}</div>
-				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<div class="rounded-lg card-inset">
-						<div class="text-xs text-muted mb-1">Valor total</div>
-						<div class="text-lg font-bold text-main">{fmt(resumoCozinhaPeriodo.total)}</div>
-					</div>
-					<div class="rounded-lg card-inset">
-						<div class="text-xs text-muted mb-1">Pedidos fechados</div>
-						<div class="text-lg font-bold text-main">{resumoCozinhaPeriodo.qtd}</div>
 					</div>
 				</div>
 			</div>
