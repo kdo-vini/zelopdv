@@ -2,6 +2,25 @@
 
 ---
 
+## INC-2026-07-29-01 - Fila de pedidos recusa sessao do navegador
+
+**Status:** mitigacao implementada no codigo; requer deploy do app para chegar aos usuarios.
+
+**Sintoma**
+
+- `/app/pedidos` exibe `Erro ao carregar pedidos: permission denied for table zelo_orders`.
+
+**Causa provavel e evidencias**
+
+- A fila consulta `zelo_orders` com a sessao do navegador. O banco de producao exige o role `authenticated` para essa leitura; uma sessao ausente, expirada ou invalida chega como `anon` e recebe exatamente essa mensagem.
+- A verificacao de producao em 2026-07-29 confirmou RLS ligado, `SELECT` para `authenticated`, nenhum `SELECT` para `anon` e as policies owner-scoped esperadas. Portanto, nao foi aplicado grant anon como paliativo.
+
+**Fix / recovery**
+
+- A tela reconhece o erro 42501/permissao da tabela, valida o usuario, tenta renovar a sessao uma vez e repete a consulta.
+- Se a sessao expirou, o token local e removido e o usuario volta ao login; se a sessao esta valida, a tela mostra uma mensagem operacional sem expor o erro bruto do Postgres.
+- Cobertura: `tests/onlineOrders.test.js` (9/9) e `npm run check` (0 erros / 96 avisos preexistentes).
+
 ## INC-2026-07-24-02 - ZeloAdmin nao altera o preco ao salvar plano
 
 **Status:** corrigido no codigo em 2026-07-24; aguardando deploy via push para `main`.

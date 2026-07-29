@@ -7,6 +7,12 @@ const ONLINE_QUEUE_STATUSES = [
   'out_for_delivery'
 ];
 
+/** Identifies the Postgres error returned when the browser lost its authenticated role. */
+export function isCanonicalOrderPermissionError(error) {
+  return error?.code === '42501'
+    || /permission denied for table\s+zelo_orders/i.test(error?.message || '');
+}
+
 /**
  * Canonical public orders use ZeloMenu snapshot names (`type` and
  * `declaredMethod`). Older producers used the shorter PDV names (`mode` and

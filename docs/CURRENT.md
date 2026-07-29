@@ -3,6 +3,8 @@
 > Atualizar a cada sprint/sessão.
 > Referências: [[CLAUDE]] · [[BILLING]] · [[CODE_REVIEW]] · [[FIXES_PROGRESS]] · [[INCIDENTS]]
 
+- Fila de pedidos (2026-07-29): incidente reportado com `permission denied for table zelo_orders`. O ACL/RLS de producao foi conferido e esta correto (`authenticated` com SELECT, `anon` sem SELECT); a tela agora tenta renovar a sessao, repete a leitura e encaminha sessoes expiradas ao login. O ajuste local passou em 9 testes direcionados e `npm run check` com 0 erros / 96 avisos; aguarda deploy.
+
 - Página de extensões / identidade dos produtos (2026-07-28): o card do ZeloMenu agora usa o mini-mascote extraído da hero com fundo transparente, animação sutil e tratamento roxo próprio por tokens (`--zelomenu-brand*`). O card do ZeloChat usa os tokens verdes oficiais do repo do produto (`--zelochat-brand*`). Os preços exibidos e os textos de meta, FAQ e passos derivam de `src/lib/pricing.js`; não há mais preço atual de produto escrito à mão em `src/lib/data/extensoes.js`. `npm run check` passou com 0 erros / 96 avisos conhecidos; QA visual validou desktop e mobile sem overflow, com os assets carregados.
 
 - Seguranca ZeloMenu (2026-07-28): `public.zelomenu_table_capabilities` foi endurecida em producao via `supabase db query --linked`: RLS ligado, nenhum privilegio para `anon`/`authenticated` e as RPCs `issue_table_capability`/`revoke_table_capability` ficaram restritas ao `service_role`. A tabela estava vazia e sem sessoes usando `capability_id`; o advisor deixou de reportar `rls_disabled_in_public`. Migration registrada em `.ai/migrations/zelomenu_table_capabilities_enable_rls_2026_07_28.sql` e a migration original do ZeloMenu tambem foi corrigida para novos ambientes.

@@ -14,6 +14,7 @@
   import {
     canonicalFulfillmentMode,
     canonicalPaymentMethod,
+    isCanonicalOrderPermissionError,
     itemModifierGroups,
     loadCanonicalOrders,
     subscribeCanonicalOrderUpdates,
@@ -47,6 +48,7 @@
   let reimprimindo = false;
   let orderBaselineReady = false;
   let polling = false;
+  let recoveringOrderSession = false;
   let mobileDetailOpen = false;
 
   $: pedidoSelecionado = pedidos.find((p) => p.id === pedidoSelecionadoId) || pedidos[0] || null;
@@ -239,6 +241,10 @@
   }
 
   async function carregarPedidos() {
+    return carregarPedidosComRecuperacao(true);
+  }
+
+  async function carregarPedidosComRecuperacao(tentarRecuperarSessao) {
     if (polling || fechandoPedido || !userId) return;
     polling = true;
     try {
@@ -249,10 +255,43 @@
         pedidoSelecionadoId = pedidos[0]?.id || null;
       }
     } catch (err) {
+      if (tentarRecuperarSessao && isCanonicalOrderPermissionError(err)) {
+        const sessionState = await recuperarSessaoParaPedidos();
+        polling = false;
+        if (sessionState === 'refreshed') {
+          await carregarPedidosComRecuperacao(false);
+          return;
+        }
+        if (sessionState === 'missing') {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          addToast('Sua sessão expirou. Entre novamente para carregar os pedidos.', 'warning');
+          goto('/login?msg=session_expired');
+          return;
+        }
+        addToast('Não foi possível validar o acesso aos pedidos. Tente recarregar a página.', 'error');
+        return;
+      }
       addToast('Erro ao carregar pedidos: ' + getFriendlyErrorMessage(err), 'error');
     } finally {
       loading = false;
       polling = false;
+    }
+  }
+
+  async function recuperarSessaoParaPedidos() {
+    if (recoveringOrderSession) return 'missing';
+    recoveringOrderSession = true;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) return 'valid';
+
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      return refreshed?.session ? 'refreshed' : 'missing';
+    } catch (error) {
+      console.warn('[Pedidos] não foi possível recuperar a sessão:', error?.message || error);
+      return 'missing';
+    } finally {
+      recoveringOrderSession = false;
     }
   }
 

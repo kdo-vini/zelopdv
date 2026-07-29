@@ -1,5 +1,7 @@
 # Fixes Progress
 
+- [ ] FX-ZELOMENU-08 (2026-07-29) - fila de pedidos agora recupera sessao expirada quando o Postgres retorna `permission denied for table zelo_orders`; sessao invalida volta ao login e ACL de producao foi validada (`authenticated` com SELECT, `anon` sem SELECT). Codigo aguarda deploy; incidente em [[INCIDENTS]].
+
 - [x] FX-ZELOMENU-07 (2026-07-28) — fase 2 publicada: `source='mesa'` unifica QR público e envio da comanda, com separação de estoque por `comandaItemId`, sem venda financeira duplicada e com endpoint owner-scoped `/api/mesas/cozinha`. ZeloMenu e ZeloChat removeram o consumidor runtime de `has_pedidos_addon`; migrations transacionais e testes 11/11 foram executados, o DDL passou em produção, e o smoke técnico pós-deploy retornou 200 nas rotas dependentes e 401 no endpoint sem bearer. Um smoke transacional 3/3 encontrou e corrigiu o marcador indevido de estoque liberado; o smoke de `delete_account` com usuário sintético também passou, e todas as transações foram revertidas sem pedidos/usuários de teste persistidos. E2E persistido com tenant descartável não foi executado por falta de credenciais.
 
 - [x] FX-BILLING-03 (2026-07-28) — assinatura `d5625be9` reconciliada e corrigida: o último pagamento confirmado foi R$89 (PDV + Mesas, sem Acessos), não há `provider_subscription_id` ativo, e a alteração manual que deixou Acessos ligado não tinha evidência contratual. Acessos foi removido, `monthly_value_cents` ajustado para R$228 (bundle + Mesas), a mudança foi auditada e nenhum histórico/estorno foi alterado.

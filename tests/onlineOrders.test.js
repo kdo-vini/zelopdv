@@ -3,6 +3,7 @@ import {
   canonicalFulfillmentMode,
   canonicalPaymentMethod,
   closeCanonicalOrder,
+  isCanonicalOrderPermissionError,
   itemModifierGroups,
   loadCanonicalOrders,
   mapCanonicalOrder,
@@ -18,6 +19,13 @@ describe('onlineOrders', () => {
     total: 25, created_at: '2026-07-12T12:00:00Z',
     zelo_order_items: [{ id: 'i1', product_id: 9, name: 'Combo', unit_price: 12.5, quantity: 2, subtotal: 25 }]
   };
+
+  it('recognizes an authenticated-role permission failure from the order table', () => {
+    expect(isCanonicalOrderPermissionError({ code: '42501', message: 'permission denied' })).toBe(true);
+    expect(isCanonicalOrderPermissionError({ message: 'permission denied for table zelo_orders' })).toBe(true);
+    expect(isCanonicalOrderPermissionError({ code: '42501', message: 'permission denied for table products' })).toBe(true);
+    expect(isCanonicalOrderPermissionError({ code: 'PGRST116', message: 'No rows found' })).toBe(false);
+  });
 
   it('maps the canonical model to the existing queue view model', () => {
     const mapped = mapCanonicalOrder(order);
