@@ -38,6 +38,7 @@
 - `AdminLock`/`pin_admin` hoje é barreira de UI no browser, não proteção forte de segredo.
 - O admin dashboard usa anon key no browser e assume tabelas administrativas sem RLS.
 - As migrations do projeto ficam em `.ai/migrations/`; não há `supabase/migrations/` versionado.
+- Para aplicar migrations no projeto real vinculado, usar o Supabase CLI com `supabase db query --linked --file <arquivo.sql>`; não depender de colar SQL manualmente no dashboard.
 - A trilha documental principal agora é: `README.md` + docs operacionais na raiz + `pdvObsidian/HOME.md`.
 - Em 2026-06-01, `npm test` voltou a 140/140 após alinhar fixtures ao contrato atual de perfil/CPF/telefone.
 - Em produção, `subscriptions` usa `provider_customer_id`; o portal Stripe já foi alinhado para esse contrato.

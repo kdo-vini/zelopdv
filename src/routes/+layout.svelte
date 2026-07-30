@@ -11,6 +11,48 @@
   import { capturePostHogPageview } from '$lib/posthogClient';
   import { captureAcquisitionOrigin } from '$lib/attribution/client';
 
+  const usageFeatureByPath = [
+    ['/gestao/gerente', 'gerente'],
+    ['/relatorios', 'relatorios'],
+    ['/gestao/produtos', 'produtos'],
+    ['/gestao/estoque', 'estoque'],
+    ['/gestao/pessoas', 'clientes'],
+    ['/gestao/caixa', 'caixa'],
+    ['/gestao/despesas', 'despesas'],
+    ['/gestao/mesas', 'mesas'],
+    ['/app/mesas', 'mesas'],
+    ['/app/pedidos', 'pedidos'],
+    ['/gestao/acessos', 'acessos'],
+    ['/ferramentas', 'ferramentas'],
+    ['/app', 'pdv'],
+  ];
+
+  function featureForPath(currentPath) {
+    if (currentPath.startsWith('/zelinho') || currentPath.includes('/chat')) return 'zelinho';
+    return usageFeatureByPath.find(([prefix]) => currentPath === prefix || currentPath.startsWith(`${prefix}/`))?.[1] || null;
+  }
+
+  async function trackFeatureUsage(currentPath) {
+    const feature = featureForPath(currentPath);
+    if (!feature || !session?.access_token || typeof window === 'undefined') return;
+
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+    const cacheKey = `zelo:usage:${day}:${feature}`;
+    if (window.sessionStorage.getItem(cacheKey)) return;
+    window.sessionStorage.setItem(cacheKey, '1');
+
+    try {
+      const response = await fetch('/api/product-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ feature }),
+      });
+      if (!response.ok) window.sessionStorage.removeItem(cacheKey);
+    } catch {
+      window.sessionStorage.removeItem(cacheKey);
+    }
+  }
+
   afterNavigate(() => {
     if (typeof window !== 'undefined' && window.fbq) {
       window.fbq('track', 'PageView');
@@ -23,6 +65,7 @@
     if (typeof document !== 'undefined' && !document.title) {
       document.title = 'Zelo PDV';
     }
+    void trackFeatureUsage(window.location.pathname);
   });
 
   export let params;
@@ -220,6 +263,7 @@
     supabase.auth.onAuthStateChange((event, sess) => {
 
       session = sess;
+      if (session) void trackFeatureUsage(window.location.pathname);
       if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'PASSWORD_RECOVERY'].includes(event)) {
         authReady = true;
         maybeNavigate();

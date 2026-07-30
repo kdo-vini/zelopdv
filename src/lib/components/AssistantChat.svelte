@@ -19,6 +19,26 @@
     return session?.access_token;
   }
 
+  async function trackZelinhoUsage() {
+    const token = await getToken();
+    if (!token || typeof window === 'undefined') return;
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+    const cacheKey = `zelo:usage:${day}:zelinho`;
+    if (window.sessionStorage.getItem(cacheKey)) return;
+    window.sessionStorage.setItem(cacheKey, '1');
+
+    try {
+      const response = await fetch('/api/product-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ feature: 'zelinho' }),
+      });
+      if (!response.ok) window.sessionStorage.removeItem(cacheKey);
+    } catch {
+      window.sessionStorage.removeItem(cacheKey);
+    }
+  }
+
   async function prepareAssistantRequest() {
     const token = await getToken();
     if (!token) {
@@ -73,6 +93,7 @@
 
   $: if ($isOpen && !wasOpen) {
     wasOpen = true;
+    void trackZelinhoUsage();
     void tick().then(() => inputElement?.focus());
   } else if (!$isOpen) {
     wasOpen = false;

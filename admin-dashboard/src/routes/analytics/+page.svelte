@@ -4,6 +4,14 @@
   import { fade } from 'svelte/transition'
   import { generatePdfReport, canvasToImage, formatBRL, formatNumber } from '$lib/pdfReport'
   import { getSubscriptionAdminStatus } from '$lib/subscriptionHelpers'
+  import { success, error as errorToast } from '$lib/toast'
+
+  const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
+  const FEATURE_LABELS = {
+    pdv: 'PDV', gerente: 'Zelinho Gerente', relatorios: 'Relatórios', zelinho: 'Zelinho',
+    produtos: 'Produtos', estoque: 'Estoque', clientes: 'Clientes', caixa: 'Caixa',
+    despesas: 'Despesas', mesas: 'Mesas', pedidos: 'Pedidos', acessos: 'Acessos', ferramentas: 'Ferramentas',
+  }
 
   let adminEmail = null
 
@@ -11,6 +19,8 @@
   let profiles = []
   let subs = []
   let churnUsers = []
+  let usageInsightsByUser = {}
+  let usageCoverage = null
 
   // Chart instances
   let engagementCanvas, revenueCanvas
@@ -31,6 +41,58 @@
 
   function hideTooltip() {
     tooltipUser = null
+  }
+
+  function formatFeatureUsage(user) {
+    const usage = user.usage?.feature_usage || {}
+    const entries = Object.entries(usage).sort((a, b) => b[1] - a[1])
+    if (!entries.length) return 'Sem eventos de módulo ainda'
+    return entries.slice(0, 3).map(([feature, days]) => `${FEATURE_LABELS[feature] || feature} · ${days}d`).join(' · ')
+  }
+
+  function contactSuggestion(user) {
+    const firstName = (user.nome_exibicao || 'tudo bem').split(' ')[0]
+    const usage = user.usage
+    const signal = usage?.recent_signals?.[0]
+    const features = Object.entries(usage?.feature_usage || {}).sort((a, b) => b[1] - a[1])
+    const topFeature = features[0]?.[0] ? FEATURE_LABELS[features[0][0]] || features[0][0] : null
+
+    if (signal?.narrative) {
+      return `Oi, ${firstName}! Vi um ponto recente na sua operação: ${signal.narrative} Posso te ajudar a olhar isso no ZeloPDV?`
+    }
+    if (usage && usage.sales_30d === 0) {
+      return `Oi, ${firstName}! Vi que ainda não tivemos vendas registradas nos últimos 30 dias. Você conseguiu começar a usar o PDV? Se travou em alguma etapa, eu te ajudo por aqui.`
+    }
+    if (topFeature) {
+      return `Oi, ${firstName}! Vi que você tem usado bastante ${topFeature}. Posso te mostrar um próximo recurso que pode facilitar a sua rotina?`
+    }
+    return `Oi, ${firstName}! Queria saber como está sendo o começo com o ZeloPDV. Tem alguma parte da rotina que você gostaria de deixar mais simples?`
+  }
+
+  async function copyContactSuggestion(user) {
+    try {
+      await navigator.clipboard.writeText(contactSuggestion(user))
+      success('Mensagem personalizada copiada.')
+    } catch {
+      errorToast('Não foi possível copiar a mensagem.')
+    }
+  }
+
+  async function loadUsageInsights() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      const response = await fetch(`${API_BASE}/api/admin/usage-insights`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || 'Falha ao carregar uso por módulo.')
+      usageCoverage = body.coverage || null
+      usageInsightsByUser = Object.fromEntries((body.insights || []).map((insight) => [insight.user_id, insight]))
+    } catch (error) {
+      console.warn('[Analytics] usage insights unavailable:', error?.message || error)
+      usageInsightsByUser = {}
+    }
   }
 
   function calcChurnReasons(profile, sub) {
@@ -217,6 +279,7 @@
       supabase.from('super_admins').select('user_id'),
       supabase.rpc('admin_get_total_sales_value'),
     ])
+    await loadUsageInsights()
 
     const adminIds = new Set((adminsRes.data || []).map(a => a.user_id))
 
@@ -239,6 +302,7 @@
         ...p,
         effective_last_seen: lastSeenMap[p.user_id] || null,
         sales_last_30d: salesMap[p.user_id] || 0,
+        usage: usageInsightsByUser[p.user_id] || null,
       }))
     subs = (subsRes.data || []).filter(s => !adminIds.has(s.user_id))
 
@@ -451,7 +515,7 @@
   <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-800">
     <div class="relative">
       <h2 class="text-3xl font-extrabold tracking-tight text-white mb-1">Analytics</h2>
-      <p class="text-slate-400 text-sm font-medium">Engajamento, receita e risco de churn por usuário</p>
+      <p class="text-slate-400 text-sm font-medium">Sinais de uso, adoção de módulos e prioridades para reduzir churn.</p>
       <div class="absolute -bottom-6 left-0 w-16 h-[2px] bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
     </div>
 
@@ -522,9 +586,14 @@
     <!-- Churn Risk Table -->
     <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden backdrop-blur-xs" in:fade={{delay: 200}}>
       <div class="px-6 py-5 border-b border-slate-800">
-        <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Tabela de Risco de Churn</h3>
-        <p class="text-xs text-slate-500 mt-1">Ordenado por score de risco (maior primeiro)</p>
+        <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Risco e contexto de uso</h3>
+        <p class="text-xs text-slate-500 mt-1">Score ordenado do maior para o menor. A mensagem usa somente dados operacionais observados.</p>
       </div>
+      {#if usageCoverage}
+        <div class="mx-6 mt-4 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2 text-xs text-slate-400">
+          Cobertura: últimos {usageCoverage.window_days} dias. {usageCoverage.note}
+        </div>
+      {/if}
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
@@ -534,6 +603,7 @@
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Fat. Médio/mês</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Vendas 30d</th>
+              <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Módulos usados</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">Score</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Risco</th>
               <th class="py-3 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ação</th>
@@ -548,6 +618,7 @@
                 <td class="py-3 px-6 text-xs text-slate-400">{user.sub?.status || '—'}</td>
                 <td class="py-3 px-6 text-xs text-slate-400 text-right font-mono">{formatBRL(user.avgMonthlyRevenue)}</td>
                 <td class="py-3 px-6 text-xs text-slate-400 text-right">{user.sales_last_30d ?? 0}</td>
+                <td class="py-3 px-6 text-xs text-slate-400 max-w-56">{formatFeatureUsage(user)}</td>
                 <td class="py-3 px-6 text-center cursor-help"
                     on:mouseenter={(e) => showTooltip(e, user)}
                     on:mouseleave={hideTooltip}>
@@ -557,7 +628,10 @@
                   <span class="inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-sm {badge.cls}">{badge.label}</span>
                 </td>
                 <td class="py-3 px-6">
-                  <a href="/users" class="text-xs text-sky-400 hover:text-sky-300 transition-colors">Ver usuário →</a>
+                  <div class="flex items-center gap-3 whitespace-nowrap">
+                    <button type="button" on:click={() => copyContactSuggestion(user)} class="text-xs text-sky-400 hover:text-sky-300 transition-colors">Copiar mensagem</button>
+                    <a href="/users" class="text-xs text-slate-400 hover:text-slate-200 transition-colors">Usuário</a>
+                  </div>
                 </td>
               </tr>
             {/each}

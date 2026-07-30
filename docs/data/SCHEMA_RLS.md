@@ -46,6 +46,7 @@ Padrao recorrente:
 | Operacao | `vendas*`, `caixas*`, `pessoas`, `fiado_lancamentos`, `produtos`, `mesas`, `comandas*`, `pedidos*` | escopo por owner via RLS |
 | ZeloMenu | `zelomenu_product_publications`, `zelomenu_modifier_groups`, `zelomenu_modifier_options` | camada PDV-owned de publicação/modificadores, escopo por owner via RLS |
 | Perfil | `empresa_perfil` | contem dados operacionais e `pin_admin` |
+| Telemetria de módulos | `product_usage_events` | presença diária por módulo, server-owned; não registra cliques nem conteúdo |
 | RPC critica | `criar_venda_completa(jsonb)` | usa `get_owner_user_id(auth.uid())` |
 | Pedidos online | `zelo_orders`, `zelo_order_items`, `zelo_order_events` | leitura owner-scoped; mutacoes somente por RPC |
 | Outbox online | `zelo_order_outbox` | somente `service_role`; sem acesso pelo browser |
@@ -159,8 +160,15 @@ Migration: `.ai/migrations/intelligence_engine_v1_2026_07_10.sql`.
 | `business_signals` | Sinais determinísticos detectados | SELECT owner-scoped; UPDATE read_at owner-scoped; INSERT/DELETE service_role | `authenticated`: select, update(read_at); `service_role`: full |
 | `business_intelligence_runs` | Logs de execução do cron | RLS ligado, sem policy para `authenticated` | só `service_role` |
 
-`empresa_perfil` ganhou coluna `intelligence_enabled_at timestamptz` (null = off). O rollout é controlado por UPDATE manual
-dessa coluna; a UI só expõe a feature quando o valor não é null.
+`empresa_perfil` mantém a coluna histórica `intelligence_enabled_at timestamptz`, usada no piloto inicial. Desde 2026-07-30 ela não controla mais o acesso: o Zelinho Gerente está disponível globalmente para empresas com assinatura ativa ou em trial. O kill switch operacional é `INTELLIGENCE_ENGINE_ENABLED=false`.
+
+## Telemetria mínima de módulos — adicionada em 2026-07-30
+
+Migration: `.ai/migrations/product_usage_events_2026_07_30.sql`.
+
+- `product_usage_events` guarda somente a presença diária da empresa em um módulo (`feature`), com primeira/última abertura no dia.
+- A tabela não recebe cliques, conteúdo, itens consultados nem dados pessoais novos.
+- RLS está ativo e não há grants para `anon`/`authenticated`; a escrita passa por `POST /api/product-usage`, que autentica a sessão e resolve o owner para subusuários. A leitura de analytics passa por `GET /api/admin/usage-insights`, limitado a super admins.
 
 ## Pendente de validacao
 

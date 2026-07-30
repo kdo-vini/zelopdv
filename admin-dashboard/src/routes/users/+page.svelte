@@ -25,6 +25,8 @@
 
   // Status filter + pagination
   let statusFilter = 'all'
+  let activityFilter = 'all'
+  let registrationFilter = 'all'
   const PAGE_SIZE = 50
   let pageLimit = PAGE_SIZE
   let selectedUserIds = []
@@ -53,6 +55,37 @@
     statusFilter = key
     pageLimit = PAGE_SIZE
     selectedUserIds = []
+  }
+
+  function formatRegistrationDate(timestamp) {
+    if (!timestamp) return 'Data indisponível'
+    return new Date(timestamp).toLocaleDateString('pt-BR')
+  }
+
+  function formatAccountAge(timestamp) {
+    if (!timestamp) return '—'
+    const start = new Date(timestamp)
+    const now = new Date()
+    let months = (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth()
+    if (now.getDate() < start.getDate()) months -= 1
+    if (months < 1) {
+      const days = Math.max(0, Math.floor((now - start) / 86400000))
+      return days === 0 ? 'hoje' : `há ${days} ${days === 1 ? 'dia' : 'dias'}`
+    }
+    if (months < 12) return `há ${months} ${months === 1 ? 'mês' : 'meses'}`
+    const years = Math.floor(months / 12)
+    const remainingMonths = months % 12
+    return remainingMonths ? `há ${years}a ${remainingMonths}m` : `há ${years} ${years === 1 ? 'ano' : 'anos'}`
+  }
+
+  async function copyContact(value, label) {
+    if (!value) return
+    try {
+      await navigator.clipboard.writeText(value)
+      success(`${label} copiado.`)
+    } catch {
+      errorToast(`Não foi possível copiar ${label.toLowerCase()}.`)
+    }
   }
 
   onMount(async () => {
@@ -757,10 +790,25 @@
     // Empresa filters
     const sub = user.subscriptions?.[0]
     const subStatus = sub ? getSubscriptionAdminStatus(sub) : null
-    if (statusFilter === 'all') return true
-    if (statusFilter === 'inactive') return !subStatus
-    if (statusFilter === 'no_profile') return user.has_profile === false
-    return subStatus === statusFilter
+    if (statusFilter === 'inactive' && subStatus) return false
+    if (statusFilter === 'no_profile' && user.has_profile !== false) return false
+    if (statusFilter !== 'all' && subStatus !== statusFilter) return false
+
+    const lastSeen = user.effective_last_seen ? new Date(user.effective_last_seen) : null
+    const daysSinceSeen = lastSeen ? (Date.now() - lastSeen.getTime()) / 86400000 : Infinity
+    if (activityFilter === 'today' && daysSinceSeen >= 1) return false
+    if (activityFilter === '7d' && daysSinceSeen >= 7) return false
+    if (activityFilter === '30d' && daysSinceSeen >= 30) return false
+    if (activityFilter === 'inactive' && daysSinceSeen < 30) return false
+
+    if (registrationFilter !== 'all') {
+      const registeredAt = user.created_at ? new Date(user.created_at) : null
+      const ageDays = registeredAt ? (Date.now() - registeredAt.getTime()) / 86400000 : Infinity
+      const maxAge = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 }[registrationFilter]
+      if (ageDays > maxAge) return false
+    }
+
+    return true
   })
 
   $: companies = users.filter(u => !u.is_sub_user)
@@ -867,6 +915,30 @@
           </span>
         </button>
       {/each}
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-800/60 bg-slate-950/40 px-3 py-2" in:fade>
+      <span class="text-xs font-medium text-slate-400">Refinar lista</span>
+      <label class="flex items-center gap-2 text-xs text-slate-500">
+        Atividade
+        <select bind:value={activityFilter} class="h-8 rounded-lg border border-slate-800 bg-slate-900 px-2 text-xs text-slate-300 focus:border-sky-500/50 focus:outline-hidden">
+          <option value="all">Qualquer período</option>
+          <option value="today">Ativos hoje</option>
+          <option value="7d">Ativos em 7 dias</option>
+          <option value="30d">Ativos em 30 dias</option>
+          <option value="inactive">Sem acesso há 30+ dias</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-xs text-slate-500">
+        Cadastro
+        <select bind:value={registrationFilter} class="h-8 rounded-lg border border-slate-800 bg-slate-900 px-2 text-xs text-slate-300 focus:border-sky-500/50 focus:outline-hidden">
+          <option value="all">Qualquer data</option>
+          <option value="7d">Últimos 7 dias</option>
+          <option value="30d">Últimos 30 dias</option>
+          <option value="90d">Últimos 90 dias</option>
+          <option value="1y">Último ano</option>
+        </select>
+      </label>
     </div>
   {/if}
 
@@ -978,9 +1050,10 @@
             </th>
             <th class="py-4 pl-2 pr-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Contato</th>
+            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cadastro</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Assinatura Expira</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Último Acesso</th>
-            <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Inter. IA</th>
             <th class="py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Ações</th>
           </tr>
         </thead>
@@ -1014,6 +1087,21 @@
                   {status.text}
                 </span>
               </td>
+              <td class="py-4 px-6">
+                <div class="space-y-1.5 text-xs">
+                  {#if user.email}
+                    <button type="button" on:click={() => copyContact(user.email, 'E-mail')} class="block max-w-48 truncate text-left text-slate-300 hover:text-sky-300" title="Copiar e-mail">{user.email}</button>
+                  {/if}
+                  {#if user.phone}
+                    <button type="button" on:click={() => copyContact(user.phone, 'Telefone')} class="block max-w-48 truncate text-left text-slate-400 hover:text-sky-300" title="Copiar telefone">{user.phone}</button>
+                  {/if}
+                  {#if !user.email && !user.phone}<span class="text-slate-600">—</span>{/if}
+                </div>
+              </td>
+              <td class="py-4 px-6">
+                <div class="text-xs text-slate-300">{formatRegistrationDate(user.created_at)}</div>
+                <div class="mt-0.5 text-xs text-slate-500">{formatAccountAge(user.created_at)}</div>
+              </td>
               <td class="py-4 px-6 text-sm text-slate-400">
                 {#if sub}
                   {@const effExpiry = getEffectiveExpiry(sub)}
@@ -1033,9 +1121,6 @@
               </td>
               <td class="py-4 px-6 text-xs text-slate-400">
                 {formatLastSeen(user.effective_last_seen)}
-              </td>
-              <td class="py-4 px-6 text-xs text-slate-400 text-center">
-                {user.ai_interactions || 0}
               </td>
               <td class="py-4 px-6 text-right">
                 <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1119,6 +1204,24 @@
               {status.text}
             </span>
           </div>
+
+          {#if !user.is_sub_user}
+            <div class="grid grid-cols-2 gap-3 border-t border-slate-800 py-3 text-xs">
+              <div>
+                <span class="block text-slate-500">Cadastro</span>
+                <span class="text-slate-300">{formatRegistrationDate(user.created_at)}</span>
+                <span class="ml-1 text-slate-500">{formatAccountAge(user.created_at)}</span>
+              </div>
+              <div>
+                <span class="block text-slate-500">Contato</span>
+                {#if user.phone}
+                  <button type="button" on:click={() => copyContact(user.phone, 'Telefone')} class="max-w-full truncate text-left text-slate-300 hover:text-sky-300" title="Copiar telefone">{user.phone}</button>
+                {:else}
+                  <button type="button" on:click={() => copyContact(user.email, 'E-mail')} class="max-w-full truncate text-left text-slate-300 hover:text-sky-300" title="Copiar e-mail">{user.email}</button>
+                {/if}
+              </div>
+            </div>
+          {/if}
 
           <div class="flex items-center gap-2 border-t border-slate-800 pt-4 mt-2">
             <a href="mailto:{user.email}" class="p-2 text-slate-400 bg-slate-800 rounded-lg hover:text-sky-400" title="E-mail">
