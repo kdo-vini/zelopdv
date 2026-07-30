@@ -33,7 +33,7 @@ export async function GET({ request }) {
   if (!cronSecret || !safeEqualString(request.headers.get('authorization'), `Bearer ${cronSecret}`)) {
     return new Response('Unauthorized', { status: 401 });
   }
-  if ((env.INTELLIGENCE_ENGINE_ENABLED || '').toLowerCase() !== 'true') {
+  if ((env.INTELLIGENCE_ENGINE_ENABLED || '').toLowerCase() === 'false') {
     return json({ ok: true, skipped: true, reason: 'engine disabled via INTELLIGENCE_ENGINE_ENABLED' });
   }
   if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado.' }, { status: 500 });
@@ -43,8 +43,7 @@ export async function GET({ request }) {
   const dailyFallback = request.headers.get('x-intelligence-daily') === '1';
   const { data: profiles, error } = await supabaseAdmin
     .from('empresa_perfil')
-    .select('user_id, nome_exibicao, razao_social, contato, gerente_prefs, gerente_whatsapp_last_sent_date, intelligence_enabled_at')
-    .not('intelligence_enabled_at', 'is', null);
+    .select('user_id, nome_exibicao, razao_social, contato, gerente_prefs, gerente_whatsapp_last_sent_date');
   if (error) return json({ error: error.message }, { status: 500 });
 
   const results = { sent: 0, skipped: 0, errors: 0, details: [] };

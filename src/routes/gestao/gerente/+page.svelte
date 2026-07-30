@@ -14,7 +14,6 @@
   let refreshing = false;
   let error = '';
   let failures = 0;
-  let enabled = false;
   let signals = [];
   let snapshots = [];
   let profile = null;
@@ -41,15 +40,13 @@
       const access = await getAccessContext();
       ownerUserId = access?.ownerUserId || userData.user.id;
       const [{ data: perfil, error: profileError }, { data: signalRows, error: signalsError }, { data: snapshotRows, error: snapshotsError }] = await Promise.all([
-        supabase.from('empresa_perfil').select('intelligence_enabled_at, gerente_prefs').eq('user_id', ownerUserId).maybeSingle(),
+        supabase.from('empresa_perfil').select('gerente_prefs').eq('user_id', ownerUserId).maybeSingle(),
         supabase.from('business_signals').select('id, signal_date, type, severity, confidence, evidence, narrative, narrative_source, read_at, created_at').order('signal_date', { ascending: false }).limit(200),
         supabase.from('business_daily_snapshots').select('snapshot_date, receita_bruta, qtd_vendas, ticket_medio, computed_at').order('snapshot_date', { ascending: false }).limit(56),
       ]);
       if (requestVersion !== loadVersion) return;
       if (profileError) throw profileError;
       profile = perfil;
-      enabled = Boolean(perfil?.intelligence_enabled_at);
-      if (!enabled) return;
       if (signalsError) throw signalsError;
       if (snapshotsError) throw snapshotsError;
       signals = signalRows || [];
@@ -98,10 +95,9 @@
 
 <svelte:head><title>Zelinho Gerente | ZeloPDV</title></svelte:head>
 <section class="manager-page">
-  <div class="mb-6 flex items-end justify-between border-b  pb-4" style="border-color: var(--border-card);"><div><p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p><h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Zelinho Gerente</h1></div>{#if enabled && analysedAt}<button type="button" class="refresh" on:click={refresh} disabled={refreshing} title="Atualizar dados">Analisado às {analysedAt}<span class:spinning={refreshing}><RefreshCw size={15} /></span></button>{/if}</div>
+  <div class="mb-6 flex items-end justify-between border-b  pb-4" style="border-color: var(--border-card);"><div><p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p><h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Zelinho Gerente</h1></div>{#if analysedAt}<button type="button" class="refresh" on:click={refresh} disabled={refreshing} title="Atualizar dados">Analisado às {analysedAt}<span class:spinning={refreshing}><RefreshCw size={15} /></span></button>{/if}</div>
   {#if loading}<div class="skeleton hero"></div><div class="skeleton card"></div><div class="skeleton card"></div><div class="skeleton card"></div>
   {:else if error}<div class="error-state"><CloudOff size={56} aria-hidden="true" /><p>{error}</p><button type="button" on:click={() => load()}>Tentar novamente</button></div>
-  {:else if !enabled}<div class="empty-state"><h2>O Zelinho Gerente ainda não está disponível para esta empresa.</h2><p>Quando o piloto estiver habilitado, os resumos e avisos aparecerão aqui.</p></div>
   {:else}<ZelinhoBriefing signals={briefingSignals} snapshot={latestSnapshot} {learning} {salesDays} onRead={read} onAsk={ask} onMute={mute} /><SignalFeed {signals} {snapshots} {mutedTypes} onRead={read} onAsk={ask} onMute={mute} />{/if}
 </section>
 

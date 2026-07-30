@@ -2,7 +2,7 @@
  * GET /api/cron/intelligence-daily
  *
  * Zelo Intelligence Engine — cron diário de processamento de métricas e sinais.
- * Executa para todas as empresas com intelligence_enabled_at preenchido.
+ * Executa para todas as empresas com assinatura ativa ou em trial.
  *
  * Schedule: 4 3 * * * (03:04 BRT = 06:04 UTC) — defined in vercel.json
  *
@@ -10,7 +10,7 @@
  *   CRON_SECRET — shared secret for endpoint protection
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
- *   INTELLIGENCE_ENGINE_ENABLED — kill switch global; qualquer valor != 'true' desliga o engine
+ *   INTELLIGENCE_ENGINE_ENABLED — kill switch global; somente 'false' desliga o engine
  */
 
 import { json } from '@sveltejs/kit';
@@ -34,10 +34,10 @@ export async function GET({ request, fetch }) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  // Kill switch global: permite desligar o engine em incidente sem deploy
-  // e sem zerar a flag por empresa. Default OFF (rollout controlado).
-  if ((env.INTELLIGENCE_ENGINE_ENABLED || '').toLowerCase() !== 'true') {
-    console.log('[intelligence-cron] INTELLIGENCE_ENGINE_ENABLED != true — pulando execução.');
+  // Kill switch global: permite desligar o engine em incidente sem deploy.
+  // O rollout deixou de ser piloto; sem a variável, o engine permanece ligado.
+  if ((env.INTELLIGENCE_ENGINE_ENABLED || '').toLowerCase() === 'false') {
+    console.log('[intelligence-cron] INTELLIGENCE_ENGINE_ENABLED=false — pulando execução.');
     return json({ ok: true, skipped: true, reason: 'engine disabled via INTELLIGENCE_ENGINE_ENABLED' });
   }
 

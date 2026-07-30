@@ -4,7 +4,6 @@
   import { page } from '$app/stores';
   import { Copy, Share2, Sparkles } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient.js';
-  import { getAccessContext } from '$lib/accessControl.js';
   import { addToast } from '$lib/stores/ui.js';
   import { openAssistantWithContext } from '$lib/stores/assistant.js';
   import BackLink from '$lib/components/ui/BackLink.svelte';
@@ -66,15 +65,10 @@
       const { data: userResult, error: authError } = await supabase.auth.getUser();
       if (authError) throw authError;
       if (!userResult.user) throw new Error('Sessão expirada.');
-      const access = await getAccessContext();
-      const ownerUserId = access?.ownerUserId || userResult.user.id;
-      const [{ data: profile, error: profileError }, { data: snapshotRows, error: snapshotsError }, { data: signalRows, error: signalsError }] = await Promise.all([
-        supabase.from('empresa_perfil').select('intelligence_enabled_at').eq('user_id', ownerUserId).maybeSingle(),
+      const [{ data: snapshotRows, error: snapshotsError }, { data: signalRows, error: signalsError }] = await Promise.all([
         supabase.from('business_daily_snapshots').select('snapshot_date, receita_bruta, receita_realizada, qtd_vendas, ticket_medio, metrics').order('snapshot_date', { ascending: false }).limit(70),
         supabase.from('business_signals').select('id, signal_date, type, severity, narrative').order('signal_date', { ascending: false }).limit(200),
       ]);
-      if (profileError) throw profileError;
-      if (!profile?.intelligence_enabled_at) { error = 'O relatório semanal estará disponível quando o piloto for habilitado para esta empresa.'; return; }
       if (snapshotsError) throw snapshotsError;
       if (signalsError) throw signalsError;
       snapshots = snapshotRows || [];

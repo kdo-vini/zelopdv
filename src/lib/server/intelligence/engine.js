@@ -33,7 +33,7 @@ import { computeDailyMetrics } from './metrics.js';
 import { detectSignals } from './signals.js';
 import { rankSignals, applyCooldown } from './ranking.js';
 import {
-  fetchIntelligenceEnabledCompanies,
+  fetchEligibleSubscribedCompanies,
   hasRecentSales,
   fetchVendas,
   fetchVendasItens,
@@ -74,7 +74,7 @@ export async function runDaily(db, targetDate) {
     console.error('[intelligence] Erro ao registrar início do run:', err.message);
   }
 
-  const companies = await fetchIntelligenceEnabledCompanies(db);
+  const companies = await fetchEligibleSubscribedCompanies(db);
 
   const results = {
     companies_scanned: companies.length,

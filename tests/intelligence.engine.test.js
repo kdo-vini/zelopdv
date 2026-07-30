@@ -57,7 +57,7 @@ beforeEach(() => {
 
 describe('runDaily', () => {
   it('processa empresa habilitada', async () => {
-    vi.spyOn(fetchers, 'fetchIntelligenceEnabledCompanies').mockResolvedValue([
+    vi.spyOn(fetchers, 'fetchEligibleSubscribedCompanies').mockResolvedValue([
       { id: 'u1' },
     ]);
     vi.spyOn(fetchers, 'fetchVendas').mockResolvedValue([
@@ -92,8 +92,8 @@ describe('runDaily', () => {
     expect(result.companies_failed).toBe(0);
   });
 
-  it('ignora empresa sem intelligence_enabled', async () => {
-    vi.spyOn(fetchers, 'fetchIntelligenceEnabledCompanies').mockResolvedValue([]);
+  it('não processa quando não há empresas elegíveis', async () => {
+    vi.spyOn(fetchers, 'fetchEligibleSubscribedCompanies').mockResolvedValue([]);
     vi.spyOn(fetchers, 'insertIntelligenceRun').mockResolvedValue(1);
     vi.spyOn(fetchers, 'updateIntelligenceRun').mockResolvedValue(undefined);
 
@@ -104,7 +104,7 @@ describe('runDaily', () => {
 
   it('reprocessamento idempotente (upsert não duplica)', async () => {
     const upsertCalls = [];
-    vi.spyOn(fetchers, 'fetchIntelligenceEnabledCompanies').mockResolvedValue([
+    vi.spyOn(fetchers, 'fetchEligibleSubscribedCompanies').mockResolvedValue([
       { id: 'u1' },
     ]);
     vi.spyOn(fetchers, 'fetchVendas').mockResolvedValue([
@@ -145,7 +145,7 @@ describe('runDaily', () => {
   });
 
   it('isola erro de uma empresa sem afetar outras', async () => {
-    vi.spyOn(fetchers, 'fetchIntelligenceEnabledCompanies').mockResolvedValue([
+    vi.spyOn(fetchers, 'fetchEligibleSubscribedCompanies').mockResolvedValue([
       { id: 'u1' },
       { id: 'u2' },
     ]);
@@ -183,7 +183,7 @@ describe('runDaily', () => {
 
   it('A empresa B não vaza dados para empresa A (multi-tenant)', async () => {
     let vendasCalls = [];
-    vi.spyOn(fetchers, 'fetchIntelligenceEnabledCompanies').mockResolvedValue([
+    vi.spyOn(fetchers, 'fetchEligibleSubscribedCompanies').mockResolvedValue([
       { id: 'u_a' },
       { id: 'u_b' },
     ]);
@@ -215,7 +215,7 @@ describe('runDaily', () => {
   });
 
   it('pula empresa inativa (sem venda em 7 dias) antes do pipeline', async () => {
-    vi.spyOn(fetchers, 'fetchIntelligenceEnabledCompanies').mockResolvedValue([{ id: 'u1' }]);
+    vi.spyOn(fetchers, 'fetchEligibleSubscribedCompanies').mockResolvedValue([{ id: 'u1' }]);
     vi.spyOn(fetchers, 'hasRecentSales').mockResolvedValue(false);
     vi.spyOn(fetchers, 'insertIntelligenceRun').mockResolvedValue(1);
     vi.spyOn(fetchers, 'updateIntelligenceRun').mockResolvedValue(undefined);
@@ -230,7 +230,7 @@ describe('runDaily', () => {
 
   it('backfill: primeira execução (sem snapshots) computa 56 dias', async () => {
     const upsertCalls = [];
-    vi.spyOn(fetchers, 'fetchIntelligenceEnabledCompanies').mockResolvedValue([{ id: 'u1' }]);
+    vi.spyOn(fetchers, 'fetchEligibleSubscribedCompanies').mockResolvedValue([{ id: 'u1' }]);
     vi.spyOn(fetchers, 'hasRecentSales').mockResolvedValue(true);
     vi.spyOn(fetchers, 'fetchVendas').mockResolvedValue([
       makeVenda({ id: 1, valorTotal: 1000, createdAt: '2026-07-10T15:00:00.000Z' }),

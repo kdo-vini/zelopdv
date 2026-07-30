@@ -58,23 +58,25 @@ async function fetchAllByVendaIds(db, table, columns, vendaIds) {
 }
 
 /**
- * Lista empresas com intelligence habilitado.
+ * Lista as empresas com assinatura ativa ou em trial.
+ *
+ * O Zelinho Gerente e global para a base elegivel: `intelligence_enabled_at`
+ * ficou como registro historico do piloto e nao e mais um gate.
  * @param {SupabaseClient} db
  * @returns {Promise<Array<{id: string, nome_exibicao?: string, razao_social?: string}>>}
  */
-export async function fetchIntelligenceEnabledCompanies(db) {
+export async function fetchEligibleSubscribedCompanies(db) {
   // empresa_perfil chaveia o owner por `user_id` (não `id_usuario`, que é a
   // convenção das tabelas operacionais). Ver discovery §1.7.
   const enabledRows = await fetchAllPages((from, to) => db
     .from('empresa_perfil')
     .select('user_id, nome_exibicao, razao_social')
-    .not('intelligence_enabled_at', 'is', null)
     .order('user_id')
     .range(from, to));
   const enabledIds = enabledRows.map((row) => row.user_id);
   if (enabledIds.length === 0) return [];
 
-  // Universo prometido pelo plano: flag ligada E assinatura ativa/trial.
+  // Universo prometido pelo plano: assinatura ativa ou em trial.
   // "Última linha vence" em subscriptions — qualquer linha ativa conta.
   const subscriptions = [];
   for (let i = 0; i < enabledIds.length; i += IN_CHUNK_SIZE) {

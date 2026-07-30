@@ -35,7 +35,7 @@ async function buildBusinessContext(userId) {
     // The assistant uses stored catalog relations and every sale item in the
     // window. Do not infer categories from product names or truncate sales.
     const [perfilRes, produtosRes, categoriasRes, expensesRes, prevMonthExpensesRes, caixaRes, topFiadoRes, signalsRes, prevMonthVendasRes, vendas] = await Promise.all([
-      supabaseAdmin.from('empresa_perfil').select('nome_exibicao, contato, intelligence_enabled_at, gerente_prefs').eq('user_id', userId).maybeSingle(),
+      supabaseAdmin.from('empresa_perfil').select('nome_exibicao, contato, gerente_prefs').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('produtos').select('id, nome, preco, id_categoria, estoque_atual, controlar_estoque, ocultar_no_pdv').eq('id_usuario', userId).order('nome'),
       supabaseAdmin.from('categorias').select('id, nome, ordem, controlar_estoque_compartilhado, estoque_compartilhado_atual').eq('id_usuario', userId).order('ordem'),
       supabaseAdmin.from('expenses').select('amount, category').eq('user_id', userId).gte('date', startOfMonth.toISOString()),
@@ -43,8 +43,8 @@ async function buildBusinessContext(userId) {
       supabaseAdmin.from('expenses').select('amount').eq('user_id', userId).gte('date', startOfPrevMonth.toISOString()).lt('date', startOfMonth.toISOString()),
       supabaseAdmin.from('caixas').select('valor_inicial, data_abertura, data_fechamento').eq('id_usuario', userId).order('data_abertura', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('pessoas').select('nome, saldo_fiado').eq('id_usuario', userId).gt('saldo_fiado', 0).order('saldo_fiado', { ascending: false }).limit(5),
-      // Cheap and indexed even for companies outside the intelligence pilot,
-      // where it just returns no rows; the flag below gates its use.
+      // Signals are owner-scoped and may be absent while the first daily run
+      // is still being processed for a newly eligible company.
       supabaseAdmin.from('business_signals').select('type, severity, evidence, narrative, signal_date').eq('user_id', userId).order('signal_date', { ascending: false }).limit(20),
       // Lightweight: only the previous-month revenue needed for the month-over-month comparison.
       supabaseAdmin.from('vendas').select('valor_total').eq('id_usuario', userId).gte('created_at', startOfPrevMonth.toISOString()).lt('created_at', startOfMonth.toISOString()),
@@ -70,9 +70,7 @@ async function buildBusinessContext(userId) {
     const peakHoursContext = buildPeakHoursContext({ vendas });
     const seasonalContext = getActiveSeasonalContext();
     const mutedSignalTypes = Array.isArray(perfilRes.data?.gerente_prefs?.muted_types) ? perfilRes.data.gerente_prefs.muted_types : [];
-    const activeSignalsContext = perfilRes.data?.intelligence_enabled_at
-      ? buildActiveSignalsContext({ signals: signalsRes.data || [], mutedTypes: mutedSignalTypes })
-      : [];
+    const activeSignalsContext = buildActiveSignalsContext({ signals: signalsRes.data || [], mutedTypes: mutedSignalTypes });
 
     // Aggregate expenses
     const expenses = expensesRes.data || [];

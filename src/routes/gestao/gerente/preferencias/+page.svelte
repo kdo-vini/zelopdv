@@ -17,7 +17,6 @@
   let loading = true;
   let saving = false;
   let isSubUser = false;
-  let intelligenceEnabled = false;
   let ownerUserId = null;
   let contact = '';
   let whatsappEnabled = false;
@@ -32,11 +31,10 @@
       ownerUserId = access.ownerUserId;
       const { data, error } = await supabase
         .from('empresa_perfil')
-        .select('contato, gerente_prefs, intelligence_enabled_at')
+        .select('contato, gerente_prefs')
         .eq('user_id', ownerUserId)
         .maybeSingle();
       if (error) throw error;
-      intelligenceEnabled = Boolean(data?.intelligence_enabled_at);
       contact = maskPhone(data?.contato || '');
       const prefs = data?.gerente_prefs || {};
       whatsappEnabled = prefs?.whatsapp?.enabled === true;
@@ -85,8 +83,6 @@
 
   {#if loading}
     <div class="skeleton"></div><div class="skeleton short"></div>
-  {:else if !intelligenceEnabled}
-    <div class="notice">O Zelinho Gerente ainda não está habilitado para esta empresa.</div>
   {:else}
     {#if isSubUser}
       <p class="notice">Somente o dono da empresa pode alterar preferências de WhatsApp.</p>
