@@ -1,5 +1,7 @@
 # Fixes Progress
 
+- [x] FX-UI-UPDATE-01 (2026-07-30) — aviso de nova versão simplificado: copy traduzida, ação única `Atualizar`, dismiss por X e swipe horizontal no mobile, mantendo supressão temporária por versão e suporte a `prefers-reduced-motion`. `npm run check` passou com 0 erros / 98 avisos conhecidos.
+
 - [x] FX-FIADO-02 (2026-07-30) — exclusão definitiva de pessoa quitada corrigida: a tela de Pessoas chama `fiado_excluir_pessoa`, que exige saldo zero, desvincula vendas históricas, apaga os lançamentos do extrato e exclui a pessoa na mesma transação. A função foi aplicada no Supabase real com `authenticated` autorizado e `anon` bloqueado. Cobertura: 2 testes de schema e `npm run check` com 0 erros / 98 avisos conhecidos; requer deploy do frontend.
 
 - [ ] FX-ZELOMENU-08 (2026-07-29) - fila de pedidos agora recupera sessao expirada quando o Postgres retorna `permission denied for table zelo_orders`; sessao invalida volta ao login e ACL de producao foi validada (`authenticated` com SELECT, `anon` sem SELECT). Codigo aguarda deploy; incidente em [[INCIDENTS]].

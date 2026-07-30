@@ -6,7 +6,7 @@
   const CHECK_INTERVAL_MS = 5 * 60 * 1000;
   const ACTIVE_CHECK_INTERVAL_MS = 90 * 1000;
   const INITIAL_DELAY_MS = 20 * 1000;
-  const LATER_DELAY_MS = 2 * 60 * 60 * 1000;
+  const DISMISS_DELAY_MS = 2 * 60 * 60 * 1000;
   const RECENT_REFRESH_SUPPRESSION_MS = 5 * 60 * 1000;
   const CHANNEL_NAME = 'zelo-app-version';
   const STORAGE_DEFERRED_VERSION = 'zelo_update_deferred_version';
@@ -22,6 +22,9 @@
   let pollTimer = null;
   let deferredPromptTimer = null;
   let cleanupFns = [];
+  let swipeStart = null;
+  let swipeOffset = 0;
+  let isSwiping = false;
 
   const currentVersion = normalizeVersion(APP_VERSION);
 
@@ -202,13 +205,57 @@
     window.location.replace(url.toString());
   }
 
-  function later() {
+  function dismiss() {
     if (pendingVersion) {
       safeSet(localStorage, STORAGE_DEFERRED_VERSION, pendingVersion);
-      safeSet(localStorage, STORAGE_DEFERRED_UNTIL, String(now() + LATER_DELAY_MS));
-      bc?.postMessage({ type: 'deferred', version: pendingVersion });
+      safeSet(localStorage, STORAGE_DEFERRED_UNTIL, String(now() + DISMISS_DELAY_MS));
+      bc?.postMessage({ type: 'dismissed', version: pendingVersion });
     }
     visible = false;
+  }
+
+  function handleTouchStart(event) {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    swipeStart = { x: touch.clientX, y: touch.clientY };
+    swipeOffset = 0;
+    isSwiping = false;
+  }
+
+  function handleTouchMove(event) {
+    if (!swipeStart) return;
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - swipeStart.x;
+    const deltaY = touch.clientY - swipeStart.y;
+    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 8) {
+      swipeStart = null;
+      swipeOffset = 0;
+      isSwiping = false;
+      return;
+    }
+    if (Math.abs(deltaX) > 8) {
+      isSwiping = true;
+      swipeOffset = deltaX;
+    }
+  }
+
+  function handleTouchEnd(event) {
+    if (!swipeStart) return;
+    const touch = event.changedTouches?.[0];
+    const deltaX = touch ? touch.clientX - swipeStart.x : 0;
+    swipeStart = null;
+    if (Math.abs(deltaX) >= 72) {
+      isSwiping = false;
+      swipeOffset = deltaX > 0 ? window.innerWidth : -window.innerWidth;
+      setTimeout(() => {
+        swipeOffset = 0;
+        dismiss();
+      }, 160);
+    } else {
+      isSwiping = false;
+      swipeOffset = 0;
+    }
   }
 
   onMount(() => {
@@ -239,7 +286,7 @@
           pendingVersion = version;
           schedulePromptWhenSafe(version);
         }
-        if (type === 'deferred' || type === 'refreshing') {
+        if (type === 'dismissed' || type === 'deferred' || type === 'refreshing') {
           visible = false;
         }
       };
@@ -281,20 +328,28 @@
 {#if visible}
   <section
     class="update-toast"
+    class:swiping={isSwiping}
     role="status"
     aria-live="polite"
+    style:transform={`translateX(${swipeOffset}px)`}
+    on:touchstart={handleTouchStart}
+    on:touchmove={handleTouchMove}
+    on:touchend={handleTouchEnd}
+    on:touchcancel={handleTouchEnd}
     in:fly={{ y: 18, duration: 240 }}
     out:fade={{ duration: 160 }}
   >
     <div class="update-dot" aria-hidden="true"></div>
     <div class="update-copy">
-      <strong>Uma nova atualizacao esta disponivel.</strong>
+      <strong>Uma nova atualização está disponível.</strong>
       <span>Atualize para receber as melhorias mais recentes.</span>
     </div>
     <div class="update-actions">
-      <button type="button" class="btn-later" on:click={later}>Depois</button>
-      <button type="button" class="btn-refresh" on:click={refreshNow}>Atualizar agora</button>
+      <button type="button" class="btn-refresh" on:click={refreshNow}>Atualizar</button>
     </div>
+    <button type="button" class="btn-dismiss" on:click={dismiss} aria-label="Fechar aviso de atualização" title="Fechar">
+      <span aria-hidden="true">×</span>
+    </button>
   </section>
 {/if}
 
@@ -309,13 +364,21 @@
     align-items: center;
     gap: 0.85rem;
     width: min(31rem, calc(100vw - 2rem));
-    padding: 0.9rem;
+    padding: 0.9rem 2.8rem 0.9rem 0.9rem;
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
     background: color-mix(in srgb, var(--bg-panel) 94%, transparent);
     color: var(--text-main);
-    box-shadow: 0 18px 48px color-mix(in srgb, var(--bg-app) 55%, transparent);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-app) 55%, transparent);
     backdrop-filter: blur(18px);
+    touch-action: pan-y;
+    user-select: none;
+    transition: transform 160ms ease-out;
+    will-change: transform;
+  }
+
+  .update-toast.swiping {
+    transition: none;
   }
 
   .update-dot {
@@ -350,7 +413,8 @@
     gap: 0.45rem;
   }
 
-  .update-actions button {
+  .update-actions button,
+  .btn-dismiss {
     min-height: 2.2rem;
     border-radius: 8px;
     padding: 0 0.8rem;
@@ -362,18 +426,9 @@
       border-color var(--transition-fast);
   }
 
-  .update-actions button:hover {
+  .update-actions button:hover,
+  .btn-dismiss:hover {
     transform: translateY(-1px);
-  }
-
-  .btn-later {
-    border: 1px solid var(--border-subtle);
-    background: transparent;
-    color: var(--text-label);
-  }
-
-  .btn-later:hover {
-    background: var(--sidebar-item-hover-bg);
   }
 
   .btn-refresh {
@@ -387,6 +442,30 @@
     border-color: var(--primary-hover);
   }
 
+  .btn-dismiss {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 2rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .btn-dismiss:hover {
+    color: var(--text-main);
+  }
+
+  .btn-dismiss:focus-visible,
+  .btn-refresh:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+
   @media (max-width: 640px) {
     .update-toast {
       left: 0.75rem;
@@ -395,16 +474,25 @@
       width: auto;
       grid-template-columns: auto minmax(0, 1fr);
       align-items: start;
+      padding-right: 2.8rem;
     }
 
     .update-actions {
       grid-column: 1 / -1;
       width: 100%;
-      justify-content: flex-end;
+      justify-content: stretch;
     }
 
     .update-actions button {
-      flex: 1;
+      width: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .update-toast,
+    .update-actions button,
+    .btn-dismiss {
+      transition: none;
     }
   }
 </style>
