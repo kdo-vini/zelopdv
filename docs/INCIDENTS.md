@@ -2,6 +2,26 @@
 
 ---
 
+## INC-2026-07-30-01 - Exclusão de pessoa quitada bloqueada pelo histórico de fiado
+
+**Status:** corrigido no banco e no código; requer deploy do frontend.
+
+**Sintoma**
+
+- A tela de Pessoas retornava `update or delete on table "pessoas" violates foreign key constraint "fiado_lancamentos_id_pessoa_fkey"` ao excluir um cadastro já quitado.
+
+**Causa-raiz**
+
+- O `DELETE` direto do navegador não tratava as dependências. O extrato auditável usa `ON DELETE RESTRICT` para preservar a referência e as vendas também mantêm FKs para a pessoa, mesmo quando o saldo atual é zero.
+
+**Fix / recovery**
+
+- Criada e aplicada a RPC owner-scoped `fiado_excluir_pessoa(uuid)`. Ela bloqueia saldo diferente de zero, desvincula `vendas.id_cliente`/`vendas.id_pessoa`, remove o extrato da pessoa e só então exclui o cadastro, tudo na mesma transação.
+- A tela passou a chamar a RPC e exibir uma mensagem operacional para saldo em aberto/crédito, sem expor o erro bruto da FK.
+- Nenhum cadastro de cliente foi apagado durante a correção.
+
+---
+
 ## INC-2026-07-29-01 - Fila de pedidos recusa sessao do navegador
 
 **Status:** mitigacao implementada no codigo; requer deploy do app para chegar aos usuarios.

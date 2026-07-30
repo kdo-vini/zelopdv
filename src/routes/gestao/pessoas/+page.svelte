@@ -46,10 +46,16 @@
   }
 
   async function remove(id) {
-    const ok = await confirmAction('Excluir pessoa', 'Tem certeza que deseja excluir esta pessoa?');
+    const ok = await confirmAction('Excluir pessoa', 'Tem certeza que deseja excluir esta pessoa? O saldo precisa estar quitado. O histórico de fiado desta pessoa também será apagado.');
     if (!ok) return;
-    const { error } = await supabase.from('pessoas').delete().eq('id', id);
-    if (error) { addToast(error.message, 'error'); return; }
+    const { error } = await supabase.rpc('fiado_excluir_pessoa', { p_id_pessoa: id });
+    if (error) {
+      const message = error.code === '23514'
+        ? 'Não é possível excluir uma pessoa com saldo de fiado em aberto ou crédito pendente.'
+        : error.message;
+      addToast(message, 'error');
+      return;
+    }
     addToast('Pessoa excluída.', 'success');
     load();
   }
