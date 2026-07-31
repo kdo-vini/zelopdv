@@ -11,7 +11,7 @@
     'Baixe o arquivo no computador onde a impressora está instalada.',
     'Se aparecer a tela azul de proteção do Windows (SmartScreen), clique em "Mais informações" no canto inferior esquerdo e depois em "Executar mesmo assim".',
     'Quando terminar, abra o Zelo Impressão. Se a janela sumir, ele continua aberto no ícone perto do relógio do Windows.',
-    'No Zelo PDV ou no ZeloChat, abra a parte de impressão e digite o código de 6 números que aparece na tela do Zelo Impressão.',
+    'Volte ao Zelo PDV ou ao ZeloChat. O sistema encontra o aplicativo e tenta conectar automaticamente; só digite o código se ele for solicitado.',
     'Escolha a sua impressora e clique em Imprimir teste.',
   ];
 
@@ -95,8 +95,8 @@
           <div class="rounded-3xl border p-6" style="background: var(--bg-card); border-color: var(--border-card);">
             <h3 class="text-lg font-bold text-white">Depois de instalar</h3>
             <p class="mt-3 text-sm leading-6" style="color: var(--text-label);">
-              Volte ao PDV ou ao Chat, clique em <strong class="text-white">Conectar impressora</strong>, digite o código que aparece na tela do Zelo Impressão
-              e depois escolha a impressora para fazer o teste.
+              Volte ao PDV ou ao Chat. A conexão acontece automaticamente quando o aplicativo está aberto. Se o sistema pedir uma confirmação, informe o código exibido no Zelo Impressão;
+              depois escolha a impressora e faça o teste.
             </p>
           </div>
         </div>

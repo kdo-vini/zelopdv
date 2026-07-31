@@ -285,7 +285,7 @@
       }
       if (!detection.paired) {
         localPrintStatus = 'desconectado';
-        localPrintMessage = 'Conecte este navegador ao Zelo Impressão usando o código exibido no aplicativo.';
+        localPrintMessage = detection.message || 'A conexão automática não foi concluída. Se o aplicativo pedir, digite o código exibido no Zelo Impressão.';
         localPrintPrinters = [];
         return;
       }
@@ -1253,18 +1253,18 @@
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style="background: var(--bg-input); color: var(--text-muted);">3</span>
-                        <span class="text-sm" style="color: var(--text-label);">Volte aqui para conectar com o código de 6 números.</span>
+                        <span class="text-sm" style="color: var(--text-label);">Volte ao PDV: ele tenta conectar automaticamente. Se o aplicativo pedir, use o código mostrado na tela.</span>
                       </li>
                     </ol>
                   </div>
                 </div>
 
               {:else if localPrintStatus === 'desconectado'}
-                <!-- Estado: instalado mas não pareado -->
+                <!-- Estado: instalado, mas a conexão automática precisa de ajuda -->
                 <div class="p-5 grid gap-4">
                   <div>
-                    <p class="text-sm font-medium mb-1" style="color: var(--text-main);">Conectar ao Zelo Impressão</p>
-                    <p class="text-xs" style="color: var(--text-muted);">Digite o código de 6 dígitos exibido no aplicativo.</p>
+                    <p class="text-sm font-medium mb-1" style="color: var(--text-main);">A conexão automática não foi concluída</p>
+                    <p class="text-xs" style="color: var(--text-muted);">{localPrintMessage}</p>
                   </div>
                   <div class="flex gap-2">
                     <input

@@ -80,9 +80,11 @@ IMPRESSÃO TÉRMICA
 • Se o WebUSB falhar, o sistema usa automaticamente a impressão nativa do navegador/Windows
 
 ZELO IMPRESSÃO (WINDOWS)
-• O Zelo Impressão é o programa usado no Windows para conectar a impressora ao Zelo PDV e ao ZeloChat usando um código de 6 números
+• O Zelo Impressão é o programa usado no Windows para conectar a impressora ao Zelo PDV e ao ZeloChat
+• Depois de instalar e abrir o programa, o PDV e o ZeloChat tentam encontrar e conectar automaticamente
+• O código de 6 números é apenas um plano B: use-o somente se o aplicativo ou o sistema solicitar
 • Sempre explique essa instalação de forma simples, como atendimento de linha de frente, sem termos técnicos
-• Prefira frases como: "baixe o arquivo", "abra o programa", "digite o código que aparece na tela", "escolha a impressora", "faça o teste"
+• Prefira frases como: "baixe o arquivo", "abra o programa", "volte ao PDV", "se aparecer um pedido, informe o código", "escolha a impressora", "faça o teste"
 • Evite termos como: tray, SmartScreen, token, localhost, pareamento, CORS
 • Se a pessoa ainda não concluir essa configuração, informe que ela pode continuar usando a impressão normal do navegador até o Zelo Impressão ficar pronto
 • Se a pessoa quiser ajuda humana, informe que a equipe pode agendar e fazer um acesso remoto para instalar sem custo
@@ -264,7 +266,7 @@ Esqueci o PIN / PIN incorreto
 → Se nunca configurou um PIN, tente 0000 — é o padrão para quem pulou a configuração inicial.
 
 USB direto não imprime
-→ Use Chrome ou Edge no computador do caixa, conecte a impressora por USB e pareie em Perfil → Integrações. Se aparecer aviso de sobreposição/interferência ou o navegador bloquear a permissão, continue pela impressão nativa do Windows; o Zelo abre esse fallback automaticamente quando o USB falha.
+→ Use Chrome ou Edge no computador do caixa, conecte a impressora por USB e configure-a em Perfil → Integrações. Se aparecer aviso de sobreposição/interferência ou o navegador bloquear a permissão, continue pela impressão nativa do Windows; o Zelo abre esse fallback automaticamente quando o USB falha.
 
 Como instalar e configurar o Zelo Impressão
 → Oriente em linguagem simples, sem termos técnicos, e dê um passo por vez.
@@ -276,17 +278,18 @@ Como instalar e configurar o Zelo Impressão
 5. Quando terminar, peça para abrir o Zelo Impressão.
 6. Explique que, se a janela fechar, o programa continua aberto no ícone perto do relógio do Windows.
 7. Peça para voltar ao Zelo PDV ou ao ZeloChat.
-8. Na parte de impressão, a pessoa deve digitar o código de 6 números que aparece na tela do Zelo Impressão.
-9. Depois disso, deve escolher a impressora correta.
-10. Por fim, deve clicar para fazer o teste de impressão.
+8. Explique que o sistema tenta conectar sozinho assim que encontra o programa aberto.
+9. Se aparecer um pedido de código, a pessoa deve informar os 6 números exibidos na tela do Zelo Impressão.
+10. Depois disso, deve escolher a impressora correta.
+11. Por fim, deve clicar para fazer o teste de impressão.
 → Frases prontas:
 • Se a pessoa acabou de baixar: "Agora abra o arquivo que foi baixado. Se aparecer um aviso do Windows na primeira vez, pode continuar. Depois é só avançar, avançar e instalar."
 • Se a pessoa instalou mas não está vendo a tela: "Sem problema. Procure o ícone do Zelo Impressão perto do relógio do Windows. Se não aparecer, clique na setinha para mostrar os outros ícones."
-• Se a pessoa já abriu o programa: "Perfeito. Agora volte ao PDV, clique em conectar impressora, digite o código que aparece na tela e depois escolha a sua impressora."
+• Se a pessoa já abriu o programa: "Perfeito. Agora volte ao PDV. Ele vai tentar conectar sozinho; se pedir, informe o código que aparece na tela e depois escolha a sua impressora."
 • Se a pessoa perguntar se precisa de ajuda técnica: "Não precisa. Você mesmo consegue fazer. Eu vou te passar o passo a passo e você só vai clicando comigo."
 → Antes de encerrar, confirme:
 • se o Zelo Impressão ficou aberto no computador
-• se o código foi digitado
+• se a conexão automática foi concluída ou, se solicitado, se o código foi digitado
 • se a impressora foi escolhida
 • se o teste saiu na impressora certa
 → Se a pessoa ainda não terminar essa configuração, diga que o sistema pode continuar usando a impressão normal do navegador até o Zelo Impressão ficar pronto.

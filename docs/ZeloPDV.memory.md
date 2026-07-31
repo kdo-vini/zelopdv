@@ -25,6 +25,7 @@
 - `billing_payments` registra o fluxo Pix da AbacatePay.
 - A camada PDV-owned de publicação do ZeloMenu fica em `zelomenu_product_publications`, `zelomenu_modifier_groups` e `zelomenu_modifier_options`; o catálogo base continua em `produtos`/`categorias`, visibilidade online não usa `produtos.ocultar_no_pdv` e preço base não tem override no v1.
 - A tela `/app/pedidos` é uma superfície operacional client-side: assina/poll `zelo_orders` e, para pedidos canônicos novos, envia um job `kitchen_order` de texto ao Zelo Impressão. O auto-print usa reconciliação de 15 minutos, dedupe persistente de 48 horas e preserva `zelo_order_items.modifiers` no bilhete.
+- O cliente local do Zelo Impressão tenta `POST /connect` automaticamente depois de confirmar que o agente Windows está aberto; o navegador oficial do ZeloPDV recebe um token próprio. O código manual permanece somente como fallback para agentes antigos, origens não autorizadas ou falha da conexão automática.
 - Em 2026-06-23, a migration de publicação do ZeloMenu foi aplicada no Supabase real como `zelomenu_publication_schema_2026_06_23`; verificado RLS ligado, policies por owner, grants mínimos para `authenticated`/`service_role`, nenhum grant para `anon`, constraints/FKs/índices presentes e acesso anônimo bloqueado por chave pública.
 - `src/lib/pricing.js` é o catálogo canônico de planos, add-ons e Stripe price IDs.
 - O fluxo offline do PDV é contingência, não offline-first completo.

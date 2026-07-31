@@ -1,5 +1,7 @@
 # Fixes Progress
 
+- [x] FX-PRINT-01 (2026-07-31) — a instalação do Zelo Impressão ainda orientava todos os usuários a digitar um código e não aproveitava a conexão automática do agente; o cliente local agora chama a conexão automática quando o aplicativo está aberto, mantém o código apenas como fallback e a copy do Perfil, da página pública e do suporte foi atualizada — `src/lib/zeloImpressaoClient.js`, `src/routes/perfil/+page.svelte`, `src/routes/zelo-impressao/+page.svelte`, `src/routes/api/chat/support/+server.js`.
+
 - [x] FX-ZELOMENU-09 (2026-07-31) — componentes de produtos montáveis ocultos do PDV continuam resolvíveis para preço, vínculo e estoque; a disponibilidade agora respeita estoque individual e estoque compartilhado por categoria. Carga do Mix Guaraná aplicada e verificada no Supabase: 5 grupos, 78 opções, 76 vínculos, 0 vínculos órfãos, 42 componentes ocultos no PDV/cardápio e nenhum estoque ativado sem saldo informado. Cobertura: 8 testes direcionados, suíte completa 473/473 e `npm run check` com 0 erros / 97 avisos conhecidos.
 - [x] FX-UI-UPDATE-01 (2026-07-30) — aviso de nova versão simplificado: copy traduzida, ação única `Atualizar`, dismiss por X e swipe horizontal no mobile, mantendo supressão temporária por versão e suporte a `prefers-reduced-motion`. `npm run check` passou com 0 erros / 98 avisos conhecidos.
 
