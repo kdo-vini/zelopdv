@@ -1,5 +1,6 @@
 # Fixes Progress
 
+- [x] FX-ZELOMENU-09 (2026-07-31) — componentes de produtos montáveis ocultos do PDV continuam resolvíveis para preço, vínculo e estoque; a disponibilidade agora respeita estoque individual e estoque compartilhado por categoria. Carga do Mix Guaraná aplicada e verificada no Supabase: 5 grupos, 78 opções, 76 vínculos, 0 vínculos órfãos, 42 componentes ocultos no PDV/cardápio e nenhum estoque ativado sem saldo informado. Cobertura: 8 testes direcionados, suíte completa 473/473 e `npm run check` com 0 erros / 97 avisos conhecidos.
 - [x] FX-UI-UPDATE-01 (2026-07-30) — aviso de nova versão simplificado: copy traduzida, ação única `Atualizar`, dismiss por X e swipe horizontal no mobile, mantendo supressão temporária por versão e suporte a `prefers-reduced-motion`. `npm run check` passou com 0 erros / 98 avisos conhecidos.
 
 - [x] FX-FIADO-02 (2026-07-30) — exclusão definitiva de pessoa quitada corrigida: a tela de Pessoas chama `fiado_excluir_pessoa`, que exige saldo zero, desvincula vendas históricas, apaga os lançamentos do extrato e exclui a pessoa na mesma transação. A função foi aplicada no Supabase real com `authenticated` autorizado e `anon` bloqueado. Cobertura: 2 testes de schema e `npm run check` com 0 erros / 98 avisos conhecidos; requer deploy do frontend.

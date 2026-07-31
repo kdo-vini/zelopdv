@@ -1,5 +1,8 @@
 # ZeloPDV — Foco atual
 
+- Carga operacional Mix Guaraná (2026-07-31): o usuário `39192d38-507c-443c-b075-85998abde740` (`Mix Guaraná`) recebeu o produto-base `Guaraná da Amazônia` (ID 1043), o componente ausente `Guaraná 500ml` (ID 1039), nomes normalizados e 5 grupos montáveis com 78 opções/76 vínculos. Componentes ficam ocultos do PDV via `ocultar_no_pdv` e não publicados no cardápio via `zelomenu_product_publications.visivel_online`; o base fica visível nos dois. Nenhum controle de estoque individual ou compartilhado foi ativado sem saldo confirmado. `zelomenu_slug` foi configurado como `mixguarana` e o link público foi validado.
+  - Guardrail do PDV: `pdvCache` busca também os produtos vinculados que estão ocultos no catálogo e `zelomenuModifiers` considera estoque individual e estoque compartilhado da categoria ao resolver disponibilidade. Sem esse fallback, uma opção montável oculta aparecia indisponível por falta de produto no cache.
+
 > Atualizar a cada sprint/sessão.
 > Referências: [[CLAUDE]] · [[BILLING]] · [[CODE_REVIEW]] · [[FIXES_PROGRESS]] · [[INCIDENTS]]
 
