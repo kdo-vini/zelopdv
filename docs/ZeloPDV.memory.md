@@ -1,5 +1,7 @@
 # ZeloPDV.memory
 
+- Fluxo de publicação: para disponibilizar mudanças em produção, enviar os commits para `origin/main`; o Vercel está configurado para fazer o deploy automático. Não usar `vercel --prod` diretamente sem pedido explícito do dono do produto.
+
 - O catalogo canonico de precos esta em `src/lib/pricing.js`: ZeloMenu custa R$40 como add-on do ZeloPDV, e e incluido no ZeloChat/Pacote Gestao + Atendimento. O espelho do Admin precisa manter essa regra.
 
 - O add-on `pedidos` (Pedidos + Cozinha) foi removido do codigo e do schema em 2026-07-28. ZeloMenu, ZeloChat e a copia `delivery-frontend` ja nao leem `has_pedidos_addon`; a view `user_entitlements` e as colunas legadas foram recriadas/removidas na migration de aposentadoria. O historico da flag financeira nao foi preservado por decisao do dono do produto.
