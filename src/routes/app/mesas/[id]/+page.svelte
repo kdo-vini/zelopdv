@@ -10,7 +10,10 @@
   import { pdvCache } from '$lib/stores/pdvCache';
   import { printVenda } from '$lib/printService';
   import { estoqueDisponivel, produtoControlaEstoque, produtoSemEstoque as semEstoque } from '$lib/stock';
+  import { formatSelectedModifierGroups, hasActiveModifierGroups } from '$lib/zelomenuModifiers';
   import BackLink from '$lib/components/ui/BackLink.svelte';
+  import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
+  import ModalProdutoMontavel from '$lib/components/modals/ModalProdutoMontavel.svelte';
 
   let userId = '';
   let ownerUserId = '';
@@ -31,6 +34,8 @@
   let empresaId = '';
   let itensEnviadosCozinha = new Set();
   let sendingCozinhaIds = new Set();
+  let montagemProduto = null;
+  let montagemOpen = false;
 
   // Filtros / busca
   let busca = '';
@@ -281,7 +286,8 @@
     }
     itens = (data || []).map(i => ({
       ...i,
-      nome_produto: i.produtos?.nome || '(produto removido)',
+      nome_produto: i.nome_produto_na_venda || i.produtos?.nome || '(produto removido)',
+      modifierSummary: formatSelectedModifierGroups(i.modifiers),
     }));
   }
 
@@ -384,6 +390,12 @@
       return;
     }
 
+    if (hasActiveModifierGroups(produto?.modifierGroups)) {
+      montagemProduto = produto;
+      montagemOpen = true;
+      return;
+    }
+
     savingItem = true;
 
     try {
@@ -391,6 +403,8 @@
         p_id_comanda: comanda.id,
         p_id_produto: produto.id,
         p_delta: 1,
+        p_preco_unitario: Number(produto.preco || 0),
+        p_modifiers: [],
       });
 
       if (error) {
@@ -424,6 +438,8 @@
         p_id_comanda: comanda.id,
         p_id_produto: item.id_produto,
         p_delta: delta,
+        p_preco_unitario: Number(item.preco_unitario || 0),
+        p_modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
       });
 
       if (error) {
@@ -433,6 +449,30 @@
       await refreshItensEProdutos();
     } catch (error) {
       addToast('Erro ao atualizar item: ' + errorMessageFrom(error), 'error');
+    } finally {
+      savingItem = false;
+    }
+  }
+
+  async function confirmarMontagem(event) {
+    const montagem = event.detail;
+    if (!comanda || savingItem || !montagem?.produto) return;
+
+    savingItem = true;
+    try {
+      const { error } = await supabase.rpc('comanda_aplicar_delta_item', {
+        p_id_comanda: comanda.id,
+        p_id_produto: montagem.produto.id,
+        p_delta: 1,
+        p_preco_unitario: Number(montagem.preco || 0),
+        p_modifiers: montagem.modifiers || [],
+      });
+      if (error) throw error;
+      montagemOpen = false;
+      montagemProduto = null;
+      await refreshItensEProdutos();
+    } catch (error) {
+      addToast('Erro ao adicionar montagem: ' + errorMessageFrom(error), 'error');
     } finally {
       savingItem = false;
     }
@@ -677,8 +717,9 @@
         id_venda: vendaId,
         id_produto: i.id_produto ?? null,
         quantidade: Math.max(1, Math.round(Number(i.quantidade))),
-        nome_produto_na_venda: i.nome_produto || '',
+        nome_produto_na_venda: [i.nome_produto || '', i.modifierSummary].filter(Boolean).join(' — '),
         preco_unitario_na_venda: Number(i.preco_unitario),
+        modifiers: Array.isArray(i.modifiers) ? i.modifiers : [],
       }));
 
       const { error: itensErr } = await supabase.from('vendas_itens').insert(itensPayload);
@@ -1339,6 +1380,9 @@
               <li class="item-card">
                 <div class="item-info">
                   <span class="item-nome">{item.nome_produto}</span>
+                  {#if item.modifierSummary}
+                    <span class="item-modifiers">{item.modifierSummary}</span>
+                  {/if}
                   <span class="item-preco">R$ {Number(item.preco_unitario).toFixed(2)} · subtotal R$ {(Number(item.preco_unitario) * Number(item.quantidade)).toFixed(2)}</span>
                 </div>
                 <div class="item-actions">
@@ -1473,24 +1517,30 @@
       </div>
 
       <div class="comanda-actions">
-        <button class="btn-secondary" on:click={() => preContaOpen = true} disabled={itens.length === 0}>
+        <button class="btn-secondary" on:click={() => preContaOpen = true} disabled={itens.length === 0} aria-describedby={itens.length === 0 ? 'mesa-actions-hint' : undefined}>
           <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 0 0 3 3.5v13A1.5 1.5 0 0 0 4.5 18h11a1.5 1.5 0 0 0 1.5-1.5V7.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.122A1.5 1.5 0 0 0 11.378 2H4.5Zm2.25 8.5a.75.75 0 0 1 .75-.75h5a.75.75 0 0 1 0 1.5h-5a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h5a.75.75 0 0 0 0-1.5h-5Z" clip-rule="evenodd"/>
           </svg>
           Pré-conta
         </button>
-        <button class="btn-success" on:click={abrirCloseModal} disabled={itens.length === 0}>
+        <button class="btn-success" on:click={abrirCloseModal} disabled={itens.length === 0} aria-describedby={itens.length === 0 ? 'mesa-actions-hint' : undefined}>
           <span>{saldoMesa <= 0.001 && pagamentosParciais.length > 0 ? 'CONFIRMAR FECHAMENTO' : 'FECHAR MESA'}</span>
           <span class="btn-success-badge">R$ {(saldoMesa > 0 || pagamentosParciais.length === 0 ? saldoMesa : 0).toFixed(2)}</span>
         </button>
       </div>
+
+      {#if itens.length === 0}
+        <InlineHelper id="mesa-actions-hint" compact message="Adicione um item à comanda para liberar a pré-conta e o fechamento da mesa." />
+      {:else if saldoMesa <= 0.001}
+        <InlineHelper id="mesa-actions-hint" compact message="A mesa já está paga; não há saldo para registrar outro pagamento parcial." />
+      {/if}
 
       <button
         type="button"
         class="btn-parcial"
         on:click={abrirParcialModal}
         disabled={itens.length === 0 || saldoMesa <= 0.001}
-        title={saldoMesa <= 0.001 ? 'Saldo já zerado' : 'Registrar pagamento parcial sem fechar a mesa'}
+        aria-describedby={itens.length === 0 || saldoMesa <= 0.001 ? 'mesa-actions-hint' : undefined}
       >
         <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path d="M10 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16Zm.75 4a.75.75 0 0 0-1.5 0v3.25H6a.75.75 0 0 0 0 1.5h3.25V14a.75.75 0 0 0 1.5 0v-3.25H14a.75.75 0 0 0 0-1.5h-3.25V6Z"/>
@@ -1600,6 +1650,14 @@
     </div>
   </div>
 {/if}
+
+<ModalProdutoMontavel
+  open={montagemOpen}
+  produto={montagemProduto}
+  precoBase={Number(montagemProduto?.preco || 0)}
+  on:close={() => { montagemOpen = false; montagemProduto = null; }}
+  on:confirm={confirmarMontagem}
+/>
 
 <!-- ============================ PAGAMENTO PARCIAL MODAL ============================ -->
 {#if parcialModalOpen && comanda}
@@ -2505,6 +2563,14 @@
   .item-preco {
     font-size: 0.7rem; color: var(--text-muted);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .item-modifiers {
+    color: var(--primary);
+    font-size: 0.68rem;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .item-actions {

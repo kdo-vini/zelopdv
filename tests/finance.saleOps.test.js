@@ -39,6 +39,59 @@ describe('buildVendaPayload', () => {
     expect(settlement.valorTroco).toBe(3.5);
   });
 
+  test('preserves the structured modifier snapshot in each sale item', () => {
+    const modifiers = [{
+      groupId: 'topping',
+      groupName: 'Cobertura',
+      kind: 'adicional',
+      selectedOptions: [{ optionId: 'condensed', optionName: 'Leite condensado', priceDelta: 2, quantity: 1 }]
+    }];
+    const { payload } = buildVendaPayload({
+      formaPagamento: 'dinheiro',
+      valorRecebido: 12,
+      totalFinal: 12,
+      itens: [{
+        id_produto: 10,
+        nome: 'Guaraná da Amazônia',
+        quantidade: 1,
+        preco: 12,
+        modifiers,
+        resumoMontagem: 'Cobertura: Leite condensado'
+      }],
+      idCaixa: 1
+    });
+
+    expect(payload.itens[0].modifiers).toEqual(modifiers);
+    expect(payload.itens[0].nome_produto_na_venda).toBe('Guaraná da Amazônia (Cobertura: Leite condensado)');
+  });
+
+  test('expands stock decrement for modifier options linked to a real catalog product', () => {
+    const modifiers = [{
+      groupId: 'massa',
+      groupName: 'Escolha sua massa',
+      kind: 'variacao',
+      selectedOptions: [{ optionId: 'penne', optionName: 'Penne', priceDelta: 0, quantity: 1, linkedProductId: 501 }]
+    }, {
+      groupId: 'adicionais',
+      groupName: 'Adicional para sua massa',
+      kind: 'adicional',
+      selectedOptions: [{ optionId: 'bacon', optionName: 'Bacon', priceDelta: 3, quantity: 2, linkedProductId: 502 }]
+    }];
+    const { payload } = buildVendaPayload({
+      formaPagamento: 'dinheiro',
+      valorRecebido: 20,
+      totalFinal: 20,
+      itens: [{ id_produto: 843, nome: 'Monte sua Massa', quantidade: 2, preco: 20, modifiers }],
+      idCaixa: 1
+    });
+
+    expect(payload.estoque).toEqual([
+      { id_produto: 843, quantidade: 2 },
+      { id_produto: 501, quantidade: 2 },
+      { id_produto: 502, quantidade: 4 }
+    ]);
+  });
+
   test('multi-pay sale stores cash net of change in pagamentos[]', () => {
     const { payload } = buildVendaPayload({
       formaPagamento: 'multiplo',

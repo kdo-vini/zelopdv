@@ -22,6 +22,7 @@
     closeCanonicalOrder
   } from '$lib/onlineOrders';
   import { Printer } from 'lucide-svelte';
+  import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
 
   let ready = false;
   let loading = true;
@@ -430,6 +431,10 @@
       </div>
     </header>
 
+    {#if !canCancelOrders}
+      <InlineHelper id="pedidos-cancel-hint" compact message="Seu cargo não pode cancelar pedidos. Peça essa ação ao responsável pela operação." />
+    {/if}
+
     {#if loading}
       <div class="state-card">Carregando pedidos...</div>
     {:else if pedidos.length === 0}
@@ -474,7 +479,7 @@
                   type="button"
                   class="action-btn action-btn-danger"
                   aria-label="Cancelar pedido #{pedido.numero_pedido}"
-                  title={canCancelOrders ? 'Cancelar pedido' : 'Seu cargo não pode cancelar pedidos'}
+                  aria-describedby={!canCancelOrders ? 'pedidos-cancel-hint' : undefined}
                   disabled={!canCancelOrders}
                   on:click|stopPropagation={() => excluirPedido(pedido)}
                 >
@@ -543,7 +548,7 @@
                 <span>Total</span>
                 <strong>{formatMoney(totalPedido)}</strong>
               </div>
-              <button type="button" class="btn-success" on:click={() => avancarPedidoCanonico(pedidoSelecionado)} disabled={fechandoPedido || pedidoSelecionado.status === 'pending_payment' || (['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders)} title={['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders ? 'Seu cargo não pode concluir pedidos' : ''}>
+              <button type="button" class="btn-success" on:click={() => avancarPedidoCanonico(pedidoSelecionado)} disabled={fechandoPedido || pedidoSelecionado.status === 'pending_payment' || (['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders)} aria-describedby={['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders ? 'pedidos-receive-hint' : undefined}>
                 {#if fechandoPedido}
                   Confirmando...
                 {:else}
@@ -551,6 +556,9 @@
                   <span>{canonicalActionLabel(pedidoSelecionado)}</span>
                 {/if}
               </button>
+              {#if ['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders}
+                <InlineHelper id="pedidos-receive-hint" compact message="Seu cargo não pode concluir pedidos. Peça essa ação ao responsável pela operação." />
+              {/if}
             </footer>
           {:else}
             <div class="empty-detail">

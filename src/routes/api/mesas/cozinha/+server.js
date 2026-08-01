@@ -102,7 +102,7 @@ export async function POST({ request }) {
 
   const { data: item, error: itemError } = await supabaseAdmin
     .from('comanda_itens')
-    .select('id, id_comanda, id_produto, quantidade, preco_unitario, observacao')
+    .select('id, id_comanda, id_produto, quantidade, preco_unitario, observacao, modifiers, nome_produto_na_venda')
     .eq('id', itemId)
     .eq('id_comanda', comandaId)
     .maybeSingle();
@@ -125,7 +125,7 @@ export async function POST({ request }) {
       return json({ error: 'Não foi possível carregar o produto.' }, { status: 500 });
     }
     if (!product) return json({ error: 'Produto não encontrado no catálogo.' }, { status: 409 });
-    productName = product.nome || productName;
+    productName = item.nome_produto_na_venda || product.nome || productName;
   }
 
   const quantity = Number(item.quantidade);
@@ -166,6 +166,7 @@ export async function POST({ request }) {
           unitPrice,
           quantity,
           lineTotal: subtotal,
+          modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
           position: 0,
         }],
       },

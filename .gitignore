@@ -34,6 +34,9 @@ SUPPORT_GUIDE_ZELO_PDV.txt
 !.ai/migrations/fiado_excluir_pessoa_quitada_2026_07_30.sql
 !.ai/migrations/empresa_perfil_origem_aquisicao_2026_07_27.sql
 !.ai/migrations/product_usage_events_2026_07_30.sql
+!.ai/migrations/produtos_montaveis_pdv_2026_07_31.sql
+!.ai/migrations/criar_venda_completa_persistir_modifiers_2026_07_31.sql
+!.ai/migrations/comanda_aplicar_delta_item_remove_ambiguous_overload_2026_07_31.sql
 !.ai/migrations/verification/
 !.ai/migrations/verification/*.sql
 SISTEMA.md

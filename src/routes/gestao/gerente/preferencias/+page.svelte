@@ -7,6 +7,7 @@
   import { capturePostHogEvent } from '$lib/posthogClient.js';
   import { maskPhone, normalizeBrazilianPhone } from '$lib/masks.js';
   import Button from '$lib/components/ui/button/button.svelte';
+  import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   const signalGroups = [
     { label: 'Vendas', types: [['REVENUE_BELOW_WEEKDAY_AVG', 'Vendas abaixo do ritmo'], ['REVENUE_ABOVE_WEEKDAY_AVG', 'Vendas acima do ritmo'], ['AVG_TICKET_DOWN', 'Ticket médio menor'], ['PRODUCT_SALES_DROP', 'Produto com menos saída'], ['TOP_PRODUCT_CONCENTRATION', 'Concentração em produto']] },
     { label: 'Financeiro', types: [['PAYMENT_MIX_SHIFT', 'Mudança no mix de pagamento'], ['FIADO_ISSUED_SHARE_HIGH', 'Fiado emitido'], ['CASH_DIFFERENCE_RECURRING', 'Diferença recorrente no caixa']] },
@@ -85,14 +86,14 @@
     <div class="skeleton"></div><div class="skeleton short"></div>
   {:else}
     {#if isSubUser}
-      <p class="notice">Somente o dono da empresa pode alterar preferências de WhatsApp.</p>
+      <InlineHelper id="prefs-subuser-hint" tone="warning" message="Seu perfil pode consultar estas preferências, mas somente o dono da empresa pode alterá-las." />
     {/if}
     <section class="preference-card">
       <div class="card-heading"><MessageCircle size={20} /><div><h2>Resumo no WhatsApp</h2><p>Uma mensagem por dia com os números e pontos que merecem atenção.</p></div></div>
-      <label class="switch-row"><input type="checkbox" class="themed-checkbox" bind:checked={whatsappEnabled} disabled={isSubUser} /><span>Receber resumo diário</span></label>
+      <label class="switch-row"><input type="checkbox" class="themed-checkbox" bind:checked={whatsappEnabled} disabled={isSubUser} aria-describedby={isSubUser ? 'prefs-subuser-hint' : undefined} /><span>Receber resumo diário</span></label>
       {#if whatsappEnabled}
         <div class="form-grid">
-          <label><span>WhatsApp</span><input value={contact} inputmode="numeric" placeholder="(00) 00000-0000" disabled={isSubUser} on:input={(event) => { contact = maskPhone(event.currentTarget.value); event.currentTarget.value = contact; }} /></label>
+          <label><span>WhatsApp</span><input value={contact} inputmode="numeric" placeholder="(00) 00000-0000" disabled={isSubUser} aria-describedby={isSubUser ? 'prefs-subuser-hint' : undefined} on:input={(event) => { contact = maskPhone(event.currentTarget.value); event.currentTarget.value = contact; }} /></label>
         </div>
         <p class="schedule-note">Enviado após a análise diária do Zelinho.</p>
         <button class="example-toggle" on:click={() => showExample = !showExample}>{showExample ? 'Fechar exemplo' : 'Ver um exemplo'}</button>
@@ -103,7 +104,27 @@
     <section class="preference-card">
       <div class="card-heading"><div><h2>O que o Zelinho te avisa</h2><p>Silenciar tira o aviso do briefing e do WhatsApp, mas ele continua disponível no histórico.</p></div></div>
       <div class="groups">
-        {#each signalGroups as group}<div class="signal-group"><h3>{group.label}</h3>{#each group.types as [type, label]}<label class="signal-option"><input type="checkbox" class="themed-checkbox" checked={lockedTypes.has(type) ? false : mutedTypes.includes(type)} disabled={lockedTypes.has(type) || isSubUser} on:change={() => toggleMuted(type)} /><span>{label}</span>{#if lockedTypes.has(type)}<span class="locked"><Lock size={13} /> Sempre ativo</span>{/if}</label>{/each}</div>{/each}
+        {#each signalGroups as group}
+          <div class="signal-group">
+            <h3>{group.label}</h3>
+            {#each group.types as [type, label]}
+              <label class="signal-option">
+                <input
+                  type="checkbox"
+                  class="themed-checkbox"
+                  checked={lockedTypes.has(type) ? false : mutedTypes.includes(type)}
+                  disabled={lockedTypes.has(type) || isSubUser}
+                  aria-describedby={lockedTypes.has(type) ? `locked-${type}-hint` : isSubUser ? 'prefs-subuser-hint' : undefined}
+                  on:change={() => toggleMuted(type)}
+                />
+                <span>{label}</span>
+                {#if lockedTypes.has(type)}
+                  <span id={`locked-${type}-hint`} class="locked"><Lock size={13} /> Sempre ativo para acompanhar riscos</span>
+                {/if}
+              </label>
+            {/each}
+          </div>
+        {/each}
       </div>
     </section>
     {#if !isSubUser}<div class="save-row"><Button on:click={save} disabled={saving}><Save />{saving ? 'Salvando...' : 'Salvar preferências'}</Button></div>{/if}

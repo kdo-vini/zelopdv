@@ -6,6 +6,7 @@
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import BackLink from '$lib/components/ui/BackLink.svelte';
+  import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   import { itemModifierGroups, loadCanonicalOrders, transitionCanonicalOrder } from '$lib/onlineOrders';
 
   let ownerUserId = '';
@@ -225,6 +226,10 @@
       </div>
     </header>
 
+    {#if !canCancelOrders}
+      <InlineHelper id="cozinha-cancel-hint" compact message="Seu cargo não pode cancelar pedidos. Peça essa ação ao responsável pela operação." />
+    {/if}
+
     {#if loading}
       <section class="empty-state">
         <p>Carregando cozinha...</p>
@@ -248,7 +253,7 @@
                     type="button"
                     class="action-btn action-btn-danger"
                     aria-label="Cancelar pedido"
-                    title={canCancelOrders ? 'Cancelar pedido' : 'Seu cargo não pode cancelar pedidos'}
+                    aria-describedby={!canCancelOrders ? 'cozinha-cancel-hint' : undefined}
                     disabled={!canCancelOrders}
                     on:click={() => excluirPedido(pedido)}
                   >
@@ -294,7 +299,7 @@
                         type="button"
                         on:click={() => marcarPedidoPronto(pedido)}
                         disabled={itemPronto(item) || isMarking(pedido) || pedido.status !== 'preparing'}
-                        title={pedido.status === 'accepted' ? 'Inicie o preparo antes de marcar como pronto' : ''}
+                        aria-describedby={pedido.status === 'accepted' ? `cozinha-start-hint-${pedido.id}` : undefined}
                       >
                         {itemPronto(item) ? 'Pronto' : (isMarking(pedido) ? '...' : 'Marcar')}
                       </button>
@@ -302,6 +307,7 @@
                   {/each}
                 </ul>
                 {#if pedido.status === 'accepted'}
+                  <InlineHelper id={`cozinha-start-hint-${pedido.id}`} compact message="Inicie o preparo antes de marcar os itens como prontos." />
                   <button
                     type="button"
                     class="pedido-action-btn"
@@ -336,7 +342,7 @@
                     type="button"
                     class="action-btn action-btn-danger"
                     aria-label="Cancelar pedido"
-                    title={canCancelOrders ? 'Cancelar pedido' : 'Seu cargo não pode cancelar pedidos'}
+                    aria-describedby={!canCancelOrders ? 'cozinha-cancel-hint' : undefined}
                     disabled={!canCancelOrders}
                     on:click={() => excluirPedido(pedido)}
                   >

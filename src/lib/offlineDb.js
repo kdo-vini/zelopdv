@@ -191,7 +191,8 @@ function legacyToPayload(record) {
             id_produto: i.id_produto ?? null,
             quantidade: Number(i.quantidade || 1),
             nome_produto_na_venda: i.nome_produto_na_venda || i.nome || '',
-            preco_unitario_na_venda: Number(i.preco_unitario_na_venda || i.preco || 0)
+            preco_unitario_na_venda: Number(i.preco_unitario_na_venda || i.preco || 0),
+            ...(Array.isArray(i.modifiers) && i.modifiers.length ? { modifiers: i.modifiers } : {})
         })),
         pagamentos,
         estoque,

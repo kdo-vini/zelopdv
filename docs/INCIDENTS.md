@@ -2,6 +2,33 @@
 
 ---
 
+## INC-2026-07-31-01 - Mesas não adiciona item por RPC ambígua
+
+**Status:** corrigido imediatamente no banco de produção em 2026-07-31.
+
+**Sintoma**
+
+- Ao tocar em um produto simples no mapa de comanda, o PDV mostrava `Erro ao adicionar item: Could not choose the best candidate function`.
+
+**Causa-raiz**
+
+- A migration de produtos montáveis criou duas funções `comanda_aplicar_delta_item`: uma assinatura legada com 3 argumentos e uma nova com 5 argumentos, sendo os dois últimos opcionais.
+- Para clientes ainda usando o payload antigo, o PostgREST encontrou duas candidatas válidas e devolveu `PGRST203`, antes de executar qualquer alteração na comanda.
+
+**Fix / recovery**
+
+- Aplicada via `supabase db query --linked --file` a migration `.ai/migrations/comanda_aplicar_delta_item_remove_ambiguous_overload_2026_07_31.sql`.
+- A sobrecarga de 3 argumentos foi removida; a função de 5 argumentos com defaults continua aceitando chamadas antigas com 3 parâmetros e chamadas novas com montagem completa.
+- Verificação pós-fix confirmou uma única assinatura no catálogo, `EXECUTE` para `authenticated` e nenhuma linha de comanda/venda alterada pela correção.
+- Cobertura local: testes direcionados 43/43 e `npm run check` com 0 erros / 95 avisos conhecidos.
+
+**Referências**
+
+- [.ai/migrations/comanda_aplicar_delta_item_remove_ambiguous_overload_2026_07_31.sql](/home/vinicius/code/zelopdv/.ai/migrations/comanda_aplicar_delta_item_remove_ambiguous_overload_2026_07_31.sql:1)
+- [src/routes/app/mesas/[id]/+page.svelte](/home/vinicius/code/zelopdv/src/routes/app/mesas/[id]/+page.svelte:401)
+
+---
+
 ## INC-2026-07-30-01 - Exclusão de pessoa quitada bloqueada pelo histórico de fiado
 
 **Status:** corrigido no banco e no código; requer deploy do frontend.

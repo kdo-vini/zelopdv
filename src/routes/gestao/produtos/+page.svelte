@@ -8,12 +8,15 @@
   import { getAccessContext } from '$lib/accessControl';
   import { clearScreenContext, openAssistantWithContext, screenContext } from '$lib/stores/assistant';
   import * as Select from '$lib/components/ui/select/index.js';
+  import ModalModificadores from '$lib/components/modals/ModalModificadores.svelte';
   import { MessageCircle, Pencil, Trash2, Plus, ChevronDown, SlidersHorizontal, ArrowUpDown, List, ExternalLink } from 'lucide-svelte';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
   let subcategorias = [];
   let produtos = [];
+  let ownerUserId = '';
+  let modifierGroupCounts = {};
 
   // ─── State: Tree Panel ────────────────────────────────────────────────────────
   let expandedCats = new Set();
@@ -59,6 +62,8 @@
   let showCatModal = false;
   let showSubModal = false;
   let showProdModal = false;
+  let modifierModalOpen = false;
+  let modifierProduct = null;
 
   let newCatForm = { nome: '', ordem: 0, controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 };
   let newSubForm = { nome: '', ordem: 0, id_categoria: null };
@@ -124,11 +129,17 @@
     kitPascoaInserted = localStorage.getItem('zelo_kit_pascoa_2026') === 'done';
     await carregarTudo();
     try {
-      const [{ data: userData }, ctx] = await Promise.all([
-        supabase.auth.getUser(),
-        getAccessContext()
-      ]);
+      // Sequencial (não Promise.all): getAccessContext() já chama getSession()
+      // internamente, e rodar os dois em paralelo já foi observado deixando
+      // ownerUserId vazio silenciosamente — corrida entre duas chamadas de
+      // auth do supabase-js no boot da página.
+      const { data: userData } = await supabase.auth.getUser();
+      const ctx = await getAccessContext();
       const ownerId = ctx?.ownerUserId;
+      ownerUserId = ownerId || userData?.user?.id || '';
+      if (!ownerUserId) {
+        console.warn('[produtos] ownerUserId vazio após setup — Complementos e opções vai falhar até isso ser corrigido.');
+      }
 
       if (ownerId) {
         const { data: perfil } = await supabase
@@ -207,13 +218,51 @@
         produtos = data || [];
       }
 
-      await carregarPublicacoes();
+      await carregarResumoMontagens(produtos);
 
       currentPage = 1;
       selectedItems = new Set();
     } finally {
       loading = false;
     }
+  }
+
+  async function carregarResumoMontagens(products) {
+    const ids = (products || []).map((product) => product.id).filter((id) => id != null);
+    if (!ids.length) {
+      modifierGroupCounts = {};
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('zelomenu_modifier_groups')
+      .select('id_produto, ativo')
+      .in('id_produto', ids);
+    if (error) {
+      console.warn('[produtos] resumo de montagens indisponível:', error.message);
+      modifierGroupCounts = {};
+      return;
+    }
+
+    modifierGroupCounts = (data || []).reduce((counts, group) => {
+      if (group.ativo !== false) counts[group.id_produto] = (counts[group.id_produto] || 0) + 1;
+      return counts;
+    }, {});
+  }
+
+  function modifierGroupCount(prod) {
+    return Number(modifierGroupCounts[prod?.id] || 0);
+  }
+
+  function abrirComplementos(prod) {
+    modifierProduct = prod;
+    modifierModalOpen = true;
+  }
+
+  function fecharComplementos() {
+    modifierModalOpen = false;
+    modifierProduct = null;
+    carregarProdutos();
   }
 
   // ─── Computed: Tree ───────────────────────────────────────────────────────────
@@ -573,7 +622,7 @@
   async function criarProduto(e) {
     e.preventDefault();
     const { data: userData } = await supabase.auth.getUser();
-    const id_usuario = userData?.user?.id ?? null;
+    const id_usuario = ownerUserId || userData?.user?.id || null;
 
     const payload = {
       ...newProdForm,
@@ -584,7 +633,11 @@
       estoque_atual: !newProdCategoriaCompartilhada && newProdForm.controlar_estoque ? newProdForm.estoque_atual : 0
     };
 
-    const { error } = await supabase.from('produtos').insert(payload);
+    const { data: createdProduct, error } = await supabase
+      .from('produtos')
+      .insert(payload)
+      .select('id, nome, preco, id_usuario')
+      .single();
     if (error) {
       addToast('Erro ao criar produto: ' + error.message, 'error');
       return;
@@ -606,6 +659,7 @@
     showProdModal = false;
     pdvCache.invalidateProdutos();
     await carregarProdutos();
+    abrirComplementos(createdProduct);
   }
 
   function iniciarEdicaoProduto(prod) {
@@ -1420,6 +1474,9 @@
                       {#if prod.ocultar_no_pdv}
                         <span class="badge-oculto">Oculto</span>
                       {/if}
+                      {#if modifierGroupCount(prod) > 0}
+                        <span class="badge-montavel">Montável · {modifierGroupCount(prod)} {modifierGroupCount(prod) === 1 ? 'grupo' : 'grupos'}</span>
+                      {/if}
                     </div>
                     <div class="mobile-product-meta">
                       <span class="mobile-price">{formatPreco(prod.preco)}</span>
@@ -1451,6 +1508,15 @@
                   </div>
 
                   <div class="row-actions">
+                    <button
+                      class="row-action-btn"
+                      title="Complementos e opções"
+                      aria-label="Configurar complementos e opções de {prod.nome}"
+                      on:click={() => abrirComplementos(prod)}
+                      style="color: var(--primary);"
+                    >
+                      <SlidersHorizontal class="w-4 h-4" />
+                    </button>
                     <button
                       class="row-action-btn"
                       title="Editar"
@@ -1655,6 +1721,9 @@
                       {#if prod.ocultar_no_pdv}
                         <span class="badge-oculto">Oculto</span>
                       {/if}
+                      {#if modifierGroupCount(prod) > 0}
+                        <span class="badge-montavel">Montável · {modifierGroupCount(prod)} {modifierGroupCount(prod) === 1 ? 'grupo' : 'grupos'}</span>
+                      {/if}
                     </div>
                   </td>
 
@@ -1695,6 +1764,15 @@
                   <!-- Ações -->
                   <td class="td-cell text-right">
                     <div class="row-actions">
+                      <button
+                        class="row-action-btn"
+                        title="Complementos e opções"
+                        aria-label="Configurar complementos e opções de {prod.nome}"
+                        on:click={() => abrirComplementos(prod)}
+                        style="color: var(--primary);"
+                      >
+                        <SlidersHorizontal class="w-4 h-4" />
+                      </button>
                       <button
                         class="row-action-btn"
                         title="Editar"
@@ -2074,6 +2152,13 @@
     </div>
   </div>
 {/if}
+
+<ModalModificadores
+  open={modifierModalOpen}
+  produto={modifierProduct}
+  ownerUserId={ownerUserId}
+  on:close={fecharComplementos}
+/>
 
 <style>
   /* ─── Layout ──────────────────────────────────────────────────────────────── */
@@ -2541,6 +2626,20 @@
     border-radius: 9999px;
     background: color-mix(in srgb, var(--warning) 15%, transparent);
     color: var(--warning);
+  }
+
+  .badge-montavel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
+    color: var(--primary);
+    white-space: nowrap;
   }
 
   .badge-estoque {

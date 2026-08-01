@@ -138,20 +138,38 @@ export function buildVendaPayload(input) {
     : [];
 
   // Items
-  const itens = (input.itens || []).map((i) => ({
-    id_produto: i.id_produto ?? null,
-    quantidade: extractEffectiveQty(i),
-    nome_produto_na_venda: i.nome,
-    preco_unitario_na_venda: money(i.preco)
-  }));
+  const itens = (input.itens || []).map((i) => {
+    const modifiers = Array.isArray(i.modifiers) && i.modifiers.length ? i.modifiers : null;
+    const nomeProdutoNaVenda = i.resumoMontagem && i.nome
+      ? `${i.nome} (${i.resumoMontagem})`
+      : i.nome;
+    return {
+      id_produto: i.id_produto ?? null,
+      quantidade: extractEffectiveQty(i),
+      nome_produto_na_venda: nomeProdutoNaVenda,
+      preco_unitario_na_venda: money(i.preco),
+      ...(modifiers ? { modifiers } : {})
+    };
+  });
 
-  // Stock decrement list — server filters by controlar_estoque internally
-  const estoque = (input.itens || [])
-    .filter((i) => i.id_produto)
-    .map((i) => ({
-      id_produto: i.id_produto,
-      quantidade: extractEffectiveQty(i)
-    }));
+  // Stock decrement list — server filters by controlar_estoque internally.
+  // Also expands each item's modifier options that are linked to a real
+  // catalog product (e.g. massa, calda, proteína), mirroring the same
+  // expansion `comanda_modifier_stock_requirements` does for Mesas/comandas.
+  const estoque = [];
+  for (const i of input.itens || []) {
+    const itemQty = extractEffectiveQty(i);
+    if (i.id_produto) {
+      estoque.push({ id_produto: i.id_produto, quantidade: itemQty });
+    }
+    for (const group of Array.isArray(i.modifiers) ? i.modifiers : []) {
+      for (const option of group?.selectedOptions || []) {
+        if (!option?.linkedProductId) continue;
+        const optionQty = Math.max(1, Math.round(Number(option.quantity) || 1));
+        estoque.push({ id_produto: option.linkedProductId, quantidade: optionQty * itemQty });
+      }
+    }
+  }
 
   // Fiado debits
   const fiados = [];

@@ -61,6 +61,7 @@
 - o fechamento da mesa vira venda operacional real; nao e um ledger paralelo
 - pre-conta nao fecha a comanda
 - subusuario usa dados do owner, nao tenant proprio
+- `comanda_aplicar_delta_item` usa uma assinatura canônica de cinco argumentos (`uuid, integer, integer, numeric, jsonb`); os dois últimos têm defaults para manter clientes antigos compatíveis. Não recriar uma sobrecarga separada de três argumentos, pois o PostgREST pode rejeitar a RPC como ambígua.
 
 ## Pontos de atencao
 

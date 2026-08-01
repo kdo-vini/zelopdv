@@ -27,6 +27,7 @@
   import { abrirCaixaIdempotente } from '$lib/finance/caixaOps';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
+  import { buildCartItemKey, formatSelectedModifierGroups, hasActiveModifierGroups } from '$lib/zelomenuModifiers';
   
   // Modais componentizados
   import ModalAbrirCaixa from '$lib/components/modals/ModalAbrirCaixa.svelte';
@@ -35,6 +36,8 @@
   import ModalMovCaixa from '$lib/components/modals/ModalMovCaixa.svelte';
   import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
   import ModalSucesso from '$lib/components/modals/ModalSucesso.svelte'; // [NEW]
+  import ModalProdutoMontavel from '$lib/components/modals/ModalProdutoMontavel.svelte';
+  import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   
   // Grid virtualizado para performance
   import VirtualProductGrid from '$lib/components/VirtualProductGrid.svelte';
@@ -78,6 +81,8 @@
   // [NEW] Estado Modal Sucesso
   let modalSucessoAberto = false;
   let vendaConcluida = null;
+  let modalProdutoMontavelAberto = false;
+  let produtoMontavelSelecionado = null;
 
   // [NEW] Mobile State
   let showMobileCart = false;
@@ -106,6 +111,14 @@
   let canCancelar = true;
   let canAbrirCaixa = true;
   let canMovimentarCaixa = true;
+
+  $: pdvReceiveHint = !canVender
+    ? 'Seu perfil não tem permissão para registrar vendas.'
+    : !canReceber
+      ? 'Seu perfil não tem permissão para receber pagamentos.'
+      : comanda.length === 0
+        ? 'Adicione um item à comanda para liberar o recebimento.'
+        : '';
 
   // Atalho: '/' foca a busca quando o modal de pagamento não está aberto e o usuário não está digitando em um campo
   function onKeyGlobal(e) {
@@ -602,6 +615,12 @@
       return;
     }
 
+    if (hasActiveModifierGroups(produto?.modifierGroups)) {
+      produtoMontavelSelecionado = produto;
+      modalProdutoMontavelAberto = true;
+      return;
+    }
+
     // Se é marcado como "Por unidade", abre modal para informar a quantidade
     if (produto?.eh_item_por_unidade) {
       produtoQuantidadeSelecionado = produto;
@@ -632,10 +651,12 @@
    * Adiciona (ou incrementa) um item na comanda.
    * Aceita itens de banco (com id) ou avulsos (sem id).
    */
-  function adicionarItemNaComanda(item, qtd, preco) {
+  function adicionarItemNaComanda(item, qtd, preco, selectedOptions = null, modifiers = null) {
     // Chave inclui o preço: trocar de tabela cria linha nova em vez de
     // incrementar a linha do preço antigo.
-    const idUnico = item.id != null ? `${item.id}__${preco}` : Date.now();
+    const idUnico = item.id != null
+      ? `${buildCartItemKey(item.id, selectedOptions)}::price:${Number(preco).toFixed(2)}`
+      : Date.now();
 
     const itemExistente = comanda.find((i) => i.id === idUnico);
 
@@ -651,6 +672,8 @@
           nome: item.nome,
           preco: preco,
           quantidade: qtd,
+          ...(selectedOptions?.length ? { selectedOptions } : {}),
+          ...(modifiers?.length ? { modifiers, resumoMontagem: formatSelectedModifierGroups(modifiers) } : {})
         },
       ];
     }
@@ -1264,7 +1287,7 @@
     class="md:hidden p-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-300 hover:text-white rounded-md border border-slate-700/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
     on:click={() => modalMovCaixaAberto = true}
     disabled={!canMovimentarCaixa}
-    title="Movimentação de Caixa"
+    aria-describedby={!canMovimentarCaixa ? 'pdv-top-movement-hint' : undefined}
     aria-label="Movimentação de Caixa"
   >
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -1285,6 +1308,11 @@
     {/if}
   </div>
 </div>
+{#if !canMovimentarCaixa}
+  <div class="mx-4 mb-2">
+    <InlineHelper id="pdv-top-movement-hint" compact message="Seu perfil não tem permissão para movimentar o caixa." />
+  </div>
+{/if}
 
 <!-- Fundo principal do PDV: Layout Responsivo -->
 <!-- Desktop: flex-row (produtos + comanda). Sidebar agora vem do layout -->
@@ -1433,6 +1461,9 @@
             <li class="p-3 bg-slate-800/30 rounded-lg flex items-center gap-3 group transition-colors hover:bg-slate-800/50">
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-bold text-slate-100 truncate leading-tight">{item.nome}</p>
+                {#if item.resumoMontagem}
+                  <p class="text-[11px] text-sky-300 leading-snug mt-1">{item.resumoMontagem}</p>
+                {/if}
                 <p class="text-[11px] text-slate-400">R$ {Number(item.preco).toFixed(2)}</p>
               </div>
               
@@ -1508,8 +1539,9 @@
         <button
           on:click={() => modalMovCaixaAberto = true}
           disabled={!canMovimentarCaixa}
+          aria-describedby={!canMovimentarCaixa ? 'pdv-action-movement-hint' : undefined}
+          aria-label="Movimentação de caixa"
           class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center border border-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
-          title="Movimentação de Caixa"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
@@ -1526,8 +1558,8 @@
           }}
           aria-label="Limpar comanda"
           disabled={!canCancelar}
+          aria-describedby={!canCancelar ? 'pdv-action-cancel-hint' : undefined}
           class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/30 transition-colors flex items-center justify-center border border-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
-          title="Limpar Comanda"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -1538,12 +1570,24 @@
         <button
           data-testid="btn-cobrar"
           disabled={comanda.length === 0 || !canVender || !canReceber}
+          aria-describedby={pdvReceiveHint ? 'pdv-receive-hint' : undefined}
           on:click={abrirModalPagamento}
           class="col-span-2 h-12 md:h-10 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-green-900/20 text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
         >
           <span>Receber</span>
           <span class="bg-black/20 px-2 py-0.5 rounded-sm text-xs">R$ {Number(totalComandaComEntrega).toFixed(2)}</span>
         </button>
+      </div>
+      <div class="flex flex-col gap-1.5 mt-2">
+        {#if !canMovimentarCaixa}
+          <InlineHelper id="pdv-action-movement-hint" compact message="Seu perfil não tem permissão para movimentar o caixa." />
+        {/if}
+        {#if !canCancelar}
+          <InlineHelper id="pdv-action-cancel-hint" compact message="Seu perfil não tem permissão para limpar a comanda." />
+        {/if}
+        {#if pdvReceiveHint}
+          <InlineHelper id="pdv-receive-hint" compact message={pdvReceiveHint} />
+        {/if}
       </div>
     </div>
   </aside>
@@ -1606,6 +1650,32 @@
   on:close={() => {
     modalQuantidadeAberto = false;
     produtoQuantidadeSelecionado = null;
+  }}
+/>
+
+<ModalProdutoMontavel
+  open={modalProdutoMontavelAberto}
+  produto={produtoMontavelSelecionado}
+  precoBase={produtoMontavelSelecionado ? getPrecoTabela(produtoMontavelSelecionado, tabelaAtiva) : 0}
+  on:confirm={(e) => {
+    const { produto, preco, selectedOptions, modifiers } = e.detail;
+    if (produto?.id && produtoControlaEstoque(produto)) {
+      const qtdAtual = comanda
+        .filter((i) => i.id_produto === produto.id)
+        .reduce((acc, i) => acc + i.quantidade, 0);
+      const disponivel = estoqueDisponivel(produto);
+      if (qtdAtual + 1 > disponivel) {
+        addToast(`Estoque insuficiente para "${produto.nome}". Restam ${disponivel} unidade(s).`, 'error');
+        return;
+      }
+    }
+    adicionarItemNaComanda(produto, 1, preco, selectedOptions, modifiers);
+    modalProdutoMontavelAberto = false;
+    produtoMontavelSelecionado = null;
+  }}
+  on:close={() => {
+    modalProdutoMontavelAberto = false;
+    produtoMontavelSelecionado = null;
   }}
 />
 

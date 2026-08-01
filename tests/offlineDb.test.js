@@ -22,6 +22,18 @@ describe('shouldQueueVendaOffline', () => {
 });
 
 describe('prepareVendaOfflineRecord', () => {
+  test('keeps modifiers inside the pending sale payload for replay', () => {
+    const modifiers = [{ groupName: 'Confeitos', selectedOptions: [{ optionName: 'Granulado', quantity: 1 }] }];
+    const record = prepareVendaOfflineRecord({
+      payload: {
+        valor_total: 10,
+        itens: [{ id_produto: 10, nome_produto_na_venda: 'Guaraná', preco_unitario_na_venda: 10, quantidade: 1, modifiers }]
+      },
+      createdAt: '2026-07-31T10:00:00.000Z'
+    });
+
+    expect(record.payload.itens[0].modifiers).toEqual(modifiers);
+  });
   test('preserves an existing client_sale_id in the queued payload', () => {
     const record = prepareVendaOfflineRecord({
       payload: { client_sale_id: 'sale-existing', valor_total: 10 }
