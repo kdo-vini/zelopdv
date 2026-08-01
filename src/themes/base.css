@@ -148,4 +148,22 @@
     /* Transitions */
     --transition-fast: 200ms ease;
     --transition-normal: 300ms ease;
+
+    /* Mobile app navigation */
+    --mobile-bottom-nav-height: 64px;
+    --mobile-bottom-nav-safe-height: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    --mobile-bottom-nav-offset: env(safe-area-inset-bottom, 0px);
+    --toast-offset: 32px;
+}
+
+@media (max-width: 767px) {
+    html.has-mobile-bottom-nav {
+        --mobile-bottom-nav-offset: var(--mobile-bottom-nav-safe-height);
+        --toast-offset: calc(var(--mobile-bottom-nav-safe-height) + 12px);
+    }
+
+    html.has-mobile-bottom-nav.mobile-keyboard-open {
+        --mobile-bottom-nav-offset: env(safe-area-inset-bottom, 0px);
+        --toast-offset: 12px;
+    }
 }

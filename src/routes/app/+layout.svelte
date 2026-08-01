@@ -114,9 +114,9 @@
   });
 </script>
 
-<div class:zelinho-open={$isZelinhoOpen} class="zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app); color: var(--text-main);">
+<div class:zelinho-open={$isZelinhoOpen} class="app-navigation-workspace zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app); color: var(--text-main);">
   <GestaoSidebar />
-  <div class="flex-1 flex flex-col overflow-hidden min-w-0 pt-14 md:pt-0">
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
     {#if deletionScheduledAt}
       <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm" style="background: color-mix(in srgb, var(--warning) 15%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--warning) 35%, transparent); color: var(--text-main);">
         <span>

@@ -769,8 +769,7 @@
 
   /* === Mobile === */
   @media (max-width: 768px) {
-    /* top maior: hambúrguer da sidebar */
-    .page-shell { padding: 3.25rem 1rem 1.25rem; }
+    .page-shell { padding: 1rem 1rem 1.25rem; }
     .page-header { flex-direction: column; }
     .header-actions { width: 100%; }
     .search-wrap { flex: 1; }

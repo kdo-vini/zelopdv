@@ -24,7 +24,7 @@
   .zelinho-rail:focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
   .zelinho-rail span { font-size: 0.875rem; font-weight: 600; }
   @media (max-width: 767px) {
-    .zelinho-rail { top: 0.75rem; right: auto; left: 3.75rem; min-width: 44px; padding: 0.625rem; border-right: 1px solid var(--border-subtle); border-radius: 8px; transform: none; justify-content: center; }
+    .zelinho-rail { top: 0.75rem; right: auto; left: 0.75rem; z-index: 20; min-width: 44px; padding: 0.625rem; border-right: 1px solid var(--border-subtle); border-radius: 8px; transform: none; justify-content: center; }
     .zelinho-rail span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   }
   @media (prefers-reduced-motion: reduce) { .zelinho-rail { transition: none; } }

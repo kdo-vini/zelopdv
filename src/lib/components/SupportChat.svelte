@@ -28,7 +28,7 @@
   });
 </script>
 
-<div class="support-chat-container" role="complementary" aria-label="Chat de suporte">
+<div class="support-chat-container" class:open={isOpen} role="complementary" aria-label="Chat de suporte">
   {#if isOpen}
     <ChatStreamCore
       messagesStore={messagesStore}
@@ -140,13 +140,17 @@
 <style>
   .support-chat-container {
     position: fixed;
-    bottom: 20px;
+    bottom: calc(20px + var(--mobile-bottom-nav-offset));
     right: 20px;
-    z-index: 100;
+    z-index: 20;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 12px;
+  }
+
+  .support-chat-container.open {
+    z-index: 100;
   }
 
   .chat-window {
@@ -164,7 +168,7 @@
   @media (max-width: 480px) {
     .chat-window {
       position: fixed;
-      bottom: 80px;
+      bottom: calc(80px + var(--mobile-bottom-nav-offset));
       right: 12px;
       left: 12px;
       width: auto;

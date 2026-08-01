@@ -357,7 +357,7 @@
   .update-toast {
     position: fixed;
     right: 1rem;
-    bottom: 1rem;
+    bottom: calc(1rem + var(--mobile-bottom-nav-offset));
     z-index: 120;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -470,7 +470,7 @@
     .update-toast {
       left: 0.75rem;
       right: 0.75rem;
-      bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+      bottom: calc(0.75rem + var(--mobile-bottom-nav-offset));
       width: auto;
       grid-template-columns: auto minmax(0, 1fr);
       align-items: start;

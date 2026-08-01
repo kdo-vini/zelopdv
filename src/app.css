@@ -6,6 +6,12 @@
 
 @plugin '@tailwindcss/forms';
 
+@media (max-width: 767px) {
+  .app-navigation-workspace {
+    padding-bottom: calc(var(--mobile-bottom-nav-safe-height) + 16px);
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /*

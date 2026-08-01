@@ -17,10 +17,10 @@
 </script>
 
 {#if ready}
-  <div class:zelinho-open={$isZelinhoOpen} class="zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app); color: var(--text-main);">
+  <div class:zelinho-open={$isZelinhoOpen} class="app-navigation-workspace zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app); color: var(--text-main);">
     <GestaoSidebar />
     <div class="flex-1 flex flex-col overflow-hidden min-w-0">
-      <main class="flex-1 overflow-y-auto p-6 pt-16 md:p-8" id="ferramentas-main-content">
+      <main class="flex-1 overflow-y-auto p-6 md:p-8" id="ferramentas-main-content">
         <slot />
       </main>
     </div>

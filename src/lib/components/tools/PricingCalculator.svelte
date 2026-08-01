@@ -1437,10 +1437,10 @@
   /* Sticky result bar */
   .sticky-bar {
     position: fixed;
-    bottom: 0;
+    bottom: var(--mobile-bottom-nav-offset);
     left: 0;
     right: 0;
-    z-index: 50;
+    z-index: 20;
     background: color-mix(in srgb, var(--bg-card) 92%, transparent);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);

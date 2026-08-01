@@ -395,6 +395,7 @@
   richColors
   closeButton
   position="bottom-right"
+  offset="var(--toast-offset)"
   style="--normal-bg: var(--popover); --normal-text: var(--popover-foreground); --normal-border: var(--border);"
 />
 <ConfirmDialog />

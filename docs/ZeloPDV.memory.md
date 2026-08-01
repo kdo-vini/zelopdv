@@ -6,6 +6,8 @@
 
 - O add-on `pedidos` (Pedidos + Cozinha) foi removido do codigo e do schema em 2026-07-28. ZeloMenu, ZeloChat e a copia `delivery-frontend` ja nao leem `has_pedidos_addon`; a view `user_entitlements` e as colunas legadas foram recriadas/removidas na migration de aposentadoria. O historico da flag financeira nao foi preservado por decisao do dono do produto.
 
+- A navegação autenticada tem uma única configuração em `src/lib/navigation/appNavigation.js`: a sidebar permanece exclusiva do desktop e, abaixo de 768px, `MobileBottomNav.svelte` exibe PDV, Gestão, Financeiro, Outros e Perfil. Permissões de subusuário e entitlements de Mesas/ZeloMenu/Acessos devem continuar sendo derivados pelo `GestaoSidebar` e aplicados por essa configuração, sem criar listas paralelas por viewport.
+
 - A assinatura do usuario `d5625be9` ficou em `bundle + Mesas` apos reconciliacao de billing em 2026-07-28: `has_acessos_addon=false`, `monthly_value_cents=22800`, sem `provider_subscription_id` ativo. Nao alterar historico de pagamentos nem emitir estorno sem nova evidencia.
 
 - `source='mesa'` e o contrato comum do QR publico de mesa e do botao "Enviar pra cozinha" da comanda. QR chega sem `fulfillment.comandaItemId` e baixa estoque ao aceitar; item da comanda ja consumiu estoque, carrega esse campo e nao deve ser restaurado em cancelamento. Pedidos mesa nunca criam venda por `ensure_zelo_order_sale`/`close_zelo_order`; a venda e do fechamento da comanda.
@@ -17,7 +19,7 @@
 - `subscriptions.monthly_value_cents` e nullable e guarda o valor mensal real em centavos; a coluna foi aplicada no Supabase real em 2026-07-24 apos o ZeloAdmin zerar consultas por coluna ausente. Linhas antigas ainda usam fallback por `plan_tier` no admin ate o backfill.
 
 > Memória viva. Guardar só fatos confirmados e úteis para continuidade técnica.
-> Atualizado em 2026-07-28.
+> Atualizado em 2026-07-31.
 
 - O app principal roda em SvelteKit 2 + Svelte 5 e usa `@sveltejs/adapter-vercel` com runtime Node 20.
 - Existe um segundo app em `admin-dashboard/`, separado do app principal.

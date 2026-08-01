@@ -3250,8 +3250,8 @@
       top: auto;
       right: 0.75rem;
       left: 0.75rem;
-      bottom: 0.75rem;
-      z-index: 80;
+      bottom: calc(0.75rem + var(--mobile-bottom-nav-offset));
+      z-index: 20;
       min-width: 0;
       border-radius: 0.75rem;
       padding: 1rem;
@@ -3261,8 +3261,9 @@
       position: fixed;
       top: auto;
       right: 0.75rem;
-      bottom: 0.75rem;
+      bottom: calc(0.75rem + var(--mobile-bottom-nav-offset));
       left: 0.75rem;
+      z-index: 20;
       min-width: 0;
       padding: 0.5rem;
       border-radius: 0.75rem;
@@ -3475,8 +3476,8 @@
     .mobile-create-menu {
       position: fixed;
       right: 1rem;
-      bottom: calc(1rem + env(safe-area-inset-bottom));
-      z-index: 75;
+      bottom: calc(1rem + var(--mobile-bottom-nav-offset));
+      z-index: 20;
       display: flex;
       flex-direction: column;
       align-items: flex-end;

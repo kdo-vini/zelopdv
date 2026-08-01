@@ -1595,7 +1595,10 @@
 
   <!-- [NEW] Mobile Bottom Bar (Sticky) -->
   {#if !showMobileCart && comanda.length > 0}
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-3 flex items-center justify-between z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]">
+    <div
+      class="md:hidden fixed left-0 right-0 bg-slate-900 border-t border-slate-800 p-3 flex items-center justify-between z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]"
+      style="bottom: var(--mobile-bottom-nav-offset);"
+    >
         <div class="flex flex-col">
             <span class="text-xs text-slate-400">{comanda.reduce((a,i)=>a+i.quantidade,0)} itens</span>
             <span class="text-lg font-bold text-white">R$ {Number(totalComanda).toFixed(2)}</span>

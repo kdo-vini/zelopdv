@@ -18,10 +18,10 @@
 </script>
 
 {#if ready}
-  <div class:zelinho-open={$isZelinhoOpen} class="zelinho-workspace relatorios-workspace flex overflow-visible md:overflow-hidden" style="background: var(--bg-app); color: var(--text-main);">
+  <div class:zelinho-open={$isZelinhoOpen} class="app-navigation-workspace zelinho-workspace relatorios-workspace flex overflow-visible md:overflow-hidden" style="background: var(--bg-app); color: var(--text-main);">
     <GestaoSidebar />
     <div class="flex-1 flex flex-col overflow-visible md:overflow-hidden min-w-0">
-      <main class="relatorios-content flex-1 overflow-visible md:overflow-y-auto p-6 pt-16 md:p-8">
+      <main class="relatorios-content flex-1 overflow-visible md:overflow-y-auto p-6 md:p-8">
         <slot />
       </main>
     </div>

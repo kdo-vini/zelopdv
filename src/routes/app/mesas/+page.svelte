@@ -529,8 +529,7 @@
   .btn-secondary svg { width: 16px; height: 16px; color: var(--text-muted); }
 
   @media (max-width: 768px) {
-    /* top maior: hambúrguer da sidebar fica fixed em top:12px + 36px do botão */
-    .page-shell { padding: 3.25rem 0.85rem 1.25rem; }
+    .page-shell { padding: 0.85rem 0.85rem 1.25rem; }
     .map-header { flex-direction: column; align-items: stretch; }
     .map-header .btn-secondary { align-self: flex-start; }
     .mesa-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.65rem; }

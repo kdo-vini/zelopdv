@@ -2148,8 +2148,7 @@
       height: auto;
       min-height: 100%;
       gap: 1rem;
-      /* top maior pra não esconder atrás do hambúrguer da sidebar (top:12px + 36px do botão) */
-      padding: 3.25rem 0.85rem 5.5rem;
+      padding: 0.85rem 0.85rem 5.5rem;
       overflow-x: hidden;
       overflow-y: visible;
     }
@@ -2166,8 +2165,7 @@
     .comanda-side {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      /* z-index 65 fica acima do hambúrguer da sidebar (z-60),
-         então o drawer cobre tudo e o close vira o único caminho de saída */
+      /* Fica abaixo da navegação global; o padding inferior mantém as ações livres. */
       z-index: 65;
       transform: translateY(100%);
       transition: transform 0.28s ease;
@@ -2248,8 +2246,8 @@
     .mobile-cart-bar {
       display: flex;
       position: fixed;
-      bottom: 0; left: 0; right: 0;
-      z-index: 30;
+      bottom: var(--mobile-bottom-nav-offset); left: 0; right: 0;
+      z-index: 20;
       background: var(--bg-card);
       border-top: 1px solid var(--border-card);
       padding: 0.7rem 0.95rem;

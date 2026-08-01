@@ -5,14 +5,19 @@
   import { closeAssistant } from '$lib/stores/assistant';
   import { unreadCount, hasUnreadCritical } from '$lib/stores/gerente';
   import SidebarBadge from '$lib/components/gerente/SidebarBadge.svelte';
+  import MobileBottomNav from '$lib/components/MobileBottomNav.svelte';
   import { toggleSupport, closeSupport, isSupportOpen } from '$lib/stores/support';
   import { getAccessContext, getAccessContextSync } from '$lib/accessControl';
+  import {
+    appNavigationSections,
+    isNavigationItemActive,
+    shouldShowNavigationItem,
+  } from '$lib/navigation/appNavigation';
   import { onMount } from 'svelte';
   import { TRIAL_DAYS } from '$lib/pricing';
   import { getTrialTotalDays } from '$lib/subscriptionStatus';
-  import { X, Menu, ChevronLeft, ChevronRight, HelpCircle, LogOut, ShoppingBag, Table2, ListChecks, LayoutGrid, Package, Users, Boxes, BarChart3, Wrench, ArrowUpRight, Wallet, Puzzle, ChefHat, BookOpen, Receipt, Radar } from 'lucide-svelte';
+  import { ChevronLeft, ChevronRight } from 'lucide-svelte';
 
-  let mobileOpen = false;
   let collapsed = false;
   let subStatus = null;
   let trialDaysLeft = null;
@@ -122,17 +127,6 @@
 
   $: pathname = $page.url.pathname;
 
-  function isActive(href, currentPath) {
-    // Itens "raiz" precisam ser exact match — caso contrário /app/mesas marcaria /app como ativo
-    if (href === '/gestao' || href === '/app') return currentPath === href;
-    if (currentPath !== href && !currentPath.startsWith(href + '/')) return false;
-    // Se algum item mais específico também combina (ex: /app/pedidos/cozinha vs /app/pedidos),
-    // só o mais específico fica ativo.
-    return !allHrefs.some(
-      (h) => h.length > href.length && (currentPath === h || currentPath.startsWith(h + '/'))
-    );
-  }
-
   async function logout() {
     $sessionStore = null;
     $companyNameStore = null;
@@ -140,8 +134,9 @@
     window.location.href = '/login';
   }
 
-  function closeMobile() {
-    mobileOpen = false;
+  function openSupport() {
+    toggleSupport();
+    closeAssistant();
   }
 
   $: avatarLetter = ($companyNameStore || $sessionStore?.user?.email || 'Z')[0].toUpperCase();
@@ -156,205 +151,26 @@
     acessos: acessosAddonActive
   };
 
-  function shouldShowItem(item, flags, ready = accessLoaded) {
-    // Hide any permission/admin-gated entry until we know who the user is. For
-    // public items (no requiredPermission and no adminOnly) we render eagerly
-    // so the menu doesn't feel empty for owners on a cold start.
-    const isGated = item.adminOnly || item.requiredPermission;
-    if (isGated && !ready) return false;
-
-    if (!item.requiresAddon) {
-      if (isSubUserMode && item.adminOnly) return false;
-      if (isSubUserMode && item.requiredPermission) {
-        return subUserPermissions?.[item.requiredPermission] === true;
-      }
-      return true;
-    }
-    if (!flags[item.requiresAddon]) return false;
-    if (isSubUserMode && item.adminOnly) return false;
-    if (isSubUserMode && item.requiredPermission) {
-      return subUserPermissions?.[item.requiredPermission] === true;
-    }
-    return true;
-  }
-
-  const navGroups = [
-    {
-      label: 'Vendas',
-      items: [
-        {
-          href: '/app',
-          label: 'Frente de Caixa',
-          requiredPermission: 'pdv.acessar',
-          icon: ShoppingBag
-        },
-        {
-          href: '/app/mesas',
-          label: 'Mesas',
-          requiresAddon: 'mesas',
-          requiredPermission: 'mesas.acessar',
-          icon: Table2
-        },
-        {
-          href: '/app/pedidos',
-          label: 'Pedidos',
-          requiresAddon: 'orderingReview',
-          // Chaves de permissão `pedidos.*` seguem as originais de propósito:
-          // estão persistidas no JSON de `access_roles`, e renomeá-las apagaria
-          // silenciosamente a permissão dos subusuários já cadastrados.
-          requiredPermission: 'pedidos.acessar',
-          icon: ListChecks
-        },
-        {
-          href: '/app/pedidos/cozinha',
-          label: 'Cozinha',
-          requiresAddon: 'kitchenQueue',
-          requiredPermission: 'pedidos.cozinha',
-          icon: ChefHat
-        }
-      ]
-    },
-    {
-      label: 'Gestão',
-      items: [
-        {
-          href: '/gestao',
-          label: 'Dashboard',
-          icon: LayoutGrid
-        },
-        {
-          href: '/gestao/gerente',
-          label: 'Zelinho Gerente',
-          icon: Radar,
-          badge: true,
-        },
-        {
-          href: '/gestao/produtos',
-          label: 'Produtos',
-          requiredPermission: 'produtos.visualizar',
-          icon: Package
-        },
-        {
-          href: '/gestao/pessoas',
-          label: 'Pessoas',
-          requiredPermission: 'pessoas.visualizar',
-          icon: Users
-        },
-        {
-          href: '/gestao/estoque',
-          label: 'Estoque',
-          requiredPermission: 'estoque.visualizar',
-          icon: Boxes
-        },
-        {
-          href: '/gestao/mesas',
-          label: 'Cadastro de Mesas',
-          requiresAddon: 'mesas',
-          requiredPermission: 'mesas.acessar',
-          icon: Table2
-        }
-      ]
-    },
-    {
-      label: 'Financeiro',
-      items: [
-        {
-          href: '/gestao/caixa',
-          label: 'Fechar Caixa',
-          requiredPermission: 'caixa.ver',
-          icon: Wallet
-        },
-        {
-          href: '/gestao/fichario',
-          label: 'Fichário (Fiado)',
-          requiredPermission: 'fiado.visualizar',
-          icon: BookOpen
-        },
-        {
-          href: '/gestao/despesas',
-          label: 'Despesas',
-          requiredPermission: 'despesas.visualizar',
-          icon: Receipt
-        }
-      ]
-    },
-    {
-      label: 'Outros',
-      items: [
-        {
-          href: '/relatorios',
-          label: 'Relatórios',
-          requiredPermission: 'relatorios.ver',
-          icon: BarChart3
-        },
-        {
-          href: '/ferramentas',
-          label: 'Ferramentas',
-          icon: Wrench
-        },
-        {
-          href: '/gestao/indicacoes',
-          label: 'Indicações',
-          adminOnly: true,
-          icon: ArrowUpRight
-        },
-        {
-          href: '/gestao/extensoes',
-          label: 'Extensões',
-          adminOnly: true,
-          icon: Puzzle
-        },
-        {
-          href: '/gestao/acessos',
-          label: 'Acessos',
-          requiresAddon: 'acessos',
-          adminOnly: true,
-          icon: Users
-        }
-      ]
-    }
-  ];
-
-  const allHrefs = navGroups.flatMap((g) => g.items.map((i) => i.href));
+  $: navigationContext = {
+    accessLoaded,
+    addonFlags,
+    isSubUser: isSubUserMode,
+    permissions: subUserPermissions,
+  };
+  $: desktopSections = appNavigationSections.filter((section) => section.id !== 'perfil');
+  $: profileSection = appNavigationSections.find((section) => section.id === 'perfil');
+  $: profileItem = profileSection?.items.find((item) => item.href);
+  $: logoutItem = profileSection?.items.find((item) => item.action === 'logout');
 </script>
-
-<!-- Botão hambúrguer mobile -->
-<button
-  class="md:hidden fixed top-3 left-3 z-60 p-2 rounded-lg transition-colors"
-  style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle);"
-  on:click={() => mobileOpen = !mobileOpen}
-  aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu de gestão'}
-  aria-expanded={mobileOpen}
-  aria-controls="gestao-sidebar"
->
-  {#if $unreadCount > 0}<span class:critical-dot={$hasUnreadCritical} class="mobile-gerente-dot" aria-hidden="true"></span>{/if}
-  {#if mobileOpen}
-    <X class="size-5" aria-hidden="true" />
-  {:else}
-    <Menu class="size-5" aria-hidden="true" />
-  {/if}
-</button>
-
-<!-- Overlay mobile -->
-{#if mobileOpen}
-  <div
-    class="md:hidden fixed inset-0 z-55 bg-black/50"
-    role="presentation"
-    on:click={closeMobile}
-    on:keydown={e => e.key === 'Escape' && closeMobile()}
-    aria-hidden="true"
-  ></div>
-{/if}
 
 <!-- Sidebar -->
 <aside
   id="gestao-sidebar"
   role="navigation"
   aria-label="Menu de gestão"
-  class="fixed md:static inset-y-0 left-0 z-58 flex flex-col h-screen shrink-0 sidebar-shell"
+  class="hidden md:flex md:static flex-col h-screen shrink-0 sidebar-shell"
   class:collapsed
   style="background: var(--bg-sidebar); border-right: 1px solid var(--border-subtle);"
-  class:mobile-open={mobileOpen}
 >
 
   <!-- Topo: logo + botão de toggle -->
@@ -363,7 +179,6 @@
       href="/app"
       class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden"
       title="Ir para Frente de Caixa"
-      on:click={closeMobile}
     >
       <img src="/logo-horizontal.webp" alt="Zelo PDV" class="h-24 w-auto shrink-0" />
     </a>
@@ -405,7 +220,6 @@
         </span>
         <a
           href="/assinatura"
-          on:click={closeMobile}
           class="font-bold underline"
           style="color: {urgent ? '#1a1a00' : 'var(--primary)'}; font-size: 0.7rem;"
         >Assinar</a>
@@ -422,76 +236,63 @@
 
   <!-- Grupos de navegação -->
   <nav class="flex-1 overflow-y-auto px-3 py-2 space-y-1 sidebar-nav" class:nav-collapsed={collapsed} aria-label="Navegação principal de gestão">
-    {#each navGroups as group}
+    {#each desktopSections as section}
       <div class="pt-3">
         <p class="px-3 pb-1 text-xs font-bold uppercase tracking-wider overflow-hidden label-text" style="color: var(--text-muted);">
-          {group.label}
+          {section.desktopLabel}
         </p>
         <ul role="list" class="space-y-0.5">
-          {#each group.items as item}
-            {#if shouldShowItem(item, addonFlags, accessLoaded)}
-              {@const active = isActive(item.href, pathname)}
+          {#each section.items as item}
+            {#if shouldShowNavigationItem(item, navigationContext)}
+              {@const active = item.href ? isNavigationItemActive(item, pathname) : item.action === 'support' && $isSupportOpen}
               <li>
-                <a
-                  href={item.href}
-                  class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden"
-                  style="
-                    background: {active ? 'var(--sidebar-item-active-bg)' : 'transparent'};
-                    color: {active ? 'var(--sidebar-item-active-text)' : 'var(--text-main)'};
-                  "
-                  on:mouseenter={e => { if (!active) e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'; }}
-                  on:mouseleave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--sidebar-item-active-bg)' : 'transparent'; }}
-                  on:click={closeMobile}
-                  aria-current={active ? 'page' : undefined}
-                  title={item.label}
-                >
-                  <span class="nav-icon"><svelte:component this={item.icon} class="size-5 shrink-0" aria-hidden="true" />{#if item.badge && collapsed && $unreadCount > 0}<span class:critical-dot={$hasUnreadCritical} class="collapsed-gerente-dot" aria-hidden="true"></span>{/if}</span>
-                  <span class="label-text whitespace-nowrap">{item.label}</span>
-                  {#if item.badge}<span class="ml-auto label-text"><SidebarBadge count={$unreadCount} hasCritical={$hasUnreadCritical} /></span>{/if}
-                </a>
+                {#if item.href}
+                  <a
+                    href={item.href}
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden"
+                    style="background: {active ? 'var(--sidebar-item-active-bg)' : 'transparent'}; color: {active ? 'var(--sidebar-item-active-text)' : 'var(--text-main)'};"
+                    on:mouseenter={e => { if (!active) e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'; }}
+                    on:mouseleave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--sidebar-item-active-bg)' : 'transparent'; }}
+                    aria-current={active ? 'page' : undefined}
+                    title={item.label}
+                  >
+                    <span class="nav-icon"><svelte:component this={item.icon} class="size-5 shrink-0" aria-hidden="true" />{#if item.badge && collapsed && $unreadCount > 0}<span class:critical-dot={$hasUnreadCritical} class="collapsed-gerente-dot" aria-hidden="true"></span>{/if}</span>
+                    <span class="label-text whitespace-nowrap">{item.label}</span>
+                    {#if item.badge}<span class="ml-auto label-text"><SidebarBadge count={$unreadCount} hasCritical={$hasUnreadCritical} /></span>{/if}
+                  </a>
+                {:else}
+                  <button
+                    type="button"
+                    on:click={openSupport}
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden w-full text-left"
+                    style="background: {active ? 'var(--accent-light)' : 'transparent'}; color: {active ? 'var(--primary)' : 'var(--text-main)'};"
+                    on:mouseenter={e => { if (!active) e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'; }}
+                    on:mouseleave={e => { e.currentTarget.style.background = active ? 'var(--accent-light)' : 'transparent'; }}
+                    aria-pressed={$isSupportOpen}
+                    title={item.label}
+                  >
+                    <svelte:component this={item.icon} class="size-5 shrink-0" aria-hidden="true" />
+                    <span class="label-text whitespace-nowrap">{item.label}</span>
+                  </button>
+                {/if}
               </li>
             {/if}
           {/each}
         </ul>
       </div>
     {/each}
-
-    <!-- Suporte -->
-    <div class="pt-3">
-      <p class="px-3 pb-1 text-xs font-bold uppercase tracking-wider overflow-hidden label-text" style="color: var(--text-muted);">
-        Ajuda
-      </p>
-      <ul role="list" class="space-y-0.5">
-        <li>
-          <button
-            on:click={() => { toggleSupport(); closeAssistant(); closeMobile(); }}
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors overflow-hidden w-full text-left"
-            style="color: {$isSupportOpen ? '#0f766e' : 'var(--text-main)'};"
-            on:mouseenter={e => e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'}
-            on:mouseleave={e => e.currentTarget.style.background = ''}
-            title="Suporte IA"
-            aria-label="Abrir Suporte IA"
-            aria-pressed={$isSupportOpen}
-          >
-            <HelpCircle class="size-5 shrink-0" style="color: {$isSupportOpen ? '#0f766e' : 'var(--link)'};" aria-hidden="true" />
-            <span class="label-text whitespace-nowrap">Suporte</span>
-          </button>
-        </li>
-      </ul>
-    </div>
   </nav>
 
   <!-- Usuário / base -->
   <div class="shrink-0 border-t px-3 py-3 overflow-hidden" style="border-color: var(--border-subtle);">
     <a
-      href="/perfil"
-      on:click={closeMobile}
+      href={profileItem.href}
       class="flex items-center gap-3 mb-2 min-w-0 w-full px-2 py-1.5 rounded-lg transition-colors"
       style="color: var(--text-main);"
       on:mouseenter={e => e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'}
       on:mouseleave={e => e.currentTarget.style.background = ''}
-      title="Meu Perfil"
-      aria-label="Ir para Meu Perfil"
+      title={profileItem.label}
+      aria-label={`Ir para ${profileItem.label}`}
     >
       <div
         class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden"
@@ -517,11 +318,25 @@
       aria-label="Sair da conta"
       title="Sair"
     >
-      <LogOut class="size-5 shrink-0" aria-hidden="true" />
-      <span class="label-text whitespace-nowrap">Sair</span>
+      <svelte:component this={logoutItem.icon} class="size-5 shrink-0" aria-hidden="true" />
+      <span class="label-text whitespace-nowrap">{logoutItem.label}</span>
     </button>
   </div>
 </aside>
+
+<MobileBottomNav
+  sections={appNavigationSections}
+  {pathname}
+  {navigationContext}
+  {companyLogoUrl}
+  {displayName}
+  {avatarLetter}
+  unreadCount={$unreadCount}
+  hasUnreadCritical={$hasUnreadCritical}
+  supportOpen={$isSupportOpen}
+  onSupport={openSupport}
+  onLogout={logout}
+/>
 
 <style>
   /* Largura da sidebar com transição suave */
@@ -534,23 +349,6 @@
 
   .sidebar-shell.collapsed {
     width: 64px;
-  }
-
-  /* Mobile: ignora collapsed, segue translate */
-  @media (max-width: 767px) {
-    .sidebar-shell {
-      width: 240px !important;
-      transform: translateX(-100%);
-      transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .sidebar-shell.mobile-open {
-      transform: translateX(0);
-    }
-    /* Always show labels on mobile, regardless of collapsed state */
-    .sidebar-shell.collapsed .label-text {
-      max-width: 200px;
-      opacity: 1;
-    }
   }
 
   /* Labels: somem com fade + clip quando colapsado */
@@ -597,5 +395,5 @@
     padding-right: 0.25rem !important;
     gap: 0.35rem !important;
   }
-  .nav-icon { position: relative; display: inline-flex; flex: 0 0 auto; }.collapsed-gerente-dot, .mobile-gerente-dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }.collapsed-gerente-dot.critical-dot, .mobile-gerente-dot.critical-dot { background: var(--status-error-text); }.collapsed-gerente-dot { top: -3px; right: -4px; }.mobile-gerente-dot { top: 4px; right: 4px; }
+  .nav-icon { position: relative; display: inline-flex; flex: 0 0 auto; }.collapsed-gerente-dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }.collapsed-gerente-dot.critical-dot { background: var(--status-error-text); }.collapsed-gerente-dot { top: -3px; right: -4px; }
 </style>

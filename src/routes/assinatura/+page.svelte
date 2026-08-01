@@ -2418,7 +2418,7 @@
       position: fixed;
       left: 0.75rem;
       right: 0.75rem;
-      bottom: 0.75rem;
+      bottom: calc(0.75rem + var(--mobile-bottom-nav-offset));
       z-index: 20;
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
