@@ -270,7 +270,7 @@
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-modal);
   }
 
   /* Header */

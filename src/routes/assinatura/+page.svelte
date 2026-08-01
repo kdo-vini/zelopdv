@@ -2204,7 +2204,7 @@
     border-radius: 18px;
     background: var(--bg-card);
     color: var(--text-main);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.32);
+    box-shadow: var(--shadow-modal);
   }
 
   .pix-modal-close {

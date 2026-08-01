@@ -9,7 +9,20 @@
   import { clearScreenContext, openAssistantWithContext, screenContext } from '$lib/stores/assistant';
   import * as Select from '$lib/components/ui/select/index.js';
   import ModalModificadores from '$lib/components/modals/ModalModificadores.svelte';
-  import { MessageCircle, Pencil, Trash2, Plus, ChevronDown, SlidersHorizontal, ArrowUpDown, List, ExternalLink } from 'lucide-svelte';
+  import {
+    MessageCircle,
+    Pencil,
+    Trash2,
+    Plus,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    MoreVertical,
+    SlidersHorizontal,
+    ArrowUpDown,
+    List,
+    ExternalLink
+  } from 'lucide-svelte';
 
   // ─── State: Data ─────────────────────────────────────────────────────────────
   let categorias = [];
@@ -17,6 +30,8 @@
   let produtos = [];
   let ownerUserId = '';
   let modifierGroupCounts = {};
+  let productCountsByCategory = {};
+  let totalProdutosCatalogo = null;
 
   // ─── State: Tree Panel ────────────────────────────────────────────────────────
   let expandedCats = new Set();
@@ -41,9 +56,15 @@
 
   // Paginação
   let currentPage = 1;
-  const ITEMS_PER_PAGE = 10;
+  const PAGE_SIZE_OPTIONS = [10, 20, 50];
+  let itemsPerPage = 10;
   let sortField = 'nome';
   let sortDesc = false;
+  let openProductMenuId = null;
+  let openTreeMenuId = null;
+  let productMenuPosition = { top: 0, left: 0, transform: 'none' };
+  let productMenuOpensUp = false;
+  let statusUpdatingId = null;
 
   // Seleção em massa
   let selectedItems = new Set();
@@ -164,7 +185,7 @@
   async function carregarTudo() {
     loading = true;
     try {
-      await Promise.all([carregarCategorias(), carregarSubcategorias()]);
+      await Promise.all([carregarCategorias(), carregarSubcategorias(), carregarContagemProdutosPorCategoria()]);
       await carregarProdutos();
     } finally {
       loading = false;
@@ -222,6 +243,7 @@
 
       currentPage = 1;
       selectedItems = new Set();
+      openProductMenuId = null;
     } finally {
       loading = false;
     }
@@ -335,10 +357,11 @@
     return 0;
   });
 
-  $: totalPages = Math.max(1, Math.ceil(sortedProdutos.length / ITEMS_PER_PAGE));
+  $: totalPages = Math.max(1, Math.ceil(sortedProdutos.length / itemsPerPage));
+  $: if (currentPage > totalPages) currentPage = totalPages;
   $: paginatedProdutos = sortedProdutos.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   $: filteredSubcatsForProdForm = newProdForm.id_categoria
@@ -359,6 +382,36 @@
       sortField = field;
       sortDesc = false;
     }
+  }
+
+  async function carregarContagemProdutosPorCategoria() {
+    const { data, error } = await supabase
+      .from('produtos')
+      .select('id, id_categoria');
+
+    if (error) {
+      productCountsByCategory = {};
+      totalProdutosCatalogo = null;
+      console.warn('[produtos] contagem por categoria indisponível:', error.message);
+      return;
+    }
+
+    const counts = {};
+    for (const produto of data || []) {
+      if (produto.id_categoria == null) continue;
+      counts[produto.id_categoria] = (counts[produto.id_categoria] || 0) + 1;
+    }
+
+    productCountsByCategory = counts;
+    totalProdutosCatalogo = (data || []).length;
+  }
+
+  function mudarItensPorPagina(value) {
+    const nextSize = Number(value);
+    if (!PAGE_SIZE_OPTIONS.includes(nextSize)) return;
+    itemsPerPage = nextSize;
+    currentPage = 1;
+    selectedItems = new Set();
   }
 
   function categoriaTemEstoqueCompartilhado(idCategoria) {
@@ -392,6 +445,105 @@
     return estoqueProdutoCompartilhado(prod)
       ? Number(prod?.categorias?.estoque_compartilhado_atual || 0)
       : Number(prod?.estoque_atual || 0);
+  }
+
+  function categoriaProduto(prod) {
+    return prod?.categorias?.nome || getCategoriaNome(prod?.id_categoria) || 'Sem categoria';
+  }
+
+  function subcategoriaProduto(prod) {
+    return getSubcategoriaNome(prod?.id_subcategoria);
+  }
+
+  function produtosNaCategoria(idCategoria) {
+    return Number(productCountsByCategory[idCategoria] || 0);
+  }
+
+  function totalProdutosExibido() {
+    return totalProdutosCatalogo ?? produtos.length;
+  }
+
+  function produtoAtivo(prod) {
+    return !prod?.ocultar_no_pdv;
+  }
+
+  function toggleProductMenu(prod, event) {
+    if (openProductMenuId === prod.id) {
+      openProductMenuId = null;
+      return;
+    }
+
+    const rect = event.currentTarget?.getBoundingClientRect?.();
+    productMenuOpensUp = false;
+    if (rect && typeof window !== 'undefined') {
+      const menuWidth = 208;
+      const menuGap = 8;
+      const opensUp = window.innerHeight - rect.bottom < 196;
+      productMenuOpensUp = opensUp;
+      productMenuPosition = {
+        top: opensUp ? rect.top - menuGap : rect.bottom + menuGap,
+        left: Math.min(
+          Math.max(rect.right - menuWidth, 12),
+          Math.max(12, window.innerWidth - menuWidth - 12)
+        ),
+        transform: opensUp ? 'translateY(-100%)' : 'none'
+      };
+    }
+
+    openProductMenuId = prod.id;
+    openTreeMenuId = null;
+  }
+
+  function toggleTreeMenu(type, item, event) {
+    const menuId = `${type}:${item.id}`;
+    if (openTreeMenuId === menuId) {
+      openTreeMenuId = null;
+      return;
+    }
+
+    const rect = event.currentTarget?.getBoundingClientRect?.();
+    if (rect && typeof window !== 'undefined') {
+      const menuWidth = 208;
+      const menuGap = 8;
+      const opensUp = window.innerHeight - rect.bottom < 128;
+      productMenuPosition = {
+        top: opensUp ? rect.top - menuGap : rect.bottom + menuGap,
+        left: Math.min(
+          Math.max(rect.right - menuWidth, 12),
+          Math.max(12, window.innerWidth - menuWidth - 12)
+        ),
+        transform: opensUp ? 'translateY(-100%)' : 'none'
+      };
+    }
+
+    openProductMenuId = null;
+    openTreeMenuId = menuId;
+  }
+
+  async function alternarStatusProduto(prod) {
+    const nextOculto = !prod.ocultar_no_pdv;
+    openProductMenuId = null;
+    statusUpdatingId = prod.id;
+
+    try {
+      const { error } = await supabase
+        .from('produtos')
+        .update({ ocultar_no_pdv: nextOculto })
+        .eq('id', prod.id);
+
+      if (error) {
+        addToast('Não foi possível atualizar o status do produto: ' + error.message, 'error');
+        return;
+      }
+
+      produtos = produtos.map((item) => item.id === prod.id
+        ? { ...item, ocultar_no_pdv: nextOculto }
+        : item);
+      pdvCache.invalidateProdutos();
+      addToast(nextOculto ? 'Produto desativado.' : 'Produto ativado.', 'success');
+    } finally {
+      statusUpdatingId = null;
+    }
   }
 
   // ─── Seleção em massa ─────────────────────────────────────────────────────────
@@ -515,7 +667,7 @@
     if (selectedCategoriaId === cat.id) limparSelecao();
     pdvCache.invalidateCategorias();
     pdvCache.invalidateProdutos();
-    await Promise.all([carregarCategorias(), carregarSubcategorias()]);
+    await Promise.all([carregarCategorias(), carregarSubcategorias(), carregarContagemProdutosPorCategoria()]);
     await carregarProdutos();
   }
 
@@ -659,10 +811,12 @@
     showProdModal = false;
     pdvCache.invalidateProdutos();
     await carregarProdutos();
+    await carregarContagemProdutosPorCategoria();
     abrirComplementos(createdProduct);
   }
 
   function iniciarEdicaoProduto(prod) {
+    openProductMenuId = null;
     editingProdId = prod.id;
     editProdForm = {
       ...prod,
@@ -712,9 +866,11 @@
     editingProdId = null;
     pdvCache.invalidateProdutos();
     await carregarProdutos();
+    await carregarContagemProdutosPorCategoria();
   }
 
   async function excluirProduto(prod) {
+    openProductMenuId = null;
     const ok = await confirmAction('Excluir Produto', `Excluir "${prod.nome}"? Esta ação não pode ser desfeita.`);
     if (!ok) return;
 
@@ -727,6 +883,7 @@
     addToast('Produto excluído.', 'success');
     pdvCache.invalidateProdutos();
     await carregarProdutos();
+    await carregarContagemProdutosPorCategoria();
   }
 
   async function excluirEmMassa() {
@@ -748,20 +905,12 @@
     pdvCache.invalidateProdutos();
     selectedItems = new Set();
     await carregarProdutos();
+    await carregarContagemProdutosPorCategoria();
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────────
   function formatPreco(valor) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-  }
-
-  function getInicialColor(nome) {
-    const colors = [
-      'var(--primary)', 'var(--warning)', 'var(--error)', 'var(--success)',
-      'var(--accent)', 'var(--link)', 'var(--link-hover)', 'var(--text-muted)'
-    ];
-    const idx = (nome?.charCodeAt(0) ?? 0) % colors.length;
-    return colors[idx];
   }
 
   function abrirModalProduto() {
@@ -804,6 +953,12 @@
     if (showMobileCreateMenu && !e.target.closest('.mobile-create-menu')) {
       showMobileCreateMenu = false;
     }
+    if (openProductMenuId !== null && !e.target.closest('.product-action-menu')) {
+      openProductMenuId = null;
+    }
+    if (openTreeMenuId !== null && !e.target.closest('.tree-action-menu')) {
+      openTreeMenuId = null;
+    }
   }
 </script>
 
@@ -814,6 +969,7 @@
   <div class="page-title-block">
     <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Produtos</p>
     <h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Produtos</h1>
+    <p class="page-subtitle">{totalProdutosExibido()} {totalProdutosExibido() === 1 ? 'produto cadastrado' : 'produtos cadastrados'}</p>
   </div>
 
   <!-- Botões de ação globais -->
@@ -903,7 +1059,8 @@
           class:active={selectedCategoriaId === null && selectedSubcategoriaId === null}
           on:click={limparSelecao}
         >
-          Todos
+          <span>Todos</span>
+          <span class="category-count">{totalProdutosExibido()}</span>
         </button>
         {#each categorias as cat (cat.id)}
           <button
@@ -911,7 +1068,8 @@
             class:active={selectedCategoriaId === cat.id}
             on:click={() => selectCategoria(cat.id)}
           >
-            {cat.nome}
+            <span class="category-chip-label">{cat.nome}</span>
+            <span class="category-count">{produtosNaCategoria(cat.id)}</span>
           </button>
         {/each}
       </div>
@@ -1051,27 +1209,32 @@
               <!-- Ações (aparecem no hover) -->
               <div class="tree-item-actions">
                 <button
-                  class="tree-action-btn"
-                  title="Editar categoria"
-                  on:click|stopPropagation={() => iniciarEdicaoCategoria(cat)}
+                  class="tree-action-btn tree-action-menu"
+                  type="button"
+                  title="Mais ações da categoria"
+                  aria-label="Mais ações da categoria {cat.nome}"
+                  aria-haspopup="menu"
+                  aria-expanded={openTreeMenuId === `category:${cat.id}`}
+                  on:click|stopPropagation={(event) => toggleTreeMenu('category', cat, event)}
                   style="color: var(--text-muted);"
                 >
-                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
+                  <MoreVertical class="w-4 h-4" aria-hidden="true" />
                 </button>
-                <button
-                  class="tree-action-btn tree-action-danger"
-                  title="Excluir categoria"
-                  on:click|stopPropagation={() => excluirCategoria(cat)}
-                  style="color: var(--error);"
-                >
-                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                {#if openTreeMenuId === `category:${cat.id}`}
+                  <div
+                    class="product-menu-popover tree-action-menu"
+                    role="menu"
+                    style={`top: ${productMenuPosition.top}px; left: ${productMenuPosition.left}px; transform: ${productMenuPosition.transform};`}
+                    on:click|stopPropagation
+                  >
+                    <button class="product-menu-item" type="button" role="menuitem" on:click={() => { openTreeMenuId = null; iniciarEdicaoCategoria(cat); }}>
+                      <Pencil class="w-4 h-4" aria-hidden="true" /> Editar categoria
+                    </button>
+                    <button class="product-menu-item product-menu-danger" type="button" role="menuitem" on:click={() => { openTreeMenuId = null; excluirCategoria(cat); }}>
+                      <Trash2 class="w-4 h-4" aria-hidden="true" /> Excluir categoria
+                    </button>
+                  </div>
+                {/if}
               </div>
             </div>
           {/if}
@@ -1116,27 +1279,32 @@
                     <!-- Ações (hover) -->
                     <div class="tree-item-actions">
                       <button
-                        class="tree-action-btn"
-                        title="Editar subcategoria"
-                        on:click|stopPropagation={() => iniciarEdicaoSubcategoria(sub)}
+                        class="tree-action-btn tree-action-menu"
+                        type="button"
+                        title="Mais ações da subcategoria"
+                        aria-label="Mais ações da subcategoria {sub.nome}"
+                        aria-haspopup="menu"
+                        aria-expanded={openTreeMenuId === `subcategory:${sub.id}`}
+                        on:click|stopPropagation={(event) => toggleTreeMenu('subcategory', sub, event)}
                         style="color: var(--text-muted);"
                       >
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
+                        <MoreVertical class="w-4 h-4" aria-hidden="true" />
                       </button>
-                      <button
-                        class="tree-action-btn tree-action-danger"
-                        title="Excluir subcategoria"
-                        on:click|stopPropagation={() => excluirSubcategoria(sub)}
-                        style="color: var(--error);"
-                      >
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {#if openTreeMenuId === `subcategory:${sub.id}`}
+                        <div
+                          class="product-menu-popover tree-action-menu"
+                          role="menu"
+                          style={`top: ${productMenuPosition.top}px; left: ${productMenuPosition.left}px; transform: ${productMenuPosition.transform};`}
+                          on:click|stopPropagation
+                        >
+                          <button class="product-menu-item" type="button" role="menuitem" on:click={() => { openTreeMenuId = null; iniciarEdicaoSubcategoria(sub); }}>
+                            <Pencil class="w-4 h-4" aria-hidden="true" /> Editar subcategoria
+                          </button>
+                          <button class="product-menu-item product-menu-danger" type="button" role="menuitem" on:click={() => { openTreeMenuId = null; excluirSubcategoria(sub); }}>
+                            <Trash2 class="w-4 h-4" aria-hidden="true" /> Excluir subcategoria
+                          </button>
+                        </div>
+                      {/if}
                     </div>
                   </div>
                 {/if}
@@ -1169,7 +1337,7 @@
     <div class="products-toolbar" style="background: var(--bg-panel); border-color: var(--border-subtle);">
 
       <!-- Indicador de filtro ativo -->
-      <div class="flex items-center gap-2 min-w-0">
+      <div class="toolbar-summary flex items-center gap-2 min-w-0" class:has-selection={selectedItems.size > 0}>
         {#if selectedItems.size > 0}
           <div class="flex items-center gap-2 flex-wrap">
             <button
@@ -1207,7 +1375,7 @@
           </svg>
           <input
             type="text"
-            placeholder="Buscar produto..."
+            placeholder="Buscar produto por nome, código ou categoria..."
             bind:value={buscaFilter}
             on:input={() => carregarProdutos()}
             class="search-input"
@@ -1332,6 +1500,18 @@
             <article
               class="mobile-product-card"
               class:mobile-product-card-selected={selectedItems.has(prod.id)}
+              tabindex="0"
+              aria-label={`Editar produto ${prod.nome}`}
+              on:click={(event) => {
+                if (editingProdId === prod.id || event.target?.closest?.('input, label, button, a, select')) return;
+                iniciarEdicaoProduto(prod);
+              }}
+              on:keydown={(event) => {
+                if (editingProdId !== prod.id && event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                  event.preventDefault();
+                  iniciarEdicaoProduto(prod);
+                }
+              }}
               style="border-color: var(--border-subtle);"
             >
               {#if editingProdId === prod.id}
@@ -1454,7 +1634,7 @@
                   </div>
                 </form>
               {:else}
-                <div class="mobile-product-main">
+                <div class="mobile-product-head">
                   <label class="mobile-select-box" aria-label={'Selecionar ' + prod.nome}>
                     <input
                       type="checkbox"
@@ -1464,74 +1644,104 @@
                     />
                   </label>
 
-                  <div class="prod-avatar" style="background: color-mix(in srgb, {getInicialColor(prod.nome)} 18%, transparent); color: {getInicialColor(prod.nome)};">
-                    {(prod.nome || '?').charAt(0).toUpperCase()}
-                  </div>
-
                   <div class="mobile-product-info">
                     <div class="mobile-product-title-row">
                       <h2>{prod.nome}</h2>
-                      {#if prod.ocultar_no_pdv}
-                        <span class="badge-oculto">Oculto</span>
-                      {/if}
-                      {#if modifierGroupCount(prod) > 0}
-                        <span class="badge-montavel">Montável · {modifierGroupCount(prod)} {modifierGroupCount(prod) === 1 ? 'grupo' : 'grupos'}</span>
-                      {/if}
                     </div>
-                    <div class="mobile-product-meta">
-                      <span class="mobile-price">{formatPreco(prod.preco)}</span>
-                      {#if prod.controlar_estoque || estoqueProdutoCompartilhado(prod)}
-                        <span
-                          class="badge-estoque"
-                          title={estoqueProdutoCompartilhado(prod) ? 'Estoque compartilhado pela categoria' : 'Estoque individual'}
-                          style={estoqueExibido(prod) < 5
-                            ? 'background: color-mix(in srgb, var(--error) 12%, transparent); color: var(--error);'
-                            : 'background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);'}
-                        >
-                          Estoque {estoqueExibido(prod)}
-                        </span>
-                      {:else}
-                        <span style="color: var(--text-muted);">Sem estoque</span>
+                    <span class="mobile-product-category">
+                      {categoriaProduto(prod)}
+                      {#if subcategoriaProduto(prod)}
+                        <span class="mobile-product-subcategory"> · {subcategoriaProduto(prod)}</span>
                       {/if}
-                    </div>
+                    </span>
+                  </div>
+
+                  <div class="row-actions product-action-menu">
+                    <button
+                      class="row-action-btn"
+                      type="button"
+                      title="Mais ações"
+                      aria-label="Mais ações para {prod.nome}"
+                      aria-expanded={openProductMenuId === prod.id}
+                      on:click|stopPropagation={(event) => toggleProductMenu(prod, event)}
+                    >
+                      <MoreVertical class="w-4 h-4" aria-hidden="true" />
+                    </button>
+                    {#if openProductMenuId === prod.id}
+                      <div
+                        class:product-card-menu-opens-up={productMenuOpensUp}
+                        class="product-menu-popover product-action-menu product-card-menu"
+                      >
+                        <button class="product-menu-item" type="button" on:click|stopPropagation={() => abrirComplementos(prod)}>
+                          <SlidersHorizontal class="w-4 h-4" aria-hidden="true" />
+                          Complementos e opções
+                        </button>
+                        <button class="product-menu-item" type="button" on:click|stopPropagation={() => iniciarEdicaoProduto(prod)}>
+                          <Pencil class="w-4 h-4" aria-hidden="true" />
+                          Editar produto
+                        </button>
+                        <button class="product-menu-item" type="button" on:click|stopPropagation={() => perguntarSobreProduto(prod)}>
+                          <MessageCircle class="w-4 h-4" aria-hidden="true" />
+                          Perguntar ao Zelinho
+                        </button>
+                        <button class="product-menu-item product-menu-danger" type="button" on:click|stopPropagation={() => excluirProduto(prod)}>
+                          <Trash2 class="w-4 h-4" aria-hidden="true" />
+                          Excluir produto
+                        </button>
+                      </div>
+                    {/if}
                   </div>
                 </div>
 
-                <div class="mobile-product-footer">
-                  <div class="mobile-status-row">
-                    {#if prod.ocultar_no_pdv}
-                      <span class="badge-status" style="background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text-muted);">Inativo</span>
-                    {:else}
-                      <span class="badge-status" style="background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);">Ativo</span>
-                    {/if}
+                <div class="mobile-card-divider"></div>
 
+                <div class="mobile-product-details">
+                  <div class="mobile-product-detail">
+                    <span class="mobile-detail-label">Preço</span>
+                    <span class="mobile-detail-value mobile-price">{formatPreco(prod.preco)}</span>
                   </div>
 
-                  <div class="row-actions">
+                  <div class="mobile-product-detail">
+                    <span class="mobile-detail-label">Complementos</span>
+                    {#if modifierGroupCount(prod) > 0}
+                      <button class="mobile-complements-link mobile-detail-value" type="button" on:click|stopPropagation={() => abrirComplementos(prod)}>
+                        {modifierGroupCount(prod)} {modifierGroupCount(prod) === 1 ? 'grupo de opções' : 'grupos de opções'}
+                      </button>
+                    {:else}
+                      <span class="mobile-detail-value table-muted">Sem complementos</span>
+                    {/if}
+                  </div>
+
+                  <div class="mobile-product-detail">
+                    <span class="mobile-detail-label">Estoque</span>
+                    {#if prod.controlar_estoque || estoqueProdutoCompartilhado(prod)}
+                      <span
+                        class="mobile-detail-value"
+                        class:stock-low={estoqueExibido(prod) < 5}
+                        title={estoqueProdutoCompartilhado(prod) ? 'Estoque compartilhado pela categoria' : 'Estoque individual'}
+                      >
+                        {estoqueExibido(prod) < 5 ? `Baixo (${estoqueExibido(prod)})` : `${estoqueExibido(prod)} un.`}
+                      </span>
+                    {:else}
+                      <span class="mobile-detail-value table-muted">Sem controle</span>
+                    {/if}
+                  </div>
+
+                  <div class="mobile-product-detail">
+                    <span class="mobile-detail-label">Status</span>
                     <button
-                      class="row-action-btn"
-                      title="Complementos e opções"
-                      aria-label="Configurar complementos e opções de {prod.nome}"
-                      on:click={() => abrirComplementos(prod)}
-                      style="color: var(--primary);"
+                      type="button"
+                      class="status-toggle"
+                      class:is-active={produtoAtivo(prod)}
+                      class:is-pending={statusUpdatingId === prod.id}
+                      role="switch"
+                      aria-checked={produtoAtivo(prod)}
+                      aria-label={`${produtoAtivo(prod) ? 'Desativar' : 'Ativar'} ${prod.nome}`}
+                      disabled={statusUpdatingId === prod.id}
+                      on:click|stopPropagation={() => alternarStatusProduto(prod)}
                     >
-                      <SlidersHorizontal class="w-4 h-4" />
-                    </button>
-                    <button
-                      class="row-action-btn"
-                      title="Editar"
-                      on:click={() => iniciarEdicaoProduto(prod)}
-                      style="color: var(--text-muted);"
-                    >
-                      <Pencil class="w-4 h-4" />
-                    </button>
-                    <button
-                      class="row-action-btn row-action-danger"
-                      title="Excluir"
-                      on:click={() => excluirProduto(prod)}
-                      style="color: var(--error);"
-                    >
-                      <Trash2 class="w-4 h-4" />
+                      <span class="status-toggle-track"><span class="status-toggle-thumb"></span></span>
+                      <span class="status-toggle-label">{produtoAtivo(prod) ? 'Ativo' : 'Inativo'}</span>
                     </button>
                   </div>
                 </div>
@@ -1551,21 +1761,22 @@
                   class="themed-checkbox"
                 />
               </th>
-              <th class="th-cell w-10"></th>
               <th class="th-cell cursor-pointer hover-th" on:click={() => toggleSort('nome')}>
-                Nome
+                 Produto
                 {#if sortField === 'nome'}<span class="sort-arrow">{sortDesc ? '↓' : '↑'}</span>{/if}
               </th>
-              <th class="th-cell cursor-pointer hover-th" on:click={() => toggleSort('preco')}>
+               <th class="th-cell">Categoria</th>
+               <th class="th-cell cursor-pointer hover-th" on:click={() => toggleSort('preco')}>
                 Preço
                 {#if sortField === 'preco'}<span class="sort-arrow">{sortDesc ? '↓' : '↑'}</span>{/if}
               </th>
-              <th class="th-cell text-center cursor-pointer hover-th" on:click={() => toggleSort('estoque_atual')}>
+               <th class="th-cell">Complementos</th>
+               <th class="th-cell cursor-pointer hover-th" on:click={() => toggleSort('estoque_atual')}>
                 Estoque
                 {#if sortField === 'estoque_atual'}<span class="sort-arrow">{sortDesc ? '↓' : '↑'}</span>{/if}
               </th>
               <th class="th-cell text-center">Status</th>
-              <th class="th-cell text-right">Ações</th>
+              <th class="th-cell text-right"><span class="sr-only">Ações</span></th>
             </tr>
           </thead>
           <tbody>
@@ -1574,7 +1785,7 @@
                 <!-- Linha de edição inline -->
                 <tr style="background: var(--accent-light);">
                   <td class="td-cell"></td>
-                  <td colspan="6" class="td-cell">
+                  <td colspan="7" class="td-cell">
                     <form on:submit={salvarEdicaoProduto} class="flex flex-col gap-3">
                       <div class="flex flex-wrap gap-3">
                         <input
@@ -1707,88 +1918,111 @@
                     />
                   </td>
 
-                  <!-- Miniatura/Avatar -->
+                   <!-- Nome + cÃ³digo -->
                   <td class="td-cell">
-                    <div class="prod-avatar" style="background: color-mix(in srgb, {getInicialColor(prod.nome)} 18%, transparent); color: {getInicialColor(prod.nome)};">
-                      {(prod.nome || '?').charAt(0).toUpperCase()}
+                     <div class="product-name-cell">
+                       <span class="font-medium text-sm" style="color: var(--text-main);">{prod.nome}</span>
                     </div>
                   </td>
 
-                  <!-- Nome + badge Oculto -->
-                  <td class="td-cell">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <span class="font-medium text-sm" style="color: var(--text-main);">{prod.nome}</span>
-                      {#if prod.ocultar_no_pdv}
-                        <span class="badge-oculto">Oculto</span>
-                      {/if}
-                      {#if modifierGroupCount(prod) > 0}
-                        <span class="badge-montavel">Montável · {modifierGroupCount(prod)} {modifierGroupCount(prod) === 1 ? 'grupo' : 'grupos'}</span>
-                      {/if}
-                    </div>
-                  </td>
+                   <!-- Categoria -->
+                   <td class="td-cell">
+                     <div class="product-category-cell">
+                       <span>{categoriaProduto(prod)}</span>
+                       {#if subcategoriaProduto(prod)}
+                         <span class="product-subcategory">{subcategoriaProduto(prod)}</span>
+                       {/if}
+                     </div>
+                   </td>
 
-                  <!-- Preço -->
+                   <!-- Preço -->
                   <td class="td-cell text-sm font-mono" style="color: var(--text-label);">
                     {formatPreco(prod.preco)}
                   </td>
 
-                  <!-- Estoque -->
-                  <td class="td-cell text-center">
-                    {#if prod.controlar_estoque || estoqueProdutoCompartilhado(prod)}
-                      <span
-                        class="badge-estoque"
-                        title={estoqueProdutoCompartilhado(prod) ? 'Estoque compartilhado pela categoria' : 'Estoque individual'}
-                        style={estoqueExibido(prod) < 5
-                          ? 'background: color-mix(in srgb, var(--error) 12%, transparent); color: var(--error);'
-                          : 'background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);'}
+                   <!-- Complementos -->
+                   <td class="td-cell">
+                     {#if modifierGroupCount(prod) > 0}
+                       <button class="complements-link" type="button" on:click={() => abrirComplementos(prod)}>
+                         {modifierGroupCount(prod)} {modifierGroupCount(prod) === 1 ? 'grupo' : 'grupos'}
+                       </button>
+                     {:else}
+                       <span class="table-muted">—</span>
+                     {/if}
+                   </td>
+
+                   <!-- Estoque -->
+                    <td class="td-cell">
+                     {#if prod.controlar_estoque || estoqueProdutoCompartilhado(prod)}
+                       <span
+                         class="stock-value"
+                         class:stock-low={estoqueExibido(prod) < 5}
+                         title={estoqueProdutoCompartilhado(prod) ? 'Estoque compartilhado pela categoria' : 'Estoque individual'}
                       >
-                        {estoqueExibido(prod)}
+                         {estoqueExibido(prod) < 5 ? `Baixo (${estoqueExibido(prod)})` : `${estoqueExibido(prod)} un.`}
                       </span>
                       {#if estoqueProdutoCompartilhado(prod)}
                         <div class="text-[10px] mt-1" style="color: var(--text-muted);">grupo</div>
                       {/if}
                     {:else}
-                      <span class="text-xs" style="color: var(--text-muted);">—</span>
+                       <span class="table-muted">Não controla</span>
                     {/if}
                   </td>
 
                   <!-- Status -->
-                  <td class="td-cell text-center">
-                    {#if prod.ocultar_no_pdv}
-                      <span class="badge-status" style="background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text-muted);">Inativo</span>
-                    {:else}
-                      <span class="badge-status" style="background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success);">Ativo</span>
-                    {/if}
+                  <td class="td-cell">
+                    <button
+                      type="button"
+                      class="status-toggle"
+                      class:is-active={produtoAtivo(prod)}
+                      class:is-pending={statusUpdatingId === prod.id}
+                      role="switch"
+                      aria-checked={produtoAtivo(prod)}
+                      aria-label={`${produtoAtivo(prod) ? 'Desativar' : 'Ativar'} ${prod.nome}`}
+                      disabled={statusUpdatingId === prod.id}
+                      on:click={() => alternarStatusProduto(prod)}
+                    >
+                      <span class="status-toggle-track"><span class="status-toggle-thumb"></span></span>
+                      <span class="status-toggle-label">{produtoAtivo(prod) ? 'Ativo' : 'Inativo'}</span>
+                    </button>
                   </td>
 
                   <!-- Ações -->
                   <td class="td-cell text-right">
-                    <div class="row-actions">
+                    <div class="row-actions product-action-menu">
                       <button
                         class="row-action-btn"
-                        title="Complementos e opções"
-                        aria-label="Configurar complementos e opções de {prod.nome}"
-                        on:click={() => abrirComplementos(prod)}
-                        style="color: var(--primary);"
+                        type="button"
+                        title="Mais ações"
+                        aria-label="Mais ações para {prod.nome}"
+                        aria-expanded={openProductMenuId === prod.id}
+                        on:click|stopPropagation={(event) => toggleProductMenu(prod, event)}
                       >
-                        <SlidersHorizontal class="w-4 h-4" />
+                        <MoreVertical class="w-4 h-4" aria-hidden="true" />
                       </button>
-                      <button
-                        class="row-action-btn"
-                        title="Editar"
-                        on:click={() => iniciarEdicaoProduto(prod)}
-                        style="color: var(--text-muted);"
-                      >
-                        <Pencil class="w-4 h-4" />
-                      </button>
-                      <button
-                        class="row-action-btn row-action-danger"
-                        title="Excluir"
-                        on:click={() => excluirProduto(prod)}
-                        style="color: var(--error);"
-                      >
-                        <Trash2 class="w-4 h-4" />
-                      </button>
+                      {#if openProductMenuId === prod.id}
+                        <div
+                          class="product-menu-popover product-action-menu"
+                          style={`top: ${productMenuPosition.top}px; left: ${productMenuPosition.left}px; transform: ${productMenuPosition.transform};`}
+                        >
+                          <button class="product-menu-item" type="button" on:click={() => abrirComplementos(prod)}>
+                            <SlidersHorizontal class="w-4 h-4" aria-hidden="true" />
+                            Complementos e opções
+                          </button>
+                          <button class="product-menu-item" type="button" on:click={() => iniciarEdicaoProduto(prod)}>
+                            <Pencil class="w-4 h-4" aria-hidden="true" />
+                            Editar produto
+                          </button>
+                          <button class="product-menu-item" type="button" on:click={() => perguntarSobreProduto(prod)}>
+                            <MessageCircle class="w-4 h-4" aria-hidden="true" />
+                            Perguntar ao Zelinho
+                          </button>
+                          <button class="product-menu-item product-menu-danger" type="button" on:click={() => excluirProduto(prod)}>
+                            <Trash2 class="w-4 h-4" aria-hidden="true" />
+                            Excluir produto
+                          </button>
+                        </div>
+                      {/if}
                     </div>
                   </td>
                 </tr>
@@ -1800,29 +2034,50 @@
     </div>
 
     <!-- Paginação -->
-    {#if totalPages > 1}
+    {#if sortedProdutos.length > 0}
       <div class="pagination" style="background: var(--bg-panel); border-color: var(--border-subtle);">
-        <span class="text-xs" style="color: var(--text-muted);">
-          Página {currentPage} de {totalPages}
-          · {sortedProdutos.length} produto(s)
+        <span class="pagination-summary">
+          Mostrando {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, sortedProdutos.length)} de {sortedProdutos.length}
         </span>
-        <div class="flex gap-1.5">
+        <div class="pagination-controls">
+          <label class="page-size-control">
+            <span>Itens por página:</span>
+            <Select.Root value={String(itemsPerPage)} onValueChange={mudarItensPorPagina}>
+              <Select.Trigger class="page-size-select">
+                <Select.Value />
+              </Select.Trigger>
+              <Select.Content>
+                {#each PAGE_SIZE_OPTIONS as size}
+                  <Select.Item value={String(size)} label={String(size)} />
+                {/each}
+              </Select.Content>
+            </Select.Root>
+          </label>
+          <div class="pagination-nav">
           <button
             class="page-btn"
             disabled={currentPage === 1}
             on:click={() => currentPage--}
             style="background: var(--bg-card); color: var(--text-label); border-color: var(--border-subtle);"
+            aria-label="Página anterior"
           >
-            ← Anterior
+            <ChevronLeft class="w-4 h-4" aria-hidden="true" />
+            <span class="pagination-nav-label">Anterior</span>
           </button>
+          {#if totalPages > 1}
+            <span class="page-number" aria-current="page">{currentPage}</span>
+          {/if}
           <button
             class="page-btn"
             disabled={currentPage === totalPages}
             on:click={() => currentPage++}
             style="background: var(--bg-card); color: var(--text-label); border-color: var(--border-subtle);"
+            aria-label="Próxima página"
           >
-            Próxima →
+            <span class="pagination-nav-label">Próxima</span>
+            <ChevronRight class="w-4 h-4" aria-hidden="true" />
           </button>
+          </div>
         </div>
       </div>
     {/if}
@@ -2175,6 +2430,12 @@
     min-width: 0;
   }
 
+  .page-subtitle {
+    margin-top: 0.25rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
   .desktop-page-actions {
     display: flex;
     align-items: center;
@@ -2262,14 +2523,6 @@
 
   .mobile-category-nav {
     display: none;
-  }
-
-  .page-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    flex-wrap: wrap;
   }
 
   .split-view {
@@ -2385,10 +2638,6 @@
 
   .tree-action-btn:hover {
     background: var(--sidebar-item-hover-bg);
-  }
-
-  .tree-action-danger:hover {
-    background: color-mix(in srgb, var(--error) 15%, transparent);
   }
 
   .tree-edit-form {
@@ -2563,9 +2812,11 @@
   /* ─── Tabela ─────────────────────────────────────────────────────────────── */
   .products-table {
     width: 100%;
+    min-width: 900px;
     text-align: left;
     font-size: 0.875rem;
     border-collapse: collapse;
+    table-layout: fixed;
   }
 
   .mobile-products-list {
@@ -2593,9 +2844,43 @@
   }
 
   .td-cell {
-    padding: 0.7rem 1rem;
+    padding: 0.8rem 1rem;
     border-bottom: 1px solid var(--border-subtle);
     vertical-align: middle;
+  }
+
+  .products-table th:nth-child(1),
+  .products-table td:nth-child(1) {
+    width: 3rem;
+  }
+
+  .products-table th:nth-child(2) {
+    width: 22%;
+  }
+
+  .products-table th:nth-child(3) {
+    width: 16%;
+  }
+
+  .products-table th:nth-child(4) {
+    width: 12%;
+  }
+
+  .products-table th:nth-child(5) {
+    width: 16%;
+  }
+
+  .products-table th:nth-child(6) {
+    width: 15%;
+  }
+
+  .products-table th:nth-child(7) {
+    width: 13%;
+  }
+
+  .products-table th:nth-child(8),
+  .products-table td:nth-child(8) {
+    width: 3.5rem;
   }
 
   .product-row {
@@ -2606,55 +2891,61 @@
     background: var(--sidebar-item-hover-bg);
   }
 
-  .prod-avatar {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 0.375rem;
+  .product-name-cell,
+  .product-category-cell {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.875rem;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
   }
 
-  .badge-oculto {
-    font-size: 0.65rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 0.1rem 0.5rem;
-    border-radius: 9999px;
-    background: color-mix(in srgb, var(--warning) 15%, transparent);
-    color: var(--warning);
+  .product-subcategory {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
   }
 
-  .badge-montavel {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    padding: 0.15rem 0.5rem;
-    border-radius: 9999px;
-    background: color-mix(in srgb, var(--primary) 14%, transparent);
-    color: var(--primary);
+  .product-subcategory {
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .badge-estoque {
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.2rem 0.6rem;
-    border-radius: 9999px;
+  .table-muted {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
   }
 
-  .badge-status {
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.2rem 0.6rem;
-    border-radius: 9999px;
+  .complements-link,
+  .mobile-complements-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.25rem 0;
     border: 0;
+    background: transparent;
+    color: var(--link);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+  }
+
+  .complements-link:hover,
+  .mobile-complements-link:hover {
+    color: var(--link-hover);
+    text-decoration: underline;
+  }
+
+  .stock-value {
+    color: var(--text-label);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stock-value.stock-low {
+    color: var(--warning);
+    font-weight: 700;
   }
 
   .row-actions {
@@ -2679,14 +2970,101 @@
     background: var(--sidebar-item-hover-bg);
   }
 
+  .product-action-menu {
+    position: relative;
+  }
+
+  .product-menu-popover {
+    position: fixed;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    width: 13rem;
+    padding: 0.25rem;
+    border: 1px solid var(--border-card);
+    border-radius: 0.625rem;
+    background: var(--bg-panel);
+  }
+
+  .product-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.625rem 0.75rem;
+    border: 0;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: var(--text-label);
+    font-size: 0.8125rem;
+    text-align: left;
+    transition: background var(--transition-fast), color var(--transition-fast);
+  }
+
+  .product-menu-item:hover {
+    background: var(--sidebar-item-hover-bg);
+    color: var(--text-main);
+  }
+
+  .product-menu-item.product-menu-danger {
+    color: var(--error);
+  }
+
+  .product-menu-item.product-menu-danger:hover {
+    background: color-mix(in srgb, var(--error) 12%, transparent);
+  }
+
+  .status-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.25rem 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-label);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  .status-toggle-track {
+    display: inline-flex;
+    align-items: center;
+    width: 2rem;
+    height: 1.125rem;
+    padding: 0.125rem;
+    border-radius: 9999px;
+    background: var(--border-strong);
+    transition: background var(--transition-fast);
+  }
+
+  .status-toggle-thumb {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 50%;
+    background: var(--text-main);
+    transform: translateX(0);
+    transition: transform var(--transition-fast);
+  }
+
+  .status-toggle.is-active .status-toggle-track {
+    background: var(--primary);
+  }
+
+  .status-toggle.is-active .status-toggle-thumb {
+    transform: translateX(0.875rem);
+  }
+
+  .status-toggle.is-pending {
+    cursor: wait;
+    opacity: 0.6;
+  }
+
   @media (hover: none), (max-width: 768px) {
     .row-actions {
       opacity: 1;
     }
-  }
-
-  .row-action-danger:hover {
-    background: color-mix(in srgb, var(--error) 15%, transparent);
   }
 
   /* ─── Paginação ──────────────────────────────────────────────────────────── */
@@ -2697,6 +3075,58 @@
     padding: 0.75rem 1rem;
     border-top: 1px solid;
     flex-shrink: 0;
+  }
+
+  .pagination-summary {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pagination-controls,
+  .pagination-nav,
+  .page-size-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pagination-controls {
+    gap: 1rem;
+  }
+
+  .page-size-control {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  :global(.page-size-select) {
+    min-width: 4.25rem;
+    min-height: 2.25rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    background: var(--bg-card);
+    color: var(--text-label);
+  }
+
+  .pagination-nav {
+    gap: 0.375rem;
+  }
+
+  .page-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 2.25rem;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--primary);
+    border-radius: 0.5rem;
+    background: var(--primary);
+    color: var(--primary-text);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .page-btn {
@@ -2848,7 +3278,7 @@
     border-radius: 0.75rem;
     border: 1px solid;
     overflow: hidden;
-    box-shadow: 0 20px 60px color-mix(in srgb, var(--bg-app) 50%, transparent);
+    box-shadow: var(--shadow-modal);
   }
 
   .modal-box-lg {
@@ -3029,9 +3459,19 @@
 
   /* ─── Responsividade mobile ───────────────────────────────────────────────── */
   @media (max-width: 640px) {
-    .desktop-page-actions,
-    .page-actions {
+    .desktop-page-actions {
+      display: flex;
+      align-items: stretch;
+      justify-content: flex-end;
+      width: auto;
+    }
+
+    .desktop-page-actions .page-new-product {
       display: none;
+    }
+
+    .desktop-actions-menu > .btn-secondary {
+      min-width: 7.5rem;
     }
 
     .page-header {
@@ -3062,22 +3502,22 @@
       width: 100%;
       max-height: none;
       border-right: none;
-      border: 1px solid var(--border-subtle);
-      border-radius: 0.75rem;
-      overflow: hidden;
+      border: 0;
+      border-radius: 0;
+      background: transparent !important;
+      overflow: visible;
       flex-shrink: 1;
     }
 
     .tree-header {
-      padding: 0.75rem 0.875rem;
+      display: none;
     }
 
     .mobile-category-nav {
       display: flex;
       flex-direction: column;
       gap: 0.625rem;
-      padding: 0.75rem;
-      border-bottom: 1px solid var(--border-subtle);
+      padding: 0;
       overflow: hidden;
     }
 
@@ -3107,6 +3547,40 @@
       font-weight: 600;
       white-space: nowrap;
       transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    .mobile-category-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .category-chip-label {
+      max-width: min(12rem, 48vw);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .category-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.35rem;
+      height: 1.35rem;
+      padding: 0 0.35rem;
+      border-radius: 9999px;
+      background: var(--bg-panel);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .mobile-category-chip.active .category-count {
+      background: color-mix(in srgb, var(--primary-text) 18%, transparent);
+      color: var(--primary-text);
     }
 
     .mobile-category-chip.active,
@@ -3194,26 +3668,48 @@
       order: 2;
     }
 
+    .toolbar-summary {
+      display: none;
+    }
+
+    .toolbar-summary.has-selection {
+      display: flex;
+    }
+
     .products-toolbar > .toolbar-controls {
       order: 1;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 2.75rem 2.75rem;
-      gap: 0.5rem;
+      position: relative;
+      display: block;
+      width: 100%;
     }
 
     .toolbar-controls .search-wrapper {
       min-width: 0;
+      min-height: 3rem;
+      padding-right: 7rem;
     }
 
     .toolbar-controls .filter-dropdown-wrapper,
     .toolbar-controls .sort-dropdown-wrapper {
+      position: absolute;
+      top: 0;
+      z-index: 2;
       min-width: 0;
+    }
+
+    .toolbar-controls .filter-dropdown-wrapper {
+      right: 3.25rem;
+    }
+
+    .toolbar-controls .sort-dropdown-wrapper {
+      right: 0;
     }
 
     .toolbar-controls .filter-btn,
     .toolbar-controls .sort-btn {
-      width: 100%;
-      height: 2.75rem;
+      width: 2.75rem;
+      height: 3rem;
+      background: var(--bg-input);
     }
 
     .sort-btn-label {
@@ -3226,7 +3722,7 @@
 
     .search-wrapper {
       width: 100%;
-      min-height: 2.75rem;
+      min-height: 3rem;
       padding: 0.5rem 0.75rem;
     }
 
@@ -3236,13 +3732,9 @@
       font-size: 1rem;
     }
 
-    .filter-dropdown-wrapper {
-      position: static;
-    }
-
     .filter-btn {
       width: 2.75rem;
-      height: 2.75rem;
+      height: 3rem;
     }
 
     .filter-dropdown {
@@ -3299,8 +3791,15 @@
       border: 1px solid;
       border-radius: 0.75rem;
       background: var(--bg-card);
-      padding: 0.75rem;
+      padding: 1rem;
+      cursor: pointer;
       transition: border-color var(--transition-fast), background var(--transition-fast);
+    }
+
+    .mobile-product-card:focus-visible {
+      border-color: var(--primary) !important;
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
     }
 
     .mobile-product-card-selected {
@@ -3308,11 +3807,11 @@
       background: color-mix(in srgb, var(--primary) 8%, var(--bg-card));
     }
 
-    .mobile-product-main {
+    .mobile-product-head {
       display: grid;
-      grid-template-columns: 2.75rem 2.5rem minmax(0, 1fr);
-      align-items: center;
-      gap: 0.625rem;
+      grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 0.75rem;
     }
 
     .mobile-select-box {
@@ -3325,6 +3824,26 @@
 
     .mobile-product-info {
       min-width: 0;
+    }
+
+    .mobile-product-category {
+      display: inline-flex;
+      max-width: 100%;
+      margin-top: 0.375rem;
+      padding: 0.2rem 0.6rem;
+      overflow: hidden;
+      border-radius: 9999px;
+      background: var(--bg-panel);
+      color: var(--text-label);
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.35;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mobile-product-subcategory {
+      color: var(--text-muted);
     }
 
     .mobile-product-title-row {
@@ -3343,43 +3862,66 @@
       line-height: 1.2;
     }
 
-    .mobile-product-meta {
+    .mobile-card-divider {
+      margin: 0.875rem 0;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .mobile-product-details {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .mobile-product-detail {
       display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin-top: 0.375rem;
-      font-size: 0.8125rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+      min-width: 0;
+    }
+
+    .mobile-detail-label {
       color: var(--text-muted);
+      font-size: 0.75rem;
+      line-height: 1.3;
+    }
+
+    .mobile-detail-value {
+      min-width: 0;
+      max-width: 100%;
+      color: var(--text-label);
+      font-size: 0.875rem;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
     }
 
     .mobile-price {
-      color: var(--text-label);
+      color: var(--text-main);
       font-variant-numeric: tabular-nums;
       font-weight: 700;
     }
 
-    .mobile-product-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      margin-top: 0.75rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--border-subtle);
-    }
-
-    .mobile-status-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      min-width: 0;
+    .mobile-product-detail .status-toggle {
+      min-height: 2.75rem;
     }
 
     .row-action-btn {
       min-width: 2.75rem;
       min-height: 2.75rem;
+    }
+
+    .product-card-menu {
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      left: auto;
+      transform: none;
+    }
+
+    .product-card-menu-opens-up {
+      top: auto;
+      bottom: calc(100% + 0.5rem);
     }
 
     .mobile-edit-form {
@@ -3450,27 +3992,20 @@
       padding: 0.875rem;
     }
 
-    .pagination > div {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 0.5rem;
+    .pagination-controls {
+      width: 100%;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .pagination-nav {
+      margin-left: auto;
     }
 
     .page-btn {
       min-height: 2.75rem;
       padding: 0.625rem 0.75rem;
-    }
-
-    .prod-avatar {
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 0.5rem;
-    }
-
-    .badge-estoque,
-    .badge-status,
-    .badge-oculto {
-      white-space: nowrap;
     }
 
     .mobile-create-menu {

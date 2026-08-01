@@ -191,7 +191,7 @@
 
 <style>
   .modal-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
-  .modal { width: min(100%, 36rem); max-height: min(90vh, 48rem); overflow: hidden; display: flex; flex-direction: column; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-subtle); border-radius: 14px; }
+  .modal { width: min(100%, 36rem); max-height: min(90vh, 48rem); overflow: hidden; display: flex; flex-direction: column; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-subtle); border-radius: 14px; box-shadow: var(--shadow-modal); }
   .modal-header, .modal-footer { border-color: var(--border-subtle); }
   .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.25rem .95rem; border-bottom: 1px solid var(--border-subtle); }
   .eyebrow { margin: 0 0 .3rem; color: var(--primary); font-size: .625rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }

@@ -394,7 +394,7 @@
   .btn-icon.danger:hover{background:rgba(239,68,68,0.15);color:#ef4444}
 
   .modal-backdrop{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:1000}
-  .modal-box{background:var(--bg-card);border:1px solid var(--border-card);border-radius:12px;padding:24px;max-width:380px;width:90%}
+  .modal-box{background:var(--bg-card);border:1px solid var(--border-card);border-radius:12px;padding:24px;max-width:380px;width:90%;box-shadow:var(--shadow-modal)}
   .modal-title{margin:0 0 10px;font-size:17px;font-weight:700;color:var(--text-main)}
   .modal-text{margin:0 0 20px;font-size:13px;color:var(--text-label);line-height:1.5}
   .modal-actions{display:flex;justify-content:flex-end;gap:10px}

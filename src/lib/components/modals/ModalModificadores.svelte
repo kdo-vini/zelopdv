@@ -833,6 +833,7 @@
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    box-shadow: var(--shadow-modal);
   }
 
   .modal.desktop {

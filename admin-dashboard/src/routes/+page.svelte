@@ -34,6 +34,7 @@
 
   $: fixedMonthlyCosts = fixedExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
   $: arr = stats.realMrr * 12
+  $: averageTicket = stats.paidSubscriptions ? stats.realMrr / stats.paidSubscriptions : 0
   $: monthlyProfit = stats.realMrr - fixedMonthlyCosts
   $: projections = [3, 6, 12].map((months) => ({
     months,
@@ -241,7 +242,6 @@
   }
 
   function exportDashboardPdf() {
-    const arpu = stats.paidSubscriptions ? stats.realMrr / stats.paidSubscriptions : 0
     const margin = stats.realMrr > 0 ? Math.round(monthlyProfit / stats.realMrr * 100) : 0
 
     generatePdfReport({
@@ -251,7 +251,7 @@
       kpis: [
         { label: 'MRR Real',          value: formatBRL(stats.realMrr),           hint: 'Apenas pagantes ativos' },
         { label: 'ARR',               value: formatBRL(arr),                     hint: 'MRR × 12' },
-        { label: 'ARPU',              value: formatBRL(arpu),                    hint: 'Receita média por cliente' },
+        { label: 'Ticket Médio (ARPU)', value: formatBRL(averageTicket),         hint: 'MRR ÷ contas pagantes ativas' },
         { label: 'Lucro do Mês',      value: formatBRL(monthlyProfit),           hint: `Margem ${margin}%` },
         { label: 'Custos Fixos',      value: formatBRL(fixedMonthlyCosts),       hint: `${fixedExpenses.length} ${fixedExpenses.length === 1 ? 'item' : 'itens'}` },
         { label: 'Valor em Trial',    value: formatBRL(stats.trialPipelineValue), hint: 'Pipeline de conversão' },
@@ -279,7 +279,7 @@
           rows: [
             { metrica: 'MRR (Receita Mensal Recorrente)', valor: formatBRL(stats.realMrr),           nota: 'Pagantes ativos, sem trials nem contas internas' },
             { metrica: 'ARR (Anual Run Rate)',            valor: formatBRL(arr),                     nota: 'Projeção anual da base atual' },
-            { metrica: 'ARPU',                            valor: formatBRL(arpu),                    nota: 'Ticket médio por cliente pagante' },
+            { metrica: 'Ticket Médio (ARPU)',             valor: formatBRL(averageTicket),           nota: 'MRR dividido pelas contas pagantes ativas' },
             { metrica: 'Custos Fixos Mensais',            valor: formatBRL(fixedMonthlyCosts),       nota: `${fixedExpenses.length} ${fixedExpenses.length === 1 ? 'despesa cadastrada' : 'despesas cadastradas'}` },
             { metrica: 'Lucro Mensal',                    valor: formatBRL(monthlyProfit),           nota: `Margem operacional ${margin}%` },
             { metrica: 'Custo de IA (mês corrente)',      valor: formatBRL(stats.aiCostBrl),         nota: 'USD convertido a R$ 5,00' },
@@ -464,7 +464,7 @@
 
       <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)] gap-6">
         <div class="space-y-5">
-          <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-5 gap-4">
             <div class="bg-slate-950/80 border border-emerald-500/15 rounded-2xl p-5">
               <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.22em]">MRR</div>
               <div class="mt-3 text-3xl font-extrabold text-white">R$ {formatCurrency(stats.realMrr)}</div>
@@ -475,6 +475,12 @@
               <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.22em]">ARR</div>
               <div class="mt-3 text-3xl font-extrabold text-white">R$ {formatCurrency(arr)}</div>
               <div class="mt-2 text-xs text-sky-400/70">Run rate anual da base atual</div>
+            </div>
+
+            <div class="bg-slate-950/80 border border-cyan-500/15 rounded-2xl p-5">
+              <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.22em]">Ticket Médio</div>
+              <div class="mt-3 text-3xl font-extrabold text-white">R$ {formatCurrency(averageTicket)}</div>
+              <div class="mt-2 text-xs text-cyan-400/70">MRR ÷ contas pagantes ativas</div>
             </div>
 
             <div class="bg-slate-950/80 border border-violet-500/15 rounded-2xl p-5">

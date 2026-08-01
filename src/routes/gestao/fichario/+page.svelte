@@ -849,7 +849,7 @@ Regularize quando puder!</div>
 
   /* ── Native ZeloPDV confirmation ── */
   .confirm-overlay { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--bg-app) 76%, transparent); backdrop-filter: blur(3px); }
-  .confirm-dialog { width: min(100%, 420px); padding: 1.25rem; border: 1px solid var(--border-card); border-radius: 16px; background: var(--bg-card); box-shadow: 0 24px 64px color-mix(in srgb, var(--bg-app) 48%, transparent); }
+  .confirm-dialog { width: min(100%, 420px); padding: 1.25rem; border: 1px solid var(--border-card); border-radius: 16px; background: var(--bg-card); box-shadow: var(--shadow-modal); }
   .confirm-dialog-icon { width: 40px; height: 40px; display: grid; place-items: center; margin-bottom: .875rem; border-radius: 12px; background: var(--status-error-bg); color: var(--status-error-text); }
   .confirm-dialog-copy h3 { margin-bottom: .5rem; color: var(--text-main); font-size: 1rem; }
   .confirm-eyebrow { margin-bottom: .375rem; color: var(--status-error-text); font-size: .625rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }

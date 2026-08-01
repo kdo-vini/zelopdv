@@ -221,7 +221,8 @@
 }
 
 .modal-content {
-  @apply bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md;
+  @apply bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md;
+  box-shadow: var(--shadow-modal);
 }
 
 /* --- AUTH PAGES --- */

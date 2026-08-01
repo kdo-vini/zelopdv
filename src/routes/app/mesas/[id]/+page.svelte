@@ -2842,7 +2842,7 @@
     width: 100%; max-width: 460px;
     display: flex; flex-direction: column; gap: 0.95rem;
     max-height: 90vh; overflow-y: auto;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    box-shadow: var(--shadow-modal);
     position: relative;
   }
   .modal-ticket { max-width: 380px; }

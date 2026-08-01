@@ -691,7 +691,7 @@
     padding: 1.5rem;
     width: 100%; max-width: 460px;
     display: flex; flex-direction: column; gap: 1rem;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    box-shadow: var(--shadow-modal);
   }
   .modal-title { font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin: 0; }
 
