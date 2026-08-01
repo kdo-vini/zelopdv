@@ -7,6 +7,9 @@
 - Ações contextuais de categorias (2026-07-31): a árvore de categorias e subcategorias em `/gestao/produtos` usa o mesmo padrão de três pontos da lista de produtos; editar e excluir ficam dentro do menu contextual, sem alterar os handlers nem a seleção da categoria.
 
 - Cadastro de produtos (2026-07-31): a listagem em `/gestao/produtos` foi alinhada ao novo padrão visual da tabela no desktop e, no mobile, virou uma lista de cards com cabeçalho, categoria/subcategoria e grade 2x2 de preço/complementos/estoque/status. Avatares, iniciais coloridas e códigos foram removidos da listagem em ambos os breakpoints; os fluxos existentes de edição/busca foram preservados. O status segue alternável, as ações ficam no menu de três pontos, a seleção em massa continua disponível e o mobile mantém paginação, busca em largura total, chips horizontais com contagens e o FAB de criação com Produto/Categoria/Subcategoria. O botão de nova categoria, o fluxo de complementos, permissões e handlers existentes foram preservados.
+- Ticket médio no admin dashboard (2026-07-31): o Painel Financeiro exibe e exporta o ticket médio (ARPU), calculado como `MRR ÷ contas pagantes ativas`, usando a mesma base do MRR e excluindo trials e contas internas Donutopia/Techne.
+
+- Cardápio por empresa (2026-07-31): a ferramenta de cardápio agora grava configurações e dados no `localStorage` com o UUID do proprietário autenticado; chaves antigas sem escopo são ignoradas para impedir que uma empresa herde o cardápio de outra.
 
 - Zelo Impressão (2026-07-31): depois que o aplicativo Windows é instalado e aberto, o ZeloPDV tenta criar a conexão automaticamente no navegador. O código de 6 dígitos ficou apenas como fallback para agentes antigos ou quando a autorização automática não for concluída. A jornada e a página pública `/zelo-impressao` refletem esse fluxo; pedidos e a configuração da impressora continuam usando o fallback do navegador quando o agente não está disponível.
 
