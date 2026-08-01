@@ -1436,7 +1436,7 @@
     transition-transform duration-300 ease-in-out
     {showMobileCart ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}
     md:border md:border-slate-800 md:rounded-l-2xl md:shadow-2xl md:mr-0
-  ">
+  " style="bottom: var(--mobile-bottom-nav-offset);">
     <!-- Header Comanda (Mobile has close button) -->
     <div class="px-4 py-3 md:px-6 md:py-4 border-b border-slate-800 flex justify-between items-center">
       <h2 class="text-lg font-bold text-white uppercase tracking-widest">Comanda</h2>
