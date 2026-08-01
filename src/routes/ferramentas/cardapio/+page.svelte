@@ -19,6 +19,7 @@
   let loading = false;
   let previewWrapper;
   let productSearch = '';
+  let storageUserId = '';
 
   // Contact (manual)
   let cardInstagram = '';
@@ -47,6 +48,10 @@
 
   function uid() {
     return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  function cardapioStorageKey(name) {
+    return storageUserId ? `${name}:${storageUserId}` : null;
   }
 
   // ── Fonts ───────────────────────────────────────────────────────────────
@@ -392,9 +397,9 @@
   })();
 
   // ── localStorage config persistence ─────────────────────────────────────
-  $: if (typeof localStorage !== 'undefined') {
+  $: if (typeof localStorage !== 'undefined' && storageUserId) {
     try {
-      localStorage.setItem('zeloPDV_cardapio_config', JSON.stringify({
+      localStorage.setItem(cardapioStorageKey('zeloPDV_cardapio_config'), JSON.stringify({
         mode, theme, font,
         cardTitle, cardSubtitle, cardFooter,
         cardInstagram, showQRHint, twoColumn,
@@ -409,9 +414,9 @@
   // lifecycle from UI config. Only written after initial load has finished
   // (via `dataHydrated`) to avoid clobbering saved data with defaults.
   let dataHydrated = false;
-  $: if (dataHydrated && typeof localStorage !== 'undefined') {
+  $: if (dataHydrated && typeof localStorage !== 'undefined' && storageUserId) {
     try {
-      localStorage.setItem('zeloPDV_cardapio_data', JSON.stringify({
+      localStorage.setItem(cardapioStorageKey('zeloPDV_cardapio_data'), JSON.stringify({
         sections,
         selectedCatIds: Array.from(selectedCatIds),
         itemOverrides,
@@ -427,49 +432,51 @@
       loadGoogleFont(f.google);
     }
 
-    // Restore saved config
-    try {
-      const saved = localStorage.getItem('zeloPDV_cardapio_config');
-      if (saved) {
-        const c = JSON.parse(saved);
-        if (c.mode) mode = c.mode;
-        if (c.theme && templates[c.theme]) theme = c.theme;
-        if (c.font && fonts[c.font]) font = c.font;
-        if (c.cardTitle !== undefined) cardTitle = c.cardTitle;
-        if (c.cardSubtitle !== undefined) cardSubtitle = c.cardSubtitle;
-        if (c.cardFooter !== undefined) cardFooter = c.cardFooter;
-        if (c.cardInstagram !== undefined) cardInstagram = c.cardInstagram;
-        if (c.showQRHint !== undefined) showQRHint = c.showQRHint;
-        if (c.twoColumn !== undefined) twoColumn = c.twoColumn;
-        if (c.showLogo !== undefined) showLogo = c.showLogo;
-        if (c.showStoreName !== undefined) showStoreName = c.showStoreName;
-        if (c.showPhone !== undefined) showPhone = c.showPhone;
-        if (c.showAddress !== undefined) showAddress = c.showAddress;
-        if (c.itemBadges !== undefined) itemBadges = c.itemBadges;
-      }
-    } catch {}
-
-    // Restore saved data (sections/overrides/destaque). Category selection
-    // needs `categorias` loaded before applying — handled below after fetch.
-    let savedData = null;
-    try {
-      const rawData = localStorage.getItem('zeloPDV_cardapio_data');
-      if (rawData) {
-        savedData = JSON.parse(rawData);
-        if (Array.isArray(savedData.sections) && savedData.sections.length > 0) {
-          sections = savedData.sections;
-        }
-        if (savedData.itemOverrides && typeof savedData.itemOverrides === 'object') {
-          itemOverrides = savedData.itemOverrides;
-        }
-        if (savedData.destaqueId !== undefined) destaqueId = savedData.destaqueId;
-      }
-    } catch {}
-
     loading = true;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      storageUserId = user.id;
+
+      // Restore only this owner's saved cardápio. Older unscoped keys are
+      // intentionally ignored so one company can never inherit another's menu.
+      try {
+        const saved = localStorage.getItem(cardapioStorageKey('zeloPDV_cardapio_config'));
+        if (saved) {
+          const c = JSON.parse(saved);
+          if (c.mode) mode = c.mode;
+          if (c.theme && templates[c.theme]) theme = c.theme;
+          if (c.font && fonts[c.font]) font = c.font;
+          if (c.cardTitle !== undefined) cardTitle = c.cardTitle;
+          if (c.cardSubtitle !== undefined) cardSubtitle = c.cardSubtitle;
+          if (c.cardFooter !== undefined) cardFooter = c.cardFooter;
+          if (c.cardInstagram !== undefined) cardInstagram = c.cardInstagram;
+          if (c.showQRHint !== undefined) showQRHint = c.showQRHint;
+          if (c.twoColumn !== undefined) twoColumn = c.twoColumn;
+          if (c.showLogo !== undefined) showLogo = c.showLogo;
+          if (c.showStoreName !== undefined) showStoreName = c.showStoreName;
+          if (c.showPhone !== undefined) showPhone = c.showPhone;
+          if (c.showAddress !== undefined) showAddress = c.showAddress;
+          if (c.itemBadges !== undefined) itemBadges = c.itemBadges;
+        }
+      } catch {}
+
+      // Restore saved data after auth, so category/product selections also stay tenant-scoped.
+      let savedData = null;
+      try {
+        const rawData = localStorage.getItem(cardapioStorageKey('zeloPDV_cardapio_data'));
+        if (rawData) {
+          savedData = JSON.parse(rawData);
+          if (Array.isArray(savedData.sections) && savedData.sections.length > 0) {
+            sections = savedData.sections;
+          }
+          if (savedData.itemOverrides && typeof savedData.itemOverrides === 'object') {
+            itemOverrides = savedData.itemOverrides;
+          }
+          if (savedData.destaqueId !== undefined) destaqueId = savedData.destaqueId;
+        }
+      } catch {}
+
       const [catRes, prodRes, perfilRes] = await Promise.all([
         supabase.from('categorias').select('id, nome').eq('id_usuario', user.id).order('nome'),
         supabase.from('produtos').select('id, nome, preco, id_categoria')

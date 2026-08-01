@@ -1,5 +1,9 @@
 # ZeloPDV — Foco atual
 
+- Ticket médio no admin dashboard (2026-07-31): o Painel Financeiro exibe e exporta o ticket médio (ARPU), calculado como `MRR ÷ contas pagantes ativas`, usando a mesma base do MRR e excluindo trials e contas internas Donutopia/Techne.
+
+- Cardápio por empresa (2026-07-31): a ferramenta de cardápio agora grava configurações e dados no `localStorage` com o UUID do proprietário autenticado; chaves antigas sem escopo são ignoradas para impedir que uma empresa herde o cardápio de outra.
+
 - Zelo Impressão (2026-07-31): depois que o aplicativo Windows é instalado e aberto, o ZeloPDV tenta criar a conexão automaticamente no navegador. O código de 6 dígitos ficou apenas como fallback para agentes antigos ou quando a autorização automática não for concluída. A jornada e a página pública `/zelo-impressao` refletem esse fluxo; pedidos e a configuração da impressora continuam usando o fallback do navegador quando o agente não está disponível.
 
 - Carga operacional Mix Guaraná (2026-07-31): o usuário `39192d38-507c-443c-b075-85998abde740` (`Mix Guaraná`) recebeu o produto-base `Guaraná da Amazônia` (ID 1043), o componente ausente `Guaraná 500ml` (ID 1039), nomes normalizados e 5 grupos montáveis com 78 opções/76 vínculos. Componentes ficam ocultos do PDV via `ocultar_no_pdv` e não publicados no cardápio via `zelomenu_product_publications.visivel_online`; o base fica visível nos dois. Nenhum controle de estoque individual ou compartilhado foi ativado sem saldo confirmado. `zelomenu_slug` foi configurado como `mixguarana` e o link público foi validado.
