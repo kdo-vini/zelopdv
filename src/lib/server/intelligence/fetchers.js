@@ -162,6 +162,24 @@ export async function fetchVendas(db, userId, startIso, endIso) {
 }
 
 /**
+ * Busca despesas paginadas de uma empresa em um range de datas.
+ * O PostgREST limita respostas individuais a 1.000 linhas; o assistente não
+ * deve perder lançamentos só porque uma operação tem muitas despesas.
+ */
+export async function fetchExpenses(db, userId, startIso, endIso, columns = 'amount, category, date') {
+  return fetchAllPages((from, to) =>
+    db
+      .from('expenses')
+      .select(columns)
+      .eq('user_id', userId)
+      .gte('date', startIso)
+      .lt('date', endIso)
+      .order('date', { ascending: true })
+      .range(from, to)
+  );
+}
+
+/**
  * @param {SupabaseClient} db
  * @param {number[]} vendaIds
  * @returns {Promise<Array>}

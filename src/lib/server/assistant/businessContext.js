@@ -1,4 +1,4 @@
-import { addDays, getHourInTimezone, localDateOf, weekdayOf } from '$lib/server/intelligence/tz.js';
+import { addDays, dayRangeUtc, getHourInTimezone, localDateOf, weekdayOf } from '$lib/server/intelligence/tz.js';
 import { templateNarrative } from '$lib/server/intelligence/narrative.js';
 
 const SIGNAL_SEVERITY_LABELS = { critical: 'Precisa de você', attention: 'Fica de olho', info: 'Pra saber' };
@@ -29,6 +29,70 @@ function number(value) {
 
 function round(value) {
   return Math.round((number(value) + Number.EPSILON) * 100) / 100;
+}
+
+function monthStart(localDate) {
+  return `${localDate.slice(0, 7)}-01`;
+}
+
+function shiftMonthStart(localDate, amount) {
+  const [year, month] = localDate.slice(0, 7).split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1 + amount, 1, 12, 0, 0));
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-01`;
+}
+
+/**
+ * Returns month boundaries in the business timezone, not the server timezone.
+ * This matters around midnight UTC: 02:00Z on August 1 is still July 31 in
+ * Brazil, so using new Date().getMonth() would silently hide July expenses.
+ */
+export function buildFinancialPeriods(nowIso = new Date().toISOString()) {
+  const currentLocalDate = localDateOf(nowIso);
+  const currentStartLocal = monthStart(currentLocalDate);
+  const nextStartLocal = shiftMonthStart(currentStartLocal, 1);
+  const previousStartLocal = shiftMonthStart(currentStartLocal, -1);
+
+  return {
+    current: {
+      startLocal: currentStartLocal,
+      endLocalExclusive: nextStartLocal,
+      startIso: dayRangeUtc(currentStartLocal).startIso,
+      endIso: dayRangeUtc(nextStartLocal).startIso,
+    },
+    previous: {
+      startLocal: previousStartLocal,
+      endLocalExclusive: currentStartLocal,
+      startIso: dayRangeUtc(previousStartLocal).startIso,
+      endIso: dayRangeUtc(currentStartLocal).startIso,
+    },
+  };
+}
+
+/**
+ * Aggregates expense rows into the compact facts used by the assistant.
+ * Category totals stay tied to stored expense categories; no inference from
+ * descriptions is performed.
+ */
+export function buildExpenseSummary(expenses = [], receitaMesAtual = 0) {
+  const porCategoria = {};
+  for (const expense of expenses) {
+    const category = expense?.category || 'outros';
+    porCategoria[category] = round((porCategoria[category] || 0) + number(expense?.amount));
+  }
+
+  const total = round(Object.values(porCategoria).reduce((sum, value) => sum + value, 0));
+  const rankedCategories = Object.entries(porCategoria)
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((left, right) => right.amount - left.amount || left.category.localeCompare(right.category, 'pt-BR'));
+  const topCategory = rankedCategories[0] || null;
+
+  return {
+    total,
+    quantidade: expenses.length,
+    porCategoria,
+    percentualDaReceita: number(receitaMesAtual) > 0 ? round(total / number(receitaMesAtual)) : null,
+    categoriaMaisPesada: topCategory,
+  };
 }
 
 function averageOfDays(days) {

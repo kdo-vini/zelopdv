@@ -7,8 +7,8 @@ import { sendWhatsAppText, isWhatsAppConfigured } from '$lib/server/whatsapp';
 import { captureAiGeneration } from '$lib/server/posthog';
 import { resolveOwnerUserId } from '$lib/server/accessControl';
 import { buildSignalContextPrompt, getSignalContextForOwner } from '$lib/server/intelligence/signalContext';
-import { fetchVendas, fetchVendasItens, fetchVendasPagamentos } from '$lib/server/intelligence/fetchers';
-import { buildActiveSignalsContext, buildCatalogSalesContext, buildMonthOverMonthContext, buildPeakHoursContext, buildRecentDaysContext, buildStockContext } from '$lib/server/assistant/businessContext';
+import { fetchExpenses, fetchVendas, fetchVendasItens, fetchVendasPagamentos } from '$lib/server/intelligence/fetchers';
+import { buildActiveSignalsContext, buildCatalogSalesContext, buildExpenseSummary, buildFinancialPeriods, buildMonthOverMonthContext, buildPeakHoursContext, buildRecentDaysContext, buildStockContext } from '$lib/server/assistant/businessContext';
 import { getActiveSeasonalContext } from '$lib/server/assistant/seasonalContext';
 
 const BUSINESS_CONTEXT_CACHE_TTL_MS = 20_000;
@@ -17,40 +17,44 @@ const businessContextCache = new Map();
 
 async function buildBusinessContext(userId) {
   try {
-    const now = Date.now();
+    const cacheNow = Date.now();
     for (const [cachedUserId, entry] of businessContextCache) {
-      if (now - entry.createdAt >= BUSINESS_CONTEXT_CACHE_TTL_MS) businessContextCache.delete(cachedUserId);
+      if (cacheNow - entry.createdAt >= BUSINESS_CONTEXT_CACHE_TTL_MS) businessContextCache.delete(cachedUserId);
     }
     const cached = businessContextCache.get(userId);
     if (cached) return cached.value;
 
-    const thirtyDaysAgo = new Date();
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    const startOfPrevMonth = new Date(startOfMonth);
-    startOfPrevMonth.setMonth(startOfPrevMonth.getMonth() - 1);
+    const financialPeriods = buildFinancialPeriods(nowIso);
+    const currentMonth = financialPeriods.current;
+    const previousMonth = financialPeriods.previous;
 
     // The assistant uses stored catalog relations and every sale item in the
     // window. Do not infer categories from product names or truncate sales.
-    const [perfilRes, produtosRes, categoriasRes, expensesRes, prevMonthExpensesRes, caixaRes, topFiadoRes, signalsRes, prevMonthVendasRes, vendas] = await Promise.all([
+    const [perfilRes, produtosRes, categoriasRes, expensesRes, prevMonthExpensesRes, caixaRes, topFiadoRes, signalsRes, currentMonthVendasRes, prevMonthVendasRes, vendas] = await Promise.all([
       supabaseAdmin.from('empresa_perfil').select('nome_exibicao, contato, gerente_prefs').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('produtos').select('id, nome, preco, id_categoria, estoque_atual, controlar_estoque, ocultar_no_pdv').eq('id_usuario', userId).order('nome'),
       supabaseAdmin.from('categorias').select('id, nome, ordem, controlar_estoque_compartilhado, estoque_compartilhado_atual').eq('id_usuario', userId).order('ordem'),
-      supabaseAdmin.from('expenses').select('amount, category').eq('user_id', userId).gte('date', startOfMonth.toISOString()),
+      fetchExpenses(supabaseAdmin, userId, currentMonth.startIso, currentMonth.endIso),
       // Lightweight: only the previous-month totals needed for the month-over-month comparison, no category breakdown.
-      supabaseAdmin.from('expenses').select('amount').eq('user_id', userId).gte('date', startOfPrevMonth.toISOString()).lt('date', startOfMonth.toISOString()),
+      fetchExpenses(supabaseAdmin, userId, previousMonth.startIso, previousMonth.endIso, 'amount'),
       supabaseAdmin.from('caixas').select('valor_inicial, data_abertura, data_fechamento').eq('id_usuario', userId).order('data_abertura', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('pessoas').select('nome, saldo_fiado').eq('id_usuario', userId).gt('saldo_fiado', 0).order('saldo_fiado', { ascending: false }).limit(5),
       // Signals are owner-scoped and may be absent while the first daily run
       // is still being processed for a newly eligible company.
       supabaseAdmin.from('business_signals').select('type, severity, evidence, narrative, signal_date').eq('user_id', userId).order('signal_date', { ascending: false }).limit(20),
+      // Financial result must compare revenue and expenses from the same local
+      // calendar month. fetchVendas paginates, so high-volume companies are not
+      // silently capped at PostgREST's first 1,000 rows.
+      fetchVendas(supabaseAdmin, userId, currentMonth.startIso, currentMonth.endIso),
       // Lightweight: only the previous-month revenue needed for the month-over-month comparison.
-      supabaseAdmin.from('vendas').select('valor_total').eq('id_usuario', userId).gte('created_at', startOfPrevMonth.toISOString()).lt('created_at', startOfMonth.toISOString()),
-      fetchVendas(supabaseAdmin, userId, thirtyDaysAgo.toISOString(), new Date().toISOString()),
+      fetchVendas(supabaseAdmin, userId, previousMonth.startIso, previousMonth.endIso),
+      fetchVendas(supabaseAdmin, userId, thirtyDaysAgo.toISOString(), nowIso),
     ]);
-    for (const result of [perfilRes, produtosRes, categoriasRes, expensesRes, prevMonthExpensesRes, caixaRes, topFiadoRes, signalsRes, prevMonthVendasRes]) {
+    for (const result of [perfilRes, produtosRes, categoriasRes, caixaRes, topFiadoRes, signalsRes]) {
       if (result.error) throw result.error;
     }
 
@@ -72,26 +76,14 @@ async function buildBusinessContext(userId) {
     const mutedSignalTypes = Array.isArray(perfilRes.data?.gerente_prefs?.muted_types) ? perfilRes.data.gerente_prefs.muted_types : [];
     const activeSignalsContext = buildActiveSignalsContext({ signals: signalsRes.data || [], mutedTypes: mutedSignalTypes });
 
-    // Aggregate expenses
-    const expenses = expensesRes.data || [];
-    const totalDespesas = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0) || 0;
-    const despesasPorCat = {};
-    for (const e of expenses || []) {
-      const cat = e.category || 'outros';
-      despesasPorCat[cat] = (despesasPorCat[cat] || 0) + (Number(e.amount) || 0);
-    }
-    for (const k of Object.keys(despesasPorCat)) {
-      despesasPorCat[k] = Number(despesasPorCat[k].toFixed(2));
-    }
-
-    // Current-month revenue is derived from the already-fetched 30-day
-    // window (it always fully contains the elapsed days of the current
-    // month) instead of an extra query.
-    const receitaMesAtual = (vendas || [])
-      .filter((venda) => venda.created_at >= startOfMonth.toISOString())
+    const expenses = expensesRes || [];
+    const receitaMesAtual = (currentMonthVendasRes || [])
       .reduce((sum, venda) => sum + (Number(venda.valor_total) || 0), 0);
-    const receitaMesAnterior = (prevMonthVendasRes.data || []).reduce((sum, venda) => sum + (Number(venda.valor_total) || 0), 0);
-    const despesasMesAnterior = (prevMonthExpensesRes.data || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const expenseSummary = buildExpenseSummary(expenses, receitaMesAtual);
+    const totalDespesas = expenseSummary.total;
+
+    const receitaMesAnterior = (prevMonthVendasRes || []).reduce((sum, venda) => sum + (Number(venda.valor_total) || 0), 0);
+    const despesasMesAnterior = (prevMonthExpensesRes || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
     const monthOverMonthContext = buildMonthOverMonthContext({
       receitaMesAtual, receitaMesAnterior, despesasMesAtual: totalDespesas, despesasMesAnterior,
     });
@@ -103,6 +95,7 @@ async function buildBusinessContext(userId) {
       },
       whatsapp_disponivel: isWhatsAppConfigured() && !!perfilRes.data?.contato,
       catalogo_produtos: (produtosRes.data || []).map((product) => `${product.nome} (R$ ${Number(product.preco).toFixed(2)})`),
+      periodo_financeiro: `${currentMonth.startLocal} a ${currentMonth.endLocalExclusive} (mes atual no fuso da empresa)`,
       periodo: 'últimos 30 dias',
       ontem: recentDaysContext.ontem,
       media_mesmo_dia_semana: recentDaysContext.media_mesmo_dia_semana,
@@ -117,9 +110,13 @@ async function buildBusinessContext(userId) {
       catalogo: salesContext.catalogo,
       despesas: {
         total_mes_atual: totalDespesas.toFixed(2),
-        por_categoria: despesasPorCat,
+        quantidade_lancamentos_mes_atual: expenseSummary.quantidade,
+        por_categoria: expenseSummary.porCategoria,
+        percentual_da_receita: expenseSummary.percentualDaReceita,
+        categoria_mais_pesada: expenseSummary.categoriaMaisPesada,
       },
-      resultado_operacional_aproximado: (Number(salesContext.vendas.receita_total) - totalDespesas).toFixed(2),
+      receita_mes_atual: Number(receitaMesAtual.toFixed(2)),
+      resultado_operacional_aproximado: (receitaMesAtual - totalDespesas).toFixed(2),
       estoque_controlado: buildStockContext({ produtos: produtosRes.data || [], categorias: categoriasRes.data || [] }),
       caixa: caixaRes.data ? { aberto: !caixaRes.data.data_fechamento, valor_inicial: caixaRes.data.valor_inicial, data_abertura: caixaRes.data.data_abertura } : null,
       fiado_em_aberto: topFiadoRes.data?.map(p => ({ cliente: p.nome, saldo: p.saldo_fiado })) || [],
@@ -141,11 +138,12 @@ export function _buildSystemPrompt(context, contextType, signalContext = null, s
 
   // Pre-compute key metrics so the AI doesn't need to do arithmetic
   const receita = parseFloat(context.vendas?.receita_total || 0);
+  const receitaMesAtual = parseFloat(context.receita_mes_atual ?? context.comparativo_mes_anterior?.receita_mes_atual ?? receita);
   const numVendas = context.vendas?.quantidade || 0;
   const despesasMes = parseFloat(context.despesas?.total_mes_atual || 0);
   const resultadoOperacional = parseFloat(context.resultado_operacional_aproximado || 0);
   const ticketMedio = context.vendas?.ticket_medio || (numVendas > 0 ? (receita / numVendas).toFixed(2) : null);
-  const despesasPct = receita > 0 ? ((despesasMes / receita) * 100).toFixed(1) : null;
+  const despesasPct = receitaMesAtual > 0 ? ((despesasMes / receitaMesAtual) * 100).toFixed(1) : null;
   const metodoDominante = Object.entries(context.vendas?.por_metodo_pagamento || {})
     .sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const produtoTop = context.itens_vendidos?.top_produtos?.[0]?.nome ?? null;
@@ -182,13 +180,15 @@ ${datasComemorativas.map((d) => `• ${d.nome} (${d.em_andamento ? 'em andamento
 Só mencione essas datas se forem relevantes à pergunta ou se o usuário perguntar sobre oportunidades/promoções; não force o assunto em toda resposta.` : '';
 
   const metricsBlock = `
+- Receita do mês atual até agora: R$ ${receitaMesAtual.toFixed(2)} (mesmo período usado para as despesas)
+- Resultado operacional aproximado: R$ ${resultadoOperacional.toFixed(2)} (não inclui o custo dos produtos)
+- Se as despesas reais forem maiores que zero, reconheça os lançamentos e não recomende cadastrá-los novamente
 MÉTRICAS JÁ CALCULADAS (use exatamente estes valores, não recalcule):
 • Receita total (30 dias): R$ ${receita.toFixed(2)}
 • Número de vendas: ${numVendas}
 • Ticket médio: ${ticketMedio ? `R$ ${ticketMedio}` : 'sem dados'}
 • Unidades de itens registradas: ${unidadesRegistradas}${mediaItensPorVenda != null ? ` (${mediaItensPorVenda} itens por venda, em média)` : ''}
 • Despesas do mês: R$ ${despesasMes.toFixed(2)}${despesasPct ? ` (${despesasPct}% da receita)` : ''}
-• Resultado operacional aproximado: R$ ${resultadoOperacional.toFixed(2)} (não inclui o custo dos produtos)
 • Método de pagamento dominante: ${metodoDominante ?? 'sem dados'}
 • Produto mais vendido: ${produtoTop ?? 'sem dados'}
 • Total em fiado em aberto: R$ ${totalFiado}${fiadoPct ? ` (${fiadoPct}% da receita)` : ''}${diaAnteriorBlock}${picoBlock}${comparativoMesBlock}`;

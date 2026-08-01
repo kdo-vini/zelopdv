@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fetchEligibleSubscribedCompanies, selectEligibleCompanyIds } from '../src/lib/server/intelligence/fetchers.js';
+import { fetchEligibleSubscribedCompanies, fetchExpenses, selectEligibleCompanyIds } from '../src/lib/server/intelligence/fetchers.js';
 
 describe('selectEligibleCompanyIds', () => {
   const now = new Date('2026-07-12T12:00:00.000Z');
@@ -70,5 +70,37 @@ describe('fetchEligibleSubscribedCompanies', () => {
       { id: 'empresa-sem-piloto', nome_exibicao: 'Loja aberta', razao_social: undefined },
     ]);
     expect(filters).toEqual([]);
+  });
+});
+
+describe('fetchExpenses', () => {
+  it('paginates expense rows beyond the PostgREST page limit', async () => {
+    const ranges = [];
+    const db = {
+      from() {
+        const query = {
+          select() { return query; },
+          eq() { return query; },
+          gte() { return query; },
+          lt() { return query; },
+          order() { return query; },
+          range(from, to) {
+            ranges.push([from, to]);
+            return Promise.resolve({
+              data: from === 0
+                ? Array.from({ length: 1000 }, (_, index) => ({ amount: index + 1 }))
+                : [{ amount: 1001 }],
+              error: null,
+            });
+          },
+        };
+        return query;
+      },
+    };
+
+    const result = await fetchExpenses(db, 'owner-1', '2026-07-01T03:00:00.000Z', '2026-08-01T03:00:00.000Z');
+
+    expect(result).toHaveLength(1001);
+    expect(ranges).toEqual([[0, 999], [1000, 1999]]);
   });
 });

@@ -1,7 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { buildActiveSignalsContext, buildCatalogSalesContext, buildMonthOverMonthContext, buildPeakHoursContext, buildRecentDaysContext, buildStockContext } from '../src/lib/server/assistant/businessContext.js';
+import { buildActiveSignalsContext, buildCatalogSalesContext, buildExpenseSummary, buildFinancialPeriods, buildMonthOverMonthContext, buildPeakHoursContext, buildRecentDaysContext, buildStockContext } from '../src/lib/server/assistant/businessContext.js';
 
 describe('assistant business context', () => {
+  describe('buildFinancialPeriods', () => {
+    it('keeps the local business month during the UTC month rollover', () => {
+      const periods = buildFinancialPeriods('2026-08-01T02:30:00.000Z');
+
+      expect(periods.current).toMatchObject({
+        startLocal: '2026-07-01',
+        endLocalExclusive: '2026-08-01',
+        startIso: '2026-07-01T03:00:00.000Z',
+        endIso: '2026-08-01T03:00:00.000Z',
+      });
+      expect(periods.previous).toMatchObject({
+        startLocal: '2026-06-01',
+        endLocalExclusive: '2026-07-01',
+      });
+    });
+  });
+
+  it('summarizes registered expenses and their share of same-period revenue', () => {
+    expect(buildExpenseSummary([
+      { amount: 100, category: 'Insumos' },
+      { amount: 50, category: 'Insumos' },
+      { amount: 25, category: 'Aluguel' },
+    ], 500)).toEqual({
+      total: 175,
+      quantidade: 3,
+      porCategoria: { Insumos: 150, Aluguel: 25 },
+      percentualDaReceita: 0.35,
+      categoriaMaisPesada: { category: 'Insumos', amount: 150 },
+    });
+  });
+
   describe('buildActiveSignalsContext', () => {
     it('keeps only the most recent signal_date and excludes muted types, humanizing severity', () => {
       const signals = [

@@ -2,6 +2,36 @@
 
 ---
 
+## INC-2026-07-31-02 - Zelinho dizia que despesas registradas não existiam
+
+**Status:** corrigido no código em 2026-07-31; requer deploy do frontend/server para chegar à produção.
+
+**Sintoma**
+
+- Na conta Apex Burgers, o Zelinho respondia que não havia despesas e tratava a receita como resultado operacional aproximado.
+- O banco tinha 7 despesas no mês, total de R$ 7.431,00.
+
+**Causa-raiz**
+
+- O endpoint calculava o mês com o relógio do servidor em UTC. Às 02:00 UTC do dia 1, ainda era 23:00 do último dia do mês no Brasil; a consulta passava a buscar o mês seguinte e retornava zero.
+- O resultado subtraía despesas do mês de uma receita acumulada nos últimos 30 dias, misturando períodos.
+
+**Fix / recovery**
+
+- Criados limites mensais usando `America/Sao_Paulo` e intervalos UTC inclusivos/exclusivos corretos.
+- Receita e despesas do resultado agora vêm do mesmo mês local; vendas e despesas financeiras são paginadas para não parar na primeira página do PostgREST.
+- O contexto do Zelinho preserva quantidade, categorias, percentual da receita e maior categoria de despesa, para cruzamento com vendas.
+- Validação da Apex com os mesmos limites: 118 vendas / R$ 7.274,30, 7 despesas / R$ 7.431,00, resultado operacional aproximado de R$ -156,70 antes do custo dos produtos.
+- Cobertura: suíte completa verde e `npm run check` com 0 erros / 99 avisos conhecidos.
+
+**Referências**
+
+- `src/lib/server/assistant/businessContext.js`
+- `src/lib/server/intelligence/fetchers.js`
+- `src/routes/api/chat/assistant/+server.js`
+
+---
+
 ## INC-2026-07-31-01 - Mesas não adiciona item por RPC ambígua
 
 **Status:** corrigido imediatamente no banco de produção em 2026-07-31.
