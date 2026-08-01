@@ -60,8 +60,8 @@
 </script>
 
 <!-- Backdrop (High z-index, cannot close) -->
-<div class="fixed inset-0 z-200 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);">
-  <div class="rounded-xl shadow-2xl max-w-md w-full p-6 text-center" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+<div class="fixed inset-0 z-200 mobile-bottom-nav-overlay flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);">
+  <div class="rounded-xl shadow-2xl max-w-md w-full p-6 text-center mobile-bottom-nav-dialog" style="background: var(--bg-card); border: 1px solid var(--border-card);">
     
     <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background: color-mix(in srgb, var(--primary) 15%, transparent);">
         <LockKeyhole class="size-8" style="color: var(--primary);" aria-hidden="true" />

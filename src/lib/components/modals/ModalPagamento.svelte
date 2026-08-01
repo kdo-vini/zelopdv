@@ -21,12 +21,6 @@
   /** @type {Array<{id: number, id_produto?: number, nome: string, preco: number, quantidade: number}>} */
   export let comanda = [];
   
-  /** @type {number | null} */
-  export let idCaixaAberto = null;
-  
-  /** @type {Array<{id: number, nome: string}>} */
-  export let produtos = [];
-
   /** @type {Array<{id: string, nome: string, taxa_pct: number, icone: string, ativo: boolean}>} */
   export let plataformasAtivas = [];
 

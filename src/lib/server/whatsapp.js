@@ -4,8 +4,8 @@
  *
  * Messages:
  *  - enviarBoasVindas     : sent immediately on first account creation
- *  - enviarFollowup7d     : sent ~7 days after trial start
- *  - enviarFollowupFinal  : sent 1 day before the trial ends (day TRIAL_DAYS - 1)
+ *  - enviarFollowup7dDetalhado    : sent ~7 days after trial start
+ *  - enviarFollowupFinalDetalhado : sent 1 day before the trial ends (day TRIAL_DAYS - 1)
  *
  * Os dias de disparo vivem em WHATSAPP_DAYS no cron de onboarding.
  */
@@ -179,11 +179,6 @@ export async function enviarBoasVindasDetalhado(telefone, nomeUsuario) {
 /**
  * Mensagem 2 — Followup 7 dias (disparada pela cron ~dia 7 do trial)
  */
-export async function enviarFollowup7d(telefone, nomeUsuario) {
-  const result = await enviarFollowup7dDetalhado(telefone, nomeUsuario);
-  return result.ok;
-}
-
 export async function enviarFollowup7dDetalhado(telefone, nomeUsuario) {
   const loja = nomeDaLoja(nomeUsuario);
   const mensagem =
@@ -201,11 +196,6 @@ export async function enviarFollowup7dDetalhado(telefone, nomeUsuario) {
 /**
  * Mensagem 3 — Trial encerrando (disparada pela cron na véspera do fim do trial)
  */
-export async function enviarFollowupFinal(telefone, nomeUsuario) {
-  const result = await enviarFollowupFinalDetalhado(telefone, nomeUsuario);
-  return result.ok;
-}
-
 export async function enviarFollowupFinalDetalhado(telefone, nomeUsuario) {
   const loja = nomeDaLoja(nomeUsuario);
   const mensagem =

@@ -1702,8 +1702,6 @@
   {tipoPedido}
   taxaEntrega={tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0}
   {comanda}
-  {idCaixaAberto}
-  {produtos}
   {plataformasAtivas}
   on:confirmar={handleVendaConfirmada}
   on:close={() => {

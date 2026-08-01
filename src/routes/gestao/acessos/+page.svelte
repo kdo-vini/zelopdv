@@ -821,7 +821,7 @@
 {#if showInviteModal}
   <!-- Backdrop -->
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    class="fixed inset-0 z-50 mobile-bottom-nav-overlay flex items-center justify-center p-4"
     style="background: rgba(0,0,0,0.5);"
     role="dialog"
     aria-modal="true"
@@ -830,7 +830,7 @@
     on:keydown={e => e.key === 'Escape' && closeInviteModal()}
   >
     <div
-      class="rounded-xl border w-full max-w-md p-6 space-y-5"
+      class="rounded-xl border w-full max-w-md p-6 space-y-5 mobile-bottom-nav-dialog"
       style="background: var(--bg-card); border-color: var(--border-subtle);"
       role="document"
     >

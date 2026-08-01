@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium } from '@playwright/test';
 
 const VIEWPORTS = {
   desktop: { width: 1280, height: 800 },

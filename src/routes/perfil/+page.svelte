@@ -1432,12 +1432,12 @@
 
   {#if showDeleteModal}
     <div
-      class="fixed inset-0 z-80 flex items-center justify-center p-4"
+      class="fixed inset-0 z-80 mobile-bottom-nav-overlay flex items-center justify-center p-4"
       style="background: rgba(0,0,0,0.6);"
       role="dialog"
       aria-modal="true"
     >
-      <div class="w-full max-w-md rounded-xl overflow-hidden shadow-2xl" style="background: var(--bg-card); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);">
+      <div class="w-full max-w-md rounded-xl overflow-hidden shadow-2xl mobile-bottom-nav-dialog" style="background: var(--bg-card); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);">
         <div class="px-6 py-4" style="border-bottom: 1px solid var(--border-subtle);">
           <h3 class="text-lg font-semibold" style="color: var(--error);">Apagar conta</h3>
         </div>

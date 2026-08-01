@@ -9,7 +9,6 @@ export function getPrecoTabela(produto, tabela) {
   if (tabela === 3 && produto.preco_3 != null) return produto.preco_3;
   return produto.preco;
 }
-
 export const STANDARD_PAYMENT_FORMS = new Set([
   'dinheiro',
   'pix',
@@ -210,31 +209,4 @@ export function calculatePlatformFees(taxas = []) {
   const byPlatform = Array.from(map.values()).sort((a, b) => b.total - a.total);
 
   return { total, byPlatform };
-}
-
-export function platformTotalsFromPayments({ vendas = [], pagamentos = [], plataformasAtivas = [], presets = [] }) {
-  const map = new Map();
-
-  for (const venda of vendas || []) {
-    const forma = venda?.forma_pagamento;
-    if (forma && !STANDARD_PAYMENT_FORMS.has(forma)) {
-      map.set(forma, money((map.get(forma) || 0) + money(venda?.valor_total)));
-    }
-  }
-
-  for (const payment of pagamentos || []) {
-    const forma = paymentForma(payment);
-    if (forma && !STANDARD_PAYMENT_FORMS.has(forma)) {
-      map.set(forma, money((map.get(forma) || 0) + paymentValue(payment)));
-    }
-  }
-
-  return Array.from(map.entries())
-    .filter(([, value]) => value > 0)
-    .map(([id, value]) => {
-      const info = plataformasAtivas.find((p) => p.id === id)
-        || presets.find((p) => p.id === id)
-        || { id, nome: id.replace(/_/g, ' ') };
-      return { id, label: info.nome, value };
-    });
 }

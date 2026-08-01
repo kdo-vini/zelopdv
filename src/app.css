@@ -225,6 +225,46 @@
   box-shadow: var(--shadow-modal);
 }
 
+@media (max-width: 767px) {
+  html.has-mobile-bottom-nav .modal-backdrop,
+  html.has-mobile-bottom-nav .mobile-bottom-nav-overlay,
+  html.has-mobile-bottom-nav .overlay,
+  html.has-mobile-bottom-nav .resumo-sheet-overlay,
+  html.has-mobile-bottom-nav .modal-overlay,
+  html.has-mobile-bottom-nav .confirm-overlay,
+  html.has-mobile-bottom-nav .sheet-overlay,
+  html.has-mobile-bottom-nav .wizard-backdrop,
+  html.has-mobile-bottom-nav .pix-modal-layer {
+    bottom: var(--mobile-bottom-nav-offset) !important;
+    height: auto !important;
+    max-height: calc(100dvh - var(--mobile-bottom-nav-offset)) !important;
+    overflow-y: auto;
+  }
+
+  html.has-mobile-bottom-nav .mobile-bottom-nav-dialog {
+    max-height: calc(100dvh - var(--mobile-bottom-nav-offset) - 1rem) !important;
+  }
+
+  html.has-mobile-bottom-nav .modal-backdrop > .modal-box,
+  html.has-mobile-bottom-nav .modal-backdrop > .modal-content,
+  html.has-mobile-bottom-nav .overlay > .modal,
+  html.has-mobile-bottom-nav .resumo-sheet-overlay > .resumo-sheet,
+  html.has-mobile-bottom-nav .modal-overlay > .modal,
+  html.has-mobile-bottom-nav .sheet-overlay > .sheet,
+  html.has-mobile-bottom-nav .confirm-overlay > .confirm-dialog,
+  html.has-mobile-bottom-nav .wizard-backdrop > .wizard-card,
+  html.has-mobile-bottom-nav .pix-modal-layer > .pix-modal {
+    max-height: calc(100dvh - var(--mobile-bottom-nav-offset) - 1rem) !important;
+    overflow-y: auto;
+  }
+
+  html.has-mobile-bottom-nav .mobile-bottom-nav-dialog-content {
+    top: calc(50% - (var(--mobile-bottom-nav-offset) / 2));
+    max-height: calc(100dvh - var(--mobile-bottom-nav-offset) - 2rem);
+    overflow-y: auto;
+  }
+}
+
 /* --- AUTH PAGES --- */
 
 .auth-input {

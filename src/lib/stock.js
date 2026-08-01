@@ -13,10 +13,6 @@ export function estoqueDisponivel(produto) {
   return Number(produto?.estoque_atual || 0);
 }
 
-export function estoqueLabel(produto) {
-  return categoriaCompartilhaEstoque(produto) ? 'Estoque compartilhado' : 'Estoque';
-}
-
 export function produtoSemEstoque(produto) {
   return produtoControlaEstoque(produto) && estoqueDisponivel(produto) <= 0;
 }

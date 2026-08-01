@@ -101,7 +101,7 @@
     on:click|self={close}
     on:keydown={handleKeydown}
   >
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="montavel-title" tabindex="-1">
+    <div class="modal mobile-bottom-nav-dialog" role="dialog" aria-modal="true" aria-labelledby="montavel-title" tabindex="-1">
       <header class="modal-header">
         <div>
           <p class="eyebrow">Produto montável</p>
@@ -233,7 +233,7 @@
   .confirm:disabled { cursor: not-allowed; opacity: .5; }
   @media (max-width: 640px) {
     .modal-backdrop { align-items: end; padding: 0; }
-    .modal { width: 100%; max-height: 92vh; border-radius: 1rem 1rem 0 0; }
+    .modal { width: 100%; max-height: min(92vh, calc(100dvh - var(--mobile-bottom-nav-offset))); border-radius: 1rem 1rem 0 0; }
     .modal-header { padding-inline: 1rem; }
     .groups { padding-inline: 1rem; }
     .modal-footer { padding-inline: 1rem; padding-bottom: max(1rem, env(safe-area-inset-bottom)); }

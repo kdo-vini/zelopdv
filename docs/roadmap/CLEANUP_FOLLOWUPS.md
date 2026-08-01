@@ -149,7 +149,7 @@ Fatiar em:
 | 173 `console.log/error/warn` no src/ | Maioria é tratamento legítimo de fallback. Não tem "console.log de debug esquecido" óbvio. |
 | Documentos `.md` na raiz (PROJETO_*, OFFLINE, mesas, audit-report, memory) | Decisão de organização, não dead code. Considerar mover pra `docs/` num PR só de housekeeping. |
 | Páginas grandes não listadas em Onda (termos 1032 L, privacidade 984 L) | Conteúdo, não código. OK do jeito que está. |
-| `playwright` declarado junto com `@playwright/test` em devDeps | Redundante mas inofensivo. Remover sozinho não vale PR. |
+| `playwright` declarado junto com `@playwright/test` em devDeps | Resolvido em 2026-08-01: scripts e CLI usam `@playwright/test`, que já fornece `chromium` e o binário `playwright`. |
 
 ---
 
