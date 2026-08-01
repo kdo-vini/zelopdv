@@ -230,7 +230,8 @@
       position: fixed;
       inset-inline: 0;
       bottom: 0;
-      z-index: 40;
+      /* A navegação global permanece operável sobre modais da rota, como Abrir Caixa. */
+      z-index: 1100;
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       height: var(--mobile-bottom-nav-safe-height);
@@ -292,7 +293,7 @@
     .mobile-nav-backdrop {
       position: fixed;
       inset: 0;
-      z-index: 30;
+      z-index: 1090;
       display: block;
       width: 100%;
       height: 100%;
@@ -305,7 +306,7 @@
       position: fixed;
       inset-inline: 0;
       bottom: var(--mobile-bottom-nav-safe-height);
-      z-index: 40;
+      z-index: 1100;
       display: block;
       max-height: min(60dvh, 30rem);
       padding: 0.5rem max(1rem, env(safe-area-inset-right, 0px)) 1rem max(1rem, env(safe-area-inset-left, 0px));

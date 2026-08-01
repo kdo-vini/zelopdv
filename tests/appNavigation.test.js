@@ -56,6 +56,7 @@ describe('app navigation configuration', () => {
         'caixa.ver': true,
         'fiado.visualizar': false,
         'despesas.visualizar': false,
+        'relatorios.ver': false,
       },
     };
 
@@ -69,6 +70,14 @@ describe('app navigation configuration', () => {
     expect(zelinho.badge).toBe('gerente');
     expect(zelinho).not.toHaveProperty('badgeCount');
   });
+
+  it('places Relatórios in Financeiro for desktop and mobile consumers', () => {
+    expect(section('financeiro').items.find((item) => item.id === 'relatorios')).toMatchObject({
+      href: '/relatorios',
+      requiredPermission: 'relatorios.ver',
+    });
+    expect(section('outros').items.some((item) => item.id === 'relatorios')).toBe(false);
+  });
 });
 
 describe('active navigation resolution', () => {
@@ -79,7 +88,7 @@ describe('active navigation resolution', () => {
     ['/gestao/produtos/123/editar', 'gestao', 'produtos'],
     ['/gestao/nova-rota', 'gestao', null],
     ['/gestao/despesas/2026-07', 'financeiro', 'despesas'],
-    ['/relatorios/vendas', 'outros', 'relatorios'],
+    ['/relatorios/vendas', 'financeiro', 'relatorios'],
     ['/perfil', 'perfil', 'meu-perfil'],
     ['/assinatura', 'perfil', null],
   ])('maps %s to one section and the most specific item', (pathname, sectionId, itemId) => {

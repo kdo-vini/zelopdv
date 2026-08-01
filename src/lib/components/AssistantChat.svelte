@@ -303,6 +303,8 @@
   @media (max-width: 767px) {
     .assistant-panel {
       width: 100vw;
+      height: auto;
+      bottom: var(--mobile-bottom-nav-offset);
       border-left: 0;
     }
   }

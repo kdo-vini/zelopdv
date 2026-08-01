@@ -128,9 +128,11 @@
     transform: translateX(0);
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 767px) {
     .support-panel {
       width: 100vw;
+      height: auto;
+      bottom: var(--mobile-bottom-nav-offset);
     }
   }
 

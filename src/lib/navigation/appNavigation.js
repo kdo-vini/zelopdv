@@ -119,7 +119,7 @@ export const appNavigationSections = [
     label: 'Financeiro',
     desktopLabel: 'Financeiro',
     icon: Wallet,
-    matchRoutes: ['/gestao/caixa', '/gestao/fichario', '/gestao/despesas'],
+    matchRoutes: ['/gestao/caixa', '/gestao/fichario', '/gestao/despesas', '/relatorios'],
     items: [
       {
         id: 'fechar-caixa',
@@ -142,15 +142,6 @@ export const appNavigationSections = [
         requiredPermission: 'despesas.visualizar',
         icon: Receipt,
       },
-    ],
-  },
-  {
-    id: 'outros',
-    label: 'Outros',
-    desktopLabel: 'Outros',
-    icon: Ellipsis,
-    matchRoutes: ['/relatorios', '/ferramentas', '/gestao/indicacoes', '/gestao/extensoes', '/gestao/acessos'],
-    items: [
       {
         id: 'relatorios',
         href: '/relatorios',
@@ -158,6 +149,15 @@ export const appNavigationSections = [
         requiredPermission: 'relatorios.ver',
         icon: BarChart3,
       },
+    ],
+  },
+  {
+    id: 'outros',
+    label: 'Outros',
+    desktopLabel: 'Outros',
+    icon: Ellipsis,
+    matchRoutes: ['/ferramentas', '/gestao/indicacoes', '/gestao/extensoes', '/gestao/acessos'],
+    items: [
       { id: 'ferramentas', href: '/ferramentas', label: 'Ferramentas', icon: Wrench },
       {
         id: 'indicacoes',
