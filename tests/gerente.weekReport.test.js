@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWeekReport, normalizeWeekStart } from '../src/lib/gerente/weekReport.js';
+import { businessDateKey, buildWeekReport, getWeekStart, normalizeWeekStart } from '../src/lib/gerente/weekReport.js';
 
 const snapshot = (date, receita, vendas, metrics = {}) => ({
   snapshot_date: date,
@@ -11,6 +11,13 @@ const snapshot = (date, receita, vendas, metrics = {}) => ({
 });
 
 describe('buildWeekReport', () => {
+  it('uses the Brazil business date at the UTC rollover', () => {
+    const lateSundayUtc = new Date('2026-08-03T02:30:00.000Z');
+
+    expect(businessDateKey(lateSundayUtc)).toBe('2026-08-02');
+    expect(getWeekStart(businessDateKey(lateSundayUtc))).toBe('2026-07-27');
+  });
+
   it('normalizes arbitrary dates and clamps navigation to eight weeks', () => {
     expect(normalizeWeekStart('2026-07-12', '2026-07-13')).toBe('2026-07-06');
     expect(normalizeWeekStart('2026-07-20', '2026-07-13')).toBe('2026-07-13');

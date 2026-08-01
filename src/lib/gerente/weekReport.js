@@ -1,4 +1,13 @@
 const DAY_MS = 86_400_000;
+
+export function businessDateKey(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date);
+}
 const paymentLabels = { pix: 'Pix', dinheiro: 'Dinheiro', cartao: 'Cartão', fiado: 'Fiado', outros: 'Outros' };
 
 function dateAtNoon(date) { return new Date(`${date}T12:00:00Z`); }
@@ -13,8 +22,8 @@ function isDateKey(value) {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
-export function normalizeWeekStart(value, today = new Date().toISOString().slice(0, 10)) {
-  const reference = isDateKey(today) ? today : new Date().toISOString().slice(0, 10);
+export function normalizeWeekStart(value, today = businessDateKey()) {
+  const reference = isDateKey(today) ? today : businessDateKey();
   const current = getWeekStart(reference);
   const candidate = isDateKey(value) ? getWeekStart(value) : current;
   const oldest = shiftWeek(current, -7);
@@ -67,7 +76,7 @@ function opening(current, previous) {
     : 'A semana fechou abaixo da anterior em receita bruta; vale observar os sinais listados abaixo.';
 }
 
-export function buildWeekReport(snapshots = [], signals = [], weekStart, { today = new Date().toISOString().slice(0, 10) } = {}) {
+export function buildWeekReport(snapshots = [], signals = [], weekStart, { today = businessDateKey() } = {}) {
   const start = normalizeWeekStart(weekStart, today);
   const end = addDays(start, 6);
   const currentRows = weekRows(snapshots, start);
@@ -100,7 +109,7 @@ export function buildWeekReport(snapshots = [], signals = [], weekStart, { today
   };
 }
 
-export function getWeekStart(date = new Date().toISOString().slice(0, 10)) {
+export function getWeekStart(date = businessDateKey()) {
   const value = dateAtNoon(date);
   const offset = (value.getUTCDay() + 6) % 7;
   value.setUTCDate(value.getUTCDate() - offset);

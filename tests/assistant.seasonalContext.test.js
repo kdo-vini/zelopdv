@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { getActiveSeasonalContext } from '../src/lib/server/assistant/seasonalContext.js';
+import { businessDateKey, getActiveSeasonalContext } from '../src/lib/server/assistant/seasonalContext.js';
 
 describe('assistant seasonal context', () => {
+  it('uses the Brazil business date at the UTC rollover', () => {
+    expect(businessDateKey(new Date('2026-08-01T02:30:00.000Z'))).toBe('2026-07-31');
+  });
+
   it('produces the same result on the same calendar date regardless of year, with no year-specific hardcoded entries', () => {
     // Fixed-date entries (Natal) must fire identically far into the future —
     // there is nothing in the calendar keyed to a specific year like 2026.

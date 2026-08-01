@@ -24,6 +24,15 @@ function pad(value) {
   return String(value).padStart(2, '0');
 }
 
+export function businessDateKey(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date);
+}
+
 function toDateKey(date) {
   return date.toISOString().slice(0, 10);
 }
@@ -118,7 +127,7 @@ const RECURRING_COMPUTED_WINDOWS = [
  * active; otherwise they surface once their start date enters the lookahead
  * window.
  */
-export function getActiveSeasonalContext(referenceDate = new Date().toISOString().slice(0, 10), { lookaheadDays = LOOKAHEAD_DAYS } = {}) {
+export function getActiveSeasonalContext(referenceDate = businessDateKey(), { lookaheadDays = LOOKAHEAD_DAYS } = {}) {
   const [year, month, day] = referenceDate.split('-').map(Number);
   const referenceMs = new Date(Date.UTC(year, month - 1, day, 12, 0, 0)).getTime();
   const matches = [];

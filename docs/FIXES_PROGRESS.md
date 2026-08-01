@@ -1,5 +1,7 @@
 # Fixes Progress
 
+- [x] FX-ZELINHO-02 (2026-08-01) — auditoria encontrou dois defaults de data ainda baseados em UTC: o contexto sazonal e o resumo semanal podiam avançar um dia/uma semana antes da virada brasileira. Ambos agora derivam a data de negócio de `America/Sao_Paulo`; os cálculos internos de datas sem horário continuam em UTC por determinismo. Testes cobrem a virada de 23h30 BRT; sem migration ou alteração de dados.
+
 - [x] FX-ZELINHO-01 (2026-07-31) — o Zelinho ignorava despesas no início do mês seguinte em UTC, enquanto ainda era o mês anterior no fuso brasileiro; o resultado também misturava receita de 30 dias com despesas do mês. Corrigidos os limites locais, alinhado o cálculo no mesmo período, adicionada paginação de vendas/despesas e ampliado o contexto com categorias e participação na receita. Validado na Apex Burgers e coberto por testes de timezone/contexto; `npm test` completo verde e `npm run check` em 0 erros / 99 avisos.
 
 - [x] FX-PRINT-01 (2026-07-31) — a instalação do Zelo Impressão ainda orientava todos os usuários a digitar um código e não aproveitava a conexão automática do agente; o cliente local agora chama a conexão automática quando o aplicativo está aberto, mantém o código apenas como fallback e a copy do Perfil, da página pública e do suporte foi atualizada — `src/lib/zeloImpressaoClient.js`, `src/routes/perfil/+page.svelte`, `src/routes/zelo-impressao/+page.svelte`, `src/routes/api/chat/support/+server.js`.
