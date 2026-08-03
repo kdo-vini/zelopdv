@@ -1,5 +1,7 @@
 # ZeloPDV — Foco atual
 
+- QA local do logo (2026-08-03): corrigido o encaixe do logo do header para `object-fit: contain`, mantendo a marca inteira em desktop e mobile. Dev server validado em 127.0.0.1:5173, sem overflow horizontal nem erros de console; nenhuma publicação em produção foi feita.
+
 - Performance da home pública (2026-08-03): o Supabase e o modal de PIN deixaram o bundle inicial do layout por imports dinâmicos; em páginas públicas, a autenticação também aguarda 5s para não competir com a primeira pintura, enquanto rotas protegidas continuam carregando-a imediatamente. GTM, gtag e Meta Pixel mantêm suas filas locais e carregam scripts externos em idle, sem preconnect prematuro. O logo da home ganhou recorte, dimensões e `fetchpriority="high"`; screenshots abaixo da dobra usam WebP responsivo em 800/1600 px e mantêm PNG apenas como fallback. `npm run check`: 0 erros / 96 avisos conhecidos. O build compila os bundles, mas a etapa final do adapter Vercel continua falhando pelo `EPERM` de symlink conhecido no clone Windows.
 
 - Limpeza de overengineering (2026-08-01): removidos o `ToastContainer` legado sem referências, exports/funções sem chamadas (`platformTotalsFromPayments`, `estoqueLabel` e wrappers simples de follow-up), props não consumidas de `ModalPagamento` e duas dependências duplicadas de ícones/Playwright. Os scripts de screenshot continuam usando `chromium` via `@playwright/test`; nenhuma regra de negócio foi alterada. Validação: `npm run check` com 0 erros / 96 avisos conhecidos e `npm test` com 497/497 testes.

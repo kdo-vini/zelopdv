@@ -119,8 +119,8 @@
   .site-logo {
     display: block;
     width: 8rem;
-    height: 3rem;
-    object-fit: cover;
+    height: 2.5rem;
+    object-fit: contain;
     object-position: center;
   }
 
