@@ -1,6 +1,6 @@
 # Fixes Progress
 
-- [x] FX-MKT-07 (2026-08-03) — reduzido o caminho crítico da home: autenticação/Supabase e modal de PIN foram divididos em carregamento dinâmico; tracking de Google/Meta foi movido para filas client-side + carregamento em idle; logo principal recebeu dimensões/prioridade; screenshots de marketing ganharam WebP responsivo em 800/1600 px. `npm run check` passou com 0 erros / 96 avisos conhecidos. Build compila, mas o adapter Vercel permanece bloqueado pelo `EPERM` de symlink conhecido no Windows.
+- [x] FX-MKT-07 (2026-08-03) — reduzido o caminho crítico da home: autenticação/Supabase e modal de PIN foram divididos em carregamento dinâmico e, na superfície pública, adiados por 5s; tracking de Google/Meta foi movido para filas client-side + carregamento em idle sem preconnect prematuro; logo principal recebeu dimensões/prioridade; screenshots de marketing ganharam WebP responsivo em 800/1600 px. `npm run check` passou com 0 erros / 96 avisos conhecidos. Build compila, mas o adapter Vercel permanece bloqueado pelo `EPERM` de symlink conhecido no Windows.
 
 - [x] FX-ZELINHO-02 (2026-08-01) — auditoria encontrou dois defaults de data ainda baseados em UTC: o contexto sazonal e o resumo semanal podiam avançar um dia/uma semana antes da virada brasileira. Ambos agora derivam a data de negócio de `America/Sao_Paulo`; os cálculos internos de datas sem horário continuam em UTC por determinismo. Testes cobrem a virada de 23h30 BRT; sem migration ou alteração de dados.
 

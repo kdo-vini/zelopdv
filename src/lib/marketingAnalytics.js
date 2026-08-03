@@ -14,16 +14,6 @@ function appendScript(src) {
   document.head.appendChild(script);
 }
 
-function addPreconnect(href) {
-  if (document.querySelector(`link[rel="preconnect"][href="${href}"]`)) return;
-
-  const link = document.createElement('link');
-  link.rel = 'preconnect';
-  link.href = href;
-  link.crossOrigin = '';
-  document.head.appendChild(link);
-}
-
 function prepareGoogleQueue() {
   window.dataLayer = window.dataLayer || [];
   window.gtag = window.gtag || function gtag() {
@@ -63,9 +53,6 @@ function prepareMetaQueue() {
 }
 
 function loadAnalyticsScripts() {
-  addPreconnect('https://www.googletagmanager.com');
-  addPreconnect('https://connect.facebook.net');
-
   appendScript(`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`);
   window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
   appendScript(`https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`);

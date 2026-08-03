@@ -191,6 +191,15 @@
   onMount(async () => {
     initMarketingAnalytics();
 
+    const currentPath = window.location.pathname;
+    const authIsCritical = matchesProtectedPrefix(currentPath, subscriptionRequiredPrefixes)
+      || ['/perfil', '/assinatura'].includes(currentPath);
+
+    // The public shell does not need Supabase to paint. Keep auth eager for
+    // protected routes, but let the marketing page finish its first paint
+    // before downloading the auth client. If the visitor navigates during the
+    // delay, the guard below reads the current pathname when it starts.
+    if (!authIsCritical) await new Promise((resolve) => window.setTimeout(resolve, 5000));
     await loadAuthModules();
     if (!supabase) return;
  
