@@ -157,6 +157,80 @@ describe('escpos builder', () => {
       expect(text).toMatch(/-{28}/);
       expect(text).not.toMatch(/-{32}/);
     });
+
+    it('imprime couvert e taxa de serviço explícitos na pré-conta de mesa', () => {
+      const out = buildVendaEscPos({
+        estabelecimento: baseEst,
+        venda: {
+          ...baseVenda,
+          tipoPedido: 'mesa',
+          mesaNumero: 6,
+          formaPagamento: null,
+          subtotal: 100,
+          couvert: 10,
+          taxa_pct: 10,
+          taxa_valor: 11,
+          total: 121,
+          taxaEntrega: 99,
+        },
+        opcoes: { titulo: 'PRE-CONTA - MESA 6', naoFiscal: true },
+      });
+      const text = bytesToText(out);
+
+      expect(text).toContain('PRE-CONTA');
+      expect(text).toContain('MESA 6');
+      expect(text).toContain('Couvert');
+      expect(text).toContain('Taxa servico (10%)');
+      expect(text).toMatch(/Couvert\s+\+ R\$ 10,00/);
+      expect(text).toMatch(/Taxa servico \(10%\)\s+\+ R\$ 11,00/);
+      expect(text).not.toContain('Taxa entrega');
+    });
+
+    it('imprime o recibo final de mesa com couvert e taxa de serviço', () => {
+      const out = buildVendaEscPos({
+        estabelecimento: baseEst,
+        venda: {
+          ...baseVenda,
+          numeroVenda: 25,
+          tipoPedido: 'mesa',
+          mesaNumero: 6,
+          subtotal: 50,
+          couvert: 5,
+          taxaServicoPct: 10,
+          taxaServico: 5.3,
+          desconto: 2,
+          total: 58.3,
+          formaPagamento: 'pix',
+        },
+        opcoes: { titulo: 'RECIBO - MESA 6' },
+      });
+      const text = bytesToText(out);
+
+      expect(text).toContain('RECIBO');
+      expect(text).toContain('Couvert');
+      expect(text).toContain('Taxa servico (10%)');
+      expect(text).toMatch(/TOTAL\s+R\$ 58,30/);
+      expect(text).not.toContain('Taxa entrega');
+    });
+
+    it('preserva taxa de entrega em delivery', () => {
+      const out = buildVendaEscPos({
+        estabelecimento: baseEst,
+        venda: {
+          ...baseVenda,
+          tipoPedido: 'delivery',
+          subtotal: 40,
+          taxaEntrega: 8,
+          total: 48,
+        },
+      });
+      const text = bytesToText(out);
+
+      expect(text).toContain('Taxa entrega');
+      expect(text).toMatch(/Taxa entrega\s+\+ R\$ 8,00/);
+      expect(text).not.toContain('Couvert');
+      expect(text).not.toContain('Taxa servico');
+    });
   });
 
   describe('buildMovCaixaEscPos', () => {

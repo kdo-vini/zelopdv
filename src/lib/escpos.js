@@ -177,6 +177,32 @@ function formaLabel(f) {
   return String(f).charAt(0).toUpperCase() + String(f).slice(1);
 }
 
+function numberFrom(value, fallback = 0) {
+  if (value == null || value === '') return fallback;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function firstNumber(object, keys) {
+  for (const key of keys) {
+    if (object?.[key] != null && object[key] !== '') return numberFrom(object[key]);
+  }
+  return 0;
+}
+
+function getReceiptCharges(venda, subtotal, desconto) {
+  const couvert = firstNumber(venda, ['couvert', 'couvert_valor', 'couvertValor']);
+  const taxaServicoPct = firstNumber(venda, ['taxaServicoPct', 'taxa_pct', 'taxa_servico_pct']);
+  const taxaServicoKeys = ['taxaServico', 'taxa_servico', 'taxaServicoValor', 'taxa_servico_valor', 'taxa_valor'];
+  const hasTaxaServicoValor = taxaServicoKeys.some(key => venda?.[key] != null && venda[key] !== '');
+  const taxaServico = hasTaxaServicoValor
+    ? firstNumber(venda, taxaServicoKeys)
+    : Math.max(0, subtotal + couvert - desconto) * (taxaServicoPct / 100);
+  const taxaEntrega = venda?.tipoPedido === 'delivery' ? firstNumber(venda, ['taxaEntrega']) : 0;
+
+  return { couvert, taxaServicoPct, taxaServico, taxaEntrega };
+}
+
 function tipoPedidoLabel(t) {
   if (t === 'delivery') return 'Delivery';
   if (t === 'retirada') return 'Retirada';
@@ -204,7 +230,12 @@ function tipoPedidoLabel(t) {
  * @property {number} [subtotal]
  * @property {number} [desconto]
  * @property {number} [total]
- * @property {number} [taxaEntrega]
+ * @property {number} [couvert] - couvert da mesa, em reais
+ * @property {number} [taxaServico] - taxa de serviço, em reais
+ * @property {number} [taxaServicoPct] - percentual da taxa de serviço
+ * @property {number} [taxa_pct] - alias persistido do percentual de Mesas
+ * @property {number} [taxa_valor] - alias persistido do valor de Mesas
+ * @property {number} [taxaEntrega] - taxa de entrega, somente para delivery
  * @property {number} [valorRecebido]
  * @property {number} [troco]
  * @property {string} [formaPagamento]
@@ -305,12 +336,14 @@ export function buildVendaEscPos(payload) {
   const subtotalCalc = itens.reduce((s, it) => s + Number(it.quantidade || 1) * Number(it.preco_unitario || it.preco_unitario_na_venda || 0), 0);
   const subtotal = venda.subtotal != null ? Number(venda.subtotal) : subtotalCalc;
   const desconto = Number(venda.desconto || 0);
-  const taxa = Number(venda.taxaEntrega || 0);
-  const total = venda.total != null ? Number(venda.total) : (subtotal - desconto + taxa);
+  const { couvert, taxaServicoPct, taxaServico, taxaEntrega } = getReceiptCharges(venda, subtotal, desconto);
+  const total = venda.total != null ? Number(venda.total) : (subtotal - desconto + couvert + taxaServico + taxaEntrega);
 
   b.line(twoCol('Subtotal', fmtBRL(subtotal), cols));
+  if (couvert > 0) b.line(twoCol('Couvert', '+ ' + fmtBRL(couvert), cols));
   if (desconto > 0) b.line(twoCol('Desconto', '- ' + fmtBRL(desconto), cols));
-  if (taxa > 0) b.line(twoCol('Taxa entrega', '+ ' + fmtBRL(taxa), cols));
+  if (taxaServico > 0) b.line(twoCol(`Taxa servico${taxaServicoPct > 0 ? ` (${taxaServicoPct}%)` : ''}`, '+ ' + fmtBRL(taxaServico), cols));
+  if (taxaEntrega > 0) b.line(twoCol('Taxa entrega', '+ ' + fmtBRL(taxaEntrega), cols));
 
   b.bold(true).size({ width: false, height: true });
   b.line(twoCol('TOTAL', fmtBRL(total), cols));

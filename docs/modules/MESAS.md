@@ -10,6 +10,8 @@
 - comanda por mesa em `/app/mesas/[id]`
 - fechamento da mesa convertendo consumo em `vendas` + `vendas_itens`
 - pre-conta e recibo final imprimivel
+- pagamentos parciais por valor ou por quantidade de item
+- historico de itens pagos preservado na venda apos o fechamento
 
 ## Fontes de codigo
 
@@ -25,6 +27,7 @@
 - `comandas`
 - `comanda_itens`
 - `comanda_pagamentos`
+- `comanda_pagamento_itens`
 - `vendas`
 - `vendas_itens`
 - `produtos`
@@ -55,6 +58,25 @@
 6. marca comanda como fechada
 7. libera a mesa
 
+### Pagamento parcial
+
+- O fluxo existente por valor continua disponivel em `Informar valor`.
+- `Selecionar itens` registra a quantidade de cada `comanda_itens` em
+  `comanda_pagamento_itens`; a mesma quantidade nao pode ser cobrada duas vezes.
+- Couvert, taxa de servico e desconto sao encargos globais. O modo por item cobra
+  apenas o subtotal dos itens selecionados; o saldo residual (se houver) deve ser
+  quitado por valor.
+- No fechamento, `vendas_itens.id_comanda_item`,
+  `vendas_pagamentos.id_comanda_pagamento` e os vinculos da tabela filha
+  preservam a trilha item -> pagamento -> venda antes da limpeza da comanda.
+
+### Impressao
+
+- Pre-conta e recibo final de mesa imprimem `Couvert` e `Taxa de servico` com
+  seus valores reais.
+- `Taxa de entrega` fica reservada a pedidos com `tipoPedido = delivery` e nao
+  e usada como alias visual para couvert.
+
 ## Invariantes
 
 - add-on Mesas custa `R$ 30` no catalogo canônico atual
@@ -68,6 +90,12 @@
 - `src/routes/app/mesas/[id]/+page.svelte` e um dos maiores hotspots do repo
 - o tracker antigo cita `.ai/migrations/mesas_module.sql`, mas o repo atual nao deve ser tratado como snapshot perfeito de producao
 - fiado e estoque no fechamento compartilham risco com o fluxo de venda normal
+- a migracao `supabase/migrations/20260803164855_mesas_payment_item_allocation.sql`
+  cria a tabela de atribuicao, RLS, limites de quantidade e colunas de rastreio
+  na venda; ela foi aplicada no Supabase vinculado em 2026-08-03
+- a migracao `supabase/migrations/20260803170000_mesas_owner_scoped_payment_policies.sql`
+  alinha os INSERTs financeiros ao owner efetivo, permitindo operacao por
+  subusuario sem trocar o tenant do registro
 
 ## Relacao com billing
 

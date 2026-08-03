@@ -1,5 +1,21 @@
 # ZeloPDV — Foco atual
 
+- Mesas/pagamento parcial (2026-08-03): confirmado que o fluxo existente ja
+  registrava pagamentos parciais por valor e recalculava o saldo quando novos
+  itens eram adicionados. O modulo agora tambem permite selecionar quantidades
+  por item, impede sobrealocacao no cliente e no banco, preserva a relacao item
+  -> pagamento -> venda no fechamento e corrige a impressao de mesa para separar
+  couvert/taxa de servico de taxa de entrega. A migration foi aplicada via
+  Supabase CLI no projeto vinculado; `npm run check` terminou com 0 erros/96
+  avisos conhecidos e os testes direcionados passaram 38/38.
+
+- Mesas/RLS (2026-08-03): auditoria do fechamento encontrou policies de INSERT
+  que comparavam `auth.uid()` diretamente com o owner e bloqueavam subusuarios.
+  A migration `20260803170000_mesas_owner_scoped_payment_policies.sql` agora
+  usa `get_owner_user_id(auth.uid())` para comanda_pagamentos, vendas,
+  vendas_itens e vendas_pagamentos; aplicada via Supabase CLI e verificada no
+  schema vinculado.
+
 - QA local do logo (2026-08-03): corrigido o encaixe do logo do header para `object-fit: contain`, mantendo a marca inteira em desktop e mobile. Dev server validado em 127.0.0.1:5173, sem overflow horizontal nem erros de console; nenhuma publicação em produção foi feita.
 
 - Performance da home pública (2026-08-03): o Supabase e o modal de PIN deixaram o bundle inicial do layout por imports dinâmicos; em páginas públicas, a autenticação também aguarda 5s para não competir com a primeira pintura, enquanto rotas protegidas continuam carregando-a imediatamente. GTM, gtag e Meta Pixel mantêm suas filas locais e carregam scripts externos em idle, sem preconnect prematuro. O logo da home ganhou recorte, dimensões e `fetchpriority="high"`; screenshots abaixo da dobra usam WebP responsivo em 800/1600 px e mantêm PNG apenas como fallback. `npm run check`: 0 erros / 96 avisos conhecidos. O build compila os bundles, mas a etapa final do adapter Vercel continua falhando pelo `EPERM` de symlink conhecido no clone Windows.

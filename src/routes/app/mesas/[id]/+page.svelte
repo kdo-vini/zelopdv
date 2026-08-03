@@ -11,6 +11,7 @@
   import { printVenda } from '$lib/printService';
   import { estoqueDisponivel, produtoControlaEstoque, produtoSemEstoque as semEstoque } from '$lib/stock';
   import { formatSelectedModifierGroups, hasActiveModifierGroups } from '$lib/zelomenuModifiers';
+  import { allocatePaymentItems, PaymentAllocationError } from '$lib/mesasPaymentAllocation';
   import BackLink from '$lib/components/ui/BackLink.svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   import ModalProdutoMontavel from '$lib/components/modals/ModalProdutoMontavel.svelte';
@@ -76,6 +77,8 @@
   let parcialModalOpen = false;
   let parcialForma = 'dinheiro';
   let parcialValor = 0;
+  let parcialModo = 'itens'; // itens | valor
+  let parcialSelecionados = {}; // { [id_comanda_item]: quantidade }
   let parcialPessoaId = '';
   let parcialErro = '';
   let savingParcial = false;
@@ -112,13 +115,20 @@
   $: desconto = comanda ? Number(comanda.desconto || 0) : 0;
   $: couvert = comanda ? Number(comanda.couvert_valor || 0) : 0;
   $: taxaPct = comanda ? Number(comanda.taxa_servico_pct || 0) : 0;
-  $: taxaValor = (subtotal + couvert - desconto) * (taxaPct / 100);
+  $: taxaValor = Math.max(0, subtotal + couvert - desconto) * (taxaPct / 100);
   $: total = Math.max(0, subtotal + couvert - desconto + taxaValor);
 
   // Pagamentos parciais — total já pago e saldo a pagar
   $: jaPago = pagamentosParciais.reduce((acc, p) => acc + Number(p.valor || 0), 0);
   $: saldoMesa = Math.max(0, total - jaPago);
   $: alvoPagamentoAtual = pagamentosParciais.length > 0 ? saldoMesa : total;
+  $: quantidadePagaPorItem = pagamentosParciais.reduce((acc, pagamento) => {
+    for (const alocacao of pagamento.itens_alocados || []) {
+      acc[alocacao.id_comanda_item] = (acc[alocacao.id_comanda_item] || 0) + Number(alocacao.quantidade || 0);
+    }
+    return acc;
+  }, {});
+  $: valorItensSelecionados = calcularValorItensSelecionados(parcialSelecionados);
 
   $: produtosFiltrados = produtos.filter(p => {
     if (p.ativo === false) return false;
@@ -180,7 +190,28 @@
       console.warn('[Mesa] loadPagamentosParciais falhou:', error.message);
       return;
     }
-    pagamentosParciais = data || [];
+    const pagamentos = data || [];
+    let alocacoes = [];
+    if (pagamentos.length > 0) {
+      const { data: allocationRows, error: allocationError } = await supabase
+        .from('comanda_pagamento_itens')
+        .select('*')
+        .in('id_pagamento', pagamentos.map(p => p.id));
+      if (allocationError) {
+        // Compatibilidade com instalações que ainda só têm pagamentos gerais.
+        console.warn('[Mesa] alocações de pagamento não carregadas:', allocationError.message);
+      } else {
+        alocacoes = allocationRows || [];
+      }
+    }
+    const alocacoesPorPagamento = alocacoes.reduce((acc, row) => {
+      (acc[row.id_pagamento] ||= []).push(row);
+      return acc;
+    }, {});
+    pagamentosParciais = pagamentos.map(p => ({
+      ...p,
+      itens_alocados: alocacoesPorPagamento[p.id] || [],
+    }));
   }
 
   async function loadCaixaEPerfil() {
@@ -631,6 +662,7 @@
           forma: pp.forma_pagamento,
           valor: Number(pp.valor),
           pessoaId: pp.id_pessoa || null,
+          idComandaPagamento: pp.id,
         });
       }
 
@@ -643,6 +675,7 @@
               forma: p.forma,
               valor: Number(p.valor),
               pessoaId: p.pessoaId || null,
+              idComandaPagamento: null,
             });
           }
           // Troco do split: cash recebido - cash requerido (considerando outras formas dentro do alvo)
@@ -657,6 +690,7 @@
             forma: formaPagamento,
             valor: alvoPagamento, // grava só o saldo, troco fica fora
             pessoaId: formaPagamento === 'fiado' ? pessoaFiadoId : null,
+            idComandaPagamento: null,
           });
           if (formaPagamento === 'dinheiro') {
             trocoCalc = Math.max(0, Number(valorRecebido) - alvoPagamento);
@@ -715,6 +749,7 @@
       const itensPayload = itens.map(i => ({
         id_usuario: ownerUserId,
         id_venda: vendaId,
+        id_comanda_item: i.id,
         id_produto: i.id_produto ?? null,
         quantidade: Math.max(1, Math.round(Number(i.quantidade))),
         nome_produto_na_venda: [i.nome_produto || '', i.modifierSummary].filter(Boolean).join(' — '),
@@ -722,7 +757,10 @@
         modifiers: Array.isArray(i.modifiers) ? i.modifiers : [],
       }));
 
-      const { error: itensErr } = await supabase.from('vendas_itens').insert(itensPayload);
+      const { data: itensVenda, error: itensErr } = await supabase
+        .from('vendas_itens')
+        .insert(itensPayload)
+        .select('id, id_comanda_item');
       if (itensErr) {
         await supabase.from('vendas').delete().eq('id', vendaId);
         throw new Error(itensErr.message);
@@ -748,11 +786,48 @@
             id_usuario: ownerUserId,
             forma_pagamento: l.forma,
             valor: Math.round(valorFinal * 100) / 100,
+            id_comanda_pagamento: l.idComandaPagamento || null,
           };
         }).filter(l => l.valor > 0);
         if (linhasInsert.length > 0) {
-          const { error: pagErr } = await supabase.from('vendas_pagamentos').insert(linhasInsert);
+          const { data: pagamentosVenda, error: pagErr } = await supabase
+            .from('vendas_pagamentos')
+            .insert(linhasInsert)
+            .select('id, id_comanda_pagamento');
           if (pagErr) throw new Error('Falha ao registrar pagamentos: ' + pagErr.message);
+
+          // Mantém a relação parcial -> pagamento final -> item vendido antes
+          // de apagar os registros transitórios da comanda.
+          if (pagamentosParciais.length > 0) {
+            const pagamentoVendaPorOrigem = new Map(
+              (pagamentosVenda || [])
+                .filter(p => p.id_comanda_pagamento)
+                .map(p => [p.id_comanda_pagamento, p.id]),
+            );
+            const itemVendaPorComanda = new Map(
+              (itensVenda || [])
+                .filter(i => i.id_comanda_item)
+                .map(i => [i.id_comanda_item, i.id]),
+            );
+            for (const parcial of pagamentosParciais) {
+              const idVendaPagamento = pagamentoVendaPorOrigem.get(parcial.id);
+              if (!idVendaPagamento) throw new Error('Não foi possível vincular um pagamento parcial à venda.');
+              for (const alocacao of parcial.itens_alocados || []) {
+                const idVendaItem = itemVendaPorComanda.get(alocacao.id_comanda_item);
+                if (!idVendaItem) throw new Error('Não foi possível vincular um item pago à venda.');
+                const { error: vinculoErr } = await supabase
+                  .from('comanda_pagamento_itens')
+                  .update({
+                    id_venda: vendaId,
+                    id_venda_pagamento: idVendaPagamento,
+                    id_venda_item: idVendaItem,
+                  })
+                  .eq('id_pagamento', parcial.id)
+                  .eq('id_comanda_item', alocacao.id_comanda_item);
+                if (vinculoErr) throw new Error('Falha ao preservar os itens pagos: ' + vinculoErr.message);
+              }
+            }
+          }
         }
       }
 
@@ -877,7 +952,10 @@
         subtotal,
         desconto,
         total,
-        taxaEntrega: couvert > 0 ? couvert : 0,
+        tipoPedido: 'mesa',
+        couvert,
+        taxaServicoPct: taxaPct,
+        taxaServicoValor: taxaValor,
         formaPagamento: null,
       },
       opcoes: { titulo: `PRÉ-CONTA — MESA ${mesa?.numero || ''}`, naoFiscal: true },
@@ -903,6 +981,10 @@
         subtotal: recibo.subtotal,
         desconto: recibo.desconto,
         total: recibo.total,
+        tipoPedido: 'mesa',
+        couvert: recibo.couvert,
+        taxaServicoPct: recibo.taxa_pct,
+        taxaServicoValor: recibo.taxa_valor,
         formaPagamento: recibo.pagamentos_split?.length ? 'multiplo' : recibo.forma_pagamento,
         pagamentos: pags,
         valorRecebido: recibo.valor_recebido,
@@ -1012,11 +1094,49 @@
   }
 
   // === Pagamentos parciais (rachar ao longo do tempo) ===
+  function quantidadeDisponivelItem(item) {
+    return Math.max(0, Number(item.quantidade || 0) - Number(quantidadePagaPorItem[item.id] || 0));
+  }
+
+  function calcularValorItensSelecionados(selecao) {
+    return itens.reduce((acc, item) => {
+      const quantidade = Number(selecao?.[item.id] || 0);
+      return acc + quantidade * Number(item.preco_unitario || 0);
+    }, 0);
+  }
+
+  function selecionarQuantidadeParcial(item, value) {
+    const disponivel = quantidadeDisponivelItem(item);
+    const quantidade = Math.min(disponivel, Math.max(0, Number(value || 0)));
+    const next = { ...parcialSelecionados };
+    if (quantidade <= 0) delete next[item.id];
+    else next[item.id] = quantidade;
+    parcialSelecionados = next;
+    if (parcialModo === 'itens') parcialValor = Math.min(saldoMesa, calcularValorItensSelecionados(next));
+  }
+
+  function limparSelecaoParcial() {
+    parcialSelecionados = {};
+    parcialValor = saldoMesa > 0 ? saldoMesa : 0;
+  }
+
+  function selecionarTodosItensDisponiveis() {
+    const next = itens.reduce((acc, item) => {
+      const disponivel = quantidadeDisponivelItem(item);
+      if (disponivel > 0) acc[item.id] = disponivel;
+      return acc;
+    }, {});
+    parcialSelecionados = next;
+    parcialValor = Math.min(saldoMesa, calcularValorItensSelecionados(next));
+  }
+
   async function abrirParcialModal() {
     if (!comanda) return;
     parcialErro = '';
     parcialForma = 'dinheiro';
     parcialValor = saldoMesa > 0 ? saldoMesa : 0;
+    parcialModo = 'itens';
+    parcialSelecionados = {};
     parcialPessoaId = '';
     parcialModalOpen = true;
     await loadPessoasFiado();
@@ -1033,12 +1153,33 @@
   }
 
   function preencherParcialSaldo() {
-    parcialValor = saldoMesa;
+    if (parcialModo === 'itens') selecionarTodosItensDisponiveis();
+    else parcialValor = saldoMesa;
   }
 
   async function salvarPagamentoParcial() {
     parcialErro = '';
-    const valor = Number(parcialValor || 0);
+    const allocations = parcialModo === 'itens'
+      ? Object.entries(parcialSelecionados).map(([id_comanda_item, quantidade]) => ({
+        id_comanda_item,
+        quantidade: Number(quantidade),
+      }))
+      : [];
+    let allocationResult;
+    try {
+      allocationResult = allocatePaymentItems({
+        items: itens,
+        allocations,
+        existingAllocations: pagamentosParciais.flatMap(p => p.itens_alocados || []),
+      });
+    } catch (error) {
+      parcialErro = error instanceof PaymentAllocationError
+        ? error.message
+        : 'Não foi possível validar os itens selecionados.';
+      return;
+    }
+    const quantidadeSelecionada = allocations.reduce((acc, item) => acc + Number(item.quantidade || 0), 0);
+    const valor = parcialModo === 'itens' ? Number(allocationResult.subtotal || 0) : Number(parcialValor || 0);
     if (!parcialForma || valor <= 0) {
       parcialErro = 'Selecione forma e digite um valor maior que zero.';
       return;
@@ -1049,6 +1190,10 @@
     }
     if (valor > saldoMesa + 0.001) {
       parcialErro = `Valor excede o saldo (R$ ${saldoMesa.toFixed(2)}).`;
+      return;
+    }
+    if (parcialModo === 'itens' && quantidadeSelecionada <= 0) {
+      parcialErro = 'Selecione pelo menos um item ou troque para pagamento por valor.';
       return;
     }
 
@@ -1070,6 +1215,20 @@
         .single();
       if (error) throw new Error(error.message);
 
+      const alocacoes = allocationResult.rows.map(row => ({ ...row, id_pagamento: data.id }));
+      if (alocacoes.length > 0) {
+        const { error: allocationError } = await supabase
+          .from('comanda_pagamento_itens')
+          .insert(alocacoes);
+        if (allocationError) {
+          await supabase.from('comanda_pagamentos').delete().eq('id', data.id).eq('id_usuario', ownerUserId);
+          throw new Error('Falha ao vincular os itens pagos: ' + allocationError.message);
+        }
+        data.itens_alocados = alocacoes;
+      } else {
+        data.itens_alocados = [];
+      }
+
       pagamentosParciais = [...pagamentosParciais, data];
       await supabase
         .from('comandas')
@@ -1087,6 +1246,8 @@
       parcialErro = '';
       parcialForma = 'dinheiro';
       parcialPessoaId = '';
+      parcialModo = 'itens';
+      parcialSelecionados = {};
       parcialValor = saldoMesa > 0 ? saldoMesa : 0;
 
       // Se zerou o saldo, fecha o modal
@@ -1104,6 +1265,16 @@
       `Remover ${nomeForma(p.forma_pagamento)} de R$ ${Number(p.valor).toFixed(2)}?`
     );
     if (!ok) return;
+
+    const { error: allocationError } = await supabase
+      .from('comanda_pagamento_itens')
+      .delete()
+      .eq('id_pagamento', p.id)
+      .eq('id_usuario', ownerUserId);
+    if (allocationError) {
+      addToast('Erro ao remover itens vinculados: ' + allocationError.message, 'error');
+      return;
+    }
 
     const { error } = await supabase
       .from('comanda_pagamentos')
@@ -1377,6 +1548,7 @@
         {:else}
           <ul class="itens-ul">
             {#each itens as item (item.id)}
+              {@const qtdPaga = Number(quantidadePagaPorItem[item.id] || 0)}
               <li class="item-card">
                 <div class="item-info">
                   <span class="item-nome">{item.nome_produto}</span>
@@ -1384,6 +1556,11 @@
                     <span class="item-modifiers">{item.modifierSummary}</span>
                   {/if}
                   <span class="item-preco">R$ {Number(item.preco_unitario).toFixed(2)} · subtotal R$ {(Number(item.preco_unitario) * Number(item.quantidade)).toFixed(2)}</span>
+                  {#if qtdPaga > 0}
+                    <span class="item-paid-status">
+                      {qtdPaga >= Number(item.quantidade) - 0.001 ? 'Pago' : `Pago ${qtdPaga.toFixed(3).replace(/\.000$/, '')} de ${Number(item.quantidade).toFixed(3).replace(/\.000$/, '')}`}
+                    </span>
+                  {/if}
                 </div>
                 <div class="item-actions">
                   <div class="qty-cluster">
@@ -1685,6 +1862,47 @@
         </div>
       </div>
 
+      <div class="parcial-mode-toggle" role="group" aria-label="Tipo de pagamento parcial">
+        <button type="button" class:active={parcialModo === 'itens'} on:click={() => { parcialModo = 'itens'; parcialValor = valorItensSelecionados; }}>
+          Selecionar itens
+        </button>
+        <button type="button" class:active={parcialModo === 'valor'} on:click={() => parcialModo = 'valor'}>
+          Informar valor
+        </button>
+      </div>
+
+      {#if parcialModo === 'itens'}
+        <div class="parcial-picker-header">
+          <span>O que esta pessoa está pagando?</span>
+          <span class="parcial-picker-actions">
+            <button type="button" on:click={selecionarTodosItensDisponiveis}>Todos</button>
+            <button type="button" on:click={limparSelecaoParcial}>Limpar</button>
+          </span>
+        </div>
+        <div class="parcial-items-picker">
+          {#each itens as item (item.id)}
+            {@const disponivel = quantidadeDisponivelItem(item)}
+            <label class="parcial-picker-item" class:paid={disponivel <= 0.001}>
+              <span class="parcial-picker-item-info">
+                <strong>{item.nome_produto}</strong>
+                <small>R$ {Number(item.preco_unitario).toFixed(2)} cada · disponível {disponivel.toFixed(3).replace(/\.000$/, '')}</small>
+              </span>
+              <input
+                type="number"
+                min="0"
+                max={disponivel}
+                step="0.001"
+                value={parcialSelecionados[item.id] || 0}
+                disabled={disponivel <= 0.001}
+                on:input={(event) => selecionarQuantidadeParcial(item, event.currentTarget.value)}
+                aria-label={`Quantidade de ${item.nome_produto} paga agora`}
+              />
+            </label>
+          {/each}
+        </div>
+        <p class="parcial-picker-help">Couvert, desconto e taxa de serviço são encargos da mesa. Para cobrar esses valores, use “Informar valor”.</p>
+      {/if}
+
       <div class="multi-add-form">
         <select class="multi-forma" bind:value={parcialForma} on:change={onParcialFormaChange}>
           <option value="dinheiro">Dinheiro</option>
@@ -1693,12 +1911,16 @@
           <option value="pix">PIX</option>
           <option value="fiado">Fiado</option>
         </select>
-        <input
-          type="number" inputmode="decimal" min="0.01" step="0.01"
-          class="multi-valor"
-          bind:value={parcialValor}
-          placeholder="0,00"
-        />
+        {#if parcialModo === 'itens'}
+          <input class="multi-valor" value={valorItensSelecionados.toFixed(2)} readonly aria-label="Valor dos itens selecionados" />
+        {:else}
+          <input
+            type="number" inputmode="decimal" min="0.01" step="0.01"
+            class="multi-valor"
+            bind:value={parcialValor}
+            placeholder="0,00"
+          />
+        {/if}
         <button type="button" class="multi-restante" on:click={preencherParcialSaldo} title="Preencher com o saldo">
           Saldo
         </button>
@@ -1706,7 +1928,7 @@
           type="button"
           class="multi-add-btn"
           on:click={salvarPagamentoParcial}
-          disabled={savingParcial || saldoMesa <= 0.001}
+           disabled={savingParcial || saldoMesa <= 0.001 || (parcialModo === 'itens' && valorItensSelecionados <= 0.001)}
         >
           {#if savingParcial}
             …
@@ -1742,6 +1964,14 @@
                   <span class="multi-item-forma">{nomeForma(p.forma_pagamento)}</span>
                   {#if p.forma_pagamento === 'fiado'}
                     <span class="multi-item-pessoa">{pessoas.find(x => x.id === p.id_pessoa)?.nome || ''}</span>
+                  {/if}
+                  {#if p.itens_alocados?.length}
+                    <span class="multi-item-pessoa">{p.itens_alocados.map(a => {
+                      const item = itens.find(x => x.id === a.id_comanda_item);
+                      return `${Number(a.quantidade)}× ${item?.nome_produto || 'item'}`;
+                    }).join(', ')}</span>
+                  {:else}
+                    <span class="multi-item-pessoa">Pagamento geral</span>
                   {/if}
                 </div>
                 <span class="multi-item-valor">R$ {Number(p.valor).toFixed(2)}</span>
@@ -3180,6 +3410,114 @@
     color: var(--status-warning-text);
     font-weight: 800;
     font-size: 1rem;
+  }
+
+  .item-paid-status {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-top: 0.2rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 999px;
+    background: var(--status-success-bg);
+    color: var(--status-success-text);
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .parcial-mode-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+  }
+  .parcial-mode-toggle button,
+  .parcial-picker-actions button {
+    min-height: 2.25rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-input);
+    color: var(--text-label);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .parcial-mode-toggle button.active {
+    border-color: var(--primary);
+    background: var(--accent-light);
+    color: var(--primary);
+  }
+  .parcial-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    color: var(--text-label);
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .parcial-picker-actions {
+    display: flex;
+    gap: 0.3rem;
+  }
+  .parcial-picker-actions button {
+    min-height: 1.9rem;
+    padding: 0 0.55rem;
+    font-size: 0.7rem;
+  }
+  .parcial-items-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 15rem;
+    margin-top: 0.45rem;
+    overflow: auto;
+  }
+  .parcial-picker-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 9px;
+    background: var(--bg-input);
+  }
+  .parcial-picker-item.paid { opacity: 0.55; }
+  .parcial-picker-item-info {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .parcial-picker-item-info strong {
+    overflow: hidden;
+    color: var(--text-main);
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .parcial-picker-item-info small {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+  }
+  .parcial-picker-item input {
+    width: 4.5rem;
+    flex: 0 0 auto;
+    border: 1px solid var(--border-subtle);
+    border-radius: 7px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    padding: 0.45rem 0.35rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .parcial-picker-help {
+    margin: 0.45rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    line-height: 1.35;
   }
 
   .parcial-history {

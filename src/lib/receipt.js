@@ -19,6 +19,32 @@ function fmtBRL(v) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
 }
 
+function numberFrom(value, fallback = 0) {
+  if (value == null || value === '') return fallback;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function firstNumber(object, keys) {
+  for (const key of keys) {
+    if (object?.[key] != null && object[key] !== '') return numberFrom(object[key]);
+  }
+  return 0;
+}
+
+function getReceiptCharges(venda, subtotal, desconto) {
+  const couvert = firstNumber(venda, ['couvert', 'couvert_valor', 'couvertValor']);
+  const taxaServicoPct = firstNumber(venda, ['taxaServicoPct', 'taxa_pct', 'taxa_servico_pct']);
+  const taxaServicoKeys = ['taxaServico', 'taxa_servico', 'taxaServicoValor', 'taxa_servico_valor', 'taxa_valor'];
+  const hasTaxaServicoValor = taxaServicoKeys.some(key => venda?.[key] != null && venda[key] !== '');
+  const taxaServico = hasTaxaServicoValor
+    ? firstNumber(venda, taxaServicoKeys)
+    : Math.max(0, subtotal + couvert - desconto) * (taxaServicoPct / 100);
+  const taxaEntrega = venda?.tipoPedido === 'delivery' ? firstNumber(venda, ['taxaEntrega']) : 0;
+
+  return { couvert, taxaServicoPct, taxaServico, taxaEntrega };
+}
+
 function formaLabel(f) {
   if (!f) return '';
   if (f === 'dinheiro') return 'Dinheiro';
@@ -118,8 +144,8 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
   const subtotalCalc = itens.reduce((s, it) => s + Number(it.quantidade || 1) * Number(it.preco_unitario || it.preco_unitario_na_venda || 0), 0);
   const subtotal = venda.subtotal != null ? Number(venda.subtotal) : subtotalCalc;
   const desconto = Number(venda.desconto || 0);
-  const taxa = Number(venda.taxaEntrega || 0);
-  const total = venda.total != null ? Number(venda.total) : (subtotal - desconto + taxa);
+  const { couvert, taxaServicoPct, taxaServico, taxaEntrega } = getReceiptCharges(venda, subtotal, desconto);
+  const total = venda.total != null ? Number(venda.total) : (subtotal - desconto + couvert + taxaServico + taxaEntrega);
   const recebido = venda.valorRecebido != null ? Number(venda.valorRecebido) : null;
   const troco = venda.troco != null ? Number(venda.troco) : (recebido != null ? Math.max(0, recebido - total) : 0);
   const pagamentos = Array.isArray(venda.pagamentos) ? venda.pagamentos.map(p => ({
@@ -221,8 +247,10 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
   <div class="total-row">
     <span>Subtotal</span><span>${fmtBRL(subtotal)}</span>
   </div>
+  ${couvert > 0 ? `<div class="total-row"><span>Couvert</span><span>+ ${fmtBRL(couvert)}</span></div>` : ''}
   ${desconto > 0 ? `<div class="total-row desconto"><span>Desconto</span><span class="val">− ${fmtBRL(desconto)}</span></div>` : ''}
-  ${taxa > 0 ? `<div class="total-row"><span>Taxa de entrega</span><span>+ ${fmtBRL(taxa)}</span></div>` : ''}
+  ${taxaServico > 0 ? `<div class="total-row"><span>Taxa de serviço${taxaServicoPct > 0 ? ` (${taxaServicoPct}%)` : ''}</span><span>+ ${fmtBRL(taxaServico)}</span></div>` : ''}
+  ${taxaEntrega > 0 ? `<div class="total-row"><span>Taxa de entrega</span><span>+ ${fmtBRL(taxaEntrega)}</span></div>` : ''}
   <hr class="sep-solid">
   <div class="total-row grand">
     <span>TOTAL</span><span>${fmtBRL(total)}</span>

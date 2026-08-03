@@ -83,4 +83,77 @@ describe('receipt builder', () => {
     expect(html).toContain('font-weight: 900');
     expect(html).not.toContain('color:#888');
   });
+
+  it('prints explicit couvert and service fee for a mesa without calling either delivery', () => {
+    const html = buildReceiptHTML({
+      estabelecimento: { nome_exibicao: 'Loja' },
+      venda: {
+        numeroVenda: 24,
+        tipoPedido: 'mesa',
+        mesaNumero: 6,
+        formaPagamento: null,
+        subtotal: 100,
+        couvert: 10,
+        taxaServicoPct: 10,
+        taxaServico: 11,
+        total: 121,
+        // A mesa must never render this legacy delivery field.
+        taxaEntrega: 99,
+        itens: [],
+      },
+      opcoes: { titulo: 'PRÉ-CONTA — MESA 6', naoFiscal: true },
+    });
+
+    expect(html).toContain('PRÉ-CONTA — MESA 6');
+    expect(html).toContain('Couvert');
+    expect(html).toContain('Taxa de serviço (10%)');
+    expect(html).toContain('R$ 10,00');
+    expect(html).toContain('R$ 11,00');
+    expect(html).not.toContain('Taxa de entrega');
+  });
+
+  it('prints the final mesa receipt with persisted service-fee fields', () => {
+    const html = buildReceiptHTML({
+      estabelecimento: { nome_exibicao: 'Loja' },
+      venda: {
+        numeroVenda: 25,
+        tipoPedido: 'mesa',
+        mesaNumero: 6,
+        formaPagamento: 'pix',
+        subtotal: 50,
+        couvert: 5,
+        desconto: 2,
+        taxa_pct: 10,
+        taxa_valor: 5.3,
+        total: 58.3,
+        itens: [],
+      },
+      opcoes: { titulo: 'RECIBO — MESA 6' },
+    });
+
+    expect(html).toContain('RECIBO — MESA 6');
+    expect(html).toContain('Couvert');
+    expect(html).toContain('Taxa de serviço (10%)');
+    expect(html).toContain('TOTAL</span><span>R$ 58,30');
+    expect(html).not.toContain('Taxa de entrega');
+  });
+
+  it('keeps delivery tax as delivery tax', () => {
+    const html = buildReceiptHTML({
+      estabelecimento: { nome_exibicao: 'Loja' },
+      venda: {
+        numeroVenda: 26,
+        tipoPedido: 'delivery',
+        formaPagamento: 'pix',
+        subtotal: 40,
+        taxaEntrega: 8,
+        total: 48,
+        itens: [],
+      },
+    });
+
+    expect(html).toContain('Taxa de entrega');
+    expect(html).not.toContain('Couvert');
+    expect(html).not.toContain('Taxa de serviço');
+  });
 });

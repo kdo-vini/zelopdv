@@ -1,5 +1,18 @@
 # Fixes Progress
 
+- [x] FX-MESAS-01 (2026-08-03) — o pagamento parcial existente por valor ganhou
+  atribuicao opcional por item, com controle de quantidade disponivel, RLS e
+  trigger no banco. O fechamento preserva a origem em `vendas_pagamentos` e o
+  item em `vendas_itens`/`comanda_pagamento_itens`. Pre-conta e recibo final
+  deixaram de chamar couvert de taxa de entrega; delivery continua imprimindo a
+  propria taxa. Migration aplicada no Supabase vinculado; testes direcionados
+  38/38 e `npm run check` 0 erros/96 avisos conhecidos.
+
+- [x] FX-MESAS-02 (2026-08-03) — corrigidas as policies de INSERT do fechamento
+  para subusuarios: pagamentos da comanda, venda, itens e pagamentos da venda
+  agora validam o owner efetivo, sem exigir que `auth.uid()` seja o owner.
+  Migration aplicada no Supabase vinculado.
+
 - [x] FX-MKT-08 (2026-08-03) — corrigido o logo cortado no header: o asset horizontal agora respeita `object-fit: contain` e a altura declarada de 40 px. QA no dev server em desktop e mobile confirmou logo completo, sem overflow horizontal e sem erros de console; `npm run check` passou com 0 erros / 96 avisos e `npm test` com 497/497.
 
 - [x] FX-MKT-07 (2026-08-03) — reduzido o caminho crítico da home: autenticação/Supabase e modal de PIN foram divididos em carregamento dinâmico e, na superfície pública, adiados por 5s; tracking de Google/Meta foi movido para filas client-side + carregamento em idle sem preconnect prematuro; logo principal recebeu dimensões/prioridade; screenshots de marketing ganharam WebP responsivo em 800/1600 px. `npm run check` passou com 0 erros / 96 avisos conhecidos. Build compila, mas o adapter Vercel permanece bloqueado pelo `EPERM` de symlink conhecido no Windows.
