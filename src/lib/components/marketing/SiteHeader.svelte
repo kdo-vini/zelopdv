@@ -32,7 +32,15 @@
 <nav class="site-nav {topOffset}" aria-label="Navegação principal">
   <div class="site-nav-inner">
     <a href="/" class="brand-link" aria-label="Zelo PDV, página inicial">
-      <img src="/logo-horizontal.webp" alt="Zelo PDV" class="site-logo" />
+      <img
+        src="/logo-horizontal-cropped.webp"
+        alt="Zelo PDV"
+        class="site-logo"
+        width="128"
+        height="40"
+        fetchpriority="high"
+        decoding="async"
+      />
     </a>
 
     <div class="desktop-nav">

@@ -1,36 +1,6 @@
 <!doctype html>
 <html lang="pt-BR" class="dark">
   <head>
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-TG5PPGLB');</script>
-    <!-- End Google Tag Manager -->
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6XMEDGM8H6"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag('js', new Date());
-
-      // Consent Mode V2: default granted (tráfego BR/LGPD, sem banner por ora).
-      // Mantém a modelagem do Google disponível e fica pronto pra um futuro
-      // banner chamar gtag('consent', 'update', ...).
-      gtag('consent', 'default', {
-        ad_storage: 'granted',
-        ad_user_data: 'granted',
-        ad_personalization: 'granted',
-        analytics_storage: 'granted'
-      });
-
-      gtag('config', 'G-6XMEDGM8H6');
-      gtag('config', 'AW-17382733965');
-    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- <title> vem de cada rota via svelte:head; título estático aqui duplicaria a tag no SSR -->
@@ -58,23 +28,9 @@
     <meta name="twitter:description" content="Frente de caixa ágil, controle de fiado e gestão financeira em um só lugar. Teste grátis por 14 dias, sem cartão." />
     <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
 
-    <!-- Meta Pixel Code -->
-    <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '1612234413401838');
-    fbq('track', 'PageView');
-    </script>
     <noscript><img height="1" width="1" style="display:none"
     src="https://www.facebook.com/tr?id=1612234413401838&ev=PageView&noscript=1"
     /></noscript>
-    <!-- End Meta Pixel Code -->
 
     %sveltekit.head%
   </head>

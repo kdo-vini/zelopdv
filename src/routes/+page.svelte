@@ -175,6 +175,7 @@
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import { ADDONS, PLANS } from '$lib/pricing';
   import { trackViewContent } from '$lib/metaPixel';
+  import { initMarketingAnalytics } from '$lib/marketingAnalytics';
 
   let activeLightboxImage = null;
   let activeDemo = 'profit';
@@ -220,6 +221,7 @@
     }
 
     window.addEventListener('keydown', handleKeydown);
+    initMarketingAnalytics();
     trackViewContent();
 
     return () => window.removeEventListener('keydown', handleKeydown);
@@ -306,13 +308,21 @@
           aria-label="Ampliar tela de relatório financeiro"
           on:click={() => activeLightboxImage = '/images/screenshots/financial-screen.png'}
         >
-          <img
-            src="/images/screenshots/financial-screen.png"
-            alt="Relatório financeiro do Zelo PDV com vendas, formas de pagamento e receita líquida."
-            width="1682"
-            height="858"
-            loading="lazy"
-          />
+          <picture>
+            <source
+              type="image/webp"
+              srcset="/images/screenshots/financial-screen-800.webp 800w, /images/screenshots/financial-screen-1600.webp 1600w"
+              sizes="(max-width: 768px) calc(100vw - 2rem), min(80rem, calc(100vw - 3rem))"
+            />
+            <img
+              src="/images/screenshots/financial-screen.png"
+              alt="Relatório financeiro do Zelo PDV com vendas, formas de pagamento e receita líquida."
+              width="1682"
+              height="858"
+              loading="lazy"
+              decoding="async"
+            />
+          </picture>
           <span class="zoom-action"><ScanSearch class="size-5" aria-hidden="true" /> Ampliar tela</span>
         </button>
 
@@ -355,13 +365,21 @@
               aria-label="Ampliar tela da frente de caixa"
               on:click={() => activeLightboxImage = '/images/screenshots/dashboard-desktop.png'}
             >
-              <img
-                src="/images/screenshots/dashboard-desktop.png"
-                alt="Frente de caixa do Zelo PDV com produtos e comanda."
-                width="1918"
-                height="906"
-                loading="lazy"
-              />
+              <picture>
+                <source
+                  type="image/webp"
+                  srcset="/images/screenshots/dashboard-desktop-800.webp 800w, /images/screenshots/dashboard-desktop-1600.webp 1600w"
+                  sizes="(max-width: 900px) calc(100vw - 2rem), 60vw"
+                />
+                <img
+                  src="/images/screenshots/dashboard-desktop.png"
+                  alt="Frente de caixa do Zelo PDV com produtos e comanda."
+                  width="1918"
+                  height="906"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
             </button>
           </article>
 
@@ -384,13 +402,21 @@
                 aria-label="Ampliar tela de controle de fiado"
                 on:click={() => activeLightboxImage = '/images/screenshots/customers-screen.png'}
               >
-                <img
-                  src="/images/screenshots/customers-screen.png"
-                  alt="Controle de clientes e fiado no Zelo PDV."
-                  width="1680"
-                  height="840"
-                  loading="lazy"
-                />
+                <picture>
+                  <source
+                    type="image/webp"
+                    srcset="/images/screenshots/customers-screen-800.webp 800w, /images/screenshots/customers-screen-1600.webp 1600w"
+                    sizes="(max-width: 900px) calc(100vw - 2rem), 50vw"
+                  />
+                  <img
+                    src="/images/screenshots/customers-screen.png"
+                    alt="Controle de clientes e fiado no Zelo PDV."
+                    width="1696"
+                    height="699"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </picture>
               </button>
             </article>
           </div>

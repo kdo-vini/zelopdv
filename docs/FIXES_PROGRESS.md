@@ -1,5 +1,7 @@
 # Fixes Progress
 
+- [x] FX-MKT-07 (2026-08-03) — reduzido o caminho crítico da home: autenticação/Supabase e modal de PIN foram divididos em carregamento dinâmico; tracking de Google/Meta foi movido para filas client-side + carregamento em idle; logo principal recebeu dimensões/prioridade; screenshots de marketing ganharam WebP responsivo em 800/1600 px. `npm run check` passou com 0 erros / 96 avisos conhecidos. Build compila, mas o adapter Vercel permanece bloqueado pelo `EPERM` de symlink conhecido no Windows.
+
 - [x] FX-ZELINHO-02 (2026-08-01) — auditoria encontrou dois defaults de data ainda baseados em UTC: o contexto sazonal e o resumo semanal podiam avançar um dia/uma semana antes da virada brasileira. Ambos agora derivam a data de negócio de `America/Sao_Paulo`; os cálculos internos de datas sem horário continuam em UTC por determinismo. Testes cobrem a virada de 23h30 BRT; sem migration ou alteração de dados.
 
 - [x] FX-ZELINHO-01 (2026-07-31) — o Zelinho ignorava despesas no início do mês seguinte em UTC, enquanto ainda era o mês anterior no fuso brasileiro; o resultado também misturava receita de 30 dias com despesas do mês. Corrigidos os limites locais, alinhado o cálculo no mesmo período, adicionada paginação de vendas/despesas e ampliado o contexto com categorias e participação na receita. Validado na Apex Burgers e coberto por testes de timezone/contexto; `npm test` completo verde e `npm run check` em 0 erros / 99 avisos.

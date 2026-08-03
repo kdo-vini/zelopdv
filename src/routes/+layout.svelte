@@ -1,15 +1,38 @@
 <script>
   import "../app.css";
   import { onMount } from 'svelte';
-  import { supabase, hasSupabaseConfig } from '$lib/supabaseClient';
-  import { isSubscriptionActiveStrict } from '$lib/guards';
-  import { requiredOk } from '$lib/profileUtils';
   import { page } from '$app/stores';
   import { get } from 'svelte/store';
   import { afterNavigate } from '$app/navigation';
   import { isZeloContactWhatsAppHref, trackGoogleAdsContato } from '$lib/googleAds';
   import { capturePostHogPageview } from '$lib/posthogClient';
   import { captureAcquisitionOrigin } from '$lib/attribution/client';
+  import { initMarketingAnalytics } from '$lib/marketingAnalytics';
+
+  let supabase = null;
+  let PinSetupModal = null;
+  let isSubscriptionActiveStrict;
+  let requiredOk;
+  let authModulesPromise;
+
+  async function loadAuthModules() {
+    if (!authModulesPromise) {
+      authModulesPromise = Promise.all([
+        import('$lib/supabaseClient'),
+        import('$lib/guards'),
+        import('$lib/profileUtils'),
+        import('$lib/components/PinSetupModal.svelte'),
+      ]).then(([supabaseModule, guardsModule, profileUtilsModule, pinSetupModule]) => {
+        supabase = supabaseModule.supabase;
+        isSubscriptionActiveStrict = guardsModule.isSubscriptionActiveStrict;
+        requiredOk = profileUtilsModule.requiredOk;
+        PinSetupModal = pinSetupModule.default;
+        return supabase;
+      });
+    }
+
+    return authModulesPromise;
+  }
 
   const usageFeatureByPath = [
     ['/gestao/gerente', 'gerente'],
@@ -166,6 +189,9 @@
 
 
   onMount(async () => {
+    initMarketingAnalytics();
+
+    await loadAuthModules();
     if (!supabase) return;
  
   const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/redefinir-senha', '/privacidade', '/termos', '/pascoa', '/para-lanchonetes', '/para-restaurantes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao', '/extensoes', '/vs-planilha', '/comparativos', '/contato', '/zelo-impressao', '/auth/callback'];
@@ -335,7 +361,6 @@
   });
   import { Toaster } from 'svelte-sonner';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-  import PinSetupModal from '$lib/components/PinSetupModal.svelte';
   import SupportChat from '$lib/components/SupportChat.svelte';
   import UpdateAvailable from '$lib/components/UpdateAvailable.svelte';
   import { adminUnlocked } from '$lib/stores/adminStore';
@@ -401,8 +426,8 @@
 <ConfirmDialog />
 <UpdateAvailable />
 
-{#if showPinSetup && session && !isPerfil && !isAssinatura}
-  <PinSetupModal userId={session.user.id} {onPinSet} />
+{#if showPinSetup && session && !isPerfil && !isAssinatura && PinSetupModal}
+  <svelte:component this={PinSetupModal} userId={session.user.id} {onPinSet} />
 {/if}
 
 {#if !isOnline}

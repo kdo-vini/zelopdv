@@ -14,7 +14,7 @@
   <div class="footer-shell">
     <div class="footer-main">
       <div class="footer-brand">
-        <img src="/logo-horizontal.webp" alt="Zelo PDV" />
+        <img src="/logo-horizontal-cropped.webp" alt="Zelo PDV" width="144" height="45" loading="lazy" decoding="async" />
         <p>Seu caixa em ordem para você cuidar do negócio.</p>
       </div>
 
@@ -88,8 +88,7 @@
     width: 9rem;
     height: 3.4rem;
     margin-bottom: 1.25rem;
-    object-fit: cover;
-    object-position: center;
+    object-fit: contain;
   }
 
   .footer-brand p {
