@@ -1,5 +1,12 @@
 # Fixes Progress
 
+- [x] FX-FIADO-03 (2026-08-04) — corrigida a rolagem desktop do Fichário:
+  `gestao-main-content` agora permite que a workspace ocupe corretamente a
+  altura disponível, a lista de pessoas rola dentro do painel esquerdo e o
+  detalhe da pessoa rola como um único contêiner, incluindo o extrato. As
+  rolagens aninhadas do extrato foram removidas; o comportamento mobile foi
+  preservado.
+
 - [x] FX-MESAS-01 (2026-08-03) — o pagamento parcial existente por valor ganhou
   atribuicao opcional por item, com controle de quantidade disponivel, RLS e
   trigger no banco. O fechamento preserva a origem em `vendas_pagamentos` e o
@@ -121,5 +128,4 @@
   por empresa no dashboard administrativo. A configuração persistida no
   Supabase controla as métricas de base, financeiro e engajamento; Donutopia e
   Téchne permanecem excluídas por padrão.
-
 

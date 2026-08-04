@@ -20,7 +20,7 @@
   <div class:zelinho-open={$isZelinhoOpen} class="app-navigation-workspace zelinho-workspace flex h-screen overflow-hidden" style="background: var(--bg-app); color: var(--text-main);">
     <GestaoSidebar />
     <div class="flex-1 flex flex-col overflow-hidden min-w-0">
-      <main class="flex-1 overflow-y-auto p-6 md:p-8" id="gestao-main-content">
+      <main class="flex-1 min-h-0 overflow-y-auto p-6 md:p-8" id="gestao-main-content">
         <slot />
       </main>
     </div>

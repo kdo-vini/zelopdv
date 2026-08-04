@@ -392,7 +392,8 @@
         {#if pessoasFiltradas.length === 0}
           <div class="empty-list"><Users size={28} aria-hidden="true" /><p>Nenhuma pessoa encontrada.</p></div>
         {:else}
-          <div class="people-list">
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex -- região rolável precisa receber foco para navegação por teclado -->
+          <div class="people-list" tabindex="0" aria-label="Lista de pessoas">
             {#each pessoasFiltradas as pessoa (pessoa.id)}
               {@const estado = getFiadoState(pessoa.saldo_fiado)}
               <button class="person-card" class:active={pessoa.id === selectedPessoaId} on:click={() => selecionar(pessoa.id)} aria-pressed={pessoa.id === selectedPessoaId}>
@@ -408,7 +409,8 @@
         {/if}
       </aside>
 
-      <main class="detail-panel">
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex -- região rolável precisa receber foco para navegação por teclado -->
+      <main class="detail-panel" tabindex="0" aria-label="Detalhes da ficha">
         {#if !pessoaSelecionada}
           <div class="empty-detail"><WalletCards size={48} aria-hidden="true" /><h2>Escolha uma pessoa</h2><p>Busque pelo nome para ver a ficha e registrar um pagamento.</p></div>
         {:else}
@@ -920,10 +922,12 @@ Regularize quando puder!</div>
 
   /* ── Fichário workspace ── */
   .fichario-page {
+    box-sizing: border-box;
     width: 100%;
     max-width: 1280px;
-    height: calc(100dvh - 4rem);
-    min-height: 640px;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
     margin: 0 auto;
     padding: 0;
   }
@@ -956,13 +960,16 @@ Regularize quando puder!</div>
     grid-template-columns: 280px minmax(0, 1fr);
     flex: 1 1 auto;
     min-height: 0;
+    overflow: hidden;
     gap: 0;
   }
 
   .fichario-layout .people-panel {
+    display: flex;
+    flex-direction: column;
     position: static;
     min-height: 0;
-    overflow-y: auto;
+    overflow: hidden;
     border: 0;
     border-right: 1px solid var(--border-card);
     border-radius: 0;
@@ -971,12 +978,25 @@ Regularize quando puder!</div>
   }
 
   .fichario-layout .people-list {
+    min-height: 0;
+    flex: 1 1 auto;
     max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .fichario-layout .people-list:focus-visible,
+  .fichario-layout .detail-panel:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
   }
 
   .fichario-layout .detail-panel {
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     gap: 1rem;
     padding: 1rem 1.25rem 1.25rem;
   }
@@ -1052,17 +1072,17 @@ Regularize quando puder!</div>
 
   .fichario-layout .history-card {
     display: flex;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     flex-direction: column;
     min-height: 220px;
-    overflow: hidden;
+    overflow: visible;
     padding: 1rem;
     border-radius: 12px;
   }
 
   .fichario-layout .statement-list {
     min-height: 0;
-    overflow-y: auto;
+    overflow: visible;
   }
 
   .sheet-overlay {

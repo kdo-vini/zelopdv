@@ -1,5 +1,10 @@
 # ZeloPDV — Foco atual
 
+- Fichário (2026-08-04): corrigida a rolagem desktop da lista de pessoas e do
+  detalhe do usuário. A tela agora usa uma única rolagem previsível por coluna
+  (lista à esquerda e detalhe completo à direita), sem rolagens aninhadas no
+  extrato; o mobile continua usando a rolagem da página.
+
 - Mesas/pagamento parcial (2026-08-03): confirmado que o fluxo existente ja
   registrava pagamentos parciais por valor e recalculava o saldo quando novos
   itens eram adicionados. O modulo agora tambem permite selecionar quantidades
@@ -307,4 +312,3 @@ Dashboard administrativo (2026-08-04): o escopo global das métricas agora é
   configurável por empresa em `/settings`; novas contas entram por padrão e
   contas de teste/internas podem ser excluídas de MRR, ARR, ticket médio,
   assinaturas, churn, DAU/WAU e custos de IA vinculados à conta.
-
