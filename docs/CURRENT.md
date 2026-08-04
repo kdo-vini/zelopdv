@@ -4,8 +4,9 @@
   detalhe do usuário. A tela agora usa uma única rolagem previsível por coluna
   (lista à esquerda e detalhe completo à direita), sem rolagens aninhadas no
   extrato. O grid desktop também força os painéis a ocuparem a altura
-  disponível, evitando que o conteúdo cresça além da área rolável; o mobile
-  continua usando a rolagem da página.
+  disponível, evitando que o conteúdo cresça além da área rolável. O workspace
+  foi limitado ao breakpoint desktop, para que no mobile a página continue
+  usando a rolagem natural do conteúdo.
 
 - Mesas/pagamento parcial (2026-08-03): confirmado que o fluxo existente ja
   registrava pagamentos parciais por valor e recalculava o saldo quando novos

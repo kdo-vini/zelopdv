@@ -920,7 +920,8 @@ Regularize quando puder!</div>
 
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
 
-  /* ── Fichário workspace ── */
+  /* ── Fichário workspace (desktop) ── */
+  @media (min-width: 761px) {
   .fichario-page {
     box-sizing: border-box;
     width: 100%;
@@ -1097,6 +1098,7 @@ Regularize quando puder!</div>
     border-radius: 14px;
     width: min(400px, 100%);
     padding: 1rem;
+  }
   }
 
   @media (max-width: 760px) {

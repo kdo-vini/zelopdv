@@ -6,8 +6,10 @@
   detalhe da pessoa rola como um único contêiner, incluindo o extrato. As
   rolagens aninhadas do extrato foram removidas. A causa final era o grid
   desktop com `align-items: start`, que deixava os painéis maiores que a área
-  rolável; os painéis agora esticam até a altura disponível. O comportamento
-  mobile foi preservado.
+  rolável; os painéis agora esticam até a altura disponível. As regras do
+  workspace foram restringidas a telas acima de 760px, restabelecendo a
+  rolagem natural da página no mobile sem alterar o desktop. `npm run check`:
+  0 erros / 96 avisos conhecidos.
 
 - [x] FX-MESAS-01 (2026-08-03) — o pagamento parcial existente por valor ganhou
   atribuicao opcional por item, com controle de quantidade disponivel, RLS e
