@@ -960,6 +960,7 @@ Regularize quando puder!</div>
     grid-template-columns: 280px minmax(0, 1fr);
     flex: 1 1 auto;
     min-height: 0;
+    align-items: stretch;
     overflow: hidden;
     gap: 0;
   }
