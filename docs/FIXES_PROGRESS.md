@@ -117,3 +117,9 @@
 ## Pendência operacional fora do repo
 
 - ⚠️ OPS-DELETE-01 — purge final de contas agendadas depende de sweeper no ZeloChat, não encontrado neste repo — [.ai/migrations/account_deletion_grace_2026_05_31.sql](/home/vinicius/code/zelopdv/.ai/migrations/account_deletion_grace_2026_05_31.sql:5) → **agendado em SPRINT-3 (2026-06-02)**, prioridade por LGPD
+- [x] FX-ADMIN-METRIC-SCOPE (2026-08-04) — criado o escopo global configurável
+  por empresa no dashboard administrativo. A configuração persistida no
+  Supabase controla as métricas de base, financeiro e engajamento; Donutopia e
+  Téchne permanecem excluídas por padrão.
+
+

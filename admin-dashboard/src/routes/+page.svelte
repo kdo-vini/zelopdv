@@ -4,7 +4,7 @@
   import { fade } from 'svelte/transition'
   import { subscriptionValue } from '$lib/pricing'
   import { getEffectiveExpiry, isSubscriptionExpired } from '$lib/subscriptionHelpers'
-  import { INTERNAL_ACCOUNT_LABELS, filterExternalAccounts, isInternalAccount } from '$lib/internalAccounts'
+  import { METRIC_SETTINGS_TABLE, createMetricSettingsMap, getMetricAccountName, isMetricIncluded } from '$lib/metricSettings'
   import { logAdminAction } from '$lib/logger'
   import { generatePdfReport, formatBRL, formatNumber } from '$lib/pdfReport'
   import { error as errorToast } from '$lib/toast'
@@ -16,7 +16,7 @@
     paidSubscriptions: 0,
     trialSubscriptions: 0,
     inactiveSubscriptions: 0,
-    internalAccountsExcluded: 0,
+    excludedAccounts: 0,
     expiringSoon: 0,
     newThisMonth: 0,
     dau: 0,
@@ -28,7 +28,8 @@
   let loading = true
   let savingFinanceExpense = false
   let adminInfo = null
-  const internalAccountsLabel = INTERNAL_ACCOUNT_LABELS.join(', ')
+  let metricAccounts = []
+  let metricSettingsByUserId = new Map()
   let fixedExpenses = []
   let expenseDraft = { label: '', amount: '' }
 
@@ -43,11 +44,23 @@
     profit: monthlyProfit * months,
   }))
   $: canAddExpense = expenseDraft.label.trim().length > 0 && Number(expenseDraft.amount) >= 0
+  $: excludedMetricAccountNames = metricAccounts
+    .filter((account) => !isMetricIncluded(account.user_id, metricSettingsByUserId))
+    .map(getMetricAccountName)
+  $: excludedMetricAccountsLabel = excludedMetricAccountNames.length > 0
+    ? excludedMetricAccountNames.join(', ')
+    : 'nenhuma'
 
   onMount(async () => {
-    await loadAdminInfo()
-    await Promise.all([loadStats(), loadFixedExpenses()])
-    loading = false
+    try {
+      await loadAdminInfo()
+      await Promise.all([loadStats(), loadFixedExpenses()])
+    } catch (err) {
+      console.error('[Dashboard] Failed to load dashboard data:', err)
+      errorToast('Não foi possível carregar as métricas administrativas.')
+    } finally {
+      loading = false
+    }
   })
 
   function formatCurrency(value) {
@@ -179,23 +192,32 @@
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000)
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
-    const { data: subs } = await supabase
-      .from('subscriptions')
-      .select('id, user_id, status, current_period_end, manually_extended_until, created_at, plan_tier, has_mesas_addon, has_zelo_menu, has_acessos_addon, monthly_value_cents')
+    const [{ data: subs, error: subscriptionsError }, { data: allUsers, error: usersError }, { data: metricSettings, error: settingsError }] = await Promise.all([
+      supabase
+        .from('subscriptions')
+        .select('id, user_id, status, current_period_end, manually_extended_until, created_at, plan_tier, has_mesas_addon, has_zelo_menu, has_acessos_addon, monthly_value_cents'),
+      supabase.rpc('admin_get_all_auth_users'),
+      supabase.from(METRIC_SETTINGS_TABLE).select('user_id, include_in_metrics'),
+    ])
+
+    if (subscriptionsError) throw subscriptionsError
+    if (usersError) throw usersError
+    if (settingsError) throw settingsError
+
+    metricSettingsByUserId = createMetricSettingsMap(metricSettings || [])
+    metricAccounts = allUsers || []
 
     const allSubs = subs || []
-    const externalSubs = filterExternalAccounts(allSubs)
-    const paidSubs = externalSubs.filter(isCurrentlyPaid)
-    const trialSubs = externalSubs.filter(isCurrentlyTrialing)
+    const includedSubs = allSubs.filter((sub) => isMetricIncluded(sub.user_id, metricSettingsByUserId))
+    const paidSubs = includedSubs.filter(isCurrentlyPaid)
+    const trialSubs = includedSubs.filter(isCurrentlyTrialing)
     const accessibleSubs = [...paidSubs, ...trialSubs]
-    const inactiveSubs = externalSubs.filter((sub) => !isCurrentlyPaid(sub) && !isCurrentlyTrialing(sub))
-    const internalSubs = allSubs.filter((sub) => isInternalAccount(sub))
-
+    const inactiveSubs = includedSubs.filter((sub) => !isCurrentlyPaid(sub) && !isCurrentlyTrialing(sub))
     stats.activeSubscriptions = accessibleSubs.length
     stats.paidSubscriptions = paidSubs.length
     stats.trialSubscriptions = trialSubs.length
     stats.inactiveSubscriptions = inactiveSubs.length
-    stats.internalAccountsExcluded = internalSubs.length
+    stats.excludedAccounts = metricAccounts.filter((account) => !isMetricIncluded(account.user_id, metricSettingsByUserId)).length
     stats.realMrr = sumSubscriptionValues(paidSubs)
     stats.trialPipelineValue = sumSubscriptionValues(trialSubs)
 
@@ -215,18 +237,20 @@
 
     // DAU / WAU — uses GREATEST(last_seen_at, auth.last_sign_in_at) via security definer fn
     const { data: lastSeenData } = await supabase.rpc('admin_get_users_last_seen')
-    const externalLastSeen = filterExternalAccounts(lastSeenData || [])
+    const includedLastSeen = (lastSeenData || []).filter((row) => isMetricIncluded(row.user_id, metricSettingsByUserId))
 
-    stats.dau = externalLastSeen.filter(p => p.effective_last_seen && new Date(p.effective_last_seen) >= today).length
-    stats.wau = externalLastSeen.filter(p => p.effective_last_seen && new Date(p.effective_last_seen) >= sevenDaysAgo).length
+    stats.dau = includedLastSeen.filter(p => p.effective_last_seen && new Date(p.effective_last_seen) >= today).length
+    stats.wau = includedLastSeen.filter(p => p.effective_last_seen && new Date(p.effective_last_seen) >= sevenDaysAgo).length
 
     // AI cost this month (USD → BRL at 5.0)
     const { data: aiLogs } = await supabase
       .from('ai_usage_logs')
-      .select('cost_usd')
+      .select('user_id, cost_usd')
       .gte('created_at', startOfMonth.toISOString())
 
-    const totalCostUsd = aiLogs?.reduce((s, r) => s + (Number(r.cost_usd) || 0), 0) || 0
+    const totalCostUsd = aiLogs
+      ?.filter((row) => isMetricIncluded(row.user_id, metricSettingsByUserId))
+      .reduce((s, r) => s + (Number(r.cost_usd) || 0), 0) || 0
     stats.aiCostBrl = totalCostUsd * 5.0
 
     // Churn this month: canceled this month / (active at start of month)
@@ -236,7 +260,9 @@
       .eq('status', 'canceled')
       .gte('updated_at', startOfMonth.toISOString())
 
-    const canceledCount = filterExternalAccounts(canceledThisMonth || []).length
+    const canceledCount = (canceledThisMonth || [])
+      .filter((sub) => isMetricIncluded(sub.user_id, metricSettingsByUserId))
+      .length
     const activeAtStart = stats.activeSubscriptions + canceledCount
     stats.churnPct = activeAtStart > 0 ? Math.round((canceledCount / activeAtStart) * 100) : 0
   }
@@ -264,7 +290,7 @@
         { label: 'DAU',               value: formatNumber(stats.dau),            hint: 'Ativos hoje' },
         { label: 'WAU',               value: formatNumber(stats.wau),            hint: 'Ativos em 7 dias' },
         { label: 'Custo IA (mês)',    value: formatBRL(stats.aiCostBrl),         hint: 'Estimado USD × 5,0' },
-        { label: 'Contas Internas',   value: formatNumber(stats.internalAccountsExcluded), hint: 'Excluídas do cálculo' },
+        { label: 'Fora do escopo',     value: formatNumber(stats.excludedAccounts), hint: 'Excluídas das métricas' },
       ],
       sections: [
         {
@@ -277,7 +303,7 @@
             { key: 'nota',    label: 'Observação' },
           ],
           rows: [
-            { metrica: 'MRR (Receita Mensal Recorrente)', valor: formatBRL(stats.realMrr),           nota: 'Pagantes ativos, sem trials nem contas internas' },
+            { metrica: 'MRR (Receita Mensal Recorrente)', valor: formatBRL(stats.realMrr),           nota: 'Pagantes ativos, sem trials e respeitando o escopo global' },
             { metrica: 'ARR (Anual Run Rate)',            valor: formatBRL(arr),                     nota: 'Projeção anual da base atual' },
             { metrica: 'Ticket Médio (ARPU)',             valor: formatBRL(averageTicket),           nota: 'MRR dividido pelas contas pagantes ativas' },
             { metrica: 'Custos Fixos Mensais',            valor: formatBRL(fixedMonthlyCosts),       nota: `${fixedExpenses.length} ${fixedExpenses.length === 1 ? 'despesa cadastrada' : 'despesas cadastradas'}` },
@@ -333,7 +359,7 @@
             { segmento: 'Inativas',         count: stats.inactiveSubscriptions,     nota: 'Sem impacto no MRR' },
             { segmento: 'Novas no Mês',     count: stats.newThisMonth,              nota: 'Crescimento bruto' },
             { segmento: 'Expirando em 7d',  count: stats.expiringSoon,              nota: 'Risco de churn' },
-            { segmento: 'Contas Internas',  count: stats.internalAccountsExcluded,  nota: `Excluídas: ${internalAccountsLabel}` },
+            { segmento: 'Fora do escopo',   count: stats.excludedAccounts,          nota: `Excluídas: ${excludedMetricAccountsLabel}` },
           ],
         },
         {
@@ -370,8 +396,15 @@
       <div class="absolute -bottom-6 left-0 w-16 h-[2px] bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
     </div>
 
-    <button
-      on:click={exportDashboardPdf}
+    <div class="flex flex-wrap items-center gap-3">
+      <a href="/settings" class="flex h-11 items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 text-sm font-medium text-sky-300 transition-all hover:border-sky-400/60 hover:bg-sky-500/20 focus:outline-hidden focus:ring-2 focus:ring-sky-500/40" title="Configurar quais empresas entram nas métricas">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 6h9.75M3.75 6h.008v.008H3.75V6zm0 6h.008v.008H3.75V12zm0 6h.008v.008H3.75V18zM10.5 12h9.75M10.5 18h9.75" />
+        </svg>
+        Configurar métricas
+      </a>
+      <button
+        on:click={exportDashboardPdf}
       disabled={loading}
       class="flex items-center gap-2 shrink-0 px-4 h-11 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-xl text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-emerald-500/40"
       title="Exportar painel financeiro em PDF"
@@ -380,7 +413,8 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
       Exportar PDF
-    </button>
+      </button>
+    </div>
   </div>
   
   {#if loading}
@@ -404,7 +438,7 @@
         <div class="text-3xl font-extrabold text-white tracking-tight">
           R$ {stats.realMrr.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
         </div>
-        <div class="mt-2 text-xs font-medium text-emerald-400/60">Sem trials e sem contas internas</div>
+        <div class="mt-2 text-xs font-medium text-emerald-400/60">Sem trials e sem contas fora do escopo</div>
       </div>
       
       <!-- Active Subs Card -->
@@ -417,7 +451,7 @@
           </div>
         </div>
         <div class="text-3xl font-extrabold text-white tracking-tight">{stats.activeSubscriptions}</div>
-        <div class="mt-2 text-xs font-medium text-sky-400/60">Pagas + trial, sem contas internas</div>
+        <div class="mt-2 text-xs font-medium text-sky-400/60">Pagas + trial, respeitando o escopo global</div>
       </div>
       
       <!-- New This Month Card -->
@@ -456,10 +490,11 @@
           <h3 class="text-xl font-bold text-white tracking-wide">Painel Financeiro</h3>
           <p class="text-sm text-slate-400 mt-1">Receita real, base pagante, custos fixos e projeções de caixa em um só lugar, sem misturar trial com MRR.</p>
         </div>
-        <div class="inline-flex items-center gap-2 self-start rounded-full border border-slate-700 bg-slate-950/70 px-3 py-1.5 text-xs font-medium text-slate-300">
+        <a href="/settings" class="inline-flex items-center gap-2 self-start rounded-full border border-slate-700 bg-slate-950/70 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:border-sky-500/50 hover:text-white">
           <span class="w-2 h-2 rounded-full bg-sky-400"></span>
-          {stats.internalAccountsExcluded} conta(s) interna(s) fora do calculo: {internalAccountsLabel}
-        </div>
+          {stats.excludedAccounts} conta(s) fora do escopo: {excludedMetricAccountsLabel}
+          <span class="text-sky-300">Configurar</span>
+        </a>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)] gap-6">
@@ -637,7 +672,7 @@
           <div class="mt-5 rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 px-4 py-5">
             <div class="text-sm font-medium text-slate-200">Como isso entra no painel</div>
             <div class="mt-3 space-y-2 text-xs text-slate-400">
-              <div>MRR: considera apenas contas pagas ativas, sem trials e sem contas internas.</div>
+              <div>MRR: considera apenas contas pagas ativas, sem trials e dentro do escopo global.</div>
               <div>ARR: `MRR x 12` com a base atual.</div>
               <div>Lucro do mês: `MRR - soma das despesas fixas`.</div>
               <div>Projeções 3/6/12 meses: repetem a mesma base de receita e a mesma lista fixa atual.</div>

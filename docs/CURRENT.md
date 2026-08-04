@@ -303,3 +303,8 @@
 - A bottom navbar usa uma camada acima dos modais operacionais, inclusive `Abrir Caixa`, e permanece operável. Os painéis do Zelinho e do suporte terminam acima da faixa reservada pela navbar por meio de `--mobile-bottom-nav-offset`; toasts usam `--toast-offset`.
 - `Relatórios` passou de `Outros` para `Financeiro` na configuração central compartilhada por desktop e mobile. A rota `/relatorios`, a permissão `relatorios.ver` e a proteção por PIN não foram alteradas.
 - O menu de três pontos dos cards de Produtos agora é ancorado ao próprio gatilho no mobile e acompanha o card durante o scroll, abrindo para cima quando falta espaço. Validação combinada da `main`: `npm run check` com 0 erros/99 avisos conhecidos e `npm test` com 492/492 testes.
+Dashboard administrativo (2026-08-04): o escopo global das métricas agora é
+  configurável por empresa em `/settings`; novas contas entram por padrão e
+  contas de teste/internas podem ser excluídas de MRR, ARR, ticket médio,
+  assinaturas, churn, DAU/WAU e custos de IA vinculados à conta.
+
