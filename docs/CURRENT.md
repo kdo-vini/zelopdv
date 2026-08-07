@@ -1,5 +1,10 @@
 # ZeloPDV — Foco atual
 
+- Meta Pixel da LP (2026-08-07): o rastreamento de navegador e o fallback
+  `noscript` agora usam o pixel `904797296018757`; a API de Conversões foi
+  alinhada ao mesmo ID para manter o funil consistente. O carregamento segue
+  a fila local existente e baixa o script externo em idle.
+
 - Fichário (2026-08-04): corrigida a rolagem desktop da lista de pessoas e do
   detalhe do usuário. A tela agora usa uma única rolagem previsível por coluna
   (lista à esquerda e detalhe completo à direita), sem rolagens aninhadas no

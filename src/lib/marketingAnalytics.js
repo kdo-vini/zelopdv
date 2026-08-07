@@ -1,7 +1,7 @@
 const GTM_ID = 'GTM-TG5PPGLB';
 const GA_MEASUREMENT_ID = 'G-6XMEDGM8H6';
 const GOOGLE_ADS_ID = 'AW-17382733965';
-const META_PIXEL_ID = '1612234413401838';
+const META_PIXEL_ID = '904797296018757';
 
 let analyticsLoadScheduled = false;
 

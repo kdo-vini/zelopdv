@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'crypto';
 
-const PIXEL_ID = '1612234413401838';
+const PIXEL_ID = '904797296018757';
 const CAPI_URL = `https://graph.facebook.com/v18.0/${PIXEL_ID}/events`;
 
 function sha256(value) {
