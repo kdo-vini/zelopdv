@@ -8,6 +8,8 @@
 --     auth.users delete (so admin_delete_user already fails for any real user).
 --   * pessoas (PDV customers) and the zelochat_sessions/messages/tags/event/log tables
 --     have NO FK to auth.users/empresa_perfil -> they are NOT cascaded and leak PII.
+--   * fiado_lancamentos.id_pessoa is ON DELETE RESTRICT, so the account ledger
+--     must be purged before its pessoas parent can be removed.
 -- This function deletes those explicitly, in dependency order, before the cascade.
 --
 -- NOT handled here (done by the calling server endpoint, which has the context/SDKs):
@@ -97,11 +99,12 @@ begin
   delete from zelochat_whatsapp_onboarding_logs where user_id = p_user_id;
 
   -- 4) PDV pre-deletes that unblock the auth.users cascade and remove orphan PII.
-  --    Order: pedidos -> comandas -> expenses -> vendas -> pessoas.
+  --    Order: pedidos -> comandas -> expenses -> vendas -> fiado_lancamentos -> pessoas.
   delete from pedidos  where id_usuario = p_user_id;  -- NO ACTION blocker; cascades pedido_itens
   delete from comandas where id_usuario = p_user_id;  -- NO ACTION blocker; cascades comanda_itens/pagamentos
   delete from expenses where user_id   = p_user_id;   -- NO ACTION blocker
   delete from vendas   where id_usuario = p_user_id;  -- cascades vendas_itens/pagamentos/taxas; frees pessoas FK
+  delete from fiado_lancamentos where id_usuario = p_user_id; -- id_pessoa is ON DELETE RESTRICT
   delete from pessoas  where id_usuario = p_user_id;  -- orphan PII (no FK to auth.users)
 
   -- 5) Remove the auth identity. Cascades everything else owned by this user:

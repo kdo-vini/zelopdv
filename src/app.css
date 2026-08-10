@@ -225,6 +225,18 @@
   box-shadow: var(--shadow-modal);
 }
 
+/*
+ * Abrir Caixa bloqueia o PDV, mas não deve bloquear a navegação global.
+ * A sidebar é um flex item; elevá-la somente enquanto este modal está
+ * aberto deixa o backdrop cobrindo o conteúdo do PDV sem capturar seus cliques.
+ */
+@media (min-width: 768px) {
+  html.cash-opening-modal-open #gestao-sidebar {
+    position: relative;
+    z-index: 60;
+  }
+}
+
 @media (max-width: 767px) {
   html.has-mobile-bottom-nav .modal-backdrop,
   html.has-mobile-bottom-nav .mobile-bottom-nav-overlay,

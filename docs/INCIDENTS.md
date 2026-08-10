@@ -2,6 +2,37 @@
 
 ---
 
+## INC-2026-08-10-01 - Modal Abrir Caixa bloqueava a sidebar no desktop
+
+**Status:** corrigido no codigo; requer deploy do frontend.
+
+**Sintoma**
+
+- Quando nao havia caixa aberto em `/app`, o modal `Abrir Caixa` aparecia como
+  esperado, mas o backdrop fixo cobria tambem a sidebar desktop. O usuario nao
+  conseguia navegar para as demais areas sem abrir o caixa primeiro.
+
+**Causa-raiz**
+
+- O backdrop global do modal usava `position: fixed` e `z-index: 50`. A
+  sidebar era um flex item sem camada propria, entao ficava abaixo do overlay.
+  No mobile, a bottom navbar ja usava `z-index: 1100`, mascarando o problema.
+
+**Fix / recovery**
+
+- `ModalAbrirCaixa.svelte` agora publica uma classe temporaria no elemento
+  `html` enquanto esta aberto. Em telas desktop, `#gestao-sidebar` recebe uma
+  camada superior somente nesse estado; o backdrop continua interceptando o
+  restante do PDV. Nao houve alteracao de dados nem de regra de abertura.
+- `npm run check` passou com 0 erros / 95 avisos conhecidos.
+
+**Referencias**
+
+- `src/lib/components/modals/ModalAbrirCaixa.svelte`
+- `src/app.css`
+
+---
+
 ## INC-2026-07-31-02 - Zelinho dizia que despesas registradas não existiam
 
 **Status:** corrigido no código em 2026-07-31; requer deploy do frontend/server para chegar à produção.
@@ -56,6 +87,39 @@
 
 - [.ai/migrations/comanda_aplicar_delta_item_remove_ambiguous_overload_2026_07_31.sql](/home/vinicius/code/zelopdv/.ai/migrations/comanda_aplicar_delta_item_remove_ambiguous_overload_2026_07_31.sql:1)
 - [src/routes/app/mesas/[id]/+page.svelte](/home/vinicius/code/zelopdv/src/routes/app/mesas/[id]/+page.svelte:401)
+
+---
+
+## INC-2026-08-09-01 - Exclusão de conta no admin bloqueada pelo histórico de fiado
+
+**Status:** corrigido no banco; nenhuma conta foi apagada durante a correção.
+
+**Sintoma**
+
+- A tela `/users` do `admin-dashboard` retornava `update or delete on table
+  "pessoas" violates foreign key constraint
+  "fiado_lancamentos_id_pessoa_fkey"` ao apagar uma conta.
+
+**Causa-raiz**
+
+- `admin_delete_user` delega a remoção para `delete_account`. O purge já
+  removia vendas, mas tentava apagar `pessoas` enquanto ainda existiam linhas
+  em `fiado_lancamentos`. O FK do ledger é `ON DELETE RESTRICT` de propósito,
+  para preservar o histórico quando uma pessoa é removida pelo fluxo normal.
+
+**Fix / recovery**
+
+- `delete_account` agora remove os `fiado_lancamentos` cujo `id_usuario` é da
+  conta alvo antes de apagar `pessoas` e `auth.users`, na mesma transação.
+- A migration `.ai/migrations/account_deletion_fiado_2026_08_09.sql` foi
+  aplicada no Supabase vinculado via CLI e a ordem dos deletes/grants foi
+  verificada por introspecção. O dashboard não precisou de alteração de
+  frontend porque já chama `admin_delete_user`.
+
+**Referências**
+
+- [.ai/migrations/account_deletion_fiado_2026_08_09.sql](/home/vinicius/code/zelopdv/.ai/migrations/account_deletion_fiado_2026_08_09.sql:1)
+- [admin-dashboard/src/routes/users/+page.svelte](/home/vinicius/code/zelopdv/admin-dashboard/src/routes/users/+page.svelte:519)
 
 ---
 

@@ -1,5 +1,23 @@
 # ZeloPDV — Foco atual
 
+- PDV — navegacao desktop com caixa fechado (2026-08-10): o modal
+  `Abrir Caixa` continua bloqueando a frente de caixa, mas a sidebar desktop
+  permanece acessivel para navegar para Gestao, Financeiro, Relatorios e
+  Perfil. O comportamento mobile existente foi preservado. `npm run check`:
+  0 erros / 95 avisos conhecidos; requer deploy do frontend para producao.
+
+- Admin — exclusao de usuarios com historico de fiado (2026-08-09): a RPC
+  `admin_delete_user` delega para `delete_account`, que agora remove os
+  `fiado_lancamentos` da conta antes de apagar `pessoas` e `auth.users`.
+  Isso corrige no banco o erro de FK `fiado_lancamentos_id_pessoa_fkey` na
+  tela `/users`, inclusive para exclusoes em lote. A migration
+  `.ai/migrations/account_deletion_fiado_2026_08_09.sql` foi aplicada via
+  Supabase CLI no projeto vinculado e verificada por introspeccao do corpo da
+  funcao, ordem dos deletes e grants. Nenhuma conta foi apagada durante a
+  correcao. Teste direcionado: 1/1; `npm test`: 513/513; `npm run check`:
+  0 erros / 96 avisos conhecidos; `cd admin-dashboard && npm run build`:
+  concluido.
+
 - Meta Pixel da LP (2026-08-07): o rastreamento de navegador e o fallback
   `noscript` agora usam o pixel `904797296018757`; a API de Conversões foi
   alinhada ao mesmo ID para manter o funil consistente. O carregamento segue

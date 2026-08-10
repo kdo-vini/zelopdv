@@ -3,7 +3,7 @@
   Descrição: Modal para abertura de caixa com valor de troco inicial
 -->
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
   
   const dispatch = createEventDispatcher();
   
@@ -13,6 +13,18 @@
   export let busy = false;
 
   let trocoInicial = 0;
+
+  // No desktop, a abertura bloqueia apenas a superfície do PDV. A sidebar
+  // continua navegável, como já acontece com a bottom navbar no mobile.
+  $: if (typeof document !== 'undefined') {
+    document.documentElement.classList.toggle('cash-opening-modal-open', open);
+  }
+
+  onDestroy(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.remove('cash-opening-modal-open');
+    }
+  });
 
   function handleSubmit() {
     if (busy) return;
@@ -37,9 +49,16 @@
 </script>
 
 {#if open}
-  <div class="modal-backdrop" on:keydown={handleKeydown}>
+  <div
+    class="modal-backdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="abrir-caixa-title"
+    tabindex="-1"
+    on:keydown={handleKeydown}
+  >
     <div class="modal-content">
-      <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">Abrir Caixa</h3>
+      <h3 id="abrir-caixa-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">Abrir Caixa</h3>
       <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
         Você precisa abrir o caixa antes de registrar vendas. Se não usa gaveta,
         vende mais no Pix/cartão ou está só testando, pode deixar R$ 0,00.

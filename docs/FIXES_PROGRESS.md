@@ -1,5 +1,12 @@
 # Fixes Progress
 
+- [x] FX-PDV-01 (2026-08-10) - o modal obrigatorio `Abrir Caixa` cobria a
+  sidebar inteira no desktop porque seu backdrop fixo tinha camada acima do
+  menu. O modal agora sinaliza seu estado no documento e a sidebar sobe acima
+  do backdrop somente em telas desktop; o conteudo da frente de caixa continua
+  bloqueado. A bottom navbar mobile permanece acima do modal. `npm run check`:
+  0 erros / 95 avisos conhecidos; requer deploy do frontend.
+
 - [x] FX-FIADO-03 (2026-08-04) — corrigida a rolagem desktop do Fichário:
   `gestao-main-content` agora permite que a workspace ocupe corretamente a
   altura disponível, a lista de pessoas rola dentro do painel esquerdo e o
@@ -39,6 +46,8 @@
 - [x] FX-PRODUTOS-01 (2026-07-31) — removida chamada órfã a `carregarPublicacoes()` em `src/routes/gestao/produtos/+page.svelte`, que causava `Uncaught (in promise) ReferenceError` ao carregar a tela. A tela de Produtos não tinha essa função definida nem outro consumidor local.
 
 - [x] FX-UI-UPDATE-01 (2026-07-30) — aviso de nova versão simplificado: copy traduzida, ação única `Atualizar`, dismiss por X e swipe horizontal no mobile, mantendo supressão temporária por versão e suporte a `prefers-reduced-motion`. `npm run check` passou com 0 erros / 98 avisos conhecidos.
+
+- [x] FX-ADMIN-DELETE-FIADO-01 (2026-08-09) — exclusão definitiva de conta no `/users` corrigida: `delete_account` agora remove o ledger `fiado_lancamentos` da conta antes de apagar `pessoas`, desbloqueando a delegação de `admin_delete_user` sem alterar o FK auditável `ON DELETE RESTRICT`. Migration aplicada no Supabase vinculado via CLI; cobertura: teste estrutural 1/1, suíte 513/513, `npm run check` com 0 erros / 96 avisos conhecidos e build do admin concluído.
 
 - [x] FX-FIADO-02 (2026-07-30) — exclusão definitiva de pessoa quitada corrigida: a tela de Pessoas chama `fiado_excluir_pessoa`, que exige saldo zero, desvincula vendas históricas, apaga os lançamentos do extrato e exclui a pessoa na mesma transação. A função foi aplicada no Supabase real com `authenticated` autorizado e `anon` bloqueado. Cobertura: 2 testes de schema e `npm run check` com 0 erros / 98 avisos conhecidos; requer deploy do frontend.
 
