@@ -1,12 +1,13 @@
 <script>
   import { onMount } from 'svelte';
-  import { Search, WalletCards, CircleDollarSign, ReceiptText, ArrowDownLeft, ArrowUpRight, RefreshCw, Users, MessageCircle, MoreHorizontal, Filter, ArrowLeft, ChevronDown, TriangleAlert, X } from 'lucide-svelte';
+  import { Search, WalletCards, CircleDollarSign, ReceiptText, ArrowDownLeft, ArrowUpRight, RefreshCw, Users, MessageCircle, MoreHorizontal, Filter, ArrowLeft, ChevronDown, TriangleAlert, X, CheckCircle2, Printer } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription } from '$lib/guards';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast } from '$lib/stores/ui';
   import { printPagamentoFiado } from '$lib/printService';
   import { buildFiadoStatement, getFiadoState } from '$lib/finance/fiado';
+  import { buildFiadoPaymentWhatsAppUrl } from '$lib/finance/fiadoWhatsApp';
   import { normalizeBrazilianPhone } from '$lib/masks';
 
   let pessoas = [];
@@ -34,6 +35,8 @@
   let sheetOpen = false;
   let showPaymentForm = false;
   let paymentSheetOpen = false;
+  let paymentConfirmation = null;
+  let imprimindoConfirmacao = false;
   let selectedFilter = 'todos';
   let menuOpen = false;
   let filterOpen = false;
@@ -43,6 +46,16 @@
   $: valorDigitado = Number(valorPagamento || 0);
   $: saldoPrevisto = Number(pessoaSelecionada?.saldo_fiado || 0) - (Number.isFinite(valorDigitado) ? valorDigitado : 0);
   $: estadoPrevisto = getFiadoState(saldoPrevisto);
+  $: confirmationState = getFiadoState(paymentConfirmation?.saldoAtual || 0);
+  $: paymentConfirmationUrl = paymentConfirmation && pessoaSelecionada
+    ? buildFiadoPaymentWhatsAppUrl({
+      contact: pessoaSelecionada.contato,
+      customerName: pessoaSelecionada.nome,
+      paymentAmount: paymentConfirmation.paymentAmount,
+      currentBalance: paymentConfirmation.saldoAtual,
+      businessName: paymentConfirmation.businessName
+    })
+    : null;
   $: extrato = buildFiadoStatement(lancamentos);
   $: extratoFiltrado = selectedFilter === 'todos' ? extrato : extrato.filter((e) => {
     if (selectedFilter === 'debitos') return e.natureza === 'debito_venda' || e.natureza === 'saldo_inicial';
@@ -152,6 +165,7 @@
     selectedPessoaId = id;
     pessoaSelecionada = pessoas.find((p) => p.id === id) || null;
     lancamentos = [];
+    paymentConfirmation = null;
     showPaymentForm = true;
     paymentSheetOpen = false;
     if (!pessoaSelecionada) return;
@@ -252,12 +266,16 @@
 
       const saldoAnterior = Number(data?.saldo_anterior ?? pessoaSelecionada.saldo_fiado ?? 0);
       const saldoAtual = Number(data?.saldo_atual ?? saldoAnterior - valorDigitado);
-      if (imprimirRecibo) {
-        const { data: perfil } = await supabase
+      let perfil = null;
+      if (imprimirRecibo || normalizeBrazilianPhone(pessoaSelecionada?.contato)) {
+        const { data: perfilData } = await supabase
           .from('empresa_perfil')
           .select('nome_exibicao,documento,contato,endereco,largura_bobina,rodape_recibo')
           .eq('user_id', ownerUserId)
           .maybeSingle();
+        perfil = perfilData;
+      }
+      if (imprimirRecibo) {
         await printPagamentoFiado({
           estabelecimento: {
             nome_exibicao: perfil?.nome_exibicao || 'ZeloPDV',
@@ -272,15 +290,63 @@
       }
 
       const credito = Math.max(0, -saldoAtual);
+      const confirmation = {
+        paymentAmount: valorDigitado,
+        saldoAnterior,
+        saldoAtual,
+        businessName: perfil?.nome_exibicao || '',
+        perfil
+      };
       addToast(credito > 0 ? `Pagamento registrado. Crédito disponível: ${money(credito)}.` : 'Pagamento registrado.', 'success');
       valorPagamento = '';
       paymentSheetOpen = false;
       showPaymentForm = false;
       await refreshPessoa();
+      paymentConfirmation = confirmation;
     } catch (error) {
       addToast(error?.message || 'Não foi possível registrar o pagamento.', 'error');
     } finally {
       salvando = false;
+    }
+  }
+
+  async function imprimirPagamentoConfirmado() {
+    if (!paymentConfirmation || imprimindoConfirmacao || !pessoaSelecionada) return;
+
+    imprimindoConfirmacao = true;
+    try {
+      let perfil = paymentConfirmation.perfil;
+      if (!perfil) {
+        const { data } = await supabase
+          .from('empresa_perfil')
+          .select('nome_exibicao,documento,contato,endereco,largura_bobina,rodape_recibo')
+          .eq('user_id', ownerUserId)
+          .maybeSingle();
+        perfil = data;
+        paymentConfirmation = { ...paymentConfirmation, perfil, businessName: perfil?.nome_exibicao || '' };
+      }
+
+      await printPagamentoFiado({
+        estabelecimento: {
+          nome_exibicao: perfil?.nome_exibicao || 'ZeloPDV',
+          documento: perfil?.documento || null,
+          contato: perfil?.contato || null,
+          endereco: perfil?.endereco || null,
+          largura_bobina: perfil?.largura_bobina || '80mm',
+          rodape_recibo: perfil?.rodape_recibo || 'Obrigado!'
+        },
+        pagamento: {
+          nomePessoa: pessoaSelecionada.nome,
+          valor: paymentConfirmation.paymentAmount,
+          saldoAnterior: paymentConfirmation.saldoAnterior,
+          saldoAtual: paymentConfirmation.saldoAtual
+        }
+      });
+      addToast('Recibo enviado para impressão.', 'success');
+    } catch (error) {
+      addToast(error?.message || 'NÃ£o foi possÃ­vel imprimir o recibo.', 'error');
+    } finally {
+      imprimindoConfirmacao = false;
     }
   }
 
@@ -449,9 +515,11 @@
             </div>
             <output class="hero-balance {estadoAtual.key}">{money(estadoAtual.value)}</output>
             <div class="hero-actions">
-              <button class="hero-btn-primary" on:click={togglePaymentForm}>
-                <CircleDollarSign size={18} /> Registrar pagamento
-              </button>
+              {#if !showPaymentForm && !paymentConfirmation}
+                <button class="hero-btn-primary" on:click={togglePaymentForm}>
+                  <CircleDollarSign size={18} /> Registrar pagamento
+                </button>
+              {/if}
               {#if estadoAtual.key === 'devedor' && buildCobrancaUrl()}
                 <button class="hero-btn-ghost" on:click={() => (sheetOpen = true)}>
                   <MessageCircle size={18} /> Cobrar cliente
@@ -459,6 +527,39 @@
               {/if}
             </div>
           </section>
+
+          {#if paymentConfirmation}
+            <section class="payment-confirmation" aria-labelledby="payment-confirmation-title">
+              <div class="confirmation-heading">
+                <span class="confirmation-icon" aria-hidden="true"><CheckCircle2 size={22} /></span>
+                <div class="confirmation-copy">
+                  <p class="confirmation-eyebrow">Pagamento registrado</p>
+                  <h3 id="payment-confirmation-title">Pagamento registrado</h3>
+                  <p>{money(paymentConfirmation.paymentAmount)} recebido. Saldo atualizado: {confirmationState.label === 'Crédito disponível' ? `${money(confirmationState.value)} de crédito` : money(confirmationState.value)}.</p>
+                </div>
+              </div>
+
+              <div class="confirmation-actions">
+                {#if paymentConfirmationUrl}
+                  <a class="confirmation-whatsapp" href={paymentConfirmationUrl} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle size={18} aria-hidden="true" /> Enviar confirmação no WhatsApp
+                  </a>
+                {:else}
+                  <div class="confirmation-no-contact">
+                    <MessageCircle size={18} aria-hidden="true" />
+                    <span>Cadastre um WhatsApp para enviar a confirmação. <a href="/gestao/pessoas">Cadastrar contato</a></span>
+                  </div>
+                {/if}
+
+                <div class="confirmation-secondary-actions">
+                  <button class="confirmation-secondary" type="button" on:click={imprimirPagamentoConfirmado} disabled={imprimindoConfirmacao}>
+                    <Printer size={16} aria-hidden="true" /> {imprimindoConfirmacao ? 'Imprimindo...' : 'Imprimir recibo'}
+                  </button>
+                  <button class="confirmation-secondary" type="button" on:click={() => (paymentConfirmation = null)}>Concluir</button>
+                </div>
+              </div>
+            </section>
+          {/if}
 
           <!-- Payment Card (inline, desktop only) -->
           {#if showPaymentForm}
@@ -774,6 +875,25 @@ Regularize quando puder!</div>
   .hero-btn-ghost { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; padding: 0 1.25rem; border: 1px solid var(--status-success-border); border-radius: 12px; background: var(--status-success-bg); color: var(--status-success-text); font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; }
   .hero-btn-ghost:hover { background: color-mix(in srgb, var(--success) 15%, transparent); border-color: var(--success); }
 
+  /* ── Payment confirmation ── */
+  .payment-confirmation { display: grid; gap: 1.25rem; padding: 1.5rem 2rem; border: 1px solid var(--status-success-border); border-radius: 16px; background: var(--status-success-bg); }
+  .confirmation-heading { display: flex; align-items: flex-start; gap: .875rem; }
+  .confirmation-icon { width: 42px; height: 42px; display: grid; flex: 0 0 42px; place-items: center; border-radius: 50%; background: var(--success); color: var(--primary-text); }
+  .confirmation-copy { min-width: 0; }
+  .confirmation-eyebrow { margin-bottom: .25rem; color: var(--status-success-text); font-size: .6875rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+  .confirmation-copy h3 { margin-bottom: .25rem; color: var(--text-main); font-size: 1.125rem; }
+  .confirmation-copy > p:last-child { margin-bottom: 0; color: var(--text-label); font-size: .875rem; line-height: 1.45; }
+  .confirmation-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 1.25rem; border-top: 1px solid var(--status-success-border); }
+  .confirmation-whatsapp, .confirmation-secondary, .confirmation-no-contact { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-radius: 10px; font: inherit; font-size: .8125rem; font-weight: 600; text-decoration: none; }
+  .confirmation-whatsapp { padding: 0 1rem; border: 1px solid var(--success); background: var(--success); color: var(--primary-text); }
+  .confirmation-whatsapp:hover { filter: brightness(1.08); }
+  .confirmation-secondary-actions { display: flex; align-items: center; gap: .5rem; }
+  .confirmation-secondary { padding: 0 .875rem; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-label); cursor: pointer; }
+  .confirmation-secondary:hover:not(:disabled) { border-color: var(--border-strong); background: var(--bg-panel); color: var(--text-main); }
+  .confirmation-secondary:disabled { cursor: wait; opacity: .65; }
+  .confirmation-no-contact { justify-content: flex-start; color: var(--text-muted); font-size: .8125rem; font-weight: 400; }
+  .confirmation-no-contact a { color: var(--link); font-weight: 600; }
+
   /* ── Payment card ── */
   .payment-card { padding: 1.5rem 2rem; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 16px; }
   .form-heading { display: flex; gap: .75rem; color: var(--primary); }
@@ -905,6 +1025,11 @@ Regularize quando puder!</div>
     .hero-balance { font-size: 2.25rem; margin-bottom: 1rem; }
     .hero-actions { flex-direction: column; gap: .5rem; }
     .hero-btn-primary, .hero-btn-ghost { width: 100%; }
+    .payment-confirmation { padding: 1.25rem; border-radius: 14px; }
+    .confirmation-actions { align-items: stretch; flex-direction: column; }
+    .confirmation-whatsapp, .confirmation-no-contact { width: 100%; }
+    .confirmation-secondary-actions { width: 100%; }
+    .confirmation-secondary { flex: 1; }
     .payment-card { display: none; }
     .history-card { padding: 1.25rem; border-radius: 14px; }
     .history-header { flex-direction: column; gap: .75rem; }

@@ -1,5 +1,27 @@
 # ZeloPDV — Foco atual
 
+- Fichário — confirmação de pagamento via WhatsApp (2026-08-11): após a RPC
+  `fiado_registrar_pagamento_v2` concluir, a ficha exibe um card de sucesso com
+  valor recebido, saldo atualizado, impressão opcional e um link `wa.me` com
+  mensagem pronta para revisão do operador. O texto diferencia saldo em aberto,
+  dívida quitada e crédito disponível; o nome comercial vem de
+  `empresa_perfil.nome_exibicao`, sem fallback para “ZeloPDV”. Contatos ausentes
+  ou inválidos mantêm o pagamento concluído e exibem atalho para cadastro. Não
+  há envio automático nem registro de entrega nesta primeira versão. Testes
+  direcionados: 4/4; `npm run check`: 0 erros / 95 avisos conhecidos. `npm run
+  build` compila os bundles, mas a etapa final do adapter Vercel permanece
+  bloqueada pelo EPERM de symlink conhecido no clone Windows.
+
+- Fichário — hierarquia do CTA de pagamento (2026-08-11): o botão superior
+  `Registrar pagamento` agora aparece apenas quando o formulário está fechado
+  e some enquanto o formulário desktop ou a confirmação pós-pagamento está
+  visível. O mobile preserva esse botão como gatilho do bottom sheet.
+
+- Fichário — formatação da confirmação no WhatsApp (2026-08-11): a mensagem
+  agora usa quebras CRLF com blocos em branco, marcação de negrito do WhatsApp
+  para pagamento/situação e não envia emojis, evitando o caractere `�` no link
+  `wa.me`.
+
 - PDV — navegacao desktop com caixa fechado (2026-08-10): o modal
   `Abrir Caixa` continua bloqueando a frente de caixa, mas a sidebar desktop
   permanece acessivel para navegar para Gestao, Financeiro, Relatorios e
