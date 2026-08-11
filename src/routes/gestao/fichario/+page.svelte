@@ -515,7 +515,7 @@
             </div>
             <output class="hero-balance {estadoAtual.key}">{money(estadoAtual.value)}</output>
             <div class="hero-actions">
-              {#if !showPaymentForm && !paymentConfirmation}
+              {#if !paymentConfirmation && (isMobileViewport() || !showPaymentForm)}
                 <button class="hero-btn-primary" on:click={togglePaymentForm}>
                   <CircleDollarSign size={18} /> Registrar pagamento
                 </button>
