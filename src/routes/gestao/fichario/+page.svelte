@@ -516,8 +516,8 @@
             <output class="hero-balance {estadoAtual.key}">{money(estadoAtual.value)}</output>
             <div class="hero-actions">
               {#if !paymentConfirmation && (isMobileViewport() || !showPaymentForm)}
-                <button class="hero-btn-primary" on:click={togglePaymentForm}>
-                  <CircleDollarSign size={18} /> Registrar pagamento
+                <button class="hero-btn-secondary" on:click={togglePaymentForm}>
+                  <CircleDollarSign size={18} /> Receber pagamento
                 </button>
               {/if}
               {#if estadoAtual.key === 'devedor' && buildCobrancaUrl()}
@@ -870,8 +870,8 @@ Regularize quando puder!</div>
   .hero-balance.credor { color: var(--status-success-text); }
   .hero-balance.neutro { color: var(--text-main); }
   .hero-actions { display: flex; gap: .75rem; }
-  .hero-btn-primary { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; padding: 0 1.25rem; border: 0; border-radius: 12px; background: var(--primary); color: var(--primary-text); font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer; transition: background-color 150ms ease, box-shadow 150ms ease; }
-  .hero-btn-primary:hover { background: var(--primary-hover); box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent); }
+  .hero-btn-secondary { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; padding: 0 1.25rem; border: 1px solid var(--primary); border-radius: 12px; background: transparent; color: var(--primary); font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+  .hero-btn-secondary:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); border-color: var(--primary-hover); color: var(--primary-hover); }
   .hero-btn-ghost { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; padding: 0 1.25rem; border: 1px solid var(--status-success-border); border-radius: 12px; background: var(--status-success-bg); color: var(--status-success-text); font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; }
   .hero-btn-ghost:hover { background: color-mix(in srgb, var(--success) 15%, transparent); border-color: var(--success); }
 
@@ -1024,7 +1024,7 @@ Regularize quando puder!</div>
     .hero-card { padding: 1.25rem; border-radius: 14px; }
     .hero-balance { font-size: 2.25rem; margin-bottom: 1rem; }
     .hero-actions { flex-direction: column; gap: .5rem; }
-    .hero-btn-primary, .hero-btn-ghost { width: 100%; }
+    .hero-btn-secondary, .hero-btn-ghost { width: 100%; }
     .payment-confirmation { padding: 1.25rem; border-radius: 14px; }
     .confirmation-actions { align-items: stretch; flex-direction: column; }
     .confirmation-whatsapp, .confirmation-no-contact { width: 100%; }

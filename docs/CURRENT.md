@@ -13,9 +13,10 @@
   bloqueada pelo EPERM de symlink conhecido no clone Windows.
 
 - Fichário — hierarquia do CTA de pagamento (2026-08-11): o botão superior
-  `Registrar pagamento` agora aparece apenas quando o formulário está fechado
-  e some enquanto o formulário desktop ou a confirmação pós-pagamento está
-  visível. O mobile preserva esse botão como gatilho do bottom sheet.
+  `Receber pagamento` é um gatilho secundário para abrir o formulário e aparece
+  apenas quando ele está fechado no desktop; o botão final `Registrar pagamento`
+  fica dentro do formulário. O mobile preserva o gatilho como abertura do bottom
+  sheet.
 
 - Fichário — formatação da confirmação no WhatsApp (2026-08-11): a mensagem
   agora usa quebras CRLF com blocos em branco, marcação de negrito do WhatsApp
