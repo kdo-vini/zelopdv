@@ -16,7 +16,9 @@
   `Receber pagamento` é um gatilho secundário para abrir o formulário e aparece
   apenas quando ele está fechado no desktop; o botão final `Registrar pagamento`
   fica dentro do formulário. O mobile preserva o gatilho como abertura do bottom
-  sheet.
+  sheet. Em larguras de laptop, o formulário usa duas colunas para valor e
+  previsão, com as opções e o botão em linhas próprias; os campos têm largura
+  limitada ao grid para evitar sobreposição.
 
 - Fichário — formatação da confirmação no WhatsApp (2026-08-11): a mensagem
   agora usa quebras CRLF com blocos em branco, marcação de negrito do WhatsApp

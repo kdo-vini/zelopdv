@@ -899,14 +899,14 @@ Regularize quando puder!</div>
   .form-heading { display: flex; gap: .75rem; color: var(--primary); }
   .form-heading p, .history-header p { margin-bottom: 0; color: var(--text-muted); font-size: .875rem; line-height: 1.45; }
   .payment-body { margin-top: 1.25rem; display: grid; gap: 1rem; }
-  .payment-field { display: grid; gap: .375rem; }
+  .payment-field { display: grid; min-width: 0; gap: .375rem; }
   .payment-field span { color: var(--text-label); font-size: .8125rem; font-weight: 600; }
-  .payment-field input { min-height: 48px; box-sizing: border-box; padding: 0 .875rem; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-input); color: var(--text-main); font: inherit; font-size: 1rem; font-variant-numeric: tabular-nums; }
+  .payment-field input { width: 100%; min-width: 0; min-height: 48px; box-sizing: border-box; padding: 0 .875rem; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-input); color: var(--text-main); font: inherit; font-size: 1rem; font-variant-numeric: tabular-nums; }
   .payment-field input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
   .payment-field input::placeholder { color: var(--text-muted); }
-  .prediction { min-height: 48px; padding: .625rem .875rem; box-sizing: border-box; border-radius: 10px; background: var(--bg-input); border: 1px solid var(--border-subtle); }
+  .prediction { min-height: 48px; min-width: 0; padding: .625rem .875rem; box-sizing: border-box; border-radius: 10px; background: var(--bg-input); border: 1px solid var(--border-subtle); }
   .prediction span { display: block; color: var(--text-muted); font-size: .75rem; }
-  .prediction strong { display: block; margin-top: .125rem; font-size: .9375rem; font-variant-numeric: tabular-nums; }
+  .prediction strong { display: block; margin-top: .125rem; font-size: .9375rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .prediction strong.devedor { color: var(--status-warning-text); }
   .prediction strong.credor { color: var(--status-success-text); }
   .prediction strong.neutro { color: var(--text-main); }
@@ -1226,6 +1226,36 @@ Regularize quando puder!</div>
   }
   }
 
+  /* ── Laptop payment layout ── */
+  @media (min-width: 761px) and (max-width: 1366px) {
+    .fichario-layout .payment-body {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-areas:
+        "field prediction"
+        "options options"
+        "submit submit";
+    }
+
+    .fichario-layout .payment-submit {
+      justify-self: end;
+    }
+  }
+
+  @media (min-width: 761px) and (max-width: 920px) {
+    .fichario-layout .payment-body {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "field"
+        "prediction"
+        "options"
+        "submit";
+    }
+
+    .fichario-layout .payment-submit {
+      width: 100%;
+    }
+  }
+
   @media (max-width: 760px) {
     .fichario-page {
       height: auto;
@@ -1369,7 +1399,7 @@ Regularize quando puder!</div>
       gap: .5rem;
     }
 
-    .fichario-layout .hero-btn-primary,
+    .fichario-layout .hero-btn-secondary,
     .fichario-layout .hero-btn-ghost {
       width: 100%;
     }
