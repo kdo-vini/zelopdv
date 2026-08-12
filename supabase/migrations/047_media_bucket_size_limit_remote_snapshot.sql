@@ -1,0 +1,11 @@
+-- Remote-history reconciliation marker.
+--
+-- Migration 047 (media_bucket_size_limit) was applied in the linked project
+-- before this repository tracked the corresponding SQL.  The authoritative
+-- remote state is preserved in the production schema snapshot documented in
+-- docs/operations/MIGRATION-HISTORY-RECONCILIATION-2026-08-12.md.
+--
+-- Keep this marker forward-only and do not replay the historical DDL here.
+-- The repository still contains legacy/manual migrations that are not a
+-- reproducible bootstrap; this marker exists only so the CLI can reconcile
+-- history without executing an unknown historical change.

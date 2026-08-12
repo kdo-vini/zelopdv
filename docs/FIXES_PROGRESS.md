@@ -1,6 +1,6 @@
 # Fixes Progress
 
-- [ ] FX-BILLING-WEBHOOK-RELIABILITY-01 (2026-08-12) — findings confirmados:
+- [x] FX-BILLING-WEBHOOK-RELIABILITY-01 (2026-08-12) — findings confirmados:
   Stripe marcava o evento antes do efeito e engolia falhas; AbacatePay
   descartava retries de eventos `received`/`failed` e confirmava como `ignored`
   um pagamento cuja linha local ainda não havia chegado; a confirmação Pix
@@ -9,12 +9,11 @@
   retryáveis, reabre eventos AbacatePay não concluídos, mantém pagamento ainda
   não persistido retryável e adiciona a RPC
   service-role-only `settle_pix_payment` para lock + assinatura + pagamento em
-  uma transação. Testes direcionados: 24/24. Migration forward-only criada em
-  `supabase/migrations/20260812165936_webhook_reliability_pix_atomicity.sql`,
-  ainda não aplicada por causa da divergência de histórico remoto/local; não
-  usar `--include-all` nesta rodada.
+  uma transação. Testes direcionados: 31/31; smoke pós-apply confirmou que a
+  segunda liquidação não estende novamente a assinatura. Migration aplicada em
+  `supabase/migrations/20260812165936_webhook_reliability_pix_atomicity.sql`.
 
-- [ ] FX-SEC-P0-CONTAINMENT-01 (2026-08-12) — findings P0 confirmados no schema
+- [x] FX-SEC-P0-CONTAINMENT-01 (2026-08-12) — findings P0 confirmados no schema
   remoto: grants `anon`/`authenticated` nas quatro views SECURITY DEFINER,
   execução pública de RPCs administrativas e `USING (true)` em
   `super_admins`. Criados snapshot pré-mudança e migration forward-only com o
@@ -23,10 +22,11 @@
   guarda interna; RPCs sem consumidor browser ficam em `service_role`; o
   dashboard mantém SELECT/UPDATE necessários em `super_admins`. Contrato
   estrutural 5/5 e matriz de autorização transacional remota passaram, com
-  rollback da transação de verificação; `npm test` 562/562 e `npm run check`
-  0 erros. **Ainda não aplicada em produção**:
-  `supabase db push --linked --dry-run` está bloqueado pela divergência de
-  histórico remoto/local, reservada para a rodada de migration reconciliation.
+  rollback da transação de verificação; `npm test` 568/568 e `npm run check`
+  0 erros. Aplicada em produção pela migration
+  `supabase/migrations/20260812150000_p0_security_containment.sql` após
+  reconciliação de histórico documentada em
+  `docs/operations/MIGRATION-HISTORY-RECONCILIATION-2026-08-12.md`.
 
 - [x] FX-PDV-01 (2026-08-10) - o modal obrigatorio `Abrir Caixa` cobria a
   sidebar inteira no desktop porque seu backdrop fixo tinha camada acima do

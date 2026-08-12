@@ -1,0 +1,10 @@
+-- Remote-history reconciliation marker.
+--
+-- Migration 20260807134325 (catalog_canonical_products) is already applied
+-- in the linked project but its original SQL is not present in this checkout.
+-- See the production schema snapshot in
+-- docs/operations/MIGRATION-HISTORY-RECONCILIATION-2026-08-12.md.
+--
+-- Do not replay an unverified historical migration.  This no-op marker lets
+-- Supabase CLI match the remote history while the separate migration-
+-- reconciliation work reconstructs a reproducible bootstrap.

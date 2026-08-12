@@ -8,9 +8,10 @@
   a RPC transacional `settle_pix_payment`, com lock do pagamento e renovação de
   assinatura no mesmo commit. Testes direcionados passaram (31/31). A migration
   `supabase/migrations/20260812165936_webhook_reliability_pix_atomicity.sql`
-  foi criada, mas ainda não foi aplicada em produção porque a reconciliação do
-  histórico remoto/local continua pendente. O snapshot está em
-  `docs/operations/WEBHOOK-RELIABILITY-SNAPSHOT-2026-08-12.md`.
+  foi aplicada em produção após reconciliação segura do histórico remoto/local.
+  O snapshot está em `docs/operations/WEBHOOK-RELIABILITY-SNAPSHOT-2026-08-12.md`;
+  o smoke transacional pós-apply confirmou liquidação idempotente e terminou
+  com rollback.
 
 - P0 security containment (2026-08-12): a migration forward-only foi preparada
   em `supabase/migrations/20260812150000_p0_security_containment.sql` após
@@ -21,9 +22,11 @@
   e limita a exposição de `super_admins`. O snapshot pré-mudança está em
   `docs/operations/P0-SECURITY-CONTAINMENT-SNAPSHOT-2026-08-12.md`.
   A matriz transacional anon/authenticated/owner/subuser/super-admin/service-role
-  passou no banco vinculado sem persistir alterações. O deploy da migration
-  permanece pendente porque o histórico remoto/local está divergente; não usar
-  `--include-all` nesta rodada — reconciliação de migrations é trabalho separado.
+  passou no banco vinculado depois do apply. O histórico foi reconciliado sem
+  reaplicar SQL histórico; o detalhe está em
+  `docs/operations/MIGRATION-HISTORY-RECONCILIATION-2026-08-12.md`. A
+  reconstrução de bootstrap das três versões remotas sem SQL local continua
+  deliberadamente como trabalho separado.
 
 - Cobertura operacional (2026-08-11): a suíte Vitest passou de 517 para **557/557 testes**
   (78 arquivos), incluindo regras de estoque, pedidos canônicos, impressão automática,

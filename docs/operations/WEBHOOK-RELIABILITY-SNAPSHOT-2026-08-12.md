@@ -67,6 +67,7 @@ It is intentionally separate from the P0 security-containment migration.
    `drop function if exists public.settle_pix_payment(uuid, text, text,
    integer, timestamptz, timestamptz, text);`.
 
-The migration is forward-only and has not been pushed to production in this
-working session because the linked project still has remote-only migration
-versions awaiting the separate migration-reconciliation work.
+The migration was applied to production on 2026-08-12 after a bounded
+metadata-only migration-history reconciliation. The post-apply smoke used the
+existing pending Pix row inside a rollback-only transaction; no payment or
+subscription data was changed by the verification.
