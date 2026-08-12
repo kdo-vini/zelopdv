@@ -5,6 +5,17 @@
 
 ## Findings
 
+### Update 2026-08-12 - enforcement de leitura do histórico de fechamentos
+
+O finding foi confirmado em produção: `/relatorios` bloqueava o subusuário sem
+`relatorios.ver` apenas no cliente, enquanto `caixa_fechamentos` tinha SELECT
+owner-scoped para `public`. A migration
+`20260813010000_reports_select_rbac.sql` exige `relatorios.ver` no RLS,
+revoga o grant anônimo sem consumidor e preserva owner, relatório autorizado,
+INSERT e service-role. Tabelas compartilhadas como `vendas` e `caixas` ficaram
+fora por terem consumidores operacionais legítimos; o snapshot documenta esse
+blast radius.
+
 ### Update 2026-08-12 - enforcement de criação de vendas
 
 O finding foi confirmado em produção: subusuário sem `pdv.vender`/`pdv.receber`

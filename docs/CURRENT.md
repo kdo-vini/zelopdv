@@ -1,5 +1,14 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — leitura de fechamentos de caixa (2026-08-12): a
+  revalidação remota confirmou que um subusuário sem `relatorios.ver` ainda
+  conseguia ler `caixa_fechamentos` diretamente pelo Data API, apesar do gate
+  client-side de `/relatorios`. A migration forward-only
+  `20260813010000_reports_select_rbac.sql` exige a capability na policy SELECT,
+  revoga o grant anônimo sem consumidor e preserva owner, relatório autorizado,
+  service-role e os caminhos operacionais compartilhados. Snapshot:
+  `docs/operations/REPORT-SELECT-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - RBAC incremental — criação de vendas (2026-08-12): a revalidação remota
   confirmou que `criar_venda_completa(jsonb)` e o INSERT direto de `vendas`
   aceitavam subusuários sem `pdv.vender`/`pdv.receber`. A migration forward-only

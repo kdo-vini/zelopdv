@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-REPORT-SELECT-RBAC-01 (2026-08-12) - finding confirmado em produção:
+  a policy owner-scoped de `caixa_fechamentos` permitia que subusuário sem
+  `relatorios.ver` lesse o histórico financeiro via Data API. A migration
+  forward-only `20260813010000_reports_select_rbac.sql` exige a capability na
+  policy SELECT e remove o grant anônimo sem consumidor. Owner, subusuário
+  autorizado, service-role e INSERT de fechamento foram preservados; smoke
+  remoto transacional cobriu owner, ambos os subusuários, super-admin e anon,
+  sem fixture persistente. Snapshot em
+  `docs/operations/REPORT-SELECT-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-SALES-CREATION-RBAC-01 (2026-08-12) - finding confirmado em produção:
   `criar_venda_completa` e o INSERT direto de `vendas` ignoravam
   `pdv.vender`/`pdv.receber`. A migration forward-only

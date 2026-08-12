@@ -96,6 +96,12 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ## Progresso de RBAC (2026-08-12)
 
+O histórico de fechamentos (`caixa_fechamentos`) agora exige `relatorios.ver`
+para SELECT de subusuários; owners continuam com bypass e service-role não muda.
+As tabelas compartilhadas do PDV/caixa permanecem owner-scoped nesta fatia para
+não quebrar consumidores operacionais; um report API/RPC dedicado seria outra
+decisão, não uma consequência automática desta migration.
+
 Criação de venda agora exige `pdv.vender` e `pdv.receber` no caminho POS/
 offline e no INSERT direto não-Mesa. O fechamento de Mesa continua separado e
 exige `mesas.fechar`; o guard identifica o caminho SECURITY DEFINER sem expor

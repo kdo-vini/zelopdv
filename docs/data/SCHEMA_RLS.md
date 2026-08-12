@@ -155,7 +155,10 @@ Conclusao operacional:
 - UPDATE de `caixas` exige `caixa.fechar`; DELETE continua owner-only.
 - INSERT de `caixa_movimentacoes` exige `caixa.movimentar` e caixa ainda aberto.
 - INSERT de `caixa_fechamentos` exige `caixa.fechar`.
-- SELECT e o bypass deliberado de `service_role` permanecem inalterados.
+- SELECT de `caixa_fechamentos` exige `relatorios.ver` para subusuários;
+  owners mantêm bypass e `anon` não possui grant. Leituras das tabelas
+  operacionais compartilhadas e o bypass deliberado de `service_role` continuam
+  inalterados.
 
 ## Mesas: pagamentos parciais por capacidade
 

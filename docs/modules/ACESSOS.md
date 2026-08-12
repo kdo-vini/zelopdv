@@ -134,6 +134,11 @@ O caminho de criação de vendas foi endurecido em
 `mesas.fechar`. Leituras de vendas e o fluxo de ownership da RPC continuam
 separados para uma revisão própria.
 
+O histórico de fechamentos de caixa foi endurecido em
+`20260813010000_reports_select_rbac.sql`: SELECT de `caixa_fechamentos` exige
+`relatorios.ver` para subusuários. Tabelas compartilhadas por PDV, Mesas e
+operação de caixa permanecem fora desta fatia para preservar seus consumidores.
+
 ## Quando atualizar esta doc
 
 - nova permissao
