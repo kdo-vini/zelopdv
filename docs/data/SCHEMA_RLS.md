@@ -46,6 +46,18 @@ Padrao recorrente:
 | Operacao | `vendas*`, `caixas*`, `pessoas`, `fiado_lancamentos`, `produtos`, `mesas`, `comandas*`, `pedidos*` | escopo por owner via RLS |
 | ZeloMenu | `zelomenu_product_publications`, `zelomenu_modifier_groups`, `zelomenu_modifier_options` | camada PDV-owned de publicação/modificadores, escopo por owner via RLS |
 | Perfil | `empresa_perfil` | contem dados operacionais e `pin_admin` |
+
+### `access_users` (estado remoto verificado em 2026-08-12)
+
+- `access_users_owner` concede CRUD somente quando o autenticado e o titular
+  efetivo (`auth.uid() = owner_user_id` e
+  `get_owner_user_id(auth.uid()) = auth.uid()`).
+- `access_users_self_select` permite ao subusuario ativo ler apenas a propria
+  linha para resolver contexto e permissoes.
+- `access_users_super_admin_select` preserva a leitura cross-tenant do
+  super-admin ativo; nao existe policy nova de escrita para ele.
+- Convite, ativacao, alteracao de cargo/status e remocao continuam usando
+  `supabaseAdmin` nos handlers server-side.
 | Telemetria de módulos | `product_usage_events` | presença diária por módulo, server-owned; não registra cliques nem conteúdo |
 | RPC critica | `criar_venda_completa(jsonb)` | usa `get_owner_user_id(auth.uid())` |
 | Pedidos online | `zelo_orders`, `zelo_order_items`, `zelo_order_events` | leitura owner-scoped; mutacoes somente por RPC |

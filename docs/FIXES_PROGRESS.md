@@ -1,5 +1,17 @@
 # Fixes Progress
 
+- [x] FX-ACCESS-USERS-01 (2026-08-12) - finding confirmado no schema remoto:
+  `access_users_owner_or_self` concedia `ALL` a subusuarios sobre a propria
+  linha, permitindo tentar alterar cargo/tenant/status ou remover o vinculo;
+  uma policy owner-only tambem precisava impedir que um subusuario fabricasse
+  uma linha com `owner_user_id = auth.uid()`. As migrations forward-only
+  `20260812204706_access_users_self_write_containment.sql` e
+  `20260812205010_access_users_owner_guard.sql` preservam leituras de contexto,
+  CRUD do titular, leitura de cargos pelo proprio subusuario e todos os fluxos
+  server-side/service-role. Smoke remoto transacional cobriu owner,
+  subusuario, cargo, super-admin, anon e service-role; nenhum fixture persistiu.
+  Snapshot em `docs/operations/ACCESS-USERS-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-ACCESS-PESSOAS-01 (2026-08-12) — finding confirmado: as policies
   owner-scoped de `pessoas` permitiam writes diretos de subusuários sem
   `pessoas.gerenciar`. A migration forward-only

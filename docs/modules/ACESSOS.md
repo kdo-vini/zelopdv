@@ -50,6 +50,9 @@
 ### Forte hoje
 
 - tenant scoping por empresa dona via `get_owner_user_id(auth.uid())`
+- `access_users` separa CRUD do titular de self-SELECT do subusuario; o
+  vinculo nao pode ser promovido, removido ou relinkado pelo Data API do
+  proprio subusuario
 - bloqueio de billing owner-facing para subusuario
 - trilha de contexto owner/operator no fluxo de venda e audit log
 

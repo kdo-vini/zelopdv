@@ -1,5 +1,15 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — `access_users` (2026-08-12): o finding foi confirmado em
+  produção e fechado com as migrations forward-only
+  `20260812204706_access_users_self_write_containment.sql` e
+  `20260812205010_access_users_owner_guard.sql`. Titular mantém CRUD; o
+  subusuário mantém apenas self-SELECT para contexto/cargo e não pode alterar
+  `role_id`, `owner_user_id` ou `status`, nem remover/criar vínculos. Convite,
+  ativação e gestão continuam server-side/service-role. Smoke remoto cobriu
+  owner, subusuário, cargo, super-admin, anon e service-role sem persistência;
+  snapshot: `docs/operations/ACCESS-USERS-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - RBAC incremental — Pessoas (2026-08-12): a migration
   `20260812202400_pessoas_role_rbac.sql` mantém as leituras owner-scoped usadas
   pelo PDV, Mesas, Fichário e Relatórios, mas exige `pessoas.gerenciar` para
@@ -16,14 +26,15 @@
   harness local excedeu o timeout de 30s na asserção de URL do login. Isso não
   é evidência de regressão da policy; a autorização foi coberta pelos smokes
   SQL em produção. O problema do harness continua documentado, sem alteração
-  de código para mascará-lo.
+  de código para mascará-lo. A repetição pós-`access_users` foi bloqueada no
+  setup por `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` ausentes; cleanup passou.
 
 - Segurança/reliabilidade incremental (2026-08-12): `POST /api/account/reactivate` agora falha
   fechada quando o Stripe não consegue retomar a assinatura, preservando a agenda local para retry.
   O schema de produção recebeu o índice parcial `subscriptions_one_live_row_per_user`, mantendo
   histórico terminal e impedindo mais de uma linha viva por titular. O PIN administrativo deixou de
   ser enviado ao browser: status e verificação passam por `/api/auth/admin-pin`, e somente o titular
-  pode alterá-lo. A suíte Vitest passou 583/583 e `npm run check` passou com 0 erros/95 avisos
+  pode alterá-lo. A suíte Vitest passou 587/587 e `npm run check` passou com 0 erros/95 avisos
   conhecidos. O lint SQL continua com os dois erros pré-existentes fora desta rodada.
 
 - RBAC incremental (2026-08-12): o catálogo base (`produtos`, `categorias` e

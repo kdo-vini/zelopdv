@@ -5,6 +5,18 @@
 
 ## Findings
 
+### Update 2026-08-12 - contencao de escrita em `access_users`
+
+O finding foi confirmado em producao: `access_users_owner_or_self` era uma
+policy `ALL` para `authenticated`, entao um subusuario podia atingir a propria
+linha por chamadas diretas ao Data API. As migrations
+`20260812204706_access_users_self_write_containment.sql` e
+`20260812205010_access_users_owner_guard.sql` separam CRUD do titular de
+self-SELECT do subusuario e exigem que o usuario resolva para si mesmo como
+owner antes de qualquer escrita. Convites, ativacao, atualizacao, remocao e
+admin continuam em `supabaseAdmin`; as leituras client-side permanecem
+compativeis.
+
 ### Update 2026-08-12 — enforcement incremental em Pessoas
 
 `20260812202400_pessoas_role_rbac.sql` fechou o bypass de writes diretos em

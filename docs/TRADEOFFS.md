@@ -96,6 +96,12 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ## Progresso de RBAC (2026-08-12)
 
+`access_users` agora separa CRUD do titular de self-SELECT do subusuario. O
+tenant continua owner-scoped, mas o proprio vinculo de acesso nao pode mais
+ser alterado pelo subusuario via Data API; convites e ativacao continuam
+server-side. Isso reduz o bypass de escalonamento sem transformar o modulo em
+uma refatoracao ampla.
+
 Além de Despesas e do catálogo base, Pessoas agora exige `pessoas.gerenciar`
 para writes diretos de subusuários. Leituras permanecem owner-scoped porque
 Caixa/Atendente precisam selecionar clientes no PDV e Mesas. O restante das
