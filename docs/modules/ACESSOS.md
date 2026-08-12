@@ -18,7 +18,8 @@
 - Servidor: `src/lib/server/accessControl.js`
 - Ativacao de convite: `src/routes/api/access/activate/+server.js`
 - Guardas: `src/lib/guards.js`
-- RLS owner-scoped: `.ai/migrations/rls_subuser_access.sql`
+- RLS base owner-scoped: `.ai/migrations/rls_subuser_access.sql`
+- Enforcement incremental de Despesas: `supabase/migrations/20260812193009_expenses_role_rbac.sql`
 
 ## Modelo real
 
@@ -54,7 +55,7 @@
 
 - permissao fina por papel nao e enforced uniformemente no servidor
 - varias telas dependem de esconder rota/acao no cliente
-- `AdminLock` nao e substituto para permissionamento server-side
+- `AdminLock` agora valida o PIN no servidor, mas continua sendo complementar ao permissionamento por cargo
 
 ## Fluxos operacionais
 
@@ -74,7 +75,7 @@
 ### Usar o produto como subusuario
 
 1. guarda resolve o owner efetivo
-2. RLS entrega dados da empresa dona
+2. RLS entrega dados da empresa dona; em Despesas, as policies tambem exigem a permissao do cargo
 3. UI decide o que mostrar com base no JSON de permissoes
 4. em acoes auditadas, `operator_user_id` e registrado
 
@@ -105,8 +106,8 @@ Motivo:
 ## Limites e riscos confirmados
 
 - RBAC de enforcement nao e uniforme rota por rota
-- `pin_admin` nao deve ser tratado como segredo forte
-- paginas sensiveis podem depender de lock/client gating
+- enforcement de papel continua incompleto fora das superficies ja migradas
+- paginas sensiveis ainda podem depender de lock/client gating para UX, sem substituir RLS/API
 - qualquer mudanca em `guards.js`, RLS ou `accessControl` pode quebrar acesso em cascata
 
 ## Quando atualizar esta doc

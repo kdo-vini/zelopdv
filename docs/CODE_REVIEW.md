@@ -11,23 +11,29 @@
 - Impacto: o contexto owner/subusuário existe e o RLS escopa por empresa dona, mas o JSON de permissões é lido no browser. Em superfícies como `despesas`, o carregamento da página acontece sem um gate explícito de permissão por rota. Isso é mais próximo de navegação/UI gating do que de RBAC de enforcement.
 - Ação recomendada: documentar isso como limitação atual, priorizar checks server-side para mutações e definir quais superfícies precisam de enforcement real além do escopo por owner.
 - Update 2026-06-01: a camada de *dados* de `expenses` foi endurecida — `expenses_owner_scoped_write_policies_2026_06_01` adicionou policies owner-scoped de `INSERT`/`UPDATE`/`DELETE`/`SELECT` em produção, então um subusuário não consegue mais escrever fora da empresa dona via RLS. O ponto P1 permanece aberto porque isso é escopo por *owner*, não RBAC por *papel*: a granularidade por cargo (quem pode lançar despesa vs. só ver) segue gated na UI. Tratado como dívida aceita em [[TRADEOFFS]].
+- Update 2026-08-12: Despesas saiu desse estado específico: `20260812193009_expenses_role_rbac.sql` exige
+  `despesas.visualizar` para leitura e `despesas.gerenciar` para mutações, preservando owners e Gerente.
+  O P1 permanece aberto para as demais superfícies ainda client-side.
 
-### P1 — `AdminLock` não protege segredo no servidor; o PIN é carregado e comparado no cliente
+### P1 (resolvido 2026-08-12) — `AdminLock` não protegia segredo no servidor
 
 - Evidência: [src/lib/components/AdminLock.svelte](/home/vinicius/code/zelopdv/src/lib/components/AdminLock.svelte:37), [src/routes/gestao/despesas/+page.svelte](/home/vinicius/code/zelopdv/src/routes/gestao/despesas/+page.svelte:223), [.ai/migrations/rls_subuser_access.sql](/home/vinicius/code/zelopdv/.ai/migrations/rls_subuser_access.sql:107)
 - Impacto: páginas sensíveis leem `pin_admin` de `empresa_perfil` no browser e o componente compara `inputPin === correctPin` localmente. Como subusuários podem ler o perfil do titular via RLS para fins operacionais, o PIN vira um dado observável no cliente, não uma barreira forte.
-- Ação recomendada: tratar o PIN atual como trava de conveniência operacional. Se a intenção for proteção real, mover validação para o servidor e parar de expor o valor bruto ao cliente.
+- Resolução: `/api/auth/admin-pin` autentica o bearer, resolve o titular server-side, retorna apenas
+  `{configured, canSet}` no GET e compara o PIN no servidor com comparação constante. O POST de alteração
+  é restrito ao titular; despesas, relatórios, layout, perfil e o fluxo de reset deixaram de ler ou escrever
+  `pin_admin` diretamente pelo browser. Há rate limit específico para tentativas de verificação.
 
 ### P1 — Deleção definitiva de conta depende de um sweeper fora deste repositório
 
-- Evidência: [.ai/migrations/account_deletion_grace_2026_05_31.sql](/home/vinicius/code/zelopdv/.ai/migrations/account_deletion_grace_2026_05_31.sql:5), [src/routes/api/account/delete/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/delete/+server.js:1). Validação manual: o banco real possui `public.delete_account(...)`, mas não há job `pg_cron` chamando `delete_account`, `deletion_scheduled_at` ou equivalente.
+- Evidência: [.ai/migrations/account_deletion_grace_2026_05_31.sql](/home/vinicius/code/zelopdv/.ai/migrations/account_deletion_grace_2026_05_31.sql:5), [src/routes/api/account/delete/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/delete/+server.js:1). A fonte do ZeloChat contém `server/accountDeletionSweeper.ts`, ligado no startup por `startAccountDeletionSweepLoop()`, mas o deploy/monitoramento desse processo externo ainda não foi confirmado nesta rodada.
 - Impacto: o app agenda grace period e cancela Stripe no fim do ciclo, mas o purge real não é garantido só com este repo. Se o sweeper externo não existir ou parar, contas ficam presas em estado intermediário, com risco de descumprimento operacional/LGPD.
-- Ação recomendada: localizar o job no ZeloChat, documentar owner/monitoramento e adicionar runbook de reconciliação.
+- Ação recomendada: confirmar o processo implantado e seu monitoramento com operação; não duplicar o sweeper no ZeloPDV sem evidência de necessidade.
 
 ### P1 — `admin-dashboard/` assume tabelas sem RLS e usa anon key direto no browser
 
 - Evidência: [admin-dashboard/src/lib/supabaseClient.js](/home/vinicius/code/zelopdv/admin-dashboard/src/lib/supabaseClient.js:1)
-- Impacto: a segurança do painel depende de `super_admins` + ausência de RLS nas tabelas administrativas. Qualquer relaxamento indevido em policies/dados pode expor operações sensíveis no cliente.
+- Impacto: o painel ainda fala direto com o Data API via anon key, mas a verificação remota confirmou RLS ativo nas tabelas administrativas relevantes (`admin_activity_logs`, `empresa_perfil`, `subscriptions`) e policies owner/super-admin. Continua sendo uma superfície de defesa em profundidade, não um P0 confirmado.
 - Ação recomendada: revisar a lista de tabelas acessadas pelo admin, preferir handlers server-side para mutações críticas e registrar explicitamente quais tabelas estão com RLS desligado por design.
 
 ### P0 (resolvido 2026-07-06) — Tabelas em `public` sem RLS e com grants completos para `anon`/`authenticated`
@@ -36,30 +42,32 @@
 - Impacto: qualquer portador da anon key (embutida no bundle do client) podia ler/alterar/apagar essas tabelas via Data API. `leads`/`outreach_messages` contêm dados pessoais de prospecção; `billing_webhook_events` é auditoria de billing.
 - Status parcial: `billing_webhook_events` corrigida em 2026-07-06 (RLS ligado + grants revogados de anon/authenticated; único consumidor é o webhook AbacatePay via service role, verificado). Migration: `.ai/migrations/billing_webhook_events_enable_rls_2026_07_06.sql`.
 - Resolvido: as outras 6 tabelas eram de um bot antigo de captação de leads (confirmado pelo dono, sem consumidor ativo). RLS ligado + grants revogados em 2026-07-06 via `.ai/migrations/leadbot_tables_enable_rls_2026_07_06.sql`; dados preservados (`leads`=72, `lead_events`=1865, `outreach_messages`=4, demais vazias). Follow-up recomendado: dropar/anonimizar essas tabelas — contêm dados pessoais de prospecção sem uso (minimização LGPD).
-- Advisor também acumula (pré-existentes, menor severidade): 4 views SECURITY DEFINER em `public` (`user_entitlements`, `v_leads_pending_followup`, `v_daily_metrics`, +1), 157 policies com `auth.uid()` sem initplan, 28 funções SECURITY DEFINER executáveis por anon/authenticated, buckets públicos com listagem. Rastrear em rodada própria de hardening.
+- Advisor ainda acumula itens fora desta rodada: policies com `auth.uid()` sem initplan, funções SECURITY DEFINER não confirmadas como administrativas e buckets públicos com listagem. As views sensíveis e RPCs administrativas confirmadas foram tratadas na contenção P0 de 2026-08-12; findings novos exigem consumidor/blast-radius próprio antes de qualquer mudança.
 
-### P2 — Reativação de conta limpa o agendamento local mesmo se a retomada no Stripe falhar
+### P2 (resolvido 2026-08-12) — Reativação de conta podia limpar o agendamento antes do Stripe
 
 - Evidência: [src/routes/api/account/reactivate/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/reactivate/+server.js:28), [src/routes/api/account/reactivate/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/reactivate/+server.js:47)
 - Impacto: se `cancel_at_period_end=false` falhar no Stripe, o endpoint apenas loga warning e limpa `deletion_scheduled_at` no banco local. O usuário pode parecer reativado enquanto a assinatura segue cancelando no fim do ciclo.
-- Ação recomendada: decidir se a operação deve falhar fechada, ou ao menos gravar estado de reconciliação pendente para o suporte.
+- Resolução: o endpoint agora falha fechada em erros Stripe não transitórios e só limpa o agendamento depois do sucesso (ou de recurso já ausente). Teste direcionado cobre o erro e confirma que não há update local.
 
-### P2 — Vários fluxos assumem implicitamente "uma assinatura efetiva por usuário"
+### P2 (resolvido 2026-08-12) — Vários fluxos assumiam implicitamente "uma assinatura efetiva por usuário"
 
 - Evidência: [src/lib/guards.js](/home/vinicius/code/zelopdv/src/lib/guards.js:166), [src/routes/api/billing/create-subscription/+server.js](/home/vinicius/code/zelopdv/src/routes/api/billing/create-subscription/+server.js:80), [src/lib/server/billingPix.js](/home/vinicius/code/zelopdv/src/lib/server/billingPix.js:69)
 - Impacto: o padrão `order(updated_at desc).limit(1)` aparece em guardas, checkout, portal e Pix. Não há constraint única por `user_id` no schema, então entitlement, cancelamento e reconciliação seguem dependentes de convenção implícita, ainda que a produção atual não tenha usuários com múltiplas rows em `subscriptions`.
-- Ação recomendada: validar o schema real e registrar explicitamente se `subscriptions` é uma linha viva por `user_id` ou histórico append-only com contrato de "última linha vence".
+- Resolução: snapshot de produção confirmou zero duplicatas vivas; migration forward-only adicionou o índice parcial `subscriptions_one_live_row_per_user`, mantendo histórico terminal append-only. O contrato de leitura “última linha efetiva vence” permanece compatível.
 
-### P2 — Webhook Pix aceita fallback para chave pública hardcoded
+### P2 (resolvido anteriormente) — Webhook Pix aceita fallback para chave pública hardcoded
 
 - Evidência: [src/lib/server/billingPix.js](/home/vinicius/code/zelopdv/src/lib/server/billingPix.js:5), [src/lib/server/billingPix.js](/home/vinicius/code/zelopdv/src/lib/server/billingPix.js:121)
 - Impacto: se `ABACATEPAY_PUBLIC_KEY` faltar no ambiente, a verificação continua com uma chave embutida no código. Isso cria ambiguidade operacional e dificulta garantir que a trust boundary do webhook está configurada como esperado.
-- Ação recomendada: validar se o fallback é oficial/estável. Se não for, remover o default e falhar fechado.
+- Resolução: a implementação atual já falha fechada quando `ABACATEPAY_PUBLIC_KEY` não existe; o fallback citado no baseline não está presente no runtime. A documentação foi corrigida para não reabrir o finding sem evidência nova.
 
-### P2 — Não há snapshot único do schema de produção; migrations vivem em `.ai/migrations/`
+### P2 — Ainda não há snapshot único completo do schema de produção
 
-- Evidência: ausência de `supabase/migrations/` e dependência operacional explícita de migrations avulsas em `.ai/migrations/`
-- Impacto: para incidentes, onboarding de IA e mudanças de RLS, a verdade do banco fica espalhada entre código, docs e SQLs soltos.
+- Evidência: `supabase/migrations/` agora contém apenas o histórico reconciliado/novo de algumas fases,
+  enquanto migrations históricas continuam em `.ai/migrations/` e o dump completo ainda não foi reconstruído.
+- Impacto: para incidentes, onboarding de IA e mudanças de RLS, a verdade do banco continua parcialmente
+  espalhada entre código, docs e SQLs soltos.
 - Ação recomendada: manter [[CLAUDE]] e [[ZeloPDV.memory]] atualizados e considerar um snapshot/referência consolidada do schema quando o projeto estabilizar.
 
 ### P2 — `svelte-check` passa sem erros, mas há 133 warnings concentrados em superfícies grandes
@@ -83,11 +91,9 @@
 
 ## Open questions
 
-- Onde está implantado o sweeper que consome `deletion_scheduled_at`?
-- Quais tabelas do admin dashboard estão realmente com RLS desligado em produção?
-- O fallback `DEFAULT_ABACATEPAY_PUBLIC_KEY` é uma exigência da AbacatePay ou apenas conveniência temporária?
+- O sweeper do ZeloChat que consome `deletion_scheduled_at` está implantado e monitorado em produção?
 - Quais superfícies, além da navegação, realmente exigem enforcement de permissão por papel no servidor?
 
 ## Summary
 
-Os riscos mais altos hoje são trust boundaries frágeis em acessos/PIN, dependências operacionais implícitas e drifts internos de contrato no billing. A documentação agora cobre melhor o terreno, mas a base ainda precisa de validação manual em schema real, sweeper externo e enforcement real de permissões.
+Os riscos mais altos remanescentes são enforcement de permissões por papel em superfícies client-side e a confirmação operacional do sweeper externo de deleção. O PIN server-side, a reativação fail-closed e a unicidade de linhas vivas de assinatura já foram implementados e verificados; a base continua deliberadamente sem refactors gerais.

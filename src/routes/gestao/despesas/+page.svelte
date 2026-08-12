@@ -9,10 +9,22 @@
   import * as Select from '$lib/components/ui/select/index.js';
 
   let uid = null;
-  let adminPin = '';
+  let pinConfigured = false;
   let ownerUserId = null;
   let operadorUserId = null;
   let isSubUser = false;
+
+  async function loadAdminPinStatus() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    const response = await fetch('/api/auth/admin-pin', {
+      headers: { authorization: `Bearer ${session.access_token}` },
+    });
+    if (response.ok) {
+      const status = await response.json().catch(() => ({}));
+      pinConfigured = status.configured === true;
+    }
+  }
 
   // Date range — defaults to current month
   let today = new Date();
@@ -264,9 +276,7 @@
       operadorUserId = authCtx.userId;
       isSubUser = authCtx.isSubUser;
       if (uid) {
-        const { data: perfil, error } = await supabase.from('empresa_perfil').select('pin_admin').eq('user_id', ownerUserId).maybeSingle();
-        if (error) throw error;
-        if (perfil?.pin_admin) adminPin = perfil.pin_admin;
+        await loadAdminPinStatus();
         // Override uid with ownerUserId for all DB operations
         uid = ownerUserId;
         await loadExpenses();
@@ -278,7 +288,7 @@
   });
 </script>
 
-<AdminLock correctPin={adminPin}>
+<AdminLock pinConfigured={pinConfigured}>
 <div class="space-y-6">
   <!-- Header -->
   <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -32,6 +32,19 @@
 	// UID do usuário autenticado
 	let uid = null;
 	let mesasAddonAtivo = false;
+	let pinConfigured = false;
+
+	async function loadAdminPinStatus() {
+		const { data: { session } } = await supabase.auth.getSession();
+		if (!session?.access_token) return;
+		const response = await fetch('/api/auth/admin-pin', {
+			headers: { authorization: `Bearer ${session.access_token}` },
+		});
+		if (response.ok) {
+			const status = await response.json().catch(() => ({}));
+			pinConfigured = status.configured === true;
+		}
+	}
 
 	// Filtro: lista de caixas do usuário (últimos 60 dias) e caixa selecionado
 	let caixas = [];
@@ -165,10 +178,10 @@
 			// Carrega PIN administrativo
 			const { data: perfilData } = await supabase
 				.from('empresa_perfil')
-				.select('pin_admin, plataformas_pagamento')
+				.select('plataformas_pagamento')
 				.eq('user_id', uid)
 				.maybeSingle();
-			if (perfilData?.pin_admin) adminPin = perfilData.pin_admin;
+			await loadAdminPinStatus();
 			plataformasAtivas = (perfilData?.plataformas_pagamento || []).filter(p => p.ativo !== false);
 
 			await carregarCaixasRecentes();
@@ -1019,13 +1032,10 @@
 		else arr.sort((a,b)=> dir*(a.receita - b.receita));
 		return arr;
 	})();
-	// Admin PIN
-	let adminPin = '';
-
 	import AdminLock from '$lib/components/AdminLock.svelte';
 </script>
 
-<AdminLock correctPin={adminPin}>
+<AdminLock pinConfigured={pinConfigured}>
 <div class="mb-6 flex items-end justify-between">
 	<div>
 		<h1 class="text-xl font-bold" style="color: var(--text-main);">Relatórios</h1>

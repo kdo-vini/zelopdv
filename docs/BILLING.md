@@ -135,8 +135,9 @@ Regra prática:
 ## Riscos e drifts
 
 - A validação do webhook AbacatePay usa `ABACATEPAY_WEBHOOK_SECRET` na query e assinatura HMAC em header.
-- Há fallback para `DEFAULT_ABACATEPAY_PUBLIC_KEY` em [src/lib/server/billingPix.js](/home/vinicius/code/zelopdv/src/lib/server/billingPix.js:122); confirmar manualmente se isso é intencional.
-- `POST /api/account/reactivate` limpa `deletion_*` mesmo quando a retomada do Stripe falha; isso deixa espaco para drift entre estado local e estado do provedor — [src/routes/api/account/reactivate/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/reactivate/+server.js:28)
+- A verificação Pix falha fechada quando `ABACATEPAY_PUBLIC_KEY` não está configurada; não há fallback de chave embutida em runtime.
+- `POST /api/account/reactivate` só limpa `deletion_*` depois que o Stripe aceita a retomada (ou confirma que a assinatura já não existe); falhas transitórias retornam erro e preservam a agenda para retry.
+- `subscriptions` preserva histórico terminal, mas o schema agora garante no máximo uma linha viva por titular (`active`, `trialing`, `past_due` ou `incomplete`) pelo índice parcial `subscriptions_one_live_row_per_user`.
 - O contrato de perfil exigido diverge entre Stripe checkout e Pix/guards: checkout exige `documento`, enquanto Pix e guards exigem perfil validado completo — [src/routes/api/billing/create-subscription/+server.js](/home/vinicius/code/zelopdv/src/routes/api/billing/create-subscription/+server.js:65), [src/routes/api/billing/pix/create/+server.js](/home/vinicius/code/zelopdv/src/routes/api/billing/pix/create/+server.js:100), [src/lib/guards.js](/home/vinicius/code/zelopdv/src/lib/guards.js:147)
 
 ## Operação manual que depende de validação humana

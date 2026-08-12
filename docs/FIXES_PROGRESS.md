@@ -1,5 +1,17 @@
 # Fixes Progress
 
+- [x] FX-SEC-PIN-01 (2026-08-12) - o PIN administrativo deixou de ser exposto
+  ao browser. Status, verificação e alteração passam por `/api/auth/admin-pin`,
+  com comparação constante, rate limit por titular e alteração restrita ao owner.
+  Layout, Despesas, Relatórios, Perfil e reset de PIN foram migrados sem alterar
+  o contrato visual; testes direcionados cobrem owner, subusuário e PIN incorreto.
+
+- [x] FX-BILLING-INVARIANTS-01 (2026-08-12) - reativação agora falha fechada
+  quando o Stripe não retoma a assinatura e preserva `deletion_*` para retry.
+  O índice parcial `subscriptions_one_live_row_per_user` foi aplicado em produção
+  após snapshot sem duplicatas vivas; histórico terminal segue append-only.
+  Vitest completo: 575/575; `npm run check`: 0 erros/95 avisos conhecidos.
+
 - [x] FX-E2E-DEDICATED-01 (2026-08-12) - a conta informada pelo usuario foi
   validada como tenant dedicado permanente. O setup/teardown remoto passou
   2/2; o fixture agora aguarda a hidratacao do login, trata a caixa aberta ja
@@ -161,17 +173,22 @@
 > definição de pronto ficam lá; aqui fica a trilha de execução. Marque ✅ conforme cada frente fechar.
 
 - ⏳ SPRINT-1 — quebrar os god-components, começando pelo fluxo de pagamento de `src/routes/app/mesas/[id]/+page.svelte` (~3.400 linhas). Reclassifica `DT-ARCH-01` de prioridade baixa → ativa; extrair lógica para componentes/store testável reusando [src/lib/components/modals/ModalPagamento.svelte](/home/vinicius/code/zelopdv/src/lib/components/modals/ModalPagamento.svelte:1)
-- ⏳ SPRINT-2 — defesa em profundidade em acessos: enforcement server-side das mutações sensíveis, decisão sobre o PIN, revisão das tabelas admin sem RLS e testes de escalonamento de papel + edição concorrente. Absorve FX-PENDING-05 e FX-PENDING-06 — [src/lib/server/accessControl.js](/home/vinicius/code/zelopdv/src/lib/server/accessControl.js:106), [src/lib/accessControl.js](/home/vinicius/code/zelopdv/src/lib/accessControl.js:122), [src/lib/components/AdminLock.svelte](/home/vinicius/code/zelopdv/src/lib/components/AdminLock.svelte:37)
-- ⏳ SPRINT-3 — trocar invariantes-por-convenção por enforcement: confirmar/monitorar o sweeper de deleção (LGPD, absorve OPS-DELETE-01), reativação falhar fechada (`DT-RELIABILITY-01`), remover fallback de chave Pix hardcoded (`DT-SEC-01`) e decidir contrato de `subscriptions` (`TA-DATA-01`) — [src/routes/api/account/reactivate/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/reactivate/+server.js:28), [src/lib/server/billingPix.js](/home/vinicius/code/zelopdv/src/lib/server/billingPix.js:5)
+- ⏳ SPRINT-2 — defesa em profundidade em acessos continua incremental: Despesas e PIN já foram migrados;
+  faltam outras mutações sensíveis, revisão de handlers do admin e testes amplos de escalonamento — [docs/modules/ACESSOS.md](/home/vinicius/code/zelopdv/docs/modules/ACESSOS.md:1)
+- ⏳ SPRINT-3 — confirmar/monitorar o sweeper de deleção (LGPD, absorve OPS-DELETE-01); reativação fail-closed,
+  linha viva única de assinatura e Pix sem fallback já estão concluídos — [src/routes/api/account/reactivate/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/reactivate/+server.js:28)
 
 ## Pendentes confirmados nesta sessão
 
-- ⏳ FX-PENDING-05 — modelo de permissao do add-on Acessos ainda e majoritariamente gating de UI; falta definir onde precisa de enforcement server-side real — [src/lib/accessControl.js](/home/vinicius/code/zelopdv/src/lib/accessControl.js:122), [docs/modules/ACESSOS.md](/home/vinicius/code/zelopdv/docs/modules/ACESSOS.md:1) → **agendado em SPRINT-2 (2026-06-02)**
-- ⏳ FX-PENDING-06 — `AdminLock` usa `pin_admin` em claro no cliente; tratar como trava de conveniencia ate redesenho — [src/lib/components/AdminLock.svelte](/home/vinicius/code/zelopdv/src/lib/components/AdminLock.svelte:37), [docs/data/SCHEMA_RLS.md](/home/vinicius/code/zelopdv/docs/data/SCHEMA_RLS.md:1) → **agendado em SPRINT-2 (2026-06-02)**
+- ⏳ FX-PENDING-05 — modelo de permissao do add-on Acessos ainda é majoritariamente gating de UI fora das
+  superficies migradas; Despesas já exige `despesas.visualizar`/`despesas.gerenciar` no RLS — [docs/modules/ACESSOS.md](/home/vinicius/code/zelopdv/docs/modules/ACESSOS.md:1) → **SPRINT-2 incremental**
+- [x] FX-PENDING-06 — `AdminLock` deixou de carregar `pin_admin` em claro no cliente; status/verificação/alteração
+  passam por `/api/auth/admin-pin`, com rate limit e alteração owner-only — [src/lib/components/AdminLock.svelte](/home/vinicius/code/zelopdv/src/lib/components/AdminLock.svelte:1)
 
 ## Pendência operacional fora do repo
 
-- ⚠️ OPS-DELETE-01 — purge final de contas agendadas depende de sweeper no ZeloChat, não encontrado neste repo — [.ai/migrations/account_deletion_grace_2026_05_31.sql](/home/vinicius/code/zelopdv/.ai/migrations/account_deletion_grace_2026_05_31.sql:5) → **agendado em SPRINT-3 (2026-06-02)**, prioridade por LGPD
+- ⚠️ OPS-DELETE-01 — a fonte do sweeper está em `ZeloChat/server/accountDeletionSweeper.ts` e é ligada no startup,
+  mas deploy/monitoramento em produção ainda não foram confirmados — [.ai/migrations/account_deletion_grace_2026_05_31.sql](/home/vinicius/code/zelopdv/.ai/migrations/account_deletion_grace_2026_05_31.sql:5) → **agendado em SPRINT-3**, prioridade por LGPD
 - [x] FX-ADMIN-METRIC-SCOPE (2026-08-04) — criado o escopo global configurável
   por empresa no dashboard administrativo. A configuração persistida no
   Supabase controla as métricas de base, financeiro e engajamento; Donutopia e

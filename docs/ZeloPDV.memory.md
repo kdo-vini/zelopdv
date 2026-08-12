@@ -41,9 +41,12 @@
 - PostHog roda somente em rotas publicas externas via `src/lib/posthogClient.js`; areas internas, onboarding (`/perfil`), billing (`/assinatura`) e callback OAuth ficam bloqueados.
 - O purge final de conta agendada não está neste repo; a migration diz que roda em um sweeper do ZeloChat.
 - O modelo de subusuário mistura duas camadas: contexto server-side/RLS por owner e gating fino de permissões majoritariamente no cliente.
-- `AdminLock`/`pin_admin` hoje é barreira de UI no browser, não proteção forte de segredo.
-- O admin dashboard usa anon key no browser e assume tabelas administrativas sem RLS.
-- As migrations do projeto ficam em `.ai/migrations/`; não há `supabase/migrations/` versionado.
+- `AdminLock`/`pin_admin` agora valida o valor em `/api/auth/admin-pin`; o browser recebe somente o status
+  de configuração. Continua sendo complementar ao RBAC por cargo.
+- O admin dashboard usa anon key no browser; a verificação de produção confirmou RLS ativo nas tabelas
+  administrativas relevantes, então o risco remanescente é de defesa em profundidade/handlers críticos.
+- Migrations históricas ainda vivem em `.ai/migrations/`; `supabase/migrations/` agora contém o histórico
+  reconciliado e as mudanças forward-only recentes, mas não substitui um snapshot completo do schema.
 - Para aplicar migrations no projeto real vinculado, usar o Supabase CLI com `supabase db query --linked --file <arquivo.sql>`; não depender de colar SQL manualmente no dashboard.
 - A trilha documental principal agora é: `README.md` + docs operacionais na raiz + `pdvObsidian/HOME.md`.
 - Em 2026-06-01, `npm test` voltou a 140/140 após alinhar fixtures ao contrato atual de perfil/CPF/telefone.

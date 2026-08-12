@@ -82,7 +82,8 @@
 **Pontos de atencao**
 
 - depende de `ABACATEPAY_WEBHOOK_SECRET`
-- existe fallback para `DEFAULT_ABACATEPAY_PUBLIC_KEY`, ainda nao validado como intencional
+- a assinatura falha fechada quando `ABACATEPAY_PUBLIC_KEY` não está configurada; não há fallback
+  hardcoded no runtime atual
 
 ## Resend
 

@@ -1,5 +1,13 @@
 # ZeloPDV — Foco atual
 
+- Segurança/reliabilidade incremental (2026-08-12): `POST /api/account/reactivate` agora falha
+  fechada quando o Stripe não consegue retomar a assinatura, preservando a agenda local para retry.
+  O schema de produção recebeu o índice parcial `subscriptions_one_live_row_per_user`, mantendo
+  histórico terminal e impedindo mais de uma linha viva por titular. O PIN administrativo deixou de
+  ser enviado ao browser: status e verificação passam por `/api/auth/admin-pin`, e somente o titular
+  pode alterá-lo. A suíte Vitest passou 575/575 e `npm run check` passou com 0 erros/95 avisos
+  conhecidos. O lint SQL continua com os dois erros pré-existentes documentados abaixo.
+
 - Webhook reliability round 2 (2026-08-12): os cenários descritos foram
   confirmados no código e no schema de produção. Stripe agora só registra o
   evento depois dos efeitos locais e propaga falhas de update para permitir
@@ -354,10 +362,10 @@
 ## Drifts e riscos ativos
 
 - Controle de Acessos hoje faz enforcement fino majoritariamente no cliente; o servidor/RLS escopa dados por `owner_user_id`, mas não aplica o JSON de permissões como barreira forte em todas as rotas ([[CODE_REVIEW]]).
-- `AdminLock`/`pin_admin` é barreira de UI no browser, não proteção server-side de segredo ([[CODE_REVIEW]]).
-- O Supabase real tem a função `delete_account()`, mas não há job `pg_cron` chamando essa função nem qualquer cron local por `deletion_scheduled_at`; a execução final continua fora deste repo / deste banco ([[CODE_REVIEW]]).
-- `admin-dashboard/` usa anon key e presume tabelas sem RLS ([[CODE_REVIEW]]).
-- Webhook Pix usa fallback para `DEFAULT_ABACATEPAY_PUBLIC_KEY`; confirmar se isso é intencional ([[CODE_REVIEW]]).
+- `AdminLock`/`pin_admin` agora valida o valor em `/api/auth/admin-pin`; o browser recebe somente status de configuração ([[CODE_REVIEW]]).
+- O Supabase real tem `delete_account()` e a fonte do ZeloChat contém o sweeper externo; deploy/monitoramento desse processo ainda precisam de confirmação operacional ([[CODE_REVIEW]]).
+- `admin-dashboard/` usa anon key e continua sendo uma superfície de defesa em profundidade; as tabelas administrativas relevantes têm RLS ativo em produção ([[CODE_REVIEW]]).
+- O webhook Pix falha fechado sem `ABACATEPAY_PUBLIC_KEY`; não há fallback hardcoded no runtime atual ([[CODE_REVIEW]]).
 
 ## Hotspots que pedem cautela
 
@@ -398,9 +406,8 @@
 3. Finalizar landing page de marketing do ZeloMenu em `/extensoes` (card + seção detalhada + FAQ + entrada em `extensoes.js`).
 4. Validar fim-a-fim o fluxo de deleção agendada com o sweeper externo.
 5. Revisar e documentar o modelo de segurança do `admin-dashboard/`.
-6. Decidir se `pin_admin` continua como trava de conveniência ou vira proteção real server-side.
-7. Atacar warnings de `svelte-check` por lote, começando pelos arquivos operacionais e não pelas páginas de marketing.
-8. Expandir hero archetypes pra páginas standalone: `/precificacao` e `/vs-planilha` ainda usam layout legado (gradient text, multi-glow) — sprint separada pode ganhar +3-4 pontos no critique.
+6. Atacar warnings de `svelte-check` por lote, começando pelos arquivos operacionais e não pelas páginas de marketing.
+7. Expandir hero archetypes pra páginas standalone: `/precificacao` e `/vs-planilha` ainda usam layout legado (gradient text, multi-glow) — sprint separada pode ganhar +3-4 pontos no critique.
 
 ## Ajustes pós-QA da navegação mobile
 

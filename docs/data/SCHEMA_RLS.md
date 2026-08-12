@@ -116,15 +116,17 @@ Conclusao operacional:
 
 ## Ponto critico: `empresa_perfil.pin_admin`
 
-- Paginas como `relatorios` e `despesas` carregam `pin_admin` no cliente e passam o valor bruto para `AdminLock`.
-- `AdminLock` compara `inputPin === correctPin` no browser.
-- Como `empresa_perfil` e legivel para subusuarios ativos, o PIN nao deve ser tratado como segredo forte.
+- Paginas como `relatorios` e `despesas` consultam apenas o status de configuração por `/api/auth/admin-pin`.
+- `AdminLock` envia a tentativa ao endpoint autenticado; o valor bruto não atravessa o Data API nem é
+  retornado ao browser.
+- O endpoint resolve o owner para subusuários e restringe alteração do PIN ao titular.
 
 ## Ponto critico: `expenses`
 
 - A pagina de despesas resolve o contexto via `ensureActiveSubscription`.
 - Depois disso, consulta `expenses` pelo `uid` do owner.
-- A pagina usa `AdminLock`, mas nao ha um gate server-side de permissao por papel antes de carregar a superficie.
+- A página usa `AdminLock` para UX; as policies de `20260812193009_expenses_role_rbac.sql` também exigem
+  `despesas.visualizar` para leitura e `despesas.gerenciar` para mutações de subusuários.
 
 ## Regras praticas para mudancas
 
@@ -173,5 +175,7 @@ Migration: `.ai/migrations/product_usage_events_2026_07_30.sql`.
 ## Pendente de validacao
 
 - Confirmar no banco real se todas as policies de `.ai/migrations/rls_subuser_access.sql` batem com producao.
-- Confirmar o schema real da tabela `expenses` e suas policies atuais.
-- Definir se `pin_admin` continuara existindo como trava de conveniencia ou sera redesenhado.
+- `expenses` foi reconciliada em produção pela migration `20260812193009_expenses_role_rbac.sql`:
+  owner mantém CRUD; subusuário precisa de `despesas.visualizar` para SELECT ou
+  `despesas.gerenciar` para mutações.
+- `pin_admin` agora é verificado por `/api/auth/admin-pin`; o valor bruto não é selecionado pelo browser.

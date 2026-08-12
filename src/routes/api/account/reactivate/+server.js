@@ -25,22 +25,31 @@ export async function POST({ request }) {
       return json({ success: true, alreadyActive: true });
     }
 
-    // Resume Stripe subscription if it was set to cancel at period end.
-    if (stripe) {
-      const { data: sub } = await supabaseAdmin
-        .from('subscriptions')
-        .select('provider_subscription_id, payment_provider, status')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (sub?.provider_subscription_id && sub.payment_provider === 'stripe' && sub.status !== 'canceled') {
-        try {
-          await stripe.subscriptions.update(sub.provider_subscription_id, { cancel_at_period_end: false });
-        } catch (stripeErr) {
-          // Non-fatal: the account stays active even if Stripe resume hiccups.
-          console.warn('[account/reactivate] Stripe resume warning:', stripeErr?.message || stripeErr);
+    // Resume Stripe subscription before clearing the local deletion schedule.
+    // If Stripe rejects the operation, keep the schedule so a retry can
+    // reconcile both systems instead of reporting a false reactivation.
+    const { data: sub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('provider_subscription_id, payment_provider, status')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (sub?.provider_subscription_id && sub.payment_provider === 'stripe' && sub.status !== 'canceled') {
+      if (!stripe) {
+        return json({ error: 'Serviço de cobrança indisponível. Tente novamente.' }, { status: 503 });
+      }
+      try {
+        await stripe.subscriptions.update(sub.provider_subscription_id, { cancel_at_period_end: false });
+      } catch (stripeErr) {
+        const msg = stripeErr?.message || String(stripeErr);
+        if (!/resource_missing|not.?found|no such/i.test(msg)) {
+          console.error('[account/reactivate] Stripe resume error:', msg);
+          return json({
+            error: 'Não foi possível reativar a assinatura agora. Tente novamente.',
+          }, { status: 502 });
         }
+        console.warn('[account/reactivate] Stripe subscription already missing:', msg);
       }
     }
 

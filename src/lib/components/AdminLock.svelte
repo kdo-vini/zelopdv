@@ -5,7 +5,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { LockKeyhole } from 'lucide-svelte';
 
-  export let correctPin; 
+  export let pinConfigured = false;
   
   let inputPin = '';
   let errorShake = false;
@@ -35,15 +35,34 @@
       bubbleTimerNew = setTimeout(() => showBubbleNew = false, 2000);
   }
 
-  function unlock() {
-    if (inputPin === correctPin) {
+  let unlocking = false;
+
+  async function unlock() {
+    if (unlocking) return;
+    unlocking = true;
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('Sessão expirada.');
+        const response = await fetch('/api/auth/admin-pin', {
+            method: 'POST',
+            headers: {
+                authorization: `Bearer ${session.access_token}`,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ action: 'verify', pin: inputPin }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error || 'PIN incorreto.');
         $adminUnlocked = true;
+        inputPin = '';
         addToast('Acesso liberado.', 'success');
-    } else {
+    } catch (e) {
         errorShake = true;
         setTimeout(() => errorShake = false, 400);
         inputPin = '';
-        addToast('PIN Incorreto', 'error');
+        addToast(e?.message || 'PIN incorreto.', 'error');
+    } finally {
+        unlocking = false;
     }
   }
 
@@ -105,17 +124,21 @@
     }
     loadingRest = true;
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase
-            .from('empresa_perfil')
-            .update({ pin_admin: newPin })
-            .eq('user_id', user.id);
-
-        if (error) throw error;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('Sessão expirada.');
+        const response = await fetch('/api/auth/admin-pin', {
+            method: 'POST',
+            headers: {
+                authorization: `Bearer ${session.access_token}`,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ action: 'set', pin: newPin }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error || 'Falha ao salvar PIN.');
 
         addToast('Novo PIN definido!', 'success');
         $adminUnlocked = true; // Unlock directly
-        // Optionally update correctPin if bound, but unlocking bypasses it anyway
     } catch (e) {
         addToast('Erro ao salvar: ' + e.message, 'error');
     } finally {
@@ -124,7 +147,7 @@
   }
 </script>
 
-{#if $adminUnlocked || !correctPin}
+{#if $adminUnlocked || !pinConfigured}
   <slot />
 {:else}
   <div class="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 animate-in fade-in zoom-in duration-300">
@@ -182,7 +205,7 @@
         <button 
             class="text-xs text-slate-400 hover:text-sky-500 underline mt-2"
             on:click={startReset}
-            disabled={loadingRest}
+            disabled={loadingRest || unlocking}
         >
             {loadingRest ? 'Enviando...' : 'Esqueci meu PIN'}
         </button>

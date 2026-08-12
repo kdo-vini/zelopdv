@@ -60,12 +60,18 @@
     if (newPin.length !== 4) return;
     savingPin = true;
     try {
-      const { error } = await supabase
-        .from('empresa_perfil')
-        .update({ pin_admin: newPin })
-        .eq('user_id', userId);
-      if (error) throw error;
-      adminPin = newPin;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Sessão expirada.');
+      const response = await fetch('/api/auth/admin-pin', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'set', pin: newPin }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || 'Falha ao salvar PIN.');
       showChangePin = false;
       newPin = '';
       addToast('PIN atualizado com sucesso!', 'success');
@@ -199,7 +205,6 @@
   let logo_url = '';
   let pendingLogoUrl = null;
   let logoFile = null;
-  let adminPin = '';
 
   // Form fields — Aba Empresa
   let razao_social = '';
@@ -462,7 +467,7 @@
     // Load profile
     const { data, error } = await supabase
       .from('empresa_perfil')
-      .select('*')
+      .select('nome_exibicao, logo_url, razao_social, documento, inscricao_estadual, contato, endereco, largura_bobina, rodape_recibo, tabelas_preco_ativo, tabela_preco_1_nome, tabela_preco_2_nome, tabela_preco_3_nome, deletion_scheduled_at, plataformas_pagamento, whatsmiau_instance, zelochat_onboarding_done')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -479,7 +484,6 @@
       largura_bobina    = normalizeLarguraBobina(data.largura_bobina ?? '80mm');
       logo_url          = data.logo_url ?? '';
       rodape_recibo     = data.rodape_recibo ?? 'Obrigado pela preferência!';
-      adminPin          = data.pin_admin || '';
       tabelasPrecoAtivo = !!data.tabelas_preco_ativo;
       nomeTabela1       = data.tabela_preco_1_nome || 'Tabela 1';
       nomeTabela2       = data.tabela_preco_2_nome || 'Tabela 2';

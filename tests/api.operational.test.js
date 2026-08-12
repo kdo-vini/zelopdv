@@ -119,6 +119,64 @@ describe('operational products API', () => {
   });
 });
 
+describe('admin PIN API', () => {
+  function loadAdminPin(state, context = { isSubUser: false, ownerUserId: state.user?.id }) {
+    return loadModule('../src/routes/api/auth/admin-pin/+server.js', state, {
+      '$lib/server/accessControl': () => ({ getServerAccessContext: vi.fn(async () => context) }),
+    });
+  }
+
+  it('returns PIN status without exposing the stored PIN', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: { empresa_perfil: { data: { pin_admin: '1234' }, error: null } },
+      results: {},
+    };
+    const { GET } = await loadAdminPin(state);
+    const response = await GET({ request: makeRequest() });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ configured: true, canSet: true });
+  });
+
+  it('verifies the PIN server-side and rejects incorrect values', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: { empresa_perfil: { data: { pin_admin: '1234' }, error: null } },
+      results: {},
+    };
+    const { POST } = await loadAdminPin(state);
+    expect((await POST({ request: makeRequest({ body: { action: 'verify', pin: '1234' } }) })).status).toBe(200);
+    const wrong = await POST({ request: makeRequest({ body: { action: 'verify', pin: '9999' } }) });
+    expect(wrong.status).toBe(401);
+    expect(await wrong.json()).toEqual({ error: 'PIN incorreto.' });
+  });
+
+  it('allows only the owner to set the company PIN', async () => {
+    const ownerState = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: { empresa_perfil: { data: { user_id: 'owner-1' }, error: null } },
+      results: {},
+    };
+    const { POST: ownerPost } = await loadAdminPin(ownerState);
+    expect((await ownerPost({ request: makeRequest({ body: { action: 'set', pin: '5678' } }) })).status).toBe(200);
+    const update = ownerState.queries.find((query) => query.table === 'empresa_perfil' && query.operation === 'update');
+    expect(update.payload).toEqual({ pin_admin: '5678' });
+
+    const subState = {
+      user: { id: 'sub-1' },
+      queries: [],
+      maybeSingle: {},
+      results: {},
+    };
+    const { POST: subPost } = await loadAdminPin(subState, { isSubUser: true, ownerUserId: 'owner-1' });
+    expect((await subPost({ request: makeRequest({ body: { action: 'set', pin: '5678' } }) })).status).toBe(403);
+    expect(subState.queries.some((query) => query.operation === 'update')).toBe(false);
+  });
+});
+
 describe('access roles API', () => {
   function loadRoles(state) {
     return loadModule('../src/routes/api/access/roles/+server.js', state, {
@@ -218,9 +276,9 @@ describe('access activation API', () => {
 });
 
 describe('account lifecycle APIs', () => {
-  function loadAccount(path, state) {
+  function loadAccount(path, state, stripeMock = { stripe: null }) {
     return loadModule(path, state, {
-      '$lib/server/stripe': () => ({ stripe: null }),
+      '$lib/server/stripe': () => stripeMock,
     });
   }
 
@@ -259,5 +317,30 @@ describe('account lifecycle APIs', () => {
     expect(response.status).toBe(200);
     const updates = state.queries.filter((query) => query.operation === 'update');
     expect(updates.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('keeps the local deletion schedule when Stripe resume fails', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: {
+        empresa_perfil: { data: { id: 'profile-1', deletion_scheduled_at: '2099-01-01T00:00:00Z' }, error: null },
+        subscriptions: { data: { provider_subscription_id: 'sub-stripe-1', payment_provider: 'stripe', status: 'active' }, error: null },
+      },
+      results: {},
+    };
+    const stripeUpdate = vi.fn(async () => { throw new Error('Stripe unavailable'); });
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: 'Não foi possível reativar a assinatura agora. Tente novamente.',
+    });
+    expect(stripeUpdate).toHaveBeenCalledWith('sub-stripe-1', { cancel_at_period_end: false });
+    expect(state.queries.filter((query) => query.operation === 'update')).toHaveLength(0);
   });
 });

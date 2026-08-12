@@ -58,43 +58,37 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ### SPRINT-2 — Defesa em profundidade em acessos (parar de depender só do RLS)
 
-- **Crítica:** permissão por papel é gating de UI, o PIN é comparado no cliente e o `admin-dashboard` fala
-  direto com Supabase via anon key. Empilhados, esses tradeoffs deixam o sistema com **zero defesa em
-  profundidade**: se uma policy de RLS for mal configurada, cai a única barreira real — e não há snapshot
-  de schema para auditar o RLS contra uma fonte de verdade. Os testes também não cobrem escalonamento de
-  papel nem edição concorrente.
+- **Crítica remanescente:** permissão por papel ainda é gating de UI em várias superfícies e o `admin-dashboard` fala
+  direto com Supabase via anon key. Ainda há gaps de defesa em profundidade nas superfícies não migradas:
+  uma policy de RLS mal configurada continua sendo crítica em módulos sem enforcement de papel. Os testes
+  também não cobrem escalonamento de papel nem edição concorrente de forma ampla.
 - **Consolida:** `TA-SEC-01`, `TA-SEC-02`, `TA-ARCH-01`, `TA-DATA-02` + lacuna de testes (nova).
-- **Plano de ação:**
-  1. Enforcement server-side nas **mutações sensíveis** por papel (não só esconder na UI) — definir a
-     lista de rotas/ações que exigem isso (responde à open question de [[CODE_REVIEW]]).
-  2. Decidir o destino do PIN: validar no servidor sem expor o valor, **ou** rebaixar formalmente para
-     "trava de balcão" e parar de chamá-lo de proteção.
-  3. Listar as tabelas do admin sem RLS e mover mutações críticas para handlers server-side.
-  4. Adicionar testes de **escalonamento de papel** (subusuário não eleva o próprio cargo; titular não é
+- **Progresso (2026-08-12):** o PIN foi movido para `/api/auth/admin-pin`; o módulo de Despesas agora
+  aplica `despesas.visualizar`/`despesas.gerenciar` no RLS, sem alterar owners ou Gerente. O snapshot e
+  o smoke owner/anon/subusuário/Gerente estão em [[FIXES_PROGRESS]].
+- **Plano de ação remanescente:**
+  1. Repetir enforcement server-side nas próximas mutações sensíveis por módulo, uma por vez.
+  2. Listar as tabelas do admin sem RLS e mover mutações críticas para handlers server-side quando houver
+     consumidor real que justifique o blast radius.
+  3. Adicionar testes de **escalonamento de papel** (subusuário não eleva o próprio cargo; titular não é
      trancado por subusuário) e de **edição concorrente** (dois operadores, mesmo caixa/produto).
 - **Definição de pronto:** mutação sensível recusada no servidor para papel sem permissão, com teste
   cobrindo o caminho negado.
 
 ### SPRINT-3 — Trocar invariantes-por-convenção por enforcement (dinheiro + LGPD)
 
-- **Crítica:** garantias críticas dependem de convenção ou de processo externo, não de enforcement: o
-  purge de conta depende de sweeper externo não confirmado (risco LGPD); `subscriptions` usa "última
-  linha vence" sem constraint; a reativação não falha fechada; o webhook Pix tem chave hardcoded de
-  fallback.
+- **Crítica remanescente:** o purge de conta depende de sweeper externo; a fonte do ZeloChat foi
+  localizada, mas deploy/monitoramento ainda não foram confirmados. Os itens de billing foram tratados:
+  reativação fail-closed, índice de linha viva e verificação Pix sem fallback embutido.
 - **Consolida:** `TA-OPS-01`, `TA-DATA-01`, `DT-RELIABILITY-01`, `DT-SEC-01`.
-- **O que muda agora:** ordenar por risco. **Primeiro** confirmar o sweeper de deleção (LGPD é a maior
+- **O que muda agora:** confirmar o sweeper de deleção (LGPD é a maior
   exposição); os demais são quick wins.
 - **Plano de ação:**
   1. Localizar o sweeper que consome `deletion_scheduled_at` (provável ZeloChat), documentar owner +
      monitoramento e escrever runbook de reconciliação (`TA-OPS-01` / OPS-DELETE-01).
-  2. `reactivate`: falhar fechada se o Stripe recusar `cancel_at_period_end=false`, ou gravar estado de
-     reconciliação pendente (`DT-RELIABILITY-01`).
-  3. Confirmar com a AbacatePay se `DEFAULT_ABACATEPAY_PUBLIC_KEY` é oficial; se não, remover o fallback e
-     falhar fechado (`DT-SEC-01`).
-  4. Decidir o contrato de `subscriptions`: constraint única por `user_id` **ou** registrar formalmente
-     "última linha vence" e centralizar a leitura (`TA-DATA-01`).
-- **Definição de pronto:** sweeper confirmado e monitorado; reativação com caminho de falha explícito;
-  webhook Pix sem fallback silencioso.
+  2. Manter o runbook de reconciliação e observar a operação externa; não duplicar o sweeper sem evidência.
+- **Definição de pronto parcial:** reativação com caminho de falha explícito, uma linha viva por titular
+  e webhook Pix sem fallback silencioso já estão concluídos; sweeper continua pendente de confirmação operacional.
 
 ---
 
@@ -114,15 +108,11 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
   incidente de subusuário abusando de permissão. Ver finding P1 em [[CODE_REVIEW]] e [[docs/modules/ACESSOS]].
 - **Status (2026-06-02):** gatilho puxado por decisão — agendado em SPRINT-2 (enforcement server-side das mutações sensíveis).
 
-### TA-SEC-02 — `AdminLock` / `pin_admin` é trava de conveniência, não barreira de segurança
+### TA-SEC-02 (resolvido 2026-08-12) — `AdminLock` / `pin_admin` era trava de conveniência
 
-- **O que deixamos na mesa:** validação de PIN no servidor com o valor nunca exposto ao cliente.
-- **O que ganhamos:** UX simples para “travar” telas sensíveis sem round-trip e sem novo endpoint.
-- **Custo aceito:** o PIN é legível por quem inspeciona o cliente (subusuário lê `empresa_perfil` via RLS).
-- **Por que é tolerável hoje:** o objetivo real é evitar que um funcionário *casual* abra telas de gestão
-  no balcão — não barrar um atacante técnico. É uma trava de balcão, não um cofre.
-- **Gatilho de revisão:** se o PIN passar a proteger algo de valor real (ex.: estorno, sangria sem
-  rastro). Ver finding P1 em [[CODE_REVIEW]].
+- **Resolução:** o valor não é mais selecionado no cliente; GET/POST server-side resolvem o titular,
+  com comparação constante, rate limit e alteração somente pelo owner. O round-trip é deliberado para
+  que o PIN seja uma barreira real de defesa em profundidade.
 
 ### TA-OPS-01 — Purge final de conta depende de sweeper externo (fora deste repo)
 
@@ -141,21 +131,18 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 - **O que deixamos na mesa:** uma camada server-side própria para o admin.
 - **O que ganhamos:** dashboard interno entregue rápido, reusando o Supabase já existente.
-- **Custo aceito:** a segurança depende de `super_admins` + ausência de RLS nas tabelas admin; qualquer
-  relaxamento de policy expõe operação sensível no cliente.
+- **Custo aceito:** o painel usa anon key no browser e depende de `super_admins` + policies RLS; qualquer
+  relaxamento de policy pode expor operação sensível no cliente. A verificação de produção confirmou RLS
+  ativo nas tabelas administrativas relevantes, então não há ausência de RLS confirmada neste momento.
 - **Por que é tolerável hoje:** público restrito (operação interna), superfície pequena.
 - **Gatilho de revisão:** crescer o time de admin ou mover mutações críticas para handlers server-side.
   Ver finding P1 em [[CODE_REVIEW]].
 
-### TA-DATA-01 — “Última linha vence” em `subscriptions`, sem constraint única por `user_id`
+### TA-DATA-01 (resolvido 2026-08-12) — “Última linha vence” em `subscriptions`, sem constraint única por `user_id`
 
-- **O que deixamos na mesa:** uma invariante forte (uma linha viva por usuário) garantida no schema.
-- **O que ganhamos:** flexibilidade de histórico append-only e menos atrito em migrações de billing.
-- **Custo aceito:** entitlement, cancelamento e reconciliação dependem da convenção implícita
-  `order(updated_at desc).limit(1)`, espalhada por guards, checkout, portal e Pix.
-- **Por que é tolerável hoje:** produção atual não tem usuários com múltiplas rows.
-- **Gatilho de revisão:** primeiro caso real de linhas duplicadas, ou antes de qualquer refactor de
-  billing. Ver finding P2 em [[CODE_REVIEW]].
+- **Resolução:** o índice parcial `subscriptions_one_live_row_per_user` impede mais de uma linha viva
+  por titular e mantém estados terminais como histórico append-only. O contrato de leitura existente
+  continua compatível; snapshot pré-mudança e rollback estão documentados.
 
 ### TA-DATA-02 — Migrations em `.ai/migrations/`, sem snapshot único do schema de produção
 

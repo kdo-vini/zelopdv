@@ -376,7 +376,7 @@
   import { sessionStore, companyNameStore } from '$lib/stores/session';
 
   let showPinSetup = false;
-  let adminPin = null;
+  let pinConfigured = false;
   let companyName = null;
 
   // Enhance the existing onMount/auth check
@@ -388,12 +388,21 @@
     const companyUserId = accessCtx.ownerUserId || uId;
     const { data } = await supabase
       .from('empresa_perfil')
-      .select('pin_admin, nome_exibicao')
+      .select('nome_exibicao')
       .eq('user_id', companyUserId)
       .maybeSingle();
 
     if (data) {
-        if (!data.pin_admin) {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        let pinStatus = null;
+        if (currentSession?.access_token) {
+          const response = await fetch('/api/auth/admin-pin', {
+            headers: { authorization: `Bearer ${currentSession.access_token}` },
+          });
+          pinStatus = response.ok ? await response.json().catch(() => null) : null;
+        }
+        pinConfigured = pinStatus?.configured === true;
+        if (!pinConfigured && pinStatus?.canSet !== false) {
             // Don't interrupt onboarding flow — only prompt PIN setup on protected app pages
             const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
             const onboardingPaths = ['/perfil', '/assinatura', '/login', '/cadastro', '/esqueci-senha', '/redefinir-senha'];
@@ -401,8 +410,6 @@
             if (!isOnboarding) {
                 showPinSetup = true;
             }
-        } else {
-            adminPin = data.pin_admin;
         }
         if (data.nome_exibicao) {
             companyName = data.nome_exibicao;
@@ -417,9 +424,9 @@
   $: $sessionStore = session;
   $: $companyNameStore = companyName;
   
-  function onPinSet(newPin) {
+  function onPinSet() {
     showPinSetup = false;
-    adminPin = newPin;
+    pinConfigured = true;
     $adminUnlocked = true; // Auto unlock on creation
   }
 </script>
@@ -436,7 +443,7 @@
 <UpdateAvailable />
 
 {#if showPinSetup && session && !isPerfil && !isAssinatura && PinSetupModal}
-  <svelte:component this={PinSetupModal} userId={session.user.id} {onPinSet} />
+  <svelte:component this={PinSetupModal} {onPinSet} />
 {/if}
 
 {#if !isOnline}

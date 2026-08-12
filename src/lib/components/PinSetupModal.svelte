@@ -4,7 +4,6 @@
   import { LockKeyhole } from 'lucide-svelte';
   import { onMount } from 'svelte';
   
-  export let userId;
   export let onPinSet = () => {};
 
   let pin = '';
@@ -42,15 +41,21 @@
   async function doSavePin(value, successMsg) {
     saving = true;
     try {
-        const { error } = await supabase
-            .from('empresa_perfil')
-            .update({ pin_admin: value })
-            .eq('user_id', userId);
-
-        if (error) throw error;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('Sessão expirada.');
+        const response = await fetch('/api/auth/admin-pin', {
+            method: 'POST',
+            headers: {
+                authorization: `Bearer ${session.access_token}`,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ action: 'set', pin: value }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error || 'Falha ao salvar PIN.');
         
         addToast(successMsg, 'success');
-        onPinSet(value);
+        onPinSet(true);
     } catch (e) {
         addToast('Erro ao salvar PIN: ' + e.message, 'error');
     } finally {
