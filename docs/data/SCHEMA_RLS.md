@@ -157,6 +157,23 @@ Conclusao operacional:
 - O contrato de linhas, alocações, fechamento completo e service-role não foi
   alterado nesta fatia.
 
+## Mesas: operação por capacidade
+
+- `comandas` INSERT exige `mesas.abrir_comanda`; DELETE exige
+  `mesas.cancelar`.
+- `comanda_itens` INSERT/UPDATE/DELETE exige `mesas.editar_itens`.
+- Triggers em `mesas` e `comandas` comparam `OLD`/`NEW` para exigir
+  `mesas.abrir_comanda` ao ocupar, `mesas.fechar` ao fechar/liberar e
+  `mesas.cancelar` ao cancelar. Campos de fechamento (`id_venda`,
+  `total_calculado`, `fechada_em`) também exigem `mesas.fechar`.
+- A migration `20260812233000_mesas_operational_rbac.sql` não altera grants,
+  leituras owner-scoped ou service-role.
+- A migration `20260812234500_mesas_operational_rpc_rbac.sql` torna as três
+  RPCs de estoque `SECURITY DEFINER` com `search_path` fixo, resolve
+  `get_owner_user_id(auth.uid())`, exige a capability da operação e mantém o
+  bypass explícito do service-role. O contrato dos argumentos permanece
+  inalterado.
+
 ## Ponto critico: `empresa_perfil.pin_admin`
 
 - Paginas como `relatorios` e `despesas` consultam apenas o status de configuração por `/api/auth/admin-pin`.

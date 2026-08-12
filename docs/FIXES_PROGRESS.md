@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-MESAS-OPERATIONAL-RBAC-01 (2026-08-12) - finding confirmado no
+  schema remoto: Atendente sem `mesas.fechar`/`mesas.cancelar` podia alterar
+  diretamente status de comanda/mesa e campos financeiros owner-scoped. A
+  migrations forward-only `20260812233000_mesas_operational_rbac.sql` e
+  `20260812234500_mesas_operational_rpc_rbac.sql` aplicaram policies, guards
+  transacionais e owner/capability checks nas RPCs de estoque consumidas pelo
+  browser. Smoke remoto cobriu owner, Atendente, subusuário com fechamento,
+  anon e service-role; nenhuma fixture persistiu. Snapshot em
+  `docs/operations/MESAS-OPERATIONAL-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-MESAS-PAYMENT-RBAC-01 (2026-08-12) - finding confirmado no schema remoto: policies owner-scoped permitiam que subusuários sem capacidade de recebimento criassem, alterassem ou removessem pagamentos parciais e linhas de alocação de Mesas. A migration forward-only `20260812230000_mesas_payment_rbac.sql` exige `mesas.acessar` e `pdv.receber` ou `pedidos.receber`, preservando SELECT, o contrato de dados, fechamento completo e service-role. Smoke remoto transacional cobriu owner, Atendente sem receber, subusuário autorizado, anon, super-admin e service-role; nenhuma linha persistiu. Snapshot em `docs/operations/MESAS-PAYMENT-RBAC-SNAPSHOT-2026-08-12.md`.
 
 - [x] FX-CAIXA-RBAC-01 (2026-08-12) - finding confirmado no schema remoto:

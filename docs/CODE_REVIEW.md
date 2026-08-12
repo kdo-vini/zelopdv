@@ -5,6 +5,16 @@
 
 ## Findings
 
+### Update 2026-08-12 - enforcement operacional de Mesas
+
+A migration `20260812233000_mesas_operational_rbac.sql` foi desenhada após
+reprodução transacional do bypass owner-scoped. Policies de INSERT/UPDATE/
+DELETE e dois guards de trigger agora consultam as chaves `mesas.*`
+existentes. A migration complementar `20260812234500_mesas_operational_rpc_rbac.sql`
+resolve o owner efetivo nas RPCs de estoque já consumidas pelo browser e exige
+as capabilities correspondentes. O snapshot documenta consumidores e
+service-role.
+
 ### Update 2026-08-12 - enforcement de pagamentos parciais de Mesas
 
 O finding foi confirmado em produção: `comanda_pagamentos` e

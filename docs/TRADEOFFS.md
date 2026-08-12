@@ -96,6 +96,13 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ## Progresso de RBAC (2026-08-12)
 
+Operação de Mesas agora separa abertura, edição, fechamento e cancelamento
+por capabilities existentes (`mesas.abrir_comanda`, `mesas.editar_itens`,
+`mesas.fechar`, `mesas.cancelar`). Triggers foram usados para comparar estado
+anterior/novo e proteger campos financeiros que uma policy de UPDATE não
+consegue distinguir sozinha. O custo é um corte de comportamento para
+subusuários sem a capability correta; owners e service-role mantêm o bypass.
+
 Pagamentos parciais de Mesas agora exigem `mesas.acessar` e `pdv.receber` ou
 `pedidos.receber` para INSERT/UPDATE/DELETE tanto no pagamento quanto no ledger
 de alocação. SELECT, fechamento completo e comandas/itens continuam separados

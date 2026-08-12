@@ -21,6 +21,8 @@
 - `src/routes/api/billing/toggle-addon/+server.js`
 - `src/lib/guards.js`
 - `supabase/migrations/20260812230000_mesas_payment_rbac.sql`
+- `supabase/migrations/20260812233000_mesas_operational_rbac.sql`
+- `supabase/migrations/20260812234500_mesas_operational_rpc_rbac.sql`
 
 ## Dependencias de dados observadas
 
@@ -73,6 +75,21 @@
 - No fechamento, `vendas_itens.id_comanda_item`,
   `vendas_pagamentos.id_comanda_pagamento` e os vinculos da tabela filha
   preservam a trilha item -> pagamento -> venda antes da limpeza da comanda.
+
+### Capacidades operacionais
+
+- Abrir comanda exige `mesas.abrir_comanda` para subusuários.
+- Alterar itens, dados operacionais ou transferir comanda exige
+  `mesas.editar_itens`.
+- Iniciar/concluir fechamento e alterar campos financeiros exige
+  `mesas.fechar`.
+- Cancelar comanda ou liberar mesa por cancelamento exige `mesas.cancelar`.
+- Os guards vivem no banco para cobrir chamadas diretas ao Data API; o
+  service-role permanece fora dessa barreira.
+- As RPCs `comanda_aplicar_delta_item`, `comanda_cancelar_com_estoque` e
+  `comanda_garantir_estoque_baixado` resolvem o owner do subusuário e repetem
+  os checks (`mesas.editar_itens`, `mesas.cancelar`, `mesas.fechar`) antes de
+  qualquer alteração de estoque/comanda.
 
 ### Impressao
 

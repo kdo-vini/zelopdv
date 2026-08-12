@@ -1,5 +1,18 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — operação de Mesas (2026-08-12): a revalidação remota
+  confirmou que o Atendente, sem `mesas.fechar`/`mesas.cancelar`, conseguia
+  alterar diretamente status de comanda/mesa e campos de fechamento por
+  policies apenas owner-scoped. A migration forward-only
+  `20260812233000_mesas_operational_rbac.sql` separa INSERT/DELETE de
+  comandas, mutações de itens e guards de transição/fechamento por
+  `mesas.abrir_comanda`, `mesas.editar_itens`, `mesas.fechar` e
+  `mesas.cancelar`, mantendo grants, service-role e leituras fora desta fatia.
+  A migration complementar `20260812234500_mesas_operational_rpc_rbac.sql`
+  resolveu owner de subusuário e capabilities nas três RPCs de estoque já
+  consumidas pelo browser, sem alterar seus contratos. Snapshot:
+  `docs/operations/MESAS-OPERATIONAL-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - RBAC incremental — pagamentos parciais de Mesas (2026-08-12): o schema remoto confirmou que um Atendente sem `pdv.receber`/`pedidos.receber` podia inserir pagamentos owner-scoped em `comanda_pagamentos`. A migration `20260812230000_mesas_payment_rbac.sql` exige `mesas.acessar` e uma capacidade de recebimento para INSERT/UPDATE/DELETE nos pagamentos parciais e no ledger `comanda_pagamento_itens`. SELECT, fechamento completo, comandas/itens, grants e service-role ficaram fora desta fatia. Smoke transacional cobriu owner, Atendente sem receber, subusuário temporariamente autorizado, anon, super-admin e service-role; nenhum fixture persistiu. Snapshot: `docs/operations/MESAS-PAYMENT-RBAC-SNAPSHOT-2026-08-12.md`.
 
 - RBAC incremental — cancelamento de vendas (2026-08-12): o schema remoto
