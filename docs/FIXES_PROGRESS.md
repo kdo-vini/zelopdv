@@ -1,5 +1,19 @@
 # Fixes Progress
 
+- [ ] FX-SEC-P0-CONTAINMENT-01 (2026-08-12) — findings P0 confirmados no schema
+  remoto: grants `anon`/`authenticated` nas quatro views SECURITY DEFINER,
+  execução pública de RPCs administrativas e `USING (true)` em
+  `super_admins`. Criados snapshot pré-mudança e migration forward-only com o
+  menor blast radius: `user_entitlements` mantém SELECT owner/subuser via
+  `security_invoker`; RPCs consumidos pelo Admin preservam `authenticated` com
+  guarda interna; RPCs sem consumidor browser ficam em `service_role`; o
+  dashboard mantém SELECT/UPDATE necessários em `super_admins`. Contrato
+  estrutural 5/5 e matriz de autorização transacional remota passaram, com
+  rollback da transação de verificação; `npm test` 562/562 e `npm run check`
+  0 erros. **Ainda não aplicada em produção**:
+  `supabase db push --linked --dry-run` está bloqueado pela divergência de
+  histórico remoto/local, reservada para a rodada de migration reconciliation.
+
 - [x] FX-PDV-01 (2026-08-10) - o modal obrigatorio `Abrir Caixa` cobria a
   sidebar inteira no desktop porque seu backdrop fixo tinha camada acima do
   menu. O modal agora sinaliza seu estado no documento e a sidebar sobe acima

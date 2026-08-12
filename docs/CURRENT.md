@@ -1,5 +1,18 @@
 # ZeloPDV — Foco atual
 
+- P0 security containment (2026-08-12): a migration forward-only foi preparada
+  em `supabase/migrations/20260812150000_p0_security_containment.sql` após
+  revalidação do schema remoto. Ela remove grants de cliente nas views
+  SECURITY DEFINER sensíveis, torna `user_entitlements` invoker-scoped,
+  restringe RPCs administrativas sem consumidor browser a `service_role`,
+  mantém os RPCs usados pelo ZeloAdmin com guarda interna de super-admin ativo
+  e limita a exposição de `super_admins`. O snapshot pré-mudança está em
+  `docs/operations/P0-SECURITY-CONTAINMENT-SNAPSHOT-2026-08-12.md`.
+  A matriz transacional anon/authenticated/owner/subuser/super-admin/service-role
+  passou no banco vinculado sem persistir alterações. O deploy da migration
+  permanece pendente porque o histórico remoto/local está divergente; não usar
+  `--include-all` nesta rodada — reconciliação de migrations é trabalho separado.
+
 - Cobertura operacional (2026-08-11): a suíte Vitest passou de 517 para **557/557 testes**
   (78 arquivos), incluindo regras de estoque, pedidos canônicos, impressão automática,
   modifiers, APIs de produtos/acessos/conta e contratos de migrations/RLS/offline. O Playwright
