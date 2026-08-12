@@ -21,6 +21,7 @@ import {
   E2E_SUBUSER_PASSWORD,
   seedAccessControlE2EUsers,
 } from './helpers/access-control-fixtures.js';
+import { resetTestTenant } from './helpers/test-tenant.js';
 
 const authFile = path.join(import.meta.dirname, '.auth/user.json');
 const caixaAuthFile = path.join(import.meta.dirname, '.auth/caixa.json');
@@ -50,24 +51,43 @@ setup('authenticate', async ({ page, browser }) => {
     );
   }
 
-  await seedAccessControlE2EUsers(email);
+  let dedicatedUsers = null;
+  if (process.env.E2E_DEDICATED_TENANT === 'true') {
+    const { manifest } = await resetTestTenant();
+    dedicatedUsers = manifest.access?.users || null;
+  } else {
+    await seedAccessControlE2EUsers(email);
+  }
 
   await loginAndSave(page, email, password, authFile);
 
   const baseURL = process.env.E2E_BASE_URL || 'http://localhost:5173';
 
+  const caixaCredentials = dedicatedUsers?.caixa || {
+    email: E2E_CAIXA_EMAIL,
+    password: E2E_SUBUSER_PASSWORD,
+  };
+  const atendenteCredentials = dedicatedUsers?.atendente || {
+    email: E2E_ATENDENTE_EMAIL,
+    password: E2E_SUBUSER_PASSWORD,
+  };
+  const gerenteCredentials = dedicatedUsers?.gerente || {
+    email: E2E_GERENTE_EMAIL,
+    password: E2E_SUBUSER_PASSWORD,
+  };
+
   const caixaContext = await browser.newContext({ baseURL });
   const caixaPage = await caixaContext.newPage();
-  await loginAndSave(caixaPage, E2E_CAIXA_EMAIL, E2E_SUBUSER_PASSWORD, caixaAuthFile);
+  await loginAndSave(caixaPage, caixaCredentials.email, caixaCredentials.password, caixaAuthFile);
   await caixaContext.close();
 
   const atendenteContext = await browser.newContext({ baseURL });
   const atendentePage = await atendenteContext.newPage();
-  await loginAndSave(atendentePage, E2E_ATENDENTE_EMAIL, E2E_SUBUSER_PASSWORD, atendenteAuthFile);
+  await loginAndSave(atendentePage, atendenteCredentials.email, atendenteCredentials.password, atendenteAuthFile);
   await atendenteContext.close();
 
   const gerenteContext = await browser.newContext({ baseURL });
   const gerentePage = await gerenteContext.newPage();
-  await loginAndSave(gerentePage, E2E_GERENTE_EMAIL, E2E_SUBUSER_PASSWORD, gerenteAuthFile);
+  await loginAndSave(gerentePage, gerenteCredentials.email, gerenteCredentials.password, gerenteAuthFile);
   await gerenteContext.close();
 });

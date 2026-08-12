@@ -1,5 +1,15 @@
 # ZeloPDV — Foco atual
 
+- Cobertura operacional (2026-08-11): a suíte Vitest passou de 517 para **557/557 testes**
+  (78 arquivos), incluindo regras de estoque, pedidos canônicos, impressão automática,
+  modifiers, APIs de produtos/acessos/conta e contratos de migrations/RLS/offline. O Playwright
+  agora lista **110 testes Playwright** (**108 cenários de produto** em Chromium desktop e Pixel
+  mobile, mais setup/teardown), com tenant remoto dedicado,
+  seed/reset/cleanup owner-scoped em `e2e/helpers/test-tenant.js`. `npm run check` passou com
+  0 erros e 95 avisos conhecidos. A execução transacional remota ainda não foi rodada nesta
+  sessão porque as variáveis seguras `E2E_SUPABASE_*`, `E2E_TEST_*` e `E2E_DEDICATED_TENANT`
+  não estavam disponíveis; o setup falha explicitamente nesse caso, sem skips novos.
+
 - Fichário — confirmação de pagamento via WhatsApp (2026-08-11): após a RPC
   `fiado_registrar_pagamento_v2` concluir, a ficha exibe um card de sucesso com
   valor recebido, saldo atualizado, impressão opcional e um link `wa.me` com

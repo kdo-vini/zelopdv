@@ -14,7 +14,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI || process.env.E2E_DEDICATED_TENANT === 'true' ? 1 : undefined,
   reporter: [['html', { open: 'never' }], ['list']],
   timeout: 30_000,
   expect: { timeout: 8_000 },
@@ -31,7 +31,12 @@ export default defineConfig({
     // Setup project: creates authenticated storage state so tests don't re-login each time
     {
       name: 'setup',
-      testMatch: /.*\.setup\.js/,
+      testMatch: /auth\.setup\.js/,
+      teardown: 'cleanup',
+    },
+    {
+      name: 'cleanup',
+      testMatch: /cleanup\.setup\.js/,
     },
     {
       name: 'chromium',
