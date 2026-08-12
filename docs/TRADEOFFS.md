@@ -96,6 +96,13 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ## Progresso de RBAC (2026-08-12)
 
+Criação de venda agora exige `pdv.vender` e `pdv.receber` no caminho POS/
+offline e no INSERT direto não-Mesa. O fechamento de Mesa continua separado e
+exige `mesas.fechar`; o guard identifica o caminho SECURITY DEFINER sem expor
+um atalho de payload `tipo_pedido = 'mesa'`. O custo é que subusuários que
+antes contornavam a UI deixam de criar vendas; owners e service-role continuam
+com o comportamento anterior.
+
 Operação de Mesas agora separa abertura, edição, fechamento e cancelamento
 por capabilities existentes (`mesas.abrir_comanda`, `mesas.editar_itens`,
 `mesas.fechar`, `mesas.cancelar`). Triggers foram usados para comparar estado

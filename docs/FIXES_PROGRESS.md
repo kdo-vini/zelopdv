@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-SALES-CREATION-RBAC-01 (2026-08-12) - finding confirmado em produção:
+  `criar_venda_completa` e o INSERT direto de `vendas` ignoravam
+  `pdv.vender`/`pdv.receber`. A migration forward-only
+  `20260813000000_sales_creation_rbac.sql` adicionou guard transacional,
+  preservou fechamento direto de Mesa por `mesas.fechar`, manteve
+  service-role/contratos e removeu EXECUTE anônimo da RPC. Smoke transacional
+  cobriu owner, Caixa/Gerente, Atendente sem venda, Mesa, anon e service-role;
+  nenhuma fixture persistiu. Snapshot em
+  `docs/operations/SALES-CREATION-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-MESAS-OPERATIONAL-RBAC-01 (2026-08-12) - finding confirmado no
   schema remoto: Atendente sem `mesas.fechar`/`mesas.cancelar` podia alterar
   diretamente status de comanda/mesa e campos financeiros owner-scoped. A

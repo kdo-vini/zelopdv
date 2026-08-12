@@ -128,6 +128,12 @@ Motivo:
 - paginas sensiveis ainda podem depender de lock/client gating para UX, sem substituir RLS/API
 - qualquer mudanca em `guards.js`, RLS ou `accessControl` pode quebrar acesso em cascata
 
+O caminho de criação de vendas foi endurecido em
+`20260813000000_sales_creation_rbac.sql`: POS/offline exige
+`pdv.vender` + `pdv.receber`, enquanto o fechamento direto de Mesa exige
+`mesas.fechar`. Leituras de vendas e o fluxo de ownership da RPC continuam
+separados para uma revisão própria.
+
 ## Quando atualizar esta doc
 
 - nova permissao

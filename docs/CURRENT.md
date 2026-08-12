@@ -1,5 +1,13 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — criação de vendas (2026-08-12): a revalidação remota
+  confirmou que `criar_venda_completa(jsonb)` e o INSERT direto de `vendas`
+  aceitavam subusuários sem `pdv.vender`/`pdv.receber`. A migration forward-only
+  `20260813000000_sales_creation_rbac.sql` adiciona guard BEFORE INSERT,
+  preserva o INSERT direto de fechamento de Mesa somente com `mesas.fechar`,
+  mantém service-role e contratos existentes e revoga EXECUTE anônimo da RPC.
+  Snapshot: `docs/operations/SALES-CREATION-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - RBAC incremental — operação de Mesas (2026-08-12): a revalidação remota
   confirmou que o Atendente, sem `mesas.fechar`/`mesas.cancelar`, conseguia
   alterar diretamente status de comanda/mesa e campos de fechamento por

@@ -126,7 +126,17 @@ Conclusao operacional:
 - hoje existe tenant scoping forte por empresa
 - nao existe garantia uniforme de RBAC fino no servidor
 
-## Vendas: cancelamento e mutações pós-criação
+## Vendas: criação, cancelamento e mutações pós-criação
+
+- `vendas_insert_rbac_guard` exige `pdv.vender` e `pdv.receber` para o
+  caminho POS/offline (`criar_venda_completa`) e para INSERTs diretos
+  não-Mesa.
+- O INSERT direto usado pelo fechamento de Mesa exige `mesas.fechar`; o guard
+  distingue esse caminho do `SECURITY DEFINER` para não aceitar um payload
+  POS forjado como `tipo_pedido = 'mesa'`.
+- A migration `20260813000000_sales_creation_rbac.sql` revoga EXECUTE anônimo
+  de `criar_venda_completa`, mantendo authenticated/service-role e o contrato
+  do payload.
 
 - `vendas_actor_delete` usa `vendas_actor_can_delete(bigint)` e exige
   `pdv.cancelar` para vendas concluídas.
@@ -135,8 +145,8 @@ Conclusao operacional:
   preserva a compensação do fechamento de Mesas sem liberar exclusão histórica.
 - UPDATE/DELETE de `vendas_itens`, `vendas_pagamentos` e
   `vendas_taxas_plataforma` também exigem `pdv.cancelar`.
-- INSERT e SELECT permanecem com o contrato anterior nesta rodada; criação e
-  recebimento (`pdv.receber`) serão avaliados separadamente.
+- SELECT, cancelamento e service-role permanecem fora desta fatia; o fluxo de
+  recebimento parcial e ownership da RPC será avaliado separadamente.
 
 ## Caixa: mutações por capacidade
 

@@ -5,6 +5,16 @@
 
 ## Findings
 
+### Update 2026-08-12 - enforcement de criação de vendas
+
+O finding foi confirmado em produção: subusuário sem `pdv.vender`/`pdv.receber`
+conseguia chamar `criar_venda_completa(jsonb)` e inserir uma venda direta por
+owner scope. A migration `20260813000000_sales_creation_rbac.sql` adiciona um
+guard BEFORE INSERT que separa o checkout POS/offline do fechamento direto de
+Mesa (`mesas.fechar`), revoga EXECUTE anônimo da RPC e preserva service-role,
+leituras, cancelamento e o contrato de payload. Consumidores, snapshot e
+rollback estão documentados em `docs/operations/SALES-CREATION-RBAC-SNAPSHOT-2026-08-12.md`.
+
 ### Update 2026-08-12 - enforcement operacional de Mesas
 
 A migration `20260812233000_mesas_operational_rbac.sql` foi desenhada após
