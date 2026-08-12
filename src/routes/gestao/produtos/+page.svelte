@@ -122,15 +122,15 @@
     if (!ok) return;
 
     const { data: userData } = await supabase.auth.getUser();
-    const uid = userData?.user?.id;
-    if (!uid) { addToast('Sessão expirada.', 'error'); return; }
+    const ownerId = ownerUserId || userData?.user?.id;
+    if (!ownerId) { addToast('Sessão expirada.', 'error'); return; }
 
     const cats = [
-      { nome: 'Ovos de Páscoa',   ordem: 1, id_usuario: uid },
-      { nome: 'Trufas & Bombons', ordem: 2, id_usuario: uid },
-      { nome: 'Cestas',           ordem: 3, id_usuario: uid },
-      { nome: 'Colomba Pascal',   ordem: 4, id_usuario: uid },
-      { nome: 'Avulso',           ordem: 5, id_usuario: uid },
+      { nome: 'Ovos de Páscoa',   ordem: 1, id_usuario: ownerId },
+      { nome: 'Trufas & Bombons', ordem: 2, id_usuario: ownerId },
+      { nome: 'Cestas',           ordem: 3, id_usuario: ownerId },
+      { nome: 'Colomba Pascal', ordem: 4, id_usuario: ownerId },
+      { nome: 'Avulso',           ordem: 5, id_usuario: ownerId },
     ];
 
     const { error } = await supabase.from('categorias').insert(cats);
@@ -566,7 +566,7 @@
   async function criarCategoria(e) {
     e.preventDefault();
     const { data: userData } = await supabase.auth.getUser();
-    const id_usuario = userData?.user?.id ?? null;
+    const id_usuario = ownerUserId || userData?.user?.id || null;
 
     const { error } = await supabase.from('categorias').insert({
       nome: newCatForm.nome,
@@ -675,7 +675,7 @@
   async function criarSubcategoria(e) {
     e.preventDefault();
     const { data: userData } = await supabase.auth.getUser();
-    const id_usuario = userData?.user?.id ?? null;
+    const id_usuario = ownerUserId || userData?.user?.id || null;
 
     const { error } = await supabase.from('subcategorias').insert({
       nome: newSubForm.nome,

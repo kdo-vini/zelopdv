@@ -1,11 +1,29 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — Pessoas (2026-08-12): a migration
+  `20260812202400_pessoas_role_rbac.sql` mantém as leituras owner-scoped usadas
+  pelo PDV, Mesas, Fichário e Relatórios, mas exige `pessoas.gerenciar` para
+  INSERT/UPDATE/DELETE de subusuários. Titular e Gerente continuam com CRUD;
+  Caixa/Atendente não ganham escrita indireta. A página de Pessoas agora grava
+  novos cadastros com o `ownerUserId` resolvido do contexto de acesso. Smoke
+  remoto transacional cobriu owner, Gerente, subusuário sem permissão, leitura
+  compatível, anon e service-role; nenhum dado de produção persistiu. Snapshot:
+  `docs/operations/PESSOAS-RBAC-SNAPSHOT-2026-08-12.md`.
+
+- E2E focado pós-Pessoas (2026-08-12): a conta permanente
+  `kdo.vini@gmail.com` foi usada com o tenant dedicado; o cleanup remoto
+  passou e não ficou manifesto persistido. O setup chegou ao `/app`, mas o
+  harness local excedeu o timeout de 30s na asserção de URL do login. Isso não
+  é evidência de regressão da policy; a autorização foi coberta pelos smokes
+  SQL em produção. O problema do harness continua documentado, sem alteração
+  de código para mascará-lo.
+
 - Segurança/reliabilidade incremental (2026-08-12): `POST /api/account/reactivate` agora falha
   fechada quando o Stripe não consegue retomar a assinatura, preservando a agenda local para retry.
   O schema de produção recebeu o índice parcial `subscriptions_one_live_row_per_user`, mantendo
   histórico terminal e impedindo mais de uma linha viva por titular. O PIN administrativo deixou de
   ser enviado ao browser: status e verificação passam por `/api/auth/admin-pin`, e somente o titular
-  pode alterá-lo. A suíte Vitest passou 579/579 e `npm run check` passou com 0 erros/95 avisos
+  pode alterá-lo. A suíte Vitest passou 583/583 e `npm run check` passou com 0 erros/95 avisos
   conhecidos. O lint SQL continua com os dois erros pré-existentes fora desta rodada.
 
 - RBAC incremental (2026-08-12): o catálogo base (`produtos`, `categorias` e

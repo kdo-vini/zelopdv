@@ -82,6 +82,10 @@
 3. UI decide o que mostrar com base no JSON de permissoes
 4. em acoes auditadas, `operator_user_id` e registrado
 
+Pessoas mantém o mesmo owner scope para leituras operacionais, mas writes
+diretos de subusuários exigem `pessoas.gerenciar` no RLS. Isso cobre a tela de
+cadastro sem bloquear a seleção de clientes no PDV, Mesas e Fichário.
+
 ## Offline
 
 - Dexie v4 guarda `ownerUserId` e `operatorUserId`

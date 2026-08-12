@@ -1,5 +1,16 @@
 # Fixes Progress
 
+- [x] FX-ACCESS-PESSOAS-01 (2026-08-12) — finding confirmado: as policies
+  owner-scoped de `pessoas` permitiam writes diretos de subusuários sem
+  `pessoas.gerenciar`. A migration forward-only
+  `20260812202400_pessoas_role_rbac.sql` preserva SELECT para o PDV/Mesas/
+  Fichário/Relatórios, exige a permissão para INSERT/UPDATE/DELETE e mantém os
+  RPCs de fiado existentes como barreiras separadas. A página de Pessoas passa
+  a enviar o `ownerUserId` no cadastro de Gerente. Smoke remoto transacional
+  cobriu owner, Gerente, subusuário sem permissão, leitura, anon e service-role;
+  nenhuma linha persistiu. Snapshot em
+  `docs/operations/PESSOAS-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-ACCESS-PRODUCTS-01 (2026-08-12) — finding confirmado: as policies
   owner-scoped de `produtos`, `categorias` e `subcategorias` permitiam que um
   subusuário ativo contornasse o menu e mutasse o catálogo via Data API. A

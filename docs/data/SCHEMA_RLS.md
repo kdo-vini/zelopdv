@@ -142,6 +142,18 @@ Conclusao operacional:
 - A página `/gestao/produtos` é browser-side, então a policy é a barreira de
   segurança real para chamadas diretas ao Data API.
 
+## Pessoas
+
+- `pessoas` continua com SELECT owner-scoped porque `/app`, Mesas, Fichário,
+  Relatórios e o fluxo de fiado precisam ler nomes/saldos em operação normal.
+- A migration `20260812202400_pessoas_role_rbac.sql` exige
+  `pessoas.gerenciar` para INSERT/UPDATE/DELETE de subusuários; titular e
+  `service_role` mantêm bypass deliberado.
+- `fiado_registrar_pagamento_v2`, `fiado_excluir_pagamento` e
+  `fiado_excluir_pessoa` já fazem suas próprias checagens de
+  `fiado.receber`/`pessoas.gerenciar`; esta migration não altera o ledger nem o
+  contrato de recebimento.
+
 ## Regras praticas para mudancas
 
 1. Se tocar em `supabaseAdmin`, documente por que a operacao precisa furar RLS.

@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import { maskPhone } from '$lib/masks';
+  import { getAccessContext } from '$lib/accessControl';
   import * as Select from '$lib/components/ui/select/index.js';
   import { getFiadoState } from '$lib/finance/fiado';
   export let params;
@@ -12,6 +13,7 @@
   let errorMsg = '';
   let form = { id: null, nome: '', tipo: 'cliente', contato: '' };
   let uid = null;
+  let ownerUserId = null;
 
   async function load() {
     loading = true; errorMsg = '';
@@ -38,7 +40,7 @@
         uid = userData?.user?.id || null;
       }
       const payload = { nome: form.nome, tipo: form.tipo, contato: form.contato };
-      if (uid) payload.id_usuario = uid;
+      if (ownerUserId || uid) payload.id_usuario = ownerUserId || uid;
       const { error } = await supabase.from('pessoas').insert(payload);
       if (error) { errorMsg = error.message; return; }
     }
@@ -63,6 +65,8 @@
   onMount(async () => {
     const { data: userData } = await supabase.auth.getUser();
     uid = userData?.user?.id || null;
+    const accessContext = await getAccessContext();
+    ownerUserId = accessContext?.ownerUserId || uid;
     await load();
   });
 </script>

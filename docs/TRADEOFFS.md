@@ -94,6 +94,13 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ---
 
+## Progresso de RBAC (2026-08-12)
+
+Além de Despesas e do catálogo base, Pessoas agora exige `pessoas.gerenciar`
+para writes diretos de subusuários. Leituras permanecem owner-scoped porque
+Caixa/Atendente precisam selecionar clientes no PDV e Mesas. O restante das
+superfícies client-side continua backlog incremental, sem refatoração ampla.
+
 ## Tradeoffs aceitos
 
 ### TA-SEC-01 — Permissão por papel é gating de UI, não RBAC forte no servidor

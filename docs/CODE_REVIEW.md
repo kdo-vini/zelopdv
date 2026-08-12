@@ -5,6 +5,14 @@
 
 ## Findings
 
+### Update 2026-08-12 — enforcement incremental em Pessoas
+
+`20260812202400_pessoas_role_rbac.sql` fechou o bypass de writes diretos em
+`pessoas`: INSERT/UPDATE/DELETE de subusuários agora exigem
+`pessoas.gerenciar`. SELECT continua owner-scoped para preservar PDV, Mesas,
+Fichário e Relatórios. O P1 permanece aberto somente para as superfícies ainda
+não migradas.
+
 ### P1 — Permissões de subusuário são majoritariamente enforcement de UI, não RBAC forte no servidor
 
 - Evidência: [src/lib/accessControl.js](/home/vinicius/code/zelopdv/src/lib/accessControl.js:122), [.ai/migrations/rls_subuser_access.sql](/home/vinicius/code/zelopdv/.ai/migrations/rls_subuser_access.sql:11), [src/routes/gestao/despesas/+page.svelte](/home/vinicius/code/zelopdv/src/routes/gestao/despesas/+page.svelte:72), [src/routes/gestao/despesas/+page.svelte](/home/vinicius/code/zelopdv/src/routes/gestao/despesas/+page.svelte:215)
