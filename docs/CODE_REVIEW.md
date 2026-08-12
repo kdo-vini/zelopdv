@@ -13,6 +13,11 @@
 - Update 2026-06-01: a camada de *dados* de `expenses` foi endurecida — `expenses_owner_scoped_write_policies_2026_06_01` adicionou policies owner-scoped de `INSERT`/`UPDATE`/`DELETE`/`SELECT` em produção, então um subusuário não consegue mais escrever fora da empresa dona via RLS. O ponto P1 permanece aberto porque isso é escopo por *owner*, não RBAC por *papel*: a granularidade por cargo (quem pode lançar despesa vs. só ver) segue gated na UI. Tratado como dívida aceita em [[TRADEOFFS]].
 - Update 2026-08-12: Despesas saiu desse estado específico: `20260812193009_expenses_role_rbac.sql` exige
   `despesas.visualizar` para leitura e `despesas.gerenciar` para mutações, preservando owners e Gerente.
+  O catálogo base (`produtos`, `categorias`, `subcategorias`) também foi
+  endurecido por `20260812195032_products_role_rbac.sql`: leituras continuam
+  owner-scoped para o PDV, mas writes de subusuários exigem `produtos.gerenciar`.
+  O ajuste de estoque, que tem permissão própria, foi preservado por RPCs
+  limitadas às colunas de estoque em `20260812200550_catalog_stock_adjustment_rpc.sql`.
   O P1 permanece aberto para as demais superfícies ainda client-side.
 
 ### P1 (resolvido 2026-08-12) — `AdminLock` não protegia segredo no servidor

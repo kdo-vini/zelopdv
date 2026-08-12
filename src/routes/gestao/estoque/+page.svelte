@@ -187,11 +187,10 @@
     msgProduto = { ...msgProduto, [item.id]: '' };
     try {
       const anterior = Number(item.estoque_atual || 0);
-      const { error } = await supabase
-        .from('produtos')
-        .update({ estoque_atual: novo })
-        .eq('id', item.id)
-        .eq('id_usuario', ownerUserId || userId);
+      const { error } = await supabase.rpc('ajustar_estoque_produto', {
+        p_produto_id: item.id,
+        p_estoque: novo
+      });
       if (error) throw error;
       item.estoque_atual = novo;
       produtos = produtos.map((p) => p.id === item.id ? { ...p, estoque_atual: novo } : p);
@@ -223,16 +222,16 @@
     if (Number.isNaN(novo) || novo < 0) { linha._msg = 'Valor inválido'; linhasEstoque = [...linhasEstoque]; return; }
     linha._saving = true; linha._msg = ''; linhasEstoque = [...linhasEstoque];
     try {
-      const table = linha.tipo === 'categoria' ? 'categorias' : 'produtos';
       const anterior = Number(linha.estoque_atual || 0);
-      const payload = linha.tipo === 'categoria'
-        ? { estoque_compartilhado_atual: novo }
-        : { estoque_atual: novo };
-      const { error } = await supabase
-        .from(table)
-        .update(payload)
-        .eq('id', linha.id)
-        .eq('id_usuario', ownerUserId || userId);
+      const { error } = linha.tipo === 'categoria'
+        ? await supabase.rpc('ajustar_estoque_categoria', {
+          p_categoria_id: linha.id,
+          p_estoque: novo
+        })
+        : await supabase.rpc('ajustar_estoque_produto', {
+          p_produto_id: linha.id,
+          p_estoque: novo
+        });
       if (error) throw error;
       linha.estoque_atual = novo;
       if (linha.tipo === 'categoria') {

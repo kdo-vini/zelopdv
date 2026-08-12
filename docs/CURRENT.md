@@ -5,8 +5,19 @@
   O schema de produção recebeu o índice parcial `subscriptions_one_live_row_per_user`, mantendo
   histórico terminal e impedindo mais de uma linha viva por titular. O PIN administrativo deixou de
   ser enviado ao browser: status e verificação passam por `/api/auth/admin-pin`, e somente o titular
-  pode alterá-lo. A suíte Vitest passou 575/575 e `npm run check` passou com 0 erros/95 avisos
+  pode alterá-lo. A suíte Vitest passou 579/579 e `npm run check` passou com 0 erros/95 avisos
   conhecidos. O lint SQL continua com os dois erros pré-existentes fora desta rodada.
+
+- RBAC incremental (2026-08-12): o catálogo base (`produtos`, `categorias` e
+  `subcategorias`) agora exige `produtos.gerenciar` para mutações de
+  subusuários no RLS. Owners e o papel Gerente preservam CRUD; Caixa e
+  Atendente continuam lendo o catálogo para o PDV, mas não conseguem escrever.
+  A migration `20260812195032_products_role_rbac.sql` foi aplicada em produção
+  com smoke transacional owner/Caixa/Gerente/anon/service-role e sem linhas
+  persistidas. A capacidade separada `estoque.ajustar` foi preservada por
+  `20260812200550_catalog_stock_adjustment_rpc.sql`, com a página de Estoque
+  usando RPCs que só alteram colunas de estoque. O snapshot está em
+  `docs/operations/PRODUCTS-RBAC-SNAPSHOT-2026-08-12.md`.
 
 - Webhook reliability round 2 (2026-08-12): os cenários descritos foram
   confirmados no código e no schema de produção. Stripe agora só registra o

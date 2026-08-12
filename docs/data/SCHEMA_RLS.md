@@ -128,6 +128,20 @@ Conclusao operacional:
 - A página usa `AdminLock` para UX; as policies de `20260812193009_expenses_role_rbac.sql` também exigem
   `despesas.visualizar` para leitura e `despesas.gerenciar` para mutações de subusuários.
 
+## Ponto crítico: catálogo base
+
+- `produtos`, `categorias` e `subcategorias` continuam com SELECT owner-scoped
+  para que Caixa/Atendente carreguem o catálogo no PDV.
+- A migration `20260812195032_products_role_rbac.sql` restringe INSERT/UPDATE/
+  DELETE de subusuários ativos à chave `produtos.gerenciar`; o owner mantém o
+  bypass existente e `service_role` não muda.
+- A permissão distinta `estoque.ajustar` usa as RPCs
+  `ajustar_estoque_produto`/`ajustar_estoque_categoria` da migration
+  `20260812200550_catalog_stock_adjustment_rpc.sql`; elas alteram somente os
+  campos de estoque e não são executáveis por `anon`.
+- A página `/gestao/produtos` é browser-side, então a policy é a barreira de
+  segurança real para chamadas diretas ao Data API.
+
 ## Regras praticas para mudancas
 
 1. Se tocar em `supabaseAdmin`, documente por que a operacao precisa furar RLS.

@@ -1,5 +1,16 @@
 # Fixes Progress
 
+- [x] FX-ACCESS-PRODUCTS-01 (2026-08-12) — finding confirmado: as policies
+  owner-scoped de `produtos`, `categorias` e `subcategorias` permitiam que um
+  subusuário ativo contornasse o menu e mutasse o catálogo via Data API. A
+  migration forward-only `20260812195032_products_role_rbac.sql` mantém as
+  leituras do PDV, preserva CRUD do owner, exige `produtos.gerenciar` para
+  mutações do Gerente e nega writes a Caixa/Atendente. Smoke remoto
+  transacional cobriu owner, Caixa, Gerente, anon e service-role; nenhuma linha
+  de produção foi criada ou removida. A permissão separada `estoque.ajustar`
+  continua funcional via `20260812200550_catalog_stock_adjustment_rpc.sql`,
+  que não concede a um cargo de estoque poder para editar nome/preço.
+
 - [x] FX-SEC-PIN-01 (2026-08-12) - o PIN administrativo deixou de ser exposto
   ao browser. Status, verificação e alteração passam por `/api/auth/admin-pin`,
   com comparação constante, rate limit por titular e alteração restrita ao owner.
@@ -10,7 +21,7 @@
   quando o Stripe não retoma a assinatura e preserva `deletion_*` para retry.
   O índice parcial `subscriptions_one_live_row_per_user` foi aplicado em produção
   após snapshot sem duplicatas vivas; histórico terminal segue append-only.
-  Vitest completo: 575/575; `npm run check`: 0 erros/95 avisos conhecidos.
+  Vitest completo: 579/579; `npm run check`: 0 erros/95 avisos conhecidos.
 
 - [x] FX-E2E-DEDICATED-01 (2026-08-12) - a conta informada pelo usuario foi
   validada como tenant dedicado permanente. O setup/teardown remoto passou

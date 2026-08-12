@@ -20,6 +20,8 @@
 - Guardas: `src/lib/guards.js`
 - RLS base owner-scoped: `.ai/migrations/rls_subuser_access.sql`
 - Enforcement incremental de Despesas: `supabase/migrations/20260812193009_expenses_role_rbac.sql`
+- Enforcement incremental de catálogo: `supabase/migrations/20260812195032_products_role_rbac.sql`
+- Ajuste de estoque por permissão própria: `supabase/migrations/20260812200550_catalog_stock_adjustment_rpc.sql`
 
 ## Modelo real
 
@@ -75,7 +77,8 @@
 ### Usar o produto como subusuario
 
 1. guarda resolve o owner efetivo
-2. RLS entrega dados da empresa dona; em Despesas, as policies tambem exigem a permissao do cargo
+2. RLS entrega dados da empresa dona; em Despesas, as policies exigem a permissão do cargo, e no
+   catálogo base as mutações exigem `produtos.gerenciar`
 3. UI decide o que mostrar com base no JSON de permissoes
 4. em acoes auditadas, `operator_user_id` e registrado
 

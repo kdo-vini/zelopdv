@@ -64,8 +64,10 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
   também não cobrem escalonamento de papel nem edição concorrente de forma ampla.
 - **Consolida:** `TA-SEC-01`, `TA-SEC-02`, `TA-ARCH-01`, `TA-DATA-02` + lacuna de testes (nova).
 - **Progresso (2026-08-12):** o PIN foi movido para `/api/auth/admin-pin`; o módulo de Despesas agora
-  aplica `despesas.visualizar`/`despesas.gerenciar` no RLS, sem alterar owners ou Gerente. O snapshot e
-  o smoke owner/anon/subusuário/Gerente estão em [[FIXES_PROGRESS]].
+  aplica `despesas.visualizar`/`despesas.gerenciar` no RLS e o catálogo base
+  aplica `produtos.gerenciar` em mutações, sem alterar owners, leituras do PDV
+  ou o papel Gerente. Snapshots e smokes owner/anon/subusuário/Gerente estão
+  em [[FIXES_PROGRESS]].
 - **Plano de ação remanescente:**
   1. Repetir enforcement server-side nas próximas mutações sensíveis por módulo, uma por vez.
   2. Listar as tabelas do admin sem RLS e mover mutações críticas para handlers server-side quando houver
