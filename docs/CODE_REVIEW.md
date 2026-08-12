@@ -5,6 +5,18 @@
 
 ## Findings
 
+### Update 2026-08-12 - enforcement de cancelamento de vendas
+
+O finding foi confirmado em produção: `vendas`, `vendas_itens`,
+`vendas_pagamentos` e `vendas_taxas_plataforma` permitiam mutações
+owner-scoped por subusuários, apesar de a matriz já possuir `pdv.cancelar`.
+As migrations `20260812210856_sales_cancel_rbac.sql` e
+`20260812211428_sales_cancel_helper_grant_fix.sql` exigem essa capacidade para
+alterações pós-criação e hard delete. O rollback interno de Mesas continua
+funcionando apenas para venda vazia, recente e criada pelo operador atual;
+criação/recebimento e SELECT ficaram fora desta fatia para preservar o contrato
+operacional.
+
 ### Update 2026-08-12 - contencao de escrita em `access_users`
 
 O finding foi confirmado em producao: `access_users_owner_or_self` era uma

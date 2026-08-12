@@ -126,6 +126,18 @@ Conclusao operacional:
 - hoje existe tenant scoping forte por empresa
 - nao existe garantia uniforme de RBAC fino no servidor
 
+## Vendas: cancelamento e mutações pós-criação
+
+- `vendas_actor_delete` usa `vendas_actor_can_delete(bigint)` e exige
+  `pdv.cancelar` para vendas concluídas.
+- A única exceção é o rollback de uma venda vazia, criada pelo operador atual
+  nos últimos 15 minutos, sem itens, pagamentos ou taxas de plataforma. Isso
+  preserva a compensação do fechamento de Mesas sem liberar exclusão histórica.
+- UPDATE/DELETE de `vendas_itens`, `vendas_pagamentos` e
+  `vendas_taxas_plataforma` também exigem `pdv.cancelar`.
+- INSERT e SELECT permanecem com o contrato anterior nesta rodada; criação e
+  recebimento (`pdv.receber`) serão avaliados separadamente.
+
 ## Ponto critico: `empresa_perfil.pin_admin`
 
 - Paginas como `relatorios` e `despesas` consultam apenas o status de configuração por `/api/auth/admin-pin`.

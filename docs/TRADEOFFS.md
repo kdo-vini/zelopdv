@@ -96,6 +96,11 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ## Progresso de RBAC (2026-08-12)
 
+Cancelamento de vendas agora é enforcement no RLS: subusuário sem
+`pdv.cancelar` não altera/remover histórico financeiro, enquanto o rollback
+transacional estreito do fechamento de Mesa permanece permitido. A criação e o
+recebimento de vendas continuam separados e serão avaliados em outra fatia.
+
 `access_users` agora separa CRUD do titular de self-SELECT do subusuario. O
 tenant continua owner-scoped, mas o proprio vinculo de acesso nao pode mais
 ser alterado pelo subusuario via Data API; convites e ativacao continuam

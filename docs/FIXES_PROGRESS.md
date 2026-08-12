@@ -1,5 +1,16 @@
 # Fixes Progress
 
+- [x] FX-SALES-CANCEL-RBAC-01 (2026-08-12) - finding confirmado no schema
+  remoto: policies owner-scoped permitiam que subusuários editassem/removessem
+  vendas, itens, pagamentos e taxas sem `pdv.cancelar`. As migrations
+  forward-only `20260812210856_sales_cancel_rbac.sql` e
+  `20260812211428_sales_cancel_helper_grant_fix.sql` preservam criação,
+  leituras, service-role e o rollback estreito de Mesa (venda vazia, recente,
+  do próprio operador), exigindo `pdv.cancelar` para o restante. Smoke remoto
+  transacional cobriu owner, subusuário sem/com permissão, rollback recente e
+  antigo, anon, super-admin e service-role; nenhuma fixture persistiu. Snapshot
+  em `docs/operations/SALES-CANCEL-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-ACCESS-USERS-01 (2026-08-12) - finding confirmado no schema remoto:
   `access_users_owner_or_self` concedia `ALL` a subusuarios sobre a propria
   linha, permitindo tentar alterar cargo/tenant/status ou remover o vinculo;

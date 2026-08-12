@@ -1,5 +1,16 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — cancelamento de vendas (2026-08-12): o schema remoto
+  confirmou que subusuários podiam editar/remover vendas, itens, pagamentos e
+  taxas apenas por estarem no tenant owner, ignorando `pdv.cancelar`. As
+  migrations `20260812210856_sales_cancel_rbac.sql` e
+  `20260812211428_sales_cancel_helper_grant_fix.sql` exigem a permissão para
+  mutações pós-criação e preservam somente o rollback de Mesa para venda vazia,
+  recente e criada pelo próprio operador. INSERT/criação e leituras não foram
+  alterados. Smoke transacional cobriu owner, subusuário sem/com permissão,
+  rollback recente/antigo, anon, super-admin e service-role; snapshot:
+  `docs/operations/SALES-CANCEL-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - RBAC incremental — `access_users` (2026-08-12): o finding foi confirmado em
   produção e fechado com as migrations forward-only
   `20260812204706_access_users_self_write_containment.sql` e

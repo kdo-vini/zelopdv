@@ -21,6 +21,10 @@
 - RLS base owner-scoped: `.ai/migrations/rls_subuser_access.sql`
 - Enforcement incremental de Despesas: `supabase/migrations/20260812193009_expenses_role_rbac.sql`
 - Enforcement incremental de catálogo: `supabase/migrations/20260812195032_products_role_rbac.sql`
+- Enforcement incremental de cancelamento de vendas:
+  `supabase/migrations/20260812210856_sales_cancel_rbac.sql`
+- Correção de ACL do helper de cancelamento:
+  `supabase/migrations/20260812211428_sales_cancel_helper_grant_fix.sql`
 - Ajuste de estoque por permissão própria: `supabase/migrations/20260812200550_catalog_stock_adjustment_rpc.sql`
 
 ## Modelo real
