@@ -11,6 +11,12 @@
   rollback recente/antigo, anon, super-admin e service-role; snapshot:
   `docs/operations/SALES-CANCEL-RBAC-SNAPSHOT-2026-08-12.md`.
 
+- E2E focado pós-cancelamento (2026-08-12): a conta permanente de teste
+  autenticou no ambiente local com o tenant configurado; setup, os dois
+  cenários de Controle de Acessos e cleanup passaram (4/4). O setup usou a
+  chave de serviço somente em memória para semear o fixture, sem persistir
+  credenciais ou arquivos no repositório.
+
 - RBAC incremental — `access_users` (2026-08-12): o finding foi confirmado em
   produção e fechado com as migrations forward-only
   `20260812204706_access_users_self_write_containment.sql` e
