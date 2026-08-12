@@ -1,5 +1,7 @@
 # Fixes Progress
 
+- [x] FX-MESAS-PAYMENT-RBAC-01 (2026-08-12) - finding confirmado no schema remoto: policies owner-scoped permitiam que subusuários sem capacidade de recebimento criassem, alterassem ou removessem pagamentos parciais e linhas de alocação de Mesas. A migration forward-only `20260812230000_mesas_payment_rbac.sql` exige `mesas.acessar` e `pdv.receber` ou `pedidos.receber`, preservando SELECT, o contrato de dados, fechamento completo e service-role. Smoke remoto transacional cobriu owner, Atendente sem receber, subusuário autorizado, anon, super-admin e service-role; nenhuma linha persistiu. Snapshot em `docs/operations/MESAS-PAYMENT-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-CAIXA-RBAC-01 (2026-08-12) - finding confirmado no schema remoto:
   `caixas_actor_update/delete` eram apenas owner-scoped e
   `caixa_movs_actor_insert` não exigia `caixa.movimentar`. A migration

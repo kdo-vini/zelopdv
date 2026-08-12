@@ -5,6 +5,16 @@
 
 ## Findings
 
+### Update 2026-08-12 - enforcement de pagamentos parciais de Mesas
+
+O finding foi confirmado em produção: `comanda_pagamentos` e
+`comanda_pagamento_itens` aceitavam writes owner-scoped por subusuários sem
+`mesas.acessar`/capacidade de recebimento. A migration
+`20260812230000_mesas_payment_rbac.sql` exige `mesas.acessar` e
+`pdv.receber` ou `pedidos.receber` para mutações do ledger, preservando
+leituras, fechamento completo, grants e service-role. Consumidores e blast
+radius estão em `docs/operations/MESAS-PAYMENT-RBAC-SNAPSHOT-2026-08-12.md`.
+
 ### Update 2026-08-12 - enforcement de mutações de caixa
 
 O finding foi confirmado em produção: `caixas_actor_update/delete` aceitavam

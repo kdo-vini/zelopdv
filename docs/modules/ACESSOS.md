@@ -27,6 +27,8 @@
   `supabase/migrations/20260812211428_sales_cancel_helper_grant_fix.sql`
 - Enforcement incremental de caixa:
   `supabase/migrations/20260812214518_caixa_role_rbac.sql`
+- Enforcement incremental de pagamentos parciais de Mesas:
+  `supabase/migrations/20260812230000_mesas_payment_rbac.sql`
 - Ajuste de estoque por permissão própria: `supabase/migrations/20260812200550_catalog_stock_adjustment_rpc.sql`
 
 ## Modelo real

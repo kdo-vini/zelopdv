@@ -96,6 +96,11 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ## Progresso de RBAC (2026-08-12)
 
+Pagamentos parciais de Mesas agora exigem `mesas.acessar` e `pdv.receber` ou
+`pedidos.receber` para INSERT/UPDATE/DELETE tanto no pagamento quanto no ledger
+de alocação. SELECT, fechamento completo e comandas/itens continuam separados
+para não misturar esta correção com o RPC de venda e o fluxo financeiro maior.
+
 Caixa agora consulta `caixa.abrir`, `caixa.fechar` e `caixa.movimentar` no RLS
 para mutações autenticadas. Delete de caixa continua reservado ao titular;
 leituras e service-role não mudaram. A próxima superfície deve ser avaliada

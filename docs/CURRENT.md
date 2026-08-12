@@ -1,5 +1,7 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — pagamentos parciais de Mesas (2026-08-12): o schema remoto confirmou que um Atendente sem `pdv.receber`/`pedidos.receber` podia inserir pagamentos owner-scoped em `comanda_pagamentos`. A migration `20260812230000_mesas_payment_rbac.sql` exige `mesas.acessar` e uma capacidade de recebimento para INSERT/UPDATE/DELETE nos pagamentos parciais e no ledger `comanda_pagamento_itens`. SELECT, fechamento completo, comandas/itens, grants e service-role ficaram fora desta fatia. Smoke transacional cobriu owner, Atendente sem receber, subusuário temporariamente autorizado, anon, super-admin e service-role; nenhum fixture persistiu. Snapshot: `docs/operations/MESAS-PAYMENT-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - RBAC incremental — cancelamento de vendas (2026-08-12): o schema remoto
   confirmou que subusuários podiam editar/remover vendas, itens, pagamentos e
   taxas apenas por estarem no tenant owner, ignorando `pdv.cancelar`. As

@@ -147,6 +147,16 @@ Conclusao operacional:
 - INSERT de `caixa_fechamentos` exige `caixa.fechar`.
 - SELECT e o bypass deliberado de `service_role` permanecem inalterados.
 
+## Mesas: pagamentos parciais por capacidade
+
+- `comanda_pagamentos` e `comanda_pagamento_itens` continuam owner-scoped para
+  SELECT.
+- INSERT/UPDATE/DELETE exigem `mesas.acessar` e `pdv.receber` ou
+  `pedidos.receber` para subusuários; o owner mantém o bypass da função
+  `fiado_actor_can`.
+- O contrato de linhas, alocações, fechamento completo e service-role não foi
+  alterado nesta fatia.
+
 ## Ponto critico: `empresa_perfil.pin_admin`
 
 - Paginas como `relatorios` e `despesas` consultam apenas o status de configuração por `/api/auth/admin-pin`.

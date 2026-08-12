@@ -20,6 +20,7 @@
 - `src/routes/app/mesas/[id]/+page.svelte`
 - `src/routes/api/billing/toggle-addon/+server.js`
 - `src/lib/guards.js`
+- `supabase/migrations/20260812230000_mesas_payment_rbac.sql`
 
 ## Dependencias de dados observadas
 
@@ -61,6 +62,9 @@
 ### Pagamento parcial
 
 - O fluxo existente por valor continua disponivel em `Informar valor`.
+- INSERT/UPDATE/DELETE de pagamentos parciais e do ledger de itens exigem
+  `mesas.acessar` e `pdv.receber` ou `pedidos.receber` para subusuarios; o
+  titular continua com acesso total.
 - `Selecionar itens` registra a quantidade de cada `comanda_itens` em
   `comanda_pagamento_itens`; a mesma quantidade nao pode ser cobrada duas vezes.
 - Couvert, taxa de servico e desconto sao encargos globais. O modo por item cobra
