@@ -93,6 +93,8 @@ All writes were transactional and rolled back:
 ## Rollback procedure
 
 Do not rewrite this migration. Create a new forward migration that drops the
-`vendas_insert_rbac_guard` trigger/function and restores the pre-change
-`public/anon` EXECUTE ACL on `criar_venda_completa(jsonb)`. Re-run the full
-authorization matrix and confirm no fixture rows persist.
+`vendas_insert_rbac_guard` trigger/function, restores the four pre-change
+owner-scoped INSERT policies (`vendas`, `vendas_itens`, `vendas_pagamentos`,
+and `vendas_taxas_plataforma`) from a fresh `pg_policies` snapshot, and restores
+the pre-change `public/anon` EXECUTE ACL on `criar_venda_completa(jsonb)`. Re-run
+the full authorization matrix and confirm no fixture rows persist.
