@@ -6,13 +6,16 @@ function mockWebhookSecret(value = 'whsec_test') {
   vi.doMock('$env/dynamic/private', () => ({ env: { STRIPE_WEBHOOK_SECRET: value } }));
 }
 
-function makeSupabaseAdmin(row = { id: 'sub-row', user_id: 'u1', plan_tier: 'pdv' }, updates = []) {
+function makeSupabaseAdmin(row = { id: 'sub-row', user_id: 'u1', plan_tier: 'pdv' }, updates = [], options = {}) {
   return {
     from: vi.fn((table) => {
       const chain = {
         insert: vi.fn(() => ({
           select: () => ({
-            maybeSingle: async () => ({ data: { event_id: 'evt_1' }, error: null })
+            maybeSingle: async () => ({
+              data: options.insertData ?? { event_id: 'evt_1' },
+              error: options.insertError ?? null,
+            })
           })
         })),
         select: vi.fn(() => chain),
@@ -20,13 +23,13 @@ function makeSupabaseAdmin(row = { id: 'sub-row', user_id: 'u1', plan_tier: 'pdv
         order: vi.fn(() => chain),
         limit: vi.fn(() => chain),
         maybeSingle: vi.fn(async () => ({
-          data: table === 'subscriptions' ? row : null,
-          error: null
+          data: table === 'subscriptions' ? row : (table === 'webhook_events_processed' ? options.processedEvent ?? null : null),
+          error: table === 'webhook_events_processed' ? options.processedSelectError ?? null : null,
         })),
         update: vi.fn((payload) => ({
           eq: async () => {
             updates.push({ table, payload });
-            return { error: null };
+            return { error: options.updateError ?? null };
           }
         }))
       };
@@ -205,5 +208,56 @@ describe('API: stripe webhook', () => {
 
     expect(res.status).toBe(200);
     expect(updates.find((u) => u.table === 'subscriptions')?.payload).not.toHaveProperty('monthly_value_cents');
+  });
+
+  it('returns 500 and leaves the event retryable when the subscription update fails', async () => {
+    mockWebhookSecret();
+    const updates = [];
+    const constructEvent = vi.fn(() => ({
+      id: 'evt_retryable',
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          id: 'sub_123',
+          customer: 'cus_123',
+          status: 'active',
+          metadata: { user_id: 'u1' },
+          current_period_end: Math.floor(Date.now() / 1000) + 3600,
+          cancel_at_period_end: false,
+          items: { data: [{ price: { id: 'price_123' } }] },
+        },
+      },
+    }));
+
+    vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({
+      supabaseAdmin: makeSupabaseAdmin(undefined, updates, { updateError: { message: 'temporary db error' } }),
+    }));
+    vi.doMock('../src/lib/server/stripe.js', () => ({
+      stripe: { webhooks: { constructEvent } },
+    }));
+
+    const { POST } = await loadHandler();
+    const res = await POST({ request: { text: async () => 'raw', headers: { get: () => 'sig' } } });
+
+    expect(res.status).toBe(500);
+    expect(updates).toHaveLength(1);
+  });
+
+  it('acknowledges an event only after it is already recorded as processed', async () => {
+    mockWebhookSecret();
+    const constructEvent = vi.fn(() => ({ id: 'evt_done', type: 'customer.subscription.updated', data: { object: {} } }));
+    const updates = [];
+    vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({
+      supabaseAdmin: makeSupabaseAdmin(undefined, updates, { processedEvent: { event_id: 'evt_done' } }),
+    }));
+    vi.doMock('../src/lib/server/stripe.js', () => ({ stripe: { webhooks: { constructEvent } } }));
+
+    const { POST } = await loadHandler();
+    const res = await POST({ request: { text: async () => 'raw', headers: { get: () => 'sig' } } });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.idempotent).toBe(true);
+    expect(updates).toHaveLength(0);
   });
 });

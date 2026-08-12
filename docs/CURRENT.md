@@ -1,5 +1,17 @@
 # ZeloPDV — Foco atual
 
+- Webhook reliability round 2 (2026-08-12): os cenários descritos foram
+  confirmados no código e no schema de produção. Stripe agora só registra o
+  evento depois dos efeitos locais e propaga falhas de update para permitir
+  retry; AbacatePay reabre eventos `received`/`failed`, transforma pagamento
+  local ausente em erro retryável em vez de `ignored`; liquidação Pix paga usa
+  a RPC transacional `settle_pix_payment`, com lock do pagamento e renovação de
+  assinatura no mesmo commit. Testes direcionados passaram (31/31). A migration
+  `supabase/migrations/20260812165936_webhook_reliability_pix_atomicity.sql`
+  foi criada, mas ainda não foi aplicada em produção porque a reconciliação do
+  histórico remoto/local continua pendente. O snapshot está em
+  `docs/operations/WEBHOOK-RELIABILITY-SNAPSHOT-2026-08-12.md`.
+
 - P0 security containment (2026-08-12): a migration forward-only foi preparada
   em `supabase/migrations/20260812150000_p0_security_containment.sql` após
   revalidação do schema remoto. Ela remove grants de cliente nas views

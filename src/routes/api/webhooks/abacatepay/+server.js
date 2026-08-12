@@ -34,7 +34,18 @@ async function createWebhookEvent({ eventId, eventType, payload, signature }) {
     .maybeSingle();
 
   if (error) {
-    if (error.code === '23505') return null;
+    if (error.code === '23505') {
+      const { data: existingEvent, error: existingError } = await supabaseAdmin
+        .from('billing_webhook_events')
+        .select('id, event_id, status')
+        .eq('provider', 'abacatepay')
+        .eq('event_id', eventId)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+      if (!existingEvent) throw new Error(`Webhook event ${eventId} disappeared after duplicate insert.`);
+      return { ...existingEvent, duplicate: true };
+    }
     throw error;
   }
 
@@ -94,8 +105,21 @@ export async function POST({ request, url }) {
       signature,
     });
 
-    if (!createdEvent) {
+    if (createdEvent?.duplicate && ['processed', 'ignored'].includes(createdEvent.status)) {
       return json({ received: true, idempotent: true });
+    }
+
+    if (createdEvent?.duplicate) {
+      // A prior attempt may have crashed after inserting `received` or may
+      // have persisted `failed`. Reopen that row so the provider retry can
+      // execute the payment synchronization again.
+      await updateWebhookEvent(eventId, {
+        status: 'received',
+        raw_payload: payload,
+        signature,
+        error_message: null,
+        processed_at: null,
+      });
     }
 
     if (!providerPaymentId) {
@@ -109,12 +133,10 @@ export async function POST({ request, url }) {
 
     const payment = await findBillingPaymentByProviderId(providerPaymentId);
     if (!payment) {
-      await updateWebhookEvent(eventId, {
-        status: 'ignored',
-        error_message: `Pagamento ${providerPaymentId} não encontrado`,
-        processed_at: new Date().toISOString(),
-      });
-      return json({ received: true, ignored: true });
+      // The provider can deliver the webhook while the local billing row is
+      // still being persisted. Keep this retryable instead of acknowledging a
+      // payment that could otherwise activate no subscription ever.
+      throw new Error(`Pagamento ${providerPaymentId} não encontrado`);
     }
 
     let nextPayment = payment;

@@ -9,8 +9,6 @@ import {
 import { calculateValue, PLANS, sanitizeAddons } from '$lib/pricing';
 import { createTransparentPixCharge } from '$lib/server/abacatePay';
 
-const BILLING_CYCLE_MONTHS = 1;
-
 export function serializeBillingPayment(row) {
   return {
     paymentId: row.id,
@@ -47,83 +45,6 @@ export function mapAbacatePaymentStatus(providerStatus) {
     default:
       return 'pending';
   }
-}
-
-function getRenewalBaseDate(subscription) {
-  const candidates = [new Date()];
-
-  if (subscription?.current_period_end) {
-    const periodEnd = new Date(subscription.current_period_end);
-    if (!Number.isNaN(periodEnd.getTime())) candidates.push(periodEnd);
-  }
-
-  if (subscription?.manually_extended_until) {
-    const extendedUntil = new Date(subscription.manually_extended_until);
-    if (!Number.isNaN(extendedUntil.getTime())) candidates.push(extendedUntil);
-  }
-
-  return candidates.reduce((latest, current) => (current > latest ? current : latest));
-}
-
-function addMonths(baseDate, months) {
-  const next = new Date(baseDate);
-  next.setMonth(next.getMonth() + months);
-  return next;
-}
-
-async function activateSubscriptionFromPayment({ payment, userId, nowIso }) {
-  const { data: existingSub, error: existingSubError } = await supabaseAdmin
-    .from('subscriptions')
-    .select('id, status, current_period_end, manually_extended_until')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (existingSubError) throw existingSubError;
-
-  const baseDate = getRenewalBaseDate(existingSub);
-  const nextPeriodEnd = addMonths(baseDate, BILLING_CYCLE_MONTHS).toISOString();
-  const subscriptionPayload = {
-    user_id: userId,
-    status: 'active',
-    current_period_end: nextPeriodEnd,
-    cancel_at_period_end: false,
-    payment_provider: 'abacatepay',
-    billing_type: 'PIX',
-    plan_tier: payment.plan_tier || 'pdv',
-    has_mesas_addon: !!payment.has_mesas_addon,
-    has_acessos_addon: !!payment.has_acessos_addon,
-    has_zelo_menu: !!payment.has_zelo_menu,
-    // Valor real travado no momento da cobrança Pix (não o preço de tabela atual).
-    monthly_value_cents: payment.amount_expected_cents,
-    updated_at: nowIso,
-  };
-
-  let subscriptionId = existingSub?.id || null;
-
-  if (existingSub) {
-    const { error } = await supabaseAdmin
-      .from('subscriptions')
-      .update(subscriptionPayload)
-      .eq('id', existingSub.id);
-
-    if (error) throw error;
-  } else {
-    const { data: insertedSub, error } = await supabaseAdmin
-      .from('subscriptions')
-      .insert({
-        ...subscriptionPayload,
-        created_at: nowIso,
-      })
-      .select('id')
-      .single();
-
-    if (error || !insertedSub) throw error || new Error('Falha ao criar assinatura local.');
-    subscriptionId = insertedSub.id;
-  }
-
-  return { subscriptionId, nextPeriodEnd };
 }
 
 export function verifyAbacateWebhookSignature(rawBody, signatureFromHeader) {
@@ -212,19 +133,25 @@ export async function syncPixPaymentWithRemote({ payment, remotePayment, source 
   }
 
   if (mappedStatus === 'paid') {
-    const paidAmount = remotePayment?.paidAmount ?? payment.amount_paid_cents ?? payment.amount_expected_cents;
-    if (paidAmount < payment.amount_expected_cents) {
-      updates.status = 'failed';
-      updates.provider_status = 'PAID_AMOUNT_MISMATCH';
-    } else if (!payment.paid_at) {
-      const { subscriptionId } = await activateSubscriptionFromPayment({
-        payment,
-        userId: payment.user_id,
-        nowIso,
-      });
-      updates.paid_at = remotePayment?.updatedAt || nowIso;
-      updates.subscription_id = subscriptionId;
-    }
+    const { data: settledPayment, error: settleError } = await supabaseAdmin
+      .rpc('settle_pix_payment', {
+        p_payment_id: payment.id,
+        p_provider_status: providerStatus,
+        p_mapped_status: mappedStatus,
+        p_amount_paid_cents: remotePayment?.paidAmount ?? payment.amount_paid_cents ?? null,
+        p_expires_at: remotePayment?.expiresAt || payment.expires_at || null,
+        p_paid_at: remotePayment?.updatedAt || nowIso,
+        p_external_reference: remotePayment?.externalId || null,
+      })
+      .single();
+
+    if (settleError) throw settleError;
+    if (!settledPayment) throw new Error('RPC settle_pix_payment não retornou o pagamento.');
+
+    return {
+      ...payment,
+      ...settledPayment,
+    };
   }
 
   const { error } = await supabaseAdmin

@@ -19,7 +19,8 @@ import { getPostHogClient } from '$lib/server/posthog';
 
 const WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
 
-// Marca evento como processado. Retorna true na 1ª vez, false se já processado.
+// Marca evento como processado depois que os efeitos locais terminaram.
+// Retorna true na 1ª gravação, false se uma entrega concorrente ganhou a corrida.
 async function markEventProcessed(eventId, eventType) {
   if (!eventId) return true;
   const { data, error } = await supabaseAdmin
@@ -30,42 +31,57 @@ async function markEventProcessed(eventId, eventType) {
 
   if (error) {
     if (error.code === '23505') return false; // unique_violation = já processado
-    console.error('[Stripe Webhook] markEventProcessed error:', error);
-    return true; // erro de DB transiente — processa pra não perder evento
+    throw error;
   }
+  return !!data;
+}
+
+async function hasEventBeenProcessed(eventId) {
+  if (!eventId) return false;
+  const { data, error } = await supabaseAdmin
+    .from('webhook_events_processed')
+    .select('event_id')
+    .eq('provider', 'stripe')
+    .eq('event_id', eventId)
+    .maybeSingle();
+
+  if (error) throw error;
   return !!data;
 }
 
 // Localiza row de subscriptions pelo subscription_id ou customer_id (fallback).
 async function findSubscriptionRow({ stripeSubId, stripeCustomerId, userId }) {
   if (stripeSubId) {
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('subscriptions')
       .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_acessos_addon, payment_provider')
       .eq('provider_subscription_id', stripeSubId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (error) throw error;
     if (data) return data;
   }
   if (userId) {
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('subscriptions')
       .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_acessos_addon, payment_provider')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (error) throw error;
     if (data) return data;
   }
   if (stripeCustomerId) {
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('subscriptions')
       .select('id, user_id, status, current_period_end, plan_tier, has_mesas_addon, has_acessos_addon, payment_provider')
       .eq('provider_customer_id', stripeCustomerId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (error) throw error;
     if (data) return data;
   }
   return null;
@@ -78,8 +94,7 @@ async function updateSubscriptionRow(rowId, payload) {
     .from('subscriptions')
     .update(payload)
     .eq('id', rowId);
-  if (error) console.error('[Stripe Webhook] DB update error:', error);
-  return !error;
+  if (error) throw error;
 }
 
 // Mapeia status Stripe → status DB. Stripe usa: incomplete, incomplete_expired, trialing, active, past_due, canceled, unpaid.
@@ -170,9 +185,9 @@ export async function POST({ request }) {
   const eventId = event.id;
   const eventType = event.type;
 
-  // Idempotency
-  const isFirstTime = await markEventProcessed(eventId, eventType);
-  if (!isFirstTime) {
+  // A previous successful delivery is safe to acknowledge. The event is
+  // inserted only after the switch below succeeds, so a 500 remains retryable.
+  if (await hasEventBeenProcessed(eventId)) {
     console.log(`[Stripe Webhook] Event ${eventId} already processed`);
     return json({ received: true, idempotent: true });
   }
@@ -367,6 +382,12 @@ export async function POST({ request }) {
 
       default:
         console.log(`[Stripe Webhook] Unhandled event type: ${eventType}`);
+    }
+
+    const marked = await markEventProcessed(eventId, eventType);
+    if (!marked) {
+      console.log(`[Stripe Webhook] Event ${eventId} finished concurrently`);
+      return json({ received: true, idempotent: true });
     }
 
     return json({ received: true });

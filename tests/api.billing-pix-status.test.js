@@ -29,6 +29,12 @@ function makeSupabaseAdmin(state) {
         error: state.authError ?? null,
       })),
     },
+    rpc: vi.fn((name, params) => ({
+      single: vi.fn(async () => {
+        state.writes.push({ table: 'rpc', operation: name, payload: params });
+        return { data: state.rpcResult ?? null, error: state.rpcError ?? null };
+      }),
+    })),
     from: vi.fn((table) => {
       const selectResult = state.selectResults?.[table] ?? null;
       const buildUpdateChain = (payload, filters = []) => ({
@@ -227,6 +233,9 @@ describe('API: billing/pix/status', () => {
           manually_extended_until: null,
         },
       },
+      rpcResult: {
+        id: 'pay-1', status: 'paid', paid_at: '2026-05-21T17:00:00.000Z', subscription_id: 'sub-1',
+      },
     };
 
     const checkTransparentPixCharge = vi.fn(async () => ({
@@ -255,30 +264,15 @@ describe('API: billing/pix/status', () => {
     expect(body.status).toBe('paid');
     expect(checkTransparentPixCharge).toHaveBeenCalledWith('abacate_123');
 
-    const subscriptionUpdate = state.writes.find(
-      (entry) => entry.table === 'subscriptions' && entry.operation === 'update'
+    const settlement = state.writes.find(
+      (entry) => entry.table === 'rpc' && entry.operation === 'settle_pix_payment'
     );
-    expect(subscriptionUpdate).toBeTruthy();
-    expect(subscriptionUpdate.payload).toMatchObject({
-      status: 'active',
-      payment_provider: 'abacatepay',
-      billing_type: 'PIX',
-      plan_tier: 'bundle',
-      has_mesas_addon: true,
-      has_acessos_addon: true,
-      cancel_at_period_end: false,
+    expect(settlement).toBeTruthy();
+    expect(settlement.payload).toMatchObject({
+      p_payment_id: 'pay-1',
+      p_provider_status: 'PAID',
+      p_mapped_status: 'paid',
+      p_amount_paid_cents: null,
     });
-    expect(subscriptionUpdate.payload.current_period_end).toBeTruthy();
-
-    const paymentUpdate = state.writes.find(
-      (entry) => entry.table === 'billing_payments' && entry.operation === 'update'
-    );
-    expect(paymentUpdate).toBeTruthy();
-    expect(paymentUpdate.payload).toMatchObject({
-      status: 'paid',
-      provider_status: 'PAID',
-      subscription_id: 'sub-1',
-    });
-    expect(paymentUpdate.payload.paid_at).toBeTruthy();
   });
 });

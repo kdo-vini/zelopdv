@@ -12,17 +12,36 @@ function signPayload(rawBody, publicKey) {
 
 function makeSupabaseAdmin(state) {
   return {
+    rpc: vi.fn((name, params) => ({
+      single: vi.fn(async () => {
+        state.writes.push({ table: 'rpc', operation: name, payload: params });
+        return {
+          data: state.rpcResult ?? { ...(state.payment || {}), status: 'paid', paid_at: '2026-05-21T17:00:00.000Z', subscription_id: 'sub-1' },
+          error: state.rpcError ?? null,
+        };
+      }),
+    })),
     from: vi.fn((table) => {
       if (table === 'billing_webhook_events') {
-        const chain = {
-          select: vi.fn(() => chain),
+        const selectChain = {
+          eq: vi.fn(() => selectChain),
+          maybeSingle: vi.fn(async () => ({
+            data: state.webhookExistingResult ?? null,
+            error: state.webhookSelectError ?? null,
+          })),
+        };
+        const insertChain = {
+          select: vi.fn(() => insertChain),
           maybeSingle: vi.fn(async () => ({
             data: state.webhookInsertResult ?? { id: 'hook-1', event_id: 'evt_1' },
             error: state.webhookInsertError ?? null,
           })),
+        };
+        const tableApi = {
+          select: vi.fn(() => selectChain),
           insert: vi.fn((payload) => {
             state.writes.push({ table, operation: 'insert', payload });
-            return chain;
+            return insertChain;
           }),
           update: vi.fn((payload) => ({
             eq: vi.fn(() => ({
@@ -34,7 +53,7 @@ function makeSupabaseAdmin(state) {
           })),
         };
 
-        return chain;
+        return tableApi;
       }
 
       if (table === 'billing_payments') {
@@ -154,6 +173,7 @@ describe('API: abacatepay webhook', () => {
       writes: [],
       webhookInsertResult: null,
       webhookInsertError: { code: '23505', message: 'duplicate key value violates unique constraint' },
+      webhookExistingResult: { id: 'hook-1', event_id: 'evt_1', status: 'processed' },
     };
 
     vi.doMock('$lib/server/supabaseAdmin', () => ({
@@ -217,6 +237,9 @@ describe('API: abacatepay webhook', () => {
         current_period_end: '2026-05-01T00:00:00.000Z',
         manually_extended_until: null,
       },
+      rpcResult: {
+        id: 'pay-1', status: 'paid', paid_at: '2026-05-21T17:00:00.000Z', subscription_id: 'sub-1',
+      },
     };
 
     vi.doMock('$lib/server/supabaseAdmin', () => ({
@@ -247,14 +270,71 @@ describe('API: abacatepay webhook', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(
-      state.writes.some((entry) => entry.table === 'billing_payments' && entry.operation === 'update' && entry.payload.status === 'paid')
-    ).toBe(true);
-    expect(
-      state.writes.some((entry) => entry.table === 'subscriptions' && entry.operation === 'update' && entry.payload.status === 'active')
-    ).toBe(true);
+    expect(state.writes.some((entry) => entry.table === 'rpc' && entry.operation === 'settle_pix_payment')).toBe(true);
     expect(
       state.writes.some((entry) => entry.table === 'billing_webhook_events' && entry.operation === 'update' && entry.payload.status === 'processed')
     ).toBe(true);
+  });
+
+  it('reprocessa evento que ficou failed em uma tentativa anterior', async () => {
+    const { webhookSecret, publicKey } = setupWebhookEnv();
+    const state = {
+      writes: [],
+      webhookInsertResult: null,
+      webhookInsertError: { code: '23505', message: 'duplicate key value violates unique constraint' },
+      webhookExistingResult: { id: 'hook-1', event_id: 'evt_retry', status: 'failed' },
+      payment: {
+        id: 'pay-retry', user_id: 'owner-1', subscription_id: null, provider: 'abacatepay', method: 'pix',
+        status: 'pending', amount_expected_cents: 9900, amount_paid_cents: null,
+        external_reference: 'pix_owner-1_123', expires_at: '2099-05-21T18:00:00.000Z', paid_at: null,
+        provider_payment_id: 'char_retry', provider_status: 'PENDING', plan_tier: 'pdv',
+        has_mesas_addon: false, has_acessos_addon: false, has_zelo_menu: false, metadata: {},
+      },
+      rpcResult: { id: 'pay-retry', status: 'paid', paid_at: '2026-05-21T17:00:00.000Z', subscription_id: 'sub-retry' },
+    };
+
+    vi.doMock('$lib/server/supabaseAdmin', () => ({ supabaseAdmin: makeSupabaseAdmin(state) }));
+    const payload = {
+      id: 'evt_retry', event: 'transparent.completed',
+      data: { transparent: { id: 'char_retry', externalId: 'pix_owner-1_123', amount: 9900, paidAmount: 9900, status: 'PAID' } },
+    };
+    const rawBody = JSON.stringify(payload);
+    const signature = signPayload(rawBody, publicKey);
+
+    const { POST } = await loadHandler();
+    const res = await POST({
+      url: new URL(`https://zelopdv.com.br/api/webhooks/abacatepay?webhookSecret=${webhookSecret}`),
+      request: makeRequest(rawBody, signature),
+    });
+
+    expect(res.status).toBe(200);
+    expect(state.writes.some((entry) => entry.table === 'rpc' && entry.operation === 'settle_pix_payment')).toBe(true);
+    expect(state.writes.some((entry) => entry.table === 'billing_webhook_events' && entry.operation === 'update' && entry.payload.status === 'received')).toBe(true);
+  });
+
+  it('mantém retryável um evento recebido antes da linha local do pagamento', async () => {
+    const { webhookSecret, publicKey } = setupWebhookEnv();
+    const state = {
+      writes: [],
+      payment: null,
+    };
+    vi.doMock('$lib/server/supabaseAdmin', () => ({ supabaseAdmin: makeSupabaseAdmin(state) }));
+
+    const payload = {
+      id: 'evt_payment_row_late',
+      event: 'transparent.completed',
+      data: { transparent: { id: 'char_late', amount: 9900, paidAmount: 9900, status: 'PAID' } },
+    };
+    const rawBody = JSON.stringify(payload);
+    const signature = signPayload(rawBody, publicKey);
+
+    const { POST } = await loadHandler();
+    const res = await POST({
+      url: new URL(`https://zelopdv.com.br/api/webhooks/abacatepay?webhookSecret=${webhookSecret}`),
+      request: makeRequest(rawBody, signature),
+    });
+
+    expect(res.status).toBe(500);
+    expect(state.writes.some((entry) => entry.table === 'billing_webhook_events' && entry.operation === 'update' && entry.payload.status === 'failed')).toBe(true);
   });
 });

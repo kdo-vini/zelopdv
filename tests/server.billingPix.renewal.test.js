@@ -93,6 +93,12 @@ function makeSelectChain(result) {
 
 function makeSupabaseAdmin(state) {
   return {
+    rpc: vi.fn((fn, params) => ({
+      single: vi.fn(async () => {
+        state.rpcCalls = [...(state.rpcCalls || []), { fn, params }];
+        return { data: state.rpcResult ?? null, error: state.rpcError ?? null };
+      }),
+    })),
     from: vi.fn((table) => ({
       select: vi.fn(() => makeSelectChain(state.selectResults?.[table] ?? null)),
       insert: vi.fn((payload) => {
@@ -113,16 +119,21 @@ function makeSupabaseAdmin(state) {
   };
 }
 
-describe('syncPixPaymentWithRemote — grava monthly_value_cents real na subscription', () => {
+describe('syncPixPaymentWithRemote — liquidação Pix atômica', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.unstubAllEnvs();
   });
 
-  it('ativa subscription nova com monthly_value_cents = amount_expected_cents do pagamento (valor real travado na cobranca)', async () => {
+  it('delega a liquidação do valor travado para a RPC transacional', async () => {
     const state = {
       writes: [],
-      selectResults: { subscriptions: null }, // sem assinatura existente -> insert
+      rpcResult: {
+        id: 'pay-1',
+        status: 'paid',
+        paid_at: '2026-07-22T12:00:00Z',
+        subscription_id: 'sub-new-1',
+      },
     };
     vi.doMock('$lib/server/supabaseAdmin', () => ({ supabaseAdmin: makeSupabaseAdmin(state) }));
     const { syncPixPaymentWithRemote } = await import('../src/lib/server/billingPix.js');
@@ -140,10 +151,15 @@ describe('syncPixPaymentWithRemote — grava monthly_value_cents real na subscri
 
     await syncPixPaymentWithRemote({ payment, remotePayment, source: 'test' });
 
-    const subInsert = state.writes.find((w) => w.table === 'subscriptions' && w.operation === 'insert');
-    expect(subInsert).toBeTruthy();
-    expect(subInsert.payload.monthly_value_cents).toBe(14900);
-    expect(subInsert.payload.plan_tier).toBe('chat');
+    expect(state.rpcCalls).toHaveLength(1);
+    expect(state.rpcCalls[0].fn).toBe('settle_pix_payment');
+    expect(state.rpcCalls[0].params).toMatchObject({
+      p_payment_id: 'pay-1',
+      p_provider_status: 'PAID',
+      p_mapped_status: 'paid',
+      p_amount_paid_cents: 14900,
+      p_external_reference: 'pix_user-1_123',
+    });
   });
 });
 

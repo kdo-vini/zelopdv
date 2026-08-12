@@ -61,6 +61,8 @@ Regra prática:
   - `invoice.paid`
   - `invoice.payment_succeeded`
   - `invoice.payment_failed`
+- Stripe só grava `webhook_events_processed` depois dos efeitos locais; falhas
+  de update retornam 500 para que o provedor tente novamente.
 
 ### Portal do cliente Stripe
 
@@ -81,8 +83,13 @@ Regra prática:
 
 - Sincronização:
   - webhook em [src/routes/api/webhooks/abacatepay/+server.js](/home/vinicius/code/zelopdv/src/routes/api/webhooks/abacatepay/+server.js:53)
-  - motor de ativação em [src/lib/server/billingPix.js](/home/vinicius/code/zelopdv/src/lib/server/billingPix.js:178)
+  - motor de ativação em [src/lib/server/billingPix.js](/home/vinicius/code/zelopdv/src/lib/server/billingPix.js:133)
   - polling/status em [src/routes/api/billing/pix/status/[paymentId]/+server.js](/home/vinicius/code/zelopdv/src/routes/api/billing/pix/status/[paymentId]/+server.js:1)
+- Confirmação paga usa a RPC service-role-only `settle_pix_payment`, que trava
+  a cobrança e grava pagamento + renovação da assinatura no mesmo commit.
+- Eventos AbacatePay em `received` ou `failed` são reabertos em retries; se a
+  linha local ainda não existir, o webhook retorna 500 em vez de confirmar
+  `ignored`.
 
 ## Endpoint matrix
 

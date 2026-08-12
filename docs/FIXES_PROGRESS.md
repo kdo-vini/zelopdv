@@ -1,5 +1,19 @@
 # Fixes Progress
 
+- [ ] FX-BILLING-WEBHOOK-RELIABILITY-01 (2026-08-12) — findings confirmados:
+  Stripe marcava o evento antes do efeito e engolia falhas; AbacatePay
+  descartava retries de eventos `received`/`failed` e confirmava como `ignored`
+  um pagamento cuja linha local ainda não havia chegado; a confirmação Pix
+  podia renovar a mesma assinatura em duas operações concorrentes. O fix local
+  move a marcação Stripe para depois do processamento, torna updates fatais
+  retryáveis, reabre eventos AbacatePay não concluídos, mantém pagamento ainda
+  não persistido retryável e adiciona a RPC
+  service-role-only `settle_pix_payment` para lock + assinatura + pagamento em
+  uma transação. Testes direcionados: 24/24. Migration forward-only criada em
+  `supabase/migrations/20260812165936_webhook_reliability_pix_atomicity.sql`,
+  ainda não aplicada por causa da divergência de histórico remoto/local; não
+  usar `--include-all` nesta rodada.
+
 - [ ] FX-SEC-P0-CONTAINMENT-01 (2026-08-12) — findings P0 confirmados no schema
   remoto: grants `anon`/`authenticated` nas quatro views SECURITY DEFINER,
   execução pública de RPCs administrativas e `USING (true)` em
