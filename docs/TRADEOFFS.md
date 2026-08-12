@@ -96,6 +96,12 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ## Progresso de RBAC (2026-08-12)
 
+Caixa agora consulta `caixa.abrir`, `caixa.fechar` e `caixa.movimentar` no RLS
+para mutações autenticadas. Delete de caixa continua reservado ao titular;
+leituras e service-role não mudaram. A próxima superfície deve ser avaliada
+separadamente, sem assumir que o RPC compartilhado de vendas pode receber uma
+permissão adicional sem revisar seus consumidores.
+
 Cancelamento de vendas agora é enforcement no RLS: subusuário sem
 `pdv.cancelar` não altera/remover histórico financeiro, enquanto o rollback
 transacional estreito do fechamento de Mesa permanece permitido. A criação e o

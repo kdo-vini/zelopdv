@@ -5,6 +5,16 @@
 
 ## Findings
 
+### Update 2026-08-12 - enforcement de mutações de caixa
+
+O finding foi confirmado em produção: `caixas_actor_update/delete` aceitavam
+mutação owner-scoped por subusuários, e `caixa_movs_actor_insert` não consultava
+`caixa.movimentar`. A migration `20260812214518_caixa_role_rbac.sql` exige as
+capacidades existentes para abrir, fechar, movimentar e registrar o histórico;
+delete continua owner-only. Leituras e service-role permanecem inalterados.
+Consumidores e blast radius estão em
+`docs/operations/CAIXA-RBAC-SNAPSHOT-2026-08-12.md`.
+
 ### Update 2026-08-12 - enforcement de cancelamento de vendas
 
 O finding foi confirmado em produção: `vendas`, `vendas_itens`,

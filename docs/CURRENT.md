@@ -17,6 +17,15 @@
   chave de serviço somente em memória para semear o fixture, sem persistir
   credenciais ou arquivos no repositório.
 
+- RBAC incremental — caixa (2026-08-12): o schema remoto confirmou que
+  subusuários sem `caixa.fechar` podiam alterar/remover caixas e que
+  `caixa.movimentar` não era consultada pela policy de movimentações. A
+  migration `20260812214518_caixa_role_rbac.sql` exige as capacidades
+  existentes, mantém leituras e o comportamento service-role, e preserva a
+  criação de histórico de fechamento. Smoke transacional cobriu owner,
+  subusuário sem/com capacidades, anon e super-admin; nenhum fixture persistiu.
+  Snapshot: `docs/operations/CAIXA-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - RBAC incremental — `access_users` (2026-08-12): o finding foi confirmado em
   produção e fechado com as migrations forward-only
   `20260812204706_access_users_self_write_containment.sql` e

@@ -25,6 +25,8 @@
   `supabase/migrations/20260812210856_sales_cancel_rbac.sql`
 - Correção de ACL do helper de cancelamento:
   `supabase/migrations/20260812211428_sales_cancel_helper_grant_fix.sql`
+- Enforcement incremental de caixa:
+  `supabase/migrations/20260812214518_caixa_role_rbac.sql`
 - Ajuste de estoque por permissão própria: `supabase/migrations/20260812200550_catalog_stock_adjustment_rpc.sql`
 
 ## Modelo real

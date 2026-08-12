@@ -138,6 +138,15 @@ Conclusao operacional:
 - INSERT e SELECT permanecem com o contrato anterior nesta rodada; criação e
   recebimento (`pdv.receber`) serão avaliados separadamente.
 
+## Caixa: mutações por capacidade
+
+- INSERT de `caixas` exige `caixa.abrir` e mantém `id_usuario` no owner
+  resolvido do ator.
+- UPDATE de `caixas` exige `caixa.fechar`; DELETE continua owner-only.
+- INSERT de `caixa_movimentacoes` exige `caixa.movimentar` e caixa ainda aberto.
+- INSERT de `caixa_fechamentos` exige `caixa.fechar`.
+- SELECT e o bypass deliberado de `service_role` permanecem inalterados.
+
 ## Ponto critico: `empresa_perfil.pin_admin`
 
 - Paginas como `relatorios` e `despesas` consultam apenas o status de configuração por `/api/auth/admin-pin`.

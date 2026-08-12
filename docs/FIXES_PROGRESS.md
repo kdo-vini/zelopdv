@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-CAIXA-RBAC-01 (2026-08-12) - finding confirmado no schema remoto:
+  `caixas_actor_update/delete` eram apenas owner-scoped e
+  `caixa_movs_actor_insert` não exigia `caixa.movimentar`. A migration
+  forward-only `20260812214518_caixa_role_rbac.sql` exige `caixa.abrir`,
+  `caixa.fechar` e `caixa.movimentar` nas mutações correspondentes, mantém
+  delete owner-only e preserva leituras/service-role. Smoke remoto transacional
+  cobriu owner, subusuário sem/com capacidades, anon e super-admin; nenhum
+  fixture persistiu. Snapshot em
+  `docs/operations/CAIXA-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-SALES-CANCEL-RBAC-01 (2026-08-12) - finding confirmado no schema
   remoto: policies owner-scoped permitiam que subusuários editassem/removessem
   vendas, itens, pagamentos e taxas sem `pdv.cancelar`. As migrations
