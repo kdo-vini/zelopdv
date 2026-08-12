@@ -6,7 +6,7 @@
   histórico terminal e impedindo mais de uma linha viva por titular. O PIN administrativo deixou de
   ser enviado ao browser: status e verificação passam por `/api/auth/admin-pin`, e somente o titular
   pode alterá-lo. A suíte Vitest passou 575/575 e `npm run check` passou com 0 erros/95 avisos
-  conhecidos. O lint SQL continua com os dois erros pré-existentes documentados abaixo.
+  conhecidos. O lint SQL continua com os dois erros pré-existentes fora desta rodada.
 
 - Webhook reliability round 2 (2026-08-12): os cenários descritos foram
   confirmados no código e no schema de produção. Stripe agora só registra o
