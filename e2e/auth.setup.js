@@ -31,12 +31,15 @@ const gerenteAuthFile = path.join(import.meta.dirname, '.auth/gerente.json');
 async function loginAndSave(page, email, password, targetFile) {
   await page.goto('/login');
   await expect(page).toHaveURL(/\/login/);
+  // The production login page hydrates after the initial document load; avoid
+  // clicking the inert server-rendered form before Svelte binds the handler.
+  await page.waitForTimeout(1_500);
 
   await page.locator('#login-email').fill(email);
   await page.locator('#login-password').fill(password);
   await page.getByRole('button', { name: /entrar/i }).click();
 
-  await page.waitForURL(/\/(app|perfil|assinatura)/, { timeout: 15_000 });
+  await expect.poll(() => page.url(), { timeout: 30_000 }).toMatch(/\/(app|perfil|assinatura)/);
   await page.context().storageState({ path: targetFile });
 }
 

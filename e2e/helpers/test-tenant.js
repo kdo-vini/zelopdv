@@ -120,16 +120,18 @@ async function findUser(admin, email) {
 async function ensureUser(admin, email, password) {
   const existing = await findUser(admin, email);
   if (existing) {
-    return throwOnError(
+    const data = await throwOnError(
       `auth user ${email}`,
       await admin.auth.admin.updateUserById(existing.id, { email, password, email_confirm: true }),
     );
+    return data?.user ?? data;
   }
 
-  return throwOnError(
+  const data = await throwOnError(
     `auth user ${email}`,
     await admin.auth.admin.createUser({ email, password, email_confirm: true }),
   );
+  return data?.user ?? data;
 }
 
 async function insertRows(admin, table, rows, label = table) {
@@ -385,14 +387,18 @@ export async function seedTestTenant() {
     nome_produto_na_venda: `${runId} Produto Estoque`,
     modifiers: [],
   }], 'open command item');
+  const existingOpenCash = await throwOnError(
+    'existing open cash lookup',
+    await admin.from('caixas').select('id').eq('id_usuario', owner.id).is('data_fechamento', null).limit(1).maybeSingle(),
+  );
   const cashRows = await insertRows(admin, 'caixas', [
-    {
+    ...(existingOpenCash ? [] : [{
       id_usuario: owner.id,
       id_operador: owner.id,
       data_abertura: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
       valor_inicial: 100,
       data_fechamento: null,
-    },
+    }]),
     {
       id_usuario: owner.id,
       id_operador: owner.id,
@@ -579,9 +585,6 @@ export async function seedTestTenant() {
 export async function cleanupTestTenant(manifest = readTestTenantManifest()) {
   if (!manifest) return;
   const admin = createTestAdminClient();
-  const ownerId = manifest.owner?.id;
-
-  await cleanupOwnerOperationalData(admin, ownerId, manifest.profile?.id);
 
   await deleteByIds(admin, 'zelo_order_items', manifest.orderItemIds);
   await deleteByField(admin, 'zelo_order_events', 'order_id', manifest.orderIds);
@@ -605,11 +608,8 @@ export async function cleanupTestTenant(manifest = readTestTenantManifest()) {
   await deleteByIds(admin, 'subcategorias', manifest.subcategoryIds);
   await deleteByIds(admin, 'categorias', manifest.categoryIds);
 
-  if (ownerId) {
-    await throwOnError('cleanup access users', await admin.from('access_users').delete().eq('owner_user_id', ownerId));
-    await throwOnError('cleanup access roles', await admin.from('access_roles').delete().eq('owner_user_id', ownerId));
-    await throwOnError('cleanup access settings', await admin.from('access_settings').delete().eq('owner_user_id', ownerId));
-  }
+  await deleteByIds(admin, 'access_users', Object.values(manifest.access?.users || {}).map((user) => user.id));
+  await deleteByIds(admin, 'access_roles', Object.values(manifest.access?.roleIds || {}));
 
   if (process.env.E2E_DELETE_TEST_USERS !== 'false') {
     for (const user of Object.values(manifest.access?.users || {})) {

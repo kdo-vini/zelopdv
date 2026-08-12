@@ -1,5 +1,12 @@
 # Fixes Progress
 
+- [x] FX-E2E-DEDICATED-01 (2026-08-12) - a conta informada pelo usuario foi
+  validada como tenant dedicado permanente. O setup/teardown remoto passou
+  2/2; o fixture agora aguarda a hidratacao do login, trata a caixa aberta ja
+  existente e limpa apenas IDs do manifesto, sem apagar historico preexistente.
+  A suite completa de 110 testes foi tentada, mas revelou falhas preexistentes
+  de selectors/produtos hard-coded e nao foi alterada neste escopo.
+
 - [x] FX-BILLING-WEBHOOK-RELIABILITY-01 (2026-08-12) — findings confirmados:
   Stripe marcava o evento antes do efeito e engolia falhas; AbacatePay
   descartava retries de eventos `received`/`failed` e confirmava como `ignored`

@@ -13,6 +13,16 @@
   o smoke transacional pós-apply confirmou liquidação idempotente e terminou
   com rollback.
 
+- E2E de producao (2026-08-12): a conta informada pelo usuario foi designada
+  como tenant dedicado permanente, sem credenciais persistidas no repositorio.
+  O setup/teardown Playwright remoto passou 2/2, cobrindo owner e os tres
+  subusuarios. A tentativa da suite completa (110 testes) avancou para os
+  cenarios, mas encontrou falhas preexistentes do proprio E2E (seletor CSS
+  invalido e produto hard-coded ausente); esses cenarios ficaram deliberadamente
+  fora deste PR. O fixture foi corrigido para respeitar a restricao de uma
+  caixa aberta, evitar corrida de hidratacao no login e limpar apenas IDs do
+  manifesto, preservando historico preexistente.
+
 - P0 security containment (2026-08-12): a migration forward-only foi preparada
   em `supabase/migrations/20260812150000_p0_security_containment.sql` após
   revalidação do schema remoto. Ela remove grants de cliente nas views
