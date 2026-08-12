@@ -1,5 +1,17 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — extensoes de catalogo ZeloMenu (2026-08-12): a
+  revalidacao remota confirmou que um subusuario sem `produtos.gerenciar`
+  conseguia alterar grupos/opcoes de modificadores, vinculos opcao-produto e
+  publicacoes pelo Data API. A migration forward-only
+  `20260813020000_catalog_extensions_rbac.sql` exige a capability nas escritas,
+  preserva os checks de ownership dos pais, as leituras do cache POS, grants,
+  service-role e o fluxo existente de produto. Snapshot:
+  `docs/operations/CATALOG-EXTENSIONS-RBAC-SNAPSHOT-2026-08-12.md`.
+  `npm test` e `npm run check` ficaram verdes. O E2E de autorizacao executou o
+  setup e quatro cenarios; um cenario antigo de convite continua vermelho por
+  esperar o seletor inexistente `#invite-role`, sem relacao com esta migration.
+
 - RBAC incremental — leitura de fechamentos de caixa (2026-08-12): a
   revalidação remota confirmou que um subusuário sem `relatorios.ver` ainda
   conseguia ler `caixa_fechamentos` diretamente pelo Data API, apesar do gate

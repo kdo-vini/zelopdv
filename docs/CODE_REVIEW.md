@@ -5,6 +5,16 @@
 
 ## Findings
 
+### Update 2026-08-12 - enforcement de escritas das extensoes de catalogo
+
+O finding foi confirmado em producao: as policies owner-scoped das tabelas de
+grupos/opcoes de modificadores, vinculos opcao-produto e publicacoes do
+ZeloMenu nao consultavam `produtos.gerenciar`. A migration
+`20260813020000_catalog_extensions_rbac.sql` exige a capability nas escritas,
+mantem os checks de ownership dos pais e deixa SELECT, grants, service-role,
+cache do PDV e consumidores de produto inalterados. O snapshot documenta o
+blast radius e a matriz owner/subusuario/super-admin/anon/service-role.
+
 ### Update 2026-08-12 - enforcement de leitura do histórico de fechamentos
 
 O finding foi confirmado em produção: `/relatorios` bloqueava o subusuário sem

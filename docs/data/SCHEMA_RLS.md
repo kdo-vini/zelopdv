@@ -107,6 +107,15 @@ Estado produção em 2026-06-23: aplicada no Supabase real como `zelomenu_public
 - As tabelas novas incluem grants explicitos mínimos (`select`, `insert`, `update`, `delete`) para `authenticated`/`service_role` e revogam `anon`, porque RLS sozinho nao deve ser assumido como permissao de acesso ao PostgREST.
 - Verificação pós-rollout: RLS ligado nas 3 tabelas, 4 policies por tabela, constraints/FKs/índices presentes, nenhum grant para `anon` e chave pública bloqueada para acesso anônimo.
 
+## ZeloMenu catalog write capabilities
+
+- Desde `20260813020000_catalog_extensions_rbac.sql`, INSERT/UPDATE/DELETE
+  de `zelomenu_modifier_groups`, `zelomenu_modifier_options`,
+  `zelomenu_modifier_option_products` e `zelomenu_product_publications`
+  tambem exigem `produtos.gerenciar` para subusuarios.
+- Owner, service-role e SELECT owner-scoped permanecem preservados; o cache
+  do PDV continua lendo a configuracao do tenant.
+
 ## ZeloMenu table capabilities
 
 - `public.zelomenu_table_capabilities` e uma tabela server-owned para capacidades temporarias de mesa.

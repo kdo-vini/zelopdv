@@ -14,6 +14,8 @@
 
 ## Fontes de codigo
 
+- Enforcement incremental das extensoes ZeloMenu: `supabase/migrations/20260813020000_catalog_extensions_rbac.sql`
+
 - Cliente: `src/lib/accessControl.js`
 - Servidor: `src/lib/server/accessControl.js`
 - Ativacao de convite: `src/routes/api/access/activate/+server.js`

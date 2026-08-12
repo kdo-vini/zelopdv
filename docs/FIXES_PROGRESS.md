@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-CATALOG-EXTENSIONS-RBAC-01 (2026-08-12) - finding confirmado em
+  producao: subusuarios sem `produtos.gerenciar` conseguiam escrever as
+  extensoes de catalogo do ZeloMenu por policies apenas owner-scoped. A
+  migration forward-only `20260813020000_catalog_extensions_rbac.sql` exige a
+  capability em INSERT/UPDATE/DELETE dos quatro agregados, preserva checks de
+  pais, SELECT, grants e service-role. Smoke remoto cobriu owner, subusuarios
+  com/sem permissao, super-admin sem tenant, anon e service-role; nenhuma
+  fixture persistiu. Snapshot em
+  `docs/operations/CATALOG-EXTENSIONS-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-REPORT-SELECT-RBAC-01 (2026-08-12) - finding confirmado em produção:
   a policy owner-scoped de `caixa_fechamentos` permitia que subusuário sem
   `relatorios.ver` lesse o histórico financeiro via Data API. A migration
