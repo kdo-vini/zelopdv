@@ -42,6 +42,13 @@
   caixa aberta, evitar corrida de hidratacao no login e limpar apenas IDs do
   manifesto, preservando historico preexistente.
 
+- E2E focado pós-RBAC (2026-08-12): setup e cleanup do tenant dedicado passaram,
+  mas o cenário de Gerente que esperava redirecionamento de `/assinatura`
+  falhou no servidor local. O dev server registrou `SUPABASE_SERVICE_ROLE_KEY`
+  ausente e 500 em `/api/access/audit-login`; isso impede usar esse resultado
+  como regressão da policy, já coberta pelo smoke SQL de produção. Não foi
+  alterado código para mascarar a falha de ambiente.
+
 - P0 security containment (2026-08-12): a migration forward-only foi preparada
   em `supabase/migrations/20260812150000_p0_security_containment.sql` após
   revalidação do schema remoto. Ela remove grants de cliente nas views
