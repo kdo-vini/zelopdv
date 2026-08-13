@@ -1,5 +1,14 @@
 # Fixes Progress
 
+- [x] FX-VENDAS-TAXAS-SELECT-RBAC-01 (2026-08-13) - finding confirmado em
+  produção: subusuário sem `caixa.ver`/`relatorios.ver` lia taxas de plataforma
+  owner-scoped pela Data API. A migration forward-only
+  `20260813070000_vendas_taxas_select_rbac.sql` exige uma das duas
+  capabilities e remove o grant anônimo; owner, subusuários autorizados,
+  super-admin fora do tenant e service-role foram verificados com linha
+  transacional revertida. Snapshot:
+  `docs/operations/VENDAS-TAXAS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - [x] FX-ADMIN-PIN-COLUMN-01 (2026-08-13) - finding confirmado em produção:
   `empresa_perfil` tinha SELECT de tabela para clientes, então um subusuário
   conseguia pedir `pin_admin` pela Data API. A migration forward-only

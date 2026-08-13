@@ -5,6 +5,18 @@
 
 ## Findings
 
+### Update 2026-08-13 - enforcement de leitura das taxas de plataforma
+
+O finding foi confirmado em produção: `vendas_taxas_plataforma` era owner-scoped
+apenas, e um subusuário sem `caixa.ver`/`relatorios.ver` conseguia ler uma taxa
+pela Data API. Os únicos consumidores browser são `/relatorios` e
+`/gestao/caixa`, que correspondem às duas capabilities; o motor de inteligência
+usa service-role. A migration
+`20260813070000_vendas_taxas_select_rbac.sql` exige `caixa.ver` ou
+`relatorios.ver` e revoga o grant anônimo, sem tocar nas tabelas de venda ou nas
+policies de escrita. Snapshot:
+`docs/operations/VENDAS-TAXAS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
+
 ### Update 2026-08-13 - containment de `empresa_perfil.pin_admin`
 
 O residual do finding do `AdminLock` foi confirmado em produção: embora a

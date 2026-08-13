@@ -243,6 +243,15 @@ Conclusao operacional:
 
 ## Pessoas
 
+## Taxas de plataforma
+
+- `vendas_taxas_plataforma` permanece owner-scoped para o titular, mas SELECT
+  de subusuários exige `caixa.ver` ou `relatorios.ver`, conforme a migration
+  `20260813070000_vendas_taxas_select_rbac.sql`.
+- `/relatorios` e `/gestao/caixa` são os consumidores browser legítimos; o
+  motor de inteligência usa service-role. INSERT/DELETE e as tabelas de venda
+  não foram alterados nesta fatia.
+
 - `pessoas` continua com SELECT owner-scoped porque `/app`, Mesas, Fichário,
   Relatórios e o fluxo de fiado precisam ler nomes/saldos em operação normal.
 - A migration `20260812202400_pessoas_role_rbac.sql` exige

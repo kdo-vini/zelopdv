@@ -1,5 +1,14 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — taxas de plataforma (2026-08-13): a revalidação remota
+  confirmou que um subusuário sem `caixa.ver`/`relatorios.ver` lia
+  `vendas_taxas_plataforma` pela Data API. A migration forward-only
+  `20260813070000_vendas_taxas_select_rbac.sql` exige uma dessas capabilities,
+  revoga SELECT anônimo e mantém writes, tabelas de venda, owners,
+  super-admins e service-role. O relatório e a tela de Caixa continuam com o
+  caminho legítimo; snapshot em
+  `docs/operations/VENDAS-TAXAS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - Security containment — `empresa_perfil.pin_admin` (2026-08-13): a
   revalidação remota mostrou que o grant de tabela permitia a um subusuário
   pedir o PIN diretamente pela Data API, apesar do fluxo normal já usar o
