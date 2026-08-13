@@ -20,6 +20,8 @@
   `supabase/migrations/20260813034000_fiado_ledger_select_rbac.sql`
 - Integridade tenant-scoped do log de auditoria:
   `supabase/migrations/20260813041000_access_audit_logs_tenant_guard.sql`
+- Enforcement incremental de leitura de Mesas:
+  `supabase/migrations/20260813050000_mesas_select_rbac.sql`
 
 - Cliente: `src/lib/accessControl.js`
 - Servidor: `src/lib/server/accessControl.js`
@@ -96,7 +98,9 @@
 
 1. guarda resolve o owner efetivo
 2. RLS entrega dados da empresa dona; em Despesas, as policies exigem a permissão do cargo, e no
-   catálogo base as mutações exigem `produtos.gerenciar`
+   catálogo base as mutações exigem `produtos.gerenciar`; as leituras privadas
+   de Mesas exigem `mesas.acessar` (o resumo de comandas do relatório aceita
+   `relatorios.ver`)
 3. UI decide o que mostrar com base no JSON de permissoes
 4. em acoes auditadas, `operator_user_id` e registrado
 

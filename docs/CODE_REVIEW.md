@@ -5,6 +5,19 @@
 
 ## Findings
 
+### Update 2026-08-13 - enforcement de leitura das tabelas de Mesas
+
+O finding foi confirmado em produção: as policies SELECT de `mesas`,
+`comandas`, `comanda_itens`, `comanda_pagamentos` e
+`comanda_pagamento_itens` exigiam somente o owner efetivo. Um subusuário ativo
+sem `mesas.acessar` conseguia ler todas essas linhas pela Data API. Os
+consumidores browser são as telas de Mesas; `/relatorios` usa somente o resumo
+de comandas e mantém `relatorios.ver`, enquanto `/api/mesas/cozinha` usa
+service-role. A migration `20260813050000_mesas_select_rbac.sql` adiciona o
+capability gate, move a policy de pagamentos parciais para `authenticated` e
+revoga grants anônimos sem consumidor. A matriz e o rollback estão em
+`docs/operations/MESAS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
+
 ### Update 2026-08-13 - enforcement do Zelinho Gerente por relatorios
 
 O finding foi confirmado em produção: as policies owner-scoped de

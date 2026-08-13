@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-MESAS-SELECT-RBAC-01 (2026-08-13) - finding confirmado em
+  produção: subusuário sem `mesas.acessar` lia mesas, comandas, itens e
+  pagamentos parciais owner-scoped pela Data API. A migration forward-only
+  `20260813050000_mesas_select_rbac.sql` exige a capability nas leituras
+  privadas, preserva `relatorios.ver` somente para o resumo de comandas e
+  remove grants anônimos sem consumidor. Smoke remoto cobriu owner,
+  subusuário sem/com permissão, report-only, super-admin e service-role, sem
+  persistência. Snapshot em
+  `docs/operations/MESAS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - [x] FX-GERENTE-REPORTS-RBAC-01 (2026-08-13) - finding confirmado em
   produção: subusuário sem `relatorios.ver` lia `business_signals`/
   `business_daily_snapshots` e atualizava `read_at` pela Data API. A migration

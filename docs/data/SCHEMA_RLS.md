@@ -176,8 +176,14 @@ Conclusao operacional:
 
 ## Mesas: pagamentos parciais por capacidade
 
-- `comanda_pagamentos` e `comanda_pagamento_itens` continuam owner-scoped para
-  SELECT.
+- SELECT de `mesas`, `comandas`, `comanda_itens`,
+  `comanda_pagamentos` e `comanda_pagamento_itens` exige `mesas.acessar`
+  para subusuários. `comandas` também aceita `relatorios.ver` somente para o
+  resumo de comandas fechadas usado pelo relatório. Owners mantêm bypass,
+  `service_role` permanece fora do RLS e grants de `anon` foram revogados.
+
+- As mutações de `comanda_pagamentos` e `comanda_pagamento_itens` continuam
+  exigindo `mesas.acessar` e capacidade de recebimento.
 - INSERT/UPDATE/DELETE exigem `mesas.acessar` e `pdv.receber` ou
   `pedidos.receber` para subusuários; o owner mantém o bypass da função
   `fiado_actor_can`.

@@ -1,5 +1,16 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — leitura de Mesas (2026-08-13): a revalidação remota
+  confirmou que um subusuário sem `mesas.acessar` conseguia ler mesas,
+  comandas, itens e pagamentos parciais da empresa pela Data API. A migration
+  forward-only `20260813050000_mesas_select_rbac.sql` exige a capability nas
+  leituras privadas, mantém `relatorios.ver` somente para o resumo de
+  comandas usado por `/relatorios` e revoga grants anônimos sem consumidor.
+  Owner, subusuário autorizado, report-only, super-admin fora do tenant e
+  service-role foram verificados em smoke transacional; a fixture e as
+  permissões temporárias foram revertidas. Snapshot:
+  `docs/operations/MESAS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - RBAC incremental — Zelinho Gerente (2026-08-13): a revalidação remota
   confirmou que as policies owner-scoped de `business_signals` e
   `business_daily_snapshots` deixavam um subusuário sem `relatorios.ver` ler
