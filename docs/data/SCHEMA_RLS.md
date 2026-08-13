@@ -306,7 +306,11 @@ Migration base: `.ai/migrations/canonical_online_orders_2026_07_12.sql`; o contr
 - `zelo_orders` e `zelo_order_items` sao a fonte canonica para pedidos online de ZeloMenu/ZeloChat e para os bilhetes `source='mesa'`; a rota QR `table_order` e o envio da comanda convergem nesse agregado.
 - O item da comanda enviado pelo PDV carrega `fulfillment.comandaItemId` e ja consumiu estoque no momento em que entrou na comanda; o QR publico nao carrega esse campo e consome estoque na transicao para `accepted`.
 - Criacao, transicao e fechamento passam pelas RPCs `create_zelo_order`, `transition_zelo_order` e `close_zelo_order`, com idempotencia e CAS por `revision`.
-- Usuarios autenticados podem ler o tenant do owner e executar transicoes; inserts/updates diretos sao revogados. Integracoes publicas criam via `service_role`.
+- Owner e subusuarios ativos com `pedidos.acessar` ou `pedidos.cozinha` podem
+  ler orders/items/events do tenant; papéis apenas de recebimento/cancelamento
+  não recebem leitura direta. Inserts/updates diretos continuam revogados e
+  integrações públicas criam via `service_role`. Enforcement aplicado pela
+  migration `20260813094000_canonical_orders_select_rbac.sql`.
 - Para subusuarios, as RPCs tambem consultam `access_users`/`access_roles.permissions`: acesso, cozinha, recebimento e cancelamento exigem suas respectivas chaves `pedidos.*`; owner e `service_role` mantem bypass deliberado.
 - `zelo_order_events` preserva a auditoria e `zelo_order_outbox` desacopla notificacao/impressao com retry.
 - O cutover preservou os IDs do motor canônico; as tabelas legadas `pedidos`/`pedido_itens` foram removidas depois do snapshot sanitizado e da validação do DDL, conforme decisão registrada no handoff.

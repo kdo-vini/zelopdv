@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-CANONICAL-ORDERS-SELECT-RBAC-01 (2026-08-13) - produção confirmou
+  que qualquer subusuário ativo do tenant lia customer/payment, items e events
+  do motor canônico sem `pedidos.acessar`/`pedidos.cozinha`. A migration
+  forward-only `20260813094000_canonical_orders_select_rbac.sql` restringe as
+  três policies SELECT a owner ou papel de fila/cozinha, preserva RPCs de ação,
+  grants, service-role e Realtime. Matriz linked, Data API nested, Realtime,
+  benchmark, suíte 654/654 e typecheck passaram; zero fixtures residuais.
+  Evidência/rollback em
+  `docs/operations/CANONICAL-ORDERS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - [x] FX-FIADO-ESTORNO-RBAC-01 (2026-08-13) - finding reproduzido em
   produção: um subusuário ativo sem `pdv.cancelar` conseguia chamar diretamente
   `fiado_estornar_venda(bigint)`, reduzir `pessoas.saldo_fiado` e inserir o

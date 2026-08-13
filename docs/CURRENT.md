@@ -12,15 +12,19 @@
   a migration `20260813093000` exige `pdv.cancelar` dentro de
   `fiado_estornar_venda`, após o probe live provar que um papel sem a capability
   conseguia alterar saldo/ledger; owner, papel autorizado, negados, super-admin,
-  anon e service-role passaram e não restou fixture. Restam, nesta ordem, dois
-  candidatos RBAC confirmados no código/baseline e ainda sujeitos à revalidação
-  obrigatória em produção,
-  verificação operacional do sweeper de
-  deleção, mutações críticas confirmadas do ZeloAdmin e auditoria final. Request
+  anon e service-role passaram e não restou fixture. A leitura dos pedidos
+  canônicos também foi confirmada e contida pela migration `20260813094000`:
+  owner e papéis `pedidos.acessar`/`pedidos.cozinha` mantêm orders/items/events,
+  papéis sem leitura foram bloqueados e suas RPCs de ação continuaram válidas.
+  Matriz SQL, Data API nested, Realtime, benchmark e zero resíduo passaram.
+  Resta um candidato RBAC no boundary server-side do assistant, ainda sujeito
+  à revalidação obrigatória em produção, seguido da verificação operacional do
+  sweeper de deleção, mutações críticas confirmadas do ZeloAdmin e auditoria
+  final. Request
   IDs, structured logging, rate limiting compartilhado, decomposição de
   componentes, dependency cleanup e redesign de confirmação por IA estão
-  explicitamente fora da meta. O próximo bloco RBAC finito é a leitura dos
-  pedidos canônicos, seguida do boundary server-side do assistant. A matriz
+  explicitamente fora da meta. O próximo bloco RBAC finito é o boundary
+  server-side do assistant. A matriz
   31/31 e os probes pendentes estão
   em `docs/operations/RBAC-CAPABILITY-INVENTORY-2026-08-13.md`. Evidência da reconciliação:
   `supabase/baselines/20260813091000/README.md`. O lint de banco continua
@@ -30,6 +34,19 @@
   transformações client/server, mas o adapter Vercel terminou vermelho neste
   Windows com `EPERM` ao criar o symlink `.vercel/output/functions/index.func`;
   é uma limitação local de permissão de symlink e permanece registrada.
+
+- RBAC incremental — leitura de pedidos canônicos (2026-08-13): produção
+  confirmou que as policies owner-scoped de `zelo_orders`,
+  `zelo_order_items` e `zelo_order_events` deixavam qualquer subusuário ativo
+  do tenant ler customer/payment/itens/auditoria. A migration forward-only
+  `20260813094000_canonical_orders_select_rbac.sql` preserva owner e restringe
+  leitura browser a `pedidos.acessar` ou `pedidos.cozinha`; papéis apenas de
+  recebimento/cancelamento continuam executando suas RPCs sem leitura direta.
+  Grants, funções, publication Realtime e writes não mudaram. Matriz linked,
+  Data API nested e Realtime passaram para owner/acesso/cozinha e negaram o
+  action-only; benchmark de 1.000 orders passou de 1,438 ms para 1,852 ms com
+  InitPlan. Suíte 654/654 e typecheck 0 erros/95 warnings conhecidos. Snapshot:
+  `docs/operations/CANONICAL-ORDERS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
 
 - RBAC incremental — histórico de vendas (2026-08-13): a revalidação remota
   confirmou que um cargo só de Pedidos lia `vendas` e `vendas_itens`. A

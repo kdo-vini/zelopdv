@@ -121,9 +121,13 @@ no próprio inventário.
 Primeira fatia encerrada em produção: o bypass de
 `fiado_estornar_venda(bigint)` foi reproduzido e contido pela migration
 `20260813093000`, com matriz completa e rollback em
-`docs/operations/FIADO-ESTORNO-RBAC-SNAPSHOT-2026-08-13.md`. Restam os dois
-candidatos de leitura de pedidos canônicos e boundary server-side do assistant;
-eles continuam sujeitos à mesma regra de confirmação antes de mudar produção.
+`docs/operations/FIADO-ESTORNO-RBAC-SNAPSHOT-2026-08-13.md`. A segunda fatia
+também foi encerrada: `20260813094000` restringe orders/items/events canônicos
+a owner, `pedidos.acessar` ou `pedidos.cozinha`, preservando actions, Realtime e
+service-role; evidência em
+`docs/operations/CANONICAL-ORDERS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`. Resta o
+candidato server-side do assistant, sujeito à mesma regra de confirmação antes
+de mudar produção.
 
 Já concluído e rastreado em `docs/FIXES_PROGRESS.md`: Despesas, catálogo,
 estoque, Pessoas, `access_users`, Caixa, Mesas, vendas, desconto, relatórios,
