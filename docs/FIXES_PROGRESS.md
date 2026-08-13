@@ -1,5 +1,14 @@
 # Fixes Progress
 
+- [x] FX-AUDIT-LOG-TENANT-RBAC-01 (2026-08-13) - finding confirmado em
+  produção: subusuário conseguia escolher outro `owner_user_id` ao inserir
+  `access_audit_logs`, forjando histórico cross-tenant. A migration
+  forward-only `20260813041000_access_audit_logs_tenant_guard.sql` exige o
+  operador autenticado e o owner resolvido por `get_owner_user_id`, preserva
+  o write same-tenant, service-role, leituras e grants. Smoke remoto
+  transacional cobriu forged owner e same-tenant; snapshot em
+  `docs/operations/ACCESS-AUDIT-LOGS-TENANT-GUARD-SNAPSHOT-2026-08-13.md`.
+
 - [x] FX-FIADO-SELECT-RBAC-01 (2026-08-13) - finding confirmado em produção:
   Caixa/Atendente sem `fiado.visualizar` liam o ledger detalhado por Data API,
   apesar do gate de navegação do Fichário. A migration forward-only

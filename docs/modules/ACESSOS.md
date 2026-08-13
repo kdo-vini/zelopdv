@@ -18,6 +18,8 @@
 - Enforcement incremental de desconto POS: `supabase/migrations/20260813030000_discount_rbac.sql`
 - Enforcement incremental de leitura do ledger de fiado:
   `supabase/migrations/20260813034000_fiado_ledger_select_rbac.sql`
+- Integridade tenant-scoped do log de auditoria:
+  `supabase/migrations/20260813041000_access_audit_logs_tenant_guard.sql`
 
 - Cliente: `src/lib/accessControl.js`
 - Servidor: `src/lib/server/accessControl.js`

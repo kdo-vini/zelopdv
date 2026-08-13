@@ -5,6 +5,18 @@
 
 ## Findings
 
+### Update 2026-08-13 - integridade tenant-scoped de `access_audit_logs`
+
+O finding foi confirmado em producao: um subusuario conseguia inserir um
+evento com `operator_user_id = auth.uid()` mas escolher `owner_user_id` de
+outra empresa, forjando historico cross-tenant. O unico consumidor browser e
+`logAuditAction` em `src/lib/accessControl.js`, que ja passa o owner resolvido;
+os writes server-side usam service-role. A migration
+`20260813041000_access_audit_logs_tenant_guard.sql` exige simultaneamente o
+operador autenticado e `get_owner_user_id(auth.uid())`, preservando o write
+legitimo no proprio tenant, service-role, leituras e grants. Snapshot e matriz:
+`docs/operations/ACCESS-AUDIT-LOGS-TENANT-GUARD-SNAPSHOT-2026-08-13.md`.
+
 ### Update 2026-08-13 - enforcement da leitura do ledger de fiado
 
 O finding foi confirmado em produção: a policy

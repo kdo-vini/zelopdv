@@ -42,7 +42,7 @@ Padrao recorrente:
 | Area | Tabelas / funcoes | Observacao |
 | --- | --- | --- |
 | Billing | `subscriptions`, `billing_payments`, `webhook_events_processed`, `billing_webhook_events` | acesso final depende de `subscriptions` |
-| Acessos | `access_users`, `access_roles`, `access_settings`, `access_audit_logs` | papeis e permissoes vivem em JSON |
+| Acessos | `access_users`, `access_roles`, `access_settings`, `access_audit_logs` | papéis e permissões vivem em JSON; writes de auditoria client-side exigem operador autenticado e owner resolvido |
 | Operacao | `vendas*`, `caixas*`, `pessoas`, `fiado_lancamentos`, `produtos`, `mesas`, `comandas*`, `pedidos*` | escopo por owner via RLS |
 | ZeloMenu | `zelomenu_product_publications`, `zelomenu_modifier_groups`, `zelomenu_modifier_options` | camada PDV-owned de publicação/modificadores, escopo por owner via RLS |
 | Perfil | `empresa_perfil` | contem dados operacionais e `pin_admin` |

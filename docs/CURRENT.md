@@ -1,5 +1,20 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — integridade do `access_audit_logs` (2026-08-13): a
+  revalidação remota reproduziu que um subusuário podia forjar um evento sob o
+  `owner_user_id` de outra empresa, pois a policy aceitava apenas
+  `operator_user_id = auth.uid()` como alternativa. A migration forward-only
+  `20260813041000_access_audit_logs_tenant_guard.sql` exige operador autenticado
+  e owner resolvido pelo helper existente, preservando o helper browser,
+  writes service-role, leituras, grants e dados existentes. O smoke
+  cross-tenant/same-tenant foi transacional e revertido. Snapshot:
+  `docs/operations/ACCESS-AUDIT-LOGS-TENANT-GUARD-SNAPSHOT-2026-08-13.md`.
+  O setup E2E com `kdo.vini@gmail.com` resetou e limpou o tenant dedicado,
+  mas o harness local voltou a ficar em `/login` após renderizar o app e
+  excedeu o timeout de navegação; isso é a mesma flakiness de ambiente já
+  registrada, não evidência contra a policy. A matriz SQL de produção é a
+  validação autoritativa desta fatia.
+
 - RBAC incremental — leitura do ledger de fiado (2026-08-13): a revalidação
   remota reproduziu que Caixa/Atendente sem `fiado.visualizar` conseguiam ler
   `fiado_lancamentos` diretamente pelo Data API, embora a navegação escondesse
