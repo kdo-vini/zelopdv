@@ -1,5 +1,13 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — desconto POS (2026-08-12): a revalidacao remota confirmou
+  que `pdv.desconto` era apenas gate de UI: um subusuario com venda/recebimento
+  conseguia inserir venda com desconto positivo pelo Data API. A migration
+  forward-only `20260813030000_discount_rbac.sql` adiciona trigger estreito
+  para INSERT/UPDATE de desconto, preserva desconto zero, fechamento de Mesa,
+  owner e service-role. Snapshot:
+  `docs/operations/DISCOUNT-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - RBAC incremental — extensoes de catalogo ZeloMenu (2026-08-12): a
   revalidacao remota confirmou que um subusuario sem `produtos.gerenciar`
   conseguia alterar grupos/opcoes de modificadores, vinculos opcao-produto e

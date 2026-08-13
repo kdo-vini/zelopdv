@@ -15,6 +15,7 @@
 ## Fontes de codigo
 
 - Enforcement incremental das extensoes ZeloMenu: `supabase/migrations/20260813020000_catalog_extensions_rbac.sql`
+- Enforcement incremental de desconto POS: `supabase/migrations/20260813030000_discount_rbac.sql`
 
 - Cliente: `src/lib/accessControl.js`
 - Servidor: `src/lib/server/accessControl.js`

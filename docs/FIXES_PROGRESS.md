@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-DISCOUNT-RBAC-01 (2026-08-12) - finding confirmado em producao:
+  subusuario com `pdv.vender`/`pdv.receber`, mas sem `pdv.desconto`, conseguia
+  inserir venda com desconto positivo diretamente. A migration forward-only
+  `20260813030000_discount_rbac.sql` e o hardening forward-only
+  `20260813031000_discount_rbac_update_hardening.sql` exigem a capability no
+  trigger de INSERT/UPDATE do desconto, preservam desconto zero, Mesa, owner e
+  service-role. Matriz remota confirmou owner, subusuarios, Mesa e service-role;
+  nenhuma fixture persistiu. Snapshot em
+  `docs/operations/DISCOUNT-RBAC-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-CATALOG-EXTENSIONS-RBAC-01 (2026-08-12) - finding confirmado em
   producao: subusuarios sem `produtos.gerenciar` conseguiam escrever as
   extensoes de catalogo do ZeloMenu por policies apenas owner-scoped. A

@@ -137,6 +137,10 @@ Conclusao operacional:
 
 ## Vendas: criação, cancelamento e mutações pós-criação
 
+- Desde `20260813030000_discount_rbac.sql`, INSERT/UPDATE de `valor_desconto`
+  positivo exigem `pdv.desconto` no actor efetivo. Desconto zero continua
+  compatível; fechamento direto de Mesa continua usando `mesas.fechar`.
+
 - `vendas_insert_rbac_guard` exige `pdv.vender` e `pdv.receber` para o
   caminho POS/offline (`criar_venda_completa`) e para INSERTs diretos
   não-Mesa.

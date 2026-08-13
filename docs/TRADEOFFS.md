@@ -13,6 +13,10 @@ INSERT/UPDATE/DELETE; SELECT, cache do PDV, billing, offline e service-role
 continuam fora desta mudanca. Itens arquiteturais P2/P3 continuam backlog e
 nao sao pretexto para refatoracoes amplas.
 
+O desconto POS segue a mesma regra de contenção: `pdv.desconto` é validado no
+trigger somente quando há desconto positivo; Mesa e desconto zero preservam o
+contrato operacional existente.
+
 Todo sistema faz *trading*. Para entregar valor rápido e barato, a gente escolhe deixar algumas coisas
 na mesa. Este arquivo registra **o que estamos deixando na mesa de propósito** (tradeoffs aceitos) e
 **o que sabemos que está torto mas ainda não pagamos** (dívida técnica conhecida).

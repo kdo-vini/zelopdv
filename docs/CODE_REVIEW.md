@@ -5,6 +5,15 @@
 
 ## Findings
 
+### Update 2026-08-12 - enforcement de desconto no POS
+
+O finding foi confirmado em producao: `pdv.desconto` era aplicado somente no
+browser. Um subusuario com `pdv.vender` e `pdv.receber`, sem a capacidade de
+desconto, conseguiu inserir uma venda positiva via Data API. A migration
+`20260813030000_discount_rbac.sql` adiciona trigger estreito para desconto
+positivo em INSERT/UPDATE, preserva desconto zero, fechamento direto de Mesa,
+owner e service-role, sem tocar no contrato de billing/offline.
+
 ### Update 2026-08-12 - enforcement de escritas das extensoes de catalogo
 
 O finding foi confirmado em producao: as policies owner-scoped das tabelas de
