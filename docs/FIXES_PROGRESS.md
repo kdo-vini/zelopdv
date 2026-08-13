@@ -1,5 +1,21 @@
 # Fixes Progress
 
+- [x] FX-SECURITY-DEFINER-RPC-01 (2026-08-13) - finding confirmado em
+  producao: `saldo_caixa(bigint)` e `get_user_id_by_email(text)` eram
+  `SECURITY DEFINER`, executaveis por anon/autenticados e sem consumidor no
+  repositorio; o primeiro calculava saldo por id arbitrario e o segundo
+  consultava `auth.users`. A migration forward-only
+  `20260813033000_rpc_security_definer_containment.sql` revoga EXECUTE de
+  `public`/`anon`/`authenticated` e preserva `service_role`. O mesmo finding
+  mostrou `add_empresa_membro_por_email(integer,text,text)` em uso pelo browser;
+  somente anon/public foram removidos e o grant autenticado/guard interno
+  ficaram intactos. Snapshot em
+  `docs/operations/RPC-SECURITY-DEFINER-CONTAINMENT-SNAPSHOT-2026-08-13.md`.
+  Smoke remoto confirmou anon negado nos tres, owner/subuser/super-admin
+  negados nos dois server-only e service-role executando os dois. Nao havia
+  empresas/empresa_usuarios em producao para um owner positivo do fluxo legado;
+  nenhum dado foi criado.
+
 - [x] FX-BILLING-PAYMENTS-INSERT-01 (2026-08-13) - finding confirmado em
   producao: `billing_payments_self_insert` permitia INSERT arbitrario de uma
   cobranca para o proprio usuario por cliente autenticado, sem consumidor

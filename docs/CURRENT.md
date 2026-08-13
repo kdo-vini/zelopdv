@@ -1,5 +1,30 @@
 # ZeloPDV — Foco atual
 
+- Contencao incremental — RPCs SECURITY DEFINER (2026-08-13): a
+  revalidacao remota confirmou que `saldo_caixa(bigint)` podia ser executada
+  por `anon`/`authenticated` e calculava saldo de qualquer caixa sem guard de
+  tenant; `get_user_id_by_email(text)` tambem retornava UUIDs de `auth.users`
+  sem consumidor no repositorio. A migration forward-only
+  `20260813033000_rpc_security_definer_containment.sql` remove EXECUTE de
+  `public`/`anon`/`authenticated` nesses dois RPCs e preserva `service_role`.
+  O RPC `add_empresa_membro_por_email(integer,text,text)` tinha consumidor
+  browser identificado, entao somente `public`/`anon` foram removidos; o
+  grant autenticado, a definicao e o guard owner/admin permanecem. Snapshot:
+  `docs/operations/RPC-SECURITY-DEFINER-CONTAINMENT-SNAPSHOT-2026-08-13.md`.
+  A producao confirmou anon negado nos tres, authenticated negado nos dois
+  server-only e service-role executando os dois sem persistencia. O banco nao
+  possui linhas em `empresas`/`empresa_usuarios`, portanto nao foi possivel
+  executar um caso owner positivo do legado de membership sem fabricar uma
+  fixture; o grant autenticado e a funcao foram preservados sem alteracao.
+
+- Validacao da contenção RPC (2026-08-13): `npm test` passou com 96 arquivos e
+  619 testes; `npm run check` passou com 0 erros e 95 avisos preexistentes.
+  `npx supabase db lint --linked` manteve somente os dois erros conhecidos de
+  `save_zelomenu_delivery_settings`/`criar_venda_completa`, e o advisor de
+  seguranca nao reportou mais execucao anonica de `saldo_caixa` ou
+  `get_user_id_by_email`. O setup E2E com a conta permanente informada pelo
+  usuario passou 2/2 (autenticacao + cleanup), sem persistir senha.
+
 - Contencao incremental — `billing_payments` server-only (2026-08-13): a
   revalidacao remota confirmou que a policy `billing_payments_self_insert`
   permitia que qualquer autenticado criasse uma linha de cobranca arbitraria

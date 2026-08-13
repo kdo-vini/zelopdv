@@ -5,6 +5,19 @@
 
 ## Findings
 
+### Update 2026-08-13 - containment de RPCs SECURITY DEFINER
+
+O finding foi confirmado no schema de producao: `saldo_caixa(bigint)` tinha
+EXECUTE para anon/autenticados e calculava saldo de qualquer `caixa` sem
+ownership; `get_user_id_by_email(text)` retornava UUID de `auth.users` por
+email. Nenhum consumidor foi encontrado no repositorio, e o app calcula o
+saldo localmente. A migration `20260813033000_rpc_security_definer_containment.sql`
+remove EXECUTE client-side dos dois e preserva somente `service_role`, sem
+alterar definicoes. `add_empresa_membro_por_email(integer,text,text)` continua
+com EXECUTE autenticado porque `src/routes/gestao/empresas/+page.svelte` o usa;
+somente anon/public foram removidos. Blast radius, matriz e rollback estao em
+`docs/operations/RPC-SECURITY-DEFINER-CONTAINMENT-SNAPSHOT-2026-08-13.md`.
+
 ### Update 2026-08-13 - billing_payments server-only
 
 O finding foi confirmado em producao: a policy
