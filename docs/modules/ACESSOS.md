@@ -70,6 +70,10 @@
 
 - `getServerAccessContext(userId)` resolve `isSubUser`, `ownerUserId`, `roleId` e `permissions`.
 - `resolveOwnerUserId(userId)` devolve o owner efetivo.
+- `/api/chat/assistant` usa `getServerAccessContext` e exige
+  `relatorios.ver === true` de subusuários antes de carregar contexto financeiro
+  com service-role; owner mantém bypass. O rail visual continua global e o
+  endpoint devolve 403 para papéis sem a capability.
 - Convites e seeds de cargo padrao usam `supabaseAdmin`.
 
 ## O que e forte e o que nao e

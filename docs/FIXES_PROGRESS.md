@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-ASSISTANT-SERVER-RBAC-01 (2026-08-13) - o assistant resolvia todo
+  subusuário ativo para o owner e lia dados financeiros/fiado/signals e expunha
+  a ferramenta de WhatsApp via service-role sem capability. Uso live agregado
+  encontrou zero chamadas de subusuário atual. O endpoint agora exige
+  `relatorios.ver: true` antes de qualquer leitura privilegiada, preservando
+  owner e papéis autorizados sem mudar UI/banco. TDD, 656/656 testes, typecheck
+  e revisão independente passaram. O 401 live preexistente inclusive para owner
+  está registrado separadamente. Evidência/rollback em
+  `docs/operations/ASSISTANT-SERVER-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - [x] FX-CANONICAL-ORDERS-SELECT-RBAC-01 (2026-08-13) - produção confirmou
   que qualquer subusuário ativo do tenant lia customer/payment, items e events
   do motor canônico sem `pedidos.acessar`/`pedidos.cozinha`. A migration

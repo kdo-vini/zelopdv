@@ -5,7 +5,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import OpenAI from 'openai';
 import { sendWhatsAppText, isWhatsAppConfigured } from '$lib/server/whatsapp';
 import { captureAiGeneration } from '$lib/server/posthog';
-import { resolveOwnerUserId } from '$lib/server/accessControl';
+import { getServerAccessContext } from '$lib/server/accessControl';
 import { buildSignalContextPrompt, getSignalContextForOwner } from '$lib/server/intelligence/signalContext';
 import { fetchExpenses, fetchVendas, fetchVendasItens, fetchVendasPagamentos } from '$lib/server/intelligence/fetchers';
 import { buildActiveSignalsContext, buildCatalogSalesContext, buildExpenseSummary, buildFinancialPeriods, buildMonthOverMonthContext, buildPeakHoursContext, buildRecentDaysContext, buildStockContext } from '$lib/server/assistant/businessContext';
@@ -464,7 +464,14 @@ export async function POST({ request }) {
     return json({ error: 'Mensagens inválidas.' }, { status: 400 });
   }
 
-  const ownerUserId = await resolveOwnerUserId(user.id);
+  const accessContext = await getServerAccessContext(user.id);
+  if (
+    accessContext.isSubUser &&
+    accessContext.permissions?.['relatorios.ver'] !== true
+  ) {
+    return json({ error: 'Você não tem permissão para usar o Zelinho.' }, { status: 403 });
+  }
+  const ownerUserId = accessContext.ownerUserId;
   const requestedScreenContext = rawScreenContext == null ? null : _parseScreenContext(rawScreenContext);
   if (rawScreenContext != null && !requestedScreenContext) {
     return json({ error: 'Contexto da tela invalido.' }, { status: 400 });

@@ -17,15 +17,15 @@
   owner e papéis `pedidos.acessar`/`pedidos.cozinha` mantêm orders/items/events,
   papéis sem leitura foram bloqueados e suas RPCs de ação continuaram válidas.
   Matriz SQL, Data API nested, Realtime, benchmark e zero resíduo passaram.
-  Resta um candidato RBAC no boundary server-side do assistant, ainda sujeito
-  à revalidação obrigatória em produção, seguido da verificação operacional do
-  sweeper de deleção, mutações críticas confirmadas do ZeloAdmin e auditoria
-  final. Request
+  O último boundary RBAC, no assistant, também foi verificado: nenhum uso
+  histórico foi atribuído a subusuário atual, e o endpoint agora exige
+  `relatorios.ver` antes de qualquer leitura financeira com service-role ou
+  ferramenta de WhatsApp. Owners e papéis autorizados permanecem. Restam a
+  verificação operacional do sweeper de deleção, mutações críticas confirmadas
+  do ZeloAdmin e auditoria final. Request
   IDs, structured logging, rate limiting compartilhado, decomposição de
   componentes, dependency cleanup e redesign de confirmação por IA estão
-  explicitamente fora da meta. O próximo bloco RBAC finito é o boundary
-  server-side do assistant. A matriz
-  31/31 e os probes pendentes estão
+  explicitamente fora da meta. A matriz RBAC 31/31 e a evidência de fechamento estão
   em `docs/operations/RBAC-CAPABILITY-INVENTORY-2026-08-13.md`. Evidência da reconciliação:
   `supabase/baselines/20260813091000/README.md`. O lint de banco continua
   reproduzindo dois findings preexistentes em `criar_venda_completa` e
@@ -34,6 +34,19 @@
   transformações client/server, mas o adapter Vercel terminou vermelho neste
   Windows com `EPERM` ao criar o symlink `.vercel/output/functions/index.func`;
   é uma limitação local de permissão de symlink e permanece registrada.
+
+- RBAC incremental — Zelinho assistant (2026-08-13): o endpoint autenticado
+  resolvia qualquer subusuário ativo para o owner e usava service-role para
+  vendas, despesas, caixa, fiado, signals e WhatsApp sem capability. O uso live
+  agregado mostrou 50 logs históricos, nenhum atribuível a subusuário atual;
+  existem 4 subusuários ativos, todos sem `relatorios.ver`. O endpoint agora
+  usa `getServerAccessContext` e exige o booleano estrito `relatorios.ver` antes
+  de qualquer leitura privilegiada. Owners e papéis autorizados passam; UI,
+  assinatura, prompts, rate limit e banco não mudaram. TDD RED→GREEN, 656/656
+  testes, typecheck 0 erros/95 warnings e revisão independente aprovados. O
+  probe HTTP live ficou bloqueado por um 401 preexistente inclusive para o JWT
+  válido do owner e permanece separado desta fatia. Snapshot:
+  `docs/operations/ASSISTANT-SERVER-RBAC-SNAPSHOT-2026-08-13.md`.
 
 - RBAC incremental — leitura de pedidos canônicos (2026-08-13): produção
   confirmou que as policies owner-scoped de `zelo_orders`,

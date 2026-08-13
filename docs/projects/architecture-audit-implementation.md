@@ -105,12 +105,12 @@ Evidência e rollback:
 - [x] Classificar cada linha como `enforced`, `compartilhamento intencional` ou
   `candidato a gap`; só promover a `gap confirmado` após o probe live e não
   alterar linhas sem finding reproduzido.
-- [ ] Corrigir cada gap confirmado em PR/commit independente, com snapshot,
+- [x] Corrigir cada gap confirmado em PR/commit independente, com snapshot,
   consumidores, blast radius, migration forward-only e rollback.
-- [ ] Para cada fatia, validar owner, papel autorizado, papel não autorizado,
+- [x] Para cada fatia, validar owner, papel autorizado, papel não autorizado,
   subusuário bloqueado, super-admin externo, anon e `service_role`, além dos
   writes que dependem de SELECT/`RETURNING`.
-- [ ] Encerrar explicitamente os compartilhamentos necessários ao PDV/Mesas/
+- [x] Encerrar explicitamente os compartilhamentos necessários ao PDV/Mesas/
   Caixa/Fichário para que não reapareçam como finding genérico.
 
 Inventário versionado: `docs/operations/RBAC-CAPABILITY-INVENTORY-2026-08-13.md`.
@@ -125,9 +125,13 @@ Primeira fatia encerrada em produção: o bypass de
 também foi encerrada: `20260813094000` restringe orders/items/events canônicos
 a owner, `pedidos.acessar` ou `pedidos.cozinha`, preservando actions, Realtime e
 service-role; evidência em
-`docs/operations/CANONICAL-ORDERS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`. Resta o
-candidato server-side do assistant, sujeito à mesma regra de confirmação antes
-de mudar produção.
+`docs/operations/CANONICAL-ORDERS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`. O
+boundary server-side do assistant foi fechado no endpoint com
+`relatorios.ver`; o uso agregado live encontrou zero chamadas de subusuário
+atual e a evidência/rollback estão em
+`docs/operations/ASSISTANT-SERVER-RBAC-SNAPSHOT-2026-08-13.md`. O HTTP live
+permanece bloqueado por um 401 preexistente inclusive para owner, sem ser
+misturado à correção.
 
 Já concluído e rastreado em `docs/FIXES_PROGRESS.md`: Despesas, catálogo,
 estoque, Pessoas, `access_users`, Caixa, Mesas, vendas, desconto, relatórios,
