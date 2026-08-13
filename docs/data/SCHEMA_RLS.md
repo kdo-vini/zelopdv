@@ -252,6 +252,17 @@ Conclusao operacional:
   motor de inteligência usa service-role. INSERT/DELETE e as tabelas de venda
   não foram alterados nesta fatia.
 
+## Pagamentos de venda e movimentações de caixa
+
+- `vendas_pagamentos` exige `pdv.acessar`, `pdv.receber`, `mesas.acessar`,
+  `caixa.ver` ou `relatorios.ver` para SELECT de subusuários.
+- `caixa_movimentacoes` exige `pdv.acessar`, uma capacidade `caixa.*` de
+  operação/leitura ou `relatorios.ver` para SELECT de subusuários.
+- A migration `20260813080000_sales_payment_cash_read_rbac.sql` revoga os
+  grants de `anon` e não altera INSERT/UPDATE/DELETE. `vendas` e
+  `vendas_itens` seguem em fatia posterior por atenderem POS, Fichário,
+  Dashboard, Relatórios e fechamento de Mesa.
+
 - `pessoas` continua com SELECT owner-scoped porque `/app`, Mesas, Fichário,
   Relatórios e o fluxo de fiado precisam ler nomes/saldos em operação normal.
 - A migration `20260812202400_pessoas_role_rbac.sql` exige

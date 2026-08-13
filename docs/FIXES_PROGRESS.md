@@ -1,5 +1,14 @@
 # Fixes Progress
 
+- [x] FX-SALES-PAYMENT-CASH-READ-RBAC-01 (2026-08-13) - finding confirmado:
+  subusuário sem capacidades de PDV/Mesas/Caixa/Relatórios lia pagamentos de
+  venda e movimentações de caixa owner-scoped. A migration forward-only
+  `20260813080000_sales_payment_cash_read_rbac.sql` exige as capabilities
+  existentes, remove SELECT anônimo e preserva writes e service-role. Owner,
+  subusuário sem/com cada capacidade, super-admin fora do tenant e service-role
+  foram verificados com fixtures transacionais revertidas. Snapshot:
+  `docs/operations/SALES-PAYMENT-CASH-READ-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - [x] FX-VENDAS-TAXAS-SELECT-RBAC-01 (2026-08-13) - finding confirmado em
   produção: subusuário sem `caixa.ver`/`relatorios.ver` lia taxas de plataforma
   owner-scoped pela Data API. A migration forward-only

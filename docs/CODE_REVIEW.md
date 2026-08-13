@@ -5,6 +5,17 @@
 
 ## Findings
 
+### Update 2026-08-13 - enforcement de leitura de pagamentos e movimentações
+
+O finding foi confirmado em produção: `vendas_pagamentos` e
+`caixa_movimentacoes` eram apenas owner-scoped, então um subusuário com somente
+`pedidos.acessar` lia dados financeiros pela Data API. Os consumidores browser
+foram classificados entre PDV, Mesas, Caixa e Relatórios; writes e as tabelas
+`vendas`/`vendas_itens` ficaram fora desta fatia por terem dependências mais
+amplas. A migration `20260813080000_sales_payment_cash_read_rbac.sql` exige as
+capabilities operacionais existentes e revoga anon. Snapshot:
+`docs/operations/SALES-PAYMENT-CASH-READ-RBAC-SNAPSHOT-2026-08-13.md`.
+
 ### Update 2026-08-13 - enforcement de leitura das taxas de plataforma
 
 O finding foi confirmado em produção: `vendas_taxas_plataforma` era owner-scoped

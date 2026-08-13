@@ -1,5 +1,14 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — pagamentos de venda e movimentações de caixa
+  (2026-08-13): a revalidação remota mostrou que um cargo sem capacidades
+  financeiras lia `vendas_pagamentos` e `caixa_movimentacoes`. A migration
+  forward-only `20260813080000_sales_payment_cash_read_rbac.sql` exige as
+  capabilities legítimas de PDV, Mesas, Caixa ou Relatórios e revoga SELECT
+  anônimo; writes, `vendas`/`vendas_itens` e service-role permanecem. Matriz
+  transacional e rollback em
+  `docs/operations/SALES-PAYMENT-CASH-READ-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - RBAC incremental — taxas de plataforma (2026-08-13): a revalidação remota
   confirmou que um subusuário sem `caixa.ver`/`relatorios.ver` lia
   `vendas_taxas_plataforma` pela Data API. A migration forward-only

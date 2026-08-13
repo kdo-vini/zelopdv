@@ -26,6 +26,8 @@
   `supabase/migrations/20260813060000_empresa_perfil_pin_select_containment.sql`
 - Enforcement de leitura das taxas de plataforma:
   `supabase/migrations/20260813070000_vendas_taxas_select_rbac.sql`
+- Enforcement de leitura de pagamentos/movimentações:
+  `supabase/migrations/20260813080000_sales_payment_cash_read_rbac.sql`
 
 - Cliente: `src/lib/accessControl.js`
 - Servidor: `src/lib/server/accessControl.js`
