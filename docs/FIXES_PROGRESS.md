@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-FIADO-SELECT-RBAC-01 (2026-08-13) - finding confirmado em produção:
+  Caixa/Atendente sem `fiado.visualizar` liam o ledger detalhado por Data API,
+  apesar do gate de navegação do Fichário. A migration forward-only
+  `20260813034000_fiado_ledger_select_rbac.sql` adiciona a capability existente
+  à policy SELECT de `fiado_lancamentos`, preserva owner/Gerente/service-role,
+  não altera as RPCs de recebimento/estorno e mantém `pessoas.saldo_fiado`
+  operacional. Matriz remota confirmou owner, subusuário com/sem permissão,
+  super-admin, anon e service-role; nenhuma alteração persistiu. Snapshot em
+  `docs/operations/FIADO-LEDGER-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - [x] FX-SECURITY-DEFINER-RPC-01 (2026-08-13) - finding confirmado em
   producao: `saldo_caixa(bigint)` e `get_user_id_by_email(text)` eram
   `SECURITY DEFINER`, executaveis por anon/autenticados e sem consumidor no

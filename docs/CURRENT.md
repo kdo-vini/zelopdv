@@ -1,5 +1,15 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — leitura do ledger de fiado (2026-08-13): a revalidação
+  remota reproduziu que Caixa/Atendente sem `fiado.visualizar` conseguiam ler
+  `fiado_lancamentos` diretamente pelo Data API, embora a navegação escondesse
+  o Fichário. A migration forward-only
+  `20260813034000_fiado_ledger_select_rbac.sql` adiciona a capability à policy
+  SELECT, preserva owner, Gerente, service-role, RPC de recebimento e leitura
+  operacional de `pessoas.saldo_fiado`. Smoke remoto cobriu owner, subusuário
+  com/sem permissão, super-admin e anon sem persistência. Snapshot:
+  `docs/operations/FIADO-LEDGER-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - Contencao incremental — RPCs SECURITY DEFINER (2026-08-13): a
   revalidacao remota confirmou que `saldo_caixa(bigint)` podia ser executada
   por `anon`/`authenticated` e calculava saldo de qualquer caixa sem guard de

@@ -87,7 +87,8 @@ Padrao recorrente:
 
 Migration local: `.ai/migrations/fiado_ledger_2026_07_15.sql` (aguarda validação/aplicação no banco real).
 
-- `fiado_lancamentos` é leitura owner-scoped para usuários autenticados; escrita direta pelo browser é revogada.
+- `fiado_lancamentos` é leitura owner-scoped para o titular e subusuários com
+  `fiado.visualizar`; escrita direta pelo browser é revogada.
 - `fiado_registrar_pagamento_v2(...)` valida `fiado.receber` para subusuários, bloqueia a pessoa durante a operação e grava pagamento, saldo e suprimento de caixa na mesma transação.
 - `fiado_estornar_venda(...)` cria evento compensatório ao desfazer uma venda; o razão não perde histórico.
 - Triggers registram novos débitos de vendas fiado simples e de parcelas fiado em venda múltipla. Saldos anteriores entram como um lançamento único `saldo_inicial` porque pagamentos antigos não são reconstituíveis.

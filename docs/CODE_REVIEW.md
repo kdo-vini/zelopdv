@@ -5,6 +5,19 @@
 
 ## Findings
 
+### Update 2026-08-13 - enforcement da leitura do ledger de fiado
+
+O finding foi confirmado em produção: a policy
+`fiado_lancamentos_select_owner` usava somente escopo por owner, então
+Caixa/Atendente sem `fiado.visualizar` liam o extrato completo pela Data API.
+`src/routes/gestao/fichario/+page.svelte` é o único consumidor browser direto;
+triggers, RPCs de recebimento/estorno e purge usam caminhos confiáveis. A
+migration `20260813034000_fiado_ledger_select_rbac.sql` adiciona
+`fiado_actor_can('fiado.visualizar', id_usuario)` à policy existente, mantendo
+owner, Gerente, service-role, recebimento e `pessoas.saldo_fiado` operacional.
+O blast radius, matriz e rollback estão em
+`docs/operations/FIADO-LEDGER-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
+
 ### Update 2026-08-13 - containment de RPCs SECURITY DEFINER
 
 O finding foi confirmado no schema de producao: `saldo_caixa(bigint)` tinha
