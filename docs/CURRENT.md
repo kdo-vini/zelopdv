@@ -1,5 +1,18 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — histórico de vendas (2026-08-13): a revalidação remota
+  confirmou que um cargo só de Pedidos lia `vendas` e `vendas_itens`. A
+  migration forward-only `20260813090000_sales_history_read_rbac.sql` exige
+  capacidades legítimas de PDV, Mesas, Caixa, Relatórios ou Fichário e remove
+  SELECT anônimo. A companion forward-only
+  `20260813091000_sales_history_read_rbac_performance.sql` mantém a mesma
+  autorização, mas resolve a união de capabilities uma vez por statement e
+  delega itens à policy da venda-pai; o benchmark representativo caiu de
+  731,117 ms para 7,593 ms. A matriz de atores e writes foi repetida após a
+  companion. O Dashboard continua owner-only na prática, writes e service-role
+  não mudaram; matriz/rollback em
+  `docs/operations/SALES-HISTORY-READ-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - RBAC incremental — pagamentos de venda e movimentações de caixa
   (2026-08-13): a revalidação remota mostrou que um cargo sem capacidades
   financeiras lia `vendas_pagamentos` e `caixa_movimentacoes`. A migration

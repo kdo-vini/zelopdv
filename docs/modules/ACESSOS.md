@@ -28,6 +28,10 @@
   `supabase/migrations/20260813070000_vendas_taxas_select_rbac.sql`
 - Enforcement de leitura de pagamentos/movimentações:
   `supabase/migrations/20260813080000_sales_payment_cash_read_rbac.sql`
+- Enforcement de leitura do histórico de vendas:
+  `supabase/migrations/20260813090000_sales_history_read_rbac.sql`
+- Otimização forward-only da mesma autorização:
+  `supabase/migrations/20260813091000_sales_history_read_rbac_performance.sql`
 
 - Cliente: `src/lib/accessControl.js`
 - Servidor: `src/lib/server/accessControl.js`

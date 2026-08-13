@@ -263,6 +263,22 @@ Conclusao operacional:
   `vendas_itens` seguem em fatia posterior por atenderem POS, Fichário,
   Dashboard, Relatórios e fechamento de Mesa.
 
+## Histórico de vendas e itens
+
+- SELECT de `vendas` e `vendas_itens` exige, para subusuários, uma capability
+  operacional de PDV, Mesas, Caixa, Relatórios ou `fiado.visualizar`.
+- A migration `20260813090000_sales_history_read_rbac.sql` revoga SELECT de
+  `anon`, mantém o vínculo de `vendas_itens` com a venda-pai e não altera
+  INSERT/UPDATE/DELETE.
+- A companion forward-only
+  `20260813091000_sales_history_read_rbac_performance.sql` mantém a mesma união
+  de capabilities, mas calcula a autorização uma vez por statement e deixa
+  `vendas_itens` herdar a visibilidade da venda-pai. Isso evita chamadas ao
+  helper por linha/capability sem criar função ou RPC nova.
+- O Fichário ainda recebe leitura owner-scoped completa por
+  `fiado.visualizar`; limitar a somente vendas referenciadas no ledger requer
+  outra fronteira de consulta e não faz parte desta contenção.
+
 - `pessoas` continua com SELECT owner-scoped porque `/app`, Mesas, Fichário,
   Relatórios e o fluxo de fiado precisam ler nomes/saldos em operação normal.
 - A migration `20260812202400_pessoas_role_rbac.sql` exige

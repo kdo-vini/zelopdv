@@ -5,6 +5,22 @@
 
 ## Findings
 
+### Update 2026-08-13 - enforcement de leitura do histórico de vendas
+
+O finding residual foi confirmado em produção: `vendas` e `vendas_itens`
+tinham uma única policy SELECT owner-scoped para `public`, permitindo que um
+cargo contendo somente `pedidos.acessar` lesse o histórico inteiro do tenant.
+A migration `20260813090000_sales_history_read_rbac.sql` remove o grant
+anônimo e exige uma capability já consumida por PDV, Mesas, Caixa, Relatórios
+ou Fichário, sem alterar writes ou UI. A migration complementar forward-only
+`20260813091000_sales_history_read_rbac_performance.sql` preserva essa união,
+calcula a autorização uma vez por statement e faz itens herdarem o gate da
+venda-pai; o `EXPLAIN ANALYZE` representativo passou de 731,117 ms para
+7,593 ms. Titular, subusuários, cargo bloqueado, super-admin externo, anon,
+service-role e writes com `RETURNING` passaram novamente na matriz transacional
+após a companion. Snapshot em
+`docs/operations/SALES-HISTORY-READ-RBAC-SNAPSHOT-2026-08-13.md`.
+
 ### Update 2026-08-13 - enforcement de leitura de pagamentos e movimentações
 
 O finding foi confirmado em produção: `vendas_pagamentos` e

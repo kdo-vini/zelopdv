@@ -1,5 +1,19 @@
 # Fixes Progress
 
+- [x] FX-SALES-HISTORY-READ-RBAC-01 (2026-08-13) - finding confirmado:
+  subusuário com somente `pedidos.acessar` lia `vendas` e `vendas_itens` do
+  titular. A migration forward-only
+  `20260813090000_sales_history_read_rbac.sql` preserva consumidores de PDV,
+  Mesas, Caixa, Relatórios e Fichário, remove SELECT anônimo e mantém writes e
+  service-role. A companion forward-only
+  `20260813091000_sales_history_read_rbac_performance.sql` substitui as
+  chamadas por linha por uma autorização calculada uma vez por statement e
+  mantém `vendas_itens` subordinada à venda-pai (731,117 ms → 7,593 ms no
+  benchmark representativo). A matriz remota transacional, repetida após a
+  companion, cobriu titular, fixture
+  permanente, capabilities isoladas, subusuário bloqueado, super-admin externo,
+  anon, service-role, Mesa INSERT RETURNING e cancelamento UPDATE/DELETE.
+
 - [x] FX-SALES-PAYMENT-CASH-READ-RBAC-01 (2026-08-13) - finding confirmado:
   subusuário sem capacidades de PDV/Mesas/Caixa/Relatórios lia pagamentos de
   venda e movimentações de caixa owner-scoped. A migration forward-only
