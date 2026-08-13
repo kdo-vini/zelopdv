@@ -25,35 +25,56 @@ export async function POST({ request }) {
 
     // Only the account owner may delete. Sub-users (funcionários) must never be
     // able to schedule deletion of the owner's account.
-    const { data: ownProfile } = await supabaseAdmin
+    const { data: ownProfile, error: profileErr } = await supabaseAdmin
       .from('empresa_perfil')
-      .select('id')
+      .select('id, deletion_scheduled_at, deletion_purge_token, deletion_reactivation_token')
       .eq('user_id', userId)
       .maybeSingle();
+    if (profileErr) {
+      console.error('[account/delete] profile lookup error:', profileErr);
+      return json({ error: 'Falha ao verificar a conta.' }, { status: 500 });
+    }
     if (!ownProfile) {
       return json({ error: 'Apenas o titular da conta pode apagá-la.' }, { status: 403 });
     }
 
+    if (ownProfile.deletion_purge_token != null || ownProfile.deletion_reactivation_token != null) {
+      return json({ error: 'A exclus\u00e3o definitiva da conta j\u00e1 est\u00e1 em processamento.' }, { status: 409 });
+    }
+    if (ownProfile.deletion_scheduled_at) {
+      return json({
+        success: true,
+        scheduledAt: ownProfile.deletion_scheduled_at,
+        graceDays: GRACE_DAYS,
+        alreadyScheduled: true,
+      });
+    }
+
     // 1) Cancel Stripe subscription at period end (reversible).
-    if (stripe) {
-      const { data: sub } = await supabaseAdmin
-        .from('subscriptions')
-        .select('provider_subscription_id, payment_provider')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (sub?.provider_subscription_id && sub.payment_provider === 'stripe') {
-        try {
-          await stripe.subscriptions.update(sub.provider_subscription_id, { cancel_at_period_end: true });
-        } catch (stripeErr) {
-          const msg = stripeErr?.message || '';
-          if (!/resource_missing|not.?found|no such/i.test(msg)) {
-            console.error('[account/delete] Stripe cancel error:', msg);
-            return json({
-              error: 'Não foi possível agendar o cancelamento da assinatura. Tente novamente.',
-            }, { status: 502 });
-          }
+    const { data: sub, error: subErr } = await supabaseAdmin
+      .from('subscriptions')
+      .select('provider_subscription_id, payment_provider')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (subErr) {
+      console.error('[account/delete] subscription lookup error:', subErr);
+      return json({ error: 'Falha ao verificar a assinatura.' }, { status: 500 });
+    }
+    if (sub?.provider_subscription_id && sub.payment_provider === 'stripe') {
+      if (!stripe) {
+        return json({ error: 'Serviço de cobrança indisponível. Tente novamente.' }, { status: 503 });
+      }
+      try {
+        await stripe.subscriptions.update(sub.provider_subscription_id, { cancel_at_period_end: true });
+      } catch (stripeErr) {
+        const msg = stripeErr?.message || '';
+        if (!/resource_missing|not.?found|no such/i.test(msg)) {
+          console.error('[account/delete] Stripe cancel error:', msg);
+          return json({
+            error: 'Não foi possível agendar o cancelamento da assinatura. Tente novamente.',
+          }, { status: 502 });
         }
       }
     }
@@ -61,17 +82,47 @@ export async function POST({ request }) {
     // 2) Schedule the deletion (grace period).
     const now = new Date();
     const scheduledAt = new Date(now.getTime() + GRACE_DAYS * 24 * 60 * 60 * 1000);
-    const { error: dbErr } = await supabaseAdmin
+    const { data: scheduledProfile, error: dbErr } = await supabaseAdmin
       .from('empresa_perfil')
       .update({
         deletion_scheduled_at: scheduledAt.toISOString(),
         deletion_requested_at: now.toISOString(),
         deletion_source: 'pdv',
       })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .is('deletion_purge_token', null)
+      .is('deletion_reactivation_token', null)
+      .is('deletion_scheduled_at', null)
+      .select('id')
+      .maybeSingle();
     if (dbErr) {
       console.error('[account/delete] schedule error:', dbErr);
       return json({ error: 'Falha ao agendar a exclusão.' }, { status: 500 });
+    }
+
+    if (!scheduledProfile) {
+      const { data: currentProfile, error: stateErr } = await supabaseAdmin
+        .from('empresa_perfil')
+        .select('deletion_scheduled_at, deletion_purge_token, deletion_reactivation_token')
+        .eq('id', ownProfile.id)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (stateErr) {
+        console.error('[account/delete] state lookup error:', stateErr);
+        return json({ error: 'Falha ao confirmar o agendamento da exclus\u00e3o.' }, { status: 500 });
+      }
+      if (currentProfile?.deletion_purge_token != null || currentProfile?.deletion_reactivation_token != null) {
+        return json({ error: 'A exclus\u00e3o definitiva da conta j\u00e1 est\u00e1 em processamento.' }, { status: 409 });
+      }
+      if (currentProfile?.deletion_scheduled_at) {
+        return json({
+          success: true,
+          scheduledAt: currentProfile.deletion_scheduled_at,
+          graceDays: GRACE_DAYS,
+          alreadyScheduled: true,
+        });
+      }
+      return json({ error: 'A exclus\u00e3o definitiva da conta j\u00e1 est\u00e1 em processamento.' }, { status: 409 });
     }
 
     return json({ success: true, scheduledAt: scheduledAt.toISOString(), graceDays: GRACE_DAYS });

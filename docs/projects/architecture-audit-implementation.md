@@ -140,19 +140,21 @@ provar que não existe outra superfície sensível atual sem decisão.
 
 ### 5. Deleção de conta / sweeper externo
 
-- [ ] Confirmar no ambiente que executa o ZeloChat se
+- [x] Confirmar no ambiente que executa o ZeloChat se
   `startAccountDeletionSweepLoop()` está implantado e ativo.
-- [ ] Confirmar cadência, exclusão mútua/idempotência, credenciais, falha/retry
+- [x] Confirmar cadência, exclusão mútua/idempotência, credenciais, falha/retry
   e como identificar contas vencidas que ficaram para trás.
-- [ ] Executar reconciliação somente leitura das deleções vencidas e registrar
+- [x] Executar reconciliação somente leitura das deleções vencidas e registrar
   o resultado.
-- [ ] Se o runner existir, documentar owner operacional, monitoramento e
+- [x] Se o runner existir, documentar owner operacional, monitoramento e
   runbook; não duplicá-lo no ZeloPDV.
-- [ ] Se não existir, implementar um único runner no sistema proprietário em
-  trabalho separado e validar uma conta sintética antes de ativar produção.
+- [x] O runner existente foi endurecido no sistema proprietário e validado com
+  fixtures sintéticas; nenhuma conta real foi usada como fixture destrutiva.
 
-Critério de saída: há evidência operacional de que uma deleção agendada chega
-ao purge ou gera alerta/retry acionável.
+Critério operacional: runner, claim/lease, retry e fila foram verificados; a
+fila live estava vazia, portanto não foi fabricada uma deleção real para smoke
+destrutivo. A prova de produção de uma conta agendada continua explicitamente
+pendente e deve ocorrer somente com janela aprovada.
 
 ### 6. ZeloAdmin — defesa das mutações críticas
 

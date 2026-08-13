@@ -22,13 +22,25 @@ function makeSupabase(state) {
         deleteUser: vi.fn(async () => ({ error: null })),
       },
     },
+    rpc(name, args) {
+      state.rpcCalls ||= [];
+      state.rpcCalls.push({ name, args });
+      state.events?.push(`rpc:${name}`);
+      const configured = state.rpcResults?.[name];
+      if (Array.isArray(configured)) {
+        return Promise.resolve(configured.shift() || { data: null, error: null });
+      }
+      return Promise.resolve(configured || { data: null, error: null });
+    },
     from(table) {
       const query = {
         table,
         operation: 'select',
         payload: null,
+        filters: [],
         select() { return query; },
-        eq() { return query; },
+        eq(column, value) { query.filters.push({ method: 'eq', column, value }); return query; },
+        is(column, value) { query.filters.push({ method: 'is', column, value }); return query; },
         neq() { return query; },
         in() { return query; },
         or() { return query; },
@@ -40,7 +52,15 @@ function makeSupabase(state) {
         insert(payload) { query.operation = 'insert'; query.payload = payload; return query; },
         update(payload) { query.operation = 'update'; query.payload = payload; return query; },
         delete() { query.operation = 'delete'; return query; },
-        maybeSingle() { return Promise.resolve(state.maybeSingle?.[table] || { data: null, error: null }); },
+        maybeSingle() {
+          const sequence = state.maybeSingleSequence?.[table];
+          if (sequence?.length) return Promise.resolve(sequence.shift());
+          return Promise.resolve(
+            state.maybeSingleByOperation?.[table]?.[query.operation]
+              || state.maybeSingle?.[table]
+              || { data: null, error: null },
+          );
+        },
         single() {
           return Promise.resolve(state.single?.[table] || state.maybeSingle?.[table] || { data: null, error: null });
         },
@@ -297,10 +317,15 @@ describe('account lifecycle APIs', () => {
     expect((await subuserDelete({ request: makeRequest() })).status).toBe(403);
   });
 
-  it('schedules deletion for the owner and clears it on reactivation', async () => {
+  it('returns an existing schedule idempotently and reactivates it through the fenced RPCs', async () => {
     const state = {
       user: { id: 'owner-1' },
       queries: [],
+      rpcCalls: [],
+      rpcResults: {
+        begin_account_deletion_reactivation: { data: 'reactivation-1', error: null },
+        complete_account_deletion_reactivation: { data: true, error: null },
+      },
       maybeSingle: {
         empresa_perfil: { data: { id: 'profile-1', deletion_scheduled_at: '2099-01-01T00:00:00Z' }, error: null },
         subscriptions: { data: { provider_subscription_id: null, payment_provider: null }, error: null },
@@ -315,14 +340,21 @@ describe('account lifecycle APIs', () => {
     const { POST: reactivate } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state);
     const response = await reactivate({ request: makeRequest() });
     expect(response.status).toBe(200);
-    const updates = state.queries.filter((query) => query.operation === 'update');
-    expect(updates.length).toBeGreaterThanOrEqual(2);
+    expect(state.rpcCalls.map((call) => call.name)).toEqual([
+      'begin_account_deletion_reactivation',
+      'complete_account_deletion_reactivation',
+    ]);
+    expect(state.queries.filter((query) => query.operation === 'update')).toHaveLength(0);
   });
 
   it('keeps the local deletion schedule when Stripe resume fails', async () => {
     const state = {
       user: { id: 'owner-1' },
       queries: [],
+      rpcCalls: [],
+      rpcResults: {
+        begin_account_deletion_reactivation: { data: 'reactivation-1', error: null },
+      },
       maybeSingle: {
         empresa_perfil: { data: { id: 'profile-1', deletion_scheduled_at: '2099-01-01T00:00:00Z' }, error: null },
         subscriptions: { data: { provider_subscription_id: 'sub-stripe-1', payment_provider: 'stripe', status: 'active' }, error: null },
@@ -341,6 +373,612 @@ describe('account lifecycle APIs', () => {
       error: 'Não foi possível reativar a assinatura agora. Tente novamente.',
     });
     expect(stripeUpdate).toHaveBeenCalledWith('sub-stripe-1', { cancel_at_period_end: false });
+    expect(state.rpcCalls.map((call) => call.name)).toEqual(['begin_account_deletion_reactivation']);
     expect(state.queries.filter((query) => query.operation === 'update')).toHaveLength(0);
+  });
+
+  it('refuses to reschedule deletion after the purge has been claimed', async () => {
+    const stripeUpdate = vi.fn(async () => ({}));
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: {
+        empresa_perfil: {
+          data: {
+            id: 'profile-1',
+            deletion_scheduled_at: '2099-01-01T00:00:00Z',
+            deletion_purge_token: 'claim-1',
+            deletion_reactivation_token: null,
+          },
+          error: null,
+        },
+        subscriptions: {
+          data: { provider_subscription_id: 'sub-stripe-1', payment_provider: 'stripe' },
+          error: null,
+        },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/delete/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(409);
+    expect(stripeUpdate).not.toHaveBeenCalled();
+    expect(state.queries.some((query) => query.operation === 'update')).toBe(false);
+  });
+
+  it('does not mistake a profile lookup failure for a non-owner during scheduling', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: {
+        empresa_perfil: { data: null, error: { message: 'database unavailable' } },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/delete/+server.js', state);
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(500);
+    expect(state.queries.some((query) => query.operation === 'update')).toBe(false);
+  });
+
+  it('returns a conflict when the purge claims the account while deletion is being scheduled', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: {
+        empresa_perfil: {
+          data: { id: 'profile-1', deletion_purge_token: null },
+          error: null,
+        },
+        subscriptions: { data: null, error: null },
+      },
+      maybeSingleByOperation: {
+        empresa_perfil: { update: { data: null, error: null } },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/delete/+server.js', state);
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(409);
+    const update = state.queries.find((query) => query.operation === 'update');
+    expect(update.filters).toContainEqual({
+      method: 'is',
+      column: 'deletion_purge_token',
+      value: null,
+    });
+    expect(update.filters).toContainEqual({
+      method: 'is',
+      column: 'deletion_scheduled_at',
+      value: null,
+    });
+  });
+
+  it('accepts a concurrent deletion schedule as an idempotent success after the CAS loses', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingleSequence: {
+        empresa_perfil: [
+          {
+            data: {
+              id: 'profile-1',
+              deletion_scheduled_at: null,
+              deletion_purge_token: null,
+              deletion_reactivation_token: null,
+            },
+            error: null,
+          },
+          { data: null, error: null },
+          { data: { deletion_scheduled_at: '2099-01-01T00:00:00Z' }, error: null },
+        ],
+      },
+      maybeSingle: {
+        subscriptions: { data: null, error: null },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/delete/+server.js', state);
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      success: true,
+      scheduledAt: '2099-01-01T00:00:00Z',
+      alreadyScheduled: true,
+    });
+  });
+
+  it('refuses to reactivate an account after the purge has been claimed', async () => {
+    const stripeUpdate = vi.fn(async () => ({}));
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      rpcCalls: [],
+      rpcResults: {
+        begin_account_deletion_reactivation: {
+          data: null,
+          error: { code: 'PURGE_IN_PROGRESS', message: 'purge in progress' },
+        },
+      },
+      maybeSingle: {
+        empresa_perfil: {
+          data: {
+            id: 'profile-1',
+            deletion_scheduled_at: '2099-01-01T00:00:00Z',
+          },
+          error: null,
+        },
+        subscriptions: {
+          data: {
+            provider_subscription_id: 'sub-stripe-1',
+            payment_provider: 'stripe',
+            status: 'active',
+          },
+          error: null,
+        },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(409);
+    expect(stripeUpdate).not.toHaveBeenCalled();
+    expect(state.rpcCalls.map((call) => call.name)).toEqual(['begin_account_deletion_reactivation']);
+    expect(state.queries.some((query) => query.operation === 'update')).toBe(false);
+  });
+
+  it('returns a server error when the profile lookup fails during reactivation', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: {
+        empresa_perfil: { data: null, error: { message: 'database unavailable' } },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state);
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(500);
+    expect(state.queries.some((query) => query.operation === 'update')).toBe(false);
+  });
+
+  it('returns a conflict before Stripe when another reactivation owns the fence', async () => {
+    const stripeUpdate = vi.fn(async () => ({}));
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      rpcCalls: [],
+      rpcResults: {
+        begin_account_deletion_reactivation: {
+          data: null,
+          error: { code: 'REACTIVATION_IN_PROGRESS', message: 'reactivation in progress' },
+        },
+      },
+      maybeSingle: {
+        empresa_perfil: {
+          data: {
+            id: 'profile-1',
+            deletion_scheduled_at: '2099-01-01T00:00:00Z',
+          },
+          error: null,
+        },
+        subscriptions: {
+          data: {
+            provider_subscription_id: 'sub-stripe-1',
+            payment_provider: 'stripe',
+            status: 'active',
+          },
+          error: null,
+        },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(409);
+    expect(stripeUpdate).not.toHaveBeenCalled();
+    expect(state.rpcCalls.map((call) => call.name)).toEqual(['begin_account_deletion_reactivation']);
+  });
+
+  it('treats an existing deletion schedule as an idempotent success without touching Stripe', async () => {
+    const stripeUpdate = vi.fn(async () => ({}));
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: {
+        empresa_perfil: {
+          data: {
+            id: 'profile-1',
+            deletion_scheduled_at: '2099-01-01T00:00:00Z',
+            deletion_purge_token: null,
+            deletion_reactivation_token: null,
+          },
+          error: null,
+        },
+        subscriptions: {
+          data: { provider_subscription_id: 'sub-stripe-1', payment_provider: 'stripe' },
+          error: null,
+        },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/delete/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).scheduledAt).toBe('2099-01-01T00:00:00Z');
+    expect(stripeUpdate).not.toHaveBeenCalled();
+    expect(state.queries.some((query) => query.table === 'subscriptions')).toBe(false);
+    expect(state.queries.some((query) => query.operation === 'update')).toBe(false);
+  });
+
+  it('fails closed when the subscription lookup fails before scheduling deletion', async () => {
+    const stripeUpdate = vi.fn(async () => ({}));
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: {
+        empresa_perfil: {
+          data: {
+            id: 'profile-1',
+            deletion_scheduled_at: null,
+            deletion_purge_token: null,
+            deletion_reactivation_token: null,
+          },
+          error: null,
+        },
+        subscriptions: { data: null, error: { message: 'database unavailable' } },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/delete/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(500);
+    expect(stripeUpdate).not.toHaveBeenCalled();
+    expect(state.queries.some((query) => query.operation === 'update')).toBe(false);
+  });
+
+  it('does not schedule a Stripe deletion when the Stripe client is unavailable', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: {
+        empresa_perfil: {
+          data: {
+            id: 'profile-1',
+            deletion_scheduled_at: null,
+            deletion_purge_token: null,
+            deletion_reactivation_token: null,
+          },
+          error: null,
+        },
+        subscriptions: {
+          data: { provider_subscription_id: 'sub-stripe-1', payment_provider: 'stripe' },
+          error: null,
+        },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/delete/+server.js', state);
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(503);
+    expect(state.queries.some((query) => query.operation === 'update')).toBe(false);
+  });
+
+  it('schedules only while purge and reactivation fences are both absent', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: {
+        empresa_perfil: {
+          data: {
+            id: 'profile-1',
+            deletion_scheduled_at: null,
+            deletion_purge_token: null,
+            deletion_reactivation_token: null,
+          },
+          error: null,
+        },
+        subscriptions: { data: null, error: null },
+      },
+      maybeSingleByOperation: {
+        empresa_perfil: { update: { data: { id: 'profile-1' }, error: null } },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/delete/+server.js', state);
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(200);
+    const update = state.queries.find((query) => query.operation === 'update');
+    expect(update.filters).toContainEqual({
+      method: 'is',
+      column: 'deletion_reactivation_token',
+      value: null,
+    });
+  });
+
+  it('fails closed when the subscription lookup fails before reactivation begins', async () => {
+    const stripeUpdate = vi.fn(async () => ({}));
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      rpcCalls: [],
+      maybeSingle: {
+        empresa_perfil: {
+          data: { id: 'profile-1', deletion_scheduled_at: '2099-01-01T00:00:00Z' },
+          error: null,
+        },
+        subscriptions: { data: null, error: { message: 'database unavailable' } },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(500);
+    expect(state.rpcCalls).toHaveLength(0);
+    expect(stripeUpdate).not.toHaveBeenCalled();
+  });
+
+  it('begins reactivation before Stripe and completes it only after Stripe succeeds', async () => {
+    const events = [];
+    const stripeUpdate = vi.fn(async () => { events.push('stripe:update'); });
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      events,
+      rpcCalls: [],
+      rpcResults: {
+        begin_account_deletion_reactivation: { data: 'reactivation-1', error: null },
+        complete_account_deletion_reactivation: { data: true, error: null },
+      },
+      maybeSingle: {
+        empresa_perfil: {
+          data: { id: 'profile-1', deletion_scheduled_at: '2099-01-01T00:00:00Z' },
+          error: null,
+        },
+        subscriptions: {
+          data: {
+            provider_subscription_id: 'sub-stripe-1',
+            payment_provider: 'stripe',
+            status: 'active',
+          },
+          error: null,
+        },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(200);
+    expect(events).toEqual([
+      'rpc:begin_account_deletion_reactivation',
+      'stripe:update',
+      'rpc:complete_account_deletion_reactivation',
+    ]);
+    expect(state.rpcCalls).toEqual([
+      {
+        name: 'begin_account_deletion_reactivation',
+        args: { p_empresa_id: 'profile-1', p_user_id: 'owner-1' },
+      },
+      {
+        name: 'complete_account_deletion_reactivation',
+        args: {
+          p_empresa_id: 'profile-1',
+          p_user_id: 'owner-1',
+          p_reactivation_token: 'reactivation-1',
+        },
+      },
+    ]);
+    expect(state.queries.some((query) => query.operation === 'update')).toBe(false);
+  });
+
+  it('treats a null begin token as an idempotent success when the schedule was already cleared', async () => {
+    const stripeUpdate = vi.fn(async () => ({}));
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      rpcCalls: [],
+      rpcResults: {
+        begin_account_deletion_reactivation: { data: null, error: null },
+      },
+      maybeSingle: {
+        empresa_perfil: {
+          data: { id: 'profile-1', deletion_scheduled_at: '2099-01-01T00:00:00Z' },
+          error: null,
+        },
+        subscriptions: {
+          data: {
+            provider_subscription_id: 'sub-stripe-1',
+            payment_provider: 'stripe',
+            status: 'active',
+          },
+          error: null,
+        },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, alreadyActive: true });
+    expect(stripeUpdate).not.toHaveBeenCalled();
+    expect(state.rpcCalls.map((call) => call.name)).toEqual(['begin_account_deletion_reactivation']);
+  });
+
+  it('fails closed before Stripe when the begin RPC has an unexpected error', async () => {
+    const stripeUpdate = vi.fn(async () => ({}));
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      rpcCalls: [],
+      rpcResults: {
+        begin_account_deletion_reactivation: {
+          data: null,
+          error: { code: 'XX000', message: 'database unavailable' },
+        },
+      },
+      maybeSingle: {
+        empresa_perfil: {
+          data: { id: 'profile-1', deletion_scheduled_at: '2099-01-01T00:00:00Z' },
+          error: null,
+        },
+        subscriptions: {
+          data: {
+            provider_subscription_id: 'sub-stripe-1',
+            payment_provider: 'stripe',
+            status: 'active',
+          },
+          error: null,
+        },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(500);
+    expect(stripeUpdate).not.toHaveBeenCalled();
+    expect(state.rpcCalls.map((call) => call.name)).toEqual(['begin_account_deletion_reactivation']);
+  });
+
+  it('keeps the reactivation fence after an ambiguous Stripe failure', async () => {
+    const stripeUpdate = vi.fn(async () => { throw new Error('connection reset'); });
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      rpcCalls: [],
+      rpcResults: {
+        begin_account_deletion_reactivation: { data: 'reactivation-1', error: null },
+      },
+      maybeSingle: {
+        empresa_perfil: {
+          data: { id: 'profile-1', deletion_scheduled_at: '2099-01-01T00:00:00Z' },
+          error: null,
+        },
+        subscriptions: {
+          data: {
+            provider_subscription_id: 'sub-stripe-1',
+            payment_provider: 'stripe',
+            status: 'active',
+          },
+          error: null,
+        },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state, {
+      stripe: { subscriptions: { update: stripeUpdate } },
+    });
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(502);
+    expect(state.rpcCalls.map((call) => call.name)).toEqual(['begin_account_deletion_reactivation']);
+  });
+
+  it('accepts an idempotent completion when another request already cleared the schedule', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      rpcCalls: [],
+      rpcResults: {
+        begin_account_deletion_reactivation: { data: 'reactivation-1', error: null },
+        complete_account_deletion_reactivation: { data: false, error: null },
+      },
+      maybeSingleSequence: {
+        empresa_perfil: [
+          {
+            data: { id: 'profile-1', deletion_scheduled_at: '2099-01-01T00:00:00Z' },
+            error: null,
+          },
+          { data: { deletion_scheduled_at: null }, error: null },
+        ],
+      },
+      maybeSingle: {
+        subscriptions: { data: null, error: null },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state);
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, alreadyActive: true });
+  });
+
+  it('returns a conflict when completion loses ownership and deletion is still scheduled', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      rpcCalls: [],
+      rpcResults: {
+        begin_account_deletion_reactivation: { data: 'reactivation-1', error: null },
+        complete_account_deletion_reactivation: { data: false, error: null },
+      },
+      maybeSingleSequence: {
+        empresa_perfil: [
+          {
+            data: { id: 'profile-1', deletion_scheduled_at: '2099-01-01T00:00:00Z' },
+            error: null,
+          },
+          { data: { deletion_scheduled_at: '2099-01-01T00:00:00Z' }, error: null },
+        ],
+      },
+      maybeSingle: {
+        subscriptions: { data: null, error: null },
+      },
+      results: {},
+    };
+    const { POST } = await loadAccount('../src/routes/api/account/reactivate/+server.js', state);
+
+    const response = await POST({ request: makeRequest() });
+
+    expect(response.status).toBe(409);
   });
 });
