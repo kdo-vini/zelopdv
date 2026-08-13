@@ -8,15 +8,20 @@
   linked sem pendências. O P0 de Storage revelado pela captura também foi
   contido pela migration `20260813092000`: anon/auth perderam upload, listagem e
   delete em `zelochat-media`; service-role e GET público foram preservados, com
-  zero fixtures residuais. Restam, nesta ordem, três candidatos RBAC confirmados
-  no código/baseline e ainda sujeitos à revalidação obrigatória em produção,
+  zero fixtures residuais. A primeira fatia RBAC residual também foi encerrada:
+  a migration `20260813093000` exige `pdv.cancelar` dentro de
+  `fiado_estornar_venda`, após o probe live provar que um papel sem a capability
+  conseguia alterar saldo/ledger; owner, papel autorizado, negados, super-admin,
+  anon e service-role passaram e não restou fixture. Restam, nesta ordem, dois
+  candidatos RBAC confirmados no código/baseline e ainda sujeitos à revalidação
+  obrigatória em produção,
   verificação operacional do sweeper de
   deleção, mutações críticas confirmadas do ZeloAdmin e auditoria final. Request
   IDs, structured logging, rate limiting compartilhado, decomposição de
   componentes, dependency cleanup e redesign de confirmação por IA estão
-  explicitamente fora da meta. O próximo bloco RBAC finito é:
-  estorno de fiado no cancelamento, leitura dos pedidos canônicos e
-  boundary server-side do assistant. A matriz 31/31 e os probes pendentes estão
+  explicitamente fora da meta. O próximo bloco RBAC finito é a leitura dos
+  pedidos canônicos, seguida do boundary server-side do assistant. A matriz
+  31/31 e os probes pendentes estão
   em `docs/operations/RBAC-CAPABILITY-INVENTORY-2026-08-13.md`. Evidência da reconciliação:
   `supabase/baselines/20260813091000/README.md`. O lint de banco continua
   reproduzindo dois findings preexistentes em `criar_venda_completa` e

@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-FIADO-ESTORNO-RBAC-01 (2026-08-13) - finding reproduzido em
+  produção: um subusuário ativo sem `pdv.cancelar` conseguia chamar diretamente
+  `fiado_estornar_venda(bigint)`, reduzir `pessoas.saldo_fiado` e inserir o
+  ledger compensatório antes de a policy bloquear a exclusão da venda. A
+  migration forward-only `20260813093000_fiado_estorno_rbac.sql` exige a
+  capability dentro da RPC e preserva owner, escopo, cálculo simples/múltiplo,
+  idempotência, ACL e service-role. Matriz linked completa passou, dry-run
+  alinhou e não restou fixture. Evidência/rollback em
+  `docs/operations/FIADO-ESTORNO-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - [x] FX-ZELOCHAT-MEDIA-STORAGE-P0-01 (2026-08-13) - o catálogo e o Storage API
   confirmaram que anon e authenticated podiam listar, inserir e apagar qualquer
   objeto de `zelochat-media`. A migration forward-only `20260813092000` removeu

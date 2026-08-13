@@ -22,7 +22,7 @@ Classification:
 | `pdv.vender` | `/app`, offline sale RPC; create sale and stock effects | Sale RPC and INSERT policies | Enforced |
 | `pdv.receber` | `/app`, Mesa partial payment; write payment | RPC/policies require receive permission | Enforced |
 | `pdv.desconto` | `/app`; apply positive discount | Database trigger | Enforced |
-| `pdv.cancelar` | `/app` and management cancellation | Sale/child writes are protected; `fiado_estornar_venda(bigint)` is tenant-only | **Candidate gap 1** |
+| `pdv.cancelar` | `/app` and management cancellation | Sale/child writes and `fiado_estornar_venda(bigint)` require the capability | **Enforced — production validated 2026-08-13** |
 | `caixa.abrir` | `/app`; open cash drawer | `caixas` INSERT policy | Enforced |
 | `caixa.fechar` | `/gestao/caixa`; close drawer/write closure | UPDATE/INSERT policies | Enforced |
 | `caixa.movimentar` | `/app`; cash movement | Movement INSERT policy | Enforced |
@@ -50,13 +50,15 @@ Classification:
 | `pedidos.receber` | Close/deliver order and Mesa payment | Function guards | Enforced for mutations |
 | `pedidos.cancelar` | Reject/cancel order | Function guards | Enforced for mutations |
 
-## Three bounded candidate gaps
+## Bounded candidate gaps and closure
 
-1. `fiado_estornar_venda(bigint)` can change a person's balance and append a
-   compensating ledger row before the later sale DELETE is rejected. Consumers:
-   `src/lib/finance/saleOps.js` and management cancellation. Expected minimum,
-   only after live definition/grant and actor probes: add the existing
-   `pdv.cancelar` guard in a forward-only function replacement.
+1. **Closed in production.** `fiado_estornar_venda(bigint)` could change a
+   person's balance and append a compensating ledger row before the later sale
+   DELETE was rejected. The live actor probe reproduced it; migration
+   `20260813093000_fiado_estorno_rbac.sql` added the existing `pdv.cancelar`
+   guard without changing ACL, tenant scope, calculations or idempotency. Full
+   evidence and rollback:
+   `docs/operations/FIADO-ESTORNO-RBAC-SNAPSHOT-2026-08-13.md`.
 2. `/api/chat/assistant` can assemble sales, expenses, cash, people/ledger and
    intelligence context through service role for any resolved active subuser;
    it also exposes the owner WhatsApp tool. Product intent and the deployed

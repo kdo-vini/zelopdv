@@ -114,9 +114,16 @@ Evidência e rollback:
   Caixa/Fichário para que não reapareçam como finding genérico.
 
 Inventário versionado: `docs/operations/RBAC-CAPABILITY-INVENTORY-2026-08-13.md`.
-As três linhas classificadas como candidatos ainda não autorizam mudança de
+As linhas ainda classificadas como candidatas não autorizam mudança de
 produção: cada uma exige o probe live e o mapeamento de consumidores descritos
 no próprio inventário.
+
+Primeira fatia encerrada em produção: o bypass de
+`fiado_estornar_venda(bigint)` foi reproduzido e contido pela migration
+`20260813093000`, com matriz completa e rollback em
+`docs/operations/FIADO-ESTORNO-RBAC-SNAPSHOT-2026-08-13.md`. Restam os dois
+candidatos de leitura de pedidos canônicos e boundary server-side do assistant;
+eles continuam sujeitos à mesma regra de confirmação antes de mudar produção.
 
 Já concluído e rastreado em `docs/FIXES_PROGRESS.md`: Despesas, catálogo,
 estoque, Pessoas, `access_users`, Caixa, Mesas, vendas, desconto, relatórios,
