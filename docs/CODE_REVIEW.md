@@ -5,6 +5,19 @@
 
 ## Findings
 
+### Update 2026-08-13 - billing_payments server-only
+
+O finding foi confirmado em producao: a policy
+`billing_payments_self_insert` mais o grant de tabela permitiam que um
+autenticado criasse uma cobranca arbitraria para o proprio `user_id` via Data
+API. Nenhum consumidor browser foi encontrado; criacao/reconciliacao Pix,
+webhook, status e settlement usam `supabaseAdmin`/service-role. A migration
+`20260813032000_billing_payments_server_insert_only.sql` revoga somente INSERT
+para `anon`/`authenticated`, preserva SELECT do titular e o caminho service-role,
+e deixa a remocao da policy stale para o trabalho separado de reconciliation.
+Blast radius e rollback estao em
+`docs/operations/BILLING-PAYMENTS-INSERT-SNAPSHOT-2026-08-12.md`.
+
 ### Update 2026-08-12 - enforcement de desconto no POS
 
 O finding foi confirmado em producao: `pdv.desconto` era aplicado somente no

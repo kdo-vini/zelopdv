@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-BILLING-PAYMENTS-INSERT-01 (2026-08-13) - finding confirmado em
+  producao: `billing_payments_self_insert` permitia INSERT arbitrario de uma
+  cobranca para o proprio usuario por cliente autenticado, sem consumidor
+  browser legitimo. A migration forward-only
+  `20260813032000_billing_payments_server_insert_only.sql` revoga somente
+  INSERT para `anon`/`authenticated`, preservando SELECT do titular, rotas
+  server-side, webhook, RPC de settlement e service-role. Matriz remota
+  cobriu owner, subusuario, super-admin, anon e service-role sem persistencia;
+  snapshot em `docs/operations/BILLING-PAYMENTS-INSERT-SNAPSHOT-2026-08-12.md`.
+
 - [x] FX-DISCOUNT-RBAC-01 (2026-08-12) - finding confirmado em producao:
   subusuario com `pdv.vender`/`pdv.receber`, mas sem `pdv.desconto`, conseguia
   inserir venda com desconto positivo diretamente. A migration forward-only

@@ -1,5 +1,23 @@
 # ZeloPDV — Foco atual
 
+- Contencao incremental — `billing_payments` server-only (2026-08-13): a
+  revalidacao remota confirmou que a policy `billing_payments_self_insert`
+  permitia que qualquer autenticado criasse uma linha de cobranca arbitraria
+  para si pelo Data API, embora nenhum consumidor browser exista. A migration
+  forward-only `20260813032000_billing_payments_server_insert_only.sql`
+  revoga somente INSERT de `anon`/`authenticated`; SELECT do titular e os
+  writes service-role dos fluxos Pix/webhook permanecem iguais. Snapshot:
+  `docs/operations/BILLING-PAYMENTS-INSERT-SNAPSHOT-2026-08-12.md`.
+
+- E2E pos-migration (2026-08-13): a conta permanente informada pelo usuario
+  foi usada sem persistir a senha. O cleanup dedicado passou, mas o setup do
+  Playwright excedeu 30s esperando a URL apos o login, apesar do snapshot
+  mostrar a sessao autenticada no app. Trata-se de falha/flakiness do setup
+  local, nao de autorizacao do billing; nao foi feito cleanup de UI por causa
+  disso. `npm run build` tambem nao concluiu neste Windows porque o
+  `adapter-vercel` nao conseguiu criar um symlink em `.vercel/output`
+  (`EPERM`); o typecheck e a suite Vitest continuam verdes.
+
 - RBAC incremental — desconto POS (2026-08-12): a revalidacao remota confirmou
   que `pdv.desconto` era apenas gate de UI: um subusuario com venda/recebimento
   conseguia inserir venda com desconto positivo pelo Data API. A migration
