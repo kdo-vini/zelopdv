@@ -1,3 +1,8 @@
+param(
+  [switch]$ApplyForwardMigrations,
+  [string[]]$PostMigrationVerification = @()
+)
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
@@ -50,6 +55,30 @@ function Invoke-DisposablePsql {
 
   & docker @arguments
   if ($LASTEXITCODE -ne 0) { throw "Baseline SQL failed: $File" }
+}
+
+function Invoke-DisposableVerificationPsql {
+  param(
+    [Parameter(Mandatory = $true)][string]$DatabaseUrl,
+    [Parameter(Mandatory = $true)][string]$File
+  )
+
+  if ($DatabaseUrl -notmatch '^postgresql://postgres:postgres@127\.0\.0\.1:55322/postgres$') {
+    throw 'Refusing a non-loopback or unexpected database target.'
+  }
+
+  $verificationRoot = (Resolve-Path -LiteralPath (Join-Path $repositoryRoot 'supabase\verification')).Path
+  $resolvedFile = (Resolve-Path -LiteralPath (Join-Path $repositoryRoot $File)).Path
+  if (-not $resolvedFile.StartsWith("$verificationRoot\", [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Post-migration verification must stay under supabase/verification: $File"
+  }
+
+  $containerFile = "/verification/$([IO.Path]::GetFileName($resolvedFile))"
+  & docker run --rm --network host `
+    -v "${verificationRoot}:/verification:ro" `
+    $postgresImage `
+    psql $DatabaseUrl -X -q -v ON_ERROR_STOP=1 --file $containerFile
+  if ($LASTEXITCODE -ne 0) { throw "Post-migration verification failed: $File" }
 }
 
 function Get-NormalizedDumpHash {
@@ -146,8 +175,23 @@ try {
     Set-Content -LiteralPath $lintOutput -Encoding utf8
   if ($LASTEXITCODE -ne 0) { throw 'Local database lint command failed.' }
 
+  if ($ApplyForwardMigrations) {
+    Invoke-SupabaseLocal db push --local --yes --workdir $temporaryRoot
+
+    foreach ($verificationFile in $PostMigrationVerification) {
+      Invoke-DisposableVerificationPsql `
+        -DatabaseUrl $databaseUrl `
+        -File $verificationFile
+    }
+  } elseif ($PostMigrationVerification.Count -gt 0) {
+    throw 'PostMigrationVerification requires ApplyForwardMigrations.'
+  }
+
   Write-Output "BASELINE_VERIFIED cutoff=$baselineCutoff normalized_dump_sha256=$actualDumpHash"
   Write-Output 'Application schema/security and captured platform configuration match production.'
+  if ($ApplyForwardMigrations) {
+    Write-Output "Forward migrations applied locally; post-migration verifiers passed: $($PostMigrationVerification.Count)."
+  }
   Write-Output "Lint evidence: $lintOutput"
 } finally {
   if ($started) {

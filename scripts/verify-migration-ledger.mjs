@@ -363,6 +363,8 @@ function verifyManifest() {
     .filter((line) => line && !line.startsWith('#'));
   const canonical = sqlFiles(join(root, 'supabase', 'migrations'));
   const canonicalVersions = canonical.map(versionOf);
+  const canonicalAtCutoff = canonicalVersions.filter((version) => BigInt(version) <= BigInt(cutoff));
+  const forwardVersions = canonicalVersions.filter((version) => BigInt(version) > BigInt(cutoff));
   const remoteVersions = manifest.remote_history.map((entry) => entry.version);
   const remoteNames = manifest.remote_history.map((entry) => entry.name);
   const artifactIds = manifest.artifacts.map((entry) => entry.artifact_id);
@@ -371,14 +373,11 @@ function verifyManifest() {
   if (new Set(remoteVersions).size !== remoteVersions.length) fail('Remote history contains duplicate versions.');
   if (new Set(remoteNames).size !== remoteNames.length) fail('Remote history contains duplicate names.');
   if (new Set(artifactIds).size !== artifactIds.length) fail('Manifest contains duplicate artifact ids.');
-  if (JSON.stringify(applied) !== JSON.stringify(canonicalVersions)) {
-    fail('applied-versions.txt does not exactly match local canonical migration versions.');
+  if (JSON.stringify(applied) !== JSON.stringify(canonicalAtCutoff)) {
+    fail('applied-versions.txt does not exactly match canonical migrations through the baseline cutoff.');
   }
   if (JSON.stringify(applied) !== JSON.stringify(remoteVersions)) {
     fail('Remote history versions do not exactly match applied-versions.txt.');
-  }
-  if (canonicalVersions.some((version) => BigInt(version) > BigInt(cutoff))) {
-    fail('A migration newer than the baseline cutoff exists; regenerate/extend verification before bootstrap.');
   }
 
   const archivedRemote = manifest.remote_history.filter((entry) => entry.archived_path);
@@ -461,7 +460,10 @@ function verifyManifest() {
     fail('schema.sql appears to contain a credential.');
   }
 
-  console.log('Migration ledger verified: 107/107 artifacts, 59/59 remote versions, no unknown classifications.');
+  console.log(
+    `Migration ledger verified: 107/107 baseline artifacts, 59/59 remote versions, `
+      + `${forwardVersions.length} forward migration(s), no unknown classifications.`,
+  );
 }
 
 if (update) updateManifest();

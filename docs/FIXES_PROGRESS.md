@@ -1,5 +1,14 @@
 # Fixes Progress
 
+- [x] FX-ZELOCHAT-MEDIA-STORAGE-P0-01 (2026-08-13) - o catálogo e o Storage API
+  confirmaram que anon e authenticated podiam listar, inserir e apagar qualquer
+  objeto de `zelochat-media`. A migration forward-only `20260813092000` removeu
+  a policy SELECT e restringiu INSERT/DELETE ao service role, mantendo o bucket
+  público para os downloads do Whatsmiau/browser/OpenAI. Pós-deploy: anon/auth
+  negados, service-role completo, GET público HTTP 200, zero objetos sintéticos
+  residuais e migration dry-run sem pendências. Evidência/rollback em
+  `docs/operations/ZELOCHAT-MEDIA-STORAGE-CONTAINMENT-SNAPSHOT-2026-08-13.md`.
+
 - [x] FX-MIGRATION-RECONCILIATION-01 (2026-08-13) - os 107 SQLs do worktree
   foram classificados sem estado desconhecido; as 59 versões remotas tiveram
   hashes congelados; 22 payloads autoritativos foram arquivados e o patch de

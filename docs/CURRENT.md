@@ -5,17 +5,16 @@
   webhooks estão concluídos; a reconciliação integral de migrations também foi
   encerrada com 107/107 artefatos classificados, baseline PG17 reproduzível,
   dump/ACL/policies e configuração Storage/Realtime com diff zero e dry-run
-  linked sem pendências. A captura confirmou um novo P0 isolado em Storage:
-  `anon` tem grant de INSERT/DELETE em `storage.objects` e as policies de
-  `zelochat-media` estão `TO PUBLIC`. O próximo bloco é mapear consumidores,
-  testar anon/auth/service-role e conter isso em migration forward-only. Depois
-  restam, nesta ordem, três candidatos RBAC confirmados
+  linked sem pendências. O P0 de Storage revelado pela captura também foi
+  contido pela migration `20260813092000`: anon/auth perderam upload, listagem e
+  delete em `zelochat-media`; service-role e GET público foram preservados, com
+  zero fixtures residuais. Restam, nesta ordem, três candidatos RBAC confirmados
   no código/baseline e ainda sujeitos à revalidação obrigatória em produção,
   verificação operacional do sweeper de
   deleção, mutações críticas confirmadas do ZeloAdmin e auditoria final. Request
   IDs, structured logging, rate limiting compartilhado, decomposição de
   componentes, dependency cleanup e redesign de confirmação por IA estão
-  explicitamente fora da meta. Após o P0 de Storage, o bloco RBAC finito é:
+  explicitamente fora da meta. O próximo bloco RBAC finito é:
   estorno de fiado no cancelamento, leitura dos pedidos canônicos e
   boundary server-side do assistant. A matriz 31/31 e os probes pendentes estão
   em `docs/operations/RBAC-CAPABILITY-INVENTORY-2026-08-13.md`. Evidência da reconciliação:

@@ -75,24 +75,27 @@ Storage/Realtime com diff zero; nenhuma escrita ou repair foi feita no projeto
 vinculado. Os dois findings existentes do lint de funções foram reproduzidos e
 registrados, sem mudança comportamental oportunista.
 
-### 3.1. P0 de Storage revelado pela reconciliação — próxima fatia
+### 3.1. P0 de Storage revelado pela reconciliação — concluído
 
 - [x] Confirmar no catálogo real que `storage.objects` tem RLS e grants de
   INSERT/DELETE para `anon`/`authenticated`.
 - [x] Confirmar que `zelochat-media service insert` e
   `zelochat-media service delete` são permissivas e `TO PUBLIC` para todo o
   bucket.
-- [ ] Identificar todos os consumidores de upload/delete e provar quais usam
+- [x] Identificar todos os consumidores de upload/delete e provar quais usam
   service-role, browser authenticated ou anon.
-- [ ] Executar probes Storage API com objeto sintético e remoção imediata,
+- [x] Executar probes Storage API com objeto sintético e remoção imediata,
   cobrindo anon, authenticated e service-role.
-- [ ] Criar snapshot e migration forward-only mínima; não alterar o baseline,
+- [x] Criar snapshot e migration forward-only mínima; não alterar o baseline,
   que precisa continuar representando o cutoff anterior.
-- [ ] Testar/deployar/observar a contenção antes de iniciar RBAC residual.
+- [x] Testar/deployar/observar a contenção antes de iniciar RBAC residual.
 
 Classificação: P0 confirmado, porque grant de INSERT/DELETE + policy `TO PUBLIC`
 forma um caminho efetivo de escrita anônima. O baseline registrou a exposição;
 ele não a criou nem a trata como aprovada.
+
+Evidência e rollback:
+`docs/operations/ZELOCHAT-MEDIA-STORAGE-CONTAINMENT-SNAPSHOT-2026-08-13.md`.
 
 ### 4. RBAC por papel — fechamento incremental
 
