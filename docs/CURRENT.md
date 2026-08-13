@@ -2,13 +2,30 @@
 
 - Meta ativa do audit de arquitetura (2026-08-13): o escopo foi congelado em
   `docs/projects/architecture-audit-implementation.md`. P0 e reliability de
-  webhooks estão concluídos; restam, nesta ordem, bootstrap/reconciliação de
-  migrations, inventário RBAC residual, verificação operacional do sweeper de
+  webhooks estão concluídos; a reconciliação integral de migrations também foi
+  encerrada com 107/107 artefatos classificados, baseline PG17 reproduzível,
+  dump/ACL/policies e configuração Storage/Realtime com diff zero e dry-run
+  linked sem pendências. A captura confirmou um novo P0 isolado em Storage:
+  `anon` tem grant de INSERT/DELETE em `storage.objects` e as policies de
+  `zelochat-media` estão `TO PUBLIC`. O próximo bloco é mapear consumidores,
+  testar anon/auth/service-role e conter isso em migration forward-only. Depois
+  restam, nesta ordem, três candidatos RBAC confirmados
+  no código/baseline e ainda sujeitos à revalidação obrigatória em produção,
+  verificação operacional do sweeper de
   deleção, mutações críticas confirmadas do ZeloAdmin e auditoria final. Request
   IDs, structured logging, rate limiting compartilhado, decomposição de
   componentes, dependency cleanup e redesign de confirmação por IA estão
-  explicitamente fora da meta. O próximo e único bloco ativo é migration/schema
-  reconciliation.
+  explicitamente fora da meta. Após o P0 de Storage, o bloco RBAC finito é:
+  estorno de fiado no cancelamento, leitura dos pedidos canônicos e
+  boundary server-side do assistant. A matriz 31/31 e os probes pendentes estão
+  em `docs/operations/RBAC-CAPABILITY-INVENTORY-2026-08-13.md`. Evidência da reconciliação:
+  `supabase/baselines/20260813091000/README.md`. O lint de banco continua
+  reproduzindo dois findings preexistentes em `criar_venda_completa` e
+  `save_zelomenu_delivery_settings`; nenhum foi mascarado ou alterado nesta
+  entrega de preservação de comportamento. `npm run build` completou as
+  transformações client/server, mas o adapter Vercel terminou vermelho neste
+  Windows com `EPERM` ao criar o symlink `.vercel/output/functions/index.func`;
+  é uma limitação local de permissão de symlink e permanece registrada.
 
 - RBAC incremental — histórico de vendas (2026-08-13): a revalidação remota
   confirmou que um cargo só de Pedidos lia `vendas` e `vendas_itens`. A
@@ -359,7 +376,7 @@
   `fiado_lancamentos` da conta antes de apagar `pessoas` e `auth.users`.
   Isso corrige no banco o erro de FK `fiado_lancamentos_id_pessoa_fkey` na
   tela `/users`, inclusive para exclusoes em lote. A migration
-  `.ai/migrations/account_deletion_fiado_2026_08_09.sql` foi aplicada via
+  `supabase/history/observed-local/account_deletion_fiado_2026_08_09.sql` foi aplicada via
   Supabase CLI no projeto vinculado e verificada por introspeccao do corpo da
   funcao, ordem dos deletes e grants. Nenhuma conta foi apagada durante a
   correcao. Teste direcionado: 1/1; `npm test`: 513/513; `npm run check`:

@@ -5,18 +5,6 @@
 
 ## Para que serve este documento
 
-## Progresso RBAC incremental (2026-08-12)
-
-As fatias de risco confirmado seguem pequenas e independentes. A fatia de
-extensoes de catalogo ZeloMenu exige `produtos.gerenciar` somente em
-INSERT/UPDATE/DELETE; SELECT, cache do PDV, billing, offline e service-role
-continuam fora desta mudanca. Itens arquiteturais P2/P3 continuam backlog e
-nao sao pretexto para refatoracoes amplas.
-
-O desconto POS segue a mesma regra de contenção: `pdv.desconto` é validado no
-trigger somente quando há desconto positivo; Mesa e desconto zero preservam o
-contrato operacional existente.
-
 Todo sistema faz *trading*. Para entregar valor rápido e barato, a gente escolhe deixar algumas coisas
 na mesa. Este arquivo registra **o que estamos deixando na mesa de propósito** (tradeoffs aceitos) e
 **o que sabemos que está torto mas ainda não pagamos** (dívida técnica conhecida).
@@ -30,6 +18,29 @@ A diferença importa:
 
 Regra de uso: antes de criar um TA/DT novo, confira se já não está em [[CODE_REVIEW]] como finding.
 Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidência* técnica.
+
+## Governança de migrations (2026-08-13)
+
+As 59 migrations já aplicadas permanecem byte a byte imutáveis. O baseline
+atual fica fora de `supabase/migrations`, exige um sentinel de stack descartável
+e só repara histórico local depois do restore. Dos 23 payloads remotos ausentes,
+22 ficam como evidência não executável; o patch de dados de um tenant fica
+somente como hash para não versionar identificadores e catálogo. Isso evita
+reescrever a história de produção ou transformar um snapshot tardio em migration
+pendente. Uma nova captura é necessária quando houver migration posterior ao
+cutoff `20260813091000`.
+
+## Progresso RBAC incremental (2026-08-12)
+
+As fatias de risco confirmado seguem pequenas e independentes. A fatia de
+extensoes de catalogo ZeloMenu exige `produtos.gerenciar` somente em
+INSERT/UPDATE/DELETE; SELECT, cache do PDV, billing, offline e service-role
+continuam fora desta mudanca. Itens arquiteturais P2/P3 continuam backlog e
+nao sao pretexto para refatoracoes amplas.
+
+O desconto POS segue a mesma regra de contenção: `pdv.desconto` é validado no
+trigger somente quando há desconto positivo; Mesa e desconto zero preservam o
+contrato operacional existente.
 
 ## TA-INTELLIGENCE-01 — Silenciar sinais é apresentação, não detecção
 

@@ -111,14 +111,14 @@
 
 - `delete_account` agora remove os `fiado_lancamentos` cujo `id_usuario` é da
   conta alvo antes de apagar `pessoas` e `auth.users`, na mesma transação.
-- A migration `.ai/migrations/account_deletion_fiado_2026_08_09.sql` foi
+- A migration arquivada em `supabase/history/observed-local/account_deletion_fiado_2026_08_09.sql` foi
   aplicada no Supabase vinculado via CLI e a ordem dos deletes/grants foi
   verificada por introspecção. O dashboard não precisou de alteração de
   frontend porque já chama `admin_delete_user`.
 
 **Referências**
 
-- [.ai/migrations/account_deletion_fiado_2026_08_09.sql](/home/vinicius/code/zelopdv/.ai/migrations/account_deletion_fiado_2026_08_09.sql:1)
+- [supabase/history/observed-local/account_deletion_fiado_2026_08_09.sql](../supabase/history/observed-local/account_deletion_fiado_2026_08_09.sql)
 - [admin-dashboard/src/routes/users/+page.svelte](/home/vinicius/code/zelopdv/admin-dashboard/src/routes/users/+page.svelte:519)
 
 ---

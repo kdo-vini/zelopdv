@@ -76,9 +76,14 @@ Principais envs usados no código:
 
 ### Convenção observada
 
-- Não existe `supabase/migrations/` no repo.
-- As migrations versionadas ficam em `.ai/migrations/`.
-- O estado real de produção precisa ser inferido de código + migrations + banco, não só do repo.
+- `supabase/migrations/` contém as 59 versões aplicadas e todas as migrations
+  futuras devem ser forward-only; nunca editar um arquivo já aplicado.
+- `supabase/baselines/20260813091000/` é o baseline executável atual, fora do
+  stream normal, e `supabase/history/` contém referências não executáveis.
+- `.ai/migrations/` permanece como acervo legado classificado; não é a fonte
+  canônica para migrations novas.
+- O estado real continua sendo verificado contra o banco vinculado, mas o
+  bootstrap descartável agora prova equivalência de schema, grants e policies.
 
 ### Tabelas centrais confirmadas no código
 

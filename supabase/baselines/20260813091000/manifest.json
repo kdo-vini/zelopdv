@@ -1,0 +1,3915 @@
+{
+  "format": 1,
+  "cutoff": "20260813091000",
+  "captured_at": "2026-08-13",
+  "source_head": "964e8811681363fedead2effb879d91ad34b7c26",
+  "environment": {
+    "supabase_cli": "2.109.0",
+    "postgres": "17.6",
+    "postgres_image": "17.6.1.031",
+    "encoding": "UTF8",
+    "collate": "en_US.UTF-8",
+    "ctype": "en_US.UTF-8",
+    "extensions": [
+      "pg_cron@1.6.4",
+      "pg_net@0.19.5",
+      "pg_stat_statements@1.11",
+      "pgcrypto@1.3",
+      "plpgsql@1.0",
+      "supabase_vault@0.3.1",
+      "uuid-ossp@1.1"
+    ]
+  },
+  "counts": {
+    "canonical_migrations": 59,
+    "legacy_sql": 46,
+    "verification_sql": 2,
+    "classified_artifacts": 107,
+    "archived_remote_payloads": 22,
+    "hash_only_tenant_data_payloads": 1,
+    "archived_observed_local": 6,
+    "public_tables": 93,
+    "public_functions": 68,
+    "public_views": 4,
+    "public_policies": 203,
+    "public_triggers": 15,
+    "public_rls_tables": 93,
+    "storage_buckets": 3,
+    "storage_policies": 14,
+    "realtime_tables": 2,
+    "custom_roles": 0,
+    "cron_jobs_metadata_only": 3
+  },
+  "baseline_files": [
+    {
+      "path": "supabase/baselines/20260813091000/schema.sql",
+      "raw_sha256": "37271a8370208e948e3f5090c6339e01266990574048f61b926503033d0aa8ee",
+      "lf_sha256": "37271a8370208e948e3f5090c6339e01266990574048f61b926503033d0aa8ee",
+      "bytes": 449717,
+      "git_blob_oid": "1cc3bafa42788a2dc1ff941e00187530cde3aa67"
+    },
+    {
+      "path": "supabase/baselines/20260813091000/platform.sql",
+      "raw_sha256": "eadb7d8a0124840d8b5b767ecf1d96fc5f68c46f8f2366ae559c549c1cdadbb8",
+      "lf_sha256": "eadb7d8a0124840d8b5b767ecf1d96fc5f68c46f8f2366ae559c549c1cdadbb8",
+      "bytes": 5927,
+      "git_blob_oid": "53ae42c2d99f2f2633b3ecdd46876984ec253eb2"
+    },
+    {
+      "path": "supabase/baselines/20260813091000/applied-versions.txt",
+      "raw_sha256": "65841cf66dda7b28fd77cfbe19f45a4ed7f78688bcd41e120453bb7553294235",
+      "lf_sha256": "65841cf66dda7b28fd77cfbe19f45a4ed7f78688bcd41e120453bb7553294235",
+      "bytes": 925,
+      "git_blob_oid": "347ed5cc9975c54c3a99c7d2dbab04f8bee852c1"
+    },
+    {
+      "path": "supabase/baselines/20260813091000/legacy-classification.json",
+      "raw_sha256": "afacfc813a6955b7808e1e2c5ce5bdc18c3d8a6ef58263325afffba17ee28094",
+      "lf_sha256": "afacfc813a6955b7808e1e2c5ce5bdc18c3d8a6ef58263325afffba17ee28094",
+      "bytes": 14198,
+      "git_blob_oid": "08f80898acf73abe98fefee21989e6b6a85dec05"
+    },
+    {
+      "path": "supabase/baselines/20260813091000/platform-state.json",
+      "raw_sha256": "c29bead2429ee8dab847aa56bdbb95f8e72309b24ca95523eabacb0033b2841f",
+      "lf_sha256": "c29bead2429ee8dab847aa56bdbb95f8e72309b24ca95523eabacb0033b2841f",
+      "bytes": 10005,
+      "git_blob_oid": "c27e3471ad50d99cf6537164c4f1224aa971468e"
+    },
+    {
+      "path": "supabase/baselines/20260813091000/README.md",
+      "raw_sha256": "ad730a99cd4fa8575c7ef7e7202acd394cd219461f8943f049047fd6ca7d4df5",
+      "lf_sha256": "ad730a99cd4fa8575c7ef7e7202acd394cd219461f8943f049047fd6ca7d4df5",
+      "bytes": 4176,
+      "git_blob_oid": "9c4cee779d48e01688f480db0a6d28d87561c402"
+    },
+    {
+      "path": "supabase/config.toml",
+      "raw_sha256": "2efcca84a23cdb4627bc1d60b3a0c711cfee1b33ff86cf1fd9af0cb5e3ee8b0b",
+      "lf_sha256": "2efcca84a23cdb4627bc1d60b3a0c711cfee1b33ff86cf1fd9af0cb5e3ee8b0b",
+      "bytes": 1614,
+      "git_blob_oid": "e8982ef46f4717ad4c3cd709bfb7337a5c09cc77"
+    }
+  ],
+  "app_owned_schemas": [
+    "public"
+  ],
+  "excluded_managed_schemas": [
+    "auth",
+    "storage",
+    "realtime",
+    "_realtime",
+    "supabase_migrations",
+    "supabase_functions",
+    "extensions",
+    "graphql",
+    "graphql_public",
+    "vault",
+    "cron",
+    "net",
+    "pgsodium",
+    "pg_catalog",
+    "information_schema"
+  ],
+  "excluded_data": [
+    "Auth users/sessions",
+    "business rows",
+    "Storage objects",
+    "Vault secrets",
+    "cron command bodies",
+    "sequence current values",
+    "statistics and physical identifiers"
+  ],
+  "platform_state": {
+    "buckets": [
+      "delivery-assets",
+      "logos",
+      "zelochat-media"
+    ],
+    "realtime_tables": [
+      "public.zelo_orders",
+      "public.zelochat_orders"
+    ],
+    "cron_jobs_not_replayed": [
+      {
+        "name": "whatsapp-lifecycle-cron-daily",
+        "schedule": "0 13 * * *",
+        "command_sha256": "4addf69e49959008460ce6cc699633d160a460e5edcf044a7881a5f2fb6ed775"
+      },
+      {
+        "name": "onboarding-emails-daily",
+        "schedule": "0 9 * * *",
+        "command_sha256": "7e27b3a52d259b2d983ed473f9712e9bccc1b060002ce03b683bbc570f4ae195"
+      },
+      {
+        "name": "nudge-incomplete-registration",
+        "schedule": "0 * * * *",
+        "command_sha256": "e95b0aa870418fb3a04c60226bde412aeb9d59273779c0bc2c4f14acecfd59e4"
+      }
+    ]
+  },
+  "remote_history": [
+    {
+      "version": "045",
+      "name": "045_zelochat_orders_source_zelomenu.sql",
+      "raw_sha256": "8a98a69e606d9cd91c57fa6f77e05e5c1b0a3e20f30b1b5e8776c50efbc923c1",
+      "lf_sha256": "8a98a69e606d9cd91c57fa6f77e05e5c1b0a3e20f30b1b5e8776c50efbc923c1",
+      "bytes": 377,
+      "sql_blank_line_sha256": "e45910a16d82fd7580c9f7fb28c2e84ffd58dafe493455d42b24cb8a40fa1aad",
+      "archived_path": "supabase/history/remote-applied/045_zelochat_orders_source_zelomenu.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "047",
+      "name": "047_media_bucket_size_limit.sql",
+      "raw_sha256": "3f352ab01be5d99633ca3d073e44662fd0242fb4d2e7697b9883850eeb8d7f31",
+      "lf_sha256": "3f352ab01be5d99633ca3d073e44662fd0242fb4d2e7697b9883850eeb8d7f31",
+      "bytes": 616,
+      "sql_blank_line_sha256": "db43ca05fd3e6a0033b1b2ed4f0e37c2d4c6ac9f8edf6fed1cf04e4e2ab92cdf",
+      "archived_path": "supabase/history/remote-applied/047_media_bucket_size_limit.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": [
+        {
+          "line": 10,
+          "operation": "update"
+        }
+      ]
+    },
+    {
+      "version": "20260415000000",
+      "name": "20260415000000_email_onboarding_logs_rls.sql",
+      "raw_sha256": "328d9f3d297762bcd7e78a9da750fb4eac67c437d57050412de098435462e0a7",
+      "lf_sha256": "68c541e7aefc1895dbbeb5d479318679dd8fde2432a80e33fd737fe78ff1cc11",
+      "bytes": 1577,
+      "sql_blank_line_sha256": "66b948afc079479bfed609ca7994e2a627978b7b94e60e845b60401cae5e764f",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260712120000",
+      "name": "20260712120000_zelomenu_transactional_checkout.sql",
+      "raw_sha256": "29cdc5a72ebe693b272c70376444cee1291b9a403ddb7c82fefd57d6329c81a8",
+      "lf_sha256": "29cdc5a72ebe693b272c70376444cee1291b9a403ddb7c82fefd57d6329c81a8",
+      "bytes": 9839,
+      "sql_blank_line_sha256": "fa8507839baa429140938b18c6cf013493810cadba7b327f6d5f6fdc294ba6a4",
+      "archived_path": "supabase/history/remote-applied/20260712120000_zelomenu_transactional_checkout.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": [
+        {
+          "line": 4,
+          "operation": "update"
+        },
+        {
+          "line": 34,
+          "operation": "update"
+        },
+        {
+          "line": 36,
+          "operation": "insert"
+        },
+        {
+          "line": 43,
+          "operation": "update"
+        },
+        {
+          "line": 54,
+          "operation": "update"
+        },
+        {
+          "line": 123,
+          "operation": "update"
+        },
+        {
+          "line": 135,
+          "operation": "insert"
+        },
+        {
+          "line": 147,
+          "operation": "insert"
+        },
+        {
+          "line": 150,
+          "operation": "insert"
+        },
+        {
+          "line": 156,
+          "operation": "update"
+        }
+      ]
+    },
+    {
+      "version": "20260712130000",
+      "name": "20260712130000_temporary_function_introspection.sql",
+      "raw_sha256": "1544c9388dd43696179cfb2fc2cd104f81952080bc58dfc3f0c992bc9d062621",
+      "lf_sha256": "1544c9388dd43696179cfb2fc2cd104f81952080bc58dfc3f0c992bc9d062621",
+      "bytes": 509,
+      "sql_blank_line_sha256": "ecf03a0db7af48291b4b27a0db418caec059cd6572796c0e4aeccb166cbf72f4",
+      "archived_path": "supabase/history/remote-applied/20260712130000_temporary_function_introspection.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260712133000",
+      "name": "20260712133000_fix_criar_venda_completa_stock.sql",
+      "raw_sha256": "bca8af03ae55102db6024cb414602363d0a3074a263621f345bf5b36873fbebf",
+      "lf_sha256": "bca8af03ae55102db6024cb414602363d0a3074a263621f345bf5b36873fbebf",
+      "bytes": 8078,
+      "sql_blank_line_sha256": "aeafbd4e2bdf1970f850ce6d3a527b62c27adf5e2cf89bfe0f4d09be2df040e9",
+      "archived_path": "supabase/history/remote-applied/20260712133000_fix_criar_venda_completa_stock.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": [
+        {
+          "line": 67,
+          "operation": "insert"
+        },
+        {
+          "line": 92,
+          "operation": "insert"
+        },
+        {
+          "line": 113,
+          "operation": "insert"
+        },
+        {
+          "line": 137,
+          "operation": "update"
+        },
+        {
+          "line": 165,
+          "operation": "update"
+        },
+        {
+          "line": 183,
+          "operation": "update"
+        },
+        {
+          "line": 193,
+          "operation": "insert"
+        },
+        {
+          "line": 211,
+          "operation": "insert"
+        }
+      ]
+    },
+    {
+      "version": "20260718140000",
+      "name": "20260718140000_zelomenu_coupons.sql",
+      "raw_sha256": "1ee8d56f7f39b7b8dc51c286e0ad5bce5f69dba2fffe757007b94d2962ab02b9",
+      "lf_sha256": "1ee8d56f7f39b7b8dc51c286e0ad5bce5f69dba2fffe757007b94d2962ab02b9",
+      "bytes": 5955,
+      "sql_blank_line_sha256": "0f0ec374b76e69094fc208628de36fec71f9c3c2f48728d3c90f072fc38a12ad",
+      "archived_path": "supabase/history/remote-applied/20260718140000_zelomenu_coupons.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260721160000",
+      "name": "20260721160000_zelomenu_recommendations.sql",
+      "raw_sha256": "21470fddaf9b8568141a8098790f16af3d39c58f4787a20a3455a6ef492d36d1",
+      "lf_sha256": "21470fddaf9b8568141a8098790f16af3d39c58f4787a20a3455a6ef492d36d1",
+      "bytes": 696,
+      "sql_blank_line_sha256": "b3e088301d34499c6f3ab764947e270474c8015d75c7570b94a86a40a5711bbd",
+      "archived_path": "supabase/history/remote-applied/20260721160000_zelomenu_recommendations.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260722170000",
+      "name": "20260722170000_bem_servido_product_names.sql",
+      "raw_sha256": "69698e0ba0c7cd6822b22366d186cbe083bf99cd67f350fcddca5ffa2ec17714",
+      "lf_sha256": "69698e0ba0c7cd6822b22366d186cbe083bf99cd67f350fcddca5ffa2ec17714",
+      "bytes": 8865,
+      "sql_blank_line_sha256": "4781978c2d91d1e100637c2529ecc760e3d236ee6e14626019aa0aabf75a0e79",
+      "archived_path": null,
+      "archive_disposition": "hash_only_tenant_data",
+      "top_level_dml": [
+        {
+          "line": 7,
+          "operation": "update"
+        },
+        {
+          "line": 8,
+          "operation": "update"
+        },
+        {
+          "line": 9,
+          "operation": "update"
+        },
+        {
+          "line": 10,
+          "operation": "update"
+        },
+        {
+          "line": 11,
+          "operation": "update"
+        },
+        {
+          "line": 12,
+          "operation": "update"
+        },
+        {
+          "line": 13,
+          "operation": "update"
+        },
+        {
+          "line": 14,
+          "operation": "update"
+        },
+        {
+          "line": 15,
+          "operation": "update"
+        },
+        {
+          "line": 16,
+          "operation": "update"
+        },
+        {
+          "line": 18,
+          "operation": "update"
+        },
+        {
+          "line": 19,
+          "operation": "update"
+        },
+        {
+          "line": 20,
+          "operation": "update"
+        },
+        {
+          "line": 22,
+          "operation": "update"
+        },
+        {
+          "line": 23,
+          "operation": "update"
+        },
+        {
+          "line": 24,
+          "operation": "update"
+        },
+        {
+          "line": 25,
+          "operation": "update"
+        },
+        {
+          "line": 26,
+          "operation": "update"
+        },
+        {
+          "line": 27,
+          "operation": "update"
+        },
+        {
+          "line": 29,
+          "operation": "update"
+        },
+        {
+          "line": 30,
+          "operation": "update"
+        },
+        {
+          "line": 31,
+          "operation": "update"
+        },
+        {
+          "line": 33,
+          "operation": "update"
+        },
+        {
+          "line": 34,
+          "operation": "update"
+        },
+        {
+          "line": 35,
+          "operation": "update"
+        },
+        {
+          "line": 36,
+          "operation": "update"
+        },
+        {
+          "line": 38,
+          "operation": "update"
+        },
+        {
+          "line": 39,
+          "operation": "update"
+        },
+        {
+          "line": 40,
+          "operation": "update"
+        },
+        {
+          "line": 42,
+          "operation": "update"
+        },
+        {
+          "line": 43,
+          "operation": "update"
+        },
+        {
+          "line": 44,
+          "operation": "update"
+        },
+        {
+          "line": 45,
+          "operation": "update"
+        },
+        {
+          "line": 47,
+          "operation": "update"
+        },
+        {
+          "line": 48,
+          "operation": "update"
+        },
+        {
+          "line": 49,
+          "operation": "update"
+        },
+        {
+          "line": 50,
+          "operation": "update"
+        },
+        {
+          "line": 51,
+          "operation": "update"
+        },
+        {
+          "line": 52,
+          "operation": "update"
+        },
+        {
+          "line": 53,
+          "operation": "update"
+        },
+        {
+          "line": 54,
+          "operation": "update"
+        },
+        {
+          "line": 55,
+          "operation": "update"
+        },
+        {
+          "line": 56,
+          "operation": "update"
+        },
+        {
+          "line": 57,
+          "operation": "update"
+        },
+        {
+          "line": 58,
+          "operation": "update"
+        },
+        {
+          "line": 59,
+          "operation": "update"
+        },
+        {
+          "line": 61,
+          "operation": "update"
+        },
+        {
+          "line": 62,
+          "operation": "update"
+        },
+        {
+          "line": 63,
+          "operation": "update"
+        },
+        {
+          "line": 64,
+          "operation": "update"
+        }
+      ]
+    },
+    {
+      "version": "20260723120000",
+      "name": "20260723120000_zelomenu_pix_key_type.sql",
+      "raw_sha256": "8f5d73f9883e370bd7c939ba12411226e75cd3659e1ae1fec126866b4589a833",
+      "lf_sha256": "8f5d73f9883e370bd7c939ba12411226e75cd3659e1ae1fec126866b4589a833",
+      "bytes": 666,
+      "sql_blank_line_sha256": "9c57a6aef8b9d7b6b5646318dc2b2d0a4f96448fb95603a72b6a4e1ff4e5c4b3",
+      "archived_path": "supabase/history/remote-applied/20260723120000_zelomenu_pix_key_type.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260723130000",
+      "name": "20260723130000_zelomenu_auto_accept_orders.sql",
+      "raw_sha256": "5b248f1a1063924d742bfaa9947381d2f74a0648d240e1811d86690db5b8880a",
+      "lf_sha256": "5b248f1a1063924d742bfaa9947381d2f74a0648d240e1811d86690db5b8880a",
+      "bytes": 538,
+      "sql_blank_line_sha256": "b3ea0120aa07d46ae16250735a0a26b87c5e17e6f01b0be9c2197be6d6741be5",
+      "archived_path": "supabase/history/remote-applied/20260723130000_zelomenu_auto_accept_orders.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260725130000",
+      "name": "20260725130000_zelomenu_delivery_by_distance.sql",
+      "raw_sha256": "e516945507e9cf44dd6e2a08efb16148ef63bed85c5db7777a35d8f09cb6d101",
+      "lf_sha256": "d5484b00c1c3edd031a7e888cc0a218ee85e5c0358986ac4cb5ff9aceac62237",
+      "bytes": 10216,
+      "sql_blank_line_sha256": "06c1ee0aa9f9fb64e4afe5709dc6d1a38c4f015f79e8114fa66a4280d5004b4d",
+      "archived_path": "supabase/history/remote-applied/20260725130000_zelomenu_delivery_by_distance.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260725143000",
+      "name": "20260725143000_zelomenu_delivery_hardening.sql",
+      "raw_sha256": "dc519a9792bb126b3558dee5690b80620da2b6b9838e7b59779fa5a42312cbb1",
+      "lf_sha256": "dc519a9792bb126b3558dee5690b80620da2b6b9838e7b59779fa5a42312cbb1",
+      "bytes": 8174,
+      "sql_blank_line_sha256": "cea536d9ebefd06d5fd73687c3ca4c98f456c544351c5ff33effd617fed520c3",
+      "archived_path": "supabase/history/remote-applied/20260725143000_zelomenu_delivery_hardening.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": [
+        {
+          "line": 130,
+          "operation": "update"
+        },
+        {
+          "line": 148,
+          "operation": "delete"
+        },
+        {
+          "line": 150,
+          "operation": "insert"
+        }
+      ]
+    },
+    {
+      "version": "20260725150000",
+      "name": "20260725150000_zelomenu_delivery_zero_distance.sql",
+      "raw_sha256": "ede2a16d9e9beee68c0d2259cc0f66968c954093c7809d5ae4c62c96345746ef",
+      "lf_sha256": "ede2a16d9e9beee68c0d2259cc0f66968c954093c7809d5ae4c62c96345746ef",
+      "bytes": 750,
+      "sql_blank_line_sha256": "fd181423cb995bfdba7aebb004fb287108dee1d7534b675525285983a71e6a63",
+      "archived_path": "supabase/history/remote-applied/20260725150000_zelomenu_delivery_zero_distance.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260725160000",
+      "name": "20260725160000_zelomenu_delivery_quote_resolution.sql",
+      "raw_sha256": "e672e782fe36b12e8a03f86c12c3e4fcef3af07ef8be9dfba9018098a734e4dd",
+      "lf_sha256": "e672e782fe36b12e8a03f86c12c3e4fcef3af07ef8be9dfba9018098a734e4dd",
+      "bytes": 4064,
+      "sql_blank_line_sha256": "e2c5e804a8f2435d67052da10ed7a93d469be213ea969a55c0246c024143495a",
+      "archived_path": "supabase/history/remote-applied/20260725160000_zelomenu_delivery_quote_resolution.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": [
+        {
+          "line": 84,
+          "operation": "update"
+        },
+        {
+          "line": 100,
+          "operation": "update"
+        }
+      ]
+    },
+    {
+      "version": "20260725170000",
+      "name": "20260725170000_zelomenu_delivery_custom_time_pricing.sql",
+      "raw_sha256": "19f4bf81a92902d424a459f2c7e433ed27ba9ec22d62b0cf6dfafeb35c28bb3e",
+      "lf_sha256": "19f4bf81a92902d424a459f2c7e433ed27ba9ec22d62b0cf6dfafeb35c28bb3e",
+      "bytes": 12229,
+      "sql_blank_line_sha256": "18f29808e2adcd50b4103fa6d79c2a4d50c8eec80e4e64f3c54e3565387f83d9",
+      "archived_path": "supabase/history/remote-applied/20260725170000_zelomenu_delivery_custom_time_pricing.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": [
+        {
+          "line": 199,
+          "operation": "update"
+        },
+        {
+          "line": 228,
+          "operation": "delete"
+        },
+        {
+          "line": 230,
+          "operation": "insert"
+        },
+        {
+          "line": 237,
+          "operation": "delete"
+        },
+        {
+          "line": 240,
+          "operation": "insert"
+        },
+        {
+          "line": 254,
+          "operation": "insert"
+        }
+      ]
+    },
+    {
+      "version": "20260727120000",
+      "name": "20260727120000_zelomenu_business_cover.sql",
+      "raw_sha256": "8b436db935fd3a8a8ee34db74a3df917aa2208c1683dd7c4353533ee25dad796",
+      "lf_sha256": "8b436db935fd3a8a8ee34db74a3df917aa2208c1683dd7c4353533ee25dad796",
+      "bytes": 496,
+      "sql_blank_line_sha256": "20b7a89f5021b8f1d309887be1af6b1b1574b4d92246fb2e62b8ebfcca08eabc",
+      "archived_path": "supabase/history/remote-applied/20260727120000_zelomenu_business_cover.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260727150000",
+      "name": "20260727150000_zelomenu_push_subscriptions.sql",
+      "raw_sha256": "e26d5be9c6642eafda1a77d7e09e4e73174778782f2762a2a7f8cca1d468ede4",
+      "lf_sha256": "e26d5be9c6642eafda1a77d7e09e4e73174778782f2762a2a7f8cca1d468ede4",
+      "bytes": 721,
+      "sql_blank_line_sha256": "8b8e8bcae9e5c4355c0d0ca287cf5a445d94d6107ff283c0c9ad784d72098d94",
+      "archived_path": "supabase/history/remote-applied/20260727150000_zelomenu_push_subscriptions.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260727151000",
+      "name": "20260727151000_zelomenu_sponsored_businesses.sql",
+      "raw_sha256": "9a62c182dd4ee9e12a463013e9d6845c7898c5f1f7c079cc4e46c3dd5dc7057e",
+      "lf_sha256": "9a62c182dd4ee9e12a463013e9d6845c7898c5f1f7c079cc4e46c3dd5dc7057e",
+      "bytes": 355,
+      "sql_blank_line_sha256": "4232ef2885dbc0f8cc3b81f78f77dfdffe7a670821999ba38c1cd35b81c261ce",
+      "archived_path": "supabase/history/remote-applied/20260727151000_zelomenu_sponsored_businesses.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260727152000",
+      "name": "20260727152000_zelomenu_push_order_link.sql",
+      "raw_sha256": "469fbda6cf2f1ac5e50037ff70abf63af8d81b3eb2bac4aace9012fad239a30c",
+      "lf_sha256": "469fbda6cf2f1ac5e50037ff70abf63af8d81b3eb2bac4aace9012fad239a30c",
+      "bytes": 209,
+      "sql_blank_line_sha256": "4d49690dd3a142466a1b417151bb728a5306d8cd0dc682aac36fb13ff2fff904",
+      "archived_path": "supabase/history/remote-applied/20260727152000_zelomenu_push_order_link.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260727160000",
+      "name": "20260727160000_zelomenu_branding_storage.sql",
+      "raw_sha256": "60dfc2978568f6ece49808fb3359f0736f4f62f26291380c97e77bfe6db41fd9",
+      "lf_sha256": "60dfc2978568f6ece49808fb3359f0736f4f62f26291380c97e77bfe6db41fd9",
+      "bytes": 860,
+      "sql_blank_line_sha256": "962ecb6898d0d7c113592ed73addc29d51e59f2c0ee4d92ab58388cb402d18e7",
+      "archived_path": "supabase/history/remote-applied/20260727160000_zelomenu_branding_storage.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260727170000",
+      "name": "20260727170000_zelomenu_push_security.sql",
+      "raw_sha256": "762c9024da9ac3eba464de4fdd1be635b05ee448840cc47a2867cf24b99a9b54",
+      "lf_sha256": "762c9024da9ac3eba464de4fdd1be635b05ee448840cc47a2867cf24b99a9b54",
+      "bytes": 1950,
+      "sql_blank_line_sha256": "36e4c46bab745831d4702674dfc9be0d71f4da7fb02dd8f4c40e7ba37e3975bd",
+      "archived_path": "supabase/history/remote-applied/20260727170000_zelomenu_push_security.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260727220000",
+      "name": "20260727220000_admin_get_total_sales_value.sql",
+      "raw_sha256": "87f54fee2afde7f9baf06d5674f61a56f8b03edb4f4d895e3e8f60c1ad41c197",
+      "lf_sha256": "87f54fee2afde7f9baf06d5674f61a56f8b03edb4f4d895e3e8f60c1ad41c197",
+      "bytes": 806,
+      "sql_blank_line_sha256": "9532f16a559ff21eafb75229e0dc43d62c673507b6ac7ce6659ba966cf63836d",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260803164855",
+      "name": "20260803164855_mesas_payment_item_allocation.sql",
+      "raw_sha256": "ec1f418341ebea2687e9ffb3e35b62701a792bfdafcaba49349169ed8592a477",
+      "lf_sha256": "ec1f418341ebea2687e9ffb3e35b62701a792bfdafcaba49349169ed8592a477",
+      "bytes": 6980,
+      "sql_blank_line_sha256": "2e1b323b16cd3967fd3b9558362c229f5e685cf0528adb48c8297299077f61e9",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260803170000",
+      "name": "20260803170000_mesas_owner_scoped_payment_policies.sql",
+      "raw_sha256": "47d9d269f323f65efed23f6c83544d76d09d552a7092dc3c8730aec1c85be390",
+      "lf_sha256": "47d9d269f323f65efed23f6c83544d76d09d552a7092dc3c8730aec1c85be390",
+      "bytes": 1582,
+      "sql_blank_line_sha256": "d30b7fa0b94ce47edf2cff28d6c5677b35442bd9fe8526821c806bd263fc421f",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260804143959",
+      "name": "20260804143959_admin_finance_company_mrr_settings.sql",
+      "raw_sha256": "7d5bb1371a239022f9f23ef4d1be162670892ceb417e2500ca9c4f8f9c297794",
+      "lf_sha256": "7d5bb1371a239022f9f23ef4d1be162670892ceb417e2500ca9c4f8f9c297794",
+      "bytes": 2266,
+      "sql_blank_line_sha256": "f8e567d944e812dd87be4ec4bb8cd6c7abc41c8b62cbb5122d91fa904357c112",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": [
+        {
+          "line": 67,
+          "operation": "insert"
+        }
+      ]
+    },
+    {
+      "version": "20260805143653",
+      "name": "20260805143653_zelomenu_canonical_public_order_hotfix.sql",
+      "raw_sha256": "05396bd0a6b2ce78a2ecba7e54ad3cfd64adeba21cd8d2924087245c202a65a7",
+      "lf_sha256": "05396bd0a6b2ce78a2ecba7e54ad3cfd64adeba21cd8d2924087245c202a65a7",
+      "bytes": 4266,
+      "sql_blank_line_sha256": "10db90d7aeec803dfa61120e46d4f15f1d04bd54f5549375970518b3f11692ea",
+      "archived_path": "supabase/history/remote-applied/20260805143653_zelomenu_canonical_public_order_hotfix.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": [
+        {
+          "line": 112,
+          "operation": "update"
+        },
+        {
+          "line": 117,
+          "operation": "update"
+        },
+        {
+          "line": 121,
+          "operation": "update"
+        }
+      ]
+    },
+    {
+      "version": "20260807134325",
+      "name": "20260807134325_catalog_canonical_products.sql",
+      "raw_sha256": "d682f27ab73e4deb25abe95ad307ec81b929853fbbbf03b1166e86ddccf7cff0",
+      "lf_sha256": "d682f27ab73e4deb25abe95ad307ec81b929853fbbbf03b1166e86ddccf7cff0",
+      "bytes": 2616,
+      "sql_blank_line_sha256": "f37d091e2c0ccd584af10eb351b15781e174e39eed2b494a7b1f703386e758be",
+      "archived_path": "supabase/history/remote-applied/20260807134325_catalog_canonical_products.sql",
+      "archive_disposition": "payload_archived",
+      "top_level_dml": [
+        {
+          "line": 6,
+          "operation": "update"
+        },
+        {
+          "line": 13,
+          "operation": "update"
+        },
+        {
+          "line": 59,
+          "operation": "update"
+        },
+        {
+          "line": 69,
+          "operation": "update"
+        },
+        {
+          "line": 77,
+          "operation": "delete"
+        }
+      ]
+    },
+    {
+      "version": "20260812150000",
+      "name": "20260812150000_p0_security_containment.sql",
+      "raw_sha256": "ca7ee42f9c7c0e8368fcbf935b18cff0e756f2e53e3ecdbfd8afb513ce19cf8f",
+      "lf_sha256": "ca7ee42f9c7c0e8368fcbf935b18cff0e756f2e53e3ecdbfd8afb513ce19cf8f",
+      "bytes": 7195,
+      "sql_blank_line_sha256": "f209ab7fc416cd05503399d4f491e1435e3eb66b69a5a2f4a7ffc030c2aed414",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812165936",
+      "name": "20260812165936_webhook_reliability_pix_atomicity.sql",
+      "raw_sha256": "dbbef007141254288fc1ad74fcc52f61f0e1d07eabdc3fbe875f5fbf74bc7866",
+      "lf_sha256": "dbbef007141254288fc1ad74fcc52f61f0e1d07eabdc3fbe875f5fbf74bc7866",
+      "bytes": 5871,
+      "sql_blank_line_sha256": "321affde8295e92c8355f97dcea9f3d72217a811c7bd0e7771a15b78759e3098",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": [
+        {
+          "line": 91,
+          "operation": "insert"
+        },
+        {
+          "line": 121,
+          "operation": "update"
+        },
+        {
+          "line": 141,
+          "operation": "update"
+        }
+      ]
+    },
+    {
+      "version": "20260812191700",
+      "name": "20260812191700_subscriptions_live_row_invariant.sql",
+      "raw_sha256": "a0059687054634982be84897f8e3d5a1497d17d9d49ec7a85efa0b5f9f98d373",
+      "lf_sha256": "a0059687054634982be84897f8e3d5a1497d17d9d49ec7a85efa0b5f9f98d373",
+      "bytes": 793,
+      "sql_blank_line_sha256": "21522873961799f00c5bff32c99a81e48c682c339cc6498f29a5a01efd93bf15",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812193009",
+      "name": "20260812193009_expenses_role_rbac.sql",
+      "raw_sha256": "54058cb38ae4cc9782786ad07411044d88e85c93ea69707214440ed46980049f",
+      "lf_sha256": "54058cb38ae4cc9782786ad07411044d88e85c93ea69707214440ed46980049f",
+      "bytes": 3268,
+      "sql_blank_line_sha256": "911df06cec8cbbdeaf4e58fbdb6e590e6fa1c457d10c164042cf22028e90e956",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812195032",
+      "name": "20260812195032_products_role_rbac.sql",
+      "raw_sha256": "d44706626b8823b4d88b3fb60bf54ecfa7e35fff2c605fe5f27a409f3a74fd2d",
+      "lf_sha256": "d44706626b8823b4d88b3fb60bf54ecfa7e35fff2c605fe5f27a409f3a74fd2d",
+      "bytes": 8428,
+      "sql_blank_line_sha256": "30f77ac893669be934727fdfa4e630c52b4ffefc405d846c00b4c8aa17729b9f",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812200550",
+      "name": "20260812200550_catalog_stock_adjustment_rpc.sql",
+      "raw_sha256": "1fd86394286569437a3d1a92139099725a946a3e6d4864b82781406a8bc29cb8",
+      "lf_sha256": "1fd86394286569437a3d1a92139099725a946a3e6d4864b82781406a8bc29cb8",
+      "bytes": 3780,
+      "sql_blank_line_sha256": "7ad1977bd98ef744c33ef86f9e06883fcf9e6d90714421d6cb6fd623e128b6b8",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": [
+        {
+          "line": 24,
+          "operation": "update"
+        },
+        {
+          "line": 48,
+          "operation": "update"
+        },
+        {
+          "line": 80,
+          "operation": "update"
+        },
+        {
+          "line": 104,
+          "operation": "update"
+        }
+      ]
+    },
+    {
+      "version": "20260812202400",
+      "name": "20260812202400_pessoas_role_rbac.sql",
+      "raw_sha256": "358a83c910581f2391ec77dbb95f56162c3e4dc7b5fa54c53d4040ea4f189bee",
+      "lf_sha256": "358a83c910581f2391ec77dbb95f56162c3e4dc7b5fa54c53d4040ea4f189bee",
+      "bytes": 1231,
+      "sql_blank_line_sha256": "be7524b880f9aa26411918e7360f15994ff14db1d5ff896252727c30ac3f5e31",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812204706",
+      "name": "20260812204706_access_users_self_write_containment.sql",
+      "raw_sha256": "f7d8b8d4e4e7a2f3f93731657e53b3b649db1637b73f4f81c93a00b9ec4d1650",
+      "lf_sha256": "f7d8b8d4e4e7a2f3f93731657e53b3b649db1637b73f4f81c93a00b9ec4d1650",
+      "bytes": 1002,
+      "sql_blank_line_sha256": "23100f07fc0b48d66fda35ac8acad3e2f4b46cad3e263d6224b756bc632d1ae8",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812205010",
+      "name": "20260812205010_access_users_owner_guard.sql",
+      "raw_sha256": "22016e1f0536b5766b7221be8bcee47e34622e8ca3d48e0ec79e893bbe94051b",
+      "lf_sha256": "22016e1f0536b5766b7221be8bcee47e34622e8ca3d48e0ec79e893bbe94051b",
+      "bytes": 786,
+      "sql_blank_line_sha256": "df5ba737a8f7aad0766faddca22a710764b0431a1f1bbedfb7ef63802b5540b1",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812210856",
+      "name": "20260812210856_sales_cancel_rbac.sql",
+      "raw_sha256": "5ba7cb3de788f8ee66e9444861858b474f7f79142dc9a18609432509add585e9",
+      "lf_sha256": "5ba7cb3de788f8ee66e9444861858b474f7f79142dc9a18609432509add585e9",
+      "bytes": 3674,
+      "sql_blank_line_sha256": "3797d4ef6c2dd7bbff817075baae6335f150885bfb69ebbe85358f709bb16c49",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812211428",
+      "name": "20260812211428_sales_cancel_helper_grant_fix.sql",
+      "raw_sha256": "5289557a2e69325a1f56130fc5a763f4cbfd1408bff108f28102049681405090",
+      "lf_sha256": "5289557a2e69325a1f56130fc5a763f4cbfd1408bff108f28102049681405090",
+      "bytes": 612,
+      "sql_blank_line_sha256": "56ba8aa2ce9fb1c311a7306e4b96fc03fd01414a5a701f578ac730e91b5ce64a",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812214518",
+      "name": "20260812214518_caixa_role_rbac.sql",
+      "raw_sha256": "3bd97020c620bdb343f04f415613974e4c6e9f50a5ebac2f4f1fe4ede0a337b2",
+      "lf_sha256": "3bd97020c620bdb343f04f415613974e4c6e9f50a5ebac2f4f1fe4ede0a337b2",
+      "bytes": 2251,
+      "sql_blank_line_sha256": "7b1204194fc1879970544d06a143c508b3f8764ad15392c8b876f89d43430f69",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812230000",
+      "name": "20260812230000_mesas_payment_rbac.sql",
+      "raw_sha256": "716a38f36d3417d40c76de04901b9173dce1377c37fac6f037b93f62d0fd42ee",
+      "lf_sha256": "716a38f36d3417d40c76de04901b9173dce1377c37fac6f037b93f62d0fd42ee",
+      "bytes": 3896,
+      "sql_blank_line_sha256": "821e36b9cc645c4351baa1e9e41cce26b165f2ec452408ecd865e3fed0ee797d",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812233000",
+      "name": "20260812233000_mesas_operational_rbac.sql",
+      "raw_sha256": "60482bd95d7cdd8b1aae3dc418361831c6366138c0cfe5e34499911ebfd724d1",
+      "lf_sha256": "60482bd95d7cdd8b1aae3dc418361831c6366138c0cfe5e34499911ebfd724d1",
+      "bytes": 10682,
+      "sql_blank_line_sha256": "db49023b61c7dfd202917e120dfa4193601f5b41dd66398a209afadd9e98a12a",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260812234500",
+      "name": "20260812234500_mesas_operational_rpc_rbac.sql",
+      "raw_sha256": "3b09e2a157fa56b2a6d547daf9bf419669ead6682b9842e2c8a445b0143e74bd",
+      "lf_sha256": "3b09e2a157fa56b2a6d547daf9bf419669ead6682b9842e2c8a445b0143e74bd",
+      "bytes": 14852,
+      "sql_blank_line_sha256": "da4fe5c22ba88248e8d2d34a68beaa0dcce12c77ee636a24f88541e38da438bb",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": [
+        {
+          "line": 109,
+          "operation": "update"
+        },
+        {
+          "line": 118,
+          "operation": "update"
+        },
+        {
+          "line": 130,
+          "operation": "insert"
+        },
+        {
+          "line": 147,
+          "operation": "update"
+        },
+        {
+          "line": 185,
+          "operation": "update"
+        },
+        {
+          "line": 190,
+          "operation": "update"
+        },
+        {
+          "line": 199,
+          "operation": "delete"
+        },
+        {
+          "line": 201,
+          "operation": "update"
+        },
+        {
+          "line": 258,
+          "operation": "update"
+        },
+        {
+          "line": 263,
+          "operation": "update"
+        },
+        {
+          "line": 271,
+          "operation": "update"
+        },
+        {
+          "line": 275,
+          "operation": "update"
+        },
+        {
+          "line": 279,
+          "operation": "update"
+        },
+        {
+          "line": 338,
+          "operation": "update"
+        },
+        {
+          "line": 345,
+          "operation": "update"
+        },
+        {
+          "line": 354,
+          "operation": "update"
+        }
+      ]
+    },
+    {
+      "version": "20260813000000",
+      "name": "20260813000000_sales_creation_rbac.sql",
+      "raw_sha256": "b86ca5f35cbab873e8b9588d477a8d95681bb36f1b6c915e7a3ed4f5d07b1a30",
+      "lf_sha256": "b86ca5f35cbab873e8b9588d477a8d95681bb36f1b6c915e7a3ed4f5d07b1a30",
+      "bytes": 5649,
+      "sql_blank_line_sha256": "8f62970fba0c75c5cfb98b364a15c03e9e2bd7541df39317b5a49c2beb6c80b7",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813010000",
+      "name": "20260813010000_reports_select_rbac.sql",
+      "raw_sha256": "17db1db559b8853c1a4e318464957293ab2bb21f7a13176e6ba8c3fab2c8a88e",
+      "lf_sha256": "17db1db559b8853c1a4e318464957293ab2bb21f7a13176e6ba8c3fab2c8a88e",
+      "bytes": 1071,
+      "sql_blank_line_sha256": "8f28bfe71d65e78ce71766ffe94d65eb5f674dccc71a39c91498278725462a75",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813020000",
+      "name": "20260813020000_catalog_extensions_rbac.sql",
+      "raw_sha256": "851288358fc8868dd7c13776bd6d19cd98ec0eac39fae94397dd38079be506a5",
+      "lf_sha256": "851288358fc8868dd7c13776bd6d19cd98ec0eac39fae94397dd38079be506a5",
+      "bytes": 7315,
+      "sql_blank_line_sha256": "1265445c662d7fdbb4f947abf2f3c5f4e9cbda2a8eae61064b0c4130d8c71d58",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813030000",
+      "name": "20260813030000_discount_rbac.sql",
+      "raw_sha256": "60d831807f4eadd535f517986bfce6fb2e6d0be6a590f6fdb77ee2d2b29b1408",
+      "lf_sha256": "60d831807f4eadd535f517986bfce6fb2e6d0be6a590f6fdb77ee2d2b29b1408",
+      "bytes": 2042,
+      "sql_blank_line_sha256": "e1fc59fae833dbca30ca35ce729f422156a7a7eb0f161515ac52e519be2de359",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813031000",
+      "name": "20260813031000_discount_rbac_update_hardening.sql",
+      "raw_sha256": "1313e6aa8d66cd7268ad6d9aa85ad6653f0fa120601cf140e0e0bb97a6284880",
+      "lf_sha256": "1313e6aa8d66cd7268ad6d9aa85ad6653f0fa120601cf140e0e0bb97a6284880",
+      "bytes": 1441,
+      "sql_blank_line_sha256": "655e29d54bcd35a2c8ac150f4213d6d71506f0185803bae71ebf202fcae6ce5a",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813032000",
+      "name": "20260813032000_billing_payments_server_insert_only.sql",
+      "raw_sha256": "c5773e8ff7d9c53db5472341c4c0a182128fc0652e496144052409b5dc1564a5",
+      "lf_sha256": "c5773e8ff7d9c53db5472341c4c0a182128fc0652e496144052409b5dc1564a5",
+      "bytes": 443,
+      "sql_blank_line_sha256": "02471c84e355ed37a3c4454103f92a04440a77500ec5383055ebb74b694358cf",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813033000",
+      "name": "20260813033000_rpc_security_definer_containment.sql",
+      "raw_sha256": "5d449421b0ca6c627d4eb7cc8ddd1449d399e9d55e9ded1eefeb44b7d7db9397",
+      "lf_sha256": "5d449421b0ca6c627d4eb7cc8ddd1449d399e9d55e9ded1eefeb44b7d7db9397",
+      "bytes": 949,
+      "sql_blank_line_sha256": "bc455fefda67d3109fd40781a7580672b0b40f1b54c230dca3b1449b3509181c",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813034000",
+      "name": "20260813034000_fiado_ledger_select_rbac.sql",
+      "raw_sha256": "8bef09afa2bc5c47da59a33d9cdbf40b7535b3bb378237bf863fabb86e14a5c1",
+      "lf_sha256": "8bef09afa2bc5c47da59a33d9cdbf40b7535b3bb378237bf863fabb86e14a5c1",
+      "bytes": 426,
+      "sql_blank_line_sha256": "b8fb9e27ff9bb47a01baba0bd56f882ba2786122158a0b146405793a5dea7771",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813041000",
+      "name": "20260813041000_access_audit_logs_tenant_guard.sql",
+      "raw_sha256": "3fb7d1fc12c3c55e01c28b9e60025d36b23a8d03dc555adf9eedef9f5c51c4e9",
+      "lf_sha256": "3fb7d1fc12c3c55e01c28b9e60025d36b23a8d03dc555adf9eedef9f5c51c4e9",
+      "bytes": 397,
+      "sql_blank_line_sha256": "2e2c51c01c2420375d385d61cef7d4ce5c13e8c8c2c8ae80bc406230c347e9ce",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813043000",
+      "name": "20260813043000_gerente_reports_rbac.sql",
+      "raw_sha256": "3c37ba4135153922b0a71312caeac28ed7fdc1b3007925ce3e5f9dc242764bf1",
+      "lf_sha256": "3c37ba4135153922b0a71312caeac28ed7fdc1b3007925ce3e5f9dc242764bf1",
+      "bytes": 909,
+      "sql_blank_line_sha256": "b26a8a1946baf0e1f4a051efccbc3e7665632b5f32caec571f56146d6e8a9af5",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813050000",
+      "name": "20260813050000_mesas_select_rbac.sql",
+      "raw_sha256": "ec61200b174ba0c6543c00933ee0a8c6ed0396f6c33ed302e996f0cf8d292c42",
+      "lf_sha256": "ec61200b174ba0c6543c00933ee0a8c6ed0396f6c33ed302e996f0cf8d292c42",
+      "bytes": 1480,
+      "sql_blank_line_sha256": "032365e7352b81fbd2a3efa793fd9ce796a1d6f8806718e9df0aa749df3ac8a1",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813060000",
+      "name": "20260813060000_empresa_perfil_pin_select_containment.sql",
+      "raw_sha256": "0e9655e71b7e3100555c59cc7cd3a68d241985d611767f354cc33053e9f197f6",
+      "lf_sha256": "0e9655e71b7e3100555c59cc7cd3a68d241985d611767f354cc33053e9f197f6",
+      "bytes": 2321,
+      "sql_blank_line_sha256": "923cd551b0401ba420886bd0e1357dfbf7c1f77608ef32e27c1a255ab6f82bf5",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813070000",
+      "name": "20260813070000_vendas_taxas_select_rbac.sql",
+      "raw_sha256": "407e26ff2824a7f34c2fdfb2a2cf50dd3e63adce43a9b96a9ef3d40e78b95c28",
+      "lf_sha256": "407e26ff2824a7f34c2fdfb2a2cf50dd3e63adce43a9b96a9ef3d40e78b95c28",
+      "bytes": 603,
+      "sql_blank_line_sha256": "2d7bed40dae0327bb0ec0d9671eb859d6086453a8ea3e42225840a5cbee2f85e",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813080000",
+      "name": "20260813080000_sales_payment_cash_read_rbac.sql",
+      "raw_sha256": "90b7b44496dab6e6ed2d8f89064ba258811c4779c1fcebe086000d8362f3a538",
+      "lf_sha256": "90b7b44496dab6e6ed2d8f89064ba258811c4779c1fcebe086000d8362f3a538",
+      "bytes": 1253,
+      "sql_blank_line_sha256": "eae49475f0d82edbdbf25ef8ae8f5857d191359ed0c3abfb2adf8bbed4e49c74",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813090000",
+      "name": "20260813090000_sales_history_read_rbac.sql",
+      "raw_sha256": "6c888c54d91d3090aa63394a251af76d57785de9ed7875f0ca6b20b67cfde141",
+      "lf_sha256": "6c888c54d91d3090aa63394a251af76d57785de9ed7875f0ca6b20b67cfde141",
+      "bytes": 2206,
+      "sql_blank_line_sha256": "d4a83a3ea2c8b6eff1ac9ed913287a3477b2e12cff3fdba9e8c9782f4a13b798",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    },
+    {
+      "version": "20260813091000",
+      "name": "20260813091000_sales_history_read_rbac_performance.sql",
+      "raw_sha256": "a7da10bbadff0560b729d431d5665978a328b6f6c8d4745bed834fd1281c73d6",
+      "lf_sha256": "a7da10bbadff0560b729d431d5665978a328b6f6c8d4745bed834fd1281c73d6",
+      "bytes": 2398,
+      "sql_blank_line_sha256": "fcc4fdee49d0fd13b6ae14908002aeb0d192341793027741d52f1f426ccc68b4",
+      "archived_path": null,
+      "archive_disposition": "archive_not_required_local_canonical",
+      "top_level_dml": []
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "canonical:045",
+      "path": "supabase/migrations/045_legacy_placeholder.sql",
+      "original_path": "supabase/migrations/045_legacy_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "045",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "045",
+          "name": "045_zelochat_orders_source_zelomenu.sql",
+          "payload_lf_sha256": "8a98a69e606d9cd91c57fa6f77e05e5c1b0a3e20f30b1b5e8776c50efbc923c1",
+          "payload_sql_blank_line_sha256": "e45910a16d82fd7580c9f7fb28c2e84ffd58dafe493455d42b24cb8a40fa1aad",
+          "archived_path": "supabase/history/remote-applied/045_zelochat_orders_source_zelomenu.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:047",
+      "path": "supabase/migrations/047_media_bucket_size_limit_remote_snapshot.sql",
+      "original_path": "supabase/migrations/047_media_bucket_size_limit_remote_snapshot.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "remote_marker",
+      "version": "047",
+      "raw_sha256": "8402641f3bf03a13c13c6be1d9dedd807a51a7111bbaab177641bd0f2aa28cf0",
+      "lf_sha256": "8402641f3bf03a13c13c6be1d9dedd807a51a7111bbaab177641bd0f2aa28cf0",
+      "bytes": 628,
+      "sql_blank_line_sha256": "c1fa9b2ff3a0bf973cf5085fb04a777da4f193555e9cb1f3441e407e2669ccc7",
+      "git_blob_oid": "c4d9f2e25b117fc6ab1525cd77a6330f8faa8e7d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "047",
+          "name": "047_media_bucket_size_limit.sql",
+          "payload_lf_sha256": "3f352ab01be5d99633ca3d073e44662fd0242fb4d2e7697b9883850eeb8d7f31",
+          "payload_sql_blank_line_sha256": "db43ca05fd3e6a0033b1b2ed4f0e37c2d4c6ac9f8edf6fed1cf04e4e2ab92cdf",
+          "archived_path": "supabase/history/remote-applied/047_media_bucket_size_limit.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260415000000",
+      "path": "supabase/migrations/20260415000000_email_onboarding_logs_rls.sql",
+      "original_path": "supabase/migrations/20260415000000_email_onboarding_logs_rls.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260415000000",
+      "raw_sha256": "7cf547ab0307034d9a18635cd49413c149851249b35e4f2cafb18b6d76eacaf1",
+      "lf_sha256": "40da85906f3cb0c41d6b5f78c7c24d511b36af5d9638ed476f43068eb2394ee2",
+      "bytes": 1581,
+      "sql_blank_line_sha256": "66b948afc079479bfed609ca7994e2a627978b7b94e60e845b60401cae5e764f",
+      "git_blob_oid": "de407b7a7a50218c33c73a14469685a05515f57f",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260415000000",
+          "name": "20260415000000_email_onboarding_logs_rls.sql",
+          "payload_lf_sha256": "68c541e7aefc1895dbbeb5d479318679dd8fde2432a80e33fd737fe78ff1cc11",
+          "payload_sql_blank_line_sha256": "66b948afc079479bfed609ca7994e2a627978b7b94e60e845b60401cae5e764f",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260712120000",
+      "path": "supabase/migrations/20260712120000_placeholder.sql",
+      "original_path": "supabase/migrations/20260712120000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260712120000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260712120000",
+          "name": "20260712120000_zelomenu_transactional_checkout.sql",
+          "payload_lf_sha256": "29cdc5a72ebe693b272c70376444cee1291b9a403ddb7c82fefd57d6329c81a8",
+          "payload_sql_blank_line_sha256": "fa8507839baa429140938b18c6cf013493810cadba7b327f6d5f6fdc294ba6a4",
+          "archived_path": "supabase/history/remote-applied/20260712120000_zelomenu_transactional_checkout.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260712130000",
+      "path": "supabase/migrations/20260712130000_placeholder.sql",
+      "original_path": "supabase/migrations/20260712130000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260712130000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260712130000",
+          "name": "20260712130000_temporary_function_introspection.sql",
+          "payload_lf_sha256": "1544c9388dd43696179cfb2fc2cd104f81952080bc58dfc3f0c992bc9d062621",
+          "payload_sql_blank_line_sha256": "ecf03a0db7af48291b4b27a0db418caec059cd6572796c0e4aeccb166cbf72f4",
+          "archived_path": "supabase/history/remote-applied/20260712130000_temporary_function_introspection.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260712133000",
+      "path": "supabase/migrations/20260712133000_placeholder.sql",
+      "original_path": "supabase/migrations/20260712133000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260712133000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260712133000",
+          "name": "20260712133000_fix_criar_venda_completa_stock.sql",
+          "payload_lf_sha256": "bca8af03ae55102db6024cb414602363d0a3074a263621f345bf5b36873fbebf",
+          "payload_sql_blank_line_sha256": "aeafbd4e2bdf1970f850ce6d3a527b62c27adf5e2cf89bfe0f4d09be2df040e9",
+          "archived_path": "supabase/history/remote-applied/20260712133000_fix_criar_venda_completa_stock.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260718140000",
+      "path": "supabase/migrations/20260718140000_placeholder.sql",
+      "original_path": "supabase/migrations/20260718140000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260718140000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260718140000",
+          "name": "20260718140000_zelomenu_coupons.sql",
+          "payload_lf_sha256": "1ee8d56f7f39b7b8dc51c286e0ad5bce5f69dba2fffe757007b94d2962ab02b9",
+          "payload_sql_blank_line_sha256": "0f0ec374b76e69094fc208628de36fec71f9c3c2f48728d3c90f072fc38a12ad",
+          "archived_path": "supabase/history/remote-applied/20260718140000_zelomenu_coupons.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260721160000",
+      "path": "supabase/migrations/20260721160000_placeholder.sql",
+      "original_path": "supabase/migrations/20260721160000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260721160000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260721160000",
+          "name": "20260721160000_zelomenu_recommendations.sql",
+          "payload_lf_sha256": "21470fddaf9b8568141a8098790f16af3d39c58f4787a20a3455a6ef492d36d1",
+          "payload_sql_blank_line_sha256": "b3e088301d34499c6f3ab764947e270474c8015d75c7570b94a86a40a5711bbd",
+          "archived_path": "supabase/history/remote-applied/20260721160000_zelomenu_recommendations.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260722170000",
+      "path": "supabase/migrations/20260722170000_placeholder.sql",
+      "original_path": "supabase/migrations/20260722170000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260722170000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_hash_only_tenant_data",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "exclude_tenant_data",
+      "remote_links": [
+        {
+          "version": "20260722170000",
+          "name": "20260722170000_bem_servido_product_names.sql",
+          "payload_lf_sha256": "69698e0ba0c7cd6822b22366d186cbe083bf99cd67f350fcddca5ffa2ec17714",
+          "payload_sql_blank_line_sha256": "4781978c2d91d1e100637c2529ecc760e3d236ee6e14626019aa0aabf75a0e79",
+          "archived_path": null,
+          "archive_disposition": "hash_only_tenant_data"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260723120000",
+      "path": "supabase/migrations/20260723120000_placeholder.sql",
+      "original_path": "supabase/migrations/20260723120000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260723120000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260723120000",
+          "name": "20260723120000_zelomenu_pix_key_type.sql",
+          "payload_lf_sha256": "8f5d73f9883e370bd7c939ba12411226e75cd3659e1ae1fec126866b4589a833",
+          "payload_sql_blank_line_sha256": "9c57a6aef8b9d7b6b5646318dc2b2d0a4f96448fb95603a72b6a4e1ff4e5c4b3",
+          "archived_path": "supabase/history/remote-applied/20260723120000_zelomenu_pix_key_type.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260723130000",
+      "path": "supabase/migrations/20260723130000_placeholder.sql",
+      "original_path": "supabase/migrations/20260723130000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260723130000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260723130000",
+          "name": "20260723130000_zelomenu_auto_accept_orders.sql",
+          "payload_lf_sha256": "5b248f1a1063924d742bfaa9947381d2f74a0648d240e1811d86690db5b8880a",
+          "payload_sql_blank_line_sha256": "b3ea0120aa07d46ae16250735a0a26b87c5e17e6f01b0be9c2197be6d6741be5",
+          "archived_path": "supabase/history/remote-applied/20260723130000_zelomenu_auto_accept_orders.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260725130000",
+      "path": "supabase/migrations/20260725130000_placeholder.sql",
+      "original_path": "supabase/migrations/20260725130000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260725130000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260725130000",
+          "name": "20260725130000_zelomenu_delivery_by_distance.sql",
+          "payload_lf_sha256": "d5484b00c1c3edd031a7e888cc0a218ee85e5c0358986ac4cb5ff9aceac62237",
+          "payload_sql_blank_line_sha256": "06c1ee0aa9f9fb64e4afe5709dc6d1a38c4f015f79e8114fa66a4280d5004b4d",
+          "archived_path": "supabase/history/remote-applied/20260725130000_zelomenu_delivery_by_distance.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260725143000",
+      "path": "supabase/migrations/20260725143000_placeholder.sql",
+      "original_path": "supabase/migrations/20260725143000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260725143000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260725143000",
+          "name": "20260725143000_zelomenu_delivery_hardening.sql",
+          "payload_lf_sha256": "dc519a9792bb126b3558dee5690b80620da2b6b9838e7b59779fa5a42312cbb1",
+          "payload_sql_blank_line_sha256": "cea536d9ebefd06d5fd73687c3ca4c98f456c544351c5ff33effd617fed520c3",
+          "archived_path": "supabase/history/remote-applied/20260725143000_zelomenu_delivery_hardening.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260725150000",
+      "path": "supabase/migrations/20260725150000_placeholder.sql",
+      "original_path": "supabase/migrations/20260725150000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260725150000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260725150000",
+          "name": "20260725150000_zelomenu_delivery_zero_distance.sql",
+          "payload_lf_sha256": "ede2a16d9e9beee68c0d2259cc0f66968c954093c7809d5ae4c62c96345746ef",
+          "payload_sql_blank_line_sha256": "fd181423cb995bfdba7aebb004fb287108dee1d7534b675525285983a71e6a63",
+          "archived_path": "supabase/history/remote-applied/20260725150000_zelomenu_delivery_zero_distance.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260725160000",
+      "path": "supabase/migrations/20260725160000_placeholder.sql",
+      "original_path": "supabase/migrations/20260725160000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260725160000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260725160000",
+          "name": "20260725160000_zelomenu_delivery_quote_resolution.sql",
+          "payload_lf_sha256": "e672e782fe36b12e8a03f86c12c3e4fcef3af07ef8be9dfba9018098a734e4dd",
+          "payload_sql_blank_line_sha256": "e2c5e804a8f2435d67052da10ed7a93d469be213ea969a55c0246c024143495a",
+          "archived_path": "supabase/history/remote-applied/20260725160000_zelomenu_delivery_quote_resolution.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260725170000",
+      "path": "supabase/migrations/20260725170000_placeholder.sql",
+      "original_path": "supabase/migrations/20260725170000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260725170000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260725170000",
+          "name": "20260725170000_zelomenu_delivery_custom_time_pricing.sql",
+          "payload_lf_sha256": "19f4bf81a92902d424a459f2c7e433ed27ba9ec22d62b0cf6dfafeb35c28bb3e",
+          "payload_sql_blank_line_sha256": "18f29808e2adcd50b4103fa6d79c2a4d50c8eec80e4e64f3c54e3565387f83d9",
+          "archived_path": "supabase/history/remote-applied/20260725170000_zelomenu_delivery_custom_time_pricing.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260727120000",
+      "path": "supabase/migrations/20260727120000_placeholder.sql",
+      "original_path": "supabase/migrations/20260727120000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260727120000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260727120000",
+          "name": "20260727120000_zelomenu_business_cover.sql",
+          "payload_lf_sha256": "8b436db935fd3a8a8ee34db74a3df917aa2208c1683dd7c4353533ee25dad796",
+          "payload_sql_blank_line_sha256": "20b7a89f5021b8f1d309887be1af6b1b1574b4d92246fb2e62b8ebfcca08eabc",
+          "archived_path": "supabase/history/remote-applied/20260727120000_zelomenu_business_cover.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260727150000",
+      "path": "supabase/migrations/20260727150000_placeholder.sql",
+      "original_path": "supabase/migrations/20260727150000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260727150000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260727150000",
+          "name": "20260727150000_zelomenu_push_subscriptions.sql",
+          "payload_lf_sha256": "e26d5be9c6642eafda1a77d7e09e4e73174778782f2762a2a7f8cca1d468ede4",
+          "payload_sql_blank_line_sha256": "8b8e8bcae9e5c4355c0d0ca287cf5a445d94d6107ff283c0c9ad784d72098d94",
+          "archived_path": "supabase/history/remote-applied/20260727150000_zelomenu_push_subscriptions.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260727151000",
+      "path": "supabase/migrations/20260727151000_placeholder.sql",
+      "original_path": "supabase/migrations/20260727151000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260727151000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260727151000",
+          "name": "20260727151000_zelomenu_sponsored_businesses.sql",
+          "payload_lf_sha256": "9a62c182dd4ee9e12a463013e9d6845c7898c5f1f7c079cc4e46c3dd5dc7057e",
+          "payload_sql_blank_line_sha256": "4232ef2885dbc0f8cc3b81f78f77dfdffe7a670821999ba38c1cd35b81c261ce",
+          "archived_path": "supabase/history/remote-applied/20260727151000_zelomenu_sponsored_businesses.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260727152000",
+      "path": "supabase/migrations/20260727152000_placeholder.sql",
+      "original_path": "supabase/migrations/20260727152000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260727152000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260727152000",
+          "name": "20260727152000_zelomenu_push_order_link.sql",
+          "payload_lf_sha256": "469fbda6cf2f1ac5e50037ff70abf63af8d81b3eb2bac4aace9012fad239a30c",
+          "payload_sql_blank_line_sha256": "4d49690dd3a142466a1b417151bb728a5306d8cd0dc682aac36fb13ff2fff904",
+          "archived_path": "supabase/history/remote-applied/20260727152000_zelomenu_push_order_link.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260727160000",
+      "path": "supabase/migrations/20260727160000_placeholder.sql",
+      "original_path": "supabase/migrations/20260727160000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260727160000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260727160000",
+          "name": "20260727160000_zelomenu_branding_storage.sql",
+          "payload_lf_sha256": "60dfc2978568f6ece49808fb3359f0736f4f62f26291380c97e77bfe6db41fd9",
+          "payload_sql_blank_line_sha256": "962ecb6898d0d7c113592ed73addc29d51e59f2c0ee4d92ab58388cb402d18e7",
+          "archived_path": "supabase/history/remote-applied/20260727160000_zelomenu_branding_storage.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260727170000",
+      "path": "supabase/migrations/20260727170000_placeholder.sql",
+      "original_path": "supabase/migrations/20260727170000_placeholder.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "history_placeholder",
+      "version": "20260727170000",
+      "raw_sha256": "bf6d399a36d0c205fa7d4785c6e9369fa6bf67249e2742c714b5e74d476cc4b4",
+      "lf_sha256": "d762058bef4c2aff71d39b58772b79d1fcb5a51414db797700a45b2061d54a51",
+      "bytes": 16,
+      "sql_blank_line_sha256": "0b715fd4acf9e25cc18eb6f9456e5e0c623f4da5788f2cf92ce9d95c2c35dfa1",
+      "git_blob_oid": "09a7b0592dafbc12248e659b874f8086f6b0ba1d",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260727170000",
+          "name": "20260727170000_zelomenu_push_security.sql",
+          "payload_lf_sha256": "762c9024da9ac3eba464de4fdd1be635b05ee448840cc47a2867cf24b99a9b54",
+          "payload_sql_blank_line_sha256": "36e4c46bab745831d4702674dfc9be0d71f4da7fb02dd8f4c40e7ba37e3975bd",
+          "archived_path": "supabase/history/remote-applied/20260727170000_zelomenu_push_security.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260727220000",
+      "path": "supabase/migrations/20260727220000_admin_get_total_sales_value.sql",
+      "original_path": "supabase/migrations/20260727220000_admin_get_total_sales_value.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260727220000",
+      "raw_sha256": "ac0fec53816517ce77914a0712d012188630776b23419e590c3e8dab3c851324",
+      "lf_sha256": "87f54fee2afde7f9baf06d5674f61a56f8b03edb4f4d895e3e8f60c1ad41c197",
+      "bytes": 829,
+      "sql_blank_line_sha256": "9532f16a559ff21eafb75229e0dc43d62c673507b6ac7ce6659ba966cf63836d",
+      "git_blob_oid": "cfec302783fa27b269ebb40ebf42052838a6039a",
+      "history_status": "remote_payload_exact",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260727220000",
+          "name": "20260727220000_admin_get_total_sales_value.sql",
+          "payload_lf_sha256": "87f54fee2afde7f9baf06d5674f61a56f8b03edb4f4d895e3e8f60c1ad41c197",
+          "payload_sql_blank_line_sha256": "9532f16a559ff21eafb75229e0dc43d62c673507b6ac7ce6659ba966cf63836d",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260803164855",
+      "path": "supabase/migrations/20260803164855_mesas_payment_item_allocation.sql",
+      "original_path": "supabase/migrations/20260803164855_mesas_payment_item_allocation.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260803164855",
+      "raw_sha256": "8f2a90614d5d8e8723c24ca19d5bfb4873d5d8cd639013a26ac10e95788000dd",
+      "lf_sha256": "8f2a90614d5d8e8723c24ca19d5bfb4873d5d8cd639013a26ac10e95788000dd",
+      "bytes": 6997,
+      "sql_blank_line_sha256": "2e1b323b16cd3967fd3b9558362c229f5e685cf0528adb48c8297299077f61e9",
+      "git_blob_oid": "a701c28902bba1e1949ebe3fb47e68537c2b6825",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260803164855",
+          "name": "20260803164855_mesas_payment_item_allocation.sql",
+          "payload_lf_sha256": "ec1f418341ebea2687e9ffb3e35b62701a792bfdafcaba49349169ed8592a477",
+          "payload_sql_blank_line_sha256": "2e1b323b16cd3967fd3b9558362c229f5e685cf0528adb48c8297299077f61e9",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260803170000",
+      "path": "supabase/migrations/20260803170000_mesas_owner_scoped_payment_policies.sql",
+      "original_path": "supabase/migrations/20260803170000_mesas_owner_scoped_payment_policies.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260803170000",
+      "raw_sha256": "8d73fece01aabc376eeffd4d8a19a338d2617d2929403b9f44f1a0155c46b4e8",
+      "lf_sha256": "8d73fece01aabc376eeffd4d8a19a338d2617d2929403b9f44f1a0155c46b4e8",
+      "bytes": 1587,
+      "sql_blank_line_sha256": "d30b7fa0b94ce47edf2cff28d6c5677b35442bd9fe8526821c806bd263fc421f",
+      "git_blob_oid": "2d2abdcc4c4b5d447dfaa12fff95f707388a2cd3",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260803170000",
+          "name": "20260803170000_mesas_owner_scoped_payment_policies.sql",
+          "payload_lf_sha256": "47d9d269f323f65efed23f6c83544d76d09d552a7092dc3c8730aec1c85be390",
+          "payload_sql_blank_line_sha256": "d30b7fa0b94ce47edf2cff28d6c5677b35442bd9fe8526821c806bd263fc421f",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260804143959",
+      "path": "supabase/migrations/20260804143959_admin_finance_company_mrr_settings.sql",
+      "original_path": "supabase/migrations/20260804143959_admin_finance_company_mrr_settings.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260804143959",
+      "raw_sha256": "0dfdb1562b0e301450ff9e3a06c1302cf127b3d53b31b937b17f50fe161c7370",
+      "lf_sha256": "0dfdb1562b0e301450ff9e3a06c1302cf127b3d53b31b937b17f50fe161c7370",
+      "bytes": 2273,
+      "sql_blank_line_sha256": "f8e567d944e812dd87be4ec4bb8cd6c7abc41c8b62cbb5122d91fa904357c112",
+      "git_blob_oid": "7964c9aa28c921b4311672e1ee4205b456c10289",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260804143959",
+          "name": "20260804143959_admin_finance_company_mrr_settings.sql",
+          "payload_lf_sha256": "7d5bb1371a239022f9f23ef4d1be162670892ceb417e2500ca9c4f8f9c297794",
+          "payload_sql_blank_line_sha256": "f8e567d944e812dd87be4ec4bb8cd6c7abc41c8b62cbb5122d91fa904357c112",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260805143653",
+      "path": "supabase/migrations/20260805143653_zelomenu_canonical_public_order_hotfix_remote_snapshot.sql",
+      "original_path": "supabase/migrations/20260805143653_zelomenu_canonical_public_order_hotfix_remote_snapshot.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "remote_marker",
+      "version": "20260805143653",
+      "raw_sha256": "6a4a6a35a87f7b5d6a4a95c5f81d7fef801f616810fd68d07ea19ac9f5ce90fb",
+      "lf_sha256": "6a4a6a35a87f7b5d6a4a95c5f81d7fef801f616810fd68d07ea19ac9f5ce90fb",
+      "bytes": 533,
+      "sql_blank_line_sha256": "8dbd26525e723904836c003a59fd2d96996faaa7c7a2f713dcfcffed3157160f",
+      "git_blob_oid": "30734289b82f64eff087b48eb2e1ae8ba93b3fc7",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260805143653",
+          "name": "20260805143653_zelomenu_canonical_public_order_hotfix.sql",
+          "payload_lf_sha256": "05396bd0a6b2ce78a2ecba7e54ad3cfd64adeba21cd8d2924087245c202a65a7",
+          "payload_sql_blank_line_sha256": "10db90d7aeec803dfa61120e46d4f15f1d04bd54f5549375970518b3f11692ea",
+          "archived_path": "supabase/history/remote-applied/20260805143653_zelomenu_canonical_public_order_hotfix.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260807134325",
+      "path": "supabase/migrations/20260807134325_catalog_canonical_products_remote_snapshot.sql",
+      "original_path": "supabase/migrations/20260807134325_catalog_canonical_products_remote_snapshot.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "remote_marker",
+      "version": "20260807134325",
+      "raw_sha256": "f4837cab763efbf89df29b518c9b47d53398d4ebf0f9159e911eb8ff7e2212f1",
+      "lf_sha256": "f4837cab763efbf89df29b518c9b47d53398d4ebf0f9159e911eb8ff7e2212f1",
+      "bytes": 520,
+      "sql_blank_line_sha256": "0b0f9326801c523a8bff9bdfa5da1b8ad9ef0cb1e7cafc580342535e11a01acd",
+      "git_blob_oid": "d923f8b42c593f7d8ab97e8a979dc5c95e1107b4",
+      "history_status": "remote_payload_archived",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260807134325",
+          "name": "20260807134325_catalog_canonical_products.sql",
+          "payload_lf_sha256": "d682f27ab73e4deb25abe95ad307ec81b929853fbbbf03b1166e86ddccf7cff0",
+          "payload_sql_blank_line_sha256": "f37d091e2c0ccd584af10eb351b15781e174e39eed2b494a7b1f703386e758be",
+          "archived_path": "supabase/history/remote-applied/20260807134325_catalog_canonical_products.sql",
+          "archive_disposition": "payload_archived"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812150000",
+      "path": "supabase/migrations/20260812150000_p0_security_containment.sql",
+      "original_path": "supabase/migrations/20260812150000_p0_security_containment.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812150000",
+      "raw_sha256": "cb3e7cc47cbabf655c716734f6a83b2f24392d4383f646b9c1086f1d1dd0fc52",
+      "lf_sha256": "cb3e7cc47cbabf655c716734f6a83b2f24392d4383f646b9c1086f1d1dd0fc52",
+      "bytes": 7211,
+      "sql_blank_line_sha256": "f209ab7fc416cd05503399d4f491e1435e3eb66b69a5a2f4a7ffc030c2aed414",
+      "git_blob_oid": "074d7d62cff11c5d1e5f43e98e03c954aa8eb433",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812150000",
+          "name": "20260812150000_p0_security_containment.sql",
+          "payload_lf_sha256": "ca7ee42f9c7c0e8368fcbf935b18cff0e756f2e53e3ecdbfd8afb513ce19cf8f",
+          "payload_sql_blank_line_sha256": "f209ab7fc416cd05503399d4f491e1435e3eb66b69a5a2f4a7ffc030c2aed414",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812165936",
+      "path": "supabase/migrations/20260812165936_webhook_reliability_pix_atomicity.sql",
+      "original_path": "supabase/migrations/20260812165936_webhook_reliability_pix_atomicity.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812165936",
+      "raw_sha256": "ce72a7edd0f1d78c343804d96b4d99c588bcce17badadcf3a8a3a8b9469635a5",
+      "lf_sha256": "ce72a7edd0f1d78c343804d96b4d99c588bcce17badadcf3a8a3a8b9469635a5",
+      "bytes": 5872,
+      "sql_blank_line_sha256": "321affde8295e92c8355f97dcea9f3d72217a811c7bd0e7771a15b78759e3098",
+      "git_blob_oid": "2a035cd4cf4f239187f48e7da0a18f10d00144f8",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812165936",
+          "name": "20260812165936_webhook_reliability_pix_atomicity.sql",
+          "payload_lf_sha256": "dbbef007141254288fc1ad74fcc52f61f0e1d07eabdc3fbe875f5fbf74bc7866",
+          "payload_sql_blank_line_sha256": "321affde8295e92c8355f97dcea9f3d72217a811c7bd0e7771a15b78759e3098",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812191700",
+      "path": "supabase/migrations/20260812191700_subscriptions_live_row_invariant.sql",
+      "original_path": "supabase/migrations/20260812191700_subscriptions_live_row_invariant.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812191700",
+      "raw_sha256": "f093d805b681f5afe5762ccd442293da5c87ad9a086a8c5825eae4d4cf5a334a",
+      "lf_sha256": "f093d805b681f5afe5762ccd442293da5c87ad9a086a8c5825eae4d4cf5a334a",
+      "bytes": 794,
+      "sql_blank_line_sha256": "21522873961799f00c5bff32c99a81e48c682c339cc6498f29a5a01efd93bf15",
+      "git_blob_oid": "a513bea5ec2687c5bb8daf33ff1c64704b6146af",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812191700",
+          "name": "20260812191700_subscriptions_live_row_invariant.sql",
+          "payload_lf_sha256": "a0059687054634982be84897f8e3d5a1497d17d9d49ec7a85efa0b5f9f98d373",
+          "payload_sql_blank_line_sha256": "21522873961799f00c5bff32c99a81e48c682c339cc6498f29a5a01efd93bf15",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812193009",
+      "path": "supabase/migrations/20260812193009_expenses_role_rbac.sql",
+      "original_path": "supabase/migrations/20260812193009_expenses_role_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812193009",
+      "raw_sha256": "a3ab60e6d259fb2eab592a1963c03aed7f030faab96ee910bca757f2e17eaa8e",
+      "lf_sha256": "a3ab60e6d259fb2eab592a1963c03aed7f030faab96ee910bca757f2e17eaa8e",
+      "bytes": 3272,
+      "sql_blank_line_sha256": "911df06cec8cbbdeaf4e58fbdb6e590e6fa1c457d10c164042cf22028e90e956",
+      "git_blob_oid": "35083500f1a8753fa9a4309f3c077d9edc836671",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812193009",
+          "name": "20260812193009_expenses_role_rbac.sql",
+          "payload_lf_sha256": "54058cb38ae4cc9782786ad07411044d88e85c93ea69707214440ed46980049f",
+          "payload_sql_blank_line_sha256": "911df06cec8cbbdeaf4e58fbdb6e590e6fa1c457d10c164042cf22028e90e956",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812195032",
+      "path": "supabase/migrations/20260812195032_products_role_rbac.sql",
+      "original_path": "supabase/migrations/20260812195032_products_role_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812195032",
+      "raw_sha256": "de359c53a0ba1b52bd916631199fc501c5efa84d4e2ef2b91fd7711189e4b41e",
+      "lf_sha256": "de359c53a0ba1b52bd916631199fc501c5efa84d4e2ef2b91fd7711189e4b41e",
+      "bytes": 8439,
+      "sql_blank_line_sha256": "30f77ac893669be934727fdfa4e630c52b4ffefc405d846c00b4c8aa17729b9f",
+      "git_blob_oid": "116b6f634b77de8e9e48ddd865eb82b535280f9c",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812195032",
+          "name": "20260812195032_products_role_rbac.sql",
+          "payload_lf_sha256": "d44706626b8823b4d88b3fb60bf54ecfa7e35fff2c605fe5f27a409f3a74fd2d",
+          "payload_sql_blank_line_sha256": "30f77ac893669be934727fdfa4e630c52b4ffefc405d846c00b4c8aa17729b9f",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812200550",
+      "path": "supabase/migrations/20260812200550_catalog_stock_adjustment_rpc.sql",
+      "original_path": "supabase/migrations/20260812200550_catalog_stock_adjustment_rpc.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812200550",
+      "raw_sha256": "78ee90814a55cb3227fc2461d51441169df8880660704245cdfb11f3bc67c799",
+      "lf_sha256": "78ee90814a55cb3227fc2461d51441169df8880660704245cdfb11f3bc67c799",
+      "bytes": 3782,
+      "sql_blank_line_sha256": "7ad1977bd98ef744c33ef86f9e06883fcf9e6d90714421d6cb6fd623e128b6b8",
+      "git_blob_oid": "5cac3154c4fbb7e8aff4398d56afffb62db8fc3e",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812200550",
+          "name": "20260812200550_catalog_stock_adjustment_rpc.sql",
+          "payload_lf_sha256": "1fd86394286569437a3d1a92139099725a946a3e6d4864b82781406a8bc29cb8",
+          "payload_sql_blank_line_sha256": "7ad1977bd98ef744c33ef86f9e06883fcf9e6d90714421d6cb6fd623e128b6b8",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812202400",
+      "path": "supabase/migrations/20260812202400_pessoas_role_rbac.sql",
+      "original_path": "supabase/migrations/20260812202400_pessoas_role_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812202400",
+      "raw_sha256": "1e2ea2a4657da3276db00be7bd1d8e7224222ed661e7ce82d0a1dea2a1aac5d6",
+      "lf_sha256": "1e2ea2a4657da3276db00be7bd1d8e7224222ed661e7ce82d0a1dea2a1aac5d6",
+      "bytes": 1234,
+      "sql_blank_line_sha256": "be7524b880f9aa26411918e7360f15994ff14db1d5ff896252727c30ac3f5e31",
+      "git_blob_oid": "c94d6a8dc020983dac32e3f415e83c88e0d59f03",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812202400",
+          "name": "20260812202400_pessoas_role_rbac.sql",
+          "payload_lf_sha256": "358a83c910581f2391ec77dbb95f56162c3e4dc7b5fa54c53d4040ea4f189bee",
+          "payload_sql_blank_line_sha256": "be7524b880f9aa26411918e7360f15994ff14db1d5ff896252727c30ac3f5e31",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812204706",
+      "path": "supabase/migrations/20260812204706_access_users_self_write_containment.sql",
+      "original_path": "supabase/migrations/20260812204706_access_users_self_write_containment.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812204706",
+      "raw_sha256": "a9c3273a823a28d776d2e6ab0d7aed67b6140fb5f56913bb6eb6fa188d9e68d8",
+      "lf_sha256": "a9c3273a823a28d776d2e6ab0d7aed67b6140fb5f56913bb6eb6fa188d9e68d8",
+      "bytes": 1004,
+      "sql_blank_line_sha256": "23100f07fc0b48d66fda35ac8acad3e2f4b46cad3e263d6224b756bc632d1ae8",
+      "git_blob_oid": "a0229fc4a728f2d916c02256d4a47b911a311a7c",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812204706",
+          "name": "20260812204706_access_users_self_write_containment.sql",
+          "payload_lf_sha256": "f7d8b8d4e4e7a2f3f93731657e53b3b649db1637b73f4f81c93a00b9ec4d1650",
+          "payload_sql_blank_line_sha256": "23100f07fc0b48d66fda35ac8acad3e2f4b46cad3e263d6224b756bc632d1ae8",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812205010",
+      "path": "supabase/migrations/20260812205010_access_users_owner_guard.sql",
+      "original_path": "supabase/migrations/20260812205010_access_users_owner_guard.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812205010",
+      "raw_sha256": "586620a8a13f80c47aa7f5ac3b79b28ef422141c1318d2e17967f8763849110e",
+      "lf_sha256": "586620a8a13f80c47aa7f5ac3b79b28ef422141c1318d2e17967f8763849110e",
+      "bytes": 787,
+      "sql_blank_line_sha256": "df5ba737a8f7aad0766faddca22a710764b0431a1f1bbedfb7ef63802b5540b1",
+      "git_blob_oid": "cfe3fd58cc3c1bf149447dce90b97988d558b714",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812205010",
+          "name": "20260812205010_access_users_owner_guard.sql",
+          "payload_lf_sha256": "22016e1f0536b5766b7221be8bcee47e34622e8ca3d48e0ec79e893bbe94051b",
+          "payload_sql_blank_line_sha256": "df5ba737a8f7aad0766faddca22a710764b0431a1f1bbedfb7ef63802b5540b1",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812210856",
+      "path": "supabase/migrations/20260812210856_sales_cancel_rbac.sql",
+      "original_path": "supabase/migrations/20260812210856_sales_cancel_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812210856",
+      "raw_sha256": "0dc53c09ac6d1a748ceb2eb9ba069fc1901c6f87d60d78699bedf7d75bfe35b3",
+      "lf_sha256": "0dc53c09ac6d1a748ceb2eb9ba069fc1901c6f87d60d78699bedf7d75bfe35b3",
+      "bytes": 3682,
+      "sql_blank_line_sha256": "3797d4ef6c2dd7bbff817075baae6335f150885bfb69ebbe85358f709bb16c49",
+      "git_blob_oid": "86352b9ae5c257542f25d8e91b519138e130fa4d",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812210856",
+          "name": "20260812210856_sales_cancel_rbac.sql",
+          "payload_lf_sha256": "5ba7cb3de788f8ee66e9444861858b474f7f79142dc9a18609432509add585e9",
+          "payload_sql_blank_line_sha256": "3797d4ef6c2dd7bbff817075baae6335f150885bfb69ebbe85358f709bb16c49",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812211428",
+      "path": "supabase/migrations/20260812211428_sales_cancel_helper_grant_fix.sql",
+      "original_path": "supabase/migrations/20260812211428_sales_cancel_helper_grant_fix.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812211428",
+      "raw_sha256": "5289557a2e69325a1f56130fc5a763f4cbfd1408bff108f28102049681405090",
+      "lf_sha256": "5289557a2e69325a1f56130fc5a763f4cbfd1408bff108f28102049681405090",
+      "bytes": 612,
+      "sql_blank_line_sha256": "56ba8aa2ce9fb1c311a7306e4b96fc03fd01414a5a701f578ac730e91b5ce64a",
+      "git_blob_oid": "8091a3bac3e22e67c8afdf8cb447dee672e4eef9",
+      "history_status": "remote_payload_exact",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812211428",
+          "name": "20260812211428_sales_cancel_helper_grant_fix.sql",
+          "payload_lf_sha256": "5289557a2e69325a1f56130fc5a763f4cbfd1408bff108f28102049681405090",
+          "payload_sql_blank_line_sha256": "56ba8aa2ce9fb1c311a7306e4b96fc03fd01414a5a701f578ac730e91b5ce64a",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812214518",
+      "path": "supabase/migrations/20260812214518_caixa_role_rbac.sql",
+      "original_path": "supabase/migrations/20260812214518_caixa_role_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812214518",
+      "raw_sha256": "52664ad359931a249b73aa3ee164a2e5f9e579e672d76f3a1bf6872a4be9c70d",
+      "lf_sha256": "52664ad359931a249b73aa3ee164a2e5f9e579e672d76f3a1bf6872a4be9c70d",
+      "bytes": 2255,
+      "sql_blank_line_sha256": "7b1204194fc1879970544d06a143c508b3f8764ad15392c8b876f89d43430f69",
+      "git_blob_oid": "cee5024066aa5c1d46437cdc5d2d53ecf159cae0",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812214518",
+          "name": "20260812214518_caixa_role_rbac.sql",
+          "payload_lf_sha256": "3bd97020c620bdb343f04f415613974e4c6e9f50a5ebac2f4f1fe4ede0a337b2",
+          "payload_sql_blank_line_sha256": "7b1204194fc1879970544d06a143c508b3f8764ad15392c8b876f89d43430f69",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812230000",
+      "path": "supabase/migrations/20260812230000_mesas_payment_rbac.sql",
+      "original_path": "supabase/migrations/20260812230000_mesas_payment_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812230000",
+      "raw_sha256": "ec94b338b15c66fde39f1a7cb25f28d597602722585e6d075906a9af21abe60f",
+      "lf_sha256": "ec94b338b15c66fde39f1a7cb25f28d597602722585e6d075906a9af21abe60f",
+      "bytes": 3901,
+      "sql_blank_line_sha256": "821e36b9cc645c4351baa1e9e41cce26b165f2ec452408ecd865e3fed0ee797d",
+      "git_blob_oid": "e5482a52e26aa3b8b9c58e094c0ff7fe42b718cf",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812230000",
+          "name": "20260812230000_mesas_payment_rbac.sql",
+          "payload_lf_sha256": "716a38f36d3417d40c76de04901b9173dce1377c37fac6f037b93f62d0fd42ee",
+          "payload_sql_blank_line_sha256": "821e36b9cc645c4351baa1e9e41cce26b165f2ec452408ecd865e3fed0ee797d",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812233000",
+      "path": "supabase/migrations/20260812233000_mesas_operational_rbac.sql",
+      "original_path": "supabase/migrations/20260812233000_mesas_operational_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812233000",
+      "raw_sha256": "7b07196a4baf4b1fd89b598539533bb804047910dae6a22fd8d5bcaac0a5f23f",
+      "lf_sha256": "7b07196a4baf4b1fd89b598539533bb804047910dae6a22fd8d5bcaac0a5f23f",
+      "bytes": 10700,
+      "sql_blank_line_sha256": "db49023b61c7dfd202917e120dfa4193601f5b41dd66398a209afadd9e98a12a",
+      "git_blob_oid": "75b2a2ab60f609b1f7cf11054346d4a49473ec04",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812233000",
+          "name": "20260812233000_mesas_operational_rbac.sql",
+          "payload_lf_sha256": "60482bd95d7cdd8b1aae3dc418361831c6366138c0cfe5e34499911ebfd724d1",
+          "payload_sql_blank_line_sha256": "db49023b61c7dfd202917e120dfa4193601f5b41dd66398a209afadd9e98a12a",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260812234500",
+      "path": "supabase/migrations/20260812234500_mesas_operational_rpc_rbac.sql",
+      "original_path": "supabase/migrations/20260812234500_mesas_operational_rpc_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260812234500",
+      "raw_sha256": "c68b68e64eba7586a6b13e382b85554df05be43e192139e914af7c5da0fbbeee",
+      "lf_sha256": "c68b68e64eba7586a6b13e382b85554df05be43e192139e914af7c5da0fbbeee",
+      "bytes": 14856,
+      "sql_blank_line_sha256": "da4fe5c22ba88248e8d2d34a68beaa0dcce12c77ee636a24f88541e38da438bb",
+      "git_blob_oid": "c1c74b211ade1dd52ba3e6e375cd97ac21e42b81",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260812234500",
+          "name": "20260812234500_mesas_operational_rpc_rbac.sql",
+          "payload_lf_sha256": "3b09e2a157fa56b2a6d547daf9bf419669ead6682b9842e2c8a445b0143e74bd",
+          "payload_sql_blank_line_sha256": "da4fe5c22ba88248e8d2d34a68beaa0dcce12c77ee636a24f88541e38da438bb",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813000000",
+      "path": "supabase/migrations/20260813000000_sales_creation_rbac.sql",
+      "original_path": "supabase/migrations/20260813000000_sales_creation_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813000000",
+      "raw_sha256": "b0239f96d4fe4655f51f61c644de42078ecbb68a426b713e76f9ed0b65e305a7",
+      "lf_sha256": "b0239f96d4fe4655f51f61c644de42078ecbb68a426b713e76f9ed0b65e305a7",
+      "bytes": 5656,
+      "sql_blank_line_sha256": "8f62970fba0c75c5cfb98b364a15c03e9e2bd7541df39317b5a49c2beb6c80b7",
+      "git_blob_oid": "c10b357d755d10a2b4b2e896129f3e04bb72cc4c",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813000000",
+          "name": "20260813000000_sales_creation_rbac.sql",
+          "payload_lf_sha256": "b86ca5f35cbab873e8b9588d477a8d95681bb36f1b6c915e7a3ed4f5d07b1a30",
+          "payload_sql_blank_line_sha256": "8f62970fba0c75c5cfb98b364a15c03e9e2bd7541df39317b5a49c2beb6c80b7",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813010000",
+      "path": "supabase/migrations/20260813010000_reports_select_rbac.sql",
+      "original_path": "supabase/migrations/20260813010000_reports_select_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813010000",
+      "raw_sha256": "56f79de4da90286cfc7b4ad52639c28742308c70474a5fb71e6e172041a3fd62",
+      "lf_sha256": "56f79de4da90286cfc7b4ad52639c28742308c70474a5fb71e6e172041a3fd62",
+      "bytes": 1072,
+      "sql_blank_line_sha256": "8f28bfe71d65e78ce71766ffe94d65eb5f674dccc71a39c91498278725462a75",
+      "git_blob_oid": "8bdafcde1b8e3d47bcc42b40791248c05dd15510",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813010000",
+          "name": "20260813010000_reports_select_rbac.sql",
+          "payload_lf_sha256": "17db1db559b8853c1a4e318464957293ab2bb21f7a13176e6ba8c3fab2c8a88e",
+          "payload_sql_blank_line_sha256": "8f28bfe71d65e78ce71766ffe94d65eb5f674dccc71a39c91498278725462a75",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813020000",
+      "path": "supabase/migrations/20260813020000_catalog_extensions_rbac.sql",
+      "original_path": "supabase/migrations/20260813020000_catalog_extensions_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813020000",
+      "raw_sha256": "5c7c58bc15c044c0b8ec010922f657f7cd35c456987ab3a1356fd9dd042ac96a",
+      "lf_sha256": "5c7c58bc15c044c0b8ec010922f657f7cd35c456987ab3a1356fd9dd042ac96a",
+      "bytes": 7326,
+      "sql_blank_line_sha256": "1265445c662d7fdbb4f947abf2f3c5f4e9cbda2a8eae61064b0c4130d8c71d58",
+      "git_blob_oid": "0f9089a14e3d6b45bf9fae496229f577af9c2534",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813020000",
+          "name": "20260813020000_catalog_extensions_rbac.sql",
+          "payload_lf_sha256": "851288358fc8868dd7c13776bd6d19cd98ec0eac39fae94397dd38079be506a5",
+          "payload_sql_blank_line_sha256": "1265445c662d7fdbb4f947abf2f3c5f4e9cbda2a8eae61064b0c4130d8c71d58",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813030000",
+      "path": "supabase/migrations/20260813030000_discount_rbac.sql",
+      "original_path": "supabase/migrations/20260813030000_discount_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813030000",
+      "raw_sha256": "8a3e1ca4157735502f53017f6263e92d1f94aa34b6d4459927c5dda45bc7ad8f",
+      "lf_sha256": "8a3e1ca4157735502f53017f6263e92d1f94aa34b6d4459927c5dda45bc7ad8f",
+      "bytes": 2045,
+      "sql_blank_line_sha256": "e1fc59fae833dbca30ca35ce729f422156a7a7eb0f161515ac52e519be2de359",
+      "git_blob_oid": "7ed0f75197afac615b8b8de5e2b7cb03397ff9f2",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813030000",
+          "name": "20260813030000_discount_rbac.sql",
+          "payload_lf_sha256": "60d831807f4eadd535f517986bfce6fb2e6d0be6a590f6fdb77ee2d2b29b1408",
+          "payload_sql_blank_line_sha256": "e1fc59fae833dbca30ca35ce729f422156a7a7eb0f161515ac52e519be2de359",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813031000",
+      "path": "supabase/migrations/20260813031000_discount_rbac_update_hardening.sql",
+      "original_path": "supabase/migrations/20260813031000_discount_rbac_update_hardening.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813031000",
+      "raw_sha256": "b066f72b702bbf7ebd788db6383fd198b5e966389197a374c1635cc4f5c3bf7d",
+      "lf_sha256": "b066f72b702bbf7ebd788db6383fd198b5e966389197a374c1635cc4f5c3bf7d",
+      "bytes": 1442,
+      "sql_blank_line_sha256": "655e29d54bcd35a2c8ac150f4213d6d71506f0185803bae71ebf202fcae6ce5a",
+      "git_blob_oid": "adcfdd6e4cb5f9ba6dac21a52fc631a7cc414d43",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813031000",
+          "name": "20260813031000_discount_rbac_update_hardening.sql",
+          "payload_lf_sha256": "1313e6aa8d66cd7268ad6d9aa85ad6653f0fa120601cf140e0e0bb97a6284880",
+          "payload_sql_blank_line_sha256": "655e29d54bcd35a2c8ac150f4213d6d71506f0185803bae71ebf202fcae6ce5a",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813032000",
+      "path": "supabase/migrations/20260813032000_billing_payments_server_insert_only.sql",
+      "original_path": "supabase/migrations/20260813032000_billing_payments_server_insert_only.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813032000",
+      "raw_sha256": "c5773e8ff7d9c53db5472341c4c0a182128fc0652e496144052409b5dc1564a5",
+      "lf_sha256": "c5773e8ff7d9c53db5472341c4c0a182128fc0652e496144052409b5dc1564a5",
+      "bytes": 443,
+      "sql_blank_line_sha256": "02471c84e355ed37a3c4454103f92a04440a77500ec5383055ebb74b694358cf",
+      "git_blob_oid": "04b54bcff53f090e84842decd0d4384adf3a40e7",
+      "history_status": "remote_payload_exact",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813032000",
+          "name": "20260813032000_billing_payments_server_insert_only.sql",
+          "payload_lf_sha256": "c5773e8ff7d9c53db5472341c4c0a182128fc0652e496144052409b5dc1564a5",
+          "payload_sql_blank_line_sha256": "02471c84e355ed37a3c4454103f92a04440a77500ec5383055ebb74b694358cf",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813033000",
+      "path": "supabase/migrations/20260813033000_rpc_security_definer_containment.sql",
+      "original_path": "supabase/migrations/20260813033000_rpc_security_definer_containment.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813033000",
+      "raw_sha256": "92056e72dd6b56febc1f4755348ab0145ac5fc6bbd4ca7be45d40d6e6a30cdee",
+      "lf_sha256": "92056e72dd6b56febc1f4755348ab0145ac5fc6bbd4ca7be45d40d6e6a30cdee",
+      "bytes": 951,
+      "sql_blank_line_sha256": "bc455fefda67d3109fd40781a7580672b0b40f1b54c230dca3b1449b3509181c",
+      "git_blob_oid": "fd30a0c10df886b19b4a0180f4297594714f7c5f",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813033000",
+          "name": "20260813033000_rpc_security_definer_containment.sql",
+          "payload_lf_sha256": "5d449421b0ca6c627d4eb7cc8ddd1449d399e9d55e9ded1eefeb44b7d7db9397",
+          "payload_sql_blank_line_sha256": "bc455fefda67d3109fd40781a7580672b0b40f1b54c230dca3b1449b3509181c",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813034000",
+      "path": "supabase/migrations/20260813034000_fiado_ledger_select_rbac.sql",
+      "original_path": "supabase/migrations/20260813034000_fiado_ledger_select_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813034000",
+      "raw_sha256": "8bef09afa2bc5c47da59a33d9cdbf40b7535b3bb378237bf863fabb86e14a5c1",
+      "lf_sha256": "8bef09afa2bc5c47da59a33d9cdbf40b7535b3bb378237bf863fabb86e14a5c1",
+      "bytes": 426,
+      "sql_blank_line_sha256": "b8fb9e27ff9bb47a01baba0bd56f882ba2786122158a0b146405793a5dea7771",
+      "git_blob_oid": "b99995da1919f536ad8d1956d3bcbe6e90c2ae16",
+      "history_status": "remote_payload_exact",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813034000",
+          "name": "20260813034000_fiado_ledger_select_rbac.sql",
+          "payload_lf_sha256": "8bef09afa2bc5c47da59a33d9cdbf40b7535b3bb378237bf863fabb86e14a5c1",
+          "payload_sql_blank_line_sha256": "b8fb9e27ff9bb47a01baba0bd56f882ba2786122158a0b146405793a5dea7771",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813041000",
+      "path": "supabase/migrations/20260813041000_access_audit_logs_tenant_guard.sql",
+      "original_path": "supabase/migrations/20260813041000_access_audit_logs_tenant_guard.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813041000",
+      "raw_sha256": "3fb7d1fc12c3c55e01c28b9e60025d36b23a8d03dc555adf9eedef9f5c51c4e9",
+      "lf_sha256": "3fb7d1fc12c3c55e01c28b9e60025d36b23a8d03dc555adf9eedef9f5c51c4e9",
+      "bytes": 397,
+      "sql_blank_line_sha256": "2e2c51c01c2420375d385d61cef7d4ce5c13e8c8c2c8ae80bc406230c347e9ce",
+      "git_blob_oid": "6a50f2f28aa7451c02e484ede37da76feb0c7243",
+      "history_status": "remote_payload_exact",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813041000",
+          "name": "20260813041000_access_audit_logs_tenant_guard.sql",
+          "payload_lf_sha256": "3fb7d1fc12c3c55e01c28b9e60025d36b23a8d03dc555adf9eedef9f5c51c4e9",
+          "payload_sql_blank_line_sha256": "2e2c51c01c2420375d385d61cef7d4ce5c13e8c8c2c8ae80bc406230c347e9ce",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813043000",
+      "path": "supabase/migrations/20260813043000_gerente_reports_rbac.sql",
+      "original_path": "supabase/migrations/20260813043000_gerente_reports_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813043000",
+      "raw_sha256": "9c0a7690bc9ece14475a41a3cc881cd203a3894791d211ea8a0edc18e936fff1",
+      "lf_sha256": "9c0a7690bc9ece14475a41a3cc881cd203a3894791d211ea8a0edc18e936fff1",
+      "bytes": 911,
+      "sql_blank_line_sha256": "b26a8a1946baf0e1f4a051efccbc3e7665632b5f32caec571f56146d6e8a9af5",
+      "git_blob_oid": "a2414384e4965be9110eca18b2397a33814c1a22",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813043000",
+          "name": "20260813043000_gerente_reports_rbac.sql",
+          "payload_lf_sha256": "3c37ba4135153922b0a71312caeac28ed7fdc1b3007925ce3e5f9dc242764bf1",
+          "payload_sql_blank_line_sha256": "b26a8a1946baf0e1f4a051efccbc3e7665632b5f32caec571f56146d6e8a9af5",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813050000",
+      "path": "supabase/migrations/20260813050000_mesas_select_rbac.sql",
+      "original_path": "supabase/migrations/20260813050000_mesas_select_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813050000",
+      "raw_sha256": "e79dce22026e7fa08ff2373fef444e8cf1ad925a1735ea269d190c0baca410f4",
+      "lf_sha256": "e79dce22026e7fa08ff2373fef444e8cf1ad925a1735ea269d190c0baca410f4",
+      "bytes": 1485,
+      "sql_blank_line_sha256": "032365e7352b81fbd2a3efa793fd9ce796a1d6f8806718e9df0aa749df3ac8a1",
+      "git_blob_oid": "36fe3ad5b415daeb95a6ccb09bc95de771fcf8a1",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813050000",
+          "name": "20260813050000_mesas_select_rbac.sql",
+          "payload_lf_sha256": "ec61200b174ba0c6543c00933ee0a8c6ed0396f6c33ed302e996f0cf8d292c42",
+          "payload_sql_blank_line_sha256": "032365e7352b81fbd2a3efa793fd9ce796a1d6f8806718e9df0aa749df3ac8a1",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813060000",
+      "path": "supabase/migrations/20260813060000_empresa_perfil_pin_select_containment.sql",
+      "original_path": "supabase/migrations/20260813060000_empresa_perfil_pin_select_containment.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813060000",
+      "raw_sha256": "692771440cec2eab8ecc39942d65c3ceed6999ba10f47329f915ac998b7c9d12",
+      "lf_sha256": "692771440cec2eab8ecc39942d65c3ceed6999ba10f47329f915ac998b7c9d12",
+      "bytes": 2322,
+      "sql_blank_line_sha256": "923cd551b0401ba420886bd0e1357dfbf7c1f77608ef32e27c1a255ab6f82bf5",
+      "git_blob_oid": "f4affdc3dbf3d46f06939ea48bd848c257e8e32c",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813060000",
+          "name": "20260813060000_empresa_perfil_pin_select_containment.sql",
+          "payload_lf_sha256": "0e9655e71b7e3100555c59cc7cd3a68d241985d611767f354cc33053e9f197f6",
+          "payload_sql_blank_line_sha256": "923cd551b0401ba420886bd0e1357dfbf7c1f77608ef32e27c1a255ab6f82bf5",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813070000",
+      "path": "supabase/migrations/20260813070000_vendas_taxas_select_rbac.sql",
+      "original_path": "supabase/migrations/20260813070000_vendas_taxas_select_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813070000",
+      "raw_sha256": "b1dfa3a6be114ae085c35c196e5f2337cc4fbb12a8495ff455008a545c7329a2",
+      "lf_sha256": "b1dfa3a6be114ae085c35c196e5f2337cc4fbb12a8495ff455008a545c7329a2",
+      "bytes": 604,
+      "sql_blank_line_sha256": "2d7bed40dae0327bb0ec0d9671eb859d6086453a8ea3e42225840a5cbee2f85e",
+      "git_blob_oid": "d819899b1c38acd7efb6b2a7c5f6155204836262",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813070000",
+          "name": "20260813070000_vendas_taxas_select_rbac.sql",
+          "payload_lf_sha256": "407e26ff2824a7f34c2fdfb2a2cf50dd3e63adce43a9b96a9ef3d40e78b95c28",
+          "payload_sql_blank_line_sha256": "2d7bed40dae0327bb0ec0d9671eb859d6086453a8ea3e42225840a5cbee2f85e",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813080000",
+      "path": "supabase/migrations/20260813080000_sales_payment_cash_read_rbac.sql",
+      "original_path": "supabase/migrations/20260813080000_sales_payment_cash_read_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813080000",
+      "raw_sha256": "ded858a699023b7705411ae3e2e53d82be3a8451be13d0ed8530c9f6f821bf90",
+      "lf_sha256": "ded858a699023b7705411ae3e2e53d82be3a8451be13d0ed8530c9f6f821bf90",
+      "bytes": 1255,
+      "sql_blank_line_sha256": "eae49475f0d82edbdbf25ef8ae8f5857d191359ed0c3abfb2adf8bbed4e49c74",
+      "git_blob_oid": "b41a9e6b1f11e2527bf53a7c423e179f81ccd6ac",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813080000",
+          "name": "20260813080000_sales_payment_cash_read_rbac.sql",
+          "payload_lf_sha256": "90b7b44496dab6e6ed2d8f89064ba258811c4779c1fcebe086000d8362f3a538",
+          "payload_sql_blank_line_sha256": "eae49475f0d82edbdbf25ef8ae8f5857d191359ed0c3abfb2adf8bbed4e49c74",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813090000",
+      "path": "supabase/migrations/20260813090000_sales_history_read_rbac.sql",
+      "original_path": "supabase/migrations/20260813090000_sales_history_read_rbac.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813090000",
+      "raw_sha256": "5bfa8e9df81052dc1e737dbbbde14b87415190d9b9abc68e4aadcc83abe11a61",
+      "lf_sha256": "5bfa8e9df81052dc1e737dbbbde14b87415190d9b9abc68e4aadcc83abe11a61",
+      "bytes": 2208,
+      "sql_blank_line_sha256": "d4a83a3ea2c8b6eff1ac9ed913287a3477b2e12cff3fdba9e8c9782f4a13b798",
+      "git_blob_oid": "afbfb25fdabdb8b28aebfd249f1d93de207f14ac",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813090000",
+          "name": "20260813090000_sales_history_read_rbac.sql",
+          "payload_lf_sha256": "6c888c54d91d3090aa63394a251af76d57785de9ed7875f0ca6b20b67cfde141",
+          "payload_sql_blank_line_sha256": "d4a83a3ea2c8b6eff1ac9ed913287a3477b2e12cff3fdba9e8c9782f4a13b798",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "canonical:20260813091000",
+      "path": "supabase/migrations/20260813091000_sales_history_read_rbac_performance.sql",
+      "original_path": "supabase/migrations/20260813091000_sales_history_read_rbac_performance.sql",
+      "source_root": "supabase/migrations",
+      "artifact_kind": "canonical_migration",
+      "version": "20260813091000",
+      "raw_sha256": "67c4e26078be4c5a4ad60eeae2309a0340a54b86089c78f8676c09ea19401a71",
+      "lf_sha256": "67c4e26078be4c5a4ad60eeae2309a0340a54b86089c78f8676c09ea19401a71",
+      "bytes": 2399,
+      "sql_blank_line_sha256": "fcc4fdee49d0fd13b6ae14908002aeb0d192341793027741d52f1f426ccc68b4",
+      "git_blob_oid": "086dbbb9e3a2f0576f7fb206673a732d88ad7e05",
+      "history_status": "remote_payload_blank_line_equivalent",
+      "current_state_status": "present_in_current_baseline",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [
+        {
+          "version": "20260813091000",
+          "name": "20260813091000_sales_history_read_rbac_performance.sql",
+          "payload_lf_sha256": "a7da10bbadff0560b729d431d5665978a328b6f6c8d4745bed834fd1281c73d6",
+          "payload_sql_blank_line_sha256": "fcc4fdee49d0fd13b6ae14908002aeb0d192341793027741d52f1f426ccc68b4",
+          "archived_path": null,
+          "archive_disposition": "archive_not_required_local_canonical"
+        }
+      ],
+      "superseded_by": [],
+      "evidence": "Version is present in linked supabase_migrations history and current production schema was captured at the cutoff.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:account_deletion_fiado_2026_08_09.sql",
+      "path": "supabase/history/observed-local/account_deletion_fiado_2026_08_09.sql",
+      "original_path": ".ai/migrations/account_deletion_fiado_2026_08_09.sql",
+      "source_root": "supabase/history/observed-local",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "da6992ce57b4f1d4e5433ad05c5b578c0d3c5ad6bfaacadab8b4e4cdc835194b",
+      "lf_sha256": "da6992ce57b4f1d4e5433ad05c5b578c0d3c5ad6bfaacadab8b4e4cdc835194b",
+      "bytes": 2785,
+      "git_blob_oid": "9ee820581264573c90504fc3a34cb128cd1ac7a6",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current delete_account deletes fiado_lancamentos before pessoas/auth.users and EXECUTE is service_role-only.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:account_deletion_grace_2026_05_31.sql",
+      "path": ".ai/migrations/account_deletion_grace_2026_05_31.sql",
+      "original_path": ".ai/migrations/account_deletion_grace_2026_05_31.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "06225884c053571417140a892c7632d5d41ed92338c2bed471e3d2994e68a29b",
+      "lf_sha256": "624ee8d0d2971594d7129e7839315bcb1f25774ab541803717899a20e41b7d16",
+      "bytes": 1063,
+      "git_blob_oid": "8cf7551b2b176e4a92fd8e0e511b1ee43f78c526",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current account-deletion columns, defaults and index are present and consumed by the API/sweeper.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:account_self_deletion_2026_05_30.sql",
+      "path": ".ai/migrations/account_self_deletion_2026_05_30.sql",
+      "original_path": ".ai/migrations/account_self_deletion_2026_05_30.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "78d931a908aa9581e25eb5984e08b7970c88e32c315971ed2dd02ea5ecc59f82",
+      "lf_sha256": "3c34cb2f1b2dd8e0797908e131e1b596f5893aa5ef9a98477d59e1a70564b4b4",
+      "bytes": 8213,
+      "git_blob_oid": "4d97760942a6c2850247ef2a9ed2c35fb1eefb7d",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [
+        "account_deletion_fiado_2026_08_09.sql"
+      ],
+      "evidence": "Table/logging objects remain; delete_account has a later effective definition.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:admin_finance_fixed_expenses_2026_05_13.sql",
+      "path": ".ai/migrations/admin_finance_fixed_expenses_2026_05_13.sql",
+      "original_path": ".ai/migrations/admin_finance_fixed_expenses_2026_05_13.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "13c03c9ffe756680cc386b7577e6d191a23ae6524d8ba00e0353d17fb2ca3eea",
+      "lf_sha256": "e6258703fbacb6dbb13a24df2bc9ceadc1664344f448f79d0065ddf7316f6fb5",
+      "bytes": 2913,
+      "git_blob_oid": "35b22a4599bd7e1c550df4cc69ab0fea1ebd3c75",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current baseline contains the admin fixed-expense table, constraints, RLS, policies and grants.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:admin_get_total_sales_value_2026_07_27.sql",
+      "path": "supabase/history/observed-local/admin_get_total_sales_value_2026_07_27.sql",
+      "original_path": ".ai/migrations/admin_get_total_sales_value_2026_07_27.sql",
+      "source_root": "supabase/history/observed-local",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "87f54fee2afde7f9baf06d5674f61a56f8b03edb4f4d895e3e8f60c1ad41c197",
+      "lf_sha256": "87f54fee2afde7f9baf06d5674f61a56f8b03edb4f4d895e3e8f60c1ad41c197",
+      "bytes": 806,
+      "git_blob_oid": "cfec302783fa27b269ebb40ebf42052838a6039a",
+      "history_status": "remote_payload_exact_duplicate",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "reference_only",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/migrations/20260727220000_admin_get_total_sales_value.sql",
+        "supabase/migrations/20260812150000_p0_security_containment.sql"
+      ],
+      "evidence": "Duplicate of the canonical remote migration; later P0 migration hardens its effective definition and ACL.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:billing_payments_has_zelo_menu_2026_07_01.sql",
+      "path": ".ai/migrations/billing_payments_has_zelo_menu_2026_07_01.sql",
+      "original_path": ".ai/migrations/billing_payments_has_zelo_menu_2026_07_01.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "6d7e61fbcc70e1803b5df6c0a6ed8f3f9f6977266b57d9bd52aeaf37a1fdf224",
+      "lf_sha256": "dc3e666fa3e673e6ce18232782cb01fcb144f1139265cddda40886c31ef973e5",
+      "bytes": 597,
+      "git_blob_oid": "9f20c34d6d661d4b374cfd52921fa174f7386423",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "billing_payments.has_zelo_menu is present and used by the Pix atomicity migration.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:billing_webhook_events_enable_rls_2026_07_06.sql",
+      "path": ".ai/migrations/billing_webhook_events_enable_rls_2026_07_06.sql",
+      "original_path": ".ai/migrations/billing_webhook_events_enable_rls_2026_07_06.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "a6687ee090db8187b06f67d3b43eeb4d9f627347f6a515d16d2b77f85184cdf0",
+      "lf_sha256": "7ba380586c2df5e2518a7e47587241a462662345892bf0a894aaace6d6167bda",
+      "bytes": 824,
+      "git_blob_oid": "8d1575e3b5250bdffc0903726e01a3a07abcab32",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current table has RLS enabled and no browser-role access path.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:caixa_movimentacoes_insert_policy_subusers_2026_05_27.sql",
+      "path": ".ai/migrations/caixa_movimentacoes_insert_policy_subusers_2026_05_27.sql",
+      "original_path": ".ai/migrations/caixa_movimentacoes_insert_policy_subusers_2026_05_27.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "cecd87a486a9681da23e796602fd9eeb1b1cb2b7c6b94daef0b4c266a5158340",
+      "lf_sha256": "461f712bd5fe939ae641c419bf565ffe7355eea20cff8bf86bc1658f59b3ce7d",
+      "bytes": 471,
+      "git_blob_oid": "5dbe5d8c8a17af7d1a06c5b508cd700818bb9033",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "reference_only",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/migrations/20260812214518_caixa_role_rbac.sql"
+      ],
+      "evidence": "The old policy is replaced by the current capability-aware Caixa policy.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:caixas_one_open_per_user_2026_07_06.sql",
+      "path": ".ai/migrations/caixas_one_open_per_user_2026_07_06.sql",
+      "original_path": ".ai/migrations/caixas_one_open_per_user_2026_07_06.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "67eceff0d712bfb141c838c37f6fdfe38f79e203e3d0e640955ac5494638dda1",
+      "lf_sha256": "6117f205cfcce89c682bebf64fd1b2091d70be40a39f4d9f574ebf5bcebafc05",
+      "bytes": 2591,
+      "git_blob_oid": "ccf400c0476fe5af598b4f2db5310b0ecbd51195",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current baseline contains the partial unique index; historical deduplication DML is not replayed.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:canonical_online_orders_2026_07_12.sql",
+      "path": ".ai/migrations/canonical_online_orders_2026_07_12.sql",
+      "original_path": ".ai/migrations/canonical_online_orders_2026_07_12.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "b4879684f7f4d2a48e1aebadab3d16c1e0b660acc48b7a5afe4a133018173327",
+      "lf_sha256": "de9d4f9f6a799d10c8052d4c9d8e2cba18a0c59d5bf1aeaf897857e317998b45",
+      "bytes": 29062,
+      "git_blob_oid": "0bfa14f404cbaaab25c8847e7f102d22ff335535",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Canonical order tables remain while multiple RPC definitions and policies have later effective versions.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:canonical_online_orders_legacy_totals_fix_2026_07_12.sql",
+      "path": ".ai/migrations/canonical_online_orders_legacy_totals_fix_2026_07_12.sql",
+      "original_path": ".ai/migrations/canonical_online_orders_legacy_totals_fix_2026_07_12.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "operational_data_patch",
+      "version": null,
+      "raw_sha256": "9001d54f4f193b958713f79adabf0dbea023f079865929b40c189818bacf8175",
+      "lf_sha256": "a89634de7e2490225ee08b7033e6b03c9e88a56194e96938bdd3aab22edf4a98",
+      "bytes": 1785,
+      "git_blob_oid": "efc6e5f9b50ec734f8a2228adf0070228deef274",
+      "history_status": "not_confirmable_data_patch",
+      "current_state_status": "data_effect_not_compared",
+      "bootstrap_disposition": "exclude_tenant_data",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "One-off business-data correction has no durable catalog proof; it is intentionally not replayed.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:canonical_online_orders_payment_mapping_2026_07_22.sql",
+      "path": ".ai/migrations/canonical_online_orders_payment_mapping_2026_07_22.sql",
+      "original_path": ".ai/migrations/canonical_online_orders_payment_mapping_2026_07_22.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "d7b4dfe5861fcab7a9afa0485afe98f2784f65440a7b40c00e1666e7e70e59ab",
+      "lf_sha256": "f72f486f64441168963ea13281a0cbdfcde29a18d5846fe038148bc0c902bbef",
+      "bytes": 2861,
+      "git_blob_oid": "9b89e4354c1565b8e02493b9b3ff8673477b36f7",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "reference_only",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "close_zelo_order has later effective definitions.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:canonical_order_sales_2026_07_23.sql",
+      "path": ".ai/migrations/canonical_order_sales_2026_07_23.sql",
+      "original_path": ".ai/migrations/canonical_order_sales_2026_07_23.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "c8d1e4c653da08405b1fce5a7a7c68954f9d19cbbfec1dec691e67753d9a74d9",
+      "lf_sha256": "128a4bee093acb5a01bdb53470e2b2ea6fc578c469968be22bddd98590e4d0bd",
+      "bytes": 6296,
+      "git_blob_oid": "a0f0578793b721bce1d70bbc8b695724570a4221",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Sale attribution trigger/function lineage exists with later patches.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:comanda_aplicar_delta_item_remove_ambiguous_overload_2026_07_31.sql",
+      "path": ".ai/migrations/comanda_aplicar_delta_item_remove_ambiguous_overload_2026_07_31.sql",
+      "original_path": ".ai/migrations/comanda_aplicar_delta_item_remove_ambiguous_overload_2026_07_31.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "dec919ec675d0b82fc5bc8543cc21f5723fd2103358224178e0415140609e8c0",
+      "lf_sha256": "dec919ec675d0b82fc5bc8543cc21f5723fd2103358224178e0415140609e8c0",
+      "bytes": 428,
+      "git_blob_oid": "6bc7ae176351428de4f21442aac6f80da11734c5",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "reference_only",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/migrations/20260812234500_mesas_operational_rpc_rbac.sql"
+      ],
+      "evidence": "Ambiguous overload is absent; the surviving function has a later canonical definition.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:criar_venda_completa_persistir_modifiers_2026_07_31.sql",
+      "path": ".ai/migrations/criar_venda_completa_persistir_modifiers_2026_07_31.sql",
+      "original_path": ".ai/migrations/criar_venda_completa_persistir_modifiers_2026_07_31.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "7c2fc58884bcf25289c773ed5755fdbd66d07be0172e3ab090401d7e774719a2",
+      "lf_sha256": "7c2fc58884bcf25289c773ed5755fdbd66d07be0172e3ab090401d7e774719a2",
+      "bytes": 8049,
+      "git_blob_oid": "2311dd31bce5b5dde083b8673ffde75a0eb135e3",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current criar_venda_completa inserts vendas_itens.modifiers; the captured schema is authoritative.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:drop_admin_finance_settings_2026_05_13.sql",
+      "path": ".ai/migrations/drop_admin_finance_settings_2026_05_13.sql",
+      "original_path": ".ai/migrations/drop_admin_finance_settings_2026_05_13.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "5d94774600f56e1af31b796e66bad265f85f7e3ef55e3048311a70742eb9fcda",
+      "lf_sha256": "2b572fba87f595fb008a0972ae9bda63e414986818ffecfd08e32a82c02a9df5",
+      "bytes": 197,
+      "git_blob_oid": "a4c9c5338f9b27a1981add594d81303deeaa459c",
+      "history_status": "one_shot_effect_observed",
+      "current_state_status": "reverted_absent",
+      "bootstrap_disposition": "reference_only",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "admin_finance_settings is absent from the current catalog; the destructive patch is never replayed.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:empresa_perfil_origem_aquisicao_2026_07_27.sql",
+      "path": ".ai/migrations/empresa_perfil_origem_aquisicao_2026_07_27.sql",
+      "original_path": ".ai/migrations/empresa_perfil_origem_aquisicao_2026_07_27.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "534d8c8c6992fcbb7d41ff4b98de65475b7e33c62cf34b0254689d35cdc76dde",
+      "lf_sha256": "161012b3110d56120950c360348ee8a38ca5bb5e88b0a724bb395b531d5e4481",
+      "bytes": 2464,
+      "git_blob_oid": "baaa75ae95c6079ec8902fccd322b69eab19f04a",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Column, constraint/index/comment are present; a later canonical grant references the column.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:fiado_excluir_pessoa_quitada_2026_07_30.sql",
+      "path": ".ai/migrations/fiado_excluir_pessoa_quitada_2026_07_30.sql",
+      "original_path": ".ai/migrations/fiado_excluir_pessoa_quitada_2026_07_30.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "e648f6669ffd654d9bcafa078b78e502c3f27cc737155cf44e431507cebd3fb2",
+      "lf_sha256": "e648f6669ffd654d9bcafa078b78e502c3f27cc737155cf44e431507cebd3fb2",
+      "bytes": 2323,
+      "git_blob_oid": "96e8e5d6da8822e4a6eff0d17d47c6e16185bab1",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current function and ACL are present in the baseline.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:fiado_ledger_2026_07_15.sql",
+      "path": ".ai/migrations/fiado_ledger_2026_07_15.sql",
+      "original_path": ".ai/migrations/fiado_ledger_2026_07_15.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "84bdb1e724b5c85a7e6fe447ed47e8406a656acd03d5db407abfe8fe67ebfb96",
+      "lf_sha256": "5559275eacc6d72cf9926845c324e2aee15d576f18f2f452e6ce35b3d3d67458",
+      "bytes": 15450,
+      "git_blob_oid": "458606dda682729a8e39fa699c0efd2433592ebb",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/migrations/20260813034000_fiado_ledger_select_rbac.sql"
+      ],
+      "evidence": "Ledger schema persists; SELECT policy is replaced by capability-aware RLS.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:intelligence_engine_v1_2026_07_10.sql",
+      "path": ".ai/migrations/intelligence_engine_v1_2026_07_10.sql",
+      "original_path": ".ai/migrations/intelligence_engine_v1_2026_07_10.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "a141352c50d18823a164cc69ea3aa6f186dbf04cce0efafe1ec48b1b78ad0826",
+      "lf_sha256": "5ffe7cb9a8e5b1e77acc3263cebe284a48da9d009cd1177e8393c1893e63230a",
+      "bytes": 6996,
+      "git_blob_oid": "cf90bc00f9919183e80989370b079369d267392e",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/migrations/20260813043000_gerente_reports_rbac.sql"
+      ],
+      "evidence": "Engine tables persist and report-read policies have later definitions.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:intelligence_gerente_prefs_2026_07_12.sql",
+      "path": ".ai/migrations/intelligence_gerente_prefs_2026_07_12.sql",
+      "original_path": ".ai/migrations/intelligence_gerente_prefs_2026_07_12.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "813ef8749fbde8d0f3abb6092cccf7bdbfb292e9ebdba2cf8e1f61a7129e85ea",
+      "lf_sha256": "22c715442987d1ab74f4440ac942035bce13ec885bc0aea4d2be54ecf525cc0f",
+      "bytes": 997,
+      "git_blob_oid": "e7e332342d6e7b31be9544dbca33ec2136eac4bd",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current profile columns/default/check are present and later grants reference them.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:intelligence_narratives_2026_07_12.sql",
+      "path": ".ai/migrations/intelligence_narratives_2026_07_12.sql",
+      "original_path": ".ai/migrations/intelligence_narratives_2026_07_12.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "43be415f22b09222bf95c226cda77072e44c2209012890747b1c33dc83abe2b1",
+      "lf_sha256": "1547353604fec91b88e195351d71232d3fdac784b62fd327d4efb2549820535b",
+      "bytes": 426,
+      "git_blob_oid": "009f50fdb039073a58272c88f3fb7714a5e848ef",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current ai_usage_logs constraint includes the intelligence chat type.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:leadbot_tables_enable_rls_2026_07_06.sql",
+      "path": ".ai/migrations/leadbot_tables_enable_rls_2026_07_06.sql",
+      "original_path": ".ai/migrations/leadbot_tables_enable_rls_2026_07_06.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "2f6d550084463a4206e65b58477a494c2a677032adef668254e78b77372e3566",
+      "lf_sha256": "fea4475d67b1c9f349130051edbdf63a278e1270615788cad937a4fbad51c86c",
+      "bytes": 1016,
+      "git_blob_oid": "0867437ae8cc30915bd3111d839e479dea983e0b",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "All six leadbot tables have RLS and no browser-role grants in the captured state.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:mesas_payment_item_allocation_2026_08_03.sql",
+      "path": "supabase/history/observed-local/mesas_payment_item_allocation_2026_08_03.sql",
+      "original_path": ".ai/migrations/mesas_payment_item_allocation_2026_08_03.sql",
+      "source_root": "supabase/history/observed-local",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "69657704343e3f7410bbdf9fd299b2e916509983822dc498c6cb65950aeca262",
+      "lf_sha256": "69657704343e3f7410bbdf9fd299b2e916509983822dc498c6cb65950aeca262",
+      "bytes": 8341,
+      "git_blob_oid": "70751c70ee8d2d7a75863d2899642f56d50c3042",
+      "history_status": "superseded_draft",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "reference_only",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/migrations/20260803164855_mesas_payment_item_allocation.sql"
+      ],
+      "evidence": "Local draft adds a FK deliberately removed by the canonical migration and omits vendas_itens.id_comanda_item.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:mesas_stock_realtime_hotfix_2026_05_01.sql",
+      "path": ".ai/migrations/mesas_stock_realtime_hotfix_2026_05_01.sql",
+      "original_path": ".ai/migrations/mesas_stock_realtime_hotfix_2026_05_01.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "68c346f67a89d9670334a29340f6443edbf77880b45ed812949b418ca42de3d6",
+      "lf_sha256": "430236c73d142224de4aeeaede38f9eef198db541b59eedc4425b739b001ef48",
+      "bytes": 9088,
+      "git_blob_oid": "c15941fc9c4d67ec249b1b0d85c32192d1a872a2",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "estoque_baixado remains; the RPC definitions have later canonical versions.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:mix_guarana_produto_montavel_2026_07_31.sql",
+      "path": ".ai/migrations/mix_guarana_produto_montavel_2026_07_31.sql",
+      "original_path": ".ai/migrations/mix_guarana_produto_montavel_2026_07_31.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "operational_data_patch",
+      "version": null,
+      "raw_sha256": "f1a27c8e8886ba3b203fb71ade297965fa2f87f9f2aa2a8384a98b51a48eba98",
+      "lf_sha256": "f1a27c8e8886ba3b203fb71ade297965fa2f87f9f2aa2a8384a98b51a48eba98",
+      "bytes": 17144,
+      "git_blob_oid": "363056b47c0b8a948d761491a6d76d69db15f206",
+      "history_status": "operational_data_patch_applied",
+      "current_state_status": "data_effect_not_compared",
+      "bootstrap_disposition": "exclude_tenant_data",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Tenant-specific catalog load is documented as applied and is deliberately excluded from schema bootstrap.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:offline_sales_idempotency_2026_05_12.sql",
+      "path": ".ai/migrations/offline_sales_idempotency_2026_05_12.sql",
+      "original_path": ".ai/migrations/offline_sales_idempotency_2026_05_12.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "42dae9c1082ab93adc9a471578897a202355a9202a60ba693cbfc1d192447248",
+      "lf_sha256": "ea736fba681dfb502935aba3d826607f704a9ea0e95d220f6c9b1422af243b59",
+      "bytes": 8403,
+      "git_blob_oid": "a3819602da41b0016c1e465ce990b8ac75e84ef5",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/history/remote-applied/20260712133000_fix_criar_venda_completa_stock.sql",
+        "criar_venda_completa_persistir_modifiers_2026_07_31.sql"
+      ],
+      "evidence": "client_sale_id schema remains; criar_venda_completa has later effective definitions.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:pedidos_cozinha_entitlement_columns_drop_2026_07_28.sql",
+      "path": ".ai/migrations/pedidos_cozinha_entitlement_columns_drop_2026_07_28.sql",
+      "original_path": ".ai/migrations/pedidos_cozinha_entitlement_columns_drop_2026_07_28.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "84d88e68e9ab7268b1ebfdaa2abe1a2650d937a044c0e55b874ad570d3acaf96",
+      "lf_sha256": "466da7e74852b485968d3762d05c3bb2dcf320390984bde38e3cc82e7924319a",
+      "bytes": 1957,
+      "git_blob_oid": "c6b75ccd069e62badfefd0072e14368c4ff60833",
+      "history_status": "one_shot_effect_observed",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Dropped entitlement columns are absent and user_entitlements has a later effective definition.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:pedidos_cozinha_mesa_cancel_marker_2026_07_28.sql",
+      "path": ".ai/migrations/pedidos_cozinha_mesa_cancel_marker_2026_07_28.sql",
+      "original_path": ".ai/migrations/pedidos_cozinha_mesa_cancel_marker_2026_07_28.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "8ffc9fa286c62720860698ff5760bc36c8dbef7923055567a791c2805fa1d648",
+      "lf_sha256": "196f8016a6e2047a762caf6e7cec37174c9316070956f626b26bec0d4e33174a",
+      "bytes": 1397,
+      "git_blob_oid": "23e823d1fa18aa31c344c4a3866b10bde0cadc82",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current transition_zelo_order retains the Mesa cancel-marker behavior with later patches.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:pedidos_cozinha_source_mesa_and_drop_2026_07_28.sql",
+      "path": ".ai/migrations/pedidos_cozinha_source_mesa_and_drop_2026_07_28.sql",
+      "original_path": ".ai/migrations/pedidos_cozinha_source_mesa_and_drop_2026_07_28.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "e231641b4ca42e1368692cf20a1ef4205c012cf3db30986196ed2226b93e9a8e",
+      "lf_sha256": "5099c14f3296b9d13accaa57e66423d1769c84a0fa71009770c82b550a6e9807",
+      "bytes": 21199,
+      "git_blob_oid": "a98e2c23569cf2a7f2b4c5d8a46a92cca4049dcf",
+      "history_status": "one_shot_effect_observed",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Legacy pedidos objects are absent; retained RPCs have later effective definitions.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:pedidos_origem_zelomenu_2026_06_23.sql",
+      "path": ".ai/migrations/pedidos_origem_zelomenu_2026_06_23.sql",
+      "original_path": ".ai/migrations/pedidos_origem_zelomenu_2026_06_23.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "3daaa4b86d3bcddab44372d3eac64b54895eb5cfe16185e100d5705eff19c2fc",
+      "lf_sha256": "aaa21ce5b7d868d869296da4ed74c32be2f240378dc2d777f1c1788cfdb5b67a",
+      "bytes": 1001,
+      "git_blob_oid": "d3ca96addcc51a7a2815b4e25b59bdbd3b4d8c2d",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "reverted_absent",
+      "bootstrap_disposition": "reference_only",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Its target legacy pedidos table was later removed.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:pedidos_preparando_status_2026_06_25.sql",
+      "path": ".ai/migrations/pedidos_preparando_status_2026_06_25.sql",
+      "original_path": ".ai/migrations/pedidos_preparando_status_2026_06_25.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "fb48c5f955fb52603417e7a0417d5ffb78ef19abe3fd802a11236cbb65676e59",
+      "lf_sha256": "fb48c5f955fb52603417e7a0417d5ffb78ef19abe3fd802a11236cbb65676e59",
+      "bytes": 444,
+      "git_blob_oid": "0cd1b22441ce77f5f8119a29da380a49063137de",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "reverted_absent",
+      "bootstrap_disposition": "reference_only",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Its target legacy pedidos table was later removed.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:product_usage_events_2026_07_30.sql",
+      "path": ".ai/migrations/product_usage_events_2026_07_30.sql",
+      "original_path": ".ai/migrations/product_usage_events_2026_07_30.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "6db28ca4ff1fdcaace18b6a46acac23040bc19b5422211be9d0d3cbb762db7c7",
+      "lf_sha256": "6db28ca4ff1fdcaace18b6a46acac23040bc19b5422211be9d0d3cbb762db7c7",
+      "bytes": 1346,
+      "git_blob_oid": "8cce81ef569e611d0d763a71b771f336bdf159b6",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Table, unique/index, RLS and service-role-only access are present.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:produtos_montaveis_pdv_2026_07_31.sql",
+      "path": ".ai/migrations/produtos_montaveis_pdv_2026_07_31.sql",
+      "original_path": ".ai/migrations/produtos_montaveis_pdv_2026_07_31.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "e34f7bc556bc1232430b1275977ee7ee59a4abe31c4681a246e5b55246de9922",
+      "lf_sha256": "e34f7bc556bc1232430b1275977ee7ee59a4abe31c4681a246e5b55246de9922",
+      "bytes": 15875,
+      "git_blob_oid": "7099a6db7af080e3ece474781e6243cfc2e36c57",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/migrations/20260812234500_mesas_operational_rpc_rbac.sql"
+      ],
+      "evidence": "Modifier schema persists while operational RPCs have later definitions.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:referral_system_2026_05_16.sql",
+      "path": ".ai/migrations/referral_system_2026_05_16.sql",
+      "original_path": ".ai/migrations/referral_system_2026_05_16.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "cf0661e5e55b01bf29a41008138d27b4d088844eacdbb6b1af3ddc26f41a0c16",
+      "lf_sha256": "08ba1dc1c7655466194aee515fa1ceca219d11b62365d645190839c38f969fa1",
+      "bytes": 8214,
+      "git_blob_oid": "4775c651279dc87efde39468343445caad30e461",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Referral tables, indexes, policies and functions are present and consumed by current code.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:subscriptions_monthly_value_cents_2026_07_22.sql",
+      "path": ".ai/migrations/subscriptions_monthly_value_cents_2026_07_22.sql",
+      "original_path": ".ai/migrations/subscriptions_monthly_value_cents_2026_07_22.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "c9cb5f560fe6c02e9ee51c8e6a8d004ea46990e14714af44d0e05b608ad37f96",
+      "lf_sha256": "9ef8aca36ef05361f42d059102862913749e00a7645c82795a8c0bb3b6ae9510",
+      "bytes": 1300,
+      "git_blob_oid": "ac0e0e46a1d38c8e9485cd42c5a1a7dc62e70109",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Column/check are present and used by the Pix settlement function.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:trial_expired_status_2026_06_17.sql",
+      "path": ".ai/migrations/trial_expired_status_2026_06_17.sql",
+      "original_path": ".ai/migrations/trial_expired_status_2026_06_17.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "9d6077905e017604f0b48d1ab563e5815ff0b3c31b446b37de108f59b76f58c1",
+      "lf_sha256": "f073d4f549a30363f7d04c8da4cb9941d97d14bb63f15771cac18ea5b40ec9a7",
+      "bytes": 1183,
+      "git_blob_oid": "066d55c1367c99d76df8af684c14ed92f48f65df",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/migrations/20260812191700_subscriptions_live_row_invariant.sql"
+      ],
+      "evidence": "Current subscription status constraint includes trial_expired and later live-row hardening.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:zelo_order_sub_item_attribution_2026_07_22.sql",
+      "path": ".ai/migrations/zelo_order_sub_item_attribution_2026_07_22.sql",
+      "original_path": ".ai/migrations/zelo_order_sub_item_attribution_2026_07_22.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "20fb41e28d2b477f4b73f6899f36364c8be4f0d1666d38b892691fba0ada4e4d",
+      "lf_sha256": "1ba1b20c592491d11e979cd2307417ae739af4fa4df38ac6f67dcd724c5a84f8",
+      "bytes": 15708,
+      "git_blob_oid": "3e4b4089db1ea549a01e812987280d936f770eca",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "reference_only",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Order transition/close functions have later definitions; option-product schema remains elsewhere.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:zelochat_messages_audio_transcript_error_2026_05_19.sql",
+      "path": ".ai/migrations/zelochat_messages_audio_transcript_error_2026_05_19.sql",
+      "original_path": ".ai/migrations/zelochat_messages_audio_transcript_error_2026_05_19.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "94b90e4401424eb3b67a08c9a1f50af46d346cc3478fad66ee491d421cfd3071",
+      "lf_sha256": "9fb08206e93462c25b63d92615db0234260d3a66668366b3c2c339ee9f6bc76b",
+      "bytes": 587,
+      "git_blob_oid": "9531fd5feb76e40a9df46a589a3b836ec19d2419",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "zelochat_messages.audio_transcript_error is present in the current baseline.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:zelomenu_category_suggestions_2026_07_22.sql",
+      "path": "supabase/history/observed-local/zelomenu_category_suggestions_2026_07_22.sql",
+      "original_path": ".ai/migrations/zelomenu_category_suggestions_2026_07_22.sql",
+      "source_root": "supabase/history/observed-local",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "5210abefcb76a5be56e4c99a662328030274c0f8cbf7323155ca17fd724f9911",
+      "lf_sha256": "5210abefcb76a5be56e4c99a662328030274c0f8cbf7323155ca17fd724f9911",
+      "bytes": 720,
+      "git_blob_oid": "14d50f72de9cc1f9e046d881fca2a8cf1f6e6b15",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Current category suggestion column/default/comment exist and a later canonical grant references it.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:zelomenu_entitlement_and_slug_2026_06_23.sql",
+      "path": ".ai/migrations/zelomenu_entitlement_and_slug_2026_06_23.sql",
+      "original_path": ".ai/migrations/zelomenu_entitlement_and_slug_2026_06_23.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "4922939c718d35ac8442e91d604c3be9275905f5e1848b14f1aff5dca7807118",
+      "lf_sha256": "8a4af08deda6a9ef8af86ff34f057eb851c7a332b026332b49a05e2cdd318f3d",
+      "bytes": 3260,
+      "git_blob_oid": "88b1101eb01c21993eeaff6205a50b144e9e46f9",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Profile/slug schema persists while user_entitlements has a later effective definition.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:zelomenu_modifier_produto_vinculado_2026_07_22.sql",
+      "path": "supabase/history/observed-local/zelomenu_modifier_produto_vinculado_2026_07_22.sql",
+      "original_path": ".ai/migrations/zelomenu_modifier_produto_vinculado_2026_07_22.sql",
+      "source_root": "supabase/history/observed-local",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "ff676d8277ed4ac960df8b13de3d5c293285fb99481e98b29039e7607b82ce21",
+      "lf_sha256": "ff676d8277ed4ac960df8b13de3d5c293285fb99481e98b29039e7607b82ce21",
+      "bytes": 5044,
+      "git_blob_oid": "a2bbbcc1e5802ee3f0b50eea5a119a913357fa38",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/migrations/20260813020000_catalog_extensions_rbac.sql"
+      ],
+      "evidence": "Option-product schema persists; write policies are replaced by capability-aware RLS.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:zelomenu_modifier_quantidade_opcao_2026_07_22.sql",
+      "path": "supabase/history/observed-local/zelomenu_modifier_quantidade_opcao_2026_07_22.sql",
+      "original_path": ".ai/migrations/zelomenu_modifier_quantidade_opcao_2026_07_22.sql",
+      "source_root": "supabase/history/observed-local",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "0b6240ab79010af544a68bcdc03cbbb4bea4f9c208704f4c922b53536d0dba2d",
+      "lf_sha256": "0b6240ab79010af544a68bcdc03cbbb4bea4f9c208704f4c922b53536d0dba2d",
+      "bytes": 1551,
+      "git_blob_oid": "bf9386b5fc09cafa597cb9be317400d4ea13e7ae",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Modifier quantity columns/defaults/constraints are present and consumed by current runtime.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:zelomenu_pedido_status_sync_2026_06_23.sql",
+      "path": ".ai/migrations/zelomenu_pedido_status_sync_2026_06_23.sql",
+      "original_path": ".ai/migrations/zelomenu_pedido_status_sync_2026_06_23.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "854563295b2c2e29abfcd8404b7368981a6dc51ca2a6d4f70ed5011e59c6b2af",
+      "lf_sha256": "01aa1a5cec3d8c83d3691369042d63a691bf317b8996e0637dd23369043671f9",
+      "bytes": 2672,
+      "git_blob_oid": "d8ff648367d519f139ed49243aa4b96d153501dc",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "reverted_absent",
+      "bootstrap_disposition": "reference_only",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Its target legacy pedidos table and trigger were later removed.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:zelomenu_publication_schema_2026_06_23.sql",
+      "path": ".ai/migrations/zelomenu_publication_schema_2026_06_23.sql",
+      "original_path": ".ai/migrations/zelomenu_publication_schema_2026_06_23.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "2e7b272100ba0d32dbcfd20977f896622acae5989393468a7dc95c48f0a02642",
+      "lf_sha256": "760e5b51c2c6d64587643cee9992c1da5c6f6a78a21ba9ba0e365e76f9ab36e4",
+      "bytes": 11040,
+      "git_blob_oid": "e6cb8b6adba8b5f6b6ba9215d97dfa3329fdc221",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_superseded",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [
+        "supabase/migrations/20260807134325_catalog_canonical_products_remote_snapshot.sql",
+        "supabase/migrations/20260813020000_catalog_extensions_rbac.sql"
+      ],
+      "evidence": "Publication tables persist; canonical-product migration and RBAC migration define later state.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "legacy:zelomenu_table_capabilities_enable_rls_2026_07_28.sql",
+      "path": ".ai/migrations/zelomenu_table_capabilities_enable_rls_2026_07_28.sql",
+      "original_path": ".ai/migrations/zelomenu_table_capabilities_enable_rls_2026_07_28.sql",
+      "source_root": ".ai/migrations",
+      "artifact_kind": "legacy_migration",
+      "version": null,
+      "raw_sha256": "3e3614af69e8891d251af729a067d852d1023927f7a5d3bfa4b07f26f12938b4",
+      "lf_sha256": "a1d5ea21ae35192cd7bad895e9f4db0d98ab49a9a6976939cd859351c7ffa573",
+      "bytes": 860,
+      "git_blob_oid": "37c097c8b9be460f8e7c42ddf7cb6341a3dd2100",
+      "history_status": "applied_outside_remote_history",
+      "current_state_status": "present_exact",
+      "bootstrap_disposition": "baseline_absorbed",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Capability table has RLS, no browser policies/grants and service-role-only RPC execution.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "verification:verification/empresa_perfil_origem_aquisicao_2026_07_27_verify.sql",
+      "path": ".ai/migrations/verification/empresa_perfil_origem_aquisicao_2026_07_27_verify.sql",
+      "original_path": ".ai/migrations/verification/empresa_perfil_origem_aquisicao_2026_07_27_verify.sql",
+      "source_root": ".ai/migrations/verification",
+      "artifact_kind": "verification_readonly",
+      "version": null,
+      "raw_sha256": "7111d5f72bd0f62632ede9bd95df1b9eee2d21cf92b4cfa5c6dc2a63d416ecd5",
+      "lf_sha256": "a888ba20351e6c7f44a9879a34dd36d9e8bce1bf39c400ed63c6020a2719dacf",
+      "bytes": 4151,
+      "git_blob_oid": "36ea85aeb3b2ef4169446479031d7f62590db182",
+      "history_status": "not_history_applicable",
+      "current_state_status": "verification_only",
+      "bootstrap_disposition": "verification_only",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Read-only manual verifier; never migration input.",
+      "review_status": "reviewed"
+    },
+    {
+      "artifact_id": "verification:verification/zelo_order_sub_item_attribution_2026_07_22_verify.sql",
+      "path": ".ai/migrations/verification/zelo_order_sub_item_attribution_2026_07_22_verify.sql",
+      "original_path": ".ai/migrations/verification/zelo_order_sub_item_attribution_2026_07_22_verify.sql",
+      "source_root": ".ai/migrations/verification",
+      "artifact_kind": "verification_rollback",
+      "version": null,
+      "raw_sha256": "a23fd7be51e79bdfc9c7c6908a3fcd2ae199b2b2be8ad8ec0f55f5b72167a304",
+      "lf_sha256": "776558c28a54f23a45282ade813a4589a549ce9c0677a129249e9d5b7093ce92",
+      "bytes": 26991,
+      "git_blob_oid": "c53c91436a6a5eb873ea1be50bd8adbb572b83e3",
+      "history_status": "not_history_applicable",
+      "current_state_status": "verification_only",
+      "bootstrap_disposition": "verification_only",
+      "remote_links": [],
+      "superseded_by": [],
+      "evidence": "Synthetic transactional verifier ending in ROLLBACK; never migration input.",
+      "review_status": "reviewed"
+    }
+  ]
+}

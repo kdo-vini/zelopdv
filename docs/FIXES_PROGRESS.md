@@ -1,5 +1,17 @@
 # Fixes Progress
 
+- [x] FX-MIGRATION-RECONCILIATION-01 (2026-08-13) - os 107 SQLs do worktree
+  foram classificados sem estado desconhecido; as 59 versões remotas tiveram
+  hashes congelados; 22 payloads autoritativos foram arquivados e o patch de
+  dados de um tenant foi preservado apenas por hash, sem reescrever migrations
+  aplicadas nem versionar seus dados. Um baseline atual fora
+  do stream de migrations restaura `public`, ACLs/RLS/policies, buckets,
+  policies de Storage e Realtime em uma stack Supabase PG17 descartável. O dump
+  normalizado e a configuração de plataforma tiveram diff zero; migration list
+  e dry-run linked ficaram sem pendências. Nenhuma mutação de produção foi
+  necessária. Evidência e rollback em
+  `supabase/baselines/20260813091000/README.md`.
+
 - [x] FX-SALES-HISTORY-READ-RBAC-01 (2026-08-13) - finding confirmado:
   subusuário com somente `pedidos.acessar` lia `vendas` e `vendas_itens` do
   titular. A migration forward-only

@@ -45,8 +45,11 @@
   de configuração. Continua sendo complementar ao RBAC por cargo.
 - O admin dashboard usa anon key no browser; a verificação de produção confirmou RLS ativo nas tabelas
   administrativas relevantes, então o risco remanescente é de defesa em profundidade/handlers críticos.
-- Migrations históricas ainda vivem em `.ai/migrations/`; `supabase/migrations/` agora contém o histórico
-  reconciliado e as mudanças forward-only recentes, mas não substitui um snapshot completo do schema.
+- O baseline completo atual está em `supabase/baselines/20260813091000`: 107/107
+  SQLs classificados, 59 versões remotas congeladas e bootstrap Supabase PG17
+  descartável com equivalência estrutural/de segurança. Migrations aplicadas em
+  `supabase/migrations/` são imutáveis; SQL em `supabase/history/` é somente
+  referência e nunca deve ser executado.
 - Para aplicar migrations no projeto real vinculado, usar o Supabase CLI com `supabase db query --linked --file <arquivo.sql>`; não depender de colar SQL manualmente no dashboard.
 - A trilha documental principal agora é: `README.md` + docs operacionais na raiz + `pdvObsidian/HOME.md`.
 - Em 2026-06-01, `npm test` voltou a 140/140 após alinhar fixtures ao contrato atual de perfil/CPF/telefone.

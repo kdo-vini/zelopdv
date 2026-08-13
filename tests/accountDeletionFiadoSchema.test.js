@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const migration = readFileSync(
-  resolve('.ai/migrations/account_deletion_fiado_2026_08_09.sql'),
+  resolve('supabase/baselines/20260813091000/schema.sql'),
   'utf8',
 ).replace(/\r\n/g, '\n').toLowerCase();
 

@@ -1,0 +1,156 @@
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+$repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+$baselineCutoff = '20260813091000'
+$baselineDirectory = Join-Path $repositoryRoot "supabase\baselines\$baselineCutoff"
+$cli = Join-Path $repositoryRoot 'node_modules\.bin\supabase.cmd'
+$postgresImage = 'public.ecr.aws/supabase/postgres:17.6.1.031'
+$projectId = "zelopdv-baseline-$([guid]::NewGuid().ToString('N').Substring(0, 10))"
+$temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) $projectId
+$temporarySupabase = Join-Path $temporaryRoot 'supabase'
+$started = $false
+
+function Invoke-SupabaseLocal {
+  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
+
+  $forbidden = @('--linked', '--db-url', '--password')
+  foreach ($argument in $Arguments) {
+    if ($forbidden -contains $argument) {
+      throw "Remote-capable Supabase option is forbidden by this harness: $argument"
+    }
+  }
+
+  & $cli @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "Supabase CLI failed: $($Arguments -join ' ')"
+  }
+}
+
+function Invoke-DisposablePsql {
+  param(
+    [Parameter(Mandatory = $true)][string]$DatabaseUrl,
+    [Parameter(Mandatory = $true)][ValidateSet('schema.sql', 'platform.sql')][string]$File,
+    [switch]$SingleTransaction
+  )
+
+  if ($DatabaseUrl -notmatch '^postgresql://postgres:postgres@127\.0\.0\.1:55322/postgres$') {
+    throw 'Refusing a non-loopback or unexpected database target.'
+  }
+
+  $arguments = @(
+    'run', '--rm', '--network', 'host',
+    '-v', "${baselineDirectory}:/baseline:ro",
+    $postgresImage,
+    'psql', $DatabaseUrl, '-X', '-q', '-v', 'ON_ERROR_STOP=1',
+    '-v', 'zelo_disposable_baseline=1'
+  )
+  if ($SingleTransaction) { $arguments += '--single-transaction' }
+  $arguments += @('--file', "/baseline/$File")
+
+  & docker @arguments
+  if ($LASTEXITCODE -ne 0) { throw "Baseline SQL failed: $File" }
+}
+
+function Get-NormalizedDumpHash {
+  param([Parameter(Mandatory = $true)][string]$File)
+
+  $content = (Get-Content -LiteralPath $File -Raw).Replace("`r`n", "`n")
+  $start = $content.IndexOf('SET statement_timeout = 0;')
+  if ($start -lt 0) { throw "Could not locate stable pg_dump body in $File" }
+  $content = $content.Substring($start)
+  $content = [regex]::Replace($content, '(?m)^\\(?:un)?restrict .+\n', '')
+  $content = [regex]::Replace($content, '\n{3,}', "`n`n").Trim() + "`n"
+  $bytes = [Text.Encoding]::UTF8.GetBytes($content)
+  $hasher = [Security.Cryptography.SHA256]::Create()
+  try {
+    return ([BitConverter]::ToString($hasher.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant()
+  } finally {
+    $hasher.Dispose()
+  }
+}
+
+try {
+  if (-not (Test-Path -LiteralPath $cli)) { throw 'Repository-pinned Supabase CLI is missing.' }
+  if (Test-Path -LiteralPath $temporaryRoot) { throw "Unexpected existing temp path: $temporaryRoot" }
+
+  New-Item -ItemType Directory -Path $temporarySupabase -Force | Out-Null
+  $config = Get-Content -LiteralPath (Join-Path $repositoryRoot 'supabase\config.toml') -Raw
+  if ($config -notmatch '(?ms)^\[db\.migrations\]\s*\r?\nenabled = false(?:\r?\n|$)') {
+    throw 'Harness config must disable automatic migration replay.'
+  }
+  $config = $config.Replace('project_id = "zelopdv-local"', "project_id = `"$projectId`"")
+  [IO.File]::WriteAllText(
+    (Join-Path $temporarySupabase 'config.toml'),
+    $config,
+    [Text.UTF8Encoding]::new($false)
+  )
+
+  Invoke-SupabaseLocal start --workdir $temporaryRoot --exclude `
+    'edge-runtime,gotrue,imgproxy,kong,logflare,mailpit,postgres-meta,postgrest,realtime,storage-api,studio,supavisor,vector' `
+    --output-format json | Out-Null
+  $started = $true
+
+  $databaseUrl = 'postgresql://postgres:postgres@127.0.0.1:55322/postgres'
+
+  Invoke-DisposablePsql -DatabaseUrl $databaseUrl -File 'schema.sql' -SingleTransaction
+  Invoke-DisposablePsql -DatabaseUrl $databaseUrl -File 'platform.sql'
+
+  $temporaryMigrations = Join-Path $temporarySupabase 'migrations'
+  New-Item -ItemType Directory -Path $temporaryMigrations -Force | Out-Null
+  Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'supabase\migrations') -File -Filter '*.sql' |
+    ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $temporaryMigrations $_.Name) }
+
+  $temporaryConfigPath = Join-Path $temporarySupabase 'config.toml'
+  $originalTemporaryConfig = Get-Content -LiteralPath $temporaryConfigPath -Raw
+  $temporaryConfig = [regex]::Replace(
+    $originalTemporaryConfig,
+    '(?ms)(\[db\.migrations\]\s*\r?\n)enabled = false',
+    '${1}enabled = true'
+  )
+  $migrationsEnabled = [regex]::IsMatch(
+    $temporaryConfig,
+    '(?ms)^\[db\.migrations\]\s*\r?\nenabled = true(?:\r?\n|$)'
+  )
+  if (($temporaryConfig -eq $originalTemporaryConfig) -or (-not $migrationsEnabled)) {
+    throw 'Failed to enable migrations only in the disposable workdir.'
+  }
+  [IO.File]::WriteAllText($temporaryConfigPath, $temporaryConfig, [Text.UTF8Encoding]::new($false))
+
+  $versions = Get-Content -LiteralPath (Join-Path $baselineDirectory 'applied-versions.txt') |
+    Where-Object { $_ -and -not $_.StartsWith('#') }
+  Invoke-SupabaseLocal migration repair @versions --status applied --local --workdir $temporaryRoot
+  Invoke-SupabaseLocal db push --local --dry-run --workdir $temporaryRoot
+  Invoke-SupabaseLocal migration list --local --workdir $temporaryRoot
+
+  $localDump = Join-Path $temporaryRoot 'local-public.sql'
+  Invoke-SupabaseLocal db dump --local --schema public --file $localDump --workdir $temporaryRoot
+  $expectedDumpHash = Get-NormalizedDumpHash (Join-Path $baselineDirectory 'schema.sql')
+  $actualDumpHash = Get-NormalizedDumpHash $localDump
+  if ($actualDumpHash -ne $expectedDumpHash) {
+    throw "Public schema/security dump differs: expected $expectedDumpHash, got $actualDumpHash"
+  }
+
+  $platformQuery = Join-Path $repositoryRoot 'supabase\verification\capture_platform_state.sql'
+  $localPlatformRaw = Join-Path $temporaryRoot 'local-platform.json'
+  & $cli db query --local --workdir $temporaryRoot --file $platformQuery --output-format json |
+    Set-Content -LiteralPath $localPlatformRaw -Encoding utf8
+  if ($LASTEXITCODE -ne 0) { throw 'Local platform-state capture failed.' }
+  & node (Join-Path $repositoryRoot 'scripts\compare-platform-state.mjs') `
+    $localPlatformRaw `
+    (Join-Path $baselineDirectory 'platform-state.json')
+  if ($LASTEXITCODE -ne 0) { throw 'Captured platform configuration differs from production.' }
+
+  $lintOutput = Join-Path $temporaryRoot 'db-lint.json'
+  & $cli db lint --local --level error --workdir $temporaryRoot --output-format json |
+    Set-Content -LiteralPath $lintOutput -Encoding utf8
+  if ($LASTEXITCODE -ne 0) { throw 'Local database lint command failed.' }
+
+  Write-Output "BASELINE_VERIFIED cutoff=$baselineCutoff normalized_dump_sha256=$actualDumpHash"
+  Write-Output 'Application schema/security and captured platform configuration match production.'
+  Write-Output "Lint evidence: $lintOutput"
+} finally {
+  if ($started) {
+    & $cli stop --workdir $temporaryRoot --no-backup | Out-Null
+  }
+}

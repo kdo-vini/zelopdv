@@ -1,0 +1,419 @@
+{
+  "applied_count": 59,
+  "custom_roles": [],
+  "cutoff": "20260813091000",
+  "database_collate": "en_US.UTF-8",
+  "database_ctype": "en_US.UTF-8",
+  "database_encoding": "UTF8",
+  "extensions": [
+    {
+      "name": "pg_cron",
+      "schema": "pg_catalog",
+      "version": "1.6.4"
+    },
+    {
+      "name": "pg_net",
+      "schema": "extensions",
+      "version": "0.19.5"
+    },
+    {
+      "name": "pg_stat_statements",
+      "schema": "extensions",
+      "version": "1.11"
+    },
+    {
+      "name": "pgcrypto",
+      "schema": "extensions",
+      "version": "1.3"
+    },
+    {
+      "name": "plpgsql",
+      "schema": "pg_catalog",
+      "version": "1.0"
+    },
+    {
+      "name": "supabase_vault",
+      "schema": "vault",
+      "version": "0.3.1"
+    },
+    {
+      "name": "uuid-ossp",
+      "schema": "extensions",
+      "version": "1.1"
+    }
+  ],
+  "format": 1,
+  "postgrest_schemas_setting": null,
+  "realtime_publication": {
+    "all_tables": false,
+    "delete": true,
+    "insert": true,
+    "truncate": true,
+    "update": true,
+    "via_partition_root": false
+  },
+  "realtime_tables": [
+    {
+      "columns": [
+        "id",
+        "empresa_id",
+        "source",
+        "status",
+        "revision",
+        "zelomenu_session_id",
+        "idempotency_key",
+        "legacy_zelochat_order_id",
+        "legacy_pedido_id",
+        "customer",
+        "fulfillment",
+        "payment",
+        "subtotal",
+        "delivery_fee",
+        "discount",
+        "total",
+        "observations",
+        "accepted_at",
+        "stock_committed_at",
+        "stock_released_at",
+        "rejected_at",
+        "closed_at",
+        "sale_id",
+        "created_at",
+        "updated_at"
+      ],
+      "publication": "supabase_realtime",
+      "row_filter": null,
+      "schema": "public",
+      "table": "zelo_orders"
+    },
+    {
+      "columns": [
+        "id",
+        "empresa_id",
+        "customer_name",
+        "customer_phone",
+        "items",
+        "pickup_date",
+        "pickup_time",
+        "delivery_address",
+        "driver_id",
+        "status",
+        "total",
+        "source",
+        "created_at",
+        "updated_at",
+        "payment_method",
+        "delivery_fee",
+        "delivery_neighborhood",
+        "observations",
+        "pix_receipt_message_id",
+        "pix_receipt_analysis",
+        "zelomenu_session_id"
+      ],
+      "publication": "supabase_realtime",
+      "row_filter": null,
+      "schema": "public",
+      "table": "zelochat_orders"
+    }
+  ],
+  "server_version": "17.6",
+  "server_version_num": "170006",
+  "storage_buckets": [
+    {
+      "allowed_mime_types": null,
+      "avif_autodetection": false,
+      "file_size_limit": null,
+      "id": "delivery-assets",
+      "name": "delivery-assets",
+      "public": true,
+      "type": "STANDARD"
+    },
+    {
+      "allowed_mime_types": null,
+      "avif_autodetection": false,
+      "file_size_limit": null,
+      "id": "logos",
+      "name": "logos",
+      "public": true,
+      "type": "STANDARD"
+    },
+    {
+      "allowed_mime_types": [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "audio/ogg",
+        "audio/mpeg",
+        "audio/webm",
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "video/mp4"
+      ],
+      "avif_autodetection": false,
+      "file_size_limit": 26214400,
+      "id": "zelochat-media",
+      "name": "zelochat-media",
+      "public": true,
+      "type": "STANDARD"
+    }
+  ],
+  "storage_policies": [
+    {
+      "command": "r",
+      "name": "Assets são públicos para leitura",
+      "permissive": true,
+      "roles": [
+        "PUBLIC"
+      ],
+      "table": "objects",
+      "using": "(bucket_id = 'delivery-assets'::text)",
+      "with_check": null
+    },
+    {
+      "command": "d",
+      "name": "Usuários podem deletar seus próprios assets",
+      "permissive": true,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "objects",
+      "using": "((bucket_id = 'delivery-assets'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+      "with_check": null
+    },
+    {
+      "command": "a",
+      "name": "Usuários podem fazer upload de seus assets",
+      "permissive": true,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "objects",
+      "using": null,
+      "with_check": "((bucket_id = 'delivery-assets'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))"
+    },
+    {
+      "command": "w",
+      "name": "Usuários podem gerenciar seus próprios assets",
+      "permissive": true,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "objects",
+      "using": "((bucket_id = 'delivery-assets'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+      "with_check": null
+    },
+    {
+      "command": "d",
+      "name": "logos_auth_delete_own",
+      "permissive": true,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "objects",
+      "using": "((bucket_id = 'logos'::text) AND (owner = auth.uid()))",
+      "with_check": null
+    },
+    {
+      "command": "a",
+      "name": "logos_auth_insert",
+      "permissive": true,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "objects",
+      "using": null,
+      "with_check": "(bucket_id = 'logos'::text)"
+    },
+    {
+      "command": "w",
+      "name": "logos_auth_update_own",
+      "permissive": true,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "objects",
+      "using": "((bucket_id = 'logos'::text) AND (owner = auth.uid()))",
+      "with_check": "((bucket_id = 'logos'::text) AND (owner = auth.uid()))"
+    },
+    {
+      "command": "r",
+      "name": "logos_public_read",
+      "permissive": true,
+      "roles": [
+        "PUBLIC"
+      ],
+      "table": "objects",
+      "using": "(bucket_id = 'logos'::text)",
+      "with_check": null
+    },
+    {
+      "command": "r",
+      "name": "zelochat-media public read",
+      "permissive": true,
+      "roles": [
+        "PUBLIC"
+      ],
+      "table": "objects",
+      "using": "(bucket_id = 'zelochat-media'::text)",
+      "with_check": null
+    },
+    {
+      "command": "d",
+      "name": "zelochat-media service delete",
+      "permissive": true,
+      "roles": [
+        "PUBLIC"
+      ],
+      "table": "objects",
+      "using": "(bucket_id = 'zelochat-media'::text)",
+      "with_check": null
+    },
+    {
+      "command": "a",
+      "name": "zelochat-media service insert",
+      "permissive": true,
+      "roles": [
+        "PUBLIC"
+      ],
+      "table": "objects",
+      "using": null,
+      "with_check": "(bucket_id = 'zelochat-media'::text)"
+    },
+    {
+      "command": "d",
+      "name": "zelomenu_branding_delete",
+      "permissive": true,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "objects",
+      "using": "((bucket_id = 'logos'::text) AND ((storage.foldername(name))[1] = 'zelomenu-branding'::text) AND ((storage.foldername(name))[2] = ( SELECT (auth.uid())::text AS uid)))",
+      "with_check": null
+    },
+    {
+      "command": "a",
+      "name": "zelomenu_branding_insert",
+      "permissive": true,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "objects",
+      "using": null,
+      "with_check": "((bucket_id = 'logos'::text) AND ((storage.foldername(name))[1] = 'zelomenu-branding'::text) AND ((storage.foldername(name))[2] = ( SELECT (auth.uid())::text AS uid)))"
+    },
+    {
+      "command": "r",
+      "name": "zelomenu_branding_select",
+      "permissive": true,
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "table": "objects",
+      "using": "((bucket_id = 'logos'::text) AND ((storage.foldername(name))[1] = 'zelomenu-branding'::text))",
+      "with_check": null
+    }
+  ],
+  "storage_table_security": [
+    {
+      "force_rls": false,
+      "grants": [
+        {
+          "grantable_privileges": [],
+          "grantee": "anon",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ]
+        },
+        {
+          "grantable_privileges": [],
+          "grantee": "authenticated",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ]
+        },
+        {
+          "grantable_privileges": [],
+          "grantee": "service_role",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ]
+        }
+      ],
+      "rls_enabled": true,
+      "table": "buckets"
+    },
+    {
+      "force_rls": false,
+      "grants": [
+        {
+          "grantable_privileges": [],
+          "grantee": "anon",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ]
+        },
+        {
+          "grantable_privileges": [],
+          "grantee": "authenticated",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ]
+        },
+        {
+          "grantable_privileges": [],
+          "grantee": "service_role",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ]
+        }
+      ],
+      "rls_enabled": true,
+      "table": "objects"
+    }
+  ]
+}

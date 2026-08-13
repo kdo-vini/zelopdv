@@ -41,41 +41,67 @@ Evidência: `docs/operations/P0-SECURITY-CONTAINMENT-SNAPSHOT-2026-08-12.md`.
 
 Evidência: `docs/operations/WEBHOOK-RELIABILITY-SNAPSHOT-2026-08-12.md`.
 
-### 3. Migration/schema reconciliation — próxima entrega ativa
+### 3. Migration/schema reconciliation — concluída
 
 - [x] Capturar novamente o estado remoto e o histórico local/remoto. A tabela
   `supabase_migrations.schema_migrations` preserva os statements autoritativos
   das 23 versões que hoje são placeholders/markers locais.
-- [ ] Classificar os 107 artefatos SQL existentes (59 em
+- [x] Classificar os 107 artefatos SQL existentes (59 em
   `supabase/migrations`, 46 legados e 2 verificadores), sem nenhuma origem ou
   situação `unknown`.
-- [ ] Capturar um snapshot completo do schema de produção, sem dados nem
+- [x] Capturar um snapshot completo do schema de produção, sem dados nem
   segredos.
-- [ ] Reconstruir como artefatos históricos de referência o DDL autoritativo
-  das 20 versões representadas por `-- placeholder` e das três representadas
-  por markers (`047`, `20260805143653`, `20260807134325`), sem editar ou
-  reexecutar os arquivos de versões já aplicadas.
-- [ ] Definir e versionar o caminho de bootstrap a partir do baseline +
+- [x] Recuperar os 23 payloads autoritativos representados por placeholders ou
+  markers sem editar/reexecutar arquivos aplicados: 22 foram versionados como
+  referência e `20260722170000`, que continha UUID e catálogo reais de tenant,
+  foi preservado somente por versão e hashes no manifest.
+- [x] Definir e versionar o caminho de bootstrap a partir do baseline +
   migrations forward-only.
-- [ ] Provar o bootstrap em banco vazio e comparar objetos/policies/grants com
+- [x] Provar o bootstrap em banco vazio e comparar objetos/policies/grants com
   produção; registrar diferenças deliberadas.
-- [ ] Confirmar `supabase migration list --linked` alinhado e dry-run sem
+- [x] Confirmar `supabase migration list --linked` alinhado e dry-run sem
   pendências.
 
 Critério de saída: 107/107 artefatos classificados, baseline versionado,
 bootstrap descartável reproduzível e diff estrutural/de segurança igual a zero
 contra produção, sem depender de SQL manual ou inferência por documentação.
 
-Observação: a reconciliação mínima necessária para publicar migrations já foi
-concluída em 2026-08-12. Este item trata do bootstrap integral ainda pendente.
+Observação: a reconciliação mínima necessária para publicar migrations foi
+concluída em 2026-08-12; esta entrega concluiu também o bootstrap integral.
+
+Evidência final: `supabase/baselines/20260813091000/README.md`. O bootstrap
+descartável reproduziu o dump `public` e a configuração capturada de
+Storage/Realtime com diff zero; nenhuma escrita ou repair foi feita no projeto
+vinculado. Os dois findings existentes do lint de funções foram reproduzidos e
+registrados, sem mudança comportamental oportunista.
+
+### 3.1. P0 de Storage revelado pela reconciliação — próxima fatia
+
+- [x] Confirmar no catálogo real que `storage.objects` tem RLS e grants de
+  INSERT/DELETE para `anon`/`authenticated`.
+- [x] Confirmar que `zelochat-media service insert` e
+  `zelochat-media service delete` são permissivas e `TO PUBLIC` para todo o
+  bucket.
+- [ ] Identificar todos os consumidores de upload/delete e provar quais usam
+  service-role, browser authenticated ou anon.
+- [ ] Executar probes Storage API com objeto sintético e remoção imediata,
+  cobrindo anon, authenticated e service-role.
+- [ ] Criar snapshot e migration forward-only mínima; não alterar o baseline,
+  que precisa continuar representando o cutoff anterior.
+- [ ] Testar/deployar/observar a contenção antes de iniciar RBAC residual.
+
+Classificação: P0 confirmado, porque grant de INSERT/DELETE + policy `TO PUBLIC`
+forma um caminho efetivo de escrita anônima. O baseline registrou a exposição;
+ele não a criou nem a trata como aprovada.
 
 ### 4. RBAC por papel — fechamento incremental
 
-- [ ] Congelar uma matriz única `capability → rota → operação → tabela/RPC →
+- [x] Congelar uma matriz única `capability → rota → operação → tabela/RPC →
   enforcement atual`, usando todas as capabilities e todos os consumidores
   browser existentes como universo finito.
-- [ ] Classificar cada linha como `enforced`, `compartilhamento intencional` ou
-  `gap confirmado`; não alterar linhas sem finding reproduzido.
+- [x] Classificar cada linha como `enforced`, `compartilhamento intencional` ou
+  `candidato a gap`; só promover a `gap confirmado` após o probe live e não
+  alterar linhas sem finding reproduzido.
 - [ ] Corrigir cada gap confirmado em PR/commit independente, com snapshot,
   consumidores, blast radius, migration forward-only e rollback.
 - [ ] Para cada fatia, validar owner, papel autorizado, papel não autorizado,
@@ -83,6 +109,11 @@ concluída em 2026-08-12. Este item trata do bootstrap integral ainda pendente.
   writes que dependem de SELECT/`RETURNING`.
 - [ ] Encerrar explicitamente os compartilhamentos necessários ao PDV/Mesas/
   Caixa/Fichário para que não reapareçam como finding genérico.
+
+Inventário versionado: `docs/operations/RBAC-CAPABILITY-INVENTORY-2026-08-13.md`.
+As três linhas classificadas como candidatos ainda não autorizam mudança de
+produção: cada uma exige o probe live e o mapeamento de consumidores descritos
+no próprio inventário.
 
 Já concluído e rastreado em `docs/FIXES_PROGRESS.md`: Despesas, catálogo,
 estoque, Pessoas, `access_users`, Caixa, Mesas, vendas, desconto, relatórios,

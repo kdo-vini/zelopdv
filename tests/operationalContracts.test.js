@@ -51,7 +51,7 @@ describe('contrato operacional do banco', () => {
   });
 
   it('aplica limites e rollback no allocation ledger de mesas', () => {
-    const sql = read('.ai/migrations/mesas_payment_item_allocation_2026_08_03.sql');
+    const sql = read('supabase/migrations/20260803164855_mesas_payment_item_allocation.sql');
     expect(sql).toContain('comanda_pagamento_itens_validate_quantity');
     expect(sql).toContain('Quantidade alocada excede a quantidade do item da comanda');
     expect(sql).toContain('id_pagamento');
