@@ -5,6 +5,19 @@
 
 ## Findings
 
+### Update 2026-08-13 - enforcement do Zelinho Gerente por relatorios
+
+O finding foi confirmado em produção: as policies owner-scoped de
+`business_signals` e `business_daily_snapshots` permitiam que um subusuário
+sem `relatorios.ver` lesse a inteligência financeira e atualizasse
+`business_signals.read_at`. Os consumidores browser são as telas/loja do
+Zelinho; engine, cron e admin usam service-role. A migration
+`20260813043000_gerente_reports_rbac.sql` adiciona a capability existente às
+três policies e o item de navegação passa a respeitar o mesmo contexto. Owner,
+subusuário autorizado, super-admin fora do tenant, anon e service-role foram
+verificados sem persistência; o blast radius e o rollback estão no snapshot
+`docs/operations/GERENTE-REPORTS-RBAC-SNAPSHOT-2026-08-13.md`.
+
 ### Update 2026-08-13 - integridade tenant-scoped de `access_audit_logs`
 
 O finding foi confirmado em producao: um subusuario conseguia inserir um

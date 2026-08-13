@@ -1,5 +1,17 @@
 # ZeloPDV — Foco atual
 
+- RBAC incremental — Zelinho Gerente (2026-08-13): a revalidação remota
+  confirmou que as policies owner-scoped de `business_signals` e
+  `business_daily_snapshots` deixavam um subusuário sem `relatorios.ver` ler
+  sinais/snapshots e marcar `business_signals.read_at` como lido pela Data
+  API. A migration forward-only
+  `20260813043000_gerente_reports_rbac.sql` exige a capability existente nas
+  três policies e `appNavigation` passou a esconder o Zelinho para o mesmo
+  contexto sem permissão. Owner, subusuário autorizado, super-admin fora do
+  tenant, anon e service-role foram verificados em smoke transacional; a
+  fixture foi revertida. Snapshot:
+  `docs/operations/GERENTE-REPORTS-RBAC-SNAPSHOT-2026-08-13.md`.
+
 - RBAC incremental — integridade do `access_audit_logs` (2026-08-13): a
   revalidação remota reproduziu que um subusuário podia forjar um evento sob o
   `owner_user_id` de outra empresa, pois a policy aceitava apenas

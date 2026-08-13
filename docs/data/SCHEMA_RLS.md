@@ -271,8 +271,8 @@ Migration: `.ai/migrations/intelligence_engine_v1_2026_07_10.sql`.
 
 | Tabela | Finalidade | RLS | Grants |
 |--------|-----------|-----|--------|
-| `business_daily_snapshots` | Snapshots diários de métricas por empresa | SELECT owner-scoped; INSERT/UPDATE/DELETE service_role | `authenticated`: select; `service_role`: full |
-| `business_signals` | Sinais determinísticos detectados | SELECT owner-scoped; UPDATE read_at owner-scoped; INSERT/DELETE service_role | `authenticated`: select, update(read_at); `service_role`: full |
+| `business_daily_snapshots` | Snapshots diários de métricas por empresa | SELECT owner-scoped + `relatorios.ver` para subusuários; INSERT/UPDATE/DELETE service_role | `authenticated`: select; `service_role`: full |
+| `business_signals` | Sinais determinísticos detectados | SELECT owner-scoped + `relatorios.ver` para subusuários; UPDATE read_at com a mesma capability; INSERT/DELETE service_role | `authenticated`: select, update(read_at); `service_role`: full |
 | `business_intelligence_runs` | Logs de execução do cron | RLS ligado, sem policy para `authenticated` | só `service_role` |
 
 `empresa_perfil` mantém a coluna histórica `intelligence_enabled_at timestamptz`, usada no piloto inicial. Desde 2026-07-30 ela não controla mais o acesso: o Zelinho Gerente está disponível globalmente para empresas com assinatura ativa ou em trial. O kill switch operacional é `INTELLIGENCE_ENGINE_ENABLED=false`.

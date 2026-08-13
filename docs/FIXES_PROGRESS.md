@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-GERENTE-REPORTS-RBAC-01 (2026-08-13) - finding confirmado em
+  produção: subusuário sem `relatorios.ver` lia `business_signals`/
+  `business_daily_snapshots` e atualizava `read_at` pela Data API. A migration
+  forward-only `20260813043000_gerente_reports_rbac.sql` adiciona a capability
+  existente às três policies e o menu do Zelinho respeita o mesmo gate. A
+  matriz owner, subusuário com/sem permissão, super-admin fora do tenant, anon
+  e service-role foi validada em transação revertida.
+
 - [x] FX-AUDIT-LOG-TENANT-RBAC-01 (2026-08-13) - finding confirmado em
   produção: subusuário conseguia escolher outro `owner_user_id` ao inserir
   `access_audit_logs`, forjando histórico cross-tenant. A migration

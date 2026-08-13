@@ -80,6 +80,7 @@ export const appNavigationSections = [
         id: 'zelinho-gerente',
         href: '/gestao/gerente',
         label: 'Zelinho Gerente',
+        requiredPermission: 'relatorios.ver',
         icon: Radar,
         badge: 'gerente',
       },

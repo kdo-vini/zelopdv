@@ -146,6 +146,12 @@ O histórico de fechamentos de caixa foi endurecido em
 `relatorios.ver` para subusuários. Tabelas compartilhadas por PDV, Mesas e
 operação de caixa permanecem fora desta fatia para preservar seus consumidores.
 
+O Zelinho Gerente segue a mesma capability: a migration
+`20260813043000_gerente_reports_rbac.sql` exige `relatorios.ver` no SELECT e no
+update de `read_at` de `business_signals` e no SELECT de
+`business_daily_snapshots`. O item de navegação também é ocultado para
+subusuários sem essa permissão; owner e service-role mantêm o bypass existente.
+
 ## Quando atualizar esta doc
 
 - nova permissao

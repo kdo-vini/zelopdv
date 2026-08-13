@@ -61,7 +61,20 @@ describe('app navigation configuration', () => {
     };
 
     expect(section('financeiro', context).items.map((item) => item.label)).toEqual(['Fechar Caixa']);
+    expect(section('gestao', context).items.some((item) => item.id === 'zelinho-gerente')).toBe(false);
     expect(section('outros', context).items.some((item) => item.label === 'Extensões')).toBe(false);
+  });
+
+  it('shows Zelinho Gerente to sub-users with the existing reports permission', () => {
+    const context = {
+      accessLoaded: true,
+      addonFlags: {},
+      isSubUser: true,
+      permissions: { 'relatorios.ver': true },
+    };
+    expect(section('gestao', context).items.find((item) => item.id === 'zelinho-gerente')).toMatchObject({
+      requiredPermission: 'relatorios.ver',
+    });
   });
 
   it('keeps support inside Outros and the Zelinho badge dynamic', () => {
