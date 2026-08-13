@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-ZELOMENU-RECEIPT-DETAILS-01 (2026-08-13) - o cupom do PDV
+  ignorava a montagem estruturada recebida do Zelo Menu e imprimia somente o
+  nome do produto. Os geradores ESC/POS e HTML agora seguem o mesmo contrato
+  usado pelo Zelo Chat: descricao e grupos de modificadores sao exibidos em
+  linhas separadas, completas e quebradas na largura da impressora. Testes de
+  regressao cobrem Tamanho, Abacate e Coberturas/confeitos, inclusive opcoes
+  repetidas.
+
 - [x] FX-ASSISTANT-SERVER-RBAC-01 (2026-08-13) - o assistant resolvia todo
   subusuário ativo para o owner e lia dados financeiros/fiado/signals e expunha
   a ferramenta de WhatsApp via service-role sem capability. Uso live agregado

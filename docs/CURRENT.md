@@ -1,5 +1,11 @@
 # ZeloPDV — Foco atual
 
+- Impressao do Zelo Menu no cupom (2026-08-13): `src/lib/escpos.js` e
+  `src/lib/receipt.js` agora preservam e exibem descricao, grupos de
+  modificadores e opcoes da montagem em linhas separadas no cupom ESC/POS e no
+  fallback HTML. O formato segue o padrao estruturado do Zelo Chat e cobre o
+  recebimento automatico dos pedidos sem alterar o payload ou o banco.
+
 - Meta ativa do audit de arquitetura (2026-08-13): o escopo foi congelado em
   `docs/projects/architecture-audit-implementation.md`. P0 e reliability de
   webhooks estão concluídos; a reconciliação integral de migrations também foi

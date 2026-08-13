@@ -96,6 +96,39 @@ describe('escpos builder', () => {
       expect(text).toContain('sem cebola');
     });
 
+    it('renderiza a montagem completa do ZeloMenu em linhas separadas', () => {
+      const out = buildVendaEscPos({
+        estabelecimento: baseEst,
+        venda: {
+          ...baseVenda,
+          itens: [{
+            nome: 'Guarana da Amazonia',
+            quantidade: 1,
+            preco_unitario: 8,
+            modifiers: [
+              { groupName: 'Tamanho', selectedOptions: [{ optionName: 'Guarana 300ml' }] },
+              { groupName: 'Abacate', selectedOptions: [{ optionName: 'Com abacate' }] },
+              { groupName: 'Coberturas ou confeitos incluidos (ate 2)', selectedOptions: [
+                { optionName: 'Amendoim' },
+                { optionName: 'Amendoim' },
+              ] },
+            ],
+          }],
+        },
+      });
+      const text = bytesToText(out);
+
+      expect(text).toContain('1x Guarana da');
+      expect(text).toContain('Amazonia');
+      expect(text).toContain('  Tamanho: Guarana 300ml');
+      expect(text).toContain('  Abacate: Com abacate');
+      expect(text).toContain('  Coberturas ou');
+      expect(text).toContain('Amendoim,');
+      expect(text.match(/Amendoim/g)).toHaveLength(2);
+      expect(text.indexOf('1x Guarana da')).toBeLessThan(text.indexOf('  Tamanho: Guarana 300ml'));
+      expect(text.indexOf('  Tamanho: Guarana 300ml')).toBeLessThan(text.indexOf('  Abacate: Com abacate'));
+    });
+
     it('mostra preço unitário quando qtd > 1', () => {
       const out = buildVendaEscPos({
         estabelecimento: baseEst,

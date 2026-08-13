@@ -142,6 +142,50 @@ function wrap(text, width) {
   });
 }
 
+function modifierOptionNames(group) {
+  if (Array.isArray(group?.optionNames)) return group.optionNames.filter(Boolean).join(', ');
+  if (!Array.isArray(group?.selectedOptions)) return '';
+  return group.selectedOptions
+    .map((option) => {
+      const name = option?.optionName || option?.name;
+      if (!name) return '';
+      const quantity = Number(option?.quantity || 1);
+      return quantity > 1 ? `${quantity}x ${name}` : name;
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
+function itemAssemblyLines(item, width) {
+  const lines = [];
+  const indent = '  ';
+  const description = String(
+    item?.description
+      || item?.descricao
+      || item?.descricao_publica
+      || item?.descricaoPublica
+      || '',
+  ).trim();
+
+  if (description) {
+    for (const line of wrap(description, Math.max(1, width - indent.length))) {
+      lines.push(indent + line);
+    }
+  }
+
+  const groups = item?.modifierGroups || item?.modifiers || [];
+  for (const group of Array.isArray(groups) ? groups : []) {
+    const options = modifierOptionNames(group);
+    if (!options) continue;
+    const groupName = group?.groupName || group?.name || 'Opcoes';
+    for (const line of wrap(`${groupName}: ${options}`, Math.max(1, width - indent.length))) {
+      lines.push(indent + line);
+    }
+  }
+
+  return lines;
+}
+
 /** Linha "Esquerda ............ Direita" preenchida com pontos até largura. */
 function dotLine(left, right, width) {
   const r = String(right ?? '');
@@ -321,6 +365,7 @@ export function buildVendaEscPos(payload) {
       if (qtd > 1) {
         b.line(repeat(' ', prefix.length) + `${fmtBRL(unit)} cada`);
       }
+      for (const line of itemAssemblyLines(it, cols)) b.line(line);
       const obs = String(it.observacao || it.obs || '').trim();
       if (obs) {
         for (const ln of wrap(obs, descColW)) {

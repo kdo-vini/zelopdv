@@ -55,6 +55,30 @@ describe('receipt builder', () => {
     expect(html).toMatch(/TOTAL<\/span><span>R\$\s*16/);
   });
 
+  it('renders the complete ZeloMenu assembly in separate detail blocks', () => {
+    const html = buildReceiptHTML({
+      estabelecimento: { nome_exibicao: 'Loja' },
+      venda: {
+        idVenda: 10,
+        formaPagamento: 'pix',
+        total: 8,
+        itens: [{
+          nome: 'Guarana da Amazonia',
+          quantidade: 1,
+          preco_unitario: 8,
+          modifierGroups: [
+            { groupName: 'Tamanho', optionNames: ['Guarana 300ml'] },
+            { groupName: 'Abacate', optionNames: ['Com abacate'] },
+          ],
+        }],
+      },
+    });
+
+    expect(html).toContain('Tamanho: Guarana 300ml');
+    expect(html).toContain('Abacate: Com abacate');
+    expect(html.match(/class="item-detail"/g)).toHaveLength(2);
+  });
+
   // debug overlay removed per request; ensure no DEBUG text leaks
   it('does not include debug overlay even if options.debug is passed', () => {
     const html = buildReceiptHTML({

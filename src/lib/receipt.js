@@ -15,6 +15,60 @@ function escHtml(str) {
     .replaceAll("'", '&#39;');
 }
 
+function wrapText(value, width = 48) {
+  const words = String(value || '').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [''];
+
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    if (!current) current = word;
+    else if (current.length + 1 + word.length <= width) current += ` ${word}`;
+    else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function modifierOptionNames(group) {
+  if (Array.isArray(group?.optionNames)) return group.optionNames.filter(Boolean).join(', ');
+  if (!Array.isArray(group?.selectedOptions)) return '';
+  return group.selectedOptions
+    .map((option) => {
+      const name = option?.optionName || option?.name;
+      if (!name) return '';
+      const quantity = Number(option?.quantity || 1);
+      return quantity > 1 ? `${quantity}x ${name}` : name;
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
+function itemAssemblyLines(item) {
+  const lines = [];
+  const description = String(
+    item?.description
+      || item?.descricao
+      || item?.descricao_publica
+      || item?.descricaoPublica
+      || '',
+  ).trim();
+
+  if (description) lines.push(...wrapText(description));
+
+  const groups = item?.modifierGroups || item?.modifiers || [];
+  for (const group of Array.isArray(groups) ? groups : []) {
+    const options = modifierOptionNames(group);
+    if (!options) continue;
+    lines.push(...wrapText(`${group?.groupName || group?.name || 'Opcoes'}: ${options}`));
+  }
+
+  return lines;
+}
+
 function fmtBRL(v) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
 }
@@ -91,6 +145,7 @@ body {
 .item-nome { flex: 1; font-weight: 800; }
 .item-sub { width: 74px; text-align: right; shrink: 0; white-space: nowrap; font-weight: 900; }
 .item-unit { font-size: 11px; font-weight: 700; color: #000; margin-left: 28px; margin-top: -2px; }
+.item-detail { font-size: 11px; font-weight: 700; color: #000; margin-left: 28px; margin-top: 1px; }
 .item-obs { font-size: 11px; font-weight: 700; color: #000; margin-left: 28px; margin-top: 1px; font-style: italic; }
 
 /* Totais */
@@ -175,6 +230,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
         <span class="item-sub">${fmtBRL(sub)}</span>
       </div>
       ${qtd > 1 ? `<div class="item-unit">${fmtBRL(unit)} cada</div>` : ''}
+      ${itemAssemblyLines(it).map(line => `<div class="item-detail">${escHtml(line)}</div>`).join('')}
       ${obs ? `<div class="item-obs">${escHtml(obs)}</div>` : ''}
     `;
   }).join('');
