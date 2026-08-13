@@ -1,5 +1,15 @@
 # ZeloPDV — Foco atual
 
+- Meta ativa do audit de arquitetura (2026-08-13): o escopo foi congelado em
+  `docs/projects/architecture-audit-implementation.md`. P0 e reliability de
+  webhooks estão concluídos; restam, nesta ordem, bootstrap/reconciliação de
+  migrations, inventário RBAC residual, verificação operacional do sweeper de
+  deleção, mutações críticas confirmadas do ZeloAdmin e auditoria final. Request
+  IDs, structured logging, rate limiting compartilhado, decomposição de
+  componentes, dependency cleanup e redesign de confirmação por IA estão
+  explicitamente fora da meta. O próximo e único bloco ativo é migration/schema
+  reconciliation.
+
 - RBAC incremental — histórico de vendas (2026-08-13): a revalidação remota
   confirmou que um cargo só de Pedidos lia `vendas` e `vendas_itens`. A
   migration forward-only `20260813090000_sales_history_read_rbac.sql` exige

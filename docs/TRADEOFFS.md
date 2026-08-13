@@ -53,11 +53,15 @@ Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidênc
 
 ### SPRINT-1 — Quebrar os god-components, começando pelo fluxo de pagamento
 
+> Backlog excluído da meta ativa do audit em 2026-08-13. A decisão não apaga
+> a dívida; apenas impede que ela seja executada como parte deste trabalho de
+> contenção/reconciliação.
+
 - **Crítica:** `src/routes/app/mesas/[id]/+page.svelte` (~3.400 linhas / ~124 KB) concentra estado, UI e
   regra de negócio inline, sem componentes filhos. `relatorios` (~96 KB), `gestao/produtos` (~88 KB) e
   `assinatura` (~80 KB) seguem o mesmo padrão.
 - **Consolida:** `DT-ARCH-01`.
-- **O que muda agora:** a prioridade de `DT-ARCH-01` sobe de *baixa* para *ativa*. Os juros **já estão
+- **Registro histórico:** em 2026-06-02 a prioridade de `DT-ARCH-01` subiu de *baixa* para *ativa*. Os juros **já estão
   sendo pagos** — os 133 warnings de `svelte-check` (`DT-QUALITY-01`) se concentram nesses arquivos, e o
   fluxo de pagamento (maior risco de receita) é o trecho mais ilegível do maior arquivo.
 - **Plano de ação:**
@@ -296,7 +300,9 @@ superfícies client-side continua backlog incremental, sem refatoração ampla.
 - **Conserto certo:** decompor por superfícies de domínio, não por “limpeza geral”.
 - **Custo de conserto:** alto. **Prioridade:** ~~baixa, mas crescente~~ → **ativa** (reclassificada em
   2026-06-02). Ver finding P3 em [[CODE_REVIEW]] e os hotspots listados em [[CLAUDE]].
-- **Status (2026-06-02):** agendado em SPRINT-1, começando pelo fluxo de pagamento de `mesas/[id]`.
+- **Status:** backlog arquitetural excluído da meta ativa em 2026-08-13; só
+  retomar por decisão própria, começando pelo fluxo de pagamento de
+  `mesas/[id]`.
 
 ---
 
