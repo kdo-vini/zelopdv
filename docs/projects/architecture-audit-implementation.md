@@ -158,28 +158,33 @@ pendente e deve ocorrer somente com janela aprovada.
 
 ### 6. ZeloAdmin — defesa das mutações críticas
 
-- [ ] Congelar a lista de tabelas/RPCs e mutações diretas consumidas pelo
+- [x] Congelar a lista de tabelas/RPCs e mutações diretas consumidas pelo
   `admin-dashboard`.
-- [ ] Revalidar RLS, grants, guards internos e consumidores em produção.
-- [ ] Classificar cada mutação como segura no Data API, server-only necessária
+- [x] Revalidar RLS, grants, guards internos e consumidores em produção.
+- [x] Classificar cada mutação como segura no Data API, server-only necessária
   ou finding não confirmado.
-- [ ] Mover somente mutações críticas confirmadas para handlers autenticados;
+- [x] Não mover mutações: nenhuma mutação crítica adicional foi confirmada;
   preservar leituras e contratos browser que já são seguros.
-- [ ] Validar admin legítimo, authenticated comum, anon, super-admin removido e
+- [x] Validar admin legítimo, authenticated comum, anon, super-admin removido e
   `service_role`, incluindo tentativa cross-tenant.
 
 Critério de saída: nenhuma mutação administrativa crítica depende apenas de
-gating do browser ou de uma policy genérica.
+gating do browser ou de uma policy genérica. Evidência:
+`docs/operations/ZELOADMIN-CRITICAL-MUTATIONS-SNAPSHOT-2026-08-13.md`.
 
 ### 7. Auditoria final de conclusão
 
-- [ ] Reexecutar suíte completa, typecheck, builds aplicáveis, E2E crítico,
+- [x] Reexecutar suíte completa, typecheck, builds aplicáveis, E2E crítico,
   lint/advisors do banco e matrizes de autorização.
-- [ ] Comparar cada requisito desta lista com evidência atual, não com intenção
+- [x] Comparar cada requisito desta lista com evidência atual, não com intenção
   ou commits antigos.
-- [ ] Entregar relatório final: verificado, alterado, intencionalmente
+- [x] Entregar relatório final: verificado, alterado, intencionalmente
   preservado, testes, riscos residuais, deploy/observação e rollback.
-- [ ] Só então encerrar a meta ativa.
+- [x] Só então encerrar a meta ativa.
+
+Relatório: `docs/operations/ARCHITECTURE-AUDIT-FINAL-2026-08-13.md`. A suíte
+ZeloChat ainda tem um único teste preexistente de slug vermelho, explicitamente
+fora do escopo e não mascarado.
 
 ## Fora desta meta
 
