@@ -1,5 +1,15 @@
 # ZeloPDV — Foco atual
 
+- Security containment — `empresa_perfil.pin_admin` (2026-08-13): a
+  revalidação remota mostrou que o grant de tabela permitia a um subusuário
+  pedir o PIN diretamente pela Data API, apesar do fluxo normal já usar o
+  endpoint server-side. A migration forward-only
+  `20260813060000_empresa_perfil_pin_select_containment.sql` troca o SELECT de
+  `anon`/`authenticated` por colunas explícitas sem `pin_admin`; os dois
+  wildcards do PDV foram reduzidos aos campos que realmente usam. Policies,
+  writes, owners, subusuários, super-admins e service-role foram preservados.
+  Snapshot: `docs/operations/EMPRESA-PERFIL-PIN-SELECT-SNAPSHOT-2026-08-13.md`.
+
 - RBAC incremental — leitura de Mesas (2026-08-13): a revalidação remota
   confirmou que um subusuário sem `mesas.acessar` conseguia ler mesas,
   comandas, itens e pagamentos parciais da empresa pela Data API. A migration

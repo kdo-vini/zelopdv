@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-ADMIN-PIN-COLUMN-01 (2026-08-13) - finding confirmado em produção:
+  `empresa_perfil` tinha SELECT de tabela para clientes, então um subusuário
+  conseguia pedir `pin_admin` pela Data API. A migration forward-only
+  `20260813060000_empresa_perfil_pin_select_containment.sql` revoga SELECT de
+  tabela e concede apenas as colunas não-PIN a `authenticated`; `/app` e
+  `/app/pedidos` deixaram de usar `select('*')`. Owner, subusuário,
+  super-admin, anon e service-role foram cobertos em smoke transacional, sem
+  persistência. Snapshot:
+  `docs/operations/EMPRESA-PERFIL-PIN-SELECT-SNAPSHOT-2026-08-13.md`.
+
 - [x] FX-MESAS-SELECT-RBAC-01 (2026-08-13) - finding confirmado em
   produção: subusuário sem `mesas.acessar` lia mesas, comandas, itens e
   pagamentos parciais owner-scoped pela Data API. A migration forward-only

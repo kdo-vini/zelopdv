@@ -209,6 +209,12 @@ Conclusao operacional:
 
 ## Ponto critico: `empresa_perfil.pin_admin`
 
+- A migration `20260813060000_empresa_perfil_pin_select_containment.sql`
+  remove o SELECT de tabela de `anon`/`authenticated` e concede somente
+  colunas explicitas sem `pin_admin` a `authenticated`; os wildcards legados do
+  PDV foram reduzidos aos campos necessarios. `service_role` continua com o
+  caminho completo para o endpoint server-side.
+
 - Paginas como `relatorios` e `despesas` consultam apenas o status de configuração por `/api/auth/admin-pin`.
 - `AdminLock` envia a tentativa ao endpoint autenticado; o valor bruto não atravessa o Data API nem é
   retornado ao browser.

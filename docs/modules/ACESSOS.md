@@ -22,6 +22,8 @@
   `supabase/migrations/20260813041000_access_audit_logs_tenant_guard.sql`
 - Enforcement incremental de leitura de Mesas:
   `supabase/migrations/20260813050000_mesas_select_rbac.sql`
+- Containment do PIN administrativo no perfil:
+  `supabase/migrations/20260813060000_empresa_perfil_pin_select_containment.sql`
 
 - Cliente: `src/lib/accessControl.js`
 - Servidor: `src/lib/server/accessControl.js`

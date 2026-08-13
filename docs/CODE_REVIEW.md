@@ -5,6 +5,19 @@
 
 ## Findings
 
+### Update 2026-08-13 - containment de `empresa_perfil.pin_admin`
+
+O residual do finding do `AdminLock` foi confirmado em produção: embora a
+verificação já ocorresse em `/api/auth/admin-pin`, `empresa_perfil` ainda tinha
+SELECT de tabela para clientes e um subusuário conseguia requisitar o
+`pin_admin` diretamente. A migration
+`20260813060000_empresa_perfil_pin_select_containment.sql` revoga SELECT de
+tabela de `anon`/`authenticated` e concede apenas colunas não-PIN a
+`authenticated`; os dois `select('*')` browser do PDV foram reduzidos aos
+campos usados. Policies de linha, writes, owners, super-admins e service-role
+permanecem inalterados. Blast radius, matriz e rollback:
+`docs/operations/EMPRESA-PERFIL-PIN-SELECT-SNAPSHOT-2026-08-13.md`.
+
 ### Update 2026-08-13 - enforcement de leitura das tabelas de Mesas
 
 O finding foi confirmado em produção: as policies SELECT de `mesas`,

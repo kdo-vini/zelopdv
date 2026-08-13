@@ -217,7 +217,7 @@
     try {
       const { data } = await supabase
         .from('empresa_perfil')
-        .select('*')
+        .select('id, nome_exibicao, razao_social')
         .eq('user_id', ownerUserId || userId)
         .maybeSingle();
       dadosEmpresa = data;

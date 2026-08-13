@@ -309,7 +309,11 @@
     // [NEW] Carrega dados da empresa para recibos (WhatsApp/Impressão)
     try {
       if (ownerUserId) {
-        const { data } = await supabase.from('empresa_perfil').select('*').eq('user_id', ownerUserId).single();
+        const { data } = await supabase
+          .from('empresa_perfil')
+          .select('id, nome_exibicao, documento, endereco, contato, logo_url, rodape_recibo, largura_bobina, tabelas_preco_ativo, tabela_preco_1_nome, tabela_preco_2_nome, tabela_preco_3_nome, plataformas_pagamento')
+          .eq('user_id', ownerUserId)
+          .single();
         dadosEmpresa = data;
       }
     } catch (e) { console.error('Error fetching company profile:', e); }
@@ -1198,7 +1202,12 @@
       const userId = ownerUserId;
       if (!userId) return null;
       const perfilRes = await race(
-        supabase.from('empresa_perfil').select('*').eq('user_id', userId).limit(1).single(),
+        supabase
+          .from('empresa_perfil')
+          .select('id, nome_exibicao, documento, endereco, contato, logo_url, rodape_recibo, largura_bobina')
+          .eq('user_id', userId)
+          .limit(1)
+          .single(),
         800
       );
       if (perfilRes?.__timeout || perfilRes?.error) return null;
