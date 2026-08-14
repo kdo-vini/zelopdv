@@ -103,6 +103,10 @@ export function hasActiveModifierGroups(groups) {
   return Array.isArray(groups) && groups.some((group) => group?.active !== false);
 }
 
+export function shouldResetModifierSelections({ open = false, wasOpen = false, productKey = '', lastProductKey = '' } = {}) {
+  return Boolean(open) && (!wasOpen || productKey !== lastProductKey);
+}
+
 export function normalizeModifierSelections(selections) {
   return (Array.isArray(selections) ? selections : [])
     .map((selection) => ({

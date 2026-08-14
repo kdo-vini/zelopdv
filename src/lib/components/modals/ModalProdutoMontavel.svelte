@@ -5,6 +5,7 @@
   import {
     formatSelectedModifierGroups,
     resolveModifierSelections,
+    shouldResetModifierSelections,
     sortModifierGroups
   } from '$lib/zelomenuModifiers';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
@@ -16,11 +17,15 @@
   const dispatch = createEventDispatcher();
   let selections = {};
   let lastProductKey = '';
+  let wasOpen = false;
 
   $: productKey = `${produto?.id ?? ''}:${precoBase}`;
-  $: if (open && productKey !== lastProductKey) {
-    selections = {};
-    lastProductKey = productKey;
+  $: {
+    if (shouldResetModifierSelections({ open, wasOpen, productKey, lastProductKey })) {
+      selections = {};
+      lastProductKey = productKey;
+    }
+    wasOpen = open;
   }
   $: groups = sortModifierGroups((produto?.modifierGroups || []).filter((group) => group.active !== false));
   $: selectionInput = groups.map((group) => ({

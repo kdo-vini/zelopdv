@@ -1,5 +1,11 @@
 # Fixes Progress
 
+- [x] FX-ZELOMENU-MODAL-RESET-01 (2026-08-13) - ao reabrir o mesmo produto
+  montável no PDV mobile, o modal preservava a montagem anterior porque o
+  reset dependia apenas de mudança de produto/preço. A abertura de uma nova
+  montagem agora limpa as seleções mesmo quando o produto e o preço-base são
+  iguais; o teste cobre esse ciclo e a suíte completa passou com 685 testes.
+
 - [x] FX-ZELOMENU-RECEIPT-DETAILS-01 (2026-08-13) - o cupom do PDV
   ignorava a montagem estruturada recebida do Zelo Menu e imprimia somente o
   nome do produto. Os geradores ESC/POS e HTML agora seguem o mesmo contrato

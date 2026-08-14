@@ -5,7 +5,8 @@ import {
   buildModifierSignature,
   formatSelectedModifierGroups,
   mergeModifierLinkedProducts,
-  resolveModifierSelections
+  resolveModifierSelections,
+  shouldResetModifierSelections
 } from '../src/lib/zelomenuModifiers.js';
 
 const groups = [
@@ -53,6 +54,48 @@ describe('zelomenuModifiers', () => {
     expect(buildModifierSignature(first)).toBe(buildModifierSignature(same));
     expect(buildModifierSignature(first)).not.toBe(buildModifierSignature(different));
     expect(buildCartItemKey(10, first)).not.toBe(buildCartItemKey(10, different));
+  });
+
+  it('keeps same-price Guaraná montages with different toppings in separate cart lines', () => {
+    const first = [
+      { groupId: 'size', optionSelections: [{ optionId: 'size-500', quantity: 1 }] },
+      { groupId: 'toppings', optionSelections: [
+        { optionId: 'peanut', quantity: 1 },
+        { optionId: 'chocolate', quantity: 1 }
+      ] }
+    ];
+    const second = [
+      { groupId: 'size', optionSelections: [{ optionId: 'size-500', quantity: 1 }] },
+      { groupId: 'toppings', optionSelections: [
+        { optionId: 'peanut', quantity: 1 },
+        { optionId: 'strawberry', quantity: 1 }
+      ] }
+    ];
+
+    const lines = [first, second].map((selection) => ({
+      id: `${buildCartItemKey(1043, selection)}::price:15.00`,
+      quantidade: 1
+    }));
+
+    expect(lines[0].id).not.toBe(lines[1].id);
+    expect(new Set(lines.map((line) => line.id)).size).toBe(2);
+    expect(lines.map((line) => line.quantidade)).toEqual([1, 1]);
+  });
+
+  it('resets selections when reopening the same montable product', () => {
+    expect(shouldResetModifierSelections({
+      open: true,
+      wasOpen: false,
+      productKey: '1043:8',
+      lastProductKey: '1043:8'
+    })).toBe(true);
+
+    expect(shouldResetModifierSelections({
+      open: true,
+      wasOpen: true,
+      productKey: '1043:8',
+      lastProductKey: '1043:8'
+    })).toBe(false);
   });
 
   it('orders selectedOptions deterministically regardless of click order, so the same combination always merges into one comanda line', () => {
