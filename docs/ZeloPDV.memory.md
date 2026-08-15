@@ -17,6 +17,8 @@
 - `/app/pedidos` e `/app/pedidos/cozinha` leem **so** `zelo_orders` (motor canonico). No painel de cozinha o preparo conclui o pedido inteiro via `mark_ready`; nao existe estado por item.
 
 - `subscriptions.monthly_value_cents` e nullable e guarda o valor mensal real em centavos; a coluna foi aplicada no Supabase real em 2026-07-24 apos o ZeloAdmin zerar consultas por coluna ausente. Linhas antigas ainda usam fallback por `plan_tier` no admin ate o backfill.
+- O PostgREST do Supabase nao popula os GUCs legados `request.jwt.claim.*`; so existe `request.jwt.claims`. Para detectar service-role dentro de uma funcao, usar `coalesce(current_setting('role', true) = 'service_role', false)` — SECURITY DEFINER troca `current_user` para postgres mas preserva o SET ROLE derivado do JWT. Sem o `coalesce` a comparacao devolve NULL, `if not NULL` nao executa o ramo e NULL num `where` filtra tudo: foi exatamente o que derrubou as Mesas em 2026-08-14 (INC-2026-08-14-01).
+
 - O purge compartilhado de contas `delete_account(uuid,text)` precisa remover `fiado_lancamentos` antes de `pessoas`: o ledger usa FK `id_pessoa` com `ON DELETE RESTRICT`. A correção foi aplicada em 2026-08-09 e cobre o caminho `admin_delete_user` do dashboard.
 
 > Memória viva. Guardar só fatos confirmados e úteis para continuidade técnica.

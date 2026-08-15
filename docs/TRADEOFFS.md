@@ -19,6 +19,23 @@ A diferença importa:
 Regra de uso: antes de criar um TA/DT novo, confira se já não está em [[CODE_REVIEW]] como finding.
 Aqui guardamos a *decisão* e o *gatilho de revisão*; lá guardamos a *evidência* técnica.
 
+## Governança de migrations — atualização (2026-08-14)
+
+`[db.migrations] enabled` passou de `false` para `true` em
+`supabase/config.toml`, por decisão do dono do repositório, depois de dois
+incidentes seguidos exigirem SQL colado à mão no painel. O fluxo normal volta a
+ser `supabase db push --linked`. O que continua valendo: rodar
+`--dry-run` antes de todo push, porque ele lista as versões pendentes exatas e
+expõe drift; migrations aplicadas seguem imutáveis; e o harness do baseline
+mantém a garantia que realmente importa, que é recusar alvo linkado/remoto e só
+replayar contra a URL de loopback. `scripts/verify-supabase-baseline.ps1` foi
+ajustado para não depender mais do flag estar `false` — ele agora exige que o
+flag exista e força `true` na própria cópia descartável.
+
+Custo aceito: um `db push` distraído passa a alcançar produção direto. Gatilho de
+revisão: qualquer push não intencional, ou a entrada de mais gente com acesso de
+escrita ao projeto linkado.
+
 ## Governança de migrations (2026-08-13)
 
 As 59 migrations já aplicadas permanecem byte a byte imutáveis. O baseline
@@ -314,6 +331,36 @@ superfícies client-side continua backlog incremental, sem refatoração ampla.
 - **Status:** backlog arquitetural excluído da meta ativa em 2026-08-13; só
   retomar por decisão própria, começando pelo fluxo de pagamento de
   `mesas/[id]`.
+
+### DT-SEC-02 (resolvido 2026-08-14) — Bypass de `service_role` inerte nos triggers RBAC que leem o GUC legado
+
+- **Resolução:** `20260814210000_rbac_guards_service_role_detection_fix.sql`
+  recria os quatro guards com detecção em dois valores e corrige, de quebra, as
+  mensagens com UTF-8 duplamente codificado que chegavam ao toast do operador.
+  Aplicada em produção via `supabase db push --linked`; ledger conferido.
+  Verificação de não-regressão: o caminho SECURITY DEFINER de
+  `criar_venda_completa` continua exigindo `pdv.vender` + `pdv.receber`, porque
+  uma chamada autenticada do browser reporta role `authenticated` mesmo com
+  `current_user = 'postgres'`. Registro histórico abaixo.
+- **Estado (antes):** `20260812233000` (mesas/comandas), `20260813000000` (criação de
+  venda), `20260813030000` e `20260813031000` (desconto) detectam service-role
+  com `current_setting('request.jwt.claim.role', true)`. O PostgREST não
+  popula mais esse GUC desde a v9, então a variável é sempre NULL e o bypass
+  nunca dispara. Guardam o valor como `text`, não como boolean, então não
+  sofrem a propagação de NULL que causou INC-2026-08-14-01 — o efeito é só o
+  bypass morto.
+- **Juros:** hoje é latente, porque nenhuma rota server-side cria venda ou
+  desconto via service-role (`src/routes/api/` não chama
+  `criar_venda_completa` nem insere em `vendas`). No dia em que existir, o
+  trigger cai em `auth.uid() is null` e levanta `Usuario nao autenticado`
+  (28000) — outra falha total de fluxo, igual à de 14/08.
+- **Conserto certo:** migration forward-only trocando as quatro declarações
+  pelo padrão já adotado em `20260813095000` e no hotfix `20260814200000`:
+  `coalesce(current_setting('role', true) = 'service_role', false)`, com o GUC
+  legado só como fallback dentro de `coalesce`.
+- **Custo de conserto:** baixo. **Prioridade:** média — fazer antes de expor
+  qualquer criação de venda/desconto server-side. Ver INC-2026-08-14-01 e
+  FX-MESAS-COMANDA-SERVICE-FLAG-01 em [[FIXES_PROGRESS]].
 
 ---
 

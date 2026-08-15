@@ -105,8 +105,11 @@ try {
 
   New-Item -ItemType Directory -Path $temporarySupabase -Force | Out-Null
   $config = Get-Content -LiteralPath (Join-Path $repositoryRoot 'supabase\config.toml') -Raw
-  if ($config -notmatch '(?ms)^\[db\.migrations\]\s*\r?\nenabled = false(?:\r?\n|$)') {
-    throw 'Harness config must disable automatic migration replay.'
+  # The repository config may enable migration replay for linked work; the
+  # guarantee this harness owns is that replay happens only against the
+  # disposable loopback database below, never against the linked project.
+  if ($config -notmatch '(?ms)^\[db\.migrations\]\s*\r?\nenabled = (?:false|true)(?:\r?\n|$)') {
+    throw 'Harness config must declare an explicit [db.migrations] enabled flag.'
   }
   $config = $config.Replace('project_id = "zelopdv-local"', "project_id = `"$projectId`"")
   [IO.File]::WriteAllText(
@@ -134,15 +137,15 @@ try {
   $originalTemporaryConfig = Get-Content -LiteralPath $temporaryConfigPath -Raw
   $temporaryConfig = [regex]::Replace(
     $originalTemporaryConfig,
-    '(?ms)(\[db\.migrations\]\s*\r?\n)enabled = false',
+    '(?ms)(\[db\.migrations\]\s*\r?\n)enabled = (?:false|true)',
     '${1}enabled = true'
   )
   $migrationsEnabled = [regex]::IsMatch(
     $temporaryConfig,
     '(?ms)^\[db\.migrations\]\s*\r?\nenabled = true(?:\r?\n|$)'
   )
-  if (($temporaryConfig -eq $originalTemporaryConfig) -or (-not $migrationsEnabled)) {
-    throw 'Failed to enable migrations only in the disposable workdir.'
+  if (-not $migrationsEnabled) {
+    throw 'Failed to enable migrations in the disposable workdir.'
   }
   [IO.File]::WriteAllText($temporaryConfigPath, $temporaryConfig, [Text.UTF8Encoding]::new($false))
 

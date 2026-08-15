@@ -1,5 +1,33 @@
 # ZeloPDV — Foco atual
 
+- Incidente resolvido — Mesas travadas em producao (2026-08-14): todas as
+  comandas recusavam item, fechamento e cancelamento com
+  `Comanda aberta nao encontrada`. A flag `v_service` das tres RPCs de comanda
+  criadas em `20260812234500` era um boolean de tres valores, porque
+  `current_setting('request.jwt.claim.role', true)` devolve NULL no PostgREST
+  atual; com isso o owner nunca era resolvido e o predicado da comanda virava
+  NULL. `20260814200000_mesas_comanda_rpc_service_flag_fix.sql` corrige a
+  deteccao com `coalesce(current_setting('role', true) = 'service_role', false)`
+  e exige `v_owner` nao nulo, sem tocar no contrato de capabilities. Aplicada em
+  producao e confirmada pelo cliente. Detalhe em INC-2026-08-14-01.
+
+- Varredura do mesmo defeito (2026-08-14): o GUC morto deixava o bypass de
+  service_role inerte em mais quatro triggers RBAC. Nos dois de Mesa era inocuo;
+  nos dois de vendas era o proximo "prod down" latente, porque a primeira rota
+  server-side a criar venda ou desconto com service key cairia em
+  `Usuario nao autenticado`. `20260814210000` padroniza a deteccao nos quatro e
+  corrige as mensagens com acento duplamente codificado que chegavam ilegiveis
+  ao operador. Aplicada em producao; DT-SEC-02 fechado. O caminho SECURITY
+  DEFINER de `criar_venda_completa` continua exigindo `pdv.vender` +
+  `pdv.receber`, coberto por teste.
+
+- Governanca de migrations (2026-08-14): `[db.migrations] enabled` virou `true`
+  em `supabase/config.toml` por decisao do dono do repo, e
+  `supabase db push --linked` volta a ser o fluxo normal de deploy de banco.
+  `scripts/verify-supabase-baseline.ps1` foi ajustado para nao depender mais do
+  flag estar `false`. Rodar `--dry-run` antes de todo push. O baseline
+  `20260813091000` ficou defasado em duas versoes; nova captura pendente.
+
 - Impressao do Zelo Menu no cupom (2026-08-13): `src/lib/escpos.js` e
   `src/lib/receipt.js` agora preservam e exibem descricao, grupos de
   modificadores e opcoes da montagem em linhas separadas no cupom ESC/POS e no

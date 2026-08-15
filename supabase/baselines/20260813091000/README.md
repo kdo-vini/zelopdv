@@ -4,15 +4,24 @@ This is the application-schema baseline captured from production after migration
 `20260813091000`. It exists outside `supabase/migrations` and therefore cannot
 be pushed by the normal migration command.
 
+> Cutoff note: two migrations were applied after this capture,
+> `20260814200000` and `20260814210000`. A new capture is due.
+
 ## Safety contract
 
 - The 59 already-applied migration files remain unchanged.
 - `schema.sql` and `platform.sql` refuse execution with a non-zero exit unless
   the disposable harness provides a truthy `zelo_disposable_baseline` in
   `psql`; the committed harness always sets it to `1`.
-- `supabase/config.toml` disables automatic migration replay. The verifier
-  enables it only inside an unlinked temporary workdir after loading the
-  baseline and repairing history locally.
+- `supabase/config.toml` enables migration replay since 2026-08-14, by decision
+  of the repository owner, so `supabase db push --linked` is the normal way to
+  ship a migration. The verifier no longer depends on that flag being `false`:
+  it requires the flag to be declared, and forces `enabled = true` in its own
+  disposable copy after loading the baseline and repairing history locally.
+- The guarantee the harness actually owns is unchanged and is the one that
+  matters: it rejects linked/remote database options and only ever replays
+  against the fixed loopback URL. Always run `supabase db push --dry-run`
+  first; it lists the exact pending versions.
 - The verifier rejects linked/remote database options and accepts only the
   fixed loopback database URL.
 - The baseline contains no Auth users, business rows, Storage objects, secrets,

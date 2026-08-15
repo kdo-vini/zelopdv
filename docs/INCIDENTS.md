@@ -2,6 +2,71 @@
 
 ---
 
+## INC-2026-08-14-01 - Mesas: "Comanda aberta nao encontrada" bloqueou toda a operacao
+
+**Status:** corrigido em producao em 2026-08-14 (migration aplicada direto no
+Supabase); migration forward-only versionada no repo.
+
+**Sintoma**
+
+- Reportado pelo cliente "Seu Muinhoz" as 19:41 de 14/08/2026, mas atingia
+  todos os tenants com o add-on Mesas.
+- As mesas abriam normalmente (comanda criada, `num_pessoas` editavel), mas
+  qualquer tentativa de adicionar item retornava
+  `Erro ao adicionar item: Comanda aberta nao encontrada`. Fechar e cancelar a
+  mesa falhavam pelo mesmo motivo.
+
+**Causa-raiz**
+
+- `20260812234500_mesas_operational_rpc_rbac.sql` introduziu nas tres RPCs de
+  comanda a deteccao de service-role
+  `v_service boolean := current_setting('request.jwt.claim.role', true) = 'service_role';`.
+- O PostgREST parou de popular os GUCs legados `request.jwt.claim.*` na v9 e
+  so define `request.jwt.claims`; o Supabase roda v12+. Logo
+  `current_setting(...)` devolve NULL e `NULL = 'service_role'` e NULL, nao
+  false: `v_service` virou uma flag de tres valores.
+- Duas consequencias em cascata, ambas silenciosas:
+  - `if not v_service then v_owner := get_owner_user_id(v_actor); end if;` -
+    `not NULL` e NULL, o ramo nunca executou e `v_owner` ficou NULL;
+  - `where ... and (v_service or id_usuario = v_owner)` avaliou
+    `NULL or NULL` = NULL, nenhuma linha casou e a funcao caiu direto no
+    `raise exception 'Comanda aberta nao encontrada'`.
+- Atingia owner e subusuario igualmente, porque nenhum dos dois chega a ter o
+  owner resolvido. Nao havia problema de RLS, de dados nem de permissao: as
+  escritas diretas do browser (ex.: `num_pessoas`) continuavam passando, o que
+  mascarou o diagnostico inicial.
+
+**Fix / recovery**
+
+- `20260814200000_mesas_comanda_rpc_service_flag_fix.sql` recria as tres RPCs
+  com a deteccao de service-role em dois valores, usando
+  `coalesce(current_setting('role', true) = 'service_role', false)` - o padrao
+  que `20260813095000` ja tinha adotado, porque SECURITY DEFINER troca
+  `current_user` para postgres mas preserva o SET ROLE que o PostgREST deriva
+  do JWT. O GUC legado permanece como fallback, tambem com `coalesce`.
+- `v_owner` passa a ser validado como nao nulo antes de alcancar qualquer
+  predicado: uma falha futura de resolucao levanta erro em vez de casar zero
+  linhas em silencio.
+- Contrato de autorizacao inalterado: mesmas capabilities, mesmo search_path
+  fixo, mesmos grants, sem execucao para anon.
+- Aplicada em producao e confirmada pelo usuario. Suite completa 689/689.
+
+**Licao**
+
+- Comparacao com `current_setting(..., true)` sempre deve ser envolvida em
+  `coalesce(..., false)` quando o resultado vira boolean de controle. Em
+  PL/pgSQL `if not NULL` nao executa o ramo, e NULL dentro de um `where` filtra
+  tudo - as duas falham para o lado errado sem gerar erro.
+
+**Referencias**
+
+- `supabase/migrations/20260814200000_mesas_comanda_rpc_service_flag_fix.sql`
+- `supabase/migrations/20260812234500_mesas_operational_rpc_rbac.sql`
+- `tests/mesasComandaRpcServiceFlagSchema.test.js`
+- `src/routes/app/mesas/[id]/+page.svelte`
+
+---
+
 ## INC-2026-08-10-01 - Modal Abrir Caixa bloqueava a sidebar no desktop
 
 **Status:** corrigido no codigo; requer deploy do frontend.

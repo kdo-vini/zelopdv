@@ -1,5 +1,38 @@
 # Fixes Progress
 
+- [x] FX-MESAS-COMANDA-SERVICE-FLAG-01 (2026-08-14) - incidente em producao
+  afetando todos os tenants com Mesas: nenhuma comanda aceitava item, fechamento
+  ou cancelamento, sempre com `Comanda aberta nao encontrada`. A flag
+  `v_service` das tres RPCs introduzidas em `20260812234500` vinha de
+  `current_setting('request.jwt.claim.role', true) = 'service_role'`, GUC que o
+  PostgREST nao popula desde a v9, entao a flag era NULL e nao false. Com isso
+  `not v_service` nunca resolvia o owner e o predicado da comanda virava NULL.
+  `20260814200000_mesas_comanda_rpc_service_flag_fix.sql` torna a deteccao de
+  service-role em dois valores via `coalesce(current_setting('role', true) =
+  'service_role', false)` e exige `v_owner` nao nulo antes de qualquer
+  predicado, sem mexer no contrato de capabilities. Aplicada em producao e
+  confirmada; suite 689/689. Detalhe em INC-2026-08-14-01.
+  Pendencia relacionada fechada no mesmo dia por
+  FX-RBAC-GUARDS-SERVICE-ROLE-01.
+
+- [x] FX-RBAC-GUARDS-SERVICE-ROLE-01 (2026-08-14) - fecha o DT-SEC-02 aberto
+  algumas horas antes: os quatro guards que ainda liam o GUC morto
+  (`mesas_status_rbac_guard`, `comandas_mutation_rbac_guard`,
+  `vendas_insert_rbac_guard`, `vendas_discount_rbac_guard`) nunca disparavam o
+  bypass de service_role. Nos dois de Mesa era inocuo, porque `v_actor is null`
+  ja curto-circuitava; nos dois de vendas era outro "prod down" esperando
+  acontecer, porque a primeira rota server-side a criar venda ou desconto com a
+  service key cairia em `Usuario nao autenticado` (28000).
+  `20260814210000_rbac_guards_service_role_detection_fix.sql` padroniza a
+  deteccao em `coalesce(current_setting('role', true) = 'service_role', false)`
+  e corrige as mensagens cujos acentos estavam codificados duas vezes em UTF-8
+  (bytes `C3 83 C2 AA` no lugar de um unico `e` circunflexo), que chegavam
+  ilegiveis ao toast do operador. Nenhuma capability,
+  policy, trigger ou grant mudou; o caminho SECURITY DEFINER de
+  `criar_venda_completa` continua exigindo `pdv.vender` + `pdv.receber`, coberto
+  por teste. Aplicada em producao com `supabase db push --linked` apos dry-run
+  limpo; ledger conferido, suite 695/695.
+
 - [x] FX-ZELOMENU-MODAL-RESET-01 (2026-08-13) - ao reabrir o mesmo produto
   montável no PDV mobile, o modal preservava a montagem anterior porque o
   reset dependia apenas de mudança de produto/preço. A abertura de uma nova
