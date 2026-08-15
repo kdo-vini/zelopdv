@@ -28,6 +28,24 @@
   flag estar `false`. Rodar `--dry-run` antes de todo push. O baseline
   `20260813091000` ficou defasado em duas versoes; nova captura pendente.
 
+- Acesso de leitura ao banco de producao (2026-08-14):
+  `supabase db query --linked "<sql>"` reaproveita a sessao ja logada do CLI
+  via Management API, sem precisar de Docker nem de token novo. Confirmado com
+  leitura real em producao. Resultado sempre vem com um bloco `<boundary>`
+  marcado como dado nao confiavel.
+
+- `npm run verify:migrations` investigado e parcialmente corrigido (2026-08-14):
+  falhava por dois motivos independentes. (1) 56 arquivos versionados tinham
+  CRLF fantasma na working tree desta maquina Windows, mascarado do `git
+  status` normal pelo cache de stat do indice — conteudo identico ao HEAD,
+  corrigido reescrevendo os bytes exatos via Node (`git checkout` nesta maquina
+  reintroduz CRLF, confirmado). Suite completa 695/695 depois da correcao; nada
+  para commitar, porque os arquivos ja eram identicos ao commitado. (2) o
+  manifest do baseline trava hash de `README.md` e `config.toml`, que mudaram
+  ontem por decisao sua; recaptura completa exige Docker (indisponivel nesta
+  maquina). Sem impacto real: o script nao esta encadeado em build/test/deploy.
+  Detalhe em DT-DEV-01 e DT-DEV-02 em [[TRADEOFFS]].
+
 - Impressao do Zelo Menu no cupom (2026-08-13): `src/lib/escpos.js` e
   `src/lib/receipt.js` agora preservam e exibem descricao, grupos de
   modificadores e opcoes da montagem em linhas separadas no cupom ESC/POS e no

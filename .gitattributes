@@ -1,3 +1,5 @@
 supabase/baselines/**/*.sql text eol=lf -whitespace
 supabase/verification/**/*.sql text eol=lf
 supabase/history/**/*.sql text eol=lf -whitespace
+supabase/migrations/**/*.sql text eol=lf
+.ai/migrations/**/*.sql text eol=lf

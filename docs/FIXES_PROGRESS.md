@@ -1,5 +1,22 @@
 # Fixes Progress
 
+- [x] FX-DEV-CRLF-WORKING-TREE-01 (2026-08-14) - `npm run verify:migrations`
+  falhava com `Git-normalized content changed` em `045_legacy_placeholder.sql`.
+  Causa: `core.autocrlf=true` no Git de sistema desta maquina Windows checkou
+  esses arquivos com CRLF antes do override local (`false`) existir; o cache de
+  stat do indice escondia isso do `git status`/`diff` normais. Varredura dos 107
+  artefatos do manifest achou 56 arquivos no mesmo estado
+  (`.ai/migrations/*`, `supabase/migrations/*_placeholder*`,
+  `.ai/migrations/verification/*`); todos com conteudo normalizado identico ao
+  HEAD, so a quebra de linha divergia. Restaurados bytes exatos via
+  `fs.writeFileSync` a partir de `git show HEAD:<path>` — `git checkout`/
+  redirecionamento de shell nesta maquina reintroduz CRLF mesmo com
+  `-c core.autocrlf=false -c core.eol=lf` explicito, confirmado
+  experimentalmente. Suite completa 695/695 depois; nada para commitar, pois os
+  arquivos ja eram byte-identicos ao commitado. Falta real: `.gitattributes`
+  sem regra `eol=lf` para `*.sql` fora de `supabase/baselines|verification|
+  history`, registrado como DT-DEV-01 em [[TRADEOFFS]].
+
 - [x] FX-MESAS-COMANDA-SERVICE-FLAG-01 (2026-08-14) - incidente em producao
   afetando todos os tenants com Mesas: nenhuma comanda aceitava item, fechamento
   ou cancelamento, sempre com `Comanda aberta nao encontrada`. A flag

@@ -36,6 +36,64 @@ Custo aceito: um `db push` distraído passa a alcançar produção direto. Gatil
 revisão: qualquer push não intencional, ou a entrada de mais gente com acesso de
 escrita ao projeto linkado.
 
+### DT-DEV-01 — Working tree Windows com CRLF fantasma em 56 artefatos versionados
+
+- **Causa:** o Git de sistema (`C:/Program Files/Git/etc/gitconfig`) tem
+  `core.autocrlf=true`; o override local do repo (`.git/config`) tem `false`.
+  Arquivos que foram para o disco sob o `true` do sistema, antes do override
+  local existir, ficaram com CRLF na working tree enquanto o blob commitado
+  continua LF. O cache de stat do índice mascara isso de `git status`/`git
+  diff` normais — só um recálculo de hash puro (`git hash-object`) expõe a
+  diferença. Confirmado byte a byte: nos 56 arquivos afetados (`.ai/migrations/*`,
+  `supabase/migrations/*_placeholder*` e dois `.ai/migrations/verification/*`)
+  o conteúdo normalizado é idêntico ao HEAD — só a quebra de linha divergia.
+- **Como foi achado:** `npm run verify:migrations` falhava em
+  `045_legacy_placeholder.sql` com `Git-normalized content changed`. Uma
+  varredura de todo `manifest.json` (107 artefatos) achou os 56.
+- **Fix aplicado (2026-08-14):** bytes restaurados via `fs.writeFileSync` a
+  partir de `git show HEAD:<path>` (escrever por `git checkout`/redirecionamento
+  de shell nesta máquina reintroduz CRLF — confirmado experimentalmente; só a
+  escrita direta por Node produz o byte exato). `git diff --stat` e a suíte
+  completa (695/695) confirmam zero mudança de conteúdo. Nada disso tocou
+  produção nem precisou de commit, porque os arquivos já eram idênticos ao
+  HEAD — a correção foi só realinhar o disco com o que já estava commitado.
+- **Risco residual:** o mesmo pode voltar a acontecer para qualquer arquivo do
+  `manifest.json` tocado por uma ferramenta que escreva CRLF nesta máquina.
+  **Conserto certo:** `.gitattributes` na raiz cobrindo `*.sql text eol=lf` e
+  `.ai/migrations/**/*.sql text eol=lf` (hoje só `supabase/baselines`,
+  `supabase/verification` e `supabase/history` têm essa regra), forçando o
+  próprio git a normalizar no checkout em vez de depender do config local.
+  **Prioridade:** baixa — sem impacto de runtime, só reaparece se `npm run
+  verify:migrations` rodar de novo nesta máquina.
+
+### DT-DEV-02 — Baseline `20260813091000` com dois hashes desatualizados por decisão, não por bug
+
+- **Estado:** `npm run verify:migrations` falha agora em
+  `Baseline input changed: supabase/baselines/20260813091000/README.md`.
+  Comparação campo a campo contra `manifest.json` confirma que **só** dois dos
+  sete `baseline_files` divergem: `README.md` (nota de cutoff adicionada em
+  2026-08-14) e `supabase/config.toml` (flag `enabled` mudado nesta mesma
+  data, por decisão do dono do repo). `schema.sql`, `platform.sql`,
+  `applied-versions.txt`, `legacy-classification.json` e
+  `platform-state.json` — a evidência real de equivalência de schema —
+  continuam batendo exatamente.
+- **Por que não foi corrigido agora:** o script só tem modo `--update` preso a
+  `--remote-dir`, que exige recaptura completa (stack Supabase local via
+  Docker + fetch remoto). O Docker Desktop não está disponível nesta máquina
+  (`failed to connect to the docker API`), e hand-editar hashes no
+  `manifest.json` fora do próprio pipeline do script destruiria o valor do
+  documento como evidência auditável — pior do que deixar o script vermelho
+  com a causa documentada.
+- **Impacto real:** nenhum. `verify:migrations` não está encadeado em
+  `build`, `test`, `check` nem em nenhum workflow — confirmado em
+  `package.json` e ausência de `.github/workflows`. Deploy do Vercel usa
+  `vite build` puro, sem override em `vercel.json`. Este script não gira em
+  nenhum caminho que chega a produção.
+- **Conserto certo:** rodar a recaptura completa (`--update --remote-dir`)
+  numa máquina com Docker Desktop ativo, fechando ao mesmo tempo a pendência
+  de baseline defasado já registrada acima. **Prioridade:** baixa/média — só
+  urgente se alguém depender de `verify:migrations` como sinal de saúde.
+
 ## Governança de migrations (2026-08-13)
 
 As 59 migrations já aplicadas permanecem byte a byte imutáveis. O baseline
