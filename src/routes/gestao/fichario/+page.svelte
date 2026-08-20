@@ -1107,6 +1107,7 @@ Regularize quando puder!</div>
   .fichario-layout .people-list {
     min-height: 0;
     flex: 1 1 auto;
+    align-content: start;
     max-height: none;
     overflow-y: auto;
     overscroll-behavior: contain;

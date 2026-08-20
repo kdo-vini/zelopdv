@@ -26,7 +26,7 @@ async function authenticate(request) {
 async function loadPin(ownerUserId) {
   const { data, error } = await supabaseAdmin
     .from('empresa_perfil')
-    .select('pin_admin')
+    .select('pin_admin, pin_enabled')
     .eq('user_id', ownerUserId)
     .maybeSingle();
 
@@ -36,7 +36,10 @@ async function loadPin(ownerUserId) {
   }
 
   if (!data) return { error: json({ error: 'Conta não encontrada.' }, { status: 404 }) };
-  return { pin: String(data.pin_admin || '') };
+  return {
+    pin: String(data.pin_admin || ''),
+    enabled: data.pin_enabled !== false,
+  };
 }
 
 export async function GET({ request }) {
@@ -49,7 +52,11 @@ export async function GET({ request }) {
 
   // The browser receives only the state needed to render the lock. The PIN
   // itself never crosses the API boundary.
-  return json({ configured: Boolean(profile.pin), canSet: !context.isSubUser });
+  return json({
+    configured: Boolean(profile.pin),
+    enabled: profile.enabled,
+    canSet: !context.isSubUser,
+  });
 }
 
 export async function POST({ request }) {
@@ -65,7 +72,11 @@ export async function POST({ request }) {
 
   const action = body?.action;
   const pin = String(body?.pin || '');
-  if (!['verify', 'set'].includes(action) || !PIN_PATTERN.test(pin)) {
+  if (!['verify', 'set', 'disable'].includes(action)) {
+    return json({ error: 'PIN deve ter entre 4 e 6 dígitos.' }, { status: 400 });
+  }
+
+  if (['verify', 'set'].includes(action) && !PIN_PATTERN.test(pin)) {
     return json({ error: 'PIN deve ter entre 4 e 6 dígitos.' }, { status: 400 });
   }
 
@@ -88,13 +99,39 @@ export async function POST({ request }) {
     return json({ success: true });
   }
 
-  // Only the account owner can create or replace the company PIN. Sub-users
-  // may verify the owner's PIN, but cannot change the shared gate.
+  // Only the account owner can create, replace, or disable the company PIN.
+  // Sub-users may verify the owner's PIN, but cannot change the shared gate.
   if (context.isSubUser) return json({ error: 'Somente o titular pode alterar o PIN.' }, { status: 403 });
+
+  const currentProfile = await loadPin(context.ownerUserId);
+  if (currentProfile.error) return currentProfile.error;
+
+  if (action === 'disable' && currentProfile.pin) {
+    const currentPin = String(body?.currentPin || '');
+    if (!PIN_PATTERN.test(currentPin) || !safeEqualString(currentPin, currentProfile.pin)) {
+      return json({ error: 'PIN incorreto.' }, { status: 401 });
+    }
+  }
+
+  if (action === 'disable') {
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('empresa_perfil')
+      .update({ pin_admin: null, pin_enabled: false })
+      .eq('user_id', context.ownerUserId)
+      .select('user_id')
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('[auth/admin-pin] profile disable error:', profileError.message);
+      return json({ error: 'Não foi possível desativar o PIN.' }, { status: 500 });
+    }
+    if (!profile) return json({ error: 'Conta não encontrada.' }, { status: 404 });
+    return json({ success: true, configured: false, enabled: false });
+  }
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('empresa_perfil')
-    .update({ pin_admin: pin })
+    .update({ pin_admin: pin, pin_enabled: true })
     .eq('user_id', context.ownerUserId)
     .select('user_id')
     .maybeSingle();
@@ -105,5 +142,5 @@ export async function POST({ request }) {
   }
   if (!profile) return json({ error: 'Conta não encontrada.' }, { status: 404 });
 
-  return json({ success: true, configured: true });
+  return json({ success: true, configured: true, enabled: true });
 }

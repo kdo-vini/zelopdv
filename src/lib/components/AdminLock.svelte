@@ -6,6 +6,8 @@
   import { LockKeyhole } from 'lucide-svelte';
 
   export let pinConfigured = false;
+  export let pinStatus = 'ready';
+  export let onPinRetry = null;
   
   let inputPin = '';
   let errorShake = false;
@@ -147,7 +149,21 @@
   }
 </script>
 
-{#if $adminUnlocked || !pinConfigured}
+{#if pinStatus === 'loading'}
+  <div class="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+    <div class="w-10 h-10 rounded-full border-2 border-(--border-subtle) border-t-(--primary) animate-spin mb-4" aria-hidden="true"></div>
+    <p class="text-sm" style="color: var(--text-muted);">Verificando segurança…</p>
+  </div>
+{:else if pinStatus === 'error'}
+  <div class="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+    <LockKeyhole class="size-10 mb-4" style="color: var(--error);" aria-hidden="true" />
+    <h2 class="text-xl font-bold mb-2" style="color: var(--text-main);">Não foi possível validar o PIN</h2>
+    <p class="text-sm max-w-md mb-5" style="color: var(--text-muted);">A área permanece bloqueada até a configuração de segurança ser confirmada.</p>
+    {#if onPinRetry}
+      <button type="button" class="px-4 py-2 rounded-md text-sm font-semibold" style="background: var(--primary); color: var(--primary-text);" on:click={onPinRetry}>Tentar novamente</button>
+    {/if}
+  </div>
+{:else if $adminUnlocked || !pinConfigured}
   <slot />
 {:else}
   <div class="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 animate-in fade-in zoom-in duration-300">

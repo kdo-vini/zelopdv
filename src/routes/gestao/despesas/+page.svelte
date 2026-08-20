@@ -5,25 +5,43 @@
   import { logAuditAction } from '$lib/accessControl';
   import { formatStoredDateForPtBr, getLocalDateInputValue, localDateInputToIso } from '$lib/dateRange';
   import { addToast, confirmAction } from '$lib/stores/ui';
+  import { requiresAdminPin } from '$lib/adminPinPrompt';
   import AdminLock from '$lib/components/AdminLock.svelte';
   import * as Select from '$lib/components/ui/select/index.js';
 
   let uid = null;
   let pinConfigured = false;
+  let pinStatus = 'loading';
   let ownerUserId = null;
   let operadorUserId = null;
   let isSubUser = false;
 
   async function loadAdminPinStatus() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    const response = await fetch('/api/auth/admin-pin', {
-      headers: { authorization: `Bearer ${session.access_token}` },
-    });
-    if (response.ok) {
+    pinStatus = 'loading';
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Sessão expirada.');
+      const response = await fetch('/api/auth/admin-pin', {
+        headers: { authorization: `Bearer ${session.access_token}` },
+      });
       const status = await response.json().catch(() => ({}));
-      pinConfigured = status.configured === true;
+      if (!response.ok || typeof status.enabled !== 'boolean') {
+        throw new Error(status?.error || 'Não foi possível validar o PIN.');
+      }
+      pinConfigured = requiresAdminPin(status);
+      pinStatus = 'ready';
+      return true;
+    } catch (error) {
+      pinConfigured = false;
+      pinStatus = 'error';
+      console.error('[despesas] admin PIN status:', error);
+      return false;
     }
+  }
+
+  async function retryAdminPin() {
+    if (!await loadAdminPinStatus()) return;
+    if (uid) await loadExpenses();
   }
 
   // Date range — defaults to current month
@@ -276,9 +294,9 @@
       operadorUserId = authCtx.userId;
       isSubUser = authCtx.isSubUser;
       if (uid) {
-        await loadAdminPinStatus();
         // Override uid with ownerUserId for all DB operations
         uid = ownerUserId;
+        if (!await loadAdminPinStatus()) return;
         await loadExpenses();
       }
     } catch (error) {
@@ -288,7 +306,7 @@
   });
 </script>
 
-<AdminLock pinConfigured={pinConfigured}>
+<AdminLock pinConfigured={pinConfigured} {pinStatus} onPinRetry={retryAdminPin}>
 <div class="space-y-6">
   <!-- Header -->
   <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

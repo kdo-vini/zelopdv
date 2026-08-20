@@ -12,6 +12,30 @@
   verificadas responderam HTTP `200`. O smoke autenticado permanece pendente
   por falta de conta dedicada.
 
+- PIN administrativo opcional (2026-08-20): `empresa_perfil.pin_enabled` agora
+  representa explicitamente se a proteção está ativa. O titular pode ativar o
+  PIN com um novo valor ou desativá-lo mediante o PIN atual; “Continuar sem
+  PIN” grava `pin_admin = null` e `pin_enabled = false`, sem criar `0000`.
+  Relatórios e Despesas aguardam o status server-side e falham fechado quando
+  o endpoint está indisponível. A migration idempotente
+  `20260820154751_admin_pin_optional.sql` garante a coluna em ambientes que
+  ainda não a possuem. `.env.local` recebeu a chave service-role apenas para o
+  dev server e permanece ignorado pelo Git.
+
+- Dev server — falso prompt de configuração do PIN (2026-08-20): o layout global
+  tratava falha, ausência de resposta ou payload incompleto de
+  `/api/auth/admin-pin` como PIN inexistente. Isso fazia a prévia local abrir o
+  modal mesmo para contas configuradas. `shouldPromptPinSetup` agora exige a
+  confirmação explícita `{ configured: false, canSet: true }`; o caso de erro
+  fica fechado e coberto por teste direcionado.
+
+- Fichário — cartões da lista lateral com poucos registros (2026-08-20): no
+  desktop, `.people-list` continua ocupando a altura disponível para manter a
+  rolagem previsível, mas `align-content: start` impede que as linhas implícitas
+  do grid estiquem um cartão único ou poucos cartões até cobrir toda a barra
+  lateral. O problema foi reproduzido na tela publicada com 1 pessoa (cartão de
+  576px para uma lista de 576px); teste de regressão direcionado passa no código.
+
 - Incidente resolvido — Mesas travadas em producao (2026-08-14): todas as
   comandas recusavam item, fechamento e cancelamento com
   `Comanda aberta nao encontrada`. A flag `v_service` das tres RPCs de comanda

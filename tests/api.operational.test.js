@@ -150,20 +150,33 @@ describe('admin PIN API', () => {
     const state = {
       user: { id: 'owner-1' },
       queries: [],
-      maybeSingle: { empresa_perfil: { data: { pin_admin: '1234' }, error: null } },
+      maybeSingle: { empresa_perfil: { data: { pin_admin: '1234', pin_enabled: true }, error: null } },
       results: {},
     };
     const { GET } = await loadAdminPin(state);
     const response = await GET({ request: makeRequest() });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ configured: true, canSet: true });
+    expect(await response.json()).toEqual({ configured: true, enabled: true, canSet: true });
+  });
+
+  it('returns a disabled PIN without exposing the stored value', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: { empresa_perfil: { data: { pin_admin: null, pin_enabled: false }, error: null } },
+      results: {},
+    };
+    const { GET } = await loadAdminPin(state);
+    const response = await GET({ request: makeRequest() });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ configured: false, enabled: false, canSet: true });
   });
 
   it('verifies the PIN server-side and rejects incorrect values', async () => {
     const state = {
       user: { id: 'owner-1' },
       queries: [],
-      maybeSingle: { empresa_perfil: { data: { pin_admin: '1234' }, error: null } },
+      maybeSingle: { empresa_perfil: { data: { pin_admin: '1234', pin_enabled: true }, error: null } },
       results: {},
     };
     const { POST } = await loadAdminPin(state);
@@ -181,9 +194,11 @@ describe('admin PIN API', () => {
       results: {},
     };
     const { POST: ownerPost } = await loadAdminPin(ownerState);
-    expect((await ownerPost({ request: makeRequest({ body: { action: 'set', pin: '5678' } }) })).status).toBe(200);
+    const response = await ownerPost({ request: makeRequest({ body: { action: 'set', pin: '5678' } }) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, configured: true, enabled: true });
     const update = ownerState.queries.find((query) => query.table === 'empresa_perfil' && query.operation === 'update');
-    expect(update.payload).toEqual({ pin_admin: '5678' });
+    expect(update.payload).toEqual({ pin_admin: '5678', pin_enabled: true });
 
     const subState = {
       user: { id: 'sub-1' },
@@ -194,6 +209,57 @@ describe('admin PIN API', () => {
     const { POST: subPost } = await loadAdminPin(subState, { isSubUser: true, ownerUserId: 'owner-1' });
     expect((await subPost({ request: makeRequest({ body: { action: 'set', pin: '5678' } }) })).status).toBe(403);
     expect(subState.queries.some((query) => query.operation === 'update')).toBe(false);
+  });
+
+  it('disables the PIN only after verifying the current owner PIN', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: { empresa_perfil: { data: { pin_admin: '1234', pin_enabled: true }, error: null } },
+      maybeSingleByOperation: { empresa_perfil: { update: { data: { user_id: 'owner-1' }, error: null } } },
+      results: {},
+    };
+    const { POST } = await loadAdminPin(state);
+
+    const wrong = await POST({ request: makeRequest({ body: { action: 'disable', currentPin: '9999' } }) });
+    expect(wrong.status).toBe(401);
+    expect(state.queries.some((query) => query.operation === 'update')).toBe(false);
+
+    const response = await POST({ request: makeRequest({ body: { action: 'disable', currentPin: '1234' } }) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, configured: false, enabled: false });
+    const update = state.queries.find((query) => query.table === 'empresa_perfil' && query.operation === 'update');
+    expect(update.payload).toEqual({ pin_admin: null, pin_enabled: false });
+  });
+
+  it('allows the owner to skip setup without creating a default PIN', async () => {
+    const state = {
+      user: { id: 'owner-1' },
+      queries: [],
+      maybeSingle: { empresa_perfil: { data: { pin_admin: null, pin_enabled: true }, error: null } },
+      maybeSingleByOperation: { empresa_perfil: { update: { data: { user_id: 'owner-1' }, error: null } } },
+      results: {},
+    };
+    const { POST } = await loadAdminPin(state);
+    const response = await POST({ request: makeRequest({ body: { action: 'disable' } }) });
+
+    expect(response.status).toBe(200);
+    const update = state.queries.find((query) => query.table === 'empresa_perfil' && query.operation === 'update');
+    expect(update.payload).toEqual({ pin_admin: null, pin_enabled: false });
+  });
+
+  it('does not allow a sub-user to disable the company PIN', async () => {
+    const state = {
+      user: { id: 'sub-1' },
+      queries: [],
+      maybeSingle: { empresa_perfil: { data: { pin_admin: '1234', pin_enabled: true }, error: null } },
+      results: {},
+    };
+    const { POST } = await loadAdminPin(state, { isSubUser: true, ownerUserId: 'owner-1' });
+    const response = await POST({ request: makeRequest({ body: { action: 'disable', currentPin: '1234' } }) });
+
+    expect(response.status).toBe(403);
+    expect(state.queries.some((query) => query.operation === 'update')).toBe(false);
   });
 });
 

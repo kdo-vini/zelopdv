@@ -372,6 +372,7 @@
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import SupportChat from '$lib/components/SupportChat.svelte';
   import UpdateAvailable from '$lib/components/UpdateAvailable.svelte';
+  import { shouldPromptPinSetup } from '$lib/adminPinPrompt';
   import { adminUnlocked } from '$lib/stores/adminStore';
   import { sessionStore, companyNameStore } from '$lib/stores/session';
 
@@ -402,14 +403,10 @@
           pinStatus = response.ok ? await response.json().catch(() => null) : null;
         }
         pinConfigured = pinStatus?.configured === true;
-        if (!pinConfigured && pinStatus?.canSet !== false) {
-            // Don't interrupt onboarding flow — only prompt PIN setup on protected app pages
-            const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-            const onboardingPaths = ['/perfil', '/assinatura', '/login', '/cadastro', '/esqueci-senha', '/redefinir-senha'];
-            const isOnboarding = onboardingPaths.some(p => currentPath === p || currentPath.startsWith(p + '?'));
-            if (!isOnboarding) {
-                showPinSetup = true;
-            }
+        // Don't interrupt onboarding flow — only prompt PIN setup on protected app pages
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+        if (shouldPromptPinSetup(pinStatus, currentPath)) {
+            showPinSetup = true;
         }
         if (data.nome_exibicao) {
             companyName = data.nome_exibicao;
@@ -424,10 +421,10 @@
   $: $sessionStore = session;
   $: $companyNameStore = companyName;
   
-  function onPinSet() {
+  function onPinSet(configured = true) {
     showPinSetup = false;
-    pinConfigured = true;
-    $adminUnlocked = true; // Auto unlock on creation
+    pinConfigured = configured;
+    $adminUnlocked = configured; // Auto unlock only after setting a PIN
   }
 </script>
 

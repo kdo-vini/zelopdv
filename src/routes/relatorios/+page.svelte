@@ -7,6 +7,7 @@
 	import { resolveAppIcon } from '$lib/icons/appIcons';
 	import { withTimeout } from '$lib/utils';
 	import { addToast } from '$lib/stores/ui';
+	import { requiresAdminPin } from '$lib/adminPinPrompt';
 	import {
 		calculateExpectedDrawer,
 		calculateMovementSummary,
@@ -33,16 +34,44 @@
 	let uid = null;
 	let mesasAddonAtivo = false;
 	let pinConfigured = false;
+	let pinStatus = 'loading';
 
 	async function loadAdminPinStatus() {
-		const { data: { session } } = await supabase.auth.getSession();
-		if (!session?.access_token) return;
-		const response = await fetch('/api/auth/admin-pin', {
-			headers: { authorization: `Bearer ${session.access_token}` },
-		});
-		if (response.ok) {
+		pinStatus = 'loading';
+		try {
+			const { data: { session } } = await supabase.auth.getSession();
+			if (!session?.access_token) throw new Error('Sessão expirada.');
+			const response = await fetch('/api/auth/admin-pin', {
+				headers: { authorization: `Bearer ${session.access_token}` },
+			});
 			const status = await response.json().catch(() => ({}));
-			pinConfigured = status.configured === true;
+			if (!response.ok || typeof status.enabled !== 'boolean') {
+				throw new Error(status?.error || 'Não foi possível validar o PIN.');
+			}
+			pinConfigured = requiresAdminPin(status);
+			pinStatus = 'ready';
+			return true;
+		} catch (error) {
+			pinConfigured = false;
+			pinStatus = 'error';
+			console.error('[relatorios] admin PIN status:', error);
+			return false;
+		}
+	}
+
+	async function retryAdminPin() {
+		if (!await loadAdminPinStatus() || !uid) return;
+		try {
+			await carregarCaixasRecentes();
+			if (caixas.length) {
+				caixaSelecionado = caixas[0]?.id;
+				await carregarRelatorioDoCaixa(caixaSelecionado);
+			}
+			await carregarFechamentosRecentes();
+			aplicarPreset('hoje');
+			await carregarRelatorioPeriodo();
+		} catch (error) {
+			errorMessage = error?.message || 'Erro ao carregar relatórios.';
 		}
 	}
 
@@ -181,7 +210,7 @@
 				.select('plataformas_pagamento')
 				.eq('user_id', uid)
 				.maybeSingle();
-			await loadAdminPinStatus();
+			if (!await loadAdminPinStatus()) return;
 			plataformasAtivas = (perfilData?.plataformas_pagamento || []).filter(p => p.ativo !== false);
 
 			await carregarCaixasRecentes();
@@ -1035,7 +1064,7 @@
 	import AdminLock from '$lib/components/AdminLock.svelte';
 </script>
 
-<AdminLock pinConfigured={pinConfigured}>
+<AdminLock pinConfigured={pinConfigured} {pinStatus} onPinRetry={retryAdminPin}>
 <div class="mb-6 flex items-end justify-between">
 	<div>
 		<h1 class="text-xl font-bold" style="color: var(--text-main);">Relatórios</h1>

@@ -35,7 +35,28 @@
   }
 
   async function skipForNow() {
-    await doSavePin('0000', 'PIN temporário definido (0000). Altere em Perfil > Segurança.');
+    saving = true;
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('Sessão expirada.');
+        const response = await fetch('/api/auth/admin-pin', {
+            method: 'POST',
+            headers: {
+                authorization: `Bearer ${session.access_token}`,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ action: 'disable' }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error || 'Falha ao desativar o PIN.');
+
+        addToast('PIN desativado. Você pode ativá-lo depois no Perfil.', 'success');
+        onPinSet(false);
+    } catch (e) {
+        addToast('Erro ao desativar PIN: ' + e.message, 'error');
+    } finally {
+        saving = false;
+    }
   }
 
   async function doSavePin(value, successMsg) {
@@ -144,9 +165,9 @@
             style="background: transparent; color: var(--text-muted); border: 1px solid var(--border-subtle);"
             on:click={skipForNow} disabled={saving}
         >
-            Configurar depois
+            Continuar sem PIN
         </button>
-        <p class="text-[11px]" style="color: var(--text-muted); opacity: 0.7;">Ao pular, o PIN será definido como <strong>0000</strong> temporariamente.</p>
+        <p class="text-[11px]" style="color: var(--text-muted); opacity: 0.7;">Você poderá ativar o PIN a qualquer momento em Perfil → Segurança.</p>
     </div>
   </div>
 </div>

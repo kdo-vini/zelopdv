@@ -1,5 +1,28 @@
 # Fixes Progress
 
+- [x] FX-ADMIN-PIN-OPTIONAL-01 (2026-08-20) - PIN administrativo tornou-se
+  opcional por empresa: o onboarding não grava mais `0000`, Perfil permite
+  ativar/desativar com validação server-side, e Relatórios/Despesas aguardam o
+  status antes de consultar dados, permanecendo bloqueados em caso de falha.
+  A migration idempotente `20260820154751_admin_pin_optional.sql` garante
+  `empresa_perfil.pin_enabled`; testes direcionados cobrem os estados, owner,
+  subusuário e o caminho sem PIN.
+
+- [x] FX-DEV-PIN-SETUP-FALSE-POSITIVE-01 (2026-08-20) - o layout global
+  interpretava erro ou resposta ausente de `/api/auth/admin-pin` como PIN não
+  configurado, especialmente no dev server sem a sessão da publicação. O
+  prompt agora exige `configured: false` e `canSet: true` explicitamente;
+  respostas indisponíveis não abrem o modal. Coberto por
+  `tests/adminPinPrompt.test.js`.
+
+- [x] FX-FICHARIO-SHORT-LIST-ROWS-01 (2026-08-20) - a lista lateral do
+  Fichário usava um grid flexível no workspace desktop; com uma ou poucas
+  pessoas, o alinhamento padrão `stretch` expandia as linhas implícitas e o
+  cartão selecionado cobria toda a barra lateral. `align-content: start` mantém
+  os cartões na altura do conteúdo sem remover a área rolável. Reprodução
+  visual confirmada na publicação com a conta já aberta; teste direcionado
+  `tests/ficharioLayout.test.js` passa após a correção.
+
 - [x] FX-DEV-CRLF-WORKING-TREE-01 (2026-08-14) - `npm run verify:migrations`
   falhava com `Git-normalized content changed` em `045_legacy_placeholder.sql`.
   Causa: `core.autocrlf=true` no Git de sistema desta maquina Windows checkou

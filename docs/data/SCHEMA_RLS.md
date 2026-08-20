@@ -209,6 +209,11 @@ Conclusao operacional:
 
 ## Ponto critico: `empresa_perfil.pin_admin`
 
+- `empresa_perfil.pin_enabled` é `boolean NOT NULL DEFAULT true` e controla se
+  a barreira administrativa está ativa. O estado desativado é representado por
+  `pin_enabled = false` e `pin_admin = null`; a migration
+  `20260820154751_admin_pin_optional.sql` é idempotente para bases que já
+  receberam a coluna pelo baseline.
 - A migration `20260813060000_empresa_perfil_pin_select_containment.sql`
   remove o SELECT de tabela de `anon`/`authenticated` e concede somente
   colunas explicitas sem `pin_admin` a `authenticated`; os wildcards legados do
