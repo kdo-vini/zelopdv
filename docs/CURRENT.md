@@ -5,9 +5,12 @@
   Os commits `743545c`, `5908aef`, `1114c0d` e `228ad99` atualizam o contrato
   de runtime e a documentação, incluindo `@sveltejs/adapter-vercel` explícito
   com `nodejs24.x` no app principal e no admin. Os previews finais estão
-  `READY` e os logs não mostram falhas de runtime. O smoke autenticado permanece
-  pendente por falta de conta dedicada; a promoção para produção está sendo
-  feita após esta integração.
+  `READY` e os logs não mostram falhas de runtime. A promoção para produção foi
+  concluída via `origin/main` no commit integrado `4cc0599`: o app principal
+  (`dpl_8v5sq3HWxijrNS2fm6cG4ufFWXX1`) e o admin
+  (`dpl_59mYocX714FCyQ6Vc8xtCy8mL2kd`) ficaram `READY`, e as páginas públicas
+  verificadas responderam HTTP `200`. O smoke autenticado permanece pendente
+  por falta de conta dedicada.
 
 - Incidente resolvido — Mesas travadas em producao (2026-08-14): todas as
   comandas recusavam item, fechamento e cancelamento com
