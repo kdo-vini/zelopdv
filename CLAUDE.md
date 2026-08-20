@@ -19,7 +19,7 @@
 
 - App principal: `src/` em SvelteKit 2 + Svelte 5 + Vite 6.
 - Dashboard admin separado: `admin-dashboard/` em SvelteKit 2 + Svelte 4 + Vite 5.
-- Deploy do app principal: `@sveltejs/adapter-vercel` com runtime `nodejs20.x` em [svelte.config.js](/home/vinicius/code/zelopdv/svelte.config.js:1).
+- Deploys Vercel: `zelopdv` e `zelopdv-admin` usam `@sveltejs/adapter-vercel` explícito com runtime `nodejs24.x`, respectivamente em [svelte.config.js](/home/vinicius/code/zelopdv/svelte.config.js:1) e `admin-dashboard/svelte.config.js`.
 - Cron jobs Vercel: `0 9 * * *` para onboarding emails e `0 10 * * *` para nudge de cadastro em [vercel.json](/home/vinicius/code/zelopdv/vercel.json:1).
 
 ### Mapa do repositório
@@ -171,7 +171,7 @@ Estado validado mais recente está em [[CURRENT]].
 
 ## Deploy e operação
 
-- App principal assume Vercel Node 20.
+- `zelopdv` e `zelopdv-admin` usam Vercel Node `24.x`; os dois `svelte.config.js` declaram `@sveltejs/adapter-vercel` com runtime `nodejs24.x`.
 - URLs públicas inferidas do código: `https://zelopdv.com.br`, `https://admin.zelopdv.com.br`, `https://chat.zelopdv.com.br`.
 - `hooks.server.js` aplica rate limit em `/api/*` e CORS específico para `/api/admin/*` em [src/hooks.server.js](/home/vinicius/code/zelopdv/src/hooks.server.js:1).
 - O admin dashboard conversa direto com Supabase via anon key; ver risco em [[CODE_REVIEW]].

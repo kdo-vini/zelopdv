@@ -13,11 +13,11 @@ Setup local e comandos úteis para trabalhar no repo sem depender de contexto or
 | Email | Resend |
 | Offline | Dexie / IndexedDB |
 | Testes | Vitest + Playwright |
-| Deploy | Vercel Node 20 |
+| Deploy | Vercel Node 24.x, com `@sveltejs/adapter-vercel` explícito nos dois apps |
 
 ## Pré-requisitos
 
-- Node `20.x`
+- Node `24.x`
 - npm `10.x`
 - Git
 - Chromium para Playwright
