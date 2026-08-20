@@ -1,6 +1,7 @@
 <script>
   import { adminUnlocked } from '$lib/stores/adminStore';
   import { addToast } from '$lib/stores/ui';
+  import { tick } from 'svelte';
   import { fade } from 'svelte/transition';
   import { supabase } from '$lib/supabaseClient';
   import { LockKeyhole } from 'lucide-svelte';
@@ -24,6 +25,12 @@
   let bubbleTimer;
   let showBubbleNew = false;
   let bubbleTimerNew;
+
+  function focusOnMount(node) {
+    void tick().then(() => {
+      if (node.isConnected) node.focus();
+    });
+  }
 
   function triggerBubble() {
       showBubble = true;
@@ -201,7 +208,7 @@
                     }
                 }}
                 on:keydown={handleKeydown}
-                autofocus
+                use:focusOnMount
             />
             {#if showBubble}
                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-1.5 bg-amber-500 text-white text-xs font-bold rounded-lg shadow-xl whitespace-nowrap z-50 animate-bounce">

@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { slide } from 'svelte/transition';
   import { supabase } from '$lib/supabaseClient';
   import { pdvCache } from '$lib/stores/pdvCache';
@@ -100,6 +100,35 @@
     controlar_estoque: false,
     estoque_atual: 0
   };
+
+  let creationModalReturnFocus = null;
+
+  function focusOnMount(node) {
+    void tick().then(() => {
+      if (node.isConnected) node.focus();
+    });
+  }
+
+  function rememberCreationModalTrigger() {
+    if (typeof document === 'undefined') return;
+    const activeElement = document.activeElement;
+    creationModalReturnFocus = activeElement instanceof HTMLElement ? activeElement : null;
+  }
+
+  function fecharModalCriacao(tipo) {
+    if (tipo === 'categoria') showCatModal = false;
+    if (tipo === 'subcategoria') showSubModal = false;
+    if (tipo === 'produto') showProdModal = false;
+
+    void tick().then(() => {
+      if (creationModalReturnFocus?.isConnected) creationModalReturnFocus.focus();
+      creationModalReturnFocus = null;
+    });
+  }
+
+  function handleCreationModalKeydown(event, tipo) {
+    if (event.key === 'Escape') fecharModalCriacao(tipo);
+  }
 
   // Tabelas de preço (Balcão / Revenda / Atacado)
   let tabelasPrecoAtivo = false;
@@ -583,7 +612,7 @@
 
     addToast('Categoria criada com sucesso!', 'success');
     newCatForm = { nome: '', ordem: 0, controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 };
-    showCatModal = false;
+    fecharModalCriacao('categoria');
     pdvCache.invalidateCategorias();
     await carregarCategorias();
   }
@@ -691,7 +720,7 @@
 
     addToast('Subcategoria criada com sucesso!', 'success');
     newSubForm = { nome: '', ordem: 0, id_categoria: null };
-    showSubModal = false;
+    fecharModalCriacao('subcategoria');
     pdvCache.invalidateSubcategorias();
     await carregarSubcategorias();
   }
@@ -808,7 +837,7 @@
       controlar_estoque: false,
       estoque_atual: 0
     };
-    showProdModal = false;
+    fecharModalCriacao('produto');
     pdvCache.invalidateProdutos();
     await carregarProdutos();
     await carregarContagemProdutosPorCategoria();
@@ -914,6 +943,7 @@
   }
 
   function abrirModalProduto() {
+    rememberCreationModalTrigger();
     // Pré-preenche categoria/subcategoria com a seleção atual
     newProdForm.id_categoria = toSelectId(selectedCategoriaId);
     newProdForm.id_subcategoria = toSelectId(selectedSubcategoriaId);
@@ -923,6 +953,7 @@
   }
 
   function abrirModalSubcategoria() {
+    rememberCreationModalTrigger();
     newSubForm.id_categoria = toSelectId(selectedCategoriaId);
     showDesktopActions = false;
     showMobileCreateMenu = false;
@@ -930,6 +961,7 @@
   }
 
   function abrirModalCategoria() {
+    rememberCreationModalTrigger();
     showDesktopActions = false;
     showMobileCreateMenu = false;
     showCatModal = true;
@@ -969,7 +1001,6 @@
   <div class="page-title-block">
     <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Produtos</p>
     <h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Produtos</h1>
-    <p class="page-subtitle">{totalProdutosExibido()} {totalProdutosExibido() === 1 ? 'produto cadastrado' : 'produtos cadastrados'}</p>
   </div>
 
   <!-- Botões de ação globais -->
@@ -1131,7 +1162,7 @@
                   bind:value={editCatForm.nome}
                   placeholder="Nome da categoria"
                   required
-                  autofocus
+                  use:focusOnMount
                   style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
                 />
                 <input
@@ -1170,16 +1201,14 @@
               style={selectedCategoriaId === cat.id && selectedSubcategoriaId === null
                 ? 'background: var(--sidebar-item-active-bg); color: var(--sidebar-item-active-text);'
                 : ''}
-              role="button"
-              tabindex="0"
-              on:click={() => selectCategoria(cat.id)}
-              on:keydown={(e) => e.key === 'Enter' && selectCategoria(cat.id)}
             >
               <!-- Seta expandir/colapsar -->
               <button
                 class="chevron-btn"
                 on:click|stopPropagation={() => toggleExpand(cat.id)}
                 aria-label={expandedCats.has(cat.id) ? 'Colapsar' : 'Expandir'}
+                aria-expanded={expandedCats.has(cat.id)}
+                aria-controls={`category-subcategories-${cat.id}`}
                 style="color: inherit; opacity: 0.6;"
               >
                 <svg class="w-3.5 h-3.5 transition-transform duration-150"
@@ -1189,22 +1218,29 @@
                 </svg>
               </button>
 
-              <span class="flex-1 text-sm font-medium truncate">{cat.nome}</span>
-              {#if cat.controlar_estoque_compartilhado}
-                <span class="subcat-badge" title="Estoque compartilhado"
-                  style="background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary);">
-                  {cat.estoque_compartilhado_atual}
-                </span>
-              {/if}
+              <button
+                type="button"
+                class="tree-item-select"
+                aria-pressed={selectedCategoriaId === cat.id && selectedSubcategoriaId === null}
+                on:click={() => selectCategoria(cat.id)}
+              >
+                <span class="text-sm font-medium truncate">{cat.nome}</span>
+                {#if cat.controlar_estoque_compartilhado}
+                  <span class="subcat-badge" title="Estoque compartilhado"
+                    style="background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary);">
+                    {cat.estoque_compartilhado_atual}
+                  </span>
+                {/if}
 
-              <!-- Badge de subcategorias -->
-              {#if getSubcatCount(cat.id) > 0}
-                <span class="subcat-badge"
-                  style="background: var(--accent-light); color: var(--accent);
-                    {selectedCategoriaId === cat.id && selectedSubcategoriaId === null ? 'background: color-mix(in srgb, var(--bg-app) 15%, transparent); color: inherit;' : ''}">
-                  {getSubcatCount(cat.id)}
-                </span>
-              {/if}
+                <!-- Badge de subcategorias -->
+                {#if getSubcatCount(cat.id) > 0}
+                  <span class="subcat-badge"
+                    style="background: var(--accent-light); color: var(--accent);
+                      {selectedCategoriaId === cat.id && selectedSubcategoriaId === null ? 'background: color-mix(in srgb, var(--bg-app) 15%, transparent); color: inherit;' : ''}">
+                    {getSubcatCount(cat.id)}
+                  </span>
+                {/if}
+              </button>
 
               <!-- Ações (aparecem no hover) -->
               <div class="tree-item-actions">
@@ -1224,8 +1260,8 @@
                   <div
                     class="product-menu-popover tree-action-menu"
                     role="menu"
+                    tabindex="-1"
                     style={`top: ${productMenuPosition.top}px; left: ${productMenuPosition.left}px; transform: ${productMenuPosition.transform};`}
-                    on:click|stopPropagation
                   >
                     <button class="product-menu-item" type="button" role="menuitem" on:click={() => { openTreeMenuId = null; iniciarEdicaoCategoria(cat); }}>
                       <Pencil class="w-4 h-4" aria-hidden="true" /> Editar categoria
@@ -1241,7 +1277,7 @@
 
           <!-- Subcategorias (expandidas) -->
           {#if expandedCats.has(cat.id)}
-            <div class="subcat-list" transition:slide|local={{ duration: 150 }}>
+            <div id={`category-subcategories-${cat.id}`} class="subcat-list" transition:slide|local={{ duration: 150 }}>
               {#each getSubcats(cat.id) as sub (sub.id)}
                 {#if editingSubId === sub.id}
                   <!-- Formulário de edição inline da subcategoria -->
@@ -1252,7 +1288,7 @@
                         bind:value={editSubForm.nome}
                         placeholder="Nome da subcategoria"
                         required
-                        autofocus
+                        use:focusOnMount
                         style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
                       />
                       <div class="flex gap-2">
@@ -1268,13 +1304,16 @@
                     style={selectedSubcategoriaId === sub.id
                       ? 'background: var(--sidebar-item-active-bg); color: var(--sidebar-item-active-text);'
                       : ''}
-                    role="button"
-                    tabindex="0"
-                    on:click={() => selectSubcategoria(sub.id, cat.id)}
-                    on:keydown={(e) => e.key === 'Enter' && selectSubcategoria(sub.id, cat.id)}
                   >
-                    <span class="sub-dot" style="background: {selectedSubcategoriaId === sub.id ? 'currentColor' : 'var(--border-strong)'};"></span>
-                    <span class="flex-1 text-sm truncate">{sub.nome}</span>
+                    <button
+                      type="button"
+                      class="tree-item-select"
+                      aria-pressed={selectedSubcategoriaId === sub.id}
+                      on:click={() => selectSubcategoria(sub.id, cat.id)}
+                    >
+                      <span class="sub-dot" style="background: {selectedSubcategoriaId === sub.id ? 'currentColor' : 'var(--border-strong)'};"></span>
+                      <span class="flex-1 text-sm truncate">{sub.nome}</span>
+                    </button>
 
                     <!-- Ações (hover) -->
                     <div class="tree-item-actions">
@@ -1294,8 +1333,8 @@
                         <div
                           class="product-menu-popover tree-action-menu"
                           role="menu"
+                          tabindex="-1"
                           style={`top: ${productMenuPosition.top}px; left: ${productMenuPosition.left}px; transform: ${productMenuPosition.transform};`}
-                          on:click|stopPropagation
                         >
                           <button class="product-menu-item" type="button" role="menuitem" on:click={() => { openTreeMenuId = null; iniciarEdicaoSubcategoria(sub); }}>
                             <Pencil class="w-4 h-4" aria-hidden="true" /> Editar subcategoria
@@ -1500,18 +1539,6 @@
             <article
               class="mobile-product-card"
               class:mobile-product-card-selected={selectedItems.has(prod.id)}
-              tabindex="0"
-              aria-label={`Editar produto ${prod.nome}`}
-              on:click={(event) => {
-                if (editingProdId === prod.id || event.target?.closest?.('input, label, button, a, select')) return;
-                iniciarEdicaoProduto(prod);
-              }}
-              on:keydown={(event) => {
-                if (editingProdId !== prod.id && event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
-                  event.preventDefault();
-                  iniciarEdicaoProduto(prod);
-                }
-              }}
               style="border-color: var(--border-subtle);"
             >
               {#if editingProdId === prod.id}
@@ -1644,7 +1671,12 @@
                     />
                   </label>
 
-                  <div class="mobile-product-info">
+                  <button
+                    type="button"
+                    class="mobile-product-info mobile-product-edit-trigger"
+                    aria-label={`Editar produto ${prod.nome}`}
+                    on:click={() => iniciarEdicaoProduto(prod)}
+                  >
                     <div class="mobile-product-title-row">
                       <h2>{prod.nome}</h2>
                     </div>
@@ -1654,7 +1686,7 @@
                         <span class="mobile-product-subcategory"> · {subcategoriaProduto(prod)}</span>
                       {/if}
                     </span>
-                  </div>
+                  </button>
 
                   <div class="row-actions product-action-menu">
                     <button
@@ -2117,11 +2149,20 @@
 </div>
 
 {#if showCatModal}
-  <div class="modal-backdrop" on:click|self={() => showCatModal = false} transition:slide={{ duration: 200 }}>
+  <dialog
+    open
+    class="modal-backdrop"
+    aria-modal="true"
+    aria-labelledby="new-category-title"
+    tabindex="-1"
+    on:keydown={(event) => handleCreationModalKeydown(event, 'categoria')}
+    on:click|self={() => fecharModalCriacao('categoria')}
+    transition:slide={{ duration: 200 }}
+  >
     <div class="modal-box" style="background: var(--bg-card); border-color: var(--border-card);">
       <div class="modal-header" style="border-color: var(--border-subtle);">
-        <h2 class="modal-title" style="color: var(--text-main);">Nova Categoria</h2>
-        <button class="modal-close" on:click={() => showCatModal = false} style="color: var(--text-muted);">
+        <h2 id="new-category-title" class="modal-title" style="color: var(--text-main);">Nova Categoria</h2>
+        <button type="button" class="modal-close" aria-label="Fechar nova categoria" on:click={() => fecharModalCriacao('categoria')} style="color: var(--text-muted);">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -2129,19 +2170,21 @@
       </div>
       <form on:submit={criarCategoria} class="modal-body flex flex-col gap-4">
         <div>
-          <label class="form-label" style="color: var(--text-label);">Nome da Categoria</label>
+          <label for="new-category-name" class="form-label" style="color: var(--text-label);">Nome da Categoria</label>
           <input
+            id="new-category-name"
             class="form-input"
             bind:value={newCatForm.nome}
             placeholder="Ex: Bebidas"
             required
-            autofocus
+            use:focusOnMount
             style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
           />
         </div>
         <div>
-          <label class="form-label" style="color: var(--text-label);">Ordem de Exibição</label>
+          <label for="new-category-order" class="form-label" style="color: var(--text-label);">Ordem de Exibição</label>
           <input
+            id="new-category-order"
             class="form-input"
             type="number"
             step="1"
@@ -2159,8 +2202,9 @@
         </label>
         {#if newCatForm.controlar_estoque_compartilhado}
           <div>
-            <label class="form-label" style="color: var(--text-label);">Qtd. Compartilhada</label>
+            <label for="new-category-shared-stock" class="form-label" style="color: var(--text-label);">Qtd. Compartilhada</label>
             <input
+              id="new-category-shared-stock"
               class="form-input"
               type="number"
               min="0"
@@ -2171,7 +2215,7 @@
           </div>
         {/if}
         <div class="modal-footer" style="border-color: var(--border-subtle);">
-          <button type="button" class="btn-ghost-modal" on:click={() => showCatModal = false} style="color: var(--text-muted); border-color: var(--border-subtle);">
+          <button type="button" class="btn-ghost-modal" on:click={() => fecharModalCriacao('categoria')} style="color: var(--text-muted); border-color: var(--border-subtle);">
             Cancelar
           </button>
           <button type="submit" class="btn-primary">
@@ -2180,18 +2224,27 @@
         </div>
       </form>
     </div>
-  </div>
+  </dialog>
 {/if}
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
      MODAL — Nova Subcategoria
      ═══════════════════════════════════════════════════════════════════════ -->
 {#if showSubModal}
-  <div class="modal-backdrop" on:click|self={() => showSubModal = false} transition:slide={{ duration: 200 }}>
+  <dialog
+    open
+    class="modal-backdrop"
+    aria-modal="true"
+    aria-labelledby="new-subcategory-title"
+    tabindex="-1"
+    on:keydown={(event) => handleCreationModalKeydown(event, 'subcategoria')}
+    on:click|self={() => fecharModalCriacao('subcategoria')}
+    transition:slide={{ duration: 200 }}
+  >
     <div class="modal-box" style="background: var(--bg-card); border-color: var(--border-card);">
       <div class="modal-header" style="border-color: var(--border-subtle);">
-        <h2 class="modal-title" style="color: var(--text-main);">Nova Subcategoria</h2>
-        <button class="modal-close" on:click={() => showSubModal = false} style="color: var(--text-muted);">
+        <h2 id="new-subcategory-title" class="modal-title" style="color: var(--text-main);">Nova Subcategoria</h2>
+        <button type="button" class="modal-close" aria-label="Fechar nova subcategoria" on:click={() => fecharModalCriacao('subcategoria')} style="color: var(--text-muted);">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -2199,7 +2252,7 @@
       </div>
       <form on:submit={criarSubcategoria} class="modal-body flex flex-col gap-4">
         <div>
-          <label class="form-label" style="color: var(--text-label);">Categoria Pai</label>
+          <span class="form-label" style="color: var(--text-label);">Categoria Pai</span>
           <Select.Root bind:value={newSubForm.id_categoria}>
             <Select.Trigger class="field-input">
               <span class="select-value-label">{getCategoriaNome(newSubForm.id_categoria) || 'Selecione uma categoria...'}</span>
@@ -2212,19 +2265,21 @@
           </Select.Root>
         </div>
         <div>
-          <label class="form-label" style="color: var(--text-label);">Nome da Subcategoria</label>
+          <label for="new-subcategory-name" class="form-label" style="color: var(--text-label);">Nome da Subcategoria</label>
           <input
+            id="new-subcategory-name"
             class="form-input"
             bind:value={newSubForm.nome}
             placeholder="Ex: Latas"
             required
-            autofocus
+            use:focusOnMount
             style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
           />
         </div>
         <div>
-          <label class="form-label" style="color: var(--text-label);">Ordem de Exibição</label>
+          <label for="new-subcategory-order" class="form-label" style="color: var(--text-label);">Ordem de Exibição</label>
           <input
+            id="new-subcategory-order"
             class="form-input"
             type="number"
             step="1"
@@ -2234,7 +2289,7 @@
           />
         </div>
         <div class="modal-footer" style="border-color: var(--border-subtle);">
-          <button type="button" class="btn-ghost-modal" on:click={() => showSubModal = false} style="color: var(--text-muted); border-color: var(--border-subtle);">
+          <button type="button" class="btn-ghost-modal" on:click={() => fecharModalCriacao('subcategoria')} style="color: var(--text-muted); border-color: var(--border-subtle);">
             Cancelar
           </button>
           <button type="submit" class="btn-primary">
@@ -2243,18 +2298,27 @@
         </div>
       </form>
     </div>
-  </div>
+  </dialog>
 {/if}
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
      MODAL — Novo Produto
      ═══════════════════════════════════════════════════════════════════════ -->
 {#if showProdModal}
-  <div class="modal-backdrop" on:click|self={() => showProdModal = false} transition:slide={{ duration: 200 }}>
+  <dialog
+    open
+    class="modal-backdrop"
+    aria-modal="true"
+    aria-labelledby="new-product-title"
+    tabindex="-1"
+    on:keydown={(event) => handleCreationModalKeydown(event, 'produto')}
+    on:click|self={() => fecharModalCriacao('produto')}
+    transition:slide={{ duration: 200 }}
+  >
     <div class="modal-box modal-box-lg" style="background: var(--bg-card); border-color: var(--border-card);">
       <div class="modal-header" style="border-color: var(--border-subtle);">
-        <h2 class="modal-title" style="color: var(--text-main);">Novo Produto</h2>
-        <button class="modal-close" on:click={() => showProdModal = false} style="color: var(--text-muted);">
+        <h2 id="new-product-title" class="modal-title" style="color: var(--text-main);">Novo Produto</h2>
+        <button type="button" class="modal-close" aria-label="Fechar novo produto" on:click={() => fecharModalCriacao('produto')} style="color: var(--text-muted);">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -2263,22 +2327,24 @@
       <form on:submit={criarProduto} class="modal-body flex flex-col gap-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="form-label" style="color: var(--text-label);">Nome do Produto</label>
+            <label for="new-product-name" class="form-label" style="color: var(--text-label);">Nome do Produto</label>
             <input
+              id="new-product-name"
               class="form-input"
               bind:value={newProdForm.nome}
               placeholder="Ex: Coca-Cola Lata"
               required
-              autofocus
+              use:focusOnMount
               style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
             />
           </div>
           <div>
-            <label class="form-label" style="color: var(--text-label);">{tabelasPrecoAtivo ? `Preço ${nomesTabelas[0]} (R$)` : 'Preço (R$)'}</label>
+            <label for="new-product-price-1" class="form-label" style="color: var(--text-label);">{tabelasPrecoAtivo ? `Preço ${nomesTabelas[0]} (R$)` : 'Preço (R$)'}</label>
             <div class="currency-field">
               <span class="currency-prefix" aria-hidden="true">R$</span>
               <input
                 class="form-input currency-input"
+                id="new-product-price-1"
                 type="number"
                 step="0.01"
                 min="0"
@@ -2290,11 +2356,12 @@
           </div>
           {#if tabelasPrecoAtivo}
             <div>
-              <label class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[1]} (R$)</label>
+              <label for="new-product-price-2" class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[1]} (R$)</label>
               <div class="currency-field">
                 <span class="currency-prefix" aria-hidden="true">R$</span>
                 <input
                   class="form-input currency-input"
+                  id="new-product-price-2"
                   type="number"
                   step="0.01"
                   min="0"
@@ -2305,11 +2372,12 @@
               </div>
             </div>
             <div>
-              <label class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[2]} (R$)</label>
+              <label for="new-product-price-3" class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[2]} (R$)</label>
               <div class="currency-field">
                 <span class="currency-prefix" aria-hidden="true">R$</span>
                 <input
                   class="form-input currency-input"
+                  id="new-product-price-3"
                   type="number"
                   step="0.01"
                   min="0"
@@ -2321,7 +2389,7 @@
             </div>
           {/if}
           <div>
-            <label class="form-label" style="color: var(--text-label);">Categoria</label>
+            <span class="form-label" style="color: var(--text-label);">Categoria</span>
             <Select.Root bind:value={newProdForm.id_categoria}>
               <Select.Trigger class="field-input">
                 <span class="select-value-label">{getCategoriaNome(newProdForm.id_categoria) || 'Selecione...'}</span>
@@ -2334,7 +2402,7 @@
             </Select.Root>
           </div>
           <div>
-            <label class="form-label" style="color: var(--text-label);">Subcategoria</label>
+            <span class="form-label" style="color: var(--text-label);">Subcategoria</span>
             <Select.Root bind:value={newProdForm.id_subcategoria} disabled={!newProdForm.id_categoria}>
               <Select.Trigger class="field-input">
                 <span class="select-value-label">{getSubcategoriaNome(newProdForm.id_subcategoria) || '— Nenhuma —'}</span>
@@ -2382,8 +2450,9 @@
           {/if}
           {#if !newProdCategoriaCompartilhada && newProdForm.controlar_estoque}
             <div class="flex items-center gap-2" transition:slide|local={{ duration: 100 }}>
-              <label class="form-label mb-0" style="color: var(--text-label);">Qtd. Inicial:</label>
+              <label for="new-product-stock" class="form-label mb-0" style="color: var(--text-label);">Qtd. Inicial:</label>
               <input
+                id="new-product-stock"
                 class="form-input w-24"
                 type="number"
                 step="1"
@@ -2396,7 +2465,7 @@
         </div>
 
         <div class="modal-footer" style="border-color: var(--border-subtle);">
-          <button type="button" class="btn-ghost-modal" on:click={() => showProdModal = false} style="color: var(--text-muted); border-color: var(--border-subtle);">
+          <button type="button" class="btn-ghost-modal" on:click={() => fecharModalCriacao('produto')} style="color: var(--text-muted); border-color: var(--border-subtle);">
             Cancelar
           </button>
           <button type="submit" class="btn-primary">
@@ -2405,7 +2474,7 @@
         </div>
       </form>
     </div>
-  </div>
+  </dialog>
 {/if}
 
 <ModalModificadores
@@ -2428,12 +2497,6 @@
 
   .page-title-block {
     min-width: 0;
-  }
-
-  .page-subtitle {
-    margin-top: 0.25rem;
-    color: var(--text-muted);
-    font-size: 0.875rem;
   }
 
   .desktop-page-actions {
@@ -2575,6 +2638,25 @@
     width: 100%;
     text-align: left;
     position: relative;
+  }
+
+  .tree-item-select {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+  }
+
+  .tree-item-select:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
   }
 
   .tree-item:not(.tree-item-active):hover {
@@ -3264,12 +3346,21 @@
   .modal-backdrop {
     position: fixed;
     inset: 0;
+    width: auto;
+    max-width: none;
+    height: auto;
+    margin: 0;
+    border: 0;
     background: color-mix(in srgb, var(--bg-app) 60%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 200;
     padding: 1rem;
+  }
+
+  .modal-backdrop::backdrop {
+    background: transparent;
   }
 
   .modal-box {
@@ -3792,14 +3883,25 @@
       border-radius: 0.75rem;
       background: var(--bg-card);
       padding: 1rem;
-      cursor: pointer;
       transition: border-color var(--transition-fast), background var(--transition-fast);
     }
 
-    .mobile-product-card:focus-visible {
+    .mobile-product-edit-trigger {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .mobile-product-edit-trigger:focus-visible {
       border-color: var(--primary) !important;
       outline: 2px solid var(--primary);
       outline-offset: 2px;
+      border-radius: 0.375rem;
     }
 
     .mobile-product-card-selected {

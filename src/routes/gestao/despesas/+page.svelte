@@ -365,7 +365,7 @@
         <input id="exp-date" type="date" class="input-form w-full" bind:value={newExpense.date} />
       </div>
       <div class="w-full lg:w-44">
-        <label class="text-xs mb-1 block" style="color: var(--text-muted);">Categoria/Fornecedor</label>
+        <span class="text-xs mb-1 block" style="color: var(--text-muted);">Categoria/Fornecedor</span>
         <Select.Root bind:value={newExpense.category}>
           <Select.Trigger class="input-form w-full !h-10">
             {newExpense.category || 'Selecione...'}

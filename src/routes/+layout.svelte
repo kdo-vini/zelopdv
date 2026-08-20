@@ -91,7 +91,6 @@
     void trackFeatureUsage(window.location.pathname);
   });
 
-  export let params;
 
   let session = null;
   let showMobileMenu = false;

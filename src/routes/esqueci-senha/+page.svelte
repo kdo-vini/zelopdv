@@ -1,5 +1,4 @@
 <script>
-  export let params;
   import AuthLayout from '$lib/components/AuthLayout.svelte';
   import EmailSentHelper from '$lib/components/EmailSentHelper.svelte';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';

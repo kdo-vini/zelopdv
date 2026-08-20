@@ -232,11 +232,6 @@
   .link-panel-desc { font-size: 0.85rem; color: var(--text-label); margin: 0.3rem 0 0; line-height: 1.5; }
 
   .page-header { margin-bottom: 1.75rem; }
-  .title {
-    font-size: 1.85rem; font-weight: 800; color: var(--text-main);
-    margin: 0; letter-spacing: -0.02em;
-    line-height: 1.15;
-  }
   .subtitle {
     font-size: 0.92rem; color: var(--text-label);
     line-height: 1.5;

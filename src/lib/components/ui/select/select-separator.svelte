@@ -1,5 +1,4 @@
 <script>
-	import { Separator } from "$lib/components/ui/separator/index.js";
 	import { cn } from "$lib/utils.js";
 
 	let {
@@ -9,9 +8,10 @@
 	} = $props();
 </script>
 
-<Separator
-	bind:ref
+<div
+	bind:this={ref}
 	data-slot="select-separator"
 	class={cn("bg-border -mx-1 my-1 h-px pointer-events-none", className)}
+	role="separator"
 	{...restProps}
-/>
+></div>

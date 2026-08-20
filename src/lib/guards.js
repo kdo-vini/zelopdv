@@ -48,6 +48,46 @@ async function resolveSubscriptionUserId(userId) {
   }
 }
 
+async function readSubscription(userId, columns, label) {
+  if (!userId) return null;
+  try {
+    const subUserId = await resolveSubscriptionUserId(userId);
+    const { data } = await supabase
+      .from('subscriptions')
+      .select(columns)
+      .eq('user_id', subUserId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data;
+  } catch (err) {
+    console.warn(`[Guards] ${label} error:`, err?.message);
+    return null;
+  }
+}
+
+async function hasSubscriptionAddon(userId, flag, label) {
+  const data = await readSubscription(userId, `${flag}, plan_tier`, label);
+  if (!data) return false;
+  return ['pdv', 'bundle'].includes(data.plan_tier) && !!data[flag];
+}
+
+async function hasZeloMenuEntitlement(userId, label) {
+  const data = await readSubscription(userId, 'has_zelo_menu, plan_tier', label);
+  if (!data) return false;
+  if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
+  return data.plan_tier === 'pdv' && !!data.has_zelo_menu;
+}
+
+async function hasPlanAccess(userId, allowedPlans, label) {
+  const data = await readSubscription(
+    userId,
+    'plan_tier, status, current_period_end, manually_extended_until',
+    label
+  );
+  return isSubscriptionActiveStrict(data) && allowedPlans.includes(data?.plan_tier);
+}
+
 /**
  * Ensure user is logged in and has an active subscription; otherwise redirect.
  * Also optionally checks profile completeness.
@@ -230,23 +270,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
  * @returns {Promise<boolean>}
  */
 export async function hasMesasAddon(userId) {
-  if (!userId) return false;
-  try {
-    const subUserId = await resolveSubscriptionUserId(userId);
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('has_mesas_addon, plan_tier')
-      .eq('user_id', subUserId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!data) return false;
-    const planAllowsMesas = data.plan_tier === 'pdv' || data.plan_tier === 'bundle';
-    return planAllowsMesas && !!data.has_mesas_addon;
-  } catch (err) {
-    console.warn('[Guards] hasMesasAddon error:', err?.message);
-    return false;
-  }
+  return hasSubscriptionAddon(userId, 'has_mesas_addon', 'hasMesasAddon');
 }
 
 /**
@@ -257,23 +281,7 @@ export async function hasMesasAddon(userId) {
  * @returns {Promise<boolean>}
  */
 export async function hasAcessosAddon(userId) {
-  if (!userId) return false;
-  try {
-    const subUserId = await resolveSubscriptionUserId(userId);
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('has_acessos_addon, plan_tier')
-      .eq('user_id', subUserId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!data) return false;
-    const planAllowsAcessos = data.plan_tier === 'pdv' || data.plan_tier === 'bundle';
-    return planAllowsAcessos && !!data.has_acessos_addon;
-  } catch (err) {
-    console.warn('[Guards] hasAcessosAddon error:', err?.message);
-    return false;
-  }
+  return hasSubscriptionAddon(userId, 'has_acessos_addon', 'hasAcessosAddon');
 }
 
 /**
@@ -286,23 +294,7 @@ export async function hasAcessosAddon(userId) {
  * @returns {Promise<boolean>}
  */
 export async function hasZeloMenuAccess(userId) {
-  if (!userId) return false;
-  try {
-    const subUserId = await resolveSubscriptionUserId(userId);
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('has_zelo_menu, plan_tier')
-      .eq('user_id', subUserId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!data) return false;
-    if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
-    return data.plan_tier === 'pdv' && !!data.has_zelo_menu;
-  } catch (err) {
-    console.warn('[Guards] hasZeloMenuAccess error:', err?.message);
-    return false;
-  }
+  return hasZeloMenuEntitlement(userId, 'hasZeloMenuAccess');
 }
 
 /**
@@ -316,23 +308,7 @@ export async function hasZeloMenuAccess(userId) {
  * @returns {Promise<boolean>}
  */
 export async function hasOrderingReviewAccess(userId) {
-  if (!userId) return false;
-  try {
-    const subUserId = await resolveSubscriptionUserId(userId);
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('has_zelo_menu, plan_tier')
-      .eq('user_id', subUserId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!data) return false;
-    if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
-    return data.plan_tier === 'pdv' && !!data.has_zelo_menu;
-  } catch (err) {
-    console.warn('[Guards] hasOrderingReviewAccess error:', err?.message);
-    return false;
-  }
+  return hasZeloMenuEntitlement(userId, 'hasOrderingReviewAccess');
 }
 
 /**
@@ -352,23 +328,7 @@ export async function hasOrderingReviewAccess(userId) {
  * @returns {Promise<boolean>}
  */
 export async function hasKitchenQueueAccess(userId) {
-  if (!userId) return false;
-  try {
-    const subUserId = await resolveSubscriptionUserId(userId);
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('has_zelo_menu, plan_tier')
-      .eq('user_id', subUserId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!data) return false;
-    if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
-    return data.plan_tier === 'pdv' && !!data.has_zelo_menu;
-  } catch (err) {
-    console.warn('[Guards] hasKitchenQueueAccess error:', err?.message);
-    return false;
-  }
+  return hasZeloMenuEntitlement(userId, 'hasKitchenQueueAccess');
 }
 
 /**
@@ -379,22 +339,7 @@ export async function hasKitchenQueueAccess(userId) {
  * @returns {Promise<boolean>}
  */
 export async function hasZeloChatAccess(userId) {
-  if (!userId) return false;
-  try {
-    const subUserId = await resolveSubscriptionUserId(userId);
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('plan_tier, status, current_period_end, manually_extended_until')
-      .eq('user_id', subUserId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!isSubscriptionActiveStrict(data)) return false;
-    return data?.plan_tier === 'chat' || data?.plan_tier === 'bundle';
-  } catch (err) {
-    console.warn('[Guards] hasZeloChatAccess error:', err?.message);
-    return false;
-  }
+  return hasPlanAccess(userId, ['chat', 'bundle'], 'hasZeloChatAccess');
 }
 
 /**
@@ -404,20 +349,5 @@ export async function hasZeloChatAccess(userId) {
  * @returns {Promise<boolean>}
  */
 export async function hasZeloPdvAccess(userId) {
-  if (!userId) return false;
-  try {
-    const subUserId = await resolveSubscriptionUserId(userId);
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('plan_tier, status, current_period_end, manually_extended_until')
-      .eq('user_id', subUserId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!isSubscriptionActiveStrict(data)) return false;
-    return data?.plan_tier === 'pdv' || data?.plan_tier === 'bundle';
-  } catch (err) {
-    console.warn('[Guards] hasZeloPdvAccess error:', err?.message);
-    return false;
-  }
+  return hasPlanAccess(userId, ['pdv', 'bundle'], 'hasZeloPdvAccess');
 }

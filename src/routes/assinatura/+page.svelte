@@ -1510,13 +1510,6 @@
     margin: 0;
   }
 
-  .title {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--text-main);
-    margin: 0;
-  }
-
   .subtitle {
     font-size: 0.95rem;
     color: var(--text-label);

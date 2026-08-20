@@ -1024,8 +1024,7 @@
      Strong text inside body paragraphs
   ----------------------------------------------- */
   .section-body strong,
-  .numbered-list strong,
-  .bullet-list strong {
+  .numbered-list strong {
     color: var(--text-main);
     font-weight: 600;
   }

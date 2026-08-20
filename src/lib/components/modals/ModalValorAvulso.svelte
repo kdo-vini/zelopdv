@@ -3,6 +3,7 @@
   Descrição: Modal para adicionar item avulso com valor personalizado
 -->
 <script>
+  import { tick } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   
   const dispatch = createEventDispatcher();
@@ -12,6 +13,12 @@
   
   let nome = 'Item Avulso';
   let valor = 0;
+
+  function focusOnMount(node) {
+    void tick().then(() => {
+      if (node.isConnected) node.focus();
+    });
+  }
   
   function handleSubmit() {
     if (valor <= 0) return;
@@ -40,15 +47,16 @@
 </script>
 
 {#if open}
-  <div
+  <dialog
+    open
     class="modal-backdrop"
-    role="button"
     tabindex="0"
-    aria-label="Fechar modal de valor avulso"
+    aria-modal="true"
+    aria-labelledby="titulo-valor-avulso"
     on:keydown={handleKeydown}
     on:click|self={handleClose}
   >
-    <div class="modal-content text-gray-900 dark:text-gray-100" role="dialog" aria-modal="true" aria-labelledby="titulo-valor-avulso">
+    <div class="modal-content text-gray-900 dark:text-gray-100">
       <h3 id="titulo-valor-avulso" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">
         Item Avulso / Valor Personalizado
       </h3>
@@ -67,7 +75,7 @@
             bind:value={valor}
             class="mt-1 input-form text-2xl h-12"
             required
-            autofocus
+            use:focusOnMount
           />
         </div>
         <div class="mt-6 flex justify-end">
@@ -76,5 +84,20 @@
         </div>
       </form>
     </div>
-  </div>
+  </dialog>
 {/if}
+
+<style>
+  .modal-backdrop {
+    width: auto;
+    max-width: none;
+    height: auto;
+    margin: 0;
+    border: 0;
+    padding: 0;
+  }
+
+  .modal-backdrop::backdrop {
+    background: transparent;
+  }
+</style>

@@ -115,21 +115,21 @@
           <div class="tech-body">
             <div class="tech-fields">
               <div class="field">
-                <label>Error Type</label>
+                <span class="field-label">Error Type</span>
                 <span class="field-error">{errorType} ({status})</span>
               </div>
               <div class="field-row">
                 <div class="field">
-                  <label>Timestamp</label>
+                  <span class="field-label">Timestamp</span>
                   <span>{timestamp}</span>
                 </div>
                 <div class="field">
-                  <label>Request ID</label>
+                  <span class="field-label">Request ID</span>
                   <span class="mono">{requestId}</span>
                 </div>
               </div>
               <div class="field">
-                <label>Mensagem</label>
+                <span class="field-label">Mensagem</span>
                 <div class="code-block">
                   <code>{message}</code>
                 </div>
@@ -371,7 +371,7 @@
   .tech-fields { display: flex; flex-direction: column; gap: 1rem; }
 
   .field { display: flex; flex-direction: column; }
-  .field label {
+  .field-label {
     font-size: 0.625rem; text-transform: uppercase;
     letter-spacing: 0.15em; color: rgba(148, 163, 184, 0.6);
     font-weight: 700; margin-bottom: 0.25rem;

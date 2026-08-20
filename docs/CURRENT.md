@@ -12,6 +12,15 @@
   verificadas responderam HTTP `200`. O smoke autenticado permanece pendente
   por falta de conta dedicada.
 
+- Simplificação estrutural pós-auditoria (2026-08-20): `ConfirmDialog` agora
+  usa `<dialog>` nativo com foco inicial, Escape e retorno ao gatilho; guards de
+  assinatura foram consolidados sem alterar seus contratos públicos; wrappers
+  `alert-dialog`/`separator`, o rail sem consumidores e helpers de impressão
+  sem consumidores foram removidos. O Iconify do Pix foi preservado conforme
+  decisão do produto. `npm run check`: 0 erros/0 warnings. `npm test`: 113
+  arquivos / 709 testes passando. `npm run build`: bundles e precache PWA
+  concluídos; adapter Vercel segue falhando apenas no symlink Windows `EPERM`.
+
 - PIN administrativo opcional (2026-08-20): `empresa_perfil.pin_enabled` agora
   representa explicitamente se a proteção está ativa. O titular pode ativar o
   PIN com um novo valor ou desativá-lo mediante o PIN atual; “Continuar sem
@@ -21,6 +30,17 @@
   `20260820154751_admin_pin_optional.sql` garante a coluna em ambientes que
   ainda não a possuem. `.env.local` recebeu a chave service-role apenas para o
   dev server e permanece ignorado pelo Git.
+
+- Refinamento cirúrgico de interface e acessibilidade (2026-08-20): Produtos
+  não repete a contagem no cabeçalho; a árvore de categorias separa foco de
+  seleção, expansão e menu; o Zelinho Rail global foi removido e o assistant
+  retorna foco ao gatilho contextual. Overlays principais usam dialogs
+  acessíveis, labels/controles foram associados e `npm run check` termina com
+  0 erros e 0 warnings. A paleta/rebranding permanece fora desta rodada.
+  A suíte completa atual passa com 113 arquivos / 709 testes. `npm run build`:
+  compilação SSR/client e precache PWA
+  concluídos; o adapter Vercel falha apenas no symlink local do Windows
+  (`EPERM`).
 
 - Dev server — falso prompt de configuração do PIN (2026-08-20): o layout global
   tratava falha, ausência de resposta ou payload incompleto de

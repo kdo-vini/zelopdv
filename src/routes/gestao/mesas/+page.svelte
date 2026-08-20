@@ -429,11 +429,6 @@
     margin-bottom: 1.5rem;
   }
   .header-text { flex: 1; min-width: 240px; }
-  .title {
-    font-size: 1.85rem; font-weight: 800; color: var(--text-main);
-    margin: 0; letter-spacing: -0.02em;
-    line-height: 1.15;
-  }
   .subtitle {
     font-size: 0.92rem; color: var(--text-label);
     line-height: 1.5;

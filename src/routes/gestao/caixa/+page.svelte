@@ -1,6 +1,5 @@
 <script>
   import { onMount } from 'svelte';
-  export let params;
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription } from '$lib/guards';
   import { addToast } from '$lib/stores/ui';

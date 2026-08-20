@@ -4,7 +4,7 @@
   plataformas dinâmicas (iFood, Rappi, etc.) e layout em 3 zonas visuais.
 -->
 <script>
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher, onMount, tick } from 'svelte';
   import { Check, ChevronLeft, Scissors, X } from 'lucide-svelte';
   import { resolveAppIcon } from '$lib/icons/appIcons';
   import { supabase } from '$lib/supabaseClient';
@@ -58,6 +58,12 @@
 
   // Valor real cobrado na plataforma (digitado pelo usuário)
   let valorPlataforma = 0;
+
+  function focusOnMount(node) {
+    void tick().then(() => {
+      if (node.isConnected) node.focus();
+    });
+  }
   
   // Derivados - Desconto
   $: valorDesconto = (() => {
@@ -372,16 +378,16 @@
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <div
+  <dialog
+    open
     class="modal-backdrop"
-    role="button"
-    tabindex="0"
-    aria-label="Fechar modal de pagamento"
+    aria-modal="true"
+    aria-labelledby="titulo-pagamento"
+    tabindex="-1"
     on:keydown={handleKeydown}
     on:click|self={handleClose}
   >
-    <div class="modal-content payment-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-pagamento">
+    <div class="modal-content payment-modal">
 
       <!-- ═══════════ ZONA 1: RESUMO ═══════════ -->
       <div class="zone zone-summary">
@@ -409,7 +415,7 @@
         {/if}
 
         <!-- Desconto colapsável -->
-        <button type="button" class="discount-toggle" on:click={() => descontoAtivo = !descontoAtivo}>
+        <button type="button" class="discount-toggle" use:focusOnMount on:click={() => descontoAtivo = !descontoAtivo}>
           <span class="discount-toggle-icon">{descontoAtivo ? '▾' : '▸'}</span>
           <span>Aplicar desconto</span>
         </button>
@@ -657,10 +663,23 @@
       </div>
 
     </div>
-  </div>
+  </dialog>
 {/if}
 
 <style>
+  .modal-backdrop {
+    width: auto;
+    max-width: none;
+    height: auto;
+    margin: 0;
+    border: 0;
+    padding: 0;
+  }
+
+  .modal-backdrop::backdrop {
+    background: transparent;
+  }
+
   .payment-modal {
     max-width: 460px;
     width: 100%;

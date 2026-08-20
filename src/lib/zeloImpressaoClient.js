@@ -16,21 +16,6 @@ export const ZELO_IMPRESSAO_PRINTER_UNAVAILABLE_MESSAGE =
 export const ZELO_IMPRESSAO_AUTO_CONNECT_FALLBACK_MESSAGE =
   'A conexão automática não foi concluída. Se o aplicativo pedir, digite o código exibido no Zelo Impressão.';
 
-function normalizeReleaseChannel(channel) {
-  const value = String(channel || 'latest').trim();
-  return value || 'latest';
-}
-
-export function getZeloImpressaoInstallerUrl(channel = 'latest') {
-  const normalizedChannel = normalizeReleaseChannel(channel);
-  if (normalizedChannel === 'latest') return ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL;
-  return `${ZELO_IMPRESSAO_DOWNLOADS_BASE_URL}/${encodeURIComponent(normalizedChannel)}/${ZELO_IMPRESSAO_INSTALLER_FILENAME}`;
-}
-
-export function getZeloImpressaoDownloadPageUrl() {
-  return ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL;
-}
-
 function getStoredToken() {
   try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
 }

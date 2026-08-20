@@ -120,6 +120,7 @@
         <!-- Mobile Menu Toggle -->
         <button
           class="md:hidden relative z-50 flex flex-col justify-center items-center w-10 h-10 rounded-full bg-white/5 border border-white/10 text-white focus:outline-hidden backdrop-blur-md"
+          aria-label={showMobileMenu ? 'Fechar menu' : 'Abrir menu'}
           on:click={() => showMobileMenu = !showMobileMenu}
         >
           <span class="bg-white block transition-all duration-300 ease-out h-[2px] w-5 rounded-xs {showMobileMenu ? 'rotate-45 translate-y-[6px]' : '-translate-y-1'}"></span>
@@ -584,9 +585,6 @@
   }
   .animate-pulse-slow {
     animation: pulse-slow 6s ease-in-out infinite;
-  }
-  .animate-shine {
-    animation: shine 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
 
   /* Utility Delays */

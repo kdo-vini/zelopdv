@@ -25,7 +25,6 @@
     ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL,
     ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL,
   } from '$lib/zeloImpressaoClient.js';
-  export let params;
   const zeloImpressaoDownloadUrl = ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL;
   const zeloImpressaoDownloadPageUrl = ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL;
 
@@ -998,7 +997,7 @@
                 class="w-full rounded-md px-3 py-2 text-sm resize-none"
                 style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle); min-height: 72px;"
                 bind:value={rodape_recibo} on:input={markDirty}
-              />
+              ></textarea>
             </label>
           </section>
 
@@ -1154,6 +1153,7 @@
                     type="button"
                     role="switch"
                     aria-checked={plat.ativo}
+                    aria-label={`Ativar plataforma ${plat.nome}`}
                     on:click={() => { plataformas_pagamento[i].ativo = !plataformas_pagamento[i].ativo; plataformas_pagamento = plataformas_pagamento; markDirty(); }}
                     class="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
                     style="background: {plat.ativo ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {plat.ativo ? 'var(--primary)' : 'var(--border-subtle)'};"
@@ -1183,6 +1183,7 @@
                 type="button"
                 role="switch"
                 aria-checked={tabelasPrecoAtivo}
+                aria-label="Ativar tabelas de preço"
                 on:click={() => tabelasPrecoAtivo = !tabelasPrecoAtivo}
                 class="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
                 style="background: {tabelasPrecoAtivo ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {tabelasPrecoAtivo ? 'var(--primary)' : 'var(--border-subtle)'};"
@@ -1237,6 +1238,7 @@
                 type="button"
                 role="switch"
                 aria-checked={notifEstoqueBaixo}
+                aria-label="Ativar alerta de estoque baixo"
                 on:click={() => (notifEstoqueBaixo = !notifEstoqueBaixo)}
                 class="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
                 style="background: {notifEstoqueBaixo ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {notifEstoqueBaixo ? 'var(--primary)' : 'var(--border-subtle)'};"
@@ -1257,6 +1259,7 @@
                 type="button"
                 role="switch"
                 aria-checked={notifFechamentoCaixa}
+                aria-label="Ativar lembrete de fechamento de caixa"
                 on:click={() => (notifFechamentoCaixa = !notifFechamentoCaixa)}
                 class="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
                 style="background: {notifFechamentoCaixa ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {notifFechamentoCaixa ? 'var(--primary)' : 'var(--border-subtle)'};"

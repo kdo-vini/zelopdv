@@ -1,6 +1,5 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
-  export let params;
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import AuthLayout from '$lib/components/AuthLayout.svelte';
   import GoogleAuthButton from '$lib/components/GoogleAuthButton.svelte';

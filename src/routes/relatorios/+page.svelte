@@ -1097,8 +1097,7 @@
 					<svg class="w-3 h-3 transition-transform" class:rotate-180={showExportDropdown} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
 				</button>
 				{#if showExportDropdown}
-					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					<div class="fixed inset-0 z-40" on:click={() => showExportDropdown = false}></div>
+					<button type="button" class="export-dropdown-backdrop fixed inset-0 z-40" aria-label="Fechar opções de exportação" on:click={() => showExportDropdown = false}></button>
 					<div class="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-xl border py-1 min-w-[200px] animate-fade-in" style="background: var(--bg-card); border-color: var(--border-subtle);">
 						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarPDF} disabled={exporting}>
 							<FileText class="size-4 text-slate-300" aria-hidden="true" />
@@ -1143,8 +1142,7 @@
 						<svg class="w-3 h-3 transition-transform" class:rotate-180={showExportDropdown} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
 					</button>
 					{#if showExportDropdown}
-						<!-- svelte-ignore a11y-click-events-have-key-events -->
-						<div class="fixed inset-0 z-40" on:click={() => showExportDropdown = false}></div>
+						<button type="button" class="export-dropdown-backdrop fixed inset-0 z-40" aria-label="Fechar opções de exportação" on:click={() => showExportDropdown = false}></button>
 						<div class="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-xl border py-1 min-w-[200px] animate-fade-in" style="background: var(--bg-card); border-color: var(--border-subtle);">
 							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarPDF} disabled={exporting}>
 								<FileText class="size-4 text-slate-300" aria-hidden="true" />
@@ -1999,6 +1997,12 @@
 </AdminLock>
 
 <style>
+  .export-dropdown-backdrop {
+    border: 0;
+    padding: 0;
+    background: transparent;
+  }
+
   /* ── Card vocabulary ─────────────────────────────────────── */
   .card-panel {
     background: var(--bg-panel);

@@ -710,8 +710,9 @@
         <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Personalização</p>
 
         <div>
-          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">Título</label>
+          <label for="card-title" class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">Título</label>
           <input
+            id="card-title"
             type="text"
             bind:value={cardTitle}
             placeholder="Ex: Cardápio da Semana"
@@ -721,11 +722,12 @@
         </div>
 
         <div>
-          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
+          <label for="card-subtitle" class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
             Subtítulo
             <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
           </label>
           <input
+            id="card-subtitle"
             type="text"
             bind:value={cardSubtitle}
             placeholder="Ex: Sábado, 19 de Abril"
@@ -735,11 +737,12 @@
         </div>
 
         <div>
-          <label class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
+          <label for="card-footer" class="block text-xs font-medium mb-1.5" style="color: var(--text-label);">
             Rodapé livre
             <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
           </label>
           <input
+            id="card-footer"
             type="text"
             bind:value={cardFooter}
             placeholder="Ex: Promoções válidas até domingo"
@@ -922,10 +925,10 @@
 
         <div class="pt-1" style="border-top: 1px solid var(--border-subtle);">
           <!-- Instagram (manual) -->
-          <label class="block text-xs font-medium mb-1.5 mt-2" style="color: var(--text-label);">Instagram
+          <label for="card-instagram" class="block text-xs font-medium mb-1.5 mt-2" style="color: var(--text-label);">Instagram
             <span class="font-normal ml-1" style="color: var(--text-muted);">opcional</span>
           </label>
-          <input type="text" bind:value={cardInstagram} placeholder="@seulanche"
+          <input id="card-instagram" type="text" bind:value={cardInstagram} placeholder="@seulanche"
             class="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden mb-2"
             style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" />
 

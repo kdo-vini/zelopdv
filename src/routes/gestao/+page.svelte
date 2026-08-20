@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { waitAuthReady } from '$lib/authStore';
   import BarChart from '$lib/components/charts/BarChart.svelte'; // [NEW]
@@ -8,12 +8,12 @@
   import { addToast } from '$lib/stores/ui';
   import { ArrowUpRight } from 'lucide-svelte';
 
-  export let params;
 
   let loading = true;
   let errorMsg = '';
   let vendasItens = [];
   let vendaParaDeletarId = null;
+  let vendaDeleteReturnFocus = null;
   // [NEW] Added 'vendasPorHora' to dash state
   let dash = {
     vendas:{ totalHoje:0, countHoje:0, ticketMedioHoje:null, ticketMedioOntem:null, ticketMedioVarPct:null },
@@ -181,13 +181,30 @@
     ? `Caixa aberto desde ${fmtDataHora(dash.caixa.desde)} · ${dash.caixa.horasAberto}h ativo`
     : '';
 
-  function solicitarDelecaoVenda(id) { vendaParaDeletarId = id; }
-  function cancelarDelecaoVenda() { vendaParaDeletarId = null; }
+  function solicitarDelecaoVenda(id) {
+    if (typeof document !== 'undefined') {
+      const activeElement = document.activeElement;
+      vendaDeleteReturnFocus = activeElement instanceof HTMLElement ? activeElement : null;
+    }
+    vendaParaDeletarId = id;
+  }
+
+  function cancelarDelecaoVenda() {
+    vendaParaDeletarId = null;
+    void tick().then(() => {
+      if (vendaDeleteReturnFocus?.isConnected) vendaDeleteReturnFocus.focus();
+      vendaDeleteReturnFocus = null;
+    });
+  }
+
+  function handleVendaDeleteKeydown(event) {
+    if (event.key === 'Escape') cancelarDelecaoVenda();
+  }
 
   async function confirmarDelecaoVenda() {
     if (!vendaParaDeletarId) return;
     const id = vendaParaDeletarId;
-    vendaParaDeletarId = null;
+    cancelarDelecaoVenda();
     // Estorna fiado antes da exclusão para manter o fichário consistente.
     try {
       await revertFiadoDebtForVenda(supabase, id);
@@ -342,16 +359,24 @@
 
     <!-- Modal: Confirmar Exclusão de Venda -->
     {#if vendaParaDeletarId}
-      <div class="modal-backdrop" on:click={cancelarDelecaoVenda}>
-        <div class="modal-box" on:click|stopPropagation>
-          <h3 class="modal-title">Excluir venda?</h3>
+      <dialog
+        open
+        class="modal-backdrop"
+        aria-modal="true"
+        aria-labelledby="delete-sale-title"
+        tabindex="-1"
+        on:keydown={handleVendaDeleteKeydown}
+        on:click|self={cancelarDelecaoVenda}
+      >
+        <div class="modal-box">
+          <h3 id="delete-sale-title" class="modal-title">Excluir venda?</h3>
           <p class="modal-text">Esta ação remove a venda do banco de dados e dos relatórios permanentemente. Use apenas para remover vendas de teste.</p>
           <div class="modal-actions">
             <button class="btn ghost" on:click={cancelarDelecaoVenda}>Cancelar</button>
             <button class="btn-danger" on:click={confirmarDelecaoVenda}>Sim, excluir</button>
           </div>
         </div>
-      </div>
+      </dialog>
     {/if}
 
     <!-- Quick Actions (Bottom) -->
@@ -393,7 +418,8 @@
   .btn-icon:hover{background:var(--border-subtle)}
   .btn-icon.danger:hover{background:rgba(239,68,68,0.15);color:#ef4444}
 
-  .modal-backdrop{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:1000}
+  .modal-backdrop{position:fixed;top:0;left:0;width:100%;height:100%;margin:0;border:0;padding:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:1000}
+  .modal-backdrop::backdrop{background:transparent}
   .modal-box{background:var(--bg-card);border:1px solid var(--border-card);border-radius:12px;padding:24px;max-width:380px;width:90%;box-shadow:var(--shadow-modal)}
   .modal-title{margin:0 0 10px;font-size:17px;font-weight:700;color:var(--text-main)}
   .modal-text{margin:0 0 20px;font-size:13px;color:var(--text-label);line-height:1.5}

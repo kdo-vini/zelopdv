@@ -148,4 +148,3 @@ export function resolveAppIcon(name, fallback = Sparkles) {
   return iconMap[name] || fallback;
 }
 
-export { iconMap };

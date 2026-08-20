@@ -1,6 +1,5 @@
 <script>
   import { onMount } from 'svelte';
-  export let params;
   import { supabase } from '$lib/supabaseClient';
   import { confirmAction } from '$lib/stores/ui';
   import { maskCNPJ } from '$lib/masks';

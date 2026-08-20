@@ -1,6 +1,5 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
-  export let params;
   import { onMount } from 'svelte';
   import { addToast } from '$lib/stores/ui';
   import { getFriendlyErrorMessage } from '$lib/errorUtils';

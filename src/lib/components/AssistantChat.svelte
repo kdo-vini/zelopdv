@@ -4,7 +4,6 @@
   import { supabase } from '$lib/supabaseClient';
   import { isOpen, messages as assistantMessages, contextType, signalContext, screenContext, closeAssistant, clearSignalContext, clearScreenContext, screenContextMatchesLocation } from '$lib/stores/assistant';
   import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
-  import ZelinhoRail from '$lib/components/zelinho/ZelinhoRail.svelte';
   import { BarChart3, PackageSearch, Sparkles, Trash2, X, SendHorizontal } from 'lucide-svelte';
   import { getSignalPresenter } from '$lib/gerente/signalPresenter.js';
 
@@ -82,6 +81,7 @@
   let panelElement;
   let isModalViewport = false;
   let wasOpen = false;
+  let returnFocusElement = null;
 
   onMount(() => {
     const mediaQuery = window.matchMedia('(max-width: 1279px)');
@@ -92,6 +92,10 @@
   });
 
   $: if ($isOpen && !wasOpen) {
+    if (typeof document !== 'undefined') {
+      const activeElement = document.activeElement;
+      returnFocusElement = activeElement instanceof HTMLElement ? activeElement : null;
+    }
     wasOpen = true;
     void trackZelinhoUsage();
     void tick().then(() => inputElement?.focus());
@@ -102,7 +106,8 @@
   async function closePanel() {
     closeAssistant();
     await tick();
-    document.querySelector('[data-zelinho-rail]')?.focus();
+    if (returnFocusElement?.isConnected) returnFocusElement.focus();
+    returnFocusElement = null;
   }
 
   function handleEscape(event) {
@@ -130,8 +135,6 @@
 </script>
 
 <svelte:window on:keydown={handleEscape} />
-
-<ZelinhoRail />
 
 {#if $isOpen}
   <div

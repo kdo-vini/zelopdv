@@ -29,14 +29,6 @@
     margin-bottom: 0.5rem;
   }
 
-  .tool-page-title {
-    margin-top: 0.6rem;
-    color: var(--text-main);
-    font-size: clamp(1.5rem, 3vw, 2rem);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-  }
-
   .tool-page-subtitle {
     margin-top: 0.3rem;
     color: var(--text-muted);

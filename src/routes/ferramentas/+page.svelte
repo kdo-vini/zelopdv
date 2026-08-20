@@ -119,13 +119,6 @@
     margin-bottom: 1.75rem;
   }
 
-  .hub-title {
-    color: var(--text-main);
-    font-size: clamp(1.6rem, 3vw, 2.1rem);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-  }
-
   .hub-subtitle {
     margin-top: 0.4rem;
     color: var(--text-muted);

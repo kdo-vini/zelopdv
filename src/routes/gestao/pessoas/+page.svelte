@@ -6,7 +6,6 @@
   import { getAccessContext } from '$lib/accessControl';
   import * as Select from '$lib/components/ui/select/index.js';
   import { getFiadoState } from '$lib/finance/fiado';
-  export let params;
 
   let pessoas = [];
   let loading = true;
@@ -227,44 +226,106 @@
 </div>
 
 <style>
-  @reference "tailwindcss";
-
   .field-label {
-    @apply block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-1.5;
+    display: block;
+    margin-bottom: .375rem;
+    color: var(--text-muted);
+    font-size: .625rem;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
   }
   .field-input {
-    @apply block w-full px-3 py-2 rounded-lg border bg-slate-900/60 text-slate-100 text-sm
-           border-slate-600/60 placeholder-slate-600
-           focus:outline-hidden focus:ring-1 focus:ring-sky-500 focus:border-sky-500
-           transition-colors;
+    display: block;
+    width: 100%;
+    padding: .5rem .75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: .5rem;
+    background: color-mix(in srgb, var(--bg-app) 60%, transparent);
+    color: var(--text-main);
+    font-size: .875rem;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .field-input::placeholder {
+    color: var(--text-muted);
+  }
+  .field-input:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 1px var(--primary);
   }
   .action-primary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
-           bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white
-           transition-colors;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding: .5rem 1rem;
+    border: 0;
+    border-radius: .5rem;
+    background: var(--primary);
+    color: var(--primary-text);
+    font-size: .875rem;
+    font-weight: 600;
+    transition: background-color var(--transition-fast);
+  }
+  .action-primary:hover {
+    background: var(--primary-hover);
   }
   .action-ghost {
-    @apply inline-flex items-center justify-center p-2 rounded-lg text-sm
-           bg-slate-700/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200
-           border border-slate-600/50 transition-colors;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .5rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: .5rem;
+    background: var(--bg-panel);
+    color: var(--text-muted);
+    font-size: .875rem;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+  }
+  .action-ghost:hover {
+    background: var(--sidebar-item-hover-bg);
+    color: var(--text-main);
   }
 
   .col-header {
-    @apply text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500;
+    color: var(--text-muted);
+    font-size: .625rem;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
   }
 
   .type-badge {
-    @apply inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full;
+    display: inline-block;
+    padding: .125rem .5rem;
+    border-radius: 9999px;
+    font-size: .625rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
   }
-  .type-cli  { @apply bg-sky-500/10 text-sky-400 border border-sky-500/20; }
+  .type-cli  { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent); }
   .type-func { background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle); }
 
   .icon-btn {
-    @apply p-1.5 rounded-md text-slate-500 hover:text-slate-200 hover:bg-slate-600/60
-           transition-colors;
+    padding: .375rem;
+    border: 0;
+    border-radius: .375rem;
+    background: transparent;
+    color: var(--text-muted);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+  }
+  .icon-btn:hover {
+    background: var(--sidebar-item-hover-bg);
+    color: var(--text-main);
   }
   .icon-btn-danger {
-    @apply hover:text-red-400 hover:bg-red-500/10;
+    color: var(--text-muted);
+  }
+  .icon-btn-danger:hover {
+    background: var(--status-error-bg);
+    color: var(--status-error-text);
   }
   .fiado-label { display: block; margin-bottom: .125rem; font-size: .75rem; font-weight: 500; }
   .fiado-devedor { color: var(--status-warning-text); }

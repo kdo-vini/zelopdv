@@ -4,11 +4,6 @@
   Descrição: Frente de Caixa (PDV) movida para /app para que a landing fique em /
 -->
 
-<script context="module">
-  // Força renderização somente no cliente para evitar 500 na primeira navegação pós-login
-  export const ssr = false;
-</script>
-
 <script>
   // A S V E L T E K I T
   // Ajuste: Removido o ".js" da importação para deixar o bundler resolver.
@@ -57,7 +52,6 @@
     limparVendasAntigas
   } from '$lib/offlineDb';
 
-  export let params;
 
   // --- 1. ESTADO DO PDV ---
   let produtos = [];
@@ -1450,7 +1444,7 @@
     <div class="px-4 py-3 md:px-6 md:py-4 border-b border-slate-800 flex justify-between items-center">
       <h2 class="text-lg font-bold text-white uppercase tracking-widest">Comanda</h2>
       <!-- Mobile Close Button -->
-      <button class="md:hidden p-2 text-slate-400" on:click={() => showMobileCart = false}>
+      <button class="md:hidden p-2 text-slate-400" aria-label="Fechar comanda" on:click={() => showMobileCart = false}>
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
     </div>

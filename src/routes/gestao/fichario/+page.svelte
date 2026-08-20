@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { Search, WalletCards, CircleDollarSign, ReceiptText, ArrowDownLeft, ArrowUpRight, RefreshCw, Users, MessageCircle, MoreHorizontal, Filter, ArrowLeft, ChevronDown, TriangleAlert, X, CheckCircle2, Printer } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription } from '$lib/guards';
@@ -102,6 +102,24 @@
 
   function closeMenu() {
     menuOpen = false;
+  }
+
+  function handleDocumentClick(event) {
+    if (menuOpen && !event.target.closest('.menu-wrapper')) menuOpen = false;
+    if (filterOpen && !event.target.closest('.filter-trigger')) filterOpen = false;
+  }
+
+  function focusOnMount(node) {
+    void tick().then(() => {
+      if (node.isConnected) node.focus();
+    });
+  }
+
+  function handleSheetKeydown(event) {
+    if (event.key === 'Escape') {
+      sheetOpen = false;
+      closePaymentSheet();
+    }
   }
 
   function togglePaymentForm() {
@@ -415,7 +433,7 @@
   });
 </script>
 
-<svelte:window on:keydown={handleExclusaoKeydown} />
+<svelte:window on:keydown={handleExclusaoKeydown} on:click={handleDocumentClick} />
 
 <section class="fichario-page" aria-busy={loading}>
   <div class="fichario-shell">
@@ -497,9 +515,7 @@
               <div class="menu-wrapper">
                 <button class="icon-action" on:click={() => (menuOpen = !menuOpen)} aria-label="Mais opções" title="Mais opções"><MoreHorizontal size={16} /></button>
                 {#if menuOpen}
-                  <!-- svelte-ignore a11y-click-events-have-key-events -->
-                  <!-- svelte-ignore a11y-no-static-element-interactions -->
-                  <div class="menu-dropdown" on:click|self={closeMenu}>
+                  <div class="menu-dropdown">
                     <a class="menu-item" href="/gestao/pessoas" on:click={closeMenu}>Gerenciar pessoas</a>
                     <button class="menu-item" on:click={closeMenu}>Fechar</button>
                   </div>
@@ -603,9 +619,7 @@
                   <Filter size={14} aria-hidden="true" />
                 </button>
                 {#if filterOpen}
-                  <!-- svelte-ignore a11y-click-events-have-key-events -->
-                  <!-- svelte-ignore a11y-no-static-element-interactions -->
-                  <div class="filter-dropdown" on:click|self={() => (filterOpen = false)}>
+                  <div class="filter-dropdown">
                     <button class="filter-option" class:active={selectedFilter === 'todos'} on:click={() => { selectedFilter = 'todos'; filterOpen = false; }}>Todos</button>
                     <button class="filter-option" class:active={selectedFilter === 'debitos'} on:click={() => { selectedFilter = 'debitos'; filterOpen = false; }}>Compras</button>
                     <button class="filter-option" class:active={selectedFilter === 'creditos'} on:click={() => { selectedFilter = 'creditos'; filterOpen = false; }}>Pagamentos</button>
@@ -681,14 +695,12 @@
 </section>
 
 {#if sheetOpen}
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="sheet-overlay" on:click|self={() => (sheetOpen = false)}>
-    <div class="sheet" role="dialog" aria-label="Enviar WhatsApp">
+  <dialog open class="sheet-overlay" aria-modal="true" aria-label="Enviar WhatsApp" tabindex="-1" on:keydown={handleSheetKeydown} on:click|self={() => (sheetOpen = false)}>
+    <div class="sheet">
       <div class="sheet-handle"></div>
       <h3>Enviar para {pessoaSelecionada?.nome}</h3>
 
-      <button class="sheet-option" on:click={() => { window.open(buildCobrancaUrl(), '_blank'); sheetOpen = false; }}>
+      <button class="sheet-option" use:focusOnMount on:click={() => { window.open(buildCobrancaUrl(), '_blank'); sheetOpen = false; }}>
         <div class="sheet-option-icon sheet-option-icon--green"><MessageCircle size={18} /></div>
         <div class="sheet-option-text">
           <span class="sheet-option-title">Cobrar saldo</span>
@@ -716,21 +728,19 @@ Regularize quando puder!</div>
 
       <button class="sheet-cancel" on:click={() => (sheetOpen = false)}>Cancelar</button>
     </div>
-  </div>
+  </dialog>
 {/if}
 
 {#if paymentSheetOpen}
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="sheet-overlay" on:click|self={closePaymentSheet}>
-    <div class="sheet" role="dialog" aria-label="Registrar pagamento">
+  <dialog open class="sheet-overlay" aria-modal="true" aria-label="Registrar pagamento" tabindex="-1" on:keydown={handleSheetKeydown} on:click|self={closePaymentSheet}>
+    <div class="sheet">
       <div class="sheet-handle"></div>
       <h3>Receber pagamento</h3>
       <p class="sheet-subtitle">O pagamento pode quitar a dívida ou deixar crédito.</p>
 
       <label class="payment-field">
         <span>Valor recebido</span>
-        <input type="number" min="0.01" step="0.01" inputmode="decimal" bind:value={valorPagamento} placeholder="0,00" />
+        <input type="number" min="0.01" step="0.01" inputmode="decimal" bind:value={valorPagamento} placeholder="0,00" use:focusOnMount />
       </label>
 
       <div class="prediction" aria-live="polite">
@@ -750,20 +760,23 @@ Regularize quando puder!</div>
         </button>
       </div>
     </div>
-  </div>
+  </dialog>
 {/if}
 
 {#if pagamentoPendenteExclusao}
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="confirm-overlay" on:click|self={fecharExclusaoPagamento}>
-    <section
+  <dialog
+    open
+    class="confirm-overlay"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="delete-payment-title"
+    aria-describedby="delete-payment-description"
+    tabindex="-1"
+    on:keydown={handleExclusaoKeydown}
+    on:click|self={fecharExclusaoPagamento}
+  >
+    <div
       class="confirm-dialog"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="delete-payment-title"
-      aria-describedby="delete-payment-description"
-      tabindex="-1"
     >
       <div class="confirm-dialog-icon"><TriangleAlert size={20} aria-hidden="true" /></div>
       <div class="confirm-dialog-copy">
@@ -781,8 +794,8 @@ Regularize quando puder!</div>
           {excluindoPagamentoId ? 'Excluindo...' : 'Excluir pagamento'}
         </button>
       </div>
-    </section>
-  </div>
+    </div>
+  </dialog>
 {/if}
 
 <style>
@@ -970,7 +983,8 @@ Regularize quando puder!</div>
   .detail-items li span:last-child { flex-shrink: 0; font-variant-numeric: tabular-nums; color: var(--text-label); }
 
   /* ── Native ZeloPDV confirmation ── */
-  .confirm-overlay { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--bg-app) 76%, transparent); backdrop-filter: blur(3px); }
+  .confirm-overlay { position: fixed; inset: 0; z-index: 120; width: auto; max-width: none; height: auto; margin: 0; border: 0; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--bg-app) 76%, transparent); backdrop-filter: blur(3px); }
+  .confirm-overlay::backdrop { background: transparent; }
   .confirm-dialog { width: min(100%, 420px); padding: 1.25rem; border: 1px solid var(--border-card); border-radius: 16px; background: var(--bg-card); box-shadow: var(--shadow-modal); }
   .confirm-dialog-icon { width: 40px; height: 40px; display: grid; place-items: center; margin-bottom: .875rem; border-radius: 12px; background: var(--status-error-bg); color: var(--status-error-text); }
   .confirm-dialog-copy h3 { margin-bottom: .5rem; color: var(--text-main); font-size: 1rem; }
@@ -987,7 +1001,8 @@ Regularize quando puder!</div>
   .confirm-cancel:disabled, .confirm-danger:disabled { cursor: wait; opacity: .65; }
 
   /* ── Bottom sheet ── */
-  .sheet-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+  .sheet-overlay { position: fixed; inset: 0; width: auto; max-width: none; height: auto; margin: 0; border: 0; padding: 0; background: rgba(0, 0, 0, .5); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+  .sheet-overlay::backdrop { background: transparent; }
   .sheet { background: var(--bg-panel); border-radius: 14px 14px 0 0; width: 100%; max-width: 420px; padding: .625rem 1rem 1.25rem; }
   .sheet-handle { width: 32px; height: 3px; background: var(--border-subtle); border-radius: 2px; margin: 0 auto .75rem; }
   .sheet h3 { font-size: .875rem; color: var(--text-main); margin-bottom: .625rem; }

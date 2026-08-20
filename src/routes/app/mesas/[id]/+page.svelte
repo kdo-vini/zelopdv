@@ -2668,7 +2668,7 @@
     font-size: 0.9rem; font-weight: 600; line-height: 1.25;
     min-height: 2.5em;
     overflow: hidden; display: -webkit-box;
-    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    line-clamp: 2; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     word-break: break-word;
     overflow-wrap: anywhere;
   }

@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-PONYTAIL-SIMPLIFICATION-01 (2026-08-20) - consolidado o
+  `ConfirmDialog` em `<dialog>` nativo com gerenciamento de foco, reduzida a
+  duplicação dos guards de subscription e removidos wrappers/primitivos sem
+  consumidores, rail sem uso e helpers de impressão sem uso. Iconify do Pix
+  permaneceu intacto por decisão do produto. Checker em 0/0, suíte em 113
+  arquivos/709 testes; build compila e gera precache PWA, com o symlink
+  Windows `EPERM` conhecido no adapter Vercel.
+
 - [x] FX-ADMIN-PIN-OPTIONAL-01 (2026-08-20) - PIN administrativo tornou-se
   opcional por empresa: o onboarding não grava mais `0000`, Perfil permite
   ativar/desativar com validação server-side, e Relatórios/Despesas aguardam o
@@ -7,6 +15,13 @@
   A migration idempotente `20260820154751_admin_pin_optional.sql` garante
   `empresa_perfil.pin_enabled`; testes direcionados cobrem os estados, owner,
   subusuário e o caminho sem PIN.
+
+- [x] FX-UI-A11Y-SURGICAL-01 (2026-08-20) - removido o rail global do Zelinho,
+  corrigida a árvore de categorias, modais/labels/foco/teclado e avisos
+  restantes do app; `npm run check` ficou em 0 erros/0 warnings. A suíte
+  completa atual passa com 113 arquivos/709 testes. Build compila e gera
+  precache PWA; o
+  adapter Vercel permanece bloqueado localmente por symlink Windows `EPERM`.
 
 - [x] FX-DEV-PIN-SETUP-FALSE-POSITIVE-01 (2026-08-20) - o layout global
   interpretava erro ou resposta ausente de `/api/auth/admin-pin` como PIN não

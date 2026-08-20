@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { getAccessContext } from '$lib/accessControl';
   import { supabase } from '$lib/supabaseClient';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -30,6 +30,12 @@
   let inviteRoleId = '';
   let inviting = false;
   let inviteError = '';
+
+  function focusOnMount(node) {
+    void tick().then(() => {
+      if (node.isConnected) node.focus();
+    });
+  }
 
   // Inline role change
   let editingUserRoleId = null; // user id whose role is being changed inline
@@ -612,7 +618,7 @@
               class="input-form flex-1 text-sm"
               bind:value={newRoleName}
               on:keydown={e => { if (e.key === 'Enter') createRole(); if (e.key === 'Escape') showNewRoleForm = false; }}
-              autofocus
+              use:focusOnMount
             />
             <button
               class="px-4 py-2 rounded-lg text-sm font-medium"
@@ -826,6 +832,7 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="invite-modal-title"
+    tabindex="-1"
     on:click|self={closeInviteModal}
     on:keydown={e => e.key === 'Escape' && closeInviteModal()}
   >
@@ -865,7 +872,7 @@
           />
         </div>
         <div>
-          <label class="block text-xs font-medium mb-1" style="color: var(--text-muted);">Cargo</label>
+          <span class="block text-xs font-medium mb-1" style="color: var(--text-muted);">Cargo</span>
           <Select.Root bind:value={inviteRoleId}>
             <Select.Trigger class="field-input w-full">
               <Select.Value placeholder="Selecione um cargo" />
@@ -1024,8 +1031,5 @@
   /* Spinner */
   @keyframes spin {
     to { transform: rotate(360deg); }
-  }
-  .animate-spin {
-    animation: spin 0.8s linear infinite;
   }
 </style>
