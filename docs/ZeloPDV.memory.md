@@ -20,9 +20,9 @@
 - O purge compartilhado de contas `delete_account(uuid,text)` precisa remover `fiado_lancamentos` antes de `pessoas`: o ledger usa FK `id_pessoa` com `ON DELETE RESTRICT`. A correção foi aplicada em 2026-08-09 e cobre o caminho `admin_delete_user` do dashboard.
 
 > Memória viva. Guardar só fatos confirmados e úteis para continuidade técnica.
-> Atualizado em 2026-07-31.
+> Atualizado em 2026-08-20.
 
-- O app principal roda em SvelteKit 2 + Svelte 5 e usa `@sveltejs/adapter-vercel` com runtime Node 20.
+- O app principal roda em SvelteKit 2 + Svelte 5; ele e o `admin-dashboard/` usam `@sveltejs/adapter-vercel` explícito com runtime `nodejs24.x`, e os dois projetos Vercel estão configurados em `24.x`.
 - Existe um segundo app em `admin-dashboard/`, separado do app principal.
 - O backend real do produto é Supabase; service role só existe em código server-side.
 - `subscriptions` é a fonte de verdade de acesso/entitlement.

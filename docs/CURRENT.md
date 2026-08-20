@@ -1,5 +1,13 @@
 # ZeloPDV — Foco atual
 
+- Migração Vercel Node.js 24 (2026-08-20): os projetos `zelopdv` e
+  `zelopdv-admin` estão confirmados em runtime `24.x` nas configurações Vercel.
+  Os commits `743545c`, `5908aef` e `1114c0d` atualizam o contrato de runtime,
+  incluindo `@sveltejs/adapter-vercel` explícito com `nodejs24.x` no app
+  principal e no admin. Os previews finais estão `READY` e os logs não mostram
+  falhas de runtime. O smoke autenticado permanece pendente por falta de conta
+  dedicada; a produção ainda não foi promovida.
+
 - Impressao do Zelo Menu no cupom (2026-08-13): `src/lib/escpos.js` e
   `src/lib/receipt.js` agora preservam e exibem descricao, grupos de
   modificadores e opcoes da montagem em linhas separadas no cupom ESC/POS e no
