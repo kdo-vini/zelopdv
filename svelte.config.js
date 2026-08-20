@@ -6,7 +6,7 @@ const config = {
   preprocess: vitePreprocess(),
   kit: {
     adapter: adapterVercel({
-      runtime: 'nodejs20.x'
+      runtime: 'nodejs24.x'
     }),
     paths: {
       relative: false,
