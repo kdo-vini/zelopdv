@@ -1,5 +1,20 @@
 # ZeloPDV — Foco atual
 
+- Separação de visibilidade PDV/ZeloMenu (2026-08-24):
+  `produtos.ocultar_no_pdv` é exclusivamente a visibilidade interna do
+  ZeloPDV; `zelomenu_product_publications.visivel_online` e
+  `pausado_manualmente` são o contrato do cardápio digital para clientes.
+  A migration forward-only
+  `20260824134536_catalog_visibility_separation_guard.sql` registra essa
+  fronteira sem alterar linhas de produtos/publicações. O guardrail de testes
+  rejeita migrations que copiem um campo para o outro. A Bem Servido não teve
+  dados de cardápio alterados nesta correção.
+- Validação da rodada (2026-08-24): `svelte-check` passou com 0 erros/0
+  warnings; o guardrail focado passou. A suíte completa teve 113/114 arquivos
+  e 710/711 testes, com um timeout isolado em
+  `tests/guards.zelomenu.test.js`; a mesma suíte isolada passou (7/7). O build
+  concluiu com o warning preexistente de `src/hooks.client.js`.
+
 - Migração Vercel Node.js 24 (2026-08-20): os projetos `zelopdv` e
   `zelopdv-admin` estão confirmados em runtime `24.x` nas configurações Vercel.
   Os commits `743545c`, `5908aef`, `1114c0d` e `228ad99` atualizam o contrato

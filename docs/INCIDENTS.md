@@ -1,5 +1,35 @@
 # Incidents
 
+## INC-2026-08-24-01 - Visibilidade do PDV interferia na publicação do ZeloMenu
+
+**Status:** código corrigido e contrato aplicado em produção em 2026-08-24.
+Nenhum dado da Bem Servido foi alterado nesta correção.
+
+**Sintoma**
+
+- Produtos podiam ficar visíveis no ZeloPDV e, por consequência de uma regra
+  histórica, aparecer publicados no cardápio digital; o operador precisava de
+  dois controles independentes.
+
+**Causa-raiz**
+
+- A migration histórica `20260807134325_catalog_canonical_products` copiava
+  `produtos.ocultar_no_pdv` para `zelomenu_product_publications.pausado_manualmente`
+  e também fazia a cópia inversa. Além disso, ZeloMenu/ZeloChat ainda usavam
+  `ocultar_no_pdv` como bloqueio público em alguns resolvers.
+
+**Fix / recovery**
+
+- O código público dos repos ZeloMenu e ZeloChat agora usa somente
+  `visivel_online`, `pausado_manualmente`, categoria, estoque e regras de
+  complementos; `ocultar_no_pdv` ficou restrito ao PDV interno.
+- A migration `20260824134536_catalog_visibility_separation_guard.sql` apenas
+  documenta as colunas e valida a existência das tabelas. O teste de regressão
+  bloqueia futuras migrations que derivem um canal do outro.
+- Não foi executado backfill/republicação/despublicação na Bem Servido por
+  decisão explícita do produto. A conferência pós-migration manteve 122
+  produtos, 104 visíveis no PDV, 83 publicados e 39 não publicados.
+
 ---
 
 ## INC-2026-08-14-01 - Mesas: "Comanda aberta nao encontrada" bloqueou toda a operacao

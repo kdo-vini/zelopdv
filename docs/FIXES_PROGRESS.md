@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-CATALOG-VISIBILITY-SEPARATION-01 (2026-08-24) - corrigido o
+  acoplamento histórico entre `produtos.ocultar_no_pdv` e a publicação online
+  do ZeloMenu. O ZeloPDV continua filtrando o PDV pelo campo interno; a
+  publicação usa apenas o overlay `visivel_online`/`pausado_manualmente`. A
+  migration `20260824134536_catalog_visibility_separation_guard.sql` é
+  metadata-only, foi aplicada no Supabase real e não alterou o catálogo da Bem
+  Servido. Regressão em `tests/catalogVisibilitySeparation.test.js`; contagem
+  pós-migration da Bem Servido: 122 produtos, 104 visíveis no PDV, 83
+  publicados e 39 não publicados.
+
 - [x] FX-PONYTAIL-SIMPLIFICATION-01 (2026-08-20) - consolidado o
   `ConfirmDialog` em `<dialog>` nativo com gerenciamento de foco, reduzida a
   duplicação dos guards de subscription e removidos wrappers/primitivos sem
