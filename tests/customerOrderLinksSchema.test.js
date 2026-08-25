@@ -35,13 +35,14 @@ describe('vínculos de cliente no pedido canônico', () => {
     expect(compactMigration).toContain("coalesce(p_snapshots->'customer', '{}'::jsonb)");
   });
 
-  it('preserva o contrato canônico de Mesa e o overload legado com grants restritos', () => {
+  it('preserva o contrato canônico de Mesa sem overload ambíguo e com grants restritos', () => {
     expect(migration).toContain("s.context not in ('public_order', 'table_order')");
     expect(migration).toContain("'source', v_source");
     expect(migration).toContain("v_source = 'mesa'");
     expect(migration).toContain("message = 'comanda_closed'");
     expect(migration).toContain("message = 'table_session_expired'");
-    expect(migration).toContain('create or replace function public.create_zelo_order(\n  p_session_id uuid,\n  p_expected_revision integer,\n  p_idempotency_key text,\n  p_snapshots jsonb\n)');
+    expect(migration).not.toContain('create or replace function public.create_zelo_order(\n  p_session_id uuid,\n  p_expected_revision integer,\n  p_idempotency_key text,\n  p_snapshots jsonb\n)');
+    expect(migration).toContain('drop function if exists public.create_zelo_order(uuid, integer, text, jsonb);');
     expect(migration).toContain('set search_path = public, pg_temp');
     expect(migration).toContain('to service_role');
   });

@@ -72,7 +72,10 @@ alter table public.fiado_lancamentos
   foreign key (id_pessoa) references public.pessoas(id) on delete set null;
 
 -- Canonical creation with the current table-order behavior plus an optional
--- CRM link. The four-argument overload below remains for existing callers.
+-- CRM link. The single public signature keeps p_pessoa_id defaulted so legacy
+-- four-argument callers resolve to this function without an ambiguous overload.
+drop function if exists public.create_zelo_order(uuid, integer, text, jsonb);
+
 create or replace function public.create_zelo_order(
   p_session_id uuid,
   p_expected_revision integer,
@@ -321,29 +324,9 @@ exception when unique_violation then
 end
 $$;
 
--- Existing server bundles call the original signature. Delegate to the new
--- implementation so the old behavior remains exact and the ACL stays usable.
-create or replace function public.create_zelo_order(
-  p_session_id uuid,
-  p_expected_revision integer,
-  p_idempotency_key text,
-  p_snapshots jsonb
-)
-returns jsonb
-language sql
-security definer
-set search_path = public, pg_temp
-as $$
-  select public.create_zelo_order($1, $2, $3, $4, null::uuid)
-$$;
-
 revoke all on function public.create_zelo_order(uuid, integer, text, jsonb, uuid)
   from public, anon, authenticated;
 grant execute on function public.create_zelo_order(uuid, integer, text, jsonb, uuid)
-  to service_role;
-revoke all on function public.create_zelo_order(uuid, integer, text, jsonb)
-  from public, anon, authenticated;
-grant execute on function public.create_zelo_order(uuid, integer, text, jsonb)
   to service_role;
 
 -- A deleted person must not erase sales, orders, snapshots or the fiado ledger.
