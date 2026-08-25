@@ -113,7 +113,7 @@
   }
 
   async function remove(id) {
-    const ok = await confirmAction('Excluir pessoa', 'Tem certeza que deseja excluir esta pessoa? O saldo precisa estar quitado. O histórico de fiado desta pessoa também será apagado.');
+    const ok = await confirmAction('Excluir pessoa', 'Tem certeza que deseja excluir esta pessoa? O saldo precisa estar quitado. O histórico financeiro e os snapshots dos pedidos serão preservados; vendas e pedidos permanecem sem vínculo com esta pessoa.');
     if (!ok) return;
     const { error } = await supabase.rpc('fiado_excluir_pessoa', { p_id_pessoa: id });
     if (error) {

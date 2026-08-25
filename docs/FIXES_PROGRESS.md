@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-CLIENTES-ORDERS-01 (2026-08-25) — pedidos canônicos ganharam
+  `zelo_orders.pessoa_id` com FK `ON DELETE SET NULL`, índice por empresa/pessoa
+  e criação owner-scoped com snapshot obrigatório preservado. A exclusão CRM-safe
+  desvincula vendas, pedidos e lançamentos financeiros antes de remover a pessoa,
+  sem apagar histórico; a confirmação da tela Pessoas comunica o vínculo
+  removido. Cobertura: `tests/customerOrderLinksSchema.test.js` e suíte focada;
+  runtime Postgres pendente por indisponibilidade do Docker local.
+
 - [x] FX-CLIENTES-IDENTITY-01 (2026-08-25) — criada a fundação de identidade
   canônica no PDV: aniversário e `updated_at` em `pessoas`,
   `pessoa_identities` com RLS/`pessoas.gerenciar`, normalização brasileira que

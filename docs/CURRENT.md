@@ -1,5 +1,14 @@
 # ZeloPDV — Foco atual
 
+- Vínculos CRM em pedidos (2026-08-25): a migration
+  `20260825123000_customer_order_links.sql` adiciona `zelo_orders.pessoa_id`
+  com vínculo anulável ao cadastro mestre, índice para histórico por cliente e
+  validação owner-scoped na criação canônica. A exclusão de pessoa quitada
+  preserva vendas, pedidos, snapshots e razão financeiro, removendo apenas os
+  vínculos vivos; a tela Pessoas explica que vendas e pedidos permanecem sem
+  vínculo. A validação de runtime no Postgres segue pendente enquanto o Docker
+  local não está disponível.
+
 - Identidade canônica de Clientes (2026-08-25): a primeira fundação do CRM
   ficou versionada no PDV em `20260825120000_customer_identity_foundation.sql`.
   `pessoas` continua sendo o cadastro mestre; aniversários e `updated_at` foram
