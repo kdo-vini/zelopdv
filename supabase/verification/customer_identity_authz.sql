@@ -227,6 +227,34 @@ end;
 $$;
 
 do $$
+begin
+  -- birthday_dia_without_mes: CHECK must reject a partial day-only birthday.
+  begin
+    insert into public.pessoas (
+      id, id_usuario, nome, tipo, contato, aniversario_dia
+    ) values (
+      gen_random_uuid(), (select owner_a from customer_identity_fixture),
+      'Dia sem mês', 'cliente', '5511555555555', 1
+    );
+    raise exception 'birthday_dia_without_mes accepted';
+  exception when check_violation then null;
+  end;
+
+  -- birthday_mes_without_dia: CHECK must reject a partial month-only birthday.
+  begin
+    insert into public.pessoas (
+      id, id_usuario, nome, tipo, contato, aniversario_mes
+    ) values (
+      gen_random_uuid(), (select owner_a from customer_identity_fixture),
+      'Mês sem dia', 'cliente', '5511555555556', 1
+    );
+    raise exception 'birthday_mes_without_dia accepted';
+  exception when check_violation then null;
+  end;
+end;
+$$;
+
+do $$
 declare
   invalid_result jsonb;
 begin

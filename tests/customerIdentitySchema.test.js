@@ -20,6 +20,9 @@ describe('customer identity foundation migration', () => {
     expect(migration).toContain(
       'aniversario_ano is null or aniversario_ano between 1900 and 2100',
     );
+    expect(compactMigration).toContain(
+      'aniversario_dia is not null and aniversario_mes is not null and',
+    );
     expect(migration).toContain('aniversario_ano is null or (aniversario_dia is not null and aniversario_mes is not null)');
   });
 
@@ -90,6 +93,8 @@ describe('customer identity foundation migration', () => {
     const verification = existsSync(resolve('supabase/verification/customer_identity_authz.sql'))
       ? readFileSync(resolve('supabase/verification/customer_identity_authz.sql'), 'utf8').replace(/\r\n/g, '\n').toLowerCase()
       : '';
+    expect(verification).toContain('birthday_dia_without_mes');
+    expect(verification).toContain('birthday_mes_without_dia');
     expect(verification).toContain('pessoas.gerenciar');
     expect(verification).toContain('independent');
     expect(verification).toContain('concurrent');

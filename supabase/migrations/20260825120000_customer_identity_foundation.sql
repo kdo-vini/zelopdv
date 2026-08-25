@@ -24,7 +24,9 @@ begin
         (
           (aniversario_dia is null and aniversario_mes is null)
           or (
-            aniversario_dia between 1 and 31
+            aniversario_dia is not null
+            and aniversario_mes is not null
+            and aniversario_dia between 1 and 31
             and aniversario_mes between 1 and 12
           )
         )
