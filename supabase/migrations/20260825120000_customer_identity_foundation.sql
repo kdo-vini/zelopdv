@@ -21,11 +21,15 @@ begin
     alter table public.pessoas
       add constraint pessoas_aniversario_dia_mes_check
       check (
-        (aniversario_dia is null and aniversario_mes is null)
-        or (
-          aniversario_dia between 1 and 31
-          and aniversario_mes between 1 and 12
+        (
+          (aniversario_dia is null and aniversario_mes is null)
+          or (
+            aniversario_dia between 1 and 31
+            and aniversario_mes between 1 and 12
+          )
         )
+        and (aniversario_ano is null or aniversario_ano between 1900 and 2100)
+        and (aniversario_ano is null or (aniversario_dia is not null and aniversario_mes is not null))
       );
   end if;
 end
@@ -34,7 +38,7 @@ $$;
 create or replace function public.touch_pessoa_updated_at()
 returns trigger
 language plpgsql
-set search_path = public
+set search_path = public, pg_temp
 as $$
 begin
   new.updated_at := now();
@@ -74,57 +78,57 @@ create or replace function public.normalize_brazilian_phone(p_phone text)
 returns text
 language plpgsql
 immutable
-set search_path = public
+set search_path = public, pg_temp
 as $$
 declare
   v_digits text;
-  v_national text;
 begin
   v_digits := regexp_replace(coalesce(p_phone, ''), '[^0-9]', '', 'g');
   if v_digits = '' then
     return null;
   end if;
 
-  if left(v_digits, 2) = '00' then
-    v_digits := substring(v_digits from 3);
+  -- Ten/eleven digits are always local, including DDD 55. Twelve/thirteen
+  -- digits are accepted only when the explicit country prefix is 55.
+  if length(v_digits) in (10, 11) then
+    return '55' || v_digits;
   end if;
-
-  if left(v_digits, 2) = '55' then
-    v_national := substring(v_digits from 3);
-  else
-    v_national := v_digits;
+  if length(v_digits) in (12, 13) and left(v_digits, 2) = '55' then
+    return v_digits;
   end if;
-
-  -- Brazilian landlines have 10 digits and mobiles have 11. The ninth
-  -- digit is part of the canonical value and is deliberately preserved.
-  if length(v_national) not in (10, 11) or left(v_national, 1) = '0' then
-    return null;
-  end if;
-
-  return '55' || v_national;
+  return null;
 end;
 $$;
 
+-- Revalidate and remove any identity that may have been produced by an earlier
+-- interrupted version while the corresponding contato group is ambiguous. It
+-- is safer to revalidate than to keep a guessed link.
+delete from public.pessoa_identities pi
+ where pi.kind = 'phone'
+   and (
+     select count(*)
+       from public.pessoas p
+      where p.id_usuario = pi.id_usuario
+        and public.normalize_brazilian_phone(p.contato) = pi.value_normalized
+   ) > 1;
+
 -- Preserve existing contato values as identities before the server-side
--- resolver starts creating records. Employee rows win an old duplicate so a
--- WhatsApp number already assigned to staff cannot silently become a client.
+-- resolver starts creating records. Only an unambiguous group is eligible;
+-- duplicate legacy contacts remain identity-less until a human resolves them.
 insert into public.pessoa_identities (
   id_usuario, pessoa_id, kind, value_normalized, is_primary, source
 )
-select id_usuario, pessoa_id, 'phone', value_normalized, true, 'migration_backfill'
+select candidate.id_usuario, (array_agg(candidate.pessoa_id))[1], 'phone',
+       candidate.value_normalized, true, 'migration_backfill'
   from (
-    select distinct on (p.id_usuario, public.normalize_brazilian_phone(p.contato))
-      p.id_usuario,
-      p.id as pessoa_id,
-      public.normalize_brazilian_phone(p.contato) as value_normalized
+    select p.id_usuario,
+           p.id as pessoa_id,
+           public.normalize_brazilian_phone(p.contato) as value_normalized
       from public.pessoas p
      where public.normalize_brazilian_phone(p.contato) is not null
-     order by p.id_usuario,
-              public.normalize_brazilian_phone(p.contato),
-              case when p.tipo = 'funcionario' then 0 else 1 end,
-              p.created_at,
-              p.id
-  ) seeded
+  ) candidate
+ group by candidate.id_usuario, candidate.value_normalized
+having count(*) = 1
 on conflict (id_usuario, kind, value_normalized) do nothing;
 
 alter table public.pessoa_identities enable row level security;
@@ -194,14 +198,17 @@ create or replace function public.ensure_customer_from_whatsapp(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 declare
   v_phone text;
   v_observed_name text := nullif(trim(coalesce(p_observed_name, '')), '');
-  v_pessoa_id uuid;
+  v_contact_pessoa_id uuid;
+  v_identity_pessoa_id uuid;
   v_pessoa_nome text;
   v_pessoa_tipo text;
+  v_contact_count integer;
+  v_identity_count integer;
 begin
   if coalesce(current_setting('role', true), '') <> 'service_role' then
     raise exception 'Esta operação é restrita ao serviço.' using errcode = '42501';
@@ -222,45 +229,77 @@ begin
     hashtextextended(p_owner_user_id::text || ':' || v_phone, 0)
   );
 
-  select pi.pessoa_id, p.nome, p.tipo
-    into v_pessoa_id, v_pessoa_nome, v_pessoa_tipo
+  -- Count every legacy contact before choosing a row. A phone shared by two
+  -- people is ambiguous even if one of them already has an identity row.
+  select count(*), (array_agg(p.id))[1]
+    into v_contact_count, v_contact_pessoa_id
+    from public.pessoas p
+   where p.id_usuario = p_owner_user_id
+     and public.normalize_brazilian_phone(p.contato) = v_phone;
+
+  select count(*), (array_agg(pi.pessoa_id))[1]
+    into v_identity_count, v_identity_pessoa_id
     from public.pessoa_identities pi
-    join public.pessoas p
-      on p.id = pi.pessoa_id
-     and p.id_usuario = pi.id_usuario
    where pi.id_usuario = p_owner_user_id
      and pi.kind = 'phone'
-     and pi.value_normalized = v_phone
-   for update of pi, p;
+     and pi.value_normalized = v_phone;
 
-  if not found then
-    -- The fallback keeps old contato-only rows linkable if a deployment was
-    -- interrupted after the table creation but before its backfill.
-    select p.id, p.nome, p.tipo
-      into v_pessoa_id, v_pessoa_nome, v_pessoa_tipo
-      from public.pessoas p
-     where p.id_usuario = p_owner_user_id
-       and public.normalize_brazilian_phone(p.contato) = v_phone
-     order by case when p.tipo = 'funcionario' then 0 else 1 end,
-              p.created_at,
-              p.id
-     limit 1
-     for update;
-
-    if found then
-      insert into public.pessoa_identities (
-        id_usuario, pessoa_id, kind, value_normalized, is_primary, source
-      ) values (
-        p_owner_user_id, v_pessoa_id, 'phone', v_phone, true, 'whatsapp'
-      ) on conflict (id_usuario, kind, value_normalized) do nothing;
-    end if;
+  if v_contact_count > 1 or v_identity_count > 1 then
+    return jsonb_build_object(
+      'status', 'conflict',
+      'pessoaId', null::uuid,
+      'reason', case
+        when v_contact_count > 1 then 'phone_contact_ambiguous'
+        else 'phone_identity_ambiguous'
+      end
+    );
   end if;
 
-  if found then
+  if v_identity_count = 1
+     and not exists (
+       select 1
+         from public.pessoas p
+        where p.id = v_identity_pessoa_id
+          and p.id_usuario = p_owner_user_id
+     ) then
+    return jsonb_build_object(
+      'status', 'conflict',
+      'pessoaId', null::uuid,
+      'reason', 'phone_identity_mismatch'
+    );
+  end if;
+
+  if v_contact_count = 1 and v_identity_count = 1
+     and v_contact_pessoa_id <> v_identity_pessoa_id then
+    return jsonb_build_object(
+      'status', 'conflict',
+      'pessoaId', null::uuid,
+      'reason', 'phone_identity_mismatch'
+    );
+  end if;
+
+  if v_contact_count = 1 then
+    select p.nome, p.tipo
+      into v_pessoa_nome, v_pessoa_tipo
+      from public.pessoas p
+     where p.id = v_contact_pessoa_id
+       and p.id_usuario = p_owner_user_id
+     for update;
+    v_identity_pessoa_id := v_contact_pessoa_id;
+  elsif v_identity_count = 1 then
+    select p.nome, p.tipo
+      into v_pessoa_nome, v_pessoa_tipo
+      from public.pessoas p
+     where p.id = v_identity_pessoa_id
+       and p.id_usuario = p_owner_user_id
+     for update;
+  end if;
+
+  if v_contact_count = 1 or v_identity_count = 1 then
     if v_pessoa_tipo = 'funcionario' then
       return jsonb_build_object(
         'status', 'conflict',
-        'pessoaId', v_pessoa_id,
+        'pessoaId', v_identity_pessoa_id,
         'reason', 'phone_belongs_to_employee'
       );
     end if;
@@ -272,12 +311,21 @@ begin
        and v_observed_name is not null then
       update public.pessoas
          set nome = v_observed_name
-       where id = v_pessoa_id;
+       where id = v_identity_pessoa_id
+         and id_usuario = p_owner_user_id;
+    end if;
+
+    if v_identity_count = 0 then
+      insert into public.pessoa_identities (
+        id_usuario, pessoa_id, kind, value_normalized, is_primary, source
+      ) values (
+        p_owner_user_id, v_identity_pessoa_id, 'phone', v_phone, true, 'whatsapp'
+      );
     end if;
 
     return jsonb_build_object(
       'status', 'linked',
-      'pessoaId', v_pessoa_id,
+      'pessoaId', v_identity_pessoa_id,
       'reason', null::text
     );
   end if;
@@ -293,17 +341,17 @@ begin
     'cliente',
     v_phone
   )
-  returning id into v_pessoa_id;
+  returning id into v_identity_pessoa_id;
 
   insert into public.pessoa_identities (
     id_usuario, pessoa_id, kind, value_normalized, is_primary, source
   ) values (
-    p_owner_user_id, v_pessoa_id, 'phone', v_phone, true, 'whatsapp'
+    p_owner_user_id, v_identity_pessoa_id, 'phone', v_phone, true, 'whatsapp'
   );
 
   return jsonb_build_object(
     'status', 'created',
-    'pessoaId', v_pessoa_id,
+    'pessoaId', v_identity_pessoa_id,
     'reason', null::text
   );
 end;

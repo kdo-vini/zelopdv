@@ -72,7 +72,7 @@
       errorMsg = 'O mês do aniversário deve estar entre 1 e 12.';
       return null;
     }
-    if (ano !== null && (!Number.isInteger(ano) || ano < 1 || ano > 9999)) {
+    if (ano !== null && (!Number.isInteger(ano) || ano < 1900 || ano > 2100)) {
       errorMsg = 'Informe um ano de aniversário válido.';
       return null;
     }
@@ -194,7 +194,7 @@
           <div class="grid grid-cols-[.8fr_.8fr_1.2fr] gap-2">
             <input class="field-input" type="number" min="1" max="31" bind:value={form.aniversario_dia} placeholder="Dia" aria-label="Dia do aniversário" />
             <input class="field-input" type="number" min="1" max="12" bind:value={form.aniversario_mes} placeholder="Mês" aria-label="Mês do aniversário" />
-            <input class="field-input" type="number" min="1" max="9999" bind:value={form.aniversario_ano} placeholder="Ano (opcional)" aria-label="Ano do aniversário" />
+            <input class="field-input" type="number" min="1900" max="2100" bind:value={form.aniversario_ano} placeholder="Ano (opcional)" aria-label="Ano do aniversário" />
           </div>
         </fieldset>
       </div>
