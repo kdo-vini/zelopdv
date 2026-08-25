@@ -1,5 +1,14 @@
 # Fixes Progress
 
+- [x] FX-CLIENTES-IDENTITY-01 (2026-08-25) — criada a fundação de identidade
+  canônica no PDV: aniversário e `updated_at` em `pessoas`,
+  `pessoa_identities` com RLS/`pessoas.gerenciar`, normalização brasileira que
+  preserva o nono dígito e RPC server-only idempotente para resolver clientes
+  vindos do WhatsApp com lock transacional. Pessoas ganhou aniversário e o
+  grupo de acesso ganhou `clientes.comunicar`. Cobertura: `tests/customerIdentitySchema.test.js`,
+  `npm run check`; verificação runtime transacional em
+  `supabase/verification/customer_identity_authz.sql`.
+
 - [x] FX-CATALOG-VISIBILITY-SEPARATION-01 (2026-08-24) - corrigido o
   acoplamento histórico entre `produtos.ocultar_no_pdv` e a publicação online
   do ZeloMenu. O ZeloPDV continua filtrando o PDV pelo campo interno; a

@@ -1,5 +1,14 @@
 # ZeloPDV — Foco atual
 
+- Identidade canônica de Clientes (2026-08-25): a primeira fundação do CRM
+  ficou versionada no PDV em `20260825120000_customer_identity_foundation.sql`.
+  `pessoas` continua sendo o cadastro mestre; aniversários e `updated_at` foram
+  adicionados, `pessoa_identities` é owner-scoped e a resolução server-only do
+  WhatsApp usa lock transacional, preservando o nono dígito e evitando conflito
+  com funcionários. A tela Pessoas exibe/persiste aniversário e Acessos lista
+  `clientes.comunicar`. A validação de runtime ainda precisa ser executada em
+  um banco vinculado antes de qualquer aplicação em produção.
+
 - Separação de visibilidade PDV/ZeloMenu (2026-08-24):
   `produtos.ocultar_no_pdv` é exclusivamente a visibilidade interna do
   ZeloPDV; `zelomenu_product_publications.visivel_online` e

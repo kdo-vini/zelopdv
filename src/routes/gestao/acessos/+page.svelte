@@ -76,6 +76,7 @@
       items: [
         { key: 'pessoas.visualizar', label: 'Visualizar pessoas' },
         { key: 'pessoas.gerenciar', label: 'Gerenciar pessoas' },
+        { key: 'clientes.comunicar', label: 'Comunicar clientes' },
         { key: 'fiado.visualizar', label: 'Visualizar fiado' },
         { key: 'fiado.receber', label: 'Receber fiado' },
       ],
