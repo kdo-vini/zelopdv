@@ -57,38 +57,38 @@
     },
     {
       "path": "supabase/baselines/20260813091000/applied-versions.txt",
-      "raw_sha256": "65841cf66dda7b28fd77cfbe19f45a4ed7f78688bcd41e120453bb7553294235",
+      "raw_sha256": "d7d1820a01e4eb7877a6903d85ae318971a36d0121e24bf7b2447d3265c65d03",
       "lf_sha256": "65841cf66dda7b28fd77cfbe19f45a4ed7f78688bcd41e120453bb7553294235",
-      "bytes": 925,
+      "bytes": 985,
       "git_blob_oid": "347ed5cc9975c54c3a99c7d2dbab04f8bee852c1"
     },
     {
       "path": "supabase/baselines/20260813091000/legacy-classification.json",
-      "raw_sha256": "afacfc813a6955b7808e1e2c5ce5bdc18c3d8a6ef58263325afffba17ee28094",
+      "raw_sha256": "84a3e2ad9f92d04eead17549cf920bccf8d9a8e4b229698f767db671e6ae7958",
       "lf_sha256": "afacfc813a6955b7808e1e2c5ce5bdc18c3d8a6ef58263325afffba17ee28094",
-      "bytes": 14198,
+      "bytes": 14251,
       "git_blob_oid": "08f80898acf73abe98fefee21989e6b6a85dec05"
     },
     {
       "path": "supabase/baselines/20260813091000/platform-state.json",
-      "raw_sha256": "c29bead2429ee8dab847aa56bdbb95f8e72309b24ca95523eabacb0033b2841f",
+      "raw_sha256": "c8aeedc99eefe1699efa7987f57972c007f33d3fb54725b330651481195170a2",
       "lf_sha256": "c29bead2429ee8dab847aa56bdbb95f8e72309b24ca95523eabacb0033b2841f",
-      "bytes": 10005,
+      "bytes": 10424,
       "git_blob_oid": "c27e3471ad50d99cf6537164c4f1224aa971468e"
     },
     {
       "path": "supabase/baselines/20260813091000/README.md",
-      "raw_sha256": "ad730a99cd4fa8575c7ef7e7202acd394cd219461f8943f049047fd6ca7d4df5",
-      "lf_sha256": "ad730a99cd4fa8575c7ef7e7202acd394cd219461f8943f049047fd6ca7d4df5",
-      "bytes": 4176,
-      "git_blob_oid": "9c4cee779d48e01688f480db0a6d28d87561c402"
+      "raw_sha256": "8a43bc8394c6709e482fe3ca28e6338c6bfbeac2771aa0705c7d53d1bb8e9826",
+      "lf_sha256": "d0161db146364dd04fca61894c7be8d8394f273f7960bb29f91fb482553ff52a",
+      "bytes": 4866,
+      "git_blob_oid": "2b19d49b9975f15ee5af730bbdc4e81b1fdd6ea9"
     },
     {
       "path": "supabase/config.toml",
-      "raw_sha256": "2efcca84a23cdb4627bc1d60b3a0c711cfee1b33ff86cf1fd9af0cb5e3ee8b0b",
-      "lf_sha256": "2efcca84a23cdb4627bc1d60b3a0c711cfee1b33ff86cf1fd9af0cb5e3ee8b0b",
-      "bytes": 1614,
-      "git_blob_oid": "e8982ef46f4717ad4c3cd709bfb7337a5c09cc77"
+      "raw_sha256": "022444d70b508b7dcf5b79438c85cbcb344dd9f991e8e8637a549483291952d5",
+      "lf_sha256": "b9b32286041fad23b6176ad6dd38d501482773e1c7abf71380c020ec22c60aaa",
+      "bytes": 1701,
+      "git_blob_oid": "003099d6edf4d7e001711b6b93c7691c058928f9"
     }
   ],
   "app_owned_schemas": [

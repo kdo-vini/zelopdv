@@ -1,5 +1,30 @@
 # Fixes Progress
 
+- [x] FX-CLIENTES-CRM-INDEXES-01 (2026-08-26) — adicionados índices owner-scoped
+  para as FKs do CRM compartilhado (sessões, relacionamentos, tags, segmentos,
+  campanhas, filas e automações), reduzindo custo de deleções e consultas por
+  empresa/pessoa sem conceder acesso adicional ao browser. A migration
+  `20260826131437_060_customer_crm_fk_indexes.sql` foi aplicada no Supabase real;
+  `npm run verify:migrations` passou com 107/107 artefatos, 59/59 versões e 24
+  migrations forward.
+
+- [x] FX-CLIENTES-ORDERS-01 (2026-08-25) — pedidos canônicos ganharam
+  `zelo_orders.pessoa_id` com FK `ON DELETE SET NULL`, índice por empresa/pessoa
+  e criação owner-scoped com snapshot obrigatório preservado. A exclusão CRM-safe
+  desvincula vendas, pedidos e lançamentos financeiros antes de remover a pessoa,
+  sem apagar histórico; a confirmação da tela Pessoas comunica o vínculo
+  removido. Cobertura: `tests/customerOrderLinksSchema.test.js` e suíte focada;
+  runtime Postgres pendente por indisponibilidade do Docker local.
+
+- [x] FX-CLIENTES-IDENTITY-01 (2026-08-25) — criada a fundação de identidade
+  canônica no PDV: aniversário e `updated_at` em `pessoas`,
+  `pessoa_identities` com RLS/`pessoas.gerenciar`, normalização brasileira que
+  preserva o nono dígito e RPC server-only idempotente para resolver clientes
+  vindos do WhatsApp com lock transacional. Pessoas ganhou aniversário e o
+  grupo de acesso ganhou `clientes.comunicar`. Cobertura: `tests/customerIdentitySchema.test.js`,
+  `npm run check`; verificação runtime transacional em
+  `supabase/verification/customer_identity_authz.sql`.
+
 - [x] FX-CATALOG-VISIBILITY-SEPARATION-01 (2026-08-24) - corrigido o
   acoplamento histórico entre `produtos.ocultar_no_pdv` e a publicação online
   do ZeloMenu. O ZeloPDV continua filtrando o PDV pelo campo interno; a

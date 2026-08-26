@@ -10,35 +10,101 @@
   let pessoas = [];
   let loading = true;
   let errorMsg = '';
-  let form = { id: null, nome: '', tipo: 'cliente', contato: '' };
+  let form = {
+    id: null,
+    nome: '',
+    tipo: 'cliente',
+    contato: '',
+    aniversario_dia: null,
+    aniversario_mes: null,
+    aniversario_ano: null,
+  };
   let uid = null;
   let ownerUserId = null;
 
   async function load() {
     loading = true; errorMsg = '';
-    const { data, error } = await supabase.from('pessoas').select('id,nome,tipo,contato,saldo_fiado').order('nome');
+    const { data, error } = await supabase
+      .from('pessoas')
+      .select('id,nome,tipo,contato,saldo_fiado,aniversario_dia,aniversario_mes,aniversario_ano')
+      .order('nome');
     if (error) errorMsg = error.message;
     pessoas = data || [];
     loading = false;
   }
 
-  function edit(p) { form = { id: p.id, nome: p.nome, tipo: p.tipo, contato: maskPhone(p.contato || '') }; }
-  function clear() { form = { id: null, nome: '', tipo: 'cliente', contato: '' }; }
+  function edit(p) {
+    form = {
+      id: p.id,
+      nome: p.nome,
+      tipo: p.tipo,
+      contato: maskPhone(p.contato || ''),
+      aniversario_dia: p.aniversario_dia ?? null,
+      aniversario_mes: p.aniversario_mes ?? null,
+      aniversario_ano: p.aniversario_ano ?? null,
+    };
+  }
+  function clear() {
+    form = {
+      id: null,
+      nome: '',
+      tipo: 'cliente',
+      contato: '',
+      aniversario_dia: null,
+      aniversario_mes: null,
+      aniversario_ano: null,
+    };
+  }
+
+  function birthdayPayload() {
+    const dia = form.aniversario_dia === '' || form.aniversario_dia == null ? null : Number(form.aniversario_dia);
+    const mes = form.aniversario_mes === '' || form.aniversario_mes == null ? null : Number(form.aniversario_mes);
+    const ano = form.aniversario_ano === '' || form.aniversario_ano == null ? null : Number(form.aniversario_ano);
+    if ((dia === null) !== (mes === null)) {
+      errorMsg = 'Informe dia e mês do aniversário juntos.';
+      return null;
+    }
+    if (dia !== null && (!Number.isInteger(dia) || dia < 1 || dia > 31)) {
+      errorMsg = 'O dia do aniversário deve estar entre 1 e 31.';
+      return null;
+    }
+    if (mes !== null && (!Number.isInteger(mes) || mes < 1 || mes > 12)) {
+      errorMsg = 'O mês do aniversário deve estar entre 1 e 12.';
+      return null;
+    }
+    if (ano !== null && (!Number.isInteger(ano) || ano < 1900 || ano > 2100)) {
+      errorMsg = 'Informe um ano de aniversário válido.';
+      return null;
+    }
+    return { aniversario_dia: dia, aniversario_mes: mes, aniversario_ano: ano };
+  }
+
+  function formatBirthday(p) {
+    if (!p.aniversario_dia || !p.aniversario_mes) return '—';
+    const day = String(p.aniversario_dia).padStart(2, '0');
+    const month = String(p.aniversario_mes).padStart(2, '0');
+    return p.aniversario_ano ? `${day}/${month}/${p.aniversario_ano}` : `${day}/${month}`;
+  }
 
   async function save() {
     errorMsg = '';
     if (!form.nome.trim()) { errorMsg = 'Informe o nome.'; return; }
     const digits = (form.contato || '').replace(/\D/g, '');
     if (digits && digits.length > 11) { errorMsg = 'Contato deve ter no máximo 11 dígitos.'; return; }
+    const birthday = birthdayPayload();
+    if (!birthday) return;
     if (form.id) {
-      const { error } = await supabase.from('pessoas').update({ nome: form.nome, tipo: form.tipo, contato: form.contato }).eq('id', form.id);
+      const { error } = await supabase
+        .from('pessoas')
+        .update({ nome: form.nome, tipo: form.tipo, contato: form.contato, ...birthday })
+        .eq('id', form.id);
       if (error) { errorMsg = error.message; return; }
     } else {
       if (!uid) {
         const { data: userData } = await supabase.auth.getUser();
         uid = userData?.user?.id || null;
       }
-      const payload = { nome: form.nome, tipo: form.tipo, contato: form.contato };
+      const payload = { nome: form.nome, tipo: form.tipo, contato: form.contato, ...birthday };
       if (ownerUserId || uid) payload.id_usuario = ownerUserId || uid;
       const { error } = await supabase.from('pessoas').insert(payload);
       if (error) { errorMsg = error.message; return; }
@@ -47,7 +113,7 @@
   }
 
   async function remove(id) {
-    const ok = await confirmAction('Excluir pessoa', 'Tem certeza que deseja excluir esta pessoa? O saldo precisa estar quitado. O histórico de fiado desta pessoa também será apagado.');
+    const ok = await confirmAction('Excluir pessoa', 'Tem certeza que deseja excluir esta pessoa? O saldo precisa estar quitado. O histórico financeiro e os snapshots dos pedidos serão preservados; vendas e pedidos permanecem sem vínculo com esta pessoa.');
     if (!ok) return;
     const { error } = await supabase.rpc('fiado_excluir_pessoa', { p_id_pessoa: id });
     if (error) {
@@ -122,6 +188,15 @@
             on:input={(e) => { form.contato = maskPhone(e.target.value); e.target.value = form.contato; }}
           />
         </label>
+
+        <fieldset class="birthday-fields">
+          <legend class="field-label">Aniversário</legend>
+          <div class="grid grid-cols-[.8fr_.8fr_1.2fr] gap-2">
+            <input class="field-input" type="number" min="1" max="31" bind:value={form.aniversario_dia} placeholder="Dia" aria-label="Dia do aniversário" />
+            <input class="field-input" type="number" min="1" max="12" bind:value={form.aniversario_mes} placeholder="Mês" aria-label="Mês do aniversário" />
+            <input class="field-input" type="number" min="1900" max="2100" bind:value={form.aniversario_ano} placeholder="Ano (opcional)" aria-label="Ano do aniversário" />
+          </div>
+        </fieldset>
       </div>
 
       <div class="flex gap-2 mt-5">
@@ -159,6 +234,7 @@
                 <th class="col-header px-4 sm:px-5 py-3 text-left min-w-[140px]">Nome</th>
                 <th class="col-header px-3 sm:px-4 py-3 text-left min-w-[80px]">Tipo</th>
                 <th class="col-header px-3 sm:px-4 py-3 text-left min-w-[130px]">Contato</th>
+                <th class="col-header px-3 sm:px-4 py-3 text-left min-w-[100px]">Aniversário</th>
                 <th class="col-header px-3 sm:px-4 py-3 text-right min-w-[120px]">Situação do fiado</th>
                 <th class="px-3 sm:px-4 py-3 min-w-[100px]"></th>
               </tr>
@@ -173,6 +249,7 @@
                     </span>
                   </td>
                   <td class="px-3 sm:px-4 py-3 text-slate-400 tabular-nums whitespace-nowrap">{maskPhone(p.contato) || '—'}</td>
+                  <td class="px-3 sm:px-4 py-3 text-slate-400 tabular-nums whitespace-nowrap">{formatBirthday(p)}</td>
                   <td class={`px-3 sm:px-4 py-3 text-right tabular-nums font-medium fiado-${getFiadoState(p.saldo_fiado).key}`}>
                     <span class="fiado-label">{getFiadoState(p.saldo_fiado).label}</span>
                     <span>R$ {Number(getFiadoState(p.saldo_fiado).value).toFixed(2)}</span>

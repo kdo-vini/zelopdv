@@ -1,5 +1,29 @@
 # ZeloPDV — Foco atual
 
+- Índices do CRM compartilhado (2026-08-26): a migration
+  `20260826131437_060_customer_crm_fk_indexes.sql` adiciona índices para as
+  FKs e buscas owner-scoped usadas por Clientes, campanhas e automações. Ela é
+  aditiva/idempotente, mantém o acesso de browser negado às tabelas de CRM e
+  já está aplicada no Supabase real; o ledger local está íntegro.
+
+- Vínculos CRM em pedidos (2026-08-25): a migration
+  `20260825123000_customer_order_links.sql` adiciona `zelo_orders.pessoa_id`
+  com vínculo anulável ao cadastro mestre, índice para histórico por cliente e
+  validação owner-scoped na criação canônica. A exclusão de pessoa quitada
+  preserva vendas, pedidos, snapshots e razão financeiro, removendo apenas os
+  vínculos vivos; a tela Pessoas explica que vendas e pedidos permanecem sem
+  vínculo. A validação de runtime no Postgres segue pendente enquanto o Docker
+  local não está disponível.
+
+- Identidade canônica de Clientes (2026-08-25): a primeira fundação do CRM
+  ficou versionada no PDV em `20260825120000_customer_identity_foundation.sql`.
+  `pessoas` continua sendo o cadastro mestre; aniversários e `updated_at` foram
+  adicionados, `pessoa_identities` é owner-scoped e a resolução server-only do
+  WhatsApp usa lock transacional, preservando o nono dígito e evitando conflito
+  com funcionários. A tela Pessoas exibe/persiste aniversário e Acessos lista
+  `clientes.comunicar`. A validação de runtime ainda precisa ser executada em
+  um banco vinculado antes de qualquer aplicação em produção.
+
 - Separação de visibilidade PDV/ZeloMenu (2026-08-24):
   `produtos.ocultar_no_pdv` é exclusivamente a visibilidade interna do
   ZeloPDV; `zelomenu_product_publications.visivel_online` e
