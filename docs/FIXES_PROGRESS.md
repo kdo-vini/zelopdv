@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-CLIENTES-CRM-INDEXES-01 (2026-08-26) — adicionados índices owner-scoped
+  para as FKs do CRM compartilhado (sessões, relacionamentos, tags, segmentos,
+  campanhas, filas e automações), reduzindo custo de deleções e consultas por
+  empresa/pessoa sem conceder acesso adicional ao browser. A migration
+  `20260826131437_060_customer_crm_fk_indexes.sql` foi aplicada no Supabase real;
+  `npm run verify:migrations` passou com 107/107 artefatos, 59/59 versões e 24
+  migrations forward.
+
 - [x] FX-CLIENTES-ORDERS-01 (2026-08-25) — pedidos canônicos ganharam
   `zelo_orders.pessoa_id` com FK `ON DELETE SET NULL`, índice por empresa/pessoa
   e criação owner-scoped com snapshot obrigatório preservado. A exclusão CRM-safe

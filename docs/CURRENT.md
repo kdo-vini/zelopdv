@@ -1,5 +1,11 @@
 # ZeloPDV — Foco atual
 
+- Índices do CRM compartilhado (2026-08-26): a migration
+  `20260826131437_060_customer_crm_fk_indexes.sql` adiciona índices para as
+  FKs e buscas owner-scoped usadas por Clientes, campanhas e automações. Ela é
+  aditiva/idempotente, mantém o acesso de browser negado às tabelas de CRM e
+  já está aplicada no Supabase real; o ledger local está íntegro.
+
 - Vínculos CRM em pedidos (2026-08-25): a migration
   `20260825123000_customer_order_links.sql` adiciona `zelo_orders.pessoa_id`
   com vínculo anulável ao cadastro mestre, índice para histórico por cliente e
