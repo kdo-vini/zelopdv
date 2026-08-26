@@ -55,6 +55,11 @@
   descartável com equivalência estrutural/de segurança. Migrations aplicadas em
   `supabase/migrations/` são imutáveis; SQL em `supabase/history/` é somente
   referência e nunca deve ser executado.
+- Em 2026-08-26, o stream canônico recebeu as migrations compartilhadas do CRM
+  do ZeloChat (`20260826110656`–`20260826110930`), já aplicadas no projeto
+  `xnnjyrblpvsqrtsshawa`. Os arquivos são cópias semânticas dos `048`–`059` do
+  ZeloChat; a ordem e os nomes com timestamp devem ser preservados para o CLI
+  reconciliar o histórico sem reaplicar DDL no banco compartilhado.
 - Para aplicar migrations no projeto real vinculado, usar o Supabase CLI com `supabase db query --linked --file <arquivo.sql>`; não depender de colar SQL manualmente no dashboard.
 - A trilha documental principal agora é: `README.md` + docs operacionais na raiz + `pdvObsidian/HOME.md`.
 - Em 2026-06-01, `npm test` voltou a 140/140 após alinhar fixtures ao contrato atual de perfil/CPF/telefone.

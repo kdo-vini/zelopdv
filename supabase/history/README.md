@@ -15,3 +15,12 @@ these files.
 
 Applied files under `supabase/migrations/` remain byte-for-byte immutable.
 Current bootstrap state comes from `supabase/baselines/`, not from this archive.
+
+## Shared ZeloChat CRM stream
+
+The CRM relationship layer is owned by ZeloChat but runs in this shared
+database. Its canonical migration files live in `supabase/migrations/` with
+the remote timestamps `20260826110656` through `20260826110930`, matching the
+already-applied entries in `supabase_migrations.schema_migrations`. Keep the
+ZeloChat `048`–`059` payloads semantically identical and never replay them as a
+second migration under a different version.
