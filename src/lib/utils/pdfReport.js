@@ -32,7 +32,7 @@ const fmt = (n) => `R$ ${Number(n || 0).toFixed(2)}`;
  * @param {object} dados.kpis
  * @param {Array} dados.serieDiaria
  * @param {Array} dados.topProdutos
- * @param {object} dados.pagamentos - { dinheiro, pix, debito, credito, fiado }
+ * @param {object} dados.pagamentos - { dinheiro, pix, debito, credito, valeRefeicao, fiado }
  * @param {object} dados.balanco - { sangria, suprimento, descontos }
  */
 export async function generatePDFReport(dados) {
@@ -132,6 +132,7 @@ export async function generatePDFReport(dados) {
             { label: 'Pix', value: pags.pix, color: COLORS.cyan },
             { label: 'Débito', value: pags.debito, color: COLORS.primary },
             { label: 'Crédito', value: pags.credito, color: COLORS.purple },
+            { label: 'Vale-refeição', value: pags.valeRefeicao, color: COLORS.danger },
             { label: 'Fiado', value: pags.fiado, color: COLORS.warning },
             ...extras,
         ].filter(it => it.value > 0);
@@ -251,6 +252,7 @@ export async function generatePDFReport(dados) {
             { label: 'Pix', value: pags.pix, color: COLORS.cyan },
             { label: 'Débito', value: pags.debito, color: COLORS.primary },
             { label: 'Crédito', value: pags.credito, color: COLORS.purple },
+            { label: 'Vale-refeição', value: pags.valeRefeicao, color: COLORS.danger },
             { label: 'Fiado', value: pags.fiado, color: COLORS.warning },
             ...extras,
         ].filter(it => it.value > 0);

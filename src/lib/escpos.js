@@ -6,6 +6,8 @@
 // estiver no mapa, faz fallback para a versão ASCII (á → a). Funciona em
 // qualquer impressora ESC/POS, do Epson TM-T20 ao clone genérico de R$ 250.
 
+import { formatPaymentMethod } from './finance/paymentMethods.js';
+
 /* eslint-disable no-bitwise */
 
 const ESC = 0x1b;
@@ -210,15 +212,7 @@ function centerLine(text, width) {
 }
 
 function formaLabel(f) {
-  if (!f) return '';
-  if (f === 'dinheiro') return 'Dinheiro';
-  if (f === 'cartao') return 'Cartao';
-  if (f === 'cartao_debito') return 'Cartao Debito';
-  if (f === 'cartao_credito') return 'Cartao Credito';
-  if (f === 'pix') return 'PIX';
-  if (f === 'fiado') return 'Fiado';
-  if (f === 'multiplo' || f === 'múltiplo') return 'Multiplos';
-  return String(f).charAt(0).toUpperCase() + String(f).slice(1);
+  return f ? formatPaymentMethod(f, { ascii: true }) : '';
 }
 
 function numberFrom(value, fallback = 0) {

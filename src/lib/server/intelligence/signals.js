@@ -494,12 +494,13 @@ DETECTORS.push({
 
     // Agregar mix das duas janelas
     function aggregateMix(snapshots) {
-      const mix = { pix: 0, dinheiro: 0, cartao: 0, fiado: 0, outros: 0 };
+      const mix = { pix: 0, dinheiro: 0, cartao: 0, vale_refeicao: 0, fiado: 0, outros: 0 };
       for (const snap of snapshots) {
         const m = snap.metrics?.mix_pagamentos || {};
         mix.pix += m.pix || 0;
         mix.dinheiro += m.dinheiro || 0;
         mix.cartao += m.cartao || 0;
+        mix.vale_refeicao += m.vale_refeicao || 0;
         mix.fiado += m.fiado || 0;
         mix.outros += m.outros || 0;
       }
@@ -516,7 +517,7 @@ DETECTORS.push({
 
     // Calcular shift para cada forma
     const shifts = [];
-    for (const forma of ['pix', 'dinheiro', 'cartao', 'fiado']) {
+    for (const forma of ['pix', 'dinheiro', 'cartao', 'vale_refeicao', 'fiado']) {
       const shareRecent = recentMix[forma] / recentTotal;
       const sharePrev = prevMix[forma] / prevTotal;
       const shift = shareRecent - sharePrev;

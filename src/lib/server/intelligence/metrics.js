@@ -129,12 +129,14 @@ export function computeDailyMetrics({ vendas, itens, pagamentos, taxas, saldoFia
     pix: paymentSummary.pix,
     dinheiro: paymentSummary.dinheiro,
     cartao: paymentSummary.totalCartao,
+    vale_refeicao: paymentSummary.valeRefeicao,
     fiado: paymentSummary.fiado,
     outros: money(
       receita_bruta
       - paymentSummary.pix
       - paymentSummary.dinheiro
       - paymentSummary.totalCartao
+      - paymentSummary.valeRefeicao
       - paymentSummary.fiado
     ),
   };

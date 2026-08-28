@@ -2,6 +2,7 @@ import {
   AlertCircle, ArrowDownRight, ArrowUpRight, Banknote, CreditCard,
   PackageSearch, ShoppingBag, WalletCards
 } from 'lucide-svelte';
+import { formatPaymentMethod } from '$lib/finance/paymentMethods.js';
 
 const isMissing = (value) => value === null || value === undefined || value === '';
 const money = (value) => isMissing(value) ? 'Não informado' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
@@ -118,7 +119,7 @@ const evidence = {
   ticket: (e) => [field('Ticket no dia', money(e.ticket_today)), field('Referência', money(e.ticket_baseline)), field('Variação', percent(e.delta_ticket_pct)), field('Vendas no dia', number(e.qtd_today))],
   productDrop: (e) => [field('Produto', e.nome_produto || 'Produto'), field('Unidades nos últimos 7 dias', number(e.qty_last7)), field('Média semanal anterior', number(e.baseline_avg_7d)), field('Variação', percent(e.delta_pct))],
   concentration: (e) => [field('Produto', e.nome_produto || 'Produto'), field('Participação nas vendas', percent(e.share_pct)), field('Vendas do produto', money(e.revenue_product_30d)), field('Vendas totais', money(e.revenue_total_30d))],
-  payment: (e) => [field('Forma de pagamento', e.forma || 'Não informada'), field('Participação recente', percent(e.share_recent)), field('Participação anterior', percent(e.share_previous)), field('Mudança', percent(e.shift_pp))],
+  payment: (e) => [field('Forma de pagamento', e.forma ? formatPaymentMethod(e.forma) : 'Não informada'), field('Participação recente', percent(e.share_recent)), field('Participação anterior', percent(e.share_previous)), field('Mudança', percent(e.shift_pp))],
   fiado: (e) => [field('Fiado emitido em 30 dias', money(e.fiado_issued_30d)), field('Participação das vendas', percent(e.share_pct)), field('Vendas no período', money(e.revenue_30d)), field('Saldo atual no fichário', money(e.saldo_fiado_total_atual))],
   cash: (e) => [field('Fechamentos analisados', number(e.n_closures_checked)), field('Com diferença', number(e.n_with_difference)), field('Soma das diferenças', money(e.sum_differences)), field('Média por diferença', money(e.avg_difference))],
   stockCoverage: (e) => [field('Produto', e.nome_produto || 'Produto'), field('Estoque atual', number(e.estoque_atual)), field('Cobertura no ritmo médio', `${number(e.coverage_days, 1)} dias`), field('Consumo médio diário', number(e.consumo_diario_medio, 1))],

@@ -35,8 +35,18 @@ describe('receipt builder', () => {
   it('labels debit and credit card forms distinctly', () => {
     const hDeb = buildReceiptHTML({ estabelecimento: { nome_exibicao: 'Loja' }, venda: { idVenda: 2, formaPagamento: 'cartao_debito', total: 10, itens: [] } });
     const hCred = buildReceiptHTML({ estabelecimento: { nome_exibicao: 'Loja' }, venda: { idVenda: 3, formaPagamento: 'cartao_credito', total: 10, itens: [] } });
-    expect(hDeb).toMatch(/Cartão \(Débito\)/i);
-    expect(hCred).toMatch(/Cartão \(Crédito\)/i);
+    expect(hDeb).toMatch(/Cartão de débito/i);
+    expect(hCred).toMatch(/Cartão de crédito/i);
+  });
+
+  it('labels Vale-refeição with the customer-facing name', () => {
+    const html = buildReceiptHTML({
+      estabelecimento: { nome_exibicao: 'Loja' },
+      venda: { idVenda: 4, formaPagamento: 'vale_refeicao', total: 10, itens: [] }
+    });
+
+    expect(html).toContain('Vale-refeição');
+    expect(html).not.toContain('vale_refeicao');
   });
 
   it('renders items with correct totals', () => {

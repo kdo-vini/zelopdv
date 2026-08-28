@@ -8,7 +8,9 @@ export function businessDateKey(date = new Date()) {
     day: '2-digit'
   }).format(date);
 }
-const paymentLabels = { pix: 'Pix', dinheiro: 'Dinheiro', cartao: 'Cartão', fiado: 'Fiado', outros: 'Outros' };
+import { formatPaymentMethod } from '$lib/finance/paymentMethods.js';
+
+const paymentLabels = { pix: 'Pix', dinheiro: 'Dinheiro', cartao: 'Cartão', vale_refeicao: 'Vale-refeição', fiado: 'Fiado', outros: 'Outros' };
 
 function dateAtNoon(date) { return new Date(`${date}T12:00:00Z`); }
 function toDateKey(date) { return date.toISOString().slice(0, 10); }
@@ -65,7 +67,7 @@ function aggregatePayments(rows) {
   for (const row of rows) for (const [type, value] of Object.entries(row.metrics?.mix_pagamentos || {})) {
     amounts.set(type, (amounts.get(type) || 0) + (Number(value) || 0));
   }
-  return [...amounts.entries()].map(([type, value]) => ({ type, label: paymentLabels[type] || type, value })).filter((entry) => entry.value > 0).sort((a, b) => b.value - a.value);
+  return [...amounts.entries()].map(([type, value]) => ({ type, label: paymentLabels[type] || formatPaymentMethod(type), value })).filter((entry) => entry.value > 0).sort((a, b) => b.value - a.value);
 }
 
 function opening(current, previous) {

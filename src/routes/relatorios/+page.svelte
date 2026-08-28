@@ -16,6 +16,8 @@
 		calculateRestaurantRevenue,
 		calculateRevenue
 	} from '$lib/finance/caixa';
+	import { formatPaymentMethod } from '$lib/finance/paymentMethods';
+	import { buildPaymentPresentation } from '$lib/finance/paymentReport';
 	
 	// Gráficos visuais
 	import BarChart from '$lib/components/charts/BarChart.svelte';
@@ -116,18 +118,25 @@
 
 	// Helpers
 	const fmt = (n) => `R$ ${Number(n || 0).toFixed(2)}`;
-	const formatForma = (f) => ({
-		dinheiro:       'Dinheiro',
-		pix:            'PIX',
-		cartao_debito:  'Cartão (Débito)',
-		cartao_credito: 'Cartão (Crédito)',
-		cartao:         'Cartão',
-		fiado:          'Fiado',
-		multiplo:       'Múltiplo',
-	})[f] ?? (plataformasAtivas.find(p => p.id === f)?.nome
-	       || PLATAFORMAS_PRESET.find(p => p.id === f)?.nome
-	       || f?.replace(/_/g, ' ')
-	       || f);
+	const reportPlatforms = () => [...plataformasAtivas, ...PLATAFORMAS_PRESET];
+	const formatForma = (f) => formatPaymentMethod(f, { platforms: reportPlatforms() });
+
+	const PAYMENT_COLORS = {
+		dinheiro: { color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400', hex: '#22c55e' },
+		pix: { color: 'bg-cyan-500', textColor: 'text-cyan-600 dark:text-cyan-400', hex: '#06b6d4' },
+		cartao_debito: { color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400', hex: '#3b82f6' },
+		cartao_credito: { color: 'bg-purple-500', textColor: 'text-purple-600 dark:text-purple-400', hex: '#8b5cf6' },
+		cartao: { color: 'bg-slate-500', textColor: 'text-slate-600 dark:text-slate-400', hex: '#64748b' },
+		vale_refeicao: { color: 'bg-fuchsia-500', textColor: 'text-fuchsia-600 dark:text-fuchsia-400', hex: '#d946ef' },
+		fiado: { color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400', hex: '#f59e0b' },
+	};
+
+	function withPaymentVisuals(presentation) {
+		return [
+			...presentation.items.map((item) => ({ ...item, ...(PAYMENT_COLORS[item.id] || DEFAULT_PLAT_COLOR) })),
+			...presentation.extras.map((item) => ({ ...item, ...(PLATFORM_COLORS[item.id] || DEFAULT_PLAT_COLOR) })),
+		];
+	}
 
 	function chunkArray(arr, size = 1000) {
 		const chunks = [];
@@ -371,44 +380,18 @@
 		}
 	}
 
-	// KPIs com suporte a múltiplos pagamentos (corrigido cálculo de dinheiro líquido)
-	// Dinheiro em vendas simples: valor_recebido - valor_troco (não usar valor_total, pois pode haver troco)
 	$: resumoPagamentosCaixa = calculatePaymentSummary(vendas, vendasPagamentos);
-	$: dinheiroSimplesLiquido = (vendas || [])
-		.filter(v => v.forma_pagamento === 'dinheiro')
-		.reduce((a, v) => a + Math.max(0, Number(v.valor_recebido || 0) - Number(v.valor_troco || 0)), 0);
-
-	// Dinheiro em vendas múltiplas: soma das linhas "dinheiro" menos troco (se houver troco e linha dinheiro)
-	$: dinheiroMultiploLiquido = (vendas || [])
-		.filter(v => v.forma_pagamento === 'multiplo')
-		.reduce((acc, v) => {
-			const linhas = (vendasPagamentos || []).filter(p => p.id_venda === v.id && p.forma_pagamento === 'dinheiro');
-			if (linhas.length === 0) return acc; // sem dinheiro nesta venda
-			const soma = linhas.reduce((s, p) => s + Number(p.valor || 0), 0);
-			return acc + soma;
-		}, 0);
-
-	// Para exibição total de dinheiro (líquido em gaveta)
+	$: pagamentosCaixa = buildPaymentPresentation(resumoPagamentosCaixa, { platforms: reportPlatforms() });
 	$: totalDinheiro = resumoPagamentosCaixa.dinheiro;
-
-	// Demais formas: somamos vendas simples daquela forma + linhas de pagamentos múltiplos
-	$: singleDebito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-	$: singleCredito = (vendas || []).filter(v => v.forma_pagamento === 'cartao_credito').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-	$: totalCartaoLegacy = (vendas || []).filter(v => v.forma_pagamento === 'cartao').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-	$: singlePix = (vendas || []).filter(v => v.forma_pagamento === 'pix').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-	$: pagDebito = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'cartao_debito').reduce((a, p) => a + Number(p.valor || 0), 0);
-	$: pagCredito = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'cartao_credito').reduce((a, p) => a + Number(p.valor || 0), 0);
-	$: pagPix = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'pix').reduce((a, p) => a + Number(p.valor || 0), 0);
-	$: totalCartaoDebito = Number(singleDebito + pagDebito);
-	$: totalCartaoCredito = Number(singleCredito + pagCredito);
-	$: totalCartao = Number(totalCartaoDebito + totalCartaoCredito + totalCartaoLegacy);
-	$: totalPix = Number(singlePix + pagPix);
-	$: singleFiado = (vendas || []).filter(v => v.forma_pagamento === 'fiado').reduce((a, v) => a + Number(v.valor_total || 0), 0);
-	$: pagFiado = (vendasPagamentos || []).filter(p => p.forma_pagamento === 'fiado').reduce((a, p) => a + Number(p.valor || 0), 0);
-	$: totalFiado = Number(singleFiado + pagFiado);
-	// totalBruto inclui fiado (somatório integral das vendas). totalGeral exclui fiado (apenas receita realizada).
-	$: totalBruto = Number((vendas || []).reduce((a, v) => a + Number(v.valor_total || 0), 0));
-	$: totalGeral = Number(totalBruto - totalFiado);
+	$: totalCartaoDebito = resumoPagamentosCaixa.cartaoDebito;
+	$: totalCartaoCredito = resumoPagamentosCaixa.cartaoCredito;
+	$: totalCartaoLegacy = resumoPagamentosCaixa.cartaoLegacy;
+	$: totalCartao = resumoPagamentosCaixa.totalCartao;
+	$: totalPix = resumoPagamentosCaixa.pix;
+	$: totalValeRefeicao = resumoPagamentosCaixa.valeRefeicao;
+	$: totalFiado = resumoPagamentosCaixa.fiado;
+	$: totalBruto = resumoPagamentosCaixa.totalBruto;
+	$: totalGeral = resumoPagamentosCaixa.totalGeral;
 	$: qtdVendas = (vendas || []).length;
 	$: ticketMedio = qtdVendas ? totalGeral / qtdVendas : 0;
 
@@ -440,39 +423,8 @@
 		if (deliveryVendas.length > 0) result.push({ tipo: 'delivery', label: 'Delivery', icon: 'delivery', qtd: deliveryVendas.length, total: deliveryVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: deliveryVendas.reduce((a, v) => a + Number(v.taxa_entrega || 0), 0) });
 		return result;
 	})();
-	// Plataformas nas vendas do caixa (detecta todas, inclusive desativadas com histórico)
-	$: platTotaisCaixa = (() => {
-		const _ = plataformasAtivas;
-		const STANDARD = new Set(['dinheiro','pix','cartao_debito','cartao_credito','cartao','fiado','multiplo']);
-		const platMap = new Map();
-		for (const v of (vendas||[])) {
-			if (!STANDARD.has(v.forma_pagamento))
-				platMap.set(v.forma_pagamento, (platMap.get(v.forma_pagamento)||0) + Number(v.valor_total||0));
-		}
-		for (const p of (vendasPagamentos||[])) {
-			if (!STANDARD.has(p.forma_pagamento))
-				platMap.set(p.forma_pagamento, (platMap.get(p.forma_pagamento)||0) + Number(p.valor||0));
-		}
-		return Array.from(platMap.entries())
-			.filter(([, v]) => v > 0)
-			.map(([id, value]) => {
-				const info = plataformasAtivas.find(p => p.id === id)
-				          || PLATAFORMAS_PRESET.find(p => p.id === id)
-				          || { id, nome: id.replace(/_/g, ' ') };
-				const clr = PLATFORM_COLORS[id] || DEFAULT_PLAT_COLOR;
-				return { label: info.nome, id, value, color: clr.color, textColor: clr.textColor, hex: clr.hex };
-			});
-	})();
-
-	// Pagamentos breakdown (caixa)
-	$: caixaPagItems = [
-		{ label: 'Dinheiro', value: totalDinheiro, color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' },
-		{ label: 'Pix', value: totalPix, color: 'bg-cyan-500', textColor: 'text-cyan-600 dark:text-cyan-400' },
-		{ label: 'Débito', value: totalCartaoDebito, color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400' },
-		{ label: 'Crédito', value: totalCartaoCredito, color: 'bg-purple-500', textColor: 'text-purple-600 dark:text-purple-400' },
-		{ label: 'Fiado', value: totalFiado, color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400' },
-		...platTotaisCaixa,
-	].filter(p => p.value > 0);
+	$: platTotaisCaixa = pagamentosCaixa.extras.map((item) => ({ ...item, ...(PLATFORM_COLORS[item.id] || DEFAULT_PLAT_COLOR) }));
+	$: caixaPagItems = withPaymentVisuals(pagamentosCaixa).filter(p => p.value > 0);
 	$: caixaPagTotal = caixaPagItems.reduce((a, p) => a + p.value, 0);
 
 	// Paginação das vendas do caixa (mais recentes primeiro)
@@ -586,11 +538,7 @@
 					dinheiro: totalDinheiro,
 				},
 				pagamentos: {
-					dinheiro: totalDinheiro,
-					pix: totalPix,
-					debito: totalCartaoDebito,
-					credito: totalCartaoCredito,
-					fiado: totalFiado,
+					...pagamentosCaixa.pagamentos,
 					extras: platTotaisCaixa.map(p => ({ label: p.label, value: p.value, hex: p.hex })),
 				},
 				serieDiaria: serieDiariaCaixa,
@@ -617,11 +565,7 @@
 					dinheiro: periodoDinheiroLiquido,
 				},
 				pagamentos: {
-					dinheiro: periodoDinheiroLiquido,
-					pix: periodoPix,
-					debito: periodoCartaoDebito,
-					credito: periodoCartaoCredito,
-					fiado: periodoFiado,
+					...pagamentosPeriodo.pagamentos,
 					extras: platTotaisPeriodo.map(p => ({ label: p.label, value: p.value, hex: p.hex })),
 				},
 				serieDiaria: periodoSerieDiaria,
@@ -919,26 +863,17 @@
 		}
 	}
 
-	// KPIs período (dinheiro líquido)
 	$: resumoPagamentosPeriodo = calculatePaymentSummary(periodoVendas, periodoPagamentos);
-	$: periodoDinheiroSimplesLiquido = (periodoVendas||[])
-		.filter(v => v.forma_pagamento === 'dinheiro')
-		.reduce((a,v)=> a + Math.max(0, Number(v.valor_recebido||0) - Number(v.valor_troco||0)),0);
-	$: periodoDinheiroMultiploLiquido = (periodoVendas||[])
-		.filter(v => v.forma_pagamento === 'multiplo')
-		.reduce((acc,v)=> {
-			const linhas = (periodoPagamentos||[]).filter(p => p.id_venda === v.id && p.forma_pagamento === 'dinheiro');
-			if (!linhas.length) return acc;
-			const soma = linhas.reduce((s,p)=> s + Number(p.valor||0),0);
-			return acc + soma;
-		},0);
+	$: pagamentosPeriodo = buildPaymentPresentation(resumoPagamentosPeriodo, { platforms: reportPlatforms() });
 	$: periodoDinheiroLiquido = resumoPagamentosPeriodo.dinheiro;
-	$: periodoPix = (periodoVendas||[]).filter(v => v.forma_pagamento === 'pix').reduce((a,v)=> a + Number(v.valor_total||0),0) + (periodoPagamentos||[]).filter(p=> p.forma_pagamento === 'pix').reduce((a,p)=> a + Number(p.valor||0),0);
-	$: periodoCartaoDebito = (periodoVendas||[]).filter(v => v.forma_pagamento === 'cartao_debito').reduce((a,v)=> a + Number(v.valor_total||0),0) + (periodoPagamentos||[]).filter(p=> p.forma_pagamento === 'cartao_debito').reduce((a,p)=> a + Number(p.valor||0),0);
-	$: periodoCartaoCredito = (periodoVendas||[]).filter(v => v.forma_pagamento === 'cartao_credito').reduce((a,v)=> a + Number(v.valor_total||0),0) + (periodoPagamentos||[]).filter(p=> p.forma_pagamento === 'cartao_credito').reduce((a,p)=> a + Number(p.valor||0),0);
-	$: periodoFiado = (periodoVendas||[]).filter(v => v.forma_pagamento === 'fiado').reduce((a,v)=> a + Number(v.valor_total||0),0) + (periodoPagamentos||[]).filter(p=> p.forma_pagamento === 'fiado').reduce((a,p)=> a + Number(p.valor||0),0);
-	$: periodoTotalBruto = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_total||0),0);
-	$: periodoTotalGeral = periodoTotalBruto - periodoFiado;
+	$: periodoPix = resumoPagamentosPeriodo.pix;
+	$: periodoCartaoDebito = resumoPagamentosPeriodo.cartaoDebito;
+	$: periodoCartaoCredito = resumoPagamentosPeriodo.cartaoCredito;
+	$: periodoCartaoLegacy = resumoPagamentosPeriodo.cartaoLegacy;
+	$: periodoValeRefeicao = resumoPagamentosPeriodo.valeRefeicao;
+	$: periodoFiado = resumoPagamentosPeriodo.fiado;
+	$: periodoTotalBruto = resumoPagamentosPeriodo.totalBruto;
+	$: periodoTotalGeral = resumoPagamentosPeriodo.totalGeral;
 	$: periodoQtdVendas = (periodoVendas||[]).length;
 	$: periodoTicketMedio = periodoQtdVendas ? periodoTotalGeral / periodoQtdVendas : 0;
 	$: resumoMovsPeriodo = calculateMovementSummary(periodoMovs);
@@ -963,39 +898,8 @@
 		if (deliveryVendas.length > 0) result.push({ tipo: 'delivery', label: 'Delivery', icon: 'delivery', qtd: deliveryVendas.length, total: deliveryVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: deliveryVendas.reduce((a, v) => a + Number(v.taxa_entrega || 0), 0) });
 		return result;
 	})();
-	// Plataformas nas vendas do período
-	$: platTotaisPeriodo = (() => {
-		const _ = plataformasAtivas;
-		const STANDARD = new Set(['dinheiro','pix','cartao_debito','cartao_credito','cartao','fiado','multiplo']);
-		const platMap = new Map();
-		for (const v of (periodoVendas||[])) {
-			if (!STANDARD.has(v.forma_pagamento))
-				platMap.set(v.forma_pagamento, (platMap.get(v.forma_pagamento)||0) + Number(v.valor_total||0));
-		}
-		for (const p of (periodoPagamentos||[])) {
-			if (!STANDARD.has(p.forma_pagamento))
-				platMap.set(p.forma_pagamento, (platMap.get(p.forma_pagamento)||0) + Number(p.valor||0));
-		}
-		return Array.from(platMap.entries())
-			.filter(([, v]) => v > 0)
-			.map(([id, value]) => {
-				const info = plataformasAtivas.find(p => p.id === id)
-				          || PLATAFORMAS_PRESET.find(p => p.id === id)
-				          || { id, nome: id.replace(/_/g, ' ') };
-				const clr = PLATFORM_COLORS[id] || DEFAULT_PLAT_COLOR;
-				return { label: info.nome, id, value, color: clr.color, textColor: clr.textColor, hex: clr.hex };
-			});
-	})();
-
-	// Pagamentos breakdown (periodo)
-	$: periodoPagItems = [
-		{ label: 'Dinheiro', value: periodoDinheiroLiquido, color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' },
-		{ label: 'Pix', value: periodoPix, color: 'bg-cyan-500', textColor: 'text-cyan-600 dark:text-cyan-400' },
-		{ label: 'Débito', value: periodoCartaoDebito, color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400' },
-		{ label: 'Crédito', value: periodoCartaoCredito, color: 'bg-purple-500', textColor: 'text-purple-600 dark:text-purple-400' },
-		{ label: 'Fiado', value: periodoFiado, color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400' },
-		...platTotaisPeriodo,
-	].filter(p => p.value > 0);
+	$: platTotaisPeriodo = pagamentosPeriodo.extras.map((item) => ({ ...item, ...(PLATFORM_COLORS[item.id] || DEFAULT_PLAT_COLOR) }));
+	$: periodoPagItems = withPaymentVisuals(pagamentosPeriodo).filter(p => p.value > 0);
 	$: periodoPagTotal = periodoPagItems.reduce((a, p) => a + p.value, 0);
 
 	// Série diária (para futuro gráfico / export) – simples agregação client-side
@@ -1258,9 +1162,6 @@
 						</div>
 					{/each}
 				</div>
-				{#if totalCartaoLegacy > 0}
-					<div class="mt-2 text-xs text-muted">Cartão (legado): {fmt(totalCartaoLegacy)}</div>
-				{/if}
 			</div>
 			{/if}
 
@@ -1858,14 +1759,7 @@
 				<div class="p-4 rounded-lg border card-inset">
 					<DonutChart
 						title="Formas de Pagamento"
-						data={[
-							{ label: 'Dinheiro', value: periodoDinheiroLiquido, color: '#22c55e' },
-							{ label: 'Pix', value: periodoPix, color: '#06b6d4' },
-							{ label: 'Débito', value: periodoCartaoDebito, color: '#3b82f6' },
-							{ label: 'Crédito', value: periodoCartaoCredito, color: '#8b5cf6' },
-							{ label: 'Fiado', value: periodoFiado, color: '#f59e0b' },
-							...platTotaisPeriodo.map(p => ({ label: p.label, value: p.value, color: p.hex }))
-						].filter(d => d.value > 0)}
+						data={periodoPagItems.map((payment) => ({ label: payment.label, value: payment.value, color: payment.hex }))}
 						size={160}
 					/>
 				</div>

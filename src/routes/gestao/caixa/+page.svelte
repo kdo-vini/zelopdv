@@ -11,6 +11,7 @@
     calculatePlatformFees,
     buildPaymentTotalsSnapshot
   } from '$lib/finance/caixa';
+  import { formatPaymentMethod } from '$lib/finance/paymentMethods';
 
   let loading = true;
   let errorMessage = '';
@@ -104,6 +105,7 @@
     cartao_credito: resumoPagamentos.cartaoCredito,
     cartao_legacy: resumoPagamentos.cartaoLegacy,
     pix: resumoPagamentos.pix,
+    vale_refeicao: resumoPagamentos.valeRefeicao,
     fiado: resumoPagamentos.fiado,
   };
   $: formasExtras = Object.entries(resumoPagamentos.totalsByForm || {})
@@ -224,7 +226,7 @@
         </div>
       </div>
 
-      <div class="grid sm:grid-cols-4 gap-4">
+      <div class="grid sm:grid-cols-5 gap-4">
         <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
           <div class="text-xs" style="color: var(--text-muted);">Dinheiro</div>
           <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.dinheiro).toFixed(2)}</div>
@@ -237,6 +239,10 @@
         <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
           <div class="text-xs" style="color: var(--text-muted);">Pix</div>
           <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.pix).toFixed(2)}</div>
+        </div>
+        <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+          <div class="text-xs" style="color: var(--text-muted);">Vale-refeição</div>
+          <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.vale_refeicao).toFixed(2)}</div>
         </div>
         <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
           <div class="text-xs" style="color: var(--text-muted);">Total</div>
@@ -254,7 +260,7 @@
           {/if}
           {#each formasExtras as item}
             <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
-              <div class="text-xs" style="color: var(--text-muted);">{item.forma.replace(/_/g, ' ')}</div>
+              <div class="text-xs" style="color: var(--text-muted);">{formatPaymentMethod(item.forma)}</div>
               <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(item.valor).toFixed(2)}</div>
             </div>
           {/each}

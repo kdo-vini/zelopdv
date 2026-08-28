@@ -5,6 +5,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { maskPhone, maskDocumento } from '$lib/masks';
+  import { formatPaymentMethod } from '$lib/finance/paymentMethods';
 
   const dispatch = createEventDispatcher();
   
@@ -40,9 +41,9 @@
     text += `*TOTAL: R$ ${Number(venda.total || 0).toFixed(2)}*\n`;
     
     if (venda.pagamentos && venda.pagamentos.length > 0) {
-        text += `Pgto: ${venda.pagamentos.map(p => `${p.forma} (R$ ${Number(p.valor || 0).toFixed(2)})`).join(', ')}\n`;
+        text += `Pgto: ${venda.pagamentos.map(p => `${formatPaymentMethod(p.forma || p.forma_pagamento)} (R$ ${Number(p.valor || 0).toFixed(2)})`).join(', ')}\n`;
     } else if (venda.formaPagamento) {
-        text += `Pgto: ${venda.formaPagamento}\n`;
+        text += `Pgto: ${formatPaymentMethod(venda.formaPagamento)}\n`;
     }
 
     text += `\n_Obrigado pela preferência!_`;

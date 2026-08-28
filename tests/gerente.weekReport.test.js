@@ -63,4 +63,12 @@ describe('buildWeekReport', () => {
   it('does not use prohibited financial copy', () => {
     expect(JSON.stringify(buildWeekReport([], [], '2026-07-06'))).not.toMatch(/lucro|margem|vai acabar/i);
   });
+
+  it('labels Vale-refeição in the weekly payment mix', () => {
+    const report = buildWeekReport([
+      snapshot('2026-07-06', 100, 4, { mix_pagamentos: { vale_refeicao: 100 } }),
+    ], [], '2026-07-06', { today: '2026-07-12' });
+
+    expect(report.paymentMix).toContainEqual(expect.objectContaining({ type: 'vale_refeicao', label: 'Vale-refeição', value: 100 }));
+  });
 });

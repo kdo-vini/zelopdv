@@ -4,6 +4,7 @@
 // dentro de um iframe oculto (sem popup, funciona em PWA).
 
 import { maskPhone, maskDocumento } from '$lib/masks.js';
+import { formatPaymentMethod } from '$lib/finance/paymentMethods.js';
 
 function escHtml(str) {
   if (str == null) return '';
@@ -100,15 +101,7 @@ function getReceiptCharges(venda, subtotal, desconto) {
 }
 
 function formaLabel(f) {
-  if (!f) return '';
-  if (f === 'dinheiro') return 'Dinheiro';
-  if (f === 'cartao') return 'Cartão';
-  if (f === 'cartao_debito') return 'Cartão (Débito)';
-  if (f === 'cartao_credito') return 'Cartão (Crédito)';
-  if (f === 'pix') return 'PIX';
-  if (f === 'fiado') return 'Fiado';
-  if (f === 'multiplo' || f === 'múltiplo') return 'Múltiplos';
-  return String(f).charAt(0).toUpperCase() + String(f).slice(1);
+  return f ? formatPaymentMethod(f) : '';
 }
 
 const SHARED_CSS = `

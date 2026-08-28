@@ -4,6 +4,7 @@
  */
 
 import { INTELLIGENCE_LLM_ENABLED, INTELLIGENCE_LLM_MAX_TOKENS, INTELLIGENCE_LLM_MODEL } from './config.js';
+import { formatPaymentMethod } from '$lib/finance/paymentMethods.js';
 
 const money = (value) => new Intl.NumberFormat('pt-BR', {
   style: 'currency', currency: 'BRL', minimumFractionDigits: 2,
@@ -27,7 +28,7 @@ export function templateNarrative(signal) {
     case 'TOP_PRODUCT_CONCENTRATION':
       return `${clean(e.nome_produto)} concentrou ${pct(e.share_pct)} das vendas dos últimos 30 dias: ${money(e.revenue_product_30d)} de ${money(e.revenue_total_30d)}.`;
     case 'PAYMENT_MIX_SHIFT':
-      return `${clean(e.forma, 'Essa forma de pagamento')} passou de ${pct(e.share_previous)} para ${pct(e.share_recent)} das vendas recentes, uma mudança de ${pct(Math.abs(e.shift_pp))}.`;
+      return `${formatPaymentMethod(e.forma) || 'Essa forma de pagamento'} passou de ${pct(e.share_previous)} para ${pct(e.share_recent)} das vendas recentes, uma mudança de ${pct(Math.abs(e.shift_pp))}.`;
     case 'FIADO_ISSUED_SHARE_HIGH':
       return `Nos últimos 30 dias, ${money(e.fiado_issued_30d)} foram vendidos no fiado (${pct(e.share_pct)} de ${money(e.revenue_30d)}).`;
     case 'CASH_DIFFERENCE_RECURRING':

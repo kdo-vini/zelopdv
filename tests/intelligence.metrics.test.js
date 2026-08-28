@@ -16,6 +16,17 @@ describe('computeDailyMetrics', () => {
     expect(m.fiado_emitido).toBe(0);
   });
 
+  it('mantém Vale-refeição separado de outros no mix de pagamentos', () => {
+    const m = computeDailyMetrics({
+      vendas: [makeVenda({ id: 1, valorTotal: 80, forma: 'vale_refeicao' })],
+      itens: [], pagamentos: [], taxas: [],
+    });
+
+    expect(m.mix_pagamentos.vale_refeicao).toBe(80);
+    expect(m.mix_pagamentos.outros).toBe(0);
+    expect(m.receita_realizada).toBe(80);
+  });
+
   it('separa fiado da receita realizada, mas não do ticket comercial', () => {
     const vendas = [
       makeVenda({ id: 1, valorTotal: 100, forma: 'fiado' }),

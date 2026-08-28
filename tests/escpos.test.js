@@ -156,7 +156,16 @@ describe('escpos builder', () => {
       const text = bytesToText(out);
       expect(text).toContain('Pagamento (multiplo)');
       expect(text).toContain('Dinheiro');
-      expect(text).toContain('PIX');
+      expect(text).toContain('Pix');
+    });
+
+    it('imprime Vale Refeicao sem acentos no cupom térmico', () => {
+      const out = buildVendaEscPos({
+        estabelecimento: baseEst,
+        venda: { ...baseVenda, formaPagamento: 'vale_refeicao' },
+      });
+
+      expect(bytesToText(out)).toContain('Vale-refeicao');
     });
 
     it('honra opcoes.titulo (ex: PRÉ-CONTA / RECIBO MESA)', () => {

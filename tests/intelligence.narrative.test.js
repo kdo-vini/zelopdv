@@ -27,6 +27,16 @@ describe('intelligence narratives', () => {
     }
   });
 
+  it('formats payment method IDs humanely in the payment-mix narrative', () => {
+    const narrative = templateNarrative({
+      type: 'PAYMENT_MIX_SHIFT',
+      evidence: { ...evidence, forma: 'vale_refeicao' },
+    });
+
+    expect(narrative).toContain('Vale-refeição');
+    expect(narrative).not.toContain('vale_refeicao');
+  });
+
   it('uses templates when LLM is disabled', async () => {
     const create = vi.fn();
     const result = await generateNarratives([{ type: types[0], evidence }], {}, { openai: { chat: { completions: { create } } }, enabled: false });
