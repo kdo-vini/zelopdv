@@ -15,6 +15,9 @@
   import BackLink from '$lib/components/ui/BackLink.svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   import ModalProdutoMontavel from '$lib/components/modals/ModalProdutoMontavel.svelte';
+  import PaymentMethodGrid from '$lib/components/payments/PaymentMethodGrid.svelte';
+  import PaymentMethodSelect from '$lib/components/payments/PaymentMethodSelect.svelte';
+  import { SELECTABLE_PAYMENT_METHODS, formatPaymentMethod } from '$lib/finance/paymentMethods';
 
   let userId = '';
   let ownerUserId = '';
@@ -915,17 +918,6 @@
     }
   }
 
-  function formaPagamentoLabel(f) {
-    return ({
-      dinheiro: 'Dinheiro',
-      cartao_credito: 'Cartão de crédito',
-      cartao_debito: 'Cartão de débito',
-      pix: 'PIX',
-      fiado: 'Fiado',
-      multiplo: 'Múltiplo',
-    })[f] || f;
-  }
-
   function estabelecimentoFromPerfil() {
     return {
       nome_exibicao: perfilImpressao?.nome_exibicao || nomeEmpresa || 'Zelo PDV',
@@ -1028,16 +1020,6 @@
     multiPag = false;
     pagamentos = [];
     erroPagamento = '';
-  }
-
-  function nomeForma(f) {
-    return ({
-      dinheiro: 'Dinheiro',
-      cartao_debito: 'Débito',
-      cartao_credito: 'Crédito',
-      pix: 'PIX',
-      fiado: 'Fiado',
-    })[f] || f;
   }
 
   function preencherRestante() {
@@ -1240,7 +1222,7 @@
         forma_pagamento: parcialForma,
         valor: valorRound,
       });
-      addToast(`Pagamento parcial de R$ ${valorRound.toFixed(2)} (${nomeForma(parcialForma)}) registrado.`, 'success');
+      addToast(`Pagamento parcial de R$ ${valorRound.toFixed(2)} (${formatPaymentMethod(parcialForma)}) registrado.`, 'success');
 
       // Reset form para o saldo restante
       parcialErro = '';
@@ -1262,7 +1244,7 @@
   async function removerPagamentoParcial(p) {
     const ok = await confirmAction(
       'Remover pagamento parcial',
-      `Remover ${nomeForma(p.forma_pagamento)} de R$ ${Number(p.valor).toFixed(2)}?`
+      `Remover ${formatPaymentMethod(p.forma_pagamento)} de R$ ${Number(p.valor).toFixed(2)}?`
     );
     if (!ok) return;
 
@@ -1675,7 +1657,7 @@
             <ul class="parcial-list">
               {#each pagamentosParciais as p (p.id)}
                 <li class="parcial-item">
-                  <span class="parcial-item-forma">{nomeForma(p.forma_pagamento)}</span>
+                  <span class="parcial-item-forma">{formatPaymentMethod(p.forma_pagamento)}</span>
                   <span class="parcial-item-valor">R$ {Number(p.valor).toFixed(2)}</span>
                   <button
                     type="button"
@@ -1904,13 +1886,12 @@
       {/if}
 
       <div class="multi-add-form">
-        <select class="multi-forma" bind:value={parcialForma} on:change={onParcialFormaChange}>
-          <option value="dinheiro">Dinheiro</option>
-          <option value="cartao_debito">Débito</option>
-          <option value="cartao_credito">Crédito</option>
-          <option value="pix">PIX</option>
-          <option value="fiado">Fiado</option>
-        </select>
+        <PaymentMethodSelect
+          methods={SELECTABLE_PAYMENT_METHODS}
+          bind:value={parcialForma}
+          ariaLabel="Forma do pagamento parcial"
+          on:change={onParcialFormaChange}
+        />
         {#if parcialModo === 'itens'}
           <input class="multi-valor" value={valorItensSelecionados.toFixed(2)} readonly aria-label="Valor dos itens selecionados" />
         {:else}
@@ -1961,7 +1942,7 @@
             {#each pagamentosParciais as p (p.id)}
               <li class="multi-item">
                 <div class="multi-item-info">
-                  <span class="multi-item-forma">{nomeForma(p.forma_pagamento)}</span>
+                  <span class="multi-item-forma">{formatPaymentMethod(p.forma_pagamento)}</span>
                   {#if p.forma_pagamento === 'fiado'}
                     <span class="multi-item-pessoa">{pessoas.find(x => x.id === p.id_pessoa)?.nome || ''}</span>
                   {/if}
@@ -2075,54 +2056,14 @@
         <!-- === Modo single === -->
         <div class="forma-section">
           <p class="forma-section-title">Forma de pagamento</p>
-          <div class="forma-grid">
-            {#each [
-              { id: 'dinheiro',       label: 'Dinheiro' },
-              { id: 'cartao_debito',  label: 'Débito'   },
-              { id: 'cartao_credito', label: 'Crédito'  },
-              { id: 'pix',            label: 'PIX'      },
-              { id: 'fiado',          label: 'Fiado'    },
-            ] as forma}
-              <button
-                class="forma-btn"
-                class:active={formaPagamento === forma.id}
-                on:click={() => { formaPagamento = forma.id; onFormaChange(); }}
-                type="button"
-                aria-pressed={formaPagamento === forma.id}
-              >
-                <span class="forma-icon" aria-hidden="true">
-                  {#if forma.id === 'dinheiro'}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                      <rect x="2" y="6" width="20" height="12" rx="2"/>
-                      <circle cx="12" cy="12" r="2.5"/>
-                      <path d="M5 9h0M19 15h0" stroke-linecap="round"/>
-                    </svg>
-                  {:else if forma.id === 'cartao_debito'}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                      <rect x="2" y="5" width="20" height="14" rx="2"/>
-                      <path d="M2 10h20M6 15h4" stroke-linecap="round"/>
-                    </svg>
-                  {:else if forma.id === 'cartao_credito'}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                      <rect x="2" y="5" width="20" height="14" rx="2"/>
-                      <path d="M2 9h20M6 15h2M11 15h2M16 15h2" stroke-linecap="round"/>
-                    </svg>
-                  {:else if forma.id === 'pix'}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                      <path d="M12 2 22 12 12 22 2 12 12 2Z" stroke-linejoin="round"/>
-                      <path d="M7 12 12 7l5 5-5 5-5-5Z" stroke-linejoin="round"/>
-                    </svg>
-                  {:else if forma.id === 'fiado'}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                      <path d="M4 5a2 2 0 0 1 2-2h11a3 3 0 0 1 3 3v15a2 2 0 0 0-2-2H6a2 2 0 0 1-2-2V5Z" stroke-linejoin="round"/>
-                      <path d="M8 8h8M8 12h6" stroke-linecap="round"/>
-                    </svg>
-                  {/if}
-                </span>
-                <span class="forma-label">{forma.label}</span>
-              </button>
-            {/each}
-          </div>
+          <PaymentMethodGrid
+            methods={SELECTABLE_PAYMENT_METHODS}
+            selectedId={formaPagamento}
+            variant="mesa"
+            showShortcuts={false}
+            ariaLabel="Forma de pagamento da mesa"
+            on:select={(event) => { formaPagamento = event.detail.id; onFormaChange(); }}
+          />
         </div>
 
         {#if formaPagamento === 'dinheiro'}
@@ -2179,13 +2120,12 @@
           </div>
 
           <div class="multi-add-form">
-            <select class="multi-forma" bind:value={novoPagForma} on:change={onNovoPagFormaChange}>
-              <option value="dinheiro">Dinheiro</option>
-              <option value="cartao_debito">Débito</option>
-              <option value="cartao_credito">Crédito</option>
-              <option value="pix">PIX</option>
-              <option value="fiado">Fiado</option>
-            </select>
+            <PaymentMethodSelect
+              methods={SELECTABLE_PAYMENT_METHODS}
+              bind:value={novoPagForma}
+              ariaLabel="Forma do pagamento dividido"
+              on:change={onNovoPagFormaChange}
+            />
             <input
               type="number" inputmode="decimal" min="0" step="0.01"
               class="multi-valor"
@@ -2221,7 +2161,7 @@
               {#each pagamentos as p, i (i)}
                 <li class="multi-item">
                   <div class="multi-item-info">
-                    <span class="multi-item-forma">{nomeForma(p.forma)}</span>
+                    <span class="multi-item-forma">{formatPaymentMethod(p.forma)}</span>
                     {#if p.forma === 'fiado'}
                       <span class="multi-item-pessoa">{pessoas.find(x => x.id === p.pessoaId)?.nome || ''}</span>
                     {/if}
@@ -2303,13 +2243,13 @@
         {#if recibo.pagamentos_split && recibo.pagamentos_split.length}
           <div class="total-row"><span>Forma</span><span>Múltiplo</span></div>
           {#each recibo.pagamentos_split as p}
-            <div class="total-row split-line"><span>· {formaPagamentoLabel(p.forma)}</span><span>R$ {Number(p.valor).toFixed(2)}</span></div>
+            <div class="total-row split-line"><span>· {formatPaymentMethod(p.forma)}</span><span>R$ {Number(p.valor).toFixed(2)}</span></div>
           {/each}
           {#if Number(recibo.valor_troco) > 0}
             <div class="total-row"><span>Troco</span><span>R$ {Number(recibo.valor_troco).toFixed(2)}</span></div>
           {/if}
         {:else}
-          <div class="total-row"><span>Forma</span><span>{formaPagamentoLabel(recibo.forma_pagamento)}</span></div>
+          <div class="total-row"><span>Forma</span><span>{formatPaymentMethod(recibo.forma_pagamento)}</span></div>
           {#if recibo.forma_pagamento === 'dinheiro'}
             <div class="total-row"><span>Recebido</span><span>R$ {Number(recibo.valor_recebido).toFixed(2)}</span></div>
             <div class="total-row"><span>Troco</span><span>R$ {Number(recibo.valor_troco).toFixed(2)}</span></div>
@@ -3202,39 +3142,6 @@
     color: var(--text-muted);
     margin: 0;
   }
-  .forma-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(85px, 1fr));
-    gap: 0.5rem;
-  }
-  .forma-btn {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 0.35rem;
-    padding: 0.75rem 0.5rem;
-    background: var(--bg-input);
-    border: 2px solid var(--border-subtle);
-    border-radius: 12px;
-    color: var(--text-label);
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.1s;
-  }
-  .forma-btn:hover {
-    border-color: var(--border-strong);
-    color: var(--text-main);
-  }
-  .forma-btn.active {
-    border-color: var(--primary);
-    background: var(--accent-light);
-    color: var(--primary);
-  }
-  .forma-icon {
-    display: inline-flex; align-items: center; justify-content: center;
-  }
-  .forma-icon svg {
-    width: 24px; height: 24px;
-  }
-  .forma-label { font-size: 0.78rem; font-weight: 600; }
-
   /* === Cash row === */
   .cash-row {
     display: flex; gap: 0.6rem; align-items: stretch;
@@ -3580,7 +3487,7 @@
     gap: 0.4rem;
     align-items: stretch;
   }
-  .multi-forma, .multi-valor, .multi-restante, .multi-add-btn, .multi-fiado-select {
+  .multi-valor, .multi-restante, .multi-add-btn, .multi-fiado-select {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
@@ -3589,9 +3496,8 @@
     padding: 0.5rem 0.65rem;
     min-width: 0;
   }
-  .multi-forma { font-weight: 600; }
   .multi-valor { font-variant-numeric: tabular-nums; font-weight: 700; }
-  .multi-valor:focus, .multi-forma:focus, .multi-fiado-select:focus {
+  .multi-valor:focus, .multi-fiado-select:focus {
     outline: none; border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--accent-light);
   }

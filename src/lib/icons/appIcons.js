@@ -115,6 +115,7 @@ const iconMap = {
   cartao_debito: CreditCard,
   cartao_credito: CreditCard,
   pix: Smartphone,
+  vale_refeicao: BadgePercent,
   fiado: NotebookPen,
   plataformas: Store,
   balcao: Monitor,

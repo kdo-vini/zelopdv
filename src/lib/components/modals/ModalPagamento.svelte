@@ -6,9 +6,15 @@
 <script>
   import { createEventDispatcher, onMount, tick } from 'svelte';
   import { Check, ChevronLeft, Scissors, X } from 'lucide-svelte';
-  import { resolveAppIcon } from '$lib/icons/appIcons';
   import { supabase } from '$lib/supabaseClient';
   import { addToast } from '$lib/stores/ui';
+  import PaymentMethodGrid from '$lib/components/payments/PaymentMethodGrid.svelte';
+  import PaymentMethodSelect from '$lib/components/payments/PaymentMethodSelect.svelte';
+  import {
+    SELECTABLE_PAYMENT_METHODS,
+    STANDARD_PAYMENT_FORMS,
+    formatPaymentMethod
+  } from '$lib/finance/paymentMethods';
   
   const dispatch = createEventDispatcher();
   
@@ -76,7 +82,22 @@
   $: totalFinal = Math.max(0, Number(totalComanda) - valorDesconto);
   
   // Plataforma selecionada (se for forma de pagamento de plataforma)
-  $: plataformaSelecionada = plataformasAtivas.find(p => p.id === formaPagamento) ?? null;
+  $: plataformasSelecionaveis = plataformasAtivas.filter((plataforma) => !STANDARD_PAYMENT_FORMS.has(plataforma.id));
+  // X já era o atalho operacional de Pix neste modal; preservamos o contrato
+  // de teclado enquanto o catálogo continua sendo a fonte dos demais metadados.
+  $: formasPdv = SELECTABLE_PAYMENT_METHODS.map((metodo) => (
+    metodo.id === 'pix' ? { ...metodo, shortcut: 'X' } : metodo
+  ));
+  $: formasMulti = [
+    ...SELECTABLE_PAYMENT_METHODS,
+    ...plataformasSelecionaveis.map((plataforma) => ({
+      id: plataforma.id,
+      label: plataforma.nome,
+      icon: plataforma.icone || 'plataformas',
+      taxPct: plataforma.taxa_pct,
+    })),
+  ];
+  $: plataformaSelecionada = plataformasSelecionaveis.find(p => p.id === formaPagamento) ?? null;
   $: taxaPlataformaValor = (plataformaSelecionada && valorPlataforma > 0)
       ? (valorPlataforma * plataformaSelecionada.taxa_pct / 100) : 0;
   $: liquidoPlataforma = valorPlataforma > 0 ? valorPlataforma - taxaPlataformaValor : 0;
@@ -93,15 +114,6 @@
     return Math.max(0, cashRec - requeridoDin);
   })();
 
-  // Formas padrão
-  const FORMAS_PADRAO = [
-    { id: 'dinheiro',       label: 'Dinheiro', icone: 'dinheiro', atalho: 'D' },
-    { id: 'cartao_debito',  label: 'Débito',   icone: 'cartao_debito', atalho: 'B' },
-    { id: 'cartao_credito', label: 'Crédito',  icone: 'cartao_credito', atalho: 'C' },
-    { id: 'pix',            label: 'Pix',      icone: 'pix', atalho: 'X' },
-    { id: 'fiado',          label: 'Fiado',    icone: 'fiado', atalho: 'F' },
-  ];
-  
   async function carregarPessoasFiado() {
     if (pessoasFiado.length) return;
     try {
@@ -156,15 +168,6 @@
     if (id === 'fiado') carregarPessoasFiado();
   }
 
-  /** Build nome for display of a forma_pagamento id */
-  function nomeForma(id) {
-    const padrao = FORMAS_PADRAO.find(f => f.id === id);
-    if (padrao) return padrao.label;
-    const plat = plataformasAtivas.find(p => p.id === id);
-    if (plat) return plat.nome;
-    return id.replace(/_/g, ' ');
-  }
-  
   async function confirmarVenda() {
     try {
       erroPagamento = '';
@@ -322,6 +325,7 @@
       if (!multiPag) {
         if (e.key.toLowerCase() === 'd') selecionarForma('dinheiro');
         if (e.key.toLowerCase() === 'x') selecionarForma('pix');
+        if (e.key.toLowerCase() === 'v') selecionarForma('vale_refeicao');
         if (e.key.toLowerCase() === 'b') selecionarForma('cartao_debito');
         if (e.key.toLowerCase() === 'c') selecionarForma('cartao_credito');
         if (e.key.toLowerCase() === 'f') selecionarForma('fiado');
@@ -458,47 +462,27 @@
           <fieldset class="payment-fieldset">
             <legend class="zone-label">Forma de pagamento</legend>
 
-            <!-- Formas padrão -->
-            <div class="payment-grid">
-              {#each FORMAS_PADRAO as forma}
-                <button
-                  type="button"
-                  class="pay-btn"
-                  class:pay-btn-active={formaPagamento === forma.id}
-                  on:click={() => selecionarForma(forma.id)}
-                >
-                  <span class="pay-btn-icon">
-                    <svelte:component this={resolveAppIcon(forma.icone)} class="size-5" aria-hidden="true" />
-                  </span>
-                  <span class="pay-btn-label">{forma.label}</span>
-                  <span class="pay-btn-shortcut">{forma.atalho}</span>
-                </button>
-              {/each}
-            </div>
+            <PaymentMethodGrid
+              methods={formasPdv}
+              selectedId={formaPagamento}
+              ariaLabel="Formas de pagamento"
+              on:select={(event) => selecionarForma(event.detail.id)}
+            />
 
             <!-- Plataformas dinâmicas -->
-            {#if plataformasAtivas.length > 0}
+            {#if plataformasSelecionaveis.length > 0}
               <p class="section-sublabel">Plataformas</p>
-              <div class="payment-grid">
-                {#each plataformasAtivas as plat}
-                  <button
-                    type="button"
-                    class="pay-btn pay-btn-platform"
-                    class:pay-btn-active={formaPagamento === plat.id}
-                    on:click={() => selecionarForma(plat.id)}
-                  >
-                    <span class="pay-btn-icon">
-                      <svelte:component this={resolveAppIcon(plat.icone || 'plataformas')} class="size-5" aria-hidden="true" />
-                    </span>
-                    <span class="pay-btn-label">{plat.nome}</span>
-                    <span class="pay-btn-tax">{plat.taxa_pct}%</span>
-                  </button>
-                {/each}
-              </div>
+              <PaymentMethodGrid
+                methods={formasMulti.slice(SELECTABLE_PAYMENT_METHODS.length)}
+                selectedId={formaPagamento}
+                showShortcuts={false}
+                ariaLabel="Plataformas de pagamento"
+                on:select={(event) => selecionarForma(event.detail.id)}
+              />
             {/if}
 
             <!-- Atalhos -->
-            <p class="shortcuts-hint">D Dinheiro · X Pix · B Débito · C Crédito · F Fiado · Ctrl+Enter Confirmar</p>
+            <p class="shortcuts-hint">D Dinheiro · X Pix · V Vale-refeição · B Débito · C Crédito · F Fiado · Ctrl+Enter Confirmar</p>
           </fieldset>
 
           <!-- Contexto: Dinheiro → troco -->
@@ -574,14 +558,7 @@
               <div class="multi-form-row">
                 <div class="multi-field">
                   <label for="mp-forma" class="context-label">Forma</label>
-                  <select id="mp-forma" class="context-input" bind:value={novoPagForma}>
-                    {#each FORMAS_PADRAO as f}
-                      <option value={f.id}>{f.label}</option>
-                    {/each}
-                    {#each plataformasAtivas as plat}
-                      <option value={plat.id}>{plat.nome} ({plat.taxa_pct}%)</option>
-                    {/each}
-                  </select>
+                  <PaymentMethodSelect id="mp-forma" methods={formasMulti} bind:value={novoPagForma} />
                 </div>
                 <div class="multi-field">
                   <label for="mp-valor" class="context-label">{novoPagForma === 'dinheiro' ? 'Recebido (R$)' : 'Valor (R$)'}</label>
@@ -614,7 +591,7 @@
                 {#each pagamentos as p, i}
                   <div class="payment-item">
                     <div class="payment-item-info">
-                      <span class="payment-item-name">{nomeForma(p.forma)}</span>
+                      <span class="payment-item-name">{formatPaymentMethod(p.forma, { platforms: plataformasAtivas })}</span>
                       <span class="payment-item-value">R$ {Number(p.valor).toFixed(2)}</span>
                       {#if p.forma === 'fiado'}
                         <span class="payment-item-extra">{pessoasFiado.find(x => x.id === p.pessoaId)?.nome || ''}</span>
@@ -810,64 +787,6 @@
     border: none;
     padding: 0;
     margin: 0;
-  }
-  .payment-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .pay-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    padding: 12px 6px 10px;
-    border-radius: 12px;
-    border: 1.5px solid var(--border-subtle, rgba(255,255,255,0.1));
-    background: var(--bg-input, #1e293b);
-    color: var(--text-label, #cbd5e1);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    position: relative;
-  }
-  .pay-btn:hover {
-    border-color: var(--primary, #0ea5e9);
-    background: color-mix(in srgb, var(--primary, #0ea5e9) 8%, var(--bg-input, #1e293b));
-  }
-  .pay-btn-active {
-    border-color: var(--primary, #0ea5e9) !important;
-    background: color-mix(in srgb, var(--primary, #0ea5e9) 15%, var(--bg-input, #1e293b)) !important;
-    box-shadow: 0 0 0 1px var(--primary, #0ea5e9), 0 0 12px color-mix(in srgb, var(--primary, #0ea5e9) 25%, transparent);
-  }
-  .pay-btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-  }
-  .pay-btn-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-main, #fff);
-  }
-  .pay-btn-shortcut {
-    position: absolute;
-    top: 4px;
-    right: 6px;
-    font-size: 0.55rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--text-muted, #64748b);
-    opacity: 0.6;
-  }
-  .pay-btn-tax {
-    font-size: 0.65rem;
-    font-weight: 700;
-    color: var(--warning, #f59e0b);
-    background: color-mix(in srgb, var(--warning, #f59e0b) 15%, transparent);
-    padding: 1px 6px;
-    border-radius: 99px;
   }
   .section-sublabel {
     font-size: 0.7rem;
