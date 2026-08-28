@@ -1,3 +1,7 @@
+import { STANDARD_PAYMENT_FORMS as paymentMethodForms } from './paymentMethods.js';
+
+export const STANDARD_PAYMENT_FORMS = paymentMethodForms;
+
 /**
  * Retorna o preço do produto para a tabela ativa.
  * null em preco_2/preco_3 significa "usar preço principal como fallback".
@@ -9,16 +13,6 @@ export function getPrecoTabela(produto, tabela) {
   if (tabela === 3 && produto.preco_3 != null) return produto.preco_3;
   return produto.preco;
 }
-export const STANDARD_PAYMENT_FORMS = new Set([
-  'dinheiro',
-  'pix',
-  'cartao_debito',
-  'cartao_credito',
-  'cartao',
-  'fiado',
-  'multiplo'
-]);
-
 export function money(value) {
   const number = Number(value || 0);
   if (!Number.isFinite(number)) return 0;
@@ -153,11 +147,32 @@ export function calculatePaymentSummary(vendas = [], pagamentos = []) {
     cartaoDebito: money(totalsByForm.cartao_debito),
     cartaoCredito: money(totalsByForm.cartao_credito),
     cartaoLegacy: money(totalsByForm.cartao),
+    valeRefeicao: money(totalsByForm.vale_refeicao),
     fiado: fiadoTotal,
     totalCartao: money((totalsByForm.cartao_debito || 0) + (totalsByForm.cartao_credito || 0) + (totalsByForm.cartao || 0)),
     totalGeral,
     totalBruto
   };
+}
+
+/**
+ * Creates the immutable payment-breakdown snapshot stored with a cash closing.
+ * `multiplo` marks a sale with payment rows and is not a financial method itself.
+ *
+ * @param {Record<string, number>} totalsByForm
+ * @returns {Record<string, number>}
+ */
+export function buildPaymentTotalsSnapshot(totalsByForm = {}) {
+  const snapshot = {};
+
+  for (const [forma, total] of Object.entries(totalsByForm || {})) {
+    const normalizedForma = typeof forma === 'string' ? forma.trim() : '';
+    const normalizedTotal = money(total);
+    if (!normalizedForma || normalizedForma === 'multiplo' || normalizedTotal <= 0) continue;
+    snapshot[normalizedForma] = normalizedTotal;
+  }
+
+  return snapshot;
 }
 
 export function calculateMovementSummary(movs = []) {

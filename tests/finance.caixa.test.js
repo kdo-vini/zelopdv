@@ -6,6 +6,7 @@ import {
   calculateRestaurantRevenue,
   calculateRevenue,
   calculateSaleSettlement,
+  buildPaymentTotalsSnapshot,
   validatePaymentCoverage
 } from '../src/lib/finance/caixa.js';
 
@@ -156,6 +157,35 @@ describe('caixa finance math', () => {
     expect(summary.fiado).toBe(40);
     expect(summary.totalGeral).toBe(60); // só a parte realizada
     expect(summary.dinheiro).toBe(60);
+  });
+
+  test('vale-refeicao is realized revenue without increasing drawer cash', () => {
+    const summary = calculatePaymentSummary([
+      { id: 1, forma_pagamento: 'vale_refeicao', valor_total: 100 }
+    ], []);
+
+    expect(summary.valeRefeicao).toBe(100);
+    expect(summary.totalGeral).toBe(100);
+    expect(summary.dinheiro).toBe(0);
+    expect(summary.totalCartao).toBe(0);
+    expect(summary.fiado).toBe(0);
+  });
+
+  test('payment totals snapshot rounds positive paid methods and omits multiplo', () => {
+    expect(buildPaymentTotalsSnapshot({
+      dinheiro: 40.004,
+      pix: 20.005,
+      vale_refeicao: 25,
+      fiado: 10,
+      multiplo: 95,
+      plataforma_foo: 0,
+      outro: -2
+    })).toEqual({
+      dinheiro: 40,
+      pix: 20.01,
+      vale_refeicao: 25,
+      fiado: 10
+    });
   });
 });
 

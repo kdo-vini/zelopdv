@@ -73,7 +73,7 @@ export function extractEffectiveQty(item) {
  *   - pessoas.saldo_fiado increments (for fiado payments)
  *
  * @param {Object} input
- * @param {string} input.formaPagamento - 'dinheiro' | 'pix' | 'cartao_debito' | 'cartao_credito' | 'fiado' | 'multiplo' | platform id
+ * @param {string} input.formaPagamento - 'dinheiro' | 'pix' | 'cartao_debito' | 'cartao_credito' | 'vale_refeicao' | 'fiado' | 'multiplo' | platform id
  * @param {number} [input.valorRecebido=0] - cash received (single-pay only)
  * @param {Array} [input.pagamentos=[]] - multi-pay rows: [{ forma, valor, pessoaId? }]
  * @param {number} input.totalFinal - customer-charged total (post discount, with delivery)
