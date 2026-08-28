@@ -38,6 +38,7 @@ describe('payment method catalog', () => {
     expect(isCashPaymentMethod('vale_refeicao')).toBe(false);
     expect(isFiadoPaymentMethod('vale_refeicao')).toBe(false);
     expect(isRealizedRevenuePaymentMethod('vale_refeicao')).toBe(true);
+    expect(getPaymentMethod(PAYMENT_METHOD_IDS.PIX)?.shortcut).toBe('X');
   });
 
   test('prefers native labels over conflicting dynamic platform labels and supports ascii output', () => {

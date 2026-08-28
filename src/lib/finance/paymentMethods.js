@@ -51,7 +51,7 @@ const BUILT_IN_PAYMENT_METHODS = Object.freeze([
     label: 'Pix',
     asciiLabel: 'Pix',
     icon: 'pix',
-    shortcut: 'P',
+    shortcut: 'X',
     isCash: false,
     isRealizedRevenue: true,
     requiresCustomer: false,

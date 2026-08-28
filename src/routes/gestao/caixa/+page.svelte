@@ -8,7 +8,8 @@
     calculateExpectedDrawer,
     calculateMovementSummary,
     calculatePaymentSummary,
-    calculatePlatformFees
+    calculatePlatformFees,
+    buildPaymentTotalsSnapshot
   } from '$lib/finance/caixa';
 
   let loading = true;
@@ -173,6 +174,7 @@
           total_dinheiro: Number(totais.dinheiro || 0),
           total_cartao: Number(totalCartao || 0),
           total_pix: Number(totais.pix || 0),
+          totais_pagamento: buildPaymentTotalsSnapshot(resumoPagamentos.totalsByForm),
           total_geral: Number(totalGeral || 0),
           valor_inicial: Number(caixa.valor_inicial || 0),
           valor_esperado_em_gaveta: Number(esperadoEmGaveta || 0),
