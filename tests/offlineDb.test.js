@@ -42,6 +42,28 @@ describe('prepareVendaOfflineRecord', () => {
     expect(record.payload.client_sale_id).toBe('sale-existing');
   });
 
+  test('preserves Vale-refeição in single and multi-payment replay payloads', () => {
+    const single = prepareVendaOfflineRecord({
+      payload: { forma_pagamento: 'vale_refeicao', valor_total: 30, pagamentos: [] },
+    });
+    const multi = prepareVendaOfflineRecord({
+      payload: {
+        forma_pagamento: 'multiplo',
+        valor_total: 100,
+        pagamentos: [
+          { forma_pagamento: 'vale_refeicao', valor: 60 },
+          { forma_pagamento: 'dinheiro', valor: 40 },
+        ],
+      },
+    });
+
+    expect(single.payload.forma_pagamento).toBe('vale_refeicao');
+    expect(multi.payload.pagamentos).toEqual([
+      { forma_pagamento: 'vale_refeicao', valor: 60 },
+      { forma_pagamento: 'dinheiro', valor: 40 },
+    ]);
+  });
+
   test('adds a client_sale_id when an offline payload does not have one', () => {
     const record = prepareVendaOfflineRecord({
       payload: { valor_total: 10 }
