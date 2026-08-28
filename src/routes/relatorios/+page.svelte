@@ -261,7 +261,7 @@
 			const { data: hs, error: hErr } = await withTimeout(
 				supabase
 					.from('caixa_fechamentos')
-					.select('id, data_fechamento, total_dinheiro, total_cartao, total_pix, total_geral, valor_inicial, valor_esperado_em_gaveta, valor_contado_em_gaveta, diferenca, quantidade_vendas')
+					.select('id, data_fechamento, total_dinheiro, total_cartao, total_pix, total_geral, totais_pagamento, valor_inicial, valor_esperado_em_gaveta, valor_contado_em_gaveta, diferenca, quantidade_vendas')
 					.eq('id_usuario', uid)
 					.gte('data_fechamento', limite.toISOString())
 					.order('data_fechamento', { ascending: false })
