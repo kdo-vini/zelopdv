@@ -12,7 +12,10 @@
 
   function handleChange(event) {
     value = event.currentTarget.value;
-    dispatch('change', { value });
+    // `bind:value` on the parent listens to the component's `value` event;
+    // keep the public change event for callers that need a semantic hook.
+    dispatch('value', value);
+    dispatch('change', value);
   }
 </script>
 

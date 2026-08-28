@@ -9,6 +9,18 @@
 - Nao substitui validacao no banco real de producao.
 - Quando houver conflito entre esta doc e o schema real, o schema real vence e a doc deve ser atualizada.
 
+## Snapshot financeiro de fechamento (2026-08-28)
+
+- A migration `supabase/migrations/20260828120000_caixa_payment_totals.sql`
+  adiciona `caixa_fechamentos.totais_pagamento jsonb not null default '{}'`.
+- A coluna exige JSONB do tipo objeto e guarda totais positivos por ID de
+  pagamento, incluindo métodos nativos, plataformas dinâmicas, fiado e
+  desconhecidos; `multiplo` é apenas marcador e não é salvo como meio.
+- Fechamentos antigos recebem `dinheiro`, `pix` e `cartao` a partir das colunas
+  legadas. As colunas antigas continuam preenchidas para compatibilidade.
+- A migration não altera RLS, grants ou policies: INSERT continua exigindo
+  `caixa.fechar` e SELECT continua exigindo `relatorios.ver` para subusuários.
+
 ## Modelo de tenancy observado
 
 - A empresa continua ancorada no owner.

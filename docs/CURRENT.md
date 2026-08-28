@@ -1,5 +1,17 @@
 # ZeloPDV — Foco atual
 
+- Vale-refeição (2026-08-28): o pagamento canônico `vale_refeicao` foi
+  integrado ao PDV e às três jornadas de Mesas (fechamento único, dividido e
+  parcial). A interface exibe **Vale-refeição** e a impressão usa
+  `Vale-refeicao`; não há operadora, taxa, TEF ou alteração no checkout do
+  ZeloMenu. O domínio compartilhado evita colisão com plataformas dinâmicas.
+  Fechamentos gravam `caixa_fechamentos.totais_pagamento` (JSONB) junto das
+  colunas legadas, e Caixa, Período, PDF, Excel, recibos, WhatsApp e
+  Intelligence mantêm o valor separado de dinheiro, cartões, Pix e fiado.
+  Migration preparada em
+  `supabase/migrations/20260828120000_caixa_payment_totals.sql`; aplicar após
+  preflight de colisões no banco de produção.
+
 - Índices do CRM compartilhado (2026-08-26): a migration
   `20260826131437_060_customer_crm_fk_indexes.sql` adiciona índices para as
   FKs e buscas owner-scoped usadas por Clientes, campanhas e automações. Ela é

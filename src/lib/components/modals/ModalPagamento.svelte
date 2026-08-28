@@ -466,7 +466,7 @@
               methods={formasPdv}
               selectedId={formaPagamento}
               ariaLabel="Formas de pagamento"
-              on:select={(event) => selecionarForma(event.detail.id)}
+              on:select={(event) => selecionarForma(event.detail)}
             />
 
             <!-- Plataformas dinâmicas -->
@@ -477,7 +477,7 @@
                 selectedId={formaPagamento}
                 showShortcuts={false}
                 ariaLabel="Plataformas de pagamento"
-                on:select={(event) => selecionarForma(event.detail.id)}
+                on:select={(event) => selecionarForma(event.detail)}
               />
             {/if}
 

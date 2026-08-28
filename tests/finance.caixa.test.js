@@ -171,6 +171,25 @@ describe('caixa finance math', () => {
     expect(summary.fiado).toBe(0);
   });
 
+  test('split Vale-refeição plus cash reports only the cash portion in the drawer', () => {
+    const summary = calculatePaymentSummary(
+      [{ id: 1, forma_pagamento: 'multiplo', valor_total: 100 }],
+      [
+        { id_venda: 1, forma_pagamento: 'vale_refeicao', valor: 60 },
+        { id_venda: 1, forma_pagamento: 'dinheiro', valor: 40 },
+      ],
+    );
+
+    expect(summary.valeRefeicao).toBe(60);
+    expect(summary.dinheiro).toBe(40);
+    expect(summary.totalGeral).toBe(100);
+    expect(summary.totalCartao).toBe(0);
+    expect(buildPaymentTotalsSnapshot(summary.totalsByForm)).toEqual({
+      vale_refeicao: 60,
+      dinheiro: 40,
+    });
+  });
+
   test('payment totals snapshot rounds positive paid methods and omits multiplo', () => {
     expect(buildPaymentTotalsSnapshot({
       dinheiro: 40.004,

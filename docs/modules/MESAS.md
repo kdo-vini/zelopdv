@@ -12,6 +12,10 @@
 - pre-conta e recibo final imprimivel
 - pagamentos parciais por valor ou por quantidade de item
 - historico de itens pagos preservado na venda apos o fechamento
+- as jornadas de fechamento único, dividido e parcial compartilham o catálogo
+  de pagamentos. Vale-refeição (`vale_refeicao`) está disponível nas três;
+  pagamentos parciais continuam em `comanda_pagamentos` enquanto a mesa fica
+  aberta e são vinculados às linhas de `vendas_pagamentos` no fechamento.
 
 ## Fontes de codigo
 

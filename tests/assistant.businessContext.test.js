@@ -165,6 +165,18 @@ describe('assistant business context', () => {
     expect(context.itens_vendidos).toEqual(expect.objectContaining({ unidades_registradas: 10, media_itens_por_venda: 5 }));
   });
 
+  it('keeps Vale-refeição as an individual payment method for the assistant', () => {
+    const context = buildCatalogSalesContext({
+      vendas: [{ id: 1, valor_total: 75, forma_pagamento: 'vale_refeicao' }],
+      itens: [],
+      pagamentos: [],
+      produtos: [],
+      categorias: [],
+    });
+
+    expect(context.vendas.por_metodo_pagamento).toEqual({ vale_refeicao: 75 });
+  });
+
   it('builds an auditable aggregate when real category labels share a term', () => {
     const context = buildCatalogSalesContext({
       vendas: [{ id: 1, valor_total: 18, forma_pagamento: 'pix' }, { id: 2, valor_total: 12, forma_pagamento: 'pix' }],

@@ -2062,7 +2062,7 @@
             variant="mesa"
             showShortcuts={false}
             ariaLabel="Forma de pagamento da mesa"
-            on:select={(event) => { formaPagamento = event.detail.id; onFormaChange(); }}
+            on:select={(event) => { formaPagamento = event.detail; onFormaChange(); }}
           />
         </div>
 

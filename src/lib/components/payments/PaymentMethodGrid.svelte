@@ -12,7 +12,7 @@
   export let ariaLabel = 'Forma de pagamento';
 
   function select(method) {
-    dispatch('select', { id: method.id, method });
+    dispatch('select', method.id);
   }
 </script>
 

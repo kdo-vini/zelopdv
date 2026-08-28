@@ -1,5 +1,12 @@
 # ZeloPDV.memory
 
+- Pagamentos (2026-08-28): `src/lib/finance/paymentMethods.js` é o catálogo
+  canônico. `vale_refeicao` é método nativo, receita realizada sem dinheiro em
+  gaveta, sem fiado, taxa ou plataforma; o rótulo humano é Vale-refeição e o
+  ASCII de impressora é Vale-refeicao. O snapshot de fechamento fica em
+  `caixa_fechamentos.totais_pagamento`; `multiplo` nunca é meio financeiro.
+  Não separar Vale-refeição e Vale-alimentação nesta entrega.
+
 - Fluxo de publicação: para disponibilizar mudanças em produção, enviar os commits para `origin/main`; o Vercel está configurado para fazer o deploy automático. Não usar `vercel --prod` diretamente sem pedido explícito do dono do produto.
 
 - O catalogo canonico de precos esta em `src/lib/pricing.js`: ZeloMenu custa R$40 como add-on do ZeloPDV, e e incluido no ZeloChat/Pacote Gestao + Atendimento. O espelho do Admin precisa manter essa regra.
