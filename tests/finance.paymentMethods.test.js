@@ -4,6 +4,7 @@ import {
   SELECTABLE_PAYMENT_METHODS,
   STANDARD_PAYMENT_FORMS,
   formatPaymentMethod,
+  getPaymentPlatform,
   getPaymentMethod,
   isCashPaymentMethod,
   isFiadoPaymentMethod,
@@ -42,11 +43,16 @@ describe('payment method catalog', () => {
   });
 
   test('prefers native labels over conflicting dynamic platform labels and supports ascii output', () => {
-    const platforms = [{ id: 'vale_refeicao', nome: 'Nome legado de plataforma' }];
+    const platforms = [
+      { id: 'vale_refeicao', nome: 'Nome legado de plataforma' },
+      { id: 'plataforma_propria', nome: 'Plataforma própria' },
+    ];
 
     expect(formatPaymentMethod('vale_refeicao', { platforms })).toBe('Vale-refeição');
     expect(formatPaymentMethod('vale_refeicao', { ascii: true })).toBe('Vale-refeicao');
-    expect(formatPaymentMethod('plataforma_propria', { platforms: [{ id: 'plataforma_propria', nome: 'Plataforma própria' }] }))
+    expect(formatPaymentMethod('plataforma_propria', { platforms }))
       .toBe('Plataforma própria');
+    expect(getPaymentPlatform('vale_refeicao', platforms)).toBeNull();
+    expect(getPaymentPlatform('plataforma_propria', platforms)).toMatchObject({ id: 'plataforma_propria' });
   });
 });

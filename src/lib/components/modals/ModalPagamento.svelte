@@ -12,8 +12,9 @@
   import PaymentMethodSelect from '$lib/components/payments/PaymentMethodSelect.svelte';
   import {
     SELECTABLE_PAYMENT_METHODS,
-    STANDARD_PAYMENT_FORMS,
-    formatPaymentMethod
+    formatPaymentMethod,
+    getPaymentMethod,
+    getPaymentPlatform
   } from '$lib/finance/paymentMethods';
   
   const dispatch = createEventDispatcher();
@@ -82,7 +83,7 @@
   $: totalFinal = Math.max(0, Number(totalComanda) - valorDesconto);
   
   // Plataforma selecionada (se for forma de pagamento de plataforma)
-  $: plataformasSelecionaveis = plataformasAtivas.filter((plataforma) => !STANDARD_PAYMENT_FORMS.has(plataforma.id));
+  $: plataformasSelecionaveis = plataformasAtivas.filter((plataforma) => !getPaymentMethod(plataforma?.id));
   // X já era o atalho operacional de Pix neste modal; preservamos o contrato
   // de teclado enquanto o catálogo continua sendo a fonte dos demais metadados.
   $: formasPdv = SELECTABLE_PAYMENT_METHODS.map((metodo) => (
@@ -97,7 +98,7 @@
       taxPct: plataforma.taxa_pct,
     })),
   ];
-  $: plataformaSelecionada = plataformasSelecionaveis.find(p => p.id === formaPagamento) ?? null;
+  $: plataformaSelecionada = getPaymentPlatform(formaPagamento, plataformasAtivas);
   $: taxaPlataformaValor = (plataformaSelecionada && valorPlataforma > 0)
       ? (valorPlataforma * plataformaSelecionada.taxa_pct / 100) : 0;
   $: liquidoPlataforma = valorPlataforma > 0 ? valorPlataforma - taxaPlataformaValor : 0;
@@ -266,7 +267,7 @@
         }
       } else if (multiPag) {
         for (const p of pagamentos) {
-          const plat = plataformasAtivas.find((pl) => pl.id === p.forma);
+          const plat = getPaymentPlatform(p.forma, plataformasAtivas);
           if (plat) {
             const taxaPct = Number(plat.taxa_pct || 0);
             const grossBase = Number(p.valor || 0);

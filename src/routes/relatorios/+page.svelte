@@ -17,7 +17,7 @@
 		calculateRevenue
 	} from '$lib/finance/caixa';
 	import { formatPaymentMethod } from '$lib/finance/paymentMethods';
-	import { buildPaymentPresentation } from '$lib/finance/paymentReport';
+	import { buildPaymentPresentation, PAYMENT_METHOD_VISUALS, readCashClosingPaymentTotals } from '$lib/finance/paymentReport';
 	
 	// Gráficos visuais
 	import BarChart from '$lib/components/charts/BarChart.svelte';
@@ -127,7 +127,7 @@
 		cartao_debito: { color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400', hex: '#3b82f6' },
 		cartao_credito: { color: 'bg-purple-500', textColor: 'text-purple-600 dark:text-purple-400', hex: '#8b5cf6' },
 		cartao: { color: 'bg-slate-500', textColor: 'text-slate-600 dark:text-slate-400', hex: '#64748b' },
-		vale_refeicao: { color: 'bg-fuchsia-500', textColor: 'text-fuchsia-600 dark:text-fuchsia-400', hex: '#d946ef' },
+		vale_refeicao: PAYMENT_METHOD_VISUALS.vale_refeicao,
 		fiado: { color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400', hex: '#f59e0b' },
 	};
 
@@ -266,7 +266,12 @@
 					.gte('data_fechamento', limite.toISOString())
 					.order('data_fechamento', { ascending: false })
 			);
-			if (!hErr) fechamentos = hs || [];
+			if (!hErr) {
+				fechamentos = (hs || []).map((closing) => ({
+					...closing,
+					totais_pagamento: readCashClosingPaymentTotals(closing),
+				}));
+			}
 		} catch (e) {
 			addToast('Erro ao carregar fechamentos: ' + e.message, 'error');
 		}

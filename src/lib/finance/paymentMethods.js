@@ -160,12 +160,23 @@ export function isRealizedRevenuePaymentMethod(id) {
   return method ? method.isRealizedRevenue : !isFiadoPaymentMethod(id);
 }
 
+/**
+ * Returns a configurable platform only when the ID is not reserved by a
+ * native payment method. This keeps financial side effects consistent with
+ * the label/UI precedence rule.
+ */
+export function getPaymentPlatform(id, platforms) {
+  const normalizedId = normalizeId(id);
+  if (!normalizedId || getPaymentMethod(normalizedId)) return null;
+  return getPlatform(platforms, normalizedId);
+}
+
 export function formatPaymentMethod(id, { platforms, ascii = false } = {}) {
   const normalizedId = normalizeId(id);
   const nativeMethod = getPaymentMethod(normalizedId);
   if (nativeMethod) return ascii ? nativeMethod.asciiLabel : nativeMethod.label;
 
-  const platform = getPlatform(platforms, normalizedId);
+  const platform = getPaymentPlatform(normalizedId, platforms);
   const platformLabel = platform?.nome || platform?.name || platform?.label;
   if (typeof platformLabel === 'string' && platformLabel.trim()) return platformLabel.trim();
 
