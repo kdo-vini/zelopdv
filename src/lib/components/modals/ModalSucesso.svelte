@@ -4,8 +4,7 @@
 -->
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { maskPhone, maskDocumento } from '$lib/masks';
-  import { formatPaymentMethod } from '$lib/finance/paymentMethods';
+  import { buildReceiptText as buildSaleReceiptText } from '$lib/receiptText';
 
   const dispatch = createEventDispatcher();
   
@@ -16,40 +15,7 @@
   
   // Gera o texto do recibo para WhatsApp ou cópia manual.
   function buildReceiptText() {
-    if (!venda || !venda.itens) return '';
-    
-    // Header com Nome da Empresa ou Padrão
-    let text = `*${(empresa?.nome_exibicao || 'COMPROVANTE DE PEDIDO').toUpperCase()}*\n`;
-    
-    if (empresa?.documento) {
-        text += `CPF/CNPJ: ${maskDocumento(empresa.documento)}\n`;
-    }
-    if (empresa?.endereco) {
-        text += `${empresa.endereco}\n`;
-    }
-
-    text += `\n ${new Date().toLocaleString()}\n`;
-    text += `------------------------------\n`;
-    
-    venda.itens.forEach(item => {
-        const totalItem = (item.quantidade * item.preco).toFixed(2);
-        text += `${item.quantidade}x ${item.nome}\n`;
-        text += `   R$ ${totalItem}\n`;
-    });
-    
-    text += `------------------------------\n`;
-    text += `*TOTAL: R$ ${Number(venda.total || 0).toFixed(2)}*\n`;
-    
-    if (venda.pagamentos && venda.pagamentos.length > 0) {
-        text += `Pgto: ${venda.pagamentos.map(p => `${formatPaymentMethod(p.forma || p.forma_pagamento)} (R$ ${Number(p.valor || 0).toFixed(2)})`).join(', ')}\n`;
-    } else if (venda.formaPagamento) {
-        text += `Pgto: ${formatPaymentMethod(venda.formaPagamento)}\n`;
-    }
-
-    text += `\n_Obrigado pela preferência!_`;
-    text += `\n_ZeloPDV - Sistema de Gestão de Vendas_`;
-
-    return text;
+    return buildSaleReceiptText({ venda, empresa });
   }
 
   function getWhatsAppText() {

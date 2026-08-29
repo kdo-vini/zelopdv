@@ -241,7 +241,7 @@
           <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.pix).toFixed(2)}</div>
         </div>
         <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
-          <div class="text-xs" style="color: var(--text-muted);">Vale-refeição</div>
+          <div class="text-xs" style="color: var(--text-muted);">{formatPaymentMethod('vale_refeicao')}</div>
           <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.vale_refeicao).toFixed(2)}</div>
         </div>
         <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">

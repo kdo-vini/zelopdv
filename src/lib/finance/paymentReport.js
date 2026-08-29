@@ -40,7 +40,7 @@ const REPORT_PAYMENT_METHODS = Object.freeze([
   ['cartao_debito', 'cartaoDebito', 'Cartão (Débito)'],
   ['cartao_credito', 'cartaoCredito', 'Cartão (Crédito)'],
   ['cartao', 'cartaoLegacy', 'Cartão (legado)'],
-  ['vale_refeicao', 'valeRefeicao', 'Vale-refeição'],
+  ['vale_refeicao', 'valeRefeicao', 'Vale-Refeição'],
   ['fiado', 'fiado', 'Fiado'],
 ]);
 

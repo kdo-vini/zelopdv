@@ -1,8 +1,8 @@
 # ZeloPDV — Foco atual
 
-- Vale-refeição (2026-08-28): o pagamento canônico `vale_refeicao` foi
+- Vale-Refeição (2026-08-28): o pagamento canônico `vale_refeicao` foi
   integrado ao PDV e às três jornadas de Mesas (fechamento único, dividido e
-  parcial). A interface exibe **Vale-refeição** e a impressão usa
+  parcial). A interface exibe **Vale-Refeição** e a impressão usa
   `Vale-refeicao`; não há operadora, taxa, TEF ou alteração no checkout do
   ZeloMenu. O domínio compartilhado evita colisão com plataformas dinâmicas.
   Fechamentos gravam `caixa_fechamentos.totais_pagamento` (JSONB) junto das

@@ -290,6 +290,7 @@ export function buildVendaEscPos(payload) {
   const est = payload?.estabelecimento || {};
   const venda = payload?.venda || {};
   const opcoes = payload?.opcoes || {};
+  const formaPagamento = venda.formaPagamento ?? venda.forma_pagamento ?? null;
   const largura = est.largura_bobina || '80mm';
   const cols = largura === '58mm' ? 28 : 32;
 
@@ -391,24 +392,27 @@ export function buildVendaEscPos(payload) {
   /* PAGAMENTO */
   b.line(repeat('-', cols));
 
-  if (venda.formaPagamento === 'multiplo' && Array.isArray(venda.pagamentos) && venda.pagamentos.length) {
+  if (formaPagamento === 'multiplo' && Array.isArray(venda.pagamentos) && venda.pagamentos.length) {
     b.line('Pagamento (multiplo):');
     for (const p of venda.pagamentos) {
-      const meta = p.forma === 'fiado' && p.pessoaNome ? ` (${p.pessoaNome})` : '';
-      b.line('  ' + twoCol(formaLabel(p.forma) + meta, fmtBRL(p.valor), cols - 2));
+      const forma = p.forma ?? p.forma_pagamento;
+      const meta = forma === 'fiado' && p.pessoaNome ? ` (${p.pessoaNome})` : '';
+      b.line('  ' + twoCol(formaLabel(forma) + meta, fmtBRL(p.valor), cols - 2));
     }
     if (Number(venda.troco || 0) > 0) {
       b.line(twoCol('Troco', fmtBRL(venda.troco), cols));
     }
-  } else if (venda.formaPagamento) {
-    b.line(twoCol('Pagamento', formaLabel(venda.formaPagamento), cols));
-    if (venda.formaPagamento === 'dinheiro' && venda.valorRecebido != null) {
-      b.line(twoCol('Recebido', fmtBRL(venda.valorRecebido), cols));
-      if (Number(venda.troco || 0) > 0) {
-        b.line(twoCol('Troco', fmtBRL(venda.troco), cols));
+  } else if (formaPagamento) {
+    b.line(twoCol('Pagamento', formaLabel(formaPagamento), cols));
+    const valorRecebido = venda.valorRecebido ?? venda.valor_recebido;
+    const troco = venda.troco ?? venda.valor_troco;
+    if (formaPagamento === 'dinheiro' && valorRecebido != null) {
+      b.line(twoCol('Recebido', fmtBRL(valorRecebido), cols));
+      if (Number(troco || 0) > 0) {
+        b.line(twoCol('Troco', fmtBRL(troco), cols));
       }
     }
-    if (venda.formaPagamento === 'fiado') {
+    if (formaPagamento === 'fiado') {
       b.line(centerLine('* lancado em conta — a receber *', cols));
     }
   }

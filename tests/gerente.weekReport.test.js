@@ -69,6 +69,6 @@ describe('buildWeekReport', () => {
       snapshot('2026-07-06', 100, 4, { mix_pagamentos: { vale_refeicao: 100 } }),
     ], [], '2026-07-06', { today: '2026-07-12' });
 
-    expect(report.paymentMix).toContainEqual(expect.objectContaining({ type: 'vale_refeicao', label: 'Vale-refeição', value: 100 }));
+    expect(report.paymentMix).toContainEqual(expect.objectContaining({ type: 'vale_refeicao', label: 'Vale-Refeição', value: 100 }));
   });
 });

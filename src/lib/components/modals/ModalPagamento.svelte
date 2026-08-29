@@ -483,7 +483,7 @@
             {/if}
 
             <!-- Atalhos -->
-            <p class="shortcuts-hint">D Dinheiro · X Pix · V Vale-refeição · B Débito · C Crédito · F Fiado · Ctrl+Enter Confirmar</p>
+            <p class="shortcuts-hint">D Dinheiro · X Pix · V Vale-Refeição · B Débito · C Crédito · F Fiado · Ctrl+Enter Confirmar</p>
           </fieldset>
 
           <!-- Contexto: Dinheiro → troco -->

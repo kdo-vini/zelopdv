@@ -17,7 +17,7 @@ describe('payment method catalog', () => {
 
     expect(vale).toMatchObject({
       id: 'vale_refeicao',
-      label: 'Vale-refeição',
+      label: 'Vale-Refeição',
       asciiLabel: 'Vale-refeicao',
       icon: 'vale_refeicao',
       shortcut: 'V',
@@ -48,7 +48,7 @@ describe('payment method catalog', () => {
       { id: 'plataforma_propria', nome: 'Plataforma própria' },
     ];
 
-    expect(formatPaymentMethod('vale_refeicao', { platforms })).toBe('Vale-refeição');
+    expect(formatPaymentMethod('vale_refeicao', { platforms })).toBe('Vale-Refeição');
     expect(formatPaymentMethod('vale_refeicao', { ascii: true })).toBe('Vale-refeicao');
     expect(formatPaymentMethod('plataforma_propria', { platforms }))
       .toBe('Plataforma própria');

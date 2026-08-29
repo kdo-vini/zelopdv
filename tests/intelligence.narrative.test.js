@@ -33,7 +33,7 @@ describe('intelligence narratives', () => {
       evidence: { ...evidence, forma: 'vale_refeicao' },
     });
 
-    expect(narrative).toContain('Vale-refeição');
+    expect(narrative).toContain('Vale-Refeição');
     expect(narrative).not.toContain('vale_refeicao');
   });
 

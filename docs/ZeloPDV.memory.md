@@ -2,10 +2,10 @@
 
 - Pagamentos (2026-08-28): `src/lib/finance/paymentMethods.js` é o catálogo
   canônico. `vale_refeicao` é método nativo, receita realizada sem dinheiro em
-  gaveta, sem fiado, taxa ou plataforma; o rótulo humano é Vale-refeição e o
+  gaveta, sem fiado, taxa ou plataforma; o rótulo humano é Vale-Refeição e o
   ASCII de impressora é Vale-refeicao. O snapshot de fechamento fica em
   `caixa_fechamentos.totais_pagamento`; `multiplo` nunca é meio financeiro.
-  Não separar Vale-refeição e Vale-alimentação nesta entrega.
+  Não separar Vale-Refeição e Vale-alimentação nesta entrega.
 
 - Fluxo de publicação: para disponibilizar mudanças em produção, enviar os commits para `origin/main`; o Vercel está configurado para fazer o deploy automático. Não usar `vercel --prod` diretamente sem pedido explícito do dono do produto.
 

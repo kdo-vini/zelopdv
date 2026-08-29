@@ -26,6 +26,6 @@ describe('report exports', () => {
       balanco: { descontos: 0, sangria: 0, suprimento: 0 },
     });
 
-    expect(sheets[0]).toContainEqual(['Vale-refeição', 'R$ 50.00']);
+    expect(sheets[0]).toContainEqual(['Vale-Refeição', 'R$ 50.00']);
   });
 });

@@ -168,6 +168,15 @@ describe('escpos builder', () => {
       expect(bytesToText(out)).toContain('Vale-refeicao');
     });
 
+    it('imprime o método da venda persistida quando a forma usa snake_case', () => {
+      const out = buildVendaEscPos({
+        estabelecimento: baseEst,
+        venda: { ...baseVenda, formaPagamento: undefined, forma_pagamento: 'vale_refeicao' },
+      });
+
+      expect(bytesToText(out)).toContain('Vale-refeicao');
+    });
+
     it('honra opcoes.titulo (ex: PRÉ-CONTA / RECIBO MESA)', () => {
       const out = buildVendaEscPos({
         estabelecimento: baseEst,

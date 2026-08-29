@@ -194,8 +194,11 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
   const desconto = Number(venda.desconto || 0);
   const { couvert, taxaServicoPct, taxaServico, taxaEntrega } = getReceiptCharges(venda, subtotal, desconto);
   const total = venda.total != null ? Number(venda.total) : (subtotal - desconto + couvert + taxaServico + taxaEntrega);
-  const recebido = venda.valorRecebido != null ? Number(venda.valorRecebido) : null;
-  const troco = venda.troco != null ? Number(venda.troco) : (recebido != null ? Math.max(0, recebido - total) : 0);
+  const formaPagamento = venda.formaPagamento ?? venda.forma_pagamento ?? null;
+  const valorRecebido = venda.valorRecebido ?? venda.valor_recebido;
+  const valorTroco = venda.troco ?? venda.valor_troco;
+  const recebido = valorRecebido != null ? Number(valorRecebido) : null;
+  const troco = valorTroco != null ? Number(valorTroco) : (recebido != null ? Math.max(0, recebido - total) : 0);
   const pagamentos = Array.isArray(venda.pagamentos) ? venda.pagamentos.map(p => ({
     forma: p.forma || p.forma_pagamento,
     valor: Number(p.valor || 0),
@@ -229,7 +232,7 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
   }).join('');
 
   let pgtoHtml = '';
-  if (venda.formaPagamento === 'multiplo' && pagamentos.length) {
+  if (formaPagamento === 'multiplo' && pagamentos.length) {
     pgtoHtml = `
       <div class="pgto-row"><span class="forma">Pagamento</span><span>Múltiplos</span></div>
       ${pagamentos.map(p => {
@@ -238,12 +241,12 @@ export function buildReceiptHTML({ estabelecimento = {}, venda = {}, opcoes = {}
       }).join('')}
       ${troco > 0 ? `<div class="pgto-row"><span>Troco</span><span>${fmtBRL(troco)}</span></div>` : ''}
     `;
-  } else if (venda.formaPagamento) {
+  } else if (formaPagamento) {
     pgtoHtml = `
-      <div class="pgto-row"><span class="forma">Pagamento</span><span>${escHtml(formaLabel(venda.formaPagamento))}</span></div>
-      ${recebido != null && venda.formaPagamento === 'dinheiro' ? `<div class="pgto-row"><span>Recebido</span><span>${fmtBRL(recebido)}</span></div>` : ''}
+      <div class="pgto-row"><span class="forma">Pagamento</span><span>${escHtml(formaLabel(formaPagamento))}</span></div>
+      ${recebido != null && formaPagamento === 'dinheiro' ? `<div class="pgto-row"><span>Recebido</span><span>${fmtBRL(recebido)}</span></div>` : ''}
       ${troco > 0 ? `<div class="pgto-row"><span>Troco</span><span>${fmtBRL(troco)}</span></div>` : ''}
-      ${venda.formaPagamento === 'fiado' ? `<div class="pgto-nota">Lançado em conta — a receber depois</div>` : ''}
+      ${formaPagamento === 'fiado' ? `<div class="pgto-nota">Lançado em conta — a receber depois</div>` : ''}
     `;
   }
 

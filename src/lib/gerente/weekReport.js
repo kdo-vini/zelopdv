@@ -10,7 +10,7 @@ export function businessDateKey(date = new Date()) {
 }
 import { formatPaymentMethod } from '$lib/finance/paymentMethods.js';
 
-const paymentLabels = { pix: 'Pix', dinheiro: 'Dinheiro', cartao: 'Cartão', vale_refeicao: 'Vale-refeição', fiado: 'Fiado', outros: 'Outros' };
+const paymentLabels = { pix: 'Pix', dinheiro: 'Dinheiro', cartao: 'Cartão', vale_refeicao: formatPaymentMethod('vale_refeicao'), fiado: 'Fiado', outros: 'Outros' };
 
 function dateAtNoon(date) { return new Date(`${date}T12:00:00Z`); }
 function toDateKey(date) { return date.toISOString().slice(0, 10); }

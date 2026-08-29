@@ -45,7 +45,17 @@ describe('receipt builder', () => {
       venda: { idVenda: 4, formaPagamento: 'vale_refeicao', total: 10, itens: [] }
     });
 
-    expect(html).toContain('Vale-refeição');
+    expect(html).toContain('Vale-Refeição');
+    expect(html).not.toContain('vale_refeicao');
+  });
+
+  it('renders the payment method when the persisted sale uses snake_case', () => {
+    const html = buildReceiptHTML({
+      estabelecimento: { nome_exibicao: 'Loja' },
+      venda: { idVenda: 11, forma_pagamento: 'vale_refeicao', total: 10, itens: [] }
+    });
+
+    expect(html).toContain('Vale-Refeição');
     expect(html).not.toContain('vale_refeicao');
   });
 

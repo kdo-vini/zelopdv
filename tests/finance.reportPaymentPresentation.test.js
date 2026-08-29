@@ -14,7 +14,7 @@ describe('buildPaymentPresentation', () => {
       totalsByForm: { dinheiro: 10, pix: 20, cartao_debito: 30, cartao_credito: 40, vale_refeicao: 50, ifood: 60 },
     }, { platforms: [{ id: 'ifood', nome: 'iFood' }] });
 
-    expect(presentation.items).toContainEqual(expect.objectContaining({ id: 'vale_refeicao', label: 'Vale-refeição', value: 50 }));
+    expect(presentation.items).toContainEqual(expect.objectContaining({ id: 'vale_refeicao', label: 'Vale-Refeição', value: 50 }));
     expect(presentation.extras).toEqual([expect.objectContaining({ id: 'ifood', label: 'iFood', value: 60 })]);
     expect(presentation.pagamentos.valeRefeicao).toBe(50);
   });

@@ -31,7 +31,7 @@ A causa do "fica faltando produto offline" não era a fila de vendas (já estava
 | Adicionar produtos à comanda | Sim, se os produtos já estavam carregados | Usa a lista local já carregada na tela. |
 | Item avulso | Sim | Não depende de produto cadastrado nem de estoque. |
 | Finalizar venda quando a RPC falha por conexão | Sim | A venda é salva em `vendas_pendentes` no IndexedDB. |
-| Pagamento em dinheiro, pix, cartão, Vale-refeição e plataforma | Sim, com dados já carregados | O payload é salvo para sincronizar depois. Vale usa o ID `vale_refeicao`; taxas de plataforma usam o snapshot disponível na tela. |
+| Pagamento em dinheiro, pix, cartão, Vale-Refeição e plataforma | Sim, com dados já carregados | O payload é salvo para sincronizar depois. Vale usa o ID `vale_refeicao`; taxas de plataforma usam o snapshot disponível na tela. |
 | Pagamento fiado | Parcial | Funciona se a pessoa já estiver selecionada/carregada antes da queda. Não cadastra nem busca pessoa offline. |
 | Desconto, taxa de entrega e múltiplos pagamentos | Sim | Entram no mesmo payload offline da venda. |
 | Sincronização ao voltar internet | Sim | O evento `online` chama `syncVendasPendentes(supabase)`. |

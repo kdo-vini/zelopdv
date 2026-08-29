@@ -1,3 +1,7 @@
+import { formatPaymentMethod } from '$lib/finance/paymentMethods.js';
+
+const VALE_REFEICAO_LABEL = formatPaymentMethod('vale_refeicao');
+
 /**
  * Gerador de Relatório Excel — Zelo PDV
  * Usa SheetJS (xlsx) para gerar Excel formatado com múltiplas abas.
@@ -30,7 +34,7 @@ export async function generateExcelReport(dados) {
         ['Pix', `R$ ${fmt(dados.pagamentos.pix)}`],
         ['Cartão Débito', `R$ ${fmt(dados.pagamentos.debito)}`],
         ['Cartão Crédito', `R$ ${fmt(dados.pagamentos.credito)}`],
-        ['Vale-refeição', `R$ ${fmt(dados.pagamentos.valeRefeicao)}`],
+        [VALE_REFEICAO_LABEL, `R$ ${fmt(dados.pagamentos.valeRefeicao)}`],
         ['Fiado', `R$ ${fmt(dados.pagamentos.fiado)}`],
         ...(dados.pagamentos.extras || []).filter(e => e.value > 0).map(e => [e.label, `R$ ${fmt(e.value)}`]),
         [],
@@ -152,7 +156,7 @@ export async function generateExcelReport(dados) {
                     ['Pix', `R$ ${fmt(dados.pagamentos.pix)}`, ((dados.pagamentos.pix / total) * 100).toFixed(1) + '%'],
                     ['Cartão Débito', `R$ ${fmt(dados.pagamentos.debito)}`, ((dados.pagamentos.debito / total) * 100).toFixed(1) + '%'],
                     ['Cartão Crédito', `R$ ${fmt(dados.pagamentos.credito)}`, ((dados.pagamentos.credito / total) * 100).toFixed(1) + '%'],
-                    ['Vale-refeição', `R$ ${fmt(dados.pagamentos.valeRefeicao)}`, ((Number(dados.pagamentos.valeRefeicao || 0) / total) * 100).toFixed(1) + '%'],
+                    [VALE_REFEICAO_LABEL, `R$ ${fmt(dados.pagamentos.valeRefeicao)}`, ((Number(dados.pagamentos.valeRefeicao || 0) / total) * 100).toFixed(1) + '%'],
                     ['Fiado', `R$ ${fmt(dados.pagamentos.fiado)}`, ((dados.pagamentos.fiado / total) * 100).toFixed(1) + '%'],
                     ...(dados.pagamentos.extras || []).filter(e => e.value > 0).map(e => [e.label, `R$ ${fmt(e.value)}`, ((e.value / total) * 100).toFixed(1) + '%']),
                 ];

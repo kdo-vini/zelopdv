@@ -1,3 +1,7 @@
+import { formatPaymentMethod } from '$lib/finance/paymentMethods.js';
+
+const VALE_REFEICAO_LABEL = formatPaymentMethod('vale_refeicao');
+
 /**
  * Gerador de Relatório PDF — Zelo PDV
  * Usa jsPDF + jspdf-autotable para gerar relatórios visuais e estruturados.
@@ -132,7 +136,7 @@ export async function generatePDFReport(dados) {
             { label: 'Pix', value: pags.pix, color: COLORS.cyan },
             { label: 'Débito', value: pags.debito, color: COLORS.primary },
             { label: 'Crédito', value: pags.credito, color: COLORS.purple },
-            { label: 'Vale-refeição', value: pags.valeRefeicao, color: COLORS.danger },
+            { label: VALE_REFEICAO_LABEL, value: pags.valeRefeicao, color: COLORS.danger },
             { label: 'Fiado', value: pags.fiado, color: COLORS.warning },
             ...extras,
         ].filter(it => it.value > 0);
@@ -252,7 +256,7 @@ export async function generatePDFReport(dados) {
             { label: 'Pix', value: pags.pix, color: COLORS.cyan },
             { label: 'Débito', value: pags.debito, color: COLORS.primary },
             { label: 'Crédito', value: pags.credito, color: COLORS.purple },
-            { label: 'Vale-refeição', value: pags.valeRefeicao, color: COLORS.danger },
+            { label: VALE_REFEICAO_LABEL, value: pags.valeRefeicao, color: COLORS.danger },
             { label: 'Fiado', value: pags.fiado, color: COLORS.warning },
             ...extras,
         ].filter(it => it.value > 0);

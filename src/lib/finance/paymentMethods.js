@@ -60,7 +60,7 @@ const BUILT_IN_PAYMENT_METHODS = Object.freeze([
   }),
   Object.freeze({
     id: PAYMENT_METHOD_IDS.VALE_REFEICAO,
-    label: 'Vale-refeição',
+    label: 'Vale-Refeição',
     asciiLabel: 'Vale-refeicao',
     icon: 'vale_refeicao',
     shortcut: 'V',
