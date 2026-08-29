@@ -1,5 +1,17 @@
 # Fixes Progress
 
+- [x] FX-WHATSAPP-CONFIRMATION-TOKENS-01 (2026-08-29) — confirmação de pedido
+  WhatsApp passou a ter contrato de token opaco server-only: persiste somente
+  hash SHA-256 ligado a empresa/JID/sessão/revisão/validade e a RPC
+  `confirm_whatsapp_zelo_order` bloqueia token e carrinho, valida bindings,
+  chama apenas `create_zelo_order` e consome em uma transação. Retry de token
+  consumido retorna o pedido canônico existente; token expirado, invalidado ou
+  de revisão antiga não confirma. Catálogo/preço são revalidados pelo ZeloMenu
+  antes da RPC. Migration pendente de aplicação:
+  `supabase/migrations/20260829121000_whatsapp_confirmation_tokens.sql`.
+  Cobertura: `tests/whatsappConfirmationTokensSchema.test.js` (RED 4 falhas;
+  GREEN 4/4).
+
 - [x] FX-WHATSAPP-ORDER-CONTRACT-01 (2026-08-29) — sessões
   `whatsapp_order` agora são cobertas pelo motor canônico
   `create_zelo_order(..., p_pessoa_id)` e materializam `source='whatsapp'`,
