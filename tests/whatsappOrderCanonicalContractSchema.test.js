@@ -32,6 +32,20 @@ describe('contrato canônico de pedido iniciado no WhatsApp', () => {
     expect(migration).toContain("'superseded_open_whatsapp_cart'");
   });
 
+  it('substitui a unicidade legada sem bloquear a próxima conversa WhatsApp após confirmação', () => {
+    expect(migration).toContain(
+      'drop index if exists public.zelomenu_cart_sessions_active_source_ref_key;',
+    );
+    expect(compactMigration).toContain(
+      "create unique index if not exists zelomenu_cart_sessions_active_non_whatsapp_source_ref_key on public.zelomenu_cart_sessions (empresa_id, context, source_ref) where context in ('public_order', 'table_order') and archived_at is null",
+    );
+  });
+
+  it('rejeita source whatsapp sem uma sessão whatsapp_order', () => {
+    expect(migration).toContain("if v_source = 'whatsapp' then");
+    expect(migration).toContain("message = 'whatsapp_order_session_required'");
+  });
+
   it('preserva os contextos existentes ao afirmar o contrato do carrinho', () => {
     expect(migration).toContain("check (context = any (array['whatsapp_order'::text, 'public_order'::text, 'table_order'::text]))");
     expect(migration).toContain("check (source = any (array['zelomenu'::text, 'zelochat'::text, 'whatsapp'::text, 'manual'::text, 'legacy_zelochat'::text, 'legacy_pedido'::text, 'mesa'::text]))");

@@ -40,6 +40,18 @@ alter table public.zelomenu_cart_sessions
   add constraint zelomenu_cart_sessions_context_check
   check (context = any (array['whatsapp_order'::text, 'public_order'::text, 'table_order'::text]));
 
+-- The legacy predicate treated every non-archived cart as active. Confirmation
+-- intentionally leaves the cart history unarchived, so that predicate would
+-- block the next WhatsApp cart after a successful order. Preserve the exact
+-- historical behavior for public/table contexts and use state for WhatsApp.
+drop index if exists public.zelomenu_cart_sessions_active_source_ref_key;
+create unique index if not exists zelomenu_cart_sessions_active_non_whatsapp_source_ref_key
+  on public.zelomenu_cart_sessions (empresa_id, context, source_ref)
+  where context in ('public_order', 'table_order') and archived_at is null;
+
+comment on index public.zelomenu_cart_sessions_active_non_whatsapp_source_ref_key is
+  'Preserva a unicidade histórica de sessões não arquivadas para public_order e table_order.';
+
 alter table public.zelo_orders
   drop constraint if exists zelo_orders_source_check;
 alter table public.zelo_orders
@@ -177,6 +189,9 @@ begin
   else
     v_empresa := nullif(p_snapshots->>'empresaId', '')::uuid;
     v_source := coalesce(nullif(p_snapshots->>'source', ''), 'manual');
+    if v_source = 'whatsapp' then
+      raise exception using errcode = 'ZL400', message = 'WHATSAPP_ORDER_SESSION_REQUIRED';
+    end if;
     v_stock_already_committed := v_source = 'mesa'
       and nullif(p_snapshots#>>'{fulfillment,comandaItemId}', '') is not null;
   end if;
