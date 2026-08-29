@@ -1,5 +1,16 @@
 # ZeloPDV.memory
 
+- Pedidos iniciados pela IA no WhatsApp usam `zelomenu_cart_sessions` com
+  `context='whatsapp_order'` e devem sempre criar o agregado por
+  `create_zelo_order(uuid, integer, text, jsonb, uuid)`, que materializa
+  `zelo_orders.source='whatsapp'`. `source_ref` representa o `remote_jid`; o
+  banco permite no máximo um carrinho `cart_open` por empresa/conversa e, no
+  saneamento forward-only, somente dupes abertas mais antigas são arquivadas.
+  Não duplicar pedidos: preferências de pedido são
+  `zelochat_customer_relationships.ordering_overrides` (JSON objeto,
+  server-only). Contrato versionado em
+  `20260829120000_whatsapp_order_canonical_contract.sql`, pendente de rollout.
+
 - Pagamentos (2026-08-28): `src/lib/finance/paymentMethods.js` é o catálogo
   canônico. `vale_refeicao` é método nativo, receita realizada sem dinheiro em
   gaveta, sem fiado, taxa ou plataforma; o rótulo humano é Vale-Refeição e o

@@ -1,5 +1,16 @@
 # ZeloPDV — Foco atual
 
+- Pedido por IA no WhatsApp (2026-08-29): a migration forward-only
+  `20260829120000_whatsapp_order_canonical_contract.sql` prepara o contexto
+  `whatsapp_order` para convergir no mesmo `create_zelo_order(..., p_pessoa_id)`
+  canônico, materializando `zelo_orders.source='whatsapp'` sem duplicar
+  pedidos. `public_order` e `table_order` permanecem no contrato. Preferências
+  estruturadas ficam em `zelochat_customer_relationships.ordering_overrides`;
+  o banco garante no máximo um carrinho aberto por `(empresa_id, source_ref)`
+  para a conversa WhatsApp e arquiva somente duplicatas abertas mais antigas.
+  A migration ainda não foi aplicada em runtime; a cobertura de schema local
+  passou e o preflight/aplicação vinculada ficam para a etapa de rollout.
+
 - Vale-Refeição (2026-08-28): o pagamento canônico `vale_refeicao` foi
   integrado ao PDV e às três jornadas de Mesas (fechamento único, dividido e
   parcial). A interface exibe **Vale-Refeição** e a impressão usa

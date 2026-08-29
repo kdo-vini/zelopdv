@@ -1,5 +1,18 @@
 # Fixes Progress
 
+- [x] FX-WHATSAPP-ORDER-CONTRACT-01 (2026-08-29) — sessões
+  `whatsapp_order` agora são cobertas pelo motor canônico
+  `create_zelo_order(..., p_pessoa_id)` e materializam `source='whatsapp'`,
+  preservando `public_order`/`table_order`, ACL somente `service_role` e o
+  vínculo CRM opcional. `ordering_overrides` fica no relacionamento de cliente
+  com JSON objeto obrigatório; o índice parcial permite apenas um carrinho
+  WhatsApp aberto por conversa, arquivando antes somente duplicatas abertas
+  mais antigas, sem apagar pedidos. Migration ainda pendente de aplicação:
+  `supabase/migrations/20260829120000_whatsapp_order_canonical_contract.sql`.
+  Cobertura: `tests/whatsappOrderCanonicalContractSchema.test.js` (RED 3
+  falhas esperadas; GREEN 3/3) e `tests/customerOrderLinksSchema.test.js`
+  (5/5).
+
 - [x] FX-CLIENTES-CRM-INDEXES-01 (2026-08-26) — adicionados índices owner-scoped
   para as FKs do CRM compartilhado (sessões, relacionamentos, tags, segmentos,
   campanhas, filas e automações), reduzindo custo de deleções e consultas por
