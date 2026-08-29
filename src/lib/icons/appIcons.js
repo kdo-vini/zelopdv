@@ -47,10 +47,12 @@ import {
   UserCog,
   Users,
   Wallet,
+  WalletCards,
   WifiOff,
   X,
   Zap
 } from 'lucide-svelte';
+import PixIcon from './PixIcon.svelte';
 
 const iconMap = {
   '⚡': Zap,
@@ -114,8 +116,8 @@ const iconMap = {
   dinheiro: Banknote,
   cartao_debito: CreditCard,
   cartao_credito: CreditCard,
-  pix: Smartphone,
-  vale_refeicao: BadgePercent,
+  pix: PixIcon,
+  vale_refeicao: WalletCards,
   fiado: NotebookPen,
   plataformas: Store,
   balcao: Monitor,
