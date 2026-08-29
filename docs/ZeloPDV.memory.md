@@ -1,5 +1,11 @@
 # ZeloPDV.memory
 
+- Formas de pagamento (2026-08-29): o ZeloMenu/ZeloChat legado pode enviar
+  rótulos nativos (`Pix`, `Dinheiro`, `Cartão de crédito`, `Cartão de débito`)
+  em vez dos IDs; `normalizePaymentMethodId` é a fronteira canônica do PDV e
+  dos relatórios, enquanto IDs não reconhecidos continuam representando
+  plataformas configuráveis.
+
 - Pagamentos (2026-08-28): `src/lib/finance/paymentMethods.js` é o catálogo
   canônico. `vale_refeicao` é método nativo, receita realizada sem dinheiro em
   gaveta, sem fiado, taxa ou plataforma; o rótulo humano é Vale-Refeição e o

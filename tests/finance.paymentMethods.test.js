@@ -55,4 +55,11 @@ describe('payment method catalog', () => {
     expect(getPaymentPlatform('vale_refeicao', platforms)).toBeNull();
     expect(getPaymentPlatform('plataforma_propria', platforms)).toMatchObject({ id: 'plataforma_propria' });
   });
+
+  test('recognizes display-label aliases as native payment methods', () => {
+    expect(getPaymentMethod('Pix')?.id).toBe('pix');
+    expect(getPaymentMethod('Dinheiro')?.id).toBe('dinheiro');
+    expect(getPaymentMethod('Cartão de crédito')?.id).toBe('cartao_credito');
+    expect(getPaymentMethod('cartao de debito')?.id).toBe('cartao_debito');
+  });
 });

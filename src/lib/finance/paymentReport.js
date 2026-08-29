@@ -1,4 +1,4 @@
-import { STANDARD_PAYMENT_FORMS, formatPaymentMethod } from './paymentMethods.js';
+import { normalizePaymentMethodId, STANDARD_PAYMENT_FORMS, formatPaymentMethod } from './paymentMethods.js';
 
 export const PAYMENT_METHOD_VISUALS = Object.freeze({
   vale_refeicao: Object.freeze({
@@ -15,23 +15,15 @@ export const PAYMENT_METHOD_VISUALS = Object.freeze({
 export function readCashClosingPaymentTotals(closing = {}) {
   const raw = closing?.totais_pagamento;
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    const snapshot = Object.fromEntries(
-      Object.entries(raw)
-        .map(([id, value]) => [id, money(value)])
-        .filter(([id, value]) => id && id !== 'multiplo' && value > 0),
-    );
+    const snapshot = normalizePaymentTotals(raw);
     if (Object.keys(snapshot).length > 0) return snapshot;
   }
 
-  return Object.fromEntries(
-    [
-      ['dinheiro', closing?.total_dinheiro],
-      ['pix', closing?.total_pix],
-      ['cartao', closing?.total_cartao],
-    ]
-      .map(([id, value]) => [id, money(value)])
-      .filter(([id, value]) => id && value > 0),
-  );
+  return normalizePaymentTotals({
+    dinheiro: closing?.total_dinheiro,
+    pix: closing?.total_pix,
+    cartao: closing?.total_cartao,
+  });
 }
 
 const REPORT_PAYMENT_METHODS = Object.freeze([
@@ -49,13 +41,26 @@ function money(value) {
   return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
 }
 
+function normalizePaymentTotals(totals = {}) {
+  const normalizedTotals = {};
+
+  for (const [rawId, rawValue] of Object.entries(totals || {})) {
+    const id = normalizePaymentMethodId(rawId);
+    const value = money(rawValue);
+    if (!id || id === 'multiplo' || value <= 0) continue;
+    normalizedTotals[id] = money((normalizedTotals[id] || 0) + value);
+  }
+
+  return normalizedTotals;
+}
+
 /**
  * Normalizes payment totals into a presentation/export contract shared by
  * cash-closing and period reports. The input comes from calculatePaymentSummary
  * so sales with payment rows are already deduplicated.
  */
 export function buildPaymentPresentation(summary = {}, { platforms = [] } = {}) {
-  const totalsByForm = summary?.totalsByForm || {};
+  const totalsByForm = normalizePaymentTotals(summary?.totalsByForm);
   const items = REPORT_PAYMENT_METHODS
     .map(([id, key, fallbackLabel]) => ({
       id,

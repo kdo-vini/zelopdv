@@ -1,4 +1,4 @@
-import { STANDARD_PAYMENT_FORMS as paymentMethodForms } from './paymentMethods.js';
+import { normalizePaymentMethodId, STANDARD_PAYMENT_FORMS as paymentMethodForms } from './paymentMethods.js';
 
 export const STANDARD_PAYMENT_FORMS = paymentMethodForms;
 
@@ -20,7 +20,7 @@ export function money(value) {
 }
 
 export function paymentForma(payment) {
-  return payment?.forma_pagamento || payment?.forma || '';
+  return normalizePaymentMethodId(payment?.forma_pagamento || payment?.forma);
 }
 
 export function paymentValue(payment) {
@@ -110,9 +110,9 @@ export function calculatePaymentSummary(vendas = [], pagamentos = []) {
   );
 
   for (const venda of vendas || []) {
-    if (venda?.forma_pagamento === 'multiplo') continue;
+    const forma = paymentForma(venda) || 'outro';
+    if (forma === 'multiplo') continue;
     if (saleIdsWithPaymentRows.has(venda?.id)) continue;
-    const forma = venda?.forma_pagamento || 'outro';
     totalsByForm[forma] = money((totalsByForm[forma] || 0) + money(venda?.valor_total));
   }
 
@@ -123,7 +123,7 @@ export function calculatePaymentSummary(vendas = [], pagamentos = []) {
 
   const cashTotal = money(
     (vendas || [])
-      .filter((v) => v?.forma_pagamento === 'dinheiro' && !saleIdsWithPaymentRows.has(v?.id))
+      .filter((v) => paymentForma(v) === 'dinheiro' && !saleIdsWithPaymentRows.has(v?.id))
       .reduce((sum, v) => {
         const received = money(v?.valor_recebido || v?.valor_total);
         return sum + Math.max(0, received - money(v?.valor_troco));
@@ -166,10 +166,10 @@ export function buildPaymentTotalsSnapshot(totalsByForm = {}) {
   const snapshot = {};
 
   for (const [forma, total] of Object.entries(totalsByForm || {})) {
-    const normalizedForma = typeof forma === 'string' ? forma.trim() : '';
+    const normalizedForma = normalizePaymentMethodId(forma);
     const normalizedTotal = money(total);
     if (!normalizedForma || normalizedForma === 'multiplo' || normalizedTotal <= 0) continue;
-    snapshot[normalizedForma] = normalizedTotal;
+    snapshot[normalizedForma] = money((snapshot[normalizedForma] || 0) + normalizedTotal);
   }
 
   return snapshot;

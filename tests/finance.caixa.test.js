@@ -121,6 +121,32 @@ describe('caixa finance math', () => {
     expect(summary.dinheiro).toBe(32);
   });
 
+  test('unifies display-label payment aliases with their canonical forms', () => {
+    const summary = calculatePaymentSummary([
+      { id: 1, forma_pagamento: 'pix', valor_total: 100 },
+      { id: 2, forma_pagamento: 'Pix', valor_total: 50 },
+      { id: 3, forma_pagamento: 'dinheiro', valor_total: 20, valor_recebido: 20, valor_troco: 0 },
+      { id: 4, forma_pagamento: 'Dinheiro', valor_total: 30, valor_recebido: 30, valor_troco: 0 },
+      { id: 5, forma_pagamento: 'cartao_credito', valor_total: 10 },
+      { id: 6, forma_pagamento: 'Cartão de crédito', valor_total: 20 },
+      { id: 7, forma_pagamento: 'cartao de debito', valor_total: 7 },
+      { id: 8, forma_pagamento: 'Cartão de débito', valor_total: 8 },
+      { id: 9, forma_pagamento: 'plataforma_propria', valor_total: 12 },
+    ], []);
+
+    expect(summary.totalsByForm).toEqual({
+      pix: 150,
+      dinheiro: 50,
+      cartao_credito: 30,
+      cartao_debito: 15,
+      plataforma_propria: 12,
+    });
+    expect(summary.pix).toBe(150);
+    expect(summary.dinheiro).toBe(50);
+    expect(summary.cartaoCredito).toBe(30);
+    expect(summary.cartaoDebito).toBe(15);
+  });
+
   test('restaurant revenue excludes delivery fee but not discount twice', () => {
     expect(calculateRevenue({ totalGeral: 90, despesas: 10 })).toBe(80);
     expect(calculateRestaurantRevenue({ totalGeral: 90, taxaEntrega: 8, despesas: 10 })).toBe(72);

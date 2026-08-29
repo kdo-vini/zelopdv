@@ -1,5 +1,15 @@
 # ZeloPDV — Foco atual
 
+- Formas de pagamento no relatório (2026-08-29): o fluxo legado do
+  ZeloMenu/ZeloChat podia gravar rótulos de apresentação (`Pix`, `Dinheiro`,
+  `Cartão de crédito` e `Cartão de débito`) em `vendas.forma_pagamento`,
+  enquanto o PDV usa IDs canônicos. `normalizePaymentMethodId` agora unifica
+  esses aliases no resumo, na legenda/exportação e nos snapshots históricos;
+  IDs de plataformas personalizadas continuam intactos. A migration
+  `20260829134640_payment_method_alias_normalization.sql` adiciona a mesma
+  proteção na entrada de `vendas`/`vendas_pagamentos`, sem reescrever o
+  histórico financeiro. Aplicação no Supabase real ainda está pendente.
+
 - Vale-Refeição (2026-08-28): o pagamento canônico `vale_refeicao` foi
   integrado ao PDV e às três jornadas de Mesas (fechamento único, dividido e
   parcial). A interface exibe **Vale-Refeição** e a impressão usa

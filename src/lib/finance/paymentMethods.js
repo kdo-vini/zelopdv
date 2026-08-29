@@ -120,6 +120,42 @@ function normalizeId(id) {
   return typeof id === 'string' ? id.trim() : '';
 }
 
+const NATIVE_PAYMENT_ALIASES = Object.freeze({
+  dinheiro: 'dinheiro',
+  cash: 'dinheiro',
+  pix: 'pix',
+  'pix online': 'pix',
+  debito: 'cartao_debito',
+  'cartao debito': 'cartao_debito',
+  'cartao de debito': 'cartao_debito',
+  credito: 'cartao_credito',
+  'cartao credito': 'cartao_credito',
+  'cartao de credito': 'cartao_credito',
+  cartao: 'cartao',
+  'vale refeicao': 'vale_refeicao',
+  fiado: 'fiado',
+  multiplo: 'multiplo',
+  'multiplos pagamentos': 'multiplo',
+});
+
+/**
+ * Converts native payment labels/aliases to the IDs used by the financial
+ * tables. Unknown values are kept intact because they may be configurable
+ * platform IDs.
+ */
+export function normalizePaymentMethodId(id) {
+  const normalized = normalizeId(id);
+  const comparable = normalized
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return NATIVE_PAYMENT_ALIASES[comparable] || normalized;
+}
+
 function getPlatform(platforms, id) {
   if (!id) return null;
 
@@ -144,7 +180,7 @@ function humanizePaymentMethod(id) {
 }
 
 export function getPaymentMethod(id) {
-  return paymentMethodsById.get(normalizeId(id)) || null;
+  return paymentMethodsById.get(normalizePaymentMethodId(id)) || null;
 }
 
 export function isCashPaymentMethod(id) {
@@ -152,7 +188,7 @@ export function isCashPaymentMethod(id) {
 }
 
 export function isFiadoPaymentMethod(id) {
-  return normalizeId(id) === PAYMENT_METHOD_IDS.FIADO;
+  return normalizePaymentMethodId(id) === PAYMENT_METHOD_IDS.FIADO;
 }
 
 export function isRealizedRevenuePaymentMethod(id) {
@@ -172,7 +208,7 @@ export function getPaymentPlatform(id, platforms) {
 }
 
 export function formatPaymentMethod(id, { platforms, ascii = false } = {}) {
-  const normalizedId = normalizeId(id);
+  const normalizedId = normalizePaymentMethodId(id);
   const nativeMethod = getPaymentMethod(normalizedId);
   if (nativeMethod) return ascii ? nativeMethod.asciiLabel : nativeMethod.label;
 

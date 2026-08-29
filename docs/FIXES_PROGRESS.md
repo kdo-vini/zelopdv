@@ -1,5 +1,12 @@
 # Fixes Progress
 
+- [x] FX-REPORT-PAYMENT-ALIASES-01 (2026-08-29) — Relatórios agora agrupam
+  aliases de rótulos nativos gravados pelo ZeloMenu/ZeloChat (`Pix`, `Dinheiro`
+  e cartões) nos IDs canônicos, inclusive em dados históricos e snapshots de
+  fechamento. A migration `20260829134640_payment_method_alias_normalization.sql`
+  impede novos aliases nas tabelas financeiras sem alterar plataformas
+  personalizadas; aplicação no Supabase real permanece pendente.
+
 - [x] FX-CLIENTES-CRM-INDEXES-01 (2026-08-26) — adicionados índices owner-scoped
   para as FKs do CRM compartilhado (sessões, relacionamentos, tags, segmentos,
   campanhas, filas e automações), reduzindo custo de deleções e consultas por

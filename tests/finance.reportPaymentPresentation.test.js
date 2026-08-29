@@ -34,4 +34,27 @@ describe('buildPaymentPresentation', () => {
       total_cartao: 15,
     })).toEqual({ dinheiro: 40, pix: 20, cartao: 15 });
   });
+
+  it('merges aliases before building the report legend', () => {
+    const presentation = buildPaymentPresentation({
+      totalsByForm: {
+        pix: 100,
+        Pix: 50,
+        dinheiro: 20,
+        Dinheiro: 30,
+      },
+    });
+
+    expect(presentation.items).toEqual([
+      expect.objectContaining({ id: 'dinheiro', label: 'Dinheiro', value: 50 }),
+      expect.objectContaining({ id: 'pix', label: 'Pix', value: 150 }),
+    ]);
+    expect(presentation.extras).toEqual([]);
+  });
+
+  it('merges aliases when reading historical closing snapshots', () => {
+    expect(readCashClosingPaymentTotals({
+      totais_pagamento: { pix: 100, Pix: 50, Dinheiro: 30, dinheiro: 20 },
+    })).toEqual({ pix: 150, dinheiro: 50 });
+  });
 });
