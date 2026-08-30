@@ -2,6 +2,34 @@
 -- The helpers below intentionally mirror ZeloMenu's persisted cart contract so
 -- the final comparison is between canonical JSONB snapshots, not approximations.
 
+alter table public.zelomenu_modifier_groups
+  add column if not exists minimo_total_quantidade integer not null default 0;
+alter table public.zelomenu_modifier_groups
+  add column if not exists maximo_total_quantidade integer;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conname = 'zelomenu_modifier_groups_minimo_total_quantidade_check'
+       and conrelid = 'public.zelomenu_modifier_groups'::regclass
+  ) then
+    alter table public.zelomenu_modifier_groups
+      add constraint zelomenu_modifier_groups_minimo_total_quantidade_check
+      check (minimo_total_quantidade >= 0);
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+     where conname = 'zelomenu_modifier_groups_maximo_total_quantidade_check'
+       and conrelid = 'public.zelomenu_modifier_groups'::regclass
+  ) then
+    alter table public.zelomenu_modifier_groups
+      add constraint zelomenu_modifier_groups_maximo_total_quantidade_check
+      check (maximo_total_quantidade is null or maximo_total_quantidade >= minimo_total_quantidade);
+  end if;
+end
+$$;
+
 create or replace function public.zelomenu_whatsapp_minute_in_windows_v1(
   p_windows jsonb,
   p_minute integer
@@ -48,6 +76,7 @@ $$;
 
 create or replace function public.zelomenu_whatsapp_fulfillment_v1(
   p_empresa_id uuid,
+  p_session_id uuid,
   p_fulfillment jsonb,
   p_now timestamptz
 )
@@ -214,10 +243,16 @@ begin
          when coalesce(v_fulfillment->>'deliveryQuoteRequestId', '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
            then (v_fulfillment->>'deliveryQuoteRequestId')::uuid
          else null
-       end
+         end
          and request.company_id = p_empresa_id
+         and request.session_id = p_session_id
          and request.status = 'resolved'
          and request.expires_at > p_now
+         and case
+           when coalesce(request.resolved_snapshot->>'originLocationVersion', '') ~ '^\d+$'
+             then (request.resolved_snapshot->>'originLocationVersion')::bigint
+           else -1
+         end = ep.delivery_location_version
          and request.resolved_fee = case
            when coalesce(v_fulfillment->>'deliveryFee', '') ~ '^\d+(?:\.\d+)?$'
              then (v_fulfillment->>'deliveryFee')::numeric
@@ -331,6 +366,7 @@ declare
   v_issues jsonb := '[]'::jsonb;
   v_item_issues integer;
   v_distinct_count integer;
+  v_total_quantity integer;
   v_option_count integer;
   v_additions numeric(14,2);
   v_base_override numeric(14,2);
@@ -480,6 +516,21 @@ begin
       if v_distinct_count < v_group.min_selecoes
          or (v_group.max_selecoes is not null and v_distinct_count > v_group.max_selecoes) then
         v_issues := v_issues || jsonb_build_array(jsonb_build_object('code', 'modifier_selection_bounds', 'productId', v_product.id));
+        exit;
+      end if;
+
+      select coalesce(sum((option_input->>'quantity')::integer), 0)::integer
+        into v_total_quantity
+        from jsonb_array_elements(v_group_input->'selectedOptions') selected(option_input);
+      if v_total_quantity < v_group.minimo_total_quantidade
+         or (v_group.maximo_total_quantidade is not null
+             and v_total_quantity > v_group.maximo_total_quantidade) then
+        v_issues := v_issues || jsonb_build_array(jsonb_build_object(
+          'code', 'modifier_total_quantity_bounds', 'productId', v_product.id,
+          'groupId', v_group.id, 'selectedQuantity', v_total_quantity,
+          'minimumQuantity', v_group.minimo_total_quantidade,
+          'maximumQuantity', v_group.maximo_total_quantidade
+        ));
         exit;
       end if;
 
@@ -761,7 +812,9 @@ begin
   for v_lock in select id from public.zelomenu_delivery_distance_cache where company_id = p_empresa_id order by id for update loop null; end loop;
   if coalesce(s.fulfillment_snapshot->>'deliveryQuoteRequestId', '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then
     perform 1 from public.zelomenu_delivery_quote_requests
-     where id = (s.fulfillment_snapshot->>'deliveryQuoteRequestId')::uuid and company_id = p_empresa_id
+     where id = (s.fulfillment_snapshot->>'deliveryQuoteRequestId')::uuid
+       and company_id = p_empresa_id
+       and session_id = s.id
      for update;
   end if;
 
@@ -770,7 +823,9 @@ begin
   v_subtotal := coalesce((v_materialized->>'subtotal')::numeric, 0);
   v_issues := v_issues || coalesce(v_materialized->'issues', '[]'::jsonb);
 
-  v_fulfillment_result := public.zelomenu_whatsapp_fulfillment_v1(p_empresa_id, s.fulfillment_snapshot, now());
+  v_fulfillment_result := public.zelomenu_whatsapp_fulfillment_v1(
+    p_empresa_id, s.id, s.fulfillment_snapshot, now()
+  );
   v_fulfillment := v_fulfillment_result->'fulfillment';
   v_delivery_fee := coalesce((v_fulfillment_result->>'deliveryFee')::numeric, 0);
   v_issues := v_issues || coalesce(v_fulfillment_result->'issues', '[]'::jsonb);
@@ -846,7 +901,7 @@ $$;
 
 comment on function public.zelomenu_whatsapp_materialize_cart_v1(uuid, jsonb) is
   'Rematerializa o shape canônico do carrinho WhatsApp por IDs vivos, incluindo modifiers aninhados, linked products e requisitos de estoque agregáveis.';
-comment on function public.zelomenu_whatsapp_fulfillment_v1(uuid, jsonb, timestamptz) is
+comment on function public.zelomenu_whatsapp_fulfillment_v1(uuid, uuid, jsonb, timestamptz) is
   'Revalida horário ASAP/agendado e entrega contra configuração, cache, cobertura e preço vigentes.';
 comment on function public.confirm_whatsapp_zelo_order_atomic_v1(uuid, text, uuid, integer, text, text, uuid, text) is
   'Confirmação WhatsApp atômica server-only: lock sessão→token→catálogo/config, rematerialização canônica e criação exclusiva via create_zelo_order.';
@@ -855,12 +910,12 @@ revoke all on function public.zelomenu_whatsapp_minute_in_windows_v1(jsonb, inte
   from public, anon, authenticated;
 revoke all on function public.zelomenu_whatsapp_materialize_cart_v1(uuid, jsonb)
   from public, anon, authenticated;
-revoke all on function public.zelomenu_whatsapp_fulfillment_v1(uuid, jsonb, timestamptz)
+revoke all on function public.zelomenu_whatsapp_fulfillment_v1(uuid, uuid, jsonb, timestamptz)
   from public, anon, authenticated;
 revoke all on function public.confirm_whatsapp_zelo_order_atomic_v1(uuid, text, uuid, integer, text, text, uuid, text)
   from public, anon, authenticated;
 grant execute on function public.zelomenu_whatsapp_minute_in_windows_v1(jsonb, integer) to service_role;
 grant execute on function public.zelomenu_whatsapp_materialize_cart_v1(uuid, jsonb) to service_role;
-grant execute on function public.zelomenu_whatsapp_fulfillment_v1(uuid, jsonb, timestamptz) to service_role;
+grant execute on function public.zelomenu_whatsapp_fulfillment_v1(uuid, uuid, jsonb, timestamptz) to service_role;
 grant execute on function public.confirm_whatsapp_zelo_order_atomic_v1(uuid, text, uuid, integer, text, text, uuid, text)
   to service_role;

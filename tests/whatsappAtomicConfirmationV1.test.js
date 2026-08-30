@@ -44,6 +44,12 @@ describe('confirmação atômica WhatsApp v1', () => {
     expect(migration).toContain('v_group.max_selecoes');
     expect(migration).toContain('v_group.permite_quantidade');
     expect(migration).toContain('v_group.maximo_por_opcao');
+    expect(migration).toContain('add column if not exists minimo_total_quantidade integer not null default 0');
+    expect(migration).toContain('add column if not exists maximo_total_quantidade integer');
+    expect(migration).toContain('v_group.minimo_total_quantidade');
+    expect(migration).toContain('v_group.maximo_total_quantidade');
+    expect(migration).toContain('v_total_quantity < v_group.minimo_total_quantidade');
+    expect(migration).toContain('v_total_quantity > v_group.maximo_total_quantidade');
     expect(migration).toContain('zelomenu_modifier_option_products');
     expect(migration).toContain('price_override');
   });
@@ -75,6 +81,9 @@ describe('confirmação atômica WhatsApp v1', () => {
     expect(migration).toContain('zelomenu_delivery_distance_cache');
     expect(migration).toContain('origin_location_version = ep.delivery_location_version');
     expect(migration).toContain('cache.expires_at > p_now');
+    expect(migration).toContain('request.session_id = p_session_id');
+    expect(migration).toContain("request.resolved_snapshot->>'originlocationversion'");
+    expect(migration).toContain('ep.delivery_location_version');
     expect(migration).toContain('zelomenu_delivery_ranges');
     expect(migration).toContain('zelomenu_delivery_pricing_rules');
     expect(migration).toContain('zelomenu_delivery_pricing_rule_ranges');
@@ -98,8 +107,11 @@ describe('confirmação atômica WhatsApp v1', () => {
     expect(runtimeVerifier).toContain('insert into public.zelomenu_delivery_distance_cache');
     expect(runtimeVerifier).toContain('public.confirm_whatsapp_zelo_order_atomic_v1');
     expect(runtimeVerifier).toContain('nested_modifier_shape_ok');
+    expect(runtimeVerifier).toContain('modifier_total_quantity_3_vs_1_ok');
     expect(runtimeVerifier).toContain('aggregate_linked_stock_review_ok');
     expect(runtimeVerifier).toContain('stale_delivery_review_ok');
+    expect(runtimeVerifier).toContain('quote_request_session_binding_ok');
+    expect(runtimeVerifier).toContain('quote_request_origin_version_required_ok');
     expect(runtimeVerifier).toContain('canonical_noop_confirmed_ok');
   });
 

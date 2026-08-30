@@ -40,12 +40,13 @@ insert into public.zelomenu_product_publications (
 
 insert into public.zelomenu_modifier_groups (
   id, id_usuario, id_produto, nome, tipo, min_selecoes, max_selecoes,
-  ativo, ordem, modo_preco, permite_quantidade, maximo_por_opcao
+  ativo, ordem, modo_preco, permite_quantidade, maximo_por_opcao,
+  minimo_total_quantidade, maximo_total_quantidade
 ) values
   ('a4000000-0000-4000-8000-000000000021', 'a4000000-0000-4000-8000-000000000001', 2147483001,
-   'Tamanho', 'variacao', 1, 1, true, 0, 'substituir', false, null),
+   'Tamanho', 'variacao', 1, 1, true, 0, 'substituir', false, null, 0, null),
   ('a4000000-0000-4000-8000-000000000022', 'a4000000-0000-4000-8000-000000000001', 2147483001,
-   'Adicionais', 'adicional', 1, 2, true, 1, 'somar', true, 3);
+   'Adicionais', 'adicional', 1, 2, true, 1, 'somar', true, 3, 3, 3);
 
 insert into public.zelomenu_modifier_options (
   id, id_usuario, id_grupo, nome, price_delta, ativo, ordem
@@ -83,6 +84,23 @@ insert into public.zelomenu_delivery_distance_cache (
   'fixture-address-hash', 3, -23.551, -46.634, 1000, false, now() + interval '1 hour'
 );
 
+insert into public.zelomenu_cart_sessions (
+  id, empresa_id, context, state, source_ref, customer_snapshot, cart_snapshot,
+  fulfillment_snapshot, pricing_snapshot, payment_snapshot, revision
+) values (
+  'a4000000-0000-4000-8000-000000000049', 'a4000000-0000-4000-8000-000000000002',
+  'whatsapp_order', 'cart_open', 'atomic-quote@s.whatsapp.net', '{}', '{"items":[],"observations":null}',
+  '{"type":"delivery"}', '{}', '{}', 1
+);
+insert into public.zelomenu_delivery_quote_requests (
+  id, company_id, session_id, idempotency_key, status, reason_code,
+  resolved_fee, resolved_snapshot, resolved_at, expires_at
+) values (
+  'a4000000-0000-4000-8000-000000000045', 'a4000000-0000-4000-8000-000000000002',
+  'a4000000-0000-4000-8000-000000000049', 'atomic-quote-request', 'resolved', 'fixture',
+  7, '{"distanceM":1000,"fee":7}', now(), now() + interval '1 hour'
+);
+
 set local role service_role;
 
 do $$
@@ -100,7 +118,7 @@ declare
         jsonb_build_object(
           'groupId', 'a4000000-0000-4000-8000-000000000022',
           'selectedOptions', jsonb_build_array(jsonb_build_object(
-            'optionId', 'a4000000-0000-4000-8000-000000000032', 'quantity', 2
+            'optionId', 'a4000000-0000-4000-8000-000000000032', 'quantity', 3
           ))
         )
       )
@@ -108,31 +126,48 @@ declare
     'observations', 'Sem guardanapo'
   );
   v_materialized jsonb;
+  v_low_quantity_input jsonb;
   v_fulfillment jsonb;
+  v_request_fulfillment jsonb;
   v_delivery jsonb;
   v_result jsonb;
   v_session uuid;
 begin
+  v_low_quantity_input := jsonb_set(
+    v_input, '{items,0,selectedModifiers,1,selectedOptions,0,quantity}', '1'::jsonb
+  );
+  v_materialized := public.zelomenu_whatsapp_materialize_cart_v1(
+    'a4000000-0000-4000-8000-000000000002', v_low_quantity_input
+  );
+  if not exists (
+    select 1 from jsonb_array_elements(v_materialized->'issues') issue
+     where issue->>'code' = 'modifier_total_quantity_bounds'
+       and (issue->>'selectedQuantity')::integer = 1
+       and (issue->>'minimumQuantity')::integer = 3
+  ) then
+    raise exception 'modifier_total_quantity_3_vs_1_ok failed: %', v_materialized;
+  end if;
+
   v_materialized := public.zelomenu_whatsapp_materialize_cart_v1(
     'a4000000-0000-4000-8000-000000000002', v_input
   );
   if v_materialized#>>'{cart,items,0,productName}' <> 'Base pública'
      or (v_materialized#>>'{cart,items,0,baseUnitPrice}')::numeric <> 10
-     or (v_materialized#>>'{cart,items,0,modifierDeltaTotal}')::numeric <> 5
-     or (v_materialized#>>'{cart,items,0,unitPrice}')::numeric <> 15
-     or (v_materialized#>>'{cart,items,0,selectedModifiers,1,selectedOptions,0,quantity}')::integer <> 2
+     or (v_materialized#>>'{cart,items,0,modifierDeltaTotal}')::numeric <> 6.5
+     or (v_materialized#>>'{cart,items,0,unitPrice}')::numeric <> 16.5
+     or (v_materialized#>>'{cart,items,0,selectedModifiers,1,selectedOptions,0,quantity}')::integer <> 3
      or (v_materialized#>>'{cart,items,0,selectedModifiers,1,selectedOptions,0,priceDelta}')::numeric <> 1.5
      or v_materialized#>>'{cart,observations}' <> 'Sem guardanapo'
      or (v_materialized#>'{cart,items,0}') ? 'position'
      or jsonb_array_length(v_materialized->'issues') <> 1 then
-    -- The only issue is aggregated linked stock: 2 Bacon requested, stock 1.
+    -- The only issue is aggregated linked stock: 3 Bacon requested, stock 1.
     raise exception 'nested_modifier_shape_ok failed: %', v_materialized;
   end if;
   if not exists (
     select 1 from jsonb_array_elements(v_materialized->'issues') issue
      where issue->>'code' = 'stock_unavailable'
        and issue->>'productId' = '2147483002'
-       and (issue->>'requiredQuantity')::numeric = 2
+       and (issue->>'requiredQuantity')::numeric = 3
   ) then
     raise exception 'aggregate_linked_stock_review_ok failed: %', v_materialized;
   end if;
@@ -149,7 +184,7 @@ begin
     'deliveryPricingMode', 'custom_time', 'deliveryPricingRuleLabel', 'Faixa atual'
   );
   v_delivery := public.zelomenu_whatsapp_fulfillment_v1(
-    'a4000000-0000-4000-8000-000000000002', v_fulfillment, now()
+    'a4000000-0000-4000-8000-000000000002', null, v_fulfillment, now()
   );
   if jsonb_array_length(v_delivery->'issues') <> 0
      or (v_delivery->>'deliveryFee')::numeric <> 7
@@ -161,13 +196,51 @@ begin
      set expires_at = now() - interval '1 second'
    where id = 'a4000000-0000-4000-8000-000000000044';
   v_delivery := public.zelomenu_whatsapp_fulfillment_v1(
-    'a4000000-0000-4000-8000-000000000002', v_fulfillment, now()
+    'a4000000-0000-4000-8000-000000000002', null, v_fulfillment, now()
   );
   if not exists (
     select 1 from jsonb_array_elements(v_delivery->'issues') issue
      where issue->>'code' = 'delivery_quote_stale'
   ) then
     raise exception 'stale_delivery_review_ok failed: %', v_delivery;
+  end if;
+
+  v_request_fulfillment := jsonb_set(
+    v_fulfillment, '{deliveryQuoteRequestId}',
+    to_jsonb('a4000000-0000-4000-8000-000000000045'::text), true
+  );
+  v_delivery := public.zelomenu_whatsapp_fulfillment_v1(
+    'a4000000-0000-4000-8000-000000000002',
+    'a4000000-0000-4000-8000-000000000050', v_request_fulfillment, now()
+  );
+  if not exists (
+    select 1 from jsonb_array_elements(v_delivery->'issues') issue
+     where issue->>'code' = 'delivery_quote_stale'
+  ) then
+    raise exception 'quote_request_session_binding_ok failed: %', v_delivery;
+  end if;
+  v_delivery := public.zelomenu_whatsapp_fulfillment_v1(
+    'a4000000-0000-4000-8000-000000000002',
+    'a4000000-0000-4000-8000-000000000049', v_request_fulfillment, now()
+  );
+  if not exists (
+    select 1 from jsonb_array_elements(v_delivery->'issues') issue
+     where issue->>'code' = 'delivery_quote_stale'
+  ) then
+    raise exception 'quote_request_origin_version_required_ok failed: %', v_delivery;
+  end if;
+  update public.zelomenu_delivery_quote_requests
+     set resolved_snapshot = resolved_snapshot || jsonb_build_object('originLocationVersion', 3)
+   where id = 'a4000000-0000-4000-8000-000000000045';
+  v_delivery := public.zelomenu_whatsapp_fulfillment_v1(
+    'a4000000-0000-4000-8000-000000000002',
+    'a4000000-0000-4000-8000-000000000049', v_request_fulfillment, now()
+  );
+  if exists (
+    select 1 from jsonb_array_elements(v_delivery->'issues') issue
+     where issue->>'code' = 'delivery_quote_stale'
+  ) then
+    raise exception 'quote_request_origin_version_current_ok failed: %', v_delivery;
   end if;
 
   -- RPC proof for aggregate linked stock: review is persisted and no order exists.
