@@ -1,5 +1,14 @@
 # ZeloPDV — Foco atual
 
+- Confirmação conversacional atômica (2026-08-30): a migration forward-only
+  `20260830202349_confirm_whatsapp_zelo_order_atomic_v1.sql` instala a única
+  fronteira de confirmação para texto e botão. Ela bloqueia sessão → token,
+  rematerializa produto/publicação/modificadores/preço/estoque por IDs vivos e
+  delega somente a `create_zelo_order`; mudança retorna `requires_review` com
+  revisão incrementada, e conflito não escreve. Entrega sem cotação vigente ou
+  loja marcada fechada falha fechado para revisão. A validação runtime continua
+  pendente em PostgreSQL descartável antes do rollout.
+
 - Confirmação WhatsApp por token opaco (2026-08-29): a migration forward-only
   `20260829121000_whatsapp_confirmation_tokens.sql` prepara tokens armazenados
   somente como hash SHA-256, vinculados a empresa, `remote_jid`, sessão,

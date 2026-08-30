@@ -1,5 +1,14 @@
 # ZeloPDV.memory
 
+- `confirm_whatsapp_zelo_order_atomic_v1` é a fronteira server-only para
+  confirmação conversacional: bloqueia sessão antes do token, rematerializa
+  catálogo público e só então delega ao `create_zelo_order` canônico. Divergência
+  de catálogo/preço/estoque, entrega sem cotação atual ou loja fechada não cria
+  pedido: persiste preview/issues, incrementa revisão e retorna
+  `requires_review`; conflito não escreve. Contrato em
+  `20260830202349_confirm_whatsapp_zelo_order_atomic_v1.sql`, pendente de
+  runtime descartável/rollout.
+
 - A confirmação de `whatsapp_order` usa
   `zelomenu_whatsapp_confirmation_tokens`: somente `token_hash` SHA-256 é
   persistido, nunca o token bruto. Cada token liga empresa, `source_ref`

@@ -1,5 +1,12 @@
 # Fixes Progress
 
+- [x] FX-WHATSAPP-ATOMIC-CONFIRMATION-01 (2026-08-30) — texto e botão ainda
+  podiam revalidar/criar em passos separados no adapter →
+  `confirm_whatsapp_zelo_order_atomic_v1` centraliza lock, revalidação e
+  `create_zelo_order` na transação, retornando confirmed/requires_review/conflict.
+  Cobertura: `tests/whatsappAtomicConfirmationV1.test.js`; runtime pendente em
+  banco descartável.
+
 - [x] FX-WHATSAPP-CONFIRMATION-TOKENS-05 (2026-08-30) — duas réplicas do
   ZeloMenu podiam emitir o mesmo hash HMAC determinístico e a segunda causar
   substituição indevida ou `unique_violation` → a migration aditiva
