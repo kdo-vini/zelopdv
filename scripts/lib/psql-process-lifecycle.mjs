@@ -11,6 +11,15 @@ function addStdinErrorListener(handle) {
   handle.stdinErrorListenerAdded = true;
 }
 
+export function throwCollectedFailures(primaryFailure, followupFailures, message) {
+  const failures = [
+    ...(primaryFailure ? [primaryFailure] : []),
+    ...followupFailures,
+  ];
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1) throw new AggregateError(failures, message);
+}
+
 export function createPsqlProcessLifecycle({
   timeoutMs,
   spawnImpl,

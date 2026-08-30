@@ -1,6 +1,9 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it } from 'vitest';
-import { createPsqlProcessLifecycle } from '../scripts/lib/psql-process-lifecycle.mjs';
+import {
+  createPsqlProcessLifecycle,
+  throwCollectedFailures,
+} from '../scripts/lib/psql-process-lifecycle.mjs';
 
 function fakeHandle({ resist = false } = {}) {
   const stdin = new EventEmitter();
@@ -25,6 +28,24 @@ function fakeHandle({ resist = false } = {}) {
 }
 
 describe('ciclo de vida dos processos psql do probe WhatsApp', () => {
+  it('preserva a falha principal quando a finalização também falha', () => {
+    const primary = new Error('verificação SQL transacional');
+    const cleanup = new Error('limpeza da fixture');
+
+    try {
+      throwCollectedFailures(primary, [cleanup], 'falhas combinadas');
+      throw new Error('esperava AggregateError');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AggregateError);
+      expect(error.errors).toEqual([primary, cleanup]);
+    }
+  });
+
+  it('repropaga a falha principal sem esconder sua identidade quando ela é única', () => {
+    const primary = new Error('verificação SQL transacional');
+    expect(() => throwCollectedFailures(primary, [], 'falhas combinadas')).toThrow(primary);
+  });
+
   it('encerra stdin apenas uma vez mesmo quando finalizado duas vezes', async () => {
     const lifecycle = createPsqlProcessLifecycle({ timeoutMs: 10, spawnImpl: () => null, platform: 'linux' });
     const handle = fakeHandle();

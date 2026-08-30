@@ -1,7 +1,10 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
-import { createPsqlProcessLifecycle } from './lib/psql-process-lifecycle.mjs';
+import {
+  createPsqlProcessLifecycle,
+  throwCollectedFailures,
+} from './lib/psql-process-lifecycle.mjs';
 
 const timeoutMs = 4_000;
 const databaseUrl = process.env.ZELOPDV_DISPOSABLE_DB_URL;
@@ -203,6 +206,7 @@ commit;
 let blocker;
 let confirmation;
 let issuance;
+let primaryFailure;
 try {
   const verifierPath = resolve(import.meta.dirname, '..', 'supabase', 'verification', 'whatsapp_confirmation_tokens_runtime.sql');
   assertOk(await runPsqlFile(verifierPath), 'verificação SQL transacional');
@@ -273,6 +277,8 @@ select json_build_object(
   }
 
   console.log(`concorrência emissão×confirmação OK: ${JSON.stringify(state)}`);
+} catch (error) {
+  primaryFailure = error;
 } finally {
   const finalized = await Promise.allSettled([
     finalizePsql(blocker, 'finalização do bloqueador'),
@@ -288,13 +294,15 @@ select json_build_object(
   } catch (error) {
     cleanupFailures.push(new Error(`limpeza da fixture excedeu o timeout: ${error.message}`));
   }
-  const failures = [
+  const followupFailures = [
     ...finalized.filter((result) => result.status === 'rejected').map((result) => result.reason),
     ...cleanupFailures,
   ];
-  if (failures.length > 0) {
-    throw new AggregateError(failures, 'falha ao finalizar processos psql ou limpar fixture');
-  }
+  throwCollectedFailures(
+    primaryFailure,
+    followupFailures,
+    'falha principal e falhas ao finalizar processos psql ou limpar fixture',
+  );
 }
 
 async function waitForBarrier(label, predicate) {
