@@ -1,11 +1,30 @@
 # Fixes Progress
 
+- [x] FX-CUSTOMER-ORDERING-OVERRIDES-01 (2026-08-30) — cards diferentes de
+  Hábitos de pedido podiam fazer read/merge/upsert concorrentes e sobrescrever
+  preferências alheias → `patch_zelochat_customer_ordering_overrides` valida
+  empresa/owner/pessoa e patch allowlisted, serializa inclusive a criação da
+  relação com advisory lock, trava a linha e aplica merge por chave; JSON null
+  remove somente a chave informada. Migration:
+  `20260830211500_patch_customer_ordering_overrides_atomic.sql`. Cobertura:
+  `tests/customerOrderingOverridesAtomic.test.js` (RED por migration ausente;
+  GREEN 4/4). Runtime Postgres permanece no gate descartável documentado.
+
 - [x] FX-WHATSAPP-ATOMIC-CONFIRMATION-01 (2026-08-30) — texto e botão ainda
   podiam revalidar/criar em passos separados no adapter →
   `confirm_whatsapp_zelo_order_atomic_v1` centraliza lock, revalidação e
   `create_zelo_order` na transação, retornando confirmed/requires_review/conflict.
-  Cobertura: `tests/whatsappAtomicConfirmationV1.test.js`; runtime pendente em
-  banco descartável.
+  O round 1 corrigiu os sete gaps do primeiro review: modifiers aninhados com
+  quantidade/min-max/modo de preço/linked product; status de entrega
+  `eligible`; horário ASAP/agendado e frete/cobertura/taxa/cache atuais; shape
+  JSONB canônico sem `position`; locks de publicação/grupos/opções/vínculos e
+  config; estoque agregado base + vinculado; nome público/categoria/grupos
+  obrigatórios. Cobertura estrutural: 7 testes em
+  `tests/whatsappAtomicConfirmationV1.test.js`. Cobertura comportamental:
+  `supabase/verification/whatsapp_atomic_confirmation_v1_runtime.sql`, com
+  fixtures transacionais encadeadas ao harness descartável. Runtime pendente
+  por ausência local de `psql`/Supabase CLI/Docker/DB; o gate recusa qualquer
+  alvo fora de `127.0.0.1:55322`.
 
 - [x] FX-WHATSAPP-CONFIRMATION-TOKENS-05 (2026-08-30) — duas réplicas do
   ZeloMenu podiam emitir o mesmo hash HMAC determinístico e a segunda causar

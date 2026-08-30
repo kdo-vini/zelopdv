@@ -3,11 +3,21 @@
 - Confirmação conversacional atômica (2026-08-30): a migration forward-only
   `20260830202349_confirm_whatsapp_zelo_order_atomic_v1.sql` instala a única
   fronteira de confirmação para texto e botão. Ela bloqueia sessão → token,
-  rematerializa produto/publicação/modificadores/preço/estoque por IDs vivos e
-  delega somente a `create_zelo_order`; mudança retorna `requires_review` com
-  revisão incrementada, e conflito não escreve. Entrega sem cotação vigente ou
-  loja marcada fechada falha fechado para revisão. A validação runtime continua
-  pendente em PostgreSQL descartável antes do rollout.
+  perfil/configuração e todas as linhas mutáveis de publicação, grupos, opções,
+  vínculos e produtos. Os helpers SQL rematerializam o JSONB canônico do
+  ZeloMenu (`selectedOptions` aninhadas, quantidades, `somar`/`substituir`,
+  produto vinculado, observações e campos de cupom), validam categoria/nome
+  público/grupos obrigatórios e agregam estoque base + vinculado entre todas as
+  linhas. ASAP/agendamento e entrega são recalculados contra horário semanal ou
+  legado, lead time, `deliveryStatus='eligible'`, cache de rota fresco, versão
+  da localização, cobertura e regra de preço atuais. Só então a RPC delega a
+  `create_zelo_order`; mudança retorna `requires_review` com CAS/revisão e
+  conflito não escreve. O verificador transacional com fixtures reais está em
+  `supabase/verification/whatsapp_atomic_confirmation_v1_runtime.sql` e foi
+  encadeado ao harness fail-closed. Runtime segue pendente antes do rollout:
+  este host não possui `psql`, Supabase CLI, Docker nem banco descartável. Rodar
+  somente com `ZELOPDV_RUN_WHATSAPP_CONFIRMATION_CONCURRENCY=1` e
+  `ZELOPDV_DISPOSABLE_DB_URL=postgresql://postgres:postgres@127.0.0.1:55322/postgres`.
 
 - Confirmação WhatsApp por token opaco (2026-08-29): a migration forward-only
   `20260829121000_whatsapp_confirmation_tokens.sql` prepara tokens armazenados
@@ -42,8 +52,13 @@
   `whatsapp_order` para convergir no mesmo `create_zelo_order(..., p_pessoa_id)`
   canônico, materializando `zelo_orders.source='whatsapp'` sem duplicar
   pedidos. `public_order` e `table_order` permanecem no contrato. Preferências
-  estruturadas ficam em `zelochat_customer_relationships.ordering_overrides`;
-  o banco garante no máximo um carrinho aberto por `(empresa_id, source_ref)`
+  estruturadas ficam em `zelochat_customer_relationships.ordering_overrides`.
+  A migration `20260830211500_patch_customer_ordering_overrides_atomic.sql`
+  adiciona a única escrita server-only desse JSON: valida tenant/owner/pessoa,
+  aceita apenas tipo/endereço/pagamento/horário, remove uma chave com `null` e
+  serializa criação/merge com advisory lock + row lock, evitando lost update em
+  PATCHes simultâneos. O banco garante no máximo um carrinho aberto por
+  `(empresa_id, source_ref)`
   para a conversa WhatsApp e arquiva somente duplicatas abertas mais antigas.
   A migration ainda não foi aplicada em runtime; a cobertura de schema local
   passou e o preflight/aplicação vinculada ficam para a etapa de rollout.

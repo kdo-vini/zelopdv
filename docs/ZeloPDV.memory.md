@@ -1,13 +1,21 @@
 # ZeloPDV.memory
 
 - `confirm_whatsapp_zelo_order_atomic_v1` é a fronteira server-only para
-  confirmação conversacional: bloqueia sessão antes do token, rematerializa
-  catálogo público e só então delega ao `create_zelo_order` canônico. Divergência
-  de catálogo/preço/estoque, entrega sem cotação atual ou loja fechada não cria
-  pedido: persiste preview/issues, incrementa revisão e retorna
-  `requires_review`; conflito não escreve. Contrato em
-  `20260830202349_confirm_whatsapp_zelo_order_atomic_v1.sql`, pendente de
-  runtime descartável/rollout.
+  confirmação conversacional: bloqueia sessão antes do token e mantém locks no
+  perfil/configuração, publicação, grupos, opções, vínculos e produtos até a
+  criação. `zelomenu_whatsapp_materialize_cart_v1` espelha o carrinho canônico
+  do ZeloMenu, incluindo `selectedModifiers[].selectedOptions[]`, quantidades,
+  `somar`/`substituir`, linked products, nome público, categoria, grupos
+  obrigatórios e estoque agregado de linhas base + vinculadas.
+  `zelomenu_whatsapp_fulfillment_v1` revalida ASAP/agendamento e aceita entrega
+  somente com status `eligible`, cache/versão de localização frescos, cobertura
+  e regra de preço vigentes. Divergência persiste preview/issues por CAS,
+  incrementa revisão e retorna `requires_review`; conflito não escreve; criação
+  continua exclusiva de `create_zelo_order`. Contrato em
+  `20260830202349_confirm_whatsapp_zelo_order_atomic_v1.sql`. O verifier real é
+  `supabase/verification/whatsapp_atomic_confirmation_v1_runtime.sql` e roda no
+  harness fail-closed; pendente porque este host não possui psql/CLI/Docker/DB
+  descartável. Nunca apontá-lo para banco compartilhado ou de produção.
 
 - A confirmação de `whatsapp_order` usa
   `zelomenu_whatsapp_confirmation_tokens`: somente `token_hash` SHA-256 é
@@ -44,8 +52,14 @@
   saneamento forward-only, somente dupes abertas mais antigas são arquivadas.
   Não duplicar pedidos: preferências de pedido são
   `zelochat_customer_relationships.ordering_overrides` (JSON objeto,
-  server-only). Contrato versionado em
-  `20260829120000_whatsapp_order_canonical_contract.sql`, pendente de rollout.
+  server-only). Toda escrita deve usar
+  `patch_zelochat_customer_ordering_overrides(uuid,uuid,uuid,jsonb)`: a RPC
+  valida empresa/owner/pessoa cliente, limita chaves a `fulfillmentType`,
+  `deliveryAddress`, `paymentMethod` e `habitualTime`, trata null como remoção
+  pontual e faz merge sob advisory lock + row lock para não perder PATCH
+  concorrente. Contratos em `20260829120000_whatsapp_order_canonical_contract.sql`
+  e `20260830211500_patch_customer_ordering_overrides_atomic.sql`, pendentes de
+  rollout.
 
 - Pagamentos (2026-08-28): `src/lib/finance/paymentMethods.js` é o catálogo
   canônico. `vale_refeicao` é método nativo, receita realizada sem dinheiro em

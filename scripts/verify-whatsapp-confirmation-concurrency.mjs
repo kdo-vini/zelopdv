@@ -223,6 +223,8 @@ let primaryFailure;
 try {
   const verifierPath = resolve(import.meta.dirname, '..', 'supabase', 'verification', 'whatsapp_confirmation_tokens_runtime.sql');
   assertOk(await runPsqlFile(verifierPath), 'verificação SQL transacional');
+  const atomicVerifierPath = resolve(import.meta.dirname, '..', 'supabase', 'verification', 'whatsapp_atomic_confirmation_v1_runtime.sql');
+  assertOk(await runPsqlFile(atomicVerifierPath), 'verificação SQL comportamental da confirmação atômica');
   assertOk(await runPsql(setupSql), 'setup');
 
   // Hold the cart lock while both replicas queue the exact same deterministic
