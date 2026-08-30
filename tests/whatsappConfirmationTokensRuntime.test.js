@@ -23,6 +23,11 @@ describe('runtime verification of WhatsApp confirmation tokens', () => {
         ],
         { stdio: 'inherit', timeout: 60_000 },
       )).not.toThrow();
+      expect(() => execFileSync(
+        process.execPath,
+        [resolve('scripts/verify-whatsapp-confirmation-concurrency.mjs')],
+        { stdio: 'inherit', timeout: 60_000 },
+      )).not.toThrow();
     },
   );
 });

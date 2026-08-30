@@ -8,24 +8,34 @@ create temporary table whatsapp_confirmation_fixture (
   owner_id uuid not null,
   empresa_id uuid not null,
   session_id uuid not null,
+  session_b_id uuid not null,
   expired_session_id uuid not null,
   source_ref text not null,
+  second_source_ref text not null,
   expired_source_ref text not null,
   first_hash text not null,
   second_hash text not null,
   confirmation_hash text not null,
+  second_confirmation_hash text not null,
   expired_hash text not null,
   confirmation_token_id uuid,
-  order_id uuid
+  second_confirmation_token_id uuid,
+  order_id uuid,
+  second_order_id uuid
 ) on commit drop;
 
+-- The fixture is created by the harness owner, then the probe changes to the
+-- restricted service_role. Temporary-table ownership does not follow SET ROLE.
+grant select, insert, update, delete on table whatsapp_confirmation_fixture to service_role;
+
 insert into whatsapp_confirmation_fixture (
-  owner_id, empresa_id, session_id, expired_session_id, source_ref,
-  expired_source_ref, first_hash, second_hash, confirmation_hash, expired_hash
+  owner_id, empresa_id, session_id, session_b_id, expired_session_id, source_ref,
+  second_source_ref, expired_source_ref, first_hash, second_hash, confirmation_hash,
+  second_confirmation_hash, expired_hash
 ) values (
-  gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(),
-  '5511999990001@s.whatsapp.net', '5511999990002@s.whatsapp.net',
-  repeat('a', 64), repeat('b', 64), repeat('c', 64), repeat('d', 64)
+  gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(),
+  '5511999990001@s.whatsapp.net', '5511999990002@s.whatsapp.net', '5511999990003@s.whatsapp.net',
+  repeat('a', 64), repeat('b', 64), repeat('c', 64), repeat('d', 64), repeat('e', 64)
 );
 
 insert into auth.users (
@@ -60,6 +70,18 @@ select expired_session_id, empresa_id, 'whatsapp_order', 'cart_open', expired_so
        '{}'::jsonb,
        jsonb_build_object('items', jsonb_build_array(jsonb_build_object(
          'productName', 'Produto expirado', 'unitPrice', 0,
+         'quantity', 1, 'lineTotal', 0, 'position', 0
+       ))),
+       jsonb_build_object('type', 'pickup'),
+       jsonb_build_object('subtotal', 0, 'deliveryFee', 0, 'discount', 0),
+       jsonb_build_object('pixReceiptRequired', false, 'pixReceiptApproved', false),
+       1
+  from whatsapp_confirmation_fixture
+union all
+select session_b_id, empresa_id, 'whatsapp_order', 'cart_open', second_source_ref,
+       jsonb_build_object('name', 'Cliente de verificação B'),
+       jsonb_build_object('items', jsonb_build_array(jsonb_build_object(
+         'productName', 'Produto de verificação B', 'unitPrice', 0,
          'quantity', 1, 'lineTotal', 0, 'position', 0
        ))),
        jsonb_build_object('type', 'pickup'),
@@ -134,6 +156,10 @@ begin
     f.confirmation_hash, f.empresa_id, f.source_ref, f.session_id, 1, now() + interval '10 minutes'
   );
   update whatsapp_confirmation_fixture set confirmation_token_id = (issued->>'tokenId')::uuid;
+  issued := public.issue_whatsapp_zelo_confirmation_token(
+    f.second_confirmation_hash, f.empresa_id, f.second_source_ref, f.session_b_id, 1, now() + interval '10 minutes'
+  );
+  update whatsapp_confirmation_fixture set second_confirmation_token_id = (issued->>'tokenId')::uuid;
 end;
 $$;
 
@@ -174,8 +200,10 @@ do $$
 declare
   f whatsapp_confirmation_fixture%rowtype;
   confirmed jsonb;
+  confirmed_b jsonb;
   retry jsonb;
   canonical_key text;
+  canonical_key_b text;
 begin
   select * into f from whatsapp_confirmation_fixture;
   begin
@@ -188,7 +216,7 @@ begin
   end;
 
   confirmed := public.confirm_whatsapp_zelo_order(
-    f.confirmation_hash, f.empresa_id, f.source_ref, 1, 'collision-key', null
+    f.confirmation_hash, f.empresa_id, f.source_ref, 1, 'shared-caller-key', null
   );
   update whatsapp_confirmation_fixture set order_id = (confirmed->>'orderId')::uuid;
   canonical_key := 'whatsapp:' || f.session_id::text || ':' || f.confirmation_token_id::text;
@@ -203,6 +231,25 @@ begin
         where id = f.confirmation_token_id and consumed_at is not null
      ) then
     raise exception 'confirmation did not create/consume the canonical bound order';
+  end if;
+
+  -- Both sessions intentionally use the same caller key. B must still create
+  -- and return B's own order because the RPC derives idempotency internally.
+  confirmed_b := public.confirm_whatsapp_zelo_order(
+    f.second_confirmation_hash, f.empresa_id, f.second_source_ref, 1, 'shared-caller-key', null
+  );
+  update whatsapp_confirmation_fixture set second_order_id = (confirmed_b->>'orderId')::uuid;
+  canonical_key_b := 'whatsapp:' || f.session_b_id::text || ':' || f.second_confirmation_token_id::text;
+  if confirmed_b->>'orderId' = confirmed->>'orderId'
+     or not exists (
+       select 1 from public.zelo_orders
+        where id = (confirmed_b->>'orderId')::uuid
+          and zelomenu_session_id = f.session_b_id
+          and source = 'whatsapp'
+          and idempotency_key = canonical_key_b
+     ) or (select count(*) from public.zelo_orders
+           where zelomenu_session_id in (f.session_id, f.session_b_id)) <> 2 then
+    raise exception 'same caller key resolved the order of another WhatsApp session';
   end if;
 
   retry := public.confirm_whatsapp_zelo_order(
