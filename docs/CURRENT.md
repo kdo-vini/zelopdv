@@ -22,6 +22,17 @@
   `supabase/migrations/20260828120000_caixa_payment_totals.sql`; aplicar após
   preflight de colisões no banco de produção.
 
+- ZeloMenu — prazo de entrega manual (2026-08-29): a migration
+  `20260830002037_zelomenu_delivery_estimated_minutes.sql` foi aplicada e
+  registrada no Supabase real. `empresa_perfil.zelomenu_delivery_estimated_minutes`
+  é anulável e aceita somente 1–1440; nulo não exibe prazo ao cliente. A nova
+  sobrecarga service-role da RPC `save_zelomenu_delivery_settings` preserva a
+  assinatura anterior para clientes ainda atualizando. O ZeloMenu configura um
+  único valor em minutos, não o calcula mais pelo raio, mostra-o apenas no
+  fluxo de delivery e preserva o valor quando um painel antigo salva outras
+  configurações. Verificado no banco: coluna, constraint e execute apenas para
+  `service_role`; no ZeloMenu: typechecks client/server, 365 testes e build.
+
 - Índices do CRM compartilhado (2026-08-26): a migration
   `20260826131437_060_customer_crm_fk_indexes.sql` adiciona índices para as
   FKs e buscas owner-scoped usadas por Clientes, campanhas e automações. Ela é
