@@ -11,6 +11,8 @@ const concurrencyProbePath = resolve('scripts/verify-whatsapp-confirmation-concu
 const concurrencyProbe = existsSync(concurrencyProbePath)
   ? readFileSync(concurrencyProbePath, 'utf8').replace(/\r\n/g, '\n').toLowerCase()
   : '';
+const lifecycle = readFileSync(resolve('scripts/lib/psql-process-lifecycle.mjs'), 'utf8')
+  .replace(/\r\n/g, '\n').toLowerCase();
 const runtimeWrapper = readFileSync(
   resolve('tests/whatsappConfirmationTokensRuntime.test.js'),
   'utf8',
@@ -49,10 +51,13 @@ describe('verificador transacional dos tokens de confirmação WhatsApp', () => 
     expect(concurrencyProbe).toContain('pg_blocking_pids');
     expect(concurrencyProbe).toContain('waitforbarrier');
     expect(concurrencyProbe).toContain('issuanceblockedbyconfirmation');
-    expect(concurrencyProbe).toContain('terminatepsql');
-    expect(concurrencyProbe).toContain("child.kill('sigterm')");
-    expect(concurrencyProbe).toContain("child.kill('sigkill')");
-    expect(concurrencyProbe).toContain("spawn('taskkill'");
+    expect(concurrencyProbe).toContain('createpsqlprocesslifecycle');
+    expect(lifecycle).toContain('terminatepsql');
+    expect(lifecycle).toContain('stdin.writableended');
+    expect(lifecycle).toContain("child.kill('sigterm')");
+    expect(lifecycle).toContain("child.kill('sigkill')");
+    expect(lifecycle).toContain("spawnimpl('taskkill'");
+    expect(lifecycle).toContain('aggregateerror');
     expect(concurrencyProbe).toContain('await runpsqlfile');
     expect(concurrencyProbe).toContain('confirm_whatsapp_zelo_order');
     expect(concurrencyProbe).toContain('issue_whatsapp_zelo_confirmation_token');
