@@ -4,9 +4,14 @@
   `20260829121000_whatsapp_confirmation_tokens.sql` prepara tokens armazenados
   somente como hash SHA-256, vinculados a empresa, `remote_jid`, sessão,
   revisão e validade. A emissão/substituição passa pela RPC server-only atômica
-  `issue_whatsapp_zelo_confirmation_token`: ela trava a sessão `cart_open`,
-  invalida inclusive token expirado anterior e insere o novo resumo no mesmo
-  commit. A confirmação usa a mesma ordem de locks (sessão → token), rejeita
+  `issue_whatsapp_zelo_confirmation_token`: ela trava a sessão `cart_open` e,
+  para o mesmo hash determinístico ainda vivo com o mesmo binding, devolve o
+  mesmo token sem invalidá-lo; hash diferente mantém a substituição atômica.
+  Hash reusado com binding diferente falha, e hash consumido, invalidado ou
+  expirado exige novo resumo/revisão sem vazar `unique_violation`. A migration
+  aditiva `20260830195410_whatsapp_confirmation_token_idempotent_issue.sql`
+  preserva a ordem sessão → token e ACL exclusiva de `service_role`. A
+  confirmação usa a mesma ordem de locks, rejeita
   vínculo, revisão ou expiração inválidos, chama exclusivamente
   `create_zelo_order` e consome o token na mesma transação; retry devolve o
   pedido canônico sem duplicar. Sua chave de idempotência é derivada do binding
@@ -19,8 +24,9 @@
   ao executar `node scripts/verify-whatsapp-confirmation-concurrency.mjs`.
   Ele rejeita `SUPABASE_DB_URL`/`DATABASE_URL` e qualquer host/porta fora desse
   alvo local; nunca usar URL de produção ou compartilhada. O script executa
-  primeiro o verificador SQL comportamental e encerra cada `psql` por timeout
-  (SIGTERM e fallback forçado) antes do probe de locks.
+  primeiro o verificador SQL comportamental, enfileira duas emissões idênticas
+  atrás do lock de sessão e encerra cada `psql` por timeout (SIGTERM e fallback
+  forçado) antes do probe de locks.
 
 - Pedido por IA no WhatsApp (2026-08-29): a migration forward-only
   `20260829120000_whatsapp_order_canonical_contract.sql` prepara o contexto

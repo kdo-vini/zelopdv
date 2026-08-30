@@ -154,13 +154,23 @@ insert into public.zelomenu_cart_sessions (
 commit;
 `;
 
-const issueOldSql = `
+const duplicateIssueSql = (marker) => `
 begin;
 set local role service_role;
+select '${marker}:' || pg_backend_pid();
 select public.issue_whatsapp_zelo_confirmation_token(
-  '${oldHash}', '${empresaId}'::uuid, '${sourceRef}', '${sessionId}'::uuid, 1, now() + interval '10 minutes'
+  '${oldHash}', '${empresaId}'::uuid, '${sourceRef}', '${sessionId}'::uuid, 1, '2030-01-01 00:00:00+00'::timestamptz
 );
 commit;
+`;
+
+const duplicateIssueStateSql = `
+select json_build_object(
+  'liveCount', (select count(*) from public.zelomenu_whatsapp_confirmation_tokens
+                where session_id = '${sessionId}'::uuid and consumed_at is null and invalidated_at is null),
+  'tokenId', (select id from public.zelomenu_whatsapp_confirmation_tokens
+              where token_hash = '${oldHash}')
+);
 `;
 
 const confirmSql = `
@@ -206,12 +216,56 @@ commit;
 let blocker;
 let confirmation;
 let issuance;
+let duplicateBlocker;
+let duplicateIssuance1;
+let duplicateIssuance2;
 let primaryFailure;
 try {
   const verifierPath = resolve(import.meta.dirname, '..', 'supabase', 'verification', 'whatsapp_confirmation_tokens_runtime.sql');
   assertOk(await runPsqlFile(verifierPath), 'verificação SQL transacional');
   assertOk(await runPsql(setupSql), 'setup');
-  assertOk(await runPsql(issueOldSql), 'emissão inicial');
+
+  // Hold the cart lock while both replicas queue the exact same deterministic
+  // hash. Releasing only after both waits are observable proves the session
+  // lock serializes the replay and both calls return one token.
+  duplicateBlocker = startPsql();
+  writeStdin(duplicateBlocker, `
+begin;
+select id from public.zelomenu_cart_sessions where id = '${sessionId}'::uuid for update;
+select 'DUPLICATE_BLOCKER_PID:' || pg_backend_pid();
+`);
+  const duplicateBlockerPid = await waitForMarker(duplicateBlocker, 'DUPLICATE_BLOCKER_PID:');
+
+  duplicateIssuance1 = startPsql();
+  endStdin(duplicateIssuance1, `${duplicateIssueSql('DUPLICATE_ISSUANCE_1_PID')}\n\\q\n`);
+  const duplicateIssuance1Pid = await waitForMarker(duplicateIssuance1, 'DUPLICATE_ISSUANCE_1_PID:');
+  duplicateIssuance2 = startPsql();
+  endStdin(duplicateIssuance2, `${duplicateIssueSql('DUPLICATE_ISSUANCE_2_PID')}\n\\q\n`);
+  const duplicateIssuance2Pid = await waitForMarker(duplicateIssuance2, 'DUPLICATE_ISSUANCE_2_PID:');
+
+  await waitForBarrier('duplicate issuance waits on the cart lock', async () => {
+    const observed = firstJson(await runPsql(`
+select json_build_object(
+  'firstBlocked', ${duplicateBlockerPid} = any(pg_blocking_pids(${duplicateIssuance1Pid})),
+  'secondBlocked', ${duplicateBlockerPid} = any(pg_blocking_pids(${duplicateIssuance2Pid}))
+);
+`));
+    return observed.firstBlocked === true && observed.secondBlocked === true ? observed : null;
+  });
+  endStdin(duplicateBlocker, 'commit;\n\\q\n');
+  assertOk(await finish(duplicateBlocker, 'liberação para emissões duplicadas'), 'liberação para emissões duplicadas');
+  const duplicateResult1 = await finish(duplicateIssuance1, 'duplicate issuance 1');
+  const duplicateResult2 = await finish(duplicateIssuance2, 'duplicate issuance 2');
+  assertOk(duplicateResult1, 'duplicate issuance 1');
+  assertOk(duplicateResult2, 'duplicate issuance 2');
+  const duplicateToken1 = firstJson(duplicateResult1);
+  const duplicateToken2 = firstJson(duplicateResult2);
+  const duplicateState = firstJson(await runPsql(duplicateIssueStateSql));
+  if (duplicateToken1.tokenId !== duplicateToken2.tokenId
+    || duplicateState.liveCount !== 1
+    || duplicateState.tokenId !== duplicateToken1.tokenId) {
+    throw new Error(`same-hash concurrent issuance returned different tokens: ${JSON.stringify({ duplicateToken1, duplicateToken2, duplicateState })}`);
+  }
 
   blocker = startPsql();
   writeStdin(blocker, `
@@ -281,6 +335,9 @@ select json_build_object(
   primaryFailure = error;
 } finally {
   const finalized = await Promise.allSettled([
+    finalizePsql(duplicateBlocker, 'finalização do bloqueador de emissões duplicadas'),
+    finalizePsql(duplicateIssuance1, 'finalização da duplicate issuance 1'),
+    finalizePsql(duplicateIssuance2, 'finalização da duplicate issuance 2'),
     finalizePsql(blocker, 'finalização do bloqueador'),
     finalizePsql(confirmation, 'finalização da confirmação'),
     finalizePsql(issuance, 'finalização da emissão'),

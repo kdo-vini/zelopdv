@@ -121,6 +121,7 @@ do $$
 declare
   f whatsapp_confirmation_fixture%rowtype;
   issued jsonb;
+  issued_retry jsonb;
 begin
   select * into f from whatsapp_confirmation_fixture;
   issued := public.issue_whatsapp_zelo_confirmation_token(
@@ -128,6 +129,14 @@ begin
   );
   if issued->>'tokenId' is null or issued->>'sessionId' <> f.session_id::text then
     raise exception 'first token issuance returned an invalid binding';
+  end if;
+  issued_retry := public.issue_whatsapp_zelo_confirmation_token(
+    f.first_hash, f.empresa_id, f.source_ref, f.session_id, 1, now() + interval '10 minutes'
+  );
+  if issued_retry->>'tokenId' <> issued->>'tokenId'
+     or (select count(*) from public.zelomenu_whatsapp_confirmation_tokens
+         where token_hash = f.first_hash and consumed_at is null and invalidated_at is null) <> 1 then
+    raise exception 'same-hash issuance was not idempotent';
   end if;
 
   -- A replacement is atomic: the old live token is invalidated before the new
@@ -142,6 +151,14 @@ begin
          where session_id = f.session_id and consumed_at is null and invalidated_at is null) <> 1 then
     raise exception 'token replacement did not invalidate the prior live token atomically';
   end if;
+  begin
+    perform public.issue_whatsapp_zelo_confirmation_token(
+      f.first_hash, f.empresa_id, f.source_ref, f.session_id, 1, now() + interval '10 minutes'
+    );
+    raise exception 'invalidated token hash was resurrected';
+  exception when sqlstate 'ZL409' then
+    null;
+  end;
 
   begin
     perform public.issue_whatsapp_zelo_confirmation_token(
@@ -182,6 +199,14 @@ begin
     );
     raise exception 'expired token was accepted';
   exception when sqlstate 'ZL410' then
+    null;
+  end;
+  begin
+    perform public.issue_whatsapp_zelo_confirmation_token(
+      f.expired_hash, f.empresa_id, f.expired_source_ref, f.expired_session_id, 1, now() + interval '10 minutes'
+    );
+    raise exception 'expired token hash was resurrected';
+  exception when sqlstate 'ZL409' then
     null;
   end;
   perform public.issue_whatsapp_zelo_confirmation_token(

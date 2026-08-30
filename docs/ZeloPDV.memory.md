@@ -5,14 +5,20 @@
   persistido, nunca o token bruto. Cada token liga empresa, `source_ref`
   (`remote_jid`), sessão, revisão e expiração. A emissão/substituição só ocorre
   pela RPC service-role `issue_whatsapp_zelo_confirmation_token(...)`, que
-  trava a sessão primeiro, invalida inclusive tokens expirados não consumidos
-  e cria o próximo token no mesmo commit. A confirmação usa a mesma ordem de
+  trava a sessão primeiro. Para hash determinístico ainda vivo com o mesmo
+  binding/revisão, ela retorna o mesmo registro sem invalidar; hash diferente
+  invalida inclusive tokens expirados não consumidos e cria o próximo no mesmo
+  commit. Hash igual em binding diferente e hash consumido, invalidado ou
+  expirado falham com erro estável, sem ressuscitar token nem vazar colisão
+  única. A confirmação usa a mesma ordem de
   locks sessão→token, deriva a chave de idempotência de sessão+token (não confia
   no caller), delega apenas para `create_zelo_order` e confere que o pedido
   retornado pertence à sessão antes de consumir; retry retorna o pedido
   existente. A revalidação completa de catálogo/preço pertence ao ZeloMenu
   imediatamente antes da RPC, não a uma segunda regra SQL. Contrato em
-  `20260829121000_whatsapp_confirmation_tokens.sql`, pendente de rollout. O
+  `20260829121000_whatsapp_confirmation_tokens.sql`, com extensão aditiva em
+  `20260830195410_whatsapp_confirmation_token_idempotent_issue.sql`, pendente
+  de rollout. O
   probe de concorrência correspondente é deliberadamente local/descartável:
   só roda com `ZELOPDV_RUN_WHATSAPP_CONFIRMATION_CONCURRENCY=1` e
   `ZELOPDV_DISPOSABLE_DB_URL` apontando para `127.0.0.1:55322/postgres`; não

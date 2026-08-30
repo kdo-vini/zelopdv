@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-WHATSAPP-CONFIRMATION-TOKENS-05 (2026-08-30) — duas réplicas do
+  ZeloMenu podiam emitir o mesmo hash HMAC determinístico e a segunda causar
+  substituição indevida ou `unique_violation` → a migration aditiva
+  `20260830195410_whatsapp_confirmation_token_idempotent_issue.sql` devolve o
+  mesmo token para binding/revisão vivo idêntico, rejeita reuso em binding
+  diferente e token não-vivo com erro ZL409 estável e preserva substituição para
+  hash diferente. O verificador SQL cobre replay vivo e recusa de hash
+  invalidado/expirado; o probe descartável enfileira duas emissões idênticas.
+  Cobertura: `tests/whatsappConfirmationTokenIdempotentIssue.test.js`.
+
 - [x] FX-WHATSAPP-CONFIRMATION-TOKENS-04 (2026-08-30) — o wrapper runtime
   ainda podia escolher URL genérica e processos `psql` do probe podiam exceder
   timeout sem terminação garantida → wrapper delega somente ao probe com gate
