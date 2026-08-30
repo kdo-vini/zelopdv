@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-WHATSAPP-CONFIRMATION-TOKENS-03 (2026-08-30) — probe de concorrência
+  aceitava URL genérica e `Promise.all` não forçava uma interleaving observável
+  → `verify-whatsapp-confirmation-concurrency.mjs` exige opt-in e URL exclusiva
+  do PostgreSQL descartável `127.0.0.1:55322`, usa hashes aleatórios e comprova
+  a cadeia de bloqueios token → confirmação → emissão por `pg_blocking_pids`.
+  `SUPABASE_DB_URL`/`DATABASE_URL` não são lidas; runtime só ativa com
+  `ZELOPDV_RUN_WHATSAPP_CONFIRMATION_CONCURRENCY=1` e
+  `ZELOPDV_DISPOSABLE_DB_URL`. Cobertura:
+  `tests/whatsappConfirmationTokensVerifier.test.js`.
+
 - [x] FX-WHATSAPP-CONFIRMATION-TOKENS-02 (2026-08-30) — emissão/substituição
   de token era uma sequência Data API sujeita a corrida e token expirado podia
   ocupar o índice live → RPC server-only atômica

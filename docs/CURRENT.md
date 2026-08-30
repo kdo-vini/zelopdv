@@ -13,7 +13,12 @@
   imutável sessão+token, nunca da chave fornecida pelo caller. A revalidação
   completa de catálogo/preço continua no ZeloMenu imediatamente antes da RPC;
   o SQL não inventa uma segunda validação. Migration ainda pendente de
-  aplicação/runtime.
+  aplicação/runtime. O probe de concorrência só pode rodar com opt-in explícito
+  em PostgreSQL descartável local: `ZELOPDV_RUN_WHATSAPP_CONFIRMATION_CONCURRENCY=1`
+  e `ZELOPDV_DISPOSABLE_DB_URL=postgresql://postgres:postgres@127.0.0.1:55322/postgres`
+  ao executar `node scripts/verify-whatsapp-confirmation-concurrency.mjs`.
+  Ele rejeita `SUPABASE_DB_URL`/`DATABASE_URL` e qualquer host/porta fora desse
+  alvo local; nunca usar URL de produção ou compartilhada.
 
 - Pedido por IA no WhatsApp (2026-08-29): a migration forward-only
   `20260829120000_whatsapp_order_canonical_contract.sql` prepara o contexto

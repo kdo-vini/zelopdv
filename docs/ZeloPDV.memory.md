@@ -12,7 +12,12 @@
   retornado pertence à sessão antes de consumir; retry retorna o pedido
   existente. A revalidação completa de catálogo/preço pertence ao ZeloMenu
   imediatamente antes da RPC, não a uma segunda regra SQL. Contrato em
-  `20260829121000_whatsapp_confirmation_tokens.sql`, pendente de rollout.
+  `20260829121000_whatsapp_confirmation_tokens.sql`, pendente de rollout. O
+  probe de concorrência correspondente é deliberadamente local/descartável:
+  só roda com `ZELOPDV_RUN_WHATSAPP_CONFIRMATION_CONCURRENCY=1` e
+  `ZELOPDV_DISPOSABLE_DB_URL` apontando para `127.0.0.1:55322/postgres`; não
+  lê variáveis genéricas de banco e observa a cadeia de locks por
+  `pg_blocking_pids` antes de liberar a confirmação.
 
 - Pedidos iniciados pela IA no WhatsApp usam `zelomenu_cart_sessions` com
   `context='whatsapp_order'` e devem sempre criar o agregado por
