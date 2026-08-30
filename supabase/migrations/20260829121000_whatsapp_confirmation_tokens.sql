@@ -56,8 +56,94 @@ revoke all on table public.zelomenu_whatsapp_confirmation_tokens from public, an
 grant all on table public.zelomenu_whatsapp_confirmation_tokens to service_role;
 
 -- A revalidação completa de catálogo e preço ocorre no ZeloMenu imediatamente
--- antes desta RPC. create_zelo_order continua sendo a fronteira canônica de
+-- antes destas RPCs. create_zelo_order continua sendo a fronteira canônica de
 -- sessão/snapshot e não ganha uma segunda validação de catálogo neste SQL.
+--
+-- A ordem de lock deste contrato é sempre sessão -> tokens da sessão. A emissão
+-- trava a sessão antes de invalidar/inserir; a confirmação primeiro descobre a
+-- sessão sem lock e só então a trava antes de travar o token. Assim, as duas
+-- operações não se esperam em ordens opostas.
+create or replace function public.issue_whatsapp_zelo_confirmation_token(
+  p_token_hash text,
+  p_empresa_id uuid,
+  p_source_ref text,
+  p_session_id uuid,
+  p_expected_revision integer,
+  p_expires_at timestamptz
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_service_role boolean := coalesce(current_setting('role', true) = 'service_role', false);
+  s public.zelomenu_cart_sessions;
+  v_token public.zelomenu_whatsapp_confirmation_tokens;
+begin
+  if not v_service_role then
+    raise exception using errcode = '42501', message = 'SERVICE_ROLE_REQUIRED';
+  end if;
+  if nullif(trim(p_token_hash), '') is null
+     or lower(p_token_hash) !~ '^[0-9a-f]{64}$'
+     or p_empresa_id is null
+     or nullif(trim(p_source_ref), '') is null
+     or p_session_id is null
+     or p_expected_revision is null
+     or p_expected_revision <= 0
+     or p_expires_at is null
+     or p_expires_at <= now() then
+    raise exception using errcode = 'ZL400', message = 'CONFIRMATION_TOKEN_ISSUANCE_INVALID';
+  end if;
+
+  -- First lock in the universal order: the cart session.
+  select * into s
+    from public.zelomenu_cart_sessions
+   where id = p_session_id
+   for update;
+  if not found then
+    raise exception using errcode = 'ZL404', message = 'CONFIRMATION_SESSION_NOT_FOUND';
+  end if;
+  if s.context <> 'whatsapp_order' then
+    raise exception using errcode = 'ZL400', message = 'CONFIRMATION_SESSION_CONTEXT_INVALID';
+  end if;
+  if s.state <> 'cart_open' then
+    raise exception using errcode = 'ZL409', message = 'CONFIRMATION_SESSION_NOT_OPEN';
+  end if;
+  if s.empresa_id <> p_empresa_id or s.source_ref <> p_source_ref then
+    raise exception using errcode = 'ZL403', message = 'CONFIRMATION_TOKEN_BINDING_MISMATCH';
+  end if;
+  if s.revision <> p_expected_revision then
+    raise exception using errcode = 'ZL409', message = 'CONFIRMATION_TOKEN_REVISION_CONFLICT';
+  end if;
+
+  -- This update intentionally includes expired rows: expiration alone must
+  -- not keep the one-live-token index occupied when a newer summary is issued.
+  update public.zelomenu_whatsapp_confirmation_tokens
+     set invalidated_at = now()
+   where session_id = s.id
+     and consumed_at is null
+     and invalidated_at is null;
+
+  insert into public.zelomenu_whatsapp_confirmation_tokens (
+    token_hash, empresa_id, session_id, source_ref, revision, expires_at
+  ) values (
+    lower(p_token_hash), p_empresa_id, s.id, p_source_ref, p_expected_revision, p_expires_at
+  )
+  returning * into v_token;
+
+  return jsonb_build_object(
+    'tokenId', v_token.id,
+    'sessionId', v_token.session_id,
+    'revision', v_token.revision,
+    'expiresAt', v_token.expires_at
+  );
+end
+$$;
+
+comment on function public.issue_whatsapp_zelo_confirmation_token(text, uuid, text, uuid, integer, timestamptz) is
+  'Emite/substitui atomicamente token SHA-256 server-only de uma sessão whatsapp_order cart_open; locks seguem sessão→tokens.';
+
 create or replace function public.confirm_whatsapp_zelo_order(
   p_token_hash text,
   p_empresa_id uuid,
@@ -77,6 +163,8 @@ declare
   s public.zelomenu_cart_sessions;
   v_order public.zelo_orders;
   v_result jsonb;
+  v_session_id uuid;
+  v_idempotency_key text;
 begin
   if not v_service_role then
     raise exception using errcode = '42501', message = 'SERVICE_ROLE_REQUIRED';
@@ -89,22 +177,31 @@ begin
     raise exception using errcode = 'ZL400', message = 'CONFIRMATION_TOKEN_BINDING_INVALID';
   end if;
 
-  -- Lock token first and then its one session. Concurrent confirmations for
-  -- different tokens may serialize on the session but cannot create two orders.
-  select * into v_token
+  -- Find the target without locking it, then acquire the universal session
+  -- lock before locking this token. Issuance follows the same session→token
+  -- order, so replacement and confirmation cannot deadlock each other.
+  select session_id into v_session_id
     from public.zelomenu_whatsapp_confirmation_tokens
-   where token_hash = lower(p_token_hash)
-   for update;
+   where token_hash = lower(p_token_hash);
   if not found then
     raise exception using errcode = 'ZL404', message = 'CONFIRMATION_TOKEN_NOT_FOUND';
   end if;
 
   select * into s
     from public.zelomenu_cart_sessions
-   where id = v_token.session_id
+   where id = v_session_id
    for update;
   if not found then
     raise exception using errcode = 'ZL404', message = 'CONFIRMATION_SESSION_NOT_FOUND';
+  end if;
+
+  select * into v_token
+    from public.zelomenu_whatsapp_confirmation_tokens
+   where token_hash = lower(p_token_hash)
+     and session_id = s.id
+   for update;
+  if not found then
+    raise exception using errcode = 'ZL404', message = 'CONFIRMATION_TOKEN_NOT_FOUND';
   end if;
 
   if s.context <> 'whatsapp_order' then
@@ -147,13 +244,24 @@ begin
     raise exception using errcode = 'ZL410', message = 'CONFIRMATION_TOKEN_EXPIRED';
   end if;
 
+  -- The caller-supplied key remains in the signature for compatibility but is
+  -- never trusted: an immutable session+token binding isolates idempotency.
+  v_idempotency_key := 'whatsapp:' || v_token.session_id::text || ':' || v_token.id::text;
   v_result := public.create_zelo_order(
     v_token.session_id,
     p_expected_revision,
-    p_idempotency_key,
+    v_idempotency_key,
     '{}'::jsonb,
     p_pessoa_id
   );
+
+  select * into v_order
+    from public.zelo_orders
+   where id = nullif(v_result->>'orderId', '')::uuid
+     and zelomenu_session_id = v_token.session_id;
+  if not found then
+    raise exception using errcode = 'ZL409', message = 'CONFIRMATION_CANONICAL_ORDER_SESSION_MISMATCH';
+  end if;
 
   update public.zelomenu_whatsapp_confirmation_tokens
      set consumed_at = now()
@@ -165,7 +273,12 @@ end
 $$;
 
 comment on function public.confirm_whatsapp_zelo_order(text, uuid, text, integer, text, uuid) is
-  'Confirma token WhatsApp server-only pelo create_zelo_order canônico; revalidação completa de catálogo e preço ocorre no ZeloMenu antes da RPC.';
+  'Confirma token WhatsApp server-only pelo create_zelo_order canônico com idempotência derivada da sessão+token; locks seguem sessão→token.';
+
+revoke all on function public.issue_whatsapp_zelo_confirmation_token(text, uuid, text, uuid, integer, timestamptz)
+  from public, anon, authenticated;
+grant execute on function public.issue_whatsapp_zelo_confirmation_token(text, uuid, text, uuid, integer, timestamptz)
+  to service_role;
 
 revoke all on function public.confirm_whatsapp_zelo_order(text, uuid, text, integer, text, uuid)
   from public, anon, authenticated;

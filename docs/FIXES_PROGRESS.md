@@ -1,5 +1,16 @@
 # Fixes Progress
 
+- [x] FX-WHATSAPP-CONFIRMATION-TOKENS-02 (2026-08-30) — emissão/substituição
+  de token era uma sequência Data API sujeita a corrida e token expirado podia
+  ocupar o índice live → RPC server-only atômica
+  `issue_whatsapp_zelo_confirmation_token` trava a sessão `whatsapp_order`
+  aberta, invalida qualquer token não consumido (inclusive expirado) e insere
+  o próximo no mesmo commit. Confirmação adotou a mesma ordem sessão→token e
+  deriva a idempotência de sessão+token, com checagem defensiva de que o pedido
+  retornado pertence à sessão antes de consumir. Cobertura transacional em
+  `supabase/verification/whatsapp_confirmation_tokens_runtime.sql`; migration
+  pendente de aplicação: `supabase/migrations/20260829121000_whatsapp_confirmation_tokens.sql`.
+
 - [x] FX-WHATSAPP-CONFIRMATION-TOKENS-01 (2026-08-29) — confirmação de pedido
   WhatsApp passou a ter contrato de token opaco server-only: persiste somente
   hash SHA-256 ligado a empresa/JID/sessão/revisão/validade e a RPC

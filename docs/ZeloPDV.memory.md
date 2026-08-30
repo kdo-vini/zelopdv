@@ -3,13 +3,16 @@
 - A confirmação de `whatsapp_order` usa
   `zelomenu_whatsapp_confirmation_tokens`: somente `token_hash` SHA-256 é
   persistido, nunca o token bruto. Cada token liga empresa, `source_ref`
-  (`remote_jid`), sessão, revisão e expiração; tokens antigos podem ser
-  invalidados pelo servidor antes de substituir o resumo. A RPC server-only
-  `confirm_whatsapp_zelo_order(...)` trava token+sessão, delega apenas para
-  `create_zelo_order` e consome o token no mesmo commit; retry retorna o
-  pedido existente. A revalidação completa de catálogo/preço pertence ao
-  ZeloMenu imediatamente antes da RPC, não a uma segunda regra SQL. Contrato
-  em `20260829121000_whatsapp_confirmation_tokens.sql`, pendente de rollout.
+  (`remote_jid`), sessão, revisão e expiração. A emissão/substituição só ocorre
+  pela RPC service-role `issue_whatsapp_zelo_confirmation_token(...)`, que
+  trava a sessão primeiro, invalida inclusive tokens expirados não consumidos
+  e cria o próximo token no mesmo commit. A confirmação usa a mesma ordem de
+  locks sessão→token, deriva a chave de idempotência de sessão+token (não confia
+  no caller), delega apenas para `create_zelo_order` e confere que o pedido
+  retornado pertence à sessão antes de consumir; retry retorna o pedido
+  existente. A revalidação completa de catálogo/preço pertence ao ZeloMenu
+  imediatamente antes da RPC, não a uma segunda regra SQL. Contrato em
+  `20260829121000_whatsapp_confirmation_tokens.sql`, pendente de rollout.
 
 - Pedidos iniciados pela IA no WhatsApp usam `zelomenu_cart_sessions` com
   `context='whatsapp_order'` e devem sempre criar o agregado por

@@ -44,6 +44,31 @@ describe('tokens opacos para confirmação de pedido WhatsApp', () => {
     expect(migration).not.toMatch(/insert\s+into\s+public\.zelo_orders/);
   });
 
+  it('emite e substitui tokens somente por RPC atômica, serializada pela sessão', () => {
+    expect(migration).toContain('create or replace function public.issue_whatsapp_zelo_confirmation_token(');
+    expect(migration).toContain("s.context <> 'whatsapp_order'");
+    expect(migration).toContain("s.state <> 'cart_open'");
+    expect(migration).toContain('where session_id = s.id');
+    expect(compactMigration).toContain('set invalidated_at = now() where session_id = s.id and consumed_at is null and invalidated_at is null');
+    expect(migration).toContain('insert into public.zelomenu_whatsapp_confirmation_tokens');
+    expect(migration).toContain('grant execute on function public.issue_whatsapp_zelo_confirmation_token');
+    expect(migration).toContain('to service_role');
+  });
+
+  it('usa a mesma ordem sessão→token e deriva a idempotência do binding imutável', () => {
+    const confirmationStart = migration.indexOf('create or replace function public.confirm_whatsapp_zelo_order(');
+    const confirmation = migration.slice(confirmationStart);
+    const sessionLock = confirmation.search(/from public\.zelomenu_cart_sessions\s+where id = v_session_id\s+for update;/);
+    const tokenLock = confirmation.search(/from public\.zelomenu_whatsapp_confirmation_tokens\s+where token_hash = lower\(p_token_hash\)\s+and session_id = s\.id\s+for update;/);
+
+    expect(sessionLock).toBeGreaterThan(-1);
+    expect(tokenLock).toBeGreaterThan(sessionLock);
+    expect(confirmation).toContain("v_idempotency_key := 'whatsapp:' || v_token.session_id::text || ':' || v_token.id::text;");
+    expect(confirmation).toContain('v_idempotency_key,');
+    expect(confirmation).not.toContain('    p_idempotency_key,\n    \'{}\'::jsonb,');
+    expect(confirmation).toContain("message = 'confirmation_canonical_order_session_mismatch'");
+  });
+
   it('mantém tabela e RPC exclusivas de service_role e registra o limite de revalidação', () => {
     expect(migration).toContain('enable row level security');
     expect(migration).toContain('revoke all on table public.zelomenu_whatsapp_confirmation_tokens from public, anon, authenticated');
@@ -51,6 +76,7 @@ describe('tokens opacos para confirmação de pedido WhatsApp', () => {
     expect(migration).toContain('set search_path = public, pg_temp');
     expect(migration).toContain('revoke all on function public.confirm_whatsapp_zelo_order');
     expect(migration).toContain('grant execute on function public.confirm_whatsapp_zelo_order');
+    expect(migration).toContain('revoke all on function public.issue_whatsapp_zelo_confirmation_token');
     expect(migration).toContain('revalidação completa de catálogo e preço ocorre no zelomenu');
   });
 });

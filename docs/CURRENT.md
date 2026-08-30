@@ -3,13 +3,17 @@
 - Confirmação WhatsApp por token opaco (2026-08-29): a migration forward-only
   `20260829121000_whatsapp_confirmation_tokens.sql` prepara tokens armazenados
   somente como hash SHA-256, vinculados a empresa, `remote_jid`, sessão,
-  revisão e validade. A RPC server-only bloqueia token+sessão, rejeita vínculo,
-  revisão ou expiração inválidos, chama exclusivamente `create_zelo_order` e
-  consome o token na mesma transação; retry devolve o pedido canônico sem
-  duplicar. Resumos anteriores podem ser invalidados antes de substituição. A
-  revalidação completa de catálogo/preço continua no ZeloMenu imediatamente
-  antes da RPC; o SQL não inventa uma segunda validação. Migration ainda
-  pendente de aplicação/runtime.
+  revisão e validade. A emissão/substituição passa pela RPC server-only atômica
+  `issue_whatsapp_zelo_confirmation_token`: ela trava a sessão `cart_open`,
+  invalida inclusive token expirado anterior e insere o novo resumo no mesmo
+  commit. A confirmação usa a mesma ordem de locks (sessão → token), rejeita
+  vínculo, revisão ou expiração inválidos, chama exclusivamente
+  `create_zelo_order` e consome o token na mesma transação; retry devolve o
+  pedido canônico sem duplicar. Sua chave de idempotência é derivada do binding
+  imutável sessão+token, nunca da chave fornecida pelo caller. A revalidação
+  completa de catálogo/preço continua no ZeloMenu imediatamente antes da RPC;
+  o SQL não inventa uma segunda validação. Migration ainda pendente de
+  aplicação/runtime.
 
 - Pedido por IA no WhatsApp (2026-08-29): a migration forward-only
   `20260829120000_whatsapp_order_canonical_contract.sql` prepara o contexto
