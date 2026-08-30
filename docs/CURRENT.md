@@ -18,7 +18,9 @@
   e `ZELOPDV_DISPOSABLE_DB_URL=postgresql://postgres:postgres@127.0.0.1:55322/postgres`
   ao executar `node scripts/verify-whatsapp-confirmation-concurrency.mjs`.
   Ele rejeita `SUPABASE_DB_URL`/`DATABASE_URL` e qualquer host/porta fora desse
-  alvo local; nunca usar URL de produção ou compartilhada.
+  alvo local; nunca usar URL de produção ou compartilhada. O script executa
+  primeiro o verificador SQL comportamental e encerra cada `psql` por timeout
+  (SIGTERM e fallback forçado) antes do probe de locks.
 
 - Pedido por IA no WhatsApp (2026-08-29): a migration forward-only
   `20260829120000_whatsapp_order_canonical_contract.sql` prepara o contexto

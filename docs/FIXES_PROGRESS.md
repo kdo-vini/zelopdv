@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-WHATSAPP-CONFIRMATION-TOKENS-04 (2026-08-30) — o wrapper runtime
+  ainda podia escolher URL genérica e processos `psql` do probe podiam exceder
+  timeout sem terminação garantida → wrapper delega somente ao probe com gate
+  descartável, que executa também o SQL comportamental e aplica timeout real a
+  cada `psql` (SIGTERM, SIGKILL/taskkill de fallback), finalizando
+  blocker/confirmação/emissão e cleanup no `finally`. Cobertura:
+  `tests/whatsappConfirmationTokensVerifier.test.js`.
+
 - [x] FX-WHATSAPP-CONFIRMATION-TOKENS-03 (2026-08-30) — probe de concorrência
   aceitava URL genérica e `Promise.all` não forçava uma interleaving observável
   → `verify-whatsapp-confirmation-concurrency.mjs` exige opt-in e URL exclusiva

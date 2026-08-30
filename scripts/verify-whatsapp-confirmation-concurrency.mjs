@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { resolve } from 'node:path';
 
 const timeoutMs = 4_000;
 const databaseUrl = process.env.ZELOPDV_DISPOSABLE_DB_URL;
@@ -31,18 +32,18 @@ if (url.protocol !== 'postgresql:'
   process.exit(2);
 }
 
-function startPsql() {
-  const child = spawn('psql', [databaseUrl, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
+function startPsql(extraArgs = []) {
+  const child = spawn('psql', [databaseUrl, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', ...extraArgs], {
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   });
   let stdout = '';
   let stderr = '';
-  const done = new Promise((resolve, reject) => {
+  const done = new Promise((resolve) => {
     child.stdout.on('data', (chunk) => { stdout += chunk; });
     child.stderr.on('data', (chunk) => { stderr += chunk; });
-    child.on('error', reject);
-    child.on('close', (code) => resolve({ code, stdout, stderr }));
+    child.once('error', (error) => resolve({ code: 1, stdout, stderr, error: error.message }));
+    child.once('close', (code) => resolve({ code: code ?? 1, stdout, stderr }));
   });
   return {
     child,
@@ -54,7 +55,13 @@ function startPsql() {
 async function runPsql(sql) {
   const process = startPsql();
   process.child.stdin.end(`${sql}\n\\q\n`);
-  return process.done;
+  return waitForProcess(process, 'psql SQL');
+}
+
+async function runPsqlFile(file) {
+  const process = startPsql(['--file', file]);
+  process.child.stdin.end();
+  return waitForProcess(process, `psql ${file}`);
 }
 
 function assertOk(result, label) {
@@ -98,12 +105,43 @@ async function waitForMarker(process, marker) {
 }
 
 async function finish(process, label) {
-  return Promise.race([
-    process.done,
-    delay(timeoutMs).then(() => {
-      throw new Error(`timeout aguardando ${label}`);
-    }),
-  ]);
+  return waitForProcess(process, label);
+}
+
+async function waitForProcess(process, label) {
+  const result = await Promise.race([process.done, delay(timeoutMs).then(() => null)]);
+  if (result) return result;
+  await terminatePsql(process, label);
+  throw new Error(`timeout aguardando ${label}; processo psql encerrado`);
+}
+
+async function terminatePsql(process, label) {
+  if (!process || process.child.exitCode !== null) return process?.done;
+  process.child.kill('SIGTERM');
+  let result = await Promise.race([process.done, delay(500).then(() => null)]);
+  if (result) return result;
+  if (globalThis.process.platform === 'win32') {
+    await new Promise((resolve) => {
+      const killer = spawn('taskkill', ['/pid', String(process.child.pid), '/t', '/f'], {
+        stdio: 'ignore', windowsHide: true,
+      });
+      killer.once('error', resolve);
+      killer.once('close', resolve);
+    });
+  } else {
+    process.child.kill('SIGKILL');
+  }
+  result = await Promise.race([process.done, delay(500).then(() => null)]);
+  if (!result) throw new Error(`não foi possível encerrar psql após timeout: ${label}`);
+  return result;
+}
+
+async function finalizePsql(process, label) {
+  if (!process) return;
+  if (process.child.exitCode === null) {
+    process.child.stdin.end('rollback;\n\\q\n');
+  }
+  await waitForProcess(process, label).catch(async () => { await terminatePsql(process, label); });
 }
 
 const ownerId = randomUUID();
@@ -187,7 +225,11 @@ commit;
 `;
 
 let blocker;
+let confirmation;
+let issuance;
 try {
+  const verifierPath = resolve(import.meta.dirname, '..', 'supabase', 'verification', 'whatsapp_confirmation_tokens_runtime.sql');
+  assertOk(await runPsqlFile(verifierPath), 'verificação SQL transacional');
   assertOk(await runPsql(setupSql), 'setup');
   assertOk(await runPsql(issueOldSql), 'emissão inicial');
 
@@ -206,7 +248,7 @@ select 'BLOCKER_PID:' || pg_backend_pid();
   // The token blocker forces confirmation to retain the session lock while it
   // waits on the token. Issuance must then wait behind confirmation's session
   // lock; the observed blocking chain distinguishes the inverse lock order.
-  const confirmation = startPsql();
+  confirmation = startPsql();
   confirmation.child.stdin.end(`${confirmSql}\n\\q\n`);
   const confirmationPid = await waitForMarker(confirmation, 'CONFIRM_PID:');
 
@@ -226,7 +268,7 @@ select json_build_object(
     return observed.confirmationBlockedByToken === true ? observed : null;
   });
 
-  const issuance = startPsql();
+  issuance = startPsql();
   issuance.child.stdin.end(`${replaceSql}\n\\q\n`);
   const issuancePid = await waitForMarker(issuance, 'ISSUE_PID:');
 
@@ -256,14 +298,20 @@ select json_build_object(
 
   console.log(`concorrência emissão×confirmação OK: ${JSON.stringify(state)}`);
 } finally {
-  if (blocker && blocker.child.exitCode === null) {
-    blocker.child.stdin.end('rollback;\n\\q\n');
-    await finish(blocker, 'rollback do bloqueador').catch(() => blocker.child.kill());
-  }
-  const cleanup = await runPsql(cleanupSql);
-  if (cleanup.code !== 0) {
-    console.error(`limpeza da fixture falhou: ${cleanup.stderr || cleanup.stdout}`);
-    process.exitCode = 1;
+  await Promise.allSettled([
+    finalizePsql(blocker, 'finalização do bloqueador'),
+    finalizePsql(confirmation, 'finalização da confirmação'),
+    finalizePsql(issuance, 'finalização da emissão'),
+  ]);
+  try {
+    const cleanup = await runPsql(cleanupSql);
+    if (cleanup.code !== 0) {
+      console.error(`limpeza da fixture falhou: ${cleanup.stderr || cleanup.stdout}`);
+      globalThis.process.exitCode = 1;
+    }
+  } catch (error) {
+    console.error(`limpeza da fixture excedeu o timeout: ${error.message}`);
+    globalThis.process.exitCode = 1;
   }
 }
 

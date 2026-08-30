@@ -17,7 +17,9 @@
   só roda com `ZELOPDV_RUN_WHATSAPP_CONFIRMATION_CONCURRENCY=1` e
   `ZELOPDV_DISPOSABLE_DB_URL` apontando para `127.0.0.1:55322/postgres`; não
   lê variáveis genéricas de banco e observa a cadeia de locks por
-  `pg_blocking_pids` antes de liberar a confirmação.
+  `pg_blocking_pids` antes de liberar a confirmação. O mesmo script chama o
+  verificador SQL comportamental e encerra todos os `psql` com timeout
+  fail-closed, inclusive cleanup, antes de retornar.
 
 - Pedidos iniciados pela IA no WhatsApp usam `zelomenu_cart_sessions` com
   `context='whatsapp_order'` e devem sempre criar o agregado por

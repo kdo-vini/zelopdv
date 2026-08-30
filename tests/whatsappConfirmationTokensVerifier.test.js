@@ -11,6 +11,10 @@ const concurrencyProbePath = resolve('scripts/verify-whatsapp-confirmation-concu
 const concurrencyProbe = existsSync(concurrencyProbePath)
   ? readFileSync(concurrencyProbePath, 'utf8').replace(/\r\n/g, '\n').toLowerCase()
   : '';
+const runtimeWrapper = readFileSync(
+  resolve('tests/whatsappConfirmationTokensRuntime.test.js'),
+  'utf8',
+).replace(/\r\n/g, '\n').toLowerCase();
 
 describe('verificador transacional dos tokens de confirmação WhatsApp', () => {
   it('concede acesso à fixture temporária antes de mudar para service_role', () => {
@@ -45,6 +49,11 @@ describe('verificador transacional dos tokens de confirmação WhatsApp', () => 
     expect(concurrencyProbe).toContain('pg_blocking_pids');
     expect(concurrencyProbe).toContain('waitforbarrier');
     expect(concurrencyProbe).toContain('issuanceblockedbyconfirmation');
+    expect(concurrencyProbe).toContain('terminatepsql');
+    expect(concurrencyProbe).toContain("child.kill('sigterm')");
+    expect(concurrencyProbe).toContain("child.kill('sigkill')");
+    expect(concurrencyProbe).toContain("spawn('taskkill'");
+    expect(concurrencyProbe).toContain('await runpsqlfile');
     expect(concurrencyProbe).toContain('confirm_whatsapp_zelo_order');
     expect(concurrencyProbe).toContain('issue_whatsapp_zelo_confirmation_token');
     expect(concurrencyProbe).toContain('two independent psql connections');
@@ -64,5 +73,13 @@ describe('verificador transacional dos tokens de confirmação WhatsApp', () => 
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain('ZELOPDV_RUN_WHATSAPP_CONFIRMATION_CONCURRENCY=1');
+  });
+
+  it('mantém o wrapper runtime no mesmo gate descartável e delega psql ao probe', () => {
+    expect(runtimeWrapper).toContain('process.env.zelopdv_disposable_db_url');
+    expect(runtimeWrapper).toContain('process.env.zelopdv_run_whatsapp_confirmation_concurrency');
+    expect(runtimeWrapper).not.toContain('supabase_db_url');
+    expect(runtimeWrapper).not.toContain('database_url');
+    expect(runtimeWrapper).not.toContain("'psql'");
   });
 });

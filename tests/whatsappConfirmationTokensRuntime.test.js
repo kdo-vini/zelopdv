@@ -9,19 +9,8 @@ describe('runtime verification of WhatsApp confirmation tokens', () => {
   it.skipIf(!disposableConcurrencyOptIn)(
     'probes issuance replacement, binding, expiration, retry, and service-role ACL transactionally',
     () => {
-      const databaseUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
-      expect(() => execFileSync(
-        'psql',
-        [
-          databaseUrl,
-          '-X',
-          '-v',
-          'ON_ERROR_STOP=1',
-          '--file',
-          resolve('supabase/verification/whatsapp_confirmation_tokens_runtime.sql'),
-        ],
-        { stdio: 'inherit', timeout: 60_000 },
-      )).not.toThrow();
+      // The probe itself runs the behavioral SQL through its fail-closed,
+      // per-process psql timeout wrapper before opening the concurrent calls.
       expect(() => execFileSync(
         process.execPath,
         [resolve('scripts/verify-whatsapp-confirmation-concurrency.mjs')],
