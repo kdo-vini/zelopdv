@@ -1,5 +1,15 @@
 # ZeloPDV.memory
 
+- Pedido WhatsApp (2026-08-30): `whatsapp_order` usa `zelomenu_cart_sessions`
+  e confirma somente pela RPC server-only
+  `confirm_whatsapp_zelo_order_atomic_v1`, que bloqueia sessão/token e cria ou
+  reaproveita um único `zelo_orders` pelo caminho `create_zelo_order`.
+  `issue_whatsapp_zelo_confirmation_token` guarda somente SHA-256 e é
+  idempotente para o mesmo binding/revisão. Preferências CRM passam somente por
+  `patch_zelochat_customer_ordering_overrides`. Os cinco DDLs da feature ainda
+  dependem de aplicação ordenada; os probes de confirmação são estritamente
+  locais/descartáveis e jamais podem receber URL compartilhada ou de produção.
+
 - Formas de pagamento (2026-08-29): o ZeloMenu/ZeloChat legado pode enviar
   rótulos nativos (`Pix`, `Dinheiro`, `Cartão de crédito`, `Cartão de débito`)
   em vez dos IDs; `normalizePaymentMethodId` é a fronteira canônica do PDV e

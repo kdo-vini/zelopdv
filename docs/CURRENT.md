@@ -1,5 +1,17 @@
 # ZeloPDV — Foco atual
 
+- Pedido conversacional WhatsApp (2026-08-30): as cinco migrations forward-only
+  `20260829120000_whatsapp_order_canonical_contract.sql`,
+  `20260829121000_whatsapp_confirmation_tokens.sql`,
+  `20260830195410_whatsapp_confirmation_token_idempotent_issue.sql`,
+  `20260830202349_confirm_whatsapp_zelo_order_atomic_v1.sql` e
+  `20260830211500_patch_customer_ordering_overrides_atomic.sql` estabelecem o
+  carrinho `whatsapp_order`, tokens opacos idempotentes, confirmação atômica
+  exclusiva de `create_zelo_order` e overrides CRM server-only. Ainda não foram
+  aplicadas no banco compartilhado. Antes do rollout, executar o verifier SQL e
+  o probe de concorrência apenas em PostgreSQL descartável local com os opt-ins
+  documentados; nunca apontar esses probes à produção.
+
 - Formas de pagamento no relatório (2026-08-29): o fluxo legado do
   ZeloMenu/ZeloChat podia gravar rótulos de apresentação (`Pix`, `Dinheiro`,
   `Cartão de crédito` e `Cartão de débito`) em `vendas.forma_pagamento`,

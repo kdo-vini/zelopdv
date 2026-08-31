@@ -1,5 +1,14 @@
 # Fixes Progress
 
+- [x] FX-WHATSAPP-ORDERING-01 (2026-08-30) — pedido por IA precisava de uma
+  confirmação canônica sem duplicidade → cadeia de cinco migrations cria o
+  contrato `whatsapp_order`, tokens opacos idempotentes, a RPC
+  `confirm_whatsapp_zelo_order_atomic_v1` e o PATCH atômico de hábitos do CRM.
+  Verificação estrutural: 29 testes; runtime permanece bloqueado até rodar os
+  probes exclusivamente em banco descartável. Migrations:
+  `20260829120000` → `20260829121000` → `20260830195410` → `20260830202349`
+  → `20260830211500`.
+
 - [x] FX-REPORT-PAYMENT-ALIASES-01 (2026-08-29) — Relatórios agora agrupam
   aliases de rótulos nativos gravados pelo ZeloMenu/ZeloChat (`Pix`, `Dinheiro`
   e cartões) nos IDs canônicos, inclusive em dados históricos e snapshots de
