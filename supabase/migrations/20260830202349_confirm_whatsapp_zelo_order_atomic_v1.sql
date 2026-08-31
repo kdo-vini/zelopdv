@@ -50,17 +50,17 @@ as $$
   from (
     select
       case
-        when window->>'start' ~ '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$'
-          then split_part(window->>'start', ':', 1)::integer * 60
-             + split_part(window->>'start', ':', 2)::integer
+        when slot->>'start' ~ '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$'
+          then split_part(slot->>'start', ':', 1)::integer * 60
+             + split_part(slot->>'start', ':', 2)::integer
         else null
       end as start_minute,
       case
-        when window->>'end' = '24:00' then 1440
-        when window->>'end' = '00:00' and window->>'start' <> '00:00' then 1440
-        when window->>'end' ~ '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$'
-          then split_part(window->>'end', ':', 1)::integer * 60
-             + split_part(window->>'end', ':', 2)::integer
+        when slot->>'end' = '24:00' then 1440
+        when slot->>'end' = '00:00' and slot->>'start' <> '00:00' then 1440
+        when slot->>'end' ~ '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$'
+          then split_part(slot->>'end', ':', 1)::integer * 60
+             + split_part(slot->>'end', ':', 2)::integer
         else null
       end as end_minute
     from jsonb_array_elements(
@@ -69,7 +69,7 @@ as $$
         when jsonb_typeof(p_windows->'windows') = 'array' then p_windows->'windows'
         else '[]'::jsonb
       end
-    ) as item(window)
+    ) as item(slot)
   ) parsed
   where start_minute is not null and end_minute is not null
 $$;
