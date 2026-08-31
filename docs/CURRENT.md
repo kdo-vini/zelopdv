@@ -1,12 +1,15 @@
 # ZeloPDV — Foco atual
 
 - Layout de Relatórios (2026-08-31): a página deixou de criar, no desktop,
-  uma segunda área de rolagem ao lado do relatório. O documento agora concentra
-  a rolagem, eliminando o trilho lateral e a área vazia observados ao fim do
-  conteúdo. Cobertura direcionada em `tests/relatoriosLayout.test.js` e
-  `npm run check` sem diagnósticos. A suíte completa está vermelha por dois
-  testes preexistentes de `tests/gerente.weekReport.test.js`, sem relação com
-  esta alteração.
+  uma segunda área de rolagem ao lado do relatório. O documento concentra a
+  rolagem e a sidebar fica presa ao viewport com `position: sticky`, evitando
+  tanto o trilho lateral quanto a navegação sair da tela. O `min-h-full` do
+  conteúdo excedia essa workspace e criava uma faixa vazia ao fim; foi removido.
+  A correção está somente local e a validação autenticada em localhost confirmou
+  que o documento e a workspace terminam juntos. Cobertura direcionada em
+  `tests/relatoriosLayout.test.js` e `npm run check` sem diagnósticos. A suíte
+  completa está vermelha por dois testes preexistentes de
+  `tests/gerente.weekReport.test.js`, sem relação com esta alteração.
 
 - Pedido conversacional WhatsApp (2026-08-30): as cinco migrations forward-only
   `20260829120000_whatsapp_order_canonical_contract.sql`,

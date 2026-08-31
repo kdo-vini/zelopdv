@@ -42,6 +42,14 @@
     min-height: 100dvh;
   }
 
+  @media (min-width: 768px) {
+    .relatorios-workspace :global(#gestao-sidebar) {
+      position: sticky;
+      top: 0;
+      align-self: flex-start;
+    }
+  }
+
   @media (min-width: 1280px) {
     .zelinho-workspace { padding-right: 24rem; }
     .zelinho-workspace:not(.zelinho-open) { padding-right: 0; }

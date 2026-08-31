@@ -1,10 +1,13 @@
 # Fixes Progress
 
-- [x] FX-REPORTS-NESTED-SCROLL-01 (2026-08-31) — `/relatorios` criava, no
+- [~] FX-REPORTS-NESTED-SCROLL-01 (2026-08-31) — `/relatorios` criava, no
   desktop, uma área de rolagem interna além da rolagem do documento, exibindo
-  um trilho lateral e espaço vazio após o conteúdo. O layout agora permite uma
-  única rolagem da página; cobertura em `tests/relatoriosLayout.test.js` e
-  `npm run check` passaram sem erros ou avisos.
+  um trilho lateral e espaço vazio após o conteúdo. A correção local mantém
+  uma única rolagem, prende a sidebar desktop com `position: sticky` e remove o
+  `min-h-full` que fazia o conteúdo extrapolar a workspace. A validação
+  autenticada em localhost confirmou que não há altura residual; permanece sem
+  deploy. Cobertura em `tests/relatoriosLayout.test.js` e `npm run check`
+  passaram sem erros ou avisos.
 
 - [x] FX-WHATSAPP-ORDERING-01 (2026-08-30) — pedido por IA precisava de uma
   confirmação canônica sem duplicidade → cadeia de cinco migrations cria o

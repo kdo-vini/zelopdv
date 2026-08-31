@@ -1091,7 +1091,7 @@
 				<p class="text-sm text-muted">Selecione um caixa ao lado para visualizar os relatórios.</p>
 			</div>
 		{:else}
-		<section class="flex min-h-full flex-col gap-5">
+		<section class="flex flex-col gap-5">
 			<!-- ✦ HERO: Receita Líquida -->
 			<div class="card-hero">
 				<div class="flex items-center gap-2 text-sm font-medium mb-1" style="color: var(--text-muted);">
