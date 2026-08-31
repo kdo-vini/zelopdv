@@ -18,10 +18,10 @@
 </script>
 
 {#if ready}
-  <div class:zelinho-open={$isZelinhoOpen} class="app-navigation-workspace zelinho-workspace relatorios-workspace flex overflow-visible md:overflow-hidden" style="background: var(--bg-app); color: var(--text-main);">
+  <div class:zelinho-open={$isZelinhoOpen} class="app-navigation-workspace zelinho-workspace relatorios-workspace flex overflow-visible" style="background: var(--bg-app); color: var(--text-main);">
     <GestaoSidebar />
-    <div class="flex-1 flex flex-col overflow-visible md:overflow-hidden min-w-0">
-      <main class="relatorios-content flex-1 overflow-visible md:overflow-y-auto p-6 md:p-8">
+    <div class="flex-1 flex flex-col min-w-0">
+      <main class="relatorios-content flex-1 p-6 md:p-8">
         <slot />
       </main>
     </div>
@@ -40,19 +40,6 @@
   .relatorios-workspace {
     min-height: 100vh;
     min-height: 100dvh;
-  }
-
-  @media (min-width: 768px) {
-    .relatorios-workspace {
-      height: 100vh;
-      height: 100dvh;
-    }
-
-    /* Impede que a rolagem do painel, ao chegar ao fim, mova o documento
-       externo e revele uma área vazia fora do workspace. */
-    .relatorios-content {
-      overscroll-behavior-y: contain;
-    }
   }
 
   @media (min-width: 1280px) {

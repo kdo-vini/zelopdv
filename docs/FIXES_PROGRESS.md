@@ -1,5 +1,11 @@
 # Fixes Progress
 
+- [x] FX-REPORTS-NESTED-SCROLL-01 (2026-08-31) — `/relatorios` criava, no
+  desktop, uma área de rolagem interna além da rolagem do documento, exibindo
+  um trilho lateral e espaço vazio após o conteúdo. O layout agora permite uma
+  única rolagem da página; cobertura em `tests/relatoriosLayout.test.js` e
+  `npm run check` passaram sem erros ou avisos.
+
 - [x] FX-WHATSAPP-ORDERING-01 (2026-08-30) — pedido por IA precisava de uma
   confirmação canônica sem duplicidade → cadeia de cinco migrations cria o
   contrato `whatsapp_order`, tokens opacos idempotentes, a RPC
