@@ -23,6 +23,13 @@
   let whatsappEnabled = false;
   let mutedTypes = [];
   let showExample = false;
+  let pairLoading = true;
+  let pairLinked = false;
+  let pairPhoneMasked = '';
+  let pairWhatsappNumber = '';
+  let pairCode = '';
+  let pairExpiresAt = null;
+  let pairBusy = false;
 
   async function load() {
     try {
@@ -72,7 +79,62 @@
     }
   }
 
-  onMount(load);
+  async function authHeaders() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` };
+  }
+
+  async function loadPairing() {
+    pairLoading = true;
+    try {
+      const response = await fetch('/api/gerente/pair', { headers: await authHeaders() });
+      const data = await response.json();
+      pairLinked = data.linked === true;
+      pairPhoneMasked = data.phone_masked || '';
+      pairWhatsappNumber = data.whatsapp_number || '';
+    } catch {
+      addToast('Não foi possível consultar a conexão com o WhatsApp.', 'warning');
+    } finally {
+      pairLoading = false;
+    }
+  }
+
+  async function startPairing() {
+    if (pairBusy || isSubUser) return;
+    pairBusy = true;
+    try {
+      const response = await fetch('/api/gerente/pair/start', { method: 'POST', headers: await authHeaders(), body: '{}' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'Não foi possível gerar o código.');
+      pairCode = data.code;
+      pairExpiresAt = data.expires_at;
+      pairWhatsappNumber = data.whatsapp_number || pairWhatsappNumber;
+      void capturePostHogEvent('gerente_whatsapp_pair_start');
+    } catch (error) {
+      addToast(error?.message || 'Não foi possível gerar o código.', 'error');
+    } finally {
+      pairBusy = false;
+    }
+  }
+
+  async function unlinkPairing() {
+    if (pairBusy || isSubUser) return;
+    pairBusy = true;
+    try {
+      const response = await fetch('/api/gerente/pair', { method: 'DELETE', headers: await authHeaders() });
+      if (!response.ok) throw new Error('Não foi possível desvincular.');
+      pairLinked = false;
+      pairPhoneMasked = '';
+      pairCode = '';
+      addToast('WhatsApp desvinculado do Zelinho.', 'success');
+    } catch (error) {
+      addToast(error?.message || 'Não foi possível desvincular.', 'error');
+    } finally {
+      pairBusy = false;
+    }
+  }
+
+  onMount(() => { load(); loadPairing(); });
 </script>
 
 <svelte:head><title>Preferências do Zelinho | ZeloPDV</title></svelte:head>
@@ -88,6 +150,24 @@
     {#if isSubUser}
       <InlineHelper id="prefs-subuser-hint" tone="warning" message="Seu perfil pode consultar estas preferências, mas somente o dono da empresa pode alterá-las." />
     {/if}
+    <section class="preference-card">
+      <div class="card-heading"><MessageCircle size={20} /><div><h2>Zelinho no WhatsApp</h2><p>Converse com o gerente e peça ações como "pausa o refri no cardápio" direto do seu WhatsApp.</p></div></div>
+      {#if pairLoading}
+        <div class="skeleton short"></div>
+      {:else if pairLinked}
+        <p class="pair-status">Conectado ao WhatsApp <strong>{pairPhoneMasked}</strong>.</p>
+        {#if pairWhatsappNumber}<p class="pair-hint">Salve o contato do Zelinho Gerente: <strong>{pairWhatsappNumber}</strong>.</p>{/if}
+        {#if !isSubUser}<button type="button" class="pair-secondary" disabled={pairBusy} on:click={unlinkPairing}>Desvincular</button>{/if}
+      {:else if pairCode}
+        <p class="pair-hint">Mande este código para o Zelinho no WhatsApp <strong>{pairWhatsappNumber}</strong> em até 10 minutos:</p>
+        <p class="pairing-code" aria-live="polite">{pairCode}</p>
+        <button type="button" class="pair-secondary" disabled={pairBusy} on:click={() => { pairCode = ''; loadPairing(); }}>Já enviei o código</button>
+      {:else}
+        <p class="pair-hint">Só o dono da empresa pode conectar. O telefone conectado é o único que fala com o Zelinho.</p>
+        {#if !isSubUser}<Button on:click={startPairing} disabled={pairBusy}><MessageCircle />{pairBusy ? 'Gerando...' : 'Conectar no WhatsApp'}</Button>{/if}
+      {/if}
+    </section>
+
     <section class="preference-card">
       <div class="card-heading"><MessageCircle size={20} /><div><h2>Resumo no WhatsApp</h2><p>Uma mensagem por dia com os números e pontos que merecem atenção.</p></div></div>
       <label class="switch-row"><input type="checkbox" class="themed-checkbox" bind:checked={whatsappEnabled} disabled={isSubUser} aria-describedby={isSubUser ? 'prefs-subuser-hint' : undefined} /><span>Receber resumo diário</span></label>
@@ -141,4 +221,9 @@
   .example { border: 1px solid var(--border-subtle); border-radius: 6px; }
   .skeleton { border: 1px solid var(--border-card); }
   @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+  .pair-status, .pair-hint { margin: 0 0 10px; font-size: 13px; color: var(--text-main); }
+  .pair-hint { color: var(--text-muted); }
+  .pairing-code { margin: 0 0 12px; font-size: 32px; font-weight: 700; letter-spacing: 0.3em; color: var(--text-main); font-variant-numeric: tabular-nums; }
+  .pair-secondary { min-height: 44px; padding: 0 14px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-input); color: var(--text-main); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .pair-secondary:disabled { opacity: .6; cursor: not-allowed; }
 </style>
