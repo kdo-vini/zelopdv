@@ -5,7 +5,7 @@
  */
 import { appendMessages, getOrCreateSession, loadHistory } from './sessions.js';
 import { cancelAction, confirmAction, createPendingAction, undoAction } from './actions.js';
-import { executeTool, getOpenAiTools, getTool, summarizeAction } from './toolRegistry.js';
+import { executeTool, getOpenAiTools, getTool, summarizeAction, summarizeEffect } from './toolRegistry.js';
 import { buildAgentSystemPrompt } from './prompt.js';
 import { localDateOf } from '../intelligence/tz.js';
 
@@ -62,6 +62,7 @@ export async function runAgentTurn({ db, openai, ownerUserId, actorUserId, chann
   const ctx = { db, ownerUserId, now };
   const usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
   const toolsUsed = [];
+  const ambiguous = { produtos: null, categorias: null };
   let pendingAction = null;
   let reply = null;
 
@@ -97,11 +98,18 @@ export async function runAgentTurn({ db, openai, ownerUserId, actorUserId, chann
       if (tool?.write) {
         if (!pendingAction) {
           const summary = summarizeAction(name, args);
-          pendingAction = await createPendingAction(db, { ownerUserId, sessionId: session.id, actorUserId, channel, toolName: name, args, summary, now });
+          const created = await createPendingAction(db, { ownerUserId, sessionId: session.id, actorUserId, channel, toolName: name, args, summary, now });
+          pendingAction = { ...created, effect: summarizeEffect(name, args) };
         }
         result = { status: 'aguardando_confirmacao', resumo: pendingAction.summary, acao_id: pendingAction.id };
       } else {
         result = await executeTool(ctx, name, args);
+        if (name === 'buscar_produto' && result?.ok && Array.isArray(result.data?.produtos) && result.data.produtos.length >= 2) {
+          ambiguous.produtos = result.data.produtos.map((p) => p.nome);
+        }
+        if (name === 'listar_categorias' && result?.ok && Array.isArray(result.data?.categorias)) {
+          ambiguous.categorias = result.data.categorias.map((c) => c.nome);
+        }
       }
       messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) });
     }
@@ -122,7 +130,11 @@ export async function runAgentTurn({ db, openai, ownerUserId, actorUserId, chann
   const usageWithCost = { ...usage, cost_usd: costUsd(model, usage) };
   await logAgentUsage(db, { actorUserId, model, usage: usageWithCost });
 
-  return { reply, pendingAction, toolsUsed, usage: usageWithCost, sessionId: session.id };
+  let quickReplies = [];
+  if (!pendingAction && ambiguous.produtos) quickReplies = [...ambiguous.produtos.slice(0, 5), 'Nenhum desses'];
+  else if (!pendingAction && ambiguous.categorias) quickReplies = [...ambiguous.categorias.slice(0, 5), 'Criar categoria nova'];
+
+  return { reply, pendingAction, toolsUsed, usage: usageWithCost, sessionId: session.id, quickReplies };
 }
 
 export function describeExecutedAction(action, result = {}) {

@@ -48,15 +48,16 @@ describe('API: gerente/agent', () => {
 
   it('responde SSE com conteúdo e ação pendente', async () => {
     const mocks = mockCommon({ accessContext: owner });
-    mocks.runAgentTurn.mockResolvedValueOnce({ reply: 'Confirma?', pendingAction: { id: 'act-1', summary: 'Pausar "Refri" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' }, toolsUsed: ['pausar_no_cardapio'], usage: {}, sessionId: 's' });
+    mocks.runAgentTurn.mockResolvedValueOnce({ reply: 'Confirma?', pendingAction: { id: 'act-1', summary: 'Pausar "Refri" no cardápio digital', effect: 'Some do cardápio digital para os clientes. Continua no PDV para venda no balcão.', expires_at: '2026-09-02T15:10:00Z' }, quickReplies: ['Sim', 'Não'], toolsUsed: ['pausar_no_cardapio'], usage: {}, sessionId: 's' });
     const { POST } = await loadHandler();
     const response = await POST({ request: makeRequest({ message: 'pausa o refri' }) });
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('text/event-stream');
     const frames = await readSse(response);
     expect(JSON.parse(frames[0])).toEqual({ content: 'Confirma?' });
-    expect(JSON.parse(frames[1])).toEqual({ type: 'pending_action', action: { id: 'act-1', summary: 'Pausar "Refri" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' } });
-    expect(frames[2]).toBe('[DONE]');
+    expect(JSON.parse(frames[1])).toEqual({ type: 'pending_action', action: { id: 'act-1', summary: 'Pausar "Refri" no cardápio digital', effect: 'Some do cardápio digital para os clientes. Continua no PDV para venda no balcão.', expires_at: '2026-09-02T15:10:00Z' } });
+    expect(JSON.parse(frames[2])).toEqual({ type: 'quick_replies', options: ['Sim', 'Não'] });
+    expect(frames[3]).toBe('[DONE]');
     const call = mocks.runAgentTurn.mock.calls[0][0];
     expect(call).toMatchObject({ ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'pausa o refri', model: 'gpt-4.1-mini' });
   });

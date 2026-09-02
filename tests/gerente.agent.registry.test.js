@@ -51,6 +51,17 @@ describe('tool registry', () => {
     expect(getTool('x')).toBeUndefined();
     expect(getTool('buscar_produto').write).toBe(false);
   });
+
+  it('descreve o efeito de cada ferramenta de escrita', async () => {
+    const { summarizeEffect } = await import('../src/lib/server/gerente/toolRegistry.js');
+    expect(summarizeEffect('pausar_no_cardapio', { pausado: true })).toBe('Some do cardápio digital para os clientes. Continua no PDV para venda no balcão.');
+    expect(summarizeEffect('pausar_no_cardapio', { pausado: false })).toBe('Volta a aparecer no cardápio digital.');
+    expect(summarizeEffect('ocultar_no_pdv', { ocultar: true })).toBe('Sai da frente de caixa. O cardápio digital não muda.');
+    expect(summarizeEffect('criar_categoria', {})).toBe('Aparece em Produtos e no cardápio quando tiver itens.');
+    expect(summarizeEffect('criar_produto', {})).toBe('Entra no PDV na hora. No cardápio digital só quando você publicar.');
+    expect(summarizeEffect('alterar_preco', {})).toBe('Vale para o PDV e para o cardápio digital a partir de agora.');
+    expect(summarizeEffect('buscar_produto', {})).toBe('');
+  });
 });
 
 describe('buildAgentSystemPrompt', () => {

@@ -66,7 +66,7 @@ describe('runAgentTurn', () => {
       },
     ]);
     const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'whatsapp', channelRef: '5514999990000', message: 'pausa o refri', now });
-    expect(result.pendingAction).toEqual({ id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' });
+    expect(result.pendingAction).toEqual({ id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z', effect: 'Some do cardápio digital para os clientes. Continua no PDV para venda no balcão.' });
     expect(db.rpc).not.toHaveBeenCalled();
     const created = db.calls.find((c) => c.table === 'gerente_agent_actions' && c.op === 'insert');
     expect(created.payload).toMatchObject({ owner_user_id: 'owner-1', channel: 'whatsapp', tool_name: 'pausar_no_cardapio', arguments: { produto_id: 7, nome_produto: 'Refri 2L', pausado: true } });
@@ -94,6 +94,41 @@ describe('runAgentTurn', () => {
     ]);
     const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'apaga tudo', now });
     expect(result.reply).toBe('Isso eu não faço.');
+  });
+
+  it('devolve quickReplies com os produtos quando a busca é ambígua', async () => {
+    const produtos = [
+      { id: 1, nome: 'Refrigerante 2L Coca-Cola', preco: 14, id_categoria: 3, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0, categorias: { nome: 'Bebidas' } },
+      { id: 2, nome: 'Refrigerante 2L Guaraná', preco: 12, id_categoria: 3, ocultar_no_pdv: false, controlar_estoque: false, estoque_atual: 0, categorias: { nome: 'Bebidas' } },
+    ];
+    const db = makeDb({ tables: baseTables({ produtos: [{ data: produtos, error: null }], zelomenu_product_publications: [{ data: [], error: null }] }) });
+    const openai = makeOpenAi([
+      assistantMessage(null, [toolCall('c1', 'buscar_produto', { termo: 'refri' })]),
+      assistantMessage('Achei dois. Qual deles?'),
+    ]);
+    const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'pausa o refri', now });
+    expect(result.quickReplies).toEqual(['Refrigerante 2L Coca-Cola', 'Refrigerante 2L Guaraná', 'Nenhum desses']);
+  });
+
+  it('devolve quickReplies com categorias quando listar_categorias foi usada sem ação pendente', async () => {
+    const db = makeDb({ tables: baseTables({ categorias: [{ data: [{ id: 1, nome: 'Lanches', ordem: 1, controlar_estoque_compartilhado: false }, { id: 2, nome: 'Bebidas', ordem: 2, controlar_estoque_compartilhado: false }], error: null }] }) });
+    const openai = makeOpenAi([
+      assistantMessage(null, [toolCall('c1', 'listar_categorias', {})]),
+      assistantMessage('Em qual categoria?'),
+    ]);
+    const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'cadastra pudim por 12', now });
+    expect(result.quickReplies).toEqual(['Lanches', 'Bebidas', 'Criar categoria nova']);
+  });
+
+  it('não devolve quickReplies quando criou ação pendente', async () => {
+    const db = makeDb({ tables: baseTables({ gerente_agent_actions: [{ data: null, error: null }, { data: { id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' }, error: null }] }) });
+    const openai = makeOpenAi([
+      assistantMessage(null, [toolCall('c1', 'pausar_no_cardapio', { produto_id: 7, nome_produto: 'Refri 2L', pausado: true })]),
+      assistantMessage('Confirma?'),
+    ]);
+    const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'pausa', now });
+    expect(result.quickReplies).toEqual([]);
+    expect(result.pendingAction.effect).toBe('Some do cardápio digital para os clientes. Continua no PDV para venda no balcão.');
   });
 });
 

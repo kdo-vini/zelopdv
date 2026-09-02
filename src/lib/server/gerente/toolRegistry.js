@@ -51,6 +51,7 @@ export const TOOLS = [
     parameters: { type: 'object', properties: { produto_id: { type: 'integer' }, nome_produto: { type: 'string', description: 'Nome exato devolvido por buscar_produto' }, pausado: { type: 'boolean', description: 'true pausa, false despausa' } }, required: ['produto_id', 'nome_produto', 'pausado'] },
     run: (ctx, args) => pausarNoCardapio(ctx.db, ctx.ownerUserId, args),
     summary: (args) => `${args.pausado ? 'Pausar' : 'Voltar'} "${args.nome_produto}" ${args.pausado ? 'no' : 'para o'} cardápio digital`,
+    effect: (args) => args.pausado ? 'Some do cardápio digital para os clientes. Continua no PDV para venda no balcão.' : 'Volta a aparecer no cardápio digital.',
   },
   {
     name: 'ocultar_no_pdv',
@@ -59,6 +60,7 @@ export const TOOLS = [
     parameters: { type: 'object', properties: { produto_id: { type: 'integer' }, nome_produto: { type: 'string' }, ocultar: { type: 'boolean' } }, required: ['produto_id', 'nome_produto', 'ocultar'] },
     run: (ctx, args) => ocultarNoPdv(ctx.db, ctx.ownerUserId, args),
     summary: (args) => `${args.ocultar ? 'Ocultar' : 'Mostrar'} "${args.nome_produto}" no PDV`,
+    effect: (args) => args.ocultar ? 'Sai da frente de caixa. O cardápio digital não muda.' : 'Volta a aparecer na frente de caixa.',
   },
   {
     name: 'criar_categoria',
@@ -67,6 +69,7 @@ export const TOOLS = [
     parameters: { type: 'object', properties: { nome: { type: 'string' } }, required: ['nome'] },
     run: (ctx, args) => criarCategoria(ctx.db, ctx.ownerUserId, args),
     summary: (args) => `Criar a categoria "${String(args.nome || '').trim()}"`,
+    effect: () => 'Aparece em Produtos e no cardápio quando tiver itens.',
   },
   {
     name: 'criar_produto',
@@ -75,6 +78,7 @@ export const TOOLS = [
     parameters: { type: 'object', properties: { nome: { type: 'string' }, preco: { type: 'number', minimum: 0 }, categoria_id: { type: 'integer' }, nome_categoria: { type: 'string' }, controlar_estoque: { type: 'boolean' }, estoque_atual: { type: 'integer', minimum: 0 } }, required: ['nome', 'preco', 'categoria_id', 'nome_categoria'] },
     run: (ctx, args) => criarProduto(ctx.db, ctx.ownerUserId, args),
     summary: (args) => `Cadastrar "${String(args.nome || '').trim()}" por ${brl(args.preco)} em "${args.nome_categoria}"`,
+    effect: () => 'Entra no PDV na hora. No cardápio digital só quando você publicar.',
   },
   {
     name: 'alterar_preco',
@@ -83,6 +87,7 @@ export const TOOLS = [
     parameters: { type: 'object', properties: { produto_id: { type: 'integer' }, nome_produto: { type: 'string' }, preco: { type: 'number', minimum: 0 } }, required: ['produto_id', 'nome_produto', 'preco'] },
     run: (ctx, args) => alterarPreco(ctx.db, ctx.ownerUserId, args),
     summary: (args) => `Alterar o preço de "${args.nome_produto}" para ${brl(args.preco)}`,
+    effect: () => 'Vale para o PDV e para o cardápio digital a partir de agora.',
   },
 ];
 
@@ -112,4 +117,10 @@ export function summarizeAction(name, args) {
   const tool = getTool(name);
   if (!tool?.summary) return `Executar ${name}`;
   return tool.summary(args || {});
+}
+
+export function summarizeEffect(name, args) {
+  const tool = getTool(name);
+  if (!tool?.effect) return '';
+  return tool.effect(args || {});
 }

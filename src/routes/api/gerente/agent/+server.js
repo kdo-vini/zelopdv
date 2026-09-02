@@ -84,6 +84,7 @@ export async function POST({ request }) {
     });
     const frames = [{ content: result.reply }];
     if (result.pendingAction) frames.push({ type: 'pending_action', action: result.pendingAction });
+    if (Array.isArray(result.quickReplies) && result.quickReplies.length) frames.push({ type: 'quick_replies', options: result.quickReplies.slice(0, 6) });
     frames.push('[DONE]');
     return sseResponse(frames);
   } catch (error) {
