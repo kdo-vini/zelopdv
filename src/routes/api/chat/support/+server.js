@@ -419,7 +419,7 @@ export async function POST({ request, getClientAddress }) {
           const ct = usageData.completion_tokens || 0;
           const cost = (pt / 1_000_000 * 0.15) + (ct / 1_000_000 * 0.60);
           supabaseAdmin?.from('ai_usage_logs').insert({
-            user_id: null, chat_type: 'sales', model: 'gpt-4o-mini',
+            user_id: null, chat_type: 'support', model: 'gpt-4o-mini',
             prompt_tokens: pt, completion_tokens: ct,
             total_tokens: usageData.total_tokens || 0,
             cost_usd: Math.round(cost * 1_000_000) / 1_000_000,
