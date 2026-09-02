@@ -1,5 +1,18 @@
 # ZeloPDV — Foco atual
 
+- Zelinho Gerente conversacional, fase 2 (lado ZeloPDV) (2026-09-02): o dono agora
+  pareia um número de WhatsApp com a empresa em Gestão > Zelinho Gerente >
+  Preferências, no cartão "Zelinho no WhatsApp". `POST /api/gerente/pair/start`
+  gera o código de pareamento, `POST /api/gerente/pair` confirma o vínculo e
+  `DELETE /api/gerente/pair` desvincula. O canal de mensagens fica em
+  `POST /api/gerente/channel`, protegido pela chave interna
+  `GERENTE_CHANNEL_INTERNAL_KEY` e chamado pelo ZeloChat. Os vínculos e códigos
+  ficam nas novas tabelas `gerente_phone_links` e `gerente_pairing_codes`
+  (migration `20260902140000`, ainda não aplicada no banco vinculado). O
+  adaptador que fala com o WhatsApp propriamente dito vive no repo ZeloChat,
+  com plano próprio em
+  `docs/superpowers/plans/2026-09-02-zelinho-gerente-agente-zelochat.md`.
+
 - Zelinho Gerente conversacional, fase 1 (2026-09-02): o painel do Zelinho passou a
   usar `/api/gerente/agent`, com function calling (`gpt-4.1-mini` por padrão, env
   `GERENTE_AGENT_MODEL`), sessões e histórico persistidos em

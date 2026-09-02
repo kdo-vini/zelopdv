@@ -422,13 +422,6 @@ superfícies client-side continua backlog incremental, sem refatoração ampla.
 
 ---
 
-## Como manter este arquivo
-
-- Ao fechar um item de [[CODE_REVIEW]] deixando dívida residual, registre o que sobrou aqui (TA ou DT).
-- Ao decidir conscientemente *não* consertar algo, registre como **TA** com o gatilho de revisão.
-- Quando um gatilho de revisão disparar, mova o item de volta para [[CODE_REVIEW]]/[[FIXES_PROGRESS]] como
-  trabalho ativo.
-
 ## TA-GERENTE-01 — Histórico do agente não reenvia rodadas de ferramenta
 - O modelo recebe só mensagens user/assistant do histórico; as chamadas de ferramenta ficam
   gravadas em `tool_calls` para auditoria. Evita pares tool_call/tool quebrados após truncamento.
@@ -438,3 +431,10 @@ superfícies client-side continua backlog incremental, sem refatoração ampla.
 ## TA-GERENTE-02 — Rate limit em memória por processo
 - `enforceRateLimit` é por instância serverless. O limite de 20 turnos/hora é aproximado.
 - Gatilho de revisão: primeira conta com custo mensal acima de US$5 em `ai_usage_logs`.
+
+## Como manter este arquivo
+
+- Ao fechar um item de [[CODE_REVIEW]] deixando dívida residual, registre o que sobrou aqui (TA ou DT).
+- Ao decidir conscientemente *não* consertar algo, registre como **TA** com o gatilho de revisão.
+- Quando um gatilho de revisão disparar, mova o item de volta para [[CODE_REVIEW]]/[[FIXES_PROGRESS]] como
+  trabalho ativo.

@@ -230,7 +230,9 @@
 - PostHog: `PUBLIC_POSTHOG_KEY`, `PUBLIC_POSTHOG_HOST` (opcional; default `https://us.i.posthog.com`), `PUBLIC_POSTHOG_UI_HOST` (opcional)
 - Cron: `CRON_SECRET`
 - ZeloChat: `ZELOCHAT_INTERNAL_API_KEY`, `ZELOCHAT_INTERNAL_SEND_URL`, `ZELOCHAT_API_BASE_URL`
-- Zelinho Gerente: `GERENTE_AGENT_ENABLED` (opcional, `false` desliga), `GERENTE_AGENT_MODEL` (opcional, padrão `gpt-4.1-mini`)
+- Zelinho Gerente: `GERENTE_AGENT_ENABLED` (opcional, `false` desliga), `GERENTE_AGENT_MODEL` (opcional, padrão `gpt-4.1-mini`), `GERENTE_CHANNEL_INTERNAL_KEY` (obrigatória para o canal WhatsApp), `GERENTE_WHATSAPP_NUMBER` (número exibido ao dono para pareamento)
+
+Nota: o ZeloChat chama o ZeloPDV em `/api/gerente/channel`, então a dependência entre os dois repos agora é bidirecional (ZeloPDV chama ZeloChat para enviar mensagens de onboarding; ZeloChat chama ZeloPDV para o canal do Zelinho Gerente).
 
 ## Ordem de triagem em incidente
 

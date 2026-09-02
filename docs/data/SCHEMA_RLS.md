@@ -371,3 +371,5 @@ Migration: `.ai/migrations/product_usage_events_2026_07_30.sql`.
   resolvem o owner e exigem `produtos.gerenciar`. `gerente_set_menu_pause` escreve apenas
   `zelomenu_product_publications.pausado_manualmente`.
 - `ai_usage_logs.chat_type` aceita `gerente_agent`.
+- `gerente_phone_links` e `gerente_pairing_codes` são service-role only, sem policies nem
+  grants para anon/authenticated; o dono consulta o vínculo via `/api/gerente/pair`.

@@ -88,6 +88,10 @@
     pairLoading = true;
     try {
       const response = await fetch('/api/gerente/pair', { headers: await authHeaders() });
+      if (!response.ok) {
+        if (response.status !== 403) addToast('Não foi possível consultar a conexão com o WhatsApp.', 'warning');
+        return;
+      }
       const data = await response.json();
       pairLinked = data.linked === true;
       pairPhoneMasked = data.phone_masked || '';
