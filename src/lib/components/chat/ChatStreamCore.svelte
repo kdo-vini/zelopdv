@@ -75,7 +75,7 @@
 
   function getRequestMessages(allMessages) {
     return allMessages
-      .filter((message) => message?.role === 'user' || message?.content)
+      .filter((message) => (message?.role === 'user' || message?.content) && !message?.error)
       .slice(-messageLimit);
   }
 
@@ -85,6 +85,16 @@
 
       const nextItems = [...items];
       nextItems[nextItems.length - 1] = { role: 'assistant', content };
+      return nextItems;
+    });
+  }
+
+  function failLastAssistantMessage(content) {
+    messagesStore.update((items) => {
+      if (!items.length) return items;
+
+      const nextItems = [...items];
+      nextItems[nextItems.length - 1] = { role: 'assistant', content, error: true };
       return nextItems;
     });
   }
@@ -106,8 +116,8 @@
     });
   }
 
-  async function sendMessage() {
-    const content = input.trim();
+  async function sendMessage(text) {
+    const content = (typeof text === 'string' ? text : input).trim();
     if (!content || isStreaming) return;
 
     const requestConfig = await prepareRequest({ content, messages: $messagesStore });
@@ -152,7 +162,7 @@
 
       if (!response.ok || !response.body) {
         const err = await response.json().catch(() => ({}));
-        updateLastAssistantMessage(err.error || requestConfig?.errorMessage || requestErrorMessage);
+        failLastAssistantMessage(err.error || requestConfig?.errorMessage || requestErrorMessage);
         return;
       }
 
@@ -182,7 +192,7 @@
             const parsed = JSON.parse(data);
 
             if (parsed.error) {
-              updateLastAssistantMessage(parsed.error);
+              failLastAssistantMessage(parsed.error);
               shouldStop = true;
               break;
             }
@@ -216,7 +226,7 @@
       // request (see the reactive abort above) — the array it would touch
       // now belongs to a different conversation, so stay quiet instead of
       // showing a connection error on it.
-      if (err?.name !== 'AbortError') updateLastAssistantMessage(connectionErrorMessage);
+      if (err?.name !== 'AbortError') failLastAssistantMessage(connectionErrorMessage);
     } finally {
       abortController = null;
       isStreaming = false;
@@ -226,6 +236,15 @@
         content: $messagesStore[$messagesStore.length - 1]?.content || ''
       });
     }
+  }
+
+  function retryLast() {
+    const items = $messagesStore;
+    const lastUserIndex = [...items].map((m) => m.role).lastIndexOf('user');
+    if (lastUserIndex < 0) return;
+    const text = items[lastUserIndex].content;
+    messagesStore.set(items.slice(0, lastUserIndex));
+    void sendMessage(text);
   }
 
   function onKeyDown(event) {
@@ -250,6 +269,7 @@
   {placeholder}
   {registerMessagesContainer}
   {renderMarkdown}
+  {retryLast}
   {sendMessage}
   {setInput}
 ></slot>

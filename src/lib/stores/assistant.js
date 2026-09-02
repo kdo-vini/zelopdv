@@ -16,6 +16,19 @@ export function clearPendingAction() {
   pendingAction.set(null);
 }
 
+export const quickReplies = writable([]);
+
+export function setQuickReplies(options) {
+  const clean = Array.isArray(options)
+    ? options.filter((o) => typeof o === 'string' && o.trim()).map((o) => o.trim()).slice(0, 6)
+    : [];
+  quickReplies.set(clean);
+}
+
+export function clearQuickReplies() {
+  quickReplies.set([]);
+}
+
 export function screenContextMatchesLocation(context, pathname, search = '') {
   if (!context?.route) return true;
   return context.route === `${pathname}${search}`;
@@ -90,6 +103,7 @@ export function closeAssistant() {
   signalContext.set(null);
   screenContext.set(null);
   pendingAction.set(null);
+  quickReplies.set([]);
 }
 
 export function setScreenContext(context) {

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { get } from 'svelte/store';
 import {
   clearPendingAction,
+  clearQuickReplies,
   clearScreenContext,
   clearSignalContext,
   contextType,
@@ -12,9 +13,11 @@ import {
   openAssistantWithContext,
   openAssistantWithSignal,
   pendingAction,
+  quickReplies,
   screenContext,
   screenContextMatchesLocation,
   setPendingAction,
+  setQuickReplies,
 } from '../src/lib/stores/assistant.js';
 
 beforeEach(() => {
@@ -142,5 +145,17 @@ describe('pendingAction store', () => {
     clearPendingAction();
     setPendingAction({ summary: 'sem id' });
     expect(get(pendingAction)).toBeNull();
+  });
+});
+
+describe('quickReplies store', () => {
+  it('guarda até seis opções válidas e limpa ao fechar', () => {
+    setQuickReplies(['A', '', 'B', 'C', 'D', 'E', 'F', 'G']);
+    expect(get(quickReplies)).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
+    clearQuickReplies();
+    expect(get(quickReplies)).toEqual([]);
+    setQuickReplies(['X']);
+    closeAssistant();
+    expect(get(quickReplies)).toEqual([]);
   });
 });
