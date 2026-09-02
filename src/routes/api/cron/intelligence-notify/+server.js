@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GET /api/cron/intelligence-notify
  *
  * Sends one opted-in Zelinho daily digest per company. The engine remains the
