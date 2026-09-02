@@ -38,7 +38,7 @@
     }
   }
 
-  async function prepareAssistantRequest() {
+  async function prepareAssistantRequest({ content } = {}) {
     const token = await getToken();
     if (!token) {
       return { error: 'Sessão expirada. Faça login novamente.' };
@@ -49,6 +49,7 @@
         Authorization: `Bearer ${token}`,
       },
       body: {
+        message: content,
         context_type: $contextType,
         signal_id: $signalContext?.id || undefined,
         screen_context: $signalContext ? undefined : ($screenContext || undefined),

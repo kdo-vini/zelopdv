@@ -13,6 +13,8 @@ describe('AssistantChat usa o agente', () => {
     expect(source).toContain('class="pending-action"');
     expect(source).toContain('confirm_action_id');
     expect(source).toContain('cancel_action_id');
+    expect(source).toContain('message: content');
+    expect(source).toContain('prepareAssistantRequest({ content }');
   });
 
   it('ChatStreamCore repassa eventos tipados', async () => {
