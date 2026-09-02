@@ -6,14 +6,20 @@
   import OnboardingChecklist from '$lib/components/OnboardingChecklist.svelte';
   import { revertFiadoDebtForVenda } from '$lib/finance/saleOps';
   import { addToast } from '$lib/stores/ui';
-  import { ArrowUpRight } from 'lucide-svelte';
+  import { buildSaleReceiptPayload } from '$lib/finance/saleReceipt';
+  import { printVenda } from '$lib/printService';
+  import { ArrowUpRight, MoreHorizontal, Printer, Trash2 } from 'lucide-svelte';
 
 
   let loading = true;
   let errorMsg = '';
   let vendasItens = [];
+  let vendasPagamentos = [];
+  let dadosEmpresa = null;
   let vendaParaDeletarId = null;
   let vendaDeleteReturnFocus = null;
+  let vendaMenuAbertoId = null;
+  let reimprimindoVendaId = null;
   // [NEW] Added 'vendasPorHora' to dash state
   let dash = {
     vendas:{ totalHoje:0, countHoje:0, ticketMedioHoje:null, ticketMedioOntem:null, ticketMedioVarPct:null },
@@ -44,12 +50,14 @@
 
       let vendasCaixa = [];
       let movimentacoes = [];
+      vendasItens = [];
+      vendasPagamentos = [];
 
       if(caixaAtual){
         // Busca TODAS as vendas do caixa atual
         const { data: vs } = await supabase
           .from('vendas')
-          .select('id, numero_venda, valor_total, forma_pagamento, created_at')
+          .select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, taxa_entrega, tipo_pedido, created_at')
           .eq('id_caixa', caixaAtual.id)
           .order('created_at', { ascending: false });
         vendasCaixa = vs||[];
@@ -59,7 +67,7 @@
         if (vendaIds.length) {
           const { data: itens } = await supabase
             .from('vendas_itens')
-            .select('id_venda, quantidade, nome_produto_na_venda')
+            .select('id_venda, quantidade, nome_produto_na_venda, preco_unitario_na_venda, modifiers')
             .in('id_venda', vendaIds);
           vendasItens = itens || [];
         } else {
@@ -83,9 +91,11 @@
         const { data: pagsMulti } = await supabase
           .from('vendas_pagamentos')
           .select('id_venda, forma_pagamento, valor')
-          .in('id_venda', vendaIdsCaixa)
-          .eq('forma_pagamento', 'fiado');
-        pagFiadoMulti = (pagsMulti||[]).reduce((a,p)=> a + Number(p.valor||0), 0);
+          .in('id_venda', vendaIdsCaixa);
+        vendasPagamentos = pagsMulti || [];
+        pagFiadoMulti = vendasPagamentos
+          .filter((p) => p.forma_pagamento === 'fiado')
+          .reduce((a,p)=> a + Number(p.valor||0), 0);
       }
       const totalCaixa = vendasCaixa.reduce((a,v)=> {
         // Venda fiado pura: ignora valor inteiro.
@@ -133,7 +143,7 @@
       }
 
       // Combina vendas e movimentações para atividade recente
-      const atividadeVendas = vendasCaixa.map(v=>({ tipo:'venda', id:v.id, numero_venda:v.numero_venda, valor:v.valor_total, ts:v.created_at }));
+      const atividadeVendas = vendasCaixa.map(v=>({ ...v, tipo:'venda', id:v.id, numero_venda:v.numero_venda, valor:v.valor_total, ts:v.created_at }));
       const atividadeMovs = (movimentacoes||[]).map(m=>({ tipo:m.tipo, id:m.id, valor:m.valor, ts:m.created_at, motivo:m.motivo }));
       const atividadeCombinada = [...atividadeVendas, ...atividadeMovs]
         .sort((a,b) => new Date(b.ts) - new Date(a.ts))
@@ -181,10 +191,96 @@
     ? `Caixa aberto desde ${fmtDataHora(dash.caixa.desde)} · ${dash.caixa.horasAberto}h ativo`
     : '';
 
-  function solicitarDelecaoVenda(id) {
+  function toggleVendaMenu(id) {
+    vendaMenuAbertoId = vendaMenuAbertoId === id ? null : id;
+  }
+
+  function handleVendaMenuWindowClick(event) {
+    if (!(event.target instanceof Element) || !event.target.closest('[data-sale-menu]')) {
+      vendaMenuAbertoId = null;
+    }
+  }
+
+  function handleVendaMenuKeydown(event) {
+    if (event.key === 'Escape') vendaMenuAbertoId = null;
+  }
+
+  async function carregarPerfilImpressao() {
+    if (dadosEmpresa) return dadosEmpresa;
+
+    const { data, error } = await supabase
+      .from('empresa_perfil')
+      .select('id, nome_exibicao, documento, endereco, contato, logo_url, rodape_recibo, largura_bobina')
+      .eq('user_id', uid)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('[Dashboard] Não foi possível carregar o perfil para impressão:', error.message);
+      dadosEmpresa = {};
+      return dadosEmpresa;
+    }
+
+    dadosEmpresa = data || {};
+    if (!dadosEmpresa.logo_url && uid) {
+      const publicUrl = supabase.storage.from('logos').getPublicUrl(`${uid}.png`)?.data?.publicUrl;
+      dadosEmpresa = { ...dadosEmpresa, logoUrl: publicUrl || null };
+    } else {
+      dadosEmpresa = { ...dadosEmpresa, logoUrl: dadosEmpresa.logo_url || null };
+    }
+    return dadosEmpresa;
+  }
+
+  function perfilToEstabelecimento(perfil = {}) {
+    return {
+      id: perfil.id,
+      nome_exibicao: perfil.nome_exibicao || 'Zelo PDV',
+      documento: perfil.documento || null,
+      endereco: perfil.endereco || null,
+      contato: perfil.contato || null,
+      logoUrl: perfil.logoUrl || perfil.logo_url || null,
+      rodape_recibo: perfil.rodape_recibo || 'Obrigado pela preferência!',
+      largura_bobina: perfil.largura_bobina || '80mm'
+    };
+  }
+
+  async function reimprimirVenda(id) {
+    const venda = dash.atividade.find((event) => event.tipo === 'venda' && event.id === id);
+    if (!venda) {
+      addToast('Venda não encontrada para reimpressão.', 'error');
+      vendaMenuAbertoId = null;
+      return;
+    }
+
+    vendaMenuAbertoId = null;
+    reimprimindoVendaId = id;
+    try {
+      const itens = vendasItens.filter((item) => item.id_venda === id);
+      const pagamentos = vendasPagamentos.filter((pagamento) => pagamento.id_venda === id);
+      const perfil = await carregarPerfilImpressao();
+      await printVenda({
+        estabelecimento: perfilToEstabelecimento(perfil),
+        venda: buildSaleReceiptPayload({ venda, itens, pagamentos }),
+        opcoes: { copia: true }
+      });
+      addToast('Venda reimpressa com sucesso.', 'success');
+    } catch (error) {
+      console.error('[Dashboard] Falha ao reimprimir venda:', error);
+      addToast('Não foi possível reimprimir a venda: ' + (error?.message || error), 'error');
+    } finally {
+      reimprimindoVendaId = null;
+    }
+  }
+
+  function solicitarDelecaoVenda(id, event) {
+    const menuTrigger = event?.currentTarget instanceof Element
+      ? event.currentTarget.closest('[data-sale-menu]')?.querySelector('button[aria-haspopup="menu"]')
+      : null;
+    vendaMenuAbertoId = null;
     if (typeof document !== 'undefined') {
       const activeElement = document.activeElement;
-      vendaDeleteReturnFocus = activeElement instanceof HTMLElement ? activeElement : null;
+      vendaDeleteReturnFocus = menuTrigger instanceof HTMLElement
+        ? menuTrigger
+        : activeElement instanceof HTMLElement ? activeElement : null;
     }
     vendaParaDeletarId = id;
   }
@@ -217,10 +313,13 @@
       addToast('Erro ao excluir: ' + error.message, 'error');
     } else {
       vendasItens = vendasItens.filter(i => i.id_venda !== id);
+      vendasPagamentos = vendasPagamentos.filter(p => p.id_venda !== id);
       dash = { ...dash, atividade: dash.atividade.filter(ev => !(ev.tipo === 'venda' && ev.id === id)) };
     }
   }
 </script>
+
+<svelte:window on:click={handleVendaMenuWindowClick} on:keydown={handleVendaMenuKeydown} />
 
 <section class="wrap">
   <OnboardingChecklist />
@@ -343,9 +442,33 @@
              <div class="flex items-center gap-1 ml-auto">
                <span class="font-bold" style="color: var(--text-main);">{ev.tipo !== 'venda' ? (ev.tipo === 'sangria' ? '-' : '+') : ''}{fmt(ev.valor)}</span>
                {#if ev.tipo === 'venda'}
-                 <button class="btn-icon danger" title="Excluir venda" on:click={() => solicitarDelecaoVenda(ev.id)}>
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                 </button>
+                 <div class="sale-actions" data-sale-menu>
+                   <button
+                     type="button"
+                     class="btn-icon"
+                     title="Ações da venda"
+                     aria-label="Ações da venda"
+                     aria-haspopup="menu"
+                     aria-expanded={vendaMenuAbertoId === ev.id}
+                     disabled={reimprimindoVendaId === ev.id}
+                     data-testid={`sale-actions-trigger-${ev.id}`}
+                     on:click={() => toggleVendaMenu(ev.id)}
+                   >
+                     <MoreHorizontal class="size-4" aria-hidden="true" />
+                   </button>
+                   {#if vendaMenuAbertoId === ev.id}
+                     <div class="sale-menu" role="menu" data-testid={`sale-actions-menu-${ev.id}`}>
+                       <button type="button" class="sale-menu-item text-xs" role="menuitem" on:click={() => reimprimirVenda(ev.id)}>
+                         <Printer class="size-4" aria-hidden="true" />
+                         <span>{reimprimindoVendaId === ev.id ? 'Imprimindo...' : 'Reimprimir venda'}</span>
+                       </button>
+                       <button type="button" class="sale-menu-item danger text-xs" role="menuitem" on:click={(event) => solicitarDelecaoVenda(ev.id, event)}>
+                         <Trash2 class="size-4" aria-hidden="true" />
+                         <span>Excluir venda</span>
+                       </button>
+                     </div>
+                   {/if}
+                 </div>
                {/if}
              </div>
           </div>
@@ -416,7 +539,14 @@
 
   .btn-icon{background:transparent;border:none;padding:4px;cursor:pointer;color:var(--text-muted);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
   .btn-icon:hover{background:var(--border-subtle)}
-  .btn-icon.danger:hover{background:rgba(239,68,68,0.15);color:#ef4444}
+  .btn-icon:disabled{cursor:wait;opacity:.55}
+
+  .sale-actions{position:relative;display:inline-flex}
+  .sale-actions > .btn-icon{min-width:44px;min-height:44px}
+  .sale-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:180px;padding:4px;border:1px solid var(--border-card);border-radius:8px;background:var(--bg-card);box-shadow:var(--shadow-modal)}
+  .sale-menu-item{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:8px 10px;border:0;border-radius:6px;background:transparent;color:var(--text-label);text-align:left;cursor:pointer;transition:background .15s,color .15s}
+  .sale-menu-item:hover{background:var(--bg-panel);color:var(--text-main)}
+  .sale-menu-item.danger:hover{background:var(--status-error-bg);color:var(--status-error-text)}
 
   .modal-backdrop{position:fixed;top:0;left:0;width:100%;height:100%;margin:0;border:0;padding:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:1000}
   .modal-backdrop::backdrop{background:transparent}

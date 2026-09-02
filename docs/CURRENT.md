@@ -1,5 +1,12 @@
 # ZeloPDV — Foco atual
 
+- Reimpressão de recibos no dashboard (2026-09-01): a atividade recente do
+  caixa agora usa o menu de três pontos por venda, com as ações **Reimprimir
+  venda** e **Excluir venda**. A reimpressão reconstrói a venda persistida,
+  incluindo itens, modificadores, descontos, entrega e pagamentos múltiplos, e
+  reutiliza `printVenda` com a marcação de segunda via. O perfil da empresa é
+  carregado sob demanda para manter cabeçalho, logo e rodapé do recibo.
+
 - Layout de Relatórios (2026-08-31): a página deixou de criar, no desktop,
   uma segunda área de rolagem ao lado do relatório. O documento concentra a
   rolagem e a sidebar fica presa ao viewport com `position: sticky`, evitando
