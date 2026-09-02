@@ -38,6 +38,7 @@ export async function createPendingAction(db, { ownerUserId, sessionId, actorUse
     .from('gerente_agent_actions')
     .update({ status: 'cancelled' })
     .eq('session_id', sessionId)
+    .eq('owner_user_id', ownerUserId)
     .eq('status', 'pending');
   throwIfError(cancelled.error);
 
@@ -132,6 +133,7 @@ export async function undoAction(db, { actionId, ownerUserId, executeTool, actor
       before_state: result.before ?? null,
       after_state: result.after ?? null,
       result: result.data ?? null,
+      // expires_at é NOT NULL; só linhas 'pending' são checadas quanto a expiração, então aqui é apenas preenchimento, não um prazo real.
       expires_at: now.toISOString(),
       executed_at: now.toISOString(),
     })

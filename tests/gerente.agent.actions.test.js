@@ -23,7 +23,7 @@ describe('gerente agent actions', () => {
     const action = await createPendingAction(db, { ownerUserId: 'owner-1', sessionId: 'sess-1', actorUserId: 'owner-1', channel: 'app', toolName: 'pausar_no_cardapio', args: { produto_id: 7, pausado: true }, summary: 'Pausar "Refri 2L" no cardápio', now });
     expect(db.calls[0].op).toBe('update');
     expect(db.calls[0].payload).toEqual({ status: 'cancelled' });
-    expect(db.calls[0].filters).toEqual(expect.arrayContaining([{ op: 'eq', field: 'session_id', value: 'sess-1' }, { op: 'eq', field: 'status', value: 'pending' }]));
+    expect(db.calls[0].filters).toEqual(expect.arrayContaining([{ op: 'eq', field: 'session_id', value: 'sess-1' }, { op: 'eq', field: 'owner_user_id', value: 'owner-1' }, { op: 'eq', field: 'status', value: 'pending' }]));
     expect(db.calls[1].payload).toMatchObject({ owner_user_id: 'owner-1', session_id: 'sess-1', tool_name: 'pausar_no_cardapio', status: 'pending', expires_at: new Date(now.getTime() + ACTION_TTL_MS).toISOString() });
     expect(action.id).toBe('act-2');
   });
