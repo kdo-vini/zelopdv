@@ -1,4 +1,4 @@
-﻿import { templateNarrative } from './narrative.js';
+import { templateNarrative } from './narrative.js';
 
 const money = (value) => new Intl.NumberFormat('pt-BR', {
   style: 'currency', currency: 'BRL', minimumFractionDigits: 2,

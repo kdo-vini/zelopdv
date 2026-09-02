@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { buildDailyDigestText, isDigestDue } from '../src/lib/server/intelligence/digest.js';
 
 const snapshot = { snapshot_date: '2026-07-11', receita_bruta: 1240, qtd_vendas: 38, ticket_medio: 32.63 };
