@@ -197,6 +197,11 @@
               break;
             }
 
+            if (parsed.type) {
+              dispatch('event', parsed);
+              continue;
+            }
+
             if (parsed.content) {
               appendToLastAssistantMessage(parsed.content);
               scrollToBottom();

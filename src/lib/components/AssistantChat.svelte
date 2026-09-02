@@ -2,7 +2,7 @@
   import { onMount, tick } from 'svelte';
   import { page } from '$app/stores';
   import { supabase } from '$lib/supabaseClient';
-  import { isOpen, messages as assistantMessages, contextType, signalContext, screenContext, closeAssistant, clearSignalContext, clearScreenContext, screenContextMatchesLocation } from '$lib/stores/assistant';
+  import { isOpen, messages as assistantMessages, contextType, signalContext, screenContext, pendingAction, setPendingAction, clearPendingAction, closeAssistant, clearSignalContext, clearScreenContext, screenContextMatchesLocation } from '$lib/stores/assistant';
   import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
   import { BarChart3, PackageSearch, Sparkles, Trash2, X, SendHorizontal } from 'lucide-svelte';
   import { getSignalPresenter } from '$lib/gerente/signalPresenter.js';
@@ -70,6 +70,36 @@
 
     setInput(prompt);
     void tick().then(() => inputElement?.focus());
+  }
+
+  let actionBusy = false;
+
+  function handleStreamEvent(event) {
+    const payload = event.detail;
+    if (payload?.type === 'pending_action') setPendingAction(payload.action);
+  }
+
+  async function resolvePendingAction(kind) {
+    const action = $pendingAction;
+    if (!action || actionBusy) return;
+    actionBusy = true;
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+      const response = await fetch('/api/gerente/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(kind === 'confirm' ? { confirm_action_id: action.id } : { cancel_action_id: action.id }),
+      });
+      const data = await response.json().catch(() => ({}));
+      const reply = data?.reply || data?.error || 'Não consegui concluir agora.';
+      assistantMessages.update((items) => [...items, { role: 'assistant', content: reply }]);
+    } catch (error) {
+      assistantMessages.update((items) => [...items, { role: 'assistant', content: error?.message || 'Erro de conexão. Tente novamente.' }]);
+    } finally {
+      clearPendingAction();
+      actionBusy = false;
+    }
   }
 
   $: activeSignalPresenter = $signalContext ? getSignalPresenter($signalContext) : null;
@@ -148,11 +178,12 @@
 <ChatStreamCore
   messagesStore={assistantMessages}
   active={$isOpen}
-  endpoint="/api/chat/assistant"
+  endpoint="/api/gerente/agent"
   placeholder="Pergunte sobre seu negócio..."
   maxLength={1000}
   messageLimit={20}
   prepareRequest={prepareAssistantRequest}
+  on:event={handleStreamEvent}
   let:clearMessages
   let:input
   let:isStreaming
@@ -181,7 +212,7 @@
         </div>
         <div>
           <div class="font-semibold text-sm">Zelinho</div>
-          <div class="text-xs" style="opacity: 0.75;">{$screenContext?.title || 'Dados do seu negócio'}</div>
+          <div class="text-xs" style="opacity: 0.75;">{$screenContext?.title || 'Seu gerente: pergunte ou peça uma ação'}</div>
         </div>
       </div>
       <div class="flex items-center gap-1">
@@ -242,6 +273,17 @@
         </div>
       {/each}
     </div>
+
+    {#if $pendingAction}
+      <div class="pending-action" role="group" aria-label="Confirmar ação do Zelinho">
+        <p class="pending-action-title">Confirmar esta ação?</p>
+        <p class="pending-action-summary">{$pendingAction.summary}</p>
+        <div class="pending-action-buttons">
+          <button type="button" class="pending-confirm" disabled={actionBusy} on:click={() => resolvePendingAction('confirm')}>Confirmar</button>
+          <button type="button" class="pending-cancel" disabled={actionBusy} on:click={() => resolvePendingAction('cancel')}>Cancelar</button>
+        </div>
+      </div>
+    {/if}
 
     <div class="panel-input-area">
       <label class="sr-only" for="zelinho-message">Mensagem para o Zelinho</label>
@@ -582,4 +624,14 @@
     .typing-dots span { animation: none; }
     .icebreaker { transition: none; }
   }
+
+  .pending-action { margin: 0 12px 8px; padding: 12px 14px; border: 1px solid var(--primary); border-radius: 8px; background: color-mix(in srgb, var(--primary) 8%, var(--bg-card)); }
+  .pending-action-title { margin: 0 0 4px; font-size: 12px; font-weight: 700; color: var(--text-label); }
+  .pending-action-summary { margin: 0 0 10px; font-size: 13px; color: var(--text-main); }
+  .pending-action-buttons { display: flex; gap: 8px; }
+  .pending-action-buttons button { min-height: 44px; flex: 1; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .pending-confirm { border: 0; background: var(--primary); color: var(--text-inverse); }
+  .pending-cancel { border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main); }
+  .pending-action-buttons button:disabled { opacity: .6; cursor: not-allowed; }
+  .pending-confirm:focus-visible, .pending-cancel:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
 </style>

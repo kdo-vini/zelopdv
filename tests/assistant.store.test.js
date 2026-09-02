@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { get } from 'svelte/store';
 import {
+  clearPendingAction,
   clearScreenContext,
   clearSignalContext,
   contextType,
@@ -10,8 +11,10 @@ import {
   openAssistant,
   openAssistantWithContext,
   openAssistantWithSignal,
+  pendingAction,
   screenContext,
   screenContextMatchesLocation,
+  setPendingAction,
 } from '../src/lib/stores/assistant.js';
 
 beforeEach(() => {
@@ -121,5 +124,23 @@ describe('assistant context store', () => {
 
     expect(screenContextMatchesLocation(context, '/gestao/gerente/semana', '?semana=2026-07-06')).toBe(true);
     expect(screenContextMatchesLocation(context, '/gestao/gerente/semana', '?semana=2026-06-29')).toBe(false);
+  });
+});
+
+describe('pendingAction store', () => {
+  it('guarda, limpa e é zerado ao fechar o painel', () => {
+    setPendingAction({ id: 'act-1', summary: 'Pausar "Refri" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' });
+    expect(get(pendingAction)?.id).toBe('act-1');
+    clearPendingAction();
+    expect(get(pendingAction)).toBeNull();
+    setPendingAction({ id: 'act-2', summary: 'x', expires_at: 'y' });
+    closeAssistant();
+    expect(get(pendingAction)).toBeNull();
+  });
+
+  it('ignora ação sem id', () => {
+    clearPendingAction();
+    setPendingAction({ summary: 'sem id' });
+    expect(get(pendingAction)).toBeNull();
   });
 });

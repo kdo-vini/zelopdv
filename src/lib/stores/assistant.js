@@ -5,6 +5,16 @@ export const messages = writable([]);
 export const contextType = writable('geral');
 export const signalContext = writable(null);
 export const screenContext = writable(null);
+export const pendingAction = writable(null);
+
+export function setPendingAction(action) {
+  if (!action || typeof action !== 'object' || !action.id) return;
+  pendingAction.set({ id: String(action.id), summary: String(action.summary || ''), expires_at: action.expires_at || null });
+}
+
+export function clearPendingAction() {
+  pendingAction.set(null);
+}
 
 export function screenContextMatchesLocation(context, pathname, search = '') {
   if (!context?.route) return true;
@@ -79,6 +89,7 @@ export function closeAssistant() {
   contextType.set('geral');
   signalContext.set(null);
   screenContext.set(null);
+  pendingAction.set(null);
 }
 
 export function setScreenContext(context) {
