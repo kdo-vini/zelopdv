@@ -60,7 +60,7 @@
     }
     saving = true;
     try {
-      const prefs = { whatsapp: { enabled: whatsappEnabled, hora: 'daily' }, muted_types: mutedTypes };
+      const prefs = { whatsapp: { enabled: whatsappEnabled }, muted_types: mutedTypes };
       const { error } = await supabase.from('empresa_perfil').update({ gerente_prefs: prefs, contato: normalizeBrazilianPhone(contact) || contact }).eq('user_id', ownerUserId);
       if (error) throw error;
       if (whatsappEnabled) void capturePostHogEvent('gerente_whatsapp_optin');

@@ -47,3 +47,26 @@ export function buildDailyDigestText(signals = [], snapshot = {}, perfil = {}, {
   const truncatedBody = body.slice(0, MAX_LENGTH - reserved).trimEnd();
   return `${truncatedBody}...\n${LINK_LINE}`;
 }
+
+/**
+ * Lê as preferências do resumo diário. O campo `hora` foi abandonado: o resumo
+ * sai sempre logo após o processamento diário do motor.
+ * @param {{ gerente_prefs?: any }} profile
+ * @returns {{ enabled: boolean, mutedTypes: string[] }}
+ */
+export function readDigestPrefs(profile) {
+  const prefs = profile?.gerente_prefs && typeof profile.gerente_prefs === 'object' ? profile.gerente_prefs : {};
+  const whatsapp = prefs.whatsapp && typeof prefs.whatsapp === 'object' ? prefs.whatsapp : {};
+  return {
+    enabled: whatsapp.enabled === true,
+    mutedTypes: Array.isArray(prefs.muted_types) ? prefs.muted_types : [],
+  };
+}
+
+/**
+ * @param {{ prefs: { enabled: boolean }, lastSentDate: string|null, today: string }} input
+ * @returns {boolean}
+ */
+export function shouldSendDigest({ prefs, lastSentDate, today }) {
+  return prefs?.enabled === true && isDigestDue(lastSentDate, today);
+}

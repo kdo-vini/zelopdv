@@ -44,3 +44,21 @@ describe('gerente daily digest', () => {
     expect(buildDailyDigestText([], snapshot)).not.toMatch(/lucro|margem|vai acabar/i);
   });
 });
+
+import { readDigestPrefs, shouldSendDigest } from '../src/lib/server/intelligence/digest.js';
+
+describe('digest scheduling sem hora', () => {
+  it('lê enabled e muted_types ignorando qualquer campo hora legado', () => {
+    const prefs = readDigestPrefs({ gerente_prefs: { whatsapp: { enabled: true, hora: 'daily' }, muted_types: ['AVG_TICKET_DOWN'] } });
+    expect(prefs).toEqual({ enabled: true, mutedTypes: ['AVG_TICKET_DOWN'] });
+  });
+
+  it('envia quando habilitado e ainda não enviou hoje', () => {
+    expect(shouldSendDigest({ prefs: { enabled: true }, lastSentDate: '2026-09-01', today: '2026-09-02' })).toBe(true);
+  });
+
+  it('não envia quando desabilitado ou já enviado hoje', () => {
+    expect(shouldSendDigest({ prefs: { enabled: false }, lastSentDate: null, today: '2026-09-02' })).toBe(false);
+    expect(shouldSendDigest({ prefs: { enabled: true }, lastSentDate: '2026-09-02', today: '2026-09-02' })).toBe(false);
+  });
+});

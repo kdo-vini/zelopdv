@@ -10,7 +10,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { safeEqualString } from '$lib/server/safeEqual';
 import { sendWhatsAppTextDetailed, isWhatsAppConfigured, getWhatsAppSendError } from '$lib/server/whatsapp';
 import { normalizeBrazilianPhone } from '$lib/masks';
-import { buildDailyDigestText, isDigestDue } from '$lib/server/intelligence/digest.js';
+import { buildDailyDigestText, readDigestPrefs, shouldSendDigest } from '$lib/server/intelligence/digest.js';
 
 export const config = { maxDuration: 300 };
 
@@ -20,12 +20,6 @@ function brtNow(now = new Date()) {
   }).formatToParts(now);
   const values = Object.fromEntries(parts.filter(({ type }) => type !== 'literal').map(({ type, value }) => [type, value]));
   return { date: `${values.year}-${values.month}-${values.day}`, hour: values.hour };
-}
-
-function readPrefs(profile) {
-  const prefs = profile.gerente_prefs && typeof profile.gerente_prefs === 'object' ? profile.gerente_prefs : {};
-  const whatsapp = prefs.whatsapp && typeof prefs.whatsapp === 'object' ? prefs.whatsapp : {};
-  return { enabled: whatsapp.enabled === true, hour: String(whatsapp.hora || ''), mutedTypes: Array.isArray(prefs.muted_types) ? prefs.muted_types : [] };
 }
 
 export async function GET({ request }) {
@@ -39,8 +33,7 @@ export async function GET({ request }) {
   if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado.' }, { status: 500 });
   if (!isWhatsAppConfigured()) return json({ ok: true, skipped: true, reason: 'whatsapp not configured' });
 
-  const { date: today, hour } = brtNow();
-  const dailyFallback = request.headers.get('x-intelligence-daily') === '1';
+  const { date: today } = brtNow();
   const { data: profiles, error } = await supabaseAdmin
     .from('empresa_perfil')
     .select('user_id, nome_exibicao, razao_social, contato, gerente_prefs, gerente_whatsapp_last_sent_date');
@@ -48,8 +41,8 @@ export async function GET({ request }) {
 
   const results = { sent: 0, skipped: 0, errors: 0, details: [] };
   for (const profile of profiles || []) {
-    const prefs = readPrefs(profile);
-    if (!prefs.enabled || (!dailyFallback && prefs.hour !== hour) || !isDigestDue(profile.gerente_whatsapp_last_sent_date, today)) {
+    const prefs = readDigestPrefs(profile);
+    if (!shouldSendDigest({ prefs, lastSentDate: profile.gerente_whatsapp_last_sent_date, today })) {
       results.skipped++;
       continue;
     }
@@ -104,5 +97,5 @@ export async function GET({ request }) {
       console.error('[intelligence-notify] Falha para', profile.user_id, sendError);
     }
   }
-  return json({ ok: true, date: today, hour, daily_fallback: dailyFallback, ...results });
+  return json({ ok: true, date: today, ...results });
 }
