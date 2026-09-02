@@ -2,13 +2,12 @@ import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import OpenAI from 'openai';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
-import { getServerAccessContext } from '$lib/server/accessControl';
+import { requireOwner } from '$lib/server/gerente/ownerAuth';
 import { buildRateLimitKey, createRateLimitResponse, enforceRateLimit } from '$lib/server/rateLimit';
 import { buildSignalContextPrompt, getSignalContextForOwner } from '$lib/server/intelligence/signalContext';
 import { DEFAULT_MODEL, cancelPendingAction, confirmPendingAction, runAgentTurn, undoExecutedAction } from '$lib/server/gerente/agent';
 
 const MAX_MESSAGE_CHARS = 1500;
-const OWNER_ONLY_MESSAGE = 'Por enquanto, só o dono da empresa conversa com o Zelinho Gerente.';
 
 function sseResponse(frames) {
   const body = frames.map((frame) => `data: ${typeof frame === 'string' ? frame : JSON.stringify(frame)}\n\n`).join('');
@@ -28,16 +27,10 @@ function cleanId(value) {
 
 export async function POST({ request }) {
   if (!isEnabled()) return json({ error: 'Zelinho Gerente indisponível.' }, { status: 503 });
-  if (!supabaseAdmin) return json({ error: 'Configuração do servidor ausente.' }, { status: 500 });
 
-  const token = request.headers.get('authorization')?.replace('Bearer ', '');
-  if (!token) return json({ error: 'Não autorizado.' }, { status: 401 });
-  const { data: { user } = {}, error: authError } = await supabaseAdmin.auth.getUser(token);
-  if (authError || !user) return json({ error: 'Não autorizado.' }, { status: 401 });
-
-  const access = await getServerAccessContext(user.id);
-  if (access.isSubUser) return json({ error: OWNER_ONLY_MESSAGE }, { status: 403 });
-  const ownerUserId = access.ownerUserId;
+  const auth = await requireOwner(request);
+  if (!auth.ok) return auth.response;
+  const { user, ownerUserId } = auth;
 
   const rateLimit = enforceRateLimit({
     key: buildRateLimitKey('gerente', 'agent', 'owner', ownerUserId),
