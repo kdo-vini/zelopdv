@@ -8,7 +8,8 @@
   `POST /api/gerente/channel`, protegido pela chave interna
   `GERENTE_CHANNEL_INTERNAL_KEY` e chamado pelo ZeloChat. Os vínculos e códigos
   ficam nas novas tabelas `gerente_phone_links` e `gerente_pairing_codes`
-  (migration `20260902140000`, ainda não aplicada no banco vinculado). O
+  (A migration 20260902140000 foi aplicada no Supabase vinculado em 2026-09-02
+  via db query --file e registrada com migration repair --status applied). O
   adaptador que fala com o WhatsApp propriamente dito vive no repo ZeloChat,
   com plano próprio em
   `docs/superpowers/plans/2026-09-02-zelinho-gerente-agente-zelochat.md`.
@@ -23,8 +24,13 @@
   (`20260902131000`). Só o dono conversa; subusuário recebe 403. Kill switch
   `GERENTE_AGENT_ENABLED=false`. A rota antiga `/api/chat/assistant` permanece para
   rollback. O briefing ganhou a seção "Ações do Zelinho" com desfazer para pausa e
-  ocultar. Migrations `20260902130000` e `20260902131000` ainda não aplicadas no
-  banco vinculado (rollout na Task 22).
+  ocultar. Migrations `20260902130000` e `20260902131000` aplicadas no Supabase
+  vinculado em 2026-09-02 (via db query --file, registradas com migration repair
+  --status applied). Verificado no banco: 6 funções gerente_*, 5 tabelas gerente_*
+  com RLS ativo e ai_usage_logs_chat_type_check aceitando gerente_agent.
+  Pendências operacionais: envs GERENTE_AGENT_ENABLED, GERENTE_AGENT_MODEL,
+  GERENTE_CHANNEL_INTERNAL_KEY e GERENTE_WHATSAPP_NUMBER na Vercel, merge da
+  branch feat/zelinho-gerente-agente e smoke autenticado após deploy.
 
 - Reimpressão de recibos no dashboard (2026-09-01): a atividade recente do
   caixa agora usa o menu de três pontos por venda, com as ações **Reimprimir
