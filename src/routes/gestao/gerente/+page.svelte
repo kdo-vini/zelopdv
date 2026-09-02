@@ -95,12 +95,22 @@
 
 <svelte:head><title>Zelinho Gerente | ZeloPDV</title></svelte:head>
 <section class="manager-page">
-  <div class="mb-6 flex items-end justify-between border-b  pb-4" style="border-color: var(--border-card);"><div><p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p><h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Zelinho Gerente</h1></div>{#if analysedAt}<button type="button" class="refresh" on:click={refresh} disabled={refreshing} title="Atualizar dados">Analisado às {analysedAt}<span class:spinning={refreshing}><RefreshCw size={15} /></span></button>{/if}</div>
+  <div class="mb-6 flex items-end justify-between border-b pb-4" style="border-color: var(--border-card);">
+    <div>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p>
+      <h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Zelinho Gerente</h1>
+      <nav class="gerente-links" aria-label="Seções do Zelinho">
+        <a href="/gestao/gerente/semana">Resumo semanal</a>
+        <a href="/gestao/gerente/preferencias">Preferências</a>
+      </nav>
+    </div>
+    {#if analysedAt}<button type="button" class="refresh" on:click={refresh} disabled={refreshing} title="Atualizar dados">Analisado às {analysedAt}<span class:spinning={refreshing}><RefreshCw size={15} /></span></button>{/if}
+  </div>
   {#if loading}<div class="skeleton hero"></div><div class="skeleton card"></div><div class="skeleton card"></div><div class="skeleton card"></div>
   {:else if error}<div class="error-state"><CloudOff size={56} aria-hidden="true" /><p>{error}</p><button type="button" on:click={() => load()}>Tentar novamente</button></div>
   {:else}<ZelinhoBriefing signals={briefingSignals} snapshot={latestSnapshot} {learning} {salesDays} onRead={read} onAsk={ask} onMute={mute} /><SignalFeed {signals} {snapshots} {mutedTypes} onRead={read} onAsk={ask} onMute={mute} />{/if}
 </section>
 
 <style>
-  .manager-page { max-width: 900px; margin: 0 auto; }.refresh { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; border: 0; background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; }.refresh:disabled { opacity: .6; }.spinning { animation: spin .7s linear infinite; }.skeleton { border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-panel); animation: pulse 1.2s ease-in-out infinite; }.skeleton.hero { height: 260px; }.skeleton.card { height: 136px; margin-top: 10px; }.error-state { padding: 40px 20px; text-align: center; border: 1px dashed var(--border-strong); border-radius: 8px; color: var(--text-muted); }.error-state :global(svg) { color: var(--text-muted); }.error-state button { min-height: 44px; margin-top: 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--bg-input); color: var(--text-label); padding: 7px 10px; cursor: pointer; } @keyframes pulse { 50% { opacity: .5; } } @keyframes spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .spinning, .skeleton { animation: none; } } @media (max-width: 520px) { .manager-page { max-width: 100%; } }
+  .manager-page { max-width: 900px; margin: 0 auto; }.refresh { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; border: 0; background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; }.refresh:disabled { opacity: .6; }.spinning { animation: spin .7s linear infinite; }.skeleton { border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-panel); animation: pulse 1.2s ease-in-out infinite; }.skeleton.hero { height: 260px; }.skeleton.card { height: 136px; margin-top: 10px; }.error-state { padding: 40px 20px; text-align: center; border: 1px dashed var(--border-strong); border-radius: 8px; color: var(--text-muted); }.error-state :global(svg) { color: var(--text-muted); }.error-state button { min-height: 44px; margin-top: 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--bg-input); color: var(--text-label); padding: 7px 10px; cursor: pointer; } .gerente-links { display: flex; gap: 14px; margin-top: 6px; } .gerente-links a { min-height: 44px; display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; } .gerente-links a:hover { text-decoration: underline; } @keyframes pulse { 50% { opacity: .5; } } @keyframes spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .spinning, .skeleton { animation: none; } } @media (max-width: 520px) { .manager-page { max-width: 100%; } }
 </style>
