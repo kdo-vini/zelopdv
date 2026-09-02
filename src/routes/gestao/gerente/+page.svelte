@@ -10,6 +10,7 @@
   import { closeSupport } from '$lib/stores/support.js';
   import ZelinhoBriefing from '$lib/components/gerente/ZelinhoBriefing.svelte';
   import SignalFeed from '$lib/components/gerente/SignalFeed.svelte';
+  import AgentActionsList from '$lib/components/gerente/AgentActionsList.svelte';
   let loading = true;
   let refreshing = false;
   let error = '';
@@ -91,6 +92,10 @@
     await load({ silent: true });
   }
   onMount(() => { load(); const visibility = () => { if (document.visibilityState === 'visible') load({ silent: true }); }; document.addEventListener('visibilitychange', visibility); return () => document.removeEventListener('visibilitychange', visibility); });
+  async function getToken() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token;
+  }
 </script>
 
 <svelte:head><title>Zelinho Gerente | ZeloPDV</title></svelte:head>
@@ -108,7 +113,7 @@
   </div>
   {#if loading}<div class="skeleton hero"></div><div class="skeleton card"></div><div class="skeleton card"></div><div class="skeleton card"></div>
   {:else if error}<div class="error-state"><CloudOff size={56} aria-hidden="true" /><p>{error}</p><button type="button" on:click={() => load()}>Tentar novamente</button></div>
-  {:else}<ZelinhoBriefing signals={briefingSignals} snapshot={latestSnapshot} {learning} {salesDays} onRead={read} onAsk={ask} onMute={mute} /><SignalFeed {signals} {snapshots} {mutedTypes} onRead={read} onAsk={ask} onMute={mute} />{/if}
+  {:else}<ZelinhoBriefing signals={briefingSignals} snapshot={latestSnapshot} {learning} {salesDays} onRead={read} onAsk={ask} onMute={mute} /><SignalFeed {signals} {snapshots} {mutedTypes} onRead={read} onAsk={ask} onMute={mute} /><AgentActionsList {supabase} {getToken} />{/if}
 </section>
 
 <style>
