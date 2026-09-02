@@ -37,6 +37,8 @@ describe('gerente catalog RPCs migration', () => {
     expect(sql).toContain("'created', false");
     expect(compact).toContain("message = 'produto_duplicado'");
     expect(compact).toContain("message = 'categoria_nao_encontrada'");
+    expect(compact).toContain("pg_advisory_xact_lock(hashtext(v_owner::text || ':categoria:' || lower(trim(p_nome))))");
+    expect(compact).toContain("pg_advisory_xact_lock(hashtext(v_owner::text || ':produto:' || lower(trim(p_nome))))");
   });
 
   it('grants: authenticated e service_role executam; anon não', () => {

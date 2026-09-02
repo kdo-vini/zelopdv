@@ -147,6 +147,10 @@ begin
     raise exception using errcode = '22023', message = 'NOME_INVALIDO';
   end if;
 
+  -- Não existe unique index em (id_usuario, lower(nome)); o lock fecha a corrida
+  -- entre o check de duplicidade abaixo e o insert (check-then-insert).
+  perform pg_advisory_xact_lock(hashtext(v_owner::text || ':categoria:' || lower(trim(p_nome))));
+
   select id, nome, ordem into v_existente
     from public.categorias
    where id_usuario = v_owner
@@ -196,6 +200,10 @@ begin
   if p_preco is null or p_preco < 0 or p_preco > 99999 then
     raise exception using errcode = '22023', message = 'PRECO_INVALIDO';
   end if;
+
+  -- Não existe unique index em (id_usuario, lower(nome)); o lock fecha a corrida
+  -- entre o check de duplicidade abaixo e o insert (check-then-insert).
+  perform pg_advisory_xact_lock(hashtext(v_owner::text || ':produto:' || lower(trim(p_nome))));
 
   select id, nome, controlar_estoque_compartilhado into v_categoria
     from public.categorias
