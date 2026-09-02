@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildSaleReceiptPayload } from '../src/lib/finance/saleReceipt.js';
+import {
+  buildSaleReceiptPayload,
+  loadSaleReceiptCompanyProfile
+} from '../src/lib/finance/saleReceipt.js';
 
 describe('sale receipt payload', () => {
   it('maps persisted sale snapshots into the printVenda contract', () => {
@@ -52,6 +55,45 @@ describe('sale receipt payload', () => {
         { forma: 'pix', valor: 30 },
         { forma: 'dinheiro', valor: 18 },
       ],
+    });
+  });
+
+  it('loads the receipt profile using the explicit user id', async () => {
+    let requestedUserId = null;
+    const supabase = {
+      from(table) {
+        expect(table).toBe('empresa_perfil');
+        return {
+          select() { return this; },
+          eq(column, value) {
+            expect(column).toBe('user_id');
+            requestedUserId = value;
+            return this;
+          },
+          async maybeSingle() {
+            return { data: { id: 9, nome_exibicao: 'Balcão Central' }, error: null };
+          }
+        };
+      },
+      storage: {
+        from(bucket) {
+          expect(bucket).toBe('logos');
+          return {
+            getPublicUrl(path) {
+              return { data: { publicUrl: `https://cdn.test/${path}` } };
+            }
+          };
+        }
+      }
+    };
+
+    const result = await loadSaleReceiptCompanyProfile({ supabase, userId: 'user-123' });
+
+    expect(requestedUserId).toBe('user-123');
+    expect(result).toMatchObject({
+      id: 9,
+      nome_exibicao: 'Balcão Central',
+      logoUrl: 'https://cdn.test/user-123.png'
     });
   });
 });

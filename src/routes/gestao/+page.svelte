@@ -6,13 +6,14 @@
   import OnboardingChecklist from '$lib/components/OnboardingChecklist.svelte';
   import { revertFiadoDebtForVenda } from '$lib/finance/saleOps';
   import { addToast } from '$lib/stores/ui';
-  import { buildSaleReceiptPayload } from '$lib/finance/saleReceipt';
+  import { buildSaleReceiptPayload, loadSaleReceiptCompanyProfile } from '$lib/finance/saleReceipt';
   import { printVenda } from '$lib/printService';
   import { ArrowUpRight, MoreHorizontal, Printer, Trash2 } from 'lucide-svelte';
 
 
   let loading = true;
   let errorMsg = '';
+  let usuarioId = null;
   let vendasItens = [];
   let vendasPagamentos = [];
   let dadosEmpresa = null;
@@ -35,6 +36,7 @@
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData?.user?.id;
       if(!uid){ window.location.href = '/login'; return; }
+      usuarioId = uid;
 
       // O dashboard reflete a SESSÃO DO CAIXA ATUAL, não o dia de calendário.
       // Motivo: empresas que atravessam a meia-noite (bar, lanchonete) precisam
@@ -207,26 +209,7 @@
 
   async function carregarPerfilImpressao() {
     if (dadosEmpresa) return dadosEmpresa;
-
-    const { data, error } = await supabase
-      .from('empresa_perfil')
-      .select('id, nome_exibicao, documento, endereco, contato, logo_url, rodape_recibo, largura_bobina')
-      .eq('user_id', uid)
-      .maybeSingle();
-
-    if (error) {
-      console.warn('[Dashboard] Não foi possível carregar o perfil para impressão:', error.message);
-      dadosEmpresa = {};
-      return dadosEmpresa;
-    }
-
-    dadosEmpresa = data || {};
-    if (!dadosEmpresa.logo_url && uid) {
-      const publicUrl = supabase.storage.from('logos').getPublicUrl(`${uid}.png`)?.data?.publicUrl;
-      dadosEmpresa = { ...dadosEmpresa, logoUrl: publicUrl || null };
-    } else {
-      dadosEmpresa = { ...dadosEmpresa, logoUrl: dadosEmpresa.logo_url || null };
-    }
+    dadosEmpresa = await loadSaleReceiptCompanyProfile({ supabase, userId: usuarioId });
     return dadosEmpresa;
   }
 

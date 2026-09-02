@@ -1,5 +1,11 @@
 # Fixes Progress
 
+- [x] FX-REPRINT-RECEIPT-01 (2026-09-01) — a reimpressão do recibo no
+  dashboard falhava porque o carregamento do perfil referenciava um `uid` fora
+  do escopo de `loadDash()`. O perfil agora recebe o `userId` explicitamente;
+  regressão coberta em `tests/finance.saleReceipt.test.js` e correção enviada
+  para produção.
+
 - [~] FX-REPORTS-NESTED-SCROLL-01 (2026-08-31) — `/relatorios` criava, no
   desktop, uma área de rolagem interna além da rolagem do documento, exibindo
   um trilho lateral e espaço vazio após o conteúdo. A correção local mantém

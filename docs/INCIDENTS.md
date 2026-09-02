@@ -1,5 +1,28 @@
 # Incidents
 
+## INC-2026-09-01-01 - Reimpressão no dashboard falhava com `uid is not defined`
+
+**Status:** corrigido e enviado para produção em 2026-09-01.
+
+**Sintoma**
+
+- Ao escolher **Reimprimir venda** em qualquer linha da atividade recente, o
+  dashboard mostrava `Não foi possível reimprimir a venda: uid is not defined`.
+
+**Causa-raiz**
+
+- `uid` era declarado como constante local dentro de `loadDash()`, mas
+  `carregarPerfilImpressao()` tentava reutilizá-lo depois, fora daquele escopo.
+
+**Fix / recovery**
+
+- O carregador de perfil agora recebe explicitamente o `userId` e a tela guarda
+  o identificador autenticado para a ação posterior de reimpressão.
+- O teste `tests/finance.saleReceipt.test.js` cobre a consulta do perfil com o
+  usuário explícito; `npm run check` passou sem diagnósticos.
+
+---
+
 ## INC-2026-08-24-01 - Visibilidade do PDV interferia na publicação do ZeloMenu
 
 **Status:** código corrigido e contrato aplicado em produção em 2026-08-24.

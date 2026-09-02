@@ -34,3 +34,22 @@ export function buildSaleReceiptPayload({ venda = {}, itens = [], pagamentos = [
     }))
   };
 }
+
+export async function loadSaleReceiptCompanyProfile({ supabase, userId } = {}) {
+  if (!supabase || !userId) return {};
+
+  const { data, error } = await supabase
+    .from('empresa_perfil')
+    .select('id, nome_exibicao, documento, endereco, contato, logo_url, rodape_recibo, largura_bobina')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[Receipt] Não foi possível carregar o perfil para impressão:', error.message);
+    return {};
+  }
+
+  const perfil = data || {};
+  const logoUrl = perfil.logo_url || supabase.storage.from('logos').getPublicUrl(`${userId}.png`)?.data?.publicUrl || null;
+  return { ...perfil, logoUrl };
+}

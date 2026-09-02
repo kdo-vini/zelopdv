@@ -3,8 +3,9 @@
 - Reimpressão de recibos (2026-09-01): `src/routes/gestao/+page.svelte`
   reconstrói vendas do caixa com `src/lib/finance/saleReceipt.js` e envia o
   payload ao `printVenda` compartilhado. O dashboard carrega os detalhes dos
-  itens e de `vendas_pagamentos` junto com as vendas do caixa; a ação usa
-  `opcoes.copia` para identificar a segunda via.
+  itens e de `vendas_pagamentos` junto com as vendas do caixa; o carregador de
+  perfil recebe explicitamente o `userId`; a ação usa `opcoes.copia` para
+  identificar a segunda via.
 
 - Pedido WhatsApp (2026-08-30): `whatsapp_order` usa `zelomenu_cart_sessions`
   e confirma somente pela RPC server-only
