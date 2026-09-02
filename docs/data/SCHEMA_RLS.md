@@ -361,3 +361,13 @@ Migration: `.ai/migrations/product_usage_events_2026_07_30.sql`.
   owner mantém CRUD; subusuário precisa de `despesas.visualizar` para SELECT ou
   `despesas.gerenciar` para mutações.
 - `pin_admin` agora é verificado por `/api/auth/admin-pin`; o valor bruto não é selecionado pelo browser.
+
+## Zelinho Gerente conversacional
+
+- `gerente_agent_sessions`, `gerente_agent_messages`, `gerente_agent_actions`: owner-scoped por
+  `owner_user_id`. SELECT via RLS com `get_owner_user_id(auth.uid())` e
+  `fiado_actor_can('relatorios.ver', owner_user_id)`. Toda escrita é service-role (servidor).
+- RPCs `gerente_*`: `security definer`. Com service role exigem `p_owner`; com `authenticated`
+  resolvem o owner e exigem `produtos.gerenciar`. `gerente_set_menu_pause` escreve apenas
+  `zelomenu_product_publications.pausado_manualmente`.
+- `ai_usage_logs.chat_type` aceita `gerente_agent`.

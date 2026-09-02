@@ -230,6 +230,7 @@
 - PostHog: `PUBLIC_POSTHOG_KEY`, `PUBLIC_POSTHOG_HOST` (opcional; default `https://us.i.posthog.com`), `PUBLIC_POSTHOG_UI_HOST` (opcional)
 - Cron: `CRON_SECRET`
 - ZeloChat: `ZELOCHAT_INTERNAL_API_KEY`, `ZELOCHAT_INTERNAL_SEND_URL`, `ZELOCHAT_API_BASE_URL`
+- Zelinho Gerente: `GERENTE_AGENT_ENABLED` (opcional, `false` desliga), `GERENTE_AGENT_MODEL` (opcional, padrão `gpt-4.1-mini`)
 
 ## Ordem de triagem em incidente
 

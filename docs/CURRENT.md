@@ -1,5 +1,18 @@
 # ZeloPDV — Foco atual
 
+- Zelinho Gerente conversacional, fase 1 (2026-09-02): o painel do Zelinho passou a
+  usar `/api/gerente/agent`, com function calling (`gpt-4.1-mini` por padrão, env
+  `GERENTE_AGENT_MODEL`), sessões e histórico persistidos em
+  `gerente_agent_sessions`/`gerente_agent_messages` e ações de escrita
+  (`pausar_no_cardapio`, `ocultar_no_pdv`, `criar_categoria`, `criar_produto`,
+  `alterar_preco`) que só executam após confirmação do dono, registradas em
+  `gerente_agent_actions`. Toda escrita passa pelas RPCs `gerente_*` owner-scoped
+  (`20260902131000`). Só o dono conversa; subusuário recebe 403. Kill switch
+  `GERENTE_AGENT_ENABLED=false`. A rota antiga `/api/chat/assistant` permanece para
+  rollback. O briefing ganhou a seção "Ações do Zelinho" com desfazer para pausa e
+  ocultar. Migrations `20260902130000` e `20260902131000` ainda não aplicadas no
+  banco vinculado (rollout na Task 22).
+
 - Reimpressão de recibos no dashboard (2026-09-01): a atividade recente do
   caixa agora usa o menu de três pontos por venda, com as ações **Reimprimir
   venda** e **Excluir venda**. A reimpressão reconstrói a venda persistida,
