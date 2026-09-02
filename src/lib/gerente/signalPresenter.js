@@ -131,6 +131,11 @@ Object.entries(evidence).forEach(([kind, formatter]) => {
   evidence[kind] = (e) => appendAdditionalEvidence(e, formatter(e), kind);
 });
 
+const pausarNoCardapio = {
+  label: 'Pausar no cardápio',
+  mensagem: (signal) => `pausa ${signal?.evidence?.nome_produto || 'esse produto'} no cardápio, acabou o estoque`,
+};
+
 export const signalPresenters = {
   REVENUE_BELOW_WEEKDAY_AVG: { titulo: 'Vendas abaixo do ritmo habitual', icone: ArrowDownRight, tagClass: 'attention', perguntaSugerida: 'O que pode explicar essa queda nas vendas?', acaoSugerida: routes.relatorios, formatEvidence: evidence.revenue },
   REVENUE_ABOVE_WEEKDAY_AVG: { titulo: 'Vendas acima do ritmo habitual', icone: ArrowUpRight, tagClass: 'info', perguntaSugerida: 'O que ajudou as vendas a subirem?', acaoSugerida: routes.relatorios, formatEvidence: evidence.revenue },
@@ -140,8 +145,8 @@ export const signalPresenters = {
   PAYMENT_MIX_SHIFT: { titulo: 'Mudança na forma de pagamento', icone: CreditCard, tagClass: 'info', perguntaSugerida: 'O que essa mudança de pagamentos indica?', acaoSugerida: routes.relatorios, formatEvidence: evidence.payment },
   FIADO_ISSUED_SHARE_HIGH: { titulo: 'Fiado ganhou espaço nas vendas', icone: WalletCards, tagClass: 'attention', perguntaSugerida: 'Como acompanhar melhor o fiado?', acaoSugerida: routes.fiado, formatEvidence: evidence.fiado },
   CASH_DIFFERENCE_RECURRING: { titulo: 'Diferenças recorrentes no caixa', icone: Banknote, tagClass: 'critical', perguntaSugerida: 'Como investigar as diferenças de caixa?', acaoSugerida: routes.caixa, formatEvidence: evidence.cash },
-  STOCK_COVERAGE_LOW: { titulo: 'Estoque com cobertura curta', icone: PackageSearch, tagClass: 'attention', perguntaSugerida: 'Como planejar a reposição deste produto?', acaoSugerida: routes.estoque, formatEvidence: evidence.stockCoverage },
-  STOCK_ZERO_WITH_DEMAND: { titulo: 'Produto zerado com saída recente', icone: AlertCircle, tagClass: 'critical', perguntaSugerida: 'Como priorizar a reposição deste produto?', acaoSugerida: routes.estoque, formatEvidence: evidence.stockZero },
+  STOCK_COVERAGE_LOW: { titulo: 'Estoque com cobertura curta', icone: PackageSearch, tagClass: 'attention', perguntaSugerida: 'Como planejar a reposição deste produto?', acaoSugerida: routes.estoque, formatEvidence: evidence.stockCoverage, acaoRapida: pausarNoCardapio },
+  STOCK_ZERO_WITH_DEMAND: { titulo: 'Produto zerado com saída recente', icone: AlertCircle, tagClass: 'critical', perguntaSugerida: 'Como priorizar a reposição deste produto?', acaoSugerida: routes.estoque, formatEvidence: evidence.stockZero, acaoRapida: pausarNoCardapio },
   CAIXA_LEFT_OPEN: { titulo: 'Caixa continua aberto', icone: Banknote, tagClass: 'attention', perguntaSugerida: 'O que preciso conferir antes de fechar o caixa?', acaoSugerida: routes.caixa, formatEvidence: evidence.openCash },
 };
 

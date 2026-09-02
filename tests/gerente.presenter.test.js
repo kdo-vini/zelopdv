@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { confiancaHumana, getSignalPresenter, signalPresenters } from '../src/lib/gerente/signalPresenter.js';
+import { getSignalPresenter as getPresenterForQuick } from '../src/lib/gerente/signalPresenter.js';
 
 describe('gerente presenter', () => {
   it('presents every engine signal with a title and auditable fields', () => {
@@ -39,5 +40,15 @@ describe('gerente presenter', () => {
   it('uses sample-aware confidence language', () => {
     expect(confiancaHumana(0.8, { n_baseline: 6 })).toContain('6');
     expect(confiancaHumana(0.6, { sample_size: 2 })).toContain('pouco histórico');
+  });
+});
+
+describe('acaoRapida', () => {
+  it('existe só para sinais de estoque e usa o nome do produto', () => {
+    const p = getPresenterForQuick({ type: 'STOCK_ZERO_WITH_DEMAND', evidence: { nome_produto: 'Refri 2L' } });
+    expect(p.acaoRapida.label).toBe('Pausar no cardápio');
+    expect(p.acaoRapida.mensagem({ evidence: { nome_produto: 'Refri 2L' } })).toBe('pausa Refri 2L no cardápio, acabou o estoque');
+    expect(getPresenterForQuick({ type: 'STOCK_COVERAGE_LOW' }).acaoRapida.label).toBe('Pausar no cardápio');
+    expect(getPresenterForQuick({ type: 'REVENUE_BELOW_WEEKDAY_AVG' }).acaoRapida).toBeUndefined();
   });
 });
