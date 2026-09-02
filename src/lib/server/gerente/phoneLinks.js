@@ -55,10 +55,10 @@ export async function completePairing(db, { phoneNormalized, code, now = new Dat
   // O código prova posse da conta; o telefone passa a pertencer a este owner.
   const byPhone = await db.from('gerente_phone_links').delete().eq('phone_normalized', phoneNormalized);
   throwIfError(byPhone.error);
-  const byOwner = await db.from('gerente_phone_links').delete().eq('owner_user_id', row.owner_user_id);
-  throwIfError(byOwner.error);
-  const inserted = await db.from('gerente_phone_links').insert({ owner_user_id: row.owner_user_id, phone_normalized: phoneNormalized, verified_at: now.toISOString() });
-  throwIfError(inserted.error);
+  // O upsert por owner_user_id substitui o vínculo anterior do owner de forma atômica;
+  // só o conflito de telefone alheio precisa do delete acima.
+  const upserted = await db.from('gerente_phone_links').upsert({ owner_user_id: row.owner_user_id, phone_normalized: phoneNormalized, verified_at: now.toISOString() }, { onConflict: 'owner_user_id' });
+  throwIfError(upserted.error);
   const consumed = await db.from('gerente_pairing_codes').update({ consumed_at: now.toISOString() }).eq('id', row.id);
   throwIfError(consumed.error);
   return { ok: true, ownerUserId: row.owner_user_id };

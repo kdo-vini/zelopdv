@@ -21,19 +21,20 @@ describe('pairing codes', () => {
     expect(db.calls[1].payload).toEqual({ owner_user_id: 'owner-1', code_hash: hashPairingCode('123456'), expires_at: result.expiresAt });
   });
 
-  it('completePairing vincula, consome o código e remove vínculos antigos do telefone e do owner', async () => {
+  it('completePairing vincula, consome o código e remove o vínculo antigo do telefone e substitui o do owner', async () => {
     const db = makeDb({ tables: {
       gerente_pairing_codes: [{ data: { id: 'code-1', owner_user_id: 'owner-1', expires_at: new Date(now.getTime() + 60_000).toISOString() }, error: null }, { data: null, error: null }],
-      gerente_phone_links: [{ data: null, error: null }, { data: null, error: null }, { data: null, error: null }],
+      gerente_phone_links: [{ data: null, error: null }, { data: null, error: null }],
     } });
     const result = await completePairing(db, { phoneNormalized: '5514999991234', code: '123456', now });
     expect(result).toEqual({ ok: true, ownerUserId: 'owner-1' });
     expect(db.calls[0].filters).toEqual(expect.arrayContaining([{ op: 'eq', field: 'code_hash', value: hashPairingCode('123456') }, { op: 'is', field: 'consumed_at', value: null }]));
     const linkCalls = db.calls.filter((c) => c.table === 'gerente_phone_links');
+    expect(linkCalls).toHaveLength(2);
     expect(linkCalls[0].op).toBe('delete');
-    expect(linkCalls[1].op).toBe('delete');
-    expect(linkCalls[2].op).toBe('insert');
-    expect(linkCalls[2].payload).toMatchObject({ owner_user_id: 'owner-1', phone_normalized: '5514999991234' });
+    expect(linkCalls[0].filters).toEqual(expect.arrayContaining([{ op: 'eq', field: 'phone_normalized', value: '5514999991234' }]));
+    expect(linkCalls[1].op).toBe('upsert');
+    expect(linkCalls[1].payload).toMatchObject({ owner_user_id: 'owner-1', phone_normalized: '5514999991234' });
     const consumed = db.calls.find((c) => c.table === 'gerente_pairing_codes' && c.op === 'update');
     expect(typeof consumed.payload.consumed_at).toBe('string');
   });
