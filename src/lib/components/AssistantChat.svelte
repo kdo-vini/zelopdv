@@ -94,6 +94,7 @@
     const payload = event.detail;
     if (payload?.type === 'pending_action') setPendingAction(payload.action);
     if (payload?.type === 'quick_replies') setQuickReplies(payload.options);
+    if (payload?.type === 'action_resolved') settleFromServer(payload.action);
   }
 
   async function resolvePendingAction(kind) {
@@ -124,6 +125,16 @@
       clearPendingAction();
       actionBusy = false;
     }
+  }
+
+  function settleFromServer(action) {
+    if (!action?.id) return;
+    const current = $pendingAction;
+    if (current && current.id === action.id && current.summary) {
+      const status = action.status === 'executed' ? 'done' : action.status === 'cancelled' ? 'cancelled' : 'failed';
+      resolvedCards = [...resolvedCards, { id: action.id, summary: current.summary, effect: current.effect, status, time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }];
+    }
+    clearPendingAction();
   }
 
   $: if ($pendingAction?.expires_at) startExpiry($pendingAction); else stopExpiry();
@@ -388,6 +399,7 @@
   .ctx b { color: var(--text-label); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ctx .iconb { margin-left: auto; }
   .thread { flex: 1; overflow-y: auto; padding: 18px 16px 8px; display: flex; flex-direction: column; gap: 16px; }
+  .thread > * { flex-shrink: 0; }
   .p-msg { font-size: 14px; line-height: 1.55; word-break: break-word; }
   .p-user { align-self: flex-end; max-width: 88%; padding: 8px 12px; border-radius: 8px; background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-main); white-space: pre-wrap; }
   .p-assistant { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 10px; color: var(--text-main); }

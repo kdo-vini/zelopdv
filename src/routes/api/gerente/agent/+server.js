@@ -5,7 +5,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { requireOwner } from '$lib/server/gerente/ownerAuth';
 import { buildRateLimitKey, createRateLimitResponse, enforceRateLimit } from '$lib/server/rateLimit';
 import { buildSignalContextPrompt, getSignalContextForOwner } from '$lib/server/intelligence/signalContext';
-import { DEFAULT_MODEL, cancelPendingAction, confirmPendingAction, runAgentTurn, undoExecutedAction } from '$lib/server/gerente/agent';
+import { DEFAULT_MODEL, cancelPendingAction, confirmPendingAction, resolveTextConfirmation, runAgentTurn, undoExecutedAction } from '$lib/server/gerente/agent';
 
 const MAX_MESSAGE_CHARS = 1500;
 
@@ -60,6 +60,10 @@ export async function POST({ request }) {
   if (undoId) return json(await undoExecutedAction({ ...common, actionId: undoId, channel: 'app' }));
 
   if (!message || message.length > MAX_MESSAGE_CHARS) return json({ error: 'Requisição inválida.' }, { status: 400 });
+
+  // "sim"/"não" digitados com ação pendente resolvem direto, sem chamar o modelo.
+  const resolved = await resolveTextConfirmation({ ...common, channel: 'app', channelRef: null, message });
+  if (resolved) return sseResponse([{ content: resolved.reply }, { type: 'action_resolved', action: resolved.action }, '[DONE]']);
 
   const hints = [];
   if (body?.signal_id !== undefined && body?.signal_id !== null) {

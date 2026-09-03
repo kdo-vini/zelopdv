@@ -70,6 +70,7 @@ describe('buildAgentSystemPrompt', () => {
     expect(prompt).toContain('Lanchonete do Zé');
     expect(prompt).toContain('2026-09-02');
     expect(prompt).toContain('aguardando_confirmacao');
+    expect(prompt).toContain('[[opcoes: Sim | Não]]');
     expect(prompt).toContain('buscar_produto');
     expect(prompt).toContain('Contexto extra.');
     expect(prompt).toMatch(/WhatsApp/);

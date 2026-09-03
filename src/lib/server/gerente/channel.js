@@ -6,6 +6,7 @@ import { normalizeBrazilianPhone } from '../../masks.js';
 import { isSubscriptionActiveStrict } from '../../subscriptionStatus.js';
 import { completePairing, resolveOwnerByPhone } from './phoneLinks.js';
 import { DEFAULT_MODEL, cancelPendingAction, confirmPendingAction, runAgentTurn } from './agent.js';
+import { NO_WORDS, YES_WORDS } from './confirmWords.js';
 import { getPendingActionForSession } from './actions.js';
 import { getOrCreateSession } from './sessions.js';
 
@@ -13,8 +14,7 @@ export const PAIRING_INSTRUCTIONS = 'Oi! Eu sou o Zelinho Gerente do ZeloPDV. Pa
 export const PAIRED_REPLY = (nome) => `Pronto! Este WhatsApp está conectado à ${nome}. Pode me pedir coisas como "pausa o refri no cardápio" ou "como foi ontem?".`;
 export const INVALID_CODE_REPLY = 'Esse código não é válido ou já expirou. Gere um novo no ZeloPDV e me mande de novo.';
 export const INACTIVE_REPLY = 'A assinatura desta empresa não está ativa. Regularize no ZeloPDV para voltar a falar comigo.';
-export const YES_WORDS = /^(sim|s|ok|confirmar|confirma|confirmo|pode|isso)[.!]?$/i;
-export const NO_WORDS = /^(n[aã]o|n|cancelar|cancela|deixa|para)[.!]?$/i;
+export { NO_WORDS, YES_WORDS };
 
 function respond(reply, { pendingAction = null, paired = false } = {}) {
   return { reply, pending_action: pendingAction, paired };

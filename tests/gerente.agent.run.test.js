@@ -120,6 +120,44 @@ describe('runAgentTurn', () => {
     expect(result.quickReplies).toEqual(['Lanches', 'Bebidas', 'Criar categoria nova']);
   });
 
+  it('recusa uma segunda escrita no mesmo turno em vez de fingir que preparou', async () => {
+    const db = makeDb({ tables: baseTables({ gerente_agent_actions: [{ data: null, error: null }, { data: { id: 'act-1', summary: 'Criar produto "Bolo de chocolate" por R$ 60,00', expires_at: '2026-09-02T15:10:00Z' }, error: null }] }) });
+    const openai = makeOpenAi([
+      assistantMessage(null, [toolCall('c1', 'criar_produto', { nome: 'Bolo de chocolate', preco: 60, categoria_id: 1 }), toolCall('c2', 'criar_produto', { nome: 'Bolo de morango', preco: 60, categoria_id: 1 })]),
+      assistantMessage('Preparei o bolo de chocolate. O de morango vem depois da confirmação.'),
+    ]);
+    const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'cria os dois bolos por 60', now });
+    const toolMsgs = openai.chat.completions.create.mock.calls[1][0].messages.filter((m) => m.role === 'tool');
+    expect(JSON.parse(toolMsgs[0].content).status).toBe('aguardando_confirmacao');
+    expect(JSON.parse(toolMsgs[1].content).status).toBe('nao_preparado');
+    expect(result.pendingAction.id).toBe('act-1');
+  });
+
+  it('usa as opções sugeridas pelo modelo e remove a linha do texto', async () => {
+    const db = makeDb({ tables: baseTables({}) });
+    const openai = makeOpenAi([assistantMessage('Quer que eu prepare o cadastro do pudim também?\n[[opcoes: Sim | Não]]')]);
+    const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'criei a categoria', now });
+    expect(result.reply).toBe('Quer que eu prepare o cadastro do pudim também?');
+    expect(result.quickReplies).toEqual(['Sim', 'Não']);
+  });
+
+  it('no WhatsApp as opções viram lista numerada no texto', async () => {
+    const db = makeDb({ tables: baseTables({}) });
+    const openai = makeOpenAi([assistantMessage('Qual deles? [[opcoes: Coca 2L | Guaraná 2L]]')]);
+    const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'whatsapp', channelRef: '5514999990000', message: 'pausa o refri', now });
+    expect(result.reply).toBe('Qual deles?\n1. Coca 2L\n2. Guaraná 2L');
+  });
+
+  it('não devolve quickReplies quando a resposta não é uma pergunta', async () => {
+    const db = makeDb({ tables: baseTables({ categorias: [{ data: [{ id: 1, nome: 'Lanches', ordem: 1, controlar_estoque_compartilhado: false }], error: null }] }) });
+    const openai = makeOpenAi([
+      assistantMessage(null, [toolCall('c1', 'listar_categorias', {})]),
+      assistantMessage('Você tem a categoria Lanches.'),
+    ]);
+    const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'quais categorias tenho', now });
+    expect(result.quickReplies).toEqual([]);
+  });
+
   it('não devolve quickReplies quando criou ação pendente', async () => {
     const db = makeDb({ tables: baseTables({ gerente_agent_actions: [{ data: null, error: null }, { data: { id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' }, error: null }] }) });
     const openai = makeOpenAi([

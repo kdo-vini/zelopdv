@@ -11,7 +11,7 @@ describe('AssistantChat redesenhado', () => {
     expect(source).not.toContain('endpoint="/api/chat/assistant"');
     expect(source).toContain('on:event={handleStreamEvent}');
     expect(source).toContain('message: content');
-    for (const t of ['Proposta, aguardando você', 'confirm_action_id', 'cancel_action_id', 'expira em', 'quick_replies', 'setQuickReplies', 'prefillMessage', 'retryLast', 'Tentar de novo', 'Pensando', 'Consultando os seus dados', 'Peça algo ao Zelinho', 'Mudanças só acontecem depois que você confirma.', 'Nova conversa', '<textarea']) expect(source).toContain(t);
+    for (const t of ['Proposta, aguardando você', 'confirm_action_id', 'cancel_action_id', 'expira em', 'quick_replies', 'setQuickReplies', 'prefillMessage', 'retryLast', 'Tentar de novo', 'Pensando', 'Consultando os seus dados', 'Peça algo ao Zelinho', 'Mudanças só acontecem depois que você confirma.', 'Nova conversa', '<textarea', 'action_resolved', '.thread > * { flex-shrink: 0; }']) expect(source).toContain(t);
     expect(source).not.toContain('Seu gerente: pergunte ou peça uma ação');
     expect(source).not.toContain('icebreaker-icon');
     expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);

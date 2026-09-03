@@ -28,14 +28,27 @@ function mockCommon({ accessContext, agent = {} }) {
   const confirmPendingAction = vi.fn(async () => ({ ok: true, reply: 'Feito.' }));
   const cancelPendingAction = vi.fn(async () => ({ ok: true, reply: 'Cancelado. Nada foi alterado.' }));
   const undoExecutedAction = vi.fn(async () => ({ ok: true, reply: 'Desfeito.' }));
-  vi.doMock('$lib/server/gerente/agent', () => ({ runAgentTurn, confirmPendingAction, cancelPendingAction, undoExecutedAction, DEFAULT_MODEL: 'gpt-4.1-mini', ...agent }));
-  return { runAgentTurn, confirmPendingAction, cancelPendingAction, undoExecutedAction };
+  const resolveTextConfirmation = vi.fn(async () => null);
+  vi.doMock('$lib/server/gerente/agent', () => ({ runAgentTurn, confirmPendingAction, cancelPendingAction, undoExecutedAction, resolveTextConfirmation, DEFAULT_MODEL: 'gpt-4.1-mini', ...agent }));
+  return { runAgentTurn, confirmPendingAction, cancelPendingAction, undoExecutedAction, resolveTextConfirmation };
 }
 
 const owner = { isSubUser: false, ownerUserId: 'owner-1', roleId: null, permissions: null };
 
 describe('API: gerente/agent', () => {
   beforeEach(() => { vi.resetModules(); vi.clearAllMocks(); });
+
+  it('"sim" digitado com ação pendente confirma sem chamar o modelo', async () => {
+    const mocks = mockCommon({ accessContext: owner });
+    mocks.resolveTextConfirmation.mockResolvedValueOnce({ reply: 'Feito: criei a categoria "Sobremesas".', action: { id: 'act-1', status: 'executed' } });
+    const { POST } = await loadHandler();
+    const response = await POST({ request: makeRequest({ message: 'sim' }) });
+    const frames = await readSse(response);
+    expect(JSON.parse(frames[0])).toEqual({ content: 'Feito: criei a categoria "Sobremesas".' });
+    expect(JSON.parse(frames[1])).toEqual({ type: 'action_resolved', action: { id: 'act-1', status: 'executed' } });
+    expect(frames[2]).toBe('[DONE]');
+    expect(mocks.runAgentTurn).not.toHaveBeenCalled();
+  });
 
   it('bloqueia subusuário com 403 antes de qualquer trabalho', async () => {
     const mocks = mockCommon({ accessContext: { isSubUser: true, ownerUserId: 'owner-1', roleId: 'r', permissions: { 'relatorios.ver': true } } });

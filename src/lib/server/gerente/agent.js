@@ -4,7 +4,11 @@
  * e desfazer respondem com texto determinístico (sem LLM).
  */
 import { appendMessages, getOrCreateSession, loadHistory } from './sessions.js';
-import { cancelAction, confirmAction, createPendingAction, undoAction } from './actions.js';
+import { NO_WORDS, YES_WORDS } from './confirmWords.js';
+import { appendOptionsAsText, extractQuickReplies } from './quickReplies.js';
+
+export { NO_WORDS, YES_WORDS };
+import { cancelAction, confirmAction, createPendingAction, getPendingActionForSession, undoAction } from './actions.js';
 import { executeTool, getOpenAiTools, getTool, summarizeAction, summarizeEffect } from './toolRegistry.js';
 import { buildAgentSystemPrompt } from './prompt.js';
 import { localDateOf } from '../intelligence/tz.js';
@@ -100,8 +104,10 @@ export async function runAgentTurn({ db, openai, ownerUserId, actorUserId, chann
           const summary = summarizeAction(name, args);
           const created = await createPendingAction(db, { ownerUserId, sessionId: session.id, actorUserId, channel, toolName: name, args, summary, now });
           pendingAction = { ...created, effect: summarizeEffect(name, args) };
+          result = { status: 'aguardando_confirmacao', resumo: pendingAction.summary, acao_id: pendingAction.id };
+        } else {
+          result = { status: 'nao_preparado', motivo: 'Só uma mudança por vez. A ação anterior já está aguardando confirmação; prepare a próxima depois que o dono confirmar.' };
         }
-        result = { status: 'aguardando_confirmacao', resumo: pendingAction.summary, acao_id: pendingAction.id };
       } else {
         result = await executeTool(ctx, name, args);
         if (name === 'buscar_produto' && result?.ok && Array.isArray(result.data?.produtos) && result.data.produtos.length >= 2) {
@@ -116,6 +122,9 @@ export async function runAgentTurn({ db, openai, ownerUserId, actorUserId, chann
   }
 
   if (reply === null) reply = FALLBACK_REPLY;
+  // O modelo pode terminar com "[[opcoes: A | B]]"; isso vira pills, não texto.
+  const extracted = extractQuickReplies(reply);
+  reply = extracted.reply;
   if (!reply) reply = EMPTY_REPLY;
 
   await appendMessages(db, {
@@ -130,9 +139,16 @@ export async function runAgentTurn({ db, openai, ownerUserId, actorUserId, chann
   const usageWithCost = { ...usage, cost_usd: costUsd(model, usage) };
   await logAgentUsage(db, { actorUserId, model, usage: usageWithCost });
 
+  // Com ação pendente o cartão de confirmação é a única resposta esperada.
+  // Sem pendente, valem as opções que o modelo sugeriu; se ele não sugeriu,
+  // caem os fallbacks determinísticos, e só quando a resposta é uma pergunta.
+  const asksQuestion = typeof reply === 'string' && reply.includes('?');
   let quickReplies = [];
-  if (!pendingAction && ambiguous.produtos) quickReplies = [...ambiguous.produtos.slice(0, 5), 'Nenhum desses'];
-  else if (!pendingAction && ambiguous.categorias) quickReplies = [...ambiguous.categorias.slice(0, 5), 'Criar categoria nova'];
+  if (pendingAction) quickReplies = [];
+  else if (extracted.options.length) quickReplies = extracted.options;
+  else if (asksQuestion && ambiguous.produtos) quickReplies = [...ambiguous.produtos.slice(0, 5), 'Nenhum desses'];
+  else if (asksQuestion && ambiguous.categorias && /categoria/i.test(reply)) quickReplies = [...ambiguous.categorias.slice(0, 5), 'Criar categoria nova'];
+  if (channel === 'whatsapp') reply = appendOptionsAsText(reply, quickReplies);
 
   return { reply, pendingAction, toolsUsed, usage: usageWithCost, sessionId: session.id, quickReplies };
 }
@@ -183,6 +199,24 @@ export async function confirmPendingAction({ db, ownerUserId, actorUserId, actio
     return { ok: false, reply: CONFIRM_ERRORS[outcome.code] || 'Não consegui confirmar agora.' };
   }
   return { ok: true, reply: describeExecutedAction(outcome.action, outcome.result) };
+}
+
+/**
+ * Resolve "sim"/"não" digitados quando há ação pendente na sessão, sem passar
+ * pelo modelo. Devolve null quando não há o que resolver (o turno segue normal).
+ */
+export async function resolveTextConfirmation({ db, ownerUserId, actorUserId, channel, channelRef = null, message, now = new Date() }) {
+  const text = String(message || '').trim();
+  const yes = YES_WORDS.test(text);
+  if (!yes && !NO_WORDS.test(text)) return null;
+  const session = await getOrCreateSession(db, { ownerUserId, channel, channelRef });
+  const pending = await getPendingActionForSession(db, { sessionId: session.id, ownerUserId, now });
+  if (!pending) return null;
+  const outcome = yes
+    ? await confirmPendingAction({ db, ownerUserId, actorUserId, actionId: pending.id, now })
+    : await cancelPendingAction({ db, ownerUserId, actionId: pending.id });
+  const status = yes ? (outcome.ok ? 'executed' : 'failed') : (outcome.ok ? 'cancelled' : 'failed');
+  return { reply: outcome.reply, action: { id: pending.id, status } };
 }
 
 export async function cancelPendingAction({ db, ownerUserId, actionId }) {
