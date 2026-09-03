@@ -5,6 +5,7 @@
   import { CloudOff, RefreshCw } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient.js';
   import { getAccessContext } from '$lib/accessControl.js';
+  import { hasZeloMenuAccess } from '$lib/guards.js';
   import { addToast } from '$lib/stores/ui.js';
   import { capturePostHogEvent } from '$lib/posthogClient.js';
   import { markRead } from '$lib/stores/gerente.js';
@@ -21,6 +22,7 @@
   let error = '';
   let failures = 0;
   let signals = [];
+  let menuAtivo = false;
   let snapshots = [];
   let profile = null;
   let ownerUserId = null;
@@ -40,7 +42,7 @@
 
   function setTab(next) { goto(`?aba=${next}`, { replaceState: true, noScroll: true, keepFocus: true }); }
   function quick(mensagem) { closeSupport(); if (!openAssistantWithMessage(mensagem)) addToast('Não foi possível abrir o Zelinho.', 'error'); }
-  const longDate = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short', timeZone: 'UTC' });
+  const longDate = (date) => { const s = new Date(`${date}T12:00:00Z`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short', timeZone: 'UTC' }); return s.charAt(0).toUpperCase() + s.slice(1); };
   const money0 = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(Number(v) || 0);
 
   async function load({ silent = false } = {}) {
@@ -54,10 +56,11 @@
       if (!userData.user) throw new Error('Sessão expirada.');
       const access = await getAccessContext();
       ownerUserId = access?.ownerUserId || userData.user.id;
-      const [{ data: perfil, error: profileError }, { data: signalRows, error: signalsError }, { data: snapshotRows, error: snapshotsError }] = await Promise.all([
+      const [{ data: perfil, error: profileError }, { data: signalRows, error: signalsError }, { data: snapshotRows, error: snapshotsError }, menuAccess] = await Promise.all([
         supabase.from('empresa_perfil').select('nome_exibicao, gerente_prefs').eq('user_id', ownerUserId).maybeSingle(),
         supabase.from('business_signals').select('id, signal_date, type, severity, confidence, evidence, narrative, narrative_source, read_at, created_at').order('signal_date', { ascending: false }).limit(200),
         supabase.from('business_daily_snapshots').select('snapshot_date, receita_bruta, receita_realizada, qtd_vendas, ticket_medio, metrics, computed_at').order('snapshot_date', { ascending: false }).limit(56),
+        hasZeloMenuAccess(ownerUserId).catch(() => false),
       ]);
       if (requestVersion !== loadVersion) return;
       if (profileError) throw profileError;
@@ -66,6 +69,7 @@
       if (snapshotsError) throw snapshotsError;
       signals = signalRows || [];
       snapshots = snapshotRows || [];
+      menuAtivo = menuAccess === true;
       if (!silent) void capturePostHogEvent('gerente_briefing_view', { signal_count: signals.length, learning });
       failures = 0;
     } catch (loadError) {
@@ -135,7 +139,7 @@
   {:else if error}<div class="error-state"><CloudOff size={56} aria-hidden="true" /><p>{error}</p><button type="button" on:click={() => load()}>Tentar novamente</button></div>
   {:else if tab === 'briefing'}
     <DayStrip strip={dayStrip} />
-    <ZelinhoBriefing signals={briefingSignals} {learning} {salesDays} onRead={read} onAsk={ask} onMute={mute} onQuickAction={quick} />
+    <ZelinhoBriefing signals={briefingSignals} {learning} {salesDays} {menuAtivo} onRead={read} onAsk={ask} onMute={mute} onQuickAction={quick} />
     {#if previousDays.length}
       <div class="section-h"><h2>Dias anteriores</h2><button type="button" class="linkish" on:click={() => setTab('historico')}>Ver histórico</button></div>
       {#each previousDays as day (day.snapshot_date)}<div class="hist"><b>{longDate(day.snapshot_date)}</b><span class="tabular-nums">{money0(day.receita_bruta)} em {day.qtd_vendas} vendas</span></div>{/each}
@@ -143,7 +147,7 @@
   {:else if tab === 'acoes'}
     <AgentActionsList {supabase} {getToken} onExample={quick} />
   {:else}
-    <SignalFeed {signals} {snapshots} {mutedTypes} onRead={read} onAsk={ask} onMute={mute} onQuickAction={quick} />
+    <SignalFeed {signals} {snapshots} {mutedTypes} {menuAtivo} onRead={read} onAsk={ask} onMute={mute} onQuickAction={quick} />
   {/if}
 </section>
 
@@ -167,7 +171,7 @@
   .linkish { border: 0; background: transparent; padding: 0; min-height: 28px; font-size: 12px; color: var(--text-muted); cursor: pointer; }
   .linkish:hover { color: var(--text-main); }
   .hist { display: flex; justify-content: space-between; gap: 12px; padding: 12px 16px; margin-bottom: 8px; border: 1px dashed var(--border-subtle); border-radius: 8px; color: var(--text-muted); font-size: 13px; }
-  .hist b { color: var(--text-label); font-weight: 500; text-transform: capitalize; }
+  .hist b { color: var(--text-label); font-weight: 500; }
   .skeleton { border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-card); margin-bottom: 12px; }
   .skeleton.strip { height: 96px; } .skeleton.row { height: 88px; }
   .error-state { display: grid; place-items: center; gap: 10px; padding: 40px 0; color: var(--text-muted); }

@@ -10,7 +10,9 @@ function money(value) {
 function displayName(nomeExibicao) {
   const full = String(nomeExibicao || '').trim();
   if (!full) return '';
-  const first = full.split(/\s+/)[0];
+  const [first, second = ''] = full.split(/\s+/);
+  // "Casa dos Salgados" is a business name, not a person: keep it whole.
+  if (/^(do|da|dos|das|de|e|&)$/i.test(second)) return full;
   return first.length <= 14 && !GENERIC.test(first) ? first : full;
 }
 

@@ -14,6 +14,7 @@ describe('buildGreeting', () => {
   it('usa o nome inteiro quando a primeira palavra é genérica e varia a saudação pela hora', () => {
     expect(buildGreeting({ nomeExibicao: 'Lanchonete do Zé', dayStrip: null, signals: [], hour: 15 }).title).toBe('Boa tarde, Lanchonete do Zé.');
     expect(buildGreeting({ nomeExibicao: '', dayStrip: null, signals: [], hour: 20 }).title).toBe('Boa noite.');
+    expect(buildGreeting({ nomeExibicao: 'Casa dos Salgados', dayStrip: null, signals: [], hour: 20 }).title).toBe('Boa noite, Casa dos Salgados.');
   });
 
   it('cobre sem histórico, ritmo normal e nenhum ponto', () => {

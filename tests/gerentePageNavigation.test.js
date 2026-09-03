@@ -6,7 +6,7 @@ const read = (p) => readFile(new URL(`../${p}`, import.meta.url), 'utf8');
 describe('gerente page redesign', () => {
   it('usa saudação, faixa do dia, abas e links de navegação', async () => {
     const page = await read('src/routes/gestao/gerente/+page.svelte');
-    for (const t of ['buildGreeting', 'computeDayStrip', '<DayStrip', 'role="tablist"', 'Ações do Zelinho', 'Histórico', 'href="/gestao/gerente/semana"', 'href="/gestao/gerente/preferencias"', 'openAssistantWithMessage', 'onQuickAction']) expect(page).toContain(t);
+    for (const t of ['buildGreeting', 'computeDayStrip', '<DayStrip', 'role="tablist"', 'Ações do Zelinho', 'Histórico', 'href="/gestao/gerente/semana"', 'href="/gestao/gerente/preferencias"', 'openAssistantWithMessage', 'onQuickAction', 'hasZeloMenuAccess', '{menuAtivo}']) expect(page).toContain(t);
     expect(page).not.toContain('tracking-[0.2em]');
     expect(page).toContain("select('snapshot_date, receita_bruta, receita_realizada, qtd_vendas, ticket_medio, metrics, computed_at')");
   });

@@ -7,6 +7,7 @@
   export let onAsk = () => {};
   export let onMute = () => {};
   export let onQuickAction = () => {};
+  export let menuAtivo = false;
   $: week = Math.min(4, Math.max(1, Math.ceil(salesDays / 7)));
 </script>
 
@@ -15,7 +16,7 @@
   {#if learning}<p class="learning">Ainda estou conhecendo seu ritmo: semana {week} de 4 ({salesDays} dias com venda de 28).</p>{/if}
   <div class="signals">
     {#if signals.length}
-      {#each signals.slice(0, 3) as signal (signal.id)}<SignalRow {signal} {onRead} {onAsk} {onMute} {onQuickAction} />{/each}
+      {#each signals.slice(0, 3) as signal (signal.id)}<SignalRow {signal} {onRead} {onAsk} {onMute} {onQuickAction} {menuAtivo} />{/each}
     {:else}
       <p class="empty">Nada pede sua atenção hoje. Continue registrando as vendas e eu aviso quando algo mudar.</p>
     {/if}

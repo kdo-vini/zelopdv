@@ -8,6 +8,8 @@
   export let onMute = () => {};
   export let onQuickAction = () => {};
   export let muted = false;
+  /** Só mostra a ação rápida de cardápio quando a empresa tem ZeloMenu ativo. */
+  export let menuAtivo = false;
   let menuOpen = false;
   let menuButton;
   let root;
@@ -48,7 +50,7 @@
   </div>
   {#if !muted}
     <div class="actions">
-      {#if presenter.acaoRapida}
+      {#if presenter.acaoRapida && menuAtivo}
         <button type="button" class="btn primary" on:click={() => { read(); onQuickAction(presenter.acaoRapida.mensagem(signal)); }}>{presenter.acaoRapida.label}</button>
       {:else}
         <a class="btn ghost" href={presenter.acaoSugerida.href} on:click={read}>{presenter.acaoSugerida.label}</a>
