@@ -166,6 +166,8 @@
         <p class="pair-hint">Mande este código para o Zelinho no WhatsApp <strong>{pairWhatsappNumber}</strong> em até 10 minutos:</p>
         <p class="pairing-code" aria-live="polite">{pairCode}</p>
         <button type="button" class="pair-secondary" disabled={pairBusy} on:click={() => { pairCode = ''; loadPairing(); }}>Já enviei o código</button>
+      {:else if !pairWhatsappNumber}
+        <p class="pair-hint">Em breve. Por enquanto, converse com o Zelinho pelo painel dentro do app.</p>
       {:else}
         <p class="pair-hint">Só o dono da empresa pode conectar. O telefone conectado é o único que fala com o Zelinho.</p>
         {#if !isSubUser}<Button on:click={startPairing} disabled={pairBusy}><MessageCircle />{pairBusy ? 'Gerando...' : 'Conectar no WhatsApp'}</Button>{/if}

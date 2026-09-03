@@ -13,4 +13,10 @@ describe('preferências: Zelinho no WhatsApp', () => {
     expect(source).toContain('Desvincular');
     expect(source).toContain('pairing-code');
   });
+
+  it('esconde o pareamento enquanto não há número do Zelinho configurado', async () => {
+    const source = await readFile(page, 'utf8');
+    expect(source).toContain('{:else if !pairWhatsappNumber}');
+    expect(source).toContain('Em breve. Por enquanto, converse com o Zelinho pelo painel dentro do app.');
+  });
 });
