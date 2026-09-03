@@ -1,5 +1,20 @@
 # ZeloPDV — Foco atual
 
+- Alvos resolvidos pelo servidor e histórico de conversas do Zelinho (2026-09-03):
+  o modelo estava inventando id de produto e de categoria (linhas reais em
+  gerente_agent_actions: produto_id 0 e categoria_id 1 quando a categoria era 225).
+  Agora resolveTargets.js confirma o alvo contra o banco por id ou nome, escopado
+  por owner, com o mesmo casamento sem acento de buscar_produto, e recusa preparar
+  a ação quando não acha ou fica ambíguo (status nao_preparado). Pausar produto não
+  publicado no ZeloMenu também é recusado. As sessões deixaram de ser uma só por
+  canal: o índice único agora é parcial (status open), gerente_agent_sessions ganhou
+  title, e existem GET/POST /api/gerente/sessions e GET /api/gerente/sessions/[id].
+  O painel ganhou botão de conversas anteriores em modo leitura, a nova conversa
+  fecha a sessão no servidor de verdade, a página do Gerente ganhou bolha flutuante
+  para abrir o Zelinho e o Desfazer virou dois passos com a frase do efeito.
+  Migration 20260903010000 aplicada no Supabase vinculado em 2026-09-03 via
+  db query --file e registrada com migration repair --status applied.
+
 - Zelinho Gerente redesenhado (2026-09-02): a página `/gestao/gerente` ganhou
   cabeçalho com saudação (`buildGreeting`), faixa do dia (`DayStrip` +
   `computeDayStrip`), abas Briefing / Ações do Zelinho / Histórico via `?aba=`
