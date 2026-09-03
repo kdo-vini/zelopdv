@@ -161,7 +161,8 @@
   .meta { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; border: 0; background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; }
   .meta:disabled { opacity: .6; }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--status-success-text); }
-  .tabs { display: flex; gap: 2px; margin: 22px 0 18px; padding: 3px; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 8px; width: max-content; max-width: 100%; overflow-x: auto; }
+  .tabs { display: flex; gap: 2px; margin: 22px 0 18px; padding: 3px; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 8px; width: max-content; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
   .tab { min-height: 36px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 500; white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; transition: background 180ms cubic-bezier(.22,1,.36,1), color 180ms cubic-bezier(.22,1,.36,1); }
   .tab:hover { color: var(--text-main); }
   .tab[aria-selected="true"] { background: var(--bg-panel); color: var(--text-main); }
