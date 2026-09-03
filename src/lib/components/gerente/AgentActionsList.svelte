@@ -52,12 +52,12 @@
 </script>
 
 <section class="acts-wrap" aria-labelledby="agent-actions-title">
-  <div class="section-h"><h2 id="agent-actions-title">Ações do Zelinho</h2><span class="hint">o que foi feito a pedido seu, no app ou no WhatsApp</span></div>
+  <div class="section-h"><h2 id="agent-actions-title">Ações do Zelinho</h2><span class="hint">o que foi feito a pedido seu, com hora e opção de desfazer</span></div>
   <div class="acts">
     {#if loading}
       <div class="skeleton" aria-hidden="true"></div>
     {:else if actions.length === 0}
-      <div class="empty"><strong>Nada ainda.</strong><span>Quando você pedir algo ao Zelinho e confirmar, a ação aparece aqui com hora, canal e a opção de desfazer.</span><div class="examples">{#each ['pausa o refri no cardápio', 'cria a categoria Sobremesas', 'preço do X-Bacon para 30'] as ex}<button type="button" on:click={() => onExample(ex)}>{ex}</button>{/each}</div></div>
+      <div class="empty"><strong>Nada ainda.</strong><span>Quando você pedir algo ao Zelinho e confirmar, a ação aparece aqui com hora, canal e a opção de desfazer.</span><div class="examples">{#each ['cria a categoria Sobremesas', 'preço do X-Bacon para 30', 'esconde o refri da frente de caixa'] as ex}<button type="button" on:click={() => onExample(ex)}>{ex}</button>{/each}</div></div>
     {:else}
       {#each actions as action (action.id)}
         <div class="act">

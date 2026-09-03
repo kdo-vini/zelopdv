@@ -10,8 +10,10 @@
   em textarea. O agente passou a devolver `pendingAction.effect` e
   `quickReplies` (frames SSE `pending_action` e `quick_replies`). Regra:
   nunca exibir nomes de ferramenta ou ids ao dono. Padrões em
-  `docs/DESIGN_PATTERNS.md` §14. Pendente: validação visual em navegador
-  (desktop e mobile) e conferência de contraste no tema claro.
+  `docs/DESIGN_PATTERNS.md` §14. Validado visualmente em 2026-09-02 no dev
+  server (desktop 1440 e mobile 390, tema escuro, conta de teste): briefing, painel,
+  estado de erro e aba de ações. A ação rápida "Pausar no cardápio" só aparece
+  com ZeloMenu ativo (). Tema claro ainda não conferido.
 
 - Zelinho Gerente conversacional, fase 2 (lado ZeloPDV) (2026-09-02): o dono agora
   pareia um número de WhatsApp com a empresa em Gestão > Zelinho Gerente >
