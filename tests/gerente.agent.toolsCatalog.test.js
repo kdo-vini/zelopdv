@@ -28,10 +28,19 @@ describe('buscarProduto', () => {
     expect(db.calls[1].filters).toEqual(expect.arrayContaining([{ op: 'eq', field: 'id_usuario', value: 'owner-1' }, { op: 'in', field: 'id_produto', value: [1, 2] }]));
   });
 
-  it('marca nao_publicado quando não há publicação e respeita o limite', async () => {
+  it('marca fora_do_cardapio quando não há publicação e respeita o limite', async () => {
     const db = makeDb({ tables: { produtos: [{ data: produtos, error: null }], zelomenu_product_publications: [{ data: [], error: null }] } });
     const result = await buscarProduto(db, 'owner-1', { termo: 'acai', limite: 1 });
-    expect(result.data.produtos).toEqual([{ id: 3, nome: 'Açaí 500ml', preco: 18, categoria: 'Sobremesas', oculto_no_pdv: true, controla_estoque: false, estoque_atual: 0, no_cardapio: 'nao_publicado' }]);
+    expect(result.data.produtos).toEqual([{ id: 3, nome: 'Açaí 500ml', preco: 18, categoria: 'Sobremesas', oculto_no_pdv: true, controla_estoque: false, estoque_atual: 0, no_cardapio: 'fora_do_cardapio' }]);
+  });
+
+  it('produto sem venda avulsa vira somente_complemento, e pausa tem precedência', async () => {
+    const db = makeDb({ tables: {
+      produtos: [{ data: produtos, error: null }],
+      zelomenu_product_publications: [{ data: [{ id_produto: 1, visivel_online: false, pausado_manualmente: false }, { id_produto: 2, visivel_online: false, pausado_manualmente: true }], error: null }],
+    } });
+    const result = await buscarProduto(db, 'owner-1', { termo: 'refri' });
+    expect(result.data.produtos.map((p) => [p.id, p.no_cardapio])).toEqual([[1, 'somente_complemento'], [2, 'pausado']]);
   });
 
   it('devolve lista vazia sem consultar publicações quando nada casa', async () => {
@@ -63,30 +72,29 @@ describe('listarCategorias e estoqueProduto', () => {
 });
 
 describe('ferramentas de escrita', () => {
-  it('pausarNoCardapio consulta a publicação, chama a RPC com p_owner e devolve before/after', async () => {
+  it('pausarNoCardapio chama a RPC com p_owner e devolve before/after', async () => {
     const db = makeDb({
-      tables: { zelomenu_product_publications: [{ data: { visivel_online: true }, error: null }] },
       rpcs: { gerente_set_menu_pause: { data: { produto_id: 1, nome: 'Refri', pausado_anterior: false, pausado_manualmente: true, visivel_online: true }, error: null } },
     });
     const result = await pausarNoCardapio(db, 'owner-1', { produto_id: 1, pausado: true });
-    expect(db.calls[1]).toEqual({ rpc: 'gerente_set_menu_pause', params: { p_produto_id: 1, p_pausado: true, p_owner: 'owner-1' } });
+    expect(db.calls[0]).toEqual({ rpc: 'gerente_set_menu_pause', params: { p_produto_id: 1, p_pausado: true, p_owner: 'owner-1' } });
     expect(result).toEqual({ ok: true, data: { produto_id: 1, nome: 'Refri', pausado_anterior: false, pausado_manualmente: true, visivel_online: true }, before: { pausado_manualmente: false }, after: { pausado_manualmente: true } });
   });
 
-  it('recusa pausar sem chamar a RPC quando o produto não está publicado no cardápio', async () => {
-    const db = makeDb({ tables: { zelomenu_product_publications: [{ data: null, error: null }] } });
-    const result = await pausarNoCardapio(db, 'owner-1', { produto_id: 1, pausado: true });
-    expect(result).toEqual({ ok: false, error: 'Esse produto não está publicado no cardápio digital, então pausar ou despausar não muda nada para os clientes. Para publicá-lo, o dono usa o ZeloMenu.' });
-    expect(db.rpc).not.toHaveBeenCalled();
+  it('pausa produto que só serve de complemento, sem consultar a publicação antes', async () => {
+    const db = makeDb({
+      rpcs: { gerente_set_menu_pause: { data: { produto_id: 4, nome: 'Bacon extra', pausado_anterior: false, pausado_manualmente: true, visivel_online: false }, error: null } },
+    });
+    const result = await pausarNoCardapio(db, 'owner-1', { produto_id: 4, pausado: true });
+    expect(result.ok).toBe(true);
+    expect(result.after).toEqual({ pausado_manualmente: true });
+    expect(db.calls.every((call) => call.table !== 'zelomenu_product_publications')).toBe(true);
   });
 
-  it('traduz PRODUTO_NAO_PUBLICADO quando a RPC recusa mesmo com publicação visível', async () => {
-    const db = makeDb({
-      tables: { zelomenu_product_publications: [{ data: { visivel_online: true }, error: null }] },
-      rpcs: { gerente_set_menu_pause: { data: null, error: { message: 'PRODUTO_NAO_PUBLICADO' } } },
-    });
+  it('traduz PRODUTO_NAO_PUBLICADO quando o produto nunca foi para o cardápio', async () => {
+    const db = makeDb({ rpcs: { gerente_set_menu_pause: { data: null, error: { message: 'PRODUTO_NAO_PUBLICADO' } } } });
     const result = await pausarNoCardapio(db, 'owner-1', { produto_id: 1, pausado: true });
-    expect(result).toEqual({ ok: false, error: 'Esse produto não está publicado no cardápio digital, então não dá para pausar.' });
+    expect(result).toEqual({ ok: false, error: 'Esse produto ainda não foi levado para o cardápio digital, então não há o que pausar. Isso se faz no ZeloMenu.' });
   });
 
   it('ocultarNoPdv, criarCategoria, criarProduto e alterarPreco mapeiam parâmetros', async () => {

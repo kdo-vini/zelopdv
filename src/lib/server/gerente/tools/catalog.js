@@ -10,7 +10,7 @@ const MAX_CATALOG_ROWS = 500;
 
 const RPC_ERRORS = {
   PRODUTO_NAO_ENCONTRADO: 'Não encontrei esse produto.',
-  PRODUTO_NAO_PUBLICADO: 'Esse produto não está publicado no cardápio digital, então não dá para pausar.',
+  PRODUTO_NAO_PUBLICADO: 'Esse produto ainda não foi levado para o cardápio digital, então não há o que pausar. Isso se faz no ZeloMenu.',
   CATEGORIA_NAO_ENCONTRADA: 'Não encontrei essa categoria.',
   PRODUTO_DUPLICADO: 'Já existe um produto com esse nome.',
   NOME_INVALIDO: 'Esse nome não é válido.',
@@ -34,9 +34,15 @@ export function normalizeText(value) {
     .trim();
 }
 
+// Mesma precedência do ZeloMenu (resolveZeloMenuPublicationStatus): a pausa vem
+// antes da venda avulsa, porque pausar é global — tira o produto da lista e também
+// das opções de outros produtos. visivel_online = false não é "escondido": é
+// "somente complemento", ou seja, não se vende sozinho mas segue valendo como
+// opção dentro de outros produtos.
 function menuState(publication) {
-  if (!publication || publication.visivel_online !== true) return 'nao_publicado';
-  return publication.pausado_manualmente ? 'pausado' : 'publicado';
+  if (!publication) return 'fora_do_cardapio';
+  if (publication.pausado_manualmente) return 'pausado';
+  return publication.visivel_online === true ? 'publicado' : 'somente_complemento';
 }
 
 function toProductSummary(row, publication) {
@@ -123,20 +129,8 @@ export async function estoqueProduto(db, ownerUserId, { produto_id }) {
 
 export async function pausarNoCardapio(db, ownerUserId, { produto_id, pausado }) {
   if (!Number.isFinite(Number(produto_id))) return { ok: false, error: 'Preciso do produto certo antes de pausar.' };
-  // Checagem de política, não invariante: a RPC gerente_set_menu_pause continua sendo a
-  // autoridade transacional (é ela quem valida owner e produto de verdade). Isso aqui só
-  // evita gastar uma escrita e confundir o dono quando pausar/despausar não muda nada
-  // porque o produto nem está publicado no cardápio digital.
-  const { data: publication, error: pubError } = await db
-    .from('zelomenu_product_publications')
-    .select('visivel_online')
-    .eq('id_usuario', ownerUserId)
-    .eq('id_produto', Number(produto_id))
-    .maybeSingle();
-  if (pubError) return { ok: false, error: 'Não consegui consultar o cardápio agora.' };
-  if (!publication || publication.visivel_online !== true) {
-    return { ok: false, error: 'Esse produto não está publicado no cardápio digital, então pausar ou despausar não muda nada para os clientes. Para publicá-lo, o dono usa o ZeloMenu.' };
-  }
+  // Pausar vale para produto avulso e para complemento: a RPC decide, e ela só recusa
+  // quando o produto nem tem linha de publicação, ou seja, nunca foi para o ZeloMenu.
   const result = await callRpc(db, 'gerente_set_menu_pause', { p_produto_id: Number(produto_id), p_pausado: pausado === true, p_owner: ownerUserId });
   if (!result.ok) return result;
   return { ...result, before: { pausado_manualmente: result.data.pausado_anterior === true }, after: { pausado_manualmente: result.data.pausado_manualmente === true } };

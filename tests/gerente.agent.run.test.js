@@ -69,7 +69,7 @@ describe('runAgentTurn', () => {
       },
     ]);
     const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'whatsapp', channelRef: '5514999990000', message: 'pausa o refri', now });
-    expect(result.pendingAction).toEqual({ id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z', effect: 'Some do cardápio digital para os clientes. Continua no PDV para venda no balcão.' });
+    expect(result.pendingAction).toEqual({ id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z', effect: 'Some do cardápio digital, inclusive como opção dentro de outros produtos. Continua no PDV para venda no balcão.' });
     expect(db.rpc).not.toHaveBeenCalled();
     const created = db.calls.find((c) => c.table === 'gerente_agent_actions' && c.op === 'insert');
     expect(created.payload).toMatchObject({ owner_user_id: 'owner-1', channel: 'whatsapp', tool_name: 'pausar_no_cardapio', arguments: { produto_id: 7, nome_produto: 'Refri 2L', pausado: true } });
@@ -175,7 +175,7 @@ describe('runAgentTurn', () => {
     ]);
     const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'pausa', now });
     expect(result.quickReplies).toEqual([]);
-    expect(result.pendingAction.effect).toBe('Some do cardápio digital para os clientes. Continua no PDV para venda no balcão.');
+    expect(result.pendingAction.effect).toBe('Some do cardápio digital, inclusive como opção dentro de outros produtos. Continua no PDV para venda no balcão.');
   });
 
   it('resolve produto_id 0 pelo nome e cria a ação pendente com o id correto', async () => {
