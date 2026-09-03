@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { canUndo, describeStatus } from '$lib/gerente/agentActions.js';
+  import { canUndo, describeStatus, describeUndo } from '$lib/gerente/agentActions.js';
   import { addToast } from '$lib/stores/ui.js';
 
   export let supabase;
@@ -10,17 +10,26 @@
   let actions = [];
   let loading = true;
   let busyId = null;
+  let confirmingId = null;
 
   async function load() {
     loading = true;
     const { data, error } = await supabase
       .from('gerente_agent_actions')
-      .select('id, tool_name, summary, status, channel, created_at, executed_at, before_state')
+      .select('id, tool_name, summary, status, channel, created_at, executed_at, before_state, arguments')
       .order('created_at', { ascending: false })
       .limit(20);
     if (error) addToast('Não foi possível carregar as ações do Zelinho.', 'warning');
     actions = data || [];
     loading = false;
+  }
+
+  function askUndo(action) {
+    confirmingId = confirmingId === action.id ? null : action.id;
+  }
+
+  function cancelUndo() {
+    confirmingId = null;
   }
 
   async function undo(action) {
@@ -40,6 +49,7 @@
       addToast('Erro de conexão ao desfazer.', 'error');
     } finally {
       busyId = null;
+      confirmingId = null;
     }
   }
 
@@ -61,8 +71,20 @@
     {:else}
       {#each actions as action (action.id)}
         <div class="act">
-          <div class="main"><span class="summary">{action.summary}</span><span class="meta"><span class="pill {action.status === 'executed' ? 'ok' : action.status === 'pending' ? 'warn' : 'mute'}">{describeStatus(action.status)}</span><span>{action.channel === 'whatsapp' ? 'WhatsApp' : 'App'} · {when(action)}</span></span></div>
-          {#if canUndo(action)}<button type="button" class="undo" disabled={busyId === action.id} on:click={() => undo(action)}>Desfazer</button>{/if}
+          <div class="main">
+            <span class="summary">{action.summary}</span>
+            <span class="meta"><span class="pill {action.status === 'executed' ? 'ok' : action.status === 'pending' ? 'warn' : 'mute'}">{describeStatus(action.status)}</span><span>{action.channel === 'whatsapp' ? 'WhatsApp' : 'App'} · {when(action)}</span></span>
+            {#if confirmingId === action.id}
+              <div class="confirm">
+                <span class="confirm-text">{describeUndo(action)}</span>
+                <div class="confirm-actions">
+                  <button type="button" class="confirm-yes" disabled={busyId === action.id} on:click={() => undo(action)}>Sim, desfazer</button>
+                  <button type="button" class="confirm-no" disabled={busyId === action.id} on:click={cancelUndo}>Agora não</button>
+                </div>
+              </div>
+            {/if}
+          </div>
+          {#if canUndo(action)}<button type="button" class="undo" disabled={busyId === action.id} on:click={() => askUndo(action)}>Desfazer</button>{/if}
         </div>
       {/each}
     {/if}
@@ -88,6 +110,14 @@
   .undo { min-height: 36px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: 6px; background: transparent; color: var(--text-label); font-size: 13px; font-weight: 500; cursor: pointer; }
   .undo:hover { color: var(--text-main); border-color: var(--border-strong); }
   .undo:disabled { opacity: .5; cursor: not-allowed; }
+  .confirm { display: grid; gap: 8px; margin-top: 6px; padding: 10px 12px; border-radius: 8px; background: var(--bg-input); }
+  .confirm-text { font-size: 12px; color: var(--text-main); }
+  .confirm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .confirm-yes { min-height: 36px; padding: 0 14px; border: none; border-radius: 6px; background: var(--primary); color: var(--primary-text); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .confirm-yes:disabled { opacity: .5; cursor: not-allowed; }
+  .confirm-no { min-height: 36px; padding: 0 14px; border: 1px solid var(--border-subtle); border-radius: 6px; background: transparent; color: var(--text-label); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .confirm-no:hover { color: var(--text-main); border-color: var(--border-strong); }
+  .confirm-no:disabled { opacity: .5; cursor: not-allowed; }
   .empty { padding: 22px 18px; display: grid; gap: 6px; color: var(--text-muted); font-size: 13px; }
   .empty strong { color: var(--text-label); font-weight: 600; }
   .examples { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
