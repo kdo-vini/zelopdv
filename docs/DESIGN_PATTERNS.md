@@ -542,3 +542,15 @@ Adicionar novos componentes: `npx shadcn-svelte@latest add <componente>` na raiz
 - **Opção vazia (filtro):** `<Select.Item value="" label="Todas as categorias" />` — funciona com `bind:value=""`.
 
 Exemplo já em uso: `gestao/pessoas`, `gestao/despesas`, `gestao/empresas`.
+
+## 14. Zelinho Gerente e painel do Zelinho (2026-09-02)
+
+Redesenho aprovado em 2026-09-02. Vale para `/gestao/gerente` e para o painel lateral do Zelinho.
+
+- **Cabeçalho com saudação.** `h1` de 28px com `buildGreeting` (`src/lib/gerente/greeting.js`) e um `p.lead` de 16px que resume ontem. Breadcrumb simples em 12px. Sem eyebrow em caixa alta com tracking, sem cartão ao redor do título.
+- **Abas em vez de blocos empilhados.** Briefing / Ações do Zelinho / Histórico como `role="tablist"` sincronizado com `?aba=`; Resumo semanal e Preferências são links no mesmo trilho visual.
+- **Números com contexto.** `DayStrip.svelte` recebe o objeto de `computeDayStrip` (`src/lib/gerente/dayStrip.js`): valor, delta contra a média do mesmo dia da semana e mini barras dos últimos dias. Não usar tiles de métrica soltos.
+- **Sinais em linhas, nunca cartão dentro de cartão.** `SignalRow.svelte` dentro de uma única moldura (`border 1px var(--border-card)`, raio 12px, fundo `var(--bg-card)`). Kicker por severidade (`Precisa de você` / `Fica de olho` / `Pra saber`), título, narrativa, `<details>` "Ver os números", ação primária (`acaoRapida` do presenter quando existir) e `Perguntar`. `SignalCard` e `DaySnapshotSummary` foram removidos.
+- **Painel do Zelinho.** Mensagens do assistente sem bolha (marcador `Z` de 22px à esquerda), mensagem do dono em bloco discreto alinhado à direita, cartão `Proposta, aguardando você` com o que muda (`effect`) e contador de expiração, respostas rápidas em pills (`quick_replies`), erro com `Tentar de novo`, compositor em `textarea` com a linha "Mudanças só acontecem depois que você confirma.".
+- **Regra dura: nunca mostrar nomes de ferramenta, ids de ação ou JSON ao usuário.** O progresso do agente aparece em linguagem humana (`Pensando…`, `Consultando os seus dados…`).
+- Escala tipográfica fixa: 11, 12, 13, 14, 16, 20, 28px. Raios: 6, 8, 12px ou pill. Transições de 180ms com `cubic-bezier(.22,1,.36,1)` e `prefers-reduced-motion` respeitado.

@@ -1,5 +1,18 @@
 # ZeloPDV — Foco atual
 
+- Zelinho Gerente redesenhado (2026-09-02): a página `/gestao/gerente` ganhou
+  cabeçalho com saudação (`buildGreeting`), faixa do dia (`DayStrip` +
+  `computeDayStrip`), abas Briefing / Ações do Zelinho / Histórico via `?aba=`
+  e sinais em linhas (`SignalRow`) dentro de uma moldura única; `SignalCard`
+  e `DaySnapshotSummary` foram removidos. O painel do Zelinho foi refeito:
+  mensagens sem bolha, cartão de proposta com o efeito da ação e contador de
+  expiração, respostas rápidas em pills, erro com "Tentar de novo" e compositor
+  em textarea. O agente passou a devolver `pendingAction.effect` e
+  `quickReplies` (frames SSE `pending_action` e `quick_replies`). Regra:
+  nunca exibir nomes de ferramenta ou ids ao dono. Padrões em
+  `docs/DESIGN_PATTERNS.md` §14. Pendente: validação visual em navegador
+  (desktop e mobile) e conferência de contraste no tema claro.
+
 - Zelinho Gerente conversacional, fase 2 (lado ZeloPDV) (2026-09-02): o dono agora
   pareia um número de WhatsApp com a empresa em Gestão > Zelinho Gerente >
   Preferências, no cartão "Zelinho no WhatsApp". `POST /api/gerente/pair/start`
