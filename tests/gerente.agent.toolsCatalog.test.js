@@ -63,15 +63,28 @@ describe('listarCategorias e estoqueProduto', () => {
 });
 
 describe('ferramentas de escrita', () => {
-  it('pausarNoCardapio chama a RPC com p_owner e devolve before/after', async () => {
-    const db = makeDb({ rpcs: { gerente_set_menu_pause: { data: { produto_id: 1, nome: 'Refri', pausado_anterior: false, pausado_manualmente: true, visivel_online: true }, error: null } } });
+  it('pausarNoCardapio consulta a publicação, chama a RPC com p_owner e devolve before/after', async () => {
+    const db = makeDb({
+      tables: { zelomenu_product_publications: [{ data: { visivel_online: true }, error: null }] },
+      rpcs: { gerente_set_menu_pause: { data: { produto_id: 1, nome: 'Refri', pausado_anterior: false, pausado_manualmente: true, visivel_online: true }, error: null } },
+    });
     const result = await pausarNoCardapio(db, 'owner-1', { produto_id: 1, pausado: true });
-    expect(db.calls[0]).toEqual({ rpc: 'gerente_set_menu_pause', params: { p_produto_id: 1, p_pausado: true, p_owner: 'owner-1' } });
+    expect(db.calls[1]).toEqual({ rpc: 'gerente_set_menu_pause', params: { p_produto_id: 1, p_pausado: true, p_owner: 'owner-1' } });
     expect(result).toEqual({ ok: true, data: { produto_id: 1, nome: 'Refri', pausado_anterior: false, pausado_manualmente: true, visivel_online: true }, before: { pausado_manualmente: false }, after: { pausado_manualmente: true } });
   });
 
-  it('traduz PRODUTO_NAO_PUBLICADO', async () => {
-    const db = makeDb({ rpcs: { gerente_set_menu_pause: { data: null, error: { message: 'PRODUTO_NAO_PUBLICADO' } } } });
+  it('recusa pausar sem chamar a RPC quando o produto não está publicado no cardápio', async () => {
+    const db = makeDb({ tables: { zelomenu_product_publications: [{ data: null, error: null }] } });
+    const result = await pausarNoCardapio(db, 'owner-1', { produto_id: 1, pausado: true });
+    expect(result).toEqual({ ok: false, error: 'Esse produto não está publicado no cardápio digital, então pausar ou despausar não muda nada para os clientes. Para publicá-lo, o dono usa o ZeloMenu.' });
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
+  it('traduz PRODUTO_NAO_PUBLICADO quando a RPC recusa mesmo com publicação visível', async () => {
+    const db = makeDb({
+      tables: { zelomenu_product_publications: [{ data: { visivel_online: true }, error: null }] },
+      rpcs: { gerente_set_menu_pause: { data: null, error: { message: 'PRODUTO_NAO_PUBLICADO' } } },
+    });
     const result = await pausarNoCardapio(db, 'owner-1', { produto_id: 1, pausado: true });
     expect(result).toEqual({ ok: false, error: 'Esse produto não está publicado no cardápio digital, então não dá para pausar.' });
   });

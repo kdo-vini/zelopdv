@@ -123,6 +123,20 @@ export async function estoqueProduto(db, ownerUserId, { produto_id }) {
 
 export async function pausarNoCardapio(db, ownerUserId, { produto_id, pausado }) {
   if (!Number.isFinite(Number(produto_id))) return { ok: false, error: 'Preciso do produto certo antes de pausar.' };
+  // Checagem de política, não invariante: a RPC gerente_set_menu_pause continua sendo a
+  // autoridade transacional (é ela quem valida owner e produto de verdade). Isso aqui só
+  // evita gastar uma escrita e confundir o dono quando pausar/despausar não muda nada
+  // porque o produto nem está publicado no cardápio digital.
+  const { data: publication, error: pubError } = await db
+    .from('zelomenu_product_publications')
+    .select('visivel_online')
+    .eq('id_usuario', ownerUserId)
+    .eq('id_produto', Number(produto_id))
+    .maybeSingle();
+  if (pubError) return { ok: false, error: 'Não consegui consultar o cardápio agora.' };
+  if (!publication || publication.visivel_online !== true) {
+    return { ok: false, error: 'Esse produto não está publicado no cardápio digital, então pausar ou despausar não muda nada para os clientes. Para publicá-lo, o dono usa o ZeloMenu.' };
+  }
   const result = await callRpc(db, 'gerente_set_menu_pause', { p_produto_id: Number(produto_id), p_pausado: pausado === true, p_owner: ownerUserId });
   if (!result.ok) return result;
   return { ...result, before: { pausado_manualmente: result.data.pausado_anterior === true }, after: { pausado_manualmente: result.data.pausado_manualmente === true } };

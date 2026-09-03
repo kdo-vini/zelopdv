@@ -11,6 +11,7 @@ export { NO_WORDS, YES_WORDS };
 import { cancelAction, confirmAction, createPendingAction, getPendingActionForSession, undoAction } from './actions.js';
 import { executeTool, getOpenAiTools, getTool, summarizeAction, summarizeEffect } from './toolRegistry.js';
 import { buildAgentSystemPrompt } from './prompt.js';
+import { resolveWriteTargets } from './resolveTargets.js';
 import { localDateOf } from '../intelligence/tz.js';
 
 export const DEFAULT_MODEL = 'gpt-4.1-mini';
@@ -100,13 +101,18 @@ export async function runAgentTurn({ db, openai, ownerUserId, actorUserId, chann
       let result;
       const tool = getTool(name);
       if (tool?.write) {
-        if (!pendingAction) {
-          const summary = summarizeAction(name, args);
-          const created = await createPendingAction(db, { ownerUserId, sessionId: session.id, actorUserId, channel, toolName: name, args, summary, now });
-          pendingAction = { ...created, effect: summarizeEffect(name, args) };
-          result = { status: 'aguardando_confirmacao', resumo: pendingAction.summary, acao_id: pendingAction.id };
-        } else {
+        if (pendingAction) {
           result = { status: 'nao_preparado', motivo: 'Só uma mudança por vez. A ação anterior já está aguardando confirmação; prepare a próxima depois que o dono confirmar.' };
+        } else {
+          const resolved = await resolveWriteTargets(db, ownerUserId, name, args);
+          if (!resolved.ok) {
+            result = { status: 'nao_preparado', motivo: resolved.motivo };
+          } else {
+            const summary = summarizeAction(name, resolved.args);
+            const created = await createPendingAction(db, { ownerUserId, sessionId: session.id, actorUserId, channel, toolName: name, args: resolved.args, summary, now });
+            pendingAction = { ...created, effect: summarizeEffect(name, resolved.args) };
+            result = { status: 'aguardando_confirmacao', resumo: pendingAction.summary, acao_id: pendingAction.id };
+          }
         }
       } else {
         result = await executeTool(ctx, name, args);

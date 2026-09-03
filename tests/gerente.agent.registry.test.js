@@ -81,4 +81,9 @@ describe('buildAgentSystemPrompt', () => {
     const prompt = buildAgentSystemPrompt({ perfil: {}, channel: 'app', today: '2026-09-02' });
     expect(prompt).toMatch(/markdown/i);
   });
+
+  it('avisa para nunca inventar id nem usar 0', () => {
+    const prompt = buildAgentSystemPrompt({ perfil: {}, channel: 'app', today: '2026-09-02' });
+    expect(prompt).toContain('nunca use 0');
+  });
 });

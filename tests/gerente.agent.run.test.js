@@ -53,10 +53,13 @@ describe('runAgentTurn', () => {
   });
 
   it('ferramenta de escrita vira ação pendente e não chama a RPC', async () => {
-    const db = makeDb({ tables: baseTables({ gerente_agent_actions: [
-      { data: null, error: null },
-      { data: { id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' }, error: null },
-    ] }) });
+    const db = makeDb({ tables: baseTables({
+      produtos: [{ data: { id: 7, nome: 'Refri 2L' }, error: null }],
+      gerente_agent_actions: [
+        { data: null, error: null },
+        { data: { id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' }, error: null },
+      ],
+    }) });
     const openai = makeOpenAi([
       assistantMessage(null, [toolCall('call-1', 'pausar_no_cardapio', { produto_id: 7, nome_produto: 'Refri 2L', pausado: true })]),
       (params) => {
@@ -121,7 +124,10 @@ describe('runAgentTurn', () => {
   });
 
   it('recusa uma segunda escrita no mesmo turno em vez de fingir que preparou', async () => {
-    const db = makeDb({ tables: baseTables({ gerente_agent_actions: [{ data: null, error: null }, { data: { id: 'act-1', summary: 'Criar produto "Bolo de chocolate" por R$ 60,00', expires_at: '2026-09-02T15:10:00Z' }, error: null }] }) });
+    const db = makeDb({ tables: baseTables({
+      categorias: [{ data: { id: 1, nome: 'Doces' }, error: null }],
+      gerente_agent_actions: [{ data: null, error: null }, { data: { id: 'act-1', summary: 'Criar produto "Bolo de chocolate" por R$ 60,00', expires_at: '2026-09-02T15:10:00Z' }, error: null }],
+    }) });
     const openai = makeOpenAi([
       assistantMessage(null, [toolCall('c1', 'criar_produto', { nome: 'Bolo de chocolate', preco: 60, categoria_id: 1 }), toolCall('c2', 'criar_produto', { nome: 'Bolo de morango', preco: 60, categoria_id: 1 })]),
       assistantMessage('Preparei o bolo de chocolate. O de morango vem depois da confirmação.'),
@@ -159,7 +165,10 @@ describe('runAgentTurn', () => {
   });
 
   it('não devolve quickReplies quando criou ação pendente', async () => {
-    const db = makeDb({ tables: baseTables({ gerente_agent_actions: [{ data: null, error: null }, { data: { id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' }, error: null }] }) });
+    const db = makeDb({ tables: baseTables({
+      produtos: [{ data: { id: 7, nome: 'Refri 2L' }, error: null }],
+      gerente_agent_actions: [{ data: null, error: null }, { data: { id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' }, error: null }],
+    }) });
     const openai = makeOpenAi([
       assistantMessage(null, [toolCall('c1', 'pausar_no_cardapio', { produto_id: 7, nome_produto: 'Refri 2L', pausado: true })]),
       assistantMessage('Confirma?'),
@@ -168,6 +177,40 @@ describe('runAgentTurn', () => {
     expect(result.quickReplies).toEqual([]);
     expect(result.pendingAction.effect).toBe('Some do cardápio digital para os clientes. Continua no PDV para venda no balcão.');
   });
+
+  it('resolve produto_id 0 pelo nome e cria a ação pendente com o id correto', async () => {
+    const db = makeDb({ tables: baseTables({
+      produtos: [{ data: [{ id: 850, nome: 'Refri 2L' }], error: null }],
+      gerente_agent_actions: [
+        { data: null, error: null },
+        { data: { id: 'act-1', summary: 'Pausar "Refri 2L" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' }, error: null },
+      ],
+    }) });
+    const openai = makeOpenAi([
+      assistantMessage(null, [toolCall('call-1', 'pausar_no_cardapio', { produto_id: 0, nome_produto: 'Refri 2L', pausado: true })]),
+      assistantMessage('Confirma?'),
+    ]);
+    const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'pausa o refri', now });
+    expect(result.pendingAction.id).toBe('act-1');
+    const created = db.calls.find((c) => c.table === 'gerente_agent_actions' && c.op === 'insert');
+    expect(created.payload.arguments).toEqual({ produto_id: 850, nome_produto: 'Refri 2L', pausado: true });
+  });
+
+  it('quando o nome não existe no catálogo, não cria ação e devolve status nao_preparado', async () => {
+    const db = makeDb({ tables: baseTables({ produtos: [{ data: [], error: null }] }) });
+    const openai = makeOpenAi([
+      assistantMessage(null, [toolCall('call-1', 'pausar_no_cardapio', { produto_id: 0, nome_produto: 'Produto Fantasma', pausado: true })]),
+      (params) => {
+        const toolMsg = params.messages.at(-1);
+        expect(JSON.parse(toolMsg.content).status).toBe('nao_preparado');
+        return assistantMessage('Não encontrei esse produto.');
+      },
+    ]);
+    const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'pausa o produto fantasma', now });
+    expect(result.pendingAction).toBeNull();
+    const created = db.calls.find((c) => c.table === 'gerente_agent_actions' && c.op === 'insert');
+    expect(created).toBeUndefined();
+  });
 });
 
 describe('confirmar, cancelar e desfazer', () => {
@@ -175,7 +218,10 @@ describe('confirmar, cancelar e desfazer', () => {
 
   it('confirma executando a RPC e responde texto determinístico', async () => {
     const db = makeDb({
-      tables: { gerente_agent_actions: [{ data: pending, error: null }, { data: null, error: null }] },
+      tables: {
+        gerente_agent_actions: [{ data: pending, error: null }, { data: null, error: null }],
+        zelomenu_product_publications: [{ data: { visivel_online: true }, error: null }],
+      },
       rpcs: { gerente_set_menu_pause: { data: { produto_id: 7, nome: 'Refri 2L', pausado_anterior: false, pausado_manualmente: true, visivel_online: true }, error: null } },
     });
     const result = await confirmPendingAction({ db, ownerUserId: 'owner-1', actorUserId: 'owner-1', actionId: 'act-1', now });
@@ -193,7 +239,10 @@ describe('confirmar, cancelar e desfazer', () => {
   it('desfaz pausa e descreve', async () => {
     const executed = { ...pending, status: 'executed', before_state: { pausado_manualmente: false }, after_state: { pausado_manualmente: true } };
     const db = makeDb({
-      tables: { gerente_agent_actions: [{ data: executed, error: null }, { data: { id: 'act-9' }, error: null }] },
+      tables: {
+        gerente_agent_actions: [{ data: executed, error: null }, { data: { id: 'act-9' }, error: null }],
+        zelomenu_product_publications: [{ data: { visivel_online: true }, error: null }],
+      },
       rpcs: { gerente_set_menu_pause: { data: { produto_id: 7, nome: 'Refri 2L', pausado_anterior: true, pausado_manualmente: false, visivel_online: true }, error: null } },
     });
     const result = await undoExecutedAction({ db, ownerUserId: 'owner-1', actorUserId: 'owner-1', actionId: 'act-1', channel: 'app', now });
