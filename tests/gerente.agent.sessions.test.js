@@ -51,9 +51,11 @@ describe('gerente agent sessions', () => {
       { session_id: 'sess-1', owner_user_id: 'owner-1', role: 'user', content: 'oi', tool_calls: null, tool_call_id: null },
       { session_id: 'sess-1', owner_user_id: 'owner-1', role: 'assistant', content: 'olá', tool_calls: [{ name: 'buscar_produto' }], tool_call_id: null },
     ]);
-    expect(db.calls[1].table).toBe('gerente_agent_sessions');
-    expect(db.calls[1].op).toBe('update');
-    expect(typeof db.calls[1].payload.last_message_at).toBe('string');
+    // Antes do update vem um select do título: a primeira mensagem do dono batiza a conversa.
+    const update = db.calls.find((call) => call.table === 'gerente_agent_sessions' && call.op === 'update');
+    expect(update).toBeTruthy();
+    expect(typeof update.payload.last_message_at).toBe('string');
+    expect(update.payload.title).toBe('oi');
   });
 
   it('propaga erro do banco', async () => {
