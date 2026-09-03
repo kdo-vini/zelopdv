@@ -21,7 +21,7 @@ export function openAssistantWithMessage(text) {
 
 export function setPendingAction(action) {
   if (!action || typeof action !== 'object' || !action.id) return;
-  pendingAction.set({ id: String(action.id), summary: String(action.summary || ''), expires_at: action.expires_at || null });
+  pendingAction.set({ id: String(action.id), summary: String(action.summary || ''), effect: typeof action.effect === 'string' ? action.effect : '', expires_at: action.expires_at || null });
 }
 
 export function clearPendingAction() {

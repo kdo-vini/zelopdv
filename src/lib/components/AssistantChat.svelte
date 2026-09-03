@@ -1,16 +1,33 @@
 <script>
-  import { onMount, tick } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { page } from '$app/stores';
   import { supabase } from '$lib/supabaseClient';
-  import { isOpen, messages as assistantMessages, contextType, signalContext, screenContext, pendingAction, setPendingAction, clearPendingAction, closeAssistant, clearSignalContext, clearScreenContext, screenContextMatchesLocation } from '$lib/stores/assistant';
+  import {
+    isOpen,
+    messages as assistantMessages,
+    contextType,
+    signalContext,
+    screenContext,
+    pendingAction,
+    setPendingAction,
+    clearPendingAction,
+    quickReplies,
+    setQuickReplies,
+    clearQuickReplies,
+    prefillMessage,
+    closeAssistant,
+    clearSignalContext,
+    clearScreenContext,
+    screenContextMatchesLocation,
+  } from '$lib/stores/assistant';
   import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
-  import { BarChart3, PackageSearch, Sparkles, Trash2, X, SendHorizontal } from 'lucide-svelte';
+  import { AlertCircle, Plus, X, ArrowUp, Clock3, Check } from 'lucide-svelte';
   import { getSignalPresenter } from '$lib/gerente/signalPresenter.js';
 
-  const ICEBREAKERS = [
-    { icon: BarChart3, title: 'Entenda suas vendas', prompt: 'Como foram minhas vendas de ontem comparadas à média?' },
-    { icon: PackageSearch, title: 'Acompanhe seus produtos', prompt: 'Quais produtos merecem minha atenção hoje?' },
-    { icon: Sparkles, title: 'Escolha um próximo passo', prompt: 'O que devo priorizar hoje no meu negócio?' },
+  const SUGGESTIONS = [
+    { label: 'como foi ontem?', send: true },
+    { label: 'o que merece atenção?', send: true },
+    { label: 'pausa um produto no cardápio', send: false },
   ];
 
   async function getToken() {
@@ -66,18 +83,17 @@
     };
   }
 
-  function chooseIcebreaker(prompt, setInput) {
-    if (typeof setInput !== 'function') return;
-
-    setInput(prompt);
-    void tick().then(() => inputElement?.focus());
-  }
-
+  let resolvedCards = [];
   let actionBusy = false;
+  let thinkingLabel = 'Pensando…';
+  let thinkingTimer = null;
+  let expiresIn = '';
+  let expiryTimer = null;
 
   function handleStreamEvent(event) {
     const payload = event.detail;
     if (payload?.type === 'pending_action') setPendingAction(payload.action);
+    if (payload?.type === 'quick_replies') setQuickReplies(payload.options);
   }
 
   async function resolvePendingAction(kind) {
@@ -93,14 +109,77 @@
         body: JSON.stringify(kind === 'confirm' ? { confirm_action_id: action.id } : { cancel_action_id: action.id }),
       });
       const data = await response.json().catch(() => ({}));
-      const reply = data?.reply || data?.error || 'Não consegui concluir agora.';
-      assistantMessages.update((items) => [...items, { role: 'assistant', content: reply }]);
+      const ok = data?.ok === true;
+      resolvedCards = [...resolvedCards, {
+        id: action.id,
+        summary: action.summary,
+        effect: action.effect,
+        status: kind === 'confirm' ? (ok ? 'done' : 'failed') : 'cancelled',
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      }];
+      assistantMessages.update((items) => [...items, { role: 'assistant', content: data?.reply || data?.error || 'Não consegui concluir agora.' }]);
     } catch (error) {
-      assistantMessages.update((items) => [...items, { role: 'assistant', content: error?.message || 'Erro de conexão. Tente novamente.' }]);
+      assistantMessages.update((items) => [...items, { role: 'assistant', content: error?.message || 'Erro de conexão. Tente novamente.', error: true }]);
     } finally {
       clearPendingAction();
       actionBusy = false;
     }
+  }
+
+  $: if ($pendingAction?.expires_at) startExpiry($pendingAction); else stopExpiry();
+  function startExpiry(action) {
+    stopExpiry();
+    const tickExpiry = () => {
+      const left = Math.max(0, new Date(action.expires_at).getTime() - Date.now());
+      expiresIn = `${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`;
+      if (left <= 0) {
+        stopExpiry();
+        clearPendingAction();
+        assistantMessages.update((items) => [...items, { role: 'assistant', content: 'Essa confirmação expirou. Me peça de novo e eu preparo outra vez.' }]);
+      }
+    };
+    tickExpiry();
+    expiryTimer = setInterval(tickExpiry, 500);
+  }
+  function stopExpiry() {
+    if (expiryTimer) clearInterval(expiryTimer);
+    expiryTimer = null;
+  }
+  onDestroy(stopExpiry);
+
+  function watchThinking(streaming) {
+    if (thinkingTimer) clearTimeout(thinkingTimer);
+    thinkingLabel = 'Pensando…';
+    if (streaming) thinkingTimer = setTimeout(() => { thinkingLabel = 'Consultando os seus dados…'; }, 1200);
+  }
+
+  let pendingPrefill = '';
+  $: if ($prefillMessage) { pendingPrefill = $prefillMessage; prefillMessage.set(''); }
+
+  function applyPrefill(node, { value, setInput, onApplied }) {
+    const apply = (val) => {
+      if (!val) return;
+      setInput(val);
+      onApplied?.();
+      void tick().then(() => node.focus());
+    };
+    apply(value);
+    return {
+      update({ value: nextValue, setInput: nextSetInput, onApplied: nextOnApplied }) {
+        if (nextValue) {
+          nextSetInput(nextValue);
+          nextOnApplied?.();
+          void tick().then(() => node.focus());
+        }
+      },
+    };
+  }
+
+  function autoGrow(node) {
+    const fit = () => { node.style.height = 'auto'; node.style.height = `${Math.min(120, node.scrollHeight)}px`; };
+    node.addEventListener('input', fit);
+    fit();
+    return { destroy() { node.removeEventListener('input', fit); } };
   }
 
   $: activeSignalPresenter = $signalContext ? getSignalPresenter($signalContext) : null;
@@ -180,11 +259,13 @@
   messagesStore={assistantMessages}
   active={$isOpen}
   endpoint="/api/gerente/agent"
-  placeholder="Pergunte sobre seu negócio..."
+  placeholder="Peça algo ao Zelinho"
   maxLength={1000}
   messageLimit={20}
   prepareRequest={prepareAssistantRequest}
   on:event={handleStreamEvent}
+  on:send={() => watchThinking(true)}
+  on:streamComplete={() => watchThinking(false)}
   let:clearMessages
   let:input
   let:isStreaming
@@ -192,6 +273,7 @@
   let:onKeyDown
   let:registerMessagesContainer
   let:renderMarkdown
+  let:retryLast
   let:sendMessage
   let:setInput
 >
@@ -206,433 +288,151 @@
     inert={!$isOpen}
     on:keydown={handlePanelKeydown}
   >
-    <div class="panel-header">
-      <div class="flex items-center gap-2">
-        <div class="panel-avatar">
-          <Sparkles class="size-5" aria-hidden="true" />
-        </div>
-        <div>
-          <div class="font-semibold text-sm">Zelinho</div>
-          <div class="text-xs" style="opacity: 0.75;">{$screenContext?.title || 'Seu gerente: pergunte ou peça uma ação'}</div>
-        </div>
+    <div class="p-head">
+      <div class="p-avatar" aria-hidden="true">Z</div>
+      <div>
+        <div class="name">Zelinho</div>
+        <div class="status"><i class:busy={isStreaming}></i>{isStreaming ? 'Pensando…' : 'Pronto para ajudar'}</div>
       </div>
-      <div class="flex items-center gap-1">
-        <button type="button" on:click={clearMessages} class="icon-btn" title="Limpar conversa" aria-label="Limpar conversa">
-          <Trash2 class="size-4" />
-        </button>
-        <button type="button" on:click={() => void closePanel()} class="icon-btn" aria-label="Fechar Zelinho">
-          <X class="size-4" />
-        </button>
+      <div class="tools">
+        <button type="button" class="iconb" title="Nova conversa" aria-label="Nova conversa" on:click={() => { clearMessages(); clearPendingAction(); clearQuickReplies(); resolvedCards = []; }}><Plus size={16} aria-hidden="true" /></button>
+        <button type="button" class="iconb" aria-label="Fechar Zelinho" on:click={() => void closePanel()}><X size={16} aria-hidden="true" /></button>
       </div>
     </div>
 
     {#if $signalContext}
-      <div class="signal-context" use:prefillSignalQuestion={{ question: activeSignalPresenter.perguntaSugerida, setInput }}>
-        <span class:critical={$signalContext.severity === 'critical'} class:attention={$signalContext.severity === 'attention'} class="signal-context-tag">
-          {$signalContext.severity === 'critical' ? 'PRECISA DE VOCÊ' : $signalContext.severity === 'attention' ? 'FICA DE OLHO' : 'PRA SABER'}
-        </span>
-        <span class="signal-context-title">{activeSignalPresenter.titulo}</span>
-        <button type="button" class="signal-context-close" on:click={clearSignalContext} aria-label="Remover contexto do aviso"><X class="size-4" /></button>
+      <div class="ctx" use:prefillSignalQuestion={{ question: activeSignalPresenter.perguntaSugerida, setInput }}>
+        <span>Sobre o aviso</span>
+        <b>{activeSignalPresenter.titulo}</b>
+        <button type="button" class="iconb" aria-label="Remover contexto do aviso" on:click={clearSignalContext}><X size={14} aria-hidden="true" /></button>
       </div>
     {:else if $screenContext}
-      <div class="screen-context">
+      <div class="ctx">
         <span>Sobre</span>
-        <strong>{$screenContext.title}</strong>
-        <button type="button" class="signal-context-close" on:click={clearScreenContext} aria-label="Remover contexto da tela"><X class="size-4" /></button>
+        <b>{$screenContext.title}</b>
+        <button type="button" class="iconb" aria-label="Remover contexto da tela" on:click={clearScreenContext}><X size={14} aria-hidden="true" /></button>
       </div>
     {/if}
 
-    <div class="panel-messages" use:registerMessagesContainer>
+    <div class="thread" use:registerMessagesContainer>
       {#if messages.length === 0}
-        <div class="welcome-msg">
-          <p class="font-semibold mb-1">Olá! Sou o Zelinho ✨</p>
-          <p class="text-sm" style="opacity: 0.75;">Escolha uma pergunta para começar ou escreva a sua.</p>
-          <div class="icebreakers" aria-label="Sugestões para começar">
-            {#each ICEBREAKERS as icebreaker}
-              <button type="button" class="icebreaker" on:click={() => chooseIcebreaker(icebreaker.prompt, setInput)}>
-                <span class="icebreaker-icon"><svelte:component this={icebreaker.icon} size={17} aria-hidden="true" /></span>
-                <span class="icebreaker-copy"><strong>{icebreaker.title}</strong><small>{icebreaker.prompt}</small></span>
-              </button>
-            {/each}
+        <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="txt"><p>Oi! Posso pausar produtos no cardápio, cadastrar categorias e produtos, alterar preços e te contar como foram as vendas. O que precisa?</p></div></div>
+      {/if}
+      {#each messages as msg, index}
+        {#if msg.role === 'user'}
+          <div class="p-msg p-user">{msg.content}</div>
+        {:else if !msg.content && isStreaming && index === messages.length - 1}
+          <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="thinking" role="status" aria-live="polite">{thinkingLabel}</div></div>
+        {:else if msg.error}
+          <div class="p-msg p-assistant error"><span class="who" aria-hidden="true"><AlertCircle size={14} /></span><div class="txt"><p>{msg.content}</p><button type="button" class="retry" on:click={retryLast}>Tentar de novo</button></div></div>
+        {:else}
+          <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="txt markdown-content">{@html renderMarkdown(msg.content)}</div></div>
+        {/if}
+      {/each}
+      {#each resolvedCards as card (card.id)}
+        <div class="proposal {card.status}">
+          <div class="ph">{#if card.status === 'done'}<Check size={13} aria-hidden="true" />Feita {card.time}{:else if card.status === 'cancelled'}Cancelada{:else}Não deu certo{/if}</div>
+          <div class="pb"><div class="what">{card.summary}</div>{#if card.effect}<div class="fx">{card.effect}</div>{/if}</div>
+        </div>
+      {/each}
+      {#if $pendingAction}
+        <div class="proposal" role="group" aria-label="Confirmar ação do Zelinho">
+          <div class="ph"><Clock3 size={13} aria-hidden="true" />Proposta, aguardando você</div>
+          <div class="pb">
+            <div class="what">{$pendingAction.summary}</div>
+            {#if $pendingAction.effect}<div class="fx">{$pendingAction.effect}</div>{/if}
+            <div class="row">
+              <button type="button" class="btn primary" disabled={actionBusy} on:click={() => resolvePendingAction('confirm')}>Confirmar</button>
+              <button type="button" class="btn ghost" disabled={actionBusy} on:click={() => resolvePendingAction('cancel')}>Cancelar</button>
+              <span class="exp tabular-nums">expira em {expiresIn}</span>
+            </div>
           </div>
         </div>
       {/if}
-
-      {#each messages as msg}
-        <div class="p-msg {msg.role === 'user' ? 'p-user' : 'p-assistant'}">
-          {#if msg.role === 'assistant' && !msg.content && isStreaming}
-            <span class="typing-dots" role="status" aria-live="polite" aria-label="Zelinho está digitando">
-              <span></span><span></span><span></span>
-            </span>
-          {:else if msg.role === 'assistant'}
-            <div class="markdown-content">
-              {@html renderMarkdown(msg.content)}
-            </div>
-          {:else}
-            {msg.content}
-          {/if}
-        </div>
-      {/each}
+      {#if $quickReplies.length && !isStreaming}
+        <div class="choices">{#each $quickReplies as option}<button type="button" class:alt={option === 'Nenhum desses' || option === 'Criar categoria nova'} on:click={() => { clearQuickReplies(); void sendMessage(option); }}>{option}</button>{/each}</div>
+      {/if}
     </div>
 
-    {#if $pendingAction}
-      <div class="pending-action" role="group" aria-label="Confirmar ação do Zelinho">
-        <p class="pending-action-title">Confirmar esta ação?</p>
-        <p class="pending-action-summary">{$pendingAction.summary}</p>
-        <div class="pending-action-buttons">
-          <button type="button" class="pending-confirm" disabled={actionBusy} on:click={() => resolvePendingAction('confirm')}>Confirmar</button>
-          <button type="button" class="pending-cancel" disabled={actionBusy} on:click={() => resolvePendingAction('cancel')}>Cancelar</button>
-        </div>
-      </div>
+    {#if messages.length === 0}
+      <div class="suggest">{#each SUGGESTIONS as s}<button type="button" on:click={() => { if (s.send) void sendMessage(s.label); else { setInput(s.label); inputElement?.focus(); } }}>{s.label}</button>{/each}</div>
     {/if}
 
-    <div class="panel-input-area">
+    <div class="composer">
       <label class="sr-only" for="zelinho-message">Mensagem para o Zelinho</label>
-      <input
-        id="zelinho-message"
-        type="text"
-        bind:this={inputElement}
-        value={input}
-        on:input={(event) => setInput(event.currentTarget.value)}
-        on:keydown={onKeyDown}
-        placeholder="Pergunte sobre seu negócio..."
-        disabled={isStreaming}
-        class="panel-input"
-        autocomplete="off"
-        maxlength="1000"
-      />
-      <button
-        type="button"
-        on:click={sendMessage}
-        disabled={isStreaming || !input.trim()}
-        class="panel-send-btn"
-        aria-label="Enviar"
-      >
-        <SendHorizontal class="size-4" aria-hidden="true" />
-      </button>
+      <div class="box">
+        <textarea id="zelinho-message" rows="1" bind:this={inputElement} value={input} use:autoGrow use:applyPrefill={{ value: pendingPrefill, setInput, onApplied: () => { pendingPrefill = ''; } }} on:input={(event) => setInput(event.currentTarget.value)} on:keydown={onKeyDown} placeholder="Peça algo ao Zelinho" disabled={isStreaming} maxlength="1000"></textarea>
+        <button type="button" class="send" on:click={() => void sendMessage()} disabled={isStreaming || !input.trim()} aria-label="Enviar"><ArrowUp size={15} aria-hidden="true" /></button>
+      </div>
+      <div class="hintline"><span>Mudanças só acontecem depois que você confirma.</span><span><kbd>Enter</kbd> envia</span></div>
     </div>
   </div>
 </ChatStreamCore>
 
 <style>
-  .assistant-panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 24rem;
-    max-width: 100vw;
-    height: 100vh;
-    background: var(--bg-panel);
-    border-left: 1px solid var(--border-card);
-    z-index: 90;
-    display: flex;
-    flex-direction: column;
-    transform: translateX(100%);
-    transition: transform var(--transition-fast);
-  }
-
-  .assistant-panel.open {
-    transform: translateX(0);
-  }
-
-  .assistant-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 89;
-    background: color-mix(in srgb, var(--text-inverse) 62%, transparent);
-  }
-
-  @media (min-width: 1280px) {
-    .assistant-backdrop { display: none; }
-  }
-
-  @media (max-width: 767px) {
-    .assistant-panel {
-      width: 100vw;
-      height: auto;
-      bottom: var(--mobile-bottom-nav-offset);
-      border-left: 0;
-    }
-  }
-
-  .panel-header {
-    padding: 14px 16px;
-    background: var(--bg-panel);
-    border-bottom: 1px solid var(--border-subtle);
-    color: var(--text-main);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-
-  .panel-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--primary) 16%, var(--bg-panel));
-    color: var(--primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .icon-btn {
-    display: grid;
-    width: 44px;
-    height: 44px;
-    place-items: center;
-    background: transparent;
-    border: 0;
-    cursor: pointer;
-    color: var(--text-muted);
-    padding: 0;
-    border-radius: 8px;
-    line-height: 0;
-    transition: opacity 0.15s;
-  }
-  .icon-btn:hover {
-    background: var(--sidebar-item-hover-bg);
-    color: var(--text-main);
-  }
-
-  .icon-btn:focus-visible,
-  .signal-context-close:focus-visible,
-  .icebreaker:focus-visible,
-  .panel-send-btn:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
-  }
-
-  .signal-context { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 9px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-input); }
-  .signal-context-tag { flex: 0 0 auto; color: var(--primary); font-size: 10px; font-weight: 700; letter-spacing: .06em; }.signal-context-tag.attention { color: var(--status-warning-text); }.signal-context-tag.critical { color: var(--status-error-text); }
-  .signal-context-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-main); font-size: 12px; font-weight: 600; }
-  .signal-context-close { display: grid; place-items: center; width: 44px; height: 44px; place-self: center; flex: 0 0 auto; margin-left: auto; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer; padding: 0; }
-  .screen-context { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 9px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-muted); font-size: 12px; }
-  .screen-context strong { min-width: 0; overflow: hidden; color: var(--text-main); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-
-  .panel-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .welcome-msg {
-    color: var(--text-muted);
-    font-size: 13px;
-    text-align: left;
-    padding: 16px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-card);
-    border-radius: 8px;
-  }
-
-  .icebreakers {
-    display: grid;
-    gap: 8px;
-    margin-top: 14px;
-  }
-
-  .icebreaker {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    min-height: 58px;
-    padding: 9px 10px;
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    background: var(--bg-input);
-    color: var(--text-main);
-    text-align: left;
-    cursor: pointer;
-    transition: border-color var(--transition-fast), background var(--transition-fast);
-  }
-
-  .icebreaker:hover {
-    border-color: var(--primary);
-    background: color-mix(in srgb, var(--primary) 7%, var(--bg-input));
-  }
-
-  .icebreaker-icon {
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    flex: 0 0 auto;
-    border-radius: 7px;
-    color: var(--primary);
-    background: color-mix(in srgb, var(--primary) 13%, var(--bg-panel));
-  }
-
-  .icebreaker-copy {
-    display: grid;
-    min-width: 0;
-    gap: 2px;
-  }
-
-  .icebreaker-copy strong {
-    color: var(--text-label);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .icebreaker-copy small {
-    overflow: hidden;
-    color: var(--text-muted);
-    font-size: 11px;
-    line-height: 1.35;
-    line-clamp: 2;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-
-  .p-msg {
-    max-width: 88%;
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    line-height: 1.5;
-    word-break: break-word;
-  }
-
-  .markdown-content :global(p) {
-    margin-bottom: 0.75rem;
-  }
-  .markdown-content :global(p:last-child) {
-    margin-bottom: 0;
-  }
-  .markdown-content :global(ul), .markdown-content :global(ol) {
-    margin-bottom: 0.75rem;
-    padding-left: 1.25rem;
-    list-style: disc;
-  }
-  .markdown-content :global(ol) {
-    list-style: decimal;
-  }
-  .markdown-content :global(li) {
-    margin-bottom: 0.25rem;
-  }
-  .markdown-content :global(strong) {
-    font-weight: 700;
-  }
-  .markdown-content :global(code) {
-    background: color-mix(in srgb, var(--text-main) 8%, var(--bg-input));
-    padding: 0.1rem 0.3rem;
-    border-radius: 4px;
-    font-family: monospace;
-  }
-
-  .p-user {
-    background: var(--primary);
-    color: var(--text-inverse);
-    align-self: flex-end;
-    border-bottom-right-radius: 4px;
-  }
-
-  .p-assistant {
-    background: var(--bg-input);
-    color: var(--text-main);
-    align-self: flex-start;
-    border-bottom-left-radius: 4px;
-  }
-
-  .typing-dots {
-    display: inline-flex;
-    gap: 4px;
-    padding: 2px 0;
-    align-items: center;
-  }
-  .typing-dots span {
-    width: 6px;
-    height: 6px;
-    background: var(--text-muted);
-    border-radius: 50%;
-    animation: dot-pulse 1.2s infinite ease-in-out;
-  }
-  .typing-dots span:nth-child(2) {
-    animation-delay: 0.2s;
-  }
-  .typing-dots span:nth-child(3) {
-    animation-delay: 0.4s;
-  }
-  @keyframes dot-pulse {
-    0%,
-    60%,
-    100% {
-      opacity: 0.4;
-    }
-    30% {
-      opacity: 1;
-    }
-  }
-
-  .panel-input-area {
-    padding: 12px;
-    display: flex;
-    gap: 8px;
-    border-top: 1px solid var(--border-subtle);
-    flex-shrink: 0;
-  }
-
-  .panel-input {
-    flex: 1;
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border-subtle);
-    background: var(--bg-input);
-    color: var(--text-main);
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .panel-input:focus {
-    border-color: var(--primary);
-  }
-  .panel-input:disabled {
-    opacity: 0.6;
-  }
-
-  .panel-send-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 8px;
-    background: var(--primary);
-    color: var(--text-inverse);
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: background 0.15s, opacity 0.15s;
-  }
-  .panel-send-btn:hover:not(:disabled) {
-    background: var(--primary-hover);
-  }
-  .panel-send-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .assistant-panel { transition: none; }
-    .typing-dots span { animation: none; }
-    .icebreaker { transition: none; }
-  }
-
-  .pending-action { margin: 0 12px 8px; padding: 12px 14px; border: 1px solid var(--primary); border-radius: 8px; background: color-mix(in srgb, var(--primary) 8%, var(--bg-card)); }
-  .pending-action-title { margin: 0 0 4px; font-size: 12px; font-weight: 700; color: var(--text-label); }
-  .pending-action-summary { margin: 0 0 10px; font-size: 13px; color: var(--text-main); }
-  .pending-action-buttons { display: flex; gap: 8px; }
-  .pending-action-buttons button { min-height: 44px; flex: 1; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
-  .pending-confirm { border: 0; background: var(--primary); color: var(--text-inverse); }
-  .pending-cancel { border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main); }
-  .pending-action-buttons button:disabled { opacity: .6; cursor: not-allowed; }
-  .pending-confirm:focus-visible, .pending-cancel:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
+  .assistant-panel { position: fixed; top: 0; right: 0; width: 25rem; max-width: 100vw; height: 100vh; background: var(--bg-panel); border-left: 1px solid var(--border-card); z-index: 90; display: flex; flex-direction: column; transform: translateX(100%); transition: transform var(--transition-fast); }
+  .assistant-panel.open { transform: translateX(0); }
+  .assistant-backdrop { position: fixed; inset: 0; z-index: 89; background: color-mix(in srgb, var(--text-inverse) 62%, transparent); }
+  @media (min-width: 1280px) { .assistant-backdrop { display: none; } }
+  @media (max-width: 767px) { .assistant-panel { width: 100vw; height: auto; bottom: var(--mobile-bottom-nav-offset); border-left: 0; } }
+  .p-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
+  .p-avatar { width: 30px; height: 30px; border-radius: 8px; background: var(--primary); color: var(--primary-text); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+  .name { font-weight: 600; font-size: 13px; line-height: 1.2; color: var(--text-main); }
+  .status { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+  .status i { width: 6px; height: 6px; border-radius: 50%; background: var(--status-success-text); }
+  .status i.busy { background: var(--primary); animation: blink 1s ease-in-out infinite; }
+  .tools { margin-left: auto; display: flex; gap: 2px; }
+  .iconb { width: 34px; height: 34px; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); display: grid; place-items: center; cursor: pointer; }
+  .iconb:hover { background: var(--bg-input); color: var(--text-main); }
+  .ctx { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-card); font-size: 12px; color: var(--text-muted); }
+  .ctx b { color: var(--text-label); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ctx .iconb { margin-left: auto; }
+  .thread { flex: 1; overflow-y: auto; padding: 18px 16px 8px; display: flex; flex-direction: column; gap: 16px; }
+  .p-msg { font-size: 14px; line-height: 1.55; word-break: break-word; }
+  .p-user { align-self: flex-end; max-width: 88%; padding: 8px 12px; border-radius: 8px; background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-main); white-space: pre-wrap; }
+  .p-assistant { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 10px; color: var(--text-main); }
+  .who { width: 22px; height: 22px; border-radius: 6px; background: var(--primary); color: var(--primary-text); font-size: 11px; font-weight: 700; display: grid; place-items: center; margin-top: 2px; }
+  .p-assistant.error .who { background: var(--status-error-bg); color: var(--status-error-text); }
+  .p-assistant.error .txt { border: 1px solid var(--status-error-border); background: var(--status-error-bg); border-radius: 8px; padding: 10px 12px; }
+  .retry { margin-top: 6px; min-height: 36px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-label); font-size: 13px; cursor: pointer; }
+  .txt :global(p) { margin: 0 0 8px; } .txt :global(p:last-child) { margin: 0; }
+  .txt :global(ul), .txt :global(ol) { margin: 0 0 8px; padding-left: 18px; } .txt :global(li) { margin: 2px 0; }
+  .txt :global(strong) { font-weight: 600; }
+  .txt :global(code) { background: var(--bg-input); padding: .1rem .3rem; border-radius: 4px; font-family: monospace; }
+  .thinking { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
+  .thinking::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); animation: blink 1s ease-in-out infinite; }
+  @keyframes blink { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+  .proposal { border: 1px solid var(--primary); border-radius: 8px; background: var(--bg-card); overflow: hidden; }
+  .proposal .ph { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: var(--accent-light); color: var(--primary); font-size: 11px; font-weight: 600; }
+  .proposal.done { border-color: var(--border-subtle); } .proposal.done .ph { background: var(--status-success-bg); color: var(--status-success-text); }
+  .proposal.cancelled, .proposal.failed { border-color: var(--border-subtle); opacity: .75; } .proposal.cancelled .ph, .proposal.failed .ph { background: var(--bg-input); color: var(--text-muted); }
+  .pb { padding: 10px 12px 12px; display: grid; gap: 8px; }
+  .what { font-size: 13px; color: var(--text-main); } .fx { font-size: 12px; color: var(--text-muted); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .exp { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 14px; border-radius: 6px; border: 1px solid transparent; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn.primary { background: var(--primary); color: var(--primary-text); } .btn.primary:hover { background: var(--primary-hover); }
+  .btn.ghost { background: transparent; color: var(--text-label); border-color: var(--border-subtle); } .btn.ghost:hover { color: var(--text-main); border-color: var(--border-strong); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .choices { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 32px; }
+  .choices button { min-height: 32px; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main); font-size: 13px; cursor: pointer; transition: border-color 180ms cubic-bezier(.22,1,.36,1), background 180ms cubic-bezier(.22,1,.36,1); }
+  .choices button:hover { border-color: var(--primary); background: var(--accent-light); }
+  .choices button.alt { color: var(--text-muted); }
+  .suggest { display: flex; gap: 6px; padding: 8px 14px 0; overflow-x: auto; scrollbar-width: none; }
+  .suggest::-webkit-scrollbar { display: none; }
+  .suggest button { flex: 0 0 auto; min-height: 32px; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-label); font-size: 12px; cursor: pointer; }
+  .suggest button:hover { border-color: var(--primary); color: var(--text-main); }
+  .composer { padding: 10px 14px 14px; display: grid; gap: 6px; flex-shrink: 0; }
+  .box { display: flex; align-items: flex-end; gap: 6px; padding: 6px 6px 6px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-input); transition: border-color 180ms cubic-bezier(.22,1,.36,1); }
+  .box:focus-within { border-color: var(--primary); }
+  .box textarea { flex: 1; resize: none; border: 0; background: transparent; color: var(--text-main); font: inherit; font-size: 13px; line-height: 1.5; padding: 6px 0; max-height: 120px; outline: none; }
+  .box textarea::placeholder { color: var(--text-muted); }
+  .box textarea:disabled { opacity: .6; }
+  .send { width: 32px; height: 32px; border: 0; border-radius: 6px; background: var(--primary); color: var(--primary-text); display: grid; place-items: center; cursor: pointer; }
+  .send:disabled { background: var(--border-subtle); color: var(--text-muted); cursor: not-allowed; }
+  .hintline { font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; gap: 8px; }
+  kbd { font: inherit; font-size: 11px; padding: 0 5px; border: 1px solid var(--border-subtle); border-bottom-width: 2px; border-radius: 4px; color: var(--text-muted); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .iconb:focus-visible, .btn:focus-visible, .choices button:focus-visible, .suggest button:focus-visible, .send:focus-visible, .retry:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
+  @media (prefers-reduced-motion: reduce) { .assistant-panel, .box, .choices button { transition: none; } .thinking::before, .status i.busy { animation: none; } }
 </style>

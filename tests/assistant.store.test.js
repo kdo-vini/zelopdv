@@ -132,8 +132,9 @@ describe('assistant context store', () => {
 
 describe('pendingAction store', () => {
   it('guarda, limpa e é zerado ao fechar o painel', () => {
-    setPendingAction({ id: 'act-1', summary: 'Pausar "Refri" no cardápio digital', expires_at: '2026-09-02T15:10:00Z' });
+    setPendingAction({ id: 'act-1', summary: 'Pausar "Refri" no cardápio digital', effect: 'Some do cardápio digital para os clientes.', expires_at: '2026-09-02T15:10:00Z' });
     expect(get(pendingAction)?.id).toBe('act-1');
+    expect(get(pendingAction)?.effect).toBe('Some do cardápio digital para os clientes.');
     clearPendingAction();
     expect(get(pendingAction)).toBeNull();
     setPendingAction({ id: 'act-2', summary: 'x', expires_at: 'y' });
