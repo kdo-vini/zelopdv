@@ -316,7 +316,7 @@
 
     <div class="thread" use:registerMessagesContainer>
       {#if messages.length === 0}
-        <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="txt"><p>Oi! Posso pausar produtos no cardápio, cadastrar categorias e produtos, alterar preços e te contar como foram as vendas. O que precisa?</p></div></div>
+        <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="txt"><p>Oi! Posso te contar como foram as vendas, cadastrar categorias e produtos, alterar preços e, se você usa o ZeloMenu, pausar itens do cardápio. O que precisa?</p></div></div>
       {/if}
       {#each messages as msg, index}
         {#if msg.role === 'user'}
@@ -426,6 +426,7 @@
   .box { display: flex; align-items: flex-end; gap: 6px; padding: 6px 6px 6px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-input); transition: border-color 180ms cubic-bezier(.22,1,.36,1); }
   .box:focus-within { border-color: var(--primary); }
   .box textarea { flex: 1; resize: none; border: 0; background: transparent; color: var(--text-main); font: inherit; font-size: 13px; line-height: 1.5; padding: 6px 0; max-height: 120px; outline: none; }
+  .box textarea:focus, .box textarea:focus-visible { outline: none; box-shadow: none; }
   .box textarea::placeholder { color: var(--text-muted); }
   .box textarea:disabled { opacity: .6; }
   .send { width: 32px; height: 32px; border: 0; border-radius: 6px; background: var(--primary); color: var(--primary-text); display: grid; place-items: center; cursor: pointer; }
