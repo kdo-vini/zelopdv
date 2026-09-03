@@ -21,7 +21,7 @@
     screenContextMatchesLocation,
   } from '$lib/stores/assistant';
   import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
-  import { AlertCircle, Plus, X, ArrowUp, Clock3, Check } from 'lucide-svelte';
+  import { AlertCircle, Plus, X, ArrowUp, Clock3, Check, History } from 'lucide-svelte';
   import { getSignalPresenter } from '$lib/gerente/signalPresenter.js';
 
   const SUGGESTIONS = [
@@ -158,6 +158,109 @@
   }
   onDestroy(stopExpiry);
 
+  let showSessionList = false;
+  let sessionListLoading = false;
+  let sessionListError = false;
+  let sessionList = [];
+  let viewingSession = null;
+  let openingSessionId = null;
+  let openSessionError = false;
+  let newConversationBusy = false;
+
+  function formatSessionDate(iso) {
+    if (!iso) return '';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    const now = new Date();
+    const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const hhmm = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    if (sameDay(date, now)) return `hoje ${hhmm}`;
+    if (sameDay(date, yesterday)) return `ontem ${hhmm}`;
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  }
+
+  async function openSessionList() {
+    showSessionList = true;
+    viewingSession = null;
+    sessionListError = false;
+    sessionListLoading = true;
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Sessão expirada.');
+      const response = await fetch('/api/gerente/sessions', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Falha ao carregar conversas.');
+      const data = await response.json();
+      sessionList = Array.isArray(data?.sessions) ? data.sessions : [];
+    } catch {
+      sessionListError = true;
+      sessionList = [];
+    } finally {
+      sessionListLoading = false;
+    }
+  }
+
+  function closeSessionList() {
+    showSessionList = false;
+  }
+
+  async function openSession(item) {
+    if (!item?.id || openingSessionId) return;
+    openingSessionId = item.id;
+    openSessionError = false;
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Sessão expirada.');
+      const response = await fetch(`/api/gerente/sessions/${item.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Falha ao carregar conversa.');
+      const data = await response.json();
+      viewingSession = {
+        id: item.id,
+        title: item.title || 'Conversa',
+        created_at: item.created_at,
+        messages: Array.isArray(data?.messages) ? data.messages : [],
+      };
+      showSessionList = false;
+    } catch {
+      openSessionError = true;
+    } finally {
+      openingSessionId = null;
+    }
+  }
+
+  function backToCurrentConversation() {
+    viewingSession = null;
+  }
+
+  async function startNewConversation(clearMessages) {
+    if (newConversationBusy) return;
+    newConversationBusy = true;
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+      const response = await fetch('/api/gerente/sessions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Não consegui iniciar uma nova conversa agora.');
+      clearMessages();
+      clearPendingAction();
+      clearQuickReplies();
+      resolvedCards = [];
+      viewingSession = null;
+      showSessionList = false;
+    } catch (error) {
+      assistantMessages.update((items) => [...items, { role: 'assistant', content: error?.message || 'Não consegui iniciar uma nova conversa agora.', error: true }]);
+    } finally {
+      newConversationBusy = false;
+    }
+  }
+
   function watchThinking(streaming) {
     if (thinkingTimer) clearTimeout(thinkingTimer);
     thinkingLabel = 'Pensando…';
@@ -226,6 +329,8 @@
 
   async function closePanel() {
     closeAssistant();
+    showSessionList = false;
+    viewingSession = null;
     await tick();
     if (returnFocusElement?.isConnected) returnFocusElement.focus();
     returnFocusElement = null;
@@ -306,7 +411,8 @@
         <div class="status"><i class:busy={isStreaming}></i>{isStreaming ? 'Pensando…' : 'Pronto para ajudar'}</div>
       </div>
       <div class="tools">
-        <button type="button" class="iconb" title="Nova conversa" aria-label="Nova conversa" on:click={() => { clearMessages(); clearPendingAction(); clearQuickReplies(); resolvedCards = []; }}><Plus size={16} aria-hidden="true" /></button>
+        <button type="button" class="iconb" aria-label="Conversas anteriores" on:click={() => void openSessionList()}><History size={16} aria-hidden="true" /></button>
+        <button type="button" class="iconb" title="Nova conversa" aria-label="Nova conversa" disabled={newConversationBusy} on:click={() => void startNewConversation(clearMessages)}><Plus size={16} aria-hidden="true" /></button>
         <button type="button" class="iconb" aria-label="Fechar Zelinho" on:click={() => void closePanel()}><X size={16} aria-hidden="true" /></button>
       </div>
     </div>
@@ -325,57 +431,105 @@
       </div>
     {/if}
 
-    <div class="thread" use:registerMessagesContainer>
-      {#if messages.length === 0}
-        <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="txt"><p>Oi! Posso te contar como foram as vendas, cadastrar categorias e produtos, alterar preços e, se você usa o ZeloMenu, pausar itens do cardápio. O que precisa?</p></div></div>
-      {/if}
-      {#each messages as msg, index}
-        {#if msg.role === 'user'}
-          <div class="p-msg p-user">{msg.content}</div>
-        {:else if !msg.content && isStreaming && index === messages.length - 1}
-          <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="thinking" role="status" aria-live="polite">{thinkingLabel}</div></div>
-        {:else if msg.error}
-          <div class="p-msg p-assistant error"><span class="who" aria-hidden="true"><AlertCircle size={14} /></span><div class="txt"><p>{msg.content}</p><button type="button" class="retry" on:click={retryLast}>Tentar de novo</button></div></div>
-        {:else}
-          <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="txt markdown-content">{@html renderMarkdown(msg.content)}</div></div>
-        {/if}
-      {/each}
-      {#each resolvedCards as card (card.id)}
-        <div class="proposal {card.status}">
-          <div class="ph">{#if card.status === 'done'}<Check size={13} aria-hidden="true" />Feita {card.time}{:else if card.status === 'cancelled'}Cancelada{:else}Não deu certo{/if}</div>
-          <div class="pb"><div class="what">{card.summary}</div>{#if card.effect}<div class="fx">{card.effect}</div>{/if}</div>
-        </div>
-      {/each}
-      {#if $pendingAction}
-        <div class="proposal" role="group" aria-label="Confirmar ação do Zelinho">
-          <div class="ph"><Clock3 size={13} aria-hidden="true" />Proposta, aguardando você</div>
-          <div class="pb">
-            <div class="what">{$pendingAction.summary}</div>
-            {#if $pendingAction.effect}<div class="fx">{$pendingAction.effect}</div>{/if}
-            <div class="row">
-              <button type="button" class="btn primary" disabled={actionBusy} on:click={() => resolvePendingAction('confirm')}>Confirmar</button>
-              <button type="button" class="btn ghost" disabled={actionBusy} on:click={() => resolvePendingAction('cancel')}>Cancelar</button>
-              <span class="exp tabular-nums">expira em {expiresIn}</span>
-            </div>
+    <div class="panel-body">
+      {#if showSessionList}
+        <div class="session-overlay">
+          <div class="session-overlay-head">
+            <span>Conversas anteriores</span>
+            <button type="button" class="iconb" aria-label="Fechar conversas anteriores" on:click={closeSessionList}><X size={16} aria-hidden="true" /></button>
+          </div>
+          <div class="session-overlay-body">
+            {#if sessionListLoading}
+              <div class="session-skeleton" aria-hidden="true"></div>
+            {:else if sessionListError}
+              <div class="session-empty"><p>Não consegui carregar suas conversas.</p><button type="button" class="retry" on:click={() => void openSessionList()}>Tentar de novo</button></div>
+            {:else if sessionList.length === 0}
+              <div class="session-empty"><p>Nenhuma conversa por aqui ainda.</p></div>
+            {:else}
+              {#if openSessionError}<p class="session-error-line">Não consegui abrir essa conversa.</p>{/if}
+              <ul class="session-list">
+                {#each sessionList as item (item.id)}
+                  <li>
+                    <button type="button" class="session-item" disabled={openingSessionId === item.id} on:click={() => void openSession(item)}>
+                      <span class="session-title">{item.title || 'Conversa'}</span>
+                      <span class="session-date">{formatSessionDate(item.last_message_at || item.created_at)}</span>
+                    </button>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
           </div>
         </div>
       {/if}
-      {#if $quickReplies.length && !isStreaming}
-        <div class="choices">{#each $quickReplies as option}<button type="button" class:alt={option === 'Nenhum desses' || option === 'Criar categoria nova'} on:click={() => { clearQuickReplies(); void sendMessage(option); }}>{option}</button>{/each}</div>
+
+      {#if viewingSession}
+        <div class="history-banner">
+          <span>Conversa de {formatSessionDate(viewingSession.created_at)}</span>
+          <button type="button" class="back-link" on:click={backToCurrentConversation}>Voltar para a conversa atual</button>
+        </div>
+        <div class="thread readonly" aria-label="Conversa anterior, somente leitura">
+          {#each viewingSession.messages as msg, index (index)}
+            {#if msg.role === 'user'}
+              <div class="p-msg p-user">{msg.content}</div>
+            {:else}
+              <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="txt markdown-content">{@html renderMarkdown(msg.content)}</div></div>
+            {/if}
+          {/each}
+        </div>
+      {:else}
+        <div class="thread" use:registerMessagesContainer>
+          {#if messages.length === 0}
+            <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="txt"><p>Oi! Posso te contar como foram as vendas, cadastrar categorias e produtos, alterar preços e, se você usa o ZeloMenu, pausar itens do cardápio. O que precisa?</p></div></div>
+          {/if}
+          {#each messages as msg, index}
+            {#if msg.role === 'user'}
+              <div class="p-msg p-user">{msg.content}</div>
+            {:else if !msg.content && isStreaming && index === messages.length - 1}
+              <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="thinking" role="status" aria-live="polite">{thinkingLabel}</div></div>
+            {:else if msg.error}
+              <div class="p-msg p-assistant error"><span class="who" aria-hidden="true"><AlertCircle size={14} /></span><div class="txt"><p>{msg.content}</p><button type="button" class="retry" on:click={retryLast}>Tentar de novo</button></div></div>
+            {:else}
+              <div class="p-msg p-assistant"><span class="who" aria-hidden="true">Z</span><div class="txt markdown-content">{@html renderMarkdown(msg.content)}</div></div>
+            {/if}
+          {/each}
+          {#each resolvedCards as card (card.id)}
+            <div class="proposal {card.status}">
+              <div class="ph">{#if card.status === 'done'}<Check size={13} aria-hidden="true" />Feita {card.time}{:else if card.status === 'cancelled'}Cancelada{:else}Não deu certo{/if}</div>
+              <div class="pb"><div class="what">{card.summary}</div>{#if card.effect}<div class="fx">{card.effect}</div>{/if}</div>
+            </div>
+          {/each}
+          {#if $pendingAction}
+            <div class="proposal" role="group" aria-label="Confirmar ação do Zelinho">
+              <div class="ph"><Clock3 size={13} aria-hidden="true" />Proposta, aguardando você</div>
+              <div class="pb">
+                <div class="what">{$pendingAction.summary}</div>
+                {#if $pendingAction.effect}<div class="fx">{$pendingAction.effect}</div>{/if}
+                <div class="row">
+                  <button type="button" class="btn primary" disabled={actionBusy} on:click={() => resolvePendingAction('confirm')}>Confirmar</button>
+                  <button type="button" class="btn ghost" disabled={actionBusy} on:click={() => resolvePendingAction('cancel')}>Cancelar</button>
+                  <span class="exp tabular-nums">expira em {expiresIn}</span>
+                </div>
+              </div>
+            </div>
+          {/if}
+          {#if $quickReplies.length && !isStreaming}
+            <div class="choices">{#each $quickReplies as option}<button type="button" class:alt={option === 'Nenhum desses' || option === 'Criar categoria nova'} on:click={() => { clearQuickReplies(); void sendMessage(option); }}>{option}</button>{/each}</div>
+          {/if}
+        </div>
+
+        {#if messages.length === 0}
+          <div class="suggest">{#each SUGGESTIONS as s}<button type="button" on:click={() => { if (s.send) void sendMessage(s.label); else { setInput(s.label); inputElement?.focus(); } }}>{s.label}</button>{/each}</div>
+        {/if}
+
+        <div class="composer">
+          <label class="sr-only" for="zelinho-message">Mensagem para o Zelinho</label>
+          <div class="box">
+            <textarea id="zelinho-message" rows="1" bind:this={inputElement} value={input} use:autoGrow use:applyPrefill={{ value: pendingPrefill, setInput, onApplied: () => { pendingPrefill = ''; } }} on:input={(event) => setInput(event.currentTarget.value)} on:keydown={onKeyDown} placeholder="Peça algo ao Zelinho" disabled={isStreaming} maxlength="1000"></textarea>
+            <button type="button" class="send" on:click={() => void sendMessage()} disabled={isStreaming || !input.trim()} aria-label="Enviar"><ArrowUp size={15} aria-hidden="true" /></button>
+          </div>
+          <div class="hintline"><span>Mudanças só acontecem depois que você confirma.</span><span><kbd>Enter</kbd> envia</span></div>
+        </div>
       {/if}
-    </div>
-
-    {#if messages.length === 0}
-      <div class="suggest">{#each SUGGESTIONS as s}<button type="button" on:click={() => { if (s.send) void sendMessage(s.label); else { setInput(s.label); inputElement?.focus(); } }}>{s.label}</button>{/each}</div>
-    {/if}
-
-    <div class="composer">
-      <label class="sr-only" for="zelinho-message">Mensagem para o Zelinho</label>
-      <div class="box">
-        <textarea id="zelinho-message" rows="1" bind:this={inputElement} value={input} use:autoGrow use:applyPrefill={{ value: pendingPrefill, setInput, onApplied: () => { pendingPrefill = ''; } }} on:input={(event) => setInput(event.currentTarget.value)} on:keydown={onKeyDown} placeholder="Peça algo ao Zelinho" disabled={isStreaming} maxlength="1000"></textarea>
-        <button type="button" class="send" on:click={() => void sendMessage()} disabled={isStreaming || !input.trim()} aria-label="Enviar"><ArrowUp size={15} aria-hidden="true" /></button>
-      </div>
-      <div class="hintline"><span>Mudanças só acontecem depois que você confirma.</span><span><kbd>Enter</kbd> envia</span></div>
     </div>
   </div>
 </ChatStreamCore>
@@ -398,6 +552,21 @@
   .ctx { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-card); font-size: 12px; color: var(--text-muted); }
   .ctx b { color: var(--text-label); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ctx .iconb { margin-left: auto; }
+  .panel-body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .session-overlay { position: absolute; inset: 0; z-index: 1; background: var(--bg-panel); display: flex; flex-direction: column; }
+  .session-overlay-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; font-weight: 600; color: var(--text-main); flex-shrink: 0; }
+  .session-overlay-body { flex: 1; overflow-y: auto; padding: 8px 8px 12px; }
+  .session-skeleton { height: 44px; margin: 8px; border-radius: 8px; background: var(--bg-input); }
+  .session-empty { display: grid; justify-items: center; gap: 10px; padding: 32px 16px; color: var(--text-muted); font-size: 13px; text-align: center; }
+  .session-error-line { margin: 8px 8px 0; font-size: 12px; color: var(--status-error-text); }
+  .session-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .session-item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-main); font: inherit; text-align: left; cursor: pointer; }
+  .session-item:hover { background: var(--bg-input); }
+  .session-item:disabled { opacity: .6; cursor: not-allowed; }
+  .session-title { font-size: 13px; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .session-date { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+  .history-banner { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-card); font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+  .back-link { border: 0; background: transparent; color: var(--primary); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; min-height: 36px; display: inline-flex; align-items: center; }
   .thread { flex: 1; overflow-y: auto; padding: 18px 16px 8px; display: flex; flex-direction: column; gap: 16px; }
   .thread > * { flex-shrink: 0; }
   .p-msg { font-size: 14px; line-height: 1.55; word-break: break-word; }
@@ -446,6 +615,6 @@
   .hintline { font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; gap: 8px; }
   kbd { font: inherit; font-size: 11px; padding: 0 5px; border: 1px solid var(--border-subtle); border-bottom-width: 2px; border-radius: 4px; color: var(--text-muted); }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-  .iconb:focus-visible, .btn:focus-visible, .choices button:focus-visible, .suggest button:focus-visible, .send:focus-visible, .retry:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
+  .iconb:focus-visible, .btn:focus-visible, .choices button:focus-visible, .suggest button:focus-visible, .send:focus-visible, .retry:focus-visible, .session-item:focus-visible, .back-link:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
   @media (prefers-reduced-motion: reduce) { .assistant-panel, .box, .choices button { transition: none; } .thinking::before, .status i.busy { animation: none; } }
 </style>

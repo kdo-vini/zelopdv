@@ -28,4 +28,12 @@ describe('gerente page redesign', () => {
     expect(store).toContain('export const prefillMessage');
     expect(store).toContain('export function openAssistantWithMessage');
   });
+
+  it('mostra a bolha do Zelinho no celular só quando o painel está fechado', async () => {
+    const page = await read('src/routes/gestao/gerente/+page.svelte');
+    expect(page).toContain('Falar com o Zelinho');
+    expect(page).toContain('$isOpen === false');
+    expect(page).toContain('MessageCircle');
+    expect(page).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
 });

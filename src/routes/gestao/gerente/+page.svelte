@@ -2,14 +2,14 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { CloudOff, RefreshCw } from 'lucide-svelte';
+  import { CloudOff, RefreshCw, MessageCircle } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient.js';
   import { getAccessContext } from '$lib/accessControl.js';
   import { hasZeloMenuAccess } from '$lib/guards.js';
   import { addToast } from '$lib/stores/ui.js';
   import { capturePostHogEvent } from '$lib/posthogClient.js';
   import { markRead } from '$lib/stores/gerente.js';
-  import { openAssistantWithSignal, openAssistantWithMessage } from '$lib/stores/assistant.js';
+  import { openAssistantWithSignal, openAssistantWithMessage, isOpen } from '$lib/stores/assistant.js';
   import { closeSupport } from '$lib/stores/support.js';
   import { computeDayStrip } from '$lib/gerente/dayStrip.js';
   import { buildGreeting } from '$lib/gerente/greeting.js';
@@ -42,6 +42,7 @@
 
   function setTab(next) { goto(`?aba=${next}`, { replaceState: true, noScroll: true, keepFocus: true }); }
   function quick(mensagem) { closeSupport(); if (!openAssistantWithMessage(mensagem)) addToast('Não foi possível abrir o Zelinho.', 'error'); }
+  function openZelinhoBubble() { closeSupport(); isOpen.set(true); }
   const longDate = (date) => { const s = new Date(`${date}T12:00:00Z`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short', timeZone: 'UTC' }); return s.charAt(0).toUpperCase() + s.slice(1); };
   const money0 = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(Number(v) || 0);
 
@@ -151,6 +152,12 @@
   {/if}
 </section>
 
+{#if $isOpen === false}
+  <button type="button" class="zelinho-fab" aria-label="Falar com o Zelinho" on:click={openZelinhoBubble}>
+    <MessageCircle size={24} aria-hidden="true" />
+  </button>
+{/if}
+
 <style>
   .manager-page { max-width: 880px; margin: 0 auto; }
   .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
@@ -178,5 +185,7 @@
   .error-state { display: grid; place-items: center; gap: 10px; padding: 40px 0; color: var(--text-muted); }
   .error-state button { min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main); cursor: pointer; }
   .tab:focus-visible, .meta:focus-visible, .linkish:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
+  .zelinho-fab { display: grid; place-items: center; position: fixed; bottom: calc(var(--mobile-bottom-nav-offset, 0px) + 16px); right: 16px; width: 56px; height: 56px; border: 0; border-radius: 9999px; background: var(--primary); color: var(--primary-text); box-shadow: 0 8px 24px color-mix(in srgb, var(--text-inverse) 24%, transparent); z-index: 80; cursor: pointer; }
+  .zelinho-fab:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
   @media (prefers-reduced-motion: reduce) { .tab { transition: none; } }
 </style>
