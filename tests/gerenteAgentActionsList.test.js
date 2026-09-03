@@ -26,4 +26,10 @@ describe('gerente page renders actions list', () => {
     expect(page).toContain("import AgentActionsList from '$lib/components/gerente/AgentActionsList.svelte'");
     expect(page).toContain('<AgentActionsList');
   });
+
+  it('lista de ações tem pills de status e estado vazio com exemplos', async () => {
+    const s = await readFile(new URL('../src/lib/components/gerente/AgentActionsList.svelte', import.meta.url), 'utf8');
+    for (const t of ['Nada ainda.', 'onExample', 'pausa o refri no cardápio', 'describeStatus', 'Desfazer']) expect(s).toContain(t);
+    expect(s).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
 });

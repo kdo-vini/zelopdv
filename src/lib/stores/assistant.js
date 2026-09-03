@@ -6,6 +6,18 @@ export const contextType = writable('geral');
 export const signalContext = writable(null);
 export const screenContext = writable(null);
 export const pendingAction = writable(null);
+export const prefillMessage = writable('');
+
+export function openAssistantWithMessage(text) {
+  const clean = typeof text === 'string' ? text.trim().slice(0, 1000) : '';
+  if (!clean) return false;
+  signalContext.set(null);
+  screenContext.set(null);
+  contextType.set('geral');
+  prefillMessage.set(clean);
+  isOpen.set(true);
+  return true;
+}
 
 export function setPendingAction(action) {
   if (!action || typeof action !== 'object' || !action.id) return;

@@ -1,11 +1,11 @@
 <script>
   import { onMount } from 'svelte';
-  import { Undo2 } from 'lucide-svelte';
   import { canUndo, describeStatus } from '$lib/gerente/agentActions.js';
   import { addToast } from '$lib/stores/ui.js';
 
   export let supabase;
   export let getToken;
+  export let onExample = () => {};
 
   let actions = [];
   let loading = true;
@@ -51,40 +51,47 @@
   onMount(load);
 </script>
 
-<section class="actions-card" aria-labelledby="agent-actions-title">
-  <h2 id="agent-actions-title">Ações do Zelinho</h2>
-  <p class="hint">O que o Zelinho fez ou propôs a pedido seu, no app ou no WhatsApp.</p>
-  {#if loading}
-    <div class="row skeleton"></div>
-  {:else if actions.length === 0}
-    <p class="empty">Nenhuma ação ainda. Peça algo ao Zelinho, como "pausa o refri no cardápio".</p>
-  {:else}
-    <ul>
+<section class="acts-wrap" aria-labelledby="agent-actions-title">
+  <div class="section-h"><h2 id="agent-actions-title">Ações do Zelinho</h2><span class="hint">o que foi feito a pedido seu, no app ou no WhatsApp</span></div>
+  <div class="acts">
+    {#if loading}
+      <div class="skeleton" aria-hidden="true"></div>
+    {:else if actions.length === 0}
+      <div class="empty"><strong>Nada ainda.</strong><span>Quando você pedir algo ao Zelinho e confirmar, a ação aparece aqui com hora, canal e a opção de desfazer.</span><div class="examples">{#each ['pausa o refri no cardápio', 'cria a categoria Sobremesas', 'preço do X-Bacon para 30'] as ex}<button type="button" on:click={() => onExample(ex)}>{ex}</button>{/each}</div></div>
+    {:else}
       {#each actions as action (action.id)}
-        <li class="row">
-          <div class="row-main">
-            <span class="summary">{action.summary}</span>
-            <span class="meta">{describeStatus(action.status)} · {action.channel === 'whatsapp' ? 'WhatsApp' : 'App'} · {when(action)}</span>
-          </div>
-          {#if canUndo(action)}
-            <button type="button" class="undo" disabled={busyId === action.id} on:click={() => undo(action)}><Undo2 size={14} aria-hidden="true" /> Desfazer</button>
-          {/if}
-        </li>
+        <div class="act">
+          <div class="main"><span class="summary">{action.summary}</span><span class="meta"><span class="pill {action.status === 'executed' ? 'ok' : action.status === 'pending' ? 'warn' : 'mute'}">{describeStatus(action.status)}</span><span>{action.channel === 'whatsapp' ? 'WhatsApp' : 'App'} · {when(action)}</span></span></div>
+          {#if canUndo(action)}<button type="button" class="undo" disabled={busyId === action.id} on:click={() => undo(action)}>Desfazer</button>{/if}
+        </div>
       {/each}
-    </ul>
-  {/if}
+    {/if}
+  </div>
 </section>
 
 <style>
-  .actions-card { margin-top: 24px; padding: 20px; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-card); }
-  h2 { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: var(--text-main); }
-  .hint, .empty { margin: 0; font-size: 12px; color: var(--text-muted); }
-  ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
-  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 8px 0; border-top: 1px solid var(--border-subtle); }
-  .row-main { display: grid; gap: 2px; min-width: 0; }
+  .acts-wrap { margin-top: 26px; }
+  .section-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+  .section-h h2 { margin: 0; font-size: 16px; font-weight: 600; color: var(--text-main); }
+  .hint { font-size: 12px; color: var(--text-muted); }
+  .acts { border: 1px solid var(--border-card); border-radius: 12px; background: var(--bg-card); overflow: hidden; }
+  .act { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--border-card); }
+  .act:first-child { border-top: 0; }
+  .main { display: grid; gap: 4px; min-width: 0; }
   .summary { font-size: 13px; color: var(--text-main); }
-  .meta { font-size: 11px; color: var(--text-muted); }
-  .undo { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-input); color: var(--text-main); font-size: 12px; font-weight: 600; cursor: pointer; }
-  .undo:disabled { opacity: .6; cursor: not-allowed; }
-  .skeleton { height: 44px; border-radius: 8px; background: var(--bg-input); }
+  .meta { font-size: 12px; color: var(--text-muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+  .pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill.ok { background: var(--status-success-bg); color: var(--status-success-text); }
+  .pill.warn { background: var(--status-warning-bg); color: var(--status-warning-text); }
+  .pill.mute { background: var(--bg-input); color: var(--text-muted); }
+  .undo { min-height: 36px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: 6px; background: transparent; color: var(--text-label); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .undo:hover { color: var(--text-main); border-color: var(--border-strong); }
+  .undo:disabled { opacity: .5; cursor: not-allowed; }
+  .empty { padding: 22px 18px; display: grid; gap: 6px; color: var(--text-muted); font-size: 13px; }
+  .empty strong { color: var(--text-label); font-weight: 600; }
+  .examples { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .examples button { min-height: 32px; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-label); font-size: 12px; cursor: pointer; }
+  .examples button:hover { border-color: var(--primary); color: var(--text-main); }
+  .skeleton { height: 56px; margin: 12px 18px; border-radius: 8px; background: var(--bg-input); }
 </style>
