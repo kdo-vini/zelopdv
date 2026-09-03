@@ -51,7 +51,7 @@ export const TOOLS = [
     parameters: { type: 'object', properties: { produto_id: { type: 'integer' }, nome_produto: { type: 'string', description: 'Nome exato devolvido por buscar_produto' }, pausado: { type: 'boolean', description: 'true pausa, false despausa' } }, required: ['produto_id', 'nome_produto', 'pausado'] },
     run: (ctx, args) => pausarNoCardapio(ctx.db, ctx.ownerUserId, args),
     summary: (args) => `${args.pausado ? 'Pausar' : 'Voltar'} "${args.nome_produto}" ${args.pausado ? 'no' : 'para o'} cardápio digital`,
-    effect: (args) => args.pausado ? 'Some do cardápio digital, inclusive como opção dentro de outros produtos. Continua no PDV para venda no balcão.' : 'Volta a aparecer no cardápio digital, inclusive como opção dentro de outros produtos.',
+    effect: (args) => args.pausado ? 'Para de aparecer para o cliente em todo o cardápio digital. Continua no PDV para venda no balcão.' : 'Volta a aparecer para o cliente no cardápio digital.',
   },
   {
     name: 'ocultar_no_pdv',

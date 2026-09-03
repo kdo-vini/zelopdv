@@ -54,8 +54,8 @@ describe('tool registry', () => {
 
   it('descreve o efeito de cada ferramenta de escrita', async () => {
     const { summarizeEffect } = await import('../src/lib/server/gerente/toolRegistry.js');
-    expect(summarizeEffect('pausar_no_cardapio', { pausado: true })).toBe('Some do cardápio digital, inclusive como opção dentro de outros produtos. Continua no PDV para venda no balcão.');
-    expect(summarizeEffect('pausar_no_cardapio', { pausado: false })).toBe('Volta a aparecer no cardápio digital, inclusive como opção dentro de outros produtos.');
+    expect(summarizeEffect('pausar_no_cardapio', { pausado: true })).toBe('Para de aparecer para o cliente em todo o cardápio digital. Continua no PDV para venda no balcão.');
+    expect(summarizeEffect('pausar_no_cardapio', { pausado: false })).toBe('Volta a aparecer para o cliente no cardápio digital.');
     expect(summarizeEffect('ocultar_no_pdv', { ocultar: true })).toBe('Sai da frente de caixa. O cardápio digital não muda.');
     expect(summarizeEffect('criar_categoria', {})).toBe('Aparece em Produtos e no cardápio quando tiver itens.');
     expect(summarizeEffect('criar_produto', {})).toBe('Entra no PDV na hora. No cardápio digital só quando você publicar.');
@@ -85,5 +85,6 @@ describe('buildAgentSystemPrompt', () => {
   it('avisa para nunca inventar id nem usar 0', () => {
     const prompt = buildAgentSystemPrompt({ perfil: {}, channel: 'app', today: '2026-09-02' });
     expect(prompt).toContain('nunca use 0');
+    expect(prompt).toContain('tudo é produto');
   });
 });
