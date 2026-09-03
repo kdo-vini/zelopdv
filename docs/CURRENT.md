@@ -13,7 +13,12 @@
   `docs/DESIGN_PATTERNS.md` §14. Validado visualmente em 2026-09-02 no dev
   server (desktop 1440 e mobile 390, tema escuro, conta de teste): briefing, painel,
   estado de erro e aba de ações. A ação rápida "Pausar no cardápio" só aparece
-  com ZeloMenu ativo (`hasZeloMenuAccess`). Tema claro ainda não conferido.
+  com ZeloMenu ativo (`hasZeloMenuAccess`). Tema claro ainda não conferido. Correções pós-deploy (2026-09-02):
+  cartão de proposta não colapsa mais dentro do thread (flex-shrink 0); "sim"/"não"
+  digitados com ação pendente confirmam/cancelam sem passar pelo modelo (frame
+  action_resolved); só uma escrita por turno (a segunda devolve nao_preparado);
+  pills sugeridas pelo modelo via linha [[opcoes: A | B]] extraída em
+  quickReplies.js, com fallback determinístico só em perguntas.
 
 - Zelinho Gerente conversacional, fase 2 (lado ZeloPDV) (2026-09-02): o dono agora
   pareia um número de WhatsApp com a empresa em Gestão > Zelinho Gerente >
