@@ -678,6 +678,11 @@
   }
   
   async function handleReactivateSubscription(sub) {
+    const expiry = getEffectiveExpiry(sub);
+    if (!expiry || expiry.getTime() <= Date.now()) {
+      openExtendModal(sub);
+      return;
+    }
     const ok = await confirmDialog({
       title: 'Reativar assinatura',
       message: `Reativar assinatura de ${sub.empresa_perfil.nome_exibicao}?`,
@@ -1354,7 +1359,7 @@
                       PIX
                     </button>
                     <!-- Cancel -->
-                    <button on:click={() => handleCancelSubscription(sub)} class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors border border-transparent hover:border-rose-500/20" title="Cancelar Imediatamente">
+                    <button on:click={() => handleCancelSubscription(sub)} aria-label="Cancelar assinatura" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors border border-transparent hover:border-rose-500/20" title="Cancelar Imediatamente">
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   {:else if sub.status === 'canceled'}
@@ -1512,7 +1517,7 @@
                 Gerar PIX
               </button>
               <!-- Cancel -->
-              <button on:click={() => handleCancelSubscription(sub)} class="px-2 py-1.5 bg-slate-800 text-rose-400 hover:text-rose-300 rounded-lg border border-slate-700 hover:border-rose-500/20 transition-all">
+              <button on:click={() => handleCancelSubscription(sub)} aria-label="Cancelar assinatura" class="px-2 py-1.5 bg-slate-800 text-rose-400 hover:text-rose-300 rounded-lg border border-slate-700 hover:border-rose-500/20 transition-all">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             {:else if sub.status === 'canceled'}
@@ -1555,7 +1560,7 @@
       
       <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
         <h3 class="text-lg font-bold text-white tracking-wide">Renovação Manual</h3>
-        <button on:click={closeExtendModal} class="text-slate-500 hover:text-white transition-colors outline-hidden"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        <button on:click={closeExtendModal} aria-label="Fechar renovação" class="text-slate-500 hover:text-white transition-colors outline-hidden"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
       </div>
       
       <div class="p-6 space-y-6">
@@ -1645,7 +1650,7 @@
 
       <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
         <h3 class="text-lg font-bold text-white tracking-wide">Plano e Addons</h3>
-        <button on:click={closePlanModal} class="text-slate-500 hover:text-white transition-colors outline-hidden"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        <button on:click={closePlanModal} aria-label="Fechar plano e addons" class="text-slate-500 hover:text-white transition-colors outline-hidden"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
       </div>
 
       <div class="p-6 space-y-5">
@@ -1775,7 +1780,7 @@
 
       <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
         <h3 class="text-lg font-bold text-white tracking-wide">PIX de Renovação</h3>
-        <button on:click={closePixModal} class="text-slate-500 hover:text-white transition-colors outline-hidden"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        <button on:click={closePixModal} aria-label="Fechar Pix de renovação" class="text-slate-500 hover:text-white transition-colors outline-hidden"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
       </div>
 
       <div class="p-6 space-y-5">

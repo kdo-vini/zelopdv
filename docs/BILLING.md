@@ -5,6 +5,14 @@
 
 ## Fonte de verdade
 
+Editor admin (2026-09-04): `update-user-subscription` recebe subscriptionId,
+valida owner e altera uma linha com confirmação/CAS de updated_at; cliente
+legado sem ID seleciona a mais recentemente atualizada. Status active/trialing
+exige prazo futuro (current_period_end ou manually_extended_until); mudar
+status não renova cobrança nem concede um mês implicitamente. A reativação
+de vencidas no painel abre a Renovação Manual existente. Cancelamento limpa
+extensão manual e cancel_at_period_end. Nenhum histórico financeiro é editado.
+
 - Entitlement/acesso: tabela `subscriptions`.
 - Tentativas e histórico de cobrança Pix: tabela `billing_payments`.
 - Idempotência de webhook:

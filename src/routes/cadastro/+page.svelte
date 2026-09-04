@@ -3,11 +3,10 @@
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import AuthLayout from '$lib/components/AuthLayout.svelte';
   import GoogleAuthButton from '$lib/components/GoogleAuthButton.svelte';
-  import { trackLead } from '$lib/metaPixel';
-  import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
-  import { claimStoredReferral, getStoredReferralAttribution, persistReferralAttributionFromUrl } from '$lib/referrals/client';
+  import { goto } from '$app/navigation';
+  import { startSignupFollowUp } from '$lib/auth/signupFollowUp.js';
+  import { getStoredReferralAttribution, persistReferralAttributionFromUrl } from '$lib/referrals/client';
   import { captureAcquisitionOrigin, getStoredAcquisitionOrigin } from '$lib/attribution/client';
-  import { capturePostHogEvent, identifyPostHogUser } from '$lib/posthogClient';
   import { onMount } from 'svelte';
 
   let email = '';
@@ -80,18 +79,10 @@
       const session = data?.session || payload.session;
       const newUserId = payload?.user?.id || session?.user?.id || '';
       successMessage = 'Conta criada! Abrindo configuração inicial...';
-      void identifyPostHogUser(newUserId, { email });
-      void capturePostHogEvent('user_signed_up', { method: 'email', has_referral: !!(referral.code) });
-      trackLead();
-      // Sinal antecipado pro Google Ads: a conversão no fim do wizard se perde silenciosamente
-      // quando o usuário troca de sessão/dispositivo antes de terminar o onboarding.
-      await waitForGtag();
-      trackGa4Event('sign_up', { method: 'email' });
-      await trackGoogleAdsInscricao({ email, transactionId: payload?.user?.id || session?.user?.id || '' });
-      await claimStoredReferral(session, 'signup-password');
+      void startSignupFollowUp({ session, userId: newUserId, email, hasReferral: !!referral.code });
       await waitStableSession();
       redirecting = true;
-      window.location.assign('/perfil?msg=complete');
+      await goto('/perfil?msg=complete');
     } catch (err) {
       errorMessage = getFriendlyErrorMessage(err);
     } finally {

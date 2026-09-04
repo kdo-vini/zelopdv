@@ -4,6 +4,7 @@ import { buildRateLimitKey, createRateLimitResponse, enforceRateLimit, getReques
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { supabaseAuth } from '$lib/server/supabaseAuth';
 import { getPostHogClient } from '$lib/server/posthog';
+import { waitUntil } from '@vercel/functions';
 
 // Campos de atribuição aceitos do cliente. Whitelist explícita: o payload vem do
 // localStorage do navegador, então é entrada não confiável e não pode virar um saco
@@ -119,8 +120,11 @@ export async function POST({ request, getClientAddress }) {
   }
 
   const newUser = signedIn.user || created.user;
-  const posthog = getPostHogClient();
-  if (posthog && newUser?.id) {
+  // Keep the registration response independent of the analytics network. The
+  // Vercel lifecycle owns completion after returning the already-created session.
+  const analytics = Promise.resolve().then(async () => {
+    const posthog = getPostHogClient();
+    if (!posthog || !newUser?.id) return;
     posthog.capture({
       distinctId: newUser.id,
       event: 'user_registered',
@@ -132,7 +136,8 @@ export async function POST({ request, getClientAddress }) {
       },
     });
     await posthog.flush();
-  }
+  }).catch(() => console.warn('[auth/signup] Analytics indisponível; conta criada.'));
+  waitUntil(analytics);
 
   return json({
     success: true,

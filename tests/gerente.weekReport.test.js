@@ -31,7 +31,7 @@ describe('buildWeekReport', () => {
       snapshot('2026-07-07', 200, 20, { por_produto: [{ id_produto: 2, nome: 'Suco', qtd: 8, receita: 80 }], mix_pagamentos: { pix: 200 }, custos_plataforma: 10 }),
       snapshot('2026-06-29', 150, 15, { por_produto: [{ id_produto: 2, nome: 'Suco', qtd: 9, receita: 90 }], mix_pagamentos: { dinheiro: 150 }, custos_plataforma: 7 }),
     ];
-    const report = buildWeekReport(snapshots, [], '2026-07-06');
+    const report = buildWeekReport(snapshots, [], '2026-07-06', { today: '2026-07-12' });
 
     expect(report.current.receita).toBe(300);
     expect(report.current.vendas).toBe(30);
@@ -55,7 +55,7 @@ describe('buildWeekReport', () => {
     const report = buildWeekReport([], [
       { id: 1, signal_date: '2026-07-07', type: 'AVG_TICKET_DOWN', severity: 'attention' },
       { id: 2, signal_date: '2026-07-13', type: 'STOCK_ZERO_WITH_DEMAND', severity: 'critical' },
-    ], '2026-07-06');
+    ], '2026-07-06', { today: '2026-07-12' });
     expect(report.signals).toHaveLength(1);
     expect(report.signals[0].id).toBe(1);
   });

@@ -4,6 +4,13 @@ Este documento descreve o comportamento offline atual do ZeloPDV, com foco no m�
 
 ## Resumo executivo
 
+Desde 2026-09-04, catálogo/categorias/subcategorias são persistidos com owner
+e só podem ser lidos pelo mesmo titular. Linhas antigas sem dono exigem
+atualização online; uma resposta online vazia substitui o cache. O replay
+exige contexto de owner e preserva registros desconhecidos/outras contas.
+Não há exclusão automática de vendas por idade. O service worker cacheia
+somente objetos públicos de storage, nunca REST/Auth ou objetos privados.
+
 O payload offline preserva `forma_pagamento` como texto e, portanto, aceita o
 ID nativo `vale_refeicao` sem mudança de versão do Dexie. A fila e o replay
 usam o mesmo contrato de venda única ou múltipla; a separação no relatório e o
@@ -34,7 +41,7 @@ A causa do "fica faltando produto offline" não era a fila de vendas (já estava
 | Pagamento em dinheiro, pix, cartão, Vale-Refeição e plataforma | Sim, com dados já carregados | O payload é salvo para sincronizar depois. Vale usa o ID `vale_refeicao`; taxas de plataforma usam o snapshot disponível na tela. |
 | Pagamento fiado | Parcial | Funciona se a pessoa já estiver selecionada/carregada antes da queda. Não cadastra nem busca pessoa offline. |
 | Desconto, taxa de entrega e múltiplos pagamentos | Sim | Entram no mesmo payload offline da venda. |
-| Sincronização ao voltar internet | Sim | O evento `online` chama `syncVendasPendentes(supabase)`. |
+| Sincronização ao voltar internet | Sim | O evento `online` chama o replay com contexto `{ ownerUserId, operatorUserId }`. |
 | Baixa de estoque na sincronização | Sim | A RPC aplica estoque de forma atômica no servidor quando a venda pendente sincroniza. |
 | Débito de fiado na sincronização | Sim | O payload envia `fiados`; após a migration de razão auditável, a venda também gera o lançamento de débito idempotente no extrato. |
 | Preservar data da venda offline | Sim | `created_at` é preenchido com o horário original salvo no IndexedDB. |
@@ -91,11 +98,11 @@ O snapshot de entitlement do gate de assinatura vive em **localStorage** (`zelo_
 - A venda online e o replay offline usam o mesmo formato de payload.
 - A RPC centraliza venda, itens, pagamentos, estoque, fiado e taxas de plataforma.
 - A sincronização apaga do IndexedDB somente vendas que retornam `data.id`.
-- Cada venda enviada pela RPC carrega `client_sale_id`, uma chave gerada no navegador para idempotência.
+- Cada venda enviada pela RPC carrega `client_sale_id`, persistido antes da primeira tentativa; registros legados recebem a chave em transação Dexie para que abas concorrentes reutilizem a mesma intenção.
 - Se a mesma venda for reenviada com o mesmo `client_sale_id`, a RPC retorna a venda existente e não baixa estoque nem lança fiado nem cria evento de extrato de novo.
 - Recebimentos de fiado continuam online: exigem a RPC atômica para manter saldo, extrato e suprimento de caixa consistentes.
 - Erros de regra de negócio não são mais colocados na fila offline.
-- Vendas pendentes antigas são removidas por `limparVendasAntigas(30)` como limpeza de segurança.
+- Vendas pendentes não são removidas por idade. Somente confirmação com `data.id` permite removê-las; suporte deve identificar o dono de registros legados sem owner antes de recuperá-los.
 
 ## Decisões aceitas (tradeoffs)
 

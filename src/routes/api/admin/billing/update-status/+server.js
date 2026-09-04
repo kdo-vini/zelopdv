@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import { expiredReactivation, EXPIRED_REACTIVATION_MESSAGE } from '$lib/server/adminSubscriptionPolicy.js';
 
 const ALLOWED_ORIGINS = new Set([
   'https://admin.zelopdv.com.br',
@@ -76,12 +77,15 @@ export async function POST({ request }) {
     // Fetch current subscription to validate and return diff
     const { data: sub, error: subErr } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, status, current_period_end, manually_extended_until')
+      .select('id, user_id, status, current_period_end, manually_extended_until, updated_at')
       .eq('id', subscriptionId)
       .maybeSingle();
 
     if (subErr || !sub) {
       return json({ error: 'Subscription não encontrada.' }, { status: 404, headers: cors });
+    }
+    if (expiredReactivation(sub, newStatus)) {
+      return json({ error: EXPIRED_REACTIVATION_MESSAGE }, { status: 409, headers: cors });
     }
 
     const nowIso = new Date().toISOString();
@@ -105,14 +109,17 @@ export async function POST({ request }) {
       updatePayload.cancel_at_period_end = false;
     }
 
-    const { error: updateErr } = await supabaseAdmin
+    let updateQuery = supabaseAdmin
       .from('subscriptions')
       .update(updatePayload)
       .eq('id', subscriptionId);
+    if (sub.updated_at) updateQuery = updateQuery.eq('updated_at', sub.updated_at);
+    const { data: saved, error: updateErr } = await updateQuery.select('id').maybeSingle();
 
     if (updateErr) {
       return json({ error: updateErr.message }, { status: 500, headers: cors });
     }
+    if (!saved?.id) return json({ error: 'A assinatura mudou. Recarregue antes de salvar.' }, { status: 409, headers: cors });
 
     return json({
       success: true,

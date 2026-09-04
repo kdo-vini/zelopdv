@@ -318,6 +318,7 @@
         },
         body: JSON.stringify({
           userId: editForm.user_id,
+          subscriptionId: editSub?.id,
           profile: {
             nome_exibicao: editForm.nome_exibicao,
             contato: editForm.phone ?? null,
@@ -1276,15 +1277,16 @@
       
       <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
         <h3 class="text-lg font-bold text-white tracking-wide">Editar Perfil</h3>
-        <button on:click={closeEdit} class="text-slate-500 hover:text-white transition-colors">
+        <button on:click={closeEdit} aria-label="Fechar edição de perfil" class="text-slate-500 hover:text-white transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
 
       <div class="p-6 space-y-5">
         <div class="space-y-1.5">
-          <label class="block text-[13px] font-medium text-slate-400">Nome de Exibição / Empresa</label>
+          <label for="edit-company-name" class="block text-[13px] font-medium text-slate-400">Nome de Exibição / Empresa</label>
           <input 
+            id="edit-company-name"
             type="text" 
             bind:value={editForm.nome_exibicao} 
             class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
@@ -1292,8 +1294,9 @@
         </div>
         
         <div class="space-y-1.5">
-          <label class="block text-[13px] font-medium text-slate-400">Documento (CPF/CNPJ)</label>
+          <label for="edit-company-document" class="block text-[13px] font-medium text-slate-400">Documento (CPF/CNPJ)</label>
           <input 
+            id="edit-company-document"
             type="text" 
             bind:value={editForm.documento} 
             class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white font-mono focus:outline-hidden focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
@@ -1301,8 +1304,9 @@
         </div>
 
         <div class="space-y-1.5">
-          <label class="block text-[13px] font-medium text-slate-400">Email (auth)</label>
+          <label for="edit-user-email" class="block text-[13px] font-medium text-slate-400">Email (auth)</label>
           <input
+            id="edit-user-email"
             type="email"
             value={editForm.email}
             disabled
@@ -1311,8 +1315,9 @@
         </div>
 
         <div class="space-y-1.5">
-          <label class="block text-[13px] font-medium text-slate-400">Telefone WhatsApp</label>
+          <label for="edit-user-phone" class="block text-[13px] font-medium text-slate-400">Telefone WhatsApp</label>
           <input
+            id="edit-user-phone"
             type="text"
             bind:value={editForm.phone}
             placeholder="5511999999999"
@@ -1325,8 +1330,9 @@
             <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Controle de Assinatura</h4>
             
             <div class="space-y-1.5">
-              <label class="block text-[13px] font-medium text-slate-400">Status da Conta</label>
+              <label for="edit-account-status" class="block text-[13px] font-medium text-slate-400">Status da Conta</label>
               <select 
+                id="edit-account-status"
                 bind:value={editSub.status}
                 class="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:border-sky-500 transition-all shadow-inner"
               >

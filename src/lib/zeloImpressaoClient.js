@@ -16,6 +16,12 @@ export const ZELO_IMPRESSAO_PRINTER_UNAVAILABLE_MESSAGE =
 export const ZELO_IMPRESSAO_AUTO_CONNECT_FALLBACK_MESSAGE =
   'A conexão automática não foi concluída. Se o aplicativo pedir, digite o código exibido no Zelo Impressão.';
 
+function unknownPrintOutcome(cause) {
+  return Object.assign(new Error('Não foi possível confirmar a impressão. Confira a saída antes de tentar novamente.'), {
+    code: 'PRINT_OUTCOME_UNKNOWN', retrySafe: false, cause,
+  });
+}
+
 function getStoredToken() {
   try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
 }
@@ -24,16 +30,8 @@ function setStoredToken(token) {
   try { localStorage.setItem(TOKEN_KEY, token); } catch {}
 }
 
-function withTimeout(promise, timeoutMs = TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  return {
-    signal: controller.signal,
-    run: promise(controller.signal).finally(() => clearTimeout(timeout))
-  };
-}
-
 async function request(path, options = {}) {
+  const isPrint = path === '/print' || path === '/test-print';
   const token = options.token ?? getStoredToken();
   const headers = {
     Accept: 'application/json',
@@ -41,35 +39,44 @@ async function request(path, options = {}) {
     ...(token ? { 'X-Zelo-Impressao-Token': token } : {})
   };
 
-  const task = withTimeout((signal) => fetch(`${options.baseUrl || DEFAULT_BASE_URL}${path}`, {
-    method: options.method || 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-    signal
-  }), options.timeoutMs);
-
+  const body = options.body ? JSON.stringify(options.body) : undefined;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? TIMEOUT_MS);
   let response;
+  let data = null;
   try {
-    response = await task.run;
+    response = await fetch(`${options.baseUrl || DEFAULT_BASE_URL}${path}`, {
+      method: options.method || 'GET', headers, body, signal: controller.signal,
+    });
+    try { data = await response.json(); }
+    catch (error) { if (response.ok || controller.signal.aborted) throw error; }
+    if (response.ok && (!data || typeof data.ok !== 'boolean')) throw new Error('Invalid local printer response');
   } catch (error) {
+    if (isPrint) throw unknownPrintOutcome(error);
     throw Object.assign(new Error(ZELO_IMPRESSAO_UNAVAILABLE_MESSAGE), {
       code: 'ZELO_IMPRESSAO_UNAVAILABLE',
+      retrySafe: true,
       cause: error
     });
+  } finally {
+    clearTimeout(timer);
   }
 
-  let data = null;
-  try { data = await response.json(); } catch {}
+  if (isPrint && (data?.code === 'PRINT_OUTCOME_UNKNOWN' || data?.retrySafe === false ||
+    (!response.ok && ![401, 403, 404, 413, 415].includes(response.status) && data?.retrySafe !== true) ||
+    (response.ok && data?.ok !== true))) {
+    throw unknownPrintOutcome(data);
+  }
 
   if (!response.ok || data?.ok === false) {
     const code = data?.code || (response.status === 401 ? 'PAIRING_REQUIRED' : 'ZELO_IMPRESSAO_ERROR');
-    if (code === 'PAIRING_REQUIRED') {
+    if (code === 'PAIRING_REQUIRED' && options.token === undefined) {
       try { localStorage.removeItem(TOKEN_KEY); } catch {}
     }
     const message = code === 'PAIRING_REQUIRED'
       ? ZELO_IMPRESSAO_AUTO_CONNECT_FALLBACK_MESSAGE
       : friendlyMessage(data?.message || response.statusText);
-    throw Object.assign(new Error(message), { code, status: response.status, data });
+    throw Object.assign(new Error(message), { code, status: response.status, data, retrySafe: data?.retrySafe });
   }
 
   return data;
@@ -106,10 +113,18 @@ export async function connectZeloImpressao(options = {}) {
 export async function detectZeloImpressao(options = {}) {
   try {
     const health = await request('/health', { ...options, token: '' });
-    const hasToken = !!getStoredToken();
+    const hasToken = !!(options.token ?? getStoredToken());
     let autoConnected = false;
     let autoConnectError = null;
-    const alreadyPaired = !health.pairingRequired || (!!health.paired && hasToken);
+    let alreadyPaired = !health.pairingRequired;
+    if (!alreadyPaired && hasToken) {
+      try {
+        await request('/config', options);
+        alreadyPaired = true;
+      } catch (error) {
+        autoConnectError = error;
+      }
+    }
 
     if (!alreadyPaired && options.autoConnect !== false) {
       try {
@@ -172,12 +187,20 @@ export async function saveConfig(config, options = {}) {
 }
 
 export async function sendPrintJob(job, options = {}) {
+  // Only a failed read preflight can safely mean that nothing was submitted.
+  const health = await request('/health', { ...options, token: '' });
+  if (job.intent?.mode === 'automatic' && health.capabilities?.canonicalAutoPrint !== true) {
+    throw Object.assign(new Error('Atualize o Zelo Impressão para coordenar PDV e Chat sem duplicar pedidos. A segunda via manual continua disponível.'), {
+      code: 'AUTO_PRINT_COORDINATION_REQUIRED', retrySafe: false,
+    });
+  }
   const response = await request('/print', {
     ...options,
     method: 'POST',
     timeoutMs: options.timeoutMs || 12000,
     body: {
       ...job,
+      jobId: job.jobId || globalThis.crypto?.randomUUID?.(),
       timestamp: job.timestamp || new Date().toISOString()
     }
   });
@@ -185,6 +208,7 @@ export async function sendPrintJob(job, options = {}) {
 }
 
 export async function sendRawEscposPrintJob({
+  jobId,
   source,
   companyStoreId,
   printerId,
@@ -197,6 +221,7 @@ export async function sendRawEscposPrintJob({
   let binary = '';
   for (let i = 0; i < buffer.length; i += 1) binary += String.fromCharCode(buffer[i]);
   return sendPrintJob({
+    jobId,
     source,
     companyStoreId,
     type,
@@ -212,6 +237,7 @@ export async function sendRawEscposPrintJob({
 }
 
 export async function sendTestPrint(printerId, options = {}) {
+  await request('/health', { ...options, token: '' });
   return request('/test-print', {
     ...options,
     method: 'POST',

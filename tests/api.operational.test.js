@@ -99,6 +99,61 @@ function activeSubscription() {
   };
 }
 
+describe('admin subscription edits', () => {
+  it('persists the Acessos add-on and ends manual extensions when canceling', async () => {
+    const state = {
+      user: { id: 'admin-user' }, queries: [], results: {},
+      maybeSingle: {
+        super_admins: { data: { id: 'admin-1', is_active: true }, error: null },
+        subscriptions: { data: { id: 'sub-current', user_id: 'owner-1', current_period_end: '2099-01-01' }, error: null },
+      },
+    };
+    const { POST } = await loadModule('../src/routes/api/admin/billing/update-user-subscription/+server.js', state);
+    const response = await POST({ request: makeRequest({ body: {
+      userId: 'owner-1', subscription: { status: 'canceled', has_acessos_addon: false },
+    } }) });
+    expect(response.status).toBe(200);
+    expect(state.queries.find((q) => q.table === 'subscriptions' && q.operation === 'update').payload)
+      .toMatchObject({ has_acessos_addon: false, manually_extended_until: null, cancel_at_period_end: false });
+    expect(state.queries.find((q) => q.table === 'subscriptions' && q.operation === 'update').filters)
+      .toContainEqual({ method: 'eq', column: 'id', value: 'sub-current' });
+  });
+  it('does not report an expired reactivation as success or change the profile before validation', async () => {
+    const state = { user: { id: 'admin-user' }, queries: [], results: {}, maybeSingle: {
+      super_admins: { data: { id: 'admin-1', is_active: true }, error: null },
+      subscriptions: { data: { id: 'old-sub', status: 'canceled', current_period_end: '2020-01-01', manually_extended_until: null }, error: null },
+    } };
+    const { POST } = await loadModule('../src/routes/api/admin/billing/update-user-subscription/+server.js', state);
+    const response = await POST({ request: makeRequest({ body: { userId: 'owner-1', subscriptionId: 'old-sub',
+      profile: { nome_exibicao: 'Loja' }, subscription: { status: 'active' },
+    } }) });
+    expect(response.status).toBe(409);
+    expect(state.queries.some((q) => q.operation === 'update')).toBe(false);
+  });
+  it('rejects a selected subscription outside the requested owner', async () => {
+    const state = { user: { id: 'admin-user' }, queries: [], results: {}, maybeSingle: {
+      super_admins: { data: { id: 'admin-1', is_active: true }, error: null },
+      subscriptions: { data: null, error: null },
+    } };
+    const { POST } = await loadModule('../src/routes/api/admin/billing/update-user-subscription/+server.js', state);
+    const response = await POST({ request: makeRequest({ body: { userId: 'owner-1', subscriptionId: 'other-owner-sub', subscription: { status: 'active' } } }) });
+    expect(response.status).toBe(404);
+    expect(state.queries.find((q) => q.table === 'subscriptions').filters).toEqual(expect.arrayContaining([
+      { method: 'eq', column: 'user_id', value: 'owner-1' }, { method: 'eq', column: 'id', value: 'other-owner-sub' },
+    ]));
+  });
+  it('blocks expired reactivation from the status endpoint too', async () => {
+    const state = { user: { id: 'admin-user' }, queries: [], results: {}, maybeSingle: {
+      super_admins: { data: { id: 'admin-1', is_active: true }, error: null },
+      subscriptions: { data: { id: 'expired', status: 'canceled', current_period_end: '2020-01-01' }, error: null },
+    } };
+    const { POST } = await loadModule('../src/routes/api/admin/billing/update-status/+server.js', state);
+    const response = await POST({ request: makeRequest({ body: { subscriptionId: 'expired', status: 'active' } }) });
+    expect(response.status).toBe(409);
+    expect(state.queries.some((q) => q.operation === 'update')).toBe(false);
+  });
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.restoreAllMocks();

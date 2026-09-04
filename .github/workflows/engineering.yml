@@ -1,0 +1,51 @@
+name: Engineering gates
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: engineering-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pdv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      VITE_PUBLIC_SUPABASE_ANON_KEY: ci-public-placeholder
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # This test checks both apps' resolved cookie dependencies.
+      - run: npm ci --prefix admin-dashboard
+      - run: npm run check
+      - run: npm test
+      - run: npm run verify:migrations
+      - run: npm run build
+      - run: test -f .vercel/output/config.json && test -d .vercel/output/functions/index.func
+  admin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: admin-dashboard
+    env:
+      VITE_SUPABASE_URL: https://example.supabase.co
+      VITE_SUPABASE_ANON_KEY: ci-public-placeholder
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: admin-dashboard/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - run: test -f .vercel/output/config.json && test -d .vercel/output/functions/index.func

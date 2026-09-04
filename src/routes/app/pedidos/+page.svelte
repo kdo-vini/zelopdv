@@ -9,7 +9,7 @@
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { printOrder } from '$lib/printService';
-  import { detectZeloImpressao } from '$lib/zeloImpressaoClient.js';
+  import { detectZeloImpressao, getZeloImpressaoFriendlyMessage } from '$lib/zeloImpressaoClient.js';
   import { createPrintedOrderStore, selectOrdersToAutoPrint } from '$lib/orderAutoPrint.js';
   import {
     canonicalFulfillmentMode,
@@ -157,15 +157,20 @@
       await printOrder(
         pedido,
         dadosEmpresa?.nome_exibicao || dadosEmpresa?.razao_social || 'Zelo PDV',
-        dadosEmpresa?.id,
+        ownerUserId,
+        { automatic: true },
       );
       autoPrintRetryIds.delete(pedido.id);
     } catch (error) {
-      printedOrderStore.release(pedido.id);
-      autoPrintRetryIds.add(pedido.id);
+      if (error?.code !== 'PRINT_OUTCOME_UNKNOWN' && error?.retrySafe !== false) {
+        printedOrderStore.release(pedido.id);
+        autoPrintRetryIds.add(pedido.id);
+      } else {
+        autoPrintRetryIds.delete(pedido.id);
+      }
       printerConnected = false;
       console.error('[printer] auto-print falhou para pedido', pedido.id, error);
-      addToast('Não consegui imprimir o pedido automaticamente. Verifique a impressora.', 'warning');
+      addToast(getZeloImpressaoFriendlyMessage(error), 'warning');
     }
   }
 
@@ -181,7 +186,7 @@
       await printOrder(
         pedido,
         dadosEmpresa?.nome_exibicao || dadosEmpresa?.razao_social || 'Zelo PDV',
-        dadosEmpresa?.id,
+        ownerUserId,
       );
       printedOrderStore?.reserve(pedido.id);
       autoPrintRetryIds.delete(pedido.id);
@@ -190,7 +195,7 @@
     } catch (error) {
       printerConnected = false;
       console.error('[printer] reimpressão falhou para pedido', pedido.id, error);
-      addToast('Não consegui imprimir o pedido. Verifique a impressora.', 'error');
+      addToast(getZeloImpressaoFriendlyMessage(error), 'error');
     } finally {
       reimprimindo = false;
     }

@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import { expiredReactivation, EXPIRED_REACTIVATION_MESSAGE } from '$lib/server/adminSubscriptionPolicy.js';
 
 const ALLOWED_ORIGINS = new Set([
   'https://admin.zelopdv.com.br',
@@ -79,6 +80,29 @@ export async function POST({ request }) {
 
     const nowIso = new Date().toISOString();
     const results = { profileUpdated: false, subscriptionUpdated: false };
+    const hasSubFields = ['status', 'plan_tier', 'has_mesas_addon', 'has_acessos_addon', 'has_zelo_menu']
+      .some((field) => subscription[field] !== undefined);
+    let selectedSubscription = null;
+    if (hasSubFields) {
+      for (const field of ['has_mesas_addon', 'has_acessos_addon', 'has_zelo_menu']) {
+        if (subscription[field] !== undefined && typeof subscription[field] !== 'boolean') {
+          return json({ error: `${field} deve ser booleano.` }, { status: 400, headers: cors });
+        }
+      }
+      let query = supabaseAdmin.from('subscriptions')
+        .select('id, user_id, status, current_period_end, manually_extended_until, updated_at')
+        .eq('user_id', userId);
+      // Legacy callers select the same latest row shown in the user editor.
+      if (body.subscriptionId) query = query.eq('id', body.subscriptionId);
+      else query = query.order('updated_at', { ascending: false }).order('id', { ascending: false }).limit(1);
+      const { data, error } = await query.maybeSingle();
+      if (error) return json({ error: 'Não foi possível consultar a assinatura.' }, { status: 500, headers: cors });
+      if (!data) return json({ error: 'Assinatura não encontrada para este usuário.' }, { status: 404, headers: cors });
+      selectedSubscription = data;
+      if (expiredReactivation(data, subscription.status)) {
+        return json({ error: EXPIRED_REACTIVATION_MESSAGE }, { status: 409, headers: cors });
+      }
+    }
 
     // Update empresa_perfil if profile fields provided
     if (profile.nome_exibicao !== undefined || profile.contato !== undefined) {
@@ -98,12 +122,6 @@ export async function POST({ request }) {
     }
 
     // Update subscription if fields provided
-    const hasSubFields = subscription.status !== undefined
-      || subscription.plan_tier !== undefined
-      || subscription.has_mesas_addon !== undefined
-      || subscription.has_acessos_addon !== undefined
-      || subscription.has_zelo_menu !== undefined;
-
     if (hasSubFields) {
       const subUpdate = {
         last_modified_by: admin.id,
@@ -114,11 +132,14 @@ export async function POST({ request }) {
       if (subscription.status !== undefined) subUpdate.status = subscription.status;
       if (subscription.plan_tier !== undefined) subUpdate.plan_tier = subscription.plan_tier;
       if (subscription.has_mesas_addon !== undefined) subUpdate.has_mesas_addon = subscription.has_mesas_addon;
+      if (subscription.has_acessos_addon !== undefined) subUpdate.has_acessos_addon = subscription.has_acessos_addon;
       if (subscription.has_zelo_menu !== undefined) subUpdate.has_zelo_menu = subscription.has_zelo_menu;
 
       // If ending access, expire immediately and clear manual extension.
       if (subscription.status === 'canceled') {
         subUpdate.current_period_end = nowIso;
+        subUpdate.manually_extended_until = null;
+        subUpdate.cancel_at_period_end = false;
       }
       if (subscription.status === 'trial_expired') {
         subUpdate.current_period_end = nowIso;
@@ -126,14 +147,18 @@ export async function POST({ request }) {
         subUpdate.cancel_at_period_end = false;
       }
 
-      const { error: subErr } = await supabaseAdmin
+      let updateQuery = supabaseAdmin
         .from('subscriptions')
         .update(subUpdate)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .eq('id', selectedSubscription.id);
+      if (selectedSubscription.updated_at) updateQuery = updateQuery.eq('updated_at', selectedSubscription.updated_at);
+      const { data: saved, error: subErr } = await updateQuery.select('id').maybeSingle();
 
       if (subErr) {
         return json({ error: `Erro ao atualizar assinatura: ${subErr.message}` }, { status: 500, headers: cors });
       }
+      if (!saved?.id) return json({ error: 'A assinatura mudou durante a edição. Recarregue antes de salvar.' }, { status: 409, headers: cors });
       results.subscriptionUpdated = true;
     }
 

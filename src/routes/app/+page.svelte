@@ -18,6 +18,7 @@
   import { getFriendlyErrorMessage } from '$lib/errorUtils';
   import { resolveAppIcon } from '$lib/icons/appIcons';
   import { pdvCache } from '$lib/stores/pdvCache';
+  import { isNetworkError } from '$lib/netStatus';
   import { money, validatePaymentCoverage, getPrecoTabela } from '$lib/finance/caixa';
   import { abrirCaixaIdempotente } from '$lib/finance/caixaOps';
   import { buildVendaPayload } from '$lib/finance/saleOps';
@@ -48,8 +49,7 @@
     contarVendasPendentes,
     salvarVendaOffline,
     shouldQueueVendaOffline,
-    syncVendasPendentes,
-    limparVendasAntigas
+    syncVendasPendentes
   } from '$lib/offlineDb';
 
 
@@ -272,6 +272,7 @@
     const authCtx = await ensureActiveSubscription({ requireProfile: true });
     if (!authCtx) return;
     ownerUserId = authCtx.ownerUserId;
+    pdvCache.setUserId(ownerUserId);
     isSubUser = authCtx.isSubUser;
     operadorUserId = authCtx.userId;
     // Verifica login e carrega dados do PDV
@@ -330,9 +331,6 @@
       } catch (e) { console.warn('[PDV] Failed to load permissions:', e?.message); }
     }
 
-    // Cleanup stuck offline records older than 30 days
-    limparVendasAntigas(30).catch(() => {});
-
     // Estado inicial do contador de pendentes + retry periódico.
     // O evento `online` é pouco confiável em rede oscilante (dispara mas a rede
     // ainda está ruim), então tentamos reenviar de tempos em tempos enquanto
@@ -355,7 +353,7 @@
   /** Atualiza o contador de vendas aguardando sincronização. */
   async function atualizarPendentesCount() {
     try {
-      vendasPendentesCount = await contarVendasPendentes();
+      vendasPendentesCount = await contarVendasPendentes(ownerUserId);
     } catch {
       // contagem é só indicador; ignora falha
     }
@@ -492,22 +490,20 @@
   async function carregarCategorias(forceRefresh = false) {
     try {
       const data = await pdvCache.getCategorias(forceRefresh);
-      // Rede falhou/vazia: cai no cache local persistido (offline-first).
-      categorias = (data && data.length) ? data : await buscarCategoriasLocal();
-      if (data && data.length) {
-        atualizarCacheCategorias(data).catch((e) => console.warn('Falha ao cachear categorias offline:', e));
-      }
+      categorias = data;
+      atualizarCacheCategorias(data, ownerUserId).catch((e) => console.warn('Falha ao cachear categorias offline:', e));
       // Seleciona a primeira categoria automaticamente se nenhuma estiver ativa
       if (categorias.length > 0 && !categoriaAtiva) {
         categoriaAtiva = categorias[0].id;
       }
     } catch (err) {
       // Erro de rede: tenta o cache local antes de desistir.
-      const local = await buscarCategoriasLocal().catch(() => []);
+      const local = isNetworkError(err) ? await buscarCategoriasLocal(ownerUserId).catch(() => []) : [];
       if (local.length) {
         categorias = local;
         if (!categoriaAtiva) categoriaAtiva = categorias[0].id;
       } else {
+        categorias = [];
         errorMessage = err?.message || 'Erro ao carregar categorias';
       }
     }
@@ -517,14 +513,12 @@
   async function carregarSubcategorias(forceRefresh = false) {
     try {
       const data = await pdvCache.getSubcategorias(forceRefresh);
-      subcategorias = (data && data.length) ? data : await buscarSubcategoriasLocal();
-      if (data && data.length) {
-        atualizarCacheSubcategorias(data).catch((e) => console.warn('Falha ao cachear subcategorias offline:', e));
-      }
+      subcategorias = data;
+      atualizarCacheSubcategorias(data, ownerUserId).catch((e) => console.warn('Falha ao cachear subcategorias offline:', e));
     } catch (err) {
-      const local = await buscarSubcategoriasLocal().catch(() => []);
-      if (local.length) subcategorias = local;
-      else addToast('Erro ao carregar subcategorias: ' + (err?.message || err), 'error');
+      const local = isNetworkError(err) ? await buscarSubcategoriasLocal(ownerUserId).catch(() => []) : [];
+      subcategorias = local;
+      if (!local.length) addToast('Erro ao carregar subcategorias: ' + (err?.message || err), 'error');
     }
   }
 
@@ -532,20 +526,13 @@
   async function carregarProdutos(forceRefresh = false) {
     try {
       const data = await pdvCache.getProdutos(forceRefresh);
-      if (data && data.length) {
-        produtos = data;
-        // Atualiza cache offline (produto completo, com estoque para validação offline)
-        atualizarCacheProdutos(produtos).catch((e) => console.warn('Falha ao cachear produtos offline:', e));
-      } else {
-        // Rede falhou ou retornou vazio: usa o último catálogo persistido.
-        const local = await buscarProdutosLocal();
-        produtos = local.length ? local : (data || []);
-      }
+      produtos = data;
+      atualizarCacheProdutos(data, ownerUserId).catch((e) => console.warn('Falha ao cachear produtos offline:', e));
     } catch (err) {
       // Erro de rede no carregamento: não deixa a tela sem produtos se há cache.
-      const local = await buscarProdutosLocal().catch(() => []);
-      if (local.length) produtos = local;
-      else if (!produtos.length) errorMessage = err?.message || 'Erro ao carregar produtos';
+      const local = isNetworkError(err) ? await buscarProdutosLocal('', ownerUserId).catch(() => []) : [];
+      produtos = local;
+      if (!local.length) errorMessage = err?.message || 'Erro ao carregar produtos';
     }
   }
   

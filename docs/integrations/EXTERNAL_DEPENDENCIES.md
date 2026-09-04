@@ -22,7 +22,7 @@
 
 - login/signup/reset quebra
 - guards e carregamento inicial falham
-- PDV online quebra; offline cobre apenas a venda ja montada no browser
+- PDV online perde consultas; catálogo previamente carregado e vendas podem usar a contingência descrita em `docs/operations/OFFLINE.md`, com owner e entitlement previamente validados
 - admin dashboard perde acesso
 
 **Validacoes manuais uteis**
@@ -131,7 +131,7 @@
 **Codigo-chave**
 
 - `src/routes/api/chat/support/+server.js`
-- `src/routes/api/chat/openai/+server.js`
+- `src/routes/api/chat/assistant/+server.js`
 
 **Quando cai**
 

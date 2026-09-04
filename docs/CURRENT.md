@@ -1,5 +1,35 @@
 # ZeloPDV — Foco atual
 
+- Correção dos remanescentes (2026-09-04, rodada 2, em validação): impressão
+  automática envia owner + zelo_orders.id ao árbitro nativo; segunda via é
+  manual. SDK bloqueia auto-print em agente sem coordenação. Editor admin
+  altera somente a assinatura selecionada e exige validade vigente para
+  reativação; assinaturas vencidas abrem Renovação Manual. Cadastro não espera
+  analytics: SPA preserva tarefas e servidor usa waitUntil da Vercel.
+  Adapter 6.3.4, Svelte 5/Vite 6 no admin, SheetJS 0.20.3 e override restrito
+  cookie 0.7.2 deixam npm audit dos dois apps em zero; round-trip real Excel e
+  cookies verificados. **994 testes passam / 3 skips**, check principal 0/0.
+  Workflow Linux valida o output Vercel completo; Windows ainda encontra
+  EPERM de symlink. Novos patches ainda não publicados. Menu/Chat/Printer e
+  migration de cupom estão em revisão coordenada.
+
+- Auditoria do ecossistema (2026-09-04): [relatório geral](audits/2026-09-04-ecossistema.md)
+  reúne PDV, Chat, Menu, Printer, performance e integração. No PDV, cache/fila
+  offline agora exigem owner, chave legacy é persistida antes do replay,
+  erro SQL confirmado não vira venda offline e cache PWA não cobre APIs
+  autenticadas. Impressão incerta preserva dedupe e pede conferência do papel;
+  editor admin persiste Acessos e limpa extensão manual ao cancelar.
+  A migration `20260904222157_delivery_pricing_rule_jsonb.sql` foi aplicada e
+  registrada no Supabase vinculado: erro record/JSONB de frete resolvido,
+  assinatura e ACL preservadas. O lint remanescente de tabela temporária em
+  `criar_venda_completa` continua pendente de validação runtime descartável.
+  Patches de dependências aplicados em ambos apps. Validação após patches:
+  **984 testes passam / 3 skips SQL; check principal 0/0; admin 0 erros/6 avisos**.
+  Build Windows ainda termina **EPERM de symlink no adapter Vercel**, após
+  compilar client/SSR/PWA; E2E autenticado não executa sem credenciais de teste.
+  Código local sem deploy desta auditoria; apresentação de pedidos paralela
+  foi preservada. Não tratar a pasta como homologada em produção.
+
 - Informações essenciais nos pedidos online (2026-09-04): a tela de pedidos do
   ZeloPDV agora exibe endereço, bairro e forma de pagamento na fila e no
   detalhe. Para pagamentos em dinheiro, o troco aparece como valor formatado

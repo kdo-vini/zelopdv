@@ -68,7 +68,7 @@ export function prepareVendaOfflineRecord(venda) {
         ownerUserId: venda?.ownerUserId || venda?.payload?.owner_user_id || null,
         operatorUserId: venda?.operatorUserId || venda?.payload?.operador_id || null,
         createdAt,
-        // Mantém `data` para compat com cleanup antigo de `limparVendasAntigas`.
+        // Mantém `data` para leitura de registros legados.
         data: createdAt,
         status: 'aguardando'
     };
@@ -97,48 +97,59 @@ export async function getVendasPendentes() {
  * Grava o objeto completo (inclui o join `categorias` e `estoque_atual`), então
  * o snapshot de estoque para validação offline vem junto de graça.
  */
-export async function atualizarCacheProdutos(produtos) {
-    await db.produtos.clear();
-    return await db.produtos.bulkAdd(produtos);
+export async function atualizarCacheProdutos(produtos, ownerUserId) {
+    return replaceCatalogCache(db.produtos, produtos, ownerUserId);
+}
+
+async function replaceCatalogCache(table, rows, ownerUserId) {
+    if (!ownerUserId) throw new Error('Titular obrigatório para salvar o catálogo offline.');
+    return db.transaction('rw', table, async () => {
+        await table.clear();
+        await table.bulkAdd(rows.map((row) => ({ ...row, _cacheOwnerUserId: ownerUserId })));
+    });
+}
+
+async function readCatalogCache(table, ownerUserId) {
+    if (!ownerUserId) return [];
+    // Legacy rows without a known owner must be refreshed online first.
+    return table.filter((row) => row._cacheOwnerUserId === ownerUserId).toArray();
 }
 
 /**
  * Cache de categorias para render offline do filtro do PDV.
  */
-export async function atualizarCacheCategorias(categorias) {
-    await db.categorias.clear();
-    if (!categorias?.length) return;
-    return await db.categorias.bulkAdd(categorias);
+export async function atualizarCacheCategorias(categorias, ownerUserId) {
+    return replaceCatalogCache(db.categorias, categorias, ownerUserId);
 }
 
 /**
  * Cache de subcategorias para render offline do filtro do PDV.
  */
-export async function atualizarCacheSubcategorias(subcategorias) {
-    await db.subcategorias.clear();
-    if (!subcategorias?.length) return;
-    return await db.subcategorias.bulkAdd(subcategorias);
+export async function atualizarCacheSubcategorias(subcategorias, ownerUserId) {
+    return replaceCatalogCache(db.subcategorias, subcategorias, ownerUserId);
 }
 
 /**
  * Lê categorias do cache local (fallback offline).
  */
-export async function buscarCategoriasLocal() {
-    return await db.categorias.toArray();
+export async function buscarCategoriasLocal(ownerUserId) {
+    return readCatalogCache(db.categorias, ownerUserId);
 }
 
 /**
  * Lê subcategorias do cache local (fallback offline).
  */
-export async function buscarSubcategoriasLocal() {
-    return await db.subcategorias.toArray();
+export async function buscarSubcategoriasLocal(ownerUserId) {
+    return readCatalogCache(db.subcategorias, ownerUserId);
 }
 
 /**
  * Conta vendas aguardando sincronização (para indicador no PDV).
  */
-export async function contarVendasPendentes() {
-    return await db.vendas_pendentes.where('status').equals('aguardando').count();
+export async function contarVendasPendentes(ownerUserId) {
+    if (!ownerUserId) return 0;
+    return db.vendas_pendentes.where('status').equals('aguardando')
+        .and((row) => row.ownerUserId === ownerUserId).count();
 }
 
 /**
@@ -223,19 +234,31 @@ export async function syncVendasPendentes(supabase, context = {}) {
 
     for (const vendaPendente of pendentes) {
         try {
-            if (ownerFilter && vendaPendente.ownerUserId && vendaPendente.ownerUserId !== ownerFilter) {
+            if (!ownerFilter || vendaPendente.ownerUserId !== ownerFilter) {
                 logs.skipped++;
                 continue;
             }
 
             // Compat: se for registro v1/v2, converte; v3 já tem .payload pronto.
-            const payload = vendaPendente.payload || legacyToPayload(vendaPendente);
+            const originalPayload = vendaPendente.payload || legacyToPayload(vendaPendente);
 
-            if (!payload) {
+            if (!originalPayload) {
                 console.warn('[Sync] Venda pendente sem payload válido — pulando:', vendaPendente.id);
                 logs.fail++;
                 continue;
             }
+
+            // Persist before sending: a timeout may occur after the server commits.
+            // The transaction also makes concurrent tabs reuse the same key.
+            const payload = await db.transaction('rw', db.vendas_pendentes, async () => {
+                const current = await db.vendas_pendentes.get(vendaPendente.id);
+                if (!current) return null;
+                const stable = { ...(current.payload || originalPayload) };
+                stable.client_sale_id ||= current.client_sale_id || createClientSaleId();
+                await db.vendas_pendentes.update(current.id, { payload: stable });
+                return stable;
+            });
+            if (!payload) { logs.skipped++; continue; }
 
             // Garante que created_at preserve a data original da venda offline
             if (!payload.created_at) {
@@ -266,28 +289,10 @@ export async function syncVendasPendentes(supabase, context = {}) {
 }
 
 /**
- * Remove vendas pendentes mais antigas que `diasMaximos` que nunca foram sincronizadas.
- * Use como limpeza de segurança para registros presos (ex.: caixa deletado no servidor).
- */
-export async function limparVendasAntigas(diasMaximos = 30) {
-    const limite = new Date();
-    limite.setDate(limite.getDate() - diasMaximos);
-    const limiteISO = limite.toISOString();
-
-    return await db.vendas_pendentes
-        .where('data')
-        .below(limiteISO)
-        .delete();
-}
-
-/**
  * Busca produtos no cache local
  */
-export async function buscarProdutosLocal(termo = '') {
-    if (!termo) return await db.produtos.toArray();
-
+export async function buscarProdutosLocal(termo = '', ownerUserId) {
+    const rows = await readCatalogCache(db.produtos, ownerUserId);
     const t = termo.toLowerCase();
-    return await db.produtos
-        .filter(p => p.nome.toLowerCase().includes(t))
-        .toArray();
+    return t ? rows.filter((p) => String(p.nome || '').toLowerCase().includes(t)) : rows;
 }

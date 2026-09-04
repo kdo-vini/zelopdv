@@ -76,8 +76,9 @@ Principais envs usados no código:
 
 ### Convenção observada
 
-- `supabase/migrations/` contém as 59 versões aplicadas e todas as migrations
-  futuras devem ser forward-only; nunca editar um arquivo já aplicado.
+- O ledger preserva 59 versões remotas congeladas e migrations forward
+  posteriores em `supabase/migrations/`; em 2026-09-04 são 38 forward.
+  `npm run verify:migrations` confirma o inventário; nunca editar arquivo aplicado.
 - `supabase/baselines/20260813091000/` é o baseline executável atual, fora do
   stream normal, e `supabase/history/` contém referências não executáveis.
 - `.ai/migrations/` permanece como acervo legado classificado; não é a fonte
@@ -202,6 +203,6 @@ Estado validado mais recente está em [[CURRENT]].
 
 - O deploy e o domínio do `admin-dashboard/` são inferidos por CORS e strings, não por config versionada no repo.
 - O banco real tem `public.delete_account(...)`, mas não há `pg_cron` local chamando a função para contas agendadas; a execução final continua dependendo de um processo externo.
-- Não há snapshot único do schema de produção; migrations em `.ai/migrations/` podem não refletir 100% do banco atual.
-- A presença de `DEFAULT_ABACATEPAY_PUBLIC_KEY` em [src/lib/server/billingPix.js](/home/vinicius/code/zelopdv/src/lib/server/billingPix.js:5) precisa de validação manual para confirmar se é fallback intencional ou dívida de segurança.
+- Baseline e ledger versionados são a referência de bootstrap; mudanças posteriores exigem leitura do stream forward e comparação com o banco vinculado. `.ai/migrations/` é acervo histórico.
+- AbacatePay exige `ABACATEPAY_PUBLIC_KEY` no runtime; o fallback hardcoded antigo não existe. Não restaurá-lo a partir de documentos históricos.
 - O modelo de permissao do add-on Acessos mistura RLS owner-scoped e gating de UI; nao assumir RBAC forte sem validar rota por rota.

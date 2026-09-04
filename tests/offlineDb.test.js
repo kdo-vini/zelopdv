@@ -14,6 +14,16 @@ describe('shouldQueueVendaOffline', () => {
     expect(shouldQueueVendaOffline({ message: 'insert or update on table violates foreign key constraint' })).toBe(false);
   });
 
+  test('does not turn a confirmed server rejection into a sale when connectivity changes', () => {
+    vi.stubGlobal('navigator', { onLine: false });
+    try {
+      expect(shouldQueueVendaOffline({ code: '42501', message: 'permission denied' })).toBe(false);
+      expect(shouldQueueVendaOffline({ code: 'P0001', message: 'Estoque insuficiente' })).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   test('queues when the browser reports offline even if the message is generic', () => {
     vi.stubGlobal('navigator', { onLine: false });
     expect(shouldQueueVendaOffline(new Error('Request failed'))).toBe(true);

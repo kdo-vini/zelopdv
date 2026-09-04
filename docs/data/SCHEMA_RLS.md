@@ -5,9 +5,17 @@
 
 ## Estado desta doc
 
-- Baseada em codigo do repo + migrations em `.ai/migrations/`.
+- Baseada em código, baseline/ledger em `supabase/` e migrations forward; `.ai/migrations/` é somente acervo legado.
 - Nao substitui validacao no banco real de producao.
 - Quando houver conflito entre esta doc e o schema real, o schema real vence e a doc deve ser atualizada.
+
+Verificação live em 2026-09-04: nenhuma tabela pública base com SELECT
+acessível e RLS desligado apareceu no catálogo consultado. Isso não certifica
+as permissões de todas as operações. `create_zelo_order`, confirmação WhatsApp
+atômica e função de salvar delivery continuam sem EXECUTE para anon/authenticated.
+O erro record/JSONB da função de delivery foi corrigido por
+`20260904222157_delivery_pricing_rule_jsonb.sql`, sem mudar grants. Advisors
+e limites do lint estão detalhados em `docs/audits/2026-09-04-zelopdv.md`.
 
 ## Snapshot financeiro de fechamento (2026-08-28)
 

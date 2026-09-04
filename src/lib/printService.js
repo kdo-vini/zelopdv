@@ -52,13 +52,15 @@ async function tryZeloImpressao(bytes, payload, jobType, metadata = {}) {
     });
     return true;
   } catch (e) {
-    console.warn('[print] Zelo Impressão indisponível, caindo no navegador:', e?.message);
+    const outcomeUnknown = e?.code === 'PRINT_OUTCOME_UNKNOWN' || e?.retrySafe === false;
+    console.warn(outcomeUnknown ? '[print] Impressão sem confirmação:' : '[print] Falha antes da impressão:', e?.message);
     addToast(
       getZeloImpressaoFriendlyMessage(e),
       'warning',
       7000
     );
-    return false;
+    // Treat uncertainty as handled: a second transport could print a duplicate.
+    return outcomeUnknown;
   }
 }
 
@@ -118,11 +120,19 @@ export async function printPagamentoFiado(payload) {
   }
 }
 
-export async function printOrder(order, businessName = 'ZeloPDV', companyStoreId) {
+export async function printOrder(order, businessName = 'ZeloPDV', companyStoreId, { automatic = false } = {}) {
+  if (automatic && (!order?.canonical || !order?.id || !companyStoreId)) {
+    throw Object.assign(new Error('A impressão automática precisa do pedido e da loja confirmados.'), {
+      code: 'AUTO_PRINT_IDENTITY_REQUIRED', retrySafe: false,
+    });
+  }
   const text = buildOrderText(order, businessName);
-  await sendPrintJob({
+  return sendPrintJob({
     source: 'zelopdv',
     ...(companyStoreId ? { companyStoreId } : {}),
+    intent: automatic
+      ? { mode: 'automatic', orderId: String(order.id), purpose: 'order_ticket' }
+      : { mode: 'manual' },
     type: 'kitchen_order',
     timestamp: new Date().toISOString(),
     content: { format: 'text', text },
@@ -148,6 +158,7 @@ export async function printTeste(estabelecimento) {
     return true;
   } catch (e) {
     console.warn('[print] teste via Zelo Impressão falhou:', e?.message);
+    if (e?.code === 'PRINT_OUTCOME_UNKNOWN' || e?.retrySafe === false) throw e;
   }
 
   if (!isWebUsbSupported() || !getPairedInfo()) return false;

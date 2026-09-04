@@ -21,13 +21,17 @@ const createPdvCache = () => {
         return (Date.now() - loadedAt) < CACHE_TTL;
     };
 
+    const assertSameUser = (userId) => {
+        if (get({ subscribe }).userId !== userId) throw new Error('Conta alterada durante o carregamento do catálogo.');
+    };
+
     return {
         subscribe,
 
         // Get cached data or fetch if stale
         async getCategorias(forceRefresh = false) {
             const state = get({ subscribe });
-            if (!forceRefresh && isCacheValid(state.categorias.loadedAt) && state.categorias.data.length > 0) {
+            if (!forceRefresh && isCacheValid(state.categorias.loadedAt)) {
                 return state.categorias.data;
             }
 
@@ -36,16 +40,18 @@ const createPdvCache = () => {
                 .select('*')
                 .order('ordem', { ascending: true });
 
-            if (!error && data) {
+            assertSameUser(state.userId);
+            if (error) throw error;
+            if (data) {
                 update(s => ({ ...s, categorias: { data, loadedAt: Date.now() } }));
                 return data;
             }
-            return state.categorias.data; // Return stale data on error
+            throw new Error('Resposta inválida ao carregar categorias.');
         },
 
         async getSubcategorias(forceRefresh = false) {
             const state = get({ subscribe });
-            if (!forceRefresh && isCacheValid(state.subcategorias.loadedAt) && state.subcategorias.data.length > 0) {
+            if (!forceRefresh && isCacheValid(state.subcategorias.loadedAt)) {
                 return state.subcategorias.data;
             }
 
@@ -54,16 +60,18 @@ const createPdvCache = () => {
                 .select('*')
                 .order('ordem', { ascending: true });
 
-            if (!error && data) {
+            assertSameUser(state.userId);
+            if (error) throw error;
+            if (data) {
                 update(s => ({ ...s, subcategorias: { data, loadedAt: Date.now() } }));
                 return data;
             }
-            return state.subcategorias.data;
+            throw new Error('Resposta inválida ao carregar subcategorias.');
         },
 
         async getProdutos(forceRefresh = false) {
             const state = get({ subscribe });
-            if (!forceRefresh && isCacheValid(state.produtos.loadedAt) && state.produtos.data.length > 0) {
+            if (!forceRefresh && isCacheValid(state.produtos.loadedAt)) {
                 return state.produtos.data;
             }
 
@@ -73,12 +81,15 @@ const createPdvCache = () => {
                 .eq('ocultar_no_pdv', false)
                 .order('nome', { ascending: true });
 
-            if (!error && data) {
+            assertSameUser(state.userId);
+            if (error) throw error;
+            if (data) {
                 const enriched = await attachModifierGroups(data);
+                assertSameUser(state.userId);
                 update(s => ({ ...s, produtos: { data: enriched, loadedAt: Date.now() } }));
                 return enriched;
             }
-            return state.produtos.data;
+            throw new Error('Resposta inválida ao carregar produtos.');
         },
 
         // Invalidate cache (call after CRUD operations)

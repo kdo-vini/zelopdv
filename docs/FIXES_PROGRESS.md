@@ -1,5 +1,32 @@
 # Fixes Progress
 
+- [x] FX-AUDIT-ROUND2-01 (2026-09-04, código local) — owner/pedido compartilhados
+  na impressão, capability obrigatória e segunda via explícita; admin seleciona
+  assinatura/CAS e rejeita status ativo sem prazo. Dependências PDV/admin sem
+  alerts; export XLSX real compatível. Cadastro não depende de analytics para
+  retornar sessão/navegar. Gates Linux adicionados; publicação pendente.
+
+- [x] FX-AUDIT-OFFLINE-01 (2026-09-04) — catálogo/contagem/replay por owner;
+  substituição de cache transacional, listas vazias autoritativas e chave
+  idempotente legacy persistida antes da RPC, inclusive entre abas. Vendas sem
+  owner conhecido ficam preservadas sem replay automático. Removida limpeza
+  por idade sem confirmação; erro SQL confirmado não entra na fila offline.
+- [x] FX-AUDIT-PWA-01 (2026-09-04) — retirado runtime cache de REST/Auth/storage
+  privado e adicionada aposentadoria dos caches antigos, preservando Dexie.
+- [x] FX-AUDIT-PRINT-01 (2026-09-04) — token validado e erro pós-envio incerto
+  impede fallback/retentativa automática; timeout cobre corpo HTTP e jobId
+  identifica intenção. Segunda via explícita continua disponível.
+- [x] FX-AUDIT-ADMIN-01 (2026-09-04) — editor persiste has_acessos_addon e
+  cancelamento remove extensão manual que mantinha guard ativo. Revisão
+  independente e regressões do adapter/guard realizadas.
+- [x] FX-AUDIT-DELIVERY-SQL-01 (2026-09-04) — tipo record usado como JSONB em
+  save_zelomenu_delivery_settings corrigido por migration forward, aplicada
+  no banco compartilhado e registrada; ACL e corpo restante preservados.
+- [x] FX-AUDIT-QUALITY-01 (2026-09-04) — datas determinísticas no relatório
+  semanal, jsconfig do admin e patches de dependências. **984 passes/3skips**;
+  build completo ainda bloqueado por EPERM Windows e E2E por credenciais.
+  Detalhes e riscos remanescentes: [auditoria PDV](audits/2026-09-04-zelopdv.md).
+
 - [x] FX-ONLINE-ORDER-ESSENTIALS-01 (2026-09-04) — a tela de pedidos do
   ZeloPDV passou a mostrar endereço, bairro e forma de pagamento na fila e no
   detalhe. Em dinheiro, o troco é exibido formatado ou como `(Não informado)`

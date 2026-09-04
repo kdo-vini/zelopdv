@@ -1,5 +1,21 @@
 # Incidents
 
+## INC-2026-09-04-DELIVERY — tipo inválido ao salvar regra de frete
+
+**Status:** corrigido no Supabase vinculado e ledger em 2026-09-04.
+
+O lint do banco real, já registrado em CURRENT antes desta auditoria, acusava
+42883 em `save_zelomenu_delivery_settings`: variável record recebia elemento
+JSONB e depois era usada com operador JSON. DO isolado reproduziu a operação
+sem tocar configurações de empresas. A migration
+`20260904222157_delivery_pricing_rule_jsonb.sql` altera somente o tipo da variável
+para jsonb. Revisão independente comparou todo o corpo com pg_get_functiondef;
+após aplicação o erro correspondente desapareceu e ACL permaneceu restrita.
+Não foi alterada regra comercial/frete de cliente nem feito backfill.
+Um save completo por tenant não foi executado; lint/prova de tipos não substituem
+o smoke de configuração após publicação dos consumidores. O alerta separado
+de tabela temporária em criar_venda_completa permanece registrado.
+
 ## INC-2026-09-04-01 - Desconto ausente no recibo da frente de caixa
 
 **Status:** corrigido no código em 2026-09-04; publicação em produção em andamento.

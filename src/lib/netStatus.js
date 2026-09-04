@@ -34,6 +34,8 @@ const NETWORK_ERROR_NEEDLES = [
  */
 export function isNetworkError(error) {
   if (!error) return false;
+  // A confirmed database rejection remains authoritative if connectivity changes.
+  if (typeof error === 'object' && /^(?:[0-9A-Z]{5}|PGRST\d+)$/i.test(String(error.code || ''))) return false;
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
 
   const message = String(

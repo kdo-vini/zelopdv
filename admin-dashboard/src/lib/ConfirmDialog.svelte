@@ -107,10 +107,11 @@
 
         {#if state.mode === 'confirm' && state.requireType}
           <div class="space-y-1.5">
-            <label class="block text-[13px] font-medium text-slate-400">
+            <label for="admin-confirm-text" class="block text-[13px] font-medium text-slate-400">
               {state.requireTypeHint || `Para confirmar, digite "${state.requireType}":`}
             </label>
             <input
+              id="admin-confirm-text"
               bind:this={inputEl}
               bind:value={typedConfirm}
               placeholder={state.requireType}

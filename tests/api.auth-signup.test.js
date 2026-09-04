@@ -21,6 +21,11 @@ beforeEach(async () => {
 
 describe('API: auth/signup', () => {
   it('cria usuario confirmado e retorna sessao para login automatico', async () => {
+    let releaseAnalytics;
+    const flush = vi.fn(() => new Promise((resolve) => { releaseAnalytics = resolve; }));
+    const waitUntil = vi.fn();
+    vi.doMock('$lib/server/posthog', () => ({ getPostHogClient: () => ({ capture: vi.fn(), flush }) }));
+    vi.doMock('@vercel/functions', () => ({ waitUntil }));
     const createUser = vi.fn(async () => ({
       data: { user: { id: 'user-1', email: 'owner@test.com' } },
       error: null,
@@ -58,6 +63,11 @@ describe('API: auth/signup', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(waitUntil).toHaveBeenCalledOnce();
+    expect(flush).toHaveBeenCalledOnce();
+    // Response has already resolved while the analytics transport is pending.
+    releaseAnalytics();
+    await waitUntil.mock.calls[0][0];
     expect(body.success).toBe(true);
     expect(body.session.access_token).toBe('access');
     expect(createUser).toHaveBeenCalledWith({

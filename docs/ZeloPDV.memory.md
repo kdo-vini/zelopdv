@@ -1,5 +1,17 @@
 # ZeloPDV.memory
 
+- Auditoria 2026-09-04: cache Dexie de catálogo exige `_cacheOwnerUserId`;
+  leituras e replay nunca atribuem dados sem owner à conta atual. Pendentes
+  só são removidas após confirmação `data.id`; chave legacy deve ser gravada
+  antes da RPC. Workbox não cacheia REST/Auth nem storage privado.
+- `PRINT_OUTCOME_UNKNOWN`/`retrySafe:false` significa conferir papel e manter
+  dedupe; não abrir fallback nem repetir automaticamente. `jobId` identifica
+  uma intenção; segunda via explícita recebe outro. No nativo auditado,
+  `/connect` não existe e o código local continua necessário para parear.
+- A migration `20260904222157_delivery_pricing_rule_jsonb.sql` foi aplicada e
+  registrada no banco compartilhado em 2026-09-04; só troca declaração
+  `v_rule record` por `v_rule jsonb`, sem alteração de ACL/contrato.
+
 - Reimpressão de recibos (2026-09-01): `src/routes/gestao/+page.svelte`
   reconstrói vendas do caixa com `src/lib/finance/saleReceipt.js` e envia o
   payload ao `printVenda` compartilhado. O dashboard carrega os detalhes dos
@@ -13,8 +25,8 @@
   reaproveita um único `zelo_orders` pelo caminho `create_zelo_order`.
   `issue_whatsapp_zelo_confirmation_token` guarda somente SHA-256 e é
   idempotente para o mesmo binding/revisão. Preferências CRM passam somente por
-  `patch_zelochat_customer_ordering_overrides`. Os cinco DDLs da feature ainda
-  dependem de aplicação ordenada; os probes de confirmação são estritamente
+  `patch_zelochat_customer_ordering_overrides`. Funções de confirmação/token
+  e o ledger aplicado foram confirmados live em 2026-09-04; os probes de confirmação são estritamente
   locais/descartáveis e jamais podem receber URL compartilhada ou de produção.
 
 - Formas de pagamento (2026-08-29): o ZeloMenu/ZeloChat legado pode enviar
@@ -65,12 +77,12 @@
 - A camada PDV-owned de publicação do ZeloMenu fica em `zelomenu_product_publications`, `zelomenu_modifier_groups` e `zelomenu_modifier_options`; o catálogo base continua em `produtos`/`categorias`, visibilidade online não usa `produtos.ocultar_no_pdv` e preço base não tem override no v1.
 - Contrato reforçado em 2026-08-24: `ocultar_no_pdv` é somente visibilidade interna do ZeloPDV; `visivel_online`/`pausado_manualmente` são somente publicação/pausa para clientes. Não fazer backfill automático de tenants ao corrigir esse acoplamento; a migration `20260824134536_catalog_visibility_separation_guard.sql` é metadata-only.
 - A tela `/app/pedidos` é uma superfície operacional client-side: assina/poll `zelo_orders` e, para pedidos canônicos novos, envia um job `kitchen_order` de texto ao Zelo Impressão. O auto-print usa reconciliação de 15 minutos, dedupe persistente de 48 horas e preserva `zelo_order_items.modifiers` no bilhete.
-- O cliente local do Zelo Impressão tenta `POST /connect` automaticamente depois de confirmar que o agente Windows está aberto; o navegador oficial do ZeloPDV recebe um token próprio. O código manual permanece somente como fallback para agentes antigos, origens não autorizadas ou falha da conexão automática.
+- O cliente local do Zelo Impressão tenta `POST /connect` depois de confirmar que o agente está aberto. O nativo auditado em 2026-09-04 não implementa esse endpoint; o código manual é o caminho compatível confirmado. Não prometer conexão automática só pela presença de token no storage.
 - Em 2026-06-23, a migration de publicação do ZeloMenu foi aplicada no Supabase real como `zelomenu_publication_schema_2026_06_23`; verificado RLS ligado, policies por owner, grants mínimos para `authenticated`/`service_role`, nenhum grant para `anon`, constraints/FKs/índices presentes e acesso anônimo bloqueado por chave pública.
 - `src/lib/pricing.js` é o catálogo canônico de planos, add-ons e Stripe price IDs.
 - O fluxo offline do PDV é contingência, não offline-first completo.
 - O replay offline depende de `client_sale_id` e da RPC `criar_venda_completa`.
-- A fila offline Dexie está na versão 4 e guarda `ownerUserId` / `operatorUserId`.
+- A fila offline Dexie está na versão 5 e guarda `ownerUserId` / `operatorUserId`; o catálogo também é escopado por owner.
 - O onboarding usa Resend para email e ZeloChat interno para WhatsApp.
 - O cadastro por senha auto-confirma o usuário via service role, grava sessão no cliente e envia o usuário para `/perfil?msg=complete`; não depende mais de confirmação por e-mail.
 - PostHog roda somente em rotas publicas externas via `src/lib/posthogClient.js`; areas internas, onboarding (`/perfil`), billing (`/assinatura`) e callback OAuth ficam bloqueados.
