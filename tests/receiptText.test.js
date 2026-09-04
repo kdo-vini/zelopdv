@@ -15,4 +15,19 @@ describe('sale receipt text', () => {
     expect(text).toContain('Pgto: Vale-Refeição');
     expect(text).not.toContain('vale_refeicao');
   });
+
+  it('renders the granted discount before the final total', () => {
+    const text = buildReceiptText({
+      empresa: { nome_exibicao: 'Loja' },
+      venda: {
+        subtotal: 100,
+        desconto: 10,
+        total: 90,
+        itens: [],
+      },
+    });
+
+    expect(text).toContain('Desconto: -R$ 10.00');
+    expect(text.indexOf('Desconto:')).toBeLessThan(text.indexOf('*TOTAL:'));
+  });
 });

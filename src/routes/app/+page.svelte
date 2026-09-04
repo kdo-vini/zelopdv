@@ -1230,7 +1230,7 @@
 
   // ── Impressão de venda ─────────────────────────────────────────────────────
 
-  async function imprimirReciboVenda({ idVenda, numeroVenda, formaPagamento, total, subtotal, valorRecebido, troco, itens, pagamentos, taxaEntrega = 0, tipoPedido: tipoPed = 'retirada' }) {
+  async function imprimirReciboVenda({ idVenda, numeroVenda, formaPagamento, total, subtotal, desconto = 0, valorRecebido, troco, itens, pagamentos, taxaEntrega = 0, tipoPedido: tipoPed = 'retirada' }) {
     const perfil = await fetchPerfil();
     const estabelecimento = perfilToEstabelecimento(perfil);
     let pags = pagamentos || [];
@@ -1243,7 +1243,7 @@
     }
     await printVenda({
       estabelecimento,
-      venda: { idVenda, numeroVenda, formaPagamento, total, subtotal: subtotal ?? total, taxaEntrega, tipoPedido: tipoPed, valorRecebido, troco, itens, pagamentos: pags },
+      venda: { idVenda, numeroVenda, formaPagamento, total, subtotal: subtotal ?? total, desconto, taxaEntrega, tipoPedido: tipoPed, valorRecebido, troco, itens, pagamentos: pags },
     });
   }
 

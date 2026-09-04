@@ -75,6 +75,16 @@ describe('receipt builder', () => {
     expect(html).toMatch(/TOTAL<\/span><span>R\$\s*16/);
   });
 
+  it('renders the granted discount before the final total', () => {
+    const html = buildReceiptHTML({
+      estabelecimento: { nome_exibicao: 'Loja' },
+      venda: { subtotal: 100, desconto: 10, total: 90, itens: [] },
+    });
+
+    expect(html).toContain('Desconto');
+    expect(html).toMatch(/Desconto<\/span><span class="val">−\s*R\$/);
+  });
+
   it('renders the complete ZeloMenu assembly in separate detail blocks', () => {
     const html = buildReceiptHTML({
       estabelecimento: { nome_exibicao: 'Loja' },

@@ -1,5 +1,29 @@
 # Incidents
 
+## INC-2026-09-04-01 - Desconto ausente no recibo da frente de caixa
+
+**Status:** corrigido no código em 2026-09-04; publicação em produção em andamento.
+
+**Sintoma**
+
+- A venda era gravada com o desconto e o total final correto, mas a nota
+  impressa pela frente de caixa não mostrava a linha do desconto.
+- O mesmo dado também não aparecia no comprovante textual compartilhado por
+  WhatsApp ou copiado para a área de transferência.
+
+**Causa-raiz**
+
+- `imprimirReciboVenda` recebia um payload com desconto, mas não declarava nem
+  repassava essa propriedade ao contrato de `printVenda`. Os builders ESC/POS
+  e HTML já tinham suporte ao campo, por isso ambos exibiam somente o total.
+
+**Fix / recovery**
+
+- O adaptador agora encaminha `desconto`; o builder textual passou a renderizar
+  `Desconto: -R$ ...` antes do total.
+- Mesas, reimpressão do dashboard e relatórios foram verificados e não exigem
+  alteração.
+
 ## INC-2026-09-01-01 - Reimpressão no dashboard falhava com `uid is not defined`
 
 **Status:** corrigido e enviado para produção em 2026-09-01.

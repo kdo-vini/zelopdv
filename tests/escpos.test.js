@@ -141,6 +141,22 @@ describe('escpos builder', () => {
       expect(text).toMatch(/R\$ 5,00 cada/);
     });
 
+    it('renderiza o desconto concedido antes do total', () => {
+      const out = buildVendaEscPos({
+        estabelecimento: baseEst,
+        venda: {
+          ...baseVenda,
+          subtotal: 100,
+          desconto: 10,
+          total: 90,
+        },
+      });
+      const text = bytesToText(out);
+
+      expect(text).toMatch(/Desconto\s+- R\$ 10,00/);
+      expect(text.indexOf('Desconto')).toBeLessThan(text.indexOf('TOTAL'));
+    });
+
     it('renderiza pagamento múltiplo com cada forma listada', () => {
       const out = buildVendaEscPos({
         estabelecimento: baseEst,

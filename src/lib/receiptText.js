@@ -23,6 +23,8 @@ export function buildReceiptText({ venda = {}, empresa = null } = {}) {
   });
 
   text += `------------------------------\n`;
+  const desconto = Number(venda.desconto ?? venda.valor_desconto ?? 0);
+  if (desconto > 0) text += `Desconto: -R$ ${desconto.toFixed(2)}\n`;
   text += `*TOTAL: R$ ${Number(venda.total || 0).toFixed(2)}*\n`;
 
   const formaPagamento = venda.formaPagamento ?? venda.forma_pagamento;
