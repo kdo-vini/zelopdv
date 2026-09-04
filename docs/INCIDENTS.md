@@ -1,5 +1,35 @@
 # Incidents
 
+## INC-2026-09-04-PUBLISH — revisão de origem e artefatos de produção
+
+**Status:** correções em validação/publicação coordenada; não declarar concluído.
+
+Relato: Chat/Menu podiam permanecer com frontend antigo após GitHub. Dokploy
+inspecionado no navegador do usuário: Menu tem um serviço GitHub/master, domínio
+menu.zelopdv.com.br → porta3101 e nenhum volume de código. `zelomenu.yml`
+legado está vazio, sem rota concorrente. O checkout local tinha um commit próprio
+e40 remotos; merge explícito preservou ambos. Chat tem dois serviços no mesmo
+repo/main; nomes internos frontend/backend estão invertidos, porém roteamento
+confere. O contexto vazio do Dockerfile.frontend foi explicitado como `.`.
+Novos builds identificam o SHA real e impedem override divergente; confirmar
+Git → deploy → endpoint de versão após publicação. Backend recebeu stop grace
+de60s no Dokploy para o drain limitado de55s. Não houve exclusão de imagens,
+volumes ou pedidos como suposta correção de cache.
+
+## INC-2026-09-04-COUPON — pedido e cupom em transações separadas
+
+**Status:** função aditiva aplicada e registrada no Supabase em2026-09-04;
+publicação do consumidor Menu em preparação. Risco identificado por código,
+sem perda histórica encontrada na consulta agregada de resgates (zero linhas).
+
+`confirm_public_zelo_order_atomic` mantém token/revisão e snapshot revalidado,
+pedido e resgate no mesmo commit. Replay recupera pedido antes de rejeitar a
+revisão antiga. Dois backends PostgreSQL17 descartáveis confirmaram espera por
+lock e exatamente um pedido/resgate por cupom/telefone; falha de produto
+reverteu tudo. Migration `20260904232549_public_order_coupon_atomic.sql` usa
+somente EXECUTE service_role; anon/authenticated negados também após aplicação.
+Nenhum pedido de cliente foi criado nos testes e nenhum resgate foi apagado.
+
 ## INC-2026-09-04-DELIVERY — tipo inválido ao salvar regra de frete
 
 **Status:** corrigido no Supabase vinculado e ledger em 2026-09-04.
