@@ -1,5 +1,13 @@
 # ZeloPDV — Foco atual
 
+- Informações essenciais nos pedidos online (2026-09-04): a tela de pedidos do
+  ZeloPDV agora exibe endereço, bairro e forma de pagamento na fila e no
+  detalhe. Para pagamentos em dinheiro, o troco aparece como valor formatado
+  quando disponível ou `(Não informado)` quando ausente. A coleta do valor
+  entregue e o cálculo do troco permanecem explicitamente planejados para o
+  checkout do ZeloMenu; o fechamento atual do PDV mantém o pagamento exato
+  como fallback. Cobertura em `tests/orderPresentation.test.js`.
+
 - Correção de recibos com desconto (2026-09-04): a impressão da frente de caixa
   agora encaminha o desconto até a engine compartilhada, funcionando tanto no
   Zelo Impressão/ESC-POS quanto no fallback do navegador. O recibo textual de

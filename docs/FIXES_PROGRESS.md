@@ -1,5 +1,11 @@
 # Fixes Progress
 
+- [x] FX-ONLINE-ORDER-ESSENTIALS-01 (2026-09-04) — a tela de pedidos do
+  ZeloPDV passou a mostrar endereço, bairro e forma de pagamento na fila e no
+  detalhe. Em dinheiro, o troco é exibido formatado ou como `(Não informado)`
+  quando não veio no pedido. A coleta do valor entregue e o cálculo do troco
+  continuam sendo responsabilidade do checkout do ZeloMenu.
+
 - [x] FX-SALE-RECEIPT-DISCOUNT-01 (2026-09-04) — o adaptador de impressão da
   frente de caixa descartava `desconto` antes de chamar a engine compartilhada;
   a linha agora aparece em ESC/POS e no fallback HTML. O comprovante textual

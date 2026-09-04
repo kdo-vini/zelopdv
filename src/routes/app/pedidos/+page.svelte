@@ -21,7 +21,8 @@
     transitionCanonicalOrder,
     closeCanonicalOrder
   } from '$lib/onlineOrders';
-  import { Printer } from 'lucide-svelte';
+  import { getOrderDeliveryPresentation, getOrderPaymentPresentation } from '$lib/orderPresentation.js';
+  import { CreditCard, MapPin, Printer } from 'lucide-svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
 
   let ready = false;
@@ -62,6 +63,8 @@
     modifierGroups: itemModifierGroups(item)
   }));
   $: totalPedido = Number(pedidoSelecionado?.total || 0);
+  $: entregaSelecionada = getOrderDeliveryPresentation(pedidoSelecionado);
+  $: pagamentoSelecionado = getOrderPaymentPresentation(pedidoSelecionado);
 
   onMount(async () => {
     const auth = await ensureActiveSubscription({ requireProfile: true });
@@ -352,6 +355,8 @@
         }
         const { payload } = buildVendaPayload({
           formaPagamento: canonicalPaymentMethod(pedido),
+          // TODO(ZeloMenu): coletar o valor entregue pelo cliente e calcular o troco no checkout do ZeloMenu.
+          // O PDV recebe apenas a forma declarada e mantém o fallback de pagamento exato até esse contrato chegar.
           valorRecebido: pedido.total,
           pagamentos: [], totalFinal: pedido.total, valorDesconto: 0, descontoTipo: null,
           taxaEntrega: Number(pedido.delivery_fee || 0),
@@ -451,6 +456,8 @@
           {#each pedidos as pedido (pedido.id)}
             {@const totalCard = Number(pedido.total || 0)}
             {@const qtdItens = (pedido.pedido_itens || []).reduce((acc, item) => acc + Number(item.quantidade || 0), 0)}
+            {@const entregaCard = getOrderDeliveryPresentation(pedido)}
+            {@const pagamentoCard = getOrderPaymentPresentation(pedido)}
             <div class="queue-card">
               <button
                 type="button"
@@ -468,6 +475,16 @@
                     <strong class="qi-cliente">{clienteLabel(pedido)}</strong>
                   </div>
                   <span class="qi-meta">{formatTime(pedido.criado_em)}</span>
+                </div>
+                <div class="qi-highlights" aria-label="Endereço, bairro e forma de pagamento">
+                  <span class="qi-address" title={entregaCard.address || 'Endereço não informado'}>
+                    <span class="qi-highlight-icon" aria-hidden="true"><MapPin size={14} strokeWidth={2} /></span>
+                    <span>{entregaCard.address || 'Endereço não informado'}</span>
+                  </span>
+                  <div class="qi-secondary-info">
+                    <span title={entregaCard.neighborhood || 'Bairro não informado'}>{entregaCard.neighborhood || 'Bairro não informado'}</span>
+                    <span><span class="qi-highlight-icon" aria-hidden="true"><CreditCard size={14} strokeWidth={2} /></span>{pagamentoCard.label}</span>
+                  </div>
                 </div>
                 <div class="qi-foot">
                   <span>{qtdItens} {qtdItens === 1 ? 'item' : 'itens'}</span>
@@ -515,6 +532,40 @@
                   <span>{reimprimindo ? 'Imprimindo...' : 'Reimprimir'}</span>
                 </button>
               </div>
+            </div>
+
+            <div class="order-info-grid" aria-label="Informações principais do pedido">
+              <section class="order-info-card" aria-labelledby="delivery-info-title">
+                <div class="info-card-head">
+                  <span class="info-card-icon"><MapPin size={18} strokeWidth={2} aria-hidden="true" /></span>
+                  <div>
+                    <span class="info-card-kicker">Entrega</span>
+                    <h3 id="delivery-info-title">Endereço</h3>
+                  </div>
+                </div>
+
+                <div class="delivery-copy">
+                  <strong>{entregaSelecionada.address || 'Não informado'}</strong>
+                  <span><b>Bairro</b> {entregaSelecionada.neighborhood || 'Não informado'}</span>
+                </div>
+              </section>
+
+              <section class="order-info-card" aria-labelledby="payment-info-title">
+                <div class="info-card-head">
+                  <span class="info-card-icon payment-icon"><CreditCard size={18} strokeWidth={2} aria-hidden="true" /></span>
+                  <div>
+                    <span class="info-card-kicker">Pagamento</span>
+                    <h3 id="payment-info-title">{pagamentoSelecionado.label}</h3>
+                  </div>
+                </div>
+
+                {#if pagamentoSelecionado.isCash}
+                  <div class="payment-breakdown">
+                    <span><strong>Troco</strong></span>
+                    <strong class="change-value">{pagamentoSelecionado.change === null ? '(Não informado)' : formatMoney(pagamentoSelecionado.change)}</strong>
+                  </div>
+                {/if}
+              </section>
             </div>
 
             {#if pedidoSelecionado.observacoes}
@@ -804,6 +855,46 @@
     font-weight: 600;
   }
 
+  .qi-highlights {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+  .qi-address,
+  .qi-secondary-info,
+  .qi-secondary-info > span {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .qi-address,
+  .qi-secondary-info > span {
+    gap: 5px;
+  }
+  .qi-address > span,
+  .qi-secondary-info > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .qi-secondary-info {
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .qi-secondary-info > span:last-child {
+    flex-shrink: 0;
+    color: var(--text-label);
+    font-weight: 700;
+  }
+  .qi-highlight-icon {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    color: var(--accent);
+  }
+
   .qi-foot {
     display: flex;
     align-items: center;
@@ -886,6 +977,92 @@
   .btn-reprint {
     font-size: 0.82rem;
     padding: 7px 12px;
+  }
+
+  .order-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .order-info-card {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--border-card);
+    border-radius: 12px;
+    background: var(--bg-card);
+  }
+  .info-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .info-card-icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+  .info-card-kicker {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .info-card-head h3 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 1rem;
+    font-weight: 900;
+  }
+  .delivery-copy {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    line-height: 1.45;
+  }
+  .delivery-copy strong {
+    color: var(--text-main);
+    font-size: 0.95rem;
+    overflow-wrap: anywhere;
+  }
+  .delivery-copy span {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+  .delivery-copy b {
+    color: var(--text-label);
+    font-weight: 700;
+  }
+  .payment-breakdown {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+  .payment-breakdown strong {
+    color: var(--text-label);
+    font-weight: 700;
+  }
+  .payment-breakdown .change-value {
+    color: var(--success);
+    font-size: 1rem;
+    font-weight: 900;
+    white-space: nowrap;
   }
 
   .note {
@@ -1002,6 +1179,7 @@
       gap: 12px;
     }
     .queue-list { max-height: none; }
+    .order-info-grid { grid-template-columns: 1fr; }
     .details-panel {
       display: none;
       min-height: 0;
