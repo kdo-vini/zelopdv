@@ -140,8 +140,8 @@
 <style>
   .support-chat-container {
     position: fixed;
-    bottom: calc(20px + var(--mobile-bottom-nav-offset));
-    right: 20px;
+    bottom: calc(20px + max(var(--mobile-bottom-nav-offset), env(safe-area-inset-bottom, 0px)));
+    right: max(20px, env(safe-area-inset-right, 0px));
     z-index: 20;
     display: flex;
     flex-direction: column;
@@ -159,7 +159,6 @@
     background: var(--bg-card);
     border: 1px solid var(--border-card);
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -168,14 +167,17 @@
   @media (max-width: 480px) {
     .chat-window {
       position: fixed;
-      bottom: calc(80px + var(--mobile-bottom-nav-offset));
-      right: 12px;
-      left: 12px;
+      bottom: max(12px, env(safe-area-inset-bottom, 0px));
+      right: max(12px, env(safe-area-inset-right, 0px));
+      left: max(12px, env(safe-area-inset-left, 0px));
       width: auto;
-      height: 70vh;
+      height: min(78dvh, 40rem);
     }
     .support-chat-container {
-      right: 12px;
+      right: max(12px, env(safe-area-inset-right, 0px));
+    }
+    .support-chat-container.open .chat-toggle-btn {
+      display: none;
     }
   }
 
@@ -227,7 +229,7 @@
 
   .welcome-message {
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 0.875rem;
     text-align: center;
     padding: 20px 10px;
   }
@@ -236,7 +238,7 @@
     max-width: 85%;
     padding: 8px 12px;
     border-radius: 12px;
-    font-size: 13px;
+    font-size: 0.875rem;
     line-height: 1.5;
     word-break: break-word;
   }
@@ -262,7 +264,7 @@
     font-weight: 700;
   }
   .markdown-content :global(code) {
-    background: rgba(0, 0, 0, 0.1);
+    background: color-mix(in srgb, var(--text-inverse) 10%, transparent);
     padding: 0.1rem 0.3rem;
     border-radius: 4px;
     font-family: monospace;
@@ -272,11 +274,11 @@
     align-items: center;
     gap: 4px;
     color: #fff;
-    background: #25D366;
+    background: var(--zelochat-brand);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 0.875rem;
     padding: 3px 10px;
-    border-radius: 20px;
+    border-radius: 9999px;
     text-decoration: none;
     white-space: nowrap;
     transition: background 0.15s, transform 0.1s;
@@ -292,7 +294,7 @@
     flex-shrink: 0;
   }
   .markdown-content :global(a:hover) {
-    background: #20b858;
+    background: var(--zelochat-brand-hover);
     transform: scale(1.03);
   }
 
@@ -321,7 +323,7 @@
     height: 6px;
     background: var(--text-muted);
     border-radius: 50%;
-    animation: typing-bounce 1.2s infinite ease-in-out;
+    animation: typing-pulse 1.2s infinite ease-in-out;
   }
   .typing-indicator span:nth-child(2) {
     animation-delay: 0.2s;
@@ -329,22 +331,20 @@
   .typing-indicator span:nth-child(3) {
     animation-delay: 0.4s;
   }
-  @keyframes typing-bounce {
+  @keyframes typing-pulse {
     0%,
     60%,
     100% {
-      transform: translateY(0);
       opacity: 0.4;
     }
     30% {
-      transform: translateY(-4px);
       opacity: 1;
     }
   }
 
   .disclaimer {
     padding: 6px 16px;
-    font-size: 11px;
+    font-size: 0.875rem;
     color: var(--text-muted);
     border-top: 1px solid var(--border-subtle);
     flex-shrink: 0;
@@ -367,11 +367,11 @@
   .chat-input {
     flex: 1;
     padding: 8px 12px;
-    border-radius: 20px;
+    border-radius: 9999px;
     border: 1px solid var(--border-subtle);
     background: var(--bg-input);
     color: var(--text-main);
-    font-size: 13px;
+    font-size: 1rem;
     outline: none;
     transition: border-color 0.15s;
   }
@@ -415,11 +415,40 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--text-inverse) 25%, transparent);
     transition: transform 0.15s, box-shadow 0.15s;
   }
-  .chat-toggle-btn:hover {
-    transform: scale(1.06);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  @media (hover: hover) {
+    .chat-toggle-btn:hover {
+      transform: scale(1.06);
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--text-inverse) 30%, transparent);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .close-btn,
+    .send-btn {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+
+    .chat-input {
+      min-height: 2.75rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .typing-indicator span {
+      animation: none;
+      opacity: 0.7;
+    }
+
+    .markdown-content :global(a),
+    .close-btn,
+    .chat-input,
+    .send-btn,
+    .chat-toggle-btn {
+      transition: none;
+    }
   }
 </style>

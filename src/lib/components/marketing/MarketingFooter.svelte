@@ -188,6 +188,16 @@
       gap: 2.5rem 1.5rem;
     }
 
+    ul {
+      gap: 0;
+    }
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.75rem;
+    }
+
     .footer-brand {
       grid-column: 1 / -1;
     }

@@ -1,5 +1,44 @@
 # ZeloPDV — Foco atual
 
+- Correção de recibos com desconto (2026-09-04): a impressão da frente de caixa
+  agora encaminha o desconto até a engine compartilhada, funcionando tanto no
+  Zelo Impressão/ESC-POS quanto no fallback do navegador. O recibo textual de
+  WhatsApp/cópia também exibe o desconto. Mesas, reimpressão do dashboard e
+  relatórios já estavam corretos. Regressões direcionadas passam; a suíte total
+  mantém as duas falhas preexistentes de `tests/gerente.weekReport.test.js`.
+
+- Limpeza visual do Zelinho (2026-09-04): a demonstração da landing deixou o
+  padrão de bolha de chat + cartão de resposta e virou uma leitura operacional
+  do caixa, com perguntas selecionáveis, consulta ativa e linhas de fechamento.
+  A interação continua acessível por teclado/toque e os números seguem
+  ilustrativos. Validar no localhost antes de publicar.
+
+- Adaptação móvel da landing (2026-09-04): o hero passa para uma coluna até
+  900px, eliminando o título espremido em 6–7 linhas nos tablets de 768–840px;
+  em 320px o título agora fecha em quatro linhas sem overflow. A etiqueta do
+  hero ficou legível a 14px, links de segmentos e rodapé têm alvo mínimo de
+  44px, e o chat público ganhou safe areas, controles de 44px, campo de 16px,
+  tipografia alinhada ao design system e modo reduzido sem animação. O botão
+  flutuante redundante some enquanto o chat móvel está aberto. Validado em
+  localhost nos viewports 320, 360, 390, 768, 844 paisagem, 901, 1024, 1280 e
+  1920px, todos sem overflow horizontal. `npm run check`: 0 erros/0 avisos; o
+  build compilou client, SSR e PWA, mas o adapter Vercel encerrou no `EPERM` de
+  symlink já conhecido no Windows. Alteração ainda não publicada.
+
+- Funil canônico PostHog (2026-09-03): a landing voltou a enviar pageviews e
+  autocapture em produção; o funil de aquisição cobre landing, CTA, cadastro e
+  trial. A migration `20260903020000_posthog_canonical_lifecycle_events.sql`
+  completa o trecho pago no servidor: transições reais de `subscriptions` para
+  `active` em Stripe ou AbacatePay geram `payment_confirmed`, e a primeira linha
+  de `vendas` do titular gera `first_sale_completed`. O envio parte do Supabase
+  via `pg_net`, usa `$insert_id` idempotente, não inclui PII nem valores e falha
+  aberto para analytics nunca bloquear cobrança ou venda. Duas views restritas
+  em `posthog_analytics` preservam a reconciliação auditável e o backfill.
+  Aplicada e registrada no Supabase vinculado; o backfill recebeu HTTP 200 nas
+  14 entregas. `supabase db lint --linked --level error` continua vermelho por
+  dois erros anteriores e fora deste escopo em `save_zelomenu_delivery_settings`
+  e `criar_venda_completa`; nenhuma falha foi apontada nas funções analíticas.
+
 - Alvos resolvidos pelo servidor e histórico de conversas do Zelinho (2026-09-03):
   o modelo estava inventando id de produto e de categoria (linhas reais em
   gerente_agent_actions: produto_id 0 e categoria_id 1 quando a categoria era 225).

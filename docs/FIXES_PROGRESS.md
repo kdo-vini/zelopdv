@@ -1,5 +1,35 @@
 # Fixes Progress
 
+- [x] FX-SALE-RECEIPT-DISCOUNT-01 (2026-09-04) — o adaptador de impressão da
+  frente de caixa descartava `desconto` antes de chamar a engine compartilhada;
+  a linha agora aparece em ESC/POS e no fallback HTML. O comprovante textual
+  de WhatsApp/cópia também passou a mostrar o desconto. Cobertura adicionada
+  em `tests/pdvReceiptForwarding.test.js`, `tests/receipt.test.js`,
+  `tests/escpos.test.js` e `tests/receiptText.test.js`.
+
+- [~] FX-MARKETING-ZELINHO-VOICE-01 (2026-09-04) — seção do Zelinho na landing
+  redesenhada para comunicar leitura operacional do caixa, removendo a gramática
+  visual de chatbot genérico. Perguntas continuam selecionáveis e o painel de
+  resultado usa linhas de fechamento em vez de métricas encaixotadas. Validar
+  visualmente no localhost; permanece sem deploy.
+
+- [~] FX-MARKETING-MOBILE-ADAPT-01 (2026-09-04) — landing e chat público
+  adaptados para toque e tablets: breakpoint do hero alinhado ao menu em 900px,
+  título com quatro linhas desde 320px, links com alvo de 44px, safe areas e
+  controles de 44px no chat, input de 16px e `prefers-reduced-motion` cobrindo
+  o indicador de digitação. Matriz visual local de 320–1920px sem overflow;
+  `npm run check` em 0/0; build compilado até o `EPERM` conhecido do symlink do
+  adapter Vercel. Permanece sem deploy.
+
+- [x] FX-POSTHOG-FUNNEL-01 (2026-09-03) — tracking da landing corrigido em
+  produção e funil completado até a primeira venda sem depender apenas do
+  Stripe. O Supabase, fonte canônica compartilhada por Stripe e AbacatePay,
+  agora envia `payment_confirmed` na ativação real da assinatura e
+  `first_sale_completed` somente na primeira venda do titular. Eventos são
+  server-side, idempotentes, sem PII/valores e não bloqueiam a transação se o
+  PostHog estiver indisponível. Migration:
+  `20260903020000_posthog_canonical_lifecycle_events.sql`.
+
 - [x] FX-REPRINT-RECEIPT-01 (2026-09-01) — a reimpressão do recibo no
   dashboard falhava porque o carregamento do perfil referenciava um `uid` fora
   do escopo de `loadDash()`. O perfil agora recebe o `userId` explicitamente;

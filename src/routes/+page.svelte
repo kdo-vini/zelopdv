@@ -427,19 +427,23 @@
     <section id="zelinho" class="zelinho-section" aria-labelledby="zelinho-title">
       <div class="section-shell zelinho-layout">
         <div>
-          <h2 id="zelinho-title">O Zelinho responde com os números da sua loja.</h2>
+          <h2 id="zelinho-title">Pergunte pelo caixa. O Zelinho organiza a resposta.</h2>
           <p>
-            Você pergunta quanto vendeu, quanto gastou ou quanto ficou fiado. O Zelinho consulta o seu próprio caixa e organiza a resposta em segundos.
+            Em vez de procurar em várias telas, faça uma pergunta direta. O Zelinho lê os lançamentos do seu próprio caixa e devolve o que importa para a decisão de hoje.
           </p>
         </div>
         <div class="zelinho-demo">
-          <p class="demo-label">Demonstração com números ilustrativos</p>
+          <div class="demo-heading">
+            <p class="demo-label">Leitura do caixa</p>
+            <span class="demo-status"><span aria-hidden="true"></span>Dados ilustrativos</span>
+          </div>
           <div class="question-list" role="tablist" aria-label="Perguntas para o Zelinho">
             <button
               type="button"
               class:active={activeDemo === 'profit'}
               role="tab"
               aria-selected={activeDemo === 'profit'}
+              aria-controls="zelinho-result"
               on:click={() => activeDemo = 'profit'}
             >
               <MessageCircle class="size-5" aria-hidden="true" />
@@ -450,6 +454,7 @@
               class:active={activeDemo === 'credit'}
               role="tab"
               aria-selected={activeDemo === 'credit'}
+              aria-controls="zelinho-result"
               on:click={() => activeDemo = 'credit'}
             >
               <MessageCircle class="size-5" aria-hidden="true" />
@@ -460,6 +465,7 @@
               class:active={activeDemo === 'products'}
               role="tab"
               aria-selected={activeDemo === 'products'}
+              aria-controls="zelinho-result"
               on:click={() => activeDemo = 'products'}
             >
               <MessageCircle class="size-5" aria-hidden="true" />
@@ -467,14 +473,17 @@
             </button>
           </div>
 
-          <div class="demo-question-bubble">Você: {selectedDemo.question}</div>
-          <div class="demo-answer" role="tabpanel" aria-live="polite">
+          <div class="demo-query">
+            <span>Pergunta selecionada</span>
+            <strong>{selectedDemo.question}</strong>
+          </div>
+          <div id="zelinho-result" class="demo-answer" role="tabpanel" aria-live="polite">
             <div class="demo-answer-heading">
-              <span class="demo-avatar" aria-hidden="true">Z</span>
               <div>
-                <strong>Zelinho</strong>
-                <span>Gerente do seu caixa</span>
+                <span>Fechamento rápido</span>
+                <strong>O que o caixa está dizendo</strong>
               </div>
+              <span class="demo-result-state">agora</span>
             </div>
             <p>{selectedDemo.answer}</p>
             <div class="demo-numbers">
@@ -717,7 +726,7 @@
     border: 1px solid var(--marketing-dark-border);
     border-radius: 999px;
     color: var(--link);
-    font-size: 0.625rem;
+    font-size: 0.875rem;
     font-weight: 700;
   }
 
@@ -1166,32 +1175,72 @@
     line-height: 1.7;
   }
 
+  .zelinho-demo {
+    min-width: 0;
+  }
+
+  .demo-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .demo-label {
+    margin: 0;
+    color: var(--marketing-dark-muted);
+    font-size: 0.625rem;
+    font-weight: 650;
+  }
+
+  .demo-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--marketing-dark-muted);
+    font-size: 0.625rem;
+  }
+
+  .demo-status span {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: var(--primary);
+  }
+
   .question-list {
-    border-top: 1px solid var(--marketing-dark-border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
   }
 
   .question-list button {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    width: 100%;
-    min-height: 5.25rem;
-    border-bottom: 1px solid var(--marketing-dark-border);
+    flex: 1 1 10.5rem;
+    gap: 0.65rem;
+    min-height: 2.75rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--marketing-dark-border);
+    border-radius: 0.5rem;
     background: transparent;
     color: var(--text-main);
-    font-size: 1.25rem;
+    font-size: 0.875rem;
     font-weight: 650;
     text-align: left;
     cursor: pointer;
-    transition: background 180ms ease, color 180ms ease;
+    transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
   }
 
   .question-list button:hover,
   .question-list button.active {
+    border-color: var(--primary);
     background: color-mix(in srgb, var(--primary) 10%, transparent);
   }
 
   .question-list button :global(svg) {
+    flex: 0 0 auto;
     color: var(--link);
   }
 
@@ -1199,32 +1248,29 @@
     color: var(--primary);
   }
 
-  .zelinho-demo {
-    min-width: 0;
+  .demo-query {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 1.75rem 0 0.75rem;
+    padding: 0 0 0.75rem;
+    border-bottom: 1px solid var(--marketing-dark-border);
   }
 
-  .demo-label {
-    margin: 0 0 0.9rem;
+  .demo-query span {
     color: var(--marketing-dark-muted);
     font-size: 0.625rem;
-    font-weight: 650;
   }
 
-  .demo-question-bubble {
-    width: fit-content;
-    max-width: 90%;
-    margin: 1.5rem 0 0 auto;
-    padding: 0.75rem 1rem;
-    border-radius: 0.75rem 0.75rem 0.25rem 0.75rem;
-    background: var(--marketing-dark-panel);
+  .demo-query strong {
     color: var(--text-main);
     font-size: 0.875rem;
-    font-weight: 650;
+    text-align: right;
   }
 
   .demo-answer {
-    margin-top: 0.75rem;
-    padding: 1.5rem;
+    padding: 1.35rem 1.5rem 1.5rem;
     border: 1px solid var(--marketing-dark-border);
     border-radius: 0.75rem;
     background: var(--marketing-dark);
@@ -1232,21 +1278,9 @@
 
   .demo-answer-heading {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .demo-avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: 50%;
-    background: var(--primary);
-    color: var(--primary-text);
-    font-size: 0.875rem;
-    font-weight: 800;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
   }
 
   .demo-answer-heading strong,
@@ -1255,18 +1289,24 @@
   }
 
   .demo-answer-heading strong {
+    margin-top: 0.3rem;
     color: var(--text-main);
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 
-  .demo-answer-heading span {
-    margin-top: 0.15rem;
+  .demo-answer-heading > div > span {
     color: var(--marketing-dark-muted);
     font-size: 0.625rem;
   }
 
+  .demo-result-state {
+    flex: 0 0 auto;
+    color: var(--link);
+    font-size: 0.625rem;
+  }
+
   .demo-answer > p {
-    margin: 1.25rem 0 0;
+    margin: 1.15rem 0 0;
     color: var(--marketing-dark-muted);
     font-size: 0.875rem;
     line-height: 1.6;
@@ -1274,21 +1314,24 @@
 
   .demo-numbers {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.75rem;
+    gap: 0;
     margin-top: 1.25rem;
-    padding: 1rem 0;
+    padding: 0.25rem 0;
     border-top: 1px solid var(--marketing-dark-border);
     border-bottom: 1px solid var(--marketing-dark-border);
   }
 
   .demo-numbers div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
     min-width: 0;
+    padding: 0.75rem 0;
   }
 
   .demo-numbers div + div {
-    padding-left: 0.75rem;
-    border-left: 1px solid var(--marketing-dark-border);
+    border-top: 1px solid var(--marketing-dark-border);
   }
 
   .demo-numbers span,
@@ -1298,18 +1341,18 @@
 
   .demo-numbers span {
     color: var(--marketing-dark-muted);
-    font-size: 0.625rem;
+    font-size: 0.875rem;
   }
 
   .demo-numbers strong {
-    margin-top: 0.35rem;
     overflow-wrap: anywhere;
     color: var(--text-main);
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-variant-numeric: tabular-nums;
   }
 
   .demo-answer .demo-takeaway {
+    margin-top: 1.15rem;
     color: var(--text-main);
     font-size: 0.875rem;
     font-weight: 650;
@@ -1344,6 +1387,9 @@
   }
 
   .audience-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
     color: var(--marketing-ink-soft);
     font-size: 0.875rem;
     font-weight: 650;
@@ -1685,7 +1731,7 @@
     }
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 900px) {
     .section-shell,
     .hero-inner,
     .hero-facts,
@@ -1710,12 +1756,12 @@
 
     .hero-kicker {
       margin-bottom: 1rem;
-      font-size: 0.625rem;
+      font-size: 0.875rem;
     }
 
     .hero h1 {
       max-width: 19ch;
-      font-size: clamp(2.35rem, 11vw, 3.25rem);
+      font-size: clamp(2.125rem, 10.5vw, 3.25rem);
       letter-spacing: -0.035em;
       line-height: 1.03;
     }
@@ -1826,7 +1872,8 @@
     }
 
     .question-list button {
-      font-size: 1.125rem;
+      flex-basis: 12rem;
+      font-size: 1rem;
     }
 
     .demo-answer {
@@ -1834,11 +1881,7 @@
     }
 
     .demo-numbers {
-      gap: 0.5rem;
-    }
-
-    .demo-numbers div + div {
-      padding-left: 0.5rem;
+      margin-top: 1rem;
     }
 
     .audience-layout {
@@ -1848,6 +1891,7 @@
 
     .audience-links {
       justify-content: flex-start;
+      row-gap: 0.25rem;
     }
 
     .pricing-action,
