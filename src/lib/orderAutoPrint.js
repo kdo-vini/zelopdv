@@ -82,6 +82,10 @@ export function createPrintedOrderStore({ storage = browserStorage(), now = () =
     reserve(orderId) {
       if (!orderId) return false;
       const currentTime = Number(now());
+      for (const [storedId, timestamp] of readPrintedIds(storage)) {
+        const currentStored = printedIds.get(storedId);
+        if (currentStored === undefined || timestamp > currentStored) printedIds.set(storedId, timestamp);
+      }
       prune(currentTime);
       const previousTime = printedIds.get(orderId);
       if (previousTime !== undefined && currentTime - previousTime < AUTO_PRINT_DEDUPE_WINDOW_MS) {

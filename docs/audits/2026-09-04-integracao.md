@@ -3,6 +3,20 @@
 
 ## Impressão PDV + Chat
 
+Desde 2026-09-05, o ZeloPDV também possui uma estação de impressão no
+navegador. O titular ativa **Este computador recebe impressões** em Perfil; a
+aba mantém heartbeat e reserva, por `FOR UPDATE SKIP LOCKED`, trabalhos
+owner-scoped enviados por celulares e outros aparelhos. A fila não escolhe
+impressora: o agente local continua sendo a única fonte da impressora
+configurada. Trabalhos expiram em duas horas, payloads são limitados a 256 KiB
+e resultados terminados são removidos após sete dias.
+
+Frente de Caixa, movimentação de caixa, fiado, reimpressões e comandas manuais
+usam a fila quando o agente não está no aparelho solicitante. Pedidos canônicos
+de Menu, Chat e Mesas usam o mesmo caminho com `zelo_orders.id` como chave
+idempotente; o observador roda globalmente em qualquer rota interna enquanto a
+estação está ativa. Resultado incerto é terminal e nunca é reenviado.
+
 PDV e Chat podem manter autorização simultânea no mesmo Printer. O segundo pareamento não invalida o primeiro. Tokens já publicados pelo 0.1.4 são preservados, até o limite de 50; atingir o limite é um erro explícito, sem descartar navegadores silenciosamente.
 
 A impressão automática usa uma identidade comum: **owner da loja + zelo_orders.id + finalidade order_ticket**. empresa_perfil.id, ID de venda e ID do pedido legado não substituem esses campos. Os dois consumidores enviam o mesmo contrato ao Printer 0.2.0.
