@@ -11,6 +11,7 @@
   import { printVenda } from '$lib/printService';
   import { estoqueDisponivel, produtoControlaEstoque, produtoSemEstoque as semEstoque } from '$lib/stock';
   import { formatSelectedModifierGroups, hasActiveModifierGroups } from '$lib/zelomenuModifiers';
+  import { pizzaStartingPrice } from '$lib/pizza';
   import { allocatePaymentItems, PaymentAllocationError } from '$lib/mesasPaymentAllocation';
   import BackLink from '$lib/components/ui/BackLink.svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
@@ -419,12 +420,12 @@
 
   async function adicionarProduto(produto) {
     if (!comanda || savingItem) return;
-    if (produtoSemEstoque(produto)) {
+    if (produto?.tipo_produto !== 'pizza' && produtoSemEstoque(produto)) {
       addToast(`Estoque insuficiente para "${produto.nome}".`, 'warning');
       return;
     }
 
-    if (hasActiveModifierGroups(produto?.modifierGroups)) {
+    if (produto?.tipo_produto === 'pizza' || hasActiveModifierGroups(produto?.modifierGroups)) {
       montagemProduto = produto;
       montagemOpen = true;
       return;
@@ -474,6 +475,7 @@
         p_delta: delta,
         p_preco_unitario: Number(item.preco_unitario || 0),
         p_modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
+        ...(item.pizza ? { p_pizza: item.pizza } : {}),
       });
 
       if (error) {
@@ -500,6 +502,7 @@
         p_delta: 1,
         p_preco_unitario: Number(montagem.preco || 0),
         p_modifiers: montagem.modifiers || [],
+        ...(montagem.pizza ? { p_pizza: montagem.pizza } : {}),
       });
       if (error) throw error;
       montagemOpen = false;
@@ -758,6 +761,7 @@
         nome_produto_na_venda: [i.nome_produto || '', i.modifierSummary].filter(Boolean).join(' — '),
         preco_unitario_na_venda: Number(i.preco_unitario),
         modifiers: Array.isArray(i.modifiers) ? i.modifiers : [],
+        ...(i.pizza ? { pizza: i.pizza } : {}),
       }));
 
       const { data: itensVenda, error: itensErr } = await supabase
@@ -1460,7 +1464,7 @@
             type="button"
           >
             <span class="produto-nome">{p.nome}</span>
-            <span class="produto-preco">R$ {Number(p.preco).toFixed(2)}</span>
+            <span class="produto-preco">{p.tipo_produto === 'pizza' ? 'A partir de R$' : 'R$'} {Number(p.tipo_produto === 'pizza' ? pizzaStartingPrice(p.pizza_config, p.modifierGroups) : p.preco).toFixed(2)}</span>
             {#if produtoControlaEstoque(p)}
               <span class="produto-estoque" class:stock-empty={produtoSemEstoque(p)}>
                 {produtoSemEstoque(p) ? 'Sem estoque' : `${estoqueDisponivel(p)} em estoque`}

@@ -162,12 +162,13 @@ async function attachModifierGroups(products, userId, assertCurrentUser) {
 
     const rawGroups = await readIdBatches(productIds, (batch) => supabase
         .from('zelomenu_modifier_groups')
-        .select('id, id_produto, nome, tipo, modo_preco, min_selecoes, max_selecoes, permite_quantidade, maximo_por_opcao, ativo, ordem')
+        .select('id, id_produto, nome, tipo, modo_preco, min_selecoes, max_selecoes, permite_quantidade, maximo_por_opcao, minimo_total_quantidade, maximo_total_quantidade, ativo, ordem')
         .eq('id_usuario', userId)
         .in('id_produto', batch)
         .order('ordem', { ascending: true })
         .order('id', { ascending: true }), assertCurrentUser);
-    if (!rawGroups.length) {
+    const pizzaStockIds = (products || []).flatMap((product) => (product.pizza_config?.sizes || []).map((size) => size.stockProductId)).filter(Boolean);
+    if (!rawGroups.length && !pizzaStockIds.length) {
         return (products || []).map((product) => ({ ...product, modifierGroups: [] }));
     }
 
@@ -192,8 +193,7 @@ async function attachModifierGroups(products, userId, assertCurrentUser) {
 
     const visibleProductIds = new Set((products || []).map((product) => Number(product.id)));
     const missingLinkedProductIds = [...new Set(
-        links
-            .map((link) => Number(link.id_produto))
+        [...links.map((link) => Number(link.id_produto)), ...pizzaStockIds]
             .filter((id) => id && !visibleProductIds.has(id)),
     )];
     let linkedProducts = [];
@@ -206,12 +206,13 @@ async function attachModifierGroups(products, userId, assertCurrentUser) {
             .order('id', { ascending: true }), assertCurrentUser);
     }
 
+    const allProducts = mergeModifierLinkedProducts(products, linkedProducts);
     const groupsByProductId = new Map();
     for (const group of buildModifierGroups({
         groups: rawGroups,
         options,
         links,
-        products: mergeModifierLinkedProducts(products, linkedProducts),
+        products: allProducts,
     })) {
         const current = groupsByProductId.get(group.productId) || [];
         current.push(group);
@@ -220,7 +221,8 @@ async function attachModifierGroups(products, userId, assertCurrentUser) {
 
     return (products || []).map((product) => ({
         ...product,
-        modifierGroups: groupsByProductId.get(product.id) || []
+        modifierGroups: groupsByProductId.get(product.id) || [],
+        ...(product.tipo_produto === 'pizza' ? { pizzaStockProducts: allProducts.filter((candidate) => (product.pizza_config?.sizes || []).some((size) => size.stockProductId === candidate.id) || links.some((link) => Number(link.id_produto) === candidate.id)) } : {})
     }));
 }
 

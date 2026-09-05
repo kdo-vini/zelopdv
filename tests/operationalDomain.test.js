@@ -244,7 +244,7 @@ describe('modifier selection operational invariants', () => {
   it('orders selected options deterministically and computes price deltas', () => {
     const result = resolveModifierSelections([
       {
-        id: 'extras', name: 'Extras', kind: 'adicional', minSelections: 0, maxSelections: 3,
+        id: 'extras', name: 'Extras', kind: 'adicional', allowsQuantity: true, minSelections: 0, maxSelections: 3,
         options: [
           { id: 'b', name: 'Bacon', priceDelta: 3, quantity: 1 },
           { id: 'a', name: 'Queijo', priceDelta: 2, quantity: 2 },

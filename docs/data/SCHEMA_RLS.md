@@ -29,6 +29,59 @@ e limites do lint estão detalhados em `docs/audits/2026-09-04-zelopdv.md`.
 - A migration não altera RLS, grants ou policies: INSERT continua exigindo
   `caixa.fechar` e SELECT continua exigindo `relatorios.ver` para subusuários.
 
+## Pizzas montáveis — migration aplicada em 2026-09-05
+
+`20260905144329_pizza_composition_contract.sql`, aplicada e registrada no
+Supabase vinculado, acrescenta `produtos.tipo_produto`
+(`simples`/`pizza`), `pizza_config` e `empresa_perfil.pizza_pricing_mode`
+(`highest`/`average`). A configuração é publicada exclusivamente por
+`save_pizza_config(integer, uuid, jsonb)`: exige `produtos.gerenciar`, valida o
+titular e compara a revisão esperada antes de gerar uma UUID no servidor.
+`save_pizza_pricing_mode(text)` exige o titular e republica as pizzas da loja.
+
+`pizza_config_revisions` tem RLS, leitura pelo titular efetivo e nenhuma escrita
+direta concedida aos clientes. Cada revisão preserva configuração, preços e
+vínculos de complementos e o destino de estoque (produto ou categoria
+compartilhada, incluindo os indicadores de controle). Mudanças nessas
+dependências publicam revisões novas; quantidade de estoque não gera revisão.
+As funções internas não têm EXECUTE para `authenticated`/`anon`.
+
+`vendas_itens`, `comanda_itens` e `zelo_order_items` guardam `pizza jsonb` com
+tamanho, sabores ordenados, frações iguais, regra, preço base e observação
+opcional de até 200 caracteres. Sabores nunca são vínculos de estoque. Grupos
+projetados `__pizza_size`, `__pizza_flavors` e `__pizza_notes` são apresentação,
+com acréscimo zero e sem produto vinculado. Complementos continuam usando os
+limites independentes de opções distintas e quantidade total.
+
+Compras novas exigem revisão atual. `criar_venda_completa` aceita
+`pizza_offline: true` para validar a revisão histórica e preservar o valor já
+cobrado. Quando há pizza, reconstrói as necessidades de estoque dos itens no
+banco, sem confiar na lista de estoque enviada pelo cliente. Repetições
+preservam a chave `client_sale_id` e a proteção de owner/operador existente.
+Conversão de pedido já reservado não baixa estoque novamente. Envio de item
+de mesa antigo à cozinha aceita histórico somente com composição, preço,
+quantidade e complementos iguais ao item persistido da mesma loja.
+
+`comanda_aplicar_delta_item` passa a ter sexto argumento opcional
+`p_pizza jsonb`; o overload antigo é removido para evitar ambiguidade no
+PostgREST. Chamadas comuns de cinco argumentos continuam válidas. A reserva
+e a devolução de pizzas usam o destino de estoque da revisão, mesmo após
+mudar a categoria ou desligar o controle no cadastro.
+
+Produtos comuns com movimentos existentes não podem ser convertidos no mesmo
+ID: o editor cria um novo rascunho. Arquivar uma pizza via RPC oculta-a no PDV
+e no Menu na mesma transação. Exclusão física de pizzas, produtos vinculados
+e categorias de estoque referenciadas é recusada para preservar histórico e
+fila offline; a exclusão integral da conta via cascade de `auth.users` continua
+permitida. As revisões não são apagadas por edição ou arquivamento.
+
+Verificação transacional: `supabase/verification/pizza_composition_runtime.sql`,
+somente com `scripts/verify-supabase-baseline.ps1 -ApplyForwardMigrations
+-ExcludeTenantDataSeeds -PostMigrationVerification
+supabase/verification/pizza_composition_runtime.sql`. Cobre ACL, CAS, preços,
+estoque histórico, fila idempotente, mesas, pedidos, arquivo e purge de conta.
+Esta seção descreve código local; não afirma aplicação ao banco compartilhado.
+
 ## Modelo de tenancy observado
 
 - A empresa continua ancorada no owner.

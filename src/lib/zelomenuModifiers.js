@@ -72,6 +72,8 @@ export function buildModifierGroups({ groups = [], options = [], links = [], pro
         ? null
         : Math.max(1, Math.trunc(Number(rawGroup.max_selecoes ?? rawGroup.maxSelections))),
       allowsQuantity: rawGroup.permite_quantidade === true || rawGroup.allowsQuantity === true,
+      minTotalQuantity: Number(rawGroup.minimo_total_quantidade ?? rawGroup.minTotalQuantity ?? 0),
+      maxTotalQuantity: rawGroup.maximo_total_quantidade ?? rawGroup.maxTotalQuantity ?? null,
       maxPerOption: rawGroup.maximo_por_opcao == null && rawGroup.maxPerOption == null
         ? null
         : Math.max(1, Math.trunc(Number(rawGroup.maximo_por_opcao ?? rawGroup.maxPerOption))),
@@ -135,6 +137,10 @@ export function buildCartItemKey(productId, selectedOptions) {
 }
 
 export function resolveModifierSelections(groups, selections, basePrice) {
+  for (const selection of selections || []) for (const option of selection?.optionSelections || []) {
+    const group = (groups || []).find((candidate) => candidate.id === selection.groupId);
+    if (!Number.isSafeInteger(option.quantity) || option.quantity < 1 || (group && !group.allowsQuantity && option.quantity !== 1)) return { ok: false, code: 'option_quantity_invalid', message: 'A quantidade escolhida para um complemento é inválida.' };
+  }
   const activeGroups = sortModifierGroups((groups || []).filter((group) => group.active !== false));
   const normalizedSelections = normalizeModifierSelections(selections);
   const activeGroupIds = new Set(activeGroups.map((group) => group.id));
@@ -176,6 +182,10 @@ export function resolveModifierSelections(groups, selections, basePrice) {
     // equality, so an unstable order would create duplicate lines for the same
     // combination instead of incrementing quantity.
     selectedOptions.sort((a, b) => a.optionId.localeCompare(b.optionId));
+
+    const totalQuantity = selectedOptions.reduce((sum, option) => sum + option.quantity, 0);
+    if (group.allowsQuantity && totalQuantity < Number(group.minTotalQuantity || 0)) return { ok: false, code: 'group_quantity_required', message: `Escolha pelo menos ${group.minTotalQuantity} unidades no total em ${group.name}.` };
+    if (group.allowsQuantity && group.maxTotalQuantity != null && totalQuantity > Number(group.maxTotalQuantity)) return { ok: false, code: 'group_quantity_exceeded', message: `Escolha no máximo ${group.maxTotalQuantity} unidades no total em ${group.name}.` };
 
     if (selectedOptions.length < Number(group.minSelections || 0)) {
       return { ok: false, code: 'group_required', message: `Escolha ${group.minSelections} ${Number(group.minSelections) === 1 ? 'opção' : 'opções'} em ${group.name}.` };

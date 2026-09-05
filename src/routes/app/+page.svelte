@@ -24,6 +24,7 @@
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
   import { buildCartItemKey, formatSelectedModifierGroups, hasActiveModifierGroups } from '$lib/zelomenuModifiers';
+  import { buildPizzaSignature, pizzaStockRequirements } from '$lib/pizza';
   
   // Modais componentizados
   import ModalAbrirCaixa from '$lib/components/modals/ModalAbrirCaixa.svelte';
@@ -47,6 +48,7 @@
     atualizarCacheSubcategorias,
     buscarSubcategoriasLocal,
     contarVendasPendentes,
+    listarItensPizzaPendentes,
     contarVendasSemTitular,
     recuperarVendasSemTitular,
     salvarVendaOffline,
@@ -57,6 +59,9 @@
 
   // --- 1. ESTADO DO PDV ---
   let produtos = [];
+  let pizzasPendentes = [];
+  let pizzaEditItem = null;
+  let pizzaPendingOwner = null;
   let categorias = [];
   let categoriaAtiva = null; // ID da categoria selecionada
   let subcategorias = [];
@@ -357,6 +362,13 @@
 
   /** Atualiza o contador de vendas aguardando sincronização. */
   async function atualizarPendentesCount() {
+    const requestedOwner = ownerUserId;
+    try {
+      const pendingItems = await listarItensPizzaPendentes(requestedOwner);
+      if (ownerUserId !== requestedOwner) return;
+      pizzasPendentes = pendingItems;
+      pizzaPendingOwner = requestedOwner;
+    } catch { pizzaPendingOwner = null; }
     try {
       vendasPendentesCount = await contarVendasPendentes(ownerUserId);
       vendasSemTitularCount = isSubUser ? 0 : await contarVendasSemTitular();
@@ -625,7 +637,8 @@
       return;
     }
 
-    if (hasActiveModifierGroups(produto?.modifierGroups)) {
+    if (produto?.tipo_produto === 'pizza' || hasActiveModifierGroups(produto?.modifierGroups)) {
+      pizzaEditItem = null;
       produtoMontavelSelecionado = produto;
       modalProdutoMontavelAberto = true;
       return;
@@ -661,11 +674,11 @@
    * Adiciona (ou incrementa) um item na comanda.
    * Aceita itens de banco (com id) ou avulsos (sem id).
    */
-  function adicionarItemNaComanda(item, qtd, preco, selectedOptions = null, modifiers = null) {
+  function adicionarItemNaComanda(item, qtd, preco, selectedOptions = null, modifiers = null, pizza = null) {
     // Chave inclui o preço: trocar de tabela cria linha nova em vez de
     // incrementar a linha do preço antigo.
     const idUnico = item.id != null
-      ? `${buildCartItemKey(item.id, selectedOptions)}::price:${Number(preco).toFixed(2)}`
+      ? `${buildCartItemKey(item.id, selectedOptions)}::pizza:${buildPizzaSignature(pizza)}::notes:${JSON.stringify(pizza?.notes || '')}::price:${Number(preco).toFixed(2)}`
       : Date.now();
 
     const itemExistente = comanda.find((i) => i.id === idUnico);
@@ -682,6 +695,7 @@
           nome: item.nome,
           preco: preco,
           quantidade: qtd,
+          ...(pizza ? { pizza } : {}),
           ...(selectedOptions?.length ? { selectedOptions } : {}),
           ...(modifiers?.length ? { modifiers, resumoMontagem: formatSelectedModifierGroups(modifiers) } : {})
         },
@@ -697,7 +711,9 @@
     const item = comanda.find((i) => i.id === id);
     if (item) {
       // Regra de estoque: soma todas as linhas do mesmo produto (tabelas distintas).
-      if (item.id_produto) {
+      if (item.pizza) {
+        if (!validarEstoqueMontagem([...comanda, { ...item, quantidade: 1 }])) return;
+      } else if (item.id_produto) {
         const prod = produtos.find((p) => p.id === item.id_produto);
         if (produtoControlaEstoque(prod)) {
           const disponivel = estoqueDisponivel(prod);
@@ -713,6 +729,26 @@
       item.quantidade++;
       comanda = [...comanda];
     }
+  }
+
+  function validarEstoqueMontagem(itens) {
+    if (pizzaPendingOwner !== ownerUserId) {
+      addToast('Não foi possível conferir as pizzas pendentes neste dispositivo. Reabra o PDV antes de vender.', 'error');
+      return false;
+    }
+    const allProducts = [...produtos, ...produtos.flatMap((product) => product.pizzaStockProducts || [])];
+    const insufficient = somarQuantidadePorEstoque([...pizzasPendentes, ...itens], allProducts).find((stock) => stock.quantidade > stock.disponivel);
+    if (!insufficient) return true;
+    addToast(`Estoque insuficiente para "${insufficient.nome}". Restam ${insufficient.disponivel} unidade(s).`, 'error');
+    return false;
+  }
+
+  function editarPizza(item) {
+    const product = produtos.find((candidate) => candidate.id === item.id_produto);
+    if (!product?.pizza_config) { addToast('Atualize o catálogo para editar esta pizza.', 'error'); return; }
+    pizzaEditItem = item;
+    produtoMontavelSelecionado = product;
+    modalProdutoMontavelAberto = true;
   }
 
   /** Decrementa a quantidade; remove o item se chegar a zero. */
@@ -1028,11 +1064,12 @@
       }
 
       salvandoVenda = true;
+      if (comanda.some((item) => item.pizza) && !validarEstoqueMontagem(comanda)) { salvandoVenda = false; return; }
 
       // Validação de estoque (refresco em tempo real antes de inserir a venda)
       let freshStockMap = new Map();
       try {
-        const idsProdutos = [...new Set(comanda.filter(i => i.id_produto).map(i => i.id_produto))];
+        const idsProdutos = [...new Set(comanda.flatMap((item) => pizzaStockRequirements({ productId: item.id_produto, quantity: item.quantidade, pizza: item.pizza, modifiers: item.modifiers }).map((requirement) => requirement.id_produto)))];
         if (idsProdutos.length) {
           const { data: prodsInfo, error: prodErr } = await supabase
             .from('produtos')
@@ -1052,13 +1089,14 @@
             const itensComInfo = comanda
               .filter((it) => it.id_produto)
               .map((it) => ({
+                ...it,
                 ...mapInfo.get(it.id_produto),
                 id_produto: it.id_produto,
                 nome: mapInfo.get(it.id_produto)?.nome || it.nome,
                 quantidade: extrairQuantidadeEfetiva(it)
               }));
             // Checa insuficiências
-            const insuficientes = somarQuantidadePorEstoque(itensComInfo, itensComInfo)
+            const insuficientes = somarQuantidadePorEstoque(itensComInfo, prodsInfo)
               .filter((item) => item.quantidade > item.disponivel)
               .map((item) => `${item.nome} (disp: ${item.disponivel}, ped: ${item.quantidade})`);
             if (insuficientes.length) {
@@ -1490,6 +1528,7 @@
                 {#if item.resumoMontagem}
                   <p class="text-[11px] text-sky-300 leading-snug mt-1">{item.resumoMontagem}</p>
                 {/if}
+                {#if item.pizza}<button type="button" class="pizza-edit" on:click={() => editarPizza(item)}>Editar pizza</button>{/if}
                 <p class="text-[11px] text-slate-400">R$ {Number(item.preco).toFixed(2)}</p>
               </div>
               
@@ -1685,10 +1724,18 @@
 <ModalProdutoMontavel
   open={modalProdutoMontavelAberto}
   produto={produtoMontavelSelecionado}
+  initialPizza={pizzaEditItem?.pizza || null}
+  initialSelections={pizzaEditItem?.selectedOptions || []}
+  editing={!!pizzaEditItem}
   precoBase={produtoMontavelSelecionado ? getPrecoTabela(produtoMontavelSelecionado, tabelaAtiva) : 0}
   on:confirm={(e) => {
-    const { produto, preco, selectedOptions, modifiers } = e.detail;
-    if (produto?.id && produtoControlaEstoque(produto)) {
+    const { produto, preco, selectedOptions, modifiers, pizza } = e.detail;
+    const nextModifiers = modifiers;
+    const quantity = pizzaEditItem?.quantidade || 1;
+    const otherItems = pizzaEditItem ? comanda.filter((item) => item.id !== pizzaEditItem.id) : comanda;
+    if (pizza) {
+      if (!validarEstoqueMontagem([...otherItems, { id_produto: produto.id, quantidade: quantity, pizza, modifiers }])) return;
+    } else if (produto?.id && produtoControlaEstoque(produto)) {
       const qtdAtual = comanda
         .filter((i) => i.id_produto === produto.id)
         .reduce((acc, i) => acc + i.quantidade, 0);
@@ -1698,7 +1745,9 @@
         return;
       }
     }
-    adicionarItemNaComanda(produto, 1, preco, selectedOptions, modifiers);
+    if (pizzaEditItem) comanda = otherItems;
+    adicionarItemNaComanda(produto, quantity, preco, selectedOptions, nextModifiers, pizza);
+    pizzaEditItem = null;
     modalProdutoMontavelAberto = false;
     produtoMontavelSelecionado = null;
   }}
@@ -1781,3 +1830,8 @@
 />
 
 <!-- Estilos removidos: usamos classes globais definidas em src/app.css -->
+
+<style>
+  .pizza-edit { min-height: 44px; padding: .4rem .2rem; color: var(--primary); background: transparent; border: 0; font-size: .875rem; cursor: pointer; }
+  .pizza-edit:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+</style>

@@ -188,6 +188,10 @@
 
   function onModelSelect(event) {
     const model = event.detail;
+    if (produto?.tipo_produto === 'pizza' && model.modo_preco === 'substituir') {
+      addToast('A pizza usa preços por tamanho e sabor. Para massa, borda e extras, escolha um modelo com acréscimo.', 'warning');
+      return;
+    }
     selectedModel = model;
     novoGrupo.tipo = model.tipo;
     novoGrupo.modo_preco = model.modo_preco;
@@ -205,6 +209,9 @@
   // --- CRUD: Groups ---
 
   async function salvarGrupo() {
+    if (produto?.tipo_produto === 'pizza' && novoGrupo.modo_preco === 'substituir') {
+      addToast('Complementos de pizza devem somar ao preço da montagem.', 'warning'); return;
+    }
     const nome = novoGrupo.nome.trim();
     if (!nome) { addToast('Nome do grupo é obrigatório.', 'warning'); return; }
     await ensureOwnerUserId();
@@ -269,6 +276,9 @@
   }
 
   async function salvarEdicaoGrupo(grupo) {
+    if (produto?.tipo_produto === 'pizza' && editGrupoForm.modo_preco === 'substituir') {
+      addToast('Complementos de pizza devem somar ao preço da montagem.', 'warning'); return;
+    }
     const nome = String(editGrupoForm.nome || '').trim();
     if (!nome) { addToast('Nome do grupo é obrigatório.', 'warning'); return; }
     const minSel = calcMinSel(editGrupoForm._required);

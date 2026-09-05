@@ -55,6 +55,15 @@ beforeEach(() => {
 });
 
 describe('PDV memory cache', () => {
+  it('loads hidden size stock even when a pizza has no modifier groups', async () => {
+    pagedDatabase({ produtos: [
+      { id: 1, id_usuario: 'owner-a', ocultar_no_pdv: false, tipo_produto: 'pizza', pizza_config: { sizes: [{ id: 'g', stockProductId: 2 }] } },
+      { id: 2, id_usuario: 'owner-a', ocultar_no_pdv: true, controlar_estoque: true, estoque_atual: 5 }
+    ] });
+    const products = await pdvCache.getProdutos();
+    expect(products).toHaveLength(1);
+    expect(products[0].pizzaStockProducts).toMatchObject([{ id: 2, estoque_atual: 5 }]);
+  });
   it('does not reuse stale data after authorization or backend errors', async () => {
     query.mockReturnValueOnce(response({ data: [{ id: 1 }], error: null }));
     await pdvCache.getCategorias();

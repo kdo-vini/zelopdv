@@ -20,6 +20,15 @@ const options = [
 ];
 
 describe('zelomenuModifiers', () => {
+  it('separates distinct options from total units and rejects quantities for single-choice extras', () => {
+    const quantityGroup = { id: 'q', name: 'Bordas', active: true, allowsQuantity: true, minSelections: 1, maxSelections: 1, minTotalQuantity: 2, maxTotalQuantity: 3, pricingMode: 'somar', options: [{ id: 'o', name: 'Extra', active: true, priceDelta: 2 }] };
+    const input = (quantity) => [{ groupId: 'q', optionSelections: [{ optionId: 'o', quantity }] }];
+    expect(resolveModifierSelections([quantityGroup], input(2), 50)).toMatchObject({ ok: true, finalUnitPrice: 54 });
+    expect(resolveModifierSelections([quantityGroup], input(1), 50).code).toBe('group_quantity_required');
+    expect(resolveModifierSelections([quantityGroup], input(4), 50).code).toBe('group_quantity_exceeded');
+    expect(resolveModifierSelections([{ ...quantityGroup, allowsQuantity: false }], input(2), 50).code).toBe('option_quantity_invalid');
+    expect(resolveModifierSelections([quantityGroup], input(1.5), 50).code).toBe('option_quantity_invalid');
+  });
   it('normalizes the current ZeloMenu rows and preserves ordering', () => {
     const normalized = buildModifierGroups({ groups, options });
     expect(normalized.map((group) => group.name)).toEqual(['Tamanho', 'Cobertura']);

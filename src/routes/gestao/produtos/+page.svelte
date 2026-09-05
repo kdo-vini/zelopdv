@@ -9,6 +9,8 @@
   import { clearScreenContext, openAssistantWithContext, screenContext } from '$lib/stores/assistant';
   import * as Select from '$lib/components/ui/select/index.js';
   import ModalModificadores from '$lib/components/modals/ModalModificadores.svelte';
+  import ModalPizzaEditor from '$lib/components/modals/ModalPizzaEditor.svelte';
+  import { archivePizzaProduct, buildPizzaDraftProduct } from '$lib/pizzaEditor';
   import {
     MessageCircle,
     Pencil,
@@ -85,6 +87,34 @@
   let showProdModal = false;
   let modifierModalOpen = false;
   let modifierProduct = null;
+  let pizzaProduct = null;
+  let newProductType = 'simples';
+
+  async function abrirPizza(prod, { newDraft = false } = {}) {
+    openProductMenuId = null;
+    if (prod.tipo_produto !== 'pizza' && !newDraft) {
+      if (!await confirmAction('Criar pizza a partir deste produto', 'Uma nova pizza será criada com uma cópia dos dados deste produto. O produto original e seus pedidos permanecerão intactos. Continuar?')) return;
+      const owner = ownerUserId || prod.id_usuario;
+      const { data: originalPublication, error: readError } = await supabase.from('zelomenu_product_publications').select('nome_publico,descricao_publica,foto_url').eq('id_produto', prod.id).eq('id_usuario', owner).maybeSingle();
+      if (readError) { addToast(readError.message, 'error'); return; }
+      const { data: draft, error: createError } = await supabase.from('produtos').insert(buildPizzaDraftProduct(prod, owner)).select('*').single();
+      if (createError) { addToast(createError.message, 'error'); return; }
+      const { error: publicationError } = await supabase.from('zelomenu_product_publications').insert({
+        ...originalPublication, id_usuario: owner, id_produto: draft.id,
+        visivel_online: false, pausado_manualmente: false, ordem: 0
+      });
+      if (publicationError) { addToast('Rascunho criado. Não foi possível preparar a publicação: ' + publicationError.message, 'error'); await carregarProdutos(); return; }
+      prod = draft;
+      pdvCache.invalidateProdutos();
+      await carregarProdutos();
+    }
+    pizzaProduct = prod;
+  }
+
+  async function pizzaChanged() {
+    pdvCache.invalidateProdutos();
+    await carregarProdutos();
+  }
 
   let newCatForm = { nome: '', ordem: 0, controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 };
   let newSubForm = { nome: '', ordem: 0, id_categoria: null };
@@ -807,6 +837,8 @@
 
     const payload = {
       ...newProdForm,
+      // An unfinished pizza stays hidden until its configuration is saved.
+      ocultar_no_pdv: newProductType === 'pizza' ? true : newProdForm.ocultar_no_pdv,
       id_usuario,
       id_categoria: toDatabaseId(newProdForm.id_categoria),
       id_subcategoria: toDatabaseId(newProdForm.id_subcategoria),
@@ -817,11 +849,23 @@
     const { data: createdProduct, error } = await supabase
       .from('produtos')
       .insert(payload)
-      .select('id, nome, preco, id_usuario')
+      .select('*')
       .single();
     if (error) {
       addToast('Erro ao criar produto: ' + error.message, 'error');
       return;
+    }
+
+    if (newProductType === 'pizza') {
+      const { error: publicationError } = await supabase.from('zelomenu_product_publications').insert({
+        id_usuario, id_produto: createdProduct.id, visivel_online: false, pausado_manualmente: false, ordem: 0
+      });
+      if (publicationError) {
+        addToast('Rascunho criado e oculto no PDV. Não foi possível preparar a publicação: ' + publicationError.message, 'error');
+        fecharModalCriacao('produto');
+        await carregarProdutos();
+        return;
+      }
     }
 
     addToast('Produto criado com sucesso!', 'success');
@@ -841,7 +885,9 @@
     pdvCache.invalidateProdutos();
     await carregarProdutos();
     await carregarContagemProdutosPorCategoria();
-    abrirComplementos(createdProduct);
+    if (newProductType === 'pizza') abrirPizza(createdProduct, { newDraft: true });
+    else abrirComplementos(createdProduct);
+    newProductType = 'simples';
   }
 
   function iniciarEdicaoProduto(prod) {
@@ -900,6 +946,15 @@
 
   async function excluirProduto(prod) {
     openProductMenuId = null;
+    if (prod.tipo_produto === 'pizza') {
+      if (!await confirmAction('Arquivar pizza', `Arquivar "${prod.nome}"? Ela sairá do PDV e do cardápio. Pedidos e vendas realizados serão preservados.`)) return;
+      try {
+        await archivePizzaProduct(supabase, prod, ownerUserId);
+        addToast('Pizza arquivada. Reative pelo editor de tamanhos e sabores.', 'success');
+      } catch (e) { addToast(e.message, 'error'); }
+      finally { pdvCache.invalidateProdutos(); await carregarProdutos(); }
+      return;
+    }
     const ok = await confirmAction('Excluir Produto', `Excluir "${prod.nome}"? Esta ação não pode ser desfeita.`);
     if (!ok) return;
 
@@ -917,20 +972,36 @@
 
   async function excluirEmMassa() {
     if (selectedItems.size === 0) return;
+    const selectedProducts = produtos.filter(product => selectedItems.has(product.id));
+    const pizzas = selectedProducts.filter(product => product.tipo_produto === 'pizza');
     const ok = await confirmAction(
-      'Excluir Produtos',
-      `Excluir ${selectedItems.size} produto(s) selecionado(s)? Esta ação não pode ser desfeita.`
+      pizzas.length ? 'Arquivar pizzas e excluir produtos' : 'Excluir Produtos',
+      pizzas.length ? `${pizzas.length} pizza(s) serão arquivadas, preservando o histórico. Os ${selectedItems.size - pizzas.length} produtos comuns serão excluídos. Confirmar?` : `Excluir ${selectedItems.size} produto(s) selecionado(s)? Esta ação não pode ser desfeita.`
     );
     if (!ok) return;
 
-    const ids = Array.from(selectedItems);
+    try {
+      for (const pizza of pizzas) await archivePizzaProduct(supabase, pizza, ownerUserId);
+    } catch (e) {
+      addToast('Operação interrompida: ' + e.message + ' Pizzas já arquivadas foram preservadas.', 'error');
+      pdvCache.invalidateProdutos();
+      await carregarProdutos();
+      return;
+    }
+    const ids = Array.from(selectedItems).filter(id => !pizzas.some(pizza => pizza.id === id));
+    if (!ids.length) {
+      addToast(`${pizzas.length} pizza(s) arquivadas.`, 'success');
+      pdvCache.invalidateProdutos();
+      await carregarProdutos();
+      return;
+    }
     const { error } = await supabase.from('produtos').delete().in('id', ids);
     if (error) {
       addToast('Erro ao excluir produtos: ' + error.message, 'error');
       return;
     }
 
-    addToast(`${ids.length} produto(s) excluído(s).`, 'success');
+    addToast(`${ids.length} produto(s) excluído(s).${pizzas.length ? ` ${pizzas.length} pizza(s) arquivadas.` : ''}`, 'success');
     pdvCache.invalidateProdutos();
     selectedItems = new Set();
     await carregarProdutos();
@@ -1704,6 +1775,7 @@
                         class:product-card-menu-opens-up={productMenuOpensUp}
                         class="product-menu-popover product-action-menu product-card-menu"
                       >
+                        <button class="product-menu-item" type="button" on:click|stopPropagation={() => abrirPizza(prod)}>Pizza: tamanhos e sabores</button>
                         <button class="product-menu-item" type="button" on:click|stopPropagation={() => abrirComplementos(prod)}>
                           <SlidersHorizontal class="w-4 h-4" aria-hidden="true" />
                           Complementos e opções
@@ -1718,7 +1790,7 @@
                         </button>
                         <button class="product-menu-item product-menu-danger" type="button" on:click|stopPropagation={() => excluirProduto(prod)}>
                           <Trash2 class="w-4 h-4" aria-hidden="true" />
-                          Excluir produto
+                          {prod.tipo_produto === 'pizza' ? 'Arquivar pizza' : 'Excluir produto'}
                         </button>
                       </div>
                     {/if}
@@ -2037,6 +2109,7 @@
                           class="product-menu-popover product-action-menu"
                           style={`top: ${productMenuPosition.top}px; left: ${productMenuPosition.left}px; transform: ${productMenuPosition.transform};`}
                         >
+                          <button class="product-menu-item" type="button" on:click={() => abrirPizza(prod)}>Pizza: tamanhos e sabores</button>
                           <button class="product-menu-item" type="button" on:click={() => abrirComplementos(prod)}>
                             <SlidersHorizontal class="w-4 h-4" aria-hidden="true" />
                             Complementos e opções
@@ -2051,7 +2124,7 @@
                           </button>
                           <button class="product-menu-item product-menu-danger" type="button" on:click={() => excluirProduto(prod)}>
                             <Trash2 class="w-4 h-4" aria-hidden="true" />
-                            Excluir produto
+                            {prod.tipo_produto === 'pizza' ? 'Arquivar pizza' : 'Excluir produto'}
                           </button>
                         </div>
                       {/if}
@@ -2325,6 +2398,7 @@
         </button>
       </div>
       <form on:submit={criarProduto} class="modal-body flex flex-col gap-4">
+<div><span class="form-label">Tipo de produto</span><Select.Root bind:value={newProductType}><Select.Trigger>{newProductType === 'pizza' ? 'Pizza montável' : 'Produto comum'}</Select.Trigger><Select.Content><Select.Item value="simples" label="Produto comum"/><Select.Item value="pizza" label="Pizza montável"/></Select.Content></Select.Root>{#if newProductType === 'pizza'}<p class="text-sm mt-2">Após criar, configure tamanhos e sabores. A pizza ficará oculta no PDV até você concluir e ativá-la.</p>{/if}</div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label for="new-product-name" class="form-label" style="color: var(--text-label);">Nome do Produto</label>
@@ -2477,6 +2551,7 @@
   </dialog>
 {/if}
 
+{#if pizzaProduct}<ModalPizzaEditor produto={pizzaProduct} {ownerUserId} on:close={() => pizzaProduct = null} on:changed={pizzaChanged} on:saved={() => { pizzaProduct = null; pizzaChanged(); }}/>{/if}
 <ModalModificadores
   open={modifierModalOpen}
   produto={modifierProduct}
