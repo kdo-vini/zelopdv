@@ -14,6 +14,8 @@
   import { pairPrinter, unpairPrinter, printerStatus, isWebUsbSupported } from '$lib/printer';
   import { printTeste } from '$lib/printService';
   import { getAccessContext } from '$lib/accessControl';
+  import { printStationEnabled, setPrintStationEnabled, setPrintStationOwner } from '$lib/printStationPreference.js';
+  import { printStationStatus } from '$lib/stores/printStation.js';
   import {
     detectZeloImpressao,
     getConfig as getZeloImpressaoConfig,
@@ -329,6 +331,21 @@
   let localPrintTesting = false;
   let localPrintSaving = false;
   let localPrintPairing = false;
+  $: printStationStatusLabel = !$printStationEnabled
+    ? 'Desativado neste computador'
+    : $printStationStatus === 'ready'
+      ? 'Pronto para receber'
+      : 'Aguardando Zelo Impressão';
+
+  function handlePrintStationToggle() {
+    const enabled = setPrintStationEnabled(!$printStationEnabled);
+    addToast(
+      enabled
+        ? 'Este computador agora pode receber impressões do celular.'
+        : 'Recebimento remoto desativado neste computador.',
+      enabled ? 'success' : 'info',
+    );
+  }
 
   async function refreshLocalPrint() {
     localPrintLoading = true;
@@ -460,6 +477,7 @@
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { window.location.href = '/login'; return; }
     userId = session.user.id;
+    setPrintStationOwner(userId);
     email = session.user.email || '';
 
     // Sub-users see a stripped-down "Minha conta" view — they can't manage the
@@ -1448,13 +1466,39 @@
 
             </div>
 
+            <div class="p-5 flex items-start justify-between gap-4" style="border-top: 1px solid var(--border-subtle);">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold" style="color: var(--text-main);">Este computador recebe impressões</p>
+                <p class="text-xs mt-1 leading-relaxed" style="color: var(--text-muted);">
+                  Ative no computador ligado à impressora. Vendas do celular, comandas de mesas e pedidos serão enviados para cá. Esta aba e o Zelo Impressão precisam permanecer abertos.
+                </p>
+                <p class="text-xs font-medium mt-2" style="color: {$printStationEnabled && $printStationStatus === 'ready' ? 'var(--success)' : 'var(--text-muted)'};">
+                  {printStationStatusLabel}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={$printStationEnabled}
+                aria-label="Este computador recebe impressões"
+                on:click={handlePrintStationToggle}
+                class="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer"
+                style="background: {$printStationEnabled ? 'var(--primary)' : 'var(--bg-input)'}; border-color: {$printStationEnabled ? 'var(--primary)' : 'var(--border-subtle)'};"
+              >
+                <span
+                  class="inline-block h-5 w-5 transform rounded-full shadow-sm transition duration-200"
+                  style="background: var(--text-main); transform: translateX({$printStationEnabled ? '20px' : '0px'});"
+                ></span>
+              </button>
+            </div>
+
             <!-- Rodapé -->
             <div class="px-5 py-3 flex items-center gap-2" style="background: color-mix(in srgb, var(--text-muted) 4%, transparent); border-top: 1px solid var(--border-subtle);">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
               </svg>
               <p class="text-xs" style="color: var(--text-muted);">
-                Se o Zelo Impressão estiver offline, o PDV continua usando o diálogo do navegador para não travar a venda.
+                Neste computador, o PDV usa o Zelo Impressão diretamente. Em outros aparelhos, a impressão fica guardada por até 2 horas para esta estação.
               </p>
             </div>
 

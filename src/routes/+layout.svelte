@@ -8,6 +8,8 @@
   import { capturePostHogPageview } from '$lib/posthogClient';
   import { captureAcquisitionOrigin } from '$lib/attribution/client';
   import { initMarketingAnalytics } from '$lib/marketingAnalytics';
+  import RemotePrintStation from '$lib/components/RemotePrintStation.svelte';
+  import CanonicalOrderAutoPrinter from '$lib/components/CanonicalOrderAutoPrinter.svelte';
 
   let supabase = null;
   let PinSetupModal = null;
@@ -456,6 +458,10 @@
 <ConfirmDialog />
 <UpdateAvailable />
 {#if isApp || path === '/gestao/caixa'}<OfflineStatus />{/if}
+{#if session && hasSidebarLayout}
+  <RemotePrintStation />
+  <CanonicalOrderAutoPrinter />
+{/if}
 
 {#if showPinSetup && session && !isPerfil && !isAssinatura && PinSetupModal}
   <svelte:component this={PinSetupModal} {onPinSet} />

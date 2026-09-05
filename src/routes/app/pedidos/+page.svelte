@@ -10,7 +10,7 @@
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { printOrder } from '$lib/printService';
   import { detectZeloImpressao, getZeloImpressaoFriendlyMessage } from '$lib/zeloImpressaoClient.js';
-  import { createPrintedOrderStore, selectOrdersToAutoPrint } from '$lib/orderAutoPrint.js';
+  import { createPrintedOrderStore } from '$lib/orderAutoPrint.js';
   import {
     canonicalFulfillmentMode,
     canonicalPaymentMethod,
@@ -46,9 +46,7 @@
   let printerStatusRequest = null;
   let printerConnected = false;
   let printedOrderStore = null;
-  let autoPrintRetryIds = new Set();
   let reimprimindo = false;
-  let orderBaselineReady = false;
   let polling = false;
   let recoveringOrderSession = false;
   let mobileDetailOpen = false;
@@ -142,38 +140,6 @@
     void carregarPedidos();
   }
 
-  async function imprimirPedidoAutomaticamente(pedido) {
-    if (!pedido?.canonical || !printedOrderStore) return;
-    if (!(await atualizarStatusImpressora())) {
-      autoPrintRetryIds.add(pedido.id);
-      return;
-    }
-    if (!printedOrderStore.reserve(pedido.id)) {
-      autoPrintRetryIds.delete(pedido.id);
-      return;
-    }
-
-    try {
-      await printOrder(
-        pedido,
-        dadosEmpresa?.nome_exibicao || dadosEmpresa?.razao_social || 'Zelo PDV',
-        ownerUserId,
-        { automatic: true },
-      );
-      autoPrintRetryIds.delete(pedido.id);
-    } catch (error) {
-      if (error?.code !== 'PRINT_OUTCOME_UNKNOWN' && error?.retrySafe !== false) {
-        printedOrderStore.release(pedido.id);
-        autoPrintRetryIds.add(pedido.id);
-      } else {
-        autoPrintRetryIds.delete(pedido.id);
-      }
-      printerConnected = false;
-      console.error('[printer] auto-print falhou para pedido', pedido.id, error);
-      addToast(getZeloImpressaoFriendlyMessage(error), 'warning');
-    }
-  }
-
   /**
    * Reimpressão manual: ignora o dedupe de 48h de propósito (o caso de uso é
    * justamente a via que não saiu). Em caso de sucesso, reserva o pedido no
@@ -189,7 +155,6 @@
         ownerUserId,
       );
       printedOrderStore?.reserve(pedido.id);
-      autoPrintRetryIds.delete(pedido.id);
       printerConnected = true;
       addToast('Pedido enviado para a impressora.', 'success');
     } catch (error) {
@@ -199,26 +164,6 @@
     } finally {
       reimprimindo = false;
     }
-  }
-
-  function reconciliarImpressaoAutomatica(proximosPedidos) {
-    if (!orderBaselineReady) {
-      orderBaselineReady = true;
-      return;
-    }
-
-    const autoPrintOptions = {
-      maxAgeMs: 15 * 60 * 1000,
-      now: Date.now(),
-    };
-    const novosPedidos = selectOrdersToAutoPrint(pedidos, proximosPedidos, autoPrintOptions);
-    const pedidosParaRetry = selectOrdersToAutoPrint(
-      [],
-      proximosPedidos.filter((pedido) => autoPrintRetryIds.has(pedido.id)),
-      autoPrintOptions,
-    );
-    const candidatos = new Map([...novosPedidos, ...pedidosParaRetry].map((pedido) => [pedido.id, pedido]));
-    for (const pedido of candidatos.values()) void imprimirPedidoAutomaticamente(pedido);
   }
 
   async function carregarEmpresa() {
@@ -258,7 +203,6 @@
     polling = true;
     try {
       const proximosPedidos = await loadCanonicalOrders(supabase, dadosEmpresa?.id);
-      reconciliarImpressaoAutomatica(proximosPedidos);
       pedidos = proximosPedidos;
       if (!pedidos.some((p) => p.id === pedidoSelecionadoId)) {
         pedidoSelecionadoId = pedidos[0]?.id || null;

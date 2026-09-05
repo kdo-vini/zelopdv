@@ -23,6 +23,8 @@ import {
 } from '$lib/receipt.js';
 import { buildOrderText } from '$lib/orderPrint.js';
 import { addToast } from '$lib/stores/ui.js';
+import { enqueueRemotePrintJob } from '$lib/remotePrintQueue.js';
+import { supabase } from '$lib/supabaseClient.js';
 
 /* --------------------------------------------------------------------------
  * Iframe fallback — sem popup, funciona em PWA, sem bloqueio de popup.
@@ -41,9 +43,35 @@ function companyStoreIdFrom(payload) {
   return est.id || est.empresa_id || est.user_id || est.owner_id || undefined;
 }
 
+function randomJobId() {
+  return globalThis.crypto?.randomUUID?.()
+    || 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
+      const random = Math.floor(Math.random() * 16);
+      return (character === 'x' ? random : (random & 0x3) | 0x8).toString(16);
+    });
+}
+
+function bytesToBase64(bytes) {
+  const buffer = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
+  let binary = '';
+  for (let index = 0; index < buffer.length; index += 1) binary += String.fromCharCode(buffer[index]);
+  return btoa(binary);
+}
+
 async function tryZeloImpressao(bytes, payload, jobType, metadata = {}) {
+  const jobId = randomJobId();
+  const envelope = {
+    jobId,
+    source: 'zelopdv',
+    ...(companyStoreIdFrom(payload) ? { companyStoreId: companyStoreIdFrom(payload) } : {}),
+    type: jobType,
+    timestamp: new Date().toISOString(),
+    content: { format: 'raw_escpos_base64', base64: bytesToBase64(bytes) },
+    metadata,
+  };
   try {
     await sendRawEscposPrintJob({
+      jobId,
       source: 'zelopdv',
       companyStoreId: companyStoreIdFrom(payload),
       bytes,
@@ -54,6 +82,21 @@ async function tryZeloImpressao(bytes, payload, jobType, metadata = {}) {
   } catch (e) {
     const outcomeUnknown = e?.code === 'PRINT_OUTCOME_UNKNOWN' || e?.retrySafe === false;
     console.warn(outcomeUnknown ? '[print] Impressão sem confirmação:' : '[print] Falha antes da impressão:', e?.message);
+    if (!outcomeUnknown && supabase) {
+      try {
+        const queued = await enqueueRemotePrintJob(supabase, envelope);
+        addToast(
+          queued.stationOnline
+            ? 'Impressão enviada ao computador da loja.'
+            : 'Impressão guardada. Ela sairá quando o computador da loja estiver online.',
+          queued.stationOnline ? 'success' : 'info',
+          6000,
+        );
+        return true;
+      } catch (queueError) {
+        console.warn('[print] Falha ao encaminhar para a estação:', queueError?.message);
+      }
+    }
     addToast(
       getZeloImpressaoFriendlyMessage(e),
       'warning',
@@ -127,7 +170,8 @@ export async function printOrder(order, businessName = 'ZeloPDV', companyStoreId
     });
   }
   const text = buildOrderText(order, businessName);
-  return sendPrintJob({
+  const envelope = {
+    jobId: automatic ? String(order.id) : randomJobId(),
     source: 'zelopdv',
     ...(companyStoreId ? { companyStoreId } : {}),
     intent: automatic
@@ -141,7 +185,27 @@ export async function printOrder(order, businessName = 'ZeloPDV', companyStoreId
       status: order?.status,
       customerPhone: order?.customerPhone || order?.customer_phone || order?.telefone_cliente,
     },
-  });
+  };
+  if (automatic) {
+    if (!supabase) throw new Error('A fila de impressão não está disponível.');
+    const queued = await enqueueRemotePrintJob(supabase, envelope);
+    return { ok: true, queued: true, ...queued };
+  }
+  try {
+    return await sendPrintJob(envelope);
+  } catch (error) {
+    const outcomeUnknown = error?.code === 'PRINT_OUTCOME_UNKNOWN' || error?.retrySafe === false;
+    if (outcomeUnknown || !supabase) throw error;
+    const queued = await enqueueRemotePrintJob(supabase, envelope);
+    addToast(
+      queued.stationOnline
+        ? 'Comanda enviada ao computador da loja.'
+        : 'Comanda guardada até o computador da loja ficar online.',
+      queued.stationOnline ? 'success' : 'info',
+      6000,
+    );
+    return { ok: true, queued: true, ...queued };
+  }
 }
 
 /**
