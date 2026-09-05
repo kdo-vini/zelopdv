@@ -36,7 +36,7 @@ try {
     catch(error) { throw new Error(`${file}: ${error.message}; ${error.where||''}`,{cause:error}); }
   }
   console.log(`Loaded public baseline + ${migrations.length} forward migrations. Excluded customer seed and unrelated Storage policy; managed Auth/Storage services are not represented.`);
-  for(const file of ['offline_operation_runtime.sql','pizza_composition_runtime.sql']) {
+  for(const file of ['offline_operation_runtime.sql','pizza_composition_runtime.sql','manual_offline_order_runtime.sql']) {
     await db.exec("reset role; set row_security=on; set search_path=public,extensions; set request.jwt.claims='{}';");
     try { await db.exec(read('supabase/verification/'+file)); console.log('PASS',file); }
     catch(error) { throw new Error(`${file}: ${error.message}; ${error.where||''}`,{cause:error}); }

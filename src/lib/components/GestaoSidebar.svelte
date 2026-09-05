@@ -8,6 +8,7 @@
   import MobileBottomNav from '$lib/components/MobileBottomNav.svelte';
   import { toggleSupport, closeSupport, isSupportOpen } from '$lib/stores/support';
   import { getAccessContext, getAccessContextSync } from '$lib/accessControl';
+  import { loadOfflineOperatingContext } from '$lib/offlineEntitlement';
   import {
     appNavigationSections,
     isNavigationItemActive,
@@ -47,6 +48,20 @@
   onMount(async () => {
     const saved = localStorage.getItem('zelo_sidebar_collapsed');
     if (saved !== null) collapsed = saved === 'true';
+
+    // Resume the same permission-filtered navigation while the network is down.
+    // The snapshot already enforces the offline authorization grace period.
+    const offline = loadOfflineOperatingContext();
+    if (offline) {
+      isSubUserMode = offline.isSubUser;
+      subUserPermissions = offline.permissions || {};
+      accessLoaded = true;
+      mesasAddonActive = offline.addons?.has_mesas_addon === true;
+      acessosAddonActive = offline.addons?.has_acessos_addon === true;
+      orderingReviewActive = offline.addons?.has_zelo_menu === true;
+      kitchenQueueActive = orderingReviewActive;
+    }
+    if (navigator.onLine === false) return;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.id) {

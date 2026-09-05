@@ -24,7 +24,7 @@
   }
   function confirmChoice(value) { const answer = confirmation; confirmation = null; answer?.resolve(value); }
   const statuses = { pending: 'Aguardando conexão', inflight: 'Enviando', needs_auth: 'Entre novamente para sincronizar', needs_review: 'Precisa de conferência', acked: 'Sincronizado' };
-  const types = { 'sale.create': 'Venda', 'caixa.open': 'Abertura de caixa', 'caixa.move': 'Movimentação de caixa', 'caixa.close': 'Fechamento de caixa', 'mesa.open': 'Abertura de comanda', 'mesa.item.add': 'Item de comanda', 'mesa.item.delta': 'Alteração de item', 'mesa.close': 'Fechamento de comanda', 'mesa.payment.add': 'Pagamento de comanda', 'mesa.payment.remove': 'Remoção de pagamento', 'mesa.cancel': 'Cancelamento de comanda', 'mesa.transfer': 'Transferência de comanda', 'mesa.update': 'Alteração de comanda' };
+  const types = { 'order.create': 'Pedido manual', 'sale.create': 'Venda', 'caixa.open': 'Abertura de caixa', 'caixa.move': 'Movimentação de caixa', 'caixa.close': 'Fechamento de caixa', 'mesa.open': 'Abertura de comanda', 'mesa.item.add': 'Item de comanda', 'mesa.item.delta': 'Alteração de item', 'mesa.close': 'Fechamento de comanda', 'mesa.payment.add': 'Pagamento de comanda', 'mesa.payment.remove': 'Remoção de pagamento', 'mesa.cancel': 'Cancelamento de comanda', 'mesa.transfer': 'Transferência de comanda', 'mesa.update': 'Alteração de comanda' };
   $: owner = !!context && !context.isSubUser && context.userId === context.ownerUserId;
   async function refresh() {
     const captured = getOfflineContext();

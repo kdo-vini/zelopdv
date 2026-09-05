@@ -1,5 +1,12 @@
 # ZeloPDV.memory
 
+- Pedido manual (implementação local 2026-09-05): usa `order.create` na outbox,
+  catálogo/montagem do PDV e motor canônico `source=manual`. Confirmação só após
+  commit IndexedDB; dados do cliente/pagamento/previsão são opcionais e frete é
+  manual. Requer aparelho preparado e migration `20260905210000`; consultar
+  CURRENT para rollout. Consulta offline da fila não implica suporte offline
+  a aceite, preparo, cancelamento ou fechamento de Pedidos.
+
 - Offline v1 (implementação local 2026-09-05): um aparelho principal controla
   o turno; dispositivos autorizados vendem/operam Mesas independentemente.
   Confirmação depende de commit IndexedDB, replay depende de recibo remoto;

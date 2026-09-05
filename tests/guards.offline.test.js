@@ -167,6 +167,37 @@ describe('online blackhole deadlines', () => {
 });
 
 describe('local session absence and addon deadlines', () => {
+  it('restores Pedidos offline only for a matching, unexpired menu entitlement', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
+    const { saveEntitlementSnapshot, ENTITLEMENT_GRACE_MS } = await import('../src/lib/offlineEntitlement.js');
+    const { hasOrderingReviewAccess, hasKitchenQueueAccess, hasMesasAddon } = await import('../src/lib/guards.js');
+    const ctx = { userId: 'operator-1', ownerUserId: 'owner-1', isSubUser: true, addons: { has_zelo_menu: true, has_mesas_addon: true } };
+    saveEntitlementSnapshot(ctx);
+    expect(await hasOrderingReviewAccess('operator-1')).toBe(true);
+    expect(await hasKitchenQueueAccess('operator-1')).toBe(true);
+    expect(await hasOrderingReviewAccess('owner-1')).toBe(true);
+    expect(await hasMesasAddon('owner-1')).toBe(true);
+    expect(await hasMesasAddon('different-user')).toBe(false);
+    expect(await hasOrderingReviewAccess('different-user')).toBe(false);
+    saveEntitlementSnapshot(ctx, Date.now() - ENTITLEMENT_GRACE_MS - 1);
+    expect(await hasOrderingReviewAccess('operator-1')).toBe(false);
+  });
+  it('preserves Pedidos on network timeout and honors confirmed denial', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('navigator', { onLine: true });
+    db.access_users = { __hang: true };
+    const { saveEntitlementSnapshot } = await import('../src/lib/offlineEntitlement.js');
+    saveEntitlementSnapshot({ userId: 'owner-1', ownerUserId: 'owner-1', addons: { has_zelo_menu: true } });
+    const { hasOrderingReviewAccess } = await import('../src/lib/guards.js');
+    const pending = hasOrderingReviewAccess('owner-1');
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await pending).toBe(true);
+    db.access_users = null;
+    db.subscriptions = { plan_tier: 'pdv', has_zelo_menu: false };
+    expect(await hasOrderingReviewAccess('owner-1')).toBe(false);
+    db.access_users = { __error: { status: 403, message: 'Forbidden' } };
+    expect(await hasOrderingReviewAccess('owner-1')).toBe(false);
+  });
   it('resumes local operating context without a token until explicit logout clears it', async () => {
     vi.stubGlobal('navigator', { onLine: true });
     const { saveEntitlementSnapshot, clearEntitlementSnapshot } = await import('../src/lib/offlineEntitlement.js');

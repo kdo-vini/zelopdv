@@ -60,7 +60,7 @@ export function createSyncCoordinator({ ownerUserId, transport, getAccessToken, 
             if (!ack || !['applied', 'already_applied', 'needs_review', 'rejected'].includes(ack.status)) throw new Error('Confirmação remota inválida.');
             if (!stopped) onConnection('online');
             if (['applied', 'already_applied'].includes(ack.status)) await confirmOperation(ownerUserId, op.operationId, ack, leaseId);
-            else await update(op, { status: 'needs_review', acknowledgement: ack, lastError: { code: ack.code || ack.status, message: ack.message || ack.error || ack.result?.reason || 'Operação precisa de conferência.' } });
+            else await update(op, { status: 'needs_review', acknowledgement: ack, lastError: { code: ack.code || ack.status, message: ack.message || ack.error || ack.result?.reason || ack.result?.error || 'Operação precisa de conferência.' } });
         } catch (error) {
             if (!stopped && !error.localAuth) onConnection(globalThis.navigator?.onLine === false ? 'offline' : (!error.status || error.status >= 500 ? 'degraded' : 'online'));
             const status = error.status === 401 ? 'needs_auth' : [400, 403, 404, 409, 413, 422].includes(error.status) ? 'needs_review' : 'pending';

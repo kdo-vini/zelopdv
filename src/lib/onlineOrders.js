@@ -109,17 +109,19 @@ export function mapCanonicalOrder(row) {
   };
 }
 
-export async function loadCanonicalOrders(supabase, empresaId, { kitchen = false } = {}) {
+export async function loadCanonicalOrders(supabase, empresaId, { kitchen = false, signal } = {}) {
   if (!empresaId) return [];
   const statuses = kitchen
     ? ['accepted', 'preparing', 'ready']
     : ONLINE_QUEUE_STATUSES;
-  const { data, error } = await supabase
+  let query = supabase
     .from('zelo_orders')
     .select('id, source, status, revision, customer, fulfillment, payment, total, delivery_fee, observations, created_at, zelo_order_items(id, product_id, name, unit_price, quantity, subtotal, modifiers, pizza, position)')
     .eq('empresa_id', empresaId)
     .in('status', statuses)
     .order('created_at', { ascending: true });
+  if (signal && query.abortSignal) query = query.abortSignal(signal);
+  const { data, error } = await query;
   if (error) throw error;
   return (data || []).map(mapCanonicalOrder);
 }

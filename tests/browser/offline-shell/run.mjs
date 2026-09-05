@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
-import { chromium } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 const root = process.cwd();
 const client = resolve(root, '.svelte-kit/output/client');
 const shell = resolve(root, '.svelte-kit/output/prerendered/pages/offline-shell.html');
@@ -28,12 +28,14 @@ try {
   for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }].filter(view => !process.argv.includes('--desktop') || view.width === 1280)) {
     const context = await browser.newContext({ viewport });
     const page = await context.newPage();
+    page.setDefaultTimeout(15000);
+    page.on('pageerror', error => console.error('browser error:', error.stack));
     // Every external service is blocked, including analytics. No real account.
     await context.route(url => url.origin !== origin, route => route.abort());
     await page.goto(`${origin}/prepare`);
     await page.evaluate(async () => {
       await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
-      localStorage.setItem('zelo_entitlement_snapshot', JSON.stringify({ userId: '00000000-0000-0000-0000-000000000001', ownerUserId: '00000000-0000-0000-0000-000000000001', isSubUser: false, addons: { has_mesas_addon: true }, validatedAt: Date.now() }));
+      localStorage.setItem('zelo_entitlement_snapshot', JSON.stringify({ userId: '00000000-0000-0000-0000-000000000001', ownerUserId: '00000000-0000-0000-0000-000000000001', isSubUser: false, addons: { has_mesas_addon: true, has_zelo_menu: true }, validatedAt: Date.now() }));
     });
     await page.reload();
     assert(await page.evaluate(() => !!navigator.serviceWorker.controller));
@@ -41,7 +43,7 @@ try {
     // navigation under CDP offline emulation. Keep both signals disconnected.
     await context.addInitScript(() => Object.defineProperty(navigator, 'onLine', { get: () => false }));
     await context.setOffline(true);
-    for (const path of ['/app', '/app/mesas', '/gestao/caixa']) {
+    for (const path of ['/app', '/app/pedidos', '/app/mesas', '/gestao/caixa']) {
       const response = await page.goto(origin + path, { waitUntil: 'domcontentloaded' });
       assert.equal(response.status(), 200);
       assert(response.fromServiceWorker(), path + ' document must come from the real worker');
@@ -49,7 +51,7 @@ try {
       assert.equal(new URL(page.url()).pathname, path, `${path} must not redirect away offline`);
       const body = await page.locator('body').innerText();
       assert(!body.includes('Abra a Frente de Caixa para continuar'), 'must render actual route, not neutral fallback UI');
-      assert(body.length > 40, 'operational screen must render');
+      assert(body.length > 40, `${path} operational screen must render: ${body}`);
       assert(!body.includes('Você está offline. Verifique sua conexão.'), 'operational screens use one discreet connectivity indicator');
       console.log(JSON.stringify({ viewport, path, serviceWorker: true, rendered: true }));
     }
@@ -61,18 +63,81 @@ try {
         const now = Date.now(); const deviceId = 'offline-browser-fixture';
         tx.objectStore('offline_meta').put({ key: 'deviceId', value: deviceId });
         const snapshot = (key, value) => tx.objectStore('offline_snapshots').put({ ownerUserId: owner, key, value, updatedAt: new Date(now).toISOString() });
-        snapshot(`bootstrap:${owner}`, { userId: owner, ownerUserId: owner, deviceId, enabled: true, registered: true, isPrimaryDevice: true, isSubUser: false, validatedAt: now, storage: { writable: true }, addons: { has_mesas_addon: true } });
+        snapshot(`bootstrap:${owner}`, { userId: owner, ownerUserId: owner, deviceId, enabled: true, registered: true, isPrimaryDevice: true, isSubUser: false, validatedAt: now, storage: { writable: true }, addons: { has_mesas_addon: true, has_zelo_menu: true } });
         snapshot(`readiness:${owner}`, { catalog: true, cash: true, mesas: true, completedAt: now });
         const caixa = { id: 101, valor_inicial: 0, data_abertura: new Date(now).toISOString(), data_fechamento: null };
         snapshot('caixa.aberto', caixa); snapshot('caixa:101', { caixa, vendas: [], pagamentos: [], taxas: [], movs: [] });
         snapshot('mesas:state', { mesas: [{ id: 1, numero: 1, nome: 'Mesa teste', status: 'livre', ativa: true, capacidade: 4 }], details: {} });
+        snapshot('orders:queue', { orders: [], reconciled: [] });
         snapshot('empresa.perfil', { nome_exibicao: 'Loja de teste offline', largura_bobina: '80mm' }); snapshot('pessoas.fiado', []);
         tx.objectStore('categorias').put({ id: 1, nome: 'Lanches', _cacheOwnerUserId: owner });
         tx.objectStore('subcategorias').put({ id: 1, id_categoria: 1, nome: 'Teste', _cacheOwnerUserId: owner });
         tx.objectStore('produtos').put({ id: 1, nome: 'Lanche Offline Fixture', preco: 10, id_categoria: 1, categoria_id: 1, id_subcategoria: 1, ativo: true, controlar_estoque: true, estoque_atual: 10, _cacheOwnerUserId: owner });
+        tx.objectStore('produtos').put({ id: 2, nome: 'Montável Offline Fixture', preco: 20, id_categoria: 1, ativo: true, controlar_estoque: false, _cacheOwnerUserId: owner, modifierGroups: [
+          { id: 'massa', name: 'Massa', minSelections: 1, maxSelections: 1, pricingMode: 'substituir', options: [{ id: 'penne', name: 'Penne', priceDelta: 20 }] },
+          { id: 'extras', name: 'Extras', minSelections: 0, maxSelections: 2, pricingMode: 'somar', options: [{ id: 'bacon', name: 'Bacon', priceDelta: 3 }] }
+        ] });
         await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); }); database.close();
       });
       await page.goto(origin + '/app');
+      if (process.argv.includes('--orders')) {
+        const navigate = async (name, path) => {
+          if (viewport.width < 768) await page.getByRole('button', { name: 'PDV', exact: true }).click();
+          await page.getByRole('link', { name, exact: true }).filter({ visible: true }).click();
+          await expect(page).toHaveURL(origin + path);
+        };
+        await navigate('Pedidos', '/app/pedidos');
+        await page.getByRole('button', { name: 'Criar pedido', exact: true }).click();
+        const manual = page.getByRole('dialog', { name: 'Criar pedido', exact: true });
+        await manual.getByRole('button', { name: /Montável Offline Fixture/ }).click();
+        await page.getByRole('button', { name: 'Revise as opções acima' }).waitFor();
+        await page.getByRole('radio', { name: /Penne/ }).click();
+        await page.getByRole('checkbox', { name: /Bacon/ }).click();
+        await page.getByRole('button', { name: /Adicionar à comanda/ }).click();
+        await manual.getByLabel('Tipo de pedido').selectOption('delivery');
+        await manual.getByLabel('Frete (R$)').fill('7.50');
+        await expect(manual.getByLabel('Nome', { exact: true })).toHaveValue('');
+        await expect(manual.getByLabel('Telefone')).toHaveValue('');
+        await expect(manual.getByLabel('Endereço')).toHaveValue('');
+        await expect(manual.getByLabel('Forma de pagamento')).toHaveValue('');
+        assert(await manual.getByLabel('Data prevista').inputValue());
+        assert(await manual.getByLabel('Horário previsto').inputValue());
+        await expect(manual.getByText('Total R$ 30,50', { exact: true })).toBeVisible();
+        await page.getByText('Conexão instável. Verifique o estado do salvamento neste aparelho.', { exact: true }).waitFor({ state: 'hidden' });
+        const geometry = await manual.evaluate(dialog => {
+          const rect = element => { const { top, bottom, height } = element.getBoundingClientRect(); return { top, bottom, height }; };
+          return { dialog: rect(dialog), header: rect(dialog.querySelector('header')), scroll: rect(dialog.querySelector('.content-scroll')), footer: rect(dialog.querySelector('footer')), viewport: innerHeight };
+        });
+        assert(geometry.header.top >= geometry.dialog.top && geometry.header.top >= 0, 'modal heading must remain inside viewport');
+        assert(geometry.scroll.top >= geometry.header.bottom - 1, 'scrolling fields must start below heading');
+        assert(geometry.scroll.bottom <= geometry.footer.top + 1, 'fields must not overflow the fixed footer');
+        assert(geometry.footer.bottom <= geometry.dialog.bottom + 1 && geometry.footer.bottom <= geometry.viewport, 'total and save must remain inside modal viewport');
+        console.log(JSON.stringify({ viewport, modalGeometry: geometry }));
+        await page.screenshot({ path: `test-results/offline/manual-order-${viewport.width}.png`, fullPage: true });
+        await manual.locator('.content-scroll').evaluate(element => { element.scrollTop = 0; });
+        await page.screenshot({ path: `test-results/offline/manual-order-top-${viewport.width}.png`, fullPage: true });
+        await manual.getByRole('button', { name: 'Criar pedido', exact: true }).click();
+        await manual.waitFor({ state: 'hidden' });
+        const getOrders = () => page.evaluate(async () => {
+          const database = await new Promise(resolve => { const req = indexedDB.open('ZeloPDVDB'); req.onsuccess = () => resolve(req.result); });
+          const rows = await new Promise(resolve => { const req = database.transaction('offline_operations').objectStore('offline_operations').getAll(); req.onsuccess = () => resolve(req.result); }); database.close(); return rows.filter(row => row.type === 'order.create');
+        });
+        const orders = await getOrders();
+        assert.equal(orders.length, 1);
+        assert.equal(orders[0].status, 'pending');
+        assert.equal(Number(orders[0].payload.total), 30.5);
+        assert.equal(Number(orders[0].payload.subtotal), 23);
+        await page.reload();
+        await page.getByRole('button', { name: 'Criar pedido', exact: true }).waitFor();
+        assert.equal((await getOrders())[0].operationId, orders[0].operationId);
+        await page.locator('.queue-item').first().click();
+        await expect(page.getByText('1× Montável Offline Fixture', { exact: true })).toBeVisible();
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await page.screenshot({ path: `test-results/offline/orders-${viewport.width}.png`, fullPage: true });
+        if (viewport.width < 768) await page.getByRole('button', { name: 'Voltar para fila', exact: true }).click();
+        await navigate('Frente de Caixa', '/app');
+        console.log(JSON.stringify({ viewport, manualOrder: true, mountedProduct: true, optionalCustomer: true, total: 30.5, durable: true, navigation: true }));
+      }
       await page.getByRole('button', { name: /Lanche Offline Fixture/i }).click();
       if (viewport.width < 768) await page.getByRole('button', { name: /Ver Comanda/ }).click();
       await page.getByTestId('btn-cobrar').click();
@@ -162,7 +227,7 @@ try {
       await page.getByRole('button', { name: 'Abrir central de pendências' }).click();
       const center = page.getByRole('dialog', { name: 'Vendas offline', exact: true });
       await center.waitFor();
-      assert(await center.getByRole('heading', { name: 'Arquivo de recuperação' }).isVisible());
+      await expect(center.getByRole('heading', { name: 'Arquivo de recuperação' })).toBeVisible();
       await page.screenshot({ path: `test-results/offline/center-${viewport.width}.png`, fullPage: true });
       await center.getByRole('button', { name: 'Fechar central' }).click();
     }

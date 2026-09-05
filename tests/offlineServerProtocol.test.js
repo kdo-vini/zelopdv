@@ -5,6 +5,12 @@ const operation = () => ({ operationId: 'sale-1', schemaVersion: 1, type: 'sale.
   ownerUserId: 'owner', operatorId: 'operator', deviceId: 'device', entityType: 'sale',
   entityId: 'sale-1', sequence: 1, dependencies: [], occurredAt: new Date().toISOString(), payload: {} });
 describe('offline server protocol', () => {
+  it('accepts a durable manual order envelope', () => {
+    const order = { ...operation(), type: 'order.create', entityType: 'order', payload: {
+      items: [{ productId: 1, quantity: 1, unitPrice: 10 }], deliveryFee: 0
+    } };
+    expect(validateOfflineBatch({ operations: [order] })).toEqual([order]);
+  });
   it('bounds batches before dispatch and rejects duplicate intent IDs', () => {
     expect(validateOfflineBatch({operations:[operation()]})).toHaveLength(1);
     expect(() => validateOfflineBatch({operations:Array.from({length:51},operation)})).toThrow();

@@ -3,6 +3,7 @@ import { atualizarCatalogoOffline, atualizarCacheCategorias, atualizarCacheSubca
 import { listOperations, saveSnapshot } from './operations.js';
 import { loadMesaState } from './mesas.js';
 import { loadCashSnapshot } from '../finance/offlineCash.js';
+import { refreshOrderSnapshot } from './orders.js';
 
 /** Preparation downloads complete, owner-scoped operational data, never authenticated HTTP pages. */
 export async function prepareOperationalData(supabase, context, assertCurrent) {
@@ -37,6 +38,7 @@ export async function prepareOperationalData(supabase, context, assertCurrent) {
   assertCurrent();
   if (cash.provisional) throw new Error('Não foi possível atualizar o turno. Reconecte e prepare novamente antes de depender do modo offline.');
   if (allowed('mesas.acessar')) await loadMesaState(supabase, owner);
+  if (allowed('pedidos.acessar')) await refreshOrderSnapshot(supabase, owner, company?.id);
   assertCurrent();
   const readiness = { catalog: true, cash: true, mesas: allowed('mesas.acessar'), completedAt: Date.now() };
   await saveSnapshot(owner, `readiness:${context.userId}`, readiness);

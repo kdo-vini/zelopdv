@@ -1,5 +1,5 @@
 export const OFFLINE_TYPES = new Set([
-  'sale.create', 'caixa.open', 'caixa.move', 'caixa.close', 'mesa.open',
+  'sale.create', 'order.create', 'caixa.open', 'caixa.move', 'caixa.close', 'mesa.open',
   'mesa.item.add', 'mesa.item.delta', 'mesa.payment.add', 'mesa.payment.remove', 'mesa.transfer',
   'mesa.cancel', 'mesa.close', 'mesa.update'
 ]);

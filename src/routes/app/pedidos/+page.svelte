@@ -16,7 +16,6 @@
     canonicalPaymentMethod,
     isCanonicalOrderPermissionError,
     itemModifierGroups,
-    loadCanonicalOrders,
     subscribeCanonicalOrderUpdates,
     transitionCanonicalOrder,
     closeCanonicalOrder
@@ -24,6 +23,15 @@
   import { getOrderDeliveryPresentation, getOrderPaymentPresentation } from '$lib/orderPresentation.js';
   import { CreditCard, MapPin, Printer } from 'lucide-svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
+  import ModalPedidoManual from '$lib/components/modals/ModalPedidoManual.svelte';
+  import { startOfflineRuntime, onOfflineChange } from '$lib/offline/runtime.js';
+  import { readSnapshot, saveSnapshot } from '$lib/offline/operations.js';
+  import { loadLocalOrders, refreshOrderSnapshot } from '$lib/offline/orders.js';
+  import { offlineStatus } from '$lib/stores/offlineStatus.js';
+
+  let manualOpen = false;
+  let unsubscribeOffline = null;
+  let queueUnavailable = false;
 
   let ready = false;
   let loading = true;
@@ -73,6 +81,7 @@
     userId = auth.userId;
     ownerUserId = auth.ownerUserId || auth.userId;
     operadorUserId = auth.userId;
+    await startOfflineRuntime({ ...auth, ownerUserId });
     isSubUser = auth.isSubUser;
     if (isSubUser && !(await hasAccessPermission('pedidos.acessar'))) {
       addToast('Seu cargo não tem acesso à fila de pedidos.', 'warning');
@@ -95,7 +104,11 @@
       return;
     }
 
-    await Promise.all([carregarEmpresa(), carregarCaixaAberto()]);
+    dadosEmpresa = await readSnapshot(ownerUserId, 'empresa.perfil');
+    pedidos = await loadLocalOrders(ownerUserId);
+    loading = false;
+    unsubscribeOffline = onOfflineChange(() => { void atualizarFilaLocal(); });
+    await carregarEmpresa();
     await carregarPedidos();
     printedOrderStore = createPrintedOrderStore();
     void atualizarStatusImpressora();
@@ -112,6 +125,7 @@
   });
 
   onDestroy(() => {
+    unsubscribeOffline?.();
     if (pollTimer) clearInterval(pollTimer);
     if (printerStatusTimer) clearInterval(printerStatusTimer);
     if (realtimeRefreshTimer) clearTimeout(realtimeRefreshTimer);
@@ -222,14 +236,23 @@
   }
 
   async function carregarEmpresa() {
+    if (dadosEmpresa?.id || navigator.onLine === false) return;
+    const controller = new AbortController();
+    let timer;
     try {
-      const { data } = await supabase
+      const query = supabase
         .from('empresa_perfil')
         .select('id, nome_exibicao, razao_social')
         .eq('user_id', ownerUserId || userId)
-        .maybeSingle();
-      dadosEmpresa = data;
-    } catch {}
+        .maybeSingle().abortSignal(controller.signal);
+      const { data, error } = await Promise.race([query, new Promise((_, reject) => {
+        timer = setTimeout(() => { controller.abort(); reject(new Error('Conexão indisponível.')); }, 3000);
+      })]);
+      if (!error && data) {
+        dadosEmpresa = data;
+        await saveSnapshot(ownerUserId, 'empresa.perfil', { ...(await readSnapshot(ownerUserId, 'empresa.perfil')), ...data });
+      }
+    } catch {} finally { clearTimeout(timer); }
   }
 
   async function carregarCaixaAberto() {
@@ -253,17 +276,34 @@
     return carregarPedidosComRecuperacao(true);
   }
 
+  async function atualizarFilaLocal() {
+    const owner = ownerUserId;
+    const rows = await loadLocalOrders(owner);
+    if (owner !== ownerUserId) return;
+    pedidos = rows;
+  }
+
+  async function pedidoCriado(event) {
+    manualOpen = false;
+    await atualizarFilaLocal();
+    pedidoSelecionadoId = event.detail?.id || event.detail?.order?.id || pedidos.at(-1)?.id;
+    addToast('Pedido salvo neste aparelho. A sincronização é automática quando há conexão.', 'success');
+  }
+
   async function carregarPedidosComRecuperacao(tentarRecuperarSessao) {
     if (polling || fechandoPedido || !userId) return;
     polling = true;
     try {
-      const proximosPedidos = await loadCanonicalOrders(supabase, dadosEmpresa?.id);
-      reconciliarImpressaoAutomatica(proximosPedidos);
+      const proximosPedidos = await refreshOrderSnapshot(supabase, ownerUserId, dadosEmpresa?.id);
+      queueUnavailable = navigator.onLine === false;
+      reconciliarImpressaoAutomatica(proximosPedidos.filter(order => !order.localOnly));
       pedidos = proximosPedidos;
       if (!pedidos.some((p) => p.id === pedidoSelecionadoId)) {
         pedidoSelecionadoId = pedidos[0]?.id || null;
       }
     } catch (err) {
+      queueUnavailable = true;
+      await atualizarFilaLocal();
       if (tentarRecuperarSessao && isCanonicalOrderPermissionError(err)) {
         const sessionState = await recuperarSessaoParaPedidos();
         polling = false;
@@ -280,7 +320,6 @@
         addToast('Não foi possível validar o acesso aos pedidos. Tente recarregar a página.', 'error');
         return;
       }
-      addToast('Erro ao carregar pedidos: ' + getFriendlyErrorMessage(err), 'error');
     } finally {
       loading = false;
       polling = false;
@@ -338,6 +377,10 @@
   }
 
   async function avancarPedidoCanonico(pedido) {
+    if (pedido.localOnly || $offlineStatus.connection !== 'online') {
+      addToast('Pedido salvo neste aparelho. Reconecte para atualizar o andamento.', 'info');
+      return;
+    }
     if (pedido.status === 'pending_payment') return;
     const actionByStatus = {
       pending_review: 'accept', accepted: 'start_preparing', preparing: 'mark_ready',
@@ -383,6 +426,10 @@
   }
 
   async function cancelarPedidoCanonico(pedido) {
+    if (pedido.localOnly || $offlineStatus.connection !== 'online') {
+      addToast('Reconecte para cancelar este pedido.', 'info');
+      return;
+    }
     const action = pedido.status === 'pending_review' ? 'reject' : 'cancel';
     const ok = await confirmAction(action === 'reject' ? 'Rejeitar pedido' : 'Cancelar pedido', 'Esta ação será registrada no histórico do pedido.');
     if (!ok) return;
@@ -410,6 +457,9 @@
   }
 </script>
 
+<ModalPedidoManual open={manualOpen} {ownerUserId} operatorId={operadorUserId}
+  on:close={() => manualOpen = false} on:created={pedidoCriado} />
+
 <svelte:head>
   <title>Pedidos - Caixa | Zelo PDV</title>
 </svelte:head>
@@ -434,12 +484,19 @@
         <span class="subtitle">{pedidos.length} {pedidos.length === 1 ? 'pedido na fila' : 'pedidos na fila'}</span>
       </div>
       <div class="header-actions">
+        {#if canReceiveOrders}
+          <button type="button" class="btn-secondary" on:click={() => manualOpen = true}>Criar pedido</button>
+        {/if}
         <button type="button" class="btn-secondary" on:click={carregarPedidos} disabled={loading || polling} aria-label="Atualizar fila">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M19.5 15a7.5 7.5 0 11-2.197-5.303l3.722 3.722M3 12a9 9 0 0114.85-6.85"/></svg>
           <span>Atualizar</span>
         </button>
       </div>
     </header>
+
+    {#if queueUnavailable || $offlineStatus.connection !== 'online'}
+      <InlineHelper compact message="Exibindo os pedidos salvos neste aparelho. Você pode criar pedidos; o andamento e os pedidos de outros aparelhos serão atualizados quando a conexão voltar." />
+    {/if}
 
     {#if !canCancelOrders}
       <InlineHelper id="pedidos-cancel-hint" compact message="Seu cargo não pode cancelar pedidos. Peça essa ação ao responsável pela operação." />
@@ -473,6 +530,7 @@
               >
                 <div class="qi-top">
                   <span class="order-num">#{pedido.numero_pedido}</span>
+                  {#if pedido.localOnly}<span class="subtitle">{['needs_review', 'needs_auth'].includes(pedido.syncStatus) ? 'Conferir sincronização' : 'Salvo neste aparelho'}</span>{/if}
                   <span class="status-pill" data-status={pedido.status} aria-label="Status: {statusLabel(pedido.status)}">{statusLabel(pedido.status)}</span>
                 </div>
                 <div class="qi-mid">
@@ -523,6 +581,9 @@
                 <p class="eyebrow">Pedido #{pedidoSelecionado.numero_pedido}</p>
                 <h2>{clienteLabel(pedidoSelecionado)}</h2>
                 <span class="details-meta">{formatTime(pedidoSelecionado.criado_em)}</span>
+                {#if pedidoSelecionado.fulfillment?.scheduledAt}
+                  <span class="details-meta">Previsto: {new Date(pedidoSelecionado.fulfillment.scheduledAt).toLocaleString('pt-BR')}</span>
+                {/if}
               </div>
               <div class="details-head-actions">
                 <span class="status-pill" data-status={pedidoSelecionado.status}>{statusLabel(pedidoSelecionado.status)}</span>

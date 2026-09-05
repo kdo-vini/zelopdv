@@ -5,6 +5,7 @@ vi.mock('../src/lib/offlineDb.js', () => ({ atualizarCatalogoOffline: mocks.cata
 vi.mock('../src/lib/offline/operations.js', () => ({ listOperations: mocks.rows, saveSnapshot: mocks.save }));
 vi.mock('../src/lib/offline/mesas.js', () => ({ loadMesaState: mocks.mesas }));
 vi.mock('../src/lib/finance/offlineCash.js', () => ({ loadCashSnapshot: mocks.cash }));
+vi.mock('../src/lib/offline/orders.js', () => ({ refreshOrderSnapshot: vi.fn() }));
 import { prepareOperationalData } from '../src/lib/offline/preparation.js';
 const context = { ownerUserId: 'owner', userId: 'operator', isSubUser: true, permissions: { 'pdv.vender': true } };
 const client = { from: () => { const q = { select: () => q, eq: () => q, maybeSingle: async () => ({ data: { nome_exibicao: 'Loja' } }) }; return q; } };

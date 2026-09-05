@@ -86,7 +86,7 @@ async function readSubscription(userId, columns, label, propagateError = false) 
 
 async function hasSubscriptionAddon(userId, flag, label) {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    return loadEntitlementSnapshot(userId)?.addons?.[flag] === true;
+    return cachedAddonEntitlement(userId, flag);
   }
   const generation = identityGeneration;
   try {
@@ -95,15 +95,33 @@ async function hasSubscriptionAddon(userId, flag, label) {
     return ['pdv', 'bundle'].includes(data.plan_tier) && !!data[flag];
   } catch (error) {
     return generation === identityGeneration && isNetworkError(error)
-      && loadEntitlementSnapshot(userId)?.addons?.[flag] === true;
+      && cachedAddonEntitlement(userId, flag);
   }
 }
 
 async function hasZeloMenuEntitlement(userId, label) {
-  const data = await readSubscription(userId, 'has_zelo_menu, plan_tier', label);
-  if (!data) return false;
-  if (data.plan_tier === 'chat' || data.plan_tier === 'bundle') return true;
-  return data.plan_tier === 'pdv' && !!data.has_zelo_menu;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return cachedAddonEntitlement(userId, 'has_zelo_menu');
+  }
+  const generation = identityGeneration;
+  try {
+    const data = await readSubscription(userId, 'has_zelo_menu, plan_tier', label, true);
+    return generation === identityGeneration && subscriptionIncludesMenu(data);
+  } catch (error) {
+    return generation === identityGeneration && isNetworkError(error)
+      && cachedAddonEntitlement(userId, 'has_zelo_menu');
+  }
+}
+
+function cachedAddonEntitlement(userId, flag) {
+  const snapshot = loadOfflineOperatingContext();
+  return !!snapshot && (snapshot.userId === userId || snapshot.ownerUserId === userId)
+    && snapshot.addons?.[flag] === true;
+}
+
+function subscriptionIncludesMenu(data) {
+  return data?.plan_tier === 'chat' || data?.plan_tier === 'bundle'
+    || (data?.plan_tier === 'pdv' && !!data.has_zelo_menu);
 }
 
 async function hasPlanAccess(userId, allowedPlans, label) {
@@ -201,7 +219,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
 
       let { data: ownerSub, error: ownerSubError } = await gateQuery(supabase
         .from('subscriptions')
-        .select('status, current_period_end, manually_extended_until, has_acessos_addon, has_mesas_addon, plan_tier')
+        .select('status, current_period_end, manually_extended_until, has_acessos_addon, has_mesas_addon, has_zelo_menu, plan_tier')
         .eq('user_id', ownerUserId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -226,7 +244,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
         isSubUser: true,
         roleId: accessUser.role_id,
         permissions: accessUser.access_roles?.permissions || {},
-        addons: { has_mesas_addon: !!ownerSub.has_mesas_addon },
+        addons: { has_mesas_addon: ['pdv', 'bundle'].includes(ownerSub.plan_tier) && !!ownerSub.has_mesas_addon, has_acessos_addon: !!ownerSub.has_acessos_addon, has_zelo_menu: subscriptionIncludesMenu(ownerSub) },
       };
       saveEntitlementSnapshot(subCtx);
       return subCtx;
@@ -283,7 +301,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
   try {
     let { data: sub, error } = await gateQuery(supabase
       .from('subscriptions')
-      .select('status, current_period_end, manually_extended_until, user_id, plan_tier, has_mesas_addon, has_acessos_addon')
+      .select('status, current_period_end, manually_extended_until, user_id, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -311,7 +329,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
       return null;
     }
 
-    ownerAddons = { has_mesas_addon: !!sub.has_mesas_addon, has_acessos_addon: !!sub.has_acessos_addon };
+    ownerAddons = { has_mesas_addon: ['pdv', 'bundle'].includes(sub.plan_tier) && !!sub.has_mesas_addon, has_acessos_addon: !!sub.has_acessos_addon, has_zelo_menu: subscriptionIncludesMenu(sub) };
     const isActiveStrict = isSubscriptionActiveStrict(sub);
     if (!isActiveStrict) {
       clearEntitlementSnapshot();

@@ -99,7 +99,7 @@ describe('ensureActiveSubscription', () => {
       isSubUser: false,
       roleId: null,
       permissions: null,
-      addons: { has_mesas_addon: false, has_acessos_addon: false },
+      addons: { has_mesas_addon: false, has_acessos_addon: false, has_zelo_menu: false },
     });
     expect(global.window.location.href).toBe('');
   });
@@ -109,7 +109,7 @@ describe('ensureActiveSubscription', () => {
     db.access_users = [
       { auth_user_id: 'sub-1', owner_user_id: 'owner-1', role_id: 'role-caixa', status: 'active' },
     ];
-    db.subscriptions = { user_id: 'owner-1', status: 'active', current_period_end: '2099-01-01T00:00:00.000Z', has_acessos_addon: true };
+    db.subscriptions = { user_id: 'owner-1', plan_tier: 'bundle', status: 'active', current_period_end: '2099-01-01T00:00:00.000Z', has_acessos_addon: true };
 
     const { ensureActiveSubscription } = await import('../src/lib/guards.js');
     const res = await ensureActiveSubscription({ requireProfile: true });
@@ -121,7 +121,7 @@ describe('ensureActiveSubscription', () => {
       isSubUser: true,
       roleId: 'role-caixa',
       permissions: {},
-      addons: { has_mesas_addon: false },
+      addons: { has_mesas_addon: false, has_acessos_addon: true, has_zelo_menu: true },
     });
     expect(global.window.location.href).toBe('');
   });

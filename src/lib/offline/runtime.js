@@ -183,6 +183,7 @@ export async function submitOfflineOperation(type, entityId, payload, options = 
   if (captured.isSubUser) {
     const permissions = captured.permissions || {};
     const required = {
+      'order.create': ['pedidos.acessar', 'pedidos.receber'],
       'sale.create': ['pdv.vender', 'pdv.receber'], 'caixa.open': ['caixa.abrir'], 'caixa.move': ['caixa.movimentar'], 'caixa.close': ['caixa.fechar'],
       'mesa.open': ['mesas.acessar', 'mesas.abrir_comanda'], 'mesa.close': ['mesas.acessar', 'mesas.fechar'],
       'mesa.cancel': ['mesas.acessar', 'mesas.cancelar'], 'mesa.transfer': ['mesas.acessar', 'mesas.editar_itens'],

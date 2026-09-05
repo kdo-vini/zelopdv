@@ -1,5 +1,44 @@
 # Funcionamento offline do ZeloPDV
 
+## Pedidos manuais — implementação local em 2026-09-05
+
+`/app/pedidos` possui **Criar pedido**, usando catálogo local e o mesmo modal
+de montáveis/pizzas da frente de caixa. Nome, telefone, endereço, pagamento,
+data e horário são opcionais. Data/hora iniciam pelo relógio local e indicam
+previsão de entrega/retirada; não reescrevem a data financeira. Frete é manual
+para entrega; total soma produtos/montagem e frete. Fiado não é oferecido neste
+formulário porque o fechamento atual não coleta vínculo de cliente.
+
+O rascunho pertence à loja/operador. Criar grava `order.create` em IndexedDB
+e limpa o rascunho na mesma transação; só depois informa salvamento. A chave
+permanece estável em falhas/reenvios. Pedidos locais aparecem na fila com
+**Salvo neste aparelho**, sobrevivem a reload e entram no motor canônico como
+`source=manual`/`pending_review` após sincronização. A resposta remota vincula
+o ID local ao remoto sem duplicar e a próxima leitura não ressuscita pedidos
+já concluídos. Preço/configuração divergentes ficam na central de conferência;
+pizzas utilizam a revisão histórica validada.
+
+A preparação baixa também a fila de pedidos. Navegação lateral/mobile usa
+permissões e add-ons validados em cache para titular e subusuário, inclusive
+ZeloMenu e Mesas. O aparelho precisa ser preparado com conexão antes do uso
+offline. Somente dados já baixados ou criados no próprio aparelho podem ser
+consultados sem rede. **Aceite, avanço de preparo, cancelamento, fechamento e
+recebimento de pedidos de outros aparelhos continuam exigindo conexão.**
+Frente de caixa, Mesas e Caixa mantêm o protocolo offline existente.
+
+Rollout: aplicar `20260905210000_manual_offline_orders.sql` antes de publicar
+o cliente, depois atualizar a preparação dos aparelhos. Migration e código
+desta entrega ainda não foram publicados. A criação exige `pedidos.acessar`
+e `pedidos.receber`, entitlement ZeloMenu e dispositivo registrado, com
+revalidação no replay. Validação e limites do build em [CURRENT](../CURRENT.md).
+
+Verificação: `node tests/browser/offline-shell/run.mjs --checkout --orders
+--mesas --cash` passou com SW real em 390/1280 px. O teste confirma produto
+montável, frete, dados opcionais, reload da mesma intenção e navegação por
+links; a rodada final `--checkout --orders` também verifica cabeçalho/rodapé
+contidos no modal durante scroll. PGlite verifica RPC, permissões, preços,
+pizza histórica e idempotência sem utilizar pedidos de clientes.
+
 ## Protocolo v1 — implementação local em 2026-09-05
 
 **Status: implementação e validação em andamento no checkout; não publicado.**

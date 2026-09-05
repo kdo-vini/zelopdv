@@ -1,5 +1,33 @@
 # ZeloPDV — Foco atual
 
+## Pedido manual e navegação offline — 2026-09-05
+
+Implementação local de **Criar pedido** em `/app/pedidos`, com catálogo e
+montáveis/pizzas compartilhados, dados opcionais, data/hora locais editáveis,
+frete manual e total calculado. Rascunho e intenção persistidos por loja e
+operador; fila exibe registros locais e concilia IDs após replay. Sidebar e
+gates de ZeloMenu/Mesas preservam acesso offline de subusuários.
+
+Exige preparação prévia do aparelho e migration
+`20260905210000_manual_offline_orders.sql` antes do rollout; **sem publicação
+ou aplicação remota nesta rodada**. Aceite/andamento/cancelamento/fechamento de
+Pedidos continuam online. Contrato atual em [OFFLINE](operations/OFFLINE.md).
+
+Validação: suíte completa 1.149 passam/3 skips, seguida de 61 testes focados
+passando após os ajustes de revisão; check final 0 erros/0 avisos.
+Três matrizes SQL PGlite reais passam (offline, pizzas e pedidos manuais),
+ledger consistente. Build compila client/SSR/PWA e termina no EPERM de symlink
+do adapter Vercel no Windows; não é um build final verde. Build isolado corrigiu
+artefatos HTML/JS inconsistentes gerados durante validações concorrentes.
+Chromium com SW real passou em 1280/390 px: quatro rotas offline, criação de
+montável R$23+frete R$7,50 com dados vazios, reload com mesma intenção, links
+Pedidos↔PDV, checkout, Mesas e Caixa. Revisão visual detectou e corrigiu scroll
+do modal móvel; última rodada confirmou geometry sem sobreposição e repetiu
+criação/recarga/navegação/checkout nas duas larguras. Evidências locais em
+`test-results/manual-orders-{browser,browser-final,focused,sql,check-final}.log`.
+Capturas `test-results/offline/manual-order-{top-390,390,1280}.png`.
+Sem sessão de cliente, pedido real, publicação ou teste em aparelho físico.
+
 ## Onboarding de catálogo Degust — 2026-09-05
 
 Catálogo público de [Degust](https://degust.roxpdv.com/) importado no tenant
