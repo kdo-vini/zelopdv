@@ -54,7 +54,7 @@ anon/authenticated negados. Recuperação documentada em
 
 ## INC-2026-09-04-PUBLISH — revisão de origem e artefatos de produção
 
-**Status:** Menu e PDV publicados e conferidos; Chat base publicada e o patch de CI aguarda o gate final.
+**Status:** Menu, PDV e Chat publicados e conferidos; CI final verde após rerun do gate público.
 
 Relato: Chat/Menu podiam permanecer com frontend antigo após GitHub. Dokploy
 inspecionado no navegador do usuário: Menu tem um serviço GitHub/master, domínio
@@ -66,7 +66,9 @@ confere. O contexto vazio do Dockerfile.frontend foi explicitado como `.`.
 Novos builds identificam o SHA real e impedem override divergente. O Menu
 `4faa1f32f3275a2cf21b8d382e2a6e9b48a6ca44` foi conferido pelo CI
 `33936060735`, Dokploy e HTTP público; o Chat base `0d67676` foi conferido e
-o patch adiciona smoke HTTP e PostgreSQL isolado. Confirmar
+o patch `dc52af4` adiciona smoke HTTP e PostgreSQL isolado; a CI
+`33941327097` passou após repetir somente o gate público que sofreu timeout de
+rede no primeiro runner. Confirmar
 Git → deploy → endpoint de versão após a publicação do patch. Backend recebeu stop grace
 de60s no Dokploy para o drain limitado de55s. Não houve exclusão de imagens,
 volumes ou pedidos como suposta correção de cache.

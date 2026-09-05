@@ -47,10 +47,10 @@ que foram superadas; não devem ser usados como status de publicação atual.
   após revisão e matriz final: operador bloqueado é recusado; assinatura própria
   preserva a loja do ex-operador. ACL authenticated/service_role preservada,
   anon negado. Estoque, fiado e uma venda por intenção conferidos no descartável.
-- Chat: a base `0d67676` está publicada e verificada; o próximo patch de CI
-  adiciona smoke HTTP às imagens e um job PostgreSQL isolado para as RPCs de
-  concorrência. O commit final será registrado aqui após o gate verde e a
-  conferência dos dois serviços no Dokploy.
+- Chat: `dc52af487cc9999a905eb9262884110fbb2f6ed5` está publicado e verificado
+  no Dokploy. A CI `33941327097` passou os gates unitário, Docker/HTTP e
+  PostgreSQL; o primeiro job público expirou por timeout de rede do runner e o
+  rerun passou. Os endpoints públicos retornam o SHA40 final.
 
 ## Histórico de registros anteriores
 

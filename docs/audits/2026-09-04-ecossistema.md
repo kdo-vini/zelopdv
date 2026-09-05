@@ -12,7 +12,7 @@ Não foi criada uma arquitetura nova. Foram corrigidos limites e contratos exist
 | Componente | Versão / estado |
 | --- | --- |
 | PDV e admin | Branch publicada com `d2d63b9`; CI final `33935053498`/`33935225504` verdes; Vercel production conferido |
-| Chat | main 0d67676; CI completo 33933729882 verde; configuração de versão corrigida, publicação final em conferência |
+| Chat | main `dc52af487cc9999a905eb9262884110fbb2f6ed5`; CI `33941327097` verde após rerun do gate público; Dokploy e endpoints conferidos |
 | Menu | master `4faa1f32f3275a2cf21b8d382e2a6e9b48a6ca44`; CI `33936060735` verde; Dokploy Done; domínio/32 assets confirmam o mesmo SHA |
 | Printer | main e068ff8; release v0.2.0 publicada, instalador/alias/SDK disponíveis; CI 33933244243 verde |
 | Supabase | Frete, cupom, lease push, cotação atual, reserva Pix e venda owner/actor aplicados, com ledger/ACL conferidos |

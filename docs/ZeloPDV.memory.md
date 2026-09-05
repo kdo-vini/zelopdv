@@ -31,6 +31,10 @@
 - Printer release 0.2.0 coordena auto-print por owner/pedido. Resposta incerta
   preserva dedupe; segunda via exige intenção explícita. CI de release não
   comprova que houve impressão física em hardware.
+- Chat `dc52af487cc9999a905eb9262884110fbb2f6ed5` está publicado no Dokploy.
+  CI `33941327097` passou com 123 unitários, smoke HTTP das imagens e três
+  corridas PostgreSQL de outbound; o primeiro gate público expirou por rede do
+  runner e o rerun passou. `/build-info.json` e `/api/version` retornam o SHA40.
 
 - Auditoria 2026-09-04: cache Dexie de catálogo exige `_cacheOwnerUserId`;
   leituras e replay nunca atribuem dados sem owner à conta atual. Pendentes
