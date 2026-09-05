@@ -225,7 +225,7 @@ try {
       console.log(JSON.stringify({ viewport, cash: true, operations: cashCommands.length, durable: true }));
       await page.getByRole('button', { name: /salvos neste aparelho/ }).click();
       await page.getByRole('button', { name: 'Abrir central de pendências' }).click();
-      const center = page.getByRole('dialog', { name: 'Vendas offline', exact: true });
+      const center = page.getByRole('dialog', { name: 'Operação offline', exact: true });
       await center.waitFor();
       await expect(center.getByRole('heading', { name: 'Arquivo de recuperação' })).toBeVisible();
       await page.screenshot({ path: `test-results/offline/center-${viewport.width}.png`, fullPage: true });

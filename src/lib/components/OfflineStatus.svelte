@@ -45,18 +45,15 @@
       <button type="button" on:click={() => centerOpen = true}>Abrir central de pendências</button>
     {/if}
   </aside>
-{:else}
-  <button class="offline-entry" type="button" on:click={() => centerOpen = true}>Vendas offline</button>
 {/if}
 {#if centerOpen}<OfflineCenter on:close={() => centerOpen = false} />{/if}
 
 <style>
-  .offline-entry { position: fixed; bottom: calc(0.5rem + var(--mobile-bottom-nav-offset, 0px)); right: 0.75rem; z-index: 19; width: auto; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--bg-panel); color: var(--text-muted); }
   .offline-status { position: fixed; bottom: calc(0.75rem + var(--mobile-bottom-nav-offset, 0px)); left: 50%; transform: translateX(-50%); width: min(32rem, calc(100vw - 2rem)); z-index: 19; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-panel); color: var(--text-main); box-shadow: 0 4px 16px color-mix(in srgb, var(--bg-app) 35%, transparent); }
   button { display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 0.85rem; width: 100%; text-align: left; font-size: 0.8rem; }
   button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   p { font-size: 0.8rem; padding: 0 0.85rem 0.7rem; color: var(--text-muted); }
   @media (max-width: 767px) {
-    .offline-status, .offline-entry { bottom: calc(4.75rem + var(--mobile-bottom-nav-offset, 0px)); }
+    .offline-status { bottom: calc(4.75rem + var(--mobile-bottom-nav-offset, 0px)); }
   }
 </style>

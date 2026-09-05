@@ -14,6 +14,8 @@
   import { pairPrinter, unpairPrinter, printerStatus, isWebUsbSupported } from '$lib/printer';
   import { printTeste } from '$lib/printService';
   import { getAccessContext } from '$lib/accessControl';
+  import OfflineCenter from '$lib/components/OfflineCenter.svelte';
+  import { startOfflineRuntime } from '$lib/offline/runtime';
   import { printStationEnabled, setPrintStationEnabled, setPrintStationOwner } from '$lib/printStationPreference.js';
   import { printStationStatus } from '$lib/stores/printStation.js';
   import {
@@ -35,6 +37,9 @@
   let ownerCompanyName = '';
   let subUserRoleName = '';
   let resettingPassword = false;
+  let offlineCenterOpen = false;
+  let offlineSetupBusy = false;
+  let offlineAccessContext = null;
 
   const tabs = [
     { id: 'perfil',       label: 'Perfil' },
@@ -141,6 +146,19 @@
     // detecta a sessão ativa e libera o form diretamente, sem precisar
     // de email de recuperação.
     await goto('/redefinir-senha');
+  }
+
+  async function openOfflineSettings() {
+    if (!offlineAccessContext || offlineSetupBusy) return;
+    offlineSetupBusy = true;
+    try {
+      await startOfflineRuntime(offlineAccessContext);
+      offlineCenterOpen = true;
+    } catch (error) {
+      addToast(error?.message || 'Não foi possível abrir a configuração offline.', 'error');
+    } finally {
+      offlineSetupBusy = false;
+    }
   }
 
   // ───── Apagar conta (LGPD) ─────
@@ -485,6 +503,11 @@
     // the owner data loading entirely.
     try {
       const accessCtx = await getAccessContext();
+      offlineAccessContext = accessCtx ? {
+        ...accessCtx,
+        userId,
+        ownerUserId: accessCtx.ownerUserId || userId,
+      } : { userId, ownerUserId: userId, isSubUser: false, permissions: null };
       if (accessCtx?.isSubUser) {
         isSubUser = true;
         const [{ data: owner }, roleResult] = await Promise.all([
@@ -504,6 +527,7 @@
       }
     } catch (e) {
       console.warn('[perfil] sub-user detection failed:', e?.message || e);
+      offlineAccessContext = { userId, ownerUserId: userId, isSubUser: false, permissions: null };
     }
 
     await loadAdminPinStatus();
@@ -725,6 +749,18 @@
             {resettingPassword ? 'Abrindo…' : 'Trocar senha'}
           </button>
           <p class="text-xs mt-2" style="color: var(--text-muted);">Defina uma nova senha para sua conta agora.</p>
+        </div>
+      </section>
+
+      <section class="rounded-lg p-5 grid gap-3 mt-5" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+        <div>
+          <h2 class="text-sm font-semibold" style="color: var(--text-main);">Operação offline</h2>
+          <p class="text-xs mt-1 leading-relaxed" style="color: var(--text-muted);">Opcional para locais com conexão instável. A preparação vale somente para este aparelho.</p>
+        </div>
+        <div>
+          <button type="button" class="px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-60" style="background: var(--primary); color: var(--primary-text);" disabled={offlineSetupBusy || !offlineAccessContext} on:click={openOfflineSettings}>
+            {offlineSetupBusy ? 'Abrindo…' : 'Configurar neste aparelho'}
+          </button>
         </div>
       </section>
     {/if}
@@ -1297,6 +1333,18 @@
       {#if activeTab === 'integracoes'}
         <div class="grid gap-5 max-w-2xl">
 
+          <section class="rounded-xl p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+            <div>
+              <h2 class="text-base font-semibold" style="color: var(--text-main);">Operação offline</h2>
+              <p class="text-sm mt-1 leading-relaxed" style="color: var(--text-muted);">Recurso opcional para estabelecimentos com conexão instável. Prepare cada aparelho que precisará registrar vendas e pedidos sem internet.</p>
+            </div>
+            <div>
+              <button type="button" class="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60 transition-opacity hover:opacity-90" style="background: var(--primary); color: var(--primary-text);" disabled={offlineSetupBusy || !offlineAccessContext} on:click={openOfflineSettings}>
+                {offlineSetupBusy ? 'Abrindo…' : 'Configurar neste aparelho'}
+              </button>
+            </div>
+          </section>
+
           <!-- Zelo Impressão -->
           <section class="rounded-xl overflow-hidden" style="background: var(--bg-card); border: 1px solid var(--border-card);">
 
@@ -1652,4 +1700,8 @@
       </div>
     </div>
   {/if}
+{/if}
+
+{#if offlineCenterOpen}
+  <OfflineCenter on:close={() => (offlineCenterOpen = false)} />
 {/if}

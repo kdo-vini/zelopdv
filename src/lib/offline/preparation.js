@@ -34,7 +34,8 @@ export async function prepareOperationalData(supabase, context, assertCurrent) {
     }
     await saveSnapshot(owner, 'pessoas.fiado', people);
   }
-  const cash = await loadCashSnapshot(supabase, owner, { refresh: true });
+  // Explicit preparation can tolerate slower mobile connections than routine screen refreshes.
+  const cash = await loadCashSnapshot(supabase, owner, { refresh: true, timeoutMs: 10000 });
   assertCurrent();
   if (cash.provisional) throw new Error('Não foi possível atualizar o turno. Reconecte e prepare novamente antes de depender do modo offline.');
   if (allowed('mesas.acessar')) await loadMesaState(supabase, owner);

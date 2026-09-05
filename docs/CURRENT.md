@@ -2,20 +2,34 @@
 
 ## Pedido manual e navegação offline — 2026-09-05
 
+Correção de experiência pronta para publicação: a configuração de operação
+offline saiu das telas de PDV/Pedidos e agora fica em **Perfil > Integrações**.
+O indicador global aparece somente quando há perda de conexão, sincronização,
+pendência ou erro que exige atenção. A criação manual com internet não exige
+preparar o aparelho para uso offline; ela registra silenciosamente o aparelho
+para manter a gravação durável e sincroniza o pedido. Sem conexão, a preparação
+continua obrigatória. Na preparação explícita, a atualização do caixa aceita
+até 10 s em conexões móveis e a operação completa até 45 s. A migration
+`20260905214500_guard_manual_orders_active_subscription.sql` foi aplicada e
+registrada no Supabase; ela revalida a assinatura quando a fila envia o pedido.
+
 Implementação local de **Criar pedido** em `/app/pedidos`, com catálogo e
 montáveis/pizzas compartilhados, dados opcionais, data/hora locais editáveis,
 frete manual e total calculado. Rascunho e intenção persistidos por loja e
 operador; fila exibe registros locais e concilia IDs após replay. Sidebar e
 gates de ZeloMenu/Mesas preservam acesso offline de subusuários.
 
-Exige preparação prévia do aparelho e a migration
+O uso sem internet exige preparação prévia do aparelho e a migration
 `20260905210000_manual_offline_orders.sql`, aplicada no projeto Supabase
-`xnnjyrblpvsqrtsshawa` e registrada no histórico via CLI. O código da aplicação
-ainda não foi publicado. Aceite/andamento/cancelamento/fechamento de
+`xnnjyrblpvsqrtsshawa` e registrada no histórico via CLI. Aceite/andamento/cancelamento/fechamento de
 Pedidos continuam online. Contrato atual em [OFFLINE](operations/OFFLINE.md).
 
-Validação: suíte completa 1.149 passam/3 skips, seguida de 61 testes focados
-passando após os ajustes de revisão; check final 0 erros/0 avisos.
+Validação desta correção: 25 testes focados e a suíte completa com 1.175 testes
+passam (3 runtimes DB opcionais pulados); `npm run check` retorna 0 erros/0 avisos.
+PGlite passa as três matrizes SQL, incluindo registro online sem ativar o modo
+offline e bloqueio de assinatura vencida. O harness Chromium passa em 390/1280 px.
+O build compila client/SSR/PWA e encontra o EPERM conhecido do symlink Vercel no
+Windows ao adaptar a saída. A validação ampla da rodada anterior permanece abaixo.
 Três matrizes SQL PGlite reais passam (offline, pizzas e pedidos manuais),
 ledger consistente. Build compila client/SSR/PWA e termina no EPERM de symlink
 do adapter Vercel no Windows; não é um build final verde. Build isolado corrigiu

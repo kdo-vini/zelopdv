@@ -1,10 +1,17 @@
 # Fixes Progress
 
+- [x] FX-OFFLINE-UX-01 (2026-09-05) — configuração offline movida para
+  **Perfil > Integrações**; o indicador global fica reservado a estados que
+  exigem atenção. Pedido manual online passa a usar a fila durável sem exigir
+  preparação offline completa. Preparação explícita tolera conexão móvel mais
+  lenta (10 s para caixa, 45 s no total). Assinatura é revalidada no cliente e
+  no replay pelo servidor; migration `20260905214500` aplicada. Regressões
+  focadas, suíte de 1.175 testes, PGlite, browser desktop/mobile e check verdes.
+
 - [x] FX-PEDIDOS-OFFLINE-01 (2026-09-05) — pedido manual com rascunho durável,
   fila local e replay idempotente; menu lateral/mobile e gates de add-on
   preservam acesso offline de titular/subusuário. A migration foi aplicada no
-  projeto Supabase; andamento/fechamento de Pedidos permanecem online. O código
-  ainda aguarda publicação; validações em
+  projeto Supabase; andamento/fechamento de Pedidos permanecem online. Validações em
   [CURRENT](CURRENT.md) e [OFFLINE](operations/OFFLINE.md).
 
 - [x] FX-OFFLINE-RESUME-01 (2026-09-05) — retomada local de caixa e sessão,

@@ -17,10 +17,12 @@ create function pg_temp.manual_op(op_id text,payload jsonb) returns jsonb langua
 $$;
 set local role authenticated;
 select set_config('request.jwt.claims',jsonb_build_object('role','authenticated','sub',owner_id)::text,true) from manual_fixture;
-select public.offline_bootstrap_v1('manual-fixture','enable');
+select pg_temp.manual_assert((public.offline_bootstrap_v1('manual-fixture','register')->>'registered')::boolean,'device registered for online order');
+select pg_temp.manual_assert(not (select enabled from public.offline_settings where owner_user_id=f.owner_id),'register does not enable offline mode') from manual_fixture f;
 update manual_fixture set op=pg_temp.manual_op('manual-empty-fields','{"items":[{"productId":912801,"quantity":2,"unitPrice":10}],"deliveryFee":3.5}');
 update manual_fixture set result=public.apply_offline_operation_v1(op);
 select pg_temp.manual_assert(result->>'status'='applied','optional fields accepted: '||result::text) from manual_fixture;
+select public.offline_bootstrap_v1('manual-fixture','enable');
 select pg_temp.manual_assert(public.apply_offline_operation_v1(op)->>'status'='already_applied','lost response is idempotent') from manual_fixture;
 reset role;
 select pg_temp.manual_assert((select total=23.5 and source='manual' and status='pending_review' and customer='{}' from public.zelo_orders where id=(f.result#>>'{result,id}')::uuid),'canonical total/status') from manual_fixture f;
@@ -67,4 +69,9 @@ update public.subscriptions set has_zelo_menu=false where user_id=(select owner_
 set local role authenticated;
 update manual_fixture set result=public.apply_offline_operation_v1(pg_temp.manual_op('missing-addon','{"items":[{"productId":912801,"quantity":1,"unitPrice":10}]}'));
 select pg_temp.manual_assert(result->>'status'='rejected','missing menu entitlement rejected') from manual_fixture;
+reset role;
+update public.subscriptions set has_zelo_menu=true,status='canceled',current_period_end=now()-interval '1 day' where user_id=(select owner_id from manual_fixture);
+set local role authenticated;
+update manual_fixture set result=public.apply_offline_operation_v1(pg_temp.manual_op('expired-subscription','{"items":[{"productId":912801,"quantity":1,"unitPrice":10}]}'));
+select pg_temp.manual_assert(result->>'status'='rejected','expired subscription rejected') from manual_fixture;
 rollback;

@@ -102,7 +102,7 @@
 </script>
 
 <dialog bind:this={dialog} on:close={() => dispatch('close')} aria-labelledby="offline-center-title">
-  <header><div><h2 id="offline-center-title">Vendas offline</h2><p>Salvamento e sincronização deste aparelho</p></div><button type="button" class="icon" aria-label="Fechar central" on:click={() => dialog.close()}><X size={20} /></button></header>
+  <header><div><h2 id="offline-center-title">Operação offline</h2><p>Preparação, salvamento e sincronização deste aparelho</p></div><button type="button" class="icon" aria-label="Fechar central" on:click={() => dialog.close()}><X size={20} /></button></header>
   <div class="content">
     {#if confirmation}
       <section aria-label="Confirmar decisão"><h3>{confirmation.title}</h3><p>{confirmation.text}</p><div class="actions"><button type="button" on:click={() => confirmChoice(true)}>Confirmar</button><button type="button" on:click={() => confirmChoice(false)}>Cancelar</button></div></section>

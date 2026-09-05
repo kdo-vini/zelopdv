@@ -25,3 +25,18 @@ it('does not overwrite an unsynchronized locally closed shift', async () => {
   const snapshot = await loadCashSnapshot(client({ caixas: [{ id: 4 }] }), 'owner');
   expect(snapshot.caixa).toBeNull(); expect(snapshot.provisional).toBe(true);
 });
+it('allows a slower mobile cash refresh during explicit device preparation', async () => {
+  const slowClient = {
+    from() {
+      const q = {
+        then(resolve) {
+          return new Promise(done => setTimeout(() => done({ data: [], error: null }), 3200)).then(resolve);
+        }
+      };
+      for (const method of ['select', 'eq', 'is', 'order', 'limit', 'range', 'in']) q[method] = () => q;
+      return q;
+    }
+  };
+  await expect(loadCashSnapshot(slowClient, 'owner', { refresh: true, timeoutMs: 5000 }))
+    .resolves.toMatchObject({ caixa: null, provisional: false });
+});

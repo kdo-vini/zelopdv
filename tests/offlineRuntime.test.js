@@ -4,7 +4,7 @@ import { db } from '../src/lib/offlineDb.js';
 import { saveSnapshot, listOperations } from '../src/lib/offline/operations.js';
 vi.mock('../src/lib/supabaseClient', () => ({ supabase: { auth: { getSession: async () => ({ data: { session: { user: { id: 'operator' }, access_token: 'fixture' } } }) } } }));
 vi.mock('../src/lib/stores/offlineStatus.js', () => ({ setOfflineStatus: vi.fn() }));
-import { startOfflineRuntime, stopOfflineRuntime, submitOfflineOperation, getOfflineContext, readOperationalSnapshot, offlineRequest } from '../src/lib/offline/runtime.js';
+import { startOfflineRuntime, stopOfflineRuntime, submitOfflineOperation, submitOnlineOperation, getOfflineContext, readOperationalSnapshot, offlineRequest } from '../src/lib/offline/runtime.js';
 beforeEach(async () => { stopOfflineRuntime(); await Promise.all(db.tables.map(t => t.clear())); vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))); });
 afterEach(() => { stopOfflineRuntime(); vi.unstubAllGlobals(); });
 it('does not revoke a prepared device or request bootstrap when physically offline', async () => {
@@ -27,6 +27,28 @@ it('does not enable a different operator or expired preparation snapshot', async
   await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
   await expect(submitOfflineOperation('sale.create', 'sale-1', {})).rejects.toThrow();
   expect(await listOperations('owner')).toEqual([]);
+});
+it('registers an online order device without running the full offline preparation', async () => {
+  vi.stubGlobal('navigator', { onLine: true });
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(new Response(JSON.stringify({ enabled: false, registered: false, ownerUserId: 'owner', operatorId: 'operator' }), { status: 200 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ enabled: false, registered: true, subscriptionActive: true, ownerUserId: 'owner', operatorId: 'operator' }), { status: 200 }));
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  const operation = await submitOnlineOperation('order.create', 'order-1', { total: 10 }, { operationId: 'order-1' });
+  expect(operation.operationId).toBe('order-1');
+  expect(getOfflineContext()).toMatchObject({ enabled: false, registered: true });
+  expect(fetch).toHaveBeenLastCalledWith('/api/offline/bootstrap', expect.objectContaining({ method: 'POST' }));
+});
+it('revalidates subscription access before an online order on a registered device', async () => {
+  vi.stubGlobal('navigator', { onLine: true });
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(new Response(JSON.stringify({ enabled: false, registered: true, subscriptionActive: true, ownerUserId: 'owner', operatorId: 'operator' }), { status: 200 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ enabled: false, registered: true, subscriptionActive: false, ownerUserId: 'owner', operatorId: 'operator' }), { status: 200 }));
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  await expect(submitOnlineOperation('order.create', 'expired-order', { total: 10 }, { operationId: 'expired-order' }))
+    .rejects.toThrow('assinatura ativa');
+  expect(await listOperations('owner')).toEqual([]);
+  expect(fetch).toHaveBeenLastCalledWith(expect.stringContaining('/api/offline/bootstrap?deviceId='), expect.any(Object));
 });
 it('does not acknowledge a forbidden local payment for a restricted operator', async () => {
   await saveSnapshot('owner', 'bootstrap:operator', { enabled: true, ownerUserId: 'owner', userId: 'operator', isSubUser: true, permissions: { 'mesas.acessar': true }, validatedAt: Date.now() });

@@ -156,7 +156,7 @@ export async function prepareOfflineDevice({ primary = false } = {}) {
   try {
     await Promise.race([
       prepareOperationalData(supabase, context, () => { if (revision !== generation || expired) throw new Error('Preparação interrompida. Tente novamente com conexão.'); }),
-      new Promise((_, reject) => { timer = setTimeout(() => { expired = true; reject(new Error('A preparação demorou demais. Verifique a conexão e tente novamente.')); }, 20000); })
+      new Promise((_, reject) => { timer = setTimeout(() => { expired = true; reject(new Error('A preparação demorou demais. Verifique a conexão e tente novamente.')); }, 45000); })
     ]);
   } finally { clearTimeout(timer); }
   setOfflineStatus({ storageError: null });
@@ -176,10 +176,7 @@ export async function runOfflineSync() {
   finally { if (captured === coordinator) { setOfflineStatus({ syncing: false }); await refreshOfflineCounts().catch(() => {}); } }
 }
 
-export async function submitOfflineOperation(type, entityId, payload, options = {}) {
-  const captured = context;
-  if (!captured?.enabled || Date.now() - captured.validatedAt > GRACE) throw new Error('Prepare este aparelho com internet antes de operar offline.');
-  if (type.startsWith('caixa.') && !captured.isPrimaryDevice) throw new Error('Use o aparelho principal para abrir, movimentar ou encerrar o caixa.');
+function assertOperationPermission(captured, type, payload) {
   if (captured.isSubUser) {
     const permissions = captured.permissions || {};
     const required = {
@@ -194,6 +191,10 @@ export async function submitOfflineOperation(type, entityId, payload, options = 
       throw new Error('Seu cargo não tem permissão para esta operação.');
     }
   }
+}
+
+async function commitCapturedOperation(captured, type, entityId, payload, options) {
+  assertOperationPermission(captured, type, payload);
   setOfflineStatus({ committing: true, storageError: null });
   try {
     const operation = await commitOperation({ ...options, ownerUserId: captured.ownerUserId, operatorId: captured.userId, deviceId: captured.deviceId, type, entityId: String(entityId), payload });
@@ -204,6 +205,42 @@ export async function submitOfflineOperation(type, entityId, payload, options = 
     setOfflineStatus({ storageError: 'Não foi possível salvar neste aparelho. Esta operação ainda não foi registrada.' });
     throw error;
   } finally { setOfflineStatus({ committing: false }); }
+}
+
+export async function submitOfflineOperation(type, entityId, payload, options = {}) {
+  const captured = context;
+  if (!captured?.enabled || Date.now() - captured.validatedAt > GRACE) throw new Error('Prepare este aparelho com internet antes de operar offline.');
+  if (type.startsWith('caixa.') && !captured.isPrimaryDevice) throw new Error('Use o aparelho principal para abrir, movimentar ou encerrar o caixa.');
+  return commitCapturedOperation(captured, type, entityId, payload, options);
+}
+
+async function validateOnlineOrderDevice() {
+  if (!context) throw new Error('Entre novamente para criar o pedido.');
+  if (globalThis.navigator?.onLine === false) throw new Error('Conecte-se para criar pedidos neste aparelho ou prepare a operação offline em Perfil → Integrações.');
+  const captured = context;
+  const result = captured.registered
+    ? await offlineRequest(`/api/offline/bootstrap?deviceId=${encodeURIComponent(captured.deviceId)}`)
+    : await offlineRequest('/api/offline/bootstrap', {
+        method: 'POST',
+        body: JSON.stringify({ deviceId: captured.deviceId, action: 'register' })
+      });
+  if (context !== captured) throw new Error('Conta alterada durante o pedido.');
+  if (!result?.subscriptionActive) throw new Error('É necessária uma assinatura ativa para criar pedidos.');
+  if (!result?.registered) throw new Error('Não foi possível registrar este aparelho para criar o pedido.');
+  context = { ...captured, ...result, deviceId: captured.deviceId, revoked: false, validatedAt: Date.now() };
+  await saveSnapshot(context.ownerUserId, `bootstrap:${context.userId}`, context);
+  activateCoordinator();
+  await refreshOfflineCounts();
+  return context;
+}
+
+/** Online manual orders use the durable queue without opting the store into full offline operation. */
+export async function submitOnlineOperation(type, entityId, payload, options = {}) {
+  if (type !== 'order.create') throw new Error('Operação online não suportada.');
+  const captured = await validateOnlineOrderDevice();
+  const operation = await commitCapturedOperation(captured, type, entityId, payload, options);
+  void runOfflineSync().catch(() => {});
+  return operation;
 }
 
 /** Cache-first reads for an already prepared tenant; no HTTP cache of private data. */

@@ -3,7 +3,7 @@ import { db } from '../offlineDb.js';
 import { projectCashSnapshot } from './offlineProjection.js';
 
 const empty = provisional => ({ caixa: null, vendas: [], pagamentos: [], taxas: [], movs: [], provisional });
-export async function loadCashSnapshot(supabase, owner, { refresh = false } = {}) {
+export async function loadCashSnapshot(supabase, owner, { refresh = false, timeoutMs = 3000 } = {}) {
   let caixa = await readSnapshot(owner, 'caixa.aberto');
   const originalCash = JSON.stringify(caixa);
   let operations = await listOperations(owner);
@@ -58,7 +58,8 @@ export async function loadCashSnapshot(supabase, owner, { refresh = false } = {}
     return { caixa, vendas, pagamentos, taxas, movs, mesaPagamentos, pendingReceipts, fetchedAt: Date.now(), provisional: unresolvedTurn };
   };
   try {
-    const fetched = await Promise.race([fetchSnapshot(), new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('Conexão instável.')); }, 3000); })]);
+    const requestTimeout = Number.isFinite(Number(timeoutMs)) ? Math.max(1000, Math.min(Number(timeoutMs), 30000)) : 3000;
+    const fetched = await Promise.race([fetchSnapshot(), new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('Conexão instável.')); }, requestTimeout); })]);
     const published = await db.transaction('rw', db.offline_snapshots, async () => {
       // Never replace a newly opened/closed local turn with an earlier network response.
       if (JSON.stringify(await readSnapshot(owner, 'caixa.aberto')) !== originalCash) return false;

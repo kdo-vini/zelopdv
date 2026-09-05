@@ -18,7 +18,11 @@ o ID local ao remoto sem duplicar e a próxima leitura não ressuscita pedidos
 já concluídos. Preço/configuração divergentes ficam na central de conferência;
 pizzas utilizam a revisão histórica validada.
 
-A preparação baixa também a fila de pedidos. Navegação lateral/mobile usa
+A criação manual com internet registra silenciosamente o aparelho para usar a
+fila durável e sincronizar, sem habilitar ou exigir a preparação completa do
+modo offline. A preparação opcional fica em **Perfil > Integrações > Operação
+offline** e baixa também a fila de pedidos. O indicador global só aparece em
+queda de conexão, sincronização, pendência ou erro. Navegação lateral/mobile usa
 permissões e add-ons validados em cache para titular e subusuário, inclusive
 ZeloMenu e Mesas. O aparelho precisa ser preparado com conexão antes do uso
 offline. Somente dados já baixados ou criados no próprio aparelho podem ser
@@ -31,6 +35,8 @@ no projeto Supabase vinculado e registrada pelo CLI; ainda é necessário public
 o cliente e atualizar a preparação dos aparelhos. A criação exige `pedidos.acessar`
 e `pedidos.receber`, entitlement ZeloMenu e dispositivo registrado, com
 revalidação no replay. Validação e limites do build em [CURRENT](../CURRENT.md).
+A migration incremental `20260905214500_guard_manual_orders_active_subscription.sql`
+revalida também o período ativo da assinatura no replay e já está aplicada.
 
 Verificação: `node tests/browser/offline-shell/run.mjs --checkout --orders
 --mesas --cash` passou com SW real em 390/1280 px. O teste confirma produto
@@ -53,9 +59,10 @@ explícita do aparelho. Não considerar um cliente antigo automaticamente migrad
   transação com erro não pode anunciar venda salva. Referência `LOCAL-*` não é
   número de venda confirmado pelo servidor.
 - Catálogo, modificadores/pizzas, categorias, pessoas para fiado, recibo, turno
-  e Mesas são preparados com internet. O botão de preparação solicita
+  e Mesas são preparados com internet em Perfil > Integrações. O botão solicita
   persistência, testa escrita e carrega os dados; falha deixa a preparação
-  incompleta. O indicador exige também Service Worker controlando a página.
+  incompleta. A atualização do caixa espera até 10 s e o conjunto até 45 s para
+  acomodar conexões móveis. O indicador exige também Service Worker controlando a página.
 - A autorização local tem validade de sete dias. Token ausente/expirado impede
   sincronizar, mas não apaga os lançamentos nem revoga sozinho o contexto local.
   Login/logout e troca de loja não podem reaproveitar snapshots de outra conta.

@@ -1,5 +1,5 @@
 import { listOperations, readSnapshot, saveSnapshot } from './operations.js';
-import { getOfflineContext, submitOfflineOperation } from './runtime.js';
+import { getOfflineContext, submitOfflineOperation, submitOnlineOperation } from './runtime.js';
 import { loadCanonicalOrders, mapCanonicalOrder } from '../onlineOrders.js';
 
 const KEY = 'orders:queue';
@@ -66,7 +66,8 @@ export async function createManualOrder(input, { operationId = crypto.randomUUID
   const context = getOfflineContext();
   if (!context || (ownerUserId && ownerUserId !== context.ownerUserId) || (operatorId && operatorId !== context.userId)) throw new Error('Conta alterada. Reabra o pedido.');
   const payload = buildManualOrderPayload(input);
-  const operation = await submitOfflineOperation('order.create', operationId, payload, { operationId,
+  const submit = context.enabled && context.registered ? submitOfflineOperation : submitOnlineOperation;
+  const operation = await submit('order.create', operationId, payload, { operationId,
     clearDraft: { operatorId: context.userId, key: 'manual-order' } });
   return localOrder(operation);
 }

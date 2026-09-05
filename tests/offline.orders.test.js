@@ -2,14 +2,26 @@ import 'fake-indexeddb/auto';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { db } from '../src/lib/offlineDb.js';
 import { commitOperation, saveSnapshot, listOperations, confirmOperation } from '../src/lib/offline/operations.js';
+const runtime = vi.hoisted(() => ({
+  context: { enabled: true, registered: true, ownerUserId: 'owner', userId: 'operator' },
+  online: vi.fn()
+}));
 vi.mock('../src/lib/offline/runtime.js', () => ({
-  getOfflineContext: () => ({ enabled: true, ownerUserId: 'owner', userId: 'operator' }),
-  submitOfflineOperation: (type, entityId, payload, options) => commitOperation({ ...options, type, entityId, payload, ownerUserId: 'owner', operatorId: 'operator', deviceId: 'device' })
+  getOfflineContext: () => runtime.context,
+  submitOfflineOperation: (type, entityId, payload, options) => {
+    if (!runtime.context.enabled) throw new Error('offline not enabled');
+    return commitOperation({ ...options, type, entityId, payload, ownerUserId: 'owner', operatorId: 'operator', deviceId: 'device' });
+  },
+  submitOnlineOperation: runtime.online
 }));
 import { createManualOrder, loadLocalOrders, buildManualOrderPayload, mergeLocalOrders } from '../src/lib/offline/orders.js';
 import { createSyncCoordinator } from '../src/lib/offline/synchronizer.js';
 const input = { items: [{ productId: 1, name: 'Lanche', quantity: 2, unitPrice: 12.35, modifiers: [{ groupName: 'Extra', selectedOptions: [{ optionName: 'Queijo' }] }] }], deliveryFee: 3.5 };
-beforeEach(async () => { await Promise.all(db.tables.map(table => table.clear())); });
+beforeEach(async () => {
+  runtime.context = { enabled: true, registered: true, ownerUserId: 'owner', userId: 'operator' };
+  runtime.online.mockReset();
+  await Promise.all(db.tables.map(table => table.clear()));
+});
 it('accepts omitted customer/payment fields and calculates total with freight in cents', () => {
   expect(buildManualOrderPayload(input)).toMatchObject({ subtotal: 24.7, total: 28.2, customer: {}, payment: {}, deliveryFee: 3.5 });
   expect(() => buildManualOrderPayload({ items: [] })).toThrow();
@@ -25,6 +37,15 @@ it('commits a durable local order and retries the same intention without duplica
   expect(rows[0]).toMatchObject({ id: 'intent', total: 28.2, localOnly: true, source: 'manual' });
   expect(await loadLocalOrders('another-owner')).toEqual([]);
   await expect(createManualOrder(input, { operationId: 'intent', ownerUserId: 'another-owner' })).rejects.toThrow();
+});
+it('creates an online manual order without requiring full offline preparation', async () => {
+  runtime.context = { enabled: false, ownerUserId: 'owner', userId: 'operator' };
+  runtime.online.mockImplementation((type, entityId, payload, options) => commitOperation({
+    ...options, type, entityId, payload, ownerUserId: 'owner', operatorId: 'operator', deviceId: 'online-device'
+  }));
+  const order = await createManualOrder(input, { operationId: 'online-intent' });
+  expect(runtime.online).toHaveBeenCalledWith('order.create', 'online-intent', expect.any(Object), expect.objectContaining({ operationId: 'online-intent' }));
+  expect(order).toMatchObject({ id: 'online-intent', localOnly: true, total: 28.2 });
 });
 it('reconciles remote IDs without duplicating or resurrecting a completed order', async () => {
   await createManualOrder(input, { operationId: 'intent' });
