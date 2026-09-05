@@ -4,6 +4,7 @@ import {
   db, atualizarCacheProdutos, buscarProdutosLocal, atualizarCacheCategorias,
   buscarCategoriasLocal, atualizarCacheSubcategorias, buscarSubcategoriasLocal,
   syncVendasPendentes, contarVendasPendentes,
+  listarItensPizzaPendentes,
 } from '../src/lib/offlineDb.js';
 
 beforeEach(async () => {
@@ -35,6 +36,17 @@ describe('persistent offline catalog', () => {
 });
 
 describe('offline replay', () => {
+  it('reserves only pending pizza items from the same owner', async () => {
+    const pizzaItem = { id_produto: 1, quantidade: 2, pizza: { stockProductId: 9 } };
+    await db.vendas_pendentes.bulkAdd([
+      { ownerUserId: 'owner-a', status: 'aguardando', payload: { itens: [pizzaItem, { id_produto: 5 }] } },
+      { ownerUserId: 'owner-b', status: 'aguardando', payload: { itens: [pizzaItem] } },
+      { ownerUserId: 'owner-a', status: 'sincronizada', payload: { itens: [pizzaItem] } },
+      { status: 'aguardando', payload: { itens: [pizzaItem] } }
+    ]);
+    expect(await listarItensPizzaPendentes('owner-a')).toEqual([pizzaItem]);
+    expect(await listarItensPizzaPendentes(null)).toEqual([]);
+  });
   it('persists the legacy idempotency key before a request with an uncertain result', async () => {
     const id = await db.vendas_pendentes.add({
       ownerUserId: 'owner-a', status: 'aguardando', createdAt: '2026-09-01T10:00:00Z',

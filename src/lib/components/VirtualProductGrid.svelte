@@ -6,10 +6,11 @@
 <script>
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
   import { getPrecoTabela } from '$lib/finance/caixa';
+  import { pizzaStartingPrice } from '$lib/pizza';
 
   const dispatch = createEventDispatcher();
 
-  /** @type {Array<{id: number, nome: string, preco: number, preco_2?: number, preco_3?: number, por_unidade?: boolean, controlar_estoque?: boolean, estoque_atual?: number}>} */
+  /** @type {Array<{id: number, nome: string, preco: number, preco_2?: number, preco_3?: number, por_unidade?: boolean, controlar_estoque?: boolean, estoque_atual?: number, tipo_produto?: string, pizza_config?: any}>} */
   export let produtos = [];
 
   /** @type {boolean} Differentiates first-use empty state from search/filter with no results. */
@@ -184,9 +185,9 @@
           
           <div class="px-3 pb-3 w-full text-right">
             <div class="flex items-baseline justify-end gap-0.5">
-              <span class="text-[10px] font-bold text-sky-400">R$</span>
+              <span class="text-[10px] font-bold text-sky-400">{produto.tipo_produto === 'pizza' ? 'A partir de R$' : 'R$'}</span>
               <span class="text-lg font-black text-white tracking-tighter">
-                {Number(getPrecoTabela(produto, tabelaAtiva)).toFixed(2)}
+                {Number(produto.tipo_produto === 'pizza' ? pizzaStartingPrice(produto.pizza_config, produto.modifierGroups) : getPrecoTabela(produto, tabelaAtiva)).toFixed(2)}
               </span>
             </div>
           </div>

@@ -148,6 +148,7 @@ export function buildVendaPayload(input) {
       quantidade: extractEffectiveQty(i),
       nome_produto_na_venda: nomeProdutoNaVenda,
       preco_unitario_na_venda: money(i.preco),
+      ...(i.pizza ? { pizza: i.pizza } : {}),
       ...(modifiers ? { modifiers } : {})
     };
   });
@@ -159,8 +160,9 @@ export function buildVendaPayload(input) {
   const estoque = [];
   for (const i of input.itens || []) {
     const itemQty = extractEffectiveQty(i);
-    if (i.id_produto) {
-      estoque.push({ id_produto: i.id_produto, quantidade: itemQty });
+    const stockProductId = i.pizza?.stockProductId ?? i.id_produto;
+    if (stockProductId) {
+      estoque.push({ id_produto: stockProductId, quantidade: itemQty });
     }
     for (const group of Array.isArray(i.modifiers) ? i.modifiers : []) {
       for (const option of group?.selectedOptions || []) {

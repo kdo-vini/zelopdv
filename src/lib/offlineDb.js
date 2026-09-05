@@ -57,10 +57,19 @@ export async function salvarVendaOffline(venda) {
     return await db.vendas_pendentes.add(prepareVendaOfflineRecord(venda));
 }
 
+/** Reserve only pizza stock from unacknowledged local intentions, without
+ * rewriting the authoritative catalog cache or crossing account boundaries. */
+export async function listarItensPizzaPendentes(ownerUserId) {
+    if (!ownerUserId) return [];
+    const rows = await db.vendas_pendentes.where('ownerUserId').equals(ownerUserId)
+        .and((row) => row.status === 'aguardando').toArray();
+    return rows.flatMap((row) => (row.payload?.itens || []).filter((item) => item.pizza));
+}
+
 export function prepareVendaOfflineRecord(venda) {
     const createdAt = venda?.createdAt || new Date().toISOString();
     const payload = venda?.payload
-        ? { ...venda.payload, client_sale_id: venda.payload.client_sale_id || createClientSaleId() }
+        ? { ...venda.payload, client_sale_id: venda.payload.client_sale_id || createClientSaleId(), ...(venda.payload.itens?.some((item) => item.pizza) ? { pizza_offline: true } : {}) }
         : venda?.payload;
     return {
         ...venda,

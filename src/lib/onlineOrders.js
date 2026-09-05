@@ -1,3 +1,5 @@
+import { pizzaModifiers } from './pizza.js';
+
 const ONLINE_QUEUE_STATUSES = [
   'pending_payment',
   'pending_review',
@@ -61,17 +63,19 @@ export function normalizeModifierGroups(rawModifiers) {
 
 /** Grupos de montagem de um item da fila, venha ele do mapeamento ou do banco. */
 export function itemModifierGroups(item) {
-  return normalizeModifierGroups(item?.modifierGroups || item?.modifiers);
+  const groups = item?.modifierGroups || item?.modifiers || [];
+  return normalizeModifierGroups(item?.pizza && !groups.some((group) => group.groupId === '__pizza_size' || group.groupName === 'Tamanho') ? [...pizzaModifiers(item.pizza), ...groups] : groups);
 }
 
 export function mapCanonicalOrder(row) {
   const customer = row?.customer || {};
   const fulfillment = row?.fulfillment || {};
   const items = (row?.zelo_order_items || []).map((item) => {
-    const modifierGroups = normalizeModifierGroups(item.modifiers);
+    const modifierGroups = itemModifierGroups(item);
     return {
       ...(modifierGroups.length ? { modifierGroups } : {}),
       id: item.id,
+      ...(item.pizza ? { pizza: item.pizza } : {}),
       id_produto: item.product_id,
       nome: item.name,
       preco_unitario: Number(item.unit_price || 0),
@@ -112,7 +116,7 @@ export async function loadCanonicalOrders(supabase, empresaId, { kitchen = false
     : ONLINE_QUEUE_STATUSES;
   const { data, error } = await supabase
     .from('zelo_orders')
-    .select('id, source, status, revision, customer, fulfillment, payment, total, delivery_fee, observations, created_at, zelo_order_items(id, product_id, name, unit_price, quantity, subtotal, modifiers, position)')
+    .select('id, source, status, revision, customer, fulfillment, payment, total, delivery_fee, observations, created_at, zelo_order_items(id, product_id, name, unit_price, quantity, subtotal, modifiers, pizza, position)')
     .eq('empresa_id', empresaId)
     .in('status', statuses)
     .order('created_at', { ascending: true });

@@ -1,5 +1,23 @@
 # Incidents
 
+## INC-2026-09-05-MONTAGEM — dificuldade de montagem manual na frente de caixa
+
+**Status:** relato de cliente recebido; defeito de UI reproduzido e corrigido
+localmente; publicação e confirmação autenticada pendentes.
+
+Usuário relatou não conseguir montar produto no atendimento do dia anterior.
+O componente real em Chromium mostrou dependências reativas indiretas:
+adicional selecionado sem controles de quantidade; grupo limitado a duas
+opções permite três marcações visuais, mas confirma snapshot com apenas duas.
+Uma unidade de cada opção válida foi confirmada corretamente no harness.
+Nenhuma venda persistida. A sessão salva de teste redirecionou ao login;
+não foi estabelecido que este defeito explica integralmente o caso do cliente.
+O harness Chromium agora confirma destaque, stepper, limites, snapshot, reset,
+escolha opcional e grupo vazio; a suíte completa passa com 1.056 testes e três
+skips opcionais. Evidência, reprodução, correção e melhorias propostas no
+[plano de montagem](superpowers/plans/2026-09-05-montagem-frente-caixa.md).
+
+
 ## INC-2026-09-04-SALE-ACTOR — venda de operador fora da loja
 
 **Status:** correção revisada, aplicada e registrada no Supabase em 2026-09-05 UTC.

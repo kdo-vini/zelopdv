@@ -102,7 +102,7 @@ export async function POST({ request }) {
 
   const { data: item, error: itemError } = await supabaseAdmin
     .from('comanda_itens')
-    .select('id, id_comanda, id_produto, quantidade, preco_unitario, observacao, modifiers, nome_produto_na_venda')
+    .select('id, id_comanda, id_produto, quantidade, preco_unitario, observacao, modifiers, pizza, nome_produto_na_venda')
     .eq('id', itemId)
     .eq('id_comanda', comandaId)
     .maybeSingle();
@@ -167,6 +167,7 @@ export async function POST({ request }) {
           quantity,
           lineTotal: subtotal,
           modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
+          ...(item.pizza ? { pizza: item.pizza } : {}),
           position: 0,
         }],
       },

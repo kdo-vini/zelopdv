@@ -32,6 +32,15 @@ describe('shouldQueueVendaOffline', () => {
 });
 
 describe('prepareVendaOfflineRecord', () => {
+  test('marks queued pizzas for historical price validation and preserves their revision', () => {
+    const pizza = { revision: 'saved-revision', baseUnitPrice: 50 };
+    const payload = { client_sale_id: 'intention-1', itens: [{ pizza, preco_unitario_na_venda: 50 }] };
+    const record = prepareVendaOfflineRecord({ payload, ownerUserId: 'owner-a' });
+    expect(record.payload.pizza_offline).toBe(true);
+    expect(record.payload.itens[0].pizza).toEqual(pizza);
+    expect(record.payload.client_sale_id).toBe('intention-1');
+    expect(payload.pizza_offline).toBeUndefined();
+  });
   test('keeps modifiers inside the pending sale payload for replay', () => {
     const modifiers = [{ groupName: 'Confeitos', selectedOptions: [{ optionName: 'Granulado', quantity: 1 }] }];
     const record = prepareVendaOfflineRecord({

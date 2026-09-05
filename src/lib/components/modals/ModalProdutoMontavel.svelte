@@ -9,20 +9,41 @@
     sortModifierGroups
   } from '$lib/zelomenuModifiers';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
+  import { resolvePizza } from '$lib/pizza';
 
   export let open = false;
   export let produto = null;
   export let precoBase = 0;
+  export let initialPizza = null;
+  export let initialSelections = [];
+  export let editing = false;
 
   const dispatch = createEventDispatcher();
   let selections = {};
   let lastProductKey = '';
   let wasOpen = false;
+  let sizeId = '';
+  let flavorIds = [];
+  let flavorCount = 1;
+  let flavorSearch = '';
+  let pizzaNotes = '';
+  $: isPizza = produto?.tipo_produto === 'pizza';
+  $: pizzaConfig = produto?.pizza_config;
+  $: selectedSize = pizzaConfig?.sizes?.find((size) => size.id === sizeId);
+  $: pizzaSelection = { revision: pizzaConfig?.revision, sizeId, flavorIds };
+  $: pizzaResolution = isPizza ? resolvePizza(pizzaConfig, pizzaSelection) : null;
+  $: matchingFlavors = (pizzaConfig?.flavors || []).filter((flavor) => flavor.active !== false && Number(flavor.prices?.[sizeId]) > 0 && flavor.name.toLocaleLowerCase('pt-BR').includes(flavorSearch.toLocaleLowerCase('pt-BR')));
 
-  $: productKey = `${produto?.id ?? ''}:${precoBase}`;
+  $: productKey = `${produto?.id ?? ''}:${precoBase}:${produto?.pizza_config?.revision || ''}`;
   $: {
     if (shouldResetModifierSelections({ open, wasOpen, productKey, lastProductKey })) {
       selections = {};
+      for (const selection of initialSelections || []) selections[selection.groupId] = Object.fromEntries((selection.optionSelections || []).map((option) => [option.optionId, option.quantity]));
+      sizeId = initialPizza?.sizeId || '';
+      flavorIds = initialPizza?.flavors?.map((flavor) => flavor.id) || [];
+      flavorCount = flavorIds.length || 1;
+      flavorSearch = '';
+      pizzaNotes = initialPizza?.notes || '';
       lastProductKey = productKey;
     }
     wasOpen = open;
@@ -34,21 +55,27 @@
       .map(([optionId, quantity]) => ({ optionId, quantity }))
       .filter((option) => Number(option.quantity) > 0)
   }));
-  $: resolution = resolveModifierSelections(groups, selectionInput, Number(precoBase || 0));
+  $: extrasResolution = resolveModifierSelections(groups, selectionInput, isPizza ? Number(pizzaResolution?.baseUnitPrice || 0) : Number(precoBase || 0));
+  $: resolution = isPizza
+    ? !pizzaResolution?.ok ? pizzaResolution
+      : flavorIds.length !== flavorCount ? { ok: false, message: `Escolha exatamente ${flavorCount} sabores.` }
+      : groups.some((group) => group.pricingMode === 'substituir') ? { ok: false, message: 'Os extras de pizza devem somar ao preço. Corrija o cadastro.' }
+      : extrasResolution.ok ? { ...extrasResolution, selectedGroups: [...pizzaResolution.modifiers, ...extrasResolution.selectedGroups] } : extrasResolution
+    : extrasResolution;
   $: summary = resolution.ok ? formatSelectedModifierGroups(resolution.selectedGroups) : '';
 
-  function quantityFor(groupId, optionId) {
-    return Number(selections[groupId]?.[optionId] || 0);
+  function quantityFor(currentSelections, groupId, optionId) {
+    return Number(currentSelections[groupId]?.[optionId] || 0);
   }
 
-  function selectedCountFor(groupId) {
-    return Object.values(selections[groupId] || {}).filter((quantity) => Number(quantity) > 0).length;
+  function selectedCountFor(currentSelections, groupId) {
+    return Object.values(currentSelections[groupId] || {}).filter((quantity) => Number(quantity) > 0).length;
   }
 
-  function isOptionBlocked(group, option) {
+  function isOptionBlocked(currentSelections, group, option) {
     if (!group.allowsQuantity && group.maxSelections === 1) return false;
     if (group.maxSelections == null) return false;
-    return !quantityFor(group.id, option.id) && selectedCountFor(group.id) >= group.maxSelections;
+    return !quantityFor(currentSelections, group.id, option.id) && selectedCountFor(currentSelections, group.id) >= group.maxSelections;
   }
 
   function setQuantity(group, option, quantity) {
@@ -66,12 +93,12 @@
   }
 
   function chooseOption(group, option) {
-    const current = quantityFor(group.id, option.id);
+    const current = quantityFor(selections, group.id, option.id);
     if (group.maxSelections === 1 && !group.allowsQuantity) {
       selections = { ...selections, [group.id]: { [option.id]: current ? 0 : 1 } };
       return;
     }
-    if (!current && group.maxSelections != null && selectedCountFor(group.id) >= group.maxSelections) {
+    if (!current && group.maxSelections != null && selectedCountFor(selections, group.id) >= group.maxSelections) {
       addToast(`Você pode escolher no máximo ${group.maxSelections} ${group.maxSelections === 1 ? 'opção' : 'opções'} em ${group.name}.`, 'warning');
       return;
     }
@@ -80,6 +107,20 @@
 
   function close() {
     dispatch('close');
+  }
+
+  function focusDialog(node) {
+    const previous = document.activeElement;
+    node.focus();
+    function trap(event) {
+      if (event.key !== 'Tab') return;
+      const controls = [...node.querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),[tabindex="0"]')].filter((control) => control.getClientRects().length);
+      const first = controls[0], last = controls.at(-1);
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === node)) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+    node.addEventListener('keydown', trap);
+    return { destroy() { node.removeEventListener('keydown', trap); if (previous instanceof HTMLElement && previous.isConnected) previous.focus(); } };
   }
 
   function handleKeydown(event) {
@@ -92,8 +133,23 @@
       produto,
       preco: resolution.finalUnitPrice,
       selectedOptions: selectionInput,
-      modifiers: resolution.selectedGroups
+      modifiers: isPizza && pizzaNotes.trim() ? [...resolution.selectedGroups, { groupId: '__pizza_notes', groupName: 'Observação', kind: 'adicional', selectedOptions: [{ optionId: 'notes', optionName: pizzaNotes.trim(), quantity: 1, priceDelta: 0 }] }] : resolution.selectedGroups,
+      ...(isPizza ? { pizza: { ...pizzaResolution.pizza, ...(pizzaNotes.trim() ? { notes: pizzaNotes.trim() } : {}) }, pizzaSelection } : {})
     });
+  }
+
+  function changeSize(nextId) {
+    sizeId = nextId;
+    const nextSize = pizzaConfig.sizes.find((size) => size.id === nextId);
+    const compatible = flavorIds.filter((id) => pizzaConfig.flavors.some((flavor) => flavor.id === id && flavor.active !== false && Number(flavor.prices?.[nextId]) > 0));
+    if (compatible.length !== flavorIds.length || flavorCount > nextSize.maxFlavors) addToast('O tamanho mudou. Revise os sabores e a quantidade de partes.', 'info');
+    flavorIds = compatible;
+    if (flavorCount > nextSize.maxFlavors) { flavorCount = nextSize.maxFlavors; flavorIds = []; }
+  }
+
+  function toggleFlavor(id) {
+    if (flavorIds.includes(id)) flavorIds = flavorIds.filter((value) => value !== id);
+    else if (flavorIds.length < flavorCount) flavorIds = [...flavorIds, id];
   }
 </script>
 
@@ -106,12 +162,12 @@
     on:click|self={close}
     on:keydown={handleKeydown}
   >
-    <div class="modal mobile-bottom-nav-dialog" role="dialog" aria-modal="true" aria-labelledby="montavel-title" tabindex="-1">
+    <div use:focusDialog class="modal mobile-bottom-nav-dialog" role="dialog" aria-modal="true" aria-labelledby="montavel-title" tabindex="-1">
       <header class="modal-header">
         <div>
-          <p class="eyebrow">Produto montável</p>
+          <p class="eyebrow">{isPizza ? 'Monte sua pizza' : 'Produto montável'}</p>
           <h2 id="montavel-title">{produto?.nome || 'Montar produto'}</h2>
-          <p class="base-price">A partir de R$ {Number(precoBase || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <p class="base-price">{#if isPizza}{pizzaConfig?.pricingMode === 'average' ? 'Preço proporcional aos sabores' : 'Preço do sabor de maior valor'} · extras à parte{:else}A partir de R$ {Number(precoBase || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}{/if}</p>
         </div>
         <button type="button" class="close" aria-label="Fechar" on:click={close}>
           <X size={18} />
@@ -119,20 +175,61 @@
       </header>
 
       <div class="groups">
+        {#if isPizza}
+          <fieldset>
+            <legend>1. Escolha o tamanho</legend>
+            <div class="options">
+              {#each (pizzaConfig?.sizes || []).filter((size) => size.active !== false) as size (size.id)}
+                <button type="button" class="option-row" class:selected={sizeId === size.id} aria-pressed={sizeId === size.id} on:click={() => changeSize(size.id)}>{size.name} · até {size.maxFlavors} sabores</button>
+              {/each}
+            </div>
+          </fieldset>
+          {#if selectedSize}
+            <fieldset>
+              <legend>2. Quantos sabores?</legend>
+              <div class="options">
+                {#each Array.from({ length: selectedSize.maxFlavors }, (_, i) => i + 1) as count}
+                  <button type="button" class="option-row" class:selected={flavorCount === count} aria-pressed={flavorCount === count} on:click={() => { flavorCount = count; if (flavorIds.length > count) flavorIds = []; }}>{count === 1 ? 'Um sabor inteiro' : `${count} sabores · partes iguais`}</button>
+                {/each}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>3. Escolha os sabores <small>{flavorIds.length}/{flavorCount}</small></legend>
+              <input class="flavor-search" aria-label="Buscar sabor" placeholder="Buscar sabor" bind:value={flavorSearch} />
+              <div class="options">
+                {#each matchingFlavors as flavor (flavor.id)}
+                  <button type="button" class="option-row" class:selected={flavorIds.includes(flavor.id)} aria-pressed={flavorIds.includes(flavor.id)} disabled={!flavorIds.includes(flavor.id) && flavorIds.length >= flavorCount} on:click={() => toggleFlavor(flavor.id)}>
+                    {#if flavor.photoUrl?.startsWith('https://')}<img class="flavor-photo" src={flavor.photoUrl} alt="" loading="lazy" />{/if}
+                    <span>{flavor.name}{#if flavor.description}<small class="flavor-description">{flavor.description}</small>{/if}</span>
+                    <span class="option-price">R$ {Number(flavor.prices[sizeId]).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </button>
+                {/each}
+              </div>
+              <p class="base-price">Valores de uma pizza inteira neste tamanho.</p>
+            </fieldset>
+          {/if}
+        {/if}
         {#each groups as group (group.id)}
           <fieldset>
             <legend>
               <span>{group.name}</span>
-              <small>
-                {#if group.minSelections > 0}Obrigatório · mínimo {group.minSelections}{:else}Opcional{/if}
-                {#if group.maxSelections != null} · máximo {group.maxSelections}{/if}
-              </small>
+              <span class="legend-meta">
+                <small>
+                  {#if group.minSelections > 0}Obrigatório · mínimo {group.minSelections}{:else}Opcional{/if}
+                  {#if group.maxSelections != null} · máximo {group.maxSelections}{/if}
+                </small>
+                {#if group.minSelections === 0 && group.maxSelections === 1 && !group.allowsQuantity && selectedCountFor(selections, group.id) > 0}
+                  <button type="button" class="clear-selection" on:click={() => selections = { ...selections, [group.id]: {} }}>
+                    Limpar escolha
+                  </button>
+                {/if}
+              </span>
             </legend>
             <div class="options">
-              {#each group.options.filter((option) => option.active !== false && option.linkedProduct?.available !== false) as option (option.id)}
-                {@const quantity = quantityFor(group.id, option.id)}
+              {#each (group.options || []).filter((option) => option.active !== false && option.linkedProduct?.available !== false) as option (option.id)}
+                {@const quantity = quantityFor(selections, group.id, option.id)}
                 {@const isRadio = group.maxSelections === 1 && !group.allowsQuantity}
-                {@const blocked = isOptionBlocked(group, option)}
+                {@const blocked = isOptionBlocked(selections, group, option)}
                 <div class="option-row" class:selected={quantity > 0} class:blocked>
                   <label class="option-choice">
                     <input
@@ -147,6 +244,8 @@
                     <span class="option-name" title={option.linkedProduct?.name || option.name}>{option.linkedProduct?.name || option.name}</span>
                     {#if group.pricingMode === 'somar' && Number(option.linkedProduct?.price ?? option.priceDelta ?? 0) > 0}
                       <span class="option-price">+ R$ {Number(option.linkedProduct?.price ?? option.priceDelta).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    {:else if group.pricingMode === 'substituir' && Number(option.linkedProduct?.price ?? option.priceDelta ?? 0) > 0}
+                      <span class="option-price">R$ {Number(option.linkedProduct?.price ?? option.priceDelta).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     {/if}
                   </label>
                   {#if group.allowsQuantity && quantity > 0}
@@ -155,21 +254,28 @@
                         <Minus size={16} />
                       </button>
                       <span aria-live="polite">{quantity}</span>
-                      <button type="button" on:click={() => setQuantity(group, option, quantity + 1)} aria-label="Aumentar">
+                      <button type="button" disabled={group.maxPerOption != null && quantity >= group.maxPerOption} on:click={() => setQuantity(group, option, quantity + 1)} aria-label="Aumentar">
                         <Plus size={16} />
                       </button>
                     </div>
                   {/if}
                 </div>
+              {:else}
+                <p class="empty-options" role="status">Sem opções disponíveis neste grupo. Revise o cadastro ou o estoque.</p>
               {/each}
             </div>
-            {#if group.maxSelections != null && selectedCountFor(group.id) >= group.maxSelections && group.maxSelections > 1}
+            {#if group.maxSelections != null && selectedCountFor(selections, group.id) >= group.maxSelections && group.maxSelections > 1}
               <InlineHelper compact message="Você já escolheu o máximo de {group.maxSelections} opções. Desmarque uma para escolher outra." />
             {/if}
           </fieldset>
         {/each}
       </div>
 
+      {#if isPizza}
+        <label class="pizza-notes">Observação para esta pizza
+          <input class="flavor-search" maxlength="200" placeholder="Ex.: bem assada" bind:value={pizzaNotes} />
+        </label>
+      {/if}
       <footer class="modal-footer">
         {#if !resolution.ok}
           <p class="error" role="alert">{resolution.message}</p>
@@ -184,7 +290,7 @@
         </div>
         <button type="button" class="confirm" disabled={!resolution.ok} on:click={confirm}>
           {#if resolution.ok}
-            Adicionar à comanda · R$ {resolution.finalUnitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            {editing ? 'Salvar montagem' : 'Adicionar à comanda'} · R$ {resolution.finalUnitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           {:else}
             Revise as opções acima
           {/if}
@@ -195,7 +301,13 @@
 {/if}
 
 <style>
-  .modal-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
+  .flavor-photo { width: 48px; height: 48px; object-fit: cover; border-radius: .5rem; }
+  .pizza-notes { padding: .5rem 1.25rem; font-size: .875rem; }
+  .flavor-search { width: 100%; margin-top: .75rem; min-height: 44px; padding: .6rem; border: 1px solid var(--border-subtle); border-radius: .5rem; background: var(--bg-input); color: var(--text-main); font-size: 1rem; }
+  .flavor-description { display: block; margin-top: .3rem; color: var(--text-muted); }
+  button.option-row { color: var(--text-main); text-align: left; cursor: pointer; }
+  button.option-row:disabled { opacity: .5; cursor: not-allowed; }
+  .modal-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--text-inverse) 60%, transparent); backdrop-filter: blur(4px); }
   .modal { width: min(100%, 36rem); max-height: min(90vh, 48rem); overflow: hidden; display: flex; flex-direction: column; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-subtle); border-radius: 14px; box-shadow: var(--shadow-modal); }
   .modal-header, .modal-footer { border-color: var(--border-subtle); }
   .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.25rem .95rem; border-bottom: 1px solid var(--border-subtle); }
@@ -210,8 +322,13 @@
   fieldset { margin: 0; padding: .9rem 0 1rem; border: 0; border-bottom: 1px solid var(--border-subtle); }
   fieldset:last-child { border-bottom: 0; }
   legend { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: 0; font-weight: 750; line-height: 1.2; }
-  legend small { max-width: 52%; color: var(--text-muted); font-size: .625rem; font-weight: 650; line-height: 1.25; text-align: right; }
+  .legend-meta { display: flex; align-items: center; justify-content: flex-end; gap: .55rem; max-width: 62%; }
+  legend small { color: var(--text-muted); font-size: .625rem; font-weight: 650; line-height: 1.25; text-align: right; }
+  .clear-selection { flex: 0 0 auto; border: 0; padding: .2rem 0; color: var(--primary); background: transparent; font-size: .875rem; font-weight: 700; cursor: pointer; }
+  .clear-selection:hover { text-decoration: underline; }
+  .clear-selection:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 6px; }
   .options { display: grid; gap: .5rem; margin-top: .7rem; }
+  .empty-options { margin: 0; padding: .75rem; border: 1px dashed var(--border-subtle); border-radius: 8px; color: var(--text-muted); font-size: .875rem; line-height: 1.35; }
   .option-row { display: flex; align-items: center; gap: .75rem; min-height: 3rem; padding: .65rem .75rem; border: 1px solid var(--border-subtle); border-radius: .75rem; background: var(--bg-panel); transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast); }
   .option-row:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(--border-subtle)); background: color-mix(in srgb, var(--primary) 5%, var(--bg-panel)); }
   .option-row:focus-within { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 1px; }
@@ -220,11 +337,12 @@
   .option-row.blocked { opacity: .45; }
   .option-row.blocked .option-choice { cursor: not-allowed; }
   .option-choice { min-width: 0; flex: 1; display: flex; align-items: center; gap: .7rem; border: 0; padding: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
-  .option-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25; }
-  .option-price { margin-left: auto; color: var(--text-muted); font-size: .875rem; white-space: nowrap; }
-  .stepper { display: flex; align-items: center; gap: .5rem; }
+  .option-name { min-width: 0; overflow-wrap: anywhere; white-space: normal; line-height: 1.25; }
+  .option-price { flex: 0 0 auto; margin-left: auto; color: var(--text-muted); font-size: .875rem; white-space: nowrap; }
+  .stepper { display: flex; flex: 0 0 auto; align-items: center; gap: .5rem; }
   .stepper button { display: inline-grid; place-items: center; width: 2.75rem; height: 2.75rem; border: 1px solid var(--border-subtle); border-radius: .5rem; color: var(--text-main); background: var(--bg-card); line-height: 1; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast); }
   .stepper button:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, var(--bg-card)); }
+  .stepper button:disabled { cursor: not-allowed; opacity: .45; }
   .stepper button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   .stepper span { min-width: 1.1rem; color: var(--text-main); text-align: center; font-size: .875rem; font-weight: 700; font-variant-numeric: tabular-nums; }
   .modal-footer { min-height: 7.25rem; display: flex; flex-direction: column; justify-content: flex-end; gap: .5rem; padding: .8rem 1.25rem 1rem; border-top: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--bg-card) 94%, var(--bg-panel)); }
