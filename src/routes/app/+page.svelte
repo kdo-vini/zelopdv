@@ -22,6 +22,14 @@
   import { money, validatePaymentCoverage, getPrecoTabela } from '$lib/finance/caixa';
   import { abrirCaixaIdempotente } from '$lib/finance/caixaOps';
   import { buildVendaPayload } from '$lib/finance/saleOps';
+  import { createClientSaleId } from '$lib/finance/saleOps';
+  import { startOfflineRuntime, getOfflineContext, submitOfflineOperation, runOfflineSync, readOperationalSnapshot, onOfflineChange } from '$lib/offline/runtime';
+  import { readSnapshot, saveSnapshot, readDraft, saveDraft, listOperations } from '$lib/offline/operations';
+  import { projectStockProducts } from '$lib/finance/offlineProjection';
+  import { validateLocalCartStock, selectCheckoutSubmission } from '$lib/finance/offlineCheckout';
+  import { atualizarCatalogoOffline } from '$lib/offlineDb';
+  import { loadCashSnapshot } from '$lib/finance/offlineCash';
+  import { calculatePaymentSummary, calculateMovementSummary, calculateExpectedDrawer } from '$lib/finance/caixa';
   import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
   import { buildCartItemKey, formatSelectedModifierGroups, hasActiveModifierGroups } from '$lib/zelomenuModifiers';
   import { buildPizzaSignature, pizzaStockRequirements } from '$lib/pizza';
@@ -59,6 +67,13 @@
 
   // --- 1. ESTADO DO PDV ---
   let produtos = [];
+  let checkoutIntent = null;
+  let checkoutSubmission = null;
+  let catalogRefreshing = false;
+  let refreshingOfflineView = false;
+  let draftReady = false;
+  let draftPersisting = Promise.resolve();
+  let unsubscribeOffline = null;
   let pizzasPendentes = [];
   let pizzaEditItem = null;
   let pizzaPendingOwner = null;
@@ -187,8 +202,14 @@
   async function carregarPessoasFiado(){
     if (pessoasFiado.length) return;
     try {
-      const { data, error } = await supabase.from('pessoas').select('id, nome').order('nome');
-      if (!error) pessoasFiado = data || [];
+      pessoasFiado = await readOperationalSnapshot('pessoas.fiado', async () => {
+        const rows = [];
+        for (let from = 0; ; from += 500) {
+          const { data, error } = await supabase.from('pessoas').select('id, nome').eq('id_usuario', ownerUserId).order('id').range(from, from + 499);
+          if (error) throw error;
+          rows.push(...data); if (data.length < 500) return rows;
+        }
+      });
     } catch {}
   }
 
@@ -267,13 +288,6 @@
 
   // Efeito: quando o app monta, verifica sessão, caixa e carrega dados do PDV
   onMount(async () => {
-    try {
-      const saved = sessionStorage.getItem('zelo_comanda');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) comanda = parsed;
-      }
-    } catch {}
     window.addEventListener('keydown', onKeyGlobal);
     window.addEventListener('online', handleSyncOnline);
 
@@ -285,27 +299,29 @@
     pdvCache.setUserId(ownerUserId);
     isSubUser = authCtx.isSubUser;
     operadorUserId = authCtx.userId;
+    if (isSubUser) {
+      const perms = authCtx.permissions || {};
+      canVender = !!perms['pdv.vender']; canReceber = !!perms['pdv.receber']; canDesconto = !!perms['pdv.desconto'];
+      canCancelar = !!perms['pdv.cancelar']; canAbrirCaixa = !!perms['caixa.abrir']; canMovimentarCaixa = !!perms['caixa.movimentar'];
+    }
+    await startOfflineRuntime(authCtx);
+    const draft = await readDraft(ownerUserId, operadorUserId, 'pdv').catch(() => null);
+    if (draft?.items?.length) { comanda = draft.items; checkoutIntent = draft.intent || null; checkoutSubmission = draft.submission || null; }
+    draftReady = true;
+    unsubscribeOffline = onOfflineChange(() => { void refreshOfflineView(); });
     // Verifica login e carrega dados do PDV
     if (!supabase) {
       errorMessage = 'Configuração do Supabase ausente. Defina as variáveis no .env e reinicie.';
       return;
     }
-    const getSessionWithTimeout = (ms = 4000) =>
-      Promise.race([
-        supabase.auth.getSession(),
-        new Promise((resolve) => setTimeout(() => resolve({ data: { session: null }, error: null }), ms))
-      ]);
-    const { data } = await getSessionWithTimeout(4000);
-    if (data?.session?.user) {
+    {
       await withTimeout(verificarCaixaAberto(ownerUserId));
       await withTimeout(carregarCategorias());
       await withTimeout(carregarProdutos());
       await withTimeout(carregarSubcategorias());
       await withTimeout(atualizarSaldoCaixa());
       loading = false;
-    } else {
-      window.location.href = '/login';
-      return;
+      void refreshCatalogInBackground();
     }
 
     // Auth state changes são tratados pelo authStore.js e +layout.svelte centralmente
@@ -314,12 +330,15 @@
     // [NEW] Carrega dados da empresa para recibos (WhatsApp/Impressão)
     try {
       if (ownerUserId) {
-        const { data } = await supabase
+        dadosEmpresa = await readOperationalSnapshot('empresa.perfil', async () => {
+        const { data, error } = await supabase
           .from('empresa_perfil')
           .select('id, nome_exibicao, documento, endereco, contato, logo_url, rodape_recibo, largura_bobina, tabelas_preco_ativo, tabela_preco_1_nome, tabela_preco_2_nome, tabela_preco_3_nome, plataformas_pagamento')
           .eq('user_id', ownerUserId)
           .single();
-        dadosEmpresa = data;
+        if (error) throw error;
+        return data;
+        });
       }
     } catch (e) { console.error('Error fetching company profile:', e); }
 
@@ -357,7 +376,8 @@
         window.removeEventListener('keydown', onKeyGlobal);
         window.removeEventListener('online', handleSyncOnline);
       }
-      if (pendentesInterval) clearInterval(pendentesInterval);
+    if (pendentesInterval) clearInterval(pendentesInterval);
+    unsubscribeOffline?.();
     });
 
   /** Atualiza o contador de vendas aguardando sincronização. */
@@ -371,6 +391,7 @@
     } catch { pizzaPendingOwner = null; }
     try {
       vendasPendentesCount = await contarVendasPendentes(ownerUserId);
+      if (getOfflineContext()?.enabled) vendasPendentesCount += (await listOperations(ownerUserId)).filter(o => o.type === 'sale.create' && o.status !== 'acked').length;
       vendasSemTitularCount = isSubUser ? 0 : await contarVendasSemTitular();
     } catch {
       // contagem é só indicador; ignora falha
@@ -402,6 +423,7 @@
    * @param {{ silencioso?: boolean }} opts silencioso = sem toasts de "sincronizando"
    */
   async function tentarSincronizarPendentes({ silencioso = false } = {}) {
+    if (getOfflineContext()?.enabled) { await runOfflineSync(); return; }
     if (sincronizandoPendentes) return;
     await atualizarPendentesCount();
     if (vendasPendentesCount === 0) return;
@@ -439,16 +461,26 @@
    * Seta flags locais para permitir/impedir finalizar vendas.
    */
   async function verificarCaixaAberto(userId) {
+    const cached = await readSnapshot(userId, 'caixa.aberto').catch(() => null);
+    if (getOfflineContext()?.enabled && cached) {
+      caixaAberto = !cached.data_fechamento;
+      idCaixaAberto = caixaAberto ? cached.id : null;
+      modalAbrirCaixaAberto = !caixaAberto;
+      return;
+    }
     // Verifica no Supabase se o usuário tem um caixa aberto (sem data_fechamento)
     const { data, error } = await supabase
       .from('caixas')
-      .select('id, data_abertura, data_fechamento')
+      .select('id, data_abertura, data_fechamento, valor_inicial')
       .eq('id_usuario', userId)
       .is('data_fechamento', null)
       .order('data_abertura', { ascending: false })
       .limit(1);
 
     if (error) {
+      if (isNetworkError(error) && cached && !cached.data_fechamento) {
+        caixaAberto = true; idCaixaAberto = cached.id; modalAbrirCaixaAberto = false; return;
+      }
       addToast('Erro ao verificar caixa: ' + error.message, 'error');
       caixaAberto = false;
       modalAbrirCaixaAberto = true;
@@ -457,10 +489,12 @@
     }
 
     if (data && data.length > 0) {
+      await saveSnapshot(userId, 'caixa.aberto', data[0]);
       caixaAberto = true;
       modalAbrirCaixaAberto = false;
       idCaixaAberto = data[0].id;
     } else {
+      await saveSnapshot(userId, 'caixa.aberto', null);
       caixaAberto = false;
       modalAbrirCaixaAberto = true;
       idCaixaAberto = null;
@@ -470,8 +504,20 @@
   /** Atualiza o saldo de caixa (dinheiro) do caixa aberto. */
   async function atualizarSaldoCaixa() {
     try {
-      if (!caixaAberto || !idCaixaAberto) { saldoCaixa = 0; return; }
+      if ((!caixaAberto || !idCaixaAberto) && !getOfflineContext()?.enabled) { saldoCaixa = 0; return; }
       carregandoSaldo = true;
+      if (getOfflineContext()?.enabled) {
+        const snapshot = await loadCashSnapshot(supabase, ownerUserId);
+        if (!salvandoVenda && !checkoutSubmission) {
+          caixaAberto = !!snapshot.caixa && !snapshot.caixa.data_fechamento;
+          idCaixaAberto = caixaAberto ? snapshot.caixa.id : null;
+          modalAbrirCaixaAberto = !caixaAberto;
+        }
+        const payments = calculatePaymentSummary(snapshot.vendas, snapshot.pagamentos);
+        const movements = calculateMovementSummary(snapshot.movs);
+        saldoCaixa = calculateExpectedDrawer({ valorInicial: snapshot.caixa?.valor_inicial || 0, dinheiroLiquido: payments.dinheiro, sangria: movements.sangria, suprimento: movements.suprimento });
+        return;
+      }
       const pCaixa = supabase.from('caixas').select('valor_inicial').eq('id', idCaixaAberto).single();
       const pVendasDoCaixa = supabase
         .from('vendas')
@@ -526,6 +572,10 @@
   /** Carrega categorias ordenadas e define a primeira como ativa. Usa cache de 5 min. */
   async function carregarCategorias(forceRefresh = false) {
     try {
+      if (!forceRefresh) {
+        const local = await buscarCategoriasLocal(ownerUserId);
+        if (local.length) { categorias = local; categoriaAtiva ||= local[0].id; return; }
+      }
       const data = await pdvCache.getCategorias(forceRefresh);
       categorias = data;
       atualizarCacheCategorias(data, ownerUserId).catch((e) => console.warn('Falha ao cachear categorias offline:', e));
@@ -549,6 +599,10 @@
   /** Carrega subcategorias ordenadas. Usa cache de 5 min, com fallback IndexedDB. */
   async function carregarSubcategorias(forceRefresh = false) {
     try {
+      if (!forceRefresh) {
+        const local = await buscarSubcategoriasLocal(ownerUserId);
+        if (local.length) { subcategorias = local; return; }
+      }
       const data = await pdvCache.getSubcategorias(forceRefresh);
       subcategorias = data;
       atualizarCacheSubcategorias(data, ownerUserId).catch((e) => console.warn('Falha ao cachear subcategorias offline:', e));
@@ -562,15 +616,40 @@
   /** Carrega produtos visíveis no PDV, ordenados por nome. Usa cache de 5 min, com fallback IndexedDB. */
   async function carregarProdutos(forceRefresh = false) {
     try {
+      if (!forceRefresh) {
+        const local = await buscarProdutosLocal('', ownerUserId);
+        if (local.length) {
+          const included = await readSnapshot(ownerUserId, 'catalog.includedOperations') || [];
+          produtos = projectStockProducts(local, await listOperations(ownerUserId), included);
+          return;
+        }
+      }
+      const before = await listOperations(ownerUserId);
+      const included = before.filter(o => o.status === 'acked').map(o => o.operationId);
       const data = await pdvCache.getProdutos(forceRefresh);
-      produtos = data;
-      atualizarCacheProdutos(data, ownerUserId).catch((e) => console.warn('Falha ao cachear produtos offline:', e));
+      const saved = await atualizarCatalogoOffline(data, ownerUserId, included, before.map(o => o.operationId));
+      if (!saved) { const local = await buscarProdutosLocal('', ownerUserId); produtos = projectStockProducts(local, await listOperations(ownerUserId), await readSnapshot(ownerUserId, 'catalog.includedOperations') || []); return; }
+      produtos = projectStockProducts(data, await listOperations(ownerUserId), included);
     } catch (err) {
       // Erro de rede no carregamento: não deixa a tela sem produtos se há cache.
       const local = isNetworkError(err) ? await buscarProdutosLocal('', ownerUserId).catch(() => []) : [];
       produtos = local;
       if (!local.length) errorMessage = err?.message || 'Erro ao carregar produtos';
     }
+  }
+
+  async function refreshCatalogInBackground() {
+    if (catalogRefreshing || globalThis.navigator?.onLine === false || comanda.length || (await listOperations(ownerUserId)).some(o => o.status !== 'acked')) return;
+    catalogRefreshing = true;
+    try { await Promise.all([carregarProdutos(true), carregarCategorias(true), carregarSubcategorias(true)]); }
+    finally { catalogRefreshing = false; }
+  }
+
+  async function refreshOfflineView() {
+    if (refreshingOfflineView || !draftReady || !getOfflineContext()?.enabled) return;
+    refreshingOfflineView = true;
+    try { await Promise.all([atualizarPendentesCount(), carregarProdutos(), atualizarSaldoCaixa()]); }
+    finally { refreshingOfflineView = false; }
   }
   
   // --- 4. LÓGICA DA COMANDA (Módulo 1.2) ---
@@ -621,10 +700,13 @@
   // Total com taxa de entrega incluída
   $: totalComandaComEntrega = Number(totalComanda) + (tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0);
 
-  // Persiste a comanda em sessionStorage para sobreviver a recarregamentos
-  $: if (typeof sessionStorage !== 'undefined') {
-    try { sessionStorage.setItem('zelo_comanda', JSON.stringify(comanda)); } catch {}
+  function persistCart(items, intent, submission) {
+    const draft = structuredClone({ items, intent, submission });
+    const owner = ownerUserId, operator = operadorUserId;
+    draftPersisting = draftPersisting.catch(() => {}).then(() => saveDraft(owner, operator, 'pdv', draft));
+    draftPersisting.catch(() => { errorMessage = 'Não foi possível salvar o rascunho neste aparelho.'; });
   }
+  $: if (draftReady && !modalSucessoAberto) persistCart(comanda, checkoutIntent, checkoutSubmission);
 
   /**
    * Adiciona um produto na comanda.
@@ -632,6 +714,7 @@
    */
   /** Decide qual fluxo usar ao clicar num produto (quantidade para por-unidade, valor avulso, ou normal). */
   function adicionarProduto(produto) {
+    if (checkoutSubmission || salvandoVenda) { addToast('Finalize a confirmação pendente antes de alterar esta venda.', 'info'); return; }
     if (!caixaAberto) {
       modalAbrirCaixaAberto = true;
       return;
@@ -675,6 +758,7 @@
    * Aceita itens de banco (com id) ou avulsos (sem id).
    */
   function adicionarItemNaComanda(item, qtd, preco, selectedOptions = null, modifiers = null, pizza = null) {
+    if (checkoutSubmission || salvandoVenda) return;
     // Chave inclui o preço: trocar de tabela cria linha nova em vez de
     // incrementar a linha do preço antigo.
     const idUnico = item.id != null
@@ -708,6 +792,7 @@
   // Funções dos botões + e - da comanda
   /** Incrementa a quantidade de um item da comanda. */
   function incrementarItem(id) {
+    if (checkoutSubmission || salvandoVenda) return;
     const item = comanda.find((i) => i.id === id);
     if (item) {
       // Regra de estoque: soma todas as linhas do mesmo produto (tabelas distintas).
@@ -744,6 +829,7 @@
   }
 
   function editarPizza(item) {
+    if (checkoutSubmission || salvandoVenda) return;
     const product = produtos.find((candidate) => candidate.id === item.id_produto);
     if (!product?.pizza_config) { addToast('Atualize o catálogo para editar esta pizza.', 'error'); return; }
     pizzaEditItem = item;
@@ -753,6 +839,7 @@
 
   /** Decrementa a quantidade; remove o item se chegar a zero. */
   function decrementarItem(id) {
+    if (checkoutSubmission || salvandoVenda) return;
     const item = comanda.find((i) => i.id === id);
     if (item) {
       item.quantidade--;
@@ -767,6 +854,7 @@
   
   /** Limpa toda a comanda mediante confirmação. */
   async function limparComanda() {
+    if (checkoutSubmission || salvandoVenda) { addToast('Finalize a confirmação pendente antes de limpar esta venda.', 'info'); return; }
     if (await confirmAction('Limpar Comanda', 'Tem certeza que deseja remover todos os itens?')) {
       comanda = [];
       try { sessionStorage.removeItem('zelo_comanda'); } catch {}
@@ -811,7 +899,14 @@
         throw new Error('Sessão inválida. Faça login novamente.');
       }
       // Persiste a movimentação de caixa
-      const { data, error } = await supabase
+      let data;
+      if (getOfflineContext()?.enabled) {
+        const op = await submitOfflineOperation('caixa.move', idCaixaAberto, {
+          id_caixa: idCaixaAberto, tipo: tipoMovCaixa === 'saida' ? 'sangria' : 'suprimento', valor: v, motivo: motivoMovCaixa || null
+        }, { dependencies: (await listOperations(ownerUserId)).filter(o => o.type === 'caixa.open' && o.entityId === String(idCaixaAberto)).map(o => o.operationId) });
+        data = { id: op.operationId, created_at: op.occurredAt };
+      } else {
+      const response = await supabase
         .from('caixa_movimentacoes')
         .insert({
           id_caixa: idCaixaAberto,
@@ -823,7 +918,9 @@
         })
         .select('id, created_at')
         .single();
-      if (error) throw new Error(error.message);
+      if (response.error) throw new Error(response.error.message);
+      data = response.data;
+      }
 
       // Sucesso: recibo opcional
       const movInfo = {
@@ -873,6 +970,20 @@
     }
     abrindoCaixa = true;
     try {
+      if (getOfflineContext()?.enabled) {
+        const existing = await readSnapshot(ownerUserId, 'caixa.aberto');
+        if (existing && !existing.data_fechamento) {
+          idCaixaAberto = existing.id;
+        } else {
+          const id = crypto.randomUUID();
+          const caixa = { id, data_abertura: new Date().toISOString(), data_fechamento: null, valor_inicial: Number(trocoInicialInput) };
+          await submitOfflineOperation('caixa.open', id, { clientCaixaId: id, valor_inicial: caixa.valor_inicial }, { operationId: id, projection: { key: 'caixa.aberto', value: caixa } });
+          idCaixaAberto = id;
+        }
+        caixaAberto = true; modalAbrirCaixaAberto = false;
+        await atualizarSaldoCaixa();
+        return;
+      }
       const { caixa, jaExistia, error } = await abrirCaixaIdempotente(supabase, {
         ownerUserId: id_usuario,
         operadorUserId,
@@ -947,6 +1058,17 @@
   // Módulo 1.4 - Início da Fase 4
   /** Abre o modal de pagamento após validar que há itens. */
   function handleFinalizarVenda() {
+    if (salvandoVenda) return;
+    if (checkoutSubmission?.formState) {
+      const saved = checkoutSubmission.formState;
+      comanda = structuredClone(saved.items); formaPagamento = saved.formaPagamento; valorRecebido = saved.valorRecebido;
+      multiPag = saved.multiPag; pagamentos = structuredClone(saved.pagamentos); pessoaFiadoId = saved.pessoaFiadoId;
+      totalFinalVenda = saved.totalFinalVenda; valorDescontoVenda = saved.valorDescontoVenda; descontoTipoVenda = saved.descontoTipoVenda;
+      tipoPedido = saved.tipoPedido; taxaEntregaInput = saved.taxaEntregaInput; taxasPlataformaVenda = saved.taxasPlataformaVenda;
+      idCaixaAberto = checkoutSubmission.payload.id_caixa;
+      addToast('Retomando a confirmação com os dados salvos desta venda.', 'info');
+      void confirmarVenda(); return;
+    }
     if (comanda.length === 0) {
       addToast('A comanda está vazia.', 'warning');
       return;
@@ -971,6 +1093,7 @@
    * Recebe os dados do modal e executa a persistência da venda.
    */
   async function handleVendaConfirmada(event) {
+    if (salvandoVenda || modalSucessoAberto) return;
     const {
       formaPagamento: forma,
       valorRecebido: valRec,
@@ -1018,7 +1141,10 @@
    * Em produção, prefira uma RPC transacional para atomicidade.
    */
   async function confirmarVenda() {
+    if (salvandoVenda || modalSucessoAberto) return;
+    salvandoVenda = true;
     try {
+      if (!canVender || !canReceber) throw new Error('Seu cargo não tem permissão para registrar e receber esta venda.');
       erroPagamento = '';
       const totalCobradoVenda = money(totalFinalVenda ?? totalComandaComEntrega);
       // Validações de pagamento (single vs múltiplo)
@@ -1064,13 +1190,17 @@
       }
 
       salvandoVenda = true;
-      if (comanda.some((item) => item.pizza) && !validarEstoqueMontagem(comanda)) { salvandoVenda = false; return; }
+      if (getOfflineContext()?.enabled && !checkoutSubmission) {
+        const stockError = validateLocalCartStock(comanda, produtos);
+        if (stockError) { erroPagamento = stockError; return; }
+      }
+      if (!checkoutSubmission && comanda.some((item) => item.pizza) && !validarEstoqueMontagem(comanda)) { salvandoVenda = false; return; }
 
       // Validação de estoque (refresco em tempo real antes de inserir a venda)
       let freshStockMap = new Map();
       try {
         const idsProdutos = [...new Set(comanda.flatMap((item) => pizzaStockRequirements({ productId: item.id_produto, quantity: item.quantidade, pizza: item.pizza, modifiers: item.modifiers }).map((requirement) => requirement.id_produto)))];
-        if (idsProdutos.length) {
+        if (idsProdutos.length && !getOfflineContext()?.enabled && !checkoutSubmission) {
           const { data: prodsInfo, error: prodErr } = await supabase
             .from('produtos')
             .select('id, nome, id_categoria, controlar_estoque, estoque_atual, categorias(id, nome, controlar_estoque_compartilhado, estoque_compartilhado_atual)')
@@ -1111,7 +1241,11 @@
       }
 
       // Build payload único — usado tanto online (RPC atômica) quanto offline (replay no sync).
-      const { payload, settlement } = buildVendaPayload({
+      checkoutIntent ||= createClientSaleId();
+      await draftPersisting;
+      const candidate = buildVendaPayload({
+        clientSaleId: checkoutIntent,
+        createdAt: checkoutSubmission?.payload?.created_at || new Date().toISOString(),
         formaPagamento: multiPag ? 'multiplo' : formaPagamento,
         valorRecebido,
         pagamentos,
@@ -1126,6 +1260,11 @@
         taxasPlataforma: taxasPlataformaVenda,
         operadorId: operadorUserId
       });
+      candidate.formState = structuredClone({ items: comanda, formaPagamento, valorRecebido, multiPag, pagamentos, pessoaFiadoId, totalFinalVenda, valorDescontoVenda, descontoTipoVenda, tipoPedido, taxaEntregaInput, taxasPlataformaVenda });
+      checkoutSubmission = selectCheckoutSubmission(candidate, checkoutSubmission);
+      await draftPersisting;
+      await saveDraft(ownerUserId, operadorUserId, 'pdv', { items: comanda, intent: checkoutIntent, submission: checkoutSubmission });
+      const { payload, settlement } = checkoutSubmission;
 
       const insertForma = settlement.formaPagamento;
       const insertValorRecebido = settlement.valorRecebido;
@@ -1136,11 +1275,23 @@
       let venda = null;
       let isOffline = false;
 
-      try {
+      if (getOfflineContext()?.enabled) {
+        const pending = await listOperations(ownerUserId);
+        const turn = pending.find(o => o.type === 'caixa.open' && o.entityId === String(idCaixaAberto));
+        await submitOfflineOperation('sale.create', checkoutIntent, payload, {
+          operationId: checkoutIntent,
+          dependencies: turn ? [turn.operationId] : [],
+          clearDraft: { operatorId: operadorUserId, key: 'pdv' }
+        });
+        isOffline = true;
+        vendaId = checkoutIntent;
+        venda = { numero_venda: `LOCAL-${checkoutIntent.slice(-8).toUpperCase()}` };
+      } else try {
         const { data, error: rpcError } = await supabase.rpc('criar_venda_completa', {
           p_payload: payload
         });
         if (rpcError) throw rpcError;
+        if (!data?.id) throw new Error('Servidor não confirmou a identificação da venda. Confira antes de repetir.');
         venda = { id: data?.id, numero_venda: data?.numero_venda };
         vendaId = venda.id;
       } catch (connErr) {
@@ -1172,7 +1323,7 @@
           desconto: valorDescontoVenda || 0
       };
       
-      addToast('Venda realizada com sucesso!', 'success');
+      addToast(isOffline ? 'Venda salva neste aparelho.' : 'Venda realizada com sucesso!', 'success');
       
       // [CHANGE] Instead of full reset, open success modal
       modalPagamentoAberto = false;
@@ -1198,7 +1349,8 @@
       }
       
       if (isOffline) {
-          await atualizarSaldoCaixa(); 
+          await carregarProdutos();
+          void atualizarSaldoCaixa();
       } else {
          pdvCache.invalidateProdutos();
          await carregarProdutos(true);
@@ -1207,6 +1359,9 @@
 
     } catch (e) {
       console.error(e);
+      if (!modalSucessoAberto && ['P0001', '42501', '23503', '23514', '22023'].includes(e?.code)) {
+        checkoutSubmission = null; checkoutIntent = null;
+      }
       const friendlyMsg = getFriendlyErrorMessage(e);
       modalPagamentoRef?.setErro?.(friendlyMsg);
     } finally {
@@ -1220,6 +1375,8 @@
       vendaConcluida = null;
       // Reset Comanda & Pagamento
       comanda = [];
+      checkoutIntent = null;
+      checkoutSubmission = null;
       try { sessionStorage.removeItem('zelo_comanda'); } catch {}
       modalPagamentoRef?.resetState?.();
       // Reset local payment state

@@ -66,3 +66,19 @@ describe('offlineEntitlement', () => {
     expect(loadEntitlementSnapshot('owner-1', 2000)).toBeNull();
   });
 });
+
+describe('offline resume and revocation', () => {
+  it('resumes the last verified local identity without fabricating a token', async () => {
+    const { loadOfflineOperatingContext } = await import('../src/lib/offlineEntitlement.js');
+    saveEntitlementSnapshot({ userId: 'sub', ownerUserId: 'owner', isSubUser: true, permissions: { 'pdv.acessar': true }, addons: { has_mesas_addon: true } }, 1000);
+    expect(loadOfflineOperatingContext(2000)).toMatchObject({ userId: 'sub', permissions: { 'pdv.acessar': true }, addons: { has_mesas_addon: true } });
+    expect(loadOfflineOperatingContext(2000)).not.toHaveProperty('access_token');
+    clearEntitlementSnapshot();
+    expect(loadOfflineOperatingContext(2000)).toBeNull();
+  });
+  it('rejects clock rollback instead of extending the seven-day grace', async () => {
+    const { loadOfflineOperatingContext } = await import('../src/lib/offlineEntitlement.js');
+    saveEntitlementSnapshot({ userId: 'owner', ownerUserId: 'owner' }, 10000);
+    expect(loadOfflineOperatingContext(1000)).toBeNull();
+  });
+});

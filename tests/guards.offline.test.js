@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // pelo servidor continua redirecionando (coberto no outro arquivo de teste).
 
 let db = {};
+let authChange;
 
 function makeQuery(table) {
   const query = {
@@ -14,6 +15,8 @@ function makeQuery(table) {
     limit() { return query; },
     async maybeSingle() {
       const entry = db[table];
+      if (entry?.__hang) return new Promise(resolve => { entry.resolve = resolve; });
+      if (entry?.__error) return { data: null, error: entry.__error };
       if (entry && entry.__networkError) {
         return { data: null, error: { message: 'Failed to fetch' } };
       }
@@ -25,7 +28,7 @@ function makeQuery(table) {
 
 vi.mock('../src/lib/supabaseClient.js', () => {
   const supabase = {
-    auth: { getSession: vi.fn(async () => ({ data: { session: db.__session || null } })) },
+    auth: { onAuthStateChange: (callback) => { authChange = callback; }, getSession: vi.fn(async () => ({ data: { session: db.__session || null } })) },
     from: vi.fn((table) => ({ select: () => makeQuery(table) })),
   };
   return { supabase, hasSupabaseConfig: true };
@@ -51,6 +54,8 @@ beforeEach(() => {
 afterEach(() => {
   global.window = originalWindow;
   delete global.localStorage;
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
   vi.resetModules();
   vi.clearAllMocks();
 });
@@ -93,5 +98,96 @@ describe('ensureActiveSubscription — offline tolerance', () => {
 
     const { loadEntitlementSnapshot } = await import('../src/lib/offlineEntitlement.js');
     expect(loadEntitlementSnapshot('owner-1')).toMatchObject({ userId: 'owner-1', isSubUser: false });
+  });
+});
+
+
+describe('offline identity boundaries', () => {
+  it('resumes cached sub-user permissions when there is no live session and the device is offline', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
+    try {
+      const { saveEntitlementSnapshot } = await import('../src/lib/offlineEntitlement.js');
+      saveEntitlementSnapshot({ userId: 'sub-1', ownerUserId: 'owner-1', isSubUser: true, permissions: { 'pdv.acessar': true } });
+      const { ensureActiveSubscription } = await import('../src/lib/guards.js');
+      const context = await ensureActiveSubscription();
+      expect(context).toMatchObject({ userId: 'sub-1', fromCache: true, permissions: { 'pdv.acessar': true } });
+      expect(context).not.toHaveProperty('access_token');
+    } finally { vi.unstubAllGlobals(); }
+  });
+  it('confirmed revocation clears offline access even if the connection drops afterwards', async () => {
+    db.__session = { user: { id: 'sub-1' } };
+    db.access_users = { owner_user_id: 'owner-1', status: 'blocked', role_id: 'role' };
+    const { saveEntitlementSnapshot, loadOfflineOperatingContext } = await import('../src/lib/offlineEntitlement.js');
+    saveEntitlementSnapshot({ userId: 'sub-1', ownerUserId: 'owner-1', isSubUser: true });
+    const { ensureActiveSubscription } = await import('../src/lib/guards.js');
+    expect(await ensureActiveSubscription()).toBeNull();
+    expect(loadOfflineOperatingContext()).toBeNull();
+  });
+});
+
+describe('online blackhole deadlines', () => {
+  it.each(['access_users', 'subscriptions', 'empresa_perfil'])('resumes cached permissions after a hanging %s query without late redirects', async (table) => {
+    vi.useFakeTimers();
+    vi.stubGlobal('navigator', { onLine: true });
+    db.__session = { user: { id: 'owner-1' } };
+    db[table] = { __hang: true };
+    const { saveEntitlementSnapshot } = await import('../src/lib/offlineEntitlement.js');
+    saveEntitlementSnapshot({ userId: 'owner-1', ownerUserId: 'owner-1', permissions: { 'pdv.acessar': true } });
+    const { ensureActiveSubscription } = await import('../src/lib/guards.js');
+    const pending = ensureActiveSubscription({ requireProfile: table === 'empresa_perfil' });
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await pending).toMatchObject({ userId: 'owner-1', fromCache: true, permissions: { 'pdv.acessar': true } });
+    db[table].resolve({ data: null, error: { status: 403, message: 'Forbidden' } });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(window.location.href).toBe('');
+  });
+  it('refuses a confirmed forbidden operator lookup instead of treating them as owner', async () => {
+    db.__session = { user: { id: 'owner-1' } };
+    db.access_users = { __error: { status: 403, message: 'Forbidden' } };
+    db.subscriptions = { status: 'active', current_period_end: '2099-01-01' };
+    const { saveEntitlementSnapshot } = await import('../src/lib/offlineEntitlement.js');
+    saveEntitlementSnapshot({ userId: 'owner-1', ownerUserId: 'owner-1' });
+    const { ensureActiveSubscription } = await import('../src/lib/guards.js');
+    expect(await ensureActiveSubscription()).toBeNull();
+  });
+  it('discards an old account request after sign-out while the query hangs', async () => {
+    vi.useFakeTimers();
+    db.__session = { user: { id: 'owner-1' } };
+    db.access_users = { __hang: true };
+    const { saveEntitlementSnapshot } = await import('../src/lib/offlineEntitlement.js');
+    saveEntitlementSnapshot({ userId: 'owner-1', ownerUserId: 'owner-1' });
+    const { ensureActiveSubscription } = await import('../src/lib/guards.js');
+    const pending = ensureActiveSubscription();
+    await vi.advanceTimersByTimeAsync(1);
+    authChange('SIGNED_OUT', null);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await pending).toBeNull();
+    expect(window.location.href).toBe('');
+  });
+});
+
+describe('local session absence and addon deadlines', () => {
+  it('resumes local operating context without a token until explicit logout clears it', async () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    const { saveEntitlementSnapshot, clearEntitlementSnapshot } = await import('../src/lib/offlineEntitlement.js');
+    saveEntitlementSnapshot({ userId: 'owner-1', ownerUserId: 'owner-1' });
+    const { ensureActiveSubscription } = await import('../src/lib/guards.js');
+    expect(await ensureActiveSubscription()).toMatchObject({ userId: 'owner-1', fromCache: true });
+    clearEntitlementSnapshot();
+    expect(await ensureActiveSubscription()).toBeNull();
+    expect(window.location.href).toBe('/login');
+  });
+  it('retains the cached Mesa addon after timeout but honors a confirmed denial', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('navigator', { onLine: true });
+    db.access_users = { __hang: true };
+    const { saveEntitlementSnapshot } = await import('../src/lib/offlineEntitlement.js');
+    saveEntitlementSnapshot({ userId: 'owner-1', ownerUserId: 'owner-1', addons: { has_mesas_addon: true } });
+    const { hasMesasAddon } = await import('../src/lib/guards.js');
+    const pending = hasMesasAddon('owner-1');
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await pending).toBe(true);
+    db.access_users = { __error: { status: 403, message: 'Forbidden' } };
+    expect(await hasMesasAddon('owner-1')).toBe(false);
   });
 });

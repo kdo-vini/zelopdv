@@ -1,5 +1,20 @@
 # ZeloPDV.memory
 
+- Offline v1 (implementação local 2026-09-05): um aparelho principal controla
+  o turno; dispositivos autorizados vendem/operam Mesas independentemente.
+  Confirmação depende de commit IndexedDB, replay depende de recibo remoto;
+  parciais mantêm turno original e ajustes tardios não reescrevem fechamento.
+  `OFFLINE.md` descreve preparação, filas e homologação. Migration offline
+  ainda não publicada nesta rodada; consultar CURRENT antes de habilitar.
+
+- Pizzas (implementação local 2026-09-05, ainda sem rollout): cadastro
+  exclusivamente no PDV; `produtos.tipo_produto`/`pizza_config` e revisões
+  imutáveis governam tamanho, sabores iguais e regra maior/média. Snapshot
+  `pizza` atravessa pedido/venda/comanda; sabores não são produtos de estoque.
+  Exclusão de pizza arquiva para preservar offline/histórico. Migrations
+  compartilhadas permanecem no stream do PDV. Ver [PIZZAS](modules/PIZZAS.md)
+  e CURRENT para validação/publicação; não inferir disponibilidade live.
+
 > Memória de fatos e contratos confirmados. Estado de publicação, gates mais
 > recentes e revisão/aplicação de migrations em [[CURRENT]]; não inferir
 > aprovação de produção a partir de uma contagem histórica de testes.

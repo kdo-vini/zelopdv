@@ -5,6 +5,14 @@
 
 ## O que o modulo faz hoje
 
+Protocolo offline v1 implementado localmente em 2026-09-05, ainda sem publicação:
+mapa/comandas e operações persistidas no aparelho preparado, fila por comanda,
+fechamento atômico no servidor (também no caminho online) e conflitos preservados
+para conferência. Parcial recebido mantém `id_caixa` original ao converter em
+pagamento de venda. A cozinha requer conexão e estado sincronizado; não há LAN
+entre aparelhos nesta fase. Contratos, ativação e limites em
+[OFFLINE](../operations/OFFLINE.md).
+
 - CRUD de mesas em `/gestao/mesas`
 - mapa operacional em `/app/mesas`
 - comanda por mesa em `/app/mesas/[id]`

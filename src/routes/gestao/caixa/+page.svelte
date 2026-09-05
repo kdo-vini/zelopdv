@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription } from '$lib/guards';
   import { addToast } from '$lib/stores/ui';
@@ -8,10 +8,12 @@
     calculateExpectedDrawer,
     calculateMovementSummary,
     calculatePaymentSummary,
-    calculatePlatformFees,
-    buildPaymentTotalsSnapshot
+    calculatePlatformFees
   } from '$lib/finance/caixa';
   import { formatPaymentMethod } from '$lib/finance/paymentMethods';
+  import { startOfflineRuntime, getOfflineContext, submitOfflineOperation, offlineRequest, onOfflineChange } from '$lib/offline/runtime';
+  import { loadCashSnapshot } from '$lib/finance/offlineCash';
+  import { listOperations, readSnapshot, saveSnapshot } from '$lib/offline/operations';
 
   let loading = true;
   let errorMessage = '';
@@ -23,6 +25,22 @@
 
   let valorEmGaveta = 0;
   let fechando = false;
+  let closeIntent = null;
+  let provisional = false;
+  let unsubscribeOffline;
+  let refreshing = false;
+  let destroyed = false;
+  onDestroy(() => { destroyed = true; unsubscribeOffline?.(); });
+  async function refreshLocalCash() {
+    if (refreshing || fechando || destroyed) return;
+    refreshing = true;
+    try {
+      const snapshot = await loadCashSnapshot(supabase, ownerUserId);
+      if (destroyed || getOfflineContext()?.ownerUserId !== ownerUserId) return;
+      caixa = snapshot.caixa; vendas = snapshot.vendas; vendasPagamentos = snapshot.pagamentos;
+      vendasTaxasPlataforma = snapshot.taxas; movs = snapshot.movs; provisional = !!snapshot.provisional;
+    } finally { refreshing = false; }
+  }
 
   // Ao montar, localiza o caixa aberto do usuário e carrega as vendas atreladas
   let uid = null;
@@ -30,16 +48,16 @@
   let operadorUserId = null;
   onMount(async () => {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-  uid = userData?.user?.id;
-      if (!uid) {
-        window.location.href = '/login';
-        return;
-      }
       const authCtx = await ensureActiveSubscription();
-      if (authCtx) {
-        ownerUserId = authCtx.ownerUserId;
-        operadorUserId = authCtx.userId;
+      if (!authCtx) return;
+      uid = authCtx.userId;
+      ownerUserId = authCtx.ownerUserId;
+      operadorUserId = authCtx.userId;
+      await startOfflineRuntime(authCtx);
+      if (getOfflineContext()?.enabled || getOfflineContext()?.registered) {
+        await refreshLocalCash();
+        if (!destroyed) unsubscribeOffline = onOfflineChange(() => { void refreshLocalCash().catch(() => {}); });
+        return;
       }
       // caixa aberto do usuário
       const { data: cs, error: cErr } = await supabase
@@ -153,40 +171,27 @@
    * Fecha o caixa atual registrando data, valor contado e diferença.
    */
   async function fecharCaixa() {
-    if (!caixa) return;
+    if (!caixa || fechando) return;
     fechando = true;
     try {
-      const { error } = await supabase
-        .from('caixas')
-        .update({
-          data_fechamento: new Date().toISOString(),
-          valor_fechamento: Number(valorEmGaveta),
-          diferenca_fechamento: Number(diferenca)
-        })
-        .eq('id', caixa.id);
-      if (error) throw error;
-
-      // Registra histórico do fechamento do dia para relatórios (até 30 dias)
-      try {
-        await supabase.from('caixa_fechamentos').insert({
-          id_caixa: caixa.id,
-          id_usuario: ownerUserId || uid,
-          id_operador: operadorUserId || uid,
-          data_fechamento: new Date().toISOString(),
-          total_dinheiro: Number(totais.dinheiro || 0),
-          total_cartao: Number(totalCartao || 0),
-          total_pix: Number(totais.pix || 0),
-          totais_pagamento: buildPaymentTotalsSnapshot(resumoPagamentos.totalsByForm),
-          total_geral: Number(totalGeral || 0),
-          valor_inicial: Number(caixa.valor_inicial || 0),
-          valor_esperado_em_gaveta: Number(esperadoEmGaveta || 0),
-          valor_contado_em_gaveta: Number(valorEmGaveta || 0),
-          diferenca: Number(diferenca || 0),
-          quantidade_vendas: (vendas || []).length
+      if (getOfflineContext()?.enabled) {
+        closeIntent ||= crypto.randomUUID();
+        const operations = await listOperations(ownerUserId);
+        const dependencies = operations.filter(o => String(o.payload.id_caixa) === String(caixa.id) || o.type === 'caixa.open' && o.entityId === String(caixa.id)).map(o => o.operationId);
+        await submitOfflineOperation('caixa.close', caixa.id, { id_caixa: caixa.id, valor_contado_em_gaveta: Number(valorEmGaveta) }, {
+          operationId: closeIntent, dependencies,
+          projection: { key: 'caixa.aberto', value: { ...caixa, data_fechamento: new Date().toISOString(), provisional: true } }
         });
-      } catch (e) {
-        console.warn('Falha ao registrar histórico de fechamento:', e?.message || e);
+        addToast('Fechamento salvo neste aparelho. Os totais serão conferidos após sincronizar.', 'success');
+        caixa = null;
+        return;
       }
+      const savedIntent = await readSnapshot(ownerUserId, `caixa.closeIntent:${caixa.id}`);
+      closeIntent ||= savedIntent || crypto.randomUUID();
+      await saveSnapshot(ownerUserId, `caixa.closeIntent:${caixa.id}`, closeIntent);
+      const response = await offlineRequest('/api/caixa/close', { method: 'POST', body: JSON.stringify({ clientOperationId: closeIntent, id_caixa: caixa.id, valor_contado_em_gaveta: Number(valorEmGaveta) }) });
+      if (!['applied', 'already_applied'].includes(response.status)) throw new Error('Não foi possível confirmar o fechamento. Os dados continuam preservados.');
+      await saveSnapshot(ownerUserId, 'caixa.aberto', { ...caixa, data_fechamento: new Date().toISOString() });
 
       addToast('Caixa fechado com sucesso.', 'success');
       window.location.href = '/gestao';
@@ -202,6 +207,7 @@
   <div>
     <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Financeiro / Fechar Caixa</p>
     <h1 class="text-xl font-bold text-slate-100 tracking-tight">Fechar Caixa</h1>
+    {#if provisional}<p class="text-sm mt-2" style="color: var(--text-muted);">Valores provisórios deste aparelho. Lançamentos de outros aparelhos serão considerados quando sincronizarem; diferenças posteriores ficam registradas como ajustes.</p>{/if}
   </div>
 </div>
 {#if errorMessage}

@@ -19,6 +19,12 @@
   import PaymentMethodGrid from '$lib/components/payments/PaymentMethodGrid.svelte';
   import PaymentMethodSelect from '$lib/components/payments/PaymentMethodSelect.svelte';
   import { SELECTABLE_PAYMENT_METHODS, formatPaymentMethod } from '$lib/finance/paymentMethods';
+  import { startOfflineRuntime, getOfflineContext, readOperationalSnapshot, offlineRequest } from '$lib/offline/runtime';
+  import { loadMesaState, submitMesaOperation } from '$lib/offline/mesas';
+  import { readSnapshot, listOperations } from '$lib/offline/operations';
+  import { buscarProdutosLocal, buscarCategoriasLocal } from '$lib/offlineDb';
+  import { MESA_SNAPSHOT } from '$lib/finance/offlineMesas';
+  import { newMesaPayments, projectStockProducts } from '$lib/finance/offlineProjection';
 
   let userId = '';
   let ownerUserId = '';
@@ -153,6 +159,7 @@
     ownerUserId = authCtx.ownerUserId || authCtx.userId;
     operadorUserId = authCtx.userId;
     isSubUser = authCtx.isSubUser;
+    await startOfflineRuntime({ ...authCtx, ownerUserId });
     if (isSubUser && !(await hasAccessPermission('mesas.acessar'))) {
       addToast('Seu cargo não tem acesso às comandas de mesa.', 'warning');
       goto('/app');
@@ -175,6 +182,7 @@
       loadMesaAndComanda(),
       loadProdutos(),
       loadCaixaEPerfil(),
+      ...(getOfflineContext()?.enabled ? [loadPessoasFiado()] : []),
     ]);
 
     // Carrega pagamentos parciais depois de garantir que a comanda existe
@@ -183,6 +191,7 @@
   });
 
   async function loadPagamentosParciais() {
+    if (getOfflineContext()?.enabled) return;
     if (!comanda?.id) return;
     const { data, error } = await supabase
       .from('comanda_pagamentos')
@@ -219,6 +228,29 @@
   }
 
   async function loadCaixaEPerfil() {
+    if (getOfflineContext()?.enabled) {
+      try {
+        const profile = await readSnapshot(ownerUserId, 'empresa.perfil');
+        if (profile) {
+          const activeCash = await readSnapshot(ownerUserId, 'caixa.aberto');
+          idCaixaAberto = activeCash && !activeCash.data_fechamento ? activeCash.id : null;
+          perfilImpressao = profile; nomeEmpresa = profile.nome_exibicao || ''; empresaId = profile.id || '';
+          return;
+        }
+        const cached = await readOperationalSnapshot('mesas:profile', async () => {
+          const [cash, profile] = await Promise.all([
+            supabase.from('caixas').select('id').eq('id_usuario', ownerUserId).is('data_fechamento', null).order('data_abertura', { ascending: false }).limit(1),
+            supabase.from('empresa_perfil').select('id, nome_exibicao, documento, contato, endereco, largura_bobina, rodape_recibo, logo_url').eq('user_id', ownerUserId).maybeSingle()
+          ]);
+          if (cash.error || profile.error) throw cash.error || profile.error;
+          return { caixa: cash.data?.[0], perfil: profile.data };
+        });
+        const activeCash = await readSnapshot(ownerUserId, 'caixa.aberto');
+        idCaixaAberto = activeCash ? activeCash.data_fechamento ? null : activeCash.id : cached.caixa?.id || null;
+        perfilImpressao = cached.perfil; nomeEmpresa = cached.perfil?.nome_exibicao || ''; empresaId = cached.perfil?.id || '';
+      } catch (error) { addToast('Perfil de impressão ainda não preparado neste aparelho.', 'info'); }
+      return;
+    }
     // Open caixa (optional — id_caixa is nullable, but we attach when available)
     const { data: caixas } = await supabase
       .from('caixas')
@@ -247,6 +279,16 @@
 
   async function loadPessoasFiado() {
     if (pessoas.length > 0) return;
+    if (getOfflineContext()?.enabled) {
+      try { pessoas = await readOperationalSnapshot('pessoas.fiado', async () => {
+        const rows = [];
+        for (let from = 0; ; from += 500) {
+          const { data, error } = await supabase.from('pessoas').select('id, nome, saldo_fiado').eq('id_usuario', ownerUserId).order('id').range(from, from + 499);
+          if (error) throw error; rows.push(...data); if (data.length < 500) return rows;
+        }
+      }); } catch { addToast('Clientes para fiado precisam ser preparados com conexão.', 'warning'); }
+      return;
+    }
     const { data } = await supabase
       .from('pessoas')
       .select('id, nome, saldo_fiado')
@@ -257,6 +299,15 @@
 
   async function loadMesaAndComanda() {
     loading = true;
+    if (getOfflineContext()?.enabled) {
+      try {
+        let state = await loadMesaState(supabase, ownerUserId);
+        if (state.details[mesaId]?.comanda.status !== 'aberta') state = (await submitMesaOperation('mesa.open', { mesaId, comandaId: crypto.randomUUID() })).state;
+        applyLocalMesa(state);
+      } catch (error) { addToast('Não foi possível abrir a comanda: ' + error.message, 'error'); }
+      finally { loading = false; }
+      return;
+    }
 
     const { data: m, error: mErr } = await supabase
       .from('mesas')
@@ -310,6 +361,7 @@
   }
 
   async function loadItens() {
+    if (getOfflineContext()?.enabled) { applyLocalMesa(await readSnapshot(ownerUserId, MESA_SNAPSHOT)); return; }
     const { data, error } = await supabase
       .from('comanda_itens')
       .select('*, produtos(nome)')
@@ -339,6 +391,7 @@
   }
 
   async function loadItensEnviadosCozinha() {
+    if (getOfflineContext()?.enabled && globalThis.navigator?.onLine === false) return;
     if (!canSendItemToKitchen() || !comanda?.id || !empresaId) {
       itensEnviadosCozinha = new Set();
       return;
@@ -363,6 +416,16 @@
   }
 
   async function enviarItemCozinha(item) {
+    const originalItemId = item?.id;
+    if (getOfflineContext()?.enabled) {
+      const operations = await listOperations(ownerUserId);
+      if (globalThis.navigator?.onLine === false || operations.some(op => op.entityId === comanda?.id && op.status !== 'acked')) {
+        addToast('Pedido ainda não entregue à cozinha. Confira a sincronização e envie novamente quando a conexão voltar.', 'info');
+        return;
+      }
+      const mapped = operations.find(op => op.payload?.itemId === item?.id && op.result?.itemId);
+      if (mapped) item = { ...item, id: mapped.result.itemId };
+    }
     if (!canSendItemToKitchen() || !comanda?.id || !item || isSendingCozinha(item)) return;
 
     if (itemEnviadoCozinha(item)) {
@@ -387,7 +450,7 @@
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'Não foi possível enviar o item à cozinha.');
 
-      itensEnviadosCozinha = new Set(itensEnviadosCozinha).add(item.id);
+      itensEnviadosCozinha = new Set(itensEnviadosCozinha).add(item.id).add(originalItemId);
       addToast(payload.alreadyConfirmed ? 'Este item já estava na cozinha.' : 'Item enviado para a cozinha.', 'success');
     } catch (error) {
       addToast('Erro ao enviar para a cozinha: ' + errorMessageFrom(error), 'error');
@@ -399,6 +462,22 @@
   }
 
   async function loadProdutos(forceRefresh = false) {
+    if (getOfflineContext()?.enabled) {
+      try {
+        const shared = await buscarProdutosLocal('', ownerUserId);
+        if (shared.length) {
+          produtos = projectStockProducts(shared, await listOperations(ownerUserId), await readSnapshot(ownerUserId, 'catalog.includedOperations') || []);
+          categorias = await buscarCategoriasLocal(ownerUserId);
+          return;
+        }
+        const catalog = await readOperationalSnapshot('mesas:catalog', async () => {
+          const includedOperationIds = (await listOperations(ownerUserId)).filter(o => o.status === 'acked').map(o => o.operationId);
+          return { produtos: await pdvCache.getProdutos(true), categorias: await pdvCache.getCategorias(), includedOperationIds };
+        });
+        produtos = projectStockProducts(catalog.produtos, await listOperations(ownerUserId), catalog.includedOperationIds || []); categorias = catalog.categorias;
+      } catch { addToast('Catálogo ainda não preparado neste aparelho.', 'warning'); }
+      return;
+    }
     produtos = await pdvCache.getProdutos(forceRefresh);
     categorias = await pdvCache.getCategorias();
   }
@@ -418,6 +497,27 @@
     return error?.message || String(error || fallback);
   }
 
+  function applyLocalMesa(state) {
+    const detail = state?.details?.[mesaId];
+    if (!detail) return;
+    mesa = detail.mesa; comanda = detail.comanda;
+    itens = detail.itens.map(i => ({ ...i, modifierSummary: formatSelectedModifierGroups(i.modifiers) }));
+    pagamentosParciais = detail.pagamentos;
+  }
+
+  async function localCommand(type, payload) {
+    const result = await submitMesaOperation(type, { comandaId: comanda.id, ...payload });
+    applyLocalMesa(result.state);
+    if (type === 'mesa.item.add' || type === 'mesa.item.delta') await loadProdutos();
+    return result;
+  }
+
+  async function localItem(produto, preco, modifiers = [], pizza = null, item = null, delta = 1) {
+    const cachedProduct = produtos.find(p => p.id === produto.id);
+    if (delta > 0 && cachedProduct && !pizza && produtoControlaEstoque(cachedProduct) && estoqueDisponivel(cachedProduct) < delta) throw new Error('Estoque conhecido neste aparelho insuficiente.');
+    await localCommand(item ? 'mesa.item.delta' : 'mesa.item.add', { itemId: item?.id || crypto.randomUUID(), produtoId: produto.id, delta, precoUnitario: Number(preco), nome: produto.nome, modifiers, ...(pizza ? { pizza } : {}) });
+  }
+
   async function adicionarProduto(produto) {
     if (!comanda || savingItem) return;
     if (produto?.tipo_produto !== 'pizza' && produtoSemEstoque(produto)) {
@@ -434,6 +534,7 @@
     savingItem = true;
 
     try {
+      if (getOfflineContext()?.enabled) { await localItem(produto, produto.preco); return; }
       const { error } = await supabase.rpc('comanda_aplicar_delta_item', {
         p_id_comanda: comanda.id,
         p_id_produto: produto.id,
@@ -469,6 +570,7 @@
 
     savingItem = true;
     try {
+      if (getOfflineContext()?.enabled) { await localItem({ id: item.id_produto, nome: item.nome_produto }, item.preco_unitario, item.modifiers, item.pizza, item, delta); return; }
       const { error } = await supabase.rpc('comanda_aplicar_delta_item', {
         p_id_comanda: comanda.id,
         p_id_produto: item.id_produto,
@@ -496,6 +598,10 @@
 
     savingItem = true;
     try {
+      if (getOfflineContext()?.enabled) {
+        await localItem(montagem.produto, montagem.preco, montagem.modifiers, montagem.pizza);
+        montagemOpen = false; montagemProduto = null; return;
+      }
       const { error } = await supabase.rpc('comanda_aplicar_delta_item', {
         p_id_comanda: comanda.id,
         p_id_produto: montagem.produto.id,
@@ -516,6 +622,11 @@
   }
 
   async function atualizarComanda(campo, valor) {
+    if (getOfflineContext()?.enabled) {
+      try { await localCommand('mesa.update', { changes: { [campo]: valor } }); }
+      catch (error) { applyLocalMesa(await readSnapshot(ownerUserId, MESA_SNAPSHOT)); addToast('Não foi possível salvar: ' + error.message, 'error'); }
+      return;
+    }
     const { error } = await supabase
       .from('comandas')
       .update({ [campo]: valor, id_operador: operadorUserId })
@@ -537,6 +648,7 @@
     if (!ok) return;
 
     try {
+      if (getOfflineContext()?.enabled) { await localCommand('mesa.cancel', { items: itens }); goto('/app/mesas'); return; }
       await supabase
         .from('comandas')
         .update({ id_operador: operadorUserId })
@@ -585,7 +697,7 @@
       closeModalOpen = true;
     }
     // Update mesa status para 'fechando' (cosmético)
-    if (mesa.status !== 'fechando') {
+    if (!getOfflineContext()?.enabled && mesa.status !== 'fechando') {
       await supabase.from('mesas').update({ status: 'fechando' }).eq('id', mesaId).eq('id_usuario', ownerUserId);
       mesa = { ...mesa, status: 'fechando' };
     }
@@ -603,6 +715,7 @@
 
   async function fecharMesa() {
     if (closing) return;
+    if (comanda?.status !== 'aberta') return;
 
     // Validations
     if (itens.length === 0) {
@@ -651,277 +764,42 @@
 
     closing = true;
     try {
-      const { error: estoqueErr } = await supabase.rpc('comanda_garantir_estoque_baixado', {
-        p_id_comanda: comanda.id,
-      });
-      if (estoqueErr) throw new Error(estoqueErr.message);
-
       const valorTotal = Math.round(total * 100) / 100;
-
-      // Monta a lista UNIFICADA de pagamentos da venda (parciais já existentes + novos no fechamento)
-      // Cada item: { forma, valor, pessoaId? }
-      const linhasNovas = [];
-
-      // 1) Parciais (já confirmados antes)
-      for (const pp of pagamentosParciais) {
-        linhasNovas.push({
-          forma: pp.forma_pagamento,
-          valor: Number(pp.valor),
-          pessoaId: pp.id_pessoa || null,
-          idComandaPagamento: pp.id,
-        });
+      const savedItems = itens.map(i => ({ nome: i.nome_produto, quantidade: i.quantidade, preco_unitario: i.preco_unitario, subtotal: Number(i.quantidade) * Number(i.preco_unitario) }));
+      const payments = newMesaPayments({ multiPag, pagamentos, saldo: alvoPagamento, formaPagamento, pessoaFiadoId });
+      const allPayments = [...pagamentosParciais, ...payments];
+      const forms = [...new Set(allPayments.map(p => p.forma_pagamento))];
+      const paidWith = forms.length > 1 ? 'multiplo' : forms[0] || formaPagamento;
+      const received = multiPag ? Number(pagamentos.find(p => p.forma === 'dinheiro')?.valor || 0) || null : formaPagamento === 'dinheiro' ? Number(valorRecebido) : null;
+      const change = multiPag ? trocoMulti : troco;
+      if (getOfflineContext()?.enabled) {
+        const activeCash = await readSnapshot(ownerUserId, 'caixa.aberto');
+        if (activeCash) idCaixaAberto = activeCash.data_fechamento ? null : activeCash.id;
       }
-
-      // 2) Pagamento(s) novos no momento do fechamento (só se ainda houver saldo)
-      let trocoCalc = 0;
-      if (alvoPagamento > 0.001) {
-        if (multiPag) {
-          for (const p of pagamentos) {
-            linhasNovas.push({
-              forma: p.forma,
-              valor: Number(p.valor),
-              pessoaId: p.pessoaId || null,
-              idComandaPagamento: null,
-            });
-          }
-          // Troco do split: cash recebido - cash requerido (considerando outras formas dentro do alvo)
-          const cashNovo = Number(pagamentos.find(p => p.forma === 'dinheiro')?.valor || 0);
-          const outrosNovo = pagamentos
-            .filter(p => p.forma !== 'dinheiro')
-            .reduce((a, b) => a + Number(b.valor || 0), 0);
-          const requeridoDinNovo = Math.max(0, alvoPagamento - outrosNovo);
-          trocoCalc = Math.max(0, cashNovo - requeridoDinNovo);
-        } else {
-          linhasNovas.push({
-            forma: formaPagamento,
-            valor: alvoPagamento, // grava só o saldo, troco fica fora
-            pessoaId: formaPagamento === 'fiado' ? pessoaFiadoId : null,
-            idComandaPagamento: null,
-          });
-          if (formaPagamento === 'dinheiro') {
-            trocoCalc = Math.max(0, Number(valorRecebido) - alvoPagamento);
-          }
-        }
+      const payload = { comandaId: comanda.id, id_caixa: idCaixaAberto, payments, valor_total: valorTotal, valor_desconto: desconto, valor_recebido: received, valor_troco: change };
+      let reference;
+      if (getOfflineContext()?.enabled) {
+        const { operation } = await localCommand('mesa.close', payload);
+        reference = `LOCAL-${operation.operationId.slice(0, 8)}`;
+      } else {
+        // Comanda UUID is a stable close intention across retries and page reloads.
+        const { result } = await offlineRequest('/api/mesas/close', { method: 'POST', body: JSON.stringify({ ...payload, clientOperationId: comanda.id, baseRevision: comanda.offline_revision ?? 0 }) });
+        if (!result?.id) throw new Error('Servidor não confirmou o fechamento. Confira antes de tentar novamente.');
+        reference = result.numero_venda || result.id;
+        comanda = { ...comanda, status: 'fechada' };
       }
-
-      // Determina forma_pagamento da venda: se >1 linha distinta, 'multiplo'; senão a forma única.
-      const formasUnicas = [...new Set(linhasNovas.map(l => l.forma))];
-      const insertForma = formasUnicas.length > 1
-        ? 'multiplo'
-        : (formasUnicas[0] || formaPagamento || 'dinheiro');
-
-      const insertValorTroco = Math.round(trocoCalc * 100) / 100;
-      // valor_recebido só faz sentido quando dinheiro está envolvido no fechamento atual
-      let insertValorRecebido = null;
-      if (alvoPagamento > 0.001) {
-        if (multiPag) {
-          const cashNovo = Number(pagamentos.find(p => p.forma === 'dinheiro')?.valor || 0);
-          insertValorRecebido = cashNovo || null;
-        } else if (formaPagamento === 'dinheiro') {
-          insertValorRecebido = Number(valorRecebido);
-        }
-      }
-      // id_cliente vai pro fiado (se houver UM ÚNICO fiado na venda)
-      const fiadoUnicas = linhasNovas.filter(l => l.forma === 'fiado');
-      const insertIdCliente = fiadoUnicas.length === 1 ? fiadoUnicas[0].pessoaId : null;
-      // Para vendas_pagamentos: dinheiro tem troco descontado da última linha de dinheiro (do fechamento)
-      // Parciais ficam como digitados (já foram cobrados, sem troco)
-      const trocoNovo = trocoCalc;
-
-      // 1. Insert venda
-      const dadosVenda = {
-        valor_total: valorTotal,
-        forma_pagamento: insertForma,
-        valor_recebido: insertValorRecebido,
-        valor_troco: insertValorTroco,
-        id_usuario: ownerUserId,
-        id_operador: operadorUserId,
-        id_caixa: idCaixaAberto,
-        id_cliente: insertIdCliente,
-        valor_desconto: Math.round(desconto * 100) / 100 || 0,
-        tipo_pedido: 'mesa',
-        taxa_entrega: 0,
-      };
-
-      const { data: venda, error: vendaErr } = await supabase
-        .from('vendas')
-        .insert(dadosVenda)
-        .select('id, numero_venda')
-        .single();
-      if (vendaErr) throw new Error(vendaErr.message);
-      const vendaId = venda.id;
-
-      // 2. Insert vendas_itens (mapping comanda_itens, snapshot, qty rounded to int)
-      const itensPayload = itens.map(i => ({
-        id_usuario: ownerUserId,
-        id_venda: vendaId,
-        id_comanda_item: i.id,
-        id_produto: i.id_produto ?? null,
-        quantidade: Math.max(1, Math.round(Number(i.quantidade))),
-        nome_produto_na_venda: [i.nome_produto || '', i.modifierSummary].filter(Boolean).join(' — '),
-        preco_unitario_na_venda: Number(i.preco_unitario),
-        modifiers: Array.isArray(i.modifiers) ? i.modifiers : [],
-        ...(i.pizza ? { pizza: i.pizza } : {}),
-      }));
-
-      const { data: itensVenda, error: itensErr } = await supabase
-        .from('vendas_itens')
-        .insert(itensPayload)
-        .select('id, id_comanda_item');
-      if (itensErr) {
-        await supabase.from('vendas').delete().eq('id', vendaId);
-        throw new Error(itensErr.message);
-      }
-
-      // 2b. Insert vendas_pagamentos — UMA row por linha (parciais + novos)
-      // Quando há mais de 1 linha OU temos parciais, persistimos cada forma separadamente.
-      // Se houver dinheiro nas linhas NOVAS, descontamos o troco da última linha de dinheiro do fechamento.
-      if (linhasNovas.length > 1 || temParciais) {
-        // Identifica linha de dinheiro NOVA pra descontar troco (parciais ficam intactos)
-        const numParciais = pagamentosParciais.length;
-        let trocoRestante = trocoNovo;
-        const linhasInsert = linhasNovas.map((l, idx) => {
-          let valorFinal = Number(l.valor);
-          // Apenas linhas NOVAS (idx >= numParciais) podem ter troco descontado
-          if (idx >= numParciais && l.forma === 'dinheiro' && trocoRestante > 0) {
-            const desc = Math.min(trocoRestante, valorFinal);
-            valorFinal = Math.max(0, valorFinal - desc);
-            trocoRestante -= desc;
-          }
-          return {
-            id_venda: vendaId,
-            id_usuario: ownerUserId,
-            forma_pagamento: l.forma,
-            valor: Math.round(valorFinal * 100) / 100,
-            id_comanda_pagamento: l.idComandaPagamento || null,
-          };
-        }).filter(l => l.valor > 0);
-        if (linhasInsert.length > 0) {
-          const { data: pagamentosVenda, error: pagErr } = await supabase
-            .from('vendas_pagamentos')
-            .insert(linhasInsert)
-            .select('id, id_comanda_pagamento');
-          if (pagErr) throw new Error('Falha ao registrar pagamentos: ' + pagErr.message);
-
-          // Mantém a relação parcial -> pagamento final -> item vendido antes
-          // de apagar os registros transitórios da comanda.
-          if (pagamentosParciais.length > 0) {
-            const pagamentoVendaPorOrigem = new Map(
-              (pagamentosVenda || [])
-                .filter(p => p.id_comanda_pagamento)
-                .map(p => [p.id_comanda_pagamento, p.id]),
-            );
-            const itemVendaPorComanda = new Map(
-              (itensVenda || [])
-                .filter(i => i.id_comanda_item)
-                .map(i => [i.id_comanda_item, i.id]),
-            );
-            for (const parcial of pagamentosParciais) {
-              const idVendaPagamento = pagamentoVendaPorOrigem.get(parcial.id);
-              if (!idVendaPagamento) throw new Error('Não foi possível vincular um pagamento parcial à venda.');
-              for (const alocacao of parcial.itens_alocados || []) {
-                const idVendaItem = itemVendaPorComanda.get(alocacao.id_comanda_item);
-                if (!idVendaItem) throw new Error('Não foi possível vincular um item pago à venda.');
-                const { error: vinculoErr } = await supabase
-                  .from('comanda_pagamento_itens')
-                  .update({
-                    id_venda: vendaId,
-                    id_venda_pagamento: idVendaPagamento,
-                    id_venda_item: idVendaItem,
-                  })
-                  .eq('id_pagamento', parcial.id)
-                  .eq('id_comanda_item', alocacao.id_comanda_item);
-                if (vinculoErr) throw new Error('Falha ao preservar os itens pagos: ' + vinculoErr.message);
-              }
-            }
-          }
-        }
-      }
-
-      // 3. Fiado: lançar débito para CADA linha de fiado (parcial OU final)
-      const fiadoLines = linhasNovas.filter(l => l.forma === 'fiado' && l.pessoaId);
-      for (const f of fiadoLines) {
-        const { error: rpcErr } = await supabase.rpc('fiado_lancar_debito', {
-          p_id_pessoa: f.pessoaId,
-          p_valor: Number(f.valor),
-        });
-        if (rpcErr) {
-          console.error('[Mesa.fechar] fiado RPC falhou:', rpcErr.message);
-          addToast('Venda registrada, mas falha ao atualizar saldo fiado. Verifique manualmente.', 'warning');
-        }
-      }
-
-      // 4. Estoque ja foi reservado em tempo real na comanda.
-
-      // 5. Comanda → fechada
-      await supabase
-        .from('comandas')
-        .update({
-          status: 'fechada',
-          fechada_em: new Date().toISOString(),
-          id_venda: vendaId,
-          total_calculado: valorTotal,
-          id_operador: operadorUserId,
-        })
-        .eq('id', comanda.id)
-        .eq('id_usuario', ownerUserId);
-
-      // 5b. Limpa pagamentos parciais (já viraram vendas_pagamentos)
-      if (temParciais) {
-        const { error: cleanErr } = await supabase
-          .from('comanda_pagamentos')
-          .delete()
-          .eq('id_usuario', ownerUserId)
-          .eq('id_comanda', comanda.id);
-        if (cleanErr) console.warn('[Mesa.fechar] cleanup parciais falhou:', cleanErr.message);
-      }
-
-      // 6. Mesa → livre
-      await supabase.from('mesas').update({ status: 'livre' }).eq('id', mesaId).eq('id_usuario', ownerUserId);
-      await auditMesa('mesa.fechada', 'comanda', comanda.id, {
-        mesa_id: mesaId,
-        venda_id: vendaId,
-        total: valorTotal,
-        forma_pagamento: insertForma,
-      });
-
-      // 7. Build receipt and show
-      const reciboPagamentos = linhasNovas.length > 0
-        ? linhasNovas.map(l => ({ forma: l.forma, valor: Number(l.valor) }))
-        : null;
       recibo = {
-        numero_venda: venda.numero_venda,
-        mesa_numero: mesa.numero,
-        empresa: nomeEmpresa,
-        itens: itens.map(i => ({
-          nome: i.nome_produto,
-          quantidade: i.quantidade,
-          preco_unitario: i.preco_unitario,
-          subtotal: Number(i.quantidade) * Number(i.preco_unitario),
-        })),
-        subtotal,
-        couvert,
-        desconto,
-        taxa_pct: taxaPct,
-        taxa_valor: taxaValor,
-        total: valorTotal,
-        num_pessoas: comanda.num_pessoas || 1,
-        forma_pagamento: insertForma,
-        valor_recebido: insertValorRecebido,
-        valor_troco: insertValorTroco,
-        pagamentos_split: insertForma === 'multiplo' ? reciboPagamentos : null,
-        data: new Date(),
+        numero_venda: reference, mesa_numero: mesa.numero, empresa: nomeEmpresa, itens: savedItems,
+        subtotal, couvert, desconto, taxa_pct: taxaPct, taxa_valor: taxaValor, total: valorTotal,
+        num_pessoas: comanda.num_pessoas || 1, forma_pagamento: paidWith, valor_recebido: received,
+        valor_troco: change, pagamentos_split: paidWith === 'multiplo' ? allPayments.map(p => ({ forma: p.forma_pagamento, valor: p.valor })) : null, data: new Date(),
       };
-      closeModalOpen = false;
-      recibosOpen = true;
-      addToast(`Mesa ${mesa.numero} fechada. Venda #${venda.numero_venda || vendaId} registrada.`, 'success');
-    } catch (e) {
-      addToast('Erro ao fechar mesa: ' + (e.message || e), 'error');
-    } finally {
-      closing = false;
-    }
+      closeModalOpen = false; recibosOpen = true;
+      addToast(getOfflineContext()?.enabled ? `Mesa ${mesa.numero} salva neste aparelho. Referência ${reference}.` : `Mesa ${mesa.numero} fechada. Venda #${reference} registrada.`, 'success');
+    } catch (error) {
+      addToast('Erro ao fechar mesa: ' + errorMessageFrom(error), 'error');
+    } finally { closing = false; }
   }
-
   function estabelecimentoFromPerfil() {
     return {
       nome_exibicao: perfilImpressao?.nome_exibicao || nomeEmpresa || 'Zelo PDV',
@@ -1144,6 +1022,7 @@
   }
 
   async function salvarPagamentoParcial() {
+    if (savingParcial) return;
     parcialErro = '';
     const allocations = parcialModo === 'itens'
       ? Object.entries(parcialSelecionados).map(([id_comanda_item, quantidade]) => ({
@@ -1193,6 +1072,15 @@
         valor: valorRound,
         id_pessoa: parcialForma === 'fiado' ? parcialPessoaId : null,
       };
+
+      if (getOfflineContext()?.enabled) {
+        const activeCash = await readSnapshot(ownerUserId, 'caixa.aberto');
+        if (activeCash) idCaixaAberto = activeCash.data_fechamento ? null : activeCash.id;
+        await localCommand('mesa.payment.add', { paymentId: crypto.randomUUID(), id_caixa: idCaixaAberto, forma_pagamento: parcialForma, valor: valorRound, id_pessoa: payload.id_pessoa, allocations: allocationResult.rows.map(row => ({ ...row, itemId: row.id_comanda_item })) });
+        parcialModalOpen = false; parcialSelecionados = {}; parcialErro = '';
+        addToast('Pagamento parcial salvo neste aparelho.', 'success');
+        return;
+      }
 
       const { data, error } = await supabase
         .from('comanda_pagamentos')
@@ -1252,6 +1140,12 @@
     );
     if (!ok) return;
 
+    if (getOfflineContext()?.enabled) {
+      try { await localCommand('mesa.payment.remove', { paymentId: p.id, id_caixa: p.id_caixa || null, forma_pagamento: p.forma_pagamento, valor: p.valor }); }
+      catch (error) { addToast('Não foi possível remover: ' + error.message, 'error'); }
+      return;
+    }
+
     const { error: allocationError } = await supabase
       .from('comanda_pagamento_itens')
       .delete()
@@ -1288,6 +1182,11 @@
   // === Transferência de mesa ===
   async function loadMesasLivres() {
     loadingMesasLivres = true;
+    if (getOfflineContext()?.enabled) {
+      const state = await readSnapshot(ownerUserId, MESA_SNAPSHOT);
+      mesasLivres = (state?.mesas || []).filter(m => String(m.id) !== String(mesaId) && m.status === 'livre');
+      loadingMesasLivres = false; return;
+    }
     const { data, error } = await supabase
       .from('mesas')
       .select('id, numero, capacidade, status, ativa')
@@ -1321,6 +1220,10 @@
 
     transferring = true;
     try {
+      if (getOfflineContext()?.enabled) {
+        await localCommand('mesa.transfer', { mesaId: mesaDestinoId });
+        transferModalOpen = false; goto(`/app/mesas/${mesaDestinoId}`); return;
+      }
       // Re-check destino (proteção contra concorrência: alguém pode ter ocupado entre listagem e clique)
       const { data: dest, error: destErr } = await supabase
         .from('mesas')

@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { clearEntitlementSnapshot } from './offlineEntitlement';
 import { supabase } from './supabaseClient';
 
 // Session store (null | Session) — local only, stores/session.js is the public source
@@ -20,6 +21,7 @@ function init() {
       resolveReady();
     }
     if (event === 'SIGNED_OUT') {
+      clearEntitlementSnapshot();
       sessionStore.set(null);
       authReadyStore.set(true); // still "ready" (no session)
       resolveReady();

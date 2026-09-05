@@ -1,5 +1,7 @@
 // Client-side (isomorphic) helper for the Controle de Acessos add-on.
 // Works in the browser; do NOT import from server-only modules.
+import { loadEntitlementSnapshot, loadOfflineOperatingContext, clearEntitlementSnapshot } from './offlineEntitlement';
+import { isNetworkError } from './netStatus';
 import { supabase } from './supabaseClient';
 
 // Module-level cache — cleared whenever auth state changes.
@@ -38,9 +40,10 @@ if (typeof window !== 'undefined') {
 
 // Reset cache on any auth state change (sign-in, sign-out, token refresh).
 if (supabase) {
-  supabase.auth.onAuthStateChange((event) => {
+  supabase.auth.onAuthStateChange((event, session) => {
     // TOKEN_REFRESHED fires periodically without changing identity — keep cache.
     if (event === 'TOKEN_REFRESHED') return;
+    if (event === 'SIGNED_OUT' || (session?.user?.id && loadOfflineOperatingContext()?.userId !== session.user.id)) clearEntitlementSnapshot();
     _cachedContext = undefined;
     writeToStorage(null);
   });
@@ -65,6 +68,9 @@ export function getAccessContextSync() {
  * @returns {Promise<{isSubUser: boolean, ownerUserId: string, roleId: string|null, permissions: object|null}|null>}
  */
 export async function getAccessContext() {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return loadOfflineOperatingContext();
+  }
   if (_cachedContext !== undefined) return _cachedContext;
 
   try {
@@ -77,13 +83,24 @@ export async function getAccessContext() {
     const userId = sessData.session.user.id;
 
     // Check if this user is a sub-user
-    const { data: accessUser } = await supabase
+    const { data: accessUser, error: accessError } = await supabase
       .from('access_users')
-      .select('owner_user_id, role_id, access_roles(permissions)')
+      .select('owner_user_id, role_id, status, access_roles(permissions)')
       .eq('auth_user_id', userId)
-      .eq('status', 'active')
       .maybeSingle();
 
+    if (accessError) {
+      if (isNetworkError(accessError)) return loadEntitlementSnapshot(userId);
+      _cachedContext = null;
+      writeToStorage(null);
+      return null;
+    }
+    if (accessUser?.status && accessUser.status !== 'active') {
+      clearEntitlementSnapshot();
+      _cachedContext = null;
+      writeToStorage(null);
+      return null;
+    }
     if (accessUser) {
       _cachedContext = {
         isSubUser: true,

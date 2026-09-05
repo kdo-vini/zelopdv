@@ -17,7 +17,6 @@ escolha opcional e grupo vazio; a suíte completa passa com 1.056 testes e três
 skips opcionais. Evidência, reprodução, correção e melhorias propostas no
 [plano de montagem](superpowers/plans/2026-09-05-montagem-frente-caixa.md).
 
-
 ## INC-2026-09-04-SALE-ACTOR — venda de operador fora da loja
 
 **Status:** correção revisada, aplicada e registrada no Supabase em 2026-09-05 UTC.

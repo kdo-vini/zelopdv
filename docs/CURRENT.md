@@ -1,23 +1,138 @@
 # ZeloPDV — Foco atual
 
-## Pizzas montáveis — prontas para homologação em 2026-09-05
+## Onboarding de catálogo Degust — 2026-09-05
 
-Cadastro unificado em Produtos e montagem ZeloMenu/PDV/Mesas implementados. A
-pizza é configurada em Complementos e opções, sem seletor técnico nem ação
-separada de criação. Até quatro sabores, regra de maior preço ou média, extras,
-edição, observação e snapshots históricos. O fluxo não pede estoque por sabor,
-ingrediente ou tamanho. Importação mantém produtos antigos e exclusão arquiva.
+Catálogo público de [Degust](https://degust.roxpdv.com/) importado no tenant
+existente: 15 categorias, sem subcategorias, 123 produtos regulares e 2
+produtos de pizza montável (26 sabores, tamanhos Broto/Grande, preço médio
+para meio a meio e 7 opções de borda por família). Há 125 publicações online;
+105 possuem imagem pública e 20 ficaram sem imagem porque a fonte não forneceu
+uma. Descrições ausentes foram mantidas vazias.
 
-A transformação de um produto que já pode ter vendas cria uma nova identidade,
-clona complementos e troca a visibilidade em uma única transação. A migration
-`20260905170613_finalize_pizza_replacement.sql` foi aplicada e registrada no
-Supabase vinculado; anon não executa a função e operadores autenticados passam
-pela capability `produtos.gerenciar`. O teste remoto criou produto, revisão e
-publicação dentro de uma transação e confirmou o rollback.
+Perfil preenchido com nome, descrição, capa, endereço de Guapiara, telefone,
+horários 16:00–00:00 de segunda a sábado, domingo fechado e slug `degust`. O trial existente
+permanece `trialing` até 2026-09-11 13:02 UTC, com PDV base, Mesas e ZeloMenu
+habilitados; Acessos não foi habilitado.
 
-Validação: suíte PDV com 1.141 testes/3 skips, check 0/0 e harness Chromium em
-390/1280; Menu com 674 unitários, typechecks, build e quatro E2E desktop/mobile.
+A fonte informa entrega de 40–60 minutos e preços por bairro. Como o ZeloPDV
+calcula entrega por distância, os valores de origem foram preservados como
+metadado pendente, sem ativar checkout nem criar faixas de km inventadas.
+Os meios informados foram registrados como Pix (chave 15 99710-4189), cartão
+de crédito e débito, sem valor mínimo. Falta apenas a conversão dos limites em
+quilômetros para as taxas hoje definidas por bairro. Validação remota: 15
+categorias, 125 produtos/publicações, 2 configurações de pizza e 0 faixas de
+entrega ativas.
+
+## Continuidade offline v1 — implementação local em 2026-09-05
+
+Plano aprovado implementado no checkout `feat/pizzas-montaveis`, preservando
+as alterações de pizza. Sem publicação ou aplicação da migration offline em
+produção nesta rodada. **Atualização: migration e deployment publicados em
+2026-09-05.** O protocolo exige
+`20260905152642_offline_operation_protocol.sql`, backend compatível e preparação
+por aparelho; o titular define o aparelho principal do caixa.
+
+Entregas: outbox transacional e rascunho durável, sincronização global com
+idempotência/leases/retry, caixa e Mesas locais, fechamento remoto atômico,
+turno original de parciais, ajustes tardios, conferência do titular, recuperação
+criptografada, shell operacional PWA, sessão offline e indicador discreto.
+Preparação baixa dados operacionais; dados privados não entram no cache HTTP.
+Tokens ausentes não revogam por si só a autorização local válida.
+
+Validação completa executada às 13:19: `npm test` — **1.123 passam, 3 skips**
+(185 arquivos passam). `npm run check` — **0 erros/0 avisos**. O teste de
+1.000 intenções, duas instâncias de sync e 50 respostas perdidas passou sem
+perda/duplicação no servidor simulado. Chromium de produção/SW real passou
+rotas `/app`, `/app/mesas`, `/gestao/caixa` e checkout+reload em 1280/390 px.
+Jornada real de Mesa (abrir/item/parcial/fechar) e turno
+(fechar anterior/abrir/suprimento/fechar) passaram em ambas as larguras.
+Reexecução geral às 13:33 terminou em **1.126 passam / 5 falham / 3 skips**:
+três timeouts de guards durante build concorrente passaram depois em execução
+isolada (5/5); duas falhas são de `pizzaProductFlow`/`modelMapping`, em arquivos
+de cadastro alterados paralelamente fora desta implementação. Não modificados
+para forçar resultado verde. A branch completa não está declarada verde.
+Novos testes de consulta owner-scoped dos ajustes passam 2/2. SQL offline e
+pizza foram repetidos pelo agente principal e passaram novamente.
+Verificação final do agente principal: **107 testes focados / 21 arquivos
+passam**, incluindo os guards atualizados. Consultas dos gates têm deadline
+de 3 s; respostas tardias não alteram a sessão e ausência de token não apaga
+um contexto local válido. O ensaio de 1.000 operações permanece passando.
+O harness completo foi repetido após o último build e passou em ambas as
+larguras. Logs locais em `test-results/offline/root-final-*.log`.
+
+Publicação executada pela Supabase CLI e Vercel:
+
+- migration `20260905152642_offline_operation_protocol.sql` aplicada no projeto
+  remoto `xnnjyrblpvsqrtsshawa`; histórico reparado como `applied` e verificado
+  com tabelas, RLS e funções `offline_bootstrap_v1`,
+  `apply_offline_operation_v1` e `apply_online_close_v1`.
+- deployment Vercel `dpl_BExkssRHXWVrFzzZ5exeURa24d98`, estado `READY`,
+  `target=production`; alias
+  `https://zelopdv-vinicius-projects-d8d7bb4c.vercel.app`; deployment promovido
+  também para `https://www.zelopdv.com.br`.
+- smoke checks: `/offline-shell` e `/app` retornam 200; bootstrap sem bearer
+  retorna 401 JSON controlado tanto no alias Vercel quanto no domínio público;
+  `/sw.js` retorna 200 no domínio público. O build remoto Linux passou; o erro
+  de symlink permanece apenas no adapter local Windows.
+- `supabase db advisors` retornou apenas avisos preexistentes do projeto;
+  nenhum aviso referenciou as novas funções privadas offline. A lista remota
+  ainda contém migrations históricas ausentes no checkout; não foram marcadas
+  como reverted nem alteradas.
+Rechecagem separada do trabalho paralelo: `pizzaProductFlow` agora passa;
+permanece uma falha em `modelMapping` (espera quatro modelos, catálogo em
+edição tem cinco). Os dois arquivos somam 11 testes passando/1 falhando.
+Check final repetido pelo agente principal: 0 erros/0 avisos. Ledger de
+migrations também verificado sem inconsistências.
+
+SQL real validado em PostgreSQL WASM/PGlite descartável: baseline+migrations,
+rollback atômico, tenant/RBAC, fiado, estoque, recibos repetidos, ajustes de
+turno e reconciliação. Docker local indisponível; **não certifica concorrência
+multi-sessão**. Build compila client/SSR/PWA, mas adapter Vercel no Windows
+continua terminando com **EPERM ao criar symlink**; não há build final verde.
+Android/iPhone físicos, impressão, queda de energia e piloto prolongado ainda
+requerem homologação. [Contratos e liberação](operations/OFFLINE.md),
+[plano e evidências](superpowers/plans/2026-09-05-offline-continuity.md).
+
+## Pizzas montáveis — implementação local em 2026-09-05
+
+Cadastro unificado em Produtos e montagem ZeloMenu/PDV/Mesas implementados na
+branch `feat/pizzas-montaveis` dos dois repositórios. A pizza é configurada em
+Complementos e opções, sem seletor técnico nem ação separada de criação. Até
+quatro sabores iguais, regra maior/média, extras, edição/observação e snapshots
+históricos. O fluxo novo não cadastra estoque por sabor, ingrediente ou tamanho.
+Importação mantém produtos antigos; exclusão de pizza arquiva.
+O replay offline preserva preço/revisão e reserva pendências locais.
 Detalhes, runner SQL e limites em [PIZZAS](modules/PIZZAS.md).
+
+Validação final: suíte PDV passou com 1.141 testes/3 skips e check 0/0.
+Menu passou 674 unitários, quatro E2E e build. Quatro matrizes SQL passaram
+no PostgreSQL descartável, incluindo estorno, exclusão integral de conta e
+capability `produtos.gerenciar` de subusuários ativos/bloqueados. Browser PDV verificou
+390/1280 com componente real. Sem pedidos reais ou publicação. Build PDV
+continua limitado pelo EPERM de symlink no adapter Vercel/Windows; a validação
+relevante passou em Windows e navegador mobile, e papel físico segue pendente.
+A migration foi aplicada e registrada no Supabase vinculado. Trabalhos
+paralelos de montagem/offline foram preservados.
+
+## Diagnóstico offline de Frente de Caixa e Mesas — 2026-09-05
+
+**Histórico da análise anterior à implementação v1 descrita acima.**
+
+Análise solicitada antes de melhorias; nenhum comportamento alterado nesta
+rodada. Frente de Caixa é contingência parcial e Mesas segue online. Três
+reproduções isoladas confirmam: erro de rede bloqueia retomada do caixa;
+abrir mesa depende da rede; retry de fechamento após falha em pagamentos
+envia nova inserção de venda sem chave idempotente. Não são incidentes
+confirmados em produção. 70 testes existentes passam e três probes de
+caracterização confirmam as limitações. IndexedDB real passa em Chromium
+desktop e Pixel 5 emulado, com rede cortada e replay simulado; não certifica
+jornada autenticada, SW, SQL nem celular físico. Proposta, prioridades e
+critérios de aceite em [OFFLINE](operations/OFFLINE.md). Alterações paralelas
+de montagem/pizza foram preservadas. Build/check/suíte completa não executados
+nesta análise; nenhuma alegação nova de branch homologada.
+O `git diff --check` global apontou whitespace em componentes de modificadores
+e produtos alterados paralelamente; esses arquivos não foram normalizados por
+esta rodada. Reexecução dos probes e persistência: 11/11 passam.
 
 ## Investigação de montagem manual — 2026-09-05
 
@@ -33,7 +148,6 @@ login, então o caso específico do cliente, `/app` autenticado e produção ain
 não foram confirmados. Ver [diagnóstico e plano](superpowers/plans/2026-09-05-montagem-frente-caixa.md).
 `npm run build` compilou client/SSR/PWA, mas terminou no EPERM de symlink do
 adapter Vercel no Windows, limitação já registrada e validada em Linux pela CI.
-
 
 ## Estado consolidado — auditoria de 2026-09-04
 

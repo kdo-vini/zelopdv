@@ -15,3 +15,16 @@ it('never serves authenticated API or private storage requests from a shared cac
   }
   expect(rules.some(({ urlPattern }) => urlPattern instanceof RegExp && urlPattern.test('https://project.supabase.co/storage/v1/object/public/logos/logo.png'))).toBe(true);
 });
+
+it('uses a neutral operational shell only for operational document navigations', async () => {
+  await import('../vite.config.js');
+  const { workbox, registerType } = capture.mock.calls[0][0];
+  expect(registerType).toBe('prompt');
+  expect(workbox.navigateFallback).toBe('/offline-shell');
+  for (const route of ['/app', '/app?shift=1', '/app/mesas', '/app/mesas/123', '/gestao/caixa']) {
+    expect(workbox.navigateFallbackAllowlist.some((rule) => rule.test(route)), route).toBe(true);
+  }
+  for (const route of ['/', '/api/offline/sync', '/login', '/blog/post', '/application', '/gestao/caixada']) {
+    expect(workbox.navigateFallbackAllowlist.some((rule) => rule.test(route)), route).toBe(false);
+  }
+});

@@ -1,4 +1,6 @@
 <script>
+  import { get } from 'svelte/store';
+  import { offlineStatus, blocksOfflineUpdate } from '$lib/stores/offlineStatus';
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { APP_VERSION, normalizeVersion } from '$lib/version';
@@ -115,7 +117,7 @@
   function isCriticalFlowActive() {
     const path = window.location.pathname;
     const activeSaleRoute = path === '/app' && hasActiveComanda();
-    return userIsTyping() || hasOpenModal() || activeSaleRoute;
+    return blocksOfflineUpdate(get(offlineStatus)) || userIsTyping() || hasOpenModal() || activeSaleRoute;
   }
 
   function schedulePromptWhenSafe(version) {
@@ -182,7 +184,7 @@
   }
 
   async function refreshNow() {
-    if (!pendingVersion) return;
+    if (!pendingVersion || isCriticalFlowActive() || !navigator.onLine) return;
     safeSet(sessionStorage, SESSION_REFRESH_TARGET, pendingVersion);
     safeSet(sessionStorage, SESSION_REFRESH_AT, String(now()));
     bc?.postMessage({ type: 'refreshing', version: pendingVersion });
@@ -198,7 +200,7 @@
       console.warn('[UpdateAvailable] Service worker update failed:', err?.message || err);
     }
 
-    await clearAppCaches();
+    // Keep the currently working shell until the replacement worker activates.
 
     const url = new URL(window.location.href);
     url.searchParams.set('appVersion', pendingVersion.slice(0, 12));

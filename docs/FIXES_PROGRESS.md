@@ -1,5 +1,17 @@
 # Fixes Progress
 
+- [x] FX-OFFLINE-RESUME-01 (2026-09-05) — retomada local de caixa e sessão,
+  outbox antes de sucesso e rascunho com intenção estável. Checkout real+reload
+  offline passam em Chromium desktop/mobile emulado; não publicado.
+- [x] FX-MESAS-CLOSE-ATOMIC-01 (2026-09-05) — fechamento online/offline usa
+  comando servidor atômico e recibo idempotente; SQL descartável verifica
+  rollback e repetição sem duplicar venda/fiado. Migration offline não aplicada
+  em produção; concorrência multi-sessão ainda requer homologação.
+- [x] FX-MESAS-OFFLINE-01 (2026-09-05) — mapa/comandas e fila por entidade
+  persistidos; parciais por turno, conflito preservado e conferência do titular.
+  Validação de jornada e limites atuais em
+  [OFFLINE](operations/OFFLINE.md).
+
 - [x] FX-MONTAVEL-UI-01 (2026-09-05) — reatividade visual do modal de montagem:
   destaque, stepper e limite agora recebem `selections` explicitamente. O
   mesmo patch adiciona limpar escolha opcional, preço substituto, grupo sem
@@ -7,7 +19,6 @@
   passa em 390×844 e 1280×800; suíte completa 1.056/3 skips e check 0/0.
   `/app` autenticado e produção permanecem pendentes por falta de sessão válida.
   [Plano](superpowers/plans/2026-09-05-montagem-frente-caixa.md).
-
 
 ## Consolidação da auditoria — 2026-09-04
 

@@ -7,6 +7,7 @@
   import { createEventDispatcher, onMount, tick } from 'svelte';
   import { Check, ChevronLeft, Scissors, X } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
+  import { getOfflineContext, readOperationalSnapshot } from '$lib/offline/runtime';
   import { addToast } from '$lib/stores/ui';
   import PaymentMethodGrid from '$lib/components/payments/PaymentMethodGrid.svelte';
   import PaymentMethodSelect from '$lib/components/payments/PaymentMethodSelect.svelte';
@@ -115,12 +116,26 @@
     return Math.max(0, cashRec - requeridoDin);
   })();
 
+  let pessoasOwner = null;
   async function carregarPessoasFiado() {
-    if (pessoasFiado.length) return;
+    const context = getOfflineContext();
+    if (pessoasOwner === context?.ownerUserId && pessoasFiado.length) return;
+    pessoasFiado = [];
     try {
-      const { data, error } = await supabase.from('pessoas').select('id, nome').order('nome');
-      if (!error) pessoasFiado = data || [];
-    } catch {}
+      if (!context?.ownerUserId) throw new Error('Aguarde o carregamento da loja para selecionar o cliente.');
+      const preparedPeople = await readOperationalSnapshot('pessoas.fiado', async () => {
+        const people = [];
+        for (let from = 0; ; from += 500) {
+          const { data, error } = await supabase.from('pessoas').select('id, nome').eq('id_usuario', context.ownerUserId).order('id').range(from, from + 499);
+          if (error) throw error;
+          people.push(...data);
+          if (data.length < 500) return people;
+        }
+      });
+      if (getOfflineContext()?.ownerUserId !== context.ownerUserId) return;
+      pessoasOwner = context.ownerUserId;
+      pessoasFiado = preparedPeople;
+    } catch (error) { addToast(error?.message || 'Clientes indisponíveis neste aparelho. Prepare os dados com internet.', 'warning'); }
   }
   
   function addPagamento() {

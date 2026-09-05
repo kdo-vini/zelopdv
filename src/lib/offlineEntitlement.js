@@ -45,6 +45,8 @@ export function saveEntitlementSnapshot(ctx, now = Date.now()) {
         ownerUserId: ctx.ownerUserId,
         isSubUser: !!ctx.isSubUser,
         roleId: ctx.roleId ?? null,
+        permissions: ctx.permissions ?? null,
+        addons: ctx.addons ?? {},
         validatedAt: now
       })
     );
@@ -60,20 +62,32 @@ export function saveEntitlementSnapshot(ctx, now = Date.now()) {
  * @param {number} [now] timestamp em ms (injetável para teste)
  */
 export function loadEntitlementSnapshot(userId, now = Date.now()) {
+  if (!userId) return null;
+  return readSnapshot(userId, now);
+}
+
+/** Local resume only. Cleared on explicit sign-out; never used to authenticate requests. */
+export function loadOfflineOperatingContext(now = Date.now()) {
+  return readSnapshot(null, now);
+}
+
+function readSnapshot(userId, now) {
   const store = getStore();
-  if (!store || !userId) return null;
+  if (!store) return null;
   try {
     const raw = store.getItem(STORAGE_KEY);
     if (!raw) return null;
     const snap = JSON.parse(raw);
-    if (!snap || snap.userId !== userId) return null;
-    if (!snap.validatedAt || now - snap.validatedAt > ENTITLEMENT_GRACE_MS) return null;
+    if (!snap || (userId && snap.userId !== userId)) return null;
+    if (!snap.userId || !snap.ownerUserId || !snap.validatedAt || now < snap.validatedAt || now - snap.validatedAt > ENTITLEMENT_GRACE_MS) return null;
     return {
       userId: snap.userId,
       email: snap.email ?? null,
       ownerUserId: snap.ownerUserId,
       isSubUser: !!snap.isSubUser,
       roleId: snap.roleId ?? null,
+      permissions: snap.permissions ?? (snap.isSubUser ? {} : null),
+      addons: snap.addons ?? {},
       validatedAt: snap.validatedAt,
       fromCache: true
     };

@@ -36,7 +36,11 @@ export default defineConfig({
   plugins: [
     sveltekit(),
     SvelteKitPWA({
+      registerType: 'prompt',
       manifest: {
+        start_url: '/app',
+        scope: '/',
+        display: 'standalone',
         name: 'Zelo PDV',
         short_name: 'ZeloPDV',
         description: 'Sistema de Ponto de Venda ágil e resiliente',
@@ -55,6 +59,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        navigateFallback: '/offline-shell',
+        navigateFallbackAllowlist: [/^\/app(?:\/|$|\?)/, /^\/gestao\/caixa(?:\/|$|\?)/],
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
         importScripts: ['/pwa-cache-cleanup.js'],
         runtimeCaching: [

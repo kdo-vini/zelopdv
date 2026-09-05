@@ -3,11 +3,37 @@ import { supabase } from './supabaseClient';
 import { requiredOk } from './profileUtils';
 import { addToast } from './stores/ui';
 import { isNetworkError } from './netStatus';
-import { saveEntitlementSnapshot, loadEntitlementSnapshot } from './offlineEntitlement';
+import { saveEntitlementSnapshot, loadEntitlementSnapshot, loadOfflineOperatingContext, clearEntitlementSnapshot } from './offlineEntitlement';
 import { isSubscriptionActiveStrict } from './subscriptionStatus';
 import { withTimeout } from './utils';
 
 export { isSubscriptionActiveStrict };
+
+// A Wi-Fi link can remain online while the server is unreachable.
+// Bound reads only: a late response cannot execute guard decisions afterward.
+let identityGeneration = 0;
+let observedIdentity;
+supabase.auth.onAuthStateChange?.((event, session) => {
+  const next = session?.user?.id || null;
+  if (event === 'SIGNED_OUT' || (observedIdentity !== undefined && next !== observedIdentity)) identityGeneration++;
+  observedIdentity = next;
+});
+async function gateQuery(query) {
+  const controller = new AbortController();
+  let timer;
+  try {
+    const request = query.abortSignal ? query.abortSignal(controller.signal) : query;
+    return await Promise.race([
+      Promise.resolve(request).catch(error => ({ data: null, error })),
+      new Promise(resolve => {
+        timer = setTimeout(() => {
+          resolve({ data: null, error: new Error('Network request timeout') });
+          controller.abort();
+        }, 3000);
+      }),
+    ]);
+  } finally { clearTimeout(timer); }
+}
 
 /**
  * For pages gated by an add-on: when the addon is inactive AND the current
@@ -35,41 +61,42 @@ export function bounceSubUserMissingAddon({ addonActive, isSubUser, addonLabel =
  */
 async function resolveSubscriptionUserId(userId) {
   if (!userId) return userId;
-  try {
-    const { data } = await supabase
-      .from('access_users')
-      .select('owner_user_id')
-      .eq('auth_user_id', userId)
-      .eq('status', 'active')
-      .maybeSingle();
-    return data?.owner_user_id || userId;
-  } catch {
-    return userId;
-  }
+  const { data, error } = await gateQuery(supabase.from('access_users')
+    .select('owner_user_id, status').eq('auth_user_id', userId).maybeSingle());
+  if (error) throw error;
+  if (data?.status && data.status !== 'active') throw new Error('Operator access revoked');
+  return data?.owner_user_id || userId;
 }
 
-async function readSubscription(userId, columns, label) {
+async function readSubscription(userId, columns, label, propagateError = false) {
   if (!userId) return null;
   try {
     const subUserId = await resolveSubscriptionUserId(userId);
-    const { data } = await supabase
-      .from('subscriptions')
-      .select(columns)
-      .eq('user_id', subUserId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data, error } = await gateQuery(supabase.from('subscriptions')
+      .select(columns).eq('user_id', subUserId).order('updated_at', { ascending: false })
+      .limit(1).maybeSingle());
+    if (error) throw error;
     return data;
   } catch (err) {
     console.warn(`[Guards] ${label} error:`, err?.message);
+    if (propagateError) throw err;
     return null;
   }
 }
 
 async function hasSubscriptionAddon(userId, flag, label) {
-  const data = await readSubscription(userId, `${flag}, plan_tier`, label);
-  if (!data) return false;
-  return ['pdv', 'bundle'].includes(data.plan_tier) && !!data[flag];
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return loadEntitlementSnapshot(userId)?.addons?.[flag] === true;
+  }
+  const generation = identityGeneration;
+  try {
+    const data = await readSubscription(userId, `${flag}, plan_tier`, label, true);
+    if (generation !== identityGeneration || !data) return false;
+    return ['pdv', 'bundle'].includes(data.plan_tier) && !!data[flag];
+  } catch (error) {
+    return generation === identityGeneration && isNetworkError(error)
+      && loadEntitlementSnapshot(userId)?.addons?.[flag] === true;
+  }
 }
 
 async function hasZeloMenuEntitlement(userId, label) {
@@ -95,20 +122,38 @@ async function hasPlanAccess(userId, allowedPlans, label) {
  * Sub-users are detected before the profile check and short-circuit to the owner's subscription validation.
  */
 export async function ensureActiveSubscription({ requireProfile = false, redirectOnFail = true } = {}) {
+  const generation = identityGeneration;
+  const currentIdentity = () => generation === identityGeneration;
+  // Cache is only local operating context, never a remote authentication token.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    const cached = loadOfflineOperatingContext();
+    if (cached) return cached;
+  }
   // 1) Session - with timeout to prevent infinite hang
   let userId = null;
   let email = null;
   try {
-    const { data: sess } = await withTimeout(supabase.auth.getSession(), 8000);
+    const { data: sess, error: sessionError } = await withTimeout(supabase.auth.getSession(), 8000);
+    if (!currentIdentity()) return null;
+    if (sessionError) throw sessionError;
     userId = sess?.session?.user?.id || null;
     email = sess?.session?.user?.email || null;
+    if (observedIdentity === undefined) observedIdentity = userId;
   } catch (err) {
+    if (!currentIdentity()) return null;
     console.warn('[Guards] getSession timeout or error:', err?.message);
+    if (isNetworkError(err)) {
+      const cached = loadOfflineOperatingContext();
+      if (cached) return cached;
+    }
     if (redirectOnFail) window.location.href = '/login';
     return null;
   }
 
   if (!userId) {
+    // Explicit logout clears this snapshot; a missing/expired token alone does not.
+    const cached = loadOfflineOperatingContext();
+    if (cached) return cached;
     if (redirectOnFail) window.location.href = '/login';
     return null;
   }
@@ -118,37 +163,50 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
   // online dentro da janela de carência. Mantém o operador trabalhando quando o
   // Wi-Fi oscila, sem virar bypass de assinatura.
   const offlineFallback = () => {
+    if (!currentIdentity()) return null;
     const snap = loadEntitlementSnapshot(userId);
     if (!snap) return null;
     console.warn('[Guards] Rede indisponível — usando entitlement em cache validado em', new Date(snap.validatedAt).toISOString());
-    return { userId: snap.userId, email: snap.email ?? email, ownerUserId: snap.ownerUserId, isSubUser: snap.isSubUser, roleId: snap.roleId };
+    return { ...snap, email: snap.email ?? email };
   };
 
   // 2) Sub-user check — before profile check, so sub-users skip the profile requirement
   try {
-    const { data: accessUser, error: accessError } = await supabase
+    const { data: accessUser, error: accessError } = await gateQuery(supabase
       .from('access_users')
-      .select('owner_user_id, role_id')
+      .select('owner_user_id, role_id, status, access_roles(permissions)')
       .eq('auth_user_id', userId)
-      .eq('status', 'active')
-      .maybeSingle();
+      .maybeSingle());
+      if (!currentIdentity()) return null;
 
     if (accessError && isNetworkError(accessError)) {
       const fb = offlineFallback();
       if (fb) return fb;
     }
 
+    if (accessError) {
+      if (!isNetworkError(accessError)) clearEntitlementSnapshot();
+      if (redirectOnFail) window.location.href = '/login';
+      return null;
+    }
+
+    if (accessUser && accessUser.status && accessUser.status !== 'active') {
+      clearEntitlementSnapshot();
+      if (redirectOnFail) window.location.href = '/login';
+      return null;
+    }
     if (accessUser) {
       // This user is a sub-user — verify the owner's subscription and add-on
       const ownerUserId = accessUser.owner_user_id;
 
-      let { data: ownerSub, error: ownerSubError } = await supabase
+      let { data: ownerSub, error: ownerSubError } = await gateQuery(supabase
         .from('subscriptions')
-        .select('status, current_period_end, manually_extended_until, has_acessos_addon')
+        .select('status, current_period_end, manually_extended_until, has_acessos_addon, has_mesas_addon, plan_tier')
         .eq('user_id', ownerUserId)
         .order('updated_at', { ascending: false })
         .limit(1)
-        .maybeSingle();
+        .maybeSingle());
+      if (!currentIdentity()) return null;
 
       if (ownerSubError && isNetworkError(ownerSubError)) {
         const fb = offlineFallback();
@@ -156,6 +214,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
       }
 
       if (ownerSubError || !ownerSub || !isSubscriptionActiveStrict(ownerSub) || !ownerSub.has_acessos_addon) {
+        if (!ownerSubError) clearEntitlementSnapshot();
         if (redirectOnFail) window.location.href = '/assinatura?msg=addon_required';
         return null;
       }
@@ -166,6 +225,8 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
         ownerUserId,
         isSubUser: true,
         roleId: accessUser.role_id,
+        permissions: accessUser.access_roles?.permissions || {},
+        addons: { has_mesas_addon: !!ownerSub.has_mesas_addon },
       };
       saveEntitlementSnapshot(subCtx);
       return subCtx;
@@ -176,23 +237,29 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
       const fb = offlineFallback();
       if (fb) return fb;
     }
-    // Fall through to owner flow on unexpected error
+    if (!currentIdentity()) return null;
+    if (redirectOnFail) window.location.href = '/login';
+    return null;
   }
 
   // 3) Optional: profile completeness (owners only)
   if (requireProfile) {
     try {
-      const { data: perfil, error: perfilError } = await supabase
+      const { data: perfil, error: perfilError } = await gateQuery(supabase
         .from('empresa_perfil')
         .select('nome_exibicao, documento, contato, largura_bobina')
         .eq('user_id', userId)
-        .maybeSingle();
+        .maybeSingle());
+      if (!currentIdentity()) return null;
       if (perfilError && isNetworkError(perfilError)) {
         const fb = offlineFallback();
         if (fb) return fb;
         // Sem snapshot e offline: não dá para verificar perfil — não redireciona
         // por isso; deixa a checagem de assinatura abaixo decidir.
-      } else if (!perfilError) {
+      } else if (perfilError) {
+        if (redirectOnFail) window.location.href = '/perfil?msg=complete';
+        return null;
+      } else {
         const ok = Boolean(perfil && requiredOk(perfil));
         if (!ok) {
           if (redirectOnFail) window.location.href = '/perfil?msg=complete';
@@ -208,18 +275,20 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     }
   }
 
+  let ownerAddons = {};
   // 4) Subscription (redirect only if status is inactive OR effective expiry passed)
   // plan_tier filter: chat-only subscribers should not access PDV routes.
   // Note: plan_tier is NOT filtered in SQL to avoid blocking NULL (legacy users).
   // Chat-only redirect happens after fetch.
   try {
-    let { data: sub, error } = await supabase
+    let { data: sub, error } = await gateQuery(supabase
       .from('subscriptions')
-      .select('status, current_period_end, manually_extended_until, user_id, plan_tier')
+      .select('status, current_period_end, manually_extended_until, user_id, plan_tier, has_mesas_addon, has_acessos_addon')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
-      .maybeSingle();
+      .maybeSingle());
+      if (!currentIdentity()) return null;
 
     // Falha de REDE: tenta entitlement em cache antes de expulsar o operador.
     if (error && isNetworkError(error)) {
@@ -229,19 +298,23 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
 
     // If there's an error or no subscription, redirect with 'subscribe' (new user)
     if (error || !sub) {
+      if (!error) clearEntitlementSnapshot();
       if (redirectOnFail) window.location.href = '/assinatura?msg=subscribe';
       return null;
     }
 
     // Chat-only users should not access PDV routes.
     if (sub.plan_tier === 'chat') {
+      clearEntitlementSnapshot();
       // Redirect to assinatura with a message specific to plan mismatch
       if (redirectOnFail) window.location.href = '/assinatura?msg=subscribe';
       return null;
     }
 
+    ownerAddons = { has_mesas_addon: !!sub.has_mesas_addon, has_acessos_addon: !!sub.has_acessos_addon };
     const isActiveStrict = isSubscriptionActiveStrict(sub);
     if (!isActiveStrict) {
+      clearEntitlementSnapshot();
       // User had subscription but it's not active anymore - use 'expired'
       if (redirectOnFail) window.location.href = '/assinatura?msg=expired';
       return null;
@@ -256,7 +329,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     return null;
   }
 
-  const ownerCtx = { userId, email, ownerUserId: userId, isSubUser: false, roleId: null };
+  const ownerCtx = { userId, email, ownerUserId: userId, isSubUser: false, roleId: null, permissions: null, addons: ownerAddons };
   saveEntitlementSnapshot(ownerCtx);
   return ownerCtx;
 }

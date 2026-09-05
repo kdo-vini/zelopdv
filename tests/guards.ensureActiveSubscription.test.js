@@ -98,6 +98,8 @@ describe('ensureActiveSubscription', () => {
       ownerUserId: 'owner-1',
       isSubUser: false,
       roleId: null,
+      permissions: null,
+      addons: { has_mesas_addon: false, has_acessos_addon: false },
     });
     expect(global.window.location.href).toBe('');
   });
@@ -118,6 +120,8 @@ describe('ensureActiveSubscription', () => {
       ownerUserId: 'owner-1',
       isSubUser: true,
       roleId: 'role-caixa',
+      permissions: {},
+      addons: { has_mesas_addon: false },
     });
     expect(global.window.location.href).toBe('');
   });

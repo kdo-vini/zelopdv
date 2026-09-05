@@ -1,8 +1,232 @@
 # Funcionamento offline do ZeloPDV
 
+## Protocolo v1 — implementação local em 2026-09-05
+
+**Status: implementação e validação em andamento no checkout; não publicado.**
+O diagnóstico abaixo é histórico. O protocolo novo exige a migration
+`20260905152642_offline_operation_protocol.sql`, servidor compatível e preparação
+explícita do aparelho. Não considerar um cliente antigo automaticamente migrado.
+
+### Fluxo operacional
+
+- A confirmação de venda depende do commit IndexedDB, antes de qualquer envio.
+  Intenção, chave, rascunho e projeção são persistidos por loja/operador; a
+  transação com erro não pode anunciar venda salva. Referência `LOCAL-*` não é
+  número de venda confirmado pelo servidor.
+- Catálogo, modificadores/pizzas, categorias, pessoas para fiado, recibo, turno
+  e Mesas são preparados com internet. O botão de preparação solicita
+  persistência, testa escrita e carrega os dados; falha deixa a preparação
+  incompleta. O indicador exige também Service Worker controlando a página.
+- A autorização local tem validade de sete dias. Token ausente/expirado impede
+  sincronizar, mas não apaga os lançamentos nem revoga sozinho o contexto local.
+  Login/logout e troca de loja não podem reaproveitar snapshots de outra conta.
+  Consultas de acesso/assinatura têm prazo de 3 s, inclusive quando o navegador
+  ainda informa conexão. Resultado tardio fica sem efeito; negativas
+  confirmadas não são tratadas como simples oscilação.
+- Apenas o aparelho principal abre, movimenta e fecha caixa. Todos os aparelhos
+  autorizados podem vender e operar Mesas; sem rede não há visão instantânea
+  dos lançamentos dos outros aparelhos. Fechamento local é provisório.
+- Fila global com leases entre abas, dependências, duas entidades independentes
+  em paralelo, prazo de envio e backoff com jitter. Resposta perdida repete a
+  mesma intenção; conflito e autenticação exigem ações distintas.
+- O servidor usa contexto autenticado, recibo de operação, locks e transação
+  única. Fechamentos online também usam a fronteira atômica, sem sequência de
+  inserts no navegador. Replay de venda recebida permite estoque negativo com
+  divergência registrada; não descarta receita por saldo de estoque posterior.
+- Pagamentos parciais mantêm o turno original, inclusive após a comanda fechar
+  em outro turno. Vendas tardias geram ajuste separado; o fechamento original
+  não é reescrito silenciosamente.
+- Central por loja lista pendências e permite recuperação criptografada por
+  senha, preservando IDs e origem. Recuperação de outro operador exige
+  conferência do titular. Conflitos nunca são descartados automaticamente.
+  A conferência permite repetir após correção, reconhecer registro repetido,
+  registrar consumo adicional como venda avulsa auditada ou registrar uma
+  devolução **já realizada**. Não executa devolução em banco/adquirente.
+  Recebimento sem turno identificável e múltiplos clientes fiado ambíguos
+  permanecem para investigação; a central não inventa a atribuição financeira.
+  Ajustes posteriores e divergências de estoque ficam consultáveis pelo titular
+  mesmo depois de a fila esvaziar (50 registros recentes de cada tipo).
+- Aviso discreto por episódio, com intervalo mínimo de dois minutos. A perda
+  de conexão não abre modal. Falha de gravação é erro explícito. Atualização de
+  PWA fica bloqueada durante escrita, sincronização, pendências ou falta de rede.
+
+### Persistência: mensagem correta ao cliente
+
+Fechar normalmente e reabrir preserva gravações confirmadas em IndexedDB.
+Isso não equivale a cópia remota: limpar dados do site, remover o aplicativo,
+modo privado, expulsão pelo navegador ou defeito físico podem causar perda.
+`navigator.storage.persist()` reduz expulsão automática quando concedido;
+não impede exclusão deliberada. Não prometer sobrevivência absoluta a falha
+de energia. [Referência do navegador](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria).
+
+### Validação e liberação
+
+- Teste de 1.000 intenções duráveis, duas instâncias de sync e 50 respostas
+  perdidas após commit: 1.000 confirmações, 1.000 efeitos no servidor simulado,
+  nenhuma duplicação. Usa Dexie/fake-indexeddb; não é medição de carga real.
+- Harness do build com Service Worker real testa `/app`, `/app/mesas` e
+  `/gestao/caixa` sem rede em 1280 e 390 px. Checkout real preparado e retomada
+  são testados com dados sintéticos; nenhuma venda de cliente é enviada.
+- Matriz PostgreSQL descartável cobre atomicidade, idempotência, fiado,
+  divergência de estoque e atribuição de turno. O fallback PGlite executa SQL
+  real em sessão única; não substitui teste de concorrência multi-sessão.
+- Resultados finais, comandos e limitações em [CURRENT](../CURRENT.md) e no
+  [plano de execução](../superpowers/plans/2026-09-05-offline-continuity.md).
+
+Reproduzir SQL sem acesso remoto (PowerShell):
+
+```powershell
+node supabase/verification/offline-pglite.mjs (Join-Path $env:TEMP 'zelo-offline-pglite/node_modules/@electric-sql/pglite')
+```
+
+O runner exige o pacote externo `@electric-sql/pglite@0.3.14`, instalado em
+diretório temporário; não adiciona dependências ao produto. Executa a matriz
+offline e a regressão existente de pizza; exclui seed específico de cliente
+e policy de Storage sem relação financeira.
+
+Publicar somente após migration e backend compatíveis, validar uma loja piloto
+e preparar cada aparelho. Antes de expandir: Android/iPhone físicos, impressão,
+turno prolongado, queda de energia e concorrência PostgreSQL multi-sessão. LAN
+e transmissão de cozinha entre aparelhos sem internet continuam fora da fase 1.
+Rollback desabilita novas entradas no protocolo; não deve apagar IndexedDB,
+recibos, migrations ou as filas já existentes.
+
+## Histórico anterior ao protocolo v1
+
+**As seções seguintes preservam o diagnóstico e os contratos legados. Não são
+a descrição vigente da implementação acima.**
+
 Este documento descreve o comportamento offline atual do ZeloPDV, com foco no módulo de frente de caixa (`/app`). Ele deve ser atualizado sempre que o fluxo de venda, estoque, caixa, fiado, gate de assinatura ou sincronização offline mudar. Espelho no vault: `pdvObsidian/OFFLINE.md`.
 
 ## Resumo executivo
+
+### Auditoria de operação sob queda de rede — 2026-09-05
+
+**Veredito: frente de caixa tem contingência parcial; Mesas não tem operação
+offline. O conjunto ainda não atende continuidade de atendimento sob pressão.**
+Esta rodada é diagnóstico solicitado antes de implementar melhorias. Só foram
+adicionados probes de teste e documentação; nenhuma venda real, migration ou
+publicação foi executada. Há edições simultâneas de montagem/pizza no workspace,
+fora desta análise. Resultados não certificam essas edições nem produção.
+
+#### Evidência executada
+
+- 70 testes existentes passam: `offlineDb`, persistência e recuperação,
+  `offlineEntitlement`, `guards.offline`, `finance.saleOps` e `pdvCache`.
+- `npx vitest run tests/offline.audit.test.js`: três reproduções passam ao
+  **confirmar limitações**, não ao aprovar o comportamento. O harness extrai
+  funções originais pelo AST Svelte e executa seus corpos com respostas de rede
+  simuladas. Não é um teste da interface nem do PostgreSQL.
+  1. `verificarCaixaAberto`: erro de rede zera ID, marca caixa fechado e abre
+     modal mesmo partindo de um caixa aberto conhecido.
+  2. `abrirMesa`: falha de rede impede entrar na comanda existente.
+  3. `fecharMesa`: após sucesso de venda/itens e falha nos pagamentos, repetir
+     produz duas inserções de venda sem `client_sale_id`. Banco simulado;
+     comprova reenvio inseguro do cliente, não duplicação observada em produção.
+- `node tests/browser/offline/run.mjs`: dois cenários passam em Chromium,
+  desktop e Pixel 5 **emulado**. Módulo real `offlineDb`, IndexedDB real,
+  `context.setOffline(true)`: catálogo e venda persistem sem rede; fechar/reabrir
+  o banco preserva dados; recarregar o harness depois de reconectar também.
+  Replay com resposta perdida preserva pendência e chave; confirmação posterior
+  remove a linha. RPC simulada, conexões externas bloqueadas.
+- Não executado: jornada autenticada completa, reload do aplicativo real sem
+  rede, build novo, banco de homologação, Android/iPhone físico, impressão em
+  papel e teste prolongado de carga. Não confundir este probe de armazenamento
+  com aprovação de PWA, autenticação, SQL ou experiência móvel.
+
+#### Achados e prioridade
+
+| Prioridade | Achado | Consequência operacional / evidência |
+| --- | --- | --- |
+| P0 | Fechamento de Mesa sem transação única e sem intenção idempotente | Queda entre venda, itens, pagamentos, fiado e fechamento deixa resultado parcial; retry pode reenviar venda. Reprodução acima; `mesas/[id]/+page.svelte`, `fecharMesa`. Alguns updates finais nem verificam `error`. |
+| P0 | Retomada do caixa depende de consulta online | Recarregar pode mostrar produtos mas bloquear atendimento com modal de abrir caixa. `app/+page.svelte`, `verificarCaixaAberto`; reproduzido. Entitlement em cache não resolve isso. |
+| P1 | Mesas não possui réplica local nem fila de operações | Abrir, lançar/alterar item, parcial, transferir e fechar dependem do servidor. `offlineDb` só tem catálogo e fila de vendas de PDV. Gate `hasMesasAddon` também consulta rede sem snapshot do add-on. |
+| P1 | PDV salva localmente somente depois da falha da RPC | Consulta de estoque e RPC são aguardadas antes da persistência, sem deadline explícito nessas chamadas. Rede que não responde pode prender o atendimento; fechar processo antes do catch pode perder a intenção/chave. Chave do carrinho não é persistida antes do primeiro envio. |
+| P1 | Confirmação online sem validar `data.id` | O caminho online da tela aceita resposta sem ID, diferente do replay. Falha de contrato não deve limpar ou concluir a intenção. Achado de leitura, ainda sem reprodução da tela. |
+| P1 | Estoque local e saldo não incorporam pendências | Mesmo dispositivo pode continuar vendendo contra snapshot antigo. `atualizarSaldoCaixa` consulta servidor; não há projeção das vendas locais. Conflito posterior precisa de resolução operacional, não retry infinito. |
+| P1 | Fila sem classificação durável dos erros | Só `aguardando` + contagem; falha de rede, acesso revogado e conflito de estoque não têm tratamento distinto na tela. Retry é sequencial, sem deadline/backoff por registro e ligado ao ciclo da página `/app`. |
+| P1 | Bootstrap offline não certificado | SW gerado localmente em 2026-09-04 usa `NavigationRoute(createHandlerBoundToURL('/'))`; o plugin instalado adota `/` por padrão. Não há prova de que esse fallback público hidrata corretamente `/app` e Mesas. Precisa testar build servido, incluindo reload e abertura direta. |
+| P2 | Dados auxiliares incompletos | Pessoas para fiado, perfil de recibo, plataformas/tabelas de preço, caixa e permissões não formam snapshot operacional persistente coerente. Permissões usam cache de sessão separado, limpo em eventos de autenticação; validar remount e sessão expirada. |
+| P2 | Rascunho e armazenamento sem proteção operacional completa | `zelo_comanda` usa sessionStorage, sem escopo de loja na chave e sem chave persistente da intenção; cache de catálogo substitui a loja anterior. Não há verificação de persistência/quota no módulo offline auditado. |
+| P2 | Reconciliação altera contexto financeiro | RPC usa caixa original somente se ainda aberto, senão caixa atual/null; grava ator autenticado do replay. Preservar separadamente turno de origem, operador original e sincronizador com autorização verificável. Não confiar cegamente no operador declarado pelo cliente. |
+
+O banner global atual diz “Você está offline. Verifique sua conexão.”; o checkout
+mostra “Venda realizada com sucesso!” para ambas as situações, e o número remoto
+ainda não existe no offline. Isso informa pouco sobre o que foi salvo e o que
+continua disponível. A fila segura é uma boa base, mas não resolve a jornada.
+
+#### Proposta de evolução, na ordem recomendada
+
+1. **Integridade de Mesas antes de habilitar replay.** Criar comando atômico de
+   fechamento, com chave estável, lock/revisão de comanda e retorno idempotente.
+   Venda, itens, pagamentos parciais, vínculos, fiado e status devem confirmar
+   juntos. Estoque já reservado não pode ser baixado duas vezes. Repetições de
+   adicionar/remover item também precisam de ID de operação; repetir delta sem
+   dedupe é perigoso. Testar a migration em PostgreSQL descartável com RBAC.
+2. **PDV com confirmação local durável.** Gravar intenção e chave em IndexedDB
+   antes de enviar; confirmar na interface somente após commit local. Projetar
+   carrinho, saldo e estoque pendente a partir desse registro; sincronizar em
+   segundo plano. Erro de negócio confirmado recebe estado próprio e resolução,
+   não desaparece nem é disfarçado como venda remota confirmada. Recuperar caixa,
+   catálogo, recibo e capacidades do snapshot da mesma loja/operador.
+3. **Arranque e retomada completos.** Shell operacional cacheado e testado,
+   snapshot versionado com validade, política de sessão offline distinta da
+   renovação do token remoto, tratamento de quota e persistência. Inicializar pela
+   leitura local e atualizar depois, sem esperar falha da rede. Não autoatualizar
+   a aplicação em meio a atendimento/pendências. Coordenar o sync entre abas e
+   cancelar a execução se identidade/tenant mudar durante a fila.
+4. **Mesas locais com reconciliação explícita.** Guardar mapa, comandas, itens,
+   pagamentos e comandos ordenados por comanda. IDs locais estáveis, versões,
+   dedupe, dependências e conflitos visíveis. Começar com responsabilidade por
+   mesa/dispositivo; pagamento/transferência/fechamento concorrente nunca deve
+   usar “última gravação vence”. Preservar todos os lançamentos em conflito.
+5. **Experiência e homologação.** Indicador discreto “Operando offline · 3 vendas
+   salvas neste aparelho”; confirmação com referência local estável; reconexão
+   silenciosa; “Tudo sincronizado” após confirmação. Central com detalhes,
+   última tentativa, causa e ação para pendências que exigem conferência.
+   O operador continua vendendo enquanto o sync roda. Mostrar “Pronto para
+   trabalhar offline” só após validar shell, snapshot e gravação local.
+
+Armazenamento persistente reduz expulsão automática, mas não torna dados locais
+imunes a limpeza pelo usuário ou falha do dispositivo; medir espaço disponível e
+oferecer recuperação segura das pendências da própria loja. Referências:
+[MDN — quotas e remoção](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria)
+e [Vite PWA — SvelteKit](https://vite-pwa-org.netlify.app/frameworks/sveltekit.html).
+
+**Vários aparelhos e cozinha:** se todos perdem internet, mas continuam na mesma
+rede local, um coordenador local pode permitir que caixa, garçons e cozinha se
+comuniquem. Isso exige serviço acessível na LAN, disponibilidade, autenticação e
+compatibilidade dos navegadores; é uma fase arquitetural, não recurso já existente.
+Se os aparelhos também perdem comunicação entre si, não conseguem conhecer os
+lançamentos uns dos outros em tempo real. Cada um pode continuar localmente, mas
+é necessário assumir responsabilidade por mesa e reconciliar depois. O fluxo
+HTTP de cozinha atual não entrega novos pedidos offline.
+
+#### Critérios de aceite propostos (ainda não atingidos)
+
+- Catálogo e caixa disponíveis após reload e reabertura offline com preparação
+  prévia; login inicial continua exigindo conexão.
+- Feedback local de inclusão/checkout com meta p95 <= 300 ms em dispositivos
+  de referência; medir em aparelho real, não apenas computador emulado.
+- Lote de 1.000 vendas com queda antes do envio, após commit e antes da resposta:
+  zero perda e uma única venda/baixa/débito por intenção após reconciliação.
+- Reiniciar aba/navegador durante commit, quota cheia, cache antigo, migração de
+  IndexedDB, atualização de SW, rede lenta sem resposta e falhas 401/403/5xx.
+- Mesas: abrir, modificar, dividir/parcial, transferir, cancelar, fechar e enviar
+  cozinha; dois dispositivos disputando a mesma comanda; nenhum pagamento perdido
+  ou duplicado. As indisponibilidades de comunicação devem aparecer claramente.
+- Estoque simples/compartilhado/componentes, desconto, múltiplos pagamentos, fiado,
+  preços, caixa fechado remotamente e operador revogado/trocado durante replay.
+- Chrome/Edge desktop, Android real e Safari/PWA iPhone real; suspensão de tela,
+  retomada, impressão local e turno de 8 horas com oscilações.
+
+Comandos desta rodada:
+
+```powershell
+npx vitest run tests/offlineDb.test.js tests/offlineDb.persistence.test.js tests/offlineDb.recovery.test.js tests/offlineEntitlement.test.js tests/guards.offline.test.js tests/finance.saleOps.test.js tests/pdvCache.test.js
+npx vitest run tests/offline.audit.test.js
+node tests/browser/offline/run.mjs
+```
 
 Desde 2026-09-04, catálogo/categorias/subcategorias são persistidos com owner
 e só podem ser lidos pelo mesmo titular. Linhas antigas sem dono exigem
@@ -41,7 +265,12 @@ usam o mesmo contrato de venda única ou múltipla; a separação no relatório 
 snapshot `caixa_fechamentos.totais_pagamento` acontecem quando a venda já foi
 confirmada e o caixa é fechado online.
 
-O frente de caixa (`/app`) opera em modo **offline-first na leitura e online-confirm na escrita**. Ele renderiza catálogo, categorias e estoque a partir de um cache persistente (IndexedDB), registra a venda mesmo sem rede e sincroniza depois pela RPC atômica `criar_venda_completa`. O gate de assinatura tolera queda de rede reusando o último entitlement validado, então recarregar a página offline não expulsa mais o operador (janela de carência de 7 dias).
+O frente de caixa (`/app`) usa cache em memória e fallback IndexedDB na leitura,
+com tentativa online antes da escrita local. Registra vendas quando a tentativa
+remota falha por conexão e sincroniza depois pela RPC `criar_venda_completa`.
+O gate de assinatura reusa entitlement por até 7 dias, mas isso não garante
+retomada da operação: caixa aberto, sessão e shell também precisam funcionar
+sem rede, conforme os achados de 2026-09-05 acima.
 
 Não é um modo offline-first completo. A aplicação ainda depende de internet para autenticar/validar assinatura na primeira vez, login, abrir/fechar caixa, cadastrar/editar produtos, usar módulos de pedidos/mesas/cozinha e consultar relatórios.
 
@@ -75,7 +304,7 @@ A causa do "fica faltando produto offline" não era a fila de vendas (já estava
 | Área | Funciona offline? | Motivo |
 | --- | --- | --- |
 | Abrir a aplicação pela primeira vez sem internet | Não | Sem snapshot prévio, o gate precisa validar online ao menos uma vez; o service worker/cache de rotas também depende de estado prévio. |
-| Reabrir/recarregar o PDV offline após sessão válida | Sim (≤ 7 dias) | `ensureActiveSubscription` cai no snapshot de entitlement quando a falha é de rede. Após a carência, exige rede. |
+| Reabrir/recarregar o PDV offline após sessão válida | Não garantido | O gate tem carência de 7 dias, mas a verificação de caixa falha fechado e o shell/renovação de sessão não estão certificados; ver auditoria 2026-09-05. |
 | Login/logout | Não | Depende do Supabase Auth. |
 | Abrir caixa | Não | O fluxo consulta e grava no Supabase. |
 | Fechar caixa | Não | Depende de vendas, sangrias, suprimentos e persistência online. |
@@ -122,7 +351,7 @@ O snapshot de entitlement do gate de assinatura vive em **localStorage** (`zelo_
 - A venda online e o replay offline usam o mesmo formato de payload.
 - A RPC centraliza venda, itens, pagamentos, estoque, fiado e taxas de plataforma.
 - A sincronização apaga do IndexedDB somente vendas que retornam `data.id`.
-- Cada venda enviada pela RPC carrega `client_sale_id`, persistido antes da primeira tentativa; registros legados recebem a chave em transação Dexie para que abas concorrentes reutilizem a mesma intenção.
+- O replay persiste `client_sale_id` antes de enviar; registros legados recebem a chave em transação Dexie para que abas concorrentes reutilizem a mesma intenção. Na primeira tentativa online do checkout, a chave ainda fica somente em memória até eventual fallback offline.
 - Se a mesma venda for reenviada com o mesmo `client_sale_id`, a RPC retorna a venda existente e não baixa estoque nem lança fiado nem cria evento de extrato de novo.
 - Recebimentos de fiado continuam online: exigem a RPC atômica para manter saldo, extrato e suprimento de caixa consistentes.
 - Erros de regra de negócio não são mais colocados na fila offline.
@@ -153,7 +382,7 @@ Registradas em `TRADEOFFS.md`:
 
 Feito nesta iteração (2026-06-02):
 
-- [x] Reabrir/recarregar o PDV sem internet depois de uma sessão válida (gate tolerante, carência de 7 dias).
+- [ ] Reabrir/recarregar o PDV sem internet depois de uma sessão válida: gate tolerante implementado, mas jornada reaberta pela auditoria de 2026-09-05 por bloqueio na verificação do caixa e ausência de homologação do shell.
 - [x] Cachear categorias, subcategorias e produtos (com estoque) em IndexedDB e **lê-los** no cold-start.
 - [x] Indicador de vendas pendentes no PDV + botão de sincronizar + retry periódico.
 

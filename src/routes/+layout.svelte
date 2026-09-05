@@ -11,6 +11,7 @@
 
   let supabase = null;
   let PinSetupModal = null;
+  let ensureActiveSubscription;
   let isSubscriptionActiveStrict;
   let requiredOk;
   let authModulesPromise;
@@ -24,6 +25,7 @@
         import('$lib/components/PinSetupModal.svelte'),
       ]).then(([supabaseModule, guardsModule, profileUtilsModule, pinSetupModule]) => {
         supabase = supabaseModule.supabase;
+        ensureActiveSubscription = guardsModule.ensureActiveSubscription;
         isSubscriptionActiveStrict = guardsModule.isSubscriptionActiveStrict;
         requiredOk = profileUtilsModule.requiredOk;
         PinSetupModal = pinSetupModule.default;
@@ -212,6 +214,15 @@
       if (navigated || !authReady) return;
       // Não redirecionar em páginas de erro (404, 500, etc.)
       if (get(page).error) return;
+      // Operational routes share the canonical guard, including network fallback.
+      if (matchesProtectedPrefix(window.location.pathname, subscriptionRequiredPrefixes)) {
+        const context = await ensureActiveSubscription({ requireProfile: true });
+        if (context) {
+          const { startOfflineRuntime } = await import('$lib/offline/runtime');
+          void startOfflineRuntime(context).catch((error) => console.warn('[offline] Startup:', error?.message));
+        }
+        return;
+      }
       // Se logado, checa assinatura antes de liberar rotas protegidas
       let hasActiveSub = false;
       let hasCompleteProfile = false;
@@ -297,6 +308,10 @@
     supabase.auth.onAuthStateChange((event, sess) => {
 
       session = sess;
+      if (event === 'SIGNED_OUT') {
+        void import('$lib/offlineEntitlement').then(({ clearEntitlementSnapshot }) => clearEntitlementSnapshot());
+        void import('$lib/offline/runtime').then(({ stopOfflineRuntime }) => stopOfflineRuntime());
+      }
       if (session) void trackFeatureUsage(window.location.pathname);
       if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'PASSWORD_RECOVERY'].includes(event)) {
         authReady = true;
@@ -323,6 +338,8 @@
   async function logout() {
     $sessionStore = null;
     $companyNameStore = null;
+    const { clearEntitlementSnapshot } = await import('$lib/offlineEntitlement');
+    clearEntitlementSnapshot();
     await supabase.auth.signOut();
     window.location.href = '/login';
   }
@@ -370,6 +387,7 @@
   import { Toaster } from 'svelte-sonner';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import SupportChat from '$lib/components/SupportChat.svelte';
+  import OfflineStatus from '$lib/components/OfflineStatus.svelte';
   import UpdateAvailable from '$lib/components/UpdateAvailable.svelte';
   import { shouldPromptPinSetup } from '$lib/adminPinPrompt';
   import { adminUnlocked } from '$lib/stores/adminStore';
@@ -437,12 +455,13 @@
 />
 <ConfirmDialog />
 <UpdateAvailable />
+{#if isApp || path === '/gestao/caixa'}<OfflineStatus />{/if}
 
 {#if showPinSetup && session && !isPerfil && !isAssinatura && PinSetupModal}
   <svelte:component this={PinSetupModal} {onPinSet} />
 {/if}
 
-{#if !isOnline}
+{#if !isOnline && !isApp && path !== '/gestao/caixa'}
   <div class="text-center text-sm py-1 font-medium z-60 relative" style="background: var(--error); color: var(--primary-text);">
     Você está offline. Verifique sua conexão.
   </div>

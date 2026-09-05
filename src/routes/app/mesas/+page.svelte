@@ -6,6 +6,8 @@
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast } from '$lib/stores/ui';
+  import { startOfflineRuntime, getOfflineContext } from '$lib/offline/runtime';
+  import { loadMesaState, submitMesaOperation } from '$lib/offline/mesas';
 
   let userId = '';
   let ownerUserId = '';
@@ -30,6 +32,7 @@
     ownerUserId = authCtx.ownerUserId || authCtx.userId;
     operadorUserId = authCtx.userId;
     isSubUser = authCtx.isSubUser;
+    await startOfflineRuntime({ ...authCtx, ownerUserId });
     if (isSubUser && !(await hasAccessPermission('mesas.acessar'))) {
       addToast('Seu cargo não tem acesso ao módulo de mesas.', 'warning');
       goto('/app');
@@ -53,6 +56,15 @@
 
   async function loadMesas() {
     loading = true;
+    if (getOfflineContext()?.enabled) {
+      try {
+        const state = await loadMesaState(supabase, ownerUserId);
+        mesas = state.mesas;
+        comandasAbertas = new Map(Object.values(state.details).filter(d => d.comanda.status === 'aberta').map(d => [d.comanda.id_mesa, d.comanda.aberta_em]));
+      } catch (error) { addToast('Não foi possível carregar as mesas deste aparelho: ' + error.message, 'error'); }
+      finally { loading = false; }
+      return;
+    }
     const [mesasResp, comandasResp] = await Promise.all([
       supabase.from('mesas').select('*').eq('id_usuario', ownerUserId).eq('ativa', true).order('numero', { ascending: true }),
       supabase.from('comandas').select('id_mesa, aberta_em').eq('id_usuario', ownerUserId).eq('status', 'aberta'),
@@ -74,6 +86,15 @@
   async function abrirMesa(mesa) {
     if (opening) return;
     opening = mesa.id;
+    if (getOfflineContext()?.enabled) {
+      try {
+        const state = await loadMesaState(supabase, ownerUserId);
+        if (state.details[mesa.id]?.comanda.status !== 'aberta') await submitMesaOperation('mesa.open', { mesaId: mesa.id, comandaId: crypto.randomUUID() });
+        goto(`/app/mesas/${mesa.id}`);
+      } catch (error) { addToast('Não foi possível salvar a abertura: ' + error.message, 'error'); }
+      finally { opening = null; }
+      return;
+    }
 
     // Look up an open comanda for this mesa
     const { data: existing, error: findErr } = await supabase
@@ -182,6 +203,7 @@
       <div class="header-titles">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em]" style="color: var(--text-muted);">Vendas / Mesas</p>
         <h1 class="title">Mesas</h1>
+        <p class="muted">Sem conexão, alterações de outros aparelhos podem não aparecer.</p>
         <div class="kpi-row" aria-label="Resumo do status das mesas">
           <span class="kpi-chip" data-status="livre">
             <span class="kpi-dot" aria-hidden="true"></span>

@@ -2,7 +2,7 @@ import Dexie from 'dexie';
 import { createClientSaleId } from './finance/saleOps.js';
 import { isNetworkError } from './netStatus.js';
 
-export const db = new Dexie('ZeloPDVDB');
+export const db = new Dexie('ZeloPDVDB', { chromeTransactionDurability: 'strict' });
 
 // v1 — schema original
 db.version(1).stores({
@@ -40,6 +40,15 @@ db.version(5).stores({
     vendas_pendentes: '++id, createdAt, status, ownerUserId, operatorUserId',
     categorias: 'id, nome',
     subcategorias: 'id, id_categoria'
+});
+
+// Additive: legacy queues remain intact until explicitly reconciled.
+db.version(6).stores({
+    offline_operations: '[ownerUserId+operationId], ownerUserId, [ownerUserId+status], [ownerUserId+entityType+entityId]',
+    offline_snapshots: '[ownerUserId+key], ownerUserId',
+    offline_drafts: '[ownerUserId+operatorId+key], ownerUserId',
+    offline_entities: '[ownerUserId+entityType+entityId], ownerUserId',
+    offline_meta: 'key'
 });
 
 /**
@@ -108,6 +117,19 @@ export async function getVendasPendentes() {
  */
 export async function atualizarCacheProdutos(produtos, ownerUserId) {
     return replaceCatalogCache(db.produtos, produtos, ownerUserId);
+}
+
+/** Catalog stock and its acknowledged-operation boundary always move together. */
+export async function atualizarCatalogoOffline(produtos, ownerUserId, includedOperationIds, expectedOperationIds) {
+    if (!ownerUserId) throw new Error('Titular obrigatório.');
+    return db.transaction('rw', db.produtos, db.offline_snapshots, db.offline_operations, async () => {
+        const operations = await db.offline_operations.where('ownerUserId').equals(ownerUserId).toArray();
+        if (expectedOperationIds && operations.some(op => op.status !== 'acked' || !expectedOperationIds.includes(op.operationId))) return false;
+        await db.produtos.clear();
+        await db.produtos.bulkAdd(produtos.map(row => ({ ...row, _cacheOwnerUserId: ownerUserId })));
+        await db.offline_snapshots.put({ ownerUserId, key: 'catalog.includedOperations', value: includedOperationIds, updatedAt: new Date().toISOString() });
+        return true;
+    });
 }
 
 async function replaceCatalogCache(table, rows, ownerUserId) {
@@ -219,7 +241,7 @@ export async function recuperarVendasSemTitular(supabase, ownerUserId) {
  * Constrói payload da RPC a partir do formato antigo (pré-v3) — best effort.
  * Retorna null se não tem dados mínimos.
  */
-function legacyToPayload(record) {
+export function legacyToPayload(record) {
     if (!record || record.payload) return null; // já é v3
     if (!record.itens?.length) return null;
 

@@ -5,6 +5,9 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
+  import { getOfflineContext, submitOfflineOperation } from '$lib/offline/runtime';
+  import { listOperations } from '$lib/offline/operations';
+  import { ensureActiveSubscription } from '$lib/guards';
   import { addToast } from '$lib/stores/ui';
   
   const dispatch = createEventDispatcher();
@@ -12,7 +15,7 @@
   /** @type {boolean} */
   export let open = false;
   
-  /** @type {number | null} */
+  /** @type {number | string | null} */
   export let idCaixa = null;
   
   /** @type {number} */
@@ -26,8 +29,10 @@
   let motivo = '';
   let salvando = false;
   let erro = '';
+  let movementIntent = null;
   
   async function handleSubmit() {
+    if (salvando) return;
     try {
       erro = '';
       
@@ -50,26 +55,27 @@
       
       salvando = true;
       
-      const { data: userData } = await supabase.auth.getUser();
-      const id_usuario = userData?.user?.id ?? null;
-      if (!id_usuario) {
-        throw new Error('Sessão inválida. Faça login novamente.');
+      const context = getOfflineContext();
+      let data;
+      if (context?.enabled) {
+        movementIntent ||= crypto.randomUUID();
+        const operations = await listOperations(context.ownerUserId);
+        const turn = operations.find(operation => operation.type === 'caixa.open' && operation.entityId === String(idCaixa));
+        const operation = await submitOfflineOperation('caixa.move', String(idCaixa), {
+          id_caixa: idCaixa, tipo: tipo === 'saida' ? 'sangria' : 'suprimento', valor: v, motivo: motivo || null,
+        }, { operationId: movementIntent, dependencies: turn ? [turn.operationId] : [] });
+        data = { id: operation.operationId, created_at: operation.occurredAt };
+      } else {
+        const auth = context || await ensureActiveSubscription();
+        if (!auth?.ownerUserId) throw new Error('Sessão inválida. Faça login novamente.');
+        const result = await supabase.from('caixa_movimentacoes').insert({
+          id_caixa: idCaixa, id_usuario: auth.ownerUserId,
+          tipo: tipo === 'saida' ? 'sangria' : 'suprimento', valor: v, motivo: motivo || null,
+        }).select('id, created_at').single();
+        if (result.error) throw new Error(result.error.message);
+        if (!result.data?.id) throw new Error('O sistema não confirmou a movimentação. Confira antes de repetir.');
+        data = result.data;
       }
-      
-      // Persiste a movimentação de caixa
-      const { data, error } = await supabase
-        .from('caixa_movimentacoes')
-        .insert({
-          id_caixa: idCaixa,
-          id_usuario,
-          tipo: tipo === 'saida' ? 'sangria' : 'suprimento',
-          valor: v,
-          motivo: motivo || null
-        })
-        .select('id, created_at')
-        .single();
-      
-      if (error) throw new Error(error.message);
       
       // Dispatch evento de sucesso com dados para impressão opcional
       dispatch('sucesso', {
@@ -84,6 +90,7 @@
       
       addToast('Movimentação registrada com sucesso.', 'success');
       
+      movementIntent = null;
       // Reset
       tipo = 'saida';
       valor = 0;
@@ -97,6 +104,7 @@
   }
   
   function handleClose() {
+    if (salvando) return;
     erro = '';
     salvando = false;
     dispatch('close');
