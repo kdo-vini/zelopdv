@@ -6,7 +6,7 @@ Esta seção é a referência atual da rodada. Os registros abaixo do histórico
 preservam a situação observada em cada data, inclusive contagens e limitações
 que foram superadas; não devem ser usados como status de publicação atual.
 
-- Validação PDV: **1.031 testes passam, três skips SQL; check 0 erros/0 avisos**.
+- Validação PDV: **1.039 testes passam, três skips SQL opt-in; check 0 erros/0 avisos**.
   Os skips da suíte rápida não substituem os probes separados: sete matrizes
   SQL e três provas de concorrência passaram em duas rodadas no PostgreSQL 17
   descartável. Os dois builds Vercel completos passaram em Linux na
@@ -30,10 +30,11 @@ que foram superadas; não devem ser usados como status de publicação atual.
   cinco `gray-on-color` combinam estados diferentes de hover/seleção/disabled,
   confirmados no código; um tamanho de fonte de 11 px é preexistente e foi
   preservado fora do escopo de rebrand. Isso não certifica contraste/WCAG geral.
-- Menu publicado: `master` em `37b4b9e1accb8a81b80bf253efebc520bade6a90`;
-  Dokploy concluiu o deploy em 28 s. Verificação pública de
+- Menu publicado: `master` em `4faa1f32f3275a2cf21b8d382e2a6e9b48a6ca44`;
+  Dokploy concluiu o deploy. Verificação pública de
   `menu.zelopdv.com.br` confirmou o SHA no backend/frontend e 32 assets
-  (1.633.991 bytes). Cupom atômico, lease push e guard de cotação já têm
+  (1.634.018 bytes). A CI `33936060735` passou com 663 unitários, E2E
+  40/4 skips, PostgreSQL, build Docker e verificador HTTP. Cupom atômico, lease push e guard de cotação já têm
   migrations canônicas aplicadas no PDV; o Menu usa espelhos de teste dessas funções.
 - Printer: release 0.2.0, revisão `e068`, CI `33933244243` verde.
   Auto-print coordena owner/pedido e preserva resultado incerto;
@@ -46,9 +47,10 @@ que foram superadas; não devem ser usados como status de publicação atual.
   após revisão e matriz final: operador bloqueado é recusado; assinatura própria
   preserva a loja do ex-operador. ACL authenticated/service_role preservada,
   anon negado. Estoque, fiado e uma venda por intenção conferidos no descartável.
-- Estado a confirmar: publicação PDV e Chat aguarda confirmação; Chat `0d67676`
-  passou CI, mas o build Dokploy recusou o placeholder `${SOURCE_COMMIT}` em
-  PUBLIC_APP_VERSION. Remoção desse override e publicação em fechamento.
+- Chat: a base `0d67676` está publicada e verificada; o próximo patch de CI
+  adiciona smoke HTTP às imagens e um job PostgreSQL isolado para as RPCs de
+  concorrência. O commit final será registrado aqui após o gate verde e a
+  conferência dos dois serviços no Dokploy.
 
 ## Histórico de registros anteriores
 

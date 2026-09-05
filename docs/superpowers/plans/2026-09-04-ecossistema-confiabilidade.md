@@ -23,39 +23,39 @@ Arquivos: `src/lib/zeloImpressaoClient.js`, `src/lib/printService.js`, `src/rout
 
 Contrato: `intent: {mode:'automatic', orderId, purpose:'order_ticket'}` com `companyStoreId=owner_user_id`; manual usa `{mode:'manual'}` e jobId novo. Health anuncia `capabilities.canonicalAutoPrint`; cliente antigo continua manual. Cliente automático exige suporte antes do POST. Preferência inicial PDV, configurável no Printer; outro canal aguarda 1500 ms e pode assumir se preferido não chegar.
 
-- [ ] Cobrir dois canais, inversão de chegada, owners distintos, conteúdo distinto, segunda via, falha segura e resposta perdida.
-- [ ] Persistir reserva antes do spool; restart de reserva incompleta retorna resultado desconhecido; capacidade cheia não expulsa chaves vigentes.
-- [ ] Alinhar o owner nos consumidores e testar que agente antigo não recebe impressão automática.
-- [ ] Construir release/SDK/instalador; validar artefato e documentar limites físicos.
+- [x] Cobrir dois canais, inversão de chegada, owners distintos, conteúdo distinto, segunda via, falha segura e resposta perdida.
+- [x] Persistir reserva antes do spool; restart de reserva incompleta retorna resultado desconhecido; capacidade cheia não expulsa chaves vigentes.
+- [x] Alinhar o owner nos consumidores e testar que agente antigo não recebe impressão automática.
+- [x] Construir release/SDK/instalador; validar artefato e documentar limites físicos.
 
 ## 2. Menu e integridade de pedido
 
 Arquivos: `server/cartSessions.ts` e serviços de entrega/cupons do Menu; migration forward-only no ledger PDV.
 
-- [ ] Backup restrito dos patches; merge explícito de upstream preservando commit local; reconciliar stock já corrigido remotamente.
-- [ ] Cupom e pedido na mesma transação; confirmação repetida recupera pedido antes de rejeitar revisão antiga.
-- [ ] Atualizações de cotação usam revisão esperada e incremento; falha não sobrescreve atualização concorrente.
-- [ ] Testar rollback, confirmação repetida, CAS concorrente e erros de transporte.
-- [ ] Limitar caches/fanout/deadlines identificados e executar unit, check, build e E2E local.
+- [x] Backup restrito dos patches; merge explícito de upstream preservando commit local; reconciliar stock já corrigido remotamente.
+- [x] Cupom e pedido na mesma transação; confirmação repetida recupera pedido antes de rejeitar revisão antiga.
+- [x] Atualizações de cotação usam revisão esperada e incremento; falha não sobrescreve atualização concorrente.
+- [x] Testar rollback, confirmação repetida, CAS concorrente e erros de transporte.
+- [x] Limitar caches/fanout/deadlines identificados e executar unit, check, build e E2E local.
 
 ## 3. Chat e publicação Docker
 
 Arquivos: Dockerfiles, workflows, configuração Nginx, entrypoint server e schedulers Chat; Dockerfile/entrypoint Menu.
 
-- [ ] Node suportado, compilação limpa, runtime sem ferramentas de desenvolvimento desnecessárias.
-- [ ] Shutdown com bloqueio de novos ticks e drain limitado; concorrência com teto e sem sobreposição.
-- [ ] Artefato expõe SHA de build; HTML revalida e assets com hash mantêm cache próprio.
-- [ ] Inventariar domínios/serviços/volumes no Dokploy; remover rota concorrente somente quando comprovadamente legada.
-- [ ] Publicar a revisão testada e comparar Git → deploy → versão HTTP de cada domínio.
+- [x] Node suportado, compilação limpa, runtime sem ferramentas de desenvolvimento desnecessárias.
+- [x] Shutdown com bloqueio de novos ticks e drain limitado; concorrência com teto e sem sobreposição.
+- [x] Artefato expõe SHA de build; HTML revalida e assets com hash mantêm cache próprio.
+- [x] Inventariar domínios/serviços/volumes no Dokploy; remover rota concorrente somente quando comprovadamente legada.
+- [x] Publicar a revisão testada e comparar Git → deploy → versão HTTP de cada domínio.
 
 ## 4. PDV/admin e gates finais
 
 Arquivos: manifests/locks dos dois apps, `src/routes/api/admin/billing/update-user-subscription/+server.js`, testes operacionais e workflow Linux.
 
-- [ ] Atualizar adapter e dependências vulneráveis com verificação do export Excel e compatibilidade admin.
-- [ ] Editor admin altera assinatura selecionada, confirma persistência e exige prazo explícito ao reativar acesso expirado.
-- [ ] Executar unit/check/build; resolver build Windows ou obter build Linux íntegro sem chamar compilação parcial de sucesso.
-- [ ] Atualizar relatórios/CURRENT/FIXES_PROGRESS/INCIDENTS com correções publicadas e limites verificáveis.
+- [x] Atualizar adapter e dependências vulneráveis com verificação do export Excel e compatibilidade admin.
+- [x] Editor admin altera assinatura selecionada, confirma persistência e exige prazo explícito ao reativar acesso expirado.
+- [x] Executar unit/check/build; resolver build Windows ou obter build Linux íntegro sem chamar compilação parcial de sucesso.
+- [x] Atualizar relatórios/CURRENT/FIXES_PROGRESS/INCIDENTS com correções publicadas e limites verificáveis.
 
 ## Aceite de produção
 

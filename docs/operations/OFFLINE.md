@@ -137,11 +137,17 @@ Registradas em `TRADEOFFS.md`:
 
 ## Riscos conhecidos
 
-- A idempotência depende da migration `offline_sales_idempotency_2026_05_12.sql` estar aplicada no Supabase. Sem ela, o payload já carrega `client_sale_id`, mas a proteção contra duplicidade no banco não existe.
+- A idempotência depende da RPC e do índice único por titular/client_sale_id.
+  Ambos foram conferidos; a migration `20260905003227` acrescenta o lock
+  compartilhado entre operadores e corrige o titular da venda. Não substituir
+  a chave ao recuperar erro ou histórico que exige reconciliação.
 - O estoque local não é decrementado imediatamente quando uma venda fica pendente offline. Isso evita mentir que o banco baixou, mas permite que a tela exiba estoque anterior até sincronizar.
 - Se duas máquinas venderem offline o mesmo item, a primeira que sincronizar consome o estoque. A segunda pode falhar no replay se a RPC bloquear estoque insuficiente.
 - O snapshot de entitlement é por dispositivo/navegador (localStorage); limpar dados do navegador zera a carência offline e exige nova validação online.
-- A fila offline Dexie ja carrega `ownerUserId` e `operatorUserId`, e o replay injeta `operador_id` quando necessario. Isso reduz o risco para subusuarios, mas o suporte offline continua restrito basicamente ao fluxo de venda no PDV.
+- A fila Dexie preserva `ownerUserId` e `operatorUserId` capturados localmente.
+  O banco grava como ator da RPC quem está autenticado no replay; o operador
+  declarado pelo payload não pode substituir essa autorização. O suporte
+  offline continua restrito basicamente ao fluxo de venda no PDV.
 
 ## Critérios para considerar offline-first completo
 

@@ -6,8 +6,8 @@ Os itens abaixo registram implementação e evidência de teste. Publicação e 
 revisão/aplicação da migration de venda têm uma única linha de status em
 [[CURRENT]], para não manter estados contraditórios entre documentos.
 
-- [x] FX-AUDIT-MENU-RELEASE-01 — Menu `37b4b9e` publicado pelo Dokploy;
-  verificador público confirmou SHA do frontend/backend e 32 assets. Cupom,
+- [x] FX-AUDIT-MENU-RELEASE-01 — Menu `4faa1f32f3275a2cf21b8d382e2a6e9b48a6ca44` publicado pelo Dokploy;
+  CI `33936060735` e verificador público confirmaram SHA do frontend/backend e 32 assets. Cupom,
   lease push e guard de cotação usam migrations canônicas já aplicadas no PDV.
 - [x] FX-AUDIT-PRINTER-RELEASE-01 — release 0.2.0 (`e068`), CI `33933244243`
   verde; confirmação em papel continua distinta de teste automatizado.
@@ -60,7 +60,7 @@ revisão/aplicação da migration de venda têm uma única linha de status em
   save_zelomenu_delivery_settings corrigido por migration forward, aplicada
   no banco compartilhado e registrada; ACL e corpo restante preservados.
 - [x] FX-AUDIT-QUALITY-01 (2026-09-04) — datas determinísticas no relatório
-  semanal, configuração e dependências do admin corrigidas. **1.031 testes
+  semanal, configuração e dependências do admin corrigidas. **1.039 testes
   passam/3 skips SQL**, check principal 0/0; builds Vercel completos em Linux
   na CI `33931021378`. Audit dos dois apps em zero. EPERM Windows e ausência
   de E2E comercial autenticado são limites específicos, não falha dos builds

@@ -1,5 +1,5 @@
 # Correções da auditoria do ecossistema Zelo — 2026-09-04
-> Rodada de execução atualizada em 2026-09-05 UTC. A primeira auditoria e suas medições permanecem no histórico Git e nos relatórios individuais. Publicação coordenada em andamento.
+> Rodada de execução atualizada em 2026-09-05 UTC. A primeira auditoria e suas medições permanecem no histórico Git e nos relatórios individuais. Os artefatos publicados abaixo foram conferidos por CI, Dokploy e HTTP público.
 
 ## Resultado
 
@@ -11,9 +11,9 @@ Não foi criada uma arquitetura nova. Foram corrigidos limites e contratos exist
 
 | Componente | Versão / estado |
 | --- | --- |
-| PDV e admin | Branch codex/ecossistema-confiabilidade-20260904; gates Linux anteriores verdes; consolidação final em curso |
+| PDV e admin | Branch publicada com `d2d63b9`; CI final `33935053498`/`33935225504` verdes; Vercel production conferido |
 | Chat | main 0d67676; CI completo 33933729882 verde; configuração de versão corrigida, publicação final em conferência |
-| Menu | master 37b4b9e; Dokploy Done em 28 s; domínio/32 assets confirmam o mesmo SHA |
+| Menu | master `4faa1f32f3275a2cf21b8d382e2a6e9b48a6ca44`; CI `33936060735` verde; Dokploy Done; domínio/32 assets confirmam o mesmo SHA |
 | Printer | main e068ff8; release v0.2.0 publicada, instalador/alias/SDK disponíveis; CI 33933244243 verde |
 | Supabase | Frete, cupom, lease push, cotação atual, reserva Pix e venda owner/actor aplicados, com ledger/ACL conferidos |
 
@@ -76,9 +76,9 @@ Apontamentos de advisors continuam classificados individualmente: tabelas de ser
 
 | Projeto | Evidência desta rodada |
 | --- | --- |
-| PDV/admin | 1.031 testes passam / três probes unitários opt-in; check zero; builds Vercel completos no GitHub/Linux; sete SQL e três concorrências executados pelo harness |
+| PDV/admin | 1.039 testes passam / três probes unitários opt-in; check zero; builds Vercel completos no GitHub/Linux; sete SQL e três concorrências executados pelo harness |
 | Chat | 123 arquivos de testes, lint dos dois lados, duas imagens e smoke sem rede/credenciais reais; quatro regressões de socket e oito de verificação de deploy |
-| Menu | 650 unitários; 44 E2E locais e 40 passam/quatro opt-in no CI; typechecks, SQL PGlite/PostgreSQL, build, audit, Docker/HTTP; domínio público com SHA validado |
+| Menu | 663 unitários; 40 E2E passam/quatro skips no CI; typechecks, SQL PGlite/PostgreSQL, build, audit, Docker/HTTP; domínio público com SHA validado |
 | Printer | 38 testes SDK, 33 cenários nativos, publish self-contained, installer, instalação/desinstalação isolada; CI Windows Node 24 verde |
 
 Os números referem-se às rodadas identificadas, não a uma soma de métricas incompatíveis. O total será consolidado após os últimos patches. Três skips do Vitest não escondem os probes SQL: o harness separado executou as verificações correspondentes.

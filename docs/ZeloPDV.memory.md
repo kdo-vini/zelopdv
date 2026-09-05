@@ -19,8 +19,9 @@
   reconciliar resultado incerto sem criar outra cobrança. A migration
   `20260905001053_pix_creation_reservation.sql` foi aplicada; timeout cobre
   corpo HTTP e analytics não pode transformar uma cobrança criada em erro.
-- Menu `37b4b9e` foi publicado e teve SHA de frontend/backend e assets
-  verificados no domínio público em 2026-09-04. Seu build deriva do Git limpo;
+- Menu `4faa1f32f3275a2cf21b8d382e2a6e9b48a6ca44` foi publicado e teve SHA de frontend/backend e 32 assets
+  verificados no domínio público em 2026-09-05. CI `33936060735` passou com
+  663 unitários, E2E 40/4 skips, SQL PostgreSQL e Docker HTTP. Seu build deriva do Git limpo;
   variável de runtime não pode rotular um bundle antigo com nova versão.
 - SQL compartilhado novo é versionado/aplicado pelo stream do PDV. Cupom
   público atômico, lease push e guard da cotação manual já estão aplicados.

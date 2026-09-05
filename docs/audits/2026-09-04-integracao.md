@@ -1,5 +1,5 @@
 # Integração e operação — Zelo — 2026-09-04
-> Atualizado na rodada de correções de 2026-09-05 UTC. Este documento substitui o estado de pendências da primeira auditoria. Publicação coordenada em andamento; consultar a tabela de versões no relatório do ecossistema antes de assumir que um artefato já está em produção.
+> Atualizado na rodada de correções de 2026-09-05 UTC. Este documento substitui o estado de pendências da primeira auditoria. Consulte a tabela de versões e os endpoints públicos antes de assumir que um artefato está em produção.
 
 ## Impressão PDV + Chat
 
@@ -24,7 +24,7 @@ O /connect do 0.1.4 foi preservado na reconciliação. **Revogar navegadores** r
 | --- | --- | --- |
 | PDV e admin | kdo-vini/zelopdv, main | GitHub/Vercel; CI compila ambos outputs completos em Linux |
 | Chat | kdo-vini/zelochat, main | Duas imagens do mesmo commit; /build-info.json no frontend e /api/version no backend |
-| Menu | kdo-vini/zelomenu, master | Uma imagem com frontend/backend compilados juntos; /api/health, x-app-version e assets da raiz |
+| Menu | kdo-vini/zelomenu, master `4faa1f32f3275a2cf21b8d382e2a6e9b48a6ca44` | Uma imagem com frontend/backend compilados juntos; /api/health, x-app-version e 32 assets conferidos |
 | Printer | kdo-vini/zeloprinter, main + tag de versão | CI Windows, instalador e SDK publicados na mesma release |
 
 Os builds Chat/Menu derivam a versão do commit real, recusam override divergente e código de produção fora do commit. Normalização CRLF/LF é aceita como faz o Git; alteração real e arquivo novo continuam sendo recusados. Metadados no runtime não podem mascarar a origem do artefato. Os workflows verificam código e imagens antes de considerar seus gates concluídos; a verificação pós-deploy compara os endpoints e o bundle servido com o SHA esperado.

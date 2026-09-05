@@ -1,5 +1,32 @@
 # Performance do ecossistema Zelo — 2026-09-04
 
+> Medições históricas da primeira rodada. Os valores abaixo mantêm suas datas,
+> máquinas e limitações originais; não descrevem as imagens atuais após rollout.
+> O estado de correções/publicação está em [ecossistema](2026-09-04-ecossistema.md).
+
+## Complemento após correções — 2026-09-05 UTC
+
+Chat e Menu foram atualizados para Node 24 e executados em imagens Linux reais.
+O Menu compila o servidor antes de montar o runtime. O Chat preserva o loader
+ESM necessário e suas dependências de execução, roda sem root, limita filas e
+deadlines e drena trabalhos antes de encerrar. Cache/fanout/paginação do Menu
+e paginação completa do PDV foram corrigidos. As imagens, endpoints e bundles
+foram conferidos contra o commit publicado; não foi atribuída melhoria de CPU
+ou memória apenas à troca de tag ou ao nome da pasta /app.
+
+Os dois builds PDV/admin passaram integralmente no Linux/GitHub e na Vercel.
+O instalador Printer 0.2.0 foi gerado e publicado (78.488.107 bytes no artefato
+distribuído), com smoke de instalação/desinstalação isolada. Logo, as antigas
+pendências de Node 20, Docker indisponível, Inno ausente e build Linux não
+validado foram superadas. EPERM de symlink continua sendo limitação local Windows.
+
+Cadastro deixa de esperar analytics/referral para avançar após criar a sessão.
+Não foi medido um novo INP de campo nem certificado que a espera de rede era
+a causa da long task observada. A medição PostHog original continua válida
+somente para seu recorte, sem alegação de ganho posterior.
+
+## Histórico da primeira rodada
+
 ## Conclusão técnica
 
 **A pasta `/app` do container não causa consumo de CPU ou RAM por si só.** No ZeloChat, o problema de carregamento comprovado foi o import estático do AppShell, que levava código de atendimento para landing/login. O patch lazy reduz o grafo inicial de JavaScript. Runtime web + workers no mesmo processo é um risco de contenção e de falha compartilhada; não houve evidência de saturação no instante inspecionado.

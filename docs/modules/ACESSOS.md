@@ -54,7 +54,9 @@
 
 - O owner continua sendo a ancora da empresa.
 - O subusuario tem conta propria no Supabase Auth.
-- O subusuario nao tem assinatura propria.
+- A operação como subusuário usa a assinatura do owner. Há contas históricas
+  que também têm assinatura própria; a remoção de um vínculo não pode apagar
+  essa titularidade independente.
 - Billing e extensoes continuam exclusivas do owner.
 - O subusuario herda o acesso final do owner via `subscriptions`.
 
@@ -122,10 +124,34 @@ Pessoas mantém o mesmo owner scope para leituras operacionais, mas writes
 diretos de subusuários exigem `pessoas.gerenciar` no RLS. Isso cobre a tela de
 cadastro sem bloquear a seleção de clientes no PDV, Mesas e Fichário.
 
+### Registrar venda e repetir uma intenção
+
+`criar_venda_completa` resolve `id_usuario` pelo titular e grava o ator autenticado
+da RPC em `vendas.id_operador`. Valores de identidade no payload não substituem
+essa verificação. `pdv.vender` e `pdv.receber` são conferidos antes do replay;
+lock por titular/client_sale_id permite que operadores reutilizem uma intenção
+sem repetir venda, estoque ou fiado. Operador inativo conhecido não vira titular
+pelo fallback do helper; quem tem assinatura própria preserva sua própria loja.
+Migration aplicada: `20260905003227_sale_owner_operator_context.sql`.
+
+### Remover um acesso
+
+`DELETE /api/access/users/[id]` verifica o owner do vínculo e consulta a existência
+de qualquer assinatura própria do operador, com limite de uma linha, antes de
+excluir algo. Falha nessa consulta preserva vínculo e conta Auth. Histórico
+cancelado/expirado também impede excluir a conta do titular independente.
+Depois da verificação, remove o vínculo; somente um subusuário sem assinatura
+própria é elegível para a cascata Auth existente. Convite ainda sem Auth remove
+apenas o vínculo. O audit registra o resultado da cascata; não é uma transação
+única entre PostgREST e Auth. Vínculos já apagados não são reconstruídos para
+correlacionar vendas históricas.
+
 ## Offline
 
-- Dexie v4 guarda `ownerUserId` e `operatorUserId`
-- `syncVendasPendentes()` injeta `operador_id` no replay quando necessario
+- Dexie v5 guarda `ownerUserId` e `operatorUserId`
+- A fila preserva o operador capturado localmente; a RPC autoriza e registra
+  o ator autenticado que efetivamente faz o replay, sem confiar nessa identidade
+  declarada pelo payload.
 - cobertura offline continua focada em venda do PDV, nao em gestao ampla
 
 ## Superficies sensiveis
