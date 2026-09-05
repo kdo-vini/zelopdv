@@ -152,6 +152,60 @@ export async function contarVendasPendentes(ownerUserId) {
         .and((row) => row.ownerUserId === ownerUserId).count();
 }
 
+/** Only an aggregate is exposed for records whose store is not known. */
+export async function contarVendasSemTitular() {
+    return db.vendas_pendentes.where('status').equals('aguardando')
+        .and((row) => !row.ownerUserId).count();
+}
+
+/**
+ * Explicit recovery: a caixa ID is a durable store reference, unlike the
+ * browser's current login. Validate it through the authenticated/RLS client.
+ * Does not submit, delete, alter the payload, or infer the original operator.
+ */
+export async function recuperarVendasSemTitular(supabase, ownerUserId) {
+    async function requireOwner() {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        if (!ownerUserId || data?.user?.id !== ownerUserId) {
+            throw new Error('Entre com a conta titular da loja para verificar as pendências.');
+        }
+    }
+    await requireOwner();
+    const rows = await db.vendas_pendentes.where('status').equals('aguardando')
+        .and((row) => !row.ownerUserId).toArray();
+    const caixaId = (row) => {
+        const value = row.payload ? row.payload.id_caixa : row.id_caixa;
+        const id = typeof value === 'number' || typeof value === 'string' ? Number(value) : NaN;
+        return Number.isSafeInteger(id) && id > 0 ? id : null;
+    };
+    const candidates = rows.filter((row) => caixaId(row)
+        && (!row.payload?.owner_user_id || row.payload.owner_user_id === ownerUserId));
+    const ids = [...new Set(candidates.map(caixaId))];
+    const verifiedIds = new Set();
+    for (let index = 0; index < ids.length; index += 100) {
+        const { data, error } = await supabase.from('caixas').select('id, id_usuario')
+            .eq('id_usuario', ownerUserId).in('id', ids.slice(index, index + 100));
+        if (error) throw error;
+        for (const caixa of data || []) {
+            if (caixa.id_usuario === ownerUserId) verifiedIds.add(Number(caixa.id));
+        }
+    }
+    await requireOwner(); // A login change while the query was running cancels recovery.
+    const recovered = await db.transaction('rw', db.vendas_pendentes, async () => {
+        let count = 0;
+        for (const row of candidates) {
+            if (!verifiedIds.has(caixaId(row))) continue;
+            const current = await db.vendas_pendentes.get(row.id);
+            if (!current || JSON.stringify(current) !== JSON.stringify(row)) continue;
+            await db.vendas_pendentes.update(row.id, { ownerUserId });
+            count++;
+        }
+        return count;
+    });
+    return { recovered, unresolved: await contarVendasSemTitular() };
+}
+
 /**
  * Constrói payload da RPC a partir do formato antigo (pré-v3) — best effort.
  * Retorna null se não tem dados mínimos.

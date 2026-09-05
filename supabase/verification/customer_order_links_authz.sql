@@ -17,6 +17,9 @@ create temporary table customer_order_links_fixture (
   snapshot jsonb
 ) on commit drop;
 
+grant select on customer_order_links_fixture to authenticated;
+grant select, update on customer_order_links_fixture to service_role;
+
 insert into customer_order_links_fixture (
   owner_id, other_owner_id, empresa_id, pessoa_id,
   other_tenant_pessoa_id, nonzero_pessoa_id, delete_pessoa_id

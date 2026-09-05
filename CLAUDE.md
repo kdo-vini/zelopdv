@@ -18,7 +18,7 @@
 ### Aplicações
 
 - App principal: `src/` em SvelteKit 2 + Svelte 5 + Vite 6.
-- Dashboard admin separado: `admin-dashboard/` em SvelteKit 2 + Svelte 4 + Vite 5.
+- Dashboard admin separado: `admin-dashboard/` em SvelteKit 2 + Svelte 5.57.0 + Vite 6.4.3.
 - Deploys Vercel: `zelopdv` e `zelopdv-admin` usam `@sveltejs/adapter-vercel` explícito com runtime `nodejs24.x`, respectivamente em [svelte.config.js](/home/vinicius/code/zelopdv/svelte.config.js:1) e `admin-dashboard/svelte.config.js`.
 - Cron jobs Vercel: `0 9 * * *` para onboarding emails e `0 10 * * *` para nudge de cadastro em [vercel.json](/home/vinicius/code/zelopdv/vercel.json:1).
 

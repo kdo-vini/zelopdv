@@ -20,6 +20,10 @@ create temporary table customer_identity_fixture (
   employee_person_id uuid not null
 ) on commit drop;
 
+-- Fixture access is separate from the application ACLs under test.
+grant select on customer_identity_fixture to authenticated;
+grant select, update on customer_identity_fixture to service_role;
+
 insert into customer_identity_fixture (
   owner_a, owner_b, employee_id, no_cap_id, allowed_id,
   no_cap_role_id, allowed_role_id, employee_person_id

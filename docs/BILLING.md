@@ -158,3 +158,52 @@ Regra prática:
 
 - Não há doc neste repo sobre o processo externo que executa o purge final após `deletion_scheduled_at`. O banco real não possui job `pg_cron` local para isso.
 - Falta validar em produção se todos os webhooks estão gravando `billing_webhook_events` e `webhook_events_processed` como esperado.
+
+## Pix: reserva e reconciliação da criação (2026-09-04)
+
+**Código local em validação; aplicar a migration `20260905001053_pix_creation_reservation.sql`
+antes de publicar os consumidores.** A reserva usa a tabela `billing_payments`
+existente e não altera valores, preços, RLS nem a regra de liquidação da assinatura.
+
+O app e o admin chamam `reserve_pix_payment` sob lock transacional por titular.
+A linha e o snapshot de plano/add-ons/valor são gravados antes do POST AbacatePay;
+`externalId = pix_<payment UUID>` e `metadata.paymentId/userId` identificam essa
+tentativa. Apenas a chamada que recebe `action=create` pode enviar o POST.
+Cobrança pronta com a mesma seleção é reutilizada. Outra seleção enquanto o Pix
+ainda pode ser pago retorna conflito; não se marca uma cobrança como cancelada
+apenas localmente. Expiração pelo relógio exige consulta ao provedor antes de
+liberar outra tentativa; uma liquidação tardia é devolvida ao solicitante.
+
+`creation_state` distingue `dispatching`, `unknown`, `ready` e `not_sent`.
+O deadline HTTP de 15 segundos cobre headers e corpo. Falha de configuração
+local comprovadamente anterior ao envio libera a reserva como `not_sent`.
+Falhas após chamar fetch, resposta incompleta e falha ao persistir a resposta
+mantêm o resultado incerto, inclusive HTTP de erro: não existe retry de POST.
+Não há promessa de idempotência do provedor; a garantia depende da reserva local.
+
+Recuperação operacional: repetir a ação de gerar Pix no app/admin ou consultar
+`GET /api/billing/pix/status/<paymentId>` executa apenas consulta para uma reserva
+incerta. `GET /v2/transparents/list?externalId=...&limit=2` procura a cobrança;
+zero resultados preserva a reserva (consistência eventual não prova ausência),
+mais de um resultado/página exige suporte, e um resultado só é vinculado se
+externalId ou metadata de payment+owner coincidirem e o valor for exato. Campos
+de identidade presentes mas divergentes são recusados novamente no SQL.
+Webhook assinado que chega antes da vinculação também pode iniciar essa
+reconciliação. Com ID já conhecido, usa-se o GET de consulta por ID.
+
+Um resultado incerto retorna HTTP409 `PIX_OUTCOME_UNKNOWN`, `paymentId` e
+`retrySafe:false`. A mesma tentativa pode ser consultada novamente, sem POST.
+Reserva incerta não é apagada nem liberada automaticamente por idade. Se o
+provedor nunca tornar a cobrança consultável, o suporte deve confirmar seu
+resultado com o provedor; não há botão que ignore essa proteção.
+`complete_pix_creation` preserva `status/paid_at`; a liquidação continua na
+RPC `settle_pix_payment`. Resposta PENDING tardia usa CAS e não regride pagamento
+confirmado. Analytics usa `waitUntil` e falha isoladamente após o sucesso do Pix.
+
+Validação: `node scripts/verify-pix-creation.mjs` cria PostgreSQL17 descartável
+sem rede externa, com duas sessões concorrentes, unknown durável, recuperação,
+identidade/valor, replay de liquidação, resposta tardia, falha local e ACL.
+Testes HTTP usam mocks/servidor localhost; nenhuma cobrança real foi criada.
+Contrato do provedor conferido no navegador do usuário:
+[criação](https://docs.abacatepay.com/pages/transparents/create) e
+[listagem por externalId](https://docs.abacatepay.com/pages/transparents/list).

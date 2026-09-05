@@ -1,5 +1,77 @@
 # ZeloPDV — Foco atual
 
+## Estado consolidado — auditoria de 2026-09-04
+
+Esta seção é a referência atual da rodada. Os registros abaixo do histórico
+preservam a situação observada em cada data, inclusive contagens e limitações
+que foram superadas; não devem ser usados como status de publicação atual.
+
+- Validação PDV: **1.031 testes passam, três skips SQL; check 0 erros/0 avisos**.
+  Os skips da suíte rápida não substituem os probes separados: sete matrizes
+  SQL e três provas de concorrência passaram em duas rodadas no PostgreSQL 17
+  descartável. Os dois builds Vercel completos passaram em Linux na
+  [CI 33931021378](https://github.com/kdo-vini/zelopdv/actions/runs/33931021378).
+  O EPERM de symlink observado no Windows permanece uma limitação local;
+  não impede a evidência de build Linux completo. Base desta consolidação:
+  branch em `3da8dc9`, incluindo os ajustes finais presentes no working tree na coleta.
+- Catálogo/offline: páginas de 500 e vínculos em lotes de 100 IDs, owner
+  explícito e ordenação por chave única; erro intermediário ou troca de conta
+  descarta a leitura completa. Recuperação de vendas legadas exige prova por
+  caixa/RLS, login estável e CAS no IndexedDB; dados inconclusivos ficam
+  preservados. Fila, idempotência e cache PWA seguem [OFFLINE](operations/OFFLINE.md).
+- Cobrança/admin: reserva Pix durável antes do POST e reconciliação por
+  externalId impedem novo POST após resultado incerto; timeout cobre o corpo
+  HTTP e analytics não bloqueia a resposta. A migration `20260905001053` foi
+  aplicada com ACL de serviço. Editor admin usa assinatura exata/CAS, limpa
+  extensão ao cancelar e exige prazo válido para reativação. [BILLING](BILLING.md).
+- Dependências e interface: audit dos dois apps sem vulnerabilidades;
+  admin em Svelte 5.57.0/Vite 6.4.3, adapter 6.3.4 e SheetJS 0.20.3.
+  Os seis apontamentos Impeccable foram classificados sem supressão:
+  cinco `gray-on-color` combinam estados diferentes de hover/seleção/disabled,
+  confirmados no código; um tamanho de fonte de 11 px é preexistente e foi
+  preservado fora do escopo de rebrand. Isso não certifica contraste/WCAG geral.
+- Menu publicado: `master` em `37b4b9e1accb8a81b80bf253efebc520bade6a90`;
+  Dokploy concluiu o deploy em 28 s. Verificação pública de
+  `menu.zelopdv.com.br` confirmou o SHA no backend/frontend e 32 assets
+  (1.633.991 bytes). Cupom atômico, lease push e guard de cotação já têm
+  migrations canônicas aplicadas no PDV; o Menu usa espelhos de teste dessas funções.
+- Printer: release 0.2.0, revisão `e068`, CI `33933244243` verde.
+  Auto-print coordena owner/pedido e preserva resultado incerto;
+  confirmação física de papel depende de hardware e não é inferida da CI.
+- A prova financeira reproduziu um defeito de contexto owner/actor e replay
+  em `criar_venda_completa`; a correção foi exercitada no banco descartável.
+  A revisão encontrou também o fallback de subusuário bloqueado tratado como
+  dono pelo helper; esse caso adicional foi incluído na revisão da correção.
+- Migration `20260905003227_sale_owner_operator_context.sql` aplicada e registrada
+  após revisão e matriz final: operador bloqueado é recusado; assinatura própria
+  preserva a loja do ex-operador. ACL authenticated/service_role preservada,
+  anon negado. Estoque, fiado e uma venda por intenção conferidos no descartável.
+- Estado a confirmar: publicação PDV e Chat aguarda confirmação; Chat `0d67676`
+  passou CI, mas o build Dokploy recusou o placeholder `${SOURCE_COMMIT}` em
+  PUBLIC_APP_VERSION. Remoção desse override e publicação em fechamento.
+
+## Histórico de registros anteriores
+
+> Conteúdo preservado para rastreabilidade. Expressões como “código local”,
+> “pendente” e resultados de testes nesta seção descrevem o momento original,
+> não substituem o estado consolidado acima. Trabalhos do usuário não foram
+> removidos, encerrados ou reavaliados implicitamente por esta classificação.
+
+- Catálogo completo no PDV (2026-09-04, código local): consultas paginadas em
+  500 linhas e vínculos em lotes de 100 IDs, sempre por owner e ordem estável.
+  Falha na página 2 ou troca de conta descarta a leitura sem publicar catálogo
+  parcial. Regressões cobrem 1250 linhas, complementos e produtos vinculados
+  ocultos: 12 testes passam; check 0 erros/0 avisos. Publicação coordenada pendente.
+
+- Pix AbacatePay (2026-09-04, código local): reserva durável antes do POST,
+  reconciliação por externalId, deadline de15s e analytics fora da resposta.
+  Repetir uma criação incerta consulta o provedor sem enviar outro POST.
+  Prova PostgreSQL17 isolada e revisão independente passaram; suite completa
+  1.021 passes/3 skips, check0/0 e regressões Pix verdes após a revisão.
+  Migration20260905001053 aplicada com ACL service_role; consumidor em publicação.
+  Nenhuma cobrança real foi criada.
+  Detalhes e recuperação em [BILLING](BILLING.md).
+
 - Correção dos remanescentes (2026-09-04, rodada 2, em validação): impressão
   automática envia owner + zelo_orders.id ao árbitro nativo; segunda via é
   manual. SDK bloqueia auto-print em agente sem coordenação. Editor admin
@@ -11,7 +83,17 @@
   cookies verificados. **994 testes passam / 3 skips**, check principal 0/0.
   Workflow Linux valida o output Vercel completo; Windows ainda encontra
   EPERM de symlink. Novos patches ainda não publicados. Menu/Chat/Printer e
-  migration de cupom estão em revisão coordenada.
+  migrations de cupom, lease push e guard de cotação já foram aplicadas.
+
+- Complemento de validação (2026-09-05 UTC): ambos builds Vercel completos
+  passaram em GitHub/Linux (`33931021378`). Baseline PostgreSQL 17 restaurado,
+  seis matrizes SQL transacionais e duas provas de concorrência passaram.
+  Fixtures corrigidas para conceder acesso somente às próprias tabelas
+  temporárias; probes recusam URL de banco remoto. Seed de catálogo de cliente
+  excluído explicitamente apenas do harness descartável, com hash conferido.
+  Recuperação offline comprova titular por caixa/RLS e preserva pendências
+  inconclusivas. Revisão admin corrigiu cancelamento repetido e CAS com NULL.
+  Validação adicional de venda/estoque/fiado por subusuário em execução.
 
 - Auditoria do ecossistema (2026-09-04): [relatório geral](audits/2026-09-04-ecossistema.md)
   reúne PDV, Chat, Menu, Printer, performance e integração. No PDV, cache/fila
@@ -873,7 +955,7 @@
 
 - Assinatura `d5625be9` (2026-07-28): auditoria de `billing_payments` mostrou último pagamento confirmado de R$89 (PDV + Mesas, sem Acessos), e a assinatura não tem `provider_subscription_id` ativo. A alteração manual sem evidência contratual foi corrigida: `has_acessos_addon=false`, `monthly_value_cents=22800` (bundle + Mesas, R$228), com registro em `admin_activity_logs`; nenhum histórico ou estorno foi alterado.
 
-## Snapshot validado (2026-07-27)
+### Snapshot validado (2026-07-27)
 
 - Módulo Pedidos + Cozinha aposentado (2026-07-28): o add-on legado saiu inteiro do código do ZeloPDV. `ADDONS.pedidos` e `allowsPedidos` foram removidos de `src/lib/pricing.js` e do espelho do Admin; `hasPedidosAddon` saiu de `guards.js` e o fallback `has_pedidos_addon` deixou de conceder `ordering_review`/`kitchen_queue` (D-099 encerrado). O runtime legado foi deletado: rotas `/app/pedidos/novo` e `/app/pedidos/[id]/editar`, os branches da tabela `pedidos` em `/app/pedidos` e `/app/pedidos/cozinha`, o breakdown "Pedidos (Cozinha)" dos relatórios e o unlink em `gestao/+page.svelte`. `/app/pedidos` e `/app/pedidos/cozinha` agora operam só o motor canônico `zelo_orders`. A remoção física das tabelas/colunas e o deploy cross-repo foram concluídos; o botão das Mesas está publicado via `source='mesa'` após deploy e soak.
   - **Cozinha virou exclusiva do ZeloMenu (2026-07-28, decisão de produto):** `hasKitchenQueueAccess` e o `kitchenQueueActive` da sidebar perderam o fallback por `has_mesas_addon` — a fila de preparo é alimentada só pelo motor canônico, então cliente só-Mesas deixa de ver o item Cozinha em vez de abrir uma tela sempre vazia. D-100 fica revogado nessa parte. Guardrail em `tests/guards.zelomenu.test.js` falha se `hasKitchenQueueAccess` e `hasOrderingReviewAccess` divergirem em silêncio.
@@ -952,7 +1034,7 @@
 - Backend real: Supabase + Stripe + AbacatePay + Resend + ZeloChat interno para WhatsApp.
 - Superfície ativa no código: PDV `/app`, gestão `/gestao`, pedidos/cozinha, mesas, billing, referrals, subusuários, onboarding por email/WhatsApp.
 
-## Validação executada nesta sessão
+### Validação executada nesta sessão
 
 - Branch: `main`
 - HEAD inspecionado: `e01d908` — `feat(seo): páginas comparativas vs concorrentes + hub + sitemap dinâmico`
@@ -962,7 +1044,7 @@
 - Backend real: Supabase + Stripe + AbacatePay + Resend + ZeloChat interno para WhatsApp.
 - Superfície ativa no código: PDV `/app`, gestão `/gestao`, pedidos/cozinha, mesas, billing, referrals, subusuários, onboarding por email/WhatsApp.
 
-## Validação executada nesta sessão
+### Validação executada nesta sessão
 
 - Motor canônico de pedidos online (2026-07-12): migration aditiva `.ai/migrations/canonical_online_orders_2026_07_12.sql` criada, mas **não aplicada em produção**. Inclui pedido/itens/eventos/outbox, RLS/grants, criação idempotente ligada atomicamente à sessão ZeloMenu, transições com revisão, fechamento financeiro e backfill não destrutivo das fontes legadas. O cutover e a auditoria no banco real continuam pendentes.
 
@@ -1026,11 +1108,11 @@
   - Validação: `npm run check` 0 errors / 106 warnings, `npm test` 149/149, `npm run build` ok.
   - **Pendências manuais (conta Google Ads / deploy):** habilitar Enhanced Conversions na conversão de inscrição; confirmar `SUPABASE_SERVICE_ROLE_KEY` no ambiente de produção para o cadastro automático; reativar a campanha pausada depois do deploy.
 
-## Falhas abertas confirmadas
+### Falhas abertas confirmadas
 
 - Nenhuma na suíte principal após alinhamento das fixtures ao contrato atual de perfil, CPF/CNPJ e telefone.
 
-## Drifts e riscos ativos
+### Drifts e riscos ativos
 
 - Controle de Acessos hoje faz enforcement fino majoritariamente no cliente; o servidor/RLS escopa dados por `owner_user_id`, mas não aplica o JSON de permissões como barreira forte em todas as rotas ([[CODE_REVIEW]]).
 - `AdminLock`/`pin_admin` agora valida o valor em `/api/auth/admin-pin`; o browser recebe somente status de configuração ([[CODE_REVIEW]]).
@@ -1038,7 +1120,7 @@
 - `admin-dashboard/` usa anon key e continua sendo uma superfície de defesa em profundidade; as tabelas administrativas relevantes têm RLS ativo em produção ([[CODE_REVIEW]]).
 - O webhook Pix falha fechado sem `ABACATEPAY_PUBLIC_KEY`; não há fallback hardcoded no runtime atual ([[CODE_REVIEW]]).
 
-## Hotspots que pedem cautela
+### Hotspots que pedem cautela
 
 - `src/routes/app/mesas/[id]/+page.svelte` — maior superfície operacional do repo
 - `src/routes/assinatura/+page.svelte` — billing UX e Pix
@@ -1046,7 +1128,7 @@
 - `src/routes/app/+page.svelte` — frente de caixa e replay offline
 - `admin-dashboard/src/routes/subscriptions/+page.svelte` — operação manual de assinatura
 
-## Mudanças recentes visíveis no histórico Git
+### Mudanças recentes visíveis no histórico Git
 
 - **Marketing redesign sprint (2026-06-10)**: home hero Zelinho-conversação, `/vs-*` editorial-dossier, eyebrow trope removido, copy em voz operador, decoração silenciada, pricing section endurecida, 3 archetypes de hero, token drift corrigido, inline SVGs migrados. Brief completo em `docs/projects/marketing-redesign-2026-06.md`. Score do critique: **23 → 29/40**.
 
@@ -1062,7 +1144,7 @@
 - CORS global para API admin.
 - Logging de atividade admin no servidor.
 
-## Planejamento cross-produto
+### Planejamento cross-produto
 
 - ZeloMenu/ZeloChat/ZeloPDV: decisões completas e backlog por fases em [[docs/projects/zelomenu-linear-plan.md]]. Impacta pricing, catálogo comum, Pedidos como motor interno, entitlements, ZeloChat e integração futura com Mesas.
 - A base de schema PDV-owned para publicação/modificadores do ZeloMenu já está aplicada no Supabase real.
@@ -1070,7 +1152,7 @@
 - ZLM-201 bulk publish concluído; self-service individual (nome/descrição/foto/ordem) ainda pendente.
 - Status completo em [[docs/projects/zelomenu-zelopdv-status.md]].
 
-## Próximas fatias recomendadas
+### Próximas fatias recomendadas
 
 1. Completar a UI self-service de publicação do ZeloMenu com edição de nome/descrição/foto/ordem, despublicação, pausa e modificadores; a publicação em lote básica já existe em Gestão → Produtos.
 2. Expandir o adapter atual de `zelomenu_product_publications` para leitura/edição e adicionar adapters de `zelomenu_modifier_groups`/`zelomenu_modifier_options`, sem alterar o catálogo base `produtos`.
@@ -1080,7 +1162,7 @@
 6. Atacar warnings de `svelte-check` por lote, começando pelos arquivos operacionais e não pelas páginas de marketing.
 7. Expandir hero archetypes pra páginas standalone: `/precificacao` e `/vs-planilha` ainda usam layout legado (gradient text, multi-glow) — sprint separada pode ganhar +3-4 pontos no critique.
 
-## Ajustes pós-QA da navegação mobile
+### Ajustes pós-QA da navegação mobile
 
 - A bottom navbar usa uma camada acima dos modais operacionais, inclusive `Abrir Caixa`, e permanece operável. Os painéis do Zelinho e do suporte terminam acima da faixa reservada pela navbar por meio de `--mobile-bottom-nav-offset`; toasts usam `--toast-offset`.
 - `Relatórios` passou de `Outros` para `Financeiro` na configuração central compartilhada por desktop e mobile. A rota `/relatorios`, a permissão `relatorios.ver` e a proteção por PIN não foram alteradas.

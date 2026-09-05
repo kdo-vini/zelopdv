@@ -1,3 +1,4 @@
+import { makePixReservationMock } from './helpers/pixReservationMock.js';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 function makeSelectChain(result) {
@@ -28,6 +29,7 @@ const DEFAULT_PAYMENT_ROW = {
 function makeSupabaseAdmin(state) {
   const authUser = state.authUser || { id: 'admin-1', email: 'admin@test.com' };
   return {
+    rpc: makePixReservationMock(state),
     auth: {
       getUser: vi.fn(async () => ({ data: { user: authUser }, error: null })),
     },
@@ -77,7 +79,7 @@ describe('POST /api/admin/billing/pix/create', () => {
     vi.doMock('$lib/server/abacatePay', () => ({
       isAbacatePayConfigured: () => true,
       createTransparentPixCharge: vi.fn(async () => ({
-        id: 'pix_1', status: 'PENDING', brCode: '00020101-BRCODE-TEST',
+        id: 'pix_1', status: 'PENDING', amount: 5900, brCode: '00020101-BRCODE-TEST',
         brCodeBase64: 'data:image/png;base64,test', expiresAt: new Date(Date.now() + 3600_000).toISOString(),
       })),
     }));

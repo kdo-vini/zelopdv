@@ -23,6 +23,8 @@ create temporary table fiado_estorno_authz_fixture (
   service_sale_id bigint not null
 ) on commit drop;
 
+grant select on fiado_estorno_authz_fixture to anon, authenticated, service_role;
+
 insert into fiado_estorno_authz_fixture
 select
   gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(),

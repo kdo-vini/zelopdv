@@ -1,10 +1,47 @@
 # Fixes Progress
 
-- [x] FX-AUDIT-ROUND2-01 (2026-09-04, código local) — owner/pedido compartilhados
+## Consolidação da auditoria — 2026-09-04
+
+Os itens abaixo registram implementação e evidência de teste. Publicação e a
+revisão/aplicação da migration de venda têm uma única linha de status em
+[[CURRENT]], para não manter estados contraditórios entre documentos.
+
+- [x] FX-AUDIT-MENU-RELEASE-01 — Menu `37b4b9e` publicado pelo Dokploy;
+  verificador público confirmou SHA do frontend/backend e 32 assets. Cupom,
+  lease push e guard de cotação usam migrations canônicas já aplicadas no PDV.
+- [x] FX-AUDIT-PRINTER-RELEASE-01 — release 0.2.0 (`e068`), CI `33933244243`
+  verde; confirmação em papel continua distinta de teste automatizado.
+- [~] FX-AUDIT-SALE-ACTOR-01 — defeito de owner/actor e replay financeiro
+  reproduzido e correção testada em PostgreSQL descartável. A revisão incluiu
+  o caso adicional de subusuário bloqueado; estado operacional em [[CURRENT]].
+- [x] FX-AUDIT-IMPECCABLE-01 — seis apontamentos classificados sem supressão:
+  cinco `gray-on-color` são combinações de estados diferentes confirmadas no
+  código; uma fonte de 11 px é preexistente e foi preservada fora do rebrand.
+
+- [x] FX-AUDIT-CATALOG-PAGING-01 (2026-09-04, implementação verificada) — removido corte
+  implícito de 1000 registros em `pdvCache`; páginas de 500 e IN de 100 IDs,
+  owner explícito, ordenação com PK e publicação só após leitura completa.
+  Erro intermediário ou troca de conta não contamina o cache. 12 regressões
+  passam, incluindo catálogo/complementos >1000.
+
+- [x] FX-AUDIT-PIX-CREATION-01 (2026-09-04, implementação verificada) — reserva por titular
+  antes do POST, externalId estável, resultado incerto durável e recuperação
+  por consulta, sem retry de cobrança. Deadline cobre corpo; analytics não
+  transforma sucesso em erro. Migration aplicada; situação de publicação centralizada em [[CURRENT]].
+
+- [x] FX-AUDIT-OFFLINE-RECOVERY-01 — ação de recuperação exige caixa da conta
+  confirmado por RLS, login estável e CAS no IndexedDB. Não atribui registros
+  sem prova, não altera payload e não apaga pendências. Seis regressões verdes.
+- [x] FX-AUDIT-SQL-PROBES-01 — baseline, sete matrizes SQL e três provas de
+  concorrência passaram em duas rodadas no PostgreSQL 17 descartável. Corrigidas permissões
+  das fixtures, cleanup de auth com papel adequado e observação da cadeia
+  real de locks. Nenhum grant de aplicação foi ampliado por esses testes.
+
+- [x] FX-AUDIT-ROUND2-01 (2026-09-04, implementação verificada) — owner/pedido compartilhados
   na impressão, capability obrigatória e segunda via explícita; admin seleciona
   assinatura/CAS e rejeita status ativo sem prazo. Dependências PDV/admin sem
   alerts; export XLSX real compatível. Cadastro não depende de analytics para
-  retornar sessão/navegar. Gates Linux adicionados; publicação pendente.
+  retornar sessão/navegar. Gates Linux completos verdes; status de publicação em [[CURRENT]].
 
 - [x] FX-AUDIT-OFFLINE-01 (2026-09-04) — catálogo/contagem/replay por owner;
   substituição de cache transacional, listas vazias autoritativas e chave
@@ -23,9 +60,17 @@
   save_zelomenu_delivery_settings corrigido por migration forward, aplicada
   no banco compartilhado e registrada; ACL e corpo restante preservados.
 - [x] FX-AUDIT-QUALITY-01 (2026-09-04) — datas determinísticas no relatório
-  semanal, jsconfig do admin e patches de dependências. **984 passes/3skips**;
-  build completo ainda bloqueado por EPERM Windows e E2E por credenciais.
-  Detalhes e riscos remanescentes: [auditoria PDV](audits/2026-09-04-zelopdv.md).
+  semanal, configuração e dependências do admin corrigidas. **1.031 testes
+  passam/3 skips SQL**, check principal 0/0; builds Vercel completos em Linux
+  na CI `33931021378`. Audit dos dois apps em zero. EPERM Windows e ausência
+  de E2E comercial autenticado são limites específicos, não falha dos builds
+  Linux. Resumo atual e histórico: [auditoria PDV](audits/2026-09-04-zelopdv.md).
+
+## Registros anteriores preservados
+
+> Os itens seguintes mantêm a situação registrada na data original. Não foram
+> encerrados nem reavaliados implicitamente nesta consolidação; publicação e
+> validação atual da auditoria estão em [[CURRENT]].
 
 - [x] FX-ONLINE-ORDER-ESSENTIALS-01 (2026-09-04) — a tela de pedidos do
   ZeloPDV passou a mostrar endereço, bairro e forma de pagamento na fila e no
@@ -614,7 +659,7 @@
 > Tracker operacional. Atualize após cada fix, feature sensível ou mudança de comportamento.
 > Base técnica: [[CLAUDE]] · riscos abertos: [[CODE_REVIEW]]
 
-## Fechados / presentes no código
+### Fechados / presentes no código
 
 - ✅ FX-ZELOMENU-05 (2026-07-27) — pedidos online no ZeloPDV agora imprimem automaticamente no recebimento, com o mesmo contrato textual do ZeloChat (`kitchen_order`), reconciliação de pedidos novos após perda de Realtime, dedupe persistente por 48h e retry após falha. O mapeamento também preserva grupos/opções de modificadores no bilhete — `src/routes/app/pedidos/+page.svelte:189`, `src/lib/orderAutoPrint.js:18`, `src/lib/printService.js:121`. Cobertura: `tests/orderAutoPrint.test.js`, `tests/orderPrint.test.js`, `tests/onlineOrders.test.js`; `npm run check` em 0 erros.
 
@@ -661,7 +706,7 @@
 - ✅ FX-AUTH-01 (2026-06-14) — removido o bloqueio de confirmação por e-mail no cadastro pago por tráfego: `POST /api/auth/signup` cria usuário confirmado com service role (`email_confirm: true`), faz `signInWithPassword` e devolve sessão; `/cadastro` grava a sessão, preserva referral, dispara `sign_up`/Google Ads e redireciona para `/perfil?msg=complete` (OnboardingWizard). Cobertura: [tests/api.auth-signup.test.js](/home/vinicius/code/zelopdv/tests/api.auth-signup.test.js:1), `npm run check` 0 errors / 106 warnings, `npm test` 151/151. Requer `SUPABASE_SERVICE_ROLE_KEY` no servidor.
 - ✅ FX-ADS-02 (2026-06-14) — PostHog adicionado para heatmap/autocapture anonimo em paginas publicas do funil, com allowlist centralizada e bloqueio de `/app`, `/gestao`, `/relatorios`, `/perfil`, `/assinatura`, `/ferramentas` e `/auth/callback`; session recording desabilitado no client. Requer `PUBLIC_POSTHOG_KEY`. Cobertura: [src/lib/posthogClient.js](/home/vinicius/code/zelopdv/src/lib/posthogClient.js:1), [tests/posthogClient.test.js](/home/vinicius/code/zelopdv/tests/posthogClient.test.js:1).
 
-## Agendado para a próxima sprint (2026-06-02)
+### Agendado para a próxima sprint (2026-06-02)
 
 > 3 frentes promovidas de [[TRADEOFFS]] (seção "Promovido para a próxima sprint"). Plano completo e
 > definição de pronto ficam lá; aqui fica a trilha de execução. Marque ✅ conforme cada frente fechar.
@@ -672,14 +717,14 @@
 - ⏳ SPRINT-3 — confirmar/monitorar o sweeper de deleção (LGPD, absorve OPS-DELETE-01); reativação fail-closed,
   linha viva única de assinatura e Pix sem fallback já estão concluídos — [src/routes/api/account/reactivate/+server.js](/home/vinicius/code/zelopdv/src/routes/api/account/reactivate/+server.js:28)
 
-## Pendentes confirmados nesta sessão
+### Pendentes confirmados nesta sessão
 
 - ⏳ FX-PENDING-05 — modelo de permissao do add-on Acessos ainda é majoritariamente gating de UI fora das
   superficies migradas; Despesas já exige `despesas.visualizar`/`despesas.gerenciar` no RLS — [docs/modules/ACESSOS.md](/home/vinicius/code/zelopdv/docs/modules/ACESSOS.md:1) → **SPRINT-2 incremental**
 - [x] FX-PENDING-06 — `AdminLock` deixou de carregar `pin_admin` em claro no cliente; status/verificação/alteração
   passam por `/api/auth/admin-pin`, com rate limit e alteração owner-only — [src/lib/components/AdminLock.svelte](/home/vinicius/code/zelopdv/src/lib/components/AdminLock.svelte:1)
 
-## Pendência operacional fora do repo
+### Pendência operacional fora do repo
 
 - ⚠️ OPS-DELETE-01 — a fonte do sweeper está em `ZeloChat/server/accountDeletionSweeper.ts` e é ligada no startup,
   mas deploy/monitoramento em produção ainda não foram confirmados — [.ai/migrations/account_deletion_grace_2026_05_31.sql](/home/vinicius/code/zelopdv/.ai/migrations/account_deletion_grace_2026_05_31.sql:5) → **agendado em SPRINT-3**, prioridade por LGPD

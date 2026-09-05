@@ -39,6 +39,7 @@ function makeSupabaseAdmin(state) {
       const selectResult = state.selectResults?.[table] ?? null;
       const buildUpdateChain = (payload, filters = []) => ({
         error: null,
+        select: vi.fn(() => ({ maybeSingle: vi.fn(async () => ({ data: { ...selectResult, ...payload }, error: null })) })),
         eq: vi.fn((field, value) => {
           const nextFilters = [...filters, [field, value]];
           state.writes.push({

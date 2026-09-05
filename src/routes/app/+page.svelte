@@ -47,6 +47,8 @@
     atualizarCacheSubcategorias,
     buscarSubcategoriasLocal,
     contarVendasPendentes,
+    contarVendasSemTitular,
+    recuperarVendasSemTitular,
     salvarVendaOffline,
     shouldQueueVendaOffline,
     syncVendasPendentes
@@ -67,6 +69,9 @@
   let errorMessage = '';
   // Sincronização offline: contador de vendas aguardando e estado do retry.
   let vendasPendentesCount = 0;
+  let vendasSemTitularCount = 0;
+  let verificandoPendenciasAntigas = false;
+  let resultadoPendenciasAntigas = '';
   let sincronizandoPendentes = false;
   let pendentesInterval = null;
   let gridEl;
@@ -354,8 +359,28 @@
   async function atualizarPendentesCount() {
     try {
       vendasPendentesCount = await contarVendasPendentes(ownerUserId);
+      vendasSemTitularCount = isSubUser ? 0 : await contarVendasSemTitular();
     } catch {
       // contagem é só indicador; ignora falha
+    }
+  }
+
+  async function verificarPendenciasAntigas() {
+    if (verificandoPendenciasAntigas || isSubUser) return;
+    verificandoPendenciasAntigas = true;
+    try {
+      const result = await recuperarVendasSemTitular(supabase, ownerUserId);
+      resultadoPendenciasAntigas = result.recovered > 0
+        ? `${result.recovered} venda(s) identificada(s) como desta loja e liberada(s) para sincronização.`
+        : 'Não foi possível comprovar que essas pendências pertencem a esta loja.';
+      if (result.unresolved > 0) {
+        resultadoPendenciasAntigas += ' As demais continuam salvas. Procure o suporte neste computador; não limpe os dados do navegador.';
+      }
+    } catch {
+      resultadoPendenciasAntigas = 'Não foi possível verificar agora. Conecte-se à internet e entre como titular. As vendas continuam salvas.';
+    } finally {
+      verificandoPendenciasAntigas = false;
+      await atualizarPendentesCount();
     }
   }
 
@@ -1301,6 +1326,17 @@
 {#if !canMovimentarCaixa}
   <div class="mx-4 mb-2">
     <InlineHelper id="pdv-top-movement-hint" compact message="Seu perfil não tem permissão para movimentar o caixa." />
+  </div>
+{/if}
+
+{#if !isSubUser && (vendasSemTitularCount > 0 || resultadoPendenciasAntigas)}
+  <div class="mx-4 mb-2 flex flex-wrap items-center gap-2">
+    <InlineHelper tone="warning" message={resultadoPendenciasAntigas || 'Há vendas antigas neste navegador sem loja identificada. Elas continuam salvas. Verifique a titularidade antes de sincronizar.'} />
+    {#if vendasSemTitularCount > 0}
+      <button class="btn-secondary" on:click={verificarPendenciasAntigas} disabled={verificandoPendenciasAntigas}>
+        {verificandoPendenciasAntigas ? 'Verificando...' : 'Verificar pendências antigas'}
+      </button>
+    {/if}
   </div>
 {/if}
 

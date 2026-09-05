@@ -212,6 +212,8 @@ export async function POST({ request }) {
     }, { headers: cors });
   } catch (err) {
     console.error('[admin/billing/pix/create] error:', err?.message || err);
-    return json({ error: err?.message || 'Falha ao gerar PIX de renovação.' }, { status: 500, headers: cors });
+    return json({ error: err?.message || 'Falha ao gerar PIX de renovação.',
+      ...(err?.code?.startsWith('PIX_') ? { code: err.code, paymentId: err.paymentId, retrySafe: false } : {}),
+    }, { status: err?.code?.startsWith('PIX_') ? 409 : 500, headers: cors });
   }
 }

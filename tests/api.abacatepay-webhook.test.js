@@ -15,8 +15,12 @@ function makeSupabaseAdmin(state) {
     rpc: vi.fn((name, params) => ({
       single: vi.fn(async () => {
         state.writes.push({ table: 'rpc', operation: name, payload: params });
+        if (name === 'complete_pix_creation') {
+          state.reservation = { ...state.reservation, creation_state: 'ready', provider_payment_id: params.p_remote.id };
+          return { data: state.reservation, error: null };
+        }
         return {
-          data: state.rpcResult ?? { ...(state.payment || {}), status: 'paid', paid_at: '2026-05-21T17:00:00.000Z', subscription_id: 'sub-1' },
+          data: state.rpcResult ?? { ...(state.payment || state.reservation || {}), status: 'paid', paid_at: '2026-05-21T17:00:00.000Z', subscription_id: 'sub-1' },
           error: state.rpcError ?? null,
         };
       }),
@@ -57,10 +61,11 @@ function makeSupabaseAdmin(state) {
       }
 
       if (table === 'billing_payments') {
+        const filters = [];
         const selectChain = {
-          eq: vi.fn(() => selectChain),
+          eq: vi.fn((field, value) => { filters.push([field, value]); return selectChain; }),
           maybeSingle: vi.fn(async () => ({
-            data: state.payment ?? null,
+            data: state.payment ?? (filters.some(([field]) => field === 'provider_payment_id') ? null : state.reservation) ?? null,
             error: null,
           })),
         };
@@ -146,6 +151,27 @@ beforeEach(() => {
 });
 
 describe('API: abacatepay webhook', () => {
+  it('recovers a reserved payment before provider-id attachment using signed webhook + provider GET', async () => {
+    const { webhookSecret, publicKey } = setupWebhookEnv();
+    const state = { writes: [], reservation: {
+      id: '11111111-1111-4111-8111-111111111111', user_id: '22222222-2222-4222-8222-222222222222',
+      provider: 'abacatepay', method: 'pix', status: 'pending', creation_state: 'unknown',
+      external_reference: 'pix_fixture_reserved', amount_expected_cents: 5900,
+    } };
+    const remote = { id: 'provider_fixture', externalId: state.reservation.external_reference,
+      amount: 5900, paidAmount: 5900, status: 'PAID' };
+    const list = vi.fn(async () => [remote]);
+    vi.doMock('$lib/server/supabaseAdmin', () => ({ supabaseAdmin: makeSupabaseAdmin(state) }));
+    vi.doMock('$lib/server/abacatePay', () => ({ listTransparentPixCharges: list }));
+    const rawBody = JSON.stringify({ id: 'event_fixture', event: 'transparent.completed', data: { transparent: remote } });
+    const { POST } = await loadHandler();
+    const response = await POST({ url: new URL(`https://fixture.invalid?webhookSecret=${webhookSecret}`),
+      request: makeRequest(rawBody, signPayload(rawBody, publicKey)) });
+    expect(response.status).toBe(200);
+    expect(list).toHaveBeenCalledWith(state.reservation.external_reference);
+    expect(state.writes.find(row => row.operation === 'complete_pix_creation')).toBeTruthy();
+    expect(state.writes.some(row => row.operation === 'settle_pix_payment')).toBe(true);
+  });
   it('rejeita segredo invalido', async () => {
     const { publicKey } = setupWebhookEnv();
 

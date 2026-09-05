@@ -7,12 +7,13 @@ import {
   normalizeBrazilianTaxId,
 } from '$lib/masks';
 import { calculateValue, PLANS, sanitizeAddons } from '$lib/pricing';
-import { createTransparentPixCharge } from '$lib/server/abacatePay';
+import { createTransparentPixCharge, checkTransparentPixCharge, listTransparentPixCharges, isAbacatePayConfigured } from '$lib/server/abacatePay';
 
 export function serializeBillingPayment(row) {
   return {
     paymentId: row.id,
     status: row.status,
+    creationState: row.creation_state || 'ready',
     providerStatus: row.provider_status || null,
     amountCents: row.amount_expected_cents,
     brCode: row.br_code,
@@ -85,7 +86,7 @@ export async function markWebhookEventProcessed({ provider, eventId, eventType }
 export async function findBillingPaymentForUser(paymentId, userId) {
   const { data, error } = await supabaseAdmin
     .from('billing_payments')
-    .select('id, user_id, subscription_id, provider, method, status, amount_expected_cents, amount_paid_cents, currency, external_reference, br_code, qr_code_base64, expires_at, paid_at, provider_payment_id, provider_status, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu, metadata')
+    .select('*')
     .eq('id', paymentId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -97,13 +98,28 @@ export async function findBillingPaymentForUser(paymentId, userId) {
 export async function findBillingPaymentByProviderId(providerPaymentId) {
   const { data, error } = await supabaseAdmin
     .from('billing_payments')
-    .select('id, user_id, subscription_id, provider, method, status, amount_expected_cents, amount_paid_cents, currency, external_reference, br_code, qr_code_base64, expires_at, paid_at, provider_payment_id, provider_status, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu, metadata')
+    .select('*')
     .eq('provider', 'abacatepay')
     .eq('provider_payment_id', providerPaymentId)
     .maybeSingle();
 
   if (error) throw error;
   return data;
+}
+
+export async function findPixReservationFromWebhook(remote) {
+  let query = supabaseAdmin.from('billing_payments').select('*')
+    .eq('provider', 'abacatepay').eq('method', 'pix');
+  if (remote?.externalId) query = query.eq('external_reference', remote.externalId);
+  else if (remote?.metadata?.paymentId && remote?.metadata?.userId) {
+    query = query.eq('id', remote.metadata.paymentId).eq('user_id', remote.metadata.userId);
+  } else return null;
+  const { data, error } = await query.maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const recovered = await reconcilePixCreation(data);
+  if (recovered.provider_payment_id !== remote.id) throw pixCreationError(data, 'PIX_RECONCILIATION_CONFLICT');
+  return recovered;
 }
 
 export async function syncPixPaymentWithRemote({ payment, remotePayment, source = 'unknown' }) {
@@ -131,6 +147,9 @@ export async function syncPixPaymentWithRemote({ payment, remotePayment, source 
   if (remotePayment?.externalId && payment.external_reference && remotePayment.externalId !== payment.external_reference) {
     throw new Error(`External reference divergente no ${source}.`);
   }
+  if (!remotePayment?.status || (remotePayment.id && payment.provider_payment_id && remotePayment.id !== payment.provider_payment_id)) {
+    throw new Error('Resposta de consulta Pix inválida.');
+  }
 
   if (mappedStatus === 'paid') {
     const { data: settledPayment, error: settleError } = await supabaseAdmin
@@ -138,7 +157,7 @@ export async function syncPixPaymentWithRemote({ payment, remotePayment, source 
         p_payment_id: payment.id,
         p_provider_status: providerStatus,
         p_mapped_status: mappedStatus,
-        p_amount_paid_cents: remotePayment?.paidAmount ?? payment.amount_paid_cents ?? null,
+        p_amount_paid_cents: remotePayment?.paidAmount ?? remotePayment?.amount ?? payment.amount_paid_cents ?? null,
         p_expires_at: remotePayment?.expiresAt || payment.expires_at || null,
         p_paid_at: remotePayment?.updatedAt || nowIso,
         p_external_reference: remotePayment?.externalId || null,
@@ -154,17 +173,19 @@ export async function syncPixPaymentWithRemote({ payment, remotePayment, source 
     };
   }
 
-  const { error } = await supabaseAdmin
+  // A pending GET can finish after a paid webhook. Never regress that result.
+  const staleUnpaidStatus = ['pending', 'expired', 'cancelled'].includes(mappedStatus)
+    || (mappedStatus === 'failed' && source !== 'webhook');
+  if (staleUnpaidStatus && (payment.status === 'paid' || payment.paid_at)) return payment;
+  const { data: updated, error } = await supabaseAdmin
     .from('billing_payments')
     .update(updates)
-    .eq('id', payment.id);
-
+    .eq('id', payment.id)
+    .eq('status', payment.status)
+    .select('*').maybeSingle();
   if (error) throw error;
-
-  return {
-    ...payment,
-    ...updates,
-  };
+  if (!updated) throw new Error('Pagamento mudou durante a consulta. Consulte novamente.');
+  return updated;
 }
 
 export const PIX_EXPIRATION_SECONDS = 60 * 60;
@@ -224,6 +245,7 @@ export function serializePixCharge(row) {
   return {
     paymentId: row.id,
     status: row.status,
+    creationState: row.creation_state || 'ready',
     amountCents: row.amount_expected_cents,
     brCode: row.br_code,
     qrCodeBase64: row.qr_code_base64,
@@ -246,109 +268,99 @@ export function pendingPaymentMatchesSelection(payment, planTier, addons, amount
     && Number(payment?.amount_expected_cents) === Number(amountCents);
 }
 
+export function pixCreationError(payment, code = 'PIX_OUTCOME_UNKNOWN') {
+  const message = code === 'PIX_SELECTION_CONFLICT'
+    ? 'Já existe um Pix pendente para outra seleção. Aguarde a confirmação ou expiração antes de gerar outro.'
+    : 'A cobrança Pix está sendo conferida. Tente consultar novamente em instantes; não gere outra cobrança.';
+  return Object.assign(new Error(message), { code, status: 409, paymentId: payment.id, retrySafe: false });
+}
+
+async function completeCreation(payment, outcome, remote = null) {
+  const { data, error } = await supabaseAdmin.rpc('complete_pix_creation', {
+    p_payment_id: payment.id, p_user_id: payment.user_id, p_outcome: outcome, p_remote: remote,
+  }).single();
+  if (error) throw error;
+  if (!data) throw new Error('Reserva Pix não retornada pelo banco.');
+  return data;
+}
+
+export async function reconcilePixCreation(payment) {
+  if (!payment || !['dispatching', 'unknown'].includes(payment.creation_state)) return payment;
+  const matches = payment.provider_payment_id
+    ? [await checkTransparentPixCharge(payment.provider_payment_id)]
+    : await listTransparentPixCharges(payment.external_reference);
+  if (matches.length === 0) return payment; // Eventual consistency is not proof of absence.
+  if (matches.length !== 1) throw pixCreationError(payment, 'PIX_RECONCILIATION_CONFLICT');
+  const remote = matches[0];
+  const metadata = remote?.metadata || {};
+  const matchesReference = remote?.externalId === payment.external_reference;
+  const matchesMetadata = metadata.paymentId === payment.id && metadata.userId === payment.user_id;
+  if (!remote?.id || (!matchesReference && !matchesMetadata)
+      || Number(remote.amount) !== Number(payment.amount_expected_cents)) {
+    throw pixCreationError(payment, 'PIX_RECONCILIATION_CONFLICT');
+  }
+  const attached = await completeCreation(payment, 'ready', remote);
+  return syncPixPaymentWithRemote({ payment: attached, remotePayment: remote, source: 'creation_recovery' });
+}
+
 export async function createOrReusePixCharge({
   userId, email, planTier, addons, name, taxId, phone, source, metadataExtra = {},
 }) {
+  if (!isAbacatePayConfigured()) throw new Error('AbacatePay não configurado.');
   const safeAddons = sanitizeAddons(planTier, addons);
   const amountCents = Math.round(calculateValue(planTier, safeAddons) * 100);
-
-  const { data: existingSub } = await supabaseAdmin
-    .from('subscriptions')
-    .select('id, status, current_period_end, manually_extended_until, plan_tier, payment_provider')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: latestPending } = await supabaseAdmin
-    .from('billing_payments')
-    .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu')
-    .eq('user_id', userId)
-    .eq('provider', 'abacatepay')
-    .eq('method', 'pix')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const now = new Date();
-  if (latestPending?.expires_at) {
-    const expiresAt = new Date(latestPending.expires_at);
-    if (expiresAt > now) {
-      if (pendingPaymentMatchesSelection(latestPending, planTier, safeAddons, amountCents)) {
-        return { reused: true, row: latestPending };
-      }
-      await supabaseAdmin.from('billing_payments')
-        .update({ status: 'cancelled', provider_status: 'REPLACED', updated_at: now.toISOString() })
-        .eq('id', latestPending.id);
-    } else {
-      await supabaseAdmin.from('billing_payments')
-        .update({ status: 'expired', provider_status: 'EXPIRED', updated_at: now.toISOString() })
-        .eq('id', latestPending.id);
+  const reserve = async () => {
+    const { data, error } = await supabaseAdmin.rpc('reserve_pix_payment', {
+      p_user_id: userId, p_plan_tier: planTier, p_amount_cents: amountCents,
+      p_mesas: !!safeAddons.mesas, p_acessos: !!safeAddons.acessos, p_menu: !!safeAddons.menu,
+      p_metadata: { ...metadataExtra, source, email },
+    });
+    if (error) throw error; // No outbound POST without a confirmed durable reservation.
+    if (!data?.payment?.id) throw new Error('Falha ao reservar cobrança Pix.');
+    return data;
+  };
+  let reservation = await reserve();
+  let payment = reservation.payment;
+  if (reservation.action === 'blocked') {
+    payment = await reconcilePixCreation(payment);
+    if (['dispatching', 'unknown'].includes(payment.creation_state)) throw pixCreationError(payment);
+    if (payment.status === 'paid') return { reused: true, row: payment };
+    reservation = await reserve();
+    payment = reservation.payment;
+  } else if (reservation.action === 'check') {
+    const remote = await checkTransparentPixCharge(payment.provider_payment_id);
+    payment = await syncPixPaymentWithRemote({ payment, remotePayment: remote, source: 'creation_check' });
+    // A late settlement is returned to the caller, never silently renewed again.
+    if (payment.status === 'paid') return { reused: true, row: payment };
+    reservation = await reserve();
+    payment = reservation.payment;
+  }
+  if (reservation.action === 'reuse') return { reused: true, row: payment };
+  if (reservation.action !== 'create') {
+    throw pixCreationError(payment, reservation.action === 'selection_conflict' ? 'PIX_SELECTION_CONFLICT' : 'PIX_OUTCOME_UNKNOWN');
+  }
+  let remote;
+  try {
+    remote = await createTransparentPixCharge({
+      amount: payment.amount_expected_cents, expiresIn: PIX_EXPIRATION_SECONDS,
+      description: buildPixDescription(payment.plan_tier), externalId: payment.external_reference,
+      metadata: payment.metadata, customer: { name, email, taxId, cellphone: phone },
+    });
+    if (!remote?.id || !remote.brCode || !remote.status || !Number.isFinite(Date.parse(remote.expiresAt))
+        || !Number.isInteger(remote.amount) || remote.amount !== payment.amount_expected_cents) {
+      throw new Error('Resposta incompleta do provedor Pix.');
     }
+    const row = await completeCreation(payment, 'ready', remote);
+    // Only confirmed payment status can activate/renew a subscription.
+    if (remote.status.toUpperCase() === 'PAID') {
+      return { reused: false, row: await syncPixPaymentWithRemote({ payment: row, remotePayment: remote, source: 'creation' }) };
+    }
+    return { reused: false, row };
+  } catch (error) {
+    const outcome = error.dispatchStarted === false ? 'not_sent' : 'unknown';
+    try { await completeCreation(payment, outcome); }
+    catch { console.warn('[billing/pix] Reserva preservada para reconciliação.'); }
+    if (outcome === 'not_sent') throw error;
+    throw pixCreationError(payment);
   }
-
-  const externalReference = `pix_${userId}_${Date.now()}`;
-  const kind = existingSub ? 'subscription_renewal' : 'subscription_start';
-  const metadata = {
-    source,
-    userId,
-    email,
-    planTier,
-    addons: safeAddons,
-    kind,
-    billingCycle: 'monthly',
-    ...metadataExtra,
-  };
-
-  const remotePayment = await createTransparentPixCharge({
-    amount: amountCents,
-    expiresIn: PIX_EXPIRATION_SECONDS,
-    description: buildPixDescription(planTier),
-    externalId: externalReference,
-    metadata,
-    customer: { name, email, taxId, cellphone: phone },
-  });
-
-  const nowIso = new Date().toISOString();
-  const insertPayload = {
-    user_id: userId,
-    subscription_id: existingSub?.id || null,
-    provider: 'abacatepay',
-    method: 'pix',
-    kind,
-    status: 'pending',
-    plan_tier: planTier,
-    has_mesas_addon: !!safeAddons.mesas,
-    has_acessos_addon: !!safeAddons.acessos,
-    has_zelo_menu: !!safeAddons.menu,
-    amount_expected_cents: amountCents,
-    amount_paid_cents: null,
-    currency: 'BRL',
-    external_reference: externalReference,
-    provider_payment_id: remotePayment?.id || null,
-    provider_checkout_id: remotePayment?.id || null,
-    provider_customer_id: null,
-    provider_subscription_id: null,
-    provider_status: remotePayment?.status || 'PENDING',
-    br_code: remotePayment?.brCode || null,
-    qr_code_base64: remotePayment?.brCodeBase64 || null,
-    expires_at: remotePayment?.expiresAt || null,
-    paid_at: null,
-    metadata,
-    created_at: nowIso,
-    updated_at: nowIso,
-  };
-
-  const { data: insertedRow, error: insertError } = await supabaseAdmin
-    .from('billing_payments')
-    .insert(insertPayload)
-    .select('id, status, amount_expected_cents, br_code, qr_code_base64, expires_at, provider_payment_id, plan_tier, has_mesas_addon, has_acessos_addon, has_zelo_menu')
-    .single();
-
-  if (insertError || !insertedRow) {
-    throw new Error('Falha ao salvar cobrança Pix.');
-  }
-
-  return { reused: false, row: insertedRow };
 }

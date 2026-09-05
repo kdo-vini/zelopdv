@@ -152,7 +152,9 @@ export async function POST({ request }) {
         .update(subUpdate)
         .eq('user_id', userId)
         .eq('id', selectedSubscription.id);
-      if (selectedSubscription.updated_at) updateQuery = updateQuery.eq('updated_at', selectedSubscription.updated_at);
+      updateQuery = selectedSubscription.updated_at == null
+        ? updateQuery.is('updated_at', null)
+        : updateQuery.eq('updated_at', selectedSubscription.updated_at);
       const { data: saved, error: subErr } = await updateQuery.select('id').maybeSingle();
 
       if (subErr) {

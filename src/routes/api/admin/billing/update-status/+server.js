@@ -63,7 +63,6 @@ export async function POST({ request }) {
     const body = await request.json().catch(() => ({}));
     const subscriptionId = body.subscriptionId;
     const newStatus = typeof body.status === 'string' ? body.status.trim().toLowerCase() : '';
-    const expireImmediately = body.expireImmediately === true;
     const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
 
     if (!subscriptionId) {
@@ -97,7 +96,7 @@ export async function POST({ request }) {
     };
 
     // Cancel logic: expire immediately and clear manual extension
-    if (newStatus === 'canceled' && (expireImmediately || sub.status !== 'canceled')) {
+    if (newStatus === 'canceled') {
       updatePayload.current_period_end = nowIso;
       updatePayload.manually_extended_until = null;
       updatePayload.cancel_at_period_end = false;
@@ -113,7 +112,9 @@ export async function POST({ request }) {
       .from('subscriptions')
       .update(updatePayload)
       .eq('id', subscriptionId);
-    if (sub.updated_at) updateQuery = updateQuery.eq('updated_at', sub.updated_at);
+    updateQuery = sub.updated_at == null
+      ? updateQuery.is('updated_at', null)
+      : updateQuery.eq('updated_at', sub.updated_at);
     const { data: saved, error: updateErr } = await updateQuery.select('id').maybeSingle();
 
     if (updateErr) {

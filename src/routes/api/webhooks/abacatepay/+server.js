@@ -4,6 +4,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { safeEqualString } from '$lib/server/safeEqual';
 import {
   findBillingPaymentByProviderId,
+  findPixReservationFromWebhook,
   syncPixPaymentWithRemote,
   verifyAbacateWebhookSignature,
 } from '$lib/server/billingPix';
@@ -131,7 +132,8 @@ export async function POST({ request, url }) {
       return json({ received: true, ignored: true });
     }
 
-    const payment = await findBillingPaymentByProviderId(providerPaymentId);
+    const payment = await findBillingPaymentByProviderId(providerPaymentId)
+      || await findPixReservationFromWebhook(transparent);
     if (!payment) {
       // The provider can deliver the webhook while the local billing row is
       // still being persisted. Keep this retryable instead of acknowledging a

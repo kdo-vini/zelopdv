@@ -11,6 +11,30 @@ exige contexto de owner e preserva registros desconhecidos/outras contas.
 Não há exclusão automática de vendas por idade. O service worker cacheia
 somente objetos públicos de storage, nunca REST/Auth ou objetos privados.
 
+O carregador `pdvCache` lê produtos, categorias, subcategorias e complementos
+em páginas de 500, com desempate pela chave primária e filtros explícitos por
+owner. Vínculos são consultados em lotes de até 100 IDs. Só entrega o catálogo
+completo à tela/persistência: falha em qualquer página preserva o snapshot
+anterior; troca de conta cancela a leitura, inclusive se voltar à primeira
+conta antes da resposta. Isso remove o corte implícito em 1000 linhas. As
+páginas não são uma transação de leitura do banco; uma edição simultânea no
+catálogo ainda pode exigir atualização posterior.
+
+### Recuperar pendências antigas sem titular
+
+A frente de caixa mostra um aviso agregado somente para o titular. A ação
+**Verificar pendências antigas** consulta, pela sessão autenticada e RLS, os
+caixas referenciados pelas vendas. Só atribui o owner quando o caixa pertence
+à conta atual, o login continua sendo o mesmo e o registro local não mudou
+durante a consulta. Não altera payload, operador ou chave de idempotência;
+não envia nem exclui a venda nessa operação. Depois, o replay normal pode
+sincronizar as pendências comprovadas.
+
+Registros sem caixa verificável, com owner conflitante ou de outra loja ficam
+intactos. O aviso orienta procurar suporte no mesmo computador e preservar os
+dados do navegador. Não há exportação de conteúdo de outras contas nem botão
+para assumir todas as vendas como pertencentes à conta atual.
+
 O payload offline preserva `forma_pagamento` como texto e, portanto, aceita o
 ID nativo `vale_refeicao` sem mudança de versão do Dexie. A fila e o replay
 usam o mesmo contrato de venda única ou múltipla; a separação no relatório e o

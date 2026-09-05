@@ -117,6 +117,8 @@ describe('admin subscription edits', () => {
       .toMatchObject({ has_acessos_addon: false, manually_extended_until: null, cancel_at_period_end: false });
     expect(state.queries.find((q) => q.table === 'subscriptions' && q.operation === 'update').filters)
       .toContainEqual({ method: 'eq', column: 'id', value: 'sub-current' });
+    expect(state.queries.find((q) => q.table === 'subscriptions' && q.operation === 'update').filters)
+      .toContainEqual({ method: 'is', column: 'updated_at', value: null });
   });
   it('does not report an expired reactivation as success or change the profile before validation', async () => {
     const state = { user: { id: 'admin-user' }, queries: [], results: {}, maybeSingle: {
@@ -151,6 +153,18 @@ describe('admin subscription edits', () => {
     const response = await POST({ request: makeRequest({ body: { subscriptionId: 'expired', status: 'active' } }) });
     expect(response.status).toBe(409);
     expect(state.queries.some((q) => q.operation === 'update')).toBe(false);
+  });
+  it('repeated cancellation clears a stale extension and protects legacy NULL timestamps with CAS', async () => {
+    const state = { user: { id: 'admin-user' }, queries: [], results: {}, maybeSingle: {
+      super_admins: { data: { id: 'admin-1', is_active: true }, error: null },
+      subscriptions: { data: { id: 'canceled', status: 'canceled', updated_at: null, manually_extended_until: '2099-01-01' }, error: null },
+    } };
+    const { POST } = await loadModule('../src/routes/api/admin/billing/update-status/+server.js', state);
+    const response = await POST({ request: makeRequest({ body: { subscriptionId: 'canceled', status: 'canceled' } }) });
+    expect(response.status).toBe(200);
+    const update = state.queries.find((q) => q.table === 'subscriptions' && q.operation === 'update');
+    expect(update.payload).toMatchObject({ manually_extended_until: null, cancel_at_period_end: false });
+    expect(update.filters).toContainEqual({ method: 'is', column: 'updated_at', value: null });
   });
 });
 

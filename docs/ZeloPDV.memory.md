@@ -1,5 +1,36 @@
 # ZeloPDV.memory
 
+> Memória de fatos e contratos confirmados. Estado de publicação, gates mais
+> recentes e revisão/aplicação de migrations em [[CURRENT]]; não inferir
+> aprovação de produção a partir de uma contagem histórica de testes.
+
+- Consolidação de 2026-09-04: os dois builds Vercel completos têm prova Linux
+  (CI `33931021378`). O EPERM de symlink observado no Windows não significa
+  ausência de um build Linux válido. Admin atual: Svelte 5.57.0/Vite 6.4.3,
+  adapter Vercel 6.3.4 e Node 24.
+- Catálogo PDV usa páginas de 500 e lotes IN de 100 IDs, sempre por owner.
+  `zelomenu_modifier_option_products.id_opcao` é PK única confirmada live;
+  ordenação por ela é estável. Erro intermediário ou mudança de geração de
+  login (inclusive A→B→A) impede publicar uma leitura parcial/antiga.
+- Recuperação de venda offline sem owner exige prova por caixa da conta/RLS,
+  login estável e CAS no IndexedDB. Não atribuir o registro ao usuário atual
+  apenas porque ele está conectado, nem apagar pendências inconclusivas.
+- Pix: reserva durável anterior ao POST e externalId estável permitem
+  reconciliar resultado incerto sem criar outra cobrança. A migration
+  `20260905001053_pix_creation_reservation.sql` foi aplicada; timeout cobre
+  corpo HTTP e analytics não pode transformar uma cobrança criada em erro.
+- Menu `37b4b9e` foi publicado e teve SHA de frontend/backend e assets
+  verificados no domínio público em 2026-09-04. Seu build deriva do Git limpo;
+  variável de runtime não pode rotular um bundle antigo com nova versão.
+- SQL compartilhado novo é versionado/aplicado pelo stream do PDV. Cupom
+  público atômico, lease push e guard da cotação manual já estão aplicados.
+  As sete migrations de conversa recebidas pelo Menu foram movidas para
+  `supabase/history/conversation-ordering/` naquele repo: são referências,
+  não devem ser reaplicadas nem ter seus timestamps reconciliados por engano.
+- Printer release 0.2.0 coordena auto-print por owner/pedido. Resposta incerta
+  preserva dedupe; segunda via exige intenção explícita. CI de release não
+  comprova que houve impressão física em hardware.
+
 - Auditoria 2026-09-04: cache Dexie de catálogo exige `_cacheOwnerUserId`;
   leituras e replay nunca atribuem dados sem owner à conta atual. Pendentes
   só são removidas após confirmação `data.id`; chave legacy deve ser gravada
@@ -66,7 +97,7 @@
 - O purge compartilhado de contas `delete_account(uuid,text)` precisa remover `fiado_lancamentos` antes de `pessoas`: o ledger usa FK `id_pessoa` com `ON DELETE RESTRICT`. A correção foi aplicada em 2026-08-09 e cobre o caminho `admin_delete_user` do dashboard.
 
 > Memória viva. Guardar só fatos confirmados e úteis para continuidade técnica.
-> Atualizado em 2026-08-20.
+> Última consolidação em 2026-09-04; entradas datadas preservam seu contexto histórico.
 
 - O app principal roda em SvelteKit 2 + Svelte 5; ele e o `admin-dashboard/` usam `@sveltejs/adapter-vercel` explícito com runtime `nodejs24.x`, e os dois projetos Vercel estão configurados em `24.x`.
 - Existe um segundo app em `admin-dashboard/`, separado do app principal.

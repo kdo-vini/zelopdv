@@ -248,11 +248,18 @@ select 'DUPLICATE_BLOCKER_PID:' || pg_backend_pid();
   await waitForBarrier('duplicate issuance waits on the cart lock', async () => {
     const observed = firstJson(await runPsql(`
 select json_build_object(
-  'firstBlocked', ${duplicateBlockerPid} = any(pg_blocking_pids(${duplicateIssuance1Pid})),
-  'secondBlocked', ${duplicateBlockerPid} = any(pg_blocking_pids(${duplicateIssuance2Pid}))
+  'firstBlockers', pg_blocking_pids(${duplicateIssuance1Pid}),
+  'secondBlockers', pg_blocking_pids(${duplicateIssuance2Pid})
 );
 `));
-    return observed.firstBlocked === true && observed.secondBlocked === true ? observed : null;
+    // PostgreSQL may queue the second SELECT FOR UPDATE behind the first
+    // waiter's tuple lock rather than directly behind the original transaction.
+    // Both wait paths must still terminate at our held cart lock.
+    const firstDirect = observed.firstBlockers.includes(duplicateBlockerPid);
+    const secondDirect = observed.secondBlockers.includes(duplicateBlockerPid);
+    const firstHeld = firstDirect || (secondDirect && observed.firstBlockers.includes(duplicateIssuance2Pid));
+    const secondHeld = secondDirect || (firstDirect && observed.secondBlockers.includes(duplicateIssuance1Pid));
+    return firstHeld && secondHeld ? observed : null;
   });
   endStdin(duplicateBlocker, 'commit;\n\\q\n');
   assertOk(await finish(duplicateBlocker, 'liberação para emissões duplicadas'), 'liberação para emissões duplicadas');

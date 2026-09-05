@@ -3,14 +3,14 @@ import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
 const databaseConfigured = Boolean(
-  process.env.SUPABASE_DB_URL || process.env.DATABASE_URL,
+  process.env.ZELOPDV_DISPOSABLE_DB_URL === 'postgresql://postgres:postgres@127.0.0.1:55322/postgres',
 );
 
 describe('customer order links runtime verification', () => {
   it.skipIf(!databaseConfigured)(
     'runs transactional order, tenant, FK, fiado, snapshot, and grant probes',
     () => {
-      const databaseUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
+      const databaseUrl = process.env.ZELOPDV_DISPOSABLE_DB_URL;
       expect(() => execFileSync(
         'psql',
         [

@@ -1,10 +1,16 @@
 param(
   [switch]$ApplyForwardMigrations,
+  [switch]$ExcludeTenantDataSeeds,
+  [switch]$RunConcurrencyProbes,
   [string[]]$PostMigrationVerification = @()
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+
+if (($RunConcurrencyProbes -or $PostMigrationVerification.Count -gt 0) -and -not $ApplyForwardMigrations) {
+  throw 'Post-migration probes require -ApplyForwardMigrations.'
+}
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $baselineCutoff = '20260813091000'
@@ -130,7 +136,18 @@ try {
 
   $temporaryMigrations = Join-Path $temporarySupabase 'migrations'
   New-Item -ItemType Directory -Path $temporaryMigrations -Force | Out-Null
+  # A customer-specific data seed intentionally requires a real customer row.
+  # It is not schema and must not manufacture that customer in a disposable DB.
+  $excludedSeed = '20260824012356_fullbuster_burger_catalog.sql'
+  if ($ExcludeTenantDataSeeds) {
+    $seedPath = Join-Path $repositoryRoot "supabase\migrations\$excludedSeed"
+    if ((Get-FileHash -LiteralPath $seedPath -Algorithm SHA256).Hash -ne '3695D8546BCEFF1D399536FB1E2E070D5B22D61B24D719E41295F6F5E45DE318') {
+      throw 'Tenant seed changed; review the disposable exclusion before continuing.'
+    }
+    Write-Output "DISPOSABLE_DATA_SEED_EXCLUDED $excludedSeed (schema and all other migrations remain required)"
+  }
   Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'supabase\migrations') -File -Filter '*.sql' |
+    Where-Object { -not $ExcludeTenantDataSeeds -or $_.Name -ne $excludedSeed } |
     ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $temporaryMigrations $_.Name) }
 
   $temporaryConfigPath = Join-Path $temporarySupabase 'config.toml'
@@ -186,6 +203,21 @@ try {
         -DatabaseUrl $databaseUrl `
         -File $verificationFile
     }
+    if ($RunConcurrencyProbes) {
+      $probeImage = 'zelopdv-disposable-verifier:node24'
+      & docker build -t $probeImage (Join-Path $PSScriptRoot 'verification')
+      if ($LASTEXITCODE -ne 0) { throw 'Failed to build the isolated concurrency verifier.' }
+      foreach ($probe in @('verify-customer-identity-concurrency.mjs', 'verify-whatsapp-confirmation-concurrency.mjs', 'verify-sale-owner-concurrency.mjs')) {
+        & docker run --rm --network host `
+          -v "${PSScriptRoot}:/work/scripts:ro" `
+          -v "${repositoryRoot}/supabase/verification:/work/supabase/verification:ro" `
+          -e "SUPABASE_DB_URL=$databaseUrl" `
+          -e "ZELOPDV_DISPOSABLE_DB_URL=$databaseUrl" `
+          -e 'ZELOPDV_RUN_WHATSAPP_CONFIRMATION_CONCURRENCY=1' `
+          $probeImage node "/work/scripts/$probe"
+        if ($LASTEXITCODE -ne 0) { throw "Concurrency verifier failed: $probe" }
+      }
+    }
   } elseif ($PostMigrationVerification.Count -gt 0) {
     throw 'PostMigrationVerification requires ApplyForwardMigrations.'
   }
@@ -193,7 +225,7 @@ try {
   Write-Output "BASELINE_VERIFIED cutoff=$baselineCutoff normalized_dump_sha256=$actualDumpHash"
   Write-Output 'Application schema/security and captured platform configuration match production.'
   if ($ApplyForwardMigrations) {
-    Write-Output "Forward migrations applied locally; post-migration verifiers passed: $($PostMigrationVerification.Count)."
+    Write-Output "Forward migrations applied locally; tenant-data exclusion=$ExcludeTenantDataSeeds; post-migration verifiers passed: $($PostMigrationVerification.Count)."
   }
   Write-Output "Lint evidence: $lintOutput"
 } finally {

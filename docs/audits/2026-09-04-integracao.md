@@ -1,83 +1,78 @@
-# Integração e fricção operacional — Zelo — 2026-09-04
+# Integração e operação — Zelo — 2026-09-04
+> Atualizado na rodada de correções de 2026-09-05 UTC. Este documento substitui o estado de pendências da primeira auditoria. Publicação coordenada em andamento; consultar a tabela de versões no relatório do ecossistema antes de assumir que um artefato já está em produção.
 
-## Diagnóstico
+## Impressão PDV + Chat
 
-O ecossistema já possui um núcleo coerente: catálogo/dono no PDV, publicação e checkout no Menu, conversa no Chat, pedidos canônicos no PostgreSQL e spool local no Printer. O maior problema encontrado foi **divergência de contrato e de versão**, com efeitos concretos: CRM não vinculava clientes, timeout podia duplicar impressão e uma rotina de frete falhava no banco.
+PDV e Chat podem manter autorização simultânea no mesmo Printer. O segundo pareamento não invalida o primeiro. Tokens já publicados pelo 0.1.4 são preservados, até o limite de 50; atingir o limite é um erro explícito, sem descartar navegadores silenciosamente.
 
-A prioridade de UX é tornar o resultado de cada ação claro e recuperável. Reduzir etapas não significa esconder incerteza de pagamento, venda ou impressão. Não houve redesenho, troca de componentes ou identidade visual nesta auditoria.
+A impressão automática usa uma identidade comum: **owner da loja + zelo_orders.id + finalidade order_ticket**. empresa_perfil.id, ID de venda e ID do pedido legado não substituem esses campos. Os dois consumidores enviam o mesmo contrato ao Printer 0.2.0.
 
-## Mapa dos contratos
+- **Preferência padrão: PDV**, alterável para Chat na configuração local.
+- O canal secundário aguarda 1,5 segundo. Se o preferido chegar nessa janela, ele assume o trabalho. Se estiver ausente ou chegar depois do início, o secundário atende; o pedido continua sendo impresso uma vez.
+- O diário em disco registra a reserva antes de chamar o spooler. Repetição pelo outro produto ou após reinício recupera o resultado, em vez de iniciar uma nova impressão.
+- Falha explicitamente anterior ao spool pode usar a alternativa já recebida. Resultado incerto não autoriza retry nem fallback automático.
+- **Segunda via é manual**, com uma nova intenção. Nenhuma mensagem de sucesso comprova que saiu papel.
+- Consumidores novos recusam impressão automática em Printer sem a capability de coordenação. A mensagem orienta atualizar o agente; não simula conexão bem-sucedida.
 
-```mermaid
-flowchart LR
-  PDV[ZeloPDV: catálogo, caixa e gestão] --> DB[(Supabase compartilhado)]
-  MENU[ZeloMenu: vitrine e checkout] --> DB
-  CHAT[ZeloChat: conversa e atendimento] -->|comandos internos e revisão| MENU
-  CHAT -->|identidade de cliente| DB
-  DB -->|pedido canônico e eventos| PDV
-  DB -->|estado do pedido| CHAT
-  PDV -->|job de impressão| PRINT[ZeloPrinter local]
-  CHAT -->|job de impressão| PRINT
-  PRINT --> SPOOL[Spooler e papel]
-```
+O histórico permanece por sete dias. Há capacidade configurável localmente de 10 mil a 50 mil registros; lotação/corrupção bloqueiam novas impressões de forma explícita, sem apagar entradas válidas para esconder o problema. O diário guarda hashes e estado, sem conteúdo do pedido, telefone ou nome da impressora. A proteção vale para o mesmo agente/PC; dois agentes independentes em máquinas distintas não compartilham esse diário.
 
-| Fronteira | Regra a preservar | Quebra encontrada / proteção |
+O /connect do 0.1.4 foi preservado na reconciliação. **Revogar navegadores** remove tokens e desabilita emissão automática por origem confiável; reativação só ocorre na tela local. Pareamento por código continua disponível. A página web não pode reativar essa autorização pelo endpoint de configuração.
+
+## Origem única e publicação
+
+| Produto | Origem do código | Artefato e conferência |
 | --- | --- | --- |
-| Conta e empresa | Auth user, owner_user_id e empresaId não são intercambiáveis; service role exige filtro explícito | Cache e fila PDV agora exigem owner conhecido; SDK local de impressão autoriza o dispositivo inteiro, não isola tenants |
-| Catálogo PDV→Menu | `id_usuario` do dono; publicação em overlay; `ocultar_no_pdv` só controla frente de caixa | Sem nova flag ou catálogo paralelo; estoque agregado inclui complementos e quantidades |
-| Entitlement | `subscriptions`, tier e flags atuais; permissões `pedidos.*` continuam persistidas, mesmo após aposentadoria do add-on homônimo | Editor admin corrigido; cópias de resolvers continuam exigindo comparação entre produtos |
-| Menu→pedido | Preço/estoque rematerializados no servidor; `create_zelo_order`; token/revisão não são autorização de canal interno | Context público agora aceita só public_order/table_order; rejeita whatsapp_order no boundary público |
-| Chat→Menu | Chave interna, tenant/JID/mensagem/revisão; comando deduplicado; confirmação vinculada à sessão | RPC `confirm_whatsapp_zelo_order_atomic_v1` confirmada live e restrita a service role; docs antigas de aplicação pendente corrigidas |
-| CRM Chat→PDV | `ensure_customer_from_whatsapp(owner, phone, observed_name)`; resposta `pessoaId` | Chamava cinco args e lia pessoa_id: PGRST202 observado em produção. Adaptador corrigido, conflito nunca vira vínculo automático |
-| Frete | Snapshot/regras JSONB e versão da cotação; configuração deve usar a assinatura live | Função de salvar regras corrigida no banco sem trocar ACL/defaults; CAS da revalidação continua risco no Menu |
-| Venda/fiado/estoque | `client_sale_id` estável e transação PostgreSQL; apagar pendente só após data.id | Chave legacy agora persistida antes da RPC e reutilizada entre abas; pendentes sem owner não são atribuídas silenciosamente |
-| Pagamento | Meio declarado/QR Pix não é pagamento recebido; venda de mesa pertence ao fechamento da comanda | Não foi criado crédito/débito ou estorno durante testes. Troco e reconciliação precisam de contrato explícito entre checkout e operação |
-| Impressão | `jobId`, source, companyStoreId, tipo, conteúdo; uma intenção pode ter resposta incerta | Novo contrato distingue unavailable antes do POST de unknown depois. Dedup limitado no nativo e persistido nos consumidores; segunda via consciente tem id novo |
-| Distribuição | SDK embutido, SDK browser e instalador são artefatos separados | `/connect` não existe no nativo auditado; pareamento por código continua necessário. Novo código não está automaticamente publicado |
+| PDV e admin | kdo-vini/zelopdv, main | GitHub/Vercel; CI compila ambos outputs completos em Linux |
+| Chat | kdo-vini/zelochat, main | Duas imagens do mesmo commit; /build-info.json no frontend e /api/version no backend |
+| Menu | kdo-vini/zelomenu, master | Uma imagem com frontend/backend compilados juntos; /api/health, x-app-version e assets da raiz |
+| Printer | kdo-vini/zeloprinter, main + tag de versão | CI Windows, instalador e SDK publicados na mesma release |
 
-## Jornadas e redução de fricção
+Os builds Chat/Menu derivam a versão do commit real, recusam override divergente e código de produção fora do commit. Normalização CRLF/LF é aceita como faz o Git; alteração real e arquivo novo continuam sendo recusados. Metadados no runtime não podem mascarar a origem do artefato. Os workflows verificam código e imagens antes de considerar seus gates concluídos; a verificação pós-deploy compara os endpoints e o bundle servido com o SHA esperado.
 
-| Jornada | Problema operacional | Estado melhorado / próximo ajuste objetivo |
+No Dokploy foi encontrado **um serviço ativo de Menu**, com domínio menu.zelopdv.com.br na porta 3101, sem volume de código e sem comando substituto. O arquivo legado zelomenu.yml estava vazio; não era uma segunda rota ativa. Imagens antigas sem uso não foram confundidas com containers servindo clientes.
+
+No Chat, os nomes internos frontend/backend estão invertidos em relação aos nomes mostrados na UI. As rotas foram conferidas; não se renomeou serviço referenciado por configuração existente. O contexto de Dockerfile.frontend foi explicitado como ponto. O backend recebeu 60 segundos de stop grace para o drain de até 55 segundos. A publicação efetiva exige conferir os dois endpoints, não apenas um deploy verde.
+
+O checkout Menu com um commit local e 40 remotos foi reconciliado por merge, preservando ambos. As sete migrations históricas do Menu foram movidas, sem alterar bytes, para supabase/history/conversation-ordering. Duas versões numéricas já pertenciam a migrations diferentes do PDV no ledger real. **Somente o PDV mantém o fluxo executável do banco compartilhado.** Não reaplicar aqueles arquivos nem reparar suas versões remotas como se fossem migrations do Menu.
+
+## Contratos corrigidos
+
+| Fronteira | Correção | Prova |
 | --- | --- | --- |
-| Entrar no Chat para consultar a conta | Landing/login baixavam painel de atendimento inteiro | AppShell sob lazy/AuthGuard reduz JS inicial em 35,1%, preservando navegação |
-| Usar PDV no mesmo navegador com outra conta | Cache anterior podia mostrar itens de outra loja; fila antiga podia seguir com dono errado | Catálogo exige dono e confirmação online negativa não cai em dado antigo. Pendências desconhecidas ficam preservadas; falta recuperação guiada por suporte |
-| Montar pedido com complementos | Quantidade de complemento não era somada corretamente ao estoque total | Validação rejeita demanda impossível antes de materializar. Manter mensagem de item indisponível e preservar carrinho |
-| Abrir Menu após deploy/configuração | Página raiz podia chegar sem configuração runtime; API inexistente devolvia HTML 200 | HTML passa pelo mesmo injector/no-store; APIs inexistentes devolvem JSON 404. Evita tela que carrega mas não consegue consultar |
-| Trocar ou remover foto do produto | Rascunho apagava imagem publicada antes do Salvar; cancelar não restaurava o arquivo | Upload preserva antiga; cleanup só após save confirmado. Falha mantém dados para retry; regressões desktop/mobile verificam remoção cancelada |
-| Reconhecer cliente vindo do WhatsApp | Mensagem chegava, mas cadastro/identidade falhava silenciosamente para a operação | Adapter alinhado ao SQL real. Conflitos continuam explícitos e não mesclam pessoas automaticamente |
-| Parear PDV e Chat no mesmo PC | Segundo pareamento revogava o primeiro; UI dizia conectado com token morto | Até32 tokens independentes e detect com validação. Um controle local permite revogar navegadores; não se pede senha nova por produto |
-| Imprimir pedido com rede local instável | Após timeout, usuário podia receber outra via sem perceber que a primeira já saiu | Texto orienta conferir papel; fallback/retry automáticos suspensos em resultado incerto. Botão de segunda via continua ação consciente |
-| Imprimir em dispositivo que sumiu | Agente escolhia outra impressora/padrão/PDF silenciosamente | Seleção explícita agora falha claramente. Diagnóstico deve indicar o dispositivo salvo e a ação para reconectar |
-| Fechar venda offline | Reinício após resposta perdida podia gerar nova intenção; cache vazio ressuscitava itens removidos | Id estável persistido, confirmação necessária antes de apagar, vazio autoritativo. Ainda é contingência, não gestão inteira offline |
-| Cadastrar conta | PostHog mostra INP elevado em amostra pequena; código espera analytics/referral antes de navegar | Priorizar trace e desacoplamento de analytics da conclusão, com teste que mantenha atribuição e não duplique evento. Não confundir fetch assíncrono com causa comprovada do INP |
-| Confirmar pedido com cupom | Reserva e criação do pedido não compartilham transação; falha pode deixar estado inconclusivo | Pendente: atomicidade ou reconciliação por sessão. UX deve recuperar mesmo pedido/cupom em retry, sem exigir remontagem |
+| Cache e contas | Dono explícito; vazio autoritativo; erro de autorização não reusa cache; troca de conta descarta resposta antiga | IndexedDB e testes de memória |
+| Venda offline | Chave persistida antes da RPC; exclusão só após ID confirmado | Retry e concorrência entre abas |
+| Venda por operador | Titular resolvido no servidor, id_operador autenticado, RBAC antes de replay e lock por loja/chave | Matrizes de estoque/fiado e duas corridas titular/operador; inativo recusado e titular próprio preservado |
+| Catálogo grande | Paginação e lotes IN por owner, ordem por chave única; publicação só após leitura completa | 12 testes incluindo mais de 1000 linhas e troca de conta A/B/A |
+| Pendência sem dono | Recuperação explícita exige caixa pertencente ao titular via RLS, login estável e CAS local | Seis testes; payload preservado e registros inconclusivos intactos |
+| Admin de assinatura | ID selecionado, owner, CAS inclusive updated_at NULL; cancelamento repetido limpa extensão; reativação expirada exige prazo | Revisão independente e regressões de API |
+| Cadastro | Navegação SPA e tarefas de analytics/referral independentes; waitUntil no servidor | Analytics pendente/falhando não impede conclusão |
+| CRM Chat → PDV | RPC de três argumentos e resposta pessoaId | Contrato live e adapter; conflito não vira associação |
+| Publicação de produto | Foto antiga só é limpa depois de salvar; CAS evita sobrescrever edição concorrente; reorder altera somente ordem | Unitários e navegador |
+| Cupom → pedido | Revalidação, pedido e resgate na mesma transação; retry recupera pedido | PostgreSQL 17 com duas conexões e rollback |
+| Frete manual | CAS da sessão; resolução exige o request ainda ligado ao carrinho | Request antigo/nulo recusado sem mutações |
+| Push | Destino permitido, timeout, paginação e concorrência limitadas; lease por assinatura e checkpoint correspondente | Transporte simulado e locks PostgreSQL |
+| Pix | Reserva durável antes do POST; externalId estável; reconciliação por GET; valor e identidade conferidos | PostgreSQL concorrente, deadlines e webhooks simulados |
+| Chat lifecycle | Sem sobreposição de timers; drain; deadlines; erros do socket contidos e filas limitadas | Runtime Linux e testes convencionais, sem reprodução de frames malformados |
 
-Não adicionar um wizard novo de integração. O diagnóstico deve caber nas ações existentes: aplicação local aberta, navegador autorizado, impressora selecionada, resultado enviado/incerto. Para pedidos, o mesmo número/ID deve continuar visível na conversa, cardápio, painel e cupom. Os IDs técnicos adicionais ficam em detalhes de suporte/logs, não no fluxo diário.
+## Banco já aplicado nesta rodada
 
-## Consistência, retries e falhas externas
+As migrations aditivas de cupom, lease de push, guard de cotação e reserva Pix foram aplicadas antes dos consumidores, usando a CLI Supabase vinculada. ACL conferida: somente service_role executa esses novos contratos. A correção anterior de record para JSONB em salvar regra de frete também está aplicada. Não houve criação de pedidos/cobranças reais, transferência de pendências entre contas ou limpeza de histórico financeiro.
 
-1. **Banco:** transação/idempotency key define o efeito único; frontends devem manter a mesma intenção após timeout. Novo UUID em todo retry não é idempotência.
-2. **Webhooks/filas:** aceitar repetição, registrar origem/ID e fazer claim com lease; não confundir HTTP200 com efeito concluído. Polling adaptativo de Chat já estava em produção.
-3. **Printer:** spool aceito não comprova papel; após restart a dedup volátil se perde. Resultado incerto não pode ser transformado em erro “aplicativo fechado”.
-4. **Storage:** objeto e referência no banco não formam uma transação. A imagem anterior deve sobreviver até o save confirmado; timeout não autoriza apagar automaticamente o upload novo.
-5. **Pagamentos:** cobrança criada, pagamento confirmado e entitlement ativo são estados distintos. Criar retry cego quando provedor pode ter aceitado gera cobranças duplicadas.
-6. **Deploy:** aplicar SQL incompatível antes/depois do consumidor errado quebra vários produtos. Priorizar alterações aditivas e teste de contrato entre assinatura live e adapter.
+A migration `20260905003227` também foi aplicada: a RPC de venda grava o dono e
+o ator corretos, compartilha a intenção entre operadores e verifica autorização
+antes do replay. Authenticated/service_role preservados, anon negado. Legado
+sob operador exige reconciliação quando seu vínculo ainda existe; nenhum
+histórico foi reassociado. Ex-operador com assinatura própria preserva sua loja.
 
-## Compatibilidade de versões e publicação
+O harness descartável restaura o baseline, aplica as migrations de schema e executa sete matrizes de identidade, pedidos, tokens, confirmação WhatsApp, estorno de fiado, RBAC e venda por operador. Três probes com conexões independentes validam identidade concorrente, emissão versus confirmação e venda entre titular/operador. Foi necessário corrigir acesso às tabelas temporárias dos testes e reconhecer a cadeia transitiva de locks do PostgreSQL; as permissões das tabelas de aplicação não foram afrouxadas.
 
-Chat foi atualizado com fast-forward da cópia atrasada em 47 commits para `e6c7ca4`, equivalente à base observada no Dokploy. Patches novos continuam locais. Menu diverge: um commit local e 40 remotos; não foi reescrita a alteração local. O relatório Menu identifica arquivos em colisão e correção de estoque já existente upstream. **Não publicar o diff inteiro dessa cópia sem reconciliar versões.** PDV estava alinhado no fetch; Printer permanece versão 0.1.2 local, sem release novo.
+Comando do harness: `./scripts/verify-supabase-baseline.ps1 -ApplyForwardMigrations -ExcludeTenantDataSeeds -RunConcurrencyProbes -PostMigrationVerification <lista de SQLs em supabase/verification>`.
+O seed comercial excluído exige hash exato; todos os schemas permanecem no teste.
 
-O teste mínimo de compatibilidade deve cruzar cliente antigo/agente novo, cliente novo/agente antigo, token revogado, timeout antes/depois do POST, segunda via e falta de impressora. Entre serviços: owner/subusuário, mudança de preço/estoque após abrir carrinho, revisão concorrente, cupom, confirmação repetida e status após reinício. Isso pede staging/fixtures compartilhadas, sem um novo framework de arquitetura.
+## Limites operacionais
 
-## Observabilidade ponta a ponta e prioridades
-
-| Ordem | Ação | Critério de aceite |
-| --- | --- | --- |
-| 1 | Publicar de forma coordenada as correções locais depois da reconciliação Menu e gates | Mesma assinatura SQL, mesmo pedido recuperado após resposta perdida, nenhum grant ampliado |
-| 2 | Exercitar venda/checkout/impressão com falhas em ambiente descartável e térmica | Sem segunda baixa/fiado/pedido; resultado incerto explícito e segunda via deliberada |
-| 3 | Tornar cupom/confirm/revalidação seguros sob retry/CAS | Duas abas não sobrescrevem silenciosamente; cupom não é consumido sem pedido recuperável |
-| 4 | Padronizar correlação em logs existentes | requestId + empresa/owner pseudonimizado + orderId/client_sale_id + jobId + fase/duração/resultado; sem token, conteúdo ou telefone |
-| 5 | Medir UX de cadastro e primeiro uso | Tempo conta→primeira venda, motivo de abandono/erro e INP por interação com amostra conhecida |
-| 6 | Rebrand | Corrigir escala visual, bordas e densidade depois; não redesenhar antes de estabilizar os contratos |
-
-Limites: não houve compra/cobrança, mensagem enviada a cliente, pedido real, sessão de suporte alterada ou impressão física. O navegador do usuário foi usado para consultar Dokploy e PostHog; configurações e campanhas permaneceram sem alterações.
+- Spool aceito não comprova papel. USB/rede, driver e impressora térmica da loja ainda exigem smoke físico após atualizar o Printer.
+- O instalador 0.2.0 passou instalação/desinstalação isolada e CI Windows, mas não possui assinatura Authenticode da empresa. Não foi inventado nem adquirido certificado.
+- Venda offline não resolve disputa de estoque entre caixas desconectados. Pendências rejeitadas no replay permanecem salvas.
+- Analytics de campo deve ser medido após rollout. Remover a espera de analytics não demonstra, por si só, a causa ou a resolução do INP observado no cadastro.
+- Nenhum rebrand foi feito. Avisos visuais preexistentes foram classificados no contexto, sem suppressions para silenciar hooks.

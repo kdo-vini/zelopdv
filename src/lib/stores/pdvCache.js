@@ -6,9 +6,35 @@ import { buildModifierGroups, mergeModifierLinkedProducts } from '$lib/zelomenuM
 
 // Cache TTL in milliseconds (5 minutes)
 const CACHE_TTL = 5 * 60 * 1000;
+const PAGE_SIZE = 500;
+const ID_BATCH_SIZE = 100;
+
+async function readPages(createQuery, assertCurrentUser) {
+    const rows = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+        assertCurrentUser();
+        const { data, error } = await createQuery().range(from, from + PAGE_SIZE - 1);
+        assertCurrentUser();
+        if (error) throw error;
+        if (!Array.isArray(data)) throw new Error('Resposta inválida ao carregar catálogo.');
+        rows.push(...data);
+        if (data.length < PAGE_SIZE) return rows;
+    }
+}
+
+async function readIdBatches(ids, createQuery, assertCurrentUser) {
+    const uniqueIds = [...new Set(ids)];
+    const rows = [];
+    for (let from = 0; from < uniqueIds.length; from += ID_BATCH_SIZE) {
+        const batch = uniqueIds.slice(from, from + ID_BATCH_SIZE);
+        rows.push(...await readPages(() => createQuery(batch), assertCurrentUser));
+    }
+    return rows;
+}
 
 // Store structure
 const createPdvCache = () => {
+    let userGeneration = 0;
     const { subscribe, set, update } = writable({
         produtos: { data: [], loadedAt: null },
         categorias: { data: [], loadedAt: null },
@@ -21,8 +47,14 @@ const createPdvCache = () => {
         return (Date.now() - loadedAt) < CACHE_TTL;
     };
 
-    const assertSameUser = (userId) => {
-        if (get({ subscribe }).userId !== userId) throw new Error('Conta alterada durante o carregamento do catálogo.');
+    const guardCurrentUser = (userId) => {
+        if (!userId) throw new Error('Identifique a conta antes de carregar o catálogo.');
+        const generation = userGeneration;
+        return () => {
+            if (get({ subscribe }).userId !== userId || userGeneration !== generation) {
+                throw new Error('Conta alterada durante o carregamento do catálogo.');
+            }
+        };
     };
 
     return {
@@ -35,18 +67,16 @@ const createPdvCache = () => {
                 return state.categorias.data;
             }
 
-            const { data, error } = await supabase
+            const assertCurrentUser = guardCurrentUser(state.userId);
+            const data = await readPages(() => supabase
                 .from('categorias')
                 .select('*')
-                .order('ordem', { ascending: true });
-
-            assertSameUser(state.userId);
-            if (error) throw error;
-            if (data) {
-                update(s => ({ ...s, categorias: { data, loadedAt: Date.now() } }));
-                return data;
-            }
-            throw new Error('Resposta inválida ao carregar categorias.');
+                .eq('id_usuario', state.userId)
+                .order('ordem', { ascending: true })
+                .order('id', { ascending: true }), assertCurrentUser);
+            assertCurrentUser();
+            update(s => ({ ...s, categorias: { data, loadedAt: Date.now() } }));
+            return data;
         },
 
         async getSubcategorias(forceRefresh = false) {
@@ -55,18 +85,16 @@ const createPdvCache = () => {
                 return state.subcategorias.data;
             }
 
-            const { data, error } = await supabase
+            const assertCurrentUser = guardCurrentUser(state.userId);
+            const data = await readPages(() => supabase
                 .from('subcategorias')
                 .select('*')
-                .order('ordem', { ascending: true });
-
-            assertSameUser(state.userId);
-            if (error) throw error;
-            if (data) {
-                update(s => ({ ...s, subcategorias: { data, loadedAt: Date.now() } }));
-                return data;
-            }
-            throw new Error('Resposta inválida ao carregar subcategorias.');
+                .eq('id_usuario', state.userId)
+                .order('ordem', { ascending: true })
+                .order('id', { ascending: true }), assertCurrentUser);
+            assertCurrentUser();
+            update(s => ({ ...s, subcategorias: { data, loadedAt: Date.now() } }));
+            return data;
         },
 
         async getProdutos(forceRefresh = false) {
@@ -75,21 +103,18 @@ const createPdvCache = () => {
                 return state.produtos.data;
             }
 
-            const { data, error } = await supabase
+            const assertCurrentUser = guardCurrentUser(state.userId);
+            const data = await readPages(() => supabase
                 .from('produtos')
                 .select('*, categorias(id, nome, controlar_estoque_compartilhado, estoque_compartilhado_atual)')
+                .eq('id_usuario', state.userId)
                 .eq('ocultar_no_pdv', false)
-                .order('nome', { ascending: true });
-
-            assertSameUser(state.userId);
-            if (error) throw error;
-            if (data) {
-                const enriched = await attachModifierGroups(data);
-                assertSameUser(state.userId);
-                update(s => ({ ...s, produtos: { data: enriched, loadedAt: Date.now() } }));
-                return enriched;
-            }
-            throw new Error('Resposta inválida ao carregar produtos.');
+                .order('nome', { ascending: true })
+                .order('id', { ascending: true }), assertCurrentUser);
+            const enriched = await attachModifierGroups(data, state.userId, assertCurrentUser);
+            assertCurrentUser();
+            update(s => ({ ...s, produtos: { data: enriched, loadedAt: Date.now() } }));
+            return enriched;
         },
 
         // Invalidate cache (call after CRUD operations)
@@ -103,6 +128,7 @@ const createPdvCache = () => {
             update(s => ({ ...s, subcategorias: { ...s.subcategorias, loadedAt: null } }));
         },
         invalidateAll() {
+            userGeneration++;
             set({
                 produtos: { data: [], loadedAt: null },
                 categorias: { data: [], loadedAt: null },
@@ -114,6 +140,7 @@ const createPdvCache = () => {
         // Set user ID (invalidates if different user logs in)
         setUserId(userId) {
             const state = get({ subscribe });
+            if (state.userId !== userId) userGeneration++;
             if (state.userId && state.userId !== userId) {
                 // Different user, clear cache
                 set({
@@ -129,40 +156,38 @@ const createPdvCache = () => {
     };
 };
 
-async function attachModifierGroups(products) {
+async function attachModifierGroups(products, userId, assertCurrentUser) {
     const productIds = (products || []).map((product) => product.id).filter((id) => id != null);
     if (!productIds.length) return products || [];
 
-    const groupsRes = await supabase
+    const rawGroups = await readIdBatches(productIds, (batch) => supabase
         .from('zelomenu_modifier_groups')
         .select('id, id_produto, nome, tipo, modo_preco, min_selecoes, max_selecoes, permite_quantidade, maximo_por_opcao, ativo, ordem')
-        .in('id_produto', productIds)
-        .order('ordem', { ascending: true });
-    if (groupsRes.error) throw groupsRes.error;
-
-    const rawGroups = groupsRes.data || [];
+        .eq('id_usuario', userId)
+        .in('id_produto', batch)
+        .order('ordem', { ascending: true })
+        .order('id', { ascending: true }), assertCurrentUser);
     if (!rawGroups.length) {
         return (products || []).map((product) => ({ ...product, modifierGroups: [] }));
     }
 
     const groupIds = rawGroups.map((group) => group.id);
-    const optionsRes = await supabase
+    const options = await readIdBatches(groupIds, (batch) => supabase
         .from('zelomenu_modifier_options')
         .select('id, id_grupo, nome, price_delta, ativo, ordem')
-        .in('id_grupo', groupIds)
-        .order('ordem', { ascending: true });
-    if (optionsRes.error) throw optionsRes.error;
-
-    const options = optionsRes.data || [];
+        .eq('id_usuario', userId)
+        .in('id_grupo', batch)
+        .order('ordem', { ascending: true })
+        .order('id', { ascending: true }), assertCurrentUser);
     const optionIds = options.map((option) => option.id);
     let links = [];
     if (optionIds.length) {
-        const linksRes = await supabase
+        links = await readIdBatches(optionIds, (batch) => supabase
             .from('zelomenu_modifier_option_products')
             .select('id_opcao, id_produto, price_override')
-            .in('id_opcao', optionIds);
-        if (linksRes.error) throw linksRes.error;
-        links = linksRes.data || [];
+            .eq('id_usuario', userId)
+            .in('id_opcao', batch)
+            .order('id_opcao', { ascending: true }), assertCurrentUser);
     }
 
     const visibleProductIds = new Set((products || []).map((product) => Number(product.id)));
@@ -173,12 +198,12 @@ async function attachModifierGroups(products) {
     )];
     let linkedProducts = [];
     if (missingLinkedProductIds.length) {
-        const linkedProductsRes = await supabase
+        linkedProducts = await readIdBatches(missingLinkedProductIds, (batch) => supabase
             .from('produtos')
             .select('id, nome, preco, controlar_estoque, estoque_atual, categorias(id, nome, controlar_estoque_compartilhado, estoque_compartilhado_atual)')
-            .in('id', missingLinkedProductIds);
-        if (linkedProductsRes.error) throw linkedProductsRes.error;
-        linkedProducts = linkedProductsRes.data || [];
+            .eq('id_usuario', userId)
+            .in('id', batch)
+            .order('id', { ascending: true }), assertCurrentUser);
     }
 
     const groupsByProductId = new Map();

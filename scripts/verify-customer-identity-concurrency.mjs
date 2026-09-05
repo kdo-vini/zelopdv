@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 
-const databaseUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
-if (!databaseUrl) {
-  console.error('SUPABASE_DB_URL (ou DATABASE_URL) é obrigatório para a verificação de concorrência.');
+const databaseUrl = process.env.ZELOPDV_DISPOSABLE_DB_URL;
+if (databaseUrl !== 'postgresql://postgres:postgres@127.0.0.1:55322/postgres') {
+  console.error('O probe exige ZELOPDV_DISPOSABLE_DB_URL apontando para o PostgreSQL descartável local na porta 55322.');
   process.exit(2);
 }
 
@@ -50,6 +50,7 @@ begin;
 set local role service_role;
 delete from public.pessoa_identities where id_usuario = '${ownerId}'::uuid;
 delete from public.pessoas where id_usuario = '${ownerId}'::uuid;
+reset role;
 delete from auth.users where id = '${ownerId}'::uuid;
 commit;`;
 

@@ -1,5 +1,57 @@
 # Incidents
 
+## INC-2026-09-04-SALE-ACTOR — venda de operador fora da loja
+
+**Status:** correção revisada, aplicada e registrada no Supabase em 2026-09-05 UTC.
+
+No baseline PostgreSQL 17 descartável, `criar_venda_completa` usava auth.uid()
+como dono. A venda do subusuário autorizado ficava sob o operador, sem caixa,
+sem baixa do estoque da loja e sem incremento do fiado. Repetir a mesma chave
+pela conta titular criava outra venda. Três intenções produziram quatro vendas,
+estoques 16/16 e saldo 120; o resultado correto era três vendas, 14/14 e 140.
+Consulta agregada live encontrou zero vendas sob subusuários com vínculo ainda
+existente em access_users. Isso não certifica relações historicamente apagadas.
+
+A migration `20260905003227_sale_owner_operator_context.sql` resolve o titular
+no servidor, grava o ator autenticado em vendas.id_operador e exige permissão
+antes de qualquer replay. Operador conhecido inativo é recusado, incluindo o
+caso em que o helper antigo o tratava como titular. A assinatura própria
+preserva quem também é titular de outra loja, sem mudar regras de validade.
+Lock transacional por
+titular/chave serializa operadores; histórico antigo sob operador exige
+reconciliação explícita, sem reassociação, nova chave ou backfill automático.
+O corpo de itens, pagamentos, estoque, fiado e taxas foi preservado.
+
+As matrizes executam venda, replay, estoque individual/compartilhado, fiado,
+ator forjado, permissões removidas, operador bloqueado, legado e ACL. Duas
+corridas reais, em ordens invertidas titular/operador, produzem uma venda por
+intenção. O ator do débito em fiado continua acessível pela venda vinculada;
+não houve alteração adicional do trigger de fiado.
+SHA256 aplicado: `590B66576FCBB16E5CCEAAC93008539A923C1CBA527B16F71C6ACDF5BF2C4E3D`.
+ACL preservada: anon sem EXECUTE; authenticated e service_role com EXECUTE,
+com os guards internos acima. Consulta pós-aplicação confirmou actor e lock.
+
+## INC-2026-09-04-PIX — resultado da criação perdido após o provedor
+
+**Status:** correção revisada e migration aplicada em 2026-09-05 UTC;
+publicação do consumidor em preparação. Sem cobrança real de teste.
+
+A criação chamava o provedor antes de inserir `billing_payments`, usando
+externalId com timestamp. Uma resposta perdida, falha no insert ou erro no
+flush de analytics poderia apresentar falha ao usuário depois de uma cobrança
+ter sido criada. Concorrência encontrava a restrição de uma cobrança pendente
+somente depois de mais de um POST. Não foi demonstrada duplicação histórica.
+
+A reserva transacional agora precede o POST; timeout/erro após envio mantém
+`unknown` e outra tentativa faz GET por externalId para recuperar a mesma
+cobrança. Zero resultados não libera retry. Snapshot de valor/plano e vínculo
+do titular são verificados antes de anexar um resultado. Configuração inválida
+antes do dispatch é distinguida e libera `not_sent`. Liquidação e resposta
+tardia preservam o pagamento confirmado. Analytics é independente da resposta.
+Migration `20260905001053` aplicada antes do código, com ACL somente service_role;
+anon/authenticated negados. Recuperação documentada em
+[BILLING](BILLING.md). Testes locais não chamaram AbacatePay real.
+
 ## INC-2026-09-04-PUBLISH — revisão de origem e artefatos de produção
 
 **Status:** correções em validação/publicação coordenada; não declarar concluído.
@@ -19,7 +71,7 @@ volumes ou pedidos como suposta correção de cache.
 ## INC-2026-09-04-COUPON — pedido e cupom em transações separadas
 
 **Status:** função aditiva aplicada e registrada no Supabase em2026-09-04;
-publicação do consumidor Menu em preparação. Risco identificado por código,
+consumidor Menu publicado em 37b4b9e e conferido no domínio. Risco identificado por código,
 sem perda histórica encontrada na consulta agregada de resgates (zero linhas).
 
 `confirm_public_zelo_order_atomic` mantém token/revisão e snapshot revalidado,
@@ -29,6 +81,19 @@ lock e exatamente um pedido/resgate por cupom/telefone; falha de produto
 reverteu tudo. Migration `20260904232549_public_order_coupon_atomic.sql` usa
 somente EXECUTE service_role; anon/authenticated negados também após aplicação.
 Nenhum pedido de cliente foi criado nos testes e nenhum resgate foi apagado.
+
+## INC-2026-09-04-DELIVERY-CAS — cotação antiga e push concorrente
+
+**Status:** migrations `20260904234946` e `20260904235540` aplicadas;
+consumidor Menu publicado em 37b4b9e e conferido no domínio.
+
+Uma cotação manual só pode resolver o request ainda vinculado ao carrinho.
+Requests órfãos de CAS perdido ou de endereço anterior retornam
+`QUOTE_REQUEST_STALE`, sem mutar carrinho ou request. Push ganha lease por
+assinatura, validando revisão/status do pedido; checkpoint exige o mesmo lease.
+PostgreSQL 17 com conexões independentes comprovou exclusão mútua, expiração,
+checkpoint antigo recusado e ACL restrita. Push continua entrega ao menos uma
+vez após falha no transporte; lease não transforma rede em exactly-once.
 
 ## INC-2026-09-04-DELIVERY — tipo inválido ao salvar regra de frete
 

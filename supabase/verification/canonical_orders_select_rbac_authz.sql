@@ -26,6 +26,8 @@ create temporary table canonical_orders_authz_fixture (
   cancel_order_id uuid not null
 ) on commit drop;
 
+grant select on canonical_orders_authz_fixture to anon, authenticated, service_role;
+
 insert into canonical_orders_authz_fixture
 select gen_random_uuid(), gen_random_uuid(), gen_random_uuid(),
        gen_random_uuid(), gen_random_uuid(), gen_random_uuid(),

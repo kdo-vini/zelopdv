@@ -3,6 +3,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { getServerAccessContext } from '$lib/server/accessControl';
 import { isAbacatePayConfigured } from '$lib/server/abacatePay';
 import { getPostHogClient } from '$lib/server/posthog';
+import { waitUntil } from '@vercel/functions';
 import { isValidPlanTier, isAddonAllowed, PLANS } from '$lib/pricing';
 import {
   createOrReusePixCharge,
@@ -83,8 +84,9 @@ export async function POST({ request }) {
       });
     }
 
-    const posthog = getPostHogClient();
-    if (posthog) {
+    const analytics = Promise.resolve().then(async () => {
+      const posthog = getPostHogClient();
+      if (!posthog) return;
       posthog.capture({
         distinctId: user.id,
         event: 'pix_charge_created',
@@ -97,11 +99,14 @@ export async function POST({ request }) {
         },
       });
       await posthog.flush();
-    }
+    }).catch(() => console.warn('[billing/pix/create] Analytics indisponível; cobrança preservada.'));
+    waitUntil(analytics);
 
     return json(serializePixCharge(paymentRow));
   } catch (error) {
     console.error('[billing/pix/create] error:', error?.message || error);
-    return json({ error: error?.message || 'Falha ao gerar cobrança Pix.' }, { status: 500 });
+    return json({ error: error?.message || 'Falha ao gerar cobrança Pix.',
+      ...(error?.code?.startsWith('PIX_') ? { code: error.code, paymentId: error.paymentId, retrySafe: false } : {}),
+    }, { status: error?.code?.startsWith('PIX_') ? 409 : 500 });
   }
 }

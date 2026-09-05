@@ -1,3 +1,4 @@
+import { makePixReservationMock } from './helpers/pixReservationMock.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   validatePixCustomerProfile,
@@ -93,12 +94,7 @@ function makeSelectChain(result) {
 
 function makeSupabaseAdmin(state) {
   return {
-    rpc: vi.fn((fn, params) => ({
-      single: vi.fn(async () => {
-        state.rpcCalls = [...(state.rpcCalls || []), { fn, params }];
-        return { data: state.rpcResult ?? null, error: state.rpcError ?? null };
-      }),
-    })),
+    rpc: makePixReservationMock(state),
     from: vi.fn((table) => ({
       select: vi.fn(() => makeSelectChain(state.selectResults?.[table] ?? null)),
       insert: vi.fn((payload) => {
@@ -188,7 +184,7 @@ describe('createOrReusePixCharge', () => {
       },
     };
     const charge = vi.fn(async () => ({
-      id: 'pix_1', status: 'PENDING', brCode: 'BR-CODE-1',
+      id: 'pix_1', status: 'PENDING', amount: 5900, brCode: 'BR-CODE-1',
       brCodeBase64: 'data:image/png;base64,xx', expiresAt: '2026-07-01T18:00:00Z',
     }));
     const { createOrReusePixCharge } = await load(state, charge);
