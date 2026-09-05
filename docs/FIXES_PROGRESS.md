@@ -2,8 +2,9 @@
 
 - [x] FX-PEDIDOS-OFFLINE-01 (2026-09-05) — pedido manual com rascunho durável,
   fila local e replay idempotente; menu lateral/mobile e gates de add-on
-  preservam acesso offline de titular/subusuário. Andamento/fechamento de
-  Pedidos permanecem online. Implementação local; publicação e validações em
+  preservam acesso offline de titular/subusuário. A migration foi aplicada no
+  projeto Supabase; andamento/fechamento de Pedidos permanecem online. O código
+  ainda aguarda publicação; validações em
   [CURRENT](CURRENT.md) e [OFFLINE](operations/OFFLINE.md).
 
 - [x] FX-OFFLINE-RESUME-01 (2026-09-05) — retomada local de caixa e sessão,

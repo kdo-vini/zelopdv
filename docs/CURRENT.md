@@ -8,9 +8,10 @@ frete manual e total calculado. Rascunho e intenção persistidos por loja e
 operador; fila exibe registros locais e concilia IDs após replay. Sidebar e
 gates de ZeloMenu/Mesas preservam acesso offline de subusuários.
 
-Exige preparação prévia do aparelho e migration
-`20260905210000_manual_offline_orders.sql` antes do rollout; **sem publicação
-ou aplicação remota nesta rodada**. Aceite/andamento/cancelamento/fechamento de
+Exige preparação prévia do aparelho e a migration
+`20260905210000_manual_offline_orders.sql`, aplicada no projeto Supabase
+`xnnjyrblpvsqrtsshawa` e registrada no histórico via CLI. O código da aplicação
+ainda não foi publicado. Aceite/andamento/cancelamento/fechamento de
 Pedidos continuam online. Contrato atual em [OFFLINE](operations/OFFLINE.md).
 
 Validação: suíte completa 1.149 passam/3 skips, seguida de 61 testes focados
@@ -26,7 +27,7 @@ do modal móvel; última rodada confirmou geometry sem sobreposição e repetiu
 criação/recarga/navegação/checkout nas duas larguras. Evidências locais em
 `test-results/manual-orders-{browser,browser-final,focused,sql,check-final}.log`.
 Capturas `test-results/offline/manual-order-{top-390,390,1280}.png`.
-Sem sessão de cliente, pedido real, publicação ou teste em aparelho físico.
+Sem sessão de cliente, pedido real, publicação do cliente ou teste em aparelho físico.
 
 ## Onboarding de catálogo Degust — 2026-09-05
 

@@ -26,9 +26,9 @@ consultados sem rede. **Aceite, avanço de preparo, cancelamento, fechamento e
 recebimento de pedidos de outros aparelhos continuam exigindo conexão.**
 Frente de caixa, Mesas e Caixa mantêm o protocolo offline existente.
 
-Rollout: aplicar `20260905210000_manual_offline_orders.sql` antes de publicar
-o cliente, depois atualizar a preparação dos aparelhos. Migration e código
-desta entrega ainda não foram publicados. A criação exige `pedidos.acessar`
+Rollout: a migration `20260905210000_manual_offline_orders.sql` já foi aplicada
+no projeto Supabase vinculado e registrada pelo CLI; ainda é necessário publicar
+o cliente e atualizar a preparação dos aparelhos. A criação exige `pedidos.acessar`
 e `pedidos.receber`, entitlement ZeloMenu e dispositivo registrado, com
 revalidação no replay. Validação e limites do build em [CURRENT](../CURRENT.md).
 

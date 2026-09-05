@@ -3,8 +3,8 @@
 - Pedido manual (implementação local 2026-09-05): usa `order.create` na outbox,
   catálogo/montagem do PDV e motor canônico `source=manual`. Confirmação só após
   commit IndexedDB; dados do cliente/pagamento/previsão são opcionais e frete é
-  manual. Requer aparelho preparado e migration `20260905210000`; consultar
-  CURRENT para rollout. Consulta offline da fila não implica suporte offline
+  manual. Requer aparelho preparado; migration `20260905210000` já aplicada no
+  projeto compartilhado. Consultar CURRENT para rollout do cliente. Consulta offline da fila não implica suporte offline
   a aceite, preparo, cancelamento ou fechamento de Pedidos.
 
 - Offline v1 (implementação local 2026-09-05): um aparelho principal controla
@@ -12,7 +12,7 @@
   Confirmação depende de commit IndexedDB, replay depende de recibo remoto;
   parciais mantêm turno original e ajustes tardios não reescrevem fechamento.
   `OFFLINE.md` descreve preparação, filas e homologação. Migration offline
-  ainda não publicada nesta rodada; consultar CURRENT antes de habilitar.
+  está aplicada no projeto compartilhado; consultar CURRENT antes de habilitar.
 
 - Pizzas (implementação local 2026-09-05, ainda sem rollout): cadastro
   exclusivamente no PDV; `produtos.tipo_produto`/`pizza_config` e revisões
