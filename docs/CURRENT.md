@@ -1,5 +1,24 @@
 # ZeloPDV — Foco atual
 
+## Modelos de entrega por bairro ou por rota — implementação local em validação (2026-09-05)
+
+Implementado nos worktrees de ZeloMenu e ZeloChat o seletor exclusivo por
+empresa entre `distance` e `neighborhood`. O modelo inativo permanece salvo,
+mas não é enviado ao checkout público nem editável no painel antigo do Chat.
+O modelo por bairro usa tabela canônica com desativação lógica, preço por
+bairro, dropdown obrigatório no checkout e validação server-side; o fluxo por
+rota/CEP permanece separado. WhatsApp usa a mesma tabela e comparação exata.
+
+A migration [20260905174107_zelomenu_delivery_models.sql](../supabase/migrations/20260905174107_zelomenu_delivery_models.sql)
+está pronta, com backfill idempotente, RLS server-only, RPC transacional e
+guards de confirmação. Ela ainda não foi aplicada: estes worktrees não estão
+vinculados a um project ref e o Docker local não está disponível. A aplicação
+deve ocorrer no projeto conectado após revisar o SQL.
+
+Validação local desta rodada: ZeloMenu 682 testes + typechecks; ZeloChat 123
+arquivos unitários, lint frontend/servidor; ZeloPDV check e ledger de migrations
+verdes. O lint SQL remoto ficou pendente pela ausência de link do Supabase.
+
 ## Pizzas montáveis — prontas para homologação em 2026-09-05
 
 Cadastro unificado em Produtos e montagem ZeloMenu/PDV/Mesas implementados. A
