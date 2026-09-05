@@ -5,6 +5,7 @@
 
   export let productName = '';
   export let selectedModelId = '';
+  export let showPizza = true;
 
   const dispatch = createEventDispatcher();
 
@@ -14,7 +15,7 @@
 </script>
 
 <div class="modelo-grid" aria-label="Modelos de grupo">
-  {#each models as model (model.id)}
+  {#each models.filter((model) => showPizza || model.compositionKind !== 'pizza') as model (model.id)}
     <button
       type="button"
       class="modelo-card"

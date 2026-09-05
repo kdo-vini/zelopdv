@@ -15,6 +15,14 @@ export function importPizzaFlavor(product, sizeId, id = crypto.randomUUID()) {
     prices: setPizzaPrice({}, sizeId, product.preco) };
 }
 
+export function preservePizzaDraftAfterModeChange(draft, savedConfig, pricingMode) {
+  return {
+    ...draft,
+    revision: savedConfig?.revision || draft.revision,
+    pricingMode,
+  };
+}
+
 export async function archivePizzaProduct(client, product) {
   if (product.tipo_produto !== 'pizza' || !product.pizza_config?.revision) throw new Error('Recarregue a configuração da pizza antes de arquivar.');
   const { data, error } = await client.rpc('save_pizza_config', {
@@ -24,13 +32,4 @@ export async function archivePizzaProduct(client, product) {
   });
   if (error) throw error;
   return data;
-}
-
-export function buildPizzaDraftProduct(source, ownerUserId) {
-  return {
-    nome: `${source.nome} · Pizza`, preco: 0, id_usuario: ownerUserId,
-    id_categoria: source.id_categoria, id_subcategoria: source.id_subcategoria,
-    ocultar_no_pdv: true, controlar_estoque: false, estoque_atual: 0,
-    eh_item_por_unidade: false
-  };
 }

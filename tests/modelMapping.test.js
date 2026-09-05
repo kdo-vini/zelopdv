@@ -9,8 +9,8 @@ import { models, calcMinSel } from '../src/lib/modifierModels.js';
  */
 
 describe('Model → technical fields mapping (spec section 2.1)', () => {
-  it('has exactly 4 models', () => {
-    expect(models).toHaveLength(4);
+  it('has four generic models plus pizza composition', () => {
+    expect(models).toHaveLength(5);
   });
 
   it('"Troca o preço" maps to variacao/substituir with allowsQuantity=false', () => {

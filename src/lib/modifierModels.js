@@ -1,6 +1,14 @@
-import { ArrowLeftRight, Plus, CircleCheck, User } from 'lucide-svelte';
+import { ArrowLeftRight, Plus, CircleCheck, Pizza, User } from 'lucide-svelte';
 
 export const models = [
+  {
+    id: 'pizza_composition',
+    description: 'O cliente escolhe tamanho e até quatro sabores. Borda, massa e adicionais continuam como grupos deste produto.',
+    label: 'Montagem de pizza',
+    compositionKind: 'pizza',
+    example: () => 'Ex.: Grande · ½ Calabresa + ½ Portuguesa',
+    icon: Pizza
+  },
   {
     id: 'variacao_substituir',
     description: 'O cliente escolhe uma opção e o preço muda conforme a escolha.',

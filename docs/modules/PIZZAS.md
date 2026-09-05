@@ -6,18 +6,26 @@
 
 ## Produto e cadastro
 
-O cadastro é exclusivo do ZeloPDV, em Gestão > Produtos > Pizza montável.
-Um produto representa uma linha de pizzas (por exemplo Tradicionais ou Doces).
-O editor mantém tamanhos, máximo de 1–4 sabores por tamanho, sabores com
-descrição/foto opcional, matriz de preços e disponibilidade manual. O preço
-da matriz é o valor de uma pizza inteira. Uma célula sem preço torna aquele
-sabor indisponível naquele tamanho. Sabores não se combinam entre produtos.
+Pizza usa o mesmo cadastro de qualquer produto. Em Gestão > Produtos, o
+operador cria o produto, salva e segue para **Complementos e opções**. Dentro
+de **Adicionar grupo**, o modelo **Montagem de pizza** abre a configuração
+especializada. Não há seletor de tipo nem uma segunda ação “Nova pizza”. O
+campo técnico `tipo_produto` só separa contratos de cálculo e persistência.
 
-Uma pizza nova começa como rascunho oculto no PDV e não publicado no Menu.
-Depois de configurar, usar a visibilidade existente do produto para ativar
-no balcão e a publicação do editor para o ZeloMenu. Publicação online é
-independente de `ocultar_no_pdv`. Importar sabores copia produtos existentes
-para o tamanho escolhido, sem alterar/ocultar os originais.
+Um produto representa uma linha de pizzas, por exemplo “Pizzas tradicionais”.
+O editor segue a ordem de trabalho do operador: regra de cobrança, tamanhos,
+sabores e preços, apresentação no ZeloMenu e prévia. Cada tamanho aceita de
+1 a 4 sabores. Sabores têm descrição e foto opcionais, disponibilidade manual
+e uma matriz de preços. O valor informado é o da pizza inteira; uma célula
+vazia torna o sabor indisponível naquele tamanho.
+
+Ao transformar um produto antigo que pode ter vendas, o sistema cria uma
+identidade técnica protegida, clona seus complementos e substitui o item
+visível em uma única transação no banco. Se qualquer etapa falhar, nada é
+substituído. O produto anterior recebe o sufixo “anterior”, sai do PDV e do
+ZeloMenu, enquanto o novo preserva a visibilidade que existia. Isso evita
+reclassificar vendas históricas. Importar sabores copia dados de produtos
+existentes sem alterar os originais.
 
 A loja escolhe maior sabor (`highest`, padrão) ou média (`average`). Massa,
 borda e extras usam complementos existentes em modo somar. Grupos de preço
@@ -40,6 +48,9 @@ em centavos; extras são somados depois, antes de multiplicar a quantidade.
 - `save_pizza_config(p_product_id,p_expected_revision,p_config)`: gravação
   atômica com controle concorrente e revisão nova. Revisões históricas
   preservam configuração e dependências dos complementos/estoque.
+- `replace_product_with_pizza(...)`: converte com segurança um produto que já
+  pode ter vendas; configuração, complementos, publicação e troca de
+  visibilidade pertencem à mesma transação.
 - Catálogo público: `productType` e `pizza`; entrada do carrinho:
   `pizzaSelection = {revision,sizeId,flavorIds}`.
 - Snapshot `pizza` em carrinho, itens de pedido, venda e comanda: versão,
@@ -57,11 +68,11 @@ do ZeloChat não faz parte desta entrega.
 
 ## Estoque e contingência
 
-O estoque é de pizza pronta: uma unidade por pizza. Pode ser o estoque do
-produto principal ou o produto vinculado ao tamanho; nunca ambos. Sabores
-não baixam estoque. Extras vinculados mantêm consumo integral. A composição
-acompanha conversão, fechamento de mesa e estorno para evitar perda de dados
-ou dupla baixa. Ingredientes/ficha técnica, frações livres e extras por parte
+O fluxo atual não pede estoque de sabores, ingredientes ou tamanhos. Tamanhos
+novos são gravados sem vínculo de estoque, e sabores nunca baixam estoque.
+Vínculos históricos de tamanho continuam legíveis para não quebrar pedidos já
+registrados. O controle genérico do produto e de adicionais vinculados mantém
+o contrato existente do PDV; ficha técnica, frações livres e extras por parte
 ficam fora desta versão.
 O destino de estoque (produto ou categoria compartilhada) é preservado na
 revisão histórica. Cancelar pedido canônico ou comanda restaura esse destino.
@@ -93,8 +104,8 @@ Runner SQL reproduzível (PowerShell, banco descartável gerenciado pelo script)
 ./scripts/verify-supabase-baseline.ps1 -ApplyForwardMigrations -ExcludeTenantDataSeeds -PostMigrationVerification @('supabase/verification/pizza_composition_runtime.sql','supabase/verification/create_sale_owner_operator_runtime.sql','supabase/verification/customer_order_links_authz.sql','supabase/verification/whatsapp_atomic_confirmation_v1_runtime.sql')
 ```
 
-Evidência local: 1.059 unitários PDV/3 skips e 673 unitários Menu; check PDV
-0/0 e typechecks frontend/backend Menu passaram. Fluxo real do modal em Chromium 390/1280 (montagem, borda,
+Evidência local mais recente: 1.141 unitários PDV/3 skips e 674 unitários Menu;
+check PDV 0/0 e typechecks frontend/backend Menu passaram. Fluxo real do modal em Chromium 390/1280 (montagem, borda,
 observação, edição, reset e bloqueios); quatro E2E Menu desktop/mobile;
 matriz SQL com configuração/CAS, ACL, preço, filas/retry, estoque histórico,
 mesas/cozinha, aceite, cancelamento, fechamento e purge. Não foram criados
@@ -104,9 +115,8 @@ harness de navegador; o adapter Vercel encontra o EPERM de symlink já conhecido
 na etapa de adaptação. A jornada de pizza também passou em navegador mobile.
 Papel físico não foi testado.
 
-Auditoria visual: nenhum apontamento determinístico nos dois modais novos/
-alterados após trocar o backdrop para token e alinhar textos auxiliares ao
-tamanho de 14px. Alertas das páginas operacionais/grade são preexistentes:
+Auditoria visual: nenhum apontamento determinístico no novo editor de pizza do
+PDV nem na montagem pública do ZeloMenu. Alertas das páginas operacionais/grade são preexistentes:
 cores de estados diferentes detectadas como simultâneas e valores CSS
 históricos fora da escala. Não houve supressão nem certificação WCAG geral.
 

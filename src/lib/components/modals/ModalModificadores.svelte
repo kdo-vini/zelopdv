@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
-  import { ArrowLeft, X, ChevronRight, ChevronDown, SlidersHorizontal, Eye, Plus, GripVertical } from 'lucide-svelte';
+  import { ArrowLeft, X, ChevronRight, ChevronDown, SlidersHorizontal, Eye, Pizza, Plus, GripVertical } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import * as Select from '$lib/components/ui/select/index.js';
@@ -188,6 +188,10 @@
 
   function onModelSelect(event) {
     const model = event.detail;
+    if (model.compositionKind === 'pizza') {
+      dispatch('pizza', { produto });
+      return;
+    }
     if (produto?.tipo_produto === 'pizza' && model.modo_preco === 'substituir') {
       addToast('A pizza usa preços por tamanho e sabor. Para massa, borda e extras, escolha um modelo com acréscimo.', 'warning');
       return;
@@ -535,6 +539,16 @@
         <!-- LIST PANEL -->
         <div class="list-panel" class:hidden={!isDesktop && showDetailPanel}>
           <div class="list-body">
+            {#if produto?.tipo_produto === 'pizza'}
+              <button type="button" class="composition-row" on:click={() => dispatch('pizza', { produto })}>
+                <span class="composition-icon" aria-hidden="true"><Pizza size={20} /></span>
+                <span class="composition-copy">
+                  <strong>Montagem da pizza</strong>
+                  <span>Edite tamanhos, sabores e preços.</span>
+                </span>
+                <ChevronRight size={18} aria-hidden="true" />
+              </button>
+            {/if}
             {#if !showAddGrupo}
               <p class="list-subtitle">Gerencie os grupos que o cliente verá para montar este produto.</p>
             {/if}
@@ -620,7 +634,7 @@
                     <p class="section-subtitle">Como este grupo funciona?</p>
                     <p class="section-description">Escolha o modelo que melhor descreve o resultado para o cliente.</p>
                   </div>
-                  <ModelSelector productName={produto?.nome || 'Produto'} on:select={onModelSelect} />
+                  <ModelSelector productName={produto?.nome || 'Produto'} showPizza={produto?.tipo_produto !== 'pizza'} on:select={onModelSelect} />
                 </div>
               {:else}
                 <!-- Step 2: Model selected, show settings -->
@@ -915,6 +929,40 @@
     font-size: 0.78rem;
     line-height: 1.4;
   }
+
+  .composition-row {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) 20px;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 68px;
+    margin-bottom: 14px;
+    padding: 12px;
+    color: var(--text-main);
+    text-align: left;
+    background: var(--accent-light);
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+  }
+
+  .composition-row:hover { background: color-mix(in srgb, var(--primary) 16%, var(--bg-card)); }
+  .composition-row:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  .composition-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    color: var(--primary);
+    background: var(--bg-card);
+    border-radius: 8px;
+  }
+
+  .composition-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .composition-copy strong { font-size: 0.875rem; }
+  .composition-copy span { color: var(--text-muted); font-size: 0.875rem; line-height: 1.4; }
 
   /* --- Content layout --- */
 

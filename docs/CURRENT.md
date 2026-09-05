@@ -1,5 +1,24 @@
 # ZeloPDV — Foco atual
 
+## Pizzas montáveis — prontas para homologação em 2026-09-05
+
+Cadastro unificado em Produtos e montagem ZeloMenu/PDV/Mesas implementados. A
+pizza é configurada em Complementos e opções, sem seletor técnico nem ação
+separada de criação. Até quatro sabores, regra de maior preço ou média, extras,
+edição, observação e snapshots históricos. O fluxo não pede estoque por sabor,
+ingrediente ou tamanho. Importação mantém produtos antigos e exclusão arquiva.
+
+A transformação de um produto que já pode ter vendas cria uma nova identidade,
+clona complementos e troca a visibilidade em uma única transação. A migration
+`20260905170613_finalize_pizza_replacement.sql` foi aplicada e registrada no
+Supabase vinculado; anon não executa a função e operadores autenticados passam
+pela capability `produtos.gerenciar`. O teste remoto criou produto, revisão e
+publicação dentro de uma transação e confirmou o rollback.
+
+Validação: suíte PDV com 1.141 testes/3 skips, check 0/0 e harness Chromium em
+390/1280; Menu com 674 unitários, typechecks, build e quatro E2E desktop/mobile.
+Detalhes, runner SQL e limites em [PIZZAS](modules/PIZZAS.md).
+
 ## Investigação de montagem manual — 2026-09-05
 
 Defeito reproduzido no componente real `ModalProdutoMontavel` em Chromium:
