@@ -686,3 +686,6 @@ Não havia um log histórico consolidado de incidentes neste repositório. As en
 - [src/app.css](/home/vinicius/code/zelopdv/src/app.css:343)
 - [src/routes/+layout.svelte](/home/vinicius/code/zelopdv/src/routes/+layout.svelte:409)
 - [src/lib/stores/ui.js](/home/vinicius/code/zelopdv/src/lib/stores/ui.js:5)
+
+
+**2026-09-04 — risco de exclusão de titular na remoção de acesso (identificado na auditoria):** o teste local confirmou que duas assinaturas históricas produziam erro de singularidade ignorado em `DELETE /api/access/users/[id]`, fazendo a rota tentar excluir Auth após remover `access_users`; uma falha comum de leitura também seguia a cascata. Não há evidência de exclusão real de cliente neste diagnóstico. A correção verifica existência com `limit(1)` antes das exclusões e retorna 500 sem DML/auditoria quando a leitura falha, inclusive se vier com dados parciais. Oito regressões passam, a revisão independente foi aprovada e `npm run check` ficou em 0 erros/0 avisos; publicação ainda pendente neste registro.

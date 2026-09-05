@@ -1,5 +1,5 @@
 // PATCH: update user status or role
-// DELETE: soft-delete (status = 'removed')
+// DELETE: remove the access link and eligible sub-user Auth account
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logServerAuditAction } from '$lib/server/accessControl';
@@ -74,6 +74,23 @@ export async function DELETE({ request, params }) {
 
   if (!subUser) return json({ error: 'Usuário não encontrado.' }, { status: 404 });
 
+  // Any subscription history identifies an independent owner account. Check
+  // before deleting the link; a failed lookup must never authorize an Auth deletion.
+  let hasOwnSubscription = false;
+  if (subUser.auth_user_id) {
+    const { data: ownSubscription, error: subscriptionError } = await supabaseAdmin
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', subUser.auth_user_id)
+      .limit(1)
+      .maybeSingle();
+
+    if (subscriptionError) {
+      return json({ error: 'Não foi possível verificar a conta do usuário. Nenhum acesso foi removido.' }, { status: 500 });
+    }
+    hasOwnSubscription = Boolean(ownSubscription);
+  }
+
   // Hard-delete the access_users row so the email can be re-invited cleanly
   // (respects the UNIQUE (owner_user_id, email) constraint).
   const { error: deleteError } = await supabaseAdmin
@@ -90,13 +107,7 @@ export async function DELETE({ request, params }) {
   let authDeleted = false;
   let authSkippedReason = null;
   if (subUser.auth_user_id) {
-    const { data: ownSubscription } = await supabaseAdmin
-      .from('subscriptions')
-      .select('id')
-      .eq('user_id', subUser.auth_user_id)
-      .maybeSingle();
-
-    if (ownSubscription) {
+    if (hasOwnSubscription) {
       authSkippedReason = 'has_own_subscription';
     } else {
       const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(subUser.auth_user_id);

@@ -732,3 +732,6 @@ revisão/aplicação da migration de venda têm uma única linha de status em
   por empresa no dashboard administrativo. A configuração persistida no
   Supabase controla as métricas de base, financeiro e engajamento; Donutopia e
   Téchne permanecem excluídas por padrão.
+
+
+**2026-09-04 — FX-ACCESS-DELETE-OWNER-HISTORY (corrigido localmente):** a remoção de subusuário usava `maybeSingle()` sem limite após apagar o vínculo e ignorava erro de cardinalidade, permitindo cascata Auth indevida quando havia várias assinaturas próprias. A consulta agora usa `limit(1)` antes de qualquer exclusão, preserva Auth com qualquer histórico próprio e interrompe sem DML em caso de erro. Regressão demonstrada em teste antes da correção; oito testes novos e revisão independente aprovados. Commit/publicação coordenados ainda pendentes neste registro.

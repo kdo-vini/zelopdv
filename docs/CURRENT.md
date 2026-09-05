@@ -1171,3 +1171,6 @@ Dashboard administrativo (2026-08-04): o escopo global das métricas agora é
   configurável por empresa em `/settings`; novas contas entram por padrão e
   contas de teste/internas podem ser excluídas de MRR, ARR, ticket médio,
   assinaturas, churn, DAU/WAU e custos de IA vinculados à conta.
+
+
+**2026-09-04 — remoção de acesso e assinatura própria:** correção local de `DELETE /api/access/users/[id]` consulta a existência de qualquer assinatura do usuário com `limit(1)` antes de excluir o vínculo. Erro nessa leitura retorna 500 sem excluir vínculo/Auth nem gravar auditoria; histórico múltiplo, inclusive cancelado/expirado, preserva a conta independente. Oito testes novos passam, incluindo falha com dados parciais, titular comum, subusuário real e convite pendente; `npm run check` terminou com 0 erros/0 avisos. Revisão independente aprovada; alteração ainda sem commit/publicação neste registro.
