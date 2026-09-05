@@ -1,5 +1,31 @@
 # ZeloPDV — Foco atual
 
+## Estação de impressão pelo navegador — 2026-09-05
+
+Implementada uma estação opt-in em **Perfil > Integrações > Zelo Impressão**.
+Com **Este computador recebe impressões** ativo, uma aba autenticada do ZeloPDV
+no computador mantém presença no Supabase, reserva trabalhos e os entrega ao
+Zelo Impressão local. Impressões iniciadas em outro aparelho cobrem recibos da
+Frente de Caixa, sangria/suprimento, pagamento de fiado, segunda via e comandas
+manuais; ficam pendentes por até duas horas quando a estação está desligada.
+
+Pedidos canônicos de ZeloMenu, ZeloChat/WhatsApp e Mesas após **Enviar para
+cozinha** agora são observados globalmente, sem depender de `/app/pedidos`
+estar aberta, e entram na mesma fila transacional com o ID canônico como chave
+de idempotência. A estação é autorizada somente para o titular; subusuários
+podem solicitar impressões, mas não ler ou reservar o conteúdo da fila. Falha
+comprovadamente anterior ao envio pode tentar novamente até três vezes;
+`PRINT_OUTCOME_UNKNOWN` é terminal. Payload máximo: 256 KiB; resultados são
+retidos por sete dias. Migrations aplicadas e registradas:
+`20260905195511_browser_print_station.sql` e correção incremental
+`20260905201827_fix_browser_print_station_heartbeat.sql`.
+
+Validação local: 20 testes direcionados de fila, schema, serviço, estação e
+auto-print; `npm run check` em 0 erros e 0 avisos. O smoke SQL autenticado
+executou heartbeat, enqueue idempotente, claim e finish dentro de rollback.
+Smoke físico na Degust segue
+pendente: venda móvel, comanda de cozinha da Mesa, pré-conta e pedido online.
+
 ## Onboarding de catálogo Degust — 2026-09-05
 
 Catálogo público de [Degust](https://degust.roxpdv.com/) importado no tenant

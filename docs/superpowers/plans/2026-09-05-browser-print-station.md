@@ -60,8 +60,10 @@ Expected: FAIL because the generated migration is empty.
 - [ ] **Step 3: Implement the migration**
 
 Use enums as checked text columns to keep PostgREST payloads simple. Claim up
-to three rows with one `update ... from (select ... for update skip locked)`;
-requeue only stale `claimed` rows that do not carry an uncertain result.
+to three rows with one `update ... from (select ... for update skip locked)`.
+Um claim abandonado vira `unknown`: depois de reservar não existe prova de que
+o POST local não começou. Apenas falhas seguras devolvidas explicitamente pela
+estação voltam para `pending`.
 
 ```sql
 create table public.zelo_print_jobs (
@@ -94,7 +96,8 @@ service role.
 
 The verification must run inside a transaction and roll back. It creates two
 owners and actors, proves idempotent enqueue, cross-owner isolation, single
-claim, matching-station completion, stale safe recovery and terminal `unknown`.
+claim, matching-station completion, retry seguro explícito e claim abandonado
+terminal em `unknown`.
 
 - [ ] **Step 5: Run schema and SQL verification**
 
