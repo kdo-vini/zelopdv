@@ -6,7 +6,6 @@ test.describe('Landing pública', () => {
 
     await expect(page.getByRole('heading', { name: /sua lanchonete vendeu bem/i })).toBeVisible();
     await expect(page.getByRole('heading', { name: /veja o que realmente sobrou no fim do dia/i })).toBeVisible();
-    await expect(page.getByText('Capturas reais do produto, sem mockup.')).toBeVisible();
     await expect(page.getByRole('img', { name: /relatório financeiro do zelo pdv/i })).toBeVisible();
     await expect(page.getByRole('region', { name: /veja o que realmente sobrou no fim do dia/i }).getByRole('link', { name: /ver cardápios publicados/i })).toHaveAttribute('href', 'https://menu.zelopdv.com.br/#empresas');
   });

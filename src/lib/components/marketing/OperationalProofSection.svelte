@@ -51,7 +51,6 @@
         Vender R$ 3.000 no dia não quer dizer nada. O que importa é o que sobrou depois do aluguel, da luz e das retiradas. O Zelo faz essa conta para você.
       </p>
       <p class="proof-subcopy">O sistema que aparece aqui é o mesmo que organiza o caixa, mostra o que entrou e calcula o que realmente sobrou.</p>
-      <small>Capturas reais do produto, sem mockup.</small>
     </div>
 
     <div class="proof-grid">
@@ -153,13 +152,6 @@
   .proof-subcopy {
     margin-top: 0.75rem !important;
     font-size: 1rem !important;
-  }
-
-  .proof-heading small {
-    display: block;
-    margin-top: 0.9rem;
-    color: var(--marketing-ink-soft);
-    font-size: 0.875rem;
   }
 
   .proof-grid {
