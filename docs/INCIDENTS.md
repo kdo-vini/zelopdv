@@ -64,8 +64,8 @@ e40 remotos; merge explícito preservou ambos. Chat tem dois serviços no mesmo
 repo/main; nomes internos frontend/backend estão invertidos, porém roteamento
 confere. O contexto vazio do Dockerfile.frontend foi explicitado como `.`.
 Novos builds identificam o SHA real e impedem override divergente. O Menu
-`4faa1f32f3275a2cf21b8d382e2a6e9b48a6ca44` foi conferido pelo CI
-`33936060735`, Dokploy e HTTP público; o Chat base `0d67676` foi conferido e
+`bd8af453d82cf13a16c9b3ded93d99becdc82124` foi conferido pelo CI
+`33942362245`, Dokploy e HTTP público; o Chat base `0d67676` foi conferido e
 o patch `dc52af4` adiciona smoke HTTP e PostgreSQL isolado; a CI
 `33941327097` passou após repetir somente o gate público que sofreu timeout de
 rede no primeiro runner. Confirmar

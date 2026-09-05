@@ -30,10 +30,10 @@ que foram superadas; não devem ser usados como status de publicação atual.
   cinco `gray-on-color` combinam estados diferentes de hover/seleção/disabled,
   confirmados no código; um tamanho de fonte de 11 px é preexistente e foi
   preservado fora do escopo de rebrand. Isso não certifica contraste/WCAG geral.
-- Menu publicado: `master` em `4faa1f32f3275a2cf21b8d382e2a6e9b48a6ca44`;
+- Menu publicado: `master` em `bd8af453d82cf13a16c9b3ded93d99becdc82124`;
   Dokploy concluiu o deploy. Verificação pública de
   `menu.zelopdv.com.br` confirmou o SHA no backend/frontend e 32 assets
-  (1.634.018 bytes). A CI `33936060735` passou com 663 unitários, E2E
+  (1.634.018 bytes). A CI `33942362245` passou com 663 unitários, E2E
   40/4 skips, PostgreSQL, build Docker e verificador HTTP. Cupom atômico, lease push e guard de cotação já têm
   migrations canônicas aplicadas no PDV; o Menu usa espelhos de teste dessas funções.
 - Printer: release 0.2.0, revisão `e068`, CI `33933244243` verde.

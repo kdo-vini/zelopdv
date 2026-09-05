@@ -6,8 +6,8 @@ Os itens abaixo registram implementação e evidência de teste. Publicação e 
 revisão/aplicação da migration de venda têm uma única linha de status em
 [[CURRENT]], para não manter estados contraditórios entre documentos.
 
-- [x] FX-AUDIT-MENU-RELEASE-01 — Menu `4faa1f32f3275a2cf21b8d382e2a6e9b48a6ca44` publicado pelo Dokploy;
-  CI `33936060735` e verificador público confirmaram SHA do frontend/backend e 32 assets. Cupom,
+- [x] FX-AUDIT-MENU-RELEASE-01 — Menu `bd8af453d82cf13a16c9b3ded93d99becdc82124` publicado pelo Dokploy;
+  CI `33942362245` e verificador público confirmaram SHA do frontend/backend e 32 assets. Cupom,
   lease push e guard de cotação usam migrations canônicas já aplicadas no PDV.
 - [x] FX-AUDIT-PRINTER-RELEASE-01 — release 0.2.0 (`e068`), CI `33933244243`
   verde; confirmação em papel continua distinta de teste automatizado.
