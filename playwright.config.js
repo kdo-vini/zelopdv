@@ -44,6 +44,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         storageState: 'e2e/.auth/user.json',
       },
+      testIgnore: /marketing-home\.spec\.js/,
       dependencies: ['setup'],
     },
     {
@@ -52,7 +53,15 @@ export default defineConfig({
         ...devices['Pixel 5'],
         storageState: 'e2e/.auth/user.json',
       },
+      testIgnore: /marketing-home\.spec\.js/,
       dependencies: ['setup'],
+    },
+    {
+      name: 'marketing',
+      testMatch: /marketing-home\.spec\.js/,
+      use: {
+        ...devices['Desktop Chrome'],
+      },
     },
   ],
 

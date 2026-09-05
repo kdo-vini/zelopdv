@@ -166,18 +166,21 @@
     ChevronDown,
     CloudOff,
     MessageCircle,
-    ScanSearch,
     ShoppingBasket,
     Wallet,
     X
   } from 'lucide-svelte';
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
+  import OperationalProofSection from '$lib/components/marketing/OperationalProofSection.svelte';
   import { ADDONS, PLANS } from '$lib/pricing';
   import { trackViewContent } from '$lib/metaPixel';
   import { initMarketingAnalytics } from '$lib/marketingAnalytics';
+  import { capturePostHogEvent } from '$lib/posthogClient';
+  import { OPERATIONAL_PROOF_EVENTS } from '$lib/components/marketing/operationalProof';
 
   let activeLightboxImage = null;
+  let activeLightboxTrigger = null;
   let activeDemo = 'profit';
 
   const demoQuestions = {
@@ -217,7 +220,7 @@
 
   onMount(() => {
     function handleKeydown(event) {
-      if (event.key === 'Escape') activeLightboxImage = null;
+      if (event.key === 'Escape' && activeLightboxImage) closeLightbox();
     }
 
     window.addEventListener('keydown', handleKeydown);
@@ -230,6 +233,22 @@
   $: basePrice = PLANS.pdv.price.toFixed(0);
   $: mesasTotal = (PLANS.pdv.price + ADDONS.mesas.price).toFixed(0);
   $: menuTotal = (PLANS.pdv.price + ADDONS.menu.price).toFixed(0);
+
+  function trackTrialClick(placement) {
+    void capturePostHogEvent(OPERATIONAL_PROOF_EVENTS.trial, { placement });
+  }
+
+  function openLightbox(image, trigger = null) {
+    activeLightboxImage = image;
+    activeLightboxTrigger = trigger;
+  }
+
+  function closeLightbox() {
+    activeLightboxImage = null;
+    const trigger = activeLightboxTrigger;
+    activeLightboxTrigger = null;
+    requestAnimationFrame(() => trigger?.focus());
+  }
 </script>
 
 <div class="marketing-page">
@@ -248,7 +267,7 @@
             Registre o pedido em 3 toques, largue o caderninho do fiado e veja o lucro do dia sem fechar o caixa no papel.
           </p>
           <div class="hero-actions">
-            <a href="/cadastro" class="primary-cta">Testar 14 dias grátis (sem cartão)</a>
+            <a href="/cadastro" class="primary-cta" on:click={() => trackTrialClick('hero')}>Testar 14 dias grátis (sem cartão)</a>
             <a href="#zelinho" class="secondary-cta">Ver o Zelo funcionando <ArrowRight class="size-4" aria-hidden="true" /></a>
           </div>
         </div>
@@ -293,57 +312,7 @@
       </div>
     </section>
 
-    <section class="profit-story" aria-labelledby="profit-title">
-      <div class="section-shell">
-        <div class="story-heading">
-          <h2 id="profit-title">Saber quanto vendeu é fácil. Difícil é saber quanto sobrou.</h2>
-          <p>
-            Vender R$ 3.000 no dia não quer dizer nada. O que importa é o que sobrou depois do aluguel, da luz e das retiradas. O Zelo faz essa conta pra você.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          class="product-shot profit-shot"
-          aria-label="Ampliar tela de relatório financeiro"
-          on:click={() => activeLightboxImage = '/images/screenshots/financial-screen.png'}
-        >
-          <picture>
-            <source
-              type="image/webp"
-              srcset="/images/screenshots/financial-screen-800.webp 800w, /images/screenshots/financial-screen-1600.webp 1600w"
-              sizes="(max-width: 768px) calc(100vw - 2rem), min(80rem, calc(100vw - 3rem))"
-            />
-            <img
-              src="/images/screenshots/financial-screen.png"
-              alt="Relatório financeiro do Zelo PDV com vendas, formas de pagamento e receita líquida."
-              width="1682"
-              height="858"
-              loading="lazy"
-              decoding="async"
-            />
-          </picture>
-          <span class="zoom-action"><ScanSearch class="size-5" aria-hidden="true" /> Ampliar tela</span>
-        </button>
-
-        <div class="money-flow" aria-label="Como o Zelo calcula o que sobrou">
-          <div>
-            <strong>O que entrou</strong>
-            <span>Vendas do caixa</span>
-          </div>
-          <ArrowRight class="size-5" aria-hidden="true" />
-          <div>
-            <strong>O que saiu</strong>
-            <span>Despesas e retiradas</span>
-          </div>
-          <ArrowRight class="size-5" aria-hidden="true" />
-          <div>
-            <strong>O que sobrou</strong>
-            <span>Lucro do negócio</span>
-          </div>
-        </div>
-      </div>
-    </section>
+    <OperationalProofSection onPreview={(image, trigger) => openLightbox(image, trigger)} />
 
     <section id="features" class="features-section" aria-labelledby="features-title">
       <div class="section-shell">
@@ -363,7 +332,7 @@
               type="button"
               class="product-shot"
               aria-label="Ampliar tela da frente de caixa"
-              on:click={() => activeLightboxImage = '/images/screenshots/dashboard-desktop.png'}
+              on:click={(event) => openLightbox('/images/screenshots/dashboard-desktop.png', event.currentTarget)}
             >
               <picture>
                 <source
@@ -400,7 +369,7 @@
                 type="button"
                 class="product-shot"
                 aria-label="Ampliar tela de controle de fiado"
-                on:click={() => activeLightboxImage = '/images/screenshots/customers-screen.png'}
+                on:click={(event) => openLightbox('/images/screenshots/customers-screen.png', event.currentTarget)}
               >
                 <picture>
                   <source
@@ -652,11 +621,11 @@
       aria-label="Visualização ampliada do Zelo PDV"
       tabindex="-1"
       class="lightbox"
-      on:click={() => activeLightboxImage = null}
-      on:keydown={(event) => event.key === 'Escape' && (activeLightboxImage = null)}
+      on:click={closeLightbox}
+      on:keydown={(event) => event.key === 'Escape' && closeLightbox()}
     >
       <div class="lightbox-inner" role="presentation" on:click={(event) => event.stopPropagation()}>
-        <button type="button" class="lightbox-close" aria-label="Fechar imagem" on:click={() => activeLightboxImage = null}>
+        <button type="button" class="lightbox-close" aria-label="Fechar imagem" on:click={closeLightbox}>
           <X class="size-6" aria-hidden="true" />
         </button>
         <img src={activeLightboxImage} alt="Tela ampliada do Zelo PDV." />
@@ -906,17 +875,6 @@
     line-height: 1.4;
   }
 
-  .profit-story {
-    padding: clamp(6rem, 9vw, 9rem) 0;
-    background: var(--marketing-paper);
-  }
-
-  .story-heading {
-    max-width: 58rem;
-    margin-bottom: 3rem;
-  }
-
-  .story-heading h2,
   .section-heading h2,
   .faq-intro h2,
   .final-cta h2 {
@@ -929,7 +887,6 @@
     text-wrap: balance;
   }
 
-  .story-heading p,
   .section-heading p,
   .faq-intro p {
     max-width: 44rem;
@@ -961,63 +918,6 @@
 
   .product-shot:hover img {
     transform: scale(1.012);
-  }
-
-  .zoom-action {
-    position: absolute;
-    right: 1rem;
-    bottom: 1rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    min-height: 2.5rem;
-    padding-inline: 0.85rem;
-    border-radius: 999px;
-    background: var(--marketing-paper-strong);
-    color: var(--marketing-ink);
-    font-size: 0.875rem;
-    font-weight: 700;
-    opacity: 0;
-    transform: translateY(0.5rem);
-    transition: opacity 180ms ease, transform 180ms ease;
-  }
-
-  .profit-shot:hover .zoom-action,
-  .profit-shot:focus-visible .zoom-action {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .money-flow {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr auto 1fr;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    padding: 1.25rem 1.5rem;
-    border: 1px solid var(--marketing-line);
-    border-radius: 0.75rem;
-    background: var(--marketing-paper-strong);
-  }
-
-  .money-flow div {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .money-flow strong {
-    color: var(--marketing-ink);
-    font-size: 0.875rem;
-  }
-
-  .money-flow span {
-    color: var(--marketing-ink-soft);
-    font-size: 0.875rem;
-  }
-
-  .money-flow > :global(svg) {
-    color: var(--primary);
   }
 
   .features-section {
@@ -1817,7 +1717,6 @@
       border-left: 0;
     }
 
-    .story-heading h2,
     .section-heading h2,
     .zelinho-layout h2,
     .faq-intro h2,
@@ -1826,29 +1725,9 @@
       letter-spacing: -0.035em;
     }
 
-    .story-heading p,
     .section-heading p,
     .zelinho-layout > div:first-child p {
       font-size: 1.125rem;
-    }
-
-    .zoom-action {
-      display: none;
-    }
-
-    .money-flow {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 0.75rem;
-    }
-
-    .money-flow div {
-      align-items: center;
-    }
-
-    .money-flow > :global(svg) {
-      transform: rotate(90deg);
-      justify-self: center;
     }
 
     .feature-side {
@@ -1970,7 +1849,6 @@
   @media (prefers-reduced-motion: reduce) {
     .primary-cta,
     .product-shot img,
-    .zoom-action,
     .faq-list summary :global(svg) {
       transition: none;
     }

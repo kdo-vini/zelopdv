@@ -33,8 +33,8 @@
         <ul>
           <li><a href={faqHref}>Central de Ajuda</a></li>
           <li><a href="/contato?assunto=demo">Agendar demonstração</a></li>
-          <li><a href="https://wa.me/5514991537503">Falar no WhatsApp</a></li>
-          <li><a href="mailto:techne.br@gmail.com">Email</a></li>
+          <li><a href="https://wa.me/5514991537503" target="_blank" rel="noopener noreferrer">Falar no WhatsApp</a></li>
+          <li><a href="https://menu.zelopdv.com.br/#empresas" target="_blank" rel="noopener noreferrer">Ver cardápios publicados</a></li>
         </ul>
       </div>
 
