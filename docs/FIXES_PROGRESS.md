@@ -1,5 +1,14 @@
 # Fixes Progress
 
+- [x] FX-MONTAVEL-UI-01 (2026-09-05) — reatividade visual do modal de montagem:
+  destaque, stepper e limite agora recebem `selections` explicitamente. O
+  mesmo patch adiciona limpar escolha opcional, preço substituto, grupo sem
+  opções, limite de quantidade e quebra de nomes longos. Regressão Chromium
+  passa em 390×844 e 1280×800; suíte completa 1.056/3 skips e check 0/0.
+  `/app` autenticado e produção permanecem pendentes por falta de sessão válida.
+  [Plano](superpowers/plans/2026-09-05-montagem-frente-caixa.md).
+
+
 ## Consolidação da auditoria — 2026-09-04
 
 Os itens abaixo registram implementação e evidência de teste. Publicação e a

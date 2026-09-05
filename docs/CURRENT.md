@@ -1,5 +1,21 @@
 # ZeloPDV — Foco atual
 
+## Investigação de montagem manual — 2026-09-05
+
+Defeito reproduzido no componente real `ModalProdutoMontavel` em Chromium:
+seleção atualizava preço/snapshot, mas não destaque, stepper e bloqueio visual
+por máximo. A terceira opção podia parecer marcada e não entrar no item;
+quantidade do adicional não ficava editável. A reatividade foi corrigida no
+modal, com escolha opcional limpável, preço substituto visível, estado de grupo
+sem opções e limite de stepper. O harness de interação passa em 390×844 e
+1280×800; a suíte completa está em 1.056 testes passando e três skips opcionais;
+`npm run check` retorna 0 erros/0 avisos. Sessão salva expirou/redirecionou ao
+login, então o caso específico do cliente, `/app` autenticado e produção ainda
+não foram confirmados. Ver [diagnóstico e plano](superpowers/plans/2026-09-05-montagem-frente-caixa.md).
+`npm run build` compilou client/SSR/PWA, mas terminou no EPERM de symlink do
+adapter Vercel no Windows, limitação já registrada e validada em Linux pela CI.
+
+
 ## Estado consolidado — auditoria de 2026-09-04
 
 Esta seção é a referência atual da rodada. Os registros abaixo do histórico
