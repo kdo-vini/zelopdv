@@ -11,13 +11,16 @@ export async function loadMesaState(supabase, ownerUserId) {
     async function pages(table, select, filter = q => q) {
         const rows = [];
         for (let from = 0; ; from += 500) {
-            const { data, error } = await filter(supabase.from(table).select(select).eq('id_usuario', ownerUserId)).order('id').range(from, from + 499);
+            const { data, error } = await filter(supabase.from(table).select(select)).order('id').range(from, from + 499);
             if (error) throw error;
             rows.push(...data); if (data.length < 500) return rows;
         }
     }
     try {
-        const [mesas, comandas] = await Promise.all([pages('mesas', '*', q => q.eq('ativa', true)), pages('comandas', '*', q => q.eq('status', 'aberta'))]);
+        const [mesas, comandas] = await Promise.all([
+            pages('mesas', '*', q => q.eq('id_usuario', ownerUserId).eq('ativa', true)),
+            pages('comandas', '*', q => q.eq('id_usuario', ownerUserId).eq('status', 'aberta')),
+        ]);
         async function forComandas(table, select) {
             const rows = [];
             for (let offset = 0; offset < comandas.length; offset += 100) rows.push(...await pages(table, select, q => q.in('id_comanda', comandas.slice(offset, offset + 100).map(c => c.id))));
