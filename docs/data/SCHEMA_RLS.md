@@ -21,6 +21,9 @@ e limites do lint estão detalhados em `docs/audits/2026-09-04-zelopdv.md`.
 
 - A migration `supabase/migrations/20260828120000_caixa_payment_totals.sql`
   adiciona `caixa_fechamentos.totais_pagamento jsonb not null default '{}'`.
+- Em produção, a ausência dessa versão no ledger foi reparada e registrada por
+  `20260907132812_hotfix_caixa_payment_totals_dependency.sql` em 2026-09-07;
+  ambas as versões constam como aplicadas.
 - A coluna exige JSONB do tipo objeto e guarda totais positivos por ID de
   pagamento, incluindo métodos nativos, plataformas dinâmicas, fiado e
   desconhecidos; `multiplo` é apenas marcador e não é salvo como meio.

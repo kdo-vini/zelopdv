@@ -1,5 +1,21 @@
 # ZeloPDV — Foco atual
 
+## Hotfix de fechamento de caixa — 2026-09-07
+
+Produção voltou a fechar caixas. O commit `247b64b` (2026-09-05) tornou o
+fechamento atômico por `apply_online_close_v1`; a função passou a inserir
+`caixa_fechamentos.totais_pagamento`, mas a migration `20260828120000` que cria
+essa coluna não constava no ledger remoto. O erro de coluna inexistente passou a
+reverter toda a transação, em vez de afetar apenas o histórico auxiliar.
+
+A migration forward-only e idempotente
+`20260907132812_hotfix_caixa_payment_totals_dependency.sql` cria/repara a coluna,
+faz o backfill das colunas legadas e valida a constraint JSONB. Ela e a migration
+original foram registradas como aplicadas no projeto `xnnjyrblpvsqrtsshawa`.
+O teste runtime `cash_closing_hotfix_runtime.sql` abriu e fechou um caixa de
+fixture dentro de transação com rollback no banco real e passou. Testes locais
+direcionados: 45/45.
+
 ## Pedido manual e navegação offline — 2026-09-05
 
 Correção de experiência pronta para publicação: a configuração de operação

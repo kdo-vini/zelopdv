@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-CAIXA-CLOSE-SCHEMA-01 (2026-09-07) — fechamento atômico publicado em
+  `247b64b` referenciava `caixa_fechamentos.totais_pagamento`, mas a migration
+  de criação da coluna não estava aplicada no banco compartilhado. Hotfix
+  forward-only `20260907132812` aplicado e registrado junto da versão original;
+  coluna JSONB, constraint validada e backfill legado confirmados. Regressão
+  estática reproduz o drift e prova a reparação; smoke SQL fecha uma fixture real
+  em transação com rollback. Testes direcionados: 45/45.
+
 - [x] FX-OFFLINE-UX-01 (2026-09-05) — configuração offline movida para
   **Perfil > Integrações**; o indicador global fica reservado a estados que
   exigem atenção. Pedido manual online passa a usar a fila durável sem exigir

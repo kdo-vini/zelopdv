@@ -1,5 +1,41 @@
 # Incidents
 
+## INC-2026-09-07-CAIXA-CLOSE — coluna ausente bloqueou fechamento de caixa
+
+**Status:** corrigido e validado no Supabase de produção em 2026-09-07.
+
+**Sintoma**
+
+- O fechamento retornava erro de coluna inexistente em
+  `caixa_fechamentos` e o caixa permanecia aberto.
+
+**Causa-raiz**
+
+- O commit `247b64b15f0e5d8498bb84dfc5266eb518a5ef6a`, de 2026-09-05,
+  substituiu o fechamento browser-side por `apply_online_close_v1`, tornando
+  atualização do caixa e snapshot uma única transação.
+- `offline_internal.close_caixa` insere `totais_pagamento`, mas produção não
+  tinha recebido nem registrado `20260828120000_caixa_payment_totals.sql`.
+  Como a nova operação é atômica, a falha do snapshot passou a reverter também
+  o fechamento principal.
+
+**Fix / recovery**
+
+- `20260907132812_hotfix_caixa_payment_totals_dependency.sql` repara a coluna
+  de forma idempotente, preserva RLS/grants, recupera snapshots legados e valida
+  que o JSONB é um objeto.
+- As versões `20260828120000` e `20260907132812` foram registradas como
+  aplicadas no ledger remoto para eliminar o drift.
+
+**Validação**
+
+- Produção confirma `totais_pagamento jsonb not null default '{}'`, constraint
+  presente e validada.
+- `supabase/verification/cash_closing_hotfix_runtime.sql` criou uma fixture,
+  executou a função real, confirmou o fechamento e fez rollback integral.
+- 45 testes direcionados passaram, incluindo a regressão que reproduz o schema
+  de produção sem a migration de agosto e comprova que o hotfix fecha a lacuna.
+
 ## INC-2026-09-05-MONTAGEM — dificuldade de montagem manual na frente de caixa
 
 **Status:** relato de cliente recebido; defeito de UI reproduzido e corrigido

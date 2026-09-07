@@ -1,5 +1,12 @@
 # ZeloPDV.memory
 
+- Fechamento de caixa (2026-09-07): `offline_internal.close_caixa` grava
+  `caixa_fechamentos.totais_pagamento` atomicamente. Produção ficou sem essa
+  coluna quando `247b64b` entrou sem a migration de 2026-08-28; o hotfix
+  `20260907132812` e a versão original estão aplicados/registrados. O verifier
+  `cash_closing_hotfix_runtime.sql` é o gate transacional com rollback para esse
+  contrato de schema.
+
 - Pedido manual (2026-09-05): usa `order.create` na outbox,
   catálogo/montagem do PDV e motor canônico `source=manual`. Confirmação só após
   commit IndexedDB; dados do cliente/pagamento/previsão são opcionais e frete é
