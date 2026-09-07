@@ -23,7 +23,7 @@
   import { abrirCaixaIdempotente } from '$lib/finance/caixaOps';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { createClientSaleId } from '$lib/finance/saleOps';
-  import { startOfflineRuntime, getOfflineContext, submitOfflineOperation, runOfflineSync, readOperationalSnapshot, onOfflineChange } from '$lib/offline/runtime';
+  import { startOfflineRuntime, getOfflineContext, isOfflineWriteActive, submitOfflineOperation, runOfflineSync, readOperationalSnapshot, onOfflineChange } from '$lib/offline/runtime';
   import { readSnapshot, saveSnapshot, readDraft, saveDraft, listOperations } from '$lib/offline/operations';
   import { projectStockProducts } from '$lib/finance/offlineProjection';
   import { validateLocalCartStock, selectCheckoutSubmission } from '$lib/finance/offlineCheckout';
@@ -900,7 +900,7 @@
       }
       // Persiste a movimentação de caixa
       let data;
-      if (getOfflineContext()?.enabled) {
+      if (isOfflineWriteActive()) {
         const op = await submitOfflineOperation('caixa.move', idCaixaAberto, {
           id_caixa: idCaixaAberto, tipo: tipoMovCaixa === 'saida' ? 'sangria' : 'suprimento', valor: v, motivo: motivoMovCaixa || null
         }, { dependencies: (await listOperations(ownerUserId)).filter(o => o.type === 'caixa.open' && o.entityId === String(idCaixaAberto)).map(o => o.operationId) });
@@ -970,7 +970,7 @@
     }
     abrindoCaixa = true;
     try {
-      if (getOfflineContext()?.enabled) {
+      if (isOfflineWriteActive()) {
         const existing = await readSnapshot(ownerUserId, 'caixa.aberto');
         if (existing && !existing.data_fechamento) {
           idCaixaAberto = existing.id;
@@ -1275,7 +1275,7 @@
       let venda = null;
       let isOffline = false;
 
-      if (getOfflineContext()?.enabled) {
+      if (isOfflineWriteActive()) {
         const pending = await listOperations(ownerUserId);
         const turn = pending.find(o => o.type === 'caixa.open' && o.entityId === String(idCaixaAberto));
         await submitOfflineOperation('sale.create', checkoutIntent, payload, {
@@ -1298,14 +1298,29 @@
         if (!shouldQueueVendaOffline(connErr)) throw connErr;
         console.warn('Falha de conexão na RPC de venda, salvando offline:', connErr?.message || connErr);
         isOffline = true;
-        await salvarVendaOffline({
-          payload,
-          createdAt: new Date().toISOString(),
-          ownerUserId,
-          operatorUserId: operadorUserId
-        });
-        vendaId = `offline-${Date.now()}`;
-        await atualizarPendentesCount();
+        if (getOfflineContext()?.enabled) {
+          // A device prepared for offline operation owns one queue, not two:
+          // sending this sale to the legacy queue would order it independently
+          // of the caixa turn already sitting in the durable one.
+          const pending = await listOperations(ownerUserId);
+          const turn = pending.find(o => o.type === 'caixa.open' && o.entityId === String(idCaixaAberto));
+          await submitOfflineOperation('sale.create', checkoutIntent, payload, {
+            operationId: checkoutIntent,
+            dependencies: turn ? [turn.operationId] : [],
+            clearDraft: { operatorId: operadorUserId, key: 'pdv' }
+          });
+          vendaId = checkoutIntent;
+          venda = { numero_venda: `LOCAL-${checkoutIntent.slice(-8).toUpperCase()}` };
+        } else {
+          await salvarVendaOffline({
+            payload,
+            createdAt: new Date().toISOString(),
+            ownerUserId,
+            operatorUserId: operadorUserId
+          });
+          vendaId = `offline-${Date.now()}`;
+          await atualizarPendentesCount();
+        }
       }
 
       // [NEW] Update Success Modal State

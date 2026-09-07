@@ -28,18 +28,59 @@ ADD-ONS PAGOS (além da assinatura base):
 Para ativar: acesse a sidebar → Extensões.
 
 O antigo add-on "Pedidos + Cozinha" foi aposentado: a fila de pedidos e o painel de
-cozinha agora fazem parte do ZeloMenu. Não existe mais criação manual de pedido pelo
-caixa — os pedidos entram pelo cardápio online. Nunca ofereça esse add-on.
+cozinha agora fazem parte do ZeloMenu. A maioria dos pedidos entra pelo cardápio
+online, mas o caixa também pode digitar um pedido manual direto na fila (ver
+COMO USAR OS PEDIDOS DO ZELOMENU). Nunca ofereça o add-on antigo "Pedidos + Cozinha".
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FUNCIONALIDADES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+OPERAÇÃO OFFLINE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANTE: por padrão o Zelo PDV precisa de internet. O funcionamento sem
+internet é um recurso opcional que precisa ser configurado **em cada
+aparelho** que vai precisar dele — não é automático, e ativar em um celular
+ou computador não ativa nos outros.
+
+COMO ATIVAR (faça isso com internet, antes de precisar):
+1. O titular da conta libera o recurso em Perfil → Integrações → Operação offline
+2. Em CADA aparelho que pode ficar sem internet (o computador do caixa, o
+   tablet da mesa, etc.), acesse Perfil → Integrações → Operação offline e
+   clique em "Preparar este aparelho"
+3. Aguarde a preparação terminar com internet — ela baixa o catálogo, o caixa
+   aberto e as mesas para aquele aparelho. Só depois disso o aparelho passa a
+   funcionar sem rede.
+
+O QUE FUNCIONA SEM INTERNET, só em aparelho já preparado:
+• Frente de Caixa: registrar venda, abrir/mexer/fechar o caixa (fechar e abrir
+  caixa só no aparelho definido como "principal", e só enquanto está sem
+  internet mesmo — com internet qualquer aparelho autorizado opera o caixa
+  normalmente)
+• Mesas: abrir comanda, adicionar item, receber pagamento, fechar comanda
+• Pedidos: só criar um pedido manual pelo caixa — ver PEDIDOS DO ZELOMENU
+
+O QUE NUNCA FUNCIONA SEM INTERNET, mesmo em aparelho preparado:
+• Aceitar, avançar ou cancelar pedidos da fila do ZeloMenu (Pedidos/Cozinha)
+• Ver o que outro aparelho fez enquanto os dois estavam sem internet — cada
+  um só sabe do que ele mesmo registrou até sincronizar
+• Relatórios, Despesas, Perfil, configurações, PIN, qualquer coisa em Gestão
+• Login pela primeira vez, cadastro, pagamento/assinatura
+
+Um aparelho que NUNCA foi preparado (não passou pelo passo 2) se comporta como
+se o recurso não existisse: uma queda de internet nele trava a tela com erro,
+não ativa nenhum modo alternativo. Isso é esperado — a solução é preparar
+aquele aparelho especificamente.
+Se a pessoa relatar tela travada ou "Failed to fetch" sem internet, pergunte
+se ela já preparou aquele aparelho especificamente. Se não, essa é a causa.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FRENTE DE CAIXA (PDV)
 • Grade de produtos por categoria, busca por nome
 • Formas de pagamento: Dinheiro, PIX, Débito, Crédito, Fiado, ou misto
 • Desconto por venda
-• Funciona offline — se cair a internet, continua registrando e sincroniza depois
+• Pode funcionar offline, mas só depois de configurar — ver seção OPERAÇÃO OFFLINE.
+  Sem essa configuração, uma queda de internet trava a tela (erro de conexão).
 
 CONTROLE DE FIADO
 • Substitui o caderninho — controle digital por cliente
@@ -201,6 +242,9 @@ USAR AS MESAS NO DIA A DIA:
 
 Filtros disponíveis: Todas / Livres / Ocupadas / Fechando (chips no topo da tela)
 
+Sem internet, Mesas só funciona em aparelho já preparado (ver OPERAÇÃO
+OFFLINE). Sem essa preparação, a tela trava com erro numa queda de conexão.
+
 ──────────────────────────────────
 COMO USAR OS PEDIDOS DO ZELOMENU
 ──────────────────────────────────
@@ -212,8 +256,11 @@ São duas telas: Pedidos (fila do caixa) e Cozinha (preparo).
 
 DE ONDE VÊM OS PEDIDOS:
 Os pedidos entram pelo cardápio online do ZeloMenu — o cliente monta o pedido pelo
-celular (link do cardápio, WhatsApp ou Instagram) e ele cai direto na fila. O caixa não
-digita pedido à mão; para venda de balcão, use a Frente de Caixa (/app).
+celular (link do cardápio, WhatsApp ou Instagram) e ele cai direto na fila. Para
+venda de balcão, use a Frente de Caixa (/app). O caixa também pode digitar um
+pedido manual na fila (botão "Criar pedido" em Vendas → Pedidos), por exemplo
+para telefone/balcão que precisa entrar na fila de preparo; aceitar, avançar e
+cancelar qualquer pedido sempre exige internet, mesmo o manual.
 
 FILA DE PEDIDOS (tela do caixa):
 1. Acesse Vendas → Pedidos no menu lateral

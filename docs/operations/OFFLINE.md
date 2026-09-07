@@ -1,5 +1,38 @@
 # Funcionamento offline do ZeloPDV
 
+## Regra de escopo — adesão por aparelho (2026-09-07)
+
+A operação offline é **opt-in por aparelho**. Um aparelho só entra nela depois
+que alguém executou **Preparar este aparelho** em **Perfil > Integrações >
+Operação offline** nele. Enquanto isso não acontece, o aparelho mantém
+exatamente os caminhos online que tinha antes da feature: venda pela RPC
+`criar_venda_completa`, caixa e mesas direto no banco, sem fila e sem aviso.
+
+Dois sinais compõem o estado, e os dois são necessários:
+
+| Sinal | Onde vive | Significado |
+| --- | --- | --- |
+| `storeOfflineEnabled` | `offline_settings.enabled`, por loja | o titular liberou a operação offline para a loja |
+| `preparedHere` | snapshot `readiness:<operador>` no IndexedDB do aparelho | este aparelho baixou catálogo, caixa e mesas |
+
+`enabled = storeOfflineEnabled && preparedHere`. Registro de aparelho
+(`offline_devices`) é só entrega durável: um pedido manual criado com internet
+registra o aparelho para usar a fila, e isso **não** o inscreve na operação
+offline nem muda qualquer outra tela.
+
+**A fila durável é fallback de queda, não o caminho padrão de escrita.** Um
+aparelho preparado e conectado escreve online; ele só vai para a fila quando o
+navegador está sem rede ou quando ainda há lançamento não sincronizado neste
+aparelho — aí a ordem importa e o turno aberto offline precisa ser respeitado.
+Como consequência, a regra de **aparelho principal** (abertura, movimentação e
+fechamento de caixa) vale **somente sem internet**: ela existe para impedir dois
+turnos offline conflitantes. Com internet, qualquer aparelho opera o caixa.
+
+O titular liga e desliga a operação offline da loja na própria central
+(**Perfil > Integrações > Operação offline**). Desligar devolve todos os
+aparelhos ao funcionamento somente online; faça isso só depois de sincronizar os
+pendentes de cada um.
+
 ## Pedidos manuais — implementação local em 2026-09-05
 
 `/app/pedidos` possui **Criar pedido**, usando catálogo local e o mesmo modal
@@ -18,10 +51,11 @@ o ID local ao remoto sem duplicar e a próxima leitura não ressuscita pedidos
 já concluídos. Preço/configuração divergentes ficam na central de conferência;
 pizzas utilizam a revisão histórica validada.
 
-A criação manual com internet registra silenciosamente o aparelho para usar a
-fila durável e sincronizar, sem habilitar ou exigir a preparação completa do
-modo offline. A preparação opcional fica em **Perfil > Integrações > Operação
-offline** e baixa também a fila de pedidos. O indicador global só aparece em
+A criação manual com internet registra o aparelho para usar a fila durável e
+sincronizar. Esse registro não habilita a operação offline nem altera Frente de
+Caixa, Caixa ou Mesas do aparelho — ver a regra de escopo no topo.
+A preparação opcional fica em **Perfil > Integrações > Operação offline** e
+baixa também a fila de pedidos. O indicador global só aparece em
 queda de conexão, sincronização, pendência ou erro. Navegação lateral/mobile usa
 permissões e add-ons validados em cache para titular e subusuário, inclusive
 ZeloMenu e Mesas. O aparelho precisa ser preparado com conexão antes do uso
@@ -69,9 +103,12 @@ explícita do aparelho. Não considerar um cliente antigo automaticamente migrad
   Consultas de acesso/assinatura têm prazo de 3 s, inclusive quando o navegador
   ainda informa conexão. Resultado tardio fica sem efeito; negativas
   confirmadas não são tratadas como simples oscilação.
-- Apenas o aparelho principal abre, movimenta e fecha caixa. Todos os aparelhos
-  autorizados podem vender e operar Mesas; sem rede não há visão instantânea
-  dos lançamentos dos outros aparelhos. Fechamento local é provisório.
+- **Sem rede**, apenas o aparelho principal abre, movimenta e fecha caixa: a
+  regra impede dois turnos offline conflitantes. Com internet ela não se aplica
+  — qualquer aparelho autorizado opera o caixa pelo caminho online, como antes
+  da feature (ver a regra de escopo no topo). Todos os aparelhos autorizados
+  podem vender e operar Mesas; sem rede não há visão instantânea dos
+  lançamentos dos outros aparelhos. Fechamento local é provisório.
 - Fila global com leases entre abas, dependências, duas entidades independentes
   em paralelo, prazo de envio e backoff com jitter. Resposta perdida repete a
   mesma intenção; conflito e autenticação exigem ações distintas.

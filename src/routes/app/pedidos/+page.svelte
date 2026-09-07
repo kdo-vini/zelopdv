@@ -27,7 +27,6 @@
   import { startOfflineRuntime, onOfflineChange } from '$lib/offline/runtime.js';
   import { readSnapshot, saveSnapshot } from '$lib/offline/operations.js';
   import { loadLocalOrders, refreshOrderSnapshot } from '$lib/offline/orders.js';
-  import { offlineStatus } from '$lib/stores/offlineStatus.js';
 
   let manualOpen = false;
   let unsubscribeOffline = null;
@@ -248,6 +247,9 @@
     } catch (err) {
       queueUnavailable = true;
       await atualizarFilaLocal();
+      if (navigator.onLine !== false && !isCanonicalOrderPermissionError(err)) {
+        addToast('Erro ao carregar pedidos: ' + getFriendlyErrorMessage(err), 'error');
+      }
       if (tentarRecuperarSessao && isCanonicalOrderPermissionError(err)) {
         const sessionState = await recuperarSessaoParaPedidos();
         polling = false;
@@ -321,8 +323,16 @@
   }
 
   async function avancarPedidoCanonico(pedido) {
-    if (pedido.localOnly || $offlineStatus.connection !== 'online') {
-      addToast('Pedido salvo neste aparelho. Reconecte para atualizar o andamento.', 'info');
+    // Only two things actually stop this: an order that has not reached the
+    // server yet, and a browser with no network. A "degraded" reading is a hint
+    // about the last request, not proof the next one fails — gating on it left
+    // connected devices unable to accept or advance a single order.
+    if (pedido.localOnly) {
+      addToast('Pedido salvo neste aparelho. Ele avança assim que a sincronização terminar.', 'info');
+      return;
+    }
+    if (navigator.onLine === false) {
+      addToast('Sem conexão. Reconecte para atualizar o andamento do pedido.', 'info');
       return;
     }
     if (pedido.status === 'pending_payment') return;
@@ -370,8 +380,12 @@
   }
 
   async function cancelarPedidoCanonico(pedido) {
-    if (pedido.localOnly || $offlineStatus.connection !== 'online') {
-      addToast('Reconecte para cancelar este pedido.', 'info');
+    if (pedido.localOnly) {
+      addToast('Pedido ainda salvo neste aparelho. Aguarde a sincronização para cancelar.', 'info');
+      return;
+    }
+    if (navigator.onLine === false) {
+      addToast('Sem conexão. Reconecte para cancelar este pedido.', 'info');
       return;
     }
     const action = pedido.status === 'pending_review' ? 'reject' : 'cancel';
@@ -438,7 +452,7 @@
       </div>
     </header>
 
-    {#if queueUnavailable || $offlineStatus.connection !== 'online'}
+    {#if queueUnavailable}
       <InlineHelper compact message="Exibindo os pedidos salvos neste aparelho. Você pode criar pedidos; o andamento e os pedidos de outros aparelhos serão atualizados quando a conexão voltar." />
     {/if}
 

@@ -9,12 +9,12 @@ function handler(file, name) {
 it('the actual movement modal stores an offline intention with turn dependency before announcing success', async () => {
   const submit = vi.fn().mockRejectedValueOnce(new Error('Quota unavailable')).mockImplementation(async (_type, _id, _payload, opts) => ({ operationId: opts.operationId, occurredAt: '2026-09-05T00:00:00Z' }));
   const dispatch = vi.fn(); const supabase = { from: vi.fn(() => { throw new Error('Network must not be required'); }) };
-  const controller = new Function('getOfflineContext', 'submitOfflineOperation', 'listOperations', 'dispatch', 'supabase', 'addToast', `
+  const controller = new Function('getOfflineContext', 'isOfflineWriteActive', 'submitOfflineOperation', 'listOperations', 'dispatch', 'supabase', 'addToast', `
     let idCaixa='turn-local', saldoCaixa=100, tipo='saida', valor=10, motivo='Troco', salvando=false, erro='', movementIntent=null, imprimirRecibo=false;
     const crypto=globalThis.crypto;
     ${handler('src/lib/components/modals/ModalMovCaixa.svelte', 'handleSubmit')}
     return { submit: handleSubmit, error: () => erro };
-  `)(() => ({ enabled: true, ownerUserId: 'owner' }), submit, async () => [{ type: 'caixa.open', entityId: 'turn-local', operationId: 'opening' }], dispatch, supabase, vi.fn());
+  `)(() => ({ enabled: true, ownerUserId: 'owner' }), () => true, submit, async () => [{ type: 'caixa.open', entityId: 'turn-local', operationId: 'opening' }], dispatch, supabase, vi.fn());
   await controller.submit();
   expect(controller.error()).toContain('Quota'); expect(dispatch).not.toHaveBeenCalled();
   await controller.submit();
@@ -34,4 +34,23 @@ it('the actual payment modal uses prepared fiado people without a network reques
   expect(await load()).toEqual([{ id: 7, nome: 'Cliente preparado' }]);
   expect(read.mock.calls[0][0]).toBe('pessoas.fiado');
   expect(supabase.from).not.toHaveBeenCalled();
+});
+it('the movement modal sends a prepared but connected device straight to the server', async () => {
+  // Offline preparation must not divert a healthy device onto the queue: that is
+  // what made every non-primary device unable to move the caixa while online.
+  const submit = vi.fn();
+  const dispatch = vi.fn();
+  const insert = { select: () => ({ single: async () => ({ data: { id: 91, created_at: '2026-09-05T00:00:00Z' } }) }) };
+  const supabase = { from: vi.fn(() => ({ insert: vi.fn(() => insert) })) };
+  const controller = new Function('getOfflineContext', 'isOfflineWriteActive', 'submitOfflineOperation', 'listOperations', 'dispatch', 'supabase', 'addToast', `
+    let idCaixa=7, saldoCaixa=100, tipo='saida', valor=10, motivo='Troco', salvando=false, erro='', movementIntent=null, imprimirRecibo=false;
+    const crypto=globalThis.crypto;
+    ${handler('src/lib/components/modals/ModalMovCaixa.svelte', 'handleSubmit')}
+    return { submit: handleSubmit, error: () => erro };
+  `)(() => ({ enabled: true, ownerUserId: 'owner' }), () => false, submit, async () => [], dispatch, supabase, vi.fn());
+  await controller.submit();
+  expect(controller.error()).toBe('');
+  expect(submit).not.toHaveBeenCalled();
+  expect(supabase.from).toHaveBeenCalledWith('caixa_movimentacoes');
+  expect(dispatch).toHaveBeenCalledWith('sucesso', expect.objectContaining({ idMov: 91, idCaixa: 7 }));
 });

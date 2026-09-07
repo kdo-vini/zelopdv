@@ -1,5 +1,21 @@
 # Fixes Progress
 
+- [x] FX-OFFLINE-SCOPE-01 (2026-09-07) — a operação offline vazava para contas e
+  aparelhos que nunca a configuraram. `offline_settings.enabled` é por loja e o
+  cliente usava `enabled` (loja ∧ aparelho registrado) como chave de roteamento
+  de **toda** escrita; como um pedido manual online registra o aparelho
+  silenciosamente, qualquer aparelho da loja passava a enfileirar vendas e caía
+  no gate `CAIXA_PRIMARY_DEVICE_REQUIRED` — "Use o aparelho principal…" mesmo
+  com internet. Agora `enabled` exige a preparação feita **neste** aparelho
+  (`readiness:<operador>`), e a fila só assume sem rede ou com pendência local.
+  Também corrigidos: `connection` que ficava preso em `degraded` para sempre
+  (probe só existia dentro do coordenador, que aparelhos não preparados não
+  têm), o gate de aceitar/cancelar pedido que dependia desse estado, o erro de
+  carregamento da fila que era engolido e o timeout de 3 s da consulta de
+  pedidos. Titular ganhou o desligamento da operação offline, que antes era
+  porta de mão única. Suíte 1.182/1.185 (3 runtimes DB pulados), `npm run check`
+  0/0, build client/SSR/PWA e harness Chromium 390/1280 px verdes.
+
 - [x] FX-CAIXA-CLOSE-SCHEMA-01 (2026-09-07) — fechamento atômico publicado em
   `247b64b` referenciava `caixa_fechamentos.totais_pagamento`, mas a migration
   de criação da coluna não estava aplicada no banco compartilhado. Hotfix

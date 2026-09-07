@@ -55,8 +55,10 @@ export async function refreshOrderSnapshot(supabase, ownerUserId, empresaId) {
   let timer;
   let orders;
   try {
+    // The queue query carries nested items; 3 s aborted healthy mobile loads and
+    // made a working device look like it had lost the store's orders.
     orders = await Promise.race([loadCanonicalOrders(supabase, empresaId, { signal: controller.signal }),
-      new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('Conexão indisponível.')); }, 3000); })]);
+      new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('Conexão indisponível.')); }, 12000); })]);
   } finally { clearTimeout(timer); }
   const reconciled = before.filter(row => row.type === 'order.create' && row.status === 'acked').map(row => row.operationId);
   await saveSnapshot(ownerUserId, KEY, { orders, reconciled, fetchedAt: Date.now() });

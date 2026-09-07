@@ -1,5 +1,39 @@
 # ZeloPDV — Foco atual
 
+## Escopo da operação offline corrigido — 2026-09-07
+
+A operação offline voltou a ser opt-in **por aparelho**. Antes, bastava o
+titular definir um aparelho como principal para que `offline_settings.enabled`
+ficasse ligado na loja inteira; qualquer outro aparelho registrado herdava esse
+estado e passava a enfileirar vendas, caixa e mesas em vez de escrever online.
+Como criar um pedido manual com internet registra o aparelho em silêncio, isso
+alcançava aparelhos que nunca configuraram nada — e o gate de aparelho
+principal, que existe para proteger turnos offline, bloqueava a abertura,
+movimentação e fechamento de caixa **mesmo com conexão**.
+
+Agora `enabled` exige os dois sinais: a loja liberada e a preparação executada
+neste aparelho (snapshot `readiness:<operador>`). Registro de aparelho voltou a
+significar apenas entrega durável do pedido manual. A fila durável passou a ser
+fallback: um aparelho preparado e conectado escreve online e só cai na fila sem
+rede ou com pendência local, então a regra de aparelho principal só vale
+offline. O titular pode desligar a operação offline da loja na própria central,
+o que antes não existia.
+
+Junto vieram quatro correções que atingiam qualquer conta: `connection` ficava
+em `degraded` para sempre depois de uma oscilação (o probe de reconexão só
+existia dentro do coordenador de sincronização, ausente em aparelhos não
+preparados), aceitar/avançar/cancelar pedido dependia desse estado e
+travava com internet, a falha de carregamento da fila era engolida sem aviso e
+a consulta de pedidos abortava em 3 s.
+
+Validação: suíte completa 1.182 testes passando (3 runtimes DB opcionais
+pulados), `npm run check` 0 erros/0 avisos, `npm run build` compila
+client/SSR/PWA com o adapter Vercel, e o harness Chromium com service worker
+real renderiza `/app`, `/app/pedidos`, `/app/mesas` e `/gestao/caixa` offline em
+1280 e 390 px. O modo `--checkout` do harness falha ao semear o IndexedDB neste
+contêiner; a falha foi reproduzida também no commit base, então é do ambiente,
+não desta mudança. Sem teste em aparelho físico nem sessão de cliente real.
+
 ## Hotfix de fechamento de caixa — 2026-09-07
 
 Produção voltou a fechar caixas. O commit `247b64b` (2026-09-05) tornou o

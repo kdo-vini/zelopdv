@@ -11,7 +11,7 @@
     calculatePlatformFees
   } from '$lib/finance/caixa';
   import { formatPaymentMethod } from '$lib/finance/paymentMethods';
-  import { startOfflineRuntime, getOfflineContext, submitOfflineOperation, offlineRequest, onOfflineChange } from '$lib/offline/runtime';
+  import { startOfflineRuntime, getOfflineContext, isOfflineWriteActive, submitOfflineOperation, offlineRequest, onOfflineChange } from '$lib/offline/runtime';
   import { loadCashSnapshot } from '$lib/finance/offlineCash';
   import { listOperations, readSnapshot, saveSnapshot } from '$lib/offline/operations';
 
@@ -54,7 +54,9 @@
       ownerUserId = authCtx.ownerUserId;
       operadorUserId = authCtx.userId;
       await startOfflineRuntime(authCtx);
-      if (getOfflineContext()?.enabled || getOfflineContext()?.registered) {
+      // Registration alone means durable delivery, not offline operation; only a
+      // device prepared here reads the caixa from the local projection.
+      if (getOfflineContext()?.enabled) {
         await refreshLocalCash();
         if (!destroyed) unsubscribeOffline = onOfflineChange(() => { void refreshLocalCash().catch(() => {}); });
         return;
@@ -174,7 +176,7 @@
     if (!caixa || fechando) return;
     fechando = true;
     try {
-      if (getOfflineContext()?.enabled) {
+      if (isOfflineWriteActive()) {
         closeIntent ||= crypto.randomUUID();
         const operations = await listOperations(ownerUserId);
         const dependencies = operations.filter(o => String(o.payload.id_caixa) === String(caixa.id) || o.type === 'caixa.open' && o.entityId === String(caixa.id)).map(o => o.operationId);

@@ -3,11 +3,13 @@ import { commitOperation, getDeviceId, listOperations, readSnapshot, saveSnapsho
 import { buscarProdutosLocal } from '../offlineDb.js';
 import { isNetworkError } from '../netStatus.js';
 import { createSyncCoordinator } from './synchronizer.js';
-import { setOfflineStatus } from '../stores/offlineStatus.js';
+import { get } from 'svelte/store';
+import { offlineStatus, setOfflineStatus } from '../stores/offlineStatus.js';
 
 let context = null;
 let coordinator = null;
 let interval = null;
+let probeTimer = null;
 let generation = 0;
 let starting = null;
 let startingKey = null;
@@ -19,6 +21,39 @@ const listeners = new Set();
 export const getOfflineContext = () => context;
 export function onOfflineChange(listener) { listeners.add(listener); return () => listeners.delete(listener); }
 function notify() { for (const listener of listeners) { try { listener(); } catch { /* UI cannot break a committed operation */ } } }
+
+/**
+ * Offline operation is a per-device choice, never a store-wide one.
+ * The server flag only says the store is allowed to operate offline; this device
+ * joins it after someone ran the explicit preparation on it, in
+ * Perfil > Integracoes > Operacao offline, which is what writes the readiness
+ * snapshot below. A device registered for durable delivery (an online manual
+ * order registers one) is not a device that opted into offline operation, so it
+ * keeps every online path it had before the feature.
+ */
+async function applyDeviceOptIn(next) {
+  const storeEnabled = next.storeOfflineEnabled ?? next.enabled;
+  const readiness = await readSnapshot(next.ownerUserId, `readiness:${next.userId}`);
+  const preparedHere = !!readiness?.catalog && Number.isFinite(readiness?.completedAt)
+    && Date.now() - readiness.completedAt >= 0 && Date.now() - readiness.completedAt <= GRACE;
+  return { ...next, storeOfflineEnabled: !!storeEnabled, preparedHere, enabled: !!storeEnabled && preparedHere };
+}
+
+/**
+ * The durable queue is the fallback for a device that cannot reach the server,
+ * never the default write path for a healthy one. Queue while the browser is
+ * offline, or while this device still holds unsynced work so a turn that started
+ * offline keeps its ordering. Otherwise the online path stays in charge and the
+ * primary-device rule, which exists to protect offline cash turns, never blocks
+ * a connected device from opening, moving or closing the caixa.
+ */
+export function isOfflineWriteActive() {
+  if (!context?.enabled) return false;
+  if (globalThis.navigator?.onLine === false) return true;
+  // pendingCount already covers everything unsynced, review and re-auth included.
+  const state = get(offlineStatus);
+  return state.connection === 'offline' || state.pendingCount > 0;
+}
 
 async function accessToken() {
   const { data } = await supabase.auth.getSession();
@@ -51,6 +86,7 @@ export function stopOfflineRuntime() {
   generation++;
   coordinator?.stop(); coordinator = null;
   clearInterval(interval); interval = null;
+  clearInterval(probeTimer); probeTimer = null;
   context = null; starting = null; startingKey = null;
   refreshConnection = null; lastProbe = 0; probing = false;
   setOfflineStatus({ pendingCount: 0, reviewCount: 0, syncing: false, committing: false, prepared: false, storageError: null });
@@ -77,15 +113,38 @@ function activateCoordinator() {
     refreshAuth: async () => { const { data, error } = await supabase.auth.refreshSession(); return !error && data?.session?.user?.id === context?.userId; },
     onChange: () => { void refreshOfflineCounts().catch(() => {}); },
   });
-  interval = setInterval(() => {
-    void runOfflineSync().catch(() => {});
-    // Also confirm recovery when the queue is empty; navigator.onLine is only a hint.
-    if (!probing && refreshConnection && globalThis.navigator?.onLine !== false && Date.now() - lastProbe >= 30000) {
-      probing = true; lastProbe = Date.now();
-      void refreshConnection().finally(() => { if (revision === generation) probing = false; });
-    }
-  }, 2000);
+  interval = setInterval(() => { void runOfflineSync().catch(() => {}); }, 2000);
   interval?.unref?.();
+}
+
+/**
+ * `navigator.onLine` returning true is not proof that the service is reachable,
+ * so a recovered browser is only marked degraded until a request confirms it.
+ * The probe therefore has to run for every session, not just for devices that
+ * prepared offline operation: without it a single connectivity blip left an
+ * ordinary device reading "conexao instavel" for the rest of the session, and
+ * every screen that keys an action off that state stayed blocked. A healthy
+ * session never pays for it — only a degraded one issues the request.
+ */
+function startConnectionProbe() {
+  if (probeTimer) return;
+  const revision = generation;
+  probeTimer = setInterval(() => { void probeConnection(revision); }, 5000);
+  probeTimer?.unref?.();
+}
+
+async function probeConnection(revision = generation, { force = false } = {}) {
+  if (revision !== generation || probing || !refreshConnection) return;
+  if (globalThis.navigator?.onLine === false) return;
+  if (!force && !coordinator && get(offlineStatus).connection === 'online') return;
+  if (!force && Date.now() - lastProbe < 30000) return;
+  probing = true; lastProbe = Date.now();
+  try { await refreshConnection(); } finally { if (revision === generation) probing = false; }
+}
+
+/** Confirms reachability right away instead of waiting for the next tick. */
+export function refreshConnectionState() {
+  return probeConnection(generation, { force: true });
 }
 
 export function startOfflineRuntime(authCtx) {
@@ -101,7 +160,9 @@ export function startOfflineRuntime(authCtx) {
     const cached = await readSnapshot(authCtx.ownerUserId, `bootstrap:${authCtx.userId}`);
     if (revision !== generation) return null;
     const valid = cached?.ownerUserId === authCtx.ownerUserId && cached?.userId === authCtx.userId && Date.now() - cached.validatedAt >= 0 && Date.now() - cached.validatedAt <= GRACE;
-    context = { ...authCtx, deviceId, enabled: false, ...(valid ? cached : {}), deviceId };
+    const bootstrapped = await applyDeviceOptIn({ ...authCtx, deviceId, enabled: false, ...(valid ? cached : {}), deviceId });
+    if (revision !== generation) return null;
+    context = bootstrapped;
     activateCoordinator();
     if (context.enabled) await migrateLegacyOperations(context.ownerUserId);
     await refreshOfflineCounts();
@@ -111,7 +172,9 @@ export function startOfflineRuntime(authCtx) {
       try {
         const result = await offlineRequest(`/api/offline/bootstrap?deviceId=${encodeURIComponent(deviceId)}`);
         if (revision !== generation) return;
-        context = { ...context, ...authCtx, ...result, deviceId, revoked: false, validatedAt: Date.now() };
+        const refreshed = await applyDeviceOptIn({ ...context, ...authCtx, ...result, storeOfflineEnabled: !!result?.enabled, deviceId, revoked: false, validatedAt: Date.now() });
+        if (revision !== generation) return;
+        context = refreshed;
         await saveSnapshot(authCtx.ownerUserId, `bootstrap:${authCtx.userId}`, context);
         activateCoordinator();
         if (!context.enabled && !context.registered) { coordinator?.stop(); coordinator = null; clearInterval(interval); interval = null; }
@@ -123,6 +186,7 @@ export function startOfflineRuntime(authCtx) {
         // Confirmed revocation is authoritative; transport failure preserves the validated context.
         if (error.status === 403 && !error.localAuth) {
           context.enabled = false;
+          context.storeOfflineEnabled = false;
           context.revoked = true;
           coordinator?.stop(); coordinator = null;
           await saveSnapshot(authCtx.ownerUserId, `bootstrap:${authCtx.userId}`, context);
@@ -130,6 +194,7 @@ export function startOfflineRuntime(authCtx) {
       }
     };
     refreshConnection = refresh;
+    startConnectionProbe();
     lastProbe = Date.now();
     if (valid) void refresh(); else await refresh();
     if (revision !== generation) return null;
@@ -145,10 +210,11 @@ export async function prepareOfflineDevice({ primary = false } = {}) {
   const storage = await prepareStorage();
   const result = await offlineRequest('/api/offline/bootstrap', { method: 'POST', body: JSON.stringify({ deviceId: captured.deviceId, action: primary ? 'set_primary' : 'register' }) });
   if (context !== captured) throw new Error('Conta alterada durante a preparação.');
-  context = { ...captured, ...result, validatedAt: Date.now(), storage };
+  const registered = await applyDeviceOptIn({ ...captured, ...result, storeOfflineEnabled: !!result?.enabled, validatedAt: Date.now(), storage });
+  if (context !== captured) throw new Error('Conta alterada durante a preparação.');
+  context = registered;
   await saveSnapshot(context.ownerUserId, `bootstrap:${context.userId}`, context);
   activateCoordinator();
-  if (context.enabled) await migrateLegacyOperations(context.ownerUserId);
   const revision = generation;
   const { prepareOperationalData } = await import('./preparation.js');
   let timer;
@@ -159,7 +225,37 @@ export async function prepareOfflineDevice({ primary = false } = {}) {
       new Promise((_, reject) => { timer = setTimeout(() => { expired = true; reject(new Error('A preparação demorou demais. Verifique a conexão e tente novamente.')); }, 45000); })
     ]);
   } finally { clearTimeout(timer); }
+  const settled = context;
+  if (settled !== registered) throw new Error('Conta alterada durante a preparação.');
+  // The readiness marker only exists now, so this is where the device joins.
+  const joined = await applyDeviceOptIn(settled);
+  if (context !== settled) throw new Error('Conta alterada durante a preparação.');
+  context = joined;
+  await saveSnapshot(context.ownerUserId, `bootstrap:${context.userId}`, context);
+  if (context.enabled) await migrateLegacyOperations(context.ownerUserId);
   setOfflineStatus({ storageError: null });
+  await refreshOfflineCounts();
+  notify();
+  return context;
+}
+
+/**
+ * Store-level switch, owner only. Turning offline operation off has to be
+ * reachable: before this, "Definir como principal" was a one-way door that left
+ * every prepared device queueing writes with no way back.
+ */
+export async function setStoreOfflineOperation(enabled) {
+  if (!context) throw new Error('Entre na loja para alterar a operação offline.');
+  const captured = context;
+  const result = await offlineRequest('/api/offline/bootstrap', {
+    method: 'POST',
+    body: JSON.stringify({ deviceId: captured.deviceId, action: enabled ? 'enable' : 'disable' })
+  });
+  if (context !== captured) throw new Error('Conta alterada durante a configuração.');
+  const next = await applyDeviceOptIn({ ...captured, ...result, storeOfflineEnabled: !!result?.enabled, deviceId: captured.deviceId, validatedAt: Date.now() });
+  if (context !== captured) throw new Error('Conta alterada durante a configuração.');
+  context = next;
+  await saveSnapshot(context.ownerUserId, `bootstrap:${context.userId}`, context);
   await refreshOfflineCounts();
   notify();
   return context;
@@ -227,7 +323,12 @@ async function validateOnlineOrderDevice() {
   if (context !== captured) throw new Error('Conta alterada durante o pedido.');
   if (!result?.subscriptionActive) throw new Error('É necessária uma assinatura ativa para criar pedidos.');
   if (!result?.registered) throw new Error('Não foi possível registrar este aparelho para criar o pedido.');
-  context = { ...captured, ...result, deviceId: captured.deviceId, revoked: false, validatedAt: Date.now() };
+  // Registering for durable delivery must not enrol the device in offline
+  // operation: applyDeviceOptIn keeps `enabled` tied to this device's own
+  // preparation, so no other screen changes behaviour because of one order.
+  const next = await applyDeviceOptIn({ ...captured, ...result, storeOfflineEnabled: !!result?.enabled, deviceId: captured.deviceId, revoked: false, validatedAt: Date.now() });
+  if (context !== captured) throw new Error('Conta alterada durante o pedido.');
+  context = next;
   await saveSnapshot(context.ownerUserId, `bootstrap:${context.userId}`, context);
   activateCoordinator();
   await refreshOfflineCounts();

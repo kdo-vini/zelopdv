@@ -2,7 +2,7 @@
   import OfflineAdjustments from './OfflineAdjustments.svelte';
   import { onMount, createEventDispatcher } from 'svelte';
   import { X, CloudUpload, Download, Upload } from 'lucide-svelte';
-  import { getOfflineContext, onOfflineChange, prepareOfflineDevice, runOfflineSync, refreshOfflineCounts, offlineRequest } from '$lib/offline/runtime';
+  import { getOfflineContext, onOfflineChange, prepareOfflineDevice, setStoreOfflineOperation, runOfflineSync, refreshOfflineCounts, offlineRequest } from '$lib/offline/runtime';
   import { listOperations } from '$lib/offline/operations';
   import { reconcileOperation, retryPendingOperations } from '$lib/offline/reconciliation';
   import { exportRecovery, importRecovery } from '$lib/offline/recovery';
@@ -45,6 +45,14 @@
     await act(async () => {
       await prepareOfflineDevice({ primary });
       message = primary ? 'Aparelho principal definido.' : 'Dados da operação preparados. Confira o indicador de salvamento antes de desconectar.';
+    });
+  }
+  async function toggleStore(enabled) {
+    if (!enabled && !await confirmAction('Desligar a operação offline da loja?',
+      'Todos os aparelhos voltam a registrar vendas, caixa e mesas somente com internet. Faça isso apenas depois de sincronizar os lançamentos pendentes de todos eles.')) return;
+    await act(async () => {
+      await setStoreOfflineOperation(enabled);
+      message = enabled ? 'Operação offline liberada para a loja. Prepare cada aparelho que vai usá-la.' : 'Operação offline desligada. Os aparelhos voltaram ao funcionamento somente online.';
     });
   }
   function requireOwner() {
@@ -110,15 +118,27 @@
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     {#if message}<p role="status">{message}</p>{/if}
     <section aria-label="Preparação do aparelho">
-      <h3>{context?.registered ? 'Aparelho registrado' : 'Preparar este aparelho'}</h3>
-      <p>{context?.isPrimaryDevice ? 'Este é o aparelho principal do caixa.' : 'Este aparelho pode guardar seus próprios lançamentos após a preparação.'}</p>
-      <p>Preparar baixa o catálogo, os clientes autorizados e os dados do caixa e das mesas. Aguarde a conclusão com internet. Na primeira preparação, reabra o sistema com conexão para ativar a abertura offline.</p>
-      {#if $offlineStatus.prepared}<p>Dados e abertura offline verificados neste aparelho.</p>{:else if context?.registered}<p>Preparação ainda não confirmada. Mantenha a conexão e conclua a preparação antes de operar offline.</p>{/if}
-      {#if context?.enabled === false}<p>A liberação do modo offline para esta loja ainda está pendente.</p>{/if}
+      <h3>{context?.preparedHere ? 'Aparelho preparado' : 'Preparar este aparelho'}</h3>
+      <p>{context?.preparedHere
+        ? 'Este aparelho registra vendas, caixa e mesas sem internet e sincroniza depois.'
+        : 'Este aparelho ainda funciona somente com internet. Nada muda no dia a dia dele até você preparar aqui.'}</p>
+      <p>A preparação vale só para este aparelho. Ela baixa o catálogo, os clientes autorizados e os dados do caixa e das mesas; aguarde a conclusão com internet.</p>
+      {#if context?.isPrimaryDevice}<p>Este é o aparelho principal do caixa: sem internet, a abertura, as movimentações e o fechamento do caixa saem daqui. Com internet, qualquer aparelho continua operando o caixa normalmente.</p>{/if}
+      {#if $offlineStatus.prepared}<p>Dados e abertura offline verificados neste aparelho.</p>{:else if context?.preparedHere}<p>Preparação desatualizada. Mantenha a conexão e prepare de novo antes de depender do modo offline.</p>{/if}
+      {#if context?.storeOfflineEnabled === false}<p>A operação offline está desligada para esta loja. {owner ? 'Libere abaixo antes de preparar os aparelhos.' : 'Peça ao titular para liberar.'}</p>{/if}
       <div class="actions">
         <button type="button" disabled={busy || !context || $offlineStatus.connection === 'offline'} on:click={() => prepare(false)}>Preparar este aparelho</button>
         {#if owner && !context?.isPrimaryDevice}<button type="button" disabled={busy || $offlineStatus.connection === 'offline'} on:click={() => prepare(true)}>Definir como principal</button>{/if}
       </div>
+      {#if owner}
+        <div class="actions">
+          {#if context?.storeOfflineEnabled}
+            <button type="button" disabled={busy || $offlineStatus.connection === 'offline'} on:click={() => toggleStore(false)}>Desligar operação offline da loja</button>
+          {:else}
+            <button type="button" disabled={busy || $offlineStatus.connection === 'offline'} on:click={() => toggleStore(true)}>Liberar operação offline para a loja</button>
+          {/if}
+        </div>
+      {/if}
       {#if context?.storage?.writable}<p>Gravação local verificada. {context.storage.persistent ? 'Armazenamento persistente concedido pelo navegador.' : 'O navegador não concedeu armazenamento persistente.'}</p>{/if}
     </section>
     <section aria-label="Lançamentos pendentes">

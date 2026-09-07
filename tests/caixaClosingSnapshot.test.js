@@ -9,14 +9,14 @@ const closeFunction = source.slice(node.start, node.end);
 // Exercise the actual page handler with its IO replaced. Financial arithmetic
 // belongs to PostgreSQL; the page must transmit only the operator's count.
 function mountClosingHandler({ snapshots, request, count = 125 }) {
-  return new Function('readSnapshot', 'saveSnapshot', 'offlineRequest', 'getOfflineContext', 'addToast', 'window', `
+  return new Function('readSnapshot', 'saveSnapshot', 'offlineRequest', 'getOfflineContext', 'isOfflineWriteActive', 'addToast', 'window', `
     let caixa = { id: 42, valor_inicial: 500 };
     let ownerUserId = 'owner'; let fechando = false; let closeIntent = null;
     let valorEmGaveta = ${count}; let errorMessage = '';
     const crypto = globalThis.crypto;
     ${closeFunction}
     return { close: fecharCaixa, error: () => errorMessage };
-  `)(async (owner, key) => snapshots.get(owner + ':' + key), async (owner, key, value) => snapshots.set(owner + ':' + key, value), request, () => null, vi.fn(), { location: { href: '' } });
+  `)(async (owner, key) => snapshots.get(owner + ':' + key), async (owner, key, value) => snapshots.set(owner + ':' + key, value), request, () => null, () => false, vi.fn(), { location: { href: '' } });
 }
 
 describe('authoritative cash closing contract', () => {

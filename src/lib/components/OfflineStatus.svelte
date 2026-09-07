@@ -17,8 +17,14 @@
       }
     });
     const disconnected = () => setOfflineStatus({ connection: 'offline' });
-    // Browser connectivity alone is not proof that the service recovered.
-    const connected = () => setOfflineStatus({ connection: 'degraded' });
+    // Browser connectivity alone is not proof that the service recovered, so the
+    // recovered state stays degraded until a request confirms it. Ask for that
+    // confirmation immediately; otherwise a single blip leaves the whole session
+    // reading "instável" and every screen keyed off it stuck.
+    const connected = () => {
+      setOfflineStatus({ connection: 'degraded' });
+      void import('$lib/offline/runtime').then(m => m.refreshConnectionState()).catch(() => {});
+    };
     if (!navigator.onLine) disconnected();
     window.addEventListener('offline', disconnected);
     window.addEventListener('online', connected);

@@ -5,7 +5,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-  import { getOfflineContext, submitOfflineOperation } from '$lib/offline/runtime';
+  import { getOfflineContext, isOfflineWriteActive, submitOfflineOperation } from '$lib/offline/runtime';
   import { listOperations } from '$lib/offline/operations';
   import { ensureActiveSubscription } from '$lib/guards';
   import { addToast } from '$lib/stores/ui';
@@ -57,7 +57,7 @@
       
       const context = getOfflineContext();
       let data;
-      if (context?.enabled) {
+      if (isOfflineWriteActive()) {
         movementIntent ||= crypto.randomUUID();
         const operations = await listOperations(context.ownerUserId);
         const turn = operations.find(operation => operation.type === 'caixa.open' && operation.entityId === String(idCaixa));
