@@ -169,6 +169,21 @@
     pollTimer = setInterval(() => checkForUpdate('interval'), interval);
   }
 
+  function waitForControllerChange(timeoutMs = 5000) {
+    if (!navigator.serviceWorker) return Promise.resolve();
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        navigator.serviceWorker.removeEventListener('controllerchange', finish);
+        resolve();
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', finish);
+      setTimeout(finish, timeoutMs);
+    });
+  }
+
   async function clearAppCaches() {
     if (!('caches' in window)) return;
     try {
@@ -192,6 +207,9 @@
     try {
       if (updateServiceWorker) {
         await updateServiceWorker(false);
+        // Only the new worker taking control makes it safe to drop the old
+        // caches below — until then the still-active old worker may need them.
+        await waitForControllerChange();
       } else if (navigator.serviceWorker?.getRegistration) {
         const registration = await navigator.serviceWorker.getRegistration();
         await registration?.update();
@@ -200,7 +218,7 @@
       console.warn('[UpdateAvailable] Service worker update failed:', err?.message || err);
     }
 
-    // Keep the currently working shell until the replacement worker activates.
+    await clearAppCaches();
 
     const url = new URL(window.location.href);
     url.searchParams.set('appVersion', pendingVersion.slice(0, 12));
