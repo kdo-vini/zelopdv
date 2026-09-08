@@ -11,7 +11,7 @@
     calculatePlatformFees
   } from '$lib/finance/caixa';
   import { formatPaymentMethod } from '$lib/finance/paymentMethods';
-  import { startOfflineRuntime, getOfflineContext, isOfflineWriteActive, submitOfflineOperation, offlineRequest, onOfflineChange } from '$lib/offline/runtime';
+  import { startOfflineRuntime, getOfflineContext, isOfflineWriteActive, submitOfflineOperation, offlineRequest, onOfflineChange, markOfflineReadiness, claimPrimaryDevice } from '$lib/offline/runtime';
   import { loadCashSnapshot } from '$lib/finance/offlineCash';
   import { listOperations, readSnapshot, saveSnapshot } from '$lib/offline/operations';
 
@@ -76,6 +76,11 @@
         return;
       }
       caixa = cs[0];
+      // Keeps the full cash snapshot warm in the background so this device
+      // qualifies for offline operation with no "Preparar este aparelho".
+      void loadCashSnapshot(supabase, ownerUserId, { timeoutMs: 8000 })
+        .then(snap => { if (!snap.provisional) void markOfflineReadiness('cash'); })
+        .catch(() => {});
 
       const { data: vs, error: vErr } = await supabase
         .from('vendas')
@@ -194,6 +199,9 @@
       const response = await offlineRequest('/api/caixa/close', { method: 'POST', body: JSON.stringify({ clientOperationId: closeIntent, id_caixa: caixa.id, valor_contado_em_gaveta: Number(valorEmGaveta) }) });
       if (!['applied', 'already_applied'].includes(response.status)) throw new Error('Não foi possível confirmar o fechamento. Os dados continuam preservados.');
       await saveSnapshot(ownerUserId, 'caixa.aberto', { ...caixa, data_fechamento: new Date().toISOString() });
+      // This device just closed the till online: it becomes the primary
+      // device for offline caixa turns, no manual designation needed.
+      void claimPrimaryDevice();
 
       addToast('Caixa fechado com sucesso.', 'success');
       window.location.href = '/gestao';

@@ -1,5 +1,22 @@
 # Fixes Progress
 
+- [x] FX-OFFLINE-ZEROCONFIG-01 (2026-09-07) — as duas configurações manuais
+  restantes (Preparar este aparelho / Definir como principal) eram o único
+  obstáculo entre uma loja nova e o modo offline, sem motivo de billing para
+  nenhuma das duas. `offline_settings.enabled` agora nasce `true`
+  (`20260907150000_offline_zero_config.sql`), todo aparelho se registra
+  sozinho na primeira sessão, e o snapshot de caixa/mesas é aquecido em
+  segundo plano nas telas online normais — mesmo padrão que o catálogo já
+  usava. `readiness` passou de um carimbo único para timestamp por peça
+  (catálogo/caixa/mesas). Nova ação de RPC `claim_primary` deixa qualquer
+  operador com permissão de caixa assumir o aparelho principal como efeito
+  colateral de abrir/fechar o caixa online, sem tela exclusiva do titular, e
+  sem nunca reativar uma loja que o titular desligou. Botões manuais
+  continuam existindo como força-atualização/escape-hatch. Migration aplicada
+  e registrada no projeto Supabase; PGlite ganhou `offline_zero_config_runtime.sql`
+  dedicado. Suíte 1.188/1.191, `npm run check` 0/0, build e harness Chromium
+  verdes. Ver [[CURRENT]] e [[OFFLINE]].
+
 - [x] FX-OFFLINE-SCOPE-01 (2026-09-07) — a operação offline vazava para contas e
   aparelhos que nunca a configuraram. `offline_settings.enabled` é por loja e o
   cliente usava `enabled` (loja ∧ aparelho registrado) como chave de roteamento

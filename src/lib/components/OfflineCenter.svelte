@@ -52,7 +52,7 @@
       'Todos os aparelhos voltam a registrar vendas, caixa e mesas somente com internet. Faça isso apenas depois de sincronizar os lançamentos pendentes de todos eles.')) return;
     await act(async () => {
       await setStoreOfflineOperation(enabled);
-      message = enabled ? 'Operação offline liberada para a loja. Prepare cada aparelho que vai usá-la.' : 'Operação offline desligada. Os aparelhos voltaram ao funcionamento somente online.';
+      message = enabled ? 'Operação offline liberada para a loja. Cada aparelho se prepara sozinho pelo uso normal, sem precisar visitar esta tela.' : 'Operação offline desligada. Os aparelhos voltaram ao funcionamento somente online.';
     });
   }
   function requireOwner() {
@@ -118,17 +118,17 @@
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     {#if message}<p role="status">{message}</p>{/if}
     <section aria-label="Preparação do aparelho">
-      <h3>{context?.preparedHere ? 'Aparelho preparado' : 'Preparar este aparelho'}</h3>
+      <h3>{context?.preparedHere ? 'Aparelho preparado' : 'Preparando automaticamente'}</h3>
       <p>{context?.preparedHere
-        ? 'Este aparelho registra vendas, caixa e mesas sem internet e sincroniza depois.'
-        : 'Este aparelho ainda funciona somente com internet. Nada muda no dia a dia dele até você preparar aqui.'}</p>
-      <p>A preparação vale só para este aparelho. Ela baixa o catálogo, os clientes autorizados e os dados do caixa e das mesas; aguarde a conclusão com internet.</p>
-      {#if context?.isPrimaryDevice}<p>Este é o aparelho principal do caixa: sem internet, a abertura, as movimentações e o fechamento do caixa saem daqui. Com internet, qualquer aparelho continua operando o caixa normalmente.</p>{/if}
-      {#if $offlineStatus.prepared}<p>Dados e abertura offline verificados neste aparelho.</p>{:else if context?.preparedHere}<p>Preparação desatualizada. Mantenha a conexão e prepare de novo antes de depender do modo offline.</p>{/if}
-      {#if context?.storeOfflineEnabled === false}<p>A operação offline está desligada para esta loja. {owner ? 'Libere abaixo antes de preparar os aparelhos.' : 'Peça ao titular para liberar.'}</p>{/if}
+        ? 'Este aparelho registra vendas, caixa e mesas sem internet e sincroniza depois. Isso aconteceu sozinho, pelo uso normal do sistema — sem clicar em nada aqui.'
+        : 'Continue usando o PDV normalmente com internet; este aparelho se prepara em segundo plano em poucos minutos de uso. Nada muda no dia a dia dele enquanto isso.'}</p>
+      {#if context?.isPrimaryDevice}<p>Este também é o aparelho principal do caixa: ele assumiu essa função automaticamente na última vez que abriu ou fechou o caixa com internet. Sem internet, a abertura, as movimentações e o fechamento do caixa saem daqui; com internet, qualquer aparelho continua operando o caixa normalmente.</p>{/if}
+      {#if $offlineStatus.prepared}<p>Dados e abertura offline verificados neste aparelho.</p>{:else if context?.preparedHere}<p>Preparação desatualizada. Use o sistema normalmente com conexão, ou force uma atualização abaixo, antes de depender do modo offline.</p>{/if}
+      {#if context?.storeOfflineEnabled === false}<p>A operação offline está desligada para esta loja. {owner ? 'Libere abaixo para os aparelhos voltarem a se preparar sozinhos.' : 'Peça ao titular para liberar.'}</p>{/if}
+      <p>Os botões abaixo são só para forçar agora o que normalmente acontece sozinho — por exemplo, antes de uma viagem sem internet prevista, ou se este aparelho nunca chegou a abrir ou fechar o caixa online.</p>
       <div class="actions">
-        <button type="button" disabled={busy || !context || $offlineStatus.connection === 'offline'} on:click={() => prepare(false)}>Preparar este aparelho</button>
-        {#if owner && !context?.isPrimaryDevice}<button type="button" disabled={busy || $offlineStatus.connection === 'offline'} on:click={() => prepare(true)}>Definir como principal</button>{/if}
+        <button type="button" disabled={busy || !context || $offlineStatus.connection === 'offline'} on:click={() => prepare(false)}>Forçar preparação agora</button>
+        {#if owner && !context?.isPrimaryDevice}<button type="button" disabled={busy || $offlineStatus.connection === 'offline'} on:click={() => prepare(true)}>Definir como principal manualmente</button>{/if}
       </div>
       {#if owner}
         <div class="actions">

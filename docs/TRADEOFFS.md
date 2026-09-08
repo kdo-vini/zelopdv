@@ -339,6 +339,22 @@ superfícies client-side continua backlog incremental, sem refatoração ampla.
 - **Gatilho de revisão:** clientes com múltiplos caixas simultâneos offline. Aí entra baixa otimista local
   com reconciliação. Ver [[docs/operations/OFFLINE]].
 
+### TA-OFF-03 — Aparelho principal eleito automaticamente, sem reconciliação de disputa
+
+- **O que deixamos na mesa:** um mecanismo de resolução de conflito quando dois aparelhos disputam o posto
+  de principal.
+- **O que ganhamos:** zero-config para o público-alvo real (loja/fábrica com um caixa só, TA-OFF-02): o
+  aparelho que abriu ou fechou o caixa **online** pela última vez reivindica o posto sozinho
+  (`claim_primary`), sem tela do titular.
+- **Custo aceito:** a loja cujo primeiríssimo caixa é aberto inteiramente offline (nenhum aparelho jamais
+  reivindicou o posto online) fica bloqueada até o titular usar "Definir como principal manualmente" — o
+  mesmo bloqueio de antes, agora só para esse caso raro em vez do caso comum.
+- **Por que é tolerável hoje:** a maioria das lojas abre o primeiro caixa do dia com internet; o caso do
+  primeiro turno inteiramente offline é raro e tem escape hatch manual, não bloqueio permanente.
+- **Gatilho de revisão:** mesmo gatilho de TA-OFF-02 — clientes com múltiplos caixas simultâneos exigem a
+  baixa otimista com reconciliação, que também resolveria disputa de principal sem eleição automática.
+  Ver [[docs/operations/OFFLINE]].
+
 ---
 
 ## Dívida técnica conhecida

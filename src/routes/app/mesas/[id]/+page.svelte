@@ -19,7 +19,7 @@
   import PaymentMethodGrid from '$lib/components/payments/PaymentMethodGrid.svelte';
   import PaymentMethodSelect from '$lib/components/payments/PaymentMethodSelect.svelte';
   import { SELECTABLE_PAYMENT_METHODS, formatPaymentMethod } from '$lib/finance/paymentMethods';
-  import { startOfflineRuntime, getOfflineContext, readOperationalSnapshot, offlineRequest } from '$lib/offline/runtime';
+  import { startOfflineRuntime, getOfflineContext, readOperationalSnapshot, offlineRequest, markOfflineReadiness } from '$lib/offline/runtime';
   import { loadMesaState, submitMesaOperation } from '$lib/offline/mesas';
   import { readSnapshot, listOperations } from '$lib/offline/operations';
   import { buscarProdutosLocal, buscarCategoriasLocal } from '$lib/offlineDb';
@@ -184,6 +184,9 @@
       loadCaixaEPerfil(),
       ...(getOfflineContext()?.enabled ? [loadPessoasFiado()] : []),
     ]);
+    // Keeps the mesas cache warm in the background so this device qualifies
+    // for offline Mesas without ever running "Preparar este aparelho".
+    if (!getOfflineContext()?.enabled) void loadMesaState(supabase, ownerUserId).then(() => markOfflineReadiness('mesas')).catch(() => {});
 
     // Carrega pagamentos parciais depois de garantir que a comanda existe
     await loadPagamentosParciais();

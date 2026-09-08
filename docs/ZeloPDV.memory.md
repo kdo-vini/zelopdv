@@ -24,6 +24,17 @@
   `OFFLINE.md` descreve preparação, filas e homologação. Migration offline
   está aplicada no projeto compartilhado; consultar CURRENT antes de habilitar.
 
+- Offline zero-config (2026-09-07): nenhuma configuração manual é mais
+  necessária. `offline_settings.enabled` nasce `true` por padrão; todo
+  aparelho se registra sozinho na primeira sessão; catálogo/caixa/mesas são
+  aquecidos em segundo plano pelas telas online normais (mesmo padrão que o
+  catálogo já usava). Aparelho principal é reivindicado automaticamente
+  (`offline_bootstrap_v1` ação `claim_primary`) por qualquer operador com
+  permissão de caixa, como efeito de abrir/fechar o caixa online — nunca
+  reativa uma loja que o titular desligou. Botões manuais em Perfil >
+  Integrações viraram força-atualização/escape-hatch, não pré-requisito.
+  Migration `20260907150000` aplicada no projeto compartilhado.
+
 - Pizzas (implementação local 2026-09-05, ainda sem rollout): cadastro
   exclusivamente no PDV; `produtos.tipo_produto`/`pizza_config` e revisões
   imutáveis governam tamanho, sabores iguais e regra maior/média. Snapshot

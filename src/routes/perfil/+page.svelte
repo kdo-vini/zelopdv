@@ -755,11 +755,11 @@
       <section class="rounded-lg p-5 grid gap-3 mt-5" style="background: var(--bg-card); border: 1px solid var(--border-card);">
         <div>
           <h2 class="text-sm font-semibold" style="color: var(--text-main);">Operação offline</h2>
-          <p class="text-xs mt-1 leading-relaxed" style="color: var(--text-muted);">Opcional para locais com conexão instável. A preparação vale somente para este aparelho.</p>
+          <p class="text-xs mt-1 leading-relaxed" style="color: var(--text-muted);">Já acontece automaticamente enquanto você usa o sistema. Abra aqui só para forçar uma atualização agora neste aparelho.</p>
         </div>
         <div>
           <button type="button" class="px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-60" style="background: var(--primary); color: var(--primary-text);" disabled={offlineSetupBusy || !offlineAccessContext} on:click={openOfflineSettings}>
-            {offlineSetupBusy ? 'Abrindo…' : 'Configurar neste aparelho'}
+            {offlineSetupBusy ? 'Abrindo…' : 'Ver estado deste aparelho'}
           </button>
         </div>
       </section>
@@ -1336,11 +1336,11 @@
           <section class="rounded-xl p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
             <div>
               <h2 class="text-base font-semibold" style="color: var(--text-main);">Operação offline</h2>
-              <p class="text-sm mt-1 leading-relaxed" style="color: var(--text-muted);">Recurso opcional para estabelecimentos com conexão instável. Prepare cada aparelho que precisará registrar vendas e pedidos sem internet.</p>
+              <p class="text-sm mt-1 leading-relaxed" style="color: var(--text-muted);">Recurso automático para estabelecimentos com conexão instável: cada aparelho se prepara sozinho pelo uso normal do sistema. Abra aqui só para forçar uma atualização agora ou para o caso raro de um aparelho que nunca abriu ou fechou o caixa online.</p>
             </div>
             <div>
               <button type="button" class="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60 transition-opacity hover:opacity-90" style="background: var(--primary); color: var(--primary-text);" disabled={offlineSetupBusy || !offlineAccessContext} on:click={openOfflineSettings}>
-                {offlineSetupBusy ? 'Abrindo…' : 'Configurar neste aparelho'}
+                {offlineSetupBusy ? 'Abrindo…' : 'Ver estado deste aparelho'}
               </button>
             </div>
           </section>

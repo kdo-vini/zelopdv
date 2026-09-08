@@ -9,5 +9,5 @@ it('keeps optional offline setup in Profile instead of a permanent operational b
   expect(status).not.toContain('class="offline-entry"');
   expect(profile).toContain("import OfflineCenter from '$lib/components/OfflineCenter.svelte'");
   expect(profile).toContain('Operação offline');
-  expect(profile).toContain('Configurar neste aparelho');
+  expect(profile).toContain('Ver estado deste aparelho');
 });

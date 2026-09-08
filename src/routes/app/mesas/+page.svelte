@@ -6,7 +6,7 @@
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast } from '$lib/stores/ui';
-  import { startOfflineRuntime, getOfflineContext } from '$lib/offline/runtime';
+  import { startOfflineRuntime, getOfflineContext, markOfflineReadiness } from '$lib/offline/runtime';
   import { loadMesaState, submitMesaOperation } from '$lib/offline/mesas';
 
   let userId = '';
@@ -81,6 +81,9 @@
     }
 
     loading = false;
+    // Keeps the mesas cache warm in the background so this device qualifies
+    // for offline Mesas without ever running "Preparar este aparelho".
+    if (!mesasResp.error) void loadMesaState(supabase, ownerUserId).then(() => markOfflineReadiness('mesas')).catch(() => {});
   }
 
   async function abrirMesa(mesa) {

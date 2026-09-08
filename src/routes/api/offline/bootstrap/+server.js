@@ -16,6 +16,6 @@ async function invoke(request, action, deviceId) {
 export async function GET({request,url}) { return invoke(request,'read',url.searchParams.get('deviceId')); }
 export async function POST({request}) {
   const body = await request.json().catch(() => null);
-  if (!['register','set_primary','enable','disable'].includes(body?.action)) return json({error:'Ação inválida.'},{status:400,headers});
+  if (!['register','set_primary','enable','disable','claim_primary'].includes(body?.action)) return json({error:'Ação inválida.'},{status:400,headers});
   return invoke(request,body.action,body.deviceId);
 }

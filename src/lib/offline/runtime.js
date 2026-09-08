@@ -23,20 +23,61 @@ export function onOfflineChange(listener) { listeners.add(listener); return () =
 function notify() { for (const listener of listeners) { try { listener(); } catch { /* UI cannot break a committed operation */ } } }
 
 /**
+ * A piece is fresh when it has its own timestamp within the grace window, or
+ * — for a snapshot written by the old one-shot "Preparar este aparelho" flow,
+ * which only ever recorded a single `completedAt` for the whole batch — when
+ * that flow's boolean for this piece is true and `completedAt` is fresh.
+ */
+function readinessFresh(readiness, piece, now = Date.now()) {
+  const at = readiness?.[`${piece}At`] ?? (readiness?.[piece] ? readiness?.completedAt : null);
+  return Number.isFinite(at) && now - at >= 0 && now - at <= GRACE;
+}
+
+/**
+ * Zero-config readiness: a device is prepared once ordinary online usage has
+ * warmed the two caches every write path actually depends on — the product
+ * catalog (already cached on every PDV visit) and a full cash snapshot (now
+ * cached in the background by atualizarSaldoCaixa/refreshLocalCash). Mesas is
+ * warmed the same way but is not required here: a store without the add-on,
+ * or one that has simply not opened Mesas yet on this device, still gets
+ * offline PDV and caixa. Nothing here requires the old manual button.
+ */
+function isDevicePrepared(readiness, now = Date.now()) {
+  return readinessFresh(readiness, 'catalog', now) && readinessFresh(readiness, 'cash', now);
+}
+
+/**
  * Offline operation is a per-device choice, never a store-wide one.
  * The server flag only says the store is allowed to operate offline; this device
- * joins it after someone ran the explicit preparation on it, in
- * Perfil > Integracoes > Operacao offline, which is what writes the readiness
- * snapshot below. A device registered for durable delivery (an online manual
- * order registers one) is not a device that opted into offline operation, so it
- * keeps every online path it had before the feature.
+ * joins it once its own local caches are warm enough (see isDevicePrepared),
+ * which now happens automatically as a side effect of normal online use — the
+ * same way the product catalog already warms itself on every PDV visit. A
+ * device registered for durable delivery (an online manual order registers
+ * one) is not necessarily a prepared device, so it keeps every online path it
+ * had before the feature until its own caches actually warm up.
  */
 async function applyDeviceOptIn(next) {
   const storeEnabled = next.storeOfflineEnabled ?? next.enabled;
   const readiness = await readSnapshot(next.ownerUserId, `readiness:${next.userId}`);
-  const preparedHere = !!readiness?.catalog && Number.isFinite(readiness?.completedAt)
-    && Date.now() - readiness.completedAt >= 0 && Date.now() - readiness.completedAt <= GRACE;
+  const preparedHere = isDevicePrepared(readiness);
   return { ...next, storeOfflineEnabled: !!storeEnabled, preparedHere, enabled: !!storeEnabled && preparedHere };
+}
+
+/**
+ * Called by the ordinary online read paths (catalog, cash, mesas) once they
+ * actually warm a cache — never by the manual preparation flow alone. This is
+ * what lets a device become "prepared" without anyone ever opening Perfil >
+ * Integrações > Operação offline.
+ */
+export async function markOfflineReadiness(piece) {
+  if (!context?.ownerUserId || !context?.userId) return;
+  const owner = context.ownerUserId;
+  const key = `readiness:${context.userId}`;
+  const current = await readSnapshot(owner, key) || {};
+  await saveSnapshot(owner, key, { ...current, [piece]: true, [`${piece}At`]: Date.now() });
+  if (context?.ownerUserId !== owner) return;
+  context = await applyDeviceOptIn(context);
+  await refreshOfflineCounts();
 }
 
 /**
@@ -100,7 +141,7 @@ export async function refreshOfflineCounts() {
   const catalog = await buscarProdutosLocal('', current.ownerUserId).catch(() => []);
   const readiness = await readSnapshot(current.ownerUserId, `readiness:${current.userId}`);
   if (current !== context) return;
-  const ready = !!(current.enabled && current.storage?.writable && catalog.length && readiness?.catalog && readiness?.cash && Date.now() - readiness.completedAt <= GRACE && globalThis.navigator?.serviceWorker?.controller);
+  const ready = !!(current.enabled && current.storage?.writable && catalog.length && isDevicePrepared(readiness) && globalThis.navigator?.serviceWorker?.controller);
   setOfflineStatus({ pendingCount: rows.filter(r => r.status !== 'acked').length, reviewCount: rows.filter(r => ['needs_review', 'needs_auth'].includes(r.status)).length, prepared: ready });
   notify();
 }
@@ -170,8 +211,17 @@ export function startOfflineRuntime(authCtx) {
     const refresh = async () => {
       if (globalThis.navigator?.onLine === false) return;
       try {
-        const result = await offlineRequest(`/api/offline/bootstrap?deviceId=${encodeURIComponent(deviceId)}`);
+        let result = await offlineRequest(`/api/offline/bootstrap?deviceId=${encodeURIComponent(deviceId)}`);
         if (revision !== generation) return;
+        // Registration is durable-delivery bookkeeping, not an offline opt-in
+        // (applyDeviceOptIn still gates `enabled` on this device's own warm
+        // caches). Doing it silently on every session, instead of waiting for
+        // an online manual order or a manual "Preparar este aparelho" click,
+        // is what lets a brand-new device become eligible with zero setup.
+        if (!result?.registered && result?.subscriptionActive) {
+          result = await offlineRequest('/api/offline/bootstrap', { method: 'POST', body: JSON.stringify({ deviceId, action: 'register' }) });
+          if (revision !== generation) return;
+        }
         const refreshed = await applyDeviceOptIn({ ...context, ...authCtx, ...result, storeOfflineEnabled: !!result?.enabled, deviceId, revoked: false, validatedAt: Date.now() });
         if (revision !== generation) return;
         context = refreshed;
@@ -259,6 +309,28 @@ export async function setStoreOfflineOperation(enabled) {
   await refreshOfflineCounts();
   notify();
   return context;
+}
+
+/**
+ * Fires as a side effect of an ordinary *online* caixa open/close — the
+ * moment a device is actually shown to be the one running the till today.
+ * This is what replaces "Definir como principal" as a required manual step:
+ * nobody has to know that concept exists for the single-till store the
+ * primary-device rule was designed for (see docs/TRADEOFFS.md TA-OFF-02).
+ * Best-effort and silent: the caixa action already succeeded online, so a
+ * failure here must never surface as an error to the operator — worst case,
+ * primary status simply does not move until the next successful open/close.
+ */
+export async function claimPrimaryDevice() {
+  const captured = context;
+  if (!captured?.ownerUserId || !captured?.deviceId) return;
+  try {
+    const result = await offlineRequest('/api/offline/bootstrap', { method: 'POST', body: JSON.stringify({ deviceId: captured.deviceId, action: 'claim_primary' }) });
+    if (context !== captured) return;
+    context = await applyDeviceOptIn({ ...captured, ...result, storeOfflineEnabled: !!result?.enabled, deviceId: captured.deviceId, validatedAt: Date.now() });
+    await saveSnapshot(context.ownerUserId, `bootstrap:${context.userId}`, context);
+    notify();
+  } catch { /* Best-effort; the online caixa action already succeeded. */ }
 }
 
 export async function runOfflineSync() {

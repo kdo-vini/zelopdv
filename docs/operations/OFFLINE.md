@@ -1,37 +1,49 @@
 # Funcionamento offline do ZeloPDV
 
-## Regra de escopo — adesão por aparelho (2026-09-07)
+## Zero-config (2026-09-07): nenhuma configuração manual é necessária
 
-A operação offline é **opt-in por aparelho**. Um aparelho só entra nela depois
-que alguém executou **Preparar este aparelho** em **Perfil > Integrações >
-Operação offline** nele. Enquanto isso não acontece, o aparelho mantém
-exatamente os caminhos online que tinha antes da feature: venda pela RPC
-`criar_venda_completa`, caixa e mesas direto no banco, sem fila e sem aviso.
+Uma loja nova já opera offline sem ninguém visitar Perfil > Integrações. Dois
+sinais compõem o estado, e os dois agora acontecem sozinhos:
 
-Dois sinais compõem o estado, e os dois são necessários:
-
-| Sinal | Onde vive | Significado |
+| Sinal | Onde vive | Como fica `true` sem ação manual |
 | --- | --- | --- |
-| `storeOfflineEnabled` | `offline_settings.enabled`, por loja | o titular liberou a operação offline para a loja |
-| `preparedHere` | snapshot `readiness:<operador>` no IndexedDB do aparelho | este aparelho baixou catálogo, caixa e mesas |
+| `storeOfflineEnabled` | `offline_settings.enabled`, por loja | nasce `true` (default da coluna); todo aparelho já se registra sozinho na primeira sessão |
+| `preparedHere` | snapshot `readiness:<operador>`, por peça (`catalogAt`/`cashAt`/`mesasAt`) | cada peça fica fresca sozinha: o catálogo já era cacheado em toda visita ao PDV, e caixa/mesas agora são aquecidos em segundo plano pelas mesmas telas online (`atualizarSaldoCaixa`, `refreshLocalCash`, `loadMesas`/mesas detalhe) |
 
-`enabled = storeOfflineEnabled && preparedHere`. Registro de aparelho
-(`offline_devices`) é só entrega durável: um pedido manual criado com internet
-registra o aparelho para usar a fila, e isso **não** o inscreve na operação
-offline nem muda qualquer outra tela.
+`enabled = storeOfflineEnabled && preparedHere`, onde `preparedHere` exige
+catálogo **e** caixa frescos (mesas é bônus opcional — sem addon ou sem visita
+recente, o aparelho ainda qualifica para PDV/caixa offline). Registro de
+aparelho (`offline_devices`) continua sendo só entrega durável — um pedido
+manual online registra o aparelho para a fila sem inscrevê-lo na operação
+offline — mas agora o registro em si também acontece sozinho em toda sessão,
+não só num pedido manual.
 
-**A fila durável é fallback de queda, não o caminho padrão de escrita.** Um
-aparelho preparado e conectado escreve online; ele só vai para a fila quando o
-navegador está sem rede ou quando ainda há lançamento não sincronizado neste
-aparelho — aí a ordem importa e o turno aberto offline precisa ser respeitado.
-Como consequência, a regra de **aparelho principal** (abertura, movimentação e
-fechamento de caixa) vale **somente sem internet**: ela existe para impedir dois
-turnos offline conflitantes. Com internet, qualquer aparelho opera o caixa.
+**Aparelho principal também deixou de exigir configuração.** A RPC
+`offline_bootstrap_v1` ganhou a ação `claim_primary`: qualquer operador com
+permissão de caixa (`caixa.abrir`, `caixa.fechar` ou `caixa.movimentar`)
+reivindica esse status como efeito colateral de abrir ou fechar o caixa
+**online** — o próprio ato de rodar o caixa naquele dia já designa o aparelho,
+sem tela e sem gate exclusivo do titular. A reivindicação nunca reativa uma
+loja que o titular desligou explicitamente. **Sem rede**, apenas o aparelho
+principal abre, movimenta e fecha caixa — a regra existe para impedir dois
+turnos offline conflitantes (ver TA-OFF-02 em [[TRADEOFFS]]); com internet ela
+não se aplica, qualquer aparelho autorizado opera o caixa online normalmente.
 
-O titular liga e desliga a operação offline da loja na própria central
-(**Perfil > Integrações > Operação offline**). Desligar devolve todos os
-aparelhos ao funcionamento somente online; faça isso só depois de sincronizar os
-pendentes de cada um.
+Os botões manuais em **Perfil > Integrações > Operação offline** continuam
+existindo, reenquadrados como força-atualização e escape hatch: "Forçar
+preparação agora" atualiza os três caches imediatamente (útil antes de uma
+queda de conexão prevista), e "Definir como principal manualmente" cobre o
+caso raro de um aparelho cuja primeira abertura de caixa da loja aconteça
+inteiramente offline, sem nenhum aparelho jamais ter reivindicado o posto
+online. O titular ainda liga e desliga a operação offline da loja inteira
+nessa mesma central; desligar devolve todos os aparelhos ao funcionamento
+somente online e nenhuma reivindicação automática religa sozinha.
+
+**A fila durável continua sendo fallback de queda, não o caminho padrão de
+escrita.** Um aparelho preparado e conectado escreve online; ele só vai para a
+fila quando o navegador está sem rede ou quando ainda há lançamento não
+sincronizado neste aparelho — aí a ordem importa e o turno aberto offline
+precisa ser respeitado.
 
 ## Pedidos manuais — implementação local em 2026-09-05
 
@@ -54,12 +66,14 @@ pizzas utilizam a revisão histórica validada.
 A criação manual com internet registra o aparelho para usar a fila durável e
 sincronizar. Esse registro não habilita a operação offline nem altera Frente de
 Caixa, Caixa ou Mesas do aparelho — ver a regra de escopo no topo.
-A preparação opcional fica em **Perfil > Integrações > Operação offline** e
-baixa também a fila de pedidos. O indicador global só aparece em
-queda de conexão, sincronização, pendência ou erro. Navegação lateral/mobile usa
-permissões e add-ons validados em cache para titular e subusuário, inclusive
-ZeloMenu e Mesas. O aparelho precisa ser preparado com conexão antes do uso
-offline. Somente dados já baixados ou criados no próprio aparelho podem ser
+A preparação de catálogo/caixa/mesas acontece sozinha pelo uso normal do
+sistema (ver zero-config no topo); **Perfil > Integrações > Operação offline**
+existe só para forçar isso agora e também baixa a fila de pedidos. O indicador
+global só aparece em queda de conexão, sincronização, pendência ou erro.
+Navegação lateral/mobile usa permissões e add-ons validados em cache para
+titular e subusuário, inclusive ZeloMenu e Mesas. O aparelho precisa ter
+navegado online pelo menos uma vez para aquecer o cache antes do uso offline.
+Somente dados já baixados ou criados no próprio aparelho podem ser
 consultados sem rede. **Aceite, avanço de preparo, cancelamento, fechamento e
 recebimento de pedidos de outros aparelhos continuam exigindo conexão.**
 Frente de caixa, Mesas e Caixa mantêm o protocolo offline existente.

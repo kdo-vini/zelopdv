@@ -1,13 +1,13 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { db } from '../src/lib/offlineDb.js';
-import { saveSnapshot, listOperations } from '../src/lib/offline/operations.js';
+import { saveSnapshot, readSnapshot, listOperations } from '../src/lib/offline/operations.js';
 vi.mock('../src/lib/supabaseClient', () => ({ supabase: { auth: { getSession: async () => ({ data: { session: { user: { id: 'operator' }, access_token: 'fixture' } } }) } } }));
 vi.mock('../src/lib/stores/offlineStatus.js', async () => {
   const { writable } = await import('svelte/store');
   return { offlineStatus: writable({ connection: 'online', pendingCount: 0, reviewCount: 0 }), setOfflineStatus: vi.fn() };
 });
-import { startOfflineRuntime, stopOfflineRuntime, submitOfflineOperation, submitOnlineOperation, isOfflineWriteActive, getOfflineContext, readOperationalSnapshot, offlineRequest } from '../src/lib/offline/runtime.js';
+import { startOfflineRuntime, stopOfflineRuntime, submitOfflineOperation, submitOnlineOperation, isOfflineWriteActive, getOfflineContext, readOperationalSnapshot, offlineRequest, markOfflineReadiness, claimPrimaryDevice } from '../src/lib/offline/runtime.js';
 /** Offline operation is now a per-device opt-in: the bootstrap snapshot alone
  * no longer enables it, the local readiness marker written by the explicit
  * preparation has to be there too. */
@@ -152,4 +152,89 @@ it('queues while unsynced work is still pending so an offline turn keeps its ord
   expect(isOfflineWriteActive()).toBe(false);
   offlineStatus.set({ connection: 'online', pendingCount: 1, reviewCount: 0 });
   expect(isOfflineWriteActive()).toBe(true);
+});
+
+it('registers a new device automatically on session start, with no manual order and no button', async () => {
+  // Fase 1: registration used to happen only via an online manual order or
+  // the "Preparar este aparelho" click. Now every session self-registers.
+  vi.stubGlobal('navigator', { onLine: true });
+  vi.mocked(fetch)
+    .mockImplementationOnce(async () => new Response(JSON.stringify({
+      enabled: true, registered: false, subscriptionActive: true, ownerUserId: 'owner', operatorId: 'operator'
+    }), { status: 200 }))
+    .mockImplementationOnce(async (path, options) => {
+      expect(path).toBe('/api/offline/bootstrap');
+      expect(JSON.parse(options.body)).toMatchObject({ action: 'register' });
+      return new Response(JSON.stringify({
+        enabled: true, registered: true, subscriptionActive: true, ownerUserId: 'owner', operatorId: 'operator'
+      }), { status: 200 });
+    });
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  expect(getOfflineContext()).toMatchObject({ registered: true, storeOfflineEnabled: true });
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+it('does not attempt to register a device without an active subscription', async () => {
+  vi.stubGlobal('navigator', { onLine: true });
+  vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({
+    enabled: false, registered: false, subscriptionActive: false, ownerUserId: 'owner', operatorId: 'operator'
+  }), { status: 200 }));
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  expect(getOfflineContext()).toMatchObject({ registered: false });
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+
+it('becomes prepared from ordinary online usage alone, with no manual preparation step', async () => {
+  // Fase 1: catalog/cash caching used to only happen inside the explicit
+  // "Preparar este aparelho" flow. Now the normal PDV/caixa screens call
+  // markOfflineReadiness as a side effect of their own online reads.
+  vi.stubGlobal('navigator', { onLine: true });
+  vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({
+    enabled: true, registered: true, subscriptionActive: true, ownerUserId: 'owner', operatorId: 'operator'
+  }), { status: 200 }));
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  expect(getOfflineContext().enabled).toBe(false);
+  await markOfflineReadiness('catalog');
+  expect(getOfflineContext().enabled).toBe(false); // cash still missing
+  await markOfflineReadiness('cash');
+  expect(getOfflineContext()).toMatchObject({ enabled: true, preparedHere: true });
+});
+
+it('claims primary-device status as a side effect of an online caixa action, no manual designation', async () => {
+  vi.stubGlobal('navigator', { onLine: true });
+  vi.mocked(fetch)
+    .mockImplementationOnce(async () => new Response(JSON.stringify({
+      enabled: true, registered: true, subscriptionActive: true, isPrimaryDevice: false, ownerUserId: 'owner', operatorId: 'operator'
+    }), { status: 200 }))
+    .mockImplementationOnce(async (path, options) => {
+      expect(JSON.parse(options.body)).toMatchObject({ action: 'claim_primary' });
+      return new Response(JSON.stringify({
+        enabled: true, registered: true, subscriptionActive: true, isPrimaryDevice: true, primaryDeviceId: 'this-device', ownerUserId: 'owner', operatorId: 'operator'
+      }), { status: 200 });
+    });
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  expect(getOfflineContext().isPrimaryDevice).toBe(false);
+  await claimPrimaryDevice();
+  expect(getOfflineContext().isPrimaryDevice).toBe(true);
+});
+
+it('never surfaces a claim_primary failure: the online caixa action it rides on already succeeded', async () => {
+  vi.stubGlobal('navigator', { onLine: true });
+  vi.mocked(fetch)
+    .mockImplementationOnce(async () => new Response(JSON.stringify({
+      enabled: true, registered: true, subscriptionActive: true, ownerUserId: 'owner', operatorId: 'operator'
+    }), { status: 200 }))
+    .mockImplementationOnce(async () => new Response(JSON.stringify({ error: 'Permissão de caixa necessária.' }), { status: 403 }));
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  await expect(claimPrimaryDevice()).resolves.toBeUndefined();
+});
+
+it('treats a legacy one-shot preparation snapshot as still fresh (backward compatible)', async () => {
+  await saveSnapshot('owner', 'readiness:operator', { catalog: true, cash: true, mesas: true, completedAt: Date.now() });
+  vi.stubGlobal('navigator', { onLine: true });
+  vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({
+    enabled: true, registered: true, subscriptionActive: true, ownerUserId: 'owner', operatorId: 'operator'
+  }), { status: 200 }));
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  expect(getOfflineContext()).toMatchObject({ enabled: true, preparedHere: true });
 });

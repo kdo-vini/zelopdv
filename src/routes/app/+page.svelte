@@ -23,7 +23,7 @@
   import { abrirCaixaIdempotente } from '$lib/finance/caixaOps';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { createClientSaleId } from '$lib/finance/saleOps';
-  import { startOfflineRuntime, getOfflineContext, isOfflineWriteActive, submitOfflineOperation, runOfflineSync, readOperationalSnapshot, onOfflineChange } from '$lib/offline/runtime';
+  import { startOfflineRuntime, getOfflineContext, isOfflineWriteActive, submitOfflineOperation, runOfflineSync, readOperationalSnapshot, onOfflineChange, markOfflineReadiness, claimPrimaryDevice } from '$lib/offline/runtime';
   import { readSnapshot, saveSnapshot, readDraft, saveDraft, listOperations } from '$lib/offline/operations';
   import { projectStockProducts } from '$lib/finance/offlineProjection';
   import { validateLocalCartStock, selectCheckoutSubmission } from '$lib/finance/offlineCheckout';
@@ -502,6 +502,16 @@
   }
 
   /** Atualiza o saldo de caixa (dinheiro) do caixa aberto. */
+  let cashWarmup = null;
+  function warmCashSnapshotCache() {
+    if (cashWarmup) return cashWarmup;
+    cashWarmup = loadCashSnapshot(supabase, ownerUserId, { timeoutMs: 8000 })
+      .then(snapshot => { if (!snapshot.provisional) void markOfflineReadiness('cash'); })
+      .catch(() => {})
+      .finally(() => { cashWarmup = null; });
+    return cashWarmup;
+  }
+
   async function atualizarSaldoCaixa() {
     try {
       if ((!caixaAberto || !idCaixaAberto) && !getOfflineContext()?.enabled) { saldoCaixa = 0; return; }
@@ -518,6 +528,12 @@
         saldoCaixa = calculateExpectedDrawer({ valorInicial: snapshot.caixa?.valor_inicial || 0, dinheiroLiquido: payments.dinheiro, sangria: movements.sangria, suprimento: movements.suprimento });
         return;
       }
+      // Keeps the full cash snapshot warm in the background so this device
+      // qualifies for offline operation without ever running "Preparar este
+      // aparelho". loadCashSnapshot has its own 15s reuse window, so this
+      // does not add a request on every call, and never blocks the numbers
+      // below, which stay on the existing lightweight query.
+      if (idCaixaAberto) void warmCashSnapshotCache();
       const pCaixa = supabase.from('caixas').select('valor_inicial').eq('id', idCaixaAberto).single();
       const pVendasDoCaixa = supabase
         .from('vendas')
@@ -621,6 +637,7 @@
         if (local.length) {
           const included = await readSnapshot(ownerUserId, 'catalog.includedOperations') || [];
           produtos = projectStockProducts(local, await listOperations(ownerUserId), included);
+          void markOfflineReadiness('catalog');
           return;
         }
       }
@@ -630,6 +647,9 @@
       const saved = await atualizarCatalogoOffline(data, ownerUserId, included, before.map(o => o.operationId));
       if (!saved) { const local = await buscarProdutosLocal('', ownerUserId); produtos = projectStockProducts(local, await listOperations(ownerUserId), await readSnapshot(ownerUserId, 'catalog.includedOperations') || []); return; }
       produtos = projectStockProducts(data, await listOperations(ownerUserId), included);
+      // Every PDV visit already warms this cache; marking readiness here is
+      // what lets a device qualify for offline operation with no setup screen.
+      void markOfflineReadiness('catalog');
     } catch (err) {
       // Erro de rede no carregamento: não deixa a tela sem produtos se há cache.
       const local = isNetworkError(err) ? await buscarProdutosLocal('', ownerUserId).catch(() => []) : [];
@@ -996,6 +1016,9 @@
       idCaixaAberto = caixa.id;
       caixaAberto = true;
       modalAbrirCaixaAberto = false;
+      // This device just opened the till online: it becomes the primary
+      // device for offline caixa turns, no manual designation needed.
+      void claimPrimaryDevice();
       if (jaExistia) {
         addToast('Já havia um caixa aberto. Continuando nele.', 'info');
       } else if (isSubUser) {

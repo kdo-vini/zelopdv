@@ -18,7 +18,11 @@ $$;
 set local role authenticated;
 select set_config('request.jwt.claims',jsonb_build_object('role','authenticated','sub',owner_id)::text,true) from manual_fixture;
 select pg_temp.manual_assert((public.offline_bootstrap_v1('manual-fixture','register')->>'registered')::boolean,'device registered for online order');
-select pg_temp.manual_assert(not (select enabled from public.offline_settings where owner_user_id=f.owner_id),'register does not enable offline mode') from manual_fixture f;
+-- Zero-config offline (20260907150000): a store is offline-enabled by default
+-- the moment any device registers, no owner action required. Whether THIS
+-- device may actually write offline is a separate, client-side question
+-- (its own warmed cache), not modeled at this layer.
+select pg_temp.manual_assert((select enabled from public.offline_settings where owner_user_id=f.owner_id),'store is offline-enabled by default on first register') from manual_fixture f;
 update manual_fixture set op=pg_temp.manual_op('manual-empty-fields','{"items":[{"productId":912801,"quantity":2,"unitPrice":10}],"deliveryFee":3.5}');
 update manual_fixture set result=public.apply_offline_operation_v1(op);
 select pg_temp.manual_assert(result->>'status'='applied','optional fields accepted: '||result::text) from manual_fixture;

@@ -1,5 +1,57 @@
 # ZeloPDV — Foco atual
 
+## Operação offline zero-config (Fase 1 + Fase 2) — 2026-09-07
+
+Depois da correção de escopo por aparelho (abaixo), o produto ainda exigia duas
+configurações manuais para qualquer loja usar offline: "Preparar este
+aparelho" em Perfil > Integrações, e o titular "Definir como principal" para
+liberar o caixa sem internet. Na prática, dono de restaurante não visita essa
+tela sozinho — o suporte técnico tinha que fazer isso por ele. Investigação
+confirmou que não há motivo de billing para nenhuma das duas exigências, e que
+o catálogo já prova o padrão certo: ele já é cacheado em IndexedDB em toda
+visita ao PDV, sem botão nenhum.
+
+**Fase 1 — zero-config para Mesas, Fiado e leitura do caixa.** Todo o aparelho
+se registra sozinho na primeira sessão (`register` silencioso, não mais só em
+pedido manual online). A loja nasce com `offline_settings.enabled = true`
+(migration `20260907150000_offline_zero_config.sql`; linhas existentes também
+foram migradas para `true` — a feature ainda não tinha cliente real usando o
+desligamento explícito). O snapshot completo de caixa/mesas passa a ser
+aquecido em segundo plano nas telas online normais (`atualizarSaldoCaixa`,
+`refreshLocalCash`, `loadMesas`/mesas detalhe), do mesmo jeito que o catálogo já
+fazia — sem bloquear a tela, sem pedir nada. `readiness` deixou de ser um
+carimbo único (`completedAt`) e passou a ter timestamp por peça
+(`catalogAt`/`cashAt`/`mesasAt`); um aparelho fica "preparado" assim que
+catálogo e caixa estão frescos, com Mesas como bônus opcional. O botão manual
+"Preparar este aparelho" continua existindo só para forçar uma atualização
+imediata.
+
+**Fase 2 — zero-config para o caixa único.** `offline_bootstrap_v1` ganhou a
+ação `claim_primary`: qualquer operador com permissão de caixa (`caixa.abrir`,
+`caixa.fechar` ou `caixa.movimentar`) reivindica o status de aparelho principal
+como efeito colateral de abrir ou fechar o caixa **online** — sem tela, sem
+gate exclusivo do titular. A reivindicação nunca reativa uma loja que o titular
+desligou explicitamente (`enabled=true` continua sendo exigido na atualização).
+"Definir como principal" manual continua disponível como escape hatch para o
+caso raro de um aparelho cuja primeira abertura de caixa da loja aconteça
+inteiramente offline.
+
+Validação: 6 novos testes em `tests/offlineRuntime.test.js` cobrindo
+auto-registro, preparo automático por peça, reivindicação automática de
+principal e compatibilidade retroativa com o snapshot antigo de preparo único;
+suíte completa 1.188/1.191 (3 runtimes DB opcionais pulados); `npm run check`
+0/0; `npm run build` compila client/SSR/PWA; harness Chromium com SW real
+passa em 1280/390 px nas quatro rotas offline. SQL: `npm run verify:migrations`
+confirma o ledger (53 forward); harness PGlite (`offline-pglite.mjs`) passa com
+um novo script dedicado `offline_zero_config_runtime.sql` cobrindo o default
+`enabled=true` no primeiro registro, a reivindicação de principal por
+permissão de caixa (não por ser titular), a rejeição de quem não tem permissão
+de caixa, e o respeito ao desligamento explícito do titular. Migration aplicada
+e registrada no projeto Supabase `xnnjyrblpvsqrtsshawa`; `get_advisors`
+confirmado sem achado novo (o único aviso de `SECURITY DEFINER` em
+`offline_bootstrap_v1` é o mesmo padrão já presente nas demais RPCs offline).
+Sem sessão de cliente real nem teste em aparelho físico.
+
 ## Escopo da operação offline corrigido — 2026-09-07
 
 A operação offline voltou a ser opt-in **por aparelho**. Antes, bastava o
