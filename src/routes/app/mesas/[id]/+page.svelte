@@ -286,7 +286,7 @@
       try { pessoas = await readOperationalSnapshot('pessoas.fiado', async () => {
         const rows = [];
         for (let from = 0; ; from += 500) {
-          const { data, error } = await supabase.from('pessoas').select('id, nome, saldo_fiado').eq('id_usuario', ownerUserId).order('id').range(from, from + 499);
+          const { data, error } = await supabase.from('pessoas').select('id, nome, saldo_fiado').eq('id_usuario', ownerUserId).order('nome').order('id').range(from, from + 499);
           if (error) throw error; rows.push(...data); if (data.length < 500) return rows;
         }
       }); } catch { addToast('Clientes para fiado precisam ser preparados com conexão.', 'warning'); }

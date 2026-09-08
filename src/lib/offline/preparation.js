@@ -26,7 +26,7 @@ export async function prepareOperationalData(supabase, context, assertCurrent) {
   if (allowed('pdv.receber') || allowed('pedidos.receber')) {
     const people = [];
     for (let from = 0; ; from += 500) {
-      const { data, error } = await supabase.from('pessoas').select('id, nome, saldo_fiado').eq('id_usuario', owner).order('id').range(from, from + 499);
+      const { data, error } = await supabase.from('pessoas').select('id, nome, saldo_fiado').eq('id_usuario', owner).order('nome').order('id').range(from, from + 499);
       if (error) throw error;
       assertCurrent();
       people.push(...data);
