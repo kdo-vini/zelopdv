@@ -73,7 +73,7 @@
 			aplicarPreset('hoje');
 			await carregarRelatorioPeriodo();
 		} catch (error) {
-			errorMessage = error?.message || 'Erro ao carregar relatórios.';
+			errorMessage = 'Erro ao carregar relatórios.';
 		}
 	}
 
@@ -232,7 +232,7 @@
 			aplicarPreset('hoje');
 			await carregarRelatorioPeriodo();
 		} catch (err) {
-			errorMessage = err?.message || 'Erro ao carregar relatórios.';
+			errorMessage = 'Erro ao carregar relatórios.';
 		} finally {
 			loading = false;
 		}
@@ -251,7 +251,7 @@
 			);
 			if (!cErr) caixas = cs || [];
 		} catch (e) {
-			addToast('Erro ao carregar caixas: ' + e.message, 'error');
+			addToast('Não foi possível carregar os caixas. Tente novamente.', 'error');
 		}
 	}
 
@@ -273,7 +273,7 @@
 				}));
 			}
 		} catch (e) {
-			addToast('Erro ao carregar fechamentos: ' + e.message, 'error');
+			addToast('Não foi possível carregar os fechamentos. Tente novamente.', 'error');
 		}
 	}
 
@@ -378,8 +378,8 @@
 				if (!ps2Err && ps2) pessoasMap = new Map(ps2.map(p => [p.id, p]));
 			}
 		} catch (err) {
-			addToast('Erro ao carregar dados do caixa: ' + err.message, 'error');
-			errorMessage = err?.message || 'Erro ao carregar dados do caixa.';
+			addToast('Não foi possível carregar os dados do caixa. Tente novamente.', 'error');
+			errorMessage = 'Erro ao carregar dados do caixa.';
 		} finally {
 			loading = false;
 		}
@@ -594,7 +594,7 @@
 			await generatePDFReport(dados);
 			addToast('PDF gerado com sucesso!', 'success');
 		} catch (e) {
-			addToast('Erro ao gerar PDF: ' + e.message, 'error');
+			addToast('Não foi possível gerar o PDF. Tente novamente.', 'error');
 		} finally {
 			showExportDropdown = false;
 			exporting = false;
@@ -610,7 +610,7 @@
 			await generateExcelReport(dados);
 			addToast('Excel gerado com sucesso!', 'success');
 		} catch (e) {
-			addToast('Erro ao gerar Excel: ' + e.message, 'error');
+			addToast('Não foi possível gerar o Excel. Tente novamente.', 'error');
 		} finally {
 			showExportDropdown = false;
 			exporting = false;
@@ -861,8 +861,8 @@
 				}
 			}
 		} catch (e) {
-			addToast('Erro ao carregar relatório do período: ' + e.message, 'error');
-			errorMessage = e?.message || 'Erro ao carregar relatório do período.';
+			addToast('Não foi possível carregar o relatório do período. Tente novamente.', 'error');
+			errorMessage = 'Erro ao carregar relatório do período.';
 		} finally {
 			periodoLoading = false;
 		}
@@ -974,9 +974,10 @@
 </script>
 
 <AdminLock pinConfigured={pinConfigured} {pinStatus} onPinRetry={retryAdminPin}>
-<div class="mb-6 flex items-end justify-between">
+<div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
 	<div>
-		<h1 class="text-xl font-bold" style="color: var(--text-main);">Relatórios</h1>
+		<p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Financeiro / Relatórios</p>
+		<h1 class="text-xl font-bold text-slate-100 tracking-tight">Relatórios</h1>
 	</div>
 </div>
 {#if errorMessage}

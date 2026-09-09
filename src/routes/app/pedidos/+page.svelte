@@ -210,7 +210,7 @@
       .maybeSingle();
 
     if (error) {
-      addToast('Erro ao verificar caixa: ' + error.message, 'error');
+      addToast('Não foi possível verificar o caixa. Verifique sua conexão e tente novamente.', 'error');
       return;
     }
     idCaixaAberto = data?.id || null;

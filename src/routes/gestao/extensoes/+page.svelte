@@ -121,7 +121,7 @@
     </div>
   {:else}
     <header class="page-header" style="border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 85%, transparent); padding-bottom: 1rem;">
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Outros / Extensões</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Outros / Extensões</p>
       <h1 class="text-xl font-bold text-slate-100 tracking-tight">Extensões</h1>
       <p class="subtitle">
         Recursos extras que ampliam o seu Zelo. Ative só o que faz sentido pro seu negócio.
@@ -131,7 +131,7 @@
     {#if menuActive}
       <div class="link-panel">
         <div class="link-panel-header">
-          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">ZeloMenu · Cardápio online</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">ZeloMenu · Cardápio online</p>
           <h2 class="text-base font-bold text-slate-100 tracking-tight">Configurar cardápio</h2>
           <p class="link-panel-desc">Gerencie produtos, fotos, modificadores e o link público do seu cardápio em um só lugar.</p>
         </div>

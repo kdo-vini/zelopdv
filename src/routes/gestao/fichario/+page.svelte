@@ -322,7 +322,7 @@
       await refreshPessoa();
       paymentConfirmation = confirmation;
     } catch (error) {
-      addToast(error?.message || 'Não foi possível registrar o pagamento.', 'error');
+      addToast('Não foi possível registrar o pagamento.', 'error');
     } finally {
       salvando = false;
     }
@@ -362,7 +362,7 @@
       });
       addToast('Recibo enviado para impressão.', 'success');
     } catch (error) {
-      addToast(error?.message || 'NÃ£o foi possÃ­vel imprimir o recibo.', 'error');
+      addToast('Não foi possível imprimir o recibo.', 'error');
     } finally {
       imprimindoConfirmacao = false;
     }
@@ -406,7 +406,7 @@
       addToast(`Pagamento de ${money(Number(data?.valor_excluido ?? valor))} excluído.`, 'success');
       await refreshPessoa();
     } catch (error) {
-      addToast(error?.message || 'Não foi possível excluir o pagamento.', 'error');
+      addToast('Não foi possível excluir o pagamento.', 'error');
     } finally {
       excluindoPagamentoId = null;
       pagamentoPendenteExclusao = null;
@@ -426,7 +426,7 @@
         await selecionar(pessoaIdFromUrl);
       }
     } catch (error) {
-      errorMsg = error?.message || 'Não foi possível carregar o fichário.';
+      errorMsg = 'Não foi possível carregar o fichário.';
     } finally {
       loading = false;
     }

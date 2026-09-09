@@ -570,7 +570,8 @@
       message = 'Resposta inesperada do servidor. Tente novamente.';
       messageType = 'warning';
     } catch (e) {
-      message = e?.message || 'Erro ao conectar com o servidor de pagamento.';
+      console.error('[assinatura] checkout error:', e);
+      message = 'Erro ao conectar com o servidor de pagamento. Verifique sua conexão e tente novamente.';
       messageType = 'warning';
     } finally {
       loading = false;
@@ -646,7 +647,8 @@
           : 'Pix gerado com sucesso. Faça o pagamento e acompanhe a confirmação nesta tela.';
       }
     } catch (e) {
-      message = e?.message || 'Erro ao conectar com o servidor de pagamento.';
+      console.error('[assinatura] pix error:', e);
+      message = 'Erro ao conectar com o servidor de pagamento. Verifique sua conexão e tente novamente.';
       messageType = 'warning';
     } finally {
       pixLoading = false;
@@ -734,7 +736,8 @@
       }
     } catch (e) {
       if (!silent) {
-        message = e?.message || 'Erro ao consultar status do Pix.';
+        console.error('[assinatura] pix status error:', e);
+        message = 'Erro ao consultar status do Pix. Verifique sua conexão e tente novamente.';
         messageType = 'warning';
       }
     } finally {
@@ -2554,6 +2557,22 @@
 
     .pix-actions {
       width: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn-primary, .btn-secondary, .btn-danger-outline,
+    .plan-card, .step-chip, .checkout-track,
+    .payment-card, .addon-choice, .addon-tooltip,
+    .mobile-step-dot {
+      transition: none;
+    }
+    .plan-card:hover:not(:disabled),
+    .plan-card.current:hover,
+    .payment-card:hover, .payment-card:focus-visible,
+    .addon-choice.disabled,
+    .addon-choice:hover .addon-tooltip, .addon-choice:focus-visible .addon-tooltip {
+      transform: none;
     }
   }
 </style>

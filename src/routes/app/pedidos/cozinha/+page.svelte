@@ -81,7 +81,7 @@
     try {
       pedidos = await loadCanonicalOrders(supabase, empresaId, { kitchen: true });
     } catch (err) {
-      addToast('Erro ao carregar cozinha: ' + (err?.message || err), 'error');
+      addToast('Não foi possível carregar os pedidos da cozinha. Verifique sua conexão e tente novamente.', 'error');
     } finally {
       loading = false;
       refreshing = false;
@@ -159,7 +159,7 @@
       await transitionCanonicalOrder(supabase, pedido, 'cancel', operadorUserId);
       await loadPedidos();
     } catch (error) {
-      addToast('Erro ao cancelar pedido: ' + (error?.message || error), 'error');
+      addToast('Não foi possível cancelar o pedido. Tente novamente.', 'error');
     }
   }
 
@@ -169,7 +169,7 @@
       await transitionCanonicalOrder(supabase, pedido, 'start_preparing', operadorUserId);
       await loadPedidos();
     } catch (error) {
-      addToast('Erro ao iniciar preparo: ' + (error?.message || error), 'error');
+      addToast('Não foi possível iniciar o preparo. Tente novamente.', 'error');
     }
   }
 
@@ -185,7 +185,7 @@
       await transitionCanonicalOrder(supabase, pedido, 'mark_ready', operadorUserId);
       await loadPedidos();
     } catch (error) {
-      addToast('Erro ao concluir preparo: ' + (error?.message || error), 'error');
+      addToast('Não foi possível concluir o preparo. Tente novamente.', 'error');
     } finally {
       const next = new Set(markingIds);
       next.delete(pedido.id);

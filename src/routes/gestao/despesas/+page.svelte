@@ -102,9 +102,8 @@
   $: if (searchQuery || filterCategory) currentPage = 1;
 
   function getErrorMessage(error, fallback = 'Erro inesperado. Tente novamente.') {
-    if (!error) return fallback;
-    if (typeof error === 'string') return error;
-    return error.message || error.error_description || error.details || fallback;
+    if (error) console.error('[despesas]', fallback, error);
+    return fallback;
   }
 
   function ensureSupabaseReady() {
@@ -136,7 +135,7 @@
       expenses = data || [];
     } catch (error) {
       console.error('[despesas] loadExpenses:', error);
-      addToast('Erro ao carregar despesas: ' + getErrorMessage(error), 'error', 5000);
+      addToast(getErrorMessage(error, 'Não foi possível carregar as despesas. Verifique sua conexão e tente novamente.'), 'error', 5000);
     } finally {
       loading = false;
     }
@@ -185,7 +184,7 @@
       await loadExpenses();
     } catch (e) {
       console.error('[despesas] addExpense:', e);
-      addToast('Erro ao salvar despesa: ' + getErrorMessage(e), 'error', 6000);
+      addToast(getErrorMessage(e, 'Não foi possível salvar a despesa. Tente novamente.'), 'error', 6000);
     } finally {
       loadingOp = false;
     }
@@ -248,7 +247,7 @@
       editData = {};
     } catch (e) {
       console.error('[despesas] saveEdit:', e);
-      addToast('Erro ao atualizar despesa: ' + getErrorMessage(e), 'error', 6000);
+      addToast(getErrorMessage(e, 'Não foi possível atualizar a despesa. Tente novamente.'), 'error', 6000);
     } finally {
       loadingOp = false;
     }
@@ -280,7 +279,7 @@
       await loadExpenses();
     } catch (e) {
       console.error('[despesas] deleteExpense:', e);
-      addToast('Erro ao excluir despesa: ' + getErrorMessage(e), 'error', 6000);
+      addToast(getErrorMessage(e, 'Não foi possível excluir a despesa. Tente novamente.'), 'error', 6000);
     }
   }
 
@@ -301,7 +300,7 @@
       }
     } catch (error) {
       console.error('[despesas] onMount:', error);
-      addToast('Erro ao iniciar despesas: ' + getErrorMessage(error), 'error', 6000);
+      addToast(getErrorMessage(error, 'Não foi possível carregar as despesas. Tente novamente.'), 'error', 6000);
     }
   });
 </script>
@@ -311,7 +310,7 @@
   <!-- Header -->
   <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     <div>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Financeiro / Despesas</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Financeiro / Despesas</p>
       <h1 class="text-xl font-bold text-slate-100 tracking-tight">Gerenciar Despesas</h1>
       <p class="text-sm" style="color: var(--text-muted);">Lance contas, fornecedores e retiradas.</p>
     </div>

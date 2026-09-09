@@ -135,7 +135,7 @@
       if (getOfflineContext()?.ownerUserId !== context.ownerUserId) return;
       pessoasOwner = context.ownerUserId;
       pessoasFiado = preparedPeople;
-    } catch (error) { addToast(error?.message || 'Clientes indisponíveis neste aparelho. Prepare os dados com internet.', 'warning'); }
+    } catch (error) { addToast('Clientes indisponíveis neste aparelho. Prepare os dados com internet.', 'warning'); }
   }
   
   function addPagamento() {
@@ -316,7 +316,8 @@
       });
       
     } catch (err) {
-      erroPagamento = err?.message ?? 'Erro ao confirmar a venda.';
+      console.error('[ModalPagamento] confirmarVenda error:', err);
+      erroPagamento = 'Não foi possível confirmar a venda. Verifique sua conexão e tente novamente.';
       salvandoVenda = false;
     }
   }
@@ -892,7 +893,8 @@
     gap: 0.5rem;
     width: 100%;
     margin-top: 12px;
-    padding: 8px;
+    min-height: 44px;
+    padding: 10px;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-muted, #94a3b8);
@@ -936,9 +938,13 @@
     margin-top: 6px;
   }
   .sugg-btn {
-    padding: 3px 10px;
-    font-size: 0.7rem;
-    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    border-radius: 8px;
     border: 1px solid var(--border-subtle, rgba(255,255,255,0.1));
     background: var(--bg-panel, #0f172a);
     color: var(--text-label, #cbd5e1);
@@ -947,7 +953,8 @@
   .sugg-btn:hover { border-color: var(--primary, #0ea5e9); }
   .add-payment-btn {
     width: 100%;
-    padding: 8px;
+    min-height: 44px;
+    padding: 10px;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--primary, #0ea5e9);
@@ -1053,6 +1060,10 @@
     justify-content: flex-end;
   }
   .btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
     padding: 10px 20px;
     font-size: 0.875rem;
     font-weight: 600;
@@ -1071,10 +1082,11 @@
     align-items: center;
     justify-content: center;
     gap: 0.45rem;
+    min-height: 44px;
     padding: 10px 24px;
     font-size: 0.875rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--primary-text, #0f172a);
     background: var(--primary, #0ea5e9);
     border: none;
     border-radius: 10px;
@@ -1089,5 +1101,15 @@
   .btn-confirm:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .split-btn, .add-payment-btn, .remove-btn, .btn-cancel, .btn-confirm {
+      transition: none;
+      animation: none;
+    }
+    .btn-confirm:hover:not(:disabled) {
+      transform: none;
+    }
   }
 </style>

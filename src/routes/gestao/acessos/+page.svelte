@@ -168,7 +168,7 @@
       // which runs the first time a user is invited. If roles is empty here,
       // they will be seeded on first invite.
     } catch (e) {
-      addToast('Erro ao carregar dados: ' + e.message, 'error');
+      addToast('Não foi possível carregar os dados. Verifique sua conexão e tente novamente.', 'error');
     } finally {
       loading = false;
     }
@@ -212,7 +212,7 @@
         addToast('Permissões salvas', 'success');
       }
     } catch (e) {
-      addToast('Erro ao salvar permissões: ' + e.message, 'error');
+      addToast('Não foi possível salvar as permissões. Tente novamente.', 'error');
     }
   }
 
@@ -240,7 +240,7 @@
         await loadData();
       }
     } catch (e) {
-      addToast('Erro: ' + e.message, 'error');
+      addToast('Não foi possível criar o cargo. Tente novamente.', 'error');
     } finally {
       creatingRole = false;
     }
@@ -268,7 +268,7 @@
         await loadData();
       }
     } catch (e) {
-      addToast('Erro: ' + e.message, 'error');
+      addToast('Não foi possível excluir o cargo. Tente novamente.', 'error');
     }
   }
 
@@ -313,7 +313,8 @@
         await loadData();
       }
     } catch (e) {
-      inviteError = e.message;
+      console.error('[acessos] convidar error:', e);
+      inviteError = 'Não foi possível enviar o convite. Verifique sua conexão e tente novamente.';
     } finally {
       inviting = false;
     }
@@ -343,7 +344,7 @@
         await loadData();
       }
     } catch (e) {
-      addToast('Erro: ' + e.message, 'error');
+      addToast('Não foi possível atualizar o status do usuário. Tente novamente.', 'error');
     }
   }
 
@@ -368,7 +369,7 @@
         await loadData();
       }
     } catch (e) {
-      addToast('Erro: ' + e.message, 'error');
+      addToast('Não foi possível remover o usuário. Tente novamente.', 'error');
     }
   }
 
@@ -401,7 +402,7 @@
         await loadData();
       }
     } catch (e) {
-      addToast('Erro: ' + e.message, 'error');
+      addToast('Não foi possível alterar o cargo. Tente novamente.', 'error');
     }
   }
 
@@ -442,7 +443,7 @@
 {#if !loading && !addonActive}
   <div class="space-y-6">
     <header>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Configurações / Acessos</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Configurações / Acessos</p>
       <h1 class="text-xl font-bold text-slate-100 tracking-tight">Controle de Acessos</h1>
     </header>
     <div class="rounded-xl border p-8 flex flex-col items-center text-center gap-4" style="background: var(--bg-card); border-color: var(--border-subtle);">
@@ -482,7 +483,7 @@
 
     <!-- Header -->
     <header>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Configurações / Acessos</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Configurações / Acessos</p>
       <h1 class="text-xl font-bold text-slate-100 tracking-tight">Controle de Acessos</h1>
       <p class="text-sm mt-1" style="color: var(--text-muted);">Gerencie cargos, permissões e usuários do seu sistema.</p>
     </header>

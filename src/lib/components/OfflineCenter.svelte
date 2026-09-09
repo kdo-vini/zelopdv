@@ -37,7 +37,7 @@
     if (busy) return;
     busy = true; error = ''; message = '';
     try { await action(); await refresh(); }
-    catch (cause) { error = cause?.message || 'Não foi possível concluir. Seus registros foram preservados.'; }
+    catch (cause) { console.error('[OfflineCenter] action error:', cause); error = 'Não foi possível concluir. Seus registros foram preservados.'; }
     finally { busy = false; }
   }
   async function prepare(primary = false) {

@@ -48,7 +48,7 @@
       whatsappEnabled = prefs?.whatsapp?.enabled === true;
       mutedTypes = Array.isArray(prefs?.muted_types) ? prefs.muted_types.filter((type) => !lockedTypes.has(type)) : [];
     } catch (error) {
-      addToast(error?.message || 'Não foi possível carregar as preferências.', 'error');
+      addToast('Não foi possível carregar as preferências.', 'error');
     } finally {
       loading = false;
     }
@@ -73,7 +73,7 @@
       if (whatsappEnabled) void capturePostHogEvent('gerente_whatsapp_optin');
       addToast('Preferências do Zelinho atualizadas.', 'success');
     } catch (error) {
-      addToast(error?.message || 'Não foi possível salvar as preferências.', 'error');
+      addToast('Não foi possível salvar as preferências.', 'error');
     } finally {
       saving = false;
     }
@@ -115,7 +115,7 @@
       pairWhatsappNumber = data.whatsapp_number || pairWhatsappNumber;
       void capturePostHogEvent('gerente_whatsapp_pair_start');
     } catch (error) {
-      addToast(error?.message || 'Não foi possível gerar o código.', 'error');
+      addToast('Não foi possível gerar o código.', 'error');
     } finally {
       pairBusy = false;
     }
@@ -132,7 +132,7 @@
       pairCode = '';
       addToast('WhatsApp desvinculado do Zelinho.', 'success');
     } catch (error) {
-      addToast(error?.message || 'Não foi possível desvincular.', 'error');
+      addToast('Não foi possível desvincular.', 'error');
     } finally {
       pairBusy = false;
     }

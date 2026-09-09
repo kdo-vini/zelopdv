@@ -69,7 +69,7 @@
         errorShake = true;
         setTimeout(() => errorShake = false, 400);
         inputPin = '';
-        addToast(e?.message || 'PIN incorreto.', 'error');
+        addToast('PIN incorreto.', 'error');
     } finally {
         unlocking = false;
     }
@@ -100,7 +100,7 @@
         addToast(`Código enviado para ${resetEmail}`, 'info');
         mode = 'verify';
     } catch (e) {
-        addToast('Erro ao enviar código: ' + e.message, 'error');
+        addToast('Não foi possível enviar o código. Tente novamente.', 'error');
     } finally {
         loadingRest = false;
     }
@@ -149,7 +149,7 @@
         addToast('Novo PIN definido!', 'success');
         $adminUnlocked = true; // Unlock directly
     } catch (e) {
-        addToast('Erro ao salvar: ' + e.message, 'error');
+        addToast('Não foi possível salvar. Tente novamente.', 'error');
     } finally {
         loadingRest = false;
     }

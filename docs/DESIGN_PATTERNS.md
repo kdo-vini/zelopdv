@@ -66,7 +66,7 @@ Padrão canônico — **todas as páginas de gestão devem usar exatamente isto*
 ```svelte
 <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
   <div>
-    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">
       Gestão / Cadastros
     </p>
     <h1 class="text-xl font-bold text-slate-100 tracking-tight">Pessoas</h1>
@@ -79,7 +79,7 @@ Padrão canônico — **todas as páginas de gestão devem usar exatamente isto*
 
 | Elemento | Classes Tailwind |
 | --- | --- |
-| Breadcrumb `<p>` | `text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1` |
+| Breadcrumb `<p>` | `text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1` |
 | Título `<h1>` | `text-xl font-bold text-slate-100 tracking-tight` |
 | Container | `mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4` |
 

@@ -180,7 +180,7 @@
       };
     }catch(e){
       console.error('[Dashboard] Erro ao carregar:', e);
-      errorMsg = e?.message || 'Erro ao carregar dashboard.';
+      errorMsg = 'Erro ao carregar dashboard.';
     }
     loading=false;
   }
@@ -248,7 +248,7 @@
       addToast('Venda reimpressa com sucesso.', 'success');
     } catch (error) {
       console.error('[Dashboard] Falha ao reimprimir venda:', error);
-      addToast('Não foi possível reimprimir a venda: ' + (error?.message || error), 'error');
+      addToast('Não foi possível reimprimir a venda. Tente novamente.', 'error');
     } finally {
       reimprimindoVendaId = null;
     }
@@ -288,12 +288,12 @@
     try {
       await revertFiadoDebtForVenda(supabase, id);
     } catch (e) {
-      addToast('Não foi possível estornar a dívida no fichário: ' + (e?.message || e), 'error');
+      addToast('Não foi possível estornar a dívida no fichário. Tente novamente.', 'error');
       return;
     }
     const { error } = await supabase.from('vendas').delete().eq('id', id);
     if (error) {
-      addToast('Erro ao excluir: ' + error.message, 'error');
+      addToast('Não foi possível excluir. Tente novamente.', 'error');
     } else {
       vendasItens = vendasItens.filter(i => i.id_venda !== id);
       vendasPagamentos = vendasPagamentos.filter(p => p.id_venda !== id);
@@ -309,7 +309,7 @@
 
   <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
     <div>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Dashboard</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Gestão / Dashboard</p>
       <h1 class="text-xl font-bold text-slate-100 tracking-tight">Dashboard</h1>
     </div>
     <button class="btn-sm" on:click={loadDash}>Atualizar</button>

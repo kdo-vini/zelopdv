@@ -31,7 +31,7 @@
       deletionScheduledAt = null;
       addToast('Conta reativada. A exclusão foi cancelada.', 'success');
     } catch (e) {
-      addToast(e.message || 'Erro ao reativar a conta.', 'error');
+      addToast('Não foi possível reativar a conta. Tente novamente.', 'error');
     } finally {
       reactivating = false;
     }

@@ -250,7 +250,7 @@
       .select('*')
       .order('ordem', { ascending: true });
     if (error) {
-      addToast('Erro ao carregar categorias: ' + error.message, 'error');
+      addToast('Não foi possível carregar as categorias. Verifique sua conexão e tente novamente.', 'error');
     } else {
       categorias = data || [];
     }
@@ -262,7 +262,7 @@
       .select('id, id_categoria, nome, ordem')
       .order('ordem', { ascending: true });
     if (error) {
-      addToast('Erro ao carregar subcategorias: ' + error.message, 'error');
+      addToast('Não foi possível carregar as subcategorias. Verifique sua conexão e tente novamente.', 'error');
     } else {
       subcategorias = data || [];
     }
@@ -285,7 +285,7 @@
 
       const { data, error } = await q.order('nome', { ascending: true });
       if (error) {
-        addToast('Erro ao carregar produtos: ' + error.message, 'error');
+        addToast('Não foi possível carregar os produtos. Verifique sua conexão e tente novamente.', 'error');
         produtos = [];
       } else {
         produtos = data || [];
@@ -594,7 +594,7 @@
         .eq('id', prod.id);
 
       if (error) {
-        addToast('Não foi possível atualizar o status do produto: ' + error.message, 'error');
+        addToast('Não foi possível atualizar o status do produto. Tente novamente.', 'error');
         return;
       }
 
@@ -639,7 +639,7 @@
     });
 
     if (error) {
-      addToast('Erro ao criar categoria: ' + error.message, 'error');
+      addToast('Não foi possível criar a categoria. Tente novamente.', 'error');
       return;
     }
 
@@ -679,7 +679,7 @@
       .eq('id', editingCatId);
 
     if (error) {
-      addToast('Erro ao atualizar categoria: ' + error.message, 'error');
+      addToast('Não foi possível atualizar a categoria. Tente novamente.', 'error');
       return;
     }
 
@@ -714,14 +714,14 @@
         .update({ id_categoria: null, id_subcategoria: null })
         .eq('id_categoria', cat.id);
       if (unlinkError) {
-        addToast('Erro ao desvincular produtos: ' + unlinkError.message, 'error');
+        addToast('Não foi possível desvincular os produtos. Tente novamente.', 'error');
         return;
       }
     }
 
     const { error } = await supabase.from('categorias').delete().eq('id', cat.id);
     if (error) {
-      addToast('Erro ao excluir categoria: ' + error.message, 'error');
+      addToast('Não foi possível excluir a categoria. Tente novamente.', 'error');
       return;
     }
 
@@ -747,7 +747,7 @@
     });
 
     if (error) {
-      addToast('Erro ao criar subcategoria: ' + error.message, 'error');
+      addToast('Não foi possível criar a subcategoria. Tente novamente.', 'error');
       return;
     }
 
@@ -777,7 +777,7 @@
       .eq('id', editingSubId);
 
     if (error) {
-      addToast('Erro ao atualizar subcategoria: ' + error.message, 'error');
+      addToast('Não foi possível atualizar a subcategoria. Tente novamente.', 'error');
       return;
     }
 
@@ -812,14 +812,14 @@
         .update({ id_subcategoria: null })
         .eq('id_subcategoria', sub.id);
       if (unlinkError) {
-        addToast('Erro ao desvincular produtos: ' + unlinkError.message, 'error');
+        addToast('Não foi possível desvincular os produtos. Tente novamente.', 'error');
         return;
       }
     }
 
     const { error } = await supabase.from('subcategorias').delete().eq('id', sub.id);
     if (error) {
-      addToast('Erro ao excluir subcategoria: ' + error.message, 'error');
+      addToast('Não foi possível excluir a subcategoria. Tente novamente.', 'error');
       return;
     }
 
@@ -852,7 +852,7 @@
       .select('*')
       .single();
     if (error) {
-      addToast('Erro ao criar produto: ' + error.message, 'error');
+      addToast('Não foi possível criar o produto. Tente novamente.', 'error');
       return;
     }
 
@@ -920,7 +920,7 @@
     }).eq('id', editingProdId);
 
     if (error) {
-      addToast('Erro ao atualizar produto: ' + error.message, 'error');
+      addToast('Não foi possível atualizar o produto. Tente novamente.', 'error');
       return;
     }
 
@@ -938,7 +938,7 @@
       try {
         await archivePizzaProduct(supabase, prod, ownerUserId);
         addToast('Pizza arquivada. Reative pelo editor de tamanhos e sabores.', 'success');
-      } catch (e) { addToast(e.message, 'error'); }
+      } catch (e) { addToast('Não foi possível concluir a operação. Tente novamente.', 'error'); }
       finally { pdvCache.invalidateProdutos(); await carregarProdutos(); }
       return;
     }
@@ -947,7 +947,7 @@
 
     const { error } = await supabase.from('produtos').delete().eq('id', prod.id);
     if (error) {
-      addToast('Erro ao excluir produto: ' + error.message, 'error');
+      addToast('Não foi possível excluir o produto. Tente novamente.', 'error');
       return;
     }
 
@@ -970,7 +970,7 @@
     try {
       for (const pizza of pizzas) await archivePizzaProduct(supabase, pizza, ownerUserId);
     } catch (e) {
-      addToast('Operação interrompida: ' + e.message + ' Pizzas já arquivadas foram preservadas.', 'error');
+      addToast('Operação interrompida. Pizzas já arquivadas foram preservadas.', 'error');
       pdvCache.invalidateProdutos();
       await carregarProdutos();
       return;
@@ -984,7 +984,7 @@
     }
     const { error } = await supabase.from('produtos').delete().in('id', ids);
     if (error) {
-      addToast('Erro ao excluir produtos: ' + error.message, 'error');
+      addToast('Não foi possível excluir os produtos selecionados. Tente novamente.', 'error');
       return;
     }
 

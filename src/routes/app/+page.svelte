@@ -481,7 +481,8 @@
       if (isNetworkError(error) && cached && !cached.data_fechamento) {
         caixaAberto = true; idCaixaAberto = cached.id; modalAbrirCaixaAberto = false; return;
       }
-      addToast('Erro ao verificar caixa: ' + error.message, 'error');
+      console.error('[PDV] verificarCaixaAberto error:', error);
+      addToast('Não foi possível verificar o caixa. Verifique sua conexão e tente novamente.', 'error');
       caixaAberto = false;
       modalAbrirCaixaAberto = true;
       idCaixaAberto = null;
@@ -607,7 +608,8 @@
         if (!categoriaAtiva) categoriaAtiva = categorias[0].id;
       } else {
         categorias = [];
-        errorMessage = err?.message || 'Erro ao carregar categorias';
+        console.error('[PDV] carregarCategorias error:', err);
+        errorMessage = 'Não foi possível carregar as categorias. Verifique sua conexão e tente novamente.';
       }
     }
   }
@@ -625,7 +627,10 @@
     } catch (err) {
       const local = isNetworkError(err) ? await buscarSubcategoriasLocal(ownerUserId).catch(() => []) : [];
       subcategorias = local;
-      if (!local.length) addToast('Erro ao carregar subcategorias: ' + (err?.message || err), 'error');
+      if (!local.length) {
+        console.error('[PDV] carregarSubcategorias error:', err);
+        addToast('Não foi possível carregar as subcategorias. Verifique sua conexão e tente novamente.', 'error');
+      }
     }
   }
 
@@ -654,7 +659,10 @@
       // Erro de rede no carregamento: não deixa a tela sem produtos se há cache.
       const local = isNetworkError(err) ? await buscarProdutosLocal('', ownerUserId).catch(() => []) : [];
       produtos = local;
-      if (!local.length) errorMessage = err?.message || 'Erro ao carregar produtos';
+      if (!local.length) {
+        console.error('[PDV] carregarProdutos error:', err);
+        errorMessage = 'Não foi possível carregar os produtos. Verifique sua conexão e tente novamente.';
+      }
     }
   }
 
@@ -966,7 +974,8 @@
       addToast('Movimentação registrada com sucesso.', 'success');
       await atualizarSaldoCaixa();
     } catch (e) {
-      erroMovCaixa = e?.message || 'Falha ao registrar a movimentação.';
+      console.error('[PDV] registrarMovCaixa error:', e);
+      erroMovCaixa = 'Não foi possível registrar a movimentação. Tente novamente.';
     } finally {
       salvandoMovCaixa = false;
     }
@@ -1010,7 +1019,8 @@
         valorInicial: Number(trocoInicialInput)
       });
       if (error || !caixa) {
-        addToast('Erro ao abrir caixa: ' + (error?.message || 'tente novamente.'), 'error');
+        if (error) console.error('[PDV] abrirCaixaIdempotente error:', error);
+        addToast('Não foi possível abrir o caixa. Verifique sua conexão e tente novamente.', 'error');
         return;
       }
       idCaixaAberto = caixa.id;
@@ -1801,7 +1811,7 @@
           disabled={!canMovimentarCaixa}
           aria-describedby={!canMovimentarCaixa ? 'pdv-action-movement-hint' : undefined}
           aria-label="Movimentação de caixa"
-          class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center border border-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
+          class="col-span-1 h-12 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center border border-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
@@ -1819,7 +1829,7 @@
           aria-label="Limpar comanda"
           disabled={!canCancelar}
           aria-describedby={!canCancelar ? 'pdv-action-cancel-hint' : undefined}
-          class="col-span-1 h-12 md:h-10 bg-slate-800 text-slate-300 rounded-lg hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/30 transition-colors flex items-center justify-center border border-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
+          class="col-span-1 h-12 bg-slate-800 text-slate-300 rounded-lg hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/30 transition-colors flex items-center justify-center border border-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -1832,7 +1842,7 @@
           disabled={comanda.length === 0 || !canVender || !canReceber}
           aria-describedby={pdvReceiveHint ? 'pdv-receive-hint' : undefined}
           on:click={abrirModalPagamento}
-          class="col-span-2 h-12 md:h-10 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-green-900/20 text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
+          class="col-span-2 h-12 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-green-900/20 text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
         >
           <span>Receber</span>
           <span class="bg-black/20 px-2 py-0.5 rounded-sm text-xs">R$ {Number(totalComandaComEntrega).toFixed(2)}</span>
@@ -2029,4 +2039,15 @@
 <style>
   .pizza-edit { min-height: 44px; padding: .4rem .2rem; color: var(--primary); background: transparent; border: 0; font-size: .875rem; cursor: pointer; }
   .pizza-edit:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(.transition-colors),
+    :global(.transition-all),
+    :global(.transition-transform) {
+      transition: none;
+    }
+    :global(.active\:scale-95:active) {
+      transform: none;
+    }
+  }
 </style>

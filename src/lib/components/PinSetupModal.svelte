@@ -53,7 +53,7 @@
         addToast('PIN desativado. Você pode ativá-lo depois no Perfil.', 'success');
         onPinSet(false);
     } catch (e) {
-        addToast('Erro ao desativar PIN: ' + e.message, 'error');
+        addToast('Não foi possível desativar o PIN. Tente novamente.', 'error');
     } finally {
         saving = false;
     }
@@ -78,7 +78,7 @@
         addToast(successMsg, 'success');
         onPinSet(true);
     } catch (e) {
-        addToast('Erro ao salvar PIN: ' + e.message, 'error');
+        addToast('Não foi possível salvar o PIN. Tente novamente.', 'error');
     } finally {
         saving = false;
     }

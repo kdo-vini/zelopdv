@@ -93,7 +93,8 @@
         visivel_online: Boolean(pub.visivel_online && !pub.pausado_manualmente)
       };
     } catch (exception) {
-      error = exception.message;
+      console.error('[ModalPizzaEditor] load error:', exception);
+      error = 'Não foi possível carregar os dados da montagem. Verifique sua conexão e tente novamente.';
       loadFailed = true;
     } finally {
       loading = false;
@@ -147,7 +148,8 @@
     busy = true;
     const { error: saveError } = await supabase.rpc('save_pizza_pricing_mode', { p_pricing_mode: config.pricingMode });
     if (saveError) {
-      error = saveError.message;
+      console.error('[ModalPizzaEditor] changeStoreMode error:', saveError);
+      error = 'Não foi possível salvar a regra de cobrança. Tente novamente.';
       config = { ...config, pricingMode: storeMode };
     } else {
       storeMode = config.pricingMode;

@@ -107,7 +107,7 @@
       $adminUnlocked = true;
       addToast('PIN atualizado com sucesso!', 'success');
     } catch (e) {
-      addToast('Erro ao atualizar PIN: ' + e.message, 'error');
+      addToast('Não foi possível atualizar o PIN. Tente novamente.', 'error');
     } finally {
       savingPin = false;
     }
@@ -135,7 +135,7 @@
       $adminUnlocked = false;
       addToast('PIN desativado.', 'success');
     } catch (e) {
-      addToast('Erro ao desativar PIN: ' + e.message, 'error');
+      addToast('Não foi possível desativar o PIN. Tente novamente.', 'error');
     } finally {
       disablingPin = false;
     }
@@ -155,7 +155,7 @@
       await startOfflineRuntime(offlineAccessContext);
       offlineCenterOpen = true;
     } catch (error) {
-      addToast(error?.message || 'Não foi possível abrir a configuração offline.', 'error');
+      addToast('Não foi possível abrir a configuração offline.', 'error');
     } finally {
       offlineSetupBusy = false;
     }
@@ -198,7 +198,7 @@
       deletionScheduledAt = null;
       addToast('Conta reativada. A exclusão foi cancelada.', 'success');
     } catch (e) {
-      addToast(e.message || 'Erro ao reativar a conta.', 'error');
+      addToast('Não foi possível reativar a conta. Tente novamente.', 'error');
     } finally {
       reactivating = false;
     }
@@ -247,7 +247,7 @@
       await supabase.auth.signOut().catch(() => {});
       window.location.href = '/login?msg=deletion_scheduled';
     } catch (e) {
-      addToast(e.message || 'Erro ao apagar a conta.', 'error');
+      addToast('Não foi possível apagar a conta. Tente novamente.', 'error');
       deleting = false;
     }
   }
@@ -451,7 +451,7 @@
       await pairPrinter();
       addToast('Impressora pareada com sucesso!', 'success');
     } catch (e) {
-      printerPairError = e?.message || 'Falha ao parear.';
+      printerPairError = 'Não foi possível parear a impressora. Tente novamente.';
     } finally {
       printerPairing = false;
     }
@@ -463,7 +463,7 @@
       await unpairPrinter();
       addToast('Impressora desconectada.', 'info');
     } catch (e) {
-      addToast('Erro ao desconectar: ' + (e?.message || e), 'error');
+      addToast('Não foi possível desconectar. Tente novamente.', 'error');
     } finally {
       printerUnpairing = false;
     }
@@ -484,7 +484,7 @@
       if (!ok) addToast('Nenhuma impressora pareada. Pareie a impressora primeiro.', 'warning');
     } catch (e) {
       printerTestResult = 'fail';
-      addToast('Falha ao imprimir teste: ' + (e?.message || e), 'error');
+      addToast('Não foi possível imprimir o teste. Verifique a impressora e tente novamente.', 'error');
     } finally {
       printerTesting = false;
     }
@@ -568,7 +568,7 @@
       .maybeSingle();
 
     if (error) {
-      addToast('Erro ao carregar perfil: ' + error.message, 'error');
+      addToast('Não foi possível carregar o perfil. Verifique sua conexão e tente novamente.', 'error');
       msg = 'Erro ao carregar perfil.';
     } else if (data) {
       nome_exibicao     = data.nome_exibicao ?? '';
@@ -681,7 +681,7 @@
       }
     } catch (e) {
       console.error('[perfil] salvar failed:', e);
-      addToast('Erro ao salvar: ' + e.message, 'error');
+      addToast('Não foi possível salvar o perfil. Verifique sua conexão e tente novamente.', 'error');
     } finally {
       saving = false;
     }

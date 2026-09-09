@@ -74,7 +74,7 @@
       }
       membrosPorEmpresa = mapa;
     } catch (err) {
-      errorMessage = err?.message ?? 'Erro ao carregar empresas.';
+      errorMessage = 'Erro ao carregar empresas.';
     }
   }
 
@@ -88,13 +88,13 @@
       .insert({ nome: formEmpresa.nome, cnpj: formEmpresa.cnpj || null, id_owner: uid })
       .select('id')
       .single();
-    if (error) { errorMessage = error.message; return; }
+    if (error) { errorMessage = 'Não foi possível criar a empresa. Tente novamente.'; return; }
 
     // torna o criador admin
     const { error: meErr } = await supabase
       .from('empresa_usuarios')
       .insert({ id_empresa: nova.id, id_usuario: uid, role: 'admin' });
-    if (meErr) { errorMessage = meErr.message; return; }
+    if (meErr) { errorMessage = 'Não foi possível concluir o cadastro da empresa. Tente novamente.'; return; }
 
     formEmpresa = { nome: '', cnpj: '' };
     await carregar();
@@ -115,7 +115,7 @@
       p_email: novoMembroEmail.trim(),
       p_role: novoMembroRole
     });
-    if (error) { errorMessage = error.message; return; }
+    if (error) { errorMessage = 'Não foi possível adicionar o membro. Verifique o e-mail e tente novamente.'; return; }
 
     novoMembroEmail = '';
     novoMembroRole = 'atendente';
@@ -131,14 +131,14 @@
       .delete()
       .eq('id_empresa', empresaId)
       .eq('id_usuario', userId);
-    if (error) { errorMessage = error.message; return; }
+    if (error) { errorMessage = 'Não foi possível remover o membro. Tente novamente.'; return; }
     await carregar();
   }
 </script>
 
 <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
   <div>
-    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Empresas</p>
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Gestão / Empresas</p>
     <h1 class="text-xl font-bold text-slate-100 tracking-tight">Empresas</h1>
   </div>
 </div>

@@ -50,7 +50,7 @@
       .select('*')
       .order('numero', { ascending: true });
     if (error) {
-      addToast('Erro ao carregar mesas: ' + error.message, 'error');
+      addToast('Não foi possível carregar as mesas. Verifique sua conexão e tente novamente.', 'error');
     } else {
       mesas = data || [];
     }
@@ -108,7 +108,7 @@
     if (result.error) {
       const msg = result.error.message.includes('mesas_usuario_numero_unique')
         ? `Já existe uma mesa com o número "${payload.numero}".`
-        : 'Erro ao salvar: ' + result.error.message;
+        : 'Não foi possível salvar a mesa. Tente novamente.';
       addToast(msg, 'error');
       return;
     }
@@ -133,7 +133,7 @@
     if (error) {
       const msg = error.message.includes('foreign key')
         ? 'Não é possível excluir: existem comandas associadas a esta mesa.'
-        : 'Erro ao excluir: ' + error.message;
+        : 'Não foi possível excluir a mesa. Tente novamente.';
       addToast(msg, 'error');
       return;
     }
@@ -197,7 +197,7 @@
   {:else}
     <header class="page-header" style="border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 85%, transparent); padding-bottom: 1rem;">
       <div class="header-text">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Mesas</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Gestão / Mesas</p>
         <h1 class="text-xl font-bold text-slate-100 tracking-tight">Mesas do Salão</h1>
         <p class="subtitle">
           Gerencie as mesas disponíveis no seu estabelecimento,<br>

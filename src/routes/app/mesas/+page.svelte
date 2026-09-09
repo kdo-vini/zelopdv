@@ -61,7 +61,7 @@
         const state = await loadMesaState(supabase, ownerUserId);
         mesas = state.mesas;
         comandasAbertas = new Map(Object.values(state.details).filter(d => d.comanda.status === 'aberta').map(d => [d.comanda.id_mesa, d.comanda.aberta_em]));
-      } catch (error) { addToast('Não foi possível carregar as mesas deste aparelho: ' + error.message, 'error'); }
+      } catch (error) { addToast('Não foi possível carregar as mesas deste aparelho. Tente novamente.', 'error'); }
       finally { loading = false; }
       return;
     }
@@ -71,7 +71,7 @@
     ]);
 
     if (mesasResp.error) {
-      addToast('Erro ao carregar mesas: ' + mesasResp.error.message, 'error');
+      addToast('Não foi possível carregar as mesas. Verifique sua conexão e tente novamente.', 'error');
     } else {
       mesas = mesasResp.data || [];
     }
@@ -94,7 +94,7 @@
         const state = await loadMesaState(supabase, ownerUserId);
         if (state.details[mesa.id]?.comanda.status !== 'aberta') await submitMesaOperation('mesa.open', { mesaId: mesa.id, comandaId: crypto.randomUUID() });
         goto(`/app/mesas/${mesa.id}`);
-      } catch (error) { addToast('Não foi possível salvar a abertura: ' + error.message, 'error'); }
+      } catch (error) { addToast('Não foi possível salvar a abertura. Verifique sua conexão e tente novamente.', 'error'); }
       finally { opening = null; }
       return;
     }
@@ -109,7 +109,7 @@
       .maybeSingle();
 
     if (findErr) {
-      addToast('Erro ao abrir mesa: ' + findErr.message, 'error');
+      addToast('Não foi possível abrir a mesa. Tente novamente.', 'error');
       opening = null;
       return;
     }
@@ -131,7 +131,7 @@
       });
 
     if (insErr) {
-      addToast('Erro ao criar comanda: ' + insErr.message, 'error');
+      addToast('Não foi possível criar a comanda. Tente novamente.', 'error');
       opening = null;
       return;
     }

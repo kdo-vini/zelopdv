@@ -120,7 +120,7 @@
       }];
       assistantMessages.update((items) => [...items, { role: 'assistant', content: data?.reply || data?.error || 'Não consegui concluir agora.' }]);
     } catch (error) {
-      assistantMessages.update((items) => [...items, { role: 'assistant', content: error?.message || 'Erro de conexão. Tente novamente.', error: true }]);
+      assistantMessages.update((items) => [...items, { role: 'assistant', content: 'Erro de conexão. Tente novamente.', error: true }]);
     } finally {
       clearPendingAction();
       actionBusy = false;
@@ -255,7 +255,7 @@
       viewingSession = null;
       showSessionList = false;
     } catch (error) {
-      assistantMessages.update((items) => [...items, { role: 'assistant', content: error?.message || 'Não consegui iniciar uma nova conversa agora.', error: true }]);
+      assistantMessages.update((items) => [...items, { role: 'assistant', content: 'Não consegui iniciar uma nova conversa agora.', error: true }]);
     } finally {
       newConversationBusy = false;
     }

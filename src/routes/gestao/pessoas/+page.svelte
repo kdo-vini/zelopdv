@@ -28,7 +28,7 @@
       .from('pessoas')
       .select('id,nome,tipo,contato,saldo_fiado,aniversario_dia,aniversario_mes,aniversario_ano')
       .order('nome');
-    if (error) errorMsg = error.message;
+    if (error) errorMsg = 'Não foi possível carregar os cadastros. Verifique sua conexão e tente novamente.';
     pessoas = data || [];
     loading = false;
   }
@@ -98,7 +98,7 @@
         .from('pessoas')
         .update({ nome: form.nome, tipo: form.tipo, contato: form.contato, ...birthday })
         .eq('id', form.id);
-      if (error) { errorMsg = error.message; return; }
+      if (error) { errorMsg = 'Não foi possível salvar o cadastro. Tente novamente.'; return; }
     } else {
       if (!uid) {
         const { data: userData } = await supabase.auth.getUser();
@@ -107,7 +107,7 @@
       const payload = { nome: form.nome, tipo: form.tipo, contato: form.contato, ...birthday };
       if (ownerUserId || uid) payload.id_usuario = ownerUserId || uid;
       const { error } = await supabase.from('pessoas').insert(payload);
-      if (error) { errorMsg = error.message; return; }
+      if (error) { errorMsg = 'Não foi possível salvar o cadastro. Tente novamente.'; return; }
     }
     clear(); load();
   }
@@ -119,7 +119,7 @@
     if (error) {
       const message = error.code === '23514'
         ? 'Não é possível excluir uma pessoa com saldo de fiado em aberto ou crédito pendente.'
-        : error.message;
+        : 'Não foi possível excluir a pessoa. Tente novamente.';
       addToast(message, 'error');
       return;
     }
@@ -141,7 +141,7 @@
   <!-- Page header -->
   <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
     <div>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Cadastros</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Gestão / Cadastros</p>
       <h1 class="text-xl font-bold text-slate-100 tracking-tight">Pessoas</h1>
     </div>
     <span class="text-xs text-slate-500 tabular-nums">{pessoas.length} registros</span>

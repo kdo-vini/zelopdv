@@ -307,7 +307,7 @@
         let state = await loadMesaState(supabase, ownerUserId);
         if (state.details[mesaId]?.comanda.status !== 'aberta') state = (await submitMesaOperation('mesa.open', { mesaId, comandaId: crypto.randomUUID() })).state;
         applyLocalMesa(state);
-      } catch (error) { addToast('Não foi possível abrir a comanda: ' + error.message, 'error'); }
+      } catch (error) { addToast('Não foi possível abrir a comanda. Verifique sua conexão e tente novamente.', 'error'); }
       finally { loading = false; }
       return;
     }
@@ -348,7 +348,7 @@
         .select()
         .single();
       if (insErr) {
-        addToast('Erro ao abrir comanda: ' + insErr.message, 'error');
+        addToast('Não foi possível abrir a comanda. Tente novamente.', 'error');
         return;
       }
       c = created;
@@ -371,7 +371,7 @@
       .eq('id_comanda', comanda.id)
       .order('created_at', { ascending: true });
     if (error) {
-      addToast('Erro ao carregar itens: ' + error.message, 'error');
+      addToast('Não foi possível carregar os itens da comanda. Verifique sua conexão e tente novamente.', 'error');
       return;
     }
     itens = (data || []).map(i => ({
@@ -456,7 +456,7 @@
       itensEnviadosCozinha = new Set(itensEnviadosCozinha).add(item.id).add(originalItemId);
       addToast(payload.alreadyConfirmed ? 'Este item já estava na cozinha.' : 'Item enviado para a cozinha.', 'success');
     } catch (error) {
-      addToast('Erro ao enviar para a cozinha: ' + errorMessageFrom(error), 'error');
+      addToast(errorMessageFrom(error, 'Não foi possível enviar o item para a cozinha. Tente novamente.'), 'error');
     } finally {
       const next = new Set(sendingCozinhaIds);
       next.delete(item.id);
@@ -496,8 +496,9 @@
     return semEstoque(produto);
   }
 
-  function errorMessageFrom(error, fallback = 'Falha ao atualizar a comanda.') {
-    return error?.message || String(error || fallback);
+  function errorMessageFrom(error, fallback = 'Falha ao atualizar a comanda. Tente novamente.') {
+    console.error('[Mesa]', fallback, error);
+    return fallback;
   }
 
   function applyLocalMesa(state) {
@@ -552,7 +553,7 @@
 
       await refreshItensEProdutos();
     } catch (error) {
-      addToast('Erro ao adicionar item: ' + errorMessageFrom(error), 'error');
+      addToast(errorMessageFrom(error, 'Não foi possível adicionar o item. Tente novamente.'), 'error');
     } finally {
       savingItem = false;
     }
@@ -563,12 +564,6 @@
     if (itemEnviadoCozinha(item)) {
       addToast('Item já enviado para a cozinha; não altere a quantidade.', 'info');
       return;
-    }
-
-    const novaQtd = Number(item.quantidade) + delta;
-    if (novaQtd <= 0) {
-      const ok = await confirmAction('Remover item', `Remover "${item.nome_produto}" da comanda?`);
-      if (!ok) return;
     }
 
     savingItem = true;
@@ -589,7 +584,7 @@
 
       await refreshItensEProdutos();
     } catch (error) {
-      addToast('Erro ao atualizar item: ' + errorMessageFrom(error), 'error');
+      addToast(errorMessageFrom(error, 'Não foi possível atualizar o item. Tente novamente.'), 'error');
     } finally {
       savingItem = false;
     }
@@ -618,7 +613,7 @@
       montagemProduto = null;
       await refreshItensEProdutos();
     } catch (error) {
-      addToast('Erro ao adicionar montagem: ' + errorMessageFrom(error), 'error');
+      addToast(errorMessageFrom(error, 'Não foi possível adicionar a montagem. Tente novamente.'), 'error');
     } finally {
       savingItem = false;
     }
@@ -627,7 +622,7 @@
   async function atualizarComanda(campo, valor) {
     if (getOfflineContext()?.enabled) {
       try { await localCommand('mesa.update', { changes: { [campo]: valor } }); }
-      catch (error) { applyLocalMesa(await readSnapshot(ownerUserId, MESA_SNAPSHOT)); addToast('Não foi possível salvar: ' + error.message, 'error'); }
+      catch (error) { applyLocalMesa(await readSnapshot(ownerUserId, MESA_SNAPSHOT)); addToast('Não foi possível salvar. Verifique sua conexão e tente novamente.', 'error'); }
       return;
     }
     const { error } = await supabase
@@ -636,7 +631,7 @@
       .eq('id', comanda.id)
       .eq('id_usuario', ownerUserId);
     if (error) {
-      addToast('Erro ao salvar: ' + error.message, 'error');
+      addToast('Não foi possível salvar. Tente novamente.', 'error');
       return;
     }
     comanda = { ...comanda, [campo]: valor };
@@ -669,7 +664,7 @@
       addToast('Comanda cancelada.', 'info');
       goto('/app/mesas');
     } catch (error) {
-      addToast('Erro ao cancelar comanda: ' + errorMessageFrom(error), 'error');
+      addToast(errorMessageFrom(error, 'Não foi possível cancelar a comanda. Tente novamente.'), 'error');
     }
   }
 
@@ -800,7 +795,7 @@
       closeModalOpen = false; recibosOpen = true;
       addToast(getOfflineContext()?.enabled ? `Mesa ${mesa.numero} salva neste aparelho. Referência ${reference}.` : `Mesa ${mesa.numero} fechada. Venda #${reference} registrada.`, 'success');
     } catch (error) {
-      addToast('Erro ao fechar mesa: ' + errorMessageFrom(error), 'error');
+      addToast(errorMessageFrom(error, 'Não foi possível fechar a mesa. Tente novamente.'), 'error');
     } finally { closing = false; }
   }
   function estabelecimentoFromPerfil() {
@@ -1130,7 +1125,8 @@
       // Se zerou o saldo, fecha o modal
       if (saldoMesa <= 0.001) parcialModalOpen = false;
     } catch (e) {
-      parcialErro = 'Erro ao salvar: ' + (e.message || e);
+      console.error('[Mesa] salvarPagamentoParcial error:', e);
+      parcialErro = 'Não foi possível salvar o pagamento parcial. Verifique sua conexão e tente novamente.';
     } finally {
       savingParcial = false;
     }
@@ -1145,7 +1141,7 @@
 
     if (getOfflineContext()?.enabled) {
       try { await localCommand('mesa.payment.remove', { paymentId: p.id, id_caixa: p.id_caixa || null, forma_pagamento: p.forma_pagamento, valor: p.valor }); }
-      catch (error) { addToast('Não foi possível remover: ' + error.message, 'error'); }
+      catch (error) { addToast('Não foi possível remover o item. Tente novamente.', 'error'); }
       return;
     }
 
@@ -1155,7 +1151,7 @@
       .eq('id_pagamento', p.id)
       .eq('id_usuario', ownerUserId);
     if (allocationError) {
-      addToast('Erro ao remover itens vinculados: ' + allocationError.message, 'error');
+      addToast('Não foi possível remover os itens vinculados. Tente novamente.', 'error');
       return;
     }
 
@@ -1165,7 +1161,7 @@
       .eq('id', p.id)
       .eq('id_usuario', ownerUserId);
     if (error) {
-      addToast('Erro ao remover: ' + error.message, 'error');
+      addToast('Não foi possível remover. Tente novamente.', 'error');
       return;
     }
     pagamentosParciais = pagamentosParciais.filter(x => x.id !== p.id);
@@ -1199,7 +1195,7 @@
       .order('numero', { ascending: true });
     loadingMesasLivres = false;
     if (error) {
-      addToast('Erro ao carregar mesas: ' + error.message, 'error');
+      addToast('Não foi possível carregar as mesas. Verifique sua conexão e tente novamente.', 'error');
       return;
     }
     mesasLivres = (data || []).filter(m => m.id !== mesaId);
@@ -1285,7 +1281,7 @@
       transferModalOpen = false;
       goto(`/app/mesas/${mesaDestinoId}`);
     } catch (e) {
-      addToast('Erro ao transferir: ' + (e.message || e), 'error');
+      addToast('Não foi possível transferir. Tente novamente.', 'error');
     } finally {
       transferring = false;
     }
@@ -3582,5 +3578,27 @@
     .print-target * { color: #000 !important; }
     .print-hide { display: none !important; }
     .recibo-stamp { display: none !important; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .comanda-side,
+    .drag-handle .handle-bar,
+    .search-input,
+    .produto-card,
+    .btn-primary, .btn-secondary, .btn-success,
+    .ajustes-toggle, .ajustes-toggle svg,
+    .close-breakdown summary::after,
+    .transfer-tile,
+    .parcial-item-remove, .btn-parcial, .split-toggle, .multi-back-btn, .multi-restante, .multi-add-btn {
+      transition: none;
+    }
+    .comanda-side.mobile-open,
+    .produto-card:hover, .produto-card:active,
+    .btn-success:active:not(:disabled),
+    .ajustes-toggle.open svg,
+    .close-breakdown[open] summary::after,
+    .transfer-tile.selected {
+      transform: none;
+    }
   }
 </style>

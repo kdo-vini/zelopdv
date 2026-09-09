@@ -215,7 +215,7 @@
 
 <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
   <div>
-    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Financeiro / Fechar Caixa</p>
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Financeiro / Fechar Caixa</p>
     <h1 class="text-xl font-bold text-slate-100 tracking-tight">Fechar Caixa</h1>
     {#if provisional}<p class="text-sm mt-2" style="color: var(--text-muted);">Valores provisórios deste aparelho. Lançamentos de outros aparelhos serão considerados quando sincronizarem; diferenças posteriores ficam registradas como ajustes.</p>{/if}
   </div>

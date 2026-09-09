@@ -73,7 +73,7 @@
       if (signalsError) throw signalsError;
       snapshots = snapshotRows || [];
       signals = signalRows || [];
-    } catch (loadError) { error = loadError?.message || 'Não foi possível carregar o relatório semanal.'; }
+    } catch (loadError) { console.error('[gerente/semana] load error:', loadError); error = 'Não foi possível carregar o relatório semanal.'; }
     finally { loading = false; }
   }
   onMount(load);

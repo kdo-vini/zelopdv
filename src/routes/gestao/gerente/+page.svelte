@@ -75,7 +75,8 @@
       failures = 0;
     } catch (loadError) {
       if (requestVersion !== loadVersion) return;
-      error = loadError?.message || 'Não foi possível carregar o gerente.';
+      console.error('[gerente] load error:', loadError);
+      error = 'Não foi possível carregar o gerente.';
       failures += 1;
       if (failures >= 2) addToast('O Zelinho ainda não conseguiu atualizar os dados.', 'error');
     } finally {

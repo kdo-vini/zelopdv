@@ -134,7 +134,7 @@
         if (refreshed) selectedGroup = refreshed;
       }
     } catch (err) {
-      addToast('Erro ao carregar variações: ' + err.message, 'error');
+      addToast('Não foi possível carregar as variações. Verifique sua conexão e tente novamente.', 'error');
     } finally {
       carregando = false;
     }
@@ -248,7 +248,7 @@
       await carregarGrupos();
       addToast('Grupo adicionado.', 'success');
     } catch (err) {
-      addToast('Erro: ' + err.message, 'error');
+      addToast('Não foi possível salvar o grupo. Tente novamente.', 'error');
     } finally {
       salvandoGrupo = false;
     }
@@ -258,7 +258,7 @@
     const ok = await confirmAction('Excluir grupo', `Excluir "${grupo.nome}" e todas suas opções? Esta ação não pode ser desfeita.`);
     if (!ok) return;
     const { error } = await supabase.from('zelomenu_modifier_groups').delete().eq('id', grupo.id).eq('id_usuario', resolvedOwnerUserId);
-    if (error) { addToast('Erro: ' + error.message, 'error'); return; }
+    if (error) { addToast('Não foi possível excluir o grupo. Tente novamente.', 'error'); return; }
     if (selectedGroup?.id === grupo.id) selectedGroup = null;
     await carregarGrupos();
     addToast('Grupo excluído.', 'success');
@@ -302,7 +302,7 @@
         ? Math.max(1, Number(editGrupoForm.maximo_por_opcao))
         : null
     }).eq('id', grupo.id).eq('id_usuario', resolvedOwnerUserId);
-    if (error) { addToast('Erro: ' + error.message, 'error'); return; }
+    if (error) { addToast('Não foi possível atualizar o grupo. Tente novamente.', 'error'); return; }
     editingGrupoId = null;
     await carregarGrupos();
     addToast('Grupo atualizado.', 'success');
@@ -310,7 +310,7 @@
 
   async function toggleGrupoAtivo(grupo) {
     const { error } = await supabase.from('zelomenu_modifier_groups').update({ ativo: !grupo.ativo }).eq('id', grupo.id).eq('id_usuario', resolvedOwnerUserId);
-    if (error) { addToast('Erro: ' + error.message, 'error'); return; }
+    if (error) { addToast('Não foi possível atualizar o grupo. Tente novamente.', 'error'); return; }
     grupo.ativo = !grupo.ativo;
     grupos = [...grupos];
     if (selectedGroup?.id === grupo.id) selectedGroup = grupo;
@@ -326,7 +326,7 @@
       supabase.from('zelomenu_modifier_groups').update({ ordem: current.ordem }).eq('id', other.id).eq('id_usuario', resolvedOwnerUserId)
     ]);
     const error = results.find((result) => result.error)?.error;
-    if (error) { addToast('Erro ao reordenar grupo: ' + error.message, 'error'); return; }
+    if (error) { addToast('Não foi possível reordenar o grupo. Tente novamente.', 'error'); return; }
     await carregarGrupos();
   }
 
@@ -367,7 +367,7 @@
       await carregarGrupos();
       addToast('Opção adicionada.', 'success');
     } catch (err) {
-      addToast('Erro: ' + err.message, 'error');
+      addToast('Não foi possível salvar a opção. Tente novamente.', 'error');
     } finally {
       salvandoOpcao = { ...salvandoOpcao, [grupo.id]: false };
     }
@@ -377,7 +377,7 @@
     const ok = await confirmAction('Excluir opção', `Excluir a opção "${opcao.nome}"?`);
     if (!ok) return;
     const { error } = await supabase.from('zelomenu_modifier_options').delete().eq('id', opcao.id).eq('id_usuario', resolvedOwnerUserId);
-    if (error) { addToast('Erro: ' + error.message, 'error'); return; }
+    if (error) { addToast('Não foi possível excluir a opção. Tente novamente.', 'error'); return; }
     grupo.zelomenu_modifier_options = grupo.zelomenu_modifier_options.filter(o => o.id !== opcao.id);
     grupos = [...grupos];
     if (selectedGroup?.id === grupo.id) selectedGroup = grupo;
@@ -401,14 +401,14 @@
       nome,
       price_delta: Math.max(0, Number(editOpcaoForm.price_delta) || 0)
     }).eq('id', opcao.id).eq('id_usuario', resolvedOwnerUserId);
-    if (error) { addToast('Erro: ' + error.message, 'error'); return; }
+    if (error) { addToast('Não foi possível atualizar a opção. Tente novamente.', 'error'); return; }
 
     const { error: deleteLinkError } = await supabase
       .from('zelomenu_modifier_option_products')
       .delete()
       .eq('id_opcao', opcao.id)
       .eq('id_usuario', resolvedOwnerUserId);
-    if (deleteLinkError) { addToast('Erro ao atualizar vínculo: ' + deleteLinkError.message, 'error'); return; }
+    if (deleteLinkError) { addToast('Não foi possível atualizar o vínculo do produto. Tente novamente.', 'error'); return; }
     if (editOpcaoForm.id_produto) {
       const { error: linkError } = await supabase.from('zelomenu_modifier_option_products').insert({
         id_opcao: opcao.id,
@@ -416,7 +416,7 @@
         id_produto: Number(editOpcaoForm.id_produto),
         price_override: editOpcaoForm.price_override === '' ? null : Math.max(0, Number(editOpcaoForm.price_override) || 0)
       });
-      if (linkError) { addToast('Erro ao atualizar vínculo: ' + linkError.message, 'error'); return; }
+      if (linkError) { addToast('Não foi possível atualizar o vínculo do produto. Tente novamente.', 'error'); return; }
     }
     editingOpcaoId = null;
     await carregarGrupos();
@@ -434,13 +434,13 @@
       supabase.from('zelomenu_modifier_options').update({ ordem: current.ordem }).eq('id', other.id).eq('id_usuario', resolvedOwnerUserId)
     ]);
     const error = results.find((result) => result.error)?.error;
-    if (error) { addToast('Erro ao reordenar opção: ' + error.message, 'error'); return; }
+    if (error) { addToast('Não foi possível reordenar a opção. Tente novamente.', 'error'); return; }
     await carregarGrupos();
   }
 
   async function toggleOpcaoAtiva(opcao, grupo) {
     const { error } = await supabase.from('zelomenu_modifier_options').update({ ativo: !opcao.ativo }).eq('id', opcao.id).eq('id_usuario', resolvedOwnerUserId);
-    if (error) { addToast('Erro: ' + error.message, 'error'); return; }
+    if (error) { addToast('Não foi possível atualizar a opção. Tente novamente.', 'error'); return; }
     opcao.ativo = !opcao.ativo;
     grupos = [...grupos];
     if (selectedGroup?.id === grupo.id) selectedGroup = grupo;

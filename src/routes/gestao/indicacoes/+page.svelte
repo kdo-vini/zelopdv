@@ -37,7 +37,7 @@
 <section class="wrap">
   <div class="header border-b border-slate-700/60 pb-4 mb-6">
     <div>
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Outros / Indicações</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Outros / Indicações</p>
       <h1 class="text-xl font-bold text-slate-100 tracking-tight">Minhas indicações</h1>
       <span class="lede">
         Compartilhe seu código, acompanhe quem avançou no cadastro e veja quando seu crédito fica liberado.

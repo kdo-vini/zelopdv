@@ -46,7 +46,7 @@
       if (error) throw error;
       categorias = data || [];
     } catch (e) {
-      erro = e?.message || String(e);
+      erro = 'Não foi possível carregar as categorias. Verifique sua conexão e tente novamente.';
     }
   }
 
@@ -63,7 +63,7 @@
       if (error) throw error;
       subcategorias = data || [];
     } catch (e) {
-      erro = e?.message || String(e);
+      erro = 'Não foi possível carregar as subcategorias. Verifique sua conexão e tente novamente.';
     }
   }
 
@@ -87,7 +87,7 @@
       if (error) throw error;
       produtos = data || [];
     } catch (e) {
-      erro = e?.message || String(e);
+      erro = 'Não foi possível carregar os produtos. Verifique sua conexão e tente novamente.';
     } finally {
       loading = false;
     }
@@ -210,7 +210,7 @@
       toastTimer = setTimeout(() => { toast = ''; }, 2000);
       setTimeout(() => { msgProduto = { ...msgProduto, [item.id]: '' }; }, 1200);
     } catch (e) {
-      msgProduto = { ...msgProduto, [item.id]: e?.message || 'Erro ao salvar' };
+      msgProduto = { ...msgProduto, [item.id]: 'Não foi possível salvar. Tente novamente.' };
     } finally {
       salvandoProduto = { ...salvandoProduto, [item.id]: false };
     }
@@ -263,7 +263,7 @@
       toastTimer = setTimeout(() => { toast = ''; }, 2000);
       setTimeout(() => { linha._msg = ''; linhasEstoque = [...linhasEstoque]; }, 1200);
     } catch (e) {
-      linha._msg = e?.message || 'Erro ao salvar';
+      linha._msg = 'Não foi possível salvar. Tente novamente.';
     } finally {
       linha._saving = false;
       linhasEstoque = [...linhasEstoque];
@@ -273,7 +273,7 @@
 
 <div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
   <div>
-    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">Gestão / Estoque</p>
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Gestão / Estoque</p>
     <h1 class="text-xl font-bold text-slate-100 tracking-tight">Estoque</h1>
   </div>
 </div>

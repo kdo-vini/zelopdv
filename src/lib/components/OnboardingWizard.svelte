@@ -114,7 +114,8 @@
       }
       setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 2000 : 0);
     } catch (e) {
-      error = e.message || 'Erro ao salvar. Tente novamente.';
+      console.error('[OnboardingWizard] save error:', e);
+      error = 'Erro ao salvar. Tente novamente.';
       saving = false;
     }
   }
