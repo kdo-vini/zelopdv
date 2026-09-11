@@ -27,14 +27,25 @@ Migration `20260911120000_zelomenu_canonical_pause.sql`: view
 `gerente_set_menu_pause` delegando — o Zelinho passa a alcançar adicional
 ancorado em componente, que antes ele recusava com `PRODUTO_NAO_PUBLICADO`.
 
-**A migration ainda não foi aplicada.** `ModalModificadores` lê a view e chama a
-RPC nova; sem elas a tela de variações quebra ao carregar. Aplicar antes ou
-junto do deploy.
+Migration **aplicada** no projeto Supabase. Provado contra dados reais: uma
+chamada de `zelomenu_set_menu_pause` no produto 864 (Mandioca frita) derrubou
+as 23 aparições dele como adicional de uma vez; teste revertido por rollback.
+`ModalModificadores` depende da view e da RPC, então o app não pode subir num
+ambiente sem essa migration.
 
-Aberto, fora deste escopo: o `ordem` das publicações tem valores repetidos
-(na Bem Servido, três itens com 0 e pares em 1–4), então o topo de cada
-categoria depende de desempate indefinido se o cardápio público ordenar só por
-`ordem`. A renderização do cardápio vive no repo do ZeloMenu.
+**`ordem` normalizado na Bem Servido** (dado, não código): as publicações
+tinham valores repetidos por categoria — três itens com 0, pares em 1–4 — o que
+deixa o topo da lista dependente de desempate indefinido quando o cardápio
+ordena só por `ordem`. Renumerado em sequência densa por categoria, preservando
+a ordem relativa, e a Coca-Cola Zero 2 L saiu da 15ª (última das 22 bebidas)
+para a 10ª, logo depois da Coca-Cola 2 L. Zero duplicatas restantes.
+
+Aberto, fora deste escopo: a normalização foi pontual nessa loja e o campo
+continua sendo curadoria manual que lojista nenhum mantém — a correção de
+verdade é o cardápio público ordenar por critério próprio (giro, disponibilidade,
+foto) com desempate determinístico, e essa renderização vive no repo do ZeloMenu.
+A Coca-Cola Zero 2 L segue sem foto, o que ainda a deixa menos visível que as
+irmãs; isso é conteúdo que depende da lojista.
 
 
 ## Operação offline zero-config (Fase 1 + Fase 2) — 2026-09-07

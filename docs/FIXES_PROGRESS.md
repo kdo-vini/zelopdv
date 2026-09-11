@@ -25,7 +25,11 @@
   opção ancorada em componente recebia um `linkedProduct` vazio com
   `available: false`, o que tornava os 76 adicionais component-backed
   inselecionáveis no PDV. Suíte 1.193/1.196, `npm run check` 0/0, build verde.
-  Migration **ainda não aplicada** — o app depende dela. Ver [[CURRENT]].
+  Migration aplicada no projeto Supabase e provada com dados reais: uma chamada
+  no produto 864 derrubou as 23 aparições dele como adicional de uma vez
+  (teste revertido). Também normalizado o `ordem` das publicações da Bem
+  Servido, que tinha duplicatas por categoria e deixava o topo da lista sujeito
+  a desempate indefinido. Ver [[CURRENT]].
 
 - [x] FX-OFFLINE-ZEROCONFIG-01 (2026-09-07) — as duas configurações manuais
   restantes (Preparar este aparelho / Definir como principal) eram o único
