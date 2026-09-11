@@ -1,5 +1,36 @@
 # Fixes Progress
 
+- [x] FX-CARDAPIO-PAUSA-CANONICA-01 (2026-09-11) — o mesmo item tinha dois
+  interruptores independentes. Como produto avulso a pausa morava em
+  `zelomenu_product_publications.pausado_manualmente`; como adicional, quem
+  mandava era `zelomenu_modifier_options.ativo`, editado em outra tela e em
+  outro app. O lojista pausava uma forma e a outra seguia vendendo — caso real
+  na Bem Servido: "Bolinhos de linguiça com queijo" pausado na percepção da
+  dona e vendido como adicional em pedido do ZeloMenu (venda 18721, 10/09).
+  O schema já tinha a identidade canônica pronta e sem uso:
+  `zelomenu_modifier_option_products` garante
+  `num_nonnulls(id_produto, id_componente) = 1`, então toda opção aponta para
+  exatamente um destino — produto ou componente — e é nele que a pausa deve
+  morar. Migration `20260911120000_zelomenu_canonical_pause.sql` cria a view
+  `zelomenu_option_availability` (disponibilidade efetiva numa fonte só,
+  `security_invoker`), o setter canônico `zelomenu_set_menu_pause`, o atalho
+  `zelomenu_set_menu_pause_by_option` e faz `gerente_set_menu_pause` delegar —
+  o Zelinho agora também alcança adicional ancorado em componente. Com isso,
+  pausar um produto pausa todas as aparições dele como adicional, porque todas
+  resolvem para a mesma linha de publicação. No app, `buildModifierGroups`
+  passou a resolver destino + pausa (`resolveOptionDestination`,
+  `isDestinationPaused`, `isOptionAvailable`), `pdvCache` lê `id_componente` e
+  os dois estados de pausa, e o toggle do adicional escreve no destino em vez
+  de `ativo` (que volta a ser estrutural). Bug latente corrigido no caminho:
+  opção ancorada em componente recebia um `linkedProduct` vazio com
+  `available: false`, o que tornava os 76 adicionais component-backed
+  inselecionáveis no PDV. Suíte 1.193/1.196, `npm run check` 0/0, build verde.
+  Migration aplicada no projeto Supabase e provada com dados reais: uma chamada
+  no produto 864 derrubou as 23 aparições dele como adicional de uma vez
+  (teste revertido). Também normalizado o `ordem` das publicações da Bem
+  Servido, que tinha duplicatas por categoria e deixava o topo da lista sujeito
+  a desempate indefinido. Ver [[CURRENT]].
+
 - [x] FX-OFFLINE-ZEROCONFIG-01 (2026-09-07) — as duas configurações manuais
   restantes (Preparar este aparelho / Definir como principal) eram o único
   obstáculo entre uma loja nova e o modo offline, sem motivo de billing para

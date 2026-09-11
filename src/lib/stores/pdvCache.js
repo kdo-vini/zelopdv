@@ -185,11 +185,24 @@ async function attachModifierGroups(products, userId, assertCurrentUser) {
     if (optionIds.length) {
         links = await readIdBatches(optionIds, (batch) => supabase
             .from('zelomenu_modifier_option_products')
-            .select('id_opcao, id_produto, price_override')
+            .select('id_opcao, id_produto, id_componente, price_override')
             .eq('id_usuario', userId)
             .in('id_opcao', batch)
             .order('id_opcao', { ascending: true }), assertCurrentUser);
     }
+
+    // Pausa canônica: o destino de cada opção (produto ou componente) é quem
+    // carrega o estado. Sem estes dois reads o PDV enxerga apenas
+    // `zelomenu_modifier_options.ativo` e ignora a pausa feita no ZeloMenu.
+    const componentIds = [...new Set(links.map((link) => link.id_componente).filter(Boolean))];
+    const components = componentIds.length
+        ? await readIdBatches(componentIds, (batch) => supabase
+            .from('zelomenu_modifier_components')
+            .select('id, nome, pausado_manualmente')
+            .eq('id_usuario', userId)
+            .in('id', batch)
+            .order('id', { ascending: true }), assertCurrentUser)
+        : [];
 
     const visibleProductIds = new Set((products || []).map((product) => Number(product.id)));
     const missingLinkedProductIds = [...new Set(
@@ -206,6 +219,16 @@ async function attachModifierGroups(products, userId, assertCurrentUser) {
             .order('id', { ascending: true }), assertCurrentUser);
     }
 
+    const linkedProductIds = [...new Set(links.map((link) => Number(link.id_produto)).filter(Boolean))];
+    const publications = linkedProductIds.length
+        ? await readIdBatches(linkedProductIds, (batch) => supabase
+            .from('zelomenu_product_publications')
+            .select('id_produto, visivel_online, pausado_manualmente')
+            .eq('id_usuario', userId)
+            .in('id_produto', batch)
+            .order('id_produto', { ascending: true }), assertCurrentUser)
+        : [];
+
     const allProducts = mergeModifierLinkedProducts(products, linkedProducts);
     const groupsByProductId = new Map();
     for (const group of buildModifierGroups({
@@ -213,6 +236,8 @@ async function attachModifierGroups(products, userId, assertCurrentUser) {
         options,
         links,
         products: allProducts,
+        publications,
+        components,
     })) {
         const current = groupsByProductId.get(group.productId) || [];
         current.push(group);
