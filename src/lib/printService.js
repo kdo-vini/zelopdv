@@ -85,14 +85,13 @@ async function tryZeloImpressao(bytes, payload, jobType, metadata = {}) {
     if (!outcomeUnknown && supabase) {
       try {
         const queued = await enqueueRemotePrintJob(supabase, envelope);
-        addToast(
-          queued.stationOnline
-            ? 'Impressão enviada ao computador da loja.'
-            : 'Impressão guardada. Ela sairá quando o computador da loja estiver online.',
-          queued.stationOnline ? 'success' : 'info',
-          6000,
-        );
-        return true;
+        if (queued.stationOnline) {
+          addToast('Impressão enviada ao computador da loja.', 'success', 6000);
+          return true;
+        }
+        // No station online to claim the job right now — this device is the
+        // one meant to print, so fall through to the browser instead of
+        // leaving the job stuck in the queue with nothing to print it out.
       } catch (queueError) {
         console.warn('[print] Falha ao encaminhar para a estação:', queueError?.message);
       }
