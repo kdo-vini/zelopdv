@@ -17,9 +17,48 @@ export function sortModifierGroups(groups = []) {
     }));
 }
 
-export function buildModifierGroups({ groups = [], options = [], links = [], products = [] } = {}) {
+/**
+ * Destino canônico de uma opção de modificador.
+ *
+ * `zelomenu_modifier_option_products` garante no banco
+ * (`num_nonnulls(id_produto, id_componente) = 1`) que toda opção vinculada
+ * aponta para exatamente um destino: um produto real ou um componente. Esse
+ * destino é a identidade canônica do item — é nele que a pausa mora, e não na
+ * opção. Assim, pausar um produto pausa também todas as aparições dele como
+ * adicional, porque todas resolvem para a mesma linha de publicação.
+ *
+ * @returns {{ kind: 'produto'|'componente', productId?: number, componentId?: string } | null}
+ */
+export function resolveOptionDestination(link) {
+  if (!link) return null;
+  const productId = Number(link.id_produto ?? link.productId ?? 0);
+  if (productId) return { kind: 'produto', productId };
+  const componentId = String(link.id_componente ?? link.componentId ?? '').trim();
+  if (componentId) return { kind: 'componente', componentId };
+  return null;
+}
+
+/**
+ * Pausa efetiva do destino canônico. Um produto conta como pausado quando a
+ * publicação está pausada ou quando saiu do cardápio (`visivel_online = false`
+ * significa "só complemento", então segue valendo como opção; só a pausa e a
+ * ausência de publicação tiram o item do ar).
+ */
+export function isDestinationPaused(destination, { publicationsByProductId, componentsById } = {}) {
+  if (!destination) return false;
+  if (destination.kind === 'produto') {
+    const publication = publicationsByProductId?.get?.(Number(destination.productId));
+    return publication ? publication.pausado_manualmente === true : false;
+  }
+  const component = componentsById?.get?.(String(destination.componentId));
+  return component ? component.pausado_manualmente === true : false;
+}
+
+export function buildModifierGroups({ groups = [], options = [], links = [], products = [], publications = [], components = [] } = {}) {
   const productById = new Map((products || []).map((product) => [Number(product.id), product]));
   const linkByOptionId = new Map((links || []).map((link) => [String(link.id_opcao ?? link.optionId), link]));
+  const publicationsByProductId = new Map((publications || []).map((row) => [Number(row.id_produto ?? row.productId), row]));
+  const componentsById = new Map((components || []).map((row) => [String(row.id), row]));
   const optionsByGroupId = new Map();
 
   for (const rawOption of options || []) {
@@ -29,6 +68,8 @@ export function buildModifierGroups({ groups = [], options = [], links = [], pro
     if (!optionId || !groupId || !name) continue;
 
     const link = linkByOptionId.get(optionId);
+    const destination = resolveOptionDestination(link);
+    const paused = isDestinationPaused(destination, { publicationsByProductId, componentsById });
     const linkedProduct = link
       ? productById.get(Number(link.id_produto ?? link.productId))
       : null;
@@ -39,13 +80,18 @@ export function buildModifierGroups({ groups = [], options = [], links = [], pro
       name,
       priceDelta: roundCurrency(rawOption.price_delta ?? rawOption.priceDelta ?? 0),
       active: rawOption.ativo !== false && rawOption.active !== false,
+      paused,
       order: Number(rawOption.ordem ?? rawOption.order ?? 0),
-      ...(link ? {
+      ...(destination ? { destination } : {}),
+      // `linkedProduct` só existe quando o destino é um produto real. Um destino
+      // componente não tem estoque nem preço próprio no catálogo, e anexar um
+      // `linkedProduct` vazio pra ele o marcaria como indisponível.
+      ...(destination?.kind === 'produto' ? {
         linkedProduct: {
           productId: linkedProductId,
           name: linkedProduct?.nome || linkedProduct?.name || '',
           price: roundCurrency(linkedPrice ?? linkedProduct?.preco ?? linkedProduct?.price ?? 0),
-          available: !!linkedProduct && !produtoSemEstoque(linkedProduct)
+          available: !!linkedProduct && !produtoSemEstoque(linkedProduct) && !paused
         }
       } : {})
     };
@@ -99,6 +145,16 @@ export function mergeModifierLinkedProducts(products = [], linkedProducts = []) 
     if (id && !byId.has(id)) byId.set(id, product);
   }
   return [...byId.values()];
+}
+
+/**
+ * Disponibilidade efetiva de uma opção: estrutura (`active`), pausa canônica do
+ * destino (`paused`) e estoque do produto vinculado. É o único predicado que o
+ * PDV e a UI devem usar — checar `active` sozinho ignora a pausa.
+ */
+export function isOptionAvailable(option) {
+  if (!option) return false;
+  return option.active !== false && option.paused !== true && option.linkedProduct?.available !== false;
 }
 
 export function hasActiveModifierGroups(groups) {
@@ -157,7 +213,7 @@ export function resolveModifierSelections(groups, selections, basePrice) {
 
   for (const group of activeGroups) {
     const input = normalizedSelections.find((selection) => selection.groupId === group.id);
-    const activeOptions = (group.options || []).filter((option) => option.active !== false && option.linkedProduct?.available !== false);
+    const activeOptions = (group.options || []).filter(isOptionAvailable);
     const selectedOptions = [];
 
     for (const rawSelection of input?.optionSelections || []) {

@@ -129,10 +129,13 @@ export async function estoqueProduto(db, ownerUserId, { produto_id }) {
 
 export async function pausarNoCardapio(db, ownerUserId, { produto_id, pausado }) {
   if (!Number.isFinite(Number(produto_id))) return { ok: false, error: 'Preciso do produto certo antes de pausar.' };
-  // Pausar vale para produto avulso e para complemento: a RPC decide, e ela só recusa
-  // quando o produto nem tem linha de publicação, ou seja, nunca foi para o ZeloMenu.
+  // A pausa vai para a identidade canônica do item, então vale de uma vez para o
+  // avulso e para todas as aparições dele como adicional. A RPC só recusa quando
+  // o produto nem tem linha de publicação, ou seja, nunca foi para o ZeloMenu.
   const result = await callRpc(db, 'gerente_set_menu_pause', { p_produto_id: Number(produto_id), p_pausado: pausado === true, p_owner: ownerUserId });
   if (!result.ok) return result;
+  // `before`/`after` descrevem só o estado da entidade, porque é deles que o
+  // undo é reconstruído. A contagem de aparições afetadas vai no result.
   return { ...result, before: { pausado_manualmente: result.data.pausado_anterior === true }, after: { pausado_manualmente: result.data.pausado_manualmente === true } };
 }
 

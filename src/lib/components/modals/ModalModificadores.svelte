@@ -114,19 +114,37 @@
       if (optionIds.length) {
         const { data: linkData, error: linkError } = await supabase
           .from('zelomenu_modifier_option_products')
-          .select('id_opcao, id_produto, price_override')
+          .select('id_opcao, id_produto, id_componente, price_override')
           .eq('id_usuario', resolvedOwnerUserId)
           .in('id_opcao', optionIds);
         if (linkError) throw linkError;
         links = linkData || [];
       }
+      // Pausa efetiva vem do destino canônico, não da opção. Ler daqui é o que
+      // faz a tela mostrar "pausado" quando o item foi pausado no ZeloMenu.
+      let disponibilidade = [];
+      if (optionIds.length) {
+        const { data: availData, error: availError } = await supabase
+          .from('zelomenu_option_availability')
+          .select('opcao_id, destino_kind, destino_produto_id, destino_componente_id, destino_pausado, disponivel')
+          .eq('id_usuario', resolvedOwnerUserId)
+          .in('opcao_id', optionIds);
+        if (availError) throw availError;
+        disponibilidade = availData || [];
+      }
       const linkByOption = new Map(links.map((link) => [String(link.id_opcao), link]));
+      const availByOption = new Map(disponibilidade.map((row) => [String(row.opcao_id), row]));
       grupos = (data || []).map(g => ({
         ...g,
-        zelomenu_modifier_options: (g.zelomenu_modifier_options || []).sort((a, b) => a.ordem - b.ordem).map((option) => ({
-          ...option,
-          link: linkByOption.get(String(option.id)) || null
-        }))
+        // Desempate estável por id: `ordem` tem valores repetidos no catálogo
+        // real, e sem o desempate a lista troca de ordem entre carregamentos.
+        zelomenu_modifier_options: (g.zelomenu_modifier_options || [])
+          .sort((a, b) => (a.ordem - b.ordem) || String(a.id).localeCompare(String(b.id)))
+          .map((option) => ({
+            ...option,
+            link: linkByOption.get(String(option.id)) || null,
+            disponibilidade: availByOption.get(String(option.id)) || null
+          }))
       }));
       // Sync selectedGroup if it was loaded
       if (selectedGroup) {
@@ -438,12 +456,37 @@
     await carregarGrupos();
   }
 
+  /**
+   * Pausar um adicional é pausar o item, não esta aparição dele. Quando a opção
+   * tem destino canônico (produto ou componente), a pausa vai pro destino e
+   * vale em todo lugar: no avulso e nos outros adicionais que apontam pro mesmo
+   * item. Só opções sem destino caem no `ativo`, que é estrutural.
+   */
   async function toggleOpcaoAtiva(opcao, grupo) {
-    const { error } = await supabase.from('zelomenu_modifier_options').update({ ativo: !opcao.ativo }).eq('id', opcao.id).eq('id_usuario', resolvedOwnerUserId);
+    const temDestino = Boolean(opcao.link?.id_produto || opcao.link?.id_componente);
+    if (!temDestino) {
+      const { error } = await supabase.from('zelomenu_modifier_options').update({ ativo: !opcao.ativo }).eq('id', opcao.id).eq('id_usuario', resolvedOwnerUserId);
+      if (error) { addToast('Não foi possível atualizar a opção. Tente novamente.', 'error'); return; }
+      opcao.ativo = !opcao.ativo;
+      grupos = [...grupos];
+      if (selectedGroup?.id === grupo.id) selectedGroup = grupo;
+      return;
+    }
+
+    const pausar = opcao.disponibilidade?.destino_pausado !== true;
+    const { data, error } = await supabase.rpc('zelomenu_set_menu_pause_by_option', {
+      p_opcao: opcao.id,
+      p_pausado: pausar
+    });
     if (error) { addToast('Não foi possível atualizar a opção. Tente novamente.', 'error'); return; }
-    opcao.ativo = !opcao.ativo;
-    grupos = [...grupos];
-    if (selectedGroup?.id === grupo.id) selectedGroup = grupo;
+
+    const afetadas = Number(data?.opcoes_afetadas || 1);
+    if (pausar && afetadas > 1) {
+      addToast(`"${data?.nome || opcao.nome}" pausado no cardápio — vale para as ${afetadas} formas em que ele aparece.`, 'success');
+    } else {
+      addToast(pausar ? 'Item pausado no cardápio.' : 'Item voltou para o cardápio.', 'success');
+    }
+    await carregarGrupos();
   }
 
   function fechar() {

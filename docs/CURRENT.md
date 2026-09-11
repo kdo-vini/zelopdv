@@ -1,5 +1,42 @@
 # ZeloPDV — Foco atual
 
+## Pausa canônica do cardápio — 2026-09-11
+
+Um item podia estar pausado e vendido ao mesmo tempo. A pausa do produto avulso
+vive em `zelomenu_product_publications.pausado_manualmente`; a mesma coisa
+oferecida como adicional era governada por `zelomenu_modifier_options.ativo`,
+uma flag separada, editada em outra tela e em outro app. Pausar numa forma não
+tocava a outra.
+
+O schema já tinha a identidade canônica, só não era lida por ninguém:
+`zelomenu_modifier_option_products` garante no banco
+`num_nonnulls(id_produto, id_componente) = 1` — toda opção vinculada aponta
+para **exatamente um** destino, produto ou componente. Esse destino é o item;
+a opção é só uma aparição dele.
+
+Regra nova: **a pausa mora no destino, nunca na aparição.** `ativo` volta a ser
+estrutural ("esta opção existe neste grupo"). Pausar um produto pausa junto
+todos os adicionais que apontam pra ele, sem código extra — todos resolvem para
+a mesma linha de publicação. `visivel_online = false` continua significando "só
+complemento", não pausado, e pausar segue sem tocar `produtos.ocultar_no_pdv`.
+
+Migration `20260911120000_zelomenu_canonical_pause.sql`: view
+`zelomenu_option_availability` (disponibilidade efetiva numa fonte só,
+`security_invoker = true`), `zelomenu_set_menu_pause` (setter canônico, retorna
+`opcoes_afetadas`), `zelomenu_set_menu_pause_by_option` (atalho da UI) e
+`gerente_set_menu_pause` delegando — o Zelinho passa a alcançar adicional
+ancorado em componente, que antes ele recusava com `PRODUTO_NAO_PUBLICADO`.
+
+**A migration ainda não foi aplicada.** `ModalModificadores` lê a view e chama a
+RPC nova; sem elas a tela de variações quebra ao carregar. Aplicar antes ou
+junto do deploy.
+
+Aberto, fora deste escopo: o `ordem` das publicações tem valores repetidos
+(na Bem Servido, três itens com 0 e pares em 1–4), então o topo de cada
+categoria depende de desempate indefinido se o cardápio público ordenar só por
+`ordem`. A renderização do cardápio vive no repo do ZeloMenu.
+
+
 ## Operação offline zero-config (Fase 1 + Fase 2) — 2026-09-07
 
 Depois da correção de escopo por aparelho (abaixo), o produto ainda exigia duas

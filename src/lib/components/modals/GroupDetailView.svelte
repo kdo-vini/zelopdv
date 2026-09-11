@@ -26,6 +26,19 @@
     return tipo === 'variacao' ? 'Variação' : 'Adicional';
   }
 
+  /**
+   * Disponibilidade efetiva: a pausa mora no destino canônico do item, então
+   * checar `opcao.ativo` sozinho mostraria "Ativa" para um adicional pausado.
+   */
+  function opcaoDisponivel(opcao) {
+    if (opcao?.disponibilidade) return opcao.disponibilidade.disponivel === true;
+    return opcao?.ativo !== false;
+  }
+
+  function pausaCompartilhada(opcao) {
+    return opcao?.disponibilidade?.destino_pausado === true && opcao?.ativo !== false;
+  }
+
   function formatDelta(val) {
     const n = Number(val || 0);
     if (n === 0) return 'Grátis';
@@ -166,7 +179,7 @@
 
     <div class="opcoes-list">
       {#each (grupo.zelomenu_modifier_options || []) as opcao, opcaoIndex (opcao.id)}
-        <div class="opcao-row" class:inativa={!opcao.ativo}>
+        <div class="opcao-row" class:inativa={!opcaoDisponivel(opcao)}>
           {#if editingOpcaoId === opcao.id}
             <div class="opcao-edit-form">
               <input class="fi" bind:value={editOpcaoForm.nome} aria-label="Nome da opção" />
@@ -196,6 +209,9 @@
               {#if opcao.link}
                 <span class="opcao-vinculo">↳ {produtosCatalogo.find((p) => String(p.id) === String(opcao.link.id_produto))?.nome || 'produto vinculado'}</span>
               {/if}
+              {#if pausaCompartilhada(opcao)}
+                <span class="opcao-pausa-nota">Pausado no cardápio — vale em todas as formas deste item</span>
+              {/if}
               </span>
             </div>
             <div class="opcao-acts">
@@ -206,8 +222,8 @@
               {:else if opcaoIndex === (grupo.zelomenu_modifier_options || []).length - 1}
                 <span class="move-limit-note">Já está no fim</span>
               {/if}
-              <button type="button" class="toggle-btn sm" class:ativo={opcao.ativo} on:click={() => dispatch('toggleOpcaoAtiva', { opcao, grupo })}>
-                {opcao.ativo ? 'Ativa' : 'Inativa'}
+              <button type="button" class="toggle-btn sm" class:ativo={opcaoDisponivel(opcao)} on:click={() => dispatch('toggleOpcaoAtiva', { opcao, grupo })}>
+                {opcaoDisponivel(opcao) ? 'Ativa' : 'Pausada'}
               </button>
               <button type="button" class="btn-edit" on:click={() => dispatch('iniciarEdicaoOpcao', opcao)}>Editar</button>
               <button type="button" class="del-btn" on:click={() => dispatch('excluirOpcao', { opcao, grupo })} aria-label="Excluir opção">
@@ -438,6 +454,13 @@
   .opcao-delta { font-size: 0.76rem; color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .opcao-vinculo {
     color: var(--primary);
+    font-size: 0.68rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .opcao-pausa-nota {
+    color: var(--status-warning-text);
     font-size: 0.68rem;
     overflow: hidden;
     text-overflow: ellipsis;

@@ -3,6 +3,7 @@ import {
   buildCartItemKey,
   buildModifierGroups,
   buildModifierSignature,
+  isOptionAvailable,
   formatSelectedModifierGroups,
   mergeModifierLinkedProducts,
   resolveModifierSelections,
@@ -189,5 +190,64 @@ describe('zelomenuModifiers', () => {
     expect(resolveModifierSelections(normalized, [
       { groupId: 'size', optionSelections: [{ optionId: 'large', quantity: 1 }] }
     ], 8).code).toBe('option_missing');
+  });
+});
+
+describe('pausa canônica', () => {
+  const pausaGroups = [
+    { id: 'add', id_produto: 10, nome: 'Adicionais', tipo: 'adicional', modo_preco: 'somar', min_selecoes: 0, max_selecoes: 3, ativo: true, ordem: 1 }
+  ];
+  const pausaOptions = [
+    { id: 'refri', id_grupo: 'add', nome: 'Coca Zero 2 L', price_delta: 10, ativo: true, ordem: 1 },
+    { id: 'bolinho', id_grupo: 'add', nome: 'Bolinho de linguiça', price_delta: 10, ativo: true, ordem: 2 }
+  ];
+  // refri -> produto 99 (destino canônico produto); bolinho -> componente (destino canônico componente)
+  const pausaLinks = [
+    { id_opcao: 'refri', id_produto: 99, id_componente: null, price_override: null },
+    { id_opcao: 'bolinho', id_produto: null, id_componente: 'comp-1', price_override: 10 }
+  ];
+  const pausaProducts = [{ id: 99, nome: 'Coca Zero 2 L', preco: 19.99, controlar_estoque: false, estoque_atual: 0 }];
+
+  const build = ({ publications = [], components = [] } = {}) => buildModifierGroups({
+    groups: pausaGroups, options: pausaOptions, links: pausaLinks, products: pausaProducts, publications, components
+  });
+
+  it('trata opção ancorada em componente como disponível, sem linkedProduct vazio', () => {
+    const [group] = build();
+    const bolinho = group.options.find((option) => option.id === 'bolinho');
+    expect(bolinho.destination).toEqual({ kind: 'componente', componentId: 'comp-1' });
+    expect(bolinho.linkedProduct).toBeUndefined();
+    expect(isOptionAvailable(bolinho)).toBe(true);
+  });
+
+  it('propaga a pausa do componente para a opção', () => {
+    const [group] = build({ components: [{ id: 'comp-1', nome: 'Bolinho de linguiça', pausado_manualmente: true }] });
+    const bolinho = group.options.find((option) => option.id === 'bolinho');
+    expect(bolinho.paused).toBe(true);
+    expect(isOptionAvailable(bolinho)).toBe(false);
+  });
+
+  it('pausar o produto pausa também a aparição dele como adicional', () => {
+    const [group] = build({ publications: [{ id_produto: 99, visivel_online: true, pausado_manualmente: true }] });
+    const refri = group.options.find((option) => option.id === 'refri');
+    expect(refri.destination).toEqual({ kind: 'produto', productId: 99 });
+    expect(refri.paused).toBe(true);
+    expect(refri.linkedProduct.available).toBe(false);
+    expect(isOptionAvailable(refri)).toBe(false);
+  });
+
+  it('visivel_online false é "só complemento", não pausa', () => {
+    const [group] = build({ publications: [{ id_produto: 99, visivel_online: false, pausado_manualmente: false }] });
+    const refri = group.options.find((option) => option.id === 'refri');
+    expect(refri.paused).toBe(false);
+    expect(isOptionAvailable(refri)).toBe(true);
+  });
+
+  it('rejeita a seleção de uma opção cujo destino canônico está pausado', () => {
+    const normalized = build({ components: [{ id: 'comp-1', pausado_manualmente: true }] });
+    const result = resolveModifierSelections(normalized, [
+      { groupId: 'add', optionSelections: [{ optionId: 'bolinho', quantity: 1 }] }
+    ], 35);
+    expect(result).toMatchObject({ ok: false, code: 'option_missing' });
   });
 });
