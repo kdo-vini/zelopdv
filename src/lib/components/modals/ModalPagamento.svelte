@@ -395,6 +395,11 @@
     descontoTipo = 'valor';
     descontoInput = 0;
     valorPlataforma = 0;
+    // O modal fica montado entre vendas (só alterna `open`); sem isto, uma pessoa
+    // cadastrada depois da primeira vez que "fiado" foi aberto nesta sessão nunca
+    // aparece, pois carregarPessoasFiado() pula o refetch quando já há cache local.
+    pessoasFiado = [];
+    pessoasOwner = null;
   }
 </script>
 

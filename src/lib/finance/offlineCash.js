@@ -45,7 +45,7 @@ export async function loadCashSnapshot(supabase, owner, { refresh = false, timeo
     const [vendas, movs, mesaPagamentos, pendingReceipts] = await Promise.all([
       pages('vendas', 'id, client_sale_id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, id_cliente, pessoas!vendas_id_cliente_fkey(nome)', q => q.eq('id_caixa', caixa.id)),
       pages('caixa_movimentacoes', 'id, tipo, valor, client_operation_id', q => q.eq('id_caixa', caixa.id)),
-      pages('comanda_pagamentos', 'id, id_comanda, id_caixa, forma_pagamento, valor, id_pessoa, id_venda', q => q.eq('id_caixa', caixa.id).is('id_venda', null)),
+      pages('comanda_pagamentos', 'id, id_comanda, id_caixa, forma_pagamento, valor, id_pessoa', q => q.eq('id_caixa', caixa.id)),
       pages('offline_pending_receipts', 'operation_id, line_number, id_caixa, forma_pagamento, valor, state', q => q.eq('id_caixa', caixa.id).in('state', ['pending', 'refunded']), 'owner_user_id', 'operation_id'),
     ]);
     const pagamentos = await pages('vendas_pagamentos', 'id, id_venda, id_caixa, forma_pagamento, valor, id_comanda_pagamento', q => q.eq('id_caixa', caixa.id));
