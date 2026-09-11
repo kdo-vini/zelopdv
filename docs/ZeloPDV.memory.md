@@ -1,5 +1,14 @@
 # ZeloPDV.memory
 
+- Snapshots operacionais (2026-09-11): `readOperationalSnapshot` é fallback de
+  offline, não cache de aparelho online. Nenhum snapshot (`pessoas.fiado`,
+  `empresa.perfil`, `mesas:profile`, `mesas:catalog`) tem caminho de
+  invalidação — nenhuma tela de escrita o derruba — então servir cache a um
+  aparelho com conexão congela a lista para sempre. Com `navigator.onLine !==
+  false` o loader roda e reescreve o snapshot; offline o cache responde; erro de
+  rede cai no cache. Não reintroduzir cache-first aqui sem antes criar
+  invalidação real.
+
 - Fechamento de caixa (2026-09-07): `offline_internal.close_caixa` grava
   `caixa_fechamentos.totais_pagamento` atomicamente. Produção ficou sem essa
   coluna quando `247b64b` entrou sem a migration de 2026-08-28; o hotfix

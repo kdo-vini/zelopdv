@@ -1,5 +1,49 @@
 # Incidents
 
+## INC-2026-09-11-FIADO-SNAPSHOT — cadastro novo invisível no select de Fiado
+
+**Status:** corrigido em 2026-09-11 (mudança de app, sem migration).
+
+**Sintoma**
+
+- Pessoa cadastrada em `/gestao/pessoas` aparecia no fichário e não aparecia no
+  select "Pessoa (Fiado)" ao fechar o pedido. Relatado por cliente e
+  reproduzido na conta de teste da Donutopia: quatro pessoas no fichário, três
+  no select.
+
+**Causa-raiz**
+
+- `readOperationalSnapshot` (src/lib/offline/runtime.js) era cache-first sem TTL
+  e sem invalidação: `if (cached !== null && !refresh) return cached`.
+- O snapshot `pessoas.fiado` é gravado na primeira leitura do PDV e nenhuma tela
+  de escrita o derruba — cadastro, edição e exclusão de pessoa não o tocam.
+  O aparelho passava a servir a lista congelada indefinidamente, inclusive com
+  conexão.
+- `7dbd727` (offline zero-config) generalizou a exposição: antes só um aparelho
+  preparado manualmente tinha `context` com snapshot quente; depois, qualquer
+  sessão logada tem.
+- Descartadas paginação (`range` de 500 em laço) e `id_usuario` divergente — o
+  RLS `pessoas_actor_insert` exige `get_owner_user_id(auth.uid()) = id_usuario`,
+  então fichário e select leem o mesmo conjunto.
+
+**Fix / recovery**
+
+- O snapshot virou fallback de offline, não cache de aparelho online: com
+  `navigator.onLine !== false` o loader roda e reescreve o snapshot; offline, o
+  cache responde sem consultar; falha de rede continua caindo no cache.
+- Alcança também `empresa.perfil`, `mesas:profile` e `mesas:catalog`, que
+  tinham a mesma congelada silenciosa.
+- Nenhuma ação de recuperação necessária no cliente: o próximo carregamento de
+  tela online já reescreve o snapshot local.
+
+**Validação**
+
+- Três testes em `tests/offlineRuntime.test.js`: revalidação online, cache
+  offline sem consulta e fallback em erro de rede. O primeiro falhava antes do
+  fix.
+- Suíte 1.196/1.199 (3 skips pré-existentes), `npm run check` 0 erros / 0
+  warnings.
+
 ## INC-2026-09-07-CAIXA-CLOSE — coluna ausente bloqueou fechamento de caixa
 
 **Status:** corrigido e validado no Supabase de produção em 2026-09-07.

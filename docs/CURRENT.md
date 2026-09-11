@@ -1,5 +1,38 @@
 # ZeloPDV — Foco atual
 
+## Cadastro novo não aparecia no Fiado — 2026-09-11
+
+Reclamação de cliente, reproduzida na conta de teste da Donutopia: uma pessoa
+recém-cadastrada em `/gestao/pessoas` aparecia no fichário e não aparecia no
+select de Fiado ao fechar o pedido.
+
+Causa-raiz: `readOperationalSnapshot` em
+[src/lib/offline/runtime.js](/home/vinicius/code/zelopdv/src/lib/offline/runtime.js:426)
+era cache-first sem TTL e sem invalidação — `if (cached !== null && !refresh)
+return cached`. O snapshot `pessoas.fiado` é gravado na primeira leitura do PDV
+e nenhuma tela de escrita o invalida: cadastrar, editar ou excluir pessoa não
+toca nele. O aparelho servia a lista congelada para sempre, mesmo online.
+Descartadas as hipóteses de `id_usuario` divergente (o RLS
+`pessoas_actor_insert` exige `get_owner_user_id(auth.uid()) = id_usuario`, então
+fichário e select enxergam o mesmo conjunto) e de paginação.
+
+O agravante chegou com `7dbd727` (offline zero-config): antes só um aparelho
+preparado manualmente tinha snapshot quente; agora qualquer sessão logada tem
+`context`, então o caminho cache-first virou o caminho de todo mundo.
+
+Correção na raiz, não no chamador: o snapshot passou a ser **fallback de
+offline**, não cache de aparelho online. Com `navigator.onLine !== false` o
+loader roda e reescreve o snapshot (que segue quente para a próxima queda);
+offline, o cache responde sem consultar; falha de rede continua caindo no
+cache. Vale também para `empresa.perfil`, `mesas:profile` e `mesas:catalog` —
+todos tinham a mesma congelada silenciosa.
+
+Custo aceito: uma consulta por montagem de tela em vez de zero. Os chamadores já
+memoizam em memória por sessão de página, então é exatamente o perfil de carga
+anterior ao offline.
+
+Suíte 1.196/1.199 verde, `npm run check` 0 erros / 0 warnings.
+
 ## Pausa canônica do cardápio — 2026-09-11
 
 Um item podia estar pausado e vendido ao mesmo tempo. A pausa do produto avulso

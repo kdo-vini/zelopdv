@@ -416,12 +416,19 @@ export async function submitOnlineOperation(type, entityId, payload, options = {
   return operation;
 }
 
-/** Cache-first reads for an already prepared tenant; no HTTP cache of private data. */
+/**
+ * Offline-fallback reads for an already prepared tenant; no HTTP cache of private data.
+ * The snapshot is what answers when the device cannot reach the server, never a cache
+ * for one that can: nothing invalidates it (a pessoa cadastrada em /gestao/pessoas, um
+ * perfil editado) so serving it online froze those lists at whatever they held the first
+ * time the screen loaded. Online we always revalidate and rewrite the snapshot, keeping
+ * it warm for the next outage; a network failure still falls back to it.
+ */
 export async function readOperationalSnapshot(key, loader, { refresh = false } = {}) {
   const captured = context;
   if (!captured) return loader();
   const cached = await readSnapshot(captured.ownerUserId, key);
-  if (cached !== null && !refresh) return cached;
+  if (cached !== null && !refresh && globalThis.navigator?.onLine === false) return cached;
   try {
     const value = await loader();
     if (captured !== context) throw new Error('Conta alterada durante o carregamento.');

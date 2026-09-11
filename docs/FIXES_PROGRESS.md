@@ -1,5 +1,25 @@
 # Fixes Progress
 
+- [x] FX-FIADO-SNAPSHOT-CONGELADO-01 (2026-09-11) — pessoa cadastrada em
+  `/gestao/pessoas` não aparecia no select de Fiado ao fechar o pedido
+  (reclamação de cliente, reproduzida na conta de teste da Donutopia: quatro
+  pessoas no fichário, três no select). `readOperationalSnapshot` era
+  cache-first sem TTL e sem invalidação: o snapshot `pessoas.fiado` é escrito na
+  primeira leitura do PDV e nenhuma tela de escrita o derruba, então o aparelho
+  servia a lista congelada para sempre, inclusive online. Descartadas
+  paginação e `id_usuario` divergente — o RLS `pessoas_actor_insert` exige
+  `get_owner_user_id(auth.uid()) = id_usuario`, então fichário e select leem o
+  mesmo conjunto. O offline zero-config (`7dbd727`) generalizou a falha: antes
+  só um aparelho preparado à mão tinha snapshot quente, depois passou a ser
+  qualquer sessão logada. Corrigido na raiz, em `readOperationalSnapshot`: o
+  snapshot virou fallback de offline, não cache de aparelho online — com
+  `navigator.onLine !== false` o loader roda e reescreve o snapshot (que segue
+  quente para a próxima queda), offline o cache responde sem consultar e falha
+  de rede continua caindo no cache. Mesma congelada silenciosa existia em
+  `empresa.perfil`, `mesas:profile` e `mesas:catalog`. Três testes novos em
+  `tests/offlineRuntime.test.js` (revalidação online, cache offline sem query,
+  fallback em erro de rede). Suíte 1.196/1.199, `npm run check` 0/0.
+
 - [x] FX-CARDAPIO-PAUSA-CANONICA-01 (2026-09-11) — o mesmo item tinha dois
   interruptores independentes. Como produto avulso a pausa morava em
   `zelomenu_product_publications.pausado_manualmente`; como adicional, quem

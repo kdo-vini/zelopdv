@@ -238,3 +238,44 @@ it('treats a legacy one-shot preparation snapshot as still fresh (backward compa
   await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
   expect(getOfflineContext()).toMatchObject({ enabled: true, preparedHere: true });
 });
+
+/** An operational snapshot has no invalidation path: nothing in /gestao/pessoas
+ * (or any other write screen) touches it. Serving it to an online device froze
+ * the fiado list at whatever it held the first time the PDV loaded, so a newly
+ * registered client never reached the checkout select. */
+it('revalidates an operational snapshot while the device is online', async () => {
+  vi.stubGlobal('navigator', { onLine: true });
+  await prepareDeviceFixture();
+  vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({
+    enabled: true, registered: true, subscriptionActive: true, ownerUserId: 'owner', operatorId: 'operator'
+  }), { status: 200 }));
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  await saveSnapshot('owner', 'pessoas.fiado', [{ id: 1, nome: 'Vinicius' }]);
+  const fresh = [{ id: 1, nome: 'Vinicius' }, { id: 2, nome: 'Cliente novo' }];
+  expect(await readOperationalSnapshot('pessoas.fiado', async () => fresh)).toEqual(fresh);
+  expect(await readSnapshot('owner', 'pessoas.fiado')).toEqual(fresh);
+});
+
+it('serves the cached snapshot without a query when the device is offline', async () => {
+  vi.stubGlobal('navigator', { onLine: false });
+  await prepareDeviceFixture();
+  await saveSnapshot('owner', 'bootstrap:operator', { enabled: true, ownerUserId: 'owner', userId: 'operator', validatedAt: Date.now() });
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  const cached = [{ id: 1, nome: 'Vinicius' }];
+  await saveSnapshot('owner', 'pessoas.fiado', cached);
+  const loader = vi.fn();
+  expect(await readOperationalSnapshot('pessoas.fiado', loader)).toEqual(cached);
+  expect(loader).not.toHaveBeenCalled();
+});
+
+it('falls back to the cached snapshot when an online revalidation hits the network', async () => {
+  vi.stubGlobal('navigator', { onLine: true });
+  await prepareDeviceFixture();
+  vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({
+    enabled: true, registered: true, subscriptionActive: true, ownerUserId: 'owner', operatorId: 'operator'
+  }), { status: 200 }));
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  const cached = [{ id: 1, nome: 'Vinicius' }];
+  await saveSnapshot('owner', 'pessoas.fiado', cached);
+  expect(await readOperationalSnapshot('pessoas.fiado', async () => { throw new TypeError('Failed to fetch'); })).toEqual(cached);
+});
