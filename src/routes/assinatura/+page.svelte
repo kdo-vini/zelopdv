@@ -17,7 +17,6 @@
   } from '$lib/billing/planSelection';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao } from '$lib/googleAds';
-  import { capturePostHogEvent } from '$lib/posthogClient';
   import {
     CircleCheckBig,
     Hourglass,
@@ -514,7 +513,9 @@
                   trackStartTrial();
                   trackGa4Event('begin_trial');
                   trackGoogleAdsInscricao({ email, transactionId: userId });
-                  void capturePostHogEvent('trial_auto_started', { plan: 'pdv' });
+                  // PostHog: `trial_started` sai de POST /api/billing/start-trial,
+                  // que ja gravou $set.email, plan e trial_end. Duplicar aqui so
+                  // dobraria a contagem de inicio de teste no funil.
                 }
                 setTimeout(() => { window.location.href = '/gestao'; }, 2000);
                 return;
@@ -629,13 +630,9 @@
         if (typeof window.fbq === 'function') {
           window.fbq('track', 'InitiateCheckout', { value: planPrice, currency: 'BRL' });
         }
-        void capturePostHogEvent('subscription_checkout_started', {
-          plan: selectedPlan,
-          addons: { ...effectiveAddons },
-          amount: planPrice,
-          payment_method: 'card',
-          is_renewal: isActiveStrict,
-        });
+        // PostHog: `stripe_checkout_created` ja saiu de
+        // POST /api/billing/create-subscription antes desta resposta chegar, com
+        // plan, addons, amount, is_first_time e session_id.
         window.location.href = data.url;
         return;
       }
@@ -697,14 +694,8 @@
       pixModalOpen = true;
       goToCheckoutStep(3);
       startPixStatusPolling();
-      if (!data.reused) {
-        void capturePostHogEvent('pix_payment_initiated', {
-          plan: selectedPlan,
-          addons: { ...effectiveAddons },
-          amount: planPrice,
-          is_renewal: isActiveStrict,
-        });
-      }
+      // PostHog: `pix_charge_created` ja saiu de POST /api/billing/pix/create,
+      // com plan, addons, amount_cents, kind e payment_id.
       messageType = 'info';
       if (autoRenew) {
         message = 'O Pix venceu e uma nova cobrança foi gerada automaticamente.';

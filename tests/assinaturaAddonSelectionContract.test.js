@@ -15,8 +15,17 @@ describe('assinatura add-on selection contract', () => {
   });
 
   it('sends the resolved selection to both payment endpoints', () => {
-    const bodies = page.match(/addons: \{ \.\.\.effectiveAddons \}/g) || [];
-    expect(bodies.length).toBeGreaterThanOrEqual(4); // 2 requests + 2 analytics
+    // Antes isto contava ocorrencias soltas de `effectiveAddons` no arquivo
+    // ("2 requests + 2 analytics"), entao passava a depender de quantos eventos
+    // de analytics a tela tivesse. Os dois client-side de PostHog sairam daqui
+    // (o servidor ja emite stripe_checkout_created / pix_charge_created), e a
+    // contagem quebrou sem que a invariante real tivesse mudado.
+    // O que importa e cada requisicao de pagamento levar a selecao resolvida.
+    for (const endpoint of ['/api/billing/create-subscription', '/api/billing/pix/create']) {
+      const request = page.slice(page.indexOf(endpoint));
+      expect(request).not.toBe('');
+      expect(request.slice(0, 600)).toContain('addons: { ...effectiveAddons }');
+    }
     expect(page).not.toMatch(/addons: \{\s*mesas: mesasAddonOn/);
   });
 

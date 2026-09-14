@@ -1,5 +1,16 @@
 # Fixes Progress
 
+- [x] FX-POSTHOG-GATE-POR-ROTA-01 (2026-09-14) — `before_send` derrubava todo
+  evento disparado fora da área pública, porque o gate era por rota e não por
+  evento. `trial_auto_started`, `subscription_checkout_started`,
+  `pix_payment_initiated` e os `gerente_*` eram código morto silencioso: zero
+  eventos no PostHog desde a instalação. Agora só a superfície de tela
+  (`SURFACE_EVENTS`) morre em rota privada; o evento de negócio passa com URL
+  mascarada (`/app/mesas/:id`) e referrer removido. `opt_out_capturing()` —
+  que também calava `capture()` e persistia no localStorage — saiu em favor de
+  `set_config`, com desfazimento do opt-out legado no init. As três chamadas de
+  `/assinatura` foram removidas por duplicarem eventos server-side melhores.
+
 - [x] FX-ASSINATURA-ADDON-RESET-01 (2026-09-14) — o wizard de assinatura perdia
   o add-on já ativo ao trocar de plano e voltar, e anunciava o preço base do
   plano na etapa 1. Caso real: FullBuster Burger (`pdv` + `has_zelo_menu=true`,

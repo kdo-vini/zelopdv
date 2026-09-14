@@ -1,5 +1,44 @@
 # ZeloPDV — Foco atual
 
+## Evento de negócio dentro do produto nunca chegou ao PostHog — 2026-09-14
+
+Auditoria do funil no PostHog (projeto 470628): `trial_auto_started`,
+`subscription_checkout_started`, `pix_payment_initiated` e os três `gerente_*`
+**não existem** na lista de eventos do projeto. Nunca chegou um.
+
+Causa-raiz em [src/lib/posthogClient.js](../src/lib/posthogClient.js): o gate era
+por **rota**, não por evento. `sanitizeEvent`, usado como `before_send`, abria com
+`if (!isBrowser() || !isPostHogAllowedPath(window.location.pathname)) return null`
+— e `/assinatura`, `/gestao`, `/app`, `/perfil`, `/relatorios`, `/ferramentas`
+estão em `BLOCKED_PREFIXES`. Todo `capture()` disparado lá dentro morria. Uma
+segunda trava somava: `syncPostHogForPath` chamava `opt_out_capturing()` ao
+entrar em rota privada, e esse opt-out fica gravado no localStorage do aparelho.
+O contrato mentia — `capturePostHogEvent` devolvia `true` com o evento no lixo.
+
+O commit anterior (`f5c0dbe`) contornou para o cadastro, movendo o evento para o
+servidor, e documentou a causa em comentário sem removê-la.
+
+Correção: o gate passou a ser por **evento**. `SURFACE_EVENTS` (pageview,
+autocapture, rageclick, heatmap, web vitals, pageleave) morre fora da área
+pública; evento de negócio nomeado, `$identify` e `$exception` atravessam com a
+URL reduzida a `/app/mesas/:id` e o referrer apagado — inclusive em `$set`/
+`$set_once`, que no `CaptureResult` do posthog-js são **irmãos** de `properties`.
+`opt_out_capturing()` virou `set_config({ autocapture, capture_pageleave,
+enable_heatmaps })`, e o init desfaz o opt-out que a versão anterior gravou —
+sem isso os aparelhos que abriram o PDV antes ficariam mudos para sempre.
+
+As três chamadas de `/assinatura` foram **removidas**, não religadas: o servidor
+já emite `trial_started`, `stripe_checkout_created` e `pix_charge_created`, com
+propriedades a mais (`trial_end`, `session_id`, `payment_id`) e sem depender do
+cliente chegar vivo ao fim do fluxo. Religar duplicaria a contagem no funil.
+
+Aberto de propósito: não existe evento de **falha** de checkout. Hoje só se vê
+cobrança criada com sucesso; clique que morreu no servidor é invisível.
+
+Suíte 1.222/1.225 (3 skips pré-existentes), `npm run check` 0/0, build verde.
+Corrigido também `tests/signupFollowUp.test.js`, que estava vermelho desde
+`f5c0dbe` (ainda exigia o `user_signed_up` removido por aquele commit).
+
 ## Assinatura pós-trial perdia o add-on ativo — 2026-09-14
 
 Reclamação de cliente (FullBuster Burger, `plan_tier='pdv'`,

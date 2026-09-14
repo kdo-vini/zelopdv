@@ -1,6 +1,13 @@
 <wizard-report>
 # PostHog post-wizard report
 
+> **Histórico, não fonte viva (nota de 2026-09-14).** A tabela abaixo lista como
+> instrumentados três eventos que nunca chegaram ao PostHog — `trial_auto_started`,
+> `subscription_checkout_started`, `pix_payment_initiated` — porque `/assinatura`
+> está em `BLOCKED_PREFIXES` e o `before_send` os derrubava. Eles foram removidos
+> em favor dos equivalentes server-side. `user_signed_up` (client) também saiu.
+> Estado canônico: [[CURRENT]].
+
 The wizard has completed a deep integration of PostHog into ZeloPDV. Changes include: initializing the PostHog client in `hooks.client.js` for client-side error tracking; adding `capture`, `identify`, and `captureException` exports to the existing `posthogClient.js` wrapper; creating a server-side PostHog singleton at `src/lib/server/posthog.js` (using `posthog-node`); and instrumenting 13 business-critical events across signup, login, trial activation, Stripe checkout, Pix payment, subscription webhooks, and referral landing. `svelte.config.js` was updated with `paths.relative: false` as required by PostHog session replay. Environment variables `PUBLIC_POSTHOG_KEY` and `PUBLIC_POSTHOG_HOST` are now set in `.env`.
 
 | Event | Description | File |
