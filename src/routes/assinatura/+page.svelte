@@ -5,7 +5,16 @@
   import { isSubscriptionActiveStrict } from '$lib/guards';
   import { onMount, onDestroy } from 'svelte';
   import { addToast, confirmAction } from '$lib/stores/ui';
+  import EntitlementLossWarning from '$lib/components/billing/EntitlementLossWarning.svelte';
   import { PLANS, calculateValue, TRIAL_DAYS } from '$lib/pricing';
+  import {
+    entitlementLabel,
+    entitlementsFromSubscription,
+    lostEntitlements,
+    resolveEntitlements,
+    resolveSelection,
+    selectionPrice,
+  } from '$lib/billing/planSelection';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao } from '$lib/googleAds';
   import { capturePostHogEvent } from '$lib/posthogClient';
@@ -20,7 +29,6 @@
     Zap
   } from 'lucide-svelte';
 
-
   let userId = '';
   let email = '';
   let subStatus = null;
@@ -33,11 +41,11 @@
   let hasHadSubscription = false;
   let isActiveStrict = false;
   let trialDaysLeft = null;
-  let mesasAddonOn = false;
-  let acessosAddonOn = false;
+  // Intenção do usuário. NUNCA é apagada por troca de plano — `resolveSelection`
+  // suprime o que o plano atual não vende e devolve quando ele volta a vender.
+  let desiredAddons = { mesas: false, acessos: false, menu: false };
   let activeMesasAddon = false;
   let activeAcessosAddon = false;
-  let menuAddonOn = false;
   let activeMenuAddon = false;
   let camePromptingMesas = false;
   let camePromptingAcessos = false;
@@ -87,11 +95,13 @@
     },
   ];
 
-  $: planPrice = calculateValue(selectedPlan, {
-    mesas: mesasAddonOn,
-    acessos: acessosAddonOn,
-    menu: menuAddonOn,
-  });
+  $: selection = resolveSelection({ planTier: selectedPlan, desired: desiredAddons });
+  $: effectiveAddons = selection.addons;
+  // Aliases de leitura mantidos para o template; a fonte é sempre `desiredAddons`.
+  $: mesasAddonOn = effectiveAddons.mesas;
+  $: acessosAddonOn = effectiveAddons.acessos;
+  $: menuAddonOn = effectiveAddons.menu;
+  $: planPrice = calculateValue(selectedPlan, effectiveAddons);
   $: activePlanPrice = activePlanTier
     ? calculateValue(activePlanTier, {
         mesas: activeMesasAddon,
@@ -108,6 +118,19 @@
     ? PLANS[activePlanTier]?.allowsAcessos
     : false;
   $: selectedPlanAllowsMenu = PLANS[selectedPlan]?.allowsMenu;
+  // Capacidades de hoje x capacidades depois de pagar a seleção atual. Um pacote
+  // que já inclui o módulo (bundle/chat incluem ZeloMenu, D-014) não conta como perda.
+  $: activeEntitlements = hasHadSubscription
+    ? entitlementsFromSubscription({
+        plan_tier: activePlanTier,
+        has_mesas_addon: activeMesasAddon,
+        has_acessos_addon: activeAcessosAddon,
+        has_zelo_menu: activeMenuAddon,
+      })
+    : resolveEntitlements(null);
+  $: selectedEntitlements = resolveEntitlements(selectedPlan, effectiveAddons);
+  $: droppedEntitlements = lostEntitlements(activeEntitlements, selectedEntitlements);
+  $: droppedEntitlementNames = droppedEntitlements.map(entitlementLabel);
   $: activePlanAllowsMenu = activePlanTier
     ? PLANS[activePlanTier]?.allowsMenu
     : false;
@@ -136,6 +159,17 @@
     || !!acessosAddonOn !== !!activeAcessosAddon
     || !!menuAddonOn !== !!activeMenuAddon
   );
+  $: activePackageSummary = activePlanTier
+    ? [
+        PLANS[activePlanTier]?.name || 'Plano',
+        ...addonCatalog
+          .filter((addon) => resolveSelection({
+            planTier: activePlanTier,
+            desired: { mesas: activeMesasAddon, acessos: activeAcessosAddon, menu: activeMenuAddon },
+          }).addons[addon.id])
+          .map((addon) => addon.name),
+      ].join(' + ')
+    : '';
   $: wizardModeLabel = isActiveStrict ? 'Mudar de plano' : 'Assinatura';
   $: wizardStepOneTitle = isActiveStrict
     ? 'Escolha como sua assinatura deve ficar'
@@ -179,9 +213,9 @@
       : `Pagar com cartão - R$ ${planPrice}/mês`;
   $: currentSelectionKey = JSON.stringify({
     selectedPlan,
-    mesas: mesasAddonOn,
-    acessos: acessosAddonOn,
-    menu: menuAddonOn,
+    mesas: effectiveAddons.mesas,
+    acessos: effectiveAddons.acessos,
+    menu: effectiveAddons.menu,
   });
   $: pixPaymentMatchesSelection = !pixPayment || pixSelectionKey === currentSelectionKey;
   $: pixExpiresAtMs = pixPayment?.expiresAt ? new Date(pixPayment.expiresAt).getTime() : null;
@@ -202,10 +236,8 @@
     renovarPixExpirado();
   }
 
-  // Se selectedPlan não permite os addons, força off (UX clara)
-  $: if (!selectedPlanAllowsMesas && mesasAddonOn) mesasAddonOn = false;
-  $: if (!selectedPlanAllowsAcessos && acessosAddonOn) acessosAddonOn = false;
-  $: if (!selectedPlanAllowsMenu && menuAddonOn) menuAddonOn = false;
+  // O que o plano atual não vende sai do preço via `resolveSelection`, sem apagar
+  // a intenção — por isso NÃO existe mais um bloco reativo zerando os booleans.
   $: if (!isActiveStrict && selectedPlan === 'chat') selectedPlan = 'bundle';
 
   let autoStartingTrial = false;
@@ -269,9 +301,11 @@
     activeMesasAddon = !!data?.has_mesas_addon;
     activeAcessosAddon = !!data?.has_acessos_addon;
     activeMenuAddon = !!data?.has_zelo_menu;
-    mesasAddonOn = activeMesasAddon;
-    acessosAddonOn = activeAcessosAddon;
-    menuAddonOn = activeMenuAddon;
+    desiredAddons = {
+      mesas: activeMesasAddon,
+      acessos: activeAcessosAddon,
+      menu: activeMenuAddon,
+    };
     activePlanTier = data?.plan_tier || 'pdv';
     selectedPlan = activePlanTier;
 
@@ -308,9 +342,47 @@
   }
 
   function toggleAddonSelection(addonId) {
-    if (addonId === 'mesas' && selectedPlanAllowsMesas) mesasAddonOn = !mesasAddonOn;
-    if (addonId === 'menu' && selectedPlanAllowsMenu) menuAddonOn = !menuAddonOn;
-    if (addonId === 'acessos' && selectedPlanAllowsAcessos) acessosAddonOn = !acessosAddonOn;
+    if (!addonAvailable(addonId)) return;
+    desiredAddons = { ...desiredAddons, [addonId]: !desiredAddons[addonId] };
+  }
+
+  // Preço do card do plano JÁ com os módulos que o cliente escolheu — senão a
+  // etapa 1 anuncia R$59 para quem tem ZeloMenu e o resumo diz R$99 na mesma tela.
+  function planCardPrice(planId) {
+    return selectionPrice({ planTier: planId, desired: desiredAddons });
+  }
+
+  function planCardExtras(planId) {
+    return resolveSelection({ planTier: planId, desired: desiredAddons }).addons;
+  }
+
+  function planCardExtraNames(planId) {
+    const extras = planCardExtras(planId);
+    return addonCatalog.filter((addon) => extras[addon.id]).map((addon) => addon.name);
+  }
+
+  // Pós-trial o cliente não quer montar um pacote do zero — quer continuar o que
+  // já usava. Este atalho reconstrói exatamente a seleção da assinatura atual.
+  function restoreActivePackage() {
+    if (!activePlanTier) return;
+    selectedPlan = activePlanTier;
+    desiredAddons = {
+      mesas: activeMesasAddon,
+      acessos: activeAcessosAddon,
+      menu: activeMenuAddon,
+    };
+    goToCheckoutStep(3);
+  }
+
+  // Pagar uma seleção que remove um módulo ativo nunca pode ser silencioso:
+  // foi assim que o pacote de R$99 virou R$59 sem o cliente perceber.
+  async function confirmEntitlementRemoval() {
+    if (!droppedEntitlements.length) return true;
+    const names = droppedEntitlementNames.join(', ');
+    return confirmAction(
+      'Confirmar remoção de módulo',
+      `Este pacote remove: ${names}. Você perde o acesso a esse módulo assim que a mudança for aplicada. Deseja continuar?`,
+    );
   }
 
   function addonAvailable(addonId) {
@@ -321,9 +393,13 @@
   }
 
   function addonSelected(addonId) {
-    if (addonId === 'mesas') return mesasAddonOn;
-    if (addonId === 'menu') return menuAddonOn;
-    if (addonId === 'acessos') return acessosAddonOn;
+    return !!effectiveAddons[addonId];
+  }
+
+  // Um add-on indisponível pode estar incluso no pacote ou incompatível com ele.
+  // Dizer qual é o caso evita o cliente achar que perdeu o módulo que já tem.
+  function addonIncludedInPlan(addonId) {
+    if (addonId === 'menu') return !!PLANS[selectedPlan]?.includesMenu;
     return false;
   }
 
@@ -460,7 +536,7 @@
           const subscribeValue = activePlanTier
             ? calculateValue(activePlanTier, {
                 mesas: activeMesasAddon,
-                        acessos: activeAcessosAddon,
+                acessos: activeAcessosAddon,
                 menu: activeMenuAddon,
               })
             : null;
@@ -472,14 +548,14 @@
         }
         if (params.get('addon') === 'mesas') {
           camePromptingMesas = true;
-          if (!activeMesasAddon) mesasAddonOn = true;
+          if (!activeMesasAddon) desiredAddons = { ...desiredAddons, mesas: true };
           // Se user veio querendo Mesas mas tá no plano errado, sugere bundle
           if (selectedPlan === 'chat') selectedPlan = 'bundle';
           checkoutStep = 2;
         }
         if (params.get('addon') === 'acessos') {
           camePromptingAcessos = true;
-          if (!activeAcessosAddon) acessosAddonOn = true;
+          if (!activeAcessosAddon) desiredAddons = { ...desiredAddons, acessos: true };
           if (selectedPlan === 'chat') selectedPlan = 'bundle';
           checkoutStep = 2;
         }
@@ -511,6 +587,7 @@
 
   async function assinar() {
     if (loading) return;
+    if (!(await confirmEntitlementRemoval())) return;
     try {
       loading = true;
       message = '';
@@ -531,11 +608,7 @@
         },
         body: JSON.stringify({
           planTier: selectedPlan,
-          addons: {
-            mesas: mesasAddonOn,
-                    acessos: acessosAddonOn,
-            menu: menuAddonOn,
-          },
+          addons: { ...effectiveAddons },
         }),
       });
 
@@ -558,7 +631,7 @@
         }
         void capturePostHogEvent('subscription_checkout_started', {
           plan: selectedPlan,
-          addons: { mesas: mesasAddonOn, acessos: acessosAddonOn, menu: menuAddonOn },
+          addons: { ...effectiveAddons },
           amount: planPrice,
           payment_method: 'card',
           is_renewal: isActiveStrict,
@@ -580,6 +653,8 @@
 
   async function gerarPix({ autoRenew = false, renewal = false } = {}) {
     if (pixLoading) return;
+    // O auto-renew de Pix vencido repete uma seleção já confirmada.
+    if (!autoRenew && !(await confirmEntitlementRemoval())) return;
 
     try {
       pixLoading = true;
@@ -601,11 +676,7 @@
         },
         body: JSON.stringify({
           planTier: selectedPlan,
-          addons: {
-            mesas: mesasAddonOn,
-                    acessos: acessosAddonOn,
-            menu: menuAddonOn,
-          },
+          addons: { ...effectiveAddons },
         }),
       });
 
@@ -629,7 +700,7 @@
       if (!data.reused) {
         void capturePostHogEvent('pix_payment_initiated', {
           plan: selectedPlan,
-          addons: { mesas: mesasAddonOn, acessos: acessosAddonOn, menu: menuAddonOn },
+          addons: { ...effectiveAddons },
           amount: planPrice,
           is_renewal: isActiveStrict,
         });
@@ -954,7 +1025,12 @@
                   {#if planId === 'bundle'}<span class="plan-badge">Mais popular</span>{/if}
                   <span class="decision-eyebrow">{getPlanDecisionEyebrow(planId)}</span>
                   <div class="plan-name">{PLANS[planId].name}</div>
-                  <div class="plan-price">R$ {PLANS[planId].price}<span class="plan-cycle">/mês</span></div>
+                  <div class="plan-price">R$ {planCardPrice(planId)}<span class="plan-cycle">/mês</span></div>
+                  {#if planCardExtraNames(planId).length}
+                    <div class="plan-price-breakdown">
+                      R$ {PLANS[planId].price} + {planCardExtraNames(planId).join(' + ')}
+                    </div>
+                  {/if}
                   {#if PLANS[planId].bundleSavings}<div class="plan-savings">Economize R$ {PLANS[planId].bundleSavings}</div>{/if}
                   <div class="plan-tagline">{PLANS[planId].tagline}</div>
                   <div class="plan-cta">
@@ -997,9 +1073,11 @@
                       <strong>{addon.name}</strong>
                       <span>{addon.priceLabel}</span>
                     </div>
-                    <span class="addon-pill" class:on={addonSelected(addon.id)}>
+                    <span class="addon-pill" class:on={addonSelected(addon.id) || addonIncludedInPlan(addon.id)}>
                       {#if addonAvailable(addon.id)}
                         {addonSelected(addon.id) ? 'Selecionado' : 'Opcional'}
+                      {:else if addonIncludedInPlan(addon.id)}
+                        Já incluso
                       {:else}
                         Não disponível
                       {/if}
@@ -1008,6 +1086,8 @@
                   <p class="addon-choice-copy">
                     {#if addonAvailable(addon.id)}
                       {addon.teaser}
+                    {:else if addonIncludedInPlan(addon.id)}
+                      Já vem no {selectedPlanName} sem custo extra — você não perde este módulo.
                     {:else}
                       Disponível apenas em planos com ZeloPDV.
                     {/if}
@@ -1019,6 +1099,12 @@
                 </button>
               {/each}
             </div>
+
+            <EntitlementLossWarning
+              names={droppedEntitlementNames}
+              restorePrice={activePlanPrice}
+              onRestore={activePlanTier ? restoreActivePackage : null}
+            />
 
             <div class="step-actions step-actions-between">
               <button type="button" class="btn-secondary" on:click={() => goToCheckoutStep(1)}>
@@ -1042,6 +1128,12 @@
               <strong>R$ {planPrice}/mês</strong>
               <p>{selectedAddons.length ? selectionSummary.join(' + ') : selectedPlanTagline}</p>
             </div>
+
+            <EntitlementLossWarning
+              names={droppedEntitlementNames}
+              restorePrice={activePlanPrice}
+              onRestore={activePlanTier ? restoreActivePackage : null}
+            />
 
             <div class="renewal-summary">
               <span>Vencimento atual: <strong>{expiryDateLabel || 'não definido'}</strong></span>
@@ -1161,6 +1253,29 @@
       </div>
     {/if}
 
+    {#if hasHadSubscription && activePlanTier}
+      <div class="current-package-card">
+        <div class="current-package-info">
+          <p class="summary-kicker">
+            {subStatus === 'trialing' || subStatus === 'trial_expired' ? 'O que você usou no teste' : 'Seu último pacote'}
+          </p>
+          <h2 class="summary-title">{activePackageSummary}</h2>
+          <p class="current-package-copy">
+            Continue com o mesmo pacote ou ajuste os módulos nas etapas abaixo.
+          </p>
+        </div>
+        <div class="current-package-action">
+          <div class="summary-total">
+            <span>Valor mensal</span>
+            <strong>R$ {activePlanPrice}</strong>
+          </div>
+          <button type="button" class="btn-primary" on:click={restoreActivePackage}>
+            Continuar com este pacote
+          </button>
+        </div>
+      </div>
+    {/if}
+
     <div class="checkout-flow">
       <div class="checkout-steps" aria-label="Etapas da assinatura">
         {#each checkoutSteps as step}
@@ -1222,7 +1337,12 @@
                     {/if}
                   </span>
                   <div class="plan-name">{PLANS[planId].name}</div>
-                  <div class="plan-price">R$ {PLANS[planId].price}<span class="plan-cycle">/mês</span></div>
+                  <div class="plan-price">R$ {planCardPrice(planId)}<span class="plan-cycle">/mês</span></div>
+                  {#if planCardExtraNames(planId).length}
+                    <div class="plan-price-breakdown">
+                      R$ {PLANS[planId].price} + {planCardExtraNames(planId).join(' + ')}
+                    </div>
+                  {/if}
                   {#if PLANS[planId].bundleSavings}<div class="plan-savings">Economize R$ {PLANS[planId].bundleSavings}</div>{/if}
                   <div class="plan-tagline">{PLANS[planId].tagline}</div>
                   <div class="plan-cta">{selectedPlan === planId ? 'Pacote selecionado' : 'Escolher pacote'}</div>
@@ -1259,9 +1379,11 @@
                       <strong>{addon.name}</strong>
                       <span>{addon.priceLabel}</span>
                     </div>
-                    <span class="addon-pill" class:on={addonSelected(addon.id)}>
+                    <span class="addon-pill" class:on={addonSelected(addon.id) || addonIncludedInPlan(addon.id)}>
                       {#if addonAvailable(addon.id)}
                         {addonSelected(addon.id) ? 'Selecionado' : 'Opcional'}
+                      {:else if addonIncludedInPlan(addon.id)}
+                        Já incluso
                       {:else}
                         Não disponível
                       {/if}
@@ -1270,6 +1392,8 @@
                   <p class="addon-choice-copy">
                     {#if addonAvailable(addon.id)}
                       {addon.teaser}
+                    {:else if addonIncludedInPlan(addon.id)}
+                      Já vem no {selectedPlanName} sem custo extra — você não perde este módulo.
                     {:else}
                       Disponível apenas em planos com ZeloPDV.
                     {/if}
@@ -1281,6 +1405,12 @@
                 </button>
               {/each}
             </div>
+
+            <EntitlementLossWarning
+              names={droppedEntitlementNames}
+              restorePrice={activePlanPrice}
+              onRestore={activePlanTier ? restoreActivePackage : null}
+            />
 
             <div class="step-actions step-actions-between">
               <button type="button" class="btn-secondary" on:click={() => goToCheckoutStep(1)}>
@@ -1304,6 +1434,12 @@
               <strong>R$ {planPrice}/mês</strong>
               <p>{selectedAddons.length ? selectionSummary.join(' + ') : selectedPlanTagline}</p>
             </div>
+
+            <EntitlementLossWarning
+              names={droppedEntitlementNames}
+              restorePrice={activePlanPrice}
+              onRestore={activePlanTier ? restoreActivePackage : null}
+            />
 
             <div class="payment-grid">
               <button class="payment-card" type="button" on:click={gerarPix} disabled={loading || pixLoading}>
@@ -2070,6 +2206,36 @@
     color: var(--primary);
   }
 
+  .plan-price-breakdown {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+
+  .current-package-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--primary);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+
+  .current-package-copy {
+    margin: 0.3rem 0 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .current-package-action {
+    display: grid;
+    gap: 0.6rem;
+    justify-items: end;
+  }
+
   .step-total-spotlight {
     display: grid;
     gap: 0.2rem;
@@ -2504,6 +2670,18 @@
 
     .step-copy {
       font-size: 0.95rem;
+    }
+
+    .current-package-card {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .current-package-action {
+      justify-items: stretch;
+    }
+
+    .current-package-action .summary-total {
+      text-align: left;
     }
 
     .step-total-spotlight {

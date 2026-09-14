@@ -1,5 +1,28 @@
 # Fixes Progress
 
+- [x] FX-ASSINATURA-ADDON-RESET-01 (2026-09-14) — o wizard de assinatura perdia
+  o add-on já ativo ao trocar de plano e voltar, e anunciava o preço base do
+  plano na etapa 1. Caso real: FullBuster Burger (`pdv` + `has_zelo_menu=true`,
+  R$99) foi assinar no fim do trial e viu R$59. Duas causas somadas:
+  (1) `$: if (!selectedPlanAllowsMenu && menuAddonOn) menuAddonOn = false;` era
+  um reset de mão única — `bundle` tem `allowsMenu: false` porque já inclui o
+  ZeloMenu (D-014), então passar pelo card "Mais popular" desligava o boolean e
+  nada o religava ao voltar para ZeloPDV; (2) o card do plano renderizava
+  `PLANS[planId].price`, sempre R$59, enquanto o resumo mostrava R$99 na mesma
+  tela. Nenhuma cobrança foi gerada — `billing_payments` do titular está vazio.
+  Correção na raiz: `src/lib/billing/planSelection.js` separa a intenção do
+  cliente (`desiredAddons`) do que é cobrável no plano atual — o incompatível é
+  suprimido, não apagado, e volta sozinho. Os cards passam a precificar a
+  seleção e a mostrar a decomposição; `EntitlementLossWarning` + `confirmAction`
+  impedem que um downgrade de módulo ativo aconteça em silêncio; card "O que
+  você usou no teste" e botão "Continuar com este pacote" dão continuidade
+  pós-trial. Deliberadamente NÃO virou trava de servidor: `create-subscription`
+  e `pix/create` seguem confiando no payload porque o schema não distingue
+  add-on comprado de add-on apenas experimentado no trial, e barrar quem desiste
+  do módulo seria pior que o bug (ver [[CODE_REVIEW]]). 16 testes novos
+  (`tests/billing.planSelection.test.js`, `tests/assinaturaAddonSelectionContract.test.js`).
+  Suíte 1.212/1.215, `npm run build` verde.
+
 - [x] FX-FIADO-SNAPSHOT-CONGELADO-01 (2026-09-11) — pessoa cadastrada em
   `/gestao/pessoas` não aparecia no select de Fiado ao fechar o pedido
   (reclamação de cliente, reproduzida na conta de teste da Donutopia: quatro

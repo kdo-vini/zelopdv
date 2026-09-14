@@ -146,6 +146,12 @@ Regra prática:
 - A verificação Pix falha fechada quando `ABACATEPAY_PUBLIC_KEY` não está configurada; não há fallback de chave embutida em runtime.
 - `POST /api/account/reactivate` só limpa `deletion_*` depois que o Stripe aceita a retomada (ou confirma que a assinatura já não existe); falhas transitórias retornam erro e preservam a agenda para retry.
 - `subscriptions` preserva histórico terminal, mas o schema agora garante no máximo uma linha viva por titular (`active`, `trialing`, `past_due` ou `incomplete`) pelo índice parcial `subscriptions_one_live_row_per_user`.
+- O wizard de `/assinatura` é a única camada que impede um downgrade acidental de
+  add-on: `create-subscription` e `pix/create` gravam a combinação que o cliente
+  mandar, sem comparar com `subscriptions`. A intenção de add-on vive em
+  `desiredAddons` e é resolvida por [src/lib/billing/planSelection.js](/home/vinicius/code/zelopdv/src/lib/billing/planSelection.js:1)
+  — nunca voltar a zerar o add-on num bloco reativo quando o plano muda
+  (INC-2026-09-14-ASSINATURA-ADDON-SUMIDO).
 - O contrato de perfil exigido diverge entre Stripe checkout e Pix/guards: checkout exige `documento`, enquanto Pix e guards exigem perfil validado completo — [src/routes/api/billing/create-subscription/+server.js](/home/vinicius/code/zelopdv/src/routes/api/billing/create-subscription/+server.js:65), [src/routes/api/billing/pix/create/+server.js](/home/vinicius/code/zelopdv/src/routes/api/billing/pix/create/+server.js:100), [src/lib/guards.js](/home/vinicius/code/zelopdv/src/lib/guards.js:147)
 
 ## Operação manual que depende de validação humana

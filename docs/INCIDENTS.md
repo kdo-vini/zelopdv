@@ -1,5 +1,68 @@
 # Incidents
 
+## INC-2026-09-14-ASSINATURA-ADDON-SUMIDO — pacote de R$99 virava R$59 no checkout
+
+**Status:** corrigido em 2026-09-14 (mudança de app, sem migration).
+
+**Sintoma**
+
+- FullBuster Burger (`79a8ffbd-82e1-4307-b218-dc2a4175d66b`), trial vencendo em
+  2026-09-14, foi assinar e viu R$59 onde esperava R$99. A conta tem
+  `plan_tier='pdv'`, `has_zelo_menu=true` e slug público `fullbusterburger`, ou
+  seja, o ZeloMenu estava ativo e deveria compor o pacote.
+- Nenhuma cobrança foi criada: `billing_payments` do titular está vazio. O
+  cliente parou no preço, não pagou o valor errado.
+
+**Causa-raiz**
+
+1. Reset destrutivo da seleção. `src/routes/assinatura/+page.svelte` guardava os
+   add-ons em três booleans e tinha
+   `$: if (!selectedPlanAllowsMenu && menuAddonOn) menuAddonOn = false;`.
+   O `bundle` tem `allowsMenu: false` (já inclui ZeloMenu, D-014), então tocar
+   no card "Mais popular" desligava o boolean — e voltar para ZeloPDV **não**
+   religava, porque o único lugar que setava `menuAddonOn = true` era o
+   `applySubscriptionState` do `onMount`. Caminho: R$99 → R$198 → **R$59**, com
+   o ZeloMenu desmarcado e sem aviso.
+2. Preço do card do plano desconectado da seleção. A etapa 1 renderizava
+   `R$ {PLANS[planId].price}` — sempre R$59 no ZeloPDV — enquanto o resumo e a
+   barra fixa mostravam `planPrice` (R$99). A mesma tela exibia dois números.
+3. Sem âncora de continuidade pós-trial. Quem terminava o teste caía num
+   seletor genérico, sem nenhuma menção ao pacote que já usava.
+
+**Fix**
+
+- `src/lib/billing/planSelection.js`: intenção (`desired`) separada do que é
+  cobrável (`addons`). O que o plano não vende é **suprimido**, nunca apagado, e
+  volta sozinho. Inclui `resolveEntitlements`/`lostEntitlements`, que espelham
+  `subscriptionIncludesMenu` de guards.js — trocar pdv+ZeloMenu por bundle não
+  conta como perda, porque o bundle inclui o módulo.
+- A tela passou a usar `desiredAddons` como fonte única; o bloco reativo
+  destrutivo saiu. Cards de plano mostram o preço com a seleção aplicada, mais a
+  decomposição (`R$ 59 + ZeloMenu`).
+- `EntitlementLossWarning.svelte` avisa nas etapas 2 e 3 quando a seleção remove
+  um módulo ativo, com atalho "Manter meu pacote atual"; `confirmAction` bloqueia
+  Pix e cartão até o cliente confirmar a remoção.
+- Card "O que você usou no teste" com o pacote e o valor reais, e botão
+  "Continuar com este pacote" que salta direto para o pagamento.
+
+**Não corrigido de propósito**
+
+- `POST /api/billing/create-subscription` e `POST /api/billing/pix/create`
+  continuam aceitando a combinação de add-ons que o cliente mandar, sem comparar
+  com `subscriptions`. Não virou trava de servidor porque o schema não distingue
+  add-on comprado de add-on só experimentado no trial: bloquear a compra de quem
+  legitimamente desiste do módulo seria pior que o bug. A confirmação explícita
+  no cliente é a camada correta aqui. Registrado em [[CODE_REVIEW]].
+
+**Validação**
+
+- `tests/billing.planSelection.test.js` (11 casos), incluindo a regressão
+  pdv → bundle → pdv em R$99, e `tests/assinaturaAddonSelectionContract.test.js`
+  (5 casos) travando o reset destrutivo e o payload do checkout.
+- Suíte 1.212/1.215 (3 skips pré-existentes) e `npm run build` verdes. Sem
+  validação em navegador: este ambiente não tem as chaves Supabase para subir a
+  tela autenticada.
+
 ## INC-2026-09-11-FIADO-SNAPSHOT — cadastro novo invisível no select de Fiado
 
 **Status:** corrigido em 2026-09-11 (mudança de app, sem migration).

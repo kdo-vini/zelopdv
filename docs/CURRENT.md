@@ -1,5 +1,46 @@
 # ZeloPDV — Foco atual
 
+## Assinatura pós-trial perdia o add-on ativo — 2026-09-14
+
+Reclamação de cliente (FullBuster Burger, `plan_tier='pdv'`,
+`has_zelo_menu=true`, trial vencendo em 14/09): foi assinar e a tela mostrou
+R$59 onde o pacote real é R$99. Nenhuma cobrança chegou a ser criada —
+`billing_payments` do titular está vazio.
+
+Duas causas somadas em `src/routes/assinatura/+page.svelte`:
+
+1. O reset reativo `$: if (!selectedPlanAllowsMenu && menuAddonOn) menuAddonOn
+   = false;` era de mão única. `bundle` tem `allowsMenu: false` porque já inclui
+   o ZeloMenu (D-014), então passar pelo card "Mais popular" desligava o add-on
+   e voltar para ZeloPDV **não** o religava: o único ponto que setava `true` era
+   o `applySubscriptionState` do `onMount`. R$99 → R$198 → R$59, em silêncio.
+2. O card do plano na etapa 1 renderizava `PLANS[planId].price` — R$59 fixo —
+   enquanto o resumo e a barra fixa mostravam `planPrice` (R$99). A tela exibia
+   dois preços contraditórios ao mesmo tempo.
+
+Correção na raiz: `src/lib/billing/planSelection.js` separa a **intenção** do
+cliente (`desiredAddons`) do que é **cobrável** no plano atual. O que o plano não
+vende é suprimido, nunca apagado, e volta sozinho — o reset destrutivo deixou de
+existir. `resolveEntitlements`/`lostEntitlements` espelham
+`subscriptionIncludesMenu` de guards.js, então trocar pdv+ZeloMenu por bundle
+não é contabilizado como perda.
+
+UX/UI do mesmo fluxo: cards de plano precificam a seleção e mostram a
+decomposição (`R$ 59 + ZeloMenu`); `EntitlementLossWarning` avisa nas etapas 2 e
+3 quando a seleção remove um módulo ativo, com atalho de volta; `confirmAction`
+segura Pix e cartão até o cliente confirmar a remoção; e um card "O que você
+usou no teste" com botão "Continuar com este pacote" dá continuidade pós-trial
+em vez do seletor genérico.
+
+Fica aberto de propósito: os endpoints de billing seguem confiando no payload de
+add-ons (ver [[CODE_REVIEW]]) — o schema não separa add-on comprado de add-on só
+experimentado no trial, e uma trava de servidor barraria quem desiste do módulo
+por vontade própria.
+
+Suíte 1.212/1.215 (3 skips pré-existentes) e `npm run build` verdes; 16 testes
+novos. Sem verificação em navegador: o ambiente desta sessão não tem as chaves
+Supabase para subir a tela autenticada.
+
 ## Cadastro novo não aparecia no Fiado — 2026-09-11
 
 Reclamação de cliente, reproduzida na conta de teste da Donutopia: uma pessoa

@@ -5,6 +5,26 @@
 
 ## Findings
 
+### Update 2026-09-14 - billing confia no payload de add-ons do cliente
+
+`POST /api/billing/create-subscription` e `POST /api/billing/pix/create` só
+validam **compatibilidade** do add-on com o plano (`isAddonAllowed`). Nenhum dos
+dois compara a seleção recebida com o que já está gravado em `subscriptions`,
+então um cliente com `has_zelo_menu=true` pode fechar um checkout de ZeloPDV
+puro e o webhook grava `has_zelo_menu=false` — o cardápio público sai do ar sem
+nenhuma confirmação no servidor. Foi exatamente esse buraco que o bug de UI
+(INC-2026-09-14-ASSINATURA-ADDON-SUMIDO) explorava sem querer.
+
+Corrigido no cliente, não no servidor, e de propósito: `subscriptions` não
+distingue add-on **comprado** de add-on apenas **experimentado no trial**. Uma
+trava de 409 no endpoint barraria também o cliente que, legitimamente, decide
+não levar o módulo — falso positivo pior que o defeito. A confirmação explícita
+vive em `confirmEntitlementRemoval` (`src/routes/assinatura/+page.svelte`).
+
+Reabrir este finding se/quando existir histórico de compra de add-on (ou um
+flag equivalente em `billing_payments`) que permita distinguir os dois casos;
+aí a trava de servidor passa a ser implementável sem falso positivo.
+
 ### Update 2026-08-13 - enforcement de leitura do histórico de vendas
 
 O finding residual foi confirmado em produção: `vendas` e `vendas_itens`
