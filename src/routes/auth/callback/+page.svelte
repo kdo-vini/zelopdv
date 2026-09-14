@@ -3,7 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { trackLead } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
-  import { claimStoredReferral } from '$lib/referrals/client';
+  import { claimStoredReferral, getStoredReferralAttribution } from '$lib/referrals/client';
 
   let status = 'Autenticando...';
 
@@ -22,6 +22,29 @@
     } catch {}
   }
 
+  // Server-side counterpart to what /cadastro's user_registered capture does for
+  // email signups. /auth/callback is a blocked path for client-side PostHog (the
+  // URL can carry auth tokens), so this has to go through the server — see
+  // /api/auth/oauth-registered. No-ops (server-side) for anyone who isn't a
+  // fresh signup, so it's safe to call on every OAuth callback, not just new ones.
+  async function registerPostHogSignup(session) {
+    try {
+      const token = session?.access_token;
+      if (!token) return;
+      await fetch('/api/auth/oauth-registered', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          method: 'google',
+          hasReferral: !!getStoredReferralAttribution().code,
+        }),
+      });
+    } catch {}
+  }
+
   onMount(() => {
     if (!supabase) {
       window.location.href = '/login';
@@ -33,6 +56,7 @@
       const isNewUser = Date.now() - createdAt.getTime() < 60_000;
       if (!isNewUser) return;
       trackLead();
+      await registerPostHogSignup(session);
       // Mesmo sinal antecipado do /cadastro, para signup via Google OAuth
       await waitForGtag({ attempts: 20 });
       trackGa4Event('sign_up', { method: 'google' });
