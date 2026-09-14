@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-CHECKOUT-FAILED-01 (2026-09-14) — o funil só media checkout com
+  sucesso; tentativa recusada era invisível. `checkout_failed` passa a sair da
+  mesma função que devolve o erro (`lib/server/checkoutFailure.js`), cobrindo as
+  19 saídas de erro dos dois endpoints de pagamento, com `reason` em código
+  estável. Cliente emite só o que o servidor não pode ver (`no_session`,
+  `network`, `unexpected_response`), sem duplicar o `!res.ok`. Teste de fonte
+  barra `return json(...)` com status 4xx/5xx fora do helper.
+
 - [x] FX-POSTHOG-GATE-POR-ROTA-01 (2026-09-14) — `before_send` derrubava todo
   evento disparado fora da área pública, porque o gate era por rota e não por
   evento. `trial_auto_started`, `subscription_checkout_started`,

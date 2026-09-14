@@ -1,5 +1,41 @@
 # ZeloPDV — Foco atual
 
+## `checkout_failed`: o funil passou a ver quem tentou pagar e não conseguiu — 2026-09-14
+
+Antes só existia o lado feliz (`stripe_checkout_created`, `pix_charge_created`).
+Clique que morria no servidor — perfil sem CPF/CNPJ, plano inválido, provedor
+fora do ar — sumia, e o buraco entre "abriu /assinatura" e "cobrança criada"
+ficava sem explicação.
+
+A resposta de erro e o evento saem da **mesma função**, em
+[src/lib/server/checkoutFailure.js](../src/lib/server/checkoutFailure.js).
+Espalhar `posthog.capture` por dez `return json(...)` é exatamente como o bug
+anterior nasceu. As 19 saídas de erro cruas dos dois endpoints (10 no cartão,
+9 no Pix) passam por `fail()`; um teste de fonte rejeita `return json(...)` com
+status 4xx/5xx, e foi verificado contra a versão anterior — falharia nas 19.
+
+`reason` é código estável (`profile_incomplete`, `invalid_plan`,
+`addon_not_allowed`, `unauthenticated`, `subuser_forbidden`,
+`provider_unavailable`, `provider_error`), nunca derivado da mensagem em pt-BR:
+o texto é de UI e uma revisão de copy levaria o histórico do funil junto.
+`profile_incomplete` é o que mede diretamente o muro de cadastro descrito na
+auditoria de conversão — quem chegou querendo pagar e foi mandado de volta.
+
+Partição entre cliente e servidor, sem dupla contagem: o servidor registra toda
+resposta de erro que ele produziu (`origin: 'server'`); a tela registra só o que
+o servidor não pode ter visto (`origin: 'client'`) — `no_session` (a requisição
+nunca saiu), `network` (resposta nunca voltou) e `unexpected_response` (200 sem
+URL de checkout). O ramo `!res.ok` do cliente **não** emite, de propósito.
+
+Falha de autenticação cai em `distinctId: 'anonymous'` — não há a quem atribuir,
+mas "a sessão expirou antes de assinar" continua sendo conversão perdida e
+precisa ser contada. Mesma convenção do chat de suporte.
+
+O flush não segura a resposta: numa falha de pagamento o cliente está esperando
+na tela. Vai por `waitUntil`, com fallback silencioso fora do runtime da Vercel.
+
+Suíte 1.230/1.233 (3 skips pré-existentes), `npm run check` 0/0, build verde.
+
 ## Evento de negócio dentro do produto nunca chegou ao PostHog — 2026-09-14
 
 Auditoria do funil no PostHog (projeto 470628): `trial_auto_started`,

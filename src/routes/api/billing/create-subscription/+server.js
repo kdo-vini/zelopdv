@@ -15,22 +15,32 @@ import {
 } from '$lib/pricing';
 import { progressReferralForUser } from '$lib/server/referrals';
 import { getPostHogClient } from '$lib/server/posthog';
+import { checkoutFailed, CHECKOUT_FAILURE_REASONS as WHY } from '$lib/server/checkoutFailure';
 import { isSubscriptionActiveStrict } from '$lib/subscriptionStatus';
 
 const ORIGIN = env.PUBLIC_APP_URL || 'https://zelopdv.com.br';
 
 export async function POST({ request, url, cookies }) {
+  /** Erro de checkout no cartão. Toda saída de falha passa por aqui — a resposta
+   *  e o evento `checkout_failed` são a mesma coisa. */
+  const fail = (params) => checkoutFailed({ paymentMethod: 'card', ...params });
+
+  // Preenchidos conforme a requisição avança; uma falha precoce registra sem eles.
+  let userId;
+  let planTier;
+  let requestedAddons;
+
   try {
-    if (!supabaseAdmin) return json({ error: 'Supabase admin não configurado.' }, { status: 500 });
-    if (!stripe) return json({ error: 'Stripe não configurado. Verifique STRIPE_SECRET_KEY.' }, { status: 500 });
+    if (!supabaseAdmin) return fail({ reason: WHY.PROVIDER_UNAVAILABLE, error: 'Supabase admin não configurado.', status: 500 });
+    if (!stripe) return fail({ reason: WHY.PROVIDER_UNAVAILABLE, error: 'Stripe não configurado. Verifique STRIPE_SECRET_KEY.', status: 500 });
 
     // Auth
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) return json({ error: 'Não autorizado' }, { status: 401 });
+    if (!token) return fail({ reason: WHY.UNAUTHENTICATED, error: 'Não autorizado', status: 401 });
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
-    if (authErr || !user) return json({ error: 'Não autorizado' }, { status: 401 });
+    if (authErr || !user) return fail({ reason: WHY.UNAUTHENTICATED, error: 'Não autorizado', status: 401 });
 
-    const userId = user.id;
+    userId = user.id;
     const email = user.email;
 
     // Fire-and-forget: track last activity
@@ -43,25 +53,31 @@ export async function POST({ request, url, cookies }) {
 
     // Parse body
     const body = await request.json().catch(() => ({}));
-    const planTier = body.planTier || 'pdv';
-    const requestedAddons = body.addons || {};
+    planTier = body.planTier || 'pdv';
+    requestedAddons = body.addons || {};
 
     if (!isValidPlanTier(planTier)) {
-      return json({ error: `Plano inválido. Use: ${Object.keys(PLANS).join(', ')}.` }, { status: 400 });
+      return fail({
+        reason: WHY.INVALID_PLAN,
+        error: `Plano inválido. Use: ${Object.keys(PLANS).join(', ')}.`,
+        userId,
+        planTier,
+        addons: requestedAddons,
+      });
     }
 
     // Mesas só permitido em planos com PDV
     const hasMesasAddon = !!requestedAddons.mesas;
     if (hasMesasAddon && !isAddonAllowed(planTier, 'mesas')) {
-      return json({ error: `Plano ${planTier} não suporta o add-on Mesas.` }, { status: 400 });
+      return fail({ reason: WHY.ADDON_NOT_ALLOWED, error: `Plano ${planTier} não suporta o add-on Mesas.`, userId, planTier, addons: requestedAddons });
     }
     const hasAcessosAddon = !!requestedAddons.acessos;
     if (hasAcessosAddon && !isAddonAllowed(planTier, 'acessos')) {
-      return json({ error: `Plano ${planTier} não suporta o add-on Controle de Acessos.` }, { status: 400 });
+      return fail({ reason: WHY.ADDON_NOT_ALLOWED, error: `Plano ${planTier} não suporta o add-on Controle de Acessos.`, userId, planTier, addons: requestedAddons });
     }
     const hasMenuAddon = !!requestedAddons.menu;
     if (hasMenuAddon && !isAddonAllowed(planTier, 'menu')) {
-      return json({ error: `Plano ${planTier} não suporta o add-on ZeloMenu.` }, { status: 400 });
+      return fail({ reason: WHY.ADDON_NOT_ALLOWED, error: `Plano ${planTier} não suporta o add-on ZeloMenu.`, userId, planTier, addons: requestedAddons });
     }
 
     // Profile gate: precisa ter CNPJ/CPF preenchido (Stripe não exige, mas usamos pra emitir nota fiscal e validar negócio)
@@ -72,10 +88,16 @@ export async function POST({ request, url, cookies }) {
       .maybeSingle();
 
     if (!perfil?.documento) {
-      return json({
+      // O muro de cadastro cobrando o pedágio: quem chegou até aqui queria pagar
+      // e foi mandado de volta pro /perfil.
+      return fail({
+        reason: WHY.PROFILE_INCOMPLETE,
         error: 'Complete o perfil da empresa (CPF/CNPJ) antes de assinar.',
-        redirect: '/perfil?msg=complete',
-      }, { status: 400 });
+        userId,
+        planTier,
+        addons: requestedAddons,
+        body: { redirect: '/perfil?msg=complete' },
+      });
     }
 
     // Existing subscription check
@@ -213,6 +235,13 @@ export async function POST({ request, url, cookies }) {
     return json({ url: session.url, sessionId: session.id });
   } catch (err) {
     console.error('[create-subscription] Stripe error:', err?.message || err);
-    return json({ error: err?.message || 'Falha ao criar assinatura' }, { status: 500 });
+    return fail({
+      reason: WHY.PROVIDER_ERROR,
+      error: err?.message || 'Falha ao criar assinatura',
+      status: 500,
+      userId,
+      planTier,
+      addons: requestedAddons,
+    });
   }
 }

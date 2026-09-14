@@ -15,6 +15,7 @@
     resolveSelection,
     selectionPrice,
   } from '$lib/billing/planSelection';
+  import { capturePostHogEvent } from '$lib/posthogClient';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao } from '$lib/googleAds';
   import {
@@ -586,6 +587,20 @@
     }
   });
 
+  // `checkout_failed` sai do servidor em toda resposta de erro (ver
+  // lib/server/checkoutFailure.js). Daqui sai SÓ o que o servidor não pode ter
+  // visto: pedido que nunca saiu do aparelho, ou resposta que nunca voltou.
+  // Emitir também no `!res.ok` duplicaria o que o servidor já contou.
+  function reportCheckoutFailed(paymentMethod, reason) {
+    void capturePostHogEvent('checkout_failed', {
+      payment_method: paymentMethod,
+      reason,
+      origin: 'client',
+      plan: selectedPlan,
+      addons: { ...effectiveAddons },
+    });
+  }
+
   async function assinar() {
     if (loading) return;
     if (!(await confirmEntitlementRemoval())) return;
@@ -596,6 +611,7 @@
       const { data: { session: authSession } } = await supabase.auth.getSession();
       const token = authSession?.access_token ?? '';
       if (!token) {
+        reportCheckoutFailed('card', 'no_session');
         message = 'Sua sessão expirou. Faça login novamente.';
         messageType = 'warning';
         return;
@@ -637,9 +653,11 @@
         return;
       }
 
+      reportCheckoutFailed('card', 'unexpected_response');
       message = 'Resposta inesperada do servidor. Tente novamente.';
       messageType = 'warning';
     } catch (e) {
+      reportCheckoutFailed('card', 'network');
       console.error('[assinatura] checkout error:', e);
       message = 'Erro ao conectar com o servidor de pagamento. Verifique sua conexão e tente novamente.';
       messageType = 'warning';
@@ -660,6 +678,7 @@
       const { data: { session: authSession } } = await supabase.auth.getSession();
       const token = authSession?.access_token ?? '';
       if (!token) {
+        reportCheckoutFailed('pix', 'no_session');
         message = 'Sua sessão expirou. Faça login novamente.';
         messageType = 'warning';
         return;
@@ -709,6 +728,7 @@
           : 'Pix gerado com sucesso. Faça o pagamento e acompanhe a confirmação nesta tela.';
       }
     } catch (e) {
+      reportCheckoutFailed('pix', 'network');
       console.error('[assinatura] pix error:', e);
       message = 'Erro ao conectar com o servidor de pagamento. Verifique sua conexão e tente novamente.';
       messageType = 'warning';
