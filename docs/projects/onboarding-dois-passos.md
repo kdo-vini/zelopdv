@@ -3,8 +3,8 @@
 > Artefato visual (mesmo conteúdo, formato de leitura):
 > https://claude.ai/artifact/TigsUMdoyes8jrmj12hPS8
 >
-> Estado: **Fases 1–4 concluídas localmente.** Sem push, deploy ou migration
-> remota; a Fase 5.1 só começa depois da 3.1 em produção.
+> Estado: **Fases 1–4 publicadas em 2026-09-15.** O dono optou pelo rollout
+> imediato da 3.1, sem janela útil de baseline. A Fase 5.1 segue separada.
 > Última atualização: 2026-09-15.
 
 ## O problema, medido
@@ -141,7 +141,7 @@ emitir nota fiscal" — o produto não emite NFC-e, o próprio wizard admite iss
 
 ### Fase 3 — O wizard curto
 
-**3.1 — De 4 para 2 passos, com a copy nova** · ✅ **FEITO** (commit separado — ver aviso de deploy em [[CURRENT]])
+**3.1 — De 4 para 2 passos, com a copy nova** · ✅ **PUBLICADO**
 
 `src/lib/components/OnboardingWizard.svelte`: passos 3 (CPF) e 4 (bobina) saem.
 `totalSteps` vira 2. O `upsert` continua gravando `largura_bobina: '80mm'`.
@@ -151,13 +151,13 @@ A bobina **não precisa de tela nova**: já é um campo editável em
 
 ### Fase 4 — Depois da porta
 
-**4.1 — Checklist sem parede no `/gestao`** · ✅ **FEITO LOCALMENTE**
+**4.1 — Checklist sem parede no `/gestao`** · ✅ **PUBLICADO**
 
 Card no `/gestao`, onde a pessoa já cai — **não** uma rota de boas-vindas que
 some depois do primeiro acesso. É onde CPF, logo e bobina passam a morar, e onde
 "cadastre seu primeiro produto" cabe sem virar mais um passo de wizard.
 
-**4.2 — Salvar por passo + corrigir a RPC do nudge** · ✅ **FEITO LOCALMENTE**
+**4.2 — Salvar por passo + corrigir a RPC do nudge** · ✅ **PUBLICADO**
 
 As duas coisas sobem **juntas ou nenhuma sobe** (ver armadilha 2). A migration
 não exclui usuários só por terem uma linha em `subscriptions`: isso esconderia

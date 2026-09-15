@@ -1,6 +1,6 @@
 # Fixes Progress
 
-- [ ] FX-ONBOARDING-MURO-01 (2026-09-15) — o wizard de 4 passos cobra CPF/CNPJ e
+- [x] FX-ONBOARDING-MURO-01 (2026-09-15) — o wizard de 4 passos cobra CPF/CNPJ e
   largura de bobina antes da pessoa ver uma tela do produto, e o trial só nasce
   no `finalizar()`. 26% dos cadastros (10 de 38 em 180 dias) travam ali, sem
   trial e sem acesso; 7 desses voltaram e travaram de novo. Plano em cinco fases
@@ -22,7 +22,10 @@
   da RPC do nudge entregues juntos; perfis operacionais incompletos com
   subscription continuam elegíveis. Testes focados 39/39 + 66/66, suíte
   completa 1.275/1.278 (3 skips), check 0/0 e ledger 107/107, 59/59, 55 forward.
-  Nenhum push/deploy/migration remota; Fase 5.1 bloqueada até 3.1 em produção.
+  Publicado em produção em 2026-09-15. Primeiro lote no merge `954fdf2`; Fases
+  3.1/4.1/4.2 publicadas imediatamente depois por decisão do dono, sem janela
+  útil de baseline. Migration `20260915090000` aplicada isoladamente pela CLI,
+  registrada e verificada. A Fase 5.1 permanece uma ação operacional separada.
 
 - [x] FX-CHECKOUT-FAILED-01 (2026-09-14) — o funil só media checkout com
   sucesso; tentativa recusada era invisível. `checkout_failed` passa a sair da

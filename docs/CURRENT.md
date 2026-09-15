@@ -1,6 +1,6 @@
 # ZeloPDV — Foco atual
 
-## Onboarding em dois passos — Fases 1–4 concluídas localmente, aguardando rollout — 2026-09-15
+## Onboarding em dois passos — Fases 1–4 publicadas — 2026-09-15
 
 Plano completo em [onboarding-dois-passos](projects/onboarding-dois-passos.md).
 Artefato de leitura: https://claude.ai/artifact/TigsUMdoyes8jrmj12hPS8
@@ -105,12 +105,16 @@ considerar linha ausente, nome vazio ou contato vazio. Ela preserva filtros de
 idade/e-mail/subusuário, restringe execução a `service_role` e **não** exclui
 perfil incompleto apenas porque existe uma linha em `subscriptions`.
 
-Nenhum push, deploy ou migration remota foi executado. A Fase 5.1 continua
-bloqueada até a Fase 3.1 estar realmente em produção.
+**Publicação concluída:** o primeiro lote (até `3314ea1`) entrou em produção no
+merge `954fdf2`; em seguida, por decisão explícita do dono de priorizar o
+rollout imediato, as Fases 3.1, 4.1 e 4.2 foram publicadas sem janela de coleta
+útil do baseline de quatro passos. A migration `20260915090000` foi aplicada
+isoladamente pela Supabase CLI, registrada no histórico e verificada no banco:
+RPC estável/`SECURITY DEFINER`, `search_path` fixo, `service_role` com EXECUTE,
+`anon`/`authenticated` sem EXECUTE e três perfis elegíveis no momento do smoke.
 
-> ⚠️ **Deploy:** a 1.1 (baseline de 4 passos) e a 3.1 estão na mesma branch, em
-> commits separados. Se subirem juntas, o "antes" nunca é coletado. Subir até a
-> 2.1/1.3 primeiro, deixar coletar, e só então a 3.1.
+A Fase 5.1 não foi executada nesta publicação; o resgate dos órfãos continua
+como ação operacional separada.
 
 Validação local final: 39/39 testes focados de login/onboarding/checklist/RPC,
 66/66 testes focados de billing/RPC, suíte completa 1.275/1.278 (3 runtimes
