@@ -16,6 +16,9 @@
   /** @type {boolean} Differentiates first-use empty state from search/filter with no results. */
   export let hasAnyProducts = true;
 
+  /** @type {boolean} Shows the "+ Cadastrar primeiro produto" CTA in the first-use empty state (hidden for sub-users without produtos.gerenciar). */
+  export let canCadastrarProduto = true;
+
   /** @type {number} Tabela de preço ativa (1, 2 ou 3) */
   export let tabelaAtiva = 1;
   
@@ -87,6 +90,10 @@
   function handleValorAvulsoClick() {
     dispatch('valorAvulsoClick');
   }
+
+  function handleCadastrarProdutoClick() {
+    dispatch('cadastrarProdutoClick');
+  }
   
   // Keyboard navigation
   function handleKeydown(e) {
@@ -142,22 +149,25 @@
     <div class="empty-state">
       <div class="empty-card">
         <div class="empty-icon" aria-hidden="true">+</div>
-        <h3>{hasAnyProducts ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado ainda'}</h3>
+        <h3>{hasAnyProducts ? 'Nenhum produto encontrado' : 'Faça sua primeira venda'}</h3>
         <p>
           {hasAnyProducts
             ? 'Tente limpar a busca ou escolher outra categoria. Se quiser vender mesmo assim, use um item avulso.'
-            : 'Para testar agora, use um item avulso. Depois você pode cadastrar seus produtos em Gestão → Produtos e eles aparecem aqui automaticamente.'}
+            : 'Você pode vender agora mesmo ou cadastrar seus produtos primeiro.'}
         </p>
         <div class="empty-actions">
           <button type="button" class="empty-primary" on:click={handleValorAvulsoClick}>
-            Testar com item avulso
+            {hasAnyProducts ? 'Testar com item avulso' : '+ Venda avulsa'}
           </button>
-          {#if !hasAnyProducts}
-            <a href="/gestao/produtos" class="empty-secondary">
-              Cadastrar produtos
-            </a>
+          {#if !hasAnyProducts && canCadastrarProduto}
+            <button type="button" class="empty-secondary" on:click={handleCadastrarProdutoClick}>
+              + Cadastrar primeiro produto
+            </button>
           {/if}
         </div>
+        {#if !hasAnyProducts}
+          <p class="empty-footnote">Seus produtos aparecerão aqui.</p>
+        {/if}
       </div>
     </div>
   {:else}
@@ -277,6 +287,7 @@
     font-size: 0.9rem;
     font-weight: 800;
     text-decoration: none;
+    cursor: pointer;
   }
 
   .empty-primary {
@@ -289,5 +300,13 @@
     border: 1px solid var(--border-subtle);
     background: var(--bg-input);
     color: var(--text-main);
+  }
+
+  /* Rodapé discreto: reaproveita o tamanho do token "Label" de DESIGN.md
+     (0.625rem / text-[10px]), o mesmo usado no breadcrumb do produto. */
+  .empty-footnote {
+    margin: 0.85rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.625rem;
   }
 </style>

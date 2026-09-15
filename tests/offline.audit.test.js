@@ -4,6 +4,10 @@ import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import { parse } from 'svelte/compiler';
 import { describe, it, expect, vi } from 'vitest';
+import {
+  isFirstUseNoCaixa as computeIsFirstUseNoCaixa,
+  shouldAutoOpenCaixaModal
+} from '../src/lib/pdv/firstUseCaixaGate.js';
 
 function loadFunction(path, name, state) {
   const source = readFileSync(path, 'utf8');
@@ -27,6 +31,9 @@ describe('offline audit — reproductions of current limitations', () => {
       salvandoVenda: false, checkoutSubmission: null, getOfflineContext: () => ({ enabled: true }), supabase: {},
       loadCashSnapshot: async () => ({ caixa: { id: 5 }, vendas: [], pagamentos: [], movs: [] }),
       calculatePaymentSummary: () => ({ dinheiro: 0 }), calculateMovementSummary: () => ({ sangria: 0, suprimento: 0 }), calculateExpectedDrawer: () => 0,
+      // Barreira de "conta nova sem caixa aberto" (src/lib/pdv/firstUseCaixaGate.js):
+      // conta antiga conhecida, comportamento de sempre.
+      hasEverOpenedCaixa: true, isSubUser: false, computeIsFirstUseNoCaixa, shouldAutoOpenCaixaModal,
     };
     const {ctx, call} = loadFunction('src/routes/app/+page.svelte', 'atualizarSaldoCaixa', state);
     await call(); expect(ctx.idCaixaAberto).toBe(5);
@@ -63,6 +70,11 @@ describe('offline audit — reproductions of current limitations', () => {
       readSnapshot: async () => ({ id: 42 }), saveSnapshot: vi.fn(), getOfflineContext: () => null,
       isNetworkError: () => true,
       addToast: vi.fn(), supabase: { from: () => query({ data: null, error: { message: 'Failed to fetch' } }) },
+      // Ramo de erro de rede resolve antes de chegar na detecção de "conta
+      // nova sem caixa aberto" (src/lib/pdv/firstUseCaixaGate.js); globals
+      // fornecidos só para o VM não quebrar se algum dia o fluxo mudar.
+      isSubUser: false, hasEverOpenedCaixa: null, computeIsFirstUseNoCaixa, shouldAutoOpenCaixaModal,
+      detectHasEverOpenedCaixa: async () => {},
     });
     await call('owner-a');
     expect(ctx.caixaAberto).toBe(true);

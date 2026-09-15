@@ -352,6 +352,7 @@ Ver **seção 13** para API e exemplos. Não use `<select>` nativo em páginas n
 
 - **Confirmação:** `confirmAction(title, message)` de `$lib/stores/ui` — retorna `Promise<boolean>`. Usa `AlertDialog` (bits-ui) internamente, com focus trap e dismiss via Escape.
 - **Modal custom:** padrão overlay + scale. `.modal-overlay` (`fixed inset-0 bg-black/60 backdrop-blur z-100`) + `.modal` (`var(--bg-card)`, `border-radius: 14px`, `max-width: 460px`). Ref: `gestao/mesas/+page.svelte`.
+- **Novo produto:** use `$lib/components/modals/ModalNovoProduto.svelte` (eventos `close`/`created`; `compact` para cadastro rápido, como no estado vazio do PDV). Não recrie o formulário inline.
 
 ---
 

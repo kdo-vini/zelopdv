@@ -33,7 +33,13 @@
   import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
   import { buildCartItemKey, formatSelectedModifierGroups, hasActiveModifierGroups } from '$lib/zelomenuModifiers';
   import { buildPizzaSignature, pizzaStockRequirements } from '$lib/pizza';
-  
+  import {
+    isFirstUseNoCaixa as computeIsFirstUseNoCaixa,
+    shouldAutoOpenCaixaModal,
+    shouldBlockAddToCart
+  } from '$lib/pdv/firstUseCaixaGate';
+  import { capturePostHogEvent } from '$lib/posthogClient';
+
   // Modais componentizados
   import ModalAbrirCaixa from '$lib/components/modals/ModalAbrirCaixa.svelte';
   import ModalQuantidade from '$lib/components/modals/ModalQuantidade.svelte';
@@ -42,6 +48,7 @@
   import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
   import ModalSucesso from '$lib/components/modals/ModalSucesso.svelte'; // [NEW]
   import ModalProdutoMontavel from '$lib/components/modals/ModalProdutoMontavel.svelte';
+  import ModalNovoProduto from '$lib/components/modals/ModalNovoProduto.svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   
   // Grid virtualizado para performance
@@ -102,6 +109,9 @@
   let vendaConcluida = null;
   let modalProdutoMontavelAberto = false;
   let produtoMontavelSelecionado = null;
+  // Cadastro rápido de produto a partir do estado vazio da grade (sem produto cadastrado)
+  let modalNovoProdutoAberto = false;
+  let canGerenciarProdutos = true;
 
   // [NEW] Mobile State
   let showMobileCart = false;
@@ -230,6 +240,18 @@
   let idCaixaAberto = null;
   let saldoCaixa = 0; // saldo atual em dinheiro no caixa
   let carregandoSaldo = false;
+
+  // Barreira de "conta nova sem caixa aberto": titular que nunca abriu um
+  // caixa não vê o modal Abrir Caixa automaticamente no carregamento; a
+  // barreira só aparece na hora de pagar. Ver src/lib/pdv/firstUseCaixaGate.js.
+  // hasEverOpenedCaixa: false = detectado "nunca abriu" (count head em `caixas`);
+  // true = já abriu alguma vez; null = desconhecido (falha, offline, subusuário
+  // ou ainda não checado) — mantém o comportamento atual.
+  let hasEverOpenedCaixa = null;
+  // true enquanto aguardamos a abertura do caixa (disparada pela barreira de
+  // pagamento) para então seguir automaticamente para o ModalPagamento.
+  let pendingPaymentAfterCaixa = false;
+  $: isFirstUseNoCaixa = computeIsFirstUseNoCaixa({ hasEverOpenedCaixa, isSubUser, caixaAberto });
   
   // Referência ao componente ModalPagamento
   let modalPagamentoRef;
@@ -303,6 +325,7 @@
       const perms = authCtx.permissions || {};
       canVender = !!perms['pdv.vender']; canReceber = !!perms['pdv.receber']; canDesconto = !!perms['pdv.desconto'];
       canCancelar = !!perms['pdv.cancelar']; canAbrirCaixa = !!perms['caixa.abrir']; canMovimentarCaixa = !!perms['caixa.movimentar'];
+      canGerenciarProdutos = !!perms['produtos.gerenciar'];
     }
     await startOfflineRuntime(authCtx);
     const draft = await readDraft(ownerUserId, operadorUserId, 'pdv').catch(() => null);
@@ -347,6 +370,7 @@
       // Sub-users start with no permissions; only grant what's explicitly allowed
       canVender = false; canReceber = false; canDesconto = false;
       canCancelar = false; canAbrirCaixa = false; canMovimentarCaixa = false;
+      canGerenciarProdutos = false;
       try {
         const ctx = await getAccessContext();
         if (ctx?.permissions) {
@@ -356,6 +380,7 @@
           canCancelar = !!ctx.permissions['pdv.cancelar'];
           canAbrirCaixa = !!ctx.permissions['caixa.abrir'];
           canMovimentarCaixa = !!ctx.permissions['caixa.movimentar'];
+          canGerenciarProdutos = !!ctx.permissions['produtos.gerenciar'];
         }
       } catch (e) { console.warn('[PDV] Failed to load permissions:', e?.message); }
     }
@@ -497,8 +522,31 @@
     } else {
       await saveSnapshot(userId, 'caixa.aberto', null);
       caixaAberto = false;
-      modalAbrirCaixaAberto = true;
       idCaixaAberto = null;
+      await detectHasEverOpenedCaixa(userId);
+      modalAbrirCaixaAberto = shouldAutoOpenCaixaModal({
+        caixaAberto,
+        isFirstUseNoCaixa: computeIsFirstUseNoCaixa({ hasEverOpenedCaixa, isSubUser, caixaAberto })
+      });
+    }
+  }
+
+  /**
+   * "Conta nova" = titular que nunca abriu um caixa (zero linhas em `caixas`).
+   * Consulta barata (count head); falha ou subusuário mantém hasEverOpenedCaixa
+   * desconhecido (null), preservando o comportamento atual da barreira.
+   */
+  async function detectHasEverOpenedCaixa(userId) {
+    if (isSubUser) return;
+    try {
+      const { count, error } = await supabase
+        .from('caixas')
+        .select('id', { count: 'exact', head: true })
+        .eq('id_usuario', userId);
+      if (error) return;
+      hasEverOpenedCaixa = count !== 0;
+    } catch {
+      // desconhecido: mantém comportamento atual (hasEverOpenedCaixa = null)
     }
   }
 
@@ -522,7 +570,10 @@
         if (!salvandoVenda && !checkoutSubmission) {
           caixaAberto = !!snapshot.caixa && !snapshot.caixa.data_fechamento;
           idCaixaAberto = caixaAberto ? snapshot.caixa.id : null;
-          modalAbrirCaixaAberto = !caixaAberto;
+          modalAbrirCaixaAberto = shouldAutoOpenCaixaModal({
+            caixaAberto,
+            isFirstUseNoCaixa: computeIsFirstUseNoCaixa({ hasEverOpenedCaixa, isSubUser, caixaAberto })
+          });
         }
         const payments = calculatePaymentSummary(snapshot.vendas, snapshot.pagamentos);
         const movements = calculateMovementSummary(snapshot.movs);
@@ -696,6 +747,9 @@
     if (buscaLower && !String(p.nome || '').toLowerCase().includes(buscaLower)) return false;
     return true;
   });
+  // Diferencia o estado vazio de "conta sem nenhum produto cadastrado" do de
+  // "busca/filtro sem resultado" (VirtualProductGrid usa isso para a copy).
+  $: hasAnyProducts = produtos.length > 0;
 
   // Navegação por teclado no grid de produtos
   function gridMoveFocus(delta, byRow = false) {
@@ -743,7 +797,7 @@
   /** Decide qual fluxo usar ao clicar num produto (quantidade para por-unidade, valor avulso, ou normal). */
   function adicionarProduto(produto) {
     if (checkoutSubmission || salvandoVenda) { addToast('Finalize a confirmação pendente antes de alterar esta venda.', 'info'); return; }
-    if (!caixaAberto) {
+    if (shouldBlockAddToCart({ caixaAberto, isFirstUseNoCaixa })) {
       modalAbrirCaixaAberto = true;
       return;
     }
@@ -1011,6 +1065,7 @@
         }
         caixaAberto = true; modalAbrirCaixaAberto = false;
         await atualizarSaldoCaixa();
+        seguirParaPagamentoSePendente();
         return;
       }
       const { caixa, jaExistia, error } = await abrirCaixaIdempotente(supabase, {
@@ -1035,9 +1090,21 @@
         logAuditAction({ ownerUserId, action: 'caixa.aberto', entityType: 'caixa', entityId: String(caixa.id), details: { valor_inicial: Number(trocoInicialInput) } });
       }
       await atualizarSaldoCaixa();
+      seguirParaPagamentoSePendente();
     } finally {
       abrindoCaixa = false;
     }
+  }
+
+  /**
+   * Depois que o caixa abre (disparado pela barreira de pagamento de conta
+   * nova em primeiro uso), segue automaticamente para o ModalPagamento com a
+   * comanda intacta. Ver abrirModalPagamento().
+   */
+  function seguirParaPagamentoSePendente() {
+    if (!pendingPaymentAfterCaixa) return;
+    pendingPaymentAfterCaixa = false;
+    modalPagamentoAberto = true;
   }
 
   // Removido: Fluxo de quantidade por modal (click adiciona diretamente)
@@ -1440,7 +1507,38 @@
 
   function abrirModalPagamento() {
     if (comanda.length === 0) return;
+    // Conta nova em primeiro uso: a barreira do caixa foi adiada até aqui.
+    // Abre o Abrir Caixa e, quando ele fechar com sucesso (handleAbrirCaixa),
+    // segue automaticamente para o pagamento com a comanda intacta. Para
+    // qualquer outra conta este ramo nunca é alcançado (caixaAberto já é
+    // true nesse ponto), então o comportamento delas não muda.
+    if (isFirstUseNoCaixa && !caixaAberto) {
+      pendingPaymentAfterCaixa = true;
+      void capturePostHogEvent('pdv_first_use_caixa_prompted', { trigger: 'payment' });
+      modalAbrirCaixaAberto = true;
+      return;
+    }
     modalPagamentoAberto = true;
+  }
+
+  // ── Cadastro rápido de produto (estado vazio da grade) ─────────────────────
+
+  /** Abre o ModalNovoProduto a partir do CTA "+ Cadastrar primeiro produto" do estado vazio. */
+  function abrirModalNovoProdutoRapido() {
+    if (!canGerenciarProdutos) return;
+    modalNovoProdutoAberto = true;
+  }
+
+  /** Depois que o ModalNovoProduto cria o produto: recarrega o catálogo do PDV e fecha o modal. */
+  async function produtoRapidoCriado(event) {
+    const createdProduct = event.detail;
+    modalNovoProdutoAberto = false;
+    void capturePostHogEvent('pdv_quick_product_created', {});
+    // ModalNovoProduto.svelte já invalidou o pdvCache de produtos antes de disparar 'created'.
+    await carregarProdutos(true);
+    // Garante que o produto recém-criado fique visível na grade (categoria/subcategoria/busca ativas).
+    busca = '';
+    if (createdProduct?.id_categoria != null) categoriaAtiva = createdProduct.id_categoria;
   }
 
   // ── Helpers compartilhados de perfil ──────────────────────────────────────
@@ -1687,10 +1785,18 @@
       <div data-testid="product-grid" class="flex-1 flex flex-col min-h-0">
         <VirtualProductGrid
           produtos={produtosFiltrados}
-          hasAnyProducts={produtos.length > 0}
+          {hasAnyProducts}
+          canCadastrarProduto={canGerenciarProdutos}
           tabelaAtiva={tabelaAtiva}
           on:produtoClick={(e) => adicionarProduto(e.detail)}
-          on:valorAvulsoClick={() => modalValorAberto = true}
+          on:valorAvulsoClick={() => {
+            if (!hasAnyProducts) void capturePostHogEvent('pdv_empty_state_cta_clicked', { cta: 'avulso' });
+            modalValorAberto = true;
+          }}
+          on:cadastrarProdutoClick={() => {
+            void capturePostHogEvent('pdv_empty_state_cta_clicked', { cta: 'cadastrar_produto' });
+            abrirModalNovoProdutoRapido();
+          }}
         />
       </div>
     {/if}
@@ -1896,7 +2002,7 @@
     trocoInicialInput = e.detail.trocoInicial;
     await handleAbrirCaixa();
   }}
-  on:close={() => {}}
+  on:close={() => { pendingPaymentAfterCaixa = false; }}
 />
 
 <!-- Modal: Quantidade (produtos por unidade) -->
@@ -1971,6 +2077,19 @@
     modalValorAberto = false;
   }}
   on:close={() => modalValorAberto = false}
+/>
+
+<!-- Modal: Novo Produto (cadastro rápido a partir do estado vazio da grade) -->
+<ModalNovoProduto
+  open={modalNovoProdutoAberto}
+  {ownerUserId}
+  {categorias}
+  {subcategorias}
+  tabelasPreco={{ ativo: tabelasPrecoAtivo, nomes: nomesTabelas }}
+  defaultCategoriaId={categoriaAtiva}
+  compact
+  on:close={() => { modalNovoProdutoAberto = false; }}
+  on:created={produtoRapidoCriado}
 />
 
 <!-- Modal: Pagamento -->

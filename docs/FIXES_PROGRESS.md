@@ -1,5 +1,12 @@
 # Fixes Progress
 
+- [x] FX-ONBOARDING-CHEGADA-01 (2026-09-15) — depois do wizard a conta caía num
+  `/gestao` vazio, sem reconhecimento nem próximo passo. Wizard ganhou estado de
+  chegada com boas-vindas e destino na Frente de Caixa; conta que nunca abriu
+  caixa não recebe o Abrir Caixa no carregamento (barreira passa para o
+  pagamento); estado vazio da grade com venda avulsa e cadastro rápido via
+  `ModalNovoProduto` compacto, extraído da página de produtos.
+
 - [x] FX-CADASTRO-LENTO-01 (2026-09-15) — cadastro real levava ~15–25 s entre
   criar a conta e ver o produto. `start-trial` aguardava CAPI/e-mail/WhatsApp/
   referral (10 s medidos) → `waitUntil`; `/perfil` só abria o wizard depois de

@@ -1,5 +1,57 @@
 # ZeloPDV — Foco atual
 
+## Chegada no produto: boas-vindas e primeira venda — 2026-09-15
+
+O dono achou o cadastro "seco": criar conta caía direto na pergunta e, depois,
+num `/gestao` vazio. Decisão dele, com o porquê: o destino é a **Frente de
+Caixa**, não o cadastro de produto — onboarding não pode virar configuração, e
+abrir caixa logo de cara é barreira antes de a pessoa entender o produto.
+
+Dado que sustentou a discussão (contas com trial, 180 dias, sem subusuário):
+28 contas, 21 cadastraram produto, 18 venderam, 14 no primeiro dia; mediana até
+a 1ª venda 28 min. Das 18 que venderam, só 3 fizeram a 1ª venda com item avulso
+e 17 venderam produto cadastrado em algum momento.
+
+**Feito:**
+- **Wizard** (`OnboardingWizard.svelte`): bolinhas passam a mostrar passo atual
+  (contorno) × concluído (preenchida). Depois do passo 2 o mesmo card vira a
+  chegada: "Boas-vindas ao Zelo, {loja}." + "Seu teste de 14 dias começou. Se
+  quiser, cadastramos seus produtos junto com você pelo WhatsApp — uns 15
+  minutos." Botões "Fazer primeira venda" (`/app`) e "Ajuda no WhatsApp"
+  (`wa.me` com mensagem pronta em nova aba + `/app` na aba atual). Sem data de
+  fim do teste (decisão do dono). A conversão de trial roda em segundo plano
+  enquanto a pessoa lê; clique espera no máximo 1 s. Eventos
+  `onboarding_welcome_viewed` e `onboarding_welcome_cta_clicked {cta}`.
+- **Número do WhatsApp do Zelo** virou fonte única em `src/lib/zeloContact.js`.
+  O botão do wizard não conta como conversão "contato" do Google Ads (`/perfil`
+  é área protegida e o botão usa `window.open`).
+- **`ModalNovoProduto`** extraído de `gestao/produtos/+page.svelte`, com modo
+  `compact` (nome, preço, categoria) usado no PDV.
+- **Frente de Caixa para conta nova** (`src/lib/pdv/firstUseCaixaGate.js`):
+  "conta nova" = titular que nunca abriu caixa (count em `caixas`); expira sozinha
+  no primeiro caixa aberto. Para ela o Abrir Caixa não abre no carregamento,
+  produto e avulso entram na comanda, e a barreira aparece em
+  `abrirModalPagamento` — ao abrir o caixa, segue para o pagamento com a comanda
+  intacta. Erro, offline sem informação ou subusuário → comportamento antigo.
+  Nenhuma venda nasce sem caixa aberto.
+- **Estado vazio da grade** (qualquer conta sem produto): "Faça sua primeira
+  venda / Você pode vender agora mesmo ou cadastrar seus produtos primeiro. /
+  + Venda avulsa / + Cadastrar primeiro produto / Seus produtos aparecerão
+  aqui." O cadastro abre o `ModalNovoProduto` compacto dentro do PDV (só com
+  `produtos.gerenciar` para subusuário). Eventos `pdv_empty_state_cta_clicked`,
+  `pdv_quick_product_created`, `pdv_first_use_caixa_prompted`.
+
+**Pendente / riscos:**
+- `ModalAbrirCaixa` não tem cancelar: quem chega na barreira do pagamento
+  precisa abrir o caixa para seguir (a comanda não se perde).
+- `first_sale_completed` vem de trigger de banco e não distingue venda de teste
+  (avulso) de venda com produto; medir por `vendas_itens.id_produto`.
+- `handleFinalizarVenda` em `app/+page.svelte` é código morto.
+- Revisar o destino em 30 dias: contas que cadastram produto e vendem no 1º dia.
+
+Validação: suíte completa 1.321/1.324 (3 skips pré-existentes), `npm run check`
+0/0. Não verificado em navegador com conta nova.
+
 ## Cadastro sem espera e sem PIN — 2026-09-15
 
 Cadastro de teste do dono em produção (09:19), medido no PostHog: 5,6 s de
