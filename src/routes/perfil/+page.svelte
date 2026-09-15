@@ -512,16 +512,43 @@
     setPrintStationOwner(userId);
     email = session.user.email || '';
 
+    // Quem vem do cadastro (`msg=complete`) precisa decidir se abre o wizard o
+    // mais cedo possível — o wizard faz sua própria leitura de nome/contato pra
+    // retomar o passo, então não depende de nada do resto do carregamento desta
+    // página. Dispara essa leitura mínima em paralelo com a detecção de
+    // subusuário (nunca abrir o wizard pra subusuário) em vez de esperar o
+    // carregamento completo (assinatura + perfil inteiro) primeiro.
+    const urlParams = new URLSearchParams($page.url.search);
+    const cameFromSignup = urlParams.get('msg') === 'complete';
+    const earlyProfilePromise = cameFromSignup
+      ? supabase
+          .from('empresa_perfil')
+          .select('nome_exibicao, contato')
+          .eq('user_id', userId)
+          .maybeSingle()
+          .then(({ data, error }) => (error ? undefined : (data || {})))
+          .catch(() => undefined)
+      : Promise.resolve(undefined);
+
     // Sub-users see a stripped-down "Minha conta" view — they can't manage the
     // company profile, subscription, plataformas, etc. Detect early and skip
     // the owner data loading entirely.
     try {
-      const accessCtx = await getAccessContext();
+      const [accessCtx, earlyProfile] = await Promise.all([getAccessContext(), earlyProfilePromise]);
       offlineAccessContext = accessCtx ? {
         ...accessCtx,
         userId,
         ownerUserId: accessCtx.ownerUserId || userId,
       } : { userId, ownerUserId: userId, isSubUser: false, permissions: null };
+
+      // earlyProfile === undefined significa "não sabemos ainda" (leitura não
+      // disparada ou falhou) — nesse caso o check de baixo, com o perfil
+      // completo já carregado, decide. Só decide aqui quando a leitura mínima
+      // teve resposta e a pessoa não é subusuário.
+      if (cameFromSignup && !accessCtx?.isSubUser && earlyProfile !== undefined && !operationalProfileOk(earlyProfile)) {
+        showOnboardingWizard = true;
+      }
+
       if (accessCtx?.isSubUser) {
         isSubUser = true;
         const [{ data: owner }, roleResult] = await Promise.all([
@@ -614,8 +641,7 @@
       plataformas_pagamento = [...plataformas_pagamento, ...customSaved];
     }
 
-    const urlParams = new URLSearchParams($page.url.search);
-    if (urlParams.get('msg') === 'complete' && !operationalProfileOk({ nome_exibicao, contato })) {
+    if (cameFromSignup && !operationalProfileOk({ nome_exibicao, contato })) {
       showOnboardingWizard = true;
     }
     loading = false;

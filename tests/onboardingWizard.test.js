@@ -75,4 +75,24 @@ describe('onboardingWizard', () => {
     expect(source).toMatch(/async function finalizar\(\)[\s\S]*?const validation = validate\(\)/);
     expect(source).toMatch(/async function avancar\(\)[\s\S]*?await saveStep\(step\)[\s\S]*?step \+= 1/);
   });
+
+  it('mantém os tetos curtos de espera do tracking no fim do onboarding', () => {
+    const source = readFileSync(
+      new URL('../src/lib/components/OnboardingWizard.svelte', import.meta.url),
+      'utf8',
+    );
+
+    // gtag: no máximo 10 tentativas de 150ms = 1500ms de teto.
+    expect(source).toMatch(/waitForGtag\(\{\s*attempts:\s*10,\s*intervalMs:\s*150\s*\}\)/);
+
+    // Google Ads: espera o event_callback real, com teto de 1s, só quando o
+    // gtag carregou — nunca o tempo fixo de 2s antigo.
+    expect(source).toMatch(/timeoutMs:\s*gtagReady\s*\?\s*1000\s*:\s*undefined/);
+    expect(source).not.toMatch(/waitForGtag\(\)/);
+
+    // Redirecionamento final: teto de no máximo 800ms, só quando algo foi
+    // rastreado — nunca os 2000ms fixos antigos.
+    expect(source).toMatch(/setTimeout\(\(\) => \{ window\.location\.href = '\/gestao'; \}, didTrackTrial \? 800 : 0\)/);
+    expect(source).not.toMatch(/didTrackTrial \? 2000 : 0/);
+  });
 });

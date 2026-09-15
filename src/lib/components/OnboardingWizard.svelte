@@ -180,18 +180,26 @@
 
       let didTrackTrial = false;
       if (!trialPayload?.alreadyExists) {
-        // gtag carrega async; sem esperar, a conversão de inscrição se perde silenciosamente
-        const gtagReady = await waitForGtag();
+        // gtag carrega async; sem esperar, a conversão de inscrição se perde
+        // silenciosamente. Teto curto: com bloqueador de anúncio isso nunca
+        // aparece, então não vale segurar a pessoa por mais que isso.
+        const gtagReady = await waitForGtag({ attempts: 10, intervalMs: 150 });
         if (!gtagReady) console.warn('[tracking] gtag indisponível no fim do onboarding');
         const trackedMetaTrial = trackStartTrial();
         trackGa4Event('begin_trial');
+        // Com gtag pronto, espera o event_callback real do Google Ads (o
+        // beacon saiu de verdade) em vez de um tempo fixo — teto de 1s pro
+        // caso do callback nunca disparar.
         const trackedGoogleTrial = await trackGoogleAdsInscricao({
           email,
           transactionId: userId,
+          timeoutMs: gtagReady ? 1000 : undefined,
         });
         didTrackTrial = trackedMetaTrial || trackedGoogleTrial;
       }
-      setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 2000 : 0);
+      // Meta não tem callback de envio; teto curto só pra dar tempo do beacon
+      // sair antes de navegar, e só quando algo foi de fato disparado.
+      setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 800 : 0);
     } catch (e) {
       console.error('[OnboardingWizard] save error:', e);
       error = 'Não deu pra salvar agora. Confira sua internet e tente de novo.';
