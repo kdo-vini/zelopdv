@@ -1,13 +1,17 @@
 <script>
   import { tick, onMount } from 'svelte';
+  import { Check, MessageCircle } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import { maskPhone } from '$lib/masks';
   import {
     ONBOARDING_TOTAL_STEPS,
     buildOnboardingStepPayload,
+    buildOnboardingWhatsAppHelpHref,
+    computeOnboardingDotsState,
     deriveOnboardingResumeStep,
     validateOnboardingStep,
   } from '$lib/onboardingWizard';
+  import { TRIAL_DAYS } from '$lib/pricing';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
   import { getStoredAcquisitionOrigin } from '$lib/attribution/client';
@@ -27,8 +31,19 @@
   let error = '';
   let saving = false;
 
+  // Estado de chegada: mostrado no mesmo card, depois do passo 2, assim que
+  // o trial responde OK. `trackingPromise` guarda o tracking de conversão
+  // que passa a rodar em segundo plano depois da troca de estado — os
+  // cliques dos botões aguardam o que faltar dela (teto de 1s) antes de
+  // navegar, pra nenhuma conversão deixar de disparar.
+  let arrived = false;
+  let trackingPromise = null;
+
   let nomeInput;
   let contatoInput;
+  let welcomeTitleEl;
+
+  $: dotsState = computeOnboardingDotsState({ step, totalSteps, arrived });
 
   $: if (show || step) {
     tick().then(() => {
@@ -146,6 +161,39 @@
     }
   }
 
+  // Roda o tracking de conversão depois que o card já trocou pro estado de
+  // chegada. Não bloqueia a UI — a Promise fica guardada em trackingPromise
+  // e os cliques dos botões aguardam o que faltar dela (teto de 1s).
+  async function runBackgroundTracking(trialPayload) {
+    if (trialPayload?.alreadyExists) return;
+
+    // gtag carrega async; sem esperar, a conversão de inscrição se perde
+    // silenciosamente. Teto curto: com bloqueador de anúncio isso nunca
+    // aparece, então não vale segurar a pessoa por mais que isso.
+    const gtagReady = await waitForGtag({ attempts: 10, intervalMs: 150 });
+    if (!gtagReady) console.warn('[tracking] gtag indisponível no fim do onboarding');
+    trackStartTrial();
+    trackGa4Event('begin_trial');
+    // Com gtag pronto, espera o event_callback real do Google Ads (o
+    // beacon saiu de verdade) em vez de um tempo fixo — teto de 1s pro
+    // caso do callback nunca disparar.
+    await trackGoogleAdsInscricao({
+      email,
+      transactionId: userId,
+      timeoutMs: gtagReady ? 1000 : undefined,
+    });
+  }
+
+  // Espera o que faltar do tracking em segundo plano antes de navegar, com
+  // teto de 1000ms — nunca trava o clique além disso.
+  function waitForBackgroundTracking() {
+    if (!trackingPromise) return Promise.resolve();
+    return Promise.race([
+      trackingPromise,
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]);
+  }
+
   async function finalizar() {
     if (saving) return;
 
@@ -178,33 +226,35 @@
         throw new Error(trialPayload?.error || 'Erro ao ativar período de teste.');
       }
 
-      let didTrackTrial = false;
-      if (!trialPayload?.alreadyExists) {
-        // gtag carrega async; sem esperar, a conversão de inscrição se perde
-        // silenciosamente. Teto curto: com bloqueador de anúncio isso nunca
-        // aparece, então não vale segurar a pessoa por mais que isso.
-        const gtagReady = await waitForGtag({ attempts: 10, intervalMs: 150 });
-        if (!gtagReady) console.warn('[tracking] gtag indisponível no fim do onboarding');
-        const trackedMetaTrial = trackStartTrial();
-        trackGa4Event('begin_trial');
-        // Com gtag pronto, espera o event_callback real do Google Ads (o
-        // beacon saiu de verdade) em vez de um tempo fixo — teto de 1s pro
-        // caso do callback nunca disparar.
-        const trackedGoogleTrial = await trackGoogleAdsInscricao({
-          email,
-          transactionId: userId,
-          timeoutMs: gtagReady ? 1000 : undefined,
-        });
-        didTrackTrial = trackedMetaTrial || trackedGoogleTrial;
-      }
-      // Meta não tem callback de envio; teto curto só pra dar tempo do beacon
-      // sair antes de navegar, e só quando algo foi de fato disparado.
-      setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 800 : 0);
+      // Trial OK (inclusive alreadyExists): troca pro estado de chegada no
+      // mesmo card. Não navega sozinho — só os botões do estado de chegada
+      // navegam. O tracking de conversão roda depois, em segundo plano.
+      saving = false;
+      arrived = true;
+      void capturePostHogEvent('onboarding_welcome_viewed', { total_steps: totalSteps });
+      await tick();
+      welcomeTitleEl?.focus();
+
+      trackingPromise = runBackgroundTracking(trialPayload);
     } catch (e) {
       console.error('[OnboardingWizard] save error:', e);
       error = 'Não deu pra salvar agora. Confira sua internet e tente de novo.';
       saving = false;
     }
+  }
+
+  async function irParaPrimeiraVenda() {
+    void capturePostHogEvent('onboarding_welcome_cta_clicked', { cta: 'first_sale' });
+    await waitForBackgroundTracking();
+    window.location.href = '/app';
+  }
+
+  async function pedirAjudaWhatsApp() {
+    void capturePostHogEvent('onboarding_welcome_cta_clicked', { cta: 'whatsapp' });
+    const helpHref = buildOnboardingWhatsAppHelpHref(nome);
+    window.open(helpHref, '_blank', 'noopener,noreferrer');
+    await waitForBackgroundTracking();
+    window.location.href = '/app';
   }
 </script>
 
@@ -212,7 +262,7 @@
 <div
   role="dialog"
   aria-modal="true"
-  aria-label="Configuração inicial"
+  aria-label={arrived ? 'Conta pronta' : 'Configuração inicial'}
   class="wizard-backdrop"
 >
   <div class="wizard-card">
@@ -220,44 +270,56 @@
     <!-- Top: logo + progress -->
     <div class="wizard-header">
       <span class="wizard-brand">Zelo PDV</span>
-      <div class="wizard-dots">
-        {#each Array(totalSteps) as _, i}
-          <div class="dot" class:active={i < step}></div>
+      <div class="wizard-dots" role="presentation">
+        {#each dotsState as dotStatus}
+          <div class="dot" class:completed={dotStatus === 'completed'} class:current={dotStatus === 'current'}></div>
         {/each}
       </div>
     </div>
 
     <!-- Step content -->
     <div class="wizard-body">
-      {#if step === 1}
-        <div class="step-label">Passo 1 de 2</div>
-        <h2 class="step-title">Como se chama sua loja?</h2>
-        <p class="step-hint">É o nome que vai no recibo do seu cliente.</p>
-        <input
-          bind:this={nomeInput}
-          bind:value={nome}
-          on:keydown={handleKeydown}
-          type="text"
-          placeholder="Ex: Lanchonete do João"
-          class="wizard-input"
-          class:input-error={error}
-        />
+      {#if arrived}
+        <div class="step-content">
+          <div class="welcome-badge" aria-hidden="true">
+            <Check class="size-5" />
+          </div>
+          <h2 class="step-title" tabindex="-1" bind:this={welcomeTitleEl}>Boas-vindas ao Zelo, {nome}.</h2>
+          <p class="step-hint">Seu teste de {TRIAL_DAYS} dias começou. Se quiser, cadastramos seus produtos junto com você pelo WhatsApp — uns 15 minutos.</p>
+        </div>
+      {:else if step === 1}
+        <div class="step-content">
+          <div class="step-label">Passo 1 de 2</div>
+          <h2 class="step-title">Como se chama sua loja?</h2>
+          <p class="step-hint">É o nome que vai no recibo do seu cliente.</p>
+          <input
+            bind:this={nomeInput}
+            bind:value={nome}
+            on:keydown={handleKeydown}
+            type="text"
+            placeholder="Ex: Lanchonete do João"
+            class="wizard-input"
+            class:input-error={error}
+          />
+        </div>
 
       {:else if step === 2}
-        <div class="step-label">Passo 2 de 2</div>
-        <h2 class="step-title">Qual o seu WhatsApp?</h2>
-        <p class="step-hint">É por onde a gente te ajuda. Se quiser, cadastramos seus produtos junto com você — uns 15 minutos, sem custo.</p>
-        <input
-          bind:this={contatoInput}
-          bind:value={contato}
-          on:keydown={handleKeydown}
-          on:input={(e) => { contato = maskPhone(e.target.value); e.target.value = contato; }}
-          type="tel"
-          inputmode="numeric"
-          placeholder="(11) 98765-4321"
-          class="wizard-input"
-          class:input-error={error}
-        />
+        <div class="step-content">
+          <div class="step-label">Passo 2 de 2</div>
+          <h2 class="step-title">Qual o seu WhatsApp?</h2>
+          <p class="step-hint">É por onde a gente te ajuda. Se quiser, cadastramos seus produtos junto com você — uns 15 minutos, sem custo.</p>
+          <input
+            bind:this={contatoInput}
+            bind:value={contato}
+            on:keydown={handleKeydown}
+            on:input={(e) => { contato = maskPhone(e.target.value); e.target.value = contato; }}
+            type="tel"
+            inputmode="numeric"
+            placeholder="(11) 98765-4321"
+            class="wizard-input"
+            class:input-error={error}
+          />
+        </div>
       {/if}
 
       {#if error}
@@ -265,25 +327,37 @@
       {/if}
     </div>
 
-    <!-- Footer: back + advance -->
-    <div class="wizard-footer">
-      {#if step > 1}
-        <button type="button" class="btn-back" disabled={saving} on:click={voltar}>
-          ← Voltar
+    <!-- Footer: back + advance, ou CTAs do estado de chegada -->
+    {#if arrived}
+      <div class="wizard-footer wizard-footer-stacked">
+        <button type="button" class="btn-advance btn-block" on:click={irParaPrimeiraVenda}>
+          Fazer primeira venda
         </button>
-      {:else}
-        <span></span>
-      {/if}
+        <button type="button" class="btn-outline btn-block" on:click={pedirAjudaWhatsApp}>
+          <MessageCircle class="size-4" aria-hidden="true" />
+          Ajuda no WhatsApp
+        </button>
+      </div>
+    {:else}
+      <div class="wizard-footer">
+        {#if step > 1}
+          <button type="button" class="btn-back" disabled={saving} on:click={voltar}>
+            ← Voltar
+          </button>
+        {:else}
+          <span></span>
+        {/if}
 
-      <button
-        type="button"
-        class="btn-advance"
-        disabled={saving}
-        on:click={step < totalSteps ? avancar : finalizar}
-      >
-        {saving ? 'Salvando…' : step < totalSteps ? 'Continuar' : 'Começar a usar'}
-      </button>
-    </div>
+        <button
+          type="button"
+          class="btn-advance"
+          disabled={saving}
+          on:click={step < totalSteps ? avancar : finalizar}
+        >
+          {saving ? 'Salvando…' : step < totalSteps ? 'Continuar' : 'Começar a usar'}
+        </button>
+      </div>
+    {/if}
 
   </div>
 </div>
@@ -306,13 +380,13 @@
   .wizard-card {
     background: var(--bg-panel);
     border: 1px solid var(--border-card);
-    border-radius: 14px;
+    border-radius: 16px;
     width: 100%;
     max-width: 400px;
-    padding: 1.75rem;
+    padding: 2rem;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1.5rem;
     box-shadow: var(--shadow-modal);
   }
 
@@ -342,12 +416,21 @@
     height: 6px;
     border-radius: 50%;
     background: var(--border-subtle);
-    transition: background 0.25s, transform 0.25s;
+    border: 1.5px solid transparent;
+    box-sizing: border-box;
+    transition: background 0.25s, border-color 0.25s, transform 0.25s;
   }
 
-  .dot.active {
+  /* Concluído: bolinha preenchida. Atual: contorno primário, miolo vazio. */
+  .dot.completed {
     background: var(--primary);
     transform: scale(1.2);
+  }
+
+  .dot.current {
+    background: var(--bg-panel);
+    border-color: var(--primary);
+    transform: scale(1.3);
   }
 
   /* Body */
@@ -355,6 +438,36 @@
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+  }
+
+  .step-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    animation: wizard-step-in 150ms ease-out;
+  }
+
+  @keyframes wizard-step-in {
+    from {
+      opacity: 0;
+      transform: translateX(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .welcome-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    margin-bottom: 0.1rem;
   }
 
   .step-label {
@@ -371,11 +484,13 @@
     color: var(--text-main);
     margin: 0.1rem 0 0;
     line-height: 1.3;
+    outline: none;
   }
 
   .step-hint {
     font-size: 0.875rem;
     color: var(--text-muted);
+    line-height: 1.5;
     margin: 0 0 0.6rem;
   }
 
@@ -412,6 +527,38 @@
     align-items: center;
     justify-content: space-between;
     padding-top: 0.25rem;
+  }
+
+  /* Estado de chegada: botões empilhados, largura total, sem Voltar. */
+  .wizard-footer-stacked {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+
+  .btn-block {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text-main);
+    border: 1.5px solid var(--border-subtle);
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .btn-outline:hover {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
   }
 
   .btn-back {
@@ -458,6 +605,25 @@
     .wizard-card {
       border-radius: 14px;
       padding: 1.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .step-content {
+      animation: none;
+    }
+
+    .dot,
+    .wizard-input,
+    .btn-back,
+    .btn-advance,
+    .btn-outline {
+      transition: none;
+    }
+
+    .dot.completed,
+    .dot.current {
+      transform: none;
     }
   }
 </style>

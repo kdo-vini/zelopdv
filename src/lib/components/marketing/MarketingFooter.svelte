@@ -1,7 +1,9 @@
 <script>
   import { page } from '$app/stores';
+  import { buildZeloWhatsAppHref } from '$lib/zeloContact';
 
   export let variant = 'dark';
+  const whatsappHref = buildZeloWhatsAppHref();
 
   $: isHomeRoute = $page.url.pathname === '/';
   $: featuresHref = isHomeRoute ? '#features' : '/#features';
@@ -33,7 +35,7 @@
         <ul>
           <li><a href={faqHref}>Central de Ajuda</a></li>
           <li><a href="/contato?assunto=demo">Agendar demonstração</a></li>
-          <li><a href="https://wa.me/5514991537503" target="_blank" rel="noopener noreferrer">Falar no WhatsApp</a></li>
+          <li><a href={whatsappHref} target="_blank" rel="noopener noreferrer">Falar no WhatsApp</a></li>
           <li><a href="https://menu.zelopdv.com.br/#empresas" target="_blank" rel="noopener noreferrer">Ver cardápios publicados</a></li>
         </ul>
       </div>

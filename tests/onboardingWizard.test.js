@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs';
 import {
   ONBOARDING_TOTAL_STEPS,
   buildOnboardingStepPayload,
+  buildOnboardingWhatsAppHelpHref,
+  buildOnboardingWhatsAppHelpMessage,
+  computeOnboardingDotsState,
   deriveOnboardingResumeStep,
   validateOnboardingStep,
 } from '../src/lib/onboardingWizard.js';
@@ -89,10 +92,83 @@ describe('onboardingWizard', () => {
     // gtag carregou — nunca o tempo fixo de 2s antigo.
     expect(source).toMatch(/timeoutMs:\s*gtagReady\s*\?\s*1000\s*:\s*undefined/);
     expect(source).not.toMatch(/waitForGtag\(\)/);
+  });
 
-    // Redirecionamento final: teto de no máximo 800ms, só quando algo foi
-    // rastreado — nunca os 2000ms fixos antigos.
-    expect(source).toMatch(/setTimeout\(\(\) => \{ window\.location\.href = '\/gestao'; \}, didTrackTrial \? 800 : 0\)/);
-    expect(source).not.toMatch(/didTrackTrial \? 2000 : 0/);
+  it('troca pro estado de chegada assim que o trial responde OK, sem navegar sozinho', () => {
+    const source = readFileSync(
+      new URL('../src/lib/components/OnboardingWizard.svelte', import.meta.url),
+      'utf8',
+    );
+
+    // finalizar() vira arrived=true e dispara o tracking em segundo plano —
+    // nunca faz window.location.href sozinho.
+    const finalizarBody = source.slice(
+      source.indexOf('async function finalizar()'),
+      source.indexOf('async function irParaPrimeiraVenda'),
+    );
+    expect(finalizarBody).toMatch(/arrived = true/);
+    expect(finalizarBody).toMatch(/trackingPromise = runBackgroundTracking\(trialPayload\)/);
+    expect(finalizarBody).not.toMatch(/window\.location\.href/);
+
+    // runBackgroundTracking não roda o tracking de novo quando o trial já
+    // existia (alreadyExists) — mesma regra de antes, só que fora do finalizar.
+    expect(source).toMatch(/async function runBackgroundTracking\(trialPayload\) \{\s*if \(trialPayload\?\.alreadyExists\) return;/);
+  });
+
+  it('os cliques do estado de chegada esperam o tracking com teto de 1000ms antes de navegar pro /app', () => {
+    const source = readFileSync(
+      new URL('../src/lib/components/OnboardingWizard.svelte', import.meta.url),
+      'utf8',
+    );
+
+    expect(source).toMatch(/new Promise\(\(resolve\) => setTimeout\(resolve, 1000\)\)/);
+
+    const primeiraVendaBody = source.slice(
+      source.indexOf('async function irParaPrimeiraVenda'),
+      source.indexOf('async function pedirAjudaWhatsApp'),
+    );
+    expect(primeiraVendaBody).toMatch(/await waitForBackgroundTracking\(\)/);
+    expect(primeiraVendaBody).toMatch(/window\.location\.href = '\/app'/);
+
+    const whatsappBody = source.slice(
+      source.indexOf('async function pedirAjudaWhatsApp'),
+      source.indexOf('</script>'),
+    );
+    expect(whatsappBody).toMatch(/window\.open\(helpHref, '_blank', 'noopener,noreferrer'\)/);
+    expect(whatsappBody).toMatch(/await waitForBackgroundTracking\(\)/);
+    expect(whatsappBody).toMatch(/window\.location\.href = '\/app'/);
+  });
+});
+
+describe('computeOnboardingDotsState', () => {
+  it('passo 1: bolinha atual (contorno) seguida de futuro', () => {
+    expect(computeOnboardingDotsState({ step: 1, totalSteps: 2 })).toEqual(['current', 'future']);
+  });
+
+  it('passo 2: concluído seguido de atual (contorno)', () => {
+    expect(computeOnboardingDotsState({ step: 2, totalSteps: 2 })).toEqual(['completed', 'current']);
+  });
+
+  it('chegada: as duas bolinhas concluídas, independente do step', () => {
+    expect(computeOnboardingDotsState({ step: 2, totalSteps: 2, arrived: true })).toEqual(['completed', 'completed']);
+  });
+});
+
+describe('WhatsApp de ajuda no estado de chegada', () => {
+  it('monta a mensagem exata com o nome da loja interpolado', () => {
+    expect(buildOnboardingWhatsAppHelpMessage('Loja da Ana')).toBe(
+      'Oi! Acabei de criar a conta da Loja da Ana e quero ajuda pra cadastrar os produtos.',
+    );
+  });
+
+  it('monta o link wa.me com o texto codificado', () => {
+    const href = buildOnboardingWhatsAppHelpHref('Loja da Ana');
+    expect(href).toBe(
+      'https://wa.me/5514991537503?text=' +
+        encodeURIComponent('Oi! Acabei de criar a conta da Loja da Ana e quero ajuda pra cadastrar os produtos.'),
+    );
+    // Confere que o texto foi de fato URL-encoded (espaços viram %20, não '+').
+    expect(href).toContain('%20');
+    expect(href).not.toContain(' ');
   });
 });
