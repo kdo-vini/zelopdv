@@ -1,14 +1,13 @@
 <script>
   import { tick, onMount } from 'svelte';
-  import { Printer } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
+  import { maskPhone } from '$lib/masks';
   import {
-    isValidBrazilianTaxId,
-    maskPhone,
-    maskDocumento,
-    normalizeBrazilianPhone,
-    normalizeBrazilianTaxId,
-  } from '$lib/masks';
+    ONBOARDING_TOTAL_STEPS,
+    buildOnboardingStepPayload,
+    deriveOnboardingResumeStep,
+    validateOnboardingStep,
+  } from '$lib/onboardingWizard';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
   import { getStoredAcquisitionOrigin } from '$lib/attribution/client';
@@ -19,25 +18,22 @@
   export let email = '';
 
   let step = 1;
-  const totalSteps = 4;
+  const totalSteps = ONBOARDING_TOTAL_STEPS;
 
   let nome = '';
   let contato = '';
-  let documento = '';
-  let largura_bobina = '80mm';
+  const largura_bobina = '80mm';
 
   let error = '';
   let saving = false;
 
   let nomeInput;
   let contatoInput;
-  let documentoInput;
 
   $: if (show || step) {
     tick().then(() => {
       if (step === 1) nomeInput?.focus();
       else if (step === 2) contatoInput?.focus();
-      else if (step === 3) documentoInput?.focus();
     });
   }
 
@@ -50,40 +46,92 @@
     void capturePostHogEvent('onboarding_wizard_step_viewed', { step: currentStep, total_steps: totalSteps });
   }
 
-  onMount(() => {
+  onMount(async () => {
+    if (!supabase || !userId) {
+      trackStepViewed(step);
+      return;
+    }
+
+    try {
+      const { data: perfil, error: profileError } = await supabase
+        .from('empresa_perfil')
+        .select('nome_exibicao, contato')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+      if (perfil) {
+        nome = perfil.nome_exibicao || '';
+        contato = maskPhone(perfil.contato || '');
+        step = deriveOnboardingResumeStep(perfil);
+      }
+    } catch (loadError) {
+      console.warn('[OnboardingWizard] profile resume failed:', loadError?.message || loadError);
+    }
     trackStepViewed(step);
   });
 
-  function fieldForStep(currentStep) {
-    if (currentStep === 1) return 'nome';
-    if (currentStep === 2) return 'contato';
-    if (currentStep === 3) return 'documento';
-    return 'largura_bobina';
-  }
-
   function validate() {
-    error = '';
-    if (step === 1 && !nome.trim()) { error = 'Informe o nome da loja.'; return false; }
-    if (step === 2 && !normalizeBrazilianPhone(contato)) { error = 'Informe um WhatsApp válido com DDD.'; return false; }
-    if (step === 3 && !isValidBrazilianTaxId(documento)) { error = 'Informe um CPF ou CNPJ válido.'; return false; }
-    return true;
+    const result = validateOnboardingStep(step, { nome, contato });
+    error = result.error;
+    return result;
   }
 
-  function avancar() {
-    if (!validate()) {
+  function trackValidationFailure(validation) {
+    if (!validation.valid) {
       void capturePostHogEvent('onboarding_wizard_validation_failed', {
         step,
         total_steps: totalSteps,
-        field: fieldForStep(step),
+        field: validation.field,
       });
+    }
+  }
+
+  async function saveStep(currentStep) {
+    const perfilPayload = buildOnboardingStepPayload({
+      step: currentStep,
+      userId,
+      nome,
+      contato,
+      origemAquisicao: getStoredAcquisitionOrigin(),
+    });
+
+    const { error: dbError } = await supabase
+      .from('empresa_perfil')
+      .upsert(perfilPayload, { onConflict: 'user_id' });
+
+    if (dbError) {
+      void capturePostHogEvent('onboarding_wizard_save_failed', { step: currentStep, total_steps: totalSteps });
+      throw dbError;
+    }
+  }
+
+  async function avancar() {
+    if (saving) return;
+
+    const validation = validate();
+    if (!validation.valid) {
+      trackValidationFailure(validation);
       return;
     }
-    void capturePostHogEvent('onboarding_wizard_step_completed', { step, total_steps: totalSteps });
-    step += 1;
-    trackStepViewed(step);
+
+    saving = true;
+    try {
+      await saveStep(step);
+      void capturePostHogEvent('onboarding_wizard_step_completed', { step, total_steps: totalSteps });
+      step += 1;
+      trackStepViewed(step);
+    } catch (saveError) {
+      console.error('[OnboardingWizard] step save error:', saveError);
+      error = 'Não deu pra salvar agora. Confira sua internet e tente de novo.';
+    } finally {
+      saving = false;
+    }
   }
 
   function voltar() {
+    if (saving) return;
+
     const fromStep = step;
     step -= 1;
     error = '';
@@ -92,38 +140,25 @@
   }
 
   function handleKeydown(e) {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !saving) {
       e.preventDefault();
       step < totalSteps ? avancar() : finalizar();
     }
   }
 
   async function finalizar() {
+    if (saving) return;
+
+    const validation = validate();
+    if (!validation.valid) {
+      trackValidationFailure(validation);
+      return;
+    }
+
     saving = true;
     error = '';
     try {
-      const perfilPayload = {
-        user_id: userId,
-        nome_exibicao: nome.trim(),
-        documento: normalizeBrazilianTaxId(documento),
-        contato: normalizeBrazilianPhone(contato),
-        largura_bobina,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Só manda a origem quando existe de fato. Como isto é um upsert, enviar null
-      // apagaria uma atribuição já gravada caso o wizard rode de novo.
-      const origemAquisicao = getStoredAcquisitionOrigin();
-      if (origemAquisicao) perfilPayload.origem_aquisicao = origemAquisicao;
-
-      const { error: dbError } = await supabase
-        .from('empresa_perfil')
-        .upsert(perfilPayload, { onConflict: 'user_id' });
-
-      if (dbError) {
-        void capturePostHogEvent('onboarding_wizard_save_failed', { step, total_steps: totalSteps });
-        throw dbError;
-      }
+      await saveStep(step);
 
       void capturePostHogEvent('onboarding_wizard_step_completed', { step, total_steps: totalSteps });
       void capturePostHogEvent('onboarding_wizard_completed', { total_steps: totalSteps, largura_bobina });
@@ -159,7 +194,7 @@
       setTimeout(() => { window.location.href = '/gestao'; }, didTrackTrial ? 2000 : 0);
     } catch (e) {
       console.error('[OnboardingWizard] save error:', e);
-      error = 'Erro ao salvar. Tente novamente.';
+      error = 'Não deu pra salvar agora. Confira sua internet e tente de novo.';
       saving = false;
     }
   }
@@ -187,9 +222,9 @@
     <!-- Step content -->
     <div class="wizard-body">
       {#if step === 1}
-        <div class="step-label">Passo 1 de 4</div>
+        <div class="step-label">Passo 1 de 2</div>
         <h2 class="step-title">Como se chama sua loja?</h2>
-        <p class="step-hint">Aparecerá nos seus recibos.</p>
+        <p class="step-hint">É o nome que vai no recibo do seu cliente.</p>
         <input
           bind:this={nomeInput}
           bind:value={nome}
@@ -201,9 +236,9 @@
         />
 
       {:else if step === 2}
-        <div class="step-label">Passo 2 de 4</div>
-        <h2 class="step-title">Qual o telefone?</h2>
-        <p class="step-hint">Para contato e notificações via WhatsApp.</p>
+        <div class="step-label">Passo 2 de 2</div>
+        <h2 class="step-title">Qual o seu WhatsApp?</h2>
+        <p class="step-hint">É por onde a gente te ajuda. Se quiser, cadastramos seus produtos junto com você — uns 15 minutos, sem custo.</p>
         <input
           bind:this={contatoInput}
           bind:value={contato}
@@ -211,55 +246,10 @@
           on:input={(e) => { contato = maskPhone(e.target.value); e.target.value = contato; }}
           type="tel"
           inputmode="numeric"
-          placeholder="(00) 00000-0000"
+          placeholder="(11) 98765-4321"
           class="wizard-input"
           class:input-error={error}
         />
-
-      {:else if step === 3}
-        <div class="step-label">Passo 3 de 4</div>
-        <h2 class="step-title">Qual o CPF ou CNPJ?</h2>
-        <p class="step-hint">Vai aparecer no recibo e ajuda a identificar sua loja. O Zelo PDV ainda não emite NFC-e.</p>
-        <input
-          bind:this={documentoInput}
-          bind:value={documento}
-          on:keydown={handleKeydown}
-          on:input={(e) => { documento = maskDocumento(e.target.value); e.target.value = documento; }}
-          type="text"
-          inputmode="numeric"
-          placeholder="000.000.000-00"
-          class="wizard-input"
-          class:input-error={error}
-        />
-
-      {:else if step === 4}
-        <div class="step-label">Passo 4 de 4</div>
-        <h2 class="step-title">Tipo de impressora?</h2>
-        <p class="step-hint">80 mm é o padrão da maioria das impressoras térmicas de balcão. Use 58 mm só se sua impressora for o modelo menor (papel estreito).</p>
-        <div class="printer-options">
-          <button
-            type="button"
-            class="printer-card"
-            class:printer-selected={largura_bobina === '80mm'}
-            on:click={() => (largura_bobina = '80mm')}
-            aria-pressed={largura_bobina === '80mm'}
-          >
-            <span class="printer-icon"><Printer class="size-6" aria-hidden="true" /></span>
-            <strong>80 mm</strong>
-            <span class="printer-sub">Mais comum</span>
-          </button>
-          <button
-            type="button"
-            class="printer-card"
-            class:printer-selected={largura_bobina === '58mm'}
-            on:click={() => (largura_bobina = '58mm')}
-            aria-pressed={largura_bobina === '58mm'}
-          >
-            <span class="printer-icon"><Printer class="size-6" aria-hidden="true" /></span>
-            <strong>58 mm</strong>
-            <span class="printer-sub">Estreita</span>
-          </button>
-        </div>
       {/if}
 
       {#if error}
@@ -270,7 +260,7 @@
     <!-- Footer: back + advance -->
     <div class="wizard-footer">
       {#if step > 1}
-        <button type="button" class="btn-back" on:click={voltar}>
+        <button type="button" class="btn-back" disabled={saving} on:click={voltar}>
           ← Voltar
         </button>
       {:else}
@@ -283,7 +273,7 @@
         disabled={saving}
         on:click={step < totalSteps ? avancar : finalizar}
       >
-        {saving ? 'Salvando…' : step < totalSteps ? 'Avançar →' : 'Finalizar'}
+        {saving ? 'Salvando…' : step < totalSteps ? 'Continuar' : 'Começar a usar'}
       </button>
     </div>
 
@@ -295,7 +285,7 @@
   .wizard-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: color-mix(in srgb, var(--text-inverse) 60%, transparent);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     z-index: 200;
@@ -308,7 +298,7 @@
   .wizard-card {
     background: var(--bg-panel);
     border: 1px solid var(--border-card);
-    border-radius: 18px;
+    border-radius: 14px;
     width: 100%;
     max-width: 400px;
     padding: 1.75rem;
@@ -326,7 +316,7 @@
   }
 
   .wizard-brand {
-    font-size: 0.75rem;
+    font-size: 0.625rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -360,7 +350,7 @@
   }
 
   .step-label {
-    font-size: 0.7rem;
+    font-size: 0.625rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -368,7 +358,7 @@
   }
 
   .step-title {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--text-main);
     margin: 0.1rem 0 0;
@@ -376,7 +366,7 @@
   }
 
   .step-hint {
-    font-size: 0.82rem;
+    font-size: 0.875rem;
     color: var(--text-muted);
     margin: 0 0 0.6rem;
   }
@@ -388,7 +378,7 @@
     border: 1.5px solid var(--border-subtle);
     border-radius: 8px;
     color: var(--text-main);
-    font-size: 0.95rem;
+    font-size: 0.875rem;
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.15s;
@@ -403,56 +393,9 @@
   }
 
   .wizard-error {
-    font-size: 0.78rem;
+    font-size: 0.875rem;
     color: var(--error);
     margin: 0.2rem 0 0;
-  }
-
-  /* Printer cards */
-  .printer-options {
-    display: flex;
-    gap: 0.6rem;
-    margin-top: 0.25rem;
-  }
-
-  .printer-card {
-    flex: 1;
-    padding: 0.85rem 0.5rem;
-    border: 1.5px solid var(--border-subtle);
-    border-radius: 10px;
-    cursor: pointer;
-    text-align: center;
-    background: var(--bg-input);
-    transition: border-color 0.15s, background 0.15s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
-    color: var(--text-main);
-  }
-
-  .printer-card:hover {
-    border-color: var(--primary);
-  }
-
-  .printer-card.printer-selected {
-    border-color: var(--primary);
-    background: var(--bg-card);
-  }
-
-  .printer-icon {
-    font-size: 1.4rem;
-  }
-
-  .printer-card strong {
-    font-size: 0.88rem;
-    font-weight: 700;
-    color: var(--text-main);
-  }
-
-  .printer-sub {
-    font-size: 0.72rem;
-    color: var(--text-muted);
   }
 
   /* Footer */
@@ -464,7 +407,7 @@
   }
 
   .btn-back {
-    font-size: 0.82rem;
+    font-size: 0.875rem;
     color: var(--text-muted);
     background: none;
     border: none;
@@ -477,14 +420,19 @@
     color: var(--text-main);
   }
 
+  .btn-back:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
   .btn-advance {
     padding: 0.5rem 1.25rem;
     background: var(--primary);
-    color: #fff;
+    color: var(--primary-text);
     border: none;
-    border-radius: 7px;
+    border-radius: 8px;
     font-weight: 600;
-    font-size: 0.88rem;
+    font-size: 0.875rem;
     cursor: pointer;
     transition: background 0.15s, opacity 0.15s;
   }
