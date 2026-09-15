@@ -14,7 +14,15 @@
   para os 80 pageviews — guards de página com `getUser()` sem timeout no
   `/gestao` — registrada em CURRENT, não corrigida. **Fase 2.1 feita**: CPF/CNPJ
   inline no Pix, gravado na criação da cobrança; o redirect pro `/perfil` por
-  falta de documento morreu. Fase 3 destravada. Resto em aberto.
+  falta de documento morreu. Fase 3 destravada. **Fase 3.1 feita**: wizard de
+  2 passos com a copy fechada e validação também no clique final; sobe só depois
+  do baseline da 1.1 coletar. **Fase 4.1 feita**: checklist fechado integrado ao
+  `/gestao`, com links para as abas/seções reais do perfil e sem semântica
+  paralela para bobina. **Fase 4.2 feita localmente**: save por passo e migration
+  da RPC do nudge entregues juntos; perfis operacionais incompletos com
+  subscription continuam elegíveis. Testes focados 39/39 + 66/66, suíte
+  completa 1.275/1.278 (3 skips), check 0/0 e ledger 107/107, 59/59, 55 forward.
+  Nenhum push/deploy/migration remota; Fase 5.1 bloqueada até 3.1 em produção.
 
 - [x] FX-CHECKOUT-FAILED-01 (2026-09-14) — o funil só media checkout com
   sucesso; tentativa recusada era invisível. `checkout_failed` passa a sair da

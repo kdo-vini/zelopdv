@@ -1,6 +1,6 @@
 # ZeloPDV — Foco atual
 
-## Onboarding em dois passos — plano aberto, Fase 1.2 feita — 2026-09-15
+## Onboarding em dois passos — Fases 1–4 concluídas localmente, aguardando rollout — 2026-09-15
 
 Plano completo em [onboarding-dois-passos](projects/onboarding-dois-passos.md).
 Artefato de leitura: https://claude.ai/artifact/TigsUMdoyes8jrmj12hPS8
@@ -46,7 +46,10 @@ casos novos em `api.create-subscription.test.js` (sem documento, perfil null).
 `login_viewed` { redirect_from, has_session }, `login_submitted` { method },
 `login_failed` { method, error_code } e `login_bounced_authenticated`
 { destination }. `error_code` e `redirect_from` saem de helpers puros em
-`src/lib/loginTelemetry.js` (12 testes); nunca mensagem crua nem URL completa.
+`src/lib/loginTelemetry.js` (14 testes); nunca mensagem crua nem URL completa.
+`redirect_from` aceita somente rotas e mensagens do vocabulário fechado do
+produto; paths livres, URLs externas e `msg` arbitrária são descartados. Falha
+do OAuth Google em `/login` também emite `login_failed` com código sanitizado.
 No caminho com sessão, o redirect pra `/app` aguarda o capture por até 400 ms —
 sem isso o evento de bounce morria com a navegação.
 
@@ -79,6 +82,40 @@ Pendências conhecidas, não bloqueantes:
   tempo ainda devolve `redirect` (caso raro, sem teste)
 - o admin (`api/admin/billing/pix/create`) segue exigindo documento no perfil
 - o campo aparece na etapa 3 mesmo para quem vai de cartão (a copy fala de Pix)
+
+**Fase 3.1 feita — wizard de 2 passos (nome da loja, WhatsApp)** com a copy
+fechada do plano. Passos de CPF/CNPJ e bobina saíram; o upsert grava
+`largura_bobina: '80mm'` e **não manda mais `documento`** (mandar vazio apagaria
+CPF já salvo pelo Pix). Instrumentação da 1.1 mantida; `total_steps` agora é 2.
+O clique final repete a validação do WhatsApp e as ações ficam protegidas contra
+duplo envio enquanto o save está em andamento.
+
+**Fase 4.1 feita:** o card já existente em `/gestao` agora usa exclusivamente o
+checklist fechado (primeiro produto, CPF/CNPJ, logo e largura da bobina), sem
+reaproveitar `onboarding_completed` nem as tarefas antigas de caixa/venda/
+relatório. Os links de perfil selecionam as abas corretas e rolam para seções
+reais (`#documento`, `#logo`, `#largura-bobina`). Bobina é item normal do
+checklist; o valor efetivo ausente continua sendo o default de 80 mm do produto.
+
+**Fase 4.2 feita localmente e atômica na entrega:** o wizard persiste o passo 1
+antes de avançar, retoma no WhatsApp quando necessário e salva o passo 2 antes
+de iniciar o trial. A migration
+`20260915090000_nudge_operational_profile_rpc.sql` muda a RPC do nudge para
+considerar linha ausente, nome vazio ou contato vazio. Ela preserva filtros de
+idade/e-mail/subusuário, restringe execução a `service_role` e **não** exclui
+perfil incompleto apenas porque existe uma linha em `subscriptions`.
+
+Nenhum push, deploy ou migration remota foi executado. A Fase 5.1 continua
+bloqueada até a Fase 3.1 estar realmente em produção.
+
+> ⚠️ **Deploy:** a 1.1 (baseline de 4 passos) e a 3.1 estão na mesma branch, em
+> commits separados. Se subirem juntas, o "antes" nunca é coletado. Subir até a
+> 2.1/1.3 primeiro, deixar coletar, e só então a 3.1.
+
+Validação local final: 39/39 testes focados de login/onboarding/checklist/RPC,
+66/66 testes focados de billing/RPC, suíte completa 1.275/1.278 (3 runtimes
+pré-existentes pulados), `npm run check` com 0 erros/0 avisos e
+`npm run verify:migrations` verde (107/107, 59/59, 55 forward migrations).
 
 **Ordem que não pode inverter:** a Fase 2 (CPF inline no Pix) tem que estar no ar
 antes da Fase 3 (wizard curto). `validatePixCustomerProfile` exige documento e
