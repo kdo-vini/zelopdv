@@ -6,7 +6,9 @@
   trial e sem acesso; 7 desses voltaram e travaram de novo. Plano em cinco fases
   em `docs/projects/onboarding-dois-passos.md`. **Fase 1.2 feita**: `requiredOk`
   partido em `operationalProfileOk` × `billingProfileOk`, com os 4 call sites
-  atualizados (guards, layout raiz, perfil ×2). Resto em aberto.
+  atualizados (guards, layout raiz, perfil ×2). **Fase 1.1 feita**: wizard
+  instrumentado com evento por passo (`onboarding_wizard_*`, sem PII), baseline
+  de 4 passos. Resto em aberto.
 
 - [x] FX-CHECKOUT-FAILED-01 (2026-09-14) — o funil só media checkout com
   sucesso; tentativa recusada era invisível. `checkout_failed` passa a sair da

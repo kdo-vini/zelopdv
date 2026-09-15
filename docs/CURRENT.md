@@ -30,6 +30,12 @@ telefone não normaliza.
 Suíte completa **não** foi rodada — decisão do dono: roda uma vez no fim das
 cinco fases, velocidade acima de granularidade.
 
+**Fase 1.1 feita (baseline):** o wizard atual de 4 passos emite
+`onboarding_wizard_step_viewed` / `_step_completed` / `_validation_failed` /
+`_step_back` / `_completed` / `_save_failed`, com `step` e `total_steps` e sem
+PII. Precisa estar coletando em produção **antes** da Fase 3 subir — sem isso o
+"antes" se perde. Filtrar por `total_steps = 4` para o baseline.
+
 **Ordem que não pode inverter:** a Fase 2 (CPF inline no Pix) tem que estar no ar
 antes da Fase 3 (wizard curto). `validatePixCustomerProfile` exige documento e
 `billingPix.js:347` manda `taxId` pra AbacatePay — tirar o CPF do wizard antes

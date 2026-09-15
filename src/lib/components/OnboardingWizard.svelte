@@ -1,5 +1,5 @@
 <script>
-  import { tick } from 'svelte';
+  import { tick, onMount } from 'svelte';
   import { Printer } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import {
@@ -12,6 +12,7 @@
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
   import { getStoredAcquisitionOrigin } from '$lib/attribution/client';
+  import { capturePostHogEvent } from '$lib/posthogClient';
 
   export let show = false;
   export let userId = '';
@@ -40,6 +41,26 @@
     });
   }
 
+  // Baseline "antes" da Fase 3 (docs/projects/onboarding-dois-passos.md): o
+  // wizard de 4 passos nunca disse EM QUAL passo as pessoas desistiam, porque
+  // so existia um upsert no fim. Nomes/propriedades pensados pra continuar
+  // fazendo sentido quando totalSteps virar 2. Nunca manda o valor digitado —
+  // so metadado de step, nunca nome/telefone/CPF.
+  function trackStepViewed(currentStep) {
+    void capturePostHogEvent('onboarding_wizard_step_viewed', { step: currentStep, total_steps: totalSteps });
+  }
+
+  onMount(() => {
+    trackStepViewed(step);
+  });
+
+  function fieldForStep(currentStep) {
+    if (currentStep === 1) return 'nome';
+    if (currentStep === 2) return 'contato';
+    if (currentStep === 3) return 'documento';
+    return 'largura_bobina';
+  }
+
   function validate() {
     error = '';
     if (step === 1 && !nome.trim()) { error = 'Informe o nome da loja.'; return false; }
@@ -49,8 +70,25 @@
   }
 
   function avancar() {
-    if (!validate()) return;
+    if (!validate()) {
+      void capturePostHogEvent('onboarding_wizard_validation_failed', {
+        step,
+        total_steps: totalSteps,
+        field: fieldForStep(step),
+      });
+      return;
+    }
+    void capturePostHogEvent('onboarding_wizard_step_completed', { step, total_steps: totalSteps });
     step += 1;
+    trackStepViewed(step);
+  }
+
+  function voltar() {
+    const fromStep = step;
+    step -= 1;
+    error = '';
+    void capturePostHogEvent('onboarding_wizard_step_back', { from_step: fromStep });
+    trackStepViewed(step);
   }
 
   function handleKeydown(e) {
@@ -82,7 +120,13 @@
         .from('empresa_perfil')
         .upsert(perfilPayload, { onConflict: 'user_id' });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        void capturePostHogEvent('onboarding_wizard_save_failed', { step, total_steps: totalSteps });
+        throw dbError;
+      }
+
+      void capturePostHogEvent('onboarding_wizard_step_completed', { step, total_steps: totalSteps });
+      void capturePostHogEvent('onboarding_wizard_completed', { total_steps: totalSteps, largura_bobina });
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
@@ -226,7 +270,7 @@
     <!-- Footer: back + advance -->
     <div class="wizard-footer">
       {#if step > 1}
-        <button type="button" class="btn-back" on:click={() => { step -= 1; error = ''; }}>
+        <button type="button" class="btn-back" on:click={voltar}>
           ← Voltar
         </button>
       {:else}

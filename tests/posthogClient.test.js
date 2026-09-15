@@ -43,6 +43,19 @@ describe('posthogClient: evento de negocio em rota privada', () => {
     expect(shouldDropPostHogEvent('$exception', '/app/mesas/12')).toBe(false);
   });
 
+  // Fase 1.1 do onboarding em dois passos (docs/projects/onboarding-dois-passos.md):
+  // o wizard roda dentro de /perfil, que esta em BLOCKED_PREFIXES. Sem isto os
+  // eventos de passo viram codigo morto silencioso de novo, exatamente como
+  // trial_auto_started foi antes do commit 24e2f16.
+  it('deixa passar os eventos do wizard de onboarding em /perfil', () => {
+    expect(shouldDropPostHogEvent('onboarding_wizard_step_viewed', '/perfil')).toBe(false);
+    expect(shouldDropPostHogEvent('onboarding_wizard_step_completed', '/perfil')).toBe(false);
+    expect(shouldDropPostHogEvent('onboarding_wizard_validation_failed', '/perfil')).toBe(false);
+    expect(shouldDropPostHogEvent('onboarding_wizard_step_back', '/perfil')).toBe(false);
+    expect(shouldDropPostHogEvent('onboarding_wizard_completed', '/perfil')).toBe(false);
+    expect(shouldDropPostHogEvent('onboarding_wizard_save_failed', '/perfil')).toBe(false);
+  });
+
   it('mata superficie de tela em rota privada', () => {
     for (const evento of ['$pageview', '$pageleave', '$autocapture', '$rageclick', '$web_vitals', '$heatmap']) {
       expect(shouldDropPostHogEvent(evento, '/app')).toBe(true);

@@ -61,10 +61,18 @@ telefone. **Falta um campo só.**
 
 ### Fase 1 — Destravar e medir (nada muda para quem usa)
 
-**1.1 — Instrumentar o wizard atual** · *a fazer*
+**1.1 — Instrumentar o wizard atual** · ✅ **FEITO**
 
 Evento por passo em `src/lib/components/OnboardingWizard.svelte`. Diz qual passo
 derruba, com dado real.
+
+Eventos (sem PII — nunca o valor digitado): `onboarding_wizard_step_viewed`
+{ step, total_steps }, `onboarding_wizard_step_completed` { step, total_steps },
+`onboarding_wizard_validation_failed` { step, total_steps, field },
+`onboarding_wizard_step_back` { from_step }, `onboarding_wizard_completed`
+{ total_steps, largura_bobina }, `onboarding_wizard_save_failed` { step, total_steps }.
+`total_steps` separa o baseline de 4 passos do wizard de 2 passos da Fase 3.
+Teste em `tests/posthogClient.test.js` garante que os seis atravessam o gate em `/perfil`.
 
 Isto só funciona desde o commit `24e2f16`: antes, `/perfil` estava em
 `BLOCKED_PREFIXES` e o `before_send` do `posthogClient.js` derrubava todo evento
