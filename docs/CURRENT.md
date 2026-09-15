@@ -1,5 +1,24 @@
 # ZeloPDV — Foco atual
 
+## Zoom automático do iOS ao focar campos — 2026-09-15
+
+Relato do dono no iPhone: toda vez que o teclado abria (chat do Zelinho em
+`/gestao`, valor recebido no `ModalPagamento`, etc.) a tela dava um zoom e não
+voltava sozinha — precisava dar pinch pra desfazer. Causa: vários campos têm
+`font-size` abaixo de 16px (13–15,2px), e o Safari/iOS aplica zoom automático
+ao focar qualquer campo assim, só desfazendo com gesto manual do usuário.
+`SupportChat.svelte` já tinha corrigido isso isoladamente (`font-size: 1rem`
+documentado em FX-MARKETING-MOBILE-ADAPT-01), mas nenhum outro campo do app
+recebeu o mesmo tratamento.
+
+**Corrigido**: piso global em `src/app.css` — `input`/`textarea`/`select`
+(exceto checkbox/radio/range/color/file/submit/button) recebem `font-size:
+16px !important` só em `max-width: 767px`. Vence qualquer `font-size` menor
+definido por componente sem alterar nada no desktop. Documentado em
+`DESIGN_PATTERNS.md` §9. Validado com Playwright: 16px aplicado em 390px,
+tamanho original preservado em 1280px. `npm test` 1376/1376, `npm run check`
+0/0.
+
 ## Polish do primeiro uso no PDV (iPhone) — 2026-09-15
 
 Teste do dono no iPhone depois do fix do PWA: fluxo de conta nova funcionou

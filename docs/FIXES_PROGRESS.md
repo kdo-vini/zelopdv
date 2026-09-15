@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-IOS-INPUT-ZOOM-01 (2026-09-15) — iOS Safari dava zoom automático ao
+  focar campos com `font-size` < 16px (chat do Zelinho a 13px, valor recebido
+  do `ModalPagamento` a 15,2px, entre outros) e não voltava sozinho — exigia
+  pinch manual toda vez que o teclado abria. `SupportChat.svelte` já tinha o
+  campo em 16px isolado, mas o resto do app não. Piso global em `src/app.css`
+  (`input`/`textarea`/`select` a 16px `!important`, só `max-width: 767px`)
+  cobre todos os campos existentes e futuros sem tocar o desktop; validado com
+  Playwright em 390px (16px aplicado) e 1280px (tamanho original preservado).
+  `npm test` 1376/1376 (3 skips preexistentes), `npm run check` 0/0.
+
 - [x] FX-PWA-VERSAO-PRESA-01 (2026-09-15) — aparelhos com o PWA instalado
   ficavam na versão antiga do `/app`: recarregar serve o precache, e o aviso de
   atualização era adiado por qualquer modal — inclusive o Abrir Caixa, que a
