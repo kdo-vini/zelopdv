@@ -12,7 +12,9 @@
   (`create-subscription`). **Fase 1.3 feita**: `/login` instrumentado
   (`login_viewed/submitted/failed/bounced_authenticated`); hipótese principal
   para os 80 pageviews — guards de página com `getUser()` sem timeout no
-  `/gestao` — registrada em CURRENT, não corrigida. Resto em aberto.
+  `/gestao` — registrada em CURRENT, não corrigida. **Fase 2.1 feita**: CPF/CNPJ
+  inline no Pix, gravado na criação da cobrança; o redirect pro `/perfil` por
+  falta de documento morreu. Fase 3 destravada. Resto em aberto.
 
 - [x] FX-CHECKOUT-FAILED-01 (2026-09-14) — o funil só media checkout com
   sucesso; tentativa recusada era invisível. `checkout_failed` passa a sair da

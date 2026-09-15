@@ -88,6 +88,18 @@ Regra prática:
   - owner autenticado
   - perfil com `nome_exibicao`, `documento` e `contato`
   - CPF/CNPJ e telefone normalizados/validados
+- Documento inline (desde 2026-09-15, Fase 2.1 do onboarding em dois passos):
+  - body aceita `documento` opcional; só é usado quando o perfil não tem
+    documento válido — documento salvo nunca é sobrescrito por aqui
+  - documento do body inválido → 400 `profile_incomplete` com `field: 'documento'`,
+    **sem** `redirect`, nada gravado
+  - válido → `update` (nunca upsert) em `empresa_perfil.documento`, só dígitos
+    (mesmo formato de `buildPayload`), **antes** de chamar a AbacatePay; falha
+    na gravação → 500 e nenhuma cobrança criada
+  - só documento faltando → `field: 'documento'`; nome/telefone faltando continua
+    devolvendo `redirect: '/perfil?msg=complete'`
+  - UI: campo "CPF ou CNPJ" na etapa 3 de `/assinatura` (checkout novo e
+    renovação), exibido quando `billingProfileOk` falha; "Gerar Pix" é o salvar
 - Persistência:
   - grava `billing_payments.status='pending'`
   - guarda `br_code`, `qr_code_base64`, vencimento e seleção de plano/add-ons

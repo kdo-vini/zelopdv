@@ -117,7 +117,7 @@ saber o que são esses 80 pageviews.
 
 ### Fase 2 — Soltar o billing do cadastro (obrigatória antes da Fase 3)
 
-**2.1 — CPF inline no Pix, persistido na criação da cobrança**
+**2.1 — CPF inline no Pix, persistido na criação da cobrança** · ✅ **FEITO** (contrato em [[BILLING]])
 
 Em `src/routes/assinatura/+page.svelte`, etapa 3 (Pagamento) — não na etapa 2
 (Add-ons), porque é dado de cobrança. Aparece só quando o perfil não tem.

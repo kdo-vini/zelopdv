@@ -67,6 +67,19 @@ Consulta: `login_viewed` por `has_session`; com sessão falsa, funil
 `login_bounced_authenticated` repetido por `distinct_id` em janela curta é a
 assinatura do ping-pong.
 
+**Fase 2.1 feita — a Fase 3 está destravada:** `/assinatura` etapa 3 mostra
+"CPF ou CNPJ" quando o perfil não tem documento válido; `POST
+/api/billing/pix/create` recebe `documento`, grava em `empresa_perfil` antes de
+cobrar e não joga mais a pessoa pro `/perfil` por falta só de documento
+(`field: 'documento'` no lugar do `redirect`). Contrato em [[BILLING]].
+Pendências conhecidas, não bloqueantes:
+- falha ao **gravar** o documento sai com `reason: profile_read_failed` — nome
+  errado; merece um `PROFILE_WRITE_FAILED` em `checkoutFailure.js`
+- contato preenchido mas não normalizável **e** documento faltando ao mesmo
+  tempo ainda devolve `redirect` (caso raro, sem teste)
+- o admin (`api/admin/billing/pix/create`) segue exigindo documento no perfil
+- o campo aparece na etapa 3 mesmo para quem vai de cartão (a copy fala de Pix)
+
 **Ordem que não pode inverter:** a Fase 2 (CPF inline no Pix) tem que estar no ar
 antes da Fase 3 (wizard curto). `validatePixCustomerProfile` exige documento e
 `billingPix.js:347` manda `taxId` pra AbacatePay — tirar o CPF do wizard antes

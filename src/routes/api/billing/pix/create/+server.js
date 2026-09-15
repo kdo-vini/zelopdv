@@ -6,6 +6,7 @@ import { getPostHogClient } from '$lib/server/posthog';
 import { checkoutFailed, CHECKOUT_FAILURE_REASONS as WHY } from '$lib/server/checkoutFailure';
 import { waitUntil } from '@vercel/functions';
 import { isValidPlanTier, isAddonAllowed, PLANS } from '$lib/pricing';
+import { isValidBrazilianTaxId, normalizeBrazilianTaxId } from '$lib/masks';
 import {
   createOrReusePixCharge,
   serializePixCharge,
@@ -54,6 +55,10 @@ export async function POST({ request }) {
     const body = await request.json().catch(() => ({}));
     planTier = body.planTier || 'pdv';
     requestedAddons = body.addons || {};
+    // Fase 2.1 do onboarding em dois passos: CPF/CNPJ some do wizard e vira um
+    // campo inline no Pix. `documento` é opcional aqui — só é usado quando o
+    // perfil ainda não tem um documento válido salvo.
+    const bodyDocumento = typeof body.documento === 'string' ? body.documento.trim() : '';
 
     if (!isValidPlanTier(planTier)) {
       return fail({
@@ -94,17 +99,68 @@ export async function POST({ request }) {
       });
     }
 
-    const profileValidation = validatePixCustomerProfile(perfil);
+    // Documento é o único campo de billing que ainda pode faltar depois do
+    // wizard curto. Se o perfil já tem um válido, o body nunca sobrescreve —
+    // documento salvo é definitivo, não fica trocando a cada Pix gerado.
+    let effectivePerfil = perfil;
+    const perfilDocumentoValido = !!perfil?.documento && isValidBrazilianTaxId(perfil.documento);
+
+    if (perfil && !perfilDocumentoValido && bodyDocumento) {
+      const normalizedBodyDoc = normalizeBrazilianTaxId(bodyDocumento);
+      if (!normalizedBodyDoc || !isValidBrazilianTaxId(normalizedBodyDoc)) {
+        return fail({
+          reason: WHY.PROFILE_INCOMPLETE,
+          error: 'CPF/CNPJ inválido.',
+          userId: user.id,
+          planTier,
+          addons: requestedAddons,
+          body: { field: 'documento' },
+        });
+      }
+
+      // Persistir ANTES de cobrar, e só seguir se a gravação for confirmada:
+      // se o update falhar, a AbacatePay nunca chega a ver esse taxId, então
+      // nunca existe cobrança criada com um documento que não ficou salvo.
+      // `.update` (não upsert) de propósito — se a linha de empresa_perfil não
+      // existir, não é este endpoint que cria; cai no PROFILE_INCOMPLETE de
+      // nome/telefone abaixo, que é gate do wizard.
+      const { data: updatedPerfil, error: updateError } = await supabaseAdmin
+        .from('empresa_perfil')
+        .update({ documento: normalizedBodyDoc, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .select('nome_exibicao, documento, contato')
+        .maybeSingle();
+
+      if (updateError || !updatedPerfil) {
+        return fail({
+          reason: WHY.PROFILE_READ_FAILED,
+          error: 'Não deu para salvar o CPF/CNPJ no perfil. Tente novamente.',
+          status: 500,
+          userId: user.id,
+          planTier,
+          addons: requestedAddons,
+        });
+      }
+
+      effectivePerfil = updatedPerfil;
+    }
+
+    const profileValidation = validatePixCustomerProfile(effectivePerfil);
     if (!profileValidation.ok) {
-      // O muro de cadastro cobrando o pedágio: quem chegou até aqui queria
-      // pagar e foi mandado de volta pro /perfil.
+      // Nome/telefone faltando é o muro de cadastro de sempre — manda pro
+      // /perfil. Documento sozinho faltando não: aquele muro tirava a pessoa
+      // do checkout Pix por causa de um campo que agora tem um jeito de
+      // preencher sem sair da tela (ver assinatura/+page.svelte).
+      const nomeOk = !!(effectivePerfil?.nome_exibicao || '').trim();
+      const contatoOk = !!(effectivePerfil?.contato || '').trim();
+      const isDocumentoOnlyIssue = nomeOk && contatoOk;
       return fail({
         reason: WHY.PROFILE_INCOMPLETE,
         error: profileValidation.message,
         userId: user.id,
         planTier,
         addons: requestedAddons,
-        body: { redirect: '/perfil?msg=complete' },
+        body: isDocumentoOnlyIssue ? { field: 'documento' } : { redirect: '/perfil?msg=complete' },
       });
     }
 
