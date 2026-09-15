@@ -1,5 +1,165 @@
 # ZeloPDV — Foco atual
 
+## Onboarding em dois passos — plano aberto, Fase 1.2 feita — 2026-09-15
+
+Plano completo em [onboarding-dois-passos](projects/onboarding-dois-passos.md).
+Artefato de leitura: https://claude.ai/artifact/TigsUMdoyes8jrmj12hPS8
+
+Medição no banco (180 dias): 38 contas criadas, 28 concluíram o wizard, **10
+travaram** sem perfil, sem trial e sem acesso. Das 10, **7 voltaram ao produto
+depois** e bateram na mesma parede. O trial só nasce no `finalizar()` do wizard,
+então desistir no passo 3 deixa conta sem acesso e sem saída.
+
+**Feito nesta branch:** `requiredOk` foi partido em `operationalProfileOk`
+(nome + contato — o que o produto precisa pra operar) e `billingProfileOk`
+(CPF/CNPJ válido — o que o billing precisa pra cobrar). `largura_bobina` saiu das
+duas checagens: todo consumidor já cai em `|| '80mm'`.
+
+O muro mais duro era o redirect global em `src/routes/+layout.svelte:262` — de
+qualquer rota, perfil incompleto ia pra `/perfil?msg=complete`. Agora "incompleto"
+quer dizer sem nome ou sem telefone, não sem CPF.
+
+`canSave` no perfil também estava preso ao CPF: sem ele, ninguém salvava nada no
+próprio perfil. Agora aceita documento vazio e exige validade só quando preenchido.
+
+`contato` continua checado por presença, não por validade — de propósito. É o
+critério do `requiredOk` antigo; apertar expulsaria pro wizard toda conta cujo
+telefone não normaliza.
+
+`tests/profileUtils.test.js` reescrito: 9 testes verdes. `npm run check` 0/0.
+Suíte completa **não** foi rodada — decisão do dono: roda uma vez no fim das
+cinco fases, velocidade acima de granularidade.
+
+**Fase 1.1 feita (baseline):** o wizard atual de 4 passos emite
+`onboarding_wizard_step_viewed` / `_step_completed` / `_validation_failed` /
+`_step_back` / `_completed` / `_save_failed`, com `step` e `total_steps` e sem
+PII. Precisa estar coletando em produção **antes** da Fase 3 subir — sem isso o
+"antes" se perde. Filtrar por `total_steps = 4` para o baseline.
+
+**Fase 2.2 feita:** `create-subscription` não barra mais cartão sem CPF/CNPJ.
+O gate era nosso — Stripe não tem `tax_id_collection` e o comentário de "nota
+fiscal" era falso. `checkout_failed` com `reason: profile_incomplete` agora só
+sai do Pix. Teste do gate do cartão em `api.checkout-failed.test.js` saiu; dois
+casos novos em `api.create-subscription.test.js` (sem documento, perfil null).
+
+**Fase 1.3 feita (só medição, nenhum redirect mudou):** `/login` emite
+`login_viewed` { redirect_from, has_session }, `login_submitted` { method },
+`login_failed` { method, error_code } e `login_bounced_authenticated`
+{ destination }. `error_code` e `redirect_from` saem de helpers puros em
+`src/lib/loginTelemetry.js` (12 testes); nunca mensagem crua nem URL completa.
+No caminho com sessão, o redirect pra `/app` aguarda o capture por até 400 ms —
+sem isso o evento de bounce morria com a navegação.
+
+Hipóteses para os 80 pageviews / 19 visitantes, **não confirmadas** (confirmar
+com os eventos acima antes de mexer):
+1. Guards de página duplicados em `gestao/+page.svelte:36`,
+   `gestao/mesas/+page.svelte:27`, `gestao/empresas/+page.svelte:28`,
+   `gestao/extensoes/+page.svelte:17` usam `getUser()` sem timeout nem fallback
+   offline e fazem `window.location.href = '/login'` na primeira falha — em
+   rede lenta expulsam sessão válida, em paralelo ao `ensureActiveSubscription`
+   que tem timeout de 8 s. Cada expulsão é reload e pageview novo em `/login`.
+2. `$pageview` morre nas rotas protegidas mas não em `/login`: todo ida-e-volta
+   só aparece pela metade `/login`.
+3. Autenticado em `/login` é redirecionado por dois mecanismos (a própria página
+   e `+layout.svelte:279`) — duplicado, mas provavelmente não é o volume.
+Consulta: `login_viewed` por `has_session`; com sessão falsa, funil
+`login_submitted` → `user_logged_in` × `login_failed` por `error_code`;
+`login_bounced_authenticated` repetido por `distinct_id` em janela curta é a
+assinatura do ping-pong.
+
+**Fase 2.1 feita — a Fase 3 está destravada:** `/assinatura` etapa 3 mostra
+"CPF ou CNPJ" quando o perfil não tem documento válido; `POST
+/api/billing/pix/create` recebe `documento`, grava em `empresa_perfil` antes de
+cobrar e não joga mais a pessoa pro `/perfil` por falta só de documento
+(`field: 'documento'` no lugar do `redirect`). Contrato em [[BILLING]].
+Pendências conhecidas, não bloqueantes:
+- falha ao **gravar** o documento sai com `reason: profile_read_failed` — nome
+  errado; merece um `PROFILE_WRITE_FAILED` em `checkoutFailure.js`
+- contato preenchido mas não normalizável **e** documento faltando ao mesmo
+  tempo ainda devolve `redirect` (caso raro, sem teste)
+- o admin (`api/admin/billing/pix/create`) segue exigindo documento no perfil
+- o campo aparece na etapa 3 mesmo para quem vai de cartão (a copy fala de Pix)
+
+**Ordem que não pode inverter:** a Fase 2 (CPF inline no Pix) tem que estar no ar
+antes da Fase 3 (wizard curto). `validatePixCustomerProfile` exige documento e
+`billingPix.js:347` manda `taxId` pra AbacatePay — tirar o CPF do wizard antes
+quebra todo Pix de cliente novo.
+
+## `checkout_failed`: o funil passou a ver quem tentou pagar e não conseguiu — 2026-09-14
+
+Antes só existia o lado feliz (`stripe_checkout_created`, `pix_charge_created`).
+Clique que morria no servidor — perfil sem CPF/CNPJ, plano inválido, provedor
+fora do ar — sumia, e o buraco entre "abriu /assinatura" e "cobrança criada"
+ficava sem explicação.
+
+A resposta de erro e o evento saem da **mesma função**, em
+[src/lib/server/checkoutFailure.js](../src/lib/server/checkoutFailure.js).
+Espalhar `posthog.capture` por dez `return json(...)` é exatamente como o bug
+anterior nasceu. As 19 saídas de erro cruas dos dois endpoints (10 no cartão,
+9 no Pix) passam por `fail()`; um teste de fonte rejeita `return json(...)` com
+status 4xx/5xx, e foi verificado contra a versão anterior — falharia nas 19.
+
+`reason` é código estável (`profile_incomplete`, `invalid_plan`,
+`addon_not_allowed`, `unauthenticated`, `subuser_forbidden`,
+`provider_unavailable`, `provider_error`), nunca derivado da mensagem em pt-BR:
+o texto é de UI e uma revisão de copy levaria o histórico do funil junto.
+`profile_incomplete` é o que mede diretamente o muro de cadastro descrito na
+auditoria de conversão — quem chegou querendo pagar e foi mandado de volta.
+
+Partição entre cliente e servidor, sem dupla contagem: o servidor registra toda
+resposta de erro que ele produziu (`origin: 'server'`); a tela registra só o que
+o servidor não pode ter visto (`origin: 'client'`) — `no_session` (a requisição
+nunca saiu), `network` (resposta nunca voltou) e `unexpected_response` (200 sem
+URL de checkout). O ramo `!res.ok` do cliente **não** emite, de propósito.
+
+Falha de autenticação cai em `distinctId: 'anonymous'` — não há a quem atribuir,
+mas "a sessão expirou antes de assinar" continua sendo conversão perdida e
+precisa ser contada. Mesma convenção do chat de suporte.
+
+O flush não segura a resposta: numa falha de pagamento o cliente está esperando
+na tela. Vai por `waitUntil`, com fallback silencioso fora do runtime da Vercel.
+
+Suíte 1.230/1.233 (3 skips pré-existentes), `npm run check` 0/0, build verde.
+
+## Evento de negócio dentro do produto nunca chegou ao PostHog — 2026-09-14
+
+Auditoria do funil no PostHog (projeto 470628): `trial_auto_started`,
+`subscription_checkout_started`, `pix_payment_initiated` e os três `gerente_*`
+**não existem** na lista de eventos do projeto. Nunca chegou um.
+
+Causa-raiz em [src/lib/posthogClient.js](../src/lib/posthogClient.js): o gate era
+por **rota**, não por evento. `sanitizeEvent`, usado como `before_send`, abria com
+`if (!isBrowser() || !isPostHogAllowedPath(window.location.pathname)) return null`
+— e `/assinatura`, `/gestao`, `/app`, `/perfil`, `/relatorios`, `/ferramentas`
+estão em `BLOCKED_PREFIXES`. Todo `capture()` disparado lá dentro morria. Uma
+segunda trava somava: `syncPostHogForPath` chamava `opt_out_capturing()` ao
+entrar em rota privada, e esse opt-out fica gravado no localStorage do aparelho.
+O contrato mentia — `capturePostHogEvent` devolvia `true` com o evento no lixo.
+
+O commit anterior (`f5c0dbe`) contornou para o cadastro, movendo o evento para o
+servidor, e documentou a causa em comentário sem removê-la.
+
+Correção: o gate passou a ser por **evento**. `SURFACE_EVENTS` (pageview,
+autocapture, rageclick, heatmap, web vitals, pageleave) morre fora da área
+pública; evento de negócio nomeado, `$identify` e `$exception` atravessam com a
+URL reduzida a `/app/mesas/:id` e o referrer apagado — inclusive em `$set`/
+`$set_once`, que no `CaptureResult` do posthog-js são **irmãos** de `properties`.
+`opt_out_capturing()` virou `set_config({ autocapture, capture_pageleave,
+enable_heatmaps })`, e o init desfaz o opt-out que a versão anterior gravou —
+sem isso os aparelhos que abriram o PDV antes ficariam mudos para sempre.
+
+As três chamadas de `/assinatura` foram **removidas**, não religadas: o servidor
+já emite `trial_started`, `stripe_checkout_created` e `pix_charge_created`, com
+propriedades a mais (`trial_end`, `session_id`, `payment_id`) e sem depender do
+cliente chegar vivo ao fim do fluxo. Religar duplicaria a contagem no funil.
+
+Aberto de propósito: não existe evento de **falha** de checkout. Hoje só se vê
+cobrança criada com sucesso; clique que morreu no servidor é invisível.
+
+Suíte 1.222/1.225 (3 skips pré-existentes), `npm run check` 0/0, build verde.
+Corrigido também `tests/signupFollowUp.test.js`, que estava vermelho desde
+`f5c0dbe` (ainda exigia o `user_signed_up` removido por aquele commit).
+
 ## Assinatura pós-trial perdia o add-on ativo — 2026-09-14
 
 Reclamação de cliente (FullBuster Burger, `plan_tier='pdv'`,

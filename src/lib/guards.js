@@ -1,6 +1,6 @@
 // Client-side guards for session, profile, and subscription
 import { supabase } from './supabaseClient';
-import { requiredOk } from './profileUtils';
+import { operationalProfileOk } from './profileUtils';
 import { addToast } from './stores/ui';
 import { isNetworkError } from './netStatus';
 import { saveEntitlementSnapshot, loadEntitlementSnapshot, loadOfflineOperatingContext, clearEntitlementSnapshot } from './offlineEntitlement';
@@ -265,7 +265,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
     try {
       const { data: perfil, error: perfilError } = await gateQuery(supabase
         .from('empresa_perfil')
-        .select('nome_exibicao, documento, contato, largura_bobina')
+        .select('nome_exibicao, contato')
         .eq('user_id', userId)
         .maybeSingle());
       if (!currentIdentity()) return null;
@@ -278,7 +278,7 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
         if (redirectOnFail) window.location.href = '/perfil?msg=complete';
         return null;
       } else {
-        const ok = Boolean(perfil && requiredOk(perfil));
+        const ok = Boolean(perfil && operationalProfileOk(perfil));
         if (!ok) {
           if (redirectOnFail) window.location.href = '/perfil?msg=complete';
           return null;

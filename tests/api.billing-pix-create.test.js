@@ -53,12 +53,24 @@ function makeSupabaseAdmin(state) {
             })),
           };
         }),
-        update: vi.fn((payload) => ({
-          eq: vi.fn(async () => {
-            state.writes.push({ table, operation: 'update', payload });
-            return { error: null };
-          }),
-        })),
+        update: vi.fn((payload) => {
+          // Encadeia como o Supabase real: nada acontece até o `await` final
+          // (`.maybeSingle()`), que é onde o handler de pix/create pousa
+          // depois de `.update(...).eq(...).select(...)`.
+          const chain = {
+            eq: vi.fn(() => chain),
+            select: vi.fn(() => chain),
+            maybeSingle: vi.fn(async () => {
+              state.writes.push({ table, operation: 'update', payload });
+              if (state.updateErrors?.[table]) {
+                return { data: null, error: state.updateErrors[table] };
+              }
+              const base = state.selectResults?.[table] || {};
+              return { data: { ...base, ...payload }, error: null };
+            }),
+          };
+          return chain;
+        }),
         upsert: vi.fn(async (payload) => {
           state.writes.push({ table, operation: 'upsert', payload });
           return { data: payload, error: null };
@@ -198,7 +210,7 @@ describe('API: billing/pix/create', () => {
     expect(body.error).toMatch(/subusu|titular/i);
   });
 
-  it('400 para perfil sem documento', async () => {
+  it('400 para perfil sem documento e sem documento no body — sem redirect, com field', async () => {
     const state = {
       user: { id: 'owner-1', email: 'owner@test.com' },
       writes: [],
@@ -232,6 +244,125 @@ describe('API: billing/pix/create', () => {
 
     expect(res.status).toBe(400);
     expect(body.error).toMatch(/cpf|cnpj|documento|perfil/i);
+    // Fase 2.1: o caso de documento sozinho não joga mais a pessoa pra fora do
+    // checkout Pix — o campo inline em /assinatura cuida disso.
+    expect(body.redirect).toBeUndefined();
+    expect(body.field).toBe('documento');
+    expect(state.writes.some((w) => w.table === 'empresa_perfil')).toBe(false);
+  });
+
+  it('documento no body persiste quando o perfil não tem um válido, e a cobrança usa o valor salvo', async () => {
+    const state = {
+      user: { id: 'owner-1', email: 'owner@test.com' },
+      writes: [],
+      selectResults: {
+        empresa_perfil: { nome_exibicao: 'Loja Teste', documento: null, contato: '11999999999' },
+        subscriptions: null,
+      },
+      accessContext: { isSubUser: false, ownerUserId: 'owner-1', roleId: null, permissions: null },
+    };
+
+    let capturedCustomer;
+    vi.doMock('$lib/server/supabaseAdmin', () => ({ supabaseAdmin: makeSupabaseAdmin(state) }));
+    vi.doMock('$lib/server/accessControl', () => makeAccessControl(state));
+    vi.doMock('$lib/server/abacatePay', () => ({
+      isAbacatePayConfigured: () => true,
+      createTransparentPixCharge: vi.fn(async ({ customer }) => {
+        capturedCustomer = customer;
+        return {
+          id: 'pix_charge_doc',
+          status: 'PENDING',
+          amount: 5900,
+          brCode: 'fixture-brcode',
+          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        };
+      }),
+    }));
+
+    const { POST } = await loadHandler();
+    const res = await POST({
+      request: makeRequest({ body: { planTier: 'pdv', documento: '529.982.247-25' } }),
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.brCode).toBe('fixture-brcode');
+    expect(capturedCustomer?.taxId).toBe('52998224725');
+
+    const persisted = state.writes.find((w) => w.table === 'empresa_perfil' && w.operation === 'update');
+    expect(persisted?.payload?.documento).toBe('52998224725');
+  });
+
+  it('documento inválido no body não grava nada e devolve 400 sem redirect', async () => {
+    const state = {
+      user: { id: 'owner-1', email: 'owner@test.com' },
+      writes: [],
+      selectResults: {
+        empresa_perfil: { nome_exibicao: 'Loja Teste', documento: null, contato: '11999999999' },
+        subscriptions: null,
+      },
+      accessContext: { isSubUser: false, ownerUserId: 'owner-1', roleId: null, permissions: null },
+    };
+
+    vi.doMock('$lib/server/supabaseAdmin', () => ({ supabaseAdmin: makeSupabaseAdmin(state) }));
+    vi.doMock('$lib/server/accessControl', () => makeAccessControl(state));
+    vi.doMock('$lib/server/abacatePay', () => ({
+      isAbacatePayConfigured: () => true,
+      createTransparentPixCharge: vi.fn(),
+    }));
+
+    const { POST } = await loadHandler();
+    const res = await POST({
+      request: makeRequest({ body: { planTier: 'pdv', documento: '111.111.111-11' } }),
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.field).toBe('documento');
+    expect(body.redirect).toBeUndefined();
+    expect(state.writes.some((w) => w.table === 'empresa_perfil')).toBe(false);
+  });
+
+  it('perfil com documento válido ignora o documento do body (não sobrescreve)', async () => {
+    const state = {
+      user: { id: 'owner-1', email: 'owner@test.com' },
+      writes: [],
+      selectResults: {
+        empresa_perfil: { nome_exibicao: 'Loja Teste', documento: '11222333000181', contato: '11999999999' },
+        subscriptions: null,
+      },
+      accessContext: { isSubUser: false, ownerUserId: 'owner-1', roleId: null, permissions: null },
+    };
+
+    let capturedCustomer;
+    vi.doMock('$lib/server/supabaseAdmin', () => ({ supabaseAdmin: makeSupabaseAdmin(state) }));
+    vi.doMock('$lib/server/accessControl', () => makeAccessControl(state));
+    vi.doMock('$lib/server/abacatePay', () => ({
+      isAbacatePayConfigured: () => true,
+      createTransparentPixCharge: vi.fn(async ({ customer }) => {
+        capturedCustomer = customer;
+        return {
+          id: 'pix_charge_ignore_body',
+          status: 'PENDING',
+          amount: 5900,
+          brCode: 'fixture-brcode-2',
+          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        };
+      }),
+    }));
+
+    const { POST } = await loadHandler();
+    const res = await POST({
+      // documento do body é um CPF válido, diferente do que já está no perfil.
+      request: makeRequest({ body: { planTier: 'pdv', documento: '52998224725' } }),
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.brCode).toBe('fixture-brcode-2');
+    // O perfil já tinha documento válido: o body foi ignorado.
+    expect(capturedCustomer?.taxId).toBe('11222333000181');
+    expect(state.writes.some((w) => w.table === 'empresa_perfil')).toBe(false);
   });
 
   it('200 com persistencia pending e retorno de QR/brCode', async () => {

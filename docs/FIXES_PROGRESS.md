@@ -1,5 +1,40 @@
 # Fixes Progress
 
+- [ ] FX-ONBOARDING-MURO-01 (2026-09-15) — o wizard de 4 passos cobra CPF/CNPJ e
+  largura de bobina antes da pessoa ver uma tela do produto, e o trial só nasce
+  no `finalizar()`. 26% dos cadastros (10 de 38 em 180 dias) travam ali, sem
+  trial e sem acesso; 7 desses voltaram e travaram de novo. Plano em cinco fases
+  em `docs/projects/onboarding-dois-passos.md`. **Fase 1.2 feita**: `requiredOk`
+  partido em `operationalProfileOk` × `billingProfileOk`, com os 4 call sites
+  atualizados (guards, layout raiz, perfil ×2). **Fase 1.1 feita**: wizard
+  instrumentado com evento por passo (`onboarding_wizard_*`, sem PII), baseline
+  de 4 passos. **Fase 2.2 feita**: gate de CPF/CNPJ removido do cartão
+  (`create-subscription`). **Fase 1.3 feita**: `/login` instrumentado
+  (`login_viewed/submitted/failed/bounced_authenticated`); hipótese principal
+  para os 80 pageviews — guards de página com `getUser()` sem timeout no
+  `/gestao` — registrada em CURRENT, não corrigida. **Fase 2.1 feita**: CPF/CNPJ
+  inline no Pix, gravado na criação da cobrança; o redirect pro `/perfil` por
+  falta de documento morreu. Fase 3 destravada. Resto em aberto.
+
+- [x] FX-CHECKOUT-FAILED-01 (2026-09-14) — o funil só media checkout com
+  sucesso; tentativa recusada era invisível. `checkout_failed` passa a sair da
+  mesma função que devolve o erro (`lib/server/checkoutFailure.js`), cobrindo as
+  19 saídas de erro dos dois endpoints de pagamento, com `reason` em código
+  estável. Cliente emite só o que o servidor não pode ver (`no_session`,
+  `network`, `unexpected_response`), sem duplicar o `!res.ok`. Teste de fonte
+  barra `return json(...)` com status 4xx/5xx fora do helper.
+
+- [x] FX-POSTHOG-GATE-POR-ROTA-01 (2026-09-14) — `before_send` derrubava todo
+  evento disparado fora da área pública, porque o gate era por rota e não por
+  evento. `trial_auto_started`, `subscription_checkout_started`,
+  `pix_payment_initiated` e os `gerente_*` eram código morto silencioso: zero
+  eventos no PostHog desde a instalação. Agora só a superfície de tela
+  (`SURFACE_EVENTS`) morre em rota privada; o evento de negócio passa com URL
+  mascarada (`/app/mesas/:id`) e referrer removido. `opt_out_capturing()` —
+  que também calava `capture()` e persistia no localStorage — saiu em favor de
+  `set_config`, com desfazimento do opt-out legado no init. As três chamadas de
+  `/assinatura` foram removidas por duplicarem eventos server-side melhores.
+
 - [x] FX-ASSINATURA-ADDON-RESET-01 (2026-09-14) — o wizard de assinatura perdia
   o add-on já ativo ao trocar de plano e voltar, e anunciava o preço base do
   plano na etapa 1. Caso real: FullBuster Burger (`pdv` + `has_zelo_menu=true`,

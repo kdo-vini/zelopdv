@@ -19,6 +19,21 @@ describe('signup follow-up', () => {
     const outcomes = await followUp;
     expect(outcomes[0].status).toBe('rejected');
     expect(mocks.ads).toHaveBeenCalledWith({ email: 'fixture@example.test', transactionId: 'owner-1' });
-    expect(mocks.capture).toHaveBeenCalledWith('user_signed_up', { method: 'email', has_referral: true });
+  });
+
+  // O evento de cadastro e server-side (POST /api/auth/signup -> `user_registered`).
+  // A captura client-side daqui foi removida em f5c0dbe porque corria contra o
+  // redirect pra /perfil e morria no `before_send`. Re-adicionar duplicaria o
+  // cadastro no funil, entao a ausencia da chamada e a invariante.
+  it('does not duplicate the signup event on the client', async () => {
+    mocks.capture.mockClear();
+    mocks.wait.mockImplementationOnce(() => Promise.resolve(true));
+    await startSignupFollowUp({
+      session: { access_token: 'fixture-session' },
+      userId: 'owner-2',
+      email: 'fixture2@example.test',
+      hasReferral: false,
+    });
+    expect(mocks.capture).not.toHaveBeenCalled();
   });
 });

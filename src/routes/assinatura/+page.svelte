@@ -3,6 +3,8 @@
   import pixIconData from '@iconify/icons-simple-icons/pix';
   import { supabase } from '$lib/supabaseClient';
   import { isSubscriptionActiveStrict } from '$lib/guards';
+  import { maskDocumento, isValidBrazilianTaxId, normalizeBrazilianTaxId } from '$lib/masks';
+  import { billingProfileOk } from '$lib/profileUtils';
   import { onMount, onDestroy } from 'svelte';
   import { addToast, confirmAction } from '$lib/stores/ui';
   import EntitlementLossWarning from '$lib/components/billing/EntitlementLossWarning.svelte';
@@ -15,9 +17,9 @@
     resolveSelection,
     selectionPrice,
   } from '$lib/billing/planSelection';
+  import { capturePostHogEvent } from '$lib/posthogClient';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao } from '$lib/googleAds';
-  import { capturePostHogEvent } from '$lib/posthogClient';
   import {
     CircleCheckBig,
     Hourglass,
@@ -62,6 +64,13 @@
   let pixNow = Date.now();
   let pixModalOpen = false;
   let pixAutoRenewing = false;
+
+  // Fase 2.1 do onboarding em dois passos: CPF/CNPJ saiu do wizard e virou um
+  // campo inline aqui, na etapa de pagamento — só aparece quando o perfil
+  // ainda não tem um documento válido salvo.
+  let needsDocumento = false;
+  let documentoInput = '';
+  let documentoError = '';
   let checkoutStep = 1;
   let pixSelectionKey = '';
 
@@ -211,6 +220,8 @@
     : isActiveStrict
       ? `Renovar no cartão - R$ ${planPrice}/mês`
       : `Pagar com cartão - R$ ${planPrice}/mês`;
+  $: documentoDigits = normalizeBrazilianTaxId(documentoInput);
+  $: documentoValido = !!documentoDigits && isValidBrazilianTaxId(documentoDigits);
   $: currentSelectionKey = JSON.stringify({
     selectedPlan,
     mesas: effectiveAddons.mesas,
@@ -329,6 +340,20 @@
     if (error) throw error;
     applySubscriptionState(data);
     return data;
+  }
+
+  // Fase 2.1: descobre se o campo de CPF/CNPJ precisa aparecer na etapa de
+  // pagamento. Falha aqui não deve travar o resto da página — o pior caso é o
+  // campo não aparecer de cara, e o servidor ainda barra com clareza
+  // (`field: 'documento'`, sem redirect) se faltar na hora de gerar o Pix.
+  async function loadPerfilDocumento() {
+    const { data, error } = await supabase
+      .from('empresa_perfil')
+      .select('documento')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw error;
+    needsDocumento = !billingProfileOk({ documento: data?.documento });
   }
 
   function handlePlanSelection(planId) {
@@ -469,6 +494,12 @@
         }
 
         try {
+          await loadPerfilDocumento();
+        } catch (docError) {
+          console.error('[Assinatura] Erro ao carregar documento do perfil:', docError);
+        }
+
+        try {
           await loadSubscriptionState();
 
           if (hasHadSubscription && !isActiveStrict) {
@@ -514,7 +545,9 @@
                   trackStartTrial();
                   trackGa4Event('begin_trial');
                   trackGoogleAdsInscricao({ email, transactionId: userId });
-                  void capturePostHogEvent('trial_auto_started', { plan: 'pdv' });
+                  // PostHog: `trial_started` sai de POST /api/billing/start-trial,
+                  // que ja gravou $set.email, plan e trial_end. Duplicar aqui so
+                  // dobraria a contagem de inicio de teste no funil.
                 }
                 setTimeout(() => { window.location.href = '/gestao'; }, 2000);
                 return;
@@ -585,6 +618,20 @@
     }
   });
 
+  // `checkout_failed` sai do servidor em toda resposta de erro (ver
+  // lib/server/checkoutFailure.js). Daqui sai SÓ o que o servidor não pode ter
+  // visto: pedido que nunca saiu do aparelho, ou resposta que nunca voltou.
+  // Emitir também no `!res.ok` duplicaria o que o servidor já contou.
+  function reportCheckoutFailed(paymentMethod, reason) {
+    void capturePostHogEvent('checkout_failed', {
+      payment_method: paymentMethod,
+      reason,
+      origin: 'client',
+      plan: selectedPlan,
+      addons: { ...effectiveAddons },
+    });
+  }
+
   async function assinar() {
     if (loading) return;
     if (!(await confirmEntitlementRemoval())) return;
@@ -595,6 +642,7 @@
       const { data: { session: authSession } } = await supabase.auth.getSession();
       const token = authSession?.access_token ?? '';
       if (!token) {
+        reportCheckoutFailed('card', 'no_session');
         message = 'Sua sessão expirou. Faça login novamente.';
         messageType = 'warning';
         return;
@@ -629,20 +677,18 @@
         if (typeof window.fbq === 'function') {
           window.fbq('track', 'InitiateCheckout', { value: planPrice, currency: 'BRL' });
         }
-        void capturePostHogEvent('subscription_checkout_started', {
-          plan: selectedPlan,
-          addons: { ...effectiveAddons },
-          amount: planPrice,
-          payment_method: 'card',
-          is_renewal: isActiveStrict,
-        });
+        // PostHog: `stripe_checkout_created` ja saiu de
+        // POST /api/billing/create-subscription antes desta resposta chegar, com
+        // plan, addons, amount, is_first_time e session_id.
         window.location.href = data.url;
         return;
       }
 
+      reportCheckoutFailed('card', 'unexpected_response');
       message = 'Resposta inesperada do servidor. Tente novamente.';
       messageType = 'warning';
     } catch (e) {
+      reportCheckoutFailed('card', 'network');
       console.error('[assinatura] checkout error:', e);
       message = 'Erro ao conectar com o servidor de pagamento. Verifique sua conexão e tente novamente.';
       messageType = 'warning';
@@ -656,6 +702,23 @@
     // O auto-renew de Pix vencido repete uma seleção já confirmada.
     if (!autoRenew && !(await confirmEntitlementRemoval())) return;
 
+    // "Gerar Pix" já é o botão de salvar o documento — sem auto-save no blur
+    // e sem botão separado. Valida no cliente antes de chamar a API; documento
+    // meio digitado nunca sai daqui.
+    if (needsDocumento) {
+      if (!documentoValido) {
+        documentoError = documentoInput.trim() ? 'CPF ou CNPJ inválido.' : 'Digite seu CPF ou CNPJ.';
+        // Cobre o auto-renew: se disparar sem o campo preenchido (não deveria,
+        // já que o documento fica salvo no primeiro Pix gerado), mostra o
+        // campo e avisa em vez de falhar em silêncio.
+        goToCheckoutStep(3);
+        message = 'Digite seu CPF ou CNPJ para gerar o Pix.';
+        messageType = 'warning';
+        return;
+      }
+      documentoError = '';
+    }
+
     try {
       pixLoading = true;
       message = '';
@@ -663,6 +726,7 @@
       const { data: { session: authSession } } = await supabase.auth.getSession();
       const token = authSession?.access_token ?? '';
       if (!token) {
+        reportCheckoutFailed('pix', 'no_session');
         message = 'Sua sessão expirou. Faça login novamente.';
         messageType = 'warning';
         return;
@@ -677,12 +741,23 @@
         body: JSON.stringify({
           planTier: selectedPlan,
           addons: { ...effectiveAddons },
+          ...(needsDocumento ? { documento: documentoDigits } : {}),
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
+        if (data?.field === 'documento') {
+          // O servidor viu o que o cliente não via (ex.: outra aba já limpou
+          // o perfil, ou o auto-renew disparou sem o campo visível). Mostra o
+          // campo e o erro — nunca joga a pessoa pra fora do checkout.
+          needsDocumento = true;
+          documentoError = data?.error || 'CPF ou CNPJ inválido.';
+          goToCheckoutStep(3);
+          messageType = 'warning';
+          return;
+        }
         if (data?.redirect) {
           window.location.href = data.redirect;
           return;
@@ -692,19 +767,19 @@
         return;
       }
 
+      if (needsDocumento) {
+        needsDocumento = false;
+        documentoInput = '';
+        documentoError = '';
+      }
+
       pixPayment = data;
       pixSelectionKey = currentSelectionKey;
       pixModalOpen = true;
       goToCheckoutStep(3);
       startPixStatusPolling();
-      if (!data.reused) {
-        void capturePostHogEvent('pix_payment_initiated', {
-          plan: selectedPlan,
-          addons: { ...effectiveAddons },
-          amount: planPrice,
-          is_renewal: isActiveStrict,
-        });
-      }
+      // PostHog: `pix_charge_created` ja saiu de POST /api/billing/pix/create,
+      // com plan, addons, amount_cents, kind e payment_id.
       messageType = 'info';
       if (autoRenew) {
         message = 'O Pix venceu e uma nova cobrança foi gerada automaticamente.';
@@ -718,6 +793,7 @@
           : 'Pix gerado com sucesso. Faça o pagamento e acompanhe a confirmação nesta tela.';
       }
     } catch (e) {
+      reportCheckoutFailed('pix', 'network');
       console.error('[assinatura] pix error:', e);
       message = 'Erro ao conectar com o servidor de pagamento. Verifique sua conexão e tente novamente.';
       messageType = 'warning';
@@ -1140,6 +1216,27 @@
               <span>Após o pagamento: <strong>{projectedRenewalLabel}</strong></span>
             </div>
 
+            {#if needsDocumento}
+              <div class="documento-field">
+                <label for="documento-pix-renewal" class="field-label">CPF ou CNPJ</label>
+                <p class="field-help">O Pix precisa do documento de quem recebe. Fica salvo no seu perfil, você digita uma vez só.</p>
+                <input
+                  id="documento-pix-renewal"
+                  class="field-input"
+                  class:field-input-error={!!documentoError}
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder="000.000.000-00"
+                  value={documentoInput}
+                  on:input={(e) => { documentoInput = maskDocumento(e.target.value); e.target.value = documentoInput; documentoError = ''; }}
+                />
+                {#if documentoError}
+                  <p class="field-error">{documentoError}</p>
+                {/if}
+              </div>
+            {/if}
+
             <div class="payment-grid">
               <button class="payment-card" type="button" on:click={() => gerarPix({ renewal: true })} disabled={loading || pixLoading}>
                 <div class="payment-card-head">
@@ -1440,6 +1537,27 @@
               restorePrice={activePlanPrice}
               onRestore={activePlanTier ? restoreActivePackage : null}
             />
+
+            {#if needsDocumento}
+              <div class="documento-field">
+                <label for="documento-pix-novo" class="field-label">CPF ou CNPJ</label>
+                <p class="field-help">O Pix precisa do documento de quem recebe. Fica salvo no seu perfil, você digita uma vez só.</p>
+                <input
+                  id="documento-pix-novo"
+                  class="field-input"
+                  class:field-input-error={!!documentoError}
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder="000.000.000-00"
+                  value={documentoInput}
+                  on:input={(e) => { documentoInput = maskDocumento(e.target.value); e.target.value = documentoInput; documentoError = ''; }}
+                />
+                {#if documentoError}
+                  <p class="field-error">{documentoError}</p>
+                {/if}
+              </div>
+            {/if}
 
             <div class="payment-grid">
               <button class="payment-card" type="button" on:click={gerarPix} disabled={loading || pixLoading}>
@@ -1940,6 +2058,54 @@
 
   .renewal-summary strong {
     color: var(--text-main);
+  }
+
+  .documento-field {
+    display: grid;
+    gap: 0.4rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    background: var(--bg-input);
+  }
+
+  .documento-field .field-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .documento-field .field-help {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  .documento-field .field-input {
+    width: 100%;
+    max-width: 220px;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-panel);
+    color: var(--text-main);
+    font-size: 0.9rem;
+  }
+
+  .documento-field .field-input:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+
+  .documento-field .field-input-error {
+    border-color: var(--status-warning-text);
+  }
+
+  .documento-field .field-error {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--status-warning-text);
   }
 
   .checkout-shell {
