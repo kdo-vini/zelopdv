@@ -1,5 +1,40 @@
 # ZeloPDV — Foco atual
 
+## Onboarding em dois passos — plano aberto, Fase 1.2 feita — 2026-09-15
+
+Plano completo em [onboarding-dois-passos](projects/onboarding-dois-passos.md).
+Artefato de leitura: https://claude.ai/artifact/TigsUMdoyes8jrmj12hPS8
+
+Medição no banco (180 dias): 38 contas criadas, 28 concluíram o wizard, **10
+travaram** sem perfil, sem trial e sem acesso. Das 10, **7 voltaram ao produto
+depois** e bateram na mesma parede. O trial só nasce no `finalizar()` do wizard,
+então desistir no passo 3 deixa conta sem acesso e sem saída.
+
+**Feito nesta branch:** `requiredOk` foi partido em `operationalProfileOk`
+(nome + contato — o que o produto precisa pra operar) e `billingProfileOk`
+(CPF/CNPJ válido — o que o billing precisa pra cobrar). `largura_bobina` saiu das
+duas checagens: todo consumidor já cai em `|| '80mm'`.
+
+O muro mais duro era o redirect global em `src/routes/+layout.svelte:262` — de
+qualquer rota, perfil incompleto ia pra `/perfil?msg=complete`. Agora "incompleto"
+quer dizer sem nome ou sem telefone, não sem CPF.
+
+`canSave` no perfil também estava preso ao CPF: sem ele, ninguém salvava nada no
+próprio perfil. Agora aceita documento vazio e exige validade só quando preenchido.
+
+`contato` continua checado por presença, não por validade — de propósito. É o
+critério do `requiredOk` antigo; apertar expulsaria pro wizard toda conta cujo
+telefone não normaliza.
+
+`tests/profileUtils.test.js` reescrito: 9 testes verdes. `npm run check` 0/0.
+Suíte completa **não** foi rodada — decisão do dono: roda uma vez no fim das
+cinco fases, velocidade acima de granularidade.
+
+**Ordem que não pode inverter:** a Fase 2 (CPF inline no Pix) tem que estar no ar
+antes da Fase 3 (wizard curto). `validatePixCustomerProfile` exige documento e
+`billingPix.js:347` manda `taxId` pra AbacatePay — tirar o CPF do wizard antes
+quebra todo Pix de cliente novo.
+
 ## `checkout_failed`: o funil passou a ver quem tentou pagar e não conseguiu — 2026-09-14
 
 Antes só existia o lado feliz (`stripe_checkout_created`, `pix_charge_created`).

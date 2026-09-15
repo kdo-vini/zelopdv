@@ -6,7 +6,7 @@
   import { goto } from '$app/navigation';
   import { ADDONS, PLANS, calculateValue, TRIAL_DAYS } from '$lib/pricing';
   import { getTrialTotalDays } from '$lib/subscriptionStatus';
-  import { requiredOk as requiredOkUtil, buildPayload, isValidImage, normalizeLarguraBobina, PLATAFORMAS_PRESET } from '$lib/profileUtils';
+  import { operationalProfileOk, billingProfileOk, buildPayload, isValidImage, normalizeLarguraBobina, PLATAFORMAS_PRESET } from '$lib/profileUtils';
   import { maskPhone, maskDocumento } from '$lib/masks';
   import { addToast } from '$lib/stores/ui';
   import { adminUnlocked } from '$lib/stores/adminStore';
@@ -299,7 +299,10 @@
   let plataformas_pagamento = PLATAFORMAS_PRESET.map(p => ({ ...p, ativo: false }));
 
   let canSave = false;
-  $: canSave = requiredOkUtil({ nome_exibicao, documento, contato, largura_bobina });
+  // CPF/CNPJ é opcional, mas quando preenchido tem que ser válido — senão entra
+  // lixo no recibo e no `customer.taxId` da cobrança Pix.
+  $: documentoAceito = !(documento || '').trim() || billingProfileOk({ documento });
+  $: canSave = operationalProfileOk({ nome_exibicao, contato }) && documentoAceito;
 
   let dirty = false;
   function markDirty() { dirty = true; }
@@ -601,7 +604,7 @@
     }
 
     const urlParams = new URLSearchParams($page.url.search);
-    if (urlParams.get('msg') === 'complete' && !requiredOkUtil({ nome_exibicao, documento, contato, largura_bobina })) {
+    if (urlParams.get('msg') === 'complete' && !operationalProfileOk({ nome_exibicao, contato })) {
       showOnboardingWizard = true;
     }
     loading = false;

@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [ ] FX-ONBOARDING-MURO-01 (2026-09-15) — o wizard de 4 passos cobra CPF/CNPJ e
+  largura de bobina antes da pessoa ver uma tela do produto, e o trial só nasce
+  no `finalizar()`. 26% dos cadastros (10 de 38 em 180 dias) travam ali, sem
+  trial e sem acesso; 7 desses voltaram e travaram de novo. Plano em cinco fases
+  em `docs/projects/onboarding-dois-passos.md`. **Fase 1.2 feita**: `requiredOk`
+  partido em `operationalProfileOk` × `billingProfileOk`, com os 4 call sites
+  atualizados (guards, layout raiz, perfil ×2). Resto em aberto.
+
 - [x] FX-CHECKOUT-FAILED-01 (2026-09-14) — o funil só media checkout com
   sucesso; tentativa recusada era invisível. `checkout_failed` passa a sair da
   mesma função que devolve o erro (`lib/server/checkoutFailure.js`), cobrindo as

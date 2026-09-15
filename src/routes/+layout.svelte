@@ -15,7 +15,7 @@
   let PinSetupModal = null;
   let ensureActiveSubscription;
   let isSubscriptionActiveStrict;
-  let requiredOk;
+  let perfilOperacionalOk;
   let authModulesPromise;
 
   async function loadAuthModules() {
@@ -29,7 +29,7 @@
         supabase = supabaseModule.supabase;
         ensureActiveSubscription = guardsModule.ensureActiveSubscription;
         isSubscriptionActiveStrict = guardsModule.isSubscriptionActiveStrict;
-        requiredOk = profileUtilsModule.requiredOk;
+        perfilOperacionalOk = profileUtilsModule.operationalProfileOk;
         PinSetupModal = pinSetupModule.default;
         return supabase;
       });
@@ -249,10 +249,10 @@
           } else {
             let { data: perfil } = await supabase
               .from('empresa_perfil')
-              .select('nome_exibicao, documento, contato, largura_bobina')
+              .select('nome_exibicao, contato')
               .eq('user_id', companyUserId)
               .maybeSingle();
-            hasCompleteProfile = Boolean(perfil && requiredOk(perfil));
+            hasCompleteProfile = Boolean(perfil && perfilOperacionalOk(perfil));
           }
           
         } catch {}
