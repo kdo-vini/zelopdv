@@ -106,7 +106,7 @@ Call sites atualizados:
 > exatamente o critério do `requiredOk` antigo. Apertar aqui expulsaria pro
 > wizard toda conta existente cujo telefone não normaliza.
 
-**1.3 — Instrumentar a tela de login** · *a fazer*
+**1.3 — Instrumentar a tela de login** · ✅ **FEITO** (eventos e hipóteses em [[CURRENT]])
 
 Em 30 dias: `/login` teve 19 visitantes, **80 pageviews** e apenas 7
 `user_logged_in`. 4,2 views por pessoa numa tela de login. Loop de redirect,

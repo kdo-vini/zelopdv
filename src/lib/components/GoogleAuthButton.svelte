@@ -2,12 +2,18 @@
   import { supabase } from '$lib/supabaseClient';
   import { getAuthRedirectUrl } from '$lib/authRedirect';
   import { addToast } from '$lib/stores/ui';
+  import { capturePostHogEvent } from '$lib/posthogClient';
 
   let loading = false;
 
   async function handleGoogleAuth() {
     if (loading || !supabase) return;
     loading = true;
+    // Este componente também vive em /cadastro; `login_submitted` só faz
+    // sentido semântico na tela de login — não polui o funil de signup.
+    if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+      void capturePostHogEvent('login_submitted', { method: 'google' });
+    }
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

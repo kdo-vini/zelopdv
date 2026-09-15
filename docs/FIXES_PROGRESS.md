@@ -9,7 +9,10 @@
   atualizados (guards, layout raiz, perfil ×2). **Fase 1.1 feita**: wizard
   instrumentado com evento por passo (`onboarding_wizard_*`, sem PII), baseline
   de 4 passos. **Fase 2.2 feita**: gate de CPF/CNPJ removido do cartão
-  (`create-subscription`). Resto em aberto.
+  (`create-subscription`). **Fase 1.3 feita**: `/login` instrumentado
+  (`login_viewed/submitted/failed/bounced_authenticated`); hipótese principal
+  para os 80 pageviews — guards de página com `getUser()` sem timeout no
+  `/gestao` — registrada em CURRENT, não corrigida. Resto em aberto.
 
 - [x] FX-CHECKOUT-FAILED-01 (2026-09-14) — o funil só media checkout com
   sucesso; tentativa recusada era invisível. `checkout_failed` passa a sair da

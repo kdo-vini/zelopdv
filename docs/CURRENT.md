@@ -42,6 +42,31 @@ fiscal" era falso. `checkout_failed` com `reason: profile_incomplete` agora só
 sai do Pix. Teste do gate do cartão em `api.checkout-failed.test.js` saiu; dois
 casos novos em `api.create-subscription.test.js` (sem documento, perfil null).
 
+**Fase 1.3 feita (só medição, nenhum redirect mudou):** `/login` emite
+`login_viewed` { redirect_from, has_session }, `login_submitted` { method },
+`login_failed` { method, error_code } e `login_bounced_authenticated`
+{ destination }. `error_code` e `redirect_from` saem de helpers puros em
+`src/lib/loginTelemetry.js` (12 testes); nunca mensagem crua nem URL completa.
+No caminho com sessão, o redirect pra `/app` aguarda o capture por até 400 ms —
+sem isso o evento de bounce morria com a navegação.
+
+Hipóteses para os 80 pageviews / 19 visitantes, **não confirmadas** (confirmar
+com os eventos acima antes de mexer):
+1. Guards de página duplicados em `gestao/+page.svelte:36`,
+   `gestao/mesas/+page.svelte:27`, `gestao/empresas/+page.svelte:28`,
+   `gestao/extensoes/+page.svelte:17` usam `getUser()` sem timeout nem fallback
+   offline e fazem `window.location.href = '/login'` na primeira falha — em
+   rede lenta expulsam sessão válida, em paralelo ao `ensureActiveSubscription`
+   que tem timeout de 8 s. Cada expulsão é reload e pageview novo em `/login`.
+2. `$pageview` morre nas rotas protegidas mas não em `/login`: todo ida-e-volta
+   só aparece pela metade `/login`.
+3. Autenticado em `/login` é redirecionado por dois mecanismos (a própria página
+   e `+layout.svelte:279`) — duplicado, mas provavelmente não é o volume.
+Consulta: `login_viewed` por `has_session`; com sessão falsa, funil
+`login_submitted` → `user_logged_in` × `login_failed` por `error_code`;
+`login_bounced_authenticated` repetido por `distinct_id` em janela curta é a
+assinatura do ping-pong.
+
 **Ordem que não pode inverter:** a Fase 2 (CPF inline no Pix) tem que estar no ar
 antes da Fase 3 (wizard curto). `validatePixCustomerProfile` exige documento e
 `billingPix.js:347` manda `taxId` pra AbacatePay — tirar o CPF do wizard antes
