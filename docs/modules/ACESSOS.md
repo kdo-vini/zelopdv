@@ -93,7 +93,8 @@
 
 - permissao fina por papel nao e enforced uniformemente no servidor
 - varias telas dependem de esconder rota/acao no cliente
-- `AdminLock` agora valida o PIN no servidor, mas continua sendo complementar ao permissionamento por cargo
+- PIN administrativo (`AdminLock`) **removido em 2026-09-15**: privacidade entre funcionários é
+  exclusivamente o permissionamento por cargo deste add-on (`relatorios.ver`, policies de despesas)
 
 ## Fluxos operacionais
 
@@ -159,11 +160,10 @@ correlacionar vendas históricas.
 - `src/routes/gestao/despesas/+page.svelte`
 - `src/routes/relatorios/+page.svelte`
 - `src/routes/app/+page.svelte`
-- `src/lib/components/AdminLock.svelte`
 
 Motivo:
 
-- parte do modelo atual mistura owner-scoping, PIN e gating de UI
+- parte do modelo atual mistura owner-scoping e gating de UI (o PIN saiu em 2026-09-15)
 
 ## Invariantes
 

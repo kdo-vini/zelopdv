@@ -9,7 +9,6 @@
   import { operationalProfileOk, billingProfileOk, buildPayload, isValidImage, normalizeLarguraBobina, PLATAFORMAS_PRESET } from '$lib/profileUtils';
   import { maskPhone, maskDocumento } from '$lib/masks';
   import { addToast } from '$lib/stores/ui';
-  import { adminUnlocked } from '$lib/stores/adminStore';
   import OnboardingWizard from '$lib/components/OnboardingWizard.svelte';
   import { pairPrinter, unpairPrinter, printerStatus, isWebUsbSupported } from '$lib/printer';
   import { printTeste } from '$lib/printService';
@@ -59,97 +58,6 @@
     activeTab = target.tab;
     await tick();
     document.getElementById(target.anchor)?.scrollIntoView({ block: 'start' });
-  }
-
-  // PIN Management
-  let showChangePin = false;
-  let newPin = '';
-  let savingPin = false;
-  let showDisablePin = false;
-  let currentPin = '';
-  let disablingPin = false;
-  let adminPinStatus = { state: 'loading', configured: false, enabled: false, canSet: false };
-  let showPinBubble = false;
-  let pinBubbleTimer;
-
-  function triggerPinBubble() {
-    showPinBubble = true;
-    clearTimeout(pinBubbleTimer);
-    pinBubbleTimer = setTimeout(() => (showPinBubble = false), 2000);
-  }
-
-  async function loadAdminPinStatus() {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('Sessão expirada.');
-      const response = await fetch('/api/auth/admin-pin', {
-        headers: { authorization: `Bearer ${session.access_token}` },
-      });
-      const status = await response.json().catch(() => ({}));
-      if (!response.ok || typeof status.enabled !== 'boolean') {
-        throw new Error(status?.error || 'Não foi possível verificar o PIN.');
-      }
-      adminPinStatus = { state: 'ready', ...status };
-    } catch (error) {
-      adminPinStatus = { state: 'error', configured: false, enabled: false, canSet: false };
-      console.warn('[perfil] admin PIN status failed:', error?.message || error);
-    }
-  }
-
-  async function saveNewPin() {
-    if (newPin.length < 4 || newPin.length > 6) return;
-    savingPin = true;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('Sessão expirada.');
-      const response = await fetch('/api/auth/admin-pin', {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${session.access_token}`,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ action: 'set', pin: newPin }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload?.error || 'Falha ao salvar PIN.');
-      showChangePin = false;
-      newPin = '';
-      adminPinStatus = { state: 'ready', configured: true, enabled: true, canSet: true };
-      $adminUnlocked = true;
-      addToast('PIN atualizado com sucesso!', 'success');
-    } catch (e) {
-      addToast('Não foi possível atualizar o PIN. Tente novamente.', 'error');
-    } finally {
-      savingPin = false;
-    }
-  }
-
-  async function disablePin() {
-    if (adminPinStatus.configured && currentPin.length < 4) return;
-    disablingPin = true;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('Sessão expirada.');
-      const response = await fetch('/api/auth/admin-pin', {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${session.access_token}`,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ action: 'disable', ...(currentPin ? { currentPin } : {}) }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload?.error || 'Falha ao desativar PIN.');
-      adminPinStatus = { state: 'ready', configured: false, enabled: false, canSet: true };
-      currentPin = '';
-      showDisablePin = false;
-      $adminUnlocked = false;
-      addToast('PIN desativado.', 'success');
-    } catch (e) {
-      addToast('Não foi possível desativar o PIN. Tente novamente.', 'error');
-    } finally {
-      disablingPin = false;
-    }
   }
 
   async function resetPassword() {
@@ -571,8 +479,6 @@
       offlineAccessContext = { userId, ownerUserId: userId, isSubUser: false, permissions: null };
     }
 
-    await loadAdminPinStatus();
-
     // Load preferences from localStorage
     notifEstoqueBaixo = localStorage.getItem('zelo_notif_estoque') === 'true';
     notifFechamentoCaixa = localStorage.getItem('zelo_notif_caixa') === 'true';
@@ -925,85 +831,6 @@
                 on:mouseenter={e => (e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)')}
                 on:mouseleave={e => (e.currentTarget.style.background = 'var(--bg-input)')}
               >Redefinir Senha</button>
-            </div>
-
-            <div class="pt-4 grid gap-3" style="border-top: 1px solid var(--border-subtle);">
-              <div class="flex items-center justify-between gap-4 flex-wrap">
-                <div>
-                  <p class="text-sm font-medium" style="color: var(--text-main);">PIN Administrativo</p>
-                  {#if adminPinStatus.state === 'ready'}
-                    <p class="text-xs mt-0.5" style="color: var(--text-muted);">
-                      {adminPinStatus.enabled && adminPinStatus.configured
-                        ? 'Ativo: protege Relatórios e Despesas.'
-                        : 'Desativado: essas áreas ficam acessíveis sem PIN.'}
-                    </p>
-                  {:else if adminPinStatus.state === 'error'}
-                    <p class="text-xs mt-0.5" style="color: var(--error);">Não foi possível verificar o status do PIN.</p>
-                  {:else}
-                    <p class="text-xs mt-0.5" style="color: var(--text-muted);">Verificando configuração…</p>
-                  {/if}
-                </div>
-                {#if adminPinStatus.state === 'ready'}
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <button type="button" on:click={() => { showChangePin = !showChangePin; showDisablePin = false; }}
-                      class="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-                      style="background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle);"
-                      on:mouseenter={e => (e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)')}
-                      on:mouseleave={e => (e.currentTarget.style.background = 'var(--bg-input)')}
-                    >{adminPinStatus.enabled && adminPinStatus.configured ? 'Alterar PIN' : 'Ativar PIN'}</button>
-                    {#if adminPinStatus.enabled && adminPinStatus.configured}
-                      <button type="button" on:click={() => { showDisablePin = !showDisablePin; showChangePin = false; }}
-                        class="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-                        style="background: transparent; color: var(--error); border: 1px solid color-mix(in srgb, var(--error) 45%, transparent);"
-                      >Desativar PIN</button>
-                    {/if}
-                  </div>
-                {/if}
-              </div>
-              {#if adminPinStatus.state === 'ready' && showDisablePin}
-                <div class="rounded-md p-4 grid gap-3" style="background: var(--bg-input); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);">
-                  <label class="block">
-                    <span class="block mb-1 text-sm" style="color: var(--text-label);">PIN atual</span>
-                    <input type="password" maxlength="6" inputmode="numeric" pattern="[0-9]*"
-                      class="w-full rounded-md px-3 py-2 text-sm text-center tracking-[0.5em] font-mono"
-                      style="background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                      placeholder="Digite o PIN atual" bind:value={currentPin}
-                      on:input={(e) => { currentPin = e.currentTarget.value.replace(/\D/g, ''); }}
-                    />
-                  </label>
-                  <button type="button" on:click={disablePin}
-                    class="w-full px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-60"
-                    style="background: var(--error); color: var(--primary-text);"
-                    disabled={currentPin.length < 4 || disablingPin}
-                  >{disablingPin ? 'Desativando…' : 'Confirmar desativação'}</button>
-                </div>
-              {/if}
-              {#if adminPinStatus.state === 'ready' && showChangePin}
-                <div class="rounded-md p-4 grid gap-3" style="background: var(--bg-input); border: 1px solid var(--border-subtle);">
-                  <label class="block">
-                    <span class="block mb-1 text-sm" style="color: var(--text-label);">Novo PIN (4 a 6 dígitos)</span>
-                    <div class="relative">
-                      <input type="password" maxlength="6" inputmode="numeric" pattern="[0-9]*"
-                        class="w-full rounded-md px-3 py-2 text-sm text-center tracking-[0.5em] font-mono"
-                        style="background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-subtle);"
-                        placeholder="0000" bind:value={newPin}
-                        on:input={(e) => { if (/\D/.test(e.currentTarget.value)) { triggerPinBubble(); newPin = e.currentTarget.value.replace(/\D/g, ''); } }}
-                      />
-                      {#if showPinBubble}
-                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 text-xs font-bold rounded-sm shadow-xl whitespace-nowrap z-50" style="background: var(--warning); color: #fff;">
-                          Números apenas!
-                          <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent" style="border-top-color: var(--warning);"></div>
-                        </div>
-                      {/if}
-                    </div>
-                  </label>
-                  <button type="button" on:click={saveNewPin}
-                    class="w-full px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-60"
-                    style="background: var(--primary); color: var(--primary-text);"
-                    disabled={newPin.length < 4 || newPin.length > 6 || savingPin}
-                  >{savingPin ? 'Salvando…' : 'Atualizar PIN'}</button>
-                </div>
-              {/if}
             </div>
           </section>
 

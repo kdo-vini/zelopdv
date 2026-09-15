@@ -190,8 +190,8 @@ não foi alterada.
 `/cadastro` e `/login`.
 
 **A.2 — OTP por WhatsApp como recuperação.** Mata o "esqueci a senha" sem trocar
-o motor. `api/auth/pin-reset-otp` já chama `signInWithOtp` com limite de 5/dia —
-o primitivo está em produção. E o envio sai por infra própria
+o motor. `api/auth/pin-reset-otp` chamava `signInWithOtp` com limite de 5/dia,
+mas **foi removido junto com o PIN em 2026-09-15** — o envio precisa ser recriado. E o envio sai por infra própria
 (`ZELOCHAT_INTERNAL_SEND_URL`), a custo marginal quase zero.
 
 > **Aberto:** OTP de autenticação por WhatsApp cai na categoria *authentication*

@@ -1,5 +1,53 @@
 # ZeloPDV — Foco atual
 
+## Cadastro sem espera e sem PIN — 2026-09-15
+
+Cadastro de teste do dono em produção (09:19), medido no PostHog: 5,6 s de
+"Carregando…" até o wizard aparecer, 10 s entre "Começar a usar" e o
+`trial_started`, até mais 8 s de espera fixa de tracking, recarga completa do
+`/gestao` e, ao chegar, o modal de configurar PIN. O passo 1 do wizard também
+emitia `onboarding_wizard_step_viewed` duas vezes.
+
+**Corrigido:**
+- `POST /api/billing/start-trial` responde assim que a assinatura existe
+  (inserida ou encontrada). Meta CAPI, e-mail dia 0, WhatsApp de boas-vindas,
+  referral, `last_seen_at` e o flush do `trial_started` vão para `waitUntil`.
+  O campo `onboarding` saiu da resposta — ninguém lia.
+- `/perfil?msg=complete` decide o wizard com leitura mínima de
+  `nome_exibicao, contato` em paralelo à detecção de subusuário, sem esperar
+  assinatura e perfil completo.
+- Fim do wizard: `waitForGtag` com teto de 1,5 s (era 6 s),
+  `trackGoogleAdsInscricao({ timeoutMs })` espera o `event_callback` real com
+  teto de 1 s, buffer final de 800 ms só quando houve tracking (eram 2 s fixos).
+  Conversões de Google Ads e Meta continuam disparando.
+- **Bug de navegação no layout raiz:** `maybeNavigate` usava um `path`
+  capturado uma vez no `onMount`, que sombreava o `$: path` reativo. Todo
+  `onAuthStateChange` decidia com a URL de quando o app montou. No cadastro,
+  `setSession` disparava um `window.location.href = '/perfil?msg=complete'`
+  que corria com o `goto` do próprio `/cadastro` — `/perfil` e wizard montavam
+  duas vezes (origem do `step_viewed` duplicado). Agora o pathname é lido a cada
+  decisão e `/cadastro` não é redirecionado pelo layout (a página navega
+  sozinha). Candidato forte a explicar o ping-pong `/cadastro`↔`/login` visto
+  no PostHog — confirmar com `login_bounced_authenticated` depois do deploy.
+
+**PIN administrativo removido do SaaS** (decisão do dono: privacidade entre
+funcionários é o add-on Controle de Acessos; com PIN grátis o add-on não vende).
+Saíram `AdminLock`, `PinSetupModal`, `adminPinPrompt`, `adminStore`, as rotas
+`/api/auth/admin-pin` e `/api/auth/pin-reset-otp`, o rate limit correspondente,
+o bloqueio em `/relatorios` e `/gestao/despesas` e a seção de PIN do `/perfil`.
+`relatorios.ver` e as policies de despesas por cargo continuam intactas.
+- **Impacto conhecido e aceito:** 3 clientes pagantes tinham PIN e não têm
+  Acessos; relatórios e despesas deles ficam visíveis a quem usar o mesmo login.
+- **Pendente:** colunas `empresa_perfil.pin_admin`, `empresa_perfil.pin_enabled`
+  e `access_settings.pin_enabled` continuam no banco sem leitor. Drop só depois
+  do deploy estável, via migration forward; `tests/empresaPerfilPinSelectSchema.test.js`
+  segue testando a migration antiga.
+- A trilha A.2 (OTP por WhatsApp) perdeu o primitivo `pin-reset-otp`; se andar,
+  recria-se o envio a partir de `signInWithOtp`.
+
+Validação: suíte completa 1.283/1.286 (3 skips pré-existentes), `npm run check`
+0/0. Não publicado ainda.
+
 ## Onboarding em dois passos — Fases 1–5 encerradas — 2026-09-15
 
 Plano completo em [onboarding-dois-passos](projects/onboarding-dois-passos.md).

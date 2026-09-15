@@ -64,6 +64,17 @@ usa service-role. A migration
 policies de escrita. Snapshot:
 `docs/operations/VENDAS-TAXAS-SELECT-RBAC-SNAPSHOT-2026-08-13.md`.
 
+### Update 2026-09-15 - `start-trial` em background
+
+`POST /api/billing/start-trial` passou a responder antes de e-mail dia 0,
+WhatsApp de boas-vindas, CAPI e referral (`waitUntil`). Risco residual
+**pré-existente, não introduzido**: `maybeSendDay0Email` e
+`maybeSendWelcomeWhatsApp` deduplicam com select-antes-de-enviar
+(`email_onboarding_logs`, `subscriptions.whatsapp_onboarding_sent_at`), não de
+forma atômica — dois POSTs concorrentes da mesma conta podem enviar em dobro.
+Correção, se virar problema: claim atômico (insert com unique ou update
+condicional) antes do envio.
+
 ### Update 2026-08-13 - containment de `empresa_perfil.pin_admin`
 
 O residual do finding do `AdminLock` foi confirmado em produção: embora a
@@ -352,4 +363,4 @@ não migradas.
 
 ## Summary
 
-Os riscos mais altos remanescentes são enforcement de permissões por papel em superfícies client-side e a confirmação operacional do sweeper externo de deleção. O PIN server-side, a reativação fail-closed e a unicidade de linhas vivas de assinatura já foram implementados e verificados; a base continua deliberadamente sem refactors gerais.
+Os riscos mais altos remanescentes são enforcement de permissões por papel em superfícies client-side e a confirmação operacional do sweeper externo de deleção. O PIN administrativo foi removido do produto em 2026-09-15 (os achados de PIN acima são históricos). A reativação fail-closed e a unicidade de linhas vivas de assinatura já foram implementados e verificados; a base continua deliberadamente sem refactors gerais.

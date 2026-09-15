@@ -1,5 +1,19 @@
 # Fixes Progress
 
+- [x] FX-CADASTRO-LENTO-01 (2026-09-15) — cadastro real levava ~15–25 s entre
+  criar a conta e ver o produto. `start-trial` aguardava CAPI/e-mail/WhatsApp/
+  referral (10 s medidos) → `waitUntil`; `/perfil` só abria o wizard depois de
+  carregar tudo (5,6 s) → leitura mínima em paralelo; tracking esperava até 8 s
+  fixos → tetos de 1,5 s + callback de 1 s + 800 ms. Layout raiz decidia
+  redirects com `path` capturado no mount, causando reload redundante de
+  `/perfil` após o cadastro e `step_viewed` duplicado → pathname lido a cada
+  decisão e `/cadastro` isento.
+
+- [x] FX-PIN-REMOVIDO-01 (2026-09-15) — PIN administrativo removido do SaaS por
+  decisão de produto (fricção pós-cadastro; concorria com o add-on Acessos).
+  Código, rotas e UI saíram; colunas `pin_*` ficam no banco até migration de
+  drop. 3 pagantes sem Acessos perdem a trava de relatórios/despesas.
+
 - [x] FX-ONBOARDING-MURO-01 (2026-09-15) — o wizard de 4 passos cobra CPF/CNPJ e
   largura de bobina antes da pessoa ver uma tela do produto, e o trial só nasce
   no `finalizar()`. 26% dos cadastros (10 de 38 em 180 dias) travam ali, sem

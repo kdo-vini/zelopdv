@@ -12,7 +12,6 @@
   import CanonicalOrderAutoPrinter from '$lib/components/CanonicalOrderAutoPrinter.svelte';
 
   let supabase = null;
-  let PinSetupModal = null;
   let ensureActiveSubscription;
   let isSubscriptionActiveStrict;
   let perfilOperacionalOk;
@@ -24,13 +23,11 @@
         import('$lib/supabaseClient'),
         import('$lib/guards'),
         import('$lib/profileUtils'),
-        import('$lib/components/PinSetupModal.svelte'),
-      ]).then(([supabaseModule, guardsModule, profileUtilsModule, pinSetupModule]) => {
+      ]).then(([supabaseModule, guardsModule, profileUtilsModule]) => {
         supabase = supabaseModule.supabase;
         ensureActiveSubscription = guardsModule.ensureActiveSubscription;
         isSubscriptionActiveStrict = guardsModule.isSubscriptionActiveStrict;
         perfilOperacionalOk = profileUtilsModule.operationalProfileOk;
-        PinSetupModal = pinSetupModule.default;
         return supabase;
       });
     }
@@ -207,7 +204,6 @@
     if (!supabase) return;
  
   const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/redefinir-senha', '/privacidade', '/termos', '/pascoa', '/para-lanchonetes', '/para-restaurantes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao', '/extensoes', '/vs-planilha', '/comparativos', '/contato', '/zelo-impressao', '/auth/callback'];
-    const path = window.location.pathname;
 
     let navigated = false;
     let authReady = false;
@@ -216,8 +212,13 @@
       if (navigated || !authReady) return;
       // Não redirecionar em páginas de erro (404, 500, etc.)
       if (get(page).error) return;
+      // Lido agora, não capturado uma vez no início do onMount — maybeNavigate
+      // roda de novo após navegações client-side (goto), e um valor velho aqui
+      // fazia os checks abaixo decidirem com base na URL errada (ex.: ping-pong
+      // /cadastro↔/perfil).
+      const currentPath = window.location.pathname;
       // Operational routes share the canonical guard, including network fallback.
-      if (matchesProtectedPrefix(window.location.pathname, subscriptionRequiredPrefixes)) {
+      if (matchesProtectedPrefix(currentPath, subscriptionRequiredPrefixes)) {
         const context = await ensureActiveSubscription({ requireProfile: true });
         if (context) {
           const { startOfflineRuntime } = await import('$lib/offline/runtime');
@@ -258,27 +259,33 @@
         } catch {}
       }
 
-      // Se logado e perfil incompleto, força ir para /perfil (evitar loop quando já está em /perfil)
-      if (session && !hasCompleteProfile && path !== '/perfil' && path !== '/perfil.html' && path !== '/redefinir-senha') {
-
-        const params = new URLSearchParams({ msg: 'complete' });
-        window.location.href = `/perfil?${params.toString()}`;
-        navigated = true;
-        return;
+      // Se logado e perfil incompleto, força ir para /perfil (evitar loop quando já está em /perfil).
+      if (session && !hasCompleteProfile) {
+        // /cadastro já navega sozinha para /perfil?msg=complete logo após criar a
+        // sessão (setSession → goto). Disparar aqui também (window.location.href,
+        // reload completo) corria com o goto dela e montava o wizard duas vezes —
+        // então só devolve e deixa a página seguir seu próprio fluxo.
+        if (currentPath === '/cadastro') return;
+        if (currentPath !== '/perfil' && currentPath !== '/perfil.html' && currentPath !== '/redefinir-senha') {
+          const params = new URLSearchParams({ msg: 'complete' });
+          window.location.href = `/perfil?${params.toString()}`;
+          navigated = true;
+          return;
+        }
       }
 
       // Helper to check if path is public (includes /loja/* subroutes)
       const isPublicPath = (p) => publicPaths.includes(p) || p.startsWith('/blog/') || p.startsWith('/indica/') || p.startsWith('/vs-');
 
-      if (!session && !isPublicPath(path)) {
+      if (!session && !isPublicPath(currentPath)) {
 
         window.location.href = '/login';
         navigated = true;
         return;
       }
-      if (session && isPublicPath(path)) {
+      if (session && isPublicPath(currentPath)) {
         // Allow /loja/* paths without redirect (public storefront)
-        if (path === '/' || path === '/assinatura' || path === '/perfil' || path === '/perfil.html' || path === '/redefinir-senha' || path === '/pascoa' || path === '/precificacao' || path.startsWith('/vs-') || path.startsWith('/para-') || path.startsWith('/blog') || path.startsWith('/indica/')) {
+        if (currentPath === '/' || currentPath === '/assinatura' || currentPath === '/perfil' || currentPath === '/perfil.html' || currentPath === '/redefinir-senha' || currentPath === '/pascoa' || currentPath === '/precificacao' || currentPath.startsWith('/vs-') || currentPath.startsWith('/para-') || currentPath.startsWith('/blog') || currentPath.startsWith('/indica/')) {
 
         } else {
 
@@ -288,7 +295,7 @@
         return;
       }
       // Protege rotas internas sem assinatura ativa
-      if (session && matchesProtectedPrefix(path, subscriptionRequiredPrefixes)) {
+      if (session && matchesProtectedPrefix(currentPath, subscriptionRequiredPrefixes)) {
         if (!hasCompleteProfile) {
 
           const params = new URLSearchParams({ msg: 'complete' });
@@ -391,17 +398,13 @@
   import SupportChat from '$lib/components/SupportChat.svelte';
   import OfflineStatus from '$lib/components/OfflineStatus.svelte';
   import UpdateAvailable from '$lib/components/UpdateAvailable.svelte';
-  import { shouldPromptPinSetup } from '$lib/adminPinPrompt';
-  import { adminUnlocked } from '$lib/stores/adminStore';
   import { sessionStore, companyNameStore } from '$lib/stores/session';
 
-  let showPinSetup = false;
-  let pinConfigured = false;
   let companyName = null;
 
   // Enhance the existing onMount/auth check
-  // We need to fetch the PIN and NAME from profile when session loads
-  
+  // We need to fetch the NAME from profile when session loads
+
   async function fetchProfileData(uId) {
     if (!uId) return;
     const accessCtx = await resolveAccessContext(uId);
@@ -413,20 +416,6 @@
       .maybeSingle();
 
     if (data) {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        let pinStatus = null;
-        if (currentSession?.access_token) {
-          const response = await fetch('/api/auth/admin-pin', {
-            headers: { authorization: `Bearer ${currentSession.access_token}` },
-          });
-          pinStatus = response.ok ? await response.json().catch(() => null) : null;
-        }
-        pinConfigured = pinStatus?.configured === true;
-        // Don't interrupt onboarding flow — only prompt PIN setup on protected app pages
-        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-        if (shouldPromptPinSetup(pinStatus, currentPath)) {
-            showPinSetup = true;
-        }
         if (data.nome_exibicao) {
             companyName = data.nome_exibicao;
         }
@@ -439,12 +428,6 @@
   // Alimenta stores globais de sessão para uso em sub-layouts (ex: GestaoSidebar)
   $: $sessionStore = session;
   $: $companyNameStore = companyName;
-  
-  function onPinSet(configured = true) {
-    showPinSetup = false;
-    pinConfigured = configured;
-    $adminUnlocked = configured; // Auto unlock only after setting a PIN
-  }
 </script>
 
 <Toaster
@@ -461,10 +444,6 @@
 {#if session && hasSidebarLayout}
   <RemotePrintStation />
   <CanonicalOrderAutoPrinter />
-{/if}
-
-{#if showPinSetup && session && !isPerfil && !isAssinatura && PinSetupModal}
-  <svelte:component this={PinSetupModal} {onPinSet} />
 {/if}
 
 {#if !isOnline && !isApp && path !== '/gestao/caixa'}

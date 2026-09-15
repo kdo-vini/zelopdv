@@ -216,7 +216,6 @@ async function seedSubusers(admin, ownerUserId, ownerEmail) {
     'access settings',
     await admin.from('access_settings').upsert({
       owner_user_id: ownerUserId,
-      pin_enabled: true,
       max_subusers: 5,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'owner_user_id' }),
@@ -259,7 +258,6 @@ export async function seedTestTenant() {
       documento: '52998224725',
       contato: '5511999999999',
       largura_bobina: '80mm',
-      pin_admin: '1234',
     }, { onConflict: 'user_id' }).select('*').single(),
   ));
 
