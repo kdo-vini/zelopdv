@@ -516,3 +516,8 @@ recarregar a página não troca de versão. Regras em
 - Aparelho preso numa versão anterior a esta regra precisa pegá-la uma vez pelo
   caminho manual (aceitar o aviso numa tela sem modal, aba privada ou apagar os
   dados do site); daí em diante as atualizações entram no boot.
+- **Confirmado em campo (iPhone/Safari, 2026-09-15):** trocar de aba ou deixar o
+  Safari em segundo plano não conta como reabrir o app — o iOS mantém o processo
+  vivo e o `onMount` não roda de novo. É preciso fechar o Safari por completo
+  (deslizar para cima e fechar, não só trocar de aba) e reabrir o Zelo do zero.
+  Vale como primeiro passo de suporte antes de qualquer reset manual.
