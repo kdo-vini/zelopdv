@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { waitUntil } from '@vercel/functions';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { enviarBoasVindasDetalhado, getWhatsAppSendError } from '$lib/server/whatsapp';
 import { sendEmail, isEmailConfigured } from '$lib/server/email';
@@ -11,6 +12,24 @@ import {
 } from '$lib/server/referrals';
 import { getPostHogClient } from '$lib/server/posthog';
 import { TRIAL_DAYS } from '$lib/pricing';
+
+// Agenda os efeitos colaterais de onboarding (CAPI, e-mail, WhatsApp, referral,
+// last_seen, flush do PostHog) sem segurar a resposta: o acesso já está
+// garantido (subscription inserida ou encontrada) no momento em que isto é
+// chamado. Mesmo padrão de `waitUntil` + catch silencioso de
+// `checkoutFailure.js`/`pix/create`; fora do runtime da Vercel (teste, dev)
+// `waitUntil` não existe e o trabalho segue solto em background mesmo assim.
+function scheduleBackgroundWork(promise, label) {
+  const settled = promise.catch((err) => {
+    console.warn(`[start-trial] background work failed (${label}):`, err?.message || err);
+  });
+  try {
+    waitUntil(settled);
+  } catch {
+    // Sem runtime da Vercel (teste, dev): a promise já está em voo, só não
+    // há quem prometa mantê-la viva além do fim da função.
+  }
+}
 
 async function fetchPerfil(userId) {
   const { data: perfil, error } = await supabaseAdmin
@@ -207,6 +226,12 @@ export async function POST({ request, cookies }) {
       || undefined;
     const userAgent = request.headers.get('user-agent') || undefined;
 
+    // Lidos de forma síncrona antes de qualquer `await` para não depender de
+    // `cookies`/`request` ainda estarem "vivos" quando o trabalho em
+    // background rodar depois da resposta já ter saído.
+    const referralCode = cookies?.get?.('zelo_referral_code') || user.user_metadata?.referral_code;
+    const referralId = cookies?.get?.('zelo_referral_id');
+
     const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
       .select('id, status, current_period_end, whatsapp_onboarding_sent_at')
@@ -214,43 +239,42 @@ export async function POST({ request, cookies }) {
       .maybeSingle();
 
     if (existingSub) {
-      const perfil = await fetchPerfil(userId);
-      if (perfil?.nome_exibicao) {
-        await ensureReferralCodeForEmpresa(userId, perfil.nome_exibicao).catch((err) => {
-          console.warn('[start-trial] referral code ensure error:', err?.message || err);
-        });
-      }
-      await progressReferralForUser({
-        userId,
-        email,
-        wantedStatus: 'trial_started',
-        referralCode: cookies?.get?.('zelo_referral_code') || user.user_metadata?.referral_code,
-        referralId: cookies?.get?.('zelo_referral_id'),
-        source: 'start-trial-existing',
-      }).catch((err) => {
-        console.warn('[start-trial] referral progress existing error:', err?.message || err);
-      });
-      const emailDay0Sent = await maybeSendDay0Email({
-        userId,
-        email,
-        nomeLoja: perfil?.nome_exibicao || '',
-      });
-      let whatsappDay0Sent = Boolean(existingSub.whatsapp_onboarding_sent_at);
-      if (!existingSub.whatsapp_onboarding_sent_at) {
-        whatsappDay0Sent = await maybeSendWelcomeWhatsApp({
+      // Acesso já garantido (assinatura encontrada) — responde agora e manda
+      // referral/e-mail/WhatsApp pra trás. Nada aqui compõe a resposta: o
+      // retorno de `progressReferralForUser` já era descartado antes desta
+      // mudança (só `.catch` pra log), e nenhum consumidor em src/ lê
+      // `onboarding.emailDay0Sent`/`whatsappDay0Sent` (grep confirmado).
+      scheduleBackgroundWork((async () => {
+        const perfil = await fetchPerfil(userId);
+        if (perfil?.nome_exibicao) {
+          await ensureReferralCodeForEmpresa(userId, perfil.nome_exibicao).catch((err) => {
+            console.warn('[start-trial] referral code ensure error:', err?.message || err);
+          });
+        }
+        await progressReferralForUser({
           userId,
-          perfil,
+          email,
+          wantedStatus: 'trial_started',
+          referralCode,
+          referralId,
+          source: 'start-trial-existing',
+        }).catch((err) => {
+          console.warn('[start-trial] referral progress existing error:', err?.message || err);
         });
-      }
+        await maybeSendDay0Email({
+          userId,
+          email,
+          nomeLoja: perfil?.nome_exibicao || '',
+        });
+        if (!existingSub.whatsapp_onboarding_sent_at) {
+          await maybeSendWelcomeWhatsApp({ userId, perfil });
+        }
+      })(), 'existing-subscription');
 
       return json({
         success: true,
         trialEnd: existingSub.current_period_end,
         alreadyExists: true,
-        onboarding: {
-          emailDay0Sent,
-          whatsappDay0Sent,
-        },
       });
     }
 
@@ -275,31 +299,35 @@ export async function POST({ request, cookies }) {
       return json({ error: 'Erro ao ativar período de teste. Tente novamente.' }, { status: 500 });
     }
 
-    const perfil = await fetchPerfil(userId);
-    if (perfil?.nome_exibicao) {
-      await ensureReferralCodeForEmpresa(userId, perfil.nome_exibicao).catch((err) => {
-        console.warn('[start-trial] referral code ensure error:', err?.message || err);
-      });
-    }
-    await progressReferralForUser({
-      userId,
-      email,
-      wantedStatus: 'trial_started',
-      referralCode: cookies?.get?.('zelo_referral_code') || user.user_metadata?.referral_code,
-      referralId: cookies?.get?.('zelo_referral_id'),
-      source: 'start-trial',
-    }).catch((err) => {
-      console.warn('[start-trial] referral progress error:', err?.message || err);
-    });
-    const [, sideEffects] = await Promise.all([
-      sendCapiEvent({
-        eventName: 'StartTrial',
+    // Estado de acesso garantido a partir daqui (linha inserida). Tudo abaixo
+    // é efeito colateral — CAPI, e-mail dia 0, WhatsApp, referral, last_seen,
+    // PostHog — e vai pra background; nada disso compõe a resposta.
+    scheduleBackgroundWork((async () => {
+      const perfil = await fetchPerfil(userId);
+      if (perfil?.nome_exibicao) {
+        await ensureReferralCodeForEmpresa(userId, perfil.nome_exibicao).catch((err) => {
+          console.warn('[start-trial] referral code ensure error:', err?.message || err);
+        });
+      }
+      await progressReferralForUser({
+        userId,
         email,
-        ipAddress,
-        userAgent,
-        customData: { value: 0, currency: 'BRL', predicted_ltv: 0 },
-      }),
-      Promise.allSettled([
+        wantedStatus: 'trial_started',
+        referralCode,
+        referralId,
+        source: 'start-trial',
+      }).catch((err) => {
+        console.warn('[start-trial] referral progress error:', err?.message || err);
+      });
+
+      const sideEffects = await Promise.allSettled([
+        sendCapiEvent({
+          eventName: 'StartTrial',
+          email,
+          ipAddress,
+          userAgent,
+          customData: { value: 0, currency: 'BRL', predicted_ltv: 0 },
+        }),
         touchLastSeen(userId, nowIso),
         maybeSendDay0Email({
           userId,
@@ -310,36 +338,32 @@ export async function POST({ request, cookies }) {
           userId,
           perfil,
         }),
-      ]),
-    ]);
+      ]);
 
-    for (const result of sideEffects) {
-      if (result.status === 'rejected') {
-        console.warn('[start-trial] Side effect rejected:', result.reason?.message || result.reason);
+      for (const result of sideEffects) {
+        if (result.status === 'rejected') {
+          console.warn('[start-trial] Side effect rejected:', result.reason?.message || result.reason);
+        }
       }
-    }
 
-    const posthog = getPostHogClient();
-    if (posthog) {
-      posthog.capture({
-        distinctId: userId,
-        event: 'trial_started',
-        properties: {
-          $set: { email },
-          plan: 'pdv',
-          trial_end: trialEnd.toISOString(),
-        },
-      });
-      await posthog.flush();
-    }
+      const posthog = getPostHogClient();
+      if (posthog) {
+        posthog.capture({
+          distinctId: userId,
+          event: 'trial_started',
+          properties: {
+            $set: { email },
+            plan: 'pdv',
+            trial_end: trialEnd.toISOString(),
+          },
+        });
+        await posthog.flush();
+      }
+    })(), 'new-subscription');
 
     return json({
       success: true,
       trialEnd: trialEnd.toISOString(),
-      onboarding: {
-        emailDay0Sent: sideEffects[1]?.status === 'fulfilled' && sideEffects[1].value === true,
-        whatsappDay0Sent: sideEffects[2]?.status === 'fulfilled' && sideEffects[2].value === true,
-      },
     });
 
   } catch (err) {
