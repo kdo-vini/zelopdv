@@ -1,5 +1,5 @@
 <script>
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { translateSubscriptionStatus } from '$lib/errorUtils';
   import { page } from '$app/stores';
@@ -14,6 +14,7 @@
   import { pairPrinter, unpairPrinter, printerStatus, isWebUsbSupported } from '$lib/printer';
   import { printTeste } from '$lib/printService';
   import { getAccessContext } from '$lib/accessControl';
+  import { resolveProfileAnchor } from '$lib/profileAnchors';
   import OfflineCenter from '$lib/components/OfflineCenter.svelte';
   import { startOfflineRuntime } from '$lib/offline/runtime';
   import { printStationEnabled, setPrintStationEnabled, setPrintStationOwner } from '$lib/printStationPreference.js';
@@ -49,6 +50,16 @@
     { id: 'integracoes',  label: 'Integrações' },
   ];
   let activeTab = 'perfil';
+
+  async function syncProfileAnchor() {
+    if (typeof window === 'undefined') return;
+    const target = resolveProfileAnchor(window.location.hash);
+    if (!target) return;
+
+    activeTab = target.tab;
+    await tick();
+    document.getElementById(target.anchor)?.scrollIntoView({ block: 'start' });
+  }
 
   // PIN Management
   let showChangePin = false;
@@ -608,6 +619,7 @@
       showOnboardingWizard = true;
     }
     loading = false;
+    await syncProfileAnchor();
     void refreshLocalPrint();
   });
 
@@ -708,6 +720,8 @@
   }
   $: tag = subStatus ? statusTag(subStatus) : null;
 </script>
+
+<svelte:window on:hashchange={syncProfileAnchor} />
 
 {#if isSubUser}
   <div class="max-w-2xl">
@@ -822,7 +836,7 @@
         <div class="grid gap-5 max-w-2xl">
 
           <!-- Logotipo -->
-          <section class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+          <section id="logo" class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card); scroll-margin-top: 1rem;">
             <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Logotipo</h2>
             <div class="flex items-center gap-5">
               <div class="w-20 h-20 rounded-xl overflow-hidden shrink-0 flex items-center justify-center" style="background: var(--bg-input); border: 1px solid var(--border-subtle);">
@@ -975,7 +989,7 @@
         <div class="grid gap-5 max-w-2xl">
 
           <!-- Informações Fiscais -->
-          <section class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+          <section id="documento" class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card); scroll-margin-top: 1rem;">
             <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Informações Fiscais</h2>
 
             <label class="block">
@@ -1154,7 +1168,7 @@
         <div class="grid gap-5 max-w-2xl">
 
           <!-- Impressão -->
-          <section class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+          <section id="largura-bobina" class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card); scroll-margin-top: 1rem;">
             <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Impressão</h2>
 
             <label class="block">
