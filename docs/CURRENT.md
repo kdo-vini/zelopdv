@@ -46,7 +46,18 @@ e 17 venderam produto cadastrado em algum momento.
   precisa abrir o caixa para seguir (a comanda não se perde).
 - `first_sale_completed` vem de trigger de banco e não distingue venda de teste
   (avulso) de venda com produto; medir por `vendas_itens.id_produto`.
-- `handleFinalizarVenda` em `app/+page.svelte` é código morto.
+- Código morto removido de `app/+page.svelte`: `handleFinalizarVenda` e a sobra
+  do split de pagamento anterior ao `ModalPagamento` (`addPagamento`,
+  `removerPagamento`, `trocoPrevMulti`, `restantePagamento`, `somaPagamentos`,
+  `novoPag*`). **Bug latente revelado, não corrigido:** `handleFinalizarVenda`
+  era o único leitor de `checkoutSubmission.formState`, o estado salvo para
+  retomar uma venda com confirmação incerta. Depois de recarregar a página, a
+  comanda e o payload pendente voltam do rascunho, mas o `ModalPagamento` abre
+  vazio; se a pessoa escolher pagamento diferente do original,
+  `selectCheckoutSubmission` recusa ("Há uma confirmação pendente…") e a venda
+  fica presa. Não há risco de duplicidade — o payload original é reaproveitado.
+  `formState` segue sendo gravado; a correção é restaurá-lo no caminho vivo
+  (`abrirModalPagamento` → `ModalPagamento`).
 - Revisar o destino em 30 dias: contas que cadastram produto e vendem no 1º dia.
 
 Validação: suíte completa 1.321/1.324 (3 skips pré-existentes), `npm run check`

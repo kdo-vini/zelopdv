@@ -197,9 +197,6 @@
   // Múltiplos pagamentos (split)
   let multiPag = false;
   let pagamentos = []; // { forma: 'dinheiro'|'pix'|'cartao_debito'|'cartao_credito'|'fiado'|'outro', valor: number, pessoaId?: string }
-  let novoPagForma = 'dinheiro';
-  let novoPagValor = 0;
-  let novoPagPessoaId = '';
   // Fiado
   let pessoasFiado = [];
   let pessoaFiadoId = '';
@@ -255,56 +252,6 @@
   
   // Referência ao componente ModalPagamento
   let modalPagamentoRef;
-
-  // Derivados e helpers de múltiplos pagamentos
-  $: somaPagamentos = pagamentos.reduce((acc, p) => acc + Number(p?.valor || 0), 0);
-  $: restantePagamento = Math.max(0, Number(totalComanda) - Number(somaPagamentos || 0));
-  $: trocoPrevMulti = (() => {
-    if (!multiPag) return 0;
-    const somaOutros = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a, b) => a + Number(b.valor || 0), 0);
-    const cashRec = Number((pagamentos.find(p => p.forma === 'dinheiro')?.valor) || 0);
-    const requeridoDin = Math.max(0, Number(totalComanda) - somaOutros);
-    return Math.max(0, cashRec - requeridoDin);
-  })();
-
-  function addPagamento() {
-    const forma = novoPagForma;
-    const valor = Number(novoPagValor || 0);
-    if (!forma || valor <= 0) return;
-    const total = Number(totalComanda);
-    const somaNaoDinheiroAtual = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a,b)=>a+Number(b.valor||0),0);
-    if (forma !== 'dinheiro') {
-      const novoSomaNC = somaNaoDinheiroAtual + valor;
-      if (novoSomaNC > total) {
-        erroPagamento = 'Pagamentos não-dinheiro não podem exceder o total da comanda.';
-        return;
-      }
-    }
-    if (forma === 'fiado') {
-      // permite apenas 1 linha de fiado
-      if (pagamentos.some(p => p.forma === 'fiado')) {
-        erroPagamento = 'Use apenas uma linha de Fiado.';
-        return;
-      }
-      if (!novoPagPessoaId) {
-        erroPagamento = 'Selecione a pessoa para o Fiado.';
-        return;
-      }
-      pagamentos = [...pagamentos, { forma, valor, pessoaId: novoPagPessoaId }];
-      novoPagPessoaId = '';
-    } else {
-      pagamentos = [...pagamentos, { forma, valor }];
-    }
-    // Sugere próximo valor = restante
-    novoPagValor = Math.max(0, total - pagamentos.reduce((a,b)=>a+Number(b.valor||0),0));
-    erroPagamento = '';
-  }
-
-  function removerPagamento(idx) {
-    pagamentos = pagamentos.filter((_, i) => i !== idx);
-    // Ajusta sugestão do próximo valor
-    novoPagValor = Math.max(0, Number(totalComanda) - pagamentos.reduce((a,b)=>a+Number(b.valor||0),0));
-  }
 
   // --- 3. CARREGAMENTO DE DADOS ---
 
@@ -1155,39 +1102,6 @@
     quantidadeInput = 1;
   }
   
-  // Módulo 1.4 - Início da Fase 4
-  /** Abre o modal de pagamento após validar que há itens. */
-  function handleFinalizarVenda() {
-    if (salvandoVenda) return;
-    if (checkoutSubmission?.formState) {
-      const saved = checkoutSubmission.formState;
-      comanda = structuredClone(saved.items); formaPagamento = saved.formaPagamento; valorRecebido = saved.valorRecebido;
-      multiPag = saved.multiPag; pagamentos = structuredClone(saved.pagamentos); pessoaFiadoId = saved.pessoaFiadoId;
-      totalFinalVenda = saved.totalFinalVenda; valorDescontoVenda = saved.valorDescontoVenda; descontoTipoVenda = saved.descontoTipoVenda;
-      tipoPedido = saved.tipoPedido; taxaEntregaInput = saved.taxaEntregaInput; taxasPlataformaVenda = saved.taxasPlataformaVenda;
-      idCaixaAberto = checkoutSubmission.payload.id_caixa;
-      addToast('Retomando a confirmação com os dados salvos desta venda.', 'info');
-      void confirmarVenda(); return;
-    }
-    if (comanda.length === 0) {
-      addToast('A comanda está vazia.', 'warning');
-      return;
-    }
-    
-    // Abre o modal de pagamento
-    // O modal de pagamento cuidará da Fase 4 e 5
-    modalPagamentoAberto = true;
-    formaPagamento = null;
-    valorRecebido = 0;
-    multiPag = false;
-    pagamentos = [];
-    novoPagForma = 'dinheiro';
-    novoPagValor = Number(totalComanda);
-    novoPagPessoaId = '';
-    erroPagamento = '';
-    salvandoVenda = false; // garante reset visual ao tentar novamente
-  }
-
   /**
    * Handler para o evento 'confirmar' do ModalPagamento.
    * Recebe os dados do modal e executa a persistência da venda.
