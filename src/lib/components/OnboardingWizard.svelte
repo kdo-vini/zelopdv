@@ -581,6 +581,10 @@
   }
 
   .btn-advance {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 10rem;
     padding: 0.5rem 1.25rem;
     background: var(--primary);
     color: var(--primary-text);

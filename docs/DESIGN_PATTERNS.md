@@ -369,6 +369,14 @@ Ver **seção 13** para API e exemplos. Não use `<select>` nativo em páginas n
 - Breakpoint principal: `md` (Tailwind). Sidebar vira off-canvas com hambúrguer (overlay `bg-black/50 z-[55]`, `aside` `fixed md:static`).
 - Header público tem menu mobile próprio (`+layout.svelte`).
 - Grids de tool/cards: `grid-template-columns` 1 → 2 (`sm`) → 3 (`lg`).
+- **Campos de formulário nunca abaixo de 16px no mobile.** iOS Safari dá zoom
+  automático ao focar `input`/`textarea`/`select` com `font-size` computado
+  menor que 16px e não volta sozinho — exige pinch manual. Piso global em
+  `src/app.css` (`@media (max-width: 767px)`, com `!important` porque compete
+  com classes de componente) cobre isso para qualquer campo novo; não crie
+  `font-size` menor que `1rem` para inputs pensando que "só desktop" — o piso
+  já reduz o impacto, mas prefira `1rem`/`16px` direto no campo quando o
+  contexto for majoritariamente mobile (padrão usado em `SupportChat.svelte`).
 
 ---
 
