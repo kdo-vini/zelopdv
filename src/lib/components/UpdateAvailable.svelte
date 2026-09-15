@@ -4,12 +4,14 @@
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { APP_VERSION, normalizeVersion } from '$lib/version';
+  import { evaluateBootUpdateSafety, isWithinBootWindow, draftHasPendingWork } from '$lib/pwa/updateSafety';
 
   const CHECK_INTERVAL_MS = 5 * 60 * 1000;
   const ACTIVE_CHECK_INTERVAL_MS = 90 * 1000;
   const INITIAL_DELAY_MS = 20 * 1000;
   const DISMISS_DELAY_MS = 2 * 60 * 60 * 1000;
   const RECENT_REFRESH_SUPPRESSION_MS = 5 * 60 * 1000;
+  const BOOT_WINDOW_MS = 8 * 1000;
   const CHANNEL_NAME = 'zelo-app-version';
   const STORAGE_DEFERRED_VERSION = 'zelo_update_deferred_version';
   const STORAGE_DEFERRED_UNTIL = 'zelo_update_deferred_until';
@@ -27,6 +29,8 @@
   let swipeStart = null;
   let swipeOffset = 0;
   let isSwiping = false;
+  let bootStartedAt = 0;
+  let bootInteracted = false;
 
   const currentVersion = normalizeVersion(APP_VERSION);
 
@@ -94,11 +98,16 @@
   }
 
   function hasOpenModal() {
-    return Boolean(
-      document.querySelector(
-        'dialog[open], [aria-modal="true"], [data-update-blocking="true"], .swal2-container, .modal, .modal-backdrop'
-      )
+    // A modal explicitly marked data-update-safe (e.g. ModalAbrirCaixa, which
+    // the old version opens automatically whenever the caixa is closed) never
+    // blocks the update notice — otherwise that screen could never show it.
+    const candidates = document.querySelectorAll(
+      'dialog[open], [aria-modal="true"], [data-update-blocking="true"], .swal2-container, .modal, .modal-backdrop'
     );
+    for (const el of candidates) {
+      if (!el.closest('[data-update-safe="true"]')) return true;
+    }
+    return false;
   }
 
   function userIsTyping() {
@@ -120,6 +129,53 @@
     return blocksOfflineUpdate(get(offlineStatus)) || userIsTyping() || hasOpenModal() || activeSaleRoute;
   }
 
+  function withinBootWindow() {
+    return isWithinBootWindow(bootStartedAt, now(), bootInteracted, BOOT_WINDOW_MS);
+  }
+
+  /**
+   * Live sync-runtime status (`offlineStatus`) is the fast path, but it only
+   * reflects reality once `startOfflineRuntime` has run its first count
+   * refresh — which can race this boot check. So, at boot only, also read the
+   * durable queue directly. This component never knows the signed-in owner
+   * (it mounts in the root layout, before any page resolves one), so it
+   * checks every row in the queue tables rather than a single owner's —a
+   * shared terminal could still hold a previous account's unsynced rows.
+   * Any query failure counts as "has pending work" (never guess safe).
+   */
+  async function hasPendingOfflineWorkForBoot() {
+    if (blocksOfflineUpdate(get(offlineStatus))) return true;
+    try {
+      const { db } = await import('$lib/offlineDb.js');
+      const [pendingOps, legacyPending] = await Promise.all([
+        db.offline_operations.toCollection().filter((row) => row.status !== 'acked').count(),
+        db.vendas_pendentes.toCollection().filter((row) => row.status === 'aguardando').count()
+      ]);
+      return pendingOps > 0 || legacyPending > 0;
+    } catch (err) {
+      console.warn('[UpdateAvailable] Offline queue check failed:', err?.message || err);
+      return true;
+    }
+  }
+
+  /**
+   * Same reasoning as above for the PDV draft (comanda em edição, ainda não
+   * enviada — readDraft/saveDraft in $lib/offline/operations.js under key
+   * 'pdv'): no owner/operator context is available here, so every stored PDV
+   * draft is checked, not just the current person's. A query failure counts
+   * as "has a pending draft".
+   */
+  async function hasPendingPdvDraftForBoot() {
+    try {
+      const { db } = await import('$lib/offlineDb.js');
+      const rows = await db.offline_drafts.toCollection().filter((row) => row.key === 'pdv').toArray();
+      return rows.some((row) => draftHasPendingWork(row.value));
+    } catch (err) {
+      console.warn('[UpdateAvailable] Draft check failed:', err?.message || err);
+      return true;
+    }
+  }
+
   function schedulePromptWhenSafe(version) {
     clearTimeout(deferredPromptTimer);
     deferredPromptTimer = setTimeout(() => {
@@ -133,12 +189,17 @@
     }, 1200);
   }
 
-  function announceUpdate(version, source = 'poll') {
+  async function announceUpdate(version, source = 'poll') {
     const normalized = normalizeVersion(version);
     if (!normalized || isSameVersion(normalized)) return;
     if (wasRecentlyRefreshedFor(normalized) || isDeferred(normalized)) return;
     pendingVersion = normalized;
     bc?.postMessage({ type: 'update-available', version: normalized, source });
+    // Boot-safe silent path first. tryBootAutoUpdate is a no-op outside the
+    // short post-load window (see withinBootWindow), so this is harmless for
+    // updates discovered later by polling/focus/visibility — those always
+    // fall through to the toast below, never an automatic reload.
+    if (await tryBootAutoUpdate(normalized)) return;
     schedulePromptWhenSafe(normalized);
   }
 
@@ -198,11 +259,10 @@
     }
   }
 
-  async function refreshNow() {
-    if (!pendingVersion || isCriticalFlowActive() || !navigator.onLine) return;
-    safeSet(sessionStorage, SESSION_REFRESH_TARGET, pendingVersion);
+  async function applyUpdate(version) {
+    safeSet(sessionStorage, SESSION_REFRESH_TARGET, version);
     safeSet(sessionStorage, SESSION_REFRESH_AT, String(now()));
-    bc?.postMessage({ type: 'refreshing', version: pendingVersion });
+    bc?.postMessage({ type: 'refreshing', version });
 
     try {
       if (updateServiceWorker) {
@@ -221,8 +281,38 @@
     await clearAppCaches();
 
     const url = new URL(window.location.href);
-    url.searchParams.set('appVersion', pendingVersion.slice(0, 12));
+    url.searchParams.set('appVersion', version.slice(0, 12));
     window.location.replace(url.toString());
+  }
+
+  async function refreshNow() {
+    if (!pendingVersion || isCriticalFlowActive() || !navigator.onLine) return;
+    await applyUpdate(pendingVersion);
+  }
+
+  /**
+   * Silently applies a waiting update at boot, before the person has started
+   * interacting — see updateSafety.js for the exact rule. Outside the boot
+   * window this always resolves false and callers fall back to the toast.
+   */
+  async function tryBootAutoUpdate(version) {
+    if (!withinBootWindow()) return false;
+    const [hasPendingQueue, hasPendingDraft] = await Promise.all([
+      hasPendingOfflineWorkForBoot(),
+      hasPendingPdvDraftForBoot()
+    ]);
+    const { safe } = evaluateBootUpdateSafety({
+      online: navigator.onLine,
+      hasPendingQueue,
+      hasActiveComanda: hasActiveComanda(),
+      hasPendingDraft,
+      inputFocused: userIsTyping(),
+      withinBootWindow: withinBootWindow(),
+      alreadyApplied: wasRecentlyRefreshedFor(version)
+    });
+    if (!safe) return false;
+    await applyUpdate(version);
+    return true;
   }
 
   function dismiss() {
@@ -281,6 +371,17 @@
   onMount(() => {
     clearCompletedRefreshGuard();
 
+    bootStartedAt = now();
+    const markInteracted = () => {
+      bootInteracted = true;
+    };
+    window.addEventListener('pointerdown', markInteracted, { once: true, passive: true });
+    window.addEventListener('keydown', markInteracted, { once: true });
+    cleanupFns.push(
+      () => window.removeEventListener('pointerdown', markInteracted),
+      () => window.removeEventListener('keydown', markInteracted)
+    );
+
     import('virtual:pwa-register')
       .then(({ registerSW }) => {
         updateServiceWorker = registerSW({
@@ -290,6 +391,13 @@
           },
           onRegisteredSW(_swUrl, registration) {
             cleanupFns.push(setInterval(() => registration?.update(), CHECK_INTERVAL_MS));
+            // Force a check right away instead of waiting for the first
+            // 5-minute interval tick, so a version already published shows
+            // up (and can be applied silently) during the boot window.
+            registration?.update().catch(() => {});
+            if (registration?.waiting) {
+              checkForUpdate('service-worker');
+            }
           }
         });
       })

@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-PWA-VERSAO-PRESA-01 (2026-09-15) — aparelhos com o PWA instalado
+  ficavam na versão antiga do `/app`: recarregar serve o precache, e o aviso de
+  atualização era adiado por qualquer modal — inclusive o Abrir Caixa, que a
+  versão antiga abre no carregamento. Boot aplica versão nova quando não há
+  pendências; Abrir Caixa não bloqueia mais o aviso.
+
+- [x] FX-PDV-CONFIRMACAO-PENDENTE-01 (2026-09-15) — venda com confirmação incerta
+  ficava presa após recarregar: `formState` era gravado mas só lido por função
+  morta. `abrirModalPagamento` restaura e reenvia o mesmo payload.
+
 - [x] FX-ONBOARDING-CHEGADA-01 (2026-09-15) — depois do wizard a conta caía num
   `/gestao` vazio, sem reconhecimento nem próximo passo. Wizard ganhou estado de
   chegada com boas-vindas e destino na Frente de Caixa; conta que nunca abriu

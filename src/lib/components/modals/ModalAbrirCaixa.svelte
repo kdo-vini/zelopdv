@@ -55,6 +55,7 @@
     aria-modal="true"
     aria-labelledby="abrir-caixa-title"
     tabindex="-1"
+    data-update-safe="true"
     on:keydown={handleKeydown}
   >
     <div class="modal-content">

@@ -1,5 +1,28 @@
 # ZeloPDV — Foco atual
 
+## Aparelhos presos na versão antiga do PWA — 2026-09-15
+
+Testando a conta nova no iPhone, o dono caiu no Abrir Caixa mesmo com a regra
+de conta nova em produção, e recarregar não resolvia. Logs do Supabase: o iPhone
+nunca fez a contagem em `caixas` que só a versão nova faz — rodava o `/app`
+antigo do precache do service worker. O aviso "Nova versão disponível" nunca
+apareceu na sessão inteira: ele é adiado enquanto houver modal aberto, e a versão
+antiga abre o Abrir Caixa no carregamento. Todo operador que abre o PDV com
+caixa fechado ficava preso na versão antiga.
+
+**Corrigido** (`UpdateAvailable.svelte`, `src/lib/pwa/updateSafety.js`,
+regra completa em `docs/operations/OFFLINE.md`): no boot, versão nova é aplicada
+sozinha se nada estiver pendente (fila offline, comanda, rascunho, campo focado);
+depois do boot só aviso; `ModalAbrirCaixa` (`data-update-safe`) não bloqueia mais
+o aviso. Aparelho já preso precisa pegar esta versão uma vez à mão (aba privada
+ou apagar dados do site).
+
+Também publicado hoje: retomada de venda com confirmação pendente
+(`restoreCheckoutFormState`, commit 42dc2b1) — ver seção abaixo.
+
+Validação: suíte completa 1.365/1.368 (3 skips pré-existentes), `npm run check`
+0/0. Não verificado em aparelho real.
+
 ## Chegada no produto: boas-vindas e primeira venda — 2026-09-15
 
 O dono achou o cadastro "seco": criar conta caía direto na pergunta e, depois,
