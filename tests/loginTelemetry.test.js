@@ -29,6 +29,19 @@ describe('deriveLoginRedirectFrom', () => {
   it('prioriza redirect sobre msg quando os dois existem', () => {
     expect(deriveLoginRedirectFrom(new URLSearchParams('?redirect=/app&msg=session_expired'))).toBe('/app');
   });
+
+  it('recusa paths livres, URLs externas e valores que podem carregar PII', () => {
+    expect(deriveLoginRedirectFrom(new URLSearchParams('?redirect=/cliente/maria@example.com'))).toBeNull();
+    expect(deriveLoginRedirectFrom(new URLSearchParams('?redirect=https://evil.example/maria@example.com'))).toBeNull();
+    expect(deriveLoginRedirectFrom(new URLSearchParams('?redirect=//evil.example/app'))).toBeNull();
+    expect(deriveLoginRedirectFrom(new URLSearchParams('?redirect=/gestao/produtos/maria@example.com'))).toBeNull();
+  });
+
+  it('recusa msg arbitrária e mantém somente o vocabulário fechado do app', () => {
+    expect(deriveLoginRedirectFrom(new URLSearchParams('?msg=maria@example.com'))).toBeNull();
+    expect(deriveLoginRedirectFrom(new URLSearchParams('?msg=qualquer-coisa'))).toBeNull();
+    expect(deriveLoginRedirectFrom(new URLSearchParams('?msg=session_expired'))).toBe('msg:session_expired');
+  });
 });
 
 describe('mapLoginErrorToCode', () => {

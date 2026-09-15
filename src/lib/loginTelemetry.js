@@ -4,6 +4,24 @@
 import { maskPrivatePath } from './posthogClient';
 
 const REDIRECT_QUERY_KEYS = ['redirect', 'redirectTo', 'redirect_to', 'next'];
+const ALLOWED_REDIRECT_PATHS = [
+  /^\/app$/,
+  /^\/app\/mesas(?:\/:id)?$/,
+  /^\/app\/pedidos(?:\/cozinha)?$/,
+  /^\/gestao(?:\/(?:acessos|caixa|despesas|empresas|estoque|extensoes|fichario|indicacoes|mesas|pessoas|produtos))?$/,
+  /^\/gestao\/gerente(?:\/(?:preferencias|semana))?$/,
+  /^\/relatorios$/,
+  /^\/perfil$/,
+  /^\/assinatura$/,
+  /^\/ferramentas(?:\/(?:cardapio|precificacao))?$/,
+];
+const ALLOWED_LOGIN_MESSAGES = new Set(['session_expired', 'deletion_scheduled']);
+
+function sanitizeRedirectPath(value) {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+  const path = maskPrivatePath(value);
+  return ALLOWED_REDIRECT_PATHS.some((pattern) => pattern.test(path)) ? path : null;
+}
 
 /**
  * De onde veio o redirect que trouxe a pessoa pra /login, a partir da query
@@ -21,12 +39,11 @@ export function deriveLoginRedirectFrom(searchParams) {
   for (const key of REDIRECT_QUERY_KEYS) {
     const value = searchParams.get(key);
     if (!value) continue;
-    const pathOnly = value.split('?')[0].split('#')[0];
-    return maskPrivatePath(pathOnly);
+    return sanitizeRedirectPath(value);
   }
 
   const msg = searchParams.get('msg');
-  if (msg) return `msg:${msg}`;
+  if (ALLOWED_LOGIN_MESSAGES.has(msg)) return `msg:${msg}`;
 
   return null;
 }
