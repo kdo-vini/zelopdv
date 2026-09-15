@@ -8,7 +8,7 @@
   // A S V E L T E K I T
   // Ajuste: Removido o ".js" da importação para deixar o bundler resolver.
   import { supabase } from '$lib/supabaseClient';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { waitAuthReady } from '$lib/authStore';
   import { printVenda, printMovCaixa } from '$lib/printService';
   import { ensureActiveSubscription } from '$lib/guards';
@@ -26,7 +26,7 @@
   import { startOfflineRuntime, getOfflineContext, isOfflineWriteActive, submitOfflineOperation, runOfflineSync, readOperationalSnapshot, onOfflineChange, markOfflineReadiness, claimPrimaryDevice } from '$lib/offline/runtime';
   import { readSnapshot, saveSnapshot, readDraft, saveDraft, listOperations } from '$lib/offline/operations';
   import { projectStockProducts } from '$lib/finance/offlineProjection';
-  import { validateLocalCartStock, selectCheckoutSubmission } from '$lib/finance/offlineCheckout';
+  import { validateLocalCartStock, selectCheckoutSubmission, restoreCheckoutFormState } from '$lib/finance/offlineCheckout';
   import { atualizarCatalogoOffline } from '$lib/offlineDb';
   import { loadCashSnapshot } from '$lib/finance/offlineCash';
   import { calculatePaymentSummary, calculateMovementSummary, calculateExpectedDrawer } from '$lib/finance/caixa';
@@ -1419,7 +1419,43 @@
       addToast('Pronto para próxima venda', 'info');
   }
 
-  function abrirModalPagamento() {
+  async function abrirModalPagamento() {
+    // Retomada de confirmação pendente: reload/outra sessão trouxe do rascunho
+    // uma comanda travada com checkoutSubmission.formState (venda já enviada
+    // para a RPC com confirmação incerta). Precisa reaproveitar exatamente o
+    // mesmo payload — se a pessoa escolhesse um pagamento novo aqui,
+    // selectCheckoutSubmission divergiria do candidate anterior e lançaria
+    // "Há uma confirmação pendente...", travando a venda. Isso roda ANTES de
+    // qualquer outra barreira, inclusive a de conta nova (isFirstUseNoCaixa):
+    // uma venda pendente de confirmação nunca pode cair no fluxo de abrir caixa.
+    if (checkoutSubmission?.formState && !salvandoVenda) {
+      const restored = restoreCheckoutFormState(checkoutSubmission);
+      if (restored) {
+        comanda = restored.items;
+        formaPagamento = restored.formaPagamento;
+        valorRecebido = restored.valorRecebido;
+        multiPag = restored.multiPag;
+        pagamentos = restored.pagamentos;
+        pessoaFiadoId = restored.pessoaFiadoId;
+        totalFinalVenda = restored.totalFinalVenda;
+        valorDescontoVenda = restored.valorDescontoVenda;
+        descontoTipoVenda = restored.descontoTipoVenda;
+        tipoPedido = restored.tipoPedido;
+        taxaEntregaInput = restored.taxaEntregaInput;
+        taxasPlataformaVenda = restored.taxasPlataformaVenda;
+        idCaixaAberto = restored.idCaixaAberto;
+        imprimirRecibo = restored.imprimirRecibo;
+        modalPagamentoAberto = true;
+        addToast('Retomando a confirmação com os dados salvos desta venda.', 'info');
+        // O modal reseta seu próprio estado interno (inclusive `salvandoVenda`)
+        // na reação a `open` — precisa existir e já ter processado essa reação
+        // antes de forçarmos o estado de salvando, senão o reset o sobrescreve.
+        await tick();
+        modalPagamentoRef?.setSalvando?.(true);
+        void confirmarVenda();
+        return;
+      }
+    }
     if (comanda.length === 0) return;
     // Conta nova em primeiro uso: a barreira do caixa foi adiada até aqui.
     // Abre o Abrir Caixa e, quando ele fechar com sucesso (handleAbrirCaixa),
