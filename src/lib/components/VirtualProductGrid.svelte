@@ -7,6 +7,8 @@
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
   import { getPrecoTabela } from '$lib/finance/caixa';
   import { pizzaStartingPrice } from '$lib/pizza';
+  import { formatMoneyNumber } from '$lib/formatMoney';
+  import { Receipt, Plus } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -147,25 +149,34 @@
 >
   {#if produtos.length === 0}
     <div class="empty-state">
-      <div class="empty-card">
-        <div class="empty-icon" aria-hidden="true">+</div>
-        <h3>{hasAnyProducts ? 'Nenhum produto encontrado' : 'Faça sua primeira venda'}</h3>
-        <p>
+      <div class="empty-content">
+        <div class="empty-icon" aria-hidden="true">
+          <Receipt size={24} />
+        </div>
+        <h3 class="empty-title">{hasAnyProducts ? 'Nenhum produto encontrado' : 'Faça sua primeira venda'}</h3>
+        <p class="empty-text">
           {hasAnyProducts
             ? 'Tente limpar a busca ou escolher outra categoria. Se quiser vender mesmo assim, use um item avulso.'
             : 'Você pode vender agora mesmo ou cadastrar seus produtos primeiro.'}
         </p>
         <div class="empty-actions">
           <button type="button" class="empty-primary" on:click={handleValorAvulsoClick}>
-            {hasAnyProducts ? 'Testar com item avulso' : '+ Venda avulsa'}
+            {#if !hasAnyProducts}<Plus size={18} aria-hidden="true" />{/if}
+            <span>{hasAnyProducts ? 'Testar com item avulso' : 'Venda avulsa'}</span>
           </button>
           {#if !hasAnyProducts && canCadastrarProduto}
             <button type="button" class="empty-secondary" on:click={handleCadastrarProdutoClick}>
-              + Cadastrar primeiro produto
+              <Plus size={18} aria-hidden="true" />
+              <span>Cadastrar primeiro produto</span>
             </button>
           {/if}
         </div>
         {#if !hasAnyProducts}
+          <div class="empty-preview" aria-hidden="true">
+            <div class="empty-preview-tile"></div>
+            <div class="empty-preview-tile"></div>
+            <div class="empty-preview-tile empty-preview-tile-third"></div>
+          </div>
           <p class="empty-footnote">Seus produtos aparecerão aqui.</p>
         {/if}
       </div>
@@ -196,8 +207,8 @@
           <div class="px-3 pb-3 w-full text-right">
             <div class="flex items-baseline justify-end gap-0.5">
               <span class="text-[10px] font-bold text-sky-400">{produto.tipo_produto === 'pizza' ? 'A partir de R$' : 'R$'}</span>
-              <span class="text-lg font-black text-white tracking-tighter">
-                {Number(produto.tipo_produto === 'pizza' ? pizzaStartingPrice(produto.pizza_config, produto.modifierGroups) : getPrecoTabela(produto, tabelaAtiva)).toFixed(2)}
+              <span class="text-lg font-black text-white tracking-tighter tabular-nums">
+                {formatMoneyNumber(produto.tipo_produto === 'pizza' ? pizzaStartingPrice(produto.pizza_config, produto.modifierGroups) : getPrecoTabela(produto, tabelaAtiva))}
               </span>
             </div>
           </div>
@@ -227,67 +238,77 @@
 </div>
 
 <style>
+  /* Sem cartão ao redor (ver DESIGN_PATTERNS "Never nest cards" / pedido do
+     dono): o conteúdo fica direto na página, alinhado mais para cima
+     (padding-top ~10vh, não centralizado verticalmente) para as ações
+     ficarem ao alcance do polegar no celular. */
   .empty-state {
     min-height: 100%;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 1rem;
+    padding-top: 10vh;
   }
 
-  .empty-card {
-    width: min(100%, 28rem);
-    border: 1px solid var(--border-card);
-    border-radius: 1rem;
-    background: color-mix(in srgb, var(--bg-card) 82%, transparent);
-    padding: 1.5rem;
+  .empty-content {
+    width: 100%;
+    max-width: 22rem;
     text-align: center;
     color: var(--text-main);
   }
 
   .empty-icon {
-    width: 2.75rem;
-    height: 2.75rem;
-    margin: 0 auto 0.85rem;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 16px;
     border-radius: 999px;
     display: grid;
     place-items: center;
-    font-size: 1.5rem;
-    font-weight: 800;
-    background: color-mix(in srgb, var(--primary) 16%, transparent);
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
     color: var(--primary);
   }
 
-  .empty-card h3 {
-    margin: 0 0 0.5rem;
-    font-size: 1rem;
-    font-weight: 800;
+  .empty-title {
+    margin: 0 0 8px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-wrap: balance;
+    color: var(--text-main);
   }
 
-  .empty-card p {
+  .empty-text {
     margin: 0;
     color: var(--text-label);
-    font-size: 0.9rem;
-    line-height: 1.55;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  @media (min-width: 640px) {
+    .empty-text {
+      font-size: 0.9375rem;
+    }
   }
 
   .empty-actions {
     display: grid;
-    gap: 0.65rem;
-    margin-top: 1.15rem;
+    gap: 12px;
+    margin-top: 24px;
   }
 
   .empty-primary,
   .empty-secondary {
-    min-height: 2.75rem;
-    border-radius: 0.75rem;
+    width: 100%;
+    min-height: 52px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9rem;
-    font-weight: 800;
-    text-decoration: none;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast), transform 120ms ease;
   }
 
   .empty-primary {
@@ -296,17 +317,72 @@
     color: var(--primary-text);
   }
 
+  .empty-primary:hover {
+    background: var(--primary-hover);
+  }
+
   .empty-secondary {
     border: 1px solid var(--border-subtle);
-    background: var(--bg-input);
+    background: var(--bg-panel);
     color: var(--text-main);
   }
 
-  /* Rodapé discreto: reaproveita o tamanho do token "Label" de DESIGN.md
-     (0.625rem / text-[10px]), o mesmo usado no breadcrumb do produto. */
+  .empty-secondary:hover {
+    border-color: var(--text-muted);
+  }
+
+  .empty-primary:active,
+  .empty-secondary:active {
+    transform: scale(0.98);
+  }
+
+  .empty-primary:focus-visible,
+  .empty-secondary:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .empty-primary,
+    .empty-secondary {
+      transition: none;
+    }
+
+    .empty-primary:active,
+    .empty-secondary:active {
+      transform: none;
+    }
+  }
+
+  /* Prévia que ensina: 3 tiles fantasma no mesmo formato dos cards de
+     produto da grade (min-h-28 / 12px de raio), sem conteúdo. */
+  .empty-preview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 32px;
+  }
+
+  .empty-preview-tile {
+    height: 7rem;
+    border-radius: 12px;
+    border: 1px dashed var(--border-subtle);
+    background: transparent;
+  }
+
+  @media (max-width: 359px) {
+    .empty-preview {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .empty-preview-tile-third {
+      display: none;
+    }
+  }
+
   .empty-footnote {
-    margin: 0.85rem 0 0;
+    margin: 12px 0 0;
     color: var(--text-muted);
-    font-size: 0.625rem;
+    font-size: 0.875rem;
   }
 </style>

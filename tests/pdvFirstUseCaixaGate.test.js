@@ -107,8 +107,11 @@ describe('copy exata do estado vazio "faca sua primeira venda" (VirtualProductGr
   it('mostra titulo, texto, CTAs e rodape exatos quando nao ha nenhum produto cadastrado', () => {
     expect(source).toContain("hasAnyProducts ? 'Nenhum produto encontrado' : 'Faça sua primeira venda'");
     expect(source).toContain('Você pode vender agora mesmo ou cadastrar seus produtos primeiro.');
-    expect(source).toContain("hasAnyProducts ? 'Testar com item avulso' : '+ Venda avulsa'");
-    expect(source).toContain('+ Cadastrar primeiro produto');
+    // O "+" antes de "Venda avulsa" e "Cadastrar primeiro produto" virou um
+    // ícone lucide Plus ao lado do texto (ver especificação de design do
+    // estado vazio) — o texto em si continua exatamente o mesmo.
+    expect(source).toContain("hasAnyProducts ? 'Testar com item avulso' : 'Venda avulsa'");
+    expect(source).toContain('Cadastrar primeiro produto');
     expect(source).toContain('Seus produtos aparecerão aqui.');
   });
 

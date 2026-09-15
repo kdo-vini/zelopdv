@@ -1,5 +1,26 @@
 # ZeloPDV — Foco atual
 
+## Polish do primeiro uso no PDV (iPhone) — 2026-09-15
+
+Teste do dono no iPhone depois do fix do PWA: fluxo de conta nova funcionou
+(PDV sem Abrir Caixa, estado vazio novo). Defeitos corrigidos:
+- `ModalNovoProduto`: preço começava em 0 e virava "R$ 025" → campo texto
+  `inputmode="decimal"`, vazio com placeholder `0,00`, aceita vírgula, parse no
+  submit (`src/lib/parsePrecoInput.js`), erro inline "Coloque o preço.".
+- Sem categoria cadastrada o select abria uma lista vazia → categoria marcada
+  "(opcional)" com "+ Nova categoria" inline (sem segundo modal). Salvar cria a
+  categoria e o produto no mesmo envio; `created` passa `{ ...produto,
+  categoriaCriada }` e as páginas recarregam categorias quando houver.
+- Estado vazio da grade redesenhado (sem cartão, ícone, ritmo 16/8/24/12/32,
+  botões 52 px, prévia com 3 tiles tracejados e rodapé legível). Copy do dono
+  mantida.
+- Barra de categorias vazia não renderiza mais (sumiram as duas linhas).
+- Dinheiro exibido em pt-BR (`src/lib/formatMoney.js`, `tabular-nums`) no
+  badge do caixa, grade e comanda; chave técnica de item mantém `toFixed`.
+
+Verificado em navegador (375 px, rota temporária local removida). Suíte
+1.376/1.379 (3 skips pré-existentes), `npm run check` 0/0.
+
 ## Aparelhos presos na versão antiga do PWA — 2026-09-15
 
 Testando a conta nova no iPhone, o dono caiu no Abrir Caixa mesmo com a regra

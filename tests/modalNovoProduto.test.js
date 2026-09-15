@@ -21,9 +21,12 @@ describe('ModalNovoProduto.svelte — contrato do componente', () => {
     }
   });
 
-  it('dispara close e created (com o produto criado) em vez de conhecer a página', () => {
+  it('dispara close e created (produto + categoriaCriada) em vez de conhecer a página', () => {
     expect(component).toMatch(/dispatch\(\s*'close'\s*\)/);
-    expect(component).toMatch(/dispatch\(\s*'created'\s*,\s*createdProduct\s*\)/);
+    // event.detail continua sendo o produto (spread), com categoriaCriada
+    // (objeto {id, nome} ou null) adicionada como propriedade extra —
+    // quem já lê event.detail como produto continua funcionando.
+    expect(component).toMatch(/dispatch\(\s*'created'\s*,\s*\{\s*\.\.\.createdProduct,\s*categoriaCriada\s*\}\s*\)/);
   });
 
   it('esconde os campos avançados no modo compact e usa os defaults do form completo', () => {

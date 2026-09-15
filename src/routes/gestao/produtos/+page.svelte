@@ -821,7 +821,15 @@
   // reset do form + invalidação do pdvCache). Este handler só cuida dos
   // efeitos colaterais que são específicos desta página.
   async function produtoCriado(event) {
-    const createdProduct = event.detail;
+    // event.detail é o produto criado (spread) + categoriaCriada ({id, nome} ou null)
+    // quando o ModalNovoProduto também criou uma categoria nova no mesmo submit.
+    const { categoriaCriada, ...createdProduct } = event.detail;
+    if (categoriaCriada) {
+      // carregarCategorias() já busca direto do Supabase (sem cache local),
+      // então recarrega sozinha os dados atuais — só precisa rodar antes de
+      // posicionar a categoria ativa para a aba nova aparecer na lista.
+      await carregarCategorias();
+    }
     await carregarProdutos();
     await carregarContagemProdutosPorCategoria();
     justCreatedProductId = createdProduct.id;

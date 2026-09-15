@@ -20,6 +20,7 @@
   import { pdvCache } from '$lib/stores/pdvCache';
   import { isNetworkError } from '$lib/netStatus';
   import { money, validatePaymentCoverage, getPrecoTabela } from '$lib/finance/caixa';
+  import { formatMoney, formatMoneyNumber } from '$lib/formatMoney';
   import { abrirCaixaIdempotente } from '$lib/finance/caixaOps';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { createClientSaleId } from '$lib/finance/saleOps';
@@ -919,7 +920,7 @@
       // Atualiza o saldo e impede SAÍDA maior que o disponível
       await atualizarSaldoCaixa();
       if (tipoMovCaixa === 'saida' && v > Number(saldoCaixa || 0)) {
-        erroMovCaixa = `Valor maior que o saldo em caixa (R$ ${Number(saldoCaixa).toFixed(2)}).`;
+        erroMovCaixa = `Valor maior que o saldo em caixa (${formatMoney(saldoCaixa)}).`;
         return;
       }
       salvandoMovCaixa = true;
@@ -1481,10 +1482,17 @@
 
   /** Depois que o ModalNovoProduto cria o produto: recarrega o catálogo do PDV e fecha o modal. */
   async function produtoRapidoCriado(event) {
-    const createdProduct = event.detail;
+    // event.detail é o produto criado (spread) + categoriaCriada ({id, nome} ou null)
+    // quando o ModalNovoProduto também criou uma categoria nova no mesmo submit.
+    const { categoriaCriada, ...createdProduct } = event.detail;
     modalNovoProdutoAberto = false;
     void capturePostHogEvent('pdv_quick_product_created', {});
-    // ModalNovoProduto.svelte já invalidou o pdvCache de produtos antes de disparar 'created'.
+    // ModalNovoProduto.svelte já invalidou o pdvCache de produtos (e de categorias,
+    // se aplicável) antes de disparar 'created'.
+    if (categoriaCriada) {
+      // Força refresh (ignora cache/local) para a aba da categoria nova aparecer.
+      await carregarCategorias(true);
+    }
     await carregarProdutos(true);
     // Garante que o produto recém-criado fique visível na grade (categoria/subcategoria/busca ativas).
     busca = '';
@@ -1568,7 +1576,7 @@
   <div class="flex items-center gap-3">
     <div class="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-md">
       <span class="text-xs text-slate-400 font-medium">Caixa:</span>
-      <span class="text-green-400 font-bold">R$ {Number(saldoCaixa).toFixed(2)}</span>
+      <span class="text-green-400 font-bold tabular-nums">{formatMoney(saldoCaixa)}</span>
     </div>
 
     {#if vendasPendentesCount > 0}
@@ -1679,25 +1687,27 @@
           </div>
         {/if}
 
-        <div class="flex items-center gap-6 overflow-x-auto pb-1 scrollbar-none border-b" style="border-color: var(--border-subtle);" role="tablist" aria-label="Categorias">
-          {#each categorias as cat (cat.id)}
-            <button
-              data-testid="category-tab"
-              type="button"
-              role="tab"
-              aria-selected={categoriaAtiva === cat.id}
-              class="shrink-0 pb-2 font-semibold text-base transition-colors whitespace-nowrap relative"
-              style="
-                color: {categoriaAtiva === cat.id ? 'var(--text-main)' : 'var(--text-muted)'};
-                border-bottom: 2px solid {categoriaAtiva === cat.id ? 'var(--primary)' : 'transparent'};
-                margin-bottom: -1px;
-              "
-              on:click={() => (categoriaAtiva = cat.id)}
-            >
-              {cat.nome}
-            </button>
-          {/each}
-        </div>
+        {#if categorias.length > 0}
+          <div class="flex items-center gap-6 overflow-x-auto pb-1 scrollbar-none border-b" style="border-color: var(--border-subtle);" role="tablist" aria-label="Categorias">
+            {#each categorias as cat (cat.id)}
+              <button
+                data-testid="category-tab"
+                type="button"
+                role="tab"
+                aria-selected={categoriaAtiva === cat.id}
+                class="shrink-0 pb-2 font-semibold text-base transition-colors whitespace-nowrap relative"
+                style="
+                  color: {categoriaAtiva === cat.id ? 'var(--text-main)' : 'var(--text-muted)'};
+                  border-bottom: 2px solid {categoriaAtiva === cat.id ? 'var(--primary)' : 'transparent'};
+                  margin-bottom: -1px;
+                "
+                on:click={() => (categoriaAtiva = cat.id)}
+              >
+                {cat.nome}
+              </button>
+            {/each}
+          </div>
+        {/if}
 
         <!-- Subcategorias: Pills (quando existem) -->
         {#if subcatsDaCat.length}
@@ -1790,7 +1800,7 @@
                   <p class="text-[11px] text-sky-300 leading-snug mt-1">{item.resumoMontagem}</p>
                 {/if}
                 {#if item.pizza}<button type="button" class="pizza-edit" on:click={() => editarPizza(item)}>Editar pizza</button>{/if}
-                <p class="text-[11px] text-slate-400">R$ {Number(item.preco).toFixed(2)}</p>
+                <p class="text-[11px] text-slate-400 tabular-nums">{formatMoney(item.preco)}</p>
               </div>
               
               <div class="flex items-center gap-1 bg-slate-900/50 p-1 rounded-md border border-slate-700/50">
@@ -1850,12 +1860,12 @@
 
       <div class="flex justify-between items-center px-1">
         <span class="text-xs text-slate-400 font-medium">Subtotal</span>
-        <span class="text-sm font-bold text-slate-200">R$ {Number(totalComanda).toFixed(2)}</span>
+        <span class="text-sm font-bold text-slate-200 tabular-nums">{formatMoney(totalComanda)}</span>
       </div>
       {#if tipoPedido === 'delivery' && Number(taxaEntregaInput) > 0}
         <div class="flex justify-between items-center px-1">
           <span class="text-xs text-sky-400 font-medium">Taxa entrega</span>
-          <span class="text-sm font-bold text-sky-400">+ R$ {Number(taxaEntregaInput).toFixed(2)}</span>
+          <span class="text-sm font-bold text-sky-400 tabular-nums">+ {formatMoney(taxaEntregaInput)}</span>
         </div>
       {/if}
       
@@ -1901,7 +1911,7 @@
           class="col-span-2 h-12 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-green-900/20 text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
         >
           <span>Receber</span>
-          <span class="bg-black/20 px-2 py-0.5 rounded-sm text-xs">R$ {Number(totalComandaComEntrega).toFixed(2)}</span>
+          <span class="bg-black/20 px-2 py-0.5 rounded-sm text-xs tabular-nums">{formatMoney(totalComandaComEntrega)}</span>
         </button>
       </div>
       <div class="flex flex-col gap-1.5 mt-2">
@@ -1927,7 +1937,7 @@
     >
         <div class="flex flex-col">
             <span class="text-xs text-slate-400">{comanda.reduce((a,i)=>a+i.quantidade,0)} itens</span>
-            <span class="text-lg font-bold text-white">R$ {Number(totalComanda).toFixed(2)}</span>
+            <span class="text-lg font-bold text-white tabular-nums">{formatMoney(totalComanda)}</span>
         </div>
         <button 
             class="bg-sky-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg active:scale-95 transition-transform"

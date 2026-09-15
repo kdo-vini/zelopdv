@@ -5,6 +5,7 @@
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast } from '$lib/stores/ui';
   import * as Select from '$lib/components/ui/select/index.js';
+  import { parsePrecoInput } from '$lib/parsePrecoInput';
 
   // ─── Props ──────────────────────────────────────────────────────────────────
   export let open = false;
@@ -27,9 +28,11 @@
   function createDefaultForm() {
     return {
       nome: '',
-      preco: 0,
-      preco_2: null,
-      preco_3: null,
+      // Preço começa vazio (não 0): o campo é type="text" + inputmode="decimal",
+      // convertido para número só no submit por parsePrecoInput. Ver criarProduto/validarPrecos.
+      preco: '',
+      preco_2: '',
+      preco_3: '',
       id_categoria: null,
       id_subcategoria: null,
       eh_item_por_unidade: false,
@@ -41,6 +44,20 @@
 
   let form = createDefaultForm();
 
+  // Erros inline de preço (setados só no submit, por validarPrecos()).
+  let precoErro = '';
+  let preco2Erro = '';
+  let preco3Erro = '';
+
+  // Fluxo "+ Nova categoria": esconde o Select (quando existe) e mostra um
+  // input de nome. `categoriaCriadaPendente` sobrevive a um retry (produto
+  // falhou depois da categoria criada) para que o evento `created` ainda
+  // informe a categoria à página-mãe quando o produto enfim for salvo, sem
+  // criar a categoria de novo (ver criarProduto).
+  let showNovaCategoria = false;
+  let novaCategoriaNome = '';
+  let categoriaCriadaPendente = null;
+
   $: tabelasPrecoAtivo = !!tabelasPreco?.ativo;
   $: nomesTabelas = tabelasPreco?.nomes ?? ['Tabela 1', 'Tabela 2', 'Tabela 3'];
 
@@ -48,7 +65,11 @@
     ? subcategorias.filter((s) => String(s.id_categoria) === String(form.id_categoria))
     : [];
 
-  $: categoriaCompartilhada = categoriaTemEstoqueCompartilhado(form.id_categoria);
+  // Enquanto o input de "nova categoria" está aberto, a categoria final ainda
+  // não existe — nunca é compartilhada (mesmo default de criarCategoria em
+  // gestao/produtos). Evita usar por engano o estoque compartilhado da
+  // categoria que estava selecionada antes de trocar para "nova categoria".
+  $: categoriaCompartilhada = showNovaCategoria ? false : categoriaTemEstoqueCompartilhado(form.id_categoria);
 
   function categoriaTemEstoqueCompartilhado(idCategoria) {
     if (!idCategoria) return false;
@@ -77,15 +98,100 @@
     dispatch('close');
   }
 
+  function abrirNovaCategoria() {
+    showNovaCategoria = true;
+  }
+
+  function cancelarNovaCategoria() {
+    showNovaCategoria = false;
+    novaCategoriaNome = '';
+  }
+
+  /** Ação Svelte simples: foca o node assim que ele entra no DOM. */
+  function autofocus(node) {
+    node.focus();
+  }
+
+  /**
+   * Valida e converte os campos de preço (texto digitado -> número) no
+   * submit. Preço 1 é obrigatório (vazio ou inválido = erro inline); preço 2
+   * e 3 são opcionais (vazio = null, mas inválido ainda é erro).
+   */
+  function validarPrecos() {
+    precoErro = '';
+    preco2Erro = '';
+    preco3Erro = '';
+
+    const parsed1 = parsePrecoInput(form.preco);
+    if (!parsed1.ok) precoErro = 'Coloque o preço.';
+
+    let preco2 = null;
+    let preco3 = null;
+    if (!compact && tabelasPrecoAtivo) {
+      const parsed2 = parsePrecoInput(form.preco_2);
+      if (!parsed2.ok && !parsed2.empty) preco2Erro = 'Coloque o preço.';
+      else preco2 = parsed2.value;
+
+      const parsed3 = parsePrecoInput(form.preco_3);
+      if (!parsed3.ok && !parsed3.empty) preco3Erro = 'Coloque o preço.';
+      else preco3 = parsed3.value;
+    }
+
+    return {
+      valid: !precoErro && !preco2Erro && !preco3Erro,
+      preco: parsed1.ok ? parsed1.value : null,
+      preco_2: preco2,
+      preco_3: preco3
+    };
+  }
+
   async function criarProduto(e) {
     e.preventDefault();
+    const precos = validarPrecos();
+    if (!precos.valid) return;
+
     const { data: userData } = await supabase.auth.getUser();
     const id_usuario = ownerUserId || userData?.user?.id || null;
+
+    let idCategoriaFinal = toDatabaseId(form.id_categoria);
+
+    // Categoria nova: só cria uma vez. Se um submit anterior já criou a
+    // categoria e falhou depois no produto, showNovaCategoria já foi
+    // desligado e form.id_categoria já aponta para ela — este bloco não roda
+    // de novo, evitando duplicar a categoria num reenvio.
+    if (showNovaCategoria && novaCategoriaNome.trim()) {
+      const { data: novaCategoria, error: categoriaError } = await supabase
+        .from('categorias')
+        .insert({
+          nome: novaCategoriaNome.trim(),
+          ordem: 0,
+          controlar_estoque_compartilhado: false,
+          estoque_compartilhado_atual: 0,
+          id_usuario
+        })
+        .select('id')
+        .single();
+
+      if (categoriaError) {
+        addToast('Não foi possível criar a categoria. Tente novamente.', 'error');
+        return;
+      }
+
+      pdvCache.invalidateCategorias();
+      idCategoriaFinal = Number(novaCategoria.id);
+      categoriaCriadaPendente = { id: idCategoriaFinal, nome: novaCategoriaNome.trim() };
+    }
+
     const payload = {
-      ...form,
-      id_usuario,
-      id_categoria: toDatabaseId(form.id_categoria),
+      nome: form.nome,
+      preco: precos.preco,
+      preco_2: precos.preco_2,
+      preco_3: precos.preco_3,
+      id_categoria: idCategoriaFinal,
       id_subcategoria: toDatabaseId(form.id_subcategoria),
+      eh_item_por_unidade: form.eh_item_por_unidade,
+      ocultar_no_pdv: form.ocultar_no_pdv,
+      id_usuario,
       controlar_estoque: categoriaCompartilhada ? false : form.controlar_estoque,
       estoque_atual: !categoriaCompartilhada && form.controlar_estoque ? form.estoque_atual : 0
     };
@@ -97,16 +203,45 @@
       .single();
     if (error) {
       addToast('Não foi possível criar o produto. Tente novamente.', 'error');
+      if (categoriaCriadaPendente) {
+        // A categoria já foi criada e fica — troca o form para selecioná-la
+        // (Select volta a aparecer com ela dentro), para o reenvio não
+        // tentar criar outra categoria com o mesmo nome.
+        showNovaCategoria = false;
+        novaCategoriaNome = '';
+        form.id_categoria = toSelectId(categoriaCriadaPendente.id);
+        if (!categorias.some((cat) => Number(cat.id) === categoriaCriadaPendente.id)) {
+          categorias = [
+            ...categorias,
+            {
+              id: categoriaCriadaPendente.id,
+              nome: categoriaCriadaPendente.nome,
+              controlar_estoque_compartilhado: false,
+              estoque_compartilhado_atual: 0
+            }
+          ];
+        }
+      }
       return;
     }
 
     addToast('Produto criado com sucesso!', 'success');
+    const categoriaCriada = categoriaCriadaPendente;
     form = createDefaultForm();
+    precoErro = '';
+    preco2Erro = '';
+    preco3Erro = '';
+    showNovaCategoria = false;
+    novaCategoriaNome = '';
+    categoriaCriadaPendente = null;
     // Efeito colateral obrigatório para qualquer consumidor: o cache de
     // produtos do PDV (pdvCache) não pode ficar desatualizado depois de um
     // insert, seja o chamador a tela de gestão ou o cadastro rápido do /app.
     pdvCache.invalidateProdutos();
-    dispatch('created', createdProduct);
+    // event.detail continua sendo o produto criado (compatibilidade com quem
+    // já lê event.detail como produto) + a propriedade categoriaCriada
+    // (objeto {id, nome} ou null) quando uma categoria nova foi criada junto.
+    dispatch('created', { ...createdProduct, categoriaCriada });
     close();
   }
 
@@ -192,16 +327,20 @@
               <div class="currency-field">
                 <span class="currency-prefix" aria-hidden="true">R$</span>
                 <input
-                  class="form-input currency-input"
+                  class="form-input currency-input tabular-nums"
                   id="modal-novo-produto-preco-1"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="0,00"
                   bind:value={form.preco}
-                  required
-                  style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                  aria-invalid={precoErro ? 'true' : undefined}
+                  aria-describedby={precoErro ? 'modal-novo-produto-preco-1-erro' : undefined}
+                  style="background: var(--bg-input); color: var(--text-main); border-color: {precoErro ? 'var(--status-error-text)' : 'var(--border-subtle)'};"
                 />
               </div>
+              {#if precoErro}
+                <p id="modal-novo-produto-preco-1-erro" class="field-error">{precoErro}</p>
+              {/if}
           </div>
           {#if !compact && tabelasPrecoAtivo}
             <div>
@@ -209,46 +348,69 @@
               <div class="currency-field">
                 <span class="currency-prefix" aria-hidden="true">R$</span>
                 <input
-                  class="form-input currency-input"
+                  class="form-input currency-input tabular-nums"
                   id="modal-novo-produto-preco-2"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputmode="decimal"
                   bind:value={form.preco_2}
-                  placeholder="Opcional"
-                  style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                  placeholder="0,00"
+                  aria-invalid={preco2Erro ? 'true' : undefined}
+                  aria-describedby={preco2Erro ? 'modal-novo-produto-preco-2-erro' : undefined}
+                  style="background: var(--bg-input); color: var(--text-main); border-color: {preco2Erro ? 'var(--status-error-text)' : 'var(--border-subtle)'};"
                 />
               </div>
+              {#if preco2Erro}
+                <p id="modal-novo-produto-preco-2-erro" class="field-error">{preco2Erro}</p>
+              {/if}
             </div>
             <div>
               <label for="modal-novo-produto-preco-3" class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[2]} (R$)</label>
               <div class="currency-field">
                 <span class="currency-prefix" aria-hidden="true">R$</span>
                 <input
-                  class="form-input currency-input"
+                  class="form-input currency-input tabular-nums"
                   id="modal-novo-produto-preco-3"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputmode="decimal"
                   bind:value={form.preco_3}
-                  placeholder="Opcional"
-                  style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+                  placeholder="0,00"
+                  aria-invalid={preco3Erro ? 'true' : undefined}
+                  aria-describedby={preco3Erro ? 'modal-novo-produto-preco-3-erro' : undefined}
+                  style="background: var(--bg-input); color: var(--text-main); border-color: {preco3Erro ? 'var(--status-error-text)' : 'var(--border-subtle)'};"
                 />
               </div>
+              {#if preco3Erro}
+                <p id="modal-novo-produto-preco-3-erro" class="field-error">{preco3Erro}</p>
+              {/if}
             </div>
           {/if}
           <div>
-            <span class="form-label" style="color: var(--text-label);">Categoria</span>
-            <Select.Root bind:value={form.id_categoria}>
-              <Select.Trigger class="field-input">
-                <span class="select-value-label">{getCategoriaNome(form.id_categoria) || 'Selecione...'}</span>
-              </Select.Trigger>
-              <Select.Content>
-                {#each categorias as c}
-                  <Select.Item value={String(c.id)} label={c.nome} />
-                {/each}
-              </Select.Content>
-            </Select.Root>
+            <span class="form-label" style="color: var(--text-label);">Categoria <span class="field-label-suffix">(opcional)</span></span>
+            {#if showNovaCategoria}
+              <input
+                class="form-input"
+                bind:value={novaCategoriaNome}
+                placeholder="Ex.: Bebidas"
+                aria-label="Nome da categoria"
+                use:autofocus
+                style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
+              />
+              <button type="button" class="link-btn" on:click={cancelarNovaCategoria}>{categorias.length > 0 ? 'Escolher existente' : 'Sem categoria'}</button>
+            {:else}
+              {#if categorias.length > 0}
+                <Select.Root bind:value={form.id_categoria}>
+                  <Select.Trigger class="field-input">
+                    <span class="select-value-label">{getCategoriaNome(form.id_categoria) || 'Selecione...'}</span>
+                  </Select.Trigger>
+                  <Select.Content>
+                    {#each categorias as c}
+                      <Select.Item value={String(c.id)} label={c.nome} />
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
+              {/if}
+              <button type="button" class="link-btn" on:click={abrirNovaCategoria}>+ Nova categoria</button>
+            {/if}
           </div>
           {#if !compact}
             <div>
@@ -448,6 +610,41 @@
     letter-spacing: 0.05em;
     margin-bottom: 0.375rem;
     color: var(--text-label);
+  }
+
+  /* Sufixo "(opcional)" do rótulo Categoria: mesmo rótulo, mas sem herdar o
+     uppercase/tracking do .form-label — senão "(opcional)" também vira
+     caixa alta e some no meio do resto, difícil de ler. */
+  .field-label-suffix {
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .field-error {
+    margin: 0.375rem 0 0;
+    font-size: 0.875rem;
+    color: var(--status-error-text);
+  }
+
+  .link-btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-top: 0.25rem;
+    padding: 0.25rem 0;
+    background: transparent;
+    border: 0;
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .link-btn:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
   }
 
   .form-input {
