@@ -25,7 +25,12 @@
   Publicado em produção em 2026-09-15. Primeiro lote no merge `954fdf2`; Fases
   3.1/4.1/4.2 publicadas imediatamente depois por decisão do dono, sem janela
   útil de baseline. Migration `20260915090000` aplicada isoladamente pela CLI,
-  registrada e verificada. A Fase 5.1 permanece uma ação operacional separada.
+  registrada e verificada. **Fase 5.1 encerrada** após auditoria da coorte em
+  produção: dos 10 registros históricos, 7 eram subusuários (não devem receber
+  nudge) e 3 eram titulares incompletos, todos com envio anterior registrado
+  antes da Fase 3.1. O CTA desses e-mails apontava para `/onboarding`, rota
+  inexistente; foi corrigido para `/perfil?msg=complete`. Por decisão do dono,
+  não houve novo disparo de e-mail e a deduplicação permaneceu intacta.
 
 - [x] FX-CHECKOUT-FAILED-01 (2026-09-14) — o funil só media checkout com
   sucesso; tentativa recusada era invisível. `checkout_failed` passa a sair da

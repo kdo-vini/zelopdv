@@ -1,6 +1,6 @@
 # ZeloPDV — Foco atual
 
-## Onboarding em dois passos — Fases 1–4 publicadas — 2026-09-15
+## Onboarding em dois passos — Fases 1–5 encerradas — 2026-09-15
 
 Plano completo em [onboarding-dois-passos](projects/onboarding-dois-passos.md).
 Artefato de leitura: https://claude.ai/artifact/TigsUMdoyes8jrmj12hPS8
@@ -113,8 +113,11 @@ isoladamente pela Supabase CLI, registrada no histórico e verificada no banco:
 RPC estável/`SECURITY DEFINER`, `search_path` fixo, `service_role` com EXECUTE,
 `anon`/`authenticated` sem EXECUTE e três perfis elegíveis no momento do smoke.
 
-A Fase 5.1 não foi executada nesta publicação; o resgate dos órfãos continua
-como ação operacional separada.
+**Fase 5.1 encerrada:** a auditoria final separou os 7 subusuários dos 3
+titulares realmente incompletos. Os três já tinham nudge registrado antes da
+Fase 3.1, mas o CTA apontava para `/onboarding` (rota inexistente). O CTA foi
+corrigido para `/perfil?msg=complete`; por decisão do dono, não houve novo
+disparo de e-mail. A tabela de deduplicação não foi alterada.
 
 Validação local final: 39/39 testes focados de login/onboarding/checklist/RPC,
 66/66 testes focados de billing/RPC, suíte completa 1.275/1.278 (3 runtimes

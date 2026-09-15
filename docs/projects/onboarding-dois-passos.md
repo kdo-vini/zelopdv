@@ -3,8 +3,9 @@
 > Artefato visual (mesmo conteúdo, formato de leitura):
 > https://claude.ai/artifact/TigsUMdoyes8jrmj12hPS8
 >
-> Estado: **Fases 1–4 publicadas em 2026-09-15.** O dono optou pelo rollout
-> imediato da 3.1, sem janela útil de baseline. A Fase 5.1 segue separada.
+> Estado: **Fases 1–5 encerradas em 2026-09-15.** O dono optou pelo rollout
+> imediato da 3.1, sem janela útil de baseline, e decidiu encerrar a 5.1 sem
+> novo disparo de e-mails após a auditoria da coorte.
 > Última atualização: 2026-09-15.
 
 ## O problema, medido
@@ -26,6 +27,13 @@ depois, bateram na mesma parede e foram embora.
 acoplamento: **o trial só nasce no `finalizar()` do wizard**. Quem desiste no
 passo 3 fica com conta sem trial, e todo `/app` e `/gestao` devolve para
 `/perfil?msg=complete`.
+
+Auditoria final da coorte mostrou que os 10 não eram 10 titulares: **7 eram
+subusuários** de duas empresas, com acesso ativo e sem perfil/trial próprios por
+design. Os outros **3 eram titulares realmente incompletos**. Assim, para medir
+o problema do onboarding de titulares, a base correta é 28 de 31 contas (90,3%),
+com 3 órfãos reais (9,7%). A contagem bruta de 10/38 fica preservada apenas como
+registro da consulta histórica que motivou o plano.
 
 O wizard faz **um único `upsert`, no fim** — por isso não se sabe em qual passo
 as 10 desistiram. A informação nunca existiu.
@@ -165,8 +173,16 @@ perfis operacionais incompletos sem estar previsto no plano.
 
 ### Fase 5 — Resgate
 
-**5.1 — Chamar os 10 órfãos de volta.** Só com a Fase 3 no ar — antes disso,
-manda essas pessoas pra mesma parede.
+**5.1 — Chamar os 10 órfãos de volta** · ✅ **ENCERRADA**
+
+Auditoria em produção separou os 7 subusuários (que não devem receber nudge) dos
+3 titulares reais. Os 3 já tinham registro de envio anterior (`attempted` e
+`sent`, sem falhas), mas antes da Fase 3.1 e com CTA apontando para a rota
+inexistente `/onboarding`. O CTA foi corrigido para o fluxo existente
+`/perfil?msg=complete` em `emailTemplates.js`. Por decisão do dono, não houve
+novo disparo de e-mail; a fase fica encerrada com essa correção publicada e a
+coorte documentada. A tabela `registration_nudges` continua com deduplicação e
+não foi alterada.
 
 ### Paralela — Autenticação (independe das cinco fases)
 
