@@ -55,7 +55,10 @@ Regra prática:
 - Este endpoint:
   - autentica owner
   - valida plano/add-ons
-  - exige perfil com `documento`
+  - **não** exige `documento` (desde 2026-09-15, Fase 2.2 do onboarding em dois
+    passos): Stripe não coleta documento e o produto não emite NFC-e. `perfil`
+    pode vir `null`; o customer usa `nome_exibicao || email` e
+    `metadata.documento` vazio quando não houver
   - cria/resolve customer Stripe
   - abre Checkout Session
   - pré-grava `subscriptions` como `incomplete` ou preserva estado atual se o cliente ainda está ativo/trialing

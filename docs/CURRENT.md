@@ -36,6 +36,12 @@ cinco fases, velocidade acima de granularidade.
 PII. Precisa estar coletando em produção **antes** da Fase 3 subir — sem isso o
 "antes" se perde. Filtrar por `total_steps = 4` para o baseline.
 
+**Fase 2.2 feita:** `create-subscription` não barra mais cartão sem CPF/CNPJ.
+O gate era nosso — Stripe não tem `tax_id_collection` e o comentário de "nota
+fiscal" era falso. `checkout_failed` com `reason: profile_incomplete` agora só
+sai do Pix. Teste do gate do cartão em `api.checkout-failed.test.js` saiu; dois
+casos novos em `api.create-subscription.test.js` (sem documento, perfil null).
+
 **Ordem que não pode inverter:** a Fase 2 (CPF inline no Pix) tem que estar no ar
 antes da Fase 3 (wizard curto). `validatePixCustomerProfile` exige documento e
 `billingPix.js:347` manda `taxId` pra AbacatePay — tirar o CPF do wizard antes

@@ -132,7 +132,7 @@ e **persiste como parte de criar a cobrança**.
 Hoje o servidor devolve `redirect: '/perfil?msg=complete'` e a tela joga a pessoa
 **para fora do checkout**. Esse caminho tem que morrer.
 
-**2.2 — Remover nosso gate de CPF no cartão**
+**2.2 — Remover nosso gate de CPF no cartão** · ✅ **FEITO**
 
 `src/routes/api/billing/create-subscription/+server.js`: o
 `if (!perfil?.documento)` sai. O comentário ali diz que o documento serve "pra

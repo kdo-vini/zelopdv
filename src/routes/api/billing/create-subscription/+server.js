@@ -80,25 +80,14 @@ export async function POST({ request, url, cookies }) {
       return fail({ reason: WHY.ADDON_NOT_ALLOWED, error: `Plano ${planTier} não suporta o add-on ZeloMenu.`, userId, planTier, addons: requestedAddons });
     }
 
-    // Profile gate: precisa ter CNPJ/CPF preenchido (Stripe não exige, mas usamos pra emitir nota fiscal e validar negócio)
+    // Nome de exibição e documento (se já houver) pra popular o customer Stripe.
+    // Cartão não exige documento: não há tax_id_collection na sessão de Checkout,
+    // e o produto não emite NFC-e. Sem gate aqui — perfil pode vir null.
     const { data: perfil } = await supabaseAdmin
       .from('empresa_perfil')
       .select('nome_exibicao, documento, contato')
       .eq('user_id', userId)
       .maybeSingle();
-
-    if (!perfil?.documento) {
-      // O muro de cadastro cobrando o pedágio: quem chegou até aqui queria pagar
-      // e foi mandado de volta pro /perfil.
-      return fail({
-        reason: WHY.PROFILE_INCOMPLETE,
-        error: 'Complete o perfil da empresa (CPF/CNPJ) antes de assinar.',
-        userId,
-        planTier,
-        addons: requestedAddons,
-        body: { redirect: '/perfil?msg=complete' },
-      });
-    }
 
     // Existing subscription check
     const { data: existingSub } = await supabaseAdmin
@@ -124,10 +113,10 @@ export async function POST({ request, url, cookies }) {
     if (!stripeCustomerId) {
       const newCustomer = await stripe.customers.create({
         email,
-        name: perfil.nome_exibicao || email,
+        name: perfil?.nome_exibicao || email,
         metadata: {
           user_id: userId,
-          documento: perfil.documento,
+          documento: perfil?.documento || '',
         },
       });
       stripeCustomerId = newCustomer.id;

@@ -219,4 +219,87 @@ describe('API: create-subscription', () => {
       status: 'incomplete',
     });
   });
+
+  // Fase 2.2 do onboarding em dois passos: Stripe não exige documento (sem
+  // tax_id_collection) e o produto não emite NFC-e, então o gate nosso saiu.
+  // Sem documento — ou sem perfil nenhum — o checkout segue normalmente.
+  it('sem documento no perfil, segue para checkout Stripe normalmente', async () => {
+    const state = {
+      perfil: { nome_exibicao: 'Loja Teste', documento: null },
+      existingSub: null,
+      customerList: [],
+      updatedSubscriptions: [],
+      insertedSubscriptions: [],
+    };
+
+    vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({
+      supabaseAdmin: makeSupabaseAdmin(state),
+    }));
+    vi.doMock('../src/lib/server/stripe.js', () => ({
+      stripe: makeStripe(state),
+    }));
+
+    const { POST } = await loadHandler();
+    const response = await POST({
+      request: {
+        headers: { get: (name) => (name === 'authorization' ? 'Bearer token' : null) },
+        json: async () => ({
+          planTier: 'pdv',
+          addons: {},
+        }),
+      },
+      url: new URL('https://zelopdv.com.br/assinatura'),
+      cookies: { get: () => null },
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.url).toBe('https://checkout.test/session');
+    expect(state.insertedSubscriptions).toHaveLength(1);
+    expect(state.insertedSubscriptions[0]).toMatchObject({
+      payment_provider: 'stripe',
+      plan_tier: 'pdv',
+      status: 'incomplete',
+    });
+  });
+
+  it('sem perfil nenhum (perfil null), segue para checkout Stripe normalmente', async () => {
+    const state = {
+      perfil: null,
+      existingSub: null,
+      customerList: [],
+      updatedSubscriptions: [],
+      insertedSubscriptions: [],
+    };
+
+    vi.doMock('../src/lib/server/supabaseAdmin.js', () => ({
+      supabaseAdmin: makeSupabaseAdmin(state),
+    }));
+    vi.doMock('../src/lib/server/stripe.js', () => ({
+      stripe: makeStripe(state),
+    }));
+
+    const { POST } = await loadHandler();
+    const response = await POST({
+      request: {
+        headers: { get: (name) => (name === 'authorization' ? 'Bearer token' : null) },
+        json: async () => ({
+          planTier: 'pdv',
+          addons: {},
+        }),
+      },
+      url: new URL('https://zelopdv.com.br/assinatura'),
+      cookies: { get: () => null },
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.url).toBe('https://checkout.test/session');
+    expect(state.insertedSubscriptions).toHaveLength(1);
+    expect(state.insertedSubscriptions[0]).toMatchObject({
+      payment_provider: 'stripe',
+      plan_tier: 'pdv',
+      status: 'incomplete',
+    });
+  });
 });

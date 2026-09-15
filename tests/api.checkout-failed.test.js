@@ -65,36 +65,11 @@ beforeEach(() => {
 });
 
 describe('checkout_failed: cartão', () => {
-  it('registra o perfil incompleto que barra quem quer pagar', async () => {
-    const analytics = makeAnalytics();
-    vi.doMock('$lib/server/supabaseAdmin', () => ({
-      supabaseAdmin: makeSupabaseAdmin({ perfil: { nome_exibicao: 'Fixture', documento: null } }),
-    }));
-    vi.doMock('$lib/server/stripe', () => ({ stripe: { customers: { list: vi.fn() } } }));
-
-    const { POST } = await import(CARD);
-    const res = await POST({
-      request: makeRequest({ body: { planTier: 'pdv', addons: { mesas: true } } }),
-      url: new URL('https://zelopdv.com.br/assinatura'),
-      cookies: { get: () => null },
-    });
-    await analytics.settle();
-
-    expect(res.status).toBe(400);
-    // O redirect pro /perfil continua sendo entregue ao cliente.
-    expect(await res.json()).toMatchObject({ redirect: '/perfil?msg=complete' });
-
-    const [evento] = analytics.failures();
-    expect(evento.distinctId).toBe('owner-1');
-    expect(evento.properties).toMatchObject({
-      payment_method: 'card',
-      reason: 'profile_incomplete',
-      status_code: 400,
-      origin: 'server',
-      plan: 'pdv',
-      addons: { mesas: true },
-    });
-  });
+  // O cartão não gateia mais por perfil incompleto (Fase 2.2 do onboarding em
+  // dois passos): Stripe não exige documento e o produto não emite NFC-e. Quem
+  // chega aqui sem CPF/CNPJ segue pro Checkout normalmente — ver
+  // tests/api.create-subscription.test.js. `profile_incomplete` continua vivo
+  // só do lado Pix, abaixo.
 
   it('registra sessão inválida mesmo sem ter a quem atribuir', async () => {
     const analytics = makeAnalytics();
