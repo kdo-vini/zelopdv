@@ -66,12 +66,38 @@ Não exercitado por falta de pedido de teste ativo (a criação de pedidos de
 teste exige o Portal do Parceiro com login humano): `getOrder`, motivos de
 cancelamento e comandos Order.
 
+### Ciclo completo com pedidos de teste (2026-09-16)
+
+Dois pedidos gerados pelo dono da conta em Portal do Desenvolvedor →
+"Pedidos de teste" (loja de teste do app centralizado "Teste (C)", cujas
+credenciais são as do `.env.local`), operados com `createHttpIfoodAdapter`:
+
+| Passo | HTTP | Evento(s) recebido(s) por polling |
+| --- | --- | --- |
+| Pedido 1 gerado | — | `PLACED` |
+| `getOrder` | `200` | `DELIVERY`/`IMMEDIATE`, `deliveredBy=MERCHANT`, `isTest=true`, 2 itens/4 opções, 2 pagamentos `CREDIT`/`ONLINE` |
+| `getCancellationReasons` | `200` | lista de `{cancelCodeId, description}` (11 motivos, ex. `501`) |
+| `confirm` | `202` | `CONFIRMED` + `DELIVERY_DROP_CODE_REQUESTED` |
+| `startPreparation` | `202` | `PREPARATION_STARTED` |
+| `dispatch` | `202` | `DISPATCHED` |
+| `readyToPickup` (após despacho) | `202` | `READY_TO_PICKUP` — o iFood aceita fora de ordem |
+| Pedido 2 gerado | — | `PLACED` |
+| `requestCancellation` `{reason, cancellationCode:"501"}` | `202` | `CANCELLATION_REQUESTED` + `CANCELLED` |
+| ACK de cada lote | `202` | sem ACK o mesmo lote voltou em 6 polls seguidos; após ACK, não voltou |
+
+Consequências para as próximas tasks: `CANCELLED` agora é observado (antes
+sintético); `DELIVERY_DROP_CODE_REQUESTED` e `CANCELLATION_REQUESTED` são
+códigos reais fora do conjunto canônico e não podem ficar presos em quarentena
+(ver requisito na Task 8); a ordenação monotônica do domínio é obrigatória
+porque a API aceita transição regressiva. `CONCLUDED` não foi observado
+nesta janela.
+
 ### Não comprovado nesta sessão
 
 | Superfície | Estado | Regra para implementação |
 | --- | --- | --- |
 | Webhook | Não existe/configurado no app de teste | Só usar depois de registrar URL HTTPS e validar `X-IFood-Signature` sobre bytes crus. |
-| Comandos Order | Não exercitados | Tratar `202` apenas como aceite HTTP; estado comercial só muda por evento posterior. |
+| Comandos Order | Exercitados em 2026-09-16 (ver ciclo completo acima) | Tratar `202` apenas como aceite HTTP; estado comercial só muda por evento posterior. |
 | `DELIVERY` iFood, `TAKEOUT` e `SCHEDULED` | Não observados na conta | Fixtures sintéticas baseadas nas amostras oficiais, explicitamente marcadas abaixo. |
 | Presença/heartbeat granular | Não exercitado | Não abrir ou fechar merchants sem contrato e gate de saúde por merchant. |
 | `429`, headers e limites | Nenhum `429` observado | Fixture e limites documentados são referências sintéticas; observar headers e atualizar após homologação. |

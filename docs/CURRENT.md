@@ -30,10 +30,10 @@ conexão ser descartado.
 **Produção (2026-09-16, autorizado pelo dono):** migrations
 `ifood_mvp_foundation` e `ifood_webhook_enqueue` aplicadas no Supabase
 vinculado, com grants/RLS verificados e 277 pedidos preservados; nenhum
-worker, deploy ou webhook foi ligado. Adapter HTTP provado ao vivo em
-leitura (token, merchants, status 200/403, polling 204). Comandos Order,
-webhook real e homologação seguem bloqueados por dependência externa (pedido
-de teste e registro de URL exigem login humano no Portal do Parceiro).
+worker, deploy ou webhook foi ligado. Adapter HTTP provado ao vivo: leitura (token, merchants, status 200/403,
+polling) e ciclo completo com dois pedidos de teste (confirm, preparo,
+despacho, pronto, cancelamento e ACK, cada um confirmado pelo evento). Webhook
+real pendente de URL HTTPS pública; homologação depende das Tasks 7–20.
 
 Detalhes completos (assinatura HMAC, ordem de validação, RPCs, contagens de
 teste por task) nas seções "Resultado real" de cada task no plano vivo.
