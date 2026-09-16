@@ -47,6 +47,25 @@ respondeu `202`; o polling seguinte respondeu `204`. IDs, tokens, segredos e
 PII dessa prova não foram persistidos. Não houve comando Order, configuração
 de webhook ou outro side effect externo além da geração automática e do ACK.
 
+### Prova ao vivo do adapter HTTP (2026-09-16)
+
+Executada com as credenciais do app de teste via `createHttpIfoodAdapter`,
+somente leitura, sem registrar IDs, token ou PII:
+
+- `POST /authentication/v1.0/oauth/token` → `200`.
+- `GET /merchant/v1.0/merchants` → `200`, 1 loja.
+- `GET /merchants/{id}/status` → `200` para a loja autorizada (itens
+  `operation`/`state`/`available`; a loja de teste estava
+  `delivery`/`ERROR`/indisponível) e `403` para um UUID não autorizado —
+  confirma o mapeamento `403 → connected:false` de `connectMerchant`.
+- `GET /events/v1.0/events:polling` → `204` (sem eventos pendentes).
+- Nenhuma resposta trouxe `X-RateLimit-*`; o limiter permanece orientado a
+  `429`/`Retry-After`.
+
+Não exercitado por falta de pedido de teste ativo (a criação de pedidos de
+teste exige o Portal do Parceiro com login humano): `getOrder`, motivos de
+cancelamento e comandos Order.
+
 ### Não comprovado nesta sessão
 
 | Superfície | Estado | Regra para implementação |
@@ -92,7 +111,7 @@ https://merchant-api.ifood.com.br/merchant/v1.0
 
 | Método | Rota | Retorno observado | Contrato mínimo |
 | --- | --- | --- | --- |
-| `GET` | `/merchants` | `200`, uma loja | Array de merchants com `id` string; paginação existe mas seus params/envelope não foram confirmados (a página oficial que os documenta retorna `403` para fetchers) — não invente `page`/`size`. |
+| `GET` | `/merchants` | `200`, uma loja | Array plano de merchants (`id`, `name`, `corporateName`), sem header `Link`. Em 2026-09-16, `?page=2&size=1` retornou `200` com array vazio (a conta tem 1 loja), indício de que `page`/`size` são aceitos; semântica completa não confirmada, por isso a verificação de conexão usa `/status`. |
 | `GET` | `/merchants/{merchantId}/status` | `200` | Estado/validações operacionais em JSON; não usar somente HTTP 200 para inferir loja aberta. |
 | `GET` | `/merchants/{merchantId}` | Não exercitado | Detalhe completo do merchant; contrato oficial, não prova da conta. |
 | `GET/POST/DELETE` | `/merchants/{merchantId}/interruptions` | Não exercitado | Pausa temporária; qualquer escrita aguarda autorização e homologação. |
