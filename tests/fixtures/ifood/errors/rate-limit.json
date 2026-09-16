@@ -1,0 +1,6 @@
+{
+  "statusCode": 429,
+  "code": "TOO_MANY_REQUESTS",
+  "message": "Too Many Requests",
+  "retryAfter": 30
+}

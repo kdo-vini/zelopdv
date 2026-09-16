@@ -16,6 +16,23 @@ de signup ainda esperava o evento removido `user_signed_up`, enquanto o contrato
 autoritativo já era `user_registered` no servidor. A suíte integral voltou a
 199 arquivos aprovados, 1.212 testes aprovados e 3 skips condicionais.
 
+Task 1 do iFood — snapshot do contrato externo (2026-09-15): concluída. A
+conta de teste centralizada comprovou `client_credentials`,
+`GET /merchant/v1.0/merchants` e `/status` em `200`, Events v1 polling em
+`204` quando vazio, dois eventos `PLACED` e detalhes Order em `200`; a rota
+`/order/v1.0/orders:polling` respondeu `404`. A coleção Events v1 confirmou
+headers/filtros/envelopes e ACK em lista de IDs únicos; a prova real retornou
+seis reentregas dos dois pedidos automáticos, ACK `202` e polling seguinte
+`204`. O snapshot sanitizado está em
+`docs/integrations/ifood/CONTRACT_SNAPSHOT.md`, com fixtures de quatro
+modalidades e eventos terminais sintéticos marcados como não observados. O
+teste focado passa 14/14 após RED esperado por 13 falhas causadas por 8
+fixtures ausentes. Webhook, comandos, presença granular, `429`/limites e
+homologação ainda não foram comprovados; não há integração habilitada em
+runtime. IDs, segredos e PII não foram preservados; nenhum pedido adicional
+foi gerado deliberadamente para esta entrega. A Task 2 está liberada para
+iniciar.
+
 ## Assinatura pós-trial perdia o add-on ativo — 2026-09-14
 
 Reclamação de cliente (FullBuster Burger, `plan_tier='pdv'`,

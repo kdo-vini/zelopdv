@@ -1,0 +1,74 @@
+{
+  "id": "order-fixture-pickup",
+  "displayId": "display-fixture-003",
+  "createdAt": "2026-09-15T18:20:00.000Z",
+  "preparationStartDateTime": "2026-09-15T18:20:00.000Z",
+  "orderType": "TAKEOUT",
+  "orderTiming": "IMMEDIATE",
+  "salesChannel": "IFOOD",
+  "category": "FOOD",
+  "isTest": true,
+  "merchant": {
+    "id": "merchant-fixture",
+    "name": "Merchant Fixture"
+  },
+  "customer": {
+    "id": "customer-fixture-003",
+    "name": "Cliente Teste"
+  },
+  "items": [
+    {
+      "index": 1,
+      "id": "item-fixture-pickup",
+      "uniqueId": "unique-item-fixture-pickup",
+      "name": "Produto Fixture",
+      "type": "ITEM",
+      "externalCode": "product-fixture",
+      "quantity": 2,
+      "unit": "UN",
+      "unitPrice": 12.5,
+      "price": 25,
+      "scalePrices": null,
+      "optionsPrice": 0,
+      "totalPrice": 25,
+      "observations": "Observação de retirada Fixture",
+      "options": []
+    }
+  ],
+  "benefits": [],
+  "additionalFees": [],
+  "total": {
+    "subTotal": 25,
+    "deliveryFee": 0,
+    "additionalFees": 0,
+    "benefits": 0,
+    "orderAmount": 25
+  },
+  "payments": {
+    "prepaid": 25,
+    "pending": 0,
+    "methods": [
+      {
+        "value": 25,
+        "currency": "BRL",
+        "type": "ONLINE",
+        "method": "CREDIT",
+        "prepaid": true,
+        "card": {
+          "brand": "CARD_FIXTURE"
+        }
+      }
+    ]
+  },
+  "picking": null,
+  "delivery": null,
+  "takeout": {
+    "mode": "DEFAULT",
+    "takeoutDateTime": "2026-09-15T18:50:00.000Z",
+    "observations": "Observação de retirada Fixture"
+  },
+  "schedule": null,
+  "additionalInfo": {
+    "metadata": {}
+  }
+}

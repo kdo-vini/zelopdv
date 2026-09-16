@@ -1,0 +1,9 @@
+{
+  "id": "event-fixture-placed",
+  "code": "PLC",
+  "fullCode": "PLACED",
+  "orderId": "order-fixture-ifood-delivery",
+  "merchantId": "merchant-fixture",
+  "createdAt": "2026-09-15T18:00:00.000Z",
+  "metadata": {}
+}
