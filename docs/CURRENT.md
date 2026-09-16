@@ -30,8 +30,36 @@ teste focado passa 14/14 após RED esperado por 13 falhas causadas por 8
 fixtures ausentes. Webhook, comandos, presença granular, `429`/limites e
 homologação ainda não foram comprovados; não há integração habilitada em
 runtime. IDs, segredos e PII não foram preservados; nenhum pedido adicional
-foi gerado deliberadamente para esta entrega. A Task 2 está liberada para
-iniciar.
+foi gerado deliberadamente para esta entrega. A Task 2 foi executada e está
+registrada abaixo.
+
+Task 2 do iFood — núcleo de domínio (2026-09-15): concluída. `contracts.js`,
+`eventPolicy.js`, `orderNormalizer.js`, `createIfoodIntegration.js` e o adapter
+mock ficam atrás de uma interface pequena com dependências injetadas; não há
+I/O ou integração habilitada em runtime. O normalizador cobre os quatro
+fixtures sanitizados (entrega iFood, entrega própria, retirada e agendado),
+preservando itens, complementos, descontos, totais, pagamento, códigos e
+`customerSnapshot` somente no contrato operacional. A projeção não cria campo
+`analytics` nem duplica PII. A política é monotônica, trata duplicidade e
+inversão, coloca código desconhecido em `quarantine` e permite somente as
+exceções terminais explícitas `CANCELLED`/`CONCLUDED`.
+
+RED comprovado: 2 suítes novas falharam por módulos ausentes (0 testes
+coletados). GREEN focado: 14/14; GREEN com `tests/onlineOrders.test.js`: 23/23.
+`npm test`: 202 arquivos aprovados, 1.240 testes aprovados, 3 skips
+condicionais. `npm run check`: 0 erros/0 warnings. A tentativa inicial com
+`--runInBand` foi rejeitada por opção não suportada no Vitest e repetida com
+sucesso sem essa opção. O commit da task mantém o snapshot/fixtures da Task 1;
+webhook, persistência e adapter HTTP seguem para as Tasks seguintes.
+
+Revisão corretiva da Task 2 (2026-09-15, preservando o único commit via
+amend): RED específico com o mesmo foco falhou em 14 testes e aprovou 13
+(27 listados); GREEN focado + `tests/onlineOrders.test.js` passou em 36/36.
+Foram fechados os conflitos terminais sem timestamp posterior comprovável,
+validações de dinheiro/quantidade/enums/totais, o mapeamento canônico de
+pagamentos e split, a quarentena durável com retry e a deduplicação dependente
+do resultado persistente de `appendEvent`. O contrato interno agora usa apenas
+`options`; nenhum alias adicional duplica PII ou mantém referências mutáveis.
 
 ## Assinatura pós-trial perdia o add-on ativo — 2026-09-14
 
