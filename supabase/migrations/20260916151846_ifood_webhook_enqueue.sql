@@ -4,12 +4,18 @@
 -- `connection_id` to hand to `public.enqueue_ifood_event_v1`, and
 -- `ifood_internal` is private (no PostgREST exposure, no lookup RPC). This
 -- migration adds a service-role-only RPC that resolves the non-revoked
--- connection by `merchant_id` and performs the same insert/duplicate
--- semantics as the foundation enqueue, but never raises for an unknown or
--- revoked merchant: the webhook must still ack fast, and an event that
--- could not be attributed to a connection is simply not persisted. That
--- gap is acceptable because Task 9's polling reconciliation independently
--- retrieves events the webhook could not enqueue.
+-- connection by `merchant_id` and delegates the actual insert/duplicate
+-- work to `public.enqueue_ifood_event_v1` so the two RPCs share a single
+-- insert path, but never raises for an unknown or revoked merchant: the
+-- webhook must still ack fast, and an event that could not be attributed
+-- to a connection is simply not persisted. Historical events of a
+-- merchant that never connected to Zelo are out of MVP scope (no
+-- historical backfill); events of a merchant already connected
+-- (`pending`/`active`/`degraded`/`paused`) are persisted and Task 9's
+-- polling reconciliation only ever fills gaps for those same connected
+-- merchants. This migration is local-only: it has never been applied to
+-- any shared database, so rewriting it in place (instead of layering a
+-- forward migration on top) is acceptable.
 begin;
 
 create or replace function public.enqueue_ifood_webhook_event_v1(
@@ -27,8 +33,7 @@ set search_path = ''
 as $$
 declare
   v_connection_id uuid;
-  v_empresa_id uuid;
-  v_id uuid;
+  v_result record;
 begin
   if coalesce(current_setting('role', true) = 'service_role', false) is not true then
     raise exception 'FORBIDDEN';
@@ -43,8 +48,8 @@ begin
     raise exception 'PAYLOAD_TOO_LARGE_OR_INVALID';
   end if;
 
-  select c.id, c.empresa_id
-    into v_connection_id, v_empresa_id
+  select c.id
+    into v_connection_id
     from ifood_internal.connections as c
    where c.merchant_id = p_merchant_id
      and c.status <> 'revoked'
@@ -60,34 +65,18 @@ begin
     return;
   end if;
 
-  insert into ifood_internal.event_inbox (
-    connection_id, empresa_id, merchant_id, event_id, external_order_id,
-    event_type, external_revision, occurred_at, payload, payload_hash
-  ) values (
-    v_connection_id, v_empresa_id, p_merchant_id, p_event_id,
-    nullif(btrim(p_external_order_id), ''), p_event_type,
-    greatest(coalesce(p_external_revision, 0), 0), p_occurred_at, p_payload,
-    md5(p_payload::text)
-  )
-  on conflict on constraint ifood_event_inbox_event_unique do nothing
-  returning id, event_inbox.event_id, true, event_inbox.status
-    into v_id, event_id, inserted, status;
+  select *
+    into v_result
+    from public.enqueue_ifood_event_v1(
+      v_connection_id, p_event_id, p_merchant_id, p_external_order_id,
+      p_event_type, p_external_revision, p_occurred_at, p_payload
+    );
 
-  if v_id is not null then
-    inbox_id := v_id;
-    outcome := 'inserted';
-    return next;
-    return;
-  end if;
-
-  select e.id, e.event_id, false, e.status
-    into inbox_id, event_id, inserted, status
-    from ifood_internal.event_inbox as e
-   where e.event_id = p_event_id;
-  if inbox_id is null then
-    raise exception 'EVENT_INSERT_RACE';
-  end if;
-  outcome := 'duplicate';
+  inbox_id := v_result.inbox_id;
+  event_id := v_result.event_id;
+  inserted := v_result.inserted;
+  status := v_result.status;
+  outcome := case when v_result.inserted then 'inserted' else 'duplicate' end;
   return next;
 end;
 $$;

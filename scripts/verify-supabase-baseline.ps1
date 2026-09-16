@@ -13,6 +13,27 @@ if (($RunConcurrencyProbes -or $PostMigrationVerification.Count -gt 0) -and -not
 }
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+
+# `-File` invocation collapses PowerShell array binding: a comma-separated
+# value passed on the command line arrives here as a single string (or, with
+# space-separated repeats, only the first repeat is bound). Normalize by
+# splitting every supplied entry on commas, trimming whitespace, dropping
+# empties, and resolving each path relative to the repository root so a
+# single run can verify several post-migration files.
+$PostMigrationVerification = @(
+  $PostMigrationVerification |
+    ForEach-Object { $_ -split ',' } |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -ne '' } |
+    ForEach-Object {
+      $candidate = Join-Path $repositoryRoot $_
+      if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+        throw "PostMigrationVerification file not found: $_ (resolved: $candidate)"
+      }
+      (Resolve-Path -LiteralPath $candidate).Path.Substring($repositoryRoot.Length + 1)
+    }
+)
+
 $baselineCutoff = '20260813091000'
 $baselineDirectory = Join-Path $repositoryRoot "supabase\baselines\$baselineCutoff"
 $cli = Join-Path $repositoryRoot 'node_modules\.bin\supabase.cmd'
@@ -207,7 +228,7 @@ try {
       $probeImage = 'zelopdv-disposable-verifier:node24'
       & docker build -t $probeImage (Join-Path $PSScriptRoot 'verification')
       if ($LASTEXITCODE -ne 0) { throw 'Failed to build the isolated concurrency verifier.' }
-      foreach ($probe in @('verify-customer-identity-concurrency.mjs', 'verify-whatsapp-confirmation-concurrency.mjs', 'verify-sale-owner-concurrency.mjs')) {
+      foreach ($probe in @('verify-customer-identity-concurrency.mjs', 'verify-whatsapp-confirmation-concurrency.mjs', 'verify-sale-owner-concurrency.mjs', 'verify-ifood-lease-concurrency.mjs')) {
         & docker run --rm --network host `
           -v "${PSScriptRoot}:/work/scripts:ro" `
           -v "${repositoryRoot}/supabase/verification:/work/supabase/verification:ro" `

@@ -732,6 +732,64 @@ describe('createHttpIfoodAdapter', () => {
     );
   });
 
+  it('connectMerchant reports connected:true on a 200 from the per-merchant status route (not listMerchants)', async () => {
+    let capturedUrl;
+    const fetchImpl = vi.fn(async (url) => {
+      if (String(url).includes('/oauth/token')) return tokenResponse(300);
+      capturedUrl = url;
+      return makeResponse({ status: 200, jsonBody: { available: true } });
+    });
+    const adapter = buildAdapter({ fetchImpl });
+
+    await expect(adapter.connectMerchant({ merchantId: 'merchant-fixture-1' })).resolves.toEqual({
+      merchantId: 'merchant-fixture-1',
+      connected: true
+    });
+    expect(String(capturedUrl)).toBe(
+      'https://merchant-api.ifood.com.br/merchant/v1.0/merchants/merchant-fixture-1/status'
+    );
+  });
+
+  it('connectMerchant reports connected:false on a 403 (not this app\'s merchant)', async () => {
+    const fetchImpl = vi.fn(async (url) => {
+      if (String(url).includes('/oauth/token')) return tokenResponse(300);
+      return makeResponse({ status: 403 });
+    });
+    const adapter = buildAdapter({ fetchImpl });
+
+    await expect(adapter.connectMerchant({ merchantId: 'merchant-fixture-foreign' })).resolves.toEqual({
+      merchantId: 'merchant-fixture-foreign',
+      connected: false
+    });
+  });
+
+  it('connectMerchant reports connected:false on a 404 (merchant does not exist)', async () => {
+    const fetchImpl = vi.fn(async (url) => {
+      if (String(url).includes('/oauth/token')) return tokenResponse(300);
+      return makeResponse({ status: 404 });
+    });
+    const adapter = buildAdapter({ fetchImpl });
+
+    await expect(adapter.connectMerchant({ merchantId: 'merchant-fixture-missing' })).resolves.toEqual({
+      merchantId: 'merchant-fixture-missing',
+      connected: false
+    });
+  });
+
+  it('connectMerchant propagates a 503 instead of reporting connected:false, so an outage is never mistaken for disconnection', async () => {
+    const fetchImpl = vi.fn(async (url) => {
+      if (String(url).includes('/oauth/token')) return tokenResponse(300);
+      return makeResponse({ status: 503 });
+    });
+    const adapter = buildAdapter({ fetchImpl });
+
+    await expect(adapter.connectMerchant({ merchantId: 'merchant-fixture-1' })).rejects.toMatchObject({
+      code: 'IFOOD_HTTP_SERVER',
+      status: 503,
+      retryable: true
+    });
+  });
+
   it('never leaks credentials, tokens, or Authorization in serialized errors', async () => {
     const scenarios = [
       { status: 401 },

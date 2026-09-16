@@ -92,7 +92,7 @@ https://merchant-api.ifood.com.br/merchant/v1.0
 
 | Método | Rota | Retorno observado | Contrato mínimo |
 | --- | --- | --- | --- |
-| `GET` | `/merchants` | `200`, uma loja | Array de merchants com `id` string; paginação é documentada. |
+| `GET` | `/merchants` | `200`, uma loja | Array de merchants com `id` string; paginação existe mas seus params/envelope não foram confirmados (a página oficial que os documenta retorna `403` para fetchers) — não invente `page`/`size`. |
 | `GET` | `/merchants/{merchantId}/status` | `200` | Estado/validações operacionais em JSON; não usar somente HTTP 200 para inferir loja aberta. |
 | `GET` | `/merchants/{merchantId}` | Não exercitado | Detalhe completo do merchant; contrato oficial, não prova da conta. |
 | `GET/POST/DELETE` | `/merchants/{merchantId}/interruptions` | Não exercitado | Pausa temporária; qualquer escrita aguarda autorização e homologação. |

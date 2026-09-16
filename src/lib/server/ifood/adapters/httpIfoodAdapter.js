@@ -69,6 +69,12 @@ export function createHttpIfoodAdapter({
   });
 
   async function listMerchants({ signal } = {}) {
+    // CONTRACT_SNAPSHOT.md #3 notes pagination "is documented" for this route,
+    // but the page describing it returns 403 to fetchers, so the actual
+    // page/size params and paginated response envelope are unconfirmed; this
+    // only reads a single page. Not used by connectMerchant below (see its
+    // own comment) precisely because a centralized app's merchant list can
+    // span pages this call would never see.
     const { body } = await request({
       method: 'GET',
       path: '/merchant/v1.0/merchants',
@@ -77,6 +83,34 @@ export function createHttpIfoodAdapter({
     if (Array.isArray(body)) return body;
     if (body && Array.isArray(body.merchants)) return body.merchants;
     return [];
+  }
+
+  /**
+   * The centralized-auth flow means the merchant authorizes Zelo on iFood's
+   * side; there is no Zelo-initiated "connect" call in the contract. This
+   * uses the per-merchant route the snapshot actually exercised
+   * (CONTRACT_SNAPSHOT.md #3, `GET /merchants/{id}/status` observed `200`)
+   * instead of `listMerchants`: that list route can paginate for a
+   * centralized app (every merchant that ever authorized Zelo), and with its
+   * pagination params unconfirmed, a merchant on page 2+ would be wrongly
+   * reported `connected: false`. A 2xx here means the merchant status is
+   * readable, so it is connected; a 403/404 (`IfoodHttpError.status`) means
+   * it is not this app's merchant or does not exist, mapped to
+   * `connected: false`. Every other error (401 after retry, 429, 5xx,
+   * timeout, abort) propagates unchanged so an outage is never reported as
+   * "not connected".
+   */
+  async function connectMerchant({ merchantId, signal } = {}) {
+    const id = requireNonEmptyId(merchantId, 'merchantId');
+    try {
+      await getMerchantStatus(id, { signal });
+      return { merchantId: id, connected: true };
+    } catch (error) {
+      if (error instanceof IfoodHttpError && (error.status === 403 || error.status === 404)) {
+        return { merchantId: id, connected: false };
+      }
+      throw error;
+    }
   }
 
   async function getMerchantStatus(merchantId, { signal } = {}) {
@@ -222,9 +256,18 @@ export function createHttpIfoodAdapter({
       : handler(orderId, { signal });
   }
 
+  // `getConnectionHealth` is intentionally not implemented here:
+  // `createIfoodIntegration.getConnectionHealth(empresaId)` needs to map an
+  // internal `empresaId` to a provider `merchantId`/health signal, and this
+  // adapter has no repository access to make that mapping — only
+  // `httpIfoodAdapter`'s own `clientId`/`clientSecret`/`baseUrl` config. The
+  // seam already treats it as optional and falls back to
+  // `{ empresaId, status: 'unknown' }` when neither the repository nor the
+  // adapter implement it.
   return Object.freeze({
     listMerchants,
     getMerchantStatus,
+    connectMerchant,
     pollEvents,
     ackEvents,
     getOrder,

@@ -40,18 +40,18 @@ describe('iFood webhook enqueue RPC migration', () => {
   it('resolves merchant_id to a non-revoked connection without ever raising for an unknown or revoked merchant', () => {
     expect(sql).toMatch(/from ifood_internal\.connections as c\s+where c\.merchant_id = p_merchant_id\s+and c\.status <> 'revoked'/);
     expect(sql).toContain("outcome := 'unknown_merchant'");
-    expect(sql).toContain("outcome := 'inserted'");
-    expect(sql).toContain("outcome := 'duplicate'");
-    // The unknown-merchant branch must return before any insert is attempted.
+    expect(sql).toContain("outcome := case when v_result.inserted then 'inserted' else 'duplicate' end");
+    // The unknown-merchant branch must return before the delegate call is attempted.
     const unknownBranchIndex = sql.indexOf("outcome := 'unknown_merchant'");
-    const insertIndex = sql.indexOf('insert into ifood_internal.event_inbox');
+    const delegateIndex = sql.indexOf('from public.enqueue_ifood_event_v1(');
     expect(unknownBranchIndex).toBeGreaterThan(-1);
-    expect(insertIndex).toBeGreaterThan(unknownBranchIndex);
+    expect(delegateIndex).toBeGreaterThan(unknownBranchIndex);
   });
 
-  it('reuses the same duplicate-safe insert semantics as the foundation enqueue', () => {
-    expect(sql).toContain('on conflict on constraint ifood_event_inbox_event_unique do nothing');
-    expect(sql).toMatch(/octet_length\s*\(\s*p_payload::text\s*\)\s*>\s*262144/);
+  it('delegates the actual insert/duplicate work to the foundation enqueue instead of duplicating it', () => {
+    expect(sql).toContain('from public.enqueue_ifood_event_v1(');
+    expect(sql).not.toContain('insert into ifood_internal.event_inbox');
+    expect(sql).not.toContain('on conflict on constraint ifood_event_inbox_event_unique do nothing');
   });
 
   it('verifies the tenant isolation, idempotency, and ACL guarantees transactionally', () => {
