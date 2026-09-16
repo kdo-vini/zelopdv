@@ -1,5 +1,19 @@
 # Fixes Progress
 
+- [x] FX-SCHEMA-REPLAY-ZELOMENU-01 (2026-09-16) — o replay descartável do
+  iFood parava em `20260911120000_zelomenu_canonical_pause.sql` porque o
+  baseline `20260813091000` não continha
+  `public.zelomenu_modifier_components` nem
+  `zelomenu_modifier_option_products.id_componente` (SQLSTATE `42703`). A
+  bridge forward-only
+  `20260911110000_zelomenu_canonical_modifier_components.sql` recompõe a
+  dependência antes da migration histórica, preserva links/preços, repara
+  links vazios de rollout parcial e valida exatamente um destino. A migration
+  canônica não foi alterada e nenhum banco vinculado foi tocado. Teste focado:
+  9/9; `npm run verify:migrations`: 107/107 baseline, 59/59 remotas, 56
+  forward; harness completo com verificador iFood e lint: verde, alcançando a
+  migration iFood e passando 1 verifier.
+
 - [x] FX-ASSINATURA-ADDON-RESET-01 (2026-09-14) — o wizard de assinatura perdia
   o add-on já ativo ao trocar de plano e voltar, e anunciava o preço base do
   plano na etapa 1. Caso real: FullBuster Burger (`pdv` + `has_zelo_menu=true`,

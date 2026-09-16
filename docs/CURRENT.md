@@ -1,5 +1,30 @@
 # ZeloPDV — Foco atual
 
+## Reparo do replay de migrations ZeloMenu — 2026-09-16
+
+O harness descartável do iFood parava antes da migration da integração, em
+`20260911120000_zelomenu_canonical_pause.sql`: o baseline
+`20260813091000` não continha `public.zelomenu_modifier_components` nem a
+coluna `id_componente` de `public.zelomenu_modifier_option_products`
+(SQLSTATE `42703`). Essa dependência foi introduzida no stream do ZeloMenu e
+aplicada no banco compartilhado, mas não entrou no stream de replay do PDV.
+
+A migration forward-only
+`20260911110000_zelomenu_canonical_modifier_components.sql` recompõe o
+contrato antes da pausa canônica: cria a tabela e suas políticas, torna
+`id_produto` opcional, adiciona a FK de `id_componente`, preserva preços e
+destinos legados, completa links vazios de rollout parcial e valida o CHECK de
+exatamente um destino. Ela é segura para o caso em que o contrato já exista.
+O timestamp conserva a ordem histórica necessária antes da migration canônica
+já aplicada; a migration histórica não foi alterada e nenhum banco vinculado
+foi tocado.
+
+Validação verde:
+
+- `npx vitest run tests/zelomenuCanonicalModifierComponentsSchema.test.js tests/ifood.persistence-schema.test.js` — 9/9;
+- `npm run verify:migrations` — 107/107 artefatos baseline, 59/59 versões remotas e 56 migrations forward;
+- harness completo com `-ApplyForwardMigrations -ExcludeTenantDataSeeds -PostMigrationVerification supabase/verification/ifood_mvp_foundation.sql` — replay chegou à migration iFood, o verificador transacional passou (1 verifier), schema/security e configuração de plataforma permaneceram iguais ao baseline e o lint terminou com exit 0.
+
 ## Integração iFood MVP planejada — 2026-09-15
 
 Design de produto e arquitetura aprovado, sem integração habilitada em runtime.
@@ -61,10 +86,9 @@ pagamentos e split, a quarentena durável com retry e a deduplicação dependent
 do resultado persistente de `appendEvent`. O contrato interno agora usa apenas
 `options`; nenhum alias adicional duplica PII ou mantém referências mutáveis.
 
-Task 3 do iFood — persistência privada, identidades e leases (2026-09-15):
-**bloqueada — harness SQL do iFood não executado.** O Docker Desktop iniciou o
-banco descartável, mas o replay do histórico foi interrompido por uma migration
-preexistente e não relacionada. A migration criada pela CLI em
+Task 3 do iFood — persistência privada, identidades e leases (2026-09-15;
+replay reparado em 2026-09-16): **concluída no harness SQL descartável.** A
+migration criada pela CLI em
 `supabase/migrations/20260916023512_ifood_mvp_foundation.sql` adiciona o schema
 privado `ifood_internal` com `connections`, `event_inbox`, `order_refs`,
 `order_commands`, `product_mappings` e `stock_commitments`. As tabelas têm RLS,
@@ -77,19 +101,17 @@ retornado aos workers service-role. A verificação textual faz claims
 sequenciais na mesma sessão e não prova concorrência entre workers.
 
 RED estrito: `tests/ifood.persistence-schema.test.js` falhou 5/5 antes do SQL;
-GREEN: passou 5/5 depois. `npm run verify:migrations` passou com 107/107
-artefatos baseline, 59/59 versões remotas e 55 migrations forward. A
+GREEN: passou 6/6 após o SQL e o ajuste do fixture de verificação. O teste do
+bridge também passa 3/3. `npm run verify:migrations` passou com 107/107
+artefatos baseline, 59/59 versões remotas e 56 migrations forward. A
 verificação transacional preparada em
-`supabase/verification/ifood_mvp_foundation.sql` não pôde rodar: o comando
-completo
+`supabase/verification/ifood_mvp_foundation.sql` passou no comando completo
 `powershell -ExecutionPolicy Bypass -File scripts/verify-supabase-baseline.ps1
 -ApplyForwardMigrations -ExcludeTenantDataSeeds -PostMigrationVerification
-supabase/verification/ifood_mvp_foundation.sql` falhou antes da migration iFood,
-em `20260911120000_zelomenu_canonical_pause.sql`, com `column
-op.id_componente does not exist` (SQLSTATE `42703`). A migration
-`20260916023512_ifood_mvp_foundation.sql` não chegou a ser executada e a
-verificação SQL transacional permanece explicitamente não-verde, sem afirmar
-validação no banco vinculado. O comando read-only `supabase db advisors --linked` retornou
+supabase/verification/ifood_mvp_foundation.sql` após a bridge descrita acima:
+o replay chegou à migration iFood, três enqueues e os asserts transacionais
+passaram; claims sequenciais não provam concorrência entre workers. O comando
+read-only `supabase db advisors --linked` retornou
 `LegacyProjectNotLinkedError`; além disso, advisors do linked não enxergariam a
 migration local ainda não aplicada. Nenhuma migration foi aplicada ao banco
 vinculado, e nenhum deploy/publicação foi autorizado ou executado.
