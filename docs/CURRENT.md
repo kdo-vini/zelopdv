@@ -1,5 +1,21 @@
 # ZeloPDV — Foco atual
 
+## Integração iFood MVP planejada — 2026-09-15
+
+Design de produto e arquitetura aprovado, sem integração habilitada em runtime.
+O trabalho está isolado na branch `codex/ifood-mvp` e no worktree
+`.worktrees/ifood-mvp`. O plano vivo
+`docs/superpowers/plans/2026-09-15-ifood-mvp.md` define 21 tasks estritamente
+lineares, uma por commit, iniciando pelo congelamento do contrato efetivamente
+liberado ao app de teste do iFood. Cada task deve atualizar o próprio plano e
+este arquivo antes de ser concluída. O alerta sonoro genérico permanece uma
+dependência separada e o rollout exige shadow, piloto e decisão GO/NO-GO.
+
+Antes do plano, o baseline foi corrigido no commit `2a8df7d`: o teste cliente
+de signup ainda esperava o evento removido `user_signed_up`, enquanto o contrato
+autoritativo já era `user_registered` no servidor. A suíte integral voltou a
+199 arquivos aprovados, 1.212 testes aprovados e 3 skips condicionais.
+
 ## Assinatura pós-trial perdia o add-on ativo — 2026-09-14
 
 Reclamação de cliente (FullBuster Burger, `plan_tier='pdv'`,

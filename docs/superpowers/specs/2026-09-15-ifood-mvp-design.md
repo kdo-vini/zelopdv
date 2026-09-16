@@ -2,7 +2,7 @@
 
 **Data:** 15 de setembro de 2026
 
-**Status:** aprovado em entrevista; aguardando revisão do documento
+**Status:** aprovado pelo dono do produto após revisão seção a seção
 
 **Relatório de viabilidade:** [IFOOD_INTEGRATION_REPORT.md](../../projects/IFOOD_INTEGRATION_REPORT.md)
 **Decisão arquitetural:** [ADR-0001](../../adr/0001-ifood-worker-dedicado.md)
