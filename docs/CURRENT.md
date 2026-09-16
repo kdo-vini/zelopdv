@@ -61,6 +61,39 @@ pagamentos e split, a quarentena durável com retry e a deduplicação dependent
 do resultado persistente de `appendEvent`. O contrato interno agora usa apenas
 `options`; nenhum alias adicional duplica PII ou mantém referências mutáveis.
 
+Task 3 do iFood — persistência privada, identidades e leases (2026-09-15):
+**bloqueada — harness SQL do iFood não executado.** O Docker Desktop iniciou o
+banco descartável, mas o replay do histórico foi interrompido por uma migration
+preexistente e não relacionada. A migration criada pela CLI em
+`supabase/migrations/20260916023512_ifood_mvp_foundation.sql` adiciona o schema
+privado `ifood_internal` com `connections`, `event_inbox`, `order_refs`,
+`order_commands`, `product_mappings` e `stock_commitments`. As tabelas têm RLS,
+FKs/índices alinhados às filas, chaves idempotentes, limites de payload e erro,
+retenção explícita e grants apenas para `service_role`; a constraint canônica
+aceita `zelo_orders.source = 'ifood'`. As RPCs de enqueue/claim/finish usam
+`SECURITY DEFINER` com `search_path = ''`, validação de `service_role`,
+`FOR UPDATE SKIP LOCKED`, leases curtos e CAS no finish. O payload bruto só é
+retornado aos workers service-role. A verificação textual faz claims
+sequenciais na mesma sessão e não prova concorrência entre workers.
+
+RED estrito: `tests/ifood.persistence-schema.test.js` falhou 5/5 antes do SQL;
+GREEN: passou 5/5 depois. `npm run verify:migrations` passou com 107/107
+artefatos baseline, 59/59 versões remotas e 55 migrations forward. A
+verificação transacional preparada em
+`supabase/verification/ifood_mvp_foundation.sql` não pôde rodar: o comando
+completo
+`powershell -ExecutionPolicy Bypass -File scripts/verify-supabase-baseline.ps1
+-ApplyForwardMigrations -ExcludeTenantDataSeeds -PostMigrationVerification
+supabase/verification/ifood_mvp_foundation.sql` falhou antes da migration iFood,
+em `20260911120000_zelomenu_canonical_pause.sql`, com `column
+op.id_componente does not exist` (SQLSTATE `42703`). A migration
+`20260916023512_ifood_mvp_foundation.sql` não chegou a ser executada e a
+verificação SQL transacional permanece explicitamente não-verde, sem afirmar
+validação no banco vinculado. O comando read-only `supabase db advisors --linked` retornou
+`LegacyProjectNotLinkedError`; além disso, advisors do linked não enxergariam a
+migration local ainda não aplicada. Nenhuma migration foi aplicada ao banco
+vinculado, e nenhum deploy/publicação foi autorizado ou executado.
+
 ## Assinatura pós-trial perdia o add-on ativo — 2026-09-14
 
 Reclamação de cliente (FullBuster Burger, `plan_tier='pdv'`,

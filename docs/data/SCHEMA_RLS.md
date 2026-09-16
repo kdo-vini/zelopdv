@@ -17,6 +17,48 @@ O erro record/JSONB da função de delivery foi corrigido por
 `20260904222157_delivery_pricing_rule_jsonb.sql`, sem mudar grants. Advisors
 e limites do lint estão detalhados em `docs/audits/2026-09-04-zelopdv.md`.
 
+## Fundação de persistência iFood — migration local de 2026-09-15
+
+A Task 3 acrescenta a migration ainda não aplicada
+`supabase/migrations/20260916023512_ifood_mvp_foundation.sql`. O estado de
+integração fica no schema privado `ifood_internal`, separado do contrato
+exposto do app, com seis tabelas:
+
+- `connections` ancora `merchant_id` único à `empresa_perfil` e registra estado,
+  cursor e dono da impressão;
+- `event_inbox` guarda uma única entrada por `event_id`, revisão externa,
+  payload JSON limitado a 256 KiB, expiração de sete dias, tentativas e
+  dead-letter;
+- `order_refs` liga `(merchant_id, external_order_id)` e `zelo_order_id` de
+  forma única;
+- `order_commands` usa a chave única
+  `(connection_id, external_order_id, intent, expected_external_revision)` e
+  idempotency key para comandos assíncronos;
+- `product_mappings` mantém o vínculo explícito entre item externo e produto;
+- `stock_commitments` mantém compromissos por item/pedido, com quantidade
+  positiva e liberação explícita.
+
+Todas as tabelas têm RLS como defesa adicional, índices para cada FK e para as
+filas de itens devidos/leases expirados, e `revoke all` para `PUBLIC`, `anon` e
+`authenticated`. O schema só concede `USAGE` e as tabelas só concedem
+operações ao `service_role`; não há leitura browser de payload bruto. As cinco
+RPCs públicas (`enqueue_ifood_event_v1`, `claim_ifood_events_v1`,
+`finish_ifood_event_v1`, `claim_ifood_commands_v1` e
+`finish_ifood_command_v1`) são explicitamente revogadas dos papéis de browser e
+concedidas somente ao `service_role`. Funções definidas com privilégio usam
+`search_path = ''`, nomes schema-qualified e a checagem de role vigente; claims
+usam `FOR UPDATE SKIP LOCKED`, e finish usa compare-and-set pelo lease.
+
+A constraint de `public.zelo_orders.source` preserva os canais existentes e
+adiciona `ifood`. A verificação transacional correspondente está em
+`supabase/verification/ifood_mvp_foundation.sql`; ela cria fixtures efêmeras,
+exercita idempotência, isolamento entre duas empresas, claims sequenciais,
+reclaim de lease expirado, dead-letter terminal, command key e ACL, e termina
+com `ROLLBACK`. Os claims sequenciais usam uma única sessão e não provam
+concorrência entre workers. A migration é código local pendente: a ausência do
+Docker Desktop impediu executar o harness nesta sessão, portanto esta seção não
+é uma afirmação de aplicação no banco compartilhado.
+
 ## Snapshot financeiro de fechamento (2026-08-28)
 
 - A migration `supabase/migrations/20260828120000_caixa_payment_totals.sql`
