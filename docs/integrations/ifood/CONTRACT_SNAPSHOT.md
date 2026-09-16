@@ -313,6 +313,41 @@ homologação exige aplicação pronta, conta profissional, loja de teste e
 cenários de conexão, confirmação, cancelamento, despacho e conclusão. Este
 snapshot registra pré-condições e lacunas; não afirma aprovação.
 
+### Webhook real exercitado ponta a ponta (2026-09-16, autorizado pelo dono)
+
+Registrado com URL pública temporária de um deploy Preview na Vercel
+(`codex/ifood-mvp`), `IFOOD_CLIENT_SECRET`/`SUPABASE_SERVICE_ROLE_KEY`
+configurados só nesse ambiente, e a proteção de acesso do preview desligada
+só durante o teste (religada depois). Nenhuma migration nova; a rota já
+existente da Task 6 recebeu tráfego real do iFood.
+
+- **Portal:** `Meus aplicativos → Teste (C) → Webhook`. O campo Status usa
+  `Salvar` **separado** de "Testar conexão" — alternar o toggle sem salvar
+  não persiste, então um evento real não chega até o Status ficar
+  efetivamente `true` no servidor do iFood.
+- **"Testar conexão" fica desabilitado enquanto Status está desligado** e
+  dispara `POST .../developer-portal/api/v1/apps/{appId}/webhook/test`
+  (chamado pelo portal, não documentado no snapshot). É uma simulação de
+  **KEEPALIVE**: nosso servidor respondeu `400` porque esse ping não tem
+  `merchantId`/`id`/`code`, campos que a Task 6 exige por ser voltada a
+  eventos de pedido — a assinatura HMAC do ping bateu certo (não foi `401`),
+  confirmando nossa verificação contra tráfego real do iFood. Presença/
+  keepalive segue fora de escopo (ver acima).
+- **Pedido de teste real com Status=true:** o iFood entregou `PLACED` via
+  webhook — `POST` com `X-IFood-Signature` válida, corpo aceito e `202` do
+  nosso servidor, log de runtime confirmado na Vercel. Como a loja de teste
+  (`6bdbbe5d-9ae9-4852-bc14-93a2907c0e6c`) não tinha `ifood_internal.connections`
+  cadastrada, o resultado foi `unknown_merchant` → `ignored`: `202` sem
+  gravar nada, conferido por leitura direta no Postgres (0 linhas). Um
+  KEEPALIVE adicional (`400`) chegou minutos depois do primeiro Status=true,
+  também sem `merchantId`.
+- Antes de Status=true, dois pedidos de teste ficaram visíveis só via
+  polling (`GET /events/v1.0/events:polling`), nunca via webhook — prova de
+  que a entrega HTTP depende do Status persistido, não apenas da URL
+  preenchida.
+- Webhook desativado (Status=false, URL mantida desabilitada) e a proteção
+  do preview religada ao final; nenhuma alteração ficou ativa em produção.
+
 ## 10. Segurança e sanitização
 
 - As fixtures usam somente strings como `merchant-fixture`, `order-fixture`,

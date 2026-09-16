@@ -30,10 +30,18 @@ conexão ser descartado.
 **Produção (2026-09-16, autorizado pelo dono):** migrations
 `ifood_mvp_foundation` e `ifood_webhook_enqueue` aplicadas no Supabase
 vinculado, com grants/RLS verificados e 277 pedidos preservados; nenhum
-worker, deploy ou webhook foi ligado. Adapter HTTP provado ao vivo: leitura (token, merchants, status 200/403,
-polling) e ciclo completo com dois pedidos de teste (confirm, preparo,
-despacho, pronto, cancelamento e ACK, cada um confirmado pelo evento). Webhook
-real pendente de URL HTTPS pública; homologação depende das Tasks 7–20.
+worker foi ligado. Adapter HTTP provado ao vivo: leitura (token, merchants,
+status 200/403, polling) e ciclo completo com dois pedidos de teste (confirm,
+preparo, despacho, pronto, cancelamento e ACK, cada um confirmado pelo
+evento). **Webhook real também provado ponta a ponta**, usando um deploy
+Preview temporário na Vercel como URL pública (secrets só nesse ambiente,
+proteção do preview desligada só durante o teste e religada depois): pedido
+de teste entregue por HTTP real com assinatura válida, `202`, e
+`unknown_merchant`/`ignored` sem gravar nada (loja de teste sem conexão
+cadastrada) — confirmado por leitura direta no Postgres. Webhook desligado ao
+final. Homologação depende das Tasks 7–20. Detalhe em
+`docs/integrations/ifood/CONTRACT_SNAPSHOT.md` → "Webhook real exercitado
+ponta a ponta".
 
 Detalhes completos (assinatura HMAC, ordem de validação, RPCs, contagens de
 teste por task) nas seções "Resultado real" de cada task no plano vivo.
