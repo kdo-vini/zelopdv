@@ -1,5 +1,32 @@
 # ZeloPDV — Foco atual
 
+## Handoff — integração iFood MVP — 2026-09-16
+
+Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. As Tasks 1 a 4
+estão implementadas na ordem do plano vivo
+`docs/superpowers/plans/2026-09-15-ifood-mvp.md`, uma por commit: contrato e
+arquitetura, domínio/normalização, persistência com leases e, por último, o
+processo worker dedicado. A Task 4 deve aparecer no histórico como
+`feat: add dedicated iFood worker runtime`.
+
+Estado entregue no handoff: worker Node 24 isolado do SvelteKit, loop
+sequencial abortável, shutdown gracioso, `/health/live`, `/health/ready`,
+configuração validada e imagem Docker não-root. A suíte focada passou 13/13,
+as suítes iFood/vizinhas passaram 55/55, `npm run check` ficou em 0 erros e 0
+warnings e a suíte integral registrou 1.275 testes aprovados e 3 pulados. O
+smoke do container confirmou liveness 200 e readiness 503 fail-closed.
+
+Limite intencional atual: o worker ainda não autentica nem chama a API do
+iFood e não processa inbox/commands. O bootstrap de produção permanece
+`unready` de propósito, sem fingir conectividade. Nenhum deploy, push de imagem
+ou alteração no Supabase remoto foi feito.
+
+**Próximo passo linear:** Task 5 — implementar autenticação e o adapter HTTP de
+produção (`httpIfoodAdapter`, cache de token, request/rate limit e módulos
+Order, Events e Merchant). Não iniciar Tasks 6+ antes de concluir e registrar
+a Task 5 no plano. Evitar repetir a suíte integral ou pedir revisão redundante;
+usar apenas validações proporcionais aos arquivos alterados.
+
 ## Reparo do replay de migrations ZeloMenu — 2026-09-16
 
 O harness descartável do iFood parava antes da migration da integração, em
@@ -115,6 +142,48 @@ read-only `supabase db advisors --linked` retornou
 `LegacyProjectNotLinkedError`; além disso, advisors do linked não enxergariam a
 migration local ainda não aplicada. Nenhuma migration foi aplicada ao banco
 vinculado, e nenhum deploy/publicação foi autorizado ou executado.
+
+Task 4 do iFood — processo worker dedicado (2026-09-16): **concluída.**
+`workers/ifood/runtime.js` é um módulo Node profundo e injetável, sem imports de
+Svelte ou `$env`; roda um único loop aguardado, sem sobreposição, com atraso
+abortável, drain de trabalho em voo e erros genéricos sanitizados. Nesta task o
+único trabalho é o probe não mutante `repository.probeDependencies()`, que
+retorna apenas `{databaseReachable, leaseCapable}`. Não há chamadas HTTP ao
+iFood, claims, inbox ou processamento: Tasks 5 e 7 ainda não existem.
+
+O bootstrap real usa deliberadamente uma dependência `false/false`, então o
+processo permanece `unready` até que um probe de produção seguro e verdadeiro
+seja implementado. O adapter mock da Task 2 não é conectado ao processo real.
+`workers/ifood/healthServer.js` mantém liveness 200 enquanto o servidor serve,
+mas readiness começa em 503, falha com banco/lease, expira após 90 s sem probe
+fresco e cai imediatamente durante shutdown; as respostas são JSON genérico
+somente com `status`/`reason`, sem cache, e as rotas aceitam apenas GET/HEAD.
+
+RED: `npx vitest run tests/ifood.worker-runtime.test.js --reporter=verbose`
+falhou por módulos ausentes (0 testes coletados). GREEN: a suíte focada passou
+13/13. As suítes Task 2/3 e vizinha passaram no comando
+`npx vitest run tests/ifood.worker-runtime.test.js tests/ifood.domain.test.js
+tests/ifood.order-normalizer.test.js tests/onlineOrders.test.js
+tests/ifood.persistence-schema.test.js --reporter=verbose` (5 arquivos,
+55/55 testes). `npm run check` passou com 0 erros e 0 warnings.
+
+`npm test -- --reporter=dot` também passou integralmente: 205 arquivos e 1.275
+testes aprovados, com 3 arquivos e 3 testes condicionais pulados (208 arquivos,
+1.278 testes; 194,23 s).
+
+O container de dois estágios foi validado por
+`docker build -f workers/ifood/Dockerfile -t zelopdv-ifood-worker:test .`;
+`workers/ifood/Dockerfile.dockerignore` é o ignore específico efetivo para
+contexto na raiz (o plano histórico citava incorretamente `.dockerignore`).
+`docker run --rm zelopdv-ifood-worker:test node --version` retornou
+`v24.20.0`; `docker image inspect` confirmou `USER=node`, CMD exec-form
+`node workers/ifood/index.js` e HEALTHCHECK Node `fetch` local em
+`/health/live`, independente do banco. Não houve push/deploy/publicação,
+mutação no Supabase remoto, nem início das Tasks 5+; também não foi possível
+provar integração iFood real porque o adapter HTTP ainda é a Task 5. No smoke
+local com envs sintéticas, `/health/live` respondeu 200 e `/health/ready`
+respondeu 503 com razão genérica `dependencies_unavailable`, como exigido para
+este bootstrap sem probe de produção.
 
 ## Assinatura pós-trial perdia o add-on ativo — 2026-09-14
 
