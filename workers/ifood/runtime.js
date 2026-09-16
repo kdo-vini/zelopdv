@@ -154,8 +154,9 @@ function invokeObserver(observer, value) {
  * respects `signal` (skipped/aborted the same way any other tracked
  * operation is), and any error it throws goes through the same
  * `reportError`/`sanitizeWorkerError` path as every other error here — it
- * never crashes the loop or leaks raw error text. iFood HTTP polling and
- * presence reconciliation remain out of scope and are not wired here.
+ * never crashes the loop or leaks raw error text. Task 9 adds the same
+ * optional pattern for `options.reconcile` and `options.evaluateHealth`;
+ * neither is supplied by the default bootstrap.
  *
  * The returned promise resolves when the loop observes abort. It also carries
  * `drain()` so the bootstrap can wait for an in-flight probe/inbox cycle
@@ -174,7 +175,9 @@ export function runIfoodWorker(options = {}) {
     onHealthChange = noop,
     onError = noop,
     logger = null,
-    processInbox
+    processInbox,
+    reconcile,
+    evaluateHealth
   } = options;
 
   const internalController = providedSignal ? null : new AbortController();
@@ -209,6 +212,18 @@ export function runIfoodWorker(options = {}) {
     }
   };
 
+  const runOptionalHook = async (hook, input) => {
+    if (typeof hook !== 'function') return;
+    if (signal.aborted) throw abortError();
+    try {
+      await invokeTracked(() => invokeObserver(hook, input));
+    } catch (error) {
+      if (isAbortError(error, signal)) throw error;
+      const safeError = reportError(error, { onError, logger });
+      errors.push(safeError);
+    }
+  };
+
   const runCycle = async () => {
     if (signal.aborted) throw abortError();
     let probe;
@@ -232,6 +247,8 @@ export function runIfoodWorker(options = {}) {
           errors.push(safeError);
         }
       }
+      await runOptionalHook(reconcile, { signal });
+      await runOptionalHook(evaluateHealth, { signal, probe });
     } catch (error) {
       if (isAbortError(error, signal)) throw error;
       const safeError = reportError(error, { onError, logger });

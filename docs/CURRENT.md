@@ -2,7 +2,7 @@
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
-Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. **Tasks 1–8
+Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. **Tasks 1–9
 concluídas** (contrato/arquitetura, domínio/normalização, persistência com
 leases, worker dedicado, adapter HTTP de produção, webhook assinado
 durável, processamento da inbox com retry/dead-letter, projeção canônica
@@ -169,10 +169,23 @@ foi validada **somente** no harness local descartável — **não foi aplicada**
 ao Supabase vinculado (`xnnjyrblpvsqrtsshawa`); essa aplicação fica a
 critério do coordenador após revisão linha a linha.
 
-**Próximo passo linear:** Task 9 — reconciliar polling, ACK, presença e
-fail-closed. Não iniciar Tasks 10+ antes de concluir e registrar a Task 9
-no plano. Evitar repetir a suíte integral ou pedir revisão redundante; usar
-apenas validações proporcionais aos arquivos alterados.
+**Task 9 do iFood (2026-09-16):** `reconciliation.js` agora polla todos os
+merchants não revogados, incluindo `pending`, `active`, `degraded` e `paused`,
+em lotes de até 1.000 e persiste cada envelope antes do ACK. `inserted` e
+`duplicate` podem ser confirmados; `unknown_merchant` permanece sem ACK para
+redelivery seguro, e `last_poll_at` só é registrado após polling bem-sucedido.
+`connectionHealth.js` aplica fail-closed por merchant com idade padrão de 90s,
+bloqueia novos comandos sem esconder pedidos já persistidos e exige token,
+heartbeat/poll válido e configuração verde para recuperar. A presença usa
+somente o seam injetado `setMerchantPresence({ merchantId, online, signal? })`;
+nenhuma rota de escrita real do iFood foi inventada ou ligada. O runtime ganhou
+hooks opcionais `reconcile`/`evaluateHealth`, enquanto o bootstrap padrão
+continua fail-closed; a validação focada passou 15/15, a combinada passou
+123/123 e `npm.cmd run check` terminou em 0 erros/0 warnings.
+
+**Próximo passo linear:** Task 10 — criar comandos assíncronos e APIs
+operacionais. Não iniciar Tasks 11+ antes de concluir e registrar a Task 10
+no plano; usar validações proporcionais aos arquivos alterados.
 
 ## Reparo do replay de migrations ZeloMenu — 2026-09-16
 
