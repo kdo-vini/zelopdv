@@ -2,10 +2,11 @@
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
-Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. **Tasks 1–7
+Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. **Tasks 1–8
 concluídas** (contrato/arquitetura, domínio/normalização, persistência com
 leases, worker dedicado, adapter HTTP de produção, webhook assinado
-durável, processamento da inbox com retry/dead-letter) e a **revisão de
+durável, processamento da inbox com retry/dead-letter, projeção canônica
+em `zelo_orders`) e a **revisão de
 conformidade das Tasks 1–6 (2026-09-16) está fechada** — ver
 `docs/superpowers/plans/2026-09-15-ifood-mvp.md`, seção
 "Revisão de conformidade das Tasks 1–6 (2026-09-16)" logo após o Resultado
@@ -63,10 +64,114 @@ comportamento padrão. Nota de contrato importante: `finish_ifood_event_v1`
 'dead_letter'` da inbox — o processor repassa o outcome do handler
 inalterado e só o `errorCode` distingue a causa depois.
 
-**Próximo passo linear:** Task 8 — buscar detalhes do pedido e projetar
-pedidos canônicos em `zelo_orders` (o handler que a Task 7 já sabe invocar
-por evento). Não iniciar Tasks 9+ antes de concluir e registrar a Task 8 no
-plano. Evitar repetir a suíte integral ou pedir revisão redundante; usar
+**Task 8 do iFood (2026-09-16):** nova RPC
+`public.project_ifood_order_event_v1` (migration
+`20260916195009_ifood_canonical_order_projection.sql`, **validada apenas no
+harness local descartável, não aplicada no Supabase vinculado**) é o único
+lugar que grava `zelo_orders`/`zelo_order_items`/`zelo_order_events`/
+`zelo_order_outbox` para um evento iFood — nunca reusa `create_zelo_order`
+(cujo whitelist de `source` não inclui `ifood`) nem `transition_zelo_order`
+(que faz baixa de estoque via `produtos`/`categorias`, indevida para item
+ainda não mapeado). A decisão de aplicar/ignorar/duplicar/conflito terminal
+é autoritativa em SQL, travando `ifood_internal.order_refs` e recalculando
+o mesmo rank monotônico de `eventPolicy.js`; `additionalFees` é dobrado em
+`delivery_fee` e o `total` é sempre recalculado em SQL
+(`subtotal + delivery_fee - discount`), nunca copiado do normalizador, para
+o `CHECK zelo_orders_total_consistent` nunca poder falhar. `pessoa_id` e
+`product_id` ficam sempre `null` (Pessoas e mapeamento de produto seguem
+fora do MVP). `src/lib/server/ifood/eventHandler.js` é o `handler` real da
+Task 7: curto-circuita os códigos informativos observados ao vivo
+(`DELIVERY_DROP_CODE_REQUESTED`, `CANCELLATION_REQUESTED`) e códigos
+desconhecidos antes de qualquer chamada de rede, busca o detalhe do pedido
+via `getOrderDetail` (novo método aditivo em `createIfoodIntegration.js`,
+`receiveEvent` da Task 2 intocado), confere que o detalhe devolvido
+realmente descreve o `externalOrderId`/`merchantId` esperado (correção do
+coordenador — sem essa checagem um retorno trocado da API gravaria o pedido
+errado), e trata `404` do detalhe com retry limitado a 10 minutos contados
+do `occurredAt` do evento antes de virar pendência administrativa
+(`ORDER_DETAIL_NOT_FOUND_TIMEOUT`). Suíte iFood completa (13 arquivos):
+**190/190 aprovados**; `npm run check` 0/0; `npm run verify:migrations`
+inalterado. **Achado separado, não relacionado ao iFood:** o harness
+descartável tem uma divergência real e pré-existente de `storage_policies`
+contra produção (a policy `zelochat-media public read` sumiu); documentado
+para o dono decidir, sem impacto nesta task.
+
+**Task 8 do iFood (2026-09-16):** `src/lib/server/ifood/eventHandler.js`
+(`createIfoodEventHandler({ integration, repository, retryPolicy, clock })`)
+é o `handler(row, context)` que a Task 7's `inboxProcessor.js` já sabia
+invocar. Ele resolve o status externo via `contracts.js`, curto-circuita os
+dois códigos informativos observados ao vivo
+(`DELIVERY_DROP_CODE_REQUESTED`, `CANCELLATION_REQUESTED`, novo export
+`IFOOD_INFORMATIONAL_EVENT_CODES`/`isIfoodInformationalEventCode`) para
+`processed` sem RPC nem fetch de detalhe, e quarentena qualquer código fora
+do conjunto canônico de 7 antes de qualquer I/O. Para um evento conhecido,
+busca o detalhe via `integration.getOrderDetail` (novo método aditivo em
+`createIfoodIntegration.js`, passthrough de `adapter.getOrder`;
+`receiveEvent`/demais métodos da Task 2 não foram tocados), normaliza com
+`normalizeIfoodOrder` (Task 2) e chama a única RPC transacional
+`project_ifood_order_event_v1` via `repository.projectOrderEvent(...)`
+(seam documentado por JSDoc; nenhum repositório Supabase real foi criado,
+mesmo padrão adiado das Tasks 4–7).
+
+Decisão de design registrada: o compare-and-set (novo/duplicado/obsoleto/
+conflito terminal/avanço) é **autoritativo em SQL only** dentro de
+`project_ifood_order_event_v1` — a função tranca `ifood_internal.order_refs`
+e depois `zelo_orders` (`for update`) e recalcula a mesma tabela de rank de
+7 entradas de `eventPolicy.js` como `CASE` interno. O handler em JS não
+duplica esse cálculo contra uma leitura especulativa de `order_refs`: ele só
+decide os dois curto-circuitos que nunca chegam à RPC (informativo e código
+desconhecido). Isso evita que duas cópias do rank table divirjam
+silenciosamente.
+
+Retry de `404` do detalhe do pedido: janela de 10 minutos ancorada no
+`occurredAt` do próprio evento (não no `attempts` do worker, que varia com
+jitter/reinícios); sem `occurredAt` utilizável, cai para um teto
+conservador de 3 tentativas em vez de tentar para sempre. Passado a janela,
+`terminal` com `errorCode: 'ORDER_DETAIL_NOT_FOUND_TIMEOUT'` (pendência
+administrativa). Outro erro retryable do adapter vira `retryable`; um erro
+não-retryable vira `terminal`; a falha da própria RPC vira `retryable` com
+`errorCode` genérico (`PROJECTION_RPC_ERROR`), nunca o texto bruto do erro.
+
+Simplificações documentadas na migration
+`supabase/migrations/20260916195009_ifood_canonical_order_projection.sql`:
+`additionalFees` é somado a `delivery_fee` (sem coluna própria em
+`zelo_orders`); `total` é **calculado** em SQL a partir de
+`subtotal + delivery_fee - discount` (nunca copiado de `totals.orderAmount`
+do payload), o que garante que `zelo_orders_total_consistent` nunca pode
+ser violado por arredondamento entre a tolerância de 0.01 do normalizador
+JS e a aritmética exata do `numeric(14,2)` do Postgres. `pessoa_id` fica
+sempre `null` (Pessoas fora do MVP); `zelo_order_items.product_id` fica
+sempre `null` (mapeamento de produto é a Task 12); itens não são
+reinseridos numa atualização de status, só na criação.
+
+RED: `npx vitest run tests/ifood.event-handler.test.js
+tests/ifood.canonical-projection-schema.test.js --reporter=verbose` falhou
+como esperado por módulo/arquivo inexistente (0 testes coletados). GREEN:
+mesma suíte, **28/28** (17 do handler + 11 do schema). Suíte combinada
+`tests/ifood.event-handler.test.js tests/ifood.canonical-projection-schema.test.js
+tests/ifood.domain.test.js tests/ifood.inbox-processor.test.js
+tests/ifood.worker-runtime.test.js tests/ifood.contract-fixtures.test.js
+tests/ifood.persistence-schema.test.js tests/ifood.webhook-enqueue-schema.test.js
+tests/ifood.order-normalizer.test.js tests/onlineOrders.test.js` →
+**10 arquivos, 119/119**. `npm run check` → `5874 FILES 0 ERRORS 0
+WARNINGS`. `npm run verify:migrations` → `107/107` baseline, `59/59`
+remoto, `58` forward. `git diff --check` (via `git add -N` dos 7 arquivos
+tocados/novos, depois `git reset`) → limpo. Varredura de LF via `node`
+(byte `13`/CR) nos 7 arquivos → nenhum `\r`.
+
+Harness descartável local:
+`powershell -ExecutionPolicy Bypass -File scripts/verify-supabase-baseline.ps1
+-ApplyForwardMigrations -ExcludeTenantDataSeeds -PostMigrationVerification
+supabase/verification/ifood_mvp_foundation.sql,supabase/verification/ifood_webhook_enqueue.sql,supabase/verification/ifood_canonical_order_projection.sql`
+→ `exit code 0`, `BASELINE_VERIFIED cutoff=20260813091000`,
+`post-migration verifiers passed: 3`. A migration `ifood_canonical_order_projection`
+foi validada **somente** no harness local descartável — **não foi aplicada**
+ao Supabase vinculado (`xnnjyrblpvsqrtsshawa`); essa aplicação fica a
+critério do coordenador após revisão linha a linha.
+
+**Próximo passo linear:** Task 9 — reconciliar polling, ACK, presença e
+fail-closed. Não iniciar Tasks 10+ antes de concluir e registrar a Task 9
+no plano. Evitar repetir a suíte integral ou pedir revisão redundante; usar
 apenas validações proporcionais aos arquivos alterados.
 
 ## Reparo do replay de migrations ZeloMenu — 2026-09-16

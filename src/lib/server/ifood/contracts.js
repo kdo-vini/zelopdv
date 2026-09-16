@@ -97,6 +97,31 @@ function statusToken(value) {
   return token || null;
 }
 
+export { statusToken };
+
+// Observed live on the real test account (2026-09-16, see
+// CONTRACT_SNAPSHOT.md's "Ciclo completo com pedidos de teste"):
+// `confirm` produces both `CONFIRMED` and `DELIVERY_DROP_CODE_REQUESTED`,
+// and `requestCancellation` produces both `CANCELLATION_REQUESTED` and
+// `CANCELLED`. Neither of these two extra codes is in
+// `IFOOD_EXTERNAL_STATUSES`/`EXTERNAL_STATUS_ALIASES`: they carry no
+// commercial transition of their own and must never reach
+// `decideEventTransition`/quarantine/dead-letter. Task 8's event handler
+// checks this set first and short-circuits to a successfully processed,
+// no-op event before any RPC call or order-detail fetch.
+export const IFOOD_INFORMATIONAL_EVENT_CODES = Object.freeze(new Set([
+  'DELIVERY_DROP_CODE_REQUESTED',
+  'CANCELLATION_REQUESTED'
+]));
+
+/** True when any candidate field on `event` matches a known informational code. */
+export function isIfoodInformationalEventCode(event) {
+  return eventStatusCandidates(event).some((value) => {
+    const token = statusToken(value);
+    return Boolean(token && IFOOD_INFORMATIONAL_EVENT_CODES.has(token));
+  });
+}
+
 /** Return a known external status, or null for a code not in this contract. */
 export function normalizeIfoodExternalStatus(value) {
   const token = statusToken(value);

@@ -113,6 +113,22 @@ export function createIfoodIntegration(deps = {}) {
     return adapter.pollEvents(input);
   }
 
+  /**
+   * Thin passthrough to the adapter's own `getOrder`, added for Task 8's
+   * event handler so it can fetch the full order detail needed to refresh
+   * `zelo_orders`'s snapshot columns. Deliberately does not wrap, retry, or
+   * reinterpret adapter errors (e.g. `IfoodHttpError` with
+   * `code: 'IFOOD_HTTP_NOT_FOUND'`) — that policy (bounded 404 retry
+   * window, generic classification of other errors) belongs to the caller,
+   * not to this deep module, exactly like `requestOrderAction` and
+   * `reconcileEvents` already leave their own retry/backoff policy to the
+   * adapter or caller.
+   */
+  async function getOrderDetail(orderId, options = {}) {
+    if (typeof adapter.getOrder !== 'function') throw operationError('getOrder');
+    return adapter.getOrder(orderId, options);
+  }
+
   async function getConnectionHealth(empresaId) {
     const result = typeof repository.getConnectionHealth === 'function'
       ? await repository.getConnectionHealth(empresaId)
@@ -129,7 +145,8 @@ export function createIfoodIntegration(deps = {}) {
     receiveEvent,
     requestOrderAction,
     reconcileEvents,
-    getConnectionHealth
+    getConnectionHealth,
+    getOrderDetail
   });
 }
 
