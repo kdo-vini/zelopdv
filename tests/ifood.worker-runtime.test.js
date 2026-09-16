@@ -262,6 +262,60 @@ describe('iFood worker runtime', () => {
     controller.abort();
     await expect(delay).resolves.toBe(false);
   });
+
+  it('invokes an injected processInbox once per cycle, but only when supplied (Task 7 additive hook)', async () => {
+    const controller = new AbortController();
+    const repository = { probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true })) };
+    const processInbox = vi.fn(async () => ({ claimed: 0, processed: 0, retried: 0, deadLettered: 0, finishFailed: 0 }));
+
+    const run = runIfoodWorker({ repository, signal: controller.signal, intervalMs: 60_000, processInbox });
+    await waitFor(() => processInbox.mock.calls.length === 1);
+    controller.abort();
+    await run;
+
+    expect(processInbox).toHaveBeenCalledTimes(1);
+    expect(processInbox.mock.calls[0][0]).toMatchObject({ signal: controller.signal });
+  });
+
+  it('does not invoke processInbox at all when it is not supplied (default bootstrap stays unchanged)', async () => {
+    const controller = new AbortController();
+    const repository = { probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true })) };
+
+    const run = runIfoodWorker({ repository, signal: controller.signal, intervalMs: 60_000 });
+    await waitFor(() => repository.probeDependencies.mock.calls.length === 1);
+    controller.abort();
+    const result = await run;
+
+    expect(result.cycles).toBeGreaterThanOrEqual(1);
+  });
+
+  it('sanitizes a processInbox failure through the same reportError path instead of crashing the loop', async () => {
+    const controller = new AbortController();
+    const repository = { probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true })) };
+    const secretMessage = 'raw db error with client secret abc123';
+    const processInbox = vi.fn(async () => {
+      throw new Error(secretMessage);
+    });
+    const onError = vi.fn();
+    const logger = { error: vi.fn(), info: vi.fn() };
+
+    const run = runIfoodWorker({
+      repository,
+      signal: controller.signal,
+      intervalMs: 60_000,
+      processInbox,
+      onError,
+      logger
+    });
+    await waitFor(() => onError.mock.calls.length >= 1);
+    controller.abort();
+    await run;
+
+    expect(processInbox).toHaveBeenCalledTimes(1);
+    for (const call of [...onError.mock.calls, ...logger.error.mock.calls]) {
+      expect(JSON.stringify(call)).not.toContain(secretMessage);
+    }
+  });
 });
 
 describe('iFood health server', () => {

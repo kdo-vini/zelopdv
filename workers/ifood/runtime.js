@@ -141,14 +141,26 @@ function invokeObserver(observer, value) {
 }
 
 /**
- * Run the Task 4 worker skeleton. The only operation in this task is the
- * explicitly safe, non-mutating `probeDependencies` call. Inbox claims,
- * iFood HTTP, and event processing belong to later tasks and are intentionally
- * absent here.
+ * Run the Task 4 worker skeleton. The only operation guaranteed in this
+ * task is the explicitly safe, non-mutating `probeDependencies` call.
+ *
+ * Task 7 adds one optional, purely additive hook: `options.processInbox`,
+ * a `runInboxCycle`-shaped async callback (see
+ * `src/lib/server/ifood/inboxProcessor.js`). When provided, it is invoked
+ * once per cycle right after the health probe/notification, wired the same
+ * defensive way `probeOwner` already is: it only runs when supplied (the
+ * default bootstrap in `workers/ifood/index.js` never supplies it, so its
+ * fail-closed `createUnreadyWorkerDependencies` path is unchanged), it
+ * respects `signal` (skipped/aborted the same way any other tracked
+ * operation is), and any error it throws goes through the same
+ * `reportError`/`sanitizeWorkerError` path as every other error here — it
+ * never crashes the loop or leaks raw error text. iFood HTTP polling and
+ * presence reconciliation remain out of scope and are not wired here.
  *
  * The returned promise resolves when the loop observes abort. It also carries
- * `drain()` so the bootstrap can wait for an in-flight probe before closing
- * its HTTP server, while still bounding shutdown at the process boundary.
+ * `drain()` so the bootstrap can wait for an in-flight probe/inbox cycle
+ * before closing its HTTP server, while still bounding shutdown at the
+ * process boundary.
  */
 export function runIfoodWorker(options = {}) {
   const {
@@ -161,7 +173,8 @@ export function runIfoodWorker(options = {}) {
     pollIntervalMs: configuredPollIntervalMs,
     onHealthChange = noop,
     onError = noop,
-    logger = null
+    logger = null,
+    processInbox
   } = options;
 
   const internalController = providedSignal ? null : new AbortController();
@@ -209,6 +222,16 @@ export function runIfoodWorker(options = {}) {
       lastProbe = probe;
       cycles += 1;
       await notifyHealth(probe);
+      if (typeof processInbox === 'function') {
+        if (signal.aborted) throw abortError();
+        try {
+          await invokeTracked(() => invokeObserver(processInbox, { signal }));
+        } catch (inboxError) {
+          if (isAbortError(inboxError, signal)) throw inboxError;
+          const safeError = reportError(inboxError, { onError, logger });
+          errors.push(safeError);
+        }
+      }
     } catch (error) {
       if (isAbortError(error, signal)) throw error;
       const safeError = reportError(error, { onError, logger });

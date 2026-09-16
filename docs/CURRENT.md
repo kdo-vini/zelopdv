@@ -2,11 +2,12 @@
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
-Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. **Tasks 1–6
+Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. **Tasks 1–7
 concluídas** (contrato/arquitetura, domínio/normalização, persistência com
 leases, worker dedicado, adapter HTTP de produção, webhook assinado
-durável) e a **revisão de conformidade das Tasks 1–6 (2026-09-16) está
-fechada** — ver `docs/superpowers/plans/2026-09-15-ifood-mvp.md`, seção
+durável, processamento da inbox com retry/dead-letter) e a **revisão de
+conformidade das Tasks 1–6 (2026-09-16) está fechada** — ver
+`docs/superpowers/plans/2026-09-15-ifood-mvp.md`, seção
 "Revisão de conformidade das Tasks 1–6 (2026-09-16)" logo após o Resultado
 real da Task 6, para o detalhe de cada gap (G1–G6) fechado: harness
 multi-arquivo (`-PostMigrationVerification a.sql,b.sql`), prova de
@@ -46,12 +47,27 @@ ponta a ponta".
 Detalhes completos (assinatura HMAC, ordem de validação, RPCs, contagens de
 teste por task) nas seções "Resultado real" de cada task no plano vivo.
 
-**Próximo passo linear:** Task 7 — processar a inbox com lease, retry e
-dead-letter (`inboxProcessor.js`, `retryPolicy.js`, worker consumindo
-`claim_ifood_events_v1`/`finish_ifood_event_v1` da Task 3). Não iniciar
-Tasks 8+ antes de concluir e registrar a Task 7 no plano. Evitar repetir a
-suíte integral ou pedir revisão redundante; usar apenas validações
-proporcionais aos arquivos alterados.
+**Task 7 do iFood (2026-09-16):** `src/lib/server/ifood/retryPolicy.js`
+(backoff exponencial com jitter, determinístico via `random`/`clock`
+injetados, base 1s/cap 10min configuráveis) e
+`src/lib/server/ifood/inboxProcessor.js` (`createIfoodInboxProcessor` com
+`runInboxCycle`) processam a inbox contra um repositório fake injetado
+(`claimEvents`/`finishEvent`), puro e sem I/O — nenhum repositório real
+Supabase foi criado nem ligado ao bootstrap padrão de
+`workers/ifood/index.js`, que segue fail-closed como nas Tasks 4–6; isso
+fica para uma task futura. `workers/ifood/runtime.js` ganhou um hook aditivo
+opcional (`options.processInbox`), só invocado quando fornecido, sem mudar o
+comportamento padrão. Nota de contrato importante: `finish_ifood_event_v1`
+(migration aplicada em produção, não modificada) colapsa `terminal`,
+`failed_terminal`, `quarantine` e `dead_letter` no mesmo `status =
+'dead_letter'` da inbox — o processor repassa o outcome do handler
+inalterado e só o `errorCode` distingue a causa depois.
+
+**Próximo passo linear:** Task 8 — buscar detalhes do pedido e projetar
+pedidos canônicos em `zelo_orders` (o handler que a Task 7 já sabe invocar
+por evento). Não iniciar Tasks 9+ antes de concluir e registrar a Task 8 no
+plano. Evitar repetir a suíte integral ou pedir revisão redundante; usar
+apenas validações proporcionais aos arquivos alterados.
 
 ## Reparo do replay de migrations ZeloMenu — 2026-09-16
 
