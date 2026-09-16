@@ -3,8 +3,35 @@ import { pathToFileURL } from 'node:url';
 import { loadIfoodWorkerConfig } from './config.js';
 import { createHealthServer, createHealthState, listenHealthServer } from './healthServer.js';
 import { runIfoodWorker, sanitizeWorkerError } from './runtime.js';
+import { createHttpIfoodAdapter } from '../../src/lib/server/ifood/adapters/httpIfoodAdapter.js';
 
 function noop() {}
+
+/**
+ * Build the production iFood HTTP adapter from worker config, when
+ * `IFOOD_CLIENT_ID`/`IFOOD_CLIENT_SECRET` are both configured. Returns
+ * `null` otherwise so a worker without credentials still boots.
+ *
+ * This factory is intentionally not wired into `createUnreadyWorkerDependencies`
+ * or the runtime loop: the repository readiness probe stays `false/false`
+ * (fail-closed) until Task 7 ships a real repository, and polling/command
+ * processing that would use this adapter is Task 9's scope, not this one.
+ */
+export function createIfoodHttpAdapterFromConfig(config, overrides = {}) {
+  if (!config?.credentials) return null;
+  const { clientId, clientSecret } = config.credentials;
+  return createHttpIfoodAdapter({
+    clientId,
+    clientSecret,
+    fetch: overrides.fetch ?? globalThis.fetch,
+    clock: overrides.clock ?? (() => Date.now()),
+    ...(overrides.sleep ? { sleep: overrides.sleep } : {}),
+    ...(overrides.random ? { random: overrides.random } : {}),
+    ...(overrides.baseUrl ? { baseUrl: overrides.baseUrl } : {}),
+    ...(overrides.timeoutMs !== undefined ? { timeoutMs: overrides.timeoutMs } : {}),
+    ...(overrides.retryBudgetMs !== undefined ? { retryBudgetMs: overrides.retryBudgetMs } : {})
+  });
+}
 
 /**
  * Task 4 deliberately ships no production repository adapter yet. Returning

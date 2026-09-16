@@ -2,30 +2,60 @@
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
-Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. As Tasks 1 a 4
+Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. As Tasks 1 a 5
 estão implementadas na ordem do plano vivo
 `docs/superpowers/plans/2026-09-15-ifood-mvp.md`, uma por commit: contrato e
-arquitetura, domínio/normalização, persistência com leases e, por último, o
-processo worker dedicado. A Task 4 deve aparecer no histórico como
-`feat: add dedicated iFood worker runtime`.
+arquitetura, domínio/normalização, persistência com leases, processo worker
+dedicado e, por último, o adapter HTTP de produção. A Task 5 deve aparecer no
+histórico como `feat: add production iFood HTTP adapter`.
 
-Estado entregue no handoff: worker Node 24 isolado do SvelteKit, loop
-sequencial abortável, shutdown gracioso, `/health/live`, `/health/ready`,
-configuração validada e imagem Docker não-root. A suíte focada passou 13/13,
-as suítes iFood/vizinhas passaram 55/55, `npm run check` ficou em 0 erros e 0
-warnings e a suíte integral registrou 1.275 testes aprovados e 3 pulados. O
-smoke do container confirmou liveness 200 e readiness 503 fail-closed.
+Estado entregue no handoff: `createHttpIfoodAdapter` (token cache
+`client_credentials` com `expiresIn` real, single-flight e renovação
+antecipada; rate limiter orientado por headers `Retry-After`/`X-RateLimit-*`
+sem limite numérico fixo; transporte com timeout por `AbortSignal`, um retry
+após `401` e backoff com jitter limitado por orçamento para
+`429`/`5xx`/timeout/rede) implementa `listMerchants`, `getMerchantStatus`,
+`pollEvents`, `ackEvents`, `getOrder` e as ações de pedido (`confirm`,
+`startPreparation`, `readyToPickup`, `dispatch`, `getCancellationReasons`,
+`requestCancellation`, `requestOrderAction`) compatíveis com o adapter mock da
+Task 2. A suíte focada nova passou 29/29 (22 originais + 7 de uma revisão
+corretiva pré-commit) e a suíte iFood/vizinha (3 arquivos) passou 53/53;
+`npm run check` ficou em 0 erros e 0 warnings.
 
-Limite intencional atual: o worker ainda não autentica nem chama a API do
-iFood e não processa inbox/commands. O bootstrap de produção permanece
-`unready` de propósito, sem fingir conectividade. Nenhum deploy, push de imagem
-ou alteração no Supabase remoto foi feito.
+Revisão corretiva pré-commit (2026-09-16): o coordenador apontou quatro
+riscos antes do commit único da Task 5, corrigidos nos mesmos arquivos sem
+gerar commit adicional. Retry ambíguo (timeout/rede/`5xx`) agora só é
+automático para chamadas idempotentes via `retryUnsafe` por chamada —
+padrão `true` só para `GET`; ações de pedido (`confirm`, `startPreparation`,
+`readyToPickup`, `dispatch`, `requestCancellation`) ficam em `false` para não
+reenviar um comando com desfecho incerto, e `ackEvents` usa `true` explícito
+por ser idempotente; `401`/`429` continuam retryable para qualquer método
+por serem respostas explícitas. A busca de token ganhou timeout próprio
+(`AbortController`, padrão igual ao transporte) mapeando qualquer falha para
+`IFOOD_AUTH_FAILED` retryable. Toda espera (backoff de
+`429`/`5xx`/timeout/rede e `rateLimiter.waitForSlot`) só dorme quando o
+atraso cabe no orçamento restante — um `Retry-After` de 120s contra um
+orçamento de 20s falha na hora com `retryAfterMs`, sem dormir — e aceita o
+`signal` do chamador via `abortableSleep` (novo padrão de `sleep` em
+`rateLimit.js`/`request.js`/adapter), rejeitando com `IFOOD_HTTP_ABORTED`
+quando abortada. Todo método do adapter aceita `signal` opcional repassado a
+`request()`, mantendo a assinatura compatível com o seam mock.
 
-**Próximo passo linear:** Task 5 — implementar autenticação e o adapter HTTP de
-produção (`httpIfoodAdapter`, cache de token, request/rate limit e módulos
-Order, Events e Merchant). Não iniciar Tasks 6+ antes de concluir e registrar
-a Task 5 no plano. Evitar repetir a suíte integral ou pedir revisão redundante;
-usar apenas validações proporcionais aos arquivos alterados.
+Limite intencional atual: o worker ainda não faz polling nem processa
+inbox/commands com este adapter — `workers/ifood/index.js` ganhou apenas a
+fábrica `createIfoodHttpAdapterFromConfig`, não usada pelo bootstrap padrão.
+O probe de dependências continua `false/false` (fail-closed); presença
+permanece somente leitura (`getMerchantStatus`), sem interrupções/horários.
+Nenhum deploy, push de imagem ou alteração no Supabase remoto foi feito, e
+nenhuma chamada real ao iFood ocorreu nesta task (somente `fetch` falso
+injetado nos testes).
+
+**Próximo passo linear:** Task 6 — receber webhook assinado com HMAC sobre
+bytes crus e persistir antes do `202` (`webhookSignature.js`,
+`inboxRepository.js`, rota `/api/integrations/ifood/webhook`). Não iniciar
+Tasks 7+ antes de concluir e registrar a Task 6 no plano. Evitar repetir a
+suíte integral ou pedir revisão redundante; usar apenas validações
+proporcionais aos arquivos alterados.
 
 ## Reparo do replay de migrations ZeloMenu — 2026-09-16
 
@@ -184,6 +214,130 @@ provar integração iFood real porque o adapter HTTP ainda é a Task 5. No smoke
 local com envs sintéticas, `/health/live` respondeu 200 e `/health/ready`
 respondeu 503 com razão genérica `dependencies_unavailable`, como exigido para
 este bootstrap sem probe de produção.
+
+Task 5 do iFood — adapter HTTP de produção (2026-09-16): **concluída.**
+`src/lib/server/ifood/http/tokenCache.js` implementa o fluxo centralizado
+`client_credentials` contra
+`POST https://merchant-api.ifood.com.br/authentication/v1.0/oauth/token`
+(form-urlencoded `grantType`/`clientId`/`clientSecret`), sem duração fixa de
+token: o cache lê `expiresIn` da resposta, renova antecipadamente dentro de
+uma margem configurável (`minMarginMs`/`marginRatio`, padrão 10% do tempo de
+vida com piso de 5s), compartilha uma única busca em voo entre chamadas
+concorrentes (single-flight) e expõe `invalidate()` para o retry de `401`.
+`src/lib/server/ifood/http/rateLimit.js` só reage a `Retry-After` e
+`X-RateLimit-Limit/Remaining/Reset`; nenhum limite numérico por endpoint foi
+codificado, pois o snapshot da Task 1 documenta que nenhum `429` real foi
+observado. `src/lib/server/ifood/http/request.js` resolve a URL base,
+injeta `Authorization: Bearer`, aplica timeout por `AbortSignal` (padrão
+8s), faz exatamente um retry após `401` invalidando o token, e usa backoff
+exponencial com jitter (`random`/`sleep` injetados) limitado por um
+orçamento total (padrão 20s, no máx. 5 tentativas) para `429`/`5xx`/timeout/
+erro de rede; `4xx` não retryable falha na primeira tentativa. O erro
+sanitizado `IfoodHttpError` expõe somente `status`/`code`/`retryable`/
+`retryAfterMs?`, nunca headers, Authorization, `clientSecret`, `clientId`,
+token ou corpo da resposta.
+
+`src/lib/server/ifood/adapters/httpIfoodAdapter.js` implementa
+`listMerchants`, `getMerchantStatus` (leitura de presença, sem interrupções
+nem horários), `pollEvents` (header `x-polling-merchants` com IDs
+concatenados por vírgula, `types`/`groups`/`categories` omitidos quando
+vazios, `204` vira `[]`), `ackEvents` (deduplica IDs, envia `[{id}]`, decompõe
+lotes acima de 10.000 em vários `POST` em vez de rejeitar o lote inteiro),
+`getOrder`, `confirm`, `startPreparation`, `readyToPickup`, `dispatch`,
+`getCancellationReasons`, `requestCancellation` e `requestOrderAction`
+compatível com o seam do adapter mock da Task 2. Toda ação com `202` retorna
+`{ orderId, action, accepted: true, status: 'accepted_http' }`, nunca uma
+confirmação comercial. Decisão registrada para `getOrder`: um `404` vira
+`IfoodHttpError` com `code: 'IFOOD_HTTP_NOT_FOUND'` e `retryable: true` (nunca
+`null` nem exceção genérica), para a Task 8 aplicar seu próprio backoff
+limitado. IDs de rota são URL-encoded e IDs vazios são rejeitados antes de
+qualquer requisição.
+
+`workers/ifood/config.js` ganhou leitura opcional de `IFOOD_CLIENT_ID` e
+`IFOOD_CLIENT_SECRET`: as duas devem vir juntas ou nenhuma, o par vira um
+`credentials` não enumerável (nunca aparece em `Object.keys`, `console.log`
+ou JSON do config) e só um booleano `hasIfoodCredentials` é enumerável.
+`workers/ifood/index.js` ganhou a fábrica aditiva
+`createIfoodHttpAdapterFromConfig(config, overrides)`, que constrói o adapter
+quando as credenciais existem; ela não é chamada pelo bootstrap padrão, o
+probe de dependências continua `false/false` e nenhum polling foi ligado ao
+loop do worker — isso é escopo da Task 9.
+
+RED: `npx vitest run tests/ifood.http-adapter.test.js --reporter=verbose`
+falhou por módulo inexistente (0 testes coletados). GREEN focado: a mesma
+suíte passou 22/22 após a implementação mínima (incluindo um ajuste
+necessário para o retry de `429` usar o `Retry-After` real em vez de apenas
+jitter aleatório). GREEN com vizinhas:
+`npx vitest run tests/ifood.http-adapter.test.js tests/ifood.domain.test.js
+tests/ifood.worker-runtime.test.js tests/ifood.order-normalizer.test.js
+tests/ifood.persistence-schema.test.js tests/ifood.contract-fixtures.test.js`
+passou 6 arquivos e 82/82 testes, confirmando que a Task 4 e as tasks
+anteriores continuam verdes sem alteração de teste. `npm run check` passou
+com 0 erros e 0 warnings (5.860 arquivos). `git diff --check` passou limpo
+para os arquivos novos e modificados. Verificação manual de LF confirmou
+ausência de `\r` em todos os arquivos tocados.
+
+A suíte de leakage prova que `JSON.stringify`, `String()`, `.message`,
+`.stack` e `Object.keys()` do erro nunca contêm `clientId`, `clientSecret`,
+o token de acesso, `Bearer` ou `Authorization`. Não houve chamada real ao
+iFood, deploy, push de imagem ou mutação no Supabase; todos os testes usam
+`fetch` falso injetado. A suíte integral (`npm test`) não foi executada nesta
+task, conforme instrução explícita de escopo.
+
+**Revisão corretiva da Task 5 (2026-09-16, antes do commit):** o coordenador
+revisou o adapter ainda não commitado e apontou quatro riscos, todos
+corrigidos nos mesmos arquivos, sem commit adicional.
+
+1. **POSTs não-idempotentes não reautomatizam falhas ambíguas.** `request.js`
+   ganhou `retryUnsafe` por chamada: timeout, erro de rede e `5xx` são
+   ambíguos (não se sabe se o iFood processou o pedido), então só são
+   reautomatizados quando a chamada é idempotente. Padrão: `true` para
+   `GET`, `false` para qualquer outro método. `confirm`,
+   `startPreparation`, `readyToPickup`, `dispatch` e `requestCancellation`
+   ficam no padrão `false` — uma falha ambígua vira erro imediato
+   (`retryable: true`) em vez de reenviar um comando com desfecho incerto
+   (ex.: `requestCancellation` em duplicidade); `ackEvents` passa
+   `retryUnsafe: true` porque reconfirmar um `id` já processado é
+   inofensivo. `401` e `429` continuam retryable para qualquer método, por
+   serem respostas explícitas do servidor.
+2. **Timeout na busca de token.** `tokenCache.fetchToken` ganhou
+   `AbortController`/timeout próprio (`timeoutMs`, padrão igual ao
+   transporte, 8s), independente do timeout por recurso — uma busca de
+   token travada bloquearia todo chamador do single-flight. Timeout e falha
+   de rede mapeiam para o mesmo `IFOOD_AUTH_FAILED` retryable.
+3. **Esperas respeitam orçamento e cancelamento.** (a) O atraso de `429`
+   (`Retry-After`/backoff) e o de `5xx`/timeout/rede só dormem quando cabem
+   no que resta do orçamento; um `Retry-After` de 120s contra um orçamento
+   de 20s falha na hora com `retryAfterMs`, sem dormir o tempo todo. (b)
+   Toda espera (`rateLimiter.waitForSlot` e o backoff) aceita o `signal` do
+   chamador: `rateLimit.js` exporta `abortableSleep(ms, signal)`, usado como
+   `sleep` padrão em `rateLimit.js`, `request.js` e no adapter; abortar
+   durante uma espera rejeita na hora com `IFOOD_HTTP_ABORTED`
+   (`retryable: false`).
+4. **`signal` opcional em todo método do adapter.** `httpIfoodAdapter.js`
+   aceita `signal` (parâmetro de opções à direita para métodos com id único,
+   ou campo dentro do objeto de entrada para `pollEvents`/
+   `requestOrderAction`/`requestCancellation`) e repassa a `request()`,
+   mantendo a assinatura compatível com o seam mock — nada mudou de posição
+   ou tipo nos parâmetros existentes.
+
+Sete testes novos comprovam os quatro pontos (timeout de token; POST
+ambíguo não reautomatizado a nível de transporte e a nível de adapter
+(`confirm`); ACK ambíguo reautomatizado a nível de transporte e de adapter;
+`429` que excede o orçamento sem dormir; aborto durante o backoff). Três
+asserções existentes precisaram trocar `toHaveBeenCalledWith(ms)` por
+`sleep.mock.calls[0][0]` porque `sleep` passou a receber um segundo
+argumento (`signal`); nenhuma asserção comportamental foi enfraquecida.
+
+GREEN pós-correção: `npx vitest run tests/ifood.http-adapter.test.js
+--reporter=verbose` passou 29/29 (22 anteriores + 7 novos). `npx vitest run
+tests/ifood.http-adapter.test.js tests/ifood.domain.test.js
+tests/ifood.worker-runtime.test.js --reporter=verbose` passou 3 arquivos e
+53/53 testes. `npm run check` passou com 0 erros e 0 warnings (5.860
+arquivos). `git diff --check` passou limpo para os arquivos modificados e
+para os novos (via `git add -N` seguido de `git reset`). A verificação
+manual de LF não encontrou `\r` em nenhum arquivo tocado, incluindo os dois
+documentos.
 
 ## Assinatura pós-trial perdia o add-on ativo — 2026-09-14
 

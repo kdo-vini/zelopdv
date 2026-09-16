@@ -122,6 +122,21 @@ export function loadIfoodWorkerConfig(env = process.env) {
     'IFOOD_WORKER_SHUTDOWN_TIMEOUT'
   ]);
 
+  const clientId = readOptionalString(env, 'IFOOD_CLIENT_ID', undefined);
+  const clientSecretRaw = env.IFOOD_CLIENT_SECRET;
+  if (clientSecretRaw !== undefined && clientSecretRaw !== null && typeof clientSecretRaw !== 'string') {
+    throw new IfoodWorkerConfigError('IFOOD_CLIENT_SECRET', 'must be a string');
+  }
+  const clientSecret = hasValue(clientSecretRaw) ? clientSecretRaw.trim() : undefined;
+  // Task 5 only wires the HTTP adapter factory: both credentials must be
+  // present together, or neither. The message below never echoes a value.
+  if (Boolean(clientId) !== Boolean(clientSecret)) {
+    throw new IfoodWorkerConfigError(
+      'IFOOD_CLIENT_ID/IFOOD_CLIENT_SECRET',
+      'must both be set together or both left empty'
+    );
+  }
+
   const config = {
     supabaseUrl,
     serviceRoleKey: serviceRoleKey.trim(),
@@ -153,6 +168,21 @@ export function loadIfoodWorkerConfig(env = process.env) {
   Object.defineProperty(config, 'supabaseServiceRoleKey', {
     value: config.serviceRoleKey,
     enumerable: false,
+    writable: false,
+    configurable: false
+  });
+  // iFood client credentials never become an enumerable/logged config field:
+  // `console.log(config)`, JSON.stringify(config) and Object.keys(config)
+  // must never surface clientId/clientSecret, only whether they are present.
+  Object.defineProperty(config, 'credentials', {
+    value: clientId && clientSecret ? Object.freeze({ clientId, clientSecret }) : undefined,
+    enumerable: false,
+    writable: false,
+    configurable: false
+  });
+  Object.defineProperty(config, 'hasIfoodCredentials', {
+    value: Boolean(clientId && clientSecret),
+    enumerable: true,
     writable: false,
     configurable: false
   });
