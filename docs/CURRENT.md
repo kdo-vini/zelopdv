@@ -2,58 +2,93 @@
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
-Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. As Tasks 1 a 5
+Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. As Tasks 1 a 6
 estão implementadas na ordem do plano vivo
 `docs/superpowers/plans/2026-09-15-ifood-mvp.md`, uma por commit: contrato e
 arquitetura, domínio/normalização, persistência com leases, processo worker
-dedicado e, por último, o adapter HTTP de produção. A Task 5 deve aparecer no
-histórico como `feat: add production iFood HTTP adapter`.
+dedicado, adapter HTTP de produção e, por último, o webhook assinado
+durável. A Task 6 deve aparecer no histórico como
+`feat: persist signed iFood webhooks`.
 
-Estado entregue no handoff: `createHttpIfoodAdapter` (token cache
-`client_credentials` com `expiresIn` real, single-flight e renovação
-antecipada; rate limiter orientado por headers `Retry-After`/`X-RateLimit-*`
-sem limite numérico fixo; transporte com timeout por `AbortSignal`, um retry
-após `401` e backoff com jitter limitado por orçamento para
-`429`/`5xx`/timeout/rede) implementa `listMerchants`, `getMerchantStatus`,
-`pollEvents`, `ackEvents`, `getOrder` e as ações de pedido (`confirm`,
-`startPreparation`, `readyToPickup`, `dispatch`, `getCancellationReasons`,
-`requestCancellation`, `requestOrderAction`) compatíveis com o adapter mock da
-Task 2. A suíte focada nova passou 29/29 (22 originais + 7 de uma revisão
-corretiva pré-commit) e a suíte iFood/vizinha (3 arquivos) passou 53/53;
-`npm run check` ficou em 0 erros e 0 warnings.
+Resumo Tasks 1–5: `createHttpIfoodAdapter` (token cache `client_credentials`
+com renovação antecipada e single-flight, rate limiter orientado por
+headers, transporte com timeout/retry/backoff por orçamento) implementa
+todos os métodos Merchant/Events/Order do adapter mock da Task 2. Worker
+dedicado (`workers/ifood/`) ainda não faz polling nem processa
+inbox/commands — probe de dependências continua `false/false` (fail-closed).
+Detalhes completos nas seções "Resultado real" das Tasks 1–5 no plano vivo.
 
-Revisão corretiva pré-commit (2026-09-16): o coordenador apontou quatro
-riscos antes do commit único da Task 5, corrigidos nos mesmos arquivos sem
-gerar commit adicional. Retry ambíguo (timeout/rede/`5xx`) agora só é
-automático para chamadas idempotentes via `retryUnsafe` por chamada —
-padrão `true` só para `GET`; ações de pedido (`confirm`, `startPreparation`,
-`readyToPickup`, `dispatch`, `requestCancellation`) ficam em `false` para não
-reenviar um comando com desfecho incerto, e `ackEvents` usa `true` explícito
-por ser idempotente; `401`/`429` continuam retryable para qualquer método
-por serem respostas explícitas. A busca de token ganhou timeout próprio
-(`AbortController`, padrão igual ao transporte) mapeando qualquer falha para
-`IFOOD_AUTH_FAILED` retryable. Toda espera (backoff de
-`429`/`5xx`/timeout/rede e `rateLimiter.waitForSlot`) só dorme quando o
-atraso cabe no orçamento restante — um `Retry-After` de 120s contra um
-orçamento de 20s falha na hora com `retryAfterMs`, sem dormir — e aceita o
-`signal` do chamador via `abortableSleep` (novo padrão de `sleep` em
-`rateLimit.js`/`request.js`/adapter), rejeitando com `IFOOD_HTTP_ABORTED`
-quando abortada. Todo método do adapter aceita `signal` opcional repassado a
-`request()`, mantendo a assinatura compatível com o seam mock.
+**Task 6 do iFood (2026-09-16):** rota pública
+`POST /api/integrations/ifood/webhook` persiste eventos assinados antes de
+responder `202`. Assinatura confirmada nos docs oficiais via WebFetch:
+`X-IFood-Signature` = HMAC-SHA256(`clientSecret`, bytes crus do corpo),
+hex minúsculo sem prefixo, envelope de evento único (não array) com `id`,
+`code`/`fullCode`, `merchantId`, `orderId?`, `createdAt?`. Nada ficou
+"não confirmado" desta vez.
 
-Limite intencional atual: o worker ainda não faz polling nem processa
-inbox/commands com este adapter — `workers/ifood/index.js` ganhou apenas a
-fábrica `createIfoodHttpAdapterFromConfig`, não usada pelo bootstrap padrão.
-O probe de dependências continua `false/false` (fail-closed); presença
-permanece somente leitura (`getMerchantStatus`), sem interrupções/horários.
-Nenhum deploy, push de imagem ou alteração no Supabase remoto foi feito, e
-nenhuma chamada real ao iFood ocorreu nesta task (somente `fetch` falso
-injetado nos testes).
+Núcleo: `src/lib/server/ifood/webhookSignature.js` (`verifyIfoodSignature`,
+puro, `timingSafeEqual`), `src/lib/server/ifood/inboxRepository.js`
+(`createIfoodInboxRepository`, mapeia outcomes do RPC para
+`inserted|duplicate|ignored`) e `src/lib/server/ifood/webhookHandler.js`
+(`handleIfoodWebhook`, puro, sem `$env`/`supabaseAdmin`).
+`src/routes/api/integrations/ifood/webhook/+server.js` exporta só `POST`,
+fiação fina de `$env` + `supabaseAdmin` para `handleIfoodWebhook` — o
+núcleo foi extraído de `+server.js` numa revisão pré-commit porque o
+SvelteKit só aceita verbos HTTP (e um punhado de exports reservados) num
+`+server.js`; um export nomeado extra como `handleIfoodWebhook` quebra em
+dev/build. Ordem estrita: segredo ausente → `503`; `content-length` acima
+de 262144 → `413` antes de ler; stream cortado no mesmo cap
+independentemente do header (cobre header ausente/mentiroso); assinatura
+verificada sobre bytes crus **antes** de qualquer `JSON.parse`;
+corpo/campos inválidos → `400`; `202` só depois do RPC persistir
+(inserido, duplicata ou merchant desconhecido/revogado). Nenhuma resposta
+ecoa payload, ids, assinatura ou segredo.
 
-**Próximo passo linear:** Task 6 — receber webhook assinado com HMAC sobre
-bytes crus e persistir antes do `202` (`webhookSignature.js`,
-`inboxRepository.js`, rota `/api/integrations/ifood/webhook`). Não iniciar
-Tasks 7+ antes de concluir e registrar a Task 6 no plano. Evitar repetir a
+Lacuna do plano resolvida com nova migration gerada por CLI
+(`supabase migration new ifood_webhook_enqueue`):
+`supabase/migrations/20260916151846_ifood_webhook_enqueue.sql` cria
+`public.enqueue_ifood_webhook_event_v1`, service-role-only, que resolve
+`merchant_id → connection` (já que `ifood_internal` é privado) e retorna
+`outcome='unknown_merchant'` **sem lançar exceção e sem persistir** quando o
+merchant é desconhecido ou a conexão está revogada — a reconciliação por
+polling da Task 9 fecha essa lacuna depois; não é perda definitiva.
+Verificação transacional em `supabase/verification/ifood_webhook_enqueue.sql`
+e schema test em `tests/ifood.webhook-enqueue-schema.test.js`.
+
+GREEN: `npx vitest run tests/api.ifood-webhook.test.js
+tests/ifood.persistence-schema.test.js tests/ifood.webhook-enqueue-schema.test.js
+tests/ifood.http-adapter.test.js tests/api.abacatepay-webhook.test.js` passou
+5 arquivos, 72/72. `npm run check`: 0 erros/0 warnings. `npm run
+verify:migrations`: 107/107 baseline, 59/59 remoto, 57 forward (+1). `git
+diff --check` limpo; LF confirmado via `node -e` em todos os arquivos
+tocados. `src/hooks.server.js` ganhou rate limit de 200/min para a nova rota,
+igual aos demais webhooks de provedor.
+
+Revisão pré-commit (extração de `webhookHandler.js` + remoção do fallback
+`process.env`): `node -e` sobre `+server.js` confirma exports `[ 'POST' ]`;
+`npx svelte-kit sync && npm run check` → `5867 FILES 0 ERRORS 0 WARNINGS`;
+`npx vitest run tests/api.ifood-webhook.test.js
+tests/ifood.webhook-enqueue-schema.test.js tests/ifood.persistence-schema.test.js`
+→ 3 arquivos, 37/37 (26+6+5, contagem inalterada); `git diff --check` e LF
+seguem limpos para os 11 arquivos tocados.
+
+Harness descartável (Docker Desktop disponível): rodou 3 vezes em background.
+Passar os dois arquivos de verificação separados por vírgula falhou
+(`[string[]]` não faz split de vírgula — erro de sintaxe do operador, não do
+schema); separados por espaço, as duas migrations aplicaram mas só o
+primeiro verificador rodou de fato (binding de array do PowerShell 5.1
+atravessando `powershell -File` aninhado). A terceira rodada, isolada só com
+`-PostMigrationVerification supabase/verification/ifood_webhook_enqueue.sql`,
+aplicou as mesmas migrations e executou essa verificação via
+`psql -v ON_ERROR_STOP=1`, terminando em `exit code 0` com
+`BASELINE_VERIFIED cutoff=20260813091000` e dump schema/security igual à
+produção — prova real de que a Task 6 replaya e verifica limpo. Nenhuma
+mutação tocou o banco vinculado; só o Postgres descartável do harness.
+
+**Próximo passo linear:** Task 7 — processar a inbox com lease, retry e
+dead-letter (`inboxProcessor.js`, `retryPolicy.js`, worker consumindo
+`claim_ifood_events_v1`/`finish_ifood_event_v1` da Task 3). Não iniciar
+Tasks 8+ antes de concluir e registrar a Task 7 no plano. Evitar repetir a
 suíte integral ou pedir revisão redundante; usar apenas validações
 proporcionais aos arquivos alterados.
 
