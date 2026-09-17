@@ -25,7 +25,8 @@ import {
 import {
   createIfoodSupabaseRepository,
   IFOOD_LEASE_PROBE,
-  IFOOD_POLLING_RPCS
+  IFOOD_POLLING_RPCS,
+  IFOOD_EVENT_EFFECT_RPCS
 } from '../workers/ifood/supabaseRepository.js';
 
 function validEnv(overrides = {}) {
@@ -1186,6 +1187,158 @@ describe('iFood production repository probe', () => {
       'iFood worker repository operation failed'
     );
     await expect(failing.claimEvents({ workerId: 'ifood-worker' })).rejects.not.toThrow(/secret-pii/);
+  });
+});
+
+describe('iFood production repository event-effect seam', () => {
+  // eventHandler.js and commandProcessor.js already call these six methods
+  // through an optional `typeof repository.<name> === 'function'` guard —
+  // the guard is why a missing method fails silently (no error, no log,
+  // just a permanent no-op) instead of crashing. Before this seam existed,
+  // production went PLACED -> CANCELLED on every test order without ever
+  // committing stock, materializing a sale, correlating a PDV command, or
+  // expiring a stuck one. These tests pin the exact RPC name, parameter
+  // shape and response mapping each method must produce.
+  it('confirms commands, commits/releases stock and materializes/reverses sales with the exact RPC contract', async () => {
+    const calls = [];
+    const fetchImpl = vi.fn(async (url, init) => {
+      const rpc = String(url).split('/rest/v1/rpc/')[1];
+      const body = JSON.parse(init.body);
+      calls.push({ rpc, body });
+      expect(init.body).not.toContain('service-role-secret-canary');
+
+      if (rpc === IFOOD_EVENT_EFFECT_RPCS.confirmCommandsForEvent) return jsonResponse(200, 2);
+      if (rpc === IFOOD_EVENT_EFFECT_RPCS.commitStockForEvent) {
+        return jsonResponse(200, [{
+          outcome: 'committed',
+          committed_count: 1,
+          skipped_unmapped: 0,
+          skipped_insufficient: 0,
+          duplicate_count: 0
+        }]);
+      }
+      if (rpc === IFOOD_EVENT_EFFECT_RPCS.releaseStockForEvent) {
+        return jsonResponse(200, [{ outcome: 'released', released_count: 1, duplicate_count: 0 }]);
+      }
+      if (rpc === IFOOD_EVENT_EFFECT_RPCS.materializeSaleForEvent) {
+        return jsonResponse(200, [{ outcome: 'materialized', venda_id: 42 }]);
+      }
+      if (rpc === IFOOD_EVENT_EFFECT_RPCS.reverseSaleForEvent) {
+        return jsonResponse(200, [{ outcome: 'applied', estorno_id: 7, venda_id: 42, status: 'applied' }]);
+      }
+      return jsonResponse(200, 3);
+    });
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: fetchImpl
+    });
+
+    await expect(repository.confirmCommandsForEvent({
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1',
+      externalStatus: 'CONFIRMED'
+    })).resolves.toBe(2);
+
+    await expect(repository.commitStockForEvent({
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1',
+      eventId: 'event-1',
+      items: [{ externalItemId: 'item-1', quantity: 1 }]
+    })).resolves.toMatchObject({ outcome: 'committed', committedCount: 1 });
+
+    await expect(repository.releaseStockForEvent({
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1',
+      eventId: 'event-2'
+    })).resolves.toMatchObject({ outcome: 'released', releasedCount: 1 });
+
+    await expect(repository.materializeSaleForEvent({
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1'
+    })).resolves.toMatchObject({ outcome: 'materialized', vendaId: 42 });
+
+    await expect(repository.reverseSaleForEvent({
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1',
+      eventId: 'event-3'
+    })).resolves.toMatchObject({ outcome: 'applied', estornoId: 7, vendaId: 42, status: 'applied' });
+
+    await expect(repository.expireAcceptedCommands({ olderThanSeconds: 300 })).resolves.toBe(3);
+
+    expect(calls.map(({ rpc }) => rpc)).toEqual([
+      IFOOD_EVENT_EFFECT_RPCS.confirmCommandsForEvent,
+      IFOOD_EVENT_EFFECT_RPCS.commitStockForEvent,
+      IFOOD_EVENT_EFFECT_RPCS.releaseStockForEvent,
+      IFOOD_EVENT_EFFECT_RPCS.materializeSaleForEvent,
+      IFOOD_EVENT_EFFECT_RPCS.reverseSaleForEvent,
+      IFOOD_EVENT_EFFECT_RPCS.expireAcceptedCommands
+    ]);
+    expect(calls[0].body).toEqual({
+      p_merchant_id: 'merchant-1',
+      p_external_order_id: 'order-1',
+      p_external_status: 'CONFIRMED'
+    });
+    expect(calls[1].body).toEqual({
+      p_merchant_id: 'merchant-1',
+      p_external_order_id: 'order-1',
+      p_event_id: 'event-1',
+      p_items: [{ externalItemId: 'item-1', quantity: 1 }]
+    });
+    expect(calls[2].body).toEqual({
+      p_merchant_id: 'merchant-1',
+      p_external_order_id: 'order-1',
+      p_event_id: 'event-2'
+    });
+    expect(calls[3].body).toEqual({
+      p_merchant_id: 'merchant-1',
+      p_external_order_id: 'order-1'
+    });
+    expect(calls[4].body).toEqual({
+      p_merchant_id: 'merchant-1',
+      p_external_order_id: 'order-1',
+      p_event_id: 'event-3'
+    });
+    expect(calls[5].body).toEqual({ p_older_than_seconds: 300 });
+  });
+
+  it('lets a failing event-effect RPC reject instead of returning a false outcome', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse(400, {
+      code: 'P0001',
+      message: 'INVALID_MERCHANT_ID'
+    }));
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: fetchImpl
+    });
+
+    await expect(repository.materializeSaleForEvent({
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1'
+    })).rejects.toThrow('iFood worker repository operation failed');
+  });
+
+  it('exposes every method eventHandler.js and commandProcessor.js probe for via typeof', () => {
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: vi.fn()
+    });
+    // This is the exact regression: each of these was previously undefined
+    // on the production repository, so eventHandler.js's `typeof
+    // repository.<name> === 'function'` guard silently skipped it — no
+    // error, no log, just a permanent no-op in production.
+    for (const name of [
+      'confirmCommandsForEvent',
+      'commitStockForEvent',
+      'releaseStockForEvent',
+      'materializeSaleForEvent',
+      'reverseSaleForEvent',
+      'expireAcceptedCommands'
+    ]) {
+      expect(typeof repository[name]).toBe('function');
+    }
   });
 });
 

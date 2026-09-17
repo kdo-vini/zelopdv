@@ -6,6 +6,12 @@ const PROJECT_ORDER_EVENT_RPC = 'project_ifood_order_event_v1';
 const LIST_POLLING_CONNECTIONS_RPC = 'list_ifood_connections_for_polling_v1';
 const ENQUEUE_POLLED_EVENT_RPC = 'enqueue_ifood_webhook_event_v1';
 const RECORD_POLL_SUCCESS_RPC = 'record_ifood_poll_success_v1';
+const CONFIRM_COMMANDS_RPC = 'confirm_ifood_order_commands_v1';
+const COMMIT_STOCK_RPC = 'commit_ifood_stock_for_event_v1';
+const RELEASE_STOCK_RPC = 'release_ifood_stock_for_event_v1';
+const MATERIALIZE_SALE_RPC = 'materialize_ifood_sale_v1';
+const REVERSE_SALE_RPC = 'reverse_ifood_sale_v1';
+const EXPIRE_ACCEPTED_COMMANDS_RPC = 'expire_ifood_accepted_commands_v1';
 const MAX_POLLING_CONNECTIONS = 1_000;
 const PROBE_WORKER_ID = 'ifood-health-probe';
 const PROBE_TIMEOUT_MS = 5_000;
@@ -71,6 +77,53 @@ function mapEnqueueOutcome(data) {
     inserted: first.inserted === true,
     status: first.status ?? null
   };
+}
+
+function firstRow(data) {
+  const first = Array.isArray(data) ? data[0] : data;
+  return first && typeof first === 'object' ? first : null;
+}
+
+function mapStockCommit(data) {
+  const first = firstRow(data);
+  return {
+    outcome: first?.outcome ?? null,
+    committedCount: Number(first?.committed_count ?? first?.committedCount ?? 0),
+    skippedUnmapped: Number(first?.skipped_unmapped ?? first?.skippedUnmapped ?? 0),
+    skippedInsufficient: Number(first?.skipped_insufficient ?? first?.skippedInsufficient ?? 0),
+    duplicateCount: Number(first?.duplicate_count ?? first?.duplicateCount ?? 0)
+  };
+}
+
+function mapStockRelease(data) {
+  const first = firstRow(data);
+  return {
+    outcome: first?.outcome ?? null,
+    releasedCount: Number(first?.released_count ?? first?.releasedCount ?? 0),
+    duplicateCount: Number(first?.duplicate_count ?? first?.duplicateCount ?? 0)
+  };
+}
+
+function mapSaleMaterialize(data) {
+  const first = firstRow(data);
+  return {
+    outcome: first?.outcome ?? null,
+    vendaId: first?.venda_id ?? first?.vendaId ?? null
+  };
+}
+
+function mapSaleReverse(data) {
+  const first = firstRow(data);
+  return {
+    outcome: first?.outcome ?? null,
+    estornoId: first?.estorno_id ?? first?.estornoId ?? null,
+    vendaId: first?.venda_id ?? first?.vendaId ?? null,
+    status: first?.status ?? null
+  };
+}
+
+function asCount(data) {
+  return Number.isInteger(data) ? data : Number(data ?? 0);
 }
 
 function mapProjection(row) {
@@ -469,6 +522,84 @@ export function createIfoodSupabaseRepository(options = {}) {
     };
   }
 
+  /**
+   * Correlate a projected event back to any command that predicted it
+   * (`eventHandler.js` calls this after every `applied`/`ignored_duplicate`
+   * projection). Best-effort by design: the projection already committed,
+   * so a failure here only delays a PDV "waiting" indicator, never the
+   * order's canonical status.
+   */
+  async function confirmCommandsForEvent({ merchantId, externalOrderId, externalStatus, signal } = {}) {
+    const data = await mutatingRpc(CONFIRM_COMMANDS_RPC, {
+      p_merchant_id: merchantId,
+      p_external_order_id: externalOrderId,
+      p_external_status: externalStatus
+    }, signal);
+    return asCount(data);
+  }
+
+  /**
+   * Stock is event-driven (CONFIRMED commits, CANCELLED releases), never
+   * command-driven — `eventHandler.js` calls this once per CONFIRMED
+   * projection. The ledger RPC is idempotent per event/item.
+   */
+  async function commitStockForEvent({ merchantId, externalOrderId, eventId, items, signal } = {}) {
+    const data = await mutatingRpc(COMMIT_STOCK_RPC, {
+      p_merchant_id: merchantId,
+      p_external_order_id: externalOrderId,
+      p_event_id: eventId,
+      p_items: items
+    }, signal);
+    return mapStockCommit(data);
+  }
+
+  /** Mirror of commitStockForEvent for the CANCELLED path. */
+  async function releaseStockForEvent({ merchantId, externalOrderId, eventId, signal } = {}) {
+    const data = await mutatingRpc(RELEASE_STOCK_RPC, {
+      p_merchant_id: merchantId,
+      p_external_order_id: externalOrderId,
+      p_event_id: eventId
+    }, signal);
+    return mapStockRelease(data);
+  }
+
+  /**
+   * Materializes a CONCLUDED iFood order as `public.vendas`, idempotent via
+   * `vendas.client_sale_id`. Called once per CONCLUDED projection.
+   */
+  async function materializeSaleForEvent({ merchantId, externalOrderId, signal } = {}) {
+    const data = await mutatingRpc(MATERIALIZE_SALE_RPC, {
+      p_merchant_id: merchantId,
+      p_external_order_id: externalOrderId
+    }, signal);
+    return mapSaleMaterialize(data);
+  }
+
+  /**
+   * Reverses a materialized sale on the CANCELLED path, idempotent via
+   * `vendas_estornos.event_id`.
+   */
+  async function reverseSaleForEvent({ merchantId, externalOrderId, eventId, signal } = {}) {
+    const data = await mutatingRpc(REVERSE_SALE_RPC, {
+      p_merchant_id: merchantId,
+      p_external_order_id: externalOrderId,
+      p_event_id: eventId
+    }, signal);
+    return mapSaleReverse(data);
+  }
+
+  /**
+   * `commandProcessor.js` calls this once per cycle to expire commands stuck
+   * in `accepted_http` past the provider's ack window, without touching
+   * `zelo_orders` — the event stream is still the source of truth for status.
+   */
+  async function expireAcceptedCommands({ olderThanSeconds, signal } = {}) {
+    const data = await mutatingRpc(EXPIRE_ACCEPTED_COMMANDS_RPC, {
+      p_older_than_seconds: olderThanSeconds
+    }, signal);
+    return asCount(data);
+  }
+
   return Object.freeze({
     probeDependencies,
     claimEvents,
@@ -478,7 +609,13 @@ export function createIfoodSupabaseRepository(options = {}) {
     projectOrderEvent,
     listConnectionsForPolling,
     enqueuePolledEvent,
-    recordPollSuccess
+    recordPollSuccess,
+    confirmCommandsForEvent,
+    commitStockForEvent,
+    releaseStockForEvent,
+    materializeSaleForEvent,
+    reverseSaleForEvent,
+    expireAcceptedCommands
   });
 }
 
@@ -493,6 +630,15 @@ export const IFOOD_LEASE_PROBE = Object.freeze({
   rpc: CLAIM_EVENTS_RPC,
   workerId: PROBE_WORKER_ID,
   timeoutMs: PROBE_TIMEOUT_MS
+});
+
+export const IFOOD_EVENT_EFFECT_RPCS = Object.freeze({
+  confirmCommandsForEvent: CONFIRM_COMMANDS_RPC,
+  commitStockForEvent: COMMIT_STOCK_RPC,
+  releaseStockForEvent: RELEASE_STOCK_RPC,
+  materializeSaleForEvent: MATERIALIZE_SALE_RPC,
+  reverseSaleForEvent: REVERSE_SALE_RPC,
+  expireAcceptedCommands: EXPIRE_ACCEPTED_COMMANDS_RPC
 });
 
 export default createIfoodSupabaseRepository;
