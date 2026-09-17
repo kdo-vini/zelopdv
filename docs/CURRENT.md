@@ -1,5 +1,95 @@
 # Tasks 1–21 + worker live+ready (GO parcial)
 
+## Handoff — 2026-09-17 (poll→inbox ligado; latência de 1 ciclo corrigida)
+
+Dois commits e uma migration aplicada em produção. **Ainda GO parcial**:
+sem piloto real, gate de confirm/cancel ainda aberto.
+
+### 1. Reconciler poll→inbox ligado (`b075032`, PR #37)
+
+`IFOOD_WORKER_PROCESS_INBOX` só consumia linhas que já existiam em
+`event_inbox` — nada pollava o iFood. `workers/ifood/index.js` agora monta
+`createIfoodReconciler` e passa como hook `reconcile`, gated só em
+`IFOOD_WORKER_ENABLE_HTTP_ADAPTER`, que já é fail-closed: sem
+`IFOOD_CLIENT_ID` + `IFOOD_CLIENT_SECRET` o adapter é `null`, logo não há
+poll nem ACK.
+
+`workers/ifood/supabaseRepository.js` ganhou os três métodos do reconciler:
+
+| método | RPC |
+| --- | --- |
+| `listConnectionsForPolling` | **nova** `list_ifood_connections_for_polling_v1` |
+| `enqueuePolledEvent` | **existente** `enqueue_ifood_webhook_event_v1` |
+| `recordPollSuccess` | **nova** `record_ifood_poll_success_v1` |
+
+O reuso do RPC de webhook é deliberado: ele já resolve a conexão por
+`merchant_id` e já devolve `inserted`/`duplicate`/`unknown_merchant`, então
+polling e webhook compartilham **um** caminho de insert e **uma** constraint
+de idempotência. Nada é acked que o repositório não confirmou como
+persistido.
+
+### 2. Migration `20260917050000_ifood_worker_polling` — aplicada em prod
+
+Aplicada no Supabase `xnnjyrblpvsqrtsshawa` e **validada executando**, não só
+criando (`CREATE FUNCTION` só faz syntax-check do corpo plpgsql):
+
+- `list_ifood_connections_for_polling_v1` retorna a conexão ativa
+- `record_ifood_poll_success_v1` devolve `updated` e carimba
+  `last_poll_at` / `last_token_at` / `worker_heartbeat_at`
+- probe de escrita feito com `raise exception` proposital para abortar a
+  transação — nenhum sinal falso de liveness persistido
+- path `unknown_merchant` ok, sem write
+- ACL confirmada: `anon` e `authenticated` = **false**; `service_role` = true
+
+Polling cobre `active`/`degraded`/`paused`, nunca `pending` ou `revoked`.
+Timestamps são monotônicos (`greatest`), então worker atrasado ou com clock
+torto não envelhece uma conexão.
+
+### 3. Ordem do ciclo corrigida (`efb6df3`, PR #41)
+
+`runCycle` rodava `processInbox` **antes** de `reconcile`. Como `reconcile`
+escreve `event_inbox` e `processInbox` lê, um evento pollado no ciclo N só
+era projetado no ciclo N+1 — um `intervalMs` inteiro de espera morta por
+evento, por construção.
+
+Evidência em produção, nos dois pedidos de teste, com o default de 300s:
+
+| pedido | `received_at` → `processed_at` |
+| --- | --- |
+| `25b0aa10-3626-4025-a3bb-d511304be0a8` | 16:50:18.024 → 16:55:19.656 = **5m01.6s** |
+| `6031f97b-36c2-4b6d-b061-05d8d9bbe423` | 17:28:11.099 → 17:33:12.321 = **5m01.2s** |
+
+Ponta a ponta no `6031f97b`: PLACED 17:25:42 → visível no PDV 17:33:12
+(**7m29s**), e `CANCELLATION_REQUESTED` chegou 30s depois. A janela de
+aceite acabava antes de haver operador para agir — era isso que bloqueava o
+gate de Product, não a duração do pedido de teste.
+
+Ordem nova: `probe → notifyHealth → reconcile → processInbox →
+processCommands → evaluateHealth`. Teste de regressão fixa a sequência e foi
+verificado falhando na ordem antiga.
+
+### Estado medido em produção (2026-09-17 ~17:54Z)
+
+- Polling **ativo**; `last_webhook_at` = `null` → os 6 eventos do inbox
+  vieram **todos de polling**, nenhum de webhook
+- `event_inbox`: 6 eventos, 2 pedidos, todos `processed`, `attempts: 1`
+- `order_refs` / `zelo_orders`: 2 pedidos, ambos `source=ifood`, ambos
+  `cancelled`, `sale_id` null
+- `order_commands`: **0** · `vendas` com `canal_origem='ifood'`: **0**
+- `product_mappings`: **0 no total** — ninguém validou ainda se um pedido
+  aceito materializa `vendas`; possível segundo bloqueio logo adiante
+
+### Pendente
+
+- **Redeploy do `ifood-worker`** para o fix de ordem entrar em vigor
+- Opcional, dobra o ganho: `IFOOD_WORKER_INTERVAL_MS=60000` (o reconciler já
+  faz clamp do piso de 30s do provider; `readyMaxAgeMs` se re-deriva em
+  `config.js`, sem risco de `stale_probe`)
+- Wiring accept/reject do PDV → enfileirar confirm/cancel: **não landou**
+- Gap de UI (lista do PDV mostrar origem `ifood`): não verificável por SQL
+- `codex/ifood-mvp` → `main`: ainda não mergeado
+
+
 ## Handoff — 2026-09-17 (imagem worker: MODULE_NOT_FOUND)
 
 Redeploy Dokploy do worker iFood quebrava no boot: `orderNormalizer.js`
