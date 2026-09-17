@@ -1,5 +1,21 @@
 # ZeloPDV — Foco atual
 
+## Polish do coachmark da primeira venda — 2026-09-17
+
+Product greenlit Spec A–B sobre PR #39, sem expandir o fluxo.
+
+**Spec A:** o helper pós-primeiro-produto deixou de ser overlay no centro da
+grade ("Clique no produto acima" + seta invertida + pulse infinito + Entendi
+primário). Agora o tile ganha lift + anel sky; a dica cola abaixo do tile
+(`top: calc(100% + 8px)`), copy única "Toque no produto para somar na venda",
+`ChevronUp` lucide apontando para o tile. Dispensa no `produtoClick`, Entendi
+ghost e timeout de 8 s. Um pop; `prefers-reduced-motion` corta a animação.
+
+**Spec B:** Plus lucide só em "Cadastrar primeiro produto". "Ou venda avulsa"
+fica sem ícone. Título do vazio permanece "Faça sua primeira venda".
+
+Não muda API/schema/RLS, Menu/Chat, nem auto-add ao carrinho.
+
 ## Admin churn scoring false positives — 2026-09-17
 
 Admin analytics `/analytics` mostrava contas ativas pagantes como "quiet"
@@ -57,6 +73,8 @@ após criação do produto).
   flutuante aparece por 8 s no centro da grade: "Clique no produto acima para
   adicionar na venda", com seta animada apontando pra cima, borda pulsante,
   botão "Entendi" pra dispensar antes. Fecha a lacuna "criei produto, e agora?".
+  *Polish posterior (Spec A–B, ver seção no topo): dica colada no tile, copy
+  "Toque no produto…", Entendi ghost, Plus só no cadastrar.*
 - **Tracking aprimorado**: `pdv_quick_product_created` agora inclui
   `was_first_product: boolean` pra diferenciar primeira criação das seguintes.
 
