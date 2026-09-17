@@ -1,5 +1,26 @@
 # ZeloPDV — Foco atual
 
+## Admin churn scoring false positives — 2026-09-17
+
+Admin analytics `/analytics` mostrava contas ativas pagantes como "quiet"
+(alto risco de churn): `sales_30d=0`, `effective_last_seen null`. Product
+Lead e Staff Eng confirmaram via Supabase direto que 7 contas tinham
+centenas de vendas (Casa dos Salgados ~1135/30d, Fanny Massas ~581/30d,
+Bem Servido ~404/30d, etc.). Causa: analytics chamava
+`admin_get_users_last_seen`, `admin_get_sales_counts` e
+`admin_get_total_sales_value` direto do browser com anon key. As RPCs têm
+`SECURITY DEFINER` com `WHERE (auth.role() = 'service_role' OR
+is_active_super_admin())`; browser-side sem service_role retorna array
+vazio `[]`, frontend mapeia undefined → `sales_30d=0` e `last_seen=null`
+para **todas** as contas.
+
+**Corrigido**: endpoint server-side `/api/admin/analytics-data` que autentica
+super_admin via JWT, depois chama as RPCs com `supabaseAdmin` (service_role).
+Analytics page faz fetch desse endpoint em vez de RPC direta. Testes cobrem
+autenticação, origem e erros de RPC. `npm test` 1381/1381 (5 novos do endpoint),
+`npm run build` ok (ambos apps). Product pode re-extrair lista de quiet/risk
+com dados reais agora. PR #38.
+
 ## Zoom automático do iOS ao focar campos — 2026-09-15
 
 Relato do dono no iPhone: toda vez que o teclado abria (chat do Zelinho em
