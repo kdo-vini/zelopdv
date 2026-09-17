@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  IFOOD_DEVELOPERS_FALLBACK_CANCEL_REASONS,
   IFOOD_REVIEW_SLA_MINUTES,
   ifoodCanCancel,
   ifoodHandoffCodes,
@@ -10,6 +11,7 @@ import {
   ifoodSyncPresentation,
   ifoodUnmappedItemCount,
   ifoodWaitingLabel,
+  isIfoodOrder,
   orderSourceBadge,
   upcomingScheduledOrders
 } from '../src/lib/orders/ifoodPresentation.js';
@@ -34,6 +36,12 @@ describe('orderSourceBadge', () => {
     expect(orderSourceBadge(order())).toEqual({ source: 'ifood', label: 'iFood', reference: '7421' });
     expect(orderSourceBadge({ source: 'zelomenu' })).toEqual({ source: 'zelomenu', label: 'ZeloMenu', reference: null });
     expect(orderSourceBadge({})).toMatchObject({ label: 'ZeloMenu' });
+  });
+
+  it('treats origem as the channel when source is missing and keeps a visible iFood reference', () => {
+    expect(isIfoodOrder({ origem: 'ifood' })).toBe(true);
+    expect(orderSourceBadge({ origem: 'ifood', id: '320113f2-ede9-4217-95d1-fadfd831f9c5' }))
+      .toEqual({ source: 'ifood', label: 'iFood', reference: '320113F2' });
   });
 });
 
@@ -100,6 +108,9 @@ describe('ifoodPrimaryIntent and waiting labels', () => {
     expect(ifoodCanCancel(order({ status: 'delivered' }))).toBe(false);
     expect(ifoodCanCancel(order({ status: 'cancelled' }))).toBe(false);
     expect(ifoodCanCancel(order({ source: 'manual' }))).toBe(false);
+    expect(IFOOD_DEVELOPERS_FALLBACK_CANCEL_REASONS).toEqual([
+      { code: '501', description: 'Problemas de sistema' }
+    ]);
   });
 });
 

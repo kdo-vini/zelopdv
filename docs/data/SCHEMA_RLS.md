@@ -59,6 +59,24 @@ concorrência entre workers. A migration é código local pendente: a ausência 
 Docker Desktop impediu executar o harness nesta sessão, portanto esta seção não
 é uma afirmação de aplicação no banco compartilhado.
 
+## Enqueue iFood no accept/reject/cancel canônico (2026-09-17)
+
+`20260917180000_ifood_canonical_command_enqueue.sql` envolve
+`accept_zelo_order` / `reject_zelo_order` e o caminho cancel de
+`transition_zelo_order` para chamar `enqueue_ifood_order_command_v1`
+**antes** de virar o status (confirm só vale em `pending_review`). O helper
+`enqueue_ifood_command_for_canonical_action_v1` é SECURITY DEFINER, `search_path`
+vazio, **sem** EXECUTE para `anon`/`authenticated`; eleva
+`SET LOCAL ROLE service_role` e `set_config('role','service_role',true)` só
+no enqueue porque a RPC de comando recusa qualquer role vigente diferente de
+`service_role`. Accept→confirm; reject/cancel→cancel com `cancellationCode`
+default `501`. Insert do comando e update comercial compartilham a transação
+do caller — rollback limpa órfão. `transition_zelo_order` é patchado via
+`pg_get_functiondef` para não regressar o corpo de estoque pizza.
+Verificação: `supabase/verification/ifood_canonical_command_enqueue.sql`
+(`ROLLBACK`). `vendas.canal_origem` continua só no deliver/materialize; a
+fila lê `zelo_orders.source`.
+
 ## Snapshot financeiro de fechamento (2026-08-28)
 
 - A migration `supabase/migrations/20260828120000_caixa_payment_totals.sql`

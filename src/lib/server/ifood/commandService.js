@@ -11,6 +11,10 @@ export const IFOOD_COMMAND_PERMISSIONS = Object.freeze({
 });
 
 const VALID_INTENTS = new Set(Object.keys(IFOOD_COMMAND_PERMISSIONS));
+const INTENT_ALIASES = Object.freeze({
+  accept: 'confirm',
+  reject: 'cancel'
+});
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function result(status, body) {
@@ -52,7 +56,8 @@ function validateInput({ empresaId, orderId, body }) {
   if (!isNonEmptyString(empresaId) || !isValidUuid(orderId)) return { code: 'invalid_input' };
   if (!body || typeof body !== 'object' || Array.isArray(body)) return { code: 'invalid_payload' };
 
-  const intent = typeof body.intent === 'string' ? body.intent.trim().toLowerCase() : '';
+  const rawIntent = typeof body.intent === 'string' ? body.intent.trim().toLowerCase() : '';
+  const intent = INTENT_ALIASES[rawIntent] || rawIntent;
   if (!VALID_INTENTS.has(intent)) return { code: 'invalid_payload' };
 
   const expectedRevision = body.expectedRevision;

@@ -12,6 +12,13 @@ export const IFOOD_SOURCE = 'ifood';
 // 6 and 8 minutes (plan, Task 11).
 export const IFOOD_REVIEW_SLA_MINUTES = Object.freeze({ attention: 4, warning: 6, critical: 8 });
 
+// Developers "Pedidos de teste" still require a cancellationCode on enqueue.
+// Used only when the live reasons list cannot be loaded (app without HTTP
+// adapter, empty provider list). Connection-unavailable stays fail-closed.
+export const IFOOD_DEVELOPERS_FALLBACK_CANCEL_REASONS = Object.freeze([
+  { code: '501', description: 'Problemas de sistema' }
+]);
+
 const SOURCE_LABELS = Object.freeze({
   ifood: 'iFood',
   zelomenu: 'ZeloMenu',
@@ -60,17 +67,22 @@ function text(value) {
 }
 
 export function isIfoodOrder(order) {
-  return order?.source === IFOOD_SOURCE;
+  const source = text(order?.source) || text(order?.origem);
+  return source === IFOOD_SOURCE;
 }
 
 /** Plain-text channel badge. The iFood logo needs formal authorization first. */
 export function orderSourceBadge(order) {
-  const source = text(order?.source) || 'zelomenu';
+  const source = text(order?.source) || text(order?.origem) || 'zelomenu';
   const ifood = order?.ifood || {};
+  const displayId = source === IFOOD_SOURCE ? text(ifood.displayId) : null;
+  const fallbackRef = source === IFOOD_SOURCE && !displayId && order?.id
+    ? String(order.id).slice(0, 8).toUpperCase()
+    : null;
   return {
     source,
     label: SOURCE_LABELS[source] || source,
-    reference: source === IFOOD_SOURCE ? text(ifood.displayId) : null
+    reference: displayId || fallbackRef
   };
 }
 
@@ -202,12 +214,14 @@ export function ifoodWaitingLabel(order) {
 }
 
 /**
- * Decides how the queue advances an order. iFood orders always go through
- * the asynchronous command API; every other channel keeps the existing
- * `transition_zelo_order` / `close_zelo_order` flow untouched.
+ * Decides how the queue advances an order. Confirm/accept for iFood uses
+ * `transition_zelo_order` so the DB enqueues `confirm` before flipping
+ * `pending_review`. Later kitchen/dispatch steps stay on the command API.
+ * `canal_origem` on `vendas` is stamped only after deliver.
  */
 export function resolveQueueAdvance(order) {
   if (isIfoodOrder(order)) {
+    if (order.status === 'pending_review') return { kind: 'transition', action: 'accept' };
     const intent = ifoodPrimaryIntent(order);
     return intent ? { kind: 'ifood_command', intent } : { kind: 'none' };
   }

@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import { ensureActiveSubscription, hasOrderingReviewAccess, bounceSubUserMissingAddon } from '$lib/guards';
+  import { ensureActiveSubscription, hasOrderingReviewAccess } from '$lib/guards';
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { pdvCache } from '$lib/stores/pdvCache';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -22,6 +22,7 @@
   } from '$lib/onlineOrders';
   import { getOrderDeliveryPresentation, getOrderPaymentPresentation } from '$lib/orderPresentation.js';
   import {
+    IFOOD_DEVELOPERS_FALLBACK_CANCEL_REASONS,
     ifoodCanCancel,
     ifoodHandoffCodes,
     ifoodHasPendingCommand,
@@ -71,6 +72,7 @@
   let ifoodCancelCode = '';
   let ifoodCancelLoading = false;
   let ifoodCancelError = '';
+  let ifoodCancelFallback = false;
   let ifoodSending = false;
   let pedidos = [];
   let pedidoSelecionadoId = null;
@@ -109,6 +111,8 @@
   $: itensSemVinculo = ifoodUnmappedItemCount(pedidoSelecionado);
   $: ifoodComandoPendente = ifoodHasPendingCommand(syncSelecionado);
   $: ifoodIntentPermitido = avancoSelecionado.kind !== 'ifood_command' || ifoodPermissionAllowed(avancoSelecionado.intent);
+  $: hasIfoodQueue = pedidos.some((pedido) => isIfoodOrder(pedido));
+  $: queueUnlocked = orderingReviewActive || hasIfoodQueue || loading;
 
   onMount(async () => {
     const auth = await ensureActiveSubscription({ requireProfile: true });
@@ -133,17 +137,11 @@
     }
     pdvCache.setUserId(ownerUserId);
     orderingReviewActive = await hasOrderingReviewAccess(ownerUserId);
-    if (bounceSubUserMissingAddon({ addonActive: orderingReviewActive, isSubUser, addonLabel: 'ZeloMenu' })) return;
     ready = true;
-
-    if (!orderingReviewActive) {
-      loading = false;
-      return;
-    }
 
     dadosEmpresa = await readSnapshot(ownerUserId, 'empresa.perfil');
     pedidos = await loadLocalOrders(ownerUserId);
-    loading = false;
+    if (orderingReviewActive || pedidos.some((pedido) => isIfoodOrder(pedido))) loading = false;
     unsubscribeOffline = onOfflineChange(() => { void atualizarFilaLocal(); });
     await carregarEmpresa();
     await carregarPedidos();
@@ -408,15 +406,24 @@
     ifoodCancelReasons = [];
     ifoodCancelCode = '';
     ifoodCancelError = '';
+    ifoodCancelFallback = false;
     ifoodCancelLoading = true;
     const result = await fetchIfoodCancellationReasons(supabase, pedido.id);
     ifoodCancelLoading = false;
     if (!result.ok) {
-      ifoodCancelError = result.message;
+      if (result.status === 401 || result.status === 403 || result.status === 409) {
+        ifoodCancelError = result.message;
+        return;
+      }
+      ifoodCancelReasons = [...IFOOD_DEVELOPERS_FALLBACK_CANCEL_REASONS];
+      ifoodCancelFallback = true;
       return;
     }
     ifoodCancelReasons = result.reasons;
-    if (ifoodCancelReasons.length === 0) ifoodCancelError = 'O iFood não informou motivos para este pedido. Use o Portal do Parceiro.';
+    if (ifoodCancelReasons.length === 0) {
+      ifoodCancelReasons = [...IFOOD_DEVELOPERS_FALLBACK_CANCEL_REASONS];
+      ifoodCancelFallback = true;
+    }
   }
 
   function fecharCancelamentoIfood() {
@@ -427,11 +434,23 @@
   async function confirmarCancelamentoIfood() {
     const reason = ifoodCancelReasons.find((item) => item.code === ifoodCancelCode);
     if (!ifoodCancelOrder || !reason) return;
-    const ok = await enviarComandoIfood(ifoodCancelOrder, 'cancel', {
-      cancellationCode: reason.code,
-      reason: reason.description
-    });
-    if (ok) ifoodCancelOrder = null;
+    const pedido = ifoodCancelOrder;
+    const action = pedido.status === 'pending_review' ? 'reject' : 'cancel';
+    ifoodSending = true;
+    try {
+      await transitionCanonicalOrder(supabase, pedido, action, operadorUserId, {
+        cancellationCode: reason.code,
+        reason: reason.description
+      });
+      addToast(`Pedido #${pedido.numero_pedido} ${action === 'reject' ? 'rejeitado' : 'cancelado'}.`, 'success');
+      ifoodCancelOrder = null;
+      await carregarPedidos();
+    } catch (err) {
+      addToast('Erro: ' + getFriendlyErrorMessage(err), 'error');
+      await carregarPedidos();
+    } finally {
+      ifoodSending = false;
+    }
   }
 
   function statusLabel(status) {
@@ -447,6 +466,7 @@
     if (isIfoodOrder(pedido)) {
       const advance = resolveQueueAdvance(pedido);
       if (advance.kind === 'ifood_command') return ifoodIntentLabel(advance.intent);
+      if (advance.kind === 'transition' && advance.action === 'accept') return 'Confirmar pedido';
       return ifoodWaitingLabel(pedido) || 'Aguardando o iFood';
     }
     if (pedido.status === 'pending_review') return 'Aceitar pedido';
@@ -569,7 +589,7 @@
       </header>
 
       <p class="ifood-modal-lead">
-        Escolha o motivo. O pedido só aparece como cancelado depois que o iFood confirmar.
+        Escolha o motivo. O PDV cancela na hora e enfileira o pedido no iFood (código 501 se a lista não carregar).
       </p>
 
       {#if ifoodCancelLoading}
@@ -577,6 +597,9 @@
       {:else if ifoodCancelError}
         <InlineHelper tone="warning" message={ifoodCancelError} />
       {:else}
+        {#if ifoodCancelFallback}
+          <InlineHelper compact message="Lista de motivos do iFood indisponível. Use o motivo de teste para Pedidos de teste (Developers)." />
+        {/if}
         <fieldset class="ifood-reasons">
           <legend class="sr-only">Motivo do cancelamento</legend>
           {#each ifoodCancelReasons as reason (reason.code)}
@@ -612,11 +635,11 @@
     <div class="state-card">
       <p>Carregando...</p>
     </div>
-  {:else if !orderingReviewActive}
+  {:else if !queueUnlocked}
     <section class="upsell">
-      <p class="eyebrow">ZeloMenu</p>
+      <p class="eyebrow">Pedidos online</p>
       <h1>Fila de Pedidos</h1>
-      <p>Ative o ZeloMenu para receber e gerenciar pedidos online.</p>
+      <p>Ative o ZeloMenu ou conecte o iFood para receber e gerenciar pedidos online.</p>
       <a href="/gestao/extensoes">Ver extensões</a>
     </section>
   {:else}
@@ -653,7 +676,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h10.5M8.25 12h10.5M8.25 17.25h10.5M3.75 6.75h.008v.008H3.75V6.75Zm0 5.25h.008v.008H3.75V12Zm0 5.25h.008v.008H3.75v-.008Z"/></svg>
         </div>
         <h2>Nenhum pedido na fila</h2>
-        <p>Pedidos do ZeloMenu aparecem aqui automaticamente.</p>
+        <p>Pedidos do iFood e do ZeloMenu aparecem aqui automaticamente.</p>
       </div>
     {:else}
       <div class="queue-layout" class:detail-open={mobileDetailOpen}>
@@ -663,6 +686,7 @@
             {@const qtdItens = (pedido.pedido_itens || []).reduce((acc, item) => acc + Number(item.quantidade || 0), 0)}
             {@const entregaCard = getOrderDeliveryPresentation(pedido)}
             {@const pagamentoCard = getOrderPaymentPresentation(pedido)}
+            {@const ifoodAdvance = isIfoodOrder(pedido) ? resolveQueueAdvance(pedido) : null}
             <div class="queue-card">
               <button
                 type="button"
@@ -673,7 +697,10 @@
               >
                 <div class="qi-top">
                   {#if isIfoodOrder(pedido)}
-                    <OrderSourceBadge order={pedido} />
+                    <div class="qi-origin-block">
+                      <p class="qi-origin">Canal / origem iFood</p>
+                      <OrderSourceBadge order={pedido} />
+                    </div>
                   {:else}
                     <span class="order-num">#{pedido.numero_pedido}</span>
                   {/if}
@@ -705,6 +732,17 @@
                 </div>
               </button>
               <div class="queue-actions">
+                {#if ifoodAdvance?.kind === 'ifood_command' || ifoodAdvance?.kind === 'transition'}
+                  <button
+                    type="button"
+                    class="action-btn action-btn-success"
+                    aria-label="{canonicalActionLabel(pedido)} #{pedido.numero_pedido}"
+                    disabled={ifoodSending || (ifoodAdvance.kind === 'ifood_command' && (ifoodHasPendingCommand(ifoodSync[pedido.id]) || !ifoodPermissionAllowed(ifoodAdvance.intent)))}
+                    on:click|stopPropagation={() => avancarPedidoCanonico(pedido)}
+                  >
+                    <CheckCircle2 class="size-4" aria-hidden="true" />
+                  </button>
+                {/if}
                 <button
                   type="button"
                   class="action-btn action-btn-danger"
@@ -729,6 +767,7 @@
             <div class="details-head">
               <div>
                 {#if selecionadoIfood}
+                  <p class="eyebrow">Canal / origem iFood</p>
                   <OrderSourceBadge order={pedidoSelecionado} />
                 {:else}
                   <p class="eyebrow">Pedido #{pedidoSelecionado.numero_pedido}</p>
@@ -854,7 +893,7 @@
                   type="button"
                   class="btn-success"
                   on:click={() => avancarPedidoCanonico(pedidoSelecionado)}
-                  disabled={ifoodSending || ifoodComandoPendente || avancoSelecionado.kind !== 'ifood_command' || !ifoodIntentPermitido || pedidoSelecionado.localOnly}
+                  disabled={ifoodSending || pedidoSelecionado.localOnly || (avancoSelecionado.kind === 'ifood_command' && (ifoodComandoPendente || !ifoodIntentPermitido)) || (avancoSelecionado.kind !== 'ifood_command' && avancoSelecionado.kind !== 'transition')}
                   aria-describedby={!ifoodIntentPermitido ? 'pedidos-ifood-permission-hint' : undefined}
                 >
                   {#if ifoodSending}
@@ -930,6 +969,23 @@
     font-size: 0.7rem;
     font-weight: 800;
     letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .qi-origin-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .qi-origin {
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
   }
 
@@ -1074,6 +1130,11 @@
     background: var(--bg-card);
     color: var(--text-main);
     border-color: var(--border-strong);
+  }
+  .action-btn-success:hover {
+    background: var(--status-success-bg);
+    color: var(--status-success-text);
+    border-color: var(--status-success-border);
   }
   .action-btn-danger:hover {
     background: rgba(239, 68, 68, 0.1);

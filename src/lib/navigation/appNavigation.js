@@ -53,7 +53,7 @@ export const appNavigationSections = [
         id: 'pedidos',
         href: '/app/pedidos',
         label: 'Pedidos',
-        requiresAddon: 'orderingReview',
+        requiresAnyAddon: ['orderingReview', 'ifoodQueue'],
         // O prefixo `pedidos.*` e legado persistido em access_roles.
         requiredPermission: 'pedidos.acessar',
         icon: ListChecks,
@@ -245,6 +245,8 @@ export function shouldShowNavigationItem(item, context) {
   const gatedByAccess = item.adminOnly || item.requiredPermission;
   if (gatedByAccess && !accessLoaded) return false;
   if (item.requiresAddon && !addonFlags[item.requiresAddon]) return false;
+  if (Array.isArray(item.requiresAnyAddon) && item.requiresAnyAddon.length > 0
+      && !item.requiresAnyAddon.some((flag) => addonFlags[flag])) return false;
   if (isSubUser && item.adminOnly) return false;
   if (isSubUser && item.requiredPermission) return permissions?.[item.requiredPermission] === true;
   return true;

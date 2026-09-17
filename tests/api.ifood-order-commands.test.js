@@ -150,6 +150,41 @@ describe('createIfoodCommandService', () => {
     }));
   });
 
+  it('maps PDV accept/reject aliases onto confirm/cancel without calling the canonical RPC', async () => {
+    const repository = { enqueueCommand: vi.fn(async ({ intent }) => ({
+      outcome: 'queued', commandId: `command-${intent}`, status: 'queued'
+    })) };
+    const service = createIfoodCommandService({
+      repository,
+      accessResolver: async () => baseAccessContext(),
+    });
+
+    const accepted = await service.enqueueCommand({
+      authResult: { user: { id: 'owner-1' } },
+      empresaId: EMPRESA_ID,
+      orderId: ORDER_ID,
+      body: commandBody('accept'),
+    });
+    const rejected = await service.enqueueCommand({
+      authResult: { user: { id: 'owner-1' } },
+      empresaId: EMPRESA_ID,
+      orderId: ORDER_ID,
+      body: commandBody('reject', { cancellationCode: '501', reason: 'Problemas de sistema' }),
+    });
+
+    expect(accepted.status).toBe(202);
+    expect(rejected.status).toBe(202);
+    expect(repository.enqueueCommand.mock.calls[0][0]).toMatchObject({
+      intent: 'confirm',
+      idempotencyKey: `ifood:command:v1:${EMPRESA_ID}:${ORDER_ID}:confirm:1`,
+    });
+    expect(repository.enqueueCommand.mock.calls[1][0]).toMatchObject({
+      intent: 'cancel',
+      payload: { cancellationCode: '501', reason: 'Problemas de sistema' },
+      idempotencyKey: `ifood:command:v1:${EMPRESA_ID}:${ORDER_ID}:cancel:1`,
+    });
+  });
+
   it('maps every repository outcome to a stable HTTP result', async () => {
     const outcomes = [
       ['queued', 202, { commandId: 'command-1', status: 'queued' }],

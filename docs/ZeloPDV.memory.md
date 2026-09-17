@@ -1,16 +1,29 @@
 # ZeloPDV.memory
 
+- Pedidos iFood no PDV (2026-09-17): `/app/pedidos` lê `zelo_orders.source`
+  para canal/origem iFood (`vendas.canal_origem` só após deliver).
+  `accept_zelo_order` / `reject_zelo_order` / cancel em
+  `transition_zelo_order` enfileiram `confirm`/`cancel` via
+  `enqueue_ifood_order_command_v1` **antes** de virar o status (confirm
+  exige `pending_review`; cancel default `cancellationCode` 501). O
+  helper SECURITY DEFINER usa `SET LOCAL ROLE service_role` /
+  `set_config('role','service_role',true)` porque o enqueue é
+  service_role-gated. Mesma transação. Close/cozinha/dispatch iFood
+  continuam na command API. Pedido `cancelled` some da fila.
+
+- Worker iFood flags de ciclo (2026-09-17): default **off**.
+  `IFOOD_WORKER_PROCESS_INBOX=1` drena a inbox e projeta pedidos.
+  `IFOOD_WORKER_PROCESS_COMMANDS=1` drena a fila de comandos (Dokploy
+  ligou esta). `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1` monta o adapter HTTP
+  (exige `IFOOD_CLIENT_ID` + `IFOOD_CLIENT_SECRET` juntos; sem o par o
+  adapter fica null e os hooks default de inbox/commands **não** sobem).
+  PROCESS_COMMANDS sozinho não fala com o iFood. Não é GO completo.
+
 - Worker iFood imagem Docker (2026-09-17): `workers/ifood/index.js` puxa
   `orderNormalizer.js`, que importa `src/lib/finance/paymentMethods.js`.
   A imagem precisa copiar esse arquivo no mesmo path relativo; o
   `Dockerfile.dockerignore` tem de un-ignore `src/lib/finance/` + o
   arquivo. Sem isso o container sai com `MODULE_NOT_FOUND` no boot.
-
-- Worker iFood ciclos (2026-09-17): inbox/commands/adapter HTTP só sobem
-  com `IFOOD_WORKER_PROCESS_INBOX=1`, `IFOOD_WORKER_PROCESS_COMMANDS=1` e
-  `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1`. Sem o par `IFOOD_CLIENT_*` o
-  adapter fica null (fail-closed). Default off. `readyMaxAgeMs` >
-  `intervalMs`. Não é GO completo.
 
 - Worker iFood `/health/ready` (2026-09-17): o probe só é gravado no ciclo
   do loop. `readyMaxAgeMs` tem de ser **estritamente maior** que
