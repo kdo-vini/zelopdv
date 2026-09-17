@@ -1,5 +1,23 @@
 # Fixes Progress
 
+- [x] FX-ADMIN-CHURN-FALSO-POSITIVO-01 (2026-09-17) — Admin analytics `/analytics`
+  exibia contas ativas pagantes como "quiet" (alto risco de churn): `sales_30d=0`,
+  `effective_last_seen null`. Product Lead e Staff Eng confirmaram via Supabase
+  direto que 7 contas tinham centenas de vendas no período (Casa dos Salgados
+  ~1135/30d, Fanny Massas ~581/30d, Bem Servido ~404/30d, Mix Guaraná ~110/30d,
+  Seu Munhoz ~217/30d, FullBuster Burger ~32/30d, Donutopia teste). Causa: analytics
+  chamava `admin_get_users_last_seen`, `admin_get_sales_counts` e
+  `admin_get_total_sales_value` direto do browser com anon key. As RPCs têm
+  `SECURITY DEFINER` com `WHERE (auth.role() = 'service_role' OR
+  is_active_super_admin())`; browser-side sem service_role retorna array vazio `[]`,
+  frontend mapeia undefined → `sales_30d=0` e `last_seen=null` para **todas** as
+  contas. Endpoint server-side `/api/admin/analytics-data` criado: autentica
+  super_admin via JWT, depois chama as RPCs com `supabaseAdmin` (service_role).
+  Analytics page faz fetch desse endpoint em vez de RPC direta. Testes cobrem
+  autenticação, origem e erros de RPC (5 novos). `npm test` 1381/1381, `npm run
+  build` ok (ambos apps). Product pode re-extrair lista de quiet/risk com dados
+  reais. PR #38.
+
 - [x] FX-IOS-INPUT-ZOOM-01 (2026-09-15) — iOS Safari dava zoom automático ao
   focar campos com `font-size` < 16px (chat do Zelinho a 13px, valor recebido
   do `ModalPagamento` a 15,2px, entre outros) e não voltava sozinho — exigia
