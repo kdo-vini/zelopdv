@@ -439,7 +439,7 @@ describe('iFood worker bootstrap', () => {
     expect(rpc).toHaveBeenCalledWith(
       IFOOD_LEASE_PROBE.rpc,
       expect.objectContaining({ p_worker_id: IFOOD_LEASE_PROBE.workerId, p_limit: 0, p_lease_seconds: 0 }),
-      undefined
+      expect.objectContaining({ abortSignal: expect.any(AbortSignal) })
     );
   });
 
