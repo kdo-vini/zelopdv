@@ -1,5 +1,11 @@
 # ZeloPDV.memory
 
+- Worker iFood imagem Docker (2026-09-17): `workers/ifood/index.js` puxa
+  `orderNormalizer.js`, que importa `src/lib/finance/paymentMethods.js`.
+  A imagem precisa copiar esse arquivo no mesmo path relativo; o
+  `Dockerfile.dockerignore` tem de un-ignore `src/lib/finance/` + o
+  arquivo. Sem isso o container sai com `MODULE_NOT_FOUND` no boot.
+
 - Worker iFood ciclos (2026-09-17): inbox/commands/adapter HTTP só sobem
   com `IFOOD_WORKER_PROCESS_INBOX=1`, `IFOOD_WORKER_PROCESS_COMMANDS=1` e
   `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1`. Sem o par `IFOOD_CLIENT_*` o

@@ -1,5 +1,19 @@
 # Tasks 1–21 + worker live+ready (GO parcial)
 
+## Handoff — 2026-09-17 (imagem worker: MODULE_NOT_FOUND)
+
+Redeploy Dokploy do worker iFood quebrava no boot: `orderNormalizer.js`
+importa `src/lib/finance/paymentMethods.js`, mas a imagem só copiava
+`workers/ifood` + `src/lib/server/ifood`. Container `exit(1)` com
+`MODULE_NOT_FOUND` — isso bloqueava o redeploy das credenciais shadow
+Developers.
+
+Correção mínima: `workers/ifood/Dockerfile` passa a copiar
+`src/lib/finance/paymentMethods.js` no mesmo path relativo; o
+`Dockerfile.dockerignore` libera `src/lib/finance/` + o arquivo. Sem flags
+de ciclo, sem secrets, sem mudança de runtime além de o graph de import
+resolver. Fail-closed continua. **Ainda GO parcial.**
+
 ## Handoff — 2026-09-17 (flags de ciclo; GO ainda parcial)
 
 Bootstrap do worker agora **pode** ligar inbox / commands / adapter HTTP,

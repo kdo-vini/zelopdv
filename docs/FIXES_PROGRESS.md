@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-IFOOD-WORKER-IMAGE-PAYMENTMETHODS-01 (2026-09-17) — imagem Docker do
+  worker iFood saía com `MODULE_NOT_FOUND` no boot: `orderNormalizer.js`
+  importa `src/lib/finance/paymentMethods.js`, mas o Dockerfile só copiava
+  `workers/ifood` + `src/lib/server/ifood` (e o dockerignore bloqueava
+  finance). Agora copia o catálogo canônico no mesmo path relativo e o
+  ignore libera o arquivo. Sem flags de ciclo, sem secrets, fail-closed
+  intacto. Bloqueava redeploy Dokploy para shadow Developers.
+
 - [x] FX-IFOOD-WORKER-CYCLE-FLAGS-01 (2026-09-17) — bootstrap do worker iFood
   passa a aceitar `IFOOD_WORKER_PROCESS_INBOX`,
   `IFOOD_WORKER_PROCESS_COMMANDS` e `IFOOD_WORKER_ENABLE_HTTP_ADAPTER`

@@ -18,7 +18,7 @@ produção nem abertura global — isso é gate da Task 21.
 | Ações | `POST /api/ifood/actions` | `pause` / `resume` / `revoke` / `replay_event` / `replay_command` |
 | RPCs | `public.admin_*_ifood_*_v1` | `service_role` only; migration local `20260917040026_ifood_admin_operations.sql` |
 | Auditoria | `admin_activity_logs` | `ifood.connection.*`, `ifood.event.replay`, `ifood.command.replay` |
-| Worker | Dokploy `ifood-worker` (`ifood-worker-ellizg` / `nARDI-HdMP6OO0HyBhxuE`) | Host e health abaixo |
+| Worker | Dokploy `ifood-worker` (`ifood-worker-ellizg` / `nARDI-HdMP6OO0HyBhxuE`) | Host e health abaixo. Imagem deve incluir `src/lib/finance/paymentMethods.js` (grafo de `orderNormalizer`); sem isso o container sai com `MODULE_NOT_FOUND` no boot. |
 
 O browser **nunca** recebe payload bruto de webhook, telefone, endereço ou
 corpo de pedido — só contagens, status, timestamps e códigos de erro truncados

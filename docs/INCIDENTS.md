@@ -1,5 +1,31 @@
 # Incidents
 
+## INC-2026-09-17-IFOOD-WORKER-MODULE-NOT-FOUND — imagem Docker exit(1) no boot
+
+**Status:** corrigido em código (2026-09-17). Redeploy Dokploy pendente deste
+commit. **Não é GO completo.**
+
+**Sintoma**
+
+- Container `ifood-worker` no Dokploy saía imediatamente com `exit(1)`.
+- Node: `MODULE_NOT_FOUND` para `src/lib/finance/paymentMethods.js`.
+- Redeploy necessário para credenciais shadow Developers ficava bloqueado.
+
+**Causa-raiz**
+
+- `workers/ifood/index.js` importa `eventHandler` / `createIfoodIntegration`,
+  que puxam `orderNormalizer.js`, que importa o catálogo canônico de
+  pagamentos. A imagem só copiava `workers/ifood` + `src/lib/server/ifood`;
+  `Dockerfile.dockerignore` ignorava `src/lib/finance/**`.
+
+**Correção**
+
+- Copiar `src/lib/finance/paymentMethods.js` para `/app/src/lib/finance/` e
+  un-ignore no `workers/ifood/Dockerfile.dockerignore`. Sem flags de ciclo e
+  sem secrets. Fail-closed permanece.
+
+**Referência:** [[IFOOD]] / `docs/operations/IFOOD.md`, FX-IFOOD-WORKER-IMAGE-PAYMENTMETHODS-01.
+
 ## INC-2026-09-17-IFOOD-WORKER-STALE-PROBE — ready 503 após probe fresco
 
 **Status:** corrigido em código (2026-09-17). Redeploy Dokploy pendente deste

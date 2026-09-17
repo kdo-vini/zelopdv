@@ -14,7 +14,7 @@
 | Self-service APIs + wizard | Implementado |
 | Console ops admin + runbook | Implementado (`docs/operations/IFOOD.md`) |
 | Gate `verify:ifood` + resilience + E2E mock | Verde na Task 20 |
-| `docker build` da imagem worker | **OK** no Dokploy (2026-09-17) |
+| `docker build` da imagem worker | **OK** no Dokploy (2026-09-17); boot exigia `src/lib/finance/paymentMethods.js` no image (fix 2026-09-17, `MODULE_NOT_FOUND` no container) |
 | Migrations iFood no Supabase vinculado | **Aplicadas** (2026-09-17, após autorização do owner) |
 | Processo worker no Dokploy | **Live+ready (GO parcial)** — liveness 200; readiness 200 `fresh_probe` só enquanto o probe for mais novo que `readyMaxAgeMs` (default 600s, intervalo 300s). 503 `stale_probe` com defaults antigos (90s) era bug de TTL, não queda de deps |
 

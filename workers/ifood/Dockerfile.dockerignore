@@ -15,3 +15,6 @@
 !src/lib/server/
 !src/lib/server/ifood/
 !src/lib/server/ifood/**
+# orderNormalizer imports the canonical payment catalog from finance.
+!src/lib/finance/
+!src/lib/finance/paymentMethods.js

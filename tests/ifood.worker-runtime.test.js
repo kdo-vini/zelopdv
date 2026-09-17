@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import {
   IfoodWorkerConfigError,
@@ -915,5 +916,18 @@ describe('iFood production repository probe', () => {
       'iFood worker repository operation failed'
     );
     await expect(failing.claimEvents({ workerId: 'ifood-worker' })).rejects.not.toThrow(/secret-pii/);
+  });
+});
+
+describe('iFood worker Docker image contents', () => {
+  it('copies finance paymentMethods.js because orderNormalizer imports it', () => {
+    const dockerfile = readFileSync('workers/ifood/Dockerfile', 'utf8');
+    const dockerignore = readFileSync('workers/ifood/Dockerfile.dockerignore', 'utf8');
+    const normalizer = readFileSync('src/lib/server/ifood/orderNormalizer.js', 'utf8');
+
+    expect(normalizer).toMatch(/from ['"]\.\.\/\.\.\/finance\/paymentMethods\.js['"]/);
+    expect(dockerfile).toMatch(/COPY --chown=node:node src\/lib\/finance\/paymentMethods\.js \.\/src\/lib\/finance\/paymentMethods\.js/);
+    expect(dockerignore).toMatch(/!src\/lib\/finance\/$/m);
+    expect(dockerignore).toMatch(/!src\/lib\/finance\/paymentMethods\.js/);
   });
 });

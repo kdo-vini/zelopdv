@@ -16,6 +16,8 @@ COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node package.json package-lock.json ./
 COPY --chown=node:node workers/ifood ./workers/ifood
 COPY --chown=node:node src/lib/server/ifood ./src/lib/server/ifood
+# orderNormalizer statically imports the canonical payment catalog; keep the same relative path.
+COPY --chown=node:node src/lib/finance/paymentMethods.js ./src/lib/finance/paymentMethods.js
 
 USER node
 
