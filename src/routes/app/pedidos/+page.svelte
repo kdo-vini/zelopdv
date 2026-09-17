@@ -21,7 +21,26 @@
     closeCanonicalOrder
   } from '$lib/onlineOrders';
   import { getOrderDeliveryPresentation, getOrderPaymentPresentation } from '$lib/orderPresentation.js';
-  import { CreditCard, MapPin, Printer } from 'lucide-svelte';
+  import {
+    ifoodCanCancel,
+    ifoodHandoffCodes,
+    ifoodHasPendingCommand,
+    ifoodIntentLabel,
+    ifoodIntentPermission,
+    ifoodScheduleState,
+    ifoodUnmappedItemCount,
+    ifoodWaitingLabel,
+    isIfoodOrder,
+    resolveQueueAdvance
+  } from '$lib/orders/ifoodPresentation.js';
+  import {
+    fetchIfoodCancellationReasons,
+    fetchIfoodSyncState,
+    sendIfoodCommand
+  } from '$lib/orders/ifoodCommandsClient.js';
+  import OrderSourceBadge from '$lib/components/orders/OrderSourceBadge.svelte';
+  import IfoodSyncState from '$lib/components/orders/IfoodSyncState.svelte';
+  import { CheckCircle2, CreditCard, MapPin, Printer, X } from 'lucide-svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   import ModalPedidoManual from '$lib/components/modals/ModalPedidoManual.svelte';
   import { startOfflineRuntime, onOfflineChange } from '$lib/offline/runtime.js';
@@ -41,6 +60,18 @@
   let isSubUser = false;
   let canCancelOrders = true;
   let canReceiveOrders = true;
+  let canKitchenOrders = true;
+  // iFood: sanitized sync state per order id, live clock and cancellation dialog.
+  let ifoodSync = {};
+  let nowTick = Date.now();
+  let clockTimer = null;
+  let ifoodSyncTimer = null;
+  let ifoodCancelOrder = null;
+  let ifoodCancelReasons = [];
+  let ifoodCancelCode = '';
+  let ifoodCancelLoading = false;
+  let ifoodCancelError = '';
+  let ifoodSending = false;
   let pedidos = [];
   let pedidoSelecionadoId = null;
   let dadosEmpresa = null;
@@ -70,6 +101,14 @@
   $: totalPedido = Number(pedidoSelecionado?.total || 0);
   $: entregaSelecionada = getOrderDeliveryPresentation(pedidoSelecionado);
   $: pagamentoSelecionado = getOrderPaymentPresentation(pedidoSelecionado);
+  $: selecionadoIfood = isIfoodOrder(pedidoSelecionado);
+  $: syncSelecionado = pedidoSelecionado ? ifoodSync[pedidoSelecionado.id] || null : null;
+  $: avancoSelecionado = pedidoSelecionado ? resolveQueueAdvance(pedidoSelecionado) : { kind: 'none' };
+  $: codigosSelecionados = ifoodHandoffCodes(pedidoSelecionado);
+  $: agendaSelecionada = ifoodScheduleState(pedidoSelecionado, nowTick);
+  $: itensSemVinculo = ifoodUnmappedItemCount(pedidoSelecionado);
+  $: ifoodComandoPendente = ifoodHasPendingCommand(syncSelecionado);
+  $: ifoodIntentPermitido = avancoSelecionado.kind !== 'ifood_command' || ifoodPermissionAllowed(avancoSelecionado.intent);
 
   onMount(async () => {
     const auth = await ensureActiveSubscription({ requireProfile: true });
@@ -86,9 +125,10 @@
       return;
     }
     if (isSubUser) {
-      [canCancelOrders, canReceiveOrders] = await Promise.all([
+      [canCancelOrders, canReceiveOrders, canKitchenOrders] = await Promise.all([
         hasAccessPermission('pedidos.cancelar'),
-        hasAccessPermission('pedidos.receber')
+        hasAccessPermission('pedidos.receber'),
+        hasAccessPermission('pedidos.cozinha')
       ]);
     }
     pdvCache.setUserId(ownerUserId);
@@ -119,11 +159,19 @@
       }, 150);
     });
     pollTimer = setInterval(carregarPedidos, 30000);
+    clockTimer = setInterval(() => { nowTick = Date.now(); }, 15000);
+    // Command state lives server-side and does not fire zelo_orders realtime,
+    // so refresh it on a short interval while an iFood command is in flight.
+    ifoodSyncTimer = setInterval(() => {
+      if (Object.values(ifoodSync).some((state) => ifoodHasPendingCommand(state))) void atualizarIfoodSync();
+    }, 8000);
   });
 
   onDestroy(() => {
     unsubscribeOffline?.();
     if (pollTimer) clearInterval(pollTimer);
+    if (clockTimer) clearInterval(clockTimer);
+    if (ifoodSyncTimer) clearInterval(ifoodSyncTimer);
     if (printerStatusTimer) clearInterval(printerStatusTimer);
     if (realtimeRefreshTimer) clearTimeout(realtimeRefreshTimer);
     if (realtimeChannel) void supabase.removeChannel(realtimeChannel);
@@ -244,6 +292,7 @@
       if (!pedidos.some((p) => p.id === pedidoSelecionadoId)) {
         pedidoSelecionadoId = pedidos[0]?.id || null;
       }
+      void atualizarIfoodSync();
     } catch (err) {
       queueUnavailable = true;
       await atualizarFilaLocal();
@@ -301,7 +350,86 @@
       addToast('Seu cargo não pode cancelar ou rejeitar pedidos.', 'warning');
       return;
     }
+    if (isIfoodOrder(pedido)) return abrirCancelamentoIfood(pedido);
     return cancelarPedidoCanonico(pedido);
+  }
+
+  function ifoodPermissionAllowed(intent) {
+    const permission = ifoodIntentPermission(intent);
+    if (permission === 'pedidos.cozinha') return canKitchenOrders;
+    if (permission === 'pedidos.cancelar') return canCancelOrders;
+    // pedidos.acessar is already required to open this page.
+    return Boolean(permission);
+  }
+
+  async function atualizarIfoodSync() {
+    const ids = pedidos.filter((p) => isIfoodOrder(p) && !p.localOnly).map((p) => p.id);
+    if (ids.length === 0) {
+      ifoodSync = {};
+      return;
+    }
+    ifoodSync = await fetchIfoodSyncState(supabase, ids);
+  }
+
+  async function enviarComandoIfood(pedido, intent, extra = {}) {
+    if (navigator.onLine === false) {
+      addToast('Sem conexão. Reconecte para falar com o iFood.', 'info');
+      return false;
+    }
+    if (!ifoodPermissionAllowed(intent)) {
+      addToast('Seu cargo não pode fazer esta ação.', 'warning');
+      return false;
+    }
+    ifoodSending = true;
+    try {
+      const result = await sendIfoodCommand(supabase, pedido, intent, extra);
+      if (!result.ok) {
+        addToast(result.message, result.status === 409 ? 'warning' : 'error');
+        if (result.status === 409) await carregarPedidos();
+        return false;
+      }
+      // The order status only changes when iFood confirms by event.
+      addToast(`Enviado ao iFood: ${(ifoodIntentLabel(intent) || 'ação').toLowerCase()}.`, 'info');
+      await atualizarIfoodSync();
+      return true;
+    } finally {
+      ifoodSending = false;
+    }
+  }
+
+  async function abrirCancelamentoIfood(pedido) {
+    if (navigator.onLine === false) {
+      addToast('Sem conexão. Reconecte para cancelar este pedido.', 'info');
+      return;
+    }
+    ifoodCancelOrder = pedido;
+    ifoodCancelReasons = [];
+    ifoodCancelCode = '';
+    ifoodCancelError = '';
+    ifoodCancelLoading = true;
+    const result = await fetchIfoodCancellationReasons(supabase, pedido.id);
+    ifoodCancelLoading = false;
+    if (!result.ok) {
+      ifoodCancelError = result.message;
+      return;
+    }
+    ifoodCancelReasons = result.reasons;
+    if (ifoodCancelReasons.length === 0) ifoodCancelError = 'O iFood não informou motivos para este pedido. Use o Portal do Parceiro.';
+  }
+
+  function fecharCancelamentoIfood() {
+    if (ifoodSending) return;
+    ifoodCancelOrder = null;
+  }
+
+  async function confirmarCancelamentoIfood() {
+    const reason = ifoodCancelReasons.find((item) => item.code === ifoodCancelCode);
+    if (!ifoodCancelOrder || !reason) return;
+    const ok = await enviarComandoIfood(ifoodCancelOrder, 'cancel', {
+      cancellationCode: reason.code,
+      reason: reason.description
+    });
+    if (ok) ifoodCancelOrder = null;
   }
 
   function statusLabel(status) {
@@ -314,6 +442,11 @@
   }
 
   function canonicalActionLabel(pedido) {
+    if (isIfoodOrder(pedido)) {
+      const advance = resolveQueueAdvance(pedido);
+      if (advance.kind === 'ifood_command') return ifoodIntentLabel(advance.intent);
+      return ifoodWaitingLabel(pedido) || 'Aguardando o iFood';
+    }
     if (pedido.status === 'pending_review') return 'Aceitar pedido';
     if (pedido.status === 'accepted') return 'Iniciar preparo';
     if (pedido.status === 'preparing') return 'Marcar como pronto';
@@ -336,13 +469,14 @@
       return;
     }
     if (pedido.status === 'pending_payment') return;
-    const actionByStatus = {
-      pending_review: 'accept', accepted: 'start_preparing', preparing: 'mark_ready',
-      ready: canonicalFulfillmentMode(pedido) === 'delivery' ? 'dispatch' : 'close',
-      out_for_delivery: 'close'
-    };
-    const action = actionByStatus[pedido.status];
-    if (!action) return;
+    const advance = resolveQueueAdvance(pedido);
+    if (advance.kind === 'ifood_command') {
+      if (ifoodHasPendingCommand(ifoodSync[pedido.id])) return;
+      await enviarComandoIfood(pedido, advance.intent);
+      return;
+    }
+    if (advance.kind === 'none') return;
+    const action = advance.kind === 'close' ? 'close' : advance.action;
     if (action === 'close' && !canReceiveOrders) {
       addToast('Seu cargo não pode receber ou concluir pedidos.', 'warning');
       return;
@@ -418,6 +552,55 @@
 <ModalPedidoManual open={manualOpen} {ownerUserId} operatorId={operadorUserId}
   on:close={() => manualOpen = false} on:created={pedidoCriado} />
 
+{#if ifoodCancelOrder}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+  <div class="ifood-modal-overlay" on:click|self={fecharCancelamentoIfood}>
+    <div class="ifood-modal" role="dialog" aria-modal="true" aria-labelledby="ifood-cancel-title">
+      <header class="ifood-modal-head">
+        <div>
+          <OrderSourceBadge order={ifoodCancelOrder} />
+          <h2 id="ifood-cancel-title">Cancelar pedido no iFood</h2>
+        </div>
+        <button type="button" class="ifood-modal-close" on:click={fecharCancelamentoIfood} aria-label="Fechar" disabled={ifoodSending}>
+          <X class="size-4" aria-hidden="true" />
+        </button>
+      </header>
+
+      <p class="ifood-modal-lead">
+        Escolha o motivo. O pedido só aparece como cancelado depois que o iFood confirmar.
+      </p>
+
+      {#if ifoodCancelLoading}
+        <p class="ifood-modal-state">Carregando motivos do iFood...</p>
+      {:else if ifoodCancelError}
+        <InlineHelper tone="warning" message={ifoodCancelError} />
+      {:else}
+        <fieldset class="ifood-reasons">
+          <legend class="sr-only">Motivo do cancelamento</legend>
+          {#each ifoodCancelReasons as reason (reason.code)}
+            <label class="ifood-reason" class:selected={ifoodCancelCode === reason.code}>
+              <input type="radio" name="ifood-cancel-reason" value={reason.code} bind:group={ifoodCancelCode} />
+              <span>{reason.description}</span>
+            </label>
+          {/each}
+        </fieldset>
+      {/if}
+
+      <footer class="ifood-modal-actions">
+        <button type="button" class="btn-secondary" on:click={fecharCancelamentoIfood} disabled={ifoodSending}>Voltar</button>
+        <button
+          type="button"
+          class="btn-danger"
+          on:click={confirmarCancelamentoIfood}
+          disabled={ifoodSending || ifoodCancelLoading || !ifoodCancelCode}
+        >
+          {ifoodSending ? 'Enviando ao iFood...' : 'Pedir cancelamento'}
+        </button>
+      </footer>
+    </div>
+  </div>
+{/if}
+
 <svelte:head>
   <title>Pedidos - Caixa | Zelo PDV</title>
 </svelte:head>
@@ -487,10 +670,17 @@
                 on:click={() => selecionarPedido(pedido.id)}
               >
                 <div class="qi-top">
-                  <span class="order-num">#{pedido.numero_pedido}</span>
+                  {#if isIfoodOrder(pedido)}
+                    <OrderSourceBadge order={pedido} />
+                  {:else}
+                    <span class="order-num">#{pedido.numero_pedido}</span>
+                  {/if}
                   {#if pedido.localOnly}<span class="subtitle">{['needs_review', 'needs_auth'].includes(pedido.syncStatus) ? 'Conferir sincronização' : 'Salvo neste aparelho'}</span>{/if}
                   <span class="status-pill" data-status={pedido.status} aria-label="Status: {statusLabel(pedido.status)}">{statusLabel(pedido.status)}</span>
                 </div>
+                {#if isIfoodOrder(pedido)}
+                  <IfoodSyncState order={pedido} syncState={ifoodSync[pedido.id] || null} now={nowTick} compact />
+                {/if}
                 <div class="qi-mid">
                   <div class="qi-cliente-row">
                     <strong class="qi-cliente">{clienteLabel(pedido)}</strong>
@@ -518,7 +708,7 @@
                   class="action-btn action-btn-danger"
                   aria-label="Cancelar pedido #{pedido.numero_pedido}"
                   aria-describedby={!canCancelOrders ? 'pedidos-cancel-hint' : undefined}
-                  disabled={!canCancelOrders}
+                  disabled={!canCancelOrders || (isIfoodOrder(pedido) && !ifoodCanCancel(pedido))}
                   on:click|stopPropagation={() => excluirPedido(pedido)}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -536,11 +726,24 @@
             </button>
             <div class="details-head">
               <div>
-                <p class="eyebrow">Pedido #{pedidoSelecionado.numero_pedido}</p>
+                {#if selecionadoIfood}
+                  <OrderSourceBadge order={pedidoSelecionado} />
+                {:else}
+                  <p class="eyebrow">Pedido #{pedidoSelecionado.numero_pedido}</p>
+                {/if}
                 <h2>{clienteLabel(pedidoSelecionado)}</h2>
                 <span class="details-meta">{formatTime(pedidoSelecionado.criado_em)}</span>
                 {#if pedidoSelecionado.fulfillment?.scheduledAt}
                   <span class="details-meta">Previsto: {new Date(pedidoSelecionado.fulfillment.scheduledAt).toLocaleString('pt-BR')}</span>
+                {/if}
+                {#if agendaSelecionada.scheduled}
+                  <span class="details-meta">
+                    Agendado{#if agendaSelecionada.windowStart}: entrega entre {formatTime(agendaSelecionada.windowStart)} e {formatTime(agendaSelecionada.windowEnd)}{/if}
+                    {#if agendaSelecionada.preparationStartAt} · preparo a partir de {formatTime(agendaSelecionada.preparationStartAt)}{/if}
+                  </span>
+                {/if}
+                {#if selecionadoIfood && pedidoSelecionado.customer_phone}
+                  <span class="details-meta">Telefone iFood: {pedidoSelecionado.customer_phone}</span>
                 {/if}
               </div>
               <div class="details-head-actions">
@@ -557,6 +760,27 @@
                 </button>
               </div>
             </div>
+
+            {#if selecionadoIfood}
+              <div class="ifood-detail-strip">
+                <IfoodSyncState order={pedidoSelecionado} syncState={syncSelecionado} now={nowTick} />
+                {#if codigosSelecionados.length}
+                  <dl class="handoff-codes" aria-label="Códigos do iFood">
+                    {#each codigosSelecionados as codigo (codigo.kind)}
+                      <div>
+                        <dt>{codigo.label}</dt>
+                        <dd>{codigo.value}</dd>
+                      </div>
+                    {/each}
+                  </dl>
+                {/if}
+                {#if itensSemVinculo > 0}
+                  <InlineHelper compact message={itensSemVinculo === 1
+                    ? '1 item ainda não está vinculado a um produto do Zelo. O pedido segue normalmente, sem baixa de estoque desse item.'
+                    : `${itensSemVinculo} itens ainda não estão vinculados a produtos do Zelo. O pedido segue normalmente, sem baixa de estoque desses itens.`} />
+                {/if}
+              </div>
+            {/if}
 
             <div class="order-info-grid" aria-label="Informações principais do pedido">
               <section class="order-info-card" aria-labelledby="delivery-info-title">
@@ -623,16 +847,38 @@
                 <span>Total</span>
                 <strong>{formatMoney(totalPedido)}</strong>
               </div>
-              <button type="button" class="btn-success" on:click={() => avancarPedidoCanonico(pedidoSelecionado)} disabled={fechandoPedido || pedidoSelecionado.status === 'pending_payment' || (['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders)} aria-describedby={['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders ? 'pedidos-receive-hint' : undefined}>
-                {#if fechandoPedido}
-                  Confirmando...
-                {:else}
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                  <span>{canonicalActionLabel(pedidoSelecionado)}</span>
+              {#if selecionadoIfood}
+                <button
+                  type="button"
+                  class="btn-success"
+                  on:click={() => avancarPedidoCanonico(pedidoSelecionado)}
+                  disabled={ifoodSending || ifoodComandoPendente || avancoSelecionado.kind !== 'ifood_command' || !ifoodIntentPermitido || pedidoSelecionado.localOnly}
+                  aria-describedby={!ifoodIntentPermitido ? 'pedidos-ifood-permission-hint' : undefined}
+                >
+                  {#if ifoodSending}
+                    Enviando ao iFood...
+                  {:else if ifoodComandoPendente}
+                    Aguardando o iFood...
+                  {:else}
+                    <CheckCircle2 class="size-4" aria-hidden="true" />
+                    <span>{canonicalActionLabel(pedidoSelecionado)}</span>
+                  {/if}
+                </button>
+                {#if !ifoodIntentPermitido}
+                  <InlineHelper id="pedidos-ifood-permission-hint" compact message="Seu cargo não pode fazer esta etapa do pedido. Peça ao responsável pela operação." />
                 {/if}
-              </button>
-              {#if ['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders}
-                <InlineHelper id="pedidos-receive-hint" compact message="Seu cargo não pode concluir pedidos. Peça essa ação ao responsável pela operação." />
+              {:else}
+                <button type="button" class="btn-success" on:click={() => avancarPedidoCanonico(pedidoSelecionado)} disabled={fechandoPedido || pedidoSelecionado.status === 'pending_payment' || (['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders)} aria-describedby={['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders ? 'pedidos-receive-hint' : undefined}>
+                  {#if fechandoPedido}
+                    Confirmando...
+                  {:else}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>{canonicalActionLabel(pedidoSelecionado)}</span>
+                  {/if}
+                </button>
+                {#if ['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders}
+                  <InlineHelper id="pedidos-receive-hint" compact message="Seu cargo não pode concluir pedidos. Peça essa ação ao responsável pela operação." />
+                {/if}
               {/if}
             </footer>
           {:else}
@@ -1235,5 +1481,137 @@
   @media (max-width: 480px) {
     .header-actions { width: 100%; }
     .header-actions .btn-secondary { flex: 1; }
+  }
+
+  /* iFood (Task 11) */
+  .ifood-detail-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .handoff-codes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+  }
+
+  .handoff-codes div {
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 0.5rem;
+    background: var(--bg-card);
+  }
+
+  .handoff-codes dt {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .handoff-codes dd {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+  }
+
+  .ifood-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+  }
+
+  .ifood-modal {
+    width: 100%;
+    max-width: 460px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    padding: 1.25rem;
+    border: 1px solid var(--border-card);
+    border-radius: 14px;
+    background: var(--bg-card);
+    color: var(--text-main);
+  }
+
+  .ifood-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .ifood-modal-head h2 {
+    margin: 0.4rem 0 0;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .ifood-modal-close {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .ifood-modal-lead,
+  .ifood-modal-state {
+    margin: 0.75rem 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+
+  .ifood-reasons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .ifood-reason {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    color: var(--text-label);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .ifood-reason.selected {
+    border-color: var(--primary);
+    color: var(--text-main);
+  }
+
+  .ifood-reason input {
+    accent-color: var(--primary);
+  }
+
+  .ifood-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
   }
 </style>

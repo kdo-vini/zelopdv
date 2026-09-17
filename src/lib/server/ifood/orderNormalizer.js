@@ -74,6 +74,13 @@ function cloneOperationalValue(value) {
   return value;
 }
 
+function pickOperationalFields(value, fields) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return Object.fromEntries(fields
+    .filter((field) => Object.prototype.hasOwnProperty.call(value, field) && value[field] !== undefined)
+    .map((field) => [field, cloneOperationalValue(value[field])]));
+}
+
 function normalizeOption(option = {}, itemIndex, optionIndex) {
   objectOrFail(option, `items[${itemIndex}].options[${optionIndex}]`);
   const field = (name) => `items[${itemIndex}].options[${optionIndex}].${name}`;
@@ -299,15 +306,41 @@ function normalizeTotals(order, items) {
 
 function normalizeCustomerSnapshot(order) {
   const customer = order.customer && typeof order.customer === 'object'
-    ? cloneOperationalValue(order.customer)
+    ? order.customer
     : {};
-  // Raw/analytics bags are not part of the operational customer snapshot.
-  delete customer.raw;
-  delete customer.analytics;
-  if (order.delivery?.address && customer.deliveryAddress === undefined) {
-    customer.deliveryAddress = cloneOperationalValue(order.delivery.address);
+
+  const snapshot = {};
+  if (Object.prototype.hasOwnProperty.call(customer, 'name') && customer.name !== undefined) {
+    snapshot.name = cloneOperationalValue(customer.name);
   }
-  return customer;
+
+  const phone = pickOperationalFields(customer.phone, [
+    'number',
+    'localizer',
+    'localizerExpiration'
+  ]);
+  if (phone) snapshot.phone = phone;
+
+  const deliveryAddressSource = order.delivery?.deliveryAddress
+    ?? order.delivery?.address
+    ?? customer.deliveryAddress;
+  const deliveryAddress = pickOperationalFields(deliveryAddressSource, [
+    'streetName',
+    'streetNumber',
+    'formattedAddress',
+    'neighborhood',
+    'complement',
+    'postalCode',
+    'city',
+    'state',
+    'country',
+    'reference'
+  ]);
+  if (deliveryAddress) {
+    snapshot.deliveryAddress = deliveryAddress;
+  }
+
+  return snapshot;
 }
 
 function statusFromOrder(order) {
@@ -337,6 +370,7 @@ function codeFor(order, fulfillment, kind) {
 export function normalizeIfoodOrder(order) {
   objectOrFail(order, 'order');
   const externalOrderId = requiredString(order.id, 'id');
+  const displayId = order.displayId == null ? null : requiredString(order.displayId, 'displayId');
   const merchantId = requiredString(order.merchant?.id ?? order.merchantId, 'merchant.id');
   const occurredAt = order.createdAt;
   timestamp(occurredAt, 'createdAt');
@@ -347,6 +381,7 @@ export function normalizeIfoodOrder(order) {
 
   const normalized = {
     externalOrderId,
+    displayId,
     merchantId,
     externalStatus: statusFromOrder(order),
     occurredAt,

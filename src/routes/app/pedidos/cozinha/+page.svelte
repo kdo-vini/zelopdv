@@ -8,6 +8,16 @@
   import BackLink from '$lib/components/ui/BackLink.svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   import { itemModifierGroups, loadCanonicalOrders, transitionCanonicalOrder } from '$lib/onlineOrders';
+  import {
+    ifoodHasPendingCommand,
+    isIfoodOrder,
+    kitchenVisibleOrders,
+    resolveKitchenAdvance,
+    upcomingScheduledOrders
+  } from '$lib/orders/ifoodPresentation.js';
+  import { fetchIfoodSyncState, sendIfoodCommand } from '$lib/orders/ifoodCommandsClient.js';
+  import OrderSourceBadge from '$lib/components/orders/OrderSourceBadge.svelte';
+  import IfoodSyncState from '$lib/components/orders/IfoodSyncState.svelte';
 
   let ownerUserId = '';
   let empresaId = '';
@@ -22,9 +32,16 @@
   let markingIds = new Set();
   let realtimeChannel = null;
   let refreshTimer = null;
+  let ifoodSync = {};
+  let nowTick = Date.now();
+  let clockTimer = null;
+  let ifoodSyncTimer = null;
 
-  $: pedidosAbertos = pedidos.filter(p => ['accepted', 'preparing'].includes(p.status));
-  $: pedidosProntos = pedidos.filter(p => p.status === 'ready');
+  // Scheduled iFood orders only reach the board at their preparation start.
+  $: pedidosVisiveis = kitchenVisibleOrders(pedidos, nowTick);
+  $: pedidosAgendados = upcomingScheduledOrders(pedidos, nowTick);
+  $: pedidosAbertos = pedidosVisiveis.filter(p => ['accepted', 'preparing'].includes(p.status));
+  $: pedidosProntos = pedidosVisiveis.filter(p => p.status === 'ready');
   $: totalItensPendentes = pedidosAbertos.reduce(
     (acc, p) => acc + p.itens.filter(i => i.status_cozinha !== 'pronto').length,
     0
@@ -32,10 +49,18 @@
 
   onMount(() => {
     boot();
+    clockTimer = setInterval(() => { nowTick = Date.now(); }, 15000);
+    ifoodSyncTimer = setInterval(() => {
+      if (Object.values(ifoodSync).some((state) => ifoodHasPendingCommand(state))) void atualizarIfoodSync();
+    }, 8000);
     return cleanupRealtime;
   });
 
-  onDestroy(cleanupRealtime);
+  onDestroy(() => {
+    cleanupRealtime();
+    if (clockTimer) clearInterval(clockTimer);
+    if (ifoodSyncTimer) clearInterval(ifoodSyncTimer);
+  });
 
   async function boot() {
     const auth = await ensureActiveSubscription({ requireProfile: true });
@@ -80,6 +105,7 @@
 
     try {
       pedidos = await loadCanonicalOrders(supabase, empresaId, { kitchen: true });
+      void atualizarIfoodSync();
     } catch (err) {
       addToast('Não foi possível carregar os pedidos da cozinha. Verifique sua conexão e tente novamente.', 'error');
     } finally {
@@ -140,6 +166,11 @@
     return `${min} min`;
   }
 
+  function horaCurta(value) {
+    if (!value) return '--:--';
+    return new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
   function itemPronto(item) {
     return item.status_cozinha === 'pronto';
   }
@@ -148,7 +179,40 @@
     return markingIds.has(pedido.id);
   }
 
+  async function atualizarIfoodSync() {
+    const ids = pedidos.filter(isIfoodOrder).map((p) => p.id);
+    ifoodSync = ids.length ? await fetchIfoodSyncState(supabase, ids) : {};
+  }
+
+  function comandoIfoodPendente(pedido) {
+    return isIfoodOrder(pedido) && ifoodHasPendingCommand(ifoodSync[pedido.id]);
+  }
+
+  /** Runs a kitchen step: iFood goes through the command API, other channels keep the RPC. */
+  async function executarEtapa(pedido, step, errorMessage) {
+    const advance = resolveKitchenAdvance(pedido, step);
+    if (advance.kind === 'transition') {
+      await transitionCanonicalOrder(supabase, pedido, advance.action, operadorUserId);
+      await loadPedidos();
+      return;
+    }
+    if (advance.kind !== 'ifood_command' || comandoIfoodPendente(pedido)) return;
+    const result = await sendIfoodCommand(supabase, pedido, advance.intent);
+    if (!result.ok) {
+      addToast(result.message || errorMessage, result.status === 409 ? 'warning' : 'error');
+      if (result.status === 409) await loadPedidos();
+      return;
+    }
+    // The card only moves when iFood confirms by event.
+    addToast('Enviado ao iFood. O pedido avança assim que o iFood confirmar.', 'info');
+    await atualizarIfoodSync();
+  }
+
   async function excluirPedido(pedido) {
+    if (isIfoodOrder(pedido)) {
+      addToast('Pedidos do iFood são cancelados pela tela de Pedidos, com o motivo exigido pelo iFood.', 'info');
+      return;
+    }
     if (!canCancelOrders) {
       addToast('Seu cargo não pode cancelar pedidos.', 'warning');
       return;
@@ -166,8 +230,7 @@
   async function marcarPedidoPreparando(pedido) {
     if (pedido.status !== 'accepted') return;
     try {
-      await transitionCanonicalOrder(supabase, pedido, 'start_preparing', operadorUserId);
-      await loadPedidos();
+      await executarEtapa(pedido, 'start', 'Não foi possível iniciar o preparo. Tente novamente.');
     } catch (error) {
       addToast('Não foi possível iniciar o preparo. Tente novamente.', 'error');
     }
@@ -182,8 +245,7 @@
     if (pedido.status !== 'preparing' || markingIds.has(pedido.id)) return;
     markingIds = new Set(markingIds).add(pedido.id);
     try {
-      await transitionCanonicalOrder(supabase, pedido, 'mark_ready', operadorUserId);
-      await loadPedidos();
+      await executarEtapa(pedido, 'ready', 'Não foi possível concluir o preparo. Tente novamente.');
     } catch (error) {
       addToast('Não foi possível concluir o preparo. Tente novamente.', 'error');
     } finally {
@@ -234,11 +296,25 @@
       <section class="empty-state">
         <p>Carregando cozinha...</p>
       </section>
-    {:else if pedidos.length === 0}
+    {:else if pedidosVisiveis.length === 0 && pedidosAgendados.length === 0}
       <section class="empty-state">
         <p>Nenhum item enviado para a cozinha.</p>
       </section>
     {:else}
+      {#if pedidosAgendados.length}
+        <section class="scheduled-strip" aria-label="Pedidos agendados">
+          <h2>Agendados</h2>
+          <ul>
+            {#each pedidosAgendados as pedido (pedido.id)}
+              <li>
+                <OrderSourceBadge order={pedido} />
+                <span class="scheduled-name">{pedidoTitulo(pedido)}</span>
+                <span class="scheduled-time">preparo a partir de {horaCurta(pedido.ifood?.preparationStartAt)}</span>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
       <section class="kitchen-board">
         <div class="lane">
           <div class="lane-header">
@@ -254,7 +330,8 @@
                     class="action-btn action-btn-danger"
                     aria-label="Cancelar pedido"
                     aria-describedby={!canCancelOrders ? 'cozinha-cancel-hint' : undefined}
-                    disabled={!canCancelOrders}
+                    disabled={!canCancelOrders || isIfoodOrder(pedido)}
+                    title={isIfoodOrder(pedido) ? 'Cancele pedidos do iFood pela tela de Pedidos' : undefined}
                     on:click={() => excluirPedido(pedido)}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -262,6 +339,7 @@
                 </div>
                 <div class="pedido-header">
                   <div>
+                    {#if isIfoodOrder(pedido)}<OrderSourceBadge order={pedido} />{/if}
                     <h3>{pedidoTitulo(pedido)}</h3>
                     <p>
                       {#if pedidoSubtitulo(pedido)}<span class="num-tag">{pedidoSubtitulo(pedido)}</span> · {/if}
@@ -273,6 +351,9 @@
                   </div>
                   <span>{pedido.itens.filter(i => !itemPronto(i)).length}/{pedido.itens.length}</span>
                 </div>
+                {#if isIfoodOrder(pedido)}
+                  <IfoodSyncState order={pedido} syncState={ifoodSync[pedido.id] || null} now={nowTick} compact />
+                {/if}
                 {#if pedido.observacoes}
                   <p class="observacoes">{pedido.observacoes}</p>
                 {/if}
@@ -298,7 +379,7 @@
                       <button
                         type="button"
                         on:click={() => marcarPedidoPronto(pedido)}
-                        disabled={itemPronto(item) || isMarking(pedido) || pedido.status !== 'preparing'}
+                        disabled={itemPronto(item) || isMarking(pedido) || pedido.status !== 'preparing' || comandoIfoodPendente(pedido) || resolveKitchenAdvance(pedido, 'ready').kind === 'none'}
                         aria-describedby={pedido.status === 'accepted' ? `cozinha-start-hint-${pedido.id}` : undefined}
                       >
                         {itemPronto(item) ? 'Pronto' : (isMarking(pedido) ? '...' : 'Marcar')}
@@ -312,8 +393,9 @@
                     type="button"
                     class="pedido-action-btn"
                     on:click={() => marcarPedidoPreparando(pedido)}
+                    disabled={comandoIfoodPendente(pedido)}
                   >
-                    Iniciar preparo
+                    {comandoIfoodPendente(pedido) ? 'Aguardando o iFood...' : 'Iniciar preparo'}
                   </button>
                 {/if}
               </article>
@@ -330,6 +412,7 @@
             {#each pedidosProntos as pedido (pedido.id)}
               <article class="ready-card">
                 <div class="ready-info">
+                  {#if isIfoodOrder(pedido)}<OrderSourceBadge order={pedido} />{/if}
                   <h3>{pedidoTitulo(pedido)}</h3>
                   <p>
                     {#if pedidoSubtitulo(pedido)}<span class="num-tag">{pedidoSubtitulo(pedido)}</span> · {/if}
@@ -343,7 +426,8 @@
                     class="action-btn action-btn-danger"
                     aria-label="Cancelar pedido"
                     aria-describedby={!canCancelOrders ? 'cozinha-cancel-hint' : undefined}
-                    disabled={!canCancelOrders}
+                    disabled={!canCancelOrders || isIfoodOrder(pedido)}
+                    title={isIfoodOrder(pedido) ? 'Cancele pedidos do iFood pela tela de Pedidos' : undefined}
                     on:click={() => excluirPedido(pedido)}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -777,5 +861,51 @@
       min-width: 80px;
       padding: 0.5rem 0.75rem;
     }
+  }
+
+  /* iFood scheduled orders (Task 11) */
+  .scheduled-strip {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px dashed var(--border-subtle);
+    border-radius: 12px;
+    background: var(--bg-card);
+  }
+
+  .scheduled-strip h2 {
+    margin: 0 0 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .scheduled-strip ul {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .scheduled-strip li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-label);
+    font-size: 0.85rem;
+  }
+
+  .scheduled-name {
+    color: var(--text-main);
+    font-weight: 700;
+  }
+
+  .scheduled-time {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
   }
 </style>

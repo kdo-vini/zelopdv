@@ -183,8 +183,17 @@ hooks opcionais `reconcile`/`evaluateHealth`, enquanto o bootstrap padrão
 continua fail-closed; a validação focada passou 15/15, a combinada passou
 123/123 e `npm.cmd run check` terminou em 0 erros/0 warnings.
 
-**Próximo passo linear:** Task 11 — integrar iFood nas filas de Pedidos e
-Cozinha; não iniciar Tasks 12+ antes de registrar essa task no plano.
+**Task 11 do iFood (2026-09-16):** pedidos iFood aparecem nas filas de
+Pedidos e Cozinha com badge textual, número curto do iFood, relógio de
+confirmação 4/6/8 min, estado de sincronização separado do status comercial,
+códigos de retirada/entrega, itens sem vínculo e faixa de agendados (entram na
+Cozinha só em `preparationStartAt`). Ações iFood viram comandos assíncronos
+da Task 10; outros canais seguem em `transition_zelo_order`. O normalizer
+passou a ler `delivery.deliveryAddress` e a guardar só nome/telefone/endereço
+(sem CPF). Divisão de execução a partir desta task: backend Codex, frontend
+Claude. Harness com 6 verificadores iFood verde; 316 testes; check 0/0.
+
+**Próximo passo linear:** Task 12 — vínculo de produtos iFood e estoque.
 
 **Task 10 do iFood (2026-09-16):** comandos assíncronos agora entram por uma
 rota autenticada, tenant-scoped e sem chamada ao provider no request do

@@ -67,11 +67,94 @@ export function itemModifierGroups(item) {
   return normalizeModifierGroups(item?.pizza && !groups.some((group) => group.groupId === '__pizza_size' || group.groupName === 'Tamanho') ? [...pizzaModifiers(item.pizza), ...groups] : groups);
 }
 
-export function mapCanonicalOrder(row) {
+/**
+ * iFood items store the provider's flat option list
+ * (`[{ name, groupName, quantity }]`); group it into the queue's
+ * `{ groupName, selectedOptions }` shape so both screens render it like any
+ * other channel's modifiers.
+ */
+function groupIfoodOptions(options) {
+  if (!Array.isArray(options)) return [];
+  const groups = new Map();
+  for (const option of options) {
+    const name = typeof option?.name === 'string' ? option.name.trim() : '';
+    if (!name) continue;
+    const groupName = (typeof option?.groupName === 'string' && option.groupName.trim()) || 'Opções';
+    if (!groups.has(groupName)) groups.set(groupName, { groupName, selectedOptions: [] });
+    groups.get(groupName).selectedOptions.push({ optionName: name, quantity: Number(option?.quantity || 1) });
+  }
+  return [...groups.values()];
+}
+
+function stringOrNull(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+/**
+ * Normalizes the iFood snapshot stored by `project_ifood_order_event_v1` into
+ * the flat delivery/payment fields the existing queue presentation reads.
+ * Returns `{ ifood, fulfillment, payment, phone }` for iFood rows only.
+ */
+function ifoodViewParts(row) {
   const customer = row?.customer || {};
   const fulfillment = row?.fulfillment || {};
+  const payment = row?.payment || {};
+  const block = fulfillment.ifood && typeof fulfillment.ifood === 'object' ? fulfillment.ifood : {};
+  const address = customer.deliveryAddress && typeof customer.deliveryAddress === 'object'
+    ? customer.deliveryAddress
+    : {};
+
+  const deliveryFields = {
+    deliveryStreet: stringOrNull(address.streetName) || stringOrNull(address.formattedAddress),
+    deliveryNumber: stringOrNull(address.streetNumber),
+    deliveryComplement: stringOrNull(address.complement),
+    deliveryNeighborhood: stringOrNull(address.neighborhood),
+    deliveryCity: stringOrNull(address.city),
+    deliveryState: stringOrNull(address.state),
+    deliveryPostalCode: stringOrNull(address.postalCode),
+    deliveryReference: stringOrNull(address.reference)
+  };
+
+  const methods = Array.isArray(payment.methods) ? payment.methods : [];
+  const cashMethod = methods.find((method) => method?.cash && Number.isFinite(Number(method.cash.changeFor)));
+  const changeFor = cashMethod ? Number(cashMethod.cash.changeFor) : null;
+  const total = Number(row?.total || 0);
+  const cashFields = changeFor !== null && changeFor > 0
+    ? { valorRecebido: changeFor, troco: Math.max(0, Math.round((changeFor - total) * 100) / 100) }
+    : {};
+
+  const phone = customer.phone && typeof customer.phone === 'object'
+    ? [stringOrNull(customer.phone.number), stringOrNull(customer.phone.localizer) ? `(localizador ${customer.phone.localizer.trim()})` : null]
+      .filter(Boolean).join(' ')
+    : stringOrNull(customer.phone);
+
+  return {
+    ifood: {
+      displayId: stringOrNull(block.displayId),
+      externalOrderId: stringOrNull(block.externalOrderId),
+      preparationStartAt: stringOrNull(block.preparationStartAt),
+      scheduled: block.scheduled === true,
+      scheduleStart: stringOrNull(block.scheduleStart),
+      scheduleEnd: stringOrNull(block.scheduleEnd),
+      pickupCode: stringOrNull(block.pickupCode),
+      deliveryCode: stringOrNull(block.deliveryCode)
+    },
+    fulfillment: { ...fulfillment, ...Object.fromEntries(Object.entries(deliveryFields).filter(([, value]) => value !== null)) },
+    payment: { ...payment, ...cashFields },
+    phone: phone || ''
+  };
+}
+
+export function mapCanonicalOrder(row) {
+  const customer = row?.customer || {};
+  const isIfood = row?.source === 'ifood';
+  const ifoodParts = isIfood ? ifoodViewParts(row) : null;
+  const fulfillment = ifoodParts ? ifoodParts.fulfillment : (row?.fulfillment || {});
+  const payment = ifoodParts ? ifoodParts.payment : (row?.payment || {});
   const items = (row?.zelo_order_items || []).map((item) => {
-    const modifierGroups = itemModifierGroups(item);
+    const modifierGroups = isIfood
+      ? normalizeModifierGroups(groupIfoodOptions(item.modifiers))
+      : itemModifierGroups(item);
     return {
       ...(modifierGroups.length ? { modifierGroups } : {}),
       id: item.id,
@@ -88,20 +171,21 @@ export function mapCanonicalOrder(row) {
 
   return {
     id: row.id,
-    numero_pedido: String(row.id).slice(0, 8).toUpperCase(),
+    numero_pedido: ifoodParts?.ifood.displayId || String(row.id).slice(0, 8).toUpperCase(),
     status: row.status,
     revision: Number(row.revision || 0),
     observacoes: row.observations || fulfillment.observations || '',
     nome_cliente: customer.name || customer.nome || '',
-    customer_phone: customer.phone || customer.telefone || '',
-    origem: 'zelomenu',
+    customer_phone: ifoodParts ? ifoodParts.phone : (customer.phone || customer.telefone || ''),
+    origem: row.source || 'zelomenu',
     source: row.source,
+    ifood: ifoodParts ? ifoodParts.ifood : null,
     criado_em: row.created_at,
     total: Number(row.total || 0),
     delivery_fee: Number(row.delivery_fee || 0),
-    payment: row.payment || {},
+    payment,
     fulfillment,
-    forma_pagamento: canonicalPaymentMethod(row),
+    forma_pagamento: canonicalPaymentMethod({ payment }),
     tipo_pedido: canonicalFulfillmentMode(row),
     pedido_itens: items,
     itens: items,

@@ -14,6 +14,7 @@ const orders = {
 
 const contractKeys = [
   'externalOrderId',
+  'displayId',
   'merchantId',
   'externalStatus',
   'occurredAt',
@@ -35,13 +36,14 @@ describe('normalizeIfoodOrder', () => {
     expect(Object.keys(normalized).sort()).toEqual([...contractKeys].sort());
     expect(normalized).toMatchObject({
       externalOrderId: order.id,
+      displayId: order.displayId,
       merchantId: order.merchant.id,
       externalStatus: 'PLACED',
       occurredAt: order.createdAt,
       scheduled: order.orderTiming === 'SCHEDULED',
       preparationStartAt: order.preparationStartDateTime
     });
-    expect(normalized.customerSnapshot).toMatchObject({ id: order.customer.id, name: order.customer.name });
+    expect(normalized.customerSnapshot).toMatchObject({ name: order.customer.name });
     expect(normalized).not.toHaveProperty('analytics');
     expect(normalized).not.toHaveProperty('raw');
   });
@@ -89,21 +91,93 @@ describe('normalizeIfoodOrder', () => {
     expect(normalized.payment.methods[0]).toMatchObject({ value: 29, type: 'ONLINE', method: 'PIX' });
   });
 
-  it('keeps the buyer snapshot operational while leaving analytics free of PII', () => {
+  it('reads deliveryAddress and keeps only operational customer fields', () => {
     const order = {
       ...orders.ifoodDelivery,
       customer: {
         ...orders.ifoodDelivery.customer,
-        phone: 'phone-fixture',
-        address: { street: 'address-fixture', number: '1' }
+        documentNumber: 'cpf-fixture',
+        documentType: 'CPF',
+        segmentation: 'SEGMENTATION_FIXTURE',
+        ordersCountOnMerchant: 7,
+        phone: {
+          number: 'phone-fixture',
+          localizer: 'localizer-fixture',
+          localizerExpiration: '2026-09-15T19:00:00.000Z'
+        }
+      },
+      delivery: {
+        ...orders.ifoodDelivery.delivery,
+        address: {
+          streetName: 'wrong-fallback-street-fixture'
+        },
+        deliveryAddress: {
+          streetName: 'street-fixture',
+          streetNumber: '123',
+          formattedAddress: 'formatted-address-fixture',
+          neighborhood: 'neighborhood-fixture',
+          complement: 'complement-fixture',
+          postalCode: 'postal-code-fixture',
+          city: 'city-fixture',
+          state: 'state-fixture',
+          country: 'country-fixture',
+          reference: 'reference-fixture',
+          coordinates: { latitude: 1.23, longitude: 4.56 }
+        }
       }
     };
 
     const normalized = normalizeIfoodOrder(order);
 
-    expect(normalized.customerSnapshot).toMatchObject({ phone: 'phone-fixture', address: { street: 'address-fixture' } });
+    expect(normalized.customerSnapshot).toEqual({
+      name: 'Cliente Teste',
+      phone: {
+        number: 'phone-fixture',
+        localizer: 'localizer-fixture',
+        localizerExpiration: '2026-09-15T19:00:00.000Z'
+      },
+      deliveryAddress: {
+        streetName: 'street-fixture',
+        streetNumber: '123',
+        formattedAddress: 'formatted-address-fixture',
+        neighborhood: 'neighborhood-fixture',
+        complement: 'complement-fixture',
+        postalCode: 'postal-code-fixture',
+        city: 'city-fixture',
+        state: 'state-fixture',
+        country: 'country-fixture',
+        reference: 'reference-fixture'
+      }
+    });
+    expect(normalized.customerSnapshot).not.toHaveProperty('id');
+    expect(normalized.customerSnapshot).not.toHaveProperty('documentNumber');
+    expect(normalized.customerSnapshot).not.toHaveProperty('documentType');
+    expect(normalized.customerSnapshot).not.toHaveProperty('segmentation');
+    expect(normalized.customerSnapshot).not.toHaveProperty('ordersCountOnMerchant');
+    expect(normalized.customerSnapshot.deliveryAddress).not.toHaveProperty('coordinates');
     expect(normalized.analytics).toBeUndefined();
-    expect(JSON.stringify(normalized)).toContain('phone-fixture');
+    expect(JSON.stringify(normalized.customerSnapshot)).toContain('phone-fixture');
+    expect(JSON.stringify(normalized.customerSnapshot)).not.toContain('cpf-fixture');
+  });
+
+  it('uses the legacy delivery.address only when deliveryAddress is absent', () => {
+    const order = {
+      ...orders.ifoodDelivery,
+      delivery: {
+        ...orders.ifoodDelivery.delivery,
+        address: { streetName: 'legacy-street-fixture', streetNumber: '9' }
+      }
+    };
+
+    expect(normalizeIfoodOrder(order).customerSnapshot.deliveryAddress).toEqual({
+      streetName: 'legacy-street-fixture',
+      streetNumber: '9'
+    });
+  });
+
+  it('normalizes displayId as an optional string', () => {
+    expect(normalizeIfoodOrder({ ...orders.ifoodDelivery, displayId: undefined }).displayId).toBeNull();
+    expect(() => normalizeIfoodOrder({ ...orders.ifoodDelivery, displayId: 7421 })).toThrow(/displayId/i);
   });
 
   it.each([

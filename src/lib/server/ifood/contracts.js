@@ -73,6 +73,7 @@ const EXTERNAL_STATUS_ALIASES = Object.freeze({
 
 export const IFOOD_ORDER_CONTRACT_KEYS = Object.freeze([
   'externalOrderId',
+  'displayId',
   'merchantId',
   'externalStatus',
   'occurredAt',
