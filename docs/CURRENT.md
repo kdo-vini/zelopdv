@@ -1,15 +1,16 @@
-# Tasks 1–13 concluídas
+# Tasks 1–14 concluídas
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
 Trabalho em `codex/ifood-mvp` (retomada Cursor Cloud em
-`cursor/ifood-task-12-cdb9`). **Tasks 1–13 concluídas** (contrato/arquitetura,
+`cursor/ifood-task-12-cdb9`). **Tasks 1–14 concluídas** (contrato/arquitetura,
 domínio/normalização, persistência com leases, worker dedicado, adapter HTTP
 de produção, webhook assinado durável, processamento da inbox com
 retry/dead-letter, projeção canônica em `zelo_orders`, reconciliação/presença,
 comandos assíncronos, filas Pedidos/Cozinha, mapeamento progressivo de
-produtos com ledger de estoque, e coordenação de impressão sem duplicidade) e a **revisão de
-conformidade das Tasks 1–6 (2026-09-16) está fechada** — ver
+produtos com ledger de estoque, coordenação de impressão sem duplicidade, e
+materialização de venda operacional + estorno auditável fora do caixa) e a
+**revisão de conformidade das Tasks 1–6 (2026-09-16) está fechada** — ver
 `docs/superpowers/plans/2026-09-15-ifood-mvp.md`, seção
 "Revisão de conformidade das Tasks 1–6 (2026-09-16)" logo após o Resultado
 real da Task 6, para o detalhe de cada gap (G1–G6) fechado: harness
@@ -215,6 +216,35 @@ ticket mostra display id/códigos iFood. Fallback temporário `resolvePrintOwner
 → 'zelo'` até Task 17/18 expor a conexão. Reimpressão manual em Pedidos
 continua livre.
 
+**Task 14 do iFood (2026-09-17, Cursor Cloud):** venda operacional e estorno
+auditável. Migration `20260917020813_ifood_sales_and_reversals.sql` adiciona
+`vendas.canal_origem` (check `pdv|zelomenu|zelochat|mesa|manual|ifood` +
+índice `(id_usuario, created_at, canal_origem)`, backfill via
+`zelo_orders.sale_id`/`source`, default `pdv` para histórico sem vínculo) e
+`vendas_estornos` (`event_id unique`, `status applied|pending_review`, no
+máximo um `applied` por venda via índice único parcial). RPCs
+`materialize_ifood_sale_v1`/`reverse_ifood_sale_v1` são `SECURITY DEFINER`,
+`search_path=''`, `service_role`-only (mesmo endurecimento da Task 12).
+Materialize só age em `source='ifood'`+`status='delivered'`; `id_caixa`
+sempre `null`; nunca cria `pessoas`/`fiado_lancamentos`/
+`vendas_taxas_plataforma`; `client_sale_id='zelo-order:'||id` garante
+idempotência; pagamento `fiado` é sempre coagido para `outro`. Reverse nunca
+apaga a venda: `event_id` duplicado ou segunda reversão da mesma venda →
+`duplicate`; sem venda materializada → `no_sale`; cancelamento inequívoco →
+`status='applied'`; total divergente ou pedido ainda não cancelado →
+`status='pending_review'`. `ensure_zelo_order_sale` (`create or replace`)
+ganhou branch `source='ifood'` delegando a `materialize_ifood_sale_v1`, mas
+esse caminho automático nunca materializa nada de fato (trigger `BEFORE
+UPDATE` vê a linha pré-UPDATE); a materialização real é a chamada
+best-effort de `eventHandler.js` após a projeção comitar, via
+`salesRepository.js` novo (mesmo padrão de `productMappingRepository.js`).
+Suíte alvo (`ifood.sales-schema` + `ifood.event-handler` +
+`canonicalOrderSales` + `salesCreationRbacSchema`) **42/42 verde**; os dois
+últimos ficaram intocados (leem `.ai/migrations/canonical_order_sales_
+2026_07_23.sql`, arquivo legado). Harness local e aplicação em produção
+**pendentes** (sem Docker/`pwsh` neste ambiente; migration não aplicada ao
+Supabase vinculado).
+
 **Produção (2026-09-16, autorizado pelo dono):** as duas migrations novas da
 Task 11 — `ifood_order_sync_state` (RPC
 `get_ifood_order_sync_state_v1`) e `ifood_projection_display_fields`
@@ -229,27 +259,34 @@ sem nenhum efeito colateral (nenhuma linha tocada em `zelo_orders` real).
 Branch `codex/ifood-mvp` (commit `fc59017`, depois handoff `aa9297d`) enviada
 para `https://github.com/kdo-vini/zelopdv`.
 
-**Próximo passo linear:** Task 14 — materializar venda e estorno.
+**Próximo passo linear:** Task 15 — expor canal de venda nos relatórios.
 
-## Handoff para retomada externa (Cursor Cloud) — 2026-09-17
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 14)
 
-Trabalho retomado nesta sessão a partir do handoff de 2026-09-16. Estado após
-Task 13:
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 13).
+Estado após Task 14:
 
-1. Este arquivo (`docs/CURRENT.md`) — blocos Task 12 e Task 13 acima.
-2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultados reais 12–13.
-3. Próxima task: **Task 14** (venda operacional e estorno) — backend/SQL;
-   gerar migration com `supabase migration new` e não editar migrations
-   já aplicadas.
+1. Este arquivo (`docs/CURRENT.md`) — blocos Task 12, Task 13 e Task 14 acima.
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultados reais 12–14.
+3. Próxima task: **Task 15** (expor canal iFood nos relatórios) —
+   frontend/relatórios; ler `canal_origem` já disponível em `vendas`.
 
 **Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
 Commits: Task 12 `feat: add progressive iFood product mapping`; Task 13
-`feat: coordinate iFood order printing`.
+`feat: coordinate iFood order printing`. **Task 14 ainda não commitada** —
+mudanças da migration `20260917020813_ifood_sales_and_reversals.sql`,
+`salesRepository.js`, `eventHandler.js`, testes e docs ficaram no working
+tree para o coordenador revisar e commitar (`feat: materialize iFood sales
+and reversals`).
 
 **Estado validado nesta sessão:**
 - Task 13 print suites: 5 arquivos / 23 testes verdes.
-- Migration da Task 12 **ainda não aplicada** em produção; harness Task 12
-  pendente na máquina do coordenador.
+- Task 14 suíte alvo (`ifood.sales-schema` + `ifood.event-handler` +
+  `canonicalOrderSales` + `salesCreationRbacSchema`): 4 arquivos / 42 testes
+  verdes.
+- Migrations das Tasks 12 e 14 **ainda não aplicadas** em produção; harness
+  descartável pendente na máquina do coordenador (sem Docker/`pwsh` neste
+  ambiente Linux Cloud).
 
 **Pendências conhecidas, fora do escopo do iFood:**
 - O drift de `storage_policies` do harness (documentado para o dono, não é
@@ -259,8 +296,8 @@ Commits: Task 12 `feat: add progressive iFood product mapping`; Task 13
   não ligado).
 - Leitura browser de `connections.print_owner` ainda depende das Tasks 17/18.
 
-**Próximo passo real (Task 14):** materializar venda e estorno — ver
-`## Task 14: Criar venda operacional e estorno auditável` no plano.
+**Próximo passo real (Task 15):** expor canal de venda iFood nos relatórios —
+ver `## Task 15: Expor vendas iFood nos relatórios existentes` no plano.
 
 ## Handoff para retomada externa (Cursor Cloud) — 2026-09-16 (histórico)
 

@@ -412,6 +412,77 @@ Conclusao operacional:
   `fiado.receber`/`pessoas.gerenciar`; esta migration não altera o ledger nem o
   contrato de recebimento.
 
+## Vendas iFood: canal_origem e estornos (Task 14, 2026-09-17)
+
+Migration `supabase/migrations/20260917020813_ifood_sales_and_reversals.sql`
+(**validada apenas no schema test/harness local, não aplicada no Supabase
+vinculado**).
+
+- `public.vendas` ganha `canal_origem text not null` com
+  `CHECK (canal_origem = any (array['pdv','zelomenu','zelochat','mesa','manual','ifood']))`
+  e índice `idx_vendas_usuario_created_canal (id_usuario, created_at, canal_origem)`.
+  Backfill: para vendas ligadas por `zelo_orders.sale_id`, usa o `source` do
+  pedido (`whatsapp`/`legacy_zelochat` → `zelochat`, `legacy_pedido` → `pdv`);
+  toda venda sem esse vínculo (inclui histórico de PDV e de Mesa) recebe
+  `pdv` — simplificação deliberada e documentada, só o histórico é grosseiro,
+  vendas novas são estampadas corretamente. Um trigger novo
+  `vendas_default_canal_origem` (BEFORE INSERT, sem grants especiais — mesmo
+  padrão de `vendas_insert_rbac_guard`) estampa `mesa` quando
+  `tipo_pedido = 'mesa'` e `pdv` nos demais casos, apenas quando o INSERT não
+  passou `canal_origem` explicitamente; `ensure_zelo_order_sale` e
+  `materialize_ifood_sale_v1` sempre estampam o valor deles mesmos.
+- `public.vendas_estornos` é o ledger auditável de estorno: `event_id`
+  `unique`, `status in ('applied','pending_review')`, índice único parcial
+  `idx_vendas_estornos_applied_per_venda (id_venda) where status = 'applied'`
+  (no máximo um estorno `applied` por venda). RLS ligado; SELECT para
+  `authenticated` exige owner + `relatorios.ver` (mesmo padrão de
+  `vendas_taxas_plataforma`); INSERT/UPDATE/DELETE só `service_role`.
+- `materialize_ifood_sale_v1(merchant_id, external_order_id)` e
+  `reverse_ifood_sale_v1(merchant_id, external_order_id, event_id)` são
+  `SECURITY DEFINER`, `search_path = ''`, e exigem
+  `coalesce(current_setting('role', true) = 'service_role', false)` — mesmo
+  endurecimento de `20260917014734_ifood_product_mapping_stock.sql`. Nenhuma
+  das duas tem EXECUTE para `anon`/`authenticated`.
+- `materialize_ifood_sale_v1` só materializa quando o pedido tem
+  `source='ifood'` e `status='delivered'`; `id_caixa` é sempre `null`; nunca
+  cria `pessoas`/`fiado_lancamentos` nem `vendas_taxas_plataforma`;
+  `client_sale_id = 'zelo-order:'||id` garante idempotência (chamar duas
+  vezes retorna `already_exists` com o mesmo `venda_id`). Itens e
+  `modifiers` são copiados de `zelo_order_items`; cada linha de
+  `payment.methods[]` gera sua própria linha em `vendas_pagamentos` (split
+  preservado); qualquer método que resolva para `fiado` é forçado para
+  `outro` antes de gravar — nenhuma linha `fiado` chega a `vendas_pagamentos`
+  para pedido iFood.
+- `reverse_ifood_sale_v1` nunca apaga a venda. Um `event_id` repetido, ou um
+  segundo `event_id` distinto para uma venda já revertida (via o índice
+  único parcial), volta `duplicate`. Pedido nunca entregue (sem venda) volta
+  `no_sale`. Cancelamento inequívoco (pedido `status='cancelled'` e
+  `zelo_orders.total` ainda igual ao `valor_total` gravado na venda) grava
+  `status='applied'`. Qualquer ambiguidade — pedido ainda não cancelado, ou
+  total divergente porque um evento terminal posterior sobrescreveu o
+  snapshot do pedido (`project_ifood_order_event_v1` já documenta essa
+  sobrescrita) — grava `status='pending_review'` em vez de aplicar
+  automaticamente.
+- `ensure_zelo_order_sale` (`create or replace`, corpo aplicado nunca editado
+  em arquivo antigo) ganha um branch para `source='ifood'`: exige
+  `status='delivered'`, resolve `merchant_id`/`external_order_id` via
+  `ifood_internal.order_refs.zelo_order_id` e delega inteiramente a
+  `materialize_ifood_sale_v1`. Esse branch é uma ferramenta de
+  reparo/consistência (mesmo papel que a varredura legada de "entregues sem
+  venda"): o trigger `zelo_order_sale_on_deliver` já existente dispara
+  incondicionalmente sempre que um pedido chega a `delivered`, inclusive os
+  projetados por `project_ifood_order_event_v1`, mas dispara **antes** do
+  mesmo UPDATE aplicar `status`/`total`/`payment` na tupla (semântica BEFORE
+  ROW do Postgres) — um `SELECT` simples dentro do trigger ainda vê a linha
+  pré-UPDATE, então esse caminho automático sempre observa `status`
+  diferente de `delivered` e não materializa nada (não erra, só não faz
+  nada). A materialização real do fluxo ao vivo é a chamada explícita e
+  best-effort de `materializeSaleForEvent` pelo `eventHandler.js` **depois**
+  da transação de projeção já ter comitado — mesmo padrão dos hooks de
+  estoque da Task 12. Para as demais fontes, o corpo genérico de
+  caixa/pagamento/item é o mesmo de sempre; só ganhou o cálculo de
+  `canal_origem` a partir do `source` do pedido antes do INSERT.
+
 ## Regras praticas para mudancas
 
 1. Se tocar em `supabaseAdmin`, documente por que a operacao precisa furar RLS.

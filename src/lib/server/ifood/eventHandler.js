@@ -126,6 +126,8 @@ function safeLog(logger, message) {
  * @property {(args: { merchantId: string, externalOrderId: string, externalStatus: string, signal?: AbortSignal }) => Promise<unknown>} [confirmCommandsForEvent]
  * @property {(args: { merchantId: string, externalOrderId: string, eventId: string, items: object[], signal?: AbortSignal }) => Promise<unknown>} [commitStockForEvent]
  * @property {(args: { merchantId: string, externalOrderId: string, eventId: string, signal?: AbortSignal }) => Promise<unknown>} [releaseStockForEvent]
+ * @property {(args: { merchantId: string, externalOrderId: string, signal?: AbortSignal }) => Promise<unknown>} [materializeSaleForEvent]
+ * @property {(args: { merchantId: string, externalOrderId: string, eventId: string, signal?: AbortSignal }) => Promise<unknown>} [reverseSaleForEvent]
  */
 export function createIfoodEventHandler({
   integration,
@@ -272,6 +274,35 @@ export function createIfoodEventHandler({
             });
           } catch {
             safeLog(logger, 'iFood stock release failed after projection');
+          }
+        }
+        // Sale materialization/reversal follows the exact same best-effort
+        // rule as stock above: a failure here must not reopen the inbox.
+        // materialize is idempotent via vendas.client_sale_id; reverse is
+        // idempotent via vendas_estornos.event_id and the one-applied-per-
+        // sale unique index (see 20260917020813_ifood_sales_and_reversals.sql).
+        if (externalStatus === 'CONCLUDED'
+          && typeof repository.materializeSaleForEvent === 'function') {
+          try {
+            await repository.materializeSaleForEvent({
+              merchantId: row.merchantId,
+              externalOrderId,
+              signal: context.signal
+            });
+          } catch {
+            safeLog(logger, 'iFood sale materialization failed after projection');
+          }
+        } else if (externalStatus === 'CANCELLED'
+          && typeof repository.reverseSaleForEvent === 'function') {
+          try {
+            await repository.reverseSaleForEvent({
+              merchantId: row.merchantId,
+              externalOrderId,
+              eventId: row.eventId,
+              signal: context.signal
+            });
+          } catch {
+            safeLog(logger, 'iFood sale reversal failed after projection');
           }
         }
         return processed();
