@@ -107,13 +107,18 @@ describe('copy exata do estado vazio "faca sua primeira venda" (VirtualProductGr
   it('mostra titulo, texto, CTAs e rodape exatos quando nao ha nenhum produto cadastrado', () => {
     expect(source).toContain("hasAnyProducts ? 'Nenhum produto encontrado' : 'Faça sua primeira venda'");
     expect(source).toContain('Cadastre seu primeiro produto para começar. É rápido: nome e preço.');
-    // O "+" antes de "Cadastrar primeiro produto" e "Ou venda avulsa" virou um
-    // ícone lucide Plus ao lado do texto (ver especificação de design do
-    // estado vazio) — o texto em si continua exatamente o mesmo.
-    // PR #39: hierarquia invertida para reforçar o caminho canônico (produto primeiro).
+    // Plus lucide só no CTA primário de cadastro; "Ou venda avulsa" fica sem ícone
+    // para não competir com o caminho canônico (PR #39 + polish do coachmark).
     expect(source).toContain('Cadastrar primeiro produto');
     expect(source).toContain("hasAnyProducts ? 'Testar com item avulso' : 'Ou venda avulsa'");
     expect(source).toContain('Seus produtos aparecerão aqui.');
+  });
+
+  it('Plus aparece só em "Cadastrar primeiro produto", nunca em "Ou venda avulsa"', () => {
+    expect(source).toMatch(/<Plus size=\{18\}[\s\S]{0,80}Cadastrar primeiro produto/);
+    const avulsaIdx = source.indexOf("hasAnyProducts ? 'Testar com item avulso' : 'Ou venda avulsa'");
+    expect(avulsaIdx).toBeGreaterThan(-1);
+    expect(source.slice(avulsaIdx - 220, avulsaIdx)).not.toContain('<Plus');
   });
 
   it('o CTA de cadastro dispara um evento (cadastrarProdutoClick), nunca navega para /gestao/produtos', () => {
@@ -128,5 +133,43 @@ describe('copy exata do estado vazio "faca sua primeira venda" (VirtualProductGr
 
   it('o estado de busca/filtro sem resultado (hasAnyProducts true) continua com a copy antiga', () => {
     expect(source).toContain('Tente limpar a busca ou escolher outra categoria. Se quiser vender mesmo assim, use um item avulso.');
+  });
+});
+
+describe('coachmark pos-primeiro-produto (VirtualProductGrid + Frente de Caixa)', () => {
+  const grid = readFileSync('src/lib/components/VirtualProductGrid.svelte', 'utf8');
+  const page = readFileSync('src/routes/app/+page.svelte', 'utf8');
+
+  it('cola a dica no tile (nao no centro da viewport) com copy mobile-first', () => {
+    expect(grid).toContain('Toque no produto para somar na venda');
+    expect(grid).not.toContain('Clique no produto acima');
+    expect(grid).toContain('coachmarkProductId');
+    expect(grid).toContain('top: calc(100% + 8px)');
+    expect(grid).toContain('prod-tile-highlight');
+    expect(page).not.toContain('helper-primeiro-click');
+  });
+
+  it('seta aponta para o tile via ChevronUp lucide, sem SVG inline na dica', () => {
+    expect(grid).toContain('ChevronUp');
+    expect(grid).toContain("import { Receipt, Plus, ChevronUp } from 'lucide-svelte'");
+    const coachmarkBlock = grid.slice(grid.indexOf('prod-coachmark'), grid.indexOf('prod-coachmark-text'));
+    expect(coachmarkBlock).not.toContain('<svg');
+  });
+
+  it('Entendi e ghost (nao primario/sky) e o clique no produto dispensa a dica', () => {
+    expect(grid).toContain('prod-coachmark-dismiss');
+    expect(grid).toMatch(/\.prod-coachmark-dismiss \{[\s\S]*?background: transparent;/);
+    expect(grid).toContain("if (coachmarkProductId != null) dispatch('coachmarkDismiss')");
+    expect(grid).toContain("dispatch('produtoClick'");
+    expect(page).toContain('on:coachmarkDismiss={fecharHelperPrimeiroClick}');
+    expect(page).toContain('8000');
+  });
+
+  it('motion e um pop unico com prefers-reduced-motion, sem pulse infinito', () => {
+    expect(grid).toContain('prod-tile-pop');
+    expect(grid).toContain('prod-coachmark-pop');
+    expect(grid).not.toContain('infinite');
+    expect(grid).toContain('prefers-reduced-motion');
+    expect(page).not.toContain('pulse-border');
   });
 });

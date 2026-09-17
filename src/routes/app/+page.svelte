@@ -9,7 +9,6 @@
   // Ajuste: Removido o ".js" da importação para deixar o bundler resolver.
   import { supabase } from '$lib/supabaseClient';
   import { onMount, onDestroy, tick } from 'svelte';
-  import { slide } from 'svelte/transition';
   import { waitAuthReady } from '$lib/authStore';
   import { printVenda, printMovCaixa } from '$lib/printService';
   import { ensureActiveSubscription } from '$lib/guards';
@@ -114,6 +113,9 @@
   // Cadastro rápido de produto a partir do estado vazio da grade (sem produto cadastrado)
   let modalNovoProdutoAberto = false;
   let canGerenciarProdutos = true;
+  let mostrarHelperPrimeiroClick = false;
+  let helperPrimeiroClickProdutoId = null;
+  let timeoutHelperPrimeiroClick = null;
 
   // [NEW] Mobile State
   let showMobileCart = false;
@@ -352,6 +354,7 @@
       }
     if (pendentesInterval) clearInterval(pendentesInterval);
     unsubscribeOffline?.();
+    if (timeoutHelperPrimeiroClick) clearTimeout(timeoutHelperPrimeiroClick);
     });
 
   /** Atualiza o contador de vendas aguardando sincronização. */
@@ -1481,9 +1484,12 @@
     modalNovoProdutoAberto = true;
   }
 
-  // Para orientar usuário após criar o primeiro produto
-  let mostrarHelperPrimeiroClick = false;
-  let timeoutHelperPrimeiroClick = null;
+  function fecharHelperPrimeiroClick() {
+    if (timeoutHelperPrimeiroClick) clearTimeout(timeoutHelperPrimeiroClick);
+    timeoutHelperPrimeiroClick = null;
+    mostrarHelperPrimeiroClick = false;
+    helperPrimeiroClickProdutoId = null;
+  }
 
   /** Depois que o ModalNovoProduto cria o produto: recarrega o catálogo do PDV e fecha o modal. */
   async function produtoRapidoCriado(event) {
@@ -1504,12 +1510,14 @@
     busca = '';
     if (createdProduct?.id_categoria != null) categoriaAtiva = createdProduct.id_categoria;
 
-    // Se era o primeiro produto (estado vazio), mostra helper orientando a clicar no produto
-    if (eraEstadoVazio && isFirstUseNoCaixa) {
+    // Se era o primeiro produto (estado vazio), destaca o tile e cola a dica nele.
+    const createdId = createdProduct?.id ?? produtos[0]?.id ?? null;
+    if (eraEstadoVazio && isFirstUseNoCaixa && createdId != null) {
       if (timeoutHelperPrimeiroClick) clearTimeout(timeoutHelperPrimeiroClick);
+      helperPrimeiroClickProdutoId = createdId;
       mostrarHelperPrimeiroClick = true;
       timeoutHelperPrimeiroClick = setTimeout(() => {
-        mostrarHelperPrimeiroClick = false;
+        fecharHelperPrimeiroClick();
       }, 8000);
     }
   }
@@ -1763,7 +1771,9 @@
           {hasAnyProducts}
           canCadastrarProduto={canGerenciarProdutos}
           tabelaAtiva={tabelaAtiva}
+          coachmarkProductId={mostrarHelperPrimeiroClick ? helperPrimeiroClickProdutoId : null}
           on:produtoClick={(e) => adicionarProduto(e.detail)}
+          on:coachmarkDismiss={fecharHelperPrimeiroClick}
           on:valorAvulsoClick={() => {
             if (!hasAnyProducts) void capturePostHogEvent('pdv_empty_state_cta_clicked', { cta: 'avulso' });
             modalValorAberto = true;
@@ -1773,28 +1783,6 @@
             abrirModalNovoProdutoRapido();
           }}
         />
-        
-        {#if mostrarHelperPrimeiroClick}
-          <div class="helper-primeiro-click" transition:slide={{ duration: 300 }}>
-            <div class="helper-arrow" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <p class="helper-text">Clique no produto acima para adicionar na venda</p>
-            <button
-              type="button"
-              class="helper-dismiss"
-              aria-label="Dispensar dica"
-              on:click={() => {
-                if (timeoutHelperPrimeiroClick) clearTimeout(timeoutHelperPrimeiroClick);
-                mostrarHelperPrimeiroClick = false;
-              }}
-            >
-              Entendi
-            </button>
-          </div>
-        {/if}
       </div>
     {/if}
   </main>
@@ -2156,104 +2144,4 @@
   .pizza-edit { min-height: 44px; padding: .4rem .2rem; color: var(--primary); background: transparent; border: 0; font-size: .875rem; cursor: pointer; }
   .pizza-edit:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-  /* Helper de orientação para o primeiro produto criado */
-  .helper-primeiro-click {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 100;
-    max-width: 20rem;
-    padding: 1.25rem 1.5rem;
-    background: var(--bg-card);
-    border: 2px solid var(--primary);
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    text-align: center;
-    animation: pulse-border 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse-border {
-    0%, 100% {
-      border-color: var(--primary);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 0 var(--primary);
-    }
-    50% {
-      border-color: color-mix(in srgb, var(--primary) 70%, transparent);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 8px color-mix(in srgb, var(--primary) 20%, transparent);
-    }
-  }
-
-  .helper-arrow {
-    width: 2rem;
-    height: 2rem;
-    margin: 0 auto 0.75rem;
-    color: var(--primary);
-    animation: bounce-arrow 1.5s ease-in-out infinite;
-  }
-
-  @keyframes bounce-arrow {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-8px);
-    }
-  }
-
-  .helper-text {
-    margin: 0 0 1rem;
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.5;
-    color: var(--text-main);
-  }
-
-  .helper-dismiss {
-    min-height: 44px;
-    padding: 0.625rem 1.25rem;
-    border: 0;
-    border-radius: 0.5rem;
-    background: var(--primary);
-    color: var(--primary-text);
-    font-size: 0.9375rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background var(--transition-fast);
-  }
-
-  .helper-dismiss:hover {
-    background: var(--primary-hover);
-  }
-
-  .helper-dismiss:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
-  }
-
-  @media (max-width: 640px) {
-    .helper-primeiro-click {
-      top: auto;
-      bottom: 6rem;
-      transform: translateX(-50%);
-      max-width: calc(100% - 2rem);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .helper-primeiro-click {
-      animation: none;
-    }
-    .helper-arrow {
-      animation: none;
-    }
-    :global(.transition-colors),
-    :global(.transition-all),
-    :global(.transition-transform) {
-      transition: none;
-    }
-    :global(.active\:scale-95:active) {
-      transform: none;
-    }
-  }
 </style>

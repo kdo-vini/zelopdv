@@ -1,5 +1,12 @@
 # Fixes Progress
 
+- [x] FX-ATIVACAO-PRIMEIRA-VENDA-02 (2026-09-17) — Polish do coachmark/CTAs do
+  primeiro uso na Frente de Caixa (Spec A–B sobre PR #39). Helper deixou de
+  cobrir o tile: dica colada abaixo do produto, anel sky + lift, copy "Toque
+  no produto para somar na venda", ChevronUp lucide, Entendi ghost, dismiss no
+  `produtoClick` + 8 s, um pop (sem pulse). Plus só no "Cadastrar primeiro
+  produto". Título do vazio inalterado.
+
 - [x] FX-ADMIN-CHURN-FALSO-POSITIVO-01 (2026-09-17) — Admin analytics `/analytics`
   exibia contas ativas pagantes como "quiet" (alto risco de churn): `sales_30d=0`,
   `effective_last_seen null`. Product Lead e Staff Eng confirmaram via Supabase
