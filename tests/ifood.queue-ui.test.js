@@ -117,6 +117,13 @@ describe('mapCanonicalOrder with real order source', () => {
     expect(payment).toMatchObject({ isCash: true, received: 40, change: 11 });
   });
 
+  it('maps canal/origem from zelo_orders.source, not vendas.canal_origem', () => {
+    const mapped = mapCanonicalOrder(ifoodRow());
+    expect(mapped.source).toBe('ifood');
+    expect(mapped.origem).toBe('ifood');
+    expect(mapped).not.toHaveProperty('canal_origem');
+  });
+
   it('keeps non-iFood orders exactly as before (no ifood block)', () => {
     const mapped = mapCanonicalOrder(ifoodRow({ source: 'zelomenu', fulfillment: { mode: 'delivery' } }));
     expect(mapped.ifood).toBeNull();
@@ -125,9 +132,10 @@ describe('mapCanonicalOrder with real order source', () => {
 });
 
 describe('queue action routing', () => {
-  it('iFood orders advance through the command API, never transition_zelo_order', () => {
+  it('iFood confirm uses the canonical RPC; later steps stay on the command API', () => {
     const ifood = mapCanonicalOrder(ifoodRow());
-    expect(resolveQueueAdvance(ifood)).toEqual({ kind: 'ifood_command', intent: 'confirm' });
+    expect(resolveQueueAdvance(ifood)).toEqual({ kind: 'transition', action: 'accept' });
+    expect(resolveQueueAdvance({ ...ifood, status: 'accepted' })).toEqual({ kind: 'ifood_command', intent: 'start_preparation' });
     expect(resolveQueueAdvance({ ...ifood, status: 'ready' })).toEqual({ kind: 'ifood_command', intent: 'dispatch' });
     // An iFood order is never closed into a caixa sale from the queue.
     expect(resolveQueueAdvance({ ...ifood, status: 'out_for_delivery' })).toEqual({ kind: 'none' });

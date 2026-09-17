@@ -214,12 +214,14 @@ export function ifoodWaitingLabel(order) {
 }
 
 /**
- * Decides how the queue advances an order. iFood orders always go through
- * the asynchronous command API; every other channel keeps the existing
- * `transition_zelo_order` / `close_zelo_order` flow untouched.
+ * Decides how the queue advances an order. Confirm/accept for iFood uses
+ * `transition_zelo_order` so the DB enqueues `confirm` before flipping
+ * `pending_review`. Later kitchen/dispatch steps stay on the command API.
+ * `canal_origem` on `vendas` is stamped only after deliver.
  */
 export function resolveQueueAdvance(order) {
   if (isIfoodOrder(order)) {
+    if (order.status === 'pending_review') return { kind: 'transition', action: 'accept' };
     const intent = ifoodPrimaryIntent(order);
     return intent ? { kind: 'ifood_command', intent } : { kind: 'none' };
   }

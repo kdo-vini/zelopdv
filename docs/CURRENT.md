@@ -1,24 +1,34 @@
 # Tasks 1–21 + worker live+ready (GO parcial)
 
-## Handoff — 2026-09-17 (gate de produto quieto: Pedidos iFood)
+## Handoff — 2026-09-17 (DB path: enqueue iFood antes da transição)
 
-PDV `/app/pedidos` agora mostra canal/origem **iFood** e enfileira
-confirm/cancel pela API de comandos (`service_role`), sem mutar
-`zelo_orders` no clique. `transition_zelo_order` / `close_zelo_order` no
-cliente recusam `source=ifood` (fail-closed): essas RPCs só gravam
-`zelo_order_outbox` (`order.accept` / `order.reject`) e **não** chamam
-`enqueue_ifood_order_command_v1`. Alias de intent `accept→confirm` e
-`reject→cancel` na API. Cancel sem lista live do iFood usa motivo
-Developers `501` (conexão pausada/revogada continua 409). Fila de Pedidos
-abre com ZeloMenu **ou** um `zelo_orders.source=ifood`. Sem secrets.
-**Ainda GO parcial.**
+`accept_zelo_order` / `reject_zelo_order` / `transition_zelo_order`
+(cancel) agora chamam `enqueue_ifood_order_command_v1` **antes** de
+virar `zelo_orders.status`. Confirm exige `pending_review`. Intents:
+accept→confirm; reject/cancel→cancel com `cancellationCode` default
+`501`. O helper SECURITY DEFINER eleva `SET LOCAL ROLE service_role`
+e `set_config('role','service_role',true)` só no enqueue; mesma
+transação, rollback limpa comando órfão. PDV confirma/rejeita/cancela
+por essas RPCs (`source=ifood`); cozinha/dispatch seguem a API de
+comandos. Canal/origem na fila vem de `zelo_orders.source` —
+`vendas.canal_origem` só depois do deliver. Migration
+`20260917180000_ifood_canonical_command_enqueue.sql`. Fail-closed.
+Sem secrets. **Ainda GO parcial** (adapter HTTP + par `IFOOD_CLIENT_*`
+ainda necessários para o POST no iFood).
 
-Verificar com um **Pedido de teste novo que fique PLACED** (o
-`320113f2-ede9-4217-95d1-fadfd831f9c5` já está `cancelled` e some da
-fila). Worker: `IFOOD_WORKER_PROCESS_COMMANDS=1` no Dokploy; envio HTTP
-ainda exige `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1` + par `IFOOD_CLIENT_*`.
+Verificar com um **Pedido de teste novo que fique PLACED**. Worker:
+`IFOOD_WORKER_PROCESS_COMMANDS=1` no Dokploy.
 
 **Branch:** `cursor/ifood-pdv-product-gate-fe47` (base `codex/ifood-mvp`)
+
+## Handoff — 2026-09-17 (gate de produto quieto: Pedidos iFood)
+
+PDV `/app/pedidos` mostra canal/origem **iFood** (`zelo_orders.source`).
+A primeira fatia usava só a API de comandos, sem mutar `zelo_orders` no
+clique; o handoff acima substitui confirm/cancel pelo caminho de banco.
+Cancel sem lista live do iFood usa motivo Developers `501` (conexão
+pausada/revogada continua 409). Fila de Pedidos abre com ZeloMenu **ou**
+um `zelo_orders.source=ifood`. Sem secrets. **Ainda GO parcial.**
 
 ## Handoff — 2026-09-17 (imagem worker: MODULE_NOT_FOUND)
 

@@ -434,11 +434,23 @@
   async function confirmarCancelamentoIfood() {
     const reason = ifoodCancelReasons.find((item) => item.code === ifoodCancelCode);
     if (!ifoodCancelOrder || !reason) return;
-    const ok = await enviarComandoIfood(ifoodCancelOrder, 'cancel', {
-      cancellationCode: reason.code,
-      reason: reason.description
-    });
-    if (ok) ifoodCancelOrder = null;
+    const pedido = ifoodCancelOrder;
+    const action = pedido.status === 'pending_review' ? 'reject' : 'cancel';
+    ifoodSending = true;
+    try {
+      await transitionCanonicalOrder(supabase, pedido, action, operadorUserId, {
+        cancellationCode: reason.code,
+        reason: reason.description
+      });
+      addToast(`Pedido #${pedido.numero_pedido} ${action === 'reject' ? 'rejeitado' : 'cancelado'}.`, 'success');
+      ifoodCancelOrder = null;
+      await carregarPedidos();
+    } catch (err) {
+      addToast('Erro: ' + getFriendlyErrorMessage(err), 'error');
+      await carregarPedidos();
+    } finally {
+      ifoodSending = false;
+    }
   }
 
   function statusLabel(status) {
@@ -454,6 +466,7 @@
     if (isIfoodOrder(pedido)) {
       const advance = resolveQueueAdvance(pedido);
       if (advance.kind === 'ifood_command') return ifoodIntentLabel(advance.intent);
+      if (advance.kind === 'transition' && advance.action === 'accept') return 'Confirmar pedido';
       return ifoodWaitingLabel(pedido) || 'Aguardando o iFood';
     }
     if (pedido.status === 'pending_review') return 'Aceitar pedido';
@@ -576,7 +589,7 @@
       </header>
 
       <p class="ifood-modal-lead">
-        Escolha o motivo. O pedido só aparece como cancelado depois que o iFood confirmar.
+        Escolha o motivo. O PDV cancela na hora e enfileira o pedido no iFood (código 501 se a lista não carregar).
       </p>
 
       {#if ifoodCancelLoading}
@@ -684,7 +697,10 @@
               >
                 <div class="qi-top">
                   {#if isIfoodOrder(pedido)}
-                    <OrderSourceBadge order={pedido} />
+                    <div class="qi-origin-block">
+                      <p class="qi-origin">Canal / origem iFood</p>
+                      <OrderSourceBadge order={pedido} />
+                    </div>
                   {:else}
                     <span class="order-num">#{pedido.numero_pedido}</span>
                   {/if}
@@ -716,12 +732,12 @@
                 </div>
               </button>
               <div class="queue-actions">
-                {#if ifoodAdvance?.kind === 'ifood_command'}
+                {#if ifoodAdvance?.kind === 'ifood_command' || ifoodAdvance?.kind === 'transition'}
                   <button
                     type="button"
                     class="action-btn action-btn-success"
                     aria-label="{canonicalActionLabel(pedido)} #{pedido.numero_pedido}"
-                    disabled={ifoodSending || ifoodHasPendingCommand(ifoodSync[pedido.id]) || !ifoodPermissionAllowed(ifoodAdvance.intent)}
+                    disabled={ifoodSending || (ifoodAdvance.kind === 'ifood_command' && (ifoodHasPendingCommand(ifoodSync[pedido.id]) || !ifoodPermissionAllowed(ifoodAdvance.intent)))}
                     on:click|stopPropagation={() => avancarPedidoCanonico(pedido)}
                   >
                     <CheckCircle2 class="size-4" aria-hidden="true" />
@@ -877,7 +893,7 @@
                   type="button"
                   class="btn-success"
                   on:click={() => avancarPedidoCanonico(pedidoSelecionado)}
-                  disabled={ifoodSending || ifoodComandoPendente || avancoSelecionado.kind !== 'ifood_command' || !ifoodIntentPermitido || pedidoSelecionado.localOnly}
+                  disabled={ifoodSending || pedidoSelecionado.localOnly || (avancoSelecionado.kind === 'ifood_command' && (ifoodComandoPendente || !ifoodIntentPermitido)) || (avancoSelecionado.kind !== 'ifood_command' && avancoSelecionado.kind !== 'transition')}
                   aria-describedby={!ifoodIntentPermitido ? 'pedidos-ifood-permission-hint' : undefined}
                 >
                   {#if ifoodSending}
@@ -953,6 +969,23 @@
     font-size: 0.7rem;
     font-weight: 800;
     letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .qi-origin-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .qi-origin {
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
   }
 

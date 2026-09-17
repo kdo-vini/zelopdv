@@ -1,13 +1,26 @@
 # Fixes Progress
 
+- [x] FX-IFOOD-CANONICAL-ENQUEUE-01 (2026-09-17) — accept/reject/cancel
+  canônicos enfileiram comando iFood **antes** de `transition_zelo_order`
+  virar o status. Helper
+  `enqueue_ifood_command_for_canonical_action_v1` eleva
+  `SET LOCAL ROLE` / `set_config('role','service_role',true)` para passar
+  no gate de `enqueue_ifood_order_command_v1`. Accept→confirm;
+  reject/cancel→cancel (`cancellationCode` default 501). Mesma TX:
+  falha não deixa comando órfão nem status pela metade. PDV confirma
+  via RPC; close/cozinha/dispatch iFood continuam na command API.
+  Origin na fila: `zelo_orders.source`. Migration
+  `20260917180000_ifood_canonical_command_enqueue.sql`. Fail-closed.
+  Sem secrets. Ainda GO parcial.
+
 - [x] FX-IFOOD-PDV-PRODUCT-GATE-01 (2026-09-17) — Pedidos iFood no PDV:
-  badge canal/origem, fila visível sem ZeloMenu se existir `source=ifood`,
-  accept/confirm e reject/cancel enfileiram via
-  `POST /api/integrations/ifood/orders/:id/commands` (service-role RPC).
-  `transitionCanonicalOrder`/`closeCanonicalOrder` recusam iFood.
-  Fallback de cancelamento Developers `501` só quando a lista live falha
-  sem 401/403/409. Flags de ciclo documentadas em `docs/operations/IFOOD.md`.
-  Sem migrations, sem secrets. Ainda GO parcial.
+  badge canal/origem, fila visível sem ZeloMenu se existir `source=ifood`.
+  Confirm/cancel passaram ao caminho de banco em FX-IFOOD-CANONICAL-ENQUEUE-01;
+  cozinha/dispatch seguem
+  `POST /api/integrations/ifood/orders/:id/commands`. Fallback de
+  cancelamento Developers `501` só quando a lista live falha sem 401/403/409.
+  Flags de ciclo documentadas em `docs/operations/IFOOD.md`. Sem secrets.
+  Ainda GO parcial.
 
 - [x] FX-IFOOD-WORKER-IMAGE-PAYMENTMETHODS-01 (2026-09-17) — imagem Docker do
   worker iFood saía com `MODULE_NOT_FOUND` no boot: `orderNormalizer.js`

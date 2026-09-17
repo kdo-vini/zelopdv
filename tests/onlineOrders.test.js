@@ -96,14 +96,21 @@ describe('onlineOrders', () => {
     });
   });
 
-  it('refuses canonical accept/reject/close for source=ifood (command API only)', async () => {
-    const rpc = vi.fn();
+  it('sends ifood accept/reject/cancel through the canonical RPC and still blocks close', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: { orderId: order.id, revision: 4 }, error: null });
     const ifood = mapCanonicalOrder({ ...order, source: 'ifood' });
-    await expect(transitionCanonicalOrder({ rpc }, ifood, 'accept', 'actor-1'))
-      .rejects.toMatchObject({ code: 'IFOOD_USE_COMMAND_API' });
+    await transitionCanonicalOrder({ rpc }, ifood, 'accept', 'actor-1');
+    await transitionCanonicalOrder({ rpc }, ifood, 'cancel', 'actor-1', { cancellationCode: '501' });
+    expect(rpc).toHaveBeenCalledWith('transition_zelo_order', expect.objectContaining({
+      p_order_id: ifood.id, p_action: 'accept'
+    }));
+    expect(rpc).toHaveBeenCalledWith('transition_zelo_order', expect.objectContaining({
+      p_action: 'cancel', p_detail: { cancellationCode: '501' }
+    }));
     await expect(closeCanonicalOrder({ rpc }, ifood, { method: 'pix' }, 'actor-1'))
       .rejects.toMatchObject({ code: 'IFOOD_USE_COMMAND_API' });
-    expect(rpc).not.toHaveBeenCalled();
+    await expect(transitionCanonicalOrder({ rpc }, ifood, 'start_preparing', 'actor-1'))
+      .rejects.toMatchObject({ code: 'IFOOD_USE_COMMAND_API' });
   });
 
   it('filters canonical orders by empresa_perfil.id, not by auth owner id', async () => {

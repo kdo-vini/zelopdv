@@ -216,23 +216,25 @@ function isIfoodCanonicalOrder(order) {
   return source === 'ifood' || origem === 'ifood';
 }
 
+const IFOOD_CANONICAL_ENQUEUE_ACTIONS = new Set(['accept', 'reject', 'cancel']);
+
 /**
- * iFood commercial state only moves on a confirmed provider event. Accept /
- * reject / cancel from the PDV must enqueue via the command API
- * (`POST /api/integrations/ifood/orders/:id/commands`). The canonical RPCs
- * write `zelo_order_outbox` topics and never enqueue iFood commands.
+ * Accept / reject / cancel for `source=ifood` go through the canonical RPCs,
+ * which enqueue `confirm`/`cancel` in the same transaction before flipping
+ * status. Other mutations (close, kitchen steps) stay on the command API.
  */
-export function assertCanonicalMutationAllowed(order) {
+export function assertCanonicalMutationAllowed(order, action = null) {
   if (!isIfoodCanonicalOrder(order)) return;
+  if (IFOOD_CANONICAL_ENQUEUE_ACTIONS.has(action)) return;
   const error = new Error(
-    'Pedidos do iFood só avançam depois que o iFood confirma. Use confirmar ou cancelar na fila.'
+    'Pedidos do iFood só avançam com confirmar, rejeitar ou cancelar na fila.'
   );
   error.code = 'IFOOD_USE_COMMAND_API';
   throw error;
 }
 
 export async function transitionCanonicalOrder(supabase, order, action, actorId, detail = {}) {
-  assertCanonicalMutationAllowed(order);
+  assertCanonicalMutationAllowed(order, action);
   const { data, error } = await supabase.rpc('transition_zelo_order', {
     p_order_id: order.id,
     p_expected_revision: order.revision,
@@ -245,7 +247,7 @@ export async function transitionCanonicalOrder(supabase, order, action, actorId,
 }
 
 export async function closeCanonicalOrder(supabase, order, payment, actorId) {
-  assertCanonicalMutationAllowed(order);
+  assertCanonicalMutationAllowed(order, 'close');
   const { data, error } = await supabase.rpc('close_zelo_order', {
     p_order_id: order.id,
     p_expected_revision: order.revision,

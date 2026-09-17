@@ -51,6 +51,12 @@ O bootstrap **pode** ligar ciclos reais só com flags explícitas (default
 em 2026-09-17; inbox e adapter HTTP continuam off até autorização. Não trata
 live+ready como GO completo.
 
+Confirm/cancel do PDV (2026-09-17) saem de `accept_zelo_order` /
+`reject_zelo_order` / `transition_zelo_order` (cancel), que enfileiram o
+comando **antes** de virar o status canônico. O worker com
+`PROCESS_COMMANDS=1` drena essa fila; sem adapter HTTP o POST ao iFood
+não sai.
+
 ## Flags de ciclo (shadow)
 
 Default **off**. Valores aceitos: `1`/`true`/`yes`/`on` (liga) e
