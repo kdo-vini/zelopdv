@@ -147,7 +147,8 @@ function invokeObserver(observer, value) {
  * Task 7 adds one optional, purely additive hook: `options.processInbox`,
  * a `runInboxCycle`-shaped async callback (see
  * `src/lib/server/ifood/inboxProcessor.js`). When provided, it is invoked
- * once per cycle right after the health probe/notification, wired the same
+ * once per cycle right after the health probe/notification and after
+ * `reconcile` has polled new events into the inbox, wired the same
  * defensive way `probeOwner` already is: it only runs when supplied (the
  * default bootstrap in `workers/ifood/index.js` never supplies it, so the
  * production probe / fail-closed unready path is unchanged), it
@@ -241,6 +242,14 @@ export function runIfoodWorker(options = {}) {
       lastProbe = probe;
       cycles += 1;
       await notifyHealth(probe);
+      // `reconcile` polls iFood into `event_inbox`, so it must run BEFORE
+      // `processInbox` consumes that table. With the reverse order an event
+      // polled in cycle N was only projected in cycle N+1, costing a full
+      // `intervalMs` of dead time per event: production showed 5m01s between
+      // `received_at` and `processed_at` on every event at the 300s default,
+      // which ate almost the whole iFood accept window before the order was
+      // even visible in the PDV. Polling first makes it one cycle, not two.
+      await runOptionalHook(reconcile, { signal });
       if (typeof processInbox === 'function') {
         if (signal.aborted) throw abortError();
         try {
@@ -252,7 +261,6 @@ export function runIfoodWorker(options = {}) {
         }
       }
       await runOptionalHook(processCommands, { signal });
-      await runOptionalHook(reconcile, { signal });
       await runOptionalHook(evaluateHealth, { signal, probe });
     } catch (error) {
       if (isAbortError(error, signal)) throw error;
