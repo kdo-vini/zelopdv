@@ -18,6 +18,20 @@
   build` ok (ambos apps). Product pode re-extrair lista de quiet/risk com dados
   reais. PR #38.
 
+
+- [ ] FX-ATIVACAO-PRIMEIRA-VENDA-01 (2026-09-17) — PostHog mostrou que 1 de 4
+  novos usuários clicou no CTA do estado vazio 7× ao longo de 45 minutos antes
+  de completar a criação do produto (mas depois vendeu em 22 s). PR #36 montou o
+  fluxo wizard → PDV, mas faltava orientação pós-chegada. **Corrigido**: copy do
+  estado vazio diretiva ("Cadastre seu primeiro produto para começar. É rápido:
+  nome e preço."), hierarquia de botões invertida ("Cadastrar primeiro produto"
+  primário, "Ou venda avulsa" secundário), helper pós-criação (primeiro uso
+  apenas) que aparece 8 s: "Clique no produto acima para adicionar na venda" com
+  seta animada e borda pulsante. Tracking aprimorado:
+  `pdv_quick_product_created` agora tem `was_first_product: boolean`. Sucesso
+  medido pós-publicação (2 semanas): ≥70% wizard_completed → first_sale <48h,
+  mediana <15 min, ≤2 cliques em empty-state CTA por usuário. PR #39 (branch
+  `cursor/minimal-first-sale-activation-711e`), validação local pendente.
 - [x] FX-IOS-INPUT-ZOOM-01 (2026-09-15) — iOS Safari dava zoom automático ao
   focar campos com `font-size` < 16px (chat do Zelinho a 13px, valor recebido
   do `ModalPagamento` a 15,2px, entre outros) e não voltava sozinho — exigia

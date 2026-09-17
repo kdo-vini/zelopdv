@@ -106,12 +106,13 @@ describe('copy exata do estado vazio "faca sua primeira venda" (VirtualProductGr
 
   it('mostra titulo, texto, CTAs e rodape exatos quando nao ha nenhum produto cadastrado', () => {
     expect(source).toContain("hasAnyProducts ? 'Nenhum produto encontrado' : 'Faça sua primeira venda'");
-    expect(source).toContain('Você pode vender agora mesmo ou cadastrar seus produtos primeiro.');
-    // O "+" antes de "Venda avulsa" e "Cadastrar primeiro produto" virou um
+    expect(source).toContain('Cadastre seu primeiro produto para começar. É rápido: nome e preço.');
+    // O "+" antes de "Cadastrar primeiro produto" e "Ou venda avulsa" virou um
     // ícone lucide Plus ao lado do texto (ver especificação de design do
     // estado vazio) — o texto em si continua exatamente o mesmo.
-    expect(source).toContain("hasAnyProducts ? 'Testar com item avulso' : 'Venda avulsa'");
+    // PR #39: hierarquia invertida para reforçar o caminho canônico (produto primeiro).
     expect(source).toContain('Cadastrar primeiro produto');
+    expect(source).toContain("hasAnyProducts ? 'Testar com item avulso' : 'Ou venda avulsa'");
     expect(source).toContain('Seus produtos aparecerão aqui.');
   });
 

@@ -21,6 +21,64 @@ autenticação, origem e erros de RPC. `npm test` 1381/1381 (5 novos do endpoint
 `npm run build` ok (ambos apps). Product pode re-extrair lista de quiet/risk
 com dados reais agora. PR #38.
 
+## Ativação da primeira venda reforçada — 2026-09-17
+
+Evidência PostHog (projeto 470628, 15–17 set, filterTestAccounts, n=4 contas):
+4 registradas → 4 wizard_completed (100%) → 4 first_sale (100%), mas 1 usuário
+clicou `pdv_empty_state_cta_clicked` **7× ao longo de 45 minutos** antes de
+completar a criação do produto. Após produto criado + caixa aberto: 2/2
+completaram venda em ~15 s. Gargalo não é o fluxo de pagamento (funciona), mas
+a lacuna vazio → criar produto → saber clicar no produto.
+
+Traço do usuário com dificuldade: 15:18 clique "cadastrar_produto" → 15:59
+clique "avulso" (41 min depois!) → 15:59 "cadastrar_produto" → 16:02 "avulso" →
+16:02 "cadastrar_produto" → 16:03 "avulso" → 16:03 "cadastrar_produto" →
+16:03:41 produto criado → 16:03:47 caixa aberto → 16:04:03 venda concluída (22 s
+após criação do produto).
+
+**Causa raiz (PR #36 tinha o fluxo, mas faltava orientação pós-chegada):**
+- Estado vazio passivo: "Você pode vender agora mesmo ou cadastrar seus produtos
+  primeiro" — ambos os caminhos pareciam igualmente válidos.
+- Hierarquia de botões invertida: "Venda avulsa" (primário), "Cadastrar primeiro
+  produto" (secundário) — mas a evidência mostra que criar produto é o caminho
+  canônico (17 de 18 primeiras vendas no histórico pré-PR tinham produto).
+- Sem orientação pós-criação: após criar o produto, usuário volta à grade com 1
+  tile, mas sem dica de "agora clique nele para adicionar no carrinho".
+
+**Corrigido (mínimo, sobre PR #36):**
+- **Copy do estado vazio agora diretiva**: "Cadastre seu primeiro produto para
+  começar. É rápido: nome e preço." Define caminho primário claro, calibra
+  expectativa de velocidade.
+- **Hierarquia de botões invertida**: "Cadastrar primeiro produto" (primário
+  azul céu), "Ou venda avulsa" (secundário cinza). Alinha hierarquia visual com
+  o caminho canônico; "Ou" reforça que avulso é o fallback.
+- **Helper pós-criação (só primeiro uso)**: quando usuário cria primeiro produto
+  no fluxo `isFirstUseNoCaixa` (`produtos.length === 0` antes da criação), helper
+  flutuante aparece por 8 s no centro da grade: "Clique no produto acima para
+  adicionar na venda", com seta animada apontando pra cima, borda pulsante,
+  botão "Entendi" pra dispensar antes. Fecha a lacuna "criei produto, e agora?".
+- **Tracking aprimorado**: `pdv_quick_product_created` agora inclui
+  `was_first_product: boolean` pra diferenciar primeira criação das seguintes.
+
+**Critérios de sucesso (medir pós-publicação, 2 semanas):**
+- **Norte**: ≥70% de `wizard_completed` → `first_sale_completed` <48h (linha
+  base ~50% em 30d por CURRENT.md "Chegada no produto" 2026-09-15).
+- **Antecedente**: mediana entre `wizard_completed` e `first_sale_completed`
+  <15 min (abaixo dos 45 min observados).
+- **Fricção**: cliques em `pdv_empty_state_cta_clicked` por usuário ≤2 (abaixo
+  do máximo de 7 observado).
+
+Sequência de eventos esperada: `onboarding_wizard_completed` →
+`onboarding_welcome_cta_clicked {cta: 'first_sale'}` →
+`pdv_empty_state_cta_clicked {cta: 'cadastrar_produto'}` →
+`pdv_quick_product_created {was_first_product: true}` →
+`pdv_first_use_caixa_prompted {trigger: 'payment'}` → `first_sale_completed`.
+
+Validação local: pendente (branch `cursor/minimal-first-sale-activation-711e`,
+PR #39 draft). Não altera schema/RLS/segurança. Reutiliza `ModalNovoProduto`
+`compact` e `firstUseCaixaGate` de PR #36. Desktop/tablet inalterados
+(posicionamento do helper adapta).
+
 ## Zoom automático do iOS ao focar campos — 2026-09-15
 
 Relato do dono no iPhone: toda vez que o teclado abria (chat do Zelinho em
