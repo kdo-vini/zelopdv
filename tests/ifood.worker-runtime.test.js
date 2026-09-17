@@ -17,7 +17,9 @@ import {
 import {
   createUnreadyWorkerDependencies,
   createWorkerDependencies,
-  main
+  createIfoodHttpAdapterFromConfig,
+  main,
+  resolveWorkerCycleHooks
 } from '../workers/ifood/index.js';
 import {
   createIfoodSupabaseRepository,
@@ -98,7 +100,10 @@ describe('iFood worker configuration', () => {
       port: 3000,
       intervalMs: IFOOD_WORKER_DEFAULTS.intervalMs,
       readyMaxAgeMs: IFOOD_WORKER_DEFAULTS.readyMaxAgeMs,
-      shutdownTimeoutMs: 15000
+      shutdownTimeoutMs: 15000,
+      processInbox: false,
+      processCommands: false,
+      enableHttpAdapter: false
     });
     expect(defaults.readyMaxAgeMs).toBeGreaterThan(defaults.intervalMs);
 
@@ -156,6 +161,51 @@ describe('iFood worker configuration', () => {
     }))).toThrow(IfoodWorkerConfigError);
   });
 
+  it('parses cycle flags off by default and on for explicit 1/true', () => {
+    expect(loadIfoodWorkerConfig(validEnv())).toMatchObject({
+      processInbox: false,
+      processCommands: false,
+      enableHttpAdapter: false
+    });
+    expect(loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_PROCESS_INBOX: '1',
+      IFOOD_WORKER_PROCESS_COMMANDS: 'true',
+      IFOOD_WORKER_ENABLE_HTTP_ADAPTER: 'on'
+    }))).toMatchObject({
+      processInbox: true,
+      processCommands: true,
+      enableHttpAdapter: true
+    });
+    expect(loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_PROCESS_INBOX: '0',
+      IFOOD_WORKER_PROCESS_COMMANDS: 'off',
+      IFOOD_WORKER_ENABLE_HTTP_ADAPTER: 'false'
+    }))).toMatchObject({
+      processInbox: false,
+      processCommands: false,
+      enableHttpAdapter: false
+    });
+  });
+
+  it('keeps iFood HTTP credentials optional unless the adapter flag is on', () => {
+    const withoutCreds = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_ENABLE_HTTP_ADAPTER: '1'
+    }));
+    expect(withoutCreds.enableHttpAdapter).toBe(true);
+    expect(withoutCreds.hasIfoodCredentials).toBe(false);
+    expect(withoutCreds.credentials).toBeUndefined();
+    expect(JSON.stringify(withoutCreds)).not.toMatch(/clientSecret|IFOOD_CLIENT/i);
+
+    const withCreds = loadIfoodWorkerConfig(validEnv({
+      IFOOD_CLIENT_ID: 'client-id-canary',
+      IFOOD_CLIENT_SECRET: 'client-secret-canary'
+    }));
+    expect(withCreds.hasIfoodCredentials).toBe(true);
+    expect(withCreds.enableHttpAdapter).toBe(false);
+    expect(Object.keys(withCreds)).not.toContain('credentials');
+    expect(JSON.stringify(withCreds)).not.toContain('client-secret-canary');
+  });
+
   it('rejects malformed URLs and unbounded/non-integer numeric values', () => {
     for (const env of [
       validEnv({ SUPABASE_URL: 'not-a-url' }),
@@ -165,7 +215,8 @@ describe('iFood worker configuration', () => {
       validEnv({ IFOOD_WORKER_PORT: '12.5' }),
       validEnv({ IFOOD_WORKER_INTERVAL_MS: '-1' }),
       validEnv({ IFOOD_WORKER_READY_MAX_AGE_MS: 'Infinity' }),
-      validEnv({ IFOOD_WORKER_SHUTDOWN_TIMEOUT_MS: '1e3' })
+      validEnv({ IFOOD_WORKER_SHUTDOWN_TIMEOUT_MS: '1e3' }),
+      validEnv({ IFOOD_WORKER_PROCESS_INBOX: 'maybe' })
     ]) {
       expect(() => loadIfoodWorkerConfig(env)).toThrow(IfoodWorkerConfigError);
     }
@@ -581,6 +632,182 @@ describe('iFood worker bootstrap', () => {
     expect(processLike.listenerCount('SIGTERM')).toBe(0);
     expect(processLike.listenerCount('SIGINT')).toBe(0);
   });
+
+  it('keeps inbox, commands and HTTP adapter off when cycle flags are off', async () => {
+    const processLike = new EventEmitter();
+    const controller = new AbortController();
+    const processInbox = vi.fn();
+    const processCommands = vi.fn();
+    const createAdapter = vi.fn();
+    const claimEvents = vi.fn();
+    const claimCommands = vi.fn();
+    const repository = {
+      probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true })),
+      claimEvents,
+      finishEvent: vi.fn(),
+      projectOrderEvent: vi.fn(),
+      claimCommands,
+      finishCommand: vi.fn()
+    };
+    const server = new EventEmitter();
+    server.listen = vi.fn((_port, _host, callback) => callback());
+    server.close = vi.fn((callback) => callback());
+    const mainPromise = main({
+      processLike,
+      controller,
+      config: {
+        host: '127.0.0.1',
+        port: 0,
+        intervalMs: 60_000,
+        readyMaxAgeMs: 90_000,
+        shutdownTimeoutMs: 1000,
+        processInbox: false,
+        processCommands: false,
+        enableHttpAdapter: false
+      },
+      repository,
+      processInbox,
+      processCommands,
+      createAdapter,
+      server
+    });
+
+    await waitFor(() => repository.probeDependencies.mock.calls.length === 1);
+    processLike.emit('SIGTERM');
+    await mainPromise;
+
+    expect(processInbox).not.toHaveBeenCalled();
+    expect(processCommands).not.toHaveBeenCalled();
+    expect(createAdapter).not.toHaveBeenCalled();
+    expect(claimEvents).not.toHaveBeenCalled();
+    expect(claimCommands).not.toHaveBeenCalled();
+    expect(createIfoodHttpAdapterFromConfig({ enableHttpAdapter: false })).toBeNull();
+  });
+
+  it('invokes injected inbox and command hooks when cycle flags are on', async () => {
+    const processLike = new EventEmitter();
+    const controller = new AbortController();
+    const processInbox = vi.fn(async () => ({ claimed: 0 }));
+    const processCommands = vi.fn(async () => ({ claimed: 0 }));
+    const createAdapter = vi.fn(() => ({ getOrder: vi.fn() }));
+    const repository = {
+      probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true }))
+    };
+    const server = new EventEmitter();
+    server.listen = vi.fn((_port, _host, callback) => callback());
+    server.close = vi.fn((callback) => callback());
+    const mainPromise = main({
+      processLike,
+      controller,
+      config: {
+        host: '127.0.0.1',
+        port: 0,
+        intervalMs: 60_000,
+        readyMaxAgeMs: 90_000,
+        shutdownTimeoutMs: 1000,
+        processInbox: true,
+        processCommands: true,
+        enableHttpAdapter: true
+      },
+      repository,
+      processInbox,
+      processCommands,
+      createAdapter,
+      server
+    });
+
+    await waitFor(() => processInbox.mock.calls.length === 1);
+    await waitFor(() => processCommands.mock.calls.length === 1);
+    processLike.emit('SIGTERM');
+    await mainPromise;
+
+    expect(processInbox).toHaveBeenCalledOnce();
+    expect(processCommands).toHaveBeenCalledOnce();
+    expect(createAdapter).toHaveBeenCalledOnce();
+  });
+
+  it('constructs inbox and command processors from fake deps when flags are on', async () => {
+    const processLike = new EventEmitter();
+    const controller = new AbortController();
+    const claimEvents = vi.fn(async () => []);
+    const claimCommands = vi.fn(async () => []);
+    const adapter = {
+      getOrder: vi.fn(),
+      confirm: vi.fn(async () => ({ accepted: true }))
+    };
+    const repository = {
+      probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true })),
+      claimEvents,
+      finishEvent: vi.fn(),
+      projectOrderEvent: vi.fn(),
+      claimCommands,
+      finishCommand: vi.fn()
+    };
+    const server = new EventEmitter();
+    server.listen = vi.fn((_port, _host, callback) => callback());
+    server.close = vi.fn((callback) => callback());
+    const mainPromise = main({
+      processLike,
+      controller,
+      config: {
+        host: '127.0.0.1',
+        port: 0,
+        intervalMs: 60_000,
+        readyMaxAgeMs: 90_000,
+        shutdownTimeoutMs: 1000,
+        workerId: 'ifood-worker',
+        processInbox: true,
+        processCommands: true,
+        enableHttpAdapter: true
+      },
+      repository,
+      adapter,
+      createAdapter: () => adapter,
+      server
+    });
+
+    await waitFor(() => claimEvents.mock.calls.length === 1);
+    await waitFor(() => claimCommands.mock.calls.length === 1);
+    processLike.emit('SIGTERM');
+    await mainPromise;
+
+    expect(claimEvents).toHaveBeenCalledOnce();
+    expect(claimCommands).toHaveBeenCalledOnce();
+    expect(adapter.confirm).not.toHaveBeenCalled();
+  });
+
+  it('stays fail-closed when the HTTP adapter flag is on without credentials', () => {
+    const config = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_ENABLE_HTTP_ADAPTER: '1',
+      IFOOD_WORKER_PROCESS_INBOX: '1',
+      IFOOD_WORKER_PROCESS_COMMANDS: '1'
+    }));
+    expect(config.enableHttpAdapter).toBe(true);
+    expect(config.hasIfoodCredentials).toBe(false);
+
+    const createAdapter = vi.fn((cfg, overrides) => createIfoodHttpAdapterFromConfig(cfg, overrides));
+    const processInbox = vi.fn();
+    const processCommands = vi.fn();
+    const hooks = resolveWorkerCycleHooks({
+      config,
+      repository: {
+        claimEvents: vi.fn(),
+        finishEvent: vi.fn(),
+        projectOrderEvent: vi.fn(),
+        claimCommands: vi.fn(),
+        finishCommand: vi.fn()
+      },
+      createAdapter
+    });
+
+    expect(hooks.adapter).toBeNull();
+    expect(hooks.processInbox).toBeUndefined();
+    expect(hooks.processCommands).toBeUndefined();
+    expect(createAdapter).toHaveBeenCalledOnce();
+    expect(processInbox).not.toHaveBeenCalled();
+    expect(processCommands).not.toHaveBeenCalled();
+    expect(createIfoodHttpAdapterFromConfig(config)).toBeNull();
+  });
 });
 
 describe('iFood production repository probe', () => {
@@ -650,5 +877,43 @@ describe('iFood production repository probe', () => {
       databaseReachable: true,
       leaseCapable: false
     });
+  });
+
+  it('maps claimed inbox rows for flagged cycles without leaking PII in errors', async () => {
+    const rpc = vi.fn(async (name) => {
+      expect(name).toBe('claim_ifood_events_v1');
+      return {
+        data: [{
+          inbox_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          event_id: 'event-1',
+          connection_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          empresa_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          merchant_id: 'merchant-1',
+          external_order_id: 'order-1',
+          event_type: 'PLACED',
+          payload: { customer: 'secret-pii' }
+        }],
+        error: null
+      };
+    });
+    const repository = createIfoodSupabaseRepository({ supabase: { rpc } });
+    const rows = await repository.claimEvents({ workerId: 'ifood-worker', limit: 10, leaseSeconds: 120 });
+    expect(rows[0]).toMatchObject({
+      inboxId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      eventId: 'event-1',
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1'
+    });
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_worker_id: 'ifood-worker', p_limit: 10, p_lease_seconds: 120 });
+
+    const failing = createIfoodSupabaseRepository({
+      supabase: {
+        rpc: vi.fn(async () => ({ data: null, error: { message: 'secret-pii LEASE_LOST' } }))
+      }
+    });
+    await expect(failing.claimEvents({ workerId: 'ifood-worker' })).rejects.toThrow(
+      'iFood worker repository operation failed'
+    );
+    await expect(failing.claimEvents({ workerId: 'ifood-worker' })).rejects.not.toThrow(/secret-pii/);
   });
 });

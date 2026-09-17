@@ -1,5 +1,11 @@
 # ZeloPDV.memory
 
+- Worker iFood ciclos (2026-09-17): inbox/commands/adapter HTTP só sobem
+  com `IFOOD_WORKER_PROCESS_INBOX=1`, `IFOOD_WORKER_PROCESS_COMMANDS=1` e
+  `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1`. Sem o par `IFOOD_CLIENT_*` o
+  adapter fica null (fail-closed). Default off. `readyMaxAgeMs` >
+  `intervalMs`. Não é GO completo.
+
 - Worker iFood `/health/ready` (2026-09-17): o probe só é gravado no ciclo
   do loop. `readyMaxAgeMs` tem de ser **estritamente maior** que
   `intervalMs` (defaults 600_000 vs 300_000). `loadIfoodWorkerConfig`

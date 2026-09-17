@@ -3,7 +3,7 @@
 **Data:** 2026-09-17  
 **Branch de implementação:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`)  
 **Projeto Supabase:** `xnnjyrblpvsqrtsshawa` (ZeloPDV)  
-**Decisão atual:** **GO parcial (schema + worker live+ready)** — migrations aplicadas e worker Dokploy com `/health/live` 200 e `/health/ready` 200 enquanto o probe for fresco (TTL default 600s > intervalo 300s); **não é GO completo** (bootstrap default sem inbox/commands/adapter HTTP; shadow/piloto/soak pendentes)
+**Decisão atual:** **GO parcial (schema + worker live+ready)** — migrations aplicadas e worker Dokploy com `/health/live` 200 e `/health/ready` 200 enquanto o probe for fresco (TTL default 600s > intervalo 300s); **não é GO completo** (flags de ciclo default off; shadow/piloto/soak pendentes)
 
 ## Pré-condições de código (Tasks 1–20)
 
@@ -24,7 +24,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | Aplicar forward migrations iFood no projeto vinculado | **Sim** | Owner 2026-09-17 (“Autorizo”) | Ver tabela abaixo |
 | 2 | Deploy worker (imagem por digest) + envs por **nome** | **Sim** | Owner 2026-09-17 (intenção) + evidência Dokploy 2026-09-17 | Ver seção Deploy Dokploy abaixo. Envs presentes **só por nome**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PORT`, `IFOOD_WORKER_HOST`, `NODE_ENV`. Opcionais `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` **não** definidas. Sem valores neste doc. |
-| 3 | Shadow mode (comandos/presença off) | Pendente | — | **Não feito.** Ready=200 já verificado. Falta ligar ciclos reais + merchant/sandbox. Bloqueios externos: `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` **não** definidas; nenhum merchant sandbox atribuído. |
+| 3 | Shadow mode (comandos/presença off) | Pendente | — | **Não feito.** Código do worker agora aceita flags `IFOOD_WORKER_PROCESS_INBOX` / `PROCESS_COMMANDS` / `ENABLE_HTTP_ADAPTER` (default off). Falta ligar flags + merchant/sandbox. Bloqueios: `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` **não** definidas; nenhum merchant sandbox atribuído. |
 | 4 | Ativar 1 loja piloto sem pedidos em andamento | Pendente | — | **Não feito.** Falta merchant/sandbox + loja piloto |
 | 5 | Soak + reconciliação financeira | Pendente | — | **Não feito** |
 | 6 | Liberar self-service gradual | Pendente | — | Somente após GO completo |
@@ -75,9 +75,9 @@ bootstrapava `createUnreadyWorkerDependencies()`. O branch liga
 `workers/ifood/supabaseRepository.js` em `main()` quando as envs Supabase
 existem. O ready 200 pós-redeploy prova o caminho PostgREST
 `claim_ifood_events_v1` (`INVALID_CLAIM_ARGUMENTS`, sem claim de inbox).
-**Não** prova ciclos reais de pedido, webhook, comando ou presença: o
-bootstrap default ainda **não** liga `processInbox`, commands nem adapter
-HTTP iFood. Sem GO completo.
+**Não** prova ciclos reais de pedido, webhook, comando ou presença: as flags
+`IFOOD_WORKER_PROCESS_INBOX` / `PROCESS_COMMANDS` / `ENABLE_HTTP_ADAPTER`
+existem no código e ficam **off** por default. Sem GO completo.
 
 ## Template — shadow (preencher quando ciclos reais estiverem ligados)
 
@@ -127,14 +127,15 @@ FEITO:
      300s) para não oscilar em stale_probe ocioso.
 
 PENDENTE PARA GO COMPLETO:
-  1. ligar processInbox / commands / adapter HTTP no bootstrap default
-  2. IFOOD_CLIENT_ID / IFOOD_CLIENT_SECRET (ausentes) + merchant/sandbox atribuído
+  1. ligar flags IFOOD_WORKER_PROCESS_INBOX / PROCESS_COMMANDS /
+     ENABLE_HTTP_ADAPTER (default off) + IFOOD_CLIENT_ID/SECRET
+  2. merchant/sandbox atribuído
   3. Shadow → loja piloto → soak → sign-off GO pleno
   4. Só então liberar self-service gradual
 
-BLOQUEADO AGORA: ciclos reais (bootstrap default sem inbox/commands/adapter);
-IFOOD_CLIENT_ID/SECRET não definidas; sem merchant sandbox; shadow/piloto/soak
-não feitos. Ready=200 não é ciclo operacional.
+BLOQUEADO AGORA: flags de ciclo off no Dokploy; IFOOD_CLIENT_ID/SECRET
+não definidas; sem merchant sandbox; shadow/piloto/soak não feitos.
+Ready=200 não é ciclo operacional.
 ```
 
 ## Rollback

@@ -44,9 +44,12 @@ processo está no ar: o TTL é `IFOOD_WORKER_READY_MAX_AGE_MS` (default
 **600_000**, estritamente maior que o intervalo default **300_000**). Com
 essas defaults, idle com banco/lease saudáveis não deve cair em
 `stale_probe`. `readyMaxAgeMs <= intervalMs` é auto-ajustado no boot.
-**Não** prova ciclo operacional: o bootstrap default ainda não liga
-`processInbox`, commands nem adapter HTTP iFood. Não trata live+ready como
-GO completo.
+O bootstrap **pode** ligar ciclos reais só com flags explícitas (default
+**off**): `IFOOD_WORKER_PROCESS_INBOX`, `IFOOD_WORKER_PROCESS_COMMANDS`,
+`IFOOD_WORKER_ENABLE_HTTP_ADAPTER`. Adapter HTTP exige o par
+`IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET`; sem o par o adapter fica null
+(fail-closed). Dokploy hoje **não** define essas flags. Não trata
+live+ready como GO completo.
 
 ## Piloto / rollout (Task 21)
 
@@ -56,14 +59,15 @@ Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`.
 autorizou apply em 2026-09-17; migrations iFood forward aplicadas em
 `xnnjyrblpvsqrtsshawa`; worker Dokploy live **e** ready 200 (`fresh_probe`)
 enquanto o probe for mais novo que o TTL (default 600s). **Não é GO
-completo.** Bootstrap default sem inbox/commands/adapter HTTP;
+completo.** Flags de ciclo default **off** (`IFOOD_WORKER_PROCESS_INBOX`,
+`IFOOD_WORKER_PROCESS_COMMANDS`, `IFOOD_WORKER_ENABLE_HTTP_ADAPTER`);
 `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` ausentes; sem merchant sandbox;
 shadow, loja piloto e soak ainda pendentes.
 
 Antes do GO completo:
 
-1. Ligar ciclos reais no worker (`processInbox` / commands / adapter HTTP)
-2. Merchant/sandbox + loja piloto (`IFOOD_CLIENT_ID` / `SECRET` + merchant atribuído)
+1. Ligar flags de ciclo no worker + `IFOOD_CLIENT_ID` / `SECRET` + merchant/sandbox
+2. Shadow (comandos/presença off) → loja piloto
 3. Testar kill switch pause/resume no console `/ifood`
 4. Confirmar som genérico, `printOwner` único e contingência Portal
 5. Shadow → soak → sign-off GO pleno

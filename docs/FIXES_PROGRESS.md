@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-IFOOD-WORKER-CYCLE-FLAGS-01 (2026-09-17) — bootstrap do worker iFood
+  passa a aceitar `IFOOD_WORKER_PROCESS_INBOX`,
+  `IFOOD_WORKER_PROCESS_COMMANDS` e `IFOOD_WORKER_ENABLE_HTTP_ADAPTER`
+  (default off). Flags off: só probe. Flags on com deps fake: inbox/commands
+  rodam. Adapter flag on sem `IFOOD_CLIENT_ID`/`SECRET`: fail-closed (adapter
+  null, hooks default não sobem). TTL ready continua `> interval`. Sem
+  migrations. Ainda GO parcial (shadow/piloto/soak pendentes).
+
 - [x] FX-IFOOD-WORKER-READY-TTL-01 (2026-09-17) — `/health/ready` do worker
   iFood ia a 200 `fresh_probe` e depois ficava 503 `stale_probe` até o
   próximo ciclo. Intervalo default 300_000 ms vs `readyMaxAgeMs` 90_000 ms:

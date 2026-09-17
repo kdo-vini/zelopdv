@@ -1,5 +1,20 @@
 # Tasks 1–21 + worker live+ready (GO parcial)
 
+## Handoff — 2026-09-17 (flags de ciclo; GO ainda parcial)
+
+Bootstrap do worker agora **pode** ligar inbox / commands / adapter HTTP,
+mas só com flags explícitas (default **off**, fail-closed):
+
+- `IFOOD_WORKER_PROCESS_INBOX=1`
+- `IFOOD_WORKER_PROCESS_COMMANDS=1`
+- `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1` (exige `IFOOD_CLIENT_ID` +
+  `IFOOD_CLIENT_SECRET`; sem o par o adapter fica null e os hooks
+  default de inbox/commands não sobem)
+
+Dokploy **não** tem essas flags hoje. Sem GO completo. Shadow/piloto/soak
+e merchant sandbox continuam pendentes. TTL de ready permanece
+`readyMaxAgeMs > intervalMs` (600s / 300s).
+
 ## Handoff — 2026-09-17 (readyMaxAge > interval; sem stale_probe ocioso)
 
 Bug live: após o probe de produção, `/health/ready` ia a 200 `fresh_probe` e

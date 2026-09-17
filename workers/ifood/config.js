@@ -124,6 +124,15 @@ function parseHost(value) {
   return value;
 }
 
+function parseEnabledFlag(env, fields) {
+  const value = readFirstString(env, fields);
+  if (value === undefined) return false;
+  const normalized = value.toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  throw new IfoodWorkerConfigError(fields[0], 'must be a boolean flag');
+}
+
 /**
  * Load the worker-only configuration. This module intentionally does not
  * import SvelteKit or `$env`; the dedicated process receives plain Node env.
@@ -200,7 +209,10 @@ export function loadIfoodWorkerConfig(env = process.env) {
       min: 1,
       max: MAX_DURATION_MS,
       fallback: DEFAULT_SHUTDOWN_TIMEOUT_MS
-    })
+    }),
+    processInbox: parseEnabledFlag(env, ['IFOOD_WORKER_PROCESS_INBOX']),
+    processCommands: parseEnabledFlag(env, ['IFOOD_WORKER_PROCESS_COMMANDS']),
+    enableHttpAdapter: parseEnabledFlag(env, ['IFOOD_WORKER_ENABLE_HTTP_ADAPTER'])
   };
   // Preserve a descriptive alias for future adapters without making the
   // secret appear twice in ordinary object inspection or serialization.
@@ -235,7 +247,10 @@ export const IFOOD_WORKER_DEFAULTS = Object.freeze({
   intervalMs: DEFAULT_INTERVAL_MS,
   readySlackMs: DEFAULT_READY_SLACK_MS,
   readyMaxAgeMs: DEFAULT_READY_MAX_AGE_MS,
-  shutdownTimeoutMs: DEFAULT_SHUTDOWN_TIMEOUT_MS
+  shutdownTimeoutMs: DEFAULT_SHUTDOWN_TIMEOUT_MS,
+  processInbox: false,
+  processCommands: false,
+  enableHttpAdapter: false
 });
 
 export default loadIfoodWorkerConfig;

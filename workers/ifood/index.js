@@ -4,6 +4,10 @@ import { IFOOD_WORKER_DEFAULTS, loadIfoodWorkerConfig } from './config.js';
 import { createHealthServer, createHealthState, listenHealthServer } from './healthServer.js';
 import { runIfoodWorker, sanitizeWorkerError } from './runtime.js';
 import { createHttpIfoodAdapter } from '../../src/lib/server/ifood/adapters/httpIfoodAdapter.js';
+import { createIfoodInboxProcessor } from '../../src/lib/server/ifood/inboxProcessor.js';
+import { createIfoodCommandProcessor } from '../../src/lib/server/ifood/commandProcessor.js';
+import { createIfoodEventHandler } from '../../src/lib/server/ifood/eventHandler.js';
+import { createIfoodIntegration } from '../../src/lib/server/ifood/createIfoodIntegration.js';
 import { createIfoodSupabaseRepository } from './supabaseRepository.js';
 
 function noop() {}
@@ -15,12 +19,9 @@ function hasText(value) {
 /**
  * Build the production iFood HTTP adapter from worker config, when
  * `IFOOD_CLIENT_ID`/`IFOOD_CLIENT_SECRET` are both configured. Returns
- * `null` otherwise so a worker without credentials still boots.
+ * `null` otherwise so a worker without credentials still boots fail-closed.
  *
- * This factory is intentionally not wired into the runtime loop: polling and
- * command processing that would use this adapter remain out of the default
- * bootstrap. Readiness comes from `createWorkerDependencies()`, which uses a
- * production repository probe when Supabase credentials are present.
+ * The default loop only uses this adapter when `enableHttpAdapter` is on.
  */
 export function createIfoodHttpAdapterFromConfig(config, overrides = {}) {
   if (!config?.credentials) return null;
@@ -55,6 +56,95 @@ export function createUnreadyWorkerDependencies() {
 }
 
 export const createTask4WorkerDependencies = createUnreadyWorkerDependencies;
+
+function canRunInbox(repository) {
+  return typeof repository?.claimEvents === 'function'
+    && typeof repository?.finishEvent === 'function'
+    && typeof repository?.projectOrderEvent === 'function';
+}
+
+function canRunCommands(repository) {
+  return typeof repository?.claimCommands === 'function'
+    && typeof repository?.finishCommand === 'function';
+}
+
+function createDefaultProcessInbox({ repository, adapter, config, logger, clock }) {
+  if (!adapter || !canRunInbox(repository)) return undefined;
+  try {
+    const integration = createIfoodIntegration({
+      adapter,
+      repository,
+      clock: clock ?? (() => Date.now())
+    });
+    const handler = createIfoodEventHandler({ integration, repository, logger });
+    const processor = createIfoodInboxProcessor({
+      repository,
+      handler,
+      workerId: config?.workerId ?? IFOOD_WORKER_DEFAULTS.workerId,
+      logger
+    });
+    return ({ signal } = {}) => processor.runInboxCycle({ signal });
+  } catch {
+    return undefined;
+  }
+}
+
+function createDefaultProcessCommands({ repository, adapter, config, logger }) {
+  if (!adapter || !canRunCommands(repository)) return undefined;
+  try {
+    const processor = createIfoodCommandProcessor({
+      repository,
+      adapter,
+      workerId: config?.workerId ?? IFOOD_WORKER_DEFAULTS.workerId,
+      logger
+    });
+    return ({ signal } = {}) => processor.runCommandCycle({ signal });
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Decide which cycle hooks the bootstrap may pass to `runIfoodWorker`.
+ * Flags default off. Missing HTTP credentials with the adapter flag on
+ * stays fail-closed (no adapter, no default inbox/commands).
+ */
+export function resolveWorkerCycleHooks(options = {}) {
+  const config = options.config ?? {};
+  const repository = options.repository;
+  const logger = options.logger ?? null;
+  const clock = options.clock;
+  const createAdapter = options.createAdapter ?? createIfoodHttpAdapterFromConfig;
+
+  const adapterEnabled = config.enableHttpAdapter === true;
+  const inboxEnabled = config.processInbox === true;
+  const commandsEnabled = config.processCommands === true;
+
+  let adapter = null;
+  if (adapterEnabled) {
+    try {
+      adapter = options.adapter ?? createAdapter(config, options) ?? null;
+    } catch {
+      adapter = null;
+    }
+  }
+
+  let processInbox;
+  if (inboxEnabled) {
+    processInbox = typeof options.processInbox === 'function'
+      ? options.processInbox
+      : createDefaultProcessInbox({ repository, adapter, config, logger, clock });
+  }
+
+  let processCommands;
+  if (commandsEnabled) {
+    processCommands = typeof options.processCommands === 'function'
+      ? options.processCommands
+      : createDefaultProcessCommands({ repository, adapter, config, logger });
+  }
+
+  return Object.freeze({ adapter, processInbox, processCommands });
+}
 
 function resolveSupabaseCredentials(options = {}) {
   const config = options.config;
@@ -164,8 +254,31 @@ export async function main(options = {}) {
     timeoutMs: options.probeTimeoutMs
   });
   const repository = options.repository ?? dependencies.repository;
-  const integration = options.integration ?? dependencies.integration;
   const clock = options.clock ?? (() => Date.now());
+  const logger = options.logger ?? console;
+  const cycleHooks = options.cycleHooks ?? resolveWorkerCycleHooks({
+    config,
+    repository,
+    adapter: options.adapter,
+    processInbox: options.processInbox,
+    processCommands: options.processCommands,
+    createAdapter: options.createAdapter,
+    fetch: options.fetch,
+    clock,
+    logger
+  });
+  let integration = options.integration ?? dependencies.integration;
+  if (!options.integration && cycleHooks.adapter) {
+    try {
+      integration = createIfoodIntegration({
+        adapter: cycleHooks.adapter,
+        repository,
+        clock
+      });
+    } catch {
+      integration = dependencies.integration;
+    }
+  }
   const suppliedServer = options.server;
   const healthState = options.healthState ?? suppliedServer?.healthState ?? createHealthState({
     readyMaxAgeMs: config.readyMaxAgeMs ?? IFOOD_WORKER_DEFAULTS.readyMaxAgeMs,
@@ -177,7 +290,6 @@ export async function main(options = {}) {
     : createHealthServer({ state: healthState }));
   const workerRunner = options.runWorker ?? options.workerRunner ?? runIfoodWorker;
   const userHealthChange = options.onHealthChange ?? noop;
-  const logger = options.logger ?? console;
   const cleanup = [];
   let workerRun;
   let workerHandle;
@@ -236,7 +348,9 @@ export async function main(options = {}) {
       intervalMs: config.intervalMs ?? 300_000,
       onHealthChange: notifyHealthChange,
       onError: options.onError,
-      logger
+      logger,
+      processInbox: cycleHooks.processInbox,
+      processCommands: cycleHooks.processCommands
     });
     workerRun = workerHandle?.promise ?? workerHandle;
     // Keep unexpected runtime failures on the same bounded shutdown path.
