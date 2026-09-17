@@ -27,6 +27,7 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm run verify:migrations
+      - run: npm run verify:ifood
       - run: npm run build
       - run: test -f .vercel/output/config.json && test -d .vercel/output/functions/index.func
   admin:

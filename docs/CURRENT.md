@@ -1,4 +1,29 @@
-# Tasks 1–19 concluídas
+# Tasks 1–20 concluídas
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 20)
+
+Estado após Task 20 (qualificação para piloto):
+
+1. Este arquivo — bloco abaixo + handoff Task 19.
+2. Plano `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real Task 20.
+3. Runbook `docs/operations/IFOOD.md` — seção gate automatizado.
+4. Próxima task: **Task 21** (shadow/piloto/GO|NO-GO) — **não aplica migration
+   nem deploy sem autorização explícita do owner**.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9`.
+**Task 20 commit:** `test: qualify iFood MVP for pilot`.
+
+**Validado:**
+- `tests/ifood.resilience.test.js` — 12 verdes.
+- `npm run verify:ifood` — exit 0.
+- `npx playwright test tests/e2e/ifood-mvp.spec.js --project=ifood-mvp` — 3 verdes.
+- `docker build` — **skip**: CLI Docker ausente neste ambiente (infra),
+  documentado; não é skip de invariante de domínio.
+
+**O que mudou:**
+- E2E mock, resilience, `scripts/verify-ifood-worker.mjs`, script
+  `verify:ifood`, step CI em `engineering.yml`, projeto Playwright
+  `ifood-mvp`.
 
 ## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 19)
 

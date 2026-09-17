@@ -23,6 +23,27 @@ O browser **nunca** recebe payload bruto de webhook, telefone, endereço ou
 corpo de pedido — só contagens, status, timestamps e códigos de erro truncados
 (≤80 chars).
 
+## Gate automatizado (Task 20)
+
+```bash
+npm test
+npm run check
+npm run verify:migrations
+npm run verify:ifood
+npx playwright test tests/e2e/ifood-mvp.spec.js --project=ifood-mvp
+docker build -f workers/ifood/Dockerfile -t zelopdv-ifood-worker:candidate .
+```
+
+- `verify:ifood` sobe o worker com adapter/repositório **in-memory**, espera
+  `/health/ready`, projeta o fixture `placed` e confirma um comando via mock —
+  sem iFood real e sem Supabase vinculado.
+- E2E em `tests/e2e/ifood-mvp.spec.js` (projeto Playwright `ifood-mvp`) cobre
+  wizard, intents operacionais, venda/canal/Zelinho sem PII.
+- Fault injection: `tests/ifood.resilience.test.js`.
+- `docker build` do worker é parte do gate; se Docker não existir no ambiente,
+  registrar o skip como dependência de infraestrutura — nunca skip de
+  idempotência, tenant, venda ou fail-closed.
+
 ## Diagnóstico rápido
 
 1. Abrir `/ifood` e conferir a linha do merchant: `status`, fila, DLQ,
