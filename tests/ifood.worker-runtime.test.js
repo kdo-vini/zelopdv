@@ -24,7 +24,8 @@ import {
 } from '../workers/ifood/index.js';
 import {
   createIfoodSupabaseRepository,
-  IFOOD_LEASE_PROBE
+  IFOOD_LEASE_PROBE,
+  IFOOD_POLLING_RPCS
 } from '../workers/ifood/supabaseRepository.js';
 
 function validEnv(overrides = {}) {
@@ -510,6 +511,32 @@ function jsonResponse(status, body) {
   };
 }
 
+function pollingAdapter() {
+  return {
+    pollEvents: vi.fn(async () => [{
+      id: 'event-1',
+      merchantId: 'merchant-a',
+      orderId: '25b0aa10-3626-4025-a3bb-d511304be0a8',
+      fullCode: 'PLACED',
+      code: 'PLC',
+      createdAt: '2026-09-17T00:00:00.000Z'
+    }]),
+    ackEvents: vi.fn(async () => ({ accepted: true }))
+  };
+}
+
+function pollingRepository() {
+  return {
+    listConnectionsForPolling: vi.fn(async () => [{
+      connectionId: 'connection-a',
+      merchantId: 'merchant-a',
+      status: 'active'
+    }]),
+    enqueuePolledEvent: vi.fn(async () => ({ outcome: 'inserted' })),
+    recordPollSuccess: vi.fn(async () => ({ outcome: 'updated' }))
+  };
+}
+
 describe('iFood worker bootstrap', () => {
   it('has a fail-closed Task 4 dependency bootstrap', async () => {
     const dependencies = createUnreadyWorkerDependencies();
@@ -804,10 +831,223 @@ describe('iFood worker bootstrap', () => {
     expect(hooks.adapter).toBeNull();
     expect(hooks.processInbox).toBeUndefined();
     expect(hooks.processCommands).toBeUndefined();
+    expect(hooks.reconcile).toBeUndefined();
     expect(createAdapter).toHaveBeenCalledOnce();
     expect(processInbox).not.toHaveBeenCalled();
     expect(processCommands).not.toHaveBeenCalled();
     expect(createIfoodHttpAdapterFromConfig(config)).toBeNull();
+  });
+
+  it('never wires the polling reconciler while the HTTP adapter flag is off', () => {
+    const config = loadIfoodWorkerConfig(validEnv({
+      IFOOD_CLIENT_ID: 'client-id',
+      IFOOD_CLIENT_SECRET: 'client-secret-canary',
+      IFOOD_WORKER_PROCESS_INBOX: '1'
+    }));
+    expect(config.enableHttpAdapter).toBe(false);
+    expect(config.hasIfoodCredentials).toBe(true);
+
+    const repository = pollingRepository();
+    const createAdapter = vi.fn(() => pollingAdapter());
+    const hooks = resolveWorkerCycleHooks({ config, repository, createAdapter });
+
+    expect(hooks.adapter).toBeNull();
+    expect(hooks.reconcile).toBeUndefined();
+    expect(createAdapter).not.toHaveBeenCalled();
+    expect(repository.listConnectionsForPolling).not.toHaveBeenCalled();
+  });
+
+  it('never wires the polling reconciler when the repository lacks the poll seam', () => {
+    const adapter = pollingAdapter();
+    const hooks = resolveWorkerCycleHooks({
+      config: { enableHttpAdapter: true },
+      repository: { probeDependencies: vi.fn() },
+      adapter,
+      createAdapter: () => adapter
+    });
+
+    expect(hooks.adapter).toBe(adapter);
+    expect(hooks.reconcile).toBeUndefined();
+  });
+
+  it('polls iFood into event_inbox when the HTTP adapter flag and credentials are present', async () => {
+    const repository = pollingRepository();
+    const adapter = pollingAdapter();
+    const hooks = resolveWorkerCycleHooks({
+      config: { enableHttpAdapter: true, intervalMs: 300_000 },
+      repository,
+      adapter,
+      createAdapter: () => adapter
+    });
+
+    expect(typeof hooks.reconcile).toBe('function');
+
+    const summary = await hooks.reconcile({});
+
+    expect(repository.listConnectionsForPolling).toHaveBeenCalledOnce();
+    expect(repository.listConnectionsForPolling.mock.calls[0][0]).toMatchObject({
+      pollingIntervalMs: 300_000
+    });
+    expect(adapter.pollEvents).toHaveBeenCalledOnce();
+    expect(repository.enqueuePolledEvent).toHaveBeenCalledOnce();
+    expect(repository.enqueuePolledEvent.mock.calls[0][0]).toMatchObject({
+      eventId: 'event-1',
+      merchantId: 'merchant-a',
+      eventType: 'PLACED'
+    });
+    expect(repository.recordPollSuccess).toHaveBeenCalledOnce();
+    expect(summary).toMatchObject({ inserted: 1, acked: 1 });
+  });
+
+  it('reaches the same polling hook through main() only with the flag on', async () => {
+    const processLike = new EventEmitter();
+    const controller = new AbortController();
+    const repository = pollingRepository();
+    repository.probeDependencies = vi.fn(async () => ({ databaseReachable: true, leaseCapable: true }));
+    const adapter = pollingAdapter();
+    const server = new EventEmitter();
+    server.listen = vi.fn((_port, _host, callback) => callback());
+    server.close = vi.fn((callback) => callback());
+
+    const mainPromise = main({
+      processLike,
+      controller,
+      config: {
+        host: '127.0.0.1',
+        port: 0,
+        intervalMs: 60_000,
+        readyMaxAgeMs: 90_000,
+        shutdownTimeoutMs: 1000,
+        enableHttpAdapter: true
+      },
+      repository,
+      adapter,
+      createAdapter: () => adapter,
+      server
+    });
+
+    await waitFor(() => repository.enqueuePolledEvent.mock.calls.length === 1);
+    processLike.emit('SIGTERM');
+    await mainPromise;
+
+    expect(adapter.pollEvents).toHaveBeenCalledOnce();
+    expect(adapter.ackEvents).toHaveBeenCalledOnce();
+  });
+});
+
+describe('iFood production repository polling seam', () => {
+  it('lists pollable connections, enqueues into event_inbox and stamps poll success', async () => {
+    const calls = [];
+    const fetchImpl = vi.fn(async (url, init) => {
+      const rpc = String(url).split('/rest/v1/rpc/')[1];
+      calls.push({ rpc, body: JSON.parse(init.body) });
+      expect(init.body).not.toContain('service-role-secret-canary');
+      if (rpc === IFOOD_POLLING_RPCS.listConnections) {
+        return jsonResponse(200, [{
+          connection_id: 'connection-a',
+          empresa_id: 'empresa-a',
+          merchant_id: 'merchant-a',
+          status: 'active',
+          last_poll_at: null,
+          polling_cursor: null
+        }]);
+      }
+      if (rpc === IFOOD_POLLING_RPCS.enqueueEvent) {
+        return jsonResponse(200, [{
+          inbox_id: 'inbox-a',
+          event_id: 'event-1',
+          inserted: true,
+          status: 'queued',
+          outcome: 'inserted'
+        }]);
+      }
+      return jsonResponse(200, [{
+        connection_id: 'connection-a',
+        merchant_id: 'merchant-a',
+        last_poll_at: '2026-09-17T00:00:00.000Z',
+        last_token_at: '2026-09-17T00:00:00.000Z',
+        outcome: 'updated'
+      }]);
+    });
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: fetchImpl
+    });
+
+    await expect(repository.listConnectionsForPolling({
+      now: '2026-09-17T00:00:00.000Z',
+      pollingIntervalMs: 300_000
+    })).resolves.toEqual([{
+      connectionId: 'connection-a',
+      empresaId: 'empresa-a',
+      merchantId: 'merchant-a',
+      status: 'active',
+      lastPollAt: null,
+      pollingCursor: null
+    }]);
+
+    await expect(repository.enqueuePolledEvent({
+      eventId: 'event-1',
+      merchantId: 'merchant-a',
+      externalOrderId: 'order-1',
+      eventType: 'PLACED',
+      externalRevision: 3,
+      occurredAt: '2026-09-17T00:00:00.000Z',
+      payload: { id: 'event-1' }
+    })).resolves.toMatchObject({ outcome: 'inserted', inserted: true });
+
+    await expect(repository.recordPollSuccess({
+      connectionId: 'connection-a',
+      merchantId: 'merchant-a',
+      polledAt: '2026-09-17T00:00:00.000Z',
+      tokenConfirmedAt: '2026-09-17T00:00:00.000Z'
+    })).resolves.toMatchObject({ outcome: 'updated' });
+
+    expect(calls.map(({ rpc }) => rpc)).toEqual([
+      IFOOD_POLLING_RPCS.listConnections,
+      IFOOD_POLLING_RPCS.enqueueEvent,
+      IFOOD_POLLING_RPCS.recordPollSuccess
+    ]);
+    expect(calls[0].body).toEqual({
+      p_now: '2026-09-17T00:00:00.000Z',
+      p_min_interval_ms: 300_000,
+      p_limit: IFOOD_POLLING_RPCS.maxConnections
+    });
+    expect(calls[1].body).toEqual({
+      p_event_id: 'event-1',
+      p_merchant_id: 'merchant-a',
+      p_external_order_id: 'order-1',
+      p_event_type: 'PLACED',
+      p_external_revision: 3,
+      p_occurred_at: '2026-09-17T00:00:00.000Z',
+      p_payload: { id: 'event-1' }
+    });
+    expect(calls[2].body).toEqual({
+      p_connection_id: 'connection-a',
+      p_merchant_id: 'merchant-a',
+      p_polled_at: '2026-09-17T00:00:00.000Z',
+      p_token_confirmed_at: '2026-09-17T00:00:00.000Z'
+    });
+  });
+
+  it('never reports an enqueue outcome when the RPC fails, so nothing is acked', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse(400, {
+      code: 'P0001',
+      message: 'INVALID_EVENT_IDENTITY'
+    }));
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: fetchImpl
+    });
+
+    await expect(repository.enqueuePolledEvent({
+      eventId: 'event-1',
+      merchantId: 'merchant-a',
+      eventType: 'PLACED',
+      payload: { id: 'event-1' }
+    })).rejects.toThrow('iFood worker repository operation failed');
   });
 });
 

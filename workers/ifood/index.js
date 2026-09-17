@@ -8,6 +8,7 @@ import { createIfoodInboxProcessor } from '../../src/lib/server/ifood/inboxProce
 import { createIfoodCommandProcessor } from '../../src/lib/server/ifood/commandProcessor.js';
 import { createIfoodEventHandler } from '../../src/lib/server/ifood/eventHandler.js';
 import { createIfoodIntegration } from '../../src/lib/server/ifood/createIfoodIntegration.js';
+import { createIfoodReconciler } from '../../src/lib/server/ifood/reconciliation.js';
 import { createIfoodSupabaseRepository } from './supabaseRepository.js';
 
 function noop() {}
@@ -68,6 +69,12 @@ function canRunCommands(repository) {
     && typeof repository?.finishCommand === 'function';
 }
 
+function canReconcile(repository) {
+  return typeof repository?.listConnectionsForPolling === 'function'
+    && typeof repository?.enqueuePolledEvent === 'function'
+    && typeof repository?.recordPollSuccess === 'function';
+}
+
 function createDefaultProcessInbox({ repository, adapter, config, logger, clock }) {
   if (!adapter || !canRunInbox(repository)) return undefined;
   try {
@@ -99,6 +106,33 @@ function createDefaultProcessCommands({ repository, adapter, config, logger }) {
       logger
     });
     return ({ signal } = {}) => processor.runCommandCycle({ signal });
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Poll iFood and land every event in `event_inbox`. This only exists when the
+ * HTTP adapter does, so the fail-closed rule is unchanged: no adapter (flag
+ * off, or on without credentials) means no polling and no ACK. The reconciler
+ * only ACKs an event the repository confirmed as inserted or duplicate, so a
+ * failed enqueue leaves the event pending at the provider for redelivery.
+ */
+function createDefaultReconcile({ repository, adapter, config, logger, clock }) {
+  if (!adapter || !canReconcile(repository)) return undefined;
+  try {
+    const reconciler = createIfoodReconciler({
+      adapter,
+      repository,
+      clock: clock ?? (() => Date.now()),
+      logger,
+      // The per-connection floor the listing RPC applies, so a short worker
+      // interval can never poll one merchant faster than iFood allows.
+      ...(Number.isSafeInteger(config?.intervalMs) && config.intervalMs > 0
+        ? { pollingIntervalMs: config.intervalMs }
+        : {})
+    });
+    return ({ signal } = {}) => reconciler.runReconciliationCycle({ signal });
   } catch {
     return undefined;
   }
@@ -143,7 +177,16 @@ export function resolveWorkerCycleHooks(options = {}) {
       : createDefaultProcessCommands({ repository, adapter, config, logger });
   }
 
-  return Object.freeze({ adapter, processInbox, processCommands });
+  // Polling is gated by the adapter flag alone: `adapter` is only non-null
+  // when the flag is on and both credentials exist.
+  let reconcile;
+  if (adapterEnabled) {
+    reconcile = typeof options.reconcile === 'function'
+      ? options.reconcile
+      : createDefaultReconcile({ repository, adapter, config, logger, clock });
+  }
+
+  return Object.freeze({ adapter, processInbox, processCommands, reconcile });
 }
 
 function resolveSupabaseCredentials(options = {}) {
@@ -262,6 +305,7 @@ export async function main(options = {}) {
     adapter: options.adapter,
     processInbox: options.processInbox,
     processCommands: options.processCommands,
+    reconcile: options.reconcile,
     createAdapter: options.createAdapter,
     fetch: options.fetch,
     clock,
@@ -350,7 +394,8 @@ export async function main(options = {}) {
       onError: options.onError,
       logger,
       processInbox: cycleHooks.processInbox,
-      processCommands: cycleHooks.processCommands
+      processCommands: cycleHooks.processCommands,
+      reconcile: cycleHooks.reconcile
     });
     workerRun = workerHandle?.promise ?? workerHandle;
     // Keep unexpected runtime failures on the same bounded shutdown path.

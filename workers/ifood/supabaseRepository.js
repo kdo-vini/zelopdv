@@ -3,6 +3,10 @@ const FINISH_EVENT_RPC = 'finish_ifood_event_v1';
 const CLAIM_COMMANDS_RPC = 'claim_ifood_commands_v1';
 const FINISH_COMMAND_RPC = 'finish_ifood_command_v1';
 const PROJECT_ORDER_EVENT_RPC = 'project_ifood_order_event_v1';
+const LIST_POLLING_CONNECTIONS_RPC = 'list_ifood_connections_for_polling_v1';
+const ENQUEUE_POLLED_EVENT_RPC = 'enqueue_ifood_webhook_event_v1';
+const RECORD_POLL_SUCCESS_RPC = 'record_ifood_poll_success_v1';
+const MAX_POLLING_CONNECTIONS = 1_000;
 const PROBE_WORKER_ID = 'ifood-health-probe';
 const PROBE_TIMEOUT_MS = 5_000;
 
@@ -42,6 +46,30 @@ function mapCommandRow(row) {
     idempotencyKey: row.idempotencyKey ?? row.idempotency_key,
     leaseId: row.leaseId ?? row.lease_id,
     leaseUntil: row.leaseUntil ?? row.lease_until
+  };
+}
+
+function mapConnectionRow(row) {
+  if (!row || typeof row !== 'object') return row;
+  return {
+    connectionId: row.connectionId ?? row.connection_id ?? null,
+    empresaId: row.empresaId ?? row.empresa_id ?? null,
+    merchantId: row.merchantId ?? row.merchant_id ?? null,
+    status: row.status ?? null,
+    lastPollAt: row.lastPollAt ?? row.last_poll_at ?? null,
+    pollingCursor: row.pollingCursor ?? row.polling_cursor ?? null
+  };
+}
+
+function mapEnqueueOutcome(data) {
+  const first = Array.isArray(data) ? data[0] : data;
+  if (!first || typeof first !== 'object') return { outcome: null };
+  return {
+    outcome: first.outcome ?? null,
+    inboxId: first.inbox_id ?? first.inboxId ?? null,
+    eventId: first.event_id ?? first.eventId ?? null,
+    inserted: first.inserted === true,
+    status: first.status ?? null
   };
 }
 
@@ -361,15 +389,105 @@ export function createIfoodSupabaseRepository(options = {}) {
     return mapProjection(data);
   }
 
+  /**
+   * Connections the polling reconciler may poll this cycle. `pollingIntervalMs`
+   * is the per-connection floor the RPC applies against `last_poll_at`, so a
+   * short worker interval can never poll one merchant faster than the provider
+   * allows.
+   */
+  async function listConnectionsForPolling({
+    now = null,
+    pollingIntervalMs = null,
+    limit = MAX_POLLING_CONNECTIONS,
+    signal
+  } = {}) {
+    const data = await mutatingRpc(LIST_POLLING_CONNECTIONS_RPC, {
+      p_now: now,
+      p_min_interval_ms: Number.isSafeInteger(pollingIntervalMs) && pollingIntervalMs > 0
+        ? pollingIntervalMs
+        : null,
+      p_limit: Number.isSafeInteger(limit) && limit > 0
+        ? Math.min(limit, MAX_POLLING_CONNECTIONS)
+        : MAX_POLLING_CONNECTIONS
+    }, signal);
+    return asRows(data).map(mapConnectionRow);
+  }
+
+  /**
+   * Persist one polled provider event into `event_inbox`. This reuses the
+   * webhook enqueue RPC on purpose: it already resolves the connection from
+   * `merchantId` and already returns the inserted/duplicate/unknown_merchant
+   * outcome the reconciler branches on before it ACKs anything, so polling and
+   * webhooks share a single insert path and a single idempotency constraint.
+   */
+  async function enqueuePolledEvent({
+    eventId,
+    merchantId,
+    externalOrderId = null,
+    eventType,
+    externalRevision = 0,
+    occurredAt = null,
+    payload,
+    signal
+  } = {}) {
+    const data = await mutatingRpc(ENQUEUE_POLLED_EVENT_RPC, {
+      p_event_id: eventId,
+      p_merchant_id: merchantId,
+      p_external_order_id: externalOrderId,
+      p_event_type: eventType,
+      p_external_revision: Number.isSafeInteger(externalRevision) ? externalRevision : 0,
+      p_occurred_at: occurredAt,
+      p_payload: payload
+    }, signal);
+    return mapEnqueueOutcome(data);
+  }
+
+  /**
+   * A successful poll is an authenticated provider call, so it is also the
+   * proof the token still works: the RPC stamps `last_poll_at`,
+   * `last_token_at` and `worker_heartbeat_at` together, which is what
+   * `connectionHealth.js` reads to clear a stale-token/heartbeat reason.
+   */
+  async function recordPollSuccess({
+    connectionId = null,
+    merchantId,
+    polledAt = null,
+    tokenConfirmedAt = null,
+    signal
+  } = {}) {
+    const data = await mutatingRpc(RECORD_POLL_SUCCESS_RPC, {
+      p_connection_id: connectionId,
+      p_merchant_id: merchantId,
+      p_polled_at: polledAt,
+      p_token_confirmed_at: tokenConfirmedAt ?? polledAt
+    }, signal);
+    const first = Array.isArray(data) ? data[0] : data;
+    return {
+      outcome: first?.outcome ?? null,
+      connectionId: first?.connection_id ?? first?.connectionId ?? null,
+      merchantId: first?.merchant_id ?? first?.merchantId ?? null
+    };
+  }
+
   return Object.freeze({
     probeDependencies,
     claimEvents,
     finishEvent,
     claimCommands,
     finishCommand,
-    projectOrderEvent
+    projectOrderEvent,
+    listConnectionsForPolling,
+    enqueuePolledEvent,
+    recordPollSuccess
   });
 }
+
+export const IFOOD_POLLING_RPCS = Object.freeze({
+  listConnections: LIST_POLLING_CONNECTIONS_RPC,
+  enqueueEvent: ENQUEUE_POLLED_EVENT_RPC,
+  recordPollSuccess: RECORD_POLL_SUCCESS_RPC,
+  maxConnections: MAX_POLLING_CONNECTIONS
+});
 
 export const IFOOD_LEASE_PROBE = Object.freeze({
   rpc: CLAIM_EVENTS_RPC,
