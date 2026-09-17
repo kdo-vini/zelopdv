@@ -4,6 +4,13 @@
 
 **Status:** aprovado pelo dono do produto após revisão seção a seção
 
+**Implementação (código):** Tasks 1–20 no branch de integração — ver
+`docs/CURRENT.md` e o plano `2026-09-15-ifood-mvp.md`.
+
+**Rollout / piloto:** **NO-GO** até autorização explícita — ver
+`docs/projects/IFOOD_MVP_PILOT.md`. Nenhuma seção abaixo autoriza apply de
+migration, deploy de worker ou abertura self-service por si só.
+
 **Relatório de viabilidade:** [IFOOD_INTEGRATION_REPORT.md](../../projects/IFOOD_INTEGRATION_REPORT.md)
 **Decisão arquitetural:** [ADR-0001](../../adr/0001-ifood-worker-dedicado.md)
 

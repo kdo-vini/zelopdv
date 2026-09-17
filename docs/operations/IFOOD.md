@@ -23,6 +23,20 @@ O browser **nunca** recebe payload bruto de webhook, telefone, endereço ou
 corpo de pedido — só contagens, status, timestamps e códigos de erro truncados
 (≤80 chars).
 
+## Piloto / rollout (Task 21)
+
+Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`.
+
+**Decisão vigente: NO-GO** até o owner autorizar explicitamente cada mutação
+de produção (migration, worker, shadow, loja piloto, soak, self-service).
+
+Antes de qualquer GO:
+
+1. `docker build -f workers/ifood/Dockerfile -t zelopdv-ifood-worker:candidate .`
+2. Aplicar migrations forward iFood **somente** com autorização
+3. Testar kill switch pause/resume no console `/ifood`
+4. Confirmar som genérico, `printOwner` único e contingência Portal
+
 ## Gate automatizado (Task 20)
 
 ```bash

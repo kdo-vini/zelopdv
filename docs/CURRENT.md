@@ -1,4 +1,21 @@
-# Tasks 1–20 concluídas
+# Tasks 1–21 concluídas (piloto = NO-GO)
+
+## Handoff — 2026-09-17 (após Task 21)
+
+MVP de **código** fechado nas Tasks 1–20. Task 21 registrou decisão
+**NO-GO** em `docs/projects/IFOOD_MVP_PILOT.md`: nenhuma migration/deploy/
+shadow/piloto real sem autorização explícita do owner.
+
+**Branch:** `cursor/ifood-task-12-cdb9`  
+**Último commit de código de qualidade:** Task 20  
+**Commit desta task:** `docs: record iFood MVP pilot decision`
+
+**Para um futuro GO o owner precisa autorizar, nesta ordem:**
+1. Apply das migrations forward iFood no projeto vinculado
+2. `docker build` + deploy do worker (digest + envs por nome)
+3. Shadow → loja piloto → soak → sign-off GO
+
+Ver runbook `docs/operations/IFOOD.md` e checklist no doc de piloto.
 
 ## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 20)
 
