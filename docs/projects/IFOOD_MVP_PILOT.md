@@ -3,7 +3,7 @@
 **Data:** 2026-09-17  
 **Branch de implementação:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`)  
 **Projeto Supabase:** `xnnjyrblpvsqrtsshawa` (ZeloPDV)  
-**Decisão atual:** **GO parcial (schema + worker process live)** — migrations aplicadas e processo worker no ar no Dokploy; **não é GO completo** (ready fail-closed; shadow/piloto/soak pendentes)
+**Decisão atual:** **GO parcial (schema + worker live+ready)** — migrations aplicadas e worker Dokploy com `/health/live` **e** `/health/ready` 200; **não é GO completo** (bootstrap default sem inbox/commands/adapter HTTP; shadow/piloto/soak pendentes)
 
 ## Pré-condições de código (Tasks 1–20)
 
@@ -16,7 +16,7 @@
 | Gate `verify:ifood` + resilience + E2E mock | Verde na Task 20 |
 | `docker build` da imagem worker | **OK** no Dokploy (2026-09-17) |
 | Migrations iFood no Supabase vinculado | **Aplicadas** (2026-09-17, após autorização do owner) |
-| Processo worker no Dokploy | **Live** — liveness 200; readiness 503 (fail-closed) |
+| Processo worker no Dokploy | **Live+ready** — liveness 200; readiness 200 `fresh_probe` (após redeploy do probe) |
 
 ## Checklist de mutações
 
@@ -24,7 +24,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | Aplicar forward migrations iFood no projeto vinculado | **Sim** | Owner 2026-09-17 (“Autorizo”) | Ver tabela abaixo |
 | 2 | Deploy worker (imagem por digest) + envs por **nome** | **Sim** | Owner 2026-09-17 (intenção) + evidência Dokploy 2026-09-17 | Ver seção Deploy Dokploy abaixo. Envs presentes **só por nome**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PORT`, `IFOOD_WORKER_HOST`, `NODE_ENV`. Opcionais `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` **não** definidas. Sem valores neste doc. |
-| 3 | Shadow mode (comandos/presença off) | Pendente | — | **Não feito.** Exige ready=200 no worker redeployado + merchant sandbox |
+| 3 | Shadow mode (comandos/presença off) | Pendente | — | **Não feito.** Ready=200 já verificado. Falta ligar ciclos reais + merchant/sandbox. Bloqueios externos: `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` **não** definidas; nenhum merchant sandbox atribuído. |
 | 4 | Ativar 1 loja piloto sem pedidos em andamento | Pendente | — | **Não feito.** Falta merchant/sandbox + loja piloto |
 | 5 | Soak + reconciliação financeira | Pendente | — | **Não feito** |
 | 6 | Liberar self-service gradual | Pendente | — | Somente após GO completo |
@@ -54,7 +54,7 @@ Fonte local canônica do SQL continua em `supabase/migrations/20260917014734_*.s
 | Campo | Valor (sem segredos) |
 | --- | --- |
 | Projeto Dokploy | ZeloPDV |
-| App | `ifood-worker` (`appName` `ifood-worker-ellizg`) |
+| App | `ifood-worker` (`appName` `ifood-worker-ellizg`, id `nARDI-HdMP6OO0HyBhxuE`) |
 | Git | `kdo-vini/zelopdv`, branch `cursor/ifood-task-12-cdb9` |
 | Dockerfile | `workers/ifood/Dockerfile`, context `.` |
 | Host | `ifood-worker-ellizg-90c105-2-24-66-12.sslip.io` |
@@ -66,18 +66,20 @@ Fonte local canônica do SQL continua em `supabase/migrations/20260917014734_*.s
 
 **Verificado over HTTP (não HTTPS):**
 
-- `GET /health/live` → **200** `{"status":"ok","reason":"serving"}`
-- `GET /health/ready` → **503** `{"status":"not_ready","reason":"dependencies_unavailable"}`
+- `GET /health/live` → **200** `{"status":"ok","reason":"serving"}` (processo no ar, 2026-09-17)
+- `GET /health/ready` → **503** `{"status":"not_ready","reason":"dependencies_unavailable"}` **antes** do probe de produção
+- Após redeploy do commit de probe (`b576c9a`): `GET /health/ready` → **200** `{"status":"ready","reason":"fresh_probe"}`
 
-**Causa raiz do ready 503 (evidência 2026-09-17):** `workers/ifood/index.js`
-ainda bootstrapava `createUnreadyWorkerDependencies()`. O branch agora liga
+**Causa do ready 503 (evidência pré-probe):** `workers/ifood/index.js`
+bootstrapava `createUnreadyWorkerDependencies()`. O branch liga
 `workers/ifood/supabaseRepository.js` em `main()` quando as envs Supabase
-existem; **redeploy** é o que muda o processo live. Sem GO completo.
+existem. O ready 200 pós-redeploy prova o caminho PostgREST
+`claim_ifood_events_v1` (`INVALID_CLAIM_ARGUMENTS`, sem claim de inbox).
+**Não** prova ciclos reais de pedido, webhook, comando ou presença: o
+bootstrap default ainda **não** liga `processInbox`, commands nem adapter
+HTTP iFood. Sem GO completo.
 
-Isso prova processo vivo + liveness. **Não** prova ciclos reais de pedido,
-webhook, comando ou presença.
-
-## Template — shadow (preencher quando worker estiver ready)
+## Template — shadow (preencher quando ciclos reais estiverem ligados)
 
 - Amostra: _N pedidos / período_
 - Comparar vs Gestor: modalidade, horário, itens, complementos, total,
@@ -110,7 +112,7 @@ Qualquer divergência financeira ou perda de pedido → **NO-GO**.
 ## Decisão
 
 ```
-DECISÃO: GO PARCIAL (SCHEMA + WORKER PROCESS LIVE)
+DECISÃO: GO PARCIAL (SCHEMA + WORKER LIVE+READY)
 DATA: 2026-09-17
 SIGN-OFF OWNER: schema apply autorizado verbalmente (“Autorizo”); deploy Dokploy evidenciado
 NÃO É GO COMPLETO.
@@ -119,14 +121,18 @@ FEITO:
   1. apply das migrations forward iFood no projeto xnnjyrblpvsqrtsshawa
   2. docker build OK no Dokploy; container Docker-healthy (HEALTHCHECK /health/live)
   3. processo worker live; GET /health/live → 200 serving
+  4. redeploy do probe de produção; GET /health/ready → 200 fresh_probe
+     (PostgREST claim_ifood_events_v1 / INVALID_CLAIM_ARGUMENTS, sem claim)
 
 PENDENTE PARA GO COMPLETO:
-  1. ligar repositório de produção no main() para GET /health/ready → 200 e ciclos reais
-  2. merchant/sandbox + loja piloto
+  1. ligar processInbox / commands / adapter HTTP no bootstrap default
+  2. IFOOD_CLIENT_ID / IFOOD_CLIENT_SECRET (ausentes) + merchant/sandbox atribuído
   3. Shadow → loja piloto → soak → sign-off GO pleno
   4. Só então liberar self-service gradual
 
-BLOQUEADO AGORA: ready=503 (dependencies_unavailable); shadow/piloto/soak não feitos.
+BLOQUEADO AGORA: ciclos reais (bootstrap default sem inbox/commands/adapter);
+IFOOD_CLIENT_ID/SECRET não definidas; sem merchant sandbox; shadow/piloto/soak
+não feitos. Ready=200 não é ciclo operacional.
 ```
 
 ## Rollback

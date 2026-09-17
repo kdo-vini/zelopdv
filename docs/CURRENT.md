@@ -1,4 +1,28 @@
-# Tasks 1–21 + probe de produção do worker iFood
+# Tasks 1–21 + worker live+ready (GO parcial)
+
+## Handoff — 2026-09-17 (Dokploy live+ready 200 após probe)
+
+Redeploy do commit de probe (`b576c9a`) no Dokploy **verificado live**.
+Decisão vigente: **GO parcial (schema + worker live+ready)**. **Não é GO
+completo.**
+
+- Host: `ifood-worker-ellizg-90c105-2-24-66-12.sslip.io`
+- App Dokploy: `ifood-worker` (`ifood-worker-ellizg` / `nARDI-HdMP6OO0HyBhxuE`)
+- `GET /health/live` → **200** `{"status":"ok","reason":"serving"}`
+- `GET /health/ready` → **200** `{"status":"ready","reason":"fresh_probe"}`
+  (antes: 503 `dependencies_unavailable`)
+- Probe: PostgREST `claim_ifood_events_v1` com args inválidos;
+  `INVALID_CLAIM_ARGUMENTS` sem claim de inbox
+
+**Ainda não operacional:** o bootstrap default **não** liga `processInbox`,
+commands nem adapter HTTP iFood. Envs opcionais `IFOOD_CLIENT_ID` /
+`IFOOD_CLIENT_SECRET` **não** definidas. Sem merchant/sandbox atribuído.
+Shadow, uma loja piloto e soak continuam pendentes.
+
+Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`. Ops:
+`docs/operations/IFOOD.md`.
+
+**Branch:** `cursor/ifood-task-12-cdb9`
 
 ## Handoff — 2026-09-17 (probe de produção para `/health/ready`)
 
@@ -11,16 +35,17 @@ rejeita com `INVALID_CLAIM_ARGUMENTS` **antes** de `FOR UPDATE` / claim,
 sem roubar inbox. Rede/timeout/auth continuam fail-closed. Sem as duas
 envs, o caminho unready permanece. Sem migrations novas e sem GO completo.
 
-**Redeploy do worker no Dokploy é necessário** para o processo live passar
-a usar este código. Evidência HTTP anterior (processo no ar, ready 503)
-fica no handoff Dokploy abaixo.
+Redeploy no Dokploy **já evidenciado** no handoff live+ready acima.
+Evidência HTTP anterior (processo no ar, ready 503) fica no handoff
+Dokploy abaixo.
 
 **Branch:** `cursor/ifood-task-12-cdb9`
 
 ## Handoff — 2026-09-17 (Dokploy ifood-worker)
 
-Worker **processo no ar** no Dokploy. **Não é GO completo.** Decisão vigente:
-**GO parcial (schema + worker process live)**.
+Worker **processo no ar** no Dokploy. **Não é GO completo.** Decisão vigente
+na época deste handoff: **GO parcial (schema + worker process live)** —
+supersedida pelo handoff live+ready 200 no topo.
 
 Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`. Ops: host e health em
 `docs/operations/IFOOD.md`.
@@ -38,14 +63,13 @@ Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`. Ops: host e health em
 - Docker build OK; container **Docker-healthy** (`HEALTHCHECK GET /health/live`)
 - `GET /health/live` → **200** `{"status":"ok","reason":"serving"}`
 - `GET /health/ready` → **503** `{"status":"not_ready","reason":"dependencies_unavailable"}`
-  (evidência **antes** do probe de produção; causa: unready factory)
+  (evidência **antes** do probe de produção e do redeploy; causa: unready factory)
 
-**Não feito:** shadow, loja piloto, soak.
+**Não feito (ainda vigente):** shadow, loja piloto, soak.
 
-**Bloqueios para GO completo (após redeploy com probe):**
-1. `GET /health/ready` → 200 no worker live + ciclos reais
-2. Merchant/sandbox + loja piloto
-3. Shadow → piloto → soak → sign-off GO pleno
+**Bloqueios para GO completo (ready 200 já verificado após redeploy):**
+1. Ligar ciclos reais (`processInbox` / commands / adapter HTTP) + merchant/sandbox
+2. Shadow → piloto → soak → sign-off GO pleno
 
 ## Handoff — 2026-09-17 (owner autorizou apply)
 
@@ -55,13 +79,12 @@ Owner respondeu **“Autorizo”**. Executado:
    `xnnjyrblpvsqrtsshawa` (ZeloPDV). Tasks 1–11 já estavam aplicadas.
 2. Verificação: 27 RPCs `*ifood*`, `vendas.canal_origem`,
    `admin_ifood_connections_overview_v1()`.
-3. **Depois desta autorização:** deploy Dokploy do worker evidenciado no
-   handoff Dokploy (processo live; ready 503 na evidência). Probe de
-   produção no código desta sessão (redeploy pendente). Shadow, loja
-   piloto e soak continuam pendentes.
+3. **Depois desta autorização:** deploy Dokploy + redeploy do probe
+   evidenciado no handoff live+ready (live 200 e ready 200). Shadow,
+   loja piloto e soak continuam pendentes.
 
 Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md` (decisão
-**GO parcial — schema + worker process live**; não GO completo).
+**GO parcial — schema + worker live+ready**; não GO completo).
 
 ## Handoff — 2026-09-17 (após Task 21)
 

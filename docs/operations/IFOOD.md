@@ -18,7 +18,7 @@ produção nem abertura global — isso é gate da Task 21.
 | Ações | `POST /api/ifood/actions` | `pause` / `resume` / `revoke` / `replay_event` / `replay_command` |
 | RPCs | `public.admin_*_ifood_*_v1` | `service_role` only; migration local `20260917040026_ifood_admin_operations.sql` |
 | Auditoria | `admin_activity_logs` | `ifood.connection.*`, `ifood.event.replay`, `ifood.command.replay` |
-| Worker | Dokploy `ifood-worker` (`ifood-worker-ellizg`) | Host e health abaixo |
+| Worker | Dokploy `ifood-worker` (`ifood-worker-ellizg` / `nARDI-HdMP6OO0HyBhxuE`) | Host e health abaixo |
 
 O browser **nunca** recebe payload bruto de webhook, telefone, endereço ou
 corpo de pedido — só contagens, status, timestamps e códigos de erro truncados
@@ -33,29 +33,30 @@ se HTTPS ainda não assentar.
 | Checagem | Caminho | Evidência 2026-09-17 |
 | --- | --- | --- |
 | Liveness | `GET /health/live` | 200 `{"status":"ok","reason":"serving"}` — container Docker-healthy |
-| Readiness | `GET /health/ready` | 503 `{"status":"not_ready","reason":"dependencies_unavailable"}` |
+| Readiness (pré-probe) | `GET /health/ready` | 503 `{"status":"not_ready","reason":"dependencies_unavailable"}` |
+| Readiness (pós-redeploy `b576c9a`) | `GET /health/ready` | 200 `{"status":"ready","reason":"fresh_probe"}` |
 
-Ready 503 na evidência HTTP de 2026-09-17 era fail-closed de
-`createUnreadyWorkerDependencies()`. O código do branch agora liga
-`workers/ifood/supabaseRepository.js` quando `SUPABASE_URL` e
-`SUPABASE_SERVICE_ROLE_KEY` existem (probe não mutante de
-`claim_ifood_events_v1`). **Redeploy** é necessário para o processo live
-refletir isso. Não trata o deploy anterior como GO completo nem como ciclo
-operacional real.
+Ready 200 pós-redeploy prova o probe PostgREST `claim_ifood_events_v1`
+(`INVALID_CLAIM_ARGUMENTS`, sem claim de inbox) com `SUPABASE_URL` +
+`SUPABASE_SERVICE_ROLE_KEY`. **Não** prova ciclo operacional: o bootstrap
+default ainda não liga `processInbox`, commands nem adapter HTTP iFood.
+Não trata live+ready como GO completo.
 
 ## Piloto / rollout (Task 21)
 
 Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`.
 
-**Decisão vigente: GO parcial (schema + worker process live)** — owner
+**Decisão vigente: GO parcial (schema + worker live+ready)** — owner
 autorizou apply em 2026-09-17; migrations iFood forward aplicadas em
-`xnnjyrblpvsqrtsshawa`; worker Dokploy live (liveness 200, ready 503).
-**Não é GO completo.** Shadow, loja piloto e soak ainda pendentes.
+`xnnjyrblpvsqrtsshawa`; worker Dokploy live **e** ready 200 (`fresh_probe`).
+**Não é GO completo.** Bootstrap default sem inbox/commands/adapter HTTP;
+`IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` ausentes; sem merchant sandbox;
+shadow, loja piloto e soak ainda pendentes.
 
 Antes do GO completo:
 
-1. Redeploy do worker com probe de produção; `GET /health/ready` → 200
-2. Merchant/sandbox + loja piloto
+1. Ligar ciclos reais no worker (`processInbox` / commands / adapter HTTP)
+2. Merchant/sandbox + loja piloto (`IFOOD_CLIENT_ID` / `SECRET` + merchant atribuído)
 3. Testar kill switch pause/resume no console `/ifood`
 4. Confirmar som genérico, `printOwner` único e contingência Portal
 5. Shadow → soak → sign-off GO pleno
