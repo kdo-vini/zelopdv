@@ -147,7 +147,11 @@ export async function POST({ request }) {
   }
 }
 
-/** `{ action: 'pause' | 'resume' | 'disconnect' }` — never accepted with active orders present. */
+/**
+ * Two independent PATCH shapes, dispatched by body:
+ * - `{ action: 'pause' | 'resume' | 'disconnect' }` — never accepted with active orders present.
+ * - `{ printOwner: 'zelo' | 'external' }` — who prints; never gated by active orders.
+ */
 export async function PATCH({ request }) {
   const auth = await authenticate(request);
   if (auth.error) return auth.error;
@@ -162,8 +166,12 @@ export async function PATCH({ request }) {
   const service = createService();
   if (!service) return noStoreJson({ error: 'unavailable' }, 503);
 
+  const handler = typeof body?.printOwner === 'string' && body?.action === undefined
+    ? service.updatePrintOwner
+    : service.updateConnectionStatus;
+
   try {
-    const result = await service.updateConnectionStatus({
+    const result = await handler({
       authResult: auth.authResult,
       accessContext: auth.accessContext,
       subscription: auth.subscription,

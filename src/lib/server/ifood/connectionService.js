@@ -198,7 +198,29 @@ export function createIfoodConnectionRepository({ supabase } = {}) {
     return Number.isInteger(value) ? value : Number(value ?? 0);
   }
 
-  return Object.freeze({ getConnection, upsertConnection, countActiveOrders });
+  async function setPrintOwner({ empresaId, printOwner, signal } = {}) {
+    let response;
+    try {
+      response = await supabase
+        .rpc('set_ifood_connection_print_owner_v1', {
+          p_empresa_id: empresaId,
+          p_print_owner: printOwner
+        })
+        .single();
+    } catch {
+      throw repositoryError();
+    }
+    if (response?.error) throw repositoryError();
+    const data = response?.data;
+    return {
+      outcome: data?.outcome ?? null,
+      connectionId: data?.connectionId ?? data?.connection_id ?? null,
+      merchantId: data?.merchantId ?? data?.merchant_id ?? null,
+      printOwner: data?.printOwner ?? data?.print_owner ?? null
+    };
+  }
+
+  return Object.freeze({ getConnection, upsertConnection, countActiveOrders, setPrintOwner });
 }
 
 /**
@@ -440,6 +462,38 @@ export function createIfoodConnectionService({
     }
   }
 
+  /**
+   * PATCH /api/integrations/ifood/connection — `{ printOwner: 'zelo' | 'external' }`.
+   * Setup wizard step 6 (design doc 3.1): the owner picks exactly one system
+   * that prints iFood orders. Independent of `updateConnectionStatus` — this
+   * never touches `status` and is never subject to the active-orders gate
+   * (choosing who prints does not stop/start the connection).
+   */
+  async function updatePrintOwner({ authResult, accessContext, subscription, empresaId, body, signal } = {}) {
+    const access = authorize({ authResult, accessContext, subscription });
+    if (access.error) return access.error;
+
+    const printOwner = typeof body?.printOwner === 'string' ? body.printOwner.trim().toLowerCase() : '';
+    if (printOwner !== 'zelo' && printOwner !== 'external') {
+      return result(400, { error: 'invalid_print_owner' });
+    }
+    if (typeof repository.setPrintOwner !== 'function') {
+      return result(503, { error: 'unavailable' });
+    }
+
+    try {
+      const connection = await repository.getConnection({ empresaId, signal });
+      if (!connection) return result(404, { error: 'not_connected' });
+
+      const updated = await repository.setPrintOwner({ empresaId, printOwner, signal });
+      if (updated.outcome === 'not_connected') return result(404, { error: 'not_connected' });
+      if (updated.outcome !== 'updated') return result(500, { error: 'unavailable' });
+      return result(200, { printOwner: updated.printOwner ?? printOwner });
+    } catch {
+      return result(500, { error: 'unavailable' });
+    }
+  }
+
   /** GET /api/integrations/ifood/health — sanitized, no payload/PII. */
   async function getHealth({
     authResult,
@@ -488,11 +542,13 @@ export function createIfoodConnectionService({
     getAuthorizationPrompt,
     checkAuthorization,
     updateConnectionStatus,
+    updatePrintOwner,
     getHealth
   });
 }
 
 export const IFOOD_CONNECTION_STATUSES = Object.freeze([...CONNECTION_STATUSES]);
+export const IFOOD_PRINT_OWNERS = Object.freeze(['zelo', 'external']);
 export const IFOOD_CONNECTION_ACTIVE_ORDER_TERMINAL_STATUSES = Object.freeze([...ACTIVE_ORDER_TERMINAL_STATUSES]);
 export const IFOOD_CONNECTION_AUTHORIZATION_WINDOW_MS = AUTHORIZATION_WINDOW_MS;
 

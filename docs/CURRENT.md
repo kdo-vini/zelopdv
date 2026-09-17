@@ -1,4 +1,77 @@
-# Tasks 1–17 concluídas
+# Tasks 1–18 concluídas
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 18)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 17).
+Estado após Task 18:
+
+1. Este arquivo (`docs/CURRENT.md`) — bloco Task 18 abaixo, mais o bloco
+   "Handoff ... após Task 17" logo em seguida.
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da
+   Task 18 (`## Task 18: Criar wizard progressivo em Perfil > Integrações`).
+3. Próxima task: **Task 19** (observabilidade, suporte e controles de
+   incidente no admin dashboard) — ver plano; pre-read obrigatório de
+   `CLAUDE.md` e `CODE_REVIEW.md` antes de tocar `admin-dashboard/`.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commit mais recente antes desta task: Task 17 `feat: add self-service
+iFood connection APIs`. **Task 18 commitada nesta sessão** como `feat: add
+self-service iFood setup wizard`.
+
+**Estado validado nesta sessão:**
+- Suíte alvo da Task 18 (`ifood.setup-wizard` + `profileUtils` +
+  `api.ifood-connection` + `ifood.connection-schema` +
+  `ifood.connection-print-owner-schema`): 5 arquivos / 77 testes verdes.
+- `npx vitest run` completo: 231 arquivos / 1663 testes verdes (3 skips
+  pré-existentes, não relacionados).
+- `npm run check`: 0 erros, 0 warnings.
+
+**O que mudou de fato:**
+- `src/lib/integrations/ifoodSetup.js` (novo) — máquina de apresentação
+  **pura** (sem `fetch`/Supabase/SvelteKit) que deriva um dos seis estados
+  do design doc (`Não conectado`/`Aguardando autorização no
+  iFood`/`Configuração necessária`/`Ativo`/`Atenção necessária`/`Pausado`)
+  a partir da resposta já sanitizada de `GET /api/integrations/ifood/connection`
+  (+ opcionalmente `GET /health`). Mapeamento `active`+`unhealthy` =
+  "Configuração necessária" vs `degraded` = "Atenção necessária" é uma
+  decisão desta task, documentada e testada, porque o design doc nomeia os
+  seis estados mas não fixa a regra exata. Também expõe
+  `availableIfoodActions`, `describeIfoodConnectionError` (todo erro HTTP
+  vira frase em PT-BR, com contagem exata em `active_orders_present`) e
+  textos estáticos de mapping/print-owner.
+- **Desvio do plano — nova migration** para fechar o passo "escolher
+  responsável pela impressão" do wizard (gap já registrado no Resultado
+  real da Task 13: a Task 17 só tinha leitura de `print_owner`, nenhuma
+  escrita): `supabase/migrations/20260917040500_ifood_connection_print_owner.sql`
+  (local, não aplicada) com `set_ifood_connection_print_owner_v1`, mesma
+  blindagem das RPCs da Task 17. Verificação transacional em
+  `supabase/verification/ifood_connection_print_owner.sql` (revisada,
+  não executada — sem Docker/Postgres local). Teste estático de schema em
+  `tests/ifood.connection-print-owner-schema.test.js`.
+- `connectionService.js` ganhou `repository.setPrintOwner()` e
+  `service.updatePrintOwner()` (mesma autorização/elegibilidade das outras
+  rotas; nunca sujeito ao gate de "pedidos ativos"). `PATCH
+  /api/integrations/ifood/connection` agora despacha por formato do corpo:
+  `{ printOwner }` vai para `updatePrintOwner`, `{ action }` continua no
+  `updateConnectionStatus` já existente — os 25 testes da Task 17 em
+  `tests/api.ifood-connection.test.js` continuam verdes sem alteração.
+- Dois componentes novos: `IfoodSetupWizard.svelte` (modal **burro**, só
+  renderiza `derived` e emite eventos de intenção — nunca chama `fetch`,
+  nunca simula autorização concluída, nunca guarda segredo/token em
+  `localStorage`) e `IfoodIntegrationCard.svelte` (dono de toda a rede:
+  busca status no `onMount`, saúde só quando `active`/`degraded`, esconde o
+  card inteiro em `402`/`403`/`503` da primeira consulta em vez de deixar a
+  aba num beco sem saída para quem não tem a integração disponível).
+- `src/routes/perfil/+page.svelte`: `<IfoodIntegrationCard />` como
+  primeiro item da aba Integrações, antes de "Operação offline".
+- **Fora do escopo desta task, por decisão deliberada:** a "sugestão de
+  vínculo de produto" é só texto estático — a API de mapping (Task 12) é
+  por item de pedido, sem modo de listagem em lote, e não havia pedido real
+  disponível no wizard para sugerir algo de verdade.
+
+**Próximo passo real (Task 19):** observabilidade, suporte e controles de
+incidente no `admin-dashboard/` — ver `## Task 19: Criar observabilidade,
+suporte e controles de incidente` no plano.
 
 ## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 17)
 
