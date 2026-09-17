@@ -1,4 +1,46 @@
-# Tasks 1–14 concluídas
+# Tasks 1–15 concluídas
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 15)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 14).
+Estado após Task 15:
+
+1. Este arquivo (`docs/CURRENT.md`) — bloco Task 15 abaixo, mais os blocos
+   Task 12–14 na seção "Handoff ... após Task 14".
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da
+   Task 15 (`## Task 15: Expor vendas iFood nos relatórios existentes`).
+3. Próxima task: **Task 16** (dar ao Zelinho consciência de canal sem PII)
+   — ler `por_canal` que a Task 15 já calcula em
+   `src/lib/finance/salesChannel.js` e reaproveitar a mesma agregação em
+   `src/lib/server/intelligence/`.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commit mais recente: Task 14 `feat: materialize iFood sales and reversals`.
+**Task 15 commitada nesta sessão** como `feat: report sales by origin
+channel`.
+
+**Estado validado nesta sessão:**
+- Suíte alvo da Task 15
+  (`finance.sales-channel` + `relatoriosLayout` + `reportExports` +
+  `finance.reportPaymentPresentation`): 4 arquivos / 30 testes verdes.
+- `npx vitest run` completo: 226 arquivos / 1580 testes verdes (3 skips
+  pré-existentes, não relacionados).
+- `npm run check`: 0 erros, 0 warnings (svelte-check).
+- Nenhuma migration nova nesta task — `canal_origem` e `vendas_estornos`
+  já existem desde a Task 14; Task 15 é só leitura (SELECT) desses campos.
+
+**Decisão de escopo registrada (ver Resultado real da Task 15 para o
+detalhe):** o filtro de canal recorta a lista de vendas do caixa e o card
+de Estornos/Cancelamentos; os cards comparativos "Vendas por Canal" somam
+**sempre todos os canais** (é o que permite comparar) e não são afetados
+pelo filtro. Os KPIs gerais do topo (Receita Líquida, Vendas Brutas, Ticket
+Médio, Formas de Pagamento, Produtos Vendidos) continuam somando o
+caixa/período inteiro, sem recorte por canal — só a lista de cupons e o
+card de estornos mudam com o filtro.
+
+**Próximo passo real (Task 16):** ensinar o Zelinho a responder "quanto veio
+do iFood" / "compare iFood com os outros canais" sem PII — ver `## Task 16:
+Dar ao Zelinho consciência de canal sem PII` no plano.
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
