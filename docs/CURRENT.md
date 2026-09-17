@@ -1,4 +1,73 @@
-# Tasks 1–15 concluídas
+# Tasks 1–16 concluídas
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 16)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 15).
+Estado após Task 16:
+
+1. Este arquivo (`docs/CURRENT.md`) — bloco Task 16 abaixo, mais o bloco
+   "Handoff ... após Task 15" logo em seguida (que por sua vez referencia
+   Task 12–14).
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da
+   Task 16 (`## Task 16: Dar ao Zelinho consciência de canal sem PII`).
+3. Próxima task: **Task 17** (APIs seguras de conexão self-service do
+   iFood) — ver plano; exige pre-read de `CLAUDE.md`, `CODE_REVIEW.md`,
+   `docs/BILLING.md`, `docs/modules/ACESSOS.md` e `docs/data/SCHEMA_RLS.md`
+   antes de tocar código.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commit mais recente antes desta task: Task 15 `feat: report sales by origin
+channel`. **Task 16 commitada nesta sessão** como `feat: teach Zelinho
+sales channel context`.
+
+**Estado validado nesta sessão:**
+- Suíte alvo da Task 16
+  (`intelligence.fetchers` + `intelligence.metrics` +
+  `gerente.agent.toolsInsights` + `gerente.ifood-channel`): 4 arquivos / 39
+  testes verdes.
+- `npx vitest run` completo: 227 arquivos / 1594 testes verdes (3 skips
+  pré-existentes, não relacionados).
+- Nenhuma migration nova nesta task — `por_canal` é derivado em memória a
+  partir de `vendas.canal_origem` (Task 14) e persistido dentro da coluna
+  `jsonb` que já existia em `business_daily_snapshots.metrics`.
+
+**O que mudou de fato:**
+- `resumoPeriodo` (ferramenta `resumo_periodo` do Zelinho) sempre devolve
+  `por_canal` (receita bruta e quantidade por canal), tanto para `hoje`
+  (calculado a partir de `vendas` em tempo real) quanto para `ontem`/
+  `semana`/`mes` (agregado a partir de `business_daily_snapshots`).
+  Aceita um parâmetro opcional `canal` que escopa receita/quantidade/ticket
+  médio a um único canal; para `hoje` isso também escopa `mix_pagamentos`
+  e `top_produtos` (dado bruto disponível), mas para snapshots históricos
+  esses dois campos voltam vazios/zerados quando `canal` é passado — a
+  granularidade por canal de mix/produto nunca foi gravada retroativamente
+  nos snapshots antigos, e o código não inventa esse dado.
+- Snapshots gravados antes desta task (sem `metrics.por_canal`) continuam
+  legíveis: caem inteiros no canal `pdv` (mesmo fallback do trigger
+  `vendas_default_canal_origem` da Task 14), preservando a soma total.
+- O prompt do Zelinho agora explica que o `por_canal` do iFood é
+  faturamento bruto operacional (o que o cliente pagou no pedido), não o
+  valor líquido que a plataforma repassa — o sistema ainda não calcula a
+  comissão do iFood. O Zelinho nunca chama esse número de "lucro".
+- Nenhuma ferramenta nova foi criada: `por_canal` viaja dentro da resposta
+  já existente de `resumo_periodo`, e nada no payload expõe nome, telefone
+  ou endereço de cliente (só `receita_bruta`/`qtd_vendas` por canal).
+
+**Decisão de escopo registrada (ver Resultado real da Task 15 para o
+detalhe):** o filtro de canal recorta a lista de vendas do caixa e o card
+de Estornos/Cancelamentos; os cards comparativos "Vendas por Canal" somam
+**sempre todos os canais** (é o que permite comparar) e não são afetados
+pelo filtro. Os KPIs gerais do topo (Receita Líquida, Vendas Brutas, Ticket
+Médio, Formas de Pagamento, Produtos Vendidos) continuam somando o
+caixa/período inteiro, sem recorte por canal — só a lista de cupons e o
+card de estornos mudam com o filtro.
+
+**Próximo passo real (Task 17):** criar as APIs server-side de conexão
+self-service do iFood (capability `integracoes.ifood.gerenciar`) — ver
+`## Task 17: Criar APIs seguras de conexão self-service` no plano. Exige
+matriz RED de autorização (titular, trial, plano superior, subusuário sem
+capacidade, merchant de outra empresa, replay de state) antes de qualquer
+endpoint.
 
 ## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 15)
 

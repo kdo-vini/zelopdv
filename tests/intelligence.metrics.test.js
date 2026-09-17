@@ -118,6 +118,26 @@ describe('computeDailyMetrics', () => {
     expect(m.por_produto[0].receita).toBe(30);
   });
 
+  it('agrega por_canal, sem PII, com fallback pdv para canal ausente', () => {
+    const vendas = [
+      makeVenda({ id: 1, valorTotal: 100, canalOrigem: 'ifood' }),
+      makeVenda({ id: 2, valorTotal: 50, canalOrigem: 'ifood' }),
+      makeVenda({ id: 3, valorTotal: 30, canalOrigem: 'pdv' }),
+      makeVenda({ id: 4, valorTotal: 20, canalOrigem: null }),
+    ];
+    const m = computeDailyMetrics({ vendas, itens: [], pagamentos: [], taxas: [] });
+    expect(m.por_canal).toEqual({
+      ifood: { receita_bruta: 150, qtd_vendas: 2 },
+      pdv: { receita_bruta: 50, qtd_vendas: 2 },
+    });
+    expect(JSON.stringify(m.por_canal)).not.toMatch(/nome|telefone|endereco|cliente/i);
+  });
+
+  it('por_canal é um objeto vazio quando não há vendas', () => {
+    const m = computeDailyMetrics({ vendas: [], itens: [], pagamentos: [], taxas: [] });
+    expect(m.por_canal).toEqual({});
+  });
+
   it('por_hora tem 24 posições', () => {
     const m = computeDailyMetrics({ vendas: [], itens: [], pagamentos: [], taxas: [] });
     expect(m.por_hora).toHaveLength(24);
