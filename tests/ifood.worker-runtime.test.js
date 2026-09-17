@@ -935,6 +935,36 @@ describe('iFood worker bootstrap', () => {
   });
 });
 
+describe('iFood worker cycle ordering', () => {
+  it('polls before draining the inbox, so a polled event is projected in the same cycle', async () => {
+    const calls = [];
+    const controller = new AbortController();
+    const repository = {
+      probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true }))
+    };
+
+    const task = runIfoodWorker({
+      repository,
+      signal: controller.signal,
+      intervalMs: 60_000,
+      reconcile: vi.fn(async () => { calls.push('reconcile'); }),
+      processInbox: vi.fn(async () => { calls.push('processInbox'); }),
+      processCommands: vi.fn(async () => { calls.push('processCommands'); }),
+      evaluateHealth: vi.fn(async () => { calls.push('evaluateHealth'); })
+    });
+
+    await waitFor(() => calls.length === 4);
+    controller.abort();
+    await task;
+
+    // Order is load-bearing, not cosmetic: reconcile writes event_inbox and
+    // processInbox reads it. Reversing these costs a full intervalMs of
+    // latency per event before the order is visible in the PDV.
+    expect(calls).toEqual(['reconcile', 'processInbox', 'processCommands', 'evaluateHealth']);
+    expect(calls.indexOf('reconcile')).toBeLessThan(calls.indexOf('processInbox'));
+  });
+});
+
 describe('iFood production repository polling seam', () => {
   it('lists pollable connections, enqueues into event_inbox and stamps poll success', async () => {
     const calls = [];
