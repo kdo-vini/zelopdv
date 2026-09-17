@@ -1,4 +1,5 @@
 import { formatPaymentMethod } from '$lib/finance/paymentMethods.js';
+import { COMMISSION_UNAVAILABLE_LABEL } from '$lib/finance/salesChannel.js';
 
 const VALE_REFEICAO_LABEL = formatPaymentMethod('vale_refeicao');
 
@@ -8,6 +9,9 @@ const VALE_REFEICAO_LABEL = formatPaymentMethod('vale_refeicao');
  */
 const fmt = (n) => Number(n || 0).toFixed(2);
 
+/** Formats a commission/net cell: "Indisponível" for null (Task 15 — never zero). */
+const fmtComissao = (n) => (n === null || n === undefined ? COMMISSION_UNAVAILABLE_LABEL : `R$ ${fmt(n)}`);
+
 /**
  * @param {object} dados — mesmo formato de pdfReport.js
  */
@@ -16,6 +20,9 @@ export async function generateExcelReport(dados) {
     const wb = XLSX.utils.book_new();
 
     // ==================== ABA: RESUMO ====================
+    const porCanal = dados.porCanal || [];
+    const estornos = dados.estornos;
+
     const resumoData = [
         ['ZELO PDV — RELATÓRIO DE VENDAS'],
         [`Período: ${dados.periodo}`],
@@ -46,6 +53,19 @@ export async function generateExcelReport(dados) {
         [],
         ['Sangrias', `−R$ ${fmt(dados.balanco.sangria)}`],
         ['Suprimentos', `+R$ ${fmt(dados.balanco.suprimento)}`],
+        ...(porCanal.length > 0 ? [
+            [],
+            ['VENDAS POR CANAL'],
+            ['Canal', 'Qtd', 'Bruto', 'Comissão', 'Líquido'],
+            ...porCanal.map((c) => [c.label, c.qtd, `R$ ${fmt(c.bruto)}`, fmtComissao(c.comissao), fmtComissao(c.liquido)]),
+        ] : []),
+        ...(estornos && (estornos.qtd > 0 || estornos.pendentes > 0) ? [
+            [],
+            ['ESTORNOS / CANCELAMENTOS'],
+            ['Estornos aplicados', estornos.qtd],
+            ['Valor estornado', `−R$ ${fmt(estornos.valor)}`],
+            ['Pendentes de revisão', estornos.pendentes],
+        ] : []),
     ].filter(row => row.length > 0);
 
     const wsResumo = XLSX.utils.aoa_to_sheet(resumoData);

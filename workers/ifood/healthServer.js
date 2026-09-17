@@ -1,4 +1,5 @@
 import { createServer as createHttpServer } from 'node:http';
+import { IFOOD_WORKER_DEFAULTS } from './config.js';
 
 const LIVE_PATH = '/health/live';
 const READY_PATH = '/health/ready';
@@ -32,7 +33,10 @@ function probeValue(value) {
  * Small in-memory state machine shared by the runtime and HTTP health server.
  * Probe details never leave this process through a response body.
  */
-export function createHealthState({ readyMaxAgeMs = 90_000, clock = () => Date.now() } = {}) {
+export function createHealthState({
+  readyMaxAgeMs = IFOOD_WORKER_DEFAULTS.readyMaxAgeMs,
+  clock = () => Date.now()
+} = {}) {
   let serving = true;
   let shuttingDown = false;
   let lastProbeAt = null;

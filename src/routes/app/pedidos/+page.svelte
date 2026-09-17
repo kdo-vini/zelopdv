@@ -205,6 +205,8 @@
    * Reimpressão manual: ignora o dedupe de 48h de propósito (o caso de uso é
    * justamente a via que não saiu). Em caso de sucesso, reserva o pedido no
    * store para a reconciliação não imprimir uma terceira via sozinha.
+   * Pedidos iFood também podem ser reimpressos manualmente aqui — a política
+   * `print_owner` da Task 13 só governa a impressão automática global.
    */
   async function reimprimirPedido(pedido) {
     if (!pedido || reimprimindo) return;

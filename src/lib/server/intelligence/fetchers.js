@@ -152,7 +152,7 @@ export async function fetchVendas(db, userId, startIso, endIso) {
   return fetchAllPages((from, to) =>
     db
       .from('vendas')
-      .select('id, id_usuario, valor_total, forma_pagamento, created_at, valor_desconto, tipo_pedido, taxa_entrega')
+      .select('id, id_usuario, valor_total, forma_pagamento, created_at, valor_desconto, tipo_pedido, taxa_entrega, canal_origem')
       .eq('id_usuario', userId)
       .gte('created_at', startIso)
       .lt('created_at', endIso)

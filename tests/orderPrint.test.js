@@ -26,4 +26,26 @@ describe('order print text', () => {
     expect(text).toContain('Rua das Flores, 10');
     expect(text).toContain('Obs: Tocar a campainha');
   });
+
+  it('prints the iFood display id and handoff codes on kitchen tickets', () => {
+    const text = buildOrderText({
+      id: '00000000-0000-0000-0000-ABCD1234',
+      source: 'ifood',
+      nome_cliente: 'Ana',
+      total: 40,
+      forma_pagamento: 'ONLINE',
+      ifood: {
+        displayId: '9876',
+        pickupCode: 'AB12',
+        deliveryCode: 'XY99',
+      },
+      fulfillment: { type: 'delivery', deliveryAddress: 'Rua A, 1' },
+      items: [{ productName: 'Burger', quantity: 1 }],
+    }, 'Loja');
+
+    expect(text).toContain('IFOOD #9876');
+    expect(text).toContain('Ref: ABCD1234');
+    expect(text).toContain('Codigo coleta: AB12');
+    expect(text).toContain('Codigo entrega: XY99');
+  });
 });

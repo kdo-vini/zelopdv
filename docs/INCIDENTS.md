@@ -1,5 +1,78 @@
 # Incidents
 
+## INC-2026-09-17-IFOOD-WORKER-MODULE-NOT-FOUND — imagem Docker exit(1) no boot
+
+**Status:** corrigido em código (2026-09-17). Redeploy Dokploy pendente deste
+commit. **Não é GO completo.**
+
+**Sintoma**
+
+- Container `ifood-worker` no Dokploy saía imediatamente com `exit(1)`.
+- Node: `MODULE_NOT_FOUND` para `src/lib/finance/paymentMethods.js`.
+- Redeploy necessário para credenciais shadow Developers ficava bloqueado.
+
+**Causa-raiz**
+
+- `workers/ifood/index.js` importa `eventHandler` / `createIfoodIntegration`,
+  que puxam `orderNormalizer.js`, que importa o catálogo canônico de
+  pagamentos. A imagem só copiava `workers/ifood` + `src/lib/server/ifood`;
+  `Dockerfile.dockerignore` ignorava `src/lib/finance/**`.
+
+**Correção**
+
+- Copiar `src/lib/finance/paymentMethods.js` para `/app/src/lib/finance/` e
+  un-ignore no `workers/ifood/Dockerfile.dockerignore`. Sem flags de ciclo e
+  sem secrets. Fail-closed permanece.
+
+**Referência:** [[IFOOD]] / `docs/operations/IFOOD.md`, FX-IFOOD-WORKER-IMAGE-PAYMENTMETHODS-01.
+
+## INC-2026-09-17-IFOOD-WORKER-STALE-PROBE — ready 503 após probe fresco
+
+**Status:** corrigido em código (2026-09-17). Redeploy Dokploy pendente deste
+commit. **Não é GO completo.**
+
+**Sintoma**
+
+- Host `ifood-worker-ellizg-90c105-2-24-66-12.sslip.io`: `/health/live` 200
+  `serving`; `/health/ready` 503 `stale_probe` minutos após um 200
+  `fresh_probe`. Processo no ar; deps não tinham caído.
+
+**Causa-raiz**
+
+- Loop default `IFOOD_WORKER_INTERVAL_MS` = 300_000; TTL
+  `IFOOD_WORKER_READY_MAX_AGE_MS` = 90_000. Readiness só atualiza no ciclo
+  (`onHealthChange` → `recordProbe`). Após 90s o ready virava stale até o
+  próximo tick.
+
+**Correção**
+
+- TTL default 600_000; boot deriva/auto-bumpeia se TTL ≤ intervalo.
+- Probe permanece `claim_ifood_events_v1` com args inválidos
+  (`INVALID_CLAIM_ARGUMENTS`), sem claim de inbox. Sem migrations.
+
+**Referência:** [[IFOOD]] / `docs/operations/IFOOD.md`, FX-IFOOD-WORKER-READY-TTL-01.
+
+## Prep — iFood schema GO parcial (2026-09-17)
+
+Owner autorizou apply. Migrations Tasks 12–19 aplicadas em
+`xnnjyrblpvsqrtsshawa`. Worker ainda sem deploy neste ambiente. Detalhes e
+checklist: [[IFOOD_MVP_PILOT]] / `docs/projects/IFOOD_MVP_PILOT.md`.
+Qualquer incidente operacional pós-worker deve virar `INC-…-IFOOD-…`.
+
+## Prep — iFood ops console (2026-09-17, ainda sem incidente de produção)
+
+Não é um outage: registra a superfície de suporte entregue na Task 19 para
+quando o piloto começar. Runbook canônico: [[IFOOD]] (`docs/operations/IFOOD.md`).
+
+- Painel: `admin-dashboard` `/ifood` (super-admin).
+- Ações auditadas: pause / resume / revoke / replay da mesma identidade
+  (inbox/command) — sem payload arbitrário do browser.
+- Migration local `20260917040026_ifood_admin_operations.sql` **não aplicada**
+  em produção até autorização da Task 21.
+- Qualquer incidente real de fila, presença, token ou divergência financeira
+  deve virar entrada `INC-…-IFOOD-…` neste arquivo apontando o runbook e o
+  `connectionId`/`merchantId` (sem PII de cliente).
+
 ## INC-2026-09-14-ASSINATURA-ADDON-SUMIDO — pacote de R$99 virava R$59 no checkout
 
 **Status:** corrigido em 2026-09-14 (mudança de app, sem migration).

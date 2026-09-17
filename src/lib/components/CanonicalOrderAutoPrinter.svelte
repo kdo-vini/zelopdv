@@ -45,6 +45,12 @@
         ),
         reserve: printed.reserve,
         release: printed.release,
+        // Until Task 17/18 expose connection.print_owner to the browser,
+        // default to the foundation column default ('zelo'). Explicit
+        // external/missing values on the order view model still win via
+        // shouldPrintIfoodOrder. Manual reprint on /app/pedidos stays an
+        // operator escape hatch and does not use this resolver.
+        resolvePrintOwner: (order) => order?.ifood?.printOwner ?? order?.printOwner ?? 'zelo',
         onError: (printError, order) => {
           console.warn('[canonical-auto-print] pedido', order?.id, printError?.message || printError);
           addToast(getZeloImpressaoFriendlyMessage(printError), 'warning', 7000);

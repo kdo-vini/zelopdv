@@ -1,13 +1,494 @@
-# Tasks 1–11 concluídas
+# Tasks 1–21 + worker live+ready (GO parcial)
+
+## Handoff — 2026-09-17 (imagem worker: MODULE_NOT_FOUND)
+
+Redeploy Dokploy do worker iFood quebrava no boot: `orderNormalizer.js`
+importa `src/lib/finance/paymentMethods.js`, mas a imagem só copiava
+`workers/ifood` + `src/lib/server/ifood`. Container `exit(1)` com
+`MODULE_NOT_FOUND` — isso bloqueava o redeploy das credenciais shadow
+Developers.
+
+Correção mínima: `workers/ifood/Dockerfile` passa a copiar
+`src/lib/finance/paymentMethods.js` no mesmo path relativo; o
+`Dockerfile.dockerignore` libera `src/lib/finance/` + o arquivo. Sem flags
+de ciclo, sem secrets, sem mudança de runtime além de o graph de import
+resolver. Fail-closed continua. **Ainda GO parcial.**
+
+## Handoff — 2026-09-17 (flags de ciclo; GO ainda parcial)
+
+Bootstrap do worker agora **pode** ligar inbox / commands / adapter HTTP,
+mas só com flags explícitas (default **off**, fail-closed):
+
+- `IFOOD_WORKER_PROCESS_INBOX=1`
+- `IFOOD_WORKER_PROCESS_COMMANDS=1`
+- `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1` (exige `IFOOD_CLIENT_ID` +
+  `IFOOD_CLIENT_SECRET`; sem o par o adapter fica null e os hooks
+  default de inbox/commands não sobem)
+
+Dokploy **não** tem essas flags hoje. Sem GO completo. Shadow/piloto/soak
+e merchant sandbox continuam pendentes. TTL de ready permanece
+`readyMaxAgeMs > intervalMs` (600s / 300s).
+
+## Handoff — 2026-09-17 (readyMaxAge > interval; sem stale_probe ocioso)
+
+Bug live: após o probe de produção, `/health/ready` ia a 200 `fresh_probe` e
+depois virava **503 `stale_probe`** até o próximo ciclo do worker. Causa:
+intervalo default **300_000 ms** e `readyMaxAgeMs` default **90_000 ms** —
+o probe só é gravado no ciclo, então ~4 min de cada janela de 5 min
+ficavam stale com deps saudáveis. Host
+`ifood-worker-ellizg-90c105-2-24-66-12.sslip.io`: live 200 `serving`, ready
+503 `stale_probe`.
+
+Correção: default `readyMaxAgeMs` = **600_000** (interval + slack 300_000).
+`loadIfoodWorkerConfig` deriva ou auto-bumpeia quando
+`readyMaxAgeMs <= intervalMs`. Probe continua não mutante
+(`claim_ifood_events_v1` + `INVALID_CLAIM_ARGUMENTS`). Sem migrations.
+**Ainda GO parcial.** Shadow/piloto/soak e `IFOOD_CLIENT_*` pendentes.
+
+Ready 200 **não** fica “para sempre”: só enquanto o último probe saudável
+for mais novo que `readyMaxAgeMs`. Com defaults coerentes, idle com deps
+saudáveis não deve mais cair em `stale_probe`.
+
+## Handoff — 2026-09-17 (Dokploy live+ready 200 após probe)
+
+Redeploy do commit de probe (`b576c9a`) no Dokploy **verificado live**.
+Decisão vigente: **GO parcial (schema + worker live+ready)**. **Não é GO
+completo.**
+
+- Host: `ifood-worker-ellizg-90c105-2-24-66-12.sslip.io`
+- App Dokploy: `ifood-worker` (`ifood-worker-ellizg` / `nARDI-HdMP6OO0HyBhxuE`)
+- `GET /health/live` → **200** `{"status":"ok","reason":"serving"}`
+- `GET /health/ready` → **200** `{"status":"ready","reason":"fresh_probe"}`
+  (antes: 503 `dependencies_unavailable`)
+- Probe: PostgREST `claim_ifood_events_v1` com args inválidos;
+  `INVALID_CLAIM_ARGUMENTS` sem claim de inbox
+
+**Ainda não operacional:** o bootstrap default **não** liga `processInbox`,
+commands nem adapter HTTP iFood. Envs opcionais `IFOOD_CLIENT_ID` /
+`IFOOD_CLIENT_SECRET` **não** definidas. Sem merchant/sandbox atribuído.
+Shadow, uma loja piloto e soak continuam pendentes.
+
+Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`. Ops:
+`docs/operations/IFOOD.md`.
+
+**Branch:** `cursor/ifood-task-12-cdb9`
+
+## Handoff — 2026-09-17 (probe de produção para `/health/ready`)
+
+Causa do ready 503 no Dokploy: `main()` sempre subia
+`createUnreadyWorkerDependencies()`. Com `SUPABASE_URL` +
+`SUPABASE_SERVICE_ROLE_KEY`, o bootstrap agora monta
+`workers/ifood/supabaseRepository.js`. `probeDependencies()` chama
+`claim_ifood_events_v1` com `p_limit=0` e `p_lease_seconds=0`; a RPC
+rejeita com `INVALID_CLAIM_ARGUMENTS` **antes** de `FOR UPDATE` / claim,
+sem roubar inbox. Rede/timeout/auth continuam fail-closed. Sem as duas
+envs, o caminho unready permanece. Sem migrations novas e sem GO completo.
+
+Redeploy no Dokploy **já evidenciado** no handoff live+ready acima.
+Evidência HTTP anterior (processo no ar, ready 503) fica no handoff
+Dokploy abaixo.
+
+**Branch:** `cursor/ifood-task-12-cdb9`
+
+## Handoff — 2026-09-17 (Dokploy ifood-worker)
+
+Worker **processo no ar** no Dokploy. **Não é GO completo.** Decisão vigente
+na época deste handoff: **GO parcial (schema + worker process live)** —
+supersedida pelo handoff live+ready 200 no topo.
+
+Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`. Ops: host e health em
+`docs/operations/IFOOD.md`.
+
+**Evidência (HTTP, 2026-09-17):**
+- Dokploy projeto **ZeloPDV**, app `ifood-worker` (`appName` `ifood-worker-ellizg`)
+- GitHub `kdo-vini/zelopdv` branch `cursor/ifood-task-12-cdb9`; Dockerfile
+  `workers/ifood/Dockerfile`, context `.`
+- Host: `ifood-worker-ellizg-90c105-2-24-66-12.sslip.io` (Let's Encrypt ligado;
+  TLS pode ainda estar assentando)
+- Envs **só por nome** (sem valores): `SUPABASE_URL`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `PORT`, `IFOOD_WORKER_HOST`, `NODE_ENV`.
+  Opcionais `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` **não** definidas.
+- Supabase `xnnjyrblpvsqrtsshawa`
+- Docker build OK; container **Docker-healthy** (`HEALTHCHECK GET /health/live`)
+- `GET /health/live` → **200** `{"status":"ok","reason":"serving"}`
+- `GET /health/ready` → **503** `{"status":"not_ready","reason":"dependencies_unavailable"}`
+  (evidência **antes** do probe de produção e do redeploy; causa: unready factory)
+
+**Não feito (ainda vigente):** shadow, loja piloto, soak.
+
+**Bloqueios para GO completo (ready 200 já verificado após redeploy):**
+1. Ligar ciclos reais (`processInbox` / commands / adapter HTTP) + merchant/sandbox
+2. Shadow → piloto → soak → sign-off GO pleno
+
+## Handoff — 2026-09-17 (owner autorizou apply)
+
+Owner respondeu **“Autorizo”**. Executado:
+
+1. **Migrations iFood Tasks 12–19 aplicadas** no projeto Supabase
+   `xnnjyrblpvsqrtsshawa` (ZeloPDV). Tasks 1–11 já estavam aplicadas.
+2. Verificação: 27 RPCs `*ifood*`, `vendas.canal_origem`,
+   `admin_ifood_connections_overview_v1()`.
+3. **Depois desta autorização:** deploy Dokploy + redeploy do probe
+   evidenciado no handoff live+ready (live 200 e ready 200). Shadow,
+   loja piloto e soak continuam pendentes.
+
+Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md` (decisão
+**GO parcial — schema + worker live+ready**; não GO completo).
+
+## Handoff — 2026-09-17 (após Task 21)
+
+MVP de **código** fechado nas Tasks 1–20. Task 21 registrou decisão
+**NO-GO** em `docs/projects/IFOOD_MVP_PILOT.md`: nenhuma migration/deploy/
+shadow/piloto real sem autorização explícita do owner.
+
+**Branch:** `cursor/ifood-task-12-cdb9`  
+**Último commit de código de qualidade:** Task 20  
+**Commit desta task:** `docs: record iFood MVP pilot decision`
+
+**Para um futuro GO o owner precisa autorizar, nesta ordem:**
+1. Apply das migrations forward iFood no projeto vinculado
+2. `docker build` + deploy do worker (digest + envs por nome)
+3. Shadow → loja piloto → soak → sign-off GO
+
+Ver runbook `docs/operations/IFOOD.md` e checklist no doc de piloto.
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 20)
+
+Estado após Task 20 (qualificação para piloto):
+
+1. Este arquivo — bloco abaixo + handoff Task 19.
+2. Plano `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real Task 20.
+3. Runbook `docs/operations/IFOOD.md` — seção gate automatizado.
+4. Próxima task: **Task 21** (shadow/piloto/GO|NO-GO) — **não aplica migration
+   nem deploy sem autorização explícita do owner**.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9`.
+**Task 20 commit:** `test: qualify iFood MVP for pilot`.
+
+**Validado:**
+- `tests/ifood.resilience.test.js` — 12 verdes.
+- `npm run verify:ifood` — exit 0.
+- `npx playwright test tests/e2e/ifood-mvp.spec.js --project=ifood-mvp` — 3 verdes.
+- `docker build` — **skip**: CLI Docker ausente neste ambiente (infra),
+  documentado; não é skip de invariante de domínio.
+
+**O que mudou:**
+- E2E mock, resilience, `scripts/verify-ifood-worker.mjs`, script
+  `verify:ifood`, step CI em `engineering.yml`, projeto Playwright
+  `ifood-mvp`.
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 19)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 18).
+Estado após Task 19:
+
+1. Este arquivo (`docs/CURRENT.md`) — bloco Task 19 abaixo, mais o bloco
+   "Handoff ... após Task 18" logo em seguida.
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da
+   Task 19 (`## Task 19: Criar observabilidade, suporte e controles de
+   incidente`).
+3. `docs/operations/IFOOD.md` — runbook operacional (novo).
+4. Próxima task: **Task 20** (qualificar MVP para piloto — E2E, resilience,
+   `verify:ifood`, gate CI) — ver plano.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commit mais recente antes desta task: Task 18 `feat: add self-service iFood
+setup wizard`. **Task 19 commitada nesta sessão** como `feat: add iFood
+operations console`.
+
+**Estado validado nesta sessão:**
+- Suíte alvo da Task 19 (`api.admin-ifood` + `ifood.operations`): 2 arquivos /
+  11 testes verdes.
+- `npm run check`: 0 erros, 0 warnings.
+- `npm --prefix admin-dashboard run check`: 0 erros, 0 warnings.
+
+**O que mudou de fato:**
+- Migration local (não aplicada):
+  `supabase/migrations/20260917040026_ifood_admin_operations.sql` com cinco
+  RPCs `service_role`-only para overview cross-tenant, kill switch por
+  `connectionId`, replay de inbox/comando (mesma linha) e listagem de
+  reprocessáveis. Verification
+  `supabase/verification/ifood_admin_operations.sql` revisada, não executada.
+- `admin-dashboard` ganhou client service-role
+  (`src/lib/server/supabaseAdmin.js`), repositório RPC
+  (`ifoodAdminRepository.js`), serviço puro (`ifoodOperations.js`), rotas
+  `GET /api/ifood/connections` e `POST /api/ifood/actions`, página `/ifood` e
+  item de nav **iFood Ops**. Super-admin obrigatório; payload sanitizado;
+  replay rejeita `payload`/`eventId` do browser; auditoria grava
+  `admin_email` (NOT NULL).
+- Runbook `docs/operations/IFOOD.md` + symlink no vault; nota de prep em
+  `docs/INCIDENTS.md`.
+
+**Próximo passo real (Task 20):** E2E com adapter mock, fault injection,
+script `verify:ifood` e gate CI — ver `## Task 20: Qualificar o MVP completo
+para piloto` no plano. Task 21 continua bloqueada para mutações de produção
+sem GO explícito do owner.
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 18)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 17).
+Estado após Task 18:
+
+1. Este arquivo (`docs/CURRENT.md`) — bloco Task 18 abaixo, mais o bloco
+   "Handoff ... após Task 17" logo em seguida.
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da
+   Task 18 (`## Task 18: Criar wizard progressivo em Perfil > Integrações`).
+3. Próxima task: **Task 19** (observabilidade, suporte e controles de
+   incidente no admin dashboard) — ver plano; pre-read obrigatório de
+   `CLAUDE.md` e `CODE_REVIEW.md` antes de tocar `admin-dashboard/`.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commit mais recente antes desta task: Task 17 `feat: add self-service
+iFood connection APIs`. **Task 18 commitada nesta sessão** como `feat: add
+self-service iFood setup wizard`.
+
+**Estado validado nesta sessão:**
+- Suíte alvo da Task 18 (`ifood.setup-wizard` + `profileUtils` +
+  `api.ifood-connection` + `ifood.connection-schema` +
+  `ifood.connection-print-owner-schema`): 5 arquivos / 77 testes verdes.
+- `npx vitest run` completo: 231 arquivos / 1663 testes verdes (3 skips
+  pré-existentes, não relacionados).
+- `npm run check`: 0 erros, 0 warnings.
+
+**O que mudou de fato:**
+- `src/lib/integrations/ifoodSetup.js` (novo) — máquina de apresentação
+  **pura** (sem `fetch`/Supabase/SvelteKit) que deriva um dos seis estados
+  do design doc (`Não conectado`/`Aguardando autorização no
+  iFood`/`Configuração necessária`/`Ativo`/`Atenção necessária`/`Pausado`)
+  a partir da resposta já sanitizada de `GET /api/integrations/ifood/connection`
+  (+ opcionalmente `GET /health`). Mapeamento `active`+`unhealthy` =
+  "Configuração necessária" vs `degraded` = "Atenção necessária" é uma
+  decisão desta task, documentada e testada, porque o design doc nomeia os
+  seis estados mas não fixa a regra exata. Também expõe
+  `availableIfoodActions`, `describeIfoodConnectionError` (todo erro HTTP
+  vira frase em PT-BR, com contagem exata em `active_orders_present`) e
+  textos estáticos de mapping/print-owner.
+- **Desvio do plano — nova migration** para fechar o passo "escolher
+  responsável pela impressão" do wizard (gap já registrado no Resultado
+  real da Task 13: a Task 17 só tinha leitura de `print_owner`, nenhuma
+  escrita): `supabase/migrations/20260917040500_ifood_connection_print_owner.sql`
+  (local, não aplicada) com `set_ifood_connection_print_owner_v1`, mesma
+  blindagem das RPCs da Task 17. Verificação transacional em
+  `supabase/verification/ifood_connection_print_owner.sql` (revisada,
+  não executada — sem Docker/Postgres local). Teste estático de schema em
+  `tests/ifood.connection-print-owner-schema.test.js`.
+- `connectionService.js` ganhou `repository.setPrintOwner()` e
+  `service.updatePrintOwner()` (mesma autorização/elegibilidade das outras
+  rotas; nunca sujeito ao gate de "pedidos ativos"). `PATCH
+  /api/integrations/ifood/connection` agora despacha por formato do corpo:
+  `{ printOwner }` vai para `updatePrintOwner`, `{ action }` continua no
+  `updateConnectionStatus` já existente — os 25 testes da Task 17 em
+  `tests/api.ifood-connection.test.js` continuam verdes sem alteração.
+- Dois componentes novos: `IfoodSetupWizard.svelte` (modal **burro**, só
+  renderiza `derived` e emite eventos de intenção — nunca chama `fetch`,
+  nunca simula autorização concluída, nunca guarda segredo/token em
+  `localStorage`) e `IfoodIntegrationCard.svelte` (dono de toda a rede:
+  busca status no `onMount`, saúde só quando `active`/`degraded`, esconde o
+  card inteiro em `402`/`403`/`503` da primeira consulta em vez de deixar a
+  aba num beco sem saída para quem não tem a integração disponível).
+- `src/routes/perfil/+page.svelte`: `<IfoodIntegrationCard />` como
+  primeiro item da aba Integrações, antes de "Operação offline".
+- **Fora do escopo desta task, por decisão deliberada:** a "sugestão de
+  vínculo de produto" é só texto estático — a API de mapping (Task 12) é
+  por item de pedido, sem modo de listagem em lote, e não havia pedido real
+  disponível no wizard para sugerir algo de verdade.
+
+**Próximo passo real (Task 19):** observabilidade, suporte e controles de
+incidente no `admin-dashboard/` — ver `## Task 19: Criar observabilidade,
+suporte e controles de incidente` no plano.
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 17)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 16).
+Estado após Task 17:
+
+1. Este arquivo (`docs/CURRENT.md`) — bloco Task 17 abaixo, mais o bloco
+   "Handoff ... após Task 16" logo em seguida.
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da
+   Task 17 (`## Task 17: Criar APIs seguras de conexão self-service`).
+3. `docs/modules/ACESSOS.md` — seção `Capability integracoes.ifood.gerenciar`.
+4. Próxima task: **Task 18** (wizard progressivo em Perfil > Integrações) —
+   ver plano; ler `docs/DESIGN_PATTERNS.md` antes de qualquer mudança de UI.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commit mais recente antes desta task: Task 16 `feat: teach Zelinho sales
+channel context`. **Task 17 commitada nesta sessão** como `feat: add
+self-service iFood connection APIs`.
+
+**Estado validado nesta sessão:**
+- Suíte alvo da Task 17 (`api.ifood-connection` + `server.accessControl`):
+  2 arquivos / 32 testes verdes. Schema test dedicado
+  (`ifood.connection-schema`): 7 testes verdes.
+- `npx vitest run` completo: 229 arquivos / 1626 testes verdes (3 skips
+  pré-existentes, não relacionados).
+- `npm run check`: 0 erros, 0 warnings.
+
+**O que mudou de fato:**
+- Nova migration local (não aplicada ao Supabase vinculado):
+  `supabase/migrations/20260917030512_ifood_self_service_connection.sql`,
+  com três RPCs mecânicas (`get_ifood_connection_v1`,
+  `upsert_ifood_connection_v1`, `count_ifood_active_orders_v1`) — desvio
+  documentado do plano, que não listava uma migration para esta task, mas
+  era estruturalmente necessária: `ifood_internal` não tem exposição
+  PostgREST, então não havia outro caminho para ler/escrever
+  `ifood_internal.connections`. Toda política (entitlement, capability,
+  CSRF/state, "sem pedidos ativos") fica em `connectionService.js`, não no
+  SQL. Verificação transacional em
+  `supabase/verification/ifood_self_service_connection.sql`, não executada
+  (Docker indisponível nesta sessão) mas revisada linha a linha; teste
+  estático em `tests/ifood.connection-schema.test.js`.
+- `src/lib/server/ifood/connectionService.js` (novo) — serviço puro
+  (repositório RPC-only + orquestração), sem `$env`/`supabaseAdmin`, com
+  `getStatus`, `startConnection`, `getAuthorizationPrompt`,
+  `checkAuthorization`, `updateConnectionStatus` e `getHealth`.
+- Três rotas novas: `POST/GET/PATCH /api/integrations/ifood/connection`,
+  `GET/POST /api/integrations/ifood/authorization`,
+  `GET /api/integrations/ifood/health`. Nenhuma retorna segredo, token ou
+  `connectionId` interno; `startConnection` cria a linha `pending` **antes**
+  de qualquer confirmação do iFood (requisito da Task 6).
+- Capability nova `integracoes.ifood.gerenciar` em
+  `src/lib/server/accessControl.js` e `src/lib/accessControl.js`
+  (`canManageIfoodIntegration`). Titular sempre pode; subusuário só com a
+  capability explícita no cargo — nenhum cargo padrão a recebe hoje (gap
+  documentado em `docs/modules/ACESSOS.md`: a UI de Acessos ainda não tem
+  um jeito de conceder essa capability a um subusuário).
+- `state` de autorização é HMAC determinístico
+  (`connectionId:merchantId:pendingSince` com `IFOOD_CLIENT_SECRET`), não
+  uma coluna nova no banco — sobrevive a refresh porque é recomputável, e
+  fica inválido sozinho quando a conexão sai de `pending` (cobre "replay de
+  state") ou passa de 30 minutos (cobre "CSRF/state expirado").
+- O fluxo real de autorização self-service do iFood **não está confirmado**
+  por documentação oficial (`docs/integrations/ifood/CONTRACT_SNAPSHOT.md`
+  já registrava isso antes desta task). `checkAuthorization` reaproveita
+  `adapter.connectMerchant()` (já existente desde a Task 1/5) para
+  confirmar a autorização, sem inventar nenhum endpoint iFood novo.
+
+**Próximo passo real (Task 18):** wizard progressivo em `/perfil` — ver
+`## Task 18: Criar wizard progressivo em Perfil > Integrações` no plano.
+Ler `docs/DESIGN_PATTERNS.md` antes de tocar em `perfil/+page.svelte`.
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 16)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 15).
+Estado após Task 16:
+
+1. Este arquivo (`docs/CURRENT.md`) — bloco Task 16 abaixo, mais o bloco
+   "Handoff ... após Task 15" logo em seguida (que por sua vez referencia
+   Task 12–14).
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da
+   Task 16 (`## Task 16: Dar ao Zelinho consciência de canal sem PII`).
+3. Próxima task: **Task 17** (APIs seguras de conexão self-service do
+   iFood) — ver plano; exige pre-read de `CLAUDE.md`, `CODE_REVIEW.md`,
+   `docs/BILLING.md`, `docs/modules/ACESSOS.md` e `docs/data/SCHEMA_RLS.md`
+   antes de tocar código.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commit mais recente antes desta task: Task 15 `feat: report sales by origin
+channel`. **Task 16 commitada nesta sessão** como `feat: teach Zelinho
+sales channel context`.
+
+**Estado validado nesta sessão:**
+- Suíte alvo da Task 16
+  (`intelligence.fetchers` + `intelligence.metrics` +
+  `gerente.agent.toolsInsights` + `gerente.ifood-channel`): 4 arquivos / 39
+  testes verdes.
+- `npx vitest run` completo: 227 arquivos / 1594 testes verdes (3 skips
+  pré-existentes, não relacionados).
+- Nenhuma migration nova nesta task — `por_canal` é derivado em memória a
+  partir de `vendas.canal_origem` (Task 14) e persistido dentro da coluna
+  `jsonb` que já existia em `business_daily_snapshots.metrics`.
+
+**O que mudou de fato:**
+- `resumoPeriodo` (ferramenta `resumo_periodo` do Zelinho) sempre devolve
+  `por_canal` (receita bruta e quantidade por canal), tanto para `hoje`
+  (calculado a partir de `vendas` em tempo real) quanto para `ontem`/
+  `semana`/`mes` (agregado a partir de `business_daily_snapshots`).
+  Aceita um parâmetro opcional `canal` que escopa receita/quantidade/ticket
+  médio a um único canal; para `hoje` isso também escopa `mix_pagamentos`
+  e `top_produtos` (dado bruto disponível), mas para snapshots históricos
+  esses dois campos voltam vazios/zerados quando `canal` é passado — a
+  granularidade por canal de mix/produto nunca foi gravada retroativamente
+  nos snapshots antigos, e o código não inventa esse dado.
+- Snapshots gravados antes desta task (sem `metrics.por_canal`) continuam
+  legíveis: caem inteiros no canal `pdv` (mesmo fallback do trigger
+  `vendas_default_canal_origem` da Task 14), preservando a soma total.
+- O prompt do Zelinho agora explica que o `por_canal` do iFood é
+  faturamento bruto operacional (o que o cliente pagou no pedido), não o
+  valor líquido que a plataforma repassa — o sistema ainda não calcula a
+  comissão do iFood. O Zelinho nunca chama esse número de "lucro".
+- Nenhuma ferramenta nova foi criada: `por_canal` viaja dentro da resposta
+  já existente de `resumo_periodo`, e nada no payload expõe nome, telefone
+  ou endereço de cliente (só `receita_bruta`/`qtd_vendas` por canal).
+
+**Decisão de escopo registrada (ver Resultado real da Task 15 para o
+detalhe):** o filtro de canal recorta a lista de vendas do caixa e o card
+de Estornos/Cancelamentos; os cards comparativos "Vendas por Canal" somam
+**sempre todos os canais** (é o que permite comparar) e não são afetados
+pelo filtro. Os KPIs gerais do topo (Receita Líquida, Vendas Brutas, Ticket
+Médio, Formas de Pagamento, Produtos Vendidos) continuam somando o
+caixa/período inteiro, sem recorte por canal — só a lista de cupons e o
+card de estornos mudam com o filtro.
+
+**Próximo passo real (Task 17):** criar as APIs server-side de conexão
+self-service do iFood (capability `integracoes.ifood.gerenciar`) — ver
+`## Task 17: Criar APIs seguras de conexão self-service` no plano. Exige
+matriz RED de autorização (titular, trial, plano superior, subusuário sem
+capacidade, merchant de outra empresa, replay de state) antes de qualquer
+endpoint.
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 15)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 14).
+Estado após Task 15:
+
+1. Este arquivo (`docs/CURRENT.md`) — bloco Task 15 abaixo, mais os blocos
+   Task 12–14 na seção "Handoff ... após Task 14".
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da
+   Task 15 (`## Task 15: Expor vendas iFood nos relatórios existentes`).
+3. Próxima task: **Task 16** (dar ao Zelinho consciência de canal sem PII)
+   — ler `por_canal` que a Task 15 já calcula em
+   `src/lib/finance/salesChannel.js` e reaproveitar a mesma agregação em
+   `src/lib/server/intelligence/`.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commit mais recente: Task 14 `feat: materialize iFood sales and reversals`.
+**Task 15 commitada nesta sessão** como `feat: report sales by origin
+channel`.
+
+**Estado validado nesta sessão:**
+- Suíte alvo da Task 15
+  (`finance.sales-channel` + `relatoriosLayout` + `reportExports` +
+  `finance.reportPaymentPresentation`): 4 arquivos / 30 testes verdes.
+- `npx vitest run` completo: 226 arquivos / 1580 testes verdes (3 skips
+  pré-existentes, não relacionados).
+- `npm run check`: 0 erros, 0 warnings (svelte-check).
+- Nenhuma migration nova nesta task — `canal_origem` e `vendas_estornos`
+  já existem desde a Task 14; Task 15 é só leitura (SELECT) desses campos.
+
+**Decisão de escopo registrada (ver Resultado real da Task 15 para o
+detalhe):** o filtro de canal recorta a lista de vendas do caixa e o card
+de Estornos/Cancelamentos; os cards comparativos "Vendas por Canal" somam
+**sempre todos os canais** (é o que permite comparar) e não são afetados
+pelo filtro. Os KPIs gerais do topo (Receita Líquida, Vendas Brutas, Ticket
+Médio, Formas de Pagamento, Produtos Vendidos) continuam somando o
+caixa/período inteiro, sem recorte por canal — só a lista de cupons e o
+card de estornos mudam com o filtro.
+
+**Próximo passo real (Task 16):** ensinar o Zelinho a responder "quanto veio
+do iFood" / "compare iFood com os outros canais" sem PII — ver `## Task 16:
+Dar ao Zelinho consciência de canal sem PII` no plano.
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
-Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. **Tasks 1–10
-concluídas** (contrato/arquitetura, domínio/normalização, persistência com
-leases, worker dedicado, adapter HTTP de produção, webhook assinado
-durável, processamento da inbox com retry/dead-letter, projeção canônica
-em `zelo_orders`) e a **revisão de
-conformidade das Tasks 1–6 (2026-09-16) está fechada** — ver
+Trabalho em `codex/ifood-mvp` (retomada Cursor Cloud em
+`cursor/ifood-task-12-cdb9`). **Tasks 1–14 concluídas** (contrato/arquitetura,
+domínio/normalização, persistência com leases, worker dedicado, adapter HTTP
+de produção, webhook assinado durável, processamento da inbox com
+retry/dead-letter, projeção canônica em `zelo_orders`, reconciliação/presença,
+comandos assíncronos, filas Pedidos/Cozinha, mapeamento progressivo de
+produtos com ledger de estoque, coordenação de impressão sem duplicidade, e
+materialização de venda operacional + estorno auditável fora do caixa) e a
+**revisão de conformidade das Tasks 1–6 (2026-09-16) está fechada** — ver
 `docs/superpowers/plans/2026-09-15-ifood-mvp.md`, seção
 "Revisão de conformidade das Tasks 1–6 (2026-09-16)" logo após o Resultado
 real da Task 6, para o detalhe de cada gap (G1–G6) fechado: harness
@@ -193,6 +674,55 @@ passou a ler `delivery.deliveryAddress` e a guardar só nome/telefone/endereço
 (sem CPF). Divisão de execução a partir desta task: backend Codex, frontend
 Claude. Harness com 6 verificadores iFood verde; 316 testes; check 0/0.
 
+**Task 12 do iFood (2026-09-17, Cursor Cloud):** mapeamento progressivo e
+estoque. RPCs novas em `20260917014734_ifood_product_mapping_stock.sql`
+(`suggest`/`confirm`/`commit`/`release`), API
+`/api/integrations/ifood/product-mappings`, hooks no `eventHandler` após
+projeção em `CONFIRMED`/`CANCELLED`. Match exato por `externalCode` só
+sugere; nome semelhante é só visual; vínculo manual exige
+`produtos.gerenciar` (ou titular). Ledger `stock_commitments` idempotente;
+item sem mapping não move estoque; estoque insuficiente não bloqueia o
+pedido já projetado. Suíte iFood **328/328**; `verify:migrations` 62 forward.
+Harness local e aplicação em produção **pendentes** (sem Docker/`pwsh` neste
+ambiente; migration não aplicada ao Supabase vinculado).
+
+**Task 13 do iFood (2026-09-17, Cursor Cloud):** impressão coordenada.
+`ifoodPrinting.js` filtra auto-print por `print_owner` (`zelo`/`external`/
+ausente) e adia agendados até `preparationStartAt`; runtime global mantém
+`deferredIds` sem reservar cedo; `PRINT_OUTCOME_UNKNOWN` sem auto-retry;
+ticket mostra display id/códigos iFood. Fallback temporário `resolvePrintOwner
+→ 'zelo'` até Task 17/18 expor a conexão. Reimpressão manual em Pedidos
+continua livre.
+
+**Task 14 do iFood (2026-09-17, Cursor Cloud):** venda operacional e estorno
+auditável. Migration `20260917020813_ifood_sales_and_reversals.sql` adiciona
+`vendas.canal_origem` (check `pdv|zelomenu|zelochat|mesa|manual|ifood` +
+índice `(id_usuario, created_at, canal_origem)`, backfill via
+`zelo_orders.sale_id`/`source`, default `pdv` para histórico sem vínculo) e
+`vendas_estornos` (`event_id unique`, `status applied|pending_review`, no
+máximo um `applied` por venda via índice único parcial). RPCs
+`materialize_ifood_sale_v1`/`reverse_ifood_sale_v1` são `SECURITY DEFINER`,
+`search_path=''`, `service_role`-only (mesmo endurecimento da Task 12).
+Materialize só age em `source='ifood'`+`status='delivered'`; `id_caixa`
+sempre `null`; nunca cria `pessoas`/`fiado_lancamentos`/
+`vendas_taxas_plataforma`; `client_sale_id='zelo-order:'||id` garante
+idempotência; pagamento `fiado` é sempre coagido para `outro`. Reverse nunca
+apaga a venda: `event_id` duplicado ou segunda reversão da mesma venda →
+`duplicate`; sem venda materializada → `no_sale`; cancelamento inequívoco →
+`status='applied'`; total divergente ou pedido ainda não cancelado →
+`status='pending_review'`. `ensure_zelo_order_sale` (`create or replace`)
+ganhou branch `source='ifood'` delegando a `materialize_ifood_sale_v1`, mas
+esse caminho automático nunca materializa nada de fato (trigger `BEFORE
+UPDATE` vê a linha pré-UPDATE); a materialização real é a chamada
+best-effort de `eventHandler.js` após a projeção comitar, via
+`salesRepository.js` novo (mesmo padrão de `productMappingRepository.js`).
+Suíte alvo (`ifood.sales-schema` + `ifood.event-handler` +
+`canonicalOrderSales` + `salesCreationRbacSchema`) **42/42 verde**; os dois
+últimos ficaram intocados (leem `.ai/migrations/canonical_order_sales_
+2026_07_23.sql`, arquivo legado). Harness local e aplicação em produção
+**pendentes** (sem Docker/`pwsh` neste ambiente; migration não aplicada ao
+Supabase vinculado).
+
 **Produção (2026-09-16, autorizado pelo dono):** as duas migrations novas da
 Task 11 — `ifood_order_sync_state` (RPC
 `get_ifood_order_sync_state_v1`) e `ifood_projection_display_fields`
@@ -204,13 +734,50 @@ arquivo. Grants conferidos: só `service_role` executa as duas funções
 `set role service_role; select * from project_ifood_order_event_v1(...)`
 usando um `merchant_id` inexistente confirmou `outcome = 'unknown_merchant'`
 sem nenhum efeito colateral (nenhuma linha tocada em `zelo_orders` real).
-Branch `codex/ifood-mvp` (commit `fc59017`) enviada para
-`https://github.com/kdo-vini/zelopdv` — ver seção "Handoff para retomada
-externa (Cursor Cloud)" logo abaixo para o pickup da Task 12.
+Branch `codex/ifood-mvp` (commit `fc59017`, depois handoff `aa9297d`) enviada
+para `https://github.com/kdo-vini/zelopdv`.
 
-**Próximo passo linear:** Task 12 — vínculo de produtos iFood e estoque.
+**Próximo passo linear:** Task 15 — expor canal de venda nos relatórios.
 
-## Handoff para retomada externa (Cursor Cloud) — 2026-09-16
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 14)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 13).
+Estado após Task 14:
+
+1. Este arquivo (`docs/CURRENT.md`) — blocos Task 12, Task 13 e Task 14 acima.
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultados reais 12–14.
+3. Próxima task: **Task 15** (expor canal iFood nos relatórios) —
+   frontend/relatórios; ler `canal_origem` já disponível em `vendas`.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commits: Task 12 `feat: add progressive iFood product mapping`; Task 13
+`feat: coordinate iFood order printing`. **Task 14 ainda não commitada** —
+mudanças da migration `20260917020813_ifood_sales_and_reversals.sql`,
+`salesRepository.js`, `eventHandler.js`, testes e docs ficaram no working
+tree para o coordenador revisar e commitar (`feat: materialize iFood sales
+and reversals`).
+
+**Estado validado nesta sessão:**
+- Task 13 print suites: 5 arquivos / 23 testes verdes.
+- Task 14 suíte alvo (`ifood.sales-schema` + `ifood.event-handler` +
+  `canonicalOrderSales` + `salesCreationRbacSchema`): 4 arquivos / 42 testes
+  verdes.
+- Migrations das Tasks 12 e 14 **ainda não aplicadas** em produção; harness
+  descartável pendente na máquina do coordenador (sem Docker/`pwsh` neste
+  ambiente Linux Cloud).
+
+**Pendências conhecidas, fora do escopo do iFood:**
+- O drift de `storage_policies` do harness (documentado para o dono, não é
+  bloqueante para o iFood).
+- O intervalo padrão de 300s do worker é incompatível com a janela de saúde
+  de 90s quando o worker for de fato ligado em produção (documentado, ainda
+  não ligado).
+- Leitura browser de `connections.print_owner` ainda depende das Tasks 17/18.
+
+**Próximo passo real (Task 15):** expor canal de venda iFood nos relatórios —
+ver `## Task 15: Expor vendas iFood nos relatórios existentes` no plano.
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-16 (histórico)
 
 Trabalho retomado fora desta sessão a partir daqui. Leia nesta ordem antes de
 codar:
@@ -223,7 +790,7 @@ codar:
    dono, 2026-09-16)"**, logo antes de "Contrato de documento vivo", define
    que **backend é Codex, frontend é quem estiver pegando a sessão** a
    partir da Task 11 — ajuste essa divisão à ferramenta que for usada no
-   Cursor Cloud, mas mantenha uma única pessoa/agente por commit e não
+   Cursor Cloud, but mantenha uma única pessoa/agente por commit e não
    misture as duas camadas no mesmo commit sem necessidade.
 3. Cada task já executada tem seu bloco **"Resultado real"** preenchido no
    plano — é a fonte de verdade sobre o que foi feito, desvios e por quê.

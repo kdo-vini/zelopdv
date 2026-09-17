@@ -149,15 +149,17 @@ function invokeObserver(observer, value) {
  * `src/lib/server/ifood/inboxProcessor.js`). When provided, it is invoked
  * once per cycle right after the health probe/notification, wired the same
  * defensive way `probeOwner` already is: it only runs when supplied (the
- * default bootstrap in `workers/ifood/index.js` never supplies it, so its
- * fail-closed `createUnreadyWorkerDependencies` path is unchanged), it
+ * default bootstrap in `workers/ifood/index.js` never supplies it, so the
+ * production probe / fail-closed unready path is unchanged), it
  * respects `signal` (skipped/aborted the same way any other tracked
  * operation is), and any error it throws goes through the same
  * `reportError`/`sanitizeWorkerError` path as every other error here — it
  * never crashes the loop or leaks raw error text. Task 9 adds the same
  * optional pattern for `options.reconcile` and `options.evaluateHealth`,
- * and Task 10 adds `options.processCommands`; none is supplied by the
- * default bootstrap.
+ * and Task 10 adds `options.processCommands`. The default bootstrap only
+ * supplies those hooks when explicit env flags are on
+ * (`IFOOD_WORKER_PROCESS_INBOX`, `IFOOD_WORKER_PROCESS_COMMANDS`,
+ * `IFOOD_WORKER_ENABLE_HTTP_ADAPTER`); otherwise the loop stays probe-only.
  *
  * The returned promise resolves when the loop observes abort. It also carries
  * `drain()` so the bootstrap can wait for an in-flight probe/inbox cycle

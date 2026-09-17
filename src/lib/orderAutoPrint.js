@@ -19,10 +19,14 @@ export function selectOrdersToAutoPrint(previousOrders, freshOrders, options) {
   const previousIds = new Set((previousOrders || []).map((order) => order.id));
   const now = Number(options?.now ?? Date.now());
   const maxAgeMs = Number(options?.maxAgeMs ?? 15 * 60 * 1000);
+  const shouldEnqueue = typeof options?.shouldEnqueue === 'function'
+    ? options.shouldEnqueue
+    : () => true;
 
   return (freshOrders || []).filter((order) => {
     if (!order?.canonical || previousIds.has(order.id)) return false;
     if (TERMINAL_ORDER_STATUSES.has(order.status)) return false;
+    if (!shouldEnqueue(order, { now })) return false;
 
     const createdAtMs = Date.parse(order.criado_em || order.createdAt || '');
     if (Number.isNaN(createdAtMs)) return false;

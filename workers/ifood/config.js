@@ -2,7 +2,8 @@ const DEFAULT_WORKER_ID = 'ifood-worker';
 const DEFAULT_HOST = '0.0.0.0';
 const DEFAULT_PORT = 3000;
 const DEFAULT_INTERVAL_MS = 300_000;
-const DEFAULT_READY_MAX_AGE_MS = 90_000;
+const DEFAULT_READY_SLACK_MS = 300_000;
+const DEFAULT_READY_MAX_AGE_MS = DEFAULT_INTERVAL_MS + DEFAULT_READY_SLACK_MS;
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 15_000;
 
 const MAX_DURATION_MS = 86_400_000;
@@ -76,6 +77,37 @@ function parseHttpUrl(value, field) {
   return value.trim();
 }
 
+/**
+ * Readiness is only refreshed at the end of a worker cycle. The probe TTL
+ * must outlive one idle interval, otherwise `/health/ready` flips to
+ * `stale_probe` while dependencies are still healthy.
+ */
+function readyMaxAgeFloorMs(intervalMs) {
+  if (!Number.isSafeInteger(intervalMs) || intervalMs < 1 || intervalMs > MAX_DURATION_MS) {
+    throw new IfoodWorkerConfigError('IFOOD_WORKER_INTERVAL_MS', 'must be a bounded integer');
+  }
+  if (intervalMs >= MAX_DURATION_MS) {
+    throw new IfoodWorkerConfigError(
+      'IFOOD_WORKER_READY_MAX_AGE_MS',
+      'must be strictly greater than IFOOD_WORKER_INTERVAL_MS'
+    );
+  }
+  const slack = Math.min(DEFAULT_READY_SLACK_MS, MAX_DURATION_MS - intervalMs);
+  const derived = intervalMs + slack;
+  if (derived <= intervalMs || derived > MAX_DURATION_MS) {
+    throw new IfoodWorkerConfigError(
+      'IFOOD_WORKER_READY_MAX_AGE_MS',
+      'must be strictly greater than IFOOD_WORKER_INTERVAL_MS'
+    );
+  }
+  return derived;
+}
+
+function resolveReadyMaxAgeMs(readyMaxAgeMs, intervalMs) {
+  if (readyMaxAgeMs != null && readyMaxAgeMs > intervalMs) return readyMaxAgeMs;
+  return readyMaxAgeFloorMs(intervalMs);
+}
+
 function parseWorkerId(value) {
   if (!value) return DEFAULT_WORKER_ID;
   if (value.length > MAX_WORKER_ID_LENGTH || /[\u0000-\u001f\u007f]/.test(value)) {
@@ -90,6 +122,15 @@ function parseHost(value) {
     throw new IfoodWorkerConfigError('IFOOD_WORKER_HOST', 'must be a valid host');
   }
   return value;
+}
+
+function parseEnabledFlag(env, fields) {
+  const value = readFirstString(env, fields);
+  if (value === undefined) return false;
+  const normalized = value.toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  throw new IfoodWorkerConfigError(fields[0], 'must be a boolean flag');
 }
 
 /**
@@ -137,6 +178,21 @@ export function loadIfoodWorkerConfig(env = process.env) {
     );
   }
 
+  const intervalMs = parseBoundedInteger(intervalValue, 'IFOOD_WORKER_INTERVAL_MS', {
+    min: 1,
+    max: MAX_DURATION_MS,
+    fallback: DEFAULT_INTERVAL_MS
+  });
+  const parsedReadyMaxAgeMs = parseBoundedInteger(
+    readyMaxAgeValue,
+    'IFOOD_WORKER_READY_MAX_AGE_MS',
+    {
+      min: 1,
+      max: MAX_DURATION_MS,
+      fallback: undefined
+    }
+  );
+
   const config = {
     supabaseUrl,
     serviceRoleKey: serviceRoleKey.trim(),
@@ -147,21 +203,16 @@ export function loadIfoodWorkerConfig(env = process.env) {
       max: 65_535,
       fallback: DEFAULT_PORT
     }),
-    intervalMs: parseBoundedInteger(intervalValue, 'IFOOD_WORKER_INTERVAL_MS', {
-      min: 1,
-      max: MAX_DURATION_MS,
-      fallback: DEFAULT_INTERVAL_MS
-    }),
-    readyMaxAgeMs: parseBoundedInteger(readyMaxAgeValue, 'IFOOD_WORKER_READY_MAX_AGE_MS', {
-      min: 1,
-      max: MAX_DURATION_MS,
-      fallback: DEFAULT_READY_MAX_AGE_MS
-    }),
+    intervalMs,
+    readyMaxAgeMs: resolveReadyMaxAgeMs(parsedReadyMaxAgeMs, intervalMs),
     shutdownTimeoutMs: parseBoundedInteger(shutdownTimeoutValue, 'IFOOD_WORKER_SHUTDOWN_TIMEOUT_MS', {
       min: 1,
       max: MAX_DURATION_MS,
       fallback: DEFAULT_SHUTDOWN_TIMEOUT_MS
-    })
+    }),
+    processInbox: parseEnabledFlag(env, ['IFOOD_WORKER_PROCESS_INBOX']),
+    processCommands: parseEnabledFlag(env, ['IFOOD_WORKER_PROCESS_COMMANDS']),
+    enableHttpAdapter: parseEnabledFlag(env, ['IFOOD_WORKER_ENABLE_HTTP_ADAPTER'])
   };
   // Preserve a descriptive alias for future adapters without making the
   // secret appear twice in ordinary object inspection or serialization.
@@ -194,8 +245,12 @@ export const IFOOD_WORKER_DEFAULTS = Object.freeze({
   host: DEFAULT_HOST,
   port: DEFAULT_PORT,
   intervalMs: DEFAULT_INTERVAL_MS,
+  readySlackMs: DEFAULT_READY_SLACK_MS,
   readyMaxAgeMs: DEFAULT_READY_MAX_AGE_MS,
-  shutdownTimeoutMs: DEFAULT_SHUTDOWN_TIMEOUT_MS
+  shutdownTimeoutMs: DEFAULT_SHUTDOWN_TIMEOUT_MS,
+  processInbox: false,
+  processCommands: false,
+  enableHttpAdapter: false
 });
 
 export default loadIfoodWorkerConfig;

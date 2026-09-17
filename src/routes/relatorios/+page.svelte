@@ -18,12 +18,21 @@
 	} from '$lib/finance/caixa';
 	import { formatPaymentMethod } from '$lib/finance/paymentMethods';
 	import { buildPaymentPresentation, PAYMENT_METHOD_VISUALS, readCashClosingPaymentTotals } from '$lib/finance/paymentReport';
+	import {
+		SALES_CHANNEL_FILTER_OPTIONS,
+		COMMISSION_UNAVAILABLE_LABEL,
+		buildVendaChannelMap,
+		filterVendasByChannel,
+		getChannelVisual,
+		summarizeEstornos,
+		summarizeSalesByChannel
+	} from '$lib/finance/salesChannel';
 	
 	// Gráficos visuais
 	import BarChart from '$lib/components/charts/BarChart.svelte';
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
 	import { PLATAFORMAS_PRESET } from '$lib/profileUtils';
-	import { Banknote, ChartNoAxesColumnIncreasing, ChevronDown, FileText, Sheet, ShoppingBag } from 'lucide-svelte';
+	import { Banknote, ChartNoAxesColumnIncreasing, ChevronDown, FileText, Sheet, ShoppingBag, Undo2 } from 'lucide-svelte';
 
 
 	let loading = true;
@@ -87,6 +96,7 @@
 	let vendasItens = [];
 	let vendasPagamentos = [];
 	let vendasTaxasPlataforma = [];
+	let vendasEstornosCaixa = [];
 	let comandasMesaCaixa = [];
 	let produtosMap = new Map(); // id_produto -> { id, nome, preco }
 	let pessoasMap = new Map(); // id_cliente -> { nome }
@@ -114,6 +124,18 @@
 
 	function alternarDetalheVenda(vendaId) {
 		vendaDetalheAbertaId = vendaDetalheAbertaId === vendaId ? null : vendaId;
+	}
+
+	// Filtro de canal de origem (Todos|PDV|ZeloMenu|ZeloChat|Mesas|Manual|iFood).
+	// Escopo: lista de vendas + card de estornos. Os cards comparativos por
+	// canal e os KPIs gerais continuam somando todos os canais de propósito
+	// (é o que permite comparar), o filtro serve para "entrar" num canal.
+	let canalFiltroCaixa = '';
+	let canalFiltroPeriodo = '';
+
+	function selecionarCanalCaixa(valor) {
+		canalFiltroCaixa = valor;
+		vendasPage = 1;
 	}
 
 	// Helpers
@@ -196,6 +218,29 @@
 			comandas = comandas.concat(resultado.data || []);
 		}
 		return comandas;
+	}
+
+	// Ledger de estorno auditável (Task 14): uma linha por evento de
+	// cancelamento, nunca substitui a venda original. Carregado em lotes
+	// porque `vendaIds` pode passar de 1000 no modo período.
+	async function carregarEstornosPorVendas(vendaIds) {
+		if (!vendaIds?.length) return [];
+
+		const resultados = await withTimeout(Promise.all(
+			chunkArray(vendaIds, 1000).map((batch) =>
+				supabase
+					.from('vendas_estornos')
+					.select('id_venda, status, reason, valor_estornado, created_at')
+					.in('id_venda', batch)
+			)
+		));
+
+		let estornos = [];
+		for (const resultado of resultados) {
+			if (resultado.error) throw resultado.error;
+			estornos = estornos.concat(resultado.data || []);
+		}
+		return estornos;
 	}
 
 	onMount(async () => {
@@ -294,7 +339,7 @@
 			// 2. Vendas do caixa
 			const pVendas = supabase
 				.from('vendas')
-				.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, tipo_pedido, taxa_entrega, created_at, id_cliente')
+				.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, tipo_pedido, taxa_entrega, canal_origem, created_at, id_cliente')
 				.eq('id_caixa', idCaixa)
 				.order('id', { ascending: true });
 
@@ -322,6 +367,7 @@
 			vendasItens = [];
 			vendasPagamentos = [];
 			vendasTaxasPlataforma = [];
+			vendasEstornosCaixa = [];
 			comandasMesaCaixa = [];
 
 			if (ids.length) {
@@ -341,7 +387,8 @@
 					.in('id_venda', ids);
 
 				const pComandasMesa = carregarComandasMesaPorVendas(ids);
-				const [resItens, resPags, resTaxas, comandasMesa] = await withTimeout(Promise.all([pItens, pPags, pTaxas, pComandasMesa]));
+				const pEstornos = carregarEstornosPorVendas(ids);
+				const [resItens, resPags, resTaxas, comandasMesa, estornosCaixa] = await withTimeout(Promise.all([pItens, pPags, pTaxas, pComandasMesa, pEstornos]));
 
 				if (resItens.error) throw resItens.error;
 				vendasItens = resItens.data || [];
@@ -351,6 +398,7 @@
 
 				if (!resTaxas.error) vendasTaxasPlataforma = resTaxas.data || [];
 				comandasMesaCaixa = comandasMesa || [];
+				vendasEstornosCaixa = estornosCaixa || [];
 
 				// Produtos map (com categoria para permitir filtro nos relatórios)
 				const pids = Array.from(new Set(vendasItens.map(it => it.id_produto).filter(Boolean)));
@@ -400,6 +448,13 @@
 	$: qtdVendas = (vendas || []).length;
 	$: ticketMedio = qtdVendas ? totalGeral / qtdVendas : 0;
 
+	// Canal de origem (Task 15): cards comparativos somam sempre todos os
+	// canais do caixa; o filtro só recorta a lista de vendas e o card de
+	// estornos abaixo.
+	$: vendaChannelMapCaixa = buildVendaChannelMap(vendas);
+	$: canalCardsCaixa = summarizeSalesByChannel(vendas, { taxasPlataforma: vendasTaxasPlataforma, estornos: vendasEstornosCaixa });
+	$: estornosResumoCaixa = summarizeEstornos(vendasEstornosCaixa, { channelByVendaId: vendaChannelMapCaixa, channelFilter: canalFiltroCaixa });
+
 	// Movimentações resumo
 	$: resumoMovsCaixa = calculateMovementSummary(movs);
 	$: totalSangria = resumoMovsCaixa.sangria;
@@ -432,8 +487,9 @@
 	$: caixaPagItems = withPaymentVisuals(pagamentosCaixa).filter(p => p.value > 0);
 	$: caixaPagTotal = caixaPagItems.reduce((a, p) => a + p.value, 0);
 
-	// Paginação das vendas do caixa (mais recentes primeiro)
-	$: vendasSorted = [...(vendas||[])].reverse();
+	// Paginação das vendas do caixa (mais recentes primeiro), recortada pelo
+	// filtro de canal selecionado ("Todos" mantém a lista completa).
+	$: vendasSorted = [...filterVendasByChannel(vendas, canalFiltroCaixa)].reverse();
 	$: vendasTotalPages = Math.max(1, Math.ceil(vendasSorted.length / VENDAS_PER_PAGE));
 	$: vendasPageButtons = (() => {
 		if (vendasTotalPages <= 7) return Array.from({length: vendasTotalPages}, (_, i) => i+1);
@@ -554,6 +610,8 @@
 					suprimento: totalSuprimento,
 					descontos: totalDescontosCaixa,
 				},
+				porCanal: canalCardsCaixa,
+				estornos: estornosResumoCaixa,
 			};
 		} else {
 			const catPeriodo = periodoCategoriaFiltro
@@ -581,6 +639,8 @@
 					suprimento: periodoTotalSuprimento,
 					descontos: periodoTotalDescontos,
 				},
+				porCanal: canalCardsPeriodo,
+				estornos: estornosResumoPeriodo,
 			};
 		}
 	}
@@ -641,6 +701,7 @@
 	let periodoCaixas = [];
 	let periodoDespesas = [];
 	let periodoTaxasPlataforma = [];
+	let periodoEstornos = [];
 
 	function aplicarPreset(p) {
 		preset = p;
@@ -697,7 +758,7 @@
 			while (fetchMore) {
 				const { data: batch, error: batchErr } = await supabase
 					.from('vendas')
-					.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, tipo_pedido, taxa_entrega, created_at')
+					.select('id, numero_venda, valor_total, forma_pagamento, valor_recebido, valor_troco, valor_desconto, tipo_pedido, taxa_entrega, canal_origem, created_at')
 					.eq('id_usuario', uid)
 					.gte('created_at', isoStart(dataInicio))
 					.lte('created_at', isoEnd(dataFim))
@@ -776,10 +837,21 @@
 					return { data: all, error: null };
 				}));
 
+				// Fetch iFood reversals/cancellations (vendas_estornos) in batches
+				const estornosPromises = batches.map(batch =>
+					supabase.from('vendas_estornos').select('id_venda, status, reason, valor_estornado, created_at').in('id_venda', batch)
+				);
+				promises.push(Promise.all(estornosPromises).then(results => {
+					let all = [];
+					results.forEach(r => { if(r.data) all = [...all, ...r.data]; });
+					return { data: all, error: null };
+				}));
+
 			} else {
 				promises.push(Promise.resolve({ data: [], error: null })); // payments placeholder
 				promises.push(Promise.resolve({ data: [], error: null })); // items placeholder
 				promises.push(Promise.resolve({ data: [], error: null })); // taxas placeholder
+				promises.push(Promise.resolve({ data: [], error: null })); // estornos placeholder
 			}
 
 			if (cxIds.length) {
@@ -824,7 +896,7 @@
 				return { data: allExp, error: null };
 			})());
 
-			const [resPags, resItens, resTaxasPlat, resMovs, resDespesas] = await withTimeout(Promise.all(promises));
+			const [resPags, resItens, resTaxasPlat, resEstornos, resMovs, resDespesas] = await withTimeout(Promise.all(promises));
 
 			if (resPags.error) throw resPags.error;
 			periodoPagamentos = resPags.data || [];
@@ -833,6 +905,7 @@
 			periodoItens = resItens.data || [];
 
 			if (!resTaxasPlat.error) periodoTaxasPlataforma = resTaxasPlat.data || [];
+			if (!resEstornos.error) periodoEstornos = resEstornos.data || [];
 
 			if (resMovs.error && cxIds.length) { /* log? */ }
 			periodoMovs = resMovs.data || [];
@@ -881,6 +954,13 @@
 	$: periodoTotalGeral = resumoPagamentosPeriodo.totalGeral;
 	$: periodoQtdVendas = (periodoVendas||[]).length;
 	$: periodoTicketMedio = periodoQtdVendas ? periodoTotalGeral / periodoQtdVendas : 0;
+
+	// Canal de origem (Task 15): mesma regra do modo caixa — os cards
+	// comparativos somam todos os canais do período; o filtro só recorta o
+	// card de estornos abaixo.
+	$: vendaChannelMapPeriodo = buildVendaChannelMap(periodoVendas);
+	$: canalCardsPeriodo = summarizeSalesByChannel(periodoVendas, { taxasPlataforma: periodoTaxasPlataforma, estornos: periodoEstornos });
+	$: estornosResumoPeriodo = summarizeEstornos(periodoEstornos, { channelByVendaId: vendaChannelMapPeriodo, channelFilter: canalFiltroPeriodo });
 	$: resumoMovsPeriodo = calculateMovementSummary(periodoMovs);
 	$: periodoTotalSangria = resumoMovsPeriodo.sangria;
 	$: periodoTotalSuprimento = resumoMovsPeriodo.suprimento;
@@ -991,12 +1071,20 @@
 		<button class="px-3 py-1 rounded-sm border" class:btn-primary={modoRelatorio==='periodo'} on:click={() => modoRelatorio='periodo'}>Por Período</button>
 	</div>
 	{#if modoRelatorio === 'caixa'}
-		<div class="grid md:grid-cols-2 gap-4 items-end">
+		<div class="grid md:grid-cols-3 gap-4 items-end">
 			<div>
 				<label class="block text-sm mb-1" style="color: var(--text-label);" for="select-caixa">Selecionar caixa</label>
 				<select id="select-caixa" class="input-form" bind:value={caixaSelecionado} on:change={() => carregarRelatorioDoCaixa(caixaSelecionado)}>
 					{#each caixas as c}
 						<option value={c.id}>#{c.id} — {new Date(c.data_abertura).toLocaleString()} {c.data_fechamento ? `(fechado ${new Date(c.data_fechamento).toLocaleString()})` : '(aberto)'}</option>
+					{/each}
+				</select>
+			</div>
+			<div>
+				<label class="block text-sm mb-1" style="color: var(--text-label);" for="select-canal-caixa">Canal de origem</label>
+				<select id="select-canal-caixa" class="input-form" value={canalFiltroCaixa} on:change={(e) => selecionarCanalCaixa(e.target.value)}>
+					{#each SALES_CHANNEL_FILTER_OPTIONS as opcao}
+						<option value={opcao.value}>{opcao.label}</option>
 					{/each}
 				</select>
 			</div>
@@ -1035,7 +1123,7 @@
 					<button class="px-2 py-1 rounded-sm border" class:bg-sky-600={preset===op.key} class:text-white={preset===op.key} on:click={() => { aplicarPreset(op.key); carregarRelatorioPeriodo(); }}>{op.label}</button>
 				{/each}
 			</div>
-			<div class="grid sm:grid-cols-3 gap-4 items-end">
+			<div class="grid sm:grid-cols-4 gap-4 items-end">
 				<div>
 					<label for="periodo-inicio" class="block text-sm mb-1">Início</label>
 					<input id="periodo-inicio" type="date" class="input-form" value={dataInicioStr} on:change={(e)=> { dataInicio = new Date(e.target.value+'T00:00:00'); preset='personalizado'; }} />
@@ -1043,6 +1131,14 @@
 				<div>
 					<label for="periodo-fim" class="block text-sm mb-1">Fim</label>
 					<input id="periodo-fim" type="date" class="input-form" value={dataFimStr} on:change={(e)=> { dataFim = new Date(e.target.value+'T00:00:00'); preset='personalizado'; }} />
+				</div>
+				<div>
+					<label for="select-canal-periodo" class="block text-sm mb-1">Canal de origem</label>
+					<select id="select-canal-periodo" class="input-form" bind:value={canalFiltroPeriodo}>
+						{#each SALES_CHANNEL_FILTER_OPTIONS as opcao}
+							<option value={opcao.value}>{opcao.label}</option>
+						{/each}
+					</select>
 				</div>
 				<div class="flex gap-2 items-end relative">
 					<button class="btn-primary" on:click={carregarRelatorioPeriodo} disabled={periodoLoading}>{periodoLoading?'Carregando...':'Atualizar'}</button>
@@ -1230,6 +1326,60 @@
 			</div>
 			{/if}
 
+			<!-- ✦ Vendas por Canal (Task 15) -->
+			{#if canalCardsCaixa.length > 0}
+			<div class="card-mini">
+				<div class="flex items-center justify-between gap-3 mb-3">
+					<h3 class="text-sm font-semibold" style="color: var(--text-main);">Vendas por Canal</h3>
+					<div class="text-xs text-muted">Comparativo de todos os canais deste caixa</div>
+				</div>
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+					{#each canalCardsCaixa as canal}
+						<div class="rounded-lg card-inset">
+							<div class="flex items-center gap-2 mb-1">
+								<span class="w-2.5 h-2.5 rounded-full {canal.color} shrink-0"></span>
+								<span class="text-xs font-medium text-main">{canal.label}</span>
+								<span class="text-xs text-muted ml-auto">{canal.qtd} venda{canal.qtd === 1 ? '' : 's'}</span>
+							</div>
+							<div class="text-lg font-bold text-main">{fmt(canal.bruto)}</div>
+							<div class="text-xs text-muted mt-0.5">Ticket médio: {fmt(canal.ticketMedio)}</div>
+							<div class="text-xs mt-1" style="color: var(--text-muted);">
+								Comissão: {canal.comissao === null ? COMMISSION_UNAVAILABLE_LABEL : fmt(canal.comissao)}
+								· Líquido: {canal.liquido === null ? COMMISSION_UNAVAILABLE_LABEL : fmt(canal.liquido)}
+							</div>
+							{#if canal.estornosQtd > 0}
+								<div class="text-xs text-rose-500 dark:text-rose-400 mt-1">Estornos: -{fmt(canal.estornosValor)} ({canal.estornosQtd})</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</div>
+			{/if}
+
+			<!-- ✦ Estornos / Cancelamentos (Task 15) -->
+			{#if vendasEstornosCaixa.length > 0}
+			<div class="card-mini">
+				<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-main);">
+					<Undo2 class="size-4 text-rose-400" aria-hidden="true" />
+					Estornos / Cancelamentos{canalFiltroCaixa ? ` — ${getChannelVisual(canalFiltroCaixa).label}` : ''}
+				</h3>
+				<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Estornos aplicados</div>
+						<div class="text-lg font-bold text-rose-600 dark:text-rose-400">{estornosResumoCaixa.qtd}</div>
+					</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Valor estornado</div>
+						<div class="text-lg font-bold text-rose-600 dark:text-rose-400">-{fmt(estornosResumoCaixa.valor)}</div>
+					</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Pendentes de revisão</div>
+						<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{estornosResumoCaixa.pendentes}</div>
+					</div>
+				</div>
+			</div>
+			{/if}
+
 			<!-- ✦ Movimentações & Caixa -->
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 				<div class="card-mini">
@@ -1391,12 +1541,12 @@
 				<div class="mb-3">
 					<h2 class="font-semibold text-main">
 						Vendas do Caixa
-						<span class="text-sm font-normal text-muted">({vendas.length})</span>
+						<span class="text-sm font-normal text-muted">({vendasSorted.length})</span>
 					</h2>
 					<p class="mt-0.5 text-xs text-muted">Cupons individuais. Abra uma venda para conferir cliente, itens e valores.</p>
 				</div>
-				{#if vendas.length === 0}
-					<div class="text-sm text-muted">Sem vendas para este caixa.</div>
+				{#if vendasSorted.length === 0}
+					<div class="text-sm text-muted">{canalFiltroCaixa ? 'Sem vendas deste canal neste caixa.' : 'Sem vendas para este caixa.'}</div>
 				{:else}
 					<div class="rounded-lg border border-[var(--border-card)]">
 						<table class="w-full text-sm">
@@ -1404,6 +1554,7 @@
 								<tr class="text-left text-xs text-muted border-b border-[var(--border-card)]">
 									<th class="py-2 pr-3 font-medium">#</th>
 									<th class="py-2 pr-3 font-medium">Horário</th>
+									<th class="py-2 pr-3 font-medium">Canal</th>
 									<th class="py-2 pr-3 font-medium">Forma</th>
 									<th class="py-2 text-right font-medium">Total</th>
 									<th class="py-2 pl-3 text-right font-medium"><span class="sr-only">Detalhes</span></th>
@@ -1415,9 +1566,16 @@
 									{@const cliente = v.id_cliente ? pessoasMap.get(v.id_cliente) : null}
 									{@const itens = vendasItens.filter(i => i.id_venda === v.id)}
 									{@const pagamentos = vendasPagamentos.filter(p => p.id_venda === v.id)}
+									{@const canalVisual = getChannelVisual(v.canal_origem)}
 									<tr class="hover:bg-[var(--accent-light)]">
 										<td class="py-2 pr-3 text-muted text-xs">{v.numero_venda || v.id}</td>
 										<td class="py-2 pr-3 text-main text-xs">{v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+										<td class="py-2 pr-3">
+											<span class="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold {canalVisual.textColor}">
+												<span class="w-1.5 h-1.5 rounded-full {canalVisual.color}"></span>
+												{canalVisual.label}
+											</span>
+										</td>
 										<td class="py-2 pr-3">
 											<span class="text-xs font-medium {hasFiado ? 'text-amber-500' : 'text-main'}">{formatForma(v.forma_pagamento)}</span>
 										</td>
@@ -1437,7 +1595,7 @@
 									</tr>
 									{#if vendaDetalheAbertaId === v.id}
 										<tr id={`venda-detalhes-${v.id}`} style="background: var(--bg-card);">
-											<td colspan="5" class="p-3">
+											<td colspan="6" class="p-3">
 												<div class="grid gap-3 md:grid-cols-3">
 													<section class="min-w-0">
 														<p class="text-xs font-medium text-muted">Itens</p>
@@ -1484,7 +1642,7 @@
 					{#if vendasTotalPages > 1}
 						<div class="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border-card)]">
 							<span class="text-xs text-muted">
-								{(vendasPage-1)*VENDAS_PER_PAGE + 1}–{Math.min(vendasPage*VENDAS_PER_PAGE, vendas.length)} de {vendas.length} vendas
+								{(vendasPage-1)*VENDAS_PER_PAGE + 1}–{Math.min(vendasPage*VENDAS_PER_PAGE, vendasSorted.length)} de {vendasSorted.length} vendas
 							</span>
 							<div class="flex items-center gap-1">
 								<button
@@ -1686,6 +1844,60 @@
 						</div>
 					</div>
 				{/if}
+			</div>
+			{/if}
+
+			<!-- ✦ Vendas por Canal (Task 15) -->
+			{#if canalCardsPeriodo.length > 0}
+			<div class="card-mini">
+				<div class="flex items-center justify-between gap-3 mb-3">
+					<h3 class="text-sm font-semibold" style="color: var(--text-main);">Vendas por Canal</h3>
+					<div class="text-xs text-muted">Comparativo de todos os canais do período</div>
+				</div>
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+					{#each canalCardsPeriodo as canal}
+						<div class="rounded-lg card-inset">
+							<div class="flex items-center gap-2 mb-1">
+								<span class="w-2.5 h-2.5 rounded-full {canal.color} shrink-0"></span>
+								<span class="text-xs font-medium text-main">{canal.label}</span>
+								<span class="text-xs text-muted ml-auto">{canal.qtd} venda{canal.qtd === 1 ? '' : 's'}</span>
+							</div>
+							<div class="text-lg font-bold text-main">{fmt(canal.bruto)}</div>
+							<div class="text-xs text-muted mt-0.5">Ticket médio: {fmt(canal.ticketMedio)}</div>
+							<div class="text-xs mt-1" style="color: var(--text-muted);">
+								Comissão: {canal.comissao === null ? COMMISSION_UNAVAILABLE_LABEL : fmt(canal.comissao)}
+								· Líquido: {canal.liquido === null ? COMMISSION_UNAVAILABLE_LABEL : fmt(canal.liquido)}
+							</div>
+							{#if canal.estornosQtd > 0}
+								<div class="text-xs text-rose-500 dark:text-rose-400 mt-1">Estornos: -{fmt(canal.estornosValor)} ({canal.estornosQtd})</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</div>
+			{/if}
+
+			<!-- ✦ Estornos / Cancelamentos (Task 15) -->
+			{#if periodoEstornos.length > 0}
+			<div class="card-mini">
+				<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-main);">
+					<Undo2 class="size-4 text-rose-400" aria-hidden="true" />
+					Estornos / Cancelamentos{canalFiltroPeriodo ? ` — ${getChannelVisual(canalFiltroPeriodo).label}` : ''}
+				</h3>
+				<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Estornos aplicados</div>
+						<div class="text-lg font-bold text-rose-600 dark:text-rose-400">{estornosResumoPeriodo.qtd}</div>
+					</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Valor estornado</div>
+						<div class="text-lg font-bold text-rose-600 dark:text-rose-400">-{fmt(estornosResumoPeriodo.valor)}</div>
+					</div>
+					<div class="rounded-lg card-inset">
+						<div class="text-xs text-muted mb-1">Pendentes de revisão</div>
+						<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{estornosResumoPeriodo.pendentes}</div>
+					</div>
+				</div>
 			</div>
 			{/if}
 

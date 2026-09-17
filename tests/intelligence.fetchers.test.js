@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fetchEligibleSubscribedCompanies, fetchExpenses, selectEligibleCompanyIds } from '../src/lib/server/intelligence/fetchers.js';
+import { fetchEligibleSubscribedCompanies, fetchExpenses, fetchVendas, selectEligibleCompanyIds } from '../src/lib/server/intelligence/fetchers.js';
 
 describe('selectEligibleCompanyIds', () => {
   const now = new Date('2026-07-12T12:00:00.000Z');
@@ -102,5 +102,29 @@ describe('fetchExpenses', () => {
 
     expect(result).toHaveLength(1001);
     expect(ranges).toEqual([[0, 999], [1000, 1999]]);
+  });
+});
+
+describe('fetchVendas', () => {
+  it('selects canal_origem so the Zelinho can aggregate por_canal (Task 16)', async () => {
+    const selects = [];
+    const db = {
+      from() {
+        const query = {
+          select(columns) { selects.push(columns); return query; },
+          eq() { return query; },
+          gte() { return query; },
+          lt() { return query; },
+          order() { return query; },
+          range() { return Promise.resolve({ data: [], error: null }); },
+        };
+        return query;
+      },
+    };
+
+    await fetchVendas(db, 'owner-1', '2026-07-01T03:00:00.000Z', '2026-08-01T03:00:00.000Z');
+
+    expect(selects).toHaveLength(1);
+    expect(selects[0]).toContain('canal_origem');
   });
 });

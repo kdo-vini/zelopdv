@@ -116,6 +116,20 @@ Uma reserva sem confirmação volta para `pending` após dois minutos somente se
 o navegador comprovar que o POST ao agente local não começou. Resultado
 `PRINT_OUTCOME_UNKNOWN` vira `unknown` e nunca é repetido automaticamente.
 
+### Integração iFood (Task 13)
+
+Pedidos `source='ifood'` entram no mesmo observador canônico
+(`CanonicalOrderAutoPrinter` + `zelo_orders.id` como chave de dedupe), com
+filtros adicionais em `src/lib/orders/ifoodPrinting.js`:
+
+- a conexão escolhe um único `print_owner`: `zelo` (imprime no Zelo Impressão)
+  ou `external` (não imprime automaticamente no Zelo);
+- conexão sem configuração válida → não imprime automaticamente (fail-closed);
+- pedidos agendados só imprimem a partir de `preparationStartAt` (mesmo relógio
+  da Cozinha); até lá ficam em defer sem reservar a chave de dedupe;
+- `PRINT_OUTCOME_UNKNOWN` continua sem repetição automática; reimpressão manual
+  em `/app/pedidos` permanece escape hatch do operador.
+
 Os trabalhos comuns expiram após duas horas. Um trabalho expirado não imprime
 quando o computador é ligado no dia seguinte; permanece visível para
 reimpressão manual.

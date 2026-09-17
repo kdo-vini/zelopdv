@@ -1,21 +1,28 @@
 import { resolve as resolvePath } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadIfoodWorkerConfig } from './config.js';
+import { IFOOD_WORKER_DEFAULTS, loadIfoodWorkerConfig } from './config.js';
 import { createHealthServer, createHealthState, listenHealthServer } from './healthServer.js';
 import { runIfoodWorker, sanitizeWorkerError } from './runtime.js';
 import { createHttpIfoodAdapter } from '../../src/lib/server/ifood/adapters/httpIfoodAdapter.js';
+import { createIfoodInboxProcessor } from '../../src/lib/server/ifood/inboxProcessor.js';
+import { createIfoodCommandProcessor } from '../../src/lib/server/ifood/commandProcessor.js';
+import { createIfoodEventHandler } from '../../src/lib/server/ifood/eventHandler.js';
+import { createIfoodIntegration } from '../../src/lib/server/ifood/createIfoodIntegration.js';
+import { createIfoodReconciler } from '../../src/lib/server/ifood/reconciliation.js';
+import { createIfoodSupabaseRepository } from './supabaseRepository.js';
 
 function noop() {}
+
+function hasText(value) {
+  return typeof value === 'string' && value.trim() !== '';
+}
 
 /**
  * Build the production iFood HTTP adapter from worker config, when
  * `IFOOD_CLIENT_ID`/`IFOOD_CLIENT_SECRET` are both configured. Returns
- * `null` otherwise so a worker without credentials still boots.
+ * `null` otherwise so a worker without credentials still boots fail-closed.
  *
- * This factory is intentionally not wired into `createUnreadyWorkerDependencies`
- * or the runtime loop: the repository readiness probe stays `false/false`
- * (fail-closed) until Task 7 ships a real repository, and polling/command
- * processing that would use this adapter is Task 9's scope, not this one.
+ * The default loop only uses this adapter when `enableHttpAdapter` is on.
  */
 export function createIfoodHttpAdapterFromConfig(config, overrides = {}) {
   if (!config?.credentials) return null;
@@ -34,9 +41,9 @@ export function createIfoodHttpAdapterFromConfig(config, overrides = {}) {
 }
 
 /**
- * Task 4 deliberately ships no production repository adapter yet. Returning
- * an explicit false/false probe keeps the real bootstrap fail-closed until
- * Tasks 5 and 7 provide truthful HTTP and inbox/lease implementations.
+ * Fail-closed dependency set used when Supabase credentials are missing or
+ * the production repository cannot be constructed. `/health/ready` stays
+ * `dependencies_unavailable` until a truthful probe exists.
  */
 export function createUnreadyWorkerDependencies() {
   return {
@@ -50,6 +57,180 @@ export function createUnreadyWorkerDependencies() {
 }
 
 export const createTask4WorkerDependencies = createUnreadyWorkerDependencies;
+
+function canRunInbox(repository) {
+  return typeof repository?.claimEvents === 'function'
+    && typeof repository?.finishEvent === 'function'
+    && typeof repository?.projectOrderEvent === 'function';
+}
+
+function canRunCommands(repository) {
+  return typeof repository?.claimCommands === 'function'
+    && typeof repository?.finishCommand === 'function';
+}
+
+function canReconcile(repository) {
+  return typeof repository?.listConnectionsForPolling === 'function'
+    && typeof repository?.enqueuePolledEvent === 'function'
+    && typeof repository?.recordPollSuccess === 'function';
+}
+
+function createDefaultProcessInbox({ repository, adapter, config, logger, clock }) {
+  if (!adapter || !canRunInbox(repository)) return undefined;
+  try {
+    const integration = createIfoodIntegration({
+      adapter,
+      repository,
+      clock: clock ?? (() => Date.now())
+    });
+    const handler = createIfoodEventHandler({ integration, repository, logger });
+    const processor = createIfoodInboxProcessor({
+      repository,
+      handler,
+      workerId: config?.workerId ?? IFOOD_WORKER_DEFAULTS.workerId,
+      logger
+    });
+    return ({ signal } = {}) => processor.runInboxCycle({ signal });
+  } catch {
+    return undefined;
+  }
+}
+
+function createDefaultProcessCommands({ repository, adapter, config, logger }) {
+  if (!adapter || !canRunCommands(repository)) return undefined;
+  try {
+    const processor = createIfoodCommandProcessor({
+      repository,
+      adapter,
+      workerId: config?.workerId ?? IFOOD_WORKER_DEFAULTS.workerId,
+      logger
+    });
+    return ({ signal } = {}) => processor.runCommandCycle({ signal });
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Poll iFood and land every event in `event_inbox`. This only exists when the
+ * HTTP adapter does, so the fail-closed rule is unchanged: no adapter (flag
+ * off, or on without credentials) means no polling and no ACK. The reconciler
+ * only ACKs an event the repository confirmed as inserted or duplicate, so a
+ * failed enqueue leaves the event pending at the provider for redelivery.
+ */
+function createDefaultReconcile({ repository, adapter, config, logger, clock }) {
+  if (!adapter || !canReconcile(repository)) return undefined;
+  try {
+    const reconciler = createIfoodReconciler({
+      adapter,
+      repository,
+      clock: clock ?? (() => Date.now()),
+      logger,
+      // The per-connection floor the listing RPC applies, so a short worker
+      // interval can never poll one merchant faster than iFood allows.
+      ...(Number.isSafeInteger(config?.intervalMs) && config.intervalMs > 0
+        ? { pollingIntervalMs: config.intervalMs }
+        : {})
+    });
+    return ({ signal } = {}) => reconciler.runReconciliationCycle({ signal });
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Decide which cycle hooks the bootstrap may pass to `runIfoodWorker`.
+ * Flags default off. Missing HTTP credentials with the adapter flag on
+ * stays fail-closed (no adapter, no default inbox/commands).
+ */
+export function resolveWorkerCycleHooks(options = {}) {
+  const config = options.config ?? {};
+  const repository = options.repository;
+  const logger = options.logger ?? null;
+  const clock = options.clock;
+  const createAdapter = options.createAdapter ?? createIfoodHttpAdapterFromConfig;
+
+  const adapterEnabled = config.enableHttpAdapter === true;
+  const inboxEnabled = config.processInbox === true;
+  const commandsEnabled = config.processCommands === true;
+
+  let adapter = null;
+  if (adapterEnabled) {
+    try {
+      adapter = options.adapter ?? createAdapter(config, options) ?? null;
+    } catch {
+      adapter = null;
+    }
+  }
+
+  let processInbox;
+  if (inboxEnabled) {
+    processInbox = typeof options.processInbox === 'function'
+      ? options.processInbox
+      : createDefaultProcessInbox({ repository, adapter, config, logger, clock });
+  }
+
+  let processCommands;
+  if (commandsEnabled) {
+    processCommands = typeof options.processCommands === 'function'
+      ? options.processCommands
+      : createDefaultProcessCommands({ repository, adapter, config, logger });
+  }
+
+  // Polling is gated by the adapter flag alone: `adapter` is only non-null
+  // when the flag is on and both credentials exist.
+  let reconcile;
+  if (adapterEnabled) {
+    reconcile = typeof options.reconcile === 'function'
+      ? options.reconcile
+      : createDefaultReconcile({ repository, adapter, config, logger, clock });
+  }
+
+  return Object.freeze({ adapter, processInbox, processCommands, reconcile });
+}
+
+function resolveSupabaseCredentials(options = {}) {
+  const config = options.config;
+  const env = options.env;
+  const supabaseUrl = options.supabaseUrl
+    ?? config?.supabaseUrl
+    ?? env?.SUPABASE_URL;
+  const serviceRoleKey = options.serviceRoleKey
+    ?? config?.serviceRoleKey
+    ?? config?.supabaseServiceRoleKey
+    ?? env?.SUPABASE_SERVICE_ROLE_KEY;
+  return {
+    supabaseUrl: hasText(supabaseUrl) ? supabaseUrl.trim() : '',
+    serviceRoleKey: hasText(serviceRoleKey) ? serviceRoleKey.trim() : ''
+  };
+}
+
+/**
+ * Prefer a production repository when `SUPABASE_URL` and
+ * `SUPABASE_SERVICE_ROLE_KEY` are present (via config or env). Construction
+ * errors stay fail-closed: never throw secrets, never claim inbox work.
+ */
+export function createWorkerDependencies(options = {}) {
+  const { supabaseUrl, serviceRoleKey } = resolveSupabaseCredentials(options);
+  if (!supabaseUrl || !serviceRoleKey) {
+    return createUnreadyWorkerDependencies();
+  }
+  try {
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl,
+      serviceRoleKey,
+      supabase: options.supabase,
+      fetch: options.fetch,
+      timeoutMs: options.timeoutMs
+    });
+    return {
+      integration: Object.freeze({}),
+      repository
+    };
+  } catch {
+    return createUnreadyWorkerDependencies();
+  }
+}
 
 function resolvedConfig(options) {
   return options.config ?? loadIfoodWorkerConfig(options.env ?? process.env);
@@ -108,13 +289,43 @@ export async function main(options = {}) {
   const config = resolvedConfig(options);
   const processLike = options.processLike ?? process;
   const controller = options.controller ?? new AbortController();
-  const dependencies = options.dependencies ?? createUnreadyWorkerDependencies();
+  const dependencies = options.dependencies ?? createWorkerDependencies({
+    config,
+    env: options.env,
+    supabase: options.supabase,
+    fetch: options.fetch,
+    timeoutMs: options.probeTimeoutMs
+  });
   const repository = options.repository ?? dependencies.repository;
-  const integration = options.integration ?? dependencies.integration;
   const clock = options.clock ?? (() => Date.now());
+  const logger = options.logger ?? console;
+  const cycleHooks = options.cycleHooks ?? resolveWorkerCycleHooks({
+    config,
+    repository,
+    adapter: options.adapter,
+    processInbox: options.processInbox,
+    processCommands: options.processCommands,
+    reconcile: options.reconcile,
+    createAdapter: options.createAdapter,
+    fetch: options.fetch,
+    clock,
+    logger
+  });
+  let integration = options.integration ?? dependencies.integration;
+  if (!options.integration && cycleHooks.adapter) {
+    try {
+      integration = createIfoodIntegration({
+        adapter: cycleHooks.adapter,
+        repository,
+        clock
+      });
+    } catch {
+      integration = dependencies.integration;
+    }
+  }
   const suppliedServer = options.server;
   const healthState = options.healthState ?? suppliedServer?.healthState ?? createHealthState({
-    readyMaxAgeMs: config.readyMaxAgeMs ?? 90_000,
+    readyMaxAgeMs: config.readyMaxAgeMs ?? IFOOD_WORKER_DEFAULTS.readyMaxAgeMs,
     clock
   });
   const healthServerFactory = options.createHealthServer ?? options.serverFactory;
@@ -123,7 +334,6 @@ export async function main(options = {}) {
     : createHealthServer({ state: healthState }));
   const workerRunner = options.runWorker ?? options.workerRunner ?? runIfoodWorker;
   const userHealthChange = options.onHealthChange ?? noop;
-  const logger = options.logger ?? console;
   const cleanup = [];
   let workerRun;
   let workerHandle;
@@ -182,7 +392,10 @@ export async function main(options = {}) {
       intervalMs: config.intervalMs ?? 300_000,
       onHealthChange: notifyHealthChange,
       onError: options.onError,
-      logger
+      logger,
+      processInbox: cycleHooks.processInbox,
+      processCommands: cycleHooks.processCommands,
+      reconcile: cycleHooks.reconcile
     });
     workerRun = workerHandle?.promise ?? workerHandle;
     // Keep unexpected runtime failures on the same bounded shutdown path.

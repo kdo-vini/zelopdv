@@ -4,6 +4,13 @@
 
 **Status:** aprovado pelo dono do produto após revisão seção a seção
 
+**Implementação (código):** Tasks 1–20 no branch de integração — ver
+`docs/CURRENT.md` e o plano `2026-09-15-ifood-mvp.md`.
+
+**Rollout / piloto:** **GO parcial (schema)** em 2026-09-17 após autorização
+do owner — migrations aplicadas; ver `docs/projects/IFOOD_MVP_PILOT.md`.
+Worker/shadow/piloto operacional ainda exigem passo de infra separado.
+
 **Relatório de viabilidade:** [IFOOD_INTEGRATION_REPORT.md](../../projects/IFOOD_INTEGRATION_REPORT.md)
 **Decisão arquitetural:** [ADR-0001](../../adr/0001-ifood-worker-dedicado.md)
 

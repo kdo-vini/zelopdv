@@ -128,6 +128,24 @@ export async function getAccessContext() {
   }
 }
 
+// Same capability key and rule as `src/lib/server/accessControl.js`
+// (Task 17). This client copy only drives what the iFood setup wizard
+// renders — the server endpoints re-check the identical rule themselves and
+// are the real authorization boundary.
+export const IFOOD_INTEGRATION_PERMISSION = 'integracoes.ifood.gerenciar';
+
+/**
+ * Owners always manage their own iFood connection. Sub-users need the
+ * `integracoes.ifood.gerenciar` capability explicitly set on their role.
+ * @param {{isSubUser: boolean, permissions: object|null}|null} accessContext
+ * @returns {boolean}
+ */
+export function canManageIfoodIntegration(accessContext) {
+  if (!accessContext) return false;
+  if (!accessContext.isSubUser) return true;
+  return accessContext.permissions?.[IFOOD_INTEGRATION_PERMISSION] === true;
+}
+
 /**
  * Checks if the current user has a specific permission key.
  * Permission keys follow the pattern: 'pdv.acessar', 'caixa.abrir', 'relatorios.ver', etc.

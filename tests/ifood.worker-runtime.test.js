@@ -1,7 +1,9 @@
 import { EventEmitter } from 'node:events';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import {
   IfoodWorkerConfigError,
+  IFOOD_WORKER_DEFAULTS,
   loadIfoodWorkerConfig
 } from '../workers/ifood/config.js';
 import {
@@ -15,8 +17,16 @@ import {
 } from '../workers/ifood/healthServer.js';
 import {
   createUnreadyWorkerDependencies,
-  main
+  createWorkerDependencies,
+  createIfoodHttpAdapterFromConfig,
+  main,
+  resolveWorkerCycleHooks
 } from '../workers/ifood/index.js';
+import {
+  createIfoodSupabaseRepository,
+  IFOOD_LEASE_PROBE,
+  IFOOD_POLLING_RPCS
+} from '../workers/ifood/supabaseRepository.js';
 
 function validEnv(overrides = {}) {
   return {
@@ -85,14 +95,19 @@ describe('iFood worker configuration', () => {
   });
 
   it('applies safe defaults and port precedence', () => {
-    expect(loadIfoodWorkerConfig(validEnv())).toMatchObject({
+    const defaults = loadIfoodWorkerConfig(validEnv());
+    expect(defaults).toMatchObject({
       workerId: 'ifood-worker',
       host: '0.0.0.0',
       port: 3000,
-      intervalMs: 300000,
-      readyMaxAgeMs: 90000,
-      shutdownTimeoutMs: 15000
+      intervalMs: IFOOD_WORKER_DEFAULTS.intervalMs,
+      readyMaxAgeMs: IFOOD_WORKER_DEFAULTS.readyMaxAgeMs,
+      shutdownTimeoutMs: 15000,
+      processInbox: false,
+      processCommands: false,
+      enableHttpAdapter: false
     });
+    expect(defaults.readyMaxAgeMs).toBeGreaterThan(defaults.intervalMs);
 
     expect(loadIfoodWorkerConfig(validEnv({
       IFOOD_WORKER_ID: 'worker-a',
@@ -100,18 +115,97 @@ describe('iFood worker configuration', () => {
       IFOOD_WORKER_PORT: '43123',
       PORT: '43124',
       IFOOD_WORKER_INTERVAL_MS: '2500',
-      IFOOD_WORKER_READY_MAX_AGE_MS: '2000',
+      IFOOD_WORKER_READY_MAX_AGE_MS: '4000',
       IFOOD_WORKER_SHUTDOWN_TIMEOUT_MS: '5000'
     }))).toMatchObject({
       workerId: 'worker-a',
       host: '127.0.0.1',
       port: 43123,
       intervalMs: 2500,
-      readyMaxAgeMs: 2000,
+      readyMaxAgeMs: 4000,
       shutdownTimeoutMs: 5000
     });
 
     expect(loadIfoodWorkerConfig(validEnv({ PORT: '43124' })).port).toBe(43124);
+  });
+
+  it('keeps readyMaxAgeMs strictly greater than intervalMs', () => {
+    const derived = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_INTERVAL_MS: '60000'
+    }));
+    expect(derived.intervalMs).toBe(60_000);
+    expect(derived.readyMaxAgeMs).toBe(60_000 + IFOOD_WORKER_DEFAULTS.readySlackMs);
+    expect(derived.readyMaxAgeMs).toBeGreaterThan(derived.intervalMs);
+
+    const bumpedEqual = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_INTERVAL_MS: '300000',
+      IFOOD_WORKER_READY_MAX_AGE_MS: '300000'
+    }));
+    expect(bumpedEqual.readyMaxAgeMs).toBe(300_000 + IFOOD_WORKER_DEFAULTS.readySlackMs);
+
+    const bumpedLegacy = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_READY_MAX_AGE_MS: '90000'
+    }));
+    expect(bumpedLegacy.intervalMs).toBe(IFOOD_WORKER_DEFAULTS.intervalMs);
+    expect(bumpedLegacy.readyMaxAgeMs).toBe(IFOOD_WORKER_DEFAULTS.readyMaxAgeMs);
+    expect(bumpedLegacy.readyMaxAgeMs).toBeGreaterThan(bumpedLegacy.intervalMs);
+
+    const bumpedSmaller = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_INTERVAL_MS: '2500',
+      IFOOD_WORKER_READY_MAX_AGE_MS: '2000'
+    }));
+    expect(bumpedSmaller.intervalMs).toBe(2500);
+    expect(bumpedSmaller.readyMaxAgeMs).toBe(2500 + IFOOD_WORKER_DEFAULTS.readySlackMs);
+    expect(bumpedSmaller.readyMaxAgeMs).toBeGreaterThan(bumpedSmaller.intervalMs);
+
+    expect(() => loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_INTERVAL_MS: '86400000'
+    }))).toThrow(IfoodWorkerConfigError);
+  });
+
+  it('parses cycle flags off by default and on for explicit 1/true', () => {
+    expect(loadIfoodWorkerConfig(validEnv())).toMatchObject({
+      processInbox: false,
+      processCommands: false,
+      enableHttpAdapter: false
+    });
+    expect(loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_PROCESS_INBOX: '1',
+      IFOOD_WORKER_PROCESS_COMMANDS: 'true',
+      IFOOD_WORKER_ENABLE_HTTP_ADAPTER: 'on'
+    }))).toMatchObject({
+      processInbox: true,
+      processCommands: true,
+      enableHttpAdapter: true
+    });
+    expect(loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_PROCESS_INBOX: '0',
+      IFOOD_WORKER_PROCESS_COMMANDS: 'off',
+      IFOOD_WORKER_ENABLE_HTTP_ADAPTER: 'false'
+    }))).toMatchObject({
+      processInbox: false,
+      processCommands: false,
+      enableHttpAdapter: false
+    });
+  });
+
+  it('keeps iFood HTTP credentials optional unless the adapter flag is on', () => {
+    const withoutCreds = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_ENABLE_HTTP_ADAPTER: '1'
+    }));
+    expect(withoutCreds.enableHttpAdapter).toBe(true);
+    expect(withoutCreds.hasIfoodCredentials).toBe(false);
+    expect(withoutCreds.credentials).toBeUndefined();
+    expect(JSON.stringify(withoutCreds)).not.toMatch(/clientSecret|IFOOD_CLIENT/i);
+
+    const withCreds = loadIfoodWorkerConfig(validEnv({
+      IFOOD_CLIENT_ID: 'client-id-canary',
+      IFOOD_CLIENT_SECRET: 'client-secret-canary'
+    }));
+    expect(withCreds.hasIfoodCredentials).toBe(true);
+    expect(withCreds.enableHttpAdapter).toBe(false);
+    expect(Object.keys(withCreds)).not.toContain('credentials');
+    expect(JSON.stringify(withCreds)).not.toContain('client-secret-canary');
   });
 
   it('rejects malformed URLs and unbounded/non-integer numeric values', () => {
@@ -123,7 +217,8 @@ describe('iFood worker configuration', () => {
       validEnv({ IFOOD_WORKER_PORT: '12.5' }),
       validEnv({ IFOOD_WORKER_INTERVAL_MS: '-1' }),
       validEnv({ IFOOD_WORKER_READY_MAX_AGE_MS: 'Infinity' }),
-      validEnv({ IFOOD_WORKER_SHUTDOWN_TIMEOUT_MS: '1e3' })
+      validEnv({ IFOOD_WORKER_SHUTDOWN_TIMEOUT_MS: '1e3' }),
+      validEnv({ IFOOD_WORKER_PROCESS_INBOX: 'maybe' })
     ]) {
       expect(() => loadIfoodWorkerConfig(env)).toThrow(IfoodWorkerConfigError);
     }
@@ -346,6 +441,8 @@ describe('iFood health server', () => {
 
     state.recordProbe({ databaseReachable: true, leaseCapable: true });
     expect(state.readyStatus()).toEqual({ status: 'ready', reason: 'fresh_probe' });
+    now = 100;
+    expect(state.readyStatus()).toEqual({ status: 'ready', reason: 'fresh_probe' });
     now = 101;
     expect(state.readyStatus()).toEqual({ status: 'not_ready', reason: 'stale_probe' });
     expect(state.liveStatus()).toEqual({ status: 'ok', reason: 'serving' });
@@ -354,6 +451,23 @@ describe('iFood health server', () => {
     expect(state.readyStatus()).toEqual({ status: 'not_ready', reason: 'dependencies_unavailable' });
     state.markShuttingDown();
     expect(state.readyStatus()).toEqual({ status: 'not_ready', reason: 'shutting_down' });
+    expect(state.liveStatus()).toEqual({ status: 'ok', reason: 'serving' });
+  });
+
+  it('stays fresh across one idle default interval and only then becomes stale', () => {
+    const { intervalMs, readyMaxAgeMs } = IFOOD_WORKER_DEFAULTS;
+    expect(readyMaxAgeMs).toBeGreaterThan(intervalMs);
+
+    let now = 0;
+    const state = createHealthState({ readyMaxAgeMs, clock: () => now });
+    state.recordProbe({ databaseReachable: true, leaseCapable: true });
+
+    now = intervalMs;
+    expect(state.readyStatus()).toEqual({ status: 'ready', reason: 'fresh_probe' });
+    now = readyMaxAgeMs;
+    expect(state.readyStatus()).toEqual({ status: 'ready', reason: 'fresh_probe' });
+    now = readyMaxAgeMs + 1;
+    expect(state.readyStatus()).toEqual({ status: 'not_ready', reason: 'stale_probe' });
     expect(state.liveStatus()).toEqual({ status: 'ok', reason: 'serving' });
   });
 
@@ -387,6 +501,42 @@ describe('iFood health server', () => {
   });
 });
 
+function jsonResponse(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    arrayBuffer: async () => new ArrayBuffer(0),
+    text: async () => JSON.stringify(body)
+  };
+}
+
+function pollingAdapter() {
+  return {
+    pollEvents: vi.fn(async () => [{
+      id: 'event-1',
+      merchantId: 'merchant-a',
+      orderId: '25b0aa10-3626-4025-a3bb-d511304be0a8',
+      fullCode: 'PLACED',
+      code: 'PLC',
+      createdAt: '2026-09-17T00:00:00.000Z'
+    }]),
+    ackEvents: vi.fn(async () => ({ accepted: true }))
+  };
+}
+
+function pollingRepository() {
+  return {
+    listConnectionsForPolling: vi.fn(async () => [{
+      connectionId: 'connection-a',
+      merchantId: 'merchant-a',
+      status: 'active'
+    }]),
+    enqueuePolledEvent: vi.fn(async () => ({ outcome: 'inserted' })),
+    recordPollSuccess: vi.fn(async () => ({ outcome: 'updated' }))
+  };
+}
+
 describe('iFood worker bootstrap', () => {
   it('has a fail-closed Task 4 dependency bootstrap', async () => {
     const dependencies = createUnreadyWorkerDependencies();
@@ -394,6 +544,76 @@ describe('iFood worker bootstrap', () => {
       databaseReachable: false,
       leaseCapable: false
     });
+  });
+
+  it('keeps fail-closed unready deps when Supabase credentials are absent', async () => {
+    const dependencies = createWorkerDependencies({
+      env: { IFOOD_WORKER_PORT: '3000' },
+      fetch: vi.fn()
+    });
+    await expect(dependencies.repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: false,
+      leaseCapable: false
+    });
+  });
+
+  it('uses a production repository when Supabase credentials are present', async () => {
+    const rpc = vi.fn(async (_name, params) => {
+      expect(params).toMatchObject({ p_limit: 0, p_lease_seconds: 0 });
+      expect(params.p_limit).toBe(0);
+      return { data: null, error: { message: 'INVALID_CLAIM_ARGUMENTS', code: 'P0001' } };
+    });
+    const dependencies = createWorkerDependencies({
+      env: validEnv(),
+      supabase: { rpc }
+    });
+    await expect(dependencies.repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: true,
+      leaseCapable: true
+    });
+    expect(rpc).toHaveBeenCalledWith(
+      IFOOD_LEASE_PROBE.rpc,
+      expect.objectContaining({ p_worker_id: IFOOD_LEASE_PROBE.workerId, p_limit: 0, p_lease_seconds: 0 }),
+      expect.objectContaining({ abortSignal: expect.any(AbortSignal) })
+    );
+  });
+
+  it('main() probes production deps from config credentials without stealing inbox work', async () => {
+    const processLike = new EventEmitter();
+    processLike.exitCode = undefined;
+    const controller = new AbortController();
+    const rpc = vi.fn(async () => ({
+      data: null,
+      error: { message: 'INVALID_CLAIM_ARGUMENTS', code: 'P0001' }
+    }));
+    const server = new EventEmitter();
+    server.listen = vi.fn((_port, _host, callback) => callback());
+    server.close = vi.fn((callback) => callback());
+    const onHealthChange = vi.fn();
+    const mainPromise = main({
+      processLike,
+      controller,
+      config: {
+        host: '127.0.0.1',
+        port: 0,
+        intervalMs: 60_000,
+        readyMaxAgeMs: 90_000,
+        shutdownTimeoutMs: 1000,
+        supabaseUrl: 'https://project.example.supabase.co',
+        serviceRoleKey: 'service-role-secret-canary'
+      },
+      supabase: { rpc },
+      server,
+      onHealthChange
+    });
+
+    await waitFor(() => onHealthChange.mock.calls.length === 1);
+    expect(rpc.mock.calls[0][0]).toBe('claim_ifood_events_v1');
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_limit: 0, p_lease_seconds: 0 });
+    processLike.emit('SIGTERM');
+    await expect(mainPromise).resolves.toMatchObject({ shutdown: true });
+    expect(onHealthChange).toHaveBeenCalledWith({ databaseReachable: true, leaseCapable: true });
+    expect(JSON.stringify(rpc.mock.calls)).not.toContain('service-role-secret-canary');
   });
 
   it('bridges repeated SIGTERM/SIGINT through one controller, drains, and closes boundedly', async () => {
@@ -439,5 +659,515 @@ describe('iFood worker bootstrap', () => {
     expect(onHealthChange).not.toHaveBeenCalled();
     expect(processLike.listenerCount('SIGTERM')).toBe(0);
     expect(processLike.listenerCount('SIGINT')).toBe(0);
+  });
+
+  it('keeps inbox, commands and HTTP adapter off when cycle flags are off', async () => {
+    const processLike = new EventEmitter();
+    const controller = new AbortController();
+    const processInbox = vi.fn();
+    const processCommands = vi.fn();
+    const createAdapter = vi.fn();
+    const claimEvents = vi.fn();
+    const claimCommands = vi.fn();
+    const repository = {
+      probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true })),
+      claimEvents,
+      finishEvent: vi.fn(),
+      projectOrderEvent: vi.fn(),
+      claimCommands,
+      finishCommand: vi.fn()
+    };
+    const server = new EventEmitter();
+    server.listen = vi.fn((_port, _host, callback) => callback());
+    server.close = vi.fn((callback) => callback());
+    const mainPromise = main({
+      processLike,
+      controller,
+      config: {
+        host: '127.0.0.1',
+        port: 0,
+        intervalMs: 60_000,
+        readyMaxAgeMs: 90_000,
+        shutdownTimeoutMs: 1000,
+        processInbox: false,
+        processCommands: false,
+        enableHttpAdapter: false
+      },
+      repository,
+      processInbox,
+      processCommands,
+      createAdapter,
+      server
+    });
+
+    await waitFor(() => repository.probeDependencies.mock.calls.length === 1);
+    processLike.emit('SIGTERM');
+    await mainPromise;
+
+    expect(processInbox).not.toHaveBeenCalled();
+    expect(processCommands).not.toHaveBeenCalled();
+    expect(createAdapter).not.toHaveBeenCalled();
+    expect(claimEvents).not.toHaveBeenCalled();
+    expect(claimCommands).not.toHaveBeenCalled();
+    expect(createIfoodHttpAdapterFromConfig({ enableHttpAdapter: false })).toBeNull();
+  });
+
+  it('invokes injected inbox and command hooks when cycle flags are on', async () => {
+    const processLike = new EventEmitter();
+    const controller = new AbortController();
+    const processInbox = vi.fn(async () => ({ claimed: 0 }));
+    const processCommands = vi.fn(async () => ({ claimed: 0 }));
+    const createAdapter = vi.fn(() => ({ getOrder: vi.fn() }));
+    const repository = {
+      probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true }))
+    };
+    const server = new EventEmitter();
+    server.listen = vi.fn((_port, _host, callback) => callback());
+    server.close = vi.fn((callback) => callback());
+    const mainPromise = main({
+      processLike,
+      controller,
+      config: {
+        host: '127.0.0.1',
+        port: 0,
+        intervalMs: 60_000,
+        readyMaxAgeMs: 90_000,
+        shutdownTimeoutMs: 1000,
+        processInbox: true,
+        processCommands: true,
+        enableHttpAdapter: true
+      },
+      repository,
+      processInbox,
+      processCommands,
+      createAdapter,
+      server
+    });
+
+    await waitFor(() => processInbox.mock.calls.length === 1);
+    await waitFor(() => processCommands.mock.calls.length === 1);
+    processLike.emit('SIGTERM');
+    await mainPromise;
+
+    expect(processInbox).toHaveBeenCalledOnce();
+    expect(processCommands).toHaveBeenCalledOnce();
+    expect(createAdapter).toHaveBeenCalledOnce();
+  });
+
+  it('constructs inbox and command processors from fake deps when flags are on', async () => {
+    const processLike = new EventEmitter();
+    const controller = new AbortController();
+    const claimEvents = vi.fn(async () => []);
+    const claimCommands = vi.fn(async () => []);
+    const adapter = {
+      getOrder: vi.fn(),
+      confirm: vi.fn(async () => ({ accepted: true }))
+    };
+    const repository = {
+      probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true })),
+      claimEvents,
+      finishEvent: vi.fn(),
+      projectOrderEvent: vi.fn(),
+      claimCommands,
+      finishCommand: vi.fn()
+    };
+    const server = new EventEmitter();
+    server.listen = vi.fn((_port, _host, callback) => callback());
+    server.close = vi.fn((callback) => callback());
+    const mainPromise = main({
+      processLike,
+      controller,
+      config: {
+        host: '127.0.0.1',
+        port: 0,
+        intervalMs: 60_000,
+        readyMaxAgeMs: 90_000,
+        shutdownTimeoutMs: 1000,
+        workerId: 'ifood-worker',
+        processInbox: true,
+        processCommands: true,
+        enableHttpAdapter: true
+      },
+      repository,
+      adapter,
+      createAdapter: () => adapter,
+      server
+    });
+
+    await waitFor(() => claimEvents.mock.calls.length === 1);
+    await waitFor(() => claimCommands.mock.calls.length === 1);
+    processLike.emit('SIGTERM');
+    await mainPromise;
+
+    expect(claimEvents).toHaveBeenCalledOnce();
+    expect(claimCommands).toHaveBeenCalledOnce();
+    expect(adapter.confirm).not.toHaveBeenCalled();
+  });
+
+  it('stays fail-closed when the HTTP adapter flag is on without credentials', () => {
+    const config = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_ENABLE_HTTP_ADAPTER: '1',
+      IFOOD_WORKER_PROCESS_INBOX: '1',
+      IFOOD_WORKER_PROCESS_COMMANDS: '1'
+    }));
+    expect(config.enableHttpAdapter).toBe(true);
+    expect(config.hasIfoodCredentials).toBe(false);
+
+    const createAdapter = vi.fn((cfg, overrides) => createIfoodHttpAdapterFromConfig(cfg, overrides));
+    const processInbox = vi.fn();
+    const processCommands = vi.fn();
+    const hooks = resolveWorkerCycleHooks({
+      config,
+      repository: {
+        claimEvents: vi.fn(),
+        finishEvent: vi.fn(),
+        projectOrderEvent: vi.fn(),
+        claimCommands: vi.fn(),
+        finishCommand: vi.fn()
+      },
+      createAdapter
+    });
+
+    expect(hooks.adapter).toBeNull();
+    expect(hooks.processInbox).toBeUndefined();
+    expect(hooks.processCommands).toBeUndefined();
+    expect(hooks.reconcile).toBeUndefined();
+    expect(createAdapter).toHaveBeenCalledOnce();
+    expect(processInbox).not.toHaveBeenCalled();
+    expect(processCommands).not.toHaveBeenCalled();
+    expect(createIfoodHttpAdapterFromConfig(config)).toBeNull();
+  });
+
+  it('never wires the polling reconciler while the HTTP adapter flag is off', () => {
+    const config = loadIfoodWorkerConfig(validEnv({
+      IFOOD_CLIENT_ID: 'client-id',
+      IFOOD_CLIENT_SECRET: 'client-secret-canary',
+      IFOOD_WORKER_PROCESS_INBOX: '1'
+    }));
+    expect(config.enableHttpAdapter).toBe(false);
+    expect(config.hasIfoodCredentials).toBe(true);
+
+    const repository = pollingRepository();
+    const createAdapter = vi.fn(() => pollingAdapter());
+    const hooks = resolveWorkerCycleHooks({ config, repository, createAdapter });
+
+    expect(hooks.adapter).toBeNull();
+    expect(hooks.reconcile).toBeUndefined();
+    expect(createAdapter).not.toHaveBeenCalled();
+    expect(repository.listConnectionsForPolling).not.toHaveBeenCalled();
+  });
+
+  it('never wires the polling reconciler when the repository lacks the poll seam', () => {
+    const adapter = pollingAdapter();
+    const hooks = resolveWorkerCycleHooks({
+      config: { enableHttpAdapter: true },
+      repository: { probeDependencies: vi.fn() },
+      adapter,
+      createAdapter: () => adapter
+    });
+
+    expect(hooks.adapter).toBe(adapter);
+    expect(hooks.reconcile).toBeUndefined();
+  });
+
+  it('polls iFood into event_inbox when the HTTP adapter flag and credentials are present', async () => {
+    const repository = pollingRepository();
+    const adapter = pollingAdapter();
+    const hooks = resolveWorkerCycleHooks({
+      config: { enableHttpAdapter: true, intervalMs: 300_000 },
+      repository,
+      adapter,
+      createAdapter: () => adapter
+    });
+
+    expect(typeof hooks.reconcile).toBe('function');
+
+    const summary = await hooks.reconcile({});
+
+    expect(repository.listConnectionsForPolling).toHaveBeenCalledOnce();
+    expect(repository.listConnectionsForPolling.mock.calls[0][0]).toMatchObject({
+      pollingIntervalMs: 300_000
+    });
+    expect(adapter.pollEvents).toHaveBeenCalledOnce();
+    expect(repository.enqueuePolledEvent).toHaveBeenCalledOnce();
+    expect(repository.enqueuePolledEvent.mock.calls[0][0]).toMatchObject({
+      eventId: 'event-1',
+      merchantId: 'merchant-a',
+      eventType: 'PLACED'
+    });
+    expect(repository.recordPollSuccess).toHaveBeenCalledOnce();
+    expect(summary).toMatchObject({ inserted: 1, acked: 1 });
+  });
+
+  it('reaches the same polling hook through main() only with the flag on', async () => {
+    const processLike = new EventEmitter();
+    const controller = new AbortController();
+    const repository = pollingRepository();
+    repository.probeDependencies = vi.fn(async () => ({ databaseReachable: true, leaseCapable: true }));
+    const adapter = pollingAdapter();
+    const server = new EventEmitter();
+    server.listen = vi.fn((_port, _host, callback) => callback());
+    server.close = vi.fn((callback) => callback());
+
+    const mainPromise = main({
+      processLike,
+      controller,
+      config: {
+        host: '127.0.0.1',
+        port: 0,
+        intervalMs: 60_000,
+        readyMaxAgeMs: 90_000,
+        shutdownTimeoutMs: 1000,
+        enableHttpAdapter: true
+      },
+      repository,
+      adapter,
+      createAdapter: () => adapter,
+      server
+    });
+
+    await waitFor(() => repository.enqueuePolledEvent.mock.calls.length === 1);
+    processLike.emit('SIGTERM');
+    await mainPromise;
+
+    expect(adapter.pollEvents).toHaveBeenCalledOnce();
+    expect(adapter.ackEvents).toHaveBeenCalledOnce();
+  });
+});
+
+describe('iFood production repository polling seam', () => {
+  it('lists pollable connections, enqueues into event_inbox and stamps poll success', async () => {
+    const calls = [];
+    const fetchImpl = vi.fn(async (url, init) => {
+      const rpc = String(url).split('/rest/v1/rpc/')[1];
+      calls.push({ rpc, body: JSON.parse(init.body) });
+      expect(init.body).not.toContain('service-role-secret-canary');
+      if (rpc === IFOOD_POLLING_RPCS.listConnections) {
+        return jsonResponse(200, [{
+          connection_id: 'connection-a',
+          empresa_id: 'empresa-a',
+          merchant_id: 'merchant-a',
+          status: 'active',
+          last_poll_at: null,
+          polling_cursor: null
+        }]);
+      }
+      if (rpc === IFOOD_POLLING_RPCS.enqueueEvent) {
+        return jsonResponse(200, [{
+          inbox_id: 'inbox-a',
+          event_id: 'event-1',
+          inserted: true,
+          status: 'queued',
+          outcome: 'inserted'
+        }]);
+      }
+      return jsonResponse(200, [{
+        connection_id: 'connection-a',
+        merchant_id: 'merchant-a',
+        last_poll_at: '2026-09-17T00:00:00.000Z',
+        last_token_at: '2026-09-17T00:00:00.000Z',
+        outcome: 'updated'
+      }]);
+    });
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: fetchImpl
+    });
+
+    await expect(repository.listConnectionsForPolling({
+      now: '2026-09-17T00:00:00.000Z',
+      pollingIntervalMs: 300_000
+    })).resolves.toEqual([{
+      connectionId: 'connection-a',
+      empresaId: 'empresa-a',
+      merchantId: 'merchant-a',
+      status: 'active',
+      lastPollAt: null,
+      pollingCursor: null
+    }]);
+
+    await expect(repository.enqueuePolledEvent({
+      eventId: 'event-1',
+      merchantId: 'merchant-a',
+      externalOrderId: 'order-1',
+      eventType: 'PLACED',
+      externalRevision: 3,
+      occurredAt: '2026-09-17T00:00:00.000Z',
+      payload: { id: 'event-1' }
+    })).resolves.toMatchObject({ outcome: 'inserted', inserted: true });
+
+    await expect(repository.recordPollSuccess({
+      connectionId: 'connection-a',
+      merchantId: 'merchant-a',
+      polledAt: '2026-09-17T00:00:00.000Z',
+      tokenConfirmedAt: '2026-09-17T00:00:00.000Z'
+    })).resolves.toMatchObject({ outcome: 'updated' });
+
+    expect(calls.map(({ rpc }) => rpc)).toEqual([
+      IFOOD_POLLING_RPCS.listConnections,
+      IFOOD_POLLING_RPCS.enqueueEvent,
+      IFOOD_POLLING_RPCS.recordPollSuccess
+    ]);
+    expect(calls[0].body).toEqual({
+      p_now: '2026-09-17T00:00:00.000Z',
+      p_min_interval_ms: 300_000,
+      p_limit: IFOOD_POLLING_RPCS.maxConnections
+    });
+    expect(calls[1].body).toEqual({
+      p_event_id: 'event-1',
+      p_merchant_id: 'merchant-a',
+      p_external_order_id: 'order-1',
+      p_event_type: 'PLACED',
+      p_external_revision: 3,
+      p_occurred_at: '2026-09-17T00:00:00.000Z',
+      p_payload: { id: 'event-1' }
+    });
+    expect(calls[2].body).toEqual({
+      p_connection_id: 'connection-a',
+      p_merchant_id: 'merchant-a',
+      p_polled_at: '2026-09-17T00:00:00.000Z',
+      p_token_confirmed_at: '2026-09-17T00:00:00.000Z'
+    });
+  });
+
+  it('never reports an enqueue outcome when the RPC fails, so nothing is acked', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse(400, {
+      code: 'P0001',
+      message: 'INVALID_EVENT_IDENTITY'
+    }));
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: fetchImpl
+    });
+
+    await expect(repository.enqueuePolledEvent({
+      eventId: 'event-1',
+      merchantId: 'merchant-a',
+      eventType: 'PLACED',
+      payload: { id: 'event-1' }
+    })).rejects.toThrow('iFood worker repository operation failed');
+  });
+});
+
+describe('iFood production repository probe', () => {
+  it('treats INVALID_CLAIM_ARGUMENTS as a non-mutating lease-capable probe', async () => {
+    const fetchImpl = vi.fn(async (url, init) => {
+      expect(String(url)).toContain(`/rest/v1/rpc/${IFOOD_LEASE_PROBE.rpc}`);
+      expect(init.method).toBe('POST');
+      expect(JSON.parse(init.body)).toEqual({
+        p_worker_id: IFOOD_LEASE_PROBE.workerId,
+        p_limit: 0,
+        p_lease_seconds: 0
+      });
+      expect(init.body).not.toContain('service-role-secret-canary');
+      return jsonResponse(400, { code: 'P0001', message: 'INVALID_CLAIM_ARGUMENTS' });
+    });
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: fetchImpl
+    });
+    await expect(repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: true,
+      leaseCapable: true
+    });
+  });
+
+  it('keeps fail-closed false/false on transport errors without leaking secrets', async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError('fetch failed for service-role-secret-canary');
+    });
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: fetchImpl
+    });
+    await expect(repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: false,
+      leaseCapable: false
+    });
+  });
+
+  it('reports database reachable but not lease-capable when the claim RPC is missing', async () => {
+    const repository = createIfoodSupabaseRepository({
+      supabase: {
+        rpc: vi.fn(async () => ({
+          data: null,
+          error: { message: 'Could not find the function public.claim_ifood_events_v1', code: 'PGRST202' }
+        }))
+      }
+    });
+    await expect(repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: true,
+      leaseCapable: false
+    });
+  });
+
+  it('does not treat a successful claim payload as a healthy probe', async () => {
+    const repository = createIfoodSupabaseRepository({
+      supabase: {
+        rpc: vi.fn(async () => ({
+          data: [{ inbox_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', payload: { customer: 'secret-pii' } }],
+          error: null
+        }))
+      }
+    });
+    await expect(repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: true,
+      leaseCapable: false
+    });
+  });
+
+  it('maps claimed inbox rows for flagged cycles without leaking PII in errors', async () => {
+    const rpc = vi.fn(async (name) => {
+      expect(name).toBe('claim_ifood_events_v1');
+      return {
+        data: [{
+          inbox_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          event_id: 'event-1',
+          connection_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          empresa_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          merchant_id: 'merchant-1',
+          external_order_id: 'order-1',
+          event_type: 'PLACED',
+          payload: { customer: 'secret-pii' }
+        }],
+        error: null
+      };
+    });
+    const repository = createIfoodSupabaseRepository({ supabase: { rpc } });
+    const rows = await repository.claimEvents({ workerId: 'ifood-worker', limit: 10, leaseSeconds: 120 });
+    expect(rows[0]).toMatchObject({
+      inboxId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      eventId: 'event-1',
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1'
+    });
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_worker_id: 'ifood-worker', p_limit: 10, p_lease_seconds: 120 });
+
+    const failing = createIfoodSupabaseRepository({
+      supabase: {
+        rpc: vi.fn(async () => ({ data: null, error: { message: 'secret-pii LEASE_LOST' } }))
+      }
+    });
+    await expect(failing.claimEvents({ workerId: 'ifood-worker' })).rejects.toThrow(
+      'iFood worker repository operation failed'
+    );
+    await expect(failing.claimEvents({ workerId: 'ifood-worker' })).rejects.not.toThrow(/secret-pii/);
+  });
+});
+
+describe('iFood worker Docker image contents', () => {
+  it('copies finance paymentMethods.js because orderNormalizer imports it', () => {
+    const dockerfile = readFileSync('workers/ifood/Dockerfile', 'utf8');
+    const dockerignore = readFileSync('workers/ifood/Dockerfile.dockerignore', 'utf8');
+    const normalizer = readFileSync('src/lib/server/ifood/orderNormalizer.js', 'utf8');
+
+    expect(normalizer).toMatch(/from ['"]\.\.\/\.\.\/finance\/paymentMethods\.js['"]/);
+    expect(dockerfile).toMatch(/COPY --chown=node:node src\/lib\/finance\/paymentMethods\.js \.\/src\/lib\/finance\/paymentMethods\.js/);
+    expect(dockerignore).toMatch(/!src\/lib\/finance\/$/m);
+    expect(dockerignore).toMatch(/!src\/lib\/finance\/paymentMethods\.js/);
   });
 });
