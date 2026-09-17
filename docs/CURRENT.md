@@ -1,14 +1,14 @@
-# Tasks 1–12 concluídas
+# Tasks 1–13 concluídas
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
 Trabalho em `codex/ifood-mvp` (retomada Cursor Cloud em
-`cursor/ifood-task-12-cdb9`). **Tasks 1–12 concluídas** (contrato/arquitetura,
+`cursor/ifood-task-12-cdb9`). **Tasks 1–13 concluídas** (contrato/arquitetura,
 domínio/normalização, persistência com leases, worker dedicado, adapter HTTP
 de produção, webhook assinado durável, processamento da inbox com
 retry/dead-letter, projeção canônica em `zelo_orders`, reconciliação/presença,
-comandos assíncronos, filas Pedidos/Cozinha, e mapeamento progressivo de
-produtos com ledger de estoque) e a **revisão de
+comandos assíncronos, filas Pedidos/Cozinha, mapeamento progressivo de
+produtos com ledger de estoque, e coordenação de impressão sem duplicidade) e a **revisão de
 conformidade das Tasks 1–6 (2026-09-16) está fechada** — ver
 `docs/superpowers/plans/2026-09-15-ifood-mvp.md`, seção
 "Revisão de conformidade das Tasks 1–6 (2026-09-16)" logo após o Resultado
@@ -207,6 +207,14 @@ pedido já projetado. Suíte iFood **328/328**; `verify:migrations` 62 forward.
 Harness local e aplicação em produção **pendentes** (sem Docker/`pwsh` neste
 ambiente; migration não aplicada ao Supabase vinculado).
 
+**Task 13 do iFood (2026-09-17, Cursor Cloud):** impressão coordenada.
+`ifoodPrinting.js` filtra auto-print por `print_owner` (`zelo`/`external`/
+ausente) e adia agendados até `preparationStartAt`; runtime global mantém
+`deferredIds` sem reservar cedo; `PRINT_OUTCOME_UNKNOWN` sem auto-retry;
+ticket mostra display id/códigos iFood. Fallback temporário `resolvePrintOwner
+→ 'zelo'` até Task 17/18 expor a conexão. Reimpressão manual em Pedidos
+continua livre.
+
 **Produção (2026-09-16, autorizado pelo dono):** as duas migrations novas da
 Task 11 — `ifood_order_sync_state` (RPC
 `get_ifood_order_sync_state_v1`) e `ifood_projection_display_fields`
@@ -221,32 +229,27 @@ sem nenhum efeito colateral (nenhuma linha tocada em `zelo_orders` real).
 Branch `codex/ifood-mvp` (commit `fc59017`, depois handoff `aa9297d`) enviada
 para `https://github.com/kdo-vini/zelopdv`.
 
-**Próximo passo linear:** Task 13 — coordenar impressão sem duplicidade.
+**Próximo passo linear:** Task 14 — materializar venda e estorno.
 
 ## Handoff para retomada externa (Cursor Cloud) — 2026-09-17
 
 Trabalho retomado nesta sessão a partir do handoff de 2026-09-16. Estado após
-Task 12:
+Task 13:
 
-1. Este arquivo (`docs/CURRENT.md`) — bloco "Task 12 do iFood" acima.
-2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da Task 12.
-3. Próxima task: **Task 13** (impressão sem duplicidade) — camada frontend/
-   apresentação conforme a divisão de execução; ler `docs/DESIGN_PATTERNS.md`
-   antes de tocar UI.
+1. Este arquivo (`docs/CURRENT.md`) — blocos Task 12 e Task 13 acima.
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultados reais 12–13.
+3. Próxima task: **Task 14** (venda operacional e estorno) — backend/SQL;
+   gerar migration com `supabase migration new` e não editar migrations
+   já aplicadas.
 
-**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp` @
-`aa9297d`). Commit da Task 12: `feat: add progressive iFood product mapping`.
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commits: Task 12 `feat: add progressive iFood product mapping`; Task 13
+`feat: coordinate iFood order printing`.
 
 **Estado validado nesta sessão:**
-- Suíte iFood: 24 arquivos / 328 testes verdes.
-- `npm run verify:migrations`: 107/107 artefatos de baseline, 59/59 versões
-  remotas, 62 migrations forward.
-- Harness descartável **não rodado** aqui (sem Docker/PowerShell). Usar o
-  bypass temporário de `storage_policies` em
-  `scripts/verify-supabase-baseline.ps1` (reverter antes do commit) na máquina
-  do coordenador, incluindo
-  `supabase/verification/ifood_product_mapping_stock.sql`.
-- Migration da Task 12 **ainda não aplicada** em produção.
+- Task 13 print suites: 5 arquivos / 23 testes verdes.
+- Migration da Task 12 **ainda não aplicada** em produção; harness Task 12
+  pendente na máquina do coordenador.
 
 **Pendências conhecidas, fora do escopo do iFood:**
 - O drift de `storage_policies` do harness (documentado para o dono, não é
@@ -254,9 +257,10 @@ Task 12:
 - O intervalo padrão de 300s do worker é incompatível com a janela de saúde
   de 90s quando o worker for de fato ligado em produção (documentado, ainda
   não ligado).
+- Leitura browser de `connections.print_owner` ainda depende das Tasks 17/18.
 
-**Próximo passo real (Task 13):** coordenar impressão sem duplicidade — ver
-`## Task 13: Coordenar impressão sem duplicidade` no plano.
+**Próximo passo real (Task 14):** materializar venda e estorno — ver
+`## Task 14: Criar venda operacional e estorno auditável` no plano.
 
 ## Handoff para retomada externa (Cursor Cloud) — 2026-09-16 (histórico)
 

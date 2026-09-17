@@ -117,15 +117,27 @@ export function buildOrderText(order, businessName = 'ZeloPDV') {
   const items = order?.items || order?.pedido_itens || order?.itens || [];
   const shortId = String(order?.id || '').slice(-8).toUpperCase();
   const customerName = order?.customerName || order?.nome_cliente || 'Cliente';
+  const isIfood = order?.source === 'ifood';
+  const ifood = order?.ifood && typeof order.ifood === 'object' ? order.ifood : {};
+  const displayId = typeof ifood.displayId === 'string' && ifood.displayId.trim()
+    ? ifood.displayId.trim()
+    : null;
+  const pickupCode = typeof ifood.pickupCode === 'string' && ifood.pickupCode.trim()
+    ? ifood.pickupCode.trim()
+    : null;
+  const deliveryCode = typeof ifood.deliveryCode === 'string' && ifood.deliveryCode.trim()
+    ? ifood.deliveryCode.trim()
+    : null;
 
   const rows = [
     line(String(businessName || 'ZeloPDV').toUpperCase()),
     separator('='),
-    `PEDIDO #${shortId}`,
+    isIfood && displayId ? `IFOOD #${displayId}` : `PEDIDO #${shortId}`,
+    isIfood ? `Ref: ${shortId}` : null,
     `Cliente: ${customerName}`,
     `Tel: ${customerPhone(order)}`,
     separator(),
-  ];
+  ].filter((rowText) => rowText !== null);
 
   for (const item of Array.isArray(items) ? items : []) rows.push(...itemReceiptLines(item));
 
@@ -137,6 +149,9 @@ export function buildOrderText(order, businessName = 'ZeloPDV') {
 
   if (deliveryAddress) rows.push('Entrega:', ...wrapText(deliveryAddress));
   else rows.push(`Retirada: ${pickupTime}`);
+
+  if (pickupCode) rows.push(`Codigo coleta: ${pickupCode}`);
+  if (deliveryCode) rows.push(`Codigo entrega: ${deliveryCode}`);
 
   if (observations) rows.push(separator(), ...wrapText(`Obs: ${observations}`));
 
