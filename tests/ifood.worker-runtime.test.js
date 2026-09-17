@@ -277,6 +277,25 @@ describe('iFood worker runtime', () => {
     expect(processInbox.mock.calls[0][0]).toMatchObject({ signal: controller.signal });
   });
 
+  it('invokes the optional processCommands hook once per cycle with the abort signal', async () => {
+    const controller = new AbortController();
+    const repository = { probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true })) };
+    const processCommands = vi.fn(async () => ({ claimed: 0 }));
+
+    const run = runIfoodWorker({
+      repository,
+      signal: controller.signal,
+      intervalMs: 60_000,
+      processCommands
+    });
+    await waitFor(() => processCommands.mock.calls.length === 1);
+    controller.abort();
+    await run;
+
+    expect(processCommands).toHaveBeenCalledOnce();
+    expect(processCommands.mock.calls[0][0]).toEqual({ signal: controller.signal });
+  });
+
   it('does not invoke processInbox at all when it is not supplied (default bootstrap stays unchanged)', async () => {
     const controller = new AbortController();
     const repository = { probeDependencies: vi.fn(async () => ({ databaseReachable: true, leaseCapable: true })) };

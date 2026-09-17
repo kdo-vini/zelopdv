@@ -1,8 +1,8 @@
-# ZeloPDV — Foco atual
+# Tasks 1–10 concluídas
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
-Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. **Tasks 1–9
+Trabalho em `codex/ifood-mvp`, worktree `.worktrees/ifood-mvp`. **Tasks 1–10
 concluídas** (contrato/arquitetura, domínio/normalização, persistência com
 leases, worker dedicado, adapter HTTP de produção, webhook assinado
 durável, processamento da inbox com retry/dead-letter, projeção canônica
@@ -183,9 +183,22 @@ hooks opcionais `reconcile`/`evaluateHealth`, enquanto o bootstrap padrão
 continua fail-closed; a validação focada passou 15/15, a combinada passou
 123/123 e `npm.cmd run check` terminou em 0 erros/0 warnings.
 
-**Próximo passo linear:** Task 10 — criar comandos assíncronos e APIs
-operacionais. Não iniciar Tasks 11+ antes de concluir e registrar a Task 10
-no plano; usar validações proporcionais aos arquivos alterados.
+**Próximo passo linear:** Task 11 — integrar iFood nas filas de Pedidos e
+Cozinha; não iniciar Tasks 12+ antes de registrar essa task no plano.
+
+**Task 10 do iFood (2026-09-16):** comandos assíncronos agora entram por uma
+rota autenticada, tenant-scoped e sem chamada ao provider no request do
+browser. A autorização de subusuários é server-side e segue o mesmo
+mapeamento do `transition_zelo_order`: `pedidos.acessar` para confirmar e
+despachar, `pedidos.cozinha` para preparo e pronto, e `pedidos.cancelar` para
+cancelar. O worker processa leases, registra `accepted_http`, retryable,
+terminal ou `expired`, e bloqueia merchants não saudáveis sem chamar o
+adapter. A correlação dos eventos marca comandos como `confirmed_event` sem
+alterar o pedido otimisticamente; falha nessa correlação não reabre a inbox
+porque a projeção já foi commitada. A rota de motivos consulta o iFood apenas
+no servidor e devolve somente código e descrição sanitizados. A migração e a
+verificação SQL permanecem locais, não foram aplicadas nem executadas no
+harness nesta sessão; o próximo passo linear é a Task 11.
 
 ## Reparo do replay de migrations ZeloMenu — 2026-09-16
 

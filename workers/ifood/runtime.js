@@ -155,8 +155,9 @@ function invokeObserver(observer, value) {
  * operation is), and any error it throws goes through the same
  * `reportError`/`sanitizeWorkerError` path as every other error here — it
  * never crashes the loop or leaks raw error text. Task 9 adds the same
- * optional pattern for `options.reconcile` and `options.evaluateHealth`;
- * neither is supplied by the default bootstrap.
+ * optional pattern for `options.reconcile` and `options.evaluateHealth`,
+ * and Task 10 adds `options.processCommands`; none is supplied by the
+ * default bootstrap.
  *
  * The returned promise resolves when the loop observes abort. It also carries
  * `drain()` so the bootstrap can wait for an in-flight probe/inbox cycle
@@ -176,6 +177,7 @@ export function runIfoodWorker(options = {}) {
     onError = noop,
     logger = null,
     processInbox,
+    processCommands,
     reconcile,
     evaluateHealth
   } = options;
@@ -247,6 +249,7 @@ export function runIfoodWorker(options = {}) {
           errors.push(safeError);
         }
       }
+      await runOptionalHook(processCommands, { signal });
       await runOptionalHook(reconcile, { signal });
       await runOptionalHook(evaluateHealth, { signal, probe });
     } catch (error) {

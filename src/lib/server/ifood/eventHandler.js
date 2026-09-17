@@ -66,6 +66,16 @@ function operationError(name) {
   return new TypeError(`iFood event handler dependency missing: ${name}`);
 }
 
+function safeLog(logger, message) {
+  const target = logger ?? globalThis.console;
+  if (!target || typeof target.error !== 'function') return;
+  try {
+    target.error(message);
+  } catch {
+    // Correlation is best effort after the projection is committed.
+  }
+}
+
 /**
  * Creates the Task 8 canonical-order projection handler consumed by
  * `inboxProcessor.js`'s `handler(row, context)` seam (Task 7). It never
@@ -99,7 +109,8 @@ function operationError(name) {
  *   integration: { getOrderDetail: (orderId: string, opts: { signal?: AbortSignal }) => Promise<object> },
  *   repository: IfoodProjectionRepository,
  *   retryPolicy?: { computeNextAttemptAt: (args: { attempts: number }) => string },
- *   clock?: () => number
+ *   clock?: () => number,
+ *   logger?: { error: (message: string) => void } | null
  * }} deps
  *
  * @typedef {object} IfoodProjectionRepository
@@ -112,8 +123,15 @@ function operationError(name) {
  *   order: object,
  *   signal?: AbortSignal
  * }) => Promise<{ outcome: 'applied'|'ignored_duplicate'|'ignored_stale'|'quarantined_terminal_conflict'|'unknown_merchant', zelo_order_id?: string, revision?: number }>} projectOrderEvent
+ * @property {(args: { merchantId: string, externalOrderId: string, externalStatus: string, signal?: AbortSignal }) => Promise<unknown>} confirmCommandsForEvent
  */
-export function createIfoodEventHandler({ integration, repository, retryPolicy, clock = () => Date.now() } = {}) {
+export function createIfoodEventHandler({
+  integration,
+  repository,
+  retryPolicy,
+  clock = () => Date.now(),
+  logger = null
+} = {}) {
   if (!integration || typeof integration.getOrderDetail !== 'function') {
     throw operationError('integration.getOrderDetail');
   }
@@ -211,6 +229,21 @@ export function createIfoodEventHandler({ integration, repository, retryPolicy, 
     switch (projection?.outcome) {
       case 'applied':
       case 'ignored_duplicate':
+        if (typeof repository.confirmCommandsForEvent === 'function') {
+          try {
+            await repository.confirmCommandsForEvent({
+              merchantId: row.merchantId,
+              externalOrderId,
+              externalStatus,
+              signal: context.signal
+            });
+          } catch {
+            // The projection already committed. Keep the event processed;
+            // another matching event or reconciliation can retry correlation.
+            safeLog(logger, 'iFood command correlation failed after projection');
+          }
+        }
+        return processed();
       case 'ignored_stale':
         return processed();
       case 'quarantined_terminal_conflict':

@@ -173,6 +173,43 @@ describe('createIfoodEventHandler', () => {
     expect(result.outcome).toBe('processed');
   });
 
+  it.each(['applied', 'ignored_duplicate'])('confirms a command after a %s projection outcome', async (outcome) => {
+    const projectOrderEvent = vi.fn(async () => ({ outcome }));
+    const confirmCommandsForEvent = vi.fn(async () => 1);
+    const repository = createFakeRepository({ projectOrderEvent });
+    repository.confirmCommandsForEvent = confirmCommandsForEvent;
+    const handler = createIfoodEventHandler({
+      integration: createFakeIntegration(),
+      repository
+    });
+    const signal = new AbortController().signal;
+
+    await expect(handler(makeRow(), { signal })).resolves.toEqual({ outcome: 'processed' });
+    expect(confirmCommandsForEvent).toHaveBeenCalledWith({
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1',
+      externalStatus: 'PLACED',
+      signal
+    });
+  });
+
+  it('keeps the event processed when command correlation fails after projection', async () => {
+    const secretMessage = 'event-correlation-detail-fixture-not-forwarded';
+    const confirmCommandsForEvent = vi.fn(async () => { throw new Error(secretMessage); });
+    const logger = { error: vi.fn() };
+    const repository = createFakeRepository();
+    repository.confirmCommandsForEvent = confirmCommandsForEvent;
+    const handler = createIfoodEventHandler({
+      integration: createFakeIntegration(),
+      repository,
+      logger
+    });
+
+    await expect(handler(makeRow(), {})).resolves.toEqual({ outcome: 'processed' });
+    expect(JSON.stringify(logger.error.mock.calls)).not.toContain(secretMessage);
+    expect(logger.error).toHaveBeenCalledWith('iFood command correlation failed after projection');
+  });
+
   it('a stale event reported by the repository is processed', async () => {
     const projectOrderEvent = vi.fn(async () => ({ outcome: 'ignored_stale' }));
     const handler = createIfoodEventHandler({
@@ -285,7 +322,7 @@ describe('createIfoodEventHandler', () => {
   });
 
   it('the projection RPC call failing is retryable with a generic sanitized errorCode, never the raw error text', async () => {
-    const secretMessage = 'duplicate key value violates unique constraint on customer phone +5511999999999';
+    const secretMessage = 'database-detail-fixture-not-forwarded';
     const projectOrderEvent = vi.fn(async () => { throw new Error(secretMessage); });
     const handler = createIfoodEventHandler({
       integration: createFakeIntegration(),
@@ -297,7 +334,7 @@ describe('createIfoodEventHandler', () => {
     expect(result.outcome).toBe('retryable');
     expect(result.errorCode).toBe('PROJECTION_RPC_ERROR');
     expect(result.errorMessage).not.toContain(secretMessage);
-    expect(JSON.stringify(result)).not.toContain('+5511999999999');
+    expect(JSON.stringify(result)).not.toContain(secretMessage);
   });
 
   it('an invalid order detail (contract violation) is terminal, not retried forever', async () => {
