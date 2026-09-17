@@ -27,6 +27,7 @@
   let companyLogoUrl = null;
   let orderingReviewActive = false;
   let kitchenQueueActive = false;
+  let ifoodQueueActive = false;
   let mesasAddonActive = false;
   let acessosAddonActive = false;
   let isSubUserMode = false;
@@ -60,6 +61,7 @@
       acessosAddonActive = offline.addons?.has_acessos_addon === true;
       orderingReviewActive = offline.addons?.has_zelo_menu === true;
       kitchenQueueActive = orderingReviewActive;
+      ifoodQueueActive = offline.addons?.has_ifood_queue === true;
     }
     if (navigator.onLine === false) return;
 
@@ -93,7 +95,7 @@
             .maybeSingle(),
           supabase
             .from('empresa_perfil')
-            .select('logo_url, gerente_prefs')
+            .select('id, logo_url, gerente_prefs')
             .eq('user_id', subscriptionUserId)
             .maybeSingle()
         ]);
@@ -113,6 +115,18 @@
         // `has_mesas_addon` saiu junto com o módulo legado. Cliente só-Mesas
         // deixa de ver o item Cozinha em vez de abrir uma tela sempre vazia.
         kitchenQueueActive = orderingReviewActive;
+        if (perfil?.id) {
+          const { data: ifoodHit } = await supabase
+            .from('zelo_orders')
+            .select('id')
+            .eq('empresa_id', perfil.id)
+            .eq('source', 'ifood')
+            .limit(1)
+            .maybeSingle();
+          ifoodQueueActive = Boolean(ifoodHit?.id);
+        } else {
+          ifoodQueueActive = false;
+        }
         if (perfil?.logo_url) companyLogoUrl = perfil.logo_url;
         // Muted types only hide a signal from the briefing/WhatsApp digest
         // (TA-INTELLIGENCE-01 in docs/TRADEOFFS.md keeps the engine detecting
@@ -162,6 +176,7 @@
   $: addonFlags = {
     orderingReview: orderingReviewActive,
     kitchenQueue: kitchenQueueActive,
+    ifoodQueue: ifoodQueueActive,
     mesas: mesasAddonActive,
     acessos: acessosAddonActive
   };

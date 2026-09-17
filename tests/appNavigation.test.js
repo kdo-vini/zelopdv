@@ -44,6 +44,11 @@ describe('app navigation configuration', () => {
       'Pedidos',
       'Cozinha',
     ]);
+
+    expect(section('pdv', ownerContext({ ifoodQueue: true })).items.map((item) => item.label)).toEqual([
+      'Frente de Caixa',
+      'Pedidos',
+    ]);
   });
 
   it('preserves sub-user permissions and hides unauthorized financial pages', () => {

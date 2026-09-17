@@ -1,5 +1,25 @@
 # Tasks 1–21 + worker live+ready (GO parcial)
 
+## Handoff — 2026-09-17 (gate de produto quieto: Pedidos iFood)
+
+PDV `/app/pedidos` agora mostra canal/origem **iFood** e enfileira
+confirm/cancel pela API de comandos (`service_role`), sem mutar
+`zelo_orders` no clique. `transition_zelo_order` / `close_zelo_order` no
+cliente recusam `source=ifood` (fail-closed): essas RPCs só gravam
+`zelo_order_outbox` (`order.accept` / `order.reject`) e **não** chamam
+`enqueue_ifood_order_command_v1`. Alias de intent `accept→confirm` e
+`reject→cancel` na API. Cancel sem lista live do iFood usa motivo
+Developers `501` (conexão pausada/revogada continua 409). Fila de Pedidos
+abre com ZeloMenu **ou** um `zelo_orders.source=ifood`. Sem secrets.
+**Ainda GO parcial.**
+
+Verificar com um **Pedido de teste novo que fique PLACED** (o
+`320113f2-ede9-4217-95d1-fadfd831f9c5` já está `cancelled` e some da
+fila). Worker: `IFOOD_WORKER_PROCESS_COMMANDS=1` no Dokploy; envio HTTP
+ainda exige `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1` + par `IFOOD_CLIENT_*`.
+
+**Branch:** `cursor/ifood-pdv-product-gate-fe47` (base `codex/ifood-mvp`)
+
 ## Handoff — 2026-09-17 (imagem worker: MODULE_NOT_FOUND)
 
 Redeploy Dokploy do worker iFood quebrava no boot: `orderNormalizer.js`

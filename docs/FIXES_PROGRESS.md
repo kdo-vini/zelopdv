@@ -1,5 +1,14 @@
 # Fixes Progress
 
+- [x] FX-IFOOD-PDV-PRODUCT-GATE-01 (2026-09-17) — Pedidos iFood no PDV:
+  badge canal/origem, fila visível sem ZeloMenu se existir `source=ifood`,
+  accept/confirm e reject/cancel enfileiram via
+  `POST /api/integrations/ifood/orders/:id/commands` (service-role RPC).
+  `transitionCanonicalOrder`/`closeCanonicalOrder` recusam iFood.
+  Fallback de cancelamento Developers `501` só quando a lista live falha
+  sem 401/403/409. Flags de ciclo documentadas em `docs/operations/IFOOD.md`.
+  Sem migrations, sem secrets. Ainda GO parcial.
+
 - [x] FX-IFOOD-WORKER-IMAGE-PAYMENTMETHODS-01 (2026-09-17) — imagem Docker do
   worker iFood saía com `MODULE_NOT_FOUND` no boot: `orderNormalizer.js`
   importa `src/lib/finance/paymentMethods.js`, mas o Dockerfile só copiava

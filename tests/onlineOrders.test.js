@@ -96,6 +96,16 @@ describe('onlineOrders', () => {
     });
   });
 
+  it('refuses canonical accept/reject/close for source=ifood (command API only)', async () => {
+    const rpc = vi.fn();
+    const ifood = mapCanonicalOrder({ ...order, source: 'ifood' });
+    await expect(transitionCanonicalOrder({ rpc }, ifood, 'accept', 'actor-1'))
+      .rejects.toMatchObject({ code: 'IFOOD_USE_COMMAND_API' });
+    await expect(closeCanonicalOrder({ rpc }, ifood, { method: 'pix' }, 'actor-1'))
+      .rejects.toMatchObject({ code: 'IFOOD_USE_COMMAND_API' });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('filters canonical orders by empresa_perfil.id, not by auth owner id', async () => {
     const filters = [];
     const query = {

@@ -210,7 +210,29 @@ export async function loadCanonicalOrders(supabase, empresaId, { kitchen = false
   return (data || []).map(mapCanonicalOrder);
 }
 
+function isIfoodCanonicalOrder(order) {
+  const source = typeof order?.source === 'string' ? order.source.trim() : '';
+  const origem = typeof order?.origem === 'string' ? order.origem.trim() : '';
+  return source === 'ifood' || origem === 'ifood';
+}
+
+/**
+ * iFood commercial state only moves on a confirmed provider event. Accept /
+ * reject / cancel from the PDV must enqueue via the command API
+ * (`POST /api/integrations/ifood/orders/:id/commands`). The canonical RPCs
+ * write `zelo_order_outbox` topics and never enqueue iFood commands.
+ */
+export function assertCanonicalMutationAllowed(order) {
+  if (!isIfoodCanonicalOrder(order)) return;
+  const error = new Error(
+    'Pedidos do iFood só avançam depois que o iFood confirma. Use confirmar ou cancelar na fila.'
+  );
+  error.code = 'IFOOD_USE_COMMAND_API';
+  throw error;
+}
+
 export async function transitionCanonicalOrder(supabase, order, action, actorId, detail = {}) {
+  assertCanonicalMutationAllowed(order);
   const { data, error } = await supabase.rpc('transition_zelo_order', {
     p_order_id: order.id,
     p_expected_revision: order.revision,
@@ -223,6 +245,7 @@ export async function transitionCanonicalOrder(supabase, order, action, actorId,
 }
 
 export async function closeCanonicalOrder(supabase, order, payment, actorId) {
+  assertCanonicalMutationAllowed(order);
   const { data, error } = await supabase.rpc('close_zelo_order', {
     p_order_id: order.id,
     p_expected_revision: order.revision,
