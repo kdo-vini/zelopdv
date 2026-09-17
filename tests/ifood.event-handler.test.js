@@ -387,4 +387,79 @@ describe('createIfoodEventHandler', () => {
   it('throws when constructed without a repository exposing projectOrderEvent', () => {
     expect(() => createIfoodEventHandler({ integration: createFakeIntegration(), repository: {} })).toThrow();
   });
+
+  it('commits stock after a CONFIRMED projection and keeps the event processed when stock fails', async () => {
+    const commitStockForEvent = vi.fn(async () => ({ outcome: 'ok', committedCount: 1 }));
+    const releaseStockForEvent = vi.fn();
+    const handler = createIfoodEventHandler({
+      integration: createFakeIntegration(),
+      repository: {
+        ...createFakeRepository(),
+        commitStockForEvent,
+        releaseStockForEvent
+      }
+    });
+
+    const result = await handler(makeRow({
+      eventType: 'CONFIRMED',
+      eventId: 'event-confirmed-1',
+      payload: { id: 'event-confirmed-1', merchantId: 'merchant-1', orderId: 'order-1', fullCode: 'CONFIRMED' }
+    }), {});
+
+    expect(result).toEqual({ outcome: 'processed' });
+    expect(commitStockForEvent).toHaveBeenCalledWith(expect.objectContaining({
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1',
+      eventId: 'event-confirmed-1',
+      items: expect.any(Array)
+    }));
+    expect(releaseStockForEvent).not.toHaveBeenCalled();
+
+    const failingCommit = vi.fn(async () => {
+      throw new Error('stock-rpc-fixture-not-forwarded');
+    });
+    const logger = { error: vi.fn() };
+    const resilient = createIfoodEventHandler({
+      integration: createFakeIntegration(),
+      repository: {
+        ...createFakeRepository(),
+        commitStockForEvent: failingCommit
+      },
+      logger
+    });
+    const resilientResult = await resilient(makeRow({
+      eventType: 'CONFIRMED',
+      payload: { id: 'event-1', merchantId: 'merchant-1', orderId: 'order-1', fullCode: 'CONFIRMED' }
+    }), {});
+    expect(resilientResult).toEqual({ outcome: 'processed' });
+    expect(logger.error).toHaveBeenCalled();
+    expect(JSON.stringify(resilientResult)).not.toContain('stock-rpc-fixture-not-forwarded');
+  });
+
+  it('releases stock after a CANCELLED projection without reopening the inbox on failure', async () => {
+    const releaseStockForEvent = vi.fn(async () => ({ outcome: 'ok', releasedCount: 1 }));
+    const commitStockForEvent = vi.fn();
+    const handler = createIfoodEventHandler({
+      integration: createFakeIntegration(),
+      repository: {
+        ...createFakeRepository(),
+        commitStockForEvent,
+        releaseStockForEvent
+      }
+    });
+
+    const result = await handler(makeRow({
+      eventType: 'CANCELLED',
+      eventId: 'event-cancelled-1',
+      payload: { id: 'event:cancelled-1', merchantId: 'merchant-1', orderId: 'order-1', fullCode: 'CANCELLED' }
+    }), {});
+
+    expect(result).toEqual({ outcome: 'processed' });
+    expect(releaseStockForEvent).toHaveBeenCalledWith(expect.objectContaining({
+      merchantId: 'merchant-1',
+      externalOrderId: 'order-1',
+      eventId: 'event-cancelled-1'
+    }));
+    expect(commitStockForEvent).not.toHaveBeenCalled();
+  });
 });

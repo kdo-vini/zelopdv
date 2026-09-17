@@ -123,7 +123,9 @@ function safeLog(logger, message) {
  *   order: object,
  *   signal?: AbortSignal
  * }) => Promise<{ outcome: 'applied'|'ignored_duplicate'|'ignored_stale'|'quarantined_terminal_conflict'|'unknown_merchant', zelo_order_id?: string, revision?: number }>} projectOrderEvent
- * @property {(args: { merchantId: string, externalOrderId: string, externalStatus: string, signal?: AbortSignal }) => Promise<unknown>} confirmCommandsForEvent
+ * @property {(args: { merchantId: string, externalOrderId: string, externalStatus: string, signal?: AbortSignal }) => Promise<unknown>} [confirmCommandsForEvent]
+ * @property {(args: { merchantId: string, externalOrderId: string, eventId: string, items: object[], signal?: AbortSignal }) => Promise<unknown>} [commitStockForEvent]
+ * @property {(args: { merchantId: string, externalOrderId: string, eventId: string, signal?: AbortSignal }) => Promise<unknown>} [releaseStockForEvent]
  */
 export function createIfoodEventHandler({
   integration,
@@ -241,6 +243,35 @@ export function createIfoodEventHandler({
             // The projection already committed. Keep the event processed;
             // another matching event or reconciliation can retry correlation.
             safeLog(logger, 'iFood command correlation failed after projection');
+          }
+        }
+        // Stock is event-driven (CONFIRMED/CANCELLED), never command-driven.
+        // Failures after projection must not reopen the inbox — same rule as
+        // command correlation. The ledger RPCs are idempotent.
+        if (externalStatus === 'CONFIRMED'
+          && typeof repository.commitStockForEvent === 'function') {
+          try {
+            await repository.commitStockForEvent({
+              merchantId: row.merchantId,
+              externalOrderId,
+              eventId: row.eventId,
+              items: Array.isArray(normalizedOrder.items) ? normalizedOrder.items : [],
+              signal: context.signal
+            });
+          } catch {
+            safeLog(logger, 'iFood stock commit failed after projection');
+          }
+        } else if (externalStatus === 'CANCELLED'
+          && typeof repository.releaseStockForEvent === 'function') {
+          try {
+            await repository.releaseStockForEvent({
+              merchantId: row.merchantId,
+              externalOrderId,
+              eventId: row.eventId,
+              signal: context.signal
+            });
+          } catch {
+            safeLog(logger, 'iFood stock release failed after projection');
           }
         }
         return processed();
