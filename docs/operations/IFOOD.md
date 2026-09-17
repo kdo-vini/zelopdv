@@ -18,25 +18,43 @@ produção nem abertura global — isso é gate da Task 21.
 | Ações | `POST /api/ifood/actions` | `pause` / `resume` / `revoke` / `replay_event` / `replay_command` |
 | RPCs | `public.admin_*_ifood_*_v1` | `service_role` only; migration local `20260917040026_ifood_admin_operations.sql` |
 | Auditoria | `admin_activity_logs` | `ifood.connection.*`, `ifood.event.replay`, `ifood.command.replay` |
+| Worker | Dokploy `ifood-worker` (`ifood-worker-ellizg`) | Host e health abaixo |
 
 O browser **nunca** recebe payload bruto de webhook, telefone, endereço ou
 corpo de pedido — só contagens, status, timestamps e códigos de erro truncados
 (≤80 chars).
 
+## Worker (Dokploy)
+
+Host (2026-09-17): `ifood-worker-ellizg-90c105-2-24-66-12.sslip.io`
+(Let's Encrypt ligado; TLS pode ainda estar assentando). Conferir over HTTP
+se HTTPS ainda não assentar.
+
+| Checagem | Caminho | Evidência 2026-09-17 |
+| --- | --- | --- |
+| Liveness | `GET /health/live` | 200 `{"status":"ok","reason":"serving"}` — container Docker-healthy |
+| Readiness | `GET /health/ready` | 503 `{"status":"not_ready","reason":"dependencies_unavailable"}` |
+
+Ready 503 é fail-closed esperado enquanto `main()` sobe
+`createUnreadyWorkerDependencies()` (repositório de produção não wired).
+Não trata como GO completo nem como ciclo operacional real.
+
 ## Piloto / rollout (Task 21)
 
 Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`.
 
-**Decisão vigente: GO parcial (schema)** — owner autorizou em 2026-09-17;
-migrations iFood forward aplicadas em `xnnjyrblpvsqrtsshawa`. Worker deploy,
-shadow, loja piloto e soak ainda pendentes.
+**Decisão vigente: GO parcial (schema + worker process live)** — owner
+autorizou apply em 2026-09-17; migrations iFood forward aplicadas em
+`xnnjyrblpvsqrtsshawa`; worker Dokploy live (liveness 200, ready 503).
+**Não é GO completo.** Shadow, loja piloto e soak ainda pendentes.
 
 Antes do GO completo:
 
-1. `docker build -f workers/ifood/Dockerfile -t zelopdv-ifood-worker:candidate .`
-2. Deploy do worker (digest + envs por nome)
+1. Ligar repositório de produção no worker para `GET /health/ready` → 200
+2. Merchant/sandbox + loja piloto
 3. Testar kill switch pause/resume no console `/ifood`
 4. Confirmar som genérico, `printOwner` único e contingência Portal
+5. Shadow → soak → sign-off GO pleno
 
 ## Gate automatizado (Task 20)
 

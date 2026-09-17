@@ -1,4 +1,37 @@
-# Tasks 1–21 + autorização de schema (GO parcial)
+# Tasks 1–21 + schema + worker Dokploy (GO parcial)
+
+## Handoff — 2026-09-17 (Dokploy ifood-worker)
+
+Worker **processo no ar** no Dokploy. **Não é GO completo.** Decisão vigente:
+**GO parcial (schema + worker process live)**.
+
+Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`. Ops: host e health em
+`docs/operations/IFOOD.md`.
+
+**Evidência (HTTP, 2026-09-17):**
+- Dokploy projeto **ZeloPDV**, app `ifood-worker` (`appName` `ifood-worker-ellizg`)
+- GitHub `kdo-vini/zelopdv` branch `cursor/ifood-task-12-cdb9`; Dockerfile
+  `workers/ifood/Dockerfile`, context `.`
+- Host: `ifood-worker-ellizg-90c105-2-24-66-12.sslip.io` (Let's Encrypt ligado;
+  TLS pode ainda estar assentando)
+- Envs **só por nome** (sem valores): `SUPABASE_URL`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `PORT`, `IFOOD_WORKER_HOST`, `NODE_ENV`.
+  Opcionais `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` **não** definidas.
+- Supabase `xnnjyrblpvsqrtsshawa`
+- Docker build OK; container **Docker-healthy** (`HEALTHCHECK GET /health/live`)
+- `GET /health/live` → **200** `{"status":"ok","reason":"serving"}`
+- `GET /health/ready` → **503** `{"status":"not_ready","reason":"dependencies_unavailable"}`
+
+**Causa do ready 503:** `workers/ifood/index.js` ainda sobe
+`createUnreadyWorkerDependencies()` (fail-closed). Repositório de produção
+Supabase **não** está ligado em `main()`.
+
+**Não feito:** shadow, loja piloto, soak.
+
+**Bloqueios para GO completo:**
+1. Ligar repositório de produção para `GET /health/ready` → 200 e ciclos reais
+2. Merchant/sandbox + loja piloto
+3. Shadow → piloto → soak → sign-off GO pleno
 
 ## Handoff — 2026-09-17 (owner autorizou apply)
 
@@ -8,20 +41,12 @@ Owner respondeu **“Autorizo”**. Executado:
    `xnnjyrblpvsqrtsshawa` (ZeloPDV). Tasks 1–11 já estavam aplicadas.
 2. Verificação: 27 RPCs `*ifood*`, `vendas.canal_origem`,
    `admin_ifood_connections_overview_v1()`.
-3. **Não executado aqui:** deploy do worker (sem Docker CLI / sem alvo de
-   hosting acessível neste ambiente). Shadow, loja piloto e soak continuam
-   bloqueados até o worker estar no ar.
+3. **Depois desta autorização:** deploy Dokploy do worker evidenciado no
+   handoff acima (processo live; ready ainda 503). Shadow, loja piloto e soak
+   continuam pendentes.
 
 Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md` (decisão
-**GO parcial — schema only**).
-
-**Próximo passo humano/infra:**
-```bash
-docker build -f workers/ifood/Dockerfile -t zelopdv-ifood-worker:candidate .
-# deploy com digest + envs por nome (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-# IFOOD_CLIENT_ID/SECRET se houver, IFOOD_WORKER_*)
-```
-Depois: shadow → piloto → soak → GO completo.
+**GO parcial — schema + worker process live**; não GO completo).
 
 ## Handoff — 2026-09-17 (após Task 21)
 
