@@ -1,5 +1,12 @@
 # ZeloPDV.memory
 
+- Worker iFood `/health/ready` (2026-09-17): o probe só é gravado no ciclo
+  do loop. `readyMaxAgeMs` tem de ser **estritamente maior** que
+  `intervalMs` (defaults 600_000 vs 300_000). `loadIfoodWorkerConfig`
+  deriva ou auto-bumpeia o par inválido; senão idle saudável vira 503
+  `stale_probe`. Probe de lease continua não mutante
+  (`claim_ifood_events_v1` + `INVALID_CLAIM_ARGUMENTS`). Não é GO completo.
+
 - Snapshots operacionais (2026-09-11): `readOperationalSnapshot` é fallback de
   offline, não cache de aparelho online. Nenhum snapshot (`pessoas.fiado`,
   `empresa.perfil`, `mesas:profile`, `mesas:catalog`) tem caminho de

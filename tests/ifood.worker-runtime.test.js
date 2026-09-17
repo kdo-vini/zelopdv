@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
 import {
   IfoodWorkerConfigError,
+  IFOOD_WORKER_DEFAULTS,
   loadIfoodWorkerConfig
 } from '../workers/ifood/config.js';
 import {
@@ -90,14 +91,16 @@ describe('iFood worker configuration', () => {
   });
 
   it('applies safe defaults and port precedence', () => {
-    expect(loadIfoodWorkerConfig(validEnv())).toMatchObject({
+    const defaults = loadIfoodWorkerConfig(validEnv());
+    expect(defaults).toMatchObject({
       workerId: 'ifood-worker',
       host: '0.0.0.0',
       port: 3000,
-      intervalMs: 300000,
-      readyMaxAgeMs: 90000,
+      intervalMs: IFOOD_WORKER_DEFAULTS.intervalMs,
+      readyMaxAgeMs: IFOOD_WORKER_DEFAULTS.readyMaxAgeMs,
       shutdownTimeoutMs: 15000
     });
+    expect(defaults.readyMaxAgeMs).toBeGreaterThan(defaults.intervalMs);
 
     expect(loadIfoodWorkerConfig(validEnv({
       IFOOD_WORKER_ID: 'worker-a',
@@ -105,18 +108,52 @@ describe('iFood worker configuration', () => {
       IFOOD_WORKER_PORT: '43123',
       PORT: '43124',
       IFOOD_WORKER_INTERVAL_MS: '2500',
-      IFOOD_WORKER_READY_MAX_AGE_MS: '2000',
+      IFOOD_WORKER_READY_MAX_AGE_MS: '4000',
       IFOOD_WORKER_SHUTDOWN_TIMEOUT_MS: '5000'
     }))).toMatchObject({
       workerId: 'worker-a',
       host: '127.0.0.1',
       port: 43123,
       intervalMs: 2500,
-      readyMaxAgeMs: 2000,
+      readyMaxAgeMs: 4000,
       shutdownTimeoutMs: 5000
     });
 
     expect(loadIfoodWorkerConfig(validEnv({ PORT: '43124' })).port).toBe(43124);
+  });
+
+  it('keeps readyMaxAgeMs strictly greater than intervalMs', () => {
+    const derived = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_INTERVAL_MS: '60000'
+    }));
+    expect(derived.intervalMs).toBe(60_000);
+    expect(derived.readyMaxAgeMs).toBe(60_000 + IFOOD_WORKER_DEFAULTS.readySlackMs);
+    expect(derived.readyMaxAgeMs).toBeGreaterThan(derived.intervalMs);
+
+    const bumpedEqual = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_INTERVAL_MS: '300000',
+      IFOOD_WORKER_READY_MAX_AGE_MS: '300000'
+    }));
+    expect(bumpedEqual.readyMaxAgeMs).toBe(300_000 + IFOOD_WORKER_DEFAULTS.readySlackMs);
+
+    const bumpedLegacy = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_READY_MAX_AGE_MS: '90000'
+    }));
+    expect(bumpedLegacy.intervalMs).toBe(IFOOD_WORKER_DEFAULTS.intervalMs);
+    expect(bumpedLegacy.readyMaxAgeMs).toBe(IFOOD_WORKER_DEFAULTS.readyMaxAgeMs);
+    expect(bumpedLegacy.readyMaxAgeMs).toBeGreaterThan(bumpedLegacy.intervalMs);
+
+    const bumpedSmaller = loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_INTERVAL_MS: '2500',
+      IFOOD_WORKER_READY_MAX_AGE_MS: '2000'
+    }));
+    expect(bumpedSmaller.intervalMs).toBe(2500);
+    expect(bumpedSmaller.readyMaxAgeMs).toBe(2500 + IFOOD_WORKER_DEFAULTS.readySlackMs);
+    expect(bumpedSmaller.readyMaxAgeMs).toBeGreaterThan(bumpedSmaller.intervalMs);
+
+    expect(() => loadIfoodWorkerConfig(validEnv({
+      IFOOD_WORKER_INTERVAL_MS: '86400000'
+    }))).toThrow(IfoodWorkerConfigError);
   });
 
   it('rejects malformed URLs and unbounded/non-integer numeric values', () => {
@@ -351,6 +388,8 @@ describe('iFood health server', () => {
 
     state.recordProbe({ databaseReachable: true, leaseCapable: true });
     expect(state.readyStatus()).toEqual({ status: 'ready', reason: 'fresh_probe' });
+    now = 100;
+    expect(state.readyStatus()).toEqual({ status: 'ready', reason: 'fresh_probe' });
     now = 101;
     expect(state.readyStatus()).toEqual({ status: 'not_ready', reason: 'stale_probe' });
     expect(state.liveStatus()).toEqual({ status: 'ok', reason: 'serving' });
@@ -359,6 +398,23 @@ describe('iFood health server', () => {
     expect(state.readyStatus()).toEqual({ status: 'not_ready', reason: 'dependencies_unavailable' });
     state.markShuttingDown();
     expect(state.readyStatus()).toEqual({ status: 'not_ready', reason: 'shutting_down' });
+    expect(state.liveStatus()).toEqual({ status: 'ok', reason: 'serving' });
+  });
+
+  it('stays fresh across one idle default interval and only then becomes stale', () => {
+    const { intervalMs, readyMaxAgeMs } = IFOOD_WORKER_DEFAULTS;
+    expect(readyMaxAgeMs).toBeGreaterThan(intervalMs);
+
+    let now = 0;
+    const state = createHealthState({ readyMaxAgeMs, clock: () => now });
+    state.recordProbe({ databaseReachable: true, leaseCapable: true });
+
+    now = intervalMs;
+    expect(state.readyStatus()).toEqual({ status: 'ready', reason: 'fresh_probe' });
+    now = readyMaxAgeMs;
+    expect(state.readyStatus()).toEqual({ status: 'ready', reason: 'fresh_probe' });
+    now = readyMaxAgeMs + 1;
+    expect(state.readyStatus()).toEqual({ status: 'not_ready', reason: 'stale_probe' });
     expect(state.liveStatus()).toEqual({ status: 'ok', reason: 'serving' });
   });
 

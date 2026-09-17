@@ -1,5 +1,16 @@
 # Fixes Progress
 
+- [x] FX-IFOOD-WORKER-READY-TTL-01 (2026-09-17) — `/health/ready` do worker
+  iFood ia a 200 `fresh_probe` e depois ficava 503 `stale_probe` até o
+  próximo ciclo. Intervalo default 300_000 ms vs `readyMaxAgeMs` 90_000 ms:
+  o probe só é gravado no ciclo, então a maior parte da janela de 5 min
+  ficava stale com deps saudáveis (visto live: live 200 `serving`, ready
+  503 `stale_probe`). Default de `readyMaxAgeMs` passou a 600_000;
+  `loadIfoodWorkerConfig` deriva/auto-bumpeia quando
+  `readyMaxAgeMs <= intervalMs`. Probe segue não mutante
+  (`claim_ifood_events_v1` + `INVALID_CLAIM_ARGUMENTS`). Sem migrations.
+  Testes em `tests/ifood.worker-runtime.test.js`. Ainda GO parcial.
+
 - [x] FX-IFOOD-WORKER-READY-PROBE-01 (2026-09-17) — `GET /health/ready` do
   worker iFood ficava 503 `dependencies_unavailable` mesmo com
   `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` porque o bootstrap sempre

@@ -1,5 +1,31 @@
 # Incidents
 
+## INC-2026-09-17-IFOOD-WORKER-STALE-PROBE — ready 503 após probe fresco
+
+**Status:** corrigido em código (2026-09-17). Redeploy Dokploy pendente deste
+commit. **Não é GO completo.**
+
+**Sintoma**
+
+- Host `ifood-worker-ellizg-90c105-2-24-66-12.sslip.io`: `/health/live` 200
+  `serving`; `/health/ready` 503 `stale_probe` minutos após um 200
+  `fresh_probe`. Processo no ar; deps não tinham caído.
+
+**Causa-raiz**
+
+- Loop default `IFOOD_WORKER_INTERVAL_MS` = 300_000; TTL
+  `IFOOD_WORKER_READY_MAX_AGE_MS` = 90_000. Readiness só atualiza no ciclo
+  (`onHealthChange` → `recordProbe`). Após 90s o ready virava stale até o
+  próximo tick.
+
+**Correção**
+
+- TTL default 600_000; boot deriva/auto-bumpeia se TTL ≤ intervalo.
+- Probe permanece `claim_ifood_events_v1` com args inválidos
+  (`INVALID_CLAIM_ARGUMENTS`), sem claim de inbox. Sem migrations.
+
+**Referência:** [[IFOOD]] / `docs/operations/IFOOD.md`, FX-IFOOD-WORKER-READY-TTL-01.
+
 ## Prep — iFood schema GO parcial (2026-09-17)
 
 Owner autorizou apply. Migrations Tasks 12–19 aplicadas em

@@ -1,6 +1,6 @@
 import { resolve as resolvePath } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadIfoodWorkerConfig } from './config.js';
+import { IFOOD_WORKER_DEFAULTS, loadIfoodWorkerConfig } from './config.js';
 import { createHealthServer, createHealthState, listenHealthServer } from './healthServer.js';
 import { runIfoodWorker, sanitizeWorkerError } from './runtime.js';
 import { createHttpIfoodAdapter } from '../../src/lib/server/ifood/adapters/httpIfoodAdapter.js';
@@ -168,7 +168,7 @@ export async function main(options = {}) {
   const clock = options.clock ?? (() => Date.now());
   const suppliedServer = options.server;
   const healthState = options.healthState ?? suppliedServer?.healthState ?? createHealthState({
-    readyMaxAgeMs: config.readyMaxAgeMs ?? 90_000,
+    readyMaxAgeMs: config.readyMaxAgeMs ?? IFOOD_WORKER_DEFAULTS.readyMaxAgeMs,
     clock
   });
   const healthServerFactory = options.createHealthServer ?? options.serverFactory;

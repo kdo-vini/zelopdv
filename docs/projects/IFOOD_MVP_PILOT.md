@@ -3,7 +3,7 @@
 **Data:** 2026-09-17  
 **Branch de implementação:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`)  
 **Projeto Supabase:** `xnnjyrblpvsqrtsshawa` (ZeloPDV)  
-**Decisão atual:** **GO parcial (schema + worker live+ready)** — migrations aplicadas e worker Dokploy com `/health/live` **e** `/health/ready` 200; **não é GO completo** (bootstrap default sem inbox/commands/adapter HTTP; shadow/piloto/soak pendentes)
+**Decisão atual:** **GO parcial (schema + worker live+ready)** — migrations aplicadas e worker Dokploy com `/health/live` 200 e `/health/ready` 200 enquanto o probe for fresco (TTL default 600s > intervalo 300s); **não é GO completo** (bootstrap default sem inbox/commands/adapter HTTP; shadow/piloto/soak pendentes)
 
 ## Pré-condições de código (Tasks 1–20)
 
@@ -16,7 +16,7 @@
 | Gate `verify:ifood` + resilience + E2E mock | Verde na Task 20 |
 | `docker build` da imagem worker | **OK** no Dokploy (2026-09-17) |
 | Migrations iFood no Supabase vinculado | **Aplicadas** (2026-09-17, após autorização do owner) |
-| Processo worker no Dokploy | **Live+ready** — liveness 200; readiness 200 `fresh_probe` (após redeploy do probe) |
+| Processo worker no Dokploy | **Live+ready (GO parcial)** — liveness 200; readiness 200 `fresh_probe` só enquanto o probe for mais novo que `readyMaxAgeMs` (default 600s, intervalo 300s). 503 `stale_probe` com defaults antigos (90s) era bug de TTL, não queda de deps |
 
 ## Checklist de mutações
 
@@ -68,7 +68,7 @@ Fonte local canônica do SQL continua em `supabase/migrations/20260917014734_*.s
 
 - `GET /health/live` → **200** `{"status":"ok","reason":"serving"}` (processo no ar, 2026-09-17)
 - `GET /health/ready` → **503** `{"status":"not_ready","reason":"dependencies_unavailable"}` **antes** do probe de produção
-- Após redeploy do commit de probe (`b576c9a`): `GET /health/ready` → **200** `{"status":"ready","reason":"fresh_probe"}`
+- Após redeploy do commit de probe (`b576c9a`): `GET /health/ready` → **200** `{"status":"ready","reason":"fresh_probe"}` no instante do probe. Com o TTL antigo (90s) vs intervalo (5 min) o ready voltava a **503 `stale_probe`** até o próximo ciclo — corrigido para `readyMaxAgeMs` default 600s, sempre `> intervalMs`.
 
 **Causa do ready 503 (evidência pré-probe):** `workers/ifood/index.js`
 bootstrapava `createUnreadyWorkerDependencies()`. O branch liga
@@ -122,7 +122,9 @@ FEITO:
   2. docker build OK no Dokploy; container Docker-healthy (HEALTHCHECK /health/live)
   3. processo worker live; GET /health/live → 200 serving
   4. redeploy do probe de produção; GET /health/ready → 200 fresh_probe
-     (PostgREST claim_ifood_events_v1 / INVALID_CLAIM_ARGUMENTS, sem claim)
+     no instante do probe (PostgREST claim_ifood_events_v1 /
+     INVALID_CLAIM_ARGUMENTS, sem claim). TTL default agora 600s (> intervalo
+     300s) para não oscilar em stale_probe ocioso.
 
 PENDENTE PARA GO COMPLETO:
   1. ligar processInbox / commands / adapter HTTP no bootstrap default

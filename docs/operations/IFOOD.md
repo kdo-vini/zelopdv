@@ -34,13 +34,19 @@ se HTTPS ainda não assentar.
 | --- | --- | --- |
 | Liveness | `GET /health/live` | 200 `{"status":"ok","reason":"serving"}` — container Docker-healthy |
 | Readiness (pré-probe) | `GET /health/ready` | 503 `{"status":"not_ready","reason":"dependencies_unavailable"}` |
-| Readiness (pós-redeploy `b576c9a`) | `GET /health/ready` | 200 `{"status":"ready","reason":"fresh_probe"}` |
+| Readiness (pós-redeploy `b576c9a`) | `GET /health/ready` | 200 `{"status":"ready","reason":"fresh_probe"}` no instante do probe |
+| Readiness (bug TTL, pré-fix) | `GET /health/ready` | 503 `{"status":"not_ready","reason":"stale_probe"}` ~90s após o probe, até o próximo ciclo de 5 min |
 
-Ready 200 pós-redeploy prova o probe PostgREST `claim_ifood_events_v1`
+Ready 200 prova o probe PostgREST `claim_ifood_events_v1`
 (`INVALID_CLAIM_ARGUMENTS`, sem claim de inbox) com `SUPABASE_URL` +
-`SUPABASE_SERVICE_ROLE_KEY`. **Não** prova ciclo operacional: o bootstrap
-default ainda não liga `processInbox`, commands nem adapter HTTP iFood.
-Não trata live+ready como GO completo.
+`SUPABASE_SERVICE_ROLE_KEY`. **Não** fica 200 o tempo todo só porque o
+processo está no ar: o TTL é `IFOOD_WORKER_READY_MAX_AGE_MS` (default
+**600_000**, estritamente maior que o intervalo default **300_000**). Com
+essas defaults, idle com banco/lease saudáveis não deve cair em
+`stale_probe`. `readyMaxAgeMs <= intervalMs` é auto-ajustado no boot.
+**Não** prova ciclo operacional: o bootstrap default ainda não liga
+`processInbox`, commands nem adapter HTTP iFood. Não trata live+ready como
+GO completo.
 
 ## Piloto / rollout (Task 21)
 
@@ -48,8 +54,9 @@ Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`.
 
 **Decisão vigente: GO parcial (schema + worker live+ready)** — owner
 autorizou apply em 2026-09-17; migrations iFood forward aplicadas em
-`xnnjyrblpvsqrtsshawa`; worker Dokploy live **e** ready 200 (`fresh_probe`).
-**Não é GO completo.** Bootstrap default sem inbox/commands/adapter HTTP;
+`xnnjyrblpvsqrtsshawa`; worker Dokploy live **e** ready 200 (`fresh_probe`)
+enquanto o probe for mais novo que o TTL (default 600s). **Não é GO
+completo.** Bootstrap default sem inbox/commands/adapter HTTP;
 `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` ausentes; sem merchant sandbox;
 shadow, loja piloto e soak ainda pendentes.
 
@@ -90,7 +97,9 @@ docker build -f workers/ifood/Dockerfile -t zelopdv-ifood-worker:candidate .
    `GET /health/ready` 200 exige probe fresco com banco + função de lease
    (`claim_ifood_events_v1` via argumentos inválidos, sem claim real).
    503 `dependencies_unavailable` = credenciais ausentes, PostgREST/DB
-   inacessível, RPC de lease ausente, ou probe stale/timeout.
+   inacessível, RPC de lease ausente, ou timeout/auth no probe.
+   503 `stale_probe` = último probe saudável passou de `readyMaxAgeMs`
+   (ciclo travado, ou TTL era ≤ intervalo — o boot auto-bumpeia esse par).
 3. Se `status=degraded` ou heartbeat parado: checar worker (processo/container),
    renovação de token (`lastTokenAt`) e último poll (`lastPollAt`).
 4. Selecionar a conexão e listar itens reprocessáveis (eventos/comandos em

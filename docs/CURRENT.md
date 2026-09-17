@@ -1,5 +1,25 @@
 # Tasks 1–21 + worker live+ready (GO parcial)
 
+## Handoff — 2026-09-17 (readyMaxAge > interval; sem stale_probe ocioso)
+
+Bug live: após o probe de produção, `/health/ready` ia a 200 `fresh_probe` e
+depois virava **503 `stale_probe`** até o próximo ciclo do worker. Causa:
+intervalo default **300_000 ms** e `readyMaxAgeMs` default **90_000 ms** —
+o probe só é gravado no ciclo, então ~4 min de cada janela de 5 min
+ficavam stale com deps saudáveis. Host
+`ifood-worker-ellizg-90c105-2-24-66-12.sslip.io`: live 200 `serving`, ready
+503 `stale_probe`.
+
+Correção: default `readyMaxAgeMs` = **600_000** (interval + slack 300_000).
+`loadIfoodWorkerConfig` deriva ou auto-bumpeia quando
+`readyMaxAgeMs <= intervalMs`. Probe continua não mutante
+(`claim_ifood_events_v1` + `INVALID_CLAIM_ARGUMENTS`). Sem migrations.
+**Ainda GO parcial.** Shadow/piloto/soak e `IFOOD_CLIENT_*` pendentes.
+
+Ready 200 **não** fica “para sempre”: só enquanto o último probe saudável
+for mais novo que `readyMaxAgeMs`. Com defaults coerentes, idle com deps
+saudáveis não deve mais cair em `stale_probe`.
+
 ## Handoff — 2026-09-17 (Dokploy live+ready 200 após probe)
 
 Redeploy do commit de probe (`b576c9a`) no Dokploy **verificado live**.
