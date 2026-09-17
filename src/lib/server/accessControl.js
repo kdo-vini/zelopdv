@@ -69,6 +69,31 @@ const DEFAULT_ROLES = [
 ];
 
 // ---------------------------------------------------------------------------
+// iFood self-service connection capability (Task 17)
+// ---------------------------------------------------------------------------
+
+// Owner/admin capability gate for `/api/integrations/ifood/*`. Mirrored
+// verbatim in the client helper (`src/lib/accessControl.js`) so the wizard
+// (Task 18) can decide what to render without a round-trip, while every
+// server endpoint still re-checks this itself — the client copy is UX only,
+// never the authorization boundary. No default role grants this key today;
+// an owner must add it explicitly via the Acessos role editor before a
+// sub-user can manage the iFood connection.
+export const IFOOD_INTEGRATION_PERMISSION = 'integracoes.ifood.gerenciar';
+
+/**
+ * Owners always manage their own iFood connection. Sub-users need the
+ * `integracoes.ifood.gerenciar` capability explicitly set on their role.
+ * @param {{isSubUser: boolean, permissions: object|null}|null} accessContext
+ * @returns {boolean}
+ */
+export function canManageIfoodIntegration(accessContext) {
+  if (!accessContext) return false;
+  if (!accessContext.isSubUser) return true;
+  return accessContext.permissions?.[IFOOD_INTEGRATION_PERMISSION] === true;
+}
+
+// ---------------------------------------------------------------------------
 // resolveOwnerUserId
 // ---------------------------------------------------------------------------
 

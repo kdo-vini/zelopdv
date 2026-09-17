@@ -196,6 +196,34 @@ update de `read_at` de `business_signals` e no SELECT de
 `business_daily_snapshots`. O item de navegação também é ocultado para
 subusuários sem essa permissão; owner e service-role mantêm o bypass existente.
 
+## Capability `integracoes.ifood.gerenciar` (Task 17, 2026-09-17)
+
+- Nova capability isolada para o fluxo self-service de conexão iFood
+  (`/api/integrations/ifood/connection|authorization|health`). Definida em
+  `src/lib/server/accessControl.js` e espelhada em `src/lib/accessControl.js`
+  como `IFOOD_INTEGRATION_PERMISSION` + `canManageIfoodIntegration()`; o
+  serviço em `src/lib/server/ifood/connectionService.js` reimplementa a mesma
+  regra localmente (`canManageIfoodConnection`) com a string literal, no
+  mesmo padrão de `productMappingService.js` — decisão deliberada para não
+  puxar `$env`/`supabaseAdmin` para dentro de um módulo pensado para ser
+  puro/testável.
+- Regra: titular sempre pode gerenciar a conexão; subusuário só pode quando
+  `permissions['integracoes.ifood.gerenciar'] === true` no seu cargo.
+- **Gap conhecido:** nenhum cargo padrão (`Caixa`, `Atendente`, `Gerente`)
+  recebe essa capability, e `src/routes/gestao/acessos/+page.svelte`
+  (`PERMISSION_GROUPS`) ainda não tem uma entrada para ela — não fazia parte
+  dos arquivos da Task 17. Na prática, hoje só o titular consegue conectar/
+  gerenciar o iFood; um subusuário só teria a permissão se ela fosse escrita
+  diretamente em `access_roles.permissions` (fora da UI). Fechar esse gap
+  (adicionar o grupo "Integrações" em `PERMISSION_GROUPS`) é follow-up
+  explícito, não uma dívida escondida.
+- Elegibilidade (independente da capability): a assinatura do titular precisa
+  estar `active`/`trialing` e não expirada
+  (`isSubscriptionActiveStrict`). Como todo plano do catálogo já custa
+  R$59+ (`pdv`/`chat`/`bundle`), não há allowlist de plano nem exigência de
+  add-on — `isIfoodEligibleSubscription()` em `connectionService.js` é só
+  isso, sem reimplementar `pricing.js`.
+
 ## Quando atualizar esta doc
 
 - nova permissao

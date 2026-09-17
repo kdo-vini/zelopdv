@@ -1,4 +1,74 @@
-# Tasks 1–16 concluídas
+# Tasks 1–17 concluídas
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 17)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 16).
+Estado após Task 17:
+
+1. Este arquivo (`docs/CURRENT.md`) — bloco Task 17 abaixo, mais o bloco
+   "Handoff ... após Task 16" logo em seguida.
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da
+   Task 17 (`## Task 17: Criar APIs seguras de conexão self-service`).
+3. `docs/modules/ACESSOS.md` — seção `Capability integracoes.ifood.gerenciar`.
+4. Próxima task: **Task 18** (wizard progressivo em Perfil > Integrações) —
+   ver plano; ler `docs/DESIGN_PATTERNS.md` antes de qualquer mudança de UI.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commit mais recente antes desta task: Task 16 `feat: teach Zelinho sales
+channel context`. **Task 17 commitada nesta sessão** como `feat: add
+self-service iFood connection APIs`.
+
+**Estado validado nesta sessão:**
+- Suíte alvo da Task 17 (`api.ifood-connection` + `server.accessControl`):
+  2 arquivos / 32 testes verdes. Schema test dedicado
+  (`ifood.connection-schema`): 7 testes verdes.
+- `npx vitest run` completo: 229 arquivos / 1626 testes verdes (3 skips
+  pré-existentes, não relacionados).
+- `npm run check`: 0 erros, 0 warnings.
+
+**O que mudou de fato:**
+- Nova migration local (não aplicada ao Supabase vinculado):
+  `supabase/migrations/20260917030512_ifood_self_service_connection.sql`,
+  com três RPCs mecânicas (`get_ifood_connection_v1`,
+  `upsert_ifood_connection_v1`, `count_ifood_active_orders_v1`) — desvio
+  documentado do plano, que não listava uma migration para esta task, mas
+  era estruturalmente necessária: `ifood_internal` não tem exposição
+  PostgREST, então não havia outro caminho para ler/escrever
+  `ifood_internal.connections`. Toda política (entitlement, capability,
+  CSRF/state, "sem pedidos ativos") fica em `connectionService.js`, não no
+  SQL. Verificação transacional em
+  `supabase/verification/ifood_self_service_connection.sql`, não executada
+  (Docker indisponível nesta sessão) mas revisada linha a linha; teste
+  estático em `tests/ifood.connection-schema.test.js`.
+- `src/lib/server/ifood/connectionService.js` (novo) — serviço puro
+  (repositório RPC-only + orquestração), sem `$env`/`supabaseAdmin`, com
+  `getStatus`, `startConnection`, `getAuthorizationPrompt`,
+  `checkAuthorization`, `updateConnectionStatus` e `getHealth`.
+- Três rotas novas: `POST/GET/PATCH /api/integrations/ifood/connection`,
+  `GET/POST /api/integrations/ifood/authorization`,
+  `GET /api/integrations/ifood/health`. Nenhuma retorna segredo, token ou
+  `connectionId` interno; `startConnection` cria a linha `pending` **antes**
+  de qualquer confirmação do iFood (requisito da Task 6).
+- Capability nova `integracoes.ifood.gerenciar` em
+  `src/lib/server/accessControl.js` e `src/lib/accessControl.js`
+  (`canManageIfoodIntegration`). Titular sempre pode; subusuário só com a
+  capability explícita no cargo — nenhum cargo padrão a recebe hoje (gap
+  documentado em `docs/modules/ACESSOS.md`: a UI de Acessos ainda não tem
+  um jeito de conceder essa capability a um subusuário).
+- `state` de autorização é HMAC determinístico
+  (`connectionId:merchantId:pendingSince` com `IFOOD_CLIENT_SECRET`), não
+  uma coluna nova no banco — sobrevive a refresh porque é recomputável, e
+  fica inválido sozinho quando a conexão sai de `pending` (cobre "replay de
+  state") ou passa de 30 minutos (cobre "CSRF/state expirado").
+- O fluxo real de autorização self-service do iFood **não está confirmado**
+  por documentação oficial (`docs/integrations/ifood/CONTRACT_SNAPSHOT.md`
+  já registrava isso antes desta task). `checkAuthorization` reaproveita
+  `adapter.connectMerchant()` (já existente desde a Task 1/5) para
+  confirmar a autorização, sem inventar nenhum endpoint iFood novo.
+
+**Próximo passo real (Task 18):** wizard progressivo em `/perfil` — ver
+`## Task 18: Criar wizard progressivo em Perfil > Integrações` no plano.
+Ler `docs/DESIGN_PATTERNS.md` antes de tocar em `perfil/+page.svelte`.
 
 ## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 16)
 
