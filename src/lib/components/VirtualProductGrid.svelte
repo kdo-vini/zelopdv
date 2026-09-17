@@ -157,19 +157,19 @@
         <p class="empty-text">
           {hasAnyProducts
             ? 'Tente limpar a busca ou escolher outra categoria. Se quiser vender mesmo assim, use um item avulso.'
-            : 'Você pode vender agora mesmo ou cadastrar seus produtos primeiro.'}
+            : 'Cadastre seu primeiro produto para começar. É rápido: nome e preço.'}
         </p>
         <div class="empty-actions">
-          <button type="button" class="empty-primary" on:click={handleValorAvulsoClick}>
-            {#if !hasAnyProducts}<Plus size={18} aria-hidden="true" />{/if}
-            <span>{hasAnyProducts ? 'Testar com item avulso' : 'Venda avulsa'}</span>
-          </button>
           {#if !hasAnyProducts && canCadastrarProduto}
-            <button type="button" class="empty-secondary" on:click={handleCadastrarProdutoClick}>
+            <button type="button" class="empty-primary" on:click={handleCadastrarProdutoClick}>
               <Plus size={18} aria-hidden="true" />
               <span>Cadastrar primeiro produto</span>
             </button>
           {/if}
+          <button type="button" class="{!hasAnyProducts && canCadastrarProduto ? 'empty-secondary' : 'empty-primary'}" on:click={handleValorAvulsoClick}>
+            {#if !hasAnyProducts}<Plus size={18} aria-hidden="true" />{/if}
+            <span>{hasAnyProducts ? 'Testar com item avulso' : 'Ou venda avulsa'}</span>
+          </button>
         </div>
         {#if !hasAnyProducts}
           <div class="empty-preview" aria-hidden="true">
