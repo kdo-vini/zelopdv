@@ -24,7 +24,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | Aplicar forward migrations iFood no projeto vinculado | **Sim** | Owner 2026-09-17 (“Autorizo”) | Ver tabela abaixo |
 | 2 | Deploy worker (imagem por digest) + envs por **nome** | **Sim** | Owner 2026-09-17 (intenção) + evidência Dokploy 2026-09-17 | Ver seção Deploy Dokploy abaixo. Envs presentes **só por nome**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PORT`, `IFOOD_WORKER_HOST`, `NODE_ENV`. Opcionais `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` **não** definidas. Sem valores neste doc. |
-| 3 | Shadow mode (comandos/presença off) | Pendente | — | **Não feito.** Exige ready=200 (repositório de produção) + merchant sandbox |
+| 3 | Shadow mode (comandos/presença off) | Pendente | — | **Não feito.** Exige ready=200 no worker redeployado + merchant sandbox |
 | 4 | Ativar 1 loja piloto sem pedidos em andamento | Pendente | — | **Não feito.** Falta merchant/sandbox + loja piloto |
 | 5 | Soak + reconciliação financeira | Pendente | — | **Não feito** |
 | 6 | Liberar self-service gradual | Pendente | — | Somente após GO completo |
@@ -69,9 +69,10 @@ Fonte local canônica do SQL continua em `supabase/migrations/20260917014734_*.s
 - `GET /health/live` → **200** `{"status":"ok","reason":"serving"}`
 - `GET /health/ready` → **503** `{"status":"not_ready","reason":"dependencies_unavailable"}`
 
-**Causa raiz do ready 503:** `workers/ifood/index.js` ainda bootstrapa
-`createUnreadyWorkerDependencies()` (fail-closed). O repositório de produção
-Supabase **não** está wired em `main()`.
+**Causa raiz do ready 503 (evidência 2026-09-17):** `workers/ifood/index.js`
+ainda bootstrapava `createUnreadyWorkerDependencies()`. O branch agora liga
+`workers/ifood/supabaseRepository.js` em `main()` quando as envs Supabase
+existem; **redeploy** é o que muda o processo live. Sem GO completo.
 
 Isso prova processo vivo + liveness. **Não** prova ciclos reais de pedido,
 webhook, comando ou presença.

@@ -35,9 +35,13 @@ se HTTPS ainda não assentar.
 | Liveness | `GET /health/live` | 200 `{"status":"ok","reason":"serving"}` — container Docker-healthy |
 | Readiness | `GET /health/ready` | 503 `{"status":"not_ready","reason":"dependencies_unavailable"}` |
 
-Ready 503 é fail-closed esperado enquanto `main()` sobe
-`createUnreadyWorkerDependencies()` (repositório de produção não wired).
-Não trata como GO completo nem como ciclo operacional real.
+Ready 503 na evidência HTTP de 2026-09-17 era fail-closed de
+`createUnreadyWorkerDependencies()`. O código do branch agora liga
+`workers/ifood/supabaseRepository.js` quando `SUPABASE_URL` e
+`SUPABASE_SERVICE_ROLE_KEY` existem (probe não mutante de
+`claim_ifood_events_v1`). **Redeploy** é necessário para o processo live
+refletir isso. Não trata o deploy anterior como GO completo nem como ciclo
+operacional real.
 
 ## Piloto / rollout (Task 21)
 
@@ -50,7 +54,7 @@ autorizou apply em 2026-09-17; migrations iFood forward aplicadas em
 
 Antes do GO completo:
 
-1. Ligar repositório de produção no worker para `GET /health/ready` → 200
+1. Redeploy do worker com probe de produção; `GET /health/ready` → 200
 2. Merchant/sandbox + loja piloto
 3. Testar kill switch pause/resume no console `/ifood`
 4. Confirmar som genérico, `printOwner` único e contingência Portal
@@ -81,11 +85,16 @@ docker build -f workers/ifood/Dockerfile -t zelopdv-ifood-worker:candidate .
 
 1. Abrir `/ifood` e conferir a linha do merchant: `status`, fila, DLQ,
    comandos, unmapped, lag de webhook e heartbeat do worker.
-2. Se `status=degraded` ou heartbeat parado: checar worker (processo/container),
+2. Worker: `GET /health/live` 200 só prova processo no ar.
+   `GET /health/ready` 200 exige probe fresco com banco + função de lease
+   (`claim_ifood_events_v1` via argumentos inválidos, sem claim real).
+   503 `dependencies_unavailable` = credenciais ausentes, PostgREST/DB
+   inacessível, RPC de lease ausente, ou probe stale/timeout.
+3. Se `status=degraded` ou heartbeat parado: checar worker (processo/container),
    renovação de token (`lastTokenAt`) e último poll (`lastPollAt`).
-3. Selecionar a conexão e listar itens reprocessáveis (eventos/comandos em
+4. Selecionar a conexão e listar itens reprocessáveis (eventos/comandos em
    estado retryable / dead-letter elegível).
-4. Confirmar no Gestor/Portal do Parceiro se o pedido ainda existe e em qual
+5. Confirmar no Gestor/Portal do Parceiro se o pedido ainda existe e em qual
    estado — o ZeloPDV é a UI operacional; o Portal é contingência.
 
 Sinais úteis (sem PII):

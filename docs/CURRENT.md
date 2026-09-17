@@ -1,4 +1,21 @@
-# Tasks 1–21 + schema + worker Dokploy (GO parcial)
+# Tasks 1–21 + probe de produção do worker iFood
+
+## Handoff — 2026-09-17 (probe de produção para `/health/ready`)
+
+Causa do ready 503 no Dokploy: `main()` sempre subia
+`createUnreadyWorkerDependencies()`. Com `SUPABASE_URL` +
+`SUPABASE_SERVICE_ROLE_KEY`, o bootstrap agora monta
+`workers/ifood/supabaseRepository.js`. `probeDependencies()` chama
+`claim_ifood_events_v1` com `p_limit=0` e `p_lease_seconds=0`; a RPC
+rejeita com `INVALID_CLAIM_ARGUMENTS` **antes** de `FOR UPDATE` / claim,
+sem roubar inbox. Rede/timeout/auth continuam fail-closed. Sem as duas
+envs, o caminho unready permanece. Sem migrations novas e sem GO completo.
+
+**Redeploy do worker no Dokploy é necessário** para o processo live passar
+a usar este código. Evidência HTTP anterior (processo no ar, ready 503)
+fica no handoff Dokploy abaixo.
+
+**Branch:** `cursor/ifood-task-12-cdb9`
 
 ## Handoff — 2026-09-17 (Dokploy ifood-worker)
 
@@ -21,15 +38,12 @@ Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`. Ops: host e health em
 - Docker build OK; container **Docker-healthy** (`HEALTHCHECK GET /health/live`)
 - `GET /health/live` → **200** `{"status":"ok","reason":"serving"}`
 - `GET /health/ready` → **503** `{"status":"not_ready","reason":"dependencies_unavailable"}`
-
-**Causa do ready 503:** `workers/ifood/index.js` ainda sobe
-`createUnreadyWorkerDependencies()` (fail-closed). Repositório de produção
-Supabase **não** está ligado em `main()`.
+  (evidência **antes** do probe de produção; causa: unready factory)
 
 **Não feito:** shadow, loja piloto, soak.
 
-**Bloqueios para GO completo:**
-1. Ligar repositório de produção para `GET /health/ready` → 200 e ciclos reais
+**Bloqueios para GO completo (após redeploy com probe):**
+1. `GET /health/ready` → 200 no worker live + ciclos reais
 2. Merchant/sandbox + loja piloto
 3. Shadow → piloto → soak → sign-off GO pleno
 
@@ -42,8 +56,9 @@ Owner respondeu **“Autorizo”**. Executado:
 2. Verificação: 27 RPCs `*ifood*`, `vendas.canal_origem`,
    `admin_ifood_connections_overview_v1()`.
 3. **Depois desta autorização:** deploy Dokploy do worker evidenciado no
-   handoff acima (processo live; ready ainda 503). Shadow, loja piloto e soak
-   continuam pendentes.
+   handoff Dokploy (processo live; ready 503 na evidência). Probe de
+   produção no código desta sessão (redeploy pendente). Shadow, loja
+   piloto e soak continuam pendentes.
 
 Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md` (decisão
 **GO parcial — schema + worker process live**; não GO completo).

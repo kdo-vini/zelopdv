@@ -149,8 +149,8 @@ function invokeObserver(observer, value) {
  * `src/lib/server/ifood/inboxProcessor.js`). When provided, it is invoked
  * once per cycle right after the health probe/notification, wired the same
  * defensive way `probeOwner` already is: it only runs when supplied (the
- * default bootstrap in `workers/ifood/index.js` never supplies it, so its
- * fail-closed `createUnreadyWorkerDependencies` path is unchanged), it
+ * default bootstrap in `workers/ifood/index.js` never supplies it, so the
+ * production probe / fail-closed unready path is unchanged), it
  * respects `signal` (skipped/aborted the same way any other tracked
  * operation is), and any error it throws goes through the same
  * `reportError`/`sanitizeWorkerError` path as every other error here — it

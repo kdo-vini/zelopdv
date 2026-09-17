@@ -4,18 +4,23 @@ import { loadIfoodWorkerConfig } from './config.js';
 import { createHealthServer, createHealthState, listenHealthServer } from './healthServer.js';
 import { runIfoodWorker, sanitizeWorkerError } from './runtime.js';
 import { createHttpIfoodAdapter } from '../../src/lib/server/ifood/adapters/httpIfoodAdapter.js';
+import { createIfoodSupabaseRepository } from './supabaseRepository.js';
 
 function noop() {}
+
+function hasText(value) {
+  return typeof value === 'string' && value.trim() !== '';
+}
 
 /**
  * Build the production iFood HTTP adapter from worker config, when
  * `IFOOD_CLIENT_ID`/`IFOOD_CLIENT_SECRET` are both configured. Returns
  * `null` otherwise so a worker without credentials still boots.
  *
- * This factory is intentionally not wired into `createUnreadyWorkerDependencies`
- * or the runtime loop: the repository readiness probe stays `false/false`
- * (fail-closed) until Task 7 ships a real repository, and polling/command
- * processing that would use this adapter is Task 9's scope, not this one.
+ * This factory is intentionally not wired into the runtime loop: polling and
+ * command processing that would use this adapter remain out of the default
+ * bootstrap. Readiness comes from `createWorkerDependencies()`, which uses a
+ * production repository probe when Supabase credentials are present.
  */
 export function createIfoodHttpAdapterFromConfig(config, overrides = {}) {
   if (!config?.credentials) return null;
@@ -34,9 +39,9 @@ export function createIfoodHttpAdapterFromConfig(config, overrides = {}) {
 }
 
 /**
- * Task 4 deliberately ships no production repository adapter yet. Returning
- * an explicit false/false probe keeps the real bootstrap fail-closed until
- * Tasks 5 and 7 provide truthful HTTP and inbox/lease implementations.
+ * Fail-closed dependency set used when Supabase credentials are missing or
+ * the production repository cannot be constructed. `/health/ready` stays
+ * `dependencies_unavailable` until a truthful probe exists.
  */
 export function createUnreadyWorkerDependencies() {
   return {
@@ -50,6 +55,49 @@ export function createUnreadyWorkerDependencies() {
 }
 
 export const createTask4WorkerDependencies = createUnreadyWorkerDependencies;
+
+function resolveSupabaseCredentials(options = {}) {
+  const config = options.config;
+  const env = options.env;
+  const supabaseUrl = options.supabaseUrl
+    ?? config?.supabaseUrl
+    ?? env?.SUPABASE_URL;
+  const serviceRoleKey = options.serviceRoleKey
+    ?? config?.serviceRoleKey
+    ?? config?.supabaseServiceRoleKey
+    ?? env?.SUPABASE_SERVICE_ROLE_KEY;
+  return {
+    supabaseUrl: hasText(supabaseUrl) ? supabaseUrl.trim() : '',
+    serviceRoleKey: hasText(serviceRoleKey) ? serviceRoleKey.trim() : ''
+  };
+}
+
+/**
+ * Prefer a production repository when `SUPABASE_URL` and
+ * `SUPABASE_SERVICE_ROLE_KEY` are present (via config or env). Construction
+ * errors stay fail-closed: never throw secrets, never claim inbox work.
+ */
+export function createWorkerDependencies(options = {}) {
+  const { supabaseUrl, serviceRoleKey } = resolveSupabaseCredentials(options);
+  if (!supabaseUrl || !serviceRoleKey) {
+    return createUnreadyWorkerDependencies();
+  }
+  try {
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl,
+      serviceRoleKey,
+      supabase: options.supabase,
+      fetch: options.fetch,
+      timeoutMs: options.timeoutMs
+    });
+    return {
+      integration: Object.freeze({}),
+      repository
+    };
+  } catch {
+    return createUnreadyWorkerDependencies();
+  }
+}
 
 function resolvedConfig(options) {
   return options.config ?? loadIfoodWorkerConfig(options.env ?? process.env);
@@ -108,7 +156,13 @@ export async function main(options = {}) {
   const config = resolvedConfig(options);
   const processLike = options.processLike ?? process;
   const controller = options.controller ?? new AbortController();
-  const dependencies = options.dependencies ?? createUnreadyWorkerDependencies();
+  const dependencies = options.dependencies ?? createWorkerDependencies({
+    config,
+    env: options.env,
+    supabase: options.supabase,
+    fetch: options.fetch,
+    timeoutMs: options.probeTimeoutMs
+  });
   const repository = options.repository ?? dependencies.repository;
   const integration = options.integration ?? dependencies.integration;
   const clock = options.clock ?? (() => Date.now());

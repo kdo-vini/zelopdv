@@ -1,5 +1,18 @@
 # Fixes Progress
 
+- [x] FX-IFOOD-WORKER-READY-PROBE-01 (2026-09-17) — `GET /health/ready` do
+  worker iFood ficava 503 `dependencies_unavailable` mesmo com
+  `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` porque o bootstrap sempre
+  usava `createUnreadyWorkerDependencies()` (`false`/`false`). Agora
+  `createWorkerDependencies()` monta `workers/ifood/supabaseRepository.js`
+  quando as duas envs existem. O probe chama `claim_ifood_events_v1` com
+  argumentos inválidos (`p_limit=0`, `p_lease_seconds=0`) e trata
+  `INVALID_CLAIM_ARGUMENTS` como `{ databaseReachable: true, leaseCapable: true }`
+  — a função de lease roda até a validação, sem `SKIP LOCKED` e sem
+  reivindicar inbox. Falha de transporte/auth/timeout continua fail-closed.
+  Sem RPC dedicada de health nas migrations aplicadas; nenhuma migration
+  nova. Testes em `tests/ifood.worker-runtime.test.js`.
+
 - [x] FX-SCHEMA-REPLAY-ZELOMENU-01 (2026-09-16) — o replay descartável do
   iFood parava em `20260911120000_zelomenu_canonical_pause.sql` porque o
   baseline `20260813091000` não continha

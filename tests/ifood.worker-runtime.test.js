@@ -15,8 +15,13 @@ import {
 } from '../workers/ifood/healthServer.js';
 import {
   createUnreadyWorkerDependencies,
+  createWorkerDependencies,
   main
 } from '../workers/ifood/index.js';
+import {
+  createIfoodSupabaseRepository,
+  IFOOD_LEASE_PROBE
+} from '../workers/ifood/supabaseRepository.js';
 
 function validEnv(overrides = {}) {
   return {
@@ -387,6 +392,16 @@ describe('iFood health server', () => {
   });
 });
 
+function jsonResponse(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    arrayBuffer: async () => new ArrayBuffer(0),
+    text: async () => JSON.stringify(body)
+  };
+}
+
 describe('iFood worker bootstrap', () => {
   it('has a fail-closed Task 4 dependency bootstrap', async () => {
     const dependencies = createUnreadyWorkerDependencies();
@@ -394,6 +409,76 @@ describe('iFood worker bootstrap', () => {
       databaseReachable: false,
       leaseCapable: false
     });
+  });
+
+  it('keeps fail-closed unready deps when Supabase credentials are absent', async () => {
+    const dependencies = createWorkerDependencies({
+      env: { IFOOD_WORKER_PORT: '3000' },
+      fetch: vi.fn()
+    });
+    await expect(dependencies.repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: false,
+      leaseCapable: false
+    });
+  });
+
+  it('uses a production repository when Supabase credentials are present', async () => {
+    const rpc = vi.fn(async (_name, params) => {
+      expect(params).toMatchObject({ p_limit: 0, p_lease_seconds: 0 });
+      expect(params.p_limit).toBe(0);
+      return { data: null, error: { message: 'INVALID_CLAIM_ARGUMENTS', code: 'P0001' } };
+    });
+    const dependencies = createWorkerDependencies({
+      env: validEnv(),
+      supabase: { rpc }
+    });
+    await expect(dependencies.repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: true,
+      leaseCapable: true
+    });
+    expect(rpc).toHaveBeenCalledWith(
+      IFOOD_LEASE_PROBE.rpc,
+      expect.objectContaining({ p_worker_id: IFOOD_LEASE_PROBE.workerId, p_limit: 0, p_lease_seconds: 0 }),
+      undefined
+    );
+  });
+
+  it('main() probes production deps from config credentials without stealing inbox work', async () => {
+    const processLike = new EventEmitter();
+    processLike.exitCode = undefined;
+    const controller = new AbortController();
+    const rpc = vi.fn(async () => ({
+      data: null,
+      error: { message: 'INVALID_CLAIM_ARGUMENTS', code: 'P0001' }
+    }));
+    const server = new EventEmitter();
+    server.listen = vi.fn((_port, _host, callback) => callback());
+    server.close = vi.fn((callback) => callback());
+    const onHealthChange = vi.fn();
+    const mainPromise = main({
+      processLike,
+      controller,
+      config: {
+        host: '127.0.0.1',
+        port: 0,
+        intervalMs: 60_000,
+        readyMaxAgeMs: 90_000,
+        shutdownTimeoutMs: 1000,
+        supabaseUrl: 'https://project.example.supabase.co',
+        serviceRoleKey: 'service-role-secret-canary'
+      },
+      supabase: { rpc },
+      server,
+      onHealthChange
+    });
+
+    await waitFor(() => onHealthChange.mock.calls.length === 1);
+    expect(rpc.mock.calls[0][0]).toBe('claim_ifood_events_v1');
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_limit: 0, p_lease_seconds: 0 });
+    processLike.emit('SIGTERM');
+    await expect(mainPromise).resolves.toMatchObject({ shutdown: true });
+    expect(onHealthChange).toHaveBeenCalledWith({ databaseReachable: true, leaseCapable: true });
+    expect(JSON.stringify(rpc.mock.calls)).not.toContain('service-role-secret-canary');
   });
 
   it('bridges repeated SIGTERM/SIGINT through one controller, drains, and closes boundedly', async () => {
@@ -439,5 +524,75 @@ describe('iFood worker bootstrap', () => {
     expect(onHealthChange).not.toHaveBeenCalled();
     expect(processLike.listenerCount('SIGTERM')).toBe(0);
     expect(processLike.listenerCount('SIGINT')).toBe(0);
+  });
+});
+
+describe('iFood production repository probe', () => {
+  it('treats INVALID_CLAIM_ARGUMENTS as a non-mutating lease-capable probe', async () => {
+    const fetchImpl = vi.fn(async (url, init) => {
+      expect(String(url)).toContain(`/rest/v1/rpc/${IFOOD_LEASE_PROBE.rpc}`);
+      expect(init.method).toBe('POST');
+      expect(JSON.parse(init.body)).toEqual({
+        p_worker_id: IFOOD_LEASE_PROBE.workerId,
+        p_limit: 0,
+        p_lease_seconds: 0
+      });
+      expect(init.body).not.toContain('service-role-secret-canary');
+      return jsonResponse(400, { code: 'P0001', message: 'INVALID_CLAIM_ARGUMENTS' });
+    });
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: fetchImpl
+    });
+    await expect(repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: true,
+      leaseCapable: true
+    });
+  });
+
+  it('keeps fail-closed false/false on transport errors without leaking secrets', async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError('fetch failed for service-role-secret-canary');
+    });
+    const repository = createIfoodSupabaseRepository({
+      supabaseUrl: 'https://project.example.supabase.co',
+      serviceRoleKey: 'service-role-secret-canary',
+      fetch: fetchImpl
+    });
+    await expect(repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: false,
+      leaseCapable: false
+    });
+  });
+
+  it('reports database reachable but not lease-capable when the claim RPC is missing', async () => {
+    const repository = createIfoodSupabaseRepository({
+      supabase: {
+        rpc: vi.fn(async () => ({
+          data: null,
+          error: { message: 'Could not find the function public.claim_ifood_events_v1', code: 'PGRST202' }
+        }))
+      }
+    });
+    await expect(repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: true,
+      leaseCapable: false
+    });
+  });
+
+  it('does not treat a successful claim payload as a healthy probe', async () => {
+    const repository = createIfoodSupabaseRepository({
+      supabase: {
+        rpc: vi.fn(async () => ({
+          data: [{ inbox_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', payload: { customer: 'secret-pii' } }],
+          error: null
+        }))
+      }
+    });
+    await expect(repository.probeDependencies()).resolves.toEqual({
+      databaseReachable: true,
+      leaseCapable: false
+    });
   });
 });
