@@ -1,4 +1,4 @@
-# Tasks 1–10 concluídas
+# Tasks 1–11 concluídas
 
 ## Handoff — integração iFood MVP — 2026-09-16
 
@@ -193,7 +193,82 @@ passou a ler `delivery.deliveryAddress` e a guardar só nome/telefone/endereço
 (sem CPF). Divisão de execução a partir desta task: backend Codex, frontend
 Claude. Harness com 6 verificadores iFood verde; 316 testes; check 0/0.
 
+**Produção (2026-09-16, autorizado pelo dono):** as duas migrations novas da
+Task 11 — `ifood_order_sync_state` (RPC
+`get_ifood_order_sync_state_v1`) e `ifood_projection_display_fields`
+(`create or replace` de `project_ifood_order_event_v1` acrescentando o bloco
+`fulfillment.ifood`) — foram aplicadas no Supabase vinculado
+(`xnnjyrblpvsqrtsshawa`) via MCP, sem os wrappers `begin;`/`commit;` do
+arquivo. Grants conferidos: só `service_role` executa as duas funções
+(`anon`/`authenticated` sem `execute`). Smoke direto no banco com
+`set role service_role; select * from project_ifood_order_event_v1(...)`
+usando um `merchant_id` inexistente confirmou `outcome = 'unknown_merchant'`
+sem nenhum efeito colateral (nenhuma linha tocada em `zelo_orders` real).
+Branch `codex/ifood-mvp` (commit `fc59017`) enviada para
+`https://github.com/kdo-vini/zelopdv` — ver seção "Handoff para retomada
+externa (Cursor Cloud)" logo abaixo para o pickup da Task 12.
+
 **Próximo passo linear:** Task 12 — vínculo de produtos iFood e estoque.
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-16
+
+Trabalho retomado fora desta sessão a partir daqui. Leia nesta ordem antes de
+codar:
+
+1. Este arquivo (`docs/CURRENT.md`) inteiro, principalmente a seção
+   "Handoff — integração iFood MVP — 2026-09-16" logo no topo (Tasks 1–10) e
+   o bloco "Task 11 do iFood" logo acima (Task 11).
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — plano linear completo,
+   21 tasks, uma por commit. A seção **"Divisão de execução (decisão do
+   dono, 2026-09-16)"**, logo antes de "Contrato de documento vivo", define
+   que **backend é Codex, frontend é quem estiver pegando a sessão** a
+   partir da Task 11 — ajuste essa divisão à ferramenta que for usada no
+   Cursor Cloud, mas mantenha uma única pessoa/agente por commit e não
+   misture as duas camadas no mesmo commit sem necessidade.
+3. Cada task já executada tem seu bloco **"Resultado real"** preenchido no
+   plano — é a fonte de verdade sobre o que foi feito, desvios e por quê.
+   Task 11 é a mais recente (`## Task 11: Mostrar iFood nas filas de
+   Pedidos e Cozinha`).
+
+**Estado do branch:** `codex/ifood-mvp`, commit `fc59017`, já em
+`origin/codex/ifood-mvp` no GitHub (`kdo-vini/zelopdv`). Working tree limpo.
+Worktree local em `.worktrees/ifood-mvp` (branch principal do repo é
+`main`, não usar `git stash` puro nele — ver aviso de ambiente sobre stash
+compartilhado entre worktrees).
+
+**Estado validado nesta sessão:**
+- `npx vitest run` da suíte iFood: 23 arquivos / 316 testes verdes.
+- `npm run check`: 0 erros, 0 warnings (svelte-check).
+- `npm run verify:migrations`: 107/107 artefatos de baseline, 59/59 versões
+  remotas, 61 migrations forward.
+- Harness descartável (`scripts/verify-supabase-baseline.ps1
+  -ApplyForwardMigrations -ExcludeTenantDataSeeds -PostMigrationVerification
+  <6 arquivos>`) verde para os 6 verificadores iFood (foundation, webhook,
+  projeção canônica, comandos, sync-state, display fields). **Atenção:** o
+  harness falha por padrão nesta máquina por um drift de `storage_policies`
+  pré-existente em produção (não relacionado ao iFood — falta a policy
+  `zelochat-media public read`). Para rodar localmente, é preciso rebaixar
+  temporariamente o `throw` correspondente em
+  `scripts/verify-supabase-baseline.ps1` para `Write-Warning`, rodar, e
+  reverter com `git checkout -- scripts/verify-supabase-baseline.ps1`
+  **antes de qualquer commit** — nunca commitar esse bypass.
+- Migrations da Task 11 já aplicadas no Supabase vinculado (ver bloco acima)
+  com grants e smoke conferidos.
+
+**Pendências conhecidas, fora do escopo do iFood:**
+- O drift de `storage_policies` do harness (documentado para o dono, não é
+  bloqueante para o iFood).
+- O intervalo padrão de 300s do worker é incompatível com a janela de saúde
+  de 90s quando o worker for de fato ligado em produção (documentado, ainda
+  não ligado).
+
+**Próximo passo real (Task 12):** vínculo de produtos iFood ao catálogo
+Zelo e reflexo em estoque — ver `## Task 12: Mapear produtos progressivamente
+e controlar estoque` no plano para arquivos, critérios RED/GREEN e comandos
+de validação. Seguir o mesmo padrão das
+tasks anteriores: testes primeiro, um commit por task, `Resultado real`
+preenchido ao final, e nunca editar uma migration já aplicada (criar uma
+nova com `create or replace` quando for alterar uma função).
 
 **Task 10 do iFood (2026-09-16):** comandos assíncronos agora entram por uma
 rota autenticada, tenant-scoped e sem chamada ao provider no request do
