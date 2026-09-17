@@ -1,5 +1,19 @@
 # Incidents
 
+## Prep — iFood ops console (2026-09-17, ainda sem incidente de produção)
+
+Não é um outage: registra a superfície de suporte entregue na Task 19 para
+quando o piloto começar. Runbook canônico: [[IFOOD]] (`docs/operations/IFOOD.md`).
+
+- Painel: `admin-dashboard` `/ifood` (super-admin).
+- Ações auditadas: pause / resume / revoke / replay da mesma identidade
+  (inbox/command) — sem payload arbitrário do browser.
+- Migration local `20260917040026_ifood_admin_operations.sql` **não aplicada**
+  em produção até autorização da Task 21.
+- Qualquer incidente real de fila, presença, token ou divergência financeira
+  deve virar entrada `INC-…-IFOOD-…` neste arquivo apontando o runbook e o
+  `connectionId`/`merchantId` (sem PII de cliente).
+
 ## INC-2026-09-14-ASSINATURA-ADDON-SUMIDO — pacote de R$99 virava R$59 no checkout
 
 **Status:** corrigido em 2026-09-14 (mudança de app, sem migration).

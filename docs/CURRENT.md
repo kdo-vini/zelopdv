@@ -1,4 +1,51 @@
-# Tasks 1–18 concluídas
+# Tasks 1–19 concluídas
+
+## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 19)
+
+Trabalho retomado nesta sessão a partir do handoff anterior (após Task 18).
+Estado após Task 19:
+
+1. Este arquivo (`docs/CURRENT.md`) — bloco Task 19 abaixo, mais o bloco
+   "Handoff ... após Task 18" logo em seguida.
+2. `docs/superpowers/plans/2026-09-15-ifood-mvp.md` — Resultado real da
+   Task 19 (`## Task 19: Criar observabilidade, suporte e controles de
+   incidente`).
+3. `docs/operations/IFOOD.md` — runbook operacional (novo).
+4. Próxima task: **Task 20** (qualificar MVP para piloto — E2E, resilience,
+   `verify:ifood`, gate CI) — ver plano.
+
+**Estado do branch:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`).
+Commit mais recente antes desta task: Task 18 `feat: add self-service iFood
+setup wizard`. **Task 19 commitada nesta sessão** como `feat: add iFood
+operations console`.
+
+**Estado validado nesta sessão:**
+- Suíte alvo da Task 19 (`api.admin-ifood` + `ifood.operations`): 2 arquivos /
+  11 testes verdes.
+- `npm run check`: 0 erros, 0 warnings.
+- `npm --prefix admin-dashboard run check`: 0 erros, 0 warnings.
+
+**O que mudou de fato:**
+- Migration local (não aplicada):
+  `supabase/migrations/20260917040026_ifood_admin_operations.sql` com cinco
+  RPCs `service_role`-only para overview cross-tenant, kill switch por
+  `connectionId`, replay de inbox/comando (mesma linha) e listagem de
+  reprocessáveis. Verification
+  `supabase/verification/ifood_admin_operations.sql` revisada, não executada.
+- `admin-dashboard` ganhou client service-role
+  (`src/lib/server/supabaseAdmin.js`), repositório RPC
+  (`ifoodAdminRepository.js`), serviço puro (`ifoodOperations.js`), rotas
+  `GET /api/ifood/connections` e `POST /api/ifood/actions`, página `/ifood` e
+  item de nav **iFood Ops**. Super-admin obrigatório; payload sanitizado;
+  replay rejeita `payload`/`eventId` do browser; auditoria grava
+  `admin_email` (NOT NULL).
+- Runbook `docs/operations/IFOOD.md` + symlink no vault; nota de prep em
+  `docs/INCIDENTS.md`.
+
+**Próximo passo real (Task 20):** E2E com adapter mock, fault injection,
+script `verify:ifood` e gate CI — ver `## Task 20: Qualificar o MVP completo
+para piloto` no plano. Task 21 continua bloqueada para mutações de produção
+sem GO explícito do owner.
 
 ## Handoff para retomada externa (Cursor Cloud) — 2026-09-17 (após Task 18)
 
