@@ -1,4 +1,27 @@
-# Tasks 1–21 concluídas (piloto = NO-GO)
+# Tasks 1–21 + autorização de schema (GO parcial)
+
+## Handoff — 2026-09-17 (owner autorizou apply)
+
+Owner respondeu **“Autorizo”**. Executado:
+
+1. **Migrations iFood Tasks 12–19 aplicadas** no projeto Supabase
+   `xnnjyrblpvsqrtsshawa` (ZeloPDV). Tasks 1–11 já estavam aplicadas.
+2. Verificação: 27 RPCs `*ifood*`, `vendas.canal_origem`,
+   `admin_ifood_connections_overview_v1()`.
+3. **Não executado aqui:** deploy do worker (sem Docker CLI / sem alvo de
+   hosting acessível neste ambiente). Shadow, loja piloto e soak continuam
+   bloqueados até o worker estar no ar.
+
+Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md` (decisão
+**GO parcial — schema only**).
+
+**Próximo passo humano/infra:**
+```bash
+docker build -f workers/ifood/Dockerfile -t zelopdv-ifood-worker:candidate .
+# deploy com digest + envs por nome (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+# IFOOD_CLIENT_ID/SECRET se houver, IFOOD_WORKER_*)
+```
+Depois: shadow → piloto → soak → GO completo.
 
 ## Handoff — 2026-09-17 (após Task 21)
 

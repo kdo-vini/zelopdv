@@ -1,5 +1,12 @@
 # Incidents
 
+## Prep — iFood schema GO parcial (2026-09-17)
+
+Owner autorizou apply. Migrations Tasks 12–19 aplicadas em
+`xnnjyrblpvsqrtsshawa`. Worker ainda sem deploy neste ambiente. Detalhes e
+checklist: [[IFOOD_MVP_PILOT]] / `docs/projects/IFOOD_MVP_PILOT.md`.
+Qualquer incidente operacional pós-worker deve virar `INC-…-IFOOD-…`.
+
 ## Prep — iFood ops console (2026-09-17, ainda sem incidente de produção)
 
 Não é um outage: registra a superfície de suporte entregue na Task 19 para

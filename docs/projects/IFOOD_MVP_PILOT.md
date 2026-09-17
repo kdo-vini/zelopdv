@@ -2,11 +2,8 @@
 
 **Data:** 2026-09-17  
 **Branch de implementação:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`)  
-**Decisão atual:** **NO-GO** (aguardando autorização explícita do owner)
-
-Este arquivo é o registro canônico da Task 21. Ele **não** autoriza migration
-em produção, deploy do worker, shadow ativo contra merchants reais nem
-self-service global.
+**Projeto Supabase:** `xnnjyrblpvsqrtsshawa` (ZeloPDV)  
+**Decisão atual:** **GO parcial (schema)** — migrations aplicadas; worker/shadow/piloto operacional ainda pendentes
 
 ## Pré-condições de código (Tasks 1–20)
 
@@ -14,26 +11,44 @@ self-service global.
 | --- | --- |
 | Domínio, worker, filas Pedidos/Cozinha | Implementado no branch |
 | Mapping, impressão, venda/estorno, canal, Zelinho | Implementado |
-| Self-service APIs + wizard | Implementado (migrations **locais**) |
+| Self-service APIs + wizard | Implementado |
 | Console ops admin + runbook | Implementado (`docs/operations/IFOOD.md`) |
 | Gate `verify:ifood` + resilience + E2E mock | Verde na Task 20 |
-| `docker build` da imagem worker | Pendente em ambiente com Docker CLI |
-| Migrations `*_ifood_*.sql` no Supabase vinculado | **Não aplicadas** |
+| `docker build` da imagem worker | Pendente (CLI Docker ausente neste ambiente) |
+| Migrations iFood no Supabase vinculado | **Aplicadas** (2026-09-17, após autorização do owner) |
 
-## Checklist de mutações (bloqueado sem GO)
-
-Cada linha exige assinatura explícita do owner antes de executar:
+## Checklist de mutações
 
 | # | Ação | Autorizado? | Quem / quando | Evidência |
 | --- | --- | --- | --- | --- |
-| 1 | Aplicar forward migrations iFood no projeto vinculado | **Não** | — | — |
-| 2 | Deploy worker (imagem por digest) + envs por **nome** | **Não** | — | — |
-| 3 | Shadow mode (comandos/presença off) | **Não** | — | — |
-| 4 | Ativar 1 loja piloto sem pedidos em andamento | **Não** | — | — |
-| 5 | Soak + reconciliação financeira | **Não** | — | — |
-| 6 | Liberar self-service gradual | **Não** | — | — |
+| 1 | Aplicar forward migrations iFood no projeto vinculado | **Sim** | Owner 2026-09-17 (“Autorizo”) | Ver tabela abaixo |
+| 2 | Deploy worker (imagem por digest) + envs por **nome** | **Sim (intenção)** | Owner 2026-09-17 | **Bloqueado neste ambiente:** sem `docker` CLI e sem alvo de hosting do worker documentado/acessível. Envs necessárias por nome: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, opcional `IFOOD_CLIENT_ID`+`IFOOD_CLIENT_SECRET`, `IFOOD_WORKER_PORT`/`PORT`, `IFOOD_WORKER_INTERVAL_MS`, `IFOOD_WORKER_READY_MAX_AGE_MS` |
+| 3 | Shadow mode (comandos/presença off) | Pendente | — | Exige worker + merchant sandbox |
+| 4 | Ativar 1 loja piloto sem pedidos em andamento | Pendente | — | — |
+| 5 | Soak + reconciliação financeira | Pendente | — | — |
+| 6 | Liberar self-service gradual | Pendente | — | Somente após GO completo |
 
-## Template — shadow (preencher quando autorizado)
+## Migrations aplicadas (item #1)
+
+Já estavam no remoto (Tasks 1–11): `ifood_mvp_foundation`, `ifood_webhook_enqueue`, `ifood_canonical_order_projection`, `ifood_order_commands`, `ifood_order_sync_state`, `ifood_projection_display_fields`.
+
+Aplicadas nesta autorização (conteúdo das migrations locais Tasks 12–19; versões remotas geradas pelo MCP `apply_migration`):
+
+| Versão remota | Nome |
+| --- | --- |
+| `20260917105056` | `ifood_product_mapping_stock` (+ commits/release split) |
+| `20260917105319` | `ifood_product_mapping_stock_commit` |
+| `20260917105341` | `ifood_product_mapping_stock_release` |
+| `20260917105434`–`20260917105607` | `ifood_sales_and_reversals` (+ materialize/reverse/ensure) |
+| `20260917105632` | `ifood_self_service_connection` |
+| `20260917105712` | `ifood_admin_operations` |
+| `20260917105724` | `ifood_connection_print_owner` |
+
+**Verificação pós-apply:** 27 funções `public.*ifood*`, coluna `vendas.canal_origem`, `admin_ifood_connections_overview_v1()` presente.
+
+Fonte local canônica do SQL continua em `supabase/migrations/20260917014734_*.sql` … `20260917040500_*.sql` (não editar após apply).
+
+## Template — shadow (preencher quando worker estiver no ar)
 
 - Amostra: _N pedidos / período_
 - Comparar vs Gestor: modalidade, horário, itens, complementos, total,
@@ -66,17 +81,18 @@ Qualquer divergência financeira ou perda de pedido → **NO-GO**.
 ## Decisão
 
 ```
-DECISÃO: NO-GO
+DECISÃO: GO PARCIAL (SCHEMA ONLY)
 DATA: 2026-09-17
-MOTIVO: código e gates de laboratório prontos (Tasks 1–20); nenhuma mutação
-        de produção, shadow ou loja piloto foi autorizada nesta sessão.
-PRÓXIMO PASSO: owner autoriza explicitamente o item #1 da tabela de mutações
-               (migrations) e o deploy do worker; então preencher shadow/piloto
-               e trocar esta decisão para GO somente com sign-off.
-SIGN-OFF OWNER: (pendente)
+SIGN-OFF OWNER: autorizado verbalmente nesta sessão (“Autorizo”)
+FEITO: apply das migrations forward iFood no projeto xnnjyrblpvsqrtsshawa
+PENDENTE PARA GO COMPLETO:
+  1. docker build -f workers/ifood/Dockerfile -t zelopdv-ifood-worker:candidate .
+  2. Deploy do worker com digest + envs por nome (sem logar valores)
+  3. Shadow → loja piloto → soak → sign-off GO pleno
+  4. Só então liberar self-service gradual
 ```
 
-## Rollback (quando houver deploy)
+## Rollback
 
 1. Feature flag / pause por merchant no console `/ifood`
 2. Revoke se necessário; titular reconecta via wizard

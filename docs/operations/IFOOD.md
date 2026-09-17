@@ -27,13 +27,14 @@ corpo de pedido — só contagens, status, timestamps e códigos de erro truncad
 
 Registro canônico: `docs/projects/IFOOD_MVP_PILOT.md`.
 
-**Decisão vigente: NO-GO** até o owner autorizar explicitamente cada mutação
-de produção (migration, worker, shadow, loja piloto, soak, self-service).
+**Decisão vigente: GO parcial (schema)** — owner autorizou em 2026-09-17;
+migrations iFood forward aplicadas em `xnnjyrblpvsqrtsshawa`. Worker deploy,
+shadow, loja piloto e soak ainda pendentes.
 
-Antes de qualquer GO:
+Antes do GO completo:
 
 1. `docker build -f workers/ifood/Dockerfile -t zelopdv-ifood-worker:candidate .`
-2. Aplicar migrations forward iFood **somente** com autorização
+2. Deploy do worker (digest + envs por nome)
 3. Testar kill switch pause/resume no console `/ifood`
 4. Confirmar som genérico, `printOwner` único e contingência Portal
 
