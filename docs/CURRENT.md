@@ -1,5 +1,16 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-18 — iFood: avisos worker/token na UI (Bem Servido)
+
+Causa: conexão Techne `6bdbbe5d` (app de teste) ainda `active` no app
+Zelopdv. Poll em batch → iFood **403** “Some polling merchants are not
+authorized” → nenhum `recordPollSuccess` → UI “worker não iniciou” /
+“token inválido”.
+
+Fix: Techne `revoked`; reconciler (`fedefca`) retenta poll por merchant
+quando o batch falha; Bem Servido já com `last_poll_at`/`last_token_at`
+frescos (worker). Redeploy Dokploy do worker.
+
 ## Sessão 2026-09-18 — Relatórios: cockpit calmo (tokens)
 
 Cores decorativas de Relatórios (KPIs rainbow, chips purple/rose, sky
