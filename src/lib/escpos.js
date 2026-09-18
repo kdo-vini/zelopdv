@@ -440,7 +440,7 @@ export function buildVendaEscPos(payload) {
  * -------------------------------------------------------------------------- */
 
 /**
- * @param {{ estabelecimento: EstabelecimentoCupom, mov: { idMov?: any, idCaixa?: any, tipo: 'saida'|'entrada'|'suprimento', valor: number, motivo?: string, created_at?: string|Date } }} payload
+ * @param {{ estabelecimento: EstabelecimentoCupom, mov: { idMov?: any, idCaixa?: any, numeroCaixa?: number|null, tipo: 'saida'|'entrada'|'suprimento', valor: number, motivo?: string, created_at?: string|Date } }} payload
  */
 export function buildMovCaixaEscPos({ estabelecimento, mov }) {
   const est = estabelecimento || {};
@@ -473,7 +473,7 @@ export function buildMovCaixaEscPos({ estabelecimento, mov }) {
 
   const dt = mov.created_at ? new Date(mov.created_at) : new Date();
   b.line(twoCol('Movimentacao', '#' + (mov.idMov ?? '—'), cols));
-  b.line(twoCol('Caixa', '#' + (mov.idCaixa ?? '—'), cols));
+  b.line(twoCol('Caixa', mov.numeroCaixa != null ? '#' + mov.numeroCaixa : '—', cols));
   b.line(twoCol(dt.toLocaleDateString('pt-BR'), dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), cols));
   if (mov.motivo) {
     b.newline();

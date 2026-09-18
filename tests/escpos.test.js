@@ -304,22 +304,37 @@ describe('escpos builder', () => {
     it('renderiza sangria (saida)', () => {
       const out = buildMovCaixaEscPos({
         estabelecimento: { nome_exibicao: 'Loja' },
-        mov: { idMov: 1, idCaixa: 7, tipo: 'saida', valor: 50, motivo: 'Troco' },
+        mov: { idMov: 1, idCaixa: 7, numeroCaixa: 3, tipo: 'saida', valor: 50, motivo: 'Troco' },
       });
       const text = bytesToText(out);
       expect(text).toContain('SANGRIA DE CAIXA');
       expect(text).toContain('Valor retirado');
+      expect(text).toContain('Caixa');
+      expect(text).toContain('#3');
+      expect(text).not.toContain('#7');
       expect(text).toMatch(/R\$ 50,00/);
     });
 
     it('renderiza suprimento (entrada)', () => {
       const out = buildMovCaixaEscPos({
         estabelecimento: { nome_exibicao: 'Loja' },
-        mov: { idMov: 2, idCaixa: 7, tipo: 'entrada', valor: 100 },
+        mov: { idMov: 2, idCaixa: 7, numeroCaixa: 3, tipo: 'entrada', valor: 100 },
       });
       const text = bytesToText(out);
       expect(text).toContain('SUPRIMENTO DE CAIXA');
       expect(text).toContain('Valor adicionado');
+      expect(text).toContain('#3');
+    });
+
+    it('não inventa número a partir do id global quando numeroCaixa falta', () => {
+      const out = buildMovCaixaEscPos({
+        estabelecimento: { nome_exibicao: 'Loja' },
+        mov: { idMov: 1, idCaixa: 1050, tipo: 'saida', valor: 10 },
+      });
+      const text = bytesToText(out);
+      expect(text).not.toContain('#1050');
+      // ESC/POS ASCII-folds em dash to plain hyphen.
+      expect(text).toMatch(/Caixa\s+-/);
     });
   });
 

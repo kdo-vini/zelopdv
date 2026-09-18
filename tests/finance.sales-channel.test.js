@@ -6,6 +6,7 @@ import {
   buildVendaChannelMap,
   channelHasCommissionData,
   filterVendasByChannel,
+  filterRelatedByChannel,
   getChannelLabel,
   getChannelVisual,
   normalizeSalesChannel,
@@ -66,6 +67,29 @@ describe('filterVendasByChannel', () => {
     const pdv = filterVendasByChannel(vendas, 'pdv');
     expect(pdv.map((v) => v.id)).toEqual([1, 4]);
     expect(filterVendasByChannel(vendas, 'ifood').map((v) => v.id)).toEqual([2]);
+  });
+});
+
+describe('filterRelatedByChannel', () => {
+  const vendas = [
+    { id: 1, canal_origem: 'pdv' },
+    { id: 2, canal_origem: 'ifood' },
+    { id: 3, canal_origem: 'mesa' },
+  ];
+  const rows = [
+    { id_venda: 1, valor: 10 },
+    { id_venda: 2, valor: 20 },
+    { id_venda: 3, valor: 30 },
+    { id_venda: 99, valor: 99 },
+  ];
+
+  it('returns every related row when no channel is selected', () => {
+    expect(filterRelatedByChannel(rows, vendas, '')).toEqual(rows);
+  });
+
+  it('keeps only rows whose venda matches the selected channel', () => {
+    expect(filterRelatedByChannel(rows, vendas, 'ifood').map((r) => r.id_venda)).toEqual([2]);
+    expect(filterRelatedByChannel(rows, vendas, 'pdv').map((r) => r.id_venda)).toEqual([1]);
   });
 });
 

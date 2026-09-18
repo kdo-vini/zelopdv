@@ -21,11 +21,13 @@
 		SALES_CHANNEL_FILTER_OPTIONS,
 		COMMISSION_UNAVAILABLE_LABEL,
 		buildVendaChannelMap,
+		filterRelatedByChannel,
 		filterVendasByChannel,
 		getChannelVisual,
 		summarizeEstornos,
 		summarizeSalesByChannel
 	} from '$lib/finance/salesChannel';
+	import { formatCaixaLabel } from '$lib/finance/caixaOps';
 	
 	// Gráficos visuais
 	import BarChart from '$lib/components/charts/BarChart.svelte';
@@ -85,15 +87,19 @@
 	}
 
 	// Filtro de canal de origem (Todos|PDV|ZeloMenu|ZeloChat|Mesas|Manual|iFood).
-	// Escopo: lista de vendas + card de estornos. Os cards comparativos por
-	// canal e os KPIs gerais continuam somando todos os canais de propósito
-	// (é o que permite comparar), o filtro serve para "entrar" num canal.
+	// Escopo: KPIs, pagamentos, produtos, taxas, delivery, lista de vendas e
+	// estornos. Cards "Vendas por Canal" continuam com todos os canais (comparativo).
+	// Sangria/suprimento/saldo da gaveta ficam no caixa inteiro (não têm canal).
 	let canalFiltroCaixa = '';
 	let canalFiltroPeriodo = '';
 
 	function selecionarCanalCaixa(valor) {
 		canalFiltroCaixa = valor;
 		vendasPage = 1;
+	}
+
+	function selecionarCanalPeriodo(valor) {
+		canalFiltroPeriodo = valor;
 	}
 
 	// Helpers
@@ -245,7 +251,7 @@
 			const { data: cs, error: cErr } = await withTimeout(
 				supabase
 					.from('caixas')
-					.select('id, data_abertura, data_fechamento, valor_inicial')
+					.select('id, numero_caixa, data_abertura, data_fechamento, valor_inicial')
 					.eq('id_usuario', uid)
 					.gte('data_abertura', corte.toISOString())
 					.order('data_abertura', { ascending: false })
@@ -288,7 +294,7 @@
 			// 1. Info do caixa
 			const pCaixa = supabase
 				.from('caixas')
-				.select('id, data_abertura, data_fechamento, valor_inicial')
+				.select('id, numero_caixa, data_abertura, data_fechamento, valor_inicial')
 				.eq('id', idCaixa)
 				.single();
 
@@ -389,7 +395,13 @@
 		}
 	}
 
-	$: resumoPagamentosCaixa = calculatePaymentSummary(vendas, vendasPagamentos);
+	$: vendasEscopoCaixa = filterVendasByChannel(vendas, canalFiltroCaixa);
+	$: pagamentosEscopoCaixa = filterRelatedByChannel(vendasPagamentos, vendas, canalFiltroCaixa);
+	$: itensEscopoCaixa = filterRelatedByChannel(vendasItens, vendas, canalFiltroCaixa);
+	$: taxasEscopoCaixa = filterRelatedByChannel(vendasTaxasPlataforma, vendas, canalFiltroCaixa);
+
+	$: resumoPagamentosCaixaAll = calculatePaymentSummary(vendas, vendasPagamentos);
+	$: resumoPagamentosCaixa = calculatePaymentSummary(vendasEscopoCaixa, pagamentosEscopoCaixa);
 	$: pagamentosCaixa = buildPaymentPresentation(resumoPagamentosCaixa, { platforms: reportPlatforms() });
 	$: totalDinheiro = resumoPagamentosCaixa.dinheiro;
 	$: totalCartaoDebito = resumoPagamentosCaixa.cartaoDebito;
@@ -401,41 +413,42 @@
 	$: totalFiado = resumoPagamentosCaixa.fiado;
 	$: totalBruto = resumoPagamentosCaixa.totalBruto;
 	$: totalGeral = resumoPagamentosCaixa.totalGeral;
-	$: qtdVendas = (vendas || []).length;
+	$: qtdVendas = (vendasEscopoCaixa || []).length;
 	$: ticketMedio = qtdVendas ? totalGeral / qtdVendas : 0;
 
-	// Canal de origem (Task 15): cards comparativos somam sempre todos os
-	// canais do caixa; o filtro só recorta a lista de vendas e o card de
-	// estornos abaixo.
+	// Cards comparativos somam sempre todos os canais do caixa.
 	$: vendaChannelMapCaixa = buildVendaChannelMap(vendas);
 	$: canalCardsCaixa = summarizeSalesByChannel(vendas, { taxasPlataforma: vendasTaxasPlataforma, estornos: vendasEstornosCaixa });
 	$: estornosResumoCaixa = summarizeEstornos(vendasEstornosCaixa, { channelByVendaId: vendaChannelMapCaixa, channelFilter: canalFiltroCaixa });
 
-	// Movimentações resumo
+	// Movimentações / gaveta: sempre do caixa inteiro (sem dimensão de canal).
 	$: resumoMovsCaixa = calculateMovementSummary(movs);
 	$: totalSangria = resumoMovsCaixa.sangria;
 	$: totalSuprimento = resumoMovsCaixa.suprimento;
 	$: saldoEsperadoGaveta = calculateExpectedDrawer({
 		valorInicial: caixaInfo?.valor_inicial,
-		dinheiroLiquido: totalDinheiro,
+		dinheiroLiquido: resumoPagamentosCaixaAll.dinheiro,
 		sangria: totalSangria,
 		suprimento: totalSuprimento
 	});
-	$: totalDescontosCaixa = (vendas || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
-	$: resumoTaxasCaixa = calculatePlatformFees(vendasTaxasPlataforma);
+	$: totalDescontosCaixa = (vendasEscopoCaixa || []).reduce((a, v) => a + Number(v.valor_desconto || 0), 0);
+	$: resumoTaxasCaixa = calculatePlatformFees(taxasEscopoCaixa);
 	$: totalCustosPlataformaCaixa = resumoTaxasCaixa.total;
 	$: receitaLiquidaCaixa = calculateRevenue({ totalGeral, custosPlataforma: totalCustosPlataformaCaixa });
-	$: caixaItensSubtotalMap = buildItensSubtotalMap(vendasItens);
-	$: resumoMesasCaixa = calcularResumoMesas(comandasMesaCaixa, caixaItensSubtotalMap);
+	$: caixaItensSubtotalMap = buildItensSubtotalMap(itensEscopoCaixa);
+	$: resumoMesasCaixa = calcularResumoMesas(
+		canalFiltroCaixa && canalFiltroCaixa !== 'mesa' ? [] : comandasMesaCaixa,
+		caixaItensSubtotalMap
+	);
 
 	// Delivery breakdown (caixa)
-	$: totalTaxaEntregaCaixa = (vendas || []).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
+	$: totalTaxaEntregaCaixa = (vendasEscopoCaixa || []).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
 	$: receitaRestauranteCaixa = calculateRestaurantRevenue({ totalGeral, taxaEntrega: totalTaxaEntregaCaixa, custosPlataforma: totalCustosPlataformaCaixa });
 	$: vendasPorTipoCaixa = (() => {
 		const result = [];
-		const retiradaVendas = (vendas || []).filter(v => (v.tipo_pedido || 'retirada') === 'retirada');
+		const retiradaVendas = (vendasEscopoCaixa || []).filter(v => (v.tipo_pedido || 'retirada') === 'retirada');
 		if (retiradaVendas.length > 0) result.push({ tipo: 'retirada', label: 'Retirada', icon: 'retirada', qtd: retiradaVendas.length, total: retiradaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
-		const deliveryVendas = (vendas || []).filter(v => v.tipo_pedido === 'delivery');
+		const deliveryVendas = (vendasEscopoCaixa || []).filter(v => v.tipo_pedido === 'delivery');
 		if (deliveryVendas.length > 0) result.push({ tipo: 'delivery', label: 'Delivery', icon: 'delivery', qtd: deliveryVendas.length, total: deliveryVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: deliveryVendas.reduce((a, v) => a + Number(v.taxa_entrega || 0), 0) });
 		return result;
 	})();
@@ -443,9 +456,8 @@
 	$: caixaPagItems = withPaymentVisuals(pagamentosCaixa).filter(p => p.value > 0);
 	$: caixaPagTotal = caixaPagItems.reduce((a, p) => a + p.value, 0);
 
-	// Paginação das vendas do caixa (mais recentes primeiro), recortada pelo
-	// filtro de canal selecionado ("Todos" mantém a lista completa).
-	$: vendasSorted = [...filterVendasByChannel(vendas, canalFiltroCaixa)].reverse();
+	// Paginação das vendas do caixa (mais recentes primeiro), no mesmo escopo do filtro.
+	$: vendasSorted = [...vendasEscopoCaixa].reverse();
 	$: vendasTotalPages = Math.max(1, Math.ceil(vendasSorted.length / VENDAS_PER_PAGE));
 	$: vendasPageButtons = (() => {
 		if (vendasTotalPages <= 7) return Array.from({length: vendasTotalPages}, (_, i) => i+1);
@@ -468,7 +480,7 @@
 	$: categoriasDoCaixa = (() => {
 		const map = new Map();
 		let temSemCategoria = false;
-		for (const it of (vendasItens || [])) {
+		for (const it of (itensEscopoCaixa || [])) {
 			const prod = it.id_produto ? produtosMap.get(it.id_produto) : null;
 			const cat = prod?.categorias;
 			if (cat?.id) map.set(cat.id, cat.nome || 'Categoria');
@@ -482,7 +494,7 @@
 
 	$: topProdutos = (() => {
 		const map = new Map();
-		for (const it of (vendasItens || [])) {
+		for (const it of (itensEscopoCaixa || [])) {
 			const prod = it.id_produto ? produtosMap.get(it.id_produto) : null;
 			const catId = prod?.categorias?.id || null;
 			if (categoriaFiltro) {
@@ -531,7 +543,7 @@
 		if (isCaixa) {
 			// Build serie diaria from vendas
 			const serieMap = new Map();
-			for (const v of (vendas || [])) {
+			for (const v of (vendasEscopoCaixa || [])) {
 				const day = v.created_at ? new Date(v.created_at).toISOString().slice(0,10) : 'unknown';
 				const prev = serieMap.get(day) || { dia: day, total: 0, qtd: 0 };
 				prev.total += Number(v.valor_total || 0);
@@ -548,6 +560,7 @@
 				periodo: periodoLabel,
 				modo: 'caixa',
 				caixaId: caixaInfo?.id,
+				caixaNumero: caixaInfo?.numero_caixa ?? null,
 				kpis: {
 					totalGeral,
 					qtdVendas,
@@ -897,7 +910,12 @@
 		}
 	}
 
-	$: resumoPagamentosPeriodo = calculatePaymentSummary(periodoVendas, periodoPagamentos);
+	$: periodoVendasEscopo = filterVendasByChannel(periodoVendas, canalFiltroPeriodo);
+	$: periodoPagamentosEscopo = filterRelatedByChannel(periodoPagamentos, periodoVendas, canalFiltroPeriodo);
+	$: periodoItensEscopo = filterRelatedByChannel(periodoItens, periodoVendas, canalFiltroPeriodo);
+	$: periodoTaxasEscopo = filterRelatedByChannel(periodoTaxasPlataforma, periodoVendas, canalFiltroPeriodo);
+
+	$: resumoPagamentosPeriodo = calculatePaymentSummary(periodoVendasEscopo, periodoPagamentosEscopo);
 	$: pagamentosPeriodo = buildPaymentPresentation(resumoPagamentosPeriodo, { platforms: reportPlatforms() });
 	$: periodoDinheiroLiquido = resumoPagamentosPeriodo.dinheiro;
 	$: periodoPix = resumoPagamentosPeriodo.pix;
@@ -908,34 +926,44 @@
 	$: periodoFiado = resumoPagamentosPeriodo.fiado;
 	$: periodoTotalBruto = resumoPagamentosPeriodo.totalBruto;
 	$: periodoTotalGeral = resumoPagamentosPeriodo.totalGeral;
-	$: periodoQtdVendas = (periodoVendas||[]).length;
+	$: periodoQtdVendas = (periodoVendasEscopo||[]).length;
 	$: periodoTicketMedio = periodoQtdVendas ? periodoTotalGeral / periodoQtdVendas : 0;
 
-	// Canal de origem (Task 15): mesma regra do modo caixa — os cards
-	// comparativos somam todos os canais do período; o filtro só recorta o
-	// card de estornos abaixo.
+	// Cards comparativos somam todos os canais do período.
 	$: vendaChannelMapPeriodo = buildVendaChannelMap(periodoVendas);
 	$: canalCardsPeriodo = summarizeSalesByChannel(periodoVendas, { taxasPlataforma: periodoTaxasPlataforma, estornos: periodoEstornos });
 	$: estornosResumoPeriodo = summarizeEstornos(periodoEstornos, { channelByVendaId: vendaChannelMapPeriodo, channelFilter: canalFiltroPeriodo });
 	$: resumoMovsPeriodo = calculateMovementSummary(periodoMovs);
 	$: periodoTotalSangria = resumoMovsPeriodo.sangria;
 	$: periodoTotalSuprimento = resumoMovsPeriodo.suprimento;
-	$: periodoTotalDescontos = (periodoVendas||[]).reduce((a,v)=> a + Number(v.valor_desconto||0),0);
+	$: periodoTotalDescontos = (periodoVendasEscopo||[]).reduce((a,v)=> a + Number(v.valor_desconto||0),0);
 	$: periodoTotalDespesas = (periodoDespesas||[]).reduce((a,e)=> a + Number(e.amount||0),0);
-	$: resumoTaxasPeriodo = calculatePlatformFees(periodoTaxasPlataforma);
+	$: resumoTaxasPeriodo = calculatePlatformFees(periodoTaxasEscopo);
 	$: periodoTotalCustosPlataforma = resumoTaxasPeriodo.total;
-	$: periodoItensSubtotalMap = buildItensSubtotalMap(periodoItens);
-	$: resumoMesasPeriodo = calcularResumoMesas(periodoComandasMesa, periodoItensSubtotalMap);
-	$: periodoReceitaLiquida = calculateRevenue({ totalGeral: periodoTotalGeral, despesas: periodoTotalDespesas, custosPlataforma: periodoTotalCustosPlataforma });
+	$: periodoItensSubtotalMap = buildItensSubtotalMap(periodoItensEscopo);
+	$: resumoMesasPeriodo = calcularResumoMesas(
+		canalFiltroPeriodo && canalFiltroPeriodo !== 'mesa' ? [] : periodoComandasMesa,
+		periodoItensSubtotalMap
+	);
+	$: periodoReceitaLiquida = calculateRevenue({
+		totalGeral: periodoTotalGeral,
+		despesas: canalFiltroPeriodo ? 0 : periodoTotalDespesas,
+		custosPlataforma: periodoTotalCustosPlataforma
+	});
 
 	// Delivery breakdown (periodo)
-	$: periodoTotalTaxaEntrega = (periodoVendas||[]).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
-	$: periodoReceitaRestaurante = calculateRestaurantRevenue({ totalGeral: periodoTotalGeral, taxaEntrega: periodoTotalTaxaEntrega, despesas: periodoTotalDespesas, custosPlataforma: periodoTotalCustosPlataforma });
+	$: periodoTotalTaxaEntrega = (periodoVendasEscopo||[]).filter(v => v.tipo_pedido === 'delivery').reduce((a, v) => a + Number(v.taxa_entrega || 0), 0);
+	$: periodoReceitaRestaurante = calculateRestaurantRevenue({
+		totalGeral: periodoTotalGeral,
+		taxaEntrega: periodoTotalTaxaEntrega,
+		despesas: canalFiltroPeriodo ? 0 : periodoTotalDespesas,
+		custosPlataforma: periodoTotalCustosPlataforma
+	});
 	$: periodoVendasPorTipo = (() => {
 		const result = [];
-		const retiradaVendas = (periodoVendas||[]).filter(v => (v.tipo_pedido || 'retirada') === 'retirada');
+		const retiradaVendas = (periodoVendasEscopo||[]).filter(v => (v.tipo_pedido || 'retirada') === 'retirada');
 		if (retiradaVendas.length > 0) result.push({ tipo: 'retirada', label: 'Retirada', icon: 'retirada', qtd: retiradaVendas.length, total: retiradaVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: 0 });
-		const deliveryVendas = (periodoVendas||[]).filter(v => v.tipo_pedido === 'delivery');
+		const deliveryVendas = (periodoVendasEscopo||[]).filter(v => v.tipo_pedido === 'delivery');
 		if (deliveryVendas.length > 0) result.push({ tipo: 'delivery', label: 'Delivery', icon: 'delivery', qtd: deliveryVendas.length, total: deliveryVendas.reduce((a, v) => a + Number(v.valor_total || 0), 0), taxaEntrega: deliveryVendas.reduce((a, v) => a + Number(v.taxa_entrega || 0), 0) });
 		return result;
 	})();
@@ -946,7 +974,7 @@
 	// Série diária (para futuro gráfico / export) – simples agregação client-side
 	$: periodoSerieDiaria = (() => {
 		const map = new Map();
-		for (const v of (periodoVendas||[])) {
+		for (const v of (periodoVendasEscopo||[])) {
 			const day = v.created_at ? new Date(v.created_at).toISOString().slice(0,10) : 'unknown';
 			const prev = map.get(day) || { dia: day, total: 0, qtd: 0 };
 			prev.total += Number(v.valor_total||0);
@@ -965,7 +993,7 @@
 	$: categoriasDoPeriodo = (() => {
 		const map = new Map();
 		let temSemCategoria = false;
-		for (const it of (periodoItens || [])) {
+		for (const it of (periodoItensEscopo || [])) {
 			const prod = it.id_produto ? periodoProdutosMap.get(it.id_produto) : null;
 			const cat = prod?.categorias;
 			if (cat?.id) map.set(cat.id, cat.nome || 'Categoria');
@@ -979,7 +1007,7 @@
 
 	$: periodoTopProdutos = (() => {
 		const map = new Map();
-		for (const it of (periodoItens||[])) {
+		for (const it of (periodoItensEscopo||[])) {
 			const prod = it.id_produto ? periodoProdutosMap.get(it.id_produto) : null;
 			const catId = prod?.categorias?.id || null;
 			if (periodoCategoriaFiltro) {
@@ -1025,25 +1053,27 @@
 		<button class="px-3 py-1 rounded-sm border" class:btn-primary={modoRelatorio==='periodo'} on:click={() => modoRelatorio='periodo'}>Por Período</button>
 	</div>
 	{#if modoRelatorio === 'caixa'}
-		<div class="grid md:grid-cols-3 gap-4 items-end">
-			<div>
-				<label class="block text-sm mb-1" style="color: var(--text-label);" for="select-caixa">Selecionar caixa</label>
-				<select id="select-caixa" class="input-form" bind:value={caixaSelecionado} on:change={() => carregarRelatorioDoCaixa(caixaSelecionado)}>
-					{#each caixas as c}
-						<option value={c.id}>#{c.id} — {new Date(c.data_abertura).toLocaleString()} {c.data_fechamento ? `(fechado ${new Date(c.data_fechamento).toLocaleString()})` : '(aberto)'}</option>
-					{/each}
-				</select>
+		<div class="space-y-3">
+			<div class="grid md:grid-cols-2 gap-4 items-end">
+				<div class="min-w-0">
+					<label class="block text-sm mb-1" style="color: var(--text-label);" for="select-caixa">Selecionar caixa</label>
+					<select id="select-caixa" class="input-form" bind:value={caixaSelecionado} on:change={() => carregarRelatorioDoCaixa(caixaSelecionado)}>
+						{#each caixas as c}
+							<option value={c.id}>{formatCaixaLabel(c)} — {new Date(c.data_abertura).toLocaleString()} {c.data_fechamento ? `(fechado ${new Date(c.data_fechamento).toLocaleString()})` : '(aberto)'}</option>
+						{/each}
+					</select>
+				</div>
+				<div class="min-w-0">
+					<label class="block text-sm mb-1" style="color: var(--text-label);" for="select-canal-caixa">Canal de origem</label>
+					<select id="select-canal-caixa" class="input-form" value={canalFiltroCaixa} on:change={(e) => selecionarCanalCaixa(e.target.value)}>
+						{#each SALES_CHANNEL_FILTER_OPTIONS as opcao}
+							<option value={opcao.value}>{opcao.label}</option>
+						{/each}
+					</select>
+				</div>
 			</div>
-			<div>
-				<label class="block text-sm mb-1" style="color: var(--text-label);" for="select-canal-caixa">Canal de origem</label>
-				<select id="select-canal-caixa" class="input-form" value={canalFiltroCaixa} on:change={(e) => selecionarCanalCaixa(e.target.value)}>
-					{#each SALES_CHANNEL_FILTER_OPTIONS as opcao}
-						<option value={opcao.value}>{opcao.label}</option>
-					{/each}
-				</select>
-			</div>
-			<div class="flex gap-2 justify-end relative">
-				<button class="btn-primary flex items-center gap-2" on:click={() => showExportDropdown = !showExportDropdown}>
+			<div class="flex flex-wrap gap-2 justify-end relative">
+				<button class="btn-primary flex items-center gap-2 shrink-0" on:click={() => showExportDropdown = !showExportDropdown}>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
 					Exportar Relatório
 					<svg class="w-3 h-3 transition-transform" class:rotate-180={showExportDropdown} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
@@ -1077,26 +1107,27 @@
 					<button class="px-2 py-1 rounded-sm border" class:bg-sky-600={preset===op.key} class:text-white={preset===op.key} on:click={() => { aplicarPreset(op.key); carregarRelatorioPeriodo(); }}>{op.label}</button>
 				{/each}
 			</div>
-			<div class="grid sm:grid-cols-4 gap-4 items-end">
-				<div>
+			<div class="grid sm:grid-cols-3 gap-4 items-end">
+				<div class="min-w-0">
 					<label for="periodo-inicio" class="block text-sm mb-1">Início</label>
 					<input id="periodo-inicio" type="date" class="input-form" value={dataInicioStr} on:change={(e)=> { dataInicio = new Date(e.target.value+'T00:00:00'); preset='personalizado'; }} />
 				</div>
-				<div>
+				<div class="min-w-0">
 					<label for="periodo-fim" class="block text-sm mb-1">Fim</label>
 					<input id="periodo-fim" type="date" class="input-form" value={dataFimStr} on:change={(e)=> { dataFim = new Date(e.target.value+'T00:00:00'); preset='personalizado'; }} />
 				</div>
-				<div>
+				<div class="min-w-0">
 					<label for="select-canal-periodo" class="block text-sm mb-1">Canal de origem</label>
-					<select id="select-canal-periodo" class="input-form" bind:value={canalFiltroPeriodo}>
+					<select id="select-canal-periodo" class="input-form" value={canalFiltroPeriodo} on:change={(e) => selecionarCanalPeriodo(e.target.value)}>
 						{#each SALES_CHANNEL_FILTER_OPTIONS as opcao}
 							<option value={opcao.value}>{opcao.label}</option>
 						{/each}
 					</select>
 				</div>
-				<div class="flex gap-2 items-end relative">
-					<button class="btn-primary" on:click={carregarRelatorioPeriodo} disabled={periodoLoading}>{periodoLoading?'Carregando...':'Atualizar'}</button>
-					<button class="btn-secondary flex items-center gap-2" on:click={() => showExportDropdown = !showExportDropdown}>
+			</div>
+			<div class="flex flex-wrap gap-2 justify-end relative">
+					<button class="btn-primary shrink-0" on:click={carregarRelatorioPeriodo} disabled={periodoLoading}>{periodoLoading?'Carregando...':'Atualizar'}</button>
+					<button class="btn-secondary flex items-center gap-2 shrink-0" on:click={() => showExportDropdown = !showExportDropdown}>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
 						Exportar
 						<svg class="w-3 h-3 transition-transform" class:rotate-180={showExportDropdown} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
@@ -1121,7 +1152,6 @@
 							</button>
 						</div>
 					{/if}
-				</div>
 			</div>
 			<div class="text-xs text-muted">Período: {dataInicio ? dataInicio.toLocaleDateString() : ''} – {dataFim ? dataFim.toLocaleDateString() : ''}</div>
 		</div>
@@ -1148,6 +1178,12 @@
 				<div class="flex items-center gap-2 text-sm font-medium mb-1" style="color: var(--text-muted);">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
 					Receita Líquida
+					{#if canalFiltroCaixa}
+						<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold {getChannelVisual(canalFiltroCaixa).textColor}" style="background: color-mix(in srgb, currentColor 12%, transparent);">
+							<span class="w-1.5 h-1.5 rounded-full {getChannelVisual(canalFiltroCaixa).color}"></span>
+							{getChannelVisual(canalFiltroCaixa).label}
+						</span>
+					{/if}
 				</div>
 				<div class="text-3xl font-bold tracking-tight tabular-nums" style="color: var(--text-main);">{fmt(totalTaxaEntregaCaixa > 0 ? receitaRestauranteCaixa : receitaLiquidaCaixa)}</div>
 				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm" style="color: var(--text-muted);">
@@ -1666,6 +1702,12 @@
 				<div class="flex items-center gap-2 text-muted text-sm font-medium mb-1">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
 					Receita Líquida
+					{#if canalFiltroPeriodo}
+						<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold {getChannelVisual(canalFiltroPeriodo).textColor}" style="background: color-mix(in srgb, currentColor 12%, transparent);">
+							<span class="w-1.5 h-1.5 rounded-full {getChannelVisual(canalFiltroPeriodo).color}"></span>
+							{getChannelVisual(canalFiltroPeriodo).label}
+						</span>
+					{/if}
 				</div>
 				<div class="text-3xl font-bold text-white tracking-tight">{fmt(periodoTotalTaxaEntrega > 0 ? periodoReceitaRestaurante : periodoReceitaLiquida)}</div>
 				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm" style="color: var(--text-muted);">

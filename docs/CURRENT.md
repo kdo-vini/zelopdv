@@ -1,5 +1,23 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-18 — Relatórios: filtro Canal de origem
+
+O select “Canal de origem” só recortava a lista de cupons (caixa) e o card
+de estornos — KPIs/pagamentos/produtos ficavam globais e o filtro parecia
+morto. Agora escopa também Receita/KPIs, formas de pagamento, produtos,
+taxas, delivery e export; cards “Vendas por Canal” continuam com todos os
+canais (comparativo). Gaveta/sangria/despesas sem dimensão de canal:
+gaveta usa dinheiro do caixa inteiro; despesas do período saem do líquido
+quando há filtro de canal.
+
+## Sessão 2026-09-18 — numero_caixa por empresa
+
+`caixas.numero_caixa` é contador sequencial por `id_usuario` (como
+`vendas.numero_venda`), com backfill por `data_abertura` e trigger
+`set_numero_caixa` na abertura. O `id` serial global permanece só como PK/FK.
+Relatórios, export PDF/Excel e recibos de movimentação passam a exibir
+`#numero_caixa` (empresa nova começa em `#1`), nunca o id global.
+
 ## Sessão 2026-09-18 — UX Pessoas (padrão Produtos)
 
 `/gestao/pessoas` alinhada ao padrão de Produtos: form fixo saiu do layout;

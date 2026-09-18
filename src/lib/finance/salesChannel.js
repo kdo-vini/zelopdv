@@ -112,6 +112,16 @@ export function filterVendasByChannel(vendas = [], channelFilter = '') {
 }
 
 /**
+ * Scopes rows that join to vendas via `id_venda` (pagamentos, itens, taxas)
+ * to the same channel filter used on the sales list / KPIs.
+ */
+export function filterRelatedByChannel(rows = [], vendas = [], channelFilter = '', idKey = 'id_venda') {
+  if (!channelFilter) return rows || [];
+  const ids = new Set(filterVendasByChannel(vendas, channelFilter).map((venda) => venda?.id));
+  return (rows || []).filter((row) => ids.has(row?.[idKey]));
+}
+
+/**
  * One comparative card per channel that has at least one sale: quantity,
  * gross total, average ticket, commission/net (null = "Indisponível" when
  * the channel never gets platform-fee rows) and applied reversals.

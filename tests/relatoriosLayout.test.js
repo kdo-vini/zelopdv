@@ -77,6 +77,16 @@ describe('Relatórios canal de origem (Task 15)', () => {
     expect(reportPage).toMatch(/canal\.liquido === null \? COMMISSION_UNAVAILABLE_LABEL/);
   });
 
+  it('scopes KPIs and related rows by channel while keeping comparative cards unfiltered', () => {
+    expect(reportPage).toContain('filterRelatedByChannel');
+    expect(reportPage).toContain('vendasEscopoCaixa');
+    expect(reportPage).toContain('periodoVendasEscopo');
+    expect(reportPage).toMatch(/summarizeSalesByChannel\(vendas,/);
+    expect(reportPage).toMatch(/summarizeSalesByChannel\(periodoVendas,/);
+    expect(reportPage).toContain('calculatePaymentSummary(vendasEscopoCaixa, pagamentosEscopoCaixa)');
+    expect(reportPage).toContain('calculatePaymentSummary(periodoVendasEscopo, periodoPagamentosEscopo)');
+  });
+
   it('shows a channel badge on each sale row in the Vendas do Caixa table', () => {
     const vendasTableSection = reportPage.slice(reportPage.indexOf('Vendas do Caixa'), reportPage.indexOf('Movimentações do Caixa'));
     expect(vendasTableSection).toContain('getChannelVisual(v.canal_origem)');

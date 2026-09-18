@@ -124,3 +124,23 @@ describe('abrirCaixaIdempotente', () => {
     expect(result.error?.message).toBe('boom');
   });
 });
+
+describe('formatCaixaNumero / formatCaixaLabel', () => {
+  test('prefers per-tenant numero_caixa over global id', async () => {
+    const { formatCaixaLabel, formatCaixaNumero } = await import('../src/lib/finance/caixaOps.js');
+    expect(formatCaixaNumero({ id: 1050, numero_caixa: 3 })).toBe(3);
+    expect(formatCaixaLabel({ id: 1050, numero_caixa: 3 })).toBe('#3');
+  });
+
+  test('accepts camelCase payload used by receipts/exports', async () => {
+    const { formatCaixaLabel } = await import('../src/lib/finance/caixaOps.js');
+    expect(formatCaixaLabel({ numeroCaixa: 1 })).toBe('#1');
+  });
+
+  test('returns em dash when number is missing (never invents from global id)', async () => {
+    const { formatCaixaLabel, formatCaixaNumero } = await import('../src/lib/finance/caixaOps.js');
+    expect(formatCaixaNumero({ id: 1050 })).toBe(null);
+    expect(formatCaixaLabel({ id: 1050 })).toBe('—');
+    expect(formatCaixaLabel(null)).toBe('—');
+  });
+});

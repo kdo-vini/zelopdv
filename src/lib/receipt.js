@@ -367,7 +367,7 @@ export function buildMovCaixaHTML({ estabelecimento = {}, mov = {} } = {}) {
   <hr class="sep">
 
   <div class="info-row"><span class="label">Movimentação</span><span class="val">#${escHtml(mov.idMov ?? '—')}</span></div>
-  <div class="info-row"><span class="label">Caixa</span><span class="val">#${escHtml(mov.idCaixa ?? '—')}</span></div>
+  <div class="info-row"><span class="label">Caixa</span><span class="val">${escHtml(mov.numeroCaixa != null ? `#${mov.numeroCaixa}` : '—')}</span></div>
   <div class="info-row">
     <span class="label">${dt.toLocaleDateString('pt-BR')}</span>
     <span class="val">${dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>

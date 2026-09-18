@@ -239,6 +239,7 @@
   let trocoInicialInput = 0.00;
   let abrindoCaixa = false;
   let idCaixaAberto = null;
+  let numeroCaixaAberto = null;
   let saldoCaixa = 0; // saldo atual em dinheiro no caixa
   let carregandoSaldo = false;
 
@@ -442,13 +443,14 @@
     if (getOfflineContext()?.enabled && cached) {
       caixaAberto = !cached.data_fechamento;
       idCaixaAberto = caixaAberto ? cached.id : null;
+      numeroCaixaAberto = caixaAberto ? (cached.numero_caixa ?? null) : null;
       modalAbrirCaixaAberto = !caixaAberto;
       return;
     }
     // Verifica no Supabase se o usuário tem um caixa aberto (sem data_fechamento)
     const { data, error } = await supabase
       .from('caixas')
-      .select('id, data_abertura, data_fechamento, valor_inicial')
+      .select('id, numero_caixa, data_abertura, data_fechamento, valor_inicial')
       .eq('id_usuario', userId)
       .is('data_fechamento', null)
       .order('data_abertura', { ascending: false })
@@ -456,13 +458,14 @@
 
     if (error) {
       if (isNetworkError(error) && cached && !cached.data_fechamento) {
-        caixaAberto = true; idCaixaAberto = cached.id; modalAbrirCaixaAberto = false; return;
+        caixaAberto = true; idCaixaAberto = cached.id; numeroCaixaAberto = cached.numero_caixa ?? null; modalAbrirCaixaAberto = false; return;
       }
       console.error('[PDV] verificarCaixaAberto error:', error);
       addToast('Não foi possível verificar o caixa. Verifique sua conexão e tente novamente.', 'error');
       caixaAberto = false;
       modalAbrirCaixaAberto = true;
       idCaixaAberto = null;
+      numeroCaixaAberto = null;
       return;
     }
 
@@ -471,10 +474,12 @@
       caixaAberto = true;
       modalAbrirCaixaAberto = false;
       idCaixaAberto = data[0].id;
+      numeroCaixaAberto = data[0].numero_caixa ?? null;
     } else {
       await saveSnapshot(userId, 'caixa.aberto', null);
       caixaAberto = false;
       idCaixaAberto = null;
+      numeroCaixaAberto = null;
       await detectHasEverOpenedCaixa(userId);
       modalAbrirCaixaAberto = shouldAutoOpenCaixaModal({
         caixaAberto,
@@ -530,6 +535,7 @@
         if (!salvandoVenda && !checkoutSubmission) {
           caixaAberto = !!snapshot.caixa && !snapshot.caixa.data_fechamento;
           idCaixaAberto = caixaAberto ? snapshot.caixa.id : null;
+          numeroCaixaAberto = caixaAberto ? (snapshot.caixa.numero_caixa ?? null) : null;
           modalAbrirCaixaAberto = shouldAutoOpenCaixaModal({
             caixaAberto,
             isFirstUseNoCaixa: computeIsFirstUseNoCaixa({ hasEverOpenedCaixa, isSubUser, caixaAberto })
@@ -979,6 +985,7 @@
       const movInfo = {
         idMov: data?.id,
         idCaixa: idCaixaAberto,
+        numeroCaixa: numeroCaixaAberto,
         tipo: tipoMovCaixa, // 'entrada' | 'saida'
         valor: v,
         motivo: motivoMovCaixa || null,
@@ -1028,11 +1035,13 @@
         const existing = await readSnapshot(ownerUserId, 'caixa.aberto');
         if (existing && !existing.data_fechamento) {
           idCaixaAberto = existing.id;
+          numeroCaixaAberto = existing.numero_caixa ?? null;
         } else {
           const id = crypto.randomUUID();
           const caixa = { id, data_abertura: new Date().toISOString(), data_fechamento: null, valor_inicial: Number(trocoInicialInput) };
           await submitOfflineOperation('caixa.open', id, { clientCaixaId: id, valor_inicial: caixa.valor_inicial }, { operationId: id, projection: { key: 'caixa.aberto', value: caixa } });
           idCaixaAberto = id;
+          numeroCaixaAberto = null;
         }
         caixaAberto = true; modalAbrirCaixaAberto = false;
         await atualizarSaldoCaixa();
@@ -1050,6 +1059,7 @@
         return;
       }
       idCaixaAberto = caixa.id;
+      numeroCaixaAberto = caixa.numero_caixa ?? null;
       caixaAberto = true;
       modalAbrirCaixaAberto = false;
       // This device just opened the till online: it becomes the primary
@@ -1602,10 +1612,10 @@
 
   // ── Impressão de movimentação de caixa ────────────────────────────────────
 
-  async function imprimirReciboMovCaixa({ idMov, idCaixa, tipo, valor, motivo, created_at }) {
+  async function imprimirReciboMovCaixa({ idMov, idCaixa, numeroCaixa, tipo, valor, motivo, created_at }) {
     const perfil = await fetchPerfil();
     const estabelecimento = perfilToEstabelecimento(perfil);
-    await printMovCaixa({ estabelecimento, mov: { idMov, idCaixa, tipo, valor, motivo, created_at } });
+    await printMovCaixa({ estabelecimento, mov: { idMov, idCaixa, numeroCaixa: numeroCaixa ?? numeroCaixaAberto, tipo, valor, motivo, created_at } });
   }
 
 </script>

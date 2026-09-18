@@ -27,7 +27,9 @@ export async function generateExcelReport(dados) {
         ['ZELO PDV — RELATÓRIO DE VENDAS'],
         [`Período: ${dados.periodo}`],
         [`Gerado em: ${new Date().toLocaleString('pt-BR')}`],
-        dados.modo === 'caixa' && dados.caixaId ? [`Caixa #${dados.caixaId}`] : [],
+        dados.modo === 'caixa' && (dados.caixaNumero != null || dados.caixaId != null)
+            ? [`Caixa ${dados.caixaNumero != null ? `#${dados.caixaNumero}` : '—'}`]
+            : [],
         [],
         ['INDICADORES PRINCIPAIS'],
         ['Métrica', 'Valor'],

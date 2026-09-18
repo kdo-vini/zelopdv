@@ -80,8 +80,9 @@ export async function generatePDFReport(dados) {
         const now = new Date().toLocaleString('pt-BR');
         doc.text(`Gerado em: ${now}`, pageWidth - margin, 19, { align: 'right' });
 
-        if (dados.modo === 'caixa' && dados.caixaId) {
-            doc.text(`Caixa #${dados.caixaId}`, pageWidth - margin, 25, { align: 'right' });
+        if (dados.modo === 'caixa' && (dados.caixaNumero != null || dados.caixaId != null)) {
+            const caixaLabel = dados.caixaNumero != null ? `#${dados.caixaNumero}` : '—';
+            doc.text(`Caixa ${caixaLabel}`, pageWidth - margin, 25, { align: 'right' });
         }
 
         y = 40;

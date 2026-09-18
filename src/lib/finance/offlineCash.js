@@ -37,7 +37,7 @@ export async function loadCashSnapshot(supabase, owner, { refresh = false, timeo
   }
   const fetchSnapshot = async () => {
     if (!unresolvedTurn) {
-      const openRows = await query(supabase.from('caixas').select('id, data_abertura, valor_inicial, data_fechamento').eq('id_usuario', owner).is('data_fechamento', null).order('data_abertura', { ascending: false }).limit(1));
+      const openRows = await query(supabase.from('caixas').select('id, numero_caixa, data_abertura, valor_inicial, data_fechamento').eq('id_usuario', owner).is('data_fechamento', null).order('data_abertura', { ascending: false }).limit(1));
       caixa = openRows[0] || null;
     }
     if (!caixa || caixa.data_fechamento) return empty(unresolvedTurn);

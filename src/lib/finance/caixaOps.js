@@ -7,6 +7,32 @@
  * idempotente para que abrir "de novo" nunca crie um caixa duplicado/órfão.
  */
 
+const CAIXA_SELECT = 'id, numero_caixa, data_abertura, valor_inicial, data_fechamento';
+
+/**
+ * Label de apresentação do caixa para a empresa (#1, #2…), nunca o id global.
+ * Aceita row de `caixas` ou payload já com `numeroCaixa` / `numero_caixa`.
+ * @param {{ numero_caixa?: number|null, numeroCaixa?: number|null, id?: number|string|null } | number | string | null | undefined} caixa
+ */
+export function formatCaixaNumero(caixa) {
+  if (caixa == null) return null;
+  if (typeof caixa === 'number' || typeof caixa === 'string') {
+    const n = Number(caixa);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  const n = Number(caixa.numero_caixa ?? caixa.numeroCaixa);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * @param {{ numero_caixa?: number|null, numeroCaixa?: number|null, id?: number|string|null } | null | undefined} caixa
+ * @returns {string} ex.: "#12" ou "—"
+ */
+export function formatCaixaLabel(caixa) {
+  const n = formatCaixaNumero(caixa);
+  return n != null ? `#${n}` : '—';
+}
+
 /**
  * Busca o caixa aberto da empresa, se houver.
  * @returns {Promise<{ caixa: object|null, error: object|null }>}
@@ -14,7 +40,7 @@
 export async function buscarCaixaAberto(supabase, ownerUserId) {
   const { data, error } = await supabase
     .from('caixas')
-    .select('id, data_abertura, valor_inicial')
+    .select(CAIXA_SELECT)
     .eq('id_usuario', ownerUserId)
     .is('data_fechamento', null)
     .order('data_abertura', { ascending: false })
@@ -43,7 +69,7 @@ export async function abrirCaixaIdempotente(supabase, { ownerUserId, operadorUse
       id_usuario: ownerUserId,
       id_operador: operadorUserId
     })
-    .select('id')
+    .select(CAIXA_SELECT)
     .single();
 
   if (!error) return { caixa: data, jaExistia: false, error: null };
