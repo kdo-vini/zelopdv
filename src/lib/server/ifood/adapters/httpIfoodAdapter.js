@@ -1,6 +1,11 @@
 import { createIfoodTokenCache } from '../http/tokenCache.js';
 import { abortableSleep, createIfoodRateLimiter } from '../http/rateLimit.js';
 import { createIfoodRequestClient, IfoodHttpError } from '../http/request.js';
+import {
+  decodeIfoodJwtClaims,
+  merchantScopesFromClaims,
+  tokenGrantsMerchantAccess
+} from '../http/tokenClaims.js';
 
 const DEFAULT_BASE_URL = 'https://merchant-api.ifood.com.br';
 const MAX_ACK_IDS_PER_REQUEST = 10_000;
@@ -68,6 +73,17 @@ export function createHttpIfoodAdapter({
     ...(maxAttempts !== undefined ? { maxAttempts } : {})
   });
 
+  async function listAuthorizedMerchantsFromToken() {
+    const token = await tokenCache.getToken();
+    const claims = decodeIfoodJwtClaims(token);
+    return merchantScopesFromClaims(claims).map(({ merchantId, modules }) => ({
+      id: merchantId,
+      name: null,
+      corporateName: null,
+      modules
+    }));
+  }
+
   async function listMerchants({ signal } = {}) {
     // CONTRACT_SNAPSHOT.md #3 notes pagination "is documented" for this route,
     // but the page describing it returns 403 to fetchers, so the actual
@@ -80,9 +96,17 @@ export function createHttpIfoodAdapter({
       path: '/merchant/v1.0/merchants',
       ...(signal ? { signal } : {})
     });
-    if (Array.isArray(body)) return body;
-    if (body && Array.isArray(body.merchants)) return body.merchants;
-    return [];
+    let merchants = [];
+    if (Array.isArray(body)) merchants = body;
+    else if (body && Array.isArray(body.merchants)) merchants = body.merchants;
+
+    // Order/Events-only grants never appear on GET /merchants (needs module
+    // Merchant). Fall back to JWT merchant_scope so discovery/connect still
+    // see stores the partner already authorized.
+    if (merchants.length === 0) {
+      return listAuthorizedMerchantsFromToken();
+    }
+    return merchants;
   }
 
   /**
@@ -95,10 +119,11 @@ export function createHttpIfoodAdapter({
    * pagination params unconfirmed, a merchant on page 2+ would be wrongly
    * reported `connected: false`. A 2xx here means the merchant status is
    * readable, so it is connected; a 403/404 (`IfoodHttpError.status`) means
-   * it is not this app's merchant or does not exist, mapped to
-   * `connected: false`. Every other error (401 after retry, 429, 5xx,
-   * timeout, abort) propagates unchanged so an outage is never reported as
-   * "not connected".
+   * Merchant API denied the store — but Order/Events-only apps still get a
+   * usable grant in the JWT `merchant_scope`, so we fall back to that before
+   * reporting `connected: false`. Every other error (401 after retry, 429,
+   * 5xx, timeout, abort) propagates unchanged so an outage is never reported
+   * as "not connected".
    */
   async function connectMerchant({ merchantId, signal } = {}) {
     const id = requireNonEmptyId(merchantId, 'merchantId');
@@ -107,6 +132,14 @@ export function createHttpIfoodAdapter({
       return { merchantId: id, connected: true };
     } catch (error) {
       if (error instanceof IfoodHttpError && (error.status === 403 || error.status === 404)) {
+        try {
+          const token = await tokenCache.getToken();
+          if (tokenGrantsMerchantAccess(decodeIfoodJwtClaims(token), id)) {
+            return { merchantId: id, connected: true };
+          }
+        } catch {
+          // Token introspection failed — keep the HTTP denial result.
+        }
         return { merchantId: id, connected: false };
       }
       throw error;

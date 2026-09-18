@@ -763,6 +763,50 @@ describe('createHttpIfoodAdapter', () => {
     });
   });
 
+  it('connectMerchant reports connected:true on 403 when JWT merchant_scope grants order/events', async () => {
+    const payload = Buffer.from(JSON.stringify({
+      merchant_scope: ['d848b8aa-da9f-4003-9461-5c21ff47ec31:order', 'd848b8aa-da9f-4003-9461-5c21ff47ec31:events']
+    })).toString('base64url');
+    const jwt = `hdr.${payload}.sig`;
+    const fetchImpl = vi.fn(async (url) => {
+      if (String(url).includes('/oauth/token')) {
+        return makeResponse({ status: 200, jsonBody: { accessToken: jwt, type: 'Bearer', expiresIn: 300 } });
+      }
+      return makeResponse({ status: 403 });
+    });
+    const adapter = buildAdapter({ fetchImpl });
+
+    await expect(adapter.connectMerchant({
+      merchantId: 'd848b8aa-da9f-4003-9461-5c21ff47ec31'
+    })).resolves.toEqual({
+      merchantId: 'd848b8aa-da9f-4003-9461-5c21ff47ec31',
+      connected: true
+    });
+  });
+
+  it('listMerchants falls back to JWT merchant_scope when Merchant API returns []', async () => {
+    const payload = Buffer.from(JSON.stringify({
+      merchant_scope: ['d848b8aa-da9f-4003-9461-5c21ff47ec31:order']
+    })).toString('base64url');
+    const jwt = `hdr.${payload}.sig`;
+    const fetchImpl = vi.fn(async (url) => {
+      if (String(url).includes('/oauth/token')) {
+        return makeResponse({ status: 200, jsonBody: { accessToken: jwt, type: 'Bearer', expiresIn: 300 } });
+      }
+      return makeResponse({ status: 200, jsonBody: [] });
+    });
+    const adapter = buildAdapter({ fetchImpl });
+
+    await expect(adapter.listMerchants()).resolves.toEqual([
+      {
+        id: 'd848b8aa-da9f-4003-9461-5c21ff47ec31',
+        name: null,
+        corporateName: null,
+        modules: ['order']
+      }
+    ]);
+  });
+
   it('connectMerchant reports connected:false on a 404 (merchant does not exist)', async () => {
     const fetchImpl = vi.fn(async (url) => {
       if (String(url).includes('/oauth/token')) return tokenResponse(300);

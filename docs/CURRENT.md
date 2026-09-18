@@ -83,6 +83,18 @@ Portal do Parceiro / wizard **Conectar iFood** no PDV (não reusar token do
 app de teste). Depois: smoke de presença + 1 pedido ponta a ponta com as
 credenciais oficiais.
 
+## Sessão 2026-09-18 — iFood: root cause + desbloqueio Bem Servido
+
+**Root cause real:** merchant ID errado no Zelo (`4e29e9a3-…`) vs Portal
+(`d848b8aa-…` = Bem Servido, CNPJ 59.316.452/0001-20). JWT já tinha
+`d848b8aa:order|events`; `/status` 403 porque **Merchant não homologado**
+(só Order/Events). Ticket iFood **#33599767** (Homologação Merchant).
+
+**Feito:** DB connection Bem Servido → `merchant_id=d848b8aa…` + `active`;
+adapter passa a aceitar grant JWT Order/Events quando `/status` 403;
+discover usa JWT se `GET /merchants` = `[]`. Relatório:
+`docs/integrations/ifood/ROOT_CAUSE_PERMISSIONS_API_GAP.md`.
+
 ## Sessão 2026-09-18 — iFood discover: nome longo no portal
 
 **Bem Servido:** autorização **Ativo** no Developer Portal, mas a loja não

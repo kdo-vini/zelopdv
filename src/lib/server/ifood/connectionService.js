@@ -410,6 +410,10 @@ export function createIfoodConnectionService({
         .filter((merchant) => isNonEmptyString(merchant?.id) && !claimed.has(merchant.id))
         .filter((merchant) => {
           const candidates = [normalizeBusinessName(merchant?.name), normalizeBusinessName(merchant?.corporateName)];
+          // JWT `merchant_scope` fallback has no display name (Merchant API
+          // empty for Order/Events-only apps). Still surface those IDs so the
+          // wizard can activate without typing the UUID by hand.
+          if (!candidates.some(Boolean)) return true;
           return candidates.some((candidate) =>
             normalizedOwnNames.some((own) => businessNamesPlausiblyMatch(own, candidate))
           );
