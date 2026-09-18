@@ -206,8 +206,18 @@
       return;
     }
     if (!res.ok) {
-      if (!silent) errorMessage = describeIfoodConnectionError(body?.error, body);
-      else if (body?.error === 'authorization_expired') await loadStatus({ silent: true });
+      if (!silent) {
+        errorMessage = describeIfoodConnectionError(body?.error, body);
+      } else if (body?.error === 'authorization_expired') {
+        await loadStatus({ silent: true });
+      } else if (res.status >= 400 && res.status < 500) {
+        // A 4xx during a silent background poll (e.g. the subscription
+        // lapsed, or the session token is stale) will not resolve itself by
+        // retrying every 10s -- stop hammering the endpoint. The manual
+        // "Já autorizei, verificar" button still works and surfaces the
+        // real error the next time the owner clicks it.
+        stopAuthPolling();
+      }
       return;
     }
     addToast('Conexão com o iFood ativada!', 'success');

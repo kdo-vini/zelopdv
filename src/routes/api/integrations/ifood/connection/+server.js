@@ -24,11 +24,21 @@ function getBearerToken(request) {
 async function resolveEmpresaId(ownerUserId) {
   const { data, error } = await supabaseAdmin
     .from('empresa_perfil')
-    .select('id')
+    .select('id, nome_exibicao, razao_social')
     .eq('user_id', ownerUserId)
     .maybeSingle();
   if (error) throw new Error('company lookup failed');
-  return data?.id ?? null;
+  return {
+    id: data?.id ?? null,
+    // The only signal `discoverMerchants` has to tell "this authorized
+    // merchant is mine" from "some other Zelo tenant's" -- the centralized
+    // iFood app returns every merchant across every tenant, so without this
+    // the discovery list would leak other businesses' store names (see
+    // connectionService.js's `discoverMerchants`).
+    businessNames: [data?.nome_exibicao, data?.razao_social].filter(
+      (value) => typeof value === 'string' && value.trim().length > 0
+    )
+  };
 }
 
 async function resolveSubscription(ownerUserId) {
@@ -66,19 +76,25 @@ async function authenticate(request) {
     return { error: noStoreJson({ error: 'unavailable' }, 503) };
   }
 
-  let empresaId;
+  let empresaProfile;
   let subscription;
   try {
-    [empresaId, subscription] = await Promise.all([
+    [empresaProfile, subscription] = await Promise.all([
       resolveEmpresaId(accessContext?.ownerUserId),
       resolveSubscription(accessContext?.ownerUserId)
     ]);
   } catch {
     return { error: noStoreJson({ error: 'unavailable' }, 503) };
   }
-  if (!empresaId) return { error: noStoreJson({ error: 'unavailable' }, 503) };
+  if (!empresaProfile.id) return { error: noStoreJson({ error: 'unavailable' }, 503) };
 
-  return { authResult: authResult.data, accessContext, empresaId, subscription };
+  return {
+    authResult: authResult.data,
+    accessContext,
+    empresaId: empresaProfile.id,
+    businessNames: empresaProfile.businessNames,
+    subscription
+  };
 }
 
 function createService() {
@@ -115,6 +131,7 @@ export async function GET({ request }) {
       accessContext: auth.accessContext,
       subscription: auth.subscription,
       empresaId: auth.empresaId,
+      businessNames: auth.businessNames,
       signal: request.signal
     });
     return noStoreJson(result.body, result.status);

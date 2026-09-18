@@ -140,6 +140,27 @@ function repositoryError() {
   return new Error('iFood connection repository operation failed');
 }
 
+const BUSINESS_NAME_SUFFIXES = /\b(ltda|me|eireli|epp|s\s*\/?\s*a|sa)\b\.?/g;
+
+/**
+ * Normalizes a business's legal/trade name for identity matching --
+ * lowercased, accent-stripped, common Brazilian corporate suffixes (LTDA,
+ * ME, EIRELI, EPP, S/A) removed, punctuation collapsed. Used ONLY to decide
+ * whether an iFood-authorized merchant plausibly belongs to the SAME
+ * business as the Zelo tenant asking -- see `discoverMerchants` for why
+ * this check exists at all.
+ */
+function normalizeBusinessName(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(BUSINESS_NAME_SUFFIXES, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 /**
  * @param {{ supabase: { rpc: Function } }} deps
  */
@@ -317,8 +338,28 @@ export function createIfoodConnectionService({
   // their store from a list. Best-effort by design: a discovery failure
   // (iFood outage, or an adapter that doesn't implement `listMerchants`)
   // must never break the base connection-status read this rides alongside.
-  async function discoverMerchants({ signal } = {}) {
-    if (typeof adapter.listMerchants !== 'function' || typeof repository.listClaimedMerchantIds !== 'function') {
+  //
+  // CRITICAL: the centralized iFood app is shared across EVERY Zelo tenant,
+  // so `listMerchants()` returns authorized stores belonging to OTHER
+  // businesses too, not just this caller's. Filtering out already-claimed
+  // ids is not enough -- an unclaimed authorized merchant could belong to
+  // any other Zelo customer who simply hasn't clicked "Conectar" yet, and
+  // showing it here (with a real store name, one click from being claimed)
+  // would let any tenant browse and hijack another tenant's iFood orders.
+  // `businessNames` (the caller's own `nome_exibicao`/`razao_social`) is the
+  // only identity signal available to bound this: a merchant is only ever
+  // surfaced when its `name`/`corporateName` matches one of the caller's own
+  // registered business names. No business name on file -> empty list,
+  // degrading to the manual merchantId field exactly as before this existed.
+  async function discoverMerchants({ signal, businessNames = [] } = {}) {
+    const normalizedOwnNames = (Array.isArray(businessNames) ? businessNames : [])
+      .map(normalizeBusinessName)
+      .filter(Boolean);
+    if (
+      normalizedOwnNames.length === 0
+      || typeof adapter.listMerchants !== 'function'
+      || typeof repository.listClaimedMerchantIds !== 'function'
+    ) {
       return [];
     }
     try {
@@ -327,8 +368,13 @@ export function createIfoodConnectionService({
         repository.listClaimedMerchantIds({ signal })
       ]);
       const claimed = new Set(Array.isArray(claimedIds) ? claimedIds : []);
+      const ownNames = new Set(normalizedOwnNames);
       return (Array.isArray(merchants) ? merchants : [])
         .filter((merchant) => isNonEmptyString(merchant?.id) && !claimed.has(merchant.id))
+        .filter((merchant) => {
+          const candidates = [normalizeBusinessName(merchant?.name), normalizeBusinessName(merchant?.corporateName)];
+          return candidates.some((candidate) => candidate && ownNames.has(candidate));
+        })
         .map((merchant) => ({
           merchantId: merchant.id,
           name: typeof merchant.name === 'string' ? merchant.name : null,
@@ -344,7 +390,7 @@ export function createIfoodConnectionService({
   }
 
   /** GET /api/integrations/ifood/connection */
-  async function getStatus({ authResult, accessContext, subscription, empresaId, signal } = {}) {
+  async function getStatus({ authResult, accessContext, subscription, empresaId, businessNames, signal } = {}) {
     const access = authorize({ authResult, accessContext, subscription });
     if (access.error) return access.error;
 
@@ -355,7 +401,7 @@ export function createIfoodConnectionService({
         authorization: connection ? authorizationPrompt(connection) : null
       };
       if (!connection || connection.status === 'revoked') {
-        body.discoveredMerchants = await discoverMerchants({ signal });
+        body.discoveredMerchants = await discoverMerchants({ signal, businessNames });
       }
       return result(200, body);
     } catch {
