@@ -9,6 +9,13 @@ export const ACTION_TTL_MS = 10 * 60 * 1000;
 export const UNDOABLE_TOOLS = {
   pausar_no_cardapio: (args, before) => ({ ...args, pausado: before?.pausado_manualmente === true }),
   ocultar_no_pdv: (args, before) => ({ ...args, ocultar: before?.ocultar_no_pdv === true }),
+  alterar_despesa: (_args, before) => ({
+    despesa_id: before?.id,
+    descricao: before?.descricao,
+    valor: before?.valor,
+    categoria: before?.categoria,
+    data: before?.data,
+  }),
 };
 
 const ACTION_COLUMNS = 'id, owner_user_id, session_id, channel, tool_name, arguments, summary, status, before_state, after_state, result, error, expires_at, created_at, executed_at';

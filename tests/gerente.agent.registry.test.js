@@ -6,10 +6,14 @@ import { buildAgentSystemPrompt } from '../src/lib/server/gerente/prompt.js';
 describe('tool registry', () => {
   it('expõe exatamente as ferramentas da primeira versão', () => {
     expect(TOOLS.map((t) => t.name).sort()).toEqual([
-      'alterar_preco', 'buscar_produto', 'criar_categoria', 'criar_produto', 'estoque_produto',
-      'listar_categorias', 'ocultar_no_pdv', 'pausar_no_cardapio', 'resumo_periodo', 'sinais_ativos',
+      'alterar_despesa', 'alterar_preco', 'buscar_fiado', 'buscar_produto', 'criar_categoria', 'criar_despesa',
+      'criar_produto', 'estoque_produto', 'excluir_despesa', 'listar_categorias', 'listar_despesas',
+      'ocultar_no_pdv', 'pausar_no_cardapio', 'resumo_fiado', 'resumo_periodo', 'sinais_ativos',
     ]);
-    expect([...WRITE_TOOL_NAMES].sort()).toEqual(['alterar_preco', 'criar_categoria', 'criar_produto', 'ocultar_no_pdv', 'pausar_no_cardapio']);
+    expect([...WRITE_TOOL_NAMES].sort()).toEqual([
+      'alterar_despesa', 'alterar_preco', 'criar_categoria', 'criar_despesa', 'criar_produto',
+      'excluir_despesa', 'ocultar_no_pdv', 'pausar_no_cardapio',
+    ]);
   });
 
   it('gera schemas OpenAI com parameters válidos e sem owner', () => {

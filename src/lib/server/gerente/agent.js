@@ -64,7 +64,7 @@ export async function runAgentTurn({ db, openai, ownerUserId, actorUserId, chann
   const today = localDateOf(now.toISOString());
   const systemPrompt = buildAgentSystemPrompt({ perfil, channel, hints, today });
   const messages = [{ role: 'system', content: systemPrompt }, ...history, { role: 'user', content: message }];
-  const ctx = { db, ownerUserId, now };
+  const ctx = { db, ownerUserId, actorUserId, now };
   const usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
   const toolsUsed = [];
   const ambiguous = { produtos: null, categorias: null };
@@ -186,6 +186,14 @@ export function describeExecutedAction(action, result = {}) {
       return `Feito: cadastrei "${result.nome}" por ${brl(result.preco)} em "${result.categoria_nome}". Ele já aparece no PDV.`;
     case 'alterar_preco':
       return `Feito: "${nome}" passou de ${brl(result.preco_anterior)} para ${brl(result.preco)}.`;
+    case 'criar_despesa':
+      return `Feito: lancei "${result.descricao}" de ${brl(result.valor)} em ${result.categoria}.`;
+    case 'alterar_despesa':
+      return `Feito: atualizei a despesa "${result.descricao}" (${brl(result.valor)} · ${result.categoria}).`;
+    case 'alterar_despesa_undo':
+      return `Desfeito: a despesa voltou para "${result.descricao}" (${brl(result.valor)} · ${result.categoria}).`;
+    case 'excluir_despesa':
+      return `Feito: excluí a despesa "${result.descricao}" (${brl(result.valor)} · ${result.categoria}).`;
     default:
       return 'Feito.';
   }
@@ -198,7 +206,7 @@ const CONFIRM_ERRORS = {
 };
 
 export async function confirmPendingAction({ db, ownerUserId, actorUserId, actionId, now = new Date() }) {
-  const ctx = { db, ownerUserId, now };
+  const ctx = { db, ownerUserId, actorUserId, now };
   const outcome = await confirmAction(db, { actionId, ownerUserId, now, executeTool: (name, args) => executeTool(ctx, name, args) });
   if (!outcome.ok) {
     if (outcome.code === 'FAILED') return { ok: false, reply: outcome.error };
@@ -232,7 +240,7 @@ export async function cancelPendingAction({ db, ownerUserId, actionId }) {
 }
 
 export async function undoExecutedAction({ db, ownerUserId, actorUserId, actionId, channel, now = new Date() }) {
-  const ctx = { db, ownerUserId, now };
+  const ctx = { db, ownerUserId, actorUserId, now };
   const outcome = await undoAction(db, { actionId, ownerUserId, actorUserId, channel, now, executeTool: (name, args) => executeTool(ctx, name, args) });
   if (!outcome.ok) {
     if (outcome.code === 'FAILED') return { ok: false, reply: outcome.error };

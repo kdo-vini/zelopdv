@@ -4,9 +4,11 @@
  * Nenhum schema expõe owner/tenant; o servidor injeta via ctx.
  */
 import { alterarPreco, buscarProduto, criarCategoria, criarProduto, estoqueProduto, listarCategorias, ocultarNoPdv, pausarNoCardapio } from './tools/catalog.js';
+import { alterarDespesa, buscarFiado, criarDespesa, excluirDespesa, EXPENSE_CATEGORIES, listarDespesas, resumoFiado } from './tools/finance.js';
 import { resumoPeriodo, sinaisAtivos } from './tools/insights.js';
 
 const brl = (value) => `R$ ${Number(value || 0).toFixed(2).replace('.', ',')}`;
+const CATEGORIAS_DESPESA = EXPENSE_CATEGORIES.join(', ');
 
 export const TOOLS = [
   {
@@ -43,6 +45,87 @@ export const TOOLS = [
     description: 'Avisos recentes do Zelinho Gerente sobre o negócio (vendas, estoque, caixa, fiado).',
     parameters: { type: 'object', properties: { dias: { type: 'integer', minimum: 1, maximum: 30 } }, required: [] },
     run: (ctx, args) => sinaisAtivos(ctx.db, ctx.ownerUserId, args, { now: ctx.now }),
+  },
+  {
+    name: 'resumo_fiado',
+    write: false,
+    description: 'Resumo do fichário: total em aberto, quantos clientes devem e os maiores saldos. Use quando o dono perguntar sobre fiado, quem deve ou quanto está em aberto.',
+    parameters: { type: 'object', properties: { limite: { type: 'integer', minimum: 1, maximum: 30 } }, required: [] },
+    run: (ctx, args) => resumoFiado(ctx.db, ctx.ownerUserId, args),
+  },
+  {
+    name: 'buscar_fiado',
+    write: false,
+    description: 'Busca clientes no fichário pelo nome e devolve saldo de fiado. Use antes de falar do saldo de um cliente específico.',
+    parameters: { type: 'object', properties: { termo: { type: 'string', description: 'Parte do nome do cliente' }, limite: { type: 'integer', minimum: 1, maximum: 20 } }, required: ['termo'] },
+    run: (ctx, args) => buscarFiado(ctx.db, ctx.ownerUserId, args),
+  },
+  {
+    name: 'listar_despesas',
+    write: false,
+    description: `Lista despesas lançadas em um período com total e breakdown por categoria. Categorias válidas: ${CATEGORIAS_DESPESA}.`,
+    parameters: {
+      type: 'object',
+      properties: {
+        periodo: { type: 'string', enum: ['hoje', 'ontem', 'semana', 'mes'] },
+        categoria: { type: 'string', description: `Opcional. Uma de: ${CATEGORIAS_DESPESA}` },
+      },
+      required: ['periodo'],
+    },
+    run: (ctx, args) => listarDespesas(ctx.db, ctx.ownerUserId, args, { now: ctx.now }),
+  },
+  {
+    name: 'criar_despesa',
+    write: true,
+    description: `Lança uma despesa nova (descrição, valor, categoria e data opcional). Categorias: ${CATEGORIAS_DESPESA}. Exige confirmação do dono.`,
+    parameters: {
+      type: 'object',
+      properties: {
+        descricao: { type: 'string' },
+        valor: { type: 'number', minimum: 0.01 },
+        categoria: { type: 'string', description: `Uma de: ${CATEGORIAS_DESPESA}` },
+        data: { type: 'string', description: 'AAAA-MM-DD; se omitir, usa hoje' },
+      },
+      required: ['descricao', 'valor'],
+    },
+    run: (ctx, args) => criarDespesa(ctx.db, ctx.ownerUserId, args, { actorUserId: ctx.actorUserId, now: ctx.now }),
+    summary: (args) => `Lançar despesa "${String(args.descricao || '').trim()}" de ${brl(args.valor)}${args.categoria ? ` em ${args.categoria}` : ''}`,
+    effect: () => 'Entra no relatório de despesas e no resultado operacional aproximado.',
+  },
+  {
+    name: 'alterar_despesa',
+    write: true,
+    description: 'Altera uma despesa já lançada (descrição, valor, categoria e/ou data). Use listar_despesas antes para obter despesa_id. Exige confirmação do dono.',
+    parameters: {
+      type: 'object',
+      properties: {
+        despesa_id: { type: 'string', description: 'UUID devolvido por listar_despesas' },
+        descricao: { type: 'string' },
+        valor: { type: 'number', minimum: 0.01 },
+        categoria: { type: 'string' },
+        data: { type: 'string', description: 'AAAA-MM-DD' },
+      },
+      required: ['despesa_id'],
+    },
+    run: (ctx, args) => alterarDespesa(ctx.db, ctx.ownerUserId, args),
+    summary: (args) => `Alterar despesa "${String(args.descricao || args.despesa_id || '').trim()}"${args.valor != null ? ` para ${brl(args.valor)}` : ''}`,
+    effect: () => 'Atualiza o lançamento no módulo de despesas.',
+  },
+  {
+    name: 'excluir_despesa',
+    write: true,
+    description: 'Exclui uma despesa já lançada. Use listar_despesas antes para obter despesa_id. Exige confirmação do dono.',
+    parameters: {
+      type: 'object',
+      properties: {
+        despesa_id: { type: 'string', description: 'UUID devolvido por listar_despesas' },
+        descricao: { type: 'string', description: 'Descrição exibida no cartão de confirmação' },
+      },
+      required: ['despesa_id'],
+    },
+    run: (ctx, args) => excluirDespesa(ctx.db, ctx.ownerUserId, args),
+    summary: (args) => `Excluir despesa "${String(args.descricao || args.despesa_id || '').trim()}"`,
+    effect: () => 'Remove o lançamento do módulo de despesas e do resultado operacional aproximado.',
   },
   {
     name: 'pausar_no_cardapio',

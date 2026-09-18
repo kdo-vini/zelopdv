@@ -114,5 +114,28 @@ export async function resolveWriteTargets(db, ownerUserId, toolName, args) {
     return { ok: true, args: { ...args, categoria_id: resolved.id, nome_categoria: resolved.nome } };
   }
 
+  if (toolName === 'alterar_despesa' || toolName === 'excluir_despesa') {
+    const despesaId = String(args.despesa_id || '').trim();
+    if (!despesaId) {
+      return { ok: false, motivo: 'Preciso do id da despesa. Chame listar_despesas antes.' };
+    }
+    const { data, error } = await db
+      .from('expenses')
+      .select('id, description, amount, category, date')
+      .eq('user_id', ownerUserId)
+      .eq('id', despesaId)
+      .maybeSingle();
+    throwIfError(error);
+    if (!data) return { ok: false, motivo: 'Não encontrei essa despesa. Chame listar_despesas e use um id da lista.' };
+    return {
+      ok: true,
+      args: {
+        ...args,
+        despesa_id: data.id,
+        descricao: args.descricao ?? data.description,
+      },
+    };
+  }
+
   return { ok: true, args };
 }
