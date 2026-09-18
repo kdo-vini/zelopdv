@@ -123,7 +123,7 @@ describe('deriveIfoodWizardState — the six named states from the design doc', 
       connection: { status: 'paused', merchantId: 'm-1', printOwner: 'zelo' }
     });
     expect(derived.state).toBe('paused');
-    expect(availableIfoodActions(derived)).toEqual(['resume', 'disconnect']);
+    expect(availableIfoodActions(derived)).toEqual(['resume', 'disconnect', 'delete']);
   });
 
   it('an unmapped/unknown status fails closed to not_connected instead of guessing', () => {
@@ -659,5 +659,131 @@ describe('connectionService.startConnection — synchronous activation shortcut'
     expect(response.status).toBe(200);
     expect(response.body.status).toBe('active');
     expect(calls).toBe(0);
+  });
+});
+
+// ── connectionService.deleteConnectionConfig — "excluir configuração" ──────
+// Distinct from `updateConnectionStatus`'s `disconnect` (which only revokes,
+// always preserving merchantId): this is the genuinely destructive action.
+
+function createFakeDeleteRepository({ existing = null, activeOrders = 0 } = {}) {
+  let connection = existing;
+  const deleteCalls = [];
+  return {
+    async getConnection() {
+      return connection ? { ...connection } : null;
+    },
+    async upsertConnection() { throw new Error('not used in these tests'); },
+    async countActiveOrders() { return activeOrders; },
+    async deleteConnection({ empresaId }) {
+      deleteCalls.push(empresaId);
+      connection = null;
+      return { outcome: 'deleted' };
+    },
+    _deleteCalls: deleteCalls
+  };
+}
+
+describe('connectionService.deleteConnectionConfig', () => {
+  it('returns not_connected when there is no connection', async () => {
+    const repository = createFakeDeleteRepository({ existing: null });
+    const service = createIfoodConnectionService({ repository, adapter: fakeAdapter(), stateSecret: 's' });
+
+    const response = await service.deleteConnectionConfig({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1'
+    });
+    expect(response.status).toBe(404);
+    expect(response.body.error).toBe('not_connected');
+  });
+
+  it('blocks deletion while active orders are present, same gate as pause/disconnect', async () => {
+    const repository = createFakeDeleteRepository({
+      existing: { connectionId: 'c-1', merchantId: 'm-1', status: 'active', printOwner: 'zelo', updatedAt: new Date().toISOString() },
+      activeOrders: 2
+    });
+    const service = createIfoodConnectionService({ repository, adapter: fakeAdapter(), stateSecret: 's' });
+
+    const response = await service.deleteConnectionConfig({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1'
+    });
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('active_orders_present');
+    expect(response.body.count).toBe(2);
+    expect(repository._deleteCalls).toEqual([]);
+  });
+
+  it('deletes an active connection with no active orders', async () => {
+    const repository = createFakeDeleteRepository({
+      existing: { connectionId: 'c-1', merchantId: 'm-1', status: 'active', printOwner: 'zelo', updatedAt: new Date().toISOString() },
+      activeOrders: 0
+    });
+    const service = createIfoodConnectionService({ repository, adapter: fakeAdapter(), stateSecret: 's' });
+
+    const response = await service.deleteConnectionConfig({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1'
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('not_connected');
+    expect(repository._deleteCalls).toEqual(['empresa-1']);
+  });
+
+  it('deletes a revoked connection without checking active orders (already gated on disconnect)', async () => {
+    const repository = createFakeDeleteRepository({
+      existing: { connectionId: 'c-1', merchantId: 'm-1', status: 'revoked', printOwner: 'zelo', updatedAt: new Date().toISOString() },
+      activeOrders: 5
+    });
+    const service = createIfoodConnectionService({ repository, adapter: fakeAdapter(), stateSecret: 's' });
+
+    const response = await service.deleteConnectionConfig({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1'
+    });
+    expect(response.status).toBe(200);
+    expect(repository._deleteCalls).toEqual(['empresa-1']);
+  });
+
+  it('degrades gracefully (503) when the injected repository has no deleteConnection (older repository)', async () => {
+    const repository = {
+      async getConnection() {
+        return { connectionId: 'c-1', merchantId: 'm-1', status: 'active', printOwner: 'zelo', updatedAt: new Date().toISOString() };
+      },
+      async upsertConnection() { throw new Error('not used'); },
+      async countActiveOrders() { return 0; }
+    };
+    const service = createIfoodConnectionService({ repository, adapter: fakeAdapter(), stateSecret: 's' });
+
+    const response = await service.deleteConnectionConfig({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1'
+    });
+    expect(response.status).toBe(503);
+  });
+
+  it('rejects a sub-user without the iFood capability', async () => {
+    const repository = createFakeDeleteRepository({
+      existing: { connectionId: 'c-1', merchantId: 'm-1', status: 'active', printOwner: 'zelo', updatedAt: new Date().toISOString() }
+    });
+    const service = createIfoodConnectionService({ repository, adapter: fakeAdapter(), stateSecret: 's' });
+
+    const response = await service.deleteConnectionConfig({
+      authResult: authResult(),
+      accessContext: { isSubUser: true, permissions: {} },
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1'
+    });
+    expect(response.status).toBe(403);
   });
 });

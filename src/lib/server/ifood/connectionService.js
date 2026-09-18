@@ -261,7 +261,35 @@ export function createIfoodConnectionRepository({ supabase } = {}) {
     };
   }
 
-  return Object.freeze({ getConnection, upsertConnection, countActiveOrders, setPrintOwner, listClaimedMerchantIds });
+  /**
+   * "Excluir configuração": a genuinely destructive action, distinct from
+   * pause/resume/disconnect (which only ever flip `status` and always
+   * preserve `merchant_id`). This deletes the row outright, cascading away
+   * that merchant's `event_inbox`/`order_commands`/`product_mappings`/
+   * `stock_commitments` history -- an explicit, confirmed product decision,
+   * not a side effect to guard against.
+   */
+  async function deleteConnection({ empresaId, signal } = {}) {
+    let response;
+    try {
+      response = await supabase
+        .rpc('delete_ifood_connection_v1', { p_empresa_id: empresaId })
+        .single();
+    } catch {
+      throw repositoryError();
+    }
+    if (response?.error) throw repositoryError();
+    return { outcome: response?.data?.outcome ?? null };
+  }
+
+  return Object.freeze({
+    getConnection,
+    upsertConnection,
+    countActiveOrders,
+    setPrintOwner,
+    listClaimedMerchantIds,
+    deleteConnection
+  });
 }
 
 /**
@@ -581,6 +609,44 @@ export function createIfoodConnectionService({
   }
 
   /**
+   * DELETE /api/integrations/ifood/connection — "excluir configuração".
+   * Distinct from `updateConnectionStatus`'s `disconnect`: that only ever
+   * revokes (preserves `merchant_id`, instantly reconnectable). This erases
+   * the row and its command/event history outright — see
+   * `repository.deleteConnection` and the migration it calls. Confirmed
+   * product decision: this is the "start over from zero" action, not
+   * `disconnect` with extra steps.
+   */
+  async function deleteConnectionConfig({ authResult, accessContext, subscription, empresaId, signal } = {}) {
+    const access = authorize({ authResult, accessContext, subscription });
+    if (access.error) return access.error;
+
+    if (typeof repository.deleteConnection !== 'function') {
+      return result(503, { error: 'unavailable' });
+    }
+
+    try {
+      const connection = await repository.getConnection({ empresaId, signal });
+      if (!connection) return result(404, { error: 'not_connected' });
+
+      if (connection.status !== 'revoked') {
+        const activeOrders = await repository.countActiveOrders({ connectionId: connection.connectionId, signal });
+        if (activeOrders > 0) {
+          return result(409, { error: 'active_orders_present', count: activeOrders });
+        }
+      }
+
+      const deleted = await repository.deleteConnection({ empresaId, signal });
+      if (deleted.outcome !== 'deleted') {
+        return result(500, { error: 'unavailable' });
+      }
+      return result(200, { status: 'not_connected' });
+    } catch {
+      return result(500, { error: 'unavailable' });
+    }
+  }
+
+  /**
    * PATCH /api/integrations/ifood/connection — `{ printOwner: 'zelo' | 'external' }`.
    * Setup wizard step 6 (design doc 3.1): the owner picks exactly one system
    * that prints iFood orders. Independent of `updateConnectionStatus` — this
@@ -661,6 +727,7 @@ export function createIfoodConnectionService({
     checkAuthorization,
     updateConnectionStatus,
     updatePrintOwner,
+    deleteConnectionConfig,
     getHealth
   });
 }

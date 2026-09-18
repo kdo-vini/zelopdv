@@ -27,6 +27,12 @@
 
   let merchantIdInput = '';
   let manualEntryExpanded = false;
+  let deleteConfirmOpen = false;
+
+  function confirmDelete() {
+    deleteConfirmOpen = false;
+    dispatch('action', { action: 'delete' });
+  }
 
   $: actions = availableIfoodActions(derived);
   $: reasonsCopy = (derived?.reasons ?? []).map(describeReason);
@@ -53,6 +59,7 @@
 
   function close() {
     if (busy) return;
+    deleteConfirmOpen = false;
     dispatch('close');
   }
 
@@ -274,6 +281,50 @@
                     <button type="button" class="px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-50" style="background: transparent; color: var(--error); border: 1px solid color-mix(in srgb, var(--error) 45%, transparent);" disabled={busy} on:click={() => dispatch('action', { action: 'disconnect' })}>Desconectar</button>
                   {/if}
                 </div>
+                <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+                  Desconectar mantém a loja reservada — reconectar com o mesmo Merchant ID reativa na hora, sem
+                  precisar autorizar de novo no iFood.
+                </p>
+              </div>
+            {/if}
+
+            {#if actions.includes('delete')}
+              <div class="grid gap-2 pt-2" style="border-top: 1px solid var(--border-subtle);">
+                {#if !deleteConfirmOpen}
+                  <button
+                    type="button"
+                    class="text-xs font-medium text-left transition-opacity hover:opacity-80 disabled:opacity-50"
+                    style="color: var(--error);"
+                    disabled={busy}
+                    on:click={() => (deleteConfirmOpen = true)}
+                  >Excluir configuração desta loja</button>
+                {:else}
+                  <div class="rounded-md p-3 grid gap-2" style="background: color-mix(in srgb, var(--error) 8%, transparent); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);">
+                    <p class="text-xs leading-relaxed" style="color: var(--text-main);">
+                      Isso apaga o Merchant ID e todo o histórico de pedidos/comandos do iFood desta loja no
+                      ZeloPDV. Não pode ser desfeito — pra reconectar depois, será preciso informar o Merchant
+                      ID de novo do zero.
+                    </p>
+                    <div class="flex gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        class="px-3 py-1.5 rounded-md text-sm font-semibold disabled:opacity-50"
+                        style="background: var(--error); color: white;"
+                        disabled={busy}
+                        on:click={confirmDelete}
+                      >
+                        {#if busy}<Spinner size="sm" />{:else}Sim, excluir tudo{/if}
+                      </button>
+                      <button
+                        type="button"
+                        class="px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-50"
+                        style="background: var(--bg-input); color: var(--text-label); border: 1px solid var(--border-subtle);"
+                        disabled={busy}
+                        on:click={() => (deleteConfirmOpen = false)}
+                      >Cancelar</button>
+                    </div>
+                  </div>
+                {/if}
               </div>
             {/if}
           </div>

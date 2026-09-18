@@ -207,3 +207,29 @@ export async function PATCH({ request }) {
     return noStoreJson({ error: 'unavailable' }, 500);
   }
 }
+
+/**
+ * "Excluir configuração" — irreversibly deletes the connection row and its
+ * command/event history (never just a `disconnect`, which only revokes and
+ * always preserves `merchant_id`; see `deleteConnectionConfig`'s doc).
+ */
+export async function DELETE({ request }) {
+  const auth = await authenticate(request);
+  if (auth.error) return auth.error;
+
+  const service = createService();
+  if (!service) return noStoreJson({ error: 'unavailable' }, 503);
+
+  try {
+    const result = await service.deleteConnectionConfig({
+      authResult: auth.authResult,
+      accessContext: auth.accessContext,
+      subscription: auth.subscription,
+      empresaId: auth.empresaId,
+      signal: request.signal
+    });
+    return noStoreJson(result.body, result.status);
+  } catch {
+    return noStoreJson({ error: 'unavailable' }, 500);
+  }
+}
