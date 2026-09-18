@@ -2,8 +2,10 @@
  * GET /api/cron/nudge-incomplete-registration
  *
  * Cron job that finds users who signed up more than 2 hours ago but never
- * completed onboarding (no empresa_perfil row), and sends them a single
- * nudge email to finish their registration.
+ * completed onboarding (no operational profile — empresa_perfil row missing,
+ * or present with nome_exibicao/contato empty, which happens once the wizard
+ * starts saving per step), and sends them a single nudge email to finish
+ * their registration.
  *
  * Deduplication is handled via the `registration_nudges` table — each user
  * only ever receives one nudge.

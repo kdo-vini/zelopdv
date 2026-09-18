@@ -1223,6 +1223,481 @@ para os novos (via `git add -N` seguido de `git reset`). A verificação
 manual de LF não encontrou `\r` em nenhum arquivo tocado, incluindo os dois
 documentos.
 
+## Polish do coachmark da primeira venda — 2026-09-17
+
+Product greenlit Spec A–B sobre PR #39, sem expandir o fluxo.
+
+**Spec A:** o helper pós-primeiro-produto deixou de ser overlay no centro da
+grade ("Clique no produto acima" + seta invertida + pulse infinito + Entendi
+primário). Agora o tile ganha lift + anel sky; a dica cola abaixo do tile
+(`top: calc(100% + 8px)`), copy única "Toque no produto para somar na venda",
+`ChevronUp` lucide apontando para o tile. Dispensa no `produtoClick`, Entendi
+ghost e timeout de 8 s. Um pop; `prefers-reduced-motion` corta a animação.
+
+**Spec B:** Plus lucide só em "Cadastrar primeiro produto". "Ou venda avulsa"
+fica sem ícone. Título do vazio permanece "Faça sua primeira venda".
+
+Não muda API/schema/RLS, Menu/Chat, nem auto-add ao carrinho.
+
+## Admin churn scoring false positives — 2026-09-17
+
+Admin analytics `/analytics` mostrava contas ativas pagantes como "quiet"
+(alto risco de churn): `sales_30d=0`, `effective_last_seen null`. Product
+Lead e Staff Eng confirmaram via Supabase direto que 7 contas tinham
+centenas de vendas (Casa dos Salgados ~1135/30d, Fanny Massas ~581/30d,
+Bem Servido ~404/30d, etc.). Causa: analytics chamava
+`admin_get_users_last_seen`, `admin_get_sales_counts` e
+`admin_get_total_sales_value` direto do browser com anon key. As RPCs têm
+`SECURITY DEFINER` com `WHERE (auth.role() = 'service_role' OR
+is_active_super_admin())`; browser-side sem service_role retorna array
+vazio `[]`, frontend mapeia undefined → `sales_30d=0` e `last_seen=null`
+para **todas** as contas.
+
+**Corrigido**: endpoint server-side `/api/admin/analytics-data` que autentica
+super_admin via JWT, depois chama as RPCs com `supabaseAdmin` (service_role).
+Analytics page faz fetch desse endpoint em vez de RPC direta. Testes cobrem
+autenticação, origem e erros de RPC. `npm test` 1381/1381 (5 novos do endpoint),
+`npm run build` ok (ambos apps). Product pode re-extrair lista de quiet/risk
+com dados reais agora. PR #38.
+
+## Ativação da primeira venda reforçada — 2026-09-17
+
+Evidência PostHog (projeto 470628, 15–17 set, filterTestAccounts, n=4 contas):
+4 registradas → 4 wizard_completed (100%) → 4 first_sale (100%), mas 1 usuário
+clicou `pdv_empty_state_cta_clicked` **7× ao longo de 45 minutos** antes de
+completar a criação do produto. Após produto criado + caixa aberto: 2/2
+completaram venda em ~15 s. Gargalo não é o fluxo de pagamento (funciona), mas
+a lacuna vazio → criar produto → saber clicar no produto.
+
+Traço do usuário com dificuldade: 15:18 clique "cadastrar_produto" → 15:59
+clique "avulso" (41 min depois!) → 15:59 "cadastrar_produto" → 16:02 "avulso" →
+16:02 "cadastrar_produto" → 16:03 "avulso" → 16:03 "cadastrar_produto" →
+16:03:41 produto criado → 16:03:47 caixa aberto → 16:04:03 venda concluída (22 s
+após criação do produto).
+
+**Causa raiz (PR #36 tinha o fluxo, mas faltava orientação pós-chegada):**
+- Estado vazio passivo: "Você pode vender agora mesmo ou cadastrar seus produtos
+  primeiro" — ambos os caminhos pareciam igualmente válidos.
+- Hierarquia de botões invertida: "Venda avulsa" (primário), "Cadastrar primeiro
+  produto" (secundário) — mas a evidência mostra que criar produto é o caminho
+  canônico (17 de 18 primeiras vendas no histórico pré-PR tinham produto).
+- Sem orientação pós-criação: após criar o produto, usuário volta à grade com 1
+  tile, mas sem dica de "agora clique nele para adicionar no carrinho".
+
+**Corrigido (mínimo, sobre PR #36):**
+- **Copy do estado vazio agora diretiva**: "Cadastre seu primeiro produto para
+  começar. É rápido: nome e preço." Define caminho primário claro, calibra
+  expectativa de velocidade.
+- **Hierarquia de botões invertida**: "Cadastrar primeiro produto" (primário
+  azul céu), "Ou venda avulsa" (secundário cinza). Alinha hierarquia visual com
+  o caminho canônico; "Ou" reforça que avulso é o fallback.
+- **Helper pós-criação (só primeiro uso)**: quando usuário cria primeiro produto
+  no fluxo `isFirstUseNoCaixa` (`produtos.length === 0` antes da criação), helper
+  flutuante aparece por 8 s no centro da grade: "Clique no produto acima para
+  adicionar na venda", com seta animada apontando pra cima, borda pulsante,
+  botão "Entendi" pra dispensar antes. Fecha a lacuna "criei produto, e agora?".
+  *Polish posterior (Spec A–B, ver seção no topo): dica colada no tile, copy
+  "Toque no produto…", Entendi ghost, Plus só no cadastrar.*
+- **Tracking aprimorado**: `pdv_quick_product_created` agora inclui
+  `was_first_product: boolean` pra diferenciar primeira criação das seguintes.
+
+**Critérios de sucesso (medir pós-publicação, 2 semanas):**
+- **Norte**: ≥70% de `wizard_completed` → `first_sale_completed` <48h (linha
+  base ~50% em 30d por CURRENT.md "Chegada no produto" 2026-09-15).
+- **Antecedente**: mediana entre `wizard_completed` e `first_sale_completed`
+  <15 min (abaixo dos 45 min observados).
+- **Fricção**: cliques em `pdv_empty_state_cta_clicked` por usuário ≤2 (abaixo
+  do máximo de 7 observado).
+
+Sequência de eventos esperada: `onboarding_wizard_completed` →
+`onboarding_welcome_cta_clicked {cta: 'first_sale'}` →
+`pdv_empty_state_cta_clicked {cta: 'cadastrar_produto'}` →
+`pdv_quick_product_created {was_first_product: true}` →
+`pdv_first_use_caixa_prompted {trigger: 'payment'}` → `first_sale_completed`.
+
+Validação local: pendente (branch `cursor/minimal-first-sale-activation-711e`,
+PR #39 draft). Não altera schema/RLS/segurança. Reutiliza `ModalNovoProduto`
+`compact` e `firstUseCaixaGate` de PR #36. Desktop/tablet inalterados
+(posicionamento do helper adapta).
+
+## Zoom automático do iOS ao focar campos — 2026-09-15
+
+Relato do dono no iPhone: toda vez que o teclado abria (chat do Zelinho em
+`/gestao`, valor recebido no `ModalPagamento`, etc.) a tela dava um zoom e não
+voltava sozinha — precisava dar pinch pra desfazer. Causa: vários campos têm
+`font-size` abaixo de 16px (13–15,2px), e o Safari/iOS aplica zoom automático
+ao focar qualquer campo assim, só desfazendo com gesto manual do usuário.
+`SupportChat.svelte` já tinha corrigido isso isoladamente (`font-size: 1rem`
+documentado em FX-MARKETING-MOBILE-ADAPT-01), mas nenhum outro campo do app
+recebeu o mesmo tratamento.
+
+**Corrigido**: piso global em `src/app.css` — `input`/`textarea`/`select`
+(exceto checkbox/radio/range/color/file/submit/button) recebem `font-size:
+16px !important` só em `max-width: 767px`. Vence qualquer `font-size` menor
+definido por componente sem alterar nada no desktop. Documentado em
+`DESIGN_PATTERNS.md` §9. Validado com Playwright: 16px aplicado em 390px,
+tamanho original preservado em 1280px. `npm test` 1376/1376, `npm run check`
+0/0.
+
+## Polish do primeiro uso no PDV (iPhone) — 2026-09-15
+
+Teste do dono no iPhone depois do fix do PWA: fluxo de conta nova funcionou
+(PDV sem Abrir Caixa, estado vazio novo). Defeitos corrigidos:
+- `ModalNovoProduto`: preço começava em 0 e virava "R$ 025" → campo texto
+  `inputmode="decimal"`, vazio com placeholder `0,00`, aceita vírgula, parse no
+  submit (`src/lib/parsePrecoInput.js`), erro inline "Coloque o preço.".
+- Sem categoria cadastrada o select abria uma lista vazia → categoria marcada
+  "(opcional)" com "+ Nova categoria" inline (sem segundo modal). Salvar cria a
+  categoria e o produto no mesmo envio; `created` passa `{ ...produto,
+  categoriaCriada }` e as páginas recarregam categorias quando houver.
+- Estado vazio da grade redesenhado (sem cartão, ícone, ritmo 16/8/24/12/32,
+  botões 52 px, prévia com 3 tiles tracejados e rodapé legível). Copy do dono
+  mantida.
+- Barra de categorias vazia não renderiza mais (sumiram as duas linhas).
+- Dinheiro exibido em pt-BR (`src/lib/formatMoney.js`, `tabular-nums`) no
+  badge do caixa, grade e comanda; chave técnica de item mantém `toFixed`.
+
+Verificado em navegador (375 px, rota temporária local removida). Suíte
+1.376/1.379 (3 skips pré-existentes), `npm run check` 0/0.
+
+## Aparelhos presos na versão antiga do PWA — 2026-09-15
+
+Testando a conta nova no iPhone, o dono caiu no Abrir Caixa mesmo com a regra
+de conta nova em produção, e recarregar não resolvia. Logs do Supabase: o iPhone
+nunca fez a contagem em `caixas` que só a versão nova faz — rodava o `/app`
+antigo do precache do service worker. O aviso "Nova versão disponível" nunca
+apareceu na sessão inteira: ele é adiado enquanto houver modal aberto, e a versão
+antiga abre o Abrir Caixa no carregamento. Todo operador que abre o PDV com
+caixa fechado ficava preso na versão antiga.
+
+**Corrigido** (`UpdateAvailable.svelte`, `src/lib/pwa/updateSafety.js`,
+regra completa em `docs/operations/OFFLINE.md`): no boot, versão nova é aplicada
+sozinha se nada estiver pendente (fila offline, comanda, rascunho, campo focado);
+depois do boot só aviso; `ModalAbrirCaixa` (`data-update-safe`) não bloqueia mais
+o aviso. Aparelho já preso precisa pegar esta versão uma vez à mão (aba privada
+ou apagar dados do site).
+
+Também publicado hoje: retomada de venda com confirmação pendente
+(`restoreCheckoutFormState`, commit 42dc2b1) — ver seção abaixo.
+
+Validação: suíte completa 1.365/1.368 (3 skips pré-existentes), `npm run check`
+0/0. Não verificado em aparelho real.
+
+## Chegada no produto: boas-vindas e primeira venda — 2026-09-15
+
+O dono achou o cadastro "seco": criar conta caía direto na pergunta e, depois,
+num `/gestao` vazio. Decisão dele, com o porquê: o destino é a **Frente de
+Caixa**, não o cadastro de produto — onboarding não pode virar configuração, e
+abrir caixa logo de cara é barreira antes de a pessoa entender o produto.
+
+Dado que sustentou a discussão (contas com trial, 180 dias, sem subusuário):
+28 contas, 21 cadastraram produto, 18 venderam, 14 no primeiro dia; mediana até
+a 1ª venda 28 min. Das 18 que venderam, só 3 fizeram a 1ª venda com item avulso
+e 17 venderam produto cadastrado em algum momento.
+
+**Feito:**
+- **Wizard** (`OnboardingWizard.svelte`): bolinhas passam a mostrar passo atual
+  (contorno) × concluído (preenchida). Depois do passo 2 o mesmo card vira a
+  chegada: "Boas-vindas ao Zelo, {loja}." + "Seu teste de 14 dias começou. Se
+  quiser, cadastramos seus produtos junto com você pelo WhatsApp — uns 15
+  minutos." Botões "Fazer primeira venda" (`/app`) e "Ajuda no WhatsApp"
+  (`wa.me` com mensagem pronta em nova aba + `/app` na aba atual). Sem data de
+  fim do teste (decisão do dono). A conversão de trial roda em segundo plano
+  enquanto a pessoa lê; clique espera no máximo 1 s. Eventos
+  `onboarding_welcome_viewed` e `onboarding_welcome_cta_clicked {cta}`.
+- **Número do WhatsApp do Zelo** virou fonte única em `src/lib/zeloContact.js`.
+  O botão do wizard não conta como conversão "contato" do Google Ads (`/perfil`
+  é área protegida e o botão usa `window.open`).
+- **`ModalNovoProduto`** extraído de `gestao/produtos/+page.svelte`, com modo
+  `compact` (nome, preço, categoria) usado no PDV.
+- **Frente de Caixa para conta nova** (`src/lib/pdv/firstUseCaixaGate.js`):
+  "conta nova" = titular que nunca abriu caixa (count em `caixas`); expira sozinha
+  no primeiro caixa aberto. Para ela o Abrir Caixa não abre no carregamento,
+  produto e avulso entram na comanda, e a barreira aparece em
+  `abrirModalPagamento` — ao abrir o caixa, segue para o pagamento com a comanda
+  intacta. Erro, offline sem informação ou subusuário → comportamento antigo.
+  Nenhuma venda nasce sem caixa aberto.
+- **Estado vazio da grade** (qualquer conta sem produto): "Faça sua primeira
+  venda / Você pode vender agora mesmo ou cadastrar seus produtos primeiro. /
+  + Venda avulsa / + Cadastrar primeiro produto / Seus produtos aparecerão
+  aqui." O cadastro abre o `ModalNovoProduto` compacto dentro do PDV (só com
+  `produtos.gerenciar` para subusuário). Eventos `pdv_empty_state_cta_clicked`,
+  `pdv_quick_product_created`, `pdv_first_use_caixa_prompted`.
+
+**Pendente / riscos:**
+- `ModalAbrirCaixa` não tem cancelar: quem chega na barreira do pagamento
+  precisa abrir o caixa para seguir (a comanda não se perde).
+- `first_sale_completed` vem de trigger de banco e não distingue venda de teste
+  (avulso) de venda com produto; medir por `vendas_itens.id_produto`.
+- Código morto removido de `app/+page.svelte`: `handleFinalizarVenda` e a sobra
+  do split de pagamento anterior ao `ModalPagamento` (`addPagamento`,
+  `removerPagamento`, `trocoPrevMulti`, `restantePagamento`, `somaPagamentos`,
+  `novoPag*`). **Bug latente revelado, não corrigido:** `handleFinalizarVenda`
+  era o único leitor de `checkoutSubmission.formState`, o estado salvo para
+  retomar uma venda com confirmação incerta. Depois de recarregar a página, a
+  comanda e o payload pendente voltam do rascunho, mas o `ModalPagamento` abre
+  vazio; se a pessoa escolher pagamento diferente do original,
+  `selectCheckoutSubmission` recusa ("Há uma confirmação pendente…") e a venda
+  fica presa. Não há risco de duplicidade — o payload original é reaproveitado.
+  `formState` segue sendo gravado; a correção é restaurá-lo no caminho vivo
+  (`abrirModalPagamento` → `ModalPagamento`).
+- Revisar o destino em 30 dias: contas que cadastram produto e vendem no 1º dia.
+
+Validação: suíte completa 1.321/1.324 (3 skips pré-existentes), `npm run check`
+0/0. Não verificado em navegador com conta nova.
+
+## Cadastro sem espera e sem PIN — 2026-09-15
+
+Cadastro de teste do dono em produção (09:19), medido no PostHog: 5,6 s de
+"Carregando…" até o wizard aparecer, 10 s entre "Começar a usar" e o
+`trial_started`, até mais 8 s de espera fixa de tracking, recarga completa do
+`/gestao` e, ao chegar, o modal de configurar PIN. O passo 1 do wizard também
+emitia `onboarding_wizard_step_viewed` duas vezes.
+
+**Corrigido:**
+- `POST /api/billing/start-trial` responde assim que a assinatura existe
+  (inserida ou encontrada). Meta CAPI, e-mail dia 0, WhatsApp de boas-vindas,
+  referral, `last_seen_at` e o flush do `trial_started` vão para `waitUntil`.
+  O campo `onboarding` saiu da resposta — ninguém lia.
+- `/perfil?msg=complete` decide o wizard com leitura mínima de
+  `nome_exibicao, contato` em paralelo à detecção de subusuário, sem esperar
+  assinatura e perfil completo.
+- Fim do wizard: `waitForGtag` com teto de 1,5 s (era 6 s),
+  `trackGoogleAdsInscricao({ timeoutMs })` espera o `event_callback` real com
+  teto de 1 s, buffer final de 800 ms só quando houve tracking (eram 2 s fixos).
+  Conversões de Google Ads e Meta continuam disparando.
+- **Bug de navegação no layout raiz:** `maybeNavigate` usava um `path`
+  capturado uma vez no `onMount`, que sombreava o `$: path` reativo. Todo
+  `onAuthStateChange` decidia com a URL de quando o app montou. No cadastro,
+  `setSession` disparava um `window.location.href = '/perfil?msg=complete'`
+  que corria com o `goto` do próprio `/cadastro` — `/perfil` e wizard montavam
+  duas vezes (origem do `step_viewed` duplicado). Agora o pathname é lido a cada
+  decisão e `/cadastro` não é redirecionado pelo layout (a página navega
+  sozinha). Candidato forte a explicar o ping-pong `/cadastro`↔`/login` visto
+  no PostHog — confirmar com `login_bounced_authenticated` depois do deploy.
+
+**PIN administrativo removido do SaaS** (decisão do dono: privacidade entre
+funcionários é o add-on Controle de Acessos; com PIN grátis o add-on não vende).
+Saíram `AdminLock`, `PinSetupModal`, `adminPinPrompt`, `adminStore`, as rotas
+`/api/auth/admin-pin` e `/api/auth/pin-reset-otp`, o rate limit correspondente,
+o bloqueio em `/relatorios` e `/gestao/despesas` e a seção de PIN do `/perfil`.
+`relatorios.ver` e as policies de despesas por cargo continuam intactas.
+- **Impacto conhecido e aceito:** 3 clientes pagantes tinham PIN e não têm
+  Acessos; relatórios e despesas deles ficam visíveis a quem usar o mesmo login.
+- **Pendente:** colunas `empresa_perfil.pin_admin`, `empresa_perfil.pin_enabled`
+  e `access_settings.pin_enabled` continuam no banco sem leitor. Drop só depois
+  do deploy estável, via migration forward; `tests/empresaPerfilPinSelectSchema.test.js`
+  segue testando a migration antiga.
+- A trilha A.2 (OTP por WhatsApp) perdeu o primitivo `pin-reset-otp`; se andar,
+  recria-se o envio a partir de `signInWithOtp`.
+
+Validação: suíte completa 1.283/1.286 (3 skips pré-existentes), `npm run check`
+0/0. Não publicado ainda.
+
+## Onboarding em dois passos — Fases 1–5 encerradas — 2026-09-15
+
+Plano completo em [onboarding-dois-passos](projects/onboarding-dois-passos.md).
+Artefato de leitura: https://claude.ai/artifact/TigsUMdoyes8jrmj12hPS8
+
+Medição no banco (180 dias): 38 contas criadas, 28 concluíram o wizard, **10
+travaram** sem perfil, sem trial e sem acesso. Das 10, **7 voltaram ao produto
+depois** e bateram na mesma parede. O trial só nasce no `finalizar()` do wizard,
+então desistir no passo 3 deixa conta sem acesso e sem saída.
+
+**Feito nesta branch:** `requiredOk` foi partido em `operationalProfileOk`
+(nome + contato — o que o produto precisa pra operar) e `billingProfileOk`
+(CPF/CNPJ válido — o que o billing precisa pra cobrar). `largura_bobina` saiu das
+duas checagens: todo consumidor já cai em `|| '80mm'`.
+
+O muro mais duro era o redirect global em `src/routes/+layout.svelte:262` — de
+qualquer rota, perfil incompleto ia pra `/perfil?msg=complete`. Agora "incompleto"
+quer dizer sem nome ou sem telefone, não sem CPF.
+
+`canSave` no perfil também estava preso ao CPF: sem ele, ninguém salvava nada no
+próprio perfil. Agora aceita documento vazio e exige validade só quando preenchido.
+
+`contato` continua checado por presença, não por validade — de propósito. É o
+critério do `requiredOk` antigo; apertar expulsaria pro wizard toda conta cujo
+telefone não normaliza.
+
+`tests/profileUtils.test.js` reescrito: 9 testes verdes. `npm run check` 0/0.
+Suíte completa **não** foi rodada — decisão do dono: roda uma vez no fim das
+cinco fases, velocidade acima de granularidade.
+
+**Fase 1.1 feita (baseline):** o wizard atual de 4 passos emite
+`onboarding_wizard_step_viewed` / `_step_completed` / `_validation_failed` /
+`_step_back` / `_completed` / `_save_failed`, com `step` e `total_steps` e sem
+PII. Precisa estar coletando em produção **antes** da Fase 3 subir — sem isso o
+"antes" se perde. Filtrar por `total_steps = 4` para o baseline.
+
+**Fase 2.2 feita:** `create-subscription` não barra mais cartão sem CPF/CNPJ.
+O gate era nosso — Stripe não tem `tax_id_collection` e o comentário de "nota
+fiscal" era falso. `checkout_failed` com `reason: profile_incomplete` agora só
+sai do Pix. Teste do gate do cartão em `api.checkout-failed.test.js` saiu; dois
+casos novos em `api.create-subscription.test.js` (sem documento, perfil null).
+
+**Fase 1.3 feita (só medição, nenhum redirect mudou):** `/login` emite
+`login_viewed` { redirect_from, has_session }, `login_submitted` { method },
+`login_failed` { method, error_code } e `login_bounced_authenticated`
+{ destination }. `error_code` e `redirect_from` saem de helpers puros em
+`src/lib/loginTelemetry.js` (14 testes); nunca mensagem crua nem URL completa.
+`redirect_from` aceita somente rotas e mensagens do vocabulário fechado do
+produto; paths livres, URLs externas e `msg` arbitrária são descartados. Falha
+do OAuth Google em `/login` também emite `login_failed` com código sanitizado.
+No caminho com sessão, o redirect pra `/app` aguarda o capture por até 400 ms —
+sem isso o evento de bounce morria com a navegação.
+
+Hipóteses para os 80 pageviews / 19 visitantes, **não confirmadas** (confirmar
+com os eventos acima antes de mexer):
+1. Guards de página duplicados em `gestao/+page.svelte:36`,
+   `gestao/mesas/+page.svelte:27`, `gestao/empresas/+page.svelte:28`,
+   `gestao/extensoes/+page.svelte:17` usam `getUser()` sem timeout nem fallback
+   offline e fazem `window.location.href = '/login'` na primeira falha — em
+   rede lenta expulsam sessão válida, em paralelo ao `ensureActiveSubscription`
+   que tem timeout de 8 s. Cada expulsão é reload e pageview novo em `/login`.
+2. `$pageview` morre nas rotas protegidas mas não em `/login`: todo ida-e-volta
+   só aparece pela metade `/login`.
+3. Autenticado em `/login` é redirecionado por dois mecanismos (a própria página
+   e `+layout.svelte:279`) — duplicado, mas provavelmente não é o volume.
+Consulta: `login_viewed` por `has_session`; com sessão falsa, funil
+`login_submitted` → `user_logged_in` × `login_failed` por `error_code`;
+`login_bounced_authenticated` repetido por `distinct_id` em janela curta é a
+assinatura do ping-pong.
+
+**Fase 2.1 feita — a Fase 3 está destravada:** `/assinatura` etapa 3 mostra
+"CPF ou CNPJ" quando o perfil não tem documento válido; `POST
+/api/billing/pix/create` recebe `documento`, grava em `empresa_perfil` antes de
+cobrar e não joga mais a pessoa pro `/perfil` por falta só de documento
+(`field: 'documento'` no lugar do `redirect`). Contrato em [[BILLING]].
+Pendências conhecidas, não bloqueantes:
+- falha ao **gravar** o documento sai com `reason: profile_read_failed` — nome
+  errado; merece um `PROFILE_WRITE_FAILED` em `checkoutFailure.js`
+- contato preenchido mas não normalizável **e** documento faltando ao mesmo
+  tempo ainda devolve `redirect` (caso raro, sem teste)
+- o admin (`api/admin/billing/pix/create`) segue exigindo documento no perfil
+- o campo aparece na etapa 3 mesmo para quem vai de cartão (a copy fala de Pix)
+
+**Fase 3.1 feita — wizard de 2 passos (nome da loja, WhatsApp)** com a copy
+fechada do plano. Passos de CPF/CNPJ e bobina saíram; o upsert grava
+`largura_bobina: '80mm'` e **não manda mais `documento`** (mandar vazio apagaria
+CPF já salvo pelo Pix). Instrumentação da 1.1 mantida; `total_steps` agora é 2.
+O clique final repete a validação do WhatsApp e as ações ficam protegidas contra
+duplo envio enquanto o save está em andamento.
+
+**Fase 4.1 feita:** o card já existente em `/gestao` agora usa exclusivamente o
+checklist fechado (primeiro produto, CPF/CNPJ, logo e largura da bobina), sem
+reaproveitar `onboarding_completed` nem as tarefas antigas de caixa/venda/
+relatório. Os links de perfil selecionam as abas corretas e rolam para seções
+reais (`#documento`, `#logo`, `#largura-bobina`). Bobina é item normal do
+checklist; o valor efetivo ausente continua sendo o default de 80 mm do produto.
+
+**Fase 4.2 feita localmente e atômica na entrega:** o wizard persiste o passo 1
+antes de avançar, retoma no WhatsApp quando necessário e salva o passo 2 antes
+de iniciar o trial. A migration
+`20260915090000_nudge_operational_profile_rpc.sql` muda a RPC do nudge para
+considerar linha ausente, nome vazio ou contato vazio. Ela preserva filtros de
+idade/e-mail/subusuário, restringe execução a `service_role` e **não** exclui
+perfil incompleto apenas porque existe uma linha em `subscriptions`.
+
+**Publicação concluída:** o primeiro lote (até `3314ea1`) entrou em produção no
+merge `954fdf2`; em seguida, por decisão explícita do dono de priorizar o
+rollout imediato, as Fases 3.1, 4.1 e 4.2 foram publicadas sem janela de coleta
+útil do baseline de quatro passos. A migration `20260915090000` foi aplicada
+isoladamente pela Supabase CLI, registrada no histórico e verificada no banco:
+RPC estável/`SECURITY DEFINER`, `search_path` fixo, `service_role` com EXECUTE,
+`anon`/`authenticated` sem EXECUTE e três perfis elegíveis no momento do smoke.
+
+**Fase 5.1 encerrada:** a auditoria final separou os 7 subusuários dos 3
+titulares realmente incompletos. Os três já tinham nudge registrado antes da
+Fase 3.1, mas o CTA apontava para `/onboarding` (rota inexistente). O CTA foi
+corrigido para `/perfil?msg=complete`; por decisão do dono, não houve novo
+disparo de e-mail. A tabela de deduplicação não foi alterada.
+
+Validação local final: 39/39 testes focados de login/onboarding/checklist/RPC,
+66/66 testes focados de billing/RPC, suíte completa 1.275/1.278 (3 runtimes
+pré-existentes pulados), `npm run check` com 0 erros/0 avisos e
+`npm run verify:migrations` verde (107/107, 59/59, 55 forward migrations).
+
+**Ordem que não pode inverter:** a Fase 2 (CPF inline no Pix) tem que estar no ar
+antes da Fase 3 (wizard curto). `validatePixCustomerProfile` exige documento e
+`billingPix.js:347` manda `taxId` pra AbacatePay — tirar o CPF do wizard antes
+quebra todo Pix de cliente novo.
+
+## `checkout_failed`: o funil passou a ver quem tentou pagar e não conseguiu — 2026-09-14
+
+Antes só existia o lado feliz (`stripe_checkout_created`, `pix_charge_created`).
+Clique que morria no servidor — perfil sem CPF/CNPJ, plano inválido, provedor
+fora do ar — sumia, e o buraco entre "abriu /assinatura" e "cobrança criada"
+ficava sem explicação.
+
+A resposta de erro e o evento saem da **mesma função**, em
+[src/lib/server/checkoutFailure.js](../src/lib/server/checkoutFailure.js).
+Espalhar `posthog.capture` por dez `return json(...)` é exatamente como o bug
+anterior nasceu. As 19 saídas de erro cruas dos dois endpoints (10 no cartão,
+9 no Pix) passam por `fail()`; um teste de fonte rejeita `return json(...)` com
+status 4xx/5xx, e foi verificado contra a versão anterior — falharia nas 19.
+
+`reason` é código estável (`profile_incomplete`, `invalid_plan`,
+`addon_not_allowed`, `unauthenticated`, `subuser_forbidden`,
+`provider_unavailable`, `provider_error`), nunca derivado da mensagem em pt-BR:
+o texto é de UI e uma revisão de copy levaria o histórico do funil junto.
+`profile_incomplete` é o que mede diretamente o muro de cadastro descrito na
+auditoria de conversão — quem chegou querendo pagar e foi mandado de volta.
+
+Partição entre cliente e servidor, sem dupla contagem: o servidor registra toda
+resposta de erro que ele produziu (`origin: 'server'`); a tela registra só o que
+o servidor não pode ter visto (`origin: 'client'`) — `no_session` (a requisição
+nunca saiu), `network` (resposta nunca voltou) e `unexpected_response` (200 sem
+URL de checkout). O ramo `!res.ok` do cliente **não** emite, de propósito.
+
+Falha de autenticação cai em `distinctId: 'anonymous'` — não há a quem atribuir,
+mas "a sessão expirou antes de assinar" continua sendo conversão perdida e
+precisa ser contada. Mesma convenção do chat de suporte.
+
+O flush não segura a resposta: numa falha de pagamento o cliente está esperando
+na tela. Vai por `waitUntil`, com fallback silencioso fora do runtime da Vercel.
+
+Suíte 1.230/1.233 (3 skips pré-existentes), `npm run check` 0/0, build verde.
+
+## Evento de negócio dentro do produto nunca chegou ao PostHog — 2026-09-14
+
+Auditoria do funil no PostHog (projeto 470628): `trial_auto_started`,
+`subscription_checkout_started`, `pix_payment_initiated` e os três `gerente_*`
+**não existem** na lista de eventos do projeto. Nunca chegou um.
+
+Causa-raiz em [src/lib/posthogClient.js](../src/lib/posthogClient.js): o gate era
+por **rota**, não por evento. `sanitizeEvent`, usado como `before_send`, abria com
+`if (!isBrowser() || !isPostHogAllowedPath(window.location.pathname)) return null`
+— e `/assinatura`, `/gestao`, `/app`, `/perfil`, `/relatorios`, `/ferramentas`
+estão em `BLOCKED_PREFIXES`. Todo `capture()` disparado lá dentro morria. Uma
+segunda trava somava: `syncPostHogForPath` chamava `opt_out_capturing()` ao
+entrar em rota privada, e esse opt-out fica gravado no localStorage do aparelho.
+O contrato mentia — `capturePostHogEvent` devolvia `true` com o evento no lixo.
+
+O commit anterior (`f5c0dbe`) contornou para o cadastro, movendo o evento para o
+servidor, e documentou a causa em comentário sem removê-la.
+
+Correção: o gate passou a ser por **evento**. `SURFACE_EVENTS` (pageview,
+autocapture, rageclick, heatmap, web vitals, pageleave) morre fora da área
+pública; evento de negócio nomeado, `$identify` e `$exception` atravessam com a
+URL reduzida a `/app/mesas/:id` e o referrer apagado — inclusive em `$set`/
+`$set_once`, que no `CaptureResult` do posthog-js são **irmãos** de `properties`.
+`opt_out_capturing()` virou `set_config({ autocapture, capture_pageleave,
+enable_heatmaps })`, e o init desfaz o opt-out que a versão anterior gravou —
+sem isso os aparelhos que abriram o PDV antes ficariam mudos para sempre.
+
+As três chamadas de `/assinatura` foram **removidas**, não religadas: o servidor
+já emite `trial_started`, `stripe_checkout_created` e `pix_charge_created`, com
+propriedades a mais (`trial_end`, `session_id`, `payment_id`) e sem depender do
+cliente chegar vivo ao fim do fluxo. Religar duplicaria a contagem no funil.
+
+Aberto de propósito: não existe evento de **falha** de checkout. Hoje só se vê
+cobrança criada com sucesso; clique que morreu no servidor é invisível.
+
+Suíte 1.222/1.225 (3 skips pré-existentes), `npm run check` 0/0, build verde.
+Corrigido também `tests/signupFollowUp.test.js`, que estava vermelho desde
+`f5c0dbe` (ainda exigia o `user_signed_up` removido por aquele commit).
+
 ## Assinatura pós-trial perdia o add-on ativo — 2026-09-14
 
 Reclamação de cliente (FullBuster Burger, `plan_tier='pdv'`,

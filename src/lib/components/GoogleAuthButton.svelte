@@ -2,12 +2,20 @@
   import { supabase } from '$lib/supabaseClient';
   import { getAuthRedirectUrl } from '$lib/authRedirect';
   import { addToast } from '$lib/stores/ui';
+  import { capturePostHogEvent } from '$lib/posthogClient';
+  import { mapLoginErrorToCode } from '$lib/loginTelemetry';
 
   let loading = false;
 
   async function handleGoogleAuth() {
     if (loading || !supabase) return;
     loading = true;
+    const isLoginSurface = typeof window !== 'undefined' && window.location.pathname === '/login';
+    // Este componente também vive em /cadastro; `login_submitted` só faz
+    // sentido semântico na tela de login — não polui o funil de signup.
+    if (isLoginSurface) {
+      void capturePostHogEvent('login_submitted', { method: 'google' });
+    }
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -17,6 +25,12 @@
       // browser redirects — keep loading=true
     } catch (err) {
       console.error('Google OAuth error:', err);
+      if (isLoginSurface) {
+        void capturePostHogEvent('login_failed', {
+          method: 'google',
+          error_code: mapLoginErrorToCode(err),
+        });
+      }
       addToast('Erro ao conectar com o Google. Tente novamente.', 'error');
       loading = false;
     }
@@ -60,7 +74,7 @@
     height: 46px;
     padding: 0 1rem;
     border-radius: 0.5rem;
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     font-weight: 500;
     color: var(--text-main);
     background-color: var(--bg-panel);
@@ -79,7 +93,7 @@
 
   .google-btn:active:not(:disabled) {
     transform: scale(0.98);
-    background-color: #f3f4f6;
+    background-color: var(--bg-input);
   }
 
   .google-btn:disabled {

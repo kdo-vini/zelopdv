@@ -23,7 +23,6 @@ const LIMITS = {
   '/api/auth/login': { limit: 20, windowMs: 10 * 60 * 1000 },
   '/api/auth/signup': { limit: 10, windowMs: 60 * 60 * 1000 },
   '/api/auth/reset-password': { limit: 10, windowMs: 60 * 60 * 1000 },
-  '/api/auth/pin-reset-otp': { limit: 10, windowMs: 60 * 60 * 1000 },
   '/api/chat/support': { limit: 10, windowMs: 60 * 60 * 1000 },
   '/api/chat/assistant': { limit: 60, windowMs: 60 * 60 * 1000 },
   '/api/access/users': { limit: 20, windowMs: 60 * 60 * 1000 },

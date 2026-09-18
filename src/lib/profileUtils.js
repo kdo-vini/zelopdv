@@ -25,12 +25,37 @@ export function normalizeLarguraBobina(value) {
   return v; // unknown stays as-is
 }
 
-export function requiredOk({ nome_exibicao, documento, contato, largura_bobina }) {
-  const nome = (nome_exibicao || '').trim();
-  const doc = isValidBrazilianTaxId(documento);
-  const cont = (contato || '').trim();
-  const largura = normalizeLarguraBobina(largura_bobina);
-  return Boolean(nome && doc && cont && VALID_WIDTHS.includes(largura));
+// O perfil tem dois contratos distintos, e misturar os dois num `requiredOk` só
+// era o que fechava o produto atrás de um CPF e de uma largura de bobina.
+//
+// - operacional: o mínimo pra abrir o caixa e falar com o cliente.
+// - billing:     o mínimo pra emitir uma cobrança.
+//
+// Um NÃO implica o outro. Quem está operando pode não ter CPF cadastrado; quem
+// vai pagar no Pix precisa dele porque a AbacatePay exige o pagador
+// identificado (validatePixCustomerProfile, em lib/server/billingPix.js).
+
+/**
+ * O que o produto precisa pra operar. Gate do `requireProfile` nos guards e
+ * critério de conclusão do wizard.
+ *
+ * `contato` é checado por presença, não por validade, de propósito: é
+ * exatamente o critério que o `requiredOk` antigo usava, e apertar aqui
+ * expulsaria pro wizard toda conta existente cujo telefone não normaliza.
+ * A validação forte vive na entrada, no wizard.
+ */
+export function operationalProfileOk({ nome_exibicao, contato }) {
+  return Boolean((nome_exibicao || '').trim() && (contato || '').trim());
+}
+
+/**
+ * O que o billing precisa pra cobrar. Checado no checkout, nunca na porta de
+ * entrada do produto. A largura da bobina saiu das duas checagens: todo
+ * consumidor já cai em `|| '80mm'` (receipt.js, escpos.js), então exigir nunca
+ * comprou informação nenhuma.
+ */
+export function billingProfileOk({ documento }) {
+  return isValidBrazilianTaxId(documento);
 }
 
 export function buildPayload({

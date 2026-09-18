@@ -8,7 +8,7 @@
   // A S V E L T E K I T
   // Ajuste: Removido o ".js" da importação para deixar o bundler resolver.
   import { supabase } from '$lib/supabaseClient';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { waitAuthReady } from '$lib/authStore';
   import { printVenda, printMovCaixa } from '$lib/printService';
   import { ensureActiveSubscription } from '$lib/guards';
@@ -20,20 +20,27 @@
   import { pdvCache } from '$lib/stores/pdvCache';
   import { isNetworkError } from '$lib/netStatus';
   import { money, validatePaymentCoverage, getPrecoTabela } from '$lib/finance/caixa';
+  import { formatMoney, formatMoneyNumber } from '$lib/formatMoney';
   import { abrirCaixaIdempotente } from '$lib/finance/caixaOps';
   import { buildVendaPayload } from '$lib/finance/saleOps';
   import { createClientSaleId } from '$lib/finance/saleOps';
   import { startOfflineRuntime, getOfflineContext, isOfflineWriteActive, submitOfflineOperation, runOfflineSync, readOperationalSnapshot, onOfflineChange, markOfflineReadiness, claimPrimaryDevice } from '$lib/offline/runtime';
   import { readSnapshot, saveSnapshot, readDraft, saveDraft, listOperations } from '$lib/offline/operations';
   import { projectStockProducts } from '$lib/finance/offlineProjection';
-  import { validateLocalCartStock, selectCheckoutSubmission } from '$lib/finance/offlineCheckout';
+  import { validateLocalCartStock, selectCheckoutSubmission, restoreCheckoutFormState } from '$lib/finance/offlineCheckout';
   import { atualizarCatalogoOffline } from '$lib/offlineDb';
   import { loadCashSnapshot } from '$lib/finance/offlineCash';
   import { calculatePaymentSummary, calculateMovementSummary, calculateExpectedDrawer } from '$lib/finance/caixa';
   import { estoqueDisponivel, produtoControlaEstoque, somarQuantidadePorEstoque } from '$lib/stock';
   import { buildCartItemKey, formatSelectedModifierGroups, hasActiveModifierGroups } from '$lib/zelomenuModifiers';
   import { buildPizzaSignature, pizzaStockRequirements } from '$lib/pizza';
-  
+  import {
+    isFirstUseNoCaixa as computeIsFirstUseNoCaixa,
+    shouldAutoOpenCaixaModal,
+    shouldBlockAddToCart
+  } from '$lib/pdv/firstUseCaixaGate';
+  import { capturePostHogEvent } from '$lib/posthogClient';
+
   // Modais componentizados
   import ModalAbrirCaixa from '$lib/components/modals/ModalAbrirCaixa.svelte';
   import ModalQuantidade from '$lib/components/modals/ModalQuantidade.svelte';
@@ -42,6 +49,7 @@
   import ModalPagamento from '$lib/components/modals/ModalPagamento.svelte';
   import ModalSucesso from '$lib/components/modals/ModalSucesso.svelte'; // [NEW]
   import ModalProdutoMontavel from '$lib/components/modals/ModalProdutoMontavel.svelte';
+  import ModalNovoProduto from '$lib/components/modals/ModalNovoProduto.svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   
   // Grid virtualizado para performance
@@ -102,6 +110,12 @@
   let vendaConcluida = null;
   let modalProdutoMontavelAberto = false;
   let produtoMontavelSelecionado = null;
+  // Cadastro rápido de produto a partir do estado vazio da grade (sem produto cadastrado)
+  let modalNovoProdutoAberto = false;
+  let canGerenciarProdutos = true;
+  let mostrarHelperPrimeiroClick = false;
+  let helperPrimeiroClickProdutoId = null;
+  let timeoutHelperPrimeiroClick = null;
 
   // [NEW] Mobile State
   let showMobileCart = false;
@@ -187,9 +201,6 @@
   // Múltiplos pagamentos (split)
   let multiPag = false;
   let pagamentos = []; // { forma: 'dinheiro'|'pix'|'cartao_debito'|'cartao_credito'|'fiado'|'outro', valor: number, pessoaId?: string }
-  let novoPagForma = 'dinheiro';
-  let novoPagValor = 0;
-  let novoPagPessoaId = '';
   // Fiado
   let pessoasFiado = [];
   let pessoaFiadoId = '';
@@ -230,59 +241,21 @@
   let idCaixaAberto = null;
   let saldoCaixa = 0; // saldo atual em dinheiro no caixa
   let carregandoSaldo = false;
+
+  // Barreira de "conta nova sem caixa aberto": titular que nunca abriu um
+  // caixa não vê o modal Abrir Caixa automaticamente no carregamento; a
+  // barreira só aparece na hora de pagar. Ver src/lib/pdv/firstUseCaixaGate.js.
+  // hasEverOpenedCaixa: false = detectado "nunca abriu" (count head em `caixas`);
+  // true = já abriu alguma vez; null = desconhecido (falha, offline, subusuário
+  // ou ainda não checado) — mantém o comportamento atual.
+  let hasEverOpenedCaixa = null;
+  // true enquanto aguardamos a abertura do caixa (disparada pela barreira de
+  // pagamento) para então seguir automaticamente para o ModalPagamento.
+  let pendingPaymentAfterCaixa = false;
+  $: isFirstUseNoCaixa = computeIsFirstUseNoCaixa({ hasEverOpenedCaixa, isSubUser, caixaAberto });
   
   // Referência ao componente ModalPagamento
   let modalPagamentoRef;
-
-  // Derivados e helpers de múltiplos pagamentos
-  $: somaPagamentos = pagamentos.reduce((acc, p) => acc + Number(p?.valor || 0), 0);
-  $: restantePagamento = Math.max(0, Number(totalComanda) - Number(somaPagamentos || 0));
-  $: trocoPrevMulti = (() => {
-    if (!multiPag) return 0;
-    const somaOutros = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a, b) => a + Number(b.valor || 0), 0);
-    const cashRec = Number((pagamentos.find(p => p.forma === 'dinheiro')?.valor) || 0);
-    const requeridoDin = Math.max(0, Number(totalComanda) - somaOutros);
-    return Math.max(0, cashRec - requeridoDin);
-  })();
-
-  function addPagamento() {
-    const forma = novoPagForma;
-    const valor = Number(novoPagValor || 0);
-    if (!forma || valor <= 0) return;
-    const total = Number(totalComanda);
-    const somaNaoDinheiroAtual = pagamentos.filter(p => p.forma !== 'dinheiro').reduce((a,b)=>a+Number(b.valor||0),0);
-    if (forma !== 'dinheiro') {
-      const novoSomaNC = somaNaoDinheiroAtual + valor;
-      if (novoSomaNC > total) {
-        erroPagamento = 'Pagamentos não-dinheiro não podem exceder o total da comanda.';
-        return;
-      }
-    }
-    if (forma === 'fiado') {
-      // permite apenas 1 linha de fiado
-      if (pagamentos.some(p => p.forma === 'fiado')) {
-        erroPagamento = 'Use apenas uma linha de Fiado.';
-        return;
-      }
-      if (!novoPagPessoaId) {
-        erroPagamento = 'Selecione a pessoa para o Fiado.';
-        return;
-      }
-      pagamentos = [...pagamentos, { forma, valor, pessoaId: novoPagPessoaId }];
-      novoPagPessoaId = '';
-    } else {
-      pagamentos = [...pagamentos, { forma, valor }];
-    }
-    // Sugere próximo valor = restante
-    novoPagValor = Math.max(0, total - pagamentos.reduce((a,b)=>a+Number(b.valor||0),0));
-    erroPagamento = '';
-  }
-
-  function removerPagamento(idx) {
-    pagamentos = pagamentos.filter((_, i) => i !== idx);
-    // Ajusta sugestão do próximo valor
-    novoPagValor = Math.max(0, Number(totalComanda) - pagamentos.reduce((a,b)=>a+Number(b.valor||0),0));
-  }
 
   // --- 3. CARREGAMENTO DE DADOS ---
 
@@ -303,6 +276,7 @@
       const perms = authCtx.permissions || {};
       canVender = !!perms['pdv.vender']; canReceber = !!perms['pdv.receber']; canDesconto = !!perms['pdv.desconto'];
       canCancelar = !!perms['pdv.cancelar']; canAbrirCaixa = !!perms['caixa.abrir']; canMovimentarCaixa = !!perms['caixa.movimentar'];
+      canGerenciarProdutos = !!perms['produtos.gerenciar'];
     }
     await startOfflineRuntime(authCtx);
     const draft = await readDraft(ownerUserId, operadorUserId, 'pdv').catch(() => null);
@@ -347,6 +321,7 @@
       // Sub-users start with no permissions; only grant what's explicitly allowed
       canVender = false; canReceber = false; canDesconto = false;
       canCancelar = false; canAbrirCaixa = false; canMovimentarCaixa = false;
+      canGerenciarProdutos = false;
       try {
         const ctx = await getAccessContext();
         if (ctx?.permissions) {
@@ -356,6 +331,7 @@
           canCancelar = !!ctx.permissions['pdv.cancelar'];
           canAbrirCaixa = !!ctx.permissions['caixa.abrir'];
           canMovimentarCaixa = !!ctx.permissions['caixa.movimentar'];
+          canGerenciarProdutos = !!ctx.permissions['produtos.gerenciar'];
         }
       } catch (e) { console.warn('[PDV] Failed to load permissions:', e?.message); }
     }
@@ -378,6 +354,7 @@
       }
     if (pendentesInterval) clearInterval(pendentesInterval);
     unsubscribeOffline?.();
+    if (timeoutHelperPrimeiroClick) clearTimeout(timeoutHelperPrimeiroClick);
     });
 
   /** Atualiza o contador de vendas aguardando sincronização. */
@@ -497,8 +474,31 @@
     } else {
       await saveSnapshot(userId, 'caixa.aberto', null);
       caixaAberto = false;
-      modalAbrirCaixaAberto = true;
       idCaixaAberto = null;
+      await detectHasEverOpenedCaixa(userId);
+      modalAbrirCaixaAberto = shouldAutoOpenCaixaModal({
+        caixaAberto,
+        isFirstUseNoCaixa: computeIsFirstUseNoCaixa({ hasEverOpenedCaixa, isSubUser, caixaAberto })
+      });
+    }
+  }
+
+  /**
+   * "Conta nova" = titular que nunca abriu um caixa (zero linhas em `caixas`).
+   * Consulta barata (count head); falha ou subusuário mantém hasEverOpenedCaixa
+   * desconhecido (null), preservando o comportamento atual da barreira.
+   */
+  async function detectHasEverOpenedCaixa(userId) {
+    if (isSubUser) return;
+    try {
+      const { count, error } = await supabase
+        .from('caixas')
+        .select('id', { count: 'exact', head: true })
+        .eq('id_usuario', userId);
+      if (error) return;
+      hasEverOpenedCaixa = count !== 0;
+    } catch {
+      // desconhecido: mantém comportamento atual (hasEverOpenedCaixa = null)
     }
   }
 
@@ -522,7 +522,10 @@
         if (!salvandoVenda && !checkoutSubmission) {
           caixaAberto = !!snapshot.caixa && !snapshot.caixa.data_fechamento;
           idCaixaAberto = caixaAberto ? snapshot.caixa.id : null;
-          modalAbrirCaixaAberto = !caixaAberto;
+          modalAbrirCaixaAberto = shouldAutoOpenCaixaModal({
+            caixaAberto,
+            isFirstUseNoCaixa: computeIsFirstUseNoCaixa({ hasEverOpenedCaixa, isSubUser, caixaAberto })
+          });
         }
         const payments = calculatePaymentSummary(snapshot.vendas, snapshot.pagamentos);
         const movements = calculateMovementSummary(snapshot.movs);
@@ -696,6 +699,9 @@
     if (buscaLower && !String(p.nome || '').toLowerCase().includes(buscaLower)) return false;
     return true;
   });
+  // Diferencia o estado vazio de "conta sem nenhum produto cadastrado" do de
+  // "busca/filtro sem resultado" (VirtualProductGrid usa isso para a copy).
+  $: hasAnyProducts = produtos.length > 0;
 
   // Navegação por teclado no grid de produtos
   function gridMoveFocus(delta, byRow = false) {
@@ -743,7 +749,7 @@
   /** Decide qual fluxo usar ao clicar num produto (quantidade para por-unidade, valor avulso, ou normal). */
   function adicionarProduto(produto) {
     if (checkoutSubmission || salvandoVenda) { addToast('Finalize a confirmação pendente antes de alterar esta venda.', 'info'); return; }
-    if (!caixaAberto) {
+    if (shouldBlockAddToCart({ caixaAberto, isFirstUseNoCaixa })) {
       modalAbrirCaixaAberto = true;
       return;
     }
@@ -918,7 +924,7 @@
       // Atualiza o saldo e impede SAÍDA maior que o disponível
       await atualizarSaldoCaixa();
       if (tipoMovCaixa === 'saida' && v > Number(saldoCaixa || 0)) {
-        erroMovCaixa = `Valor maior que o saldo em caixa (R$ ${Number(saldoCaixa).toFixed(2)}).`;
+        erroMovCaixa = `Valor maior que o saldo em caixa (${formatMoney(saldoCaixa)}).`;
         return;
       }
       salvandoMovCaixa = true;
@@ -1011,6 +1017,7 @@
         }
         caixaAberto = true; modalAbrirCaixaAberto = false;
         await atualizarSaldoCaixa();
+        seguirParaPagamentoSePendente();
         return;
       }
       const { caixa, jaExistia, error } = await abrirCaixaIdempotente(supabase, {
@@ -1035,9 +1042,21 @@
         logAuditAction({ ownerUserId, action: 'caixa.aberto', entityType: 'caixa', entityId: String(caixa.id), details: { valor_inicial: Number(trocoInicialInput) } });
       }
       await atualizarSaldoCaixa();
+      seguirParaPagamentoSePendente();
     } finally {
       abrindoCaixa = false;
     }
+  }
+
+  /**
+   * Depois que o caixa abre (disparado pela barreira de pagamento de conta
+   * nova em primeiro uso), segue automaticamente para o ModalPagamento com a
+   * comanda intacta. Ver abrirModalPagamento().
+   */
+  function seguirParaPagamentoSePendente() {
+    if (!pendingPaymentAfterCaixa) return;
+    pendingPaymentAfterCaixa = false;
+    modalPagamentoAberto = true;
   }
 
   // Removido: Fluxo de quantidade por modal (click adiciona diretamente)
@@ -1088,39 +1107,6 @@
     quantidadeInput = 1;
   }
   
-  // Módulo 1.4 - Início da Fase 4
-  /** Abre o modal de pagamento após validar que há itens. */
-  function handleFinalizarVenda() {
-    if (salvandoVenda) return;
-    if (checkoutSubmission?.formState) {
-      const saved = checkoutSubmission.formState;
-      comanda = structuredClone(saved.items); formaPagamento = saved.formaPagamento; valorRecebido = saved.valorRecebido;
-      multiPag = saved.multiPag; pagamentos = structuredClone(saved.pagamentos); pessoaFiadoId = saved.pessoaFiadoId;
-      totalFinalVenda = saved.totalFinalVenda; valorDescontoVenda = saved.valorDescontoVenda; descontoTipoVenda = saved.descontoTipoVenda;
-      tipoPedido = saved.tipoPedido; taxaEntregaInput = saved.taxaEntregaInput; taxasPlataformaVenda = saved.taxasPlataformaVenda;
-      idCaixaAberto = checkoutSubmission.payload.id_caixa;
-      addToast('Retomando a confirmação com os dados salvos desta venda.', 'info');
-      void confirmarVenda(); return;
-    }
-    if (comanda.length === 0) {
-      addToast('A comanda está vazia.', 'warning');
-      return;
-    }
-    
-    // Abre o modal de pagamento
-    // O modal de pagamento cuidará da Fase 4 e 5
-    modalPagamentoAberto = true;
-    formaPagamento = null;
-    valorRecebido = 0;
-    multiPag = false;
-    pagamentos = [];
-    novoPagForma = 'dinheiro';
-    novoPagValor = Number(totalComanda);
-    novoPagPessoaId = '';
-    erroPagamento = '';
-    salvandoVenda = false; // garante reset visual ao tentar novamente
-  }
-
   /**
    * Handler para o evento 'confirmar' do ModalPagamento.
    * Recebe os dados do modal e executa a persistência da venda.
@@ -1438,9 +1424,102 @@
       addToast('Pronto para próxima venda', 'info');
   }
 
-  function abrirModalPagamento() {
+  async function abrirModalPagamento() {
+    // Retomada de confirmação pendente: reload/outra sessão trouxe do rascunho
+    // uma comanda travada com checkoutSubmission.formState (venda já enviada
+    // para a RPC com confirmação incerta). Precisa reaproveitar exatamente o
+    // mesmo payload — se a pessoa escolhesse um pagamento novo aqui,
+    // selectCheckoutSubmission divergiria do candidate anterior e lançaria
+    // "Há uma confirmação pendente...", travando a venda. Isso roda ANTES de
+    // qualquer outra barreira, inclusive a de conta nova (isFirstUseNoCaixa):
+    // uma venda pendente de confirmação nunca pode cair no fluxo de abrir caixa.
+    if (checkoutSubmission?.formState && !salvandoVenda) {
+      const restored = restoreCheckoutFormState(checkoutSubmission);
+      if (restored) {
+        comanda = restored.items;
+        formaPagamento = restored.formaPagamento;
+        valorRecebido = restored.valorRecebido;
+        multiPag = restored.multiPag;
+        pagamentos = restored.pagamentos;
+        pessoaFiadoId = restored.pessoaFiadoId;
+        totalFinalVenda = restored.totalFinalVenda;
+        valorDescontoVenda = restored.valorDescontoVenda;
+        descontoTipoVenda = restored.descontoTipoVenda;
+        tipoPedido = restored.tipoPedido;
+        taxaEntregaInput = restored.taxaEntregaInput;
+        taxasPlataformaVenda = restored.taxasPlataformaVenda;
+        idCaixaAberto = restored.idCaixaAberto;
+        imprimirRecibo = restored.imprimirRecibo;
+        modalPagamentoAberto = true;
+        addToast('Retomando a confirmação com os dados salvos desta venda.', 'info');
+        // O modal reseta seu próprio estado interno (inclusive `salvandoVenda`)
+        // na reação a `open` — precisa existir e já ter processado essa reação
+        // antes de forçarmos o estado de salvando, senão o reset o sobrescreve.
+        await tick();
+        modalPagamentoRef?.setSalvando?.(true);
+        void confirmarVenda();
+        return;
+      }
+    }
     if (comanda.length === 0) return;
+    // Conta nova em primeiro uso: a barreira do caixa foi adiada até aqui.
+    // Abre o Abrir Caixa e, quando ele fechar com sucesso (handleAbrirCaixa),
+    // segue automaticamente para o pagamento com a comanda intacta. Para
+    // qualquer outra conta este ramo nunca é alcançado (caixaAberto já é
+    // true nesse ponto), então o comportamento delas não muda.
+    if (isFirstUseNoCaixa && !caixaAberto) {
+      pendingPaymentAfterCaixa = true;
+      void capturePostHogEvent('pdv_first_use_caixa_prompted', { trigger: 'payment' });
+      modalAbrirCaixaAberto = true;
+      return;
+    }
     modalPagamentoAberto = true;
+  }
+
+  // ── Cadastro rápido de produto (estado vazio da grade) ─────────────────────
+
+  /** Abre o ModalNovoProduto a partir do CTA "+ Cadastrar primeiro produto" do estado vazio. */
+  function abrirModalNovoProdutoRapido() {
+    if (!canGerenciarProdutos) return;
+    modalNovoProdutoAberto = true;
+  }
+
+  function fecharHelperPrimeiroClick() {
+    if (timeoutHelperPrimeiroClick) clearTimeout(timeoutHelperPrimeiroClick);
+    timeoutHelperPrimeiroClick = null;
+    mostrarHelperPrimeiroClick = false;
+    helperPrimeiroClickProdutoId = null;
+  }
+
+  /** Depois que o ModalNovoProduto cria o produto: recarrega o catálogo do PDV e fecha o modal. */
+  async function produtoRapidoCriado(event) {
+    // event.detail é o produto criado (spread) + categoriaCriada ({id, nome} ou null)
+    // quando o ModalNovoProduto também criou uma categoria nova no mesmo submit.
+    const { categoriaCriada, ...createdProduct } = event.detail;
+    const eraEstadoVazio = produtos.length === 0;
+    modalNovoProdutoAberto = false;
+    void capturePostHogEvent('pdv_quick_product_created', { was_first_product: eraEstadoVazio });
+    // ModalNovoProduto.svelte já invalidou o pdvCache de produtos (e de categorias,
+    // se aplicável) antes de disparar 'created'.
+    if (categoriaCriada) {
+      // Força refresh (ignora cache/local) para a aba da categoria nova aparecer.
+      await carregarCategorias(true);
+    }
+    await carregarProdutos(true);
+    // Garante que o produto recém-criado fique visível na grade (categoria/subcategoria/busca ativas).
+    busca = '';
+    if (createdProduct?.id_categoria != null) categoriaAtiva = createdProduct.id_categoria;
+
+    // Se era o primeiro produto (estado vazio), destaca o tile e cola a dica nele.
+    const createdId = createdProduct?.id ?? produtos[0]?.id ?? null;
+    if (eraEstadoVazio && isFirstUseNoCaixa && createdId != null) {
+      if (timeoutHelperPrimeiroClick) clearTimeout(timeoutHelperPrimeiroClick);
+      helperPrimeiroClickProdutoId = createdId;
+      mostrarHelperPrimeiroClick = true;
+      timeoutHelperPrimeiroClick = setTimeout(() => {
+        fecharHelperPrimeiroClick();
+      }, 8000);
+    }
   }
 
   // ── Helpers compartilhados de perfil ──────────────────────────────────────
@@ -1520,7 +1599,7 @@
   <div class="flex items-center gap-3">
     <div class="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-md">
       <span class="text-xs text-slate-400 font-medium">Caixa:</span>
-      <span class="text-green-400 font-bold">R$ {Number(saldoCaixa).toFixed(2)}</span>
+      <span class="text-green-400 font-bold tabular-nums">{formatMoney(saldoCaixa)}</span>
     </div>
 
     {#if vendasPendentesCount > 0}
@@ -1631,25 +1710,27 @@
           </div>
         {/if}
 
-        <div class="flex items-center gap-6 overflow-x-auto pb-1 scrollbar-none border-b" style="border-color: var(--border-subtle);" role="tablist" aria-label="Categorias">
-          {#each categorias as cat (cat.id)}
-            <button
-              data-testid="category-tab"
-              type="button"
-              role="tab"
-              aria-selected={categoriaAtiva === cat.id}
-              class="shrink-0 pb-2 font-semibold text-base transition-colors whitespace-nowrap relative"
-              style="
-                color: {categoriaAtiva === cat.id ? 'var(--text-main)' : 'var(--text-muted)'};
-                border-bottom: 2px solid {categoriaAtiva === cat.id ? 'var(--primary)' : 'transparent'};
-                margin-bottom: -1px;
-              "
-              on:click={() => (categoriaAtiva = cat.id)}
-            >
-              {cat.nome}
-            </button>
-          {/each}
-        </div>
+        {#if categorias.length > 0}
+          <div class="flex items-center gap-6 overflow-x-auto pb-1 scrollbar-none border-b" style="border-color: var(--border-subtle);" role="tablist" aria-label="Categorias">
+            {#each categorias as cat (cat.id)}
+              <button
+                data-testid="category-tab"
+                type="button"
+                role="tab"
+                aria-selected={categoriaAtiva === cat.id}
+                class="shrink-0 pb-2 font-semibold text-base transition-colors whitespace-nowrap relative"
+                style="
+                  color: {categoriaAtiva === cat.id ? 'var(--text-main)' : 'var(--text-muted)'};
+                  border-bottom: 2px solid {categoriaAtiva === cat.id ? 'var(--primary)' : 'transparent'};
+                  margin-bottom: -1px;
+                "
+                on:click={() => (categoriaAtiva = cat.id)}
+              >
+                {cat.nome}
+              </button>
+            {/each}
+          </div>
+        {/if}
 
         <!-- Subcategorias: Pills (quando existem) -->
         {#if subcatsDaCat.length}
@@ -1684,13 +1765,23 @@
         {/if}
       </div>
 
-      <div data-testid="product-grid" class="flex-1 flex flex-col min-h-0">
+      <div data-testid="product-grid" class="flex-1 flex flex-col min-h-0" style="position: relative;">
         <VirtualProductGrid
           produtos={produtosFiltrados}
-          hasAnyProducts={produtos.length > 0}
+          {hasAnyProducts}
+          canCadastrarProduto={canGerenciarProdutos}
           tabelaAtiva={tabelaAtiva}
+          coachmarkProductId={mostrarHelperPrimeiroClick ? helperPrimeiroClickProdutoId : null}
           on:produtoClick={(e) => adicionarProduto(e.detail)}
-          on:valorAvulsoClick={() => modalValorAberto = true}
+          on:coachmarkDismiss={fecharHelperPrimeiroClick}
+          on:valorAvulsoClick={() => {
+            if (!hasAnyProducts) void capturePostHogEvent('pdv_empty_state_cta_clicked', { cta: 'avulso' });
+            modalValorAberto = true;
+          }}
+          on:cadastrarProdutoClick={() => {
+            void capturePostHogEvent('pdv_empty_state_cta_clicked', { cta: 'cadastrar_produto' });
+            abrirModalNovoProdutoRapido();
+          }}
         />
       </div>
     {/if}
@@ -1734,7 +1825,7 @@
                   <p class="text-[11px] text-sky-300 leading-snug mt-1">{item.resumoMontagem}</p>
                 {/if}
                 {#if item.pizza}<button type="button" class="pizza-edit" on:click={() => editarPizza(item)}>Editar pizza</button>{/if}
-                <p class="text-[11px] text-slate-400">R$ {Number(item.preco).toFixed(2)}</p>
+                <p class="text-[11px] text-slate-400 tabular-nums">{formatMoney(item.preco)}</p>
               </div>
               
               <div class="flex items-center gap-1 bg-slate-900/50 p-1 rounded-md border border-slate-700/50">
@@ -1794,12 +1885,12 @@
 
       <div class="flex justify-between items-center px-1">
         <span class="text-xs text-slate-400 font-medium">Subtotal</span>
-        <span class="text-sm font-bold text-slate-200">R$ {Number(totalComanda).toFixed(2)}</span>
+        <span class="text-sm font-bold text-slate-200 tabular-nums">{formatMoney(totalComanda)}</span>
       </div>
       {#if tipoPedido === 'delivery' && Number(taxaEntregaInput) > 0}
         <div class="flex justify-between items-center px-1">
           <span class="text-xs text-sky-400 font-medium">Taxa entrega</span>
-          <span class="text-sm font-bold text-sky-400">+ R$ {Number(taxaEntregaInput).toFixed(2)}</span>
+          <span class="text-sm font-bold text-sky-400 tabular-nums">+ {formatMoney(taxaEntregaInput)}</span>
         </div>
       {/if}
       
@@ -1845,7 +1936,7 @@
           class="col-span-2 h-12 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-green-900/20 text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
         >
           <span>Receber</span>
-          <span class="bg-black/20 px-2 py-0.5 rounded-sm text-xs">R$ {Number(totalComandaComEntrega).toFixed(2)}</span>
+          <span class="bg-black/20 px-2 py-0.5 rounded-sm text-xs tabular-nums">{formatMoney(totalComandaComEntrega)}</span>
         </button>
       </div>
       <div class="flex flex-col gap-1.5 mt-2">
@@ -1871,7 +1962,7 @@
     >
         <div class="flex flex-col">
             <span class="text-xs text-slate-400">{comanda.reduce((a,i)=>a+i.quantidade,0)} itens</span>
-            <span class="text-lg font-bold text-white">R$ {Number(totalComanda).toFixed(2)}</span>
+            <span class="text-lg font-bold text-white tabular-nums">{formatMoney(totalComanda)}</span>
         </div>
         <button 
             class="bg-sky-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg active:scale-95 transition-transform"
@@ -1896,7 +1987,7 @@
     trocoInicialInput = e.detail.trocoInicial;
     await handleAbrirCaixa();
   }}
-  on:close={() => {}}
+  on:close={() => { pendingPaymentAfterCaixa = false; }}
 />
 
 <!-- Modal: Quantidade (produtos por unidade) -->
@@ -1973,6 +2064,19 @@
   on:close={() => modalValorAberto = false}
 />
 
+<!-- Modal: Novo Produto (cadastro rápido a partir do estado vazio da grade) -->
+<ModalNovoProduto
+  open={modalNovoProdutoAberto}
+  {ownerUserId}
+  {categorias}
+  {subcategorias}
+  tabelasPreco={{ ativo: tabelasPrecoAtivo, nomes: nomesTabelas }}
+  defaultCategoriaId={categoriaAtiva}
+  compact
+  on:close={() => { modalNovoProdutoAberto = false; }}
+  on:created={produtoRapidoCriado}
+/>
+
 <!-- Modal: Pagamento -->
 <ModalPagamento
   bind:this={modalPagamentoRef}
@@ -2040,14 +2144,4 @@
   .pizza-edit { min-height: 44px; padding: .4rem .2rem; color: var(--primary); background: transparent; border: 0; font-size: .875rem; cursor: pointer; }
   .pizza-edit:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-  @media (prefers-reduced-motion: reduce) {
-    :global(.transition-colors),
-    :global(.transition-all),
-    :global(.transition-transform) {
-      transition: none;
-    }
-    :global(.active\:scale-95:active) {
-      transform: none;
-    }
-  }
 </style>

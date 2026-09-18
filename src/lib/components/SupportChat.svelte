@@ -2,9 +2,9 @@
   import { onMount } from 'svelte';
   import { writable } from 'svelte/store';
   import ChatStreamCore from '$lib/components/chat/ChatStreamCore.svelte';
+  import { buildZeloWhatsAppHref } from '$lib/zeloContact';
 
-  const WHATSAPP_URL =
-    'https://wa.me/5514991537503?text=Ol%C3%A1%2C%20vim%20pelo%20site%20do%20Zelo%20PDV%20e%20gostaria%20de%20saber%20mais.';
+  const WHATSAPP_URL = buildZeloWhatsAppHref('Olá, vim pelo site do Zelo PDV e gostaria de saber mais.');
 
   let isOpen = false;
   const messagesStore = writable([]);

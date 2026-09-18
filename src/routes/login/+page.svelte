@@ -6,7 +6,8 @@
   import AuthLayout from '$lib/components/AuthLayout.svelte';
   import GoogleAuthButton from '$lib/components/GoogleAuthButton.svelte';
   import { claimStoredReferral, persistReferralAttributionFromUrl } from '$lib/referrals/client';
-  import { capturePostHogEvent, identifyPostHogUser } from '$lib/posthogClient';
+  import { capturePostHogEvent, identifyPostHogUser, maskPrivatePath } from '$lib/posthogClient';
+  import { deriveLoginRedirectFrom, mapLoginErrorToCode } from '$lib/loginTelemetry';
 
   let email = '';
   let password = '';
@@ -33,11 +34,29 @@
   // Se já houver sessão ativa, redireciona para o PDV (/app)
   onMount(async () => {
     persistReferralAttributionFromUrl();
-    if (!supabase) return; // evita erro quando env não está configurado
+    const redirectFrom = deriveLoginRedirectFrom(new URLSearchParams(window.location.search));
+    if (!supabase) {
+      void capturePostHogEvent('login_viewed', { redirect_from: redirectFrom, has_session: false });
+      return; // evita erro quando env não está configurado
+    }
       const { data, error } = await supabase.auth.getSession();
       if (error) console.warn('Erro ao verificar sessão:', error.message);
-      if (data.session) {
+      const hasSession = Boolean(data.session);
+      if (hasSession) {
+        // capturePostHogEvent faz import/init assíncrono do SDK antes de
+        // capturar; sem aguardar, o `window.location.href` abaixo mata a
+        // página antes do capture sair, e é justo aqui — sessão já existente
+        // — que o sinal de ping-pong pode se perder. Teto curto pra não
+        // segurar o redirect indefinidamente se o SDK demorar.
+        const capViewed = capturePostHogEvent('login_viewed', { redirect_from: redirectFrom, has_session: true });
+        const capBounced = capturePostHogEvent('login_bounced_authenticated', { destination: maskPrivatePath('/app') });
+        await Promise.race([
+          Promise.all([capViewed, capBounced]),
+          new Promise((resolve) => setTimeout(resolve, 400)),
+        ]);
         window.location.href = '/app';
+      } else {
+        void capturePostHogEvent('login_viewed', { redirect_from: redirectFrom, has_session: false });
       }
   });
 
@@ -47,6 +66,7 @@
     if (loading) return;
     loading = true;
     errorMessage = '';
+    void capturePostHogEvent('login_submitted', { method: 'email' });
     try {
       if (!supabase) { throw new Error('Configuração do Supabase ausente.'); }
       const response = await fetch('/api/auth/login', {
@@ -56,7 +76,10 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload?.error || 'Falha ao fazer login.');
+        const apiError = new Error(payload?.error || 'Falha ao fazer login.');
+        apiError.status = response.status;
+        apiError.code = payload?.code;
+        throw apiError;
       }
       if (payload?.session?.access_token && payload?.session?.refresh_token) {
         const { data, error } = await supabase.auth.setSession({
@@ -89,6 +112,10 @@
     } catch (err) {
       console.error('Login exception:', err);
       errorMessage = getFriendlyErrorMessage(err);
+      void capturePostHogEvent('login_failed', {
+        method: 'email',
+        error_code: mapLoginErrorToCode({ status: err?.status, code: err?.code, message: err?.message }),
+      });
     } finally {
       loading = false;
     }

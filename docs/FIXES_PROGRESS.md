@@ -54,6 +54,137 @@
   forward; harness completo com verificador iFood e lint: verde, alcançando a
   migration iFood e passando 1 verifier.
 
+- [x] FX-ATIVACAO-PRIMEIRA-VENDA-02 (2026-09-17) — Polish do coachmark/CTAs do
+  primeiro uso na Frente de Caixa (Spec A–B sobre PR #39). Helper deixou de
+  cobrir o tile: dica colada abaixo do produto, anel sky + lift, copy "Toque
+  no produto para somar na venda", ChevronUp lucide, Entendi ghost, dismiss no
+  `produtoClick` + 8 s, um pop (sem pulse). Plus só no "Cadastrar primeiro
+  produto". Título do vazio inalterado.
+
+- [x] FX-ADMIN-CHURN-FALSO-POSITIVO-01 (2026-09-17) — Admin analytics `/analytics`
+  exibia contas ativas pagantes como "quiet" (alto risco de churn): `sales_30d=0`,
+  `effective_last_seen null`. Product Lead e Staff Eng confirmaram via Supabase
+  direto que 7 contas tinham centenas de vendas no período (Casa dos Salgados
+  ~1135/30d, Fanny Massas ~581/30d, Bem Servido ~404/30d, Mix Guaraná ~110/30d,
+  Seu Munhoz ~217/30d, FullBuster Burger ~32/30d, Donutopia teste). Causa: analytics
+  chamava `admin_get_users_last_seen`, `admin_get_sales_counts` e
+  `admin_get_total_sales_value` direto do browser com anon key. As RPCs têm
+  `SECURITY DEFINER` com `WHERE (auth.role() = 'service_role' OR
+  is_active_super_admin())`; browser-side sem service_role retorna array vazio `[]`,
+  frontend mapeia undefined → `sales_30d=0` e `last_seen=null` para **todas** as
+  contas. Endpoint server-side `/api/admin/analytics-data` criado: autentica
+  super_admin via JWT, depois chama as RPCs com `supabaseAdmin` (service_role).
+  Analytics page faz fetch desse endpoint em vez de RPC direta. Testes cobrem
+  autenticação, origem e erros de RPC (5 novos). `npm test` 1381/1381, `npm run
+  build` ok (ambos apps). Product pode re-extrair lista de quiet/risk com dados
+  reais. PR #38.
+
+
+- [ ] FX-ATIVACAO-PRIMEIRA-VENDA-01 (2026-09-17) — PostHog mostrou que 1 de 4
+  novos usuários clicou no CTA do estado vazio 7× ao longo de 45 minutos antes
+  de completar a criação do produto (mas depois vendeu em 22 s). PR #36 montou o
+  fluxo wizard → PDV, mas faltava orientação pós-chegada. **Corrigido**: copy do
+  estado vazio diretiva ("Cadastre seu primeiro produto para começar. É rápido:
+  nome e preço."), hierarquia de botões invertida ("Cadastrar primeiro produto"
+  primário, "Ou venda avulsa" secundário), helper pós-criação (primeiro uso
+  apenas) que aparece 8 s: "Clique no produto acima para adicionar na venda" com
+  seta animada e borda pulsante. Tracking aprimorado:
+  `pdv_quick_product_created` agora tem `was_first_product: boolean`. Sucesso
+  medido pós-publicação (2 semanas): ≥70% wizard_completed → first_sale <48h,
+  mediana <15 min, ≤2 cliques em empty-state CTA por usuário. PR #39 (branch
+  `cursor/minimal-first-sale-activation-711e`), validação local pendente.
+- [x] FX-IOS-INPUT-ZOOM-01 (2026-09-15) — iOS Safari dava zoom automático ao
+  focar campos com `font-size` < 16px (chat do Zelinho a 13px, valor recebido
+  do `ModalPagamento` a 15,2px, entre outros) e não voltava sozinho — exigia
+  pinch manual toda vez que o teclado abria. `SupportChat.svelte` já tinha o
+  campo em 16px isolado, mas o resto do app não. Piso global em `src/app.css`
+  (`input`/`textarea`/`select` a 16px `!important`, só `max-width: 767px`)
+  cobre todos os campos existentes e futuros sem tocar o desktop; validado com
+  Playwright em 390px (16px aplicado) e 1280px (tamanho original preservado).
+  `npm test` 1376/1376 (3 skips preexistentes), `npm run check` 0/0.
+
+- [x] FX-PWA-VERSAO-PRESA-01 (2026-09-15) — aparelhos com o PWA instalado
+  ficavam na versão antiga do `/app`: recarregar serve o precache, e o aviso de
+  atualização era adiado por qualquer modal — inclusive o Abrir Caixa, que a
+  versão antiga abre no carregamento. Boot aplica versão nova quando não há
+  pendências; Abrir Caixa não bloqueia mais o aviso.
+
+- [x] FX-PDV-CONFIRMACAO-PENDENTE-01 (2026-09-15) — venda com confirmação incerta
+  ficava presa após recarregar: `formState` era gravado mas só lido por função
+  morta. `abrirModalPagamento` restaura e reenvia o mesmo payload.
+
+- [x] FX-ONBOARDING-CHEGADA-01 (2026-09-15) — depois do wizard a conta caía num
+  `/gestao` vazio, sem reconhecimento nem próximo passo. Wizard ganhou estado de
+  chegada com boas-vindas e destino na Frente de Caixa; conta que nunca abriu
+  caixa não recebe o Abrir Caixa no carregamento (barreira passa para o
+  pagamento); estado vazio da grade com venda avulsa e cadastro rápido via
+  `ModalNovoProduto` compacto, extraído da página de produtos.
+
+- [x] FX-CADASTRO-LENTO-01 (2026-09-15) — cadastro real levava ~15–25 s entre
+  criar a conta e ver o produto. `start-trial` aguardava CAPI/e-mail/WhatsApp/
+  referral (10 s medidos) → `waitUntil`; `/perfil` só abria o wizard depois de
+  carregar tudo (5,6 s) → leitura mínima em paralelo; tracking esperava até 8 s
+  fixos → tetos de 1,5 s + callback de 1 s + 800 ms. Layout raiz decidia
+  redirects com `path` capturado no mount, causando reload redundante de
+  `/perfil` após o cadastro e `step_viewed` duplicado → pathname lido a cada
+  decisão e `/cadastro` isento.
+
+- [x] FX-PIN-REMOVIDO-01 (2026-09-15) — PIN administrativo removido do SaaS por
+  decisão de produto (fricção pós-cadastro; concorria com o add-on Acessos).
+  Código, rotas e UI saíram; colunas `pin_*` ficam no banco até migration de
+  drop. 3 pagantes sem Acessos perdem a trava de relatórios/despesas.
+
+- [x] FX-ONBOARDING-MURO-01 (2026-09-15) — o wizard de 4 passos cobra CPF/CNPJ e
+  largura de bobina antes da pessoa ver uma tela do produto, e o trial só nasce
+  no `finalizar()`. 26% dos cadastros (10 de 38 em 180 dias) travam ali, sem
+  trial e sem acesso; 7 desses voltaram e travaram de novo. Plano em cinco fases
+  em `docs/projects/onboarding-dois-passos.md`. **Fase 1.2 feita**: `requiredOk`
+  partido em `operationalProfileOk` × `billingProfileOk`, com os 4 call sites
+  atualizados (guards, layout raiz, perfil ×2). **Fase 1.1 feita**: wizard
+  instrumentado com evento por passo (`onboarding_wizard_*`, sem PII), baseline
+  de 4 passos. **Fase 2.2 feita**: gate de CPF/CNPJ removido do cartão
+  (`create-subscription`). **Fase 1.3 feita**: `/login` instrumentado
+  (`login_viewed/submitted/failed/bounced_authenticated`); hipótese principal
+  para os 80 pageviews — guards de página com `getUser()` sem timeout no
+  `/gestao` — registrada em CURRENT, não corrigida. **Fase 2.1 feita**: CPF/CNPJ
+  inline no Pix, gravado na criação da cobrança; o redirect pro `/perfil` por
+  falta de documento morreu. Fase 3 destravada. **Fase 3.1 feita**: wizard de
+  2 passos com a copy fechada e validação também no clique final; sobe só depois
+  do baseline da 1.1 coletar. **Fase 4.1 feita**: checklist fechado integrado ao
+  `/gestao`, com links para as abas/seções reais do perfil e sem semântica
+  paralela para bobina. **Fase 4.2 feita localmente**: save por passo e migration
+  da RPC do nudge entregues juntos; perfis operacionais incompletos com
+  subscription continuam elegíveis. Testes focados 39/39 + 66/66, suíte
+  completa 1.275/1.278 (3 skips), check 0/0 e ledger 107/107, 59/59, 55 forward.
+  Publicado em produção em 2026-09-15. Primeiro lote no merge `954fdf2`; Fases
+  3.1/4.1/4.2 publicadas imediatamente depois por decisão do dono, sem janela
+  útil de baseline. Migration `20260915090000` aplicada isoladamente pela CLI,
+  registrada e verificada. **Fase 5.1 encerrada** após auditoria da coorte em
+  produção: dos 10 registros históricos, 7 eram subusuários (não devem receber
+  nudge) e 3 eram titulares incompletos, todos com envio anterior registrado
+  antes da Fase 3.1. O CTA desses e-mails apontava para `/onboarding`, rota
+  inexistente; foi corrigido para `/perfil?msg=complete`. Por decisão do dono,
+  não houve novo disparo de e-mail e a deduplicação permaneceu intacta.
+
+- [x] FX-CHECKOUT-FAILED-01 (2026-09-14) — o funil só media checkout com
+  sucesso; tentativa recusada era invisível. `checkout_failed` passa a sair da
+  mesma função que devolve o erro (`lib/server/checkoutFailure.js`), cobrindo as
+  19 saídas de erro dos dois endpoints de pagamento, com `reason` em código
+  estável. Cliente emite só o que o servidor não pode ver (`no_session`,
+  `network`, `unexpected_response`), sem duplicar o `!res.ok`. Teste de fonte
+  barra `return json(...)` com status 4xx/5xx fora do helper.
+
+- [x] FX-POSTHOG-GATE-POR-ROTA-01 (2026-09-14) — `before_send` derrubava todo
+  evento disparado fora da área pública, porque o gate era por rota e não por
+  evento. `trial_auto_started`, `subscription_checkout_started`,
+  `pix_payment_initiated` e os `gerente_*` eram código morto silencioso: zero
+  eventos no PostHog desde a instalação. Agora só a superfície de tela
+  (`SURFACE_EVENTS`) morre em rota privada; o evento de negócio passa com URL
+  mascarada (`/app/mesas/:id`) e referrer removido. `opt_out_capturing()` —
+  que também calava `capture()` e persistia no localStorage — saiu em favor de
+  `set_config`, com desfazimento do opt-out legado no init. As três chamadas de
+  `/assinatura` foram removidas por duplicarem eventos server-side melhores.
+
 - [x] FX-ASSINATURA-ADDON-RESET-01 (2026-09-14) — o wizard de assinatura perdia
   o add-on já ativo ao trocar de plano e voltar, e anunciava o preço base do
   plano na etapa 1. Caso real: FullBuster Burger (`pdv` + `has_zelo_menu=true`,

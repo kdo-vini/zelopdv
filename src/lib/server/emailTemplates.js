@@ -438,7 +438,7 @@ export function emailNudgeCompleteProfile(email) {
 
 <p style="margin:0 0 16px;">Se tiver qualquer dúvida ou travar em algum campo, pode responder diretamente neste email. Estou acompanhando cada novo usuário de perto.</p>
 
-${ctaButton('Completar meu cadastro →', `${APP_URL}/onboarding`)}
+${ctaButton('Completar meu cadastro →', `${APP_URL}/perfil?msg=complete`)}
 
 ${signature()}
 `);

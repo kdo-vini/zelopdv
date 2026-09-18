@@ -195,8 +195,8 @@
 - PostHog roda somente em rotas publicas externas via `src/lib/posthogClient.js`; areas internas, onboarding (`/perfil`), billing (`/assinatura`) e callback OAuth ficam bloqueados.
 - O purge final de conta agendada não está neste repo; a migration diz que roda em um sweeper do ZeloChat.
 - O modelo de subusuário mistura duas camadas: contexto server-side/RLS por owner e gating fino de permissões majoritariamente no cliente.
-- `AdminLock`/`pin_admin` agora valida o valor em `/api/auth/admin-pin`; o browser recebe somente o status
-  de configuração. Continua sendo complementar ao RBAC por cargo.
+- O PIN administrativo foi removido do SaaS em 2026-09-15 (decisão de produto: privacidade entre
+  funcionários é o add-on Acessos). Colunas `pin_*` ficam no banco sem leitor até migration de drop.
 - O admin dashboard usa anon key no browser; a verificação de produção confirmou RLS ativo nas tabelas
   administrativas relevantes, então o risco remanescente é de defesa em profundidade/handlers críticos.
 - O baseline completo atual está em `supabase/baselines/20260813091000`: 107/107

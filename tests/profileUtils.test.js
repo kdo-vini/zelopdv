@@ -1,19 +1,34 @@
 import { describe, it, expect } from 'vitest';
-import { requiredOk, buildPayload, isValidImage } from '../src/lib/profileUtils.js';
+import { operationalProfileOk, billingProfileOk, buildPayload, isValidImage } from '../src/lib/profileUtils.js';
 
-describe('profileUtils.requiredOk', () => {
-  it('returns false when any required field is missing', () => {
-    expect(requiredOk({ nome_exibicao: '', documento: '52998224725', contato: '11999999999', largura_bobina: '80mm' })).toBe(false);
-    expect(requiredOk({ nome_exibicao: 'A', documento: '', contato: '2', largura_bobina: '80mm' })).toBe(false);
-    expect(requiredOk({ nome_exibicao: 'A', documento: '52998224725', contato: '', largura_bobina: '80mm' })).toBe(false);
-    expect(requiredOk({ nome_exibicao: 'A', documento: '52998224725', contato: '11999999999', largura_bobina: '70mm' })).toBe(false);
+// 2026-09-15: `requiredOk` foi partido em dois contratos. Ele exigia CPF/CNPJ e
+// largura de bobina pra deixar alguem ABRIR O CAIXA — era o muro que segurava
+// 26% dos cadastros. Ver docs/projects/onboarding-dois-passos.md.
+describe('profileUtils.operationalProfileOk', () => {
+  it('exige apenas nome e contato pra operar', () => {
+    expect(operationalProfileOk({ nome_exibicao: 'A', contato: '11999999999' })).toBe(true);
+    expect(operationalProfileOk({ nome_exibicao: '', contato: '11999999999' })).toBe(false);
+    expect(operationalProfileOk({ nome_exibicao: 'A', contato: '' })).toBe(false);
   });
-  it('returns true when all required fields are valid', () => {
-    expect(requiredOk({ nome_exibicao: 'A', documento: '52998224725', contato: '11999999999', largura_bobina: '80mm' })).toBe(true);
-    expect(requiredOk({ nome_exibicao: 'A', documento: '52998224725', contato: '11999999999', largura_bobina: '58mm' })).toBe(true);
+
+  it('nao exige CPF nem largura de bobina', () => {
+    // O caso que o muro antigo barrava: quer vender, ainda nao tem CPF cadastrado.
+    expect(operationalProfileOk({ nome_exibicao: 'Lanchonete do Joao', contato: '11999999999', documento: null })).toBe(true);
+    expect(operationalProfileOk({ nome_exibicao: 'A', contato: '11999999999', largura_bobina: 'pdf' })).toBe(true);
   });
-  it('rejects pdf as a valid largura_bobina', () => {
-    expect(requiredOk({ nome_exibicao: 'A', documento: '52998224725', contato: '11999999999', largura_bobina: 'pdf' })).toBe(false);
+
+  it('checa contato por presenca, nao por validade', () => {
+    // Apertar aqui expulsaria pro wizard toda conta existente cujo telefone
+    // nao normaliza. A validacao forte vive na entrada, no wizard.
+    expect(operationalProfileOk({ nome_exibicao: 'A', contato: '2' })).toBe(true);
+  });
+});
+
+describe('profileUtils.billingProfileOk', () => {
+  it('exige CPF ou CNPJ valido', () => {
+    expect(billingProfileOk({ documento: '52998224725' })).toBe(true);
+    expect(billingProfileOk({ documento: '' })).toBe(false);
+    expect(billingProfileOk({ documento: '11111111111' })).toBe(false);
   });
 });
 

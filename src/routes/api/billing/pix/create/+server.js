@@ -3,8 +3,10 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { getServerAccessContext } from '$lib/server/accessControl';
 import { isAbacatePayConfigured } from '$lib/server/abacatePay';
 import { getPostHogClient } from '$lib/server/posthog';
+import { checkoutFailed, CHECKOUT_FAILURE_REASONS as WHY } from '$lib/server/checkoutFailure';
 import { waitUntil } from '@vercel/functions';
 import { isValidPlanTier, isAddonAllowed, PLANS } from '$lib/pricing';
+import { isValidBrazilianTaxId, normalizeBrazilianTaxId } from '$lib/masks';
 import {
   createOrReusePixCharge,
   serializePixCharge,
@@ -12,39 +14,71 @@ import {
 } from '$lib/server/billingPix';
 
 export async function POST({ request }) {
+  /** Erro de checkout Pix. Toda saída de falha passa por aqui — a resposta e o
+   *  evento `checkout_failed` são a mesma coisa. */
+  const fail = (params) => checkoutFailed({ paymentMethod: 'pix', ...params });
+
+  // Preenchidos conforme a requisição avança; uma falha precoce registra sem eles.
+  let userId;
+  let planTier;
+  let requestedAddons;
+
   try {
     if (!supabaseAdmin) {
-      return json({ error: 'Supabase admin não configurado.' }, { status: 500 });
+      return fail({ reason: WHY.PROVIDER_UNAVAILABLE, error: 'Supabase admin não configurado.', status: 500 });
     }
     if (!isAbacatePayConfigured()) {
-      return json({ error: 'AbacatePay não configurado.' }, { status: 500 });
+      return fail({ reason: WHY.PROVIDER_UNAVAILABLE, error: 'AbacatePay não configurado.', status: 500 });
     }
 
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) return json({ error: 'Não autorizado' }, { status: 401 });
+    if (!token) return fail({ reason: WHY.UNAUTHENTICATED, error: 'Não autorizado', status: 401 });
 
     const {
       data: { user },
       error: authError,
     } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) return json({ error: 'Não autorizado' }, { status: 401 });
+    if (authError || !user) return fail({ reason: WHY.UNAUTHENTICATED, error: 'Não autorizado', status: 401 });
+
+    userId = user.id;
 
     const accessContext = await getServerAccessContext(user.id);
     if (accessContext.isSubUser) {
-      return json({ error: 'Subusuários não podem gerenciar billing.' }, { status: 403 });
+      return fail({
+        reason: WHY.SUBUSER_FORBIDDEN,
+        error: 'Subusuários não podem gerenciar billing.',
+        status: 403,
+        userId: user.id,
+      });
     }
 
     const body = await request.json().catch(() => ({}));
-    const planTier = body.planTier || 'pdv';
-    const requestedAddons = body.addons || {};
+    planTier = body.planTier || 'pdv';
+    requestedAddons = body.addons || {};
+    // Fase 2.1 do onboarding em dois passos: CPF/CNPJ some do wizard e vira um
+    // campo inline no Pix. `documento` é opcional aqui — só é usado quando o
+    // perfil ainda não tem um documento válido salvo.
+    const bodyDocumento = typeof body.documento === 'string' ? body.documento.trim() : '';
 
     if (!isValidPlanTier(planTier)) {
-      return json({ error: `Plano inválido. Use: ${Object.keys(PLANS).join(', ')}.` }, { status: 400 });
+      return fail({
+        reason: WHY.INVALID_PLAN,
+        error: `Plano inválido. Use: ${Object.keys(PLANS).join(', ')}.`,
+        userId: user.id,
+        planTier,
+        addons: requestedAddons,
+      });
     }
 
     for (const addonId of ['mesas', 'acessos', 'menu']) {
       if (requestedAddons[addonId] && !isAddonAllowed(planTier, addonId)) {
-        return json({ error: `Plano ${planTier} não suporta o add-on ${addonId}.` }, { status: 400 });
+        return fail({
+          reason: WHY.ADDON_NOT_ALLOWED,
+          error: `Plano ${planTier} não suporta o add-on ${addonId}.`,
+          userId: user.id,
+          planTier,
+          addons: requestedAddons,
+        });
       }
     }
 
@@ -55,15 +89,79 @@ export async function POST({ request }) {
       .maybeSingle();
 
     if (perfilError) {
-      return json({ error: 'Erro ao carregar perfil da empresa.' }, { status: 500 });
+      return fail({
+        reason: WHY.PROFILE_READ_FAILED,
+        error: 'Erro ao carregar perfil da empresa.',
+        status: 500,
+        userId: user.id,
+        planTier,
+        addons: requestedAddons,
+      });
     }
 
-    const profileValidation = validatePixCustomerProfile(perfil);
+    // Documento é o único campo de billing que ainda pode faltar depois do
+    // wizard curto. Se o perfil já tem um válido, o body nunca sobrescreve —
+    // documento salvo é definitivo, não fica trocando a cada Pix gerado.
+    let effectivePerfil = perfil;
+    const perfilDocumentoValido = !!perfil?.documento && isValidBrazilianTaxId(perfil.documento);
+
+    if (perfil && !perfilDocumentoValido && bodyDocumento) {
+      const normalizedBodyDoc = normalizeBrazilianTaxId(bodyDocumento);
+      if (!normalizedBodyDoc || !isValidBrazilianTaxId(normalizedBodyDoc)) {
+        return fail({
+          reason: WHY.PROFILE_INCOMPLETE,
+          error: 'CPF/CNPJ inválido.',
+          userId: user.id,
+          planTier,
+          addons: requestedAddons,
+          body: { field: 'documento' },
+        });
+      }
+
+      // Persistir ANTES de cobrar, e só seguir se a gravação for confirmada:
+      // se o update falhar, a AbacatePay nunca chega a ver esse taxId, então
+      // nunca existe cobrança criada com um documento que não ficou salvo.
+      // `.update` (não upsert) de propósito — se a linha de empresa_perfil não
+      // existir, não é este endpoint que cria; cai no PROFILE_INCOMPLETE de
+      // nome/telefone abaixo, que é gate do wizard.
+      const { data: updatedPerfil, error: updateError } = await supabaseAdmin
+        .from('empresa_perfil')
+        .update({ documento: normalizedBodyDoc, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .select('nome_exibicao, documento, contato')
+        .maybeSingle();
+
+      if (updateError || !updatedPerfil) {
+        return fail({
+          reason: WHY.PROFILE_READ_FAILED,
+          error: 'Não deu para salvar o CPF/CNPJ no perfil. Tente novamente.',
+          status: 500,
+          userId: user.id,
+          planTier,
+          addons: requestedAddons,
+        });
+      }
+
+      effectivePerfil = updatedPerfil;
+    }
+
+    const profileValidation = validatePixCustomerProfile(effectivePerfil);
     if (!profileValidation.ok) {
-      return json({
+      // Nome/telefone faltando é o muro de cadastro de sempre — manda pro
+      // /perfil. Documento sozinho faltando não: aquele muro tirava a pessoa
+      // do checkout Pix por causa de um campo que agora tem um jeito de
+      // preencher sem sair da tela (ver assinatura/+page.svelte).
+      const nomeOk = !!(effectivePerfil?.nome_exibicao || '').trim();
+      const contatoOk = !!(effectivePerfil?.contato || '').trim();
+      const isDocumentoOnlyIssue = nomeOk && contatoOk;
+      return fail({
+        reason: WHY.PROFILE_INCOMPLETE,
         error: profileValidation.message,
-        redirect: '/perfil?msg=complete',
-      }, { status: 400 });
+        userId: user.id,
+        planTier,
+        addons: requestedAddons,
+        body: isDocumentoOnlyIssue ? { field: 'documento' } : { redirect: '/perfil?msg=complete' },
+      });
     }
 
     const { reused, row: paymentRow } = await createOrReusePixCharge({
@@ -105,8 +203,15 @@ export async function POST({ request }) {
     return json(serializePixCharge(paymentRow));
   } catch (error) {
     console.error('[billing/pix/create] error:', error?.message || error);
-    return json({ error: error?.message || 'Falha ao gerar cobrança Pix.',
-      ...(error?.code?.startsWith('PIX_') ? { code: error.code, paymentId: error.paymentId, retrySafe: false } : {}),
-    }, { status: error?.code?.startsWith('PIX_') ? 409 : 500 });
+    const isPixConflict = !!error?.code?.startsWith('PIX_');
+    return fail({
+      reason: WHY.PROVIDER_ERROR,
+      error: error?.message || 'Falha ao gerar cobrança Pix.',
+      status: isPixConflict ? 409 : 500,
+      userId,
+      planTier,
+      addons: requestedAddons,
+      body: isPixConflict ? { code: error.code, paymentId: error.paymentId, retrySafe: false } : undefined,
+    });
   }
 }

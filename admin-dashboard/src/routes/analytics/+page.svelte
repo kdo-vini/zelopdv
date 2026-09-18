@@ -271,28 +271,48 @@
   })
 
   async function loadData() {
-    const [profilesRes, subsRes, lastSeenRes, salesRes, adminsRes, revenueRes] = await Promise.all([
+    const [profilesRes, subsRes, adminsRes] = await Promise.all([
       supabase.from('empresa_perfil').select('user_id, nome_exibicao, created_at'),
       supabase.from('subscriptions').select('user_id, status, created_at, current_period_end, manually_extended_until, updated_at'),
-      supabase.rpc('admin_get_users_last_seen'),
-      supabase.rpc('admin_get_sales_counts', { days_ago: 30 }),
       supabase.from('super_admins').select('user_id'),
-      supabase.rpc('admin_get_total_sales_value'),
     ])
+
+    // Fetch analytics data from server-side endpoint (uses supabaseAdmin/service_role)
+    // Previously, we called admin_get_* RPCs directly from the browser, which failed silently
+    // because the WHERE clause filtered everything when not using service_role.
+    // Now we use a server-side endpoint that properly authenticates and returns real data.
+    let analyticsData = { lastSeen: [], sales: [], revenue: [] }
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        const response = await fetch(`${API_BASE}/api/admin/analytics-data`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        if (response.ok) {
+          analyticsData = await response.json()
+        } else {
+          const error = await response.json().catch(() => ({}))
+          console.error('[Analytics] Failed to fetch analytics data:', error)
+        }
+      }
+    } catch (error) {
+      console.error('[Analytics] Analytics data fetch error:', error)
+    }
+    
     await loadUsageInsights()
 
     const adminIds = new Set((adminsRes.data || []).map(a => a.user_id))
 
     const lastSeenMap = {}
-    for (const r of lastSeenRes.data || []) lastSeenMap[r.user_id] = r.effective_last_seen
+    for (const r of analyticsData.lastSeen || []) lastSeenMap[r.user_id] = r.effective_last_seen
 
     const salesMap = {}
-    for (const v of salesRes.data || []) {
+    for (const v of analyticsData.sales || []) {
       salesMap[v.id_usuario] = Number(v.sales_count)
     }
 
     const revenueMap = {}
-    for (const r of revenueRes.data || []) {
+    for (const r of analyticsData.revenue || []) {
       revenueMap[r.id_usuario] = Number(r.total_revenue)
     }
 

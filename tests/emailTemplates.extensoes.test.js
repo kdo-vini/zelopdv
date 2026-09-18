@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { emailDay9, EMAIL_DAYS, EMAIL_SEQUENCE } from '../src/lib/server/emailTemplates.js';
+import { emailDay9, emailNudgeCompleteProfile, EMAIL_DAYS, EMAIL_SEQUENCE } from '../src/lib/server/emailTemplates.js';
 import { TRIAL_DAYS } from '../src/lib/pricing.js';
 
 const ATIVO = { vendas: 12, produtos: 20, acessos: 0 };
@@ -109,5 +109,14 @@ describe('cadência de onboarding', () => {
       expect(rendered.subject, `dia ${day} sem assunto`).toBeTruthy();
       expect(rendered.html, `dia ${day} sem html`).toContain('<!DOCTYPE html>');
     }
+  });
+});
+
+describe('nudge de cadastro incompleto', () => {
+  it('aponta para o fluxo existente de perfil, não para uma rota inexistente', () => {
+    const result = emailNudgeCompleteProfile('cliente@example.com');
+
+    expect(result.html).toContain('https://zelopdv.com.br/perfil?msg=complete');
+    expect(result.html).not.toContain('/onboarding');
   });
 });

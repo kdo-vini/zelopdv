@@ -10,6 +10,16 @@
   .app-navigation-workspace {
     padding-bottom: calc(var(--mobile-bottom-nav-safe-height) + 16px);
   }
+
+  /* iOS Safari dá zoom automático ao focar um campo com font-size < 16px e não
+     volta sozinho — exige pinch manual. Piso global vence qualquer font-size
+     menor definido por componente (precisa de !important: são seletores de
+     classe com escopo Svelte, mais específicos que um seletor de tag). */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='submit']):not([type='button']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 @custom-variant dark (&:is(.dark *));

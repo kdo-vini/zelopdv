@@ -24,7 +24,7 @@ Before editing these files, read the adjacent operational docs first:
 - `src/lib/finance/saleOps.js`, `src/lib/offlineDb.js`, `src/routes/app/+page.svelte` → [[CLAUDE]] + `docs/operations/OFFLINE.md`
 - `src/lib/server/accessControl.js`, `src/lib/accessControl.js`, `src/routes/api/access/*`, `src/routes/gestao/acessos/+page.svelte` → [[CLAUDE]] + `docs/modules/ACESSOS.md` + `docs/data/SCHEMA_RLS.md`
 - `src/routes/app/mesas/*`, `src/routes/gestao/mesas/+page.svelte` → [[CLAUDE]] + `docs/modules/MESAS.md`
-- `src/routes/relatorios/+page.svelte`, `src/routes/gestao/despesas/+page.svelte`, `src/lib/components/AdminLock.svelte` → [[CODE_REVIEW]] + `docs/data/SCHEMA_RLS.md`
+- `src/routes/relatorios/+page.svelte`, `src/routes/gestao/despesas/+page.svelte` → [[CODE_REVIEW]] + `docs/data/SCHEMA_RLS.md`
 - `admin-dashboard/*` → [[CLAUDE]] + [[CODE_REVIEW]]
 
 ## Documentation contract

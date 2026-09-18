@@ -327,6 +327,12 @@ Conclusao operacional:
 
 ## Ponto critico: `empresa_perfil.pin_admin`
 
+> **PIN removido do produto em 2026-09-15.** Não há mais código que leia ou grave
+> `pin_admin`/`pin_enabled` (nem `access_settings.pin_enabled`); `AdminLock`,
+> `/api/auth/admin-pin` e `/api/auth/pin-reset-otp` saíram. As colunas e a
+> containment de SELECT abaixo continuam no banco até uma migration de drop.
+> O texto a seguir é histórico.
+
 - `empresa_perfil.pin_enabled` é `boolean NOT NULL DEFAULT true` e controla se
   a barreira administrativa está ativa. O estado desativado é representado por
   `pin_enabled = false` e `pin_admin = null`; a migration
@@ -347,7 +353,7 @@ Conclusao operacional:
 
 - A pagina de despesas resolve o contexto via `ensureActiveSubscription`.
 - Depois disso, consulta `expenses` pelo `uid` do owner.
-- A página usa `AdminLock` para UX; as policies de `20260812193009_expenses_role_rbac.sql` também exigem
+- Sem trava de UI desde 2026-09-15 (PIN removido); as policies de `20260812193009_expenses_role_rbac.sql` também exigem
   `despesas.visualizar` para leitura e `despesas.gerenciar` para mutações de subusuários.
 
 ## Ponto crítico: catálogo base
@@ -537,7 +543,7 @@ Migration: `.ai/migrations/product_usage_events_2026_07_30.sql`.
 - `expenses` foi reconciliada em produção pela migration `20260812193009_expenses_role_rbac.sql`:
   owner mantém CRUD; subusuário precisa de `despesas.visualizar` para SELECT ou
   `despesas.gerenciar` para mutações.
-- `pin_admin` agora é verificado por `/api/auth/admin-pin`; o valor bruto não é selecionado pelo browser.
+- PIN administrativo removido em 2026-09-15; `pin_admin` segue no banco sem leitor, com SELECT contido.
 
 ## Zelinho Gerente conversacional
 

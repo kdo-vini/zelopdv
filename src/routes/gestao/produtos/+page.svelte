@@ -10,6 +10,7 @@
   import * as Select from '$lib/components/ui/select/index.js';
   import ModalModificadores from '$lib/components/modals/ModalModificadores.svelte';
   import ModalPizzaEditor from '$lib/components/modals/ModalPizzaEditor.svelte';
+  import ModalNovoProduto from '$lib/components/modals/ModalNovoProduto.svelte';
   import { archivePizzaProduct } from '$lib/pizzaEditor';
   import {
     MessageCircle,
@@ -111,18 +112,6 @@
 
   let newCatForm = { nome: '', ordem: 0, controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 };
   let newSubForm = { nome: '', ordem: 0, id_categoria: null };
-  let newProdForm = {
-    nome: '',
-    preco: 0,
-    preco_2: null,
-    preco_3: null,
-    id_categoria: null,
-    id_subcategoria: null,
-    eh_item_por_unidade: false,
-    ocultar_no_pdv: false,
-    controlar_estoque: false,
-    estoque_atual: 0
-  };
 
   let creationModalReturnFocus = null;
 
@@ -426,15 +415,10 @@
     currentPage * itemsPerPage
   );
 
-  $: filteredSubcatsForProdForm = newProdForm.id_categoria
-    ? subcategorias.filter(s => String(s.id_categoria) === String(newProdForm.id_categoria))
-    : [];
-
   $: filteredSubcatsForEditForm = editProdForm.id_categoria
     ? subcategorias.filter(s => String(s.id_categoria) === String(editProdForm.id_categoria))
     : [];
 
-  $: newProdCategoriaCompartilhada = categoriaTemEstoqueCompartilhado(newProdForm.id_categoria);
   $: editProdCategoriaCompartilhada = categoriaTemEstoqueCompartilhado(editProdForm.id_categoria);
 
   function toggleSort(field) {
@@ -833,44 +817,19 @@
   }
 
   // ─── CRUD: Produtos ───────────────────────────────────────────────────────────
-  async function criarProduto(e) {
-    e.preventDefault();
-    const { data: userData } = await supabase.auth.getUser();
-    const id_usuario = ownerUserId || userData?.user?.id || null;
-    const payload = {
-      ...newProdForm,
-      id_usuario,
-      id_categoria: toDatabaseId(newProdForm.id_categoria),
-      id_subcategoria: toDatabaseId(newProdForm.id_subcategoria),
-      controlar_estoque: newProdCategoriaCompartilhada ? false : newProdForm.controlar_estoque,
-      estoque_atual: !newProdCategoriaCompartilhada && newProdForm.controlar_estoque ? newProdForm.estoque_atual : 0
-    };
-
-    const { data: createdProduct, error } = await supabase
-      .from('produtos')
-      .insert(payload)
-      .select('*')
-      .single();
-    if (error) {
-      addToast('Não foi possível criar o produto. Tente novamente.', 'error');
-      return;
+  // ModalNovoProduto.svelte já cria o produto (insert em `produtos` + toasts +
+  // reset do form + invalidação do pdvCache). Este handler só cuida dos
+  // efeitos colaterais que são específicos desta página.
+  async function produtoCriado(event) {
+    // event.detail é o produto criado (spread) + categoriaCriada ({id, nome} ou null)
+    // quando o ModalNovoProduto também criou uma categoria nova no mesmo submit.
+    const { categoriaCriada, ...createdProduct } = event.detail;
+    if (categoriaCriada) {
+      // carregarCategorias() já busca direto do Supabase (sem cache local),
+      // então recarrega sozinha os dados atuais — só precisa rodar antes de
+      // posicionar a categoria ativa para a aba nova aparecer na lista.
+      await carregarCategorias();
     }
-
-    addToast('Produto criado com sucesso!', 'success');
-    newProdForm = {
-      nome: '',
-      preco: 0,
-      preco_2: null,
-      preco_3: null,
-      id_categoria: null,
-      id_subcategoria: null,
-      eh_item_por_unidade: false,
-      ocultar_no_pdv: false,
-      controlar_estoque: false,
-      estoque_atual: 0
-    };
-    fecharModalCriacao('produto');
-    pdvCache.invalidateProdutos();
     await carregarProdutos();
     await carregarContagemProdutosPorCategoria();
     justCreatedProductId = createdProduct.id;
@@ -1001,10 +960,9 @@
   }
 
   function abrirModalProduto() {
-    rememberCreationModalTrigger();
-    // Pré-preenche categoria/subcategoria com a seleção atual
-    newProdForm.id_categoria = toSelectId(selectedCategoriaId);
-    newProdForm.id_subcategoria = toSelectId(selectedSubcategoriaId);
+    // ModalNovoProduto.svelte pré-preenche categoria/subcategoria sozinho a
+    // partir de defaultCategoriaId/defaultSubcategoriaId e cuida do próprio
+    // foco/retorno de foco — não precisa de rememberCreationModalTrigger.
     showDesktopActions = false;
     showMobileCreateMenu = false;
     showProdModal = true;
@@ -2360,180 +2318,19 @@
 {/if}
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     MODAL — Novo Produto
+     MODAL — Novo Produto (src/lib/components/modals/ModalNovoProduto.svelte)
      ═══════════════════════════════════════════════════════════════════════ -->
-{#if showProdModal}
-  <dialog
-    open
-    class="modal-backdrop"
-    aria-modal="true"
-    aria-labelledby="new-product-title"
-    tabindex="-1"
-    on:keydown={(event) => handleCreationModalKeydown(event, 'produto')}
-    on:click|self={() => fecharModalCriacao('produto')}
-    transition:slide={{ duration: 200 }}
-  >
-    <div class="modal-box modal-box-lg" style="background: var(--bg-card); border-color: var(--border-card);">
-      <div class="modal-header" style="border-color: var(--border-subtle);">
-        <h2 id="new-product-title" class="modal-title" style="color: var(--text-main);">Novo produto</h2>
-        <button type="button" class="modal-close" aria-label="Fechar novo produto" on:click={() => fecharModalCriacao('produto')} style="color: var(--text-muted);">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <form on:submit={criarProduto} class="modal-body flex flex-col gap-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label for="new-product-name" class="form-label" style="color: var(--text-label);">Nome do produto</label>
-            <input
-              id="new-product-name"
-              class="form-input"
-              bind:value={newProdForm.nome}
-              placeholder="Ex.: Coca-Cola lata"
-              required
-              use:focusOnMount
-              style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-            />
-          </div>
-          <div>
-              <label for="new-product-price-1" class="form-label" style="color: var(--text-label);">{tabelasPrecoAtivo ? `Preço ${nomesTabelas[0]} (R$)` : 'Preço (R$)'}</label>
-              <div class="currency-field">
-                <span class="currency-prefix" aria-hidden="true">R$</span>
-                <input
-                  class="form-input currency-input"
-                  id="new-product-price-1"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  bind:value={newProdForm.preco}
-                  required
-                  style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                />
-              </div>
-          </div>
-          {#if tabelasPrecoAtivo}
-            <div>
-              <label for="new-product-price-2" class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[1]} (R$)</label>
-              <div class="currency-field">
-                <span class="currency-prefix" aria-hidden="true">R$</span>
-                <input
-                  class="form-input currency-input"
-                  id="new-product-price-2"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  bind:value={newProdForm.preco_2}
-                  placeholder="Opcional"
-                  style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                />
-              </div>
-            </div>
-            <div>
-              <label for="new-product-price-3" class="form-label" style="color: var(--text-label);">Preço {nomesTabelas[2]} (R$)</label>
-              <div class="currency-field">
-                <span class="currency-prefix" aria-hidden="true">R$</span>
-                <input
-                  class="form-input currency-input"
-                  id="new-product-price-3"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  bind:value={newProdForm.preco_3}
-                  placeholder="Opcional"
-                  style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-                />
-              </div>
-            </div>
-          {/if}
-          <div>
-            <span class="form-label" style="color: var(--text-label);">Categoria</span>
-            <Select.Root bind:value={newProdForm.id_categoria}>
-              <Select.Trigger class="field-input">
-                <span class="select-value-label">{getCategoriaNome(newProdForm.id_categoria) || 'Selecione...'}</span>
-              </Select.Trigger>
-              <Select.Content>
-                {#each categorias as c}
-                  <Select.Item value={String(c.id)} label={c.nome} />
-                {/each}
-              </Select.Content>
-            </Select.Root>
-          </div>
-          <div>
-            <span class="form-label" style="color: var(--text-label);">Subcategoria</span>
-            <Select.Root bind:value={newProdForm.id_subcategoria} disabled={!newProdForm.id_categoria}>
-              <Select.Trigger class="field-input">
-                <span class="select-value-label">{getSubcategoriaNome(newProdForm.id_subcategoria) || '— Nenhuma —'}</span>
-              </Select.Trigger>
-              <Select.Content>
-                {#each filteredSubcatsForProdForm as s}
-                  <Select.Item value={String(s.id)} label={s.nome} />
-                {/each}
-              </Select.Content>
-            </Select.Root>
-          </div>
-        </div>
-
-        <!-- Opções booleanas -->
-        <div class="prod-options-grid" style="background: var(--bg-panel); border-color: var(--border-subtle);">
-          <label class="prod-option-label" style="color: var(--text-label);">
-            <input type="checkbox" bind:checked={newProdForm.eh_item_por_unidade} class="themed-checkbox" />
-            <div>
-              <span class="font-medium text-sm">Venda em atacado</span>
-              <p class="text-xs mt-0.5" style="color: var(--text-muted);">Define como este produto será vendido no PDV</p>
-            </div>
-          </label>
-          <label class="prod-option-label" style="color: var(--text-label);">
-            <input type="checkbox" bind:checked={newProdForm.ocultar_no_pdv} class="themed-checkbox" />
-            <div>
-              <span class="font-medium text-sm">Ocultar no PDV</span>
-              <p class="text-xs mt-0.5" style="color: var(--text-muted);">Produto não aparecerá para seleção na venda</p>
-            </div>
-          </label>
-          {#if newProdCategoriaCompartilhada}
-            <div class="prod-option-label" style="color: var(--text-label);">
-              <div>
-                <span class="font-medium text-sm">Estoque compartilhado</span>
-                <p class="text-xs mt-0.5" style="color: var(--text-muted);">A quantidade é controlada na categoria selecionada</p>
-              </div>
-            </div>
-          {:else}
-            <label class="prod-option-label" style="color: var(--text-label);">
-              <input type="checkbox" bind:checked={newProdForm.controlar_estoque} class="themed-checkbox" />
-              <div>
-                <span class="font-medium text-sm">Controlar estoque</span>
-                <p class="text-xs mt-0.5" style="color: var(--text-muted);">Acompanha a quantidade disponível</p>
-              </div>
-            </label>
-          {/if}
-          {#if !newProdCategoriaCompartilhada && newProdForm.controlar_estoque}
-            <div class="flex items-center gap-2" transition:slide|local={{ duration: 100 }}>
-              <label for="new-product-stock" class="form-label mb-0" style="color: var(--text-label);">Qtd. Inicial:</label>
-              <input
-                id="new-product-stock"
-                class="form-input w-24"
-                type="number"
-                step="1"
-                min="0"
-                bind:value={newProdForm.estoque_atual}
-                style="background: var(--bg-input); color: var(--text-main); border-color: var(--border-subtle);"
-              />
-            </div>
-          {/if}
-        </div>
-
-        <div class="modal-footer" style="border-color: var(--border-subtle);">
-          <button type="button" class="btn-ghost-modal" on:click={() => fecharModalCriacao('produto')} style="color: var(--text-muted); border-color: var(--border-subtle);">
-            Cancelar
-          </button>
-          <button type="submit" class="btn-primary">
-            Salvar produto
-          </button>
-        </div>
-      </form>
-    </div>
-  </dialog>
-{/if}
+<ModalNovoProduto
+  open={showProdModal}
+  {ownerUserId}
+  {categorias}
+  {subcategorias}
+  tabelasPreco={{ ativo: tabelasPrecoAtivo, nomes: nomesTabelas }}
+  defaultCategoriaId={selectedCategoriaId}
+  defaultSubcategoriaId={selectedSubcategoriaId}
+  on:close={() => fecharModalCriacao('produto')}
+  on:created={produtoCriado}
+/>
 
 {#if pizzaProduct}<ModalPizzaEditor produto={pizzaProduct} {ownerUserId} replacement={pizzaReplacement} on:close={() => { pizzaProduct = null; pizzaReplacement = null; }} on:changed={pizzaChanged} on:saved={() => { pizzaProduct = null; pizzaReplacement = null; pizzaChanged(); }}/>{/if}
 <ModalModificadores
@@ -3432,10 +3229,6 @@
     box-shadow: var(--shadow-modal);
   }
 
-  .modal-box-lg {
-    max-width: 580px;
-  }
-
   .modal-header {
     display: flex;
     align-items: center;
@@ -3564,15 +3357,6 @@
   .form-input:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-  }
-
-  .prod-options-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    border: 1px solid;
   }
 
   .prod-option-label {

@@ -7,6 +7,8 @@
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
   import { getPrecoTabela } from '$lib/finance/caixa';
   import { pizzaStartingPrice } from '$lib/pizza';
+  import { formatMoneyNumber } from '$lib/formatMoney';
+  import { Receipt, Plus, ChevronUp } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -16,8 +18,14 @@
   /** @type {boolean} Differentiates first-use empty state from search/filter with no results. */
   export let hasAnyProducts = true;
 
+  /** @type {boolean} Shows the "+ Cadastrar primeiro produto" CTA in the first-use empty state (hidden for sub-users without produtos.gerenciar). */
+  export let canCadastrarProduto = true;
+
   /** @type {number} Tabela de preço ativa (1, 2 ou 3) */
   export let tabelaAtiva = 1;
+
+  /** @type {number|string|null} First-use coachmark bound to this product tile (never a viewport overlay). */
+  export let coachmarkProductId = null;
   
   /** @type {number} Altura de cada card em pixels */
   export let itemHeight = 128;
@@ -38,6 +46,8 @@
   // +1 accounts for the always-present "Item Avulso" button at the end
   $: totalRows = Math.ceil((produtos.length + 1) / columns);
   $: totalHeight = totalRows * rowHeight;
+  // Extra scroll room so a below-tile coachmark is not clipped by overflow.
+  $: extraBottom = coachmarkProductId != null ? 160 : 96;
   
   // Calcula quais itens estão visíveis
   $: {
@@ -81,11 +91,46 @@
   }
   
   function handleProdutoClick(produto) {
+    if (coachmarkProductId != null) dispatch('coachmarkDismiss');
     dispatch('produtoClick', produto);
+  }
+
+  function handleCoachmarkDismiss(event) {
+    event?.stopPropagation?.();
+    dispatch('coachmarkDismiss');
+  }
+
+  function isCoachmarkProduct(produto) {
+    return coachmarkProductId != null && produto?.id != null
+      && String(produto.id) === String(coachmarkProductId);
+  }
+
+  let lastScrolledCoachmarkId = null;
+
+  async function ensureCoachmarkVisible(id) {
+    if (id == null || id === lastScrolledCoachmarkId) return;
+    lastScrolledCoachmarkId = id;
+    await tick();
+    const el = containerEl?.querySelector(`[data-prod="${id}"]`);
+    if (!el) {
+      lastScrolledCoachmarkId = null;
+      return;
+    }
+    el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  $: if (coachmarkProductId != null) {
+    void ensureCoachmarkVisible(coachmarkProductId);
+  } else {
+    lastScrolledCoachmarkId = null;
   }
   
   function handleValorAvulsoClick() {
     dispatch('valorAvulsoClick');
+  }
+
+  function handleCadastrarProdutoClick() {
+    dispatch('cadastrarProdutoClick');
   }
   
   // Keyboard navigation
@@ -140,29 +185,40 @@
 >
   {#if produtos.length === 0}
     <div class="empty-state">
-      <div class="empty-card">
-        <div class="empty-icon" aria-hidden="true">+</div>
-        <h3>{hasAnyProducts ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado ainda'}</h3>
-        <p>
+      <div class="empty-content">
+        <div class="empty-icon" aria-hidden="true">
+          <Receipt size={24} />
+        </div>
+        <h3 class="empty-title">{hasAnyProducts ? 'Nenhum produto encontrado' : 'Faça sua primeira venda'}</h3>
+        <p class="empty-text">
           {hasAnyProducts
             ? 'Tente limpar a busca ou escolher outra categoria. Se quiser vender mesmo assim, use um item avulso.'
-            : 'Para testar agora, use um item avulso. Depois você pode cadastrar seus produtos em Gestão → Produtos e eles aparecem aqui automaticamente.'}
+            : 'Cadastre seu primeiro produto para começar. É rápido: nome e preço.'}
         </p>
         <div class="empty-actions">
-          <button type="button" class="empty-primary" on:click={handleValorAvulsoClick}>
-            Testar com item avulso
-          </button>
-          {#if !hasAnyProducts}
-            <a href="/gestao/produtos" class="empty-secondary">
-              Cadastrar produtos
-            </a>
+          {#if !hasAnyProducts && canCadastrarProduto}
+            <button type="button" class="empty-primary" on:click={handleCadastrarProdutoClick}>
+              <Plus size={18} aria-hidden="true" />
+              <span>Cadastrar primeiro produto</span>
+            </button>
           {/if}
+          <button type="button" class="{!hasAnyProducts && canCadastrarProduto ? 'empty-secondary' : 'empty-primary'}" on:click={handleValorAvulsoClick}>
+            <span>{hasAnyProducts ? 'Testar com item avulso' : 'Ou venda avulsa'}</span>
+          </button>
         </div>
+        {#if !hasAnyProducts}
+          <div class="empty-preview" aria-hidden="true">
+            <div class="empty-preview-tile"></div>
+            <div class="empty-preview-tile"></div>
+            <div class="empty-preview-tile empty-preview-tile-third"></div>
+          </div>
+          <p class="empty-footnote">Seus produtos aparecerão aqui.</p>
+        {/if}
       </div>
     </div>
   {:else}
-  <!-- Container com altura total para scroll correto. Extra 96px para barra inferior no mobile. -->
-  <div style="height: {totalHeight + 96}px; position: relative;">
+  <!-- Container com altura total para scroll correto. extraBottom reserva a barra inferior e, no primeiro uso, a dica abaixo do tile. -->
+  <div style="height: {totalHeight + extraBottom}px; position: relative;">
     <!-- Grid posicionado com offset -->
     <div 
       class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 absolute w-full px-4"
@@ -172,26 +228,48 @@
       on:keydown={handleKeydown}
     >
       {#each visibleProducts as produto (produto.id)}
-        <button
-          data-prod={produto.id}
-          on:click={() => handleProdutoClick(produto)}
-          class="group min-h-28 bg-slate-800/40 rounded-xl border border-slate-700/50 hover:border-sky-500/50 hover:bg-slate-800/80 focus:outline-hidden focus:ring-1 focus:ring-sky-500 transition-all duration-200 flex flex-col justify-between"
-        >
-          <div class="p-3 w-full text-left">
-            <span class="text-xs font-bold text-slate-300 uppercase leading-snug wrap-break-word line-clamp-3 group-hover:text-white transition-colors">
-              {produto.nome}
-            </span>
-          </div>
-          
-          <div class="px-3 pb-3 w-full text-right">
-            <div class="flex items-baseline justify-end gap-0.5">
-              <span class="text-[10px] font-bold text-sky-400">{produto.tipo_produto === 'pizza' ? 'A partir de R$' : 'R$'}</span>
-              <span class="text-lg font-black text-white tracking-tighter">
-                {Number(produto.tipo_produto === 'pizza' ? pizzaStartingPrice(produto.pizza_config, produto.modifierGroups) : getPrecoTabela(produto, tabelaAtiva)).toFixed(2)}
+        {@const isCoachmark = isCoachmarkProduct(produto)}
+        <div class="prod-cell">
+          <button
+            data-prod={produto.id}
+            type="button"
+            aria-describedby={isCoachmark ? 'prod-coachmark-tip' : undefined}
+            on:click={() => handleProdutoClick(produto)}
+            class="group min-h-28 w-full bg-slate-800/40 rounded-xl border border-slate-700/50 hover:border-sky-500/50 hover:bg-slate-800/80 focus:outline-hidden focus:ring-1 focus:ring-sky-500 transition-all duration-200 flex flex-col justify-between"
+            class:prod-tile-highlight={isCoachmark}
+          >
+            <div class="p-3 w-full text-left">
+              <span class="text-xs font-bold text-slate-300 uppercase leading-snug wrap-break-word line-clamp-3 group-hover:text-white transition-colors">
+                {produto.nome}
               </span>
             </div>
-          </div>
-        </button>
+            
+            <div class="px-3 pb-3 w-full text-right">
+              <div class="flex items-baseline justify-end gap-0.5">
+                <span class="text-[10px] font-bold text-sky-400">{produto.tipo_produto === 'pizza' ? 'A partir de R$' : 'R$'}</span>
+                <span class="text-lg font-black text-white tracking-tighter tabular-nums">
+                  {formatMoneyNumber(produto.tipo_produto === 'pizza' ? pizzaStartingPrice(produto.pizza_config, produto.modifierGroups) : getPrecoTabela(produto, tabelaAtiva))}
+                </span>
+              </div>
+            </div>
+          </button>
+          {#if isCoachmark}
+            <div class="prod-coachmark">
+              <span class="prod-coachmark-arrow" aria-hidden="true">
+                <ChevronUp size={20} />
+              </span>
+              <p id="prod-coachmark-tip" class="prod-coachmark-text" role="status">Toque no produto para somar na venda</p>
+              <button
+                type="button"
+                class="prod-coachmark-dismiss"
+                aria-label="Dispensar dica"
+                on:click={handleCoachmarkDismiss}
+              >
+                Entendi
+              </button>
+            </div>
+          {/if}
+        </div>
       {/each}
       
       <!-- Botão Fixo: Valor Personalizado (Minimalista) -->
@@ -217,66 +295,77 @@
 </div>
 
 <style>
+  /* Sem cartão ao redor (ver DESIGN_PATTERNS "Never nest cards" / pedido do
+     dono): o conteúdo fica direto na página, alinhado mais para cima
+     (padding-top ~10vh, não centralizado verticalmente) para as ações
+     ficarem ao alcance do polegar no celular. */
   .empty-state {
     min-height: 100%;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 1rem;
+    padding-top: 10vh;
   }
 
-  .empty-card {
-    width: min(100%, 28rem);
-    border: 1px solid var(--border-card);
-    border-radius: 1rem;
-    background: color-mix(in srgb, var(--bg-card) 82%, transparent);
-    padding: 1.5rem;
+  .empty-content {
+    width: 100%;
+    max-width: 22rem;
     text-align: center;
     color: var(--text-main);
   }
 
   .empty-icon {
-    width: 2.75rem;
-    height: 2.75rem;
-    margin: 0 auto 0.85rem;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 16px;
     border-radius: 999px;
     display: grid;
     place-items: center;
-    font-size: 1.5rem;
-    font-weight: 800;
-    background: color-mix(in srgb, var(--primary) 16%, transparent);
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
     color: var(--primary);
   }
 
-  .empty-card h3 {
-    margin: 0 0 0.5rem;
-    font-size: 1rem;
-    font-weight: 800;
+  .empty-title {
+    margin: 0 0 8px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-wrap: balance;
+    color: var(--text-main);
   }
 
-  .empty-card p {
+  .empty-text {
     margin: 0;
     color: var(--text-label);
-    font-size: 0.9rem;
-    line-height: 1.55;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  @media (min-width: 640px) {
+    .empty-text {
+      font-size: 0.9375rem;
+    }
   }
 
   .empty-actions {
     display: grid;
-    gap: 0.65rem;
-    margin-top: 1.15rem;
+    gap: 12px;
+    margin-top: 24px;
   }
 
   .empty-primary,
   .empty-secondary {
-    min-height: 2.75rem;
-    border-radius: 0.75rem;
+    width: 100%;
+    min-height: 52px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9rem;
-    font-weight: 800;
-    text-decoration: none;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast), transform 120ms ease;
   }
 
   .empty-primary {
@@ -285,9 +374,168 @@
     color: var(--primary-text);
   }
 
+  .empty-primary:hover {
+    background: var(--primary-hover);
+  }
+
   .empty-secondary {
     border: 1px solid var(--border-subtle);
-    background: var(--bg-input);
+    background: var(--bg-panel);
     color: var(--text-main);
+  }
+
+  .empty-secondary:hover {
+    border-color: var(--text-muted);
+  }
+
+  .empty-primary:active,
+  .empty-secondary:active {
+    transform: scale(0.98);
+  }
+
+  .empty-primary:focus-visible,
+  .empty-secondary:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .empty-primary,
+    .empty-secondary {
+      transition: none;
+    }
+
+    .empty-primary:active,
+    .empty-secondary:active {
+      transform: none;
+    }
+
+    .prod-tile-highlight,
+    .prod-coachmark {
+      animation: none;
+    }
+  }
+
+  /* Prévia que ensina: 3 tiles fantasma no mesmo formato dos cards de
+     produto da grade (min-h-28 / 12px de raio), sem conteúdo. */
+  .empty-preview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 32px;
+  }
+
+  .empty-preview-tile {
+    height: 7rem;
+    border-radius: 12px;
+    border: 1px dashed var(--border-subtle);
+    background: transparent;
+  }
+
+  @media (max-width: 359px) {
+    .empty-preview {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .empty-preview-tile-third {
+      display: none;
+    }
+  }
+
+  .empty-footnote {
+    margin: 12px 0 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  /* First-use coachmark: bound to the product tile, never a centered overlay. */
+  .prod-cell {
+    position: relative;
+    min-width: 0;
+  }
+
+  .prod-tile-highlight {
+    border-color: var(--primary);
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    transform: translateY(-2px);
+    animation: prod-tile-pop 280ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  @keyframes prod-tile-pop {
+    from {
+      transform: translateY(4px) scale(0.98);
+    }
+    to {
+      transform: translateY(-2px) scale(1);
+    }
+  }
+
+  .prod-coachmark {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.45rem 0.55rem 0.35rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.55rem;
+    pointer-events: auto;
+    animation: prod-coachmark-pop 280ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  @keyframes prod-coachmark-pop {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .prod-coachmark-arrow {
+    display: flex;
+    color: var(--primary);
+    margin-top: -0.1rem;
+  }
+
+  .prod-coachmark-text {
+    margin: 0;
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--text-main);
+    text-wrap: balance;
+  }
+
+  .prod-coachmark-dismiss {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.35rem 0.7rem;
+    border: 0;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .prod-coachmark-dismiss:hover {
+    color: var(--text-main);
+    background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  }
+
+  .prod-coachmark-dismiss:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
   }
 </style>

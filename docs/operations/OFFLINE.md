@@ -490,3 +490,34 @@ Pendente:
 - [ ] Baixa local otimista de estoque pendente, com reconciliação no sync.
 - [ ] Cobrir com testes e2e os cenários de queda antes, durante e depois da RPC e de cold-start offline.
 - [ ] Avaliar pré-cache do app-shell (PWA) para abrir do zero sem rede.
+
+## Atualização da aplicação (service worker) — 2026-09-15
+
+`/app` e `/gestao/caixa` são servidos pelo precache do service worker
+(`navigateFallback: '/offline-shell'`, `registerType: 'prompt'`) mesmo online, então
+recarregar a página não troca de versão. Regras em
+`src/lib/components/UpdateAvailable.svelte` e `src/lib/pwa/updateSafety.js`:
+
+- **Boot:** logo após registrar, o app força `registration.update()`. Se houver
+  versão nova (worker esperando) nos primeiros 8 s e antes do primeiro toque ou
+  tecla, a atualização é aplicada sem aviso **somente se** estiver online, sem
+  operação em `offline_operations` fora de `acked`, sem `vendas_pendentes`
+  `aguardando`, sem comanda em `sessionStorage.zelo_comanda`, sem rascunho `pdv`
+  com itens ou `submission`, sem campo focado e sem ter aplicado a mesma versão
+  nesta sessão. Fila e rascunhos são lidos direto do IndexedDB (todos os owners do
+  aparelho); falha de leitura conta como pendência. IndexedDB nunca é apagado; os
+  caches do workbox só depois do novo worker assumir.
+- **Depois do boot** (voltar do segundo plano, foco, polling): só o aviso
+  "Nova versão disponível", nunca recarga automática.
+- **Modais:** qualquer modal aberto adia o aviso, exceto os marcados com
+  `data-update-safe="true"` (hoje só `ModalAbrirCaixa`). Antes disso, a versão
+  antiga abria o Abrir Caixa no carregamento e o aviso nunca aparecia nessa tela —
+  aparelhos ficavam presos na versão antiga.
+- Aparelho preso numa versão anterior a esta regra precisa pegá-la uma vez pelo
+  caminho manual (aceitar o aviso numa tela sem modal, aba privada ou apagar os
+  dados do site); daí em diante as atualizações entram no boot.
+- **Confirmado em campo (iPhone/Safari, 2026-09-15):** trocar de aba ou deixar o
+  Safari em segundo plano não conta como reabrir o app — o iOS mantém o processo
+  vivo e o `onMount` não roda de novo. É preciso fechar o Safari por completo
+  (deslizar para cima e fechar, não só trocar de aba) e reabrir o Zelo do zero.
+  Vale como primeiro passo de suporte antes de qualquer reset manual.

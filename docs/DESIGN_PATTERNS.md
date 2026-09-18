@@ -352,6 +352,7 @@ Ver **seção 13** para API e exemplos. Não use `<select>` nativo em páginas n
 
 - **Confirmação:** `confirmAction(title, message)` de `$lib/stores/ui` — retorna `Promise<boolean>`. Usa `AlertDialog` (bits-ui) internamente, com focus trap e dismiss via Escape.
 - **Modal custom:** padrão overlay + scale. `.modal-overlay` (`fixed inset-0 bg-black/60 backdrop-blur z-100`) + `.modal` (`var(--bg-card)`, `border-radius: 14px`, `max-width: 460px`). Ref: `gestao/mesas/+page.svelte`.
+- **Novo produto:** use `$lib/components/modals/ModalNovoProduto.svelte` (eventos `close`/`created`; `compact` para cadastro rápido, como no estado vazio do PDV). Não recrie o formulário inline.
 
 ---
 
@@ -368,6 +369,14 @@ Ver **seção 13** para API e exemplos. Não use `<select>` nativo em páginas n
 - Breakpoint principal: `md` (Tailwind). Sidebar vira off-canvas com hambúrguer (overlay `bg-black/50 z-[55]`, `aside` `fixed md:static`).
 - Header público tem menu mobile próprio (`+layout.svelte`).
 - Grids de tool/cards: `grid-template-columns` 1 → 2 (`sm`) → 3 (`lg`).
+- **Campos de formulário nunca abaixo de 16px no mobile.** iOS Safari dá zoom
+  automático ao focar `input`/`textarea`/`select` com `font-size` computado
+  menor que 16px e não volta sozinho — exige pinch manual. Piso global em
+  `src/app.css` (`@media (max-width: 767px)`, com `!important` porque compete
+  com classes de componente) cobre isso para qualquer campo novo; não crie
+  `font-size` menor que `1rem` para inputs pensando que "só desktop" — o piso
+  já reduz o impacto, mas prefira `1rem`/`16px` direto no campo quando o
+  contexto for majoritariamente mobile (padrão usado em `SupportChat.svelte`).
 
 ---
 

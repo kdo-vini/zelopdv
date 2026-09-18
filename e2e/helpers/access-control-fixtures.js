@@ -236,7 +236,6 @@ async function ensureAccessSettings(admin, ownerUserId) {
     .upsert(
       {
         owner_user_id: ownerUserId,
-        pin_enabled: true,
         max_subusers: 5,
         updated_at: new Date().toISOString(),
       },
