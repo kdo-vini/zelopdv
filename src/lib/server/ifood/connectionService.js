@@ -161,6 +161,16 @@ function normalizeBusinessName(value) {
     .trim();
 }
 
+function businessNamesPlausiblyMatch(own, candidate) {
+  if (!own || !candidate) return false;
+  if (own === candidate) return true;
+  const ownCanPrefix = own.includes(' ') || own.length >= 12;
+  const candidateCanPrefix = candidate.includes(' ') || candidate.length >= 12;
+  if (ownCanPrefix && candidate.startsWith(`${own} `)) return true;
+  if (candidateCanPrefix && own.startsWith(`${candidate} `)) return true;
+  return false;
+}
+
 /**
  * @param {{ supabase: { rpc: Function } }} deps
  */
@@ -396,12 +406,13 @@ export function createIfoodConnectionService({
         repository.listClaimedMerchantIds({ signal })
       ]);
       const claimed = new Set(Array.isArray(claimedIds) ? claimedIds : []);
-      const ownNames = new Set(normalizedOwnNames);
       return (Array.isArray(merchants) ? merchants : [])
         .filter((merchant) => isNonEmptyString(merchant?.id) && !claimed.has(merchant.id))
         .filter((merchant) => {
           const candidates = [normalizeBusinessName(merchant?.name), normalizeBusinessName(merchant?.corporateName)];
-          return candidates.some((candidate) => candidate && ownNames.has(candidate));
+          return candidates.some((candidate) =>
+            normalizedOwnNames.some((own) => businessNamesPlausiblyMatch(own, candidate))
+          );
         })
         .map((merchant) => ({
           merchantId: merchant.id,

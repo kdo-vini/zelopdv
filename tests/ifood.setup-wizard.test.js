@@ -532,6 +532,56 @@ describe('connectionService.getStatus — discoverMerchants surfaces unclaimed a
     expect(response.body.discoveredMerchants).toEqual([]);
   });
 
+  it('matches when iFood trade name is a longer prefix of the Zelo receipt name', async () => {
+    const repository = createFakeConnectionRepository();
+    const adapter = {
+      async connectMerchant() { return { connected: false }; },
+      async listMerchants() {
+        return [{
+          id: 'm-bem-servido',
+          name: 'Bem Servido forno e fogão marmitaria , aparmergiana,massas em geral',
+          corporateName: null
+        }];
+      }
+    };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.getStatus({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      businessNames: ['Bem Servido']
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.discoveredMerchants).toEqual([{
+      merchantId: 'm-bem-servido',
+      name: 'Bem Servido forno e fogão marmitaria , aparmergiana,massas em geral',
+      corporateName: null
+    }]);
+  });
+
+  it('does not match on a dangerously short prefix shared by unrelated stores', async () => {
+    const repository = createFakeConnectionRepository();
+    const adapter = {
+      async connectMerchant() { return { connected: false }; },
+      async listMerchants() {
+        return [{ id: 'm-other', name: 'Bem Servido forno e fogão', corporateName: null }];
+      }
+    };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.getStatus({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      businessNames: ['Bem']
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.discoveredMerchants).toEqual([]);
+  });
+
   it('matches on corporateName when name differs, ignoring case/accents/corporate suffixes', async () => {
     const repository = createFakeConnectionRepository();
     const adapter = {
