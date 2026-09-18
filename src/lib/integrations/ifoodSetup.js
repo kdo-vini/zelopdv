@@ -150,11 +150,11 @@ export function availableIfoodActions(derived) {
       return derived.expired ? ['restart'] : ['check_authorization', 'restart'];
     case 'configuration_needed':
     case 'active':
-      return ['set_print_owner', 'pause', 'disconnect'];
+      return ['set_print_owner', 'pause', 'disconnect', 'delete'];
     case 'attention':
-      return ['set_print_owner', 'pause', 'disconnect'];
+      return ['set_print_owner', 'pause', 'disconnect', 'delete'];
     case 'paused':
-      return ['resume', 'disconnect'];
+      return ['resume', 'disconnect', 'delete'];
     default:
       return [];
   }

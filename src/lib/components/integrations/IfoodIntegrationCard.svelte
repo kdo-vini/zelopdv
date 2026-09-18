@@ -249,6 +249,7 @@
 
   async function handleStatusAction(event) {
     const { action } = event.detail;
+    if (action === 'delete') return handleDeleteConnection();
     await runAction(async () => {
       const headers = { ...(await authHeaders()), 'content-type': 'application/json' };
       const res = await fetch('/api/integrations/ifood/connection', {
@@ -270,6 +271,27 @@
       } else if (action === 'resume') {
         addToast('Conexão com o iFood retomada.', 'success');
       }
+    });
+  }
+
+  /**
+   * "Excluir configuração" — genuinely destructive (DELETE, not the PATCH
+   * `disconnect` action above): erases the merchantId and its command/event
+   * history server-side, confirmed already by the wizard before this fires.
+   */
+  async function handleDeleteConnection() {
+    await runAction(async () => {
+      const headers = await authHeaders();
+      const res = await fetch('/api/integrations/ifood/connection', { method: 'DELETE', headers });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        errorMessage = describeIfoodConnectionError(body?.error, body);
+        return;
+      }
+      wizardOpen = false;
+      connection = null;
+      health = null;
+      addToast('Configuração da loja iFood excluída.', 'info');
     });
   }
 </script>
