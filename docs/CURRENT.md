@@ -83,12 +83,24 @@ Portal do Parceiro / wizard **Conectar iFood** no PDV (não reusar token do
 app de teste). Depois: smoke de presença + 1 pedido ponta a ponta com as
 credenciais oficiais.
 
+## Sessão 2026-09-18 — iFood discover: nome longo no portal
+
+**Bem Servido:** autorização **Ativo** no Developer Portal, mas a loja não
+aparecia no wizard — `nome_exibicao` = “Bem Servido” e o iFood usa nome
+completo (“Bem Servido forno e fogão…”). `discoverMerchants` exigia match
+exato pós-normalização.
+
+**Fix** (`2c3d7c2`): prefixo seguro — candidato começa com o nome Zelo + espaço
+(só se o nome Zelo tem ≥2 palavras ou ≥12 chars). Testes em
+`ifood.setup-wizard.test.js`. Deploy prod → validar “Já autorizei — atualizar
+lista” na conta Bem Servido.
+
 ## Sessão 2026-09-18 — UX Conectar iFood (portal-first)
 
 Modal **Conectar iFood**: quando a descoberta de lojas vem vazia, o fluxo
 prioriza autorizar no Portal do Parceiro + “Já autorizei — atualizar lista”;
 Merchant ID ficou só na seção **Avançado**. `GET /connection` passa
-`partnerPortalUrl` sempre. Matching `discoverMerchants` inalterado.
+`partnerPortalUrl` sempre.
 
 ## Sessão 2026-09-18 — merge `codex/ifood-mvp` → `main` (PR #44)
 
@@ -98,8 +110,8 @@ Conflito com `main` resolvido em `0af0488`. Suite local verde
 gates + Vercel verdes. `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
 
 Próximo passo de produto após o merge: voluntária com loja real no iFood
-para validar o picker de descoberta (nome normalizado). Não alterar
-`normalizeBusinessName` / `discoverMerchants` sem essa evidência.
+para validar o picker de descoberta (nome normalizado). Evidência Bem Servido
+→ fix de prefixo em `discoverMerchants` (commit `2c3d7c2`).
 
 ### Re-check produção (2026-09-18, projeto `xnnjyrblpvsqrtsshawa`)
 
