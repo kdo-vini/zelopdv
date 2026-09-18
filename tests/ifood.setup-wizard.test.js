@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   IFOOD_MAPPING_SUGGESTION_COPY,
@@ -460,7 +461,31 @@ describe('connectionService.getStatus — discoverMerchants surfaces unclaimed a
       businessNames: ['Loja Livre LTDA']
     });
     expect(response.status).toBe(200);
+    expect(response.body.partnerPortalUrl).toBe('https://portal.ifood.com.br/');
     expect(response.body.discoveredMerchants).toEqual([{ merchantId: 'm-free', name: 'Loja Livre', corporateName: null }]);
+  });
+
+  it('always includes partnerPortalUrl on getStatus, including when already connected', async () => {
+    const repository = createFakeConnectionRepository({
+      existing: { connectionId: 'c-1', merchantId: 'm-1', status: 'active', printOwner: 'zelo', updatedAt: new Date().toISOString() }
+    });
+    const customPortal = 'https://portal.example.test/ifood';
+    const service = createIfoodConnectionService({
+      repository,
+      adapter: fakeAdapter(),
+      stateSecret: 's',
+      partnerPortalUrl: customPortal
+    });
+
+    const response = await service.getStatus({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      businessNames: ['Minha Loja']
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.partnerPortalUrl).toBe(customPortal);
   });
 
   // ── Cross-tenant isolation: the centralized iFood app returns authorized
@@ -582,6 +607,16 @@ describe('connectionService.getStatus — discoverMerchants surfaces unclaimed a
     });
     expect(response.status).toBe(200);
     expect(response.body.discoveredMerchants).toBeUndefined();
+  });
+});
+
+describe('IfoodSetupWizard — portal-first copy when discovery is empty', () => {
+  it('presents the Partner Portal path before bare Merchant ID entry', () => {
+    const source = readFileSync(new URL('../src/lib/components/integrations/IfoodSetupWizard.svelte', import.meta.url), 'utf8');
+    expect(source).toMatch(/Portal do Parceiro iFood/);
+    expect(source).toMatch(/Avançado: informar código Merchant ID/);
+    expect(source).toMatch(/Já autorizei — atualizar lista/);
+    expect(source).toMatch(/portalFirstEmptyDiscovery/);
   });
 });
 

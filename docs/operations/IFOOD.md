@@ -48,8 +48,12 @@ O bootstrap **pode** ligar ciclos reais só com flags explícitas (default
 **off**): `IFOOD_WORKER_PROCESS_INBOX`, `IFOOD_WORKER_PROCESS_COMMANDS`,
 `IFOOD_WORKER_ENABLE_HTTP_ADAPTER`. Adapter HTTP exige o par
 `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET`; sem o par o adapter fica null
-(fail-closed). Dokploy hoje **não** define essas flags. Não trata
-live+ready como GO completo.
+(fail-closed). **Cutover 2026-09-18 (homolog 60/60):** Dokploy e Vercel
+usam o par do app centralizado **Zelopdv** (`cbfb1f1f-…`); flags de ciclo
+`IFOOD_WORKER_PROCESS_INBOX` / `PROCESS_COMMANDS` /
+`ENABLE_HTTP_ADAPTER` estão **on** (`1`); intervalo de poll `60000`.
+Live+ready 200 após o redeploy. Merchants ainda precisam autorizar o app
+oficial (tokens do app de teste não servem).
 
 ## Piloto / rollout (Task 21)
 

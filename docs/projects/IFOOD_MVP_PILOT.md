@@ -3,7 +3,7 @@
 **Data:** 2026-09-17  
 **Branch de implementação:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`)  
 **Projeto Supabase:** `xnnjyrblpvsqrtsshawa` (ZeloPDV)  
-**Decisão atual:** **GO parcial (schema + worker live+ready)** — migrations aplicadas e worker Dokploy com `/health/live` 200 e `/health/ready` 200 enquanto o probe for fresco (TTL default 600s > intervalo 300s); **não é GO completo** (flags de ciclo default off; shadow/piloto/soak pendentes)
+**Decisão atual:** **GO operacional pós-homolog (2026-09-18)** — Order/Events homologados 60/60 no app `zelopdv`; worker Dokploy + Vercel com `IFOOD_CLIENT_*` do Zelopdv (prefix `cbfb1f1f`); flags de ciclo on; live+ready 200. **Ainda falta** reautorizar merchant(s) no app oficial e soak com loja real (tokens do app de teste não transferem).
 
 ## Pré-condições de código (Tasks 1–20)
 

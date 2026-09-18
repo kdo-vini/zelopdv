@@ -1,5 +1,16 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-18 — UX Pessoas (padrão Produtos)
+
+`/gestao/pessoas` alinhada ao padrão de Produtos: form fixo saiu do layout;
+criação/edição em `ModalPessoa`; header com "Nova pessoa"; FAB mobile `+`;
+busca por nome/contato + chips de tipo; cards no mobile / tabela no desktop;
+contador filtrados vs total. Exclusão e fiado inalterados.
+
+Deep link: Fichário “Gerenciar pessoa” / “Cadastrar contato” vão para
+`/gestao/pessoas?editar=<id>` e abrem o modal da pessoa; ao fechar, a query
+é limpa com `replaceState`.
+
 ## Sessão 2026-09-18 — Zelinho: botões mortos + abas unificadas
 
 Causa: `Button` (Svelte 5 runes) só encaminha `onclick` via `restProps`;

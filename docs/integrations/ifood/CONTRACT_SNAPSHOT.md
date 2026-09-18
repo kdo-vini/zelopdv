@@ -2,7 +2,11 @@
 
 **Data do snapshot:** 2026-09-15
 **Escopo:** app de teste iFood do ZeloPDV, integração centralizada
-**Status:** Task 1 concluída com a coleção Events v1 confirmada e o ACK exercitado; não é homologação nem liberação de produção.
+**Status:** Homologação Order/Events do app **zelopdv** concluída em
+2026-09-18 (**60/60**, protocolo POLLING). Runtime oficial usa
+`IFOOD_CLIENT_*` do Zelopdv (não o app de teste). Este snapshot histórico
+de 2026-09-15 descreve a coleção Events v1 e o ACK; não substitui o
+runbook em `docs/operations/IFOOD.md` nem o estado em `docs/CURRENT.md`.
 
 Este documento separa o que foi observado na conta de teste do que vem de
 contratos e amostras oficiais, mas ainda não foi exercitado nesta sessão. Os

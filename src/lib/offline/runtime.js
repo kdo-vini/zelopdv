@@ -68,15 +68,25 @@ async function applyDeviceOptIn(next) {
  * actually warm a cache — never by the manual preparation flow alone. This is
  * what lets a device become "prepared" without anyone ever opening Perfil >
  * Integrações > Operação offline.
+ *
+ * Idempotent: if this piece is already fresh, skip rewrite + notify. Otherwise
+ * every PDV catalog read would notify → refreshOfflineView → catalog read again
+ * and the caixa "Atualizar" label would flicker forever while online.
  */
 export async function markOfflineReadiness(piece) {
   if (!context?.ownerUserId || !context?.userId) return;
   const owner = context.ownerUserId;
   const key = `readiness:${context.userId}`;
   const current = await readSnapshot(owner, key) || {};
-  await saveSnapshot(owner, key, { ...current, [piece]: true, [`${piece}At`]: Date.now() });
+  const alreadyFresh = readinessFresh(current, piece);
+  const wasEnabled = !!context.enabled;
+  const wasPrepared = !!context.preparedHere;
+  if (!alreadyFresh) {
+    await saveSnapshot(owner, key, { ...current, [piece]: true, [`${piece}At`]: Date.now() });
+  }
   if (context?.ownerUserId !== owner) return;
   context = await applyDeviceOptIn(context);
+  if (alreadyFresh && context.enabled === wasEnabled && context.preparedHere === wasPrepared) return;
   await refreshOfflineCounts();
 }
 

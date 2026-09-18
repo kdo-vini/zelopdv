@@ -516,7 +516,7 @@
                 <button class="icon-action" on:click={() => (menuOpen = !menuOpen)} aria-label="Mais opções" title="Mais opções"><MoreHorizontal size={16} /></button>
                 {#if menuOpen}
                   <div class="menu-dropdown">
-                    <a class="menu-item" href="/gestao/pessoas" on:click={closeMenu}>Gerenciar pessoas</a>
+                    <a class="menu-item" href={`/gestao/pessoas?editar=${pessoaSelecionada.id}`} on:click={closeMenu}>Gerenciar pessoa</a>
                     <button class="menu-item" on:click={closeMenu}>Fechar</button>
                   </div>
                 {/if}
@@ -563,7 +563,7 @@
                 {:else}
                   <div class="confirmation-no-contact">
                     <MessageCircle size={18} aria-hidden="true" />
-                    <span>Cadastre um WhatsApp para enviar a confirmação. <a href="/gestao/pessoas">Cadastrar contato</a></span>
+                    <span>Cadastre um WhatsApp para enviar a confirmação. <a href={`/gestao/pessoas?editar=${pessoaSelecionada.id}`}>Cadastrar contato</a></span>
                   </div>
                 {/if}
 

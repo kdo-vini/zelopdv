@@ -426,7 +426,8 @@ export function createIfoodConnectionService({
       const connection = await repository.getConnection({ empresaId, signal });
       const body = {
         ...connectionSnapshot(connection),
-        authorization: connection ? authorizationPrompt(connection) : null
+        authorization: connection ? authorizationPrompt(connection) : null,
+        partnerPortalUrl
       };
       if (!connection || connection.status === 'revoked') {
         body.discoveredMerchants = await discoverMerchants({ signal, businessNames });

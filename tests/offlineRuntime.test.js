@@ -7,7 +7,7 @@ vi.mock('../src/lib/stores/offlineStatus.js', async () => {
   const { writable } = await import('svelte/store');
   return { offlineStatus: writable({ connection: 'online', pendingCount: 0, reviewCount: 0 }), setOfflineStatus: vi.fn() };
 });
-import { startOfflineRuntime, stopOfflineRuntime, submitOfflineOperation, submitOnlineOperation, isOfflineWriteActive, getOfflineContext, readOperationalSnapshot, offlineRequest, markOfflineReadiness, claimPrimaryDevice } from '../src/lib/offline/runtime.js';
+import { startOfflineRuntime, stopOfflineRuntime, submitOfflineOperation, submitOnlineOperation, isOfflineWriteActive, getOfflineContext, readOperationalSnapshot, offlineRequest, markOfflineReadiness, claimPrimaryDevice, onOfflineChange } from '../src/lib/offline/runtime.js';
 /** Offline operation is now a per-device opt-in: the bootstrap snapshot alone
  * no longer enables it, the local readiness marker written by the explicit
  * preparation has to be there too. */
@@ -197,6 +197,23 @@ it('becomes prepared from ordinary online usage alone, with no manual preparatio
   await markOfflineReadiness('catalog');
   expect(getOfflineContext().enabled).toBe(false); // cash still missing
   await markOfflineReadiness('cash');
+  expect(getOfflineContext()).toMatchObject({ enabled: true, preparedHere: true });
+});
+
+it('does not re-notify when the same readiness piece is already fresh', async () => {
+  vi.stubGlobal('navigator', { onLine: true });
+  vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({
+    enabled: true, registered: true, subscriptionActive: true, ownerUserId: 'owner', operatorId: 'operator'
+  }), { status: 200 }));
+  await startOfflineRuntime({ ownerUserId: 'owner', userId: 'operator' });
+  await markOfflineReadiness('catalog');
+  await markOfflineReadiness('cash');
+  let notifies = 0;
+  const stop = onOfflineChange(() => { notifies += 1; });
+  await markOfflineReadiness('catalog');
+  await markOfflineReadiness('cash');
+  stop();
+  expect(notifies).toBe(0);
   expect(getOfflineContext()).toMatchObject({ enabled: true, preparedHere: true });
 });
 

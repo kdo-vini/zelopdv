@@ -8,6 +8,7 @@
     availableIfoodActions,
     printOwnerLabel
   } from '$lib/integrations/ifoodSetup.js';
+  import { buildZeloWhatsAppHref } from '$lib/zeloContact.js';
 
   // Dumb presentation modal: every piece of state and every network call
   // lives in `IfoodIntegrationCard.svelte`. This component only renders
@@ -22,11 +23,17 @@
   // already authorized Zelo on iFood's side but that no Zelo empresa has
   // claimed yet. Picking one skips typing a Merchant ID entirely.
   export let discoveredMerchants = [];
+  export let partnerPortalUrl = 'https://portal.ifood.com.br/';
 
   const dispatch = createEventDispatcher();
 
+  const ifoodSupportWhatsAppHref = buildZeloWhatsAppHref(
+    'Olá! Preciso de ajuda para conectar minha loja ao iFood no ZeloPDV.'
+  );
+
   let merchantIdInput = '';
   let manualEntryExpanded = false;
+  let advancedManualExpanded = false;
   let deleteConfirmOpen = false;
 
   function confirmDelete() {
@@ -36,7 +43,10 @@
 
   $: actions = availableIfoodActions(derived);
   $: reasonsCopy = (derived?.reasons ?? []).map(describeReason);
-  $: manualEntryVisible = manualEntryExpanded || discoveredMerchants.length === 0;
+  $: manualEntryVisible =
+    discoveredMerchants.length > 0 ? manualEntryExpanded : advancedManualExpanded;
+  $: portalFirstEmptyDiscovery =
+    derived?.state === 'not_connected' && discoveredMerchants.length === 0;
 
   function pickDiscoveredMerchant(merchantId) {
     dispatch('connect', { merchantId });
@@ -115,10 +125,12 @@
               com o badge <strong>iFood</strong>. Pedidos já em andamento continuam no Gestor de Pedidos do
               iFood; não há importação retroativa.
             </p>
-            <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
-              A autorização final acontece no Portal do Parceiro do iFood — o ZeloPDV não promete ativação
-              instantânea, pois essa etapa depende do iFood confirmar sua loja.
-            </p>
+            {#if !portalFirstEmptyDiscovery}
+              <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+                A autorização final acontece no Portal do Parceiro do iFood — o ZeloPDV não promete ativação
+                instantânea, pois essa etapa depende do iFood confirmar sua loja.
+              </p>
+            {/if}
           </div>
 
           {#if discoveredMerchants.length}
@@ -151,7 +163,89 @@
             </div>
           {/if}
 
-          {#if manualEntryVisible}
+          {#if portalFirstEmptyDiscovery}
+            <div class="grid gap-3 rounded-lg p-4" style="background: var(--bg-input); border: 1px solid var(--border-subtle);">
+              <span class="text-sm font-medium" style="color: var(--text-label);">Como conectar sua loja</span>
+              <ol class="grid gap-2 text-sm leading-relaxed list-decimal list-inside" style="color: var(--text-main);">
+                <li>Abra o Portal do Parceiro iFood e autorize o ZeloPDV para a sua loja.</li>
+                <li>Volte aqui — sua loja deve aparecer pelo nome para conectar com um clique.</li>
+              </ol>
+              <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+                O iFood ainda não documenta o caminho exato de menu dentro do portal; o link abaixo leva à
+                página inicial do Portal do Parceiro, onde você gerencia autorizações da loja.
+              </p>
+              <a
+                href={partnerPortalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center justify-center w-full px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
+                style="background: var(--primary); color: var(--primary-text);"
+              >Abrir Portal do Parceiro iFood</a>
+              <button
+                type="button"
+                class="w-full px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+                style="background: var(--bg-card); color: var(--text-label); border: 1px solid var(--border-subtle);"
+                disabled={busy}
+                on:click={() => dispatch('refresh')}
+              >
+                {#if busy}<Spinner size="sm" />{:else}Já autorizei — atualizar lista{/if}
+              </button>
+              <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+                Dica: se a loja não aparecer, confira em <strong>Perfil → Empresa</strong> se o nome fantasia ou
+                razão social bate com o nome da loja no iFood.
+                <a
+                  href={ifoodSupportWhatsAppHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="block mt-1 font-medium transition-opacity hover:opacity-80"
+                  style="color: var(--text-label);"
+                >Falar com o suporte pelo WhatsApp</a>
+              </p>
+            </div>
+
+            {#if !advancedManualExpanded}
+              <button
+                type="button"
+                class="text-xs font-medium text-left transition-opacity hover:opacity-80 disabled:opacity-50"
+                style="color: var(--text-muted);"
+                disabled={busy}
+                on:click={() => (advancedManualExpanded = true)}
+              >Avançado: informar código Merchant ID</button>
+            {:else}
+              <div class="grid gap-3 rounded-lg p-4" style="border: 1px solid var(--border-subtle);">
+                <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+                  O Merchant ID é um código técnico (UUID) — a maioria dos lojistas não precisa dele. Use o portal
+                  e a lista acima. Só cole aqui se o suporte já tiver passado esse código para você.
+                </p>
+                <label class="block">
+                  <span class="block mb-1 text-sm" style="color: var(--text-label);">Merchant ID da loja no iFood</span>
+                  <input
+                    class="w-full rounded-md px-3 py-2 text-sm"
+                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                    bind:value={merchantIdInput}
+                    placeholder="Ex.: 5f3a2b1c-..."
+                    disabled={busy}
+                  />
+                </label>
+                <button
+                  type="button"
+                  class="w-full px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+                  style="background: var(--primary); color: var(--primary-text);"
+                  disabled={busy || !merchantIdInput.trim()}
+                  on:click={submitConnect}
+                >
+                  {#if busy}<Spinner size="sm" />{:else}Conectar{/if}
+                </button>
+                <a
+                  href={ifoodSupportWhatsAppHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-xs font-medium transition-opacity hover:opacity-80"
+                  style="color: var(--text-muted);"
+                >Precisa de ajuda? Fale conosco no WhatsApp</a>
+              </div>
+            {/if}
+          {:else if manualEntryVisible}
             <label class="block">
               <span class="block mb-1 text-sm" style="color: var(--text-label);">Merchant ID da loja no iFood</span>
               <input

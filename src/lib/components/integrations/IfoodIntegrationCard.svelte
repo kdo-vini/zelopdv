@@ -337,11 +337,13 @@
     {busy}
     {errorMessage}
     {discoveredMerchants}
+    partnerPortalUrl={connection?.partnerPortalUrl || 'https://portal.ifood.com.br/'}
     on:close={closeWizard}
     on:connect={handleConnect}
     on:restart={handleRestart}
     on:checkAuthorization={handleCheckAuthorization}
     on:setPrintOwner={handleSetPrintOwner}
     on:action={handleStatusAction}
+    on:refresh={() => loadStatus({ silent: false })}
   />
 {/if}

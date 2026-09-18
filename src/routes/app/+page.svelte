@@ -418,7 +418,7 @@
         addToast(`${logs.success} venda(s) sincronizada(s) com sucesso.`, 'success');
         pdvCache.invalidateProdutos();
         await carregarProdutos(true);
-        await atualizarSaldoCaixa();
+        await atualizarSaldoCaixa({ showLoading: false });
       } else if (!silencioso && logs.fail > 0) {
         addToast('Não foi possível sincronizar agora. Tentaremos novamente.', 'warning');
       }
@@ -504,6 +504,7 @@
 
   /** Atualiza o saldo de caixa (dinheiro) do caixa aberto. */
   let cashWarmup = null;
+  let saldoRequestId = 0;
   function warmCashSnapshotCache() {
     if (cashWarmup) return cashWarmup;
     cashWarmup = loadCashSnapshot(supabase, ownerUserId, { timeoutMs: 8000 })
@@ -513,12 +514,19 @@
     return cashWarmup;
   }
 
-  async function atualizarSaldoCaixa() {
+  /**
+   * @param {{ showLoading?: boolean }} [opts]
+   * showLoading=false for background refreshes (offline notify / pós-venda) so
+   * the header does not flicker Atualizar ↔ Sincronizando.
+   */
+  async function atualizarSaldoCaixa({ showLoading = true } = {}) {
+    const requestId = ++saldoRequestId;
     try {
       if ((!caixaAberto || !idCaixaAberto) && !getOfflineContext()?.enabled) { saldoCaixa = 0; return; }
-      carregandoSaldo = true;
+      if (showLoading && requestId === saldoRequestId) carregandoSaldo = true;
       if (getOfflineContext()?.enabled) {
         const snapshot = await loadCashSnapshot(supabase, ownerUserId);
+        if (requestId !== saldoRequestId) return;
         if (!salvandoVenda && !checkoutSubmission) {
           caixaAberto = !!snapshot.caixa && !snapshot.caixa.data_fechamento;
           idCaixaAberto = caixaAberto ? snapshot.caixa.id : null;
@@ -549,6 +557,7 @@
         .eq('id_caixa', idCaixaAberto);
 
       const [{ data: cx, error: e1 }, { data: vendasAll, error: e2 }, { data: movs, error: e3 }] = await Promise.all([pCaixa, pVendasDoCaixa, pMovs]);
+      if (requestId !== saldoRequestId) return;
       if (e1) throw e1; if (e2) throw e2; if (e3) throw e3;
 
       const valorInicial = Number(cx?.valor_inicial || 0);
@@ -581,14 +590,14 @@
           else if (m?.tipo === 'suprimento') totalSuprimento += val;
         }
       }
+      if (requestId !== saldoRequestId) return;
       saldoCaixa = valorInicial + dinheiroLegacy + dinheiroMultiplo - totalSangria + totalSuprimento;
     } catch (err) {
       console.warn('Falha ao atualizar saldo do caixa:', err?.message || err); // Keep log for debug, maybe toast if critical? Let's keep log for background update.
     } finally {
-      carregandoSaldo = false;
+      if (requestId === saldoRequestId) carregandoSaldo = false;
     }
   }
-
   /** Carrega categorias ordenadas e define a primeira como ativa. Usa cache de 5 min. */
   async function carregarCategorias(forceRefresh = false) {
     try {
@@ -679,8 +688,18 @@
   async function refreshOfflineView() {
     if (refreshingOfflineView || !draftReady || !getOfflineContext()?.enabled) return;
     refreshingOfflineView = true;
-    try { await Promise.all([atualizarPendentesCount(), carregarProdutos(), atualizarSaldoCaixa()]); }
-    finally { refreshingOfflineView = false; }
+    try {
+      await atualizarPendentesCount();
+      // Prepared devices stay `enabled` while online. Bootstrap probes and
+      // count refreshes notify often; a full catalog/cash reload on every
+      // notify made the header flicker Atualizar ↔ Sincronizando even with
+      // a healthy connection. Only rebuild the local projection when this
+      // device is actually in an offline write turn (or truly offline).
+      if (globalThis.navigator?.onLine !== false && !isOfflineWriteActive()) return;
+      await Promise.all([carregarProdutos(), atualizarSaldoCaixa({ showLoading: false })]);
+    } finally {
+      refreshingOfflineView = false;
+    }
   }
   
   // --- 4. LÓGICA DA COMANDA (Módulo 1.2) ---
@@ -1384,11 +1403,11 @@
       
       if (isOffline) {
           await carregarProdutos();
-          void atualizarSaldoCaixa();
+          void atualizarSaldoCaixa({ showLoading: false });
       } else {
          pdvCache.invalidateProdutos();
          await carregarProdutos(true);
-         await atualizarSaldoCaixa();
+         await atualizarSaldoCaixa({ showLoading: false });
       }
 
     } catch (e) {
