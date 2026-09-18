@@ -91,7 +91,13 @@ function createService() {
   return createIfoodConnectionService({
     repository,
     adapter,
-    stateSecret: env.IFOOD_CLIENT_SECRET
+    stateSecret: env.IFOOD_CLIENT_SECRET,
+    // The exact merchant-authorization navigation path inside iFood's own
+    // Partner Portal is not publicly documented (see
+    // docs/integrations/ifood/CONTRACT_SNAPSHOT.md, "Conexão de lojista em
+    // produção"). Overridable by env so ops can drop in the confirmed deep
+    // link/copy once discovered, with no code change or redeploy of logic.
+    ...(env.IFOOD_PARTNER_PORTAL_URL ? { partnerPortalUrl: env.IFOOD_PARTNER_PORTAL_URL } : {})
   });
 }
 

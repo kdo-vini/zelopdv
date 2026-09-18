@@ -305,7 +305,11 @@ describe('RED authorization matrix — GET/POST /api/integrations/ifood/authoriz
 
   it('rejects an invalid/forged state', async () => {
     const repository = createFakeRepository();
-    const service = createService({ repository, adapter: createFakeAdapter({ connected: new Set(['merchant-1']) }) });
+    // Provider not yet confirming `merchant-1` at startConnection time, so the
+    // synchronous-activation shortcut (Alavanca 2) does not fire here and the
+    // connection stays `pending` -- exactly what this test needs to exercise
+    // the state comparison.
+    const service = createService({ repository, adapter: createFakeAdapter() });
 
     await service.startConnection({
       authResult: authResult(),
@@ -357,7 +361,13 @@ describe('RED authorization matrix — GET/POST /api/integrations/ifood/authoriz
 
   it('activates on a confirmed state, then rejects a replay of the same state (connection_not_pending)', async () => {
     const repository = createFakeRepository();
-    const service = createService({ repository, adapter: createFakeAdapter({ connected: new Set(['merchant-1']) }) });
+    // Not confirmed yet at startConnection time -- stays `pending` so this
+    // test can exercise `checkAuthorization` doing the activation, same as
+    // before the synchronous-activation shortcut (Alavanca 2) existed. The
+    // provider "confirms" only afterwards, mirroring the owner finishing
+    // authorization on iFood's side after the connection was already created.
+    const connected = new Set();
+    const service = createService({ repository, adapter: createFakeAdapter({ connected }) });
 
     await service.startConnection({
       authResult: authResult(),
@@ -366,6 +376,7 @@ describe('RED authorization matrix — GET/POST /api/integrations/ifood/authoriz
       empresaId: EMPRESA_A,
       body: { merchantId: 'merchant-1' }
     });
+    connected.add('merchant-1');
     const prompt = await service.getAuthorizationPrompt({
       authResult: authResult(),
       accessContext: owner(),

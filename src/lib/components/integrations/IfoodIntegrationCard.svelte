@@ -1,12 +1,13 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { addToast } from '$lib/stores/ui';
   import {
     IFOOD_STATE_LABELS,
     deriveIfoodWizardState,
     describeIfoodConnectionError,
-    printOwnerLabel
+    printOwnerLabel,
+    shapeDiscoveredMerchants
   } from '$lib/integrations/ifoodSetup.js';
   import IfoodSetupWizard from './IfoodSetupWizard.svelte';
 
@@ -23,6 +24,42 @@
   let errorMessage = '';
 
   $: derived = deriveIfoodWizardState({ connection, health });
+  $: discoveredMerchants = shapeDiscoveredMerchants(connection?.discoveredMerchants);
+
+  // Auto-check while the wizard sits on "awaiting_authorization", so the
+  // owner never has to remember to come back and click "Já autorizei,
+  // verificar" — it activates on its own, usually within one tick of them
+  // returning from the iFood tab. Silent: no busy spinner, no toast for the
+  // routine "still pending" case; the manual button below keeps that
+  // feedback for whoever clicks it directly.
+  const AUTH_POLL_INTERVAL_MS = 10_000;
+  let authPollTimer = null;
+
+  function stopAuthPolling() {
+    if (authPollTimer) {
+      clearInterval(authPollTimer);
+      authPollTimer = null;
+    }
+  }
+
+  function startAuthPolling() {
+    if (authPollTimer) return;
+    void attemptAuthorizationCheck({ silent: true });
+    authPollTimer = setInterval(() => {
+      void attemptAuthorizationCheck({ silent: true });
+    }, AUTH_POLL_INTERVAL_MS);
+  }
+
+  $: shouldPollAuthorization = wizardOpen && derived.state === 'awaiting_authorization' && !derived.expired;
+  $: if (shouldPollAuthorization) startAuthPolling(); else stopAuthPolling();
+
+  function handleVisibilityChange() {
+    // The moment the tab regains focus is exactly when the owner is most
+    // likely to have just finished authorizing on iFood's side.
+    if (document.visibilityState === 'visible' && shouldPollAuthorization) {
+      void attemptAuthorizationCheck({ silent: true });
+    }
+  }
 
   const STATE_BADGE_STYLE = {
     not_connected: { bg: 'var(--bg-input)', color: 'var(--text-muted)' },
@@ -72,6 +109,12 @@
 
   onMount(() => {
     void loadStatus();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+  });
+
+  onDestroy(() => {
+    stopAuthPolling();
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
   });
 
   function openWizard() {
@@ -114,7 +157,11 @@
       }
       connection = body;
       health = null;
-      addToast('Loja identificada. Conclua a autorização no iFood.', 'success');
+      if (body.status === 'active') {
+        addToast('Loja conectada e ativada!', 'success');
+      } else {
+        addToast('Loja identificada. Conclua a autorização no iFood.', 'success');
+      }
     });
   }
 
@@ -122,31 +169,53 @@
     await handleConnect(event);
   }
 
-  async function handleCheckAuthorization() {
-    await runAction(async () => {
-      const state = connection?.authorization?.state;
-      if (!state) {
-        errorMessage = describeIfoodConnectionError('invalid_state');
-        return;
-      }
-      const headers = { ...(await authHeaders()), 'content-type': 'application/json' };
-      const res = await fetch('/api/integrations/ifood/authorization', {
+  /**
+   * Shared by the manual "Já autorizei, verificar" button and the
+   * background poll. `silent: true` (the poll/visibilitychange path) never
+   * shows a spinner, never toasts the routine "still pending" 202, and
+   * swallows a transient network error instead of surfacing it — the next
+   * tick, or the next time the tab regains focus, just tries again.
+   */
+  async function attemptAuthorizationCheck({ silent }) {
+    const state = connection?.authorization?.state;
+    if (!state) {
+      if (!silent) errorMessage = describeIfoodConnectionError('invalid_state');
+      return;
+    }
+    let headers;
+    try {
+      headers = { ...(await authHeaders()), 'content-type': 'application/json' };
+    } catch {
+      if (!silent) errorMessage = describeIfoodConnectionError('unauthorized');
+      return;
+    }
+    let res;
+    try {
+      res = await fetch('/api/integrations/ifood/authorization', {
         method: 'POST',
         headers,
         body: JSON.stringify({ state })
       });
-      const body = await res.json().catch(() => ({}));
-      if (res.status === 202) {
-        addToast('Ainda aguardando confirmação do iFood. Tente novamente em instantes.', 'info');
-        return;
-      }
-      if (!res.ok) {
-        errorMessage = describeIfoodConnectionError(body?.error, body);
-        return;
-      }
-      addToast('Conexão com o iFood ativada!', 'success');
-      await loadStatus({ silent: true });
-    });
+    } catch {
+      if (!silent) errorMessage = describeIfoodConnectionError('unavailable');
+      return;
+    }
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 202) {
+      if (!silent) addToast('Ainda aguardando confirmação do iFood. Tente novamente em instantes.', 'info');
+      return;
+    }
+    if (!res.ok) {
+      if (!silent) errorMessage = describeIfoodConnectionError(body?.error, body);
+      else if (body?.error === 'authorization_expired') await loadStatus({ silent: true });
+      return;
+    }
+    addToast('Conexão com o iFood ativada!', 'success');
+    await loadStatus({ silent: true });
+  }
+
+  async function handleCheckAuthorization() {
+    await runAction(() => attemptAuthorizationCheck({ silent: false }));
   }
 
   async function handleSetPrintOwner(event) {
@@ -235,6 +304,7 @@
     {derived}
     {busy}
     {errorMessage}
+    {discoveredMerchants}
     on:close={closeWizard}
     on:connect={handleConnect}
     on:restart={handleRestart}

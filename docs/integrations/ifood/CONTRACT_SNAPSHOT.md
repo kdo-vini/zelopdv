@@ -103,6 +103,7 @@ nesta janela.
 | `429`, headers e limites | Nenhum `429` observado | Fixture e limites documentados são referências sintéticas; observar headers e atualizar após homologação. |
 | Homologação Order/Events/Merchant | Não concluída | O app não está homologado e a integração não está habilitada em runtime. |
 | Conexão de lojista em produção | Não concluída | O fluxo self-service, autorização por merchant e escopos finais exigem confirmação do iFood. |
+| Navegação exata dentro do Portal do Parceiro para autorizar um app centralizado | **Pendência de descoberta, não de código** — não publicada pelo iFood (`.../authentication/centralized/` e `.../authentication/intro/` não descrevem o caminho de menu) | Enquanto não houver alguém com login de Parceiro navegando e documentando o caminho exato, o link exibido ao lojista (`IFOOD_PARTNER_PORTAL_URL`, hoje `https://portal.ifood.com.br/`) permanece um ponto de entrada genérico, não um deep link verificado. Ver `src/routes/api/integrations/ifood/connection/+server.js` — a URL já é overridable por env, sem precisar de deploy de código quando a navegação for confirmada. |
 
 ## 2. Autenticação
 
@@ -137,7 +138,7 @@ https://merchant-api.ifood.com.br/merchant/v1.0
 
 | Método | Rota | Retorno observado | Contrato mínimo |
 | --- | --- | --- | --- |
-| `GET` | `/merchants` | `200`, uma loja | Array plano de merchants (`id`, `name`, `corporateName`), sem header `Link`. Em 2026-09-16, `?page=2&size=1` retornou `200` com array vazio (a conta tem 1 loja), indício de que `page`/`size` são aceitos; semântica completa não confirmada, por isso a verificação de conexão usa `/status`. |
+| `GET` | `/merchants` | `200`, uma loja | Array plano de merchants (`id`, `name`, `corporateName`), sem header `Link`. Em 2026-09-16, `?page=2&size=1` retornou `200` com array vazio (a conta tem 1 loja), indício de que `page`/`size` são aceitos; semântica completa não confirmada, por isso a verificação de conexão usa `/status`. **Passou de código morto a uso real em 2026-09-17**: `connectionService.js` (`discoverMerchants`) chama esta rota para listar lojas já autorizadas pelo lojista no lado do iFood, filtra as que nenhuma empresa do Zelo reivindicou ainda (via a nova RPC `list_ifood_claimed_merchant_ids_v1`) e oferece essa lista como picker de um clique no wizard `not_connected` — cortando a digitação do `merchantId` quando a autorização já existe. Segue limitado a 25 itens por página por causa da paginação não confirmada citada acima. |
 | `GET` | `/merchants/{merchantId}/status` | `200` | Estado/validações operacionais em JSON; não usar somente HTTP 200 para inferir loja aberta. |
 | `GET` | `/merchants/{merchantId}` | Não exercitado | Detalhe completo do merchant; contrato oficial, não prova da conta. |
 | `GET/POST/DELETE` | `/merchants/{merchantId}/interruptions` | Não exercitado | Pausa temporária; qualquer escrita aguarda autorização e homologação. |
