@@ -1,9 +1,45 @@
+# ZeloPDV — Foco atual
+
+## Sessão 2026-09-18 — merge `codex/ifood-mvp` → `main` (PR #44)
+
+Fronteira: publicar a UI iFood em produção via PR #44 (ainda draft).
+Conflito com `main` resolvido em `0af0488`. Suite local verde
+(1920 passed / 3 skipped, check 0/0, ledger 71 forward). CI Engineering
+gates + Vercel verdes. `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
+
+Próximo passo de produto após o merge: voluntária com loja real no iFood
+para validar o picker de descoberta (nome normalizado). Não alterar
+`normalizeBusinessName` / `discoverMerchants` sem essa evidência.
+
+### Re-check produção (2026-09-18, projeto `xnnjyrblpvsqrtsshawa`)
+
+Medido agora, não o snapshot de 17/09:
+
+- Conexão Téchne `6bdbbe5d-…` `active`, `last_poll_at` fresco
+- `zelo_orders` `source=ifood`: **7** (2 `delivered`, 5 `cancelled`)
+- `vendas` `canal_origem=ifood`: **1** (id 19217, R$27, 2026-09-17)
+- `order_commands` / `event_inbox` / `order_refs` / `product_mappings`: **0**
+  (histórico `ifood_internal` sumiu após testes de “excluir configuração”
+  com cascade; vendas e `zelo_orders` sobreviveram)
+
+Badge de origem e wiring PDV→comando existem no código
+(`OrderSourceBadge`, `ifoodCommandsClient`). Gate SQL
+`IFOOD_ORDER_REQUIRES_COMMAND` está no stream (#46).
+
+### Também no `main` desta semana (já no branch após o merge)
+
+- Polish do coachmark da primeira venda (Spec A–B, PR #40) — detalhe abaixo
+- Admin churn scoring false positives (PR #38) — detalhe abaixo
+- Ativação da primeira venda reforçada (PR #39) — detalhe abaixo
+
+---
+
 # Tasks 1–21 + worker live+ready (GO parcial)
 
 ## Handoff — 2026-09-17 (poll→inbox ligado; latência de 1 ciclo corrigida)
 
-Dois commits e uma migration aplicada em produção. **Ainda GO parcial**:
-sem piloto real, gate de confirm/cancel ainda aberto.
+Dois commits e uma migration aplicada em produção. Snapshot abaixo é de
+**2026-09-17**; o re-check de 2026-09-18 está no topo deste arquivo.
 
 ### 1. Reconciler poll→inbox ligado (`b075032`, PR #37)
 
