@@ -18,13 +18,23 @@
   export let derived = null;
   export let busy = false;
   export let errorMessage = '';
+  // Already shaped by `shapeDiscoveredMerchants` — stores whose owner has
+  // already authorized Zelo on iFood's side but that no Zelo empresa has
+  // claimed yet. Picking one skips typing a Merchant ID entirely.
+  export let discoveredMerchants = [];
 
   const dispatch = createEventDispatcher();
 
   let merchantIdInput = '';
+  let manualEntryExpanded = false;
 
   $: actions = availableIfoodActions(derived);
   $: reasonsCopy = (derived?.reasons ?? []).map(describeReason);
+  $: manualEntryVisible = manualEntryExpanded || discoveredMerchants.length === 0;
+
+  function pickDiscoveredMerchant(merchantId) {
+    dispatch('connect', { merchantId });
+  }
 
   function describeReason(reason) {
     const map = {
@@ -104,26 +114,58 @@
             </p>
           </div>
 
-          <label class="block">
-            <span class="block mb-1 text-sm" style="color: var(--text-label);">Merchant ID da loja no iFood</span>
-            <input
-              class="w-full rounded-md px-3 py-2 text-sm"
-              style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
-              bind:value={merchantIdInput}
-              placeholder="Ex.: 5f3a2b1c-..."
-              disabled={busy}
-            />
-          </label>
+          {#if discoveredMerchants.length}
+            <div class="grid gap-2">
+              <span class="block text-sm" style="color: var(--text-label);">
+                Encontramos {discoveredMerchants.length === 1 ? 'esta loja já autorizada' : 'estas lojas já autorizadas'} no iFood:
+              </span>
+              <div class="grid gap-2">
+                {#each discoveredMerchants as merchant (merchant.merchantId)}
+                  <button
+                    type="button"
+                    class="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                    disabled={busy}
+                    on:click={() => pickDiscoveredMerchant(merchant.merchantId)}
+                  >
+                    {merchant.label}
+                  </button>
+                {/each}
+              </div>
+              {#if !manualEntryExpanded}
+                <button
+                  type="button"
+                  class="text-xs font-medium text-left transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style="color: var(--text-muted);"
+                  disabled={busy}
+                  on:click={() => (manualEntryExpanded = true)}
+                >Não encontrei minha loja — informar o Merchant ID manualmente</button>
+              {/if}
+            </div>
+          {/if}
 
-          <button
-            type="button"
-            class="w-full px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
-            style="background: var(--primary); color: var(--primary-text);"
-            disabled={busy || !merchantIdInput.trim()}
-            on:click={submitConnect}
-          >
-            {#if busy}<Spinner size="sm" />{:else}Conectar{/if}
-          </button>
+          {#if manualEntryVisible}
+            <label class="block">
+              <span class="block mb-1 text-sm" style="color: var(--text-label);">Merchant ID da loja no iFood</span>
+              <input
+                class="w-full rounded-md px-3 py-2 text-sm"
+                style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);"
+                bind:value={merchantIdInput}
+                placeholder="Ex.: 5f3a2b1c-..."
+                disabled={busy}
+              />
+            </label>
+
+            <button
+              type="button"
+              class="w-full px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+              style="background: var(--primary); color: var(--primary-text);"
+              disabled={busy || !merchantIdInput.trim()}
+              on:click={submitConnect}
+            >
+              {#if busy}<Spinner size="sm" />{:else}Conectar{/if}
+            </button>
+          {/if}
 
         {:else if derived?.state === 'awaiting_authorization'}
           <div class="grid gap-3">

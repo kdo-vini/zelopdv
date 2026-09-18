@@ -160,6 +160,28 @@ export function availableIfoodActions(derived) {
   }
 }
 
+/**
+ * Shapes the `discoveredMerchants` list `GET /api/integrations/ifood/
+ * connection` returns while `not_connected` into what the picker renders —
+ * a label per store, nothing else. Deliberately kept out of
+ * `deriveIfoodWizardState`: it's presentation for the SAME `not_connected`
+ * state, not a new one, and the wizard's idempotent-recompute test asserts
+ * exactly the six `IFOOD_WIZARD_STATES` values with no extra step memory.
+ * Appearing in this list already proves the store authorized Zelo on
+ * iFood's side (see `connectionService.js`'s `discoverMerchants`) — picking
+ * one skips typing a Merchant ID and, usually, the whole "awaiting
+ * authorization" screen too.
+ */
+export function shapeDiscoveredMerchants(rawList) {
+  if (!Array.isArray(rawList)) return [];
+  return rawList
+    .filter((entry) => isNonEmptyString(entry?.merchantId))
+    .map((entry) => ({
+      merchantId: entry.merchantId,
+      label: entry.name || entry.corporateName || entry.merchantId
+    }));
+}
+
 const CONNECTION_ERROR_MESSAGES = Object.freeze({
   invalid_merchant_id: 'Informe o identificador da loja no iFood (Merchant ID) para continuar.',
   connection_already_exists: 'Já existe uma loja conectada. Desconecte-a antes de conectar outra.',

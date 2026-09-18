@@ -140,6 +140,27 @@ function repositoryError() {
   return new Error('iFood connection repository operation failed');
 }
 
+const BUSINESS_NAME_SUFFIXES = /\b(ltda|me|eireli|epp|s\s*\/?\s*a|sa)\b\.?/g;
+
+/**
+ * Normalizes a business's legal/trade name for identity matching --
+ * lowercased, accent-stripped, common Brazilian corporate suffixes (LTDA,
+ * ME, EIRELI, EPP, S/A) removed, punctuation collapsed. Used ONLY to decide
+ * whether an iFood-authorized merchant plausibly belongs to the SAME
+ * business as the Zelo tenant asking -- see `discoverMerchants` for why
+ * this check exists at all.
+ */
+function normalizeBusinessName(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(BUSINESS_NAME_SUFFIXES, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 /**
  * @param {{ supabase: { rpc: Function } }} deps
  */
@@ -198,6 +219,26 @@ export function createIfoodConnectionRepository({ supabase } = {}) {
     return Number.isInteger(value) ? value : Number(value ?? 0);
   }
 
+  /**
+   * Every `merchant_id` currently occupying a row in `ifood_internal.connections`,
+   * across ALL empresas -- the table's `UNIQUE (merchant_id)` constraint has no
+   * status filter, so even a `revoked` row still owns that id forever. Used to
+   * filter `listMerchants()` down to stores nobody in Zelo has claimed yet.
+   */
+  async function listClaimedMerchantIds({ signal } = {}) {
+    let response;
+    try {
+      response = await supabase.rpc('list_ifood_claimed_merchant_ids_v1', {});
+    } catch {
+      throw repositoryError();
+    }
+    if (response?.error) throw repositoryError();
+    const data = response?.data;
+    return Array.isArray(data)
+      ? data.map((row) => (typeof row === 'string' ? row : row?.merchant_id)).filter(isNonEmptyString)
+      : [];
+  }
+
   async function setPrintOwner({ empresaId, printOwner, signal } = {}) {
     let response;
     try {
@@ -220,13 +261,13 @@ export function createIfoodConnectionRepository({ supabase } = {}) {
     };
   }
 
-  return Object.freeze({ getConnection, upsertConnection, countActiveOrders, setPrintOwner });
+  return Object.freeze({ getConnection, upsertConnection, countActiveOrders, setPrintOwner, listClaimedMerchantIds });
 }
 
 /**
  * @param {{
- *   repository: { getConnection: Function, upsertConnection: Function, countActiveOrders: Function },
- *   adapter: { connectMerchant: Function },
+ *   repository: { getConnection: Function, upsertConnection: Function, countActiveOrders: Function, listClaimedMerchantIds?: Function },
+ *   adapter: { connectMerchant: Function, listMerchants?: Function },
  *   clock?: () => number,
  *   stateSecret: string,
  *   partnerPortalUrl?: string
@@ -289,17 +330,80 @@ export function createIfoodConnectionService({
     };
   }
 
+  // A `listMerchants()` appearance IS proof the merchant already authorized
+  // Zelo on iFood's side -- the exact same signal `checkAuthorization` uses
+  // to flip `pending` -> `active` later. Surfacing it here lets an owner who
+  // already authorized before ever opening the wizard skip typing a
+  // merchantId (and the round trip to the portal) entirely: they just pick
+  // their store from a list. Best-effort by design: a discovery failure
+  // (iFood outage, or an adapter that doesn't implement `listMerchants`)
+  // must never break the base connection-status read this rides alongside.
+  //
+  // CRITICAL: the centralized iFood app is shared across EVERY Zelo tenant,
+  // so `listMerchants()` returns authorized stores belonging to OTHER
+  // businesses too, not just this caller's. Filtering out already-claimed
+  // ids is not enough -- an unclaimed authorized merchant could belong to
+  // any other Zelo customer who simply hasn't clicked "Conectar" yet, and
+  // showing it here (with a real store name, one click from being claimed)
+  // would let any tenant browse and hijack another tenant's iFood orders.
+  // `businessNames` (the caller's own `nome_exibicao`/`razao_social`) is the
+  // only identity signal available to bound this: a merchant is only ever
+  // surfaced when its `name`/`corporateName` matches one of the caller's own
+  // registered business names. No business name on file -> empty list,
+  // degrading to the manual merchantId field exactly as before this existed.
+  async function discoverMerchants({ signal, businessNames = [] } = {}) {
+    const normalizedOwnNames = (Array.isArray(businessNames) ? businessNames : [])
+      .map(normalizeBusinessName)
+      .filter(Boolean);
+    if (
+      normalizedOwnNames.length === 0
+      || typeof adapter.listMerchants !== 'function'
+      || typeof repository.listClaimedMerchantIds !== 'function'
+    ) {
+      return [];
+    }
+    try {
+      const [merchants, claimedIds] = await Promise.all([
+        adapter.listMerchants({ signal }),
+        repository.listClaimedMerchantIds({ signal })
+      ]);
+      const claimed = new Set(Array.isArray(claimedIds) ? claimedIds : []);
+      const ownNames = new Set(normalizedOwnNames);
+      return (Array.isArray(merchants) ? merchants : [])
+        .filter((merchant) => isNonEmptyString(merchant?.id) && !claimed.has(merchant.id))
+        .filter((merchant) => {
+          const candidates = [normalizeBusinessName(merchant?.name), normalizeBusinessName(merchant?.corporateName)];
+          return candidates.some((candidate) => candidate && ownNames.has(candidate));
+        })
+        .map((merchant) => ({
+          merchantId: merchant.id,
+          name: typeof merchant.name === 'string' ? merchant.name : null,
+          corporateName: typeof merchant.corporateName === 'string' ? merchant.corporateName : null
+        }))
+        // `listMerchants()` pagination is unconfirmed for this account
+        // (CONTRACT_SNAPSHOT.md #3) -- bounded so this never claims to be a
+        // complete list across a large centralized app.
+        .slice(0, 25);
+    } catch {
+      return [];
+    }
+  }
+
   /** GET /api/integrations/ifood/connection */
-  async function getStatus({ authResult, accessContext, subscription, empresaId, signal } = {}) {
+  async function getStatus({ authResult, accessContext, subscription, empresaId, businessNames, signal } = {}) {
     const access = authorize({ authResult, accessContext, subscription });
     if (access.error) return access.error;
 
     try {
       const connection = await repository.getConnection({ empresaId, signal });
-      return result(200, {
+      const body = {
         ...connectionSnapshot(connection),
         authorization: connection ? authorizationPrompt(connection) : null
-      });
+      };
+      if (!connection || connection.status === 'revoked') {
+        body.discoveredMerchants = await discoverMerchants({ signal, businessNames });
+      }
+      return result(200, body);
     } catch {
       return result(500, { error: 'unavailable' });
     }
@@ -325,11 +429,25 @@ export function createIfoodConnectionService({
 
       // An already-active connection to the SAME merchant stays active — a
       // resubmission of the same merchantId must never demote it back to
-      // pending. Everything else (first connect, retry after paused/
-      // degraded/revoked) starts a fresh pending authorization window.
-      const targetStatus = existing?.status === 'active' && existing.merchantId === merchantId
+      // pending. Otherwise (first connect, retry after paused/degraded/
+      // revoked), check the provider right away: if this merchantId already
+      // shows up as authorized on iFood's side -- exactly the signal
+      // `discoverMerchants()` and `checkAuthorization` both key off -- skip
+      // `pending`/the portal round trip entirely and activate in this same
+      // request. A failed or negative check here is never fatal: it just
+      // falls through to the ordinary pending flow, unchanged from before
+      // this existed.
+      let targetStatus = existing?.status === 'active' && existing.merchantId === merchantId
         ? 'active'
         : 'pending';
+      if (targetStatus === 'pending') {
+        try {
+          const providerResult = await adapter.connectMerchant({ merchantId, signal });
+          if (providerResult?.connected === true) targetStatus = 'active';
+        } catch {
+          // Provider unreachable or not yet authorized -- proceed as pending.
+        }
+      }
 
       const upserted = await repository.upsertConnection({ empresaId, merchantId, status: targetStatus, signal });
       if (upserted.outcome === 'merchant_taken') {

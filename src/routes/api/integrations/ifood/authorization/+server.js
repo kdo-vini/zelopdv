@@ -91,7 +91,10 @@ function createService() {
   return createIfoodConnectionService({
     repository,
     adapter,
-    stateSecret: env.IFOOD_CLIENT_SECRET
+    stateSecret: env.IFOOD_CLIENT_SECRET,
+    // See src/routes/api/integrations/ifood/connection/+server.js for why
+    // this is env-overridable.
+    ...(env.IFOOD_PARTNER_PORTAL_URL ? { partnerPortalUrl: env.IFOOD_PARTNER_PORTAL_URL } : {})
   });
 }
 

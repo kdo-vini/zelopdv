@@ -7,7 +7,8 @@ import {
   deriveIfoodWizardState,
   describeIfoodConnectionError,
   isValidPrintOwner,
-  printOwnerLabel
+  printOwnerLabel,
+  shapeDiscoveredMerchants
 } from '../src/lib/integrations/ifoodSetup.js';
 import {
   canManageIfoodConnection,
@@ -376,5 +377,287 @@ describe('connectionService.updatePrintOwner', () => {
       body: { printOwner: 'external' }
     });
     expect(response.status).toBe(503);
+  });
+});
+
+// ── shapeDiscoveredMerchants — pure presentation for the "one click" picker ──
+
+describe('shapeDiscoveredMerchants', () => {
+  it('returns an empty list for a non-array input', () => {
+    expect(shapeDiscoveredMerchants(undefined)).toEqual([]);
+    expect(shapeDiscoveredMerchants(null)).toEqual([]);
+  });
+
+  it('drops entries without a usable merchantId', () => {
+    const shaped = shapeDiscoveredMerchants([{ name: 'Sem id' }, { merchantId: '' }, { merchantId: '  ' }]);
+    expect(shaped).toEqual([]);
+  });
+
+  it('labels each merchant by name, falling back to corporateName then merchantId', () => {
+    const shaped = shapeDiscoveredMerchants([
+      { merchantId: 'm-1', name: 'Loja do Zé' },
+      { merchantId: 'm-2', corporateName: 'Zé Comércio LTDA' },
+      { merchantId: 'm-3' }
+    ]);
+    expect(shaped).toEqual([
+      { merchantId: 'm-1', label: 'Loja do Zé' },
+      { merchantId: 'm-2', label: 'Zé Comércio LTDA' },
+      { merchantId: 'm-3', label: 'm-3' }
+    ]);
+  });
+});
+
+// ── connectionService discovery + synchronous activation (Alavanca 2) ───────
+
+function createFakeConnectionRepository({ existing = null, claimedMerchantIds = [] } = {}) {
+  let connection = existing;
+  const upserts = [];
+  return {
+    async getConnection() {
+      return connection ? { ...connection } : null;
+    },
+    async upsertConnection({ merchantId, status }) {
+      upserts.push({ merchantId, status });
+      const outcome = connection ? 'updated' : 'created';
+      connection = {
+        connectionId: connection?.connectionId ?? 'c-new',
+        merchantId,
+        status,
+        printOwner: connection?.printOwner ?? 'zelo',
+        updatedAt: new Date().toISOString()
+      };
+      return { outcome, connectionId: connection.connectionId, merchantId, status };
+    },
+    async countActiveOrders() {
+      return 0;
+    },
+    async listClaimedMerchantIds() {
+      return claimedMerchantIds;
+    },
+    _upserts: upserts
+  };
+}
+
+describe('connectionService.getStatus — discoverMerchants surfaces unclaimed authorized stores', () => {
+  it('includes discoveredMerchants, filtering out already-claimed merchantIds, when not_connected and the name matches', async () => {
+    const repository = createFakeConnectionRepository({ claimedMerchantIds: ['m-claimed'] });
+    const adapter = {
+      async connectMerchant() { return { connected: false }; },
+      async listMerchants() {
+        return [
+          { id: 'm-claimed', name: 'Loja Livre' },
+          { id: 'm-free', name: 'Loja Livre' }
+        ];
+      }
+    };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.getStatus({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      businessNames: ['Loja Livre LTDA']
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.discoveredMerchants).toEqual([{ merchantId: 'm-free', name: 'Loja Livre', corporateName: null }]);
+  });
+
+  // ── Cross-tenant isolation: the centralized iFood app returns authorized
+  // stores across EVERY Zelo tenant, not just this caller's. Without a name
+  // match, an unclaimed authorized merchant belonging to a DIFFERENT
+  // business must never be surfaced -- that would let any Zelo tenant browse
+  // and one-click hijack another tenant's iFood order routing.
+
+  it('never surfaces a merchant whose name does not match any of the caller\'s own business names', async () => {
+    const repository = createFakeConnectionRepository();
+    const adapter = {
+      async connectMerchant() { return { connected: false }; },
+      async listMerchants() { return [{ id: 'm-other-tenant', name: 'Padaria de Outro Dono', corporateName: 'Outro Dono LTDA' }]; }
+    };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.getStatus({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      businessNames: ['Minha Loja']
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.discoveredMerchants).toEqual([]);
+  });
+
+  it('never surfaces any merchant when the caller has no business name on file', async () => {
+    const repository = createFakeConnectionRepository();
+    const adapter = {
+      async connectMerchant() { return { connected: false }; },
+      async listMerchants() { return [{ id: 'm-1', name: 'Qualquer Loja' }]; }
+    };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.getStatus({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      businessNames: []
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.discoveredMerchants).toEqual([]);
+  });
+
+  it('matches on corporateName when name differs, ignoring case/accents/corporate suffixes', async () => {
+    const repository = createFakeConnectionRepository();
+    const adapter = {
+      async connectMerchant() { return { connected: false }; },
+      async listMerchants() {
+        return [{ id: 'm-match', name: 'Nome Fantasia iFood', corporateName: 'JOÃO DA SILVA LTDA' }];
+      }
+    };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.getStatus({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      businessNames: ['joao da silva']
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.discoveredMerchants).toEqual([{ merchantId: 'm-match', name: 'Nome Fantasia iFood', corporateName: 'JOÃO DA SILVA LTDA' }]);
+  });
+
+  it('never breaks the status read when the adapter has no listMerchants (older adapter)', async () => {
+    const repository = createFakeConnectionRepository();
+    const adapter = { async connectMerchant() { return { connected: false }; } };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.getStatus({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      businessNames: ['Minha Loja']
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.discoveredMerchants).toEqual([]);
+  });
+
+  it('never breaks the status read when discovery throws (iFood outage)', async () => {
+    const repository = createFakeConnectionRepository();
+    const adapter = {
+      async connectMerchant() { return { connected: false }; },
+      async listMerchants() { throw new Error('iFood unavailable'); }
+    };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.getStatus({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      businessNames: ['Minha Loja']
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.discoveredMerchants).toEqual([]);
+  });
+
+  it('does not surface discoveredMerchants for an already-connected (non-revoked) merchant', async () => {
+    const repository = createFakeConnectionRepository({
+      existing: { connectionId: 'c-1', merchantId: 'm-1', status: 'active', printOwner: 'zelo', updatedAt: new Date().toISOString() }
+    });
+    const adapter = {
+      async connectMerchant() { return { connected: false }; },
+      async listMerchants() { return [{ id: 'm-free', name: 'Loja livre' }]; }
+    };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.getStatus({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      businessNames: ['Loja livre']
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.discoveredMerchants).toBeUndefined();
+  });
+});
+
+describe('connectionService.startConnection — synchronous activation shortcut', () => {
+  it('activates immediately (status: active) when the provider already confirms the merchant', async () => {
+    const repository = createFakeConnectionRepository();
+    const adapter = { async connectMerchant() { return { connected: true }; } };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.startConnection({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      body: { merchantId: 'm-picked' }
+    });
+    expect(response.status).toBe(201);
+    expect(response.body.status).toBe('active');
+    expect(repository._upserts).toEqual([{ merchantId: 'm-picked', status: 'active' }]);
+  });
+
+  it('falls back to pending when the provider has not confirmed yet', async () => {
+    const repository = createFakeConnectionRepository();
+    const adapter = { async connectMerchant() { return { connected: false }; } };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.startConnection({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      body: { merchantId: 'm-picked' }
+    });
+    expect(response.status).toBe(201);
+    expect(response.body.status).toBe('pending');
+    expect(repository._upserts).toEqual([{ merchantId: 'm-picked', status: 'pending' }]);
+  });
+
+  it('falls back to pending when the provider check throws (provider unreachable)', async () => {
+    const repository = createFakeConnectionRepository();
+    const adapter = { async connectMerchant() { throw new Error('network'); } };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.startConnection({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      body: { merchantId: 'm-picked' }
+    });
+    expect(response.status).toBe(201);
+    expect(response.body.status).toBe('pending');
+  });
+
+  it('never re-checks the provider for a resubmission of the same already-active merchant', async () => {
+    const repository = createFakeConnectionRepository({
+      existing: { connectionId: 'c-1', merchantId: 'm-1', status: 'active', printOwner: 'zelo', updatedAt: new Date().toISOString() }
+    });
+    let calls = 0;
+    const adapter = {
+      async connectMerchant() {
+        calls += 1;
+        return { connected: true };
+      }
+    };
+    const service = createIfoodConnectionService({ repository, adapter, stateSecret: 's' });
+
+    const response = await service.startConnection({
+      authResult: authResult(),
+      accessContext: ownerAccess(),
+      subscription: activeSubscription(),
+      empresaId: 'empresa-1',
+      body: { merchantId: 'm-1' }
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('active');
+    expect(calls).toBe(0);
   });
 });
