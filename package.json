@@ -10,7 +10,9 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
     "test": "vitest run",
+    "worker:ifood": "node workers/ifood/index.js",
     "verify:migrations": "node scripts/verify-migration-ledger.mjs",
+    "verify:ifood": "node scripts/verify-ifood-worker.mjs",
     "verify:customer-identity": "node scripts/verify-customer-identity-concurrency.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"

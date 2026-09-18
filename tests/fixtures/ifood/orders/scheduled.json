@@ -1,0 +1,80 @@
+{
+  "id": "order-fixture-scheduled",
+  "displayId": "display-fixture-004",
+  "createdAt": "2026-09-15T16:00:00.000Z",
+  "preparationStartDateTime": "2026-09-16T11:30:00.000Z",
+  "orderType": "DELIVERY",
+  "orderTiming": "SCHEDULED",
+  "salesChannel": "IFOOD",
+  "category": "FOOD",
+  "isTest": true,
+  "merchant": {
+    "id": "merchant-fixture",
+    "name": "Merchant Fixture"
+  },
+  "customer": {
+    "id": "customer-fixture-004",
+    "name": "Cliente Teste"
+  },
+  "items": [
+    {
+      "index": 1,
+      "id": "item-fixture-scheduled",
+      "uniqueId": "unique-item-fixture-scheduled",
+      "name": "Produto Fixture Agendado",
+      "type": "ITEM",
+      "externalCode": "product-fixture-scheduled",
+      "quantity": 1,
+      "unit": "UN",
+      "unitPrice": 30,
+      "price": 30,
+      "scalePrices": null,
+      "optionsPrice": 0,
+      "totalPrice": 30,
+      "observations": null,
+      "options": []
+    }
+  ],
+  "benefits": [],
+  "additionalFees": [],
+  "total": {
+    "subTotal": 30,
+    "deliveryFee": 6,
+    "additionalFees": 0,
+    "benefits": 0,
+    "orderAmount": 36
+  },
+  "payments": {
+    "prepaid": 36,
+    "pending": 0,
+    "methods": [
+      {
+        "value": 36,
+        "currency": "BRL",
+        "type": "ONLINE",
+        "method": "DIGITAL_WALLET",
+        "prepaid": true,
+        "wallet": {
+          "name": "WALLET_FIXTURE"
+        }
+      }
+    ]
+  },
+  "picking": null,
+  "delivery": {
+    "mode": "DEFAULT",
+    "description": "Padrão",
+    "deliveredBy": "MERCHANT",
+    "deliveryDateTime": "2026-09-16T12:00:00.000Z",
+    "observations": "Observação de entrega Fixture",
+    "pickupCode": "delivery-fixture-scheduled"
+  },
+  "takeout": null,
+  "schedule": {
+    "deliveryDateTimeStart": "2026-09-16T12:00:00.000Z",
+    "deliveryDateTimeEnd": "2026-09-16T12:30:00.000Z"
+  },
+  "additionalInfo": {
+    "metadata": {}
+  }
+}

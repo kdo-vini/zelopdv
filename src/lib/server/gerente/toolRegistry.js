@@ -33,8 +33,8 @@ export const TOOLS = [
   {
     name: 'resumo_periodo',
     write: false,
-    description: 'Resumo de vendas de um período: receita, quantidade, ticket médio, mix de pagamento e produtos mais vendidos.',
-    parameters: { type: 'object', properties: { periodo: { type: 'string', enum: ['hoje', 'ontem', 'semana', 'mes'] } }, required: ['periodo'] },
+    description: 'Resumo de vendas de um período: receita, quantidade, ticket médio, mix de pagamento e produtos mais vendidos. A resposta sempre traz "por_canal" (receita e quantidade por canal de origem: PDV, ZeloMenu, ZeloChat, Mesas, Manual, iFood) para comparar canais sem precisar de outra chamada. Use o parâmetro "canal" só quando o dono pedir o número de UM canal específico (ex.: "quanto veio do iFood?"); nesse caso a resposta toda (receita, quantidade, ticket médio) fica restrita àquele canal.',
+    parameters: { type: 'object', properties: { periodo: { type: 'string', enum: ['hoje', 'ontem', 'semana', 'mes'] }, canal: { type: 'string', enum: ['pdv', 'zelomenu', 'zelochat', 'mesa', 'manual', 'ifood'], description: 'Opcional. Restringe o resumo a um único canal de origem da venda.' } }, required: ['periodo'] },
     run: (ctx, args) => resumoPeriodo(ctx.db, ctx.ownerUserId, args, { now: ctx.now }),
   },
   {

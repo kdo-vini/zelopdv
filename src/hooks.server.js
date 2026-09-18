@@ -14,6 +14,7 @@ const ADMIN_API_ORIGINS = new Set([
 const LIMITS = {
   '/api/billing/webhook': { limit: 200, windowMs: 60 * 1000 },
   '/api/webhooks/abacatepay': { limit: 200, windowMs: 60 * 1000 },
+  '/api/integrations/ifood/webhook': { limit: 200, windowMs: 60 * 1000 },
   '/api/billing/create-subscription': { limit: 5, windowMs: 60 * 1000 },
   '/api/billing/pix/create': { limit: 10, windowMs: 60 * 1000 },
   '/api/billing/cancel-subscription': { limit: 5, windowMs: 60 * 1000 },

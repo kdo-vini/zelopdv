@@ -18,6 +18,7 @@
   import { startOfflineRuntime } from '$lib/offline/runtime';
   import { printStationEnabled, setPrintStationEnabled, setPrintStationOwner } from '$lib/printStationPreference.js';
   import { printStationStatus } from '$lib/stores/printStation.js';
+  import IfoodIntegrationCard from '$lib/components/integrations/IfoodIntegrationCard.svelte';
   import {
     detectZeloImpressao,
     getConfig as getZeloImpressaoConfig,
@@ -1202,6 +1203,8 @@
       <!-- ─── Aba 5: Integrações ──────────────────────────── -->
       {#if activeTab === 'integracoes'}
         <div class="grid gap-5 max-w-2xl">
+
+          <IfoodIntegrationCard />
 
           <section class="rounded-xl p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
             <div>

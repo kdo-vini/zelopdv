@@ -1,0 +1,116 @@
+{
+  "id": "order-fixture-ifood-delivery",
+  "displayId": "display-fixture-001",
+  "createdAt": "2026-09-15T18:00:00.000Z",
+  "preparationStartDateTime": "2026-09-15T18:00:00.000Z",
+  "orderType": "DELIVERY",
+  "orderTiming": "IMMEDIATE",
+  "salesChannel": "IFOOD",
+  "category": "FOOD",
+  "isTest": true,
+  "merchant": {
+    "id": "merchant-fixture",
+    "name": "Merchant Fixture"
+  },
+  "customer": {
+    "id": "customer-fixture",
+    "name": "Cliente Teste"
+  },
+  "items": [
+    {
+      "index": 1,
+      "id": "item-fixture-ifood",
+      "uniqueId": "unique-item-fixture-ifood",
+      "name": "Produto Fixture",
+      "type": "ITEM",
+      "externalCode": "product-fixture",
+      "quantity": 1,
+      "unit": "UN",
+      "unitPrice": 22,
+      "price": 22,
+      "scalePrices": null,
+      "optionsPrice": 3,
+      "totalPrice": 25,
+      "observations": "Observação Fixture",
+      "options": [
+        {
+          "index": 1,
+          "id": "option-fixture-ifood",
+          "name": "Complemento Fixture",
+          "groupName": "Grupo Fixture",
+          "type": "OPTION",
+          "externalCode": "option-fixture",
+          "quantity": 1,
+          "unit": "UN",
+          "unitPrice": 2,
+          "addition": 1,
+          "price": 3,
+          "customization": []
+        }
+      ]
+    }
+  ],
+  "benefits": [
+    {
+      "target": "CART",
+      "value": 2,
+      "sponsorshipValues": [
+        {
+          "name": "IFOOD",
+          "value": 2
+        }
+      ]
+    }
+  ],
+  "additionalFees": [
+    {
+      "type": "SMALL_ORDER_FEE",
+      "description": "Taxa Fixture",
+      "fullDescription": "Taxa de serviço Fixture",
+      "value": 1,
+      "liabilities": [
+        {
+          "name": "IFOOD",
+          "percentage": 100
+        }
+      ]
+    }
+  ],
+  "total": {
+    "subTotal": 25,
+    "deliveryFee": 5,
+    "additionalFees": 1,
+    "benefits": 2,
+    "orderAmount": 29
+  },
+  "payments": {
+    "prepaid": 29,
+    "pending": 0,
+    "methods": [
+      {
+        "value": 29,
+        "currency": "BRL",
+        "type": "ONLINE",
+        "method": "PIX",
+        "prepaid": true,
+        "card": {
+          "brand": "PIX"
+        }
+      }
+    ]
+  },
+  "picking": null,
+  "delivery": {
+    "mode": "DEFAULT",
+    "description": "Padrão",
+    "deliveredBy": "IFOOD",
+    "deliveryDateTime": "2026-09-15T18:40:00.000Z",
+    "observations": "Observação de entrega Fixture",
+    "pickupCode": "pickup-fixture"
+  },
+  "takeout": null,
+  "schedule": null,
+  "additionalInfo": {
+    "metadata": {}
+  }
+}

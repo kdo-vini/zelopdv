@@ -35,3 +35,51 @@ describe('Relatórios desktop layout', () => {
     expect(reportPage).not.toContain('class="flex min-h-full flex-col gap-5"');
   });
 });
+
+describe('Relatórios canal de origem (Task 15)', () => {
+  it('centralizes channel filter/badge/commission logic in salesChannel.js instead of inlining it', () => {
+    expect(reportPage).toContain("from '$lib/finance/salesChannel'");
+    expect(reportPage).toContain('SALES_CHANNEL_FILTER_OPTIONS');
+    expect(reportPage).toContain('getChannelVisual');
+    expect(reportPage).toContain('summarizeSalesByChannel');
+    expect(reportPage).toContain('summarizeEstornos');
+  });
+
+  it('exposes the Todos|PDV|ZeloMenu|ZeloChat|Mesas|Manual|iFood filter for both caixa and período modes', () => {
+    expect(reportPage).toContain('id="select-canal-caixa"');
+    expect(reportPage).toContain('id="select-canal-periodo"');
+  });
+
+  it('adds canal_origem to every vendas select used by the report queries', () => {
+    const vendasSelects = [...reportPage.matchAll(/\.from\('vendas'\)\s*\.select\('([^']+)'\)/g)].map((m) => m[1]);
+    expect(vendasSelects.length).toBeGreaterThan(0);
+    for (const select of vendasSelects) {
+      expect(select).toContain('canal_origem');
+    }
+  });
+
+  it('loads vendas_estornos in batches, mirroring the vendas_taxas_plataforma chunking pattern', () => {
+    expect(reportPage).toContain("from('vendas_estornos')");
+    expect(reportPage).toContain('carregarEstornosPorVendas');
+    const fnBody = reportPage.slice(
+      reportPage.indexOf('async function carregarEstornosPorVendas'),
+      reportPage.indexOf('async function carregarEstornosPorVendas') + 600
+    );
+    expect(fnBody).toContain('chunkArray(vendaIds, 1000)');
+    expect(fnBody).toContain("from('vendas_estornos')");
+  });
+
+  it('renders comparative per-channel cards and never shows iFood commission/net as zero', () => {
+    expect(reportPage).toContain('Vendas por Canal');
+    expect(reportPage).toContain('Estornos / Cancelamentos');
+    expect(reportPage).toContain('COMMISSION_UNAVAILABLE_LABEL');
+    expect(reportPage).toMatch(/canal\.comissao === null \? COMMISSION_UNAVAILABLE_LABEL/);
+    expect(reportPage).toMatch(/canal\.liquido === null \? COMMISSION_UNAVAILABLE_LABEL/);
+  });
+
+  it('shows a channel badge on each sale row in the Vendas do Caixa table', () => {
+    const vendasTableSection = reportPage.slice(reportPage.indexOf('Vendas do Caixa'), reportPage.indexOf('Movimentações do Caixa'));
+    expect(vendasTableSection).toContain('getChannelVisual(v.canal_origem)');
+    expect(vendasTableSection).toContain('canalVisual.label');
+  });
+});

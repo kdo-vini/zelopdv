@@ -63,6 +63,15 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
       },
     },
+    {
+      // Domain E2E with mock iFood adapter — no auth tenant, no browser UI.
+      name: 'ifood-mvp',
+      testDir: './tests/e2e',
+      testMatch: /ifood-mvp\.spec\.js/,
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
   ],
 
   // Start the dev server automatically when running locally

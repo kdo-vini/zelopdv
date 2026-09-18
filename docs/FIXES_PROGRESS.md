@@ -1,5 +1,59 @@
 # Fixes Progress
 
+- [x] FX-IFOOD-WORKER-IMAGE-PAYMENTMETHODS-01 (2026-09-17) — imagem Docker do
+  worker iFood saía com `MODULE_NOT_FOUND` no boot: `orderNormalizer.js`
+  importa `src/lib/finance/paymentMethods.js`, mas o Dockerfile só copiava
+  `workers/ifood` + `src/lib/server/ifood` (e o dockerignore bloqueava
+  finance). Agora copia o catálogo canônico no mesmo path relativo e o
+  ignore libera o arquivo. Sem flags de ciclo, sem secrets, fail-closed
+  intacto. Bloqueava redeploy Dokploy para shadow Developers.
+
+- [x] FX-IFOOD-WORKER-CYCLE-FLAGS-01 (2026-09-17) — bootstrap do worker iFood
+  passa a aceitar `IFOOD_WORKER_PROCESS_INBOX`,
+  `IFOOD_WORKER_PROCESS_COMMANDS` e `IFOOD_WORKER_ENABLE_HTTP_ADAPTER`
+  (default off). Flags off: só probe. Flags on com deps fake: inbox/commands
+  rodam. Adapter flag on sem `IFOOD_CLIENT_ID`/`SECRET`: fail-closed (adapter
+  null, hooks default não sobem). TTL ready continua `> interval`. Sem
+  migrations. Ainda GO parcial (shadow/piloto/soak pendentes).
+
+- [x] FX-IFOOD-WORKER-READY-TTL-01 (2026-09-17) — `/health/ready` do worker
+  iFood ia a 200 `fresh_probe` e depois ficava 503 `stale_probe` até o
+  próximo ciclo. Intervalo default 300_000 ms vs `readyMaxAgeMs` 90_000 ms:
+  o probe só é gravado no ciclo, então a maior parte da janela de 5 min
+  ficava stale com deps saudáveis (visto live: live 200 `serving`, ready
+  503 `stale_probe`). Default de `readyMaxAgeMs` passou a 600_000;
+  `loadIfoodWorkerConfig` deriva/auto-bumpeia quando
+  `readyMaxAgeMs <= intervalMs`. Probe segue não mutante
+  (`claim_ifood_events_v1` + `INVALID_CLAIM_ARGUMENTS`). Sem migrations.
+  Testes em `tests/ifood.worker-runtime.test.js`. Ainda GO parcial.
+
+- [x] FX-IFOOD-WORKER-READY-PROBE-01 (2026-09-17) — `GET /health/ready` do
+  worker iFood ficava 503 `dependencies_unavailable` mesmo com
+  `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` porque o bootstrap sempre
+  usava `createUnreadyWorkerDependencies()` (`false`/`false`). Agora
+  `createWorkerDependencies()` monta `workers/ifood/supabaseRepository.js`
+  quando as duas envs existem. O probe chama `claim_ifood_events_v1` com
+  argumentos inválidos (`p_limit=0`, `p_lease_seconds=0`) e trata
+  `INVALID_CLAIM_ARGUMENTS` como `{ databaseReachable: true, leaseCapable: true }`
+  — a função de lease roda até a validação, sem `SKIP LOCKED` e sem
+  reivindicar inbox. Falha de transporte/auth/timeout continua fail-closed.
+  Sem RPC dedicada de health nas migrations aplicadas; nenhuma migration
+  nova. Testes em `tests/ifood.worker-runtime.test.js`.
+
+- [x] FX-SCHEMA-REPLAY-ZELOMENU-01 (2026-09-16) — o replay descartável do
+  iFood parava em `20260911120000_zelomenu_canonical_pause.sql` porque o
+  baseline `20260813091000` não continha
+  `public.zelomenu_modifier_components` nem
+  `zelomenu_modifier_option_products.id_componente` (SQLSTATE `42703`). A
+  bridge forward-only
+  `20260911110000_zelomenu_canonical_modifier_components.sql` recompõe a
+  dependência antes da migration histórica, preserva links/preços, repara
+  links vazios de rollout parcial e valida exatamente um destino. A migration
+  canônica não foi alterada e nenhum banco vinculado foi tocado. Teste focado:
+  9/9; `npm run verify:migrations`: 107/107 baseline, 59/59 remotas, 56
+  forward; harness completo com verificador iFood e lint: verde, alcançando a
+  migration iFood e passando 1 verifier.
+
 - [x] FX-ATIVACAO-PRIMEIRA-VENDA-02 (2026-09-17) — Polish do coachmark/CTAs do
   primeiro uso na Frente de Caixa (Spec A–B sobre PR #39). Helper deixou de
   cobrir o tile: dica colada abaixo do produto, anel sky + lift, copy "Toque

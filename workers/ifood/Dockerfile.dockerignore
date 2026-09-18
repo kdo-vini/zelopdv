@@ -1,0 +1,20 @@
+# Docker-specific ignore for the repository-root context used by
+# `docker build -f workers/ifood/Dockerfile .`.
+#
+# The stale Task 4 plan named `workers/ifood/.dockerignore`; Docker only applies
+# a per-Dockerfile ignore when it is adjacent to the Dockerfile and named
+# `Dockerfile.dockerignore`, so this file is the intentional deviation.
+**
+!package.json
+!package-lock.json
+!workers/
+!workers/ifood/
+!workers/ifood/**
+!src/
+!src/lib/
+!src/lib/server/
+!src/lib/server/ifood/
+!src/lib/server/ifood/**
+# orderNormalizer imports the canonical payment catalog from finance.
+!src/lib/finance/
+!src/lib/finance/paymentMethods.js

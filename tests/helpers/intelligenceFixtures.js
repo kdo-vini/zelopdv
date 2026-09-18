@@ -18,6 +18,7 @@ export function makeVenda(overrides = {}) {
     valor_desconto: overrides.desconto ?? 0,
     tipo_pedido: overrides.tipoPedido ?? null,
     taxa_entrega: overrides.taxaEntrega ?? 0,
+    canal_origem: overrides.canalOrigem ?? 'pdv',
     ...overrides,
   };
 }
@@ -138,6 +139,7 @@ export function zeroMetrics() {
     mix_pagamentos: { pix: 0, dinheiro: 0, cartao: 0, vale_refeicao: 0, fiado: 0, outros: 0 },
     por_produto: [],
     por_hora: new Array(24).fill(0),
+    por_canal: {},
     backfilled: false,
   };
 }

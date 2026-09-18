@@ -1,5 +1,24 @@
 # ZeloPDV.memory
 
+- Worker iFood imagem Docker (2026-09-17): `workers/ifood/index.js` puxa
+  `orderNormalizer.js`, que importa `src/lib/finance/paymentMethods.js`.
+  A imagem precisa copiar esse arquivo no mesmo path relativo; o
+  `Dockerfile.dockerignore` tem de un-ignore `src/lib/finance/` + o
+  arquivo. Sem isso o container sai com `MODULE_NOT_FOUND` no boot.
+
+- Worker iFood ciclos (2026-09-17): inbox/commands/adapter HTTP só sobem
+  com `IFOOD_WORKER_PROCESS_INBOX=1`, `IFOOD_WORKER_PROCESS_COMMANDS=1` e
+  `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1`. Sem o par `IFOOD_CLIENT_*` o
+  adapter fica null (fail-closed). Default off. `readyMaxAgeMs` >
+  `intervalMs`. Não é GO completo.
+
+- Worker iFood `/health/ready` (2026-09-17): o probe só é gravado no ciclo
+  do loop. `readyMaxAgeMs` tem de ser **estritamente maior** que
+  `intervalMs` (defaults 600_000 vs 300_000). `loadIfoodWorkerConfig`
+  deriva ou auto-bumpeia o par inválido; senão idle saudável vira 503
+  `stale_probe`. Probe de lease continua não mutante
+  (`claim_ifood_events_v1` + `INVALID_CLAIM_ARGUMENTS`). Não é GO completo.
+
 - Snapshots operacionais (2026-09-11): `readOperationalSnapshot` é fallback de
   offline, não cache de aparelho online. Nenhum snapshot (`pessoas.fiado`,
   `empresa.perfil`, `mesas:profile`, `mesas:catalog`) tem caminho de

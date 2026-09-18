@@ -1,0 +1,12 @@
+{
+  "id": "event-fixture-cancelled",
+  "code": "CAN",
+  "fullCode": "CANCELLED",
+  "orderId": "order-fixture-merchant-delivery",
+  "merchantId": "merchant-fixture",
+  "createdAt": "2026-09-15T20:00:00.000Z",
+  "metadata": {
+    "status": "CANCELLED",
+    "cancelReason": "reason-fixture"
+  }
+}

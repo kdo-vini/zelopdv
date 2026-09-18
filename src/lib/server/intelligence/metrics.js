@@ -7,6 +7,7 @@
  */
 
 import { money, calculatePaymentSummary, calculatePlatformFees } from '$lib/finance/caixa.js';
+import { normalizeSalesChannel } from '$lib/finance/salesChannel.js';
 import { getHourInTimezone } from './tz.js';
 
 /**
@@ -56,6 +57,26 @@ function aggregateByProduct(itens) {
     }
   }
   return Array.from(map.values()).sort((a, b) => b.receita - a.receita);
+}
+
+/**
+ * Agrega vendas por canal de origem (Task 15: `vendas.canal_origem`).
+ * Só números — nunca payload de pedido, cliente ou endereço (sem PII).
+ * `canal_origem` ausente/desconhecido cai em `pdv`, mesmo fallback do
+ * trigger `vendas_default_canal_origem`.
+ * @param {Array} vendas
+ * @returns {Object<string, {receita_bruta: number, qtd_vendas: number}>}
+ */
+function aggregateByChannel(vendas) {
+  const map = new Map();
+  for (const v of vendas || []) {
+    const canal = normalizeSalesChannel(v.canal_origem);
+    const acc = map.get(canal) || { receita_bruta: 0, qtd_vendas: 0 };
+    acc.receita_bruta = money(acc.receita_bruta + money(v.valor_total || 0));
+    acc.qtd_vendas += 1;
+    map.set(canal, acc);
+  }
+  return Object.fromEntries(map);
 }
 
 /**
@@ -147,6 +168,9 @@ export function computeDailyMetrics({ vendas, itens, pagamentos, taxas, saldoFia
   // Curva horária (24h, America/Sao_Paulo)
   const por_hora = aggregateByHour(vendas);
 
+  // Agregação por canal de origem (Task 16 — Zelinho compara iFood x demais canais)
+  const por_canal = aggregateByChannel(vendas);
+
   return {
     receita_bruta,
     receita_realizada,
@@ -160,6 +184,7 @@ export function computeDailyMetrics({ vendas, itens, pagamentos, taxas, saldoFia
     mix_pagamentos,
     por_produto,
     por_hora,
+    por_canal,
     backfilled: false,
   };
 }

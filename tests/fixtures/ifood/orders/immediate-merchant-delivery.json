@@ -1,0 +1,77 @@
+{
+  "id": "order-fixture-merchant-delivery",
+  "displayId": "display-fixture-002",
+  "createdAt": "2026-09-15T18:10:00.000Z",
+  "preparationStartDateTime": "2026-09-15T18:10:00.000Z",
+  "orderType": "DELIVERY",
+  "orderTiming": "IMMEDIATE",
+  "salesChannel": "IFOOD",
+  "category": "FOOD",
+  "isTest": true,
+  "merchant": {
+    "id": "merchant-fixture",
+    "name": "Merchant Fixture"
+  },
+  "customer": {
+    "id": "customer-fixture-002",
+    "name": "Cliente Teste"
+  },
+  "items": [
+    {
+      "index": 1,
+      "id": "item-fixture-merchant",
+      "uniqueId": "unique-item-fixture-merchant",
+      "name": "Produto Fixture",
+      "type": "ITEM",
+      "externalCode": "product-fixture",
+      "quantity": 1,
+      "unit": "UN",
+      "unitPrice": 25,
+      "price": 25,
+      "scalePrices": null,
+      "optionsPrice": 0,
+      "totalPrice": 25,
+      "observations": null,
+      "options": []
+    }
+  ],
+  "benefits": [],
+  "additionalFees": [],
+  "total": {
+    "subTotal": 25,
+    "deliveryFee": 4,
+    "additionalFees": 0,
+    "benefits": 0,
+    "orderAmount": 29
+  },
+  "payments": {
+    "prepaid": 0,
+    "pending": 29,
+    "methods": [
+      {
+        "value": 29,
+        "currency": "BRL",
+        "type": "OFFLINE",
+        "method": "CASH",
+        "prepaid": false,
+        "cash": {
+          "changeFor": 40
+        }
+      }
+    ]
+  },
+  "picking": null,
+  "delivery": {
+    "mode": "DEFAULT",
+    "description": "Padrão",
+    "deliveredBy": "MERCHANT",
+    "deliveryDateTime": "2026-09-15T18:45:00.000Z",
+    "observations": "Observação de entrega Fixture",
+    "pickupCode": "delivery-fixture"
+  },
+  "takeout": null,
+  "schedule": null,
+  "additionalInfo": {
+    "metadata": {}
+  }
+}

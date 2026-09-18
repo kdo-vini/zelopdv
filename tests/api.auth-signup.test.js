@@ -23,8 +23,9 @@ describe('API: auth/signup', () => {
   it('cria usuario confirmado e retorna sessao para login automatico', async () => {
     let releaseAnalytics;
     const flush = vi.fn(() => new Promise((resolve) => { releaseAnalytics = resolve; }));
+    const capture = vi.fn();
     const waitUntil = vi.fn();
-    vi.doMock('$lib/server/posthog', () => ({ getPostHogClient: () => ({ capture: vi.fn(), flush }) }));
+    vi.doMock('$lib/server/posthog', () => ({ getPostHogClient: () => ({ capture, flush }) }));
     vi.doMock('@vercel/functions', () => ({ waitUntil }));
     const createUser = vi.fn(async () => ({
       data: { user: { id: 'user-1', email: 'owner@test.com' } },
@@ -64,6 +65,15 @@ describe('API: auth/signup', () => {
 
     expect(response.status).toBe(200);
     expect(waitUntil).toHaveBeenCalledOnce();
+    expect(capture).toHaveBeenCalledWith({
+      distinctId: 'user-1',
+      event: 'user_registered',
+      properties: {
+        $set: { email: 'owner@test.com' },
+        method: 'email',
+        has_referral: true,
+      },
+    });
     expect(flush).toHaveBeenCalledOnce();
     // Response has already resolved while the analytics transport is pending.
     releaseAnalytics();
