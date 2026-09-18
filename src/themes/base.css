@@ -133,6 +133,29 @@
     --status-warning-text: #fbbf24;
     /* amber-400 */
 
+    /* Report / chart series — UI uses var(--chart-*); keep in sync with
+       src/lib/theme/chartColors.js for PDF/canvas that cannot read CSS. */
+    --chart-cash: var(--success);
+    --chart-pix: var(--accent);
+    --chart-debit: var(--link);
+    --chart-credit: var(--link-hover);
+    --chart-card: var(--text-muted);
+    --chart-meal: var(--success-hover);
+    --chart-fiado: var(--warning);
+    --chart-bar: var(--accent);
+    --chart-platform-1: var(--accent);
+    --chart-platform-2: var(--warning);
+    --chart-platform-3: var(--status-error-text);
+    --chart-platform-4: var(--status-warning-text);
+    --chart-platform-5: var(--link);
+    --chart-platform-default: var(--text-muted);
+    --chart-channel-pdv: var(--text-muted);
+    --chart-channel-zelomenu: var(--zelomenu-brand);
+    --chart-channel-zelochat: var(--zelochat-brand);
+    --chart-channel-mesa: var(--link-hover);
+    --chart-channel-manual: var(--warning);
+    --chart-channel-ifood: var(--warning);
+
     /* Links */
     --link: #93c5fd;
     /* blue-300 */

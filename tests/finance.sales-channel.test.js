@@ -33,10 +33,14 @@ describe('salesChannel filter + labels', () => {
     expect(normalizeSalesChannel('IFOOD')).toBe('ifood');
   });
 
-  it('returns badge label and color for each known channel', () => {
+  it('returns badge label and token-backed swatch for each known channel', () => {
     expect(getChannelLabel('ifood')).toBe('iFood');
     expect(getChannelLabel('mesa')).toBe('Mesas');
-    expect(getChannelVisual('zelochat')).toMatchObject({ label: 'ZeloChat', color: expect.stringContaining('bg-') });
+    expect(getChannelVisual('zelochat')).toMatchObject({
+      label: 'ZeloChat',
+      swatch: 'var(--chart-channel-zelochat)',
+      textColor: 'var(--chart-channel-zelochat)',
+    });
   });
 
   it('flags iFood as the only channel without commission/fee data today', () => {

@@ -8,7 +8,12 @@
  * writes a taxa row (see docs/CURRENT.md Task 14) — so iFood commission and
  * net must render as "Indisponível", never as R$ 0,00 (that would imply the
  * platform charges nothing).
+ *
+ * Colors: CSS vars for UI (`swatch` / `textColor`); resolved hex only for
+ * PDF/canvas via chartColors.js (mirrors `--chart-channel-*` in base.css).
  */
+
+import { CHART_COLORS } from '$lib/theme/chartColors.js';
 
 export function money(value) {
   const number = Number(value || 0);
@@ -19,44 +24,44 @@ export const SALES_CHANNELS = Object.freeze([
   Object.freeze({
     id: 'pdv',
     label: 'PDV',
-    color: 'bg-slate-500',
-    textColor: 'text-slate-600 dark:text-slate-400',
-    hex: '#64748b',
+    swatch: 'var(--chart-channel-pdv)',
+    textColor: 'var(--chart-channel-pdv)',
+    hex: CHART_COLORS.channelPdv,
   }),
   Object.freeze({
     id: 'zelomenu',
     label: 'ZeloMenu',
-    color: 'bg-indigo-500',
-    textColor: 'text-indigo-600 dark:text-indigo-400',
-    hex: '#6366f1',
+    swatch: 'var(--chart-channel-zelomenu)',
+    textColor: 'var(--chart-channel-zelomenu)',
+    hex: CHART_COLORS.channelZelomenu,
   }),
   Object.freeze({
     id: 'zelochat',
     label: 'ZeloChat',
-    color: 'bg-emerald-500',
-    textColor: 'text-emerald-600 dark:text-emerald-400',
-    hex: '#10b981',
+    swatch: 'var(--chart-channel-zelochat)',
+    textColor: 'var(--chart-channel-zelochat)',
+    hex: CHART_COLORS.channelZelochat,
   }),
   Object.freeze({
     id: 'mesa',
     label: 'Mesas',
-    color: 'bg-purple-500',
-    textColor: 'text-purple-600 dark:text-purple-400',
-    hex: '#a855f7',
+    swatch: 'var(--chart-channel-mesa)',
+    textColor: 'var(--chart-channel-mesa)',
+    hex: CHART_COLORS.channelMesa,
   }),
   Object.freeze({
     id: 'manual',
     label: 'Manual',
-    color: 'bg-amber-500',
-    textColor: 'text-amber-600 dark:text-amber-400',
-    hex: '#f59e0b',
+    swatch: 'var(--chart-channel-manual)',
+    textColor: 'var(--chart-channel-manual)',
+    hex: CHART_COLORS.channelManual,
   }),
   Object.freeze({
     id: 'ifood',
     label: 'iFood',
-    color: 'bg-orange-500',
-    textColor: 'text-orange-600 dark:text-orange-400',
-    hex: '#f97316',
+    swatch: 'var(--chart-channel-ifood)',
+    textColor: 'var(--chart-channel-ifood)',
+    hex: CHART_COLORS.channelIfood,
   }),
 ]);
 
@@ -128,7 +133,7 @@ export function filterRelatedByChannel(rows = [], vendas = [], channelFilter = '
  *
  * @param {Array} vendas - rows with `id`, `valor_total`, `canal_origem`.
  * @param {{ taxasPlataforma?: Array, estornos?: Array }} [context]
- * @returns {Array<{canal, label, color, textColor, hex, qtd, bruto, ticketMedio, comissao: number|null, liquido: number|null, estornosQtd, estornosValor}>}
+ * @returns {Array<{canal, label, swatch, textColor, hex, qtd, bruto, ticketMedio, comissao: number|null, liquido: number|null, estornosQtd, estornosValor}>}
  */
 export function summarizeSalesByChannel(vendas = [], { taxasPlataforma = [], estornos = [] } = {}) {
   const channelByVendaId = buildVendaChannelMap(vendas);
@@ -175,7 +180,7 @@ export function summarizeSalesByChannel(vendas = [], { taxasPlataforma = [], est
       return {
         canal: acc.canal,
         label: visual.label,
-        color: visual.color,
+        swatch: visual.swatch,
         textColor: visual.textColor,
         hex: visual.hex,
         qtd: acc.qtd,

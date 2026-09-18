@@ -33,6 +33,7 @@
 	import BarChart from '$lib/components/charts/BarChart.svelte';
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
 	import { PLATAFORMAS_PRESET } from '$lib/profileUtils';
+	import { CHART_COLORS } from '$lib/theme/chartColors';
 	import { Banknote, ChartNoAxesColumnIncreasing, ChevronDown, FileText, Sheet, ShoppingBag, Undo2 } from 'lucide-svelte';
 
 
@@ -67,15 +68,25 @@
 	// Active platforms loaded from empresa_perfil
 	let plataformasAtivas = [];
 
-	// Platform color map (Tailwind classes + hex for charts/PDF)
+	// Platform / payment swatches: CSS vars for UI, resolved hex for PDF.
 	const PLATFORM_COLORS = {
-		ifood:   { color: 'bg-orange-500', textColor: 'text-orange-500 dark:text-orange-400', hex: '#f97316' },
-		rappi:   { color: 'bg-fuchsia-500', textColor: 'text-fuchsia-500 dark:text-fuchsia-400', hex: '#d946ef' },
-		'99food':{ color: 'bg-red-400', textColor: 'text-red-400 dark:text-red-300', hex: '#f87171' },
-		aiqfome: { color: 'bg-yellow-400', textColor: 'text-yellow-500 dark:text-yellow-400', hex: '#facc15' },
-		keeta:   { color: 'bg-sky-400', textColor: 'text-sky-400 dark:text-sky-300', hex: '#38bdf8' },
+		ifood:   { swatch: 'var(--chart-platform-2)', textColor: 'var(--chart-platform-2)', hex: CHART_COLORS.platform2 },
+		rappi:   { swatch: 'var(--chart-platform-3)', textColor: 'var(--chart-platform-3)', hex: CHART_COLORS.platform3 },
+		'99food':{ swatch: 'var(--chart-platform-3)', textColor: 'var(--chart-platform-3)', hex: CHART_COLORS.platform3 },
+		aiqfome: { swatch: 'var(--chart-platform-4)', textColor: 'var(--chart-platform-4)', hex: CHART_COLORS.platform4 },
+		keeta:   { swatch: 'var(--chart-platform-5)', textColor: 'var(--chart-platform-5)', hex: CHART_COLORS.platform5 },
 	};
-	const DEFAULT_PLAT_COLOR = { color: 'bg-teal-500', textColor: 'text-teal-500 dark:text-teal-400', hex: '#14b8a6' };
+	const DEFAULT_PLAT_COLOR = { swatch: 'var(--chart-platform-default)', textColor: 'var(--chart-platform-default)', hex: CHART_COLORS.platformDefault };
+
+	const PAYMENT_COLORS = {
+		dinheiro: { swatch: 'var(--chart-cash)', textColor: 'var(--chart-cash)', hex: CHART_COLORS.cash },
+		pix: { swatch: 'var(--chart-pix)', textColor: 'var(--chart-pix)', hex: CHART_COLORS.pix },
+		cartao_debito: { swatch: 'var(--chart-debit)', textColor: 'var(--chart-debit)', hex: CHART_COLORS.debit },
+		cartao_credito: { swatch: 'var(--chart-credit)', textColor: 'var(--chart-credit)', hex: CHART_COLORS.credit },
+		cartao: { swatch: 'var(--chart-card)', textColor: 'var(--chart-card)', hex: CHART_COLORS.card },
+		vale_refeicao: PAYMENT_METHOD_VISUALS.vale_refeicao,
+		fiado: { swatch: 'var(--chart-fiado)', textColor: 'var(--chart-fiado)', hex: CHART_COLORS.fiado },
+	};
 
 	// Pagination state for "Vendas do Caixa" table
 	const VENDAS_PER_PAGE = 10;
@@ -106,16 +117,6 @@
 	const fmt = (n) => `R$ ${Number(n || 0).toFixed(2)}`;
 	const reportPlatforms = () => [...plataformasAtivas, ...PLATAFORMAS_PRESET];
 	const formatForma = (f) => formatPaymentMethod(f, { platforms: reportPlatforms() });
-
-	const PAYMENT_COLORS = {
-		dinheiro: { color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400', hex: '#22c55e' },
-		pix: { color: 'bg-cyan-500', textColor: 'text-cyan-600 dark:text-cyan-400', hex: '#06b6d4' },
-		cartao_debito: { color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400', hex: '#3b82f6' },
-		cartao_credito: { color: 'bg-purple-500', textColor: 'text-purple-600 dark:text-purple-400', hex: '#8b5cf6' },
-		cartao: { color: 'bg-slate-500', textColor: 'text-slate-600 dark:text-slate-400', hex: '#64748b' },
-		vale_refeicao: PAYMENT_METHOD_VISUALS.vale_refeicao,
-		fiado: { color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400', hex: '#f59e0b' },
-	};
 
 	function withPaymentVisuals(presentation) {
 		return [
@@ -1043,7 +1044,7 @@
 	</div>
 </div>
 {#if errorMessage}
-	<div class="mb-4 text-sm text-red-600">{errorMessage}</div>
+	<div class="mb-4 text-sm report-money-out">{errorMessage}</div>
 {/if}
 
 <!-- Barra de modo / filtros -->
@@ -1090,7 +1091,7 @@
 						</button>
 						<div class="mx-2" style="border-top: 1px solid var(--border-subtle);"></div>
 						<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarExcel} disabled={exporting}>
-							<Sheet class="size-4 text-emerald-300" aria-hidden="true" />
+							<Sheet class="size-4 report-money-in" aria-hidden="true" />
 							<div class="text-left">
 								<div class="font-medium">Exportar Excel</div>
 								<div class="text-xs" style="color: var(--text-muted);">Planilha com abas formatadas</div>
@@ -1104,7 +1105,7 @@
 		<div class="space-y-3">
 			<div class="flex flex-wrap gap-2 text-xs">
 				{#each presetOpcoes as op}
-					<button class="px-2 py-1 rounded-sm border" class:bg-sky-600={preset===op.key} class:text-white={preset===op.key} on:click={() => { aplicarPreset(op.key); carregarRelatorioPeriodo(); }}>{op.label}</button>
+					<button class="px-2 py-1 rounded-sm border" class:report-preset-active={preset===op.key} on:click={() => { aplicarPreset(op.key); carregarRelatorioPeriodo(); }}>{op.label}</button>
 				{/each}
 			</div>
 			<div class="grid sm:grid-cols-3 gap-4 items-end">
@@ -1144,7 +1145,7 @@
 							</button>
 							<div class="mx-2" style="border-top: 1px solid var(--border-subtle);"></div>
 							<button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors" style="color: var(--text-main);" on:click={exportarExcel} disabled={exporting}>
-								<Sheet class="size-4 text-emerald-300" aria-hidden="true" />
+								<Sheet class="size-4 report-money-in" aria-hidden="true" />
 								<div class="text-left">
 									<div class="font-medium">Exportar Excel</div>
 									<div class="text-xs" style="color: var(--text-muted);">Planilha com abas formatadas</div>
@@ -1179,8 +1180,8 @@
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
 					Receita Líquida
 					{#if canalFiltroCaixa}
-						<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold {getChannelVisual(canalFiltroCaixa).textColor}" style="background: color-mix(in srgb, currentColor 12%, transparent);">
-							<span class="w-1.5 h-1.5 rounded-full {getChannelVisual(canalFiltroCaixa).color}"></span>
+						<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold" style="color: {getChannelVisual(canalFiltroCaixa).textColor}; background: color-mix(in srgb, currentColor 12%, transparent);">
+							<span class="w-1.5 h-1.5 rounded-full" style="background: {getChannelVisual(canalFiltroCaixa).swatch}"></span>
 							{getChannelVisual(canalFiltroCaixa).label}
 						</span>
 					{/if}
@@ -1189,13 +1190,13 @@
 				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm" style="color: var(--text-muted);">
 					<span>Bruto: {fmt(totalGeral)}</span>
 					{#if totalDescontosCaixa > 0}
-						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(totalDescontosCaixa)}</span>
+						<span class="report-chip report-chip-warning">Descontos: -{fmt(totalDescontosCaixa)}</span>
 					{/if}
 					{#if totalCustosPlataformaCaixa > 0}
-						<span class="bg-rose-500/15 text-rose-400 px-2 py-0.5 rounded-full text-xs">Plataformas: -{fmt(totalCustosPlataformaCaixa)}</span>
+						<span class="report-chip report-chip-error">Plataformas: -{fmt(totalCustosPlataformaCaixa)}</span>
 					{/if}
 					{#if totalTaxaEntregaCaixa > 0}
-						<span class="bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full text-xs">Entregador: -{fmt(totalTaxaEntregaCaixa)}</span>
+						<span class="report-chip report-chip-accent">Entregador: -{fmt(totalTaxaEntregaCaixa)}</span>
 					{/if}
 				</div>
 			</div>
@@ -1204,28 +1205,28 @@
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-5 h-5 rounded-sm bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
+						<span class="report-kpi-icon"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Vendas Brutas
 					</div>
 					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(totalGeral)}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-5 h-5 rounded-sm bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><ShoppingBag class="size-3.5" aria-hidden="true" /></span>
+						<span class="report-kpi-icon"><ShoppingBag class="size-3.5" aria-hidden="true" /></span>
 						Qtd. Vendas
 					</div>
 					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{qtdVendas}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-5 h-5 rounded-sm bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400"><ChartNoAxesColumnIncreasing class="size-3.5" aria-hidden="true" /></span>
+						<span class="report-kpi-icon"><ChartNoAxesColumnIncreasing class="size-3.5" aria-hidden="true" /></span>
 						Ticket Médio
 					</div>
 					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(ticketMedio)}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-5 h-5 rounded-sm bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
+						<span class="report-kpi-icon"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Dinheiro Líq.
 					</div>
 					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(totalDinheiro)}</div>
@@ -1239,17 +1240,17 @@
 				<!-- Proportional bar -->
 				<div class="flex h-3 rounded-full overflow-hidden mb-4">
 					{#each caixaPagItems as p}
-						<div class="{p.color}" style="width: {Math.max(caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100) : 0, 2)}%"></div>
+						<div style="background: {p.swatch}; width: {Math.max(caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100) : 0, 2)}%"></div>
 					{/each}
 				</div>
 				<!-- Legend -->
 				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
 					{#each caixaPagItems as p}
 						<div class="flex items-center gap-2">
-							<span class="w-2.5 h-2.5 rounded-full {p.color} shrink-0"></span>
+							<span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {p.swatch}"></span>
 							<div>
 								<div class="text-xs text-muted">{p.label}</div>
-								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-muted">({caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100).toFixed(1) : 0}%)</span></div>
+								<div class="text-sm font-semibold" style="color: {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-muted">({caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100).toFixed(1) : 0}%)</span></div>
 							</div>
 						</div>
 					{/each}
@@ -1262,7 +1263,7 @@
 			<div class="card-mini">
 				<div class="flex items-center justify-between gap-3 mb-3">
 					<h3 class="text-sm font-semibold" style="color: var(--text-main);">Custos de Plataforma</h3>
-					<div class="text-sm font-bold text-rose-600 dark:text-rose-400">-{fmt(totalCustosPlataformaCaixa)}</div>
+					<div class="text-sm font-bold report-money-out">-{fmt(totalCustosPlataformaCaixa)}</div>
 				</div>
 				<p class="text-xs mb-3" style="color: var(--text-muted);">
 					Comissão das plataformas (snapshot da taxa configurada no momento da venda). Já descontado da Receita Líquida acima.
@@ -1274,7 +1275,7 @@
 								<span class="text-xs font-medium text-main">{plat.nome}</span>
 								<span class="text-xs text-muted">{plat.qtdVendas} venda{plat.qtdVendas === 1 ? '' : 's'}</span>
 							</div>
-							<div class="text-base font-bold text-rose-600 dark:text-rose-400">-{fmt(plat.total)}</div>
+							<div class="text-base font-bold report-money-out">-{fmt(plat.total)}</div>
 							<div class="text-xs text-muted mt-0.5">Bruto na plataforma: {fmt(plat.brutoTotal)}</div>
 						</div>
 					{/each}
@@ -1296,7 +1297,7 @@
 							<div class="text-lg font-bold text-main">{fmt(t.total)}</div>
 							<div class="text-xs text-muted">{t.qtd} venda{t.qtd !== 1 ? 's' : ''}</div>
 							{#if t.taxaEntrega > 0}
-								<div class="text-xs text-purple-500 dark:text-purple-400">Taxa entrega: {fmt(t.taxaEntrega)}</div>
+								<div class="text-xs report-money-accent">Taxa entrega: {fmt(t.taxaEntrega)}</div>
 							{/if}
 						</div>
 					{/each}
@@ -1308,8 +1309,8 @@
 							<div class="text-base font-bold text-main">{fmt(receitaRestauranteCaixa)}</div>
 						</div>
 						<div>
-							<div class="text-xs text-purple-500 dark:text-purple-400 mb-1">Taxas de Entrega (entregador)</div>
-							<div class="text-base font-bold text-purple-600 dark:text-purple-400">{fmt(totalTaxaEntregaCaixa)}</div>
+							<div class="text-xs report-money-accent mb-1">Taxas de Entrega (entregador)</div>
+							<div class="text-base font-bold report-money-accent">{fmt(totalTaxaEntregaCaixa)}</div>
 						</div>
 					</div>
 				{/if}
@@ -1327,7 +1328,7 @@
 					{#each canalCardsCaixa as canal}
 						<div class="rounded-lg card-inset">
 							<div class="flex items-center gap-2 mb-1">
-								<span class="w-2.5 h-2.5 rounded-full {canal.color} shrink-0"></span>
+								<span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {canal.swatch}"></span>
 								<span class="text-xs font-medium text-main">{canal.label}</span>
 								<span class="text-xs text-muted ml-auto">{canal.qtd} venda{canal.qtd === 1 ? '' : 's'}</span>
 							</div>
@@ -1338,7 +1339,7 @@
 								· Líquido: {canal.liquido === null ? COMMISSION_UNAVAILABLE_LABEL : fmt(canal.liquido)}
 							</div>
 							{#if canal.estornosQtd > 0}
-								<div class="text-xs text-rose-500 dark:text-rose-400 mt-1">Estornos: -{fmt(canal.estornosValor)} ({canal.estornosQtd})</div>
+								<div class="text-xs report-money-out mt-1">Estornos: -{fmt(canal.estornosValor)} ({canal.estornosQtd})</div>
 							{/if}
 						</div>
 					{/each}
@@ -1350,21 +1351,21 @@
 			{#if vendasEstornosCaixa.length > 0}
 			<div class="card-mini">
 				<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-main);">
-					<Undo2 class="size-4 text-rose-400" aria-hidden="true" />
+					<Undo2 class="size-4 report-money-out" aria-hidden="true" />
 					Estornos / Cancelamentos{canalFiltroCaixa ? ` — ${getChannelVisual(canalFiltroCaixa).label}` : ''}
 				</h3>
 				<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Estornos aplicados</div>
-						<div class="text-lg font-bold text-rose-600 dark:text-rose-400">{estornosResumoCaixa.qtd}</div>
+						<div class="text-lg font-bold report-money-out">{estornosResumoCaixa.qtd}</div>
 					</div>
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Valor estornado</div>
-						<div class="text-lg font-bold text-rose-600 dark:text-rose-400">-{fmt(estornosResumoCaixa.valor)}</div>
+						<div class="text-lg font-bold report-money-out">-{fmt(estornosResumoCaixa.valor)}</div>
 					</div>
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Pendentes de revisão</div>
-						<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{estornosResumoCaixa.pendentes}</div>
+						<div class="text-lg font-bold report-money-warn">{estornosResumoCaixa.pendentes}</div>
 					</div>
 				</div>
 			</div>
@@ -1374,24 +1375,24 @@
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-2 h-2 rounded-full bg-red-500"></span>
+						<span class="report-dot report-dot-error"></span>
 						Sangrias
 					</div>
-					<div class="text-lg font-bold text-red-600 dark:text-red-400">{totalSangria > 0 ? '-' : ''}{fmt(totalSangria)}</div>
+					<div class="text-lg font-bold report-money-out">{totalSangria > 0 ? '-' : ''}{fmt(totalSangria)}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-2 h-2 rounded-full bg-green-500"></span>
+						<span class="report-dot report-dot-success"></span>
 						Suprimentos
 					</div>
-					<div class="text-lg font-bold text-green-600 dark:text-green-400">+{fmt(totalSuprimento)}</div>
+					<div class="text-lg font-bold report-money-in">+{fmt(totalSuprimento)}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+						<span class="report-dot report-dot-warning"></span>
 						Descontos
 					</div>
-					<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{totalDescontosCaixa > 0 ? '-' : ''}{fmt(totalDescontosCaixa)}</div>
+					<div class="text-lg font-bold report-money-warn">{totalDescontosCaixa > 0 ? '-' : ''}{fmt(totalDescontosCaixa)}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
@@ -1419,11 +1420,11 @@
 					</div>
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Descontos em comandas</div>
-						<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{resumoMesasCaixa.descontos > 0 ? '-' : ''}{fmt(resumoMesasCaixa.descontos)}</div>
+						<div class="text-lg font-bold report-money-warn">{resumoMesasCaixa.descontos > 0 ? '-' : ''}{fmt(resumoMesasCaixa.descontos)}</div>
 					</div>
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Taxa de serviço</div>
-						<div class="text-lg font-bold text-emerald-600 dark:text-emerald-400">+{fmt(resumoMesasCaixa.taxaServico)}</div>
+						<div class="text-lg font-bold report-money-in">+{fmt(resumoMesasCaixa.taxaServico)}</div>
 					</div>
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Comandas fechadas</div>
@@ -1451,7 +1452,7 @@
 						{/if}
 					</div>
 					<button
-						class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors {mostrarFiltrosProdutos || categoriaFiltro ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-400 text-sky-700 dark:text-sky-300' : 'border-[var(--border-card)] text-main hover:bg-[var(--accent-light)]'}"
+						class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors {mostrarFiltrosProdutos || categoriaFiltro ? 'report-filter-active' : 'border-[var(--border-card)] text-main hover:bg-[var(--accent-light)]'}"
 						aria-label="Abrir filtros"
 						title="Filtros"
 						on:click={() => mostrarFiltrosProdutos = !mostrarFiltrosProdutos}
@@ -1459,7 +1460,7 @@
 						<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M6 12h12M10 20h4" /></svg>
 						Filtros
 						{#if categoriaFiltro}
-							<span class="ml-0.5 inline-flex w-4 h-4 rounded-full bg-sky-500 text-white items-center justify-center text-[10px] font-bold">1</span>
+							<span class="ml-0.5 inline-flex w-4 h-4 rounded-full report-badge-count items-center justify-center text-[10px] font-bold">1</span>
 						{/if}
 					</button>
 				</div>
@@ -1561,19 +1562,19 @@
 										<td class="py-2 pr-3 text-muted text-xs">{v.numero_venda || v.id}</td>
 										<td class="py-2 pr-3 text-main text-xs">{v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
 										<td class="py-2 pr-3">
-											<span class="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold {canalVisual.textColor}">
-												<span class="w-1.5 h-1.5 rounded-full {canalVisual.color}"></span>
+											<span class="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style="color: {canalVisual.textColor}; background: color-mix(in srgb, currentColor 12%, transparent);">
+												<span class="w-1.5 h-1.5 rounded-full" style="background: {canalVisual.swatch}"></span>
 												{canalVisual.label}
 											</span>
 										</td>
 										<td class="py-2 pr-3">
-											<span class="text-xs font-medium {hasFiado ? 'text-amber-500' : 'text-main'}">{formatForma(v.forma_pagamento)}</span>
+											<span class="text-xs font-medium {hasFiado ? 'report-money-warn' : 'text-main'}">{formatForma(v.forma_pagamento)}</span>
 										</td>
 										<td class="py-2 text-right font-semibold text-main text-xs tabular-nums">{fmt(v.valor_total)}</td>
 										<td class="py-2 pl-3 text-right">
 											<button
 												type="button"
-												class="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-xs font-medium text-sky-700 transition-colors hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:text-sky-300 dark:hover:bg-sky-900/30"
+												class="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-xs font-medium report-link transition-colors hover:bg-[var(--accent-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
 												aria-expanded={vendaDetalheAbertaId === v.id}
 												aria-controls={`venda-detalhes-${v.id}`}
 												on:click={() => alternarDetalheVenda(v.id)}
@@ -1645,7 +1646,7 @@
 										<span class="px-1 text-xs text-muted">…</span>
 									{:else}
 										<button
-											class="px-2 py-1 text-xs rounded-sm border transition-colors {pg === vendasPage ? 'bg-sky-500 text-white border-sky-500' : 'border-[var(--border-card)] hover:bg-[var(--accent-light)]'}"
+											class="px-2 py-1 text-xs rounded-sm border transition-colors {pg === vendasPage ? 'report-page-active' : 'border-[var(--border-card)] hover:bg-[var(--accent-light)]'}"
 											on:click={() => vendasPage = pg}
 										>{pg}</button>
 									{/if}
@@ -1703,26 +1704,26 @@
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
 					Receita Líquida
 					{#if canalFiltroPeriodo}
-						<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold {getChannelVisual(canalFiltroPeriodo).textColor}" style="background: color-mix(in srgb, currentColor 12%, transparent);">
-							<span class="w-1.5 h-1.5 rounded-full {getChannelVisual(canalFiltroPeriodo).color}"></span>
+						<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold" style="color: {getChannelVisual(canalFiltroPeriodo).textColor}; background: color-mix(in srgb, currentColor 12%, transparent);">
+							<span class="w-1.5 h-1.5 rounded-full" style="background: {getChannelVisual(canalFiltroPeriodo).swatch}"></span>
 							{getChannelVisual(canalFiltroPeriodo).label}
 						</span>
 					{/if}
 				</div>
-				<div class="text-3xl font-bold text-white tracking-tight">{fmt(periodoTotalTaxaEntrega > 0 ? periodoReceitaRestaurante : periodoReceitaLiquida)}</div>
+				<div class="text-3xl font-bold tracking-tight report-hero-value">{fmt(periodoTotalTaxaEntrega > 0 ? periodoReceitaRestaurante : periodoReceitaLiquida)}</div>
 				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm" style="color: var(--text-muted);">
 					<span>Bruto: {fmt(periodoTotalGeral)}</span>
 					{#if periodoTotalDescontos > 0}
-						<span class="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full text-xs">Descontos: -{fmt(periodoTotalDescontos)}</span>
+						<span class="report-chip report-chip-warning">Descontos: -{fmt(periodoTotalDescontos)}</span>
 					{/if}
 					{#if periodoTotalCustosPlataforma > 0}
-						<span class="bg-rose-500/15 text-rose-400 px-2 py-0.5 rounded-full text-xs">Plataformas: -{fmt(periodoTotalCustosPlataforma)}</span>
+						<span class="report-chip report-chip-error">Plataformas: -{fmt(periodoTotalCustosPlataforma)}</span>
 					{/if}
 					{#if periodoTotalDespesas > 0}
-						<span class="bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full text-xs">Despesas: -{fmt(periodoTotalDespesas)}</span>
+						<span class="report-chip report-chip-error">Despesas: -{fmt(periodoTotalDespesas)}</span>
 					{/if}
 					{#if periodoTotalTaxaEntrega > 0}
-						<span class="bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full text-xs">Entregador: -{fmt(periodoTotalTaxaEntrega)}</span>
+						<span class="report-chip report-chip-accent">Entregador: -{fmt(periodoTotalTaxaEntrega)}</span>
 					{/if}
 				</div>
 			</div>
@@ -1731,28 +1732,28 @@
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-5 h-5 rounded-sm bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
+						<span class="report-kpi-icon"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Vendas Brutas
 					</div>
 					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(periodoTotalGeral)}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-5 h-5 rounded-sm bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><ShoppingBag class="size-3.5" aria-hidden="true" /></span>
+						<span class="report-kpi-icon"><ShoppingBag class="size-3.5" aria-hidden="true" /></span>
 						Qtd. Vendas
 					</div>
 					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{periodoQtdVendas}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-5 h-5 rounded-sm bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400"><ChartNoAxesColumnIncreasing class="size-3.5" aria-hidden="true" /></span>
+						<span class="report-kpi-icon"><ChartNoAxesColumnIncreasing class="size-3.5" aria-hidden="true" /></span>
 						Ticket Médio
 					</div>
 					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(periodoTicketMedio)}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-5 h-5 rounded-sm bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400"><Banknote class="size-3.5" aria-hidden="true" /></span>
+						<span class="report-kpi-icon"><Banknote class="size-3.5" aria-hidden="true" /></span>
 						Dinheiro Líq.
 					</div>
 					<div class="text-xl font-bold tabular-nums" style="color: var(--text-main);">{fmt(periodoDinheiroLiquido)}</div>
@@ -1766,17 +1767,17 @@
 				<!-- Proportional bar -->
 				<div class="flex h-3 rounded-full overflow-hidden mb-4">
 					{#each periodoPagItems as p}
-						<div class="{p.color}" style="width: {Math.max(periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100) : 0, 2)}%"></div>
+						<div style="background: {p.swatch}; width: {Math.max(periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100) : 0, 2)}%"></div>
 					{/each}
 				</div>
 				<!-- Legend -->
 				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
 					{#each periodoPagItems as p}
 						<div class="flex items-center gap-2">
-							<span class="w-2.5 h-2.5 rounded-full {p.color} shrink-0"></span>
+							<span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {p.swatch}"></span>
 							<div>
 								<div class="text-xs text-muted">{p.label}</div>
-								<div class="text-sm font-semibold {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-muted">({periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100).toFixed(1) : 0}%)</span></div>
+								<div class="text-sm font-semibold" style="color: {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-muted">({periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100).toFixed(1) : 0}%)</span></div>
 							</div>
 						</div>
 					{/each}
@@ -1789,7 +1790,7 @@
 			<div class="card-mini">
 				<div class="flex items-center justify-between gap-3 mb-3">
 					<h3 style="color: var(--text-main);">Custos de Plataforma</h3>
-					<div class="text-sm font-bold text-rose-600 dark:text-rose-400">-{fmt(periodoTotalCustosPlataforma)}</div>
+					<div class="text-sm font-bold report-money-out">-{fmt(periodoTotalCustosPlataforma)}</div>
 				</div>
 				<p class="text-xs mb-3" style="color: var(--text-muted);">
 					Comissão das plataformas (snapshot da taxa configurada no momento da venda). Já descontado da Receita Líquida acima.
@@ -1801,7 +1802,7 @@
 								<span class="text-xs font-medium text-main">{plat.nome}</span>
 								<span class="text-xs text-muted">{plat.qtdVendas} venda{plat.qtdVendas === 1 ? '' : 's'}</span>
 							</div>
-							<div class="text-base font-bold text-rose-600 dark:text-rose-400">-{fmt(plat.total)}</div>
+							<div class="text-base font-bold report-money-out">-{fmt(plat.total)}</div>
 							<div class="text-xs text-muted mt-0.5">Bruto na plataforma: {fmt(plat.brutoTotal)}</div>
 						</div>
 					{/each}
@@ -1823,7 +1824,7 @@
 							<div class="text-lg font-bold text-main">{fmt(t.total)}</div>
 							<div class="text-xs text-muted">{t.qtd} venda{t.qtd !== 1 ? 's' : ''}</div>
 							{#if t.taxaEntrega > 0}
-								<div class="text-xs text-purple-500 dark:text-purple-400">Taxa entrega: {fmt(t.taxaEntrega)}</div>
+								<div class="text-xs report-money-accent">Taxa entrega: {fmt(t.taxaEntrega)}</div>
 							{/if}
 						</div>
 					{/each}
@@ -1835,8 +1836,8 @@
 							<div class="text-base font-bold text-main">{fmt(periodoReceitaRestaurante)}</div>
 						</div>
 						<div>
-							<div class="text-xs text-purple-500 dark:text-purple-400 mb-1">Taxas de Entrega (entregador)</div>
-							<div class="text-base font-bold text-purple-600 dark:text-purple-400">{fmt(periodoTotalTaxaEntrega)}</div>
+							<div class="text-xs report-money-accent mb-1">Taxas de Entrega (entregador)</div>
+							<div class="text-base font-bold report-money-accent">{fmt(periodoTotalTaxaEntrega)}</div>
 						</div>
 					</div>
 				{/if}
@@ -1854,7 +1855,7 @@
 					{#each canalCardsPeriodo as canal}
 						<div class="rounded-lg card-inset">
 							<div class="flex items-center gap-2 mb-1">
-								<span class="w-2.5 h-2.5 rounded-full {canal.color} shrink-0"></span>
+								<span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {canal.swatch}"></span>
 								<span class="text-xs font-medium text-main">{canal.label}</span>
 								<span class="text-xs text-muted ml-auto">{canal.qtd} venda{canal.qtd === 1 ? '' : 's'}</span>
 							</div>
@@ -1865,7 +1866,7 @@
 								· Líquido: {canal.liquido === null ? COMMISSION_UNAVAILABLE_LABEL : fmt(canal.liquido)}
 							</div>
 							{#if canal.estornosQtd > 0}
-								<div class="text-xs text-rose-500 dark:text-rose-400 mt-1">Estornos: -{fmt(canal.estornosValor)} ({canal.estornosQtd})</div>
+								<div class="text-xs report-money-out mt-1">Estornos: -{fmt(canal.estornosValor)} ({canal.estornosQtd})</div>
 							{/if}
 						</div>
 					{/each}
@@ -1877,21 +1878,21 @@
 			{#if periodoEstornos.length > 0}
 			<div class="card-mini">
 				<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-main);">
-					<Undo2 class="size-4 text-rose-400" aria-hidden="true" />
+					<Undo2 class="size-4 report-money-out" aria-hidden="true" />
 					Estornos / Cancelamentos{canalFiltroPeriodo ? ` — ${getChannelVisual(canalFiltroPeriodo).label}` : ''}
 				</h3>
 				<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Estornos aplicados</div>
-						<div class="text-lg font-bold text-rose-600 dark:text-rose-400">{estornosResumoPeriodo.qtd}</div>
+						<div class="text-lg font-bold report-money-out">{estornosResumoPeriodo.qtd}</div>
 					</div>
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Valor estornado</div>
-						<div class="text-lg font-bold text-rose-600 dark:text-rose-400">-{fmt(estornosResumoPeriodo.valor)}</div>
+						<div class="text-lg font-bold report-money-out">-{fmt(estornosResumoPeriodo.valor)}</div>
 					</div>
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Pendentes de revisão</div>
-						<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{estornosResumoPeriodo.pendentes}</div>
+						<div class="text-lg font-bold report-money-warn">{estornosResumoPeriodo.pendentes}</div>
 					</div>
 				</div>
 			</div>
@@ -1901,24 +1902,24 @@
 			<div class="grid grid-cols-3 gap-3">
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-2 h-2 rounded-full bg-red-500"></span>
+						<span class="report-dot report-dot-error"></span>
 						Sangrias
 					</div>
-					<div class="text-lg font-bold text-red-600 dark:text-red-400">{periodoTotalSangria > 0 ? '-' : ''}{fmt(periodoTotalSangria)}</div>
+					<div class="text-lg font-bold report-money-out">{periodoTotalSangria > 0 ? '-' : ''}{fmt(periodoTotalSangria)}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-2 h-2 rounded-full bg-green-500"></span>
+						<span class="report-dot report-dot-success"></span>
 						Suprimentos
 					</div>
-					<div class="text-lg font-bold text-green-600 dark:text-green-400">+{fmt(periodoTotalSuprimento)}</div>
+					<div class="text-lg font-bold report-money-in">+{fmt(periodoTotalSuprimento)}</div>
 				</div>
 				<div class="card-mini">
 					<div class="flex items-center gap-2 text-xs mb-1" style="color: var(--text-muted);">
-						<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+						<span class="report-dot report-dot-warning"></span>
 						Descontos
 					</div>
-					<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{periodoTotalDescontos > 0 ? '-' : ''}{fmt(periodoTotalDescontos)}</div>
+					<div class="text-lg font-bold report-money-warn">{periodoTotalDescontos > 0 ? '-' : ''}{fmt(periodoTotalDescontos)}</div>
 				</div>
 			</div>
 
@@ -1940,11 +1941,11 @@
 					</div>
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Descontos em comandas</div>
-						<div class="text-lg font-bold text-amber-600 dark:text-amber-400">{resumoMesasPeriodo.descontos > 0 ? '-' : ''}{fmt(resumoMesasPeriodo.descontos)}</div>
+						<div class="text-lg font-bold report-money-warn">{resumoMesasPeriodo.descontos > 0 ? '-' : ''}{fmt(resumoMesasPeriodo.descontos)}</div>
 					</div>
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Taxa de serviço</div>
-						<div class="text-lg font-bold text-emerald-600 dark:text-emerald-400">+{fmt(resumoMesasPeriodo.taxaServico)}</div>
+						<div class="text-lg font-bold report-money-in">+{fmt(resumoMesasPeriodo.taxaServico)}</div>
 					</div>
 					<div class="rounded-lg card-inset">
 						<div class="text-xs text-muted mb-1">Comandas fechadas</div>
@@ -1964,7 +1965,7 @@
 							value: d.total,
 							extra: d.qtd + ' vendas'
 						}))}
-						barColor="bg-indigo-500"
+						barColor="report-chart-bar"
 						maxHeight={140}
 					/>
 				</div>
@@ -2025,7 +2026,7 @@
 						{/if}
 					</div>
 					<button
-						class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors {periodoMostrarFiltros || periodoCategoriaFiltro ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-400 text-sky-700 dark:text-sky-300' : 'border-[var(--border-card)] text-main hover:bg-[var(--accent-light)]'}"
+						class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors {periodoMostrarFiltros || periodoCategoriaFiltro ? 'report-filter-active' : 'border-[var(--border-card)] text-main hover:bg-[var(--accent-light)]'}"
 						aria-label="Abrir filtros"
 						title="Filtros"
 						on:click={() => periodoMostrarFiltros = !periodoMostrarFiltros}
@@ -2033,7 +2034,7 @@
 						<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M6 12h12M10 20h4" /></svg>
 						Filtros
 						{#if periodoCategoriaFiltro}
-							<span class="ml-0.5 inline-flex w-4 h-4 rounded-full bg-sky-500 text-white items-center justify-center text-[10px] font-bold">1</span>
+							<span class="ml-0.5 inline-flex w-4 h-4 rounded-full report-badge-count items-center justify-center text-[10px] font-bold">1</span>
 						{/if}
 					</button>
 				</div>
@@ -2130,9 +2131,84 @@
     padding: 1rem;
   }
   .card-inset {
-    background: rgba(15, 23, 42, 0.3);
+    background: color-mix(in srgb, var(--bg-app) 30%, transparent);
     border: 1px solid var(--border-card);
     border-radius: 0.5rem;
     padding: 0.75rem;
+  }
+
+  .report-kpi-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-light);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .report-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+  }
+  .report-chip-warning {
+    background: var(--status-warning-bg);
+    color: var(--status-warning-text);
+  }
+  .report-chip-error {
+    background: var(--status-error-bg);
+    color: var(--status-error-text);
+  }
+  .report-chip-accent {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+
+  .report-money-out { color: var(--status-error-text); }
+  .report-money-in { color: var(--status-success-text); }
+  .report-money-warn { color: var(--status-warning-text); }
+  .report-money-accent { color: var(--accent); }
+
+  .report-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .report-dot-error { background: var(--error); }
+  .report-dot-success { background: var(--success); }
+  .report-dot-warning { background: var(--warning); }
+
+  .report-preset-active {
+    background: var(--primary);
+    color: var(--primary-text);
+    border-color: var(--primary);
+  }
+  .report-filter-active {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .report-badge-count {
+    background: var(--primary);
+    color: var(--primary-text);
+  }
+  .report-page-active {
+    background: var(--primary);
+    color: var(--primary-text);
+    border-color: var(--primary);
+  }
+  .report-link { color: var(--accent); }
+  .report-hero-value { color: var(--text-main); }
+
+  :global(.report-chart-bar) {
+    background-color: var(--chart-bar);
   }
 </style>

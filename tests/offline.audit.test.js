@@ -31,6 +31,7 @@ describe('offline audit — reproductions of current limitations', () => {
       salvandoVenda: false, checkoutSubmission: null, getOfflineContext: () => ({ enabled: true }), supabase: {},
       loadCashSnapshot: async () => ({ caixa: { id: 5 }, vendas: [], pagamentos: [], movs: [] }),
       calculatePaymentSummary: () => ({ dinheiro: 0 }), calculateMovementSummary: () => ({ sangria: 0, suprimento: 0 }), calculateExpectedDrawer: () => 0,
+      saldoRequestId: 0, carregandoSaldo: false, numeroCaixaAberto: null, saldoCaixa: 0,
       // Barreira de "conta nova sem caixa aberto" (src/lib/pdv/firstUseCaixaGate.js):
       // conta antiga conhecida, comportamento de sempre.
       hasEverOpenedCaixa: true, isSubUser: false, computeIsFirstUseNoCaixa, shouldAutoOpenCaixaModal,

@@ -26,8 +26,9 @@ describe('pessoas role RBAC migration', () => {
 
   it('writes new people under the tenant owner from the browser page', async () => {
     const page = await readFile(new URL('../src/routes/gestao/pessoas/+page.svelte', import.meta.url), 'utf8');
+    const modal = await readFile(new URL('../src/lib/components/modals/ModalPessoa.svelte', import.meta.url), 'utf8');
     expect(page).toContain("import { getAccessContext } from '$lib/accessControl'");
     expect(page).toContain('ownerUserId = accessContext?.ownerUserId || uid');
-    expect(page).toContain('payload.id_usuario = ownerUserId || uid');
+    expect(modal).toContain('payload.id_usuario = ownerUserId || uid');
   });
 });

@@ -131,13 +131,11 @@
           return;
         }
       } else {
-        let uid = ownerUserId;
-        if (!uid) {
-          const { data: userData } = await supabase.auth.getUser();
-          uid = userData?.user?.id || null;
-        }
+        let uid = null;
+        const { data: userData } = await supabase.auth.getUser();
+        uid = userData?.user?.id || null;
         const payload = { nome: form.nome, tipo: form.tipo, contato: form.contato, ...birthday };
-        if (uid) payload.id_usuario = uid;
+        payload.id_usuario = ownerUserId || uid;
         const { error } = await supabase.from('pessoas').insert(payload);
         if (error) {
           errorMsg = 'Não foi possível salvar o cadastro. Tente novamente.';

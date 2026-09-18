@@ -1,10 +1,11 @@
 import { normalizePaymentMethodId, STANDARD_PAYMENT_FORMS, formatPaymentMethod } from './paymentMethods.js';
+import { CHART_COLORS } from '$lib/theme/chartColors.js';
 
 export const PAYMENT_METHOD_VISUALS = Object.freeze({
   vale_refeicao: Object.freeze({
-    color: 'bg-lime-500',
-    textColor: 'text-lime-600 dark:text-lime-400',
-    hex: '#84cc16',
+    swatch: 'var(--chart-meal)',
+    textColor: 'var(--chart-meal)',
+    hex: CHART_COLORS.meal,
   }),
 });
 

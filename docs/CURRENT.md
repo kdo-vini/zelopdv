@@ -1,5 +1,12 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-18 — Relatórios: cockpit calmo (tokens)
+
+Cores decorativas de Relatórios (KPIs rainbow, chips purple/rose, sky
+hardcoded) trocadas por tokens (`--accent*`, `--status-*`, `--chart-*`).
+Swatches de pagamento/canal usam `var(--chart-*)` na UI; hex resolvido
+só em `src/lib/theme/chartColors.js` para PDF/canvas.
+
 ## Sessão 2026-09-18 — Relatórios: filtro Canal de origem
 
 O select “Canal de origem” só recortava a lista de cupons (caixa) e o card
