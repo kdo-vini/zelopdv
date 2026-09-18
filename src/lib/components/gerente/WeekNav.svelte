@@ -10,11 +10,11 @@
 </script>
 
 <nav class="week-nav" aria-label="Navegação entre semanas">
-  <Button variant="outline" size="sm" on:click={onPrevious} disabled={!canGoBack} aria-label="Semana anterior">
+  <Button variant="outline" size="sm" onclick={onPrevious} disabled={!canGoBack} aria-label="Semana anterior">
     <ChevronLeft aria-hidden="true" />
   </Button>
   <span>{label}</span>
-  <Button variant="outline" size="sm" on:click={onNext} disabled={!canGoForward} aria-label="Semana seguinte">
+  <Button variant="outline" size="sm" onclick={onNext} disabled={!canGoForward} aria-label="Semana seguinte">
     <ChevronRight aria-hidden="true" />
   </Button>
 </nav>

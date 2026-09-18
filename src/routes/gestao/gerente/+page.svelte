@@ -2,13 +2,13 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { CloudOff, RefreshCw, MessageCircle } from 'lucide-svelte';
+  import { CloudOff, MessageCircle } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient.js';
   import { getAccessContext } from '$lib/accessControl.js';
   import { hasZeloMenuAccess } from '$lib/guards.js';
   import { addToast } from '$lib/stores/ui.js';
   import { capturePostHogEvent } from '$lib/posthogClient.js';
-  import { markRead } from '$lib/stores/gerente.js';
+  import { markRead, unreadCount, hasUnreadCritical } from '$lib/stores/gerente.js';
   import { openAssistantWithSignal, openAssistantWithMessage, isOpen } from '$lib/stores/assistant.js';
   import { closeSupport } from '$lib/stores/support.js';
   import { computeDayStrip } from '$lib/gerente/dayStrip.js';
@@ -17,6 +17,7 @@
   import ZelinhoBriefing from '$lib/components/gerente/ZelinhoBriefing.svelte';
   import SignalFeed from '$lib/components/gerente/SignalFeed.svelte';
   import AgentActionsList from '$lib/components/gerente/AgentActionsList.svelte';
+  import GerenteTabs from '$lib/components/gerente/GerenteTabs.svelte';
   let loading = true;
   let refreshing = false;
   let error = '';
@@ -27,6 +28,18 @@
   let profile = null;
   let ownerUserId = null;
   let loadVersion = 0;
+  let tab = 'briefing';
+  let markingBriefing = false;
+
+  function setTab(next) { goto(`?aba=${next}`, { replaceState: true, noScroll: true, keepFocus: true }); }
+  function quick(mensagem) { closeSupport(); if (!openAssistantWithMessage(mensagem)) addToast('Não foi possível abrir o Zelinho.', 'error'); }
+  function openZelinhoBubble() { closeSupport(); isOpen.set(true); }
+  function scrollToHash() {
+    const id = typeof window !== 'undefined' ? window.location.hash?.slice(1) : '';
+    if (!id || tab !== 'historico' || loading) return;
+    requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+
   $: latestSnapshot = snapshots[0] || null;
   $: latestDate = latestSnapshot?.snapshot_date || signals[0]?.signal_date || null;
   $: todaySignals = signals.filter((signal) => signal.signal_date === latestDate);
@@ -39,12 +52,34 @@
   $: greeting = buildGreeting({ nomeExibicao: profile?.nome_exibicao, dayStrip, signals: briefingSignals, hour: new Date().getHours() });
   $: tab = ['briefing', 'acoes', 'historico'].includes($page.url.searchParams.get('aba')) ? $page.url.searchParams.get('aba') : 'briefing';
   $: previousDays = snapshots.filter((s) => s.snapshot_date !== latestDate).slice(0, 3);
+  $: if (!loading && tab === 'historico') scrollToHash();
+  $: if (!loading && !error && tab === 'briefing' && briefingSignals.some((signal) => !signal.read_at)) {
+    void markBriefingSeen();
+  }
 
-  function setTab(next) { goto(`?aba=${next}`, { replaceState: true, noScroll: true, keepFocus: true }); }
-  function quick(mensagem) { closeSupport(); if (!openAssistantWithMessage(mensagem)) addToast('Não foi possível abrir o Zelinho.', 'error'); }
-  function openZelinhoBubble() { closeSupport(); isOpen.set(true); }
   const longDate = (date) => { const s = new Date(`${date}T12:00:00Z`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short', timeZone: 'UTC' }); return s.charAt(0).toUpperCase() + s.slice(1); };
   const money0 = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(Number(v) || 0);
+
+  async function markBriefingSeen() {
+    if (markingBriefing) return;
+    const unread = briefingSignals.filter((signal) => !signal.read_at);
+    if (!unread.length) return;
+    markingBriefing = true;
+    const ids = unread.map((signal) => signal.id);
+    const stamped = new Date().toISOString();
+    const previous = new Map(unread.map((signal) => [signal.id, signal.read_at]));
+    signals = signals.map((signal) => (ids.includes(signal.id) ? { ...signal, read_at: stamped } : signal));
+    try {
+      await markRead(ids, supabase, { mutedTypes });
+      // Badge da sidebar só conta o dia do briefing; ao ver o briefing, zera o nudge.
+      unreadCount.set(0);
+      hasUnreadCritical.set(false);
+    } catch {
+      signals = signals.map((signal) => (previous.has(signal.id) ? { ...signal, read_at: previous.get(signal.id) } : signal));
+    } finally {
+      markingBriefing = false;
+    }
+  }
 
   async function load({ silent = false } = {}) {
     const requestVersion = ++loadVersion;
@@ -73,6 +108,7 @@
       menuAtivo = menuAccess === true;
       if (!silent) void capturePostHogEvent('gerente_briefing_view', { signal_count: signals.length, learning });
       failures = 0;
+      scrollToHash();
     } catch (loadError) {
       if (requestVersion !== loadVersion) return;
       console.error('[gerente] load error:', loadError);
@@ -129,13 +165,7 @@
     {#if analysedAt}<button type="button" class="meta" on:click={refresh} disabled={refreshing}><i class="dot" aria-hidden="true"></i>Analisado hoje às {analysedAt}</button>{/if}
   </div>
 
-  <div class="tabs" role="tablist" aria-label="Seções do Zelinho">
-    <button role="tab" class="tab" aria-selected={tab === 'briefing'} on:click={() => setTab('briefing')}>Briefing</button>
-    <button role="tab" class="tab" aria-selected={tab === 'acoes'} on:click={() => setTab('acoes')}>Ações do Zelinho</button>
-    <button role="tab" class="tab" aria-selected={tab === 'historico'} on:click={() => setTab('historico')}>Histórico</button>
-    <a class="tab link" href="/gestao/gerente/semana">Resumo semanal</a>
-    <a class="tab link" href="/gestao/gerente/preferencias">Preferências</a>
-  </div>
+  <GerenteTabs active={tab} />
 
   {#if loading}<div class="skeleton strip"></div><div class="skeleton row"></div><div class="skeleton row"></div>
   {:else if error}<div class="error-state"><CloudOff size={56} aria-hidden="true" /><p>{error}</p><button type="button" on:click={() => load()}>Tentar novamente</button></div>
@@ -169,12 +199,6 @@
   .meta { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; border: 0; background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; }
   .meta:disabled { opacity: .6; }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--status-success-text); }
-  .tabs { display: flex; gap: 2px; margin: 22px 0 18px; padding: 3px; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 8px; width: max-content; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab { min-height: 36px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 500; white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; transition: background 180ms cubic-bezier(.22,1,.36,1), color 180ms cubic-bezier(.22,1,.36,1); }
-  .tab:hover { color: var(--text-main); }
-  .tab[aria-selected="true"] { background: var(--bg-panel); color: var(--text-main); }
-  .tab.link { color: var(--text-muted); }
   .section-h { display: flex; align-items: baseline; justify-content: space-between; margin: 26px 0 10px; }
   .section-h h2 { margin: 0; font-size: 16px; font-weight: 600; color: var(--text-main); }
   .linkish { border: 0; background: transparent; padding: 0; min-height: 28px; font-size: 12px; color: var(--text-muted); cursor: pointer; }
@@ -185,8 +209,7 @@
   .skeleton.strip { height: 96px; } .skeleton.row { height: 88px; }
   .error-state { display: grid; place-items: center; gap: 10px; padding: 40px 0; color: var(--text-muted); }
   .error-state button { min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main); cursor: pointer; }
-  .tab:focus-visible, .meta:focus-visible, .linkish:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
+  .meta:focus-visible, .linkish:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
   .zelinho-fab { display: grid; place-items: center; position: fixed; bottom: calc(var(--mobile-bottom-nav-offset, 0px) + 16px); right: 16px; width: 56px; height: 56px; border: 0; border-radius: 9999px; background: var(--primary); color: var(--primary-text); box-shadow: 0 8px 24px color-mix(in srgb, var(--text-inverse) 24%, transparent); z-index: 80; cursor: pointer; }
   .zelinho-fab:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
-  @media (prefers-reduced-motion: reduce) { .tab { transition: none; } }
 </style>

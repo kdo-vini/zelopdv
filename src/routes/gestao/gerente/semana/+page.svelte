@@ -2,16 +2,16 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { Copy, Share2, Sparkles } from 'lucide-svelte';
+  import { Copy, MessageCircle, Sparkles } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient.js';
   import { addToast } from '$lib/stores/ui.js';
   import { openAssistantWithContext } from '$lib/stores/assistant.js';
-  import BackLink from '$lib/components/ui/BackLink.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import BarChart from '$lib/components/charts/BarChart.svelte';
   import DonutChart from '$lib/components/charts/DonutChart.svelte';
   import StatTile from '$lib/components/gerente/StatTile.svelte';
   import DeltaPill from '$lib/components/gerente/DeltaPill.svelte';
+  import GerenteTabs from '$lib/components/gerente/GerenteTabs.svelte';
   import WeekNav from '$lib/components/gerente/WeekNav.svelte';
   import { getSignalPresenter } from '$lib/gerente/signalPresenter.js';
   import { buildWeekReport, getWeekStart, normalizeWeekStart, shiftWeek } from '$lib/gerente/weekReport.js';
@@ -23,6 +23,7 @@
   let error = '';
   let snapshots = [];
   let signals = [];
+  let sendingWhatsApp = false;
   $: currentWeek = getWeekStart();
   $: requestedWeek = $page.url.searchParams.get('semana');
   $: selectedWeek = normalizeWeekStart(requestedWeek, currentWeek);
@@ -55,11 +56,36 @@
     catch { addToast('Não foi possível copiar o resumo.', 'error'); }
   }
   async function shareSummary() {
-    const text = shareText();
-    if (navigator.share) { try { await navigator.share({ text }); return; } catch (shareError) { if (shareError?.name === 'AbortError') return; } }
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
-  }
-  async function load() {
+    if (sendingWhatsApp) return;
+    sendingWhatsApp = true;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        addToast('Sessão expirada. Entre de novo para enviar o resumo.', 'error');
+        return;
+      }
+      const response = await fetch('/api/gerente/semana/send-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ semana: selectedWeek }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok) {
+        addToast(payload.phone_masked ? `Resumo enviado no WhatsApp ${payload.phone_masked}.` : 'Resumo enviado no WhatsApp.', 'success');
+        return;
+      }
+      if (payload.code === 'NEED_PHONE') {
+        addToast(payload.error || 'Conecte o WhatsApp nas Preferências do Zelinho.', 'warning');
+        return;
+      }
+      addToast(payload.error || 'Não foi possível enviar o resumo no WhatsApp.', 'error');
+    } catch {
+      addToast('Não foi possível enviar o resumo no WhatsApp.', 'error');
+    } finally {
+      sendingWhatsApp = false;
+    }
+  }  async function load() {
     if (!supabase) { error = 'Não foi possível iniciar a conexão.'; loading = false; return; }
     try {
       const { data: userResult, error: authError } = await supabase.auth.getUser();
@@ -82,11 +108,22 @@
 <svelte:head><title>Resumo semanal | Zelinho Gerente</title></svelte:head>
 
 <section class="week-page">
-  <BackLink href="/gestao/gerente" label="Zelinho Gerente" />
-  <div class="mb-6 flex items-end justify-between border-b  pb-4" style="border-color: var(--border-card);">
-    <div><p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p><h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Resumo semanal</h1></div>
-    {#if !loading && !error}<div class="share-actions"><Button variant="outline" size="sm" on:click={askZelinhoAboutWeek}><Sparkles />Perguntar ao Zelinho</Button><Button variant="outline" size="sm" on:click={copySummary}><Copy />Copiar resumo</Button><Button variant="outline" size="sm" on:click={shareSummary}><Share2 />WhatsApp</Button></div>{/if}
+  <div class="mb-6 flex items-end justify-between border-b pb-4" style="border-color: var(--border-card);">
+    <div>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p>
+      <h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Resumo semanal</h1>
+    </div>
+    {#if !loading && !error}
+      <div class="share-actions">
+        <Button variant="outline" size="sm" onclick={askZelinhoAboutWeek}><Sparkles />Perguntar ao Zelinho</Button>
+        <Button variant="outline" size="sm" onclick={copySummary}><Copy />Copiar resumo</Button>
+        <Button variant="outline" size="sm" onclick={shareSummary} disabled={sendingWhatsApp}>
+          <MessageCircle />{sendingWhatsApp ? 'Enviando...' : 'WhatsApp'}
+        </Button>
+      </div>
+    {/if}
   </div>
+  <GerenteTabs active="semana" />
   {#if loading}<div class="skeleton"></div>
   {:else if error}<div class="empty">{error}</div>
   {:else}
@@ -104,7 +141,7 @@
       <section class="panel"><h2>Produtos com mais saída</h2>{#if report.products.length}<ol class="products">{#each report.products as product}<li><div><strong>{product.nome}</strong><span>{formatMoney(product.receita)} · {product.qtd} itens</span></div><div class="product-rank"><i style={`width: ${productBarWidth(product, report.products[0].receita)}%`}></i><b class:up={product.positionChange > 0} class:down={product.positionChange < 0}>{product.positionChange > 0 ? `↑ ${product.positionChange}` : product.positionChange < 0 ? `↓ ${Math.abs(product.positionChange)}` : '—'}</b></div></li>{/each}</ol>{:else}<p class="muted">Ainda não há produtos vendidos nesta semana.</p>{/if}</section>
       <section class="panel"><DonutChart title="Formas de pagamento" data={donutData} size={150} />{#if report.paymentMixSentence}<p class="muted">{report.paymentMixSentence}</p>{/if}</section>
     </div>
-    <section class="panel"><h2>Sinais da semana</h2>{#if report.signals.length}<ul class="signals">{#each report.signals as signal}<li><a href={`/gestao/gerente#${signal.signal_date}`}><span class={`tag ${signal.severity}`}>{signal.severity === 'critical' ? 'Precisa de você' : signal.severity === 'attention' ? 'Fica de olho' : 'Pra saber'}</span>{getSignalPresenter(signal).titulo}</a></li>{/each}</ul>{:else}<p class="muted">Nenhum aviso novo nesta semana.</p>{/if}</section>
+    <section class="panel"><h2>Sinais da semana</h2>{#if report.signals.length}<ul class="signals">{#each report.signals as signal}<li><a href={`/gestao/gerente?aba=historico#${signal.signal_date}`}><span class={`tag ${signal.severity}`}>{signal.severity === 'critical' ? 'Precisa de você' : signal.severity === 'attention' ? 'Fica de olho' : 'Pra saber'}</span>{getSignalPresenter(signal).titulo}</a></li>{/each}</ul>{:else}<p class="muted">Nenhum aviso novo nesta semana.</p>{/if}</section>
     <section class="next"><h2>Pra semana que vem</h2><p>{report.nextWeek}</p></section>
   {/if}
 </section>

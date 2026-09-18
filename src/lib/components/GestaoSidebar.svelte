@@ -119,9 +119,20 @@
         // and the feed showing them for audit purposes) — the "new alert"
         // badge should still respect it, since silencing a type means the
         // owner asked to stop being nudged about it.
+        // Badge counts only the latest briefing day (same day the page highlights),
+        // so historical unread in Histórico does not accumulate a permanent 9+.
         const mutedTypes = Array.isArray(perfil?.gerente_prefs?.muted_types) ? perfil.gerente_prefs.muted_types : [];
+        const [{ data: latestSnapshot }, { data: latestSignal }] = await Promise.all([
+          supabase.from('business_daily_snapshots').select('snapshot_date').order('snapshot_date', { ascending: false }).limit(1).maybeSingle(),
+          supabase.from('business_signals').select('signal_date').order('signal_date', { ascending: false }).limit(1).maybeSingle(),
+        ]);
+        const briefingDate = latestSnapshot?.snapshot_date || latestSignal?.signal_date || null;
         let unreadQuery = supabase.from('business_signals').select('id', { count: 'exact', head: true }).is('read_at', null);
         let criticalQuery = supabase.from('business_signals').select('id').is('read_at', null).eq('severity', 'critical').limit(1);
+        if (briefingDate) {
+          unreadQuery = unreadQuery.eq('signal_date', briefingDate);
+          criticalQuery = criticalQuery.eq('signal_date', briefingDate);
+        }
         if (mutedTypes.length) {
           unreadQuery = unreadQuery.not('type', 'in', `(${mutedTypes.join(',')})`);
           criticalQuery = criticalQuery.not('type', 'in', `(${mutedTypes.join(',')})`);

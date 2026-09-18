@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Sparkles } from 'lucide-svelte';
 import {
   appNavigationSections,
   getActiveNavigationItem,
@@ -113,5 +114,14 @@ describe('active navigation resolution', () => {
     const pdvItems = appNavigationSections.find((candidate) => candidate.id === 'pdv').items;
     const active = pdvItems.filter((item) => isNavigationItemActive(item, '/app/pedidos/cozinha/123'));
     expect(active.map((item) => item.id)).toEqual(['cozinha']);
+  });
+
+  it('usa Sparkles no Zelinho Gerente (IA/briefing), não Radar', () => {
+    const item = appNavigationSections
+      .find((candidate) => candidate.id === 'gestao')
+      .items.find((candidate) => candidate.id === 'zelinho-gerente');
+    expect(item.icon.name || item.icon).toBeTruthy();
+    expect(item.icon).toBe(Sparkles);
+    expect(item.badge).toBe('gerente');
   });
 });

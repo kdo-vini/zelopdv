@@ -32,7 +32,7 @@ export async function markRead(ids, client = defaultSupabase, { signalType = nul
     hasUnreadCritical.set(previousCritical);
     throw error;
   }
-  if (severity === 'critical' && !isMuted) {
+  if (!isMuted && (severity === 'critical' || uniqueIds.length > 1 || get(hasUnreadCritical))) {
     let query = client.from('business_signals').select('id', { count: 'exact', head: true }).is('read_at', null).eq('severity', 'critical');
     if (mutedTypes.length) query = query.not('type', 'in', `(${mutedTypes.join(',')})`);
     const { count, error: criticalError } = await query;

@@ -6,7 +6,7 @@
 </script>
 
 {#if count > 0}
-  <span class:critical={hasCritical} class="sidebar-badge" role="status" aria-live="polite" aria-label={`${count} avisos novos`}>
+  <span class:critical={hasCritical} class="sidebar-badge" role="status" aria-live="polite" aria-label={`${count} avisos novos no briefing`}>
     {label}
   </span>
 {/if}

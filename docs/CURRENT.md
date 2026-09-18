@@ -1,5 +1,59 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-18 — Zelinho: botões mortos + abas unificadas
+
+Causa: `Button` (Svelte 5 runes) só encaminha `onclick` via `restProps`;
+`on:click` legado não chegava ao DOM. Corrigido em semana / WeekNav /
+preferências. UX: `GerenteTabs` compartilhado em Gerente, Resumo semanal e
+Preferências (sem BackLink confuso). Links de sinais →
+`?aba=historico#data` com scroll.
+
+Badge `9+` da sidebar: avisos de `business_signals` com `read_at` null
+(não mensagens). Antes contava o histórico inteiro e só baixava com
+interação no card. Agora conta só o dia do briefing, marca esses avisos
+como lidos ao abrir a aba Briefing, e o ícone do nav passou de `Radar`
+para `Sparkles` (padrão IA em DESIGN_PATTERNS).
+
+Botão WhatsApp do Resumo semanal: dispara via
+`POST /api/gerente/semana/send-whatsapp` (ZeloChat → telefone pareado
+ou `empresa_perfil.contato`), sem abrir `wa.me`.
+
+## Sessão 2026-09-18 — iFood oficial (homolog 60/60 + cutover de credenciais)
+
+Relatório `report.pdf` do Developer Portal: **CONCLUDED**, **60/60 (100%)**,
+app homologada `zelopdv`, protocolo **POLLING**, merchant de teste Techne
+`6bdbbe5d-…`. Cutover feito **sem versionar segredos**:
+
+| Superfície | Antes | Depois |
+| --- | --- | --- |
+| Dokploy `ifood-worker` (`nARDI-HdMP6OO0HyBhxuE`) | client prefix `684b69e5` (app teste C) | prefix `cbfb1f1f` (Zelopdv centralizado) |
+| Vercel `zelopdv` Production + Preview | `IFOOD_CLIENT_*` do app teste | `IFOOD_CLIENT_*` do Zelopdv |
+| `.env.local` | ausente / teste | Zelopdv (`cbfb1f1f…`) |
+| Worker flags | adapter/inbox/commands `1` | mantidas |
+| Intervalo poll | `" 60000"` (espaço à esquerda) | `60000` normalizado |
+| Storage `logos/homolog-tmp/` | 12 prints | **0** (limpo) |
+
+Health pós-redeploy: live `200 serving`, ready `200 fresh_probe`. Deploy
+Vercel prod aliased em `https://www.zelopdv.com.br`.
+
+Módulos no portal Zelopdv: **Order + Events + Merchant** marcados.
+Permissões: ainda **nenhum merchant autorizado** no app oficial — pedido
+manual “Pedir autorização” para a loja teste retornou “Erro inesperado”
+(loja de teste provavelmente amarrada ao app de teste). Conexão ativa no
+RPC de polling ainda aponta para `6bdbbe5d-…` (token antigo do app teste).
+
+**Próximo passo operacional:** reautorizar loja(s) no **app Zelopdv** via
+Portal do Parceiro / wizard **Conectar iFood** no PDV (não reusar token do
+app de teste). Depois: smoke de presença + 1 pedido ponta a ponta com as
+credenciais oficiais.
+
+## Sessão 2026-09-18 — UX Conectar iFood (portal-first)
+
+Modal **Conectar iFood**: quando a descoberta de lojas vem vazia, o fluxo
+prioriza autorizar no Portal do Parceiro + “Já autorizei — atualizar lista”;
+Merchant ID ficou só na seção **Avançado**. `GET /connection` passa
+`partnerPortalUrl` sempre. Matching `discoverMerchants` inalterado.
+
 ## Sessão 2026-09-18 — merge `codex/ifood-mvp` → `main` (PR #44)
 
 Fronteira: publicar a UI iFood em produção via PR #44 (ainda draft).

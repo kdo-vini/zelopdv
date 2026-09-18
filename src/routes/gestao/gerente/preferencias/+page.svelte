@@ -8,6 +8,7 @@
   import { maskPhone, normalizeBrazilianPhone } from '$lib/masks.js';
   import Button from '$lib/components/ui/button/button.svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
+  import GerenteTabs from '$lib/components/gerente/GerenteTabs.svelte';
   const signalGroups = [
     { label: 'Vendas', types: [['REVENUE_BELOW_WEEKDAY_AVG', 'Vendas abaixo do ritmo'], ['REVENUE_ABOVE_WEEKDAY_AVG', 'Vendas acima do ritmo'], ['AVG_TICKET_DOWN', 'Ticket médio menor'], ['PRODUCT_SALES_DROP', 'Produto com menos saída'], ['TOP_PRODUCT_CONCENTRATION', 'Concentração em produto']] },
     { label: 'Financeiro', types: [['PAYMENT_MIX_SHIFT', 'Mudança no mix de pagamento'], ['FIADO_ISSUED_SHARE_HIGH', 'Fiado emitido'], ['CASH_DIFFERENCE_RECURRING', 'Diferença recorrente no caixa']] },
@@ -144,9 +145,10 @@
 <svelte:head><title>Preferências do Zelinho | ZeloPDV</title></svelte:head>
 
 <section class="prefs-page">
-  <div class="mb-6 flex items-end justify-between border-b  pb-4" style="border-color: var(--border-card);">
+  <div class="mb-6 flex items-end justify-between border-b pb-4" style="border-color: var(--border-card);">
     <div><p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Gestão / Zelinho</p><h1 class="text-xl font-bold tracking-tight" style="color: var(--text-main);">Preferências</h1></div>
   </div>
+  <GerenteTabs active="preferencias" />
 
   {#if loading}
     <div class="skeleton"></div><div class="skeleton short"></div>
@@ -170,7 +172,7 @@
         <p class="pair-hint">Em breve. Por enquanto, converse com o Zelinho pelo painel dentro do app.</p>
       {:else}
         <p class="pair-hint">Só o dono da empresa pode conectar. O telefone conectado é o único que fala com o Zelinho.</p>
-        {#if !isSubUser}<Button on:click={startPairing} disabled={pairBusy}><MessageCircle />{pairBusy ? 'Gerando...' : 'Conectar no WhatsApp'}</Button>{/if}
+        {#if !isSubUser}<Button onclick={startPairing} disabled={pairBusy}><MessageCircle />{pairBusy ? 'Gerando...' : 'Conectar no WhatsApp'}</Button>{/if}
       {/if}
     </section>
 
@@ -213,7 +215,7 @@
         {/each}
       </div>
     </section>
-    {#if !isSubUser}<div class="save-row"><Button on:click={save} disabled={saving}><Save />{saving ? 'Salvando...' : 'Salvar preferências'}</Button></div>{/if}
+    {#if !isSubUser}<div class="save-row"><Button onclick={save} disabled={saving}><Save />{saving ? 'Salvando...' : 'Salvar preferências'}</Button></div>{/if}
   {/if}
 </section>
 

@@ -119,3 +119,24 @@ export function getWeekStart(date = businessDateKey()) {
 }
 
 export function shiftWeek(weekStart, amount) { return addDays(weekStart, amount * 7); }
+
+const moneyWhatsApp = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const shortDateWhatsApp = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+
+/** Texto plano do resumo semanal para disparo via ZeloChat (sem emoji). */
+export function buildWeekWhatsAppText(report, { businessName = 'seu negócio' } = {}) {
+  const weekLabel = `${shortDateWhatsApp.format(new Date(`${report.weekStart}T12:00:00Z`))} a ${shortDateWhatsApp.format(new Date(`${report.weekEnd}T12:00:00Z`))}`;
+  const money = (value) => moneyWhatsApp.format(Number(value) || 0).replace(/\u00a0/g, ' ');
+  const lines = [
+    `Zelinho Gerente - ${businessName}`,
+    `Resumo semanal (${weekLabel})`,
+    report.opening,
+    `Receita bruta: ${money(report.current.receita)}`,
+    `Vendas: ${report.current.vendas}`,
+    `Ticket médio: ${money(report.current.ticket)}`,
+    `Resultado operacional aproximado: ${money(report.current.resultadoOperacional)} (não inclui o custo dos produtos).`,
+  ];
+  if (report.isIncomplete) lines.push('Semana ainda aberta: números parciais até ontem.');
+  lines.push('Veja os números: https://zelopdv.com.br/gestao/gerente/semana');
+  return lines.join('\n');
+}

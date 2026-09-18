@@ -12,8 +12,8 @@ import {
   LogOut,
   Package,
   Puzzle,
-  Radar,
   Receipt,
+  Sparkles,
   ShoppingBag,
   Table2,
   User,
@@ -81,7 +81,7 @@ export const appNavigationSections = [
         href: '/gestao/gerente',
         label: 'Zelinho Gerente',
         requiredPermission: 'relatorios.ver',
-        icon: Radar,
+        icon: Sparkles,
         badge: 'gerente',
       },
       {
