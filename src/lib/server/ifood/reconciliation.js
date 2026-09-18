@@ -243,26 +243,9 @@ export function createIfoodReconciler({
     const connections = uniqueConnections(Array.isArray(listed) ? listed : listed?.connections);
     summary.merchants = connections.length;
 
-    for (let offset = 0; offset < connections.length; offset += parsedBatchSize) {
-      if (signal?.aborted) break;
-      const batch = connections.slice(offset, offset + parsedBatchSize);
-      const merchantIds = batch.map(({ merchantId }) => merchantId);
-      summary.batches += 1;
-
-      let envelopes;
-      try {
-        const pollInput = { merchantIds };
-        if (signal) pollInput.signal = signal;
-        envelopes = await pollEvents(pollInput);
-      } catch {
-        summary.pollFailures += 1;
-        safeLog(logger, 'iFood reconciliation poll failed');
-        continue;
-      }
-
+    async function processPolledBatch(batch, envelopes, polledAt) {
       summary.polls += 1;
       summary.merchantsPolled += batch.length;
-      const polledAt = isoAt(clock);
 
       for (const { connection, merchantId } of batch) {
         try {
@@ -286,6 +269,7 @@ export function createIfoodReconciler({
       const events = Array.isArray(envelopes) ? envelopes : [];
       summary.events += events.length;
       const ackIds = new Set();
+      const merchantIds = batch.map(({ merchantId }) => merchantId);
       const fallbackMerchantId = batch.length === 1 ? merchantIds[0] : null;
 
       for (const envelope of events) {
@@ -348,6 +332,52 @@ export function createIfoodReconciler({
         } catch {
           summary.ackFailures += ids.length;
           safeLog(logger, 'iFood reconciliation ACK failed');
+        }
+      }
+    }
+
+    for (let offset = 0; offset < connections.length; offset += parsedBatchSize) {
+      if (signal?.aborted) break;
+      const batch = connections.slice(offset, offset + parsedBatchSize);
+      const merchantIds = batch.map(({ merchantId }) => merchantId);
+      summary.batches += 1;
+
+      let envelopes;
+      let batchFailed = false;
+      try {
+        const pollInput = { merchantIds };
+        if (signal) pollInput.signal = signal;
+        envelopes = await pollEvents(pollInput);
+      } catch {
+        batchFailed = true;
+      }
+
+      if (!batchFailed) {
+        await processPolledBatch(batch, envelopes, isoAt(clock));
+        continue;
+      }
+
+      // iFood returns 403 for the whole `x-polling-merchants` request when
+      // ANY id is unauthorized. Fall back to one-merchant polls so a leftover
+      // test-store connection cannot starve healthy merchants (UI stuck on
+      // worker_heartbeat_missing / token_missing).
+      if (batch.length === 1) {
+        summary.pollFailures += 1;
+        safeLog(logger, 'iFood reconciliation poll failed');
+        continue;
+      }
+
+      safeLog(logger, 'iFood reconciliation batch poll failed; retrying per merchant');
+      for (const item of batch) {
+        if (signal?.aborted) break;
+        try {
+          const pollInput = { merchantIds: [item.merchantId] };
+          if (signal) pollInput.signal = signal;
+          const soloEnvelopes = await pollEvents(pollInput);
+          await processPolledBatch([item], soloEnvelopes, isoAt(clock));
+        } catch {
+          summary.pollFailures += 1;
+          safeLog(logger, 'iFood reconciliation poll failed');
         }
       }
     }

@@ -182,8 +182,40 @@ describe('iFood polling reconciliation', () => {
 
     const summary = await reconciler.runReconciliationCycle();
 
-    expect(repository.recordPollSuccess).not.toHaveBeenCalled();
-    expect(summary).toMatchObject({ pollFailures: 1, pollMarks: 0 });
+    // Batch fails (a unauthorized/unavailable), then per-merchant retry:
+    // merchant-a still fails, merchant-b succeeds and gets stamped.
+    expect(repository.recordPollSuccess).toHaveBeenCalledTimes(1);
+    expect(repository.recordPollSuccess.mock.calls[0][0]).toMatchObject({
+      merchantId: 'merchant-b'
+    });
+    expect(summary).toMatchObject({ pollFailures: 1, pollMarks: 1, merchantsPolled: 1 });
+  });
+
+  it('retries per merchant when a mixed batch is rejected by the provider', async () => {
+    const repository = makeRepository([
+      makeConnection('merchant-ok'),
+      makeConnection('merchant-foreign')
+    ]);
+    const adapter = {
+      pollEvents: vi.fn(async ({ merchantIds }) => {
+        if (merchantIds.length > 1) throw new Error('Some polling merchants are not authorized');
+        if (merchantIds[0] === 'merchant-foreign') throw new Error('forbidden');
+        return [makeEnvelope({ merchantId: 'merchant-ok' })];
+      }),
+      ackEvents: vi.fn(async () => ({ accepted: true }))
+    };
+    const reconciler = createIfoodReconciler({ adapter, repository, clock: () => 1_000_000 });
+
+    const summary = await reconciler.runReconciliationCycle();
+
+    expect(adapter.pollEvents).toHaveBeenCalledTimes(3); // 1 batch + 2 solo
+    expect(repository.recordPollSuccess).toHaveBeenCalledTimes(1);
+    expect(summary).toMatchObject({
+      pollFailures: 1,
+      pollMarks: 1,
+      inserted: 1,
+      acked: 1
+    });
   });
 
   it('clamps a configured polling interval to the 30-second provider minimum', async () => {
