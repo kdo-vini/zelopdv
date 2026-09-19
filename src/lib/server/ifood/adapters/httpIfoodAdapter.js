@@ -255,6 +255,25 @@ export function createHttpIfoodAdapter({
   const readyToPickup = (orderId, options) => postOrderAction(orderId, 'readyToPickup', '/readyToPickup', undefined, options);
   const dispatch = (orderId, options) => postOrderAction(orderId, 'dispatch', '/dispatch', undefined, options);
 
+  async function verifyDeliveryCode(orderId, code, { signal } = {}) {
+    const id = requireNonEmptyId(orderId, 'orderId');
+    const trimmed = typeof code === 'string' ? code.trim() : '';
+    if (!trimmed) throw new TypeError('verifyDeliveryCode requires a non-empty code');
+    const { status, body } = await request({
+      method: 'POST',
+      path: `/order/v1.0/orders/${encodeId(id)}/verifyDeliveryCode`,
+      body: { code: trimmed },
+      ...(signal ? { signal } : {})
+    });
+    const valid = body && typeof body === 'object' && body.valid === true;
+    return {
+      orderId: id,
+      action: 'verifyDeliveryCode',
+      accepted: status === 200 && valid,
+      status: status === 200 && valid ? 'accepted_http' : `http_${status}`
+    };
+  }
+
   async function getCancellationReasons(orderId, { signal } = {}) {
     const id = requireNonEmptyId(orderId, 'orderId');
     const { body } = await request({
@@ -274,6 +293,7 @@ export function createHttpIfoodAdapter({
     startPreparation,
     readyToPickup,
     dispatch,
+    verifyDeliveryCode,
     requestCancellation
   });
 
@@ -284,9 +304,9 @@ export function createHttpIfoodAdapter({
     if (typeof handler !== 'function') {
       throw new TypeError(`Unsupported iFood order action: ${action}`);
     }
-    return action === 'requestCancellation'
-      ? handler({ orderId, signal, ...rest })
-      : handler(orderId, { signal });
+    if (action === 'requestCancellation') return handler({ orderId, signal, ...rest });
+    if (action === 'verifyDeliveryCode') return handler(orderId, rest.code, { signal });
+    return handler(orderId, { signal });
   }
 
   // `getConnectionHealth` is intentionally not implemented here:
@@ -308,6 +328,7 @@ export function createHttpIfoodAdapter({
     startPreparation,
     readyToPickup,
     dispatch,
+    verifyDeliveryCode,
     getCancellationReasons,
     requestCancellation,
     requestOrderAction

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { mapCanonicalOrder } from '../src/lib/onlineOrders.js';
 import { getOrderDeliveryPresentation, getOrderPaymentPresentation } from '../src/lib/orderPresentation.js';
 import {
@@ -130,7 +131,7 @@ describe('queue action routing', () => {
     expect(resolveQueueAdvance(ifood)).toEqual({ kind: 'ifood_command', intent: 'confirm' });
     expect(resolveQueueAdvance({ ...ifood, status: 'ready' })).toEqual({ kind: 'ifood_command', intent: 'dispatch' });
     // An iFood order is never closed into a caixa sale from the queue.
-    expect(resolveQueueAdvance({ ...ifood, status: 'out_for_delivery' })).toEqual({ kind: 'none' });
+    expect(resolveQueueAdvance({ ...ifood, status: 'out_for_delivery' })).toEqual({ kind: 'ifood_command', intent: 'verify_delivery_code' });
   });
 
   it('other channels keep transition_zelo_order and close_zelo_order', () => {
@@ -241,5 +242,16 @@ describe('iFood commands browser client', () => {
     const fetchImpl = vi.fn();
     await expect(fetchIfoodSyncState(supabaseWithSession(), [], { fetchImpl })).resolves.toEqual({});
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe('iFood channel badge', () => {
+  it('keeps the text pill and adds a circular iFood logo', () => {
+    const badge = readFileSync(new URL('../src/lib/components/orders/OrderSourceBadge.svelte', import.meta.url), 'utf8');
+    expect(badge).toContain('source-mark');
+    expect(badge).toContain('/ifood-logo.png');
+    expect(badge).toContain('border-radius: 999px');
+    expect(badge).toContain('class="source-badge"');
+    expect(badge).toContain('{badge.label}');
   });
 });

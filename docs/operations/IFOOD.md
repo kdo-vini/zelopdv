@@ -73,7 +73,8 @@ Antes do GO completo:
 1. Ligar flags de ciclo no worker + `IFOOD_CLIENT_ID` / `SECRET` + merchant/sandbox
 2. Shadow (comandos/presença off) → loja piloto
 3. Testar kill switch pause/resume no console `/ifood`
-4. Confirmar som genérico, `printOwner` único e contingência Portal
+4. Confirmar som de chegada em `/app/pedidos` (dois tons em iFood
+   `pending_review` novo), `printOwner` único e contingência Portal
 5. Shadow → soak → sign-off GO pleno
 
 ## Gate automatizado (Task 20)

@@ -56,6 +56,13 @@ function actionForRow(adapter, row, signal) {
     case 'dispatch':
       if (typeof adapter.dispatch !== 'function') throw new TypeError('adapter.dispatch is required');
       return adapter.dispatch(orderId, { signal });
+    case 'verify_delivery_code': {
+      if (typeof adapter.verifyDeliveryCode !== 'function') {
+        throw new TypeError('adapter.verifyDeliveryCode is required');
+      }
+      const payload = payloadObject(row);
+      return adapter.verifyDeliveryCode(orderId, payload.code, { signal });
+    }
     case 'cancel': {
       if (typeof adapter.requestCancellation !== 'function') {
         throw new TypeError('adapter.requestCancellation is required');

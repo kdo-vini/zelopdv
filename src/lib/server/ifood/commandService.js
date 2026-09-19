@@ -5,6 +5,7 @@
 export const IFOOD_COMMAND_PERMISSIONS = Object.freeze({
   confirm: 'pedidos.acessar',
   dispatch: 'pedidos.acessar',
+  verify_delivery_code: 'pedidos.acessar',
   start_preparation: 'pedidos.cozinha',
   ready_to_pickup: 'pedidos.cozinha',
   cancel: 'pedidos.cancelar'
@@ -35,6 +36,13 @@ export function canUseIfoodIntent(accessContext, intent) {
   return !accessContext.isSubUser || accessContext.permissions?.[permission] === true;
 }
 
+function sanitizeDeliveryCodePayload(body) {
+  if (!isNonEmptyString(body?.code) && !isNonEmptyString(body?.deliveryCode)) return null;
+  const code = (body.code || body.deliveryCode).trim();
+  if (code.length > 32) return null;
+  return { code };
+}
+
 function sanitizeCancellationPayload(body) {
   if (!isNonEmptyString(body?.cancellationCode)) return null;
   const cancellationCode = body.cancellationCode.trim();
@@ -58,7 +66,11 @@ function validateInput({ empresaId, orderId, body }) {
   const expectedRevision = body.expectedRevision;
   if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) return { code: 'invalid_payload' };
 
-  const payload = intent === 'cancel' ? sanitizeCancellationPayload(body) : {};
+  const payload = intent === 'cancel'
+    ? sanitizeCancellationPayload(body)
+    : intent === 'verify_delivery_code'
+      ? sanitizeDeliveryCodePayload(body)
+      : {};
   if (payload === null) return { code: 'invalid_payload' };
 
   return { intent, expectedRevision, payload };

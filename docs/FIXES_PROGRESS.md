@@ -1,5 +1,35 @@
 # Fixes Progress
 
+- [x] FX-MESAS-MAP-DRAG-01 (2026-09-19) — `/app/mesas`: drag com threshold
+  reordena cards (filtro Todas); clique/toque abre comanda. Coluna
+  `mesas.mapa_ordem` + backfill natural; create em gestão usa max+1;
+  snapshot offline e transferência seguem `sortMesasForMap`. Migration
+  `20260919145000_mesas_mapa_ordem` aplicada no projeto linked (184/184
+  mesas com `mapa_ordem`).
+
+- [x] FX-IFOOD-CHANNEL-MARK-01 (2026-09-19) — canal iFood na fila/cozinha
+  (PDV) e na Produção (ZeloChat) usa moldura circular com o logo + a pill
+  de texto. Não substitui lucide: marca autorizada em `ifood-logo.png`.
+
+- [x] FX-MESAS-MAP-ORDER-01 (2026-09-19) — mapa/gestão/transferência e snapshot
+  offline usam sort natural compartilhado (`mesasSort.js`): labels só-dígitos
+  em ordem numérica (1,2,3…10…50), depois nomes A→Z. Corrige lexicográfico
+  (`1,10,2…`) e ordem por UUID do path offline. Estendido por
+  FX-MESAS-MAP-DRAG-01 (`mapa_ordem`). Testes `mesasSort` +
+  `offlineMesasLoad`.
+
+- [x] FX-IFOOD-BEMSERVIDO-PRINT-SOUND-MANUAL-01 (2026-09-19) — almoço Bem
+  Servido: Chat deixa de auto-imprimir `source=ifood`; PDV `/app/pedidos`
+  toca som em iFood `pending_review` novo; pedido manual grava
+  `fulfillment.deliveryAddress` e taxa (bairro único / match / campo).
+  RCA em `docs/integrations/ifood/BEM_SERVIDO_LUNCH_RUSH_RCA.md`.
+
+- [x] FX-IFOOD-BEMSERVIDO-ACCEPT-CONCLUDE-01 (2026-09-19) — Chat encaminha
+  aceite/avanço iFood para `enqueue_ifood_order_command_v1`. Em rota
+  MERCHANT: intent `verify_delivery_code` + `POST /verifyDeliveryCode`.
+  Migration `20260919131000_ifood_verify_delivery_code.sql` aplicada no
+  banco (`intent` check + RPC). Worker precisa de imagem nova.
+
 - [x] FX-IFOOD-WORKER-IMAGE-PAYMENTMETHODS-01 (2026-09-17) — imagem Docker do
   worker iFood saía com `MODULE_NOT_FOUND` no boot: `orderNormalizer.js`
   importa `src/lib/finance/paymentMethods.js`, mas o Dockerfile só copiava

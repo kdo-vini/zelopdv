@@ -38,6 +38,7 @@
     fetchIfoodSyncState,
     sendIfoodCommand
   } from '$lib/orders/ifoodCommandsClient.js';
+  import { findNewIfoodReviewOrders, playIfoodArrivalChime } from '$lib/orders/ifoodArrivalSound.js';
   import OrderSourceBadge from '$lib/components/orders/OrderSourceBadge.svelte';
   import IfoodSyncState from '$lib/components/orders/IfoodSyncState.svelte';
   import { CheckCircle2, CreditCard, MapPin, Printer, X } from 'lucide-svelte';
@@ -71,7 +72,11 @@
   let ifoodCancelCode = '';
   let ifoodCancelLoading = false;
   let ifoodCancelError = '';
+  let ifoodVerifyOrder = null;
+  let ifoodVerifyCode = '';
+  let ifoodVerifyError = '';
   let ifoodSending = false;
+  let filaBaselinePronta = false;
   let pedidos = [];
   let pedidoSelecionadoId = null;
   let dadosEmpresa = null;
@@ -118,6 +123,25 @@
     ownerUserId = auth.ownerUserId || auth.userId;
     operadorUserId = auth.userId;
     await startOfflineRuntime({ ...auth, ownerUserId });
+    const unlockAudio = () => {
+      try {
+        const Ctor = window.AudioContext || window.webkitAudioContext;
+        if (typeof Ctor !== 'function') return;
+        const ctx = new Ctor();
+        void ctx.resume?.();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.01);
+      } catch {
+        // autoplay policy — next arrival still tries
+      }
+      window.removeEventListener('pointerdown', unlockAudio);
+    };
+    window.addEventListener('pointerdown', unlockAudio, { once: true });
     isSubUser = auth.isSubUser;
     if (isSubUser && !(await hasAccessPermission('pedidos.acessar'))) {
       addToast('Seu cargo não tem acesso à fila de pedidos.', 'warning');
@@ -290,6 +314,10 @@
     try {
       const proximosPedidos = await refreshOrderSnapshot(supabase, ownerUserId, dadosEmpresa?.id);
       queueUnavailable = navigator.onLine === false;
+      if (filaBaselinePronta && findNewIfoodReviewOrders(pedidos, proximosPedidos).length > 0) {
+        playIfoodArrivalChime();
+      }
+      filaBaselinePronta = true;
       pedidos = proximosPedidos;
       if (!pedidos.some((p) => p.id === pedidoSelecionadoId)) {
         pedidoSelecionadoId = pedidos[0]?.id || null;
@@ -424,6 +452,35 @@
     ifoodCancelOrder = null;
   }
 
+  function codigoEntregaIfood(pedido) {
+    const codes = ifoodHandoffCodes(pedido);
+    const delivery = codes.find((item) => item.kind === 'delivery');
+    return delivery?.value || pedido?.ifood?.deliveryCode || '';
+  }
+
+  function abrirVerificacaoEntregaIfood(pedido) {
+    ifoodVerifyOrder = pedido;
+    ifoodVerifyCode = codigoEntregaIfood(pedido);
+    ifoodVerifyError = '';
+  }
+
+  function fecharVerificacaoEntregaIfood() {
+    if (ifoodSending) return;
+    ifoodVerifyOrder = null;
+    ifoodVerifyError = '';
+  }
+
+  async function confirmarEntregaIfood() {
+    const code = ifoodVerifyCode.trim();
+    if (!ifoodVerifyOrder) return;
+    if (!code) {
+      ifoodVerifyError = 'Peça o código de entrega no app iFood do cliente (ou o localizador do comprovante).';
+      return;
+    }
+    const ok = await enviarComandoIfood(ifoodVerifyOrder, 'verify_delivery_code', { code });
+    if (ok) ifoodVerifyOrder = null;
+  }
+
   async function confirmarCancelamentoIfood() {
     const reason = ifoodCancelReasons.find((item) => item.code === ifoodCancelCode);
     if (!ifoodCancelOrder || !reason) return;
@@ -474,6 +531,10 @@
     const advance = resolveQueueAdvance(pedido);
     if (advance.kind === 'ifood_command') {
       if (ifoodHasPendingCommand(ifoodSync[pedido.id])) return;
+      if (advance.intent === 'verify_delivery_code') {
+        abrirVerificacaoEntregaIfood(pedido);
+        return;
+      }
       await enviarComandoIfood(pedido, advance.intent);
       return;
     }
@@ -597,6 +658,49 @@
           disabled={ifoodSending || ifoodCancelLoading || !ifoodCancelCode}
         >
           {ifoodSending ? 'Enviando ao iFood...' : 'Pedir cancelamento'}
+        </button>
+      </footer>
+    </div>
+  </div>
+{/if}
+
+{#if ifoodVerifyOrder}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+  <div class="ifood-modal-overlay" on:click|self={fecharVerificacaoEntregaIfood}>
+    <div class="ifood-modal" role="dialog" aria-modal="true" aria-labelledby="ifood-verify-title">
+      <header class="ifood-modal-head">
+        <div>
+          <OrderSourceBadge order={ifoodVerifyOrder} />
+          <h2 id="ifood-verify-title">Confirmar entrega no iFood</h2>
+        </div>
+        <button type="button" class="ifood-modal-close" on:click={fecharVerificacaoEntregaIfood} aria-label="Fechar" disabled={ifoodSending}>
+          <X class="size-4" aria-hidden="true" />
+        </button>
+      </header>
+
+      <p class="ifood-modal-lead">
+        Peça o código de entrega no aplicativo iFood do cliente, ou use o localizador impresso no comprovante. Sem esse código o iFood mantém o pedido em rota.
+      </p>
+
+      <label class="ifood-verify-label" for="ifood-verify-code">Código de entrega</label>
+      <input
+        id="ifood-verify-code"
+        class="ifood-verify-input"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        bind:value={ifoodVerifyCode}
+        placeholder="Código do cliente"
+        disabled={ifoodSending}
+      />
+      {#if ifoodVerifyError}
+        <InlineHelper tone="warning" message={ifoodVerifyError} />
+      {/if}
+
+      <footer class="ifood-modal-actions">
+        <button type="button" class="btn-secondary" on:click={fecharVerificacaoEntregaIfood} disabled={ifoodSending}>Voltar</button>
+        <button type="button" class="btn-success" on:click={confirmarEntregaIfood} disabled={ifoodSending || !ifoodVerifyCode.trim()}>
+          {ifoodSending ? 'Enviando ao iFood...' : 'Confirmar entrega'}
         </button>
       </footer>
     </div>
@@ -1092,6 +1196,7 @@
 
   .qi-top {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
@@ -1578,6 +1683,26 @@
     color: var(--text-muted);
     font-size: 0.8rem;
     line-height: 1.45;
+  }
+
+  .ifood-verify-label {
+    display: block;
+    margin-top: 0.5rem;
+    color: var(--text-label);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .ifood-verify-input {
+    width: 100%;
+    margin-top: 0.35rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    background: var(--bg-input);
+    color: var(--text-main);
+    font-size: 1rem;
+    letter-spacing: 0.08em;
   }
 
   .ifood-reasons {

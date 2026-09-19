@@ -12,7 +12,7 @@ const ERROR_MESSAGES = Object.freeze({
   revision_conflict: 'O pedido mudou. Atualize a fila e tente de novo.',
   connection_unavailable: 'A conexão com o iFood está indisponível. Use o Portal do Parceiro.',
   invalid_transition: 'Esta ação não vale para o momento atual do pedido.',
-  invalid_payload: 'Escolha um motivo de cancelamento válido.'
+  invalid_payload: 'Informe um código de entrega válido ou um motivo de cancelamento.'
 });
 
 const GENERIC_SEND_ERROR = 'Não foi possível enviar ao iFood agora. Tente de novo.';
@@ -57,6 +57,12 @@ export async function sendIfoodCommand(supabase, order, intent, extra = {}, { fe
   if (intent === 'cancel') {
     if (typeof extra?.cancellationCode === 'string') body.cancellationCode = extra.cancellationCode;
     if (typeof extra?.reason === 'string' && extra.reason.trim()) body.reason = extra.reason.trim();
+  }
+  if (intent === 'verify_delivery_code') {
+    const code = typeof extra?.code === 'string' && extra.code.trim()
+      ? extra.code.trim()
+      : (typeof extra?.deliveryCode === 'string' ? extra.deliveryCode.trim() : '');
+    if (code) body.code = code;
   }
 
   let response;

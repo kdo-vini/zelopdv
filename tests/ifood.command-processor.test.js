@@ -37,6 +37,7 @@ function makeAdapter() {
     startPreparation: vi.fn(async () => ({ accepted: true, status: 'accepted_http' })),
     readyToPickup: vi.fn(async () => ({ accepted: true, status: 'accepted_http' })),
     dispatch: vi.fn(async () => ({ accepted: true, status: 'accepted_http' })),
+    verifyDeliveryCode: vi.fn(async () => ({ accepted: true, status: 'accepted_http' })),
     requestCancellation: vi.fn(async () => ({ accepted: true, status: 'accepted_http' })),
   };
 }
@@ -88,6 +89,20 @@ describe('createIfoodCommandProcessor', () => {
       cancellationCode: '501',
       signal: SIGNAL,
     });
+  });
+
+  it('maps verify_delivery_code to adapter.verifyDeliveryCode with payload.code', async () => {
+    const row = makeRow({
+      intent: 'verify_delivery_code',
+      payload: { code: '654321', ignored: 'nope' },
+    });
+    const repository = makeRepository([row]);
+    const adapter = makeAdapter();
+    const processor = createIfoodCommandProcessor({ repository, adapter, workerId: 'worker-1' });
+
+    await processor.runCommandCycle({ signal: SIGNAL });
+
+    expect(adapter.verifyDeliveryCode).toHaveBeenCalledWith('external-order-1', '654321', { signal: SIGNAL });
   });
 
   it('marks a retryable HTTP error failed_retryable with the retry-policy timestamp and no raw error text', async () => {

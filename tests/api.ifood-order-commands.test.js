@@ -12,6 +12,7 @@ const INTENTS = [
   ['start_preparation', 'pedidos.cozinha'],
   ['ready_to_pickup', 'pedidos.cozinha'],
   ['dispatch', 'pedidos.acessar'],
+  ['verify_delivery_code', 'pedidos.acessar'],
   ['cancel', 'pedidos.cancelar'],
 ];
 
@@ -79,6 +80,12 @@ function baseAccessContext(overrides = {}) {
 
 function commandBody(intent = 'confirm', overrides = {}) {
   return { intent, expectedRevision: 1, ...overrides };
+}
+
+function extrasForIntent(intent) {
+  if (intent === 'cancel') return { cancellationCode: '501' };
+  if (intent === 'verify_delivery_code') return { code: '654321' };
+  return {};
 }
 
 async function loadCommandsRoute({ supabase, accessContext = baseAccessContext(), adapter } = {}) {
@@ -216,7 +223,7 @@ describe('createIfoodCommandService', () => {
       authResult: { user: { id: 'sub-user-1' } },
       empresaId: EMPRESA_ID,
       orderId: ORDER_ID,
-      body: commandBody(intent, intent === 'cancel' ? { cancellationCode: '501' } : {}),
+      body: commandBody(intent, extrasForIntent(intent)),
     });
 
     expect(result.status).toBe(202);
@@ -234,7 +241,7 @@ describe('createIfoodCommandService', () => {
       authResult: { user: { id: 'sub-user-1' } },
       empresaId: EMPRESA_ID,
       orderId: ORDER_ID,
-      body: commandBody(intent, intent === 'cancel' ? { cancellationCode: '501' } : {}),
+      body: commandBody(intent, extrasForIntent(intent)),
     });
 
     expect(result).toEqual({ status: 403, body: { error: 'forbidden' } });
@@ -330,7 +337,7 @@ describe('POST /api/integrations/ifood/orders/:orderId/commands', () => {
     });
 
     const response = await route.POST({
-      request: makeRequest({ body: commandBody(intent, intent === 'cancel' ? { cancellationCode: '501' } : {}) }),
+      request: makeRequest({ body: commandBody(intent, extrasForIntent(intent)) }),
       params: { orderId: ORDER_ID },
     });
 
@@ -345,7 +352,7 @@ describe('POST /api/integrations/ifood/orders/:orderId/commands', () => {
     });
 
     const response = await route.POST({
-      request: makeRequest({ body: commandBody(intent, intent === 'cancel' ? { cancellationCode: '501' } : {}) }),
+      request: makeRequest({ body: commandBody(intent, extrasForIntent(intent)) }),
       params: { orderId: ORDER_ID },
     });
 

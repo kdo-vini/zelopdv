@@ -30,12 +30,14 @@ const INTENT_LABELS = Object.freeze({
   start_preparation: 'Iniciar preparo',
   ready_to_pickup: 'Marcar como pronto',
   dispatch: 'Saiu para entrega',
+  verify_delivery_code: 'Confirmar entrega',
   cancel: 'Cancelar pedido'
 });
 
 const INTENT_PERMISSIONS = Object.freeze({
   confirm: 'pedidos.acessar',
   dispatch: 'pedidos.acessar',
+  verify_delivery_code: 'pedidos.acessar',
   start_preparation: 'pedidos.cozinha',
   ready_to_pickup: 'pedidos.cozinha',
   cancel: 'pedidos.cancelar'
@@ -63,7 +65,7 @@ export function isIfoodOrder(order) {
   return order?.source === IFOOD_SOURCE;
 }
 
-/** Plain-text channel badge. The iFood logo needs formal authorization first. */
+/** Channel badge: iFood also renders a circular logo next to this text pill. */
 export function orderSourceBadge(order) {
   const source = text(order?.source) || 'zelomenu';
   const ifood = order?.ifood || {};
@@ -174,6 +176,8 @@ export function ifoodPrimaryIntent(order) {
       return null;
     case 'ready':
       return isDelivery(order) && deliveredBy(order) === 'MERCHANT' ? 'dispatch' : null;
+    case 'out_for_delivery':
+      return isDelivery(order) && deliveredBy(order) === 'MERCHANT' ? 'verify_delivery_code' : null;
     default:
       return null;
   }

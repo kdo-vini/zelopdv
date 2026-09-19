@@ -1,5 +1,55 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-19 — Mesas: drag no mapa + ordem natural
+
+Mapa `/app/mesas`: toque abre comanda; arrastar (filtro Todas) grava
+`mesas.mapa_ordem` sincronizado na loja. Sort compartilhado em
+`mesasSort.js` (números 1…N, depois nomes; mapa usa `mapa_ordem`).
+Migration `20260919145000_mesas_mapa_ordem`.
+
+## Sessão 2026-09-19 — iFood: moldura circular + pill
+
+Pedido iFood na fila/cozinha (`OrderSourceBadge`) e na Produção do
+ZeloChat (`IfoodChannelBadge`) mostra o logo em círculo **e** a pill
+`iFood #displayId`. Asset: `static/ifood-logo.png` / `public/ifood-logo.png`.
+
+## Sessão 2026-09-19 — Bem Servido almoço: P0+P1 no código
+
+RCA: `docs/integrations/ifood/BEM_SERVIDO_LUNCH_RUSH_RCA.md`.
+
+Fechado no repo (e RPC no banco ZeloPDV):
+
+1. ZeloChat não auto-imprime `source=ifood`.
+2. PDV `/app/pedidos` toca dois tons em iFood `pending_review` novo.
+3. Pedido manual grava `fulfillment.deliveryAddress` + taxa (bairro único,
+   match no endereço, ou taxa digitada).
+4. Aceite/avanço iFood no Chat chama `enqueue_ifood_order_command_v1`.
+5. Em rota MERCHANT: intent `verify_delivery_code` (código do cliente /
+   localizador). Constraint+RPC aplicados no projeto `xnnjyrblpvsqrtsshawa`.
+
+Ainda precisa **commit + deploy** `zelopdv` (Vercel), `zelochat` (Dokploy)
+e **redeploy do `ifood-worker`**. Conexão Bem Servido continua `paused`
+até a 2ª via de papel sair do ar.
+
+IA digitando o pedido depois de “Pedir por aqui” ficou de fora: mudar o
+planner aqui é decisão de produto (risco de montar pedido errado).
+
+## Sessão 2026-09-19 — Bem Servido: almoço iFood + Chat (RCA)
+
+Pedido iFood **entrou** (8 `source=ifood` CONCLUDED). A titular reclamou
+no turno: não aceita no ZeloChat, fica em rota sem concluir, imprime duas
+vezes, PDV mudo, IA não monta texto, pedido manual sem taxa e “é retirada”.
+
+RCA: `docs/integrations/ifood/BEM_SERVIDO_LUNCH_RUSH_RCA.md`.
+
+Conexão `c0f6d2b1` **paused**, `print_owner=external`. Não resumir até
+cortar auto-print do Chat em iFood.
+
+P0 aberto: (1) Chat ignora `print_owner` e reimprime iFood; (2) PDV sem
+som; (3) manual grava `fulfillment.address` + `deliveryFee: 0`, UI lê
+`deliveryAddress`. P1: Chat não fala o command API (zero `confirm` no
+banco); fila iFood `out_for_delivery` é `kind: none` (sem conclude).
+
 ## Sessão 2026-09-18 — iFood: avisos worker/token na UI (Bem Servido)
 
 Causa: conexão Techne `6bdbbe5d` (app de teste) ainda `active` no app

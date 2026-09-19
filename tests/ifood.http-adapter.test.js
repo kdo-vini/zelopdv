@@ -695,6 +695,27 @@ describe('createHttpIfoodAdapter', () => {
     expect(result.status).toBe('accepted_http');
   });
 
+  it('verifyDeliveryCode() accepts HTTP 200 with valid:true', async () => {
+    const fetchImpl = vi.fn(async (url) => {
+      if (String(url).includes('/oauth/token')) return tokenResponse(300);
+      return makeResponse({ status: 200, jsonBody: { valid: true } });
+    });
+    const adapter = buildAdapter({ fetchImpl });
+
+    const result = await adapter.verifyDeliveryCode('order-fixture-1', '654321');
+    expect(result).toEqual({
+      orderId: 'order-fixture-1',
+      action: 'verifyDeliveryCode',
+      accepted: true,
+      status: 'accepted_http'
+    });
+    expect(String(fetchImpl.mock.calls.at(-1)[0])).toContain('/order/v1.0/orders/order-fixture-1/verifyDeliveryCode');
+    expect(fetchImpl.mock.calls.at(-1)[1]).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({ code: '654321' })
+    });
+  });
+
   it('surfaces getOrder 404 as a retryable-flagged error rather than crashing', async () => {
     const fetchImpl = vi.fn(async (url) => {
       if (String(url).includes('/oauth/token')) return tokenResponse(300);

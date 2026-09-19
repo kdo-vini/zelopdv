@@ -30,7 +30,7 @@ function order(overrides = {}) {
 const at = (minutes) => new Date(Date.parse('2026-09-16T12:00:00.000Z') + minutes * 60000).toISOString();
 
 describe('orderSourceBadge', () => {
-  it('shows a plain-text channel label and the iFood display reference', () => {
+  it('shows a channel label and the iFood display reference', () => {
     expect(orderSourceBadge(order())).toEqual({ source: 'ifood', label: 'iFood', reference: '7421' });
     expect(orderSourceBadge({ source: 'zelomenu' })).toEqual({ source: 'zelomenu', label: 'ZeloMenu', reference: null });
     expect(orderSourceBadge({})).toMatchObject({ label: 'ZeloMenu' });
@@ -84,7 +84,7 @@ describe('ifoodPrimaryIntent and waiting labels', () => {
     expect(ifoodPrimaryIntent(order({ status: 'preparing', fulfillment: { type: 'takeout', mode: 'retirada' } }))).toBe('ready_to_pickup');
     expect(ifoodPrimaryIntent(order({ status: 'preparing', fulfillment: { type: 'delivery', deliveredBy: 'IFOOD' } }))).toBeNull();
     expect(ifoodPrimaryIntent(order({ status: 'ready', fulfillment: { type: 'takeout' } }))).toBeNull();
-    expect(ifoodPrimaryIntent(order({ status: 'out_for_delivery' }))).toBeNull();
+    expect(ifoodPrimaryIntent(order({ status: 'out_for_delivery' }))).toBe('verify_delivery_code');
     expect(ifoodPrimaryIntent(order({ source: 'zelomenu' }))).toBeNull();
   });
 

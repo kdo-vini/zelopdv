@@ -455,6 +455,8 @@ Adicionar novos componentes: `npx shadcn-svelte@latest add <componente>` na raiz
 
 **Regra:** nunca SVG inline. Sempre importar de `lucide-svelte`.
 
+**Exceção de marca:** o canal iFood usa o arquivo estático `static/ifood-logo.png` numa moldura circular, **ao lado** da pill de texto (`OrderSourceBadge`). Não substituir essa marca por um ícone lucide.
+
 ```svelte
 <script>
   import { Trash2, Pencil, Plus, X, Check } from 'lucide-svelte';

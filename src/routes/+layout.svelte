@@ -275,7 +275,7 @@
       }
 
       // Helper to check if path is public (includes /loja/* subroutes)
-      const isPublicPath = (p) => publicPaths.includes(p) || p.startsWith('/blog/') || p.startsWith('/indica/') || p.startsWith('/vs-');
+      const isPublicPath = (p) => publicPaths.includes(p) || p.startsWith('/blog/') || p.startsWith('/indica/') || p.startsWith('/vs-') || p.startsWith('/dev/');
 
       if (!session && !isPublicPath(currentPath)) {
 
@@ -285,7 +285,7 @@
       }
       if (session && isPublicPath(currentPath)) {
         // Allow /loja/* paths without redirect (public storefront)
-        if (currentPath === '/' || currentPath === '/assinatura' || currentPath === '/perfil' || currentPath === '/perfil.html' || currentPath === '/redefinir-senha' || currentPath === '/pascoa' || currentPath === '/precificacao' || currentPath.startsWith('/vs-') || currentPath.startsWith('/para-') || currentPath.startsWith('/blog') || currentPath.startsWith('/indica/')) {
+        if (currentPath === '/' || currentPath === '/assinatura' || currentPath === '/perfil' || currentPath === '/perfil.html' || currentPath === '/redefinir-senha' || currentPath === '/pascoa' || currentPath === '/precificacao' || currentPath.startsWith('/vs-') || currentPath.startsWith('/para-') || currentPath.startsWith('/blog') || currentPath.startsWith('/indica/') || currentPath.startsWith('/dev/')) {
 
         } else {
 
