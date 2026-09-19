@@ -7,8 +7,9 @@
  * modelo perguntar de novo em vez de arriscar o id errado.
  */
 import { normalizeText } from './tools/catalog.js';
+import { prepararExclusaoCatalogo } from './tools/catalog.js';
 
-const PRODUCT_TOOLS = new Set(['pausar_no_cardapio', 'ocultar_no_pdv', 'alterar_preco']);
+const PRODUCT_TOOLS = new Set(['pausar_no_cardapio', 'definir_publicacao_no_cardapio', 'ocultar_no_pdv', 'alterar_preco', 'editar_produto', 'definir_custo_produto']);
 // Mesmo teto de buscarProduto em tools/catalog.js: o filtro por nome roda em JS
 // para ignorar acento e não tratar % ou _ do nome como curinga do ilike.
 const MAX_ROWS = 500;
@@ -114,6 +115,24 @@ export async function resolveWriteTargets(db, ownerUserId, toolName, args) {
     return { ok: true, args: { ...args, categoria_id: resolved.id, nome_categoria: resolved.nome } };
   }
 
+  if (toolName === 'criar_produtos_lote') {
+    if (!Array.isArray(args.produtos) || args.produtos.length === 0 || args.produtos.length > 50) {
+      return { ok: false, motivo: 'Envie entre 1 e 50 produtos para cadastrar.' };
+    }
+    const produtos = [];
+    for (const produto of args.produtos) {
+      const resolved = await resolveEntity(db, ownerUserId, {
+        table: 'categorias',
+        id: toPositiveInt(produto.categoria_id),
+        name: produto.nome_categoria,
+        messages: CATEGORIA_MESSAGES,
+      });
+      if (!resolved.ok) return resolved;
+      produtos.push({ ...produto, categoria_id: resolved.id, nome_categoria: resolved.nome });
+    }
+    return { ok: true, args: { ...args, produtos } };
+  }
+
   if (toolName === 'alterar_despesa' || toolName === 'excluir_despesa') {
     const despesaId = String(args.despesa_id || '').trim();
     if (!despesaId) {
@@ -133,6 +152,28 @@ export async function resolveWriteTargets(db, ownerUserId, toolName, args) {
         ...args,
         despesa_id: data.id,
         descricao: args.descricao ?? data.description,
+      },
+    };
+  }
+
+  if (toolName === 'excluir_catalogo') {
+    const preview = await prepararExclusaoCatalogo(db, ownerUserId, {
+      produto_ids: args.produto_ids,
+      categoria_ids: args.categoria_ids,
+      todos: args.todos === true,
+    });
+    if (!preview.ok) return { ok: false, motivo: preview.error };
+    if (!preview.data.total_produtos && !preview.data.categorias.length) {
+      return { ok: false, motivo: 'Não encontrei produtos ou categorias para excluir.' };
+    }
+    const resumo = `Excluir ${preview.data.excluir.length} produto(s), arquivar ${preview.data.arquivar.length} produto(s) e excluir ${preview.data.categorias.length} categoria(s) selecionada(s)`;
+    return {
+      ok: true,
+      args: {
+        ...args,
+        produto_ids: preview.data.produto_ids,
+        categoria_ids: preview.data.categoria_ids,
+        resumo,
       },
     };
   }

@@ -76,4 +76,14 @@ describe('resolveWriteTargets', () => {
     expect(result).toEqual({ ok: true, args: { nome: 'Sobremesas' } });
     expect(db.calls).toHaveLength(0);
   });
+
+  it('prepara exclusão com ids owner-scoped e resumo da prévia', async () => {
+    const db = makeDb({ tables: {
+      produtos: [{ data: [{ id: 7, nome: 'Pudim', id_categoria: 2 }], error: null }],
+      vendas_itens: [{ data: [], error: null }],
+      categorias: [{ data: [], error: null }],
+    } });
+    const result = await resolveWriteTargets(db, 'owner-1', 'excluir_catalogo', { produto_ids: [7], categoria_ids: [] });
+    expect(result).toEqual({ ok: true, args: expect.objectContaining({ produto_ids: [7], resumo: expect.stringContaining('Excluir 1 produto(s)') }) });
+  });
 });

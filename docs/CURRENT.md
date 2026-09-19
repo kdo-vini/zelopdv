@@ -1,5 +1,39 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-19 — Zelinho: catálogo completo, finanças estimadas e playbook de crescimento
+
+O Zelinho Gerente passou a ter repertório de consultoria de vendas/marketing e
+deixou de limitar respostas a ações pré-definidas. O prompt separa fatos dos
+dados da empresa, hipóteses e recomendações; pode sugerir ZeloMenu, Instagram,
+WhatsApp, QR code, combos, adicionais, promoções por horário/dia e testes com
+métrica, sem exigir busca externa.
+
+O registro `produtos.custo_unitario` é opcional e alimenta
+`resumo_financeiro`, que calcula faturamento, despesas registradas, taxas,
+custo conhecido, resultado registrado, lucro estimado, margem estimada e
+cobertura dos custos. O agente informa que registros incompletos podem não
+refletir a realidade e não chama uma conta sem custos de lucro líquido real.
+
+O catálogo do agente agora pode ser listado por página com filtros, editado,
+publicado/retirado do ZeloMenu, cadastrado em lote e limpo com
+prévia/confirmação owner-scoped. Produtos sem
+histórico ou dependências abertas são excluídos; produtos já vendidos,
+presentes em comandas, pedidos online ou configurados como pizza são arquivados operacionalmente
+(ocultos no PDV e pausados no ZeloMenu) para preservar relatórios. Caixa,
+vendas concluídas e recebimento de fiado continuam sem ferramentas de escrita.
+
+Validação local pendente nesta sessão: o clone Windows não expõe `node`/`npm`
+no PATH, portanto os testes Vitest/check precisam ser executados em ambiente
+com Node 24 antes do deploy. Migração nova:
+`20260919160000_gerente_product_cost.sql`.
+Operações destrutivas em lote usam a RPC transacional
+`gerente_excluir_catalogo` da migration
+`20260919160001_gerente_catalog_bulk_ops.sql`, que revalida vendas e mantém
+produtos históricos como arquivados.
+Os dez cenários de uso do plano estão registrados em
+`tests/gerente.goldenPrompts.test.js` como contrato de ferramentas,
+confirmação e linguagem mínima.
+
 ## Sessão 2026-09-19 — Supabase connector: history reconcile
 
 Erro `Remote migration versions not found in local migrations directory`:

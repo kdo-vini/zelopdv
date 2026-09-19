@@ -166,6 +166,10 @@ export function describeExecutedAction(action, result = {}) {
       return result.pausado_manualmente
         ? `Feito: pausei "${nome}" no cardápio digital. Ele continua no PDV. Para voltar, me peça "despausa ${nome}".`
         : `Feito: "${nome}" voltou para o cardápio digital.`;
+    case 'definir_publicacao_no_cardapio':
+      return result.publicado
+        ? `Feito: publiquei "${nome}" no ZeloMenu.`
+        : `Feito: retirei "${nome}" do ZeloMenu. Ele continua no catálogo do PDV.`;
     case 'pausar_no_cardapio_undo':
       return result.pausado_manualmente
         ? `Desfeito: "${nome}" voltou a ficar pausado no cardápio digital.`
@@ -186,6 +190,21 @@ export function describeExecutedAction(action, result = {}) {
       return `Feito: cadastrei "${result.nome}" por ${brl(result.preco)} em "${result.categoria_nome}". Ele já aparece no PDV.`;
     case 'alterar_preco':
       return `Feito: "${nome}" passou de ${brl(result.preco_anterior)} para ${brl(result.preco)}.`;
+    case 'editar_produto':
+      return `Feito: atualizei "${nome || action.arguments?.nome_produto || 'o produto'}" no catálogo.`;
+    case 'definir_custo_produto':
+      return result.custo_unitario == null
+        ? `Feito: removi o custo cadastrado de "${nome || action.arguments?.nome_produto || 'o produto'}".`
+        : `Feito: o custo estimado de "${nome || action.arguments?.nome_produto || 'o produto'}" agora é ${brl(result.custo_unitario)}.`;
+    case 'criar_produtos_lote':
+      return `Feito: cadastrei ${Array.isArray(result.criados) ? result.criados.length : 0} produto(s) no catálogo.`;
+    case 'excluir_catalogo': {
+      const deleted = Array.isArray(result.excluidos) ? result.excluidos.length : 0;
+      const archived = Array.isArray(result.arquivados) ? result.arquivados.length : 0;
+      const categories = Array.isArray(result.categorias_excluidas) ? result.categorias_excluidas.length : 0;
+      const blockedCategories = Array.isArray(result.categorias_bloqueadas) ? result.categorias_bloqueadas.length : 0;
+      return `Feito: ${deleted} produto(s) excluído(s), ${archived} arquivado(s) e ${categories} categoria(s) vazia(s) excluída(s).${blockedCategories ? ` ${blockedCategories} categoria(s) permaneceram por dependências.` : ''}`;
+    }
     case 'criar_despesa':
       return `Feito: lancei "${result.descricao}" de ${brl(result.valor)} em ${result.categoria}.`;
     case 'alterar_despesa':

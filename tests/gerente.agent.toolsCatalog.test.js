@@ -1,7 +1,7 @@
 // tests/gerente.agent.toolsCatalog.test.js
 import { describe, expect, it } from 'vitest';
 import { makeDb } from './helpers/gerenteStubs.js';
-import { alterarPreco, buscarProduto, criarCategoria, criarProduto, estoqueProduto, listarCategorias, normalizeText, ocultarNoPdv, pausarNoCardapio, translateRpcError } from '../src/lib/server/gerente/tools/catalog.js';
+import { alterarPreco, buscarProduto, criarCategoria, criarProduto, criarProdutosLote, definirCustoProduto, definirPublicacaoProduto, estoqueProduto, excluirCatalogo, listarCatalogo, listarCategorias, normalizeText, ocultarNoPdv, pausarNoCardapio, prepararExclusaoCatalogo, translateRpcError } from '../src/lib/server/gerente/tools/catalog.js';
 
 const produtos = [
   { id: 1, nome: 'Refrigerante 2L Coca-Cola', preco: 14, id_categoria: 3, ocultar_no_pdv: false, controlar_estoque: true, estoque_atual: 6, categorias: { nome: 'Bebidas', controlar_estoque_compartilhado: false, estoque_compartilhado_atual: 0 } },
@@ -71,6 +71,22 @@ describe('listarCategorias e estoqueProduto', () => {
   });
 });
 
+describe('listarCatalogo', () => {
+  it('aplica filtros owner-scoped e devolve paginação', async () => {
+    const db = makeDb({ tables: {
+      produtos: [{ data: [produtos[0]], count: 3, error: null }],
+      zelomenu_product_publications: [{ data: [{ id_produto: 1, visivel_online: true, pausado_manualmente: false }], error: null }],
+    } });
+    const result = await listarCatalogo(db, 'owner-1', { limite: 1, offset: 2, categoria_id: 3, controlar_estoque: true });
+    expect(result.data.pagina).toEqual({ offset: 2, limite: 1, total: 3, proximo_offset: 3 });
+    expect(db.calls[0].filters).toEqual(expect.arrayContaining([
+      { op: 'eq', field: 'id_usuario', value: 'owner-1' },
+      { op: 'eq', field: 'id_categoria', value: 3 },
+      { op: 'eq', field: 'controlar_estoque', value: true },
+    ]));
+  });
+});
+
 describe('ferramentas de escrita', () => {
   it('pausarNoCardapio chama a RPC com p_owner e devolve before/after', async () => {
     const db = makeDb({
@@ -89,6 +105,27 @@ describe('ferramentas de escrita', () => {
     expect(result.ok).toBe(true);
     expect(result.after).toEqual({ pausado_manualmente: true });
     expect(db.calls.every((call) => call.table !== 'zelomenu_product_publications')).toBe(true);
+  });
+
+  it('publica e retira produto do ZeloMenu com owner e before/after', async () => {
+    const db = makeDb({ tables: {
+      produtos: [
+        { data: { id: 1, nome: 'Refri' }, error: null },
+        { data: { id: 1, nome: 'Refri' }, error: null },
+      ],
+      zelomenu_product_publications: [
+        { data: { id_produto: 1, visivel_online: false, pausado_manualmente: false }, error: null },
+        { data: { id_produto: 1, visivel_online: true, pausado_manualmente: false }, error: null },
+        { data: { id_produto: 1, visivel_online: true, pausado_manualmente: false }, error: null },
+        { data: { id_produto: 1, visivel_online: false, pausado_manualmente: false }, error: null },
+      ],
+    } });
+    const published = await definirPublicacaoProduto(db, 'owner-1', { produto_id: 1, publicado: true });
+    expect(published.data).toMatchObject({ nome: 'Refri', publicado: true });
+    expect(published.before).toEqual({ publicado: false });
+    const retired = await definirPublicacaoProduto(db, 'owner-1', { produto_id: 1, publicado: false });
+    expect(retired.data.publicado).toBe(false);
+    expect(db.calls.some((call) => call.op === 'upsert' && call.payload.id_usuario === 'owner-1')).toBe(true);
   });
 
   it('traduz PRODUTO_NAO_PUBLICADO quando o produto nunca foi para o cardápio', async () => {
@@ -123,6 +160,109 @@ describe('ferramentas de escrita', () => {
     expect(await criarProduto(db, 'owner-1', { nome: 'P', preco: 12, categoria_id: 9 })).toEqual({ ok: false, error: 'O nome do produto precisa ter entre 2 e 80 caracteres.' });
     expect(await alterarPreco(db, 'owner-1', { produto_id: 1, preco: -1 })).toEqual({ ok: false, error: 'O preço precisa ser um número maior ou igual a zero.' });
     expect(db.calls).toHaveLength(0);
+  });
+
+  it('valida o lote inteiro antes de iniciar cadastros', async () => {
+    const db = makeDb();
+    const result = await criarProdutosLote(db, 'owner-1', { produtos: [
+      { nome: 'Pudim', preco: 12, categoria_id: 9 },
+      { nome: 'Suco', preco: -1, categoria_id: 9 },
+    ] });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('Suco');
+    expect(db.calls).toHaveLength(0);
+  });
+});
+
+describe('limpeza e custo do catálogo', () => {
+  it('separa produtos vendidos para arquivamento na prévia', async () => {
+    const db = makeDb({ tables: {
+      produtos: [{ data: [{ id: 1, nome: 'Vendido', id_categoria: 3 }, { id: 2, nome: 'Novo', id_categoria: 3 }], error: null }],
+      vendas_itens: [{ data: [{ id_produto: 1 }], error: null }],
+      categorias: [{ data: [], error: null }],
+    } });
+    const result = await prepararExclusaoCatalogo(db, 'owner-1', { produto_ids: [1, 2] });
+    expect(result.data.excluir).toEqual([{ id: 2, nome: 'Novo' }]);
+    expect(result.data.arquivar).toEqual([{ id: 1, nome: 'Vendido' }]);
+  });
+
+  it('inclui todas as categorias quando a prévia é da limpeza inteira', async () => {
+    const db = makeDb({ tables: {
+      produtos: [{ data: [{ id: 1, nome: 'Novo', id_categoria: 3 }], error: null }],
+      vendas_itens: [{ data: [], error: null }],
+      comanda_itens: [{ data: [], error: null }],
+      zelo_order_items: [{ data: [], error: null }],
+      categorias: [{ data: [{ id: 3, nome: 'Bebidas' }], error: null }],
+      subcategorias: [{ data: [], error: null }],
+    } });
+    const result = await prepararExclusaoCatalogo(db, 'owner-1', { todos: true });
+    expect(result.data.categoria_ids).toEqual([3]);
+    expect(result.data.categorias).toEqual([{ id: 3, nome: 'Bebidas' }]);
+  });
+
+  it('sinaliza categoria com subcategorias como dependência na prévia', async () => {
+    const db = makeDb({ tables: {
+      categorias: [{ data: [{ id: 3, nome: 'Bebidas' }], error: null }],
+      subcategorias: [{ data: [{ id_categoria: 3 }], error: null }],
+    } });
+    const result = await prepararExclusaoCatalogo(db, 'owner-1', { categoria_ids: [3] });
+    expect(result.data.categorias_com_dependencias).toEqual([{ id: 3, nome: 'Bebidas', motivo: 'subcategorias' }]);
+  });
+
+  it('permite preparar exclusão de categoria sem selecionar produtos', async () => {
+    const db = makeDb({ tables: {
+      categorias: [{ data: [{ id: 3, nome: 'Bebidas' }], error: null }],
+    } });
+    const result = await prepararExclusaoCatalogo(db, 'owner-1', { categoria_ids: [3] });
+    expect(result.data.produto_ids).toEqual([]);
+    expect(result.data.categorias).toEqual([{ id: 3, nome: 'Bebidas' }]);
+  });
+
+  it('trata comanda aberta e pedido online como dependências de arquivamento', async () => {
+    const db = makeDb({ tables: {
+      produtos: [{ data: [{ id: 1, nome: 'Mesa', id_categoria: 3 }, { id: 2, nome: 'Online', id_categoria: 3 }], error: null }],
+      vendas_itens: [{ data: [], error: null }],
+      comanda_itens: [{ data: [{ id_produto: 1 }], error: null }],
+      zelo_order_items: [{ data: [{ product_id: 2 }], error: null }],
+      categorias: [{ data: [], error: null }],
+    } });
+    const result = await prepararExclusaoCatalogo(db, 'owner-1', { produto_ids: [1, 2] });
+    expect(result.data.excluir).toEqual([]);
+    expect(result.data.dependencias).toEqual([
+      { id: 1, nome: 'Mesa', motivo: 'comanda_aberta' },
+      { id: 2, nome: 'Online', motivo: 'pedido_online' },
+    ]);
+  });
+
+  it('mantém pizza em arquivamento mesmo sem venda', async () => {
+    const db = makeDb({ tables: {
+      produtos: [{ data: [{ id: 4, nome: 'Pizza', id_categoria: 3, tipo_produto: 'pizza' }], error: null }],
+      vendas_itens: [{ data: [], error: null }],
+      comanda_itens: [{ data: [], error: null }],
+      zelo_order_items: [{ data: [], error: null }],
+    } });
+    const result = await prepararExclusaoCatalogo(db, 'owner-1', { produto_ids: [4] });
+    expect(result.data.excluir).toEqual([]);
+    expect(result.data.dependencias).toEqual([{ id: 4, nome: 'Pizza', motivo: 'pizza_deve_ser_arquivada' }]);
+  });
+
+  it('arquiva vendido, exclui não vendido e salva custo owner-scoped', async () => {
+    const db = makeDb({ tables: {
+      produtos: [
+        { data: [{ id: 1, nome: 'Vendido', id_categoria: 3 }, { id: 2, nome: 'Novo', id_categoria: 3 }], error: null },
+        { data: { id: 1, nome: 'Vendido', preco: 20, custo_unitario: null }, error: null },
+        { data: { id: 1, nome: 'Vendido', preco: 20, custo_unitario: 8 }, error: null },
+      ],
+      vendas_itens: [{ data: [{ id_produto: 1 }], error: null }],
+      categorias: [{ data: [], error: null }],
+      zelomenu_product_publications: [{ data: [], error: null }, { data: [], error: null }],
+    }, rpcs: { gerente_excluir_catalogo: { data: { excluidos: [{ id: 2, nome: 'Novo' }], arquivados: [{ id: 1, nome: 'Vendido' }], categorias_excluidas: [], categorias_bloqueadas: [] }, error: null } } });
+    const result = await excluirCatalogo(db, 'owner-1', { produto_ids: [1, 2], categoria_ids: [] });
+    expect(result.data.excluidos).toEqual([{ id: 2, nome: 'Novo' }]);
+    expect(result.data.arquivados).toEqual([{ id: 1, nome: 'Vendido' }]);
+    const cost = await definirCustoProduto(db, 'owner-1', { produto_id: 1, custo_unitario: 8 });
+    expect(cost.ok).toBe(true);
+    expect(db.calls.find((call) => call.rpc === 'gerente_excluir_catalogo').params).toMatchObject({ p_owner: 'owner-1', p_produto_ids: [1, 2] });
   });
 });
 

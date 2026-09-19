@@ -75,6 +75,30 @@ describe('runAgentTurn', () => {
     expect(created.payload).toMatchObject({ owner_user_id: 'owner-1', channel: 'whatsapp', tool_name: 'pausar_no_cardapio', arguments: { produto_id: 7, nome_produto: 'Refri 2L', pausado: true } });
   });
 
+  it('cadastro em lote vira uma única ação pendente consolidada', async () => {
+    const db = makeDb({ tables: baseTables({
+      categorias: [
+        { data: { id: 1, nome: 'Lanches' }, error: null },
+        { data: { id: 2, nome: 'Bebidas' }, error: null },
+      ],
+      gerente_agent_actions: [
+        { data: null, error: null },
+        { data: { id: 'act-lote', summary: 'Cadastrar 2 produtos', expires_at: '2026-09-02T15:10:00Z' }, error: null },
+      ],
+    }) });
+    const openai = makeOpenAi([
+      assistantMessage(null, [toolCall('call-lote', 'criar_produtos_lote', { produtos: [
+        { nome: 'Hambúrguer', preco: 25, categoria_id: 1, nome_categoria: 'Lanches' },
+        { nome: 'Coca', preco: 6, categoria_id: 2, nome_categoria: 'Bebidas' },
+      ] })]),
+      assistantMessage('Preparei o cadastro dos dois produtos.'),
+    ]);
+    const result = await runAgentTurn({ db, openai, ownerUserId: 'owner-1', actorUserId: 'owner-1', channel: 'app', message: 'cadastre os dois', now });
+    expect(result.pendingAction.id).toBe('act-lote');
+    expect(db.rpc).not.toHaveBeenCalled();
+    expect(db.calls.filter((call) => call.table === 'gerente_agent_actions' && call.op === 'insert')).toHaveLength(1);
+  });
+
   it('para após maxToolRounds com mensagem de fallback', async () => {
     const db = makeDb({ tables: baseTables({ categorias: [{ data: [], error: null }, { data: [], error: null }] }) });
     const openai = makeOpenAi([
