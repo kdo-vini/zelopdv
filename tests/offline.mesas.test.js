@@ -19,3 +19,32 @@ it('rejects decreasing already paid items and double close', () => {
   s = projectMesaOperation(s, 'mesa.close', { comandaId: 'c' }, '5');
   expect(() => projectMesaOperation(s, 'mesa.close', { comandaId: 'c' }, '6')).toThrow();
 });
+
+it('stacks repeated product adds into one line (same as online RPC)', () => {
+  let s = projectMesaOperation(state, 'mesa.open', { mesaId: 'm1', comandaId: 'c' }, '1');
+  s = projectMesaOperation(s, 'mesa.item.add', {
+    comandaId: 'c', itemId: 'i1', produtoId: 10, delta: 1, precoUnitario: 8, nome: 'Cerveja', modifiers: [],
+  }, '2');
+  s = projectMesaOperation(s, 'mesa.item.add', {
+    comandaId: 'c', itemId: 'i2', produtoId: 10, delta: 1, precoUnitario: 8, nome: 'Cerveja', modifiers: [],
+  }, '3');
+  s = projectMesaOperation(s, 'mesa.item.add', {
+    comandaId: 'c', itemId: 'i3', produtoId: 10, delta: 1, precoUnitario: 8, nome: 'Cerveja', modifiers: [],
+  }, '4');
+  const beers = s.details.m1.itens.filter((i) => Number(i.id_produto) === 10);
+  expect(beers).toHaveLength(1);
+  expect(beers[0].quantidade).toBe(3);
+  expect(beers[0].id).toBe('i1');
+});
+
+it('keeps separate lines when modifiers differ', () => {
+  let s = projectMesaOperation(state, 'mesa.open', { mesaId: 'm1', comandaId: 'c' }, '1');
+  s = projectMesaOperation(s, 'mesa.item.add', {
+    comandaId: 'c', itemId: 'a', produtoId: 10, delta: 1, precoUnitario: 8, nome: 'Cerveja', modifiers: [],
+  }, '2');
+  s = projectMesaOperation(s, 'mesa.item.add', {
+    comandaId: 'c', itemId: 'b', produtoId: 10, delta: 1, precoUnitario: 8, nome: 'Cerveja',
+    modifiers: [{ groupId: 'g', selectedOptions: [{ optionId: 'o' }] }],
+  }, '3');
+  expect(s.details.m1.itens).toHaveLength(2);
+});

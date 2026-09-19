@@ -19,12 +19,12 @@
   import PaymentMethodGrid from '$lib/components/payments/PaymentMethodGrid.svelte';
   import PaymentMethodSelect from '$lib/components/payments/PaymentMethodSelect.svelte';
   import { SELECTABLE_PAYMENT_METHODS, formatPaymentMethod } from '$lib/finance/paymentMethods';
-  import { startOfflineRuntime, getOfflineContext, readOperationalSnapshot, offlineRequest, markOfflineReadiness } from '$lib/offline/runtime';
+  import { startOfflineRuntime, isOfflineWriteActive, readOperationalSnapshot, offlineRequest, markOfflineReadiness } from '$lib/offline/runtime';
   import { loadMesaState, submitMesaOperation } from '$lib/offline/mesas';
   import { sortMesasForMap } from '$lib/mesasSort';
   import { readSnapshot, listOperations } from '$lib/offline/operations';
   import { buscarProdutosLocal, buscarCategoriasLocal } from '$lib/offlineDb';
-  import { MESA_SNAPSHOT } from '$lib/finance/offlineMesas';
+  import { MESA_SNAPSHOT, findMergeableComandaItem } from '$lib/finance/offlineMesas';
   import { newMesaPayments, projectStockProducts } from '$lib/finance/offlineProjection';
 
   let userId = '';
@@ -183,11 +183,11 @@
       loadMesaAndComanda(),
       loadProdutos(),
       loadCaixaEPerfil(),
-      ...(getOfflineContext()?.enabled ? [loadPessoasFiado()] : []),
+      ...(isOfflineWriteActive() ? [loadPessoasFiado()] : []),
     ]);
     // Keeps the mesas cache warm in the background so this device qualifies
     // for offline Mesas without ever running "Preparar este aparelho".
-    if (!getOfflineContext()?.enabled) void loadMesaState(supabase, ownerUserId).then(() => markOfflineReadiness('mesas')).catch(() => {});
+    if (!isOfflineWriteActive()) void loadMesaState(supabase, ownerUserId).then(() => markOfflineReadiness('mesas')).catch(() => {});
 
     // Carrega pagamentos parciais depois de garantir que a comanda existe
     await loadPagamentosParciais();
@@ -195,7 +195,7 @@
   });
 
   async function loadPagamentosParciais() {
-    if (getOfflineContext()?.enabled) return;
+    if (isOfflineWriteActive()) return;
     if (!comanda?.id) return;
     const { data, error } = await supabase
       .from('comanda_pagamentos')
@@ -232,7 +232,7 @@
   }
 
   async function loadCaixaEPerfil() {
-    if (getOfflineContext()?.enabled) {
+    if (isOfflineWriteActive()) {
       try {
         const profile = await readSnapshot(ownerUserId, 'empresa.perfil');
         if (profile) {
@@ -283,7 +283,7 @@
 
   async function loadPessoasFiado() {
     if (pessoas.length > 0) return;
-    if (getOfflineContext()?.enabled) {
+    if (isOfflineWriteActive()) {
       try { pessoas = await readOperationalSnapshot('pessoas.fiado', async () => {
         const rows = [];
         for (let from = 0; ; from += 500) {
@@ -303,7 +303,7 @@
 
   async function loadMesaAndComanda() {
     loading = true;
-    if (getOfflineContext()?.enabled) {
+    if (isOfflineWriteActive()) {
       try {
         let state = await loadMesaState(supabase, ownerUserId);
         if (state.details[mesaId]?.comanda.status !== 'aberta') state = (await submitMesaOperation('mesa.open', { mesaId, comandaId: crypto.randomUUID() })).state;
@@ -365,7 +365,7 @@
   }
 
   async function loadItens() {
-    if (getOfflineContext()?.enabled) { applyLocalMesa(await readSnapshot(ownerUserId, MESA_SNAPSHOT)); return; }
+    if (isOfflineWriteActive()) { applyLocalMesa(await readSnapshot(ownerUserId, MESA_SNAPSHOT)); return; }
     const { data, error } = await supabase
       .from('comanda_itens')
       .select('*, produtos(nome)')
@@ -395,7 +395,7 @@
   }
 
   async function loadItensEnviadosCozinha() {
-    if (getOfflineContext()?.enabled && globalThis.navigator?.onLine === false) return;
+    if (isOfflineWriteActive() && globalThis.navigator?.onLine === false) return;
     if (!canSendItemToKitchen() || !comanda?.id || !empresaId) {
       itensEnviadosCozinha = new Set();
       return;
@@ -421,7 +421,7 @@
 
   async function enviarItemCozinha(item) {
     const originalItemId = item?.id;
-    if (getOfflineContext()?.enabled) {
+    if (isOfflineWriteActive()) {
       const operations = await listOperations(ownerUserId);
       if (globalThis.navigator?.onLine === false || operations.some(op => op.entityId === comanda?.id && op.status !== 'acked')) {
         addToast('Pedido ainda não entregue à cozinha. Confira a sincronização e envie novamente quando a conexão voltar.', 'info');
@@ -466,7 +466,7 @@
   }
 
   async function loadProdutos(forceRefresh = false) {
-    if (getOfflineContext()?.enabled) {
+    if (isOfflineWriteActive()) {
       try {
         const shared = await buscarProdutosLocal('', ownerUserId);
         if (shared.length) {
@@ -520,7 +520,19 @@
   async function localItem(produto, preco, modifiers = [], pizza = null, item = null, delta = 1) {
     const cachedProduct = produtos.find(p => p.id === produto.id);
     if (delta > 0 && cachedProduct && !pizza && produtoControlaEstoque(cachedProduct) && estoqueDisponivel(cachedProduct) < delta) throw new Error('Estoque conhecido neste aparelho insuficiente.');
-    await localCommand(item ? 'mesa.item.delta' : 'mesa.item.add', { itemId: item?.id || crypto.randomUUID(), produtoId: produto.id, delta, precoUnitario: Number(preco), nome: produto.nome, modifiers, ...(pizza ? { pizza } : {}) });
+    // Stack same product like online RPC (1→2→3), instead of a new line per tap.
+    const mergeTarget = item || (delta > 0
+      ? findMergeableComandaItem(itens, { produtoId: produto.id, modifiers, pizza })
+      : null);
+    await localCommand(mergeTarget ? 'mesa.item.delta' : 'mesa.item.add', {
+      itemId: mergeTarget?.id || crypto.randomUUID(),
+      produtoId: produto.id,
+      delta,
+      precoUnitario: Number(preco),
+      nome: produto.nome,
+      modifiers,
+      ...(pizza ? { pizza } : {}),
+    });
   }
 
   async function adicionarProduto(produto) {
@@ -539,7 +551,7 @@
     savingItem = true;
 
     try {
-      if (getOfflineContext()?.enabled) { await localItem(produto, produto.preco); return; }
+      if (isOfflineWriteActive()) { await localItem(produto, produto.preco); return; }
       const { error } = await supabase.rpc('comanda_aplicar_delta_item', {
         p_id_comanda: comanda.id,
         p_id_produto: produto.id,
@@ -569,7 +581,7 @@
 
     savingItem = true;
     try {
-      if (getOfflineContext()?.enabled) { await localItem({ id: item.id_produto, nome: item.nome_produto }, item.preco_unitario, item.modifiers, item.pizza, item, delta); return; }
+      if (isOfflineWriteActive()) { await localItem({ id: item.id_produto, nome: item.nome_produto }, item.preco_unitario, item.modifiers, item.pizza, item, delta); return; }
       const { error } = await supabase.rpc('comanda_aplicar_delta_item', {
         p_id_comanda: comanda.id,
         p_id_produto: item.id_produto,
@@ -597,7 +609,7 @@
 
     savingItem = true;
     try {
-      if (getOfflineContext()?.enabled) {
+      if (isOfflineWriteActive()) {
         await localItem(montagem.produto, montagem.preco, montagem.modifiers, montagem.pizza);
         montagemOpen = false; montagemProduto = null; return;
       }
@@ -621,7 +633,7 @@
   }
 
   async function atualizarComanda(campo, valor) {
-    if (getOfflineContext()?.enabled) {
+    if (isOfflineWriteActive()) {
       try { await localCommand('mesa.update', { changes: { [campo]: valor } }); }
       catch (error) { applyLocalMesa(await readSnapshot(ownerUserId, MESA_SNAPSHOT)); addToast('Não foi possível salvar. Verifique sua conexão e tente novamente.', 'error'); }
       return;
@@ -647,7 +659,7 @@
     if (!ok) return;
 
     try {
-      if (getOfflineContext()?.enabled) { await localCommand('mesa.cancel', { items: itens }); goto('/app/mesas'); return; }
+      if (isOfflineWriteActive()) { await localCommand('mesa.cancel', { items: itens }); goto('/app/mesas'); return; }
       await supabase
         .from('comandas')
         .update({ id_operador: operadorUserId })
@@ -696,7 +708,7 @@
       closeModalOpen = true;
     }
     // Update mesa status para 'fechando' (cosmético)
-    if (!getOfflineContext()?.enabled && mesa.status !== 'fechando') {
+    if (!isOfflineWriteActive() && mesa.status !== 'fechando') {
       await supabase.from('mesas').update({ status: 'fechando' }).eq('id', mesaId).eq('id_usuario', ownerUserId);
       mesa = { ...mesa, status: 'fechando' };
     }
@@ -771,13 +783,13 @@
       const paidWith = forms.length > 1 ? 'multiplo' : forms[0] || formaPagamento;
       const received = multiPag ? Number(pagamentos.find(p => p.forma === 'dinheiro')?.valor || 0) || null : formaPagamento === 'dinheiro' ? Number(valorRecebido) : null;
       const change = multiPag ? trocoMulti : troco;
-      if (getOfflineContext()?.enabled) {
+      if (isOfflineWriteActive()) {
         const activeCash = await readSnapshot(ownerUserId, 'caixa.aberto');
         if (activeCash) idCaixaAberto = activeCash.data_fechamento ? null : activeCash.id;
       }
       const payload = { comandaId: comanda.id, id_caixa: idCaixaAberto, payments, valor_total: valorTotal, valor_desconto: desconto, valor_recebido: received, valor_troco: change };
       let reference;
-      if (getOfflineContext()?.enabled) {
+      if (isOfflineWriteActive()) {
         const { operation } = await localCommand('mesa.close', payload);
         reference = `LOCAL-${operation.operationId.slice(0, 8)}`;
       } else {
@@ -794,7 +806,7 @@
         valor_troco: change, pagamentos_split: paidWith === 'multiplo' ? allPayments.map(p => ({ forma: p.forma_pagamento, valor: p.valor })) : null, data: new Date(),
       };
       closeModalOpen = false; recibosOpen = true;
-      addToast(getOfflineContext()?.enabled ? `Mesa ${mesa.numero} salva neste aparelho. Referência ${reference}.` : `Mesa ${mesa.numero} fechada. Venda #${reference} registrada.`, 'success');
+      addToast(isOfflineWriteActive() ? `Mesa ${mesa.numero} salva neste aparelho. Referência ${reference}.` : `Mesa ${mesa.numero} fechada. Venda #${reference} registrada.`, 'success');
     } catch (error) {
       addToast(errorMessageFrom(error, 'Não foi possível fechar a mesa. Tente novamente.'), 'error');
     } finally { closing = false; }
@@ -1072,7 +1084,7 @@
         id_pessoa: parcialForma === 'fiado' ? parcialPessoaId : null,
       };
 
-      if (getOfflineContext()?.enabled) {
+      if (isOfflineWriteActive()) {
         const activeCash = await readSnapshot(ownerUserId, 'caixa.aberto');
         if (activeCash) idCaixaAberto = activeCash.data_fechamento ? null : activeCash.id;
         await localCommand('mesa.payment.add', { paymentId: crypto.randomUUID(), id_caixa: idCaixaAberto, forma_pagamento: parcialForma, valor: valorRound, id_pessoa: payload.id_pessoa, allocations: allocationResult.rows.map(row => ({ ...row, itemId: row.id_comanda_item })) });
@@ -1140,7 +1152,7 @@
     );
     if (!ok) return;
 
-    if (getOfflineContext()?.enabled) {
+    if (isOfflineWriteActive()) {
       try { await localCommand('mesa.payment.remove', { paymentId: p.id, id_caixa: p.id_caixa || null, forma_pagamento: p.forma_pagamento, valor: p.valor }); }
       catch (error) { addToast('Não foi possível remover o item. Tente novamente.', 'error'); }
       return;
@@ -1182,7 +1194,7 @@
   // === Transferência de mesa ===
   async function loadMesasLivres() {
     loadingMesasLivres = true;
-    if (getOfflineContext()?.enabled) {
+    if (isOfflineWriteActive()) {
       const state = await readSnapshot(ownerUserId, MESA_SNAPSHOT);
       mesasLivres = sortMesasForMap((state?.mesas || []).filter(m => String(m.id) !== String(mesaId) && m.status === 'livre'));
       loadingMesasLivres = false; return;
@@ -1221,7 +1233,7 @@
 
     transferring = true;
     try {
-      if (getOfflineContext()?.enabled) {
+      if (isOfflineWriteActive()) {
         await localCommand('mesa.transfer', { mesaId: mesaDestinoId });
         transferModalOpen = false; goto(`/app/mesas/${mesaDestinoId}`); return;
       }

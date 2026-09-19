@@ -1,5 +1,16 @@
 # Fixes Progress
 
+- [x] FX-MESAS-ONLINE-WRITE-GATE-01 (2026-09-19) — Mesas usava
+  `getOfflineContext().enabled` (true em aparelho preparado mesmo com
+  internet) e caía no path offline. Agora usa `isOfflineWriteActive()` —
+  igual à frente de caixa: online preparado escreve na RPC; fila só sem
+  rede ou com pendência. 10/10 lojas com `offline_settings.enabled=true`.
+
+- [x] FX-MESAS-ITEM-STACK-01 (2026-09-19) — comanda offline empilhava cada
+  toque como linha nova (`mesa.item.add` + UUID). Agora reusa a linha do
+  mesmo produto/modifiers/pizza (`mesa.item.delta`), igual à RPC online.
+  Projeção `projectMesaOperation` também agrupa. Testes em `offline.mesas`.
+
 - [x] FX-IFOOD-ARRIVAL-DOORBELL-01 (2026-09-19) — campainha
   `ifood-arrival.mp3` no PDV e no ZeloChat para **qualquer** pedido novo
   na fila (não só iFood).

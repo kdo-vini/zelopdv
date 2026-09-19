@@ -6,7 +6,7 @@
   import { hasPermission as hasAccessPermission } from '$lib/accessControl';
   import { logAuditAction } from '$lib/accessControl';
   import { addToast } from '$lib/stores/ui';
-  import { startOfflineRuntime, getOfflineContext, markOfflineReadiness } from '$lib/offline/runtime';
+  import { startOfflineRuntime, isOfflineWriteActive, markOfflineReadiness } from '$lib/offline/runtime';
   import { loadMesaState, submitMesaOperation } from '$lib/offline/mesas';
   import { readSnapshot, saveSnapshot } from '$lib/offline/operations';
   import { MESA_SNAPSHOT } from '$lib/finance/offlineMesas';
@@ -67,7 +67,7 @@
 
   async function loadMesas() {
     loading = true;
-    if (getOfflineContext()?.enabled) {
+    if (isOfflineWriteActive()) {
       try {
         const state = await loadMesaState(supabase, ownerUserId);
         mesas = sortMesasForMap(state.mesas);
@@ -100,7 +100,7 @@
   async function abrirMesa(mesa) {
     if (opening) return;
     opening = mesa.id;
-    if (getOfflineContext()?.enabled) {
+    if (isOfflineWriteActive()) {
       try {
         const state = await loadMesaState(supabase, ownerUserId);
         if (state.details[mesa.id]?.comanda.status !== 'aberta') await submitMesaOperation('mesa.open', { mesaId: mesa.id, comandaId: crypto.randomUUID() });

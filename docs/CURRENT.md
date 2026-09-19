@@ -1,5 +1,12 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-19 — Mesas: empilhar itens + gate online
+
+Feedback Seu Munhoz: itens saíam em linhas separadas. Causa: Mesas
+roteava escrita por `offlineContext.enabled` (true após zero-config mesmo
+online). Corrigido para `isOfflineWriteActive()`; path offline ainda
+agrupa produto igual à RPC.
+
 ## Sessão 2026-09-19 — iFood: som de campainha
 
 Chegada de **qualquer pedido novo** na fila toca
