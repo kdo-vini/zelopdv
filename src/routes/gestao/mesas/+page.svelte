@@ -4,6 +4,7 @@
   import { hasMesasAddon, bounceSubUserMissingAddon } from '$lib/guards';
   import { getAccessContext } from '$lib/accessControl';
   import { addToast, confirmAction } from '$lib/stores/ui';
+  import { sortMesasByNumero } from '$lib/mesasSort';
 
   let userId = '';
   let isSubUser = false;
@@ -52,7 +53,7 @@
     if (error) {
       addToast('Não foi possível carregar as mesas. Verifique sua conexão e tente novamente.', 'error');
     } else {
-      mesas = data || [];
+      mesas = sortMesasByNumero(data || []);
     }
     loading = false;
   }
@@ -98,9 +99,10 @@
         .update(payload)
         .eq('id', editingId);
     } else {
+      const maxOrdem = mesas.reduce((acc, m) => Math.max(acc, Number(m.mapa_ordem) || 0), -1);
       result = await supabase
         .from('mesas')
-        .insert({ ...payload, id_usuario: userId });
+        .insert({ ...payload, id_usuario: userId, mapa_ordem: maxOrdem + 1 });
     }
 
     saving = false;

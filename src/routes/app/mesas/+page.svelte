@@ -8,6 +8,9 @@
   import { addToast } from '$lib/stores/ui';
   import { startOfflineRuntime, getOfflineContext, markOfflineReadiness } from '$lib/offline/runtime';
   import { loadMesaState, submitMesaOperation } from '$lib/offline/mesas';
+  import { readSnapshot, saveSnapshot } from '$lib/offline/operations';
+  import { MESA_SNAPSHOT } from '$lib/finance/offlineMesas';
+  import { reorderMesas, sortMesasForMap } from '$lib/mesasSort';
 
   let userId = '';
   let ownerUserId = '';
@@ -21,9 +24,16 @@
   let opening = null;
   let now = Date.now();
   let tickInterval = null;
+  let savingOrder = false;
 
   // Filtro: 'todas' | 'livre' | 'ocupada' | 'fechando'
   let filtroStatus = 'todas';
+
+  const DRAG_THRESHOLD_PX = 8;
+  /** @type {null | { mesaId: string, fromIndex: number, pointerId: number, startX: number, startY: number, active: boolean, overIndex: number }} */
+  let drag = null;
+  /** @type {null | any[]} */
+  let mesasBeforeDrag = null;
 
   onMount(async () => {
     const authCtx = await ensureActiveSubscription({ requireProfile: true });
@@ -52,6 +62,7 @@
 
   onDestroy(() => {
     if (tickInterval) clearInterval(tickInterval);
+    clearDragListeners();
   });
 
   async function loadMesas() {
@@ -59,21 +70,21 @@
     if (getOfflineContext()?.enabled) {
       try {
         const state = await loadMesaState(supabase, ownerUserId);
-        mesas = state.mesas;
+        mesas = sortMesasForMap(state.mesas);
         comandasAbertas = new Map(Object.values(state.details).filter(d => d.comanda.status === 'aberta').map(d => [d.comanda.id_mesa, d.comanda.aberta_em]));
       } catch (error) { addToast('Não foi possível carregar as mesas deste aparelho. Tente novamente.', 'error'); }
       finally { loading = false; }
       return;
     }
     const [mesasResp, comandasResp] = await Promise.all([
-      supabase.from('mesas').select('*').eq('id_usuario', ownerUserId).eq('ativa', true).order('numero', { ascending: true }),
+      supabase.from('mesas').select('*').eq('id_usuario', ownerUserId).eq('ativa', true).order('mapa_ordem', { ascending: true }).order('numero', { ascending: true }),
       supabase.from('comandas').select('id_mesa, aberta_em').eq('id_usuario', ownerUserId).eq('status', 'aberta'),
     ]);
 
     if (mesasResp.error) {
       addToast('Não foi possível carregar as mesas. Verifique sua conexão e tente novamente.', 'error');
     } else {
-      mesas = mesasResp.data || [];
+      mesas = sortMesasForMap(mesasResp.data || []);
     }
 
     if (!comandasResp.error && comandasResp.data) {
@@ -156,6 +167,121 @@
     goto(`/app/mesas/${mesa.id}`);
   }
 
+  function clearDragListeners() {
+    window.removeEventListener('pointermove', onWindowPointerMove);
+    window.removeEventListener('pointerup', onWindowPointerUp);
+    window.removeEventListener('pointercancel', onWindowPointerUp);
+  }
+
+  function canDragReorder() {
+    return filtroStatus === 'todas' && !opening && !savingOrder && !loading;
+  }
+
+  function onTilePointerDown(event, mesa, index) {
+    if (!canDragReorder()) return;
+    if (event.button != null && event.button !== 0) return;
+    drag = {
+      mesaId: String(mesa.id),
+      fromIndex: index,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+      overIndex: index,
+    };
+    mesasBeforeDrag = null;
+    window.addEventListener('pointermove', onWindowPointerMove);
+    window.addEventListener('pointerup', onWindowPointerUp);
+    window.addEventListener('pointercancel', onWindowPointerUp);
+  }
+
+  function onWindowPointerMove(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!drag.active) {
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      drag = { ...drag, active: true };
+      mesasBeforeDrag = mesas.map((m) => ({ ...m }));
+    }
+    event.preventDefault();
+    const el = document.elementFromPoint(event.clientX, event.clientY);
+    const tile = el?.closest?.('[data-mesa-id]');
+    if (!tile) return;
+    const overId = tile.getAttribute('data-mesa-id');
+    const fromIndex = mesas.findIndex((m) => String(m.id) === drag.mesaId);
+    const overIndex = mesas.findIndex((m) => String(m.id) === String(overId));
+    if (fromIndex < 0 || overIndex < 0 || fromIndex === overIndex) return;
+    drag = { ...drag, overIndex };
+    mesas = reorderMesas(mesas, fromIndex, overIndex);
+  }
+
+  async function onWindowPointerUp(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const session = drag;
+    const openedMesa = mesas.find((m) => String(m.id) === session.mesaId)
+      || mesasBeforeDrag?.find((m) => String(m.id) === session.mesaId);
+    const wasDrag = session.active;
+    clearDragListeners();
+    drag = null;
+
+    if (!wasDrag) {
+      mesasBeforeDrag = null;
+      if (openedMesa) await abrirMesa(openedMesa);
+      return;
+    }
+
+    const unchanged = mesasBeforeDrag
+      && mesas.length === mesasBeforeDrag.length
+      && mesas.every((m, i) => String(m.id) === String(mesasBeforeDrag[i].id));
+    if (unchanged) {
+      mesasBeforeDrag = null;
+      return;
+    }
+
+    await persistMapOrder(mesas, mesasBeforeDrag);
+  }
+
+  async function persistMapOrder(ordered, previous) {
+    savingOrder = true;
+    mesas = ordered;
+    try {
+      if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+        const results = await Promise.all(
+          ordered.map((m, i) =>
+            supabase
+              .from('mesas')
+              .update({ mapa_ordem: i })
+              .eq('id', m.id)
+              .eq('id_usuario', ownerUserId)
+          )
+        );
+        const failed = results.find((r) => r.error);
+        if (failed?.error) throw failed.error;
+      }
+
+      const snap = await readSnapshot(ownerUserId, MESA_SNAPSHOT);
+      if (snap?.mesas) {
+        const byId = new Map(ordered.map((m) => [String(m.id), m.mapa_ordem]));
+        await saveSnapshot(ownerUserId, MESA_SNAPSHOT, {
+          ...snap,
+          mesas: sortMesasForMap(
+            snap.mesas.map((m) => ({
+              ...m,
+              mapa_ordem: byId.has(String(m.id)) ? byId.get(String(m.id)) : m.mapa_ordem,
+            }))
+          ),
+        });
+      }
+    } catch (error) {
+      mesas = previous || ordered;
+      addToast('Não foi possível salvar a ordem das mesas. Tente novamente.', 'error');
+    } finally {
+      savingOrder = false;
+      mesasBeforeDrag = null;
+    }
+  }
+
   function statusLabel(s) {
     return ({ livre: 'Livre', ocupada: 'Ocupada', fechando: 'Fechando' })[s] || s;
   }
@@ -206,6 +332,7 @@
       <div class="header-titles">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em]" style="color: var(--text-muted);">Vendas / Mesas</p>
         <h1 class="title">Mesas</h1>
+        <p class="muted">Arraste para reorganizar · toque para abrir</p>
         <p class="muted">Sem conexão, alterações de outros aparelhos podem não aparecer.</p>
         <div class="kpi-row" aria-label="Resumo do status das mesas">
           <span class="kpi-chip" data-status="livre">
@@ -277,18 +404,22 @@
         <p class="empty-desc">Tente outro filtro acima.</p>
       </div>
     {:else}
-      <div class="mesa-grid">
-        {#each mesasFiltradas as mesa (mesa.id)}
+      <div class="mesa-grid" class:is-reordering={!!drag?.active} class:saving-order={savingOrder}>
+        {#each mesasFiltradas as mesa, index (mesa.id)}
           {@const tempo = mesa.status === 'ocupada' || mesa.status === 'fechando'
             ? formatTempoAberto(comandasAbertas.get(mesa.id), now)
             : null}
           <button
             type="button"
             class="mesa-tile"
+            class:is-dragging={drag?.active && String(drag.mesaId) === String(mesa.id)}
             data-status={mesa.status}
-            on:click={() => abrirMesa(mesa)}
-            disabled={opening === mesa.id}
+            data-mesa-id={mesa.id}
+            on:pointerdown={(e) => onTilePointerDown(e, mesa, index)}
+            on:click={() => { if (filtroStatus !== 'todas') void abrirMesa(mesa); }}
+            disabled={opening === mesa.id || savingOrder}
             aria-label={`Mesa ${mesa.numero}, ${statusLabel(mesa.status)}`}
+            style={filtroStatus === 'todas' ? 'touch-action: none;' : undefined}
           >
             <div class="tile-top">
               <span class="tile-num">{mesa.numero}</span>
@@ -454,6 +585,13 @@
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
     gap: 0.85rem;
   }
+  .mesa-grid.is-reordering,
+  .mesa-grid.saving-order {
+    cursor: grabbing;
+  }
+  .mesa-grid.is-reordering .mesa-tile {
+    cursor: grabbing;
+  }
 
   .mesa-tile {
     position: relative;
@@ -466,9 +604,20 @@
     background: var(--bg-card);
     color: var(--text-main);
     cursor: pointer;
-    transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+    transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s, opacity 0.12s;
     text-align: left;
     overflow: hidden;
+    user-select: none;
+  }
+  .mesa-tile.is-dragging {
+    opacity: 0.55;
+    transform: scale(1.03);
+    border-color: var(--primary);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+    z-index: 2;
+  }
+  .mesa-grid.is-reordering .mesa-tile:hover {
+    transform: none;
   }
   .mesa-tile::before {
     content: '';

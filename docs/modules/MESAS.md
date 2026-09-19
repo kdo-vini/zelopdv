@@ -15,6 +15,8 @@ entre aparelhos nesta fase. Contratos, ativação e limites em
 
 - CRUD de mesas em `/gestao/mesas`
 - mapa operacional em `/app/mesas`
+- no mapa: toque abre a comanda; arrastar (filtro Todas) reordena e
+  persiste `mesas.mapa_ordem` na loja
 - comanda por mesa em `/app/mesas/[id]`
 - fechamento da mesa convertendo consumo em `vendas` + `vendas_itens`
 - pre-conta e recibo final imprimivel
@@ -35,10 +37,12 @@ entre aparelhos nesta fase. Contratos, ativação e limites em
 - `supabase/migrations/20260812230000_mesas_payment_rbac.sql`
 - `supabase/migrations/20260812233000_mesas_operational_rbac.sql`
 - `supabase/migrations/20260812234500_mesas_operational_rpc_rbac.sql`
+- `supabase/migrations/20260919145000_mesas_mapa_ordem.sql`
+- `src/lib/mesasSort.js` — ordem natural (cadastro) e `mapa_ordem` (mapa)
 
 ## Dependencias de dados observadas
 
-- `mesas`
+- `mesas` (inclui `mapa_ordem` para ordem customizada do mapa)
 - `comandas`
 - `comanda_itens`
 - `comanda_pagamentos`

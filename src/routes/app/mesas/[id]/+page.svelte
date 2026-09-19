@@ -21,6 +21,7 @@
   import { SELECTABLE_PAYMENT_METHODS, formatPaymentMethod } from '$lib/finance/paymentMethods';
   import { startOfflineRuntime, getOfflineContext, readOperationalSnapshot, offlineRequest, markOfflineReadiness } from '$lib/offline/runtime';
   import { loadMesaState, submitMesaOperation } from '$lib/offline/mesas';
+  import { sortMesasForMap } from '$lib/mesasSort';
   import { readSnapshot, listOperations } from '$lib/offline/operations';
   import { buscarProdutosLocal, buscarCategoriasLocal } from '$lib/offlineDb';
   import { MESA_SNAPSHOT } from '$lib/finance/offlineMesas';
@@ -1183,22 +1184,23 @@
     loadingMesasLivres = true;
     if (getOfflineContext()?.enabled) {
       const state = await readSnapshot(ownerUserId, MESA_SNAPSHOT);
-      mesasLivres = (state?.mesas || []).filter(m => String(m.id) !== String(mesaId) && m.status === 'livre');
+      mesasLivres = sortMesasForMap((state?.mesas || []).filter(m => String(m.id) !== String(mesaId) && m.status === 'livre'));
       loadingMesasLivres = false; return;
     }
     const { data, error } = await supabase
       .from('mesas')
-      .select('id, numero, capacidade, status, ativa')
+      .select('id, numero, capacidade, status, ativa, mapa_ordem')
       .eq('id_usuario', ownerUserId)
       .eq('ativa', true)
       .eq('status', 'livre')
+      .order('mapa_ordem', { ascending: true })
       .order('numero', { ascending: true });
     loadingMesasLivres = false;
     if (error) {
       addToast('Não foi possível carregar as mesas. Verifique sua conexão e tente novamente.', 'error');
       return;
     }
-    mesasLivres = (data || []).filter(m => m.id !== mesaId);
+    mesasLivres = sortMesasForMap((data || []).filter(m => m.id !== mesaId));
   }
 
   async function abrirTransferModal() {

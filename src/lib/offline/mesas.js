@@ -1,26 +1,37 @@
 import { readSnapshot, saveSnapshot, listOperations } from './operations.js';
 import { getOfflineContext, submitOfflineOperation } from './runtime.js';
 import { MESA_SNAPSHOT, projectMesaOperation } from '../finance/offlineMesas.js';
+import { sortMesasForMap } from '../mesasSort.js';
 import { db } from '../offlineDb.js';
+
+function withSortedMesas(state) {
+    if (!state?.mesas) return state;
+    return { ...state, mesas: sortMesasForMap(state.mesas) };
+}
 
 export async function loadMesaState(supabase, ownerUserId) {
     const cached = await readSnapshot(ownerUserId, MESA_SNAPSHOT);
     const initialOperations = await listOperations(ownerUserId);
     const pending = initialOperations.some(op => ['mesa', 'item', 'payment'].includes(op.entityType) && op.status !== 'acked');
-    if (cached && (globalThis.navigator?.onLine === false || pending)) return cached;
-    async function pages(table, select, filter = q => q) {
+    // Cached/pending snapshots may still be UUID-ordered from older builds — normalize on every return.
+    if (cached && (globalThis.navigator?.onLine === false || pending)) return withSortedMesas(cached);
+    async function pages(table, select, filter = q => q, orderCols = ['id']) {
         const rows = [];
         for (let from = 0; ; from += 500) {
-            const { data, error } = await filter(supabase.from(table).select(select)).order('id').range(from, from + 499);
+            let query = filter(supabase.from(table).select(select));
+            for (const col of orderCols) query = query.order(col);
+            const { data, error } = await query.range(from, from + 499);
             if (error) throw error;
             rows.push(...data); if (data.length < 500) return rows;
         }
     }
     try {
-        const [mesas, comandas] = await Promise.all([
-            pages('mesas', '*', q => q.eq('id_usuario', ownerUserId).eq('ativa', true)),
+        const [mesasRaw, comandas] = await Promise.all([
+            // Match online map: `.order('numero', { ascending: true })`, keep `id` as tie-breaker for range pages.
+            pages('mesas', '*', q => q.eq('id_usuario', ownerUserId).eq('ativa', true), ['numero', 'id']),
             pages('comandas', '*', q => q.eq('id_usuario', ownerUserId).eq('status', 'aberta')),
         ]);
+        const mesas = sortMesasForMap(mesasRaw);
         async function forComandas(table, select) {
             const rows = [];
             for (let offset = 0; offset < comandas.length; offset += 100) rows.push(...await pages(table, select, q => q.in('id_comanda', comandas.slice(offset, offset + 100).map(c => c.id))));
@@ -36,12 +47,14 @@ export async function loadMesaState(supabase, ownerUserId) {
         // A command committed while HTTP was loading must never be overwritten by this snapshot.
         return await db.transaction('rw', db.offline_operations, db.offline_snapshots, async () => {
             const latest = await listOperations(ownerUserId);
-            if (latest.some(op => ['mesa', 'item', 'payment'].includes(op.entityType) && (op.status !== 'acked' || !initialOperations.some(old => old.operationId === op.operationId)))) return await readSnapshot(ownerUserId, MESA_SNAPSHOT) || state;
+            if (latest.some(op => ['mesa', 'item', 'payment'].includes(op.entityType) && (op.status !== 'acked' || !initialOperations.some(old => old.operationId === op.operationId)))) {
+                return withSortedMesas(await readSnapshot(ownerUserId, MESA_SNAPSHOT) || state);
+            }
             await saveSnapshot(ownerUserId, MESA_SNAPSHOT, state);
             return state;
         });
     } catch (error) {
-        if (cached && !['42501', 'PGRST301'].includes(error.code)) return cached;
+        if (cached && !['42501', 'PGRST301'].includes(error.code)) return withSortedMesas(cached);
         throw error;
     }
 }
@@ -58,5 +71,5 @@ export async function submitMesaOperation(type, payload) {
         dependencies: [...new Set([detail?.lastOperationId, caixaOpen?.operationId].filter(Boolean))],
         projection: { key: MESA_SNAPSHOT, update: current => projectMesaOperation(current, type, payload, operationId) }
     });
-    return { operation, state: await readSnapshot(context.ownerUserId, MESA_SNAPSHOT) };
+    return { operation, state: withSortedMesas(await readSnapshot(context.ownerUserId, MESA_SNAPSHOT)) };
 }
