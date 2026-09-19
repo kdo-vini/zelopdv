@@ -2,7 +2,7 @@ import { computeNextAttemptAt } from './retryPolicy.js';
 
 // The vocabulary a `handler` may return. These are deliberately the exact
 // same four strings `finish_ifood_event_v1` (applied migration
-// `supabase/migrations/20260916023512_ifood_mvp_foundation.sql`) accepts
+// `supabase/migrations/20260916160223_ifood_mvp_foundation.sql`) accepts
 // among its seven valid `p_outcome` values (`processed`, `retryable`,
 // `failed_retryable`, `terminal`, `failed_terminal`, `quarantine`,
 // `dead_letter`) — so a valid handler outcome is passed through to

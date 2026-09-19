@@ -1,5 +1,14 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-19 — Supabase connector: history reconcile
+
+Erro `Remote migration versions not found in local migrations directory`:
+50 versões só no remoto. Alinhado: 25 renomes de timestamp (mesmo SQL, id
+remoto), 25 markers `*_remote_snapshot.sql`, e
+`migration repair --status applied` em `20260911110000` (schema já tinha
+os objetos). Histórico synced 158/158. Detalhe em
+`docs/operations/MIGRATION-HISTORY-RECONCILIATION-2026-09-19.md`.
+
 ## Sessão 2026-09-19 — Mesas: empilhar itens + gate online
 
 Feedback Seu Munhoz: itens saíam em linhas separadas. Causa: Mesas

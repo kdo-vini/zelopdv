@@ -61,7 +61,7 @@
   permissão de caixa, como efeito de abrir/fechar o caixa online — nunca
   reativa uma loja que o titular desligou. Botões manuais em Perfil >
   Integrações viraram força-atualização/escape-hatch, não pré-requisito.
-  Migration `20260907150000` aplicada no projeto compartilhado.
+  Migration `20260908031010` (offline_zero_config) aplicada no projeto compartilhado.
 
 - Pizzas (implementação local 2026-09-05, ainda sem rollout): cadastro
   exclusivamente no PDV; `produtos.tipo_produto`/`pizza_config` e revisões

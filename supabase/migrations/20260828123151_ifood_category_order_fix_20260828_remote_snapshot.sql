@@ -1,0 +1,9 @@
+-- Remote-history reconciliation marker.
+--
+-- Migration 20260828123151 (ifood_category_order_fix_20260828) was applied in the linked project before this
+-- repository tracked the corresponding SQL under this version id. The
+-- authoritative remote state remains in the production schema.
+--
+-- Keep this marker forward-only and do not replay the historical DDL here.
+-- This file exists only so the CLI / connector can reconcile history without
+-- executing an unknown historical change.

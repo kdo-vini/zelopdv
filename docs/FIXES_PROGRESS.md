@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-SUPABASE-MIGRATION-HISTORY-01 (2026-09-19) — Connector falhava com
+  `Remote migration versions not found in local migrations directory` (50
+  remote-only). Renomeou 25 arquivos locais para o version id remoto quando
+  o `name` batia; 25 markers no-op `*_remote_snapshot.sql`; repair applied
+  em `20260911110000` (zelomenu modifier components já no schema).
+  `migration list --linked` ficou 158 synced / 0 drift. Doc em
+  `docs/operations/MIGRATION-HISTORY-RECONCILIATION-2026-09-19.md`.
+
 - [x] FX-MESAS-ONLINE-WRITE-GATE-01 (2026-09-19) — Mesas usava
   `getOfflineContext().enabled` (true em aparelho preparado mesmo com
   internet) e caía no path offline. Agora usa `isOfflineWriteActive()` —
@@ -42,8 +50,8 @@
 - [x] FX-IFOOD-BEMSERVIDO-ACCEPT-CONCLUDE-01 (2026-09-19) — Chat encaminha
   aceite/avanço iFood para `enqueue_ifood_order_command_v1`. Em rota
   MERCHANT: intent `verify_delivery_code` + `POST /verifyDeliveryCode`.
-  Migration `20260919131000_ifood_verify_delivery_code.sql` aplicada no
-  banco (`intent` check + RPC). Worker precisa de imagem nova.
+  Migration `20260919132439_ifood_verify_delivery_code.sql` aplicada no
+  banco (`intent` check + RPC; version id remoto). Worker precisa de imagem nova.
 
 - [x] FX-IFOOD-WORKER-IMAGE-PAYMENTMETHODS-01 (2026-09-17) — imagem Docker do
   worker iFood saía com `MODULE_NOT_FOUND` no boot: `orderNormalizer.js`
@@ -308,7 +316,7 @@
   restantes (Preparar este aparelho / Definir como principal) eram o único
   obstáculo entre uma loja nova e o modo offline, sem motivo de billing para
   nenhuma das duas. `offline_settings.enabled` agora nasce `true`
-  (`20260907150000_offline_zero_config.sql`), todo aparelho se registra
+  (`20260908031010_offline_zero_config.sql`), todo aparelho se registra
   sozinho na primeira sessão, e o snapshot de caixa/mesas é aquecido em
   segundo plano nas telas online normais — mesmo padrão que o catálogo já
   usava. `readiness` passou de um carimbo único para timestamp por peça

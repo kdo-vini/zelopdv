@@ -20,7 +20,7 @@ e limites do lint estão detalhados em `docs/audits/2026-09-04-zelopdv.md`.
 ## Fundação de persistência iFood — migration local de 2026-09-15
 
 A Task 3 acrescenta a migration ainda não aplicada
-`supabase/migrations/20260916023512_ifood_mvp_foundation.sql`. O estado de
+`supabase/migrations/20260916160223_ifood_mvp_foundation.sql`. O estado de
 integração fica no schema privado `ifood_internal`, separado do contrato
 exposto do app, com seis tabelas:
 

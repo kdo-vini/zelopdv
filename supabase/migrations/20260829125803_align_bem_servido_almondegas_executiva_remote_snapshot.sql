@@ -1,0 +1,9 @@
+-- Remote-history reconciliation marker.
+--
+-- Migration 20260829125803 (align_bem_servido_almondegas_executiva) was applied in the linked project before this
+-- repository tracked the corresponding SQL under this version id. The
+-- authoritative remote state remains in the production schema.
+--
+-- Keep this marker forward-only and do not replay the historical DDL here.
+-- This file exists only so the CLI / connector can reconcile history without
+-- executing an unknown historical change.
