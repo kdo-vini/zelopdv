@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const migration = readFileSync(
-  resolve('supabase/migrations/20260825123000_customer_order_links.sql'),
+  resolve('supabase/migrations/20260826110640_customer_order_links.sql'),
   'utf8',
 ).replace(/\r\n/g, '\n').toLowerCase();
 const compactMigration = migration.replace(/\s+/g, ' ');

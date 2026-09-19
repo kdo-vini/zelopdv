@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const migration = readFileSync(resolve(
-  'supabase/migrations/20260830202349_confirm_whatsapp_zelo_order_atomic_v1.sql',
+  'supabase/migrations/20260831124921_confirm_whatsapp_zelo_order_atomic_v1.sql',
 ), 'utf8').replace(/\r\n/g, '\n').toLowerCase();
 const runtimeVerifier = readFileSync(resolve(
   'supabase/verification/whatsapp_atomic_confirmation_v1_runtime.sql',

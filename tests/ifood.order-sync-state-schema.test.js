@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 const migrationDir = resolve('supabase/migrations');
 const migrationName = readdirSync(migrationDir)
-  .filter((name) => /^20260917004212_ifood_order_sync_state\.sql$/.test(name))
+  .filter((name) => /^20260917012021_ifood_order_sync_state\.sql$/.test(name))
   .at(-1);
 const migrationPath = migrationName ? resolve(migrationDir, migrationName) : null;
 const sql = migrationPath

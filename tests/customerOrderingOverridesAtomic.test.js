@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const migration = readFileSync(resolve(
-  'supabase/migrations/20260830211500_patch_customer_ordering_overrides_atomic.sql',
+  'supabase/migrations/20260831124850_patch_customer_ordering_overrides_atomic.sql',
 ), 'utf8').replace(/\r\n/g, '\n').toLowerCase();
 
 describe('patch atômico dos padrões de pedido do cliente', () => {

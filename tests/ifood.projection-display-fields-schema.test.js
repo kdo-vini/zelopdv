@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const migrationPath = resolve(
-  'supabase/migrations/20260917005456_ifood_projection_display_fields.sql'
+  'supabase/migrations/20260917012052_ifood_projection_display_fields.sql'
 );
 const migrationSql = readFileSync(migrationPath, 'utf8')
   .replace(/\r\n/g, '\n')

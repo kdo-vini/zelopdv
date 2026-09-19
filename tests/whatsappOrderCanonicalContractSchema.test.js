@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const migrationPath = resolve(
-  'supabase/migrations/20260829120000_whatsapp_order_canonical_contract.sql',
+  'supabase/migrations/20260831124841_whatsapp_order_canonical_contract.sql',
 );
 const migration = existsSync(migrationPath)
   ? readFileSync(migrationPath, 'utf8').replace(/\r\n/g, '\n').toLowerCase()

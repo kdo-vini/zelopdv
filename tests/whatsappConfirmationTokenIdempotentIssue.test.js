@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const migration = readFileSync(
-  resolve('supabase/migrations/20260830195410_whatsapp_confirmation_token_idempotent_issue.sql'),
+  resolve('supabase/migrations/20260831124846_whatsapp_confirmation_token_idempotent_issue.sql'),
   'utf8',
 ).replace(/\r\n/g, '\n').toLowerCase();
 const compactMigration = migration.replace(/\s+/g, ' ');

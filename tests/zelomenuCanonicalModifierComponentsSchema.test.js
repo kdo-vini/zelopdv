@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const bridgeName = '20260911110000_zelomenu_canonical_modifier_components.sql';
-const pauseName = '20260911120000_zelomenu_canonical_pause.sql';
+const pauseName = '20260911113654_zelomenu_canonical_pause.sql';
 const bridge = readFileSync(resolve('supabase/migrations', bridgeName), 'utf8')
   .replace(/\r\n/g, '\n')
   .toLowerCase();
