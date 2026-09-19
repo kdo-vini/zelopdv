@@ -1,5 +1,11 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-19 — iFood: som de campainha
+
+Chegada de **qualquer pedido novo** na fila toca
+`static/sounds/ifood-arrival.mp3` (campainha) no PDV `/app/pedidos`. Mesmo
+asset no ZeloChat (`public/sounds/ifood-arrival.mp3`) na Produção.
+
 ## Sessão 2026-09-19 — Mesas: drag no mapa + ordem natural
 
 Mapa `/app/mesas`: toque abre comanda; arrastar (filtro Todas) grava

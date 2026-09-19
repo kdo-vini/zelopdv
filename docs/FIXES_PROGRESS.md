@@ -1,5 +1,9 @@
 # Fixes Progress
 
+- [x] FX-IFOOD-ARRIVAL-DOORBELL-01 (2026-09-19) — campainha
+  `ifood-arrival.mp3` no PDV e no ZeloChat para **qualquer** pedido novo
+  na fila (não só iFood).
+
 - [x] FX-MESAS-MAP-DRAG-01 (2026-09-19) — `/app/mesas`: drag com threshold
   reordena cards (filtro Todas); clique/toque abre comanda. Coluna
   `mesas.mapa_ordem` + backfill natural; create em gestão usa max+1;

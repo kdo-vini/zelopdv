@@ -1,49 +1,94 @@
-import { isIfoodOrder } from './ifoodPresentation.js';
+const SOUND_PATH = '/sounds/ifood-arrival.mp3';
+const DEFAULT_MAX_AGE_MS = 15 * 60 * 1000;
+
+function createdAtMs(order) {
+  const raw = order?.criado_em || order?.created_at || order?.createdAt;
+  if (raw instanceof Date) return raw.getTime();
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'string' && raw.trim()) {
+    const parsed = Date.parse(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
 
 /**
- * iFood orders that just entered review since the last queue snapshot.
+ * Orders that just appeared since the last queue snapshot (any channel).
  * First paint must pass an empty `previous` and ignore the result — the
  * baseline is "already on the board", not a new arrival.
+ *
+ * Skips terminal statuses and rows older than `maxAgeMs` so a lookback
+ * refresh does not ding for yesterday's orders.
  */
-export function findNewIfoodReviewOrders(previous, next) {
+export function findNewArrivalOrders(previous, next, { now = Date.now(), maxAgeMs = DEFAULT_MAX_AGE_MS } = {}) {
   const previousIds = new Set((Array.isArray(previous) ? previous : []).map((order) => order?.id).filter(Boolean));
-  return (Array.isArray(next) ? next : []).filter((order) => (
-    isIfoodOrder(order)
-    && order?.status === 'pending_review'
-    && order?.id
-    && !previousIds.has(order.id)
-  ));
+  const terminal = new Set(['delivered', 'cancelled', 'rejected', 'closed']);
+  return (Array.isArray(next) ? next : []).filter((order) => {
+    if (!order?.id || previousIds.has(order.id)) return false;
+    if (terminal.has(order.status)) return false;
+    const created = createdAtMs(order);
+    if (created != null && now - created > maxAgeMs) return false;
+    return true;
+  });
 }
 
-function beep(context, { frequency, startAt, duration, gainValue }) {
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  oscillator.type = 'sine';
-  oscillator.frequency.value = frequency;
-  gain.gain.setValueAtTime(gainValue, startAt);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-  oscillator.connect(gain);
-  gain.connect(context.destination);
-  oscillator.start(startAt);
-  oscillator.stop(startAt + duration);
+/** @deprecated Use findNewArrivalOrders — kept for older imports/tests. */
+export function findNewIfoodReviewOrders(previous, next, options) {
+  return findNewArrivalOrders(previous, next, options);
 }
 
-/** Two short tones. Never throws — autoplay block is a no-op. */
-export function playIfoodArrivalChime() {
-  if (typeof window === 'undefined') return;
-  const Ctor = window.AudioContext || window.webkitAudioContext;
-  if (typeof Ctor !== 'function') return;
+function createArrivalAudio() {
+  if (typeof window === 'undefined' || typeof Audio !== 'function') return null;
+  const el = new Audio(SOUND_PATH);
+  el.preload = 'auto';
+  el.volume = 0.85;
+  return el;
+}
+
+/**
+ * Satisfies autoplay policy after a user gesture (pointerdown). Safe to call
+ * more than once; failures are ignored.
+ */
+export async function unlockOrderArrivalSound() {
+  const el = createArrivalAudio();
+  if (!el) return;
   try {
-    const context = new Ctor();
-    const now = context.currentTime;
-    beep(context, { frequency: 880, startAt: now, duration: 0.16, gainValue: 0.12 });
-    beep(context, { frequency: 1174, startAt: now + 0.2, duration: 0.22, gainValue: 0.12 });
-    window.setTimeout(() => {
-      void context.close?.();
-    }, 700);
+    el.muted = true;
+    await el.play();
+    el.pause();
+    el.currentTime = 0;
   } catch {
-    // Autoplay or missing Web Audio — the visual queue still works.
+    // Still blocked — next arrival will try again after another gesture.
+  } finally {
+    el.muted = false;
   }
 }
 
-export default { findNewIfoodReviewOrders, playIfoodArrivalChime };
+/** @deprecated Use unlockOrderArrivalSound. */
+export const unlockIfoodArrivalSound = unlockOrderArrivalSound;
+
+/** Doorbell MP3 for any new queue order. Never throws — autoplay block is a no-op. */
+export function playOrderArrivalChime() {
+  const el = createArrivalAudio();
+  if (!el) return;
+  try {
+    el.currentTime = 0;
+    void el.play().catch(() => {
+      // Autoplay or missing asset — the visual queue still works.
+    });
+  } catch {
+    // ignore
+  }
+}
+
+/** @deprecated Use playOrderArrivalChime. */
+export const playIfoodArrivalChime = playOrderArrivalChime;
+
+export default {
+  findNewArrivalOrders,
+  findNewIfoodReviewOrders,
+  playOrderArrivalChime,
+  playIfoodArrivalChime,
+  unlockOrderArrivalSound,
+  unlockIfoodArrivalSound
+};

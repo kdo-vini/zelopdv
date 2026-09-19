@@ -38,7 +38,7 @@
     fetchIfoodSyncState,
     sendIfoodCommand
   } from '$lib/orders/ifoodCommandsClient.js';
-  import { findNewIfoodReviewOrders, playIfoodArrivalChime } from '$lib/orders/ifoodArrivalSound.js';
+  import { findNewArrivalOrders, playOrderArrivalChime, unlockOrderArrivalSound } from '$lib/orders/ifoodArrivalSound.js';
   import OrderSourceBadge from '$lib/components/orders/OrderSourceBadge.svelte';
   import IfoodSyncState from '$lib/components/orders/IfoodSyncState.svelte';
   import { CheckCircle2, CreditCard, MapPin, Printer, X } from 'lucide-svelte';
@@ -124,21 +124,7 @@
     operadorUserId = auth.userId;
     await startOfflineRuntime({ ...auth, ownerUserId });
     const unlockAudio = () => {
-      try {
-        const Ctor = window.AudioContext || window.webkitAudioContext;
-        if (typeof Ctor !== 'function') return;
-        const ctx = new Ctor();
-        void ctx.resume?.();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        gain.gain.value = 0;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.01);
-      } catch {
-        // autoplay policy — next arrival still tries
-      }
+      void unlockOrderArrivalSound();
       window.removeEventListener('pointerdown', unlockAudio);
     };
     window.addEventListener('pointerdown', unlockAudio, { once: true });
@@ -314,8 +300,8 @@
     try {
       const proximosPedidos = await refreshOrderSnapshot(supabase, ownerUserId, dadosEmpresa?.id);
       queueUnavailable = navigator.onLine === false;
-      if (filaBaselinePronta && findNewIfoodReviewOrders(pedidos, proximosPedidos).length > 0) {
-        playIfoodArrivalChime();
+      if (filaBaselinePronta && findNewArrivalOrders(pedidos, proximosPedidos).length > 0) {
+        playOrderArrivalChime();
       }
       filaBaselinePronta = true;
       pedidos = proximosPedidos;
