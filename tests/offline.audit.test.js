@@ -48,7 +48,8 @@ describe('offline audit — reproductions of current limitations', () => {
   it('enabled Mesa close saves locally without calling remote writes, and ignores another close', async () => {
     const localCommand = vi.fn(async () => ({ operation: { operationId: '12345678-stable-key' } }));
     const state = {
-      closing: false, getOfflineContext: () => ({ enabled: true }),
+      closing: false,
+      isOfflineWriteActive: () => true,
       readSnapshot: async () => null, ownerUserId: 'owner',
       comanda: { id: 'c', status: 'aberta', num_pessoas: 1 }, mesa: { numero: 1 },
       itens: [{ nome_produto: 'Lanche', quantidade: 1, preco_unitario: 10 }], pagamentosParciais: [],
@@ -56,6 +57,7 @@ describe('offline audit — reproductions of current limitations', () => {
       pessoaFiadoId: null, pagamentos: [], desconto: 0, couvert: 0, taxaPct: 0, taxaValor: 0,
       idCaixaAberto: 1, troco: 0, trocoMulti: 0, nomeEmpresa: 'Loja', localCommand,
       newMesaPayments: () => [{ forma_pagamento: 'dinheiro', valor: 10 }],
+      errorMessageFrom: (error, fallback) => error?.message || fallback,
       addToast: vi.fn(), supabase: { rpc: vi.fn(), from: vi.fn() },
     };
     const { ctx, call } = loadFunction('src/routes/app/mesas/[id]/+page.svelte', 'fecharMesa', state);
@@ -87,7 +89,7 @@ describe('offline audit — reproductions of current limitations', () => {
     const goto = vi.fn();
     const { ctx, call } = loadFunction('src/routes/app/mesas/+page.svelte', 'abrirMesa', {
       opening: null, ownerUserId: 'owner-a', goto, addToast: vi.fn(),
-      getOfflineContext: () => ({ enabled: true }),
+      isOfflineWriteActive: () => true,
       loadMesaState: async () => ({ details: { 1: { comanda: { id: 'c1', status: 'aberta' } } } }),
       submitMesaOperation: vi.fn(),
       supabase: { from: () => query({ data: null, error: { message: 'Failed to fetch' } }) },
@@ -101,7 +103,7 @@ describe('offline audit — reproductions of current limitations', () => {
   it('online close retries the same atomic intention after an uncertain response', async () => {
     const offlineRequest = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
     const state = {
-      closing: false, getOfflineContext: () => ({ enabled: false }),
+      closing: false, isOfflineWriteActive: () => false,
       comanda: { id: 'stable-comanda', status: 'aberta', offline_revision: 4 }, mesa: { numero: 1 },
       itens: [{ nome_produto: 'Lanche', quantidade: 1, preco_unitario: 10 }], pagamentosParciais: [],
       saldoMesa: 10, total: 10, subtotal: 10, multiPag: false, formaPagamento: 'dinheiro', valorRecebido: 10,
