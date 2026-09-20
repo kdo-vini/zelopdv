@@ -31,8 +31,16 @@ function validPositiveInteger(value) {
 function providerErrorCode(error, fallback) {
   if (typeof error?.code === 'string' && SAFE_PROVIDER_CODE.test(error.code)) return error.code;
   if (Number.isInteger(error?.status) && error.status === 401) return 'IFOOD_HTTP_UNAUTHORIZED';
-  if (Number.isInteger(error?.status) && error.status >= 400 && error.status < 500) return 'IFOOD_HTTP_CLIENT';
+  if (Number.isInteger(error?.status) && error.status >= 400 && error.status < 500) {
+    return `IFOOD_HTTP_${error.status}`;
+  }
   return fallback;
+}
+
+function sanitizedHttpResponse(errorOrResponse) {
+  const status = errorOrResponse?.status;
+  if (!Number.isInteger(status)) return null;
+  return { httpStatus: status };
 }
 
 function payloadObject(row) {
@@ -210,11 +218,16 @@ export function createIfoodCommandProcessor({
         };
       } else {
         category = 'terminal';
+        const verifyCodeRejected = row?.intent === 'verify_delivery_code';
         finishInput = {
           outcome: 'failed_terminal',
-          errorCode: providerErrorCode(providerResponse, 'IFOOD_ACTION_NOT_ACCEPTED'),
-          errorMessage: 'iFood command was not accepted',
-          response: null,
+          errorCode: verifyCodeRejected
+            ? 'IFOOD_DELIVERY_CODE_INVALID'
+            : providerErrorCode(providerResponse, 'IFOOD_ACTION_NOT_ACCEPTED'),
+          errorMessage: verifyCodeRejected
+            ? 'iFood delivery code was not accepted'
+            : 'iFood command was not accepted',
+          response: sanitizedHttpResponse(providerResponse),
           nextAttemptAt: null,
           signal
         };
@@ -226,7 +239,7 @@ export function createIfoodCommandProcessor({
           outcome: 'failed_retryable',
           errorCode: providerErrorCode(error, 'IFOOD_COMMAND_RETRYABLE'),
           errorMessage: 'iFood command will be retried',
-          response: null,
+          response: sanitizedHttpResponse(error),
           nextAttemptAt: nextAttempt(effectiveRetryPolicy, row.attempts),
           signal
         };
@@ -236,7 +249,7 @@ export function createIfoodCommandProcessor({
           outcome: 'failed_terminal',
           errorCode: providerErrorCode(error, 'IFOOD_COMMAND_ERROR'),
           errorMessage: 'iFood command failed',
-          response: null,
+          response: sanitizedHttpResponse(error),
           nextAttemptAt: null,
           signal
         };

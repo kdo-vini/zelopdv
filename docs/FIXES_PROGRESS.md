@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [x] FX-IFOOD-VERIFY-DELIVERY-ERROR-UX-01 (2026-09-19) — Confirmar entrega
+  iFood: 4xx passa a `IFOOD_HTTP_{status}` (+ `httpStatus` sanitizado);
+  `valid:false` → `IFOOD_DELIVERY_CODE_INVALID`; UI
+  (`ifoodCommandFailureCopy` / `ifoodSyncPresentation`) mostra mensagem
+  amigável específica sem códigos tech; `verify_delivery_code` some do
+  banner quando status já é `delivered`. Testes presentation / processor /
+  http-adapter. Worker precisa redeploy para códigos novos.
+
 - [x] FX-SUPABASE-MIGRATION-HISTORY-01 (2026-09-19) — Connector falhava com
   `Remote migration versions not found in local migrations directory` (50
   remote-only). Renomeou 25 arquivos locais para o version id remoto quando

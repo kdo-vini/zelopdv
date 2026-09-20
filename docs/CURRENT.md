@@ -1,5 +1,20 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-19 — iFood: erro amigável em confirmar entrega
+
+Pedido Bem Servido #1596 (Nayana): `verify_delivery_code` fechou
+`failed_terminal` com `IFOOD_HTTP_CLIENT` (4xx sem status). Agora:
+
+1. Transport grava `IFOOD_HTTP_{status}` (ex. 412/400) + `response.httpStatus`.
+2. Código inválido (`valid:false`) → `IFOOD_DELIVERY_CODE_INVALID`.
+3. PDV mapeia `errorCode` → texto amigável específico (sem códigos tech).
+4. Banner some se o pedido já estiver `delivered` (Portal).
+5. Copy do 412 deixa claro que **não é demora de fetch** — pré-condição;
+   próximo passo = Portal do Parceiro.
+
+Ops #1596: concluir no Portal. Deploy PDV + **redeploy ifood-worker** para
+códigos novos nas próximas falhas.
+
 ## Sessão 2026-09-19 — Zelinho: catálogo completo, finanças estimadas e playbook de crescimento
 
 O Zelinho Gerente passou a ter repertório de consultoria de vendas/marketing e

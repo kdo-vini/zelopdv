@@ -362,7 +362,7 @@ describe('createIfoodRequestClient', () => {
     });
 
     await expect(request({ method: 'GET', path: '/merchant/v1.0/merchants' })).rejects.toMatchObject({
-      code: 'IFOOD_HTTP_CLIENT',
+      code: 'IFOOD_HTTP_400',
       status: 400,
       retryable: false
     });

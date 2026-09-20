@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   IFOOD_REVIEW_SLA_MINUTES,
   ifoodCanCancel,
+  ifoodCommandFailureCopy,
   ifoodHandoffCodes,
   ifoodHasPendingCommand,
   ifoodPrimaryIntent,
@@ -129,9 +130,50 @@ describe('ifoodSyncPresentation', () => {
     expect(ifoodSyncPresentation(failedConfirm, order({ status: 'pending_review' }))).toMatchObject({ tone: 'error' });
     const expiredCancel = { connectionStatus: 'active', command: { intent: 'cancel', status: 'expired' } };
     expect(ifoodSyncPresentation(expiredCancel, order({ status: 'cancelled' }))).toBeNull();
+    const failedVerify = {
+      connectionStatus: 'active',
+      command: { intent: 'verify_delivery_code', status: 'failed_terminal', errorCode: 'IFOOD_HTTP_CLIENT' }
+    };
+    expect(ifoodSyncPresentation(failedVerify, order({ status: 'out_for_delivery' }))).toMatchObject({ tone: 'error' });
+    expect(ifoodSyncPresentation(failedVerify, order({ status: 'delivered' }))).toBeNull();
     // Connection problems are never hidden by the order status.
     expect(ifoodSyncPresentation({ connectionStatus: 'paused', command: failedConfirm.command }, order({ status: 'accepted' })))
       .toMatchObject({ contingency: true });
+  });
+
+  it('maps terminal failures to friendly, specific operator copy (never raw provider codes)', () => {
+    const verify412 = {
+      connectionStatus: 'active',
+      command: { intent: 'verify_delivery_code', status: 'failed_terminal', errorCode: 'IFOOD_HTTP_412' }
+    };
+    expect(ifoodSyncPresentation(verify412, order({ status: 'out_for_delivery' }))).toMatchObject({
+      tone: 'error',
+      label: 'Confirmação bloqueada no iFood',
+      contingency: true
+    });
+    const detail412 = ifoodSyncPresentation(verify412, order({ status: 'out_for_delivery' })).detail;
+    expect(detail412).not.toMatch(/IFOOD_/);
+    expect(detail412).not.toMatch(/instantes|em breve|aguarde/i);
+    expect(detail412).toMatch(/Portal do Parceiro/);
+
+    const invalidCode = {
+      connectionStatus: 'active',
+      command: { intent: 'verify_delivery_code', status: 'failed_terminal', errorCode: 'IFOOD_DELIVERY_CODE_INVALID' }
+    };
+    expect(ifoodSyncPresentation(invalidCode, order({ status: 'out_for_delivery' }))).toMatchObject({
+      label: 'Código de entrega não aceito'
+    });
+
+    expect(ifoodCommandFailureCopy({
+      intent: 'verify_delivery_code',
+      status: 'failed_terminal',
+      errorCode: 'IFOOD_HTTP_CLIENT'
+    })).toMatchObject({ label: 'Não foi possível confirmar a entrega' });
+
+    expect(ifoodCommandFailureCopy({
+      intent: 'confirm',
+      status: 'expired'
+    }).label).toBe('Confirmação demorou demais');
   });
 
   it('detects an in-flight command', () => {

@@ -139,11 +139,11 @@ describe('createIfoodCommandProcessor', () => {
     expect(JSON.stringify(logger.error.mock.calls)).not.toContain(secret);
   });
 
-  it('marks a non-retryable client error failed_terminal with a stable code', async () => {
+  it('marks a non-retryable client error failed_terminal with a status-specific code', async () => {
     const repository = makeRepository([makeRow()]);
     const adapter = makeAdapter();
     adapter.confirm.mockRejectedValueOnce(Object.assign(new Error('provider-detail-fixture'), {
-      code: 'IFOOD_HTTP_CLIENT',
+      code: 'IFOOD_HTTP_400',
       retryable: false,
       status: 400,
     }));
@@ -153,7 +153,30 @@ describe('createIfoodCommandProcessor', () => {
 
     expect(repository.finishCommand).toHaveBeenCalledWith(expect.objectContaining({
       outcome: 'failed_terminal',
-      errorCode: 'IFOOD_HTTP_CLIENT',
+      errorCode: 'IFOOD_HTTP_400',
+      response: { httpStatus: 400 },
+    }));
+    expect(summary.terminal).toBe(1);
+  });
+
+  it('marks verify_delivery_code not-accepted as IFOOD_DELIVERY_CODE_INVALID', async () => {
+    const repository = makeRepository([makeRow({
+      intent: 'verify_delivery_code',
+      payload: { code: '7969' }
+    })]);
+    const adapter = makeAdapter();
+    adapter.verifyDeliveryCode.mockResolvedValueOnce({
+      accepted: false,
+      status: 'http_200'
+    });
+    const processor = createIfoodCommandProcessor({ repository, adapter, workerId: 'worker-1' });
+
+    const summary = await processor.runCommandCycle({ signal: SIGNAL });
+
+    expect(adapter.verifyDeliveryCode).toHaveBeenCalled();
+    expect(repository.finishCommand).toHaveBeenCalledWith(expect.objectContaining({
+      outcome: 'failed_terminal',
+      errorCode: 'IFOOD_DELIVERY_CODE_INVALID',
     }));
     expect(summary.terminal).toBe(1);
   });

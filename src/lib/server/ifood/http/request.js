@@ -29,6 +29,11 @@ export class IfoodHttpError extends Error {
 
 function codeForClientStatus(status) {
   if (status === 401) return 'IFOOD_HTTP_UNAUTHORIZED';
+  // Keep the numeric status in the code so operators/UI can map 412 vs 400
+  // without reading a response body (bodies stay off the error object).
+  if (Number.isInteger(status) && status >= 400 && status < 500) {
+    return `IFOOD_HTTP_${status}`;
+  }
   return 'IFOOD_HTTP_CLIENT';
 }
 

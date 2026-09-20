@@ -248,8 +248,98 @@ const INTENT_SATISFIED_BY_STATUS = Object.freeze({
   start_preparation: new Set(['preparing', 'ready', 'out_for_delivery', 'delivered']),
   ready_to_pickup: new Set(['ready', 'out_for_delivery', 'delivered']),
   dispatch: new Set(['out_for_delivery', 'delivered']),
+  verify_delivery_code: new Set(['delivered']),
   cancel: new Set(['cancelled'])
 });
+
+/**
+ * Operator-facing copy for a terminal/expired command. Never surfaces raw
+ * provider codes like `IFOOD_HTTP_412` — those stay in syncState for support.
+ */
+export function ifoodCommandFailureCopy(command, actionLabel = 'ação') {
+  const intent = command?.intent;
+  const errorCode = text(command?.errorCode);
+  const expired = command?.status === 'expired';
+  const portal = 'Portal do Parceiro iFood';
+
+  if (expired) {
+    return {
+      label: 'Confirmação demorou demais',
+      detail: `O iFood não respondeu a tempo para ${actionLabel}. Tente de novo ou use o ${portal}.`
+    };
+  }
+
+  if (
+    errorCode === 'IFOOD_DELIVERY_CODE_INVALID'
+    || (intent === 'verify_delivery_code' && errorCode === 'IFOOD_ACTION_NOT_ACCEPTED')
+  ) {
+    return {
+      label: 'Código de entrega não aceito',
+      detail: `Confira o código de 4 dígitos no app do cliente e tente de novo. Se continuar falhando, use o ${portal}.`
+    };
+  }
+
+  if (errorCode === 'IFOOD_HTTP_412') {
+    // 412 = precondition failed (pedido ainda não elegível), not API latency.
+    if (intent === 'verify_delivery_code') {
+      return {
+        label: 'Confirmação bloqueada no iFood',
+        detail: `O iFood recusou a confirmação neste estado do pedido — não é demora de conexão. Finalize neste pedido no ${portal}.`
+      };
+    }
+    return {
+      label: 'Ação bloqueada no iFood',
+      detail: `O iFood recusou: ${actionLabel} — o pedido ainda não está elegível por aqui. Finalize no ${portal}.`
+    };
+  }
+
+  if (errorCode === 'IFOOD_HTTP_400' || errorCode === 'IFOOD_HTTP_422') {
+    if (intent === 'verify_delivery_code') {
+      return {
+        label: 'Código de entrega recusado',
+        detail: `O iFood recusou este código. Confira os 4 dígitos com o cliente e tente de novo, ou conclua no ${portal}.`
+      };
+    }
+    return {
+      label: 'Pedido rejeitou a ação',
+      detail: `O iFood não aceitou: ${actionLabel}. Atualize a fila e tente de novo, ou use o ${portal}.`
+    };
+  }
+
+  if (errorCode === 'IFOOD_HTTP_403') {
+    return {
+      label: 'Sem permissão nesta ação do iFood',
+      detail: `Não foi possível concluir ${actionLabel} por aqui. Use o ${portal}.`
+    };
+  }
+
+  if (errorCode === 'IFOOD_HTTP_404') {
+    return {
+      label: 'Pedido não encontrado no iFood',
+      detail: `Atualize a fila. Se o pedido ainda existir no iFood, finalize no ${portal}.`
+    };
+  }
+
+  if (errorCode === 'IFOOD_HTTP_401' || errorCode === 'IFOOD_HTTP_UNAUTHORIZED') {
+    return {
+      label: 'Conexão com o iFood precisa renovar',
+      detail: `Aguarde a reconexão automática e tente ${actionLabel} de novo, ou use o ${portal}.`
+    };
+  }
+
+  // Legacy bucket from before status-specific codes were recorded.
+  if (errorCode === 'IFOOD_HTTP_CLIENT' && intent === 'verify_delivery_code') {
+    return {
+      label: 'Não foi possível confirmar a entrega',
+      detail: `Tente de novo com o código do cliente. Se falhar outra vez, conclua no ${portal}.`
+    };
+  }
+
+  return {
+    label: 'O iFood não confirmou',
+    detail: `Tente ${actionLabel} de novo ou use o ${portal}.`
+  };
+}
 
 /**
  * True when the order already reflects the command's effect, e.g. an operator
@@ -290,14 +380,16 @@ export function ifoodSyncPresentation(syncState, order = null) {
     case 'failed_retryable':
       return { tone: 'warning', label: 'Tentando novamente', detail: `Ainda não foi possível enviar: ${actionLabel}.`, pending: true, contingency: false };
     case 'failed_terminal':
-    case 'expired':
+    case 'expired': {
+      const copy = ifoodCommandFailureCopy(command, actionLabel);
       return {
         tone: 'error',
-        label: 'O iFood não confirmou',
-        detail: `Tente ${actionLabel} de novo ou use o Portal do Parceiro iFood.`,
+        label: copy.label,
+        detail: copy.detail,
         pending: false,
         contingency: true
       };
+    }
     default:
       return null;
   }
