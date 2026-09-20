@@ -20,6 +20,7 @@
   async function reactivateAccount() {
     reactivating = true;
     try {
+      if (!supabase) throw new Error('Configuração do Supabase ausente.');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error('Sessão expirada.');
       const res = await fetch('/api/account/reactivate', {
@@ -40,6 +41,7 @@
   onMount(async () => {
     try {
       await waitAuthReady();
+      if (!supabase) return;
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const userId = session.user.id;

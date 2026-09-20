@@ -14,7 +14,7 @@ function init() {
   initialized = true;
 
   // Listener: keeps session fresh
-  supabase?.auth.onAuthStateChange((event, sess) => {
+  supabase?.auth?.onAuthStateChange((event, sess) => {
     sessionStore.set(sess);
     if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'PASSWORD_RECOVERY'].includes(event)) {
       authReadyStore.set(true);
@@ -29,10 +29,13 @@ function init() {
   });
 
   // Prime session (with timeout to avoid hanging)
-  const getSessionWithTimeout = (ms = 3500) => Promise.race([
-    supabase.auth.getSession(),
-    new Promise((resolve) => setTimeout(() => resolve({ data: { session: null } }), ms))
-  ]);
+  const getSessionWithTimeout = (ms = 3500) => {
+    if (!supabase) return Promise.resolve({ data: { session: null } });
+    return Promise.race([
+      supabase.auth.getSession(),
+      new Promise((resolve) => setTimeout(() => resolve({ data: { session: null } }), ms))
+    ]);
+  };
 
   (async () => {
     try {

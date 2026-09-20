@@ -35,6 +35,43 @@ function formatPostalCode(value) {
     : sanitizeVisibleText(value) || null;
 }
 
+function titleCaseToken(value) {
+  return String(value)
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, (character) => character.toUpperCase());
+}
+
+/**
+ * When iFood (or another channel) stores card brand / wallet name on the
+ * method snapshot, surface it next to the base label — e.g. OTHER + Visa →
+ * "Outro (Visa)", DIGITAL_WALLET + Mercado Pago → "Carteira digital (Mercado Pago)".
+ */
+function firstPaymentMethodDetail(payment) {
+  const methods = Array.isArray(payment?.methods) ? payment.methods : [];
+  if (methods.length !== 1) return null;
+  const method = methods[0];
+  const brand = typeof method?.card?.brand === 'string' ? method.card.brand.trim() : '';
+  if (brand) return titleCaseToken(brand);
+  const wallet = typeof method?.wallet?.name === 'string' ? method.wallet.name.trim() : '';
+  if (wallet) return titleCaseToken(wallet);
+  return null;
+}
+
+function buildPaymentLabel(methodId, payment) {
+  if (payment?.isSplit || (Array.isArray(payment?.methods) && payment.methods.length > 1)) {
+    return formatPaymentMethod('multiplo');
+  }
+
+  const base = formatPaymentMethod(methodId);
+  const detail = firstPaymentMethodDetail(payment);
+  if (!detail) return base;
+  if (base.toLowerCase().includes(detail.toLowerCase())) return base;
+  return `${base} (${detail})`;
+}
+
 export function getOrderDeliveryPresentation(order) {
   const fulfillment = order?.fulfillment || {};
   const isDelivery = canonicalFulfillmentMode(order) === 'delivery';
@@ -86,7 +123,9 @@ export function getOrderDeliveryPresentation(order) {
 export function getOrderPaymentPresentation(order) {
   const payment = order?.payment || {};
   const method = canonicalPaymentMethod(order);
-  const id = normalizePaymentMethodId(method);
+  const id = payment?.isSplit || (Array.isArray(payment?.methods) && payment.methods.length > 1)
+    ? normalizePaymentMethodId('multiplo')
+    : normalizePaymentMethodId(method);
   const isCash = isCashPaymentMethod(method);
   const received = numberOrNull(firstValue(payment, [
     'cashReceived', 'cash_received', 'valorRecebido', 'valor_recebido', 'amountReceived', 'amount_received'
@@ -97,10 +136,51 @@ export function getOrderPaymentPresentation(order) {
 
   return {
     id,
-    label: formatPaymentMethod(method),
+    label: buildPaymentLabel(method, payment),
     isCash,
     received,
     change,
     hasCashSettlement: isCash && (received !== null || change !== null)
+  };
+}
+
+/**
+ * iFood rarely exposes the real cellphone (LGPD). When a localizer is present,
+ * `number` is the 0800 bridge used to reach the customer — not iFood support.
+ */
+export function getOrderCustomerPhonePresentation(order) {
+  const ifood = order?.ifood && typeof order.ifood === 'object' ? order.ifood : {};
+  const number = typeof ifood.phoneNumber === 'string' && ifood.phoneNumber.trim()
+    ? ifood.phoneNumber.trim()
+    : null;
+  const localizer = typeof ifood.phoneLocalizer === 'string' && ifood.phoneLocalizer.trim()
+    ? ifood.phoneLocalizer.trim()
+    : null;
+  const fallback = typeof order?.customer_phone === 'string' && order.customer_phone.trim()
+    ? order.customer_phone.trim()
+    : null;
+
+  if (!number && !localizer && !fallback) {
+    return { kind: 'none', number: null, localizer: null, label: null, hint: null, display: null };
+  }
+
+  if (localizer && number) {
+    return {
+      kind: 'ifood_bridge',
+      number,
+      localizer,
+      label: 'Contato do cliente',
+      hint: 'Ao ligar, digite o localizador para falar com o cliente.',
+      display: `${number} (localizador ${localizer})`
+    };
+  }
+
+  return {
+    kind: 'direct',
+    number: number || fallback,
+    localizer: null,
+    label: 'Telefone do cliente',
+    hint: null,
+    display: number || fallback
   };
 }

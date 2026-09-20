@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { mapCanonicalOrder } from '../src/lib/onlineOrders.js';
-import { getOrderDeliveryPresentation, getOrderPaymentPresentation } from '../src/lib/orderPresentation.js';
+import { getOrderDeliveryPresentation, getOrderPaymentPresentation, getOrderCustomerPhonePresentation } from '../src/lib/orderPresentation.js';
 import {
   fetchIfoodCancellationReasons,
   fetchIfoodSyncState,
@@ -103,6 +103,16 @@ describe('mapCanonicalOrder with real order source', () => {
       postalCode: '01001-000'
     });
     expect(mapped.customer_phone).toBe('0800 000 0000 (localizador 12345678)');
+    expect(mapped.ifood).toMatchObject({
+      phoneNumber: '0800 000 0000',
+      phoneLocalizer: '12345678'
+    });
+    expect(getOrderCustomerPhonePresentation(mapped)).toMatchObject({
+      kind: 'ifood_bridge',
+      number: '0800 000 0000',
+      localizer: '12345678',
+      label: 'Contato do cliente'
+    });
   });
 
   it('turns flat iFood options into grouped modifiers for queue and kitchen', () => {
@@ -116,6 +126,71 @@ describe('mapCanonicalOrder with real order source', () => {
   it('shows cash change from the iFood changeFor value', () => {
     const payment = getOrderPaymentPresentation(mapCanonicalOrder(ifoodRow()));
     expect(payment).toMatchObject({ isCash: true, received: 40, change: 11 });
+  });
+
+  it('shows friendly labels for iFood OTHER / DIGITAL_WALLET instead of Ifood:other', () => {
+    const other = getOrderPaymentPresentation(mapCanonicalOrder(ifoodRow({
+      payment: {
+        prepaid: 29,
+        pending: 0,
+        declaredMethod: 'ifood:other',
+        method: 'ifood:other',
+        isSplit: false,
+        methods: [{
+          value: 29,
+          method: 'OTHER',
+          externalMethod: 'OTHER',
+          methodId: 'ifood:other',
+          prepaid: true,
+          type: 'ONLINE',
+          card: { brand: 'ELO' }
+        }]
+      }
+    })));
+    expect(other).toMatchObject({
+      id: 'ifood:other',
+      label: 'Outro (Elo)',
+      isCash: false
+    });
+
+    const wallet = getOrderPaymentPresentation(mapCanonicalOrder(ifoodRow({
+      payment: {
+        prepaid: 29,
+        pending: 0,
+        declaredMethod: 'ifood:digital_wallet',
+        method: 'ifood:digital_wallet',
+        isSplit: false,
+        methods: [{
+          value: 29,
+          method: 'DIGITAL_WALLET',
+          externalMethod: 'DIGITAL_WALLET',
+          methodId: 'ifood:digital_wallet',
+          prepaid: true,
+          type: 'ONLINE',
+          wallet: { name: 'IFOOD' }
+        }]
+      }
+    })));
+    expect(wallet.label).toBe('Carteira digital (Ifood)');
+
+    const credit = getOrderPaymentPresentation(mapCanonicalOrder(ifoodRow({
+      payment: {
+        prepaid: 29,
+        pending: 0,
+        declaredMethod: 'cartao_credito',
+        method: 'cartao_credito',
+        isSplit: false,
+        methods: [{
+          value: 29,
+          method: 'CREDIT',
+          externalMethod: 'CREDIT',
+          methodId: 'cartao_credito',
+          prepaid: true,
+          type: 'ONLINE'
+        }]
+      }
+    })));
+    expect(credit).toMatchObject({ id: 'cartao_credito', label: 'Cartão de crédito' });
   });
 
   it('keeps non-iFood orders exactly as before (no ifood block)', () => {

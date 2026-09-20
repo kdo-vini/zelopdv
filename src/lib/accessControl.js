@@ -72,6 +72,10 @@ export async function getAccessContext() {
     return loadOfflineOperatingContext();
   }
   if (_cachedContext !== undefined) return _cachedContext;
+  if (!supabase) {
+    _cachedContext = null;
+    return null;
+  }
 
   try {
     const { data: sessData, error: sessError } = await supabase.auth.getSession();

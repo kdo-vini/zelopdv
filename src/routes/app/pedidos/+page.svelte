@@ -20,7 +20,7 @@
     transitionCanonicalOrder,
     closeCanonicalOrder
   } from '$lib/onlineOrders';
-  import { getOrderDeliveryPresentation, getOrderPaymentPresentation } from '$lib/orderPresentation.js';
+  import { getOrderDeliveryPresentation, getOrderPaymentPresentation, getOrderCustomerPhonePresentation } from '$lib/orderPresentation.js';
   import {
     ifoodCanCancel,
     ifoodHandoffCodes,
@@ -106,6 +106,7 @@
   $: totalPedido = Number(pedidoSelecionado?.total || 0);
   $: entregaSelecionada = getOrderDeliveryPresentation(pedidoSelecionado);
   $: pagamentoSelecionado = getOrderPaymentPresentation(pedidoSelecionado);
+  $: telefoneSelecionado = getOrderCustomerPhonePresentation(pedidoSelecionado);
   $: selecionadoIfood = isIfoodOrder(pedidoSelecionado);
   $: syncSelecionado = pedidoSelecionado ? ifoodSync[pedidoSelecionado.id] || null : null;
   $: avancoSelecionado = pedidoSelecionado ? resolveQueueAdvance(pedidoSelecionado) : { kind: 'none' };
@@ -834,8 +835,17 @@
                     {#if agendaSelecionada.preparationStartAt} · preparo a partir de {formatTime(agendaSelecionada.preparationStartAt)}{/if}
                   </span>
                 {/if}
-                {#if selecionadoIfood && pedidoSelecionado.customer_phone}
-                  <span class="details-meta">Telefone iFood: {pedidoSelecionado.customer_phone}</span>
+                {#if selecionadoIfood && telefoneSelecionado.kind !== 'none'}
+                  <div class="details-phone" aria-label={telefoneSelecionado.label}>
+                    <span class="details-meta">{telefoneSelecionado.label}</span>
+                    {#if telefoneSelecionado.kind === 'ifood_bridge'}
+                      <span class="details-phone-number">{telefoneSelecionado.number}</span>
+                      <span class="details-meta">Localizador: {telefoneSelecionado.localizer}</span>
+                      <span class="details-phone-hint">{telefoneSelecionado.hint}</span>
+                    {:else}
+                      <span class="details-phone-number">{telefoneSelecionado.display}</span>
+                    {/if}
+                  </div>
                 {/if}
               </div>
               <div class="details-head-actions">
@@ -987,7 +997,9 @@
 <style>
   .pedidos-page {
     height: 100%;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     padding: clamp(14px, 2.5vw, 28px);
     background: var(--bg-app);
     color: var(--text-main);
@@ -1000,6 +1012,7 @@
     gap: 16px;
     margin-bottom: 20px;
     flex-wrap: wrap;
+    flex-shrink: 0;
   }
 
   .title-block h1 {
@@ -1078,9 +1091,11 @@
 
   .queue-layout {
     display: grid;
-    grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+    grid-template-columns: minmax(280px, 400px) minmax(0, 1fr);
     gap: 16px;
-    align-items: start;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
   }
 
   .queue-list,
@@ -1097,9 +1112,22 @@
     display: grid;
     gap: 8px;
     align-content: start;
-    padding: 10px;
-    max-height: calc(100dvh - 140px);
+    padding: 12px;
+    min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  .queue-list::-webkit-scrollbar {
+    width: 8px;
+  }
+  .queue-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .queue-list::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
   }
 
   .queue-card {
@@ -1292,9 +1320,23 @@
 
   .details-panel {
     padding: 22px;
-    min-height: 540px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  .details-panel::-webkit-scrollbar {
+    width: 8px;
+  }
+  .details-panel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .details-panel::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
   }
 
   .back-btn {
@@ -1329,6 +1371,25 @@
     color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 600;
+  }
+  .details-phone {
+    display: grid;
+    gap: 2px;
+    margin-top: 6px;
+    min-width: 0;
+  }
+  .details-phone-number {
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    overflow-wrap: anywhere;
+  }
+  .details-phone-hint {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.35;
   }
   .details-head-actions {
     display: flex;
@@ -1537,16 +1598,24 @@
 
   /* Mobile-first: single column, drill-down */
   @media (max-width: 860px) {
+    .pedidos-page {
+      overflow-y: auto;
+    }
     .queue-layout {
       grid-template-columns: 1fr;
       gap: 12px;
+      flex: none;
+      min-height: auto;
     }
-    .queue-list { max-height: none; }
+    .queue-list {
+      overflow: visible;
+    }
     .order-info-grid { grid-template-columns: 1fr; }
     .details-panel {
       display: none;
       min-height: 0;
       padding: 16px;
+      overflow: visible;
     }
     .queue-layout.detail-open .queue-list { display: none; }
     .queue-layout.detail-open .details-panel { display: flex; }

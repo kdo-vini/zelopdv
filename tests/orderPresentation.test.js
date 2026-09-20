@@ -85,4 +85,51 @@ describe('order presentation', () => {
       payment: { declaredMethod: 'Dinheiro' }
     }).change).toBeNull();
   });
+
+  it('turns iFood external tokens into friendly Portuguese labels', () => {
+    expect(getOrderPaymentPresentation({
+      payment: {
+        declaredMethod: 'ifood:other',
+        method: 'ifood:other',
+        methods: [{ methodId: 'ifood:other', method: 'OTHER', type: 'ONLINE' }]
+      }
+    })).toMatchObject({
+      id: 'ifood:other',
+      label: 'Outro',
+      isCash: false
+    });
+
+    expect(getOrderPaymentPresentation({
+      payment: {
+        declaredMethod: 'ifood:other',
+        method: 'ifood:other',
+        methods: [{
+          methodId: 'ifood:other',
+          method: 'OTHER',
+          type: 'ONLINE',
+          card: { brand: 'VISA' }
+        }]
+      }
+    }).label).toBe('Outro (Visa)');
+
+    expect(getOrderPaymentPresentation({
+      payment: {
+        declaredMethod: 'ifood:digital_wallet',
+        method: 'ifood:digital_wallet',
+        methods: [{
+          methodId: 'ifood:digital_wallet',
+          method: 'DIGITAL_WALLET',
+          wallet: { name: 'MERCADO_PAGO' }
+        }]
+      }
+    }).label).toBe('Carteira digital (Mercado Pago)');
+
+    expect(getOrderPaymentPresentation({
+      payment: {
+        declaredMethod: 'cartao_credito',
+        method: 'cartao_credito',
+        methods: [{ methodId: 'cartao_credito', method: 'CREDIT', card: { brand: 'MASTERCARD' } }]
+      }
+    }).label).toBe('Cartão de crédito (Mastercard)');
+  });
 });

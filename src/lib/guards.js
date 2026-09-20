@@ -13,7 +13,8 @@ export { isSubscriptionActiveStrict };
 // Bound reads only: a late response cannot execute guard decisions afterward.
 let identityGeneration = 0;
 let observedIdentity;
-supabase.auth.onAuthStateChange?.((event, session) => {
+// Optional chaining must start at `supabase` — `supabase.auth?.…` still throws when client is null (missing .env).
+supabase?.auth?.onAuthStateChange?.((event, session) => {
   const next = session?.user?.id || null;
   if (event === 'SIGNED_OUT' || (observedIdentity !== undefined && next !== observedIdentity)) identityGeneration++;
   observedIdentity = next;
@@ -146,6 +147,11 @@ export async function ensureActiveSubscription({ requireProfile = false, redirec
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     const cached = loadOfflineOperatingContext();
     if (cached) return cached;
+  }
+  if (!supabase) {
+    console.warn('[Guards] Supabase client ausente (PUBLIC_SUPABASE_URL / PUBLIC_SUPABASE_ANON_KEY).');
+    if (redirectOnFail && typeof window !== 'undefined') window.location.href = '/login';
+    return null;
   }
   // 1) Session - with timeout to prevent infinite hang
   let userId = null;

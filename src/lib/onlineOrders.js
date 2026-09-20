@@ -123,10 +123,17 @@ function ifoodViewParts(row) {
     ? { valorRecebido: changeFor, troco: Math.max(0, Math.round((changeFor - total) * 100) / 100) }
     : {};
 
-  const phone = customer.phone && typeof customer.phone === 'object'
-    ? [stringOrNull(customer.phone.number), stringOrNull(customer.phone.localizer) ? `(localizador ${customer.phone.localizer.trim()})` : null]
-      .filter(Boolean).join(' ')
+  // iFood masks the real cellphone (LGPD). `number` is often an 0800 bridge
+  // and `localizer` is the code the merchant must dial to reach the customer.
+  const phoneNumber = customer.phone && typeof customer.phone === 'object'
+    ? stringOrNull(customer.phone.number)
     : stringOrNull(customer.phone);
+  const phoneLocalizer = customer.phone && typeof customer.phone === 'object'
+    ? stringOrNull(customer.phone.localizer)
+    : null;
+  const phone = [phoneNumber, phoneLocalizer ? `(localizador ${phoneLocalizer})` : null]
+    .filter(Boolean)
+    .join(' ');
 
   return {
     ifood: {
@@ -137,7 +144,9 @@ function ifoodViewParts(row) {
       scheduleStart: stringOrNull(block.scheduleStart),
       scheduleEnd: stringOrNull(block.scheduleEnd),
       pickupCode: stringOrNull(block.pickupCode),
-      deliveryCode: stringOrNull(block.deliveryCode)
+      deliveryCode: stringOrNull(block.deliveryCode),
+      phoneNumber: phoneNumber || null,
+      phoneLocalizer: phoneLocalizer || null
     },
     fulfillment: { ...fulfillment, ...Object.fromEntries(Object.entries(deliveryFields).filter(([, value]) => value !== null)) },
     payment: { ...payment, ...cashFields },

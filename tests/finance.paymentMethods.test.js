@@ -62,4 +62,12 @@ describe('payment method catalog', () => {
     expect(getPaymentMethod('Cartão de crédito')?.id).toBe('cartao_credito');
     expect(getPaymentMethod('cartao de debito')?.id).toBe('cartao_debito');
   });
+
+  test('formats iFood external method tokens without the raw ifood: prefix', () => {
+    expect(formatPaymentMethod('ifood:other')).toBe('Outro');
+    expect(formatPaymentMethod('ifood:digital_wallet')).toBe('Carteira digital');
+    expect(formatPaymentMethod('ifood:gift_card')).toBe('Vale-presente');
+    expect(formatPaymentMethod('ifood:digital_wallet', { ascii: true })).toBe('Carteira digital');
+    expect(formatPaymentMethod('ifood:unknown_code')).toBe('Unknown code');
+  });
 });

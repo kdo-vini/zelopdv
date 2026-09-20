@@ -179,6 +179,32 @@ function humanizePaymentMethod(id) {
     .replace(/^./, (character) => character.toUpperCase());
 }
 
+/**
+ * iFood keeps unknown provider methods as `ifood:<code>` so they never collide
+ * with native caixa IDs. Presentation must strip that prefix and use PT-BR
+ * labels — otherwise the queue shows raw tokens like "Ifood:other".
+ */
+const IFOOD_EXTERNAL_PAYMENT_LABELS = Object.freeze({
+  other: 'Outro',
+  digital_wallet: 'Carteira digital',
+  gift_card: 'Vale-presente'
+});
+
+function formatIfoodExternalPaymentMethod(id, { ascii = false } = {}) {
+  const normalized = normalizeId(id).toLowerCase();
+  if (!normalized.startsWith('ifood:')) return null;
+
+  const code = normalized.slice('ifood:'.length);
+  const known = IFOOD_EXTERNAL_PAYMENT_LABELS[code];
+  if (known) {
+    return ascii
+      ? known.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      : known;
+  }
+
+  return humanizePaymentMethod(code);
+}
+
 export function getPaymentMethod(id) {
   return paymentMethodsById.get(normalizePaymentMethodId(id)) || null;
 }
@@ -215,6 +241,9 @@ export function formatPaymentMethod(id, { platforms, ascii = false } = {}) {
   const platform = getPaymentPlatform(normalizedId, platforms);
   const platformLabel = platform?.nome || platform?.name || platform?.label;
   if (typeof platformLabel === 'string' && platformLabel.trim()) return platformLabel.trim();
+
+  const ifoodLabel = formatIfoodExternalPaymentMethod(normalizedId, { ascii });
+  if (ifoodLabel) return ifoodLabel;
 
   return humanizePaymentMethod(normalizedId);
 }
