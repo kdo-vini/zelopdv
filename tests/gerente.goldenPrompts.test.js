@@ -26,7 +26,7 @@ describe('golden prompts do Zelinho Gerente', () => {
     expect(prompt).toContain('Instagram');
     expect(prompt).toContain('resultado registrado');
     expect(prompt).toContain('dados cadastrados no sistema');
-    expect(prompt).toContain('não abre ou fecha caixa');
+    expect(prompt).toContain('Não abre ou fecha caixa');
     expect(prompt).toContain('não registra recebimento de fiado');
   });
 

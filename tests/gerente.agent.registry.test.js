@@ -110,7 +110,7 @@ describe('buildAgentSystemPrompt', () => {
     const prompt = buildAgentSystemPrompt({ perfil: {}, channel: 'app', today: '2026-09-02' });
     expect(prompt).toContain('Instagram');
     expect(prompt).toContain('hipótese');
-    expect(prompt).toContain('não abre ou fecha caixa');
+    expect(prompt).toContain('Não abre ou fecha caixa');
     expect(prompt).not.toContain('Não exclui produtos ou categorias');
     expect(prompt).not.toContain('Não fala de lucro ou margem');
   });
