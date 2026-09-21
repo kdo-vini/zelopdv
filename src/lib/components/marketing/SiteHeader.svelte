@@ -2,14 +2,17 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { Menu, Sparkles, X } from 'lucide-svelte';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
 
   export let topOffset = 'top-0';
   export let easterDays = 0;
   export let localAnchors = false;
 
   let showMobileMenu = false;
+  let cadastroHref = '/cadastro';
 
   onMount(() => {
+    cadastroHref = getSignupHref();
     const handleKeydown = (event) => {
       if (event.key === 'Escape') showMobileMenu = false;
     };
@@ -59,7 +62,11 @@
         </a>
       {/if}
       <a href="/login" class="login-link">Entrar</a>
-      <a href="/cadastro" class="site-nav-cta">Testar 14 dias grátis</a>
+      <a
+        href={cadastroHref}
+        class="site-nav-cta"
+        on:click={() => trackSignupCta('header_desktop')}
+      >Testar 14 dias grátis</a>
       <button
         class="mobile-menu-button"
         aria-label={showMobileMenu ? 'Fechar menu' : 'Abrir menu'}
@@ -85,7 +92,14 @@
       <a href={faqHref} on:click={() => showMobileMenu = false}>Dúvidas</a>
       <div class="mobile-actions">
         <a href="/login" on:click={() => showMobileMenu = false}>Entrar</a>
-        <a href="/cadastro" class="mobile-primary" on:click={() => showMobileMenu = false}>Testar 14 dias grátis</a>
+        <a
+          href={cadastroHref}
+          class="mobile-primary"
+          on:click={() => {
+            trackSignupCta('header_mobile');
+            showMobileMenu = false;
+          }}
+        >Testar 14 dias grátis</a>
       </div>
     </div>
   {/if}

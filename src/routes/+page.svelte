@@ -176,8 +176,7 @@
   import { ADDONS, PLANS } from '$lib/pricing';
   import { trackViewContent } from '$lib/metaPixel';
   import { initMarketingAnalytics } from '$lib/marketingAnalytics';
-  import { capturePostHogEvent } from '$lib/posthogClient';
-  import { OPERATIONAL_PROOF_EVENTS } from '$lib/components/marketing/operationalProof';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
 
   let activeLightboxImage = null;
   let activeLightboxTrigger = null;
@@ -218,6 +217,8 @@
 
   $: selectedDemo = demoQuestions[activeDemo];
 
+  let cadastroHref = '/cadastro';
+
   onMount(() => {
     function handleKeydown(event) {
       if (event.key === 'Escape' && activeLightboxImage) closeLightbox();
@@ -226,6 +227,7 @@
     window.addEventListener('keydown', handleKeydown);
     initMarketingAnalytics();
     trackViewContent();
+    cadastroHref = getSignupHref();
 
     return () => window.removeEventListener('keydown', handleKeydown);
   });
@@ -233,10 +235,6 @@
   $: basePrice = PLANS.pdv.price.toFixed(0);
   $: mesasTotal = (PLANS.pdv.price + ADDONS.mesas.price).toFixed(0);
   $: menuTotal = (PLANS.pdv.price + ADDONS.menu.price).toFixed(0);
-
-  function trackTrialClick(placement) {
-    void capturePostHogEvent(OPERATIONAL_PROOF_EVENTS.trial, { placement });
-  }
 
   function openLightbox(image, trigger = null) {
     activeLightboxImage = image;
@@ -267,7 +265,7 @@
             Registre o pedido em 3 toques, largue o caderninho do fiado e veja o lucro do dia sem fechar o caixa no papel.
           </p>
           <div class="hero-actions">
-            <a href="/cadastro" class="primary-cta" on:click={() => trackTrialClick('hero')}>Testar 14 dias grátis (sem cartão)</a>
+            <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('hero')}>Testar 14 dias grátis (sem cartão)</a>
             <a href="#zelinho" class="secondary-cta">Ver o Zelo funcionando <ArrowRight class="size-4" aria-hidden="true" /></a>
           </div>
         </div>
@@ -537,7 +535,7 @@
 
         <div class="pricing-action">
           <p><strong>R$ {basePrice} por mês.</strong> Vendas ilimitadas nos dispositivos do seu negócio. Cancele quando quiser.</p>
-          <a href="/cadastro" class="primary-cta">Testar 14 dias grátis (sem cartão)</a>
+          <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('pricing')}>Testar 14 dias grátis (sem cartão)</a>
         </div>
       </div>
     </section>
@@ -607,7 +605,7 @@
           <h2 id="final-cta-title">Amanhã você pode fechar o caixa sem adivinhar.</h2>
           <p>Comece sem cartão. Se não fizer sentido, você não paga nada.</p>
         </div>
-        <a href="/cadastro" class="primary-cta">Testar 14 dias grátis (sem cartão)</a>
+        <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('final')}>Testar 14 dias grátis (sem cartão)</a>
       </div>
     </section>
   </main>

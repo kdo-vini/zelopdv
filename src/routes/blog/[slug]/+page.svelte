@@ -1,9 +1,14 @@
 <script>
+  import { onMount } from 'svelte';
   import BlogCoverArt from '$lib/components/blog/BlogCoverArt.svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
 
   export let data;
+
+  let cadastroHref = '/cadastro';
+  onMount(() => { cadastroHref = getSignupHref(); });
 
   const { post } = data;
 
@@ -132,8 +137,9 @@
         <section class="article-cta">
           <p class="article-cta-title">Quer colocar em prática? O Zelo PDV faz isso por você.</p>
           <a
-            href="/cadastro"
+            href={cadastroHref}
             class="article-cta-button"
+            on:click={() => trackSignupCta('blog_cta')}
           >
             Testar 14 dias grátis →
           </a>

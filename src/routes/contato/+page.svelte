@@ -1,7 +1,14 @@
 <script>
+  import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
+
+  let cadastroHref = '/cadastro?origem=contato';
+  onMount(() => {
+    cadastroHref = getSignupHref({ origem: 'contato' });
+  });
 
   const subjectOptions = [
     { value: 'demo', label: 'Agendar demonstração' },
@@ -58,12 +65,13 @@
     },
   };
 
-  const quickRoutes = [
+  $: quickRoutes = [
     {
       title: 'Começar agora',
       description: 'Criar conta e testar o PDV por 14 dias, sem cartão.',
-      href: '/cadastro?origem=contato',
+      href: cadastroHref,
       label: 'Criar conta grátis',
+      placement: 'contato_quick',
     },
     {
       title: 'Comparar planos',
@@ -211,7 +219,11 @@
           <p class="hero-description">{copy.description}</p>
 
           <div class="hero-actions">
-            <a class="primary-action" href="/cadastro?origem=contato">Testar 14 dias grátis</a>
+            <a
+              class="primary-action"
+              href={cadastroHref}
+              on:click={() => trackSignupCta('contato_hero')}
+            >Testar 14 dias grátis</a>
             <a class="secondary-action" href="#formulario">Enviar mensagem</a>
           </div>
 
@@ -309,7 +321,10 @@
             <article class="route-card">
               <h3>{route.title}</h3>
               <p>{route.description}</p>
-              <a href={route.href}>{route.label}</a>
+              <a
+                href={route.href}
+                on:click={() => { if (route.placement) trackSignupCta(route.placement); }}
+              >{route.label}</a>
             </article>
           {/each}
         </div>

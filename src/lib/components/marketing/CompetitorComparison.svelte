@@ -1,13 +1,18 @@
 <script>
+  import { onMount } from 'svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
   import { generalFaqs } from '$lib/data/segmentLandingPages';
   import { competitorComparisons } from '$lib/data/competitorComparisons';
   import { resolveAppIcon } from '$lib/icons/appIcons';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
   import { cn } from '$lib/utils';
   import { ChevronDown } from 'lucide-svelte';
 
   export let comparison;
+
+  let cadastroHref = '/cadastro';
+  onMount(() => { cadastroHref = getSignupHref(); });
 
   $: allFaqs = [...comparison.faqSpecific, ...generalFaqs];
   $: otherComparisons = Object.values(competitorComparisons).filter((c) => c.slug !== comparison.slug);
@@ -44,7 +49,7 @@
           <a href="#comparativo" class="px-6 py-3 rounded-full font-semibold border border-sky-500/40 bg-sky-500/10 text-sky-300 hover:bg-sky-500/15 transition-colors">
             Ver comparativo →
           </a>
-          <a href="/cadastro" class="px-6 py-3 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">
+          <a href={cadastroHref} class="px-6 py-3 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors" on:click={() => trackSignupCta('vs_hero')}>
             Testar Zelo PDV grátis
           </a>
         </div>
@@ -174,8 +179,9 @@
           </p>
           <div class="flex flex-col sm:flex-row justify-center gap-4">
             <a
-              href="/cadastro"
+              href={cadastroHref}
               class="px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1"
+              on:click={() => trackSignupCta('vs_final')}
             >
               Testar 14 dias grátis
             </a>

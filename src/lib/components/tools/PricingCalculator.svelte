@@ -1,8 +1,16 @@
 <script>
+  import { onMount } from 'svelte';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
+
   // Calculadora de precificação reutilizável.
   // - variant="marketing": página pública /precificacao (mostra CTA de cadastro e barra fixa).
   // - variant="app": dentro do sistema (/ferramentas/precificacao), sem funil de cadastro.
   export let variant = "marketing";
+
+  let cadastroHref = '/cadastro';
+  onMount(() => {
+    if (variant === 'marketing') cadastroHref = getSignupHref();
+  });
 
   const niches = [
     {
@@ -877,7 +885,11 @@
         </div>
 
         <div class="cta-actions" style="margin-top: 0.5rem;">
-          <a href="/cadastro" class="primary-link">Criar conta grátis</a>
+          <a
+            href={cadastroHref}
+            class="primary-link"
+            on:click={() => trackSignupCta('precificacao_cta')}
+          >Criar conta grátis</a>
           <button type="button" class="ghost-button" on:click={openSupportChat}>
             Falar com especialista
           </button>

@@ -8,6 +8,7 @@
   import { claimStoredReferral, persistReferralAttributionFromUrl } from '$lib/referrals/client';
   import { capturePostHogEvent, identifyPostHogUser, maskPrivatePath } from '$lib/posthogClient';
   import { deriveLoginRedirectFrom, mapLoginErrorToCode } from '$lib/loginTelemetry';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
 
   let email = '';
   let password = '';
@@ -15,6 +16,7 @@
   let infoMessage = '';
   let loading = false;
   let showPassword = false;
+  let cadastroHref = '/cadastro';
 
   async function logSubUserLogin(session, source = 'login') {
     try {
@@ -33,6 +35,7 @@
 
   // Se já houver sessão ativa, redireciona para o PDV (/app)
   onMount(async () => {
+    cadastroHref = getSignupHref();
     persistReferralAttributionFromUrl();
     const redirectFrom = deriveLoginRedirectFrom(new URLSearchParams(window.location.search));
     if (!supabase) {
@@ -178,7 +181,7 @@
   <svelte:fragment slot="footer">
     <a href="/esqueci-senha" class="auth-link">Esqueci minha senha</a>
     <span class="sep">·</span>
-    <a href="/cadastro" class="auth-link">Criar conta</a>
+    <a href={cadastroHref} class="auth-link" on:click={() => trackSignupCta('login_criar_conta')}>Criar conta</a>
   </svelte:fragment>
 </AuthLayout>
 

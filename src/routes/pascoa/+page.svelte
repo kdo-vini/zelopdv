@@ -42,17 +42,20 @@
 
 <script>
   import { onMount } from 'svelte';
-  
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
+
   let showMobileMenu = false;
   let openFaq = null;
   let scrollY = 0;
   let daysUntilEaster = 0;
+  let cadastroHref = '/cadastro';
 
   function toggleFaq(i) {
     openFaq = openFaq === i ? null : i;
   }
 
   onMount(() => {
+    cadastroHref = getSignupHref();
     const easter = new Date('2026-04-05T00:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -74,7 +77,7 @@
   <div class="fixed top-0 w-full z-60 bg-linear-to-r from-amber-500 via-pink-500 to-purple-600 py-2.5 px-4 text-center text-xs md:text-sm font-black text-white tracking-wide shadow-[0_2px_20px_rgba(236,72,153,0.5)] flex items-center justify-center gap-3">
     <span class="text-base">🐣</span>
     <span>PÁSCOA EM <span class="underline underline-offset-2">{daysUntilEaster} {daysUntilEaster === 1 ? 'DIA' : 'DIAS'}</span> — Configure agora e venda no fim de semana</span>
-    <a href="/cadastro" class="hidden sm:inline-flex items-center gap-1 bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-full text-xs font-extrabold">
+    <a href={cadastroHref} class="hidden sm:inline-flex items-center gap-1 bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-full text-xs font-extrabold" on:click={() => trackSignupCta('pascoa_banner')}>
       Começar grátis →
     </a>
   </div>
@@ -111,7 +114,7 @@
         <a href="/" class="hidden md:flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
           Site Oficial
         </a>
-        <a href="/cadastro" class="hidden md:flex relative group px-7 py-2.5 rounded-full overflow-hidden shadow-[0_0_20px_rgba(236,72,153,0.3)] hover:shadow-[0_0_40px_rgba(236,72,153,0.5)] transition-all duration-300 transform hover:-translate-y-0.5">
+        <a href={cadastroHref} class="hidden md:flex relative group px-7 py-2.5 rounded-full overflow-hidden shadow-[0_0_20px_rgba(236,72,153,0.3)] hover:shadow-[0_0_40px_rgba(236,72,153,0.5)] transition-all duration-300 transform hover:-translate-y-0.5" on:click={() => trackSignupCta('pascoa_nav')}>
           <div class="absolute inset-0 bg-linear-to-r from-amber-400 via-pink-500 to-purple-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
           <div class="absolute inset-[1.5px] bg-[#06040A] rounded-full transition-colors duration-300 group-hover:bg-opacity-0"></div>
           <span class="relative text-sm font-extrabold text-transparent bg-clip-text bg-linear-to-r from-amber-100 to-white group-hover:text-white transition-colors duration-300">Testar Grátis</span>
@@ -138,7 +141,7 @@
         <a href="#preco" class="text-2xl font-black text-white hover:text-amber-400 transition-colors" on:click={() => showMobileMenu = false}>Preço</a>
         <a href="/" class="text-lg font-bold text-slate-500 hover:text-white transition-colors" on:click={() => showMobileMenu = false}>Voltar ao site principal</a>
         
-        <a href="/cadastro" class="mt-8 relative group px-10 py-4 rounded-full overflow-hidden shadow-[0_0_30px_rgba(236,72,153,0.4)]" on:click={() => showMobileMenu = false}>
+        <a href={cadastroHref} class="mt-8 relative group px-10 py-4 rounded-full overflow-hidden shadow-[0_0_30px_rgba(236,72,153,0.4)]" on:click={() => { showMobileMenu = false; trackSignupCta('pascoa_nav_mobile'); }}>
           <div class="absolute inset-0 bg-linear-to-r from-amber-400 via-pink-500 to-purple-600"></div>
           <span class="relative text-lg font-extrabold text-white">Criar Conta Grátis</span>
         </a>
@@ -167,7 +170,7 @@
         </p>
 
         <div class="flex flex-col sm:flex-row items-center gap-5 animate-fade-in-up delay-300">
-          <a href="/cadastro" class="w-full sm:w-auto px-8 py-4.5 text-white bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-2xl font-extrabold shadow-[0_0_40px_rgba(219,39,119,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_60px_rgba(219,39,119,0.5)] flex items-center justify-center gap-3 group relative overflow-hidden">
+          <a href={cadastroHref} class="w-full sm:w-auto px-8 py-4.5 text-white bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-2xl font-extrabold shadow-[0_0_40px_rgba(219,39,119,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_60px_rgba(219,39,119,0.5)] flex items-center justify-center gap-3 group relative overflow-hidden" on:click={() => trackSignupCta('pascoa_hero')}>
             <span class="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/20 to-transparent translate-x-[-150%] skew-x-[-20deg] group-hover:animate-shine"></span>
             Começar Grátis — 14 Dias
             <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
@@ -469,7 +472,7 @@
             {/each}
           </div>
 
-          <a href="/cadastro" class="block w-full text-center py-5 text-xl font-black text-white bg-linear-to-r from-amber-500 to-pink-600 rounded-2xl shadow-[0_10px_40px_rgba(236,72,153,0.4)] transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] hover:shadow-[0_15px_50px_rgba(236,72,153,0.6)] relative overflow-hidden group/btn">
+          <a href={cadastroHref} class="block w-full text-center py-5 text-xl font-black text-white bg-linear-to-r from-amber-500 to-pink-600 rounded-2xl shadow-[0_10px_40px_rgba(236,72,153,0.4)] transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] hover:shadow-[0_15px_50px_rgba(236,72,153,0.6)] relative overflow-hidden group/btn" on:click={() => trackSignupCta('pascoa_pricing')}>
             <span class="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/30 to-transparent translate-x-[-150%] skew-x-[-20deg] group-hover/btn:animate-shine"></span>
             Testar 14 dias grátis
           </a>
@@ -498,7 +501,7 @@
         <div class="flex flex-wrap items-center justify-center gap-6 text-sm font-bold tracking-wide text-slate-500">
           <a href="/" class="hover:text-amber-400 transition-colors">Site principal</a>
           <span class="text-slate-700">·</span>
-          <a href="/cadastro" class="hover:text-amber-400 transition-colors text-amber-500">Criar conta grátis</a>
+          <a href={cadastroHref} class="hover:text-amber-400 transition-colors text-amber-500" on:click={() => trackSignupCta('pascoa_footer')}>Criar conta grátis</a>
           <span class="text-slate-700">·</span>
           <a href="https://wa.me/5514991537503?text=Oi%2C+gostaria+de+tirar+uma+d%C3%BAvida+sobre+o+Zelo+PDV." target="_blank" rel="noopener noreferrer" class="hover:text-[#25D366] transition-colors flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>

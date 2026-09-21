@@ -172,7 +172,7 @@
     // aparece, então não vale segurar a pessoa por mais que isso.
     const gtagReady = await waitForGtag({ attempts: 10, intervalMs: 150 });
     if (!gtagReady) console.warn('[tracking] gtag indisponível no fim do onboarding');
-    trackStartTrial();
+    trackStartTrial(trialPayload?.metaEventId ? { eventID: trialPayload.metaEventId } : {});
     trackGa4Event('begin_trial');
     // Com gtag pronto, espera o event_callback real do Google Ads (o
     // beacon saiu de verdade) em vez de um tempo fixo — teto de 1s pro

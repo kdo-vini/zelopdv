@@ -1,12 +1,20 @@
 <script>
+  import { onMount } from 'svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import MarketingPriceSection from '$lib/components/marketing/MarketingPriceSection.svelte';
   import { generalFaqs } from '$lib/data/segmentLandingPages';
   import { resolveAppIcon } from '$lib/icons/appIcons';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
   import { Check, ChevronDown, SendHorizontal, Zap } from 'lucide-svelte';
 
   export let page;
+
+  let cadastroHref = '/cadastro';
+
+  onMount(() => {
+    cadastroHref = getSignupHref();
+  });
 
   $: allFaqs = [...page.faqSpecific, ...generalFaqs];
 
@@ -39,8 +47,9 @@
 
           <div class="flex flex-col sm:flex-row gap-4 items-start mb-5">
             <a
-              href="/cadastro"
+              href={cadastroHref}
               class="w-full sm:w-auto px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center"
+              on:click={() => trackSignupCta('segment_hero')}
             >
               Testar 14 dias grátis
             </a>
@@ -179,7 +188,7 @@
       </div>
     </section>
 
-    <MarketingPriceSection />
+    <MarketingPriceSection placement="segment_pricing" />
 
     <section id="faq" class="py-24 border-b border-white/5">
       <div class="max-w-4xl mx-auto px-6">
@@ -215,8 +224,9 @@
           </p>
           <div class="flex flex-col sm:flex-row justify-center gap-4">
             <a
-              href="/cadastro"
+              href={cadastroHref}
               class="px-8 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1"
+              on:click={() => trackSignupCta('segment_final')}
             >
               Testar 14 dias grátis
             </a>

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { ArrowRight, ScanSearch } from 'lucide-svelte';
   import { capturePostHogEvent } from '$lib/posthogClient';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
   import {
     OPERATIONAL_PROOF_EVENTS,
     OPERATIONAL_PROOF_SCREENS,
@@ -9,10 +10,12 @@
   } from './operationalProof';
 
   let isHydrated = false;
+  let cadastroHref = '/cadastro';
   export let onPreview = null;
 
   onMount(() => {
     isHydrated = true;
+    cadastroHref = getSignupHref();
     const handleClick = (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const previewButton = target?.closest('[data-proof-screen]');
@@ -38,7 +41,7 @@
   }
 
   function startTrial() {
-    void capturePostHogEvent(OPERATIONAL_PROOF_EVENTS.trial, { placement: 'proof' });
+    trackSignupCta('proof');
   }
 </script>
 
@@ -86,7 +89,7 @@
         <span><strong>WhatsApp</strong> com suporte</span>
       </div>
       <div class="proof-actions">
-        <a class="proof-link proof-trial" href="/cadastro" onclick={startTrial}>
+        <a class="proof-link proof-trial" href={cadastroHref} onclick={startTrial}>
           Testar 14 dias grátis <ArrowRight class="size-4" aria-hidden="true" />
         </a>
         <a

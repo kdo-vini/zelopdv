@@ -10,11 +10,16 @@
   async function handleGoogleAuth() {
     if (loading || !supabase) return;
     loading = true;
-    const isLoginSurface = typeof window !== 'undefined' && window.location.pathname === '/login';
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    const isLoginSurface = path === '/login';
+    const isSignupSurface = path === '/cadastro';
     // Este componente também vive em /cadastro; `login_submitted` só faz
     // sentido semântico na tela de login — não polui o funil de signup.
     if (isLoginSurface) {
       void capturePostHogEvent('login_submitted', { method: 'google' });
+    }
+    if (isSignupSurface) {
+      void capturePostHogEvent('signup_submitted', { method: 'google' });
     }
     try {
       const { error } = await supabase.auth.signInWithOAuth({

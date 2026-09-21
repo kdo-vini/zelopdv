@@ -1,5 +1,14 @@
 # Fixes Progress
 
+- [x] FX-ANALYTICS-FUNNEL-P0P1P2-01 (2026-09-21) — Funil marketing→trial→first
+  sale: identity stitching (alias+identify), acquisition no OAuth
+  `user_registered`, `marketing_trial_clicked` + UTM first-touch em CTAs
+  `/cadastro`, `signup_started`/`signup_submitted`, person profile em
+  `first_sale_completed` (migration forward), dedup Meta StartTrial
+  (eventID), `product_created`. Sem redesign; sem scroll/FAQ/replay.
+  Auditoria: cobriu cards/seções `/extensoes` e CTA `/precificacao`
+  que ainda iam a `/cadastro` sem track/UTM.
+
 - [x] FX-IFOOD-VERIFY-DELIVERY-ERROR-UX-01 (2026-09-19) — Confirmar entrega
   iFood: 4xx passa a `IFOOD_HTTP_{status}` (+ `httpStatus` sanitizado);
   `valid:false` → `IFOOD_DELIVERY_CODE_INVALID`; UI

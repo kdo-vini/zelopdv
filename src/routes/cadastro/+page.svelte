@@ -7,6 +7,7 @@
   import { startSignupFollowUp } from '$lib/auth/signupFollowUp.js';
   import { getStoredReferralAttribution, persistReferralAttributionFromUrl } from '$lib/referrals/client';
   import { captureAcquisitionOrigin, getStoredAcquisitionOrigin } from '$lib/attribution/client';
+  import { capturePostHogEvent } from '$lib/posthogClient';
   import { onMount } from 'svelte';
 
   let email = '';
@@ -21,6 +22,7 @@
     // Rede de segurança: cobre quem cai direto em /cadastro com utm/gclid na URL
     // sem passar por outra página antes.
     captureAcquisitionOrigin();
+    void capturePostHogEvent('signup_started');
   });
 
   async function waitStableSession(tries = 15) {
@@ -44,6 +46,7 @@
     if (password.length < 8) { errorMessage = 'A senha deve ter pelo menos 8 caracteres.'; return; }
     loading = true;
     let redirecting = false;
+    void capturePostHogEvent('signup_submitted', { method: 'email' });
     try {
       const referral = getStoredReferralAttribution();
       const response = await fetch('/api/auth/signup', {

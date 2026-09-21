@@ -1,5 +1,34 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-21 — Analytics P0/P1/P2 (landing → trial → first sale)
+
+Implementado no working tree (sem commit) o pacote aprovado pós-auditoria
+PostHog/landing. Sem redesign de UI.
+
+- **P0 identity**: `identifyPostHogUser` faz alias seguro do anon id + identify
+  com e-mail; OAuth callback também identifica.
+- **P0 OAuth acquisition**: `/auth/callback` envia `zelo_acquisition` para
+  `/api/auth/oauth-registered`; `user_registered` ganha utm_*/landing/referrer
+  e metadata (paridade com signup e-mail).
+- **P0 CTA + UTM**: helper `trackSignupCta` / `getSignupHref` em
+  `src/lib/marketing/signupCta.js`; CTAs de trial em home, header
+  (desktop/mobile), proof, pricing, final, `/para-*`, `/extensoes`
+  (hero/final **e** cards/seções de addon), `/vs-*`, contato,
+  `/precificacao`. First-touch no href `/cadastro?...`.
+  Auditoria 2026-09-21: fechou buracos P0 em cards/seções de
+  `/extensoes` e CTA marketing da calculadora. Superfícies
+  secundárias: `/pascoa` (pascoa_*), `/indica/[codigo]`
+  (indica_*), link “Criar conta” em `/login` (login_criar_conta).
+- **P1 signup**: `signup_started` no mount de `/cadastro`;
+  `signup_submitted` {email|google} no submit e no GoogleAuthButton.
+- **P1 first_sale person profile**: migration forward
+  `20260921180000_posthog_first_sale_person_profile.sql` —
+  `$process_person_profile: true` em `enqueue_event`.
+- **P2**: StartTrial pixel/CAPI com `metaEventId` compartilhado;
+  `product_created` em gestao/produtos. **Pulado**: scroll/section/FAQ
+  viewing amplo, session replay, feature flag de CTA mobile (infra não
+  trivial) — só instrumentação `header_mobile`.
+
 ## Sessão 2026-09-19 — iFood: erro amigável em confirmar entrega
 
 Pedido Bem Servido #1596 (Nayana): `verify_delivery_code` fechou

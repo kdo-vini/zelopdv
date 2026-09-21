@@ -295,10 +295,33 @@ export async function capturePostHogEvent(event, properties = {}) {
   return true;
 }
 
+/**
+ * Identity stitching: alias do distinct_id anônimo → userId (quando o SDK
+ * expõe alias), depois identify com propriedades de pessoa (ex.: email).
+ * Seguro se alias não existir ou se o id já for o do usuário.
+ */
 export async function identifyPostHogUser(userId, properties = {}) {
-  if (!isBrowser()) return false;
+  if (!isBrowser() || !userId) return false;
   const posthog = await ensurePostHog();
   if (!posthog) return false;
+
+  const previousId = typeof posthog.get_distinct_id === 'function'
+    ? posthog.get_distinct_id()
+    : null;
+
+  if (
+    previousId
+    && String(previousId) !== String(userId)
+    && typeof posthog.alias === 'function'
+  ) {
+    try {
+      // Liga o id anônimo atual ao userId autenticado antes do identify.
+      posthog.alias(userId);
+    } catch (err) {
+      console.warn('[posthog] alias falhou:', err?.message || err);
+    }
+  }
+
   posthog.identify(userId, properties);
   return true;
 }

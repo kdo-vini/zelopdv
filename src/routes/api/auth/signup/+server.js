@@ -1,31 +1,11 @@
 import { json } from '@sveltejs/kit';
+import { sanitizeAcquisition } from '$lib/server/acquisition';
 import { isValidEmail } from '$lib/server/authFlow';
 import { buildRateLimitKey, createRateLimitResponse, enforceRateLimit, getRequestIp, maskEmail, normalizeEmail } from '$lib/server/rateLimit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { supabaseAuth } from '$lib/server/supabaseAuth';
 import { getPostHogClient } from '$lib/server/posthog';
 import { waitUntil } from '@vercel/functions';
-
-// Campos de atribuição aceitos do cliente. Whitelist explícita: o payload vem do
-// localStorage do navegador, então é entrada não confiável e não pode virar um saco
-// aberto de chaves arbitrárias dentro do user_metadata.
-const ACQUISITION_KEYS = [
-  'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
-  'gclid', 'fbclid', 'ttclid', 'msclkid',
-  'origem', 'referrer', 'landing', 'captured_at',
-];
-
-function sanitizeAcquisition(raw) {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  const clean = {};
-  for (const key of ACQUISITION_KEYS) {
-    const value = raw[key];
-    if (typeof value !== 'string') continue;
-    const trimmed = value.trim().slice(0, 200);
-    if (trimmed) clean[key] = trimmed;
-  }
-  return Object.keys(clean).length ? clean : null;
-}
 
 function isExistingUserError(error) {
   const message = String(error?.message || '').toLowerCase();

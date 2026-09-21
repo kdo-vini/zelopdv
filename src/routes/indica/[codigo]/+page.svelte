@@ -2,13 +2,22 @@
   import { onMount } from 'svelte';
   import { persistReferralAttribution } from '$lib/referrals/client';
   import { capturePostHogEvent } from '$lib/posthogClient';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
 
   export let data;
+
+  let cadastroHref = '/cadastro';
 
   onMount(() => {
     if (data?.valid) {
       persistReferralAttribution({ code: data.code, referralId: data.referralId });
       void capturePostHogEvent('referral_landing_viewed', { referral_id: data.referralId });
+      cadastroHref = getSignupHref({
+        ref: data.code,
+        referral_id: data.referralId,
+      });
+    } else {
+      cadastroHref = getSignupHref();
     }
   });
 </script>
@@ -34,7 +43,11 @@
           como ajuda inicial na configuração ou teste estendido.
         </p>
         <div class="actions">
-          <a class="primary" href={`/cadastro?ref=${encodeURIComponent(data.code)}&referral_id=${encodeURIComponent(data.referralId)}`}>
+          <a
+            class="primary"
+            href={cadastroHref}
+            on:click={() => trackSignupCta('indica_criar_conta', { referral_id: data.referralId })}
+          >
             Criar conta
           </a>
           <a class="secondary" href={`/login?ref=${encodeURIComponent(data.code)}&referral_id=${encodeURIComponent(data.referralId)}`}>
@@ -49,7 +62,11 @@
         <h1>Este convite não está disponível.</h1>
         <p class="lead">Confira se o link foi copiado corretamente ou crie sua conta diretamente pelo ZeloPDV.</p>
         <div class="actions">
-          <a class="primary" href="/cadastro">Criar conta</a>
+          <a
+            class="primary"
+            href={cadastroHref}
+            on:click={() => trackSignupCta('indica_invalido_criar_conta')}
+          >Criar conta</a>
           <a class="secondary" href="/">Conhecer o ZeloPDV</a>
         </div>
       </div>

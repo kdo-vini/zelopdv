@@ -4,6 +4,8 @@
   import { trackLead } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
   import { claimStoredReferral, getStoredReferralAttribution } from '$lib/referrals/client';
+  import { getStoredAcquisitionOrigin } from '$lib/attribution/client';
+  import { identifyPostHogUser } from '$lib/posthogClient';
 
   let status = 'Autenticando...';
 
@@ -40,8 +42,17 @@
         body: JSON.stringify({
           method: 'google',
           hasReferral: !!getStoredReferralAttribution().code,
+          acquisition: getStoredAcquisitionOrigin(),
         }),
       });
+    } catch {}
+  }
+
+  async function stitchPostHogIdentity(session) {
+    const user = session?.user;
+    if (!user?.id) return;
+    try {
+      await identifyPostHogUser(user.id, { email: user.email || undefined });
     } catch {}
   }
 
@@ -54,6 +65,8 @@
     async function maybeFireLeadPixel(session) {
       const createdAt = new Date(session.user.created_at);
       const isNewUser = Date.now() - createdAt.getTime() < 60_000;
+      // Identity stitching em todo OAuth sign-in (novo ou retorno).
+      await stitchPostHogIdentity(session);
       if (!isNewUser) return;
       trackLead();
       await registerPostHogSignup(session);

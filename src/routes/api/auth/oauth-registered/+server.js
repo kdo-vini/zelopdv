@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { sanitizeAcquisition } from '$lib/server/acquisition';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { getPostHogClient } from '$lib/server/posthog';
 
@@ -42,6 +43,24 @@ export async function POST({ request }) {
 
   const body = await request.json().catch(() => ({}));
   const method = body?.method === 'google' ? 'google' : 'oauth';
+  const acquisition = sanitizeAcquisition(body?.acquisition);
+
+  // Persiste first-touch no user_metadata (paridade com signup e-mail), sem
+  // apagar outras chaves já gravadas pelo provedor OAuth.
+  if (acquisition && supabaseAdmin) {
+    try {
+      const prevMeta = user.user_metadata && typeof user.user_metadata === 'object'
+        ? user.user_metadata
+        : {};
+      if (!prevMeta.acquisition) {
+        await supabaseAdmin.auth.admin.updateUserById(user.id, {
+          user_metadata: { ...prevMeta, acquisition },
+        });
+      }
+    } catch (err) {
+      console.warn('[oauth-registered] acquisition metadata update failed:', err?.message || err);
+    }
+  }
 
   const posthog = getPostHogClient();
   if (posthog) {
@@ -52,6 +71,7 @@ export async function POST({ request }) {
         $set: { email: user.email },
         method,
         has_referral: !!body?.hasReferral,
+        ...(acquisition || {}),
       },
     });
     await posthog.flush();

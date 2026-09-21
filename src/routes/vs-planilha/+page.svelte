@@ -89,10 +89,15 @@
 </svelte:head>
 
 <script>
+  import { onMount } from 'svelte';
   import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import { resolveAppIcon } from '$lib/icons/appIcons';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
   import { ArrowRight, ChevronDown, CircleCheckBig, CircleX, Sheet, Zap } from 'lucide-svelte';
+
+  let cadastroHref = '/cadastro';
+  onMount(() => { cadastroHref = getSignupHref(); });
 
   const comparisonRows = [
     { feature: 'Registrar uma venda', excel: 'Digitar manualmente na célula', zelo: 'Toque no produto — feito em 3 segundos', excelhit: false },
@@ -146,7 +151,7 @@
         Veja o que você está deixando para trás.
       </p>
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-3 md:mb-4">
-        <a href="/cadastro" class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center">
+        <a href={cadastroHref} class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center" on:click={() => trackSignupCta('vs_hero')}>
           Testar 14 dias grátis — sem cartão
         </a>
         <a href="#comparacao" class="px-1 py-2 md:py-4 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">
@@ -250,7 +255,7 @@
       <p class="text-slate-400 leading-relaxed mb-8">
         Cadastre seus produtos, configure as categorias e comece a vender. Não precisa instalar nada e ninguém pede seu cartão. Se travar em qualquer passo, chama no WhatsApp que a gente migra junto com você.
       </p>
-      <a href="/cadastro" class="inline-flex items-center gap-2 px-8 py-3.5 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
+      <a href={cadastroHref} class="inline-flex items-center gap-2 px-8 py-3.5 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1" on:click={() => trackSignupCta('vs_mid')}>
         Começar agora — 14 dias grátis
         <ArrowRight class="size-4" aria-hidden="true" />
       </a>
@@ -306,7 +311,7 @@
       <p class="text-slate-400 text-lg mb-8">
         14 dias grátis. Sem cartão. Sem burocracia.
       </p>
-      <a href="/cadastro" class="inline-flex items-center gap-2 px-10 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold text-lg shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1">
+      <a href={cadastroHref} class="inline-flex items-center gap-2 px-10 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold text-lg shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1" on:click={() => trackSignupCta('vs_final')}>
         Começar agora grátis
         <ArrowRight class="size-5" aria-hidden="true" />
       </a>

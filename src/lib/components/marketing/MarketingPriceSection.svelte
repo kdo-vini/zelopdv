@@ -1,5 +1,14 @@
 <script>
+  import { onMount } from 'svelte';
   import { Check } from 'lucide-svelte';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
+
+  let cadastroHref = '/cadastro';
+  export let placement = 'pricing';
+
+  onMount(() => {
+    cadastroHref = getSignupHref();
+  });
 </script>
 
 <section id="pricing" class="py-24 relative" style="background: var(--bg-panel);">
@@ -60,8 +69,9 @@
         </ul>
 
         <a
-          href="/cadastro"
+          href={cadastroHref}
           class="block w-full text-center py-4 text-lg font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-lg shadow-sky-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          on:click={() => trackSignupCta(placement)}
         >
           Começar teste gratuito
         </a>

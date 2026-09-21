@@ -1,9 +1,14 @@
 <script>
+  import { onMount } from 'svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
   import MarketingPriceSection from '$lib/components/marketing/MarketingPriceSection.svelte';
   import { competitorComparisons } from '$lib/data/competitorComparisons';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
   import { ArrowRight } from 'lucide-svelte';
+
+  let cadastroHref = '/cadastro';
+  onMount(() => { cadastroHref = getSignupHref(); });
 
   const comparisons = Object.values(competitorComparisons);
 
@@ -66,7 +71,7 @@
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-3 md:mb-4">
-          <a href="/cadastro" class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center">
+          <a href={cadastroHref} class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center" on:click={() => trackSignupCta('comparativos_hero')}>
             Testar 14 dias grátis
           </a>
           <a href="#comparativos" class="px-1 py-2 md:py-4 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">

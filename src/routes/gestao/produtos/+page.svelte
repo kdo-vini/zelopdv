@@ -12,6 +12,7 @@
   import ModalPizzaEditor from '$lib/components/modals/ModalPizzaEditor.svelte';
   import ModalNovoProduto from '$lib/components/modals/ModalNovoProduto.svelte';
   import { archivePizzaProduct } from '$lib/pizzaEditor';
+  import { capturePostHogEvent } from '$lib/posthogClient';
   import {
     MessageCircle,
     Pencil,
@@ -824,6 +825,10 @@
     // event.detail é o produto criado (spread) + categoriaCriada ({id, nome} ou null)
     // quando o ModalNovoProduto também criou uma categoria nova no mesmo submit.
     const { categoriaCriada, ...createdProduct } = event.detail;
+    void capturePostHogEvent('product_created', {
+      has_category: !!(createdProduct?.id_categoria || categoriaCriada),
+      source: 'gestao_produtos_modal',
+    });
     if (categoriaCriada) {
       // carregarCategorias() já busca direto do Supabase (sem cache local),
       // então recarrega sozinha os dados atuais — só precisa rodar antes de

@@ -1,9 +1,34 @@
 <script>
+  import { onMount } from 'svelte';
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import { extensoes, getAddonPrice, getChatBundleDelta } from '$lib/data/extensoes';
   import { generalFaqs } from '$lib/data/segmentLandingPages';
+  import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
   import { PLANS } from '$lib/pricing';
+
+  let cadastroHref = '/cadastro';
+  onMount(() => {
+    cadastroHref = getSignupHref();
+    // Cards/seções de addon: regrava href com first-touch UTM após mount.
+    cards = cards.map((card) => {
+      if (!card.ctaPrimary?.signupParams) return card;
+      return {
+        ...card,
+        ctaPrimary: {
+          ...card.ctaPrimary,
+          href: getSignupHref(card.ctaPrimary.signupParams),
+        },
+      };
+    });
+    detailSections = detailSections.map((section) => {
+      if (!section.signupParams) return section;
+      return {
+        ...section,
+        ctaHref: getSignupHref(section.signupParams),
+      };
+    });
+  });
 
   const meta = {
     title: 'Extensões Zelo PDV — Mesas, ZeloMenu, Controle de Acessos e WhatsApp | Zelo PDV',
@@ -28,7 +53,7 @@
   }
 
   // Grade principal de cards. Ordem importa — addons baratos primeiro, Chat (upgrade de plano) por último.
-  const cards = [
+  let cards = [
     {
       anchor: 'mesas',
       data: mesas,
@@ -43,7 +68,12 @@
       priceLabel: `+R$ ${mesasPrice.toFixed(0)}`,
       priceSuffix: '/mês',
       priceNote: 'Adicional ao plano base',
-      ctaPrimary: { href: '/cadastro?addon=mesas', label: 'Adicionar ao plano' },
+      ctaPrimary: {
+        signupParams: { addon: 'mesas' },
+        href: getSignupHref({ addon: 'mesas' }),
+        label: 'Adicionar ao plano',
+        placement: 'extensoes_card_mesas',
+      },
       ctaSecondary: { href: '#mesas', label: 'Ver detalhes' },
       iconKey: 'tables'
     },
@@ -61,7 +91,12 @@
       priceLabel: `+R$ ${acessosPrice.toFixed(0)}`,
       priceSuffix: '/mês',
       priceNote: 'Adicional ao plano base',
-      ctaPrimary: { href: '/cadastro?addon=acessos', label: 'Adicionar ao plano' },
+      ctaPrimary: {
+        signupParams: { addon: 'acessos' },
+        href: getSignupHref({ addon: 'acessos' }),
+        label: 'Adicionar ao plano',
+        placement: 'extensoes_card_acessos',
+      },
       ctaSecondary: { href: '#acessos', label: 'Ver detalhes' },
       iconKey: 'access'
     },
@@ -79,7 +114,12 @@
       priceLabel: `+R$ ${menuPrice.toFixed(0)}`,
       priceSuffix: '/mês',
       priceNote: 'Adicional ao plano base',
-      ctaPrimary: { href: '/cadastro?addon=menu', label: 'Adicionar ZeloMenu' },
+      ctaPrimary: {
+        signupParams: { addon: 'menu' },
+        href: getSignupHref({ addon: 'menu' }),
+        label: 'Adicionar ZeloMenu',
+        placement: 'extensoes_card_menu',
+      },
       ctaSecondary: { href: '#menu', label: 'Ver detalhes' },
       iconKey: 'menu'
     },
@@ -98,7 +138,12 @@
       priceLabel: `+R$ ${chatDelta.toFixed(0)}`,
       priceSuffix: '/mês',
       priceNote: 'No pacote Gestão + Atendimento (inclui ZeloMenu)',
-      ctaPrimary: { href: chat.upgradeHref, label: 'Upgrade pro pacote' },
+      ctaPrimary: {
+        signupParams: { plan: 'bundle' },
+        href: getSignupHref({ plan: 'bundle' }),
+        label: 'Upgrade pro pacote',
+        placement: 'extensoes_card_chat',
+      },
       ctaSecondary: { href: chat.externalUrl, label: 'Ver chat.zelopdv.com.br', external: true },
       iconKey: 'chat',
       external: true
@@ -169,11 +214,49 @@
   ];
 
   // Detalhe expandido das extensões
-  const detailSections = [
-    { ...mesas, anchor: 'mesas', name: 'Módulo Mesas', priceLabel: `+R$ ${mesasPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=mesas', ctaLabel: 'Adicionar ao plano' },
-    { ...acessos, anchor: 'acessos', name: 'Controle de Acessos', priceLabel: `+R$ ${acessosPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=acessos', ctaLabel: 'Adicionar ao plano' },
-    { ...menu, anchor: 'menu', name: 'ZeloMenu', priceLabel: `+R$ ${menuPrice.toFixed(0)}/mês`, ctaHref: '/cadastro?addon=menu', ctaLabel: 'Adicionar ZeloMenu' },
-    { ...chat, anchor: 'chat', name: 'Zelo Chat', priceLabel: `+R$ ${chatDelta.toFixed(0)}/mês no Bundle`, ctaHref: chat.upgradeHref, ctaLabel: 'Upgrade pro pacote', external: true, externalUrl: chat.externalUrl }
+  let detailSections = [
+    {
+      ...mesas,
+      anchor: 'mesas',
+      name: 'Módulo Mesas',
+      priceLabel: `+R$ ${mesasPrice.toFixed(0)}/mês`,
+      signupParams: { addon: 'mesas' },
+      ctaHref: getSignupHref({ addon: 'mesas' }),
+      ctaLabel: 'Adicionar ao plano',
+      placement: 'extensoes_section_mesas',
+    },
+    {
+      ...acessos,
+      anchor: 'acessos',
+      name: 'Controle de Acessos',
+      priceLabel: `+R$ ${acessosPrice.toFixed(0)}/mês`,
+      signupParams: { addon: 'acessos' },
+      ctaHref: getSignupHref({ addon: 'acessos' }),
+      ctaLabel: 'Adicionar ao plano',
+      placement: 'extensoes_section_acessos',
+    },
+    {
+      ...menu,
+      anchor: 'menu',
+      name: 'ZeloMenu',
+      priceLabel: `+R$ ${menuPrice.toFixed(0)}/mês`,
+      signupParams: { addon: 'menu' },
+      ctaHref: getSignupHref({ addon: 'menu' }),
+      ctaLabel: 'Adicionar ZeloMenu',
+      placement: 'extensoes_section_menu',
+    },
+    {
+      ...chat,
+      anchor: 'chat',
+      name: 'Zelo Chat',
+      priceLabel: `+R$ ${chatDelta.toFixed(0)}/mês no Bundle`,
+      signupParams: { plan: 'bundle' },
+      ctaHref: getSignupHref({ plan: 'bundle' }),
+      ctaLabel: 'Upgrade pro pacote',
+      placement: 'extensoes_section_chat',
+      external: true,
+      externalUrl: chat.externalUrl,
+    },
   ];
 
   // JSON-LD
@@ -255,8 +338,9 @@
         </p>
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
           <a
-            href="/cadastro"
+            href={cadastroHref}
             class="px-7 py-3.5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-full shadow-lg shadow-sky-950/40 transition-colors"
+            on:click={() => trackSignupCta('extensoes_hero')}
           >
             Testar 14 dias grátis
           </a>
@@ -370,6 +454,9 @@
                 <a
                   href={card.ctaPrimary.href}
                   class="w-full text-center px-4 py-2.5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-full transition-colors extension-primary-cta"
+                  on:click={() => {
+                    if (card.ctaPrimary.placement) trackSignupCta(card.ctaPrimary.placement);
+                  }}
                 >
                   {card.ctaPrimary.label}
                 </a>
@@ -523,6 +610,9 @@
                 <a
                   href={section.ctaHref}
                   class="px-6 py-3 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-full transition-colors text-center"
+                  on:click={() => {
+                    if (section.placement) trackSignupCta(section.placement);
+                  }}
                 >
                   {section.ctaLabel}
                 </a>
@@ -616,8 +706,9 @@
         </p>
         <div class="flex flex-col sm:flex-row justify-center gap-3">
           <a
-            href="/cadastro"
+            href={cadastroHref}
             class="px-7 py-3.5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-400 rounded-full shadow-lg shadow-sky-950/40 transition-colors"
+            on:click={() => trackSignupCta('extensoes_final')}
           >
             Começar trial 14 dias
           </a>

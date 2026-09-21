@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { waitUntil } from '@vercel/functions';
+import { randomUUID } from 'crypto';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { enviarBoasVindasDetalhado, getWhatsAppSendError } from '$lib/server/whatsapp';
 import { sendEmail, isEmailConfigured } from '$lib/server/email';
@@ -299,6 +300,9 @@ export async function POST({ request, cookies }) {
       return json({ error: 'Erro ao ativar período de teste. Tente novamente.' }, { status: 500 });
     }
 
+    // Mesmo eventID no CAPI (server) e no pixel (client) para dedup Meta.
+    const metaEventId = randomUUID();
+
     // Estado de acesso garantido a partir daqui (linha inserida). Tudo abaixo
     // é efeito colateral — CAPI, e-mail dia 0, WhatsApp, referral, last_seen,
     // PostHog — e vai pra background; nada disso compõe a resposta.
@@ -326,6 +330,7 @@ export async function POST({ request, cookies }) {
           email,
           ipAddress,
           userAgent,
+          eventId: metaEventId,
           customData: { value: 0, currency: 'BRL', predicted_ltv: 0 },
         }),
         touchLastSeen(userId, nowIso),
@@ -364,6 +369,7 @@ export async function POST({ request, cookies }) {
     return json({
       success: true,
       trialEnd: trialEnd.toISOString(),
+      metaEventId,
     });
 
   } catch (err) {
