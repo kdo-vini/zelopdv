@@ -1,5 +1,20 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-22 — iFood: evento de código validado não vai mais para dead-letter
+
+Plantão 22/09: os 7 dead-letters (3 nas últimas 24h) eram
+`DELIVERY_DROP_CODE_VALIDATION_SUCCESS`. O iFood avisa que o código de
+entrega foi aceito; isso não muda o status do pedido. O handler
+colocava o aviso em quarentena por código desconhecido. Agora entra em
+`IFOOD_INFORMATIONAL_EVENT_CODES` e encerra como processado, no mesmo
+caminho de `DELIVERY_DROP_CODE_REQUESTED`.
+
+O comando `verify_delivery_code` com `IFOOD_HTTP_400` era um código
+numérico de 4 dígitos recusado pelo iFood. O pedido depois ficou
+`CONCLUDED` / `delivered`. O corpo do POST já segue o contrato
+`{ code }`. Sem mudança nesse envio e sem replay dos 7 avisos já
+parados. Vale em produção depois do redeploy do `ifood-worker`.
+
 ## Sessão 2026-09-21 — Analytics P0/P1/P2 (landing → trial → first sale)
 
 Implementado no working tree (sem commit) o pacote aprovado pós-auditoria
