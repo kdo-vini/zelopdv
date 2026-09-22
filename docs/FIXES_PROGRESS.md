@@ -6,7 +6,9 @@
   handler agora trata como informativo e encerra sem buscar detalhe nem
   projetar. O `verify_delivery_code` com `IFOOD_HTTP_400` era um código
   de 4 dígitos recusado; o pedido já chegou em `CONCLUDED`/`delivered`.
-  Sem replay. Worker precisa de redeploy para valer nos próximos eventos.
+  Worker redeployado (`7935962`); os 7 dead-letters desse evento foram
+  reenfileirados e ficaram `processed`. O replay do painel quebrava
+  (`status` ambíguo); migration `20260922190438` qualifica a tabela.
 
 - [x] FX-ANALYTICS-FUNNEL-P0P1P2-01 (2026-09-21) — Funil marketing→trial→first
   sale: identity stitching (alias+identify), acquisition no OAuth

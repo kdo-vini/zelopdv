@@ -12,8 +12,14 @@ caminho de `DELIVERY_DROP_CODE_REQUESTED`.
 O comando `verify_delivery_code` com `IFOOD_HTTP_400` era um código
 numérico de 4 dígitos recusado pelo iFood. O pedido depois ficou
 `CONCLUDED` / `delivered`. O corpo do POST já segue o contrato
-`{ code }`. Sem mudança nesse envio e sem replay dos 7 avisos já
-parados. Vale em produção depois do redeploy do `ifood-worker`.
+`{ code }`. Sem mudança nesse envio.
+
+Rollout 22/09 19:00 UTC: commit `7935962` na `main`, Dokploy rebuildou
+o `ifood-worker` (container novo, `/health/ready` 200). Os 7
+dead-letters desse evento voltaram para a fila e o worker marcou os 7
+como `processed`. O RPC `admin_replay_ifood_event_v1` quebrava com
+`status` ambíguo; migration `20260922190438` qualifica a tabela. Um
+id inexistente agora devolve `not_replayable`.
 
 ## Sessão 2026-09-21 — Analytics P0/P1/P2 (landing → trial → first sale)
 
