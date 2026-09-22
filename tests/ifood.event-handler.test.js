@@ -100,6 +100,31 @@ describe('createIfoodEventHandler', () => {
     expect(projectOrderEvent).not.toHaveBeenCalled();
   });
 
+  it('short-circuits DELIVERY_DROP_CODE_VALIDATION_SUCCESS without quarantining it', async () => {
+    const getOrderDetail = vi.fn();
+    const projectOrderEvent = vi.fn();
+    const handler = createIfoodEventHandler({
+      integration: createFakeIntegration({ getOrderDetail }),
+      repository: createFakeRepository({ projectOrderEvent })
+    });
+
+    const row = makeRow({
+      eventType: 'DELIVERY_DROP_CODE_VALIDATION_SUCCESS',
+      payload: {
+        id: 'event-1',
+        merchantId: 'merchant-1',
+        orderId: 'order-1',
+        code: 'DDCS',
+        fullCode: 'DELIVERY_DROP_CODE_VALIDATION_SUCCESS'
+      }
+    });
+    const result = await handler(row, {});
+
+    expect(result).toEqual({ outcome: 'processed' });
+    expect(getOrderDetail).not.toHaveBeenCalled();
+    expect(projectOrderEvent).not.toHaveBeenCalled();
+  });
+
   it('short-circuits the other informational code (CANCELLATION_REQUESTED) the same way', async () => {
     const getOrderDetail = vi.fn();
     const projectOrderEvent = vi.fn();

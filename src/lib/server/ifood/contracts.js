@@ -104,14 +104,17 @@ export { statusToken };
 // CONTRACT_SNAPSHOT.md's "Ciclo completo com pedidos de teste"):
 // `confirm` produces both `CONFIRMED` and `DELIVERY_DROP_CODE_REQUESTED`,
 // and `requestCancellation` produces both `CANCELLATION_REQUESTED` and
-// `CANCELLED`. Neither of these two extra codes is in
-// `IFOOD_EXTERNAL_STATUSES`/`EXTERNAL_STATUS_ALIASES`: they carry no
+// `CANCELLED`. Production polling on 2026-09-21/22 also delivered
+// `DELIVERY_DROP_CODE_VALIDATION_SUCCESS` (short code `DDCS`) after the
+// drop code was accepted outside our command queue. None of these codes is
+// in `IFOOD_EXTERNAL_STATUSES`/`EXTERNAL_STATUS_ALIASES`: they carry no
 // commercial transition of their own and must never reach
 // `decideEventTransition`/quarantine/dead-letter. Task 8's event handler
 // checks this set first and short-circuits to a successfully processed,
 // no-op event before any RPC call or order-detail fetch.
 export const IFOOD_INFORMATIONAL_EVENT_CODES = Object.freeze(new Set([
   'DELIVERY_DROP_CODE_REQUESTED',
+  'DELIVERY_DROP_CODE_VALIDATION_SUCCESS',
   'CANCELLATION_REQUESTED'
 ]));
 
