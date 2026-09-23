@@ -3,7 +3,23 @@
 **Data:** 2026-09-17  
 **Branch de implementação:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`)  
 **Projeto Supabase:** `xnnjyrblpvsqrtsshawa` (ZeloPDV)  
-**Decisão atual:** **GO parcial (schema + worker live+ready)** — migrations aplicadas e worker Dokploy com `/health/live` 200 e `/health/ready` 200 enquanto o probe for fresco (TTL default 600s > intervalo 300s); **não é GO completo** (flags de ciclo default off; shadow/piloto/soak pendentes)
+**Decisão atual:** **GO parcial (schema + worker live+ready + poll→inbox)** — migrations aplicadas (incluindo `20260917050000_ifood_worker_polling`); worker Dokploy com `/health/live` 200 e `/health/ready` 200 enquanto o probe for fresco (TTL default 600s > intervalo 300s); reconciler poll→inbox ligado atrás de `IFOOD_WORKER_ENABLE_HTTP_ADAPTER`. **Não é GO completo** (defaults de código ainda fail-closed; loja piloto/soak/`PROCESS_COMMANDS` pendentes).
+
+## Flags de shadow (não ligar o trio)
+
+As três flags são independentes e default **off**. Shadow de ingestão:
+
+| Env | Valor |
+| --- | --- |
+| `IFOOD_WORKER_ENABLE_HTTP_ADAPTER` | `1` |
+| `IFOOD_WORKER_PROCESS_INBOX` | `1` |
+| `IFOOD_WORKER_PROCESS_COMMANDS` | `0` |
+
+`ENABLE_HTTP_ADAPTER=1` exige `IFOOD_CLIENT_ID` + `IFOOD_CLIENT_SECRET`; sem o
+par o adapter fica `null` e não há poll/ACK. `PROCESS_INBOX=1` sozinha só
+drena `event_inbox` — não polla o iFood. `PROCESS_COMMANDS` fica **off** no
+shadow (confirm/cancel/presença não saem). Ordem do ciclo:
+`probe → reconcile → processInbox → processCommands`.
 
 ## Pré-condições de código (Tasks 1–20)
 
@@ -24,7 +40,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | Aplicar forward migrations iFood no projeto vinculado | **Sim** | Owner 2026-09-17 (“Autorizo”) | Ver tabela abaixo |
 | 2 | Deploy worker (imagem por digest) + envs por **nome** | **Sim** | Owner 2026-09-17 (intenção) + evidência Dokploy 2026-09-17 | Ver seção Deploy Dokploy abaixo. Envs presentes **só por nome**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PORT`, `IFOOD_WORKER_HOST`, `NODE_ENV`. Opcionais `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` **não** definidas. Sem valores neste doc. |
-| 3 | Shadow mode (comandos/presença off) | Pendente | — | **Não feito.** Código do worker agora aceita flags `IFOOD_WORKER_PROCESS_INBOX` / `PROCESS_COMMANDS` / `ENABLE_HTTP_ADAPTER` (default off). Falta ligar flags + merchant/sandbox. Bloqueios: `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET` **não** definidas; nenhum merchant sandbox atribuído. |
+| 3 | Shadow mode (comandos/presença off) | Parcial | 2026-09-17 | **Ingestão via polling medida.** Código: reconciler atrás de `ENABLE_HTTP_ADAPTER` (`b075032` / PR #37); ciclo `reconcile` antes de `processInbox` (`efb6df3` / PR #41). Em prod (~17:54Z): 6 eventos / 2 Pedidos de teste em `event_inbox` (todos `processed`, `last_webhook_at` null). `order_commands`: 0. Comparação formal vs Gestor e soak ainda pendentes. Receita: `ENABLE_HTTP_ADAPTER=1`, `PROCESS_INBOX=1`, `PROCESS_COMMANDS=0`. |
 | 4 | Ativar 1 loja piloto sem pedidos em andamento | Pendente | — | **Não feito.** Falta merchant/sandbox + loja piloto |
 | 5 | Soak + reconciliação financeira | Pendente | — | **Não feito** |
 | 6 | Liberar self-service gradual | Pendente | — | Somente após GO completo |
@@ -77,7 +93,8 @@ existem. O ready 200 pós-redeploy prova o caminho PostgREST
 `claim_ifood_events_v1` (`INVALID_CLAIM_ARGUMENTS`, sem claim de inbox).
 **Não** prova ciclos reais de pedido, webhook, comando ou presença: as flags
 `IFOOD_WORKER_PROCESS_INBOX` / `PROCESS_COMMANDS` / `ENABLE_HTTP_ADAPTER`
-existem no código e ficam **off** por default. Sem GO completo.
+existem no código e ficam **off** por default. Shadow de ingestão usa
+adapter+inbox on e **commands off**. Sem GO completo.
 
 ## Template — shadow (preencher quando ciclos reais estiverem ligados)
 
@@ -112,30 +129,32 @@ Qualquer divergência financeira ou perda de pedido → **NO-GO**.
 ## Decisão
 
 ```
-DECISÃO: GO PARCIAL (SCHEMA + WORKER LIVE+READY)
-DATA: 2026-09-17
+DECISÃO: GO PARCIAL (SCHEMA + WORKER LIVE+READY + POLL→INBOX)
+DATA: 2026-09-17 (docs de shadow 2026-09-23)
 SIGN-OFF OWNER: schema apply autorizado verbalmente (“Autorizo”); deploy Dokploy evidenciado
 NÃO É GO COMPLETO.
 
 FEITO:
   1. apply das migrations forward iFood no projeto xnnjyrblpvsqrtsshawa
+     (incluindo 20260917050000_ifood_worker_polling)
   2. docker build OK no Dokploy; container Docker-healthy (HEALTHCHECK /health/live)
   3. processo worker live; GET /health/live → 200 serving
   4. redeploy do probe de produção; GET /health/ready → 200 fresh_probe
      no instante do probe (PostgREST claim_ifood_events_v1 /
      INVALID_CLAIM_ARGUMENTS, sem claim). TTL default agora 600s (> intervalo
      300s) para não oscilar em stale_probe ocioso.
+  5. reconciler poll→inbox atrás de ENABLE_HTTP_ADAPTER; Pedido de teste
+     medido em event_inbox via polling (commands off)
 
 PENDENTE PARA GO COMPLETO:
-  1. ligar flags IFOOD_WORKER_PROCESS_INBOX / PROCESS_COMMANDS /
-     ENABLE_HTTP_ADAPTER (default off) + IFOOD_CLIENT_ID/SECRET
-  2. merchant/sandbox atribuído
+  1. manter shadow com ENABLE_HTTP_ADAPTER=1 + PROCESS_INBOX=1 +
+     PROCESS_COMMANDS=0 + IFOOD_CLIENT_ID/SECRET (não ligar o trio)
+  2. comparação formal vs Gestor + merchant/sandbox de piloto
   3. Shadow → loja piloto → soak → sign-off GO pleno
-  4. Só então liberar self-service gradual
+  4. Só então liberar self-service gradual / PROCESS_COMMANDS=1
 
-BLOQUEADO AGORA: flags de ciclo off no Dokploy; IFOOD_CLIENT_ID/SECRET
-não definidas; sem merchant sandbox; shadow/piloto/soak não feitos.
-Ready=200 não é ciclo operacional.
+BLOQUEADO AGORA: loja piloto, soak e comandos. Poll→inbox de Pedido de
+teste já foi medido. Ready=200 sozinho não é GO completo.
 ```
 
 ## Rollback

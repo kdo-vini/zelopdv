@@ -6,11 +6,15 @@
   `Dockerfile.dockerignore` tem de un-ignore `src/lib/finance/` + o
   arquivo. Sem isso o container sai com `MODULE_NOT_FOUND` no boot.
 
-- Worker iFood ciclos (2026-09-17): inbox/commands/adapter HTTP só sobem
-  com `IFOOD_WORKER_PROCESS_INBOX=1`, `IFOOD_WORKER_PROCESS_COMMANDS=1` e
-  `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1`. Sem o par `IFOOD_CLIENT_*` o
-  adapter fica null (fail-closed). Default off. `readyMaxAgeMs` >
-  `intervalMs`. Não é GO completo.
+- Worker iFood ciclos (2026-09-17): as três flags são independentes e
+  default off. `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1` + `IFOOD_CLIENT_*`
+  monta o adapter HTTP **e** o reconciler (`pollEvents` →
+  `event_inbox` → ACK; `recordPollSuccess` carimba `last_poll_at` /
+  `last_token_at` / `worker_heartbeat_at`). `IFOOD_WORKER_PROCESS_INBOX=1`
+  só claim/processa a inbox. `IFOOD_WORKER_PROCESS_COMMANDS` fica
+  independente — shadow usa `0`. Sem o par `IFOOD_CLIENT_*` o adapter
+  fica null (fail-closed). Ordem do ciclo: reconcile → inbox → commands.
+  `readyMaxAgeMs` > `intervalMs`. Não é GO completo.
 
 - Worker iFood `/health/ready` (2026-09-17): o probe só é gravado no ciclo
   do loop. `readyMaxAgeMs` tem de ser **estritamente maior** que

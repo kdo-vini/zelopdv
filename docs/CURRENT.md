@@ -1,5 +1,24 @@
 # Tasks 1–21 + worker live+ready (GO parcial)
 
+## Handoff — 2026-09-23 (receita de shadow explícita no runbook)
+
+O wiring poll→inbox já estava no branch (`b075032` / PR #37 + ordem do
+ciclo em `efb6df3` / PR #41). O runbook e o tracker de piloto ainda
+falavam em “ligar as flags de ciclo” como um trio — isso podia ligar
+`IFOOD_WORKER_PROCESS_COMMANDS` no shadow.
+
+Atualizado, sem mudança de runtime:
+
+- Shadow: `IFOOD_WORKER_ENABLE_HTTP_ADAPTER=1`,
+  `IFOOD_WORKER_PROCESS_INBOX=1`, `IFOOD_WORKER_PROCESS_COMMANDS=0`
+- Adapter flag sem `IFOOD_CLIENT_ID`/`SECRET` continua fail-closed
+- Commands continuam independentes e default off
+- Evidência já medida (2026-09-17): Pedido de teste caiu em
+  `event_inbox` via polling
+
+Docs: `docs/operations/IFOOD.md`, `docs/projects/IFOOD_MVP_PILOT.md`,
+`docs/ZeloPDV.memory.md`. **Ainda GO parcial.**
+
 ## Handoff — 2026-09-17 (poll→inbox ligado; latência de 1 ciclo corrigida)
 
 Dois commits e uma migration aplicada em produção. **Ainda GO parcial**:
