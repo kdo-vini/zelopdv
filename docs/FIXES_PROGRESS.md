@@ -1,18 +1,25 @@
 # Fixes Progress
 
+- [ ] FX-MESAS-QR-COMANDA-BILLING-01 (2026-09-23) — `table_order` do QR
+  materializa `zelo_orders`/`zelo_order_items`, mas não linhas em
+  `comanda_itens`; o fechamento financeiro da comanda soma apenas estas
+  últimas. A observação chega ao pedido da cozinha após a migration, porém a
+  cobrança de um item lançado exclusivamente pelo QR ainda precisa de
+  integração transacional e teste de estoque/cancelamento antes da homologação.
+
 - [x] FX-MESAS-KITCHEN-PENDING-REVIEW-01 (2026-09-23) — envio agora aceita
   `pending_review` antes de confirmar; item aparece na cozinha e permanece
   marcado como enviado após recarga da comanda. Estoque já comprometido na
   inclusão do item não é baixado novamente. Validado na interface local e no
-  banco vinculado; publicação pendente.
+  banco vinculado; publicado em `ea54944`.
 - [x] FX-MESAS-ORDER-DELIVERY-01 (2026-09-23) — pedido de mesa pronto agora
   avança para `delivered` em Pedidos pela ação “Entregue à mesa”, sem chamar
   `close_zelo_order` nem gerar segunda venda. Venda #128 de teste, zero vendas
-  duplicadas; publicação pendente.
+  duplicadas; publicado em `ea54944`.
 - [x] FX-MESAS-REOPEN-AFTER-CLOSE-01 (2026-09-23) — detalhe da mesa não cria
   nova comanda ao recarregar depois do fechamento. Apenas o mapa abre a
   comanda. Comanda vazia gerada no teste cancelada; mesa livre e zero comandas
-  abertas confirmadas no banco vinculado; publicação pendente.
+  abertas confirmadas no banco vinculado; publicado em `ea54944`.
 
 - [x] FX-PWA-INSTALL-ANDROID-01 (2026-09-22) — produção não anunciava o
   manifesto no HTML SSR e os PNGs declarados retornavam 404. Layout global

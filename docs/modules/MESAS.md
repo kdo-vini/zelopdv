@@ -82,8 +82,10 @@ segue pela cozinha (`accepted` → `preparing` → `ready`) e, em Pedidos, o ope
 marca “Entregue à mesa” (`delivered`). O pagamento é registrado no fechamento
 da comanda; concluir o pedido de mesa não cria outra venda. A rota de detalhe
 não abre comanda para mesa livre: a abertura ocorre no mapa, evitando reabertura
-automática após o pagamento. Correções locais ainda não publicadas em
-2026-09-23.
+automática após o pagamento. Correções publicadas em 2026-09-23 (`ea54944`).
+O QR `table_order` já entrega observações ao pedido canônico, mas sua linha
+ainda não é materializada em `comanda_itens`; fechamento financeiro de itens
+exclusivos do QR permanece pendente (FX-MESAS-QR-COMANDA-BILLING-01).
 
 ### Fechar mesa
 

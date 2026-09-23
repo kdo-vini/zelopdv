@@ -2,7 +2,9 @@
 
 ## INC-2026-09-23-MESA-KITCHEN-CLOSE — envio invisível e reabertura após pagamento
 
-**Status:** corrigido e homologado no localhost; publicação pendente.
+**Status:** corrigido e homologado no localhost; publicado em `ea54944`,
+Vercel Production Ready. A lacuna de cobrança dos itens exclusivos do QR é
+acompanhada separadamente em FX-MESAS-QR-COMANDA-BILLING-01.
 
 **Sintomas:** enviar item de mesa retornava sucesso, mas o pedido ficava em
 `pending_review` e não aparecia na cozinha. O botão voltava a permitir envio
@@ -19,7 +21,7 @@ por cartão de débito (venda de teste #128) e entrega. Pedido `delivered`, sem
 venda duplicada; mesa `livre` e zero comandas abertas após cancelar a comanda
 vazia criada durante a investigação. Não houve cobrança real no cartão.
 `npm run check`: 0 erros/1 aviso CSS preexistente; 33 testes direcionados
-passaram. A correção ainda não está em produção.
+passaram; suite completa: 2018 passaram/3 skips.
 
 ## INC-2026-09-22-PWA-INSTALL — Chrome Android não instalava o ZeloPDV
 

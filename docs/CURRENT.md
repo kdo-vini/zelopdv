@@ -2,7 +2,7 @@
 
 ## Sessão 2026-09-23 — Mesas, cozinha, Pedidos e fechamento
 
-Correções locais, ainda não publicadas: envio à cozinha agora aceita o pedido
+Correções publicadas no commit `ea54944`: envio à cozinha agora aceita o pedido
 canônico da mesa antes de confirmar o envio; comanda marca o item como enviado
 também após recarregar. Em Pedidos, o pedido de mesa pronto recebe a ação
 “Entregue à mesa”, sem gerar outra venda. Recarregar a rota da mesa fechada não
@@ -17,7 +17,12 @@ durante o teste foi cancelada; consulta ao banco vinculado confirmou Mesa 1
 `livre` e zero comandas abertas. Acesso direto à rota da mesa livre retorna ao
 mapa, que mostrou 10 livres/0 ocupadas. `npm run check`: 0 erros, 1 aviso CSS
 preexistente em Relatórios; 33 testes direcionados passaram; verificador de
-migrations passou. A migration das observações por item no QR continua pendente.
+migrations passou; suite completa: 2018 passaram/3 skips. A migration das
+observações por item no QR foi aplicada ao banco vinculado. Revisão adicional
+encontrou uma lacuna anterior: pedidos QR `table_order` viram pedidos canônicos,
+mas não há materialização de suas linhas em `comanda_itens`. Ainda não foi
+homologado o fechamento financeiro de uma mesa com pedido via QR; acompanhar
+FX-MESAS-QR-COMANDA-BILLING-01 antes de declarar essa jornada completa.
 
 
 ## Sessão 2026-09-22 — Instalação PWA no Chrome Android
