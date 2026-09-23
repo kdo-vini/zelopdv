@@ -1,5 +1,12 @@
 # ZeloPDV.memory
 
+- Materialização iFood (2026-09-22): `materialize_ifood_sale_v1` roda com
+  `search_path=''`. Triggers invocados na inserção de `vendas` também precisam
+  qualificar tabelas ou definir o próprio search path. `set_numero_venda`
+  falhava em pedidos iFood; eventos já processados não se repetem sozinhos.
+  Migration `20260923003028_fix_ifood_sale_materialization.sql` corrige e
+  reconcilia; aplicada no banco vinculado, com 31 vendas recuperadas.
+
 - Worker iFood imagem Docker (2026-09-17): `workers/ifood/index.js` puxa
   `orderNormalizer.js`, que importa `src/lib/finance/paymentMethods.js`.
   A imagem precisa copiar esse arquivo no mesmo path relativo; o
