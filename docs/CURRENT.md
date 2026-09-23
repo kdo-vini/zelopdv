@@ -5,13 +5,19 @@
 Correção local para a instalação do ZeloPDV: o HTML SSR agora publica o link
 do manifesto via `pwaInfo`; os ícones 192×192 e 512×512 foram gerados do
 favicon atual e declarados como `any maskable`. O manifesto também informa
-`pt-BR`. E2E de produção verifica o link e os PNGs.
+`pt-BR`. E2E verifica o link e os PNGs.
 
-Validação: `npm run check` — 0 erros (1 aviso CSS preexistente); `npm test` —
-2.011 passaram / 3 skips; E2E no `vite preview` — 2/2. `npm run build`
-compilou cliente, SSR e PWA, mas o adapter Vercel encerrou no `EPERM` conhecido
-do Windows ao criar symlink. Commit/deploy e teste em Android físico ainda
-pendentes; a produção segue com o defeito até publicar esta alteração.
+Commits `6b8db24` e `e7dbfb7` publicados em `main`; Vercel Production ficou
+Ready em 2026-09-23 UTC. Verificação live: homepage 200 com link para
+`/manifest.webmanifest`, manifesto 200 (`pt-BR`) e ícones PNG 192×192/512×512
+em 200 com dimensões corretas.
+
+Validação local após integrar `origin/main`: `npm run check` — 0 erros (1 aviso
+CSS preexistente); `npm test` — 2.015 passaram / 3 skips; E2E no `vite preview`
+— 2/2. O gate Linux do GitHub (`35804106973`) passou: checks, 2.015 testes,
+verificadores de migrations/iFood e build Vercel. O build local no Windows ainda
+encerra no `EPERM` conhecido do adapter ao criar symlink. Homologação em Android
+físico ainda pendente.
 
 ## Sessão 2026-09-22 — Bem Servido: iFood ausente em Relatórios
 
