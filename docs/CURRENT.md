@@ -1,5 +1,18 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-22 — Instalação PWA no Chrome Android
+
+Correção local para a instalação do ZeloPDV: o HTML SSR agora publica o link
+do manifesto via `pwaInfo`; os ícones 192×192 e 512×512 foram gerados do
+favicon atual e declarados como `any maskable`. O manifesto também informa
+`pt-BR`. E2E de produção verifica o link e os PNGs.
+
+Validação: `npm run check` — 0 erros (1 aviso CSS preexistente); `npm test` —
+2.011 passaram / 3 skips; E2E no `vite preview` — 2/2. `npm run build`
+compilou cliente, SSR e PWA, mas o adapter Vercel encerrou no `EPERM` conhecido
+do Windows ao criar symlink. Commit/deploy e teste em Android físico ainda
+pendentes; a produção segue com o defeito até publicar esta alteração.
+
 ## Sessão 2026-09-21 — Analytics P0/P1/P2 (landing → trial → first sale)
 
 Implementado no working tree (sem commit) o pacote aprovado pós-auditoria

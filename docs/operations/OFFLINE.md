@@ -491,6 +491,21 @@ Pendente:
 - [ ] Cobrir com testes e2e os cenários de queda antes, durante e depois da RPC e de cold-start offline.
 - [ ] Avaliar pré-cache do app-shell (PWA) para abrir do zero sem rede.
 
+## Instalação como app (PWA) — 2026-09-22
+
+O layout raiz precisa emitir no HTML SSR o `linkTag` fornecido por
+`pwaInfo.webManifest`; configurar `manifest` no Vite, sozinho, não garante que
+o Chrome descubra o manifesto no HTML publicado. Os arquivos de ícone usados
+por `vite.config.js` devem existir em `static/` e corresponder aos tamanhos
+declarados (192×192 e 512×512). O E2E em
+`e2e/marketing-home.spec.js` verifica o link SSR e busca cada PNG para validar
+status HTTP, assinatura e dimensões. A validação em `vite preview` cobre o
+build de produção; o dev server pode esconder a falta do link por injeção em
+desenvolvimento.
+
+Após publicar, conferir `/manifest.webmanifest`, ambos os ícones e o menu
+**Instalar app** no Chrome Android em aparelho real.
+
 ## Atualização da aplicação (service worker) — 2026-09-15
 
 `/app` e `/gestao/caixa` são servidos pelo precache do service worker

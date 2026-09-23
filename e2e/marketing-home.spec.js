@@ -29,6 +29,36 @@ test.describe('Landing pública', () => {
     await expect(page.getByRole('link', { name: /falar no whatsapp/i })).toHaveAttribute('target', '_blank');
   });
 
+  test('anuncia o manifesto PWA no HTML da landing', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', /manifest\.webmanifest/);
+  });
+
+  test('serve os ícones declarados pelo manifesto nos tamanhos exigidos', async ({ page }) => {
+    await page.goto('/');
+
+    const manifestResponse = await page.request.get(new URL('/manifest.webmanifest', page.url()).toString());
+    expect(manifestResponse.ok()).toBe(true);
+    const manifest = await manifestResponse.json();
+    const requiredSizes = new Set(['192x192', '512x512']);
+    const foundSizes = new Set();
+
+    for (const icon of manifest.icons) {
+      if (!requiredSizes.has(icon.sizes)) continue;
+
+      const iconResponse = await page.request.get(new URL(icon.src, manifestResponse.url()).toString());
+      expect(iconResponse.status()).toBe(200);
+      const png = Buffer.from(await iconResponse.body());
+      expect(png.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+      expect(png.readUInt32BE(16)).toBe(Number(icon.sizes.split('x')[0]));
+      expect(png.readUInt32BE(20)).toBe(Number(icon.sizes.split('x')[1]));
+      foundSizes.add(icon.sizes);
+    }
+
+    expect(foundSizes).toEqual(requiredSizes);
+  });
+
   for (const width of [320, 390, 768, 1024, 1440]) {
     test(`mantém a prova comercial utilizável em ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });

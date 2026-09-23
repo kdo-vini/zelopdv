@@ -1,0 +1,11 @@
+---
+description: Always verify CI before considering push/merge done
+alwaysApply: true
+---
+
+# CI before push / merge
+
+- Before declaring a push or merge finished, verify the relevant CI (GitHub Actions / Engineering gates).
+- Successful `git push` is not enough — wait for (or check) the workflow conclusion.
+- If CI is red, fix the failing gate and push again; do not leave a broken main/PR as "done".
+- Prefer running the cheap local equivalent of the failing job first when diagnosing (`npm test`, targeted vitest, etc.).

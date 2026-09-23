@@ -44,17 +44,20 @@ export default defineConfig({
         name: 'Zelo PDV',
         short_name: 'ZeloPDV',
         description: 'Sistema de Ponto de Venda ágil e resiliente',
+        lang: 'pt-BR',
         theme_color: '#0f172a',
         icons: [
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       },

@@ -1,5 +1,12 @@
 # Fixes Progress
 
+- [x] FX-PWA-INSTALL-ANDROID-01 (2026-09-22) — produção não anunciava o
+  manifesto no HTML SSR e os PNGs declarados retornavam 404. Layout global
+  injeta o `linkTag` de `pwaInfo`; ícones atuais 192×192/512×512 em
+  `static/`, `any maskable`. E2E no build de preview verifica link, status,
+  assinatura PNG e dimensões — 2/2; `npm test` 2011 passaram / 3 skips.
+  Código local corrigido; deploy Vercel e homologação em Android real pendentes.
+
 - [x] FX-ANALYTICS-FUNNEL-P0P1P2-01 (2026-09-21) — Funil marketing→trial→first
   sale: identity stitching (alias+identify), acquisition no OAuth
   `user_registered`, `marketing_trial_clicked` + UTM first-touch em CTAs

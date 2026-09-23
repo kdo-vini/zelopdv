@@ -1,5 +1,6 @@
 <script>
   import "../app.css";
+  import { pwaInfo } from 'virtual:pwa-info';
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { get } from 'svelte/store';
@@ -429,6 +430,10 @@
   $: $sessionStore = session;
   $: $companyNameStore = companyName;
 </script>
+
+<svelte:head>
+  {@html pwaInfo?.webManifest?.linkTag ?? ''}
+</svelte:head>
 
 <Toaster
   theme="dark"

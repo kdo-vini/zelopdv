@@ -1,5 +1,35 @@
 # Incidents
 
+## INC-2026-09-22-PWA-INSTALL — Chrome Android não instalava o ZeloPDV
+
+**Status:** corrigido no working tree; publicação pendente. O domínio de
+produção continua sem a correção até o deploy.
+
+**Sintoma**
+
+- Instalação do app falhava no Chrome Android.
+- HTML servido sem `<link rel="manifest">`; os dois caminhos de ícone do
+  manifesto respondiam 404.
+
+**Causa-raiz**
+
+- A configuração do PWA gerava o manifesto, mas o layout raiz não emitia seu
+  link no SSR. Os arquivos `static/pwa-192x192.png` e
+  `static/pwa-512x512.png` haviam sido removidos em `b714b26`, mantendo-se as
+  referências no manifesto.
+
+**Correção**
+
+- Layout raiz injeta `pwaInfo.webManifest.linkTag`.
+- Ícones PNG nos dois tamanhos gerados do favicon atual; manifesto os declara
+  `any maskable` e `lang: pt-BR`.
+- E2E cobre o link SSR e o status, formato PNG e dimensões dos ícones.
+
+**Validação:** `npm run check` sem erros; `npm test` 2011 passaram / 3 skips;
+E2E no `vite preview` 2/2. O build compila os bundles e o PWA, mas o adapter
+Vercel termina no EPERM conhecido de symlink do clone Windows. Teste em Android
+físico e deploy pendentes.
+
 ## INC-2026-09-17-IFOOD-WORKER-MODULE-NOT-FOUND — imagem Docker exit(1) no boot
 
 **Status:** corrigido em código (2026-09-17). Redeploy Dokploy pendente deste
