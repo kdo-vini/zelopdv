@@ -2,9 +2,8 @@
 
 ## INC-2026-09-23-MESA-KITCHEN-CLOSE — envio invisível e reabertura após pagamento
 
-**Status:** corrigido e homologado no localhost; publicado em `ea54944`,
-Vercel Production Ready. A lacuna de cobrança dos itens exclusivos do QR é
-acompanhada separadamente em FX-MESAS-QR-COMANDA-BILLING-01.
+**Status:** corrigido, migrations aplicadas e app publicado em Vercel Production
+Ready (`ea54944`, `9529924`, `a7ce26d`).
 
 **Sintomas:** enviar item de mesa retornava sucesso, mas o pedido ficava em
 `pending_review` e não aparecia na cozinha. O botão voltava a permitir envio
@@ -14,14 +13,23 @@ mesa fechada abria uma comanda vazia e deixava a mesa ocupada.
 
 **Correção:** aceitar o pedido canônico no envio à cozinha; consultar e exibir
 o estado de envio da comanda; marcar entrega em Pedidos sem segunda venda;
-concentrar a abertura de comanda no mapa de mesas.
+concentrar a abertura de comanda no mapa. Para QR `table_order`, materializar
+as linhas aceitas em `comanda_itens` com nota e vínculo canônico, sem baixar
+estoque de novo; ratear cupom em centavos para que o total da comanda corresponda
+ao total do QR. QR pendente não pode ser omitido no fechamento.
 
 **Validação:** Mesa 1 percorreu envio, preparo, pronto, pagamento registrado
 por cartão de débito (venda de teste #128) e entrega. Pedido `delivered`, sem
 venda duplicada; mesa `livre` e zero comandas abertas após cancelar a comanda
 vazia criada durante a investigação. Não houve cobrança real no cartão.
 `npm run check`: 0 erros/1 aviso CSS preexistente; 33 testes direcionados
-passaram; suite completa: 2018 passaram/3 skips.
+passaram; suite completa antes da integração QR: 2018 passaram/3 skips.
+`npm run verify:migrations`: 107/107 baseline, 59/59 remotas e sem versões
+desconhecidas. Smoke de banco com fixture em transação e `ROLLBACK` verificou
+itens/notas QR, cupom de R$ 1,01 sobre R$ 10,00 (total R$ 8,99), linha manual
+separada, cancelamento QR e bloqueio de fechamento pendente. Nenhum fixture
+ficou persistido. O pagamento manual de teste #128 foi apenas registrado no
+PDV, sem cobrança real; o checkout QR não foi executado pela interface.
 
 ## INC-2026-09-22-PWA-INSTALL — Chrome Android não instalava o ZeloPDV
 

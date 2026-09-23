@@ -2,27 +2,37 @@
 
 ## Sessão 2026-09-23 — Mesas, cozinha, Pedidos e fechamento
 
-Correções publicadas no commit `ea54944`: envio à cozinha agora aceita o pedido
-canônico da mesa antes de confirmar o envio; comanda marca o item como enviado
-também após recarregar. Em Pedidos, o pedido de mesa pronto recebe a ação
-“Entregue à mesa”, sem gerar outra venda. Recarregar a rota da mesa fechada não
-abre uma comanda vazia; a abertura continua no mapa.
+Correções de cozinha, entrega e reabertura publicadas em `ea54944`. A integração
+financeira QR foi publicada em `9529924` e `a7ce26d`; Vercel Production está
+Ready nos domínios do ZeloPDV. Migrations aplicadas ao banco vinculado:
+`20260923012557_mesa_qr_item_observations`,
+`20260923150000_mesa_qr_comanda_materialization` e
+`20260923160000_mesa_qr_coupon_allocation`.
 
-Homologação no localhost com a Mesa 1: item com observação enviado e exibido na
-cozinha, passou por preparo e pronto; fechamento com cartão de débito registrou
-a venda de teste #128 (R$ 2,50) e a comanda fechou; ação “Entregue à mesa”
-levou o pedido canônico a `delivered`, sem segunda venda. Cartão foi apenas
-registrado no PDV, sem transação real. Uma comanda vazia criada por recarga
-durante o teste foi cancelada; consulta ao banco vinculado confirmou Mesa 1
-`livre` e zero comandas abertas. Acesso direto à rota da mesa livre retorna ao
-mapa, que mostrou 10 livres/0 ocupadas. `npm run check`: 0 erros, 1 aviso CSS
-preexistente em Relatórios; 33 testes direcionados passaram; verificador de
-migrations passou; suite completa: 2018 passaram/3 skips. A migration das
-observações por item no QR foi aplicada ao banco vinculado. Revisão adicional
-encontrou uma lacuna anterior: pedidos QR `table_order` viram pedidos canônicos,
-mas não há materialização de suas linhas em `comanda_itens`. Ainda não foi
-homologado o fechamento financeiro de uma mesa com pedido via QR; acompanhar
-FX-MESAS-QR-COMANDA-BILLING-01 antes de declarar essa jornada completa.
+No fluxo manual da Mesa 1 em localhost, o item com observação apareceu na
+cozinha, avançou por preparo/pronto e fechou a comanda com pagamento de cartão
+registrado no PDV (venda de teste #128, R$ 2,50); “Entregue à mesa” levou o
+pedido a `delivered` sem segunda venda. Não houve transação real no adquirente.
+Recarregar uma mesa fechada não reabre comanda. Após cancelar uma comanda vazia
+gerada durante a investigação, o banco confirmou Mesa 1 `livre` e zero comandas
+abertas; o mapa exibiu 10 livres/0 ocupadas.
+
+No QR `table_order`, as linhas aceitas agora são materializadas em
+`comanda_itens`, preservando observação por produto e vínculo ao pedido
+canônico; o estoque não é baixado duas vezes. Pedidos pendentes bloqueiam o
+fechamento, cancelamento aceito remove somente linhas QR vinculadas, e cupons
+alocam o desconto em centavos entre as linhas, dividindo quantidade quando
+necessário para fechar exatamente o total do cardápio. Smoke test transacional
+com rollback confirmou duas notas diferentes no mesmo produto, desconto de
+R$ 1,01 sobre R$ 10,00 (comanda de R$ 8,99), preservação de uma linha manual,
+cancelamento QR e bloqueio de pedido pendente. Todo fixture foi revertido; não
+foi criada comanda de teste persistente. O checkout QR não foi disparado pela
+interface para evitar criar um pedido real.
+
+Validação: `npm run check` sem erros (1 aviso CSS preexistente em Relatórios),
+33 testes direcionados passaram, `npm run verify:migrations` confirmou
+107/107 baseline, 59/59 versões remotas e zero classificações desconhecidas.
+Suite completa de antes da integração QR: 2018 passaram/3 skips.
 
 
 ## Sessão 2026-09-22 — Instalação PWA no Chrome Android

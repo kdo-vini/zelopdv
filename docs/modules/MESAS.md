@@ -24,8 +24,9 @@ entre aparelhos nesta fase. Contratos, ativação e limites em
 - observacao opcional em cada linha da comanda, editavel ate o envio para a
   cozinha; a anotacao segue em `comanda_itens.observacao` para cozinha e recibo
 - no QR code, o Zelo Menu usa um pedido canonico vinculado a mesa/comanda,
-  nao a escrita direta de `comanda_itens`; as notas dos produtos ja coletadas
-  no cardapio entram nas observacoes do pedido com o nome de cada produto
+  nao a escrita direta de `comanda_itens`; apos aceitar, as linhas sao
+  materializadas na comanda mantendo nota individual e vinculo ao pedido. A
+  baixa de estoque ocorre uma vez; cupom QR e rateado exatamente entre as linhas
 - historico de itens pagos preservado na venda apos o fechamento
 - as jornadas de fechamento único, dividido e parcial compartilham o catálogo
   de pagamentos. Vale-Refeição (`vale_refeicao`) está disponível nas três;
@@ -83,9 +84,11 @@ marca “Entregue à mesa” (`delivered`). O pagamento é registrado no fechame
 da comanda; concluir o pedido de mesa não cria outra venda. A rota de detalhe
 não abre comanda para mesa livre: a abertura ocorre no mapa, evitando reabertura
 automática após o pagamento. Correções publicadas em 2026-09-23 (`ea54944`).
-O QR `table_order` já entrega observações ao pedido canônico, mas sua linha
-ainda não é materializada em `comanda_itens`; fechamento financeiro de itens
-exclusivos do QR permanece pendente (FX-MESAS-QR-COMANDA-BILLING-01).
+Após aceitar um pedido QR de mesa, suas linhas entram na mesma comanda usada
+para pagamento; cada observação é preservada e o desconto do cupom fecha em
+centavos exatos. QR pendente bloqueia o fechamento da mesa. Migrations
+`20260923012557`, `20260923150000` e `20260923160000` aplicadas ao banco
+vinculado; integração publicada em `9529924` e `a7ce26d`.
 
 ### Fechar mesa
 

@@ -1,11 +1,16 @@
 # Fixes Progress
 
-- [ ] FX-MESAS-QR-COMANDA-BILLING-01 (2026-09-23) — `table_order` do QR
-  materializa `zelo_orders`/`zelo_order_items`, mas não linhas em
-  `comanda_itens`; o fechamento financeiro da comanda soma apenas estas
-  últimas. A observação chega ao pedido da cozinha após a migration, porém a
-  cobrança de um item lançado exclusivamente pelo QR ainda precisa de
-  integração transacional e teste de estoque/cancelamento antes da homologação.
+- [x] FX-MESAS-QR-COMANDA-BILLING-01 (2026-09-23) — Pedidos QR de mesa
+  aceitos materializam suas linhas em `comanda_itens` com observação e vínculo
+  ao item canônico; triggers evitam baixa duplicada de estoque. Fechamento e
+  cancelamento bloqueiam QR pendente; cancelamento aceito limpa só linhas
+  vinculadas. Cupom é rateado em centavos (com divisão de quantidade se preciso)
+  para a comanda totalizar o mesmo valor do QR. Smoke transacional com rollback
+  confirmou notas distintas no mesmo produto, total R$ 8,99 após desconto de
+  R$ 1,01, linha manual preservada, cancelamento e bloqueio pendente. Migrations
+  `20260923012557`, `20260923150000` e `20260923160000` aplicadas ao banco
+  vinculado; app publicado em `9529924`/`a7ce26d`, Vercel Production Ready.
+  Checkout QR pela interface não foi disparado para não criar pedido real.
 
 - [x] FX-MESAS-KITCHEN-PENDING-REVIEW-01 (2026-09-23) — envio agora aceita
   `pending_review` antes de confirmar; item aparece na cozinha e permanece
