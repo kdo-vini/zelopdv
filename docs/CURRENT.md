@@ -1,5 +1,19 @@
 # Tasks 1–21 + worker live+ready (GO parcial)
 
+## Handoff — 2026-09-23 (intervalo de poll em 30s no Dokploy)
+
+Owner autorizou o piso do provider: sem clientes ativos, o worker
+foi para `IFOOD_WORKER_INTERVAL_MS=30000` (antes 60000; default de
+código continua 300000). Redeploy Dokploy
+`ops: IFOOD_WORKER_INTERVAL_MS=30000` (`4MaXHK40hEpIpAziWQlGK`)
+**done**; container novo healthy; `/health/live` 200 `serving` e
+`/health/ready` 200 `fresh_probe`.
+
+Flags em prod (só nomes/valores seguros): adapter=1, inbox=1,
+**commands=1** (operação só no ZeloPDV, não shadow), intervalo=30000.
+`readyMaxAgeMs` continua derivado no boot (intervalo + slack 300s).
+Pior caso para ver o pedido ou enviar o clique: **30s** (média ~15s).
+
 ## Handoff — 2026-09-23 (receita de shadow explícita no runbook)
 
 O wiring poll→inbox já estava no branch (`b075032` / PR #37 + ordem do

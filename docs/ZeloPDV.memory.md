@@ -12,9 +12,11 @@
   `event_inbox` → ACK; `recordPollSuccess` carimba `last_poll_at` /
   `last_token_at` / `worker_heartbeat_at`). `IFOOD_WORKER_PROCESS_INBOX=1`
   só claim/processa a inbox. `IFOOD_WORKER_PROCESS_COMMANDS` fica
-  independente — shadow usa `0`. Sem o par `IFOOD_CLIENT_*` o adapter
-  fica null (fail-closed). Ordem do ciclo: reconcile → inbox → commands.
-  `readyMaxAgeMs` > `intervalMs`. Não é GO completo.
+  independente. Produção (2026-09-23, sem clientes ativos):
+  adapter+inbox+commands = 1 e `IFOOD_WORKER_INTERVAL_MS=30000` (piso
+  do provider). Shadow usa commands `0`. Sem o par `IFOOD_CLIENT_*` o
+  adapter fica null (fail-closed). Ordem do ciclo: reconcile → inbox →
+  commands. `readyMaxAgeMs` > `intervalMs`. Não é GO completo.
 
 - Worker iFood `/health/ready` (2026-09-17): o probe só é gravado no ciclo
   do loop. `readyMaxAgeMs` tem de ser **estritamente maior** que

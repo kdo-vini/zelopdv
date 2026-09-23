@@ -1,5 +1,11 @@
 # Fixes Progress
 
+- [x] FX-IFOOD-WORKER-INTERVAL-30S-01 (2026-09-23) — Dokploy
+  `ifood-worker` passou de `IFOOD_WORKER_INTERVAL_MS=60000` para
+  `30000` (piso do iFood). Redeploy `ops: IFOOD_WORKER_INTERVAL_MS=30000`
+  done; live/ready 200. Commands permanecem 1 (operação só no ZeloPDV).
+  Sem clientes ativos no momento do cutover.
+
 - [x] FX-IFOOD-SHADOW-FLAG-RECIPE-01 (2026-09-23) — runbook e tracker de
   piloto falavam em ligar as três flags de ciclo juntas. Shadow de
   ingestão é `ENABLE_HTTP_ADAPTER=1` + `PROCESS_INBOX=1` +

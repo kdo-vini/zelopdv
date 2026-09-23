@@ -41,9 +41,11 @@ Ready 200 prova o probe PostgREST `claim_ifood_events_v1`
 (`INVALID_CLAIM_ARGUMENTS`, sem claim de inbox) com `SUPABASE_URL` +
 `SUPABASE_SERVICE_ROLE_KEY`. **Não** fica 200 o tempo todo só porque o
 processo está no ar: o TTL é `IFOOD_WORKER_READY_MAX_AGE_MS` (default
-**600_000**, estritamente maior que o intervalo default **300_000**). Com
-essas defaults, idle com banco/lease saudáveis não deve cair em
-`stale_probe`. `readyMaxAgeMs <= intervalMs` é auto-ajustado no boot.
+**600_000**, estritamente maior que o intervalo default de código
+**300_000**). Em produção o intervalo do worker está em
+`IFOOD_WORKER_INTERVAL_MS=30000` (piso do iFood; 2026-09-23). O boot
+deriva `readyMaxAgeMs` acima desse valor (intervalo + slack 300s), então
+idle saudável não cai em `stale_probe`.
 O bootstrap **pode** ligar ciclos reais só com flags explícitas (default
 **off**). As três flags são independentes; **não** ligue o trio de uma vez.
 
@@ -64,8 +66,12 @@ IFOOD_WORKER_PROCESS_COMMANDS=0
 mais o par `IFOOD_CLIENT_ID` / `IFOOD_CLIENT_SECRET`. Sem o adapter flag ou
 sem o par, o ciclo continua probe-only. Ordem do ciclo:
 `probe → reconcile → processInbox → processCommands`. Polling carimba
-`last_poll_at`, `last_token_at` e `worker_heartbeat_at`. Não trata
-live+ready como GO completo.
+`last_poll_at`, `last_token_at` e `worker_heartbeat_at`.
+
+Produção (2026-09-23, owner, sem clientes ativos):
+`ENABLE_HTTP_ADAPTER=1`, `PROCESS_INBOX=1`, `PROCESS_COMMANDS=1`,
+`IFOOD_WORKER_INTERVAL_MS=30000`. Commands on = operação só no ZeloPDV.
+Não trata live+ready como GO completo.
 
 ## Piloto / rollout (Task 21)
 

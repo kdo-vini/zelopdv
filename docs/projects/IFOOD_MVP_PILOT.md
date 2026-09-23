@@ -3,7 +3,7 @@
 **Data:** 2026-09-17  
 **Branch de implementação:** `cursor/ifood-task-12-cdb9` (base `codex/ifood-mvp`)  
 **Projeto Supabase:** `xnnjyrblpvsqrtsshawa` (ZeloPDV)  
-**Decisão atual:** **GO parcial (schema + worker live+ready + poll→inbox)** — migrations aplicadas (incluindo `20260917050000_ifood_worker_polling`); worker Dokploy com `/health/live` 200 e `/health/ready` 200 enquanto o probe for fresco (TTL default 600s > intervalo 300s); reconciler poll→inbox ligado atrás de `IFOOD_WORKER_ENABLE_HTTP_ADAPTER`. **Não é GO completo** (defaults de código ainda fail-closed; loja piloto/soak/`PROCESS_COMMANDS` pendentes).
+**Decisão atual:** **GO parcial (schema + worker live+ready + poll→inbox)** — migrations aplicadas (incluindo `20260917050000_ifood_worker_polling`); worker Dokploy com `/health/live` 200 e `/health/ready` 200 enquanto o probe for fresco. Produção (2026-09-23): `IFOOD_WORKER_INTERVAL_MS=30000`, adapter+inbox+**commands=1** (operação só no ZeloPDV). **Não é GO completo** (loja piloto/soak pendentes).
 
 ## Flags de shadow (não ligar o trio)
 
@@ -61,7 +61,9 @@ Aplicadas nesta autorização (conteúdo das migrations locais Tasks 12–19; ve
 | `20260917105712` | `ifood_admin_operations` |
 | `20260917105724` | `ifood_connection_print_owner` |
 
-**Verificação pós-apply:** 27 funções `public.*ifood*`, coluna `vendas.canal_origem`, `admin_ifood_connections_overview_v1()` presente.
+Forward local posterior, aplicada e executada em prod (2026-09-17): `20260917050000_ifood_worker_polling` (`list_ifood_connections_for_polling_v1`, `record_ifood_poll_success_v1`).
+
+**Verificação pós-apply:** 27 funções `public.*ifood*`, coluna `vendas.canal_origem`, `admin_ifood_connections_overview_v1()` presente. Polling RPCs validadas depois (ACL `service_role` only; `unknown_merchant` sem write).
 
 Fonte local canônica do SQL continua em `supabase/migrations/20260917014734_*.sql` … `20260917040500_*.sql` (não editar após apply).
 
