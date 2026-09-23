@@ -379,7 +379,7 @@
   }
 
   function itemEnviadoCozinha(item) {
-    return itensEnviadosCozinha.has(item?.id);
+    return Boolean(item?.zelo_order_item_id) || itensEnviadosCozinha.has(item?.id);
   }
 
   function isSendingCozinha(item) {
@@ -1473,6 +1473,7 @@
           <ul class="itens-ul">
             {#each itens as item (item.id)}
               {@const qtdPaga = Number(quantidadePagaPorItem[item.id] || 0)}
+              {@const enviadoCozinha = Boolean(item.zelo_order_item_id) || itensEnviadosCozinha.has(item.id)}
               <li class="item-card" class:editing-note={observacaoItemId === item.id}>
                 <div class="item-info">
                   <span class="item-nome">{item.nome_produto}</span>
@@ -1491,7 +1492,7 @@
                       <button type="button" on:click={() => observacaoItemId = null}>Cancelar</button>
                       <button type="button" on:click={() => salvarObservacao(item)} disabled={savingItem}>Salvar</button>
                     </div>
-                  {:else if !itensEnviadosCozinha.has(item.id)}
+                  {:else if !enviadoCozinha}
                     <button type="button" class="item-observacao-link" on:click={() => editarObservacao(item)} disabled={savingItem || isOfflineWriteActive()} title={isOfflineWriteActive() ? 'Sincronize a comanda para editar' : undefined}>{item.observacao ? 'Editar observação' : '+ Observação'}</button>
                   {/if}
                   <span class="item-preco">R$ {Number(item.preco_unitario).toFixed(2)} · subtotal R$ {(Number(item.preco_unitario) * Number(item.quantidade)).toFixed(2)}</span>
@@ -1503,11 +1504,11 @@
                 </div>
                 <div class="item-actions">
                   <div class="qty-cluster">
-                    <button class="qty-btn qty-minus" on:click={() => alterarQuantidade(item, -1)} disabled={savingItem || itensEnviadosCozinha.has(item.id)} aria-label="Diminuir">
+                    <button class="qty-btn qty-minus" on:click={() => alterarQuantidade(item, -1)} disabled={savingItem || enviadoCozinha} aria-label="Diminuir">
                       <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 10Z" clip-rule="evenodd"/></svg>
                     </button>
                     <span class="qty-val">{item.quantidade}</span>
-                    <button class="qty-btn qty-plus" on:click={() => alterarQuantidade(item, +1)} disabled={savingItem || itensEnviadosCozinha.has(item.id)} aria-label="Aumentar">
+                    <button class="qty-btn qty-plus" on:click={() => alterarQuantidade(item, +1)} disabled={savingItem || enviadoCozinha} aria-label="Aumentar">
                       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/></svg>
                     </button>
                   </div>
@@ -1515,16 +1516,16 @@
                     <button
                       type="button"
                       class="kitchen-btn"
-                      class:sent={itensEnviadosCozinha.has(item.id)}
+                      class:sent={enviadoCozinha}
                       on:click={() => enviarItemCozinha(item)}
-                      disabled={itensEnviadosCozinha.has(item.id) || sendingCozinhaIds.has(item.id)}
-                      title={itensEnviadosCozinha.has(item.id) ? 'Item já enviado para a cozinha' : 'Enviar item para a cozinha'}
-                      aria-label={itensEnviadosCozinha.has(item.id) ? 'Item já enviado para a cozinha' : 'Enviar item para a cozinha'}
+                      disabled={enviadoCozinha || sendingCozinhaIds.has(item.id)}
+                      title={enviadoCozinha ? 'Item já enviado para a cozinha' : 'Enviar item para a cozinha'}
+                      aria-label={enviadoCozinha ? 'Item já enviado para a cozinha' : 'Enviar item para a cozinha'}
                     >
                       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path d="M10 2.5a.75.75 0 0 1 .75.75v1.308a5.75 5.75 0 0 1 5 5.692v.5H4.25v-.5a5.75 5.75 0 0 1 5-5.692V3.25A.75.75 0 0 1 10 2.5Zm-6.5 10a.75.75 0 0 1 .75-.75h11.5a.75.75 0 0 1 .75.75v.25a3.75 3.75 0 0 1-3.75 3.75h-5.5a3.75 3.75 0 0 1-3.75-3.75v-.25Z"/>
                       </svg>
-                      <span>{itensEnviadosCozinha.has(item.id) ? 'Enviado' : (sendingCozinhaIds.has(item.id) ? '...' : 'Cozinha')}</span>
+                      <span>{enviadoCozinha ? 'Enviado' : (sendingCozinhaIds.has(item.id) ? '...' : 'Cozinha')}</span>
                     </button>
                   {/if}
                 </div>
