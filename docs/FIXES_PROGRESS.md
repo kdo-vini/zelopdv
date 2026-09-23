@@ -1,6 +1,6 @@
 # Fixes Progress
 
-- [ ] FX-IFOOD-BEMSERVIDO-REPORT-SALES-01 (2026-09-22) — 31 pedidos iFood
+- [x] FX-IFOOD-BEMSERVIDO-REPORT-SALES-01 (2026-09-22) — 31 pedidos iFood
   entregues da Bem Servido (R$ 1.215,44) não viraram `vendas`, logo não
   aparecem em “Vendas por Canal”. Causa: trigger `set_numero_venda` com
   referência não qualificada a `vendas` sob RPC `search_path=''`.
@@ -10,6 +10,15 @@
 
 - [x] FX-IFOOD-ORDER-CONTACT-UI-01 (2026-09-22) — removido da tela de detalhe
   iFood o bloco “Contato do cliente” com 0800 e localizador.
+- [x] FX-IFOOD-DROP-CODE-VALIDATION-EVENT-01 (2026-09-22) — Os 7
+  dead-letters da inbox eram só `DELIVERY_DROP_CODE_VALIDATION_SUCCESS`
+  (`DDCS`, `quarantine_unknown_event`). O evento não muda o pedido; o
+  handler agora trata como informativo e encerra sem buscar detalhe nem
+  projetar. O `verify_delivery_code` com `IFOOD_HTTP_400` era um código
+  de 4 dígitos recusado; o pedido já chegou em `CONCLUDED`/`delivered`.
+  Worker redeployado (`7935962`); os 7 dead-letters desse evento foram
+  reenfileirados e ficaram `processed`. O replay do painel quebrava
+  (`status` ambíguo); migration `20260922190438` qualifica a tabela.
 
 - [x] FX-ANALYTICS-FUNNEL-P0P1P2-01 (2026-09-21) — Funil marketing→trial→first
   sale: identity stitching (alias+identify), acquisition no OAuth

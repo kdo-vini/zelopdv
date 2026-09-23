@@ -3,27 +3,46 @@
 ## Sessão 2026-09-22 — Bem Servido: iFood ausente em Relatórios
 
 Diagnóstico somente leitura no projeto vinculado: o pedido iFood #4539 está
-`delivered`, mas não tem linha em `vendas`. A Bem Servido possui 31 pedidos
+`delivered`, mas não tinha linha em `vendas`. A Bem Servido possuía 31 pedidos
 iFood entregues sem venda materializada (R$ 1.215,44). Relatórios agrega
-`vendas.canal_origem`, por isso não exibe iFood.
+`vendas.canal_origem`, por isso não exibia iFood.
 
 Causa no código e no schema live: `materialize_ifood_sale_v1` usa
 `search_path = ''`, enquanto o trigger `set_numero_venda` consultava `vendas`
-sem schema e não tinha `search_path` próprio. A inserção falha; o handler
-registra o evento como processado mesmo se a materialização best-effort falhar.
+sem schema e não tinha `search_path` próprio. A inserção falhava; o handler
+registrava o evento como processado mesmo se a materialização best-effort falhasse.
 
-Migration local `20260923003028_fix_ifood_sale_materialization.sql` qualifica
+Migration `20260923003028_fix_ifood_sale_materialization.sql` qualifica
 `public.vendas` no trigger e reconcilia idempotentemente pedidos iFood
 entregues da Bem Servido sem `client_sale_id`. Aplicada ao banco vinculado em
-2026-09-23 UTC: os 31 pedidos foram materializados e não há mais entregas sem
-venda. A tela do pedido iFood deixou de exibir o bloco “Contato do
-cliente”, número 0800 e localizador, conforme pedido.
+2026-09-23 UTC: os 31 pedidos foram materializados, totalizando R$ 1.215,44,
+e não há mais entregas sem venda. A tela do pedido iFood deixou de exibir o
+bloco “Contato do cliente”, número 0800 e localizador, conforme pedido.
 
 Validação local: `npm test` 2012 passed / 3 skipped; `npm run check` 0 erros / 1
 aviso preexistente (`.card-panel` em Relatórios); localhost respondeu 200 e
 renderizou no Chrome. O build local chegou ao bundle final, mas o adapter
 Vercel falhou ao criar symlink por `EPERM` do Windows; o CI Linux executa esse
-mesmo build. O deploy de frontend segue no push para `main`.
+mesmo build.
+
+Plantão 22/09: os 7 dead-letters (3 nas últimas 24h) eram
+`DELIVERY_DROP_CODE_VALIDATION_SUCCESS`. O iFood avisa que o código de
+entrega foi aceito; isso não muda o status do pedido. O handler colocava o
+aviso em quarentena por código desconhecido. Agora entra em
+`IFOOD_INFORMATIONAL_EVENT_CODES` e encerra como processado, no mesmo caminho
+de `DELIVERY_DROP_CODE_REQUESTED`.
+
+O comando `verify_delivery_code` com `IFOOD_HTTP_400` era um código numérico
+de 4 dígitos recusado pelo iFood. O pedido depois ficou `CONCLUDED` /
+`delivered`. O corpo do POST já segue o contrato `{ code }`. Sem mudança nesse
+envio.
+
+Rollout 22/09 19:00 UTC: commit `7935962` na `main`, Dokploy rebuildou o
+`ifood-worker` (container novo, `/health/ready` 200). Os 7 dead-letters desse
+evento voltaram para a fila e o worker marcou os 7 como `processed`. O RPC
+`admin_replay_ifood_event_v1` quebrava com `status` ambíguo; migration
+`20260922190438` qualifica a tabela. Um id inexistente agora devolve
+`not_replayable`.
 
 ## Sessão 2026-09-21 — Analytics P0/P1/P2 (landing → trial → first sale)
 

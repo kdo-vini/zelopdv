@@ -96,6 +96,7 @@ describe('iFood informational event codes (Task 8 requirement observed live 2026
   it('contracts.js exports the informational code set and a matcher helper', () => {
     expect(contractsSource).toContain('IFOOD_INFORMATIONAL_EVENT_CODES');
     expect(contractsSource).toContain('DELIVERY_DROP_CODE_REQUESTED');
+    expect(contractsSource).toContain('DELIVERY_DROP_CODE_VALIDATION_SUCCESS');
     expect(contractsSource).toContain('CANCELLATION_REQUESTED');
     expect(contractsSource).toContain('export function isIfoodInformationalEventCode');
   });
