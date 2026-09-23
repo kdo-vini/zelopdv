@@ -179,10 +179,36 @@ export async function POST({ request }) {
     return json({ error: 'Não foi possível enviar o item à cozinha.' }, { status: 409 });
   }
 
+  if (!order?.orderId) {
+    return json({ error: 'Não foi possível confirmar o pedido na cozinha.' }, { status: 409 });
+  }
+
+  // Mesa items have already reserved stock in comanda_itens. create_zelo_order
+  // carries that commitment into the canonical order; accepting it makes the
+  // item visible in the kitchen without deducting stock a second time.
+  let orderStatus = order.orderStatus;
+  if (orderStatus === 'pending_review') {
+    const { data: accepted, error: acceptError } = await supabaseAdmin.rpc('transition_zelo_order', {
+      p_order_id: order.orderId,
+      p_expected_revision: order.revision,
+      p_action: 'accept',
+      p_actor_id: user.id,
+      p_detail: { source: 'mesa', comandaItemId: itemId },
+    });
+    if (acceptError) {
+      console.error('[mesas/cozinha] order acceptance failed:', acceptError.message);
+      return json({ error: 'Pedido criado, mas ainda não chegou à cozinha. Tente enviar novamente.' }, { status: 409 });
+    }
+    orderStatus = accepted?.orderStatus || accepted?.status || 'accepted';
+  }
+  if (!['accepted', 'preparing', 'ready', 'out_for_delivery', 'delivered'].includes(orderStatus)) {
+    return json({ error: 'Este pedido não pode ser enviado à cozinha.' }, { status: 409 });
+  }
+
   return json({
     success: true,
     orderId: order?.orderId || null,
-    alreadyConfirmed: order?.alreadyConfirmed === true,
+    alreadyConfirmed: order?.alreadyConfirmed === true && order?.orderStatus !== 'pending_review',
     source: 'mesa',
   });
 }

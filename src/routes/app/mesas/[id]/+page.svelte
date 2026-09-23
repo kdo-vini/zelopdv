@@ -48,6 +48,8 @@
   let sendingCozinhaIds = new Set();
   let montagemProduto = null;
   let montagemOpen = false;
+  let observacaoItemId = null;
+  let observacaoRascunho = '';
 
   // Filtros / busca
   let busca = '';
@@ -305,8 +307,11 @@
     loading = true;
     if (isOfflineWriteActive()) {
       try {
-        let state = await loadMesaState(supabase, ownerUserId);
-        if (state.details[mesaId]?.comanda.status !== 'aberta') state = (await submitMesaOperation('mesa.open', { mesaId, comandaId: crypto.randomUUID() })).state;
+        const state = await loadMesaState(supabase, ownerUserId);
+        if (state.details[mesaId]?.comanda.status !== 'aberta') {
+          goto('/app/mesas');
+          return;
+        }
         applyLocalMesa(state);
       } catch (error) { addToast('Não foi possível abrir a comanda. Verifique sua conexão e tente novamente.', 'error'); }
       finally { loading = false; }
@@ -327,8 +332,8 @@
     }
     mesa = m;
 
-    // Find or create the open comanda for this mesa
-    let { data: c } = await supabase
+    // A abertura é feita no mapa. Recarregar esta página após o pagamento não pode abrir outra comanda.
+    const { data: c, error: cErr } = await supabase
       .from('comandas')
       .select('*')
       .eq('id_usuario', ownerUserId)
@@ -336,27 +341,14 @@
       .eq('status', 'aberta')
       .maybeSingle();
 
+    if (cErr) {
+      addToast('Não foi possível carregar a comanda. Tente novamente.', 'error');
+      goto('/app/mesas');
+      return;
+    }
     if (!c) {
-      const { data: created, error: insErr } = await supabase
-        .from('comandas')
-        .insert({
-          id_mesa: mesaId,
-          id_usuario: ownerUserId,
-          id_operador: operadorUserId,
-          status: 'aberta',
-          num_pessoas: 1,
-        })
-        .select()
-        .single();
-      if (insErr) {
-        addToast('Não foi possível abrir a comanda. Tente novamente.', 'error');
-        return;
-      }
-      c = created;
-      // Mesa para 'ocupada'
-      await supabase.from('mesas').update({ status: 'ocupada' }).eq('id', mesaId).eq('id_usuario', ownerUserId);
-      mesa.status = 'ocupada';
-      auditMesa('mesa.aberta', 'mesa', mesaId, { numero: m.numero });
+      goto('/app/mesas');
+      return;
     }
     comanda = c;
 
@@ -394,6 +386,36 @@
     return sendingCozinhaIds.has(item?.id);
   }
 
+  function editarObservacao(item) {
+    observacaoItemId = item.id;
+    observacaoRascunho = item.observacao || '';
+  }
+
+  async function salvarObservacao(item) {
+    if (savingItem || itemEnviadoCozinha(item)) return;
+    if (isOfflineWriteActive()) {
+      addToast('Conecte e sincronize a comanda para editar a observação.', 'info');
+      return;
+    }
+    savingItem = true;
+    const observacao = observacaoRascunho.trim();
+    try {
+      const { data, error } = await supabase.from('comanda_itens')
+        .update({ observacao: observacao || null })
+        .eq('id', item.id)
+        .eq('id_comanda', comanda.id)
+        .select('id, observacao')
+        .single();
+      if (error || !data) throw error || new Error('Item não encontrado');
+      itens = itens.map(i => i.id === item.id ? { ...i, observacao: data.observacao } : i);
+      observacaoItemId = null;
+    } catch (error) {
+      addToast(errorMessageFrom(error, 'Não foi possível salvar a observação. Tente novamente.'), 'error');
+    } finally {
+      savingItem = false;
+    }
+  }
+
   async function loadItensEnviadosCozinha() {
     if (isOfflineWriteActive() && globalThis.navigator?.onLine === false) return;
     if (!canSendItemToKitchen() || !comanda?.id || !empresaId) {
@@ -406,7 +428,7 @@
       .select('id, source, status, fulfillment')
       .eq('empresa_id', empresaId)
       .eq('source', 'mesa')
-      .eq('fulfillment->>comandaId', comanda.id)
+      .contains('fulfillment', { comandaId: comanda.id })
       .in('status', ['pending_review', 'accepted', 'preparing', 'ready', 'out_for_delivery', 'delivered']);
 
     if (error) {
@@ -1451,11 +1473,26 @@
           <ul class="itens-ul">
             {#each itens as item (item.id)}
               {@const qtdPaga = Number(quantidadePagaPorItem[item.id] || 0)}
-              <li class="item-card">
+              <li class="item-card" class:editing-note={observacaoItemId === item.id}>
                 <div class="item-info">
                   <span class="item-nome">{item.nome_produto}</span>
                   {#if item.modifierSummary}
                     <span class="item-modifiers">{item.modifierSummary}</span>
+                  {/if}
+                  {#if item.observacao}
+                    <span class="item-modifiers">Obs: {item.observacao}</span>
+                  {/if}
+                  {#if observacaoItemId === item.id}
+                    <label class="item-observacao">
+                      <span>Observação do produto</span>
+                      <textarea rows="2" maxlength="200" bind:value={observacaoRascunho} placeholder="Ex.: sem cebola"></textarea>
+                    </label>
+                    <div class="item-observacao-actions">
+                      <button type="button" on:click={() => observacaoItemId = null}>Cancelar</button>
+                      <button type="button" on:click={() => salvarObservacao(item)} disabled={savingItem}>Salvar</button>
+                    </div>
+                  {:else if !itensEnviadosCozinha.has(item.id)}
+                    <button type="button" class="item-observacao-link" on:click={() => editarObservacao(item)} disabled={savingItem || isOfflineWriteActive()} title={isOfflineWriteActive() ? 'Sincronize a comanda para editar' : undefined}>{item.observacao ? 'Editar observação' : '+ Observação'}</button>
                   {/if}
                   <span class="item-preco">R$ {Number(item.preco_unitario).toFixed(2)} · subtotal R$ {(Number(item.preco_unitario) * Number(item.quantidade)).toFixed(2)}</span>
                   {#if qtdPaga > 0}
@@ -1466,11 +1503,11 @@
                 </div>
                 <div class="item-actions">
                   <div class="qty-cluster">
-                    <button class="qty-btn qty-minus" on:click={() => alterarQuantidade(item, -1)} disabled={savingItem || itemEnviadoCozinha(item)} aria-label="Diminuir">
+                    <button class="qty-btn qty-minus" on:click={() => alterarQuantidade(item, -1)} disabled={savingItem || itensEnviadosCozinha.has(item.id)} aria-label="Diminuir">
                       <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 10Z" clip-rule="evenodd"/></svg>
                     </button>
                     <span class="qty-val">{item.quantidade}</span>
-                    <button class="qty-btn qty-plus" on:click={() => alterarQuantidade(item, +1)} disabled={savingItem || itemEnviadoCozinha(item)} aria-label="Aumentar">
+                    <button class="qty-btn qty-plus" on:click={() => alterarQuantidade(item, +1)} disabled={savingItem || itensEnviadosCozinha.has(item.id)} aria-label="Aumentar">
                       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/></svg>
                     </button>
                   </div>
@@ -1478,16 +1515,16 @@
                     <button
                       type="button"
                       class="kitchen-btn"
-                      class:sent={itemEnviadoCozinha(item)}
+                      class:sent={itensEnviadosCozinha.has(item.id)}
                       on:click={() => enviarItemCozinha(item)}
-                      disabled={itemEnviadoCozinha(item) || isSendingCozinha(item)}
-                      title={itemEnviadoCozinha(item) ? 'Item já enviado para a cozinha' : 'Enviar item para a cozinha'}
-                      aria-label={itemEnviadoCozinha(item) ? 'Item já enviado para a cozinha' : 'Enviar item para a cozinha'}
+                      disabled={itensEnviadosCozinha.has(item.id) || sendingCozinhaIds.has(item.id)}
+                      title={itensEnviadosCozinha.has(item.id) ? 'Item já enviado para a cozinha' : 'Enviar item para a cozinha'}
+                      aria-label={itensEnviadosCozinha.has(item.id) ? 'Item já enviado para a cozinha' : 'Enviar item para a cozinha'}
                     >
                       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path d="M10 2.5a.75.75 0 0 1 .75.75v1.308a5.75 5.75 0 0 1 5 5.692v.5H4.25v-.5a5.75 5.75 0 0 1 5-5.692V3.25A.75.75 0 0 1 10 2.5Zm-6.5 10a.75.75 0 0 1 .75-.75h11.5a.75.75 0 0 1 .75.75v.25a3.75 3.75 0 0 1-3.75 3.75h-5.5a3.75 3.75 0 0 1-3.75-3.75v-.25Z"/>
                       </svg>
-                      <span>{itemEnviadoCozinha(item) ? 'Enviado' : (isSendingCozinha(item) ? '...' : 'Cozinha')}</span>
+                      <span>{itensEnviadosCozinha.has(item.id) ? 'Enviado' : (sendingCozinhaIds.has(item.id) ? '...' : 'Cozinha')}</span>
                     </button>
                   {/if}
                 </div>
@@ -2639,6 +2676,9 @@
     background: var(--bg-panel);
     border-color: var(--border-strong);
   }
+  .item-card.editing-note { flex-wrap: wrap; align-items: flex-start; }
+  .item-card.editing-note .item-info { flex: 1 0 100%; }
+  .item-card.editing-note .item-actions { margin-left: auto; }
   .item-info {
     display: flex; flex-direction: column; gap: 0.1rem;
     min-width: 0; flex: 1;
@@ -2660,6 +2700,11 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .item-observacao { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.875rem; color: var(--text-muted); }
+  .item-observacao textarea { width: 100%; padding: 0.4rem; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-input); color: var(--text-main); font-size: 1rem; resize: vertical; }
+  .item-observacao-actions { display: flex; gap: 0.7rem; }
+  .item-observacao-actions button, .item-observacao-link { width: fit-content; font-size: 0.875rem; color: var(--primary); background: none; border: 0; padding: 0.2rem 0; cursor: pointer; }
+  .item-observacao-link:disabled { opacity: 0.5; cursor: default; }
 
   .item-actions {
     display: inline-flex; align-items: center; gap: 0.35rem;

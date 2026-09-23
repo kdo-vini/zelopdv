@@ -1,5 +1,25 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-23 — Mesas, cozinha, Pedidos e fechamento
+
+Correções locais, ainda não publicadas: envio à cozinha agora aceita o pedido
+canônico da mesa antes de confirmar o envio; comanda marca o item como enviado
+também após recarregar. Em Pedidos, o pedido de mesa pronto recebe a ação
+“Entregue à mesa”, sem gerar outra venda. Recarregar a rota da mesa fechada não
+abre uma comanda vazia; a abertura continua no mapa.
+
+Homologação no localhost com a Mesa 1: item com observação enviado e exibido na
+cozinha, passou por preparo e pronto; fechamento com cartão de débito registrou
+a venda de teste #128 (R$ 2,50) e a comanda fechou; ação “Entregue à mesa”
+levou o pedido canônico a `delivered`, sem segunda venda. Cartão foi apenas
+registrado no PDV, sem transação real. Uma comanda vazia criada por recarga
+durante o teste foi cancelada; consulta ao banco vinculado confirmou Mesa 1
+`livre` e zero comandas abertas. Acesso direto à rota da mesa livre retorna ao
+mapa, que mostrou 10 livres/0 ocupadas. `npm run check`: 0 erros, 1 aviso CSS
+preexistente em Relatórios; 33 testes direcionados passaram; verificador de
+migrations passou. A migration das observações por item no QR continua pendente.
+
+
 ## Sessão 2026-09-22 — Instalação PWA no Chrome Android
 
 Correção local para a instalação do ZeloPDV: o HTML SSR agora publica o link

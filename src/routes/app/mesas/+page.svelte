@@ -168,6 +168,7 @@
   }
 
   function clearDragListeners() {
+    if (typeof window === 'undefined') return;
     window.removeEventListener('pointermove', onWindowPointerMove);
     window.removeEventListener('pointerup', onWindowPointerUp);
     window.removeEventListener('pointercancel', onWindowPointerUp);

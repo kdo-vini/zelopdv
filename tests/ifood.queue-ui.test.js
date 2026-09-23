@@ -217,6 +217,11 @@ describe('queue action routing', () => {
     expect(resolveKitchenAdvance({ ...zelomenu, status: 'accepted' }, 'start')).toEqual({ kind: 'transition', action: 'start_preparing' });
   });
 
+  it('completes a ready mesa order without creating another sale', () => {
+    const mesa = mapCanonicalOrder(ifoodRow({ source: 'mesa', status: 'ready', fulfillment: { type: 'mesa' } }));
+    expect(resolveQueueAdvance(mesa)).toEqual({ kind: 'transition', action: 'deliver' });
+  });
+
   it('kitchen routes iFood steps to commands and blocks ready for iFood-delivered orders', () => {
     const ifood = mapCanonicalOrder(ifoodRow({ status: 'accepted' }));
     expect(resolveKitchenAdvance(ifood, 'start')).toEqual({ kind: 'ifood_command', intent: 'start_preparation' });

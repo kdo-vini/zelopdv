@@ -215,6 +215,11 @@ export function resolveQueueAdvance(order) {
     const intent = ifoodPrimaryIntent(order);
     return intent ? { kind: 'ifood_command', intent } : { kind: 'none' };
   }
+  // Mesa payments are recorded when the comanda closes. Finishing its kitchen
+  // order only records delivery; close_zelo_order would create a second sale.
+  if (order?.source === 'mesa' && order.status === 'ready') {
+    return { kind: 'transition', action: 'deliver' };
+  }
   const actionByStatus = {
     pending_review: 'accept',
     accepted: 'start_preparing',

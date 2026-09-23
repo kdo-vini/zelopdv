@@ -495,6 +495,7 @@
     if (pedido.status === 'pending_review') return 'Aceitar pedido';
     if (pedido.status === 'accepted') return 'Iniciar preparo';
     if (pedido.status === 'preparing') return 'Marcar como pronto';
+    if (pedido.source === 'mesa' && pedido.status === 'ready') return 'Entregue à mesa';
     if (pedido.status === 'ready' && canonicalFulfillmentMode(pedido) === 'delivery') return 'Saiu para entrega';
     if (pedido.status === 'ready' || pedido.status === 'out_for_delivery') return 'Concluir pedido';
     return 'Aguardando pagamento';
@@ -526,7 +527,7 @@
     }
     if (advance.kind === 'none') return;
     const action = advance.kind === 'close' ? 'close' : advance.action;
-    if (action === 'close' && !canReceiveOrders) {
+    if ((action === 'close' || action === 'deliver') && !canReceiveOrders) {
       addToast('Seu cargo não pode receber ou concluir pedidos.', 'warning');
       return;
     }

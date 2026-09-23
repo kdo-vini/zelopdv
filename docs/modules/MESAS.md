@@ -21,6 +21,11 @@ entre aparelhos nesta fase. Contratos, ativação e limites em
 - fechamento da mesa convertendo consumo em `vendas` + `vendas_itens`
 - pre-conta e recibo final imprimivel
 - pagamentos parciais por valor ou por quantidade de item
+- observacao opcional em cada linha da comanda, editavel ate o envio para a
+  cozinha; a anotacao segue em `comanda_itens.observacao` para cozinha e recibo
+- no QR code, o Zelo Menu usa um pedido canonico vinculado a mesa/comanda,
+  nao a escrita direta de `comanda_itens`; as notas dos produtos ja coletadas
+  no cardapio entram nas observacoes do pedido com o nome de cada produto
 - historico de itens pagos preservado na venda apos o fechamento
 - as jornadas de fechamento único, dividido e parcial compartilham o catálogo
   de pagamentos. Vale-Refeição (`vale_refeicao`) está disponível nas três;
@@ -66,6 +71,19 @@ entre aparelhos nesta fase. Contratos, ativação e limites em
 2. escolhe mesa livre
 3. sistema cria ou abre a comanda da mesa
 4. itens sao adicionados/ajustados na comanda
+
+O clique no produto continua lancando imediatamente. Depois, o operador pode
+usar `+ Observação` na linha antes de envia-la a cozinha. Com operacoes offline
+pendentes, a edicao aguarda a sincronizacao da comanda.
+
+O botão Cozinha cria o pedido canônico e o aceita antes de confirmar o envio.
+O item permanece marcado como enviado após recarregar a comanda. O pedido
+segue pela cozinha (`accepted` → `preparing` → `ready`) e, em Pedidos, o operador
+marca “Entregue à mesa” (`delivered`). O pagamento é registrado no fechamento
+da comanda; concluir o pedido de mesa não cria outra venda. A rota de detalhe
+não abre comanda para mesa livre: a abertura ocorre no mapa, evitando reabertura
+automática após o pagamento. Correções locais ainda não publicadas em
+2026-09-23.
 
 ### Fechar mesa
 

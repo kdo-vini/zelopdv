@@ -34,7 +34,13 @@ function makeSupabaseAdmin(state) {
     from: vi.fn((table) => makeQuery(state, table)),
     rpc: vi.fn(async (name, args) => {
       state.rpcCalls.push({ name, args });
-      return { data: state.rpcData ?? { orderId: 'order-1', alreadyConfirmed: false }, error: state.rpcError ?? null };
+      if (name === 'transition_zelo_order') {
+        return { data: { orderStatus: 'accepted' }, error: state.acceptError ?? null };
+      }
+      return {
+        data: state.rpcData ?? { orderId: 'order-1', orderStatus: 'pending_review', revision: 1, alreadyConfirmed: false },
+        error: state.rpcError ?? null,
+      };
     }),
   };
 }
@@ -145,7 +151,7 @@ describe('API: mesas/cozinha', () => {
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ success: true, source: 'mesa', orderId: 'order-1' });
-    expect(state.rpcCalls).toHaveLength(1);
+    expect(state.rpcCalls).toHaveLength(2);
     expect(state.rpcCalls[0]).toMatchObject({
       name: 'create_zelo_order',
       args: {
@@ -165,6 +171,10 @@ describe('API: mesas/cozinha', () => {
           },
         },
       },
+    });
+    expect(state.rpcCalls[1]).toMatchObject({
+      name: 'transition_zelo_order',
+      args: { p_order_id: 'order-1', p_expected_revision: 1, p_action: 'accept', p_actor_id: 'sub-1' },
     });
 
     for (const table of ['subscriptions', 'comandas', 'mesas', 'produtos', 'empresa_perfil']) {
@@ -199,5 +209,24 @@ describe('API: mesas/cozinha', () => {
     expect(response.status).toBe(409);
     expect(body.error).toBe('Não foi possível enviar o item à cozinha.');
     expect(body.error).not.toContain('private_table');
+  });
+
+  it('retries acceptance of a previously created order without creating a new one', async () => {
+    const state = baseState({ rpcData: { orderId: 'order-1', orderStatus: 'pending_review', revision: 1, alreadyConfirmed: true } });
+    const { POST } = await loadWith(state);
+    const response = await POST({ request: makeRequest({ body: { comandaId: COMANDA_ID, itemId: ITEM_ID } }) });
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).alreadyConfirmed).toBe(false);
+    expect(state.rpcCalls.map(({ name }) => name)).toEqual(['create_zelo_order', 'transition_zelo_order']);
+  });
+
+  it('does not claim kitchen delivery when acceptance fails', async () => {
+    const state = baseState({ acceptError: { message: 'REVISION_CONFLICT' } });
+    const { POST } = await loadWith(state);
+    const response = await POST({ request: makeRequest({ body: { comandaId: COMANDA_ID, itemId: ITEM_ID } }) });
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toContain('ainda não chegou à cozinha');
   });
 });
