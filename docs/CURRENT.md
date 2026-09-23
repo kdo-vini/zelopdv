@@ -1,5 +1,30 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-22 — Bem Servido: iFood ausente em Relatórios
+
+Diagnóstico somente leitura no projeto vinculado: o pedido iFood #4539 está
+`delivered`, mas não tem linha em `vendas`. A Bem Servido possui 31 pedidos
+iFood entregues sem venda materializada (R$ 1.215,44). Relatórios agrega
+`vendas.canal_origem`, por isso não exibe iFood.
+
+Causa no código e no schema live: `materialize_ifood_sale_v1` usa
+`search_path = ''`, enquanto o trigger `set_numero_venda` consultava `vendas`
+sem schema e não tinha `search_path` próprio. A inserção falha; o handler
+registra o evento como processado mesmo se a materialização best-effort falhar.
+
+Migration local `20260923003028_fix_ifood_sale_materialization.sql` qualifica
+`public.vendas` no trigger e reconcilia idempotentemente pedidos iFood
+entregues da Bem Servido sem `client_sale_id`. Aplicada ao banco vinculado em
+2026-09-23 UTC: os 31 pedidos foram materializados e não há mais entregas sem
+venda. A tela do pedido iFood deixou de exibir o bloco “Contato do
+cliente”, número 0800 e localizador, conforme pedido.
+
+Validação local: `npm test` 2012 passed / 3 skipped; `npm run check` 0 erros / 1
+aviso preexistente (`.card-panel` em Relatórios); localhost respondeu 200 e
+renderizou no Chrome. O build local chegou ao bundle final, mas o adapter
+Vercel falhou ao criar symlink por `EPERM` do Windows; o CI Linux executa esse
+mesmo build. O deploy de frontend segue no push para `main`.
+
 ## Sessão 2026-09-21 — Analytics P0/P1/P2 (landing → trial → first sale)
 
 Implementado no working tree (sem commit) o pacote aprovado pós-auditoria

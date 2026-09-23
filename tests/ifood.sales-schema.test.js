@@ -14,6 +14,11 @@ const verificationSql = readFileSync(
   resolve('supabase/verification/ifood_sales_and_reversals.sql'),
   'utf8'
 ).replace(/\r\n/g, '\n').toLowerCase();
+const repairMigrationName = readdirSync(migrationDir)
+  .find((name) => /^\d+_fix_ifood_sale_materialization\.sql$/.test(name));
+const repairSql = repairMigrationName
+  ? readFileSync(resolve(migrationDir, repairMigrationName), 'utf8').replace(/\r\n/g, '\n').toLowerCase()
+  : '';
 
 const rpcSignatures = [
   'materialize_ifood_sale_v1(text, text)',
@@ -21,6 +26,13 @@ const rpcSignatures = [
 ];
 
 describe('iFood sales materialization and reversal schema', () => {
+  it('makes the sale numbering trigger safe under the iFood RPC empty search path and reconciles missed sales', () => {
+    expect(repairSql).toContain('create or replace function public.set_numero_venda()');
+    expect(repairSql).toContain("set search_path = ''");
+    expect(repairSql).toContain('from public.vendas');
+    expect(repairSql).toContain('public.materialize_ifood_sale_v1');
+    expect(repairSql).toContain('set local role service_role');
+  });
   it('uses a CLI-generated forward migration wrapped in begin/commit with no CR', () => {
     expect(migrationName).toBeTruthy();
     expect(rawSql.includes('\r')).toBe(false);

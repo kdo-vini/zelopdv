@@ -1,5 +1,16 @@
 # Fixes Progress
 
+- [ ] FX-IFOOD-BEMSERVIDO-REPORT-SALES-01 (2026-09-22) — 31 pedidos iFood
+  entregues da Bem Servido (R$ 1.215,44) não viraram `vendas`, logo não
+  aparecem em “Vendas por Canal”. Causa: trigger `set_numero_venda` com
+  referência não qualificada a `vendas` sob RPC `search_path=''`.
+  Migration `20260923003028_fix_ifood_sale_materialization.sql` corrige o
+  trigger e reconcilia vendas da Bem Servido com RPC idempotente. Aplicada em
+  produção; 31/31 vendas materializadas e total sem venda = R$ 0,00.
+
+- [x] FX-IFOOD-ORDER-CONTACT-UI-01 (2026-09-22) — removido da tela de detalhe
+  iFood o bloco “Contato do cliente” com 0800 e localizador.
+
 - [x] FX-ANALYTICS-FUNNEL-P0P1P2-01 (2026-09-21) — Funil marketing→trial→first
   sale: identity stitching (alias+identify), acquisition no OAuth
   `user_registered`, `marketing_trial_clicked` + UTM first-touch em CTAs

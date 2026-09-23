@@ -20,7 +20,7 @@
     transitionCanonicalOrder,
     closeCanonicalOrder
   } from '$lib/onlineOrders';
-  import { getOrderDeliveryPresentation, getOrderPaymentPresentation, getOrderCustomerPhonePresentation } from '$lib/orderPresentation.js';
+  import { getOrderDeliveryPresentation, getOrderPaymentPresentation } from '$lib/orderPresentation.js';
   import {
     ifoodCanCancel,
     ifoodHandoffCodes,
@@ -106,7 +106,6 @@
   $: totalPedido = Number(pedidoSelecionado?.total || 0);
   $: entregaSelecionada = getOrderDeliveryPresentation(pedidoSelecionado);
   $: pagamentoSelecionado = getOrderPaymentPresentation(pedidoSelecionado);
-  $: telefoneSelecionado = getOrderCustomerPhonePresentation(pedidoSelecionado);
   $: selecionadoIfood = isIfoodOrder(pedidoSelecionado);
   $: syncSelecionado = pedidoSelecionado ? ifoodSync[pedidoSelecionado.id] || null : null;
   $: avancoSelecionado = pedidoSelecionado ? resolveQueueAdvance(pedidoSelecionado) : { kind: 'none' };
@@ -835,18 +834,6 @@
                     {#if agendaSelecionada.preparationStartAt} · preparo a partir de {formatTime(agendaSelecionada.preparationStartAt)}{/if}
                   </span>
                 {/if}
-                {#if selecionadoIfood && telefoneSelecionado.kind !== 'none'}
-                  <div class="details-phone" aria-label={telefoneSelecionado.label}>
-                    <span class="details-meta">{telefoneSelecionado.label}</span>
-                    {#if telefoneSelecionado.kind === 'ifood_bridge'}
-                      <span class="details-phone-number">{telefoneSelecionado.number}</span>
-                      <span class="details-meta">Localizador: {telefoneSelecionado.localizer}</span>
-                      <span class="details-phone-hint">{telefoneSelecionado.hint}</span>
-                    {:else}
-                      <span class="details-phone-number">{telefoneSelecionado.display}</span>
-                    {/if}
-                  </div>
-                {/if}
               </div>
               <div class="details-head-actions">
                 <span class="status-pill" data-status={pedidoSelecionado.status}>{statusLabel(pedidoSelecionado.status)}</span>
@@ -1371,25 +1358,6 @@
     color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 600;
-  }
-  .details-phone {
-    display: grid;
-    gap: 2px;
-    margin-top: 6px;
-    min-width: 0;
-  }
-  .details-phone-number {
-    color: var(--text-main);
-    font-size: 0.95rem;
-    font-weight: 800;
-    letter-spacing: 0.01em;
-    overflow-wrap: anywhere;
-  }
-  .details-phone-hint {
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    font-weight: 600;
-    line-height: 1.35;
   }
   .details-head-actions {
     display: flex;
