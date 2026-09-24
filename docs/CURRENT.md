@@ -22,6 +22,39 @@ Migration `20260925140000_purge_zelochat_webhook_events_raw_retention.sql`
 ainda **não** aplicada em produção (PR only). Sem upgrade de compute e sem
 analytics em `payload`.
 
+## Sessão 2026-09-24 — Planilha de preços em /ferramentas/precificacao
+
+A página logada `/ferramentas/precificacao` trocou a calculadora (wizard) por
+uma planilha de preços, `src/lib/components/tools/PricingSheet.svelte`. A
+calculadora continua só na página pública `/precificacao`. O dono informa
+nome, custo, venda e margem desejada (padrão 60%), e o sistema calcula CMV,
+margem, lucro por unidade, preço sugerido e status (na meta, abaixo, prejuízo,
+incompleto). As fórmulas ficam em `src/lib/tools/pricingSheet.js`, com testes
+em `tests/pricingSheet.test.js`.
+
+A planilha lê e escreve direto em `produtos`:
+- `custo_unitario` e `preco` são as colunas que já existiam;
+- `margem_desejada` e `na_precificacao` vêm da migration
+  `20260924120000_produtos_precificacao.sql`, já aplicada no banco vinculado.
+
+O que isso significa na prática:
+- Editar a venda na planilha muda o preço cobrado no caixa. Por isso a primeira
+  edição de venda em cada sessão pede confirmação.
+- O form "Adicionar produto" cria um produto de verdade no catálogo, sem
+  categoria.
+- "Importar do meu cadastro" liga `na_precificacao` nos produtos escolhidos.
+  Pizzas ficam de fora.
+- "Tirar da planilha" só desliga a flag; o produto não é apagado.
+- Subusuário sem `produtos.gerenciar` vê a planilha só para leitura.
+
+Validação:
+- `npm test`: 2149 testes passam.
+- `npm run check`: 0 erros.
+- Build: os bundles saíram, e o adapter falhou só no EPERM conhecido do
+  Windows.
+- E2E manual na conta demo: todos os 8 cenários da
+  planilha passaram em 1280px e 390px, e os dados de teste foram limpos.
+
 ## Sessão 2026-09-24 — Conteúdo GEO, leva 1 (branch `feat/content-wave-1`)
 
 PostHog: o ChatGPT é a origem que traz cliente; anúncio não gerou cadastro em

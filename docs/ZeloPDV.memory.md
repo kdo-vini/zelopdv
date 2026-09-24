@@ -232,3 +232,4 @@
 - A trilha documental principal agora é: `README.md` + docs operacionais na raiz + `pdvObsidian/HOME.md`.
 - Em 2026-06-01, `npm test` voltou a 140/140 após alinhar fixtures ao contrato atual de perfil/CPF/telefone.
 - Em produção, `subscriptions` usa `provider_customer_id`; o portal Stripe já foi alinhado para esse contrato.
+- Desde 2026-09-24, a planilha `/ferramentas/precificacao` é uma visão de `produtos`, sem tabela própria. `na_precificacao` diz quais produtos aparecem nela, e `margem_desejada` guarda a meta em % (nula usa 60). Editar a venda ali altera `produtos.preco`, ou seja, o preço do PDV.

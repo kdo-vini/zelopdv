@@ -388,6 +388,10 @@ Conclusao operacional:
   campos de estoque e não são executáveis por `anon`.
 - A página `/gestao/produtos` é browser-side, então a policy é a barreira de
   segurança real para chamadas diretas ao Data API.
+- A planilha `/ferramentas/precificacao` também grava direto em `produtos`
+  pelo browser (`preco`, `custo_unitario` e as colunas `margem_desejada` e
+  `na_precificacao` da migration `20260924120000`). Ela usa as mesmas policies
+  de `produtos.gerenciar`; nenhuma policy nova foi criada.
 
 ## Pessoas
 

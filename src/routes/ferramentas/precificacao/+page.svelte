@@ -1,5 +1,5 @@
 <script>
-  import PricingCalculator from "$lib/components/tools/PricingCalculator.svelte";
+  import PricingSheet from "$lib/components/tools/PricingSheet.svelte";
   import BackLink from "$lib/components/ui/BackLink.svelte";
 </script>
 
@@ -13,12 +13,11 @@
     <BackLink href="/ferramentas" label="Ferramentas" />
     <h1 class="text-xl font-bold text-slate-100 tracking-tight mt-1">Precificação</h1>
     <p class="tool-page-subtitle">
-      Descubra quanto cobrar por produto a partir do custo, markup e taxa de
-      plataforma.
+      Cadastre custo e preço de venda e acompanhe CMV e margem de cada produto.
     </p>
   </div>
 
-  <PricingCalculator variant="app" />
+  <PricingSheet />
 </div>
 
 <style>
