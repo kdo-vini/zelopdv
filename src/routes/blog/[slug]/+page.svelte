@@ -311,6 +311,58 @@
     font-weight: 700;
   }
 
+  .article-content :global(a) {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .article-content :global(blockquote) {
+    margin: 0 0 1.5rem;
+    padding: 1.1rem 1.2rem;
+    border-left: 4px solid var(--primary);
+    background: var(--blog-card);
+    border-radius: 0 1rem 1rem 0;
+  }
+
+  .article-content :global(blockquote p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .article-content :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 1.5rem;
+    font-size: 1.02rem;
+  }
+
+  .article-content :global(th),
+  .article-content :global(td) {
+    border: 1px solid var(--blog-border);
+    padding: 0.65rem 0.8rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .article-content :global(th) {
+    color: var(--blog-text);
+    font-weight: 700;
+    background: var(--blog-card);
+  }
+
+  .article-content :global(td) {
+    color: color-mix(in srgb, var(--blog-text) 78%, var(--blog-muted));
+  }
+
+  .article-content :global(th.num),
+  .article-content :global(td.num) {
+    text-align: right;
+  }
+
+  .article-content :global(td.num) {
+    white-space: nowrap;
+  }
+
   .article-faq {
     margin-top: 1.4rem;
     background: var(--blog-surface);
@@ -437,6 +489,11 @@
     .article-content :global(p),
     .article-content :global(li) {
       font-size: 1rem;
+    }
+
+    .article-content :global(table) {
+      display: block;
+      overflow-x: auto;
     }
   }
 </style>

@@ -1,5 +1,18 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-24 — GEO: IndexNow full ping + post iFood 2026
+
+IndexNow de produção confirmado: `https://www.zelopdv.com.br/indexnow-key.txt`
+responde 200 com a chave pública (sem rotação). O apex `zelopdv.com.br` faz
+307 → www, então `scripts/indexnow.mjs` passou a buscar o sitemap e a
+`keyLocation` em www, mantendo `host=zelopdv.com.br` (é o host das `<loc>`).
+Ping completo do sitemap live: **38 URLs**, lote único, **HTTP 200**.
+
+Post editorial #1 do plano GEO publicado em
+`/blog/taxa-ifood-2026-como-calcular` (fonte: pacote GEO 23/09; faixas de taxa
+do iFood atribuídas e com ~; FAQ estruturado + tabelas). Sitemap dinâmico e
+`llms.txt` passam a incluir o slug automaticamente.
+
 ## Sessão 2026-09-23 — GEO: visibilidade em ChatGPT/Gemini/Perplexity
 
 Branch `feat/geo-ai-visibility` implementa a parte técnica de
