@@ -8,7 +8,9 @@
   Indicações, Analytics e logs. O apex foi verificado ao vivo com `OPTIONS`
   `204` e CORS correto; teste 2/2 e check do admin sem erros/avisos. O build
   gerou os bundles e parou no `EPERM` conhecido do adapter Vercel no Windows.
-  Deploy pendente; nenhum envio real foi feito.
+  O build remoto ficou Ready e foi promovido em produção
+  (`dpl_4spv56ZtRL26qemiHCa7rseu9KTG`); o domínio admin serve o bundle novo.
+  Nenhum envio real foi feito.
 
 - [x] FX-MESAS-QR-COMANDA-BILLING-01 (2026-09-23) — Pedidos QR de mesa
   aceitos materializam suas linhas em `comanda_itens` com observação e vínculo

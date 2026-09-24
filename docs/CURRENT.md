@@ -12,9 +12,11 @@ O dashboard agora centraliza a origem da API em `src/lib/apiBase.js` e todas as
 chamadas administrativas usam o domínio canônico, incluindo Comunicação,
 Usuários, Assinaturas, Indicações, Analytics e logs. Regressão direcionada:
 `tests/admin.apiBase.test.js` (2/2); `npm --prefix admin-dashboard run check`
-sem erros ou avisos. O build gerou os bundles, mas o adapter Vercel encerrou no
-`EPERM` conhecido do Windows ao criar symlink. Deploy do admin ainda pendente;
-nenhum WhatsApp real foi disparado durante a validação.
+sem erros ou avisos. O build local gerou os bundles, mas o adapter Vercel
+encerrou no `EPERM` conhecido do Windows ao criar symlink. Deploy de produção
+`dpl_4spv56ZtRL26qemiHCa7rseu9KTG` ficou Ready e foi promovido em
+2026-09-24; `admin.zelopdv.com.br` serve o novo bundle com origem canônica.
+Nenhum WhatsApp real foi disparado durante a validação.
 
 ## Sessão 2026-09-23 — GEO: visibilidade em ChatGPT/Gemini/Perplexity
 

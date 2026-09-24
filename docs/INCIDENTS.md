@@ -2,7 +2,8 @@
 
 ## INC-2026-09-24-ADMIN-CORS-PREFLIGHT — Comunicação não enviava WhatsApp
 
-**Status:** corrigido no working tree; deploy do admin pendente.
+**Status:** corrigido e publicado em produção no admin em 2026-09-24
+(`dpl_4spv56ZtRL26qemiHCa7rseu9KTG`).
 
 **Sintoma:** ao enviar pela tela `/communications`, o navegador bloqueava a
 requisição com “Redirect is not allowed for a preflight request” e o frontend
@@ -19,8 +20,9 @@ foram migradas para a mesma constante.
 **Validação:** `OPTIONS` no host `www` reproduziu `308`; no apex retornou `204`
 com `Access-Control-Allow-Origin: https://admin.zelopdv.com.br`. Teste de
 regressão 2/2 e `svelte-check` do admin sem erros/avisos. O bundle foi gerado;
-o adapter Vercel parou no `EPERM` conhecido de symlink no Windows. Nenhum
-WhatsApp real foi disparado.
+o adapter Vercel parou no `EPERM` conhecido de symlink no Windows. O build
+remoto ficou Ready; `admin.zelopdv.com.br` respondeu 200 e serviu o chunk
+contendo a origem `https://zelopdv.com.br`. Nenhum WhatsApp real foi disparado.
 
 ## INC-2026-09-23-MESA-KITCHEN-CLOSE — envio invisível e reabertura após pagamento
 
