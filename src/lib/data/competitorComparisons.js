@@ -10,6 +10,8 @@
 //    ausência de claim, não de fato testado.
 // 4. O preço do Zelo (R$ 59) sai de pricing.js — não inventar outro número aqui.
 
+import { buildFaqSchema, SITE_URL } from '$lib/seo/site';
+
 export { softwareApplicationSchema } from './segmentLandingPages';
 
 export const competitorComparisons = {
@@ -21,7 +23,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs Saipos: Alternativa Mais Barata e Offline | Zelo PDV',
       description:
         'Saipos a partir de R$ 240/mês e 100% online. Zelo PDV custa R$ 59/mês, funciona offline e você paga só pelos módulos que usa. Compare e teste 14 dias grátis.',
-      canonical: 'https://zelopdv.com.br/vs-saipos'
+      canonical: `${SITE_URL}/vs-saipos`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Saipos',
     h1: 'Zelo PDV vs Saipos: a alternativa mais barata, modular e que funciona offline',
@@ -149,7 +151,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs Goomer: PDV Completo x Cardápio Digital | Zelo PDV',
       description:
         'A Goomer é cardápio digital e ainda precisa integrar a um PDV externo. O Zelo PDV já é a frente de caixa completa por R$ 59/mês, com fiado, estoque e financeiro. Compare.',
-      canonical: 'https://zelopdv.com.br/vs-goomer'
+      canonical: `${SITE_URL}/vs-goomer`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Goomer',
     h1: 'Zelo PDV vs Goomer: PDV completo de verdade x cardápio digital',
@@ -277,7 +279,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs Anota AI: PDV Completo Sem Robô de IA Caro | Zelo PDV',
       description:
         'A Anota AI parte de mais de R$ 219/mês com robô de IA. O Zelo PDV é a frente de caixa completa por R$ 59/mês, com estoque e cozinha sem precisar do plano mais caro. Compare.',
-      canonical: 'https://zelopdv.com.br/vs-anota-ai'
+      canonical: `${SITE_URL}/vs-anota-ai`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Anota AI',
     h1: 'Zelo PDV vs Anota AI: frente de caixa completa sem pagar por uma plataforma de IA',
@@ -339,7 +341,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs WhatsMenu: PDV Offline e Modular por R$ 59 | Zelo PDV',
       description:
         'WhatsMenu custa R$ 97/mês em plano único e online. Zelo PDV é R$ 59/mês, funciona offline e você paga só pelos módulos que usa. Compare e teste 14 dias grátis.',
-      canonical: 'https://zelopdv.com.br/vs-whatsmenu'
+      canonical: `${SITE_URL}/vs-whatsmenu`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs WhatsMenu',
     h1: 'Zelo PDV vs WhatsMenu: caixa que funciona offline, por menos',
@@ -399,7 +401,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs Cardápio Web: Alternativa Mais Barata e Offline | Zelo PDV',
       description:
         'Cardápio Web parte de R$ 169/mês com add-ons à parte. Zelo PDV é R$ 59/mês, funciona offline e você paga só pelos módulos que usa. Compare e teste 14 dias grátis.',
-      canonical: 'https://zelopdv.com.br/vs-cardapio-web'
+      canonical: `${SITE_URL}/vs-cardapio-web`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Cardápio Web',
     h1: 'Zelo PDV vs Cardápio Web: comece em R$ 59, sem add-on em cima de add-on',
@@ -460,7 +462,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs Yooga: Sistema para Restaurante por R$ 59/mês | Zelo PDV',
       description:
         'Yooga parte de R$ 249/mês e é 100% online. Zelo PDV é R$ 59/mês, funciona offline e tem preço transparente. Compare e teste 14 dias grátis.',
-      canonical: 'https://zelopdv.com.br/vs-yooga'
+      canonical: `${SITE_URL}/vs-yooga`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Yooga',
     h1: 'Zelo PDV vs Yooga: a mesma operação de restaurante por uma fração do preço',
@@ -521,7 +523,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs SisFood: PDV Offline e Mais Barato | Zelo PDV',
       description:
         'SisFood parte de R$ 149/mês e é 100% cloud, dependendo de internet. Zelo PDV é R$ 59/mês e funciona offline. Compare e teste 14 dias grátis.',
-      canonical: 'https://zelopdv.com.br/vs-sisfood'
+      canonical: `${SITE_URL}/vs-sisfood`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs SisFood',
     h1: 'Zelo PDV vs SisFood: caixa que não para sem internet, por menos',
@@ -581,7 +583,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs Conta Azul: PDV de Balcão x ERP Financeiro | Zelo PDV',
       description:
         'Conta Azul é um ERP financeiro/contábil a partir de R$ 159/mês e 100% online. Zelo PDV é frente de caixa de balcão por R$ 59/mês, offline. Entenda a diferença.',
-      canonical: 'https://zelopdv.com.br/vs-conta-azul'
+      canonical: `${SITE_URL}/vs-conta-azul`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Conta Azul',
     h1: 'Zelo PDV vs Conta Azul: PDV de balcão de verdade x ERP financeiro',
@@ -642,7 +644,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs GestãoClick: Comece em R$ 59, Modular e Offline | Zelo PDV',
       description:
         'GestãoClick parte de R$ 119/mês (sem nota fiscal no plano de entrada). Zelo PDV é R$ 59/mês, modular e funciona offline. Compare e teste 14 dias grátis.',
-      canonical: 'https://zelopdv.com.br/vs-gestaoclick'
+      canonical: `${SITE_URL}/vs-gestaoclick`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs GestãoClick',
     h1: 'Zelo PDV vs GestãoClick: PDV de balcão a partir de R$ 59, modular',
@@ -703,7 +705,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs Bling: Caixa Offline e Preço Previsível | Zelo PDV',
       description:
         'O Bling é online e o custo escala por volume de pedidos. Zelo PDV é R$ 59/mês, funciona offline e tem preço previsível. Compare e teste 14 dias grátis.',
-      canonical: 'https://zelopdv.com.br/vs-bling'
+      canonical: `${SITE_URL}/vs-bling`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Bling',
     h1: 'Zelo PDV vs Bling: caixa offline e preço que não escala por trás',
@@ -764,7 +766,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs Tiny (Olist): PDV de Balcão Offline por R$ 59 | Zelo PDV',
       description:
         'O Tiny escala de R$ 66 a R$ 948/mês e é online. Zelo PDV é R$ 59/mês, funciona offline e foca no balcão. Compare e teste 14 dias grátis.',
-      canonical: 'https://zelopdv.com.br/vs-tiny'
+      canonical: `${SITE_URL}/vs-tiny`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Tiny',
     h1: 'Zelo PDV vs Tiny: frente de caixa de balcão, sem ERP de marketplace',
@@ -825,7 +827,7 @@ export const competitorComparisons = {
       title: 'Zelo PDV vs Omie: Preço Público x Cotação por Faturamento | Zelo PDV',
       description:
         'A Omie não publica preço e cobra por faixa de faturamento, com módulos à parte. Zelo PDV é R$ 59/mês público e funciona offline. Compare e teste 14 dias grátis.',
-      canonical: 'https://zelopdv.com.br/vs-omie'
+      canonical: `${SITE_URL}/vs-omie`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Omie',
     h1: 'Zelo PDV vs Omie: preço público de R$ 59 x cotação por faturamento',
@@ -880,16 +882,5 @@ export const competitorComparisons = {
 };
 
 export function buildComparisonFaqSchema(comparison) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: comparison.faqSpecific.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer
-      }
-    }))
-  };
+  return buildFaqSchema(comparison.faqSpecific);
 }

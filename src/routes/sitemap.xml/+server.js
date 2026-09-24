@@ -1,17 +1,20 @@
 import { segmentPages } from '$lib/data/segmentLandingPages';
 import { competitorComparisons } from '$lib/data/competitorComparisons';
 import { publishedPosts } from '$lib/blog/posts';
+import { SITE_URL } from '$lib/seo/site';
 
 // Sitemap dinâmico: monta as URLs a partir dos data files, então páginas novas
 // (segmentos, comparativos, posts) entram automaticamente sem edição manual.
 export const prerender = true;
 
-const BASE = 'https://zelopdv.com.br';
+const BASE = SITE_URL;
 
 // Rotas estáticas de marketing/auth. Páginas de produto logado ficam de fora
-// (estão em Disallow no robots.txt).
+// (estão em Disallow no robots.txt). /ferramentas fica de fora também: exige
+// assinatura ativa (ensureActiveSubscription no layout), não é marketing público.
 const staticRoutes = [
   { path: '/', changefreq: 'weekly', priority: '1.0' },
+  { path: '/sobre', changefreq: 'monthly', priority: '0.8' },
   { path: '/cadastro', changefreq: 'monthly', priority: '0.8' },
   { path: '/login', changefreq: 'monthly', priority: '0.5' },
   { path: '/precificacao', changefreq: 'monthly', priority: '0.8' },
@@ -57,7 +60,7 @@ export function GET() {
     entries.push(
       urlEntry({
         loc: `${BASE}/blog/${post.slug}`,
-        lastmod: post.publishedAt,
+        lastmod: post.updatedAt ?? post.publishedAt,
         changefreq: 'monthly',
         priority: '0.7'
       })

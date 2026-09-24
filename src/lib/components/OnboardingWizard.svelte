@@ -15,6 +15,7 @@
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao, waitForGtag } from '$lib/googleAds';
   import { getStoredAcquisitionOrigin } from '$lib/attribution/client';
+  import { HEARD_FROM_OPTIONS, buildHeardFromPayload } from '$lib/attribution/heardFrom';
   import { capturePostHogEvent } from '$lib/posthogClient';
 
   export let show = false;
@@ -38,6 +39,16 @@
   // navegar, pra nenhuma conversão deixar de disparar.
   let arrived = false;
   let trackingPromise = null;
+
+  // Pergunta auto-declarada "Como conheceu o Zelo?" — opcional e pulável, só
+  // aparece no estado de chegada e só quando o metadado ainda não existe.
+  // Nunca bloqueia a navegação: os CTAs de "arrived" continuam funcionando
+  // com ou sem resposta.
+  let heardFromAlready = false;
+  let heardFromChoice = '';
+  let heardFromSkipped = false;
+  $: showHeardFromPrompt = arrived && !heardFromAlready && !heardFromChoice && !heardFromSkipped;
+  $: showHeardFromThanks = arrived && !!heardFromChoice;
 
   let nomeInput;
   let contatoInput;
@@ -84,6 +95,13 @@
       console.warn('[OnboardingWizard] profile resume failed:', loadError?.message || loadError);
     }
     trackStepViewed(step);
+
+    try {
+      const { data } = await supabase.auth.getUser();
+      heardFromAlready = !!data?.user?.user_metadata?.heard_from;
+    } catch (userError) {
+      console.warn('[OnboardingWizard] heard_from check failed:', userError?.message || userError);
+    }
   });
 
   function validate() {
@@ -243,6 +261,25 @@
     }
   }
 
+  // Fire-and-forget: nunca trava a navegação por causa dessa resposta opcional.
+  function selectHeardFrom(id) {
+    if (heardFromChoice) return;
+    heardFromChoice = id;
+
+    const payload = buildHeardFromPayload(id);
+    if (payload && supabase) {
+      supabase.auth.updateUser({ data: payload }).catch((err) => {
+        console.warn('[OnboardingWizard] heard_from update failed:', err?.message || err);
+      });
+    }
+
+    void capturePostHogEvent('acquisition_self_reported', { heard_from: id, $set: { heard_from: id } });
+  }
+
+  function skipHeardFrom() {
+    heardFromSkipped = true;
+  }
+
   async function irParaPrimeiraVenda() {
     void capturePostHogEvent('onboarding_welcome_cta_clicked', { cta: 'first_sale' });
     await waitForBackgroundTracking();
@@ -286,6 +323,24 @@
           </div>
           <h2 class="step-title" tabindex="-1" bind:this={welcomeTitleEl}>Boas-vindas ao Zelo, {nome}.</h2>
           <p class="step-hint">Seu teste de {TRIAL_DAYS} dias começou. Se quiser, cadastramos seus produtos junto com você pelo WhatsApp — uns 15 minutos.</p>
+
+          {#if showHeardFromPrompt}
+            <div class="heard-from">
+              <div class="heard-from-header">
+                <p class="heard-from-question">Como você conheceu o Zelo?</p>
+                <button type="button" class="heard-from-skip" on:click={skipHeardFrom}>Pular</button>
+              </div>
+              <div class="heard-from-chips">
+                {#each HEARD_FROM_OPTIONS as option}
+                  <button type="button" class="heard-from-chip" on:click={() => selectHeardFrom(option.id)}>
+                    {option.label}
+                  </button>
+                {/each}
+              </div>
+            </div>
+          {:else if showHeardFromThanks}
+            <p class="heard-from-thanks">Valeu por contar!</p>
+          {/if}
         </div>
       {:else if step === 1}
         <div class="step-content">
@@ -519,6 +574,76 @@
     font-size: 0.875rem;
     color: var(--error);
     margin: 0.2rem 0 0;
+  }
+
+  /* Pergunta "Como conheceu o Zelo?" — opcional, no estado de chegada */
+  .heard-from {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 0.4rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .heard-from-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .heard-from-question {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin: 0;
+  }
+
+  .heard-from-skip {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.2rem 0.3rem;
+    transition: color 0.15s;
+  }
+
+  .heard-from-skip:hover {
+    color: var(--text-main);
+  }
+
+  .heard-from-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .heard-from-chip {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-label);
+    background: var(--bg-input);
+    border: 1.5px solid var(--border-subtle);
+    border-radius: 999px;
+    padding: 0.4rem 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+
+  .heard-from-chip:hover {
+    border-color: var(--primary);
+    color: var(--text-main);
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+
+  .heard-from-thanks {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin: 0.4rem 0 0;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border-subtle);
   }
 
   /* Footer */

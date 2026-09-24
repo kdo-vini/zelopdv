@@ -19,13 +19,30 @@
   });
 
   $: formattedDate = dateFormatter.format(new Date(`${post.publishedAt}T00:00:00`));
+  $: dateModified = post.updatedAt ?? post.publishedAt;
+  $: hasUpdate = Boolean(post.updatedAt) && post.updatedAt !== post.publishedAt;
+  $: formattedUpdatedDate = hasUpdate ? dateFormatter.format(new Date(`${post.updatedAt}T00:00:00`)) : null;
+  $: faqSchema = post.faq?.length
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: post.faq.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: item.answer
+          }
+        }))
+      }
+    : null;
   $: articleSchema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
     description: post.description,
     datePublished: post.publishedAt,
-    dateModified: post.publishedAt,
+    dateModified,
     url: `https://zelopdv.com.br/blog/${post.slug}`,
     image: 'https://zelopdv.com.br/og-image.png',
     author: {
@@ -86,6 +103,9 @@
 
   {@html `<script type="application/ld+json">${JSON.stringify(articleSchema)}</script>`}
   {@html `<script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>`}
+  {#if faqSchema}
+    {@html `<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`}
+  {/if}
 </svelte:head>
 
 <div class="article-shell min-h-screen overflow-x-hidden font-sans">
@@ -109,6 +129,10 @@
               <span>{formattedDate}</span>
               <span aria-hidden="true">•</span>
               <span>{post.readingTime}</span>
+              {#if hasUpdate}
+                <span aria-hidden="true">•</span>
+                <span>Atualizado em {formattedUpdatedDate}</span>
+              {/if}
             </div>
 
             <h1 class="article-title">{post.title}</h1>
@@ -133,6 +157,20 @@
             {@html post.content}
           </div>
         </article>
+
+        {#if post.faq?.length}
+          <section class="article-faq">
+            <h2>Perguntas frequentes</h2>
+            <div class="article-faq-list">
+              {#each post.faq as item}
+                <details>
+                  <summary>{item.question}</summary>
+                  <p>{item.answer}</p>
+                </details>
+              {/each}
+            </div>
+          </section>
+        {/if}
 
         <section class="article-cta">
           <p class="article-cta-title">Quer colocar em prática? O Zelo PDV faz isso por você.</p>
@@ -271,6 +309,48 @@
   .article-content :global(strong) {
     color: var(--blog-text);
     font-weight: 700;
+  }
+
+  .article-faq {
+    margin-top: 1.4rem;
+    background: var(--blog-surface);
+    border: 1px solid var(--blog-border);
+    border-radius: 1.8rem;
+    box-shadow: 0 14px 36px var(--blog-shadow);
+    padding: clamp(1.4rem, 3vw, 2.2rem);
+  }
+
+  .article-faq h2 {
+    color: var(--blog-text);
+    font-size: clamp(1.9rem, 3vw, 2.4rem);
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    margin: 0 0 1.25rem;
+  }
+
+  .article-faq-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .article-faq-list details {
+    border-top: 1px solid var(--blog-border);
+    padding-top: 0.75rem;
+  }
+
+  .article-faq-list summary {
+    color: var(--blog-text);
+    font-size: 1.04rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .article-faq-list p {
+    margin: 0.6rem 0 0.25rem;
+    color: color-mix(in srgb, var(--blog-text) 78%, var(--blog-muted));
+    font-size: 1.02rem;
+    line-height: 1.7;
   }
 
   .article-cta {

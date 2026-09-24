@@ -12,6 +12,8 @@
 // ela pode conter termo de busca ou token de outro site. Nada aqui identifica a
 // pessoa por si só; a ligação com o usuário acontece só no cadastro.
 
+import { detectAiSource } from './aiSources.js';
+
 const STORAGE_KEY = 'zelo_acquisition';
 
 const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
@@ -63,6 +65,13 @@ export function captureAcquisitionOrigin() {
   const referrer = safeReferrer();
   if (referrer) origem.referrer = referrer.slice(0, 200);
 
+  // ChatGPT mobile costuma não mandar referrer; quando manda, ou quando o
+  // link citado carrega utm_source=chatgpt.com, dá pra classificar aqui —
+  // o servidor recalcula isso de qualquer forma antes de confiar (ver
+  // `$lib/server/acquisition.js`), mas gravar já ajuda o CTA/banner client-side.
+  const aiSource = detectAiSource({ referrer: origem.referrer, utm_source: origem.utm_source });
+  if (aiSource) origem.ai_source = aiSource;
+
   origem.landing = window.location.pathname.slice(0, 200);
   origem.captured_at = new Date().toISOString();
 
@@ -89,6 +98,7 @@ export function acquisitionChannel(origem) {
   if (!origem || typeof origem !== 'object') return 'desconhecido';
   if (origem.gclid) return 'google_ads';
   if (origem.fbclid) return 'meta_ads';
+  if (origem.ai_source) return `ia_${origem.ai_source}`;
   if (origem.utm_source) return String(origem.utm_source).toLowerCase();
   if (origem.origem) return String(origem.origem).toLowerCase();
 

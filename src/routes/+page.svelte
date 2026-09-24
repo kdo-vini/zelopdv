@@ -1,3 +1,115 @@
+<script context="module">
+  import { ADDONS, PLANS, TRIAL_DAYS } from '$lib/pricing';
+  import { absoluteUrl, buildOrganizationSchema, buildSoftwareApplicationSchema, ORGANIZATION, SITE_URL } from '$lib/seo/site';
+
+  const homeSoftwareSchema = buildSoftwareApplicationSchema({
+    description: `Registre pedidos em 3 toques, controle fiado e despesas e veja o lucro do dia no seu próprio caixa. ${TRIAL_DAYS} dias grátis.`,
+    extra: {
+      '@type': ['SoftwareApplication', 'Product'],
+      alternateName: 'Sistema PDV para Lanchonete',
+      brand: { '@type': 'Brand', name: 'Zelo PDV' },
+      sku: 'zelopdv-pdv',
+      category: 'Business > Point of Sale Software',
+      itemCondition: 'https://schema.org/NewCondition',
+      applicationSubCategory: 'PointOfSaleApplication',
+      browserRequirements: 'Requires Google Chrome or Microsoft Edge',
+      inLanguage: 'pt-BR',
+      availability: 'https://schema.org/InStock',
+      featureList: [
+        'Frente de caixa PDV para lanchonete',
+        'Controle de fiado digital',
+        'Fechamento de caixa',
+        'Gestão de despesas',
+        'Relatório de lucro real',
+        'Controle de estoque',
+        'Funciona offline (PWA)',
+        'Comprovante via WhatsApp',
+        'Assistente de IA para lucro real (Zelinho)'
+      ],
+      screenshot: absoluteUrl('/images/screenshots/dashboard-desktop.png'),
+      publisher: {
+        '@type': 'Organization',
+        name: ORGANIZATION.brand,
+        url: ORGANIZATION.parentUrl
+      }
+    }
+  });
+
+  const homeOrganizationSchema = buildOrganizationSchema();
+
+  const homeWebSiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Zelo PDV',
+    url: SITE_URL,
+    inLanguage: 'pt-BR',
+    description: 'Sistema PDV para lanchonete e pequenos negócios. Controle caixa, fiado, despesas e lucro real no navegador.',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${SITE_URL}/blog?q={search_term_string}`
+      },
+      'query-input': 'required name=search_term_string'
+    }
+  };
+
+  const homeFaqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'Preciso de computador potente para usar o Zelo PDV?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Não. O Zelo PDV roda direto no navegador e funciona em computadores básicos, celulares e tablets.'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: `Como funcionam os ${TRIAL_DAYS} dias grátis?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Você cria a conta e começa seu período de teste de ${TRIAL_DAYS} dias, sem cadastrar cartão. A assinatura só começa se você escolher continuar.`
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'O Zelo PDV emite Nota Fiscal?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'O Zelo PDV emite recibos e comprovantes de venda. Não emitimos NFC-e. Para emissão fiscal em cada venda, use o Zelo junto com um emissor fiscal dedicado.'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'Tem suporte se eu tiver dúvidas?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Sim. Temos suporte direto via WhatsApp em horário comercial e ajudamos na configuração.'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'O sistema funciona sem internet?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Sim. O Zelo PDV funciona offline e sincroniza automaticamente quando a internet voltar.'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'Quanto custa o sistema PDV para lanchonete?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `O Zelo PDV custa R$ ${PLANS.pdv.price.toFixed(0)} por mês. O Módulo Mesas custa mais R$ ${ADDONS.mesas.price.toFixed(0)} por mês e o ZeloMenu custa mais R$ ${ADDONS.menu.price.toFixed(0)} por mês. Os primeiros ${TRIAL_DAYS} dias são grátis, sem cartão.`
+        }
+      }
+    ]
+  };
+</script>
+
 <svelte:head>
   <title>Sistema PDV para lanchonete | Zelo PDV</title>
   <meta name="description" content="Registre pedidos em 3 toques, controle fiado e despesas e veja o lucro do dia. Teste por 14 dias, sem cartão, no celular ou computador." />
@@ -21,141 +133,13 @@
   <meta name="twitter:description" content="O Zelo mostra vendas, despesas, fiado e lucro real no seu próprio caixa. Teste por 14 dias sem cartão." />
   <meta name="twitter:image" content="https://zelopdv.com.br/og-image-home.png" />
 
-  {@html `<script type="application/ld+json">${JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": ["SoftwareApplication", "Product"],
-    "name": "Zelo PDV",
-    "alternateName": "Sistema PDV para Lanchonete",
-    "brand": { "@type": "Brand", "name": "Zelo PDV" },
-    "sku": "zelopdv-pdv",
-    "category": "Business > Point of Sale Software",
-    "itemCondition": "https://schema.org/NewCondition",
-    "url": "https://zelopdv.com.br",
-    "applicationCategory": "BusinessApplication",
-    "applicationSubCategory": "PointOfSaleApplication",
-    "operatingSystem": "Web Browser, Android, iOS",
-    "browserRequirements": "Requires Google Chrome or Microsoft Edge",
-    "inLanguage": "pt-BR",
-    "offers": {
-      "@type": "Offer",
-      "price": "59.00",
-      "priceCurrency": "BRL",
-      "priceValidUntil": "2027-12-31",
-      "availability": "https://schema.org/InStock",
-      "description": "Plano PDV para lanchonetes: vendas ilimitadas, controle de fiado, gestão financeira e suporte via WhatsApp."
-    },
-    "featureList": [
-      "Frente de caixa PDV para lanchonete",
-      "Controle de fiado digital",
-      "Fechamento de caixa",
-      "Gestão de despesas",
-      "Relatório de lucro real",
-      "Controle de estoque",
-      "Funciona offline (PWA)",
-      "Comprovante via WhatsApp",
-      "Assistente de IA para lucro real (Zelinho)"
-    ],
-    "screenshot": "https://zelopdv.com.br/images/screenshots/dashboard-desktop.png",
-    "description": "Registre pedidos em 3 toques, controle fiado e despesas e veja o lucro do dia no seu próprio caixa.",
-    "publisher": {
-      "@type": "Organization",
-      "name": "Téchne Sistemas",
-      "url": "https://techneia.com.br"
-    }
-  })}</script>`}
+  {@html `<script type="application/ld+json">${JSON.stringify(homeSoftwareSchema)}</script>`}
 
-  {@html `<script type="application/ld+json">${JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Téchne Sistemas",
-    "legalName": "Techne Sistemas Tecnologia Da Informacao Ltda",
-    "url": "https://zelopdv.com.br",
-    "logo": "https://zelopdv.com.br/favicon.png",
-    "contactPoint": {
-      "@type": "ContactPoint",
-      "contactType": "customer support",
-      "telephone": "+55-14-99153-7503",
-      "availableLanguage": "Portuguese",
-      "contactOption": "TollFree"
-    },
-    "sameAs": ["https://instagram.com/techne.ia"],
-    "address": {
-      "@type": "PostalAddress",
-      "addressCountry": "BR"
-    }
-  })}</script>`}
+  {@html `<script type="application/ld+json">${JSON.stringify(homeOrganizationSchema)}</script>`}
 
-  {@html `<script type="application/ld+json">${JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "Zelo PDV",
-    "url": "https://zelopdv.com.br",
-    "inLanguage": "pt-BR",
-    "description": "Sistema PDV para lanchonete e pequenos negócios. Controle caixa, fiado, despesas e lucro real no navegador.",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": "https://zelopdv.com.br/blog?q={search_term_string}"
-      },
-      "query-input": "required name=search_term_string"
-    }
-  })}</script>`}
+  {@html `<script type="application/ld+json">${JSON.stringify(homeWebSiteSchema)}</script>`}
 
-  {@html `<script type="application/ld+json">${JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "Preciso de computador potente para usar o Zelo PDV?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Não. O Zelo PDV roda direto no navegador e funciona em computadores básicos, celulares e tablets."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Como funcionam os 14 dias grátis?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Você cria a conta e começa seu período de teste de 14 dias, sem cadastrar cartão. A assinatura só começa se você escolher continuar."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "O Zelo PDV emite Nota Fiscal?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "O Zelo PDV emite recibos e comprovantes de venda. Não emitimos NFC-e. Para emissão fiscal em cada venda, use o Zelo junto com um emissor fiscal dedicado."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Tem suporte se eu tiver dúvidas?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Sim. Temos suporte direto via WhatsApp em horário comercial e ajudamos na configuração."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "O sistema funciona sem internet?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Sim. O Zelo PDV funciona offline e sincroniza automaticamente quando a internet voltar."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Quanto custa o sistema PDV para lanchonete?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "O Zelo PDV custa R$ 59 por mês. O Módulo Mesas custa mais R$ 30 por mês e o ZeloMenu custa mais R$ 40 por mês. Os primeiros 14 dias são grátis, sem cartão."
-        }
-      }
-    ]
-  })}</script>`}
+  {@html `<script type="application/ld+json">${JSON.stringify(homeFaqSchema)}</script>`}
 </svelte:head>
 
 <script>
@@ -172,8 +156,8 @@
   } from 'lucide-svelte';
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
+  import AiReferralBanner from '$lib/components/marketing/AiReferralBanner.svelte';
   import OperationalProofSection from '$lib/components/marketing/OperationalProofSection.svelte';
-  import { ADDONS, PLANS } from '$lib/pricing';
   import { trackViewContent } from '$lib/metaPixel';
   import { initMarketingAnalytics } from '$lib/marketingAnalytics';
   import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
@@ -251,6 +235,7 @@
 
 <div class="marketing-page">
   <SiteHeader />
+  <AiReferralBanner />
 
   <main>
     <section class="hero" aria-labelledby="hero-title">

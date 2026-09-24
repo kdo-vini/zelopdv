@@ -69,6 +69,7 @@ export async function POST({ request }) {
       event: 'user_registered',
       properties: {
         $set: { email: user.email },
+        ...(acquisition?.ai_source ? { $set_once: { ai_source: acquisition.ai_source } } : {}),
         method,
         has_referral: !!body?.hasReferral,
         ...(acquisition || {}),

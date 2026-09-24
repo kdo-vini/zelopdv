@@ -1,5 +1,33 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-23 — GEO: visibilidade em ChatGPT/Gemini/Perplexity
+
+Branch `feat/geo-ai-visibility` implementa a parte técnica de
+[[GEO_PLAN_2026-09]] (`docs/marketing/`). Fatos públicos agora saem de uma fonte
+única: `src/lib/seo/site.js` (URL, empresa, builders JSON-LD com ofertas
+derivadas de `pricing.js`) e `src/lib/data/productFacts.js` (público, o que faz,
+o que não faz, `FACTS_UPDATED_AT`). `llms.txt`, `llms-full.txt` e `robots.txt`
+(com grupos explícitos para crawlers de IA) são rotas prerenderizadas; os
+arquivos em `static/` foram removidos. Nova página `/sobre`; blog aceita
+`updatedAt` e `faq` por post; rota `/indexnow-key.txt` + `npm run indexnow`
+(exige `INDEXNOW_KEY` na Vercel).
+
+Atribuição: `src/lib/attribution/aiSources.js` detecta ChatGPT, Perplexity,
+Gemini, Copilot, Claude, DeepSeek, Meta AI e Grok por referrer ou
+`utm_source`; o servidor recalcula `ai_source` (não confia no cliente) e envia
+`$set_once` no `user_registered`. O onboarding pergunta "Como você conheceu o
+Zelo?" no estado de chegada (opcional; grava `heard_from` no
+`user_metadata` + evento `acquisition_self_reported`). A home mostra
+`AiReferralBanner` para quem chegou por IA. Insights PostHog com tag `geo`:
+`09f33k0o` (visitantes por IA/semana) e `vIptaqqU` (cadastros com origem IA).
+
+Validação: `npm test` 2.071 passaram / 3 skips; `npm run check` 0 erros (1
+aviso CSS preexistente); build SvelteKit gera os quatro arquivos prerenderizados
+(o adapter termina no `EPERM` de symlink conhecido do Windows). Banner e `/sobre`
+conferidos no navegador (desktop e 375px). Pendências fora do código: verificar
+o domínio no Bing Webmaster Tools, definir `INDEXNOW_KEY`, rodar o painel
+`docs/marketing/GEO_PROMPT_PANEL.md` e as frentes de conteúdo/menções do plano.
+
 ## Sessão 2026-09-23 — Mesas, cozinha, Pedidos e fechamento
 
 Correções de cozinha, entrega e reabertura publicadas em `ea54944`. A integração

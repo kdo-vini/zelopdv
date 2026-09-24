@@ -110,6 +110,7 @@ export async function POST({ request, getClientAddress }) {
       event: 'user_registered',
       properties: {
         $set: { email: newUser.email },
+        ...(acquisition?.ai_source ? { $set_once: { ai_source: acquisition.ai_source } } : {}),
         method: 'email',
         has_referral: !!referralCode,
         ...(acquisition || {}),

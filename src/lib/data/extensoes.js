@@ -9,8 +9,7 @@
 // toggle/webhook addon map are in sync.
 
 import { ADDONS, PLANS } from '$lib/pricing';
-
-const BASE_URL = 'https://zelopdv.com.br';
+import { SITE_URL as BASE_URL } from '$lib/seo/site';
 
 const currentPrices = {
   base: PLANS.pdv.price,

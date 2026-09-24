@@ -1,3 +1,10 @@
+// Campos opcionais em cada post (não inventar conteúdo — só preencher quando
+// o post for de fato revisado/atualizado):
+// - updatedAt (string 'YYYY-MM-DD'): data da última revisão de conteúdo.
+//   Quando presente, vira dateModified no Article JSON-LD e mostra a linha
+//   "Atualizado em ..." na página do post (src/routes/blog/[slug]/+page.svelte).
+// - faq ({ question, answer }[]): perguntas específicas do post. Quando
+//   presente, vira FAQPage JSON-LD e uma seção de FAQ visível no fim do post.
 export const posts = [
   {
     slug: 'como-calcular-lucro-real-lanchonete',

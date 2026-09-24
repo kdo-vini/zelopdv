@@ -1,6 +1,7 @@
 <script>
   import { page } from '$app/stores';
   import { buildZeloWhatsAppHref } from '$lib/zeloContact';
+  import { ORGANIZATION } from '$lib/seo/site';
 
   export let variant = 'dark';
   const whatsappHref = buildZeloWhatsAppHref();
@@ -26,6 +27,7 @@
           <li><a href={featuresHref}>Funcionalidades</a></li>
           <li><a href={pricingHref}>Preços</a></li>
           <li><a href="/comparativos">Comparativos</a></li>
+          <li><a href="/sobre">Sobre o Zelo PDV</a></li>
           <li><a href="/atualizacoes">Atualizações</a></li>
         </ul>
       </div>
@@ -45,15 +47,15 @@
         <ul>
           <li><a href="/termos">Termos de Uso</a></li>
           <li><a href="/privacidade">Privacidade</a></li>
-          <li><a href="https://instagram.com/techne.ia" target="_blank" rel="noopener noreferrer">@techne.ia</a></li>
+          <li><a href={ORGANIZATION.instagram} target="_blank" rel="noopener noreferrer">@techne.ia</a></li>
         </ul>
       </div>
     </div>
 
     <div class="footer-bottom">
       <p>
-        &copy; {new Date().getFullYear()} Téchne Sistemas. Todos os direitos reservados.
-        <span>Techne Sistemas Tecnologia Da Informacao Ltda, CNPJ: 65.679.798/0001-95</span>
+        &copy; {new Date().getFullYear()} {ORGANIZATION.brand}. Todos os direitos reservados.
+        <span>{ORGANIZATION.legalName}, CNPJ: {ORGANIZATION.cnpj}</span>
       </p>
       <strong>Feche o caixa sabendo o que sobrou.</strong>
     </div>

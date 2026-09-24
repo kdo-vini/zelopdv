@@ -1,18 +1,10 @@
-export const softwareApplicationSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'Zelo PDV',
-  url: 'https://zelopdv.com.br',
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web Browser',
-  offers: {
-    '@type': 'Offer',
-    price: '59.00',
-    priceCurrency: 'BRL',
-    priceValidUntil: '2027-12-31'
-  },
-  description: 'Sistema de gestão e frente de caixa para pequenos negócios.'
-};
+import { buildFaqSchema as buildGenericFaqSchema, buildSoftwareApplicationSchema, SITE_URL } from '$lib/seo/site';
+
+// Mantido com o mesmo nome de export por compatibilidade — agora derivado de
+// PLANS/ADDONS via src/lib/seo/site.js (ver CLAUDE.md: preço só sai de pricing.js).
+export const softwareApplicationSchema = buildSoftwareApplicationSchema({
+  description: 'Sistema de gestão e frente de caixa para pequenos negócios de alimentação.'
+});
 
 export const generalFaqs = [
   {
@@ -44,7 +36,7 @@ export const segmentPages = {
       title: 'Sistema PDV para Lanchonete — Caixa, Fiado e Lucro Real | Zelo PDV',
       description:
         'Sistema PDV para lanchonete simples e sem mensalidade surpresa. Controle caixa, fiado e veja o lucro real do seu negócio. Teste grátis 14 dias, sem cartão de crédito, sem instalar nada.',
-      canonical: 'https://zelopdv.com.br/para-lanchonetes'
+      canonical: `${SITE_URL}/para-lanchonetes`
     },
     segmentName: 'lanchonetes',
     heroBadge: 'Feito para balcão, caixa e retaguarda',
@@ -175,7 +167,7 @@ export const segmentPages = {
       title: 'Sistema para Restaurante — Mesas, Comandas e Caixa | Zelo PDV',
       description:
         'Sistema para restaurante pequeno e médio: controle mesas, comandas, caixa e lucro real. R$ 59/mês + módulo de mesas opcional. Teste grátis 14 dias, sem cartão.',
-      canonical: 'https://zelopdv.com.br/para-restaurantes'
+      canonical: `${SITE_URL}/para-restaurantes`
     },
     segmentName: 'restaurantes',
     heroBadge: 'Do salão ao fechamento do caixa',
@@ -306,7 +298,7 @@ export const segmentPages = {
       title: 'PDV para Hamburgueria — Controle Pedidos e Lucro Sem Complicação | Zelo PDV',
       description:
         'Sistema PDV para hamburgueria: registre pedidos rápido, controle estoque e saiba quanto sobrou no fim do dia. R$ 59/mês, 14 dias grátis, sem cartão.',
-      canonical: 'https://zelopdv.com.br/para-hamburguerias'
+      canonical: `${SITE_URL}/para-hamburguerias`
     },
     segmentName: 'hamburguerias',
     heroBadge: 'Operação enxuta para pico de movimento',
@@ -431,7 +423,7 @@ export const segmentPages = {
       title: 'Sistema para Delivery Próprio — Gerencie Pedidos e Finanças Sem iFood | Zelo PDV',
       description:
         'Para quem faz delivery por conta própria. Controle pedidos, despesas e lucro sem pagar taxa de marketplace. Sistema simples, R$ 59/mês.',
-      canonical: 'https://zelopdv.com.br/para-delivery'
+      canonical: `${SITE_URL}/para-delivery`
     },
     segmentName: 'delivery próprio',
     heroBadge: 'Backoffice simples para delivery próprio',
@@ -562,7 +554,7 @@ export const segmentPages = {
       title: 'Sistema de Gestão para MEI — Caixa e Despesas no Celular | Zelo PDV',
       description:
         'Sistema de gestão para MEI de alimentação. Substitua planilha e caderno por controle de caixa, despesas e lucro real. R$ 59/mês, teste grátis.',
-      canonical: 'https://zelopdv.com.br/para-mei'
+      canonical: `${SITE_URL}/para-mei`
     },
     segmentName: 'MEI e pequeno negócio',
     heroBadge: 'Controle simples para quem faz tudo sozinho',
@@ -672,16 +664,5 @@ export const segmentPages = {
 };
 
 export function buildFaqSchema(page) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: page.faqSpecific.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer
-      }
-    }))
-  };
+  return buildGenericFaqSchema(page.faqSpecific);
 }
