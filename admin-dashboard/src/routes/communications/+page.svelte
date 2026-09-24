@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { fade } from 'svelte/transition'
   import { supabase } from '$lib/supabaseClient'
+  import { API_BASE } from '$lib/apiBase'
   import { success, error as errorToast, warning } from '$lib/toast'
   import { confirmDialog } from '$lib/confirmDialog'
   import {
@@ -9,8 +10,6 @@
     TECHNE_WHATSAPP_NUMBER,
     applyCommunicationPlaceholders,
   } from '$lib/communicationPlaceholders'
-
-  const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
 
   const SOURCE_FILTERS = [
     { key: 'all', label: 'Todos' },

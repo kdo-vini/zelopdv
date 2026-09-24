@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { supabase } from '$lib/supabaseClient'
+  import { API_BASE } from '$lib/apiBase'
   import { logAdminAction } from '$lib/logger'
   import { fade, slide } from 'svelte/transition'
   import { PLANS, VALID_PLAN_TIERS, calculateValue, isAddonAllowed, planLabel, subscriptionValue } from '$lib/pricing'
@@ -10,8 +11,6 @@
   import { confirmDialog } from '$lib/confirmDialog'
 
   // Base do app principal (onde rodam os endpoints /api/admin/billing/*)
-  const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
-
   let users = []
   let loading = true
   let searchTerm = ''

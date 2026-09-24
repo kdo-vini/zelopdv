@@ -1,7 +1,6 @@
 // Admin activity logger
 import { supabase } from './supabaseClient'
-
-const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
+import { API_BASE } from './apiBase'
 
 async function getAccessToken() {
     const { data: { session } } = await supabase.auth.getSession()

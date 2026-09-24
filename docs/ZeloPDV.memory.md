@@ -184,6 +184,9 @@
 
 - O app principal roda em SvelteKit 2 + Svelte 5; ele e o `admin-dashboard/` usam `@sveltejs/adapter-vercel` explícito com runtime `nodejs24.x`, e os dois projetos Vercel estão configurados em `24.x`.
 - Existe um segundo app em `admin-dashboard/`, separado do app principal.
+- APIs cross-origin do `admin-dashboard/` devem usar diretamente o domínio
+  canônico `https://zelopdv.com.br`; `https://www.zelopdv.com.br` redireciona
+  para o apex e quebra preflights CORS porque o navegador não segue o `308`.
 - O backend real do produto é Supabase; service role só existe em código server-side.
 - `subscriptions` é a fonte de verdade de acesso/entitlement.
 - Trial grátis local vencido usa status `trial_expired`; `past_due` é reservado para falha/atraso de pagamento.

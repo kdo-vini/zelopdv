@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { supabase } from '$lib/supabaseClient'
+  import { API_BASE } from '$lib/apiBase'
   import { logAdminAction } from '$lib/logger'
   import { success, error as errorToast } from '$lib/toast'
   import { confirmDialog } from '$lib/confirmDialog'
@@ -10,8 +11,6 @@
   import { generatePdfReport, formatBRL, formatNumber } from '$lib/pdfReport'
 
   // Base do app principal (onde rodam os endpoints /api/admin/billing/*)
-  const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
-
   let subscriptions = []
   let loading = true
   let searchTerm = ''

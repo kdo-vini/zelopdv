@@ -1,12 +1,12 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
   import { supabase } from '$lib/supabaseClient'
+  import { API_BASE } from '$lib/apiBase'
   import { fade } from 'svelte/transition'
   import { generatePdfReport, canvasToImage, formatBRL, formatNumber } from '$lib/pdfReport'
   import { getSubscriptionAdminStatus } from '$lib/subscriptionHelpers'
   import { success, error as errorToast } from '$lib/toast'
 
-  const API_BASE = import.meta.env.DEV ? 'http://localhost:5173' : 'https://www.zelopdv.com.br'
   const FEATURE_LABELS = {
     pdv: 'PDV', gerente: 'Zelinho Gerente', relatorios: 'Relatórios', zelinho: 'Zelinho',
     produtos: 'Produtos', estoque: 'Estoque', clientes: 'Clientes', caixa: 'Caixa',

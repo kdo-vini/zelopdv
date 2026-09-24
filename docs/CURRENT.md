@@ -1,5 +1,21 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-24 — Admin: preflight CORS redirecionado
+
+O envio de WhatsApp em `/communications` falhava antes de alcançar o handler:
+o dashboard chamava `https://www.zelopdv.com.br/api/admin/...`, e a Vercel
+respondia ao `OPTIONS` com `308` para o domínio sem `www`. Navegadores não
+seguem redirect de preflight. O domínio canônico `https://zelopdv.com.br`
+responde `204` com `Access-Control-Allow-Origin` para o admin.
+
+O dashboard agora centraliza a origem da API em `src/lib/apiBase.js` e todas as
+chamadas administrativas usam o domínio canônico, incluindo Comunicação,
+Usuários, Assinaturas, Indicações, Analytics e logs. Regressão direcionada:
+`tests/admin.apiBase.test.js` (2/2); `npm --prefix admin-dashboard run check`
+sem erros ou avisos. O build gerou os bundles, mas o adapter Vercel encerrou no
+`EPERM` conhecido do Windows ao criar symlink. Deploy do admin ainda pendente;
+nenhum WhatsApp real foi disparado durante a validação.
+
 ## Sessão 2026-09-23 — GEO: visibilidade em ChatGPT/Gemini/Perplexity
 
 Branch `feat/geo-ai-visibility` implementa a parte técnica de

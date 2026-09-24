@@ -1,5 +1,15 @@
 # Fixes Progress
 
+- [x] FX-ADMIN-CORS-PREFLIGHT-01 (2026-09-24) — chamadas do dashboard para
+  `/api/admin/*` usavam `https://www.zelopdv.com.br`; a Vercel respondia ao
+  preflight com `308` para o apex, bloqueado pelo navegador. A origem da API
+  foi centralizada em `admin-dashboard/src/lib/apiBase.js` com produção em
+  `https://zelopdv.com.br`, cobrindo Comunicação, Usuários, Assinaturas,
+  Indicações, Analytics e logs. O apex foi verificado ao vivo com `OPTIONS`
+  `204` e CORS correto; teste 2/2 e check do admin sem erros/avisos. O build
+  gerou os bundles e parou no `EPERM` conhecido do adapter Vercel no Windows.
+  Deploy pendente; nenhum envio real foi feito.
+
 - [x] FX-MESAS-QR-COMANDA-BILLING-01 (2026-09-23) — Pedidos QR de mesa
   aceitos materializam suas linhas em `comanda_itens` com observação e vínculo
   ao item canônico; triggers evitam baixa duplicada de estoque. Fechamento e
