@@ -158,6 +158,7 @@
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import AiReferralBanner from '$lib/components/marketing/AiReferralBanner.svelte';
   import OperationalProofSection from '$lib/components/marketing/OperationalProofSection.svelte';
+  import ProductVideo from '$lib/components/marketing/ProductVideo.svelte';
   import { trackViewContent } from '$lib/metaPixel';
   import { initMarketingAnalytics } from '$lib/marketingAnalytics';
   import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
@@ -165,42 +166,6 @@
 
   let activeLightboxImage = null;
   let activeLightboxTrigger = null;
-  let activeDemo = 'profit';
-
-  const demoQuestions = {
-    profit: {
-      question: 'Quanto sobrou hoje?',
-      answer: 'Depois das despesas registradas, o resultado ilustrativo ficou assim:',
-      numbers: [
-        { label: 'Vendas', value: 'R$ 3.000' },
-        { label: 'Despesas', value: 'R$ 1.290' },
-        { label: 'Resultado', value: 'R$ 1.710' }
-      ],
-      takeaway: 'Entrou, saiu, sobrou. Sem planilha.'
-    },
-    credit: {
-      question: 'Tem fiado em aberto?',
-      answer: 'A demonstração encontra os recebimentos pendentes no seu cadastro:',
-      numbers: [
-        { label: 'Em aberto', value: 'R$ 420' },
-        { label: 'Clientes', value: '3' },
-        { label: 'Mais antigo', value: '12 dias' }
-      ],
-      takeaway: 'Quem deve, quanto e desde quando. Sem depender da memória.'
-    },
-    products: {
-      question: 'Qual produto vendeu mais?',
-      answer: 'O exemplo organiza os itens do período e destaca o que puxou suas vendas:',
-      numbers: [
-        { label: 'Mais vendido', value: 'X-Salada' },
-        { label: 'Unidades', value: '47' },
-        { label: 'Receita', value: 'R$ 1.128' }
-      ],
-      takeaway: 'Você vê o que puxa o seu movimento e decide olhando o que já acontece no balcão.'
-    }
-  };
-
-  $: selectedDemo = demoQuestions[activeDemo];
 
   let cadastroHref = '/cadastro';
 
@@ -334,28 +299,10 @@
               <h3>Pedido em 3 toques.</h3>
               <p>Toca, adiciona, finaliza. Manda o comprovante no WhatsApp e já atende o próximo. A fila anda.</p>
             </div>
-            <button
-              type="button"
-              class="product-shot"
-              aria-label="Ampliar tela da frente de caixa"
-              on:click={(event) => openLightbox('/images/screenshots/dashboard-desktop.png', event.currentTarget)}
-            >
-              <picture>
-                <source
-                  type="image/webp"
-                  srcset="/images/screenshots/dashboard-desktop-800.webp 800w, /images/screenshots/dashboard-desktop-1600.webp 1600w"
-                  sizes="(max-width: 900px) calc(100vw - 2rem), 60vw"
-                />
-                <img
-                  src="/images/screenshots/dashboard-desktop.png"
-                  alt="Frente de caixa do Zelo PDV com uma comanda aberta."
-                  width="1600"
-                  height="1000"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </picture>
-            </button>
+            <ProductVideo
+              name="venda"
+              alt="Vídeo mostrando um pedido sendo registrado na frente de caixa do Zelo PDV em três toques."
+            />
           </article>
 
           <div class="feature-side">
@@ -371,28 +318,10 @@
                 <h3>Aposenta o caderninho do fiado.</h3>
                 <p>Limite por cliente, histórico de compras e a conta certinha na hora de cobrar.</p>
               </div>
-              <button
-                type="button"
-                class="product-shot"
-                aria-label="Ampliar tela de controle de fiado"
-                on:click={(event) => openLightbox('/images/screenshots/customers-screen.png', event.currentTarget)}
-              >
-                <picture>
-                  <source
-                    type="image/webp"
-                    srcset="/images/screenshots/customers-screen-800.webp 800w, /images/screenshots/customers-screen-1600.webp 1600w"
-                    sizes="(max-width: 900px) calc(100vw - 2rem), 50vw"
-                  />
-                  <img
-                    src="/images/screenshots/customers-screen.png"
-                    alt="Controle de clientes e fiado no Zelo PDV."
-                    width="1600"
-                    height="1000"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </picture>
-              </button>
+              <ProductVideo
+                name="fiado"
+                alt="Vídeo mostrando o controle de fiado do Zelo PDV, com limite por cliente e histórico de compras."
+              />
             </article>
           </div>
         </div>
@@ -407,70 +336,11 @@
             Nada de caçar número em cinco telas. Pergunta do seu jeito e o Zelinho lê as vendas do seu caixa e responde em segundos.
           </p>
         </div>
-        <div class="zelinho-demo">
-          <div class="demo-heading">
-            <p class="demo-label">Leitura do caixa</p>
-            <span class="demo-status"><span aria-hidden="true"></span>Dados ilustrativos</span>
-          </div>
-          <div class="question-list" role="tablist" aria-label="Perguntas para o Zelinho">
-            <button
-              type="button"
-              class:active={activeDemo === 'profit'}
-              role="tab"
-              aria-selected={activeDemo === 'profit'}
-              aria-controls="zelinho-result"
-              on:click={() => activeDemo = 'profit'}
-            >
-              <MessageCircle class="size-5" aria-hidden="true" />
-              <span>Quanto sobrou hoje?</span>
-            </button>
-            <button
-              type="button"
-              class:active={activeDemo === 'credit'}
-              role="tab"
-              aria-selected={activeDemo === 'credit'}
-              aria-controls="zelinho-result"
-              on:click={() => activeDemo = 'credit'}
-            >
-              <MessageCircle class="size-5" aria-hidden="true" />
-              <span>Tem fiado em aberto?</span>
-            </button>
-            <button
-              type="button"
-              class:active={activeDemo === 'products'}
-              role="tab"
-              aria-selected={activeDemo === 'products'}
-              aria-controls="zelinho-result"
-              on:click={() => activeDemo = 'products'}
-            >
-              <MessageCircle class="size-5" aria-hidden="true" />
-              <span>Qual produto vendeu mais?</span>
-            </button>
-          </div>
-
-          <div class="demo-query">
-            <span>Pergunta selecionada</span>
-            <strong>{selectedDemo.question}</strong>
-          </div>
-          <div id="zelinho-result" class="demo-answer" role="tabpanel" aria-live="polite">
-            <div class="demo-answer-heading">
-              <div>
-                <span>Fechamento rápido</span>
-                <strong>O que o caixa está dizendo</strong>
-              </div>
-              <span class="demo-result-state">agora</span>
-            </div>
-            <p>{selectedDemo.answer}</p>
-            <div class="demo-numbers">
-              {#each selectedDemo.numbers as number}
-                <div>
-                  <span>{number.label}</span>
-                  <strong>{number.value}</strong>
-                </div>
-              {/each}
-            </div>
-            <p class="demo-takeaway">{selectedDemo.takeaway}</p>
-          </div>
+        <div class="zelinho-media">
+          <ProductVideo
+            name="zelinho"
+            alt="Vídeo mostrando o Zelinho respondendo, em segundos, uma pergunta sobre as vendas do caixa."
+          />
         </div>
       </div>
     </section>
@@ -885,29 +755,6 @@
     text-wrap: pretty;
   }
 
-  .product-shot {
-    position: relative;
-    display: block;
-    width: 100%;
-    padding: 0;
-    overflow: hidden;
-    border: 1px solid var(--marketing-line);
-    border-radius: 0.75rem;
-    background: var(--marketing-dark-soft);
-    cursor: zoom-in;
-  }
-
-  .product-shot img {
-    display: block;
-    width: 100%;
-    height: auto;
-    transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .product-shot:hover img {
-    transform: scale(1.012);
-  }
-
   .features-section {
     padding: clamp(5.5rem, 8vw, 8rem) 0;
     border-top: 1px solid var(--marketing-line);
@@ -953,17 +800,12 @@
     flex-direction: column;
   }
 
-  .feature-main .product-shot,
-  .fiado-feature .product-shot {
+  .feature-main :global(.product-video),
+  .fiado-feature :global(.product-video) {
     margin-top: auto;
     border: 0;
     border-top: 1px solid var(--marketing-line);
     border-radius: 0;
-  }
-
-  .feature-main .product-shot img {
-    width: 112%;
-    max-width: none;
   }
 
   .feature-copy {
@@ -1063,187 +905,8 @@
     line-height: 1.7;
   }
 
-  .zelinho-demo {
+  .zelinho-media {
     min-width: 0;
-  }
-
-  .demo-heading {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .demo-label {
-    margin: 0;
-    color: var(--marketing-dark-muted);
-    font-size: 0.625rem;
-    font-weight: 650;
-  }
-
-  .demo-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--marketing-dark-muted);
-    font-size: 0.625rem;
-  }
-
-  .demo-status span {
-    width: 0.4rem;
-    height: 0.4rem;
-    border-radius: 50%;
-    background: var(--primary);
-  }
-
-  .question-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 1.25rem;
-  }
-
-  .question-list button {
-    display: flex;
-    align-items: center;
-    flex: 1 1 10.5rem;
-    gap: 0.65rem;
-    min-height: 2.75rem;
-    padding: 0.7rem 0.9rem;
-    border: 1px solid var(--marketing-dark-border);
-    border-radius: 0.5rem;
-    background: transparent;
-    color: var(--text-main);
-    font-size: 0.875rem;
-    font-weight: 650;
-    text-align: left;
-    cursor: pointer;
-    transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
-  }
-
-  .question-list button:hover,
-  .question-list button.active {
-    border-color: var(--primary);
-    background: color-mix(in srgb, var(--primary) 10%, transparent);
-  }
-
-  .question-list button :global(svg) {
-    flex: 0 0 auto;
-    color: var(--link);
-  }
-
-  .question-list button.active :global(svg) {
-    color: var(--primary);
-  }
-
-  .demo-query {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    margin: 1.75rem 0 0.75rem;
-    padding: 0 0 0.75rem;
-    border-bottom: 1px solid var(--marketing-dark-border);
-  }
-
-  .demo-query span {
-    color: var(--marketing-dark-muted);
-    font-size: 0.625rem;
-  }
-
-  .demo-query strong {
-    color: var(--text-main);
-    font-size: 0.875rem;
-    text-align: right;
-  }
-
-  .demo-answer {
-    padding: 1.35rem 1.5rem 1.5rem;
-    border: 1px solid var(--marketing-dark-border);
-    border-radius: 0.75rem;
-    background: var(--marketing-dark);
-  }
-
-  .demo-answer-heading {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .demo-answer-heading strong,
-  .demo-answer-heading span {
-    display: block;
-  }
-
-  .demo-answer-heading strong {
-    margin-top: 0.3rem;
-    color: var(--text-main);
-    font-size: 1rem;
-  }
-
-  .demo-answer-heading > div > span {
-    color: var(--marketing-dark-muted);
-    font-size: 0.625rem;
-  }
-
-  .demo-result-state {
-    flex: 0 0 auto;
-    color: var(--link);
-    font-size: 0.625rem;
-  }
-
-  .demo-answer > p {
-    margin: 1.15rem 0 0;
-    color: var(--marketing-dark-muted);
-    font-size: 0.875rem;
-    line-height: 1.6;
-  }
-
-  .demo-numbers {
-    display: grid;
-    gap: 0;
-    margin-top: 1.25rem;
-    padding: 0.25rem 0;
-    border-top: 1px solid var(--marketing-dark-border);
-    border-bottom: 1px solid var(--marketing-dark-border);
-  }
-
-  .demo-numbers div {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    min-width: 0;
-    padding: 0.75rem 0;
-  }
-
-  .demo-numbers div + div {
-    border-top: 1px solid var(--marketing-dark-border);
-  }
-
-  .demo-numbers span,
-  .demo-numbers strong {
-    display: block;
-  }
-
-  .demo-numbers span {
-    color: var(--marketing-dark-muted);
-    font-size: 0.875rem;
-  }
-
-  .demo-numbers strong {
-    overflow-wrap: anywhere;
-    color: var(--text-main);
-    font-size: 1rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .demo-answer .demo-takeaway {
-    margin-top: 1.15rem;
-    color: var(--text-main);
-    font-size: 0.875rem;
-    font-weight: 650;
   }
 
   .audience-section {
@@ -1756,19 +1419,6 @@
       gap: 3rem;
     }
 
-    .question-list button {
-      flex-basis: 12rem;
-      font-size: 1rem;
-    }
-
-    .demo-answer {
-      padding: 1.25rem;
-    }
-
-    .demo-numbers {
-      margin-top: 1rem;
-    }
-
     .audience-layout {
       align-items: flex-start;
       flex-direction: column;
@@ -1831,14 +1481,12 @@
 
   @media (prefers-reduced-motion: reduce) {
     .primary-cta,
-    .product-shot img,
     .faq-list summary :global(svg) {
       transition: none;
     }
 
     .primary-cta:hover,
-    .primary-cta:active,
-    .product-shot:hover img {
+    .primary-cta:active {
       transform: none;
     }
   }
