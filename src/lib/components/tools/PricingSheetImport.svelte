@@ -3,6 +3,7 @@
   import { X, Search, Loader2 } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import { formatMoney } from '$lib/formatMoney';
+  import { Button } from '$lib/components/ui/button/index.js';
 
   /**
    * Modal de importação: lista produtos do cadastro (na_precificacao = false,
@@ -225,11 +226,11 @@
       <div class="modal-footer">
         <span class="selected-count">{selectedCount} selecionado(s)</span>
         <div class="footer-actions">
-          <button type="button" class="btn-ghost" onclick={close} disabled={saving}>Cancelar</button>
-          <button type="button" class="btn-primary" onclick={confirmImport} disabled={saving || !selectedCount}>
+          <Button type="button" variant="outline" onclick={close} disabled={saving}>Cancelar</Button>
+          <Button type="button" onclick={confirmImport} disabled={saving || !selectedCount}>
             {#if saving}<Loader2 class="w-4 h-4 animate-spin" aria-hidden="true" />{/if}
             Importar {selectedCount > 0 ? `(${selectedCount})` : ''}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -263,7 +264,7 @@
     max-height: calc(100dvh - 2rem);
     display: flex;
     flex-direction: column;
-    border-radius: 0.75rem;
+    border-radius: 0.875rem;
     border: 1px solid var(--border-card);
     background: var(--bg-card);
     overflow: hidden;
@@ -289,7 +290,7 @@
 
   .modal-subtitle {
     margin: 0.25rem 0 0;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     color: var(--text-muted);
   }
 
@@ -369,7 +370,7 @@
     gap: 0.5rem;
     padding: 0.4rem 0.25rem;
     color: var(--text-label);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
     border-bottom: 1px solid var(--border-subtle);
@@ -416,14 +417,14 @@
   .product-preco {
     flex-shrink: 0;
     color: var(--text-label);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     width: 5.5rem;
     text-align: right;
   }
 
   .product-custo {
     flex-shrink: 0;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     width: 6rem;
     text-align: right;
     color: var(--text-muted);
@@ -446,54 +447,13 @@
   }
 
   .selected-count {
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     color: var(--text-muted);
   }
 
   .footer-actions {
     display: flex;
     gap: 0.5rem;
-  }
-
-  .btn-primary,
-  .btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    min-height: 2.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background var(--transition-fast);
-  }
-
-  .btn-primary {
-    border: 0;
-    background: var(--primary);
-    color: var(--primary-text);
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: var(--primary-hover);
-  }
-
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .btn-ghost {
-    border: 1px solid var(--border-subtle);
-    background: transparent;
-    color: var(--text-muted);
-  }
-
-  .btn-ghost:hover:not(:disabled) {
-    background: var(--sidebar-item-hover-bg);
-    color: var(--text-main);
   }
 
   @media (max-width: 640px) {
@@ -505,7 +465,7 @@
     .modal-box {
       max-width: none;
       max-height: calc(100dvh - 1.5rem);
-      border-radius: 0.75rem 0.75rem 0 0;
+      border-radius: 0.875rem 0.875rem 0 0;
     }
 
     .modal-footer {
@@ -517,7 +477,7 @@
       flex-direction: column;
     }
 
-    .footer-actions button {
+    .footer-actions :global(button) {
       width: 100%;
     }
   }

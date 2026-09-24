@@ -1,6 +1,16 @@
 <script>
   import { onMount } from 'svelte';
-  import { Trash2, Loader2, ArrowUpDown } from 'lucide-svelte';
+  import {
+    Trash2,
+    Loader2,
+    ArrowUpDown,
+    Plus,
+    Check,
+    AlertTriangle,
+    CheckCircle2,
+    TrendingDown,
+    CircleDashed,
+  } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription } from '$lib/guards';
   import { addToast, confirmAction } from '$lib/stores/ui';
@@ -9,6 +19,7 @@
   import { formatMoney } from '$lib/formatMoney';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Select from '$lib/components/ui/select/index.js';
+  import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   import PricingSheetImport from './PricingSheetImport.svelte';
   import {
     DEFAULT_MARGEM_DESEJADA,
@@ -18,9 +29,29 @@
     parseCurrencyInput,
     formatCurrencyInput,
     formatPercent,
+    formatMarkup,
   } from '$lib/tools/pricingSheet.js';
 
   const VENDA_WARNING_KEY = 'zelopdv_pricing_venda_warning_ack';
+
+  const STATUS_ICON = {
+    ok: CheckCircle2,
+    abaixo: TrendingDown,
+    prejuizo: AlertTriangle,
+    incompleto: CircleDashed,
+  };
+
+  const FIELD_LABELS = {
+    custo_unitario: 'Custo',
+    preco: 'Venda',
+    margem_desejada: 'Meta',
+  };
+
+  const FIELD_ARIA_LABELS = {
+    custo_unitario: (nome) => `Custo de ${nome}`,
+    preco: (nome) => `Preço de venda de ${nome}`,
+    margem_desejada: (nome) => `Margem desejada de ${nome}`,
+  };
 
   let ownerUserId = $state(/** @type {string | null} */ (null));
   let isSubUser = $state(false);
@@ -36,6 +67,25 @@
   /** @type {Map<string|number, {preco:number, custo_unitario:number|null, margem_desejada:number}>} */
   let savedValues = new Map();
 
+  // Estado de feedback de salvamento por campo (`${id}:${field}` -> 'saved').
+  // Objeto simples reativo via $state; 'saving' não precisa de estado visual
+  // próprio hoje, só bloqueia reentrância indiretamente pelo fluxo async.
+  let fieldStatus = $state(/** @type {Record<string, 'saving'|'saved'>} */ ({}));
+  const saveTimers = {};
+  let liveMessage = $state('');
+
+  function fieldKey(id, field) {
+    return `${id}:${field}`;
+  }
+
+  function scheduleClearSaved(key) {
+    if (saveTimers[key]) clearTimeout(saveTimers[key]);
+    saveTimers[key] = setTimeout(() => {
+      delete fieldStatus[key];
+      delete saveTimers[key];
+    }, 1500);
+  }
+
   let sortBy = $state('nome');
   const sortOptions = [
     { value: 'nome', label: 'Nome' },
@@ -47,6 +97,7 @@
 
   // Form "Adicionar produto"
   let formNome = $state('');
+  let formNomeInput = $state(/** @type {HTMLInputElement | null} */ (null));
   let formCusto = $state(/** @type {number | null} */ (null));
   let formVenda = $state(/** @type {number | null} */ (null));
   let formMeta = $state(DEFAULT_MARGEM_DESEJADA);
@@ -142,6 +193,9 @@
       } catch {}
     }
 
+    const key = fieldKey(id, field);
+    fieldStatus[key] = 'saving';
+
     const { data, error } = await supabase
       .from('produtos')
       .update({ [dbColumn]: current })
@@ -153,11 +207,15 @@
     if (error || !data?.length) {
       console.error('[PricingSheet] commitField', field, error || 'nenhuma linha atualizada');
       row[field] = previous;
+      delete fieldStatus[key];
       addToast('Não foi possível salvar a alteração. Tente novamente.', 'error');
       return;
     }
 
     saved[field] = current;
+    fieldStatus[key] = 'saved';
+    liveMessage = `${FIELD_LABELS[field]} de ${row.nome} salvo.`;
+    scheduleClearSaved(key);
 
     if (field === 'preco') {
       pdvCache.invalidateProdutos();
@@ -287,6 +345,17 @@
     await loadRows();
   }
 
+  function scrollToAddForm() {
+    const el = document.getElementById('pricing-add-form');
+    if (!el) return;
+    let reduceMotion = false;
+    try {
+      reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {}
+    el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    formNomeInput?.focus();
+  }
+
   let formPreview = $derived.by(() => computeRow({ custo: formCusto, venda: formVenda, margemDesejada: formMeta }));
 
   let rowsWithCalc = $derived.by(() =>
@@ -326,9 +395,29 @@
   function statusClass(status) {
     return `status-chip status-${status}`;
   }
+
+  // Uma linha só, em português claro, no lugar dos 9 números da versão antiga.
+  function primaryLineText(calc) {
+    if (calc.status === 'incompleto') return 'Informe custo e preço de venda para calcular a margem.';
+    if (calc.status === 'prejuizo') return 'Prejuízo: a venda não cobre o custo.';
+    return `Margem ${formatPercent(calc.margem)} · meta ${formatPercent(calc.meta)}`;
+  }
+
+  function secondaryLineText(calc) {
+    if (calc.diferenca == null || calc.diferenca <= 0) return '';
+    return `Para bater a meta: cobre ${formatMoney(calc.sugerido)} (+${formatMoney(calc.diferenca)})`;
+  }
+
+  function lineTone(status) {
+    if (status === 'prejuizo') return 'error';
+    if (status === 'abaixo') return 'warning';
+    return 'neutral';
+  }
 </script>
 
 <div class="pricing-sheet">
+  <span class="sr-only" role="status" aria-live="polite">{liveMessage}</span>
+
   {#if !ready}
     <div class="state-block">
       <Loader2 class="w-6 h-6 animate-spin" aria-hidden="true" />
@@ -355,7 +444,10 @@
       </div>
       <div class="summary-card">
         <span class="summary-label">Abaixo da meta</span>
-        <strong class="summary-value" style="color: var(--status-warning-text);">
+        <strong
+          class="summary-value"
+          style={`color: ${summary.abaixoDaMeta > 0 ? 'var(--status-warning-text)' : 'var(--text-main)'};`}
+        >
           {summary.abaixoDaMeta}
           {#if summary.emPrejuizo > 0}
             <span class="summary-sub" style="color: var(--status-error-text);">(+{summary.emPrejuizo} em prejuízo)</span>
@@ -364,9 +456,14 @@
       </div>
     </div>
 
+    <div class="helpers-row">
+      <InlineHelper message="CMV: quanto do preço de venda vai só para pagar o custo do produto." />
+      <InlineHelper message="Margem: quanto sobra de cada venda antes das despesas fixas do negócio." />
+    </div>
+
     <!-- Form: adicionar produto -->
     {#if canEdit}
-      <form class="add-card" onsubmit={addProduto}>
+      <form id="pricing-add-form" class="add-card" onsubmit={addProduto}>
         <div class="add-card-head">
           <h2 class="add-card-title">Adicionar produto</h2>
           <button type="button" class="link-btn" onclick={openImport}>Importar do meu cadastro</button>
@@ -382,7 +479,7 @@
         <div class="add-grid">
           <label class="block">
             <span class="field-label">Nome do produto</span>
-            <input class="field-input" type="text" placeholder="Ex.: Marmita executiva" bind:value={formNome} />
+            <input class="field-input" type="text" placeholder="Ex.: Marmita executiva" bind:value={formNome} bind:this={formNomeInput} />
           </label>
           <label class="block">
             <span class="field-label">Preço de compra (custo)</span>
@@ -488,7 +585,10 @@
           <span>Carregando produtos...</span>
         </div>
       {:else if loadError}
-        <div class="state-block error-text">{loadError}</div>
+        <div class="load-error-block">
+          <span>{loadError}</span>
+          <Button variant="outline" size="sm" onclick={loadRows}>Tentar de novo</Button>
+        </div>
       {:else if displayedRows.length === 0}
         <div class="empty-state">
           <p>Adicione seu primeiro produto ou importe do cadastro.</p>
@@ -500,10 +600,17 @@
         <!-- Mobile: linhas dentro de um único frame -->
         <div class="mobile-rows">
           {#each displayedRows as row (row.id)}
+            {@const Icon = STATUS_ICON[row.calc.status]}
+            {@const primary = primaryLineText(row.calc)}
+            {@const secondary = secondaryLineText(row.calc)}
+            {@const tone = lineTone(row.calc.status)}
             <div class="mobile-row">
               <div class="mobile-row-head">
                 <strong class="mobile-row-name">{row.nome}</strong>
-                <span class={statusClass(row.calc.status)}>{STATUS_LABELS[row.calc.status]}</span>
+                <span class={statusClass(row.calc.status)}>
+                  <Icon class="w-3 h-3" aria-hidden="true" />
+                  {STATUS_LABELS[row.calc.status]}
+                </span>
               </div>
               <div class="mobile-fields">
                 <label class="mobile-field">
@@ -521,8 +628,19 @@
                       onblur={() => commitField(row.id, 'custo_unitario', 'custo_unitario')}
                       onkeydown={commitOnEnter}
                       disabled={!canEdit}
+                      aria-label={FIELD_ARIA_LABELS.custo_unitario(row.nome)}
+                      aria-describedby={row.custo_unitario == null ? `custo-missing-m-${row.id}` : undefined}
                     />
+                    {#if fieldStatus[fieldKey(row.id, 'custo_unitario')] === 'saved'}
+                      <Check class="save-check" aria-hidden="true" />
+                    {/if}
                   </div>
+                  {#if row.custo_unitario == null}
+                    <span id={`custo-missing-m-${row.id}`} class="missing-custo-hint">
+                      <AlertTriangle class="w-3.5 h-3.5" aria-hidden="true" />
+                      Sem custo
+                    </span>
+                  {/if}
                 </label>
                 <label class="mobile-field">
                   <span class="field-label">Venda</span>
@@ -538,31 +656,69 @@
                       onblur={() => commitField(row.id, 'preco', 'preco')}
                       onkeydown={commitOnEnter}
                       disabled={!canEdit}
+                      aria-label={FIELD_ARIA_LABELS.preco(row.nome)}
                     />
+                    {#if fieldStatus[fieldKey(row.id, 'preco')] === 'saved'}
+                      <Check class="save-check" aria-hidden="true" />
+                    {/if}
                   </div>
                 </label>
-                <label class="mobile-field">
+                <label class="mobile-field mobile-field-meta">
                   <span class="field-label">Meta %</span>
-                  <input
-                    class="field-input tabular-nums"
-                    type="number"
-                    min="0"
-                    max="99.9"
-                    step="0.1"
-                    value={row.margem_desejada}
-                    oninput={(e) => onMetaInput(row.id, e)}
-                    onblur={() => commitField(row.id, 'margem_desejada', 'margem_desejada')}
-                    onkeydown={commitOnEnter}
-                    disabled={!canEdit}
-                  />
+                  <div class="meta-field-wrap">
+                    <input
+                      class="field-input tabular-nums"
+                      type="number"
+                      min="0"
+                      max="99.9"
+                      step="0.1"
+                      value={row.margem_desejada}
+                      oninput={(e) => onMetaInput(row.id, e)}
+                      onblur={() => commitField(row.id, 'margem_desejada', 'margem_desejada')}
+                      onkeydown={commitOnEnter}
+                      disabled={!canEdit}
+                      aria-label={FIELD_ARIA_LABELS.margem_desejada(row.nome)}
+                    />
+                    {#if fieldStatus[fieldKey(row.id, 'margem_desejada')] === 'saved'}
+                      <Check class="save-check" aria-hidden="true" />
+                    {/if}
+                  </div>
                 </label>
               </div>
-              <div class="mobile-calc">
-                <div><span>CMV</span><strong>{formatPercent(row.calc.cmv)}</strong></div>
-                <div><span>Margem</span><strong>{formatPercent(row.calc.margem)}</strong></div>
-                <div><span>Lucro/un</span><strong>{row.calc.lucro == null ? '—' : formatMoney(row.calc.lucro)}</strong></div>
-                <div><span>Sugerido</span><strong>{row.calc.sugerido == null ? '—' : formatMoney(row.calc.sugerido)}</strong></div>
+
+              <div class="mobile-primary">
+                <p class="mobile-primary-line" class:tone-warning={tone === 'warning'} class:tone-error={tone === 'error'}>
+                  {primary}
+                </p>
+                {#if secondary}
+                  <p class="mobile-secondary-line" class:tone-warning={tone === 'warning'} class:tone-error={tone === 'error'}>
+                    {secondary}
+                  </p>
+                {/if}
               </div>
+
+              <details class="row-details">
+                <summary class="row-details-summary">Ver detalhes</summary>
+                <div class="row-details-grid">
+                  <div class="row-details-item">
+                    <span class="detail-label">CMV</span>
+                    <strong class="detail-value">{formatPercent(row.calc.cmv)}</strong>
+                  </div>
+                  <div class="row-details-item">
+                    <span class="detail-label">Lucro/un</span>
+                    <strong class="detail-value">{row.calc.lucro == null ? '—' : formatMoney(row.calc.lucro)}</strong>
+                  </div>
+                  <div class="row-details-item">
+                    <span class="detail-label">Markup</span>
+                    <strong class="detail-value">{formatMarkup(row.calc.markup)}</strong>
+                  </div>
+                  <div class="row-details-item">
+                    <span class="detail-label">Sugerido</span>
+                    <strong class="detail-value">{row.calc.sugerido == null ? '—' : formatMoney(row.calc.sugerido)}</strong>
+                  </div>
+                </div>
+              </details>
+
               {#if canEdit}
                 <button type="button" class="remove-btn" onclick={() => removeFromSheet(row)}>
                   <Trash2 class="w-3.5 h-3.5" aria-hidden="true" />
@@ -578,22 +734,27 @@
           <table class="sheet-table">
             <thead>
               <tr>
-                <th class="col-header text-left px-3 py-2">Produto</th>
-                <th class="col-header text-right px-3 py-2">Custo</th>
-                <th class="col-header text-right px-3 py-2">Venda</th>
-                <th class="col-header text-right px-3 py-2">Margem desejada</th>
-                <th class="col-header text-right px-3 py-2">CMV</th>
-                <th class="col-header text-right px-3 py-2">Margem</th>
-                <th class="col-header text-right px-3 py-2">Lucro/un</th>
-                <th class="col-header text-right px-3 py-2">Sugerido</th>
-                <th class="col-header text-left px-3 py-2">Status</th>
-                <th class="col-header px-3 py-2"></th>
+                <th scope="col" class="col-header text-left px-3 py-2">Produto</th>
+                <th scope="col" class="col-header text-right px-3 py-2">Custo</th>
+                <th scope="col" class="col-header text-right px-3 py-2">Venda</th>
+                <th scope="col" class="col-header text-right px-3 py-2">Meta</th>
+                <th scope="col" class="col-header text-right px-3 py-2">Margem</th>
+                <th scope="col" class="col-header text-right px-3 py-2">CMV</th>
+                <th scope="col" class="col-header text-right px-3 py-2">Sugerido</th>
+                <th scope="col" class="col-header px-3 py-2"><span class="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody>
               {#each displayedRows as row (row.id)}
+                {@const Icon = STATUS_ICON[row.calc.status]}
                 <tr>
-                  <td class="px-3 py-2 row-name">{row.nome}</td>
+                  <td class="px-3 py-2 row-name-cell">
+                    <div class="row-name">{row.nome}</div>
+                    <span class={statusClass(row.calc.status)}>
+                      <Icon class="w-3 h-3" aria-hidden="true" />
+                      {STATUS_LABELS[row.calc.status]}
+                    </span>
+                  </td>
                   <td class="px-3 py-2 text-right">
                     <div class="currency-field cell-currency">
                       <span class="currency-prefix" aria-hidden="true">R$</span>
@@ -608,8 +769,19 @@
                         onblur={() => commitField(row.id, 'custo_unitario', 'custo_unitario')}
                         onkeydown={commitOnEnter}
                         disabled={!canEdit}
+                        aria-label={FIELD_ARIA_LABELS.custo_unitario(row.nome)}
+                        aria-describedby={row.custo_unitario == null ? `custo-missing-d-${row.id}` : undefined}
                       />
+                      {#if fieldStatus[fieldKey(row.id, 'custo_unitario')] === 'saved'}
+                        <Check class="save-check" aria-hidden="true" />
+                      {/if}
                     </div>
+                    {#if row.custo_unitario == null}
+                      <span id={`custo-missing-d-${row.id}`} class="missing-custo-hint missing-custo-hint-table">
+                        <AlertTriangle class="w-3.5 h-3.5" aria-hidden="true" />
+                        Sem custo
+                      </span>
+                    {/if}
                   </td>
                   <td class="px-3 py-2 text-right">
                     <div class="currency-field cell-currency">
@@ -624,29 +796,42 @@
                         onblur={() => commitField(row.id, 'preco', 'preco')}
                         onkeydown={commitOnEnter}
                         disabled={!canEdit}
+                        aria-label={FIELD_ARIA_LABELS.preco(row.nome)}
                       />
+                      {#if fieldStatus[fieldKey(row.id, 'preco')] === 'saved'}
+                        <Check class="save-check" aria-hidden="true" />
+                      {/if}
                     </div>
                   </td>
                   <td class="px-3 py-2 text-right">
-                    <input
-                      class="cell-input cell-meta tabular-nums"
-                      type="number"
-                      min="0"
-                      max="99.9"
-                      step="0.1"
-                      value={row.margem_desejada}
-                      oninput={(e) => onMetaInput(row.id, e)}
-                      onblur={() => commitField(row.id, 'margem_desejada', 'margem_desejada')}
-                      onkeydown={commitOnEnter}
-                      disabled={!canEdit}
-                    />
+                    <div class="meta-field-wrap">
+                      <input
+                        class="cell-input cell-meta tabular-nums"
+                        type="number"
+                        min="0"
+                        max="99.9"
+                        step="0.1"
+                        value={row.margem_desejada}
+                        oninput={(e) => onMetaInput(row.id, e)}
+                        onblur={() => commitField(row.id, 'margem_desejada', 'margem_desejada')}
+                        onkeydown={commitOnEnter}
+                        disabled={!canEdit}
+                        aria-label={FIELD_ARIA_LABELS.margem_desejada(row.nome)}
+                      />
+                      {#if fieldStatus[fieldKey(row.id, 'margem_desejada')] === 'saved'}
+                        <Check class="save-check" aria-hidden="true" />
+                      {/if}
+                    </div>
                   </td>
-                  <td class="px-3 py-2 text-right tabular-nums">{formatPercent(row.calc.cmv)}</td>
                   <td class="px-3 py-2 text-right tabular-nums">{formatPercent(row.calc.margem)}</td>
-                  <td class="px-3 py-2 text-right tabular-nums">{row.calc.lucro == null ? '—' : formatMoney(row.calc.lucro)}</td>
-                  <td class="px-3 py-2 text-right tabular-nums">{row.calc.sugerido == null ? '—' : formatMoney(row.calc.sugerido)}</td>
-                  <td class="px-3 py-2">
-                    <span class={statusClass(row.calc.status)}>{STATUS_LABELS[row.calc.status]}</span>
+                  <td class="px-3 py-2 text-right tabular-nums">{formatPercent(row.calc.cmv)}</td>
+                  <td class="px-3 py-2 text-right tabular-nums">
+                    <div class="sugerido-cell">
+                      <strong>{row.calc.sugerido == null ? '—' : formatMoney(row.calc.sugerido)}</strong>
+                      {#if row.calc.diferenca > 0}
+                        <span class="sugerido-hint">+{formatMoney(row.calc.diferenca)}</span>
+                      {/if}
+                    </div>
                   </td>
                   <td class="px-3 py-2 text-right">
                     {#if canEdit}
@@ -671,6 +856,12 @@
   {/if}
 </div>
 
+{#if ready && canEdit}
+  <button class="mobile-create-fab" type="button" aria-label="Adicionar produto" onclick={scrollToAddForm}>
+    <Plus class="mobile-create-fab-icon" aria-hidden="true" />
+  </button>
+{/if}
+
 <PricingSheetImport open={importOpen} {ownerUserId} onclose={closeImport} onimported={onImported} />
 
 <style>
@@ -689,11 +880,18 @@
     gap: 0.6rem;
     padding: 2.5rem 1rem;
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 0.875rem;
   }
 
-  .error-text {
+  .load-error-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2.5rem 1rem;
     color: var(--status-error-text);
+    font-size: 0.875rem;
+    text-align: center;
   }
 
   .readonly-note {
@@ -704,6 +902,12 @@
     background: var(--bg-panel);
     color: var(--text-muted);
     font-size: 0.875rem;
+  }
+
+  .helpers-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   /* Resumo */
@@ -724,10 +928,10 @@
     display: block;
     margin-bottom: 0.3rem;
     color: var(--text-muted);
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.625rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.18em;
   }
 
   .summary-value {
@@ -740,7 +944,7 @@
   .summary-sub {
     display: block;
     margin-top: 0.15rem;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     font-weight: 600;
   }
 
@@ -750,7 +954,7 @@
     flex-direction: column;
     gap: 0.9rem;
     padding: 1.1rem;
-    border-radius: 0.85rem;
+    border-radius: 0.75rem;
     border: 1px solid var(--border-card);
     background: var(--bg-card);
   }
@@ -773,7 +977,7 @@
   .add-card-copy {
     margin: 0;
     color: var(--text-muted);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
   }
 
   .add-grid {
@@ -826,7 +1030,24 @@
     box-shadow: 0 0 0 1px var(--status-warning-border);
   }
 
-  .currency-field {
+  .missing-custo-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.35rem;
+    color: var(--status-warning-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .missing-custo-hint-table {
+    margin-top: 0.3rem;
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  .currency-field,
+  .meta-field-wrap {
     position: relative;
   }
 
@@ -845,12 +1066,39 @@
     padding-left: 2.25rem;
   }
 
+  .save-check {
+    position: absolute;
+    top: 50%;
+    right: 0.6rem;
+    width: 1rem;
+    height: 1rem;
+    transform: translateY(-50%);
+    color: var(--status-success-text);
+    opacity: 0;
+    pointer-events: none;
+    animation: save-check-fade 1.5s ease forwards;
+  }
+
+  @keyframes save-check-fade {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .save-check {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
   .preview-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.6rem;
     padding: 0.75rem;
-    border-radius: 0.6rem;
+    border-radius: 0.5rem;
     border: 1px dashed var(--border-subtle);
     background: var(--bg-panel);
   }
@@ -863,9 +1111,10 @@
 
   .preview-item span {
     color: var(--text-muted);
-    font-size: 0.75rem;
+    font-size: 0.625rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
   }
 
   .preview-item strong {
@@ -883,7 +1132,7 @@
     border: 0;
     padding: 0;
     color: var(--primary);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
   }
@@ -903,7 +1152,7 @@
 
   /* Planilha */
   .sheet-shell {
-    border-radius: 0.85rem;
+    border-radius: 0.75rem;
     border: 1px solid var(--border-card);
     background: var(--bg-card);
     overflow: hidden;
@@ -922,7 +1171,7 @@
   .sheet-title {
     margin: 0;
     color: var(--text-main);
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 700;
   }
 
@@ -948,17 +1197,18 @@
     border-radius: 0.75rem;
     text-align: center;
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 0.875rem;
   }
 
-  /* Status chip */
+  /* Status chip — cor nunca sozinha: ícone + texto sempre juntos. */
   :global(.status-chip) {
     display: inline-flex;
     align-items: center;
+    gap: 0.3rem;
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
     border: 1px solid transparent;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -998,7 +1248,7 @@
   .mobile-row {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.65rem;
     padding: 0.9rem 1rem;
     border-bottom: 1px solid var(--border-subtle);
   }
@@ -1020,42 +1270,90 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--text-main);
-    font-size: 0.9rem;
+    font-size: 0.875rem;
   }
 
   .mobile-fields {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;
   }
 
-  .mobile-field .field-input {
-    min-height: 2.5rem;
+  .mobile-field-meta {
+    grid-column: 1 / -1;
   }
 
-  .mobile-calc {
+  .mobile-field .field-input {
+    min-height: 2.75rem;
+  }
+
+  .mobile-primary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .mobile-primary-line {
+    margin: 0;
+    color: var(--text-label);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .mobile-secondary-line {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  .tone-warning {
+    color: var(--status-warning-text);
+  }
+
+  .tone-error {
+    color: var(--status-error-text);
+  }
+
+  .row-details {
+    border-top: 1px dashed var(--border-subtle);
+    padding-top: 0.5rem;
+  }
+
+  .row-details-summary {
+    cursor: pointer;
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .row-details[open] .row-details-summary {
+    margin-bottom: 0.5rem;
+  }
+
+  .row-details-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.4rem 0.75rem;
-    padding-top: 0.4rem;
-    border-top: 1px dashed var(--border-subtle);
+    gap: 0.5rem 0.75rem;
   }
 
-  .mobile-calc div {
+  .row-details-item {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 0.5rem;
   }
 
-  .mobile-calc span {
+  .detail-label {
     color: var(--text-muted);
-    font-size: 0.75rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
   }
 
-  .mobile-calc strong {
+  .detail-value {
     color: var(--text-label);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
   }
 
   .remove-btn {
@@ -1063,11 +1361,12 @@
     align-items: center;
     gap: 0.35rem;
     align-self: flex-start;
+    min-height: 2.75rem;
     padding: 0.35rem 0;
     border: 0;
     background: transparent;
     color: var(--status-error-text);
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
   }
@@ -1080,7 +1379,7 @@
   .sheet-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
   }
 
   .sheet-table thead tr {
@@ -1093,6 +1392,13 @@
 
   .sheet-table tbody tr:last-child {
     border-bottom: 0;
+  }
+
+  .row-name-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
   }
 
   .row-name {
@@ -1109,11 +1415,11 @@
   .cell-input {
     width: 100%;
     padding: 0.35rem 0.5rem;
-    border-radius: 0.4rem;
+    border-radius: 0.375rem;
     border: 1px solid var(--border-subtle);
     background: var(--bg-input);
     color: var(--text-main);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     outline: none;
     text-align: right;
   }
@@ -1132,6 +1438,24 @@
     width: 5rem;
   }
 
+  .meta-field-wrap {
+    display: inline-block;
+    width: 5rem;
+  }
+
+  .sugerido-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.15rem;
+  }
+
+  .sugerido-hint {
+    color: var(--status-warning-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
   .icon-btn-danger {
     display: inline-flex;
     align-items: center;
@@ -1139,7 +1463,7 @@
     width: 2rem;
     height: 2rem;
     border: 0;
-    border-radius: 0.4rem;
+    border-radius: 0.375rem;
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
@@ -1151,6 +1475,10 @@
     color: var(--status-error-text);
   }
 
+  .mobile-create-fab {
+    display: none;
+  }
+
   @media (min-width: 640px) {
     .summary-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1158,6 +1486,10 @@
 
     .add-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .helpers-row {
+      flex-direction: row;
     }
   }
 
@@ -1175,6 +1507,40 @@
     .field-input,
     .cell-input {
       font-size: 1rem;
+    }
+
+    .mobile-create-fab {
+      position: fixed;
+      right: 1rem;
+      bottom: calc(1rem + var(--mobile-bottom-nav-offset));
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 3.5rem;
+      height: 3.5rem;
+      border: 1px solid var(--primary);
+      border-radius: 50%;
+      background: var(--primary);
+      color: var(--primary-text);
+      cursor: pointer;
+      transition: background var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .mobile-create-fab:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .mobile-create-fab :global(svg) {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-create-fab {
+      transition: none;
     }
   }
 </style>
