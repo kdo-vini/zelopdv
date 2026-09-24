@@ -10,6 +10,7 @@
     CheckCircle2,
     TrendingDown,
     CircleDashed,
+    Info,
   } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import { ensureActiveSubscription } from '$lib/guards';
@@ -19,7 +20,6 @@
   import { formatMoney } from '$lib/formatMoney';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Select from '$lib/components/ui/select/index.js';
-  import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   import PricingSheetImport from './PricingSheetImport.svelte';
   import {
     DEFAULT_MARGEM_DESEJADA,
@@ -103,6 +103,27 @@
   let formMeta = $state(DEFAULT_MARGEM_DESEJADA);
   let formError = $state('');
   let saving = $state(false);
+
+  // FAB "+" some enquanto o form "Adicionar produto" está visível na tela.
+  let addFormEl = $state(/** @type {HTMLFormElement | null} */ (null));
+  let addFormVisible = $state(false);
+
+  $effect(() => {
+    if (!addFormEl) {
+      addFormVisible = false;
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        addFormVisible = !!entry?.isIntersecting;
+      },
+      // Threshold 0: qualquer parte do form visível já conta.
+      // rootMargin negativo no bottom desconta a faixa da nav inferior mobile.
+      { threshold: 0, rootMargin: '0px 0px -80px 0px' }
+    );
+    observer.observe(addFormEl);
+    return () => observer.disconnect();
+  });
 
   let importOpen = $state(false);
 
@@ -456,14 +477,20 @@
       </div>
     </div>
 
-    <div class="helpers-row">
-      <InlineHelper message="CMV: quanto do preço de venda vai só para pagar o custo do produto." />
-      <InlineHelper message="Margem: quanto sobra de cada venda antes das despesas fixas do negócio." />
-    </div>
+    <details class="help-disclosure">
+      <summary class="help-disclosure-summary">
+        <Info class="help-disclosure-icon" size={15} aria-hidden="true" />
+        O que é CMV e margem?
+      </summary>
+      <div class="help-disclosure-content">
+        <p><strong>CMV:</strong> quanto do preço de venda vai só para pagar o custo do produto.</p>
+        <p><strong>Margem:</strong> quanto sobra de cada venda antes das despesas fixas do negócio.</p>
+      </div>
+    </details>
 
     <!-- Form: adicionar produto -->
     {#if canEdit}
-      <form id="pricing-add-form" class="add-card" onsubmit={addProduto}>
+      <form id="pricing-add-form" class="add-card" bind:this={addFormEl} onsubmit={addProduto}>
         <div class="add-card-head">
           <h2 class="add-card-title">Adicionar produto</h2>
           <button type="button" class="link-btn" onclick={openImport}>Importar do meu cadastro</button>
@@ -857,7 +884,15 @@
 </div>
 
 {#if ready && canEdit}
-  <button class="mobile-create-fab" type="button" aria-label="Adicionar produto" onclick={scrollToAddForm}>
+  <button
+    class="mobile-create-fab"
+    class:fab-hidden={addFormVisible}
+    type="button"
+    aria-label="Adicionar produto"
+    aria-hidden={addFormVisible}
+    tabindex={addFormVisible ? -1 : 0}
+    onclick={scrollToAddForm}
+  >
     <Plus class="mobile-create-fab-icon" aria-hidden="true" />
   </button>
 {/if}
@@ -904,10 +939,56 @@
     font-size: 0.875rem;
   }
 
-  .helpers-row {
+  /* Disclosure "O que é CMV e margem?" — mesmo visual do InlineHelper que
+     substitui (borda, raio, fundo), com o padrão de cor/peso do "Ver detalhes". */
+  .help-disclosure {
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.55rem;
+    background: var(--bg-card);
+    padding: 0.55rem 0.7rem;
+  }
+
+  .help-disclosure-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    cursor: pointer;
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    list-style: none;
+  }
+
+  .help-disclosure-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .help-disclosure-summary :global(svg) {
+    flex: 0 0 auto;
+    color: var(--primary);
+  }
+
+  .help-disclosure[open] .help-disclosure-summary {
+    margin-bottom: 0.35rem;
+  }
+
+  .help-disclosure-content {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.35rem;
+    padding-top: 0.15rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .help-disclosure-content p {
+    margin: 0;
+  }
+
+  .help-disclosure-content strong {
+    color: var(--text-label);
   }
 
   /* Resumo */
@@ -1487,10 +1568,6 @@
     .add-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-
-    .helpers-row {
-      flex-direction: row;
-    }
   }
 
   @media (min-width: 768px) {
@@ -1524,7 +1601,10 @@
       background: var(--primary);
       color: var(--primary-text);
       cursor: pointer;
-      transition: background var(--transition-fast), border-color var(--transition-fast);
+      opacity: 1;
+      transform: scale(1);
+      transition: background var(--transition-fast), border-color var(--transition-fast),
+        opacity 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .mobile-create-fab:hover {
@@ -1535,6 +1615,13 @@
     .mobile-create-fab :global(svg) {
       width: 1.5rem;
       height: 1.5rem;
+    }
+
+    /* Escondido enquanto o form "Adicionar produto" está visível na tela. */
+    .mobile-create-fab.fab-hidden {
+      opacity: 0;
+      transform: scale(0.8);
+      pointer-events: none;
     }
   }
 
