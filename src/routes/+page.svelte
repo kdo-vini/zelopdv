@@ -3,7 +3,7 @@
   import { absoluteUrl, buildOrganizationSchema, buildSoftwareApplicationSchema, ORGANIZATION, SITE_URL } from '$lib/seo/site';
 
   const homeSoftwareSchema = buildSoftwareApplicationSchema({
-    description: `Registre pedidos em 3 toques, controle fiado e despesas e veja o lucro do dia no seu próprio caixa. ${TRIAL_DAYS} dias grátis.`,
+    description: `PDV pra bar, lanchonete, restaurante, delivery e quem mais vende no balcão. Registra a venda, controla o fiado e mostra quanto sobrou no fim do dia. ${TRIAL_DAYS} dias grátis.`,
     extra: {
       '@type': ['SoftwareApplication', 'Product'],
       alternateName: 'Sistema PDV para Lanchonete',
@@ -43,7 +43,7 @@
     name: 'Zelo PDV',
     url: SITE_URL,
     inLanguage: 'pt-BR',
-    description: 'Sistema PDV para lanchonete e pequenos negócios. Controle caixa, fiado, despesas e lucro real no navegador.',
+    description: 'PDV pra bar, lanchonete, restaurante, delivery e quem mais vende no balcão. Controle caixa, fiado, despesas e lucro real no navegador.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -60,10 +60,10 @@
     mainEntity: [
       {
         '@type': 'Question',
-        name: 'Preciso de computador potente para usar o Zelo PDV?',
+        name: 'Preciso emitir nota fiscal pra usar?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Não. O Zelo PDV roda direto no navegador e funciona em computadores básicos, celulares e tablets.'
+          text: 'Não. O Zelo organiza suas vendas, o fiado e o caixa com ou sem nota. Ele emite recibo e comprovante de venda. A emissão de NF-e está a caminho, e quando chegar é só ativar, sem trocar de sistema.'
         }
       },
       {
@@ -71,39 +71,39 @@
         name: `Como funcionam os ${TRIAL_DAYS} dias grátis?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Você cria a conta e começa seu período de teste de ${TRIAL_DAYS} dias, sem cadastrar cartão. A assinatura só começa se você escolher continuar.`
+          text: `Cria a conta, usa tudo por ${TRIAL_DAYS} dias e não cadastra cartão. Só paga se decidir continuar.`
         }
       },
       {
         '@type': 'Question',
-        name: 'O Zelo PDV emite Nota Fiscal?',
+        name: 'Funciona sem internet?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'O Zelo PDV emite recibos e comprovantes de venda. Não emitimos NFC-e. Para emissão fiscal em cada venda, use o Zelo junto com um emissor fiscal dedicado.'
+          text: 'Funciona. As vendas ficam salvas no aparelho e sobem pra nuvem quando a conexão voltar.'
         }
       },
       {
         '@type': 'Question',
-        name: 'Tem suporte se eu tiver dúvidas?',
+        name: 'Preciso de computador bom?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Sim. Temos suporte direto via WhatsApp em horário comercial e ajudamos na configuração.'
+          text: 'Não. Roda no navegador de qualquer celular, tablet ou computador simples.'
         }
       },
       {
         '@type': 'Question',
-        name: 'O sistema funciona sem internet?',
+        name: 'Consigo usar em mais de um aparelho?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Sim. O Zelo PDV funciona offline e sincroniza automaticamente quando a internet voltar.'
+          text: 'Sim. Usa a mesma conta no celular, no tablet e no computador, sempre sincronizado.'
         }
       },
       {
         '@type': 'Question',
-        name: 'Quanto custa o sistema PDV para lanchonete?',
+        name: 'E se eu travar em alguma coisa?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `O Zelo PDV custa R$ ${PLANS.pdv.price.toFixed(0)} por mês. O Módulo Mesas custa mais R$ ${ADDONS.mesas.price.toFixed(0)} por mês e o ZeloMenu custa mais R$ ${ADDONS.menu.price.toFixed(0)} por mês. Os primeiros ${TRIAL_DAYS} dias são grátis, sem cartão.`
+          text: 'Chama no WhatsApp. Quem responde é quem constrói o Zelo, não um robô de atendimento.'
         }
       }
     ]
@@ -111,16 +111,16 @@
 </script>
 
 <svelte:head>
-  <title>Sistema PDV para lanchonete | Zelo PDV</title>
-  <meta name="description" content="Registre pedidos em 3 toques, controle fiado e despesas e veja o lucro do dia. Teste por 14 dias, sem cartão, no celular ou computador." />
+  <title>Zelo PDV | PDV pra bar, lanchonete e restaurante. Sem frescura.</title>
+  <meta name="description" content="PDV no celular pra quem vende no balcão. Pedido em 3 toques, fiado controlado e quanto sobrou no dia. 14 dias grátis, sem cartão." />
   <meta name="keywords" content="sistema PDV, PDV para lanchonete, sistema para lanchonete, controle de caixa, controle de fiado, lanchonete, hamburgueria, MEI" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://zelopdv.com.br/" />
 
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://zelopdv.com.br/" />
-  <meta property="og:title" content="Sua lanchonete vendeu bem. Mas sobrou dinheiro?" />
-  <meta property="og:description" content="O Zelo mostra vendas, despesas, fiado e lucro real no seu próprio caixa. Teste por 14 dias sem cartão." />
+  <meta property="og:title" content="Você vende. O Zelo cuida do resto." />
+  <meta property="og:description" content="PDV no celular pra quem vende no balcão. Pedido em 3 toques, fiado controlado e quanto sobrou no dia. 14 dias grátis, sem cartão." />
   <meta property="og:image" content="https://zelopdv.com.br/og-image-home.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -129,8 +129,8 @@
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://zelopdv.com.br/" />
-  <meta name="twitter:title" content="Sua lanchonete vendeu bem. Mas sobrou dinheiro?" />
-  <meta name="twitter:description" content="O Zelo mostra vendas, despesas, fiado e lucro real no seu próprio caixa. Teste por 14 dias sem cartão." />
+  <meta name="twitter:title" content="Você vende. O Zelo cuida do resto." />
+  <meta name="twitter:description" content="PDV no celular pra quem vende no balcão. Pedido em 3 toques, fiado controlado e quanto sobrou no dia. 14 dias grátis, sem cartão." />
   <meta name="twitter:image" content="https://zelopdv.com.br/og-image-home.png" />
 
   {@html `<script type="application/ld+json">${JSON.stringify(homeSoftwareSchema)}</script>`}
@@ -176,7 +176,7 @@
         { label: 'Despesas', value: 'R$ 1.290' },
         { label: 'Resultado', value: 'R$ 1.710' }
       ],
-      takeaway: 'Você sabe o que entrou, o que saiu e o que realmente ficou.'
+      takeaway: 'Entrou, saiu, sobrou. Sem planilha.'
     },
     credit: {
       question: 'Tem fiado em aberto?',
@@ -186,7 +186,7 @@
         { label: 'Clientes', value: '3' },
         { label: 'Mais antigo', value: '12 dias' }
       ],
-      takeaway: 'A conta deixa de depender da memória ou do caderninho.'
+      takeaway: 'Quem deve, quanto e desde quando. Sem depender da memória.'
     },
     products: {
       question: 'Qual produto vendeu mais?',
@@ -196,7 +196,7 @@
         { label: 'Unidades', value: '47' },
         { label: 'Receita', value: 'R$ 1.128' }
       ],
-      takeaway: 'Você decide o próximo passo olhando para o que já acontece no balcão.'
+      takeaway: 'Você vê o que puxa o seu movimento e decide olhando o que já acontece no balcão.'
     }
   };
 
@@ -246,18 +246,18 @@
     <section class="hero" aria-labelledby="hero-title" data-track-section="hero">
       <div class="hero-inner">
         <div class="hero-copy">
-          <p class="hero-kicker">O gerente da sua loja</p>
+          <p class="hero-kicker">PDV sem frescura</p>
           <h1 id="hero-title">
-            Sua lanchonete vendeu bem. Mas sobrou dinheiro?
-            <span>O Zelo te mostra.</span>
+            Você vende.
+            <span>O Zelo cuida do resto.</span>
           </h1>
           <p class="hero-lead">
-            Registre o pedido em 3 toques, largue o caderninho do fiado e veja o lucro do dia sem fechar o caixa no papel.
+            PDV pra bar, lanchonete, restaurante, delivery e quem mais vende no balcão. Registra a venda, controla o fiado e mostra quanto sobrou no fim do dia.
           </p>
           <div class="hero-actions">
-            <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('hero')}>Testar 14 dias grátis (sem cartão)</a>
-            <p class="hero-price">Depois do teste, R$ {basePrice}/mês. Cancele quando quiser.</p>
-            <a href="#zelinho" class="secondary-cta">Ver o Zelo funcionando <ArrowRight class="size-4" aria-hidden="true" /></a>
+            <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('hero')}>Testar 14 dias grátis</a>
+            <p class="hero-price">Sem cartão pra testar. Depois, R$ {basePrice}/mês.</p>
+            <a href="#features" class="secondary-cta">Ver o sistema por dentro <ArrowRight class="size-4" aria-hidden="true" /></a>
           </div>
         </div>
 
@@ -292,22 +292,22 @@
         <article>
           <span class="fact-icon"><Check class="size-5" aria-hidden="true" /></span>
           <div>
-            <strong>14 dias para testar</strong>
-            <p>Sem cartão e sem cobrança automática.</p>
+            <strong>Sem instalar nada.</strong>
+            <p>Abre no navegador do celular, tablet ou computador.</p>
           </div>
         </article>
         <article>
           <span class="fact-icon"><CloudOff class="size-5" aria-hidden="true" /></span>
           <div>
-            <strong>A internet caiu. O balcão não.</strong>
-            <p>Venda offline e sincronize quando voltar.</p>
+            <strong>Sem contrato.</strong>
+            <p>Pagou o mês, usou o mês. Cancela quando quiser.</p>
           </div>
         </article>
         <article>
           <span class="fact-icon"><MessageCircle class="size-5" aria-hidden="true" /></span>
           <div>
-            <strong>WhatsApp com gente de verdade</strong>
-            <p>Ajuda de quem constrói o produto.</p>
+            <strong>Sem internet? Sem drama.</strong>
+            <p>Vende offline e sincroniza quando voltar.</p>
           </div>
         </article>
       </div>
@@ -318,16 +318,16 @@
     <section id="features" class="features-section" data-track-section="features" aria-labelledby="features-title">
       <div class="section-shell">
         <div class="section-heading">
-          <h2 id="features-title">Menos papel no balcão. Mais clareza no fim do dia.</h2>
-          <p>O mesmo sistema acompanha o pedido, o fiado, as despesas e o fechamento.</p>
+          <h2 id="features-title">O que o Zelo faz por você no dia a dia</h2>
+          <p>Do primeiro pedido ao fechamento do caixa, tudo no mesmo lugar.</p>
         </div>
 
         <div class="feature-layout">
           <article class="feature-main">
             <div class="feature-copy">
               <span class="feature-icon"><ShoppingBasket class="size-6" aria-hidden="true" /></span>
-              <h3>Lance o pedido antes da fila crescer.</h3>
-              <p>Toque, adicione e finalize em 3 toques. Envie o comprovante no WhatsApp e atenda o próximo cliente.</p>
+              <h3>Pedido em 3 toques.</h3>
+              <p>Toca, adiciona, finaliza. Manda o comprovante no WhatsApp e já atende o próximo. A fila anda.</p>
             </div>
             <button
               type="button"
@@ -356,15 +356,15 @@
           <div class="feature-side">
             <article class="offline-feature">
               <span class="feature-icon feature-icon-inverse"><CloudOff class="size-6" aria-hidden="true" /></span>
-              <h3>A operadora caiu, mas o balcão não para.</h3>
-              <p>O Zelo vende offline e sobe tudo para a nuvem sozinho quando a internet volta.</p>
+              <h3>A internet caiu? A venda não.</h3>
+              <p>O Zelo continua vendendo sem conexão e sobe tudo pra nuvem quando a internet volta.</p>
             </article>
 
             <article class="fiado-feature">
               <div class="feature-copy compact-copy">
                 <span class="feature-icon"><Wallet class="size-6" aria-hidden="true" /></span>
-                <h3>Jogue fora o caderninho do fiado.</h3>
-                <p>Coloque limite por cliente, veja o histórico e cobre com a conta na mão.</p>
+                <h3>Aposenta o caderninho do fiado.</h3>
+                <p>Limite por cliente, histórico de compras e a conta certinha na hora de cobrar.</p>
               </div>
               <button
                 type="button"
@@ -397,9 +397,9 @@
     <section id="zelinho" class="zelinho-section" data-track-section="zelinho" aria-labelledby="zelinho-title">
       <div class="section-shell zelinho-layout">
         <div>
-          <h2 id="zelinho-title">Pergunte pelo caixa. O Zelinho organiza a resposta.</h2>
+          <h2 id="zelinho-title">Pergunta pro caixa. O Zelinho responde.</h2>
           <p>
-            Em vez de procurar em várias telas, faça uma pergunta direta. O Zelinho lê os lançamentos do seu próprio caixa e devolve o que importa para a decisão de hoje.
+            Nada de caçar número em cinco telas. Pergunta do seu jeito e o Zelinho lê as vendas do seu caixa e responde em segundos.
           </p>
         </div>
         <div class="zelinho-demo">
@@ -472,7 +472,10 @@
 
     <section class="audience-section" data-track-section="audience" aria-labelledby="audience-title">
       <div class="section-shell audience-layout">
-        <h2 id="audience-title">Feito para quem vive o balcão.</h2>
+        <div class="audience-heading">
+          <h2 id="audience-title">Pra quem vive o balcão</h2>
+          <p class="audience-lead">Do bar ao delivery, do MEI ao restaurante com salão.</p>
+        </div>
         <nav class="audience-links" aria-label="Páginas por tipo de negócio">
           <a href="/para-lanchonetes">Lanchonetes</a>
           <a href="/para-restaurantes">Restaurantes</a>
@@ -486,8 +489,8 @@
     <section id="pricing" class="pricing-section" data-track-section="pricing" aria-labelledby="pricing-title">
       <div class="section-shell">
         <div class="section-heading pricing-heading">
-          <h2 id="pricing-title">Três jeitos de começar.</h2>
-          <p>Escolha o que a sua operação usa hoje. Acrescente uma extensão quando precisar.</p>
+          <h2 id="pricing-title">Preço de gente, sem pegadinha.</h2>
+          <p>Começa com o PDV. Precisa de mesa ou cardápio online? Liga a extensão quando fizer sentido.</p>
         </div>
 
         <div class="pricing-grid">
@@ -537,7 +540,7 @@
         </div>
 
         <div class="pricing-action">
-          <p><strong>R$ {basePrice} por mês.</strong> Vendas ilimitadas nos dispositivos do seu negócio. Cancele quando quiser.</p>
+          <p><strong>R$ {basePrice} por mês</strong>, vendas ilimitadas. Sem taxa de implantação, sem fidelidade.</p>
           <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('pricing')}>Testar 14 dias grátis (sem cartão)</a>
         </div>
       </div>
@@ -546,57 +549,57 @@
     <section id="faq" class="faq-section" data-track-section="faq" aria-labelledby="faq-title">
       <div class="faq-shell">
         <div class="faq-intro">
-          <h2 id="faq-title">Antes de começar</h2>
-          <p>As respostas diretas para as dúvidas que aparecem primeiro.</p>
+          <h2 id="faq-title">Perguntas de quem tá chegando</h2>
+          <p>Direto ao ponto, do jeito que você perguntaria no balcão.</p>
         </div>
 
         <div class="faq-list">
           <details>
             <summary>
-              <span>Preciso de computador potente?</span>
+              <span>Preciso emitir nota fiscal pra usar?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>Não. O Zelo roda direto no navegador e funciona em computadores básicos, celulares e tablets.</p>
+            <p>Não. O Zelo organiza suas vendas, o fiado e o caixa com ou sem nota. Ele emite recibo e comprovante de venda. A emissão de NF-e está a caminho, e quando chegar é só ativar, sem trocar de sistema.</p>
           </details>
 
           <details>
             <summary>
-              <span>Como funcionam os 14 dias grátis?</span>
+              <span>Como funcionam os {TRIAL_DAYS} dias grátis?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>Você cria a conta sem cadastrar cartão. A assinatura só começa se você escolher continuar depois do teste.</p>
+            <p>Cria a conta, usa tudo por {TRIAL_DAYS} dias e não cadastra cartão. Só paga se decidir continuar.</p>
           </details>
 
           <details>
             <summary>
-              <span>O sistema funciona sem internet?</span>
+              <span>Funciona sem internet?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>Sim. As vendas ficam salvas no dispositivo e sobem para a nuvem quando a conexão voltar.</p>
+            <p>Funciona. As vendas ficam salvas no aparelho e sobem pra nuvem quando a conexão voltar.</p>
           </details>
 
           <details>
             <summary>
-              <span>O Zelo PDV emite Nota Fiscal?</span>
+              <span>Preciso de computador bom?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>O Zelo emite recibos e comprovantes. Não emitimos NFC-e. Para emissão fiscal em cada venda, use um emissor dedicado junto com o Zelo.</p>
+            <p>Não. Roda no navegador de qualquer celular, tablet ou computador simples.</p>
           </details>
 
           <details>
             <summary>
-              <span>Tem suporte se eu tiver dúvidas?</span>
+              <span>Consigo usar em mais de um aparelho?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>Sim. Você fala com a equipe pelo WhatsApp em horário comercial. A gente também ajuda a configurar o sistema.</p>
+            <p>Sim. Usa a mesma conta no celular, no tablet e no computador, sempre sincronizado.</p>
           </details>
 
           <details>
             <summary>
-              <span>Consigo usar em mais de um dispositivo?</span>
+              <span>E se eu travar em alguma coisa?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>Sim. Celular, tablet e computador podem usar a mesma conta e ficam sincronizados.</p>
+            <p>Chama no WhatsApp. Quem responde é quem constrói o Zelo, não um robô de atendimento.</p>
           </details>
         </div>
       </div>
@@ -605,8 +608,8 @@
     <section class="final-cta" data-track-section="final_cta" aria-labelledby="final-cta-title">
       <div class="final-cta-inner">
         <div>
-          <h2 id="final-cta-title">Amanhã você pode fechar o caixa sem adivinhar.</h2>
-          <p>Comece sem cartão. Se não fizer sentido, você não paga nada.</p>
+          <h2 id="final-cta-title">Amanhã tem movimento. Testa hoje.</h2>
+          <p>14 dias grátis, sem cartão. Não gostou, não paga nada.</p>
         </div>
         <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('final')}>Testar 14 dias grátis (sem cartão)</a>
       </div>
@@ -1290,6 +1293,12 @@
     font-size: 1.25rem;
     font-weight: 750;
     letter-spacing: -0.02em;
+  }
+
+  .audience-lead {
+    margin: 0.5rem 0 0;
+    color: var(--marketing-ink-soft);
+    font-size: 0.875rem;
   }
 
   .audience-links {

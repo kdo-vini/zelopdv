@@ -18,7 +18,7 @@
     <div class="footer-main">
       <div class="footer-brand">
         <img src="/logo-horizontal-cropped.webp" alt="Zelo PDV" width="144" height="45" loading="lazy" decoding="async" />
-        <p>Seu caixa em ordem para você cuidar do negócio.</p>
+        <p>Você vende. O Zelo cuida do resto.</p>
       </div>
 
       <div>
@@ -56,7 +56,7 @@
         &copy; {new Date().getFullYear()} {ORGANIZATION.brand}. Todos os direitos reservados.
         <span>{ORGANIZATION.legalName}, CNPJ: {ORGANIZATION.cnpj}</span>
       </p>
-      <strong>Feche o caixa sabendo o que sobrou.</strong>
+      <strong>PDV sem frescura pra quem vende no balcão.</strong>
     </div>
   </div>
 </footer>
