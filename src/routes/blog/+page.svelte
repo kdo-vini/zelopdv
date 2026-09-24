@@ -3,9 +3,15 @@
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import { publishedPosts } from '$lib/blog/posts';
+  import { coverImage, THUMB_WIDTH } from '$lib/blog/images';
 
   const sortedPosts = [...publishedPosts].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
   const [featuredPost, ...otherPosts] = sortedPosts;
+
+  // Capa real (foto gerada) quando o post tem `cover`; sem isso, os cards
+  // continuam usando BlogCoverArt (arte sintética) ou o jpeg legado no card
+  // em destaque — ver DESIGN_PATTERNS.md sobre não inventar asset novo aqui.
+  $: featuredCover = featuredPost ? coverImage(featuredPost) : null;
 
   const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
     day: 'numeric',
@@ -103,11 +109,24 @@
             <article class="featured-card">
               <a href={`/blog/${featuredPost.slug}`} class="featured-link" aria-label={`Abrir artigo ${featuredPost.title}`}>
                 <div class="featured-media">
-                  <img
-                    src="/blog/1-blog.jpeg"
-                    alt="Operadora de lanchonete conferindo fechamento de caixa em um sistema PDV"
-                    class="featured-image"
-                  />
+                  {#if featuredCover}
+                    <img
+                      src={featuredCover.src}
+                      srcset={featuredCover.srcset}
+                      sizes="(min-width: 960px) 640px, 100vw"
+                      width={featuredCover.width}
+                      height={featuredCover.height}
+                      alt={featuredCover.alt}
+                      class="featured-image"
+                      loading="eager"
+                    />
+                  {:else}
+                    <img
+                      src="/blog/1-blog.jpeg"
+                      alt="Operadora de lanchonete conferindo fechamento de caixa em um sistema PDV"
+                      class="featured-image"
+                    />
+                  {/if}
                 </div>
 
                 <div class="featured-body">
@@ -130,15 +149,29 @@
           </div>
 
           <div class="stories-grid">
-            {#each otherPosts as post}
+            {#each otherPosts as post (post.slug)}
               <article class="story-card">
                 <a href={`/blog/${post.slug}`} class="story-link" aria-label={`Abrir artigo ${post.title}`}>
-                  <BlogCoverArt
-                    variant={post.coverVariant}
-                    compact={true}
-                    title="Zelo"
-                    label="Equipe Zelo PDV"
-                  />
+                  {#if coverImage(post)}
+                    {@const cover = coverImage(post)}
+                    <div class="story-media">
+                      <img
+                        src={cover.thumbSrc}
+                        width={THUMB_WIDTH}
+                        alt={cover.alt}
+                        class="story-image"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </div>
+                  {:else}
+                    <BlogCoverArt
+                      variant={post.coverVariant}
+                      compact={true}
+                      title="Zelo"
+                      label="Equipe Zelo PDV"
+                    />
+                  {/if}
 
                   <div class="story-body">
                     <div class="story-date">{formatDate(post.publishedAt)}</div>
@@ -259,6 +292,21 @@
   }
 
   .featured-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .story-media {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-bottom: 1px solid var(--blog-border);
+    background: color-mix(in srgb, var(--blog-bg) 82%, white);
+  }
+
+  .story-image {
     width: 100%;
     height: 100%;
     object-fit: cover;

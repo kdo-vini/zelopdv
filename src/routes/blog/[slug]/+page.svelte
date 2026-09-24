@@ -4,6 +4,7 @@
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import SiteHeader from "$lib/components/marketing/SiteHeader.svelte";
   import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
+  import { coverImage } from '$lib/blog/images';
 
   export let data;
 
@@ -22,6 +23,8 @@
   $: dateModified = post.updatedAt ?? post.publishedAt;
   $: hasUpdate = Boolean(post.updatedAt) && post.updatedAt !== post.publishedAt;
   $: formattedUpdatedDate = hasUpdate ? dateFormatter.format(new Date(`${post.updatedAt}T00:00:00`)) : null;
+  $: cover = coverImage(post);
+  $: ogImageUrl = cover?.absoluteUrl ?? 'https://zelopdv.com.br/og-image.png';
   $: faqSchema = post.faq?.length
     ? {
         '@context': 'https://schema.org',
@@ -44,7 +47,7 @@
     datePublished: post.publishedAt,
     dateModified,
     url: `https://zelopdv.com.br/blog/${post.slug}`,
-    image: 'https://zelopdv.com.br/og-image.png',
+    image: ogImageUrl,
     author: {
       '@type': 'Organization',
       name: 'Equipe Zelo PDV',
@@ -93,13 +96,13 @@
   <meta property="og:url" content={`https://zelopdv.com.br/blog/${post.slug}`} />
   <meta property="og:title" content={post.title} />
   <meta property="og:description" content={post.description} />
-  <meta property="og:image" content="https://zelopdv.com.br/og-image.png" />
+  <meta property="og:image" content={ogImageUrl} />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content={`https://zelopdv.com.br/blog/${post.slug}`} />
   <meta name="twitter:title" content={post.title} />
   <meta name="twitter:description" content={post.description} />
-  <meta name="twitter:image" content="https://zelopdv.com.br/og-image.png" />
+  <meta name="twitter:image" content={ogImageUrl} />
 
   {@html `<script type="application/ld+json">${JSON.stringify(articleSchema)}</script>`}
   {@html `<script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>`}
@@ -140,13 +143,37 @@
           </div>
 
           <div class="article-cover-shell">
-            <BlogCoverArt
-              variant={post.coverVariant}
-              title="Zelo"
-              label="Equipe Zelo PDV"
-            />
+            {#if cover}
+              <img
+                src={cover.src}
+                srcset={cover.srcset}
+                sizes="(min-width: 980px) 24rem, 100vw"
+                width={cover.width}
+                height={cover.height}
+                alt={cover.alt}
+                class="article-cover-image"
+                fetchpriority="high"
+              />
+            {:else}
+              <BlogCoverArt
+                variant={post.coverVariant}
+                title="Zelo"
+                label="Equipe Zelo PDV"
+              />
+            {/if}
           </div>
         </div>
+
+        {#if post.tldr?.length}
+          <section class="article-tldr">
+            <p class="article-tldr-title">Resumo rápido</p>
+            <ul>
+              {#each post.tldr as item}
+                <li>{item}</li>
+              {/each}
+            </ul>
+          </section>
+        {/if}
       </div>
     </section>
 
@@ -265,6 +292,43 @@
     box-shadow: 0 16px 40px var(--blog-shadow);
   }
 
+  .article-cover-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .article-tldr {
+    margin-top: 1.75rem;
+    background: var(--blog-surface);
+    border: 1px solid var(--blog-border);
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 26px var(--blog-shadow);
+    padding: 1.4rem 1.6rem;
+  }
+
+  .article-tldr-title {
+    color: var(--blog-text);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.75rem;
+  }
+
+  .article-tldr ul {
+    margin: 0;
+    padding-left: 1.15rem;
+    list-style: disc;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .article-tldr li {
+    color: color-mix(in srgb, var(--blog-text) 82%, var(--blog-muted));
+    line-height: 1.6;
+  }
+
   .article-body-wrap {
     padding-top: 0.5rem;
   }
@@ -309,6 +373,120 @@
   .article-content :global(strong) {
     color: var(--blog-text);
     font-weight: 700;
+  }
+
+  .article-content :global(h3) {
+    color: var(--blog-text);
+    font-size: clamp(1.4rem, 2.2vw, 1.7rem);
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-top: 2.2rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .article-content :global(ol) {
+    margin: 0 0 1.5rem 1.25rem;
+    color: color-mix(in srgb, var(--blog-text) 78%, var(--blog-muted));
+    list-style: decimal;
+  }
+
+  .article-content :global(ol li) {
+    margin-bottom: 0.8rem;
+    line-height: 1.8;
+    font-size: 1.04rem;
+  }
+
+  .article-content :global(a) {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .article-content :global(a:hover) {
+    color: var(--link-hover);
+  }
+
+  .article-content :global(blockquote) {
+    margin: 1.6rem 0;
+    padding: 0.9rem 1.4rem;
+    border-left: 3px solid var(--primary);
+    background: color-mix(in srgb, var(--blog-surface) 60%, transparent);
+    border-radius: 0 0.9rem 0.9rem 0;
+    color: color-mix(in srgb, var(--blog-text) 84%, var(--blog-muted));
+    font-size: 1.06rem;
+    line-height: 1.75;
+  }
+
+  .article-content :global(blockquote p:last-child) {
+    margin-bottom: 0;
+  }
+
+  /* Tabela responsiva: o wrapper de overflow fica na própria tag, sem
+     precisar de markup extra no HTML dos posts. */
+  .article-content :global(table) {
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+    margin: 1.6rem 0;
+    border-collapse: collapse;
+    font-size: 0.98rem;
+  }
+
+  .article-content :global(th),
+  .article-content :global(td) {
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--blog-border);
+    text-align: left;
+    vertical-align: top;
+    /* Quebra normal: a rolagem horizontal da tabela fica só para tabelas
+       realmente largas (celular), não para texto que cabe em duas linhas. */
+    min-width: 7.5rem;
+  }
+
+  .article-content :global(th) {
+    color: var(--blog-text);
+    background: color-mix(in srgb, var(--blog-surface) 70%, transparent);
+    font-weight: 700;
+  }
+
+  .article-content :global(td) {
+    color: color-mix(in srgb, var(--blog-text) 78%, var(--blog-muted));
+  }
+
+  .article-content :global(.post-figure) {
+    margin: 1.8rem 0;
+  }
+
+  .article-content :global(.post-figure img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 1.2rem;
+    border: 1px solid var(--blog-border);
+  }
+
+  .article-content :global(.post-figure figcaption) {
+    margin-top: 0.6rem;
+    color: var(--blog-muted);
+    font-size: 0.92rem;
+    text-align: center;
+  }
+
+  .article-content :global(.callout) {
+    margin: 1.6rem 0;
+    padding: 1.1rem 1.4rem;
+    border: 1px solid var(--blog-border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 1rem 1rem 0;
+    background: color-mix(in srgb, var(--blog-surface) 65%, transparent);
+    color: color-mix(in srgb, var(--blog-text) 84%, var(--blog-muted));
+    font-size: 1.02rem;
+    line-height: 1.7;
+  }
+
+  .article-content :global(.callout p:last-child) {
+    margin-bottom: 0;
   }
 
   .article-faq {

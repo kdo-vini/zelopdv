@@ -6,10 +6,26 @@
 // sempre derivados de $lib/pricing (PLANS/ADDONS/TRIAL_DAYS), que é a fonte
 // canônica (ver CLAUDE.md).
 
-import { ADDONS, PLANS, TRIAL_DAYS } from '$lib/pricing';
+// Import relativo (não $lib) de propósito: este módulo é importado por
+// scripts/*.mjs via node puro (ex.: scripts/generate-blog-images.mjs, através
+// de src/lib/blog/images.js), que não resolve o alias $lib do Vite.
+import { ADDONS, PLANS, TRIAL_DAYS } from '../pricing.js';
 
 export const SITE_URL = 'https://zelopdv.com.br';
 export const SITE_NAME = 'Zelo PDV';
+
+// Default de compartilhamento social (Open Graph / Twitter Card) usado pelo
+// componente SocialMeta.svelte quando uma rota não define título/descrição/
+// imagem próprios. src/app.html não tem mais essas tags por padrão — cada
+// rota pública deve renderizar <SocialMeta> (ou seu próprio og:* manual) para
+// não duplicar as tags no <head>.
+export const DEFAULT_SOCIAL = {
+  title: 'Zelo PDV — Sistema de Gestão para Pequenos Negócios',
+  description: `Frente de caixa ágil, controle de fiado e gestão financeira em um só lugar. Teste grátis por ${TRIAL_DAYS} dias, sem cartão.`,
+  image: '/og-image.png',
+  imageWidth: 1200,
+  imageHeight: 630
+};
 
 // Dados da empresa por trás do Zelo PDV. Hoje vivem hardcoded em
 // MarketingFooter.svelte e src/routes/+page.svelte — este módulo é a fonte

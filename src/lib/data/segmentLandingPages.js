@@ -1,4 +1,11 @@
 import { buildFaqSchema as buildGenericFaqSchema, buildSoftwareApplicationSchema, SITE_URL } from '$lib/seo/site';
+import { ADDONS, PLANS, TRIAL_DAYS } from '$lib/pricing';
+
+// Entradas novas (açaí, pizzaria, food truck, marmitaria) interpolam preço de
+// pricing.js em vez de hardcodar — ver CLAUDE.md "evite hardcoded".
+const BASE_PRICE = `R$ ${PLANS.pdv.price.toFixed(0)}`;
+const MENU_PRICE = `R$ ${ADDONS.menu.price.toFixed(0)}`;
+const MESAS_PRICE = `R$ ${ADDONS.mesas.price.toFixed(0)}`;
 
 // Mantido com o mesmo nome de export por compatibilidade — agora derivado de
 // PLANS/ADDONS via src/lib/seo/site.js (ver CLAUDE.md: preço só sai de pricing.js).
@@ -660,6 +667,509 @@ export const segmentPages = {
     finalCtaTitle: 'Teste no seu negócio por 14 dias',
     finalCtaText:
       'Se você é MEI e precisa de um jeito mais simples de controlar caixa, despesas e lucro, o Zelo foi feito para caber na sua rotina. Teste grátis e veja como fica mais fácil fechar o mês.'
+  },
+  acaiterias: {
+    slug: 'para-acaiterias',
+    meta: {
+      title: 'Sistema PDV para Açaiteria — Copos, Adicionais e Sazonalidade | Zelo PDV',
+      description:
+        `Sistema PDV para açaiteria: cadastre copos por tamanho, adicionais e monte de forma simples. Controle caixa, fiado e lucro real na alta e na baixa temporada. ${BASE_PRICE}/mês, ${TRIAL_DAYS} dias grátis, sem cartão.`,
+      canonical: `${SITE_URL}/para-acaiterias`
+    },
+    segmentName: 'açaiterias',
+    heroBadge: 'Feito para o pico do verão e o vazio do inverno',
+    h1: 'Sistema PDV para Açaiteria: Copos, Adicionais e Lucro Real',
+    subtitle:
+      'Cadastre copos por tamanho, monte adicionais e registre cada venda rápido, mesmo na fila do fim de tarde. Acompanhe o caixa, o fiado e o que realmente sobra entre a alta e a baixa temporada.',
+    highlights: [
+      'Copos por tamanho cadastrados como produtos, sem confusão no balcão',
+      'Adicionais e montagens organizados no cardápio',
+      'Fiado do cliente fiel sem caderno',
+      'Vendas por iFood, Rappi e outras plataformas com taxa configurável'
+    ],
+    problemTitle: 'Quando a fila do açaí aperta, o controle é o primeiro a sobrar',
+    problemParagraphs: [
+      'Açaiteria vive de pico: fim de tarde, fim de semana e mês quente o movimento triplica, e o atendente precisa montar copo, cobrar adicional e passar pro próximo cliente rápido. Se o sistema atrasa ou obriga digitar peso e monte de opção toda vez, a fila anda mais devagar do que devia.',
+      'Fora do pico, o desafio muda: vem a baixa temporada, o movimento cai, e sobra a pergunta de sempre — o negócio ainda está dando lucro nos meses fracos, ou só empatando? Sem separar bem despesa fixa de venda variável, essa conta fica no achismo.',
+      'O Zelo PDV não promete pesagem automática por balança integrada — hoje isso não existe no produto. A saída prática é cadastrar cada tamanho de copo (300ml, 500ml, 700ml) como um produto com seu próprio preço, e os adicionais como itens à parte. Simples de montar, rápido de vender, e o estoque desconta certo a cada venda.'
+    ],
+    problemPoints: [
+      { label: 'Fila do fim de tarde', value: 'Cada copo tem tamanho e adicional diferente — se o sistema é lento, a fila cresce e o cliente desiste.' },
+      { label: 'Sazonalidade', value: 'Verão lota, inverno esvazia. Sem separar despesa fixa de venda variável, fica difícil saber se o mês fraco ainda dá lucro.' },
+      { label: 'Adicional sem controle', value: 'Granola, leite em pó, frutas — se não tem preço fixo e claro por adicional, a margem escorre sem ninguém perceber.' }
+    ],
+    featuresTitle: 'Sistema PDV para Açaiteria: copo, adicional e caixa rápido',
+    featuresIntro:
+      'A açaiteria precisa de agilidade na montagem do copo e clareza no fechamento, principalmente quando o movimento varia demais entre estações. O Zelo junta frente de caixa, estoque e financeiro numa operação simples de aprender.',
+    features: [
+      {
+        icon: '⚡',
+        title: 'Frente de caixa rápida para o pico',
+        description:
+          'Registre o copo com tamanho e adicionais em poucos toques, finalize e siga para o próximo cliente. Pensado para não travar quando a fila aperta no fim de tarde.'
+      },
+      {
+        icon: '📦',
+        title: 'Copos e adicionais como produtos organizados',
+        description:
+          'Cadastre cada tamanho de copo (300ml, 500ml, 700ml) e cada adicional (granola, leite em pó, frutas, coberturas) como item próprio, com preço certo. Sem depender de calcular peso na hora da venda.'
+      },
+      {
+        icon: '📒',
+        title: 'Fiado do cliente fiel',
+        description:
+          'Muita açaiteria de bairro tem cliente que passa toda semana e paga depois. Cadastre, acompanhe limite e histórico, e organize esse fiado sem caderno.'
+      },
+      {
+        icon: '📱',
+        title: 'Cardápio online com publicação do estoque',
+        description:
+          `Com o ZeloMenu (adicional de +${MENU_PRICE}/mês), publique os produtos direto do estoque no cardápio digital. Cliente vê tamanhos e adicionais pelo celular, sem cardápio impresso desatualizado.`
+      },
+      {
+        icon: '💰',
+        title: 'Lucro real entre alta e baixa temporada',
+        description:
+          'Lance despesas fixas e variáveis e enxergue o resultado de cada mês. Isso ajuda a decidir se vale reduzir equipe ou horário nos meses mais fracos, com número na mão em vez de sensação.'
+      },
+      {
+        icon: '📲',
+        title: 'Vendas de plataformas com taxa embutida',
+        description:
+          'Registre vendas do iFood, Rappi e outros apps direto no caixa, com a taxa da plataforma já configurada. Você sabe na hora quanto entrou de verdade.'
+      }
+    ],
+    howTitle: 'Como funciona na rotina da sua açaiteria',
+    howIntro:
+      'A ideia é organizar copo, adicional e caixa sem burocracia, e continuar vendendo do jeito certo mesmo quando o movimento muda de uma estação para outra.',
+    steps: [
+      {
+        title: 'Cadastre tamanhos de copo e adicionais',
+        description:
+          'Você cria cada tamanho como um produto (por exemplo, "Açaí 500ml") e cada adicional como item separado, com preço próprio. Pronto para vender no primeiro dia.'
+      },
+      {
+        title: 'Venda rápido no pico',
+        description:
+          'No balcão, monta o copo, adiciona o que o cliente pedir, cobra e segue. O comprovante pode sair pelo WhatsApp, sem enrolar a fila.'
+      },
+      {
+        title: 'Acompanhe o resultado mês a mês',
+        description:
+          'Ao lançar despesas e conferir o caixa, você compara o mês forte com o mês fraco e decide com dado, não com impressão de movimento.'
+      }
+    ],
+    faqSpecific: [
+      {
+        question: 'O Zelo PDV vende por peso, com balança integrada?',
+        answer:
+          'Não. Hoje o Zelo PDV não tem integração com balança para venda por peso. A forma prática de vender açaí é cadastrar cada tamanho de copo (por exemplo, 300ml, 500ml, 700ml) como um produto com preço fixo, e os adicionais como itens à parte. Funciona bem para a maioria das açaiterias, que já vendem por tamanho de copo ou marmita.'
+      },
+      {
+        question: 'Consigo organizar os adicionais (granola, leite em pó, frutas) separados do copo?',
+        answer:
+          'Sim. Cada adicional pode ser cadastrado como um item próprio no seu catálogo de produtos, com preço definido. Assim o atendente monta o copo certo e o preço fecha automaticamente.'
+      },
+      {
+        question: 'O sistema ajuda a entender se a baixa temporada ainda dá lucro?',
+        answer:
+          'Sim. Ao lançar despesas fixas e variáveis e acompanhar as vendas, você compara o resultado de meses diferentes e enxerga se o negócio segue saudável fora do pico do verão.'
+      },
+      {
+        question: 'Consigo controlar o fiado dos clientes fiéis?',
+        answer:
+          'Sim. O sistema tem carteira de clientes integrada, com limite e histórico por pessoa — útil para quem tem cliente de bairro que passa toda semana.'
+      },
+      {
+        question: 'Meus clientes podem ver o cardápio com os tamanhos pelo celular?',
+        answer:
+          `Sim, se você ativar o ZeloMenu (adicional de +${MENU_PRICE}/mês). Os copos e adicionais que você cadastrou no estoque viram um cardápio online acessível por link, sem cardápio impresso desatualizado.`
+      },
+      {
+        question: 'Preciso instalar algum programa?',
+        answer:
+          'Não. O Zelo PDV roda direto no navegador, em computador, notebook ou tablet, sem instalação complicada.'
+      }
+    ],
+    finalCtaTitle: `Teste na sua açaiteria por ${TRIAL_DAYS} dias`,
+    finalCtaText:
+      'Se a sua açaiteria precisa de um caixa rápido no pico e clareza de lucro fora dele, o Zelo PDV foi feito para esse tipo de operação. Teste grátis, sem cartão, e veja como fica a rotina do copo ao fechamento.'
+  },
+  pizzarias: {
+    slug: 'para-pizzarias',
+    meta: {
+      title: 'Sistema PDV para Pizzaria — Meio a Meio, Bordas e Delivery | Zelo PDV',
+      description:
+        `Sistema PDV para pizzaria: organize sabores, meio a meio, bordas recheadas e delivery sem travar na sexta de pico. Controle caixa e lucro real. ${BASE_PRICE}/mês, ${TRIAL_DAYS} dias grátis.`,
+      canonical: `${SITE_URL}/para-pizzarias`
+    },
+    segmentName: 'pizzarias',
+    heroBadge: 'Feito para o forno cheio de sexta e sábado',
+    h1: 'Sistema PDV para Pizzaria: Sabores, Bordas e Delivery Sem Travar',
+    subtitle:
+      'Organize o cardápio de sabores, meio a meio, bordas recheadas e entregas sem perder o ritmo no pico de sexta e sábado. Controle caixa, fiado e o lucro real no fim do mês.',
+    highlights: [
+      'Sabores, meio a meio e bordas organizados como produtos e adicionais',
+      'Caixa que aguenta o pico de sexta e sábado sem travar',
+      'Vendas por iFood, Rappi e outras plataformas com taxa configurável',
+      'Lucro real com despesas de massa, queijo e entrega lançadas'
+    ],
+    problemTitle: 'Sexta e sábado lotam o forno, mas o controle não acompanha',
+    problemParagraphs: [
+      'Pizzaria vive um ritmo desigual: durante a semana o movimento é tranquilo, mas sexta e sábado o telefone e o WhatsApp não param, o forno enche e cada pedido tem sua combinação de sabor, meio a meio, borda recheada e forma de entrega. Se o sistema trava ou obriga digitar tudo de novo a cada pedido, o atraso na cozinha e na entrega vira reclamação.',
+      'Some a isso o delivery: parte vem por aplicativo, parte por WhatsApp, parte é retirada no balcão. Sem um jeito único de registrar cada venda com a taxa certa, fica difícil saber, no fim da noite, quanto realmente sobrou depois de massa, queijo, embalagem e taxa de entrega.',
+      'O Zelo PDV foi pensado para esse ritmo: cadastro rápido dos sabores mais pedidos, adicionais como borda e ingrediente extra, e caixa ágil o bastante para não travar quando o forno está cheio.'
+    ],
+    problemPoints: [
+      { label: 'Pico de sexta e sábado', value: 'Pedido de meio a meio, borda recheada e observação especial — se o caixa é lento, a cozinha atrasa.' },
+      { label: 'Delivery espalhado', value: 'iFood, WhatsApp e retirada no balcão em canais diferentes tornam difícil fechar o dia com clareza.' },
+      { label: 'Lucro apertado', value: 'Massa, queijo, embalagem e taxa de entrega corroem margem quando não entram na conta.' }
+    ],
+    featuresTitle: 'Sistema PDV para Pizzaria: sabor, borda e entrega organizados',
+    featuresIntro:
+      'A pizzaria precisa de agilidade no pico e clareza no que cada pedido realmente rendeu. O Zelo junta frente de caixa, cardápio, estoque e financeiro numa operação simples de aprender.',
+    features: [
+      {
+        icon: '🍔',
+        title: 'Pedidos rápidos mesmo no pico',
+        description:
+          'A tela de venda foi pensada para agilizar sexta e sábado. Registra sabor, meio a meio e forma de entrega em poucos toques, sem enrolar a fila do balcão ou do telefone.'
+      },
+      {
+        icon: '🧾',
+        title: 'Sabores, combos e bordas organizados',
+        description:
+          'Cadastre cada sabor como produto e as combinações de meio a meio mais pedidas como itens próprios ou combos. Bordas recheadas e ingredientes extras entram como adicionais, com preço certo.'
+      },
+      {
+        icon: '📱',
+        title: 'Cardápio online com publicação do estoque',
+        description:
+          'Publique os sabores direto do estoque no cardápio digital do seu negócio. Cliente vê o cardápio, monta o pedido e confere preço antes de ligar ou chamar no WhatsApp.'
+      },
+      {
+        icon: '📲',
+        title: 'Vendas de plataformas com taxa embutida',
+        description:
+          'Registre vendas do iFood, Rappi e outros apps direto no caixa, com a taxa da plataforma já configurada. Assim você sabe na hora quanto entrou de verdade de cada canal.'
+      },
+      {
+        icon: '📦',
+        title: 'Estoque de massa, queijo e recheios',
+        description:
+          'Acompanhe os itens que mais saem no fim de semana e evite ficar sem ingrediente no meio do pico. O estoque desconta automático a cada venda registrada.'
+      },
+      {
+        icon: '💰',
+        title: 'Lucro real depois de massa, queijo e entrega',
+        description:
+          'Lance despesas de insumo, embalagem e entrega e veja o que realmente sobrou. Faturamento alto de sexta não garante lucro quando o custo de cada pizza não entra na conta.'
+      }
+    ],
+    howTitle: 'Como o Zelo entra na rotina da sua pizzaria',
+    howIntro:
+      'A proposta é preparar o cardápio antes do pico, vender rápido durante ele e fechar a noite com clareza sobre o que sobrou.',
+    steps: [
+      {
+        title: 'Cadastre sabores, combos e bordas',
+        description:
+          'Monte o cardápio com os sabores da casa, as combinações de meio a meio mais pedidas e as bordas recheadas como adicionais, com preço definido para cada uma.'
+      },
+      {
+        title: 'Venda rápido na sexta e no sábado',
+        description:
+          'No balcão ou no atendimento por telefone/WhatsApp, o pedido entra rápido, com sabor, borda e forma de entrega já registrados, sem travar o ritmo da cozinha.'
+      },
+      {
+        title: 'Feche a noite com o resultado real',
+        description:
+          'Ao lançar despesas e conferir as vendas por canal (balcão, iFood, WhatsApp), você entende se o pico de fim de semana virou lucro de verdade.'
+      }
+    ],
+    faqSpecific: [
+      {
+        question: 'O Zelo PDV organiza pizza meio a meio?',
+        answer:
+          'O Zelo permite cadastrar as combinações de meio a meio mais pedidas como produtos ou combos próprios, com o preço que você definir (por exemplo, pela regra do sabor mais caro ou uma média). Não existe hoje um "montador" automático de meio a meio com cálculo de proporção — a forma prática é cadastrar as combinações populares da casa como itens do cardápio.'
+      },
+      {
+        question: 'Consigo cobrar borda recheada e adicionais separados?',
+        answer:
+          'Sim. Bordas recheadas, ingredientes extras e outros acréscimos podem ser cadastrados como adicionais com preço próprio, aplicados no pedido junto com o sabor escolhido.'
+      },
+      {
+        question: 'O sistema aguenta o pico de sexta e sábado sem travar?',
+        answer:
+          'A tela de venda foi pensada para ser rápida mesmo em horário de pico, ajudando a registrar pedidos e pagamentos sem enrolar a fila ou atrasar a cozinha.'
+      },
+      {
+        question: 'Consigo registrar vendas do iFood junto com o delivery próprio?',
+        answer:
+          'Sim. Você registra vendas de plataformas como iFood e Rappi com a taxa configurada, e também pedidos que chegam por WhatsApp ou telefone, tudo no mesmo caixa.'
+      },
+      {
+        question: 'Dá para saber se a pizzaria tem lucro real depois dos ingredientes?',
+        answer:
+          'Sim. Ao lançar despesas de massa, queijo, embalagem e entrega, você enxerga o que realmente sobrou, em vez de olhar só para o faturamento da noite.'
+      },
+      {
+        question: 'Preciso instalar algum programa?',
+        answer:
+          'Não. O Zelo PDV roda direto no navegador, em computador, notebook ou tablet, sem instalação complicada.'
+      }
+    ],
+    finalCtaTitle: `Teste na sua pizzaria por ${TRIAL_DAYS} dias`,
+    finalCtaText:
+      'Se a sua pizzaria precisa aguentar o pico de sexta e sábado sem perder o controle do lucro, vale testar o Zelo na rotina real do forno. Sem cartão, sem compromisso.'
+  },
+  'food-trucks': {
+    slug: 'para-food-trucks',
+    meta: {
+      title: 'Sistema PDV para Food Truck — Funciona Sem Internet Estável | Zelo PDV',
+      description:
+        `Sistema PDV para food truck: continua vendendo mesmo sem internet estável e sincroniza depois. Cardápio enxuto, caixa simples para eventos. ${BASE_PRICE}/mês, ${TRIAL_DAYS} dias grátis, sem cartão.`,
+      canonical: `${SITE_URL}/para-food-trucks`
+    },
+    segmentName: 'food trucks',
+    heroBadge: 'Feito para vender sem depender de internet boa',
+    h1: 'Sistema PDV para Food Truck: Vende Mesmo Sem Internet Estável',
+    subtitle:
+      'De feira em feira, de evento em evento, a internet nunca é garantida. O Zelo PDV continua registrando venda offline e sincroniza sozinho quando a conexão volta — para o seu caixa não travar no meio da fila.',
+    highlights: [
+      'Continua vendendo mesmo sem internet, sincroniza depois',
+      'Cardápio enxuto, fácil de montar em cada praça',
+      'Caixa simples para operação móvel e de evento',
+      'Vendas por apps de delivery com taxa configurável, quando fizer sentido'
+    ],
+    problemTitle: 'Quando o sinal cai no meio da fila do evento',
+    problemParagraphs: [
+      'Food truck muda de lugar: feira de rua, evento corporativo, praça de alimentação improvisada. O sinal de internet varia de praça para praça, e no meio do rush — justamente quando mais precisa vender rápido — é comum o wi-fi do evento cair ou o 4G engasgar. Se o sistema de caixa depende de internet o tempo todo, a fila para e o cliente desiste.',
+      'Outro ponto do food truck é o cardápio enxuto: diferente de um restaurante, geralmente são poucos itens, montados para produção rápida em espaço pequeno. O sistema precisa ser simples de configurar de novo a cada evento, sem virar trabalho extra antes de já estar cansado da estrada.',
+      'O Zelo PDV foi desenhado com o offline como parte central do produto, não como promessa vaga: a venda continua sendo registrada mesmo sem internet, e sincroniza sozinha assim que a conexão volta — seja no wi-fi do evento, seja no 4G do celular.'
+    ],
+    problemPoints: [
+      { label: 'Sinal instável no evento', value: 'Wi-fi de feira cai, 4G engasga, e um sistema só-online trava o caixa bem na hora do maior movimento.' },
+      { label: 'Cardápio precisa ser enxuto', value: 'Poucos itens, produção rápida em espaço pequeno — o sistema não pode virar complicação extra a cada praça nova.' },
+      { label: 'Resultado por evento', value: 'Sem separar despesa de deslocamento, gás e insumo por evento, fica difícil saber qual praça realmente vale a pena.' }
+    ],
+    featuresTitle: 'Sistema PDV para Food Truck: continua vendendo onde o sinal falha',
+    featuresIntro:
+      'Para operação móvel, o essencial é não parar de vender quando a internet falha e manter o cardápio simples de configurar. O Zelo entrega isso com uma estrutura leve de aprender e levar para qualquer praça.',
+    features: [
+      {
+        icon: '📶',
+        title: 'Funciona offline de verdade',
+        description:
+          'O Zelo roda como PWA e continua registrando vendas mesmo sem internet. Quando a conexão volta — no wi-fi do evento ou no seu 4G — tudo sincroniza sozinho, sem você precisar refazer nada.'
+      },
+      {
+        icon: '⚡',
+        title: 'Caixa rápido para o rush do evento',
+        description:
+          'A tela de venda foi pensada para agilizar o atendimento nos horários de maior fila, comuns em feira e evento com pouco tempo de pico.'
+      },
+      {
+        icon: '🧾',
+        title: 'Cardápio enxuto e fácil de montar',
+        description:
+          'Cadastre os poucos itens que o truck vende, com combos e adicionais quando fizer sentido. Simples de ajustar antes de cada praça nova.'
+      },
+      {
+        icon: '📱',
+        title: 'Roda no celular ou tablet',
+        description:
+          'Sem precisar de computador fixo nem estrutura cara. O Zelo funciona no celular ou tablet que já está no truck, o que é ideal para quem muda de local com frequência.'
+      },
+      {
+        icon: '💰',
+        title: 'Lucro por evento, sem planilha paralela',
+        description:
+          'Lance despesas de deslocamento, gás e insumo e compare o resultado entre praças. Assim você decide com número qual tipo de evento vale mais a pena repetir.'
+      },
+      {
+        icon: '📲',
+        title: 'Vendas de plataformas com taxa embutida',
+        description:
+          'Se o truck também aceita pedido por iFood ou outro app em pontos fixos, registre com a taxa da plataforma já configurada, sem perder o controle do caixa.'
+      }
+    ],
+    howTitle: 'Como o Zelo acompanha o truck de praça em praça',
+    howIntro:
+      'A ideia é montar o cardápio uma vez, levar o sistema para qualquer lugar e não depender de internet boa para continuar vendendo.',
+    steps: [
+      {
+        title: 'Monte o cardápio enxuto do truck',
+        description:
+          'Cadastre os itens principais, combos e adicionais. Leve pronto para a próxima praça, sem precisar reconfigurar tudo de novo.'
+      },
+      {
+        title: 'Venda mesmo sem sinal',
+        description:
+          'No evento, o caixa continua funcionando ainda que o wi-fi caia ou o 4G engasgue. A venda fica registrada no aparelho e sincroniza quando a conexão volta.'
+      },
+      {
+        title: 'Compare o resultado entre eventos',
+        description:
+          'Lance as despesas de cada praça e veja qual tipo de evento realmente compensa, com base no que sobrou depois do deslocamento e dos insumos.'
+      }
+    ],
+    faqSpecific: [
+      {
+        question: 'O Zelo PDV funciona mesmo se a internet do evento cair?',
+        answer:
+          'Sim. O Zelo funciona como PWA e continua registrando vendas offline. Quando a conexão volta, tudo sincroniza automaticamente — você não perde venda nem precisa lançar de novo.'
+      },
+      {
+        question: 'Preciso de computador ou consigo usar só no celular?',
+        answer:
+          'Dá para usar em celular ou tablet, o que é prático para quem muda de praça com frequência e não quer carregar estrutura de balcão fixo.'
+      },
+      {
+        question: 'O Zelo PDV serve para cardápio pequeno, com poucos itens?',
+        answer:
+          'Sim. O sistema não exige um cardápio grande — funciona bem com poucos itens, combos e adicionais, típico da operação enxuta de food truck.'
+      },
+      {
+        question: 'Consigo comparar o resultado entre eventos diferentes?',
+        answer:
+          'Sim. Lançando despesas de deslocamento, gás e insumo por período, você consegue comparar o movimento e o lucro de praças e eventos diferentes.'
+      },
+      {
+        question: 'O Zelo PDV registra vendas por aplicativo de delivery também?',
+        answer:
+          'Sim, quando o truck atua em ponto fixo e recebe pedido por iFood, Rappi ou similares, dá para registrar com a taxa da plataforma já configurada.'
+      }
+    ],
+    finalCtaTitle: `Teste no seu food truck por ${TRIAL_DAYS} dias`,
+    finalCtaText:
+      'Se você já perdeu venda porque a internet do evento caiu, vale testar um caixa feito para continuar funcionando nessa hora. Teste grátis, sem cartão, na próxima praça.'
+  },
+  marmitarias: {
+    slug: 'para-marmitarias',
+    meta: {
+      title: 'Sistema PDV para Marmitaria — Marmita do Dia, Fiado e Entregas | Zelo PDV',
+      description:
+        `Sistema PDV para marmitaria: cardápio do dia, fiado do cliente fixo e entregas em empresas organizados. Controle caixa e lucro real. ${BASE_PRICE}/mês, ${TRIAL_DAYS} dias grátis, sem cartão.`,
+      canonical: `${SITE_URL}/para-marmitarias`
+    },
+    segmentName: 'marmitarias',
+    heroBadge: 'Feito para o corre da marmita do dia',
+    h1: 'Sistema PDV para Marmitaria: Marmita do Dia, Fiado e Entregas Organizadas',
+    subtitle:
+      'Registre a marmita do dia rápido, controle o fiado do cliente fixo que almoça toda semana e organize as entregas para empresas próximas. Tudo no navegador, sem sistema pesado.',
+    highlights: [
+      'Cardápio do dia cadastrado rápido, sem planilha paralela',
+      'Fiado do cliente fixo com histórico e limite',
+      'Entregas registradas com forma de pagamento certa',
+      'Vendas por iFood e apps com taxa configurável'
+    ],
+    problemTitle: 'A marmita do dia sai rápido, mas o controle fica para depois',
+    problemParagraphs: [
+      'Marmitaria vive de rotina apertada: de manhã já se sabe o que vai para a marmita do dia, e no fim da manhã começam os pedidos — parte é cliente fixo que já sabe o que quer, parte é encomenda para empresa vizinha, parte é quem chega no balcão. Sem um sistema simples, cada pedido vira uma anotação separada, difícil de conferir depois.',
+      'O fiado também pesa diferente na marmitaria: é comum ter o cliente que almoça ali toda semana e paga só no fim do mês. Sem controle claro de quem deve o quê, esse fiado vira ponto cego no fechamento — e às vezes constrangimento na hora de cobrar.',
+      'O Zelo PDV ajuda a organizar essa correria: cadastro rápido do prato do dia, fiado do cliente fixo com histórico, e registro de cada entrega com a forma de pagamento certa, sem sistema pesado nem mensalidade que não cabe na marmitaria.'
+    ],
+    problemPoints: [
+      { label: 'Marmita do dia', value: 'Cardápio muda todo dia — se o cadastro é lento, vira trabalho extra bem na hora do corre do almoço.' },
+      { label: 'Fiado do cliente fixo', value: 'Quem almoça toda semana e paga no fim do mês precisa de controle claro, não de memória ou caderno.' },
+      { label: 'Entregas espalhadas', value: 'Pedido de empresa, encomenda do dia anterior e balcão andam juntos sem organização, e alguma entrega sempre escapa da conta.' }
+    ],
+    featuresTitle: 'Sistema PDV para Marmitaria: do prato do dia ao fechamento',
+    featuresIntro:
+      'A marmitaria precisa de agilidade para cadastrar o prato do dia e clareza para fechar o mês com fiado e entregas organizados. O Zelo junta frente de caixa, fiado, estoque e financeiro numa operação simples de aprender.',
+    features: [
+      {
+        icon: '⚡',
+        title: 'Cadastro rápido da marmita do dia',
+        description:
+          'Cadastre o prato ou o combo do dia como um produto e ajuste amanhã em minutos. Sem precisar montar cardápio novo do zero toda manhã.'
+      },
+      {
+        icon: '📒',
+        title: 'Fiado do cliente fixo',
+        description:
+          'Cadastre o cliente que almoça toda semana, acompanhe limite e histórico, e saiba exatamente quanto cada um deve — sem depender de memória ou caderno.'
+      },
+      {
+        icon: '🧾',
+        title: 'Entregas com pagamento certo',
+        description:
+          'Registre pedidos para empresas próximas e entregas avulsas com a forma de pagamento já definida, evitando esquecimento na hora de cobrar.'
+      },
+      {
+        icon: '📱',
+        title: 'Cardápio online com publicação do estoque',
+        description:
+          `Com o ZeloMenu (adicional de +${MENU_PRICE}/mês), publique o cardápio do dia direto do estoque. Cliente fixo confere o prato do dia pelo celular antes de pedir.`
+      },
+      {
+        icon: '📦',
+        title: 'Estoque de insumos do dia a dia',
+        description:
+          'Acompanhe os itens que precisam de reposição para não faltar ingrediente no meio da produção do prato do dia.'
+      },
+      {
+        icon: '💰',
+        title: 'Lucro real no fim do mês',
+        description:
+          'Lance despesas, acompanhe entradas de balcão, fiado e entregas, e veja o que realmente sobrou. Vender bastante marmita não garante lucro quando o fiado não fecha e a despesa some da conta.'
+      }
+    ],
+    howTitle: 'Como o Zelo entra na rotina da sua marmitaria',
+    howIntro:
+      'A proposta é acompanhar o corre real da marmitaria: prato do dia de manhã, entregas no meio da manhã, fiado organizado no fim do mês.',
+    steps: [
+      {
+        title: 'Cadastre o prato do dia e os clientes fixos',
+        description:
+          'De manhã, você ajusta o prato ou combo do dia e já tem a base de clientes fiéis pronta para vender rápido e registrar fiado quando for o caso.'
+      },
+      {
+        title: 'Registre balcão, encomenda e entrega',
+        description:
+          'Cada venda entra no sistema com a forma de pagamento certa, seja cliente que chegou no balcão, empresa que encomendou ou entrega avulsa.'
+      },
+      {
+        title: 'Feche o mês com fiado e despesas em dia',
+        description:
+          'No fechamento, você confere quem ainda deve, lança as despesas do período e entende com clareza o que sobrou de verdade.'
+      }
+    ],
+    faqSpecific: [
+      {
+        question: 'O Zelo PDV ajuda a organizar a marmita do dia, que muda toda manhã?',
+        answer:
+          'Sim. Você cadastra o prato ou combo do dia como um produto e ajusta em poucos minutos sempre que o cardápio mudar, sem precisar recriar tudo do zero.'
+      },
+      {
+        question: 'Consigo controlar o fiado dos clientes que almoçam toda semana?',
+        answer:
+          'Sim. O sistema tem carteira de clientes integrada, com limite e histórico por pessoa — ideal para quem tem cliente fixo que paga no fim do mês.'
+      },
+      {
+        question: 'Dá para registrar encomendas de empresas próximas?',
+        answer:
+          'Você pode registrar essas vendas no sistema com a forma de pagamento definida, do mesmo jeito que uma venda de balcão. Hoje o Zelo não tem um módulo dedicado de agendamento de encomenda com data futura — a venda é registrada quando é feita ou entregue.'
+      },
+      {
+        question: 'O sistema serve para quem também entrega marmita fora do balcão?',
+        answer:
+          'Sim. As entregas ficam registradas com forma de pagamento e, se quiser, você também pode registrar vendas feitas por iFood ou outros apps com a taxa da plataforma configurada.'
+      },
+      {
+        question: 'Ajuda a saber se a marmitaria tem lucro real, mesmo com fiado?',
+        answer:
+          'Sim. Ao lançar despesas e acompanhar vendas de balcão, fiado e entregas juntos, você entende o que realmente sobrou no mês, sem depender de planilha paralela.'
+      },
+      {
+        question: 'Preciso instalar algum programa?',
+        answer:
+          'Não. O Zelo PDV roda direto no navegador, em computador, notebook ou tablet, sem instalação complicada.'
+      }
+    ],
+    finalCtaTitle: `Teste na sua marmitaria por ${TRIAL_DAYS} dias`,
+    finalCtaText:
+      'Se a sua marmitaria precisa de mais controle sobre o prato do dia, o fiado do cliente fixo e as entregas, vale testar o Zelo na rotina real da cozinha. Sem cartão, sem compromisso.'
   }
 };
 

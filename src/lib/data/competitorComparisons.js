@@ -11,8 +11,17 @@
 // 4. O preço do Zelo (R$ 59) sai de pricing.js — não inventar outro número aqui.
 
 import { buildFaqSchema, SITE_URL } from '$lib/seo/site';
+import { ADDONS, PLANS, TRIAL_DAYS } from '$lib/pricing';
 
 export { softwareApplicationSchema } from './segmentLandingPages';
+
+// Entradas novas (vs-consumer, vs-kyte) interpolam preço de pricing.js em vez de
+// hardcodar — ver CLAUDE.md "evite hardcoded". Entradas antigas (não tocadas
+// neste diff) continuam com string literal.
+const BASE_PRICE = `R$ ${PLANS.pdv.price.toFixed(0)}`;
+const MESAS_ADDON_PRICE = `R$ ${ADDONS.mesas.price.toFixed(0)}`;
+const ACESSOS_ADDON_PRICE = `R$ ${ADDONS.acessos.price.toFixed(0)}`;
+const MENU_ADDON_PRICE = `R$ ${ADDONS.menu.price.toFixed(0)}`;
 
 export const competitorComparisons = {
   saipos: {
@@ -878,6 +887,258 @@ export const competitorComparisons = {
     finalCtaTitle: 'Preço público de R$ 59/mês, sem cotação',
     finalCtaText:
       'Teste o Zelo PDV por 14 dias grátis, sem cartão, e tenha uma frente de caixa transparente e offline — sem precisar pedir orçamento para saber quanto custa.'
+  },
+
+  consumer: {
+    slug: 'vs-consumer',
+    competitor: 'Consumer',
+    priceCheckedAt: 'setembro de 2026',
+    meta: {
+      title: 'Zelo PDV vs Consumer: Preço Parecido, Modelo Diferente | Zelo PDV',
+      description:
+        `Consumer custa R$ 59,90/mês (Essencial, plano anual, 1 computador). Zelo PDV é ${BASE_PRICE}/mês, uma conta em vários dispositivos e modular. Compare e teste ${TRIAL_DAYS} dias grátis.`,
+      canonical: `${SITE_URL}/vs-consumer`
+    },
+    heroBadge: 'Comparativo honesto · Zelo PDV vs Consumer',
+    h1: 'Zelo PDV vs Consumer: preço quase igual, modelo de crescimento diferente',
+    subtitle:
+      `A Consumer é um sistema de gestão de food service conhecido, com plano de entrada bem perto do preço do Zelo PDV. A diferença aparece no que cada um exige para crescer: a Consumer salta de preço para liberar mais de um computador; o Zelo PDV soma módulos claros sobre uma base de ${BASE_PRICE}/mês.`,
+    editorialThesis:
+      'A Consumer é um concorrente próximo em preço de entrada e cobre bem o essencial de food service, inclusive fiado e operação offline. A diferença que mais pesa é o salto de preço da Consumer para sair de um computador só; o Zelo PDV cresce por módulo, sem esse degrau alto logo na segunda etapa.',
+    priceAnchor: {
+      zelo: `${BASE_PRICE}/mês`,
+      competitor: 'R$ 59,90/mês (Essencial, plano anual, 1 computador)',
+      note: 'Preço da Consumer consultado no site oficial (loja.consumer.com.br) em setembro de 2026: plano Essencial R$ 59,90/mês na cobrança anual, Profissional R$ 179,90/mês e Alta Performance R$ 269,90/mês. O preço mensal avulso (sem compromisso anual) não é exibido publicamente. Sujeito a alteração.'
+    },
+    introTitle: 'Preço de entrada parecido, mas o degrau seguinte é alto',
+    introParagraphs: [
+      'A Consumer é um sistema de gestão conhecido no food service brasileiro, com PDV, cardápio digital e controle de fiado. O plano de entrada, Essencial, custa R$ 59,90/mês — muito perto do preço do Zelo PDV — mas só na cobrança anual, e restrito a 1 computador. A página oficial cita que existe opção de plano mensal personalizado, sem mostrar o valor publicamente.',
+      'O ponto que mais separa os dois: para ter PDV em rede, com mais de um computador, é preciso subir para o plano Profissional, que custa R$ 179,90/mês — quase o triplo do Essencial. É um salto grande para uma necessidade comum em negócio que cresce um pouco além do balcão único.',
+      `O Zelo PDV também parte de ${BASE_PRICE}/mês: a mesma conta já abre em vários dispositivos (computador, tablet, celular). Se você precisa de logins separados por funcionário, com cargos e permissões próprios, isso entra como o add-on Controle de Acessos (+${ACESSOS_ADDON_PRICE}) — assim como mesas (+${MESAS_ADDON_PRICE}) ou ZeloMenu (+${MENU_ADDON_PRICE}) somam ao plano base sem te empurrar para um degrau de preço três vezes maior.`
+    ],
+    comparisonIntro:
+      'Comparação ponto a ponto entre Zelo PDV e Consumer, com base no que cada um divulga publicamente em setembro de 2026.',
+    comparisonRows: [
+      {
+        feature: 'Preço de entrada',
+        competitor: 'R$ 59,90/mês (Essencial, cobrança anual)',
+        zelo: `${BASE_PRICE}/mês, sem exigir plano anual`,
+        advantage: 'zelo'
+      },
+      {
+        feature: 'Limite de dispositivo no plano de entrada',
+        competitor: '1 computador no Essencial; múltiplos dispositivos só no Profissional (R$ 179,90/mês)',
+        zelo: `A mesma conta abre em vários dispositivos; login separado por funcionário é o add-on Controle de Acessos (+${ACESSOS_ADDON_PRICE})`,
+        advantage: 'zelo'
+      },
+      {
+        feature: 'Modelo de cobrança para crescer',
+        competitor: 'Salto de plano (Essencial → Profissional → Alta Performance)',
+        zelo: 'Base + módulos opcionais (mesas, acessos, ZeloMenu)',
+        advantage: 'zelo'
+      },
+      {
+        feature: 'Funciona sem internet (offline)',
+        competitor: 'Divulga operação offline com sincronização automática',
+        zelo: 'Continua vendendo offline e sincroniza depois',
+        advantage: 'tie'
+      },
+      {
+        feature: 'Controle de fiado',
+        competitor: 'Tem sistema próprio de controle de fiado e conta corrente do cliente',
+        zelo: 'Nativo, incluso na base',
+        advantage: 'tie'
+      },
+      {
+        feature: 'Totem de autoatendimento e TEF',
+        competitor: 'Disponível no plano Alta Performance',
+        zelo: 'Foco em frente de caixa, sem totem próprio',
+        advantage: 'competitor'
+      }
+    ],
+    reasonsTitle: 'Por que o Zelo PDV cresce sem o mesmo degrau de preço',
+    reasons: [
+      {
+        icon: '🧩',
+        title: 'Sem salto de 3x para crescer',
+        description:
+          `Na Consumer, sair do Essencial para um PDV em rede custa R$ 179,90/mês — quase o triplo. No Zelo, você soma módulos de ${MESAS_ADDON_PRICE} a ${MENU_ADDON_PRICE} sobre a base, sem esse degrau.`
+      },
+      {
+        icon: '💻',
+        title: 'Uma conta em vários dispositivos, sem travar em 1 computador',
+        description:
+          `O plano de entrada da Consumer trava em 1 computador. No Zelo PDV, a mesma conta abre em computador, tablet ou celular; login separado por funcionário fica no add-on Controle de Acessos (+${ACESSOS_ADDON_PRICE}).`
+      },
+      {
+        icon: '🏷️',
+        title: 'Preço sem exigir plano anual',
+        description:
+          `O R$ 59,90 da Consumer é o valor da cobrança anual; o preço mensal avulso não é público. O Zelo PDV mostra ${BASE_PRICE}/mês direto, sem letra miúda sobre periodicidade.`
+      },
+      {
+        icon: '🙋',
+        title: 'Suporte humano direto',
+        description:
+          'No Zelo você fala direto com o time pelo WhatsApp para configurar e tirar dúvidas do dia a dia.'
+      }
+    ],
+    fairnessNote:
+      'Para ser justo: a Consumer também controla fiado e divulga operação offline, então esses pontos não são diferencial do Zelo aqui — é honesto reconhecer a proximidade. A Consumer também oferece totem de autoatendimento e TEF no plano mais caro, recursos que o Zelo não tem. Este comparativo é sobre o custo de crescer além de um computador só, onde o Zelo leva vantagem.',
+    faqSpecific: [
+      {
+        question: 'A Consumer é mais cara ou mais barata que o Zelo PDV?',
+        answer:
+          `No plano de entrada, os preços são muito próximos: R$ 59,90/mês da Consumer (Essencial, cobrança anual) contra ${BASE_PRICE}/mês do Zelo PDV, sem exigir plano anual. A diferença aparece quando o negócio cresce: para ter PDV em rede na Consumer, o preço sobe para R$ 179,90/mês.`
+      },
+      {
+        question: 'A Consumer também funciona offline?',
+        answer:
+          'Sim. A própria Consumer divulga em seu site que o PDV continua operando offline e sincroniza quando a conexão volta — nesse ponto, os dois sistemas são parecidos.'
+      },
+      {
+        question: 'A Consumer controla fiado como o Zelo PDV?',
+        answer:
+          'Sim. A Consumer tem um sistema próprio de controle de fiado e conta corrente do cliente, divulgado no site oficial. Os dois sistemas cobrem esse ponto.'
+      },
+      {
+        question: 'Por que trocar a Consumer pelo Zelo PDV, se o preço de entrada é parecido?',
+        answer:
+          `O ponto principal é o custo de crescer: na Consumer, sair de 1 computador para PDV em rede custa quase o triplo do plano de entrada. No Zelo PDV, você soma módulos específicos (mesas, acessos, ZeloMenu) sobre a base de ${BASE_PRICE}, sem esse salto.`
+      }
+    ],
+    sources: [
+      { label: 'Consumer — Planos (oficial)', url: 'https://loja.consumer.com.br/' },
+      { label: 'Consumer — Página institucional e FAQ offline (oficial)', url: 'https://consumer.com.br/' },
+      { label: 'Consumer — Controle de fiado (oficial)', url: 'https://consumer.com.br/sistema-controle-fiado.aspx' },
+      { label: 'Consumer — Reclame Aqui (relatos de clientes)', url: 'https://www.reclameaqui.com.br/empresa/programa-consumer-consultoria/' }
+    ],
+    finalCtaTitle: 'Cresça sem pagar o triplo pelo segundo computador',
+    finalCtaText:
+      `Teste o Zelo PDV por ${TRIAL_DAYS} dias grátis, sem cartão, e veja como é somar só o módulo que você precisa em vez de subir de plano inteiro.`
+  },
+
+  kyte: {
+    slug: 'vs-kyte',
+    competitor: 'Kyte',
+    priceCheckedAt: 'setembro de 2026',
+    meta: {
+      title: 'Zelo PDV vs Kyte: PDV para Food Service x Vendas em Geral | Zelo PDV',
+      description:
+        'A Kyte é um PDV genérico para comércio: o app mobile funciona offline, mas a versão Kyte Web é 100% online. Zelo PDV é feito para lanchonete e restaurante, e funciona offline direto no navegador. Compare.',
+      canonical: `${SITE_URL}/vs-kyte`
+    },
+    heroBadge: 'Comparativo honesto · Zelo PDV vs Kyte',
+    h1: 'Zelo PDV vs Kyte: PDV para food service x vendas em geral',
+    subtitle:
+      'A Kyte é um aplicativo de vendas popular entre pequenos comerciantes de varejo em geral, com plano de entrada mais barato que o Zelo. O app mobile da Kyte funciona offline e sincroniza depois, mas o próprio site descreve a versão Kyte Web como totalmente online. O Zelo PDV foi feito para lanchonete e restaurante, com taxa de plataforma de delivery, e funciona offline direto no navegador (PWA), em computador, tablet ou celular.',
+    editorialThesis:
+      'A Kyte é uma opção enxuta e barata para quem vende produtos em geral (moda, calçados, acessórios), e o app mobile também funciona offline. O Zelo PDV é mais direto para quem tem food service, com recursos como taxa de plataforma de delivery e operação offline via navegador em qualquer dispositivo, sem exigir a instalação de um app específico; se o seu negócio não é de alimentação, a Kyte pode ser suficiente e mais barata.',
+    priceAnchor: {
+      zelo: `${BASE_PRICE}/mês`,
+      competitor: 'grátis a R$ 99,90/mês, conforme o plano',
+      note: 'Preço da Kyte consultado no site oficial (kyteapp.com/pt/planos) em setembro de 2026: plano Grátis R$ 0, Pro R$ 49,90/mês, Grow R$ 69,90/mês, Prime R$ 99,90/mês (assinatura anual com 2 meses de desconto). Sujeito a alteração.'
+    },
+    introTitle: 'Um PDV genérico não é o mesmo que um PDV de food service',
+    introParagraphs: [
+      `A Kyte é um aplicativo de ponto de venda conhecido entre pequenos comerciantes — moda, calçados, acessórios, produtos em geral. O plano Pro custa R$ 49,90/mês, mais barato que o Zelo PDV, e existe até uma opção gratuita para quem está começando.`,
+      'O ponto de atenção é o foco, não o offline: o material público da Kyte não é direcionado a food service. Sobre operação sem internet, a própria central de ajuda da Kyte explica que o aplicativo mobile funciona offline e sincroniza as vendas quando a conexão volta — mas a página de planos descreve a versão Kyte Web como totalmente online, ou seja, esse recurso depende de usar o app, não o navegador.',
+      'O Zelo PDV foi construído pensando em lanchonete, hamburgueria, restaurante e delivery: registra vendas com a taxa de plataformas como iFood e Rappi já configurada, controla fiado do jeito que o food service usa, e funciona offline direto no navegador (PWA), em computador, tablet ou celular, sem precisar instalar um aplicativo separado.'
+    ],
+    comparisonIntro:
+      'Comparação ponto a ponto entre Zelo PDV e Kyte, com base no que cada um divulga publicamente em setembro de 2026.',
+    comparisonRows: [
+      {
+        feature: 'Foco em food service',
+        competitor: 'Não é o foco — vendas de varejo em geral',
+        zelo: 'Construído para lanchonete, restaurante e delivery',
+        advantage: 'zelo'
+      },
+      {
+        feature: 'Funciona sem internet (offline)',
+        competitor: 'App mobile funciona offline e sincroniza depois; a versão Kyte Web é descrita como totalmente online',
+        zelo: 'Funciona offline direto no navegador (PWA), em computador, tablet ou celular',
+        advantage: 'tie'
+      },
+      {
+        feature: 'Vendas de plataformas de delivery com taxa configurável',
+        competitor: 'Não é o foco do produto',
+        zelo: 'Registra iFood, Rappi e outras com a taxa já embutida',
+        advantage: 'zelo'
+      },
+      {
+        feature: 'Controle de fiado',
+        competitor: 'Tem função própria de controle de fiado e débito',
+        zelo: 'Nativo, incluso na base',
+        advantage: 'tie'
+      },
+      {
+        feature: 'Preço de entrada',
+        competitor: 'Grátis ou R$ 49,90/mês (Pro)',
+        zelo: `${BASE_PRICE}/mês`,
+        advantage: 'competitor'
+      }
+    ],
+    reasonsTitle: 'Por que um food service tende a preferir o Zelo PDV',
+    reasons: [
+      {
+        icon: '🍔',
+        title: 'Feito para food service, não para varejo em geral',
+        description:
+          'A Kyte é pensada para vender produto de varejo. O Zelo PDV nasceu para lanchonete, restaurante e delivery, com fluxo pensado para esse tipo de operação.'
+      },
+      {
+        icon: '📶',
+        title: 'Offline no navegador, sem precisar de app separado',
+        description:
+          'Na Kyte, o offline é um recurso do aplicativo mobile — a versão Kyte Web é descrita como totalmente online. O Zelo PDV funciona offline direto no navegador (PWA), em computador, tablet ou celular, sem instalar nada.'
+      },
+      {
+        icon: '📲',
+        title: 'Taxa de delivery já calculada',
+        description:
+          'Vendas por iFood, Rappi e outros apps entram no Zelo com a taxa da plataforma configurada, mostrando o valor líquido na hora. Não é um recurso central do material público da Kyte.'
+      },
+      {
+        icon: '🙋',
+        title: 'Suporte humano direto',
+        description:
+          'No Zelo você fala direto com o time pelo WhatsApp para configurar e tirar dúvidas do dia a dia.'
+      }
+    ],
+    fairnessNote:
+      'Para ser justo: a Kyte tem plano de entrada mais barato que o Zelo, incluindo uma opção gratuita, também tem controle de fiado e o aplicativo mobile funciona offline — nenhum desses pontos é exclusividade do Zelo. Se o seu negócio é varejo em geral (não food service) e o orçamento é o critério principal, a Kyte pode fazer mais sentido. Este comparativo é para quem tem lanchonete, restaurante ou delivery e precisa de recursos pensados para esse setor.',
+    faqSpecific: [
+      {
+        question: 'A Kyte é mais barata que o Zelo PDV?',
+        answer:
+          `No plano de entrada pago, sim: a Kyte Pro custa R$ 49,90/mês contra ${BASE_PRICE}/mês do Zelo PDV, e a Kyte ainda tem uma opção gratuita. A diferença de preço existe, mas a Kyte não é especializada em food service.`
+      },
+      {
+        question: 'A Kyte funciona offline?',
+        answer:
+          'Depende de qual Kyte: segundo a central de ajuda oficial, o aplicativo mobile da Kyte funciona offline e sincroniza as vendas quando a conexão volta. Já a página de planos descreve a versão Kyte Web como totalmente online. O Zelo PDV funciona offline direto no navegador (PWA), em computador, tablet ou celular, sem precisar instalar um app separado.'
+      },
+      {
+        question: 'A Kyte serve para lanchonete ou restaurante?',
+        answer:
+          'A Kyte não é divulgada como um produto de food service — o posicionamento público é de vendas de varejo em geral (moda, calçados, acessórios). O Zelo PDV foi construído especificamente para lanchonete, restaurante e delivery, incluindo registro de vendas por plataformas como iFood.'
+      },
+      {
+        question: 'A Kyte controla fiado como o Zelo PDV?',
+        answer:
+          'Sim, a Kyte também divulga uma função de controle de fiado e débito. Nesse ponto específico, os dois sistemas são parecidos.'
+      }
+    ],
+    sources: [
+      { label: 'Kyte — Planos (oficial)', url: 'https://www.kyteapp.com/pt/planos' },
+      { label: 'Kyte — Controle de fiado e débito (oficial)', url: 'https://www.kyte.com.br/fidelizar/controle-de-fiado' },
+      { label: 'Kyte — Central de ajuda: como usar a Kyte offline (oficial)', url: 'https://docs.kyteapp.com/en/articles/7884990-how-to-use-kyte-offline' },
+      { label: 'Kyte — Reclame Aqui (relatos de clientes)', url: 'https://www.reclameaqui.com.br/empresa/kyte/' }
+    ],
+    finalCtaTitle: `Um PDV pensado para food service, por ${BASE_PRICE}/mês`,
+    finalCtaText:
+      `Teste o Zelo PDV por ${TRIAL_DAYS} dias grátis, sem cartão, e veja a diferença de um sistema construído para lanchonete, restaurante e delivery — com taxa de iFood calculada e caixa que funciona offline direto no navegador.`
   }
 };
 

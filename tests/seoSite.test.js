@@ -1,10 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { ADDONS, PLANS } from '../src/lib/pricing.js';
+import { ADDONS, PLANS, TRIAL_DAYS } from '../src/lib/pricing.js';
 import {
   absoluteUrl,
   buildFaqSchema,
   buildOrganizationSchema,
   buildSoftwareApplicationSchema,
+  DEFAULT_SOCIAL,
   formatBRL,
   ORGANIZATION,
   SITE_URL
@@ -60,5 +63,38 @@ describe('seo/site.js', () => {
     expect(schema['@type']).toBe('FAQPage');
     expect(schema.mainEntity[0].name).toBe('Q1');
     expect(schema.mainEntity[0].acceptedAnswer.text).toBe('A1');
+  });
+
+  it('DEFAULT_SOCIAL description interpolates the real TRIAL_DAYS', () => {
+    expect(DEFAULT_SOCIAL.description).toContain(`${TRIAL_DAYS} dias`);
+    expect(DEFAULT_SOCIAL.title).toBeTruthy();
+    expect(DEFAULT_SOCIAL.image).toBe('/og-image.png');
+    expect(DEFAULT_SOCIAL.imageWidth).toBe(1200);
+    expect(DEFAULT_SOCIAL.imageHeight).toBe(630);
+  });
+});
+
+describe('src/app.html', () => {
+  const appHtmlPath = fileURLToPath(new URL('../src/app.html', import.meta.url));
+  const appHtml = readFileSync(appHtmlPath, 'utf8');
+
+  it('does not hardcode page-specific Open Graph / Twitter tags (they duplicate each route\'s own tags)', () => {
+    expect(appHtml).not.toMatch(/property="og:title"/);
+    expect(appHtml).not.toMatch(/property="og:description"/);
+    expect(appHtml).not.toMatch(/property="og:image"/);
+    expect(appHtml).not.toMatch(/property="og:image:width"/);
+    expect(appHtml).not.toMatch(/property="og:image:height"/);
+    expect(appHtml).not.toMatch(/property="og:url"/);
+    expect(appHtml).not.toMatch(/property="og:type"/);
+    expect(appHtml).not.toMatch(/name="twitter:title"/);
+    expect(appHtml).not.toMatch(/name="twitter:description"/);
+    expect(appHtml).not.toMatch(/name="twitter:image"/);
+  });
+
+  it('keeps the site-wide, non-conflicting Open Graph / Twitter defaults', () => {
+    expect(appHtml).toMatch(/property="og:site_name"/);
+    expect(appHtml).toMatch(/property="og:locale"/);
+    expect(appHtml).toMatch(/name="twitter:card"/);
+    expect(appHtml).toMatch(/name="robots"/);
   });
 });

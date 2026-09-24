@@ -2,6 +2,7 @@ import { segmentPages } from '$lib/data/segmentLandingPages';
 import { competitorComparisons } from '$lib/data/competitorComparisons';
 import { publishedPosts } from '$lib/blog/posts';
 import { SITE_URL } from '$lib/seo/site';
+import { coverImage } from '$lib/blog/images';
 
 // Sitemap dinâmico: monta as URLs a partir dos data files, então páginas novas
 // (segmentos, comparativos, posts) entram automaticamente sem edição manual.
@@ -25,17 +26,36 @@ const staticRoutes = [
   { path: '/blog', changefreq: 'weekly', priority: '0.7' }
 ];
 
-function urlEntry({ loc, changefreq, priority, lastmod }) {
+function urlEntry({ loc, changefreq, priority, lastmod, image }) {
   return [
     '  <url>',
     `    <loc>${loc}</loc>`,
     lastmod ? `    <lastmod>${lastmod}</lastmod>` : null,
     changefreq ? `    <changefreq>${changefreq}</changefreq>` : null,
     priority ? `    <priority>${priority}</priority>` : null,
+    image
+      ? [
+          '    <image:image>',
+          `      <image:loc>${image.loc}</image:loc>`,
+          `      <image:title>${escapeXml(image.title)}</image:title>`,
+          '    </image:image>'
+        ].join('\n')
+      : null,
     '  </url>'
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+// Escapa texto simples para uso dentro de nós XML (image:title vem do
+// alt/título do post, texto livre digitado por humano).
+function escapeXml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
 
 export function GET() {
@@ -55,20 +75,22 @@ export function GET() {
     entries.push(urlEntry({ loc: `${BASE}/${comparison.slug}`, changefreq: 'monthly', priority: '0.8' }));
   }
 
-  // Posts do blog
+  // Posts do blog (com image:image quando o post tem capa gerada)
   for (const post of publishedPosts) {
+    const cover = coverImage(post);
     entries.push(
       urlEntry({
         loc: `${BASE}/blog/${post.slug}`,
         lastmod: post.updatedAt ?? post.publishedAt,
         changefreq: 'monthly',
-        priority: '0.7'
+        priority: '0.7',
+        image: cover ? { loc: cover.absoluteUrl, title: cover.alt } : null
       })
     );
   }
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${entries.join('\n')}
 </urlset>`;
 

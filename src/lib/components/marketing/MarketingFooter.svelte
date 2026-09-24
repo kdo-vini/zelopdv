@@ -28,7 +28,6 @@
           <li><a href={pricingHref}>Preços</a></li>
           <li><a href="/comparativos">Comparativos</a></li>
           <li><a href="/sobre">Sobre o Zelo PDV</a></li>
-          <li><a href="/atualizacoes">Atualizações</a></li>
         </ul>
       </div>
 

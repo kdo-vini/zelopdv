@@ -3,6 +3,7 @@
   import { ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL, ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL } from '$lib/zeloImpressaoClient.js';
   import SiteHeader from '$lib/components/marketing/SiteHeader.svelte';
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
+  import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
 
   const downloadUrl = ZELO_IMPRESSAO_INSTALLER_DOWNLOAD_URL;
   const canonicalUrl = ZELO_IMPRESSAO_DOWNLOAD_PAGE_URL;
@@ -23,6 +24,12 @@
   <meta name="description" content="Veja o passo a passo para baixar, instalar, abrir e configurar o Zelo Impressão no Windows sem precisar de suporte técnico." />
   <link rel="canonical" href={canonicalUrl} />
 </svelte:head>
+
+<SocialMeta
+  title="Zelo Impressão — passo a passo para instalar e configurar"
+  description="Veja o passo a passo para baixar, instalar, abrir e configurar o Zelo Impressão no Windows sem precisar de suporte técnico."
+  url={canonicalUrl}
+/>
 
 <div
   class="min-h-screen overflow-x-hidden font-sans selection:bg-sky-500/30 selection:text-white"

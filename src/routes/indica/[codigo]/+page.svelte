@@ -3,6 +3,7 @@
   import { persistReferralAttribution } from '$lib/referrals/client';
   import { capturePostHogEvent } from '$lib/posthogClient';
   import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
+  import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
 
   export let data;
 
@@ -26,6 +27,12 @@
   <title>Indicação ZeloPDV</title>
   <meta name="description" content="Você foi convidado para testar o ZeloPDV e organizar vendas, caixa e estoque do seu negócio.">
 </svelte:head>
+
+<SocialMeta
+  title="Indicação ZeloPDV"
+  description="Você foi convidado para testar o ZeloPDV e organizar vendas, caixa e estoque do seu negócio."
+  url={`/indica/${data.code}`}
+/>
 
 <section class="referral-page">
   <div class="shell">
