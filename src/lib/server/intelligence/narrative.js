@@ -5,6 +5,7 @@
 
 import { INTELLIGENCE_LLM_ENABLED, INTELLIGENCE_LLM_MAX_TOKENS, INTELLIGENCE_LLM_MODEL } from './config.js';
 import { formatPaymentMethod } from '$lib/finance/paymentMethods.js';
+import { weekdayLabel } from '$lib/gerente/weekdays.js';
 
 const money = (value) => new Intl.NumberFormat('pt-BR', {
   style: 'currency', currency: 'BRL', minimumFractionDigits: 2,
@@ -18,9 +19,9 @@ export function templateNarrative(signal) {
   const e = signal.evidence || {};
   switch (signal.type) {
     case 'REVENUE_BELOW_WEEKDAY_AVG':
-      return `As vendas somaram ${money(e.revenue_today)}, ${pct(Math.abs(e.delta_pct))} abaixo da média das últimas ${qty(e.n_baseline)} ${e.weekday || 'datas equivalentes'} (${money(e.baseline_avg)}).`;
+      return `As vendas somaram ${money(e.revenue_today)}, ${pct(Math.abs(e.delta_pct))} abaixo da média das últimas ${qty(e.n_baseline)} ${weekdayLabel(e.weekday)} (${money(e.baseline_avg)}).`;
     case 'REVENUE_ABOVE_WEEKDAY_AVG':
-      return `As vendas somaram ${money(e.revenue_today)}, ${pct(e.delta_pct)} acima da média das últimas ${qty(e.n_baseline)} ${e.weekday || 'datas equivalentes'} (${money(e.baseline_avg)}).`;
+      return `As vendas somaram ${money(e.revenue_today)}, ${pct(e.delta_pct)} acima da média das últimas ${qty(e.n_baseline)} ${weekdayLabel(e.weekday)} (${money(e.baseline_avg)}).`;
     case 'AVG_TICKET_DOWN':
       return `O ticket médio ficou em ${money(e.ticket_today)}, ${pct(Math.abs(e.delta_ticket_pct))} abaixo da referência de ${money(e.ticket_baseline)}, com ${qty(e.qtd_today)} vendas.`;
     case 'PRODUCT_SALES_DROP':

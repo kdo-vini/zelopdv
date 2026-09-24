@@ -1,5 +1,6 @@
+import { WEEKDAY_PLURALS } from './weekdays.js';
+
 const GENERIC = /^(lanchonete|restaurante|bar|padaria|pizzaria|mercado|loja)$/i;
-const WEEKDAYS = ['domingos', 'segundas', 'terças', 'quartas', 'quintas', 'sextas', 'sábados'];
 
 function money(value) {
   const n = Number(value || 0);
@@ -24,7 +25,7 @@ export function buildGreeting({ nomeExibicao = '', dayStrip = null, signals = []
   let lead = `Ontem rendeu ${money(dayStrip.receita)} em ${dayStrip.vendas} vendas`;
   const delta = dayStrip.receitaDeltaPct;
   if (delta != null && Math.abs(delta) >= 0.08) {
-    const weekday = WEEKDAYS[new Date(`${dayStrip.date}T12:00:00Z`).getUTCDay()];
+    const weekday = WEEKDAY_PLURALS[new Date(`${dayStrip.date}T12:00:00Z`).getUTCDay()];
     lead += `, ${delta < 0 ? 'abaixo' : 'acima'} do ritmo das suas ${weekday}`;
   } else if (delta != null) {
     lead += ', no ritmo de sempre';
