@@ -58,6 +58,7 @@ export async function generateExcelReport(dados) {
         ...(porCanal.length > 0 ? [
             [],
             ['VENDAS POR CANAL'],
+            ...(dados.modo === 'caixa' && dados.porCanalNota ? [[dados.porCanalNota]] : []),
             ['Canal', 'Qtd', 'Bruto', 'Comissão', 'Líquido'],
             ...porCanal.map((c) => [c.label, c.qtd, `R$ ${fmt(c.bruto)}`, fmtComissao(c.comissao), fmtComissao(c.liquido)]),
         ] : []),
