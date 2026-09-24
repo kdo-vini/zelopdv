@@ -29,6 +29,7 @@
 	} from '$lib/finance/salesChannel';
 	import { formatCaixaLabel } from '$lib/finance/caixaOps';
 	import { formatMoney } from '$lib/formatMoney';
+	import { createLatestOnly } from '$lib/utils/latestOnly';
 	
 	// Gráficos visuais
 	import BarChart from '$lib/components/charts/BarChart.svelte';
@@ -52,6 +53,7 @@
 	let caixas = [];
 	let caixaSelecionado = null; // id
 	let caixaInfo = null; // dados do caixa selecionado
+	const caixaRequest = createLatestOnly();
 
 	// Dados
 	let vendas = [];
@@ -294,6 +296,7 @@
 		vendaDetalheAbertaId = null;
 		vendasIfoodForaCaixa = [];
 		vendasEstornosIfoodForaCaixa = [];
+		const token = caixaRequest.start();
 		try {
 			loading = true;
 			errorMessage = '';
@@ -321,6 +324,7 @@
 			// Executa em paralelo
 			const [resCaixa, resVendas, resMovs] = await withTimeout(Promise.all([pCaixa, pVendas, pMovs]));
 
+			if (token.isStale) return;
 			if (resCaixa.error) throw resCaixa.error;
 			caixaInfo = resCaixa.data;
 
@@ -342,6 +346,7 @@
 						.lte('created_at', caixaFim)
 						.order('created_at', { ascending: true })
 				);
+				if (token.isStale) return;
 				if (ifoodError) throw ifoodError;
 
 				const vendaIdsCaixa = new Set(vendas.map((v) => v.id));
@@ -383,6 +388,7 @@
 				const pEstornos = carregarEstornosPorVendas(ids);
 				const [resItens, resPags, resTaxas, comandasMesa, estornosCaixa] = await withTimeout(Promise.all([pItens, pPags, pTaxas, pComandasMesa, pEstornos]));
 
+				if (token.isStale) return;
 				if (resItens.error) throw resItens.error;
 				vendasItens = resItens.data || [];
 
@@ -403,6 +409,7 @@
 							.select('id, nome, preco, id_categoria, categorias(id, nome)')
 							.in('id', pids)
 					);
+					if (token.isStale) return;
 					if (!pErr && ps) {
 						produtosMap = new Map(ps.map(p => [p.id, p]));
 					}
@@ -416,13 +423,15 @@
 				const { data: ps2, error: ps2Err } = await withTimeout(
 					supabase.from('pessoas').select('id, nome').in('id', clienteIds)
 				);
+				if (token.isStale) return;
 				if (!ps2Err && ps2) pessoasMap = new Map(ps2.map(p => [p.id, p]));
 			}
 		} catch (err) {
+			if (token.isStale) return;
 			addToast('Não foi possível carregar os dados do caixa. Tente novamente.', 'error');
 			errorMessage = 'Erro ao carregar dados do caixa.';
 		} finally {
-			loading = false;
+			if (!token.isStale) loading = false;
 		}
 	}
 
@@ -705,6 +714,7 @@
 	let periodoDespesas = [];
 	let periodoTaxasPlataforma = [];
 	let periodoEstornos = [];
+	const periodoRequest = createLatestOnly();
 
 	function aplicarPreset(p) {
 		preset = p;
@@ -750,6 +760,7 @@
 
 	async function carregarRelatorioPeriodo() {
 		if (!uid || !dataInicio || !dataFim) return;
+		const token = periodoRequest.start();
 		periodoLoading = true;
 		try {
 			// 1. Vendas (fetch all with pagination)
@@ -790,6 +801,7 @@
 
 			const [resVendas, resCaixas] = await withTimeout(Promise.all([pVendas, pCaixas]));
 
+			if (token.isStale) return;
 			if (resVendas.error) throw resVendas.error;
 			periodoVendas = resVendas.data || [];
 			const vendaIds = periodoVendas.map(v => v.id);
@@ -804,6 +816,7 @@
 			periodoComandasMesa = [];
 			periodoMovs = [];
 			periodoTaxasPlataforma = [];
+			periodoDespesas = [];
 
 			const promises = [];
 
@@ -901,6 +914,7 @@
 
 			const [resPags, resItens, resTaxasPlat, resEstornos, resMovs, resDespesas] = await withTimeout(Promise.all(promises));
 
+			if (token.isStale) return;
 			if (resPags.error) throw resPags.error;
 			periodoPagamentos = resPags.data || [];
 
@@ -915,7 +929,9 @@
 
 			if (resDespesas.error) console.error('Error fetching expenses:', resDespesas.error); // optional log
 			periodoDespesas = resDespesas.data || [];
-			periodoComandasMesa = vendaIds.length ? await carregarComandasMesaPorVendas(vendaIds) : [];
+			const comandasMesaResult = vendaIds.length ? await carregarComandasMesaPorVendas(vendaIds) : [];
+			if (token.isStale) return;
+			periodoComandasMesa = comandasMesaResult;
 
 			// Produtos do período com categoria (para filtro por categoria)
 			const pPids = Array.from(new Set((periodoItens || []).map(it => it.id_produto).filter(Boolean)));
@@ -930,6 +946,7 @@
 							.in('id', batch)
 					)
 				);
+				if (token.isStale) return;
 				for (const r of results) {
 					if (!r.error && r.data) {
 						for (const p of r.data) periodoProdutosMap.set(p.id, p);
@@ -937,10 +954,11 @@
 				}
 			}
 		} catch (e) {
+			if (token.isStale) return;
 			addToast('Não foi possível carregar o relatório do período. Tente novamente.', 'error');
 			errorMessage = 'Erro ao carregar relatório do período.';
 		} finally {
-			periodoLoading = false;
+			if (!token.isStale) periodoLoading = false;
 		}
 	}
 
@@ -1193,7 +1211,7 @@
 </section>
 
 
-{#if loading}
+{#if (modoRelatorio === 'periodo' ? periodoLoading : loading)}
 	<div class="flex flex-col items-center justify-center py-16 gap-3">
 		<div class="w-8 h-8 rounded-full border-2 border-[var(--border-card)] border-t-[var(--accent)] animate-spin"></div>
 		<p class="text-sm text-muted">Carregando relatórios...</p>
