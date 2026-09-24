@@ -161,6 +161,7 @@
   import { trackViewContent } from '$lib/metaPixel';
   import { initMarketingAnalytics } from '$lib/marketingAnalytics';
   import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
+  import { observeSectionViews } from '$lib/marketing/sectionViews';
 
   let activeLightboxImage = null;
   let activeLightboxTrigger = null;
@@ -212,8 +213,12 @@
     initMarketingAnalytics();
     trackViewContent();
     cadastroHref = getSignupHref();
+    const stopSectionViews = observeSectionViews(document, { page: 'home' });
 
-    return () => window.removeEventListener('keydown', handleKeydown);
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+      stopSectionViews();
+    };
   });
 
   $: basePrice = PLANS.pdv.price.toFixed(0);
@@ -238,7 +243,7 @@
   <AiReferralBanner />
 
   <main>
-    <section class="hero" aria-labelledby="hero-title">
+    <section class="hero" aria-labelledby="hero-title" data-track-section="hero">
       <div class="hero-inner">
         <div class="hero-copy">
           <p class="hero-kicker">O gerente da sua loja</p>
@@ -297,7 +302,7 @@
 
     <OperationalProofSection onPreview={(image, trigger) => openLightbox(image, trigger)} />
 
-    <section id="features" class="features-section" aria-labelledby="features-title">
+    <section id="features" class="features-section" data-track-section="features" aria-labelledby="features-title">
       <div class="section-shell">
         <div class="section-heading">
           <h2 id="features-title">Menos papel no balcão. Mais clareza no fim do dia.</h2>
@@ -376,7 +381,7 @@
       </div>
     </section>
 
-    <section id="zelinho" class="zelinho-section" aria-labelledby="zelinho-title">
+    <section id="zelinho" class="zelinho-section" data-track-section="zelinho" aria-labelledby="zelinho-title">
       <div class="section-shell zelinho-layout">
         <div>
           <h2 id="zelinho-title">Pergunte pelo caixa. O Zelinho organiza a resposta.</h2>
@@ -452,7 +457,7 @@
       </div>
     </section>
 
-    <section class="audience-section" aria-labelledby="audience-title">
+    <section class="audience-section" data-track-section="audience" aria-labelledby="audience-title">
       <div class="section-shell audience-layout">
         <h2 id="audience-title">Feito para quem vive o balcão.</h2>
         <nav class="audience-links" aria-label="Páginas por tipo de negócio">
@@ -465,7 +470,7 @@
       </div>
     </section>
 
-    <section id="pricing" class="pricing-section" aria-labelledby="pricing-title">
+    <section id="pricing" class="pricing-section" data-track-section="pricing" aria-labelledby="pricing-title">
       <div class="section-shell">
         <div class="section-heading pricing-heading">
           <h2 id="pricing-title">Três jeitos de começar.</h2>
@@ -525,7 +530,7 @@
       </div>
     </section>
 
-    <section id="faq" class="faq-section" aria-labelledby="faq-title">
+    <section id="faq" class="faq-section" data-track-section="faq" aria-labelledby="faq-title">
       <div class="faq-shell">
         <div class="faq-intro">
           <h2 id="faq-title">Antes de começar</h2>
@@ -584,7 +589,7 @@
       </div>
     </section>
 
-    <section class="final-cta" aria-labelledby="final-cta-title">
+    <section class="final-cta" data-track-section="final_cta" aria-labelledby="final-cta-title">
       <div class="final-cta-inner">
         <div>
           <h2 id="final-cta-title">Amanhã você pode fechar o caixa sem adivinhar.</h2>

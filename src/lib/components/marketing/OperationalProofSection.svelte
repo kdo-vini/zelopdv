@@ -45,7 +45,7 @@
   }
 </script>
 
-<section id="operational-proof" class="operational-proof" aria-labelledby="operational-proof-title" data-proof-ready={isHydrated ? 'true' : 'false'}>
+<section id="operational-proof" class="operational-proof" data-track-section="proof" aria-labelledby="operational-proof-title" data-proof-ready={isHydrated ? 'true' : 'false'}>
   <div class="proof-shell">
     <div class="proof-heading">
       <span class="proof-kicker">Tela real do sistema</span>
