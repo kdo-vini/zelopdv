@@ -28,6 +28,7 @@
 		summarizeSalesByChannel
 	} from '$lib/finance/salesChannel';
 	import { formatCaixaLabel } from '$lib/finance/caixaOps';
+	import { formatMoney } from '$lib/formatMoney';
 	
 	// Gráficos visuais
 	import BarChart from '$lib/components/charts/BarChart.svelte';
@@ -116,7 +117,7 @@
 	}
 
 	// Helpers
-	const fmt = (n) => `R$ ${Number(n || 0).toFixed(2)}`;
+	const fmt = formatMoney;
 	const reportPlatforms = () => [...plataformasAtivas, ...PLATAFORMAS_PRESET];
 	const formatForma = (f) => formatPaymentMethod(f, { platforms: reportPlatforms() });
 
@@ -1282,7 +1283,7 @@
 							<span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {p.swatch}"></span>
 							<div>
 								<div class="text-xs text-muted">{p.label}</div>
-								<div class="text-sm font-semibold" style="color: {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-muted">({caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100).toFixed(1) : 0}%)</span></div>
+								<div class="text-sm font-semibold" style="color: {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-muted">({caixaPagTotal > 0 ? (p.value / caixaPagTotal * 100).toFixed(1).replace('.', ',') : 0}%)</span></div>
 							</div>
 						</div>
 					{/each}
@@ -1809,7 +1810,7 @@
 							<span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {p.swatch}"></span>
 							<div>
 								<div class="text-xs text-muted">{p.label}</div>
-								<div class="text-sm font-semibold" style="color: {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-muted">({periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100).toFixed(1) : 0}%)</span></div>
+								<div class="text-sm font-semibold" style="color: {p.textColor}">{fmt(p.value)} <span class="text-xs font-normal text-muted">({periodoPagTotal > 0 ? (p.value / periodoPagTotal * 100).toFixed(1).replace('.', ',') : 0}%)</span></div>
 							</div>
 						</div>
 					{/each}

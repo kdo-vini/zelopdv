@@ -8,6 +8,7 @@
   import { maskPhone } from '$lib/masks';
   import { getAccessContext } from '$lib/accessControl';
   import { getFiadoState } from '$lib/finance/fiado';
+  import { formatMoney } from '$lib/formatMoney';
   import { cn } from '$lib/utils';
   import ModalPessoa from '$lib/components/modals/ModalPessoa.svelte';
 
@@ -251,7 +252,7 @@
                 <span class="meta-label">Fiado</span>
                 <span class={cn('meta-value', `fiado-${fiado.key}`)}>
                   <span class="fiado-label">{fiado.label}</span>
-                  R$ {Number(fiado.value).toFixed(2)}
+                  {formatMoney(fiado.value)}
                 </span>
               </div>
             </div>
@@ -305,7 +306,7 @@
                 </td>
                 <td class={cn('px-3 sm:px-4 py-3 text-right tabular-nums font-medium', `fiado-${fiado.key}`)}>
                   <span class="fiado-label">{fiado.label}</span>
-                  <span>R$ {Number(fiado.value).toFixed(2)}</span>
+                  <span>{formatMoney(fiado.value)}</span>
                 </td>
                 <td class="px-3 sm:px-4 py-3">
                   <div class="flex items-center justify-end gap-1 actions-cell">
