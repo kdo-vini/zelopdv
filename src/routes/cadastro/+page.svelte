@@ -102,8 +102,7 @@
     <div class="auth-error">{@html errorMessage}</div>
   {/if}
 
-  <GoogleAuthButton />
-  <div class="auth-divider">ou continue com e-mail</div>
+  <GoogleAuthButton placement="top" />
 
   <form on:submit={handleSignUp} class="auth-form">
     <div>
@@ -148,6 +147,8 @@
 
     <p class="auth-reassurance">Leva menos de 1 minuto · cancele quando quiser</p>
   </form>
+
+  <GoogleAuthButton placement="bottom" />
 
   <svelte:fragment slot="footer">
     <a href="/login" class="auth-link">Já tenho conta</a>

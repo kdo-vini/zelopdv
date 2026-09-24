@@ -133,8 +133,7 @@
     <div class="auth-error">{errorMessage}</div>
   {/if}
 
-  <GoogleAuthButton />
-  <div class="auth-divider">ou continue com e-mail</div>
+  <GoogleAuthButton placement="top" />
 
   <form on:submit={handleLogin} class="auth-form">
     <div>
@@ -177,6 +176,8 @@
       {loading ? 'Entrando...' : 'Entrar'}
     </button>
   </form>
+
+  <GoogleAuthButton placement="bottom" />
 
   <svelte:fragment slot="footer">
     <a href="/esqueci-senha" class="auth-link">Esqueci minha senha</a>
