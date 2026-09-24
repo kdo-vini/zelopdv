@@ -58,6 +58,8 @@
 	let vendasPagamentos = [];
 	let vendasTaxasPlataforma = [];
 	let vendasEstornosCaixa = [];
+	let vendasIfoodForaCaixa = [];
+	let vendasEstornosIfoodForaCaixa = [];
 	let comandasMesaCaixa = [];
 	let produtosMap = new Map(); // id_produto -> { id, nome, preco }
 	let pessoasMap = new Map(); // id_cliente -> { nome }
@@ -289,6 +291,8 @@
 		if (!idCaixa) return;
 		vendasPage = 1;
 		vendaDetalheAbertaId = null;
+		vendasIfoodForaCaixa = [];
+		vendasEstornosIfoodForaCaixa = [];
 		try {
 			loading = true;
 			errorMessage = '';
@@ -321,6 +325,31 @@
 
 			if (resVendas.error) throw resVendas.error;
 			vendas = resVendas.data || [];
+
+			// Vendas iFood ficam sem id_caixa por contrato. No comparativo,
+			// atribuímos o canal ao intervalo em que este caixa esteve aberto;
+			// elas continuam fora dos totais financeiros e do saldo da gaveta.
+			if (caixaInfo?.data_abertura) {
+				const caixaFim = caixaInfo.data_fechamento || new Date().toISOString();
+				const { data: vendasIfood, error: ifoodError } = await withTimeout(
+					supabase
+						.from('vendas')
+						.select('id, valor_total, canal_origem, created_at')
+						.eq('id_usuario', uid)
+						.eq('canal_origem', 'ifood')
+						.gte('created_at', caixaInfo.data_abertura)
+						.lte('created_at', caixaFim)
+						.order('created_at', { ascending: true })
+				);
+				if (ifoodError) throw ifoodError;
+
+				const vendaIdsCaixa = new Set(vendas.map((v) => v.id));
+				vendasIfoodForaCaixa = (vendasIfood || []).filter((v) => !vendaIdsCaixa.has(v.id));
+				const ifoodIds = vendasIfoodForaCaixa.map((v) => v.id);
+				if (ifoodIds.length) {
+					vendasEstornosIfoodForaCaixa = await carregarEstornosPorVendas(ifoodIds);
+				}
+			}
 
 			if (resMovs.error) throw resMovs.error;
 			movs = resMovs.data || [];
@@ -419,7 +448,9 @@
 
 	// Cards comparativos somam sempre todos os canais do caixa.
 	$: vendaChannelMapCaixa = buildVendaChannelMap(vendas);
-	$: canalCardsCaixa = summarizeSalesByChannel(vendas, { taxasPlataforma: vendasTaxasPlataforma, estornos: vendasEstornosCaixa });
+	$: canalCardsCaixaVinculados = summarizeSalesByChannel(vendas, { taxasPlataforma: vendasTaxasPlataforma, estornos: vendasEstornosCaixa });
+	$: canalCardsIfoodForaCaixa = summarizeSalesByChannel(vendasIfoodForaCaixa, { estornos: vendasEstornosIfoodForaCaixa });
+	$: canalCardsCaixa = [...canalCardsCaixaVinculados, ...canalCardsIfoodForaCaixa];
 	$: estornosResumoCaixa = summarizeEstornos(vendasEstornosCaixa, { channelByVendaId: vendaChannelMapCaixa, channelFilter: canalFiltroCaixa });
 
 	// Movimentações / gaveta: sempre do caixa inteiro (sem dimensão de canal).
@@ -581,6 +612,7 @@
 					descontos: totalDescontosCaixa,
 				},
 				porCanal: canalCardsCaixa,
+				porCanalNota: 'iFood inclui vendas concluídas durante o horário do caixa. Essas vendas ficam fora dos totais financeiros e do saldo da gaveta.',
 				estornos: estornosResumoCaixa,
 			};
 		} else {
@@ -1320,9 +1352,9 @@
 			<!-- ✦ Vendas por Canal (Task 15) -->
 			{#if canalCardsCaixa.length > 0}
 			<div class="card-mini">
-				<div class="flex items-center justify-between gap-3 mb-3">
+				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3 mb-3">
 					<h3 class="text-sm font-semibold" style="color: var(--text-main);">Vendas por Canal</h3>
-					<div class="text-xs text-muted">Comparativo de todos os canais deste caixa</div>
+					<div class="text-xs text-muted">iFood por horário de conclusão, fora da gaveta e dos totais</div>
 				</div>
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 					{#each canalCardsCaixa as canal}
