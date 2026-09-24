@@ -18,7 +18,7 @@ export const OPERATIONAL_PROOF_SCREENS = Object.freeze([
     key: 'dashboard',
     src: '/images/screenshots/dashboard-desktop.png',
     srcset: '/images/screenshots/dashboard-desktop-800.webp 800w, /images/screenshots/dashboard-desktop-1600.webp 1600w',
-    alt: 'Frente de caixa do Zelo PDV com produtos e comanda.',
+    alt: 'Frente de caixa do Zelo PDV com uma comanda aberta.',
     label: 'Frente de caixa',
   }),
 ]);

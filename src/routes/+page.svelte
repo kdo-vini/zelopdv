@@ -265,12 +265,12 @@
         <figure class="hero-proof-mobile">
           <img
             src="/images/screenshots/financial-kpis-crop.webp"
-            alt="Tela do Zelo PDV mostrando receita líquida de R$ 5.166,90, vendas brutas e quantidade de vendas do dia."
+            alt="Tela do Zelo PDV mostrando receita líquida de R$ 21.373,50 nos últimos 30 dias, com vendas brutas, despesas e quantidade de vendas."
             width="806"
-            height="204"
+            height="188"
             loading="eager"
           />
-          <figcaption>Tela real do sistema: o que entrou e o que ficou no dia.</figcaption>
+          <figcaption>Tela real do sistema: o que entrou e o que sobrou no mês.</figcaption>
         </figure>
 
         <figure class="hero-shot">
@@ -282,9 +282,9 @@
             />
             <img
               src="/images/screenshots/dashboard-desktop.png"
-              alt="Painel do Zelo PDV com as vendas e o resultado do dia"
-              width="1918"
-              height="906"
+              alt="Frente de caixa do Zelo PDV com uma comanda aberta"
+              width="1600"
+              height="1000"
               loading="eager"
               fetchpriority="high"
               decoding="async"
@@ -348,9 +348,9 @@
                 />
                 <img
                   src="/images/screenshots/dashboard-desktop.png"
-                  alt="Frente de caixa do Zelo PDV com produtos e comanda."
-                  width="1918"
-                  height="906"
+                  alt="Frente de caixa do Zelo PDV com uma comanda aberta."
+                  width="1600"
+                  height="1000"
                   loading="lazy"
                   decoding="async"
                 />
@@ -386,8 +386,8 @@
                   <img
                     src="/images/screenshots/customers-screen.png"
                     alt="Controle de clientes e fiado no Zelo PDV."
-                    width="1696"
-                    height="699"
+                    width="1600"
+                    height="1000"
                     loading="lazy"
                     decoding="async"
                   />
