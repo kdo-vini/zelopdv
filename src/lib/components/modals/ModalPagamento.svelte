@@ -9,6 +9,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { getOfflineContext, readOperationalSnapshot } from '$lib/offline/runtime';
   import { addToast } from '$lib/stores/ui';
+  import { formatMoney } from '$lib/formatMoney';
   import PaymentMethodGrid from '$lib/components/payments/PaymentMethodGrid.svelte';
   import PaymentMethodSelect from '$lib/components/payments/PaymentMethodSelect.svelte';
   import {
@@ -422,21 +423,21 @@
         {#if tipoPedido === 'delivery' && taxaEntrega > 0}
           <div class="summary-row">
             <span class="summary-label">Subtotal (produtos)</span>
-            <span class="summary-value">R$ {Number(subtotalProdutos || totalComanda - taxaEntrega).toFixed(2)}</span>
+            <span class="summary-value">{formatMoney(subtotalProdutos || totalComanda - taxaEntrega)}</span>
           </div>
           <div class="summary-row" style="color: var(--primary); font-size: 0.85em;">
             <span>Taxa de entrega (entregador)</span>
-            <span>+ R$ {Number(taxaEntrega).toFixed(2)}</span>
+            <span>+ {formatMoney(taxaEntrega)}</span>
           </div>
           <div class="summary-divider"></div>
           <div class="summary-row">
             <span class="summary-label">Subtotal</span>
-            <span class="summary-value">R$ {Number(totalComanda).toFixed(2)}</span>
+            <span class="summary-value">{formatMoney(totalComanda)}</span>
           </div>
         {:else}
           <div class="summary-row">
             <span class="summary-label">Subtotal</span>
-            <span class="summary-value">R$ {Number(totalComanda).toFixed(2)}</span>
+            <span class="summary-value">{formatMoney(totalComanda)}</span>
           </div>
         {/if}
 
@@ -463,7 +464,7 @@
               </select>
             </div>
             {#if valorDesconto > 0}
-              <span class="discount-badge">−R$ {Number(valorDesconto).toFixed(2)}</span>
+              <span class="discount-badge">−{formatMoney(valorDesconto)}</span>
             {/if}
           </div>
         {/if}
@@ -473,7 +474,7 @@
         {/if}
         <div class="summary-row summary-total">
           <span class="summary-label">{valorDesconto > 0 ? 'Total c/ desconto' : (tipoPedido === 'delivery' && taxaEntrega > 0 ? 'Total (c/ entrega)' : 'Total')}</span>
-          <span class="total-value {valorDesconto > 0 ? 'total-discounted' : ''}">R$ {Number(totalFinal).toFixed(2)}</span>
+          <span class="total-value {valorDesconto > 0 ? 'total-discounted' : ''}">{formatMoney(totalFinal)}</span>
         </div>
       </div>
 
@@ -515,7 +516,7 @@
               {#if troco > 0}
                 <div class="troco-display">
                   <span>Troco</span>
-                  <strong>R$ {Number(troco).toFixed(2)}</strong>
+                  <strong>{formatMoney(troco)}</strong>
                 </div>
               {/if}
             </div>
@@ -553,11 +554,11 @@
               {#if valorPlataforma > 0}
                 <div class="tax-row">
                   <span class="tax-label">Taxa {plataformaSelecionada.nome} ({plataformaSelecionada.taxa_pct}%)</span>
-                  <span class="tax-value">−R$ {Number(taxaPlataformaValor).toFixed(2)}</span>
+                  <span class="tax-value">−{formatMoney(taxaPlataformaValor)}</span>
                 </div>
                 <div class="tax-row tax-row-net">
                   <span class="tax-label">Líquido estimado</span>
-                  <strong class="tax-net-value">R$ {Number(liquidoPlataforma).toFixed(2)}</strong>
+                  <strong class="tax-net-value">{formatMoney(liquidoPlataforma)}</strong>
                 </div>
               {/if}
             </div>
@@ -614,7 +615,7 @@
                   <div class="payment-item">
                     <div class="payment-item-info">
                       <span class="payment-item-name">{formatPaymentMethod(p.forma, { platforms: plataformasAtivas })}</span>
-                      <span class="payment-item-value">R$ {Number(p.valor).toFixed(2)}</span>
+                      <span class="payment-item-value">{formatMoney(p.valor)}</span>
                       {#if p.forma === 'fiado'}
                         <span class="payment-item-extra">{pessoasFiado.find(x => x.id === p.pessoaId)?.nome || ''}</span>
                       {/if}
@@ -627,10 +628,10 @@
               </div>
 
               <div class="multi-totals">
-                <div class="multi-total-row"><span>Soma</span><span>R$ {Number(somaPagamentos).toFixed(2)}</span></div>
-                <div class="multi-total-row"><span>Restante</span><span class="{restantePagamento > 0 ? 'text-warning' : ''}">R$ {Number(restantePagamento).toFixed(2)}</span></div>
+                <div class="multi-total-row"><span>Soma</span><span>{formatMoney(somaPagamentos)}</span></div>
+                <div class="multi-total-row"><span>Restante</span><span class="{restantePagamento > 0 ? 'text-warning' : ''}">{formatMoney(restantePagamento)}</span></div>
                 {#if trocoPrevMulti > 0}
-                  <div class="multi-total-row"><span>Troco</span><span>R$ {Number(trocoPrevMulti).toFixed(2)}</span></div>
+                  <div class="multi-total-row"><span>Troco</span><span>{formatMoney(trocoPrevMulti)}</span></div>
                 {/if}
               </div>
             {/if}
@@ -655,7 +656,7 @@
             {#if salvandoVenda}
               Salvando…
             {:else}
-              <Check class="size-4" aria-hidden="true" /> Confirmar R$ {Number(plataformaSelecionada && valorPlataforma > 0 ? valorPlataforma : totalFinal).toFixed(2)}
+              <Check class="size-4" aria-hidden="true" /> Confirmar {formatMoney(plataformaSelecionada && valorPlataforma > 0 ? valorPlataforma : totalFinal)}
             {/if}
           </button>
         </div>
