@@ -489,6 +489,15 @@
     margin-bottom: 0;
   }
 
+  .article-content :global(th.num),
+  .article-content :global(td.num) {
+    text-align: right;
+  }
+
+  .article-content :global(td.num) {
+    white-space: nowrap;
+  }
+
   .article-faq {
     margin-top: 1.4rem;
     background: var(--blog-surface);
@@ -615,6 +624,11 @@
     .article-content :global(p),
     .article-content :global(li) {
       font-size: 1rem;
+    }
+
+    .article-content :global(table) {
+      display: block;
+      overflow-x: auto;
     }
   }
 </style>

@@ -112,5 +112,11 @@
     "name": "controle-financeiro-mei",
     "prompt": "A woman entrepreneur checking monthly sales totals on a smartphone inside a small food truck, serving window and kitchen equipment visible behind her.",
     "alt": "Empreendedora MEI conferindo o total de vendas do mês em um celular dentro de um food truck"
+  },
+  {
+    "slug": "taxa-ifood-2026-como-calcular",
+    "name": "capa",
+    "prompt": "A snack bar owner behind the counter checking the payout of a delivery order on a smartphone, sealed paper delivery bags ready on the counter, courier helmet resting nearby.",
+    "alt": "Dono de lanchonete conferindo no celular o repasse de um pedido de delivery, com sacolas prontas no balcão"
   }
 ]

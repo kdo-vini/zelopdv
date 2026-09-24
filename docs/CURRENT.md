@@ -1,5 +1,26 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-24 — Conteúdo GEO, leva 1 (branch `feat/content-wave-1`)
+
+PostHog: o ChatGPT é a origem que traz cliente; anúncio não gerou cadastro em
+duas semanas. Esta leva investe no que os assistentes citam. Blog: capa e
+figuras WebP geradas pelo Codex (`npm run blog:images`, manifesto em
+`scripts/blog-images.manifest.json`, constantes em `src/lib/blog/images.js`),
+"Resumo rápido" (`tldr`), tabelas, callouts, og:image e JSON-LD por post. Os
+11 posts antigos foram revisados (FAQ, links internos, taxas de delivery
+conferidas nas fontes oficiais) e há 4 posts novos, mais capa/resumo no post
+iFood 2026 do Cursor. Novas páginas `/para-acaiterias`, `/para-pizzarias`,
+`/para-food-trucks`, `/para-marmitarias`, `/vs-consumer`, `/vs-kyte` (preços
+conferidos nos sites oficiais em 2026-09-24). `src/app.html` deixou de emitir
+og/twitter padrão, que duplicavam as tags de toda página (a padrão vinha
+primeiro); páginas sem tags próprias usam `SocialMeta.svelte`. Plano editorial:
+`docs/marketing/BLOG_PLAN.md`.
+
+Domínio: desde 2026-09-24 o canônico é `zelopdv.com.br` e o `www` responde
+308 para ele (antes era o inverso, com 307). `scripts/indexnow.mjs` voltou a
+usar `SITE_URL` para sitemap e `keyLocation`; a nota abaixo sobre www está
+superada.
+
 ## Sessão 2026-09-24 — Admin: preflight CORS redirecionado
 
 O envio de WhatsApp em `/communications` falhava antes de alcançar o handler:
@@ -17,6 +38,19 @@ encerrou no `EPERM` conhecido do Windows ao criar symlink. Deploy de produção
 `dpl_4spv56ZtRL26qemiHCa7rseu9KTG` ficou Ready e foi promovido em
 2026-09-24; `admin.zelopdv.com.br` serve o novo bundle com origem canônica.
 Nenhum WhatsApp real foi disparado durante a validação.
+
+## Sessão 2026-09-24 — GEO: IndexNow full ping + post iFood 2026
+
+IndexNow de produção confirmado: `https://www.zelopdv.com.br/indexnow-key.txt`
+responde 200 com a chave pública (sem rotação). O apex `zelopdv.com.br` faz
+307 → www, então `scripts/indexnow.mjs` passou a buscar o sitemap e a
+`keyLocation` em www, mantendo `host=zelopdv.com.br` (é o host das `<loc>`).
+Ping completo do sitemap live: **38 URLs**, lote único, **HTTP 200**.
+
+Post editorial #1 do plano GEO publicado em
+`/blog/taxa-ifood-2026-como-calcular` (fonte: pacote GEO 23/09; faixas de taxa
+do iFood atribuídas e com ~; FAQ estruturado + tabelas). Sitemap dinâmico e
+`llms.txt` passam a incluir o slug automaticamente.
 
 ## Sessão 2026-09-23 — GEO: visibilidade em ChatGPT/Gemini/Perplexity
 

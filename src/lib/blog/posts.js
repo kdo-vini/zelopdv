@@ -12,6 +12,159 @@ import { inlineFigure } from '$lib/blog/images';
 
 export const posts = [
   {
+    slug: 'taxa-ifood-2026-como-calcular',
+    title: 'Quanto o iFood cobra em 2026 e como calcular se vale a pena',
+    description:
+      'Faixas públicas de comissão, taxa de pagamento e mensalidade do iFood em 2026, com um exemplo de R$ 50 e o que conferir no Portal do Parceiro.',
+    keyword: 'taxa ifood 2026',
+    coverVariant: 'sunrise',
+    publishedAt: '2026-09-24',
+    readingTime: '8 min',
+    cover: { alt: 'Dono de lanchonete conferindo no celular o repasse de um pedido de delivery, com sacolas prontas no balcão' },
+    tldr: [
+      'No Plano Básico (você entrega) a comissão pública é de cerca de 12%; no Plano Entrega (logística do iFood), cerca de 23%.',
+      'Pedidos pagos pelo app somam uma taxa de pagamento online de cerca de 3,2% a 3,5%, conforme a página ou o contrato.',
+      'A mensalidade (cerca de R$ 110 ou R$ 150) só é cobrada acima de cerca de R$ 1.800 de faturamento no mês.',
+      'A taxa real da sua loja está no Portal do Parceiro (Financeiro → Taxas e comissões) — use o contrato, não só artigos.'
+    ],
+    faq: [
+      {
+        question: 'Qual a diferença entre Plano Básico e Plano Entrega?',
+        answer:
+          'Básico: você entrega; comissão pública tipicamente ~12%. Entrega: logística iFood; comissão tipicamente ~23%. Ambos somam taxa de pagamento online (~3,2%–3,5% conforme a página/contrato).'
+      },
+      {
+        question: 'A mensalidade é por pedido?',
+        answer:
+          'Não. É cobrança mensal condicionada a faturamento acima de cerca de R$ 1.800/mês nas faixas públicas (cerca de R$ 110 ou R$ 150).'
+      },
+      {
+        question: 'Como ver a taxa real da minha loja?',
+        answer:
+          'Portal do Parceiro → dados contratuais / Financeiro → Taxas e comissões. Use o contrato, não só artigos genéricos.'
+      }
+    ],
+    content: `
+      <blockquote>
+        <p>Em 2026, pelas faixas <strong>públicas</strong> divulgadas no Blog do iFood para Parceiros (atualizado em 2026), o restaurante costuma pagar <strong>cerca de 12% de comissão no Plano Básico</strong> (entrega própria) ou <strong>cerca de 23% no Plano Entrega</strong> (logística iFood), <strong>mais cerca de 3,2% a 3,5% de taxa de pagamento online</strong> nos pedidos pagos via iFood — totalizando da ordem de <strong>~15,2% a ~15,5%</strong> (Básico) e <strong>~26,2% a ~26,5%</strong> (Entrega). Pode haver <strong>mensalidade de cerca de R$ 110 (Básico) ou R$ 150 (Entrega)</strong> quando o faturamento no iFood passa de <strong>cerca de R$ 1.800/mês</strong>. A <strong>taxa de serviço</strong> cobrada do cliente final <strong>não</strong> é a comissão da loja. <strong>Confirme sempre o percentual do seu contrato no Portal do Parceiro</strong> — condições variam por categoria, região e negociação.</p>
+      </blockquote>
+      <p>Se você vende por aplicativo e fecha o mês olhando só o faturamento do painel, a conta fica incompleta. Comissão, taxa de pagamento e, em alguns contratos, mensalidade saem do valor do pedido antes de sobrar dinheiro para comida, embalagem e operação. Este texto mostra como calcular o líquido em cinco minutos, com números públicos de 2026 e um exemplo de pedido de R$ 50.</p>
+      <p>Há um panorama mais amplo de iFood, Rappi e outros apps em <a href="/blog/como-calcular-taxa-aplicativo-delivery">taxas de aplicativos de delivery</a>. Aqui o foco é só o iFood em 2026 e o cálculo de “vale a pena?”.</p>
+
+      <h2>Fontes usadas nesta pesquisa</h2>
+      <p>As faixas abaixo não saíram de um “contrato médio inventado”. Elas vêm de páginas oficiais do iFood para parceiros, que em 2026 não batem 100% entre si no detalhe da taxa de pagamento. Por isso rotulamos <strong>faixas (~)</strong> e pedimos conferência no Portal.</p>
+      <ul>
+        <li><a href="https://blog-parceiros.ifood.com.br/taxas-ifood/">Blog do iFood para Parceiros — Taxas</a> (publicado/atualizado em 2026; tabela Básico ~12% + ~3,2%; Entrega ~23% + ~3,2%; mensalidades cerca de R$ 110 / R$ 150 acima de cerca de R$ 1.800)</li>
+        <li><a href="https://blog-parceiros.ifood.com.br/planos-ifood/">Blog do iFood para Parceiros — Planos</a> (em alguns trechos a taxa de pagamento no Entrega aparece como ~3,5%)</li>
+        <li><a href="https://parceiros.ifood.com.br/restaurante/como-funciona/entregas">Como funcionam as entregas no iFood</a> (Entrega: ~23% + ~3,5%; Básico: ~12% + ~3,5% em uma das páginas oficiais)</li>
+      </ul>
+      <p>Se a sua categoria, cidade ou negociação tiver percentual diferente, o contrato vale mais do que qualquer artigo — inclusive este.</p>
+
+      <h2>O que entra na conta (e o que não entra)</h2>
+      <p>A maior parte das lojas vê três camadas no extrato do iFood:</p>
+      <ul>
+        <li><strong>Comissão do plano</strong> — percentual sobre o pedido. Nas faixas públicas, cerca de 12% no Básico (você entrega) ou cerca de 23% no Entrega (logística iFood).</li>
+        <li><strong>Taxa de pagamento online</strong> — percentual extra nos pedidos pagos pelo app, nas faixas públicas cerca de 3,2% a 3,5%, conforme a página consultada.</li>
+        <li><strong>Mensalidade</strong> — valor fixo no mês, nas faixas públicas cerca de R$ 110 (Básico) ou R$ 150 (Entrega), quando o faturamento no iFood passa de cerca de R$ 1.800/mês. Não é cobrada por pedido.</li>
+      </ul>
+      <p>A <strong>taxa de serviço</strong> que o cliente vê no app não é a comissão da loja. Misturar os dois números é o erro mais comum na conversa de “o iFood cobra X%”.</p>
+      <p>Ainda ficam de fora desta conta de taxas: CMV (comida), embalagem, gás, moto (se você está no Básico), marketing, cancelamentos e a antecipação, se houver. O líquido do pedido só vira lucro depois desses custos.</p>
+
+      <h2>Como calcular em 5 minutos (exemplo de R$ 50)</h2>
+      <p>Pedido de <strong>R$ 50,00</strong> pago no app, <strong>Plano Básico</strong>, usando 12% + 3,2% (faixa do blog de taxas):</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="num">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Pedido</td>
+            <td class="num">R$ 50,00</td>
+          </tr>
+          <tr>
+            <td>Comissão ~12%</td>
+            <td class="num">R$ 6,00</td>
+          </tr>
+          <tr>
+            <td>Pagamento online ~3,2%</td>
+            <td class="num">R$ 1,60</td>
+          </tr>
+          <tr>
+            <td><strong>Total de taxas do pedido</strong></td>
+            <td class="num"><strong>R$ 7,60 (~15,2%)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Repasse bruto do pedido</strong></td>
+            <td class="num"><strong>R$ 42,40</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Se a sua página/contrato usar ~3,5% de pagamento online no Básico, o mesmo pedido sai ~R$ 7,75 de taxas (~15,5%) e ~R$ 42,25 de repasse bruto. A diferença é pequena no ticket unitário; no volume do mês ela aparece.</p>
+      <p>Ainda faltam <strong>no mês</strong>: mensalidade (se aplicável), custo de comida (CMV), embalagem, gás, moto (se Básico), marketing e cancelamentos.</p>
+
+      <h2>O mesmo pedido no Plano Entrega</h2>
+      <p>No <strong>Plano Entrega</strong>, com ~23% + ~3,2% a ~3,5%, o mesmo pedido de R$ 50 deixa da ordem de <strong>R$ 13 a R$ 13,25</strong> só em taxas percentuais (~26% a ~26,5%), antes do CMV:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="num">~3,2% de pagamento</th>
+            <th class="num">~3,5% de pagamento</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Pedido</td>
+            <td class="num">R$ 50,00</td>
+            <td class="num">R$ 50,00</td>
+          </tr>
+          <tr>
+            <td>Comissão ~23%</td>
+            <td class="num">R$ 11,50</td>
+            <td class="num">R$ 11,50</td>
+          </tr>
+          <tr>
+            <td>Pagamento online</td>
+            <td class="num">R$ 1,60</td>
+            <td class="num">R$ 1,75</td>
+          </tr>
+          <tr>
+            <td><strong>Total de taxas</strong></td>
+            <td class="num"><strong>R$ 13,10 (~26,2%)</strong></td>
+            <td class="num"><strong>R$ 13,25 (~26,5%)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Repasse bruto</strong></td>
+            <td class="num"><strong>R$ 36,90</strong></td>
+            <td class="num"><strong>R$ 36,75</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>O Entrega troca moto própria por logística do iFood. Isso pode valer a pena se a sua operação não cobre entrega com folga — mas o percentual maior precisa caber no ticket e no CMV. Não compare só “23% versus 12%”: compare o líquido depois de comida, embalagem e, no Básico, o custo real da moto.</p>
+
+      <h2>A mensalidade muda o custo por pedido</h2>
+      <p>Nas faixas públicas, a mensalidade (~R$ 110 no Básico ou ~R$ 150 no Entrega) entra quando o faturamento no iFood passa de cerca de R$ 1.800/mês. Não é uma taxa por pedido. O impacto unitário depende de quantos pedidos você faz depois desse limiar.</p>
+      <p>Exemplo só para dimensionar — não é a sua conta: se no mês você faturou R$ 3.000 no iFood no Básico e pagou cerca de R$ 110 de mensalidade, isso equivale a cerca de 3,7% extras sobre esse faturamento, além da comissão e do pagamento online. Em volume maior, a mensalidade dilui. Em volume perto do piso, ela pesa mais.</p>
+      <p>Some isso no fechamento do mês, não no feeling do dia. Comissão + pagamento + mensalidade + CMV + embalagem é o mínimo para dizer se o canal sobrou.</p>
+
+      <h2>Regra prática: aquisição versus único canal</h2>
+      <p>Se depois de comissão + pagamento + CMV + embalagem a margem de contribuição do canal iFood for menor que a do balcão ou do WhatsApp, o app pode ser ótimo para <strong>aquisição</strong>, mas ruim como <strong>único</strong> canal.</p>
+      <p>Vale quando: (1) o ticket e o CMV aguentam a faixa de taxa do seu plano; (2) você mede o <strong>líquido</strong>, não só o faturamento do app; (3) existe canal próprio (balcão, WhatsApp, cardápio online) para não depender 100% do marketplace.</p>
+      <p>Não vale quando o cardápio do app está no mesmo preço do balcão, o CMV já é apertado e o iFood é o único jeito de a loja aparecer. Aí o volume mascara prejuízo por item. A correção começa por saber o percentual real do contrato e o custo de cada prato — não por “sair do iFood amanhã” sem plano B.</p>
+
+      <h2>Como ver a taxa real da sua loja</h2>
+      <p>Abra o Portal do Parceiro → dados contratuais / Financeiro → Taxas e comissões. Anote comissão, taxa de pagamento, se há mensalidade e a partir de qual faturamento. Use o contrato, não só artigos genéricos.</p>
+      <p>Depois pegue 10 pedidos recentes do mesmo plano, some o valor dos pedidos, some o que o iFood reteve e divida. Se o percentual sair muito longe da faixa pública do seu plano, tem alguma linha extra (antecipação, cancelamento, ajuste) ou o contrato é outro. Não force o número do blog para caber no seu extrato.</p>
+
+      <h2>Onde o ZeloPDV entra (sem inventar)</h2>
+      <p>No ZeloPDV você pode <strong>registrar vendas de plataformas de delivery com a taxa configurável</strong> e ver o líquido. Com o <strong>ZeloMenu (+R$ 40/mês)</strong>, pedidos do iFood, WhatsApp e cardápio online podem cair no sistema e na fila da cozinha. O Zelo <strong>não substitui</strong> o iFood e <strong>não é marketplace</strong>.</p>
+      <p>O plano base do ZeloPDV custa R$ 59/mês e cobre frente de caixa, fiado, estoque, financeiro e lucro real, no navegador, com modo offline. O teste é de 14 dias, sem cartão. Fatos oficiais: <a href="https://zelopdv.com.br/sobre">zelopdv.com.br/sobre</a>.</p>
+    `
+  },
+  {
     slug: 'como-calcular-lucro-real-lanchonete',
     title: 'Como calcular o lucro real da sua lanchonete (sem enganar a si mesmo)',
     description:

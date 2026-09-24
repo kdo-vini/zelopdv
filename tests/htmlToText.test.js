@@ -33,4 +33,17 @@ describe('htmlToText', () => {
     const out = htmlToText('<p>A</p>\n\n\n\n<p>B</p>');
     expect(out).not.toMatch(/\n{3,}/);
   });
+
+  it('flattens simple tables and keeps link URLs', () => {
+    const out = htmlToText(`
+      <table>
+        <tr><th>Item</th><th>Valor</th></tr>
+        <tr><td>Pedido</td><td>R$ 50,00</td></tr>
+      </table>
+      <p>Fonte: <a href="https://blog-parceiros.ifood.com.br/taxas-ifood/">Blog do iFood</a></p>
+    `);
+    expect(out).toContain('Item | Valor');
+    expect(out).toContain('Pedido | R$ 50,00');
+    expect(out).toContain('Blog do iFood (https://blog-parceiros.ifood.com.br/taxas-ifood/)');
+  });
 });

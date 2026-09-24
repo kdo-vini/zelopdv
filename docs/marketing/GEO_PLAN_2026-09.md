@@ -14,8 +14,8 @@
 | `llms.txt` / `llms-full.txt` / `robots.txt` gerados dos dados | Feito — `src/lib/seo/` |
 | Página `/sobre` + `productFacts.js` | Feito |
 | JSON-LD com preços derivados de `pricing.js` | Feito — `src/lib/seo/site.js` |
-| Blog: `updatedAt` e `faq` por post | Suporte pronto; nenhum post preenchido ainda |
-| IndexNow | Rota + `npm run indexnow`; falta definir `INDEXNOW_KEY` na Vercel |
+| Blog: `updatedAt` e `faq` por post | Suporte pronto; 1º post GEO com FAQ: `/blog/taxa-ifood-2026-como-calcular` (2026-09-24) |
+| IndexNow | Rota + `npm run indexnow`; `INDEXNOW_KEY` na Vercel; keyLocation em `www` (apex 307) |
 | Bing Webmaster Tools | Pendente (ação manual: importar do Google Search Console) |
 | Banner para quem veio de IA | Feito — `AiReferralBanner.svelte` na home |
 | Frentes 2 e 3 (conteúdo, menções externas) | Não iniciadas — dependem de produção editorial |

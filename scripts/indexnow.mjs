@@ -8,12 +8,21 @@
 //
 // O site alvo pode ser sobrescrito via argv (--site-url) ou env
 // INDEXNOW_SITE_URL, útil para apontar para um sitemap local em teste.
+//
+// Produção: o domínio canônico é SITE_URL (sem www) e o www responde 308 para
+// ele (2026-09-24). Sitemap e keyLocation ficam sempre no canônico — o IndexNow
+// em geral não segue redirect ao validar o arquivo da chave.
 
-const DEFAULT_SITE_URL = 'https://zelopdv.com.br';
+import { pathToFileURL } from 'node:url';
+import { SITE_URL } from '../src/lib/seo/site.js';
+
+const DEFAULT_SITE_URL = SITE_URL;
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
 const BATCH_SIZE = 200; // limite prático recomendado pelo protocolo IndexNow
+const PRODUCTION_INDEX_HOST = new URL(SITE_URL).host;
+const PRODUCTION_HOSTS = new Set([PRODUCTION_INDEX_HOST, `www.${PRODUCTION_INDEX_HOST}`]);
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const args = { dryRun: false, siteUrl: null };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -27,12 +36,29 @@ function parseArgs(argv) {
   return args;
 }
 
-function extractLocUrls(sitemapXml) {
+export function extractLocUrls(sitemapXml) {
   const matches = sitemapXml.matchAll(/<loc>([^<]+)<\/loc>/g);
   return Array.from(matches, (match) => match[1].trim()).filter(Boolean);
 }
 
-function chunk(items, size) {
+export function resolveIndexNowTargets(siteUrl) {
+  const normalized = String(siteUrl || '').replace(/\/$/, '');
+  const url = new URL(normalized);
+  if (PRODUCTION_HOSTS.has(url.host)) {
+    return {
+      sitemapUrl: `${SITE_URL}/sitemap.xml`,
+      keyLocation: `${SITE_URL}/indexnow-key.txt`,
+      host: PRODUCTION_INDEX_HOST
+    };
+  }
+  return {
+    sitemapUrl: `${normalized}/sitemap.xml`,
+    keyLocation: `${normalized}/indexnow-key.txt`,
+    host: url.host
+  };
+}
+
+export function chunk(items, size) {
   const chunks = [];
   for (let i = 0; i < items.length; i += size) {
     chunks.push(items.slice(i, i + size));
@@ -51,7 +77,7 @@ async function main() {
     return;
   }
 
-  const sitemapUrl = `${siteUrl}/sitemap.xml`;
+  const { sitemapUrl, keyLocation, host } = resolveIndexNowTargets(siteUrl);
   console.log(`Buscando sitemap em ${sitemapUrl}...`);
 
   const response = await fetch(sitemapUrl);
@@ -71,9 +97,9 @@ async function main() {
   }
 
   console.log(`${urls.length} URLs encontradas no sitemap.`);
+  console.log(`keyLocation: ${keyLocation}`);
+  console.log(`host: ${host}`);
 
-  const host = new URL(siteUrl).host;
-  const keyLocation = `${siteUrl}/indexnow-key.txt`;
   const batches = chunk(urls, BATCH_SIZE);
 
   for (const [index, batchUrls] of batches.entries()) {
@@ -114,7 +140,12 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('Erro ao notificar o IndexNow:', err);
-  process.exitCode = 1;
-});
+const isDirectRun =
+  Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error('Erro ao notificar o IndexNow:', err);
+    process.exitCode = 1;
+  });
+}

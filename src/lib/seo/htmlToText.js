@@ -1,7 +1,7 @@
 // Conversor minimalista de HTML (como o usado em src/lib/blog/posts.js,
 // content: `<p>...</p>`) para texto plano/markdown-ish, usado no
 // llms-full.txt. Não é um parser HTML completo — cobre só as tags que os
-// posts do blog usam (p, h2, h3, ul, li, strong, em, br). Sem dependências
+// posts do blog usam (p, h2, h3, ul, li, strong, em, br, table, a). Sem dependências
 // novas, conforme pedido.
 
 /**
@@ -32,6 +32,14 @@ export function htmlToText(html) {
   text = text.replace(/<li[^>]*>/gi, '- ');
   text = text.replace(/<\/li>/gi, '\n');
   text = text.replace(/<\/?(ul|ol)[^>]*>/gi, '\n');
+
+  // Tabelas: cada linha vira "célula | célula".
+  text = text.replace(/<\/t[hd]>/gi, ' | ');
+  text = text.replace(/<\/tr>/gi, '\n');
+  text = text.replace(/<\/?(table|thead|tbody|t[hd]|tr)[^>]*>/gi, '');
+
+  // Links: mantém o texto âncora e a URL entre parênteses.
+  text = text.replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, '$2 ($1)');
 
   // Ênfase: mantém o texto, remove a tag.
   text = text.replace(/<\/?(strong|b|em|i)[^>]*>/gi, '');
