@@ -66,6 +66,7 @@ As rotas `/extensoes/mesas` e `/extensoes/chat` redirecionam para anchors. `/ext
 | Rota | Uso |
 | --- | --- |
 | `/blog` | Lista de artigos |
+| `/blog/taxa-ifood-2026-como-calcular` | Taxa iFood 2026 e cálculo do líquido |
 | `/blog/como-calcular-lucro-real-lanchonete` | Lucro real de lanchonete |
 | `/blog/sistema-pdv-para-lanchonete-online` | Sistema PDV online para lanchonete |
 | `/blog/controle-de-caixa-para-hamburgueria` | Controle de caixa para hamburgueria |
