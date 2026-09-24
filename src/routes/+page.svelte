@@ -256,9 +256,22 @@
           </p>
           <div class="hero-actions">
             <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('hero')}>Testar 14 dias grátis (sem cartão)</a>
+            <p class="hero-price">Depois do teste, R$ {basePrice}/mês. Cancele quando quiser.</p>
             <a href="#zelinho" class="secondary-cta">Ver o Zelo funcionando <ArrowRight class="size-4" aria-hidden="true" /></a>
           </div>
         </div>
+
+        <!-- Celular: tela real do sistema no lugar do mascote, com um número legível. -->
+        <figure class="hero-proof-mobile">
+          <img
+            src="/images/screenshots/financial-kpis-crop.webp"
+            alt="Tela do Zelo PDV mostrando receita líquida de R$ 5.166,90, vendas brutas e quantidade de vendas do dia."
+            width="806"
+            height="204"
+            loading="eager"
+          />
+          <figcaption>Tela real do sistema: o que entrou e o que ficou no dia.</figcaption>
+        </figure>
 
         <div class="hero-visual" aria-label="Zelinho apresentando os números da loja">
           <picture>
@@ -718,6 +731,18 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.85rem 1.25rem;
+  }
+
+  .hero-price {
+    order: 3;
+    flex-basis: 100%;
+    margin: 0;
+    color: var(--marketing-dark-muted);
+    font-size: 0.875rem;
+  }
+
+  .hero-proof-mobile {
+    display: none;
   }
 
   .primary-cta {
@@ -1629,7 +1654,8 @@
     }
 
     .hero {
-      padding-top: 6.25rem;
+      min-height: 0;
+      padding-top: 5.5rem;
     }
 
     .hero-inner {
@@ -1649,14 +1675,14 @@
 
     .hero h1 {
       max-width: 19ch;
-      font-size: clamp(2.125rem, 10.5vw, 3.25rem);
+      font-size: clamp(2rem, 8.6vw, 3.25rem);
       letter-spacing: -0.035em;
       line-height: 1.03;
     }
 
     .hero-lead {
-      margin-block: 1.25rem 1.5rem;
-      font-size: 1.125rem;
+      margin-block: 1rem 1.25rem;
+      font-size: 1rem;
       line-height: 1.6;
     }
 
@@ -1688,6 +1714,36 @@
     .hero-visual picture {
       width: 100%;
       margin-left: 0;
+    }
+
+    .hero-kicker,
+    .hero-visual {
+      display: none;
+    }
+
+    .hero-price {
+      order: 0;
+      text-align: center;
+    }
+
+    .hero-proof-mobile {
+      display: block;
+      margin: 1.75rem 0 0;
+    }
+
+    .hero-proof-mobile img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid var(--marketing-dark-border);
+      border-radius: 0.75rem;
+    }
+
+    .hero-proof-mobile figcaption {
+      margin-top: 0.6rem;
+      color: var(--marketing-dark-muted);
+      font-size: 0.8125rem;
+      text-align: center;
     }
 
     .hero-facts {
