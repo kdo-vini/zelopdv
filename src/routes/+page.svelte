@@ -273,19 +273,24 @@
           <figcaption>Tela real do sistema: o que entrou e o que ficou no dia.</figcaption>
         </figure>
 
-        <div class="hero-visual" aria-label="Zelinho apresentando os números da loja">
+        <figure class="hero-shot">
           <picture>
-            <source srcset="/images/landing/zelinho-hero-transparent.webp" type="image/webp" />
+            <source
+              type="image/webp"
+              srcset="/images/screenshots/dashboard-desktop-800.webp 800w, /images/screenshots/dashboard-desktop-1600.webp 1600w"
+              sizes="(min-width: 1600px) 40vw, 42vw"
+            />
             <img
-              src="/images/landing/zelinho-hero-transparent.svg"
-              alt="Zelinho apresentando um painel com vendas, lucro, pedidos, Pix, ticket médio e estoque."
-              width="693"
-              height="495"
+              src="/images/screenshots/dashboard-desktop.png"
+              alt="Painel do Zelo PDV com as vendas e o resultado do dia"
+              width="1918"
+              height="906"
               loading="eager"
               fetchpriority="high"
+              decoding="async"
             />
           </picture>
-        </div>
+        </figure>
       </div>
 
       <div class="hero-facts" aria-label="O que você encontra no teste">
@@ -793,54 +798,21 @@
     transform: translateX(2px);
   }
 
-  .hero-visual {
+  .hero-shot {
     position: relative;
-    isolation: isolate;
+    z-index: 2;
     min-width: 0;
-    margin-right: clamp(-4rem, -3vw, -1.5rem);
+    margin: 0;
   }
 
-  .hero-visual::before {
-    position: absolute;
-    z-index: -1;
-    inset: 12% 0 5% 12%;
-    border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
-    border-radius: 50%;
-    background: radial-gradient(
-      circle,
-      color-mix(in srgb, var(--primary) 28%, transparent) 0,
-      color-mix(in srgb, var(--primary) 8%, transparent) 46%,
-      transparent 72%
-    );
-    filter: blur(1rem);
-    content: "";
-  }
-
-  .hero-visual::after {
-    position: absolute;
-    z-index: -1;
-    right: 9%;
-    bottom: 0;
-    left: 4%;
-    height: 13%;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--primary) 22%, transparent);
-    filter: blur(1.5rem);
-    content: "";
-  }
-
-  .hero-visual picture {
-    display: block;
-    width: clamp(40rem, 52vw, 56rem);
-    max-width: none;
-    margin-left: clamp(-2.5rem, -2vw, -1rem);
-  }
-
-  .hero-visual img {
+  .hero-shot img {
     display: block;
     width: 100%;
+    max-width: 100%;
     height: auto;
-    filter: drop-shadow(0 2rem 2.5rem color-mix(in srgb, var(--marketing-dark) 68%, transparent));
+    border: 1px solid var(--marketing-dark-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 2rem 3rem -1.5rem color-mix(in srgb, var(--marketing-dark) 70%, transparent);
   }
 
   .hero-facts {
@@ -1632,10 +1604,6 @@
       font-size: clamp(2.5rem, 5vw, 3.5rem);
     }
 
-    .hero-visual picture {
-      width: 37rem;
-    }
-
     .feature-layout {
       grid-template-columns: 1fr;
     }
@@ -1710,23 +1678,8 @@
       width: 100%;
     }
 
-    .hero-visual {
-      width: calc(100% + 2rem);
-      margin: 1.25rem -1rem 0;
-    }
-
-    .hero-visual::before {
-      inset: 5% 2% 2% 6%;
-      filter: blur(0.75rem);
-    }
-
-    .hero-visual picture {
-      width: 100%;
-      margin-left: 0;
-    }
-
     .hero-kicker,
-    .hero-visual {
+    .hero-shot {
       display: none;
     }
 
@@ -1857,23 +1810,11 @@
       max-width: 16ch;
       font-size: clamp(5rem, 5.3vw, 5.5rem);
     }
-
-    .hero-visual {
-      margin-right: clamp(-8rem, -6vw, -3rem);
-    }
-
-    .hero-visual picture {
-      margin-left: clamp(-4rem, -3vw, -1rem);
-    }
   }
 
   @media (prefers-reduced-motion: no-preference) {
     .hero-copy {
       animation: hero-copy-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-
-    .hero-visual {
-      animation: hero-visual-in 820ms 80ms cubic-bezier(0.16, 1, 0.3, 1) both;
     }
   }
 
@@ -1885,17 +1826,6 @@
     to {
       opacity: 1;
       transform: translateY(0);
-    }
-  }
-
-  @keyframes hero-visual-in {
-    from {
-      opacity: 0;
-      transform: translateX(1.5rem);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
     }
   }
 
