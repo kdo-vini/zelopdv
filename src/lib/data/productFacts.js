@@ -50,6 +50,6 @@ export function buildIntegrationSummaries(extensoes) {
     slug: item.slug,
     title: item.h1,
     subtitle: item.subtitle,
-    kind: item.kind === 'plan' ? 'plano separado' : 'add-on'
+    kind: item.kind === 'plan' ? 'plano separado' : 'extensão'
   }));
 }

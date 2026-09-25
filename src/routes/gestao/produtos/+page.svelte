@@ -147,49 +147,9 @@
   let tabelasPrecoAtivo = false;
   let nomesTabelas = ['Tabela 1', 'Tabela 2', 'Tabela 3'];
 
-  // ─── Kit Páscoa ───────────────────────────────────────────────────────────────
-  let kitPascoaInserted = false;
-
-  $: showKitPascoa = (() => {
-    const now = new Date();
-    const inSeason = now >= new Date('2026-03-10') && now <= new Date('2026-04-06');
-    return inSeason && !kitPascoaInserted;
-  })();
-
-  async function aplicarKitPascoa() {
-    const ok = await confirmAction(
-      'Kit Páscoa 2026',
-      'Criar 5 categorias para a Páscoa: Ovos de Páscoa, Trufas & Bombons, Cestas, Colomba Pascal e Avulso?'
-    );
-    if (!ok) return;
-
-    const { data: userData } = await supabase.auth.getUser();
-    const ownerId = ownerUserId || userData?.user?.id;
-    if (!ownerId) { addToast('Sessão expirada.', 'error'); return; }
-
-    const cats = [
-      { nome: 'Ovos de Páscoa',   ordem: 1, id_usuario: ownerId },
-      { nome: 'Trufas & Bombons', ordem: 2, id_usuario: ownerId },
-      { nome: 'Cestas',           ordem: 3, id_usuario: ownerId },
-      { nome: 'Colomba Pascal', ordem: 4, id_usuario: ownerId },
-      { nome: 'Avulso',           ordem: 5, id_usuario: ownerId },
-    ];
-
-    const { error } = await supabase.from('categorias').insert(cats);
-    if (error) {
-      addToast('Erro ao criar categorias.', 'error');
-    } else {
-      addToast('🐣 Kit Páscoa ativado! 5 categorias criadas.', 'success');
-      kitPascoaInserted = true;
-      localStorage.setItem('zelo_kit_pascoa_2026', 'done');
-      await carregarCategorias();
-    }
-  }
-
   // ─── Lifecycle ────────────────────────────────────────────────────────────────
   onMount(async () => {
     await waitAuthReady();
-    kitPascoaInserted = localStorage.getItem('zelo_kit_pascoa_2026') === 'done';
     await carregarTudo();
     try {
       // Sequencial (não Promise.all): getAccessContext() já chama getSession()
@@ -1059,27 +1019,6 @@
   </div>
 
 </div>
-
-<!-- ─── Kit Páscoa Banner ─────────────────────────────────────────────────────── -->
-{#if showKitPascoa}
-  <div style="background: color-mix(in srgb, var(--accent) 10%, var(--bg-panel)); border: 1.5px solid color-mix(in srgb, var(--accent) 30%, var(--border-subtle));"
-       class="rounded-xl p-4 mb-4 flex items-center justify-between gap-4">
-    <div>
-      <p class="text-xs font-bold uppercase tracking-wider mb-0.5" style="color: var(--accent);">Especial Páscoa 2026 🥚</p>
-      <p class="font-bold text-sm" style="color: var(--text-main);">Kit de categorias pronto para usar</p>
-      <p class="text-xs" style="color: var(--text-muted);">Ovos de Páscoa, Trufas, Cestas, Colomba Pascal, Avulso</p>
-    </div>
-    <div class="flex gap-2 shrink-0">
-      <button on:click={aplicarKitPascoa}
-        class="px-4 py-2 rounded-lg text-sm font-bold"
-        style="background: var(--accent); color: var(--primary-text);">
-        Ativar Kit
-      </button>
-      <button on:click={() => kitPascoaInserted = true} class="px-2 py-2 text-xs rounded-lg"
-        style="color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 10%, transparent);">✕</button>
-    </div>
-  </div>
-{/if}
 
 <!-- ─── Layout Split View ─────────────────────────────────────────────────────── -->
 <div class="split-view" style="background: var(--bg-app);">

@@ -74,19 +74,33 @@
     --blog-glow-b: rgb(244 114 182 / 0.12);
     --blog-glow-c: rgb(99 102 241 / 0.12);
 
-    /* Marketing landing surfaces */
-    --marketing-dark: #020815;
-    --marketing-dark-soft: #050E1F;
-    --marketing-dark-panel: #07172E;
+    /* Marketing landing surfaces — mesmo navy do app (--bg-app/--bg-panel),
+       não uma paleta "quase preta" à parte. Antes disso, a LP usava
+       #020815/#050E1F/#07172E (bem mais escuros que o produto real), e quem
+       via a home e depois entrava no /app tinha a sensação de trocar de
+       marca. --marketing-dark = --bg-app (a página); --marketing-dark-soft/
+       -panel = --bg-panel/--1E293B (a camada "lifted" do produto), usado
+       tanto pra seção secundária quanto pra chips flutuantes (banner,
+       menu mobile, botão de fechar do lightbox). */
+    --marketing-dark: #0F172A;
+    --marketing-dark-soft: #1E293B;
+    --marketing-dark-panel: #1E293B;
     --marketing-dark-border: rgba(121, 176, 255, 0.18);
     --marketing-dark-muted: #B8C7DE;
     --marketing-action: #0369A1;
-    --marketing-paper: #F5F8FC;
+    /* Marca oficial a partir de 2026-09-25: Ink navy #011F4A / Paper branco
+       #FFFFFF (o #02204B que às vezes aparece é só anti-aliasing de borda,
+       não uma cor própria — não usar). Paper agora é branco puro em vez do
+       off-white levemente azulado de antes; ink-soft/line/tint são
+       derivados do próprio Ink via color-mix (não uma cor separada
+       escolhida à parte) pra acompanhar automaticamente se o Ink mudar de
+       novo. */
+    --marketing-paper: #FFFFFF;
     --marketing-paper-strong: #FFFFFF;
-    --marketing-paper-tint: #EAF6FD;
-    --marketing-ink: #0F2B46;
-    --marketing-ink-soft: #526B82;
-    --marketing-line: #D7E3EE;
+    --marketing-paper-tint: color-mix(in srgb, #011F4A 4%, #FFFFFF);
+    --marketing-ink: #011F4A;
+    --marketing-ink-soft: color-mix(in srgb, #011F4A 68%, #FFFFFF);
+    --marketing-line: color-mix(in srgb, #011F4A 12%, #FFFFFF);
 
     /* ZeloMenu product identity — sourced from the product brand assets */
     --zelomenu-brand: #7A46FF;

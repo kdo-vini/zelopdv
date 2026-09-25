@@ -4,6 +4,8 @@
   Ideal para distribuição de formas de pagamento
 -->
 <script>
+  import { formatMoneyNumber } from '$lib/formatMoney';
+
   /** @type {Array<{label: string, value: number, color: string}>} */
   export let data = [];
   
@@ -44,11 +46,11 @@
   })();
   
   function formatValue(v) {
-    return valuePrefix + Number(v || 0).toFixed(2);
+    return valuePrefix + formatMoneyNumber(v);
   }
-  
+
   function formatPct(pct) {
-    return pct.toFixed(1) + '%';
+    return pct.toFixed(1).replace('.', ',') + '%';
   }
 </script>
 

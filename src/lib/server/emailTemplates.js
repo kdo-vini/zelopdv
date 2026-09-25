@@ -326,7 +326,7 @@ export function emailDay9(nome, ctx = {}) {
         titulo: 'ZeloChat',
         preco: 'plano de R$ 149/mês, já com o ZeloMenu',
         paraQuem: 'Pra quem perde pedido por demorar a responder no WhatsApp',
-        descricao: 'Atendimento automatizado no WhatsApp: responde cardápio, tira dúvida e registra o pedido sozinho, a qualquer hora. É troca de plano, não add-on.',
+        descricao: 'Atendimento automatizado no WhatsApp: responde cardápio, tira dúvida e registra o pedido sozinho, a qualquer hora. É troca de plano, não extensão.',
         url: `${APP_URL}/extensoes#chat`,
       }),
     });

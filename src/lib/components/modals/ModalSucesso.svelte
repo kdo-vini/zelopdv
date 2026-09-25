@@ -5,6 +5,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { buildReceiptText as buildSaleReceiptText } from '$lib/receiptText';
+  import { formatMoney } from '$lib/formatMoney';
 
   const dispatch = createEventDispatcher();
   
@@ -82,7 +83,7 @@
       
       <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Venda Realizada!</h3>
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-        Total: <span class="font-bold text-gray-800 dark:text-gray-200 text-lg">R$ {Number(venda.total || 0).toFixed(2)}</span>
+        Total: <span class="font-bold text-gray-800 dark:text-gray-200 text-lg">{formatMoney(venda.total || 0)}</span>
       </p>
       
       <div class="grid gap-3">

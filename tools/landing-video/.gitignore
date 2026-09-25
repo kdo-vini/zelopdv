@@ -1,0 +1,21 @@
+node_modules/
+out/
+stills/
+public/captures/
+.remotion/
+*.log
+
+# Saida bruta de tools/landing-video/capture/*.mjs quando rodados a partir
+# desta pasta (video/videoclipes/screenshots — nunca commitar).
+capture/.auth/
+capture/video/
+capture/video-mobile/
+capture/video-mobile-frames/
+capture/video-raw/
+capture/raw/
+capture/crops/
+capture/review/
+capture/errors/
+capture/out/
+capture/*.log
+capture/timeline*.json

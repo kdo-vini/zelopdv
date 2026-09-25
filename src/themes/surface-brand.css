@@ -76,12 +76,14 @@
     --marketing-dark-border: rgba(255, 255, 255, 0.11);
     --marketing-dark-muted: rgba(255, 255, 255, 0.72);
     --marketing-action: var(--zelo-white);
-    --marketing-paper: var(--zelo-paper);
+    /* Ink/Paper da landing (decisão de 2026-09-25 em main): Paper branco puro,
+       tint/ink-soft/line derivados do próprio Ink */
+    --marketing-paper: var(--zelo-white);
     --marketing-paper-strong: var(--zelo-white);
-    --marketing-paper-tint: var(--zelo-canvas);
+    --marketing-paper-tint: color-mix(in srgb, var(--zelo-navy) 4%, var(--zelo-white));
     --marketing-ink: var(--zelo-navy);
-    --marketing-ink-soft: var(--zelo-ink-muted);
-    --marketing-line: var(--zelo-line);
+    --marketing-ink-soft: color-mix(in srgb, var(--zelo-navy) 68%, var(--zelo-white));
+    --marketing-line: color-mix(in srgb, var(--zelo-navy) 12%, var(--zelo-white));
 
     /* Blog editorial "paper" section */
     --blog-bg: var(--zelo-paper);

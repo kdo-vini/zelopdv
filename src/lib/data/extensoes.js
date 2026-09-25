@@ -29,10 +29,10 @@ export const extensoes = {
     meta: {
       title: 'Módulo Mesas — Comandas, Divisão de Conta e Mapa de Salão | Zelo PDV',
       description:
-        `Add-on do Zelo PDV para bares, hamburguerias e restaurantes pequenos. Mapa de mesas, comanda acumulativa, divisão entre N pessoas, taxa de serviço, couvert e pré-conta. +${formatPrice(currentPrices.mesas)}/mês sobre o plano base.`,
+        `Extensão do Zelo PDV para bares, hamburguerias e restaurantes pequenos. Mapa de mesas, comanda acumulativa, divisão entre N pessoas, taxa de serviço, couvert e pré-conta. +${formatPrice(currentPrices.mesas)}/mês sobre o plano base.`,
       canonical: `${BASE_URL}/extensoes#mesas`
     },
-    heroBadge: 'Add-on Zelo PDV',
+    heroBadge: 'Extensão Zelo PDV',
     h1: 'Módulo Mesas: Comanda, Divisão de Conta e Mapa de Salão',
     subtitle:
       'Para bares, hamburguerias e restaurantes pequenos que precisam organizar mesas e comandas sem virar refém de um sistema gigante. Habilita no checkout ou direto na sua assinatura.',
@@ -142,7 +142,7 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          `+${formatPrice(currentPrices.mesas)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.mesas)}/mês. Não tem taxa de adesão e o add-on sai de graça durante os 14 dias de trial.`
+          `+${formatPrice(currentPrices.mesas)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.mesas)}/mês. Não tem taxa de adesão e a extensão sai de graça durante os 14 dias de trial.`
       }
     ],
     finalCtaTitle: 'Teste o Zelo PDV com Mesas por 14 dias grátis',
@@ -156,10 +156,10 @@ export const extensoes = {
     meta: {
       title: 'Controle de Acessos — Equipe com Cargos e Permissões | Zelo PDV',
       description:
-        `Add-on do Zelo PDV para negócios com equipe. Crie até 5 subusuários por e-mail, organize em cargos como Caixa, Atendente e Gerente, e controle quem pode fazer o quê no sistema. +${formatPrice(currentPrices.acessos)}/mês.`,
+        `Extensão do Zelo PDV para negócios com equipe. Crie até 5 subusuários por e-mail, organize em cargos como Caixa, Atendente e Gerente, e controle quem pode fazer o quê no sistema. +${formatPrice(currentPrices.acessos)}/mês.`,
       canonical: `${BASE_URL}/extensoes#acessos`
     },
-    heroBadge: 'Add-on Zelo PDV',
+    heroBadge: 'Extensão Zelo PDV',
     h1: 'Controle de Acessos: Equipe com Cargos e Permissões',
     subtitle:
       'Para negócios com mais de uma pessoa na operação. Convide sua equipe por e-mail, defina o que cada cargo pode fazer, e mantenha o dono no controle de tudo que importa.',
@@ -227,7 +227,7 @@ export const extensoes = {
       'Três passos e a equipe já opera com login próprio. O dono configura uma vez, a rotina muda no próximo turno.',
     steps: [
       {
-        title: 'Ative o add-on em Extensões',
+        title: 'Ative a extensão em Extensões',
         description:
           'Em /gestao/extensoes, clique em "Ativar" no card Controle de Acessos. O item "Acessos" aparece no menu lateral da gestão.'
       },
@@ -262,7 +262,7 @@ export const extensoes = {
           'Depende do cargo. Por padrão, Caixa e Atendente não têm acesso a relatórios. O Gerente tem, mas você pode desmarcar essa permissão no checkbox do cargo. O dono sempre mantém acesso total.'
       },
       {
-        question: 'O que acontece se eu desativar o add-on?',
+        question: 'O que acontece se eu desativar a extensão?',
         answer:
           'Os subusuários perdem acesso imediatamente, mas os dados (cargos, vínculos, histórico) ficam salvos. Se você reativar, tudo volta como estava — sem precisar reconvidar.'
       },
@@ -274,12 +274,12 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          `+${formatPrice(currentPrices.acessos)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.acessos)}/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.`
+          `+${formatPrice(currentPrices.acessos)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.acessos)}/mês. Sem taxa de adesão. A extensão sai de graça durante os 14 dias de trial.`
       }
     ],
     finalCtaTitle: 'Teste o Controle de Acessos por 14 dias grátis',
     finalCtaText:
-      'Cria conta sem cartão, ativa o add-on no checkout e convide sua equipe. Se não fizer sentido pra sua operação, é só deixar o trial expirar.'
+      'Cria conta sem cartão, ativa a extensão no checkout e convide sua equipe. Se não fizer sentido pra sua operação, é só deixar o trial expirar.'
   },
 
   chat: {
@@ -419,10 +419,10 @@ export const extensoes = {
     meta: {
       title: 'ZeloMenu — Cardápio Online com Publicação para Clientes | Zelo PDV',
       description:
-        `Publique o cardápio do seu negócio online. +${formatPrice(currentPrices.menu)}/mês como add-on do Zelo PDV. Clientes acessam produtos, preços e variações pelo celular.`,
+        `Publique o cardápio do seu negócio online. +${formatPrice(currentPrices.menu)}/mês como extensão do Zelo PDV. Clientes acessam produtos, preços e variações pelo celular.`,
       canonical: `${BASE_URL}/extensoes#menu`
     },
-    heroBadge: 'Add-on Zelo PDV',
+    heroBadge: 'Extensão Zelo PDV',
     h1: 'ZeloMenu: cardápio digital, pedidos online e painel de cozinha',
     subtitle:
       'A extensão mais completa do Zelo PDV. Publique seu cardápio online, receba pedidos do WhatsApp e iFood, e acompanhe a fila da cozinha em tempo real. Tudo integrado, sem taxa por pedido.',
@@ -492,7 +492,7 @@ export const extensoes = {
       {
         title: 'Ative o ZeloMenu',
         description:
-          `Adicione o ZeloMenu como extensão na sua assinatura (${formatPrice(currentPrices.menu)}/mês). A ativação é instantânea e o add-on sai de graça durante os 14 dias de trial.`
+          `Adicione o ZeloMenu como extensão na sua assinatura (${formatPrice(currentPrices.menu)}/mês). A ativação é instantânea e a extensão sai de graça durante os 14 dias de trial.`
       },
       {
         title: 'Publique os produtos do estoque',
@@ -537,7 +537,7 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          `+${formatPrice(currentPrices.menu)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.menu)}/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.`
+          `+${formatPrice(currentPrices.menu)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.menu)}/mês. Sem taxa de adesão. A extensão sai de graça durante os 14 dias de trial.`
       }
     ],
     finalCtaTitle: 'Teste o ZeloMenu por 14 dias grátis',
@@ -575,7 +575,7 @@ export const extensoes = {
       {
         question: 'Quanto custa?',
         answer:
-          `+${formatPrice(currentPrices.menu)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.menu)}/mês. Sem taxa de adesão. O add-on sai de graça durante os 14 dias de trial.`
+          `+${formatPrice(currentPrices.menu)}/mês sobre o plano base de ${formatPrice(currentPrices.base)}. Total fica ${formatPrice(currentPrices.base + currentPrices.menu)}/mês. Sem taxa de adesão. A extensão sai de graça durante os 14 dias de trial.`
       }
     ],
     finalCtaTitle: 'Teste o ZeloMenu por 14 dias grátis',

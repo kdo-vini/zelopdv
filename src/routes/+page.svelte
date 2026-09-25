@@ -3,7 +3,7 @@
   import { absoluteUrl, buildOrganizationSchema, buildSoftwareApplicationSchema, ORGANIZATION, SITE_URL } from '$lib/seo/site';
 
   const homeSoftwareSchema = buildSoftwareApplicationSchema({
-    description: `Registre pedidos em 3 toques, controle fiado e despesas e veja o lucro do dia no seu próprio caixa. ${TRIAL_DAYS} dias grátis.`,
+    description: `PDV pra bar, lanchonete, restaurante, delivery e quem mais vende no balcão. Registra a venda, controla o fiado e mostra quanto sobrou no fim do dia. ${TRIAL_DAYS} dias grátis.`,
     extra: {
       '@type': ['SoftwareApplication', 'Product'],
       alternateName: 'Sistema PDV para Lanchonete',
@@ -43,7 +43,7 @@
     name: 'Zelo PDV',
     url: SITE_URL,
     inLanguage: 'pt-BR',
-    description: 'Sistema PDV para lanchonete e pequenos negócios. Controle caixa, fiado, despesas e lucro real no navegador.',
+    description: 'PDV pra bar, lanchonete, restaurante, delivery e quem mais vende no balcão. Controle caixa, fiado, despesas e lucro real no navegador.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -60,10 +60,10 @@
     mainEntity: [
       {
         '@type': 'Question',
-        name: 'Preciso de computador potente para usar o Zelo PDV?',
+        name: 'Preciso emitir nota fiscal pra usar?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Não. O Zelo PDV roda direto no navegador e funciona em computadores básicos, celulares e tablets.'
+          text: 'Não. O Zelo organiza suas vendas, o fiado e o caixa com ou sem nota. Ele emite recibo e comprovante de venda. A emissão de NF-e está a caminho, e quando chegar é só ativar, sem trocar de sistema.'
         }
       },
       {
@@ -71,39 +71,39 @@
         name: `Como funcionam os ${TRIAL_DAYS} dias grátis?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Você cria a conta e começa seu período de teste de ${TRIAL_DAYS} dias, sem cadastrar cartão. A assinatura só começa se você escolher continuar.`
+          text: `Cria a conta, usa tudo por ${TRIAL_DAYS} dias e não cadastra cartão. Só paga se decidir continuar.`
         }
       },
       {
         '@type': 'Question',
-        name: 'O Zelo PDV emite Nota Fiscal?',
+        name: 'Funciona sem internet?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'O Zelo PDV emite recibos e comprovantes de venda. Não emitimos NFC-e. Para emissão fiscal em cada venda, use o Zelo junto com um emissor fiscal dedicado.'
+          text: 'Funciona. As vendas ficam salvas no aparelho e sobem pra nuvem quando a conexão voltar.'
         }
       },
       {
         '@type': 'Question',
-        name: 'Tem suporte se eu tiver dúvidas?',
+        name: 'Preciso de computador bom?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Sim. Temos suporte direto via WhatsApp em horário comercial e ajudamos na configuração.'
+          text: 'Não. Roda no navegador de qualquer celular, tablet ou computador simples.'
         }
       },
       {
         '@type': 'Question',
-        name: 'O sistema funciona sem internet?',
+        name: 'Consigo usar em mais de um aparelho?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Sim. O Zelo PDV funciona offline e sincroniza automaticamente quando a internet voltar.'
+          text: 'Sim. Usa a mesma conta no celular, no tablet e no computador, sempre sincronizado.'
         }
       },
       {
         '@type': 'Question',
-        name: 'Quanto custa o sistema PDV para lanchonete?',
+        name: 'E se eu travar em alguma coisa?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `O Zelo PDV custa R$ ${PLANS.pdv.price.toFixed(0)} por mês. O Módulo Mesas custa mais R$ ${ADDONS.mesas.price.toFixed(0)} por mês e o ZeloMenu custa mais R$ ${ADDONS.menu.price.toFixed(0)} por mês. Os primeiros ${TRIAL_DAYS} dias são grátis, sem cartão.`
+          text: 'Chama no WhatsApp. Quem responde é quem constrói o Zelo, não um robô de atendimento.'
         }
       }
     ]
@@ -111,16 +111,16 @@
 </script>
 
 <svelte:head>
-  <title>Sistema PDV para lanchonete | Zelo PDV</title>
-  <meta name="description" content="Registre pedidos em 3 toques, controle fiado e despesas e veja o lucro do dia. Teste por 14 dias, sem cartão, no celular ou computador." />
+  <title>Zelo PDV | PDV pra bar, lanchonete e restaurante. Sem frescura.</title>
+  <meta name="description" content="PDV no celular pra quem vende no balcão. Pedido em 3 toques, fiado controlado e quanto sobrou no dia. 14 dias grátis, sem cartão." />
   <meta name="keywords" content="sistema PDV, PDV para lanchonete, sistema para lanchonete, controle de caixa, controle de fiado, lanchonete, hamburgueria, MEI" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://zelopdv.com.br/" />
 
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://zelopdv.com.br/" />
-  <meta property="og:title" content="Sua lanchonete vendeu bem. Mas sobrou dinheiro?" />
-  <meta property="og:description" content="O Zelo mostra vendas, despesas, fiado e lucro real no seu próprio caixa. Teste por 14 dias sem cartão." />
+  <meta property="og:title" content="Você vende. O Zelo cuida do resto." />
+  <meta property="og:description" content="PDV no celular pra quem vende no balcão. Pedido em 3 toques, fiado controlado e quanto sobrou no dia. 14 dias grátis, sem cartão." />
   <meta property="og:image" content="https://zelopdv.com.br/og-image-home.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -129,8 +129,8 @@
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://zelopdv.com.br/" />
-  <meta name="twitter:title" content="Sua lanchonete vendeu bem. Mas sobrou dinheiro?" />
-  <meta name="twitter:description" content="O Zelo mostra vendas, despesas, fiado e lucro real no seu próprio caixa. Teste por 14 dias sem cartão." />
+  <meta name="twitter:title" content="Você vende. O Zelo cuida do resto." />
+  <meta name="twitter:description" content="PDV no celular pra quem vende no balcão. Pedido em 3 toques, fiado controlado e quanto sobrou no dia. 14 dias grátis, sem cartão." />
   <meta name="twitter:image" content="https://zelopdv.com.br/og-image-home.png" />
 
   {@html `<script type="application/ld+json">${JSON.stringify(homeSoftwareSchema)}</script>`}
@@ -158,48 +158,14 @@
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import AiReferralBanner from '$lib/components/marketing/AiReferralBanner.svelte';
   import OperationalProofSection from '$lib/components/marketing/OperationalProofSection.svelte';
+  import PhoneShot from '$lib/components/marketing/PhoneShot.svelte';
   import { trackViewContent } from '$lib/metaPixel';
   import { initMarketingAnalytics } from '$lib/marketingAnalytics';
   import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
+  import { observeSectionViews } from '$lib/marketing/sectionViews';
 
   let activeLightboxImage = null;
   let activeLightboxTrigger = null;
-  let activeDemo = 'profit';
-
-  const demoQuestions = {
-    profit: {
-      question: 'Quanto sobrou hoje?',
-      answer: 'Depois das despesas registradas, o resultado ilustrativo ficou assim:',
-      numbers: [
-        { label: 'Vendas', value: 'R$ 3.000' },
-        { label: 'Despesas', value: 'R$ 1.290' },
-        { label: 'Resultado', value: 'R$ 1.710' }
-      ],
-      takeaway: 'Você sabe o que entrou, o que saiu e o que realmente ficou.'
-    },
-    credit: {
-      question: 'Tem fiado em aberto?',
-      answer: 'A demonstração encontra os recebimentos pendentes no seu cadastro:',
-      numbers: [
-        { label: 'Em aberto', value: 'R$ 420' },
-        { label: 'Clientes', value: '3' },
-        { label: 'Mais antigo', value: '12 dias' }
-      ],
-      takeaway: 'A conta deixa de depender da memória ou do caderninho.'
-    },
-    products: {
-      question: 'Qual produto vendeu mais?',
-      answer: 'O exemplo organiza os itens do período e destaca o que puxou suas vendas:',
-      numbers: [
-        { label: 'Mais vendido', value: 'X-Salada' },
-        { label: 'Unidades', value: '47' },
-        { label: 'Receita', value: 'R$ 1.128' }
-      ],
-      takeaway: 'Você decide o próximo passo olhando para o que já acontece no balcão.'
-    }
-  };
-
-  $: selectedDemo = demoQuestions[activeDemo];
 
   let cadastroHref = '/cadastro';
 
@@ -212,8 +178,12 @@
     initMarketingAnalytics();
     trackViewContent();
     cadastroHref = getSignupHref();
+    const stopSectionViews = observeSectionViews(document, { page: 'home' });
 
-    return () => window.removeEventListener('keydown', handleKeydown);
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+      stopSectionViews();
+    };
   });
 
   $: basePrice = PLANS.pdv.price.toFixed(0);
@@ -238,58 +208,75 @@
   <AiReferralBanner />
 
   <main>
-    <section class="hero" aria-labelledby="hero-title">
+    <section class="hero" aria-labelledby="hero-title" data-track-section="hero">
       <div class="hero-inner">
         <div class="hero-copy">
-          <p class="hero-kicker">O gerente da sua loja</p>
           <h1 id="hero-title">
-            Sua lanchonete vendeu bem. Mas sobrou dinheiro?
-            <span>O Zelo te mostra.</span>
+            Você vende.
+            <span>O Zelo cuida do resto.</span>
           </h1>
           <p class="hero-lead">
-            Registre o pedido em 3 toques, largue o caderninho do fiado e veja o lucro do dia sem fechar o caixa no papel.
+            PDV pra bar, lanchonete, restaurante, delivery e quem mais vende no balcão. Registra a venda, controla o fiado e mostra quanto sobrou no fim do dia.
           </p>
           <div class="hero-actions">
-            <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('hero')}>Testar 14 dias grátis (sem cartão)</a>
-            <a href="#zelinho" class="secondary-cta">Ver o Zelo funcionando <ArrowRight class="size-4" aria-hidden="true" /></a>
+            <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('hero')}>Testar 14 dias grátis</a>
+            <p class="hero-price">Sem cartão pra testar. Depois, R$ {basePrice}/mês.</p>
+            <a href="#features" class="secondary-cta">Ver o sistema por dentro <ArrowRight class="size-4" aria-hidden="true" /></a>
           </div>
         </div>
 
-        <div class="hero-visual" aria-label="Zelinho apresentando os números da loja">
+        <!-- Celular: tela real do sistema no lugar do mascote, com um número legível. -->
+        <figure class="hero-proof-mobile">
+          <img
+            src="/images/screenshots/financial-kpis-crop.webp"
+            alt="Tela do Zelo PDV mostrando receita líquida de R$ 21.373,50 nos últimos 30 dias, com vendas brutas, despesas e quantidade de vendas."
+            width="806"
+            height="188"
+            loading="eager"
+          />
+          <figcaption>Tela real do sistema: o que entrou e o que sobrou no mês.</figcaption>
+        </figure>
+
+        <figure class="hero-shot">
           <picture>
-            <source srcset="/images/landing/zelinho-hero-transparent.webp" type="image/webp" />
+            <source
+              type="image/webp"
+              srcset="/images/screenshots/dashboard-desktop-800.webp 800w, /images/screenshots/dashboard-desktop-1600.webp 1600w"
+              sizes="(min-width: 1600px) 40vw, 42vw"
+            />
             <img
-              src="/images/landing/zelinho-hero-transparent.svg"
-              alt="Zelinho apresentando um painel com vendas, lucro, pedidos, Pix, ticket médio e estoque."
-              width="693"
-              height="495"
+              src="/images/screenshots/dashboard-desktop.png"
+              alt="Frente de caixa do Zelo PDV com uma comanda aberta"
+              width="1600"
+              height="1000"
               loading="eager"
               fetchpriority="high"
+              decoding="async"
             />
           </picture>
-        </div>
+        </figure>
       </div>
 
       <div class="hero-facts" aria-label="O que você encontra no teste">
         <article>
           <span class="fact-icon"><Check class="size-5" aria-hidden="true" /></span>
           <div>
-            <strong>14 dias para testar</strong>
-            <p>Sem cartão e sem cobrança automática.</p>
+            <strong>Sem instalar nada.</strong>
+            <p>Abre no navegador do celular, tablet ou computador.</p>
           </div>
         </article>
         <article>
           <span class="fact-icon"><CloudOff class="size-5" aria-hidden="true" /></span>
           <div>
-            <strong>A internet caiu. O balcão não.</strong>
-            <p>Venda offline e sincronize quando voltar.</p>
+            <strong>Sem contrato.</strong>
+            <p>Pagou o mês, usou o mês. Cancela quando quiser.</p>
           </div>
         </article>
         <article>
           <span class="fact-icon"><MessageCircle class="size-5" aria-hidden="true" /></span>
           <div>
-            <strong>WhatsApp com gente de verdade</strong>
-            <p>Ajuda de quem constrói o produto.</p>
+            <strong>Sem internet? Sem drama.</strong>
+            <p>Vende offline e sincroniza quando voltar.</p>
           </div>
         </article>
       </div>
@@ -297,164 +284,76 @@
 
     <OperationalProofSection onPreview={(image, trigger) => openLightbox(image, trigger)} />
 
-    <section id="features" class="features-section" aria-labelledby="features-title">
+    <section id="features" class="features-section" data-track-section="features" aria-labelledby="features-title">
       <div class="section-shell">
         <div class="section-heading">
-          <h2 id="features-title">Menos papel no balcão. Mais clareza no fim do dia.</h2>
-          <p>O mesmo sistema acompanha o pedido, o fiado, as despesas e o fechamento.</p>
+          <h2 id="features-title">O que o Zelo faz por você no dia a dia</h2>
+          <p>Do primeiro pedido ao fechamento do caixa, tudo no mesmo lugar.</p>
         </div>
 
         <div class="feature-layout">
           <article class="feature-main">
             <div class="feature-copy">
               <span class="feature-icon"><ShoppingBasket class="size-6" aria-hidden="true" /></span>
-              <h3>Lance o pedido antes da fila crescer.</h3>
-              <p>Toque, adicione e finalize em 3 toques. Envie o comprovante no WhatsApp e atenda o próximo cliente.</p>
+              <h3>Pedido em 3 toques.</h3>
+              <p>Toca, adiciona, finaliza. Manda o comprovante no WhatsApp e já atende o próximo. A fila anda.</p>
             </div>
-            <button
-              type="button"
-              class="product-shot"
-              aria-label="Ampliar tela da frente de caixa"
-              on:click={(event) => openLightbox('/images/screenshots/dashboard-desktop.png', event.currentTarget)}
-            >
-              <picture>
-                <source
-                  type="image/webp"
-                  srcset="/images/screenshots/dashboard-desktop-800.webp 800w, /images/screenshots/dashboard-desktop-1600.webp 1600w"
-                  sizes="(max-width: 900px) calc(100vw - 2rem), 60vw"
-                />
-                <img
-                  src="/images/screenshots/dashboard-desktop.png"
-                  alt="Frente de caixa do Zelo PDV com produtos e comanda."
-                  width="1918"
-                  height="906"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </picture>
-            </button>
+            <div class="phone-stage">
+              <PhoneShot
+                src="/images/screenshots/product-comanda.webp"
+                alt="Comanda do Zelo PDV com quatro itens e total de R$ 48,50, pronta pra receber o pagamento."
+              />
+            </div>
           </article>
 
           <div class="feature-side">
             <article class="offline-feature">
               <span class="feature-icon feature-icon-inverse"><CloudOff class="size-6" aria-hidden="true" /></span>
-              <h3>A operadora caiu, mas o balcão não para.</h3>
-              <p>O Zelo vende offline e sobe tudo para a nuvem sozinho quando a internet volta.</p>
+              <h3>A internet caiu? A venda não.</h3>
+              <p>O Zelo continua vendendo sem conexão e sobe tudo pra nuvem quando a internet volta.</p>
             </article>
 
             <article class="fiado-feature">
               <div class="feature-copy compact-copy">
                 <span class="feature-icon"><Wallet class="size-6" aria-hidden="true" /></span>
-                <h3>Jogue fora o caderninho do fiado.</h3>
-                <p>Coloque limite por cliente, veja o histórico e cobre com a conta na mão.</p>
+                <h3>Aposenta o caderninho do fiado.</h3>
+                <p>Limite por cliente, histórico de compras e a conta certinha na hora de cobrar.</p>
               </div>
-              <button
-                type="button"
-                class="product-shot"
-                aria-label="Ampliar tela de controle de fiado"
-                on:click={(event) => openLightbox('/images/screenshots/customers-screen.png', event.currentTarget)}
-              >
-                <picture>
-                  <source
-                    type="image/webp"
-                    srcset="/images/screenshots/customers-screen-800.webp 800w, /images/screenshots/customers-screen-1600.webp 1600w"
-                    sizes="(max-width: 900px) calc(100vw - 2rem), 50vw"
-                  />
-                  <img
-                    src="/images/screenshots/customers-screen.png"
-                    alt="Controle de clientes e fiado no Zelo PDV."
-                    width="1696"
-                    height="699"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </picture>
-              </button>
+              <div class="phone-stage">
+                <PhoneShot
+                  src="/images/screenshots/product-fiado.webp"
+                  alt="Ficha de cliente do Zelo PDV mostrando fiado em aberto de R$ 847,00."
+                />
+              </div>
             </article>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="zelinho" class="zelinho-section" aria-labelledby="zelinho-title">
+    <section id="zelinho" class="zelinho-section" data-track-section="zelinho" aria-labelledby="zelinho-title">
       <div class="section-shell zelinho-layout">
         <div>
-          <h2 id="zelinho-title">Pergunte pelo caixa. O Zelinho organiza a resposta.</h2>
+          <h2 id="zelinho-title">Pergunta pro caixa. O Zelinho responde.</h2>
           <p>
-            Em vez de procurar em várias telas, faça uma pergunta direta. O Zelinho lê os lançamentos do seu próprio caixa e devolve o que importa para a decisão de hoje.
+            Nada de caçar número em cinco telas. Pergunta do seu jeito e o Zelinho lê as vendas do seu caixa e responde em segundos.
           </p>
         </div>
-        <div class="zelinho-demo">
-          <div class="demo-heading">
-            <p class="demo-label">Leitura do caixa</p>
-            <span class="demo-status"><span aria-hidden="true"></span>Dados ilustrativos</span>
-          </div>
-          <div class="question-list" role="tablist" aria-label="Perguntas para o Zelinho">
-            <button
-              type="button"
-              class:active={activeDemo === 'profit'}
-              role="tab"
-              aria-selected={activeDemo === 'profit'}
-              aria-controls="zelinho-result"
-              on:click={() => activeDemo = 'profit'}
-            >
-              <MessageCircle class="size-5" aria-hidden="true" />
-              <span>Quanto sobrou hoje?</span>
-            </button>
-            <button
-              type="button"
-              class:active={activeDemo === 'credit'}
-              role="tab"
-              aria-selected={activeDemo === 'credit'}
-              aria-controls="zelinho-result"
-              on:click={() => activeDemo = 'credit'}
-            >
-              <MessageCircle class="size-5" aria-hidden="true" />
-              <span>Tem fiado em aberto?</span>
-            </button>
-            <button
-              type="button"
-              class:active={activeDemo === 'products'}
-              role="tab"
-              aria-selected={activeDemo === 'products'}
-              aria-controls="zelinho-result"
-              on:click={() => activeDemo = 'products'}
-            >
-              <MessageCircle class="size-5" aria-hidden="true" />
-              <span>Qual produto vendeu mais?</span>
-            </button>
-          </div>
-
-          <div class="demo-query">
-            <span>Pergunta selecionada</span>
-            <strong>{selectedDemo.question}</strong>
-          </div>
-          <div id="zelinho-result" class="demo-answer" role="tabpanel" aria-live="polite">
-            <div class="demo-answer-heading">
-              <div>
-                <span>Fechamento rápido</span>
-                <strong>O que o caixa está dizendo</strong>
-              </div>
-              <span class="demo-result-state">agora</span>
-            </div>
-            <p>{selectedDemo.answer}</p>
-            <div class="demo-numbers">
-              {#each selectedDemo.numbers as number}
-                <div>
-                  <span>{number.label}</span>
-                  <strong>{number.value}</strong>
-                </div>
-              {/each}
-            </div>
-            <p class="demo-takeaway">{selectedDemo.takeaway}</p>
-          </div>
+        <div class="zelinho-media">
+          <PhoneShot
+            src="/images/screenshots/product-zelinho.webp"
+            alt="Conversa com o Zelinho: pergunta 'Quanto sobrou este mês?' respondida com R$ 16.589,00, faturamento e despesas do período."
+          />
         </div>
       </div>
     </section>
 
-    <section class="audience-section" aria-labelledby="audience-title">
+    <section class="audience-section" data-track-section="audience" aria-labelledby="audience-title">
       <div class="section-shell audience-layout">
-        <h2 id="audience-title">Feito para quem vive o balcão.</h2>
+        <div class="audience-heading">
+          <h2 id="audience-title">Pra quem vive o balcão</h2>
+          <p class="audience-lead">Do bar ao delivery, do MEI ao restaurante com salão.</p>
+        </div>
         <nav class="audience-links" aria-label="Páginas por tipo de negócio">
           <a href="/para-lanchonetes">Lanchonetes</a>
           <a href="/para-restaurantes">Restaurantes</a>
@@ -465,11 +364,11 @@
       </div>
     </section>
 
-    <section id="pricing" class="pricing-section" aria-labelledby="pricing-title">
+    <section id="pricing" class="pricing-section" data-track-section="pricing" aria-labelledby="pricing-title">
       <div class="section-shell">
         <div class="section-heading pricing-heading">
-          <h2 id="pricing-title">Três jeitos de começar.</h2>
-          <p>Escolha o que a sua operação usa hoje. Acrescente uma extensão quando precisar.</p>
+          <h2 id="pricing-title">Preço de gente, sem pegadinha.</h2>
+          <p>Começa com o PDV. Precisa de mesa ou cardápio online? Liga a extensão quando fizer sentido.</p>
         </div>
 
         <div class="pricing-grid">
@@ -482,8 +381,10 @@
             <p class="plan-price"><span>R$</span><strong>{basePrice}</strong><span>/mês</span></p>
             <ul>
               <li><Check class="size-4" aria-hidden="true" />Vendas ilimitadas</li>
-              <li><Check class="size-4" aria-hidden="true" />Celular, tablet e computador</li>
-              <li><Check class="size-4" aria-hidden="true" />Suporte no WhatsApp</li>
+              <li><Check class="size-4" aria-hidden="true" />Controle de estoque</li>
+              <li><Check class="size-4" aria-hidden="true" />Produtos e precificação</li>
+              <li><Check class="size-4" aria-hidden="true" />Relatórios completos</li>
+              <li><Check class="size-4" aria-hidden="true" />Zelinho Gerente (IA)</li>
             </ul>
           </article>
 
@@ -519,76 +420,76 @@
         </div>
 
         <div class="pricing-action">
-          <p><strong>R$ {basePrice} por mês.</strong> Vendas ilimitadas nos dispositivos do seu negócio. Cancele quando quiser.</p>
+          <p><strong>R$ {basePrice} por mês</strong>, vendas ilimitadas. Sem taxa de implantação, sem fidelidade.</p>
           <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('pricing')}>Testar 14 dias grátis (sem cartão)</a>
         </div>
       </div>
     </section>
 
-    <section id="faq" class="faq-section" aria-labelledby="faq-title">
+    <section id="faq" class="faq-section" data-track-section="faq" aria-labelledby="faq-title">
       <div class="faq-shell">
         <div class="faq-intro">
-          <h2 id="faq-title">Antes de começar</h2>
-          <p>As respostas diretas para as dúvidas que aparecem primeiro.</p>
+          <h2 id="faq-title">Perguntas de quem tá chegando</h2>
+          <p>Direto ao ponto, do jeito que você perguntaria no balcão.</p>
         </div>
 
         <div class="faq-list">
           <details>
             <summary>
-              <span>Preciso de computador potente?</span>
+              <span>Preciso emitir nota fiscal pra usar?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>Não. O Zelo roda direto no navegador e funciona em computadores básicos, celulares e tablets.</p>
+            <p>Não. O Zelo organiza suas vendas, o fiado e o caixa com ou sem nota. Ele emite recibo e comprovante de venda. A emissão de NF-e está a caminho, e quando chegar é só ativar, sem trocar de sistema.</p>
           </details>
 
           <details>
             <summary>
-              <span>Como funcionam os 14 dias grátis?</span>
+              <span>Como funcionam os {TRIAL_DAYS} dias grátis?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>Você cria a conta sem cadastrar cartão. A assinatura só começa se você escolher continuar depois do teste.</p>
+            <p>Cria a conta, usa tudo por {TRIAL_DAYS} dias e não cadastra cartão. Só paga se decidir continuar.</p>
           </details>
 
           <details>
             <summary>
-              <span>O sistema funciona sem internet?</span>
+              <span>Funciona sem internet?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>Sim. As vendas ficam salvas no dispositivo e sobem para a nuvem quando a conexão voltar.</p>
+            <p>Funciona. As vendas ficam salvas no aparelho e sobem pra nuvem quando a conexão voltar.</p>
           </details>
 
           <details>
             <summary>
-              <span>O Zelo PDV emite Nota Fiscal?</span>
+              <span>Preciso de computador bom?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>O Zelo emite recibos e comprovantes. Não emitimos NFC-e. Para emissão fiscal em cada venda, use um emissor dedicado junto com o Zelo.</p>
+            <p>Não. Roda no navegador de qualquer celular, tablet ou computador simples.</p>
           </details>
 
           <details>
             <summary>
-              <span>Tem suporte se eu tiver dúvidas?</span>
+              <span>Consigo usar em mais de um aparelho?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>Sim. Você fala com a equipe pelo WhatsApp em horário comercial. A gente também ajuda a configurar o sistema.</p>
+            <p>Sim. Usa a mesma conta no celular, no tablet e no computador, sempre sincronizado.</p>
           </details>
 
           <details>
             <summary>
-              <span>Consigo usar em mais de um dispositivo?</span>
+              <span>E se eu travar em alguma coisa?</span>
               <ChevronDown class="size-5" aria-hidden="true" />
             </summary>
-            <p>Sim. Celular, tablet e computador podem usar a mesma conta e ficam sincronizados.</p>
+            <p>Chama no WhatsApp. Quem responde é quem constrói o Zelo, não um robô de atendimento.</p>
           </details>
         </div>
       </div>
     </section>
 
-    <section class="final-cta" aria-labelledby="final-cta-title">
+    <section class="final-cta" data-track-section="final_cta" aria-labelledby="final-cta-title">
       <div class="final-cta-inner">
         <div>
-          <h2 id="final-cta-title">Amanhã você pode fechar o caixa sem adivinhar.</h2>
-          <p>Comece sem cartão. Se não fizer sentido, você não paga nada.</p>
+          <h2 id="final-cta-title">Amanhã tem movimento. Testa hoje.</h2>
+          <p>14 dias grátis, sem cartão. Não gostou, não paga nada.</p>
         </div>
         <a href={cadastroHref} class="primary-cta" on:click={() => trackSignupCta('final')}>Testar 14 dias grátis (sem cartão)</a>
       </div>
@@ -669,19 +570,6 @@
     padding-block: 2rem;
   }
 
-  .hero-kicker {
-    display: inline-flex;
-    align-items: center;
-    min-height: 2rem;
-    margin: 0 0 1.5rem;
-    padding-inline: 0.9rem;
-    border: 1px solid var(--marketing-dark-border);
-    border-radius: 999px;
-    color: var(--link);
-    font-size: 0.875rem;
-    font-weight: 700;
-  }
-
   .hero h1 {
     max-width: 16ch;
     margin: 0;
@@ -713,6 +601,18 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.85rem 1.25rem;
+  }
+
+  .hero-price {
+    order: 3;
+    flex-basis: 100%;
+    margin: 0;
+    color: var(--marketing-dark-muted);
+    font-size: 0.875rem;
+  }
+
+  .hero-proof-mobile {
+    display: none;
   }
 
   .primary-cta {
@@ -760,54 +660,21 @@
     transform: translateX(2px);
   }
 
-  .hero-visual {
+  .hero-shot {
     position: relative;
-    isolation: isolate;
+    z-index: 2;
     min-width: 0;
-    margin-right: clamp(-4rem, -3vw, -1.5rem);
+    margin: 0;
   }
 
-  .hero-visual::before {
-    position: absolute;
-    z-index: -1;
-    inset: 12% 0 5% 12%;
-    border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
-    border-radius: 50%;
-    background: radial-gradient(
-      circle,
-      color-mix(in srgb, var(--primary) 28%, transparent) 0,
-      color-mix(in srgb, var(--primary) 8%, transparent) 46%,
-      transparent 72%
-    );
-    filter: blur(1rem);
-    content: "";
-  }
-
-  .hero-visual::after {
-    position: absolute;
-    z-index: -1;
-    right: 9%;
-    bottom: 0;
-    left: 4%;
-    height: 13%;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--primary) 22%, transparent);
-    filter: blur(1.5rem);
-    content: "";
-  }
-
-  .hero-visual picture {
-    display: block;
-    width: clamp(40rem, 52vw, 56rem);
-    max-width: none;
-    margin-left: clamp(-2.5rem, -2vw, -1rem);
-  }
-
-  .hero-visual img {
+  .hero-shot img {
     display: block;
     width: 100%;
+    max-width: 100%;
     height: auto;
-    filter: drop-shadow(0 2rem 2.5rem color-mix(in srgb, var(--marketing-dark) 68%, transparent));
+    border: 1px solid var(--marketing-dark-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 2rem 3rem -1.5rem color-mix(in srgb, var(--marketing-dark) 70%, transparent);
   }
 
   .hero-facts {
@@ -880,29 +747,6 @@
     text-wrap: pretty;
   }
 
-  .product-shot {
-    position: relative;
-    display: block;
-    width: 100%;
-    padding: 0;
-    overflow: hidden;
-    border: 1px solid var(--marketing-line);
-    border-radius: 0.75rem;
-    background: var(--marketing-dark-soft);
-    cursor: zoom-in;
-  }
-
-  .product-shot img {
-    display: block;
-    width: 100%;
-    height: auto;
-    transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .product-shot:hover img {
-    transform: scale(1.012);
-  }
-
   .features-section {
     padding: clamp(5.5rem, 8vw, 8rem) 0;
     border-top: 1px solid var(--marketing-line);
@@ -948,17 +792,23 @@
     flex-direction: column;
   }
 
-  .feature-main .product-shot,
-  .fiado-feature .product-shot {
+  .phone-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-top: auto;
-    border: 0;
     border-top: 1px solid var(--marketing-line);
-    border-radius: 0;
+    background:
+      radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 60%),
+      var(--marketing-dark);
   }
 
-  .feature-main .product-shot img {
-    width: 112%;
-    max-width: none;
+  .feature-main .phone-stage {
+    min-height: 22rem;
+  }
+
+  .fiado-feature .phone-stage {
+    min-height: 20rem;
   }
 
   .feature-copy {
@@ -1058,187 +908,8 @@
     line-height: 1.7;
   }
 
-  .zelinho-demo {
+  .zelinho-media {
     min-width: 0;
-  }
-
-  .demo-heading {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .demo-label {
-    margin: 0;
-    color: var(--marketing-dark-muted);
-    font-size: 0.625rem;
-    font-weight: 650;
-  }
-
-  .demo-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--marketing-dark-muted);
-    font-size: 0.625rem;
-  }
-
-  .demo-status span {
-    width: 0.4rem;
-    height: 0.4rem;
-    border-radius: 50%;
-    background: var(--primary);
-  }
-
-  .question-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 1.25rem;
-  }
-
-  .question-list button {
-    display: flex;
-    align-items: center;
-    flex: 1 1 10.5rem;
-    gap: 0.65rem;
-    min-height: 2.75rem;
-    padding: 0.7rem 0.9rem;
-    border: 1px solid var(--marketing-dark-border);
-    border-radius: 0.5rem;
-    background: transparent;
-    color: var(--text-main);
-    font-size: 0.875rem;
-    font-weight: 650;
-    text-align: left;
-    cursor: pointer;
-    transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
-  }
-
-  .question-list button:hover,
-  .question-list button.active {
-    border-color: var(--primary);
-    background: color-mix(in srgb, var(--primary) 10%, transparent);
-  }
-
-  .question-list button :global(svg) {
-    flex: 0 0 auto;
-    color: var(--link);
-  }
-
-  .question-list button.active :global(svg) {
-    color: var(--primary);
-  }
-
-  .demo-query {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    margin: 1.75rem 0 0.75rem;
-    padding: 0 0 0.75rem;
-    border-bottom: 1px solid var(--marketing-dark-border);
-  }
-
-  .demo-query span {
-    color: var(--marketing-dark-muted);
-    font-size: 0.625rem;
-  }
-
-  .demo-query strong {
-    color: var(--text-main);
-    font-size: 0.875rem;
-    text-align: right;
-  }
-
-  .demo-answer {
-    padding: 1.35rem 1.5rem 1.5rem;
-    border: 1px solid var(--marketing-dark-border);
-    border-radius: 0.75rem;
-    background: var(--marketing-dark);
-  }
-
-  .demo-answer-heading {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .demo-answer-heading strong,
-  .demo-answer-heading span {
-    display: block;
-  }
-
-  .demo-answer-heading strong {
-    margin-top: 0.3rem;
-    color: var(--text-main);
-    font-size: 1rem;
-  }
-
-  .demo-answer-heading > div > span {
-    color: var(--marketing-dark-muted);
-    font-size: 0.625rem;
-  }
-
-  .demo-result-state {
-    flex: 0 0 auto;
-    color: var(--link);
-    font-size: 0.625rem;
-  }
-
-  .demo-answer > p {
-    margin: 1.15rem 0 0;
-    color: var(--marketing-dark-muted);
-    font-size: 0.875rem;
-    line-height: 1.6;
-  }
-
-  .demo-numbers {
-    display: grid;
-    gap: 0;
-    margin-top: 1.25rem;
-    padding: 0.25rem 0;
-    border-top: 1px solid var(--marketing-dark-border);
-    border-bottom: 1px solid var(--marketing-dark-border);
-  }
-
-  .demo-numbers div {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    min-width: 0;
-    padding: 0.75rem 0;
-  }
-
-  .demo-numbers div + div {
-    border-top: 1px solid var(--marketing-dark-border);
-  }
-
-  .demo-numbers span,
-  .demo-numbers strong {
-    display: block;
-  }
-
-  .demo-numbers span {
-    color: var(--marketing-dark-muted);
-    font-size: 0.875rem;
-  }
-
-  .demo-numbers strong {
-    overflow-wrap: anywhere;
-    color: var(--text-main);
-    font-size: 1rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .demo-answer .demo-takeaway {
-    margin-top: 1.15rem;
-    color: var(--text-main);
-    font-size: 0.875rem;
-    font-weight: 650;
   }
 
   .audience-section {
@@ -1260,6 +931,12 @@
     font-size: 1.25rem;
     font-weight: 750;
     letter-spacing: -0.02em;
+  }
+
+  .audience-lead {
+    margin: 0.5rem 0 0;
+    color: var(--marketing-ink-soft);
+    font-size: 0.875rem;
   }
 
   .audience-links {
@@ -1593,10 +1270,6 @@
       font-size: clamp(2.5rem, 5vw, 3.5rem);
     }
 
-    .hero-visual picture {
-      width: 37rem;
-    }
-
     .feature-layout {
       grid-template-columns: 1fr;
     }
@@ -1624,7 +1297,8 @@
     }
 
     .hero {
-      padding-top: 6.25rem;
+      min-height: 0;
+      padding-top: 5.5rem;
     }
 
     .hero-inner {
@@ -1637,21 +1311,16 @@
       padding-block: 1.5rem 0;
     }
 
-    .hero-kicker {
-      margin-bottom: 1rem;
-      font-size: 0.875rem;
-    }
-
     .hero h1 {
       max-width: 19ch;
-      font-size: clamp(2.125rem, 10.5vw, 3.25rem);
+      font-size: clamp(2rem, 8.6vw, 3.25rem);
       letter-spacing: -0.035em;
       line-height: 1.03;
     }
 
     .hero-lead {
-      margin-block: 1.25rem 1.5rem;
-      font-size: 1.125rem;
+      margin-block: 1rem 1.25rem;
+      font-size: 1rem;
       line-height: 1.6;
     }
 
@@ -1670,19 +1339,33 @@
       width: 100%;
     }
 
-    .hero-visual {
-      width: calc(100% + 2rem);
-      margin: 1.25rem -1rem 0;
+    .hero-shot {
+      display: none;
     }
 
-    .hero-visual::before {
-      inset: 5% 2% 2% 6%;
-      filter: blur(0.75rem);
+    .hero-price {
+      order: 0;
+      text-align: center;
     }
 
-    .hero-visual picture {
+    .hero-proof-mobile {
+      display: block;
+      margin: 1.75rem 0 0;
+    }
+
+    .hero-proof-mobile img {
+      display: block;
       width: 100%;
-      margin-left: 0;
+      height: auto;
+      border: 1px solid var(--marketing-dark-border);
+      border-radius: 0.75rem;
+    }
+
+    .hero-proof-mobile figcaption {
+      margin-top: 0.6rem;
+      color: var(--marketing-dark-muted);
+      font-size: 0.8125rem;
+      text-align: center;
     }
 
     .hero-facts {
@@ -1733,19 +1416,6 @@
       gap: 3rem;
     }
 
-    .question-list button {
-      flex-basis: 12rem;
-      font-size: 1rem;
-    }
-
-    .demo-answer {
-      padding: 1.25rem;
-    }
-
-    .demo-numbers {
-      margin-top: 1rem;
-    }
-
     .audience-layout {
       align-items: flex-start;
       flex-direction: column;
@@ -1787,23 +1457,11 @@
       max-width: 16ch;
       font-size: clamp(5rem, 5.3vw, 5.5rem);
     }
-
-    .hero-visual {
-      margin-right: clamp(-8rem, -6vw, -3rem);
-    }
-
-    .hero-visual picture {
-      margin-left: clamp(-4rem, -3vw, -1rem);
-    }
   }
 
   @media (prefers-reduced-motion: no-preference) {
     .hero-copy {
       animation: hero-copy-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-
-    .hero-visual {
-      animation: hero-visual-in 820ms 80ms cubic-bezier(0.16, 1, 0.3, 1) both;
     }
   }
 
@@ -1818,27 +1476,14 @@
     }
   }
 
-  @keyframes hero-visual-in {
-    from {
-      opacity: 0;
-      transform: translateX(1.5rem);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .primary-cta,
-    .product-shot img,
     .faq-list summary :global(svg) {
       transition: none;
     }
 
     .primary-cta:hover,
-    .primary-cta:active,
-    .product-shot:hover img {
+    .primary-cta:active {
       transform: none;
     }
   }

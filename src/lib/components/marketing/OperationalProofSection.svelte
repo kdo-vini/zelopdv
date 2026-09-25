@@ -45,15 +45,14 @@
   }
 </script>
 
-<section id="operational-proof" class="operational-proof" aria-labelledby="operational-proof-title" data-proof-ready={isHydrated ? 'true' : 'false'}>
+<section id="operational-proof" class="operational-proof" data-track-section="proof" aria-labelledby="operational-proof-title" data-proof-ready={isHydrated ? 'true' : 'false'}>
   <div class="proof-shell">
     <div class="proof-heading">
       <span class="proof-kicker">Tela real do sistema</span>
-      <h2 id="operational-proof-title">Veja o que realmente sobrou no fim do dia.</h2>
+      <h2 id="operational-proof-title">Vendeu bem. Mas quanto sobrou?</h2>
       <p>
-        Vender R$ 3.000 no dia não quer dizer nada. O que importa é o que sobrou depois do aluguel, da luz e das retiradas. O Zelo faz essa conta para você.
+        Faturar R$ 3 mil no dia é bonito no papel. O que importa é o que fica depois do aluguel, da luz e das retiradas. O Zelo faz essa conta sozinho.
       </p>
-      <p class="proof-subcopy">O sistema que aparece aqui é o mesmo que organiza o caixa, mostra o que entrou e calcula o que realmente sobrou.</p>
     </div>
 
     <div class="proof-grid">
@@ -127,9 +126,9 @@
     display: inline-block;
     margin-bottom: 0.85rem;
     color: var(--primary);
-    font-size: 0.75rem;
+    font-size: 0.625rem;
     font-weight: 800;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
   }
 
@@ -150,11 +149,6 @@
     font-size: 1.125rem;
     line-height: 1.7;
     text-wrap: pretty;
-  }
-
-  .proof-subcopy {
-    margin-top: 0.75rem !important;
-    font-size: 1rem !important;
   }
 
   .proof-grid {

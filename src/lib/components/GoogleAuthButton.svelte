@@ -4,8 +4,52 @@
   import { addToast } from '$lib/stores/ui';
   import { capturePostHogEvent } from '$lib/posthogClient';
   import { mapLoginErrorToCode } from '$lib/loginTelemetry';
+  import { onMount } from 'svelte';
+  import {
+    IN_APP_LABELS,
+    buildAndroidBrowserIntent,
+    detectInAppBrowser,
+    isAndroidUserAgent,
+  } from '$lib/inAppBrowser';
+
+  // `top`: botão do Google + divisor acima do formulário (navegador normal).
+  // `bottom`: no navegador embutido, uma linha discreta abaixo do formulário.
+  export let placement = 'top';
 
   let loading = false;
+  // O Google recusa OAuth dentro do navegador do Instagram/Facebook. Nesses
+  // casos trocamos o botão por um aviso: abrir no navegador ou seguir por e-mail.
+  let inAppBrowser = null;
+  let openBrowserHref = '';
+  let linkCopied = false;
+
+  onMount(() => {
+    const ua = navigator.userAgent;
+    inAppBrowser = detectInAppBrowser(ua);
+    if (!inAppBrowser || placement !== 'bottom') return;
+    if (isAndroidUserAgent(ua)) openBrowserHref = buildAndroidBrowserIntent(window.location.href);
+    void capturePostHogEvent('inapp_browser_detected', {
+      app: inAppBrowser,
+      surface: window.location.pathname,
+    });
+  });
+
+  function trackOpenBrowser() {
+    void capturePostHogEvent('inapp_open_browser_clicked', {
+      app: inAppBrowser,
+      surface: window.location.pathname,
+    });
+  }
+
+  async function copyLink() {
+    trackOpenBrowser();
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      linkCopied = true;
+    } catch {
+      addToast('Não foi possível copiar. Use o menu ••• e escolha abrir no navegador.', 'error');
+    }
+  }
 
   async function handleGoogleAuth() {
     if (loading || !supabase) return;
@@ -42,6 +86,20 @@
   }
 </script>
 
+{#if inAppBrowser}
+{#if placement === 'bottom'}
+<p class="inapp-note">
+  {#if openBrowserHref}
+    Prefere Google? <a class="inapp-link" href={openBrowserHref} on:click={trackOpenBrowser}>Abra no navegador</a>
+  {:else if linkCopied}
+    Link copiado. Cole no Safari para entrar com Google.
+  {:else}
+    Prefere Google? <button type="button" class="inapp-link" on:click={copyLink}>Copie o link e abra no Safari</button>
+  {/if}
+</p>
+{/if}
+{:else if placement === 'top'}
+<div>
 <button
   type="button"
   class="google-btn"
@@ -68,6 +126,9 @@
     <span>Continuar com Google</span>
   {/if}
 </button>
+<div class="auth-divider">ou continue com e-mail</div>
+</div>
+{/if}
 
 <style>
   .google-btn {
@@ -120,6 +181,26 @@
     border-radius: 50%;
     animation: google-spin 0.65s linear infinite;
     flex-shrink: 0;
+  }
+
+  .inapp-note {
+    margin: 1.5rem 0 0;
+    text-align: center;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  .inapp-link {
+    display: inline;
+    padding: 0;
+    font: inherit;
+    font-weight: 500;
+    color: var(--link);
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
   }
 
   @keyframes google-spin {

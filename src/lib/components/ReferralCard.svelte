@@ -163,7 +163,7 @@
               {#each rewards as reward}
                 <li>
                   <div>
-                    <strong>{reward.reward_type === 'credit' ? formatMoney(reward.amount_cents) : `${reward.addon_key || 'Add-on'} grátis`}</strong>
+                    <strong>{reward.reward_type === 'credit' ? formatMoney(reward.amount_cents) : `${reward.addon_key || 'Extensão'} grátis`}</strong>
                     <span>{reward.reason || 'Aguardando aplicação manual'}</span>
                   </div>
                   <span class="status">{formatRewardStatus(reward.status)}</span>

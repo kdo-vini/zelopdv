@@ -5,6 +5,7 @@
   import { logAuditAction } from '$lib/accessControl';
   import { formatStoredDateForPtBr, getLocalDateInputValue, localDateInputToIso } from '$lib/dateRange';
   import { addToast, confirmAction } from '$lib/stores/ui';
+  import { formatMoney } from '$lib/formatMoney';
   import * as Select from '$lib/components/ui/select/index.js';
 
   let uid = null;
@@ -64,7 +65,7 @@
     return acc;
   }, {});
   $: maiorCategoria = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0] || null;
-  $: maiorCategoriaPercent = totalDespesas > 0 && maiorCategoria ? ((maiorCategoria[1] / totalDespesas) * 100).toFixed(1) : '0';
+  $: maiorCategoriaPercent = totalDespesas > 0 && maiorCategoria ? ((maiorCategoria[1] / totalDespesas) * 100).toFixed(1).replace('.', ',') : '0';
 
   // Reset page when filters change
   $: if (searchQuery || filterCategory) currentPage = 1;
@@ -292,7 +293,7 @@
     <div class="rounded-lg p-4" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
       <p class="text-xs font-medium uppercase tracking-wider mb-1" style="color: var(--text-muted);">Total de Despesas Mês</p>
       <p class="text-xl font-bold" style="color: var(--accent);">
-        Total: R$ {totalDespesas.toFixed(2)}
+        Total: {formatMoney(totalDespesas)}
       </p>
     </div>
     <div class="rounded-lg p-4" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
@@ -302,7 +303,7 @@
           <span class="text-sm font-semibold" style="color: var(--text-main);">{maiorCategoria[0]}</span>
           <span class="text-xs" style="color: var(--text-muted);">({maiorCategoriaPercent}%)</span>
         </div>
-        <p class="text-lg font-bold" style="color: var(--accent);">R$ {maiorCategoria[1].toFixed(2)}</p>
+        <p class="text-lg font-bold" style="color: var(--accent);">{formatMoney(maiorCategoria[1])}</p>
       {:else}
         <p class="text-sm" style="color: var(--text-muted);">—</p>
       {/if}
@@ -446,7 +447,7 @@
                   {#if editingId === ex.id}
                     <input type="number" step="0.01" class="input-form text-sm h-8 w-24 text-right" bind:value={editData.amount} />
                   {:else}
-                    - R$ {Number(ex.amount).toFixed(2)}
+                    - {formatMoney(ex.amount)}
                   {/if}
                 </td>
                 <td class="px-4 py-3 text-right">

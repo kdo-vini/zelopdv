@@ -4,10 +4,10 @@ test.describe('Landing pública', () => {
   test('preserva o hero e mostra prova real do produto no primeiro ciclo', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: /sua lanchonete vendeu bem/i })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /veja o que realmente sobrou no fim do dia/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /você vende\. o zelo cuida do resto\./i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /vendeu bem\. mas quanto sobrou\?/i })).toBeVisible();
     await expect(page.getByRole('img', { name: /relatório financeiro do zelo pdv/i })).toBeVisible();
-    await expect(page.getByRole('region', { name: /veja o que realmente sobrou no fim do dia/i }).getByRole('link', { name: /ver cardápios publicados/i })).toHaveAttribute('href', 'https://menu.zelopdv.com.br/#empresas');
+    await expect(page.getByRole('region', { name: /vendeu bem\. mas quanto sobrou\?/i }).getByRole('link', { name: /ver cardápios publicados/i })).toHaveAttribute('href', 'https://menu.zelopdv.com.br/#empresas');
   });
 
   test('abre a tela real em lightbox e restaura o foco ao fechar', async ({ page }) => {
@@ -63,10 +63,10 @@ test.describe('Landing pública', () => {
     test(`mantém a prova comercial utilizável em ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: /sua lanchonete vendeu bem/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /você vende\. o zelo cuida do resto\./i })).toBeVisible();
       await page.locator('#operational-proof').scrollIntoViewIfNeeded();
-      await expect(page.getByRole('heading', { name: /veja o que realmente sobrou/i })).toBeVisible();
-      const publishedMenus = page.getByRole('region', { name: /veja o que realmente sobrou/i }).getByRole('link', { name: /ver cardápios publicados/i });
+      await expect(page.getByRole('heading', { name: /vendeu bem\. mas quanto sobrou\?/i })).toBeVisible();
+      const publishedMenus = page.getByRole('region', { name: /vendeu bem\. mas quanto sobrou\?/i }).getByRole('link', { name: /ver cardápios publicados/i });
       await expect(publishedMenus).toBeVisible();
       const ctaBox = await publishedMenus.boundingBox();
       expect(ctaBox?.width).toBeGreaterThanOrEqual(44);

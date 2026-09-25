@@ -69,15 +69,15 @@ export async function POST({ request, url, cookies }) {
     // Mesas só permitido em planos com PDV
     const hasMesasAddon = !!requestedAddons.mesas;
     if (hasMesasAddon && !isAddonAllowed(planTier, 'mesas')) {
-      return fail({ reason: WHY.ADDON_NOT_ALLOWED, error: `Plano ${planTier} não suporta o add-on Mesas.`, userId, planTier, addons: requestedAddons });
+      return fail({ reason: WHY.ADDON_NOT_ALLOWED, error: `Plano ${planTier} não suporta a extensão Mesas.`, userId, planTier, addons: requestedAddons });
     }
     const hasAcessosAddon = !!requestedAddons.acessos;
     if (hasAcessosAddon && !isAddonAllowed(planTier, 'acessos')) {
-      return fail({ reason: WHY.ADDON_NOT_ALLOWED, error: `Plano ${planTier} não suporta o add-on Controle de Acessos.`, userId, planTier, addons: requestedAddons });
+      return fail({ reason: WHY.ADDON_NOT_ALLOWED, error: `Plano ${planTier} não suporta a extensão Controle de Acessos.`, userId, planTier, addons: requestedAddons });
     }
     const hasMenuAddon = !!requestedAddons.menu;
     if (hasMenuAddon && !isAddonAllowed(planTier, 'menu')) {
-      return fail({ reason: WHY.ADDON_NOT_ALLOWED, error: `Plano ${planTier} não suporta o add-on ZeloMenu.`, userId, planTier, addons: requestedAddons });
+      return fail({ reason: WHY.ADDON_NOT_ALLOWED, error: `Plano ${planTier} não suporta a extensão ZeloMenu.`, userId, planTier, addons: requestedAddons });
     }
 
     // Nome de exibição e documento (se já houver) pra popular o customer Stripe.

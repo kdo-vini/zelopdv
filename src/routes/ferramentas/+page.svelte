@@ -5,7 +5,7 @@
     {
       title: "Precificação",
       description:
-        "Descubra o preço ideal por produto a partir do custo, markup e taxa de plataforma.",
+        "Cadastre custo e preço de venda e acompanhe CMV e margem de cada produto do seu catálogo.",
       href: "/ferramentas/precificacao",
       tag: "Grátis",
       available: true,

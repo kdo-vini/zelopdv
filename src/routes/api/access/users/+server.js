@@ -26,7 +26,7 @@ async function verifyAddonActive(userId) {
 export async function GET({ request }) {
   const user = await getAuthUser(request);
   if (!user) return json({ error: 'Não autorizado' }, { status: 401 });
-  if (!(await verifyAddonActive(user.id))) return json({ error: 'Add-on não ativo.' }, { status: 403 });
+  if (!(await verifyAddonActive(user.id))) return json({ error: 'Extensão não ativa.' }, { status: 403 });
 
   const [{ data: users }, { data: sub }] = await Promise.all([
     supabaseAdmin
@@ -59,7 +59,7 @@ export async function GET({ request }) {
 export async function POST({ request }) {
   const user = await getAuthUser(request);
   if (!user) return json({ error: 'Não autorizado' }, { status: 401 });
-  if (!(await verifyAddonActive(user.id))) return json({ error: 'Add-on não ativo.' }, { status: 403 });
+  if (!(await verifyAddonActive(user.id))) return json({ error: 'Extensão não ativa.' }, { status: 403 });
 
   const body = await request.json().catch(() => ({}));
   const email = (body.email || '').trim().toLowerCase();

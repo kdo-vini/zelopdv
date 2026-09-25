@@ -125,8 +125,7 @@
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  background-color: #9CA3AF;
-  /* Fallback or var */
+  background-color: var(--text-muted);
 }
 
 .btn-secondary {
@@ -146,7 +145,7 @@
   background-color: var(--accent);
   border-color: var(--accent);
   color: #fff;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 30%, transparent);
   font-weight: 600;
 }
 
@@ -380,9 +379,9 @@
   padding: 0.625rem 0.875rem;
   border-radius: 0.5rem;
   font-size: 0.8125rem;
-  color: #fca5a5;
-  background: rgba(127, 29, 29, 0.25);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--status-error-text);
+  background: var(--status-error-bg);
+  border: 1px solid var(--status-error-border);
   margin-bottom: 1rem;
 }
 
@@ -390,9 +389,9 @@
   padding: 0.625rem 0.875rem;
   border-radius: 0.5rem;
   font-size: 0.8125rem;
-  color: #86efac;
-  background: rgba(6, 78, 59, 0.25);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--status-success-text);
+  background: var(--status-success-bg);
+  border: 1px solid var(--status-success-border);
   margin-bottom: 1rem;
 }
 

@@ -27,6 +27,52 @@ describe('intelligence narratives', () => {
     }
   });
 
+  it('formats numeric weekday evidence as a PT-BR plural, not a digit', () => {
+    const below = templateNarrative({
+      type: 'REVENUE_BELOW_WEEKDAY_AVG',
+      evidence: { ...evidence, weekday: 4 },
+    });
+    expect(below).toContain('últimas 4 quintas (R$ 125,00)');
+    expect(below).not.toMatch(/quintas 4|4 4/);
+
+    const above = templateNarrative({
+      type: 'REVENUE_ABOVE_WEEKDAY_AVG',
+      evidence: { ...evidence, weekday: 4 },
+    });
+    expect(above).toContain('últimas 4 quintas (R$ 125,00)');
+    expect(above).not.toMatch(/quintas 4|4 4/);
+  });
+
+  it('formats Sunday (weekday 0, falsy) instead of falling back to "datas equivalentes"', () => {
+    const below = templateNarrative({
+      type: 'REVENUE_BELOW_WEEKDAY_AVG',
+      evidence: { ...evidence, weekday: 0 },
+    });
+    expect(below).toContain('domingos');
+    expect(below).not.toContain('datas equivalentes');
+
+    const above = templateNarrative({
+      type: 'REVENUE_ABOVE_WEEKDAY_AVG',
+      evidence: { ...evidence, weekday: 0 },
+    });
+    expect(above).toContain('domingos');
+    expect(above).not.toContain('datas equivalentes');
+  });
+
+  it('accepts legacy string weekday evidence for backward compatibility', () => {
+    const narrative = templateNarrative({
+      type: 'REVENUE_BELOW_WEEKDAY_AVG',
+      evidence: { ...evidence, weekday: 'terças' },
+    });
+    expect(narrative).toContain('terças');
+  });
+
+  it('falls back to "datas equivalentes" when weekday is missing', () => {
+    const { weekday, ...rest } = evidence;
+    const narrative = templateNarrative({ type: 'REVENUE_BELOW_WEEKDAY_AVG', evidence: rest });
+    expect(narrative).toContain('datas equivalentes');
+  });
+
   it('formats payment method IDs humanely in the payment-mix narrative', () => {
     const narrative = templateNarrative({
       type: 'PAYMENT_MIX_SHIFT',

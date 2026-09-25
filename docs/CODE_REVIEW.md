@@ -349,6 +349,12 @@ não migradas.
 - Impacto: onboarding mais lento, merges mais frágeis, maior chance de regressão lateral e mais dificuldade para agentes trabalharem em paralelo.
 - Ação recomendada: usar os trackers existentes e decompor por superfícies de domínio, não por "limpeza geral".
 
+### P3 — Valores em R$ com ponto decimal ("R$ 584.00") em telas operacionais
+
+- Evidência (2026-09-24, prints da conta demo): `/relatorios` mostra "R$ 584.00" e "R$ 26.55", `/gestao/pessoas` mostra o fiado como "R$ 1067.00" e `/gestao/despesas` mostra "Total: R$ 0.00", enquanto o resto do app usa "R$ 788,50". A causa é interpolação direta de `Number(x).toFixed(2)` (ex.: `const fmt = (n) => \`R$ ${Number(n || 0).toFixed(2)}\`` em `src/routes/relatorios/+page.svelte`). Há 106 ocorrências de `toFixed(2)` em 14 arquivos `.svelte`; as maiores são `src/routes/app/mesas/[id]/+page.svelte` (58), `src/routes/gestao/caixa/+page.svelte` (15) e `src/lib/components/modals/ModalPagamento.svelte` (14). Nem toda ocorrência é exibição: parte alimenta `<input>` e cálculo.
+- Impacto: inconsistência visível para o cliente, que também aparece nos prints usados na landing. Valores de 4 dígitos ficam sem separador de milhar ("R$ 1067.00").
+- Ação recomendada: trocar só os usos de exibição por `formatMoney`/`formatMoneyNumber` de `src/lib/formatMoney.js`, que já existe, tela por tela, começando por `/relatorios`, `/gestao/pessoas`, `/gestao/despesas` e `/gestao/caixa`. Manter `toFixed` onde o valor vai para `<input>`, payload ou cálculo.
+
 ### P3 — Prompt de suporte expunha preço antigo do add-on Acessos — ✅ RESOLVIDO (2026-06-01)
 
 - Evidência: [src/routes/api/chat/support/+server.js](/home/vinicius/code/zelopdv/src/routes/api/chat/support/+server.js:26), [src/routes/api/chat/support/+server.js](/home/vinicius/code/zelopdv/src/routes/api/chat/support/+server.js:137), catálogo atual em [src/lib/pricing.js](/home/vinicius/code/zelopdv/src/lib/pricing.js:68)

@@ -41,6 +41,187 @@ Migration `20260925140000_purge_zelochat_webhook_events_raw_retention.sql`
 ainda **não** aplicada em produção (PR only). Sem upgrade de compute e sem
 analytics em `payload`.
 
+## Sessão 2026-09-25 — Wizard de produto e taxa de app na planilha
+
+O formulário rápido saiu da planilha. O botão `+` agora abre
+`PricingWizardModal.svelte`, com a entrevista de 5 passos da calculadora antiga
+(o que, custos com ou sem ingredientes, extras e taxa de app, margem,
+resultado). A conta passou de markup sobre o custo para margem sobre a venda,
+em `src/lib/tools/pricingWizard.js`. A nova coluna `produtos.taxa_plataforma`
+(migration `20260925100000`, 0–35%) só é usada pela planilha: a margem e o
+preço sugerido descontam a taxa. Vendas, PDV e relatórios ignoram a coluna.
+A migration foi aplicada com `db query` mais `migration repair`, porque o
+banco compartilhado já tem a `20260925114017` do ZeloChat, que não está no
+repo. Por isso o `db push` fica bloqueado até alguém trazer essa migration
+para cá. A calculadora pública `/precificacao` não mudou e continua usando
+markup.
+
+## Sessão 2026-09-24 — Vídeos reais na home e tooling Remotion (não deployado)
+
+`tools/landing-video` é um projeto Remotion isolado (package.json próprio, fora
+do build/check/vitest do app) que monta clipes da landing a partir de
+gravações reais da conta demo: moldura de celular/navegador, câmera com zoom
+nos toques via `events.json`, ripple, legendas cinéticas, trechos parados
+acelerados e cartão final. `capture/` faz login na demo via `DEMO_EMAIL` /
+`DEMO_PASSWORD` do ambiente; `scripts/` tem render-all, probe e
+check-device-bounds; capturas brutas e node_modules ficam fora do git. Como
+regravar/renderizar está no README do tool.
+
+Na home, `ProductVideo.svelte` carrega o MP4 do formato do visitante (9:16 no
+celular, 16:9 no desktop) só quando o bloco chega perto da tela, pausa fora
+dela, respeita `prefers-reduced-motion` (fica o poster) e dispara
+`marketing_video_started {video, format, page}` uma vez por vídeo. Sai a demo
+clicável do Zelinho com dados ilustrativos; entram os vídeos reais de venda,
+fiado e Zelinho respondendo. `data-track-section` e os placements de CTA
+continuam intactos. Commits `c77a75d` e `4328ac1`. Nenhum dos dois foi
+deployado.
+
+## Sessão 2026-09-24 — Relatórios: corrida entre preset de período e caixa (não deployado)
+
+Trocar de preset (ou de caixa) enquanto o carregamento anterior ainda estava
+em voo deixava a última resposta a chegar vencer: dava para somar o bruto de
+"Últimos 30" com as despesas de "Hoje" e mostrar a receita líquida errada.
+Novo `createLatestOnly()` em `src/lib/utils/latestOnly.js` (testes em
+`tests/latestOnly.test.js`) guarda cada chamada por identidade;
+`periodoDespesas` passa a ser zerado junto com os demais estados, e o spinner
+do modo período passa a seguir `periodoLoading`. Commit `a67f995`, não
+deployado.
+
+## Sessão 2026-09-24 — R$ em formato pt-BR nas telas operacionais (não deployado)
+
+Troca de `toFixed(2)` ("R$ 21358.50") por `formatMoney`/`formatMoneyNumber`
+("R$ 21.358,50") e percentuais com vírgula — só na exibição; inputs, payload e
+exports PDF/Excel seguem como estavam. Cobre `BarChart`, `DonutChart`,
+`gestao/despesas`, `gestao/pessoas` e `relatorios` (`c00d203`), e
+`ModalPagamento`/`ModalSucesso` — subtotal, total, troco, taxa/líquido de
+plataforma, multi-pagamento e o botão "Confirmar R$ 44,00" (`3b5918f`).
+`docs/CODE_REVIEW.md` registrou a pendência P3 antes do fix (`6097382`); a
+mesma P3 segue aberta para `mesas/[id]`, `gestao/caixa` e outras telas.
+Nenhum dos três commits foi deployado.
+
+## Sessão 2026-09-24 — Prints novos da conta demo na landing (não deployado)
+
+`static/images/screenshots` trocou capturas antigas por prints atuais da
+conta demo "Balcão do Zelo" (frente de caixa com comanda, financeiro com
+despesas, clientes com fiado, recorte de KPIs do topo mobile, despesas), todos
+com dados fictícios e R$ em pt-BR; a legenda do topo mobile passou a dizer "30
+dias" e a OG image da home usa o print novo. Commit `7372efd`, não deployado.
+
+## Sessão 2026-09-24 — Gerente: dia da semana por extenso na narrativa (não deployado)
+
+`evidence.weekday` é 0-6, mas o template interpolava o número direto, gerando
+"abaixo da média das últimas 5 4" (e domingo, 0, caía até em "datas
+equivalentes"). Novo `weekdayLabel` em `src/lib/gerente/weekdays.js`,
+compartilhado entre `src/lib/gerente/greeting.js` e
+`src/lib/server/intelligence/narrative.js`; testes em
+`tests/intelligence.narrative.test.js`. Narrativas já gravadas em
+`business_signals` mantêm o texto antigo até serem regeradas. Commit
+`dc8fde8`, não deployado.
+
+## Sessão 2026-09-24 — Landing: robô fora do topo, copy nova e topo mobile (não deployado)
+
+Três commits em sequência na home pública. `17c9965`: no mobile o topo perdeu
+o selo "O gerente da sua loja", ganhou título menor, preço logo abaixo do CTA
+e um recorte legível da tela financeira real no lugar do mascote (72% dos
+visitantes mobile não passam de 1/4 da home); desktop ganhou a linha de preço
+abaixo dos botões. `2d0946f`: copy nova "Você vende. O Zelo cuida do resto.",
+em tom "sem frescura", falando do balcão e não do produto vendido, cobrindo
+hero, selos, prova, funcionalidades, Zelinho, público, preços e FAQ — o FAQ
+passa a dizer que não precisa emitir nota fiscal para usar e que a NF-e está a
+caminho, sem prometer data nem "1 clique"; JSON-LD FAQPage sincronizado com o
+FAQ visível, title/meta/OG e rodapé atualizados, `data-track-section` e
+placements de CTA intactos. `1afd414`: o hero desktop troca o Zelinho 3D por
+um print real do painel (sem o CSS/animação do robô); a OG image da home usa
+o título novo; `zelinho-hero-transparent.{svg,webp}` saem do repo (sem
+referências restantes em src/static/e2e). Nenhum dos três foi deployado.
+
+## Sessão 2026-09-24 — Analytics: marketing_section_viewed na home (não deployado)
+
+Novo evento dispara uma vez por seção quando o topo dela entra nos 60% de
+cima da tela, com `section/order/total_sections/page`
+(`src/lib/marketing/sectionViews.js`, testes em `tests/sectionViews.test.js`).
+O scroll % do `$pageleave` não dizia quais blocos foram lidos; isto dá a linha
+de base antes do redesenho mobile que veio nos commits seguintes. Commit
+`2307371`, não deployado.
+
+## Sessão 2026-09-24 — Auth: Google OAuth escondido no navegador in-app do Instagram/Facebook (não deployado)
+
+O Google bloqueia OAuth em WebViews de app (`disallowed_useragent`). 255 de
+277 visitantes mobile da home chegam pelo navegador do Instagram, e nenhum
+cadastro veio de lá em 30 dias. `src/lib/inAppBrowser.js` detecta o WebView;
+nesses navegadores o formulário de e-mail vira o caminho principal e o Google
+desce para uma linha discreta com "abrir no navegador" (intent do Chrome no
+Android, copiar link no iOS), em `/cadastro` e `/login`. Eventos novos:
+`inapp_browser_detected`, `inapp_open_browser_clicked`. Testes em
+`tests/inAppBrowser.test.js`. Commit `42b4389`, não deployado.
+
+## Conta demo para prints/vídeos
+
+Existe em produção a conta `demo-prints@zelopdv.com.br` (empresa "Balcão do
+Zelo", `user_id a9bca05e-b649-4f04-82d4-a0c82c592009`), com dados 100%
+fictícios, usada para gerar prints e vídeos da landing. A assinatura está
+gravada como `status active`, plano bundle com mesas+menu, sem Stripe — por
+isso ela conta no MRR/assinantes do admin-dashboard (~R$ 198/mês) até ser
+removida. Os crons de onboarding, expire-trials e nudge não a selecionam. O
+Zelinho Gerente roda para ela no cron diário (WhatsApp desligado). Credenciais
+não ficam no repo: os scripts de `tools/landing-video/capture` usam
+`DEMO_EMAIL`/`DEMO_PASSWORD` do ambiente.
+
+## Depois do deploy
+
+Comparar no PostHog 2 semanas antes x depois: `marketing_trial_clicked` por
+placement, `marketing_section_viewed` por seção, `marketing_video_started`
+por vídeo, e o funil do Instagram (`inapp_browser_detected` →
+`signup_submitted` method=email → `trial_started`).
+
+## Sessão 2026-09-25 — Wizard de produto e taxa de app na planilha
+
+O formulário rápido saiu da planilha. O botão `+` agora abre
+`PricingWizardModal.svelte`, com a entrevista de 5 passos da calculadora antiga
+(o que, custos com ou sem ingredientes, extras e taxa de app, margem,
+resultado). A conta passou de markup sobre o custo para margem sobre a venda,
+em `src/lib/tools/pricingWizard.js`. A nova coluna `produtos.taxa_plataforma`
+(migration `20260925100000`, 0–35%) só é usada pela planilha: a margem e o
+preço sugerido descontam a taxa. Vendas, PDV e relatórios ignoram a coluna.
+A migration foi aplicada com `db query` mais `migration repair`, porque o
+banco compartilhado já tem a `20260925114017` do ZeloChat, que não está no
+repo. Por isso o `db push` fica bloqueado até alguém trazer essa migration
+para cá. A calculadora pública `/precificacao` não mudou e continua usando
+markup.
+
+## Sessão 2026-09-24 — Planilha de preços em /ferramentas/precificacao
+
+A página logada `/ferramentas/precificacao` trocou a calculadora (wizard) por
+uma planilha de preços, `src/lib/components/tools/PricingSheet.svelte`. A
+calculadora continua só na página pública `/precificacao`. O dono informa
+nome, custo, venda e margem desejada (padrão 60%), e o sistema calcula CMV,
+margem, lucro por unidade, preço sugerido e status (na meta, abaixo, prejuízo,
+incompleto). As fórmulas ficam em `src/lib/tools/pricingSheet.js`, com testes
+em `tests/pricingSheet.test.js`.
+
+A planilha lê e escreve direto em `produtos`:
+- `custo_unitario` e `preco` são as colunas que já existiam;
+- `margem_desejada` e `na_precificacao` vêm da migration
+  `20260924120000_produtos_precificacao.sql`, já aplicada no banco vinculado.
+
+O que isso significa na prática:
+- Editar a venda na planilha muda o preço cobrado no caixa. Por isso a primeira
+  edição de venda em cada sessão pede confirmação.
+- O form "Adicionar produto" cria um produto de verdade no catálogo, sem
+  categoria.
+- "Importar do meu cadastro" liga `na_precificacao` nos produtos escolhidos.
+  Pizzas ficam de fora.
+- "Tirar da planilha" só desliga a flag; o produto não é apagado.
+- Subusuário sem `produtos.gerenciar` vê a planilha só para leitura.
+
+Validação:
+- `npm test`: 2149 testes passam.
+- `npm run check`: 0 erros.
+- Build: os bundles saíram, e o adapter falhou só no EPERM conhecido do
+  Windows.
+- E2E manual na conta demo: todos os 8 cenários da
+  planilha passaram em 1280px e 390px, e os dados de teste foram limpos.
+
 ## Sessão 2026-09-24 — Conteúdo GEO, leva 1 (branch `feat/content-wave-1`)
 
 PostHog: o ChatGPT é a origem que traz cliente; anúncio não gerou cadastro em

@@ -187,7 +187,7 @@
 
 **Escopo de captura**
 
-- permitido: `/`, `/para-*`, `/vs-*`, `/blog/*`, `/cadastro`, `/login`, `/contato`, `/precificacao`, `/extensoes`, `/comparativos`, `/zelo-impressao`, `/pascoa`, `/termos`, `/privacidade`, `/indica/*`
+- permitido: `/`, `/para-*`, `/vs-*`, `/blog/*`, `/cadastro`, `/login`, `/contato`, `/precificacao`, `/extensoes`, `/comparativos`, `/zelo-impressao`, `/termos`, `/privacidade`, `/indica/*`
 - bloqueado: `/app`, `/gestao`, `/relatorios`, `/perfil`, `/assinatura`, `/ferramentas`, `/auth/callback`
 - session recording fica desabilitado no client; o objetivo inicial e heatmap/autocapture, nao replay de telas internas
 

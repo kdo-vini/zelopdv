@@ -4,6 +4,8 @@
   Ideal para séries diárias de vendas
 -->
 <script>
+  import { formatMoneyNumber } from '$lib/formatMoney';
+
   /** @type {Array<{label: string, value: number, extra?: string}>} */
   export let data = [];
   
@@ -21,13 +23,13 @@
   
   /** @type {boolean} Mostrar valores nas barras */
   export let showValues = true;
-  
+
   // Calcula o valor máximo para escala
   $: maxValue = data.length ? Math.max(...data.map(d => d.value), 1) : 1;
-  
-  // Formata valores
+
+  // Formata valores em pt-BR (ex.: "R$ 1.234,56")
   function formatValue(v) {
-    return valuePrefix + Number(v || 0).toFixed(2);
+    return valuePrefix + formatMoneyNumber(v);
   }
   
   function getBarHeight(value) {

@@ -455,7 +455,7 @@
       <div>
         <h2 class="text-lg font-bold mb-1" style="color: var(--text-main);">Controle de Acessos não está ativo</h2>
         <p class="text-sm" style="color: var(--text-muted);">
-          Ative o add-on de Controle de Acessos para criar cargos, definir permissões e convidar colaboradores para o seu sistema.
+          Ative a extensão Controle de Acessos para criar cargos, definir permissões e convidar colaboradores para o seu sistema.
         </p>
       </div>
       <a

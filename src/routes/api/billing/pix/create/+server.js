@@ -74,7 +74,7 @@ export async function POST({ request }) {
       if (requestedAddons[addonId] && !isAddonAllowed(planTier, addonId)) {
         return fail({
           reason: WHY.ADDON_NOT_ALLOWED,
-          error: `Plano ${planTier} não suporta o add-on ${addonId}.`,
+          error: `Plano ${planTier} não suporta a extensão ${addonId}.`,
           userId: user.id,
           planTier,
           addons: requestedAddons,
