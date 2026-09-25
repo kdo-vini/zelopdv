@@ -331,6 +331,8 @@
     box-shadow: 0 10px 15px rgba(14, 165, 233, 0.15);
   }
   .btn-back:hover { background: var(--primary-hover); transform: translateY(-1px); }
+  /* Zelo brand surface: primary is white, so the label takes the action ink */
+  :global([data-surface="brand"]) .btn-back { color: var(--primary-text); box-shadow: var(--elevation-float); }
   .btn-back:active, .btn-wa:active { transform: scale(0.97); }
   .btn-wa {
     background: #25D366; color: white;

@@ -11,6 +11,10 @@
     color-scheme: dark;
     font-family: var(--zelo-font-ui);
 
+    /* Type: the landing's stack resolves to Geist here (legacy keeps the system
+       stack: the variable is undefined there). `--font-sans` lives in src/app.css. */
+    --marketing-font: var(--zelo-font-ui);
+
     /* Surfaces */
     --bg-app: var(--zelo-navy);
     --bg-panel: var(--zelo-navy-600);
@@ -69,6 +73,33 @@
     --sidebar-item-active-text: var(--zelo-white);
     --sidebar-item-hover-bg: rgba(255, 255, 255, 0.06);
 
+    /* Marketing tokens (legacy values in surface-legacy.css) */
+    --mk-accent: var(--primary);
+    --mk-cta-glow: color-mix(in srgb, var(--shadow-color) 60%, transparent);
+    --mk-accent-wash: color-mix(in srgb, var(--zelo-white) 6%, transparent);
+    --mk-accent-line: var(--border-strong);
+    --mk-accent-line-soft: var(--border-subtle);
+    --mk-grid-line: color-mix(in srgb, var(--zelo-white) 60%, transparent);
+    --mk-accent-strong: var(--primary-hover);
+    --mk-accent-bright: var(--primary);
+    --mk-highlight: var(--text-main);
+    --mk-highlight-soft: var(--text-label);
+    --mk-glow: var(--shadow-color);
+    --mk-glow-deep: var(--shadow-color);
+    --mk-glow-alt: var(--shadow-color);
+    --mk-ink-soft: var(--text-label);
+    --mk-ink-mid: var(--text-label);
+    --mk-muted: var(--text-muted);
+    --mk-subtle: var(--text-muted);
+    --mk-ink: var(--text-main);
+    --mk-on-accent: var(--primary-text);
+    --mk-ok: var(--status-success-text);
+    --mk-danger: var(--status-error-text);
+    --mk-warn-soft: var(--status-warning-text);
+    --mk-warn-bright: var(--status-warning-text);
+    --mk-warn: var(--status-warning-text);
+    --mk-warn-deep: var(--status-warning-text);
+
     /* Marketing aliases — existing public components read these */
     --marketing-dark: var(--zelo-navy);
     --marketing-dark-soft: var(--zelo-navy-700);
@@ -124,4 +155,12 @@
     --sidebar-accent-foreground: var(--zelo-white);
     --sidebar-border: rgba(255, 255, 255, 0.11);
     --sidebar-ring: rgba(255, 255, 255, 0.35);
+}
+
+/* Brand voice (docs/DESIGN_SYSTEM.md → Tipografia): on the site, page and section
+   titles speak Geist Mono. :where() keeps it at zero specificity, so a component
+   that sets its own family still wins; light cards nested as data-surface="app"
+   (login form, long-form reading) keep Geist. */
+[data-surface="brand"] :where(h1, h2):not(:where([data-surface="app"] *)) {
+    font-family: var(--zelo-font-num);
 }

@@ -11,7 +11,7 @@
 |---|---|---|
 | 0 | Base: tokens, superfícies, flag, travas, documentação, componentes primitivos | **Entregue** — sem mudança visual (0 pixels em 16 rotas × 2 larguras) |
 | 1 | Componentes do sistema + globais do layout raiz + ícones 1,75 | **Em andamento** — globais do layout (toasts, confirmação, offline, atualização, chats, bottom nav) atrás da flag |
-| 2 | Superfície Brand no ar (site, landing, blog) | Pendente |
+| 2 | Superfície Brand no ar (site, landing, blog) | **Pronta atrás da flag** — Geist + títulos em Mono, tokens `mk-*` nas 8 páginas/componentes com paleta Tailwind, erro legível; legado idêntico (full page). Falta ligar `LIVE_SURFACES.brand` (decisão do dono) |
 | 3 | Autenticação (Brand + cartão App) | Pendente |
 | 4 | Superfície App atrás da flag (estrutura → `/app` → modais → operação → gestão → relatórios → conta) | **Em andamento** — sidebar navy (métricas do mockup) e `/app` (desktop + mobile) no layout do mockup, com o sistema de movimento; modais do PDV (pagamento, sucesso, quantidade, avulso, caixa, montável, novo produto), toasts, confirmação, offline e bottom nav no sistema |
 | 5 | E-mails, PWA/`theme-color`, favicon/OG/logos, `chartColors.js` | Pendente |
@@ -160,6 +160,15 @@ depois). O fluxo da venda não ganhou espera: botões e Enter do sucesso respond
 - JS: todo primitivo consulta `reducedMotion()` (`prefersReducedMotion` do `svelte/motion`) e devolve duração 0 / pula a animação; `SpringValue` salta direto ao alvo; `MoneyText` mostra o valor final.
 - Exceção: o spinner do `MorphButton` continua girando (mais devagar, sem o arco "respirando") porque comunica progresso.
 - Harness de screenshots (`scripts/app-mock-screens.mjs`) roda com movimento reduzido para imagens estáveis.
+
+## Páginas públicas (Fase 2)
+
+- **Fonte:** `--marketing-font` (landing) e `--font-sans` (Tailwind `font-sans`, blog/segmentos) viram Geist no Brand. `--font-sans` é declarado **fora de camada** em `src/app.css`: `src/themes/` entra em `layer(base)` antes de o Tailwind declarar as camadas, então `base` fica antes de `theme` e não sobrescreveria o `:root` do tema.
+- **Voz da marca:** `[data-surface="brand"] :where(h1, h2)` em Geist Mono (especificidade zero; cartões aninhados `data-surface="app"` ficam em Geist). Geist Mono 700/900 adicionadas para títulos pesados.
+- **Tokens `mk-*`** (`--color-mk-*` no `@theme inline`): substituem a paleta Tailwind nas páginas públicas (`mk-accent`, `mk-accent-strong`, `mk-highlight`, `mk-muted`, `mk-ink`, `mk-on-accent`, `mk-ok|warn|danger`…). No legado cada um **é** a cor Tailwind que substituiu (`var(--color-sky-500)`…), então o legado fica idêntico; no Brand apontam para tokens da marca. `text-white` sobre fundo de ação vira `text-mk-on-accent` (navy no Brand, branco no legado). Literais `rgba()` que existiam viram tokens com o literal no legado (`--mk-accent-wash`…): `color-mix()` arredonda diferente em gradiente e quebraria o pixel.
+- Arquivos: `vs-planilha`, `extensoes`, `zelo-impressao`, `comparativos`, `precificacao`, `SegmentLandingPage`, `CompetitorComparison`, `MarketingPriceSection`. Landing, blog, sobre, contato e jurídicos já usavam tokens.
+- Verificação: `visual:diff` só compara a primeira dobra; a Fase 2 foi conferida também com captura de **página inteira** contra `main` (ruído medido rodando `main` duas vezes).
+- **Ligar:** `LIVE_SURFACES.brand = true` em `src/lib/theme/surface.js` + `tests/themeSurface.test.js`. Isso muda produção para todo visitante — fica para o dono decidir depois de ver com `?tema=novo`.
 
 ## Tipografia
 

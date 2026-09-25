@@ -32,7 +32,7 @@
 />
 
 <div
-  class="min-h-screen overflow-x-hidden font-sans selection:bg-sky-500/30 selection:text-white"
+  class="min-h-screen overflow-x-hidden font-sans selection:bg-mk-accent/30 selection:text-mk-ink"
   style="background: var(--bg-app); color: var(--text-label);"
 >
   <SiteHeader />
@@ -40,8 +40,8 @@
   <main>
     <section class="mx-auto max-w-5xl px-6 py-16 md:px-8 md:py-24">
       {#if downloadPending}
-        <div class="mb-8 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-sm text-amber-100">
-          O link direto do instalador já está reservado em <strong class="text-white">zelopdv.com.br/downloads/zelo-impressao/latest/Zelo-Impressao-Setup.exe</strong>,
+        <div class="mb-8 rounded-2xl border border-mk-warn/30 bg-mk-warn/10 px-5 py-4 text-sm text-mk-warn-soft">
+          O link direto do instalador já está reservado em <strong class="text-mk-ink">zelopdv.com.br/downloads/zelo-impressao/latest/Zelo-Impressao-Setup.exe</strong>,
           mas o arquivo ainda não foi publicado nesta hospedagem. Assim que o `.exe` for enviado para esse path, o download passará a começar automaticamente por essa mesma URL.
         </div>
       {/if}
@@ -49,17 +49,17 @@
       <div class="max-w-3xl">
         <h1 class="mt-5 text-4xl font-black tracking-tight md:text-6xl">Zelo Impressão</h1>
         <p class="mt-4 max-w-2xl text-lg leading-relaxed" style="color: var(--text-muted);">
-          Siga este passo a passo para instalar sozinho e deixar o <strong class="text-white">Zelo PDV</strong> e o <strong class="text-white">ZeloChat</strong>
+          Siga este passo a passo para instalar sozinho e deixar o <strong class="text-mk-ink">Zelo PDV</strong> e o <strong class="text-mk-ink">ZeloChat</strong>
           imprimindo automaticamente nesse computador.
         </p>
         <div class="mt-8 flex flex-wrap gap-3">
           <a
             href={downloadUrl}
-            class="inline-flex items-center justify-center rounded-full bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-sky-900/30 transition hover:-translate-y-0.5 hover:bg-sky-500"
+            class="inline-flex items-center justify-center rounded-full bg-mk-accent-strong px-6 py-3 text-sm font-semibold text-mk-on-accent shadow-xl shadow-mk-glow/30 transition hover:-translate-y-0.5 hover:bg-mk-accent"
           >Baixar instalador</a>
           <a
             href="/login"
-            class="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
+            class="inline-flex items-center justify-center rounded-full border border-mk-ink/10 bg-mk-ink/5 px-6 py-3 text-sm font-semibold text-mk-ink-soft transition hover:bg-mk-ink/10"
           >Voltar ao Zelo PDV</a>
         </div>
         <p class="mt-3 text-sm" style="color: var(--text-muted);">
@@ -70,11 +70,11 @@
 
       <div class="mt-12 grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
         <div class="rounded-3xl border p-6" style="background: var(--bg-card); border-color: var(--border-card);">
-          <h2 class="text-xl font-bold text-white">Passo a passo</h2>
+          <h2 class="text-xl font-bold text-mk-ink">Passo a passo</h2>
           <ol class="mt-5 grid gap-4">
             {#each passos as passo, index}
               <li class="flex gap-4 rounded-2xl border p-4" style="border-color: var(--border-card); background: var(--bg-panel);">
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sm font-bold text-sky-300">{index + 1}</span>
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-mk-accent/15 text-sm font-bold text-mk-highlight">{index + 1}</span>
                 <p class="text-sm leading-6" style="color: var(--text-label);">{passo}</p>
               </li>
             {/each}
@@ -83,14 +83,14 @@
 
         <div class="grid gap-6">
           <div class="rounded-3xl border p-6" style="background: var(--bg-card); border-color: var(--border-emerald);">
-            <h3 class="text-lg font-bold text-white">Na primeira instalação</h3>
+            <h3 class="text-lg font-bold text-mk-ink">Na primeira instalação</h3>
             <p class="mt-3 text-sm leading-6" style="color: var(--text-label);">
-              Se aparecer a tela azul de proteção do Windows, clique em <strong class="text-white">"Mais informações"</strong> no canto inferior esquerdo e depois em <strong class="text-white">"Executar mesmo assim"</strong> para concluir a instalação.
+              Se aparecer a tela azul de proteção do Windows, clique em <strong class="text-mk-ink">"Mais informações"</strong> no canto inferior esquerdo e depois em <strong class="text-mk-ink">"Executar mesmo assim"</strong> para concluir a instalação.
             </p>
           </div>
 
           <div class="rounded-3xl border p-6" style="background: var(--bg-card); border-color: var(--border-amber);">
-            <h3 class="text-lg font-bold text-white">Como abrir depois</h3>
+            <h3 class="text-lg font-bold text-mk-ink">Como abrir depois</h3>
             <ul class="mt-3 grid gap-2 text-sm leading-6" style="color: var(--text-label);">
               <li>• procure o ícone do Zelo Impressão perto do relógio do Windows</li>
               <li>• se não aparecer de primeira, clique na setinha para mostrar os outros ícones</li>
@@ -100,7 +100,7 @@
           </div>
 
           <div class="rounded-3xl border p-6" style="background: var(--bg-card); border-color: var(--border-card);">
-            <h3 class="text-lg font-bold text-white">Depois de instalar</h3>
+            <h3 class="text-lg font-bold text-mk-ink">Depois de instalar</h3>
             <p class="mt-3 text-sm leading-6" style="color: var(--text-label);">
               Volte ao PDV ou ao Chat. A conexão acontece automaticamente quando o aplicativo está aberto. Se o sistema pedir uma confirmação, informe o código exibido no Zelo Impressão;
               depois escolha a impressora e faça o teste.

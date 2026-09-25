@@ -463,6 +463,26 @@
    ─────────────────────────────────────────────────────────────────────── */
 /* Tailwind v4: expõe os tokens shadcn como utilitários (bg-primary, text-muted-foreground…) */
 @theme inline {
+  --color-mk-accent: var(--mk-accent);
+  --color-mk-accent-strong: var(--mk-accent-strong);
+  --color-mk-accent-bright: var(--mk-accent-bright);
+  --color-mk-highlight: var(--mk-highlight);
+  --color-mk-highlight-soft: var(--mk-highlight-soft);
+  --color-mk-glow: var(--mk-glow);
+  --color-mk-glow-deep: var(--mk-glow-deep);
+  --color-mk-glow-alt: var(--mk-glow-alt);
+  --color-mk-ink-soft: var(--mk-ink-soft);
+  --color-mk-ink-mid: var(--mk-ink-mid);
+  --color-mk-muted: var(--mk-muted);
+  --color-mk-subtle: var(--mk-subtle);
+  --color-mk-ink: var(--mk-ink);
+  --color-mk-on-accent: var(--mk-on-accent);
+  --color-mk-ok: var(--mk-ok);
+  --color-mk-danger: var(--mk-danger);
+  --color-mk-warn-soft: var(--mk-warn-soft);
+  --color-mk-warn-bright: var(--mk-warn-bright);
+  --color-mk-warn: var(--mk-warn);
+  --color-mk-warn-deep: var(--mk-warn-deep);
   --color-background:            var(--background);
   --color-foreground:            var(--foreground);
   --color-card:                  var(--card);
@@ -532,6 +552,11 @@
   --ease-spring:    var(--zelo-ease-spring);
   --shadow-float:   var(--elevation-float);
 }
+
+/* Tailwind's `font-sans` on the brand surface is Geist. Unlayered on purpose: src/themes/
+   is imported into layer(base) before Tailwind declares its layers, so `base` sorts before
+   `theme` and could never override the theme's :root --font-sans. Legacy is untouched. */
+[data-surface="brand"] { --font-sans: var(--zelo-font-ui); }
 
 /* Type roles (docs/DESIGN_SYSTEM.md → Tipografia): one role = one class. */
 @utility type-display { font: var(--type-display); letter-spacing: var(--type-display-tracking); }

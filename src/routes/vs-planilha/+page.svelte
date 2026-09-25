@@ -137,12 +137,12 @@
   <SiteHeader />
 
   <!-- HERO -->
-  <section class="relative pt-40 pb-20 overflow-hidden border-b border-white/5">
+  <section class="relative pt-40 pb-20 overflow-hidden border-b border-mk-ink/5">
     <div class="max-w-4xl mx-auto px-6 text-center">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-400 text-xs font-semibold mb-6">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-mk-accent/30 bg-mk-accent/10 text-mk-accent-bright text-xs font-semibold mb-6">
         Comparação Honesta
       </div>
-      <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-6" style="text-wrap: balance;">
+      <h1 class="text-4xl md:text-6xl font-bold text-mk-ink tracking-tight leading-[1.1] mb-6" style="text-wrap: balance;">
         Ainda controlando sua lanchonete<br class="hidden md:block" />
         numa planilha?
       </h1>
@@ -151,16 +151,16 @@
         Veja o que você está deixando para trás.
       </p>
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-3 md:mb-4">
-        <a href={cadastroHref} class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center" on:click={() => trackSignupCta('vs_hero')}>
+        <a href={cadastroHref} class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-mk-on-accent bg-mk-accent-strong hover:bg-mk-accent rounded-full font-semibold shadow-xl shadow-mk-glow/30 transition-all hover:-translate-y-1 text-center" on:click={() => trackSignupCta('vs_hero')}>
           Testar 14 dias grátis — sem cartão
         </a>
-        <a href="#comparacao" class="px-1 py-2 md:py-4 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">
+        <a href="#comparacao" class="px-1 py-2 md:py-4 text-mk-highlight hover:text-mk-highlight-soft font-semibold underline underline-offset-4 transition-colors">
           Ver comparação
         </a>
       </div>
       <p class="text-xs md:text-sm" style="color: var(--text-muted);">
         14 dias grátis. Sem cartão, sem cobrança automática.
-        <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+        <button type="button" on:click={openSupportChat} class="ml-1 text-mk-highlight hover:text-mk-highlight-soft font-semibold underline underline-offset-4">
           Tem dúvida? Fala com a gente.
         </button>
       </p>
@@ -168,19 +168,19 @@
   </section>
 
   <!-- PAIN POINTS -->
-  <section class="py-20 bg-white/2 border-y border-white/5">
+  <section class="py-20 bg-mk-ink/2 border-y border-mk-ink/5">
     <div class="max-w-6xl mx-auto px-6">
-      <h2 class="text-2xl md:text-3xl font-bold text-white text-center mb-12">
+      <h2 class="text-2xl md:text-3xl font-bold text-mk-ink text-center mb-12">
         O que acontece com quem usa planilha
       </h2>
       <div class="grid md:grid-cols-3 gap-6">
         {#each painPoints as point}
-          <div class="p-6 rounded-2xl border border-white/5 bg-white/3">
-            <div class="mb-4 text-sky-300">
+          <div class="p-6 rounded-2xl border border-mk-ink/5 bg-mk-ink/3">
+            <div class="mb-4 text-mk-highlight">
               <svelte:component this={resolveAppIcon(point.icon)} class="size-8" aria-hidden="true" />
             </div>
-            <h3 class="text-white font-semibold mb-2">{point.title}</h3>
-            <p class="text-slate-400 text-sm leading-relaxed">{point.body}</p>
+            <h3 class="text-mk-ink font-semibold mb-2">{point.title}</h3>
+            <p class="text-mk-muted text-sm leading-relaxed">{point.body}</p>
           </div>
         {/each}
       </div>
@@ -190,22 +190,22 @@
   <!-- COMPARISON TABLE -->
   <section id="comparacao" class="py-24">
     <div class="max-w-5xl mx-auto px-6">
-      <h2 class="text-2xl md:text-3xl font-bold text-white text-center mb-4">
+      <h2 class="text-2xl md:text-3xl font-bold text-mk-ink text-center mb-4">
         Planilha de Excel × Zelo PDV
       </h2>
-      <p class="text-slate-400 text-center mb-12">Funcionalidade por funcionalidade, lado a lado.</p>
+      <p class="text-mk-muted text-center mb-12">Funcionalidade por funcionalidade, lado a lado.</p>
 
-      <div class="rounded-2xl border border-white/10 overflow-hidden">
+      <div class="rounded-2xl border border-mk-ink/10 overflow-hidden">
         <!-- Table header -->
-        <div class="grid grid-cols-3 bg-white/5 border-b border-white/10">
-          <div class="px-6 py-4 text-sm font-semibold text-slate-400">Funcionalidade</div>
-          <div class="px-6 py-4 text-sm font-semibold text-slate-500 text-center border-l border-white/5">
+        <div class="grid grid-cols-3 bg-mk-ink/5 border-b border-mk-ink/10">
+          <div class="px-6 py-4 text-sm font-semibold text-mk-muted">Funcionalidade</div>
+          <div class="px-6 py-4 text-sm font-semibold text-mk-subtle text-center border-l border-mk-ink/5">
             <span class="flex items-center justify-center gap-2">
               <Sheet class="size-4" aria-hidden="true" />
               Planilha Excel
             </span>
           </div>
-          <div class="px-6 py-4 text-sm font-semibold text-sky-400 text-center border-l border-white/5">
+          <div class="px-6 py-4 text-sm font-semibold text-mk-accent-bright text-center border-l border-mk-ink/5">
             <span class="flex items-center justify-center gap-2">
               <Zap class="size-4" aria-hidden="true" />
               Zelo PDV
@@ -214,32 +214,32 @@
         </div>
 
         {#each comparisonRows as row, i}
-          <div class="grid grid-cols-3 border-b border-white/5 {i % 2 === 0 ? 'bg-transparent' : 'bg-white/2'} hover:bg-white/4 transition-colors">
-            <div class="px-6 py-4 text-sm text-white font-medium flex items-center">{row.feature}</div>
-            <div class="px-6 py-4 border-l border-white/5">
+          <div class="grid grid-cols-3 border-b border-mk-ink/5 {i % 2 === 0 ? 'bg-transparent' : 'bg-mk-ink/2'} hover:bg-mk-ink/4 transition-colors">
+            <div class="px-6 py-4 text-sm text-mk-ink font-medium flex items-center">{row.feature}</div>
+            <div class="px-6 py-4 border-l border-mk-ink/5">
               <div class="flex items-start gap-2">
-                <CircleX class="mt-0.5 size-4 shrink-0 text-red-400" aria-hidden="true" />
-                <span class="text-slate-500 text-xs leading-relaxed">{row.excel}</span>
+                <CircleX class="mt-0.5 size-4 shrink-0 text-mk-danger" aria-hidden="true" />
+                <span class="text-mk-subtle text-xs leading-relaxed">{row.excel}</span>
               </div>
             </div>
-            <div class="px-6 py-4 border-l border-white/5">
+            <div class="px-6 py-4 border-l border-mk-ink/5">
               <div class="flex items-start gap-2">
-                <CircleCheckBig class="mt-0.5 size-4 shrink-0 text-sky-400" aria-hidden="true" />
-                <span class="text-slate-300 text-xs leading-relaxed">{row.zelo}</span>
+                <CircleCheckBig class="mt-0.5 size-4 shrink-0 text-mk-accent-bright" aria-hidden="true" />
+                <span class="text-mk-ink-mid text-xs leading-relaxed">{row.zelo}</span>
               </div>
             </div>
           </div>
         {/each}
 
         <!-- Footer row -->
-        <div class="grid grid-cols-3 bg-white/4">
-          <div class="px-6 py-5 text-sm font-semibold text-white">Custo mensal</div>
-          <div class="px-6 py-5 border-l border-white/5 text-center">
-            <span class="text-slate-400 text-sm">Grátis — mas custa seu tempo</span>
+        <div class="grid grid-cols-3 bg-mk-ink/4">
+          <div class="px-6 py-5 text-sm font-semibold text-mk-ink">Custo mensal</div>
+          <div class="px-6 py-5 border-l border-mk-ink/5 text-center">
+            <span class="text-mk-muted text-sm">Grátis — mas custa seu tempo</span>
           </div>
-          <div class="px-6 py-5 border-l border-white/5 text-center">
-            <span class="text-emerald-400 font-bold text-lg">R$ 59/mês</span>
-            <span class="block text-slate-500 text-xs mt-0.5">14 dias grátis para testar</span>
+          <div class="px-6 py-5 border-l border-mk-ink/5 text-center">
+            <span class="text-mk-ok font-bold text-lg">R$ 59/mês</span>
+            <span class="block text-mk-subtle text-xs mt-0.5">14 dias grátis para testar</span>
           </div>
         </div>
       </div>
@@ -247,15 +247,15 @@
   </section>
 
   <!-- MIGRAÇÃO -->
-  <section class="py-20 bg-white/2 border-y border-white/5">
+  <section class="py-20 bg-mk-ink/2 border-y border-mk-ink/5">
     <div class="max-w-2xl mx-auto px-6 text-center">
-      <h2 class="text-xl md:text-2xl text-white font-bold leading-relaxed mb-4">
+      <h2 class="text-xl md:text-2xl text-mk-ink font-bold leading-relaxed mb-4">
         Da planilha pro Zelo em 15 a 30 minutos
       </h2>
-      <p class="text-slate-400 leading-relaxed mb-8">
+      <p class="text-mk-muted leading-relaxed mb-8">
         Cadastre seus produtos, configure as categorias e comece a vender. Não precisa instalar nada e ninguém pede seu cartão. Se travar em qualquer passo, chama no WhatsApp que a gente migra junto com você.
       </p>
-      <a href={cadastroHref} class="inline-flex items-center gap-2 px-8 py-3.5 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1" on:click={() => trackSignupCta('vs_mid')}>
+      <a href={cadastroHref} class="inline-flex items-center gap-2 px-8 py-3.5 text-mk-on-accent bg-mk-accent-strong hover:bg-mk-accent rounded-full font-semibold shadow-xl shadow-mk-glow/30 transition-all hover:-translate-y-1" on:click={() => trackSignupCta('vs_mid')}>
         Começar agora — 14 dias grátis
         <ArrowRight class="size-4" aria-hidden="true" />
       </a>
@@ -265,35 +265,35 @@
   <!-- FAQ -->
   <section id="faq" class="py-24">
     <div class="max-w-3xl mx-auto px-6">
-      <h2 class="text-2xl md:text-3xl font-bold text-white text-center mb-12">Dúvidas sobre trocar a planilha</h2>
+      <h2 class="text-2xl md:text-3xl font-bold text-mk-ink text-center mb-12">Dúvidas sobre trocar a planilha</h2>
 
       <div class="space-y-4">
-        <details class="group rounded-2xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors overflow-hidden">
+        <details class="group rounded-2xl border border-mk-ink/5 bg-mk-ink/2 hover:bg-mk-ink/4 transition-colors overflow-hidden">
           <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none">
-            <span class="font-semibold text-white text-sm">Vale a pena trocar a planilha de Excel por um sistema PDV?</span>
-            <ChevronDown class="ml-4 size-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" aria-hidden="true" />
+            <span class="font-semibold text-mk-ink text-sm">Vale a pena trocar a planilha de Excel por um sistema PDV?</span>
+            <ChevronDown class="ml-4 size-5 shrink-0 text-mk-muted transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
-          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed">
+          <div class="px-6 pb-5 text-mk-muted text-sm leading-relaxed">
             Sim, especialmente se você registra mais de 10 vendas por dia. Um sistema PDV registra vendas em segundos (sem digitar), controla o estoque automaticamente, calcula o lucro real cruzando despesas com receita e funciona no celular sem precisar de arquivo compartilhado. A planilha exige digitação manual e não avisa quando o estoque acaba.
           </div>
         </details>
 
-        <details class="group rounded-2xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors overflow-hidden">
+        <details class="group rounded-2xl border border-mk-ink/5 bg-mk-ink/2 hover:bg-mk-ink/4 transition-colors overflow-hidden">
           <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none">
-            <span class="font-semibold text-white text-sm">Quanto tempo leva para migrar da planilha para o Zelo PDV?</span>
-            <ChevronDown class="ml-4 size-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" aria-hidden="true" />
+            <span class="font-semibold text-mk-ink text-sm">Quanto tempo leva para migrar da planilha para o Zelo PDV?</span>
+            <ChevronDown class="ml-4 size-5 shrink-0 text-mk-muted transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
-          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed">
+          <div class="px-6 pb-5 text-mk-muted text-sm leading-relaxed">
             Em média 15 a 30 minutos. Você cadastra seus produtos, configura as categorias e já está pronto para vender. Não precisa instalar nada — o sistema roda direto no navegador. Se tiver dúvida no meio do caminho, o suporte via WhatsApp está disponível para ajudar.
           </div>
         </details>
 
-        <details class="group rounded-2xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors overflow-hidden">
+        <details class="group rounded-2xl border border-mk-ink/5 bg-mk-ink/2 hover:bg-mk-ink/4 transition-colors overflow-hidden">
           <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none">
-            <span class="font-semibold text-white text-sm">Preciso ter computador para usar o Zelo PDV?</span>
-            <ChevronDown class="ml-4 size-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" aria-hidden="true" />
+            <span class="font-semibold text-mk-ink text-sm">Preciso ter computador para usar o Zelo PDV?</span>
+            <ChevronDown class="ml-4 size-5 shrink-0 text-mk-muted transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
-          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed">
+          <div class="px-6 pb-5 text-mk-muted text-sm leading-relaxed">
             Não. O Zelo PDV funciona em qualquer celular, tablet ou computador com Chrome ou Edge. Muitas lanchonetes usam apenas o celular no balcão. O sistema também funciona offline e sincroniza quando a internet voltar.
           </div>
         </details>
@@ -303,21 +303,21 @@
 
   <!-- FINAL CTA -->
   <section class="py-20 relative overflow-hidden">
-    <div class="absolute inset-0 bg-linear-to-br from-sky-900/30 via-transparent to-indigo-900/20 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-linear-to-br from-mk-glow/30 via-transparent to-mk-glow-alt/20 pointer-events-none"></div>
     <div class="max-w-3xl mx-auto px-6 text-center relative z-10">
-      <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
+      <h2 class="text-3xl md:text-4xl font-bold text-mk-ink mb-4">
         Pronto para deixar a planilha para trás?
       </h2>
-      <p class="text-slate-400 text-lg mb-8">
+      <p class="text-mk-muted text-lg mb-8">
         14 dias grátis. Sem cartão. Sem burocracia.
       </p>
-      <a href={cadastroHref} class="inline-flex items-center gap-2 px-10 py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold text-lg shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1" on:click={() => trackSignupCta('vs_final')}>
+      <a href={cadastroHref} class="inline-flex items-center gap-2 px-10 py-4 text-mk-on-accent bg-mk-accent-strong hover:bg-mk-accent rounded-full font-semibold text-lg shadow-xl shadow-mk-glow/30 transition-all hover:-translate-y-1" on:click={() => trackSignupCta('vs_final')}>
         Começar agora grátis
         <ArrowRight class="size-5" aria-hidden="true" />
       </a>
       <p class="text-xs md:text-sm" style="color: var(--text-muted);">
         14 dias grátis. Sem cartão, sem cobrança automática.
-        <button type="button" on:click={openSupportChat} class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+        <button type="button" on:click={openSupportChat} class="ml-1 text-mk-highlight hover:text-mk-highlight-soft font-semibold underline underline-offset-4">
           Tem dúvida? Fala com a gente.
         </button>
       </p>

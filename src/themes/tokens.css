@@ -10,6 +10,8 @@
 @font-face { font-family: 'Geist Mono'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-Regular.woff2') format('woff2'); }
 @font-face { font-family: 'Geist Mono'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-Medium.woff2') format('woff2'); }
 @font-face { font-family: 'Geist Mono'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'Geist Mono'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'Geist Mono'; font-weight: 900; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-Black.woff2') format('woff2'); }
 
 :root {
     /* Brand — measured from the Zelo branding PDF (pages 12–15) */

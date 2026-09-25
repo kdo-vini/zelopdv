@@ -124,11 +124,11 @@
     <PricingCalculator variant="marketing" />
   </section>
 
-  <section class="py-24 border-t border-white/5" style="background: var(--bg-app);">
+  <section class="py-24 border-t border-mk-ink/5" style="background: var(--bg-app);">
     <div class="max-w-3xl mx-auto px-6">
       <div class="text-center mb-12">
-        <h2 class="text-3xl font-bold text-white mb-4">Perguntas Frequentes</h2>
-        <p class="text-slate-400">
+        <h2 class="text-3xl font-bold text-mk-ink mb-4">Perguntas Frequentes</h2>
+        <p class="text-mk-muted">
           Tire suas dúvidas e entenda os detalhes dos cálculos.
         </p>
       </div>
@@ -136,15 +136,15 @@
       <div class="space-y-4">
         {#each faqItems as item}
           <details
-            class="group rounded-xl border border-white/5 bg-white/2 open:bg-white/4 transition-all duration-300"
+            class="group rounded-xl border border-mk-ink/5 bg-mk-ink/2 open:bg-mk-ink/4 transition-all duration-300"
           >
             <summary
-              class="flex items-center justify-between cursor-pointer p-6 font-medium text-white select-none"
+              class="flex items-center justify-between cursor-pointer p-6 font-medium text-mk-ink select-none"
             >
               <span>{item.question}</span>
-              <ChevronDown class="size-5 text-slate-500 transition-transform group-open:rotate-180 shrink-0" aria-hidden="true" />
+              <ChevronDown class="size-5 text-mk-subtle transition-transform group-open:rotate-180 shrink-0" aria-hidden="true" />
             </summary>
-            <div class="px-6 pb-6 text-slate-400 leading-relaxed">
+            <div class="px-6 pb-6 text-mk-muted leading-relaxed">
               {item.answer}
             </div>
           </details>

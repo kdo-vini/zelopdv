@@ -4,6 +4,34 @@
 */
 
 :root {
+    /* Marketing tokens (public pages, docs/DESIGN_SYSTEM.md → Fase 2): each equals the Tailwind
+       colour it replaced, so legacy renders identically; surface-brand.css remaps them. */
+    --mk-accent: var(--color-sky-500);
+    --mk-cta-glow: rgba(2, 132, 199, 0.40);
+    --mk-accent-wash: rgba(14,165,233,0.06);
+    --mk-accent-line: rgba(14,165,233,0.3);
+    --mk-accent-line-soft: rgba(14,165,233,0.25);
+    --mk-grid-line: rgba(255,255,255,0.6);
+    --mk-accent-strong: var(--color-sky-600);
+    --mk-accent-bright: var(--color-sky-400);
+    --mk-highlight: var(--color-sky-300);
+    --mk-highlight-soft: var(--color-sky-200);
+    --mk-glow: var(--color-sky-900);
+    --mk-glow-deep: var(--color-sky-950);
+    --mk-glow-alt: var(--color-indigo-900);
+    --mk-ink-soft: var(--color-slate-200);
+    --mk-ink-mid: var(--color-slate-300);
+    --mk-muted: var(--color-slate-400);
+    --mk-subtle: var(--color-slate-500);
+    --mk-ink: var(--color-white);
+    --mk-on-accent: var(--color-white);
+    --mk-ok: var(--color-emerald-400);
+    --mk-danger: var(--color-red-400);
+    --mk-warn-soft: var(--color-amber-100);
+    --mk-warn-bright: var(--color-amber-300);
+    --mk-warn: var(--color-amber-400);
+    --mk-warn-deep: var(--color-amber-500);
+
     /* Backgrounds - ALL DARK NAVY */
     --bg-app: #0F172A;
     /* slate-900 - main dark background */

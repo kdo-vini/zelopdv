@@ -53,16 +53,16 @@
 </svelte:head>
 
 <div
-  class="min-h-screen overflow-x-hidden font-sans selection:bg-sky-500/30 selection:text-white"
+  class="min-h-screen overflow-x-hidden font-sans selection:bg-mk-accent/30 selection:text-mk-ink"
   style="background: var(--bg-app); color: var(--text-label);"
 >
   <SiteHeader />
 
   <main>
     <!-- HERO -->
-    <section class="relative pt-24 md:pt-32 pb-12 md:pb-20 overflow-hidden border-b border-white/5">
+    <section class="relative pt-24 md:pt-32 pb-12 md:pb-20 overflow-hidden border-b border-mk-ink/5">
       <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
-        <h1 class="text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight mb-4 md:mb-6" style="text-wrap: balance;">
+        <h1 class="text-3xl md:text-5xl font-bold text-mk-ink tracking-tight leading-tight mb-4 md:mb-6" style="text-wrap: balance;">
           Zelo PDV vs os outros sistemas do mercado
         </h1>
 
@@ -71,17 +71,17 @@
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-3 md:mb-4">
-          <a href={cadastroHref} class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-white bg-sky-600 hover:bg-sky-500 rounded-full font-semibold shadow-xl shadow-sky-900/30 transition-all hover:-translate-y-1 text-center" on:click={() => trackSignupCta('comparativos_hero')}>
+          <a href={cadastroHref} class="w-full sm:w-auto px-8 py-3.5 md:py-4 text-mk-on-accent bg-mk-accent-strong hover:bg-mk-accent rounded-full font-semibold shadow-xl shadow-mk-glow/30 transition-all hover:-translate-y-1 text-center" on:click={() => trackSignupCta('comparativos_hero')}>
             Testar 14 dias grátis
           </a>
-          <a href="#comparativos" class="px-1 py-2 md:py-4 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4 transition-colors">
+          <a href="#comparativos" class="px-1 py-2 md:py-4 text-mk-highlight hover:text-mk-highlight-soft font-semibold underline underline-offset-4 transition-colors">
             Ver comparativos
           </a>
         </div>
 
         <p class="text-xs md:text-sm" style="color: var(--text-muted);">
           14 dias grátis. Sem cartão, sem cobrança automática.
-          <button type="button" class="ml-1 text-sky-300 hover:text-sky-200 font-semibold underline underline-offset-4">
+          <button type="button" class="ml-1 text-mk-highlight hover:text-mk-highlight-soft font-semibold underline underline-offset-4">
             Tem dúvida? Fala com a gente.
           </button>
         </p>
@@ -89,7 +89,7 @@
     </section>
 
     <!-- COMPARISON CARDS -->
-    <section id="comparativos" class="py-20 border-b border-white/5">
+    <section id="comparativos" class="py-20 border-b border-mk-ink/5">
       <div class="max-w-7xl mx-auto px-6">
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {#each comparisons as comparison}
@@ -98,13 +98,13 @@
               class="group rounded-3xl border p-7 transition-all hover:-translate-y-1"
               style="background: var(--bg-card); border-color: var(--border-card);"
             >
-              <h2 class="text-2xl font-semibold text-white mb-3 group-hover:text-sky-300 transition-colors">
+              <h2 class="text-2xl font-semibold text-mk-ink mb-3 group-hover:text-mk-highlight transition-colors">
                 Zelo PDV × {comparison.competitor}
               </h2>
               <p class="text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
                 R$ 59/mês vs {comparison.priceAnchor.competitor}
               </p>
-              <span class="text-sm font-semibold text-sky-300 group-hover:text-sky-200 inline-flex items-center gap-1.5">
+              <span class="text-sm font-semibold text-mk-highlight group-hover:text-mk-highlight-soft inline-flex items-center gap-1.5">
                 Ver comparativo
                 <ArrowRight class="size-3.5" aria-hidden="true" />
               </span>

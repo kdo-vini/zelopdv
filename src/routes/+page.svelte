@@ -524,7 +524,7 @@
     overflow-x: hidden;
     background: var(--marketing-paper);
     color: var(--marketing-ink);
-    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family: var(--marketing-font, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif);
   }
 
   .marketing-page :global(*) {

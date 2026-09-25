@@ -44,7 +44,11 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     `kbd`) em `tokens.css` + `@utility type-*`; Geist Mono 600 adicionada.
     `check:ui` barra `font-family` literal, `font:` com tamanho, `text-[Npx]`
     e `font-mono` nos migrados. `/app`: título e breadcrumb em Mono.
-  - Próximo: Fase 2 — superfície Brand no ar.
+  - **Fase 2 — Brand** (pronta atrás da flag): Geist no site, títulos em
+    Mono, tokens `mk-*` (legado = cor Tailwind original, Brand = marca) nas 8
+    páginas/componentes com paleta crua, botão do 404 legível. Legado idêntico
+    em página inteira. **Ligar `LIVE_SURFACES.brand` é decisão do dono.**
+  - Próximo: Fase 3 — autenticação.
 
 ## Sessão 2026-09-25 — GEO, leva 2 (branch `feat/geo-wave-2`)
 
