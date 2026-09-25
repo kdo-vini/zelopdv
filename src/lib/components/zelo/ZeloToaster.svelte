@@ -127,8 +127,8 @@
 
   .zt-icon { display: grid; place-items: center; align-self: start; margin-top: 1px; }
   .zt-copy { min-width: 0; display: grid; gap: 3px; }
-  .zt-title { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.3; letter-spacing: -0.01em; overflow-wrap: anywhere; }
-  .zt-detail { margin: 0; font-size: 13px; line-height: 1.4; color: color-mix(in srgb, var(--primary-text) 70%, transparent); overflow-wrap: anywhere; }
+  .zt-title { margin: 0; font: var(--type-body-strong); letter-spacing: var(--type-body-strong-tracking); overflow-wrap: anywhere; }
+  .zt-detail { margin: 0; font: var(--type-caption); letter-spacing: var(--type-caption-tracking); color: color-mix(in srgb, var(--primary-text) 70%, transparent); overflow-wrap: anywhere; }
 
   .zt-close {
     position: absolute;

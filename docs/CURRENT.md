@@ -39,7 +39,12 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     sheet aberto no mobile), `ConfirmDialog`, offline (pílula + central),
     `UpdateAvailable`, chats, `InlineHelper`, `MobileBottomNav` claro com ativo
     navy. Legado segue no sonner/markup antigo.
-  - Próximo: hierarquia tipográfica (Geist Mono = voz da marca).
+  - **Hierarquia tipográfica** ✅: 13 papéis (`display`, `title`, `heading`,
+    `eyebrow`, `body`, `body-strong`, `label`, `caption`, `num-sm|md|lg|xl`,
+    `kbd`) em `tokens.css` + `@utility type-*`; Geist Mono 600 adicionada.
+    `check:ui` barra `font-family` literal, `font:` com tamanho, `text-[Npx]`
+    e `font-mono` nos migrados. `/app`: título e breadcrumb em Mono.
+  - Próximo: Fase 2 — superfície Brand no ar.
 
 ## Sessão 2026-09-25 — GEO, leva 2 (branch `feat/geo-wave-2`)
 

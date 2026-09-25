@@ -14,11 +14,22 @@
     ['--text-label', 'Rótulo'], ['--text-muted', 'Apoio'], ['--border-subtle', 'Linha'], ['--primary', 'Ação'],
     ['--status-success-text', 'Sucesso'], ['--status-warning-text', 'Atenção'], ['--status-error-text', 'Erro'],
   ];
+  // Type roles (docs/DESIGN_SYSTEM.md → Tipografia): [utility, font, spec, sample].
+  // Full class names on purpose: Tailwind only emits utilities it finds as literal strings.
   const TYPE = [
-    ['Título de página', 'type-title', 'Frente de Caixa'],
-    ['Seção', 'type-eyebrow', 'PDV / Frente de caixa'],
-    ['Corpo', 'type-body', 'Toque em um produto para somar na venda.'],
-    ['Apoio', 'type-muted', 'Dinheiro, Pix, cartão ou fiado'],
+    ['type-display', 'Mono', '40–56 / 500 / 1.05 / −0.03em', 'Venda aprovada'],
+    ['type-title', 'Mono', '22 / 600 / 1.1 / −0.02em', 'Frente de Caixa'],
+    ['type-heading', 'Geist', '18 / 600 / 1.2 / −0.015em', 'Comanda'],
+    ['type-eyebrow', 'Mono', '10.5 / 500 / 0.12em, maiúsculas', 'PDV / Frente de caixa'],
+    ['type-body', 'Geist', '14.5 / 400 / 1.4', 'Toque em um produto para somar na venda.'],
+    ['type-body-strong', 'Geist', '14.5 / 500 / 1.3', 'Bolo de cenoura (fatia)'],
+    ['type-label', 'Geist', '13.5 / 500 / 1.2', 'Movimentar caixa'],
+    ['type-caption', 'Geist', '12 / 400 / 1.4', 'Dinheiro, Pix, cartão ou fiado'],
+    ['type-num-sm', 'Mono', '13 / 500 · tabular', 'R$ 29,90 × 2'],
+    ['type-num-md', 'Mono', '14.5 / 500 · tabular', 'R$ 1.418,50'],
+    ['type-num-lg', 'Mono', '20 / 500 · tabular', 'R$ 84,70'],
+    ['type-num-xl', 'Mono', '32 / 500 · tabular', 'R$ 2.418,00'],
+    ['type-kbd', 'Mono', '11 / 500', 'Ctrl ↵'],
   ];
 
   let resolved = $state({});
@@ -93,13 +104,13 @@
   <header class="intro">
     <p class="type-eyebrow">Zelo Design System · referência viva</p>
     <h1 class="type-display">Um vocabulário, duas superfícies</h1>
-    <p class="type-muted">Os mesmos componentes e tokens, renderizados em cada superfície. Documentação: <code>docs/DESIGN_SYSTEM.md</code>. Esta página não existe em produção.</p>
+    <p class="type-caption muted">Os mesmos componentes e tokens, renderizados em cada superfície. Documentação: <code>docs/DESIGN_SYSTEM.md</code>. Esta página não existe em produção.</p>
   </header>
 
   <section class="board motion" data-surface="app" aria-labelledby="h-motion">
     <div class="board-head">
       <h2 id="h-motion">Movimento</h2>
-      <p class="type-muted">Molas em forma fechada (<code>src/lib/motion/</code>) · referência: <code>zelopdv-morph.html</code></p>
+      <p class="type-caption muted">Molas em forma fechada (<code>src/lib/motion/</code>) · referência: <code>zelopdv-morph.html</code></p>
     </div>
 
     <h3 class="type-eyebrow">MorphButton · botão → carregando → check</h3>
@@ -107,7 +118,7 @@
       <MorphButton state={morph} size="cta" loadingLabel="Registrando venda…" successLabel="Venda registrada" onclick={() => runMorph(false)}>Confirmar<Kbd>Enter</Kbd></MorphButton>
       <MorphButton state={morphFail} size="touch" loadingLabel="Enviando…" errorLabel="Falhou. Tente de novo" onclick={() => runMorph(true)}>Simular erro</MorphButton>
     </div>
-    <p class="type-muted">Estado atual: <code>{morph}</code> · <code>{morphFail}</code>. Clique para rodar o ciclo.</p>
+    <p class="type-caption muted">Estado atual: <code>{morph}</code> · <code>{morphFail}</code>. Clique para rodar o ciclo.</p>
 
     <h3 class="type-eyebrow">Troca com blur · contagem · pop</h3>
     <div class="demo-cols">
@@ -127,7 +138,7 @@
         </ul>
       </div>
       <div class="demo-total">
-        <span class="type-muted">Total (conta com mola, sem overshoot)</span>
+        <span class="type-caption muted">Total (conta com mola, sem overshoot)</span>
         <MoneyText value={total} size="lg" animate />
       </div>
     </div>
@@ -137,11 +148,11 @@
       {#each CURVES as [name, spring] (name)}
         <figure>
           <svg viewBox="0 0 200 64" aria-hidden="true"><line x1="0" x2="200" y1="8" y2="8" class="guide" /><path d={curvePath(spring)} /></svg>
-          <figcaption class="type-muted">{name} · assenta em {Math.round(springSettleTime(spring.omega, spring.zeta) * 1000)} ms</figcaption>
+          <figcaption class="type-caption muted">{name} · assenta em {Math.round(springSettleTime(spring.omega, spring.zeta) * 1000)} ms</figcaption>
         </figure>
       {/each}
     </div>
-    <p class="type-muted">Indicador líquido: troque as abas e os segmentos abaixo. Aperto (squash): pressione qualquer botão ou produto.</p>
+    <p class="type-caption muted">Indicador líquido: troque as abas e os segmentos abaixo. Aperto (squash): pressione qualquer botão ou produto.</p>
   </section>
 
   <div class="grid">
@@ -149,7 +160,7 @@
       <section class="board" data-surface={s.id} bind:this={boards[s.id]} aria-labelledby="h-{s.id}">
         <div class="board-head">
           <h2 id="h-{s.id}">{s.title}</h2>
-          <p class="type-muted">{s.note}</p>
+          <p class="type-caption muted">{s.note}</p>
         </div>
 
         <h3 class="type-eyebrow">Cores</h3>
@@ -164,10 +175,10 @@
 
         <h3 class="type-eyebrow">Tipografia</h3>
         <div class="stack">
-          {#each TYPE as [label, cls, sample] (cls)}
-            <div class="type-row"><span class="type-muted">{label}</span><span class={cls}>{sample}</span></div>
+          {#each TYPE as [role, family, spec, sample] (role)}
+            <div class="type-row"><span class="type-caption muted"><code>{role}</code><br />{family} · {spec}</span><span class={role}>{sample}</span></div>
           {/each}
-          <div class="type-row"><span class="type-muted">Números</span><MoneyText value={85.4} size="lg" /></div>
+          <div class="type-row"><span class="type-caption muted">Dinheiro (<code>MoneyText</code>)</span><MoneyText value={85.4} size="lg" /></div>
         </div>
 
         <h3 class="type-eyebrow">Botões</h3>
@@ -221,15 +232,13 @@
   .grid { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 20px; }
   .board { background: var(--bg-app); color: var(--text-main); font-family: var(--zelo-font-ui); border: 1px solid var(--border-card); border-radius: var(--zelo-radius-sheet); padding: 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
   .board-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  h2 { margin: 0; font: 600 22px/1 var(--zelo-font-ui); letter-spacing: -0.02em; }
+  h2 { margin: 0; font: var(--type-title); letter-spacing: var(--type-title-tracking); }
   h3 { margin: 12px 0 0; }
-  .type-display { margin: 0; font: 600 32px/1.1 var(--zelo-font-ui); letter-spacing: -0.03em; }
-  .type-title { font: 600 22px/1.1 var(--zelo-font-ui); letter-spacing: -0.02em; }
-  .type-eyebrow { font: 600 10.5px/1 var(--zelo-font-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
-  .type-body { font: 400 14.5px/1.4 var(--zelo-font-ui); }
-  .type-muted { font: 400 13px/1.4 var(--zelo-font-ui); color: var(--text-muted); margin: 0; }
+  h1, p { margin: 0; }
+  .muted { color: var(--text-muted); }
+  .intro .type-eyebrow, h3.type-eyebrow { color: var(--text-muted); }
   .num { font-family: var(--zelo-font-num); font-weight: 600; color: var(--text-main); }
-  code { font: 500 11px/1.3 var(--zelo-font-num); color: var(--text-muted); }
+  code { font: var(--type-kbd); color: var(--text-muted); }
   .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .sw { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: var(--zelo-radius-control); background: var(--bg-panel); border: 1px solid var(--border-card); }
   .sw > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 12.5px; }
@@ -237,7 +246,7 @@
   .val { color: var(--text-label); }
   .stack { display: flex; flex-direction: column; gap: 10px; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .type-row { display: grid; grid-template-columns: 120px 1fr; align-items: baseline; gap: 12px; }
+  .type-row { display: grid; grid-template-columns: 220px 1fr; align-items: baseline; gap: 12px; }
   .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .icons { color: var(--text-label); gap: 16px; }
   .motion { max-width: 1280px; margin: 0 auto 20px; }

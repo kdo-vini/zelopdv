@@ -7,6 +7,10 @@
  *   - Tailwind palette classes   (bg-slate-800, text-sky-400, border-red-500/40 …)
  *   - raw black/white utilities  (text-white, bg-black/20 …) — use ink/surface tokens
  *   - hex colours and rgb()/rgba()/hsl() literals
+ * and type only through the roles (docs/DESIGN_SYSTEM.md → Tipografia):
+ *   - literal font-family (only var(--…) / inherit)
+ *   - `font:` shorthand with a literal size (use font: var(--type-<role>))
+ *   - arbitrary text-[Npx] sizes and font-mono (use the type-<role> utilities)
  * A line may opt out with a trailing `ui-allow: <reason>` comment (reason required).
  * The list grows every migration phase; phase 6 switches it to the whole of src/.
  */
@@ -21,6 +25,10 @@ const RULES = [
   { id: 'tw-black-white', re: /\b(?:bg|text|border|ring|divide|from|to|via|fill|stroke)-(?:white|black)(?:\/\d+)?\b/g, hint: 'use text-ink / bg-surface-* / text-action-fg' },
   { id: 'hex', re: /#[0-9a-fA-F]{3,8}\b/g, hint: 'use a token (var(--…) or a semantic utility)' },
   { id: 'color-fn', re: /\b(?:rgba?|hsla?)\(/g, hint: 'use a token; translucent variants belong in src/themes/' },
+  { id: 'font-family', re: /\bfont-family:(?!\s*(?:var\(|inherit\b))\s*[^;"}]+/g, hint: 'use a type role: font: var(--type-<role>) or font-family: var(--zelo-font-ui|num)' },
+  { id: 'font-literal', re: /(?<![-\w])font:\s*[^;"}]*?\d(?:\.\d+)?(?:px|rem|em)\b[^;"}]*/g, hint: 'use font: var(--type-<role>) (tokens in src/themes/tokens.css)' },
+  { id: 'text-arbitrary', re: /\btext-\[\d[^\]]*\]/g, hint: 'use a type-<role> utility' },
+  { id: 'font-mono', re: /\bfont-mono\b/g, hint: 'use type-num-* / type-title / type-eyebrow / type-kbd' },
 ];
 
 function expand(pattern) {
@@ -57,7 +65,7 @@ for (const file of files) {
 }
 
 if (problems.length) {
-  console.error(`check:ui — ${problems.length} raw colour(s) in migrated files:\n`);
+  console.error(`check:ui — ${problems.length} raw colour/type value(s) in migrated files:\n`);
   console.error(problems.join('\n'));
   console.error('\nSee docs/DESIGN_SYSTEM.md → "Regras de código".');
   process.exit(1);

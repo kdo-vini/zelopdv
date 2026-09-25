@@ -30,9 +30,13 @@
 <span class="money money-{size} {className}">{#if prefix}<small>R$</small>{/if}{#if animate}<span aria-hidden="true">{shown}</span><span class="vh">{formatted}</span>{:else}<span>{formatted}</span>{/if}</span>
 
 <style>
-  .money { position: relative; display: inline-flex; align-items: baseline; gap: 4px; font-family: var(--zelo-font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; font-weight: 500; }
-  .money small { font: 500 0.55em/1 var(--zelo-font-ui); color: var(--text-muted); letter-spacing: 0; }
-  .money-sm { font-size: 14px; } .money-md { font-size: 20px; } .money-lg { font-size: 32px; letter-spacing: -0.03em; }
-  .money-sm small { font-size: 12px; }
+  .money { position: relative; display: inline-flex; align-items: baseline; gap: 4px; }
+  /* size = number role (docs/DESIGN_SYSTEM.md → Tipografia); `font` resets numeric variants, so set tabular after */
+  .money-sm { font: var(--type-num-md); letter-spacing: var(--type-num-md-tracking); font-variant-numeric: tabular-nums; }
+  .money-md { font: var(--type-num-lg); letter-spacing: var(--type-num-lg-tracking); font-variant-numeric: tabular-nums; }
+  .money-lg { font: var(--type-num-xl); letter-spacing: var(--type-num-xl-tracking); font-variant-numeric: tabular-nums; }
+  /* the "R$" prefix scales with the number (0.55em), in Geist */
+  .money small { font-family: var(--type-label-font); font-weight: var(--type-label-weight); font-size: 0.55em; line-height: 1; color: var(--text-muted); letter-spacing: 0; }
+  .money-sm small { font-size: var(--type-caption-size); }
   .vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 </style>

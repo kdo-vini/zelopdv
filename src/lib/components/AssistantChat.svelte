@@ -579,7 +579,7 @@
   .txt :global(p) { margin: 0 0 8px; } .txt :global(p:last-child) { margin: 0; }
   .txt :global(ul), .txt :global(ol) { margin: 0 0 8px; padding-left: 18px; } .txt :global(li) { margin: 2px 0; }
   .txt :global(strong) { font-weight: 600; }
-  .txt :global(code) { background: var(--bg-input); padding: .1rem .3rem; border-radius: 4px; font-family: monospace; }
+  .txt :global(code) { background: var(--bg-input); padding: .1rem .3rem; border-radius: 4px; font-family: monospace; } /* ui-allow: legacy branch, removed in phase 6 */
   .thinking { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
   .thinking::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); animation: blink 1s ease-in-out infinite; }
   @keyframes blink { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
@@ -651,7 +651,7 @@
   :global(:is([data-surface="app"], [data-surface="brand"])) .box textarea { font-size: 14.5px; }
   :global(:is([data-surface="app"], [data-surface="brand"])) .send { width: 36px; height: 36px; border-radius: 10px; }
   :global(:is([data-surface="app"], [data-surface="brand"])) .send:disabled { background: var(--bg-sunken); }
-  :global(:is([data-surface="app"], [data-surface="brand"])) kbd { height: 18px; display: inline-flex; align-items: center; border-bottom-width: 1px; border-radius: 5px; background: var(--bg-sunken); font: 500 10.5px/1 var(--zelo-font-num); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) kbd { height: 18px; display: inline-flex; align-items: center; border-bottom-width: 1px; border-radius: 5px; background: var(--bg-sunken); font: var(--type-kbd); letter-spacing: var(--type-kbd-tracking); }
   :global(:is([data-surface="app"], [data-surface="brand"])) .iconb:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .btn:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .choices button:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .suggest button:focus-visible,
   :global(:is([data-surface="app"], [data-surface="brand"])) .send:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .retry:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .session-item:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .back-link:focus-visible { box-shadow: 0 0 0 4px var(--focus); }
 </style>

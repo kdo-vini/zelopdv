@@ -46,23 +46,30 @@ colors:
   canvas-warm: "#ECEAE6"
 typography:
   display:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "2rem"
-    fontWeight: 600
-    lineHeight: 1.1
+    fontFamily: "'Geist Mono', ui-monospace, monospace"
+    fontSize: "clamp(2.5rem, 3.2vw + 0.875rem, 3.5rem)"
+    fontWeight: 500
+    lineHeight: 1.05
     letterSpacing: "-0.03em"
   title:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "'Geist Mono', ui-monospace, monospace"
     fontSize: "1.375rem"
     fontWeight: 600
     lineHeight: 1.1
     letterSpacing: "-0.02em"
   heading:
     fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.0625rem"
+    fontSize: "1.125rem"
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "-0.015em"
+  eyebrow:
+    fontFamily: "'Geist Mono', ui-monospace, monospace"
+    fontSize: "0.65625rem"
+    fontWeight: 500
+    lineHeight: 1
+    letterSpacing: "0.12em"
+    textTransform: uppercase
   body:
     fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.90625rem"
@@ -75,32 +82,52 @@ typography:
     fontWeight: 500
     lineHeight: 1.3
     letterSpacing: "-0.01em"
+  label:
+    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "0.84375rem"
+    fontWeight: 500
+    lineHeight: 1.2
+    letterSpacing: "normal"
   caption:
     fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.75rem"
     fontWeight: 400
     lineHeight: 1.4
     letterSpacing: "normal"
-  eyebrow:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.65625rem"
-    fontWeight: 600
+  num-sm:
+    fontFamily: "'Geist Mono', ui-monospace, monospace"
+    fontSize: "0.8125rem"
+    fontWeight: 500
     lineHeight: 1
-    letterSpacing: "0.12em"
-  number:
+    letterSpacing: "-0.01em"
+    fontFeature: "'tnum' on"
+  num-md:
+    fontFamily: "'Geist Mono', ui-monospace, monospace"
+    fontSize: "0.90625rem"
+    fontWeight: 500
+    lineHeight: 1.1
+    letterSpacing: "-0.02em"
+    fontFeature: "'tnum' on"
+  num-lg:
     fontFamily: "'Geist Mono', ui-monospace, monospace"
     fontSize: "1.25rem"
     fontWeight: 500
     lineHeight: 1
     letterSpacing: "-0.02em"
     fontFeature: "'tnum' on"
-  number-hero:
+  num-xl:
     fontFamily: "'Geist Mono', ui-monospace, monospace"
     fontSize: "2rem"
     fontWeight: 500
     lineHeight: 1
     letterSpacing: "-0.03em"
     fontFeature: "'tnum' on"
+  kbd:
+    fontFamily: "'Geist Mono', ui-monospace, monospace"
+    fontSize: "0.6875rem"
+    fontWeight: 500
+    lineHeight: 1
+    letterSpacing: "normal"
 rounded:
   segment: "9px"
   control: "12px"
@@ -189,12 +216,25 @@ Por que claro por dentro: operação de caixa acontece em loja iluminada, por ho
 
 ## 3. Tipografia
 
-**Geist** para interface; **Geist Mono** só para números — dinheiro, quantidades, códigos, horários, atalhos — sempre tabulares.
+**Geist Mono é a voz da marca** (o PDF de marca é todo em Mono): títulos de página, rótulos de seção/breadcrumb, números e, no site, títulos de seção e CTAs principais. **Geist**, a irmã proporcional da mesma família, carrega o texto denso: nomes de produto, listas, formulários, botões. Mono em tudo foi medido e descartado nas telas densas (+17% de largura em média, até +29%).
 
-- Título de página 22/600, tracking −0,02em. Rótulo de seção 10,5/600, maiúsculas, tracking 0,12em. Corpo 14,5. Apoio 12–13.
-- Dinheiro: `R$` pequeno em Geist + valor em Mono (20 no tile, 32 no total).
+| Papel | Fonte | Tamanho / peso / entrelinha / tracking | Uso |
+|---|---|---|---|
+| `display` | Mono | 40–56 / 500 / 1,05 / −0,03em | hero, momentos de marca |
+| `title` | Mono | 22 / 600 / 1,1 / −0,02em | título de página ("Frente de Caixa") |
+| `heading` | Geist | 18 / 600 / 1,2 / −0,015em | título de card, modal, seção |
+| `eyebrow` | Mono | 10,5 / 500 / 1 / 0,12em, maiúsculas | rótulo de seção, breadcrumb |
+| `body` | Geist | 14,5 / 400 / 1,4 | texto corrido, campos |
+| `body-strong` | Geist | 14,5 / 500 / 1,3 | nome de produto, item de lista |
+| `label` | Geist | 13,5 / 500 / 1,2 | botões, navegação, rótulos de campo |
+| `caption` | Geist | 12 / 400 / 1,4 | apoio, dicas |
+| `num-sm` · `num-md` · `num-lg` · `num-xl` | Mono, tabular | 13 · 14,5 · 20 · 32 / 500 | dinheiro, quantidades, códigos, horas |
+| `kbd` | Mono | 11 / 500 | atalhos e contadores |
+
+- Dinheiro: `R$` pequeno em Geist + valor em Mono (`num-lg` no tile, `num-xl` no total).
 - Nome de produto em caixa normal, nunca CAIXA ALTA.
 - Números nunca em Geist proporcional em listas ou tabelas.
+- Nada de tamanho, peso ou família soltos: cada texto tem um papel (implementação: `docs/DESIGN_SYSTEM.md` → Tipografia).
 
 ## 4. Forma, espaço, elevação e movimento
 

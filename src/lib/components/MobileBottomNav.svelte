@@ -591,7 +591,7 @@
       height: 18px;
       background: var(--primary);
       color: var(--primary-text);
-      font: 500 10.5px/1 var(--zelo-font-num);
+      font: var(--type-kbd); letter-spacing: var(--type-kbd-tracking);
     }
 
     :global([data-surface="app"]) .panel-item :global(.sidebar-badge.critical) {

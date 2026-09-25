@@ -44,7 +44,7 @@
 
 <style>
   .seg { position: relative; display: inline-flex; gap: 2px; padding: 4px; border-radius: var(--zelo-radius-control); background: var(--bg-sunken); isolation: isolate; }
-  .seg button { position: relative; z-index: 1; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 14px; border-radius: var(--zelo-radius-seg); font-weight: 500; font-size: 13.5px; color: var(--text-muted); transition: background var(--zelo-dur-fast) var(--zelo-ease-out), color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+  .seg button { position: relative; z-index: 1; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 14px; border-radius: var(--zelo-radius-seg); font: var(--type-label); letter-spacing: var(--type-label-tracking); color: var(--text-muted); transition: background var(--zelo-dur-fast) var(--zelo-ease-out), color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
   .seg button:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
   .seg-md button { height: 36px; } .seg-lg button { height: 40px; }
   .seg button.on { background: var(--bg-panel); color: var(--text-main); box-shadow: 0 0 0 1px var(--border-subtle); }

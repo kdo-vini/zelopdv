@@ -106,7 +106,7 @@
     --mb-r: var(--zelo-radius-control);
     position: relative; isolation: isolate; display: inline-grid; height: var(--mb-h); min-width: var(--mb-h);
     padding: 0; border: 0; background: transparent; color: var(--primary-text); cursor: pointer;
-    font: 600 14px/1 var(--zelo-font-ui); -webkit-tap-highlight-color: transparent;
+    font: var(--type-label); font-weight: 600; -webkit-tap-highlight-color: transparent;
     transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring);
   }
   .mb-md { --mb-h: 40px; }

@@ -1430,17 +1430,15 @@
     display: block;
     margin: 0;
     padding: 0;
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
+    font: var(--type-eyebrow);
+    letter-spacing: var(--type-eyebrow-tracking);
     text-transform: uppercase;
     color: var(--text-muted);
   }
   .zp-title {
     margin: 4px 0 0;
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    font: var(--type-heading);
+    letter-spacing: var(--type-heading-tracking);
     color: var(--text-main);
   }
   .zp-body {
@@ -1816,7 +1814,7 @@
     }
     .zp-head { align-items: center; padding: 4px 8px 2px 16px; }
     .zp-eyebrow { display: none; }
-    .zp-title { margin: 0; font-size: 18px; }
+    .zp-title { margin: 0; }
     .zp-body { gap: 12px; padding: 4px 16px 14px; }
     .zp-summary { padding: 8px 14px 12px; }
     .zp-line { min-height: 24px; }

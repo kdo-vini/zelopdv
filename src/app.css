@@ -532,3 +532,18 @@
   --ease-spring:    var(--zelo-ease-spring);
   --shadow-float:   var(--elevation-float);
 }
+
+/* Type roles (docs/DESIGN_SYSTEM.md → Tipografia): one role = one class. */
+@utility type-display { font: var(--type-display); letter-spacing: var(--type-display-tracking); }
+@utility type-title { font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+@utility type-heading { font: var(--type-heading); letter-spacing: var(--type-heading-tracking); }
+@utility type-eyebrow { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; }
+@utility type-body { font: var(--type-body); letter-spacing: var(--type-body-tracking); }
+@utility type-body-strong { font: var(--type-body-strong); letter-spacing: var(--type-body-strong-tracking); }
+@utility type-label { font: var(--type-label); letter-spacing: var(--type-label-tracking); }
+@utility type-caption { font: var(--type-caption); letter-spacing: var(--type-caption-tracking); }
+@utility type-num-sm { font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); font-variant-numeric: tabular-nums; }
+@utility type-num-md { font: var(--type-num-md); letter-spacing: var(--type-num-md-tracking); font-variant-numeric: tabular-nums; }
+@utility type-num-lg { font: var(--type-num-lg); letter-spacing: var(--type-num-lg-tracking); font-variant-numeric: tabular-nums; }
+@utility type-num-xl { font: var(--type-num-xl); letter-spacing: var(--type-num-xl-tracking); font-variant-numeric: tabular-nums; }
+@utility type-kbd { font: var(--type-kbd); letter-spacing: var(--type-kbd-tracking); }

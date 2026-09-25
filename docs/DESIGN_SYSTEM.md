@@ -161,6 +161,25 @@ depois). O fluxo da venda não ganhou espera: botões e Enter do sucesso respond
 - Exceção: o spinner do `MorphButton` continua girando (mais devagar, sem o arco "respirando") porque comunica progresso.
 - Harness de screenshots (`scripts/app-mock-screens.mjs`) roda com movimento reduzido para imagens estáveis.
 
+## Tipografia
+
+Decisão do produto: **Geist Mono é a voz da marca**; Geist carrega o texto denso. Papéis, usos e medidas: `DESIGN.md` → Tipografia (e `PLAN.md` §7). A escala viva está em `/dev/design-system`.
+
+| Onde | O quê |
+|---|---|
+| `src/themes/tokens.css` | Por papel: `--type-<papel>-{font,size,weight,leading,tracking}` e o atalho `--type-<papel>` (valor pronto para `font:`) |
+| `src/app.css` | `@utility type-<papel>`: `font` + `letter-spacing` (+ `tabular-nums` nos `num-*`, maiúsculas no `eyebrow`) |
+| `static/fonts/` | Geist 400/500/600 e Geist Mono 400/500/600 (a 600 do Mono veio do pacote `geist` 1.7.2, mesma versão das demais) |
+
+Uso:
+
+- **Markup:** `class="type-title"`, `class="type-num-md"`… Um papel = uma classe; não combine com `text-*`/`font-*` de tamanho, peso ou família.
+- **CSS de componente:** `font: var(--type-label); letter-spacing: var(--type-label-tracking);`. O atalho `font` zera `font-variant-numeric`: nos papéis `num-*` escreva `font-variant-numeric: tabular-nums` **depois**.
+- **Classe dinâmica não funciona:** o Tailwind só gera utilitários que aparecem literais no código. `class="type-{papel}"` não gera nada; guarde o nome inteiro (`'type-heading'`) no dado.
+- Ajuste pontual derivado do papel é aceito quando o papel não cobre o caso (ex.: o `R$` do `MoneyText` é `0.55em` do número, em Geist; o "Confirmar" usa `label` com peso 600).
+
+Aplicado hoje: componentes `zelo/` (inclui `Sheet`, `ZeloToaster`, `MoneyText` → `num-md|lg|xl`), `PaymentMethodGrid`, sidebar (rótulos de seção em `eyebrow`), bottom nav, `ModalPagamento` (título `heading`, rótulos `eyebrow`) e o `/app` (`h1` em `title`, breadcrumb em `eyebrow`, números em `num-*`).
+
 ## Regras de código
 
 1. **Cor só por token.** Arquivos em `scripts/ui-migrated.json` não podem ter classe de paleta Tailwind, `text-white`/`bg-black`, hex nem `rgb()/rgba()/hsl()`. `npm run check:ui` (no CI) barra. Exceção pontual: comentário `ui-allow: <motivo>` na linha.
@@ -168,8 +187,9 @@ depois). O fluxo da venda não ganhou espera: botões e Enter do sucesso respond
 3. **Componentes não conhecem a superfície.** Nada de `if brand`: o mesmo componente funciona nas três.
 4. **Contraste é teste.** Mudou um valor em `surface-*.css`? `tests/themeContrast.test.js` recalcula a partir do CSS real (resolve `var()` e compõe alfa sobre o fundo).
 5. **Ícones:** `lucide-svelte`, `strokeWidth={1.75}`, 18–20 px.
-6. **Números:** `MoneyText` ou `font-num` + `tabular-nums`.
+6. **Números:** `MoneyText` ou um papel `num-*` (tabular).
 7. **Movimento:** só pelos tokens e por `src/lib/motion/` (seção Movimento). Nada de `ease-in-out`/durações soltas em código novo.
+8. **Tipografia só por papel** (seção Tipografia). `check:ui` barra, nos arquivos migrados, `font-family` literal (só `var(--…)`/`inherit`), `font:` com tamanho literal, `text-[Npx]` e `font-mono`.
 
 ## Migração — padrão por arquivo
 

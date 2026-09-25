@@ -9,7 +9,7 @@
   .kbd {
     display: inline-flex; align-items: center; height: 22px; padding: 0 6px;
     border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-sunken);
-    color: var(--text-muted); font: 500 11px/1 var(--zelo-font-num);
+    color: var(--text-muted); font: var(--type-kbd); letter-spacing: var(--type-kbd-tracking);
   }
   /* inside a solid action (CTA) the chip becomes a translucent tint of the action ink */
   :global(.on-action) .kbd {

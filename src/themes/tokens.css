@@ -9,6 +9,7 @@
 @font-face { font-family: 'Geist'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/Geist-SemiBold.woff2') format('woff2'); }
 @font-face { font-family: 'Geist Mono'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-Regular.woff2') format('woff2'); }
 @font-face { font-family: 'Geist Mono'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'Geist Mono'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-SemiBold.woff2') format('woff2'); }
 
 :root {
     /* Brand — measured from the Zelo branding PDF (pages 12–15) */
@@ -36,6 +37,37 @@
     /* Type */
     --zelo-font-ui: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     --zelo-font-num: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Type roles — docs/DESIGN_SYSTEM.md → Tipografia. Geist Mono is the brand voice (titles,
+       eyebrows, numbers); Geist carries dense text. Use `font: var(--type-<role>)` plus
+       `letter-spacing: var(--type-<role>-tracking)` in component CSS, or the `type-<role>`
+       utility (src/app.css), which also sets tracking, tabular numbers and case. */
+    --type-display-font: var(--zelo-font-num); --type-display-size: clamp(40px, 3.2vw + 14px, 56px); --type-display-weight: 500; --type-display-leading: 1.05; --type-display-tracking: -0.03em;
+    --type-display: var(--type-display-weight) var(--type-display-size)/var(--type-display-leading) var(--type-display-font);
+    --type-title-font: var(--zelo-font-num); --type-title-size: 22px; --type-title-weight: 600; --type-title-leading: 1.1; --type-title-tracking: -0.02em;
+    --type-title: var(--type-title-weight) var(--type-title-size)/var(--type-title-leading) var(--type-title-font);
+    --type-heading-font: var(--zelo-font-ui); --type-heading-size: 18px; --type-heading-weight: 600; --type-heading-leading: 1.2; --type-heading-tracking: -0.015em;
+    --type-heading: var(--type-heading-weight) var(--type-heading-size)/var(--type-heading-leading) var(--type-heading-font);
+    --type-eyebrow-font: var(--zelo-font-num); --type-eyebrow-size: 10.5px; --type-eyebrow-weight: 500; --type-eyebrow-leading: 1; --type-eyebrow-tracking: 0.12em;
+    --type-eyebrow: var(--type-eyebrow-weight) var(--type-eyebrow-size)/var(--type-eyebrow-leading) var(--type-eyebrow-font);
+    --type-body-font: var(--zelo-font-ui); --type-body-size: 14.5px; --type-body-weight: 400; --type-body-leading: 1.4; --type-body-tracking: 0;
+    --type-body: var(--type-body-weight) var(--type-body-size)/var(--type-body-leading) var(--type-body-font);
+    --type-body-strong-font: var(--zelo-font-ui); --type-body-strong-size: 14.5px; --type-body-strong-weight: 500; --type-body-strong-leading: 1.3; --type-body-strong-tracking: -0.01em;
+    --type-body-strong: var(--type-body-strong-weight) var(--type-body-strong-size)/var(--type-body-strong-leading) var(--type-body-strong-font);
+    --type-label-font: var(--zelo-font-ui); --type-label-size: 13.5px; --type-label-weight: 500; --type-label-leading: 1.2; --type-label-tracking: 0;
+    --type-label: var(--type-label-weight) var(--type-label-size)/var(--type-label-leading) var(--type-label-font);
+    --type-caption-font: var(--zelo-font-ui); --type-caption-size: 12px; --type-caption-weight: 400; --type-caption-leading: 1.4; --type-caption-tracking: 0;
+    --type-caption: var(--type-caption-weight) var(--type-caption-size)/var(--type-caption-leading) var(--type-caption-font);
+    --type-num-sm-font: var(--zelo-font-num); --type-num-sm-size: 13px; --type-num-sm-weight: 500; --type-num-sm-leading: 1; --type-num-sm-tracking: -0.01em;
+    --type-num-sm: var(--type-num-sm-weight) var(--type-num-sm-size)/var(--type-num-sm-leading) var(--type-num-sm-font);
+    --type-num-md-font: var(--zelo-font-num); --type-num-md-size: 14.5px; --type-num-md-weight: 500; --type-num-md-leading: 1.1; --type-num-md-tracking: -0.02em;
+    --type-num-md: var(--type-num-md-weight) var(--type-num-md-size)/var(--type-num-md-leading) var(--type-num-md-font);
+    --type-num-lg-font: var(--zelo-font-num); --type-num-lg-size: 20px; --type-num-lg-weight: 500; --type-num-lg-leading: 1; --type-num-lg-tracking: -0.02em;
+    --type-num-lg: var(--type-num-lg-weight) var(--type-num-lg-size)/var(--type-num-lg-leading) var(--type-num-lg-font);
+    --type-num-xl-font: var(--zelo-font-num); --type-num-xl-size: 32px; --type-num-xl-weight: 500; --type-num-xl-leading: 1; --type-num-xl-tracking: -0.03em;
+    --type-num-xl: var(--type-num-xl-weight) var(--type-num-xl-size)/var(--type-num-xl-leading) var(--type-num-xl-font);
+    --type-kbd-font: var(--zelo-font-num); --type-kbd-size: 11px; --type-kbd-weight: 500; --type-kbd-leading: 1; --type-kbd-tracking: 0;
+    --type-kbd: var(--type-kbd-weight) var(--type-kbd-size)/var(--type-kbd-leading) var(--type-kbd-font);
 
     /* Shape — `--radius` feeds Tailwind's rounded-sm/md/lg/xl (shadcn scale); keep it */
     --radius: 0.5rem;

@@ -51,5 +51,5 @@
   .tabs.live button.on::after { content: none; }
   .ind { position: absolute; left: 0; bottom: 0; height: 2px; border-radius: 2px; background: var(--primary); pointer-events: none; will-change: transform, width; }
   .tabs button:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); border-radius: 6px; }
-  .n { font: 500 11px/1 var(--zelo-font-num); color: var(--text-muted); opacity: 0.75; }
+  .n { font: var(--type-kbd); letter-spacing: var(--type-kbd-tracking); font-variant-numeric: tabular-nums; color: var(--text-muted); opacity: 0.75; }
 </style>

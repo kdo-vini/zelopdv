@@ -20,7 +20,7 @@
   .step button:active:not(:disabled) { transform: scale(0.9); transition-duration: var(--zelo-dur-fast); }
   .step button:hover:not(:disabled) { color: var(--text-main); }
   .step button:disabled { opacity: 0.4; }
-  .step span { min-width: 24px; text-align: center; font: 500 13px/1 var(--zelo-font-num); color: var(--text-main); }
+  .step span { min-width: 24px; text-align: center; font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); font-variant-numeric: tabular-nums; color: var(--text-main); }
   .step-sm { height: 30px; } .step-sm button { width: 30px; height: 28px; }
-  .step-lg { height: 40px; border-radius: var(--zelo-radius-control); } .step-lg button { width: 40px; height: 38px; } .step-lg span { font-size: 14.5px; }
+  .step-lg { height: 40px; border-radius: var(--zelo-radius-control); } .step-lg button { width: 40px; height: 38px; } .step-lg span { font: var(--type-num-md); letter-spacing: var(--type-num-md-tracking); font-variant-numeric: tabular-nums; }
 </style>

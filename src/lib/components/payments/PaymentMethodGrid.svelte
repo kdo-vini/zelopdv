@@ -182,7 +182,7 @@
     display: inline-flex; align-items: center; height: 22px; padding: 0 7px;
     border-radius: var(--zelo-radius-pill); border: 1px solid var(--status-warning-border);
     background: var(--status-warning-bg); color: var(--status-warning-text);
-    font: 500 11px/1 var(--zelo-font-num);
+    font: var(--type-kbd); letter-spacing: var(--type-kbd-tracking);
   }
   .zpm-tile.on :global(.zpm-kbd) { border-color: var(--border-strong); color: var(--text-main); }
   @media (max-width: 767px) {

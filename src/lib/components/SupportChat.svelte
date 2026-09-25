@@ -267,7 +267,7 @@
     background: color-mix(in srgb, var(--shadow-color) 10%, transparent);
     padding: 0.1rem 0.3rem;
     border-radius: 4px;
-    font-family: monospace;
+    font-family: monospace; /* ui-allow: legacy branch, removed in phase 6 */
   }
   .markdown-content :global(a) {
     display: inline-flex;

@@ -14,6 +14,6 @@
 <style>
   .search { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; border-radius: var(--zelo-radius-control); background: var(--bg-input); border: 1px solid var(--border-subtle); color: var(--text-muted); }
   .search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 4px var(--focus); }
-  .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: 400 15px var(--zelo-font-ui); color: var(--text-main); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: var(--type-body); letter-spacing: var(--type-body-tracking); color: var(--text-main); }
   .search input::placeholder { color: var(--text-muted); }
 </style>
