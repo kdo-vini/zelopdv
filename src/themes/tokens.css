@@ -1,0 +1,81 @@
+/* ZELO DESIGN SYSTEM — PRIMITIVES
+   Raw palette, type, shape and motion. Components never read these directly:
+   they read the semantic tokens defined per surface (surface-*.css).
+   Canonical doc: docs/DESIGN_SYSTEM.md
+*/
+
+@font-face { font-family: 'Geist'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/Geist-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Geist'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/Geist-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'Geist'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/Geist-SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'Geist Mono'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Geist Mono'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-Medium.woff2') format('woff2'); }
+
+:root {
+    /* Brand — measured from the Zelo branding PDF (pages 12–15) */
+    --zelo-navy: #011F4A;
+    --zelo-navy-700: #0A2F66;   /* hover on navy */
+    --zelo-navy-600: #163A73;   /* raised surface on navy */
+    --zelo-navy-500: #2F4B7C;   /* inactive track on navy */
+    --zelo-white: #FFFFFF;
+
+    /* Warm neutrals for the light surface */
+    --zelo-paper: #F5F4F1;
+    --zelo-paper-sunken: #F0EEEA;
+    --zelo-canvas: #ECEAE6;
+    --zelo-line: #E5E2DC;
+    --zelo-line-card: #E8E5DF;
+    --zelo-line-strong: #C9CFD8;
+    --zelo-ink-label: #34455F;
+    --zelo-ink-muted: #5E6C80;   /* 5.34:1 on white, 4.85:1 on paper */
+
+    /* Status (functional, never brand) — light-surface values */
+    --zelo-success: #146C43; --zelo-success-bg: #E9F5EE; --zelo-success-line: #BFE3CD;
+    --zelo-warning: #7A5200; --zelo-warning-bg: #FFF5DE; --zelo-warning-line: #F1D89B; --zelo-warning-dot: #D99A06;
+    --zelo-error:   #B42318; --zelo-error-bg:   #FDECEA; --zelo-error-line:   #F5C2BC; --zelo-error-solid: #C8321F;
+
+    /* Type */
+    --zelo-font-ui: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --zelo-font-num: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Shape — `--radius` feeds Tailwind's rounded-sm/md/lg/xl (shadcn scale); keep it */
+    --radius: 0.5rem;
+    --zelo-radius-seg: 9px;
+    --zelo-radius-control: 12px;
+    --zelo-radius-card: 14px;
+    --zelo-radius-cta: 16px;
+    --zelo-radius-sheet: 24px;
+    --zelo-radius-pill: 999px;
+
+    /* Motion — closed-form spring step response (zeta 0.84, overshoot 0.8%) sampled into linear() */
+    --zelo-ease-spring: linear(0, 0.064, 0.204, 0.367, 0.523, 0.658, 0.766, 0.848, 0.907, 0.948, 0.975, 0.992, 1.001, 1.006, 1.008, 1.008, 1.007, 1.005, 1.004, 1.003, 1);
+    --zelo-ease-out: cubic-bezier(0.2, 0.9, 0.25, 1);
+    --zelo-dur-fast: 150ms;
+    --zelo-dur-base: 220ms;
+    --zelo-dur-slow: 320ms;
+
+    /* Transitions */
+    --transition-fast: 200ms ease;
+    --transition-normal: 300ms ease;
+
+    /* Mobile app navigation */
+    --mobile-bottom-nav-height: 64px;
+    --mobile-bottom-nav-safe-height: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    --mobile-bottom-nav-offset: env(safe-area-inset-bottom, 0px);
+    --toast-offset: 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root { --zelo-dur-fast: 0ms; --zelo-dur-base: 0ms; --zelo-dur-slow: 0ms; }
+}
+
+@media (max-width: 767px) {
+    html.has-mobile-bottom-nav {
+        --mobile-bottom-nav-offset: var(--mobile-bottom-nav-safe-height);
+        --toast-offset: calc(var(--mobile-bottom-nav-safe-height) + 12px);
+    }
+
+    html.has-mobile-bottom-nav.mobile-keyboard-open {
+        --mobile-bottom-nav-offset: env(safe-area-inset-bottom, 0px);
+        --toast-offset: 12px;
+    }
+}

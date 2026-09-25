@@ -9,6 +9,14 @@
 Este doc reflete os padrões **reais** do código (não um ideal). Quando um padrão
 mudar de propósito, atualize aqui e aponte o novo arquivo canônico.
 
+> **Design System Zelo em migração (2026-09).** O padrão novo é o Design System Zelo:
+> linguagem visual em [`DESIGN.md`](../DESIGN.md), implementação/regras/migração em
+> [`docs/DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md), referência viva em `/dev/design-system`.
+> **Código novo** segue o Design System (tokens semânticos, componentes de
+> `src/lib/components/zelo/`, `Button` com variantes `primary`/`outlined`/`quiet`/`danger`).
+> As seções abaixo continuam válidas para telas ainda no tema legado até a fase
+> correspondente migrá-las.
+
 > Para o app separado `admin-dashboard/`, use também [docs/admin/DESIGN_PATTERNS.md](/home/vinicius/code/zelopdv/docs/admin/DESIGN_PATTERNS.md:1).
 
 ---
@@ -17,7 +25,7 @@ mudar de propósito, atualize aqui e aponte o novo arquivo canônico.
 
 - **Nunca hardcode hex em componente.** Use variáveis de tema (`var(--primary)`, `var(--text-main)`…). Classes Tailwind do palette slate/sky são toleradas nas telas internas, mas cor de marca/estado sempre via token.
 - **Reutilize, não recrie.** Sidebar, back-link, toasts, confirm, spinner, botões, selects, ícones — tudo já existe. Importe.
-- **Tema escuro único** (navy/slate + acento sky). Sem light mode.
+- **Superfícies:** `app` (interno, claro, ação navy) e `brand` (cliente final, navy, ação branca), definidas por rota em `src/lib/theme/surface.js`. Até cada fase entrar no ar, as telas renderizam o tema `legacy` (slate + sky). Não existe mais "tema escuro único" como alvo — ver [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md).
 - **JSON-LD em Svelte** usa `{@html}` (ver [[CLAUDE]]).
 - **`cn()` para classes condicionais** — nunca template literal ternário. Importar de `$lib/utils`.
 - **Ícones via `lucide-svelte`** — nunca SVG inline (ver seção 12).
@@ -25,7 +33,9 @@ mudar de propósito, atualize aqui e aponte o novo arquivo canônico.
 
 ---
 
-## 1. Tokens de tema — `src/themes/base.css`
+## 1. Tokens de tema — `src/themes/` (ver [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) → Arquivos)
+
+> Os valores legados abaixo agora vivem em `src/themes/surface-legacy.css`; os nomes são os mesmos nas superfícies `app` e `brand`.
 
 Fonte única de cor. Resumo (ver arquivo para a lista completa):
 
@@ -382,7 +392,7 @@ Ver **seção 13** para API e exemplos. Não use `<select>` nativo em páginas n
 
 ## 10. Checklist antes de mexer em UI
 
-1. A cor que vou usar tem token em `base.css`? (não hardcode hex)
+1. A cor que vou usar tem token em `src/themes/` (semântico, igual nas três superfícies)? (não hardcode hex; arquivos migrados passam em `npm run check:ui`)
 2. Já existe componente pra isso? (`Button`, `Spinner`, `BackLink`, `ConfirmDialog`, `GestaoSidebar`…)
 3. Se é rota nova com sidebar: registrei em `hasSidebarLayout` + `protectedPaths`?
 4. Se é tela interna: a página tem cabeçalho com **título e caminho de volta** (seção 3)?

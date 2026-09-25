@@ -1,0 +1,124 @@
+/* SURFACE: BRAND — everything the end customer sees before logging in
+   (site, landing pages, blog chrome, login/cadastro). Navy canvas, raised
+   navy cards, white ink, white actions with navy text. Every component works
+   here as-is; a light form card (login) or long-form reading (blog) nests a
+   `data-surface="app"` subtree instead of special-casing components.
+   Contrast (WCAG): white on navy 16.2:1 · muted (62%) 6.88 on navy /
+   5.31 on --bg-card · primary-text on primary 16.2. Never use white below
+   50% opacity for text on navy (46% = 4.37:1, fails AA).
+*/
+[data-surface="brand"] {
+    color-scheme: dark;
+    font-family: var(--zelo-font-ui);
+
+    /* Surfaces */
+    --bg-app: var(--zelo-navy);
+    --bg-panel: var(--zelo-navy-600);
+    --bg-card: var(--zelo-navy-600);
+    --bg-sunken: rgba(255, 255, 255, 0.08);
+    --bg-input: rgba(255, 255, 255, 0.08);   /* light form cards nest data-surface="app" instead */
+    --bg-header: var(--zelo-navy);
+    --bg-sidebar: var(--zelo-navy);
+
+    /* Ink */
+    --text-main: var(--zelo-white);
+    --text-label: rgba(255, 255, 255, 0.80);
+    --text-muted: rgba(255, 255, 255, 0.62);
+    --text-inverse: var(--zelo-navy);
+
+    /* Lines */
+    --border-subtle: rgba(255, 255, 255, 0.11);
+    --border-card: rgba(255, 255, 255, 0.11);
+    --border-strong: rgba(255, 255, 255, 0.24);
+
+    /* Actions */
+    --primary: var(--zelo-white);
+    --primary-hover: #E8ECF3;
+    --primary-text: var(--zelo-navy);
+    --secondary: rgba(255, 255, 255, 0.08);
+    --secondary-border: rgba(255, 255, 255, 0.24);
+    --secondary-text: var(--zelo-white);
+    --accent: var(--zelo-white);
+    --accent-light: rgba(255, 255, 255, 0.10);
+    --focus: rgba(255, 255, 255, 0.35);
+    --elevation-float: 0 12px 28px -12px rgba(0, 8, 24, 0.75);
+    --link: var(--zelo-white);
+    --link-hover: rgba(255, 255, 255, 0.80);
+
+    /* Status keeps the dark-surface legibility values from legacy */
+    --error: #FCA5A5;
+    --error-bg: rgba(239, 68, 68, 0.14);
+    --error-light: #FECACA;
+    --success: #4ADE80;
+    --success-hover: #22C55E;
+    --success-bg: rgba(34, 197, 94, 0.14);
+    --success-light: #D1FAE5;
+    --warning: #FBBF24;
+    --status-success-bg: rgba(34, 197, 94, 0.12);
+    --status-success-border: rgba(34, 197, 94, 0.40);
+    --status-success-text: #4ADE80;
+    --status-error-bg: rgba(239, 68, 68, 0.12);
+    --status-error-border: rgba(239, 68, 68, 0.40);
+    --status-error-text: #FCA5A5;
+    --status-warning-bg: rgba(245, 158, 11, 0.12);
+    --status-warning-border: rgba(245, 158, 11, 0.40);
+    --status-warning-text: #FBBF24;
+
+    --sidebar-item-active-bg: rgba(255, 255, 255, 0.10);
+    --sidebar-item-active-text: var(--zelo-white);
+    --sidebar-item-hover-bg: rgba(255, 255, 255, 0.06);
+
+    /* Marketing aliases — existing public components read these */
+    --marketing-dark: var(--zelo-navy);
+    --marketing-dark-soft: var(--zelo-navy-700);
+    --marketing-dark-panel: var(--zelo-navy-600);
+    --marketing-dark-border: rgba(255, 255, 255, 0.11);
+    --marketing-dark-muted: rgba(255, 255, 255, 0.72);
+    --marketing-action: var(--zelo-white);
+    --marketing-paper: var(--zelo-paper);
+    --marketing-paper-strong: var(--zelo-white);
+    --marketing-paper-tint: var(--zelo-canvas);
+    --marketing-ink: var(--zelo-navy);
+    --marketing-ink-soft: var(--zelo-ink-muted);
+    --marketing-line: var(--zelo-line);
+
+    /* Blog editorial "paper" section */
+    --blog-bg: var(--zelo-paper);
+    --blog-surface: var(--zelo-white);
+    --blog-card: var(--zelo-white);
+    --blog-border: var(--zelo-line);
+    --blog-text: var(--zelo-navy);
+    --blog-muted: var(--zelo-ink-muted);
+    --blog-pill-bg: rgba(255, 255, 255, 0.72);
+    --blog-pill-text: var(--zelo-ink-label);
+    --blog-shadow: rgb(1 31 74 / 0.08);
+    --blog-glow-a: transparent;
+    --blog-glow-b: transparent;
+    --blog-glow-c: transparent;
+
+    /* shadcn-svelte palette */
+    --background: var(--zelo-navy);
+    --foreground: var(--zelo-white);
+    --card: var(--zelo-navy-600);
+    --card-foreground: var(--zelo-white);
+    --popover: var(--zelo-navy-600);
+    --popover-foreground: var(--zelo-white);
+    --primary-foreground: var(--zelo-navy);
+    --secondary-foreground: var(--zelo-white);
+    --muted: rgba(255, 255, 255, 0.08);
+    --muted-foreground: rgba(255, 255, 255, 0.62);
+    --accent-foreground: var(--zelo-navy);
+    --destructive: #F87171;
+    --destructive-foreground: var(--zelo-navy);
+    --border: rgba(255, 255, 255, 0.11);
+    --input: rgba(255, 255, 255, 0.24);
+    --ring: rgba(255, 255, 255, 0.35);
+    --sidebar: var(--zelo-navy);
+    --sidebar-foreground: rgba(255, 255, 255, 0.74);
+    --sidebar-primary: var(--zelo-white);
+    --sidebar-primary-foreground: var(--zelo-navy);
+    --sidebar-accent: rgba(255, 255, 255, 0.10);
+    --sidebar-accent-foreground: var(--zelo-white);
+    --sidebar-border: rgba(255, 255, 255, 0.11);
+    --sidebar-ring: rgba(255, 255, 255, 0.35);
+}

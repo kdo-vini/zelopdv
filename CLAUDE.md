@@ -12,6 +12,7 @@
 5. [[TRADEOFFS]] — tradeoffs aceitos e dívida técnica conhecida (o que deixamos na mesa de propósito)
 6. [[FIXES_PROGRESS]] / [[INCIDENTS]] — trilha operacional
 7. [[DESIGN_PATTERNS]] — **obrigatório antes de qualquer mudança de UI** (tela, componente, cabeçalho, botão, navegação)
+8. `DESIGN.md` (raiz) + [[DESIGN_SYSTEM]] — **Design System Zelo**: linguagem visual, superfícies `app`/`brand`, tokens, regras de código (`npm run check:ui`) e fases da migração
 
 ## Arquitetura real
 
@@ -157,6 +158,7 @@ Superficies que pedem leitura complementar antes de mexer:
 
 - `npm test` — suíte Vitest do app principal
 - `npm run check` — `svelte-check`
+- `npm run check:ui` — guarda do Design System (cor só por token nos arquivos migrados)
 - `npm run build` — build do app principal
 - `cd admin-dashboard && npm run check`
 - `cd admin-dashboard && npm run build`
@@ -180,7 +182,7 @@ Estado validado mais recente está em [[CURRENT]].
 ## Convenções de documentação
 
 - Toda a documentação vive em `docs/` (operacional + profunda) e é espelhada no vault `pdvObsidian/` via symlinks. Não criar `.md` operacionais novos na raiz.
-- A raiz guarda apenas os pontos de entrada: `README.md`, `CLAUDE.md` e `AGENTS.md`.
+- A raiz guarda apenas os pontos de entrada: `README.md`, `CLAUDE.md`, `AGENTS.md` e `DESIGN.md` (linguagem visual do Design System Zelo).
 - Quando um arquivo em `docs/` não for mais fonte viva, marque isso explicitamente no topo e aponte para a doc canônica atual.
 - Após mudanças relevantes:
   - atualizar [[CURRENT]] se o estado mudou
@@ -191,7 +193,7 @@ Estado validado mais recente está em [[CURRENT]].
 ## Convenções relevantes
 
 - Antes de qualquer mudança de UI (tela, componente, cabeçalho, botão, navegação), consultar [[DESIGN_PATTERNS]] e reutilizar o padrão existente em vez de inventar.
-- Não hardcode hex em componentes; usar variáveis de tema.
+- Não hardcode hex em componentes; usar variáveis de tema. Código novo segue o Design System Zelo (`docs/DESIGN_SYSTEM.md`): tokens semânticos, componentes de `src/lib/components/zelo/`, e o arquivo entra em `scripts/ui-migrated.json`.
 - JSON-LD em Svelte deve usar `{@html}`.
 - Para mudanças profundas: atualizar [[CURRENT]], [[FIXES_PROGRESS]], [[ZeloPDV.memory]] e, se aplicável, [[INCIDENTS]].
 - Testes principais:

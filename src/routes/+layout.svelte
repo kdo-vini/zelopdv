@@ -5,6 +5,7 @@
   import { page } from '$app/stores';
   import { get } from 'svelte/store';
   import { afterNavigate } from '$app/navigation';
+  import { applySurfaceToDocument } from '$lib/theme/surface';
   import { isZeloContactWhatsAppHref, trackGoogleAdsContato } from '$lib/googleAds';
   import { capturePostHogPageview } from '$lib/posthogClient';
   import { captureAcquisitionOrigin } from '$lib/attribution/client';
@@ -79,6 +80,7 @@
   }
 
   afterNavigate(() => {
+    if (typeof document !== 'undefined') applySurfaceToDocument(document, window.location.pathname);
     if (typeof window !== 'undefined' && window.fbq) {
       window.fbq('track', 'PageView');
     }

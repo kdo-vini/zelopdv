@@ -10,7 +10,7 @@
  * platform charges nothing).
  *
  * Colors: CSS vars for UI (`swatch` / `textColor`); resolved hex only for
- * PDF/canvas via chartColors.js (mirrors `--chart-channel-*` in base.css).
+ * PDF/canvas via chartColors.js (mirrors `--chart-channel-*` in src/themes/derived.css).
  */
 
 import { CHART_COLORS } from '$lib/theme/chartColors.js';

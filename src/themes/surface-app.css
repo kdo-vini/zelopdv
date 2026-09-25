@@ -1,0 +1,94 @@
+/* SURFACE: APP — internal system (PDV, gestão, relatórios, perfil, assinatura).
+   Light warm surfaces, navy ink, navy actions. Structure (sidebar, mobile
+   header) is navy; the primary CTA is the only other solid navy block.
+   Contrast (WCAG): text-main 16.2:1 · text-label 9.71 · text-muted 5.34 on
+   white / 4.85 on --bg-app · primary-text on primary 16.2 · status ≥ 5.7.
+*/
+[data-surface="app"] {
+    color-scheme: light;
+    font-family: var(--zelo-font-ui);
+
+    /* Surfaces */
+    --bg-app: var(--zelo-paper);
+    --bg-panel: var(--zelo-white);
+    --bg-card: var(--zelo-white);
+    --bg-sunken: var(--zelo-paper-sunken);
+    --bg-input: var(--zelo-white);
+    --bg-header: var(--zelo-white);
+    --bg-sidebar: var(--zelo-navy);
+
+    /* Ink */
+    --text-main: var(--zelo-navy);
+    --text-label: var(--zelo-ink-label);
+    --text-muted: var(--zelo-ink-muted);
+    --text-inverse: var(--zelo-white);
+
+    /* Lines */
+    --border-subtle: var(--zelo-line);
+    --border-card: var(--zelo-line-card);
+    --border-strong: var(--zelo-line-strong);
+
+    /* Actions */
+    --primary: var(--zelo-navy);
+    --primary-hover: var(--zelo-navy-700);
+    --primary-text: var(--zelo-white);
+    --secondary: var(--zelo-white);
+    --secondary-border: var(--zelo-line);
+    --secondary-text: var(--zelo-navy);
+    --accent: var(--zelo-navy);
+    --accent-light: rgba(1, 31, 74, 0.08);
+    --focus: rgba(1, 31, 74, 0.28);
+    --elevation-float: 0 10px 24px -12px rgba(1, 31, 74, 0.7);
+    --link: var(--zelo-navy);
+    --link-hover: var(--zelo-navy-700);
+
+    /* Status */
+    --error: var(--zelo-error);
+    --error-bg: var(--zelo-error-bg);
+    --error-light: var(--zelo-error);
+    --success: var(--zelo-success);
+    --success-hover: #0F5A37;
+    --success-bg: var(--zelo-success-bg);
+    --success-light: var(--zelo-success);
+    --warning: var(--zelo-warning-dot);
+    --status-success-bg: var(--zelo-success-bg);
+    --status-success-border: var(--zelo-success-line);
+    --status-success-text: var(--zelo-success);
+    --status-error-bg: var(--zelo-error-bg);
+    --status-error-border: var(--zelo-error-line);
+    --status-error-text: var(--zelo-error);
+    --status-warning-bg: var(--zelo-warning-bg);
+    --status-warning-border: var(--zelo-warning-line);
+    --status-warning-text: var(--zelo-warning);
+
+    /* Navy sidebar */
+    --sidebar-item-active-bg: rgba(255, 255, 255, 0.10);
+    --sidebar-item-active-text: var(--zelo-white);
+    --sidebar-item-hover-bg: rgba(255, 255, 255, 0.06);
+
+    /* shadcn-svelte palette */
+    --background: var(--zelo-paper);
+    --foreground: var(--zelo-navy);
+    --card: var(--zelo-white);
+    --card-foreground: var(--zelo-navy);
+    --popover: var(--zelo-white);
+    --popover-foreground: var(--zelo-navy);
+    --primary-foreground: var(--zelo-white);
+    --secondary-foreground: var(--zelo-navy);
+    --muted: var(--zelo-paper-sunken);
+    --muted-foreground: var(--zelo-ink-muted);
+    --accent-foreground: var(--zelo-white);
+    --destructive: var(--zelo-error);
+    --destructive-foreground: var(--zelo-white);
+    --border: var(--zelo-line);
+    --input: var(--zelo-line);
+    --ring: var(--zelo-navy);
+    --sidebar: var(--zelo-navy);
+    --sidebar-foreground: rgba(255, 255, 255, 0.74);
+    --sidebar-primary: var(--zelo-white);
+    --sidebar-primary-foreground: var(--zelo-navy);
+    --sidebar-accent: rgba(255, 255, 255, 0.10);
+    --sidebar-accent-foreground: var(--zelo-white);
+    --sidebar-border: transparent;
+    --sidebar-ring: rgba(255, 255, 255, 0.35);
+}

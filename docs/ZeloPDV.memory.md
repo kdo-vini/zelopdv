@@ -232,3 +232,4 @@
 - A trilha documental principal agora é: `README.md` + docs operacionais na raiz + `pdvObsidian/HOME.md`.
 - Em 2026-06-01, `npm test` voltou a 140/140 após alinhar fixtures ao contrato atual de perfil/CPF/telefone.
 - Em produção, `subscriptions` usa `provider_customer_id`; o portal Stripe já foi alinhado para esse contrato.
+- Design System Zelo (2026-09-25): tokens em `src/themes/` (`tokens.css` primitivos `--zelo-*`; `surface-legacy|app|brand.css` com os mesmos nomes semânticos; `derived.css` redeclarado em cada `[data-surface]`). A superfície vem de `src/lib/theme/surface.js` e é escrita no `<html>` pelo `hooks.server.js`. `LIVE_SURFACES` controla o que já está no ar; `?tema=novo` liga a prévia. Utilitários Tailwind semânticos usam nomes próprios (`bg-surface-*`, `text-ink*`, `border-line*`, `bg-action`) porque `text-muted` do shadcn é cor de fundo.

@@ -1,6 +1,6 @@
 /**
  * Resolved hex for PDF/canvas (cannot evaluate CSS vars).
- * Must stay aligned with `--chart-*` in `src/themes/base.css`.
+ * Must stay aligned with `--chart-*` in `src/themes/derived.css` (legacy values in `surface-legacy.css`).
  */
 export const CHART_COLORS = Object.freeze({
   cash: '#10b981',

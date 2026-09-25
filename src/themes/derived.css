@@ -1,0 +1,35 @@
+/* ZELO DESIGN SYSTEM — DERIVED TOKENS
+   Tokens computed from semantic tokens. Declared on every surface boundary
+   (`[data-surface]`) because a custom property that references another one is
+   resolved where it is declared and then inherited as a fixed value: declaring
+   it only on :root would freeze the legacy colours inside nested surfaces.
+*/
+:root,
+[data-surface] {
+    /* Report / chart series — UI uses var(--chart-*); keep in sync with
+       src/lib/theme/chartColors.js for PDF/canvas that cannot read CSS. */
+    --chart-cash: var(--success);
+    --chart-pix: var(--accent);
+    --chart-debit: var(--link);
+    --chart-credit: var(--link-hover);
+    --chart-card: var(--text-muted);
+    --chart-meal: var(--success-hover);
+    --chart-fiado: var(--warning);
+    --chart-bar: var(--accent);
+    --chart-platform-1: var(--accent);
+    --chart-platform-2: var(--warning);
+    --chart-platform-3: var(--status-error-text);
+    --chart-platform-4: var(--status-warning-text);
+    --chart-platform-5: var(--link);
+    --chart-platform-default: var(--text-muted);
+    --chart-channel-pdv: var(--text-muted);
+    --chart-channel-zelomenu: var(--zelomenu-brand);
+    --chart-channel-zelochat: var(--zelochat-brand);
+    --chart-channel-mesa: var(--link-hover);
+    --chart-channel-manual: var(--warning);
+    --chart-channel-ifood: var(--warning);
+
+    /* Elevation - modal surfaces must sit clearly above the backdrop */
+    --shadow-modal: 0 24px 64px color-mix(in srgb, var(--text-inverse) 72%, transparent),
+        0 8px 24px color-mix(in srgb, var(--text-inverse) 42%, transparent);
+}

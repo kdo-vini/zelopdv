@@ -22,7 +22,9 @@
   }
 }
 
-@custom-variant dark (&:is(.dark *));
+/* `dark:` segue a superfície: vale no legado e no brand (fundo escuro), nunca
+   dentro de uma superfície clara (`data-surface="app"`), mesmo aninhada. */
+@custom-variant dark (&:is(.dark *):not(:where([data-surface="app"], [data-surface="app"] *)));
 
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
@@ -456,46 +458,10 @@
   }
 }
 
-/* ─── shadcn-svelte: tokens mapeados para a paleta ZeloPDV ─────────────────
-   Não alterar estes valores isoladamente — manter alinhados com base.css.
-   Novos componentes shadcn usam estas variáveis; código legado usa as
-   variáveis bg / text / primary de base.css (que têm o mesmo valor).
+/* ─── shadcn-svelte: a paleta (--background, --primary-foreground…) é definida
+   por superfície em src/themes/surface-*.css. Não redefinir aqui: um :root fora
+   de layer venceria as superfícies e congelaria as cores do tema legado.
    ─────────────────────────────────────────────────────────────────────── */
-:root {
-  --background:           #0F172A;   /* = --bg-app       (slate-900) */
-  --foreground:           #F8FAFC;   /* = --text-main    (slate-50)  */
-  --card:                 #0b1220;   /* = --bg-card                  */
-  --card-foreground:      #F8FAFC;
-  --popover:              #1E293B;   /* = --bg-panel     (slate-800) */
-  --popover-foreground:   #F8FAFC;
-
-  --primary:              #0EA5E9;   /* = --primary      (sky-500)   */
-  --primary-foreground:   #FFFFFF;
-  --secondary:            #1E293B;   /* = --bg-panel     (slate-800) */
-  --secondary-foreground: #F8FAFC;
-
-  --muted:                #1E293B;
-  --muted-foreground:     #94A3B8;   /* = --text-muted   (slate-400) */
-  --accent:               #0EA5E9;   /* = --accent       (sky-500)   */
-  --accent-foreground:    #FFFFFF;
-  --destructive:          #EF4444;   /* = --error        (red-500)   */
-  --destructive-foreground: #FFFFFF;
-
-  --border:               #334155;   /* = --border-subtle (slate-700) */
-  --input:                #0f172a;   /* = --bg-input     (slate-900) */
-  --ring:                 #0EA5E9;   /* = --primary      (sky-500)   */
-  --radius:               0.5rem;
-
-  --sidebar:                  #1E293B;
-  --sidebar-foreground:       #F8FAFC;
-  --sidebar-primary:          #0EA5E9;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent:           #334155;
-  --sidebar-accent-foreground: #F8FAFC;
-  --sidebar-border:           #334155;
-  --sidebar-ring:             #0EA5E9;
-}
-
 /* Tailwind v4: expõe os tokens shadcn como utilitários (bg-primary, text-muted-foreground…) */
 @theme inline {
   --color-background:            var(--background);
@@ -529,4 +495,41 @@
   --radius-md:   calc(var(--radius) - 2px);
   --radius-lg:   var(--radius);
   --radius-xl:   calc(var(--radius) + 4px);
+
+  /* Zelo Design System — utilitários semânticos (docs/DESIGN_SYSTEM.md).
+     Nomes próprios para não colidir com classes legadas (.text-main, .text-muted)
+     nem com os utilitários shadcn (text-muted = --color-muted = fundo). */
+  --color-surface-app:    var(--bg-app);
+  --color-surface-panel:  var(--bg-panel);
+  --color-surface-card:   var(--bg-card);
+  --color-surface-sunken: var(--bg-sunken);
+  --color-surface-input:  var(--bg-input);
+  --color-ink:            var(--text-main);
+  --color-ink-label:      var(--text-label);
+  --color-ink-muted:      var(--text-muted);
+  --color-line:           var(--border-subtle);
+  --color-line-card:      var(--border-card);
+  --color-line-strong:    var(--border-strong);
+  --color-action:         var(--primary);
+  --color-action-hover:   var(--primary-hover);
+  --color-action-fg:      var(--primary-text);
+  --color-focus:          var(--focus);
+  --color-ok:             var(--status-success-text);
+  --color-ok-bg:          var(--status-success-bg);
+  --color-ok-line:        var(--status-success-border);
+  --color-warn:           var(--status-warning-text);
+  --color-warn-bg:        var(--status-warning-bg);
+  --color-warn-line:      var(--status-warning-border);
+  --color-danger:         var(--status-error-text);
+  --color-danger-bg:      var(--status-error-bg);
+  --color-danger-line:    var(--status-error-border);
+  --font-ui:  var(--zelo-font-ui);
+  --font-num: var(--zelo-font-num);
+  --radius-seg:     var(--zelo-radius-seg);
+  --radius-control: var(--zelo-radius-control);
+  --radius-card:    var(--zelo-radius-card);
+  --radius-cta:     var(--zelo-radius-cta);
+  --radius-sheet:   var(--zelo-radius-sheet);
+  --ease-spring:    var(--zelo-ease-spring);
+  --shadow-float:   var(--elevation-float);
 }

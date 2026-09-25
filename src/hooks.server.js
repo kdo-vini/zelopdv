@@ -1,4 +1,14 @@
+import { building } from '$app/environment';
 import { createRateLimitResponse, enforceRateLimit, getRequestIp } from '$lib/server/rateLimit';
+import {
+  SURFACE_COOKIE,
+  SURFACE_PREVIEW_VALUE,
+  SURFACE_QUERY_PARAM,
+  htmlClassForSurface,
+  previewFromCookie,
+  previewFromQuery,
+  resolveSurface,
+} from '$lib/theme/surface';
 
 const DEFAULT_LIMIT = { limit: 120, windowMs: 60 * 1000 };
 
@@ -52,6 +62,27 @@ function getAdminCorsHeaders(request) {
   };
 }
 
+const FONT_PRELOAD = '<link rel="preload" href="/fonts/Geist-Medium.woff2" as="font" type="font/woff2" crossorigin>';
+
+/**
+ * Decides the design-system surface for this request (docs/DESIGN_SYSTEM.md).
+ * `?tema=novo` / `?tema=atual` toggles the preview cookie. Prerendered pages
+ * cannot read query or cookies, so they build as the live surface and the
+ * root layout re-syncs on the client.
+ */
+function surfaceForRequest(event) {
+  if (building) return resolveSurface({ pathname: event.url.pathname });
+
+  const toggle = previewFromQuery(event.url.searchParams.get(SURFACE_QUERY_PARAM));
+  if (toggle === 'on') {
+    event.cookies.set(SURFACE_COOKIE, SURFACE_PREVIEW_VALUE, { path: '/', maxAge: 60 * 60 * 24 * 180, sameSite: 'lax', httpOnly: false });
+  } else if (toggle === 'off') {
+    event.cookies.delete(SURFACE_COOKIE, { path: '/' });
+  }
+  const preview = toggle ? toggle === 'on' : previewFromCookie(event.cookies.get(SURFACE_COOKIE));
+  return resolveSurface({ pathname: event.url.pathname, preview });
+}
+
 /** @type {import('@sveltejs/kit').Handle} */
 export async function handle({ event, resolve }) {
   const isAdminApi = event.url.pathname.startsWith('/api/admin/');
@@ -88,7 +119,13 @@ export async function handle({ event, resolve }) {
     }
   }
 
-  const response = await resolve(event);
+  const surface = event.url.pathname.startsWith('/api/') ? null : surfaceForRequest(event);
+  const response = await resolve(event, surface ? {
+    transformPageChunk: ({ html }) => html
+      .replace('%zelo.surface%', surface)
+      .replace('%zelo.htmlclass%', htmlClassForSurface(surface))
+      .replace('%zelo.head%', surface === 'legacy' ? '' : FONT_PRELOAD),
+  } : undefined);
   if (adminCorsHeaders) {
     for (const [key, value] of Object.entries(adminCorsHeaders)) {
       response.headers.set(key, value);

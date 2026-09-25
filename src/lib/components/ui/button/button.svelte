@@ -12,6 +12,11 @@
 				ghost: "hover:bg-muted hover:text-foreground dark:hover:bg-muted/50 aria-expanded:bg-muted aria-expanded:text-foreground",
 				destructive: "bg-destructive/10 hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/20 text-destructive focus-visible:border-destructive/40 dark:hover:bg-destructive/30",
 				link: "text-primary underline-offset-4 hover:underline",
+				// Zelo Design System (docs/DESIGN_SYSTEM.md → Botão)
+				primary: "bg-action text-action-fg hover:bg-action-hover focus-visible:ring-focus focus-visible:ring-4",
+				outlined: "border-line bg-surface-panel text-ink hover:border-line-strong focus-visible:ring-focus focus-visible:ring-4",
+				quiet: "text-ink-muted hover:bg-surface-sunken hover:text-ink",
+				danger: "border-line bg-surface-panel text-ink hover:border-danger hover:text-danger",
 			},
 			size: {
 				default: "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
@@ -22,6 +27,11 @@
 				"icon-xs": "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
 				"icon-sm": "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
 				"icon-lg": "size-9",
+				// Zelo Design System sizes
+				md: "h-10 gap-2 rounded-control px-4 text-sm font-semibold",
+				touch: "h-12 gap-2 rounded-control px-4 text-sm font-semibold",
+				cta: "h-16 w-full justify-start gap-3 rounded-cta px-5 text-[17px] font-semibold shadow-float",
+				"icon-md": "size-10 rounded-control",
 			},
 		},
 		defaultVariants: {

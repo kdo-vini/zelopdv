@@ -1,5 +1,24 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-25 — Design System Zelo, Fase 0 (branch `claude/admiring-thompson-1jk0tr`)
+
+Nova marca (navy `#011F4A` + branco) vira o **Design System Zelo**. Linguagem
+visual em `DESIGN.md` (reescrito), implementação e migração em
+`docs/DESIGN_SYSTEM.md`, referência viva em `/dev/design-system` (404 em produção).
+
+- Superfícies por rota em `<html data-surface>` definidas no servidor
+  (`src/lib/theme/surface.js` + `hooks.server.js`): `app` (interno, claro,
+  ação navy), `brand` (cliente final, navy, ação branca) e `legacy` (tema
+  antigo, padrão até cada fase).
+- Prévia: `?tema=novo` (cookie `zelo_ui=v2`) / `?tema=atual`.
+- `src/themes/base.css` → `surface-legacy.css` (valores idênticos) +
+  `tokens.css`, `surface-app.css`, `surface-brand.css`, `derived.css`.
+- Guardas: `npm run check:ui` (CI), `tests/themeContrast.test.js`,
+  `tests/themeSurface.test.js`, `npm run visual:diff`.
+- **Sem mudança visual em produção**: 0 pixels diferentes em 16 rotas × 2
+  larguras contra o commit anterior.
+- Próximo: Fase 1 (componentes + globais do layout) e Fase 2 (Brand no ar).
+
 ## Sessão 2026-09-25 — Retenção em lote de `zelochat_webhook_events_raw`
 
 Disk IO Budget do projeto compartilhado (Nano/Free) estava sendo queimado

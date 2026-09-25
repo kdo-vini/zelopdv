@@ -1,6 +1,6 @@
 <script>
   import Modal from '../../../src/lib/components/modals/ModalProdutoMontavel.svelte';
-  import '../../../src/themes/base.css';
+  import '../../../src/theme.css';
   let output = '';
   let open = true;
   let initialPizza = null;

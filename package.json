@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
+    "check:ui": "node scripts/check-ui-tokens.mjs",
+    "visual:diff": "node scripts/visual-diff.mjs",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
     "test": "vitest run",
     "worker:ifood": "node workers/ifood/index.js",

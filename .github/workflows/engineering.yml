@@ -25,6 +25,7 @@ jobs:
       # This test checks both apps' resolved cookie dependencies.
       - run: npm ci --prefix admin-dashboard
       - run: npm run check
+      - run: npm run check:ui
       - run: npm test
       - run: npm run verify:migrations
       - run: npm run verify:ifood

@@ -1,6 +1,12 @@
-/* THEME ORCHESTRATOR
-   Loads the base theme.
+/* THEME ORCHESTRATOR — Zelo Design System (docs/DESIGN_SYSTEM.md)
+   tokens   → primitives (palette, type, shape, motion, layout constants)
+   surfaces → semantic values per `data-surface` on <html> or any subtree:
+              legacy (pre-Zelo dark, default until each area migrates),
+              app (internal, light + navy actions), brand (public, navy + white actions)
+   derived  → tokens computed from semantic ones, re-evaluated at every surface boundary
 */
-
-/* Base Theme - Original Blue/Navy (Always Active) */
-@import "./themes/base.css";
+@import "./themes/tokens.css";
+@import "./themes/surface-legacy.css";
+@import "./themes/surface-app.css";
+@import "./themes/surface-brand.css";
+@import "./themes/derived.css";
