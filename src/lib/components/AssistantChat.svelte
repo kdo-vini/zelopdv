@@ -617,4 +617,41 @@
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .iconb:focus-visible, .btn:focus-visible, .choices button:focus-visible, .suggest button:focus-visible, .send:focus-visible, .retry:focus-visible, .session-item:focus-visible, .back-link:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
   @media (prefers-reduced-motion: reduce) { .assistant-panel, .box, .choices button { transition: none; } .thinking::before, .status i.busy { animation: none; } }
+
+  /* ── Zelo Design System (app/brand): raios, foco e balões do sistema ── */
+  :global(:is([data-surface="app"], [data-surface="brand"])) .assistant-panel { border-left-color: var(--border-subtle); box-shadow: var(--elevation-float); transition: transform var(--zelo-dur-slow) var(--zelo-ease-out); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .assistant-backdrop { background: color-mix(in srgb, var(--shadow-color) 42%, transparent); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .p-head { padding: 14px 16px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .p-avatar { width: 34px; height: 34px; border-radius: 10px; font-weight: 600; font-size: 14px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .name { font-size: 14.5px; letter-spacing: -0.01em; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .status { font-size: 12px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .iconb { width: 36px; height: 36px; border-radius: var(--zelo-radius-control); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .iconb:hover, :global(:is([data-surface="app"], [data-surface="brand"])) .session-item:hover { background: var(--bg-sunken); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .iconb :global(svg) { stroke-width: 1.75; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .ctx, :global(:is([data-surface="app"], [data-surface="brand"])) .history-banner { background: var(--bg-sunken); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .session-item { border-radius: var(--zelo-radius-control); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .session-date { font-family: var(--zelo-font-num); font-size: 11.5px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .session-skeleton { border-radius: var(--zelo-radius-control); background: var(--bg-sunken); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .back-link { color: var(--text-main); text-decoration: underline; text-underline-offset: 3px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .p-msg { font-size: 14.5px; line-height: 1.5; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .p-user { padding: 10px 14px; border: 0; border-radius: 16px 16px 6px 16px; background: var(--primary); color: var(--primary-text); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .who { width: 24px; height: 24px; border-radius: 8px; font-weight: 600; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .p-assistant.error .txt { border-radius: var(--zelo-radius-control); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .retry { min-height: 36px; border-radius: var(--zelo-radius-control); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .txt :global(code) { background: var(--bg-sunken); font-family: var(--zelo-font-num); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .proposal { border-radius: var(--zelo-radius-card); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .proposal .ph { padding: 8px 12px; font-size: 12px; font-weight: 500; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .btn { min-height: 40px; padding: 0 16px; border-radius: var(--zelo-radius-control); font-size: 14px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .btn.ghost { background: var(--bg-panel); color: var(--text-main); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .exp { font-family: var(--zelo-font-num); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .choices button, :global(:is([data-surface="app"], [data-surface="brand"])) .suggest button { min-height: 34px; padding: 0 14px; border-radius: var(--zelo-radius-pill); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .choices button:hover, :global(:is([data-surface="app"], [data-surface="brand"])) .suggest button:hover { border-color: var(--border-strong); background: var(--bg-sunken); color: var(--text-main); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .box { padding: 6px 6px 6px 14px; border-radius: var(--zelo-radius-control); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .box:focus-within { border-color: var(--border-strong); box-shadow: 0 0 0 4px var(--focus); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .box textarea { font-size: 14.5px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .send { width: 36px; height: 36px; border-radius: 10px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .send:disabled { background: var(--bg-sunken); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) kbd { height: 18px; display: inline-flex; align-items: center; border-bottom-width: 1px; border-radius: 5px; background: var(--bg-sunken); font: 500 10.5px/1 var(--zelo-font-num); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .iconb:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .btn:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .choices button:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .suggest button:focus-visible,
+  :global(:is([data-surface="app"], [data-surface="brand"])) .send:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .retry:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .session-item:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .back-link:focus-visible { box-shadow: 0 0 0 4px var(--focus); }
 </style>

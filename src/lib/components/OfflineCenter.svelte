@@ -168,4 +168,38 @@
  .content { padding: 0 1.25rem 1.25rem; } section { padding: 1.1rem 0; border-bottom: 1px solid var(--border-subtle); }
  button, a { display: inline-flex; align-items: center; gap: 0.4rem; border: 1px solid var(--border-subtle); border-radius: 7px; padding: 0.5rem 0.7rem; font-size: 0.8rem; min-height: 2.5rem; } button:hover, a:hover { background: var(--bg-card); } button:disabled { opacity: 0.5; } .icon { border: 0; } .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; } .section-title { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
  input:not([hidden]), textarea { display: block; width: 100%; border: 1px solid var(--border-subtle); background: var(--bg-input); border-radius: 6px; padding: 0.6rem; margin-top: 0.3rem; } label { display: block; margin-top: 0.75rem; } ul { list-style: none; padding: 0; } li { display: grid; gap: 0.3rem; padding: 0.9rem 0; border-bottom: 1px solid var(--border-subtle); } small { overflow-wrap: anywhere; color: var(--text-muted); } .error { color: var(--error); } .review { padding: 0.85rem; background: var(--bg-card); margin-top: 0.75rem; } button:focus-visible, a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+ /* ── Zelo Design System (app/brand): diálogo do sistema; sheet inferior no mobile ── */
+ :global(:is([data-surface="app"], [data-surface="brand"])) dialog { width: min(40rem, calc(100vw - 32px)); border-color: var(--border-card); border-radius: var(--zelo-radius-sheet); background: var(--bg-panel); box-shadow: var(--shadow-modal); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) dialog::backdrop { background: color-mix(in srgb, var(--shadow-color) 42%, transparent); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) header { align-items: center; padding: 20px 24px 16px; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.015em; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) header p { margin-top: 2px; font-size: 13px; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) h3 { font-size: 14.5px; font-weight: 600; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) p, :global(:is([data-surface="app"], [data-surface="brand"])) label, :global(:is([data-surface="app"], [data-surface="brand"])) li { font-size: 13.5px; line-height: 1.45; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) p { color: var(--text-label); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) .content { padding: 0 24px 24px; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) section { padding: 18px 0; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) button, :global(:is([data-surface="app"], [data-surface="brand"])) a { min-height: 40px; padding: 0 14px; gap: 8px; border-color: var(--border-subtle); border-radius: var(--zelo-radius-control); background: var(--bg-panel); color: var(--text-main); font-size: 13.5px; font-weight: 600; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) button:hover, :global(:is([data-surface="app"], [data-surface="brand"])) a:hover { background: var(--bg-panel); border-color: var(--border-strong); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) button :global(svg) { stroke-width: 1.75; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) .icon { width: 36px; min-height: 36px; padding: 0; justify-content: center; color: var(--text-muted); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) .icon:hover { background: var(--bg-sunken); color: var(--text-main); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) button:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) a:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) .actions { gap: 8px; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) input:not([hidden]), :global(:is([data-surface="app"], [data-surface="brand"])) textarea { min-height: 44px; padding: 10px 12px; border-color: var(--border-subtle); border-radius: var(--zelo-radius-control); color: var(--text-main); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) input:not([hidden]):focus, :global(:is([data-surface="app"], [data-surface="brand"])) textarea:focus { outline: none; border-color: var(--border-strong); box-shadow: 0 0 0 4px var(--focus); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) label { color: var(--text-label); font-weight: 500; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) li { gap: 4px; padding: 14px 0; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) li span { color: var(--text-label); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) small { font-family: var(--zelo-font-num); font-size: 11.5px; }
+ :global(:is([data-surface="app"], [data-surface="brand"])) .content > p[role="status"], :global(:is([data-surface="app"], [data-surface="brand"])) .content > .error { margin-top: 16px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-control); background: var(--bg-sunken); color: var(--text-label); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) .content > .error { border-color: var(--status-error-border); background: var(--status-error-bg); color: var(--status-error-text); }
+ :global(:is([data-surface="app"], [data-surface="brand"])) .review { padding: 14px; border-radius: var(--zelo-radius-card); background: var(--bg-sunken); }
+ @media (max-width: 640px) {
+  :global(:is([data-surface="app"], [data-surface="brand"])) dialog { width: 100%; max-width: 100%; max-height: calc(100dvh - 24px); margin: auto 0 0; border-bottom: 0; border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) header { padding: 16px 16px 12px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .content { padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .actions button { flex: 1 1 auto; justify-content: center; min-height: 44px; }
+ }
 </style>

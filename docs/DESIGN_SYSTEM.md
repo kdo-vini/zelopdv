@@ -78,6 +78,22 @@ O ramo legado é apagado na Fase 6. Feito assim hoje: `src/routes/app/+page.svel
 `ModalPagamento`, `ModalSucesso`, `PaymentMethodGrid`/`PaymentMethodSelect` (prop `zelo`) e os modais do PDV
 sobre o `Sheet` (`ModalQuantidade`, `ModalValorAvulso`, `ModalMovCaixa`, `ModalAbrirCaixa`, `ModalProdutoMontavel`, `ModalNovoProduto`).
 
+Quando só o **estilo** muda num componente global (sempre montado, inclusive no SSR), o CSS novo fica
+escopado ao ancestral da superfície — `:global(:is([data-surface="app"], [data-surface="brand"])) .x { … }`
+(ou só `[data-surface="app"]` quando o componente só existe no sistema interno) — e a marcação legada
+não muda. Assim a primeira pintura já sai certa, sem depender do store no cliente.
+
+### Globais do layout (Fase 1, atrás da flag)
+
+| Peça | Superfícies Zelo | Legado |
+|---|---|---|
+| Toasts (`addToast`) | `zelo/ZeloToaster.svelte`: bloco na cor de ação (navy no app, branco no brand), ícone por tom, título + detalhe (a primeira frase curta vira título), filete de tempo que pausa com hover/foco/aba oculta; até 3, repetidos reiniciam o tempo. Centro-inferior em `--toast-offset`; no `/app` mobile sobe acima da barra "Ver comanda" (`--mobile-bottom-nav-offset + 86px`) e 52px acima da pílula offline quando ela aparece | svelte-sonner |
+| `ConfirmDialog` (`confirmAction(título, texto, { confirmLabel, cancelLabel, destructive })`) | painel claro (`data-surface="app"` também no brand), raio de sheet, Cancelar `quiet` + Confirmar `primary` (ou perigo com `destructive`); sheet inferior ≤ 640px | igual |
+| `OfflineStatus` / `OfflineCenter` / `OfflineAdjustments` / `UpdateAvailable` | pílula de estado (neutra/atenção/erro pelos tokens de status), diálogo e cartão do sistema | igual |
+| `SupportChat`, `InAppSupportChat`, `AssistantChat` | painel do sistema, balões por token, lançador circular na cor de ação sem brilho | igual |
+| `InlineHelper` | neutro rebaixado; tons `warning`/`success`/`error` pelos tokens de status | igual |
+| `MobileBottomNav` (só app) | barra clara com filete, ativo navy com pílula 8% atrás do ícone, rótulo 11px, selo mono; painéis em sheet do sistema | igual |
+
 Atalhos do caixa (só na superfície Zelo, ignorados com modal aberto): **F2** busca, **F4** item avulso, **F9** receber; `/` e Ctrl+T continuam.
 
 ## Catálogo de componentes
@@ -89,7 +105,8 @@ Atalhos do caixa (só na superfície Zelo, ignorados com modal aberto): **F2** b
 | `MorphButton` (botão → carregando → check) | `zelo/` | Fase 4 — "Confirmar" do `ModalPagamento` |
 | `Sheet` (contêiner de modal: painel central no desktop, bottom sheet no mobile; classes de campo `.z-input`, `.z-money`, `.z-label`…) | `zelo/Sheet.svelte` | Fase 4 — usado pelos modais do PDV (`ModalQuantidade`, `ModalValorAvulso`, `ModalMovCaixa`, `ModalAbrirCaixa`, `ModalProdutoMontavel`, `ModalNovoProduto`) no ramo `{#if $zeloSurface}` |
 | `AppShell`/`Sidebar` navy, `PageHeader`, `MobileHeader`, `BottomNav`, `CartBar`, `SwipeRow` | — | Fase 1/4 |
-| `Toast`, `Dialog`/`ConfirmDialog`, `CommandPalette` (⌘K), `Tooltip`, gráficos | — | Fase 1/4 |
+| `ZeloToaster` (via `addToast`), `ConfirmDialog` (via `confirmAction`) | `zelo/`, `ConfirmDialog.svelte` | Fase 1 (atrás da flag) |
+| `Dialog` genérico, `CommandPalette` (⌘K), `Tooltip`, gráficos | — | Fase 1/4 |
 
 ## Movimento
 

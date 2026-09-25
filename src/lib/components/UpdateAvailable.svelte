@@ -623,4 +623,54 @@
       transition: none;
     }
   }
+
+  /* ── Zelo Design System (app/brand): cartão flutuante, sem blur; ação primária do sistema ── */
+  :global(:is([data-surface="app"], [data-surface="brand"])) .update-toast {
+    gap: 12px;
+    padding: 14px 48px 14px 16px;
+    border-color: var(--border-card);
+    border-radius: var(--zelo-radius-card);
+    background: var(--bg-panel);
+    box-shadow: var(--elevation-float);
+    backdrop-filter: none;
+    transition: transform var(--zelo-dur-fast) var(--zelo-ease-out);
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .update-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--status-success-text);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-success-text) 18%, transparent);
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .update-copy { gap: 2px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .update-copy strong { font-size: 14.5px; font-weight: 500; letter-spacing: -0.01em; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .update-copy span { font-size: 12.5px; line-height: 1.4; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .update-actions button {
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: var(--zelo-radius-control);
+    font-size: 14px;
+    font-weight: 600;
+    transition: background var(--zelo-dur-fast) var(--zelo-ease-out);
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .update-actions button:hover,
+  :global(:is([data-surface="app"], [data-surface="brand"])) .btn-dismiss:hover { transform: none; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .btn-dismiss {
+    top: 50%;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    margin-top: -16px;
+    border-radius: var(--zelo-radius-pill);
+    font-size: 1.25rem;
+    font-weight: 400;
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .btn-dismiss:hover { background: var(--bg-sunken); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .btn-dismiss:focus-visible,
+  :global(:is([data-surface="app"], [data-surface="brand"])) .btn-refresh:focus-visible { box-shadow: 0 0 0 4px var(--focus); }
+  @media (max-width: 640px) {
+    :global(:is([data-surface="app"], [data-surface="brand"])) .update-toast { left: 12px; right: 12px; padding-right: 48px; }
+    :global(:is([data-surface="app"], [data-surface="brand"])) .btn-dismiss { top: 8px; margin-top: 0; }
+    :global(:is([data-surface="app"], [data-surface="brand"])) .update-actions button { min-height: 44px; }
+  }
 </style>

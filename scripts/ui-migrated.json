@@ -5,6 +5,16 @@
     "src/lib/components/zelo/**",
     "src/lib/motion/**",
     "src/lib/theme/surface.js",
-    "src/lib/components/payments/*"
+    "src/lib/components/payments/*",
+    "src/lib/components/ConfirmDialog.svelte",
+    "src/lib/components/ui/InlineHelper.svelte",
+    "src/lib/components/MobileBottomNav.svelte",
+    "src/lib/components/OfflineStatus.svelte",
+    "src/lib/components/OfflineCenter.svelte",
+    "src/lib/components/OfflineAdjustments.svelte",
+    "src/lib/components/UpdateAvailable.svelte",
+    "src/lib/components/AssistantChat.svelte",
+    "src/lib/components/SupportChat.svelte",
+    "src/lib/stores/ui.js"
   ]
 }

@@ -6,6 +6,9 @@
   import { addToast } from '$lib/stores/ui';
   let expanded = false;
   let centerOpen = false;
+  // Tom do indicador nas superfícies Zelo (StatusPill): erro > atenção > neutro.
+  $: tone = $offlineStatus.storageError || $offlineStatus.reviewCount ? 'danger'
+    : $offlineStatus.connection !== 'online' ? 'warn' : 'neutral';
   $: visible = $offlineStatus.connection !== 'online' || $offlineStatus.pendingCount > 0 || $offlineStatus.reviewCount > 0 || $offlineStatus.storageError || $offlineStatus.syncing;
   onMount(() => {
     const shouldNotify = createConnectionNotice();
@@ -37,7 +40,7 @@
 </script>
 
 {#if visible}
-  <aside class="offline-status" aria-label="Estado do salvamento">
+  <aside class="offline-status" class:expanded aria-label="Estado do salvamento" data-offline-status data-tone={tone}>
     <button type="button" aria-expanded={expanded} aria-label={offlineStatusLabel($offlineStatus)} on:click={() => expanded = !expanded}>
       {#if $offlineStatus.storageError || $offlineStatus.reviewCount}<CircleAlert size={16} />
       {:else if $offlineStatus.connection === 'offline'}<WifiOff size={16} />
@@ -48,7 +51,7 @@
       <p>Até sincronizar, mantenha os dados deste navegador. Não limpe os dados do site nem remova o aplicativo.</p>
       <p>Fechar normalmente não apaga lançamentos já salvos. A sincronização continua quando você abrir o sistema novamente com conexão.</p>
       {#if $offlineStatus.reviewCount}<p>Abra a central de pendências para conferir os lançamentos sinalizados.</p>{/if}
-      <button type="button" on:click={() => centerOpen = true}>Abrir central de pendências</button>
+      <button type="button" class="open-center" on:click={() => centerOpen = true}>Abrir central de pendências</button>
     {/if}
   </aside>
 {/if}
@@ -61,5 +64,34 @@
   p { font-size: 0.8rem; padding: 0 0.85rem 0.7rem; color: var(--text-muted); }
   @media (max-width: 767px) {
     .offline-status { bottom: calc(4.75rem + var(--mobile-bottom-nav-offset, 0px)); }
+  }
+
+  /* ── Zelo Design System (app/brand): StatusPill compacta, tom pelo estado ── */
+  :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status {
+    width: max-content;
+    max-width: min(32rem, calc(100vw - 24px));
+    border-radius: var(--zelo-radius-pill);
+    border-color: var(--border-subtle);
+    background: var(--bg-panel);
+    color: var(--text-label);
+    box-shadow: var(--elevation-float);
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status[data-tone="warn"] { border-color: var(--status-warning-border); background: var(--status-warning-bg); color: var(--status-warning-text); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status[data-tone="danger"] { border-color: var(--status-error-border); background: var(--status-error-bg); color: var(--status-error-text); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status.expanded { width: min(26rem, calc(100vw - 24px)); border-radius: var(--zelo-radius-card); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status button { min-height: 36px; padding: 0 14px; gap: 8px; font-size: 12.5px; font-weight: 500; line-height: 1.3; border-radius: inherit; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status button :global(svg) { stroke-width: 1.75; flex: none; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status button:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status p { padding: 0 14px 8px; font-size: 12.5px; color: inherit; opacity: 0.86; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status .open-center {
+    width: auto; margin: 4px 14px 14px; justify-content: center;
+    border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-control);
+    background: var(--bg-panel); color: var(--text-main); font-weight: 600;
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status .open-center:hover { border-color: var(--border-strong); }
+  @media (max-width: 767px) {
+    :global(:is([data-surface="app"], [data-surface="brand"])) .offline-status { bottom: calc(12px + var(--mobile-bottom-nav-offset, 0px)); }
+    /* /app: logo acima da barra flutuante "Ver comanda" (offset + 12px + 62px) */
+    :global(html:is([data-surface="app"], [data-surface="brand"]):has(.fc-cartbar)) .offline-status { bottom: calc(82px + var(--mobile-bottom-nav-offset, 0px)); }
   }
 </style>

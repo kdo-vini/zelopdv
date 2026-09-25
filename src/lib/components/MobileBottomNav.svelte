@@ -454,4 +454,169 @@
       transition-duration: 1ms;
     }
   }
+
+  /* ── Zelo Design System, superfície app (mockup zelopdv-app-mobile.html) ──
+     Barra clara com filete superior; inativos em --text-muted; ativo navy com
+     pílula suave (navy 8%) atrás do ícone; rótulos 11px; selos em mono.
+     A pílula reaproveita .section-indicator (mesma marcação do legado). */
+  @media (max-width: 767px) {
+    :global([data-surface="app"]) .mobile-bottom-navigation {
+      background: var(--bg-panel);
+      border-top-color: var(--border-subtle);
+    }
+
+    :global([data-surface="app"]) .mobile-nav-section {
+      justify-content: flex-start;
+      gap: 4px;
+      padding: 10px 2px 6px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0;
+      transition: color var(--zelo-dur-fast) var(--zelo-ease-out);
+    }
+
+    :global([data-surface="app"]) .mobile-nav-section :global(svg) {
+      position: relative;
+      z-index: 1;
+      stroke-width: 1.75;
+    }
+
+    :global([data-surface="app"]) .mobile-nav-section.expanded {
+      background: transparent;
+      color: var(--text-main);
+    }
+
+    :global([data-surface="app"]) .mobile-nav-section.route-active {
+      color: var(--text-main);
+    }
+
+    :global([data-surface="app"]) .section-indicator {
+      top: 5px;
+      width: 52px;
+      height: 30px;
+      border-radius: var(--zelo-radius-pill);
+      background: transparent;
+      transition: background var(--zelo-dur-fast) var(--zelo-ease-out);
+    }
+
+    :global([data-surface="app"]) .route-active .section-indicator,
+    :global([data-surface="app"]) .expanded .section-indicator {
+      background: var(--accent-light);
+    }
+
+    :global([data-surface="app"]) .mobile-nav-section:focus-visible,
+    :global([data-surface="app"]) .panel-item:focus-visible {
+      outline: none;
+      box-shadow: inset 0 0 0 2px var(--focus);
+    }
+
+    :global([data-surface="app"]) .mobile-nav-backdrop {
+      background: color-mix(in srgb, var(--shadow-color) 42%, transparent);
+      backdrop-filter: none;
+    }
+
+    :global([data-surface="app"]) .mobile-nav-panel {
+      padding: 8px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+      background: var(--bg-panel);
+      border-color: var(--border-subtle);
+      border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0;
+      box-shadow: var(--elevation-float);
+    }
+
+    :global([data-surface="app"]) .panel-handle {
+      width: 40px;
+      margin-bottom: 14px;
+    }
+
+    :global([data-surface="app"]) .panel-heading {
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    :global([data-surface="app"]) .panel-heading :global(svg) {
+      stroke-width: 1.75;
+      color: var(--text-muted);
+    }
+
+    :global([data-surface="app"]) .panel-heading h2 {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+
+    :global([data-surface="app"]) .panel-grid {
+      gap: 8px;
+    }
+
+    :global([data-surface="app"]) .panel-item {
+      min-height: 56px;
+      gap: 10px;
+      padding: 10px 12px;
+      border-color: var(--border-card);
+      border-radius: var(--zelo-radius-card);
+      background: var(--bg-panel);
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 500;
+      transition: background var(--zelo-dur-fast) var(--zelo-ease-out), border-color var(--zelo-dur-fast) var(--zelo-ease-out);
+    }
+
+    :global([data-surface="app"]) .panel-item :global(svg) {
+      stroke-width: 1.75;
+      color: var(--text-muted);
+    }
+
+    :global([data-surface="app"]) .panel-item:hover {
+      border-color: var(--border-strong);
+    }
+
+    :global([data-surface="app"]) .panel-item.active {
+      background: var(--accent-light);
+      border-color: var(--primary);
+      color: var(--text-main);
+    }
+
+    :global([data-surface="app"]) .panel-item.active :global(svg) {
+      color: var(--text-main);
+    }
+
+    :global([data-surface="app"]) .panel-item.destructive,
+    :global([data-surface="app"]) .panel-item.destructive :global(svg) {
+      color: var(--status-error-text);
+    }
+
+    :global([data-surface="app"]) .panel-item :global(.sidebar-badge) {
+      min-width: 18px;
+      height: 18px;
+      background: var(--primary);
+      color: var(--primary-text);
+      font: 500 10.5px/1 var(--zelo-font-num);
+    }
+
+    :global([data-surface="app"]) .panel-item :global(.sidebar-badge.critical) {
+      background: var(--status-error-text);
+    }
+
+    :global([data-surface="app"]) .company-identity {
+      padding: 12px;
+      border-color: var(--border-card);
+      border-radius: var(--zelo-radius-card);
+      background: var(--bg-sunken);
+    }
+
+    :global([data-surface="app"]) .company-avatar {
+      background: var(--primary);
+      color: var(--primary-text);
+      font-weight: 600;
+    }
+
+    :global([data-surface="app"]) .company-copy span {
+      font-size: 12px;
+    }
+
+    :global([data-surface="app"]) .company-copy strong {
+      font-weight: 600;
+    }
+  }
 </style>

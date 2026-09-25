@@ -7,7 +7,7 @@
 <!-- Mobile backdrop -->
 {#if $isSupportOpen}
   <div
-    class="md:hidden fixed inset-0 z-89 bg-black/50"
+    class="support-backdrop md:hidden fixed inset-0 z-89 bg-black/50"
     role="presentation"
     on:click={closeSupport}
     aria-hidden="true"
@@ -44,7 +44,7 @@
         </div>
         <div>
           <div class="font-semibold text-sm">Suporte Zelo PDV</div>
-          <div class="text-xs" style="opacity: 0.80;">Tire dúvidas sobre o sistema</div>
+          <div class="panel-subtitle text-xs" style="opacity: 0.80;">Tire dúvidas sobre o sistema</div>
         </div>
       </div>
       <div class="flex items-center gap-1">
@@ -321,4 +321,31 @@
     opacity: 0.4;
     cursor: not-allowed;
   }
+
+  /* ── Zelo Design System (app/brand): painel claro com cabeçalho sem bloco navy, balões por token ── */
+  :global(:is([data-surface="app"], [data-surface="brand"])) .support-backdrop { background: color-mix(in srgb, var(--shadow-color) 42%, transparent); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .support-panel {
+    background: var(--bg-panel);
+    border-left-color: var(--border-subtle);
+    box-shadow: var(--elevation-float);
+    transition: transform var(--zelo-dur-slow) var(--zelo-ease-out);
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .panel-header { padding: 14px 16px; background: var(--bg-panel); color: var(--text-main); border-bottom: 1px solid var(--border-subtle); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .panel-subtitle { color: var(--text-muted); opacity: 1 !important; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .panel-avatar { border-radius: 10px; background: var(--bg-sunken); color: var(--text-main); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .panel-avatar :global(svg), :global(:is([data-surface="app"], [data-surface="brand"])) .icon-btn :global(svg) { stroke-width: 1.75; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .icon-btn { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--zelo-radius-control); color: var(--text-muted); opacity: 1; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .icon-btn:hover { background: var(--bg-sunken); color: var(--text-main); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .welcome-msg { padding: 20px 16px; border-radius: var(--zelo-radius-card); background: var(--bg-sunken); color: var(--text-label); font-size: 14px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .p-msg { padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.45; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .p-user { background: var(--primary); color: var(--primary-text); border-bottom-right-radius: 6px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .p-assistant { background: var(--bg-sunken); color: var(--text-main); border-bottom-left-radius: 6px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .markdown-content :global(a) { color: inherit; text-underline-offset: 3px; font-weight: 600; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .markdown-content :global(code) { background: color-mix(in srgb, var(--text-main) 8%, transparent); font-family: var(--zelo-font-num); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .panel-input { min-height: 44px; padding: 0 14px; border-radius: var(--zelo-radius-control); border-color: var(--border-subtle); background: var(--bg-input); font-size: 14.5px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .panel-input::placeholder { color: var(--text-muted); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .panel-input:focus { border-color: var(--border-strong); box-shadow: 0 0 0 4px var(--focus); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .panel-send-btn { width: 44px; height: 44px; border-radius: var(--zelo-radius-control); background: var(--primary); color: var(--primary-text); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .panel-send-btn:disabled { opacity: 1; background: var(--bg-sunken); color: var(--text-muted); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .icon-btn:focus-visible, :global(:is([data-surface="app"], [data-surface="brand"])) .panel-send-btn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
 </style>

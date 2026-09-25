@@ -195,7 +195,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.2); /* ui-allow: legado, trocado por token nas superfícies Zelo */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -273,7 +273,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    color: #fff;
+    color: #fff; /* ui-allow: selo WhatsApp (ZeloChat) em verde de canal */
     background: var(--zelochat-brand);
     font-weight: 600;
     font-size: 0.875rem;
@@ -451,4 +451,64 @@
       transition: none;
     }
   }
+
+  /* ── Zelo Design System (app/brand): painel do sistema, balões por token, lançador circular sem brilho ──
+     Lançador: cor de ação da superfície (navy no app, branco no brand) com sombra flutuante tingida. */
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-toggle-btn {
+    width: 56px;
+    height: 56px;
+    background: var(--primary);
+    color: var(--primary-text);
+    box-shadow: var(--elevation-float);
+    transition: background var(--zelo-dur-fast) var(--zelo-ease-out), transform var(--zelo-dur-fast) var(--zelo-ease-spring);
+  }
+  @media (hover: hover) {
+    :global(:is([data-surface="app"], [data-surface="brand"])) .chat-toggle-btn:hover { transform: none; background: var(--primary-hover); box-shadow: var(--elevation-float); }
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-toggle-btn:active { transform: scale(0.96); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-toggle-btn:focus-visible,
+  :global(:is([data-surface="app"], [data-surface="brand"])) .close-btn:focus-visible,
+  :global(:is([data-surface="app"], [data-surface="brand"])) .send-btn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-toggle-btn :global(svg) { width: 22px; height: 22px; }
+
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-window {
+    background: var(--bg-panel);
+    border-color: var(--border-card);
+    border-radius: var(--zelo-radius-sheet);
+    box-shadow: var(--elevation-float);
+    color: var(--text-main);
+    animation: zelo-chat-in var(--zelo-dur-base) var(--zelo-ease-spring) both;
+    transform-origin: bottom right;
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-header {
+    padding: 14px 16px;
+    background: var(--bg-panel);
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .avatar { border-radius: 10px; background: var(--primary); color: var(--primary-text); font-weight: 600; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-header .text-xs { color: var(--text-muted); opacity: 1 !important; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .close-btn { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--zelo-radius-control); color: var(--text-muted); opacity: 1; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .close-btn:hover { background: var(--bg-sunken); color: var(--text-main); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .welcome-message { color: var(--text-label); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .message { padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.45; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .user-msg { background: var(--primary); color: var(--primary-text); border-bottom-right-radius: 6px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .assistant-msg { background: var(--bg-sunken); color: var(--text-main); border-bottom-left-radius: 6px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .disclaimer { padding: 8px 16px; font-size: 13px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .whatsapp-link { color: var(--text-main); font-weight: 600; text-underline-offset: 3px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-input-area { padding: 12px; gap: 8px; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-input {
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: var(--zelo-radius-control);
+    border-color: var(--border-subtle);
+    background: var(--bg-input);
+    color: var(--text-main);
+    font-size: 15px;
+  }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-input::placeholder { color: var(--text-muted); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .chat-input:focus { border-color: var(--border-strong); box-shadow: 0 0 0 4px var(--focus); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .send-btn { width: 44px; height: 44px; border-radius: var(--zelo-radius-control); background: var(--primary); color: var(--primary-text); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) .send-btn:disabled { opacity: 1; background: var(--bg-sunken); color: var(--text-muted); }
+  @keyframes zelo-chat-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
 </style>

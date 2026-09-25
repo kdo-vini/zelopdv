@@ -10,3 +10,4 @@ export { default as ProductTile } from './ProductTile.svelte';
 export { default as SearchField } from './SearchField.svelte';
 export { default as ZeloMark } from './ZeloMark.svelte';
 export { default as MorphButton } from './MorphButton.svelte';
+export { default as ZeloToaster } from './ZeloToaster.svelte';

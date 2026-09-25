@@ -397,6 +397,8 @@
     };
   });
   import { Toaster } from 'svelte-sonner';
+  import ZeloToaster from '$lib/components/zelo/ZeloToaster.svelte';
+  import { zeloSurface } from '$lib/theme/surface';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import SupportChat from '$lib/components/SupportChat.svelte';
   import OfflineStatus from '$lib/components/OfflineStatus.svelte';
@@ -437,14 +439,18 @@
   {@html pwaInfo?.webManifest?.linkTag ?? ''}
 </svelte:head>
 
-<Toaster
-  theme="dark"
-  richColors
-  closeButton
-  position="bottom-right"
-  offset="var(--toast-offset)"
-  style="--normal-bg: var(--popover); --normal-text: var(--popover-foreground); --normal-border: var(--border);"
-/>
+{#if $zeloSurface}
+  <ZeloToaster />
+{:else}
+  <Toaster
+    theme="dark"
+    richColors
+    closeButton
+    position="bottom-right"
+    offset="var(--toast-offset)"
+    style="--normal-bg: var(--popover); --normal-text: var(--popover-foreground); --normal-border: var(--border);"
+  />
+{/if}
 <ConfirmDialog />
 <UpdateAvailable />
 {#if isApp || path === '/gestao/caixa'}<OfflineStatus />{/if}

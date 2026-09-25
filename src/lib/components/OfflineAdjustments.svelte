@@ -55,4 +55,13 @@
   button { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.5rem 0.7rem; min-height: 2.5rem; font-size: 0.875rem; margin-top: 0.75rem; }
   button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   ul { list-style: none; padding: 0; } li { display: grid; gap: 0.3rem; padding: 0.65rem 0; overflow-wrap: anywhere; }
+
+  /* ── Zelo Design System (app/brand) ── */
+  :global(:is([data-surface="app"], [data-surface="brand"])) h3 { font-size: 14.5px; font-weight: 600; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) p, :global(:is([data-surface="app"], [data-surface="brand"])) li { font-size: 13.5px; line-height: 1.45; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) p, :global(:is([data-surface="app"], [data-surface="brand"])) span { color: var(--text-label); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) button { min-height: 40px; padding: 0 14px; border-color: var(--border-subtle); border-radius: var(--zelo-radius-control); background: var(--bg-panel); color: var(--text-main); font-size: 13.5px; font-weight: 600; }
+  :global(:is([data-surface="app"], [data-surface="brand"])) button:hover { border-color: var(--border-strong); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) button:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  :global(:is([data-surface="app"], [data-surface="brand"])) li strong { font-weight: 600; }
 </style>
