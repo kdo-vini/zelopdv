@@ -11,7 +11,8 @@
    *  - base: `--toast-offset` (already clears the mobile bottom nav / keyboard);
    *  - /app mobile with the floating "Ver comanda" bar (`.fc-cartbar`): above it,
    *    `--mobile-bottom-nav-offset + 86px` (bar = offset + 12px + 62px tall, + 12px gap);
-   *  - when the offline pill (`[data-offline-status]`) is on screen: lifted 52px over it.
+   *  - when the offline pill (`[data-offline-status]`) is on screen: lifted 52px over it;
+   *  - mobile with a modal open (`[aria-modal="true"]`, bottom sheets): at the top instead.
    * Hovering or focusing the stack, or hiding the tab, pauses every timer.
    */
   import { onMount } from 'svelte';
@@ -180,5 +181,7 @@
     .zt-region { left: 12px; right: 12px; width: auto; transform: none; }
     /* /app: sobe acima da barra flutuante "Ver comanda" (offset + 12px + 62px + 12px de respiro) */
     :global(html:has(.fc-cartbar)) .zt-region { bottom: calc(var(--mobile-bottom-nav-offset) + 86px + var(--zt-lift, 0px)); }
+    /* a bottom sheet is open (payment, success, confirm…): the stack moves to the top so it never covers the sheet */
+    :global(html:has([aria-modal="true"])) .zt-region { top: calc(12px + env(safe-area-inset-top, 0px)); bottom: auto; }
   }
 </style>

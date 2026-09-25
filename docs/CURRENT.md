@@ -34,6 +34,12 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     movimentar caixa (Entrada/Saída em `Segmented`), abrir caixa, produto
     montável e novo produto. Foco, atalhos e handlers de cada modal repassados
     ao `Sheet` sem mudança.
+  - **D — globais e bottom nav** ✅: `ZeloToaster` (navy no app, branco no
+    brand, filete de tempo; acima da barra "Ver comanda" e no topo quando há
+    sheet aberto no mobile), `ConfirmDialog`, offline (pílula + central),
+    `UpdateAvailable`, chats, `InlineHelper`, `MobileBottomNav` claro com ativo
+    navy. Legado segue no sonner/markup antigo.
+  - Próximo: hierarquia tipográfica (Geist Mono = voz da marca).
 
 ## Sessão 2026-09-25 — GEO, leva 2 (branch `feat/geo-wave-2`)
 

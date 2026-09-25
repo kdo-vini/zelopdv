@@ -10,10 +10,10 @@
 | Fase | Escopo | Status |
 |---|---|---|
 | 0 | Base: tokens, superfícies, flag, travas, documentação, componentes primitivos | **Entregue** — sem mudança visual (0 pixels em 16 rotas × 2 larguras) |
-| 1 | Componentes do sistema + globais do layout raiz + ícones 1,75 | Pendente |
+| 1 | Componentes do sistema + globais do layout raiz + ícones 1,75 | **Em andamento** — globais do layout (toasts, confirmação, offline, atualização, chats, bottom nav) atrás da flag |
 | 2 | Superfície Brand no ar (site, landing, blog) | Pendente |
 | 3 | Autenticação (Brand + cartão App) | Pendente |
-| 4 | Superfície App atrás da flag (estrutura → `/app` → modais → operação → gestão → relatórios → conta) | **Em andamento** — sidebar navy (métricas do mockup) e `/app` (desktop + mobile) no layout do mockup, com o sistema de movimento; modais legíveis mas ainda no visual antigo |
+| 4 | Superfície App atrás da flag (estrutura → `/app` → modais → operação → gestão → relatórios → conta) | **Em andamento** — sidebar navy (métricas do mockup) e `/app` (desktop + mobile) no layout do mockup, com o sistema de movimento; modais do PDV (pagamento, sucesso, quantidade, avulso, caixa, montável, novo produto), toasts, confirmação, offline e bottom nav no sistema |
 | 5 | E-mails, PWA/`theme-color`, favicon/OG/logos, `chartColors.js` | Pendente |
 | 6 | Virada: App padrão, remover legado/flag/`class="dark"`, `check:ui` no repo todo | Pendente |
 
@@ -87,7 +87,7 @@ não muda. Assim a primeira pintura já sai certa, sem depender do store no clie
 
 | Peça | Superfícies Zelo | Legado |
 |---|---|---|
-| Toasts (`addToast`) | `zelo/ZeloToaster.svelte`: bloco na cor de ação (navy no app, branco no brand), ícone por tom, título + detalhe (a primeira frase curta vira título), filete de tempo que pausa com hover/foco/aba oculta; até 3, repetidos reiniciam o tempo. Centro-inferior em `--toast-offset`; no `/app` mobile sobe acima da barra "Ver comanda" (`--mobile-bottom-nav-offset + 86px`) e 52px acima da pílula offline quando ela aparece | svelte-sonner |
+| Toasts (`addToast`) | `zelo/ZeloToaster.svelte`: bloco na cor de ação (navy no app, branco no brand), ícone por tom, título + detalhe (a primeira frase curta vira título), filete de tempo que pausa com hover/foco/aba oculta; até 3, repetidos reiniciam o tempo. Centro-inferior em `--toast-offset`; no `/app` mobile sobe acima da barra "Ver comanda" (`--mobile-bottom-nav-offset + 86px`) e 52px acima da pílula offline quando ela aparece; no mobile com sheet aberto (`[aria-modal]`) vai para o topo | svelte-sonner |
 | `ConfirmDialog` (`confirmAction(título, texto, { confirmLabel, cancelLabel, destructive })`) | painel claro (`data-surface="app"` também no brand), raio de sheet, Cancelar `quiet` + Confirmar `primary` (ou perigo com `destructive`); sheet inferior ≤ 640px | igual |
 | `OfflineStatus` / `OfflineCenter` / `OfflineAdjustments` / `UpdateAvailable` | pílula de estado (neutra/atenção/erro pelos tokens de status), diálogo e cartão do sistema | igual |
 | `SupportChat`, `InAppSupportChat`, `AssistantChat` | painel do sistema, balões por token, lançador circular na cor de ação sem brilho | igual |
