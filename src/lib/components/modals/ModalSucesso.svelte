@@ -3,9 +3,15 @@
   Descrição: Modal de sucesso pós-venda com opções de compartilhar (WhatsApp), imprimir ou novo pedido.
 -->
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
   import { buildReceiptText as buildSaleReceiptText } from '$lib/receiptText';
   import { formatMoney } from '$lib/formatMoney';
+  import { Check, Copy, MessageCircle, Printer } from 'lucide-svelte';
+  import { zeloSurface } from '$lib/theme/surface';
+  import { Button } from '$lib/components/ui/button';
+  import Kbd from '$lib/components/zelo/Kbd.svelte';
+  import MoneyText from '$lib/components/zelo/MoneyText.svelte';
+  import { blurSwap, drawStroke, reducedMotion } from '$lib/motion/transitions.js';
 
   const dispatch = createEventDispatcher();
   
@@ -59,6 +65,32 @@
     dispatch('imprimir');
   }
 
+  // Zelo surface: the "Venda aprovada" moment. The circle with the check continues the
+  // payment button's loader, then the pill grows and the title + amount blur in.
+  // Presentation only: buttons and keys work from the first frame.
+  const ZS_EXPAND_DELAY_MS = 460;
+  let zsExpanded = false;
+  let zsShown = false;
+  let zsTimer;
+  $: zsOpen = open && $zeloSurface;
+  $: zsOpen ? beginMoment() : endMoment();
+
+  function beginMoment() {
+    if (zsShown) return;
+    zsShown = true;
+    clearTimeout(zsTimer);
+    zsExpanded = reducedMotion();
+    if (!zsExpanded) zsTimer = setTimeout(() => { zsExpanded = true; }, ZS_EXPAND_DELAY_MS);
+  }
+
+  function endMoment() {
+    zsShown = false;
+    zsExpanded = false;
+    clearTimeout(zsTimer);
+  }
+
+  onDestroy(() => clearTimeout(zsTimer));
+
   function handleKeydown(e) {
       if (e.key === 'Escape') handleClose();
       if (e.key === 'Enter') handleClose(); // Enter starts new order
@@ -66,6 +98,59 @@
 </script>
 
 {#if open}
+  {#if $zeloSurface}
+  <!--
+    Zelo Design System: the "Venda aprovada · R$ X" moment from the brand motion piece
+    (docs/design-system/reference/zelopdv-morph.html). Same props, events and keyboard
+    contract as the legacy branch below.
+  -->
+  <div
+    class="zs-backdrop"
+    role="button"
+    tabindex="0"
+    aria-label="Venda Concluída"
+    on:keydown={handleKeydown}
+    on:click|self={handleClose}
+  >
+    <div class="zs-sheet" role="dialog" aria-modal="true" aria-label="Venda aprovada">
+      <div class="zs-pill" class:zs-full={zsExpanded}>
+        <span class="zs-check" aria-hidden="true">
+          <svg viewBox="-16 -16 32 32"><path d="M-9 0.5 L-3 6.5 L9.5 -6" in:drawStroke|global={{ delay: 60 }} /></svg>
+        </span>
+        {#if zsExpanded}
+          <span class="zs-pill-body" in:blurSwap>
+            <span class="zs-title">Venda aprovada</span>
+            <MoneyText value={venda?.total || 0} class="zs-amount" />
+          </span>
+        {/if}
+      </div>
+
+      {#if venda?.numero_venda || Number(venda?.valor_troco) > 0}
+        <p class="zs-meta">
+          {#if venda?.numero_venda}<span>Venda <span class="zs-mono">nº {venda.numero_venda}</span></span>{/if}
+          {#if venda?.numero_venda && Number(venda?.valor_troco) > 0}<span aria-hidden="true">·</span>{/if}
+          {#if Number(venda?.valor_troco) > 0}<span>Troco <MoneyText value={venda.valor_troco} size="sm" /></span>{/if}
+        </p>
+      {/if}
+
+      <div class="zs-actions">
+        <Button variant="outlined" size="touch" onclick={shareWhatsApp}>
+          <MessageCircle size={18} strokeWidth={1.75} aria-hidden="true" /> WhatsApp
+        </Button>
+        <Button variant="outlined" size="touch" onclick={copyReceipt}>
+          {#if copied}<Check size={18} strokeWidth={1.75} aria-hidden="true" /> Copiado{:else}<Copy size={18} strokeWidth={1.75} aria-hidden="true" /> Copiar recibo{/if}
+        </Button>
+        <Button variant="outlined" size="touch" class="zs-print" onclick={handlePrint}>
+          <Printer size={18} strokeWidth={1.75} aria-hidden="true" /> Imprimir
+        </Button>
+      </div>
+
+      <Button variant="primary" size="cta" class="on-action zs-next" onclick={handleClose}>
+        Novo pedido<Kbd class="zs-kbd">Enter</Kbd>
+      </Button>
+    </div>
+  </div>
+  {:else}
   <div
     class="modal-backdrop"
     role="button"
@@ -109,6 +194,7 @@
       <p class="text-xs text-gray-400 mt-4">Pressione Enter para novo pedido</p>
     </div>
   </div>
+  {/if}
 {/if}
 
 <style>
@@ -120,5 +206,89 @@
  }
  .btn-whatsapp:hover {
    opacity: 0.9;
+ }
+
+ /* ═══ Zelo Design System (only rendered when $zeloSurface); colour only through tokens ═══ */
+ .zs-backdrop {
+   position: fixed;
+   inset: 0;
+   z-index: 1150; /* above MobileBottomNav (1100) */
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   padding: 24px;
+   background: color-mix(in srgb, var(--shadow-color) 42%, transparent);
+   color: var(--text-main);
+   font-family: var(--zelo-font-ui);
+ }
+ .zs-sheet {
+   display: flex;
+   flex-direction: column;
+   gap: 16px;
+   width: min(440px, 100%);
+   padding: 20px;
+   border-radius: var(--zelo-radius-sheet);
+   background: var(--bg-panel);
+   box-shadow: var(--shadow-modal);
+ }
+ /* one shape: a 64px circle (the button's loader, now a check) that grows into the pill */
+ .zs-pill {
+   display: flex;
+   align-items: center;
+   align-self: center;
+   width: 64px;
+   height: 64px;
+   padding: 0 12px;
+   overflow: hidden;
+   border-radius: var(--zelo-radius-pill);
+   background: var(--primary);
+   color: var(--primary-text);
+   box-shadow: var(--elevation-float);
+   transition: width var(--zelo-dur-slow) var(--zelo-ease-spring), padding var(--zelo-dur-slow) var(--zelo-ease-spring);
+ }
+ .zs-pill.zs-full { width: 100%; padding-right: 22px; }
+ .zs-check {
+   display: grid;
+   flex: none;
+   place-items: center;
+   width: 40px;
+   height: 40px;
+   border-radius: 50%;
+   background: var(--primary-text);
+   color: var(--primary);
+ }
+ .zs-check svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+ .zs-pill-body { display: flex; flex: 1; align-items: center; gap: 12px; min-width: 0; margin-left: 12px; white-space: nowrap; }
+ .zs-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+ .zs-pill :global(.zs-amount) { margin-left: auto; font-size: 20px; }
+ .zs-pill :global(.zs-amount small) { color: inherit; opacity: 0.72; }
+ .zs-meta {
+   display: flex;
+   flex-wrap: wrap;
+   align-items: baseline;
+   justify-content: center;
+   gap: 8px;
+   margin: -4px 0 0;
+   font-size: 13.5px;
+   color: var(--text-muted);
+ }
+ .zs-meta > span { display: inline-flex; align-items: baseline; gap: 6px; }
+ .zs-mono { font-family: var(--zelo-font-num); font-variant-numeric: tabular-nums; color: var(--text-main); }
+ .zs-meta :global(.money) { color: var(--text-main); }
+ .zs-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+ .zs-actions :global(button) { width: 100%; padding: 0 10px; }
+ .zs-sheet :global(.zs-next) { justify-content: space-between; }
+
+ @media (max-width: 767px) {
+   .zs-backdrop { align-items: flex-end; padding: 0; }
+   .zs-sheet {
+     width: 100%;
+     padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
+     border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0;
+   }
+   .zs-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+   .zs-actions :global(.zs-print) { grid-column: 1 / -1; }
+   .zs-sheet :global(.zs-kbd) { display: none; }
+   .zs-sheet :global(.zs-next) { justify-content: center; }
  }
 </style>

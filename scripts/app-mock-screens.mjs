@@ -7,7 +7,9 @@
  * Then:
  *   BASE=http://localhost:5175 OUT=/tmp/app ADD="X-Bacon,X-Burger" KEYS=F9 VP=390x844 OPEN_CART=1 node scripts/app-mock-screens.mjs
  * Env: ROUTE (default /app), QS (default ?tema=novo; "" for legacy), ADD (tabs/radios/buttons to click by accessible name,
- * in order), KEYS (keys to press after), OPEN_CART, VP (WxH), OUT (png path without extension), CHROMIUM_PATH.
+ * in order), KEYS (keys to press after), OPEN_CART, VP (WxH), OUT (png path without extension), CHROMIUM_PATH,
+ * STEPS (after the rest: comma list of `key:<Key>`, `click:<accessible name>`, `wait:<ms>`), MOTION=1 (real motion),
+ * NO_CAIXA=1 (no open caixa), EMPTY=1 (empty catalog).
  * docs/DESIGN_SYSTEM.md → Verificação.
  */
 import { chromium } from '@playwright/test';
@@ -35,11 +37,11 @@ const prods = [
 const tables = {
   subscriptions: [{ id: 's1', user_id: UID, status: 'active', plan_tier: 'pdv', current_period_end: future, has_zelo_menu: false, has_mesas: false, has_acessos: false }],
   empresa_perfil: [{ id: 'e1', user_id: UID, nome_exibicao: 'Padaria Bom Dia', contato: '11999990000', documento: '11222333000181', tabelas_preco_ativo: true, tabela_preco_1_nome: 'Balcão', tabela_preco_2_nome: 'iFood', tabela_preco_3_nome: 'Atacado', onboarding_completed: true, plataformas_pagamento: [] }],
-  access_users: [], categorias: cats, subcategorias: [], produtos: prods,
-  caixas: [{ id: 'c1', numero_caixa: 12, id_usuario: UID, data_abertura: new Date().toISOString(), data_fechamento: null, valor_inicial: 200 }],
+  access_users: [], categorias: process.env.EMPTY ? [] : cats, subcategorias: [], produtos: process.env.EMPTY ? [] : prods,
+  caixas: process.env.NO_CAIXA ? [] : [{ id: 'c1', numero_caixa: 12, id_usuario: UID, data_abertura: new Date().toISOString(), data_fechamento: null, valor_inicial: 200 }],
 };
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
-const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, locale: 'pt-BR', reducedMotion: 'reduce' });
+const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, locale: 'pt-BR', reducedMotion: process.env.MOTION ? 'no-preference' : 'reduce' });
 await ctx.addInitScript(([s]) => { try { localStorage.setItem('sb-mockproj-auth-token', s); localStorage.setItem('zelo_onboarding_done', '1'); } catch {} }, [JSON.stringify(session)]);
 await ctx.route('https://mockproj.supabase.co/**', async (route) => {
   const req = route.request(); const url = new URL(req.url());
@@ -76,5 +78,12 @@ for (const name of ADD) {
 const KEYS = (process.env.KEYS || '').split(',').filter(Boolean);
 for (const k of KEYS) { await page.keyboard.press(k); await page.waitForTimeout(700); }
 if (OPEN_CART) { await page.getByRole('button', { name: /Ver comanda/ }).click().catch((e) => console.log('open cart fail', e.message)); await page.waitForTimeout(500); }
+for (const step of (process.env.STEPS || '').split(',').filter(Boolean)) {
+  const [kind, ...rest] = step.split(':'); const arg = rest.join(':');
+  if (kind === 'key') await page.keyboard.press(arg);
+  else if (kind === 'wait') await page.waitForTimeout(Number(arg));
+  else if (kind === 'click') await page.getByRole('button', { name: new RegExp(arg) }).first().click({ timeout: 5000 }).catch((e) => console.log('click fail', arg, e.message));
+  if (kind !== 'wait') await page.waitForTimeout(500);
+}
 await page.screenshot({ path: `${OUT}.png` });
 await browser.close();

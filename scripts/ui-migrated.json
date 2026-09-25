@@ -4,6 +4,7 @@
     "src/routes/dev/design-system/**",
     "src/lib/components/zelo/**",
     "src/lib/motion/**",
-    "src/lib/theme/surface.js"
+    "src/lib/theme/surface.js",
+    "src/lib/components/payments/*"
   ]
 }

@@ -74,7 +74,8 @@ Quando a **estrutura** muda (não só a cor), a tela renderiza o layout novo só
 `{#if $zeloSurface} …layout novo… {:else} …markup legado intacto… {/if}` (store em `src/lib/theme/surface.js`).
 A lógica (estado, funções, validações, offline) é a mesma nos dois ramos — só a marcação muda.
 O ramo legado é apagado na Fase 6. Feito assim hoje: `src/routes/app/+page.svelte`,
-`VirtualProductGrid` (prop `zelo`) e `GestaoSidebar` (aside vira `data-surface="brand"` na superfície app).
+`VirtualProductGrid` (prop `zelo`), `GestaoSidebar` (aside vira `data-surface="brand"` na superfície app),
+`ModalPagamento`, `ModalSucesso` e `PaymentMethodGrid`/`PaymentMethodSelect` (prop `zelo`).
 
 Atalhos do caixa (só na superfície Zelo, ignorados com modal aberto): **F2** busca, **F4** item avulso, **F9** receber; `/` e Ctrl+T continuam.
 
@@ -84,7 +85,7 @@ Atalhos do caixa (só na superfície Zelo, ignorados com modal aberto): **F2** b
 |---|---|---|
 | `Button` (variantes do sistema) | `ui/button` | Fase 0 |
 | `Kbd`, `MoneyText`, `StatusPill`, `QtyBadge`, `Segmented`, `UnderlineTabs`, `Stepper`, `ProductTile`, `SearchField`, `ZeloMark` | `zelo/` | Fase 0 (usados no `/app`); com movimento desde a Fase 4 |
-| `MorphButton` (botão → carregando → check) | `zelo/` | Fase 4 — pronto para o "Confirmar" do `ModalPagamento` (integração pendente) |
+| `MorphButton` (botão → carregando → check) | `zelo/` | Fase 4 — "Confirmar" do `ModalPagamento` |
 | `AppShell`/`Sidebar` navy, `PageHeader`, `MobileHeader`, `BottomNav`, `CartBar`, `Sheet` + `SwipeRow` | — | Fase 1/4 |
 | `Toast`, `Dialog`/`ConfirmDialog`, `CommandPalette` (⌘K), `Tooltip`, gráficos | — | Fase 1/4 |
 
@@ -127,6 +128,12 @@ Nos componentes:
 ### Onde está aplicado (`/app`, superfície Zelo)
 
 Indicador líquido nas categorias, na tabela de preço e em Retirada/Delivery; squash nos tiles, "Valor avulso", botões e subcategorias; `QtyBadge` com pop; linhas da comanda entram/saem com `blurSwap` + colapso de altura (o vazio também troca com blur); total, CTA "Receber" e barra "Ver comanda" contam; sheet da comanda e barra "Ver comanda" com `--zelo-ease-spring` (`rise`).
+
+**Pagamento → sucesso.** O "Confirmar" do `ModalPagamento` é um `MorphButton` em `loading` enquanto `salvandoVenda`
+(o mesmo `setSalvando`/`setErro`/`resetState` de sempre; erro volta a `idle` e aparece no alerta do rodapé). Quando a
+venda salva, o `/app` fecha o pagamento e abre o `ModalSucesso` no mesmo tick — o **check** vive ali: o círculo de 64 px
+com o traço se desenhando (`drawStroke`) cresce até a pílula "Venda aprovada · R$ X" (conteúdo com `blurSwap`, 460 ms
+depois). O fluxo da venda não ganhou espera: botões e Enter do sucesso respondem desde o primeiro quadro.
 
 ### Movimento reduzido
 

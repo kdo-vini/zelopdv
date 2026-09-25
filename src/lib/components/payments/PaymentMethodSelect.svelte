@@ -9,6 +9,8 @@
   export let id = undefined;
   export let ariaLabel = 'Forma de pagamento';
   export let disabled = false;
+  /** Zelo Design System sizing (48px control, 12px radius). */
+  export let zelo = false;
 
   function handleChange(event) {
     value = event.currentTarget.value;
@@ -19,7 +21,7 @@
   }
 </script>
 
-<select {id} class="payment-method-select" bind:value aria-label={ariaLabel} {disabled} on:change={handleChange}>
+<select {id} class="payment-method-select" class:zelo bind:value aria-label={ariaLabel} {disabled} on:change={handleChange}>
   {#each methods as method (method.id)}
     <option value={method.id}>{method.label}{method.taxPct != null ? ` (${method.taxPct}%)` : ''}</option>
   {/each}
@@ -42,5 +44,16 @@
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--accent-light);
+  }
+
+  .payment-method-select.zelo {
+    height: 48px;
+    padding: 0 14px;
+    border-radius: var(--zelo-radius-control);
+    font-weight: 500;
+    font-size: 15px;
+  }
+  .payment-method-select.zelo:focus {
+    box-shadow: 0 0 0 4px var(--focus);
   }
 </style>
