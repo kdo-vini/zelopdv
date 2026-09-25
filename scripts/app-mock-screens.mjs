@@ -31,7 +31,7 @@ const P = (id, nome, id_categoria, preco, extra = {}) => ({ id, nome, id_categor
 const prods = [
   P(1, 'X-Bacon', 1, 29.9), P(2, 'X-Burger', 1, 24.9), P(3, 'X-Salada', 1, 26.9), P(4, 'Misto quente', 1, 12), P(5, 'Beirute de frango', 1, 32),
   P(6, 'Coca-Cola lata 350ml', 2, 6.5), P(7, 'Guaraná lata 350ml', 2, 6), P(8, 'Suco de laranja 400ml', 2, 9.9),
-  P(11, 'Coxinha de frango', 3, 7.5), P(12, 'Pão de queijo', 3, 5, { por_unidade: true }), P(13, 'Esfiha de carne', 3, 6.5, { controlar_estoque: true, estoque_atual: 3 }),
+  P(11, 'Coxinha de frango', 3, 7.5), P(12, 'Pão de queijo', 3, 5, { por_unidade: true, eh_item_por_unidade: true }), P(13, 'Esfiha de carne', 3, 6.5, { controlar_estoque: true, estoque_atual: 3 }),
   P(15, 'Brigadeiro', 4, 3.5), P(17, 'Açaí 500ml', 4, 18), P(16, 'Bolo de cenoura (fatia)', 4, 8.9),
 ];
 const tables = {
