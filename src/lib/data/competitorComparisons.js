@@ -33,9 +33,9 @@ const MENU_ADDON_PRICE = `R$ ${ADDONS.menu.price.toFixed(0)}`;
 export const competitorComparisons = {
   saipos: {
     slug: 'vs-saipos',
-    updatedAt: '2026-09-23',
+    updatedAt: '2026-09-25',
     competitor: 'Saipos',
-    priceCheckedAt: 'junho de 2026',
+    priceCheckedAt: 'setembro de 2026',
     meta: {
       title: 'Zelo PDV vs Saipos: Alternativa Mais Barata e Offline | Zelo PDV',
       description:
@@ -51,7 +51,7 @@ export const competitorComparisons = {
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'a partir de R$ 240,79/mês',
-      note: 'Preço da Saipos consultado no site oficial (saipos.com/planos-e-precos) em junho de 2026. O valor final é segmentado por faturamento e passa por demonstração comercial; sujeito a alteração.'
+      note: 'Preço da Saipos consultado no site oficial (saipos.com/planos-e-precos) em setembro de 2026. O valor final é segmentado por faturamento e passa por demonstração comercial; sujeito a alteração.'
     },
     introTitle: 'Quando a Saipos é mais sistema (e mais conta) do que o seu negócio precisa',
     introParagraphs: [
@@ -60,7 +60,7 @@ export const competitorComparisons = {
       'O Zelo PDV nasceu para o outro lado dessa conta: começar barato, mostrar o preço de forma transparente e crescer por módulos. Você paga R$ 59/mês pela base e adiciona só o que faz sentido (mesas, ZeloMenu, acessos) — sem assinar uma plataforma cara para depois descobrir que usa um terço dela.'
     ],
     comparisonIntro:
-      'Comparação ponto a ponto entre Zelo PDV e Saipos, com base no que cada um divulga publicamente em junho de 2026.',
+      'Comparação ponto a ponto entre Zelo PDV e Saipos, com base no que cada um divulga publicamente em setembro de 2026.',
     comparisonRows: [
       {
         feature: 'Preço de entrada',
@@ -132,7 +132,7 @@ export const competitorComparisons = {
       {
         question: 'Quanto custa a Saipos comparada ao Zelo PDV?',
         answer:
-          'Em junho de 2026, a Saipos divulga preço a partir de R$ 240,79/mês no site oficial, com valor final segmentado por faturamento e fechado em demonstração. O Zelo PDV custa R$ 59/mês fixos, com preço público e teste de 14 dias sem cartão.'
+          'Em setembro de 2026, a Saipos divulga preço a partir de R$ 240,79/mês no site oficial, com valor final segmentado por faturamento e fechado em demonstração. O Zelo PDV custa R$ 59/mês fixos, com preço público e teste de 14 dias sem cartão.'
       },
       {
         question: 'O Zelo PDV funciona offline e a Saipos não?',
@@ -164,7 +164,7 @@ export const competitorComparisons = {
     slug: 'vs-goomer',
     updatedAt: '2026-09-25',
     competitor: 'Goomer',
-    priceCheckedAt: 'junho de 2026',
+    priceCheckedAt: 'setembro de 2026',
     meta: {
       title: 'Zelo PDV vs Goomer: PDV Completo x Cardápio Digital | Zelo PDV',
       description:
@@ -180,7 +180,7 @@ export const competitorComparisons = {
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'plano com PDV a partir de R$ 224,92/mês',
-      note: 'Preço da Goomer consultado no site oficial (goomer.com.br/planos) em junho de 2026: plano "Integrar" R$ 299,90/mês (R$ 224,92 no anual). O plano grátis cobra R$ 1,39 por pedido acima de 30/mês. Sujeito a alteração.'
+      note: 'Preço da Goomer consultado no site oficial (goomer.com.br/planos) em setembro de 2026: plano "Integrar" R$ 299,90/mês (R$ 224,92 no anual). O plano grátis cobra R$ 1,39 por pedido acima de 30/mês. Sujeito a alteração.'
     },
     introTitle: 'Cardápio digital não é frente de caixa',
     introParagraphs: [
@@ -189,7 +189,7 @@ export const competitorComparisons = {
       'O Zelo PDV vai pela outra ponta: ele é a frente de caixa completa desde o primeiro dia, por R$ 59/mês. Você registra vendas, controla fiado, acompanha estoque e fecha o caixa sem precisar amarrar um segundo sistema por cima.'
     ],
     comparisonIntro:
-      'Comparação ponto a ponto entre Zelo PDV e Goomer, com base no que cada um divulga publicamente em junho de 2026.',
+      'Comparação ponto a ponto entre Zelo PDV e Goomer, com base no que cada um divulga publicamente em setembro de 2026.',
     comparisonRows: [
       {
         feature: 'É um PDV / frente de caixa completo?',
@@ -266,7 +266,7 @@ export const competitorComparisons = {
       {
         question: 'Quanto custa a Goomer com PDV comparada ao Zelo?',
         answer:
-          'Em junho de 2026, o plano "Integrar" da Goomer (que inclui integração com PDV) parte de R$ 224,92/mês no anual, segundo o site oficial, fora extensões como QR Code e Delivery. O Zelo PDV custa R$ 59/mês com a frente de caixa inclusa.'
+          'Em setembro de 2026, o plano "Integrar" da Goomer (que inclui integração com PDV) parte de R$ 224,92/mês no anual, segundo o site oficial, fora extensões como QR Code e Delivery. O Zelo PDV custa R$ 59/mês com a frente de caixa inclusa.'
       },
       {
         question: 'A Goomer cobra por pedido?',
@@ -291,65 +291,65 @@ export const competitorComparisons = {
 
   anotaAi: {
     slug: 'vs-anota-ai',
-    updatedAt: '2026-09-23',
+    updatedAt: '2026-09-25',
     competitor: 'Anota AI',
-    priceCheckedAt: 'junho de 2026',
+    priceCheckedAt: 'setembro de 2026',
     meta: {
-      title: 'Zelo PDV vs Anota AI: PDV Completo Sem Robô de IA Caro | Zelo PDV',
+      title: 'Zelo PDV vs Anota AI: PDV Simples x Suíte de IA por Volume | Zelo PDV',
       description:
-        'A Anota AI parte de mais de R$ 219/mês com robô de IA. O Zelo PDV é a frente de caixa completa por R$ 59/mês, com estoque e cozinha sem precisar do plano mais caro. Compare.',
+        'A Anota AI agora cobra por faixa de pedidos, a partir de R$ 99,99/mês, e emite NF automatizada. O Zelo PDV custa R$ 59/mês, é mais barato na entrada e funciona offline. Compare.',
       canonical: `${SITE_URL}/vs-anota-ai`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Anota AI',
-    h1: 'Zelo PDV vs Anota AI: frente de caixa completa sem pagar por uma plataforma de IA',
+    h1: 'Zelo PDV vs Anota AI: frente de caixa enxuta x suíte de atendimento com IA',
     subtitle:
-      'A Anota AI é uma plataforma forte de atendimento por robô de IA no WhatsApp — mas o preço começa em mais de R$ 219/mês e recursos como estoque e cozinha (KDS) só aparecem no plano mais caro. Se você quer mesmo é uma frente de caixa boa e barata, o Zelo PDV entrega por R$ 59/mês.',
+      'A Anota AI é uma plataforma de atendimento por robô de IA no WhatsApp que também virou PDV, com preço por faixa de pedidos a partir de R$ 99,99/mês. O Zelo PDV é mais barato na entrada (R$ 59/mês) e funciona offline — mas não emite nota fiscal, algo que a Anota AI já inclui em todos os planos.',
     editorialThesis:
-      'A Anota AI faz sentido para quem quer automação forte de atendimento por WhatsApp. O Zelo PDV é a opção mais enxuta para quem quer bater caixa, controlar estoque e ver lucro sem pagar por uma suíte de IA; se o robô de WhatsApp é o centro da operação, a Anota AI leva vantagem.',
+      'A Anota AI faz sentido para quem quer automação forte de atendimento por WhatsApp e já precisa emitir nota fiscal pelo próprio sistema. O Zelo PDV é mais barato na entrada e funciona offline; se emissão fiscal integrada é obrigatória para o seu negócio, a Anota AI leva vantagem nesse ponto específico.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
-      competitor: 'a partir de R$ 219,99/mês',
-      note: 'Preço da Anota AI consultado em fontes oficiais (anota.ai) em junho de 2026: planos de entrada divulgados entre R$ 219,99 e R$ 299,99/mês e topo entre R$ 329,99 e R$ 399,99/mês, com promoções temporárias à parte. Sujeito a alteração.'
+      competitor: 'a partir de R$ 99,99/mês (até 150 pedidos/mês)',
+      note: 'Preço da Anota AI consultado no site oficial (anota.ai/blog/planos-principal/) em setembro de 2026: cobrança por faixa de volume — R$ 99,99/mês (até 150 pedidos), R$ 199,99/mês (151 a 250 pedidos) e R$ 299,99/mês (acima de 250 pedidos), com desconto no plano anual (12x R$ 99,99 no primeiro ano). O modelo de preço mudou desde a última verificação (junho de 2026, quando era por recursos, não por volume). Sujeito a alteração.'
     },
-    introTitle: 'Você precisa mesmo de um robô de IA, ou só de um bom caixa?',
+    introTitle: 'A Anota AI mudou o modelo de preço: agora é por volume de pedidos, não por recurso',
     introParagraphs: [
-      'A Anota AI nasceu e ficou conhecida como robô de atendimento por IA no WhatsApp para delivery. Com o tempo ela ganhou módulos de PDV, mas o produto continua sendo, no centro, uma suíte de automação de atendimento — e o preço reflete isso, começando acima de R$ 219/mês.',
-      'O detalhe que pesa no bolso: recursos básicos de operação como gestor de estoque e cozinha (KDS) só aparecem no plano mais caro (Gestão Avançada). Ou seja, para ter uma frente de caixa realmente completa, você acaba no topo da tabela. Some a isso a renovação automática com aviso prévio de 7 dias úteis e sem reembolso, descrita nos termos.',
-      'O Zelo PDV vai direto ao ponto que o pequeno negócio precisa: caixa, fiado, estoque e financeiro por R$ 59/mês, funcionando até offline. Se um dia você quiser camadas extras, ativa por módulo — sem ter que assinar uma plataforma inteira de IA para conseguir bater o caixa.'
+      'A Anota AI nasceu e ficou conhecida como robô de atendimento por IA no WhatsApp para delivery, e hoje também empacota frente de caixa, cardápio digital, KDS e emissão fiscal automatizada. Em setembro de 2026, o site oficial mostra um modelo de preço por faixa de pedidos no mês, não mais por nível de recurso: R$ 99,99 (até 150 pedidos), R$ 199,99 (151 a 250) e R$ 299,99 (acima de 250), com as mesmas funcionalidades em todos os planos.',
+      'Isso muda a comparação: hoje todos os planos da Anota AI anunciam frente de caixa, cozinha (KDS) e NF automatizada — inclusive no plano de entrada. É um diferencial real sobre o Zelo PDV, que não emite NFC-e/NF-e. Se sua operação precisa de nota fiscal pelo próprio sistema de vendas, isso pesa a favor da Anota AI.',
+      'O Zelo PDV segue mais barato na entrada (R$ 59/mês contra R$ 99,99/mês) e funciona offline, o que o material público da Anota AI não anuncia. Para quem não precisa de robô de IA nem de nota fiscal integrada e quer só bater caixa, controlar fiado e estoque pelo menor preço, o Zelo continua a opção mais enxuta.'
     ],
     comparisonIntro:
-      'Comparação ponto a ponto entre Zelo PDV e Anota AI, com base no que cada um divulga publicamente em junho de 2026.',
+      'Comparação ponto a ponto entre Zelo PDV e Anota AI, com base no que cada um divulga publicamente em setembro de 2026.',
     comparisonRows: [
-      { feature: 'Preço de entrada', competitor: 'A partir de R$ 219,99/mês', zelo: 'R$ 59/mês', advantage: 'zelo' },
-      { feature: 'Estoque e cozinha (KDS)', competitor: 'Só no plano mais caro (Gestão Avançada)', zelo: 'Estoque na base; sem pagar o topo', advantage: 'zelo' },
+      { feature: 'Preço de entrada', competitor: 'A partir de R$ 99,99/mês (até 150 pedidos/mês)', zelo: 'R$ 59/mês, sem limite de pedidos', advantage: 'zelo' },
+      { feature: 'Emite NFC-e/NF-e', competitor: 'Sim — "NF Automatizada" incluída em todos os planos', zelo: 'Não emite nota fiscal', advantage: 'competitor' },
+      { feature: 'Estoque e cozinha (KDS)', competitor: 'Incluídos em todos os planos', zelo: 'Estoque nativo na base; sem KDS dedicado', advantage: 'tie' },
       { feature: 'Funciona sem internet (offline)', competitor: 'Não anuncia operação offline', zelo: 'Continua vendendo offline e sincroniza depois', advantage: 'zelo' },
-      { feature: 'Renovação e cancelamento', competitor: 'Renovação automática, aviso prévio de 7 dias úteis, sem reembolso', zelo: 'Cancele quando quiser', advantage: 'zelo' },
-      { feature: 'Produto central', competitor: 'Suíte de atendimento por robô de IA', zelo: 'Frente de caixa e gestão do negócio', advantage: 'tie' },
+      { feature: 'Como o preço cresce', competitor: 'Sobe por faixa de pedidos no mês (150 / 250 / acima)', zelo: 'Base fixa + módulos opcionais, sem limite de pedidos', advantage: 'zelo' },
       { feature: 'Robô de IA no WhatsApp', competitor: 'Forte nesse ponto', zelo: 'Não é o foco', advantage: 'competitor' }
     ],
-    reasonsTitle: 'Por que muitos preferem o Zelo PDV à Anota AI',
+    reasonsTitle: 'Por que escolher o Zelo PDV em vez da Anota AI (se você não precisa de NF integrada)',
     reasons: [
-      { icon: '💸', title: 'A partir de R$ 59 contra R$ 219+', description: 'O plano de entrada da Anota AI passa de R$ 219/mês. O Zelo entrega a frente de caixa completa por R$ 59/mês, sem cobrança por pedido nem comissão.' },
-      { icon: '📦', title: 'Estoque e cozinha sem pagar o plano top', description: 'Na Anota AI, gestor de estoque e KDS ficam só na Gestão Avançada. No Zelo, o controle vem na base — você não precisa subir para o plano mais caro só para isso.' },
+      { icon: '💸', title: 'Mais barato na entrada, sem limite de pedidos', description: 'A Anota AI cobra R$ 99,99/mês até 150 pedidos e sobe conforme o volume. O Zelo entrega a frente de caixa completa por R$ 59/mês, sem tabela por quantidade de pedidos.' },
       { icon: '📶', title: 'Vende mesmo sem internet', description: 'A Anota AI não anuncia operação offline. O Zelo PDV continua registrando vendas sem conexão e sincroniza quando a internet volta.' },
-      { icon: '🔓', title: 'Sem trava de renovação', description: 'Os termos da Anota AI descrevem renovação automática com aviso de 7 dias úteis e sem reembolso. No Zelo, você cancela quando quiser.' }
+      { icon: '🧩', title: 'Preço que não sobe com o volume de vendas', description: 'Na Anota AI, vender mais pedidos pode empurrar você para o plano seguinte. No Zelo, o preço é fixo por módulo, independente de quantas vendas você faz no mês.' },
+      { icon: '🙋', title: 'Suporte humano direto', description: 'No Zelo você fala direto com o time pelo WhatsApp para configurar e tirar dúvidas do dia a dia.' }
     ],
     fairnessNote:
-      'Para ser justo: se o seu foco é um robô de IA avançado atendendo no WhatsApp e recuperando pedidos, a Anota AI é especializada nisso. Este comparativo é para quem quer, antes de tudo, uma frente de caixa completa e barata.',
+      'Para ser justo: a Anota AI hoje anuncia NF automatizada, KDS e frente de caixa em todos os planos, inclusive o de entrada — recursos reais que o Zelo PDV não cobre da mesma forma (o Zelo não emite nota fiscal). Se o seu negócio precisa de robô de IA no WhatsApp ou de emissão fiscal integrada, a Anota AI é a opção mais completa nesses pontos específicos. Este comparativo é para quem quer, antes de tudo, uma frente de caixa simples e barata, sem essas duas necessidades.',
     faqSpecific: [
-      { question: 'Quanto custa a Anota AI comparada ao Zelo PDV?', answer: 'Em junho de 2026, a Anota AI divulga planos de entrada entre R$ 219,99 e R$ 299,99/mês e topo entre R$ 329,99 e R$ 399,99/mês (há promoções temporárias à parte). O Zelo PDV custa R$ 59/mês fixos.' },
-      { question: 'Preciso do plano mais caro da Anota AI para ter estoque?', answer: 'Conforme a tabela de planos da Anota AI, recursos como gestor de estoque e cozinha (KDS) ficam no plano Gestão Avançada, o mais caro. No Zelo PDV, o controle de estoque vem na base de R$ 59/mês.' },
-      { question: 'O Zelo PDV tem robô de IA no WhatsApp como a Anota AI?', answer: 'Não é o foco do Zelo PDV. O Zelo é uma frente de caixa e sistema de gestão. Se o seu objetivo principal é automação de atendimento por IA, a Anota AI é especializada nisso; se é bater caixa e controlar o negócio barato, o Zelo resolve por R$ 59/mês.' },
-      { question: 'A Anota AI funciona offline?', answer: 'A Anota AI não anuncia operação offline e depende de internet e da API do WhatsApp. O Zelo PDV foi feito para continuar vendendo mesmo sem internet.' }
+      { question: 'Quanto custa a Anota AI comparada ao Zelo PDV?', answer: 'Em setembro de 2026, a Anota AI cobra por faixa de pedidos no mês: R$ 99,99 (até 150 pedidos), R$ 199,99 (151 a 250) e R$ 299,99 (acima de 250), segundo o site oficial. O Zelo PDV custa R$ 59/mês fixos, sem limite de pedidos.' },
+      { question: 'A Anota AI emite nota fiscal?', answer: 'Sim. Em setembro de 2026, o site oficial lista "NF Automatizada" incluída em todos os planos da Anota AI, inclusive o de entrada. O Zelo PDV não emite NFC-e/NF-e — para isso é preciso um emissor fiscal à parte.' },
+      { question: 'O Zelo PDV tem robô de IA no WhatsApp como a Anota AI?', answer: 'Não é o foco do Zelo PDV. O Zelo é uma frente de caixa e sistema de gestão. Se o seu objetivo principal é automação de atendimento por IA, a Anota AI é especializada nisso; se é bater caixa e controlar o negócio pelo menor preço, o Zelo resolve por R$ 59/mês.' },
+      { question: 'A Anota AI funciona offline?', answer: 'O material público da Anota AI não anuncia operação offline. O Zelo PDV foi feito para continuar vendendo mesmo sem internet, sincronizando as vendas depois.' }
     ],
     sources: [
       { label: 'Anota AI — Planos (oficial)', url: 'https://anota.ai/blog/planos-principal/' },
-      { label: 'Anota AI — FAQ / renovação (oficial)', url: 'https://anota.ai/blog/faq-anota-ai/' },
+      { label: 'Anota AI — FAQ (oficial)', url: 'https://anota.ai/blog/faq-anota-ai/' },
       { label: 'Anota AI — Reclame Aqui (relatos de clientes)', url: 'https://www.reclameaqui.com.br/empresa/anota-ai/lista-reclamacoes/' }
     ],
     finalCtaTitle: 'Comece com a frente de caixa completa por R$ 59/mês',
     finalCtaText:
-      'Antes de assinar uma plataforma de IA de R$ 219+ por mês, veja se o seu negócio não resolve com R$ 59. Teste o Zelo PDV por 14 dias grátis, sem cartão.'
+      'Se você não precisa de robô de IA nem de nota fiscal integrada, veja se o seu negócio não resolve com R$ 59/mês. Teste o Zelo PDV por 14 dias grátis, sem cartão.'
   },
 
   whatsmenu: {
@@ -1040,7 +1040,7 @@ export const competitorComparisons = {
 
   kyte: {
     slug: 'vs-kyte',
-    updatedAt: '2026-09-24',
+    updatedAt: '2026-09-25',
     competitor: 'Kyte',
     priceCheckedAt: 'setembro de 2026',
     meta: {
