@@ -419,9 +419,9 @@
   .panel-head p {
     margin: 0 0 1rem;
     color: var(--link);
-    font-size: 0.78rem;
+    font-size: 0.625rem;
     font-weight: 700;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
   }
 
@@ -651,7 +651,7 @@
   }
 
   .route-card {
-    border-radius: 1.2rem;
+    border-radius: 1.5rem;
     padding: 1.4rem;
   }
 
@@ -692,7 +692,7 @@
     min-height: 7rem;
     display: flex;
     align-items: flex-end;
-    border-radius: 1.2rem;
+    border-radius: 1.5rem;
     padding: 1.2rem;
     color: var(--text-main);
     font-weight: 800;

@@ -41,7 +41,7 @@ for (const [flow, format] of COMPOSITIONS) {
   let compFailures = 0;
 
   for (let frame = 0; frame < timing.totalFrames; frame += 1) {
-    const { originX, originY, zoom } = useCameraFrame(frame, keyframes);
+    const { originX, originY, zoom } = useCameraFrame(frame, keyframes, timing.fps);
     const { box } = clampDeviceBox({
       zoom,
       originX,

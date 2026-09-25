@@ -25,7 +25,6 @@
 | `/extensoes` | Lead comparando modulos | Pagina consolidada de add-ons e Zelo Chat | `/cadastro`; conversa abre chatbot | `src/routes/extensoes/+page.svelte` + `src/lib/data/extensoes.js` |
 | `/precificacao` | Lead que quer calcular preco/lucro de produto | Ferramenta de precificacao de produto; nao e pagina de preco dos planos | `/cadastro`; conversa abre chatbot apos resultado | `src/routes/precificacao/+page.svelte` |
 | `/vs-planilha` | Lead usando planilha/caderno | Comparacao para migrar de planilha para PDV | `/cadastro`; conversa abre chatbot | `src/routes/vs-planilha/+page.svelte` |
-| `/pascoa` | Campanha sazonal | Landing de oferta sazonal para doceiras/revendedores | campanha sazonal; revisar antes de reusar | `src/routes/pascoa/+page.svelte` |
 
 ## Variacoes de `/contato`
 

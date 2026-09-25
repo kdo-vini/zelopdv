@@ -126,9 +126,9 @@
     display: inline-block;
     margin-bottom: 0.85rem;
     color: var(--primary);
-    font-size: 0.75rem;
+    font-size: 0.625rem;
     font-weight: 800;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
   }
 

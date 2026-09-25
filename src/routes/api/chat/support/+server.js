@@ -21,16 +21,16 @@ Sistema de PDV (ponto de venda) 100% online — roda no navegador, sem instalar 
 
 Preço: R$ 59/mês. Os primeiros 14 dias são completamente gratuitos, sem precisar cadastrar cartão. Cancele quando quiser, sem multa.
 
-ADD-ONS PAGOS (além da assinatura base):
+EXTENSÕES PAGAS (além da assinatura base):
 • Módulo Mesas (+R$ 30/mês): controle de mesas e comandas abertas
 • ZeloMenu (+R$ 40/mês): cardápio digital online, pedidos online e painel de cozinha
 • Controle de Acessos (+R$ 30/mês): usuários adicionais com cargos e permissões configuráveis
 Para ativar: acesse a sidebar → Extensões.
 
-O antigo add-on "Pedidos + Cozinha" foi aposentado: a fila de pedidos e o painel de
+A antiga extensão "Pedidos + Cozinha" foi aposentada: a fila de pedidos e o painel de
 cozinha agora fazem parte do ZeloMenu. A maioria dos pedidos entra pelo cardápio
 online, mas o caixa também pode digitar um pedido manual direto na fila (ver
-COMO USAR OS PEDIDOS DO ZELOMENU). Nunca ofereça o add-on antigo "Pedidos + Cozinha".
+COMO USAR OS PEDIDOS DO ZELOMENU). Nunca ofereça a extensão antiga "Pedidos + Cozinha".
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FUNCIONALIDADES
@@ -180,9 +180,9 @@ CADASTRAR O PRODUTO:
 O produto aparece imediatamente na Frente de Caixa, dentro da categoria selecionada.
 
 ──────────────────────────────────
-COMO CADASTRAR CARGO E USUÁRIO (ADD-ON CONTROLE DE ACESSOS)
+COMO CADASTRAR CARGO E USUÁRIO (EXTENSÃO CONTROLE DE ACESSOS)
 ──────────────────────────────────
-Este módulo é um add-on pago (+R$ 30/mês). Se não aparecer na sidebar, ative em Extensões.
+Este módulo é uma extensão paga (+R$ 30/mês). Se não aparecer na sidebar, ative em Extensões.
 
 Acesse Gestão → Acessos no menu lateral.
 
@@ -197,7 +197,7 @@ CRIAR UM CARGO:
    • Pessoas/Fiado: Visualizar, Gerenciar, Ver fiado, Receber fiado
    • Financeiro: Ver despesas, Gerenciar, Ver relatórios, Exportar
    • Perfil: Editar dados operacionais
-   • Mesas (se add-on ativo): Acessar, Abrir comanda, Editar itens, Fechar/receber, Cancelar
+   • Mesas (se extensão ativa): Acessar, Abrir comanda, Editar itens, Fechar/receber, Cancelar
    • Pedidos do ZeloMenu (se ZeloMenu ativo): Acessar fila, Painel de cozinha, Concluir no caixa, Cancelar/rejeitar
 5. As alterações são salvas automaticamente após ~1 segundo sem modificações (não precisa clicar em Salvar)
 
@@ -219,7 +219,7 @@ GERENCIAR USUÁRIOS EXISTENTES:
 ──────────────────────────────────
 COMO USAR O MÓDULO DE MESAS
 ──────────────────────────────────
-Este módulo é um add-on pago (+R$ 30/mês). Se não aparecer na sidebar, ative em Extensões.
+Este módulo é uma extensão paga (+R$ 30/mês). Se não aparecer na sidebar, ative em Extensões.
 
 CONFIGURAR AS MESAS (faça isso primeiro):
 1. Acesse Gestão → Mesas no menu lateral

@@ -37,13 +37,13 @@
   const faqItems = [
     {
       question: 'O Zelo PDV é um plano único, tudo incluso?',
-      answer: `Não. O plano base é o ZeloPDV (${formatBRL(PLANS.pdv.price)}/mês), e módulos como Mesas, Controle de Acessos e ZeloMenu são add-ons pagos à parte. O ZeloChat é um produto separado, com preço próprio ou como upgrade para o pacote combinado.`
+      answer: `Não. O plano base é o ZeloPDV (${formatBRL(PLANS.pdv.price)}/mês), e módulos como Mesas, Controle de Acessos e ZeloMenu são extensões pagas à parte. O ZeloChat é um produto separado, com preço próprio ou como upgrade para o pacote combinado.`
     },
     {
       question: 'Quanto custa o Zelo PDV?',
       answer: plans
         .map((plan) => `${plan.name}: ${formatBRL(plan.price)}/mês`)
-        .concat(addons.map((addon) => `${addon.name} (add-on): +${formatBRL(addon.price)}/mês`))
+        .concat(addons.map((addon) => `${addon.name} (extensão): +${formatBRL(addon.price)}/mês`))
         .join('. ')
     },
     {
@@ -158,7 +158,7 @@
             {/each}
             {#each addons as addon}
               <tr>
-                <td>{addon.name} <span class="tag">add-on</span></td>
+                <td>{addon.name} <span class="tag">extensão</span></td>
                 <td>+{formatBRL(addon.price)}/mês</td>
                 <td>{addon.tagline}</td>
               </tr>

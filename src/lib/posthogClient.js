@@ -29,7 +29,6 @@ const EXACT_PUBLIC_PATHS = new Set([
   '/vs-planilha',
   '/comparativos',
   '/zelo-impressao',
-  '/pascoa',
   '/termos',
   '/privacidade',
 ]);

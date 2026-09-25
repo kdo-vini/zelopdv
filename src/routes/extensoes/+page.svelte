@@ -324,10 +324,6 @@
       ></div>
 
       <div class="max-w-5xl mx-auto px-6 relative z-10 text-center">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-300 text-[11px] font-semibold uppercase tracking-[0.18em] mb-6">
-          <span class="inline-flex w-1.5 h-1.5 rounded-full bg-sky-400"></span>
-          Extensões Zelo PDV
-        </div>
         <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-[3.4rem] font-bold text-white tracking-tight leading-[1.08] mb-5">
           Plano base no essencial.<br class="hidden md:inline" />
           Extensões só quando faz sentido.
@@ -367,7 +363,6 @@
     <section id="extensoes" class="py-16 md:py-20 border-b border-white/5">
       <div class="max-w-7xl mx-auto px-6">
         <div class="max-w-2xl mb-12">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-3">As extensões</p>
           <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight">
             Quatro módulos opcionais. Você escolhe.
           </h2>
@@ -418,7 +413,7 @@
               <div class="flex items-start justify-between gap-4 mb-2">
                 <div>
                   <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-1.5 extension-eyebrow">
-                    {card.external ? 'Produto integrado' : 'Add-on'}
+                    {card.external ? 'Produto integrado' : 'Extensão'}
                   </p>
                   <h3 class="text-xl font-bold text-white">{card.name}</h3>
                 </div>
@@ -485,7 +480,6 @@
     <section class="py-16 md:py-20 border-b border-white/5" style="background: var(--bg-panel);">
       <div class="max-w-6xl mx-auto px-6">
         <div class="max-w-2xl mb-12">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-3">Combinações recomendadas</p>
           <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight mb-3">
             Qual extensão cabe no seu negócio
           </h2>
@@ -540,7 +534,7 @@
           <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
             <div class="max-w-2xl">
               <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-300 text-[10px] font-semibold uppercase tracking-[0.2em] mb-4">
-                {section.kind === 'plan' ? 'Produto integrado' : 'Add-on'} · {section.priceLabel}
+                {section.kind === 'plan' ? 'Produto integrado' : 'Extensão'} · {section.priceLabel}
               </div>
               <h2 class="text-2xl md:text-4xl font-bold text-white tracking-tight leading-tight mb-4">
                 {section.h1.split(':')[0].trim()}
@@ -560,7 +554,6 @@
 
           <!-- Features grid -->
           <div class="mb-14">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-3">O que tem dentro</p>
             <h3 class="text-xl md:text-2xl font-semibold text-white mb-3">{section.featuresTitle}</h3>
             <p class="text-sm md:text-base leading-relaxed max-w-3xl mb-8" style="color: var(--text-muted);">
               {section.featuresIntro}
@@ -586,7 +579,6 @@
           <!-- Steps + Testimonial -->
           <div class="grid lg:grid-cols-[1.4fr_1fr] gap-8 items-start">
             <div>
-              <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-3">Como funciona</p>
               <h3 class="text-xl md:text-2xl font-semibold text-white mb-3">{section.howTitle}</h3>
               <p class="text-sm md:text-base leading-relaxed mb-6" style="color: var(--text-muted);">
                 {section.howIntro}
@@ -638,7 +630,7 @@
                 <svg class="w-4 h-4 text-sky-400" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
                 </svg>
-                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300">Depoimento</p>
+                <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-sky-300">Depoimento</p>
               </div>
               <p class="text-base font-medium leading-relaxed text-white mb-5">
                 {section.testimonial.quote}
@@ -662,7 +654,6 @@
     <section class="py-16 md:py-24 border-b border-white/5">
       <div class="max-w-4xl mx-auto px-6">
         <div class="text-center mb-10">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-3">FAQ</p>
           <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight mb-2">
             Perguntas comuns sobre extensões
           </h2>
@@ -697,7 +688,6 @@
     <!-- ============ FINAL CTA ============ -->
     <section class="py-16 md:py-24">
       <div class="max-w-3xl mx-auto px-6 text-center">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300 mb-4">Teste 14 dias grátis</p>
         <h2 class="text-2xl md:text-4xl font-bold text-white tracking-tight leading-tight mb-5">
           Comece pelo essencial. Cresça quando precisar.
         </h2>

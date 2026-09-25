@@ -39,7 +39,7 @@ export const FlowVideo = ({ flow, format }) => {
     () => buildCameraKeyframes({ events: data.events, timing, viewport: data.viewport, format }),
     [flow, format],
   );
-  const { originX, originY, zoom: rawZoom } = useCameraFrame(frame, keyframes);
+  const { originX, originY, zoom: rawZoom } = useCameraFrame(frame, keyframes, fps);
   const {
     dx,
     dy,

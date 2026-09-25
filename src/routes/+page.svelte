@@ -158,7 +158,7 @@
   import MarketingFooter from '$lib/components/marketing/MarketingFooter.svelte';
   import AiReferralBanner from '$lib/components/marketing/AiReferralBanner.svelte';
   import OperationalProofSection from '$lib/components/marketing/OperationalProofSection.svelte';
-  import ProductVideo from '$lib/components/marketing/ProductVideo.svelte';
+  import PhoneShot from '$lib/components/marketing/PhoneShot.svelte';
   import { trackViewContent } from '$lib/metaPixel';
   import { initMarketingAnalytics } from '$lib/marketingAnalytics';
   import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
@@ -211,7 +211,6 @@
     <section class="hero" aria-labelledby="hero-title" data-track-section="hero">
       <div class="hero-inner">
         <div class="hero-copy">
-          <p class="hero-kicker">PDV sem frescura</p>
           <h1 id="hero-title">
             Você vende.
             <span>O Zelo cuida do resto.</span>
@@ -299,10 +298,12 @@
               <h3>Pedido em 3 toques.</h3>
               <p>Toca, adiciona, finaliza. Manda o comprovante no WhatsApp e já atende o próximo. A fila anda.</p>
             </div>
-            <ProductVideo
-              name="venda"
-              alt="Vídeo mostrando um pedido sendo registrado na frente de caixa do Zelo PDV em três toques."
-            />
+            <div class="phone-stage">
+              <PhoneShot
+                src="/images/screenshots/product-comanda.webp"
+                alt="Comanda do Zelo PDV com quatro itens e total de R$ 48,50, pronta pra receber o pagamento."
+              />
+            </div>
           </article>
 
           <div class="feature-side">
@@ -318,10 +319,12 @@
                 <h3>Aposenta o caderninho do fiado.</h3>
                 <p>Limite por cliente, histórico de compras e a conta certinha na hora de cobrar.</p>
               </div>
-              <ProductVideo
-                name="fiado"
-                alt="Vídeo mostrando o controle de fiado do Zelo PDV, com limite por cliente e histórico de compras."
-              />
+              <div class="phone-stage">
+                <PhoneShot
+                  src="/images/screenshots/product-fiado.webp"
+                  alt="Ficha de cliente do Zelo PDV mostrando fiado em aberto de R$ 847,00."
+                />
+              </div>
             </article>
           </div>
         </div>
@@ -337,9 +340,9 @@
           </p>
         </div>
         <div class="zelinho-media">
-          <ProductVideo
-            name="zelinho"
-            alt="Vídeo mostrando o Zelinho respondendo, em segundos, uma pergunta sobre as vendas do caixa."
+          <PhoneShot
+            src="/images/screenshots/product-zelinho.webp"
+            alt="Conversa com o Zelinho: pergunta 'Quanto sobrou este mês?' respondida com R$ 16.589,00, faturamento e despesas do período."
           />
         </div>
       </div>
@@ -378,8 +381,10 @@
             <p class="plan-price"><span>R$</span><strong>{basePrice}</strong><span>/mês</span></p>
             <ul>
               <li><Check class="size-4" aria-hidden="true" />Vendas ilimitadas</li>
-              <li><Check class="size-4" aria-hidden="true" />Celular, tablet e computador</li>
-              <li><Check class="size-4" aria-hidden="true" />Suporte no WhatsApp</li>
+              <li><Check class="size-4" aria-hidden="true" />Controle de estoque</li>
+              <li><Check class="size-4" aria-hidden="true" />Produtos e precificação</li>
+              <li><Check class="size-4" aria-hidden="true" />Relatórios completos</li>
+              <li><Check class="size-4" aria-hidden="true" />Zelinho Gerente (IA)</li>
             </ul>
           </article>
 
@@ -563,19 +568,6 @@
     position: relative;
     z-index: 2;
     padding-block: 2rem;
-  }
-
-  .hero-kicker {
-    display: inline-flex;
-    align-items: center;
-    min-height: 2rem;
-    margin: 0 0 1.5rem;
-    padding-inline: 0.9rem;
-    border: 1px solid var(--marketing-dark-border);
-    border-radius: 999px;
-    color: var(--link);
-    font-size: 0.875rem;
-    font-weight: 700;
   }
 
   .hero h1 {
@@ -800,12 +792,23 @@
     flex-direction: column;
   }
 
-  .feature-main :global(.product-video),
-  .fiado-feature :global(.product-video) {
+  .phone-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-top: auto;
-    border: 0;
     border-top: 1px solid var(--marketing-line);
-    border-radius: 0;
+    background:
+      radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 60%),
+      var(--marketing-dark);
+  }
+
+  .feature-main .phone-stage {
+    min-height: 22rem;
+  }
+
+  .fiado-feature .phone-stage {
+    min-height: 20rem;
   }
 
   .feature-copy {
@@ -1308,11 +1311,6 @@
       padding-block: 1.5rem 0;
     }
 
-    .hero-kicker {
-      margin-bottom: 1rem;
-      font-size: 0.875rem;
-    }
-
     .hero h1 {
       max-width: 19ch;
       font-size: clamp(2rem, 8.6vw, 3.25rem);
@@ -1341,7 +1339,6 @@
       width: 100%;
     }
 
-    .hero-kicker,
     .hero-shot {
       display: none;
     }

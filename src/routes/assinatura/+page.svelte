@@ -76,7 +76,7 @@
 
   const checkoutSteps = [
     { id: 1, label: 'Plano' },
-    { id: 2, label: 'Add-ons' },
+    { id: 2, label: 'Extensões' },
     { id: 3, label: 'Pagamento' },
   ];
   const primaryPlanIds = ['pdv', 'bundle'];
@@ -949,7 +949,7 @@
 
 <svelte:head>
   <title>Assinatura — Zelo</title>
-  <meta name="description" content="Monte seu plano ZeloPDV, escolha add-ons e pague com Pix ou cartão no fluxo de assinatura do Zelo.">
+  <meta name="description" content="Monte seu plano ZeloPDV, escolha extensões e pague com Pix ou cartão no fluxo de assinatura do Zelo.">
 </svelte:head>
 
 <section class="assinatura-container">
@@ -1271,7 +1271,7 @@
             {#if pixPayment && !pixPaymentMatchesSelection}
               <div class="status-card warning compact-status">
                 <div class="status-icon"><TriangleAlert class="size-6" aria-hidden="true" /></div>
-                <div>Você alterou o plano ou os add-ons depois de gerar o Pix. Gere uma nova cobrança para continuar com a seleção atual.</div>
+                <div>Você alterou o plano ou as extensões depois de gerar o Pix. Gere uma nova cobrança para continuar com a seleção atual.</div>
               </div>
             {/if}
 
@@ -1597,7 +1597,7 @@
             {#if pixPayment && !pixPaymentMatchesSelection}
               <div class="status-card warning compact-status">
                 <div class="status-icon"><TriangleAlert class="size-6" aria-hidden="true" /></div>
-                <div>Você alterou o plano ou os add-ons depois de gerar o Pix. Gere uma nova cobrança para continuar com a seleção atual.</div>
+                <div>Você alterou o plano ou as extensões depois de gerar o Pix. Gere uma nova cobrança para continuar com a seleção atual.</div>
               </div>
             {/if}
 

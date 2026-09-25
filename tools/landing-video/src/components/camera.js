@@ -1,4 +1,4 @@
-import { Easing, interpolate } from 'remotion';
+import { spring } from 'remotion';
 import { sourceMsToFrame } from '../data/timing.js';
 
 // Niveis de zoom por formato — o device mobile ocupa uma fatia menor do
@@ -160,19 +160,40 @@ export function clampDeviceBox({
   };
 }
 
-export function useCameraFrame(frame, keyframes) {
-  const ox = interpolateChain(frame, keyframes, (k) => k.ox);
-  const oy = interpolateChain(frame, keyframes, (k) => k.oy);
-  const zoom = interpolateChain(frame, keyframes, (k) => k.zoom);
-  return { originX: ox, originY: oy, zoom };
+// Fisica de mola por segmento (nao um easing simetrico tipo Easing.inOut) —
+// o motivo de trocar: uma curva cubica-inOut aplicada identica em toda
+// transicao (o mesmo "acelera-desacelera" simetrico, sempre) e o que faz
+// zoom/pan de camera parecer mecanico/robotico numa revisao humana, mesmo
+// tecnicamente "suave". Uma mola de verdade acelera rapido e desacelera com
+// uma leve "sobra" no final — cada movimento tem uma assinatura levemente
+// diferente (a duracao do segmento muda o quao comprimida a mola fica), o
+// que le como camera operada, nao como tween de slide de apresentacao.
+// `durationInFrames` calibra a mola pra assentar bem perto do frame-alvo
+// (mesma logica de spring() com from/to, so que reancorada a cada par de
+// keyframes consecutivos).
+const CAMERA_SPRING = { damping: 24, mass: 1, stiffness: 170 };
+
+export function useCameraFrame(frame, keyframes, fps) {
+  const idx = findSegment(frame, keyframes);
+  const from = keyframes[idx];
+  const to = keyframes[Math.min(idx + 1, keyframes.length - 1)];
+  const durationInFrames = Math.max(1, to.frame - from.frame);
+  const local = frame - from.frame;
+  const springTo = (fromVal, toVal) =>
+    fromVal === toVal
+      ? toVal
+      : spring({ frame: local, fps, config: CAMERA_SPRING, durationInFrames, from: fromVal, to: toVal });
+  return {
+    originX: springTo(from.ox, to.ox),
+    originY: springTo(from.oy, to.oy),
+    zoom: springTo(from.zoom, to.zoom),
+  };
 }
 
-function interpolateChain(frame, keyframes, pick) {
-  const frames = keyframes.map((k) => k.frame);
-  const values = keyframes.map(pick);
-  return interpolate(frame, frames, values, {
-    easing: Easing.inOut(Easing.cubic),
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+// Acha o par de keyframes consecutivos que envolve `frame` (from.frame <=
+// frame < proximo.frame, ou o ultimo par se `frame` for alem do fim).
+function findSegment(frame, keyframes) {
+  let i = 0;
+  while (i < keyframes.length - 1 && keyframes[i + 1].frame <= frame) i += 1;
+  return i;
 }

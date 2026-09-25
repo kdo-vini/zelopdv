@@ -176,7 +176,7 @@ export const competitorComparisons = {
     introTitle: 'Cardápio digital não é frente de caixa',
     introParagraphs: [
       'A Goomer resolve bem uma parte do problema: cardápio digital por QR Code na mesa, totem de autoatendimento e pedidos por link. Mas ela é, por desenho, uma camada de atendimento que se integra a um PDV — não o PDV em si. Ou seja, depois de assinar a Goomer, você ainda precisa de um sistema separado para controlar caixa, estoque, fiado e o financeiro do dia.',
-      'Na prática, isso vira duas assinaturas e duas ferramentas para fazer o que muitos negócios precisam que seja uma só. E o plano da Goomer que inclui integração com PDV ("Integrar") parte de R$ 224,92/mês no anual, sem contar add-ons como QR Code e Delivery, que são cobrados à parte.',
+      'Na prática, isso vira duas assinaturas e duas ferramentas para fazer o que muitos negócios precisam que seja uma só. E o plano da Goomer que inclui integração com PDV ("Integrar") parte de R$ 224,92/mês no anual, sem contar extensões como QR Code e Delivery, que são cobradas à parte.',
       'O Zelo PDV vai pela outra ponta: ele é a frente de caixa completa desde o primeiro dia, por R$ 59/mês. Você registra vendas, controla fiado, acompanha estoque e fecha o caixa sem precisar amarrar um segundo sistema por cima.'
     ],
     comparisonIntro:
@@ -207,7 +207,7 @@ export const competitorComparisons = {
         advantage: 'zelo'
       },
       {
-        feature: 'Add-ons',
+        feature: 'Extensões',
         competitor: 'QR Code e Delivery cobrados à parte (+R$ 70 a R$ 99,90/mês)',
         zelo: 'Módulos opcionais, você paga só o que usa',
         advantage: 'tie'
@@ -257,7 +257,7 @@ export const competitorComparisons = {
       {
         question: 'Quanto custa a Goomer com PDV comparada ao Zelo?',
         answer:
-          'Em junho de 2026, o plano "Integrar" da Goomer (que inclui integração com PDV) parte de R$ 224,92/mês no anual, segundo o site oficial, fora add-ons como QR Code e Delivery. O Zelo PDV custa R$ 59/mês com a frente de caixa inclusa.'
+          'Em junho de 2026, o plano "Integrar" da Goomer (que inclui integração com PDV) parte de R$ 224,92/mês no anual, segundo o site oficial, fora extensões como QR Code e Delivery. O Zelo PDV custa R$ 59/mês com a frente de caixa inclusa.'
       },
       {
         question: 'A Goomer cobra por pedido?',
@@ -409,11 +409,11 @@ export const competitorComparisons = {
     meta: {
       title: 'Zelo PDV vs Cardápio Web: Alternativa Mais Barata e Offline | Zelo PDV',
       description:
-        'Cardápio Web parte de R$ 169/mês com add-ons à parte. Zelo PDV é R$ 59/mês, funciona offline e você paga só pelos módulos que usa. Compare e teste 14 dias grátis.',
+        'Cardápio Web parte de R$ 169/mês com extensões à parte. Zelo PDV é R$ 59/mês, funciona offline e você paga só pelos módulos que usa. Compare e teste 14 dias grátis.',
       canonical: `${SITE_URL}/vs-cardapio-web`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Cardápio Web',
-    h1: 'Zelo PDV vs Cardápio Web: comece em R$ 59, sem add-on em cima de add-on',
+    h1: 'Zelo PDV vs Cardápio Web: comece em R$ 59, sem extensão em cima de extensão',
     subtitle:
       'O Cardápio Web é uma plataforma robusta de cardápio digital e automação de delivery, mas os planos partem de R$ 169/mês e funções como financeiro, fiscal e estoque avançado são cobradas à parte. O Zelo PDV começa em R$ 59/mês e funciona até offline.',
     editorialThesis:
@@ -435,13 +435,13 @@ export const competitorComparisons = {
       { feature: 'Preço de entrada', competitor: 'A partir de R$ 169,99/mês', zelo: 'R$ 59/mês', advantage: 'zelo' },
       { feature: 'Financeiro, fiscal e estoque avançado', competitor: 'Módulos pagos à parte', zelo: 'Financeiro e estoque inclusos na base', advantage: 'zelo' },
       { feature: 'Funciona sem internet (offline)', competitor: 'Baseado em navegador; não anuncia offline', zelo: 'Continua vendendo offline e sincroniza depois', advantage: 'zelo' },
-      { feature: 'Previsibilidade de preço', competitor: 'Cresce conforme add-ons', zelo: 'Base baixa + módulos claros', advantage: 'zelo' },
+      { feature: 'Previsibilidade de preço', competitor: 'Cresce conforme extensões', zelo: 'Base baixa + módulos claros', advantage: 'zelo' },
       { feature: 'Cardápio digital e automação de delivery', competitor: 'Forte nesse ponto', zelo: 'Foco em frente de caixa', advantage: 'competitor' }
     ],
     reasonsTitle: 'Por que pequenos negócios começam pelo Zelo PDV',
     reasons: [
       { icon: '💸', title: 'A partir de R$ 59 contra R$ 169+', description: 'O piso do Zelo é bem mais baixo que o plano de entrada do Cardápio Web — e já vem com caixa, fiado e estoque.' },
-      { icon: '🧩', title: 'Menos add-on surpresa', description: 'No Cardápio Web, financeiro, fiscal e estoque avançado são pagos à parte. No Zelo, o essencial vem na base e os módulos são claros.' },
+      { icon: '🧩', title: 'Menos extensão surpresa', description: 'No Cardápio Web, financeiro, fiscal e estoque avançado são pagos à parte. No Zelo, o essencial vem na base e os módulos são claros.' },
       { icon: '📶', title: 'Vende mesmo sem internet', description: 'O Cardápio Web é baseado em navegador, com relatos públicos de lentidão em fins de semana. O Zelo continua vendendo offline.' },
       { icon: '🙋', title: 'Suporte humano direto', description: 'No Zelo você fala direto com o time pelo WhatsApp para configurar e resolver dúvidas do dia a dia.' }
     ],
@@ -914,7 +914,7 @@ export const competitorComparisons = {
     introParagraphs: [
       'A Consumer é um sistema de gestão conhecido no food service brasileiro, com PDV, cardápio digital e controle de fiado. O plano de entrada, Essencial, custa R$ 59,90/mês — muito perto do preço do Zelo PDV — mas só na cobrança anual, e restrito a 1 computador. A página oficial cita que existe opção de plano mensal personalizado, sem mostrar o valor publicamente.',
       'O ponto que mais separa os dois: para ter PDV em rede, com mais de um computador, é preciso subir para o plano Profissional, que custa R$ 179,90/mês — quase o triplo do Essencial. É um salto grande para uma necessidade comum em negócio que cresce um pouco além do balcão único.',
-      `O Zelo PDV também parte de ${BASE_PRICE}/mês: a mesma conta já abre em vários dispositivos (computador, tablet, celular). Se você precisa de logins separados por funcionário, com cargos e permissões próprios, isso entra como o add-on Controle de Acessos (+${ACESSOS_ADDON_PRICE}) — assim como mesas (+${MESAS_ADDON_PRICE}) ou ZeloMenu (+${MENU_ADDON_PRICE}) somam ao plano base sem te empurrar para um degrau de preço três vezes maior.`
+      `O Zelo PDV também parte de ${BASE_PRICE}/mês: a mesma conta já abre em vários dispositivos (computador, tablet, celular). Se você precisa de logins separados por funcionário, com cargos e permissões próprios, isso entra como a extensão Controle de Acessos (+${ACESSOS_ADDON_PRICE}) — assim como mesas (+${MESAS_ADDON_PRICE}) ou ZeloMenu (+${MENU_ADDON_PRICE}) somam ao plano base sem te empurrar para um degrau de preço três vezes maior.`
     ],
     comparisonIntro:
       'Comparação ponto a ponto entre Zelo PDV e Consumer, com base no que cada um divulga publicamente em setembro de 2026.',
@@ -928,7 +928,7 @@ export const competitorComparisons = {
       {
         feature: 'Limite de dispositivo no plano de entrada',
         competitor: '1 computador no Essencial; múltiplos dispositivos só no Profissional (R$ 179,90/mês)',
-        zelo: `A mesma conta abre em vários dispositivos; login separado por funcionário é o add-on Controle de Acessos (+${ACESSOS_ADDON_PRICE})`,
+        zelo: `A mesma conta abre em vários dispositivos; login separado por funcionário é a extensão Controle de Acessos (+${ACESSOS_ADDON_PRICE})`,
         advantage: 'zelo'
       },
       {
@@ -968,7 +968,7 @@ export const competitorComparisons = {
         icon: '💻',
         title: 'Uma conta em vários dispositivos, sem travar em 1 computador',
         description:
-          `O plano de entrada da Consumer trava em 1 computador. No Zelo PDV, a mesma conta abre em computador, tablet ou celular; login separado por funcionário fica no add-on Controle de Acessos (+${ACESSOS_ADDON_PRICE}).`
+          `O plano de entrada da Consumer trava em 1 computador. No Zelo PDV, a mesma conta abre em computador, tablet ou celular; login separado por funcionário fica na extensão Controle de Acessos (+${ACESSOS_ADDON_PRICE}).`
       },
       {
         icon: '🏷️',

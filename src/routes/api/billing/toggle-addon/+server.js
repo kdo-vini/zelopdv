@@ -28,7 +28,7 @@ export async function POST({ request }) {
     const enabled = !!body.enabled;
 
     if (!VALID_ADDONS.includes(addon)) {
-      return json({ error: `Add-on inválido. Suportados: ${VALID_ADDONS.join(', ')}.` }, { status: 400 });
+      return json({ error: `Extensão inválida. Suportadas: ${VALID_ADDONS.join(', ')}.` }, { status: 400 });
     }
 
     const { data: sub, error: subErr } = await supabaseAdmin
@@ -43,14 +43,14 @@ export async function POST({ request }) {
       return json({ error: 'Assinatura não encontrada.' }, { status: 404 });
     }
     if (!isSubscriptionActiveStrict(sub)) {
-      return json({ error: 'Apenas assinaturas ativas ou em trial podem modificar add-ons.' }, { status: 400 });
+      return json({ error: 'Apenas assinaturas ativas ou em trial podem modificar extensões.' }, { status: 400 });
     }
 
     // Trial sem provedor: atualiza só o DB (preferência para quando virar assinatura real)
     if (sub.status === 'trialing' && !sub.provider_subscription_id) {
       if (enabled && !isAddonAllowed(sub.plan_tier, addon)) {
         return json({
-          error: `Add-on "${ADDONS[addon].name}" não é compatível com o plano atual.`,
+          error: `A extensão "${ADDONS[addon].name}" não é compatível com o plano atual.`,
         }, { status: 400 });
       }
       const dbUpdate = { [ADDON_DB_COLUMN[addon]]: enabled, updated_at: new Date().toISOString() };
@@ -63,8 +63,8 @@ export async function POST({ request }) {
         addon,
         enabled,
         message: enabled
-          ? `Add-on ${ADDONS[addon].name} ativado no trial.`
-          : `Add-on ${ADDONS[addon].name} desativado.`,
+          ? `Extensão ${ADDONS[addon].name} ativada no trial.`
+          : `Extensão ${ADDONS[addon].name} desativada.`,
       });
     }
 
@@ -77,7 +77,7 @@ export async function POST({ request }) {
 
     if (enabled && !isAddonAllowed(sub.plan_tier, addon)) {
       return json({
-        error: `Add-on "${ADDONS[addon].name}" não é compatível com ${sub.plan_tier}. Mude pra um plano com PDV.`,
+        error: `A extensão "${ADDONS[addon].name}" não é compatível com ${sub.plan_tier}. Mude pra um plano com PDV.`,
       }, { status: 400 });
     }
 
@@ -118,11 +118,11 @@ export async function POST({ request }) {
       addon,
       enabled,
       message: enabled
-        ? `Add-on ${ADDONS[addon].name} ativado. Cobrança proporcional aplicada.`
-        : `Add-on ${ADDONS[addon].name} desativado.`,
+        ? `Extensão ${ADDONS[addon].name} ativada. Cobrança proporcional aplicada.`
+        : `Extensão ${ADDONS[addon].name} desativada.`,
     });
   } catch (err) {
     console.error('[toggle-addon] Stripe error:', err?.message || err);
-    return json({ error: err?.message || 'Falha ao alternar add-on' }, { status: 500 });
+    return json({ error: err?.message || 'Falha ao alternar extensão' }, { status: 500 });
   }
 }

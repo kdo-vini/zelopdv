@@ -27,7 +27,7 @@ export async function GET({ request }) {
     .maybeSingle();
 
   if (!sub || !sub.has_acessos_addon || !isSubscriptionActiveStrict(sub)) {
-    return json({ error: 'Add-on Controle de Acessos não está ativo.' }, { status: 403 });
+    return json({ error: 'Extensão Controle de Acessos não está ativa.' }, { status: 403 });
   }
 
   const { data: roles, error } = await supabaseAdmin
@@ -54,7 +54,7 @@ export async function POST({ request }) {
     .maybeSingle();
 
   if (!sub || !sub.has_acessos_addon || !isSubscriptionActiveStrict(sub)) {
-    return json({ error: 'Add-on Controle de Acessos não está ativo.' }, { status: 403 });
+    return json({ error: 'Extensão Controle de Acessos não está ativa.' }, { status: 403 });
   }
 
   const body = await request.json().catch(() => ({}));

@@ -1,11 +1,10 @@
 <script>
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { Menu, Sparkles, X } from 'lucide-svelte';
+  import { Menu, X } from 'lucide-svelte';
   import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
 
   export let topOffset = 'top-0';
-  export let easterDays = 0;
   export let localAnchors = false;
 
   let showMobileMenu = false;
@@ -55,12 +54,6 @@
     </div>
 
     <div class="header-actions">
-      {#if easterDays > 0}
-        <a href="/pascoa" class="easter-link">
-          <Sparkles class="size-3.5" aria-hidden="true" />
-          <span>Páscoa em {easterDays} {easterDays === 1 ? 'dia' : 'dias'}</span>
-        </a>
-      {/if}
       <a href="/login" class="login-link">Entrar</a>
       <a
         href={cadastroHref}
@@ -165,15 +158,6 @@
     gap: 1rem;
   }
 
-  .easter-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    color: var(--link);
-    font-size: 0.625rem;
-    font-weight: 600;
-  }
-
   .site-nav-cta,
   .mobile-primary {
     display: inline-flex;
@@ -238,8 +222,7 @@
 
     .desktop-nav,
     .login-link,
-    .site-nav-cta,
-    .easter-link {
+    .site-nav-cta {
       display: none;
     }
 

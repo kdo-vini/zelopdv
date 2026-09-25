@@ -145,7 +145,7 @@
   // Routes that have their own sidebar layout — hide root header/footer for these
   $: hasSidebarLayout = matchesProtectedPrefix(path, sidebarLayoutPrefixes);
   // Show support chat on public/auth pages but not inside the app
-  $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && !isFerramentas && !isReferralPage && $page.url.pathname !== '/pascoa' && !$page.error;
+  $: showSupportChat = !isGestaoPrefixed && !isApp && !isRelatorios && !isFerramentas && !isReferralPage && !$page.error;
 
   async function resolveAccessContext(userId) {
     if (!userId) return { isSubUser: false, ownerUserId: userId };
@@ -204,7 +204,7 @@
     await loadAuthModules();
     if (!supabase) return;
  
-  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/redefinir-senha', '/privacidade', '/termos', '/pascoa', '/para-lanchonetes', '/para-restaurantes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao', '/extensoes', '/vs-planilha', '/comparativos', '/contato', '/zelo-impressao', '/auth/callback'];
+  const publicPaths = ['/', '/login', '/cadastro', '/esqueci-senha', '/landing', '/assinatura', '/perfil', '/redefinir-senha', '/privacidade', '/termos', '/para-lanchonetes', '/para-restaurantes', '/para-hamburguerias', '/para-delivery', '/para-mei', '/blog', '/precificacao', '/extensoes', '/vs-planilha', '/comparativos', '/contato', '/zelo-impressao', '/auth/callback'];
 
     let navigated = false;
     let authReady = false;
@@ -286,7 +286,7 @@
       }
       if (session && isPublicPath(currentPath)) {
         // Allow /loja/* paths without redirect (public storefront)
-        if (currentPath === '/' || currentPath === '/assinatura' || currentPath === '/perfil' || currentPath === '/perfil.html' || currentPath === '/redefinir-senha' || currentPath === '/pascoa' || currentPath === '/precificacao' || currentPath.startsWith('/vs-') || currentPath.startsWith('/para-') || currentPath.startsWith('/blog') || currentPath.startsWith('/indica/') || currentPath.startsWith('/dev/')) {
+        if (currentPath === '/' || currentPath === '/assinatura' || currentPath === '/perfil' || currentPath === '/perfil.html' || currentPath === '/redefinir-senha' || currentPath === '/precificacao' || currentPath.startsWith('/vs-') || currentPath.startsWith('/para-') || currentPath.startsWith('/blog') || currentPath.startsWith('/indica/') || currentPath.startsWith('/dev/')) {
 
         } else {
 
@@ -457,14 +457,12 @@
   </div>
 {/if}
 
-{#if $page.url.pathname === '/pascoa'}
-  <slot />
-{:else if hasSidebarLayout}
+{#if hasSidebarLayout}
   <slot />
 {:else}
 <div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden">
   
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout}
   <header class="border-b bg-header-base backdrop-blur-sm sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
@@ -640,11 +638,11 @@
   {/if}
   {/if}
 
-  <main class="flex-1 mx-auto w-full {$page.url.pathname === '/' || $page.url.pathname === '/landing' || $page.url.pathname === '/pascoa' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isContactPage || isCompetitorComparisonPage || isReferralPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
+  <main class="flex-1 mx-auto w-full {$page.url.pathname === '/' || $page.url.pathname === '/landing' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isContactPage || isCompetitorComparisonPage || isReferralPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && $page.url.pathname !== '/pascoa' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout && !$page.error}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout && !$page.error}
   <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
