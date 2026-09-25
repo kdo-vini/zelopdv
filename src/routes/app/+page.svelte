@@ -57,6 +57,7 @@
   import { zeloSurface } from '$lib/theme/surface';
   import { Button } from '$lib/components/ui/button';
   import { Kbd, MoneyText, StatusPill, Segmented, UnderlineTabs, Stepper, SearchField, ZeloMark } from '$lib/components/zelo';
+  import { blurSwap, rise } from '$lib/motion/transitions.js';
   import { companyNameStore } from '$lib/stores/session';
   import { ArrowLeftRight, Bike, ChevronUp, CloudUpload, Plus, RefreshCw, ShoppingBag, ShoppingCart, Trash2, X } from 'lucide-svelte';
 
@@ -1781,15 +1782,16 @@
     </div>
 
     <div class="fc-items">
+      <!-- the list stays mounted so the first and last line animate too (blurSwap is local to its block) -->
       {#if comanda.length === 0}
-        <div class="fc-empty">
+        <div class="fc-empty" in:blurSwap out:blurSwap>
           <ShoppingCart size={28} strokeWidth={1.5} aria-hidden="true" />
           <p>Toque em um produto para começar a venda</p>
         </div>
-      {:else}
-        <ul>
+      {/if}
+      <ul>
           {#each comanda as item (item.id)}
-            <li class="fc-item">
+            <li class="fc-item" in:blurSwap={{ collapse: true }} out:blurSwap={{ collapse: true }}>
               <div class="fc-item-info">
                 <p class="fc-item-name">{item.nome}</p>
                 {#if item.resumoMontagem}<p class="fc-item-sub">{item.resumoMontagem}</p>{/if}
@@ -1804,7 +1806,6 @@
             </li>
           {/each}
         </ul>
-      {/if}
     </div>
 
     <div class="fc-cart-foot">
@@ -1812,7 +1813,7 @@
       {#if tipoPedido === 'delivery' && Number(taxaEntregaInput) > 0}
         <div class="fc-line"><span>Taxa de entrega</span><span class="fc-num">+ {formatMoney(taxaEntregaInput)}</span></div>
       {/if}
-      <div class="fc-total"><span>Total</span><MoneyText value={totalComandaComEntrega} size="lg" /></div>
+      <div class="fc-total"><span>Total</span><MoneyText value={totalComandaComEntrega} size="lg" animate /></div>
       <div class="fc-acts">
         <Button variant="outlined" size="touch" onclick={abrirModalMovCaixa} disabled={!canMovimentarCaixa} aria-describedby={!canMovimentarCaixa ? 'pdv-action-movement-hint' : undefined}>
           <ArrowLeftRight strokeWidth={1.75} />Movimentar caixa
@@ -1822,7 +1823,7 @@
         </Button>
       </div>
       <Button variant="primary" size="cta" class="on-action" data-testid="btn-cobrar" disabled={comanda.length === 0 || !canVender || !canReceber} aria-describedby={pdvReceiveHint ? 'pdv-receive-hint' : undefined} onclick={abrirModalPagamento}>
-        Receber<Kbd>F9</Kbd><MoneyText value={totalComandaComEntrega} class="fc-cta-total" />
+        Receber<Kbd>F9</Kbd><MoneyText value={totalComandaComEntrega} class="fc-cta-total" animate />
       </Button>
       {#if !canMovimentarCaixa}<InlineHelper id="pdv-action-movement-hint" compact message="Seu perfil não tem permissão para movimentar o caixa." />{/if}
       {#if !canCancelar}<InlineHelper id="pdv-action-cancel-hint" compact message="Seu perfil não tem permissão para limpar a comanda." />{/if}
@@ -1836,10 +1837,10 @@
 
   <!-- Barra da comanda (mobile) -->
   {#if !showMobileCart && comanda.length > 0}
-    <button type="button" class="fc-cartbar" on:click={() => (showMobileCart = true)}>
+    <button type="button" class="fc-cartbar" in:rise out:rise on:click={() => (showMobileCart = true)}>
       <span class="fc-cartbar-count">{itensNaComanda}</span>
       <span class="fc-cartbar-label">Ver comanda<small>{tipoPedido === 'delivery' ? 'Delivery' : 'Retirada'} · {comanda.length} {comanda.length === 1 ? 'produto' : 'produtos'}</small></span>
-      <MoneyText value={totalComandaComEntrega} class="fc-cartbar-total" />
+      <MoneyText value={totalComandaComEntrega} class="fc-cartbar-total" animate />
       <span class="fc-cartbar-chev" aria-hidden="true"><ChevronUp size={20} strokeWidth={1.75} /></span>
     </button>
   {/if}
@@ -2425,7 +2426,9 @@
   .fc-search { flex: 1; min-width: 0; }
   .fc :global(.fc-cats) { margin-top: 18px; flex: none; }
   .fc-subcats { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; flex: none; }
-  .fc-subcats button { height: 32px; padding: 0 12px; border-radius: var(--zelo-radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-panel); color: var(--text-muted); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .fc-subcats button { height: 32px; padding: 0 12px; border-radius: var(--zelo-radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-panel); color: var(--text-muted); font-size: 13px; font-weight: 500; white-space: nowrap; transition: background var(--zelo-dur-fast), color var(--zelo-dur-fast), border-color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+  /* press squash (docs/DESIGN_SYSTEM.md → Movimento): quick in, springs back on release */
+  .fc-subcats button:active, .fc-icon-btn:active, .fc-mhead-cash:active, .fc-cartbar:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
   .fc-subcats button.on { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
   .fc-subcats button:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
   .fc-grid { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-top: 16px; position: relative; }
@@ -2436,7 +2439,7 @@
   .fc-cart-row { display: flex; align-items: center; justify-content: space-between; }
   .fc-cart h2 { margin: 0; font: 600 18px/1 var(--zelo-font-ui); letter-spacing: -0.015em; display: flex; align-items: baseline; gap: 8px; }
   .fc-count { font: 500 13px/1 var(--zelo-font-num); color: var(--text-muted); letter-spacing: 0; }
-  .fc-icon-btn { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--text-label); background: var(--bg-sunken); }
+  .fc-icon-btn { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--text-label); background: var(--bg-sunken); transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
   .fc-mobile-only { display: none; }
   .fc :global(.fc-tipo) { display: flex; width: 100%; margin-top: 14px; }
   .fc-taxa { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 13.5px; color: var(--text-label); }
@@ -2444,7 +2447,7 @@
   .fc-taxa-input:focus-within { border-color: var(--primary); box-shadow: 0 0 0 4px var(--focus); }
   .fc-taxa-input small { font-size: 11px; color: var(--text-muted); }
   .fc-taxa-input input { width: 88px; border: 0; outline: 0; background: none; text-align: right; font: 500 14px var(--zelo-font-num); color: var(--text-main); }
-  .fc-items { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px; }
+  .fc-items { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px; }
   .fc-items ul { list-style: none; margin: 0; padding: 0; }
   .fc-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 8px; border-bottom: 1px solid var(--border-subtle); }
   .fc-item:last-child { border-bottom: 0; }
@@ -2456,7 +2459,7 @@
   .fc-item-total { font: 500 14px/1.2 var(--zelo-font-num); font-variant-numeric: tabular-nums; }
   .fc-remove { font-size: 12px; color: var(--text-muted); }
   .fc-remove:hover { color: var(--status-error-text); }
-  .fc-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; color: var(--text-muted); padding: 24px; }
+  .fc-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; color: var(--text-muted); padding: 24px; }
   .fc-empty p { margin: 0; font-size: 13px; max-width: 200px; }
   .fc-cart-foot { flex: none; padding: 16px 20px 20px; border-top: 1px solid var(--border-subtle); }
   .fc-line { display: flex; justify-content: space-between; align-items: center; height: 26px; font-size: 13.5px; color: var(--text-label); }
@@ -2480,7 +2483,7 @@
     .fc-mhead-title { min-width: 0; }
     .fc-mhead-title p { margin: 0; font: 600 17px/1.15 var(--zelo-font-ui); letter-spacing: -0.015em; }
     .fc-mhead-title span { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .fc-mhead-cash { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 11px; border-radius: var(--zelo-radius-pill); background: var(--bg-sunken); color: var(--text-main); font: 500 13px/1 var(--zelo-font-num); }
+    .fc-mhead-cash { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 11px; border-radius: var(--zelo-radius-pill); background: var(--bg-sunken); color: var(--text-main); font: 500 13px/1 var(--zelo-font-num); transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
     .fc-mhead-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--status-success-text); }
     .fc-mhead-dot.off { background: var(--status-warning-text); }
     .fc-top { display: none; }
@@ -2488,13 +2491,13 @@
     .fc-tools :global(.kbd), .fc-cart :global(.kbd), .fc-avulso-label { display: none; }
     .fc-search { flex-basis: 100%; }
     .fc :global(.fc-tabelas) { flex: 1; }
-    .fc-cart { position: fixed; left: 0; right: 0; bottom: var(--mobile-bottom-nav-offset); top: 56px; z-index: 60; border-left: 0; border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0; box-shadow: var(--elevation-float); transform: translateY(105%); transition: transform var(--zelo-dur-slow) var(--zelo-ease-out); }
+    .fc-cart { position: fixed; left: 0; right: 0; bottom: var(--mobile-bottom-nav-offset); top: 56px; z-index: 60; border-left: 0; border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0; box-shadow: var(--elevation-float); transform: translateY(105%); transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
     .fc-cart.open { transform: none; }
     .fc-handle { display: block; width: 40px; height: 5px; border-radius: 3px; background: var(--border-strong); margin: 9px auto 0; }
     .fc-cart-head { padding-top: 10px; }
     .fc-mobile-only { display: grid; }
     .fc-scrim { display: block; position: fixed; inset: 0; z-index: 55; background: color-mix(in srgb, var(--zelo-navy) 42%, transparent); }
-    .fc-cartbar { display: flex; align-items: center; gap: 12px; position: fixed; left: 12px; right: 12px; bottom: calc(var(--mobile-bottom-nav-offset) + 12px); height: 62px; padding: 0 10px; border-radius: 18px; background: var(--primary); color: var(--primary-text); box-shadow: var(--elevation-float); z-index: 40; text-align: left; }
+    .fc-cartbar { display: flex; align-items: center; gap: 12px; position: fixed; left: 12px; right: 12px; bottom: calc(var(--mobile-bottom-nav-offset) + 12px); height: 62px; padding: 0 10px; border-radius: 18px; background: var(--primary); color: var(--primary-text); box-shadow: var(--elevation-float); z-index: 40; text-align: left; transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
     .fc-cartbar-count { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--primary-text) 12%, transparent); font: 500 15px/1 var(--zelo-font-num); flex: none; }
     .fc-cartbar-label { font-weight: 600; font-size: 16px; white-space: nowrap; }
     .fc-cartbar-label small { display: block; font-weight: 400; font-size: 12px; opacity: 0.62; margin-top: 2px; }

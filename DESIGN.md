@@ -201,7 +201,13 @@ Por que claro por dentro: operação de caixa acontece em loja iluminada, por ho
 - **Raios:** segmento 9 · controle (input, botão) 12 · card/tile 14 · CTA 16 · sheet 24 · pílula.
 - **Espaço:** grade de 4 px; gutter 16 (mobile) / 24 (desktop); alvo de toque ≥ 44 px; CTA 60–64 px.
 - **Elevação:** borda de 1 px é o padrão. Sombra só no que flutua (CTA, sheet, popover), tingida de navy. Sem glow, sem gradiente em interface, sem blur decorativo.
-- **Movimento:** molas com no máximo um leve overshoot (`--zelo-ease-spring`, ζ 0,84, 0,8%), 150–320 ms; troca de conteúdo com blur curto; `prefers-reduced-motion` zera as durações.
+- **Movimento** (padrão: `docs/design-system/reference/zelopdv-morph.html`; implementação: `docs/DESIGN_SYSTEM.md` → Movimento):
+  - molas em tudo, no máximo um leve overshoot (`--zelo-ease-spring`, ζ 0,84, 0,8%), 150–320 ms;
+  - **uma forma que se transforma** (tamanho, raio, cor) e o conteúdo dentro troca com **blur curto**: sai ~90% em 70 ms, entra 70 ms depois, nunca juntos;
+  - **aperto**: escala 0,965 ao pressionar, volta com mola;
+  - **indicador líquido** em abas e segmentos: a borda que lidera é rígida, a que segue é macia — estica e alcança;
+  - **botão → carregando → check** (`MorphButton`) para ações assíncronas; **números contam** em vez de pular;
+  - `prefers-reduced-motion` zera as durações.
 
 ## 5. Componentes
 

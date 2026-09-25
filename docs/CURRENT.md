@@ -17,7 +17,12 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
   `tests/themeSurface.test.js`, `npm run visual:diff`.
 - **Sem mudança visual em produção**: 0 pixels diferentes em 16 rotas × 2
   larguras contra o commit anterior.
-- Próximo: Fase 1 (componentes + globais do layout) e Fase 2 (Brand no ar).
+- Progresso da continuação (roteiro em `docs/HANDOFF-design-system.md`; cada
+  etapa verificada com legado pixel-idêntico a `main` sem `?tema=novo`):
+  - **A — movimento + `/app` + sidebar** ✅: `src/lib/motion/` (molas em forma
+    fechada, `blurSwap`, `rise`, `LiquidIndicator`), `MorphButton`, squash nas
+    variantes do sistema, `MoneyText animate`; sidebar com as métricas do
+    mockup (244 px, itens 13,5/38 px). Movimento reduzido zera durações e squash.
 
 ## Sessão 2026-09-25 — Retenção em lote de `zelochat_webhook_events_raw`
 

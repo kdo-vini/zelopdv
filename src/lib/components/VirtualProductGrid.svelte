@@ -346,8 +346,9 @@
   /* ── Zelo Design System grid (docs/DESIGN_SYSTEM.md) ── */
   .zelo-grid { grid-template-columns: repeat(var(--zelo-cols, 4), minmax(0, 1fr)); gap: 12px; padding: 0 2px; }
   .prod-cell :global(.zelo-tile) { width: 100%; height: 118px; min-height: 0; }
-  .zelo-avulso { height: 118px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 14px; text-align: left; border-radius: var(--zelo-radius-card); border: 1.5px dashed var(--border-strong); color: var(--text-muted); transition: border-color var(--zelo-dur-fast), color var(--zelo-dur-fast); }
+  .zelo-avulso { height: 118px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 14px; text-align: left; border-radius: var(--zelo-radius-card); border: 1.5px dashed var(--border-strong); color: var(--text-muted); transition: border-color var(--zelo-dur-fast), color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
   .zelo-avulso:hover { border-color: var(--primary); color: var(--text-main); }
+  .zelo-avulso:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
   .zelo-avulso:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
   .zelo-avulso-ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--bg-sunken); }
   .zelo-avulso-nm { display: block; font-weight: 500; font-size: 14.5px; color: inherit; }

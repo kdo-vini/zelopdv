@@ -16,9 +16,10 @@
 </button>
 
 <style>
-  .tile { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 118px; padding: 14px; text-align: left; border-radius: var(--zelo-radius-card); background: var(--bg-card); border: 1px solid var(--border-card); color: var(--text-main); transition: border-color var(--zelo-dur-fast), box-shadow var(--zelo-dur-fast), transform var(--zelo-dur-fast) var(--zelo-ease-spring); }
+  .tile { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 118px; padding: 14px; text-align: left; border-radius: var(--zelo-radius-card); background: var(--bg-card); border: 1px solid var(--border-card); color: var(--text-main); transition: border-color var(--zelo-dur-fast), box-shadow var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
   .tile:hover { border-color: var(--border-strong); }
-  .tile:active { transform: scale(0.985); }
+  /* press squash: quick in, springs back on release (docs/DESIGN_SYSTEM.md → Movimento) */
+  .tile:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
   .tile:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
   .tile.in { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
   .head { display: flex; flex-direction: column; gap: 4px; padding-right: 28px; }

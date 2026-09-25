@@ -384,6 +384,16 @@
   .zelo-word-name { font: 600 18px/1 var(--zelo-font-num); letter-spacing: -0.02em; color: var(--text-main); }
   .zelo-word-name small { font: 500 11px/1 var(--zelo-font-ui); letter-spacing: 0.04em; margin-left: 6px; color: var(--text-muted); }
   .zelo-word-store { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Navigation metrics measured on the approved mockup (zelopdv-app-light.html: .sb, .sb h6, .sb a):
+     244px wide · items 13.5px/500, 38px tall, 18px icons, gap 11px · labels 10.5px/600, .12em, uppercase.
+     Scoped to .zelo-sidebar, so the legacy sidebar keeps its metrics. */
+  .sidebar-shell.zelo-sidebar:not(.collapsed) { width: 244px; }
+  .zelo-sidebar .sidebar-nav { padding: 4px 12px 12px; }
+  .zelo-sidebar .sidebar-nav > :global(*) { margin-top: 0; padding-top: 0; }
+  .zelo-sidebar .sidebar-nav :global(p) { margin: 16px 0 6px; padding: 0 10px; font: 600 10.5px/1 var(--zelo-font-ui); letter-spacing: 0.12em; text-transform: uppercase; }
+  .zelo-sidebar .sidebar-nav :global(ul > li) { margin-top: 0; }
+  .zelo-sidebar .sidebar-nav :global(li > a), .zelo-sidebar .sidebar-nav :global(li > button) { height: 38px; gap: 11px; padding: 0 10px; border-radius: 10px; font: 500 13.5px/1 var(--zelo-font-ui); }
+  .zelo-sidebar .sidebar-nav :global(li > a svg), .zelo-sidebar .sidebar-nav :global(li > button svg) { width: 18px; height: 18px; stroke-width: 1.75; }
 
   /* Largura da sidebar com transição suave */
   .sidebar-shell {

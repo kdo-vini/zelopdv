@@ -13,7 +13,7 @@
 | 1 | Componentes do sistema + globais do layout raiz + ícones 1,75 | Pendente |
 | 2 | Superfície Brand no ar (site, landing, blog) | Pendente |
 | 3 | Autenticação (Brand + cartão App) | Pendente |
-| 4 | Superfície App atrás da flag (estrutura → `/app` → modais → operação → gestão → relatórios → conta) | **Em andamento** — sidebar navy e `/app` (desktop + mobile) no layout do mockup; modais legíveis mas ainda no visual antigo |
+| 4 | Superfície App atrás da flag (estrutura → `/app` → modais → operação → gestão → relatórios → conta) | **Em andamento** — sidebar navy (métricas do mockup) e `/app` (desktop + mobile) no layout do mockup, com o sistema de movimento; modais legíveis mas ainda no visual antigo |
 | 5 | E-mails, PWA/`theme-color`, favicon/OG/logos, `chartColors.js` | Pendente |
 | 6 | Virada: App padrão, remover legado/flag/`class="dark"`, `check:ui` no repo todo | Pendente |
 
@@ -49,6 +49,7 @@ Cada página renderiza em uma superfície, escrita em `<html data-surface="…">
 | `src/app.css` → `@theme inline` | Utilitários semânticos do Tailwind (abaixo) |
 | `static/fonts/` | Geist / Geist Mono (`.woff2`, SIL OFL — `OFL.txt`) |
 | `src/lib/components/zelo/` | Primitivos do sistema (catálogo abaixo) |
+| `src/lib/motion/` | Movimento: molas em forma fechada, transições e indicador líquido (seção **Movimento**) |
 | `src/lib/components/ui/button` | shadcn `Button` com variantes do sistema (`primary`, `outlined`, `quiet`, `danger`; tamanhos `md`, `touch`, `cta`, `icon-md`) — variantes antigas intactas |
 
 ### Utilitários semânticos (Tailwind)
@@ -82,9 +83,57 @@ Atalhos do caixa (só na superfície Zelo, ignorados com modal aberto): **F2** b
 | Componente | Local | Status |
 |---|---|---|
 | `Button` (variantes do sistema) | `ui/button` | Fase 0 |
-| `Kbd`, `MoneyText`, `StatusPill`, `QtyBadge`, `Segmented`, `UnderlineTabs`, `Stepper`, `ProductTile`, `SearchField`, `ZeloMark` | `zelo/` | Fase 0 (usados no `/app`) |
+| `Kbd`, `MoneyText`, `StatusPill`, `QtyBadge`, `Segmented`, `UnderlineTabs`, `Stepper`, `ProductTile`, `SearchField`, `ZeloMark` | `zelo/` | Fase 0 (usados no `/app`); com movimento desde a Fase 4 |
+| `MorphButton` (botão → carregando → check) | `zelo/` | Fase 4 — pronto para o "Confirmar" do `ModalPagamento` (integração pendente) |
 | `AppShell`/`Sidebar` navy, `PageHeader`, `MobileHeader`, `BottomNav`, `CartBar`, `Sheet` + `SwipeRow` | — | Fase 1/4 |
 | `Toast`, `Dialog`/`ConfirmDialog`, `CommandPalette` (⌘K), `Tooltip`, gráficos | — | Fase 1/4 |
+
+## Movimento
+
+Padrão aprovado pelo produto: `docs/design-system/reference/zelopdv-morph.html` (leia o `seek(t)`).
+Tudo é **mola**, com no máximo um leve overshoot; a mesma matemática existe em CSS (tokens) e em JS (`src/lib/motion/`).
+
+### Tokens (`src/themes/tokens.css`)
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--zelo-ease-spring` | `linear()` amostrado da mola ζ 0,84 (overshoot 0,8%) | toda transição de forma: tamanho, posição, raio, sheet |
+| `--zelo-ease-out` | `cubic-bezier(.2,.9,.25,1)` | cor/fundo quando mola não faz sentido |
+| `--zelo-dur-fast` · `-base` · `-slow` | 150 · 220 · 320 ms | aperto · cor · forma |
+| `--zelo-press-scale` | `0.965` | aperto (squash) |
+
+Utilitários Tailwind: `ease-spring`, `duration-(--zelo-dur-slow)`, `active:scale-(--zelo-press-scale)`.
+
+### Primitivos (`src/lib/motion/`, testados em `tests/motionSpring.test.js`)
+
+| Primitivo | Arquivo | Quando usar |
+|---|---|---|
+| `springStep(t, ω, ζ)`, `springState(d0, v0, t, ω, ζ)`, `springValue`, `springSettleTime`, `springEasing`, `springLinear`, `springSamples` | `spring.js` (puro) | Resposta ao degrau em forma fechada, igual ao vídeo. `springEasing` vira `easing` de transição Svelte; `springLinear` gera um `linear()` CSS; `springSettleTime` dá a duração |
+| Presets `SPRING_SHAPE` (ω 18 ζ .84), `SPRING_LEAD` (ω 34), `SPRING_TRAIL` (ω 15), `SPRING_ENTER` (ω 34 ζ 1), `SPRING_EXIT` (ω 55 ζ 1), `SPRING_COUNT` (ω 16 ζ 1), `SPRING_POP` (ω 30 ζ .78) | `spring.js` | Não invente ω/ζ: escolha um preset |
+| `blurSwap` | `transitions.js` | Conteúdo que troca ou entra/sai: saída ~90% em ~70 ms (blur → 8 px, opacidade → 0), entrada 70 ms depois (blur 8 → 0, escala .96 → 1). Nunca se sobrepõem. `{ collapse: true }` anima também a altura (linhas de lista) |
+| `rise` | `transitions.js` | Barra/cartão que surge de baixo (barra "Ver comanda") |
+| `drawStroke` | `transitions.js` | Traço que se desenha (check) |
+| `animateSpring(el, frame, spring)`, `pop(el)` | `transitions.js` | Animação única via Web Animations (badge que aparece ou muda de número) |
+| `SpringValue` | `liquid.svelte.js` | Número reativo com mola; redirecionar no meio preserva posição e velocidade |
+| `LiquidIndicator` | `liquid.svelte.js` | Indicador de aba/segmento com bordas em molas diferentes: a borda na direção do movimento é rígida (ω 34), a outra macia (ω 15) — estica e alcança. Usado por `Segmented` e `UnderlineTabs`; o knob do futuro `Toggle` usa o mesmo helper |
+
+Nos componentes:
+
+- **Aperto (squash):** `:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast) }` sobre uma transição base de `transform var(--zelo-dur-slow) var(--zelo-ease-spring)` — entra rápido, volta com mola. Já em `ProductTile`, `Segmented`, `UnderlineTabs`, `Stepper` (0,9 em alvo pequeno), `MorphButton` e nas variantes **do sistema** do `Button` (`primary|outlined|quiet|danger`; as variantes antigas continuam com o `translate-y-px`).
+- **`MoneyText animate`:** conta até o novo valor (mola crítica, nunca passa do valor); leitor de tela recebe só o valor final.
+- **`QtyBadge`:** pop com mola ao aparecer e ao mudar o número (não no primeiro render).
+- **`MorphButton`** (`state: 'idle' | 'loading' | 'success' | 'error'`, o pai controla): a forma encolhe até um círculo (`left/right` + raio com `--zelo-ease-spring`), o arco gira, o check se desenha; `error` volta à largura cheia em `--destructive`. Mantém nome acessível (`aria-label` com o texto do estado), `aria-busy`, `aria-disabled` + clique ignorado em loading/success, e região `role="status"`. Tamanhos `md|touch|cta`; `align="start"` para CTA com total à direita. Em tamanhos inline, mantenha `errorLabel` curto (a largura acompanha o texto).
+
+### Onde está aplicado (`/app`, superfície Zelo)
+
+Indicador líquido nas categorias, na tabela de preço e em Retirada/Delivery; squash nos tiles, "Valor avulso", botões e subcategorias; `QtyBadge` com pop; linhas da comanda entram/saem com `blurSwap` + colapso de altura (o vazio também troca com blur); total, CTA "Receber" e barra "Ver comanda" contam; sheet da comanda e barra "Ver comanda" com `--zelo-ease-spring` (`rise`).
+
+### Movimento reduzido
+
+- CSS: `prefers-reduced-motion: reduce` zera `--zelo-dur-*` e leva `--zelo-press-scale` a 1 (sem transição e sem squash).
+- JS: todo primitivo consulta `reducedMotion()` (`prefersReducedMotion` do `svelte/motion`) e devolve duração 0 / pula a animação; `SpringValue` salta direto ao alvo; `MoneyText` mostra o valor final.
+- Exceção: o spinner do `MorphButton` continua girando (mais devagar, sem o arco "respirando") porque comunica progresso.
+- Harness de screenshots (`scripts/app-mock-screens.mjs`) roda com movimento reduzido para imagens estáveis.
 
 ## Regras de código
 
@@ -94,6 +143,7 @@ Atalhos do caixa (só na superfície Zelo, ignorados com modal aberto): **F2** b
 4. **Contraste é teste.** Mudou um valor em `surface-*.css`? `tests/themeContrast.test.js` recalcula a partir do CSS real (resolve `var()` e compõe alfa sobre o fundo).
 5. **Ícones:** `lucide-svelte`, `strokeWidth={1.75}`, 18–20 px.
 6. **Números:** `MoneyText` ou `font-num` + `tabular-nums`.
+7. **Movimento:** só pelos tokens e por `src/lib/motion/` (seção Movimento). Nada de `ease-in-out`/durações soltas em código novo.
 
 ## Migração — padrão por arquivo
 

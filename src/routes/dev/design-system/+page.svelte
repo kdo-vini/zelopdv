@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { ShoppingBag, Bike, Plus, ArrowLeftRight, Trash2, Printer } from 'lucide-svelte';
   import { Button } from '$lib/components/ui/button';
-  import { Kbd, MoneyText, StatusPill, QtyBadge, Segmented, UnderlineTabs, Stepper, ProductTile, SearchField } from '$lib/components/zelo';
+  import { Kbd, MoneyText, StatusPill, QtyBadge, Segmented, UnderlineTabs, Stepper, ProductTile, SearchField, MorphButton } from '$lib/components/zelo';
+  import { blurSwap, springStep, springSettleTime, SPRING_SHAPE, SPRING_LEAD, SPRING_TRAIL, SPRING_EXIT, SPRING_COUNT } from '$lib/motion';
 
   const SURFACES = [
     { id: 'app', title: 'App', note: 'Sistema interno · superfície clara, ações navy' },
@@ -27,6 +28,52 @@
   let qty = $state({ app: 2, brand: 2 });
   let boards = {};
 
+  // ── Movimento demos ──
+  let morph = $state('idle');
+  let morphFail = $state('idle');
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  async function runMorph(fail = false) {
+    const set = (v) => (fail ? (morphFail = v) : (morph = v));
+    set('loading');
+    await wait(1400);
+    set(fail ? 'error' : 'success');
+    await wait(fail ? 1800 : 1200);
+    set('idle');
+  }
+  let total = $state(29.9);
+  let badge = $state(0);
+  const LINE_NAMES = ['X-Bacon', 'Coca-Cola lata', 'Pão de queijo', 'Coxinha', 'Brigadeiro', 'Suco de laranja'];
+  let lines = $state([{ id: 1, name: 'X-Bacon', price: 29.9 }]);
+  let nextId = 2;
+  function addLine() {
+    const price = [29.9, 6.5, 5, 7.5, 3.5, 9.9][nextId % 6];
+    lines = [...lines, { id: nextId, name: LINE_NAMES[nextId % 6], price }];
+    nextId += 1;
+    total = Number((total + price).toFixed(2));
+    badge += 1;
+  }
+  function removeLine(id) {
+    const line = lines.find((l) => l.id === id);
+    lines = lines.filter((l) => l.id !== id);
+    if (line) total = Math.max(0, Number((total - line.price).toFixed(2)));
+    badge = Math.max(0, badge - 1);
+  }
+  const CURVES = [
+    ['Forma · ω 18 ζ .84', SPRING_SHAPE],
+    ['Borda que lidera · ω 34', SPRING_LEAD],
+    ['Borda que segue · ω 15', SPRING_TRAIL],
+    ['Saída · ω 55 ζ 1', SPRING_EXIT],
+    ['Números · ω 16 ζ 1', SPRING_COUNT],
+  ];
+  const curvePath = ({ omega, zeta }) => {
+    const pts = [];
+    for (let i = 0; i <= 60; i += 1) {
+      const t = (i / 60) * 0.6;
+      pts.push(`${(i / 60) * 200},${56 - springStep(t, omega, zeta) * 48}`);
+    }
+    return `M${pts.join(' L')}`;
+  };
+
   onMount(() => {
     const next = {};
     for (const s of SURFACES) {
@@ -48,6 +95,54 @@
     <h1 class="type-display">Um vocabulário, duas superfícies</h1>
     <p class="type-muted">Os mesmos componentes e tokens, renderizados em cada superfície. Documentação: <code>docs/DESIGN_SYSTEM.md</code>. Esta página não existe em produção.</p>
   </header>
+
+  <section class="board motion" data-surface="app" aria-labelledby="h-motion">
+    <div class="board-head">
+      <h2 id="h-motion">Movimento</h2>
+      <p class="type-muted">Molas em forma fechada (<code>src/lib/motion/</code>) · referência: <code>zelopdv-morph.html</code></p>
+    </div>
+
+    <h3 class="type-eyebrow">MorphButton · botão → carregando → check</h3>
+    <div class="morph-row">
+      <MorphButton state={morph} size="cta" loadingLabel="Registrando venda…" successLabel="Venda registrada" onclick={() => runMorph(false)}>Confirmar<Kbd>Enter</Kbd></MorphButton>
+      <MorphButton state={morphFail} size="touch" loadingLabel="Enviando…" errorLabel="Falhou. Tente de novo" onclick={() => runMorph(true)}>Simular erro</MorphButton>
+    </div>
+    <p class="type-muted">Estado atual: <code>{morph}</code> · <code>{morphFail}</code>. Clique para rodar o ciclo.</p>
+
+    <h3 class="type-eyebrow">Troca com blur · contagem · pop</h3>
+    <div class="demo-cols">
+      <div class="demo-list">
+        <div class="row">
+          <Button variant="outlined" size="md" onclick={addLine}><Plus strokeWidth={1.75} />Adicionar item</Button>
+          <QtyBadge count={badge} />
+        </div>
+        <ul>
+          {#each lines as line (line.id)}
+            <li in:blurSwap={{ collapse: true }} out:blurSwap={{ collapse: true }}>
+              <span>{line.name}</span>
+              <MoneyText value={line.price} size="sm" />
+              <Button variant="quiet" size="md" onclick={() => removeLine(line.id)}>Remover</Button>
+            </li>
+          {/each}
+        </ul>
+      </div>
+      <div class="demo-total">
+        <span class="type-muted">Total (conta com mola, sem overshoot)</span>
+        <MoneyText value={total} size="lg" animate />
+      </div>
+    </div>
+
+    <h3 class="type-eyebrow">Curvas das molas · 0 → 600 ms</h3>
+    <div class="curves">
+      {#each CURVES as [name, spring] (name)}
+        <figure>
+          <svg viewBox="0 0 200 64" aria-hidden="true"><line x1="0" x2="200" y1="8" y2="8" class="guide" /><path d={curvePath(spring)} /></svg>
+          <figcaption class="type-muted">{name} · assenta em {Math.round(springSettleTime(spring.omega, spring.zeta) * 1000)} ms</figcaption>
+        </figure>
+      {/each}
+    </div>
+    <p class="type-muted">Indicador líquido: troque as abas e os segmentos abaixo. Aperto (squash): pressione qualquer botão ou produto.</p>
+  </section>
 
   <div class="grid">
     {#each SURFACES as s (s.id)}
@@ -145,6 +240,17 @@
   .type-row { display: grid; grid-template-columns: 120px 1fr; align-items: baseline; gap: 12px; }
   .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .icons { color: var(--text-label); gap: 16px; }
+  .motion { max-width: 1280px; margin: 0 auto 20px; }
+  .morph-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+  .demo-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; align-items: start; }
+  .demo-list ul { list-style: none; margin: 10px 0 0; padding: 0; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); min-height: 12px; }
+  .demo-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 6px 6px 6px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 14px; }
+  .demo-list li:last-child { border-bottom: 0; }
+  .demo-total { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: var(--zelo-radius-card); background: var(--bg-panel); border: 1px solid var(--border-card); }
+  .curves { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .curves figure { margin: 0; padding: 10px; border-radius: var(--zelo-radius-control); background: var(--bg-panel); border: 1px solid var(--border-card); display: flex; flex-direction: column; gap: 6px; }
+  .curves svg { width: 100%; height: 64px; fill: none; stroke: var(--primary); stroke-width: 2; }
+  .curves .guide { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 3 3; }
   .board :global(.cta-total) { margin-left: auto; font-size: 19px; }
   .board :global(.cta-total small) { color: inherit; opacity: 0.7; }
 </style>

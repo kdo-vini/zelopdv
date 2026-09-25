@@ -16,7 +16,8 @@
 
 <style>
   .step { display: inline-flex; align-items: center; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--bg-panel); }
-  .step button { display: grid; place-items: center; color: var(--text-label); }
+  .step button { display: grid; place-items: center; color: var(--text-label); transition: color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+  .step button:active:not(:disabled) { transform: scale(0.9); transition-duration: var(--zelo-dur-fast); }
   .step button:hover:not(:disabled) { color: var(--text-main); }
   .step button:disabled { opacity: 0.4; }
   .step span { min-width: 24px; text-align: center; font: 500 13px/1 var(--zelo-font-num); color: var(--text-main); }
