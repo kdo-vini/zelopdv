@@ -5,6 +5,10 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { estoqueDisponivel, produtoControlaEstoque } from '$lib/stock';
+  import { Minus, Plus } from 'lucide-svelte';
+  import { zeloSurface } from '$lib/theme/surface';
+  import Sheet from '$lib/components/zelo/Sheet.svelte';
+  import { Button } from '$lib/components/ui/button';
   
   const dispatch = createEventDispatcher();
   
@@ -30,13 +34,57 @@
     if (e.key === 'Escape') handleClose();
   }
   
+  // Zelo: botões −/+ só ajustam o mesmo campo; a validação continua em handleSubmit.
+  function stepQuantidade(delta) {
+    quantidade = Math.max(1, Math.floor(Number(quantidade) || 0) + delta);
+  }
+
   // Reset ao abrir
   $: if (open) {
     quantidade = 1;
   }
 </script>
 
-{#if open && produto}
+{#if open && produto && $zeloSurface}
+  <Sheet
+    labelledby="titulo-quantidade"
+    title={produto.nome}
+    size="sm"
+    closable
+    closeLabel="Fechar modal de quantidade"
+    on:backdrop={handleClose}
+    on:close={handleClose}
+    on:keydown={handleKeydown}
+  >
+    <form on:submit|preventDefault={handleSubmit} class="zsheet-form">
+      <div class="zsheet-body">
+        <div class="z-field">
+          <label for="qtd-input" class="z-label">Quantidade</label>
+          <div class="zq-row">
+            <button type="button" class="zq-step" aria-label="Diminuir quantidade" on:click={() => stepQuantidade(-1)}><Minus size={20} strokeWidth={1.75} /></button>
+            <input
+              id="qtd-input"
+              type="number"
+              min="1"
+              step="1"
+              bind:value={quantidade}
+              class="z-input z-num zq-input"
+              required
+            />
+            <button type="button" class="zq-step" aria-label="Aumentar quantidade" on:click={() => stepQuantidade(1)}><Plus size={20} strokeWidth={1.75} /></button>
+          </div>
+          {#if produtoControlaEstoque(produto)}
+            <p class="z-hint">Disponível: <span class="zq-num">{estoqueDisponivel(produto)}</span></p>
+          {/if}
+        </div>
+      </div>
+      <div class="zsheet-footer">
+        <Button variant="outlined" size="touch" onclick={handleClose}>Cancelar</Button>
+        <Button variant="primary" size="touch" type="submit" class="z-primary">Adicionar</Button>
+      </div>
+    </form>
+  </Sheet>
+{:else if open && produto}
   <div
     class="modal-backdrop"
     role="button"
@@ -73,3 +121,13 @@
     </div>
   </div>
 {/if}
+
+<style>
+  .zq-row { display: flex; align-items: center; gap: 8px; }
+  input.z-input.zq-input { flex: 1; min-width: 0; height: 56px; text-align: center; font-size: 22px; font-weight: 500; appearance: textfield; -moz-appearance: textfield; }
+  input.zq-input::-webkit-outer-spin-button, input.zq-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .zq-step { flex: 0 0 auto; display: grid; place-items: center; width: 56px; height: 56px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-control); background: var(--bg-panel); color: var(--text-label); transition: border-color var(--zelo-dur-fast) var(--zelo-ease-spring), color var(--zelo-dur-fast); }
+  .zq-step:hover { border-color: var(--border-strong); color: var(--text-main); }
+  .zq-step:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  .zq-num { font-family: var(--zelo-font-num); font-variant-numeric: tabular-nums; color: var(--text-main); }
+</style>

@@ -5,6 +5,9 @@
 <script>
   import { tick } from 'svelte';
   import { createEventDispatcher } from 'svelte';
+  import { zeloSurface } from '$lib/theme/surface';
+  import Sheet from '$lib/components/zelo/Sheet.svelte';
+  import { Button } from '$lib/components/ui/button';
   
   const dispatch = createEventDispatcher();
   
@@ -46,7 +49,47 @@
   }
 </script>
 
-{#if open}
+{#if open && $zeloSurface}
+  <Sheet
+    labelledby="titulo-valor-avulso"
+    title="Item avulso"
+    size="sm"
+    closable
+    closeLabel="Fechar item avulso"
+    on:backdrop={handleClose}
+    on:close={handleClose}
+    on:keydown={handleKeydown}
+  >
+    <p slot="subtitle" class="zsheet-subtitle">Valor personalizado, fora do catálogo.</p>
+    <form on:submit|preventDefault={handleSubmit} class="zsheet-form">
+      <div class="zsheet-body">
+        <div class="z-field">
+          <label for="nome-avulso" class="z-label">Nome do item <span class="z-optional">(opcional)</span></label>
+          <input id="nome-avulso" type="text" bind:value={nome} class="z-input" />
+        </div>
+        <div class="z-field">
+          <label for="valor-avulso" class="z-label">Valor total</label>
+          <div class="z-money">
+            <span aria-hidden="true">R$</span>
+            <input
+              id="valor-avulso"
+              type="number"
+              step="0.01"
+              min="0.01"
+              bind:value={valor}
+              required
+              use:focusOnMount
+            />
+          </div>
+        </div>
+      </div>
+      <div class="zsheet-footer">
+        <Button variant="outlined" size="touch" onclick={handleClose}>Cancelar</Button>
+        <Button variant="primary" size="touch" type="submit" class="z-primary">Adicionar</Button>
+      </div>
+    </form>
+  </Sheet>
+{:else if open}
   <dialog
     open
     class="modal-backdrop"

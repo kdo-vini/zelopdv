@@ -75,7 +75,8 @@ Quando a **estrutura** muda (não só a cor), a tela renderiza o layout novo só
 A lógica (estado, funções, validações, offline) é a mesma nos dois ramos — só a marcação muda.
 O ramo legado é apagado na Fase 6. Feito assim hoje: `src/routes/app/+page.svelte`,
 `VirtualProductGrid` (prop `zelo`), `GestaoSidebar` (aside vira `data-surface="brand"` na superfície app),
-`ModalPagamento`, `ModalSucesso` e `PaymentMethodGrid`/`PaymentMethodSelect` (prop `zelo`).
+`ModalPagamento`, `ModalSucesso`, `PaymentMethodGrid`/`PaymentMethodSelect` (prop `zelo`) e os modais do PDV
+sobre o `Sheet` (`ModalQuantidade`, `ModalValorAvulso`, `ModalMovCaixa`, `ModalAbrirCaixa`, `ModalProdutoMontavel`, `ModalNovoProduto`).
 
 Atalhos do caixa (só na superfície Zelo, ignorados com modal aberto): **F2** busca, **F4** item avulso, **F9** receber; `/` e Ctrl+T continuam.
 
@@ -86,7 +87,8 @@ Atalhos do caixa (só na superfície Zelo, ignorados com modal aberto): **F2** b
 | `Button` (variantes do sistema) | `ui/button` | Fase 0 |
 | `Kbd`, `MoneyText`, `StatusPill`, `QtyBadge`, `Segmented`, `UnderlineTabs`, `Stepper`, `ProductTile`, `SearchField`, `ZeloMark` | `zelo/` | Fase 0 (usados no `/app`); com movimento desde a Fase 4 |
 | `MorphButton` (botão → carregando → check) | `zelo/` | Fase 4 — "Confirmar" do `ModalPagamento` |
-| `AppShell`/`Sidebar` navy, `PageHeader`, `MobileHeader`, `BottomNav`, `CartBar`, `Sheet` + `SwipeRow` | — | Fase 1/4 |
+| `Sheet` (contêiner de modal: painel central no desktop, bottom sheet no mobile; classes de campo `.z-input`, `.z-money`, `.z-label`…) | `zelo/Sheet.svelte` | Fase 4 — usado pelos modais do PDV (`ModalQuantidade`, `ModalValorAvulso`, `ModalMovCaixa`, `ModalAbrirCaixa`, `ModalProdutoMontavel`, `ModalNovoProduto`) no ramo `{#if $zeloSurface}` |
+| `AppShell`/`Sidebar` navy, `PageHeader`, `MobileHeader`, `BottomNav`, `CartBar`, `SwipeRow` | — | Fase 1/4 |
 | `Toast`, `Dialog`/`ConfirmDialog`, `CommandPalette` (⌘K), `Tooltip`, gráficos | — | Fase 1/4 |
 
 ## Movimento

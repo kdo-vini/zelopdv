@@ -4,6 +4,9 @@
 -->
 <script>
   import { createEventDispatcher, onDestroy } from 'svelte';
+  import { zeloSurface } from '$lib/theme/surface';
+  import Sheet from '$lib/components/zelo/Sheet.svelte';
+  import { Button } from '$lib/components/ui/button';
   
   const dispatch = createEventDispatcher();
   
@@ -48,7 +51,47 @@
   }
 </script>
 
-{#if open}
+{#if open && $zeloSurface}
+  <!-- Zelo: sem fechar pelo fundo nem por botão, como no legado (abertura é obrigatória). -->
+  <Sheet
+    labelledby="abrir-caixa-title"
+    title="Abrir caixa"
+    size="sm"
+    backdropProps={{ 'data-update-safe': 'true' }}
+    panelProps={{ tabindex: '-1' }}
+    on:keydown={handleKeydown}
+  >
+    <p slot="subtitle" class="zsheet-subtitle">
+      Você precisa abrir o caixa antes de registrar vendas. Se não usa gaveta,
+      vende mais no Pix/cartão ou está só testando, pode deixar R$ 0,00.
+    </p>
+    <form on:submit|preventDefault={handleSubmit} class="zsheet-form">
+      <div class="zsheet-body">
+        <div class="z-field">
+          <label for="troco-inicial" class="z-label">Troco inicial</label>
+          <div class="z-money">
+            <span aria-hidden="true">R$</span>
+            <input
+              id="troco-inicial"
+              type="number"
+              step="0.01"
+              min="0"
+              bind:value={trocoInicial}
+              required
+              disabled={busy}
+            />
+          </div>
+          <p class="z-hint">Troco inicial é apenas o dinheiro que já começa na gaveta para dar troco.</p>
+        </div>
+      </div>
+      <div class="zsheet-footer">
+        <Button variant="primary" size="touch" type="submit" class="z-primary" disabled={busy}>
+          {busy ? 'Abrindo...' : 'Abrir caixa'}
+        </Button>
+      </div>
+    </form>
+  </Sheet>
+{:else if open}
   <div
     class="modal-backdrop"
     role="dialog"

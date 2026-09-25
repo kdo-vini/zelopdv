@@ -29,6 +29,11 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     vira o momento "Venda aprovada · R$ X" (check → pílula). Fluxo da venda,
     atalhos e retry idênticos. Harness: `STEPS`, `MOTION`, `NO_CAIXA`, `EMPTY`
     e RPC `criar_venda_completa` simulada.
+  - **C — modais do PDV** ✅: `zelo/Sheet.svelte` (painel central no desktop,
+    bottom sheet acima da bottom nav no mobile) em quantidade, item avulso,
+    movimentar caixa (Entrada/Saída em `Segmented`), abrir caixa, produto
+    montável e novo produto. Foco, atalhos e handlers de cada modal repassados
+    ao `Sheet` sem mudança.
 
 ## Sessão 2026-09-25 — GEO, leva 2 (branch `feat/geo-wave-2`)
 

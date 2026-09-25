@@ -6,6 +6,9 @@
   import { addToast } from '$lib/stores/ui';
   import * as Select from '$lib/components/ui/select/index.js';
   import { parsePrecoInput } from '$lib/parsePrecoInput';
+  import { zeloSurface } from '$lib/theme/surface';
+  import Sheet from '$lib/components/zelo/Sheet.svelte';
+  import { Button } from '$lib/components/ui/button';
 
   // ─── Props ──────────────────────────────────────────────────────────────────
   export let open = false;
@@ -289,7 +292,176 @@
   }
 </script>
 
-{#if open}
+{#if open && $zeloSurface}
+  <Sheet
+    labelledby="modal-novo-produto-title"
+    title="Novo produto"
+    size="lg"
+    z={200}
+    closable
+    closeLabel="Fechar novo produto"
+    backdropAction={manageFocus}
+    on:backdrop={close}
+    on:close={close}
+  >
+    <form on:submit={criarProduto} class="zsheet-form">
+      <div class="zsheet-body">
+        <div class="znp-grid">
+          <div class="z-field">
+            <label for="modal-novo-produto-nome" class="z-label">Nome do produto</label>
+            <input
+              id="modal-novo-produto-nome"
+              class="z-input"
+              bind:value={form.nome}
+              placeholder="Ex.: Coca-Cola lata"
+              required
+            />
+          </div>
+          <div class="z-field">
+            <label for="modal-novo-produto-preco-1" class="z-label">{tabelasPrecoAtivo ? `Preço ${nomesTabelas[0]}` : 'Preço'}</label>
+            <div class="z-money z-money-sm">
+              <span aria-hidden="true">R$</span>
+              <input
+                id="modal-novo-produto-preco-1"
+                type="text"
+                inputmode="decimal"
+                placeholder="0,00"
+                bind:value={form.preco}
+                aria-invalid={precoErro ? 'true' : undefined}
+                aria-describedby={precoErro ? 'modal-novo-produto-preco-1-erro' : undefined}
+              />
+            </div>
+            {#if precoErro}
+              <p id="modal-novo-produto-preco-1-erro" class="z-error">{precoErro}</p>
+            {/if}
+          </div>
+          {#if !compact && tabelasPrecoAtivo}
+            <div class="z-field">
+              <label for="modal-novo-produto-preco-2" class="z-label">Preço {nomesTabelas[1]}</label>
+              <div class="z-money z-money-sm">
+                <span aria-hidden="true">R$</span>
+                <input
+                  id="modal-novo-produto-preco-2"
+                  type="text"
+                  inputmode="decimal"
+                  bind:value={form.preco_2}
+                  placeholder="0,00"
+                  aria-invalid={preco2Erro ? 'true' : undefined}
+                  aria-describedby={preco2Erro ? 'modal-novo-produto-preco-2-erro' : undefined}
+                />
+              </div>
+              {#if preco2Erro}
+                <p id="modal-novo-produto-preco-2-erro" class="z-error">{preco2Erro}</p>
+              {/if}
+            </div>
+            <div class="z-field">
+              <label for="modal-novo-produto-preco-3" class="z-label">Preço {nomesTabelas[2]}</label>
+              <div class="z-money z-money-sm">
+                <span aria-hidden="true">R$</span>
+                <input
+                  id="modal-novo-produto-preco-3"
+                  type="text"
+                  inputmode="decimal"
+                  bind:value={form.preco_3}
+                  placeholder="0,00"
+                  aria-invalid={preco3Erro ? 'true' : undefined}
+                  aria-describedby={preco3Erro ? 'modal-novo-produto-preco-3-erro' : undefined}
+                />
+              </div>
+              {#if preco3Erro}
+                <p id="modal-novo-produto-preco-3-erro" class="z-error">{preco3Erro}</p>
+              {/if}
+            </div>
+          {/if}
+          <div class="z-field">
+            <span class="z-label">Categoria <span class="z-optional">(opcional)</span></span>
+            {#if showNovaCategoria}
+              <input
+                class="z-input"
+                bind:value={novaCategoriaNome}
+                placeholder="Ex.: Bebidas"
+                aria-label="Nome da categoria"
+                use:autofocus
+              />
+              <button type="button" class="link-btn znp-link" on:click={cancelarNovaCategoria}>{categorias.length > 0 ? 'Escolher existente' : 'Sem categoria'}</button>
+            {:else}
+              {#if categorias.length > 0}
+                <Select.Root bind:value={form.id_categoria}>
+                  <Select.Trigger class="z-select">
+                    <span class="select-value-label">{getCategoriaNome(form.id_categoria) || 'Selecione...'}</span>
+                  </Select.Trigger>
+                  <Select.Content>
+                    {#each categorias as c}
+                      <Select.Item value={String(c.id)} label={c.nome} />
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
+              {/if}
+              <button type="button" class="link-btn znp-link" on:click={abrirNovaCategoria}>+ Nova categoria</button>
+            {/if}
+          </div>
+          {#if !compact}
+            <div class="z-field">
+              <span class="z-label">Subcategoria</span>
+              <Select.Root bind:value={form.id_subcategoria} disabled={!form.id_categoria}>
+                <Select.Trigger class="z-select">
+                  <span class="select-value-label">{getSubcategoriaNome(form.id_subcategoria) || '— Nenhuma —'}</span>
+                </Select.Trigger>
+                <Select.Content>
+                  {#each filteredSubcatsForProdForm as s}
+                    <Select.Item value={String(s.id)} label={s.nome} />
+                  {/each}
+                </Select.Content>
+              </Select.Root>
+            </div>
+          {/if}
+        </div>
+
+        {#if !compact}
+          <!-- Opções booleanas -->
+          <div class="znp-options">
+            <label class="z-check">
+              <input type="checkbox" bind:checked={form.eh_item_por_unidade} class="themed-checkbox" />
+              <span>Venda em atacado<small>Define como este produto será vendido no PDV</small></span>
+            </label>
+            <label class="z-check">
+              <input type="checkbox" bind:checked={form.ocultar_no_pdv} class="themed-checkbox" />
+              <span>Ocultar no PDV<small>Produto não aparecerá para seleção na venda</small></span>
+            </label>
+            {#if categoriaCompartilhada}
+              <div class="z-check">
+                <span>Estoque compartilhado<small>A quantidade é controlada na categoria selecionada</small></span>
+              </div>
+            {:else}
+              <label class="z-check">
+                <input type="checkbox" bind:checked={form.controlar_estoque} class="themed-checkbox" />
+                <span>Controlar estoque<small>Acompanha a quantidade disponível</small></span>
+              </label>
+            {/if}
+            {#if !categoriaCompartilhada && form.controlar_estoque}
+              <div class="znp-stock">
+                <label for="modal-novo-produto-estoque" class="z-label">Quantidade inicial</label>
+                <input
+                  id="modal-novo-produto-estoque"
+                  class="z-input z-num znp-stock-input"
+                  type="number"
+                  step="1"
+                  min="0"
+                  bind:value={form.estoque_atual}
+                />
+              </div>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <div class="zsheet-footer">
+        <Button variant="outlined" size="touch" onclick={close}>Cancelar</Button>
+        <Button variant="primary" size="touch" type="submit" class="z-primary">Salvar produto</Button>
+      </div>
+    </form>
+  </Sheet>
+{:else if open}
   <dialog
     open
     class="modal-backdrop"
@@ -707,4 +879,16 @@
     flex: 1;
     min-width: 180px;
   }
+
+  /* ── Zelo surface (only inside the Sheet branch) ─────────────── */
+  .znp-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .znp-grid > * { min-width: 0; }
+  @media (min-width: 640px) { .znp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  button.link-btn.znp-link { align-self: flex-start; margin-top: 0; color: var(--text-main); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+  button.link-btn.znp-link:hover { color: var(--primary-hover); }
+  button.link-btn.znp-link:focus-visible { outline: none; border-radius: 6px; box-shadow: 0 0 0 4px var(--focus); }
+  .znp-options { display: flex; flex-direction: column; padding: 4px 16px; border-radius: var(--zelo-radius-card); background: var(--bg-sunken); }
+  .znp-options > :global(.z-check + .z-check) { border-top: 1px solid var(--border-subtle); }
+  .znp-stock { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 12px; }
+  input.z-input.znp-stock-input { width: 120px; text-align: right; }
 </style>

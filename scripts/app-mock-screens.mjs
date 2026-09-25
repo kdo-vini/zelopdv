@@ -31,12 +31,20 @@ const P = (id, nome, id_categoria, preco, extra = {}) => ({ id, nome, id_categor
 const prods = [
   P(1, 'X-Bacon', 1, 29.9), P(2, 'X-Burger', 1, 24.9), P(3, 'X-Salada', 1, 26.9), P(4, 'Misto quente', 1, 12), P(5, 'Beirute de frango', 1, 32),
   P(6, 'Coca-Cola lata 350ml', 2, 6.5), P(7, 'Guaraná lata 350ml', 2, 6), P(8, 'Suco de laranja 400ml', 2, 9.9),
-  P(11, 'Coxinha de frango', 3, 7.5), P(12, 'Pão de queijo', 3, 5, { por_unidade: false }), P(13, 'Esfiha de carne', 3, 6.5, { controlar_estoque: true, estoque_atual: 3 }),
-  P(15, 'Brigadeiro', 4, 3.5), P(16, 'Bolo de cenoura (fatia)', 4, 8.9),
+  P(11, 'Coxinha de frango', 3, 7.5), P(12, 'Pão de queijo', 3, 5, { por_unidade: true }), P(13, 'Esfiha de carne', 3, 6.5, { controlar_estoque: true, estoque_atual: 3 }),
+  P(15, 'Brigadeiro', 4, 3.5), P(17, 'Açaí 500ml', 4, 18), P(16, 'Bolo de cenoura (fatia)', 4, 8.9),
 ];
 const tables = {
   subscriptions: [{ id: 's1', user_id: UID, status: 'active', plan_tier: 'pdv', current_period_end: future, has_zelo_menu: false, has_mesas: false, has_acessos: false }],
   empresa_perfil: [{ id: 'e1', user_id: UID, nome_exibicao: 'Padaria Bom Dia', contato: '11999990000', documento: '11222333000181', tabelas_preco_ativo: true, tabela_preco_1_nome: 'Balcão', tabela_preco_2_nome: 'iFood', tabela_preco_3_nome: 'Atacado', onboarding_completed: true, plataformas_pagamento: [] }],
+  zelomenu_modifier_groups: [
+    { id: 901, id_produto: 17, nome: 'Tamanho', tipo: 'variacao', modo_preco: 'substituir', min_selecoes: 1, max_selecoes: 1, permite_quantidade: false, ativo: true, ordem: 1 },
+    { id: 902, id_produto: 17, nome: 'Complementos', tipo: 'adicional', modo_preco: 'somar', min_selecoes: 0, max_selecoes: 3, permite_quantidade: false, ativo: true, ordem: 2 },
+  ],
+  zelomenu_modifier_options: [
+    { id: 911, id_grupo: 901, nome: '300ml', price_delta: 14, ativo: true, ordem: 1 }, { id: 912, id_grupo: 901, nome: '500ml', price_delta: 18, ativo: true, ordem: 2 },
+    { id: 921, id_grupo: 902, nome: 'Granola', price_delta: 2, ativo: true, ordem: 1 }, { id: 922, id_grupo: 902, nome: 'Leite condensado', price_delta: 3, ativo: true, ordem: 2 }, { id: 923, id_grupo: 902, nome: 'Banana', price_delta: 0, ativo: true, ordem: 3 },
+  ],
   access_users: [], categorias: process.env.EMPTY ? [] : cats, subcategorias: [], produtos: process.env.EMPTY ? [] : prods,
   caixas: process.env.NO_CAIXA ? [] : [{ id: 'c1', numero_caixa: 12, id_usuario: UID, data_abertura: new Date().toISOString(), data_fechamento: null, valor_inicial: 200 }],
 };
@@ -83,7 +91,15 @@ for (const step of (process.env.STEPS || '').split(',').filter(Boolean)) {
   const [kind, ...rest] = step.split(':'); const arg = rest.join(':');
   if (kind === 'key') await page.keyboard.press(arg);
   else if (kind === 'wait') await page.waitForTimeout(Number(arg));
-  else if (kind === 'click') await page.getByRole('button', { name: new RegExp(arg) }).first().click({ timeout: 5000 }).catch((e) => console.log('click fail', arg, e.message));
+  else if (kind === 'click') {
+    let target = null;
+    for (const role of ['tab', 'radio', 'button']) {
+      const loc = page.getByRole(role, { name: new RegExp(arg) }).first();
+      if (await loc.count()) { target = loc; break; }
+    }
+    if (target) await target.click({ timeout: 5000 }).catch((e) => console.log('click fail', arg, e.message));
+    else console.log('not found', arg);
+  }
   if (kind !== 'wait') await page.waitForTimeout(500);
 }
 await page.screenshot({ path: `${OUT}.png` });

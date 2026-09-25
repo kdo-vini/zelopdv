@@ -10,6 +10,10 @@
   } from '$lib/zelomenuModifiers';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
   import { resolvePizza } from '$lib/pizza';
+  import { zeloSurface } from '$lib/theme/surface';
+  import Sheet from '$lib/components/zelo/Sheet.svelte';
+  import MoneyText from '$lib/components/zelo/MoneyText.svelte';
+  import { Button } from '$lib/components/ui/button';
 
   export let open = false;
   export let produto = null;
@@ -147,13 +151,162 @@
     if (flavorCount > nextSize.maxFlavors) { flavorCount = nextSize.maxFlavors; flavorIds = []; }
   }
 
+  /** Zelo: valor em pt-BR sem o prefixo (o "R$" é desenhado à parte). */
+  function brl(value) {
+    return Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  }
+
   function toggleFlavor(id) {
     if (flavorIds.includes(id)) flavorIds = flavorIds.filter((value) => value !== id);
     else if (flavorIds.length < flavorCount) flavorIds = [...flavorIds, id];
   }
 </script>
 
-{#if open}
+{#if open && $zeloSurface}
+  <Sheet
+    labelledby="montavel-title"
+    size="lg"
+    z={80}
+    closable
+    panelAction={focusDialog}
+    panelProps={{ tabindex: '-1' }}
+    on:backdrop={close}
+    on:close={close}
+    on:keydown={handleKeydown}
+  >
+    <svelte:fragment slot="header">
+      <p class="zsheet-eyebrow">{isPizza ? 'Monte sua pizza' : 'Produto montável'}</p>
+      <h2 id="montavel-title" class="zsheet-title">{produto?.nome || 'Montar produto'}</h2>
+    </svelte:fragment>
+    <p slot="subtitle" class="zsheet-subtitle zm-base">{#if isPizza}{pizzaConfig?.pricingMode === 'average' ? 'Preço proporcional aos sabores' : 'Preço do sabor de maior valor'} · extras à parte{:else}A partir de <MoneyText value={precoBase} size="sm" />{/if}</p>
+
+    <div class="zsheet-body zm">
+      {#if isPizza}
+        <fieldset>
+          <legend>1. Escolha o tamanho</legend>
+          <div class="options">
+            {#each (pizzaConfig?.sizes || []).filter((size) => size.active !== false) as size (size.id)}
+              <button type="button" class="option-row" class:selected={sizeId === size.id} aria-pressed={sizeId === size.id} on:click={() => changeSize(size.id)}>{size.name} · até {size.maxFlavors} sabores</button>
+            {/each}
+          </div>
+        </fieldset>
+        {#if selectedSize}
+          <fieldset>
+            <legend>2. Quantos sabores?</legend>
+            <div class="options">
+              {#each Array.from({ length: selectedSize.maxFlavors }, (_, i) => i + 1) as count}
+                <button type="button" class="option-row" class:selected={flavorCount === count} aria-pressed={flavorCount === count} on:click={() => { flavorCount = count; if (flavorIds.length > count) flavorIds = []; }}>{count === 1 ? 'Um sabor inteiro' : `${count} sabores · partes iguais`}</button>
+              {/each}
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>3. Escolha os sabores <small class="zm-count">{flavorIds.length}/{flavorCount}</small></legend>
+            <input class="z-input zm-search" aria-label="Buscar sabor" placeholder="Buscar sabor" bind:value={flavorSearch} />
+            <div class="options">
+              {#each matchingFlavors as flavor (flavor.id)}
+                <button type="button" class="option-row" class:selected={flavorIds.includes(flavor.id)} aria-pressed={flavorIds.includes(flavor.id)} disabled={!flavorIds.includes(flavor.id) && flavorIds.length >= flavorCount} on:click={() => toggleFlavor(flavor.id)}>
+                  {#if flavor.photoUrl?.startsWith('https://')}<img class="flavor-photo" src={flavor.photoUrl} alt="" loading="lazy" />{/if}
+                  <span>{flavor.name}{#if flavor.description}<small class="flavor-description">{flavor.description}</small>{/if}</span>
+                  <span class="option-price"><small>R$</small> {brl(flavor.prices[sizeId])}</span>
+                </button>
+              {/each}
+            </div>
+            <p class="z-hint zm-hint">Valores de uma pizza inteira neste tamanho.</p>
+          </fieldset>
+        {/if}
+      {/if}
+      {#each groups as group (group.id)}
+        <fieldset>
+          <legend>
+            <span>{group.name}</span>
+            <span class="legend-meta">
+              <small>
+                {#if group.minSelections > 0}Obrigatório · mínimo {group.minSelections}{:else}Opcional{/if}
+                {#if group.maxSelections != null} · máximo {group.maxSelections}{/if}
+              </small>
+              {#if group.minSelections === 0 && group.maxSelections === 1 && !group.allowsQuantity && selectedCountFor(selections, group.id) > 0}
+                <button type="button" class="clear-selection" on:click={() => selections = { ...selections, [group.id]: {} }}>
+                  Limpar escolha
+                </button>
+              {/if}
+            </span>
+          </legend>
+          <div class="options">
+            {#each (group.options || []).filter((option) => option.active !== false && option.linkedProduct?.available !== false) as option (option.id)}
+              {@const quantity = quantityFor(selections, group.id, option.id)}
+              {@const isRadio = group.maxSelections === 1 && !group.allowsQuantity}
+              {@const blocked = isOptionBlocked(selections, group, option)}
+              <div class="option-row" class:selected={quantity > 0} class:blocked>
+                <label class="option-choice">
+                  <input
+                    type={isRadio ? 'radio' : 'checkbox'}
+                    class:themed-radio={isRadio}
+                    class:themed-checkbox={!isRadio}
+                    name={isRadio ? `modifier-${group.id}` : undefined}
+                    checked={quantity > 0}
+                    disabled={blocked}
+                    on:change={() => chooseOption(group, option)}
+                  />
+                  <span class="option-name" title={option.linkedProduct?.name || option.name}>{option.linkedProduct?.name || option.name}</span>
+                  {#if group.pricingMode === 'somar' && Number(option.linkedProduct?.price ?? option.priceDelta ?? 0) > 0}
+                    <span class="option-price">+ <small>R$</small> {brl(option.linkedProduct?.price ?? option.priceDelta)}</span>
+                  {:else if group.pricingMode === 'substituir' && Number(option.linkedProduct?.price ?? option.priceDelta ?? 0) > 0}
+                    <span class="option-price"><small>R$</small> {brl(option.linkedProduct?.price ?? option.priceDelta)}</span>
+                  {/if}
+                </label>
+                {#if group.allowsQuantity && quantity > 0}
+                  <div class="stepper" aria-label="Quantidade de {option.name}">
+                    <button type="button" on:click={() => setQuantity(group, option, quantity - 1)} aria-label="Diminuir">
+                      <Minus size={16} strokeWidth={1.75} />
+                    </button>
+                    <span aria-live="polite">{quantity}</span>
+                    <button type="button" disabled={group.maxPerOption != null && quantity >= group.maxPerOption} on:click={() => setQuantity(group, option, quantity + 1)} aria-label="Aumentar">
+                      <Plus size={16} strokeWidth={1.75} />
+                    </button>
+                  </div>
+                {/if}
+              </div>
+            {:else}
+              <p class="empty-options" role="status">Sem opções disponíveis neste grupo. Revise o cadastro ou o estoque.</p>
+            {/each}
+          </div>
+          {#if group.maxSelections != null && selectedCountFor(selections, group.id) >= group.maxSelections && group.maxSelections > 1}
+            <InlineHelper compact message="Você já escolheu o máximo de {group.maxSelections} opções. Desmarque uma para escolher outra." />
+          {/if}
+        </fieldset>
+      {/each}
+
+      {#if isPizza}
+        <label class="z-field zm-notes">
+          <span class="z-label">Observação para esta pizza</span>
+          <input class="z-input" maxlength="200" placeholder="Ex.: bem assada" bind:value={pizzaNotes} />
+        </label>
+      {/if}
+    </div>
+
+    <div class="zsheet-footer zm-footer">
+      {#if !resolution.ok}
+        <p class="z-error" role="alert">{resolution.message}</p>
+      {/if}
+      <div
+        class="summary"
+        class:empty={!summary}
+        aria-live="polite"
+        title={summary || 'Escolha as opções do produto'}
+      >
+        {summary || 'Escolha as opções do produto'}
+      </div>
+      <Button variant="primary" size="touch" class="zm-confirm" disabled={!resolution.ok} onclick={confirm}>
+        {#if resolution.ok}
+          <span>{editing ? 'Salvar montagem' : 'Adicionar à comanda'}</span>
+          <span class="zm-cta-price"><small>R$</small> {brl(resolution.finalUnitPrice)}</span>
+        {:else}
+          Revise as opções acima
+        {/if}
+      </Button>
+    </div>
+  </Sheet>
+{:else if open}
   <div
     class="modal-backdrop"
     role="button"
@@ -361,6 +514,42 @@
     .groups { padding-inline: 1rem; }
     .modal-footer { padding-inline: 1rem; padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   }
+  /* ── Zelo surface (only inside the Sheet branch) ─────────────── */
+  div.zsheet-body.zm { gap: 0; padding-top: 4px; }
+  .zm fieldset { margin-top: 18px; padding: 0 0 20px; }
+  .zm fieldset:first-child { margin-top: 6px; }
+  .zm legend { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
+  .zm legend small { font-size: 11.5px; font-weight: 500; }
+  .zm .zm-count { margin-left: 4px; font-family: var(--zelo-font-num); font-variant-numeric: tabular-nums; font-size: 12px; }
+  .zm .legend-meta { max-width: 66%; }
+  .zm .clear-selection { min-height: 44px; color: var(--text-main); font-size: 13.5px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+  .zm .clear-selection:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  .zm .options { gap: 8px; margin-top: 10px; }
+  .zm .option-row { min-height: 52px; padding: 8px 14px; border-color: var(--border-card); border-radius: var(--zelo-radius-control); background: var(--bg-panel); font-size: 14.5px; transition: border-color var(--zelo-dur-fast) var(--zelo-ease-spring), box-shadow var(--zelo-dur-fast) var(--zelo-ease-spring); }
+  .zm .option-row:hover { border-color: var(--border-strong); background: var(--bg-panel); }
+  .zm .option-row:focus-within, .zm button.option-row:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  .zm .option-row.selected { border-color: var(--primary); background: var(--bg-panel); box-shadow: inset 0 0 0 1px var(--primary); }
+  .zm .option-row.selected .option-name, .zm button.option-row.selected { font-weight: 500; }
+  .zm .option-price { color: var(--text-label); font: 500 13.5px/1 var(--zelo-font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .zm .option-price small, .zm-cta-price small { font: 500 0.8em/1 var(--zelo-font-ui); letter-spacing: 0; opacity: 0.72; }
+  .zm .flavor-photo { border-radius: 10px; }
+  .zm .stepper { gap: 0; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-control); background: var(--bg-panel); }
+  .zm .stepper button { width: 44px; height: 42px; border: 0; border-radius: var(--zelo-radius-control); background: transparent; color: var(--text-label); }
+  .zm .stepper button:hover { background: transparent; color: var(--text-main); }
+  .zm .stepper button:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  .zm .stepper span { min-width: 22px; font: 500 14.5px/1 var(--zelo-font-num); }
+  .zm .empty-options { border-radius: var(--zelo-radius-control); border-color: var(--border-strong); }
+  .zm .zm-search { margin-top: 12px; }
+  .zm .zm-hint { margin-top: 10px; }
+  .zm .zm-notes { padding-top: 16px; }
+  .zm-base { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  div.zsheet-footer.zm-footer { flex-direction: column; align-items: stretch; gap: 8px; }
+  div.zsheet-footer.zm-footer > :global(*) { flex: 0 0 auto; min-width: 0; }
+  .zm-footer .summary { height: 2.55rem; font-size: 13.5px; }
+  :global(.zsheet-footer > .zm-confirm) { width: 100%; height: 52px; justify-content: space-between; font-size: 15px; }
+  :global(.zsheet-footer > .zm-confirm:disabled) { justify-content: center; }
+  .zm-cta-price { font: 500 16px/1 var(--zelo-font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
   @media (prefers-reduced-motion: reduce) {
     .close, .option-row, .stepper button, .confirm {
       transition: none;

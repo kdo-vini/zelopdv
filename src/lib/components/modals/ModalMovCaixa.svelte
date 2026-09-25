@@ -9,6 +9,17 @@
   import { listOperations } from '$lib/offline/operations';
   import { ensureActiveSubscription } from '$lib/guards';
   import { addToast } from '$lib/stores/ui';
+  import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-svelte';
+  import { zeloSurface } from '$lib/theme/surface';
+  import Sheet from '$lib/components/zelo/Sheet.svelte';
+  import Segmented from '$lib/components/zelo/Segmented.svelte';
+  import MoneyText from '$lib/components/zelo/MoneyText.svelte';
+  import { Button } from '$lib/components/ui/button';
+
+  const TIPO_OPTIONS = [
+    { value: 'entrada', label: 'Entrada', icon: ArrowDownToLine },
+    { value: 'saida', label: 'Saída', icon: ArrowUpFromLine },
+  ];
   
   const dispatch = createEventDispatcher();
   
@@ -129,7 +140,51 @@
   }
 </script>
 
-{#if open}
+{#if open && $zeloSurface}
+  <Sheet
+    labelledby="titulo-movcaixa"
+    title="Movimentar caixa"
+    size="sm"
+    closable
+    closeLabel="Fechar modal de movimentação de caixa"
+    on:backdrop={handleClose}
+    on:close={handleClose}
+    on:keydown={handleKeydown}
+  >
+    <p slot="subtitle" class="zsheet-subtitle zm-saldo">Em caixa agora <MoneyText value={saldoCaixa} size="sm" /></p>
+    <div class="zsheet-body">
+      <div class="z-field">
+        <span class="z-label">Tipo de movimentação</span>
+        <Segmented label="Tipo de movimentação" size="lg" bind:value={tipo} options={TIPO_OPTIONS} class="zm-seg" />
+        <p class="z-hint">{tipo === 'saida' ? 'Sangria: dinheiro que sai da gaveta.' : 'Suprimento: dinheiro que entra na gaveta.'}</p>
+      </div>
+      <div class="z-field">
+        <label for="valor-mov" class="z-label">Valor</label>
+        <div class="z-money">
+          <span aria-hidden="true">R$</span>
+          <input id="valor-mov" type="number" min="0.01" step="0.01" bind:value={valor} />
+        </div>
+      </div>
+      <div class="z-field">
+        <label for="motivo-mov" class="z-label">Motivo ou observação <span class="z-optional">(opcional)</span></label>
+        <input id="motivo-mov" type="text" maxlength="140" bind:value={motivo} class="z-input" placeholder="Ex.: Retirada para cofre / Troco adicional" />
+      </div>
+      <label class="z-check">
+        <input class="themed-checkbox" type="checkbox" bind:checked={imprimirRecibo} /> Imprimir recibo
+      </label>
+
+      {#if erro}
+        <p class="z-alert" role="alert">{erro}</p>
+      {/if}
+    </div>
+    <div class="zsheet-footer">
+      <Button variant="outlined" size="touch" onclick={handleClose}>Cancelar</Button>
+      <Button variant="primary" size="touch" class="z-primary" disabled={salvando} onclick={handleSubmit}>
+        {salvando ? 'Registrando...' : 'Confirmar'}
+      </Button>
+    </div>
+  </Sheet>
+{:else if open}
   <div
     class="modal-backdrop"
     role="button"
@@ -194,3 +249,8 @@
     </div>
   </div>
 {/if}
+
+<style>
+  .zm-saldo { display: flex; align-items: baseline; gap: 6px; }
+  :global(.zm-seg) { display: flex !important; width: 100%; }
+</style>
