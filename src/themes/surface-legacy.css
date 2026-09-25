@@ -149,6 +149,7 @@
     --bg-sunken: #0b1220;
     --focus: rgba(14, 165, 233, 0.35);
     --elevation-float: 0 10px 24px -12px rgba(0, 0, 0, 0.6);
+    --shadow-color: #0F172A;   /* = --text-inverse here; shadows/overlays must not follow text colour */
 
     /* shadcn-svelte palette (moved from app.css; same values) */
     --background: #0F172A;

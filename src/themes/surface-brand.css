@@ -42,6 +42,7 @@
     --accent-light: rgba(255, 255, 255, 0.10);
     --focus: rgba(255, 255, 255, 0.35);
     --elevation-float: 0 12px 28px -12px rgba(0, 8, 24, 0.75);
+    --shadow-color: #000814;
     --link: var(--zelo-white);
     --link-hover: rgba(255, 255, 255, 0.80);
 

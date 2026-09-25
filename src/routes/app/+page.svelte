@@ -54,6 +54,11 @@
   
   // Grid virtualizado para performance
   import VirtualProductGrid from '$lib/components/VirtualProductGrid.svelte';
+  import { zeloSurface } from '$lib/theme/surface';
+  import { Button } from '$lib/components/ui/button';
+  import { Kbd, MoneyText, StatusPill, Segmented, UnderlineTabs, Stepper, SearchField, ZeloMark } from '$lib/components/zelo';
+  import { companyNameStore } from '$lib/stores/session';
+  import { ArrowLeftRight, Bike, ChevronUp, CloudUpload, Plus, RefreshCw, ShoppingBag, ShoppingCart, Trash2, X } from 'lucide-svelte';
 
   // Modo Offline (IndexedDB)
   import {
@@ -161,6 +166,17 @@
       if (!modalPagamentoAberto && !isTyping && e.key === '/') {
         e.preventDefault();
         if (buscaInputEl && typeof buscaInputEl.focus === 'function') buscaInputEl.focus();
+      }
+      // Atalhos do Design System Zelo (F2 busca, F4 item avulso, F9 receber) — só na superfície nova
+      if ($zeloSurface && ['F2', 'F4', 'F9'].includes(e.key)) {
+        const algumModalAberto = modalPagamentoAberto || modalValorAberto || modalQuantidadeAberto || modalMovCaixaAberto
+          || modalAbrirCaixaAberto || modalSucessoAberto || modalProdutoMontavelAberto || modalNovoProdutoAberto;
+        if (!algumModalAberto) {
+          e.preventDefault();
+          if (e.key === 'F2') buscaInputEl?.focus?.();
+          if (e.key === 'F4') modalValorAberto = true;
+          if (e.key === 'F9' && comanda.length > 0 && canVender && canReceber) void abrirModalPagamento();
+        }
       }
       // Ctrl+T: cicla entre tabelas de preço (igual ao sistema anterior do João)
       if (e.ctrlKey && e.key.toLowerCase() === 't' && tabelasPrecoAtivo) {
@@ -757,6 +773,19 @@
   );
 
   // Total com taxa de entrega incluída
+  // Derivados usados pelo layout do Design System Zelo
+  $: itensNaComanda = comanda.reduce((acc, i) => acc + Number(i.quantidade || 0), 0);
+  $: qtyPorProduto = comanda.reduce((acc, i) => {
+    if (i.id_produto != null) acc[i.id_produto] = (acc[i.id_produto] || 0) + Number(i.quantidade || 0);
+    return acc;
+  }, {});
+  $: contagemPorCategoria = produtos.reduce((acc, p) => {
+    acc[p.id_categoria] = (acc[p.id_categoria] || 0) + 1;
+    return acc;
+  }, {});
+  // Retirada zera a taxa (o layout novo usa bind no seletor; o antigo zerava no clique)
+  $: if (tipoPedido !== 'delivery' && Number(taxaEntregaInput)) taxaEntregaInput = 0;
+
   $: totalComandaComEntrega = Number(totalComanda) + (tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0);
 
   function persistCart(items, intent, submission) {
@@ -911,6 +940,12 @@
     }
   }
   
+  /** Remove a linha inteira da comanda (mesmas travas do decremento). */
+  function removerItem(id) {
+    if (checkoutSubmission || salvandoVenda) return;
+    comanda = comanda.filter((i) => i.id !== id);
+  }
+
   /** Limpa toda a comanda mediante confirmação. */
   async function limparComanda() {
     if (checkoutSubmission || salvandoVenda) { addToast('Finalize a confirmação pendente antes de limpar esta venda.', 'info'); return; }
@@ -1620,6 +1655,196 @@
 
 </script>
 
+<!-- --- 6a. LAYOUT — Zelo Design System (superfície app; mockup aprovado: docs/design-system/reference/zelopdv-app-light.html) --- -->
+{#if $zeloSurface}
+<div class="fc">
+  <main class="fc-main">
+    <div class="fc-mhead" data-surface="brand">
+      <span class="fc-mhead-mark" aria-hidden="true"><ZeloMark size={22} /></span>
+      <div class="fc-mhead-title">
+        <p>Frente de Caixa</p>
+        <span>{$companyNameStore || 'Zelo PDV'}{#if caixaAberto && numeroCaixaAberto} · Caixa #{numeroCaixaAberto}{/if}</span>
+      </div>
+      <button type="button" class="fc-mhead-cash" on:click={() => atualizarSaldoCaixa()} aria-label="Saldo do caixa: {formatMoney(saldoCaixa)}. Toque para atualizar">
+        <span class="fc-mhead-dot" class:off={!caixaAberto} aria-hidden="true"></span>{formatMoneyNumber(saldoCaixa)}
+      </button>
+    </div>
+    <div class="fc-body">
+    <header class="fc-top">
+      <div class="fc-title">
+        <p class="fc-crumb">PDV / Frente de Caixa</p>
+        <h1>Frente de Caixa</h1>
+      </div>
+      <div class="fc-status">
+        {#if vendasPendentesCount > 0}
+          <StatusPill tone="warn">
+            <CloudUpload size={16} strokeWidth={1.75} aria-hidden="true" />
+            {vendasPendentesCount} venda{vendasPendentesCount > 1 ? 's' : ''} offline
+            <button type="button" class="fc-link" on:click={() => tentarSincronizarPendentes({ silencioso: false })} disabled={sincronizandoPendentes} title="Vendas registradas offline aguardando envio ao servidor">
+              {sincronizandoPendentes ? 'Enviando…' : 'Sincronizar'}
+            </button>
+          </StatusPill>
+        {/if}
+        <StatusPill dot={caixaAberto} tone={caixaAberto ? 'neutral' : 'warn'}>
+          {#if caixaAberto}Caixa{#if numeroCaixaAberto}&nbsp;<b class="fc-num">#{numeroCaixaAberto}</b>{/if} aberto{:else}Caixa fechado{/if}
+          <span class="fc-sep" aria-hidden="true"></span>
+          <MoneyText value={saldoCaixa} size="sm" class="fc-saldo" />
+          <button type="button" class="fc-refresh" on:click={() => atualizarSaldoCaixa()} disabled={carregandoSaldo} aria-label="Atualizar saldo do caixa" title="Atualizar saldo">
+            <RefreshCw size={14} strokeWidth={1.75} class={carregandoSaldo ? 'fc-spin' : ''} />
+          </button>
+        </StatusPill>
+      </div>
+    </header>
+
+    {#if !canMovimentarCaixa}
+      <InlineHelper id="pdv-top-movement-hint" compact message="Seu perfil não tem permissão para movimentar o caixa." />
+    {/if}
+    {#if !isSubUser && (vendasSemTitularCount > 0 || resultadoPendenciasAntigas)}
+      <div class="fc-helper-row">
+        <InlineHelper tone="warning" message={resultadoPendenciasAntigas || 'Há vendas antigas neste navegador sem loja identificada. Elas continuam salvas. Verifique a titularidade antes de sincronizar.'} />
+        {#if vendasSemTitularCount > 0}
+          <Button variant="outlined" size="md" onclick={verificarPendenciasAntigas} disabled={verificandoPendenciasAntigas}>
+            {verificandoPendenciasAntigas ? 'Verificando…' : 'Verificar pendências antigas'}
+          </Button>
+        {/if}
+      </div>
+    {/if}
+
+    {#if loading}
+      <p class="fc-loading">Carregando produtos…</p>
+    {:else}
+      <div class="fc-tools">
+        <div class="fc-search">
+          <SearchField id="busca-prod" data-testid="product-search" placeholder="Buscar produto" shortcut="F2" bind:value={busca} bind:inputRef={buscaInputEl} autocomplete="off" />
+        </div>
+        {#if tabelasPrecoAtivo}
+          <Segmented label="Tabela de preço (Ctrl+T)" size="lg" bind:value={tabelaAtiva} options={nomesTabelas.map((nome, i) => ({ value: i + 1, label: nome }))} class="fc-tabelas" />
+        {/if}
+        <Button variant="outlined" size="touch" data-testid="btn-avulso" aria-label="Item avulso" onclick={() => (modalValorAberto = true)}>
+          <Plus strokeWidth={1.75} /><span class="fc-avulso-label">Item avulso</span><Kbd>F4</Kbd>
+        </Button>
+      </div>
+
+      {#if categorias.length > 0}
+        <UnderlineTabs label="Categorias" bind:value={categoriaAtiva} tabs={categorias.map((cat) => ({ value: cat.id, label: cat.nome, count: contagemPorCategoria[cat.id] || 0 }))} class="fc-cats" />
+      {/if}
+      {#if subcatsDaCat.length}
+        <div class="fc-subcats" role="group" aria-label="Subcategorias">
+          <button type="button" class:on={subcategoriaAtiva === null} on:click={() => (subcategoriaAtiva = null)}>Todas</button>
+          {#each subcatsDaCat as sc (sc.id)}
+            <button type="button" class:on={subcategoriaAtiva === sc.id} on:click={() => (subcategoriaAtiva = sc.id)}>{sc.nome}</button>
+          {/each}
+        </div>
+      {/if}
+
+      <div data-testid="product-grid" class="fc-grid">
+        <VirtualProductGrid
+          zelo
+          cartQuantities={qtyPorProduto}
+          produtos={produtosFiltrados}
+          {hasAnyProducts}
+          canCadastrarProduto={canGerenciarProdutos}
+          tabelaAtiva={tabelaAtiva}
+          coachmarkProductId={mostrarHelperPrimeiroClick ? helperPrimeiroClickProdutoId : null}
+          on:produtoClick={(e) => adicionarProduto(e.detail)}
+          on:coachmarkDismiss={fecharHelperPrimeiroClick}
+          on:valorAvulsoClick={() => {
+            if (!hasAnyProducts) void capturePostHogEvent('pdv_empty_state_cta_clicked', { cta: 'avulso' });
+            modalValorAberto = true;
+          }}
+          on:cadastrarProdutoClick={() => {
+            void capturePostHogEvent('pdv_empty_state_cta_clicked', { cta: 'cadastrar_produto' });
+            abrirModalNovoProdutoRapido();
+          }}
+        />
+      </div>
+    {/if}
+    </div>
+  </main>
+
+  <!-- Comanda: coluna fixa no desktop, sheet no mobile -->
+  {#if showMobileCart}<button type="button" class="fc-scrim" aria-label="Fechar comanda" on:click={() => (showMobileCart = false)}></button>{/if}
+  <aside data-testid="cart" class="fc-cart" class:open={showMobileCart} aria-label="Comanda">
+    <span class="fc-handle" aria-hidden="true"></span>
+    <div class="fc-cart-head">
+      <div class="fc-cart-row">
+        <h2>Comanda{#if itensNaComanda > 0}<span class="fc-count">{itensNaComanda} {itensNaComanda === 1 ? 'item' : 'itens'}</span>{/if}</h2>
+        <button type="button" class="fc-icon-btn fc-mobile-only" aria-label="Fechar comanda" on:click={() => (showMobileCart = false)}><X size={18} strokeWidth={1.75} /></button>
+      </div>
+      <Segmented label="Tipo de pedido" size="lg" bind:value={tipoPedido} options={[{ value: 'retirada', label: 'Retirada', icon: ShoppingBag }, { value: 'delivery', label: 'Delivery', icon: Bike }]} class="fc-tipo" />
+      {#if tipoPedido === 'delivery'}
+        <label class="fc-taxa">
+          <span>Taxa de entrega</span>
+          <span class="fc-taxa-input"><small>R$</small><input id="taxa-entrega-input" type="number" min="0" step="0.01" inputmode="decimal" bind:value={taxaEntregaInput} placeholder="0,00" /></span>
+        </label>
+      {/if}
+    </div>
+
+    <div class="fc-items">
+      {#if comanda.length === 0}
+        <div class="fc-empty">
+          <ShoppingCart size={28} strokeWidth={1.5} aria-hidden="true" />
+          <p>Toque em um produto para começar a venda</p>
+        </div>
+      {:else}
+        <ul>
+          {#each comanda as item (item.id)}
+            <li class="fc-item">
+              <div class="fc-item-info">
+                <p class="fc-item-name">{item.nome}</p>
+                {#if item.resumoMontagem}<p class="fc-item-sub">{item.resumoMontagem}</p>{/if}
+                {#if item.pizza}<button type="button" class="fc-link" on:click={() => editarPizza(item)}>Editar pizza</button>{/if}
+                <p class="fc-item-unit">{formatMoney(item.preco)} × {item.quantidade}</p>
+                <Stepper value={item.quantidade} label="Quantidade de {item.nome}" size="sm" ondecrement={() => decrementarItem(item.id)} onincrement={() => incrementarItem(item.id)} />
+              </div>
+              <div class="fc-item-side">
+                <span class="fc-item-total">{formatMoney(item.preco * item.quantidade)}</span>
+                <button type="button" class="fc-remove" on:click={() => removerItem(item.id)} aria-label="Remover {item.nome}">Remover</button>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+
+    <div class="fc-cart-foot">
+      <div class="fc-line"><span>Subtotal · {itensNaComanda} {itensNaComanda === 1 ? 'item' : 'itens'}</span><span class="fc-num">{formatMoney(totalComanda)}</span></div>
+      {#if tipoPedido === 'delivery' && Number(taxaEntregaInput) > 0}
+        <div class="fc-line"><span>Taxa de entrega</span><span class="fc-num">+ {formatMoney(taxaEntregaInput)}</span></div>
+      {/if}
+      <div class="fc-total"><span>Total</span><MoneyText value={totalComandaComEntrega} size="lg" /></div>
+      <div class="fc-acts">
+        <Button variant="outlined" size="touch" onclick={abrirModalMovCaixa} disabled={!canMovimentarCaixa} aria-describedby={!canMovimentarCaixa ? 'pdv-action-movement-hint' : undefined}>
+          <ArrowLeftRight strokeWidth={1.75} />Movimentar caixa
+        </Button>
+        <Button variant="danger" size="touch" onclick={limparComanda} disabled={!canCancelar || comanda.length === 0} aria-describedby={!canCancelar ? 'pdv-action-cancel-hint' : undefined}>
+          <Trash2 strokeWidth={1.75} />Limpar
+        </Button>
+      </div>
+      <Button variant="primary" size="cta" class="on-action" data-testid="btn-cobrar" disabled={comanda.length === 0 || !canVender || !canReceber} aria-describedby={pdvReceiveHint ? 'pdv-receive-hint' : undefined} onclick={abrirModalPagamento}>
+        Receber<Kbd>F9</Kbd><MoneyText value={totalComandaComEntrega} class="fc-cta-total" />
+      </Button>
+      {#if !canMovimentarCaixa}<InlineHelper id="pdv-action-movement-hint" compact message="Seu perfil não tem permissão para movimentar o caixa." />{/if}
+      {#if !canCancelar}<InlineHelper id="pdv-action-cancel-hint" compact message="Seu perfil não tem permissão para limpar a comanda." />{/if}
+      {#if pdvReceiveHint}
+        <InlineHelper id="pdv-receive-hint" compact message={pdvReceiveHint} />
+      {:else}
+        <p class="fc-hint">Dinheiro, Pix, cartão ou fiado · pagamento dividido</p>
+      {/if}
+    </div>
+  </aside>
+
+  <!-- Barra da comanda (mobile) -->
+  {#if !showMobileCart && comanda.length > 0}
+    <button type="button" class="fc-cartbar" on:click={() => (showMobileCart = true)}>
+      <span class="fc-cartbar-count">{itensNaComanda}</span>
+      <span class="fc-cartbar-label">Ver comanda<small>{tipoPedido === 'delivery' ? 'Delivery' : 'Retirada'} · {comanda.length} {comanda.length === 1 ? 'produto' : 'produtos'}</small></span>
+      <MoneyText value={totalComandaComEntrega} class="fc-cartbar-total" />
+      <span class="fc-cartbar-chev" aria-hidden="true"><ChevronUp size={20} strokeWidth={1.75} /></span>
+    </button>
+  {/if}
+</div>
+{:else}
 <!-- --- 6. LAYOUT (HTML com Tailwind CSS) --- -->
 <div class="flex flex-col h-full overflow-hidden">
 
@@ -2004,6 +2229,7 @@
 
 </div>
 </div> <!-- /flex-col h-full -->
+{/if}
 
 <!-- --- 7. MODAIS (Componentizados) --- -->
 
@@ -2173,4 +2399,108 @@
   .pizza-edit { min-height: 44px; padding: .4rem .2rem; color: var(--primary); background: transparent; border: 0; font-size: .875rem; cursor: pointer; }
   .pizza-edit:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
+
+  /* ── Frente de Caixa · Zelo Design System (superfície app) ─────────────────
+     Mockup aprovado: docs/design-system/reference/zelopdv-app-light.html.
+     Só tokens (docs/DESIGN_SYSTEM.md → Regras de código). */
+  .fc { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 384px; background: var(--bg-app); color: var(--text-main); font-family: var(--zelo-font-ui); }
+  .fc-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .fc-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 24px; }
+  .fc-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 84px; flex-wrap: wrap; flex: none; }
+  .fc-crumb { margin: 0 0 6px; font: 600 10.5px/1 var(--zelo-font-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+  .fc-top h1 { margin: 0; font: 600 22px/1 var(--zelo-font-ui); letter-spacing: -0.02em; white-space: nowrap; }
+  .fc-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .fc-link { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; color: inherit; }
+  .fc-link:disabled { opacity: 0.6; }
+  .fc-num { font-family: var(--zelo-font-num); font-variant-numeric: tabular-nums; font-weight: 500; color: var(--text-main); }
+  .fc-sep { width: 1px; height: 14px; background: var(--border-subtle); }
+  .fc :global(.fc-saldo) { color: var(--text-main); }
+  .fc-refresh { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; color: var(--text-muted); }
+  .fc-refresh:hover { color: var(--text-main); background: var(--bg-sunken); }
+  .fc :global(.fc-spin) { animation: fc-spin 900ms linear infinite; }
+  @keyframes fc-spin { to { transform: rotate(360deg); } }
+  .fc-helper-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .fc-loading { color: var(--text-muted); }
+  .fc-tools { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex: none; }
+  .fc-search { flex: 1; min-width: 0; }
+  .fc :global(.fc-cats) { margin-top: 18px; flex: none; }
+  .fc-subcats { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; flex: none; }
+  .fc-subcats button { height: 32px; padding: 0 12px; border-radius: var(--zelo-radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-panel); color: var(--text-muted); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .fc-subcats button.on { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+  .fc-subcats button:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  .fc-grid { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-top: 16px; position: relative; }
+
+  .fc-cart { display: flex; flex-direction: column; min-height: 0; background: var(--bg-panel); border-left: 1px solid var(--border-subtle); }
+  .fc-handle { display: none; }
+  .fc-cart-head { padding: 20px 20px 0; flex: none; }
+  .fc-cart-row { display: flex; align-items: center; justify-content: space-between; }
+  .fc-cart h2 { margin: 0; font: 600 18px/1 var(--zelo-font-ui); letter-spacing: -0.015em; display: flex; align-items: baseline; gap: 8px; }
+  .fc-count { font: 500 13px/1 var(--zelo-font-num); color: var(--text-muted); letter-spacing: 0; }
+  .fc-icon-btn { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--text-label); background: var(--bg-sunken); }
+  .fc-mobile-only { display: none; }
+  .fc :global(.fc-tipo) { display: flex; width: 100%; margin-top: 14px; }
+  .fc-taxa { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 13.5px; color: var(--text-label); }
+  .fc-taxa-input { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: var(--zelo-radius-control); border: 1px solid var(--border-subtle); background: var(--bg-input); }
+  .fc-taxa-input:focus-within { border-color: var(--primary); box-shadow: 0 0 0 4px var(--focus); }
+  .fc-taxa-input small { font-size: 11px; color: var(--text-muted); }
+  .fc-taxa-input input { width: 88px; border: 0; outline: 0; background: none; text-align: right; font: 500 14px var(--zelo-font-num); color: var(--text-main); }
+  .fc-items { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px; }
+  .fc-items ul { list-style: none; margin: 0; padding: 0; }
+  .fc-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 8px; border-bottom: 1px solid var(--border-subtle); }
+  .fc-item:last-child { border-bottom: 0; }
+  .fc-item-info { min-width: 0; }
+  .fc-item-name { margin: 0; font-weight: 500; font-size: 14px; overflow-wrap: anywhere; }
+  .fc-item-sub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
+  .fc-item-unit { margin: 2px 0 6px; font: 400 12px/1.3 var(--zelo-font-num); color: var(--text-muted); }
+  .fc-item-side { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; }
+  .fc-item-total { font: 500 14px/1.2 var(--zelo-font-num); font-variant-numeric: tabular-nums; }
+  .fc-remove { font-size: 12px; color: var(--text-muted); }
+  .fc-remove:hover { color: var(--status-error-text); }
+  .fc-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; color: var(--text-muted); padding: 24px; }
+  .fc-empty p { margin: 0; font-size: 13px; max-width: 200px; }
+  .fc-cart-foot { flex: none; padding: 16px 20px 20px; border-top: 1px solid var(--border-subtle); }
+  .fc-line { display: flex; justify-content: space-between; align-items: center; height: 26px; font-size: 13.5px; color: var(--text-label); }
+  .fc-total { display: flex; justify-content: space-between; align-items: baseline; margin: 10px 0 16px; }
+  .fc-total > span:first-child { font-weight: 600; font-size: 14px; }
+  .fc-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .fc-acts :global(button) { width: 100%; justify-content: center; }
+  .fc :global(.fc-cta-total) { margin-left: auto; font-size: 19px; }
+  .fc :global(.fc-cta-total small) { color: inherit; opacity: 0.72; }
+  .fc-hint { margin: 10px 0 0; font-size: 12px; color: var(--text-muted); text-align: center; }
+  .fc-cart-foot :global([id^='pdv-']) { margin-top: 8px; }
+  .fc-scrim, .fc-cartbar { display: none; }
+  .fc-mhead { display: none; }
+
+  @media (max-width: 767px) {
+    .fc { grid-template-columns: minmax(0, 1fr); background: var(--zelo-navy); }
+    .fc-body { padding: 0 16px; margin-top: -22px; border-radius: 22px 22px 0 0; background: var(--bg-app); position: relative; }
+    /* navy header (mockup mobile): brand surface nested, content sheet overlaps it */
+    .fc-mhead { display: flex; align-items: center; gap: 12px; padding: 14px 16px 36px; background: var(--bg-app); color: var(--text-main); }
+    .fc-mhead-mark { width: 38px; height: 38px; flex: none; border-radius: 11px; display: grid; place-items: center; background: var(--bg-sunken); }
+    .fc-mhead-title { min-width: 0; }
+    .fc-mhead-title p { margin: 0; font: 600 17px/1.15 var(--zelo-font-ui); letter-spacing: -0.015em; }
+    .fc-mhead-title span { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fc-mhead-cash { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 11px; border-radius: var(--zelo-radius-pill); background: var(--bg-sunken); color: var(--text-main); font: 500 13px/1 var(--zelo-font-num); }
+    .fc-mhead-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--status-success-text); }
+    .fc-mhead-dot.off { background: var(--status-warning-text); }
+    .fc-top { display: none; }
+    .fc-tools { flex-wrap: wrap; margin-top: 14px; }
+    .fc-tools :global(.kbd), .fc-cart :global(.kbd), .fc-avulso-label { display: none; }
+    .fc-search { flex-basis: 100%; }
+    .fc :global(.fc-tabelas) { flex: 1; }
+    .fc-cart { position: fixed; left: 0; right: 0; bottom: var(--mobile-bottom-nav-offset); top: 56px; z-index: 60; border-left: 0; border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0; box-shadow: var(--elevation-float); transform: translateY(105%); transition: transform var(--zelo-dur-slow) var(--zelo-ease-out); }
+    .fc-cart.open { transform: none; }
+    .fc-handle { display: block; width: 40px; height: 5px; border-radius: 3px; background: var(--border-strong); margin: 9px auto 0; }
+    .fc-cart-head { padding-top: 10px; }
+    .fc-mobile-only { display: grid; }
+    .fc-scrim { display: block; position: fixed; inset: 0; z-index: 55; background: color-mix(in srgb, var(--zelo-navy) 42%, transparent); }
+    .fc-cartbar { display: flex; align-items: center; gap: 12px; position: fixed; left: 12px; right: 12px; bottom: calc(var(--mobile-bottom-nav-offset) + 12px); height: 62px; padding: 0 10px; border-radius: 18px; background: var(--primary); color: var(--primary-text); box-shadow: var(--elevation-float); z-index: 40; text-align: left; }
+    .fc-cartbar-count { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--primary-text) 12%, transparent); font: 500 15px/1 var(--zelo-font-num); flex: none; }
+    .fc-cartbar-label { font-weight: 600; font-size: 16px; white-space: nowrap; }
+    .fc-cartbar-label small { display: block; font-weight: 400; font-size: 12px; opacity: 0.62; margin-top: 2px; }
+    .fc :global(.fc-cartbar-total) { margin-left: auto; font-size: 18px; white-space: nowrap; }
+    .fc :global(.fc-cartbar-total small) { color: inherit; opacity: 0.72; }
+    .fc-cartbar-chev { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--primary-text) 12%, transparent); flex: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .fc-cart { transition: none; } .fc :global(.fc-spin) { animation: none; } }
 </style>

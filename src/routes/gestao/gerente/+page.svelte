@@ -210,6 +210,6 @@
   .error-state { display: grid; place-items: center; gap: 10px; padding: 40px 0; color: var(--text-muted); }
   .error-state button { min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main); cursor: pointer; }
   .meta:focus-visible, .linkish:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
-  .zelinho-fab { display: grid; place-items: center; position: fixed; bottom: calc(var(--mobile-bottom-nav-offset, 0px) + 16px); right: 16px; width: 56px; height: 56px; border: 0; border-radius: 9999px; background: var(--primary); color: var(--primary-text); box-shadow: 0 8px 24px color-mix(in srgb, var(--text-inverse) 24%, transparent); z-index: 80; cursor: pointer; }
+  .zelinho-fab { display: grid; place-items: center; position: fixed; bottom: calc(var(--mobile-bottom-nav-offset, 0px) + 16px); right: 16px; width: 56px; height: 56px; border: 0; border-radius: 9999px; background: var(--primary); color: var(--primary-text); box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow-color) 24%, transparent); z-index: 80; cursor: pointer; }
   .zelinho-fab:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
 </style>

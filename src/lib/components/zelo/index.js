@@ -8,3 +8,4 @@ export { default as UnderlineTabs } from './UnderlineTabs.svelte';
 export { default as Stepper } from './Stepper.svelte';
 export { default as ProductTile } from './ProductTile.svelte';
 export { default as SearchField } from './SearchField.svelte';
+export { default as ZeloMark } from './ZeloMark.svelte';

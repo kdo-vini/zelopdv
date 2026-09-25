@@ -1,14 +1,17 @@
 <script>
   /** Quantity stepper. size: sm (30px, desktop) | lg (40px, touch). Zelo Design System → Stepper. */
   import { Minus, Plus } from 'lucide-svelte';
-  let { value = $bindable(1), min = 0, size = 'sm', label = 'Quantidade', onchange = () => {} } = $props();
+  /** Pass onincrement/ondecrement to own the value (e.g. stock checks); otherwise it updates `value` itself. */
+  let { value = $bindable(1), min = 0, size = 'sm', label = 'Quantidade', onchange = () => {}, onincrement = null, ondecrement = null } = $props();
   function set(next) { value = Math.max(min, next); onchange(value); }
+  const dec = () => (ondecrement ? ondecrement() : set(value - 1));
+  const inc = () => (onincrement ? onincrement() : set(value + 1));
 </script>
 
 <div class="step step-{size}" role="group" aria-label={label}>
-  <button type="button" aria-label="Diminuir" onclick={() => set(value - 1)} disabled={value <= min}><Minus size={16} strokeWidth={1.75} /></button>
+  <button type="button" aria-label="Diminuir" onclick={dec} disabled={!ondecrement && value <= min}><Minus size={16} strokeWidth={1.75} /></button>
   <span aria-live="polite">{value}</span>
-  <button type="button" aria-label="Aumentar" onclick={() => set(value + 1)}><Plus size={16} strokeWidth={1.75} /></button>
+  <button type="button" aria-label="Aumentar" onclick={inc}><Plus size={16} strokeWidth={1.75} /></button>
 </div>
 
 <style>

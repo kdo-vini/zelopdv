@@ -30,6 +30,6 @@
     --chart-channel-ifood: var(--warning);
 
     /* Elevation - modal surfaces must sit clearly above the backdrop */
-    --shadow-modal: 0 24px 64px color-mix(in srgb, var(--text-inverse) 72%, transparent),
-        0 8px 24px color-mix(in srgb, var(--text-inverse) 42%, transparent);
+    --shadow-modal: 0 24px 64px color-mix(in srgb, var(--shadow-color) 72%, transparent),
+        0 8px 24px color-mix(in srgb, var(--shadow-color) 42%, transparent);
 }

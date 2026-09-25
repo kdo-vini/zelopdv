@@ -39,6 +39,7 @@
     --accent-light: rgba(1, 31, 74, 0.08);
     --focus: rgba(1, 31, 74, 0.28);
     --elevation-float: 0 10px 24px -12px rgba(1, 31, 74, 0.7);
+    --shadow-color: var(--zelo-navy);
     --link: var(--zelo-navy);
     --link-hover: var(--zelo-navy-700);
 

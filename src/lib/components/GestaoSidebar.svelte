@@ -18,6 +18,8 @@
   import { TRIAL_DAYS } from '$lib/pricing';
   import { getTrialTotalDays } from '$lib/subscriptionStatus';
   import { ChevronLeft, ChevronRight } from 'lucide-svelte';
+  import { currentSurface } from '$lib/theme/surface';
+  import ZeloMark from '$lib/components/zelo/ZeloMark.svelte';
 
   let collapsed = false;
   let subStatus = null;
@@ -196,7 +198,9 @@
   aria-label="Menu de gestão"
   class="hidden md:flex md:static flex-col h-screen shrink-0 sidebar-shell"
   class:collapsed
-  style="background: var(--bg-sidebar); border-right: 1px solid var(--border-subtle);"
+  class:zelo-sidebar={$currentSurface === 'app'}
+  data-surface={$currentSurface === 'app' ? 'brand' : undefined}
+  style="background: var(--bg-sidebar); border-right: 1px solid {$currentSurface === 'app' ? 'transparent' : 'var(--border-subtle)'};"
 >
 
   <!-- Topo: logo + botão de toggle -->
@@ -206,7 +210,15 @@
       class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden"
       title="Ir para Frente de Caixa"
     >
-      <img src="/logo-horizontal.webp" alt="Zelo PDV" class="h-24 w-auto shrink-0" />
+      {#if $currentSurface === 'app'}
+        <span class="zelo-mark" aria-hidden="true"><ZeloMark size={22} /></span>
+        <span class="label-text zelo-word">
+          <span class="zelo-word-name">Zelo<small>PDV</small></span>
+          {#if $companyNameStore}<span class="zelo-word-store">{$companyNameStore}</span>{/if}
+        </span>
+      {:else}
+        <img src="/logo-horizontal.webp" alt="Zelo PDV" class="h-24 w-auto shrink-0" />
+      {/if}
     </a>
 
     <!-- Botão de colapsar — oculto em mobile -->
@@ -365,6 +377,14 @@
 />
 
 <style>
+  /* ── Zelo Design System: navy structure (the aside is a nested brand surface) ── */
+  .zelo-sidebar :global(.border-b), .zelo-sidebar :global(.border-t) { border-color: var(--border-subtle) !important; }
+  .zelo-mark { width: 36px; height: 36px; flex: none; border-radius: 10px; display: grid; place-items: center; background: var(--bg-sunken); color: var(--text-main); }
+  .zelo-word { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .zelo-word-name { font: 600 18px/1 var(--zelo-font-num); letter-spacing: -0.02em; color: var(--text-main); }
+  .zelo-word-name small { font: 500 11px/1 var(--zelo-font-ui); letter-spacing: 0.04em; margin-left: 6px; color: var(--text-muted); }
+  .zelo-word-store { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
   /* Largura da sidebar com transição suave */
   .sidebar-shell {
     width: 240px;

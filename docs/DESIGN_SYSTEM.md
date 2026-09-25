@@ -13,7 +13,7 @@
 | 1 | Componentes do sistema + globais do layout raiz + ícones 1,75 | Pendente |
 | 2 | Superfície Brand no ar (site, landing, blog) | Pendente |
 | 3 | Autenticação (Brand + cartão App) | Pendente |
-| 4 | Superfície App atrás da flag (estrutura → `/app` → modais → operação → gestão → relatórios → conta) | Pendente |
+| 4 | Superfície App atrás da flag (estrutura → `/app` → modais → operação → gestão → relatórios → conta) | **Em andamento** — sidebar navy e `/app` (desktop + mobile) no layout do mockup; modais legíveis mas ainda no visual antigo |
 | 5 | E-mails, PWA/`theme-color`, favicon/OG/logos, `chartColors.js` | Pendente |
 | 6 | Virada: App padrão, remover legado/flag/`class="dark"`, `check:ui` no repo todo | Pendente |
 
@@ -67,12 +67,22 @@ Nomes próprios para não colidir com as classes legadas `.text-main`/`.text-mut
 | `rounded-seg` `-control` `-card` `-cta` `-sheet` | raios do sistema |
 | `shadow-float` | `--elevation-float` |
 
+## Layout por superfície (telas em transição)
+
+Quando a **estrutura** muda (não só a cor), a tela renderiza o layout novo só na superfície Zelo:
+`{#if $zeloSurface} …layout novo… {:else} …markup legado intacto… {/if}` (store em `src/lib/theme/surface.js`).
+A lógica (estado, funções, validações, offline) é a mesma nos dois ramos — só a marcação muda.
+O ramo legado é apagado na Fase 6. Feito assim hoje: `src/routes/app/+page.svelte`,
+`VirtualProductGrid` (prop `zelo`) e `GestaoSidebar` (aside vira `data-surface="brand"` na superfície app).
+
+Atalhos do caixa (só na superfície Zelo, ignorados com modal aberto): **F2** busca, **F4** item avulso, **F9** receber; `/` e Ctrl+T continuam.
+
 ## Catálogo de componentes
 
 | Componente | Local | Status |
 |---|---|---|
 | `Button` (variantes do sistema) | `ui/button` | Fase 0 |
-| `Kbd`, `MoneyText`, `StatusPill`, `QtyBadge`, `Segmented`, `UnderlineTabs`, `Stepper`, `ProductTile`, `SearchField` | `zelo/` | Fase 0 |
+| `Kbd`, `MoneyText`, `StatusPill`, `QtyBadge`, `Segmented`, `UnderlineTabs`, `Stepper`, `ProductTile`, `SearchField`, `ZeloMark` | `zelo/` | Fase 0 (usados no `/app`) |
 | `AppShell`/`Sidebar` navy, `PageHeader`, `MobileHeader`, `BottomNav`, `CartBar`, `Sheet` + `SwipeRow` | — | Fase 1/4 |
 | `Toast`, `Dialog`/`ConfirmDialog`, `CommandPalette` (⌘K), `Tooltip`, gráficos | — | Fase 1/4 |
 

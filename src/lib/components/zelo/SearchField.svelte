@@ -2,7 +2,7 @@
   /** Search input with icon and optional shortcut. Zelo Design System → SearchField. */
   import { Search } from 'lucide-svelte';
   import Kbd from './Kbd.svelte';
-  let { value = $bindable(''), placeholder = 'Buscar', shortcut = '', id = undefined, inputRef = $bindable(null), ...rest } = $props();
+  let { value = $bindable(''), placeholder = 'Buscar', shortcut = '', id = undefined, inputRef = $bindable(), ...rest } = $props();
 </script>
 
 <label class="search">

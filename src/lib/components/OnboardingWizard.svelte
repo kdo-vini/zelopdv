@@ -422,7 +422,7 @@
   .wizard-backdrop {
     position: fixed;
     inset: 0;
-    background: color-mix(in srgb, var(--text-inverse) 60%, transparent);
+    background: color-mix(in srgb, var(--shadow-color) 60%, transparent);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     z-index: 200;

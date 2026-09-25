@@ -3,6 +3,8 @@ import {
   APP_SURFACE_PREFIXES,
   LIVE_SURFACES,
   applySurfaceToDocument,
+  currentSurface,
+  zeloSurface,
   htmlClassForSurface,
   previewFromCookie,
   previewFromQuery,
@@ -99,6 +101,19 @@ describe('html class and client sync', () => {
     applySurfaceToDocument(doc, '/blog');
     expect(doc.documentElement.dataset.surface).toBe('brand');
     expect(doc.documentElement.classList.has('dark')).toBe(true);
+  });
+
+  it('publishes the surface to the stores that switch layouts', () => {
+    let surface; let zelo;
+    const stopA = currentSurface.subscribe((v) => (surface = v));
+    const stopB = zeloSurface.subscribe((v) => (zelo = v));
+    applySurfaceToDocument(fakeDocument('zelo_ui=v2'), '/app');
+    expect(surface).toBe('app');
+    expect(zelo).toBe(true);
+    applySurfaceToDocument(fakeDocument(''), '/app');
+    expect(surface).toBe('legacy');
+    expect(zelo).toBe(false);
+    stopA(); stopB();
   });
 
   it('stays legacy without the cookie', () => {

@@ -9,6 +9,8 @@
   import { pizzaStartingPrice } from '$lib/pizza';
   import { formatMoneyNumber } from '$lib/formatMoney';
   import { Receipt, Plus, ChevronUp } from 'lucide-svelte';
+  import { estoqueDisponivel, produtoControlaEstoque } from '$lib/stock';
+  import ProductTile from '$lib/components/zelo/ProductTile.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -27,6 +29,12 @@
   /** @type {number|string|null} First-use coachmark bound to this product tile (never a viewport overlay). */
   export let coachmarkProductId = null;
   
+  /** @type {boolean} Zelo Design System tile (ProductTile). Legacy markup otherwise. */
+  export let zelo = false;
+  /** @type {Record<string, number>} Quantidade de cada produto na comanda (id_produto → qtd), só no modo Zelo. */
+  export let cartQuantities = {};
+  /** @type {number} Limite de "estoque baixo" exibido no tile Zelo (mesmo de app/+layout). */
+  export let lowStockLimit = 5;
   /** @type {number} Altura de cada card em pixels */
   export let itemHeight = 128;
   
@@ -42,7 +50,18 @@
   let containerHeight = 0;
   
   // Cálculos reativos
-  $: rowHeight = itemHeight + 16; // altura + gap
+  $: gap = zelo ? 12 : 16;
+  $: tileHeight = zelo ? 118 : itemHeight;
+  $: rowHeight = tileHeight + gap; // altura + gap
+
+  function lowStockOf(produto) {
+    if (!produtoControlaEstoque(produto)) return null;
+    const disponivel = estoqueDisponivel(produto);
+    return Number.isFinite(disponivel) && disponivel < lowStockLimit ? Math.max(0, disponivel) : null;
+  }
+  function tilePrice(produto) {
+    return produto.tipo_produto === 'pizza' ? pizzaStartingPrice(produto.pizza_config, produto.modifierGroups) : getPrecoTabela(produto, tabelaAtiva);
+  }
   // +1 accounts for the always-present "Item Avulso" button at the end
   $: totalRows = Math.ceil((produtos.length + 1) / columns);
   $: totalHeight = totalRows * rowHeight;
@@ -73,6 +92,11 @@
   function updateColumns() {
     if (!containerEl) return;
     const width = containerEl.clientWidth;
+    if (zelo) {
+      // Zelo tiles: ~168px minimum each, 12px gap (same rule as the approved mockup)
+      columns = Math.max(2, Math.min(8, Math.floor((width + 12) / (168 + 12))));
+      return;
+    }
     
     // Mais colunas para aproveitar telas largas (Full HD+)
     if (width >= 1536) columns = 7;      // 2xl
@@ -83,6 +107,9 @@
     else columns = 2;                    // default
   }
   
+  // recompute when switching between legacy and Zelo layouts
+  $: if (containerEl) { zelo; updateColumns(); }
+
   function handleResize() {
     if (containerEl) {
       containerHeight = containerEl.clientHeight;
@@ -221,8 +248,8 @@
   <div style="height: {totalHeight + extraBottom}px; position: relative;">
     <!-- Grid posicionado com offset -->
     <div 
-      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 absolute w-full px-4"
-      style="top: {offsetY}px;"
+      class="grid absolute w-full {zelo ? 'zelo-grid' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-4'}"
+      style="top: {offsetY}px;{zelo ? ` --zelo-cols: ${columns};` : ''}"
       role="grid"
       tabindex="0"
       on:keydown={handleKeydown}
@@ -230,6 +257,19 @@
       {#each visibleProducts as produto (produto.id)}
         {@const isCoachmark = isCoachmarkProduct(produto)}
         <div class="prod-cell">
+          {#if zelo}
+            <ProductTile
+              data-prod={produto.id}
+              aria-describedby={isCoachmark ? 'prod-coachmark-tip' : undefined}
+              class={isCoachmark ? 'zelo-tile prod-tile-highlight' : 'zelo-tile'}
+              name={produto.nome}
+              meta={produto.tipo_produto === 'pizza' ? 'a partir de' : (produto.por_unidade ? 'por unidade' : '')}
+              price={tilePrice(produto)}
+              quantity={cartQuantities?.[produto.id] || 0}
+              lowStock={lowStockOf(produto)}
+              onclick={() => handleProdutoClick(produto)}
+            />
+          {:else}
           <button
             data-prod={produto.id}
             type="button"
@@ -253,6 +293,7 @@
               </div>
             </div>
           </button>
+          {/if}
           {#if isCoachmark}
             <div class="prod-coachmark">
               <span class="prod-coachmark-arrow" aria-hidden="true">
@@ -272,8 +313,14 @@
         </div>
       {/each}
       
-      <!-- Botão Fixo: Valor Personalizado (Minimalista) -->
+      <!-- Botão Fixo: Valor Personalizado -->
       {#if endIndex >= produtos.length}
+        {#if zelo}
+          <button type="button" class="zelo-avulso" on:click={handleValorAvulsoClick}>
+            <span class="zelo-avulso-ic" aria-hidden="true"><Plus size={18} strokeWidth={1.75} /></span>
+            <span><span class="zelo-avulso-nm">Valor avulso</span><span class="zelo-avulso-meta">Digite um valor livre</span></span>
+          </button>
+        {:else}
         <button
           on:click={handleValorAvulsoClick}
           class="h-28 bg-slate-800/10 border border-dashed border-slate-700 hover:border-amber-500/50 hover:bg-amber-500/5 text-slate-500 hover:text-amber-400 rounded-lg transition-all"
@@ -287,6 +334,7 @@
             </span>
           </div>
         </button>
+        {/if}
       {/if}
     </div>
   </div>
@@ -295,6 +343,16 @@
 </div>
 
 <style>
+  /* ── Zelo Design System grid (docs/DESIGN_SYSTEM.md) ── */
+  .zelo-grid { grid-template-columns: repeat(var(--zelo-cols, 4), minmax(0, 1fr)); gap: 12px; padding: 0 2px; }
+  .prod-cell :global(.zelo-tile) { width: 100%; height: 118px; min-height: 0; }
+  .zelo-avulso { height: 118px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 14px; text-align: left; border-radius: var(--zelo-radius-card); border: 1.5px dashed var(--border-strong); color: var(--text-muted); transition: border-color var(--zelo-dur-fast), color var(--zelo-dur-fast); }
+  .zelo-avulso:hover { border-color: var(--primary); color: var(--text-main); }
+  .zelo-avulso:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  .zelo-avulso-ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--bg-sunken); }
+  .zelo-avulso-nm { display: block; font-weight: 500; font-size: 14.5px; color: inherit; }
+  .zelo-avulso-meta { display: block; font-size: 12px; margin-top: 3px; }
+
   /* Sem cartão ao redor (ver DESIGN_PATTERNS "Never nest cards" / pedido do
      dono): o conteúdo fica direto na página, alinhado mais para cima
      (padding-top ~10vh, não centralizado verticalmente) para as ações

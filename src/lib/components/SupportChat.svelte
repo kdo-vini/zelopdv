@@ -264,7 +264,7 @@
     font-weight: 700;
   }
   .markdown-content :global(code) {
-    background: color-mix(in srgb, var(--text-inverse) 10%, transparent);
+    background: color-mix(in srgb, var(--shadow-color) 10%, transparent);
     padding: 0.1rem 0.3rem;
     border-radius: 4px;
     font-family: monospace;
@@ -415,13 +415,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 16px color-mix(in srgb, var(--text-inverse) 25%, transparent);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--shadow-color) 25%, transparent);
     transition: transform 0.15s, box-shadow 0.15s;
   }
   @media (hover: hover) {
     .chat-toggle-btn:hover {
       transform: scale(1.06);
-      box-shadow: 0 6px 20px color-mix(in srgb, var(--text-inverse) 30%, transparent);
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--shadow-color) 30%, transparent);
     }
   }
 

@@ -537,7 +537,7 @@
 <style>
   .assistant-panel { position: fixed; top: 0; right: 0; width: 25rem; max-width: 100vw; height: 100vh; background: var(--bg-panel); border-left: 1px solid var(--border-card); z-index: 90; display: flex; flex-direction: column; transform: translateX(100%); transition: transform var(--transition-fast); }
   .assistant-panel.open { transform: translateX(0); }
-  .assistant-backdrop { position: fixed; inset: 0; z-index: 89; background: color-mix(in srgb, var(--text-inverse) 62%, transparent); }
+  .assistant-backdrop { position: fixed; inset: 0; z-index: 89; background: color-mix(in srgb, var(--shadow-color) 62%, transparent); }
   @media (min-width: 1280px) { .assistant-backdrop { display: none; } }
   @media (max-width: 767px) { .assistant-panel { width: 100vw; height: auto; bottom: var(--mobile-bottom-nav-offset); border-left: 0; } }
   .p-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }

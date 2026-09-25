@@ -10,6 +10,8 @@
  * See docs/DESIGN_SYSTEM.md → "Superfícies" and "Migração".
  */
 
+import { derived, writable } from 'svelte/store';
+
 export const SURFACE_COOKIE = 'zelo_ui';
 export const SURFACE_PREVIEW_VALUE = 'v2';
 export const SURFACE_QUERY_PARAM = 'tema';
@@ -86,4 +88,20 @@ export function applySurfaceToDocument(doc, pathname) {
   const root = doc.documentElement;
   if (root.dataset.surface !== surface) root.dataset.surface = surface;
   root.classList.toggle('dark', htmlClassForSurface(surface) === 'dark');
+  currentSurface.set(surface);
 }
+
+/**
+ * The page's surface, for components whose *layout* differs per surface
+ * (colour differences never need it — tokens handle those). Client-only:
+ * it starts from the server-rendered <html data-surface> and follows
+ * applySurfaceToDocument. On the server it stays `legacy`.
+ */
+export const currentSurface = writable(
+  typeof document !== 'undefined' && ['app', 'brand', 'legacy'].includes(document.documentElement?.dataset?.surface)
+    ? document.documentElement.dataset.surface
+    : 'legacy',
+);
+
+/** true once the page renders a Zelo Design System surface (app or brand). */
+export const zeloSurface = derived(currentSurface, (surface) => surface !== 'legacy');
