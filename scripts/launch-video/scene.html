@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>ZeloPDV launch</title>
+<style>
+  @font-face { font-family: 'Inter'; src: url('node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'Caveat'; src: url('node_modules/@fontsource/caveat/files/caveat-latin-700-normal.woff2') format('woff2'); font-weight: 700; }
+  @font-face { font-family: 'Mono'; src: url('node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2') format('woff2'); font-weight: 100 800; }
+
+  :root {
+    --ink: #0B1F3A;
+    --ink-2: #4A5B73;
+    --night: #050A14;
+    --navy: #0B1F3A;
+    --sky: #0EA5E9;
+    --sky-soft: #E0F2FE;
+    --paper: #F4F7FB;
+    --cream: #F3EDE2;
+    --green: #16A34A;
+    --green-soft: #DCFCE7;
+    --amber: #D97706;
+    --amber-soft: #FEF3C7;
+    --red: #E11D48;
+    --ifood: #EA1D2C;
+    --whats: #25D366;
+    --card: #FFFFFF;
+    --emoji: 'Noto Color Emoji';
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--night); }
+  body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+  .scene { position: absolute; inset: 0; visibility: hidden; overflow: hidden; }
+  .abs { position: absolute; }
+  .emoji { font-family: var(--emoji); }
+  .mono { font-family: 'Mono', monospace; }
+
+  /* legenda das features */
+  .cap { position: absolute; left: 80px; right: 80px; top: 150px; }
+  .cap .num { display: inline-block; font-family: 'Mono'; font-weight: 700; font-size: 30px; letter-spacing: 4px;
+    color: var(--sky); background: var(--sky-soft); padding: 10px 20px; border-radius: 999px; }
+  .cap .title { margin-top: 28px; font-size: 88px; line-height: 1.02; font-weight: 800; letter-spacing: -3px; color: var(--ink); }
+  .w { display: inline-block; white-space: pre; }
+  .line { display: block; overflow: hidden; padding-bottom: 8px; }
+
+  /* S1 */
+  #s1 { background: var(--night); }
+  #s1 .kicker { top: 170px; left: 0; right: 0; text-align: center; font-family: 'Mono'; font-size: 34px; letter-spacing: 8px; color: #5B6B85; }
+  #s1 .l1 { top: 800px; left: 80px; right: 80px; font-size: 92px; font-weight: 800; letter-spacing: -3px; color: #fff; }
+  #s1 .l2 { top: 940px; left: 80px; right: 80px; font-size: 64px; font-weight: 500; letter-spacing: -1.5px; color: #8FA3C0; line-height: 1.15; }
+  .caret { display: inline-block; width: 6px; height: 0.9em; background: var(--sky); vertical-align: -0.1em; margin-left: 6px; }
+
+  /* S2 */
+  #s2 { background: var(--cream);
+    background-image: repeating-linear-gradient(0deg, transparent 0 58px, rgba(11,31,58,.07) 58px 60px); }
+  #s2 .margin { left: 110px; top: 0; bottom: 0; width: 3px; background: rgba(225,29,72,.25); }
+  .sticky { font-family: 'Caveat'; font-size: 66px; line-height: 1.02; color: #2B2B2B; padding: 34px 40px; width: 430px;
+    box-shadow: 0 18px 40px rgba(0,0,0,.18); }
+  .calc { width: 330px; height: 470px; background: #1F2430; border-radius: 36px; padding: 30px; box-shadow: 0 24px 50px rgba(0,0,0,.3); }
+  .calc .disp { height: 110px; background: #B8C7A3; border-radius: 14px; font-family: 'Mono'; font-weight: 700; font-size: 64px; color: #2E3A22;
+    text-align: right; padding: 16px 20px; }
+  .calc .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 24px; }
+  .calc .keys i { height: 52px; border-radius: 12px; background: #3A4150; }
+  .calc .keys i:nth-child(4n) { background: #E07A2E; }
+  .filechip { background: #fff; border-radius: 26px; padding: 26px 30px; display: flex; gap: 22px; align-items: center; width: 520px;
+    box-shadow: 0 18px 40px rgba(0,0,0,.16); }
+  .filechip .ic { width: 86px; height: 100px; border-radius: 12px; background: #1D7A45; color: #fff; font-weight: 800; font-size: 34px;
+    display: flex; align-items: center; justify-content: center; flex: none; }
+  .filechip .nm { font-size: 31px; font-weight: 600; color: #222; line-height: 1.2; word-break: break-all; }
+  .filechip .sz { font-size: 24px; color: #888; margin-top: 6px; }
+  .notif { background: #fff; border-radius: 30px; padding: 24px 30px; display: flex; gap: 20px; align-items: center; width: 470px;
+    box-shadow: 0 18px 40px rgba(0,0,0,.16); }
+  .notif .ic { width: 78px; height: 78px; border-radius: 20px; background: var(--whats); display: flex; align-items: center; justify-content: center; font-size: 44px; flex: none; }
+  .notif b { font-size: 32px; color: #111; display: block; }
+  .notif span { font-size: 26px; color: #666; }
+  .notif .badge { margin-left: auto; background: var(--red); color: #fff; font-weight: 800; font-size: 30px; border-radius: 999px; padding: 6px 18px; }
+  #s2 .words { left: 0; right: 0; top: 700px; text-align: center; }
+  #s2 .word { display: block; font-size: 118px; font-weight: 900; letter-spacing: -5px; color: var(--ink); line-height: 1.08; }
+  #s2 .word span { background: var(--cream); padding: 0 24px; box-decoration-break: clone; }
+  #s2 .word.fe { font-family: 'Caveat'; font-weight: 700; letter-spacing: 0; color: var(--red); font-size: 170px; }
+
+  /* S3 / S10 */
+  .dark { background: radial-gradient(ellipse at 50% 42%, #10305A 0%, #0A1A33 45%, var(--night) 100%); }
+  .glow { width: 1400px; height: 1400px; left: -160px; top: 150px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(14,165,233,.55) 0%, rgba(14,165,233,.12) 35%, transparent 65%); }
+  .appicon { width: 300px; height: 300px; left: 390px; border-radius: 72px; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(14,165,233,.35), 0 0 0 2px rgba(255,255,255,.08); }
+  .appicon img { width: 100%; height: 100%; display: block; }
+  .wordmark { left: 0; right: 0; text-align: center; font-size: 170px; font-weight: 900; letter-spacing: -7px; color: #fff; }
+  .wordmark .pdv { color: var(--sky); }
+  .wordmark .ch { display: inline-block; }
+  #s3 .label { left: 0; right: 0; top: 560px; text-align: center; font-family: 'Mono'; font-size: 32px; letter-spacing: 12px; color: #7FB8E6; }
+  #s3 .tag { left: 90px; right: 90px; top: 1340px; text-align: center; font-size: 50px; font-weight: 500; line-height: 1.3; color: #B9C8DD; }
+  #s3 .tag b { color: #fff; font-weight: 700; }
+
+  /* telas claras */
+  .light { background: var(--paper);
+    background-image: radial-gradient(circle at 1px 1px, rgba(11,31,58,.09) 1.5px, transparent 0); background-size: 44px 44px; }
+
+  /* S4 telefone */
+  .phone { left: 170px; top: 470px; width: 740px; height: 1350px; border-radius: 100px; background: #0B1220; padding: 22px;
+    box-shadow: 0 60px 120px rgba(11,31,58,.35); }
+  .screen { position: relative; width: 100%; height: 100%; border-radius: 80px; background: #F7F9FC; overflow: hidden; }
+  .sbar { height: 70px; display: flex; justify-content: space-between; align-items: center; padding: 18px 56px 0; font-size: 26px; font-weight: 700; color: #111; }
+  .phead { display: flex; justify-content: space-between; align-items: center; padding: 18px 32px 10px; }
+  .phead b { font-size: 40px; color: var(--ink); letter-spacing: -1px; }
+  .pill { font-size: 22px; font-weight: 700; padding: 10px 18px; border-radius: 999px; display: inline-flex; gap: 10px; align-items: center; }
+  .pill.ok { background: var(--green-soft); color: var(--green); }
+  .pill .dot { width: 12px; height: 12px; border-radius: 50%; background: currentColor; }
+  .search { margin: 14px 32px 22px; height: 76px; border-radius: 22px; background: #fff; border: 2px solid #E3E9F1; color: #9AA8BA;
+    font-size: 26px; display: flex; align-items: center; padding: 0 26px; }
+  .tile { position: absolute; width: 310px; height: 300px; background: #fff; border-radius: 34px; border: 2px solid #E8EDF4;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .tile .em { font-size: 104px; line-height: 1.1; }
+  .tile .nm { font-size: 32px; font-weight: 700; color: var(--ink); }
+  .tile .pr { font-size: 30px; font-weight: 800; color: var(--sky); }
+  .tile .qty { position: absolute; top: 16px; right: 16px; width: 58px; height: 58px; border-radius: 50%; background: var(--sky); color: #fff;
+    font-weight: 800; font-size: 30px; display: flex; align-items: center; justify-content: center; }
+  .cart { position: absolute; left: 0; right: 0; bottom: 0; height: 270px; background: #fff; border-top: 2px solid #E8EDF4; padding: 28px 32px; }
+  .cart .row { display: flex; justify-content: space-between; align-items: baseline; }
+  .cart .row span { font-size: 28px; color: var(--ink-2); font-weight: 600; }
+  .cart .row b { font-size: 64px; color: var(--ink); letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+  .cart .btn { margin-top: 20px; height: 104px; border-radius: 28px; background: var(--sky); color: #fff; font-size: 36px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; }
+  .ripple { width: 150px; height: 150px; margin: -75px 0 0 -75px; border-radius: 50%; border: 8px solid var(--sky); }
+  .touch { width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; background: rgba(11,31,58,.35); }
+  .success { inset: 0; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+  .success h3 { font-size: 60px; color: var(--ink); letter-spacing: -2px; }
+  .success p { font-size: 34px; color: var(--ink-2); font-weight: 600; }
+  .confetti { width: 22px; height: 34px; border-radius: 4px; }
+
+  /* cartões genéricos */
+  .card { background: var(--card); border-radius: 50px; box-shadow: 0 30px 80px rgba(11,31,58,.14); }
+
+  /* S5 fiado */
+  #s5 .card { left: 70px; top: 500px; width: 940px; padding: 56px; }
+  .who { display: flex; align-items: center; gap: 30px; }
+  .avatar { width: 130px; height: 130px; border-radius: 50%; background: linear-gradient(135deg, #38BDF8, #0369A1); color: #fff; font-size: 50px;
+    font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .who b { font-size: 58px; color: var(--ink); letter-spacing: -1.5px; display: block; }
+  .who span { font-size: 30px; color: var(--ink-2); }
+  .debt { margin-top: 50px; font-size: 30px; font-weight: 700; color: var(--ink-2); letter-spacing: 3px; text-transform: uppercase; }
+  .amount { font-size: 140px; font-weight: 900; letter-spacing: -6px; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.05; }
+  .bar { margin-top: 26px; height: 26px; border-radius: 999px; background: #EAF0F7; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #F59E0B, #EF4444); }
+  .barlbl { margin-top: 14px; display: flex; justify-content: space-between; font-size: 26px; color: var(--ink-2); font-weight: 600; }
+  .hist { margin-top: 40px; border-top: 2px solid #EEF2F7; }
+  .hrow { display: flex; justify-content: space-between; align-items: center; padding: 30px 0; border-bottom: 2px solid #EEF2F7; font-size: 34px; }
+  .hrow span { color: var(--ink-2); font-weight: 500; }
+  .hrow b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .hrow.pay b { color: var(--green); }
+  .scribble { font-family: 'Caveat'; font-size: 96px; color: var(--red); left: 120px; top: 1560px; }
+
+  /* S6 offline */
+  #s6 .wifi { left: 290px; top: 470px; width: 500px; height: 500px; }
+  .status { left: 0; right: 0; top: 990px; display: grid; justify-items: center; }
+  .status .pill { grid-area: 1 / 1; }
+  .status .pill { font-size: 34px; padding: 14px 30px; }
+  .pill.bad { background: #FFE4E6; color: var(--red); }
+  .queue { left: 90px; right: 90px; top: 1110px; }
+  .qrow { height: 150px; background: #fff; border-radius: 34px; box-shadow: 0 16px 40px rgba(11,31,58,.10); display: flex; align-items: center;
+    justify-content: space-between; padding: 0 40px; margin-bottom: 26px; }
+  .qrow b { font-size: 38px; color: var(--ink); display: block; letter-spacing: -1px; }
+  .qrow span { font-size: 28px; color: var(--ink-2); }
+  .qrow .pill { font-size: 26px; }
+  .pill.wait { background: var(--amber-soft); color: var(--amber); }
+  #s6 .sub { left: 80px; top: 385px; font-size: 88px; font-weight: 800; letter-spacing: -3px; color: var(--sky); }
+
+  /* S7 pedidos */
+  #s7 .board { left: 70px; top: 480px; width: 940px; height: 1010px; padding: 44px 40px; overflow: hidden; }
+  .bhead { display: flex; justify-content: space-between; align-items: center; }
+  .bhead b { font-size: 46px; color: var(--ink); letter-spacing: -1px; }
+  .bhead .pill { font-size: 28px; background: var(--sky-soft); color: #0369A1; }
+  .order { left: 40px; width: 860px; height: 250px; border-radius: 36px; background: #fff; border: 2px solid #E8EDF4; padding: 34px 38px;
+    box-shadow: 0 16px 40px rgba(11,31,58,.08); }
+  .src { display: inline-flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 800; color: #fff; padding: 10px 20px; border-radius: 999px; }
+  .order h4 { margin-top: 22px; font-size: 44px; color: var(--ink); letter-spacing: -1px; }
+  .order p { margin-top: 8px; font-size: 30px; color: var(--ink-2); }
+  .order .tm { position: absolute; right: 38px; top: 38px; font-family: 'Mono'; font-size: 28px; font-weight: 700; color: var(--ink-2); }
+  .order .done { position: absolute; right: 38px; bottom: 38px; }
+  #s7 .foot { left: 0; right: 0; top: 1540px; text-align: center; font-size: 30px; color: var(--ink-2); font-weight: 600; }
+
+  /* S8 lucro */
+  #s8 .card { left: 70px; top: 470px; width: 940px; padding: 56px; }
+  .stat { display: flex; justify-content: space-between; align-items: baseline; padding: 20px 0; }
+  .stat span { font-size: 34px; color: var(--ink-2); font-weight: 600; }
+  .stat b { font-size: 50px; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+  .stat.neg b { color: var(--red); }
+  .profit { margin-top: 26px; padding: 40px; border-radius: 36px; background: var(--green-soft); }
+  .profit span { font-size: 30px; font-weight: 800; letter-spacing: 3px; color: var(--green); }
+  .profit b { display: block; white-space: nowrap; font-size: 112px; font-weight: 900; letter-spacing: -5px; color: #14532D; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .profit .up { display: inline-block; margin-top: 8px; font-size: 30px; font-weight: 800; color: #fff; background: var(--green); padding: 8px 18px; border-radius: 999px; }
+  .chart { margin-top: 44px; height: 300px; display: flex; align-items: flex-end; gap: 16px; }
+  .chart i { flex: 1; border-radius: 14px 14px 6px 6px; background: linear-gradient(180deg, #38BDF8, #0284C7); transform-origin: bottom; }
+
+  /* S9 zelinho */
+  #s9 { background: radial-gradient(ellipse at 50% 80%, #0E4A7E 0%, #0A2340 50%, var(--night) 100%); }
+  #s9 .mascot { left: 20px; top: 1060px; width: 1060px; }
+  .bubble { left: 80px; max-width: 900px; background: #fff; color: var(--ink); font-size: 60px; font-weight: 800; letter-spacing: -1.5px;
+    padding: 34px 46px; border-radius: 50px 50px 50px 14px; box-shadow: 0 24px 60px rgba(0,0,0,.35); transform-origin: 0% 100%; }
+  .bubble.me { background: var(--sky); color: #fff; }
+  #s9 .who2 { left: 80px; top: 300px; font-family: 'Mono'; font-size: 30px; letter-spacing: 5px; color: #7FB8E6; }
+
+  /* S10 */
+  #s10 .appicon { top: 430px; width: 240px; height: 240px; left: 420px; border-radius: 58px; }
+  #s10 .wordmark { top: 720px; font-size: 140px; letter-spacing: -6px; }
+  #s10 .big { left: 0; right: 0; top: 1010px; text-align: center; font-size: 112px; font-weight: 900; letter-spacing: -5px; color: #fff; }
+  #s10 .big span { color: var(--sky); }
+  #s10 .sub { left: 0; right: 0; top: 1170px; text-align: center; font-size: 46px; color: #B9C8DD; font-weight: 500; line-height: 1.45; }
+  #s10 .url { left: 190px; width: 700px; top: 1390px; height: 130px; border-radius: 999px; background: #fff; color: var(--ink);
+    font-size: 54px; font-weight: 800; letter-spacing: -1px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #s10 .shine { position: absolute; top: -20px; bottom: -20px; width: 120px; background: linear-gradient(90deg, transparent, rgba(14,165,233,.35), transparent); transform: skewX(-20deg); }
+  #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- S1 cold open -->
+  <section class="scene" id="s1">
+    <div class="abs kicker">ZELO · LANÇAMENTO · 2026</div>
+    <div class="abs l1"><span id="s1l1"></span><span class="caret" id="s1c1"></span></div>
+    <div class="abs l2"><span id="s1l2"></span><span class="caret" id="s1c2"></span></div>
+  </section>
+
+  <!-- S2 caos -->
+  <section class="scene" id="s2">
+    <div class="abs margin"></div>
+    <div class="abs sticky" id="c0" style="left:90px;top:230px;background:#FDE68A">Seu Zé deve<br>R$ 47... ou 74?</div>
+    <div class="abs notif" id="c1" style="left:540px;top:520px"><div class="ic emoji">💬</div><div><b>WhatsApp</b><span>pedido novo???</span></div><div class="badge">37</div></div>
+    <div class="abs calc" id="c2" style="left:110px;top:760px"><div class="disp">ERRO</div><div class="keys"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="abs sticky" id="c3" style="left:560px;top:880px;background:#FBCFE8">troco pra<br>R$ 100!!</div>
+    <div class="abs filechip" id="c4" style="left:470px;top:1290px"><div class="ic">XLS</div><div><div class="nm">planilha_FINAL_v7_<br>agoravai(2).xlsx</div><div class="sz">não salvo · 3 min atrás</div></div></div>
+    <div class="abs sticky" id="c5" style="left:70px;top:1450px;background:#BAE6FD">quem pagou<br>o pastel??</div>
+    <div class="abs words">
+      <div class="line"><div class="word" id="w0"><span>Caderninho.</span></div></div>
+      <div class="line"><div class="word" id="w1"><span>Calculadora.</span></div></div>
+      <div class="line"><div class="word" id="w2"><span>Planilha.</span></div></div>
+      <div class="line"><div class="word fe" id="w3"><span>E fé.</span></div></div>
+    </div>
+  </section>
+
+  <!-- S3 revelação -->
+  <section class="scene dark" id="s3">
+    <div class="abs glow" id="s3glow"></div>
+    <div class="abs label" id="s3label">APRESENTANDO</div>
+    <div class="abs appicon" id="s3icon" style="top:680px"><img src="../../static/pwa-512x512.png" alt=""></div>
+    <div class="abs wordmark" id="s3wm" style="top:1050px"></div>
+    <div class="abs tag" id="s3tag">Caixa, estoque, fiado e financeiro.<br><b>Num lugar só.</b></div>
+  </section>
+
+  <!-- S4 venda -->
+  <section class="scene light" id="s4">
+    <div class="cap"><span class="num" id="s4n">01</span><div class="title" id="s4t">Venda em 3 toques.</div></div>
+    <div class="abs phone" id="s4phone">
+      <div class="screen" id="s4screen">
+        <div class="sbar"><span>20:48</span><span class="mono">●●● 87%</span></div>
+        <div class="phead"><b>Frente de caixa</b><span class="pill ok"><span class="dot"></span>Caixa aberto</span></div>
+        <div class="search">Buscar produto ou código…</div>
+        <div class="tile" id="t0" style="left:26px;top:300px"><div class="em emoji">🍔</div><div class="nm">X-Burger</div><div class="pr">R$ 24,00</div><div class="qty" id="q0">1</div></div>
+        <div class="tile" id="t1" style="left:360px;top:300px"><div class="em emoji">🥤</div><div class="nm">Refri 2L</div><div class="pr">R$ 14,00</div><div class="qty" id="q1">1</div></div>
+        <div class="tile" id="t2" style="left:26px;top:624px"><div class="em emoji">🍟</div><div class="nm">Batata</div><div class="pr">R$ 16,00</div><div class="qty" id="q2">1</div></div>
+        <div class="tile" id="t3" style="left:360px;top:624px"><div class="em emoji">🍧</div><div class="nm">Açaí 500ml</div><div class="pr">R$ 22,00</div></div>
+        <div class="cart">
+          <div class="row"><span id="s4items">0 itens</span><b id="s4total">R$ 0,00</b></div>
+          <div class="btn" id="s4btn">Finalizar venda · Pix</div>
+        </div>
+        <div class="abs ripple" id="s4rip"></div>
+        <div class="abs touch" id="s4touch"></div>
+        <div class="abs success" id="s4ok">
+          <svg width="240" height="240" viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="#DCFCE7"/><circle id="s4ring" cx="60" cy="60" r="54" fill="none" stroke="#16A34A" stroke-width="8" stroke-linecap="round" stroke-dasharray="340" transform="rotate(-90 60 60)"/><path id="s4check" d="M36 62 L53 78 L86 44" fill="none" stroke="#16A34A" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="80"/></svg>
+          <h3>Venda registrada!</h3>
+          <p>Pix · R$ 54,00 · estoque atualizado</p>
+        </div>
+        <div id="confetti"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S5 fiado -->
+  <section class="scene light" id="s5">
+    <div class="cap"><span class="num" id="s5n">02</span><div class="title" id="s5t">Fiado sem caderninho.</div></div>
+    <div class="abs card" id="s5card">
+      <div class="who"><div class="avatar">SZ</div><div><b>Seu Zé</b><span>cliente desde 2019 · paga sempre (um dia)</span></div></div>
+      <div class="debt">Saldo em aberto</div>
+      <div class="amount" id="s5amt">R$ 0,00</div>
+      <div class="bar"><i id="s5bar"></i></div>
+      <div class="barlbl"><span>Limite do fiado</span><span>R$ 100,00</span></div>
+      <div class="hist">
+        <div class="hrow" id="h0"><span>12/09 · X-Burger + Refri</span><b>R$ 38,00</b></div>
+        <div class="hrow" id="h1"><span>18/09 · Pão de queijo</span><b>R$ 9,50</b></div>
+        <div class="hrow pay" id="h2"><span>Hoje · pagou no Pix</span><b>− R$ 20,00</b></div>
+      </div>
+    </div>
+    <div class="abs scribble" id="s5note">era 47, Seu Zé. não 74.</div>
+  </section>
+
+  <!-- S6 offline -->
+  <section class="scene light" id="s6">
+    <div class="cap"><span class="num" id="s6n">03</span><div class="title" id="s6t">Internet caiu?</div></div>
+    <div class="abs sub" id="s6sub">O caixa não.</div>
+    <svg class="abs wifi" id="s6wifi" viewBox="0 0 100 100">
+      <g fill="none" stroke-linecap="round" stroke-width="8" id="s6arcs">
+        <path d="M12 42 Q50 8 88 42"/><path d="M24 56 Q50 32 76 56"/><path d="M36 70 Q50 58 64 70"/>
+      </g>
+      <circle cx="50" cy="82" r="6" id="s6dot"/>
+      <line x1="16" y1="16" x2="84" y2="88" stroke="#E11D48" stroke-width="8" stroke-linecap="round" stroke-dasharray="100" id="s6slash"/>
+    </svg>
+    <div class="abs status"><span class="pill bad" id="s6off"><span class="dot"></span>Sem conexão · vendendo offline</span><span class="pill ok" id="s6on"><span class="dot"></span>Online de novo</span></div>
+    <div class="abs queue">
+      <div class="qrow" id="r0"><div><b>Venda #1042</b><span>2x Coxinha · R$ 14,00</span></div><span class="pill wait" id="p0">☁ na fila</span></div>
+      <div class="qrow" id="r1"><div><b>Venda #1043</b><span>X-Tudo + Suco · R$ 36,00</span></div><span class="pill wait" id="p1">☁ na fila</span></div>
+      <div class="qrow" id="r2"><div><b>Venda #1044</b><span>Açaí 500ml · R$ 22,00</span></div><span class="pill wait" id="p2">☁ na fila</span></div>
+    </div>
+  </section>
+
+  <!-- S7 pedidos -->
+  <section class="scene light" id="s7">
+    <div class="cap"><span class="num" id="s7n">04</span><div class="title" id="s7t">Todo pedido,<br>uma fila só.</div></div>
+    <div class="abs card board" id="s7board">
+      <div class="bhead"><b>Fila da cozinha</b><span class="pill" id="s7count">0 pedidos</span></div>
+      <div class="abs order" id="o0"><span class="src" style="background:var(--ifood)">iFood · #4821</span><span class="tm">00:12</span><h4>2x X-Salada, 1 Batata</h4><p>entrega · Rua das Flores, 120</p><span class="pill ok done" id="o0done"><span class="dot"></span>Pronto</span></div>
+      <div class="abs order" id="o1"><span class="src" style="background:var(--whats)">WhatsApp · Mariana</span><span class="tm">00:05</span><h4>1 Açaí 500ml</h4><p>retirada no balcão · "sem granola pfv"</p></div>
+      <div class="abs order" id="o2"><span class="src" style="background:var(--sky)">Cardápio online · Mesa 7</span><span class="tm">00:01</span><h4>3 Pastéis de carne</h4><p>consumo no local</p></div>
+    </div>
+    <div class="abs foot" id="s7foot">iFood, WhatsApp e cardápio online com o ZeloMenu</div>
+  </section>
+
+  <!-- S8 lucro -->
+  <section class="scene light" id="s8">
+    <div class="cap"><span class="num" id="s8n">05</span><div class="title" id="s8t">Lucro real.<br>Não o de cabeça.</div></div>
+    <div class="abs card" id="s8card" style="top:560px">
+      <div class="stat"><span>Receita do mês</span><b id="s8rev">R$ 0,00</b></div>
+      <div class="stat neg"><span>Despesas e taxas</span><b id="s8exp">− R$ 0,00</b></div>
+      <div class="profit"><span>LUCRO DE VERDADE</span><b id="s8profit">R$ 0,00</b><span class="up" id="s8up">▲ 26,4% vs mês anterior</span></div>
+      <div class="chart" id="s8chart"></div>
+    </div>
+  </section>
+
+  <!-- S9 Zelinho -->
+  <section class="scene" id="s9">
+    <div class="abs who2" id="s9who">ZELINHO · MASCOTE OFICIAL</div>
+    <div class="abs bubble" id="b0" style="top:380px">Oi! Eu sou o Zelinho. 👋</div>
+    <div class="abs bubble" id="b1" style="top:580px">Eu cuido das contas.</div>
+    <div class="abs bubble me" id="b2" style="top:780px">Você cuida dos clientes.</div>
+    <img class="abs mascot" id="s9m" src="../../static/images/landing/zelinho-hero-transparent.webp" alt="">
+  </section>
+
+  <!-- S10 fim -->
+  <section class="scene dark" id="s10">
+    <div class="abs glow" id="s10glow"></div>
+    <div class="abs appicon" id="s10icon"><img src="../../static/pwa-512x512.png" alt=""></div>
+    <div class="abs wordmark" id="s10wm"></div>
+    <div class="abs big" id="s10big"><span>14 dias</span> grátis.</div>
+    <div class="abs sub" id="s10sub">Sem cartão de crédito. Sem instalar nada.<br>Depois, a partir de R$ 59/mês.</div>
+    <div class="abs url" id="s10url"><span>zelopdv.com.br</span><div class="shine" id="s10shine"></div></div>
+  </section>
+
+  <div id="fade"></div>
+</div>
+
+<script src="timeline.js"></script>
+<script>
+// ---------- utilitários ----------
+const $ = (id) => document.getElementById(id);
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+const P = (t, a, b) => clamp01((t - a) / (b - a));
+const lerp = (a, b, k) => a + (b - a) * k;
+const outCubic = (k) => 1 - Math.pow(1 - k, 3);
+const inCubic = (k) => k * k * k;
+const inOutCubic = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const outBack = (k, s = 1.70158) => 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2);
+const outExpo = (k) => (k === 1 ? 1 : 1 - Math.pow(2, -10 * k));
+const brl = (v) => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function tf(el, { x = 0, y = 0, s = 1, r = 0, o = 1, sx, sy } = {}) {
+  const scale = sx !== undefined || sy !== undefined ? `scale(${sx ?? s}, ${sy ?? s})` : `scale(${s})`;
+  el.style.transform = `translate(${x}px, ${y}px) ${scale} rotate(${r}deg)`;
+  el.style.opacity = o;
+}
+
+// Entrada padrão: sobe e aparece.
+function rise(el, t, t0, dur = 0.45, dist = 70) {
+  const k = outCubic(P(t, t0, t0 + dur));
+  tf(el, { y: (1 - k) * dist, o: k });
+}
+
+// Pop com overshoot.
+function pop(el, t, t0, dur = 0.45, extra = {}) {
+  const k = P(t, t0, t0 + dur);
+  const s = k === 0 ? 0 : outBack(k, 2.2);
+  tf(el, { ...extra, s: Math.max(0, s), o: clamp01(k * 4) });
+}
+
+// Divide o texto de um elemento em palavras animáveis (preserva <br>).
+function splitWords(el) {
+  const html = el.innerHTML.split('<br>');
+  el.innerHTML = html.map((ln) => '<span class="line">' + ln.split(' ').map((w) => `<span class="w">${w} </span>`).join('') + '</span>').join('');
+  return [...el.querySelectorAll('.w')];
+}
+function animWords(words, t, t0, step = 0.07) {
+  words.forEach((w, i) => {
+    const k = outCubic(P(t, t0 + i * step, t0 + i * step + 0.5));
+    tf(w, { y: (1 - k) * 110, o: k });
+  });
+}
+
+function caption(prefix, t, t0) {
+  pop($(prefix + 'n'), t, t0, 0.4);
+  animWords(W[prefix], t, t0 + 0.08);
+}
+
+// Cenas: cada uma fica visível em [a - 0.15, b + 0.15] e entra por cima da anterior.
+const SC = TL.scenes;
+const ORDER = [['s1', SC.coldOpen], ['s2', SC.chaos], ['s3', SC.reveal], ['s4', SC.venda], ['s5', SC.fiado],
+  ['s6', SC.offline], ['s7', SC.pedidos], ['s8', SC.lucro], ['s9', SC.zelinho], ['s10', SC.end]];
+const XF = 0.15;
+
+// ---------- preparação única ----------
+const W = {};
+['s4', 's5', 's6', 's7', 's8'].forEach((p) => (W[p] = splitWords($(p + 't'))));
+
+function buildWordmark(el) {
+  el.innerHTML = [...'Zelo'].map((c) => `<span class="ch">${c}</span>`).join('') +
+    [...'PDV'].map((c) => `<span class="ch pdv">${c}</span>`).join('');
+  return [...el.querySelectorAll('.ch')];
+}
+const WM3 = buildWordmark($('s3wm'));
+const WM10 = buildWordmark($('s10wm'));
+
+// Confete determinístico (PRNG com semente fixa).
+let seed = 7;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const CONF = [];
+const confColors = ['#0EA5E9', '#16A34A', '#F59E0B', '#E11D48', '#8B5CF6', '#0B1F3A'];
+for (let i = 0; i < 46; i++) {
+  const el = document.createElement('div');
+  el.className = 'abs confetti';
+  el.style.background = confColors[i % confColors.length];
+  $('confetti').appendChild(el);
+  CONF.push({ el, vx: (rnd() - 0.5) * 1500, vy: -900 - rnd() * 1100, vr: (rnd() - 0.5) * 1400, delay: rnd() * 0.08 });
+}
+
+const BARS = [38, 52, 44, 60, 55, 72, 64, 70, 82, 76, 90, 100];
+BARS.forEach(() => $('s8chart').appendChild(document.createElement('i')));
+const BAR_EL = [...$('s8chart').children];
+
+// ---------- cenas ----------
+function s1(t) {
+  const c = TL.coldOpen;
+  tf($('s1').querySelector('.kicker'), { o: P(t, 0.05, 0.6) * (1 - P(t, 3.1, 3.4)) });
+  const n1 = Math.floor(P(t, c.line1.from, c.line1.to) * c.line1.text.length);
+  const n2 = Math.floor(P(t, c.line2.from, c.line2.to) * c.line2.text.length);
+  $('s1l1').textContent = c.line1.text.slice(0, n1);
+  $('s1l2').textContent = c.line2.text.slice(0, n2);
+  const blink = Math.floor(t * 3) % 2 === 0 ? 1 : 0;
+  $('s1c1').style.opacity = t < c.line2.from ? (t < c.line1.to ? 1 : blink) : 0;
+  $('s1c2').style.opacity = t >= c.line2.from ? (t < c.line2.to ? 1 : blink) : 0;
+  // leve dolly-in
+  const z = 1 + P(t, 0, 3.5) * 0.04;
+  $('s1').style.transform = `scale(${z})`;
+}
+
+function s2(t) {
+  const c = TL.chaos;
+  const suck = inCubic(P(t, c.suck[0], c.suck[1]));
+  const rots = [-8, 5, 4, 7, -4, -6];
+  c.items.forEach((t0, i) => {
+    const el = $('c' + i);
+    const k = P(t, t0, t0 + 0.4);
+    const s = k === 0 ? 0 : outBack(k, 2.6);
+    const wob = Math.sin(t * 9 + i * 1.7) * 2.2 * (k > 0 ? 1 : 0);
+    const shake = t > c.words[0] ? Math.sin(t * 47 + i) * 5 * P(t, c.words[0], c.words[3]) : 0;
+    // sucção para o centro (540, 960)
+    const cx = el.offsetLeft + el.offsetWidth / 2, cy = el.offsetTop + el.offsetHeight / 2;
+    tf(el, { x: (540 - cx) * suck + shake, y: (960 - cy) * suck, s: Math.max(0, s) * (1 - suck), r: rots[i] + wob + suck * 540, o: clamp01(k * 4) });
+  });
+  c.words.forEach((t0, i) => {
+    const el = $('w' + i);
+    const k = outBack(P(t, t0, t0 + 0.32), 1.4);
+    const s = 1 - suck;
+    tf(el, { y: (1 - k) * 150 + (960 - (700 + i * 150)) * suck, s: Math.max(0, s), o: P(t, t0, t0 + 0.1) });
+  });
+  $('s2').style.filter = `brightness(${1 - suck * 0.6})`;
+}
+
+function s3(t) {
+  const c = TL.reveal;
+  const g = outExpo(P(t, c.icon, c.icon + 1.2));
+  tf($('s3glow'), { s: 0.3 + g * 0.9, o: 0.2 + g * 0.8 * (0.85 + 0.15 * Math.sin(t * 3)) });
+  const lk = outCubic(P(t, c.label, c.label + 0.5));
+  $('s3label').style.letterSpacing = lerp(30, 12, lk) + 'px';
+  tf($('s3label'), { o: lk });
+  pop($('s3icon'), t, c.icon, 0.55, { r: (1 - outCubic(P(t, c.icon, c.icon + 0.6))) * -25, y: Math.sin(t * 2.4) * 6 });
+  WM3.forEach((ch, i) => {
+    const k = P(t, c.wordmark + i * 0.045, c.wordmark + i * 0.045 + 0.45);
+    tf(ch, { y: (1 - outBack(k, 1.8)) * 120, o: clamp01(k * 3) });
+  });
+  rise($('s3tag'), t, c.tagline, 0.5, 40);
+}
+
+function s4(t) {
+  const c = TL.venda, a = SC.venda[0];
+  caption('s4', t, a + 0.05);
+  const ph = outCubic(P(t, a + 0.1, a + 0.7));
+  tf($('s4phone'), { y: (1 - ph) * 500, o: ph });
+
+  const prices = [24, 14, 16];
+  let count = 0, total = 0, prevTotal = 0;
+  c.taps.forEach((tp, i) => {
+    const tile = $('t' + i);
+    const press = t >= tp && t < tp + 0.2 ? 1 - Math.sin(P(t, tp, tp + 0.2) * Math.PI) * 0.06 : 1;
+    tf(tile, { s: press });
+    tile.style.borderColor = t >= tp ? 'var(--sky)' : '#E8EDF4';
+    pop($('q' + i), t, tp + 0.05, 0.35);
+    if (t >= tp) { prevTotal = total; count++; total += prices[i]; }
+  });
+  const lastTap = c.taps.filter((x) => t >= x).pop();
+  const shown = lastTap !== undefined ? lerp(prevTotal, total, outCubic(P(t, lastTap, lastTap + 0.3))) : 0;
+  $('s4total').textContent = brl(shown);
+  $('s4items').textContent = count === 1 ? '1 item' : `${count} itens`;
+  tf($('s4btn'), { s: t >= c.pay && t < c.pay + 0.2 ? 0.95 : 1 });
+
+  // toque: posição do dedo muda a cada alvo
+  const targets = [...c.taps.map((tp, i) => ({ tp, x: (i % 2 ? 360 : 26) + 155, y: (i < 2 ? 300 : 624) + 150 })), { tp: c.pay, x: 348, y: 1080 }];
+  let cur = null;
+  targets.forEach((g) => { if (t >= g.tp - 0.25) cur = g; });
+  if (cur && t < c.success) {
+    const rk = P(t, cur.tp, cur.tp + 0.4);
+    $('s4rip').style.left = $('s4touch').style.left = cur.x + 'px';
+    $('s4rip').style.top = $('s4touch').style.top = cur.y + 'px';
+    tf($('s4rip'), { s: 0.3 + rk * 0.9, o: t >= cur.tp ? (1 - rk) * 0.9 : 0 });
+    tf($('s4touch'), { s: t >= cur.tp && t < cur.tp + 0.15 ? 0.8 : 1, o: P(t, cur.tp - 0.25, cur.tp - 0.1) * (1 - P(t, cur.tp + 0.2, cur.tp + 0.35)) });
+  } else {
+    tf($('s4rip'), { o: 0 }); tf($('s4touch'), { o: 0 });
+  }
+
+  const ok = P(t, c.success, c.success + 0.25);
+  tf($('s4ok'), { o: ok, s: 0.96 + 0.04 * outCubic(ok) });
+  $('s4ring').style.strokeDashoffset = 340 * (1 - outCubic(P(t, c.success + 0.05, c.success + 0.5)));
+  $('s4check').style.strokeDashoffset = 80 * (1 - outCubic(P(t, c.success + 0.3, c.success + 0.6)));
+
+  CONF.forEach((p, i) => {
+    const dt = t - c.success - 0.15 - p.delay;
+    if (dt < 0) { tf(p.el, { o: 0 }); return; }
+    const x = 348 + p.vx * dt, y = 520 + p.vy * dt + 1500 * dt * dt;
+    tf(p.el, { x, y, r: p.vr * dt, o: 1 - P(dt, 1.0, 1.4), sx: Math.cos(dt * 12 + i) });
+  });
+}
+
+function s5(t) {
+  const c = TL.fiado, a = SC.fiado[0];
+  caption('s5', t, a + 0.05);
+  rise($('s5card'), t, a + 0.15, 0.55, 300);
+  const pay = outCubic(P(t, c.pay + 0.05, c.pay + 0.5));
+  const owed = 47.5 * outCubic(P(t, c.count[0], c.count[1])) - 20 * pay;
+  $('s5amt').textContent = brl(owed);
+  $('s5amt').style.color = pay > 0.5 ? 'var(--green)' : 'var(--ink)';
+  $('s5bar').style.width = owed + '%';
+  c.rows.forEach((t0, i) => rise($('h' + i), t, t0, 0.35, 40));
+  rise($('h2'), t, c.pay, 0.35, 40);
+  $('h2').style.background = `rgba(22,163,74,${0.12 * (1 - P(t, c.pay + 0.4, c.pay + 1.2))})`;
+  const nk = P(t, c.note, c.note + 0.35);
+  tf($('s5note'), { o: nk, r: -4, s: nk === 0 ? 0.6 : 0.6 + 0.4 * outBack(nk, 2.5) });
+}
+
+function s6(t) {
+  const c = TL.offline, a = SC.offline[0];
+  caption('s6', t, a + 0.05);
+  rise($('s6sub'), t, c.queued[2] + 0.05, 0.4, 60);
+  const off = t >= c.drop && t < c.back;
+  const shake = t >= c.drop && t < c.drop + 0.35 ? Math.sin(t * 90) * 14 * (1 - P(t, c.drop, c.drop + 0.35)) : 0;
+  const wk = outBack(P(t, a + 0.15, a + 0.6), 1.8);
+  tf($('s6wifi'), { x: shake, s: 0.5 + 0.5 * wk, o: clamp01(wk) });
+  const col = off ? '#B8C3D1' : (t >= c.back ? 'var(--green)' : 'var(--sky)');
+  $('s6arcs').setAttribute('stroke', col);
+  $('s6dot').setAttribute('fill', col);
+  const slash = t < c.back ? outCubic(P(t, c.drop, c.drop + 0.25)) : 1 - outCubic(P(t, c.back, c.back + 0.2));
+  $('s6slash').style.strokeDashoffset = 100 * (1 - slash);
+  $('s6slash').style.opacity = slash > 0.01 ? 1 : 0;
+  pop($('s6off'), t, c.drop + 0.1, 0.35);
+  if (t >= c.back) tf($('s6off'), { o: 0 });
+  pop($('s6on'), t, c.back + 0.05, 0.35);
+  c.queued.forEach((t0, i) => {
+    rise($('r' + i), t, t0, 0.35, 60);
+    const p = $('p' + i);
+    const synced = t >= c.synced[i];
+    p.className = 'pill ' + (synced ? 'ok' : 'wait');
+    p.textContent = synced ? '✓ sincronizado' : '☁ na fila';
+    if (synced) pop(p, t, c.synced[i], 0.3); else tf(p, {});
+  });
+}
+
+function s7(t) {
+  const c = TL.pedidos, a = SC.pedidos[0];
+  caption('s7', t, a + 0.05);
+  rise($('s7board'), t, a + 0.15, 0.55, 300);
+  const n = c.cards.filter((x) => t >= x).length;
+  $('s7count').textContent = n === 1 ? '1 pedido' : `${n} pedidos`;
+  // o card mais novo entra no topo e empurra os anteriores para baixo
+  c.cards.forEach((t0, k) => {
+    const el = $('o' + k);
+    let shift = 0;
+    for (let j = k + 1; j < c.cards.length; j++) shift += inOutCubic(P(t, c.cards[j], c.cards[j] + 0.35));
+    const drop = outBack(P(t, t0, t0 + 0.5), 1.3);
+    el.style.top = '140px';
+    tf(el, { y: shift * 274 + (1 - drop) * -520, o: P(t, t0, t0 + 0.12), r: (1 - drop) * (k % 2 ? 4 : -4) });
+  });
+  pop($('o0done'), t, c.ready, 0.35);
+  rise($('s7foot'), t, c.cards[0] + 0.3, 0.4, 30);
+}
+
+function s8(t) {
+  const c = TL.lucro, a = SC.lucro[0];
+  caption('s8', t, a + 0.05);
+  rise($('s8card'), t, a + 0.15, 0.55, 300);
+  const ck = outCubic(P(t, c.count[0], c.count[1]));
+  const rk = outCubic(P(t, a + 0.45, c.count[0] + 0.3));
+  $('s8rev').textContent = brl(48750.9 * rk);
+  $('s8exp').textContent = '− ' + brl(36190.55 * rk);
+  $('s8profit').textContent = brl(12560.35 * ck);
+  pop($('s8up'), t, c.count[1] - 0.05, 0.4);
+  BAR_EL.forEach((b, i) => {
+    const t0 = lerp(c.bars[0], c.bars[1], i / (BAR_EL.length - 1));
+    const k = outBack(P(t, t0, t0 + 0.4), 1.5);
+    b.style.height = BARS[i] + '%';
+    tf(b, { sy: Math.max(0, k), sx: 1, o: 1 });
+  });
+}
+
+function s9(t) {
+  const c = TL.zelinho;
+  const k = P(t, c.enter, c.enter + 0.7);
+  const x = (1 - outBack(k, 1.6)) * 1100;
+  const bob = Math.sin((t - c.enter) * 5) * 10;
+  tf($('s9m'), { x, y: bob, r: (1 - outCubic(k)) * 12 + Math.sin(t * 4) * 1.5 });
+  tf($('s9who'), { o: P(t, c.enter + 0.2, c.enter + 0.6) });
+  c.bubbles.forEach((t0, i) => pop($('b' + i), t, t0, 0.4));
+}
+
+function s10(t) {
+  const c = TL.end;
+  const g = outExpo(P(t, c.icon, c.icon + 1.5));
+  tf($('s10glow'), { s: 0.4 + g * 0.7, o: 0.25 + 0.6 * g });
+  pop($('s10icon'), t, c.icon, 0.5, { y: Math.sin(t * 2.2) * 5 });
+  WM10.forEach((ch, i) => {
+    const k = P(t, c.icon + 0.15 + i * 0.04, c.icon + 0.6 + i * 0.04);
+    tf(ch, { y: (1 - outBack(k, 1.8)) * 90, o: clamp01(k * 3) });
+  });
+  pop($('s10big'), t, c.title, 0.45);
+  rise($('s10sub'), t, c.sub, 0.45, 40);
+  rise($('s10url'), t, c.url, 0.45, 60);
+  const sh = P(t, c.url + 0.5, c.url + 1.3);
+  $('s10shine').style.left = lerp(-200, 900, inOutCubic(sh)) + 'px';
+}
+
+const RENDER = { s1, s2, s3, s4, s5, s6, s7, s8, s9, s10 };
+
+window.render = function (t) {
+  ORDER.forEach(([id, [a, b]], i) => {
+    const el = $(id);
+    const visible = t >= a - XF && t < b + XF;
+    el.style.visibility = visible ? 'visible' : 'hidden';
+    el.style.zIndex = i + 1;
+    if (!visible) return;
+    // transição em íris: a cena nova se abre num círculo a partir do centro
+    const k = i === 0 ? 1 : inOutCubic(P(t, a - XF, a + XF));
+    el.style.clipPath = k < 1 ? `circle(${k * 1110}px at 50% 50%)` : 'none';
+    if (id !== 's1') el.style.transform = `scale(${lerp(1.08, 1, outCubic(k))})`;
+    RENDER[id](t);
+  });
+  const [f0, f1] = TL.end.fadeOut;
+  $('fade').style.opacity = Math.max(1 - P(t, 0, 0.25), P(t, f0, f1));
+  $('fade').style.zIndex = 100;
+};
+
+window.ready = Promise.all([
+  document.fonts.load('800 40px Inter'), document.fonts.load('700 40px Caveat'),
+  document.fonts.load('700 40px Mono'), document.fonts.load('40px "Noto Color Emoji"', '🍔🥤🍟🍧💬👋'),
+  ...[...document.images].map((im) => (im.complete ? Promise.resolve() : new Promise((r) => { im.onload = im.onerror = r; })))
+]).then(() => { window.render(0); return true; });
+</script>
+</body>
+</html>
