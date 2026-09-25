@@ -17,6 +17,25 @@ O erro record/JSONB da função de delivery foi corrigido por
 `20260904222157_delivery_pricing_rule_jsonb.sql`, sem mudar grants. Advisors
 e limites do lint estão detalhados em `docs/audits/2026-09-04-zelopdv.md`.
 
+## Retenção de `zelochat_webhook_events_raw` — 2026-09-25
+
+Migration `20260925140000_purge_zelochat_webhook_events_raw_retention.sql`
+(ainda não aplicada no banco vinculado):
+
+- Índice parcial `zelochat_webhook_events_raw_processed_retention_idx`
+  `(processed_at, id) WHERE processed_at IS NOT NULL` — `IF NOT EXISTS`
+  porque já existe no projeto compartilhado.
+- RPC `purge_zelochat_webhook_events_raw_batch(interval, int)`:
+  SECURITY DEFINER, `search_path = ''`, EXECUTE só para `service_role`.
+  Apaga no máximo `p_batch_size` (default 500, clamp 1..2000) linhas com
+  `processed_at < now() - p_keep_interval` (default 3 dias, mínimo 1 dia).
+  Unprocessed ficam. Sem varredura de `payload`.
+- PROCEDURE `purge_zelochat_webhook_events_raw_sweep` (também só
+  `service_role`) faz até 20 lotes com COMMIT entre eles.
+- `pg_cron` `purge-zelochat-webhook-events-raw` a cada 15 minutos.
+- `delete_account` continua apagando a tabela por `empresa_id` no purge
+  de tenant; não é retenção.
+
 ## Fundação de persistência iFood — migration local de 2026-09-15
 
 A Task 3 acrescenta a migration ainda não aplicada

@@ -1,5 +1,14 @@
 # ZeloPDV.memory
 
+- Retenção de `zelochat_webhook_events_raw` (2026-09-25): processadas com
+  mais de 3 dias saem em lotes de até 500 pela RPC
+  `purge_zelochat_webhook_events_raw_batch` (índice
+  `processed_retention_idx`). Cron 15 min chama a PROCEDURE
+  `purge_zelochat_webhook_events_raw_sweep` com COMMIT por lote. Unprocessed
+  não são apagados. DELETE PostgREST unbounded nesta tabela queima Disk IO
+  no Nano; não varrer `payload` em produção. Migration
+  `20260925140000_purge_zelochat_webhook_events_raw_retention.sql`.
+
 - Materialização iFood (2026-09-22): `materialize_ifood_sale_v1` roda com
   `search_path=''`. Triggers invocados na inserção de `vendas` também precisam
   qualificar tabelas ou definir o próprio search path. `set_numero_venda`

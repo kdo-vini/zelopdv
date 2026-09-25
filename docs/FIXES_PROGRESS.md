@@ -1,5 +1,13 @@
 # Fixes Progress
 
+- [ ] FX-SUPABASE-DISKIO-WEBHOOK-RAW-01 (2026-09-25) — pressão de Disk IO no
+  projeto compartilhado Nano/Free vinha de DELETE PostgREST grande em
+  `zelochat_webhook_events_raw`, não de índice ausente. Migration
+  `20260925140000` adiciona RPC/PROCEDURE em lote (3 dias, 500/lote, cron
+  15 min no índice `processed_retention_idx`) e remove índices btree
+  duplicados de caixa/vendas. Sem consumidor app de retenção neste repo;
+  `delete_account` por tenant permanece. PR only — não aplicada em produção.
+
 - [x] FX-ADMIN-CORS-PREFLIGHT-01 (2026-09-24) — chamadas do dashboard para
   `/api/admin/*` usavam `https://www.zelopdv.com.br`; a Vercel respondia ao
   preflight com `308` para o apex, bloqueado pelo navegador. A origem da API
