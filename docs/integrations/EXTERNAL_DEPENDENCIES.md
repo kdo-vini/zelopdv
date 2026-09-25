@@ -110,17 +110,32 @@
 
 - envio de WhatsApp no onboarding
 - dependencia externa de delecao final de conta, segundo as migrations
+- o projeto compartilhado também guarda o log bruto
+  `public.zelochat_webhook_events_raw` (payload jsonb)
 
 **Codigo-chave**
 
 - `src/lib/server/whatsapp.js`
 - `src/routes/api/billing/start-trial/+server.js`
 - `.ai/migrations/account_deletion_grace_2026_05_31.sql`
+- `supabase/migrations/20260925140000_purge_zelochat_webhook_events_raw_retention.sql`
+
+**Retenção do webhook raw**
+
+- Processadas com mais de 3 dias saem em lotes de até 500 via
+  `purge_zelochat_webhook_events_raw_batch` (índice
+  `zelochat_webhook_events_raw_processed_retention_idx`).
+- `pg_cron` job `purge-zelochat-webhook-events-raw` a cada 15 min chama
+  `purge_zelochat_webhook_events_raw_sweep` (COMMIT por lote, máx. 20).
+- Unprocessed não entram nesse purge. Não varrer `payload` em produção.
+- DELETE PostgREST unbounded nesta tabela recria pressão de Disk IO no Nano.
 
 **Quando cai**
 
 - onboarding via WhatsApp degrada
 - possivel impacto no purge final de conta agendada, se o sweeper externo morar la
+- se o cron de retenção parar, `zelochat_webhook_events_raw` volta a crescer e
+  um delete manual grande volta a queimar Disk IO
 
 ## OpenAI
 

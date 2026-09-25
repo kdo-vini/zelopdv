@@ -1,5 +1,27 @@
 # ZeloPDV — Foco atual
 
+## Sessão 2026-09-25 — Retenção em lote de `zelochat_webhook_events_raw`
+
+Disk IO Budget do projeto compartilhado (Nano/Free) estava sendo queimado
+por DELETE PostgREST grande, sem LIMIT, em `public.zelochat_webhook_events_raw`
+(payload jsonb). Este repo **não** tem consumidor app dessa deleção de
+retenção — só `delete_account` por `empresa_id`. A correção fica no banco:
+
+- RPC `purge_zelochat_webhook_events_raw_batch` (SECURITY DEFINER, só
+  `service_role`) apaga no máximo 500 linhas processadas com mais de **3 dias**,
+  via `zelochat_webhook_events_raw_processed_retention_idx`.
+- PROCEDURE `purge_zelochat_webhook_events_raw_sweep` dá COMMIT após cada
+  lote (máx. 20) para o cron não virar um delete de 10k numa transação.
+- `pg_cron` a cada 15 min, job `purge-zelochat-webhook-events-raw`.
+- Unprocessed (`processed_at IS NULL`) não são apagados.
+- Mesma migration remove índices btree duplicados exatos de caixa/vendas
+  (após `pg_get_indexdef`). RLS `auth_rls_initplan` em gerente/offline
+  ficou de fora — não é wrap mecânico.
+
+Migration `20260925140000_purge_zelochat_webhook_events_raw_retention.sql`
+ainda **não** aplicada em produção (PR only). Sem upgrade de compute e sem
+analytics em `payload`.
+
 ## Sessão 2026-09-24 — Conteúdo GEO, leva 1 (branch `feat/content-wave-1`)
 
 PostHog: o ChatGPT é a origem que traz cliente; anúncio não gerou cadastro em
