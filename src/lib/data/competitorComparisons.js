@@ -354,44 +354,44 @@ export const competitorComparisons = {
 
   whatsmenu: {
     slug: 'vs-whatsmenu',
-    updatedAt: '2026-09-23',
+    updatedAt: '2026-09-25',
     competitor: 'WhatsMenu',
-    priceCheckedAt: 'junho de 2026',
+    priceCheckedAt: 'setembro de 2026',
     meta: {
       title: 'Zelo PDV vs WhatsMenu: PDV Offline e Modular por R$ 59 | Zelo PDV',
       description:
-        'WhatsMenu custa R$ 97/mês em plano único e online. Zelo PDV é R$ 59/mês, funciona offline e você paga só pelos módulos que usa. Compare e teste 14 dias grátis.',
+        'WhatsMenu custa R$ 197/mês no plano mensal (ou 12x R$ 97 no anual) e é online. Zelo PDV é R$ 59/mês, funciona offline e você paga só pelos módulos que usa. Compare e teste 14 dias grátis.',
       canonical: `${SITE_URL}/vs-whatsmenu`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs WhatsMenu',
     h1: 'Zelo PDV vs WhatsMenu: caixa que funciona offline, por menos',
     subtitle:
-      'O WhatsMenu é uma boa opção de cardápio digital com caixa para delivery via WhatsApp, em plano único de R$ 97/mês. O Zelo PDV custa R$ 59/mês, é modular e foi feito para continuar vendendo mesmo quando a internet cai.',
+      'O WhatsMenu é uma boa opção de cardápio digital com caixa para delivery via WhatsApp, por R$ 197/mês no plano mensal (ou 12x R$ 97 no plano anual). O Zelo PDV custa R$ 59/mês, é modular e foi feito para continuar vendendo mesmo quando a internet cai.',
     editorialThesis:
-      'O WhatsMenu é uma alternativa honesta para delivery por WhatsApp em plano único. O Zelo PDV pesa menos no mês e é melhor para quem quer começar pelo caixa offline e ativar módulos só quando precisar; se o foco é pedido por WhatsApp, o WhatsMenu tem mais especialização.',
+      'O WhatsMenu é uma alternativa honesta para delivery por WhatsApp, com plano mensal ou anual. O Zelo PDV pesa menos no mês — mesmo contra o equivalente mensal do plano anual do WhatsMenu — e é melhor para quem quer começar pelo caixa offline e ativar módulos só quando precisar; se o foco é pedido por WhatsApp, o WhatsMenu tem mais especialização.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
-      competitor: 'R$ 97/mês (plano único)',
-      note: 'Preço do WhatsMenu consultado no site oficial (whatsmenu.com.br) em junho de 2026: plano único de R$ 97/mês. Sujeito a alteração.'
+      competitor: 'R$ 197/mês no mensal ou 12x R$ 97 no anual',
+      note: 'Preço do WhatsMenu consultado no site oficial (whatsmenu.com.br) em setembro de 2026: R$ 197/mês no plano mensal, ou 12x R$ 97/mês (R$ 1.164 no ano) no plano anual, com parcelamento no cartão. Sujeito a alteração.'
     },
-    introTitle: 'Plano único pode custar caro pelo que você não usa',
+    introTitle: 'Mensal ou anual, o preço ainda pesa mais que o do Zelo',
     introParagraphs: [
-      'O WhatsMenu resolve bem o delivery por WhatsApp e inclui sistema de caixa, estoque e app de garçom em um plano único de R$ 97/mês. É uma proposta honesta — mas "plano único" significa que você paga por tudo, mesmo que use só uma parte.',
+      'O WhatsMenu resolve bem o delivery por WhatsApp e inclui sistema de caixa, estoque e app de garçom. Hoje o preço no site oficial é R$ 197/mês no plano mensal, ou 12x R$ 97/mês se você fechar o plano anual — nos dois casos, é um pacote fechado: você paga pelo conjunto todo, mesmo que use só uma parte.',
       'Para um negócio enxuto, isso é o oposto do ideal: você quer começar barato e crescer conforme a necessidade. E há um ponto que o WhatsMenu não destaca: a operação é via navegador e não há menção a modo offline, então uma queda de internet no horário de pico pode travar o caixa.',
       'O Zelo PDV parte de R$ 59/mês e é modular — você ativa mesas, ZeloMenu ou acessos só quando fizer sentido. E continua registrando vendas offline, sincronizando quando a conexão volta.'
     ],
     comparisonIntro:
-      'Comparação ponto a ponto entre Zelo PDV e WhatsMenu, com base no que cada um divulga publicamente em junho de 2026.',
+      'Comparação ponto a ponto entre Zelo PDV e WhatsMenu, com base no que cada um divulga publicamente em setembro de 2026.',
     comparisonRows: [
-      { feature: 'Preço', competitor: 'R$ 97/mês (plano único)', zelo: 'R$ 59/mês', advantage: 'zelo' },
+      { feature: 'Preço', competitor: 'R$ 197/mês (ou 12x R$ 97 no anual)', zelo: 'R$ 59/mês', advantage: 'zelo' },
       { feature: 'Funciona sem internet (offline)', competitor: 'Não anuncia operação offline', zelo: 'Continua vendendo offline e sincroniza depois', advantage: 'zelo' },
-      { feature: 'Modelo de cobrança', competitor: 'Plano único com tudo junto', zelo: 'Base + módulos opcionais (paga só o que usa)', advantage: 'zelo' },
+      { feature: 'Modelo de cobrança', competitor: 'Pacote fechado, mensal ou anual', zelo: 'Base + módulos opcionais (paga só o que usa)', advantage: 'zelo' },
       { feature: 'Controle de fiado', competitor: 'Não destacado', zelo: 'Nativo, incluso na base', advantage: 'zelo' },
       { feature: 'Foco em pedidos por WhatsApp', competitor: 'Forte nesse ponto', zelo: 'Frente de caixa e gestão geral', advantage: 'tie' }
     ],
     reasonsTitle: 'Por que o Zelo PDV faz mais sentido para um negócio enxuto',
     reasons: [
-      { icon: '💸', title: 'R$ 59 contra R$ 97 por mês', description: 'O Zelo é mais barato no mês e ainda permite crescer por módulo, em vez de pagar um plano único cheio desde o começo.' },
+      { icon: '💸', title: 'R$ 59 contra R$ 97–197 por mês', description: 'Mesmo no plano anual do WhatsMenu (12x R$ 97), o Zelo ainda é mais barato; no mensal (R$ 197), a diferença é maior ainda. E o Zelo permite crescer por módulo, em vez de pagar um pacote fechado desde o começo.' },
       { icon: '📶', title: 'Não para quando a internet cai', description: 'O WhatsMenu não anuncia operação offline. O Zelo PDV continua vendendo sem internet e sincroniza depois — essencial em horário de pico.' },
       { icon: '🧩', title: 'Modular de verdade', description: 'Você começa na base de R$ 59 e ativa mesas, ZeloMenu ou acessos só quando precisar. Sem pagar por recurso que não usa.' },
       { icon: '📒', title: 'Fiado e gestão na base', description: 'Controle de fiado, estoque e financeiro já vêm no Zelo. Você organiza o caixa do negócio inteiro, não só os pedidos de delivery.' }
@@ -399,7 +399,7 @@ export const competitorComparisons = {
     fairnessNote:
       'Para ser justo: o WhatsMenu é uma opção sólida e sem comissão para quem foca em delivery por WhatsApp. O ponto deste comparativo é preço, modularidade e operação offline — onde o Zelo PDV leva vantagem.',
     faqSpecific: [
-      { question: 'O Zelo PDV é mais barato que o WhatsMenu?', answer: 'Sim. Em junho de 2026, o WhatsMenu cobra R$ 97/mês em plano único, segundo o site oficial. O Zelo PDV custa R$ 59/mês e ainda é modular, então você paga só pelos módulos que usar.' },
+      { question: 'O Zelo PDV é mais barato que o WhatsMenu?', answer: 'Sim. Em setembro de 2026, o WhatsMenu cobra R$ 197/mês no plano mensal (ou 12x R$ 97/mês no plano anual), segundo o site oficial. O Zelo PDV custa R$ 59/mês e ainda é modular, então você paga só pelos módulos que usar.' },
       { question: 'O WhatsMenu funciona offline?', answer: 'O WhatsMenu não anuncia operação offline; é um sistema baseado em navegador. O Zelo PDV foi feito para continuar registrando vendas mesmo sem internet.' },
       { question: 'O Zelo PDV faz pedidos por WhatsApp como o WhatsMenu?', answer: 'O foco do Zelo é a frente de caixa e a gestão do negócio (vendas, fiado, estoque, financeiro). O WhatsMenu é especializado em pedidos por WhatsApp; se esse é o seu único objetivo, ele atende bem. Para controlar o caixa inteiro de forma barata e offline, o Zelo resolve.' },
       { question: 'Posso testar o Zelo PDV antes de pagar?', answer: 'Sim. São 14 dias grátis, sem cartão de crédito. Você cria a conta e usa a operação real do balcão durante o período.' }
@@ -477,44 +477,44 @@ export const competitorComparisons = {
 
   yooga: {
     slug: 'vs-yooga',
-    updatedAt: '2026-09-23',
+    updatedAt: '2026-09-25',
     competitor: 'Yooga',
-    priceCheckedAt: 'junho de 2026',
+    priceCheckedAt: 'setembro de 2026',
     meta: {
       title: 'Zelo PDV vs Yooga: Sistema para Restaurante por R$ 59/mês | Zelo PDV',
       description:
-        'Yooga parte de R$ 249/mês e é 100% online. Zelo PDV é R$ 59/mês, funciona offline e tem preço transparente. Compare e teste 14 dias grátis.',
+        'Yooga não publica mais preço no site (sob consulta); em junho de 2026 os planos iam de R$ 249 a R$ 349/mês. Zelo PDV é R$ 59/mês, com preço público, e funciona offline. Compare e teste 14 dias grátis.',
       canonical: `${SITE_URL}/vs-yooga`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs Yooga',
     h1: 'Zelo PDV vs Yooga: a mesma operação de restaurante por uma fração do preço',
     subtitle:
-      'A Yooga é um sistema de restaurante completo, mas o plano de entrada custa R$ 249/mês e a operação é 100% online. O Zelo PDV entrega frente de caixa, mesas, fiado e financeiro por R$ 59/mês, com preço transparente e funcionando offline.',
+      'A Yooga é um sistema de restaurante completo, mas hoje o preço não é mais público no site — é preciso falar com um especialista; em junho de 2026, os planos iam de R$ 249 a R$ 349/mês. O Zelo PDV entrega frente de caixa, mesas, fiado e financeiro por R$ 59/mês, com preço público e transparente, funcionando offline.',
     editorialThesis:
-      'A Yooga é um sistema maduro para restaurantes com operação mais estruturada. O Zelo PDV é mais simples e barato para pequeno negócio que precisa vender, controlar fiado e fechar caixa; em recursos avançados para redes, a Yooga fica à frente.',
+      'A Yooga é um sistema maduro para restaurantes com operação mais estruturada, mas hoje esconde o preço atrás de uma conversa comercial. O Zelo PDV é mais simples, mais barato e com preço público para o pequeno negócio que precisa vender, controlar fiado e fechar caixa; em recursos avançados para redes, a Yooga fica à frente.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
-      competitor: 'a partir de R$ 249/mês',
-      note: 'Preço da Yooga consultado no site oficial (yooga.com.br/planos) em junho de 2026: planos de R$ 249 a R$ 349/mês (plano Premium sob consulta). Sujeito a alteração.'
+      competitor: 'sob consulta (R$ 249 a R$ 349/mês em junho de 2026)',
+      note: 'Em setembro de 2026, o site oficial (yooga.com.br/planos) não exibe mais valores: cada plano (Clube, Básico, Essencial, Completo) mostra apenas o botão "Falar com especialista". Em junho de 2026, os mesmos planos eram anunciados de R$ 249 a R$ 349/mês (Premium sob consulta). Sujeito a nova alteração.'
     },
-    introTitle: 'Quando o sistema de restaurante custa mais que o necessário',
+    introTitle: 'Quando o preço nem aparece mais no site',
     introParagraphs: [
-      'A Yooga é um produto maduro para restaurantes, com PDV, delivery, mesas e fiscal. Mas o ponto de partida é alto: o plano Básico custa R$ 249/mês e o Completo chega a R$ 349/mês. Para muita lanchonete, hamburgueria ou delivery próprio, isso é caro logo no começo.',
+      'A Yooga é um produto maduro para restaurantes, com PDV, delivery, mesas e fiscal. Mas desde meados de 2026 o site parou de exibir preço: os planos Clube, Básico, Essencial e Completo aparecem só com o botão "Falar com especialista". Em junho de 2026, os mesmos planos eram anunciados de R$ 249 (Básico) a R$ 349/mês (Completo).',
       'A operação também é cloud, sem modo offline documentado — e há relatos públicos de clientes no Reclame Aqui sobre cobrança acima do valor anunciado. Para um negócio pequeno, previsibilidade de preço e operar sem depender de internet fazem toda a diferença.',
-      'O Zelo PDV parte de R$ 59/mês, com preço público e transparente, e funciona offline. Você tem a frente de caixa, o controle de fiado e o financeiro sem precisar pagar quatro vezes mais nem torcer para a internet não cair no pico.'
+      'O Zelo PDV parte de R$ 59/mês, com preço público e transparente, e funciona offline. Você sabe exatamente quanto vai pagar antes de assinar, sem precisar falar com um vendedor, e continua vendendo mesmo se a internet cair no pico.'
     ],
     comparisonIntro:
-      'Comparação ponto a ponto entre Zelo PDV e Yooga, com base no que cada um divulga publicamente em junho de 2026.',
+      'Comparação ponto a ponto entre Zelo PDV e Yooga, com base no que cada um divulga publicamente em setembro de 2026 (preço da Yooga registrado em junho de 2026, já que o site atual não publica mais valores).',
     comparisonRows: [
-      { feature: 'Preço de entrada', competitor: 'A partir de R$ 249/mês', zelo: 'R$ 59/mês', advantage: 'zelo' },
+      { feature: 'Preço de entrada', competitor: 'Sob consulta (R$ 249/mês em junho de 2026)', zelo: 'R$ 59/mês', advantage: 'zelo' },
       { feature: 'Funciona sem internet (offline)', competitor: 'Não anuncia operação offline', zelo: 'Continua vendendo offline e sincroniza depois', advantage: 'zelo' },
-      { feature: 'Previsibilidade de preço', competitor: 'Relatos públicos de cobrança acima do anunciado', zelo: 'Preço público fixo, sem surpresa', advantage: 'zelo' },
+      { feature: 'Previsibilidade de preço', competitor: 'Preço não público; relatos de cobrança acima do anunciado', zelo: 'Preço público fixo, sem surpresa', advantage: 'zelo' },
       { feature: 'Modelo de cobrança', competitor: 'Escada de planos por funcionalidade', zelo: 'Base + módulos opcionais', advantage: 'zelo' },
       { feature: 'Recursos avançados para rede (KDS, IA)', competitor: 'Disponível no plano Premium', zelo: 'Foco em pequeno e médio negócio', advantage: 'competitor' }
     ],
     reasonsTitle: 'Por que trocar a Yooga pelo Zelo PDV',
     reasons: [
-      { icon: '💸', title: 'Cerca de 4x mais barato no piso', description: 'R$ 59/mês contra R$ 249/mês do plano de entrada da Yooga. Para quem está começando, é a conta de meses de sistema economizada.' },
+      { icon: '💸', title: 'Preço público contra "fale com um vendedor"', description: 'O Zelo custa R$ 59/mês, sem mistério. A Yooga não publica mais preço no site; em junho de 2026, o plano de entrada era R$ 249/mês — quase 4x o valor do Zelo.' },
       { icon: '📶', title: 'Vende mesmo sem internet', description: 'A Yooga não anuncia operação offline. O Zelo PDV continua registrando vendas sem conexão e sincroniza quando a internet volta.' },
       { icon: '🏷️', title: 'Preço transparente', description: 'Há relatos públicos de clientes da Yooga no Reclame Aqui sobre cobrança acima do anunciado. O Zelo comunica R$ 59/mês fixos, sem pegadinha.' },
       { icon: '🧩', title: 'Modular', description: 'Você ativa mesas, ZeloMenu ou acessos só quando precisar, em vez de subir de plano inteiro por uma função.' }
@@ -522,70 +522,70 @@ export const competitorComparisons = {
     fairnessNote:
       'Para ser justo: a Yooga é um sistema completo e tem recursos avançados (como KDS e IA no Premium) para operações maiores. Este comparativo é para quem busca preço de pequeno negócio, transparência e operação offline.',
     faqSpecific: [
-      { question: 'Quanto custa a Yooga comparada ao Zelo PDV?', answer: 'Em junho de 2026, a Yooga divulga planos de R$ 249 a R$ 349/mês no site oficial (Premium sob consulta). O Zelo PDV custa R$ 59/mês fixos, com preço público.' },
+      { question: 'Quanto custa a Yooga comparada ao Zelo PDV?', answer: 'Hoje (setembro de 2026), a Yooga não publica mais preço no site — os planos aparecem como "sob consulta" após falar com um especialista. Em junho de 2026, os mesmos planos eram anunciados de R$ 249 a R$ 349/mês. O Zelo PDV custa R$ 59/mês fixos, com preço público.' },
       { question: 'A Yooga funciona offline?', answer: 'A Yooga não documenta modo offline; é um sistema cloud. O Zelo PDV foi feito para continuar vendendo mesmo sem internet.' },
-      { question: 'O preço da Yooga é transparente?', answer: 'A Yooga publica seus planos, mas há relatos de clientes no Reclame Aqui sobre cobrança acima do valor anunciado. O Zelo PDV trabalha com preço público fixo de R$ 59/mês.' },
+      { question: 'O preço da Yooga é transparente?', answer: 'Em setembro de 2026, a Yooga não publica mais valores no site (é preciso falar com um especialista), e há relatos de clientes no Reclame Aqui sobre cobrança acima do valor antes anunciado. O Zelo PDV trabalha com preço público fixo de R$ 59/mês.' },
       { question: 'O Zelo PDV serve para restaurante com mesas?', answer: 'Sim. O Zelo tem módulo de mesas e comandas, além de frente de caixa, fiado e financeiro. Para redes grandes com necessidades muito específicas, a Yooga tem recursos voltados a esse perfil.' }
     ],
     sources: [
       { label: 'Yooga — Planos (oficial)', url: 'https://yooga.com.br/planos/' },
-      { label: 'Yooga — Planos e preços (blog oficial)', url: 'https://blog.yooga.com.br/planos-e-precos/' },
+      { label: 'Yooga — Planos e preços (blog oficial, valores de junho de 2026)', url: 'https://blog.yooga.com.br/planos-e-precos/' },
       { label: 'Yooga — Reclame Aqui (relatos de clientes)', url: 'https://www.reclameaqui.com.br/empresa/yooga-tecnologia/lista-reclamacoes/' }
     ],
     finalCtaTitle: 'Sistema de restaurante por R$ 59/mês, sem surpresa',
     finalCtaText:
-      'Teste o Zelo PDV por 14 dias grátis, sem cartão, e compare na prática com o que você pagaria em um sistema de R$ 249/mês.'
+      'Teste o Zelo PDV por 14 dias grátis, sem cartão, e compare na prática com um sistema cujo preço de entrada era R$ 249/mês em junho de 2026 — e que hoje só aparece "sob consulta".'
   },
 
   sisfood: {
     slug: 'vs-sisfood',
-    updatedAt: '2026-09-23',
+    updatedAt: '2026-09-25',
     competitor: 'SisFood',
-    priceCheckedAt: 'junho de 2026',
+    priceCheckedAt: 'setembro de 2026',
     meta: {
       title: 'Zelo PDV vs SisFood: PDV Offline e Mais Barato | Zelo PDV',
       description:
-        'SisFood parte de R$ 149/mês e é 100% cloud, dependendo de internet. Zelo PDV é R$ 59/mês e funciona offline. Compare e teste 14 dias grátis.',
+        'SisFood parte de R$ 149,90/mês. Zelo PDV é R$ 59/mês, é modular e continua vendendo mesmo offline. Compare e teste 14 dias grátis.',
       canonical: `${SITE_URL}/vs-sisfood`
     },
     heroBadge: 'Comparativo honesto · Zelo PDV vs SisFood',
-    h1: 'Zelo PDV vs SisFood: caixa que não para sem internet, por menos',
+    h1: 'Zelo PDV vs SisFood: caixa mais barato, com offline mais completo',
     subtitle:
-      'O SisFood é um sistema completo para food service, mas parte de R$ 149,90/mês e, segundo a própria empresa, é 100% cloud e depende de internet estável. O Zelo PDV custa R$ 59/mês e foi feito para continuar vendendo mesmo offline.',
+      'O SisFood é um sistema completo para food service e parte de R$ 149,90/mês. O próprio site hoje anuncia uma contingência offline limitada a vendas em dinheiro, com NFC-e, TEF e integração com iFood dependendo de internet. O Zelo PDV custa R$ 59/mês e foi feito para continuar vendendo mesmo offline.',
     editorialThesis:
-      'O SisFood combina PDV, cardápio digital, robô de WhatsApp e módulos fiscais para food service. O Zelo PDV aposta em uma base menor, mais barata e com contingência offline para o balcão; quem precisa de fiscal/totem pode preferir o SisFood.',
+      'O SisFood combina PDV, cardápio digital, robô de WhatsApp e módulos fiscais para food service, e desde meados de 2026 também anuncia uma contingência offline para vendas em dinheiro. O Zelo PDV aposta em uma base menor, mais barata e modular, com contingência offline mais abrangente; quem precisa de fiscal/totem/robô de WhatsApp integrados pode preferir o SisFood.',
     priceAnchor: {
       zelo: 'R$ 59/mês',
       competitor: 'a partir de R$ 149,90/mês',
-      note: 'Preço do SisFood consultado no site oficial (sisfood.com.br) em junho de 2026: a partir de R$ 149,90/mês (a própria empresa cita planos superiores até cerca de R$ 249,90/mês). NFC-e, NF-e e totem são módulos à parte. Sujeito a alteração.'
+      note: 'Preço do SisFood consultado no site oficial (sisfood.com.br) em setembro de 2026: a partir de R$ 149,90/mês. NFC-e, NF-e e totem são módulos à parte. Sujeito a alteração.'
     },
-    introTitle: 'Internet estável nem sempre existe no horário de pico',
+    introTitle: 'Offline hoje os dois têm — mas com alcance bem diferente',
     introParagraphs: [
-      'O SisFood entrega PDV, cardápio digital, robô de WhatsApp e fiscal em um pacote para restaurantes, partindo de R$ 149,90/mês. É um produto competente — mas a própria empresa descreve o sistema como 100% cloud, com dependência de internet estável e capacidade offline limitada.',
-      'Para quem opera em bairro com sinal instável, ou enfrenta picos de movimento em que a rede engasga, isso é um risco real: se a internet cai, o caixa para. Além disso, módulos como NFC-e, NF-e e totem de autoatendimento são cobrados à parte.',
-      'O Zelo PDV parte de R$ 59/mês e foi desenhado para o cenário oposto: continuar registrando vendas offline e sincronizar quando a conexão volta. Você não fica refém da internet nem do plano mais caro para ter o básico funcionando.'
+      'O SisFood entrega PDV, cardápio digital, robô de WhatsApp e fiscal em um pacote para restaurantes, partindo de R$ 149,90/mês. Desde meados de 2026, o próprio site também anuncia uma contingência offline: no modelo "Web otimizado", o caixa continua vendendo em dinheiro se a internet cair, mas o próprio material do SisFood avisa que recursos como NFC-e, TEF e integração com iFood continuam dependendo de conexão.',
+      'Isso reduz o risco de caixa travado, mas ainda deixa parte da operação (nota fiscal, maquininha integrada, pedidos via iFood) sujeita à internet. Além disso, módulos como NFC-e, NF-e e totem de autoatendimento são cobrados à parte, e o plano de entrada já custa mais que o dobro do Zelo PDV.',
+      'O Zelo PDV parte de R$ 59/mês e foi desenhado para continuar registrando vendas offline e sincronizar quando a conexão volta. Você paga menos pela base e ativa só os módulos que fizerem sentido para o seu negócio.'
     ],
     comparisonIntro:
-      'Comparação ponto a ponto entre Zelo PDV e SisFood, com base no que cada um divulga publicamente em junho de 2026.',
+      'Comparação ponto a ponto entre Zelo PDV e SisFood, com base no que cada um divulga publicamente em setembro de 2026.',
     comparisonRows: [
       { feature: 'Preço de entrada', competitor: 'A partir de R$ 149,90/mês', zelo: 'R$ 59/mês', advantage: 'zelo' },
-      { feature: 'Funciona sem internet (offline)', competitor: '100% cloud, depende de internet estável (info da própria empresa)', zelo: 'Continua vendendo offline e sincroniza depois', advantage: 'zelo' },
+      { feature: 'Funciona sem internet (offline)', competitor: 'Contingência para vendas em dinheiro; NFC-e, TEF e iFood dependem de internet (info da própria empresa)', zelo: 'Continua vendendo offline e sincroniza depois', advantage: 'zelo' },
       { feature: 'Modelo de cobrança', competitor: 'Núcleo "tudo incluído" + fiscal/totem à parte', zelo: 'Base + módulos opcionais', advantage: 'zelo' },
       { feature: 'Fidelidade', competitor: 'Sem fidelidade obrigatória', zelo: 'Cancele quando quiser', advantage: 'tie' },
       { feature: 'Totem de autoatendimento', competitor: 'Disponível (módulo à parte)', zelo: 'Foco em frente de caixa', advantage: 'competitor' }
     ],
     reasonsTitle: 'Por que o Zelo PDV é a escolha mais segura para o caixa',
     reasons: [
-      { icon: '📶', title: 'Não para quando a internet cai', description: 'O próprio SisFood descreve o sistema como 100% cloud, dependente de internet estável. O Zelo PDV continua vendendo offline e sincroniza depois — sem caixa travado no pico.' },
+      { icon: '📶', title: 'Offline mais completo', description: 'O SisFood anuncia contingência offline apenas para vendas em dinheiro; nota fiscal, TEF e iFood continuam dependendo de internet, segundo o próprio site. O Zelo PDV continua vendendo offline e sincroniza depois.' },
       { icon: '💸', title: 'A partir de R$ 59 contra R$ 149,90', description: 'O piso do Zelo é menos da metade do plano de entrada do SisFood, já com a frente de caixa completa.' },
       { icon: '🧩', title: 'Modular', description: 'Você paga só pelos módulos que usa, em vez de um pacote "tudo incluído" mais caro com fiscal e totem cobrados à parte.' },
       { icon: '⚡', title: 'Simples de começar', description: 'O Zelo roda no navegador, em computador, notebook ou tablet básico, sem montar uma estrutura cara para vender.' }
     ],
     fairnessNote:
-      'Para ser justo: o SisFood é um sistema completo de food service, com bom suporte e sem fidelidade obrigatória. O foco deste comparativo é preço de entrada e, principalmente, a operação offline — onde o Zelo PDV leva vantagem.',
+      'Para ser justo: o SisFood é um sistema completo de food service, com bom suporte, sem fidelidade obrigatória e que também investiu em contingência offline para o caixa. O foco deste comparativo é preço de entrada e o alcance da operação offline — onde o Zelo PDV ainda leva vantagem.',
     faqSpecific: [
-      { question: 'Quanto custa o SisFood comparado ao Zelo PDV?', answer: 'Em junho de 2026, o SisFood parte de R$ 149,90/mês no site oficial (a própria empresa cita planos superiores até cerca de R$ 249,90/mês), com fiscal e totem à parte. O Zelo PDV custa R$ 59/mês com a frente de caixa inclusa.' },
-      { question: 'O SisFood funciona offline?', answer: 'Segundo a própria empresa, o SisFood é 100% cloud e depende de internet estável, com capacidade offline limitada. O Zelo PDV foi feito para continuar vendendo mesmo sem internet, sincronizando depois.' },
+      { question: 'Quanto custa o SisFood comparado ao Zelo PDV?', answer: 'Em setembro de 2026, o SisFood parte de R$ 149,90/mês no site oficial, com fiscal e totem à parte. O Zelo PDV custa R$ 59/mês com a frente de caixa inclusa.' },
+      { question: 'O SisFood funciona offline?', answer: 'Segundo o site oficial, o SisFood tem uma contingência offline para vendas em dinheiro no modelo "Web otimizado"; recursos como NFC-e, TEF e integração com iFood continuam dependendo de internet. O Zelo PDV foi feito para continuar vendendo mesmo sem internet, sincronizando depois.' },
       { question: 'No SisFood eu pago a mais por nota fiscal?', answer: 'Conforme o material do SisFood, NFC-e, NF-e e totem de autoatendimento são módulos cobrados à parte. No Zelo PDV, você ativa apenas os módulos que precisar sobre a base de R$ 59/mês.' },
       { question: 'Posso testar o Zelo PDV antes?', answer: 'Sim. São 14 dias grátis, sem cartão de crédito. Você cria a conta e usa a operação real do balcão durante o período.' }
     ],

@@ -36,7 +36,7 @@ export const posts = [
       {
         question: 'Qual PDV funciona sem internet?',
         answer:
-          'O Zelo PDV funciona offline direto no navegador (PWA) e sincroniza quando a conexão volta. A Consumer também divulga operação offline com sincronização automática. Saipos, SisFood (segundo a própria empresa), Anota AI, Goomer e Yooga não anunciam operação offline nos materiais públicos consultados.'
+          'O Zelo PDV funciona offline direto no navegador (PWA) e sincroniza quando a conexão volta. A Consumer também divulga operação offline com sincronização automática. O SisFood anuncia uma contingência offline mais limitada, só para vendas em dinheiro (NFC-e, TEF e iFood continuam dependendo de internet, segundo a própria empresa). Saipos, Anota AI, Goomer e Yooga não anunciam operação offline nos materiais públicos consultados.'
       },
       {
         question: 'Preciso de PDV com NFC-e?',
@@ -141,8 +141,8 @@ export const posts = [
           </tr>
           <tr>
             <td>SisFood</td>
-            <td>A partir de R$ 149,90/mês (consultado em junho de 2026)</td>
-            <td>Não (100% cloud, segundo a empresa)</td>
+            <td>A partir de R$ 149,90/mês (consultado em setembro de 2026)</td>
+            <td>Parcial (só dinheiro; NFC-e/TEF/iFood dependem de internet)</td>
             <td>Sim, módulo à parte</td>
             <td>Não verificado</td>
             <td>Não verificado</td>
@@ -159,7 +159,7 @@ export const posts = [
           </tr>
         </tbody>
       </table>
-      <p>"Não verificado" significa que não encontramos essa informação nas páginas oficiais consultadas nesta pesquisa — não é uma afirmação de que o recurso não existe. SisFood e Yooga não publicam preço atualizado de forma que desse para reconfirmar em setembro de 2026; por isso mantivemos o último valor verificado, datado.</p>
+      <p>"Não verificado" significa que não encontramos essa informação nas páginas oficiais consultadas nesta pesquisa — não é uma afirmação de que o recurso não existe. O preço do SisFood foi reconfirmado em setembro de 2026. A Yooga não publica mais preço no site em setembro de 2026 (direciona para "falar com especialista"); por isso mantivemos o último valor público verificado, de junho de 2026, datado como tal.</p>
 
       <h2>Zelo PDV</h2>
       <p><strong>Para quem é:</strong> lanchonetes, hamburguerias, delivery próprio e MEIs de alimentação que querem frente de caixa, fiado, estoque e financeiro por um preço baixo e público, funcionando mesmo com internet instável.</p>
@@ -193,8 +193,8 @@ export const posts = [
 
       <h2>SisFood</h2>
       <p><strong>Para quem é:</strong> food service que quer um pacote com PDV, cardápio digital e robô de WhatsApp, e não se importa em pagar módulos fiscais e totem à parte.</p>
-      <p><strong>Pontos fortes:</strong> pacote "tudo incluído" no núcleo (PDV, cardápio, WhatsApp); sem fidelidade obrigatória segundo a empresa.</p>
-      <p><strong>Quando não escolher:</strong> se você precisa vender sem depender de internet estável — a própria empresa descreve o SisFood como 100% cloud. O preço de entrada (a partir de R$ 149,90/mês) é o último valor que conseguimos confirmar oficialmente, verificado em junho de 2026; não conseguimos recarregar a página de preços em setembro de 2026 para reconfirmar. Veja a comparação completa em <a href="/vs-sisfood">Zelo PDV vs SisFood</a>.</p>
+      <p><strong>Pontos fortes:</strong> pacote "tudo incluído" no núcleo (PDV, cardápio, WhatsApp); sem fidelidade obrigatória segundo a empresa; desde meados de 2026 também anuncia contingência offline para vendas em dinheiro.</p>
+      <p><strong>Quando não escolher:</strong> se você precisa vender sem depender de internet para tudo — o próprio site avisa que NFC-e, TEF e integração com iFood continuam dependendo de conexão, mesmo com a contingência offline. O preço de entrada (a partir de R$ 149,90/mês) foi reconfirmado no site oficial em setembro de 2026. Veja a comparação completa em <a href="/vs-sisfood">Zelo PDV vs SisFood</a>.</p>
 
       <h2>Yooga</h2>
       <p><strong>Para quem é:</strong> restaurante mais estruturado que já quer KDS, NFC-e no plano Completo/Premium e integração com iFood desde o plano Básico.</p>
@@ -218,7 +218,7 @@ export const posts = [
         <li>Kyte — Planos (oficial): <a href="https://www.kyteapp.com/pt/planos">kyteapp.com/pt/planos</a> — consultado em setembro de 2026</li>
         <li>Goomer — Planos (oficial): <a href="https://goomer.com.br/planos">goomer.com.br/planos</a> — consultado em setembro de 2026</li>
         <li>Anota AI — Planos (oficial): <a href="https://anota.ai/blog/planos-principal/">anota.ai/blog/planos-principal</a> — consultado em setembro de 2026</li>
-        <li>SisFood — Site oficial: <a href="https://www.sisfood.com.br/">sisfood.com.br</a> — última consulta confirmada em junho de 2026 (site indisponível para nova consulta em setembro de 2026)</li>
+        <li>SisFood — Site oficial: <a href="https://www.sisfood.com.br/">sisfood.com.br</a> — consultado em setembro de 2026</li>
         <li>Yooga — Planos (oficial): <a href="https://yooga.com.br/planos/">yooga.com.br/planos</a> — consultado em setembro de 2026 (sem preço público nesta data; último valor confirmado em junho de 2026)</li>
         <li>Zelo PDV — Catálogo de planos: <a href="/sobre">zelopdv.com.br/sobre</a></li>
       </ul>
