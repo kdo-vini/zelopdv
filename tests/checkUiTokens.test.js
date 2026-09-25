@@ -28,7 +28,18 @@ describe('check:ui design-system guard', () => {
       expect(result.stderr).toContain(hit);
     }
     expect(result.stderr).not.toContain('#fff');
-    expect(result.stderr).toContain('6 raw colour(s)');
+    expect(result.stderr).toContain('6 raw colour/type value(s)');
+  });
+
+  it('flags literal type (font-family, font: with a size, text-[Npx], font-mono) but accepts roles and var()', () => {
+    const result = runWith(['tests/fixtures/ui-tokens/DirtyType.svelte']);
+    expect(result.status).toBe(1);
+    for (const rule of ['[text-arbitrary]', '[font-mono]', '[font-family]', '[font-literal]']) {
+      expect(result.stderr).toContain(rule);
+    }
+    expect(result.stderr).toContain('4 raw colour/type value(s)');
+    expect(result.stderr).not.toContain('--type-title');
+    expect(result.stderr).not.toContain('monospace');
   });
 
   it('keeps the real migrated list clean', () => {
