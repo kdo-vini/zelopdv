@@ -6,6 +6,9 @@
 /** Margem desejada padrão (%) quando o produto não define uma. */
 export const DEFAULT_MARGEM_DESEJADA = 60;
 
+/** Taxa de plataforma (iFood etc.) máxima aceita (%) para o campo do produto. */
+export const MAX_TAXA_PLATAFORMA = 35;
+
 /** Rótulos de status exibidos na planilha. */
 export const STATUS_LABELS = {
   ok: 'Na meta',
@@ -41,7 +44,7 @@ function roundTo(value, decimals) {
 
 /**
  * Calcula os campos derivados de uma linha da planilha de precificação.
- * @param {{ custo?: number|null, venda?: number|null, margemDesejada?: number|null }} row
+ * @param {{ custo?: number|null, venda?: number|null, margemDesejada?: number|null, taxaPlataforma?: number|null }} row
  * @returns {{
  *   lucro: number|null,
  *   margem: number|null,
@@ -51,23 +54,31 @@ function roundTo(value, decimals) {
  *   diferenca: number|null,
  *   status: 'ok'|'abaixo'|'prejuizo'|'incompleto',
  *   meta: number,
+ *   taxa: number,
+ *   taxaValor: number|null,
  * }}
  */
-export function computeRow({ custo, venda, margemDesejada } = {}) {
+export function computeRow({ custo, venda, margemDesejada, taxaPlataforma } = {}) {
   const custoNum = toNumberOrNull(custo);
   const vendaNum = toNumberOrNull(venda);
   const metaInput = toNumberOrNull(margemDesejada);
   const meta = metaInput === null ? DEFAULT_MARGEM_DESEJADA : metaInput;
+  const taxaInput = toNumberOrNull(taxaPlataforma);
+  const taxa = taxaInput === null ? 0 : taxaInput;
 
   const custoMissing = custoNum === null;
   const vendaMissing = vendaNum === null;
   const vendaInvalida = vendaMissing || vendaNum <= 0;
 
-  const lucro = custoMissing || vendaMissing ? null : roundTo(vendaNum - custoNum, 2);
+  const taxaValor = vendaMissing ? null : roundTo((vendaNum * taxa) / 100, 2);
+
+  const lucro = custoMissing || vendaMissing
+    ? null
+    : roundTo(vendaNum - custoNum - taxaValor, 2);
 
   const margem = custoMissing || vendaInvalida
     ? null
-    : roundTo(((vendaNum - custoNum) / vendaNum) * 100, 1);
+    : roundTo((lucro / vendaNum) * 100, 1);
 
   const cmv = custoMissing || vendaInvalida
     ? null
@@ -77,7 +88,10 @@ export function computeRow({ custo, venda, margemDesejada } = {}) {
     ? null
     : roundTo(vendaNum / custoNum, 2);
 
-  const sugerido = custoMissing ? null : roundTo(custoNum / (1 - meta / 100), 2);
+  const metaMaisTaxa = meta + taxa;
+  const sugerido = custoMissing || metaMaisTaxa >= 100
+    ? null
+    : roundTo(custoNum / (1 - metaMaisTaxa / 100), 2);
 
   const diferenca = sugerido === null || vendaMissing ? null : roundTo(sugerido - vendaNum, 2);
 
@@ -92,7 +106,7 @@ export function computeRow({ custo, venda, margemDesejada } = {}) {
     status = 'ok';
   }
 
-  return { lucro, margem, cmv, markup, sugerido, diferenca, status, meta };
+  return { lucro, margem, cmv, markup, sugerido, diferenca, status, meta, taxa, taxaValor };
 }
 
 /**

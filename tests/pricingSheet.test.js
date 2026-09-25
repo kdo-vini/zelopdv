@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_MARGEM_DESEJADA,
+  MAX_TAXA_PLATAFORMA,
   STATUS_LABELS,
   computeRow,
   formatCurrencyInput,
@@ -22,6 +23,8 @@ describe('computeRow', () => {
       diferenca: 0,
       status: 'ok',
       meta: 60,
+      taxa: 0,
+      taxaValor: 0,
     });
   });
 
@@ -129,6 +132,45 @@ describe('computeRow', () => {
     const row = computeRow({ custo: 20, venda: 15, margemDesejada: 60 });
     expect(row.margem).toBe(-33.3);
     expect(row.status).toBe('prejuizo');
+  });
+
+  it('taxa de plataforma: custo 10, taxa 12%, meta 30% → sugerido 17,24', () => {
+    const row = computeRow({ custo: 10, margemDesejada: 30, taxaPlataforma: 12 });
+    expect(row.taxa).toBe(12);
+    expect(row.sugerido).toBe(17.24);
+  });
+
+  it('taxa de plataforma: no preço sugerido, taxaValor 2,07, lucro 5,17, margem 30% (ok)', () => {
+    const row = computeRow({ custo: 10, venda: 17.24, margemDesejada: 30, taxaPlataforma: 12 });
+    expect(row.taxaValor).toBe(2.07);
+    expect(row.lucro).toBe(5.17);
+    expect(row.margem).toBe(30);
+    expect(row.status).toBe('ok');
+  });
+
+  it('meta + taxa >= 100% → sugerido null', () => {
+    const row = computeRow({ custo: 10, margemDesejada: 90, taxaPlataforma: 15 });
+    expect(row.sugerido).toBeNull();
+  });
+
+  it('taxaPlataforma null/undefined/vazia equivale a 0%', () => {
+    const semTaxa = computeRow({ custo: 10, venda: 25, margemDesejada: 60 });
+    const taxaNull = computeRow({ custo: 10, venda: 25, margemDesejada: 60, taxaPlataforma: null });
+    const taxaUndefined = computeRow({
+      custo: 10,
+      venda: 25,
+      margemDesejada: 60,
+      taxaPlataforma: undefined,
+    });
+    const taxaVazia = computeRow({ custo: 10, venda: 25, margemDesejada: 60, taxaPlataforma: '' });
+    expect(taxaNull).toEqual(semTaxa);
+    expect(taxaUndefined).toEqual(semTaxa);
+    expect(taxaVazia).toEqual(semTaxa);
+    expect(semTaxa.taxa).toBe(0);
+  });
+
+  it('MAX_TAXA_PLATAFORMA é 35', () => {
+    expect(MAX_TAXA_PLATAFORMA).toBe(35);
   });
 });
 

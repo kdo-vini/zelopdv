@@ -21,9 +21,11 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Select from '$lib/components/ui/select/index.js';
   import PricingSheetImport from './PricingSheetImport.svelte';
+  import PricingWizardModal from './PricingWizardModal.svelte';
   import {
     DEFAULT_MARGEM_DESEJADA,
     STATUS_LABELS,
+    MAX_TAXA_PLATAFORMA,
     computeRow,
     summarize,
     parseCurrencyInput,
@@ -45,12 +47,14 @@
     custo_unitario: 'Custo',
     preco: 'Venda',
     margem_desejada: 'Meta',
+    taxa_plataforma: 'Taxa',
   };
 
   const FIELD_ARIA_LABELS = {
     custo_unitario: (nome) => `Custo de ${nome}`,
     preco: (nome) => `Preço de venda de ${nome}`,
     margem_desejada: (nome) => `Margem desejada de ${nome}`,
+    taxa_plataforma: (nome) => `Taxa da plataforma de ${nome}`,
   };
 
   let ownerUserId = $state(/** @type {string | null} */ (null));
@@ -95,37 +99,8 @@
 
   let vendaWarningAcknowledged = $state(false);
 
-  // Form "Adicionar produto"
-  let formNome = $state('');
-  let formNomeInput = $state(/** @type {HTMLInputElement | null} */ (null));
-  let formCusto = $state(/** @type {number | null} */ (null));
-  let formVenda = $state(/** @type {number | null} */ (null));
-  let formMeta = $state(DEFAULT_MARGEM_DESEJADA);
-  let formError = $state('');
-  let saving = $state(false);
-
-  // FAB "+" some enquanto o form "Adicionar produto" está visível na tela.
-  let addFormEl = $state(/** @type {HTMLFormElement | null} */ (null));
-  let addFormVisible = $state(false);
-
-  $effect(() => {
-    if (!addFormEl) {
-      addFormVisible = false;
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        addFormVisible = !!entry?.isIntersecting;
-      },
-      // Threshold 0: qualquer parte do form visível já conta.
-      // rootMargin negativo no bottom desconta a faixa da nav inferior mobile.
-      { threshold: 0, rootMargin: '0px 0px -80px 0px' }
-    );
-    observer.observe(addFormEl);
-    return () => observer.disconnect();
-  });
-
   let importOpen = $state(false);
+  let wizardOpen = $state(false);
 
   onMount(async () => {
     try {
@@ -148,6 +123,7 @@
       preco: Number(p.preco ?? 0),
       custo_unitario: p.custo_unitario == null ? null : Number(p.custo_unitario),
       margem_desejada: p.margem_desejada == null ? DEFAULT_MARGEM_DESEJADA : Number(p.margem_desejada),
+      taxa_plataforma: p.taxa_plataforma == null ? null : Number(p.taxa_plataforma),
       tipo_produto: p.tipo_produto,
     };
   }
@@ -159,7 +135,7 @@
     try {
       const { data, error } = await supabase
         .from('produtos')
-        .select('id, nome, preco, custo_unitario, margem_desejada, tipo_produto')
+        .select('id, nome, preco, custo_unitario, margem_desejada, taxa_plataforma, tipo_produto')
         .eq('id_usuario', ownerUserId)
         .eq('na_precificacao', true)
         .order('nome');
@@ -167,7 +143,10 @@
       const normalized = (data || []).map(normalizeRow);
       rows = normalized;
       savedValues = new Map(
-        normalized.map((r) => [r.id, { preco: r.preco, custo_unitario: r.custo_unitario, margem_desejada: r.margem_desejada }])
+        normalized.map((r) => [
+          r.id,
+          { preco: r.preco, custo_unitario: r.custo_unitario, margem_desejada: r.margem_desejada, taxa_plataforma: r.taxa_plataforma },
+        ])
       );
     } catch (err) {
       console.error('[PricingSheet] loadRows', err);
@@ -276,6 +255,18 @@
     updateRow(id, 'margem_desejada', clamped);
   }
 
+  // Taxa vazia ou 0 vira null no banco (produto sem taxa de plataforma).
+  function onTaxaInput(id, event) {
+    const raw = event.currentTarget.value;
+    if (raw === '') {
+      updateRow(id, 'taxa_plataforma', null);
+      return;
+    }
+    const num = Number(raw);
+    const clamped = Number.isFinite(num) ? Math.min(MAX_TAXA_PLATAFORMA, Math.max(0, num)) : null;
+    updateRow(id, 'taxa_plataforma', clamped ? clamped : null);
+  }
+
   function commitOnEnter(event) {
     if (event.key === 'Enter') event.currentTarget.blur();
   }
@@ -303,51 +294,6 @@
     addToast('Produto removido da planilha.', 'success');
   }
 
-  async function addProduto(event) {
-    event.preventDefault();
-    formError = '';
-    if (!formNome.trim()) {
-      formError = 'Informe o nome do produto.';
-      return;
-    }
-    if (!(formVenda > 0)) {
-      formError = 'Informe um preço de venda maior que zero.';
-      return;
-    }
-    saving = true;
-    try {
-      const payload = {
-        id_usuario: ownerUserId,
-        nome: formNome.trim(),
-        preco: formVenda,
-        custo_unitario: formCusto,
-        margem_desejada: formMeta,
-        na_precificacao: true,
-        id_categoria: null,
-      };
-      const { data, error } = await supabase
-        .from('produtos')
-        .insert(payload)
-        .select('id, nome, preco, custo_unitario, margem_desejada, tipo_produto')
-        .single();
-      if (error) throw error;
-      const row = normalizeRow(data);
-      rows = [...rows, row];
-      savedValues.set(row.id, { preco: row.preco, custo_unitario: row.custo_unitario, margem_desejada: row.margem_desejada });
-      pdvCache.invalidateProdutos();
-      addToast('Produto adicionado à planilha!', 'success');
-      formNome = '';
-      formCusto = null;
-      formVenda = null;
-      formMeta = DEFAULT_MARGEM_DESEJADA;
-    } catch (err) {
-      console.error('[PricingSheet] addProduto', err);
-      formError = 'Não foi possível salvar o produto. Tente novamente.';
-    } finally {
-      saving = false;
-    }
-  }
-
   function openImport() {
     importOpen = true;
   }
@@ -366,21 +312,30 @@
     await loadRows();
   }
 
-  function scrollToAddForm() {
-    const el = document.getElementById('pricing-add-form');
-    if (!el) return;
-    let reduceMotion = false;
-    try {
-      reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    } catch {}
-    el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
-    formNomeInput?.focus();
+  function openWizard() {
+    wizardOpen = true;
   }
 
-  let formPreview = $derived.by(() => computeRow({ custo: formCusto, venda: formVenda, margemDesejada: formMeta }));
+  function closeWizard() {
+    wizardOpen = false;
+  }
+
+  function onWizardSaved(data) {
+    const row = normalizeRow(data);
+    rows = [...rows, row];
+    savedValues.set(row.id, {
+      preco: row.preco,
+      custo_unitario: row.custo_unitario,
+      margem_desejada: row.margem_desejada,
+      taxa_plataforma: row.taxa_plataforma,
+    });
+  }
 
   let rowsWithCalc = $derived.by(() =>
-    rows.map((r) => ({ ...r, calc: computeRow({ custo: r.custo_unitario, venda: r.preco, margemDesejada: r.margem_desejada }) }))
+    rows.map((r) => ({
+      ...r,
+      calc: computeRow({ custo: r.custo_unitario, venda: r.preco, margemDesejada: r.margem_desejada, taxaPlataforma: r.taxa_plataforma }),
+    }))
   );
 
   const statusOrder = { prejuizo: 0, abaixo: 1, incompleto: 2, ok: 3 };
@@ -408,7 +363,9 @@
   });
 
   let summary = $derived.by(() =>
-    summarize(rows.map((r) => ({ custo: r.custo_unitario, venda: r.preco, margemDesejada: r.margem_desejada })))
+    summarize(
+      rows.map((r) => ({ custo: r.custo_unitario, venda: r.preco, margemDesejada: r.margem_desejada, taxaPlataforma: r.taxa_plataforma }))
+    )
   );
 
   let sortLabel = $derived(sortOptions.find((o) => o.value === sortBy)?.label ?? 'Nome');
@@ -485,106 +442,19 @@
       <div class="help-disclosure-content">
         <p><strong>CMV:</strong> quanto do preço de venda vai só para pagar o custo do produto.</p>
         <p><strong>Margem:</strong> quanto sobra de cada venda antes das despesas fixas do negócio.</p>
+        <p><strong>Taxa do app:</strong> quanto a plataforma fica de cada venda. Ela entra na margem e no preço sugerido.</p>
       </div>
     </details>
 
-    <!-- Form: adicionar produto -->
+    <!-- Toolbar: adicionar produto (abre o wizard) / importar do cadastro -->
     {#if canEdit}
-      <form id="pricing-add-form" class="add-card" bind:this={addFormEl} onsubmit={addProduto}>
-        <div class="add-card-head">
-          <h2 class="add-card-title">Adicionar produto</h2>
-          <button type="button" class="link-btn" onclick={openImport}>Importar do meu cadastro</button>
-        </div>
-        <p class="add-card-copy">
-          Este produto também passa a existir no cadastro do PDV, disponível para venda no caixa.
-        </p>
-
-        {#if formError}
-          <div class="error-banner" role="alert">{formError}</div>
-        {/if}
-
-        <div class="add-grid">
-          <label class="block">
-            <span class="field-label">Nome do produto</span>
-            <input class="field-input" type="text" placeholder="Ex.: Marmita executiva" bind:value={formNome} bind:this={formNomeInput} />
-          </label>
-          <label class="block">
-            <span class="field-label">Preço de compra (custo)</span>
-            <div class="currency-field">
-              <span class="currency-prefix" aria-hidden="true">R$</span>
-              <input
-                class="field-input currency-input tabular-nums"
-                type="text"
-                inputmode="numeric"
-                placeholder="0,00"
-                value={formatCurrencyInput(formCusto)}
-                oninput={(e) => {
-                  formCusto = parseMoneyFieldValue(e.currentTarget.value);
-                  e.currentTarget.value = formatCurrencyInput(formCusto);
-                }}
-              />
-            </div>
-          </label>
-          <label class="block">
-            <span class="field-label">Preço de venda</span>
-            <div class="currency-field">
-              <span class="currency-prefix" aria-hidden="true">R$</span>
-              <input
-                class="field-input currency-input tabular-nums"
-                type="text"
-                inputmode="numeric"
-                placeholder="0,00"
-                value={formatCurrencyInput(formVenda)}
-                oninput={(e) => {
-                  formVenda = parseMoneyFieldValue(e.currentTarget.value);
-                  e.currentTarget.value = formatCurrencyInput(formVenda);
-                }}
-              />
-            </div>
-          </label>
-          <label class="block">
-            <span class="field-label">Margem desejada (%)</span>
-            <input
-              class="field-input tabular-nums"
-              type="number"
-              min="0"
-              max="99.9"
-              step="0.1"
-              value={formMeta}
-              oninput={(e) => {
-                const raw = Number(e.currentTarget.value);
-                formMeta = Number.isFinite(raw) ? Math.min(99.9, Math.max(0, raw)) : DEFAULT_MARGEM_DESEJADA;
-              }}
-            />
-          </label>
-        </div>
-
-        <div class="preview-row">
-          <div class="preview-item">
-            <span>CMV</span>
-            <strong>{formatPercent(formPreview.cmv)}</strong>
-          </div>
-          <div class="preview-item">
-            <span>Margem</span>
-            <strong>{formatPercent(formPreview.margem)}</strong>
-          </div>
-          <div class="preview-item">
-            <span>Lucro/un</span>
-            <strong>{formPreview.lucro == null ? '—' : formatMoney(formPreview.lucro)}</strong>
-          </div>
-          <div class="preview-item">
-            <span>Preço sugerido</span>
-            <strong>{formPreview.sugerido == null ? '—' : formatMoney(formPreview.sugerido)}</strong>
-          </div>
-        </div>
-
-        <div class="add-actions">
-          <Button type="submit" disabled={saving}>
-            {#if saving}<Loader2 class="w-4 h-4 animate-spin" aria-hidden="true" />{/if}
-            Salvar
-          </Button>
-        </div>
-      </form>
+      <div class="toolbar-row">
+        <Button type="button" class="toolbar-add-btn" onclick={openWizard}>
+          <Plus class="w-4 h-4" aria-hidden="true" />
+          Adicionar produto
+        </Button>
+        <button type="button" class="link-btn" onclick={openImport}>Importar do meu cadastro</button>
+      </div>
     {/if}
 
     <!-- Planilha -->
@@ -620,6 +490,10 @@
         <div class="empty-state">
           <p>Adicione seu primeiro produto ou importe do cadastro.</p>
           {#if canEdit}
+            <Button type="button" onclick={openWizard}>
+              <Plus class="w-4 h-4" aria-hidden="true" />
+              Adicione seu primeiro produto
+            </Button>
             <button type="button" class="link-btn" onclick={openImport}>Importar do meu cadastro</button>
           {/if}
         </div>
@@ -690,7 +564,7 @@
                     {/if}
                   </div>
                 </label>
-                <label class="mobile-field mobile-field-meta">
+                <label class="mobile-field">
                   <span class="field-label">Meta %</span>
                   <div class="meta-field-wrap">
                     <input
@@ -707,6 +581,27 @@
                       aria-label={FIELD_ARIA_LABELS.margem_desejada(row.nome)}
                     />
                     {#if fieldStatus[fieldKey(row.id, 'margem_desejada')] === 'saved'}
+                      <Check class="save-check" aria-hidden="true" />
+                    {/if}
+                  </div>
+                </label>
+                <label class="mobile-field">
+                  <span class="field-label">Taxa app %</span>
+                  <div class="meta-field-wrap">
+                    <input
+                      class="field-input tabular-nums"
+                      type="number"
+                      min="0"
+                      max={MAX_TAXA_PLATAFORMA}
+                      step="0.1"
+                      value={row.taxa_plataforma}
+                      oninput={(e) => onTaxaInput(row.id, e)}
+                      onblur={() => commitField(row.id, 'taxa_plataforma', 'taxa_plataforma')}
+                      onkeydown={commitOnEnter}
+                      disabled={!canEdit}
+                      aria-label={FIELD_ARIA_LABELS.taxa_plataforma(row.nome)}
+                    />
+                    {#if fieldStatus[fieldKey(row.id, 'taxa_plataforma')] === 'saved'}
                       <Check class="save-check" aria-hidden="true" />
                     {/if}
                   </div>
@@ -743,6 +638,10 @@
                     <span class="detail-label">Sugerido</span>
                     <strong class="detail-value">{row.calc.sugerido == null ? '—' : formatMoney(row.calc.sugerido)}</strong>
                   </div>
+                  <div class="row-details-item">
+                    <span class="detail-label">Taxa por venda</span>
+                    <strong class="detail-value">{row.calc.taxaValor ? formatMoney(row.calc.taxaValor) : '—'}</strong>
+                  </div>
                 </div>
               </details>
 
@@ -765,6 +664,7 @@
                 <th scope="col" class="col-header text-right px-3 py-2">Custo</th>
                 <th scope="col" class="col-header text-right px-3 py-2">Venda</th>
                 <th scope="col" class="col-header text-right px-3 py-2">Meta</th>
+                <th scope="col" class="col-header text-right px-3 py-2">Taxa</th>
                 <th scope="col" class="col-header text-right px-3 py-2">Margem</th>
                 <th scope="col" class="col-header text-right px-3 py-2">CMV</th>
                 <th scope="col" class="col-header text-right px-3 py-2">Sugerido</th>
@@ -850,7 +750,34 @@
                       {/if}
                     </div>
                   </td>
-                  <td class="px-3 py-2 text-right tabular-nums">{formatPercent(row.calc.margem)}</td>
+                  <td class="px-3 py-2 text-right">
+                    <div class="meta-field-wrap">
+                      <input
+                        class="cell-input cell-meta tabular-nums"
+                        type="number"
+                        min="0"
+                        max={MAX_TAXA_PLATAFORMA}
+                        step="0.1"
+                        value={row.taxa_plataforma}
+                        oninput={(e) => onTaxaInput(row.id, e)}
+                        onblur={() => commitField(row.id, 'taxa_plataforma', 'taxa_plataforma')}
+                        onkeydown={commitOnEnter}
+                        disabled={!canEdit}
+                        aria-label={FIELD_ARIA_LABELS.taxa_plataforma(row.nome)}
+                      />
+                      {#if fieldStatus[fieldKey(row.id, 'taxa_plataforma')] === 'saved'}
+                        <Check class="save-check" aria-hidden="true" />
+                      {/if}
+                    </div>
+                  </td>
+                  <td class="px-3 py-2 text-right tabular-nums">
+                    <div class="margem-cell">
+                      <span>{formatPercent(row.calc.margem)}</span>
+                      {#if row.calc.taxaValor}
+                        <span class="margem-hint">Taxa {formatMoney(row.calc.taxaValor)}</span>
+                      {/if}
+                    </div>
+                  </td>
                   <td class="px-3 py-2 text-right tabular-nums">{formatPercent(row.calc.cmv)}</td>
                   <td class="px-3 py-2 text-right tabular-nums">
                     <div class="sugerido-cell">
@@ -884,20 +811,13 @@
 </div>
 
 {#if ready && canEdit}
-  <button
-    class="mobile-create-fab"
-    class:fab-hidden={addFormVisible}
-    type="button"
-    aria-label="Adicionar produto"
-    aria-hidden={addFormVisible}
-    tabindex={addFormVisible ? -1 : 0}
-    onclick={scrollToAddForm}
-  >
+  <button class="mobile-create-fab" type="button" aria-label="Adicionar produto" onclick={openWizard}>
     <Plus class="mobile-create-fab-icon" aria-hidden="true" />
   </button>
 {/if}
 
 <PricingSheetImport open={importOpen} {ownerUserId} onclose={closeImport} onimported={onImported} />
+<PricingWizardModal open={wizardOpen} {ownerUserId} onclose={closeWizard} onsaved={onWizardSaved} />
 
 <style>
   .pricing-sheet {
@@ -1029,18 +949,8 @@
     font-weight: 600;
   }
 
-  /* Form adicionar produto */
-  .add-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.9rem;
-    padding: 1.1rem;
-    border-radius: 0.75rem;
-    border: 1px solid var(--border-card);
-    background: var(--bg-card);
-  }
-
-  .add-card-head {
+  /* Toolbar: adicionar produto / importar */
+  .toolbar-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1048,23 +958,8 @@
     flex-wrap: wrap;
   }
 
-  .add-card-title {
-    margin: 0;
-    color: var(--text-main);
-    font-size: 1rem;
-    font-weight: 700;
-  }
-
-  .add-card-copy {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.875rem;
-  }
-
-  .add-grid {
-    display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-    gap: 0.85rem;
+  :global(.toolbar-add-btn) {
+    display: none;
   }
 
   .field-label {
@@ -1174,40 +1069,6 @@
     }
   }
 
-  .preview-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.6rem;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    border: 1px dashed var(--border-subtle);
-    background: var(--bg-panel);
-  }
-
-  .preview-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-  }
-
-  .preview-item span {
-    color: var(--text-muted);
-    font-size: 0.625rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  .preview-item strong {
-    color: var(--text-main);
-    font-size: 1rem;
-  }
-
-  .add-actions {
-    display: flex;
-    justify-content: flex-end;
-  }
-
   .link-btn {
     background: transparent;
     border: 0;
@@ -1220,15 +1081,6 @@
 
   .link-btn:hover {
     text-decoration: underline;
-  }
-
-  .error-banner {
-    padding: 0.6rem 0.85rem;
-    border-radius: 0.5rem;
-    border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);
-    background: color-mix(in srgb, var(--error) 10%, transparent);
-    color: var(--status-error-text);
-    font-size: 0.875rem;
   }
 
   /* Planilha */
@@ -1358,10 +1210,6 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;
-  }
-
-  .mobile-field-meta {
-    grid-column: 1 / -1;
   }
 
   .mobile-field .field-input {
@@ -1537,6 +1385,19 @@
     font-weight: 600;
   }
 
+  .margem-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.1rem;
+  }
+
+  .margem-hint {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 400;
+  }
+
   .icon-btn-danger {
     display: inline-flex;
     align-items: center;
@@ -1564,10 +1425,6 @@
     .summary-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
-
-    .add-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
   }
 
   @media (min-width: 768px) {
@@ -1577,6 +1434,10 @@
 
     .desktop-table {
       display: block;
+    }
+
+    :global(.toolbar-add-btn) {
+      display: inline-flex;
     }
   }
 
@@ -1601,10 +1462,7 @@
       background: var(--primary);
       color: var(--primary-text);
       cursor: pointer;
-      opacity: 1;
-      transform: scale(1);
-      transition: background var(--transition-fast), border-color var(--transition-fast),
-        opacity 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+      transition: background var(--transition-fast), border-color var(--transition-fast);
     }
 
     .mobile-create-fab:hover {
@@ -1615,19 +1473,6 @@
     .mobile-create-fab :global(svg) {
       width: 1.5rem;
       height: 1.5rem;
-    }
-
-    /* Escondido enquanto o form "Adicionar produto" está visível na tela. */
-    .mobile-create-fab.fab-hidden {
-      opacity: 0;
-      transform: scale(0.8);
-      pointer-events: none;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .mobile-create-fab {
-      transition: none;
     }
   }
 </style>
