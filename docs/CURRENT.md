@@ -155,6 +155,21 @@ placement, `marketing_section_viewed` por seção, `marketing_video_started`
 por vídeo, e o funil do Instagram (`inapp_browser_detected` →
 `signup_submitted` method=email → `trial_started`).
 
+## Sessão 2026-09-25 — Wizard de produto e taxa de app na planilha
+
+O formulário rápido saiu da planilha. O botão `+` agora abre
+`PricingWizardModal.svelte`, com a entrevista de 5 passos da calculadora antiga
+(o que, custos com ou sem ingredientes, extras e taxa de app, margem,
+resultado). A conta passou de markup sobre o custo para margem sobre a venda,
+em `src/lib/tools/pricingWizard.js`. A nova coluna `produtos.taxa_plataforma`
+(migration `20260925100000`, 0–35%) só é usada pela planilha: a margem e o
+preço sugerido descontam a taxa. Vendas, PDV e relatórios ignoram a coluna.
+A migration foi aplicada com `db query` mais `migration repair`, porque o
+banco compartilhado já tem a `20260925114017` do ZeloChat, que não está no
+repo. Por isso o `db push` fica bloqueado até alguém trazer essa migration
+para cá. A calculadora pública `/precificacao` não mudou e continua usando
+markup.
+
 ## Sessão 2026-09-24 — Planilha de preços em /ferramentas/precificacao
 
 A página logada `/ferramentas/precificacao` trocou a calculadora (wizard) por
