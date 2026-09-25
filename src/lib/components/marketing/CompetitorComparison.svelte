@@ -6,6 +6,7 @@
   import { competitorComparisons } from '$lib/data/competitorComparisons';
   import { resolveAppIcon } from '$lib/icons/appIcons';
   import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
+  import { formatDatePtBR } from '$lib/seo/site';
   import { cn } from '$lib/utils';
   import { ChevronDown } from 'lucide-svelte';
 
@@ -15,6 +16,7 @@
   onMount(() => { cadastroHref = getSignupHref(); });
 
   $: allFaqs = [...comparison.faqSpecific, ...generalFaqs];
+  $: formattedUpdatedAt = formatDatePtBR(comparison.updatedAt);
   $: otherComparisons = Object.values(competitorComparisons).filter((c) => c.slug !== comparison.slug);
 
   function openSupportChat() {
@@ -33,9 +35,14 @@
     <section class="relative pt-32 pb-16 overflow-hidden border-b border-white/5">
       <div class="max-w-3xl mx-auto px-6">
         <p class="text-xs tracking-wider" style="color: var(--text-muted);">
-          Comparativo · Atualizado em {comparison.priceCheckedAt} ·
+          Comparativo · Preço checado em {comparison.priceCheckedAt} ·
           <a href="#fontes" class="text-sky-300 hover:text-sky-200 underline underline-offset-4">Fontes</a>
         </p>
+        {#if formattedUpdatedAt}
+          <p class="mt-1 text-xs tracking-wider" style="color: var(--text-muted);">
+            Atualizado em {formattedUpdatedAt}
+          </p>
+        {/if}
 
         <h1 class="mt-4 text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight" style="text-wrap: balance;">
           Zelo PDV × {comparison.competitor}

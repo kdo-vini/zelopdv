@@ -1,5 +1,17 @@
-import { buildFaqSchema as buildGenericFaqSchema, buildSoftwareApplicationSchema, SITE_URL } from '$lib/seo/site';
+import {
+  buildFaqSchema as buildGenericFaqSchema,
+  buildSoftwareApplicationSchema,
+  buildWebPageSchema,
+  SITE_URL
+} from '$lib/seo/site';
 import { ADDONS, PLANS, TRIAL_DAYS } from '$lib/pricing';
+
+// Campo `updatedAt` (string 'YYYY-MM-DD', obrigatório em cada entrada de
+// segmentPages): data da última revisão de conteúdo. Vem da data máxima de
+// `git blame` sobre o bloco da entrada — não inventar. Alimenta a linha
+// "Atualizado em ..." em src/routes/para-[slug]/+page.svelte, o dateModified
+// do WebPage JSON-LD (buildWebPageSchemaForSegment abaixo) e o <lastmod> da
+// URL em src/routes/sitemap.xml/+server.js.
 
 // Entradas novas (açaí, pizzaria, food truck, marmitaria) interpolam preço de
 // pricing.js em vez de hardcodar — ver CLAUDE.md "evite hardcoded".
@@ -39,6 +51,7 @@ export const generalFaqs = [
 export const segmentPages = {
   lanchonetes: {
     slug: 'para-lanchonetes',
+    updatedAt: '2026-09-23',
     meta: {
       title: 'Sistema PDV para Lanchonete — Caixa, Fiado e Lucro Real | Zelo PDV',
       description:
@@ -170,6 +183,7 @@ export const segmentPages = {
   },
   restaurantes: {
     slug: 'para-restaurantes',
+    updatedAt: '2026-09-23',
     meta: {
       title: 'Sistema para Restaurante — Mesas, Comandas e Caixa | Zelo PDV',
       description:
@@ -301,6 +315,7 @@ export const segmentPages = {
   },
   hamburguerias: {
     slug: 'para-hamburguerias',
+    updatedAt: '2026-09-23',
     meta: {
       title: 'PDV para Hamburgueria — Controle Pedidos e Lucro Sem Complicação | Zelo PDV',
       description:
@@ -426,6 +441,7 @@ export const segmentPages = {
   },
   delivery: {
     slug: 'para-delivery',
+    updatedAt: '2026-09-23',
     meta: {
       title: 'Sistema para Delivery Próprio — Gerencie Pedidos e Finanças Sem iFood | Zelo PDV',
       description:
@@ -557,6 +573,7 @@ export const segmentPages = {
   },
   mei: {
     slug: 'para-mei',
+    updatedAt: '2026-09-24',
     meta: {
       title: 'Sistema de Gestão para MEI — Caixa e Despesas no Celular | Zelo PDV',
       description:
@@ -670,6 +687,7 @@ export const segmentPages = {
   },
   acaiterias: {
     slug: 'para-acaiterias',
+    updatedAt: '2026-09-24',
     meta: {
       title: 'Sistema PDV para Açaiteria — Copos, Adicionais e Sazonalidade | Zelo PDV',
       description:
@@ -797,6 +815,7 @@ export const segmentPages = {
   },
   pizzarias: {
     slug: 'para-pizzarias',
+    updatedAt: '2026-09-24',
     meta: {
       title: 'Sistema PDV para Pizzaria — Meio a Meio, Bordas e Delivery | Zelo PDV',
       description:
@@ -924,6 +943,7 @@ export const segmentPages = {
   },
   'food-trucks': {
     slug: 'para-food-trucks',
+    updatedAt: '2026-09-24',
     meta: {
       title: 'Sistema PDV para Food Truck — Funciona Sem Internet Estável | Zelo PDV',
       description:
@@ -1046,6 +1066,7 @@ export const segmentPages = {
   },
   marmitarias: {
     slug: 'para-marmitarias',
+    updatedAt: '2026-09-24',
     meta: {
       title: 'Sistema PDV para Marmitaria — Marmita do Dia, Fiado e Entregas | Zelo PDV',
       description:
@@ -1175,4 +1196,14 @@ export const segmentPages = {
 
 export function buildFaqSchema(page) {
   return buildGenericFaqSchema(page.faqSpecific);
+}
+
+// WebPage JSON-LD com dateModified real (não inventamos datePublished, pois
+// não temos data de publicação original registrada para as landing pages).
+export function buildWebPageSchemaForSegment(page) {
+  return buildWebPageSchema({
+    url: page.meta.canonical,
+    name: page.meta.title,
+    dateModified: page.updatedAt
+  });
 }

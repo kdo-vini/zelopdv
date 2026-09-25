@@ -38,6 +38,11 @@ export const ORGANIZATION = {
   parentUrl: 'https://techneia.com.br',
   logo: `${SITE_URL}/favicon.png`,
   instagram: 'https://instagram.com/techne.ia',
+  // Perfis oficiais usados no sameAs do Organization JSON-LD. Hoje só temos o
+  // Instagram confirmado no código. Perfis novos (Google Business, Reclame
+  // Aqui, Capterra, LinkedIn, YouTube, Wikidata) devem ser adicionados aqui
+  // assim que forem criados de fato — nunca inventar URL que ainda não existe.
+  sameAs: ['https://instagram.com/techne.ia'],
   whatsappPhone: '+55-14-99153-7503'
 };
 
@@ -63,6 +68,22 @@ export function formatBRL(value) {
     style: 'currency',
     currency: 'BRL'
   }).format(Number(value) || 0);
+}
+
+/**
+ * Formata uma data 'YYYY-MM-DD' por extenso em pt-BR (ex.: "9 de setembro de
+ * 2026"), mesmo formato usado pelo blog em src/routes/blog/[slug]/+page.svelte.
+ * @param {string} isoDate
+ * @returns {string}
+ */
+export function formatDatePtBR(isoDate) {
+  if (!isoDate) return '';
+  const formatter = new Intl.DateTimeFormat('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+  return formatter.format(new Date(`${isoDate}T00:00:00`));
 }
 
 // priceValidUntil computado (não literal): fim do próximo ano civil a partir
@@ -129,7 +150,7 @@ export function buildOrganizationSchema() {
       availableLanguage: 'Portuguese',
       contactOption: 'TollFree'
     },
-    sameAs: [ORGANIZATION.instagram],
+    sameAs: ORGANIZATION.sameAs,
     address: {
       '@type': 'PostalAddress',
       addressCountry: 'BR'
@@ -187,6 +208,31 @@ export function buildFaqSchema(items) {
         text: item.answer
       }
     }))
+  };
+}
+
+/**
+ * WebPage JSON-LD genérico para páginas de conteúdo evergreen (vs-*, para-*)
+ * que têm data de revisão (`dateModified`) mas nem sempre uma data de
+ * publicação original confiável — por isso `datePublished` só entra quando
+ * informado explicitamente, nunca inventado.
+ * @param {{ url: string, name: string, dateModified: string, datePublished?: string }} options
+ * @returns {object}
+ */
+export function buildWebPageSchema({ url, name, dateModified, datePublished }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    url,
+    name,
+    inLanguage: 'pt-BR',
+    dateModified,
+    ...(datePublished ? { datePublished } : {}),
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_URL
+    }
   };
 }
 

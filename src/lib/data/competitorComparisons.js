@@ -9,8 +9,15 @@
 //    verificáveis. Quando o concorrente só "não anuncia" algo, use linguagem de
 //    ausência de claim, não de fato testado.
 // 4. O preço do Zelo (R$ 59) sai de pricing.js — não inventar outro número aqui.
+//
+// Campo `updatedAt` (string 'YYYY-MM-DD', obrigatório em cada entrada): data
+// da última revisão de conteúdo do comparativo. Vem da data máxima de
+// `git blame` sobre o bloco da entrada — não inventar. Alimenta a linha
+// "Atualizado em ..." em src/routes/vs-[slug]/+page.svelte, o dateModified
+// do WebPage JSON-LD (ver buildWebPageSchema em $lib/seo/site) e o <lastmod>
+// da URL em src/routes/sitemap.xml/+server.js.
 
-import { buildFaqSchema, SITE_URL } from '$lib/seo/site';
+import { buildFaqSchema, buildWebPageSchema, SITE_URL } from '$lib/seo/site';
 import { ADDONS, PLANS, TRIAL_DAYS } from '$lib/pricing';
 
 export { softwareApplicationSchema } from './segmentLandingPages';
@@ -26,6 +33,7 @@ const MENU_ADDON_PRICE = `R$ ${ADDONS.menu.price.toFixed(0)}`;
 export const competitorComparisons = {
   saipos: {
     slug: 'vs-saipos',
+    updatedAt: '2026-09-23',
     competitor: 'Saipos',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -154,6 +162,7 @@ export const competitorComparisons = {
 
   goomer: {
     slug: 'vs-goomer',
+    updatedAt: '2026-09-25',
     competitor: 'Goomer',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -282,6 +291,7 @@ export const competitorComparisons = {
 
   anotaAi: {
     slug: 'vs-anota-ai',
+    updatedAt: '2026-09-23',
     competitor: 'Anota AI',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -344,6 +354,7 @@ export const competitorComparisons = {
 
   whatsmenu: {
     slug: 'vs-whatsmenu',
+    updatedAt: '2026-09-23',
     competitor: 'WhatsMenu',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -404,6 +415,7 @@ export const competitorComparisons = {
 
   cardapioWeb: {
     slug: 'vs-cardapio-web',
+    updatedAt: '2026-09-25',
     competitor: 'Cardápio Web',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -465,6 +477,7 @@ export const competitorComparisons = {
 
   yooga: {
     slug: 'vs-yooga',
+    updatedAt: '2026-09-23',
     competitor: 'Yooga',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -526,6 +539,7 @@ export const competitorComparisons = {
 
   sisfood: {
     slug: 'vs-sisfood',
+    updatedAt: '2026-09-23',
     competitor: 'SisFood',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -586,6 +600,7 @@ export const competitorComparisons = {
 
   contaAzul: {
     slug: 'vs-conta-azul',
+    updatedAt: '2026-09-23',
     competitor: 'Conta Azul',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -647,6 +662,7 @@ export const competitorComparisons = {
 
   gestaoClick: {
     slug: 'vs-gestaoclick',
+    updatedAt: '2026-09-23',
     competitor: 'GestãoClick',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -708,6 +724,7 @@ export const competitorComparisons = {
 
   bling: {
     slug: 'vs-bling',
+    updatedAt: '2026-09-23',
     competitor: 'Bling',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -769,6 +786,7 @@ export const competitorComparisons = {
 
   tiny: {
     slug: 'vs-tiny',
+    updatedAt: '2026-09-23',
     competitor: 'Tiny',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -830,6 +848,7 @@ export const competitorComparisons = {
 
   omie: {
     slug: 'vs-omie',
+    updatedAt: '2026-09-24',
     competitor: 'Omie',
     priceCheckedAt: 'junho de 2026',
     meta: {
@@ -891,6 +910,7 @@ export const competitorComparisons = {
 
   consumer: {
     slug: 'vs-consumer',
+    updatedAt: '2026-09-25',
     competitor: 'Consumer',
     priceCheckedAt: 'setembro de 2026',
     meta: {
@@ -1020,6 +1040,7 @@ export const competitorComparisons = {
 
   kyte: {
     slug: 'vs-kyte',
+    updatedAt: '2026-09-24',
     competitor: 'Kyte',
     priceCheckedAt: 'setembro de 2026',
     meta: {
@@ -1144,4 +1165,14 @@ export const competitorComparisons = {
 
 export function buildComparisonFaqSchema(comparison) {
   return buildFaqSchema(comparison.faqSpecific);
+}
+
+// WebPage JSON-LD com dateModified real (não inventamos datePublished, pois
+// não temos data de publicação original registrada para os comparativos).
+export function buildComparisonWebPageSchema(comparison) {
+  return buildWebPageSchema({
+    url: comparison.meta.canonical,
+    name: comparison.meta.title,
+    dateModified: comparison.updatedAt
+  });
 }

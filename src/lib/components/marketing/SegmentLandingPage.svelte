@@ -6,6 +6,7 @@
   import { generalFaqs } from '$lib/data/segmentLandingPages';
   import { resolveAppIcon } from '$lib/icons/appIcons';
   import { getSignupHref, trackSignupCta } from '$lib/marketing/signupCta';
+  import { formatDatePtBR } from '$lib/seo/site';
   import { Check, ChevronDown, SendHorizontal, Zap } from 'lucide-svelte';
 
   export let page;
@@ -17,6 +18,7 @@
   });
 
   $: allFaqs = [...page.faqSpecific, ...generalFaqs];
+  $: formattedUpdatedAt = formatDatePtBR(page.updatedAt);
 
   function openSupportChat() {
     window.dispatchEvent(new CustomEvent('zelo:open-support-chat'));
@@ -37,9 +39,15 @@
         <div>
           <p class="text-sm font-semibold tracking-tight text-sky-300 mb-3">Para {page.segmentName || page.heroBadge}</p>
 
-          <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight mb-6" style="text-wrap: balance;">
+          <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight mb-3" style="text-wrap: balance;">
             {page.h1}
           </h1>
+
+          {#if formattedUpdatedAt}
+            <p class="text-xs tracking-wider mb-6" style="color: var(--text-muted);">
+              Atualizado em {formattedUpdatedAt}
+            </p>
+          {/if}
 
           <p class="text-lg md:text-xl max-w-2xl leading-relaxed mb-10" style="color: var(--text-muted);">
             {page.subtitle}

@@ -67,12 +67,21 @@ export function GET() {
 
   // Landing pages por segmento (/para-*)
   for (const page of Object.values(segmentPages)) {
-    entries.push(urlEntry({ loc: `${BASE}/${page.slug}`, changefreq: 'monthly', priority: '0.8' }));
+    entries.push(
+      urlEntry({ loc: `${BASE}/${page.slug}`, lastmod: page.updatedAt, changefreq: 'monthly', priority: '0.8' })
+    );
   }
 
   // Páginas comparativas (/vs-*)
   for (const comparison of Object.values(competitorComparisons)) {
-    entries.push(urlEntry({ loc: `${BASE}/${comparison.slug}`, changefreq: 'monthly', priority: '0.8' }));
+    entries.push(
+      urlEntry({
+        loc: `${BASE}/${comparison.slug}`,
+        lastmod: comparison.updatedAt,
+        changefreq: 'monthly',
+        priority: '0.8'
+      })
+    );
   }
 
   // Posts do blog (com image:image quando o post tem capa gerada)
